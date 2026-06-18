@@ -142,14 +142,14 @@ are permanent. Diagnostic `wlog` scaffolding remains until Phase 2A validates co
 | **MC3h** | **K-Quant dequant fix:** `dequant_q6_k` signed `int8` scales (`blk.*.ffn_down` Q6_K) | ✅ Closed — naked ` Paris.`; ChatML `The capital of France` |
 | **MC4** | Trim temporary `wlog` instrumentation; commit `0.0.18` CPU fallback checkpoint | ✅ Closed — `v0.0.18-wasm-cpu-fallback-stable` |
 
-### Phase 2B — Async WebGPU compute (Option B) — 🟡 IN PROGRESS (Part 3o: TTFT Collapse)
+### Phase 2B — Async WebGPU compute (Option B) — ✅ GATE CLOSED (Part 3y, 2026-06-19: TTFT ~3957 ms, `Paris.`)
 
 | Micro-commit | Scope | Status |
 |--------------|-------|--------|
 | **MC5** | `dispatch_attention_pass_async` + `dispatch_transformer_forward_async` plumbing | ✅ Closed — wired via `inferWasmAsync` (`wasm_llm.rs`) |
 | **MC6** | `inferWasmAsync` + JS `Promise` bridge; `_async` dispatch loop | ✅ Closed — naked ` Paris.` TTFT ~9s (vs ~47s CPU) |
 | **MC7** | WGSL `Q5_0`/`Q8_0` dequant; gate removal; full GPU offload | ✅ Closed — `Paris is the capital of France`; TTFT ~11s |
-| **MC8** | Pipeline fusing — single `CommandEncoder`, per-layer `mc8_flush`, one readback/forward | 🟡 Part 3u — super-arena + weight arena; `Paris.` ✅; TTFT ~5.6–6.0s (gate &lt;4500 ms ❌) |
+| **MC8** | Pipeline fusing + decode super-arena (3w) + resident weights (3x) + eager upload (3y) | ✅ **Closed (Part 3y)** — `Paris.` ✅; **TTFT ~3957 ms (gate &lt;4500 ms ✅)**; throughput ~0.6 tok/s (GPU-exec-bound, post-gate) |
 
 #### MC8 — split delivery
 
@@ -995,6 +995,97 @@ sed -i 's/qualia_core_db_bg\.wasm/qualia_bg.wasm/g' $DOCS/qualia.js
 ---
 
 ## 📓 7. PROGRESS LOG (newest first — keep this updated every step)
+
+- **2026-06-19 (ai)** — **MC8 Part 3y: eager resident upload → ✅ PHASE 2B GATE CLOSED.**
+  - **Eager upload:** moved `mc8_upload_all_resident_weights` from the lazy first-prefill path into
+    init (`adopt_resident_mmap`), so the one-time 219 MB upload is paid at model-load, before the
+    TTFT clock. (In 3x it ran lazily *inside* the timed prefill and was uncounted — it bypasses the
+    `weight_upload` accumulator.)
+  - **3-run gate (naked SmolLM2-360M-Q4_K_M, `WASM_ASYNC=1`, headless Chrome / NVIDIA Ampere):**
+    TTFT **3905 / 3968 / 3997 ms (avg 3957)** — **< 4500 ms** ✅; output **`Paris.`** ✅ (3/3).
+    `prefill 2409 → 35 ms`; TTFT **6118 → 3957 ms** (−2160).
+  - **Gate conditions:** TTFT < 4500 ✅ · coherence locked ✅ → **Phase 2B CLOSED** (per architect
+    gate definition). Endgame doc §1 updated.
+  - **Post-gate (not blockers):** throughput ~0.6 tok/s (~1700 ms/token) — decode forward is
+    GPU-execution-bound (~400 `M=1` dispatches/forward, invariant to submits/upload). Part 3y
+    Phase 2/3 (timestamp profiling → dispatch fusion) **deferred** — gate met without it. Then:
+    strip `ttft_profile` instrumentation; MC7 ChatML regression.
+
+- **2026-06-19 (ah)** — **MC8 Part 3x landed: GPU-resident weights — bottleneck is now GPU execution.**
+  - **Resident weights (DONE):** `mc8_upload_all_resident_weights` uploads all 32 layers' 7 role
+    tensors **once** into per-role buffers sized `stride×n_layer` (256-aligned); hot-path encoders
+    bind per-layer sub-ranges (`mc8_weight_binding`). `[MC8] resident weights uploaded once:
+    219.7 MB`; `[PROFILE] weight_upload total_MB=0.0` (per-forward upload eliminated ✅).
+    Coherence `Paris.` ✅. Approach A (architect-approved).
+  - **3-run gate (naked SmolLM2-360M-Q4_K_M, WASM_ASYNC=1):** TTFT **5942 / 6046 / 6365 ms**
+    (avg ~6118). Prefill **3276 → ~2409 ms** (−870, the upload removal). **Gate NOT met.**
+  - **Why TTFT didn't move:** removing decode's 1542 ms upload just exposed the GPU-drain wait —
+    decode readback **904 → ~3200 ms** (first token also absorbs the one-time 219 MB resident-upload
+    drain + deferred prefill GPU compute, since prefill never reads back).
+  - **Decisive finding:** adapter is a **real NVIDIA Ampere GPU** (not software; maxBuffer 2 GB).
+    Yet a single-token decode forward = **~1700 ms** (steady-state, 0.5 tok/s) and is **invariant**
+    to submit count (416→64, Part 3w) and weight upload (resident, Part 3x). CPU encode per decode
+    ≈ 35 ms. ⇒ decode is **GPU command-execution-bound** (~400 small M=1 dispatches/forward), not
+    data-/submit-/upload-bound. Arithmetic is trivial (~720 MFLOP/token) so this is dispatch/round-
+    trip overhead in the Dawn-wasm path, not FLOPs.
+  - **Open (needs architect):** next vector — (a) GPU **timestamp-query profiling** to split
+    dispatch-launch vs readback vs shader; (b) **dispatch fusion** (fewer/bigger compute passes per
+    layer); (c) **eager resident upload at load** (removes ~219 MB drain from first-token TTFT only);
+    (d) reconsider whether <4500 ms is reachable for M=1 autoregressive decode without shader rework
+    / batched (speculative) decode. Parts 3w+3x are correct and banked regardless.
+
+- **2026-06-19 (ag)** — **MC8 Part 3w landed + Part 3x root cause: per-forward weight re-upload.**
+  - **Decode super-arena port (DONE, coherent):** `dispatch_transformer_forward_async` rewritten to
+    reuse `mc8_stage_prefill_layer_super_arena` + `encode_prefill_q_ffn_tail_fused` at `n_tokens=1`
+    (dynamic-offset uniforms + 7 disjoint weight buffers). Decode flushes **416 → 64 (2/layer)**;
+    output **`Paris.`** ✅. `encode_transformer_layer_gpu` retired (`#[allow(dead_code)]`).
+  - **TTFT UNCHANGED (~6.2–6.6 s).** Submit savings (~750 ms CPU) moved into the final readback
+    (210 → 904 ms): decode was **never submit-bound** — submits overlapped GPU work. `dec0_fwd` wall
+    conserved (~2523 ms); throughput still 0.5 tok/s.
+  - **Root cause (proven, new instrumentation):** `[PROFILE] weight_upload total_MB=416.6
+    total_ms=2337.8 prefill=795.3 dec0_fwd=1542.5`. The engine **re-uploads ~208 MB of model
+    weights per forward pass** (`write_weight_role`/`write_weight_words` → `queue.write_buffer` of
+    each layer's K/V/Q/O/gate/up/down, 7 buffers overwritten per layer). **38% of TTFT**; **61% of
+    decode forward**; ~100% of the 0.5 tok/s ceiling.
+  - **Recommended Part 3x (pending architect):** **GPU-resident weights** — upload each layer/role
+    weight once (at load / first use), reuse across forwards; eliminate per-forward `write_buffer`.
+    Projected TTFT ≈ setup 371 + prefill ~2407 + decode ~981 + argmax 98 ≈ **~3.9 s** (under gate) +
+    large throughput gain. **Risk:** ~208 MB resident GPU (browser `maxBufferSize` /
+    `maxStorageBufferBindingSize`) → needs per-layer buffers or one big buffer + offsets.
+
+- **2026-06-19 (af)** — **MC8 Part 3w: TTFT profile attribution (architect-approved profile-first).**
+  - **Instrumentation (wasm-only, reverts after gate):** `ttft_profile` module in `gguf_bridge.rs`
+    (thread-local readback-ms / readback-count / submit-count accumulators); `await_wgpu_map`
+    times each `map_async` round-trip; `mc8_flush` counts compute submits; phase wall-timers +
+    `[PROFILE]` log in `wasm_llm.rs::run_inference_async`. Harness surfaces `[PROFILE]` lines.
+  - **Build:** `web-sys` += `Performance`; canonical Git-Bash wasm-pack (8 MB stack); deployed.
+  - **3-run profile (naked SmolLM2-360M-Q4_K_M, `WASM_ASYNC=1`, `MC8_FUSED_PREFILL_TAIL=true`):**
+    TTFT avg **6346 ms** (6256/6507/6275); output **`Paris.`** ✅ all runs.
+
+    | Phase | avg ms | % | compute flushes | readbacks |
+    |-------|--------|---|-----------------|-----------|
+    | setup (tokenize + `GgufTensorIndex::from_gguf`) | 381 | 6% | 0 | 0 |
+    | prefill (4 tok × 32 layers, batched) | 3276 | 52% | **64** (2/layer) | 0 |
+    | decode step-0 forward (1 tok × 32 layers) | 2590 | 41% | **416** (13/layer) | 1 (210 ms) |
+    | decode step-0 argmax (CPU `stack_gemm_quant`) | 99 | 2% | 0 | 0 |
+
+  - **Findings (overturns prior assumptions):**
+    1. **Readback is negligible** — 210 ms / **1** readback on the whole first-token path. Q1.2
+       REFUTED: argmax is CPU (Part 3k gate), 0 GPU readbacks. Consolidating vocab-GEMM readback
+       is NOT a TTFT lever.
+    2. **Decode path is un-optimized and submit-bound.** First-token decode forward = **416
+       submits (13 flushes/layer)** vs prefill's 64 (2/layer). Parts 3o–3u optimized
+       `encode_prefill_q_ffn_tail_fused` (prefill) only; the decode path
+       (`encode_attn_ffn_tail_gpu` = 11 flushes + `encode_transformer_layer_gpu` = +2) was never
+       given the super-arena/dynamic-offset/weight-arena treatment. Confirmed by grep + 416/32=13.
+    3. **Decode per-token (2590 ms) ≈ 3× prefill per-token (~820 ms)** at equal depth — pure
+       submit overhead. Also explains **0.5 tok/s** throughput (every token pays the 13-flush tax).
+    4. **Prefill (52%) is compute-bound** — already 2/layer; documented `Mc8NormWeightArena` +
+       cross-layer merge would shave little (~32 submits ≈ ~0.2 s).
+  - **Recommended redirect (pending architect):** port the MC8 super-arena to the **decode path**
+    (`encode_attn_ffn_tail_gpu` → ~2 flushes/layer) — projected ~1.5–2 s off TTFT (toward/under
+    4500 ms) **and** ~3–5× throughput. **Hold** `Mc8NormWeightArena`/prefill-merge. KV-flush probe
+    (Q2) folds into the decode port (same K/V→Q visibility floor).
 
 - **2026-06-19 (ae)** — **MC8 Part 3o: TTFT Collapse (zero-flush batched Q-SDPA).**
   - **`encode_attention_batched_q_prefill`:** single uniform params + batched per-token KV masks; `dispatch(n_head, n_tokens, 1)`; per-Q `mc8_flush` removed from fused tail.

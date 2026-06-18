@@ -194,6 +194,23 @@ enum Mc8WeightRole {
     Down,
 }
 
+#[cfg(target_arch = "wasm32")]
+impl Mc8WeightRole {
+    /// Stable index into the per-role resident stride table (`mc8_weight_role_stride`).
+    #[inline]
+    fn idx(self) -> usize {
+        match self {
+            Mc8WeightRole::AttnK => 0,
+            Mc8WeightRole::AttnV => 1,
+            Mc8WeightRole::AttnQ => 2,
+            Mc8WeightRole::OProj => 3,
+            Mc8WeightRole::Gate => 4,
+            Mc8WeightRole::Up => 5,
+            Mc8WeightRole::Down => 6,
+        }
+    }
+}
+
 /// One buffer per GEMM role so mid-layer weight uploads never clobber in-flight dispatches.
 #[cfg(target_arch = "wasm32")]
 struct Mc8WeightArenaBufs {
@@ -466,6 +483,154 @@ impl QTensorEngine {
         self.gpu_queue().write_buffer(weight_buf, 0, upload);
     }
 
+    /// MC8 Part 3x: weight binding for `role` at `layer`. When weights are resident, binds the
+    /// per-layer sub-range `[layer*stride, layer*stride + stride)`; otherwise the whole (single-
+    /// layer) role buffer that the caller just `write_weight_role`'d.
+    fn mc8_weight_binding(&self, role: Mc8WeightRole, layer: u32) -> wgpu::BindingResource<'_> {
+        let buf = self.mc8_weight_role_buf(role);
+        if self.mc8_weights_resident {
+            let stride = self.mc8_weight_role_stride[role.idx()];
+            wgpu::BindingResource::Buffer(wgpu::BufferBinding {
+                buffer: buf,
+                offset: layer as u64 * stride,
+                size: std::num::NonZeroU64::new(stride.max(4)),
+            })
+        } else {
+            buf.as_entire_binding()
+        }
+    }
+
+    /// MC8 Part 3x: upload every layer's K/V/Q/O/gate/up/down weights to the GPU **once**, into
+    /// 7 role buffers each sized `stride * n_layer` (256-byte-aligned per-role stride). After this
+    /// the hot-path encoders bind per-layer sub-ranges instead of re-`write_buffer`ing ~208 MB of
+    /// model weights every forward pass. Returns false (leaving `mc8_weights_resident=false`, so
+    /// callers fall back to per-forward upload) if any role tensor is missing.
+    #[cfg(target_arch = "wasm32")]
+    fn mc8_upload_all_resident_weights(
+        &mut self,
+        index: &crate::gguf_sharder::GgufTensorIndex,
+    ) -> bool {
+        if self.mc8_weights_resident {
+            return true;
+        }
+        // Clone the Arc so the mmap borrow does not block mutating `self` below.
+        let mmap_arc = match self.gguf_mmap.clone() {
+            Some(a) => a,
+            None => return false,
+        };
+        let mmap: &[u8] = &mmap_arc;
+        let tds = index.tensor_data_start;
+        let n_layer = index.hyperparams.n_layer;
+        if n_layer == 0 || n_layer as usize > 1024 {
+            return false;
+        }
+        const ROLES: [Mc8WeightRole; 7] = [
+            Mc8WeightRole::AttnK,
+            Mc8WeightRole::AttnV,
+            Mc8WeightRole::AttnQ,
+            Mc8WeightRole::OProj,
+            Mc8WeightRole::Gate,
+            Mc8WeightRole::Up,
+            Mc8WeightRole::Down,
+        ];
+        fn role_info<'a>(
+            role: Mc8WeightRole,
+            t: &'a crate::gguf_sharder::LayerTensors,
+        ) -> Option<&'a GgufTensorInfo> {
+            match role {
+                Mc8WeightRole::AttnK => t.attn_k.as_ref(),
+                Mc8WeightRole::AttnV => t.attn_v.as_ref(),
+                Mc8WeightRole::AttnQ => t.attn_q.as_ref(),
+                Mc8WeightRole::OProj => t.attn_output.as_ref(),
+                Mc8WeightRole::Gate => t.ffn_gate.as_ref(),
+                Mc8WeightRole::Up => t.ffn_up.as_ref(),
+                Mc8WeightRole::Down => t.ffn_down.as_ref(),
+            }
+        }
+        // Pass 1: max byte length per role across all layers → 256-aligned stride.
+        let mut max_len = [0usize; 7];
+        for layer in 0..n_layer {
+            let t = index.get_layer_tensors(layer);
+            for role in ROLES {
+                let info = match role_info(role, &t) {
+                    Some(i) => i,
+                    None => {
+                        wlog(&format!(
+                            "[MC8] resident weights: role {:?} missing at layer {layer} — per-forward fallback",
+                            role
+                        ));
+                        return false;
+                    }
+                };
+                let len = match crate::ggml_quants::fetch_tensor_bytes(mmap, tds, info) {
+                    Ok(s) => s.len(),
+                    Err(_) => return false,
+                };
+                let i = role.idx();
+                if len > max_len[i] {
+                    max_len[i] = len;
+                }
+            }
+        }
+        let mut stride = [0u64; 7];
+        let mut total_bytes = 0u64;
+        for i in 0..7 {
+            let s = (((max_len[i] + 255) & !255).max(256)) as u64;
+            stride[i] = s;
+            total_bytes += s * n_layer as u64;
+        }
+        // Allocate the 7 resident role buffers (replaces the single-layer arena).
+        let usage = wgpu::BufferUsages::STORAGE | wgpu::BufferUsages::COPY_DST;
+        let arena = {
+            let dev = self.gpu_device();
+            let mk = |i: usize, label: &str| {
+                dev.create_buffer(&wgpu::BufferDescriptor {
+                    label: Some(label),
+                    size: stride[i] * n_layer as u64,
+                    usage,
+                    mapped_at_creation: false,
+                })
+            };
+            Mc8WeightArenaBufs {
+                qkv_k: mk(0, "MC8ResidentAttnK"),
+                qkv_v: mk(1, "MC8ResidentAttnV"),
+                qkv_q: mk(2, "MC8ResidentAttnQ"),
+                o_proj: mk(3, "MC8ResidentOProj"),
+                gate: mk(4, "MC8ResidentGate"),
+                up: mk(5, "MC8ResidentUp"),
+                down: mk(6, "MC8ResidentDown"),
+            }
+        };
+        self.mc8_weight_arena = Some(arena);
+        self.mc8_weight_role_stride = stride;
+        // Pass 2: upload every layer's weights into its resident slot.
+        {
+            let queue = self.gpu_queue();
+            for layer in 0..n_layer {
+                let t = index.get_layer_tensors(layer);
+                for role in ROLES {
+                    let info = match role_info(role, &t) {
+                        Some(i) => i,
+                        None => return false,
+                    };
+                    let raw = match crate::ggml_quants::fetch_tensor_bytes(mmap, tds, info) {
+                        Ok(s) => s,
+                        Err(_) => return false,
+                    };
+                    let off = layer as u64 * stride[role.idx()];
+                    queue.write_buffer(self.mc8_weight_role_buf(role), off, raw);
+                }
+            }
+        }
+        self.mc8_weights_resident = true;
+        wlog(&format!(
+            "[MC8] resident weights uploaded once: {:.1} MB across {} layers (Part 3x)",
+            total_bytes as f64 / (1024.0 * 1024.0),
+            n_layer
+        ));
+        true
+    }
+
     fn mc8_dynamic_uniform_binding(buf: &wgpu::Buffer) -> wgpu::BindingResource<'_> {
         wgpu::BindingResource::Buffer(wgpu::BufferBinding {
             buffer: buf,
@@ -633,6 +798,7 @@ impl QTensorEngine {
         in_row_stride: u32,
         out_row_stride: u32,
         gemm_dyn_offset: u32,
+        layer: u32,
         weight_role: Mc8WeightRole,
     ) -> bool {
         if !ggml_gpu_attention_shader_supported(info.ggml_type)
@@ -643,7 +809,9 @@ impl QTensorEngine {
             return false;
         }
         let batch = n_batch.max(1);
-        self.write_weight_role(weight_role, raw, self.max_tensor_bytes);
+        if !self.mc8_weights_resident {
+            self.write_weight_role(weight_role, raw, self.max_tensor_bytes);
+        }
         let params_buf = self.gemm_params_buf.as_ref().unwrap();
         let bind = self.gpu_device().create_bind_group(&wgpu::BindGroupDescriptor {
             label: Some("MC8GemmBindOff"),
@@ -655,7 +823,7 @@ impl QTensorEngine {
                 },
                 wgpu::BindGroupEntry {
                     binding: 1,
-                    resource: self.mc8_weight_role_buf(weight_role).as_entire_binding(),
+                    resource: self.mc8_weight_binding(weight_role, layer),
                 },
                 wgpu::BindGroupEntry {
                     binding: 2,
@@ -1015,7 +1183,9 @@ impl QTensorEngine {
         }
         let (mask_words, mask_active, mask_word_count) =
             Self::attention_kv_mask_for_dispatch(layout, token_idx, proj_kind);
-        self.write_weight_role(weight_role, raw_weights, self.max_tensor_bytes);
+        if !self.mc8_weights_resident {
+            self.write_weight_role(weight_role, raw_weights, self.max_tensor_bytes);
+        }
         if mask_active != 0 {
             self.gpu_queue().write_buffer(
                 self.attention_mask_buf.as_ref().unwrap(),
@@ -1043,7 +1213,7 @@ impl QTensorEngine {
                 },
                 wgpu::BindGroupEntry {
                     binding: 1,
-                    resource: self.mc8_weight_role_buf(weight_role).as_entire_binding(),
+                    resource: self.mc8_weight_binding(weight_role, layer),
                 },
                 wgpu::BindGroupEntry {
                     binding: 2,
@@ -1111,7 +1281,9 @@ impl QTensorEngine {
         {
             return false;
         }
-        self.write_weight_role(Mc8WeightRole::AttnQ, raw_weights, self.max_tensor_bytes);
+        if !self.mc8_weights_resident {
+            self.write_weight_role(Mc8WeightRole::AttnQ, raw_weights, self.max_tensor_bytes);
+        }
         let params_buf = self.attention_params_buf.as_ref().unwrap();
         let layer_f32s = layout.layer_stride as usize;
         let layer_bytes = (layer_f32s * std::mem::size_of::<f32>()) as wgpu::BufferAddress;
@@ -1132,7 +1304,7 @@ impl QTensorEngine {
                 },
                 wgpu::BindGroupEntry {
                     binding: 1,
-                    resource: self.mc8_weight_role_buf(Mc8WeightRole::AttnQ).as_entire_binding(),
+                    resource: self.mc8_weight_binding(Mc8WeightRole::AttnQ, layer),
                 },
                 wgpu::BindGroupEntry {
                     binding: 2,
@@ -1938,6 +2110,13 @@ pub struct QTensorEngine {
     /// MC8 Part 3t: disjoint per-role weight arena (prefill single-submit).
     #[cfg(target_arch = "wasm32")]
     mc8_weight_arena: Option<Mc8WeightArenaBufs>,
+    /// MC8 Part 3x: when set, the 7 role buffers hold ALL layers' weights (uploaded once);
+    /// hot-path encoders bind a per-layer sub-range instead of re-`write_buffer`ing per forward.
+    #[cfg(target_arch = "wasm32")]
+    mc8_weights_resident: bool,
+    /// Per-role 256-byte-aligned per-layer stride (bytes), indexed by `Mc8WeightRole::idx()`.
+    #[cfg(target_arch = "wasm32")]
+    mc8_weight_role_stride: [u64; 7],
     /// Legacy decode-path ping-pong (decode tail not on weight arena yet).
     #[cfg(target_arch = "wasm32")]
     gemm_weight_buf_b: Option<wgpu::Buffer>,
@@ -2398,6 +2577,10 @@ impl QTensorEngine {
             gemm_weight_buf: None,
             #[cfg(target_arch = "wasm32")]
             mc8_weight_arena: None,
+            #[cfg(target_arch = "wasm32")]
+            mc8_weights_resident: false,
+            #[cfg(target_arch = "wasm32")]
+            mc8_weight_role_stride: [0u64; 7],
             #[cfg(target_arch = "wasm32")]
             gemm_weight_buf_b: None,
             gemm_output_buf: None,
@@ -2891,6 +3074,11 @@ impl QTensorEngine {
             return Err("KV cache allocation failed (layout or CPU mirror missing)".to_string());
         }
         self.gguf_mmap = Some(mmap);
+        // Part 3y: stage all layer weights to the GPU now (init time, before the TTFT clock),
+        // so the 219 MB upload is not charged to the first token's latency.
+        if !self.mc8_upload_all_resident_weights(&index) {
+            wlog("[MC8] eager resident weight upload skipped at init — will retry lazily");
+        }
         let kv_cache_bytes = self.kv_cache_bytes();
         Ok(GgufLoadReport {
             mapped_bytes: file_size as u64,
@@ -5182,7 +5370,9 @@ impl QTensorEngine {
     }
 
     /// MC8: encode one decode layer entirely on GPU (no map_async).
+    /// Superseded by the Part 3w super-arena decode forward (kept for reference/fallback).
     #[cfg(target_arch = "wasm32")]
+    #[allow(dead_code)]
     fn encode_transformer_layer_gpu(
         &self,
         pipeline: &mut WasmGpuPipeline,
@@ -5338,7 +5528,12 @@ impl QTensorEngine {
         )
     }
 
-    /// MC8: fused GPU forward — one upload, per-layer encode, single readback.
+    /// MC8 Part 3w: decode forward via the prefill super-arena (n_tokens=1).
+    /// Reuses `mc8_stage_prefill_layer_super_arena` + `encode_prefill_q_ffn_tail_fused`
+    /// (dynamic-offset uniforms + 7 disjoint weight buffers) → **2 submits/layer**
+    /// (KV-visibility flush + layer-end), down from the legacy 13 flushes/layer.
+    /// A single decode token at absolute position `token_idx` is a 1-row prefill chunk:
+    /// dense causal Q (`mask_active=0`, `logical <= abs_pos`) is correct for decode.
     #[cfg(target_arch = "wasm32")]
     pub async fn dispatch_transformer_forward_async(
         &mut self,
@@ -5354,31 +5549,189 @@ impl QTensorEngine {
         if n_layer == 0 || !self.mc8_buffers_ready() {
             return 0;
         }
+        if self.prefill_work_buf_a.is_none() || self.prefill_work_buf_b.is_none() {
+            wlog("[MC8] decode forward: prefill work buffers missing — cannot run super-arena");
+            return 0;
+        }
+        // Part 3x: upload all layer weights to GPU once (idempotent; falls back if it fails).
+        if !self.mc8_weights_resident {
+            let _ = self.mc8_upload_all_resident_weights(index);
+        }
         let limit = if max_layers == 0 {
             n_layer
         } else {
             max_layers.min(n_layer)
         };
-        let hidden_buf = self.gemm_input_buf.as_ref().unwrap();
+        let n_embd = index.hyperparams.n_embd as usize;
+        if emb_dim < n_embd || n_embd > hidden.len() || n_embd > self.gemm_max_input_floats {
+            return 0;
+        }
+        let prefill_scratch = match self.prefill_scratch_buf.as_ref() {
+            Some(b) => b,
+            None => return 0,
+        };
+        let batch_buf = self.gemm_input_buf.as_ref().unwrap();
+        let token_buf = self.gemm_output_buf.as_ref().unwrap();
+        let norm_buf = self.norm_weight_buf.as_ref().unwrap();
         self.gpu_queue().write_buffer(
-            hidden_buf,
+            batch_buf,
             0,
-            bytemuck::cast_slice(&hidden[..emb_dim]),
+            bytemuck::cast_slice(&hidden[..n_embd]),
         );
-        let mut pipeline = WasmGpuPipeline::begin(self);
+        let mmap = match self.gguf_mmap.as_deref() {
+            Some(m) => m,
+            None => return 0,
+        };
+        let layout = match self.kv_layout {
+            Some(l) => l,
+            None => return 0,
+        };
+        let n_tokens = 1u32;
         let mut ran = 0u32;
         for layer in 0..limit {
-            if !self.encode_transformer_layer_gpu(
-                &mut pipeline,
+            let tensors = index.get_layer_tensors(layer);
+            let k_info = match tensors.attn_k.as_ref() {
+                Some(i) => i,
+                None => break,
+            };
+            let v_info = match tensors.attn_v.as_ref() {
+                Some(i) => i,
+                None => break,
+            };
+            let k_raw = match crate::ggml_quants::fetch_tensor_bytes(mmap, index.tensor_data_start, k_info) {
+                Ok(s) => s,
+                Err(_) => break,
+            };
+            let v_raw = match crate::ggml_quants::fetch_tensor_bytes(mmap, index.tensor_data_start, v_info) {
+                Ok(s) => s,
+                Err(_) => break,
+            };
+            let h = index.hyperparams;
+            let n_kv = h.effective_n_kv_head();
+            let used_attn_norm = tensors.attn_norm.is_some();
+            let mut layer_uniform_cursors = Mc8ChunkUniformCursors {
+                attn: 0,
+                elem: 0,
+                gemm: 0,
+            };
+            let (uniforms, geom) = match self.mc8_stage_prefill_layer_super_arena(
                 index,
                 layer,
+                &tensors,
                 token_idx,
+                n_tokens,
                 emb_dim,
+                used_attn_norm,
+                k_info,
+                &k_raw,
+                v_info,
+                &v_raw,
+                &mut layer_uniform_cursors,
+            ) {
+                Some(v) => v,
+                None => break,
+            };
+            let mut enc = WasmGpuPipeline::begin(self);
+            let attn_src = if used_attn_norm {
+                if let Some(norm) = tensors.attn_norm.as_ref() {
+                    if !self.upload_norm_weights(mmap, index.tensor_data_start, norm, n_embd) {
+                        break;
+                    }
+                }
+                if let Some(off) = uniforms.attn_norm_elem_off {
+                    self.encode_elem_offset(
+                        &mut enc,
+                        ELEM_OP_RMS_NORM,
+                        n_embd as u32,
+                        n_tokens,
+                        batch_buf,
+                        0,
+                        geom.batch_in_bytes,
+                        norm_buf,
+                        0,
+                        geom.n_embd_bytes,
+                        prefill_scratch,
+                        0,
+                        geom.batch_in_bytes,
+                        0,
+                        0,
+                        0,
+                        0,
+                        0,
+                        0,
+                        off,
+                    );
+                }
+                prefill_scratch
+            } else {
+                batch_buf
+            };
+            let n_kv_wg = n_tokens.saturating_mul(n_kv);
+            if !self.encode_attention_pass_gpu(
+                &mut enc,
+                attn_src,
+                token_buf,
+                n_embd,
+                n_tokens,
+                token_idx,
+                &layout,
+                layer,
+                token_idx,
+                &h,
+                k_info,
+                k_raw,
+                1,
+                n_kv_wg,
+                uniforms.k_off,
+                Mc8WeightRole::AttnK,
             ) {
                 break;
             }
+            if !self.encode_attention_pass_gpu(
+                &mut enc,
+                attn_src,
+                token_buf,
+                n_embd,
+                n_tokens,
+                token_idx,
+                &layout,
+                layer,
+                token_idx,
+                &h,
+                v_info,
+                v_raw,
+                2,
+                n_kv_wg,
+                uniforms.v_off,
+                Mc8WeightRole::AttnV,
+            ) {
+                break;
+            }
+            // Part 3u: KV cache writes must be queue-visible before Q-SDPA reads.
+            self.mc8_flush(&mut enc);
+            let work_a = self.prefill_work_buf_a.as_ref().unwrap();
+            let work_b = self.prefill_work_buf_b.as_ref().unwrap();
+            if !self.encode_prefill_q_ffn_tail_fused(
+                &mut enc,
+                index,
+                layer,
+                &tensors,
+                batch_buf,
+                attn_src,
+                work_a,
+                work_b,
+                n_tokens,
+                token_idx,
+                emb_dim,
+                used_attn_norm,
+                &uniforms,
+                &geom,
+            ) {
+                break;
+            }
+            // Part 3w: layer-end flush → 2 submits/layer (mirrors prefill).
+            self.mc8_flush(&mut enc);
             ran += 1;
-            self.mc8_flush(&mut pipeline);
         }
         if ran > 0 && !self.pipeline_read_hidden(emb_dim, hidden).await {
             return 0;
@@ -6547,6 +6900,7 @@ impl QTensorEngine {
                 row_stride_u32,
                 row_stride_u32,
                 off_o.unwrap(),
+                layer,
                 Mc8WeightRole::OProj,
             ) {
                 return false;
@@ -6661,6 +7015,7 @@ impl QTensorEngine {
             row_stride_u32,
             row_stride_u32,
             off_gate,
+            layer,
             Mc8WeightRole::Gate,
         ) {
             return false;
@@ -6681,6 +7036,7 @@ impl QTensorEngine {
             row_stride_u32,
             row_stride_u32,
             off_up,
+            layer,
             Mc8WeightRole::Up,
         ) {
             return false;
@@ -6724,6 +7080,7 @@ impl QTensorEngine {
             row_stride_u32,
             row_stride_u32,
             off_down,
+            layer,
             Mc8WeightRole::Down,
         ) {
             return false;
@@ -6769,6 +7126,10 @@ impl QTensorEngine {
         let n_layer = index.hyperparams.n_layer;
         if n_layer == 0 || n_tokens == 0 || !self.mc8_buffers_ready() {
             return false;
+        }
+        // Part 3x: upload all layer weights to GPU once (idempotent; falls back if it fails).
+        if !self.mc8_weights_resident {
+            let _ = self.mc8_upload_all_resident_weights(index);
         }
         let prefill_scratch = match self.prefill_scratch_buf.as_ref() {
             Some(b) => b,
