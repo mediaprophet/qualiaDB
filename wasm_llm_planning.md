@@ -284,7 +284,32 @@ TTFT **7533 ms**; output still `pries underm` repetition.
 
 TTFT 8212 ms. Output shifted from `pries underm` repetition → partial English (`starlings soar…`) but still incoherent vs MC7 `Paris.`
 
-**Interpretation:** L31 variance dropped **13×** (272→21) — confirms K/V `gemm_weight_buf` + uniform race was the dominant depth amplifier. L0 no longer accidentally matches ~1.09 (residual-dominated wrong-K regime); geometry not yet at CPU parity. **Next:** Q/K targeted diff @ L1 if L31 still >5% band after another pass; audit prefill `attn_input=None` vs batch RMSNorm path.
+**Interpretation:** L31 variance dropped **13×** (272→21) — confirms K/V `gemm_weight_buf` + uniform race was the dominant depth amplifier. L0 no longer accidentally matches ~1.09 (residual-dominated wrong-K regime); geometry not yet at CPU parity.
+
+#### Part 3d — batched prefill audit (2026-06-19)
+
+**Architect answer (pt3c verify):** **prefill batched-attn audit before Q/K diff** — corrupted KV geometry makes tensor diff useless.
+
+**WGSL audit answers:**
+
+| Shader / path | Per-token `pos`? | Verdict |
+|---------------|------------------|---------|
+| `fused_attention.wgsl` K/V prefill (`proj_kind` 1\|2) | `abs_pos = batch_start_token_idx + token_in_batch` via `wg_id.x / n_kv_head` | ✅ already per-row |
+| `fused_attention.wgsl` Q decode (`proj_kind` 0) | Was `params.token_idx`; updated to `batch_start_token_idx + token_in_batch` | ✅ explicit (decode: batch=1) |
+| `wasm_elementwise.wgsl` RMSNorm | `wg_id.x` = row; `ss` summed over `base..base+n` only | ✅ per-row variance |
+
+**Not the architect's hypothesized flat-RoPE bug** for batched K/V — position already derives from workgroup index, not the singular `token_idx` uniform.
+
+**Real prefill parity gap:** `encode_attn_ffn_tail_gpu(..., attn_input: None)` re-RMSNorm'd per token while K/V consumed batch `prefill_scratch` — redundant and flush-sensitive.
+
+**Fixes (pt3d):**
+1. `mc8_flush` after batch RMSNorm before K/V prefill; after decode-layer RMSNorm before K.
+2. Prefill Q handoff: copy `prefill_scratch[t]` → `aux_buf`, pass `Some(aux_buf)` into tail (K/V/Q share identical normed input).
+3. `online_softmax_attention`: RoPE + causal window keyed on `batch_start_token_idx + token_in_batch`.
+
+**Harness verify (pt3d, same as pt3c):** L0=0.423, L1=0.098, L2=-0.736, L3=-1.080, L31=20.87 — **unchanged** (confirms batched K/V RoPE was already correct; `attn_input` handoff is parity hygiene, not the L31 gap).
+
+**Next:** Q/K targeted diff @ L1 decode step 1, or audit prefill causal Q loop (per-token `abs` vs batched K/V ordering).
 
 **Implementation notes (MC2 session):**
 - `cpu_attention_pass` uses raw-pointer KV mutation (sound on single-threaded wasm).
@@ -712,11 +737,10 @@ runs without WebGPU errors and beats MC7 TTFT, but **output coherence regressed*
 ## ▶️ 8. RESUME HERE (if context/tokens are lost — start at this section)
 
 1. Read **§0** (directives), **§0b** (F1–F6), **§6** (decisions), **§RECONCILIATION**, **MC8 §Part 2/3**.
-2. **Current task = Phase 2B MC8 Part 3c verify (K/V weight-buffer race fix):**
-   - **Done (pt3b bisect):** L0=1.011 → L1=-1.662 → L2=-7.337 → L3=-0.595 → L31=271.7.
-   - **Done (pt3c audit):** KV layer indexing/uniforms ✅; **K/V shared weight buf without flush** — patched.
-   - **Verify:** L31 **271→21** ✅ major; L0 **1.01→0.42** (wrong-K artefact gone); output partially English, not `Paris.` yet.
-   - **Next:** Q/K diff @ L1; prefill `attn_input` handoff; chase remaining ~20× L31 gap to ~1.09.
+2. **Current task = Phase 2B MC8 Part 3d verify (prefill attn_input handoff):**
+   - **Done (pt3c):** K/V+gate/up weight-buffer flush; L31 271→21.
+   - **Done (pt3d):** batched K/V RoPE audit ✅ (already per `wg_id`); RMSNorm per-row ✅; `attn_input` handoff + Q `abs_pos` patched; harness **unchanged** (L31=20.87).
+   - **Next:** Q/K diff @ L1; prefill causal Q sequencing audit.
 3. **Build rule:** must use 8 MB stack `RUSTFLAGS` (§BUILD/DEPLOY/TEST) — omitting → instant OOB trap.
 4. **Harness:** `agent-tools/wasm-mc2-test.mjs` with `WASM_ASYNC=1`, `WASM_NAKED_PROMPT=1`,
    `WASM_MODEL=models/SmolLM2-360M-Instruct-Q4_K_M.gguf`.
@@ -746,4 +770,8 @@ runs without WebGPU errors and beats MC7 TTFT, but **output coherence regressed*
 |---|----------|-------------------|-----------------|
 | F | CPU/GPU diff vs KV indexing first? | **KV layout & layer indexing audit first** | Indexing ✅; found K/V weight-buffer race; flush fix landed |
 
-**New advisor question (pt3c verify):** If post-L31 `h[0]` still blows up after K/V flush fix, should next step be **Q/K targeted diff @ L1** or **prefill batched-attn token_idx audit**?
+### Advisor feedback (MC8 pt3d) — **ANSWERED**
+
+| # | Question | Architect decision | Part 3d outcome |
+|---|----------|-------------------|-----------------|
+| G | Q/K diff vs prefill `token_idx` audit? | **Prefill batched-attn audit first** | K/V RoPE already per `wg_id`; RMSNorm per-row ✅; `attn_input` handoff + Q `abs_pos` patched |

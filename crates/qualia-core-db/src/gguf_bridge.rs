@@ -3767,6 +3767,7 @@ impl QTensorEngine {
                 norm_buf,
                 aux_buf,
             );
+            self.mc8_flush(pipeline);
             aux_buf
         } else {
             hidden_buf
@@ -4639,6 +4640,7 @@ impl QTensorEngine {
         }
         let batch_buf = self.gemm_input_buf.as_ref().unwrap();
         let token_buf = self.gemm_output_buf.as_ref().unwrap();
+        let aux_buf = self.gemm_aux_buf.as_ref().unwrap();
         let norm_buf = self.norm_weight_buf.as_ref().unwrap();
         if batch_elems > self.gemm_max_input_floats {
             return false;
@@ -4679,6 +4681,7 @@ impl QTensorEngine {
             let h = index.hyperparams;
             let n_kv = h.effective_n_kv_head();
             let mut pipeline = WasmGpuPipeline::begin(self);
+            let used_attn_norm = tensors.attn_norm.is_some();
             let attn_src = if let Some(norm) = tensors.attn_norm.as_ref() {
                 if !self.upload_norm_weights(mmap, index.tensor_data_start, norm, n_embd) {
                     return false;
@@ -4692,6 +4695,7 @@ impl QTensorEngine {
                     norm_buf,
                     prefill_scratch,
                 );
+                self.mc8_flush(&mut pipeline);
                 prefill_scratch
             } else {
                 batch_buf
@@ -4746,6 +4750,20 @@ impl QTensorEngine {
                     0,
                     token_bytes,
                 );
+                // Hand off the same RMSNorm row K/V used (prefill_scratch[t]) — skip redundant per-token norm.
+                let attn_in = if used_attn_norm {
+                    pipeline.encoder.copy_buffer_to_buffer(
+                        prefill_scratch,
+                        off,
+                        aux_buf,
+                        0,
+                        token_bytes,
+                    );
+                    self.mc8_flush(&mut pipeline);
+                    Some(aux_buf)
+                } else {
+                    None
+                };
                 if !self.encode_attn_ffn_tail_gpu(
                     &mut pipeline,
                     index,
@@ -4754,7 +4772,7 @@ impl QTensorEngine {
                     emb_dim,
                     &tensors,
                     token_buf,
-                    None,
+                    attn_in,
                 ) {
                     return false;
                 }

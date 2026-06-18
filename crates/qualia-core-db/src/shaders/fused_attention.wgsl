@@ -302,14 +302,18 @@ fn kv_slot_allowed(logical: u32) -> bool {
     return (kv_mask_words[word] & (1u << offset)) != 0u;
 }
 
-fn online_softmax_attention(qh: u32, kv_head: u32) {
+// Q+attn: abs position must be per batch row (decode: batch=1 → batch_start + 0).
+fn online_softmax_attention(qh: u32, kv_head: u32, token_in_batch: u32) {
     var q: array<f32, MAX_HEAD_DIM>;
     let row_base = qh * params.head_dim;
-    let token_in_batch = 0u;
+    if token_in_batch >= params.num_tokens_in_batch {
+        return;
+    }
     for (var d = 0u; d < params.head_dim; d = d + 1u) {
         q[d] = gemm_row(row_base + d, token_in_batch);
     }
-    apply_rope_neox(&q, params.token_idx);
+    let abs_pos = params.batch_start_token_idx + token_in_batch;
+    apply_rope_neox(&q, abs_pos);
 
     var m_max = NEG_INF;
     var l_sum = 0.0;
@@ -318,10 +322,10 @@ fn online_softmax_attention(qh: u32, kv_head: u32) {
         out_acc[d] = 0.0;
     }
 
-    let seq_len = params.token_idx + 1u;
+    let seq_len = abs_pos + 1u;
     let start = select(0u, seq_len - params.max_context, seq_len > params.max_context);
     let scale = 1.0 / sqrt(f32(params.head_dim));
-    for (var logical = start; logical <= params.token_idx; logical = logical + 1u) {
+    for (var logical = start; logical <= abs_pos; logical = logical + 1u) {
         if !kv_slot_allowed(logical) {
             continue;
         }
@@ -382,11 +386,12 @@ fn main(@builtin(workgroup_id) wg_id: vec3<u32>) {
         return;
     }
     if params.proj_kind == 0u {
+        // Decode: one token (wg per head). Batched Q prefill would map token_in_batch from wg_id.y.
         let qh = wg_id.x;
         if qh >= params.n_head {
             return;
         }
         let kv_head = qh / params.q_heads_per_kv;
-        online_softmax_attention(qh, kv_head);
+        online_softmax_attention(qh, kv_head, 0u);
     }
 }
