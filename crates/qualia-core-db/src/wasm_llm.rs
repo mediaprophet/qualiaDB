@@ -184,6 +184,7 @@ async fn run_inference_async(prompt: &str, on_token: Function) -> Result<String,
                         &mut scratch_b,
                         token_idx,
                         WASM_LAYER_CAP,
+                        step == 1,
                     )
                     .await;
                 let _ = engine.apply_output_norm_inplace(idx, &mut emb_buf[..emb_dim], emb_dim);

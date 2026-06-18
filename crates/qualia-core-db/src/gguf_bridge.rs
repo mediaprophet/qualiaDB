@@ -3815,6 +3815,7 @@ impl QTensorEngine {
         _scratch_b: &mut [f32],
         token_idx: u32,
         max_layers: u32,
+        l0_probe_step1: bool,
     ) -> u32 {
         let n_layer = index.hyperparams.n_layer;
         if n_layer == 0 || !self.mc8_buffers_ready() {
@@ -3845,9 +3846,25 @@ impl QTensorEngine {
             }
             ran += 1;
             self.mc8_flush(&mut pipeline);
+            if l0_probe_step1 && layer == 0 {
+                let mut probe = [0f32; MAX_HIDDEN_DIM];
+                if self.pipeline_read_hidden(emb_dim, &mut probe).await {
+                    wlog(&format!(
+                        "[MC8] L0 step1 probe h[0]={:.6} (target ~1.09)",
+                        probe[0]
+                    ));
+                }
+            }
         }
         if ran > 0 && !self.pipeline_read_hidden(emb_dim, hidden).await {
             return 0;
+        }
+        if l0_probe_step1 && ran > 0 {
+            wlog(&format!(
+                "[MC8] L0 step1 post-L{} h[0]={:.6} (target ~1.09)",
+                ran.saturating_sub(1),
+                hidden[0]
+            ));
         }
         ran
     }
@@ -4550,21 +4567,26 @@ impl QTensorEngine {
         scratch_b: &mut [f32],
         max_layers: u32,
     ) -> bool {
-        // MC8 GPU prefill path is wired but not yet numerically validated; use proven CPU batch path.
-        self.dispatch_prefill_chunk(
-            index,
-            batch_hidden,
-            emb_dim,
-            n_tokens,
-            batch_start_token_idx,
-            scratch_a,
-            scratch_b,
-            max_layers,
-        )
+        if self
+            .dispatch_prefill_chunk_async_mc8_gpu(
+                index,
+                batch_hidden,
+                emb_dim,
+                n_tokens,
+                batch_start_token_idx,
+                scratch_a,
+                scratch_b,
+                max_layers,
+            )
+            .await
+        {
+            return true;
+        }
+        wlog("[MC8] GPU prefill FAILED — CPU fallback blocked (manifold unification)");
+        false
     }
 
     #[cfg(target_arch = "wasm32")]
-    #[allow(dead_code)]
     async fn dispatch_prefill_chunk_async_mc8_gpu(
         &mut self,
         index: &crate::gguf_sharder::GgufTensorIndex,
@@ -4722,6 +4744,9 @@ impl QTensorEngine {
             }
             self.gpu_queue().submit(Some(pipeline.finish()));
         }
+        wlog(&format!(
+            "[MC8] GPU prefill OK layers={limit} n_tokens={n_tokens} start={batch_start_token_idx}"
+        ));
         true
     }
 #[cfg(target_arch = "wasm32")]

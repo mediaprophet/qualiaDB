@@ -53,10 +53,12 @@ dispatches GPU work *before* the `#[cfg(not(wasm32))]` readback, then `unmap()`s
 never-resolved map. This is wasted work and a candidate OOB site. The wasm path should
 short-circuit to CPU **before** touching GPU buffers (see Phase 2).
 
-**F4 — Async dispatch variants are partial.** `dispatch_prefill_chunk_async`
-(gguf_bridge.rs:2672) and `dispatch_output_argmax_chunked_async` (:2881) exist;
-`dispatch_gemm_into_async` (:2371) exists; **there is no `dispatch_transformer_forward_async`
-and no async attention.** A true async-GPU decode (option B) requires writing these.
+**F4 — Async dispatch variants.** *(Resolved MC5–MC8.)* `dispatch_gemm_into_async`,
+`dispatch_attention_pass_async`, `dispatch_transformer_layer_async`,
+`dispatch_transformer_forward_async`, `dispatch_prefill_chunk_async`, and
+`dispatch_output_argmax_chunked_async` all exist and are wired to `inferWasmAsync`
+(`wasm_llm.rs`). **Remaining gap:** prefill K/V still CPU-only; fused GPU prefill
+(`dispatch_prefill_chunk_async_mc8_gpu`) is dead_code until numerically validated.
 
 **F5 — WASM init skipped KV/GEMM arena setup.** *(Discovered MC2 session; fix landed,
 validation pending.)* `initialize_webgpu_engine` (wasm, `gguf_bridge.rs:3242`) previously
@@ -142,10 +144,10 @@ are permanent. Diagnostic `wlog` scaffolding remains until Phase 2A validates co
 
 | Micro-commit | Scope | Status |
 |--------------|-------|--------|
-| **MC5** | `dispatch_attention_pass_async` + `dispatch_transformer_forward_async` plumbing | 🟡 Landed — not wired to `infer_wasm_streaming` yet |
+| **MC5** | `dispatch_attention_pass_async` + `dispatch_transformer_forward_async` plumbing | ✅ Closed — wired via `inferWasmAsync` (`wasm_llm.rs`) |
 | **MC6** | `inferWasmAsync` + JS `Promise` bridge; `_async` dispatch loop | ✅ Closed — naked ` Paris.` TTFT ~9s (vs ~47s CPU) |
 | **MC7** | WGSL `Q5_0`/`Q8_0` dequant; gate removal; full GPU offload | ✅ Closed — `Paris is the capital of France`; TTFT ~11s |
-| **MC8** | Pipeline fusing — single `CommandEncoder`, one `map_async` per forward/argmax | 🟡 In flight (Part 1 Complete) |
+| **MC8** | Pipeline fusing — single `CommandEncoder`, one `map_async` per forward/argmax | 🟡 Part 3 in flight — L0@L0 locked; L31 blow-up open |
 
 #### MC8 — split delivery
 
@@ -165,30 +167,81 @@ WebGPU validation plumbing is complete; fused compute is **gated off** until Par
 | `dispatch_prefill_chunk_async_mc8_gpu` | GPU batched prefill (dead_code — delegates to CPU) |
 | `dispatch_output_argmax_chunked_async_mc8_fused` | Fused multi-chunk argmax (dead_code — delegates to sync) |
 
-**Current hot-path routing (stable):**
+**Current hot-path routing (post Part 3 — GPU manifold unified):**
 
-- Prefill → `dispatch_prefill_chunk` (CPU batch)
-- Decode forward → `dispatch_transformer_layer_async` (MC7 per-layer GPU + CPU elementwise)
-- Argmax → `dispatch_output_argmax_chunked` (sync, per-chunk `map_async`)
+- Prefill → `dispatch_prefill_chunk_async_mc8_gpu` (GPU batched K/V + per-token Q/FFN; **no CPU fallback**)
+- Decode forward → `dispatch_transformer_forward_async` → `encode_transformer_layer_gpu` (fused GPU: attn + `wasm_elementwise` RMSNorm/SiLU/residual)
+- Argmax → `dispatch_output_argmax_chunked` (sync — argmax fusion **gated** per architect)
 
-**Harness (Part 1):** zero WebGPU validation errors when fused path is exercised manually; fused decode runs ~8s TTFT but output is numerically degenerate.
+**Part 2 (✅ RoPE alignment + fused decode — landed `feat(wasm-llm): MC8 pt2`)**
 
-**Part 2 (🟡 active blocker — numerical correctness)**
+Architect-approved WGSL manifold alignment executed:
 
-Fused `encode_transformer_layer_gpu` executes without WebGPU errors but produces garbage/repetition. WGSL math audit suspects (priority order):
+| Fix | Detail | Status |
+|-----|--------|--------|
+| **P0 RoPE pair layout** | Replaced `rotate_rope_pair` (consecutive `(p*2,p*2+1)`) with `apply_rope_neox` (split-half `(i, i+half)`) in `fused_attention.wgsl` | ✅ |
+| **P0 RoPE freq base** | `AttentionGpuParams.rope_theta_base` ← `h.effective_rope_freq_base()` (100k SmolLM2); was hardcoded 10k | ✅ |
+| **P1 RoPE scale** | Added `rope_scale: f32` uniform; WGSL uses `pos / rope_scale` | ✅ |
+| **Fused decode** | `dispatch_transformer_forward_async` wired to `encode_transformer_layer_gpu` + per-layer `mc8_flush` + single readback | ✅ |
+| **P2 RMSNorm / SiLU** | Formulas unchanged; L0 probe **inconclusive** — see below | 🟡 |
 
-1. **RoPE pair layout (P0):** CPU `rope_inplace` uses **NEOX split-half** `(i, i + head_dim/2)`; `fused_attention.wgsl` `rotate_rope_pair` uses **consecutive** `(p*2, p*2+1)`. Documented divergence since MC2.
-2. **RoPE freq base (P0):** CPU uses `h.effective_rope_freq_base()` (100k for SmolLM2); `attention_gpu_params` hardcodes `rope_theta_base: 10_000.0`.
-3. **RoPE scale (P1):** CPU applies `scaled_pos = pos / rope_scale`; WGSL uses raw `pos` — no `rope_scale` uniform.
-4. **RMSNorm / SiLU (P2):** Formulas match CPU (`ss/n`, `1/sqrt(ss+eps)`, `x/(1+e^-x)`, `gate*up`). Residual routing in `encode_attn_ffn_tail_gpu` uses `base_save` + `mc8_flush` — verify with L0 variance probe (~1.09 per MC3c).
-5. **Attention scale (OK):** Both apply `1/sqrt(head_dim)` to dot products.
+**L0 variance probe (SmolLM2-360M naked, fused GPU decode, 32 steps):**
 
-**Part 2 probe (recommended):** run L0 post-FFN on CPU vs one fused GPU layer; compare `h[0]` variance — target ~1.09 (MC3c).
+Probe read `h[0]` after layer-0 post-FFN via `pipeline_read_hidden`. Target from MC3c CPU path: **~1.09**.
+
+| Decode step | `h[0]` | Notes |
+|-------------|--------|-------|
+| 0 | -1.337 | Miss — likely first-token / prefill boundary |
+| 1 | **0.930** | Within ~15% of target |
+| 2–10 | 2.88 → 3.05 | Drift high — elementwise or residual routing suspect |
+| 11+ | mixed (-1.5 … 1.6) | Unstable across context growth |
+
+**Harness post-Part 2 (naked `The capital of France is`, Q4_K_M, `inferWasmAsync`):**
+
+| Metric | MC7 (CPU elem) | MC8 pt2 (fused GPU) |
+|--------|----------------|---------------------|
+| TTFT | ~11 s | **~9 s** ✅ (8961 ms) |
+| WebGPU errors | 0 | **0** ✅ |
+| Output | `Paris is the capital of France.` | **garbled repetition** (`KeyNotKeyNot…`) ❌ |
+| L0 `h[0]` @ step 1 | ~1.09 (CPU, MC3c) | **0.930** (close, not locked) |
+
+**Diagnosis for advisors:** RoPE geometric divergence is **closed** (P0/P1). Remaining incoherence points to **(a)** CPU-prefill K/V vs GPU-decode Q manifold split, **(b)** GPU elementwise / `base_save` residual routing (P2), or **(c)** partial layer fusion without full prefill GPU parity. MC8 Part 3 should run **CPU vs GPU L0 diff on decode step 1 only** (after prefill settles) before widening scope.
+
+**Build trap (discovered Part 2):** wasm-pack **without** `-zstack-size=8388608` causes immediate `memory access out of bounds` at inference start (1 ms trap). Always build via `scripts/package-qualia-wasm.ps1` or explicit `RUSTFLAGS` in §BUILD/DEPLOY/TEST. Rebuilt binaries without 8 MB stack are **not** comparable to committed artifacts.
+
+**Part 3 (🟡 active — manifold unification + depth blow-up)**
+
+#### Architect answers (§8 feedback — 2026-06-18)
+
+| Q | Decision |
+|---|----------|
+| **A** Prefill split | **Mandate full GPU prefill** — no CPU/GPU KV boundary |
+| **B** L0 gate | **Decode step 1 only** (not step 0 prefill/decode boundary) |
+| **C** Priority | **GPU prefill K/V first**, then elementwise audit |
+| **D** Argmax fuse | **Gated** — keep sync `dispatch_output_argmax_chunked` |
+
+#### Part 3 results (naked SmolLM2-360M, `inferWasmAsync`)
+
+| Checkpoint | `h[0]` | Status |
+|------------|--------|--------|
+| GPU prefill | `[MC8] GPU prefill OK layers=32 n_tokens=4` | ✅ |
+| L0 @ layer 0 (step 1) | **1.011** | ✅ (~7% from ~1.09 target) |
+| L0 @ layer 31 (step 1, post-full forward) | **271.7** | ❌ **depth blow-up** |
+| TTFT | **7942 ms** | ✅ (↓ from ~9s pt2) |
+| Output | `pries underm` repetition | ❌ |
+
+**Diagnosis:** Manifold unification fixed the step-1 layer-0 variance gate. Incoherence is now a **depth accumulation fault** — layers 1–31 amplify hidden state (~1.01 → ~272). Suspects: per-layer GPU attention over unified KV, `wasm_elementwise.wgsl` residual routing, or missing `mc8_flush` between GEMM/elem at depth > 0.
+
+#### Part 3b (next — depth bisect)
+
+1. **Layer bisect:** log `h[0]` + L1 norm after layers 4, 8, 16, 31 @ decode step 1; compare CPU `dispatch_transformer_forward` on same embedding.
+2. **Elementwise audit (P2):** verify `add_residual_main` adds **FFN down-projection** (`work_buf`) to `base_save`, not SiLU output; confirm `mc8_flush` before every elem read of GEMM output.
+3. **Argmax:** remain sync until post-L31 `h[0]` stable.
 
 **Implementation notes (MC2 session):**
 - `cpu_attention_pass` uses raw-pointer KV mutation (sound on single-threaded wasm).
 - `att_scores` stack buffer (`[f32; MAX_CONTEXT_WINDOW]`) scoped to proj_kind=0 only (keeps K/V stack lean).
-- `rope_inplace` uses **NEOX split-half** (architect MC2b directive); WGSL shader divergence documented for Option B.
+- `rope_inplace` and `fused_attention.wgsl::apply_rope_neox` both use **NEOX split-half** + dynamic `rope_theta_base`/`rope_scale` (MC8 pt2).
 - `initialize_webgpu_engine` must call **`adopt_resident_mmap`** (F5) — do not set `gguf_mmap` alone.
 
 1. **Short-circuit GEMM to CPU on wasm:** in `dispatch_gemm_raw_into` /`dispatch_gemm_into`,
@@ -256,7 +309,9 @@ weights re-encoded as Quins. Confirm the intended `.q42` weight representation b
 | attention | `dispatch_attention_layer` `:1617` → `dispatch_attention_pass` `:1460` (**no CPU fallback**) |
 | GEMM + CPU fallback | `dispatch_gemm_into` `:1308`, readback `~:1284`, `stack_gemm_quant` `:294` |
 | argmax | `dispatch_output_argmax_chunked` `:1331` |
-| async variants | `dispatch_gemm_into_async` `:2371`, `dispatch_prefill_chunk_async` `:2672`, `dispatch_output_argmax_chunked_async` `:2881` |
+| async variants | `dispatch_gemm_into_async`, `dispatch_transformer_forward_async`, `dispatch_prefill_chunk_async`, `dispatch_output_argmax_chunked_async` |
+| MC8 fused layer | `encode_transformer_layer_gpu`, `encode_attn_ffn_tail_gpu`, `wasm_elementwise.wgsl` |
+| MC8 RoPE (WGSL) | `fused_attention.wgsl::apply_rope_neox`; `AttentionGpuParams.rope_theta_base` + `rope_scale` |
 | constants | `MAX_STACK_GEMM_DIM=10240` `:188`; `PREFILL_CHUNK_STACK_FLOATS=2560*64` `:196`; `MAX_PREFILL_BATCH_FLOATS=10240*64` `:194` |
 | KV cache | struct fields `gguf_bridge.rs:354-358` (`kv_layout`, `kv_cache_gpu`, `kv_cache_cpu: Box<[f32]>`) |
 
@@ -306,6 +361,23 @@ sed -i 's/qualia_core_db_bg\.wasm/qualia_bg.wasm/g' $DOCS/qualia.js
 ---
 
 ## 📓 7. PROGRESS LOG (newest first — keep this updated every step)
+
+- **2026-06-18 (w)** — **MC8 Part 3: GPU prefill manifold unification + L0 step-1 lock.**
+  - Wired `dispatch_prefill_chunk_async` → `dispatch_prefill_chunk_async_mc8_gpu` (CPU fallback blocked).
+  - L0 probe gated to **decode step 1 only** (`dispatch_transformer_forward_async(..., l0_probe_step1)`).
+  - **Harness (naked Q4_K_M):** GPU prefill OK; L0@L0 step1 `h[0]=**1.011**` (target ~1.09); L0@L31 `h[0]=**271.7**`; TTFT **7942 ms**; output still garbled.
+  - **Finding:** layer-0 variance gate met; depth accumulation (layers 1–31) is the remaining fault.
+  **Next:** Part 3b — layer bisect + elementwise residual audit.
+
+- **2026-06-18 (v)** — **MC8 Part 2 LANDED: NEOX RoPE WGSL alignment + fused decode path.**
+  - **`AttentionGpuParams`:** added `rope_scale`; `rope_theta_base` ← `effective_rope_freq_base()` (100k).
+  - **`fused_attention.wgsl`:** `apply_rope_neox` split-half `(i, i+half_dim)`; removed consecutive-pair `rotate_rope_pair`.
+  - **Hot path:** `dispatch_transformer_forward_async` → `encode_transformer_layer_gpu` (upload, per-layer encode, `mc8_flush`, readback).
+  - **L0 probe:** decode step 1 `h[0]=0.930` (target ~1.09); step 0 miss; steps 2+ drift to 2–3.
+  - **Harness:** TTFT **8961 ms** (↓ from ~11s MC7); zero WebGPU errors; output **garbled** (`KeyNotKeyNot…`) vs MC7 `Paris is the capital of France`.
+  - **Build trap:** wasm without `-zstack-size=8388608` → instant OOB; use `package-qualia-wasm.ps1` or §BUILD `RUSTFLAGS`.
+  - Commits: pt1 `60ba2451`, pt2 `4f506932` on `0.0.18`.
+  **Next:** MC8 Part 3 — L0 CPU/GPU parity @ decode step 1; GPU prefill K/V; elementwise audit.
 
 - **2026-06-18 (u)** — **MC4 CLOSED: CPU stent checkpoint + Phase 2B async plumbing.**
   - Trimmed MC2/MC3 diagnostic `wlog` (`[prefill_layer] ENTER`, `[MC3f]` IDs, `[MC3e]` argmax,
@@ -569,41 +641,47 @@ Universe / Track B3, `WASM_LLM_INFERENCE_DIAGNOSIS.md`):
 | **Stability** | Init hang / init OOB / wasm-opt / stack | STATUS table | ✅ Done — do not redo |
 | **Correctness** | CPU attention stent (Option A) | Phase 2A MC1–MC2 | 🟡 MC1 ✅, MC2 code ✅, **validation blocked on prefill** |
 | **Correctness** | WASM init → KV + GEMM arenas | F5 | 🟡 Fix landed; prefill still fails (F6) |
-| **Correctness** | Coherent browser tokens | Phase 2A success gate | ⬜ Not met (`"firehose"`) |
-| **Performance** | Async GPU decode (Option B) | Phase 2B | ⬜ Not started — required for real demo (§6 Q3) |
+| **Correctness** | Coherent browser tokens | Phase 2A success gate | 🟡 MC7 coherent on CPU elem; MC8 fused garbled |
+| **Performance** | Async GPU decode (Option B) | Phase 2B MC5–MC8 | 🟡 Fused decode ~9s TTFT; target ~4s |
+| **Correctness** | WGSL RoPE ↔ CPU NEOX | MC8 pt2 | ✅ Closed |
+| **Correctness** | GPU prefill manifold unified | MC8 pt3 | ✅ CPU fallback blocked |
+| **Correctness** | L0 post-FFN GPU @ L0 (step 1) | MC8 pt3 | ✅ `h[0]=1.011` |
+| **Correctness** | L0 post-FFN GPU @ L31 (step 1) | MC8 pt3b | ❌ `h[0]=271.7` blow-up |
 | **UX** | OPFS model cache | Phase 3 | ⬜ Parallel track, independent |
 | **Architecture** | GGUF → `.q42` AOT | Phase 4 | ⬜ Horizon |
 
-**Single blocker for broader "WASM LLM works" claim:** prefill must populate `kv_cache_cpu`
-across all layers before decode. **Q5_0 `UnsupportedType` was the layer-0 prefill killer**
-(entry k); after fix, expect `[prefill_layer] K/V passes OK` × 32 layers. Coherence gate still
-requires `[MC2] SDPA L1` non-zero + TTFT **seconds** (not <600 ms).
+**Single blocker for broader "WASM LLM works" claim (updated MC8 pt2):** fused GPU decode
+runs without WebGPU errors and beats MC7 TTFT, but **output coherence regressed** vs MC7
+(`Paris is the capital of France` → garbled repetition). Advisors should prioritize:
+**(1)** CPU/GPU L0 parity on decode step 1, **(2)** CPU-prefill vs GPU-decode KV/RoPE split,
+**(3)** elementwise residual routing before argmax fusion.
 
-**Branch:** `wasm-llm-inference-fixes` (per entry d). Uncommitted MC2 work in
-`gguf_bridge.rs`, `llm_agent.rs`, `docs/pkg/qualia/*`, `agent-tools/wasm-mc2-test.mjs`.
+**Branch:** `0.0.18` (ahead of origin). MC8 pt1 `60ba2451`, MC8 pt2 `4f506932`.
 
 ---
 
 ## ▶️ 8. RESUME HERE (if context/tokens are lost — start at this section)
 
-1. Read **§0** (directives), **§0b** (F1–F6), **§6** (decisions), **§RECONCILIATION**.
-2. **Current task = Phase 2B MC7 (WGSL Q5_0/Q8_0 + full GPU offload):**
-   - MC6 closed: `inferWasmAsync` wired; async loop yields on `map_async`.
-   - SmolLM2 still uses CPU fallback for Q5_0/Q8_0 attn+GEMM (shader gap).
-   - Next: extend `fused_attention.wgsl` / `fused_transformer.wgsl` for Q5_0/Q8_0 → ms TTFT.
-3. **MC2b–MC3d (closed):** see §7 entries (l)–(p).
-4. **MC2b reference (closed):**
-   - **Done:** NEOX RoPE; `adopt_resident_mmap`; KV ledger bypass; **Q5_0 dequant** (type 6).
-   - Rebuild/deploy (§BUILD/DEPLOY/TEST; wasm-opt **off**) — artifacts in `docs/pkg/qualia/`.
-   - Run harness (browser or `agent-tools/wasm-mc2-test.mjs`); allow **minutes** for CPU SDPA.
-   - **Console** must show: `[kv_cache] OK` → `[prefill_layer] K/V passes OK` (not
-     `UnsupportedType`) → `layer=31 COMPLETE` → `[MC2] SDPA L1` → `first token @ N ms`.
-   - **Pass criteria:** output ≠ `"firehose"`; TTFT **seconds**; coherent capital-of-France.
-   - If still failing: read first `[prefill_layer] FAILED …` / `[attn_pass] GUARD …` line.
-   - **Tip:** 2048-token decode budget on CPU SDPA is very slow; consider trimming
-     `MAX_OUTPUT_TOKENS` temporarily for harness iteration only.
-5. **Then MC4 → commit** MC2+MC3b checkpoint on `wasm-llm-inference-fixes`; trim `wlog` noise.
-6. **Phase 2B (Option B):** async `dispatch_transformer_forward` + GPU attention — mandated
-   for production demo perf (§6 Q3). WGSL RoPE vs NEOX + `rope_theta` from GGUF deferred here.
+1. Read **§0** (directives), **§0b** (F1–F6), **§6** (decisions), **§RECONCILIATION**, **MC8 §Part 2/3**.
+2. **Current task = Phase 2B MC8 Part 3b (depth blow-up after L0 lock):**
+   - **Done (pt3):** GPU prefill manifold unified; L0@L0 step1 = **1.011** (gate met).
+   - **Open:** L0@L31 step1 = **271.7**; output still garbled despite layer-0 parity.
+   - **Next:** layer bisect (4/8/16/31); CPU vs GPU per-layer diff; elementwise residual audit.
+3. **Build rule:** must use 8 MB stack `RUSTFLAGS` (§BUILD/DEPLOY/TEST) — omitting → instant OOB trap.
+4. **Harness:** `agent-tools/wasm-mc2-test.mjs` with `WASM_ASYNC=1`, `WASM_NAKED_PROMPT=1`,
+   `WASM_MODEL=models/SmolLM2-360M-Instruct-Q4_K_M.gguf`.
+5. **Pass criteria (Part 3b):** post-L31 `h[0]` within 5% of CPU (~1.09 band); then naked ` Paris.`; TTFT trending toward ~4s.
+6. **Regression reference:** MC7 (`3d39868c`) = coherent output, ~11s TTFT, CPU elementwise + GPU attention.
 7. Phase 3 (OPFS) can run in parallel.
 8. Keep **§7 Progress Log** updated as you go.
+
+### Advisor feedback (MC8 pt2 → pt3) — **ANSWERED**
+
+| # | Question | Architect decision | Part 3 outcome |
+|---|----------|-------------------|----------------|
+| A | CPU prefill + GPU decode split? | **Mandate full GPU prefill** | ✅ `dispatch_prefill_chunk_async_mc8_gpu` wired; CPU fallback blocked |
+| B | L0 gate on decode step 1? | **Yes — step 1 only** | ✅ `h[0]=1.011` @ L0; step 0 not probed |
+| C | Elementwise vs prefill first? | **Prefill GPU K/V first** | ✅ done; elementwise audit deferred to pt3b (depth blow-up) |
+| D | Argmax fusion? | **Gated** | ✅ sync argmax retained |
+
+**New advisor question (pt3b):** L0 locks at layer 0 but `h[0]` explodes to ~272 by layer 31. Should bisect prioritize **attention KV read path** or **FFN elementwise chain** first?
