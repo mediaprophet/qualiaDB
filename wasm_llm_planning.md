@@ -149,7 +149,7 @@ are permanent. Diagnostic `wlog` scaffolding remains until Phase 2A validates co
 | **MC5** | `dispatch_attention_pass_async` + `dispatch_transformer_forward_async` plumbing | ✅ Closed — wired via `inferWasmAsync` (`wasm_llm.rs`) |
 | **MC6** | `inferWasmAsync` + JS `Promise` bridge; `_async` dispatch loop | ✅ Closed — naked ` Paris.` TTFT ~9s (vs ~47s CPU) |
 | **MC7** | WGSL `Q5_0`/`Q8_0` dequant; gate removal; full GPU offload | ✅ Closed — `Paris is the capital of France`; TTFT ~11s |
-| **MC8** | Pipeline fusing — single `CommandEncoder`, per-layer `mc8_flush`, one readback/forward | 🟡 Part 3f — L0 attn ✅; post-FFN 0.423; L31=20.87 |
+| **MC8** | Pipeline fusing — single `CommandEncoder`, per-layer `mc8_flush`, one readback/forward | 🟡 Part 3g — FFN chain; L0 post-FFN 0.423; L31=20.87 |
 
 #### MC8 — split delivery
 
@@ -212,7 +212,7 @@ Probe read `h[0]` after layer-0 post-FFN via `pipeline_read_hidden`. Target from
 
 **Build trap (discovered Part 2):** wasm-pack **without** `-zstack-size=8388608` causes immediate `memory access out of bounds` at inference start (1 ms trap). Always build via `scripts/package-qualia-wasm.ps1` or explicit `RUSTFLAGS` in §BUILD/DEPLOY/TEST. Rebuilt binaries without 8 MB stack are **not** comparable to committed artifacts.
 
-**Part 3–3e (✅ L0 attention parity locked; 🟡 L0 post-FFN gap + L31 ~20.87)**
+**Part 3–3f (✅ L0 attn+o_proj+residual+ffn_norm locked; 🟡 FFN chain gap + L31 ~20.87)**
 
 **Current harness snapshot (naked SmolLM2-360M Q4_K_M, `inferWasmAsync`, decode step 1):**
 
@@ -345,11 +345,30 @@ TTFT 8212 ms. Output shifted from `pries underm` repetition → partial English 
 
 **Harness verify (pt3e, same build):** L0=0.423, L1=0.098, L31=20.87, TTFT ~7.6s, partial English output — depth bisect unchanged (attention was already correct; post-attn path still leaks variance).
 
-#### Part 3f (next — L0 post-attn diff + remaining L31 gap)
+#### Part 3f — L0 mid-layer diff: o_proj + attn-residual + ffn_norm (2026-06-19)
 
-**Open:** post-L31 `h[0]=20.87` vs CPU ~1.09 (~19×); L0 post-FFN `h[0]=0.423` vs ~1.09 despite perfect Attn_Out.
+**Architect answer (pt3f):** **`o_proj` + attn-residual first** — never audit FFN until attention block cleared.
 
-**Ruled out (pt3b–3e):**
+**Probe (`mc8_log_l0_midlayer_diff`):** decode step 1, layer 0, three phases hooked into `encode_attn_ffn_tail_gpu`.
+
+| Phase | CPU `h[0]` | GPU `h[0]` | max_abs_err | Verdict |
+|-------|------------|------------|-------------|---------|
+| `pristine_hidden_pre_residual` | 0.005753 | 0.005753 | 0.000000 | ✅ raw embedding intact (not normalized residual) |
+| `o_proj` | -0.102919 | -0.102919 | 0.000001 | ✅ bit-exact |
+| `post_attn_residual` | -0.097166 | -0.097166 | 0.000001 | ✅ `hidden + o_proj` correct |
+| `ffn_norm` | -0.057536 | -0.057536 | 0.000000 | ✅ `ffn_norm.weight` routing correct (not `attn_norm`) |
+
+**`first_divergence(0.01)=none`** for all three phases.
+
+**Interpretation:** The **0.423 vs ~1.09** depth-bisect gap is **not** in o_proj, pristine-residual routing, or ffn_norm. Variance collapse happens **after `ffn_norm`**, inside the **gate/up/SiLU/down chain** or the **FFN residual add** (`base_save + down → token_hidden`). Depth bisect L0 `h[0]=0.423` unchanged; L1 `h[0]=0.098` ≈ magnitude of post-attn residual (sign differs — layer-1 geometry).
+
+**Harness verify (pt3f):** L0=0.423, L1=0.098, L31=20.87, TTFT ~8s — geometry unchanged; fault localized to FFN tail.
+
+#### Part 3g (next — FFN gate/up/SiLU/down chain diff + remaining L31 gap)
+
+**Open:** post-L31 `h[0]=20.87` vs CPU ~1.09 (~19×); L0 post-FFN `h[0]=0.423` vs ~1.09 despite perfect path through `ffn_norm`.
+
+**Ruled out (pt3b–3f):**
 - FFN `add_residual_main` routing as *dominant L31 amplifier* — pt3b ruled dominant leak; pt3c K/V race was L31 fix
 - KV layer stride / uniform `layer_idx` — structurally correct
 - Batched K/V flat-RoPE — already per `wg_id`
@@ -358,13 +377,17 @@ TTFT 8212 ms. Output shifted from `pries underm` repetition → partial English 
 - **L0 causal mask / softmax flattening** — pt3e Attn_Out bit-exact
 - **L0 `attn_norm` weight swap** — pt3e RMSNorm bit-exact
 - **L0 K write / RoPE failure** — pt3e K_rope bit-exact (after COPY_SRC fix)
+- **L0 o_proj GEMM** — pt3f bit-exact
+- **L0 pristine-residual trap** — pt3f `pristine_hidden` bit-exact; not normalized residual
+- **L0 post-attn residual** — pt3f bit-exact
+- **L0 `ffn_norm` weight swap** — pt3f bit-exact
 
 **Confirmed root cause (pt3c):** `gemm_weight_buf` queue race — K dispatch ran with V weights
 without `mc8_flush` between passes. Fix dropped L31 **271→21**.
 
 **Next actions:**
-1. **L0 post-attn diff @ decode step 1** — `o_proj` output, post-attn residual, `ffn_norm`, gate/up/SiLU/down, post-FFN residual vs CPU.
-2. Re-audit `encode_attn_ffn_tail_gpu` weight-buffer sequencing (o_proj shares `gemm_weight_buf` with gate/up).
+1. **FFN chain diff @ L0 step 1** — gate, up, SiLU×up, down, post-FFN residual vs CPU (suspect `gemm_weight_buf` race gate→up again).
+2. Verify `base_save` snapshot timing vs FFN residual (`encode_residual_add_gpu` scratch routing).
 3. Pass gate: post-L31 `h[0]` within 5% of ~1.09 → naked ` Paris.`; argmax fusion stays gated.
 
 **Implementation notes (MC2 session):**
@@ -493,6 +516,12 @@ sed -i 's/qualia_core_db_bg\.wasm/qualia_bg.wasm/g' $DOCS/qualia.js
 ---
 
 ## 📓 7. PROGRESS LOG (newest first — keep this updated every step)
+
+- **2026-06-19 (ab)** — **MC8 Part 3f: L0 mid-layer diff (o_proj + attn-residual + ffn_norm).**
+  Architect I: o_proj+residual before FFN. Probes @ decode step 1 L0: pristine_hidden,
+  o_proj, post_attn_residual, ffn_norm all **bit-exact**. `first_divergence=none` for all three
+  phases. L0 post-FFN `h[0]=0.423` unchanged — fault is **gate/up/SiLU/down or FFN residual**
+  after `ffn_norm`.
 
 - **2026-06-19 (aa)** — **MC8 Part 3e: L0 Q/K/Attn_Out targeted diff.**
   Architect H: L0 not L1. Probe @ decode step 1 layer 0: attn_rmsnorm/K_rope/Attn_Out
@@ -808,11 +837,10 @@ Universe / Track B3, `WASM_LLM_INFERENCE_DIAGNOSIS.md`):
 | **UX** | OPFS model cache | Phase 3 | ⬜ Parallel track, independent |
 | **Architecture** | GGUF → `.q42` AOT | Phase 4 | ⬜ Horizon |
 
-**Single blocker for broader "WASM LLM works" claim (updated MC8 pt3e):** GPU manifold is
-unified (prefill + decode on WebGPU), K/V weight race fixed (L31 ↓13×), **L0 attention
-(Q/K/SDPA) bit-exact vs CPU** — but **L0 post-FFN `h[0]=0.423` vs ~1.09** and **post-L31
-~20.87** remain. Next: **L0 post-attn / o_proj / FFN diff** to localize variance collapse
-after SDPA.
+**Single blocker for broader "WASM LLM works" claim (updated MC8 pt3f):** GPU manifold is
+unified, K/V race fixed (L31 ↓13×), **L0 through `ffn_norm` bit-exact** — but **L0 post-FFN
+`h[0]=0.423` vs ~1.09** and **post-L31 ~20.87** remain. Next: **FFN gate/up/SiLU/down chain
+diff** (variance collapse is after `ffn_norm`).
 
 **Branch:** `0.0.18` (ahead of origin).
 
@@ -822,14 +850,15 @@ after SDPA.
 
 ## ▶️ 8. RESUME HERE (if context/tokens are lost — start at this section)
 
-1. Read **§0** (directives), **§0b** (F1–F6), **§RECONCILIATION**, **MC8 Part 3–3e snapshot**.
-2. **Current task = Phase 2B MC8 Part 3f (L0 post-attn / FFN diff):**
+1. Read **§0** (directives), **§0b** (F1–F6), **§RECONCILIATION**, **MC8 Part 3–3f snapshot**.
+2. **Current task = Phase 2B MC8 Part 3g (FFN chain diff):**
    - **Done (pt3):** GPU prefill sole path; false L0 lock @ 1.011.
    - **Done (pt3b):** FFN residual audit; L1 jump bisect (1.01→-1.66).
    - **Done (pt3c):** KV indexing ✅; **K/V weight-buffer race** fixed; L31 **271→21**.
    - **Done (pt3d):** batched prefill RoPE/RMSNorm ✅; `attn_input` handoff; harness stable @ L31=20.87.
    - **Done (pt3e):** L0 Q/K/Attn_Out diff ✅ all match; KV `COPY_SRC` probe fix; causal mask ruled out.
-   - **Next:** o_proj + residual + FFN tensor diff @ L0 step 1; close L31 gap to ~1.09; coherence gate ` Paris.`
+   - **Done (pt3f):** o_proj + post-attn residual + ffn_norm ✅ all match; pristine residual trap ruled out.
+   - **Next:** FFN gate/up/SiLU/down + post-FFN residual diff @ L0 step 1; close L31 gap; coherence gate ` Paris.`
 3. **Build rule:** `scripts/package-qualia-wasm.ps1` or §BUILD `RUSTFLAGS` (8 MB stack) — mandatory.
 4. **Harness:** `agent-tools/wasm-mc2-test.mjs` — `WASM_ASYNC=1`, `WASM_NAKED_PROMPT=1`,
    `WASM_MODEL=models/SmolLM2-360M-Instruct-Q4_K_M.gguf`.
@@ -871,4 +900,10 @@ after SDPA.
 |---|----------|-------------------|-----------------|
 | H | Q/K diff @ L1 vs prefill causal audit? | **L0 Q/K/V/SDPA diff first** — divergence starts at L0 (0.423), not L1 | attn_rmsnorm/K/Attn_Out **bit-exact**; mask OK; gap is **post-SDPA** (o_proj/FFN) |
 
-**New advisor question (pt3f):** With L0 attention locked but post-FFN `h[0]=0.423`, should Part 3f prioritize **`o_proj` + attn-residual diff** or **`ffn_norm`/gate/up/down chain diff** first?
+### Advisor feedback (MC8 pt3f) — **ANSWERED**
+
+| # | Question | Architect decision | Part 3f outcome |
+|---|----------|-------------------|-----------------|
+| I | `o_proj`+residual vs FFN chain first? | **`o_proj` + attn-residual first** | o_proj, pristine residual, post-attn residual, ffn_norm **all bit-exact**; gap is **after ffn_norm** |
+
+**New advisor question (pt3g):** With FFN input (`ffn_norm`) locked, should Part 3g prioritize **gate/up `gemm_weight_buf` flush audit** or **SiLU×up / down / FFN-residual diff** first?

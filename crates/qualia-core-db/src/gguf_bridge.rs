@@ -849,6 +849,121 @@ fn probe_log_diff(phase: &str, cpu: &[f32], gpu: &[f32], n: usize) {
     ));
 }
 
+#[cfg(target_arch = "wasm32")]
+fn probe_log_mid_diff(phase: &str, cpu: &[f32], gpu: &[f32], n: usize) {
+    let n = n.min(8).min(cpu.len()).min(gpu.len());
+    if n == 0 {
+        return;
+    }
+    let err = probe_max_abs_diff(cpu, gpu, n);
+    wlog(&format!(
+        "[MC8 L0 mid] {phase}: cpu[0]={:.6} gpu[0]={:.6} max_abs_err={:.6}",
+        cpu[0], gpu[0], err
+    ));
+}
+
+/// MC8 pt3f: CPU SDPA @ L0 → full `q_dim` Attn_Out (async KV readback).
+#[cfg(target_arch = "wasm32")]
+async fn mc8_cpu_l0_attn_out(
+    engine: &QTensorEngine,
+    index: &crate::gguf_sharder::GgufTensorIndex,
+    mmap: &[u8],
+    layout: &KvCacheLayout,
+    hidden_cpu: &[f32],
+    n_embd: usize,
+    token_idx: u32,
+    out: &mut [f32],
+) -> Option<usize> {
+    let h = &index.hyperparams;
+    let tensors = index.get_layer_tensors(0);
+    let head_dim = h.head_dim() as usize;
+    let n_head = h.n_head as usize;
+    let q_heads_per_kv = h.q_heads_per_kv() as usize;
+    if head_dim == 0 || n_head == 0 || q_heads_per_kv == 0 {
+        return None;
+    }
+    let q_dim = n_head * head_dim;
+    if q_dim > out.len() {
+        return None;
+    }
+    let mut norm_w = [0f32; MAX_HIDDEN_DIM];
+    let mut norm_cpu = [0f32; MAX_HIDDEN_DIM];
+    let mut proj = [0f32; MAX_STACK_GEMM_OUT];
+    let normed = prepare_pre_norm_input(
+        &hidden_cpu[..n_embd],
+        n_embd,
+        tensors.attn_norm.as_ref(),
+        Some(mmap),
+        index.tensor_data_start,
+        &mut norm_cpu,
+        &mut norm_w,
+    );
+    let q_info = tensors.attn_q.as_ref()?;
+    let q_raw = crate::ggml_quants::fetch_tensor_bytes(mmap, index.tensor_data_start, q_info).ok()?;
+    let (q_in, q_out) = QTensorEngine::matmul_dims(q_info);
+    if q_out != q_dim || !stack_gemm_quant(q_raw, q_info, normed, &mut proj[..q_out], q_in, q_out) {
+        return None;
+    }
+    rope_inplace(
+        &mut proj[..q_out],
+        n_head,
+        head_dim,
+        token_idx,
+        h.effective_rope_freq_base(),
+        h.effective_rope_scale(),
+    );
+    let scale = 1.0f32 / (head_dim as f32).sqrt();
+    let mut k_slot = [0f32; 128];
+    let mut v_slot = [0f32; 128];
+    if head_dim > k_slot.len() {
+        return None;
+    }
+    for qh in 0..n_head {
+        let kv_h = qh / q_heads_per_kv;
+        let q_off = qh * head_dim;
+        let mut att_scores = [0f32; MAX_CONTEXT_WINDOW as usize];
+        let mut max_score = f32::NEG_INFINITY;
+        for past_pos in 0..=token_idx {
+            let past_slot = layout.ring_slot(past_pos);
+            if !engine
+                .pipeline_read_kv_head(layout, 0, past_slot, kv_h as u32, head_dim, true, &mut k_slot)
+                .await
+            {
+                return None;
+            }
+            let mut dot = 0.0f32;
+            for d in 0..head_dim {
+                dot += proj[q_off + d] * k_slot[d];
+            }
+            let score = dot * scale;
+            att_scores[past_pos as usize] = score;
+            max_score = max_score.max(score);
+        }
+        let mut sum_exp = 0.0f32;
+        for past_pos in 0..=token_idx {
+            let exp_val = (att_scores[past_pos as usize] - max_score).exp();
+            att_scores[past_pos as usize] = exp_val;
+            sum_exp += exp_val;
+        }
+        if sum_exp > 0.0 {
+            for past_pos in 0..=token_idx {
+                let prob = att_scores[past_pos as usize] / sum_exp;
+                let past_slot = layout.ring_slot(past_pos);
+                if !engine
+                    .pipeline_read_kv_head(layout, 0, past_slot, kv_h as u32, head_dim, false, &mut v_slot)
+                    .await
+                {
+                    return None;
+                }
+                for d in 0..head_dim {
+                    out[q_off + d] += v_slot[d] * prob;
+                }
+            }
+        }
+    }
+    Some(q_dim)
+}
+
 // --- PHASE 1 WASM OOB DIAGNOSTIC INSTRUMENTATION (remove once the trap is fixed) ---
 #[cfg(target_arch = "wasm32")]
 #[inline]
@@ -3807,6 +3922,204 @@ impl QTensorEngine {
         let _ = q_heads_per_kv;
     }
 
+    /// MC8 pt3f: o_proj / post-attn residual / ffn_norm CPU vs GPU @ L0 decode.
+    #[cfg(target_arch = "wasm32")]
+    async fn mc8_log_l0_midlayer_diff(
+        &self,
+        index: &crate::gguf_sharder::GgufTensorIndex,
+        hidden_cpu: &[f32],
+        emb_dim: usize,
+        token_idx: u32,
+        phase: u8, // 0=o_proj 1=post_attn_residual 2=ffn_norm
+        token_hidden: &wgpu::Buffer,
+        work_buf: &wgpu::Buffer,
+        aux_buf: &wgpu::Buffer,
+    ) {
+        let layout = match self.kv_layout.as_ref() {
+            Some(l) => l,
+            None => return,
+        };
+        let mmap = match self.gguf_mmap.as_deref() {
+            Some(m) => m,
+            None => return,
+        };
+        let h = &index.hyperparams;
+        let n_embd = h.n_embd as usize;
+        if emb_dim < n_embd || hidden_cpu.len() < n_embd {
+            return;
+        }
+        let tensors = index.get_layer_tensors(0);
+        let mut attn_out = [0f32; MAX_HIDDEN_DIM];
+        let q_dim = match mc8_cpu_l0_attn_out(
+            self,
+            index,
+            mmap,
+            layout,
+            hidden_cpu,
+            n_embd,
+            token_idx,
+            &mut attn_out,
+        )
+        .await
+        {
+            Some(d) => d,
+            None => {
+                wlog("[MC8 L0 mid] CPU attn_out build FAILED");
+                return;
+            }
+        };
+        let out_info = match tensors.attn_output.as_ref() {
+            Some(i) => i,
+            None => return,
+        };
+        let o_raw = match crate::ggml_quants::fetch_tensor_bytes(mmap, index.tensor_data_start, out_info) {
+            Ok(s) => s,
+            Err(_) => return,
+        };
+        let (o_in, o_out) = Self::matmul_dims(out_info);
+        if o_in > q_dim || o_out < n_embd {
+            return;
+        }
+        let mut o_proj_cpu = [0f32; MAX_HIDDEN_DIM];
+        if !stack_gemm_quant(
+            o_raw,
+            out_info,
+            &attn_out[..q_dim],
+            &mut o_proj_cpu[..n_embd],
+            o_in,
+            n_embd,
+        ) {
+            wlog("[MC8 L0 mid] CPU o_proj FAILED");
+            return;
+        }
+        let mut post_attn_cpu = [0f32; MAX_HIDDEN_DIM];
+        for i in 0..n_embd {
+            post_attn_cpu[i] = hidden_cpu[i] + o_proj_cpu[i];
+        }
+        let mut ffn_norm_w = [0f32; MAX_HIDDEN_DIM];
+        let mut ffn_norm_cpu = [0f32; MAX_HIDDEN_DIM];
+        let ffn_normed = prepare_pre_norm_input(
+            &post_attn_cpu[..n_embd],
+            n_embd,
+            tensors.ffn_norm.as_ref(),
+            Some(mmap),
+            index.tensor_data_start,
+            &mut ffn_norm_cpu,
+            &mut ffn_norm_w,
+        );
+
+        let n_probe = n_embd.min(8);
+        let mut gpu_scratch = [0f32; MAX_HIDDEN_DIM];
+
+        if phase == 0 {
+            wlog("[MC8 L0 mid] phase=o_proj (pre-attn-residual)");
+            let mut pristine_err = f32::MAX;
+            let mut o_err = f32::MAX;
+            let mut pristine_gpu = [0f32; MAX_HIDDEN_DIM];
+            if self
+                .pipeline_read_gpu_bytes_at(
+                    token_hidden,
+                    0,
+                    bytemuck::cast_slice_mut(&mut pristine_gpu[..n_embd]),
+                )
+                .await
+            {
+                probe_log_mid_diff(
+                    "pristine_hidden_pre_residual",
+                    &hidden_cpu[..n_embd],
+                    &pristine_gpu[..n_embd],
+                    n_probe,
+                );
+                pristine_err =
+                    probe_max_abs_diff(&hidden_cpu[..n_embd], &pristine_gpu[..n_embd], n_embd);
+            }
+            if self
+                .pipeline_read_gpu_bytes_at(
+                    work_buf,
+                    0,
+                    bytemuck::cast_slice_mut(&mut gpu_scratch[..n_embd]),
+                )
+                .await
+            {
+                probe_log_mid_diff("o_proj", &o_proj_cpu[..n_embd], &gpu_scratch[..n_embd], n_probe);
+                o_err = probe_max_abs_diff(&o_proj_cpu[..n_embd], &gpu_scratch[..n_embd], n_embd);
+            } else {
+                wlog("[MC8 L0 mid] o_proj: work_buf readback FAILED");
+            }
+            let mut first = "none";
+            if pristine_err <= 0.01 && o_err <= 0.01 {
+                first = "none";
+            } else if pristine_err > 0.01 {
+                first = "pristine_hidden";
+            } else if o_err > 0.01 {
+                first = "o_proj";
+            }
+            wlog(&format!(
+                "[MC8 L0 mid] err_budget pristine={pristine_err:.6} o_proj={o_err:.6}"
+            ));
+            wlog(&format!("[MC8 L0 mid] first_divergence(0.01)={first}"));
+        } else if phase == 1 {
+            wlog("[MC8 L0 mid] phase=post_attn_residual");
+            if self
+                .pipeline_read_gpu_bytes_at(
+                    token_hidden,
+                    0,
+                    bytemuck::cast_slice_mut(&mut gpu_scratch[..n_embd]),
+                )
+                .await
+            {
+                probe_log_mid_diff(
+                    "post_attn_residual",
+                    &post_attn_cpu[..n_embd],
+                    &gpu_scratch[..n_embd],
+                    n_probe,
+                );
+                let residual_err = probe_max_abs_diff(
+                    &post_attn_cpu[..n_embd],
+                    &gpu_scratch[..n_embd],
+                    n_embd,
+                );
+                let mut first = "none";
+                if residual_err > 0.01 {
+                    first = "post_attn_residual";
+                }
+                wlog(&format!(
+                    "[MC8 L0 mid] post_attn h[0] cpu={:.6} gpu={:.6}",
+                    post_attn_cpu[0], gpu_scratch[0]
+                ));
+                wlog(&format!(
+                    "[MC8 L0 mid] err_budget post_attn_residual={residual_err:.6}"
+                ));
+                wlog(&format!("[MC8 L0 mid] first_divergence(0.01)={first}"));
+            } else {
+                wlog("[MC8 L0 mid] post_attn_residual: token_hidden readback FAILED");
+            }
+        } else if phase == 2 {
+            wlog(&format!(
+                "[MC8 L0 mid] phase=ffn_norm ffn_norm.weight[0]={:.6}",
+                ffn_norm_w[0]
+            ));
+            if self
+                .pipeline_read_gpu_bytes_at(
+                    aux_buf,
+                    0,
+                    bytemuck::cast_slice_mut(&mut gpu_scratch[..n_embd]),
+                )
+                .await
+            {
+                probe_log_mid_diff("ffn_norm", ffn_normed, &gpu_scratch[..n_embd], n_probe);
+                let mut first = "none";
+                if probe_max_abs_diff(ffn_normed, &gpu_scratch[..n_embd], n_probe) > 0.01 {
+                    first = "ffn_norm";
+                }
+                wlog(&format!("[MC8 L0 mid] first_divergence(0.01)={first}"));
+            } else {
+                wlog("[MC8 L0 mid] ffn_norm: aux_buf readback FAILED");
+            }
+        }
+        let _ = token_idx;
+    }
+
     /// MC8: Q + o_proj + FFN tail (K/V already written for this token).
     #[cfg(target_arch = "wasm32")]
     async fn encode_attn_ffn_tail_gpu(
@@ -3910,6 +4223,21 @@ impl QTensorEngine {
                 return false;
             }
             self.mc8_flush(pipeline);
+            if l0_vector_probe && layer == 0 {
+                if let Some(hc) = hidden_cpu {
+                    self.mc8_log_l0_midlayer_diff(
+                        index,
+                        hc,
+                        emb_dim,
+                        token_idx,
+                        0,
+                        token_hidden,
+                        work_buf,
+                        aux_buf,
+                    )
+                    .await;
+                }
+            }
             let attn_res_scratch = self
                 .prefill_scratch_buf
                 .as_ref()
@@ -3937,6 +4265,21 @@ impl QTensorEngine {
             );
         }
         self.mc8_flush(pipeline);
+        if l0_vector_probe && layer == 0 {
+            if let Some(hc) = hidden_cpu {
+                self.mc8_log_l0_midlayer_diff(
+                    index,
+                    hc,
+                    emb_dim,
+                    token_idx,
+                    1,
+                    token_hidden,
+                    work_buf,
+                    aux_buf,
+                )
+                .await;
+            }
+        }
         let gate_info = match tensors.ffn_gate.as_ref() {
             Some(i) => i,
             None => return false,
@@ -3993,6 +4336,21 @@ impl QTensorEngine {
             pipeline.encoder.copy_buffer_to_buffer(token_hidden, 0, aux_buf, 0, emb_bytes);
         }
         self.mc8_flush(pipeline);
+        if l0_vector_probe && layer == 0 {
+            if let Some(hc) = hidden_cpu {
+                self.mc8_log_l0_midlayer_diff(
+                    index,
+                    hc,
+                    emb_dim,
+                    token_idx,
+                    2,
+                    token_hidden,
+                    work_buf,
+                    aux_buf,
+                )
+                .await;
+            }
+        }
         if !self.encode_gemm_bufs(pipeline, gate_info, gate_raw, gate_in, n_ffn, aux_buf, work_buf) {
             return false;
         }
