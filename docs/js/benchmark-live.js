@@ -1,4 +1,4 @@
-/**
+﻿/**
  * Live, data-backed implementations for the Benchmark Hub's interactive tabs.
  *
  * Graph Operations:
@@ -61,7 +61,7 @@ function fmtOps(value) {
 
 function shortHash(hashish) {
     const hex = BigInt(hashish).toString(16).padStart(16, '0');
-    return `0x${hex.slice(0, 8)}…${hex.slice(-4)}`;
+    return `0x${hex.slice(0, 8)}â€¦${hex.slice(-4)}`;
 }
 
 function fullHash(hashish) {
@@ -210,7 +210,7 @@ function renderInspector(target, model, nodeId) {
         return `<div class="space-y-2">${triples.map((triple) => `
             <div class="rounded-xl border border-white/8 bg-black/20 px-3 py-2 text-xs font-mono text-white/75" title="${dir === 'out' ? triple.objectDescription : triple.subjectDescription}">
                 <span class="text-emerald-300" title="${triple.predicateDescription}">${triple.predicateLabel}</span>
-                <span class="text-white/35 mx-2">${dir === 'out' ? '→' : '←'}</span>
+                <span class="text-white/35 mx-2">${dir === 'out' ? 'â†’' : 'â†'}</span>
                 <span>${dir === 'out' ? triple.objectLabel : triple.subjectLabel}</span>
             </div>`).join('')}</div>`;
     };
@@ -643,7 +643,7 @@ export class GraphViewer {
         }
         if (!this.nodes.length) {
             ctx.fillStyle = 'rgba(148,163,184,0.5)';
-            ctx.fillText('Run a graph operation to render the graph…', 16, h / 2);
+            ctx.fillText('Run a graph operation to render the graphâ€¦', 16, h / 2);
         }
         requestAnimationFrame(this._loop);
     }
@@ -671,6 +671,70 @@ const GRAPH_DATASETS = {
 const GRAPH_OPS = ['point', 'twohop', 'filter', 'ingest'];
 const graphManifestCache = new Map();
 const graphDatasetCache = new Map();
+let ontologyGraphDatasetPromise = null;
+
+function normalizeDatasetKey(value) {
+    return String(value || '').trim().toLowerCase().replace(/[^a-z0-9]+/g, '-').replace(/^-+|-+$/g, '');
+}
+
+function extractSubjectFromPattern(pattern) {
+    const match = String(pattern || '').trim().match(/^<([^>]+)>\s+\?p\s+\?o\b/);
+    return match?.[1] || null;
+}
+
+async function getOntologyGraphDatasets() {
+    if (!ontologyGraphDatasetPromise) {
+        ontologyGraphDatasetPromise = (async () => {
+            try {
+                const res = await fetch('./playground/vfs-manifest.json');
+                if (!res.ok) throw new Error(`HTTP ${res.status}`);
+                const manifest = await res.json();
+                const datasets = [];
+                for (const ds of manifest.datasets || []) {
+                    if (!ds?.url || !String(ds.url).endsWith('.q42')) continue;
+                    const key = `ontology:${normalizeDatasetKey(ds.id || ds.label)}`;
+                    const pointSubject = extractSubjectFromPattern(ds.sampleQueries?.[0]?.pattern)
+                        || extractSubjectFromPattern(ds.sampleQueries?.[1]?.pattern)
+                        || null;
+                    datasets.push({
+                        key,
+                        id: ds.id,
+                        label: ds.label || ds.id,
+                        group: ds.group || ds.profile || ds.source || 'Ontologies',
+                        config: {
+                            manifestId: null,
+                            storageFormat: 'q42',
+                            label: ds.label || ds.id,
+                            manifest: {
+                                id: ds.id,
+                                label: ds.label || ds.id,
+                                paths: { q42: ds.url },
+                                queries: {
+                                    point_subject: pointSubject || undefined,
+                                    twohop_start: pointSubject || undefined,
+                                    filter_predicate: 'http://www.w3.org/1999/02/22-rdf-syntax-ns#type',
+                                },
+                                dataset_info: {
+                                    label: ds.label || ds.id,
+                                    source_format: 'q42',
+                                    source: ds.source || 'manifest',
+                                    namespace: ds.namespace || '',
+                                    homepage: ds.homepage || '',
+                                },
+                                _manifestUrl: res.url,
+                            },
+                        },
+                    });
+                }
+                return datasets;
+            } catch (error) {
+                console.warn('[benchmark-live] Ontology manifest unavailable:', error);
+                return [];
+            }
+        })();
+    }
+    return ontologyGraphDatasetPromise;
+}
 
 async function getManifest(manifestId) {
     if (!graphManifestCache.has(manifestId)) {
@@ -683,7 +747,7 @@ async function getDatasetProfile(selection) {
     const config = GRAPH_DATASETS[selection];
     if (!config) throw new Error(`Unknown graph dataset: ${selection}`);
     if (config.unavailable) return { unavailable: config.unavailable };
-    const manifest = await getManifest(config.manifestId);
+    const manifest = config.manifest ?? await getManifest(config.manifestId);
     const candidateFormats = [config.storageFormat, ...(config.fallbackStorageFormats || [])];
     for (const format of candidateFormats) {
         const cacheKey = `${selection}:${format}`;
@@ -711,7 +775,7 @@ function _graphDatasetMetaTextLegacy(selection, profile) {
     if (!profile) return '';
     if (profile.unavailable) return profile.unavailable;
     const info = profile.manifest.dataset_info || {};
-    return `${profile.config.label} · ${profile.dataset.label} · ${profile.dataset.quinCount.toLocaleString()} quins · source ${info.source_format || profile.dataset.format}`;
+    return `${profile.config.label} Â· ${profile.dataset.label} Â· ${profile.dataset.quinCount.toLocaleString()} quins Â· source ${info.source_format || profile.dataset.format}`;
 }
 
 function graphDatasetMetaText(selection, profile) {
@@ -719,15 +783,44 @@ function graphDatasetMetaText(selection, profile) {
     if (profile.unavailable) return profile.unavailable;
     const info = profile.manifest.dataset_info || {};
     const formatNote = profile.storageFormat !== profile.config.storageFormat
-        ? ` · fallback ${profile.storageFormat.toUpperCase()}`
+        ? ` Â· fallback ${profile.storageFormat.toUpperCase()}`
         : '';
-    return `${profile.config.label} · ${profile.dataset.label} · ${profile.dataset.quinCount.toLocaleString()} quins · source ${info.source_format || profile.dataset.format}${formatNote}`;
+    return `${profile.config.label} Â· ${profile.dataset.label} Â· ${profile.dataset.quinCount.toLocaleString()} quins Â· source ${info.source_format || profile.dataset.format}${formatNote}`;
 }
 
 export async function initializeGraphBenchmarkUi() {
     const datasetSelect = document.getElementById('graph-dataset');
     const meta = document.getElementById('graph-dataset-meta');
     if (!datasetSelect) return;
+    const ontologyDatasets = await getOntologyGraphDatasets();
+    for (const ds of ontologyDatasets) {
+        if (!GRAPH_DATASETS[ds.key]) {
+            GRAPH_DATASETS[ds.key] = ds.config;
+        }
+    }
+    const dynamicOptgroups = [...datasetSelect.querySelectorAll('optgroup[data-dynamic="ontology"]')];
+    dynamicOptgroups.forEach((group) => group.remove());
+    if (ontologyDatasets.length) {
+        const groups = new Map();
+        for (const ds of ontologyDatasets) {
+            const groupName = ds.group || 'Ontologies';
+            if (!groups.has(groupName)) groups.set(groupName, []);
+            groups.get(groupName).push(ds);
+        }
+        for (const [groupName, entries] of groups) {
+            const optgroup = document.createElement('optgroup');
+            optgroup.label = groupName;
+            optgroup.dataset.dynamic = 'ontology';
+            for (const entry of entries) {
+                if (datasetSelect.querySelector(`option[value="${entry.key}"]`)) continue;
+                const option = document.createElement('option');
+                option.value = entry.key;
+                option.textContent = entry.label;
+                optgroup.appendChild(option);
+            }
+            if (optgroup.children.length) datasetSelect.appendChild(optgroup);
+        }
+    }
     for (const option of [...datasetSelect.options]) {
         const config = GRAPH_DATASETS[option.value];
         if (config?.unavailable) {
@@ -963,9 +1056,9 @@ export async function runGraphLive({ wasm, charts, output, viewer, operation, da
 
     if (output) {
         output.textContent =
-            `✓ Graph benchmark (REAL — execute_ntriples_query over ${dataset.label})\n` +
+            `âœ“ Graph benchmark (REAL â€” execute_ntriples_query over ${dataset.label})\n` +
             `Dataset: ${config.label}\n` +
-            `Load path: ${dataset.format} · ${dataset.quinCount.toLocaleString()} quins · initial load ${fmtMs(dataset.loadMs)}\n` +
+            `Load path: ${dataset.format} Â· ${dataset.quinCount.toLocaleString()} quins Â· initial load ${fmtMs(dataset.loadMs)}\n` +
             `Operations measured:\n${summaryLines.join('\n')}\n\n` +
             `${focusSummary}\n` +
             `${sourceNote}\n\n` +
@@ -1025,6 +1118,88 @@ function spatialOpLabel(op) {
     }[op] || String(op).toUpperCase();
 }
 
+function spatialRepeats(requestedCount) {
+    return {
+        ga: Math.max(64, Math.min(2048, Math.round(requestedCount / 40))),
+        topology: Math.max(32, Math.min(512, Math.round(requestedCount / 80))),
+        indexing: Math.max(8, Math.min(64, Math.round(requestedCount / 400))),
+        interval: Math.max(16, Math.min(256, Math.round(requestedCount / 120))),
+    };
+}
+
+function measureSpatialOperation(wasm, op, dims, requestedCount, repeats) {
+    const latencies = [];
+    const throughputs = [];
+    let backend = 'wasm';
+    let note = '';
+    let sample = null;
+
+    if (op === 'ga') {
+        if (typeof wasm?.geometric_algebra_operation !== 'function') throw new Error('WASM geometric_algebra_operation unavailable.');
+        for (let i = 0; i < 12; i++) {
+            const payload = JSON.stringify({ a: randomMultivector(dims), b: randomMultivector(dims), op: 'geo' });
+            const t0 = performance.now();
+            for (let j = 0; j < repeats.ga; j++) {
+                sample = parseMaybeJson(wasm.geometric_algebra_operation(payload));
+            }
+            const dt = performance.now() - t0;
+            latencies.push(dt / repeats.ga);
+            throughputs.push(dt > 0 ? (repeats.ga * 1000) / dt : 0);
+        }
+        note = `sample grades=${sample.grades.length} compute_ops=${sample.compute_ops} Ã‚Â· ${repeats.ga}x batched`;
+    } else if (op === 'topology') {
+        if (typeof wasm?.geosparql_operation_wasm !== 'function') throw new Error('WASM geosparql_operation_wasm unavailable.');
+        for (let i = 0; i < 12; i++) {
+            const payload = sampleTopologyPayload(i + (dims === '4d' ? 6 : dims === '3d' ? 3 : 0));
+            const t0 = performance.now();
+            for (let j = 0; j < repeats.topology; j++) {
+                sample = parseMaybeJson(wasm.geosparql_operation_wasm(payload));
+            }
+            const dt = performance.now() - t0;
+            latencies.push(dt / repeats.topology);
+            throughputs.push(dt > 0 ? (repeats.topology * 1000) / dt : 0);
+        }
+        note = `GeoSPARQL ${sample.predicate}=${JSON.stringify(sample.result)} Ã‚Â· ${repeats.topology}x batched`;
+    } else if (op === 'indexing') {
+        if (typeof wasm?.spatial_encode_wasm !== 'function') throw new Error('WASM spatial_encode_wasm unavailable.');
+        const payload = sampleEncodingPayload(dims, requestedCount);
+        for (let i = 0; i < 10; i++) {
+            const t0 = performance.now();
+            for (let j = 0; j < repeats.indexing; j++) {
+                sample = parseMaybeJson(wasm.spatial_encode_wasm(payload));
+            }
+            const dt = performance.now() - t0;
+            latencies.push(dt / repeats.indexing);
+            throughputs.push(dt > 0 ? (repeats.indexing * 1000) / dt : 0);
+        }
+        note = `${sample.quin_count.toLocaleString()} quins Ã‚Â· ${sample.memory_kb} KB Ã‚Â· ${repeats.indexing}x batched`;
+    } else if (op === 'interval') {
+        backend = 'js-fallback';
+        for (let i = 0; i < 12; i++) {
+            const mult = dims === '4d' ? 4 : dims === '3d' ? 2 : 1;
+            const t0 = performance.now();
+            for (let j = 0; j < repeats.interval; j++) {
+                sample = intervalBenchmark(Math.min(requestedCount / 50, 5000), mult + i + j);
+            }
+            const dt = performance.now() - t0;
+            latencies.push(dt / repeats.interval);
+            throughputs.push(dt > 0 ? (repeats.interval * 1000) / dt : 0);
+        }
+        note = `Allen interval algebra benchmark (honest JS fallback until dedicated WASM export exists) Ã‚Â· ${repeats.interval}x batched`;
+    }
+
+    const summary = stats(latencies);
+    return {
+        backend,
+        note,
+        sample,
+        latencies,
+        throughputs,
+        summary,
+        opsPerSec: percentile(throughputs, 0.5),
+    };
+}
+
 function randomMultivector(dimension) {
     const width = dimension === '4d' ? 12 : dimension === '3d' ? 8 : 6;
     return Array.from({ length: width }, (_, i) => Math.round((Math.sin(i + Math.random() * 3) * 2) * 100) / 100);
@@ -1080,84 +1255,10 @@ export function runSpatialLive({ wasm, charts, output, count, operation, dimensi
     const dims = dimension || '3d';
     const requestedCount = Math.max(100, Math.min(Number(count) || 10000, 200000));
     const perfByOp = {};
-    const repeats = {
-        ga: Math.max(64, Math.min(2048, Math.round(requestedCount / 40))),
-        topology: Math.max(32, Math.min(512, Math.round(requestedCount / 80))),
-        indexing: Math.max(8, Math.min(64, Math.round(requestedCount / 400))),
-        interval: Math.max(16, Math.min(256, Math.round(requestedCount / 120))),
-    };
+    const repeats = spatialRepeats(requestedCount);
 
     for (const op of selected) {
-        const latencies = [];
-        const throughputs = [];
-        let backend = 'wasm';
-        let note = '';
-        let sample = null;
-
-        if (op === 'ga') {
-            if (typeof wasm?.geometric_algebra_operation !== 'function') throw new Error('WASM geometric_algebra_operation unavailable.');
-            for (let i = 0; i < 12; i++) {
-                const payload = JSON.stringify({ a: randomMultivector(dims), b: randomMultivector(dims), op: 'geo' });
-                const t0 = performance.now();
-                for (let j = 0; j < repeats.ga; j++) {
-                    sample = parseMaybeJson(wasm.geometric_algebra_operation(payload));
-                }
-                const dt = performance.now() - t0;
-                latencies.push(dt / repeats.ga);
-                throughputs.push(dt > 0 ? (repeats.ga * 1000) / dt : 0);
-            }
-            note = `sample grades=${sample.grades.length} compute_ops=${sample.compute_ops} · ${repeats.ga}x batched`;
-        } else if (op === 'topology') {
-            if (typeof wasm?.geosparql_operation_wasm !== 'function') throw new Error('WASM geosparql_operation_wasm unavailable.');
-            for (let i = 0; i < 12; i++) {
-                const payload = sampleTopologyPayload(i + (dims === '4d' ? 6 : dims === '3d' ? 3 : 0));
-                const t0 = performance.now();
-                for (let j = 0; j < repeats.topology; j++) {
-                    sample = parseMaybeJson(wasm.geosparql_operation_wasm(payload));
-                }
-                const dt = performance.now() - t0;
-                latencies.push(dt / repeats.topology);
-                throughputs.push(dt > 0 ? (repeats.topology * 1000) / dt : 0);
-            }
-            note = `GeoSPARQL ${sample.predicate}=${JSON.stringify(sample.result)} · ${repeats.topology}x batched`;
-        } else if (op === 'indexing') {
-            if (typeof wasm?.spatial_encode_wasm !== 'function') throw new Error('WASM spatial_encode_wasm unavailable.');
-            const payload = sampleEncodingPayload(dims, requestedCount);
-            for (let i = 0; i < 10; i++) {
-                const t0 = performance.now();
-                for (let j = 0; j < repeats.indexing; j++) {
-                    sample = parseMaybeJson(wasm.spatial_encode_wasm(payload));
-                }
-                const dt = performance.now() - t0;
-                latencies.push(dt / repeats.indexing);
-                throughputs.push(dt > 0 ? (repeats.indexing * 1000) / dt : 0);
-            }
-            note = `${sample.quin_count.toLocaleString()} quins · ${sample.memory_kb} KB · ${repeats.indexing}x batched`;
-        } else if (op === 'interval') {
-            backend = 'js-fallback';
-            for (let i = 0; i < 12; i++) {
-                const mult = dims === '4d' ? 4 : dims === '3d' ? 2 : 1;
-                const t0 = performance.now();
-                for (let j = 0; j < repeats.interval; j++) {
-                    sample = intervalBenchmark(Math.min(requestedCount / 50, 5000), mult + i + j);
-                }
-                const dt = performance.now() - t0;
-                latencies.push(dt / repeats.interval);
-                throughputs.push(dt > 0 ? (repeats.interval * 1000) / dt : 0);
-            }
-            note = `Allen interval algebra benchmark (honest JS fallback until dedicated WASM export exists) · ${repeats.interval}x batched`;
-        }
-
-        const summary = stats(latencies);
-        perfByOp[op] = {
-            backend,
-            note,
-            sample,
-            latencies,
-            throughputs,
-            summary,
-            opsPerSec: percentile(throughputs, 0.5),
-        };
+        perfByOp[op] = measureSpatialOperation(wasm, op, dims, requestedCount, repeats);
     }
 
     if (charts?.spatialPerformance) {
@@ -1173,14 +1274,23 @@ export function runSpatialLive({ wasm, charts, output, count, operation, dimensi
     }
 
     const focusOp = spatialFocusOp(operation, perfByOp);
+    const scalingDims = ['2d', '3d', '4d'];
+    const scalingProfile = {};
+    for (const scalingDim of scalingDims) {
+        scalingProfile[scalingDim] = measureSpatialOperation(
+            wasm,
+            focusOp,
+            scalingDim,
+            requestedCount,
+            spatialRepeats(requestedCount),
+        );
+    }
 
     if (charts?.spatialScaling) {
-        const focus = perfByOp[focusOp] ?? perfByOp.ga;
-        const scaleLabels = focus?.latencies?.map((_, idx) => `run ${idx + 1}`) ?? [];
-        charts.spatialScaling.data.labels = scaleLabels;
+        charts.spatialScaling.data.labels = scalingDims.map((value) => value.toUpperCase());
         charts.spatialScaling.data.datasets = [{
-            label: `${(focusOp || 'ga').toUpperCase()} latency per run (ms)`,
-            data: focus?.latencies ?? [],
+            label: `${spatialOpLabel(focusOp)} p50 latency (ms)`,
+            data: scalingDims.map((value) => scalingProfile[value]?.summary?.p50 ?? 0),
             borderColor: 'rgba(59, 130, 246, 1)',
             backgroundColor: 'rgba(59, 130, 246, 0.12)',
             fill: true,
@@ -1191,25 +1301,232 @@ export function runSpatialLive({ wasm, charts, output, count, operation, dimensi
 
     if (output) {
         output.textContent =
-            `✓ Spatial benchmark (${dims.toUpperCase()} · ${requestedCount.toLocaleString()} objects requested)\n` +
+            `Spatial benchmark (${dims.toUpperCase()} | ${requestedCount.toLocaleString()} objects requested)\n` +
             selected.map((op) => {
                 const result = perfByOp[op];
                 return `  ${op.padEnd(9)} ${fmtOps(result.opsPerSec).padStart(10)} ops/sec  p50=${fmtMs(result.summary.p50)}  backend=${result.backend}`;
             }).join('\n') +
             `\n\nNotes:\n` +
             selected.map((op) => `  ${op.padEnd(9)} ${perfByOp[op].note}`).join('\n') +
-            `\n\nSpatial controls now materially affect the measured pathway; interval remains an explicitly labeled fallback until a native WASM export lands.`;
+            `\n\nDimension scaling for ${spatialOpLabel(focusOp)}:\n` +
+            scalingDims.map((value) =>
+                `  ${value.toUpperCase().padEnd(3)} p50=${fmtMs(scalingProfile[value].summary.p50)}  ops/sec=${fmtOps(scalingProfile[value].opsPerSec)}`
+            ).join('\n') +
+            `\n\nSpatial controls now drive the measured pathway. Interval remains an explicitly labeled fallback until a native WASM export lands.`;
     }
 
     const viewerShape = shapeForSpatialFocus(focusOp, dims);
     return {
         perfByOp,
         focusOp,
+        scalingProfile,
         viewer: {
             shape: viewerShape,
             label: spatialViewerLabel(viewerShape),
             dimension: dims,
             operation: focusOp,
         },
+    };
+}
+
+const SPARQL_COMPLEXITY_ORDER = ['simple', 'medium', 'complex'];
+
+function defaultSparqlPattern() {
+    return '?subject ?predicate ?object .';
+}
+
+function extractPrimaryTriplePattern(query) {
+    const whereMatch = String(query || '').match(/WHERE\s*\{([\s\S]*?)\}/i);
+    const body = whereMatch?.[1] || String(query || '');
+    const candidates = body
+        .split('\n')
+        .map((line) => line.trim())
+        .filter((line) => line && !line.startsWith('#') && !/^FILTER\b/i.test(line));
+    for (const line of candidates) {
+        const cleaned = line.replace(/\s*\.\s*$/, '').trim();
+        if (cleaned.split(/\s+/).length >= 3) {
+            return `${cleaned} .`;
+        }
+    }
+    return defaultSparqlPattern();
+}
+
+function sparqlQueryTypeLabel(type) {
+    return ({
+        select: 'SELECT',
+        construct: 'CONSTRUCT',
+        ask: 'ASK',
+        describe: 'DESCRIBE',
+    })[String(type || '').toLowerCase()] || 'SELECT';
+}
+
+function sparqlVariantForComplexity(type, complexity, pattern) {
+    if (complexity === 'complex') {
+        return `WHERE {
+  ${pattern}
+  ?subject ?predicate ?object .
+  ?subject ?predicate2 ?o2 .
+  ?subject ?predicate3 ?o3 .
+  ?o2 ?predicate4 ?o3 .
+}
+LIMIT 96`;
+    }
+    if (complexity === 'medium') {
+        return `WHERE {
+  ${pattern}
+  ?subject ?predicate ?object .
+  ?subject ?predicate2 ?o2 .
+}
+LIMIT 64`;
+    }
+    return `WHERE {
+  ${pattern}
+}
+LIMIT 48`;
+}
+
+function measureSparqlVariant(wasm, dataset, queryText, executionPattern, runs, maxResults) {
+    const latencies = [];
+    const throughputs = [];
+    const compileLatencies = [];
+    const bytecodeLengths = [];
+    let lastExecution = null;
+
+    for (let i = 0; i < runs; i++) {
+        const compileStart = performance.now();
+        let compiled = null;
+        if (typeof wasm?.compile_query_to_json === 'function') {
+            compiled = wasm.compile_query_to_json(queryText);
+        }
+        const compileMs = performance.now() - compileStart;
+        const executionStart = performance.now();
+        lastExecution = runSingleQuery(wasm, executionPattern, dataset.db, maxResults);
+        const executionMs = performance.now() - executionStart;
+        const totalMs = compileMs + executionMs;
+
+        compileLatencies.push(compileMs);
+        latencies.push(totalMs);
+        throughputs.push(totalMs > 0 ? ((lastExecution.matches?.length || 0) * 1000) / totalMs : 0);
+        bytecodeLengths.push(typeof compiled === 'string' ? compiled.length : 0);
+    }
+
+    const decodedMatches = decodeResultMatches(lastExecution?.matches || [], dataset.labelMap)
+        .map(normalizeRenderableTriple);
+    return {
+        latencies,
+        throughputs,
+        compileLatencies,
+        bytecodeLengths,
+        summary: stats(latencies),
+        compileSummary: stats(compileLatencies),
+        bytecodeLength: Math.round(median(bytecodeLengths)),
+        resultCount: decodedMatches.length,
+        lastSummary: {
+            raw: lastExecution,
+            decodedMatches,
+        },
+    };
+}
+
+export async function runSparqlLive({
+    wasm,
+    charts,
+    output,
+    viewer,
+    inspectorTarget,
+    query,
+    queryType,
+    complexity,
+    datasetId,
+}) {
+    if (typeof wasm?.execute_ntriples_query !== 'function') {
+        if (output) output.textContent = 'WASM execute_ntriples_query unavailable.';
+        return null;
+    }
+
+    const selection = datasetId || document.getElementById('graph-dataset')?.value || 'schemaorg-30';
+    const profile = await getDatasetProfile(selection);
+    if (profile.unavailable) {
+        if (output) output.textContent = profile.unavailable;
+        return null;
+    }
+
+    const pattern = extractPrimaryTriplePattern(query);
+    const variantResults = {};
+    for (const level of SPARQL_COMPLEXITY_ORDER) {
+        const variantQuery = sparqlVariantForComplexity(queryType, level, pattern);
+        variantResults[level] = measureSparqlVariant(
+            wasm,
+            profile.dataset,
+            variantQuery,
+            pattern,
+            level === complexity ? 10 : 4,
+            level === 'complex' ? 96 : 64,
+        );
+    }
+
+    const active = variantResults[complexity] || variantResults.simple;
+    const graphTriples = active.lastSummary.decodedMatches;
+    const fallbackFocus = graphTriples[0]?.subjectId || graphTriples[0]?.objectId || null;
+    const graphModel = buildGraphModel(graphTriples);
+    const graphData = fallbackFocus
+        ? buildNeighborhood(graphTriples, fallbackFocus, 28, 56)
+        : { nodes: [], edges: [] };
+
+    if (viewer) {
+        viewer.setData(graphData);
+        viewer.setNodeSelectHandler((nodeId) => renderInspector(inspectorTarget, graphModel, nodeId));
+    }
+    renderInspector(inspectorTarget, graphModel, fallbackFocus || graphData.nodes[0]?.id || null);
+
+    if (charts?.sparqlLatency) {
+        charts.sparqlLatency.data.labels = active.latencies.map((_, index) => `run ${index + 1}`);
+        charts.sparqlLatency.data.datasets = [{
+            label: `${sparqlQueryTypeLabel(queryType)} total time (ms)`,
+            data: active.latencies,
+            backgroundColor: 'rgba(52, 211, 153, 0.5)',
+            borderColor: 'rgba(52, 211, 153, 1)',
+            borderWidth: 1,
+        }];
+        charts.sparqlLatency.update();
+    }
+
+    if (charts?.sparqlComplexity) {
+        charts.sparqlComplexity.data.labels = SPARQL_COMPLEXITY_ORDER.map((value) => value[0].toUpperCase() + value.slice(1));
+        charts.sparqlComplexity.data.datasets = [{
+            label: 'Compile + execute p50 (ms)',
+            data: SPARQL_COMPLEXITY_ORDER.map((value) => variantResults[value]?.summary?.p50 ?? 0),
+            borderColor: 'rgba(59, 130, 246, 1)',
+            backgroundColor: 'rgba(59, 130, 246, 0.1)',
+            fill: true,
+            tension: 0.4,
+        }];
+        charts.sparqlComplexity.update();
+    }
+
+    if (output) {
+        output.textContent =
+            `SPARQL benchmark (${sparqlQueryTypeLabel(queryType)} | ${complexity})\n` +
+            `Dataset: ${profile.config.label} | ${profile.dataset.quinCount.toLocaleString()} quins | loaded via ${profile.storageFormat}\n` +
+            `Execution pathway: compile_query_to_json + execute_ntriples_query(first triple pattern)\n` +
+            `Primary pattern: ${pattern}\n\n` +
+            `Selected run profile:\n` +
+            `  total p50=${fmtMs(active.summary.p50)}  compile p50=${fmtMs(active.compileSummary.p50)}  results=${active.resultCount}  bytecode=${active.bytecodeLength} chars\n` +
+            `  throughput p50=${fmtOps(percentile(active.throughputs, 0.5))} rows/sec\n\n` +
+            `Complexity sweep:\n` +
+            SPARQL_COMPLEXITY_ORDER.map((value) =>
+                `  ${value.padEnd(7)} p50=${fmtMs(variantResults[value].summary.p50)}  compile=${fmtMs(variantResults[value].compileSummary.p50)}  rows=${variantResults[value].resultCount}`
+            ).join('\n') +
+            `\n\nGraph panel renders the measured matches from the selected run.`;
+    }
+
+    return {
+        dataset: profile.dataset,
+        profile,
+        pattern,
+        variantResults,
+        active,
+        graphTriples,
+        graphModel,
     };
 }
