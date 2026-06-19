@@ -3,7 +3,7 @@
 **Version:** 1.1  
 **Date:** 2026-06-17  
 **Status:** Draft Standard  
-**Repository:** https://github.com/mediaprophet/qualiaDB/tree/0.0.17-dev
+**Repository:** https://github.com/mediaprophet/qualiaDB/tree/0.0.18-dev
 
 ## Abstract
 

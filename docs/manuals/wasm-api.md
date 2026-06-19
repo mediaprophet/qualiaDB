@@ -1,6 +1,6 @@
 # QualiaDB WebAssembly API & Integration Guide
 
-**Version:** 0.0.17 | **Branch:** `0.0.17-dev`  
+**Version:** 0.0.18 | **Branch:** `0.0.18-dev`  
 **Primary artifact:** `docs/pkg/qualia/qualia.js` + `qualia_bg.wasm` (`--features portal`)  
 **Playground artifact:** `docs/playground/qualia_core_db.js` (`--features wasm-full`)  
 **Portal manual:** [`qualia-wasm-portal.md`](qualia-wasm-portal.md)
@@ -141,22 +141,54 @@ Portal pages should prefer `QualiaPortal` methods over duplicating these calls.
 
 ## 4. LLM inference & Extension Bus
 
-Local LLM inference uses the **in-process** `gguf_bridge` + WebGPU path on supported hosts — not an external Ollama server.
+Local LLM inference uses the **in-process** `gguf_bridge` + WebGPU path — not an external Ollama
+server, llama.cpp daemon, or Python. Pure Rust→WASM. Phase 5 decode is **~5.9 tok/s** on
+SmolLM2-360M (Q4_K_M), coherent, on a stock NVIDIA Ampere via Chrome WebGPU.
 
-The **Extension Bus** bridges WASM sync code to the native daemon (`ws://127.0.0.1:4242`) for hybrid deployments:
+### 4.1 Browser WebGPU path (recommended) — AOT `.q42`
+
+Compile a GGUF to a self-contained `.q42` container **once** (weights + hyperparams + tokenizer,
+`Q42W` magic — see [`standards/q42-format-internal-draft.md`](standards/q42-format-internal-draft.md)),
+cache it in OPFS, and boot zero-parse from it thereafter. All inference then runs from the `.q42`.
+
+```javascript
+import init, {
+  initialize_webgpu_engine,   // boots from GGUF *or* .q42 (magic-sniffed)
+  inferWasmStreaming,         // streaming decode (alias: inferWasmAsync)
+  compileGgufToQ42, q42FormatVersion,
+} from './pkg/qualia/qualia.js';
+import { loadOrCompileQ42 } from './js/opfs-model-cache.js';
+
+await init();
+// Cold: stream GGUF → compile .q42 → cache in OPFS. Warm: instant zero-parse .q42 hit.
+const { bytes } = await loadOrCompileQ42(modelUrl, 'SmolLM2-360M-Instruct-Q4_K_M', {
+  compile: compileGgufToQ42, formatVersion: q42FormatVersion(),
+});
+await initialize_webgpu_engine(bytes);            // resident weights/logits/norms, single-submit forward
+
+await inferWasmStreaming('The capital of France is', (tokenDelta) => {
+  outputEl.textContent += tokenDelta;
+});
+```
+
+`compileGgufToQ42(gguf, page_log2)` → `Uint8Array` (the `.q42`); `q42FormatVersion()` keys the OPFS
+cache so an engine upgrade never boots a stale container. Live demos: `online-llm-demo.html`, `llmdemo/`.
+
+### 4.2 Extension Bus (hybrid — native daemon offload)
+
+The **Extension Bus** bridges WASM sync code to the native daemon (`ws://127.0.0.1:4242`):
 
 ```javascript
 import init, { init_extension_bus, infer_local_model_streaming } from './pkg/qualia_core_db.js';
 
 await init();
 init_extension_bus("did:q42:local-user");
-
 infer_local_model_streaming(prompt, graphContext, (tokenDelta) => {
   outputEl.textContent += tokenDelta;
 });
 ```
 
-If the daemon is unreachable, the engine falls back to in-browser WebGPU inference (RAM-limited).
+If the daemon is unreachable, the engine falls back to the in-browser WebGPU path (§4.1, RAM-limited).
 
 ---
 

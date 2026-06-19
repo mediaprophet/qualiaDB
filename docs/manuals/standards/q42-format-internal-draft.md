@@ -330,6 +330,43 @@ Matches:
 - `crates/qualia-cli/src/ingest.rs`
 - `scripts/fetch_wordnet.sh` (outputs `wordnet.q42` only)
 
+### `.q42` weight container (AOT LLM — `Q42W`)
+
+A **separate** artifact from the semantic graph `.q42` above (different magic — never collides):
+the Ahead-Of-Time-compiled home for an LLM, so the browser engine boots **zero-parse** instead of
+re-parsing a GGUF on every load. Produced by `compileGgufToQ42` (WASM) /
+`q42_weight::compile_gguf_to_q42`, cached in OPFS, consumed by `initialize_webgpu_engine` →
+`adopt_resident_q42`. All inference then runs from the `.q42`; the source GGUF is never re-touched.
+
+```text
+Header (Q42WeightHeader, 144 B, #[repr(C, align(16))], little-endian)
+  magic            "Q42W"   u8[4]          — distinguishes from the semantic .q42
+  version          u16                     — gates format changes (q42FormatVersion())
+  page_log2        u16                     — tensor-blob page alignment exponent (14 = 16 KB)
+  n_tensors        u32
+  n_layers / n_embd / n_head / n_kv_head / vocab_size   u32 each   (model hyperparams)
+  rope_freq_base / rope_scale                            f32 each
+  manifest_offset / blob_offset / cold_offset / cold_len u64 each
+  tokenizer_offset / tokenizer_len                       u64 each
+  format_flags u32 ; header_crc u32        — CRC-32C over the header
+  arch_quin        NQuin (48 B, 16-aligned at offset 80) — architecture provenance
+
+Manifest (n_tensors × Q42TensorEntry, 80 B each)
+  role        u32   — AttnK/V/Q, OProj, Gate, Up, Down, norms, output (Q42_ROLE_*)
+  layer       u16   — or 0xFFFF (Q42_LAYER_GLOBAL) for non-layer tensors
+  ggml_type   u32 ; dim0 / dim1 u32 ; blob_offset / byte_len u64
+  scaffold_quin NQuin (48 B)   — per-tensor provenance / future deontic metadata bits
+
+Tensor blobs      — opaque, contiguous, page-aligned (page_log2) for zero-copy WebGPU bind
+Tokenizer section — vocab + merges + special tokens (self-contained inference, no GGUF needed)
+Cold section      — reserved (cold_offset/cold_len) for a future CBOR-LD ontology header
+```
+
+Matches `crates/qualia-core-db/src/q42_weight.rs` (`Q42WeightHeader`, `Q42TensorEntry`,
+`compile_gguf_to_q42`, `Q42TensorIndex::from_q42`). Integrity is table-less CRC-32C. The 16 KB page
+alignment lets the resident-weight upload map blobs straight into the GPU arenas. The semantic and
+weight `.q42` are siblings: both 16 KB-aligned, both NQuin-scaffolded, distinct magics.
+
 ### Embedded Q42LEX layout
 
 Same as legacy `.q42.lex`:

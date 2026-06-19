@@ -1,6 +1,6 @@
 # Qualia-DB Glossary
 
-_Branch: `0.0.17` | Last updated: 2026-06-18_
+_Branch: `0.0.18` | Last updated: 2026-06-19_
 
 ---
 
