@@ -999,7 +999,7 @@ GET http://127.0.0.1:4242/health
             js(`
 const r    = await fetch('http://127.0.0.1:4242/health');
 const body = await r.json();
-// { status: "active", engine: "qualia-core-db", version: "0.0.17", webtorrent: { … } }
+// { status: "active", engine: "qualia-core-db", version: "0.0.18", webtorrent: { … } }
 `),
             cli(`
 # Start the daemon (dev mode — no token required)
@@ -1111,7 +1111,7 @@ ws.onmessage = (e) => {
             cli(`
 # WebSocket test with websocat (install: cargo install websocat)
 websocat ws://127.0.0.1:4242/qualia-bridge
-# Immediately receives: {"type":"HANDSHAKE_SUCCESS","payload":{"mode":"NATIVE","version":"0.0.17"}}
+# Immediately receives: {"type":"HANDSHAKE_SUCCESS","payload":{"mode":"NATIVE","version":"0.0.18"}}
 `),
         ],
         live: async (_wasm, native) => {
@@ -3133,12 +3133,12 @@ console.log('Winner object:', winner.object); // 20n — remote wins (higher clo
         name: 'get_engine_version()',
         summary: 'Returns the qualia-core-db crate version baked in at compile time. Identical to the version field returned by the native daemon\'s GET /health endpoint.',
         params: [],
-        returns: 'string — semver string e.g. "0.0.17"',
+        returns: 'string — semver string e.g. "0.0.18"',
         snippets: [
             js(`
 import init, { get_engine_version } from './qualia_core_db.js';
 await init();
-console.log(get_engine_version()); // "0.0.17"
+console.log(get_engine_version()); // "0.0.18"
 `),
         ],
         live: async (wasm) => {
