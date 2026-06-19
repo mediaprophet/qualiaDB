@@ -1,0 +1,400 @@
+<!DOCTYPE html>
+<html lang="en">
+<head>
+    <meta charset="UTF-8">
+    <meta name="viewport" content="width=device-width, initial-scale=1.0">
+    <title>QualiaDB | Browser LLM Benchmarks</title>
+    <script src="js/coi-serviceworker.js"></script>
+    <!-- Strip removed WebGPU device limits so the Qualia wgpu 0.19 requestDevice succeeds. -->
+    <script src="js/webgpu-limits-shim.js"></script>
+    <link rel="stylesheet" href="css/tailwind-built.css">
+    <link rel="stylesheet" href="css/site-nav.css">
+    <link rel="stylesheet" href="https://cdnjs.cloudflare.com/ajax/libs/font-awesome/6.5.1/css/all.min.css">
+    <style>
+        @import url('https://fonts.googleapis.com/css2?family=Inter:wght@400;500;600;700&family=Space+Grotesk:wght@500;600;700&display=swap');
+
+        :root {
+            --bg-a: #08111d;
+            --bg-b: #0d1322;
+            --panel: rgba(13, 19, 34, 0.8);
+            --panel-strong: rgba(10, 14, 24, 0.92);
+            --border: rgba(148, 163, 184, 0.14);
+            --text-dim: rgba(226, 232, 240, 0.62);
+            --ok: #34d399;
+            --warn: #f59e0b;
+            --info: #60a5fa;
+            --bad: #fb7185;
+        }
+
+        body {
+            font-family: 'Inter', system-ui, sans-serif;
+            background:
+                radial-gradient(circle at top left, rgba(14, 165, 233, 0.16), transparent 32%),
+                radial-gradient(circle at top right, rgba(20, 184, 166, 0.10), transparent 28%),
+                linear-gradient(180deg, var(--bg-a), var(--bg-b));
+            color: #e2e8f0;
+        }
+
+        .font-display {
+            font-family: 'Space Grotesk', 'Inter', sans-serif;
+            letter-spacing: -0.04em;
+        }
+
+        .glass {
+            background: var(--panel);
+            border: 1px solid var(--border);
+            backdrop-filter: blur(24px);
+            -webkit-backdrop-filter: blur(24px);
+            box-shadow: 0 24px 60px rgba(0, 0, 0, 0.28);
+        }
+
+        .glass-strong {
+            background: var(--panel-strong);
+            border: 1px solid rgba(148, 163, 184, 0.18);
+            backdrop-filter: blur(28px);
+            -webkit-backdrop-filter: blur(28px);
+        }
+
+        .section-label {
+            font-size: 0.7rem;
+            font-weight: 700;
+            letter-spacing: 0.12em;
+            text-transform: uppercase;
+            color: #64748b;
+        }
+
+        .metric-card {
+            background: rgba(15, 23, 42, 0.75);
+            border: 1px solid rgba(148, 163, 184, 0.12);
+            border-radius: 20px;
+            padding: 1rem 1.1rem;
+        }
+
+        .metric-value {
+            font-size: 1.05rem;
+            font-weight: 700;
+            line-height: 1.2;
+        }
+
+        .metric-label {
+            font-size: 0.72rem;
+            color: var(--text-dim);
+            text-transform: uppercase;
+            letter-spacing: 0.08em;
+        }
+
+        .input-field {
+            width: 100%;
+            border-radius: 14px;
+            border: 1px solid rgba(148, 163, 184, 0.18);
+            background: rgba(2, 6, 23, 0.55);
+            color: #e2e8f0;
+            padding: 0.8rem 0.95rem;
+            outline: none;
+            transition: border-color 0.18s ease, box-shadow 0.18s ease;
+        }
+
+        .input-field:focus {
+            border-color: rgba(96, 165, 250, 0.55);
+            box-shadow: 0 0 0 3px rgba(59, 130, 246, 0.14);
+        }
+
+        .bench-btn {
+            border-radius: 9999px;
+            padding: 0.72rem 1.15rem;
+            font-size: 0.88rem;
+            font-weight: 700;
+            transition: transform 0.18s ease, opacity 0.18s ease, background-color 0.18s ease;
+        }
+
+        .bench-btn:hover:not(:disabled) {
+            transform: translateY(-1px);
+        }
+
+        .bench-btn:disabled {
+            opacity: 0.45;
+            cursor: not-allowed;
+        }
+
+        .status-pill {
+            display: inline-flex;
+            align-items: center;
+            gap: 0.45rem;
+            border-radius: 9999px;
+            padding: 0.32rem 0.7rem;
+            font-size: 0.73rem;
+            font-weight: 700;
+            letter-spacing: 0.03em;
+        }
+
+        .status-ready {
+            background: rgba(16, 185, 129, 0.12);
+            color: #6ee7b7;
+            border: 1px solid rgba(16, 185, 129, 0.2);
+        }
+
+        .status-shell {
+            background: rgba(96, 165, 250, 0.12);
+            color: #93c5fd;
+            border: 1px solid rgba(96, 165, 250, 0.2);
+        }
+
+        .status-wait {
+            background: rgba(245, 158, 11, 0.12);
+            color: #fcd34d;
+            border: 1px solid rgba(245, 158, 11, 0.2);
+        }
+
+        .status-error {
+            background: rgba(244, 63, 94, 0.12);
+            color: #fda4af;
+            border: 1px solid rgba(244, 63, 94, 0.2);
+        }
+
+        .engine-card {
+            border-radius: 28px;
+            padding: 1.3rem;
+        }
+
+        .engine-row {
+            border-top: 1px solid rgba(255, 255, 255, 0.05);
+        }
+
+        .engine-row:first-child {
+            border-top: 0;
+        }
+
+        .mono {
+            font-family: 'JetBrains Mono', 'Fira Code', ui-monospace, monospace;
+        }
+
+        .log-panel {
+            min-height: 240px;
+            max-height: 360px;
+            overflow: auto;
+            white-space: pre-wrap;
+            font-size: 0.82rem;
+            line-height: 1.55;
+            background: rgba(2, 6, 23, 0.72);
+            border: 1px solid rgba(148, 163, 184, 0.12);
+        }
+
+        .result-bar-track {
+            height: 8px;
+            border-radius: 9999px;
+            background: rgba(30, 41, 59, 0.96);
+            overflow: hidden;
+        }
+
+        .result-bar-fill {
+            height: 100%;
+            border-radius: 9999px;
+            background: linear-gradient(90deg, #22c55e, #0ea5e9);
+        }
+
+        .small-note {
+            color: var(--text-dim);
+            font-size: 0.82rem;
+            line-height: 1.55;
+        }
+    </style>
+    <script src="js/menu-loader.js"></script>
+</head>
+<body>
+    <nav class="sticky top-0 z-50 border-b border-white/10" style="background:rgba(10,14,24,0.88);backdrop-filter:blur(32px)">
+        <div class="max-w-screen-2xl mx-auto px-8">
+            <div class="flex items-center justify-between h-16">
+                <div class="flex items-center gap-8">
+                    <a href="index.html" class="flex items-center gap-3">
+                        <div class="w-8 h-8 bg-gradient-to-br from-blue-500 to-cyan-400 rounded-xl flex items-center justify-center">
+                            <span class="text-black font-bold text-xl">Q</span>
+                        </div>
+                        <div><span class="font-semibold tracking-tight text-xl">Qualia</span><span class="text-blue-400 text-xl">DB</span></div>
+                    </a>
+                    <div id="dynamic-nav" class="relative flex items-center text-sm"></div>
+                </div>
+                <div class="flex items-center gap-3">
+                    <div id="coi-badge" class="status-pill status-wait">
+                        <span class="w-2 h-2 rounded-full bg-amber-300"></span>
+                        <span>COI checking</span>
+                    </div>
+                    <div id="gpu-badge" class="status-pill status-wait">
+                        <span class="w-2 h-2 rounded-full bg-amber-300"></span>
+                        <span>WebGPU checking</span>
+                    </div>
+                    <a href="https://github.com/mediaprophet/qualiaDB" target="_blank" class="flex items-center gap-2 px-4 py-2 text-sm hover:bg-white/5 rounded-2xl transition-colors">
+                        <i class="fab fa-github"></i><span>GitHub</span>
+                    </a>
+                </div>
+            </div>
+        </div>
+    </nav>
+
+    <main class="max-w-screen-2xl mx-auto px-6 md:px-8 pt-10 pb-20">
+        <section class="mb-10 flex flex-col gap-6 lg:flex-row lg:items-end lg:justify-between">
+            <div class="max-w-4xl">
+                <div class="inline-flex items-center gap-2 rounded-full border border-cyan-400/20 bg-cyan-400/10 px-4 py-1.5 text-xs font-semibold tracking-[0.12em] text-cyan-300">
+                    <i class="fa-solid fa-microchip"></i>
+                    <span>Browser / WASM LLM harness</span>
+                </div>
+                <h1 class="font-display mt-5 text-5xl md:text-7xl font-semibold leading-[0.98]">Comparative Browser LLM Benchmarks</h1>
+                <p class="mt-4 max-w-3xl text-lg text-slate-300/80">
+                    This page benchmarks browser-first LLM runtimes now, while leaving an explicit integration lane for Qualia once the independent WASM work is ready. No Qualia engine wiring is done here yet.
+                </p>
+            </div>
+            <div class="glass rounded-[28px] px-5 py-4 max-w-md">
+                <div class="section-label mb-2">Scope</div>
+                <p class="small-note">
+                    Live adapters are wired where the browser path is stable enough to exercise today. Engines without a pinned browser bootstrap stay marked as adapter shells so the page remains truthful instead of inventing benchmark data.
+                </p>
+            </div>
+        </section>
+
+        <section class="glass-strong rounded-[32px] p-6 md:p-8 mb-8">
+            <div class="flex flex-col gap-5 lg:flex-row lg:items-start lg:justify-between">
+                <div class="max-w-2xl">
+                    <div class="section-label mb-2">Benchmark Controls</div>
+                    <h2 class="text-2xl font-semibold tracking-tight">Shared prompt and run settings</h2>
+                    <p class="small-note mt-2">Runs focus on cold-start load time, time-to-first-token, completion latency, estimated throughput, and browser heap movement where the platform exposes it.</p>
+                </div>
+                <div class="flex flex-wrap gap-3">
+                    <button id="run-all-btn" class="bench-btn bg-emerald-500/20 text-emerald-300 border border-emerald-400/25">
+                        <i class="fa-solid fa-play mr-2"></i>Run available engines
+                    </button>
+                    <button id="copy-report-btn" class="bench-btn bg-blue-500/15 text-blue-200 border border-blue-400/20">
+                        <i class="fa-solid fa-copy mr-2"></i>Copy report JSON
+                    </button>
+                    <button id="clear-results-btn" class="bench-btn bg-white/5 text-slate-300 border border-white/10">
+                        <i class="fa-solid fa-arrow-rotate-left mr-2"></i>Clear results
+                    </button>
+                </div>
+            </div>
+
+            <div class="grid grid-cols-1 xl:grid-cols-[1.35fr_0.8fr] gap-6 mt-7">
+                <div>
+                    <label for="prompt-input" class="section-label mb-2 block">Prompt</label>
+                    <textarea id="prompt-input" rows="5" class="input-field">Summarize why zero-copy data layouts matter for edge inference in 3 concise bullet points.</textarea>
+                </div>
+                <div class="grid grid-cols-1 sm:grid-cols-3 gap-4">
+                    <div>
+                        <label for="system-prompt-input" class="section-label mb-2 block">System prompt</label>
+                        <textarea id="system-prompt-input" rows="5" class="input-field">You are a concise benchmark smoke-test assistant.</textarea>
+                    </div>
+                    <div>
+                        <label for="max-tokens-input" class="section-label mb-2 block">Max new tokens</label>
+                        <input id="max-tokens-input" type="number" min="8" max="256" value="48" class="input-field mono">
+                        <div class="small-note mt-2">Keep this short so browser runs stay practical.</div>
+                    </div>
+                    <div>
+                        <label for="temperature-input" class="section-label mb-2 block">Temperature</label>
+                        <input id="temperature-input" type="number" min="0" max="2" step="0.1" value="0.2" class="input-field mono">
+                        <div class="small-note mt-2">Low randomness helps make timings more comparable.</div>
+                    </div>
+                </div>
+            </div>
+        </section>
+
+        <section class="mb-8">
+            <div class="section-label mb-3 px-1">Execution Environment</div>
+            <div class="grid grid-cols-1 sm:grid-cols-2 xl:grid-cols-5 gap-4" id="env-grid">
+                <div class="metric-card">
+                    <div class="metric-label">Device summary</div>
+                    <div id="env-device" class="metric-value mt-2">Loading…</div>
+                </div>
+                <div class="metric-card">
+                    <div class="metric-label">Topology</div>
+                    <div id="env-topology" class="metric-value mt-2">Loading…</div>
+                </div>
+                <div class="metric-card">
+                    <div class="metric-label">Cross-origin isolation</div>
+                    <div id="env-coi" class="metric-value mt-2">Loading…</div>
+                </div>
+                <div class="metric-card">
+                    <div class="metric-label">WebGPU adapter</div>
+                    <div id="env-gpu" class="metric-value mt-2">Loading…</div>
+                </div>
+                <div class="metric-card">
+                    <div class="metric-label">Heap API / SIMD</div>
+                    <div id="env-heap" class="metric-value mt-2">Loading…</div>
+                </div>
+            </div>
+        </section>
+
+        <section class="mb-8">
+            <div class="section-label mb-3 px-1">Engines</div>
+            <div id="engine-grid" class="grid grid-cols-1 xl:grid-cols-2 gap-5"></div>
+        </section>
+
+        <section class="glass-strong rounded-[32px] p-6 md:p-8 mb-8">
+            <div class="flex flex-col gap-3 md:flex-row md:items-end md:justify-between">
+                <div>
+                    <div class="section-label mb-2">Results</div>
+                    <h2 class="text-2xl font-semibold tracking-tight">Latest benchmark matrix</h2>
+                </div>
+                <div class="small-note">`ttft` is exact for streaming adapters and falls back to full completion time for non-streaming browser APIs.</div>
+            </div>
+            <div class="overflow-x-auto mt-6">
+                <table class="w-full min-w-[920px]">
+                    <thead>
+                        <tr class="text-left text-[0.68rem] uppercase tracking-[0.12em] text-slate-500">
+                            <th class="pb-3 pr-4">Engine</th>
+                            <th class="pb-3 pr-4 text-right">Load</th>
+                            <th class="pb-3 pr-4 text-right">TTFT</th>
+                            <th class="pb-3 pr-4 text-right">Completion</th>
+                            <th class="pb-3 pr-4 text-right">Est. tok/s</th>
+                            <th class="pb-3 pr-4 text-right">Heap Δ</th>
+                            <th class="pb-3 pr-4">Summary</th>
+                        </tr>
+                    </thead>
+                    <tbody id="results-body"></tbody>
+                </table>
+            </div>
+        </section>
+
+        <section class="grid grid-cols-1 xl:grid-cols-[1.15fr_0.85fr] gap-6">
+            <div class="glass-strong rounded-[32px] p-6 md:p-8">
+                <div class="section-label mb-2">Benchmark Log</div>
+                <div class="flex items-center justify-between mb-4">
+                    <h2 class="text-2xl font-semibold tracking-tight">Live harness log</h2>
+                    <button id="copy-log-btn" class="bench-btn bg-white/5 text-slate-300 border border-white/10">
+                        <i class="fa-solid fa-file-lines mr-2"></i>Copy log
+                    </button>
+                </div>
+                <pre id="log-output" class="log-panel rounded-[24px] p-4 mono"></pre>
+            </div>
+
+            <div class="glass rounded-[32px] p-6 md:p-8">
+                <div class="section-label mb-2">Qualia Lane</div>
+                <h2 class="text-2xl font-semibold tracking-tight">Reserved integration contract</h2>
+                <p class="small-note mt-3">
+                    This slot is intentionally a placeholder. The page is ready to accept a Qualia adapter later, but it does not import or mutate the current Qualia WASM work.
+                </p>
+                <div class="mt-5 rounded-[24px] border border-amber-400/20 bg-amber-400/8 p-5">
+                    <div class="status-pill status-wait mb-3">
+                        <span class="w-2 h-2 rounded-full bg-amber-300"></span>
+                        <span>Waiting on independent engine handoff</span>
+                    </div>
+                    <div class="mono text-sm leading-7 text-amber-100/85">
+interface BrowserLlmAdapter {
+  prepare(config, hooks): Promise&lt;void&gt;;
+  run(prompt, config, hooks): Promise&lt;{
+    loadMs: number;
+    ttftMs: number;
+    generationMs: number;
+    outputText: string;
+    approxTokens: number;
+    heapDeltaMb: number | null;
+  }&gt;;
+}
+                    </div>
+                </div>
+                <div class="mt-5 small-note">
+                    Planned handoff points: `.q42`/GGUF selection, OPFS cache policy, worker isolation, provenance export, and any Qualia-specific semantic overhead metrics once the runtime is stable.
+                </div>
+            </div>
+        </section>
+    </main>
+
+    <script type="module" src="js/wasm-llm-benchmarks.js"></script>
+</body>
+</html>

@@ -996,6 +996,20 @@ sed -i 's/qualia_core_db_bg\.wasm/qualia_bg.wasm/g' $DOCS/qualia.js
 
 ## 📓 7. PROGRESS LOG (newest first — keep this updated every step)
 
+- **2026-06-19 (aq)** — **Wired Qualia into the comparative LLM benchmark page (`docs/benchmarks.html`).**
+  - `docs/js/wasm-llm-benchmarks.js`: flipped the `qualia` engine def to live + added `QualiaAdapter`
+    (lazy-imports `../pkg/qualia/qualia.js` + `./opfs-model-cache.js`; loads via `loadOrCompileQ42`
+    [.q42 AOT] or `loadGgufCached` [GGUF], `initialize_webgpu_engine`, streams `inferWasmAsync` →
+    TTFT/output, reports load/ttft/gen/tok-s/heapΔ via the page's `BrowserLlmAdapter` contract).
+    Container toggle: `.q42` (AOT, OPFS-cached) | GGUF (direct). Added the WebGPU limits shim to the
+    page. **Did NOT touch the external comparison adapters** (webllm/transformers.js are Timothy's
+    lazy-loaded comparison targets, not ours).
+  - **Verified (headless Chrome):** Qualia engine runs end-to-end — `load 5.39s · ttft 6.70s ·
+    gen 10.16s`, results row populated, no page errors. (Output fragmentary = known greedy-ChatML
+    early-EOS on SmolLM2-360M; perf metrics valid.)
+  - **Note:** default model URL is same-origin `models/…gguf` (works in the local harness; on GitHub
+    Pages it 404s — point the control at a reachable GGUF URL).
+
 - **2026-06-19 (ap)** — **Phase 4: JS AOT OPFS ingest pipeline — compile-once, warm-boot from `.q42`.**
   - **`opfs-model-cache.js::loadOrCompileQ42`:** compile GGUF→`.q42` once → stream `.q42` to OPFS
     (chunked writable, no `Cache.put`; store only the `.q42`, not the GGUF) → warm-boot from it.
