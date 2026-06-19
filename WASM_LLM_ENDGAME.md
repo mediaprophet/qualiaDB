@@ -88,15 +88,20 @@ This document supersedes `wasm_llm_planning.md` for the final push of Phase 2B a
                                       tensor START page-aligned (4K/16K) for single-fetch mmap; the
                                       intra-role stride mirrors the 256-aligned bind ranges from 3x.
   ```
-  Rust (`#[repr(C)]`, page-aligned):
+  Rust (`#[repr(C, align(16))]`, padding-free, little-endian on the wire) — **v2** (128B header):
   ```rust
-  #[repr(C, align(16))]
-  struct Q42WeightHeader { magic:[u8;4], version:u16, page_log2:u16, n_tensors:u32, n_layers:u32,
-                           manifest_offset:u64, blob_offset:u64, arch_quin: NQuin /*48B*/ }
-  #[repr(C, align(16))]
+  struct Q42WeightHeader { magic:[u8;4]=b"Q42W", version:u16=2, page_log2:u16, n_tensors:u32,
+      n_layers:u32, n_embd:u32, n_head:u32, n_kv_head:u32, vocab_size:u32, rope_freq_base:f32,
+      rope_scale:f32, manifest_offset:u64, blob_offset:u64, cold_offset:u64, cold_len:u64,
+      header_crc:u32, format_flags:u32, arch_quin: NQuin /*48B*/ }      // 128 B
   struct Q42TensorEntry  { role:u16, layer:u16, ggml_type:u32, dim0:u32, dim1:u32,
-                           blob_offset:u64, byte_len:u64, scaffold_quin: NQuin /*48B*/ }
+      blob_offset:u64, byte_len:u64, scaffold_quin: NQuin /*48B*/ }     // 80 B
   ```
+  **Integrity (in-band, zero-copy-safe):** `header_crc` = CRC-32C over header+manifest (boot check,
+  µs); each entry's `NQuin.parity` = CRC-32C of its 32 functional bytes (offset/len corruption →
+  caught before any GPU bind, avoiding OOB traps). `NQuin.metadata` bitfield reserved for
+  sparsity/quant/deontic-taint hints. Blob bit-rot deferred (lazy/sampled). See `WASM_LLM_TTFT_QUESTIONS`
+  follow-up + the q42 integrity discussion.
 
 * **`compile_gguf_to_q42(input: &[u8]) -> Vec<u8>` (wasm export):**
   1. Parse GGUF via `GgufTensorIndex::from_gguf` (reuse).
@@ -113,18 +118,27 @@ This document supersedes `wasm_llm_planning.md` for the final push of Phase 2B a
   (3) include ALL tensors (`token_embd`/`output`/norms via `layer=0xFFFF` sentinel); (4) enforce
   **little-endian** emission now + `version` gate.
 
-* **v1 COMPILER DONE + VERIFIED (2026-06-19):** `src/q42_weight.rs` —
-  `compile_gguf_to_q42(input, page_log2) -> Vec<u8>` (native-testable, pure Rust, explicit LE) +
-  `Q42WeightHeader` (96B) / `Q42TensorEntry` (80B) `#[repr(C, align(16))]`, size-asserted. wasm export
-  `compileGgufToQ42(Uint8Array, page_log2)` in `wasm_llm.rs`. Reuses `GgufTensorIndex::from_gguf` + the
-  same per-role/per-layer page layout as `mc8_upload_all_resident_weights`. **Native test
-  `q42_weight::tests::compile_smollm2_to_q42_layout` PASSES:** `290 tensors, 32 layers, blob@32768
-  (16K-aligned), 258 MB`; every tensor blob 16K-aligned + in-bounds.
-* **Remaining Phase 4 (next):** (a) runtime **reader** — bind blobs by pre-baked offset / mmap-view,
-  feed the resident arena directly (skip GGUF parse); (b) JS **ingest pipeline** — compile on first
-  load, stream `.q42` to OPFS (Phase 3 writer), load `.q42` thereafter; (c) cold CBOR-LD ontology
-  section; (d) optional Web-Worker "compiler farm" for parallel packing. wasm export not yet
-  rebuilt/deployed (no consumer until the JS ingest pipeline lands).
+* **v2 COMPILER + READER + BOOT GATE DONE (2026-06-19):** `src/q42_weight.rs` —
+  - `compile_gguf_to_q42(input, page_log2) -> Vec<u8>` (native, explicit LE); writes the v2 header
+    (hyperparams + `header_crc` + per-entry `parity` CRC) + manifest + 16K-page blobs.
+  - `Q42TensorIndex::from_q42(&[u8])` runtime reader — validates magic/version, **verifies header +
+    every entry CRC** (rejects corruption before any bind), reconstructs `GgufHyperparams`,
+    zero-copy `blob()` view.
+  - wasm export `compileGgufToQ42(Uint8Array, page_log2)`.
+  - **Dual-format boot gate** in `initialize_webgpu_engine` (`gguf_bridge.rs`): first 4 bytes →
+    `b"GGUF"` (legacy `adopt_resident_mmap`) or `b"Q42W"` (`adopt_resident_q42`). The q42 path
+    validates the container, reserves GEMM/KV arenas from the header hyperparams, and **maps the
+    page-aligned GEMM-role blobs straight into `Mc8WeightArenaBufs`** (`mc8_upload_resident_from_q42`).
+  - **Verified:** native test PASSES — `290 tensors, 32 layers, blob@32768`, reader round-trip +
+    hyperparams + **CRC tamper-detection** (flipped manifest byte rejected). wasm build compiles clean.
+* **Remaining Phase 4 (next):** (a) **inference-from-`.q42` hot path** — source per-tensor params
+  (dims/ggml_type/len) from the manifest instead of `GgufTensorIndex`, so a q42 boot can actually
+  run decode (today it structurally maps weights but the hot path still expects a GGUF index);
+  (b) JS **ingest pipeline** — `compileGgufToQ42` on first load → stream `.q42` to OPFS (Phase 3
+  writer) → boot from `.q42` thereafter; (c) cold CBOR-LD ontology section + `NQuin.metadata` flag
+  consumption in-shader; (d) optional single-buffer zero-copy bind (bind q42 blobs directly, skip the
+  arena copy) + Web-Worker compiler farm. wasm export not yet rebuilt/deployed (no consumer until the
+  JS ingest pipeline lands).
 
 ---
 

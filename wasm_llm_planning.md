@@ -996,6 +996,27 @@ sed -i 's/qualia_core_db_bg\.wasm/qualia_bg.wasm/g' $DOCS/qualia.js
 
 ## 📓 7. PROGRESS LOG (newest first — keep this updated every step)
 
+- **2026-06-19 (am)** — **Phase 4 v2: `.q42` integrity layer + runtime reader + dual-format boot gate.**
+  - **Format v2 (`q42_weight.rs`):** 128B header adds hyperparams (n_embd/n_head/n_kv_head/vocab/rope —
+    self-contained boot) + `header_crc:u32` + `format_flags:u32` (replacing dead padding). Per-entry
+    integrity reuses the **existing `NQuin` fields** (architect-approved, no struct churn): `parity` =
+    CRC-32C of the entry's 32 functional bytes; `metadata` = reserved bitfield (sparsity / quant /
+    deontic-ODRL taint). Table-less CRC-32C inline (no new dep). Decision driven by research
+    (ZFS/btrfs per-block checksums; safetensors/GGUF have none; NVIDIA UST decouple-layout precedent)
+    — see [[feedback_no_external_llm_libs]] re: research-not-install.
+  - **Reader:** `Q42TensorIndex::from_q42` — validates magic/version, **verifies header + every entry
+    CRC** (rejects corruption pre-bind → no WebGPU OOB), reconstructs `GgufHyperparams`, zero-copy
+    `blob()`.
+  - **Boot gate (`gguf_bridge.rs`):** `initialize_webgpu_engine` peeks 4 magic bytes → `GGUF`
+    (`adopt_resident_mmap`) | `Q42W` (`adopt_resident_q42`). q42 path validates, reserves GEMM/KV from
+    header hyperparams, maps GEMM-role blobs into `Mc8WeightArenaBufs` (`mc8_upload_resident_from_q42`,
+    `q42_role_to_mc8`). New engine field `q42_resident`.
+  - **Verified:** native test PASS (`290 tensors, 32 layers, blob@32768`, reader round-trip +
+    hyperparams + **CRC tamper rejection**); wasm build compiles clean.
+  - **Blob bit-rot integrity DEFERRED** (lazy/sampled — hashing the 250MB blob at index defeats
+    zero-copy). **Next:** inference-from-`.q42` hot path (source per-tensor params from manifest, not
+    `GgufTensorIndex`) so a q42 boot can decode; then JS ingest pipeline (compile→OPFS→boot from q42).
+
 - **2026-06-19 (al)** — **Phase 4: AOT GGUF → `.q42` weight-container compiler v1 — done + verified.**
   - **New:** `src/q42_weight.rs` — `compile_gguf_to_q42(input, page_log2) -> Vec<u8>`; structs
     `Q42WeightHeader` (96B) / `Q42TensorEntry` (80B) `#[repr(C, align(16))]`, size-asserted; explicit
