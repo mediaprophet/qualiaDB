@@ -309,3 +309,14 @@ pub async fn infer_wasm_async(prompt: String, on_token: Function) -> Result<Stri
         .await
         .map_err(|e| JsValue::from_str(&e))
 }
+
+/// Phase 4 (AOT): compile a flat GGUF byte image into a `.q42` LLM-weight container
+/// (page-aligned tensor blobs + zero-parse NQuin manifest). Run once at ingest; stream the
+/// result to OPFS. `page_log2 == 0` selects the 16 KB default.
+#[wasm_bindgen(js_name = compileGgufToQ42)]
+pub fn compile_gguf_to_q42(gguf: js_sys::Uint8Array, page_log2: u16) -> Result<js_sys::Uint8Array, JsValue> {
+    let bytes = gguf.to_vec();
+    let out = crate::q42_weight::compile_gguf_to_q42(&bytes, page_log2)
+        .map_err(|e| JsValue::from_str(&e))?;
+    Ok(js_sys::Uint8Array::from(out.as_slice()))
+}

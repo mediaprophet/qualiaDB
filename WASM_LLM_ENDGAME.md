@@ -67,9 +67,64 @@ This document supersedes `wasm_llm_planning.md` for the final push of Phase 2B a
 * **Pending:** port to `online-llm-demo.html` + `llmdemo/index.html` (architect gated until harness
   proven — now proven). Chunked OPFS→wasm mmap (avoid the one full `arrayBuffer()` read) is Phase 4.
 
-### Phase 4: AOT `.q42` Compilation (Horizon)
-* **Goal:** Compile GGUF into Qualia-native `.q42` ahead of time to skip runtime parsing.
-* **Context:** Pre-compute tensor byte offsets and pre-bake WGPU bind-group layouts. 
+### Phase 4: AOT `.q42` Compilation (Horizon) — DRAFT PLAN (2026-06-19)
+* **Goal:** Compile GGUF → a Qualia-native `.q42` **weight container** ahead of time so the runtime
+  skips GGUF parsing and binds page-aligned tensor slices directly (toward mmap/zero-copy).
+
+* **Reconciliation (important):** the existing `.q42` (`tensor/q42_integration.rs`, `bake_pipeline.rs`,
+  the schemaorg `.q42`) is the **semantic graph** format (`NQuin → Tensor10D` volumes). Phase 4 is a
+  **new sibling section in the q42 family** — an LLM-weight container — not a change to the semantic
+  format. Use a distinct section magic so they never collide.
+
+* **Layout (per §6-Q2: contiguous strided blobs + 48-byte Quin manifest; weights are NOT Quins):**
+  ```
+  [ Q42 container header ]            existing v3 header + a pointer to the weight section
+  [ Q42WeightHeader      ]            magic b"Q42W", version, page_log2 (12=4K|14=16K), n_tensors,
+                                      n_layers, manifest_offset, blob_offset, arch scaffold NQuin
+  [ manifest: Q42TensorEntry[] ]      one per tensor — role, layer, ggml_type, dim0/1, blob_offset,
+                                      byte_len, + a 48-byte scaffold NQuin (ontology/lexical binding)
+  [ pad → page boundary  ]
+  [ tensor blob region   ]            quantized bytes, per-role grouped + per-layer strided, each
+                                      tensor START page-aligned (4K/16K) for single-fetch mmap; the
+                                      intra-role stride mirrors the 256-aligned bind ranges from 3x.
+  ```
+  Rust (`#[repr(C)]`, page-aligned):
+  ```rust
+  #[repr(C, align(16))]
+  struct Q42WeightHeader { magic:[u8;4], version:u16, page_log2:u16, n_tensors:u32, n_layers:u32,
+                           manifest_offset:u64, blob_offset:u64, arch_quin: NQuin /*48B*/ }
+  #[repr(C, align(16))]
+  struct Q42TensorEntry  { role:u16, layer:u16, ggml_type:u32, dim0:u32, dim1:u32,
+                           blob_offset:u64, byte_len:u64, scaffold_quin: NQuin /*48B*/ }
+  ```
+
+* **`compile_gguf_to_q42(input: &[u8]) -> Vec<u8>` (wasm export):**
+  1. Parse GGUF via `GgufTensorIndex::from_gguf` (reuse).
+  2. Reuse the per-role/per-layer page-aligned layout already computed in
+     `mc8_upload_all_resident_weights` (3x) — it is the AOT layout.
+  3. Emit header + manifest (entries + scaffold Quins) + page-aligned blob region; stream output to
+     OPFS via the Phase 3 writer. Optionally fan out per-tensor packing to Web Workers (the architect's
+     "compiler farm").
+  4. Runtime: read header+manifest (small), bind each blob slice by pre-baked offset — zero GGUF parse;
+     the resident-weight upload becomes a direct copy (or mmap view) from the `.q42`.
+
+* **Decisions (architect, 2026-06-19):** (1) `page_log2` header field, **default 16K**; (2) raw NQuin
+  hot manifest **+** optional cold CBOR-LD section (`cold_offset`/`cold_len`, reserved in v1);
+  (3) include ALL tensors (`token_embd`/`output`/norms via `layer=0xFFFF` sentinel); (4) enforce
+  **little-endian** emission now + `version` gate.
+
+* **v1 COMPILER DONE + VERIFIED (2026-06-19):** `src/q42_weight.rs` —
+  `compile_gguf_to_q42(input, page_log2) -> Vec<u8>` (native-testable, pure Rust, explicit LE) +
+  `Q42WeightHeader` (96B) / `Q42TensorEntry` (80B) `#[repr(C, align(16))]`, size-asserted. wasm export
+  `compileGgufToQ42(Uint8Array, page_log2)` in `wasm_llm.rs`. Reuses `GgufTensorIndex::from_gguf` + the
+  same per-role/per-layer page layout as `mc8_upload_all_resident_weights`. **Native test
+  `q42_weight::tests::compile_smollm2_to_q42_layout` PASSES:** `290 tensors, 32 layers, blob@32768
+  (16K-aligned), 258 MB`; every tensor blob 16K-aligned + in-bounds.
+* **Remaining Phase 4 (next):** (a) runtime **reader** — bind blobs by pre-baked offset / mmap-view,
+  feed the resident arena directly (skip GGUF parse); (b) JS **ingest pipeline** — compile on first
+  load, stream `.q42` to OPFS (Phase 3 writer), load `.q42` thereafter; (c) cold CBOR-LD ontology
+  section; (d) optional Web-Worker "compiler farm" for parallel packing. wasm export not yet
+  rebuilt/deployed (no consumer until the JS ingest pipeline lands).
 
 ---
 

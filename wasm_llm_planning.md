@@ -996,6 +996,23 @@ sed -i 's/qualia_core_db_bg\.wasm/qualia_bg.wasm/g' $DOCS/qualia.js
 
 ## 📓 7. PROGRESS LOG (newest first — keep this updated every step)
 
+- **2026-06-19 (al)** — **Phase 4: AOT GGUF → `.q42` weight-container compiler v1 — done + verified.**
+  - **New:** `src/q42_weight.rs` — `compile_gguf_to_q42(input, page_log2) -> Vec<u8>`; structs
+    `Q42WeightHeader` (96B) / `Q42TensorEntry` (80B) `#[repr(C, align(16))]`, size-asserted; explicit
+    little-endian serialization; `b"Q42W"` magic (sibling of the semantic `.q42`, never collides).
+    Reuses `GgufTensorIndex::from_gguf` + the per-role/per-layer page layout from
+    `mc8_upload_all_resident_weights`. wasm export `compileGgufToQ42` in `wasm_llm.rs`; module
+    registered in `lib.rs` (`not(wasm32) || wasm-llm`).
+  - **Architect decisions baked:** page_log2 (default 16K) · raw NQuin hot manifest + reserved cold
+    CBOR-LD section · ALL tensors (`layer=0xFFFF` global sentinel) · little-endian + version gate.
+  - **Verified (native unit test, no browser/no external libs):**
+    `q42_weight::tests::compile_smollm2_to_q42_layout` PASS — `290 tensors, 32 layers, blob@32768`
+    (16K-aligned), every tensor blob 16K-aligned + in-bounds, 258 MB. (`output.weight` tied → not
+    double-counted; runtime projects via the included `token_embd`.)
+  - **Next:** runtime `.q42` reader (bind-by-offset / mmap → resident arena, skip GGUF parse); JS
+    ingest (compile-once → OPFS via Phase 3 writer → load `.q42`); cold CBOR-LD ontology; optional
+    Web-Worker compiler farm. wasm export not yet rebuilt/deployed (no consumer yet).
+
 - **2026-06-19 (ak)** — **Phase 3: OPFS model caching (JS layer) — done + verified in harness.**
   - **New:** `docs/js/opfs-model-cache.js` (`loadGgufCached`, `clearOpfsModel`, `clearAllOpfsModels`).
     Streaming `fetch.body.pipeThrough(progressCounter).pipeTo(FileSystemWritableFileStream)` → no

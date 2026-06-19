@@ -759,6 +759,9 @@ pub mod ggml_quants;
 pub mod gguf_bridge;
 #[cfg(any(not(target_arch = "wasm32"), feature = "wasm-llm"))]
 pub mod gguf_sharder;
+/// Phase 4: AOT GGUF → `.q42` LLM-weight container compiler.
+#[cfg(any(not(target_arch = "wasm32"), feature = "wasm-llm"))]
+pub mod q42_weight;
 pub mod identifier;
 #[cfg(not(target_arch = "wasm32"))]
 pub mod mcp_server;
