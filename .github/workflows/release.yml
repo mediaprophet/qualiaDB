@@ -103,7 +103,7 @@ jobs:
           cargo check -q --target wasm32-unknown-unknown -p qualia-core-db \
             --no-default-features --features portal
 
-# ── Job 3: Qualia Portal WASM (design-studio / spatial / 0.0.17 docs kit) ─────
+# ── Job 3: Qualia Portal WASM (design-studio / spatial / 0.0.18 docs kit) ─────
   build-portal-wasm:
     needs: check-wasm
     name: WASM (Qualia Portal)
@@ -135,22 +135,26 @@ jobs:
       - name: Install wasm-pack
         run: cargo install wasm-pack --locked --version 0.13.1 --force
 
-      - name: Build slim Qualia portal WASM
+      - name: Build Qualia portal WASM (viewport + browser LLM)
         env:
-          RUSTFLAGS: "-C target-feature=+simd128"
+          # 8 MB stack + 4 GB max-memory required by the LLM call tree, and the browser-LLM feature
+          # set so the released portal matches what Pages ships (see pages.yml / package-qualia-wasm.ps1).
+          RUSTFLAGS: "-C target-feature=+simd128 -C link-arg=-zstack-size=8388608 -C link-arg=--max-memory=4294967296"
         run: |
           wasm-pack build crates/qualia-core-db \
             --target web \
             --release \
             --out-dir pkg-qualia \
-            -- --no-default-features --features portal
+            -- --no-default-features --features portal,wasm-llm,wasm-logic,wasm-scientific
           mkdir -p docs/pkg/qualia
           cp crates/qualia-core-db/pkg-qualia/qualia_core_db.js docs/pkg/qualia/qualia.js
           cp crates/qualia-core-db/pkg-qualia/qualia_core_db_bg.wasm docs/pkg/qualia/qualia_bg.wasm
           cp crates/qualia-core-db/pkg-qualia/qualia_core_db.d.ts docs/pkg/qualia/qualia.d.ts
           cp crates/qualia-core-db/pkg-qualia/qualia_core_db_bg.wasm.d.ts docs/pkg/qualia/qualia_bg.wasm.d.ts 2>/dev/null || true
           bash scripts/patch-portal-wasm-js.sh docs/pkg/qualia/qualia.js
-          printf '%s\n' '{"name":"qualia-portal","type":"module","version":"0.0.17","main":"qualia.js","types":"qualia.d.ts"}' > docs/pkg/qualia/package.json
+          printf '%s\n' '{"name":"qualia-portal","type":"module","version":"0.0.18","main":"qualia.js","types":"qualia.d.ts"}' > docs/pkg/qualia/package.json
+          grep -q 'initialize_webgpu_engine' docs/pkg/qualia/qualia.js
+          grep -q 'inferWasmStreaming' docs/pkg/qualia/qualia.js
 
       - name: Portal WASM size budget
         run: node docs/tests/wasm-size-check.mjs docs/pkg/qualia/qualia_bg.wasm
@@ -213,7 +217,8 @@ jobs:
 
       - name: Build full playground WASM
         env:
-          RUSTFLAGS: "-C target-feature=+simd128"
+          # wasm-full includes wasm-llm → needs the 8 MB stack / 4 GB max-memory like the portal build.
+          RUSTFLAGS: "-C target-feature=+simd128 -C link-arg=-zstack-size=8388608 -C link-arg=--max-memory=4294967296"
         run: |
           wasm-pack build crates/qualia-core-db \
             --target web \
@@ -301,4 +306,4 @@ jobs:
           GITHUB_TOKEN: ${{ secrets.GITHUB_TOKEN }}
 
 # Desktop tray host: crates/webizen-desktop (Tauri). Package separately when ready.
-# Flutter desktop deprecated — 0.0.17 docs kit uses GitHub Pages + :8080 settings portal.
+# Flutter desktop deprecated — 0.0.18 docs kit uses GitHub Pages + :8080 settings portal.
