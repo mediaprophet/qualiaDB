@@ -996,6 +996,29 @@ sed -i 's/qualia_core_db_bg\.wasm/qualia_bg.wasm/g' $DOCS/qualia.js
 
 ## 📓 7. PROGRESS LOG (newest first — keep this updated every step)
 
+- **2026-06-19 (aj)** — **MC7 ChatML investigation: root cause = greedy early-EOS, NOT an engine bug.**
+  - Phase 2B banked first: instrumentation stripped, clean rebuild holds gate (TTFT 3849/4001 ms,
+    `Paris.` ✅), committed `850ac3b1`, tagged **`v0.0.18-wasm-gpu-phase2b-closed`**.
+  - **ChatML re-test (current build):** `What is the capital of France?` → **`The capital of
+    France<|im_end|>`** — fragmentary (parrots the subject, stops before "Paris").
+  - **Bisect (decisive):**
+    - **CPU path == GPU path** — byte-identical fragment ⇒ NOT the GPU manifold (3w/3x/3y innocent);
+      architect vector 3 (22- vs 5-token attn mask) ruled out.
+    - Tokenization HF-parity (test `smollm_tokenizer_audit_vs_hf_reference`, 22 IDs) + BOS correct
+      (no double-BOS; `<|im_start|>`=BOS=1) ⇒ vectors 1 & 2 ruled out.
+    - System message added → **no change** (not a missing-system-prompt issue).
+    - **Primed assistant turn** (`…assistant\nThe capital of France is`) → **` Paris.<|im_end|>`** ✅
+      ⇒ engine math correct; model knows the fact in-context.
+  - **Root cause:** from a bare `assistant\n` turn, greedy decode emits `<|im_end|>` one token early
+    (after "…France", instead of "is") — a tiny-model greedy artifact, not a tokenizer/mask/manifold
+    bug. The whole inference stack is coherent.
+  - **Resolution (architect, 2026-06-19): MC7 CLOSED — "Expected Model Behavior".** No engine change.
+    Decode hacks rejected (no `min_new_tokens`/EOS-suppression, no sampling in the core — the tensor
+    core must emit the highest-logit token deterministically for CI gates). External ground-truth
+    runner (llama.cpp/HF) **rejected** per Prime Directive #4 — internal proof (CPU≡GPU + tokenizer
+    parity + primed completion) is sufficient. Proper sampler (Temp/Top-K/Top-P) deferred to the
+    **agent layer, outside the engine**, for chat demos on small models. Endgame doc §3 updated.
+
 - **2026-06-19 (ai)** — **MC8 Part 3y: eager resident upload → ✅ PHASE 2B GATE CLOSED.**
   - **Eager upload:** moved `mc8_upload_all_resident_weights` from the lazy first-prefill path into
     init (`adopt_resident_mmap`), so the one-time 219 MB upload is paid at model-load, before the

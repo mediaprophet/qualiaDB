@@ -1,0 +1,232 @@
+{
+  "version": "0.0.17",
+  "brand": {
+    "name": "QualiaDB",
+    "tagline": "Human-Centric Semantic Engine",
+    "icon": "Q"
+  },
+  "navigation": [
+    {
+      "label": "Home",
+      "href": "index.html",
+      "icon": "fa-house",
+      "group": "Core"
+    },
+    {
+      "label": "Features",
+      "href": "advanced-features.html",
+      "icon": "fa-cubes",
+      "group": "Core"
+    },
+    {
+      "label": "API Docs",
+      "href": "api.html",
+      "icon": "fa-code",
+      "group": "Core"
+    },
+    {
+      "label": "Manuals",
+      "href": "manuals/index.html",
+      "icon": "fa-book",
+      "group": "Core"
+    },
+    {
+      "label": "Benchmark Hub",
+      "href": "benchmark.html",
+      "icon": "fa-gauge-high",
+      "group": "Benchmarks"
+    },
+    {
+      "label": "Comparative",
+      "href": "comparative_benchmarks.html",
+      "icon": "fa-chart-line",
+      "group": "Benchmarks"
+    },
+    {
+      "label": "Visualizer",
+      "href": "benchmark_visualizer.html",
+      "icon": "fa-chart-area",
+      "group": "Benchmarks"
+    },
+    {
+      "label": "Browser Harness",
+      "href": "playground/benchmark.html",
+      "icon": "fa-vial",
+      "group": "Benchmarks"
+    },
+    {
+      "label": "SPARQL",
+      "href": "sparql-showcase.html",
+      "icon": "fa-database",
+      "group": "SPARQL"
+    },
+    {
+      "label": "Examples",
+      "href": "sparql-examples.html",
+      "icon": "fa-terminal",
+      "group": "SPARQL"
+    },
+    {
+      "label": "Analytics",
+      "href": "analytics.html",
+      "icon": "fa-chart-pie",
+      "group": "Analytics"
+    },
+    {
+      "label": "Sciences",
+      "href": "science-playground.html",
+      "icon": "fa-flask",
+      "group": "Sciences"
+    },
+    {
+      "label": "Sci Computing",
+      "href": "scientific-computing.html",
+      "icon": "fa-calculator",
+      "group": "Sciences"
+    },
+    {
+      "label": "Spatial / GeoSPARQL",
+      "href": "spatial.html",
+      "icon": "fa-cube",
+      "group": "Sciences"
+    },
+    {
+      "label": "Design Studio",
+      "href": "design-studio.html",
+      "icon": "fa-pen-ruler",
+      "highlight": true,
+      "group": "Tools"
+    },
+    {
+      "label": "Phone Console",
+      "href": "phone-console.html",
+      "icon": "fa-mobile-screen",
+      "group": "Tools"
+    },
+    {
+      "label": "Neuro-Symbolic",
+      "href": "playground/neuro-symbolic.html",
+      "icon": "fa-brain",
+      "group": "Tools"
+    },
+    {
+      "label": "Semantic Drift",
+      "href": "playground/semantics.html",
+      "icon": "fa-wave-square",
+      "group": "Tools"
+    },
+    {
+      "label": "3D Anatomy",
+      "href": "playground/anatomy.html",
+      "icon": "fa-heart-pulse",
+      "group": "Tools"
+    },
+    {
+      "label": "Edge LLM",
+      "href": "edge-llm.html",
+      "icon": "fa-brain",
+      "group": "LLM"
+    },
+    {
+      "label": "Online LLM",
+      "href": "online-llm-demo.html",
+      "icon": "fa-cloud",
+      "group": "LLM"
+    },
+    {
+      "label": "LLM Showcase",
+      "href": "edge-llm-showcase.html",
+      "icon": "fa-microchip",
+      "group": "LLM"
+    },
+    {
+      "label": "Modalities",
+      "href": "modalities-showcase.html",
+      "icon": "fa-atom",
+      "highlight": true,
+      "group": "Tools"
+    },
+    {
+      "label": "Logic Showcase",
+      "href": "logic-showcase.html",
+      "icon": "fa-gavel",
+      "group": "Tools"
+    },
+    {
+      "label": "Playground",
+      "href": "playground/index.html",
+      "icon": "fa-play",
+      "group": "Tools"
+    },
+    {
+      "label": "RDF Compare",
+      "href": "playground/compare.html",
+      "icon": "fa-scale-balanced",
+      "group": "Tools"
+    },
+    {
+      "label": "API Explorer",
+      "href": "api-explorer/",
+      "icon": "fa-compass",
+      "highlight": true,
+      "group": "Tools"
+    },
+    {
+      "label": "Test Suite",
+      "href": "tests/",
+      "icon": "fa-vial-circle-check",
+      "highlight": true,
+      "group": "Tools"
+    },
+    {
+      "label": "Data Formats",
+      "href": "data-formats.html",
+      "icon": "fa-file-code",
+      "group": "Data"
+    },
+    {
+      "label": "Zero-Heap",
+      "href": "zero-heap-compliance.html",
+      "icon": "fa-memory",
+      "group": "Data"
+    },
+    {
+      "label": "Ontology Demo",
+      "href": "ontology.html",
+      "icon": "fa-book-open",
+      "highlight": true,
+      "group": "Data"
+    },
+    {
+      "label": "WordNet",
+      "href": "ontology.html?dataset=wordnet",
+      "icon": "fa-language",
+      "group": "Data"
+    },
+    {
+      "label": "WordNet Demo",
+      "href": "playground/wordnet-demo.html",
+      "icon": "fa-diagram-project",
+      "group": "Data"
+    }
+  ],
+  "footer": {
+    "links": [
+      {
+        "label": "GitHub",
+        "href": "https://github.com/mediaprophet/qualiaDB/releases",
+        "icon": "fa-brands fa-github"
+      },
+      {
+        "label": "Manuals",
+        "href": "manuals/index.html",
+        "icon": "fa-book-open"
+      },
+      {
+        "label": "Standards",
+        "href": "manuals/standards/index.html",
+        "icon": "fa-ruler"
+      }
+    ]
+  }
+}

@@ -1,0 +1,34 @@
+<!DOCTYPE html>
+<html lang="en">
+<head>
+  <meta charset="UTF-8" />
+  <meta name="viewport" content="width=device-width, initial-scale=1" />
+  <title>Qualia Settings — Notes</title>
+  <link rel="stylesheet" href="portal.css" />
+</head>
+<body>
+  <main class="shell">
+    <header>
+      <h1>Settings notes</h1>
+      <p class="lede"><a href="/">← Back to portal</a></p>
+    </header>
+    <section class="panel links">
+      <h2>Two settings surfaces</h2>
+      <ul>
+        <li><strong>This portal (8080)</strong> — browser-accessible; tray menu opens it. Edits <code>AgentConfig</code> and exposes studio <code>/manifest</code> + <code>/telemetry</code>.</li>
+        <li><strong>Webizen Studio webview</strong> — full Dioxus app at route <code>/settings</code> inside the Tauri window (QPU, themes, telemetry hooks).</li>
+        <li><strong>Graph daemon (4242)</strong> — Qualia loopback engine; Anatomy QApps and phone-console ICP attach here with <code>qualia_token</code>.</li>
+      </ul>
+      <h2>Local job queue API</h2>
+      <ul>
+        <li><code>GET /api/jobs</code> — queue snapshot</li>
+        <li><code>POST /api/jobs</code> — enqueue (ontology import, bundled seed, daemon reload, …)</li>
+        <li><code>POST /api/jobs/{id}/cancel</code> — cancel queued or running job</li>
+      </ul>
+      <p class="lede">Jobs persist under <code>%LOCALAPPDATA%/Qualia/local-jobs.json</code> and run one at a time.</p>
+      <h2>Headless alternative</h2>
+      <p class="lede">Without this desktop shell, run <code>qualia-cli daemon start</code> and <code>qualia-cli service doctor</code> — no system tray required.</p>
+    </section>
+  </main>
+</body>
+</html>

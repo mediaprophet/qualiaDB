@@ -1,0 +1,22 @@
+{
+  "endpoints": [
+    {
+      "id": "local-daemon",
+      "name": "Qualia graph daemon",
+      "endpoint": "local",
+      "domains": ["graph", "nquin", "installed-ontologies"]
+    },
+    {
+      "id": "wikidata-main",
+      "name": "Wikidata Query Service",
+      "endpoint": "https://query.wikidata.org/sparql",
+      "domains": ["general", "entities", "products"]
+    },
+    {
+      "id": "dbpedia-main",
+      "name": "DBpedia",
+      "endpoint": "https://dbpedia.org/sparql",
+      "domains": ["general", "wikipedia-derived"]
+    }
+  ]
+}

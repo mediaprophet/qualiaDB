@@ -1,0 +1,92 @@
+<!DOCTYPE html>
+<html lang="en">
+<head>
+  <meta charset="UTF-8" />
+  <meta name="viewport" content="width=device-width, initial-scale=1" />
+  <title>Qualia Settings Portal</title>
+  <link rel="stylesheet" href="portal.css" />
+</head>
+<body>
+  <main class="shell">
+    <header>
+      <h1>Qualia Settings Portal</h1>
+      <p class="lede">Local control plane at <code id="origin-label">127.0.0.1:8080</code>. Graph daemon, storage, and studio workspace hooks.</p>
+    </header>
+
+    <section class="cards" id="status-cards" aria-live="polite">
+      <article class="card"><h2>Settings server</h2><p id="st-settings">…</p></article>
+      <article class="card"><h2>Graph daemon</h2><p id="st-daemon">…</p></article>
+      <article class="card"><h2>QApps protocol</h2><p id="st-qapps">…</p></article>
+      <article class="card"><h2>Job queue</h2><p id="st-jobs">…</p></article>
+    </section>
+
+    <section class="panel">
+      <h2>Local job queue</h2>
+      <p class="lede" style="margin-top:0">Cold-path processing: ontology import, bundled seeds, daemon graph reload.</p>
+      <form id="job-form" class="job-form">
+        <label>Job type
+          <select name="job_kind" id="job-kind">
+            <option value="ontology_catalog_import">Import catalog ontology</option>
+            <option value="ontology_uri_import">Import ontology from URI</option>
+            <option value="bundled_ontology_seed">Seed bundled ontologies</option>
+            <option value="workbench_daemon_sync">Sync workbench → daemon</option>
+            <option value="daemon_graph_reload">Reload daemon graph</option>
+          </select>
+        </label>
+        <label id="job-ontology-wrap">Ontology ID <input name="ontology_id" type="text" placeholder="shacl, snomedct-us, …" /></label>
+        <label id="job-uri-wrap" hidden>Source URI <input name="uri" type="url" placeholder="https://…" /></label>
+        <div class="actions">
+          <button type="submit">Enqueue job</button>
+          <button type="button" id="refresh-jobs">Refresh</button>
+        </div>
+      </form>
+      <div class="job-table-wrap">
+        <table class="job-table" id="jobs-table">
+          <thead>
+            <tr><th>Status</th><th>Kind</th><th>Message</th><th>Progress</th><th></th></tr>
+          </thead>
+          <tbody id="jobs-body"><tr><td colspan="5">Loading…</td></tr></tbody>
+        </table>
+      </div>
+    </section>
+
+    <section class="panel">
+      <h2>Agent configuration</h2>
+      <form id="config-form">
+        <label>Storage path <input name="storage_path" type="text" required /></label>
+        <label>Storage quota (GB) <input name="storage_quota_gb" type="number" min="1" /></label>
+        <label>Daemon host <input name="daemon_host" type="text" /></label>
+        <label>Daemon port <input name="daemon_port" type="number" min="1024" max="65535" /></label>
+        <label>Inference backend
+          <select name="inference_backend">
+            <option value="local">local</option>
+            <option value="hybrid">hybrid</option>
+            <option value="remote">remote</option>
+          </select>
+        </label>
+        <label>Base connectivity cost (ILP µ¢) <input name="base_connectivity_cost_ilp" type="number" min="0" /></label>
+        <div class="actions">
+          <button type="submit">Save configuration</button>
+          <span id="save-msg" role="status"></span>
+        </div>
+      </form>
+    </section>
+
+    <section class="panel">
+      <h2>Telemetry stream</h2>
+      <pre id="telemetry-log" class="log">Connecting…</pre>
+    </section>
+
+    <section class="panel links">
+      <h2>Quick links</h2>
+      <ul>
+        <li><a id="link-daemon-health" href="#" target="_blank" rel="noopener">Graph daemon /health</a></li>
+        <li><a href="/design-studio.html">Design Studio — full Qualia Portal WASM</a> (run <code>scripts/sync-portal-design-kit.ps1</code> after WASM build)</li>
+        <li><a href="/settings.html">Extended settings notes</a></li>
+        <li>Open <strong>Webizen Studio</strong> from the system tray for the full Dioxus UI (<code>/settings</code> route).</li>
+      </ul>
+    </section>
+  </main>
+  <script src="portal.js"></script>
+</body>
+</html>

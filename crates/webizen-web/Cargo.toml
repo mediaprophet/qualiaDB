@@ -1,0 +1,46 @@
+[package]
+name = "qualia-wasm"
+version = "0.1.0"
+edition = "2021"
+publish = false
+
+[lib]
+crate-type = ["cdylib"]
+
+[dependencies]
+wasm-bindgen = "0.2"
+js-sys = "0.3"
+web-sys = { version = "0.3", features = [
+    "console",
+    "Document",
+    "Element",
+    "HtmlElement",
+    "HtmlButtonElement",
+    "Node",
+    "HtmlCanvasElement",
+    "CanvasRenderingContext2d",
+    "Window",
+    "Performance",
+    "Navigator",
+    "CanvasGradient",
+] }
+serde = { version = "1.0", features = ["derive"] }
+serde-wasm-bindgen = "0.6"
+
+[package.metadata.wasm-pack.profile.release]
+wasm-opt = ["-Oz"]
+
+# Now that QualiaDB (C:\Projects\qualiaDB) is fully functional and full-featured,
+# we depend on it for the real .q42 / 10D tensor / ontology engine in WASM.
+# This makes webizen-web the single combined package (Qualia core + our web graphics glue).
+[target.'cfg(target_arch = "wasm32")'.dependencies]
+qualia-core-db = { path = "../qualia-core-db", default-features = false, features = ["wasm_simd"] }
+
+# Re-export some core WASM symbols from Qualia so the single package exposes them cleanly
+# (the final webizen-web.wasm will contain both the qualia engine + our web graphics glue)
+
+# Graphics layer: minimal canvas2d path for now (see render_stub.rs).
+# Future: depend on webizen-render with a "web" feature for shared scene contracts + WebGPU path.
+
+[features]
+default = []

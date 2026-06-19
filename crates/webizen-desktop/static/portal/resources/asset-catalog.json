@@ -1,0 +1,52 @@
+{
+  "version": "1.0.0",
+  "source": "resources/llms.yaml + resources/ontologies.yaml (trimmed for docs)",
+  "llms": [
+    {
+      "id": "gemma-3-1b-it-q4_0",
+      "name": "Gemma 3 1B Instruct (Q4_0)",
+      "size_mb": 957,
+      "ram_estimate_mb": 1100,
+      "recommended_for": ["edge", "very_low_ram", "demos"]
+    },
+    {
+      "id": "phi-3-mini-4k-instruct-q4km",
+      "name": "Phi-3 Mini 4K Instruct (Q4_K_M)",
+      "size_mb": 2400,
+      "ram_estimate_mb": 2800,
+      "recommended_for": ["edge", "low_ram", "rag"]
+    },
+    {
+      "id": "qwen2.5-1.5b-instruct-q4km",
+      "name": "Qwen2.5 1.5B Instruct (Q4_K_M)",
+      "size_mb": 1100,
+      "ram_estimate_mb": 1400,
+      "recommended_for": ["edge", "coding"]
+    },
+    {
+      "id": "llama-3.2-3b-instruct-q4km",
+      "name": "Llama 3.2 3B Instruct (Q4_K_M)",
+      "size_mb": 2200,
+      "ram_estimate_mb": 2600,
+      "recommended_for": ["edge", "general"]
+    },
+    {
+      "id": "llama-3.1-8b-instruct-q4km",
+      "name": "Llama 3.1 8B Instruct (Q4_K_M)",
+      "size_mb": 4700,
+      "ram_estimate_mb": 5500,
+      "recommended_for": ["mainstream", "general"]
+    }
+  ],
+  "ontologies": [
+    { "id": "shacl", "name": "SHACL", "domain": "validation", "size_estimate_mb": 0.3, "tags": ["core", "validation"] },
+    { "id": "prov-o", "name": "PROV-O", "domain": "provenance", "size_estimate_mb": 0.06, "tags": ["core", "provenance"] },
+    { "id": "schemaorg", "name": "Schema.org", "domain": "general", "size_estimate_mb": 1.7, "tags": ["core", "web"] },
+    { "id": "odrl", "name": "ODRL", "domain": "policy", "size_estimate_mb": 0.15, "tags": ["core", "policy"] },
+    { "id": "skos", "name": "SKOS Core", "domain": "general", "size_estimate_mb": 0.08, "tags": ["core", "taxonomy"] },
+    { "id": "foaf", "name": "FOAF", "domain": "social", "size_estimate_mb": 0.06, "tags": ["core", "social"] },
+    { "id": "geonames", "name": "GeoNames", "domain": "geography", "size_estimate_mb": 0.2, "tags": ["geography"] },
+    { "id": "wordnet-rdf", "name": "English WordNet", "domain": "linguistics", "size_estimate_mb": 28, "tags": ["lexicon", "nlp"] },
+    { "id": "dbpedia-ont", "name": "DBpedia Ontology", "domain": "general", "size_estimate_mb": 5.4, "tags": ["knowledge-graph"] }
+  ]
+}

@@ -34,9 +34,23 @@ This document supersedes `wasm_llm_planning.md` for the final push of Phase 2B a
 
 ## 🗺️ 3. THE REMAINING ROADMAP
 
-### Part 3v: The ChatML Regression
-* **Goal:** Restore coherent output when `WASM_NAKED_PROMPT=0`.
-* **Context:** The engine currently hallucinates or produces fragmentary output when processing the 22-token HuggingFace-aligned ChatML prompt. Fix tokenizer alignment, BOS/EOS injection, or special-token routing.
+### MC7: The ChatML "Regression" — ✅ CLOSED (2026-06-19): Expected Model Behavior, engine parity proven
+* **Verdict:** **Not an engine bug.** The 22-token ChatML prompt yields a *fragmentary* greedy
+  completion (`The capital of France<|im_end|>` — stops before "Paris"), but this is an alignment
+  artifact of the heavily-quantized 360M instruct model under pure argmax, not a defect in Qualia's
+  tokenizer, masking, or tensor manifold.
+* **Internal proof of correctness (no external LLM reference used — Prime Directive #4):**
+  1. **CPU path ≡ GPU path** — byte-identical fragment ⇒ the GPU manifold (decode super-arena /
+     resident weights, Parts 3w–3y) is innocent.
+  2. **Tokenizer HF-parity** — `smollm_tokenizer_audit_vs_hf_reference` asserts the exact 22 IDs;
+     BOS handling correct (`<|im_start|>`=BOS=1, no double-BOS).
+  3. **In-context knowledge intact** — priming the assistant turn with "…The capital of France is"
+     deterministically yields **" Paris.<|im_end|>"**. The model knows the fact; greedy decode just
+     emits the turn-end `<|im_end|>` one token early from a bare `assistant\n` turn.
+* **Consequence / follow-up:** ChatML demos on small models need a proper **sampler
+  (Temperature / Top-K / Top-P) in the agent layer — *outside* the core engine** (the deterministic
+  tensor core must emit the highest-logit token, EOS included). The core engine ships greedy/argmax
+  for reproducible CI gates.
 
 ### Phase 3: OPFS Robust Model Caching
 * **Goal:** Bypass browser heap limits and `Cache Storage` failures for >250MB files.

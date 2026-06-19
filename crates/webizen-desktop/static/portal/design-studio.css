@@ -1,0 +1,211 @@
+.design-shell {
+  max-width: 1400px;
+  margin: 0 auto;
+  padding: 1.25rem 1.5rem 2rem;
+}
+
+.design-grid {
+  display: grid;
+  grid-template-columns: minmax(280px, 360px) 1fr minmax(240px, 300px);
+  gap: 1rem;
+  min-height: 72vh;
+}
+
+@media (max-width: 1100px) {
+  .design-grid {
+    grid-template-columns: 1fr;
+  }
+}
+
+.design-panel {
+  background: var(--surface, #111820);
+  border: 1px solid var(--border, #2a3544);
+  border-radius: 10px;
+  padding: 1rem;
+  display: flex;
+  flex-direction: column;
+  gap: 0.75rem;
+  min-height: 0;
+}
+
+.design-panel h2 {
+  margin: 0;
+  font-size: 1rem;
+}
+
+.design-prompt {
+  width: 100%;
+  min-height: 120px;
+  resize: vertical;
+  font-family: inherit;
+  font-size: 0.9rem;
+  padding: 0.6rem 0.75rem;
+  border-radius: 8px;
+  border: 1px solid var(--border, #2a3544);
+  background: #0a0f14;
+  color: #e8eef7;
+}
+
+.design-actions {
+  display: flex;
+  flex-wrap: wrap;
+  gap: 0.5rem;
+}
+
+.design-actions button {
+  padding: 0.45rem 0.85rem;
+  border-radius: 8px;
+  border: 1px solid #3d5a80;
+  background: #1a2a3d;
+  color: #e8eef7;
+  cursor: pointer;
+  font-size: 0.82rem;
+}
+
+.design-actions button.primary {
+  background: #1e4d3a;
+  border-color: #34d399;
+}
+
+.design-actions button:disabled {
+  opacity: 0.45;
+  cursor: not-allowed;
+}
+
+#design-canvas-wrap {
+  position: relative;
+  flex: 1;
+  min-height: 360px;
+  border-radius: 10px;
+  overflow: hidden;
+  border: 1px solid var(--border, #2a3544);
+  background: #060a10;
+}
+
+#design-canvas {
+  width: 100%;
+  height: 100%;
+  display: block;
+}
+
+.canvas-hud {
+  position: absolute;
+  top: 8px;
+  left: 10px;
+  font-size: 0.72rem;
+  color: rgba(232, 238, 247, 0.82);
+  pointer-events: none;
+  line-height: 1.45;
+}
+
+.portal-badge {
+  display: inline-block;
+  padding: 0.15rem 0.5rem;
+  border-radius: 999px;
+  font-size: 0.72rem;
+  font-weight: 600;
+}
+
+.portal-badge.live {
+  background: rgba(52, 211, 153, 0.15);
+  color: #34d399;
+  border: 1px solid rgba(52, 211, 153, 0.35);
+}
+
+.portal-badge.offline {
+  background: rgba(148, 163, 184, 0.12);
+  color: #94a3b8;
+  border: 1px solid rgba(148, 163, 184, 0.25);
+}
+
+.job-list {
+  list-style: none;
+  margin: 0;
+  padding: 0;
+  overflow-y: auto;
+  max-height: 420px;
+  display: flex;
+  flex-direction: column;
+  gap: 0.45rem;
+}
+
+.job-item {
+  padding: 0.55rem 0.65rem;
+  border-radius: 8px;
+  border: 1px solid var(--border, #2a3544);
+  background: #0c1218;
+  cursor: pointer;
+  font-size: 0.8rem;
+}
+
+.job-item:hover,
+.job-item.active {
+  border-color: #34d399;
+}
+
+.job-item .meta {
+  color: #8fa3bf;
+  font-size: 0.72rem;
+  margin-top: 0.2rem;
+}
+
+.graph-pre {
+  font-family: ui-monospace, monospace;
+  font-size: 0.72rem;
+  background: #0a0f14;
+  border: 1px solid var(--border, #2a3544);
+  border-radius: 8px;
+  padding: 0.6rem;
+  overflow: auto;
+  max-height: 200px;
+  white-space: pre-wrap;
+  margin: 0;
+}
+
+.sparql-log {
+  font-size: 0.72rem;
+  color: #8fa3bf;
+  max-height: 120px;
+  overflow-y: auto;
+}
+
+.asset-list {
+  list-style: none;
+  margin: 0 0 0.5rem;
+  padding: 0;
+  display: flex;
+  flex-direction: column;
+  gap: 0.4rem;
+  max-height: 160px;
+  overflow-y: auto;
+}
+
+.asset-item {
+  padding: 0.45rem 0.55rem;
+  border-radius: 8px;
+  border: 1px solid var(--border, #2a3544);
+  background: #0a0f14;
+  font-size: 0.75rem;
+}
+
+.asset-item .meta {
+  color: #8fa3bf;
+  font-size: 0.68rem;
+  margin-top: 0.15rem;
+}
+
+.asset-item button {
+  margin-top: 4px;
+  padding: 0.25rem 0.5rem;
+  border-radius: 6px;
+  border: 1px solid #3d5a80;
+  background: #1a2a3d;
+  color: #e8eef7;
+  font-size: 0.68rem;
+  cursor: pointer;
+}
+
+.asset-item button.installed {
+  opacity: 0.55;
+  cursor: default;
+}

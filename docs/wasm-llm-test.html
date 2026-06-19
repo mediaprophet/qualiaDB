@@ -64,6 +64,7 @@ import init, {
   initialize_webgpu_engine, inferWasmAsync, inferWasmStreaming, isWebgpuEngineReady,
   releaseWebgpuEngine, getEngineVersion, init_panic_hook,
 } from './pkg/qualia/qualia.js';
+import { loadGgufCached, clearAllOpfsModels } from './js/opfs-model-cache.js';
 
 const USE_ASYNC_GPU = new URLSearchParams(location.search).get('async') !== '0';
 
@@ -94,26 +95,25 @@ let loaded = false;
 async function getModelBytes(url, useCache) {
   const t0 = performance.now();
   if (useCache) {
-    const cache = await caches.open(CACHE_NAME);
-    let res = await cache.match(url);
-    if (res) {
-      const buf = new Uint8Array(await res.arrayBuffer());
-      log(`cache HIT ${url} (${(buf.length/1048576).toFixed(1)} MB, ${Math.round(performance.now()-t0)} ms)`, 'ok');
-      return buf;
-    }
-    log(`cache MISS ${url} — fetching…`, 'warn');
-    const fres = await fetch(url);
-    if (!fres.ok) throw new Error(`fetch ${fres.status}`);
-    const buf = new Uint8Array(await fres.arrayBuffer());
-    // Best-effort cache — a failure here (large-entry limits, COI SW, quota)
-    // must NOT block model loading.
-    try {
-      await cache.put(url, new Response(buf, { headers: { 'Content-Type': 'application/octet-stream', 'Content-Length': String(buf.length) } }));
-      log(`fetched + cached (${(buf.length/1048576).toFixed(1)} MB, ${Math.round(performance.now()-t0)} ms)`, 'ok');
-    } catch (e) {
-      log(`fetched (cache.put failed: ${e?.message ?? e}) ${(buf.length/1048576).toFixed(1)} MB, ${Math.round(performance.now()-t0)} ms`, 'warn');
-    }
-    return buf;
+    // OPFS-backed cache: streams the download straight to disk (no >250MB JS-heap blob),
+    // persists across reloads. Falls back to a plain fetch on any OPFS failure.
+    const name = url.split('/').pop();
+    let lastPct = -1;
+    const onProgress = (loaded, total, phase) => {
+      if (phase === 'download' && total) {
+        const pct = Math.round(100 * loaded / total);
+        if (pct !== lastPct) {
+          lastPct = pct;
+          $('loadstat').textContent = `downloading ${(loaded/1048576).toFixed(0)}/${(total/1048576).toFixed(0)} MB (${pct}%)`;
+        }
+      }
+    };
+    const { bytes, source } = await loadGgufCached(url, name, undefined, onProgress);
+    const tag = source === 'opfs-hit' ? 'OPFS cache HIT'
+      : source === 'opfs-miss' ? 'OPFS cached (streamed to disk)'
+      : 'fetched (OPFS unavailable)';
+    log(`${tag} ${url} (${(bytes.length/1048576).toFixed(1)} MB, ${Math.round(performance.now()-t0)} ms)`, source === 'network' ? 'warn' : 'ok');
+    return bytes;
   }
   const fres = await fetch(url);
   if (!fres.ok) throw new Error(`fetch ${fres.status}`);

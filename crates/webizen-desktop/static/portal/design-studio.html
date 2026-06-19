@@ -1,0 +1,154 @@
+<!DOCTYPE html>
+<html lang="en">
+<head>
+    <meta charset="UTF-8">
+    <meta name="viewport" content="width=device-width, initial-scale=1.0">
+    <title>Qualia-DB | Design Studio</title>
+    <link rel="stylesheet" href="css/tailwind-built.css">
+    <link rel="stylesheet" href="css/site-nav.css">
+    <link rel="stylesheet" href="https://cdnjs.cloudflare.com/ajax/libs/font-awesome/6.5.1/css/all.min.css">
+    <link rel="stylesheet" href="css/design-studio.css">
+    <style>
+        body { font-family: 'Inter', system-ui, sans-serif; }
+        .loading-overlay { position: fixed; inset: 0; background: rgba(10, 14, 23, 0.95); display: flex; align-items: center; justify-content: center; z-index: 100; }
+        .loading-spinner { width: 48px; height: 48px; border: 3px solid rgba(245, 158, 11, 0.2); border-top-color: #f59e0b; border-radius: 50%; animation: spin 1s linear infinite; }
+        @keyframes spin { to { transform: rotate(360deg); } }
+        .error-overlay { position: fixed; inset: 0; background: rgba(10, 14, 23, 0.98); display: flex; align-items: center; justify-content: center; z-index: 100; }
+        .ds-hidden { display: none !important; }
+    </style>
+    <script>
+    (function () {
+        var q = new URLSearchParams(location.search);
+        if (q.get('debug') === '0') return;
+        window.__QUALIA_DEBUG__ = true;
+    })();
+    </script>
+    <script src="js/menu-loader.js"></script>
+    <script>
+    (function () {
+        if (window.crossOriginIsolated || !('serviceWorker' in navigator)) return;
+        window.coi = { quiet: true, shouldDeregister: function () { return false; } };
+        var s = document.createElement('script');
+        s.src = 'js/coi-serviceworker.js';
+        s.async = false;
+        document.head.appendChild(s);
+    })();
+    </script>
+</head>
+<body class="bg-zinc-950 text-zinc-200">
+
+<div id="loading-overlay" class="loading-overlay">
+    <div class="text-center">
+        <div class="loading-spinner mx-auto mb-4"></div>
+        <div class="text-amber-400 font-semibold">Loading Qualia Portal…</div>
+        <div class="text-white/50 text-sm mt-2">Design Studio uses the same T2 WASM stack as spatial.html</div>
+    </div>
+</div>
+
+<div id="error-overlay" class="error-overlay ds-hidden">
+    <div class="rounded-3xl p-8 max-w-lg text-center border border-white/10" style="background:rgba(17,23,31,0.9)">
+        <div class="text-red-400 text-5xl mb-4"><i class="fas fa-exclamation-triangle"></i></div>
+        <h2 class="text-2xl font-semibold text-white mb-2">Qualia Portal required</h2>
+        <p class="text-white/60 mb-4">Build <code>docs/pkg/qualia/</code> via CI or <code>scripts/package-qualia-wasm.ps1</code>.</p>
+        <pre class="text-left text-xs text-red-300 mb-4 p-3 rounded-lg bg-black/40" id="error-message"></pre>
+        <button type="button" class="ds-btn" onclick="location.reload()">Retry</button>
+    </div>
+</div>
+
+<nav class="sticky top-0 z-50 border-b border-white/10" style="background:rgba(17,23,31,0.88);backdrop-filter:blur(32px)">
+    <div class="max-w-screen-2xl mx-auto px-4 sm:px-8">
+        <div class="flex items-center justify-between gap-3 min-h-[4rem] py-2">
+            <a href="index.html" class="flex items-center gap-3 shrink-0">
+                <div class="w-8 h-8 bg-gradient-to-br from-blue-500 to-cyan-400 rounded-xl flex items-center justify-center">
+                    <span class="text-black font-bold text-xl">Q</span>
+                </div>
+                <div class="hidden sm:block"><span class="font-semibold tracking-tight text-xl">Qualia</span><span class="text-blue-400 text-xl">DB</span></div>
+            </a>
+            <div id="dynamic-nav" class="relative flex items-center text-sm min-w-0 flex-1 justify-center lg:justify-start px-2"></div>
+            <div class="flex items-center gap-2 shrink-0">
+                <span id="portal-badge" class="badge-off">Checking…</span>
+                <div id="wasm-badge" class="hidden sm:flex items-center gap-2 text-xs px-3 py-1.5 rounded-2xl bg-slate-800 text-slate-400 border border-slate-700">
+                    <div class="w-2 h-2 rounded-full bg-slate-500" id="wasm-dot"></div>
+                    <span id="wasm-text">Portal…</span>
+                </div>
+            </div>
+        </div>
+    </div>
+</nav>
+
+<div id="main-content" class="max-w-screen-2xl mx-auto px-4 sm:px-8 pt-8 pb-16" style="display:none">
+
+    <div class="text-center mb-6">
+        <div class="inline-flex items-center gap-2 px-4 py-1 rounded-2xl bg-amber-500/10 text-amber-400 text-sm mb-4">
+            <i class="fas fa-pen-ruler"></i>
+            <span>qualia.design → Tensor10D SOA → Qualia Portal (WASM)</span>
+        </div>
+        <h1 class="text-4xl sm:text-5xl font-semibold tracking-tighter mb-3">Design Studio</h1>
+        <p class="text-white/60 max-w-2xl mx-auto text-sm sm:text-base">
+            Tech demo for natural-language product design. Parts and relations bake into the
+            <strong class="text-emerald-400">same 10D phenomenal portal</strong> as
+            <a href="spatial.html" class="text-cyan-400 hover:underline">spatial.html</a>.
+            Asset recommendations score GGUF + ontologies for your device; native installs use the
+            <code class="text-cyan-400">:8080</code> settings portal (system tray), not Flutter.
+        </p>
+        <p class="mt-2 text-xs text-white/40" id="encode-status">Generate a design to bake tensors.</p>
+        <p class="mt-1 text-xs text-white/40">
+            <a href="design-studio-wiring.md" class="hover:text-amber-400 underline">Wiring doc</a>
+            · <a href="plans/sprint-inference-handover-native-viewport.md" class="hover:text-amber-400 underline">Next sprint: inference handover</a>
+        </p>
+    </div>
+
+    <div class="flex flex-wrap gap-3 justify-center mb-6 text-center">
+        <div class="metric-pill"><span class="metric-label">Portal tier</span><span class="metric-value" id="metric-tier">—</span></div>
+        <div class="metric-pill"><span class="metric-label">Tensor nodes</span><span class="metric-value" id="metric-tensors">—</span></div>
+        <div class="metric-pill"><span class="metric-label">Quins</span><span class="metric-value" id="metric-quins">—</span></div>
+        <div class="metric-pill"><span class="metric-label">Selected</span><span class="metric-value" id="metric-selected">—</span></div>
+    </div>
+
+    <div class="design-grid">
+
+        <section class="ds-panel">
+            <h2 class="text-sm font-semibold text-white/90">Describe your design</h2>
+            <textarea id="design-prompt" class="ds-prompt" placeholder="Example: A two-part smart light switch. The electrician installs a female back-box. The male face module snaps on and has a motion sensor and Wi-Fi…"></textarea>
+            <div class="flex flex-wrap gap-2 items-center">
+                <button type="button" class="ds-btn" id="btn-generate">Generate &amp; bake</button>
+                <button type="button" class="ds-btn secondary" id="btn-save">Save</button>
+                <button type="button" class="ds-btn secondary" id="btn-assets">Refresh assets</button>
+                <span class="text-xs text-white/50">Ctrl+Enter</span>
+            </div>
+            <h2 class="text-sm font-semibold text-white/90 mt-1">Graph preview</h2>
+            <pre class="graph-pre" id="graph-preview"></pre>
+        </section>
+
+        <section class="ds-panel portal-panel">
+            <h2 class="text-sm font-semibold text-white/90 px-1">Qualia Portal — 10D preview</h2>
+            <p class="text-xs text-white/40 px-1 m-0">Click nodes to navigate · hybrid display mode</p>
+            <div id="design-canvas-wrap">
+                <canvas id="design-canvas"></canvas>
+                <div class="canvas-hud" id="canvas-hud">Initializing portal…</div>
+            </div>
+        </section>
+
+        <section class="ds-panel">
+            <h2 class="text-sm font-semibold text-emerald-400"><i class="fas fa-download mr-1"></i>Recommended assets</h2>
+            <p id="device-summary" class="text-xs text-white/50">Profiling device…</p>
+            <div>
+                <div class="text-xs font-semibold text-white/70 mb-1">LLM (native GGUF via tray)</div>
+                <ul class="asset-list" id="asset-llms"></ul>
+            </div>
+            <div>
+                <div class="text-xs font-semibold text-white/70 mb-1">Ontologies</div>
+                <ul class="asset-list" id="asset-ontologies"></ul>
+            </div>
+            <p class="text-xs text-white/40"><code>qualia resources import …</code> or enqueue when :8080 is live</p>
+
+            <h2 class="text-sm font-semibold text-white/90 mt-2">Saved jobs</h2>
+            <ul class="job-list" id="job-list"></ul>
+        </section>
+
+    </div>
+</div>
+
+<script type="module" src="js/design-studio-app.js"></script>
+</body>
+</html>

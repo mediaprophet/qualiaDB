@@ -1,0 +1,132 @@
+:root {
+  color-scheme: dark;
+  --bg: #0f1419;
+  --surface: #1a2332;
+  --border: #2d3a4f;
+  --text: #e8eef7;
+  --muted: #8fa3bf;
+  --accent: #3b82f6;
+  --ok: #22c55e;
+  --warn: #f59e0b;
+  font-family: "Segoe UI", system-ui, sans-serif;
+}
+
+* { box-sizing: border-box; }
+
+body {
+  margin: 0;
+  background: var(--bg);
+  color: var(--text);
+  line-height: 1.5;
+}
+
+.shell {
+  max-width: 880px;
+  margin: 0 auto;
+  padding: 2rem 1.25rem 3rem;
+}
+
+h1 { margin: 0 0 0.35rem; font-size: 1.6rem; }
+h2 { margin: 0 0 0.75rem; font-size: 1rem; font-weight: 600; }
+.lede { color: var(--muted); margin: 0 0 1.5rem; font-size: 0.92rem; }
+code { font-size: 0.88em; background: rgba(128,128,128,0.15); padding: 0.1em 0.35em; border-radius: 4px; }
+
+.cards {
+  display: grid;
+  grid-template-columns: repeat(auto-fit, minmax(200px, 1fr));
+  gap: 0.75rem;
+  margin-bottom: 1.25rem;
+}
+
+.card, .panel {
+  background: var(--surface);
+  border: 1px solid var(--border);
+  border-radius: 12px;
+  padding: 1rem 1.1rem;
+}
+
+.card p { margin: 0; font-size: 0.85rem; color: var(--muted); }
+.card .ok { color: var(--ok); }
+.card .bad { color: #ef4444; }
+
+.panel { margin-bottom: 1rem; }
+
+form label {
+  display: block;
+  margin-bottom: 0.65rem;
+  font-size: 0.8rem;
+  font-weight: 600;
+}
+
+input, select {
+  display: block;
+  width: 100%;
+  margin-top: 0.25rem;
+  padding: 0.5rem 0.65rem;
+  border-radius: 8px;
+  border: 1px solid var(--border);
+  background: rgba(0,0,0,0.25);
+  color: var(--text);
+  font: inherit;
+}
+
+.actions { margin-top: 0.75rem; display: flex; align-items: center; gap: 0.75rem; }
+
+button {
+  background: var(--accent);
+  color: #fff;
+  border: none;
+  border-radius: 8px;
+  padding: 0.55rem 1rem;
+  font: inherit;
+  font-weight: 600;
+  cursor: pointer;
+}
+
+#save-msg { font-size: 0.8rem; color: var(--muted); }
+
+.log {
+  margin: 0;
+  min-height: 6rem;
+  max-height: 12rem;
+  overflow: auto;
+  font-size: 0.72rem;
+  background: rgba(0,0,0,0.35);
+  border-radius: 8px;
+  padding: 0.65rem;
+  color: var(--muted);
+}
+
+.links ul { margin: 0; padding-left: 1.2rem; color: var(--muted); font-size: 0.88rem; }
+.links a { color: var(--accent); }
+
+.job-form { margin-bottom: 0.75rem; }
+
+.job-table-wrap { overflow-x: auto; border-radius: 8px; border: 1px solid var(--border); }
+
+.job-table {
+  width: 100%;
+  border-collapse: collapse;
+  font-size: 0.78rem;
+}
+
+.job-table th, .job-table td {
+  text-align: left;
+  padding: 0.45rem 0.55rem;
+  border-bottom: 1px solid var(--border);
+}
+
+.job-table th { color: var(--muted); font-weight: 600; }
+
+.job-table .status-queued { color: var(--warn); }
+.job-table .status-running { color: var(--accent); }
+.job-table .status-completed { color: var(--ok); }
+.job-table .status-failed, .job-table .status-cancelled { color: #ef4444; }
+
+.job-table button {
+  background: transparent;
+  color: var(--muted);
+  border: 1px solid var(--border);
+  padding: 0.2rem 0.45rem;
+  font-size: 0.72rem;
+}

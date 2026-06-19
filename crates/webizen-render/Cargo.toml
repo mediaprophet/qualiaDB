@@ -1,0 +1,33 @@
+[package]
+name = "webizen-render"
+version = "0.0.15"
+edition = "2021"
+publish = false
+
+[dependencies]
+# Pinned to 0.19 to match qualia-core-db + webizen-runtime: the renderer shares
+# a single wgpu::Device with the compute path, so all crates must link one wgpu
+# version (a Device from a different major version is an incompatible type).
+wgpu = "0.19"
+bytemuck = { version = "1.14", features = ["derive"] }
+log = "0.4"
+serde = { version = "1.0", features = ["derive"] }
+
+[dependencies.qualia-core-db]
+path = "../qualia-core-db"
+optional = true
+
+# Offscreen frame delivery is native-only: the wasm/web build renders to a <canvas>
+# via WebGPU/WebGL instead of reading pixels back. png codec only, to keep the
+# dependency lean (image@0.25 is already in the workspace lock).
+[target.'cfg(not(target_arch = "wasm32"))'.dependencies]
+image = { version = "0.25", default-features = false, features = ["png"] }
+base64 = "0.22"
+pollster = "0.4"
+
+[features]
+default = ["qualia"]
+qualia = ["qualia-core-db"]
+
+[build-dependencies]
+cfg_aliases = "0.2"

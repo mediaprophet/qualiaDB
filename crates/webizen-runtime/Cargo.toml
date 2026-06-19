@@ -1,0 +1,11 @@
+[package]
+name = "webizen-runtime"
+version = "0.1.0"
+edition = "2021"
+
+[dependencies]
+bytemuck = { version = "1.25.0", features = ["derive"] }
+crossbeam-channel = "0.5.15"
+sha2 = { version = "0.10", default-features = false }
+wgpu = "0.19.4"
+log = "0.4"
