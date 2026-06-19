@@ -884,6 +884,64 @@ impl QTensorEngine {
         true
     }
 
+    /// Phase 5 dispatch fusion: `silu(gate·x) * (up·x)` in a single compute pass.
+    /// Binds both resident gate+up weight sub-ranges for `layer` and reuses the gate
+    /// GEMM's staged `GemmParams` (`gemm_dyn_offset`) — valid because the caller has
+    /// verified gate and up share ggml_type + dims. Replaces the gate GEMM + up GEMM +
+    /// SiLU×mul elementwise (3 dispatches → 1) and skips two n_ffn VRAM round-trips.
+    /// Requires resident weights (`mc8_weights_resident`); caller falls back otherwise.
+    #[cfg(target_arch = "wasm32")]
+    fn encode_fused_ffn_expansion(
+        &self,
+        pipeline: &mut WasmGpuPipeline,
+        layer: u32,
+        input: &wgpu::Buffer,
+        in_off: wgpu::BufferAddress,
+        in_bytes: wgpu::BufferAddress,
+        output: &wgpu::Buffer,
+        out_off: wgpu::BufferAddress,
+        out_bytes: wgpu::BufferAddress,
+        n_out: u32,
+        n_batch: u32,
+        gemm_dyn_offset: u32,
+    ) -> bool {
+        let params_buf = self.gemm_params_buf.as_ref().unwrap();
+        let bind = self.gpu_device().create_bind_group(&wgpu::BindGroupDescriptor {
+            label: Some("MC8FfnFusedBind"),
+            layout: &self.mc8_ffn_fused_bind_layout,
+            entries: &[
+                wgpu::BindGroupEntry {
+                    binding: 0,
+                    resource: Self::mc8_buf_slice(input, in_off, in_bytes),
+                },
+                wgpu::BindGroupEntry {
+                    binding: 1,
+                    resource: self.mc8_weight_binding(Mc8WeightRole::Gate, layer),
+                },
+                wgpu::BindGroupEntry {
+                    binding: 2,
+                    resource: self.mc8_weight_binding(Mc8WeightRole::Up, layer),
+                },
+                wgpu::BindGroupEntry {
+                    binding: 3,
+                    resource: Self::mc8_dynamic_uniform_binding(params_buf),
+                },
+                wgpu::BindGroupEntry {
+                    binding: 4,
+                    resource: Self::mc8_buf_slice(output, out_off, out_bytes),
+                },
+            ],
+        });
+        let mut cpass = pipeline.encoder.begin_compute_pass(&wgpu::ComputePassDescriptor {
+            label: None,
+            timestamp_writes: None,
+        });
+        cpass.set_pipeline(&self.mc8_ffn_fused_pipeline);
+        cpass.set_bind_group(0, &bind, &[gemm_dyn_offset]);
+        cpass.dispatch_workgroups((n_out + 63) / 64, n_batch.max(1), 1);
+        true
+    }
+
     fn encode_residual_add_offset(
         &self,
         pipeline: &mut WasmGpuPipeline,
@@ -2200,6 +2258,11 @@ pub struct QTensorEngine {
     mc8_elem_bind_layout: wgpu::BindGroupLayout,
     #[cfg(target_arch = "wasm32")]
     mc8_attn_bind_layout: wgpu::BindGroupLayout,
+    /// Phase 5 dispatch fusion: SwiGLU expansion (gate · SiLU · up) collapsed into one pass.
+    #[cfg(target_arch = "wasm32")]
+    mc8_ffn_fused_bind_layout: wgpu::BindGroupLayout,
+    #[cfg(target_arch = "wasm32")]
+    mc8_ffn_fused_pipeline: wgpu::ComputePipeline,
 }
 
 impl QTensorEngine {
@@ -2566,6 +2629,102 @@ impl QTensorEngine {
                 entry_point: "add_residual_main",
             });
 
+        // Phase 5 — Fused FFN expansion pipeline (gate · SiLU · up in one dispatch).
+        // The dequant math is authored once in `dequant_template.wgsl` and instantiated
+        // per weight role here (Rust-side modular WGSL composition), so the proven GEMM
+        // path in `fused_transformer.wgsl` is untouched.
+        #[cfg(target_arch = "wasm32")]
+        let mc8_ffn_fused_bind_layout =
+            device.create_bind_group_layout(&wgpu::BindGroupLayoutDescriptor {
+                label: Some("MC8FfnFusedBGL"),
+                entries: &[
+                    // 0: ffn_input (normalized hidden, storage read)
+                    wgpu::BindGroupLayoutEntry {
+                        binding: 0,
+                        visibility: wgpu::ShaderStages::COMPUTE,
+                        ty: wgpu::BindingType::Buffer {
+                            ty: wgpu::BufferBindingType::Storage { read_only: true },
+                            has_dynamic_offset: false,
+                            min_binding_size: None,
+                        },
+                        count: None,
+                    },
+                    // 1: gate_words (quantized gate weight, storage read)
+                    wgpu::BindGroupLayoutEntry {
+                        binding: 1,
+                        visibility: wgpu::ShaderStages::COMPUTE,
+                        ty: wgpu::BindingType::Buffer {
+                            ty: wgpu::BufferBindingType::Storage { read_only: true },
+                            has_dynamic_offset: false,
+                            min_binding_size: None,
+                        },
+                        count: None,
+                    },
+                    // 2: up_words (quantized up weight, storage read)
+                    wgpu::BindGroupLayoutEntry {
+                        binding: 2,
+                        visibility: wgpu::ShaderStages::COMPUTE,
+                        ty: wgpu::BindingType::Buffer {
+                            ty: wgpu::BufferBindingType::Storage { read_only: true },
+                            has_dynamic_offset: false,
+                            min_binding_size: None,
+                        },
+                        count: None,
+                    },
+                    // 3: params (GemmParams, dynamic uniform offset — gate's staged params)
+                    wgpu::BindGroupLayoutEntry {
+                        binding: 3,
+                        visibility: wgpu::ShaderStages::COMPUTE,
+                        ty: wgpu::BindingType::Buffer {
+                            ty: wgpu::BufferBindingType::Uniform,
+                            has_dynamic_offset: true,
+                            min_binding_size: std::num::NonZeroU64::new(MC8_UNIFORM_ALIGN as u64),
+                        },
+                        count: None,
+                    },
+                    // 4: ffn_output (silu(gate)·up intermediate, storage read_write)
+                    wgpu::BindGroupLayoutEntry {
+                        binding: 4,
+                        visibility: wgpu::ShaderStages::COMPUTE,
+                        ty: wgpu::BindingType::Buffer {
+                            ty: wgpu::BufferBindingType::Storage { read_only: false },
+                            has_dynamic_offset: false,
+                            min_binding_size: None,
+                        },
+                        count: None,
+                    },
+                ],
+            });
+        #[cfg(target_arch = "wasm32")]
+        let mc8_ffn_fused_pipeline = {
+            // Modular WGSL: shared scaffold + per-role dequant instances composed at runtime.
+            let tpl = include_str!("shaders/dequant_template.wgsl");
+            let gate_fns = tpl.replace("$W", "gate_words").replace("$S", "_gate");
+            let up_fns = tpl.replace("$W", "up_words").replace("$S", "_up");
+            let base = include_str!("shaders/fused_ffn.wgsl");
+            // Inject the per-role dequant math at the marker (between shared helpers and
+            // the entry point) so declarations precede their uses.
+            let src = base.replace(
+                "// @@DEQUANT_FUNCTIONS@@",
+                &format!("{gate_fns}\n{up_fns}"),
+            );
+            let module = device.create_shader_module(wgpu::ShaderModuleDescriptor {
+                label: Some("FusedFFNExpansion"),
+                source: wgpu::ShaderSource::Wgsl(src.into()),
+            });
+            let layout = device.create_pipeline_layout(&wgpu::PipelineLayoutDescriptor {
+                label: Some("MC8FfnFusedPL"),
+                bind_group_layouts: &[&mc8_ffn_fused_bind_layout],
+                push_constant_ranges: &[],
+            });
+            device.create_compute_pipeline(&wgpu::ComputePipelineDescriptor {
+                label: Some("FusedFFNExpansionPipeline"),
+                layout: Some(&layout),
+                module: &module,
+                entry_point: "fused_ffn_expansion",
+            })
+        };
+
         #[cfg(target_os = "windows")]
         let dml_status = match crate::directml_bridge::DmlDevice::new() {
             Ok(device) => {
@@ -2656,6 +2815,10 @@ impl QTensorEngine {
             mc8_elem_bind_layout,
             #[cfg(target_arch = "wasm32")]
             mc8_attn_bind_layout,
+            #[cfg(target_arch = "wasm32")]
+            mc8_ffn_fused_bind_layout,
+            #[cfg(target_arch = "wasm32")]
+            mc8_ffn_fused_pipeline,
         })
     }
 
@@ -7043,71 +7206,108 @@ impl QTensorEngine {
                 pipeline.encoder.copy_buffer_to_buffer(batch_buf, emb_off, work_b, row_off, emb_bytes);
             }
         }
-        if !self.encode_gemm_bufs_offset(
-            pipeline,
-            gate_info,
-            gate_raw,
-            gate_in,
-            n_ffn,
-            work_b,
-            0,
-            work_span_bytes,
-            work_a,
-            slot_gate,
-            work_span_bytes,
-            n_tokens,
-            row_stride_u32,
-            row_stride_u32,
-            off_gate,
-            layer,
-            Mc8WeightRole::Gate,
-        ) {
-            return false;
-        }
-        if !self.encode_gemm_bufs_offset(
-            pipeline,
-            up_info,
-            up_raw,
-            up_in,
-            n_ffn,
-            work_b,
-            0,
-            work_span_bytes,
-            work_a,
-            slot_up,
-            work_span_bytes,
-            n_tokens,
-            row_stride_u32,
-            row_stride_u32,
-            off_up,
-            layer,
-            Mc8WeightRole::Up,
-        ) {
-            return false;
-        }
+        // Phase 5 — FFN expansion fusion: collapse gate GEMM + up GEMM + SiLU×mul into a
+        // single dispatch. The result `silu(gate·x)·(up·x)` lands in work_b@slot_scratch_half
+        // — exactly where the separate SiLU path wrote — so the `down` projection below is
+        // unchanged. Requires resident weights (so both roles are GPU-resident) and gate/up
+        // sharing ggml_type+dims (one staged GemmParams describes both). Otherwise fall back
+        // to the proven 3-dispatch path.
+        let fuse_ffn_expansion =
+            self.mc8_weights_resident && gate_info.ggml_type == up_info.ggml_type;
+        if fuse_ffn_expansion {
+            // WebGPU forbids binding one buffer as both read-only and writable storage within a
+            // single pass (validated at buffer granularity, not by offset). The norm wrote the
+            // hidden to work_b@0, and the fused intermediate must land in work_b@slot_scratch_half
+            // for `down` below — same buffer, so reading + writing work_b in one pass is illegal.
+            // Stage the normalized hidden into work_a@0 (small n_embd copy; `down` overwrites
+            // work_a@0 immediately after), read it there, and write the silu·up result to
+            // work_b@slot_scratch_half exactly as the separate-SiLU path did — `down` unchanged.
+            for t in 0..n_tokens {
+                let row_off = Self::mc8_prefill_row_off(t, row_stride);
+                pipeline.encoder.copy_buffer_to_buffer(work_b, row_off, work_a, row_off, emb_bytes);
+            }
+            if !self.encode_fused_ffn_expansion(
+                pipeline,
+                layer,
+                work_a,
+                0,
+                work_span_bytes,
+                work_b,
+                slot_scratch_half,
+                work_span_bytes,
+                n_ffn as u32,
+                n_tokens,
+                off_gate,
+            ) {
+                return false;
+            }
+        } else {
+            if !self.encode_gemm_bufs_offset(
+                pipeline,
+                gate_info,
+                gate_raw,
+                gate_in,
+                n_ffn,
+                work_b,
+                0,
+                work_span_bytes,
+                work_a,
+                slot_gate,
+                work_span_bytes,
+                n_tokens,
+                row_stride_u32,
+                row_stride_u32,
+                off_gate,
+                layer,
+                Mc8WeightRole::Gate,
+            ) {
+                return false;
+            }
+            if !self.encode_gemm_bufs_offset(
+                pipeline,
+                up_info,
+                up_raw,
+                up_in,
+                n_ffn,
+                work_b,
+                0,
+                work_span_bytes,
+                work_a,
+                slot_up,
+                work_span_bytes,
+                n_tokens,
+                row_stride_u32,
+                row_stride_u32,
+                off_up,
+                layer,
+                Mc8WeightRole::Up,
+            ) {
+                return false;
+            }
 
-        self.encode_elem_offset(
-            pipeline,
-            ELEM_OP_SILU_MUL,
-            n_ffn as u32,
-            n_tokens,
-            work_a,
-            0,
-            work_span_bytes,
-            work_a,
-            0,
-            work_span_bytes,
-            work_b,
-            0,
-            work_span_bytes,
-            row_stride_u32,
-            row_stride_u32,
-            row_stride_u32,
-            slot_gate_f,
-            slot_up_f,
-            slot_scratch_half_f,
-            off_silu,
-        );
+            self.encode_elem_offset(
+                pipeline,
+                ELEM_OP_SILU_MUL,
+                n_ffn as u32,
+                n_tokens,
+                work_a,
+                0,
+                work_span_bytes,
+                work_a,
+                0,
+                work_span_bytes,
+                work_b,
+                0,
+                work_span_bytes,
+                row_stride_u32,
+                row_stride_u32,
+                row_stride_u32,
+                slot_gate_f,
+                slot_up_f,
+                slot_scratch_half_f,
+                off_silu,
+            );
+        }
         if !self.encode_gemm_bufs_offset(
             pipeline,
             down_info,

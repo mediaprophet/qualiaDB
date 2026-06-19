@@ -149,7 +149,16 @@ are permanent. Diagnostic `wlog` scaffolding remains until Phase 2A validates co
 | **MC5** | `dispatch_attention_pass_async` + `dispatch_transformer_forward_async` plumbing | ✅ Closed — wired via `inferWasmAsync` (`wasm_llm.rs`) |
 | **MC6** | `inferWasmAsync` + JS `Promise` bridge; `_async` dispatch loop | ✅ Closed — naked ` Paris.` TTFT ~9s (vs ~47s CPU) |
 | **MC7** | WGSL `Q5_0`/`Q8_0` dequant; gate removal; full GPU offload | ✅ Closed — `Paris is the capital of France`; TTFT ~11s |
-| **MC8** | Pipeline fusing + decode super-arena (3w) + resident weights (3x) + eager upload (3y) | ✅ **Closed (Part 3y)** — `Paris.` ✅; **TTFT ~3957 ms (gate &lt;4500 ms ✅)**; throughput ~0.6 tok/s (GPU-exec-bound, post-gate) |
+| **MC8** | Pipeline fusing + decode super-arena (3w) + resident weights (3x) + eager upload (3y) | ✅ **Closed (Part 3y)** — `Paris.` ✅; **TTFT ~3957 ms (gate &lt;4500 ms ✅)**; throughput ~0.6 tok/s — bottleneck since traced to **per-token logits re-upload**, NOT layer compute (Phase 5, log ar–au) |
+
+### Phase 5 — Decode throughput (post-gate) — 🔎 ROOT CAUSE FOUND, fix pending
+
+| Step | Scope | Status |
+|------|-------|--------|
+| **5.0 Dispatch fusion** | gate+up+SiLU → 1 pass; modular Rust-composed WGSL; Phase-6 const seam | ✅ Landed (ar) — coherent, **throughput-neutral** ⇒ not dispatch-bound. Not committed |
+| **5.2 Block-amortized dequant** | decode Q5_0 `d`+`qh` once/32-block in fused FFN | ✅ Landed (as) — coherent, **throughput-neutral** ⇒ not dequant-bound |
+| **5.x Bisect** | neuter gate/up to 1/30 work | ✅ (at) — **0 change** ⇒ FFN GEMM compute ≈ 0% of per-token time |
+| **5.3 Resident output projection** | upload ~50 MB tied `token_embd` (Q8_0) **once**; resident chunked argmax, no per-token re-upload | ⏳ **NEXT** — the actual lever (au); proven Phase 2B/3x pattern |
 
 #### MC8 — split delivery
 
@@ -995,6 +1004,56 @@ sed -i 's/qualia_core_db_bg\.wasm/qualia_bg.wasm/g' $DOCS/qualia.js
 ---
 
 ## 📓 7. PROGRESS LOG (newest first — keep this updated every step)
+
+- **2026-06-19 (au)** — **Phase 5 ROOT CAUSE: decode bottleneck = per-token re-upload of the non-resident output/logits projection.**
+  - Decisive bisection ruled out everything layer-side: dispatch fusion (ar), block-amortized dequant
+    (as), and neutering gate/up to 1/30 work (at) each gave **0 tok/s change** (still ~0.6 tok/s,
+    ~1747 ms/token). Total per-token MAC work (~500M incl. the 49152-vocab projection) ≈ tens of ms of
+    arithmetic ⇒ the cost is **data movement, not math**.
+  - **Found (code):** `dispatch_output_argmax_chunked_async_mc8_fused` (gguf_bridge.rs ~7838) loops 6
+    vocab chunks (49152/8192) and `write_buffer`s the output-projection weights to the GPU **per chunk,
+    per token**. Output is **tied to `token_embd` (Q8_0 [960,49152] ≈ 50 MB)** → the engine
+    **re-uploads ~50 MB to VRAM every token** + 6 dispatch/readback round-trips. Phase 3x made the
+    *layer* weights resident; the **logits projection never was** — the Phase 2B reupload bug surviving
+    in the decode logits stage. Explains why every layer-side optimization moved nothing.
+  - **Fix (next, high-confidence — proven Phase 2B/3x pattern):** make the output/logits projection
+    GPU-**resident** (upload ~50 MB once, mirror `mc8_upload_all_resident_weights`); run the chunked
+    argmax GEMM against the resident buffer with zero per-token re-upload. Keep per-chunk
+    submit/readback (gguf_bridge.rs:7808 warns batched chunks garble tokens via write_buffer races).
+    Mem: ~50 MB on top of 219 MB resident (browser WebGPU, not the 128 MB Local cap).
+
+- **2026-06-19 (at)** — **Phase 5 bisect: FFN GEMM compute is ~0% of per-token time.**
+  - Temporarily neutered the fused gate/up loop to 1 of 30 Q5_0 blocks (≈1/30 the dot-product). tok/s
+    **unchanged (0.6; 55742 vs 55907 ms)**; output went to garbage (no `Paris`) — which *confirms the
+    fused path is live and the edit took effect*. ⇒ gate/up GEMM compute is not the bottleneck. Reverted.
+
+- **2026-06-19 (as)** — **Phase 5.2: block-amortized Q5_0 dequant in the fused FFN — coherent, throughput-neutral.**
+  - Rewrote the fused FFN inner loop to decode each 32-elem Q5_0 block's `d`+`qh` **once** (gate AND
+    up) into registers, then 32 nibble-extract+MAC — vs the per-element path that re-decoded them 32×.
+    Math identical to `dequant_q5_0_weight`; **`Paris.` preserved**. **tok/s unchanged (0.6)** ⇒ decode
+    is not dequant-ALU-bound.
+  - **Quant reality (via new `agent-tools/gguf-types.mjs`):** n_embd=960 ∤ 256 → k-quants fell back:
+    ffn_gate/up = **Q5_0**, ffn_down = Q6_K, attn q/k/o = Q5_0, attn_v + token_embd = Q8_0. (The
+    architect's Q4_K assumption was wrong for this model; a Q4_K loop would have garbled output.)
+
+- **2026-06-19 (ar)** — **Phase 5: dispatch fusion (gate+up+SiLU → 1 pass) via modular Rust-composed WGSL — coherent, throughput-neutral.**
+  - **Modular WGSL packaging (architect-approved):** the `math_core` dequant is authored once in
+    `shaders/dequant_template.wgsl`, instantiated per weight role (`$W`/`$S` substitution) and stitched
+    into `shaders/fused_ffn.wgsl` at runtime in `gguf_bridge.rs::try_new` (`format!`); the proven
+    `fused_transformer.wgsl` GEMM is untouched. Phase-6 neuro-symbolic seam = `const
+    ENABLE_DEONTIC_TAINT` (const-folded → zero hot-path cost; wgpu 0.19.0 has no `compilation_options`
+    to set `@id` overrides at pipeline creation). New engine fields `mc8_ffn_fused_bind_layout` +
+    `mc8_ffn_fused_pipeline`; method `encode_fused_ffn_expansion`; runtime fallback to the 3-dispatch
+    path when gate/up quant types differ.
+  - **Bug found+fixed:** WebGPU forbids one buffer bound read-only AND writable in a single pass
+    (buffer-granularity, not by offset). The fused pass read `work_b@0` and wrote
+    `work_b@slot_scratch_half` → invalid encoder every layer. Fixed by staging the normalized hidden
+    into `work_a@0` (small per-token copy; `down` overwrites it after) so input/output use distinct
+    buffers. **`Paris.` restored**, zero validation errors.
+  - **Result:** removed 64 compute dispatches/forward + the SiLU + the gate/up VRAM round-trips →
+    **tok/s unchanged (0.6)** ⇒ decode is NOT dispatch-bound (overturns the Phase 5 premise). The
+    modular fused kernel is correct + coherent but currently throughput-neutral; kept as substrate.
+    Not committed.
 
 - **2026-06-19 (aq)** — **Wired Qualia into the comparative LLM benchmark page (`docs/benchmarks.html`).**
   - `docs/js/wasm-llm-benchmarks.js`: flipped the `qualia` engine def to live + added `QualiaAdapter`

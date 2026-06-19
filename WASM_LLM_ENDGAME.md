@@ -24,7 +24,7 @@ This document supersedes `wasm_llm_planning.md` for the final push of Phase 2B a
 4. **Eager upload (3y):** moved the one-time 219 MB resident upload from the lazy first-prefill (inside the TTFT window) to model-init (`adopt_resident_mmap`, before the clock). `prefill 2409 → 35 ms`; **TTFT 6118 → 3957 ms**. Gate closed.
 
 **Remaining (post-gate, NOT gate blockers):**
-* **Throughput:** ~0.6 tok/s (~1700 ms/token). The decode forward is now **GPU-execution-bound** (~400 small `M=1` dispatches/forward on real Ampere; invariant to submits/upload). Next lever: GPU **timestamp profiling** → dispatch **fusion** (Part 3y Phase 2/3, deferred — gate already met).
+* **Throughput:** ~0.6 tok/s (~1700 ms/token). **Root cause found (Phase 5, 2026-06-19):** the per-token argmax `dispatch_output_argmax_chunked_async_mc8_fused` (gguf_bridge.rs ~7838) **re-uploads the entire ~50 MB output/logits projection (tied `token_embd` Q8_0) to the GPU every token** — Phase 3x made the *layer* weights resident but the **logits projection never was**. The earlier "GPU-execution / dispatch-bound" reading was **disproven**: dispatch fusion, block-amortized dequant, and a gate/up bisect each gave ~0 change (see `wasm_llm_planning.md` log ar–au). **Next lever:** make the output projection **resident** (mirror `mc8_upload_all_resident_weights`); the timestamp-profiling/dispatch-fusion plan is shelved.
 * **Instrumentation:** `ttft_profile` (wasm-only) still in tree — strip after milestone sign-off.
 * **MC7 ChatML regression** (`WASM_NAKED_PROMPT=0`) — next milestone.
 4. **Flush Purge:** Delete the `mc8_flush()` separating the K/V block from the tail.
@@ -165,7 +165,8 @@ This document supersedes `wasm_llm_planning.md` for the final push of Phase 2B a
   science-playground / scientific-computing / zero-heap-compliance / benchmark. It keeps its working
   OPFS-GGUF cache for now. (b) cold CBOR-LD ontology section + `NQuin.metadata` in-shader flags;
   (c) single-buffer zero-copy bind (bind `.q42` blobs directly, skip the arena copy) + Web-Worker
-  compiler farm; (d) the deferred decode-fusion throughput lever (~0.6 tok/s).
+  compiler farm; (d) the decode throughput lever (~0.6 tok/s) — now retargeted to **resident output
+  projection** (§1 root cause), not dispatch fusion.
 
 ---
 

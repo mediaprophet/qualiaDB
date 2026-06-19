@@ -1,7 +1,9 @@
 # 📋 QUALIA ENGINE — MASTER EXECUTION ROADMAP
 
 **Date:** 2026-06-19 · **Owner:** Qualia (Timothy Charles Holborn, inventor/curator)
-**Status:** Phase 4 (AOT Ingestion) secured. Pivoting to throughput & neuro-symbolic integration.
+**Status:** Phase 4 (AOT Ingestion) secured. Phase 5 (throughput) — decode root cause **found**:
+per-token re-upload of the non-resident ~50 MB output/logits projection (NOT layer compute). Next:
+make the output projection resident (§Part 3).
 **Companion docs:** [`WASM_LLM_ENDGAME.md`](WASM_LLM_ENDGAME.md) · [`wasm_llm_planning.md`](wasm_llm_planning.md) (per-step log) · [`qualia-llm-future-updates.md`](qualia-llm-future-updates.md) (V2 vision)
 
 ---
@@ -48,20 +50,44 @@ revertable. Then port `llmdemo/index.html` to `loadOrCompileQ42` (it keeps its O
 
 ---
 
-## ⚡ PART 3 — DISPATCH FUSION (the throughput gate)
+## ⚡ PART 3 — DECODE THROUGHPUT (post-gate) — 🔎 ROOT CAUSE FOUND (Phase 5, 2026-06-19)
 
-**Problem:** sustained decode ~0.6 tok/s — a GPU **frontend dispatch** bottleneck (~400 tiny `M=1`
-dispatches/forward starve the Ampere hardware; invariant to submit count and weight upload, per the
-Part-3w/3x profiling). Data movement is already solved.
+**Standing number:** sustained decode ~0.6 tok/s (~1747 ms/token).
 
-**Execution:**
-1. **Timestamp profiling** — wire `wgpu::QuerySet` timestamps into the decode hot path
-   (`encode_attn_ffn_tail_gpu` / `encode_prefill_q_ffn_tail_fused`), bracketing Attention vs FFN vs
-   Elementwise to isolate per-block µs on the WebGPU/Ampere backend. (Was Part 3y Phase 2; deferred.)
-2. **Kernel fusion** — collapse elementwise ops into their preceding GEMMs:
-   - Target 1: RMSNorm fused into the QKV projection.
-   - Target 2: SiLU + residual add fused into the gate/up/down GEMM passes.
+**What it is NOT (disproven empirically — the original "frontend dispatch" premise was wrong).**
+Three layer-side experiments each moved throughput **~0%**:
+- **Dispatch fusion** (gate+up+SiLU → 1 pass, −64 dispatches/forward) ⇒ not dispatch-bound.
+- **Block-amortized Q5_0 dequant** (decode `d`+`qh` once per 32-elem block) ⇒ not dequant-ALU-bound.
+- **Neutering gate/up to 1/30 work** (bisect) ⇒ FFN GEMM compute is ~0% of per-token time.
+
+Per-token arithmetic (~500M MACs incl. the 49152-vocab projection) ≈ tens of ms — so the ~1747 ms is
+**data movement, not math**.
+
+**What it IS (root cause).** The per-token argmax `dispatch_output_argmax_chunked_async_mc8_fused`
+(`gguf_bridge.rs` ~7838) **re-uploads the entire ~50 MB output/logits projection to the GPU every
+token** — 6 vocab chunks (49152/8192), each `write_buffer`-ing weights from the tied `token_embd`
+(Q8_0 [960,49152]) before its dispatch+readback. Phase 3x made the *layer* weights resident; the
+**logits projection never was**. This is the Phase 2B weight-reupload bug, alive in the decode logits
+stage — which is exactly why no layer-side optimization helped.
+
+**Execution (the actual lever):**
+1. **Resident output projection (5.3 — NEXT)** — upload the tied `token_embd`/output matrix to a
+   resident GPU buffer **once** (mirror `mc8_upload_all_resident_weights`); run the chunked argmax
+   GEMM against resident sub-ranges with **zero per-token re-upload**. Keep per-chunk submit/readback
+   (gguf_bridge.rs:7808 warns batched chunks garble tokens via write_buffer races). ~50 MB on top of
+   the existing 219 MB resident layer weights (browser WebGPU budget, not the 128 MB Local cap).
+2. **Re-measure** sustained tok/s, then profile the next-largest mover (attention over KV, the hidden
+   readback) before any further kernel work — measure, don't assume.
 3. **Gate:** > 2.0 tok/s sustained on SmolLM2-360M, coherence held (`Paris.`).
+
+**Quant reality (this model):** `n_embd=960 ∤ 256` → k-quants fell back: ffn_gate/up = **Q5_0**,
+ffn_down = Q6_K, attn q/k/o = Q5_0, attn_v + token_embd = Q8_0 (via `agent-tools/gguf-types.mjs`).
+
+**Substrate retained:** the modular fused FFN kernel (`dequant_template.wgsl` + `fused_ffn.wgsl`,
+composed in Rust at `try_new`; Phase-6 `const ENABLE_DEONTIC_TAINT` zero-cost seam) is correct +
+coherent but currently throughput-neutral — kept as the home for later ALU work once data movement is
+solved. The advanced quant horizon (Ternary/BitNet b1.58 — needs a QAT'd model, not a PTQ snap; KIVI
+KV-compression; W4A4/AWQ; speculative decoding) is **shelved until the base M=1 kernel is efficient**.
 
 ---
 
