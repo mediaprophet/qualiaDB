@@ -1005,7 +1005,34 @@ sed -i 's/qualia_core_db_bg\.wasm/qualia_bg.wasm/g' $DOCS/qualia.js
 
 ## 📓 7. PROGRESS LOG (newest first — keep this updated every step)
 
-- **2026-06-19 (au)** — **Phase 5 ROOT CAUSE: decode bottleneck = per-token re-upload of the non-resident output/logits projection.**
+- **2026-06-19 (aw)** — **Phase 5 TRUE ROOT CAUSE (direct profiling): WebGPU queue-submit IPC overhead.**
+  - Added CPU-side `js_sys::Date::now()` phase timing (temporary). Decode = **98.7% forward**
+    (`forward=52441ms argmax=667ms / 32 tok` → argmax only ~21 ms/tok).
+  - Forward split: **23 ms CPU encode + 1555 ms GPU drain** → GPU-bound, not CPU-encoding. Linear in
+    layers: **1-layer run = 11.5 tok/s**; 32-layer = 1639 ms/tok → **~49 ms/layer**.
+  - 49 ms/layer for ~15M MACs = 0.3 GMAC/s (absurd for Ampere) ⇒ NOT compute. The forward issues
+    **64 `queue.submit()`/token** (2 `mc8_flush`/layer); 64 × ~24 ms ≈ 1555 ms ≈ the GPU drain ⇒
+    **WebGPU submit IPC overhead** (WASM→Chrome-GPU-process boundary + Dawn validation per submit).
+  - This **overturns the (au) "logits re-upload" finding** — the logits projection is only ~21 ms/tok;
+    making it resident (5.3) changed nothing. au was wrong; corrected here + in memory.
+  - **Next (5.4): single-submit forward** — one encoder for all 32 layers, non-overlapping super-arena
+    uniforms (no mid-loop write_buffer race), delete per-layer `mc8_flush`, one submit before readback.
+    Existing `MC8_LAYERS_PER_ENCODER`(=4) chunk machinery already does this for prefill. OPEN: prefill's
+    KV flush is "(backend empirical)" — must confirm Dawn auto-barriers intra-encoder KV writes→reads.
+
+- **2026-06-19 (av)** — **Phase 5.3: output/logits projection made GPU-resident — correct, throughput-neutral.**
+  - `mc8_upload_resident_logits` uploads the tied `token_embd` (Q8_0 [960,49152], 47.8 MB) to a
+    dedicated STORAGE buffer **once** at init (both `adopt_resident_mmap` + `adopt_resident_q42`).
+    `dispatch_gemm_resident_chunk_async` binds per-chunk 256-aligned sub-ranges (VOCAB_CHUNK_ROWS=8192
+    is a 256-multiple → aligned) — zero per-token weight upload.
+  - **Bug found+fixed:** `self.pipeline` uses `MC8GemmBGL` (dynamic uniform at binding 2); the resident
+    bind needed `mc8_dynamic_uniform_binding(params)` + `set_bind_group(…, &[0])`. Also revealed the
+    *original* logits path CPU-fell-back (`stack_gemm_quant`) because a chunk (~8.3 MB) > `max_tensor_bytes`
+    staging — so "GPU re-upload" was never even happening; it was a CPU GEMM (~21 ms/tok, not the bottleneck).
+  - **`Paris.` preserved**, resident upload confirmed (`[MC8] resident logits projection uploaded once`).
+    Throughput unchanged (0.6 tok/s) — argmax was never the bottleneck (see aw).
+
+- **2026-06-19 (au)** — **Phase 5 ROOT CAUSE: decode bottleneck = per-token re-upload of the non-resident output/logits projection.** ⚠️ **SUPERSEDED by (aw)** — argmax/logits is only ~21 ms/tok; the real bottleneck is the forward's submit IPC. Kept for history.
   - Decisive bisection ruled out everything layer-side: dispatch fusion (ar), block-amortized dequant
     (as), and neutering gate/up to 1/30 work (at) each gave **0 tok/s change** (still ~0.6 tok/s,
     ~1747 ms/token). Total per-token MAC work (~500M incl. the 49152-vocab projection) ≈ tens of ms of

@@ -176,6 +176,12 @@ async fn run_inference_async(prompt: &str, on_token: Function) -> Result<String,
         let mut out_ids: Vec<u32> = Vec::new();
         let mut streamed_len = 0usize;
 
+        // Phase 5 attribution: wall-clock split of per-token forward vs argmax (CPU-side, no
+        // device changes). Logged once after decode; temporary diagnostic.
+        let prof_decode_start = js_sys::Date::now();
+        let mut prof_fwd_ms = 0.0f64;
+        let mut prof_argmax_ms = 0.0f64;
+
         for step in 0..WASM_DECODE_TOKEN_BUDGET {
             let cur = *ctx.last().unwrap_or(&tok.bos_token_id);
 
@@ -194,6 +200,7 @@ async fn run_inference_async(prompt: &str, on_token: Function) -> Result<String,
 
             let (top_i, _top_v) = if let Some(idx) = tensor_idx.as_ref() {
                 let token_idx = ctx.len().saturating_sub(1) as u32;
+                let _t_fwd = js_sys::Date::now();
                 let _layers = engine
                     .dispatch_transformer_forward_async(
                         idx,
@@ -205,8 +212,10 @@ async fn run_inference_async(prompt: &str, on_token: Function) -> Result<String,
                         WASM_LAYER_CAP,
                     )
                     .await;
+                prof_fwd_ms += js_sys::Date::now() - _t_fwd;
                 let _ = engine.apply_output_norm_inplace(idx, &mut emb_buf[..emb_dim], emb_dim);
-                if let Some(argmax) = engine
+                let _t_am = js_sys::Date::now();
+                let prof_am = engine
                     .dispatch_output_argmax_chunked_async(
                         idx,
                         &emb_buf[..emb_dim],
@@ -215,7 +224,9 @@ async fn run_inference_async(prompt: &str, on_token: Function) -> Result<String,
                         WASM_VOCAB_CHUNK_CAP,
                         None,
                     )
-                    .await
+                    .await;
+                prof_argmax_ms += js_sys::Date::now() - _t_am;
+                if let Some(argmax) = prof_am
                 {
                     if argmax.max_logit > f32::NEG_INFINITY {
                         (argmax.best_token_id as usize, argmax.max_logit)
@@ -254,6 +265,16 @@ async fn run_inference_async(prompt: &str, on_token: Function) -> Result<String,
             }
             let _ = step;
         }
+
+        let prof_total = js_sys::Date::now() - prof_decode_start;
+        crate::gguf_bridge::wlog(&format!(
+            "[PROFILE] decode {} tok: total={:.0}ms forward={:.0}ms argmax={:.0}ms other={:.0}ms",
+            out_ids.len(),
+            prof_total,
+            prof_fwd_ms,
+            prof_argmax_ms,
+            prof_total - prof_fwd_ms - prof_argmax_ms
+        ));
 
         Ok(tok.decode(&out_ids))
     }

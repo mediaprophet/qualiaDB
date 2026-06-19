@@ -631,6 +631,58 @@ impl QTensorEngine {
         true
     }
 
+    /// Phase 5.3: upload the output/logits projection (tied `token_embd`, ~50 MB Q8_0) to a
+    /// dedicated resident `STORAGE` buffer **once**, so the per-token argmax binds per-chunk
+    /// sub-ranges instead of `write_buffer`-ing the whole matrix every token (the decode
+    /// throughput killer — Phase 5 root cause). Idempotent. Returns false (→ per-token upload
+    /// fallback) if the projection is missing or its bytes don't divide evenly into rows.
+    fn mc8_upload_resident_logits(&mut self, index: &crate::gguf_sharder::GgufTensorIndex) -> bool {
+        if self.mc8_logits_resident_buf.is_some() {
+            return true;
+        }
+        let info = match index.logits_projection_info() {
+            Some(i) => i,
+            None => return false,
+        };
+        let (_, vocab) = Self::matmul_dims(info);
+        if vocab == 0 {
+            return false;
+        }
+        // Clone the Arc so the mmap borrow does not block mutating `self` below.
+        let mmap_arc = match self.gguf_mmap.clone() {
+            Some(a) => a,
+            None => return false,
+        };
+        let mmap: &[u8] = &mmap_arc;
+        let raw = match crate::ggml_quants::fetch_tensor_bytes(mmap, index.tensor_data_start, info) {
+            Ok(s) => s,
+            Err(_) => return false,
+        };
+        let total = raw.len();
+        if total == 0 || total % vocab != 0 {
+            return false;
+        }
+        let row_bytes = total / vocab;
+        // VOCAB_CHUNK_ROWS is a multiple of 256, so every chunk's byte offset
+        // (chunk_idx * VOCAB_CHUNK_ROWS * row_bytes) is 256-aligned for the storage binding.
+        let buf = self.gpu_device().create_buffer(&wgpu::BufferDescriptor {
+            label: Some("MC8ResidentLogits"),
+            size: total as u64,
+            usage: wgpu::BufferUsages::STORAGE | wgpu::BufferUsages::COPY_DST,
+            mapped_at_creation: false,
+        });
+        self.gpu_queue().write_buffer(&buf, 0, raw);
+        self.mc8_logits_resident_buf = Some(buf);
+        self.mc8_logits_row_bytes = row_bytes as u32;
+        wlog(&format!(
+            "[MC8] resident logits projection uploaded once: {:.1} MB ({} rows × {} B)",
+            total as f64 / (1024.0 * 1024.0),
+            vocab,
+            row_bytes
+        ));
+        true
+    }
+
     /// Phase 4: boot from a `.q42` weight container. Validates integrity (CRC via `from_q42`), builds
     /// a synthetic `GgufTensorIndex` from the manifest, points the byte source at the `.q42` bytes
     /// (`tensor_data_start = 0`, absolute blob offsets), reserves the GEMM/KV arenas, and uploads the
@@ -661,6 +713,9 @@ impl QTensorEngine {
         // Resident weight upload reuses the standard path through the synthetic index.
         if !self.mc8_upload_all_resident_weights(&index) {
             wlog("[Q42] eager resident upload skipped — will retry lazily");
+        }
+        if !self.mc8_upload_resident_logits(&index) {
+            wlog("[Q42] resident logits projection skipped — per-token upload fallback");
         }
         wlog(&format!(
             "[Q42] boot OK: {} tensors, {} layers (synthetic GGUF index; weights resident)",
@@ -2263,6 +2318,13 @@ pub struct QTensorEngine {
     mc8_ffn_fused_bind_layout: wgpu::BindGroupLayout,
     #[cfg(target_arch = "wasm32")]
     mc8_ffn_fused_pipeline: wgpu::ComputePipeline,
+    /// Phase 5.3: the output/logits projection (tied `token_embd`, ~50 MB) uploaded to VRAM
+    /// once at init so the per-token argmax binds resident sub-ranges instead of re-uploading
+    /// the whole matrix every token (the decode throughput killer).
+    #[cfg(target_arch = "wasm32")]
+    mc8_logits_resident_buf: Option<wgpu::Buffer>,
+    #[cfg(target_arch = "wasm32")]
+    mc8_logits_row_bytes: u32,
 }
 
 impl QTensorEngine {
@@ -2819,6 +2881,10 @@ impl QTensorEngine {
             mc8_ffn_fused_bind_layout,
             #[cfg(target_arch = "wasm32")]
             mc8_ffn_fused_pipeline,
+            #[cfg(target_arch = "wasm32")]
+            mc8_logits_resident_buf: None,
+            #[cfg(target_arch = "wasm32")]
+            mc8_logits_row_bytes: 0,
         })
     }
 
@@ -3285,6 +3351,11 @@ impl QTensorEngine {
         // so the 219 MB upload is not charged to the first token's latency.
         if !self.mc8_upload_all_resident_weights(&index) {
             wlog("[MC8] eager resident weight upload skipped at init — will retry lazily");
+        }
+        // Phase 5.3: also make the output/logits projection resident (eliminates the ~50 MB
+        // per-token re-upload in the decode argmax).
+        if !self.mc8_upload_resident_logits(&index) {
+            wlog("[MC8] resident logits projection skipped at init — per-token upload fallback");
         }
         let kv_cache_bytes = self.kv_cache_bytes();
         Ok(GgufLoadReport {
@@ -5795,6 +5866,7 @@ impl QTensorEngine {
         };
         let n_tokens = 1u32;
         let mut ran = 0u32;
+        let _t_enc = js_sys::Date::now();
         for layer in 0..limit {
             let tensors = index.get_layer_tensors(layer);
             let k_info = match tensors.attn_k.as_ref() {
@@ -5940,8 +6012,19 @@ impl QTensorEngine {
             self.mc8_flush(&mut enc);
             ran += 1;
         }
+        let _enc_ms = js_sys::Date::now() - _t_enc;
+        let _t_rb = js_sys::Date::now();
         if ran > 0 && !self.pipeline_read_hidden(emb_dim, hidden).await {
             return 0;
+        }
+        if token_idx % 16 == 0 {
+            wlog(&format!(
+                "[PROFILE-FWD] tok={} layers={} cpu_encode={:.1}ms gpu_readback_drain={:.1}ms",
+                token_idx,
+                ran,
+                _enc_ms,
+                js_sys::Date::now() - _t_rb
+            ));
         }
         ran
     }
@@ -6187,6 +6270,116 @@ impl QTensorEngine {
         }
 
         stack_gemm_quant(raw, info, input, out, n_in, n_out)
+    }
+
+    /// Phase 5.3: quantized GEMM against a **resident** weight sub-range (no per-call weight upload).
+    /// Same dispatch+readback as `dispatch_gemm_raw_into_async`, but binds the caller-provided
+    /// `weight` BindingResource (a slice of the resident output-projection buffer) instead of
+    /// `write_buffer`-ing the chunk. Used by the decode argmax once the logits projection is resident.
+    #[cfg(target_arch = "wasm32")]
+    async fn dispatch_gemm_resident_chunk_async(
+        &self,
+        weight_ggml_type: u32,
+        weight_row_elems: u32,
+        weight: wgpu::BindingResource<'_>,
+        weight_byte_len: u32,
+        input: &[f32],
+        out: &mut [f32],
+        n_in: usize,
+        n_out: usize,
+    ) -> bool {
+        if n_in > input.len() || n_out > out.len() {
+            return false;
+        }
+        if n_in > MAX_STACK_GEMM_IN || n_out > self.gemm_max_out_dim as usize {
+            return false;
+        }
+        let input_buf = match self.gemm_input_buf.as_ref() {
+            Some(b) => b,
+            None => return false,
+        };
+        let output_buf = match self.gemm_output_buf.as_ref() {
+            Some(b) => b,
+            None => return false,
+        };
+        let params_buf = match self.gemm_params_buf.as_ref() {
+            Some(b) => b,
+            None => return false,
+        };
+        let staging = match self.gemm_output_staging.as_ref() {
+            Some(b) => b,
+            None => return false,
+        };
+        let params = GemmGpuParams {
+            n_in: n_in as u32,
+            n_out: n_out as u32,
+            weight_ggml_type,
+            weight_row_elems,
+            weight_byte_len,
+            n_batch: 1,
+            in_row_stride: 0,
+            out_row_stride: 0,
+        };
+        self.gpu_queue()
+            .write_buffer(input_buf, 0, bytemuck::cast_slice(&input[..n_in]));
+        self.gpu_queue()
+            .write_buffer(params_buf, 0, bytemuck::bytes_of(&params));
+
+        let bind_layout = self.pipeline.get_bind_group_layout(0);
+        let bind_group = self.gpu_device().create_bind_group(&wgpu::BindGroupDescriptor {
+            label: Some("ResidentLogitsBind"),
+            layout: &bind_layout,
+            entries: &[
+                wgpu::BindGroupEntry {
+                    binding: 0,
+                    resource: input_buf.as_entire_binding(),
+                },
+                wgpu::BindGroupEntry {
+                    binding: 1,
+                    resource: weight,
+                },
+                // self.pipeline uses MC8GemmBGL, whose binding 2 is a DYNAMIC uniform — bind it
+                // as a 256-sized dynamic slice and pass offset 0 below (matches encode_gemm_bufs_offset).
+                wgpu::BindGroupEntry {
+                    binding: 2,
+                    resource: Self::mc8_dynamic_uniform_binding(params_buf),
+                },
+                wgpu::BindGroupEntry {
+                    binding: 3,
+                    resource: output_buf.as_entire_binding(),
+                },
+            ],
+        });
+
+        let mut encoder = self
+            .device()
+            .create_command_encoder(&wgpu::CommandEncoderDescriptor {
+                label: Some("ResidentLogitsEncoder"),
+            });
+        {
+            let mut cpass = encoder.begin_compute_pass(&wgpu::ComputePassDescriptor {
+                label: None,
+                timestamp_writes: None,
+            });
+            cpass.set_pipeline(&self.pipeline);
+            cpass.set_bind_group(0, &bind_group, &[0]);
+            cpass.dispatch_workgroups((n_out as u32 + 63) / 64, 1, 1);
+        }
+        let out_bytes = (n_out * 4) as wgpu::BufferAddress;
+        encoder.copy_buffer_to_buffer(output_buf, 0, staging, 0, out_bytes);
+        self.gpu_queue().submit(Some(encoder.finish()));
+
+        let slice = staging.slice(..out_bytes);
+        if await_wgpu_map(slice).await {
+            let data = slice.get_mapped_range();
+            let floats: &[f32] = bytemuck::cast_slice(&data);
+            out[..n_out].copy_from_slice(&floats[..n_out]);
+            drop(data);
+            staging.unmap();
+            return true;
+        }
+        let _ = staging.unmap();
+        false
     }
 #[cfg(target_arch = "wasm32")]
     pub async fn dispatch_gemm_into_async(
@@ -7838,16 +8031,37 @@ impl QTensorEngine {
         for chunk_idx in 0..n_chunks {
             let row_start = chunk_idx * VOCAB_CHUNK_ROWS;
             let chunk_rows = VOCAB_CHUNK_ROWS.min(vocab_size - row_start);
-            let raw = crate::ggml_quants::fetch_tensor_row_range_bytes(
-                mmap,
-                index.tensor_data_start,
-                info,
-                row_start,
-                chunk_rows,
-            )
-            .ok()?;
-            if !self
-                .dispatch_gemm_raw_into_async(
+            // Phase 5.3: bind the resident output-projection sub-range (zero per-token upload)
+            // when available; otherwise fall back to per-chunk fetch + write_buffer. The chunk
+            // byte offset is 256-aligned because VOCAB_CHUNK_ROWS is a multiple of 256.
+            let ok = if let Some(buf) = self.mc8_logits_resident_buf.as_ref() {
+                let row_bytes = self.mc8_logits_row_bytes as u64;
+                let weight = wgpu::BindingResource::Buffer(wgpu::BufferBinding {
+                    buffer: buf,
+                    offset: row_start as u64 * row_bytes,
+                    size: std::num::NonZeroU64::new(chunk_rows as u64 * row_bytes),
+                });
+                self.dispatch_gemm_resident_chunk_async(
+                    info.ggml_type,
+                    info.dims[0] as u32,
+                    weight,
+                    (chunk_rows as u64 * row_bytes) as u32,
+                    &hidden[..n_in],
+                    &mut chunk_logits[..chunk_rows],
+                    n_in,
+                    chunk_rows,
+                )
+                .await
+            } else {
+                let raw = crate::ggml_quants::fetch_tensor_row_range_bytes(
+                    mmap,
+                    index.tensor_data_start,
+                    info,
+                    row_start,
+                    chunk_rows,
+                )
+                .ok()?;
+                self.dispatch_gemm_raw_into_async(
                     info,
                     raw,
                     &hidden[..n_in],
@@ -7856,7 +8070,8 @@ impl QTensorEngine {
                     chunk_rows,
                 )
                 .await
-            {
+            };
+            if !ok {
                 return None;
             }
             update_streaming_argmax_sieved(

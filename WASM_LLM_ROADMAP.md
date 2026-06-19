@@ -1,9 +1,9 @@
 # 📋 QUALIA ENGINE — MASTER EXECUTION ROADMAP
 
 **Date:** 2026-06-19 · **Owner:** Qualia (Timothy Charles Holborn, inventor/curator)
-**Status:** Phase 4 (AOT Ingestion) secured. Phase 5 (throughput) — decode root cause **found**:
-per-token re-upload of the non-resident ~50 MB output/logits projection (NOT layer compute). Next:
-make the output projection resident (§Part 3).
+**Status:** Phase 4 (AOT Ingestion) secured. Phase 5 (throughput) — decode root cause **nailed by
+direct profiling**: WebGPU queue-submit IPC overhead (64 submits/token × ~24 ms). Resident output
+projection (5.3) done; next = single-submit forward (5.4, §Part 3).
 **Companion docs:** [`WASM_LLM_ENDGAME.md`](WASM_LLM_ENDGAME.md) · [`wasm_llm_planning.md`](wasm_llm_planning.md) (per-step log) · [`qualia-llm-future-updates.md`](qualia-llm-future-updates.md) (V2 vision)
 
 ---
@@ -50,34 +50,36 @@ revertable. Then port `llmdemo/index.html` to `loadOrCompileQ42` (it keeps its O
 
 ---
 
-## ⚡ PART 3 — DECODE THROUGHPUT (post-gate) — 🔎 ROOT CAUSE FOUND (Phase 5, 2026-06-19)
+## ⚡ PART 3 — DECODE THROUGHPUT (post-gate) — 🎯 ROOT CAUSE NAILED: WebGPU submit IPC (Phase 5, 2026-06-19)
 
 **Standing number:** sustained decode ~0.6 tok/s (~1747 ms/token).
 
-**What it is NOT (disproven empirically — the original "frontend dispatch" premise was wrong).**
-Three layer-side experiments each moved throughput **~0%**:
-- **Dispatch fusion** (gate+up+SiLU → 1 pass, −64 dispatches/forward) ⇒ not dispatch-bound.
-- **Block-amortized Q5_0 dequant** (decode `d`+`qh` once per 32-elem block) ⇒ not dequant-ALU-bound.
-- **Neutering gate/up to 1/30 work** (bisect) ⇒ FFN GEMM compute is ~0% of per-token time.
+**Direct attribution (CPU-side `js_sys::Date::now()` phase timing, not assumption):**
+- decode = **98.7% forward**; argmax only ~21 ms/token (`forward=52441ms argmax=667ms / 32 tok`).
+- forward = **23 ms CPU encode + 1555 ms GPU drain** → GPU-bound, NOT CPU-encoding-bound.
+- forward is **linear in layers**: 1-layer run = **11.5 tok/s**; 32-layer = 1639 ms/tok → **~49 ms/layer**.
 
-Per-token arithmetic (~500M MACs incl. the 49152-vocab projection) ≈ tens of ms — so the ~1747 ms is
-**data movement, not math**.
+**What it IS: WebGPU queue-submit IPC overhead.** The forward issues **64 `queue.submit()` per token**
+(2 `mc8_flush`/layer). Each submit crosses the WASM→Chrome-GPU-process IPC boundary + Dawn validation
+(~24 ms). 64 × ~24 ms ≈ 1555 ms ≈ the GPU drain. 49 ms/layer for ~15M MACs = 0.3 GMAC/s — Ampere is
+**idling on IPC**, not computing.
 
-**What it IS (root cause).** The per-token argmax `dispatch_output_argmax_chunked_async_mc8_fused`
-(`gguf_bridge.rs` ~7838) **re-uploads the entire ~50 MB output/logits projection to the GPU every
-token** — 6 vocab chunks (49152/8192), each `write_buffer`-ing weights from the tied `token_embd`
-(Q8_0 [960,49152]) before its dispatch+readback. Phase 3x made the *layer* weights resident; the
-**logits projection never was**. This is the Phase 2B weight-reupload bug, alive in the decode logits
-stage — which is exactly why no layer-side optimization helped.
+**What it is NOT (all disproven empirically — ~0 tok/s change each):** dispatch fusion (−64
+dispatches/fwd); block-amortized Q5_0 dequant; neutering gate/up GEMM to 1/30 (→garbage out, path
+live, time unchanged); CPU encoding (only 23 ms); **the logits/output projection** (only ~21 ms/tok —
+making it GPU-resident in 5.3 changed nothing).
 
-**Execution (the actual lever):**
-1. **Resident output projection (5.3 — NEXT)** — upload the tied `token_embd`/output matrix to a
-   resident GPU buffer **once** (mirror `mc8_upload_all_resident_weights`); run the chunked argmax
-   GEMM against resident sub-ranges with **zero per-token re-upload**. Keep per-chunk submit/readback
-   (gguf_bridge.rs:7808 warns batched chunks garble tokens via write_buffer races). ~50 MB on top of
-   the existing 219 MB resident layer weights (browser WebGPU budget, not the 128 MB Local cap).
-2. **Re-measure** sustained tok/s, then profile the next-largest mover (attention over KV, the hidden
-   readback) before any further kernel work — measure, don't assume.
+**Execution (the actual lever): the Grand Unified Forward Pass — 64 submits → 1.**
+1. **5.3 Resident output projection — DONE** (`mc8_upload_resident_logits` +
+   `dispatch_gemm_resident_chunk_async`). Throughput-neutral, but correct + preemptive (a per-token
+   ~50 MB logits re-fetch would have been the *next* wall once submits are fixed). Committed.
+2. **5.4 Single-submit forward (NEXT):** one `CommandEncoder` for all 32 layers; upload all layers'
+   super-arena uniforms to non-overlapping regions (no mid-loop `write_buffer` race — the real reason
+   the flush was needed, per architect); delete the per-layer `mc8_flush`; one `queue.submit()` before
+   the readback. Existing `MC8_LAYERS_PER_ENCODER` (=4) chunk machinery already batches this for
+   prefill — extend the decode forward to it and raise toward 32. **OPEN:** prefill's KV flush is
+   marked "(backend empirical)" — must confirm Dawn auto-barriers intra-encoder KV writes→reads, else
+   the flush is KV-mandatory and submit reduction is capped per chunk.
 3. **Gate:** > 2.0 tok/s sustained on SmolLM2-360M, coherence held (`Paris.`).
 
 **Quant reality (this model):** `n_embd=960 ∤ 256` → k-quants fell back: ffn_gate/up = **Q5_0**,
