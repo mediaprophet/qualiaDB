@@ -392,9 +392,8 @@ layout: null
                     qualia:spatiotemporalContext [ time:period "${time}" ; geo:region "${juris}" ] .
             `;
 
-            document.getElementById('provenance-info').innerHTML = 
-                
-ormalized from <strong>${lastAnalysis.model}</strong> • Context: ${time} • ${juris} • Ready for merge`;
+            document.getElementById('provenance-info').innerHTML =
+                `Normalized from <strong>${lastAnalysis.model}</strong> • Context: ${time} • ${juris} • Ready for merge`;
         }
 
         function downloadQ42() {
