@@ -153,9 +153,11 @@ const MC8_MAX_ELEM_UNIFORM_SLOTS: usize = 8;
 const MC8_MAX_ATTN_UNIFORM_SLOTS: usize = 8;
 #[cfg(target_arch = "wasm32")]
 const MC8_MAX_ELEM_UNIFORM_LAYER_SLOTS: usize = 8;
-/// MC8 Part 3v: layers encoded into one submit batch (KV flush still per-layer).
+/// MC8 Part 3v / Phase 5.4: layers encoded into one submit batch. Sizes the per-layer uniform
+/// buffers (slots_per_layer × this) and is the decode forward's chunk size — 64 → the whole
+/// ≤64-layer forward is a single submit. Per-chunk flush + reset handles deeper models.
 #[cfg(target_arch = "wasm32")]
-const MC8_LAYERS_PER_ENCODER: u32 = 4;
+const MC8_LAYERS_PER_ENCODER: u32 = 64;
 /// Uniform slots reserved per layer within a chunk (must cover K/V/Q + tail).
 #[cfg(target_arch = "wasm32")]
 const MC8_ATTN_SLOTS_PER_LAYER: usize = 4;
@@ -5963,8 +5965,18 @@ impl QTensorEngine {
         };
         let n_tokens = 1u32;
         let mut ran = 0u32;
+        // Phase 5.4 single-submit: one encoder + monotonic uniform cursors across the whole forward;
+        // flush only at MC8_LAYERS_PER_ENCODER chunk boundaries → 1 submit for ≤64-layer models (vs
+        // the old 2/layer). Per-layer write_buffer races are gone (resident norms + accumulating
+        // cursors), so KV/work-buffer visibility relies on WebGPU intra-encoder barriers.
+        let mut layer_uniform_cursors = Mc8ChunkUniformCursors { attn: 0, elem: 0, gemm: 0 };
+        let mut enc = WasmGpuPipeline::begin(self);
         let _t_enc = js_sys::Date::now();
         for layer in 0..limit {
+            if layer > 0 && (layer % MC8_LAYERS_PER_ENCODER) == 0 {
+                self.mc8_flush(&mut enc);
+                layer_uniform_cursors.reset();
+            }
             let tensors = index.get_layer_tensors(layer);
             let k_info = match tensors.attn_k.as_ref() {
                 Some(i) => i,
@@ -5985,11 +5997,6 @@ impl QTensorEngine {
             let h = index.hyperparams;
             let n_kv = h.effective_n_kv_head();
             let used_attn_norm = tensors.attn_norm.is_some();
-            let mut layer_uniform_cursors = Mc8ChunkUniformCursors {
-                attn: 0,
-                elem: 0,
-                gemm: 0,
-            };
             let (uniforms, geom) = match self.mc8_stage_prefill_layer_super_arena(
                 index,
                 layer,
@@ -6007,7 +6014,6 @@ impl QTensorEngine {
                 Some(v) => v,
                 None => break,
             };
-            let mut enc = WasmGpuPipeline::begin(self);
             let attn_src = if used_attn_norm {
                 if let (Some(norm), Some(off)) =
                     (tensors.attn_norm.as_ref(), uniforms.attn_norm_elem_off)
@@ -6086,8 +6092,9 @@ impl QTensorEngine {
             ) {
                 break;
             }
-            // Part 3u: KV cache writes must be queue-visible before Q-SDPA reads.
-            self.mc8_flush(&mut enc);
+            // Phase 5.4: NO per-layer flush. KV-cache + work-buffer visibility now relies on WebGPU's
+            // automatic intra-encoder barriers between compute passes (the per-layer write_buffer
+            // races that previously forced a flush are gone: resident norms + accumulating uniforms).
             let work_a = self.prefill_work_buf_a.as_ref().unwrap();
             let work_b = self.prefill_work_buf_b.as_ref().unwrap();
             if !self.encode_prefill_q_ffn_tail_fused(
@@ -6108,10 +6115,10 @@ impl QTensorEngine {
             ) {
                 break;
             }
-            // Part 3w: layer-end flush → 2 submits/layer (mirrors prefill).
-            self.mc8_flush(&mut enc);
             ran += 1;
         }
+        // Phase 5.4: ONE submit for the whole forward (or per chunk if n_layer > MC8_LAYERS_PER_ENCODER).
+        self.mc8_flush(&mut enc);
         let _enc_ms = js_sys::Date::now() - _t_enc;
         let _t_rb = js_sys::Date::now();
         if ran > 0 && !self.pipeline_read_hidden(emb_dim, hidden).await {
