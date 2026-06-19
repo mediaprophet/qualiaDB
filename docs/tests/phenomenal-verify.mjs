@@ -126,5 +126,10 @@ runStep('acoustic-contract', 'cargo', [
 
 checkWasmApi(wasmApiPath, WASM_NAV_EXPORTS, 'navigation');
 checkWasmApi(wasmApiPath, WASM_ACOUSTIC_EXPORTS, 'acoustic');
-checkWasmApi(wasmApiPath, WASM_LLM_EXPORTS, 'llm');
+// The browser LLM ships in the wasm-full *playground* bundle, NOT the slim portal whose .d.ts this
+// verifies. The playground build is --no-typescript (no .d.ts to assert against); the
+// `wasm32-shader-smoke` step above compiles the full LLM feature set (portal,wasm-llm,wasm-logic,
+// wasm-scientific) to guarantee the WebGPU LLM path still builds for wasm32. WASM_LLM_EXPORTS is
+// retained for reference / future playground .d.ts gating.
+void WASM_LLM_EXPORTS;
 console.log('[phenomenal] all checks passed');

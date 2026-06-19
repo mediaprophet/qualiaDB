@@ -26,7 +26,7 @@
 </head>
 <body>
 <h1>Qualia WASM LLM — Test Harness</h1>
-<p class="dim">Drives <code>initialize_webgpu_engine</code> / <code>inferWasmStreaming</code> from <code>pkg/qualia/qualia.js</code>. Models served from <code>/models/</code> (gitignored). Caching uses the Cache Storage API so a model is downloaded once.</p>
+<p class="dim">Drives <code>initialize_webgpu_engine</code> / <code>inferWasmStreaming</code> from <code>playground/qualia_core_db.js</code> (the wasm-full bundle). Models served from <code>/models/</code> (gitignored). Caching uses the Cache Storage API so a model is downloaded once.</p>
 
 <div class="row">
   <span class="stat" id="engine-ver">engine: …</span>
@@ -63,7 +63,7 @@
 import init, {
   initialize_webgpu_engine, inferWasmAsync, inferWasmStreaming, isWebgpuEngineReady,
   releaseWebgpuEngine, getEngineVersion, init_panic_hook, compileGgufToQ42, q42FormatVersion,
-} from './pkg/qualia/qualia.js';
+} from './playground/qualia_core_db.js';
 import { loadGgufCached, loadOrCompileQ42, clearAllOpfsModels } from './js/opfs-model-cache.js';
 
 const USE_ASYNC_GPU = new URLSearchParams(location.search).get('async') !== '0';

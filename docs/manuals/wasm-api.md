@@ -9,8 +9,12 @@ The `qualia-core-db` crate compiles to `wasm32-unknown-unknown` with two feature
 
 | Profile | Features | Use case |
 |---------|----------|----------|
-| **Portal slim** | `portal` | GitHub Pages, spatial demo, QApp embed — viewport + acoustic |
-| **Full playground** | `wasm-full` | API explorer, logic evaluators, scientific modalities |
+| **Portal slim** | `portal` | GitHub Pages, spatial demo, QApp embed — viewport + acoustic (kept under the 2 MB / 800 KB size budget) |
+| **Full playground** | `wasm-full` | API explorer, logic evaluators, scientific modalities, **and the browser LLM** |
+
+> The **browser LLM lives in the `wasm-full` playground bundle**, not the slim portal — keeping every
+> spatial page lean. LLM demos (`llmdemo/`, `online-llm-demo.html`, `wasm-llm-test.html`, `benchmark.html`)
+> all import from `playground/qualia_core_db.js`.
 
 ---
 
@@ -156,7 +160,7 @@ import init, {
   initialize_webgpu_engine,   // boots from GGUF *or* .q42 (magic-sniffed)
   inferWasmStreaming,         // streaming decode (alias: inferWasmAsync)
   compileGgufToQ42, q42FormatVersion,
-} from './pkg/qualia/qualia.js';
+} from './playground/qualia_core_db.js';   // wasm-full bundle — the LLM is NOT in the slim portal
 import { loadOrCompileQ42 } from './js/opfs-model-cache.js';
 
 await init();

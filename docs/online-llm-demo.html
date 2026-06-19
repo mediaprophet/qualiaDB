@@ -73,7 +73,7 @@
                 <label class="block text-xs text-zinc-400 mt-3 mb-1">Or load a local GGUF file</label>
                 <input type="file" id="local-model-file" accept=".gguf" multiple
                     class="w-full text-xs text-zinc-400 file:mr-3 file:py-1.5 file:px-3 file:rounded-lg file:border-0 file:bg-zinc-800 file:text-zinc-200 hover:file:bg-zinc-700">
-                <p class="text-xs text-zinc-500 leading-relaxed">GGUF weights only. Inference runs through Qualia's native WebGPU engine (<code class="text-zinc-400">qualia_bg.wasm</code>). LiteRT-LM / TFLite not supported.</p>
+                <p class="text-xs text-zinc-500 leading-relaxed">GGUF weights only. Inference runs through Qualia's native WebGPU engine (<code class="text-zinc-400">qualia_core_db_bg.wasm</code>). LiteRT-LM / TFLite not supported.</p>
             </div>
             <div class="progress-bar mb-2" id="dl-progress-wrap" style="display:none">
                 <div class="progress-fill" id="dl-progress" style="width:0%"></div>
@@ -271,7 +271,7 @@ import init, {
     getEngineVersion,
     compileGgufToQ42,
     q42FormatVersion,
-} from './pkg/qualia/qualia.js';
+} from './playground/qualia_core_db.js';
 import { loadGgufCached, loadOrCompileQ42 } from './js/opfs-model-cache.js';
 
 // ── Constants ─────────────────────────────────────────────────────────────────

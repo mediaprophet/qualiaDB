@@ -595,7 +595,7 @@ class QualiaAdapter {
 
     async loadModules() {
         if (!this.mod) {
-            const mod = await import('../pkg/qualia/qualia.js');
+            const mod = await import('../playground/qualia_core_db.js');
             await mod.default(); // initialise the wasm module
             mod.init_panic_hook?.();
             this.mod = mod;
