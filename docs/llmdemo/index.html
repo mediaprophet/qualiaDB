@@ -79,41 +79,64 @@
 <body>
     <div class="container">
         <h1>QualiaDB Native WebGPU Inference</h1>
-        <p>This demo downloads Gemma 3 1B IT (Q4_0) directly to your browser memory and executes it using WebGPU and WebAssembly.</p>
-        
+        <p>SmolLM2-360M (Q4_K_M) compiled Ahead-Of-Time to QualiaDB's zero-copy <code>.q42</code>
+        container, cached in OPFS, and executed entirely in-browser via the native WebGPU + WASM
+        pipeline (Phase 5: parallel Q/K/V projection, single-submit forward, resident weights).</p>
+
         <div class="status-box" id="statusBox">
             <strong>System Status:</strong> <span id="sysStatus">Checking WebGPU support...</span>
         </div>
 
-        <button id="btnLoadModel" disabled>1. Load GGUF Model into Browser</button>
-        <span class="loading" id="spinner">Downloading...</span>
-        
+        <button id="btnLoadModel" disabled>1. Load &amp; Compile Model (.q42 AOT → OPFS → boot)</button>
+        <span class="loading" id="spinner">Working...</span>
+
         <div class="progress-bar" id="progressBar">
             <div class="progress-fill" id="progressFill"></div>
         </div>
 
         <br><br>
-        <button id="btnInitWasm" disabled>2. Initialize WASM WebGPU Engine</button>
+        <label for="promptInput"><strong>Prompt</strong> (greedy completion; SmolLM is tiny):</label><br>
+        <input id="promptInput" type="text" value="The capital of France is"
+               style="width:100%; padding:8px; margin-top:6px; font-size:15px; box-sizing:border-box;"><br><br>
+        <button id="btnGenerate" disabled>2. Generate</button>
+        <span id="tps" style="margin-left:12px; font-weight:bold; color:#2c3e50;"></span>
 
         <div class="terminal" id="terminalOutput">
 > QualiaDB Terminal Ready
         </div>
+
+        <h3>Output</h3>
+        <div class="terminal" id="genOutput" style="color:#9cdcfe; height:160px;"></div>
     </div>
 
     <!-- Load the WASM module -->
     <script type="module">
-        import init, { initialize_webgpu_engine } from '../playground/qualia_core_db.js';
-        import { loadGgufCached } from '../js/opfs-model-cache.js';
+        import init, {
+            initialize_webgpu_engine,
+            inferWasmAsync,
+            compileGgufToQ42,
+            q42FormatVersion,
+        } from '../playground/qualia_core_db.js';
+        import { loadOrCompileQ42 } from '../js/opfs-model-cache.js';
 
         const sysStatus = document.getElementById('sysStatus');
         const btnLoadModel = document.getElementById('btnLoadModel');
-        const btnInitWasm = document.getElementById('btnInitWasm');
+        const btnGenerate = document.getElementById('btnGenerate');
         const progressBar = document.getElementById('progressBar');
         const progressFill = document.getElementById('progressFill');
         const terminal = document.getElementById('terminalOutput');
+        const genOutput = document.getElementById('genOutput');
+        const promptInput = document.getElementById('promptInput');
+        const tpsEl = document.getElementById('tps');
         const spinner = document.getElementById('spinner');
-        
-        let ggufBuffer = null;
+
+        // SmolLM2-360M Q4_K_M: coherent + the Phase 5 ~5.9 tok/s model. Same-origin first (local
+        // harness / GitHub Pages mirror), HuggingFace fallback.
+        const NAME = 'SmolLM2-360M-Instruct-Q4_K_M';
+        const MODEL_URLS = [
+            '../models/SmolLM2-360M-Instruct-Q4_K_M.gguf',
+            'https://huggingface.co/HuggingFaceTB/SmolLM2-360M-Instruct-GGUF/resolve/main/smollm2-360m-instruct-q4_k_m.gguf',
+        ];
 
         function log(msg) {
             terminal.innerHTML += `\n> ${msg}`;
@@ -132,8 +155,12 @@
                 log("Error: Failed to request WebGPU adapter.");
                 return;
             }
-            sysStatus.innerHTML = '<span style="color:green">WebGPU is supported!</span>';
-            log("WebGPU Adapter found: " + adapter.name);
+            sysStatus.innerHTML = '<span style="color:green">WebGPU supported. Loading WASM…</span>';
+            log("WebGPU Adapter found: " + (adapter.name || '(unnamed)'));
+            // Init the WASM module up front — compileGgufToQ42 (the AOT compiler) lives in it.
+            await init();
+            log("WASM module loaded (Phase 5 engine).");
+            sysStatus.innerHTML = '<span style="color:green">Ready — load a model.</span>';
             btnLoadModel.disabled = false;
         }
 
@@ -141,70 +168,79 @@
             btnLoadModel.disabled = true;
             spinner.style.display = 'inline';
             progressBar.style.display = 'block';
-            const MODEL_URLS = [
-                'http://localhost:8081/gemma-3-1b-it-q4_0.gguf',
-                'https://huggingface.co/google/gemma-3-1b-it-qat-q4_0-gguf/resolve/main/gemma-3-1b-it-q4_0.gguf',
-            ];
-            log("Starting download of gemma-3-1b-it-q4_0.gguf…");
-
             try {
-                // OPFS-backed cache: streams to disk (no whole-model JS-heap blob) and serves
-                // instantly on repeat loads. Cache key is the filename, so a hit short-circuits
-                // the URL fallback regardless of which source originally supplied it.
-                const NAME = 'gemma-3-1b-it-q4_0.gguf';
-                let result = null;
+                const fmt = q42FormatVersion();
+                let q42 = null;
                 for (const url of MODEL_URLS) {
-                    log(`Trying ${url}…`);
+                    log(`Source: ${url}`);
                     try {
-                        result = await loadGgufCached(url, NAME, undefined, (loaded, total, phase) => {
-                            if (phase === 'hit') {
-                                progressFill.style.width = '100%';
-                            } else if (phase === 'download' && total) {
-                                progressFill.style.width = (loaded / total * 100) + '%';
-                                if (loaded % (1024 * 1024 * 10) < 65536) {
-                                    log(`Downloaded ${(loaded / 1024 / 1024).toFixed(1)} MB...`);
+                        // Warm .q42 OPFS hit → instant boot. Cold → stream GGUF, compile to .q42
+                        // once (AOT), cache the .q42, boot zero-parse. No whole-model JS-heap blob.
+                        q42 = await loadOrCompileQ42(url, NAME, {
+                            compile: compileGgufToQ42,
+                            formatVersion: fmt,
+                            onProgress: (loaded, total, phase) => {
+                                if (phase === 'q42-hit') {
+                                    progressFill.style.width = '100%';
+                                    log('OPFS .q42 cache HIT — zero-parse boot.');
+                                } else if (phase === 'compile') {
+                                    progressFill.style.width = '100%';
+                                    log('Compiling GGUF → .q42 (one-time AOT)…');
+                                } else if (phase === 'download' && total) {
+                                    progressFill.style.width = (loaded / total * 100) + '%';
+                                    if (loaded % (1024 * 1024 * 20) < 65536) {
+                                        log(`Downloaded ${(loaded / 1024 / 1024).toFixed(0)} MB…`);
+                                    }
                                 }
-                            }
+                            },
                         });
-                        if (result) { log(`Source: ${url}`); break; }
+                        if (q42) break;
                     } catch (err) {
                         log(`Failed ${url}: ${err.message}`);
-                        result = null;
+                        q42 = null;
                     }
                 }
-                if (!result) throw new Error('Could not download model from local server or HuggingFace');
+                if (!q42) throw new Error('Could not load/compile model from any source');
 
-                ggufBuffer = result.bytes;
-                log(`Model ready (${(ggufBuffer.length / 1024 / 1024).toFixed(2)} MB, ${result.source === 'opfs-hit' ? 'OPFS cache' : 'downloaded + cached'})`);
+                log(`.q42 ready (${(q42.bytes.length / 1024 / 1024).toFixed(1)} MB, ${q42.source}).`);
+                log('Initializing resident WebGPU engine from .q42…');
+                await initialize_webgpu_engine(q42.bytes);
+                log('Engine resident. QualiaDB native pipeline active.');
+                sysStatus.innerHTML = '<span style="color:green">Engine ready — generate!</span>';
                 spinner.style.display = 'none';
-                btnInitWasm.disabled = false;
-
+                btnGenerate.disabled = false;
             } catch (e) {
-                log(`Error downloading model: ${e.message}`);
-                log("Tip: run serve_models.py on port 8081, or ensure HuggingFace is reachable.");
+                log(`Error: ${e.message}`);
                 spinner.style.display = 'none';
                 btnLoadModel.disabled = false;
             }
         });
 
-        btnInitWasm.addEventListener('click', async () => {
-            btnInitWasm.disabled = true;
-            log("Loading WebAssembly module...");
+        btnGenerate.addEventListener('click', async () => {
+            btnGenerate.disabled = true;
+            tpsEl.textContent = '';
+            genOutput.textContent = '';
+            const prompt = promptInput.value;
+            log(`Generating from: "${prompt}"`);
+            let tokens = 0;
+            let ttftMs = null;
+            const t0 = performance.now();
             try {
-                await init();
-                log("WASM Module loaded successfully.");
-                
-                log("Initializing WebGPU Engine inside WASM... (This will parse the GGUF)");
-                
-                // Call our exported WASM function!
-                await initialize_webgpu_engine(ggufBuffer);
-                
-                log("GGUF Engine initialized successfully! QualiaDB native WebGPU pipeline is active.");
-                sysStatus.innerHTML = '<span style="color:green">WASM Engine Ready</span>';
-                
-            } catch(e) {
-                log(`WASM Error: ${e.message}`);
+                await inferWasmAsync(prompt, (delta) => {
+                    if (ttftMs === null) ttftMs = performance.now() - t0;
+                    tokens++;
+                    genOutput.textContent += delta;
+                    genOutput.scrollTop = genOutput.scrollHeight;
+                });
+                const secs = (performance.now() - t0) / 1000;
+                const tps = tokens > 0 ? tokens / secs : 0;
+                tpsEl.textContent = `${tps.toFixed(1)} tok/s`;
+                log(`Done: ${tokens} tokens in ${secs.toFixed(2)}s — ${tps.toFixed(1)} tok/s` +
+                    (ttftMs != null ? ` (TTFT ${(ttftMs / 1000).toFixed(2)}s)` : ''));
+            } catch (e) {
+                log(`Inference error: ${e.message}`);
             }
+            btnGenerate.disabled = false;
         });
 
         // Start
