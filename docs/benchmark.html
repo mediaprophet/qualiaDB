@@ -1,9 +1,9 @@
-<!DOCTYPE html>
+﻿<!DOCTYPE html>
 <html lang="en">
 <head>
     <meta charset="UTF-8">
     <meta name="viewport" content="width=device-width, initial-scale=1.0">
-    <title>Qualia-DB • Benchmark Hub v0.0.17</title>
+    <title>Qualia-DB â€¢ Benchmark Hub v0.0.18</title>
     <link rel="stylesheet" href="css/tailwind-built.css">
     <link rel="stylesheet" href="css/site-nav.css">
     <link rel="stylesheet" href="https://cdnjs.cloudflare.com/ajax/libs/font-awesome/6.5.1/css/all.min.css">
@@ -109,14 +109,15 @@
     <div class="text-center mb-10">
         <div class="inline-flex items-center gap-2 px-4 py-1 rounded-2xl bg-emerald-500/10 text-emerald-400 text-sm mb-4">
             <i class="fas fa-tachometer-alt"></i>
-            <span>WASM-only · Zero-Heap · v0.0.17</span>
+            <span>WASM-only Â· Zero-Heap Â· v0.0.17</span>
         </div>
         <h1 class="text-5xl font-semibold tracking-tighter mb-3">Benchmark Hub</h1>
-        <p class="text-white/60 max-w-2xl mx-auto">CI platform suite (graph, Sentinel, streaming, ontology) plus interactive browser probes. Not graph-only anymore — see <a href="comparative_benchmarks.html" class="text-cyan-400 hover:underline">comparative benchmarks</a> for multi-engine graph shoot-outs.</p>
+        <p class="text-white/60 max-w-2xl mx-auto">CI platform suite (graph, Sentinel, streaming, ontology) plus interactive browser probes. Not graph-only anymore â€” see <a href="comparative_benchmarks.html" class="text-cyan-400 hover:underline">comparative benchmarks</a> for multi-engine graph shoot-outs.</p>
     </div>
 
     <div class="flex flex-wrap gap-3 justify-center mb-8">
         <a href="comparative_benchmarks.html" class="px-4 py-2 rounded-2xl text-sm bg-white/5 border border-white/10 hover:bg-white/10"><i class="fa-solid fa-chart-line mr-2 text-blue-400"></i>Comparative engines</a>
+        <a href="benchmarks.html" class="px-4 py-2 rounded-2xl text-sm bg-white/5 border border-white/10 hover:bg-white/10"><i class="fa-solid fa-microchip mr-2 text-cyan-400"></i>Browser LLM harness</a>
         <a href="comparative_benchmarks.html?view=platform" class="px-4 py-2 rounded-2xl text-sm bg-white/5 border border-white/10 hover:bg-white/10"><i class="fa-solid fa-microchip mr-2 text-amber-400"></i>Platform suite (CI)</a>
         <a href="playground/benchmark.html" class="px-4 py-2 rounded-2xl text-sm bg-white/5 border border-white/10 hover:bg-white/10"><i class="fa-solid fa-code mr-2 text-emerald-400"></i>Transparent harness</a>
         <a href="benchmark_visualizer.html" class="px-4 py-2 rounded-2xl text-sm bg-white/5 border border-white/10 hover:bg-white/10"><i class="fa-solid fa-satellite-dish mr-2 text-violet-400"></i>Telemetry visualizer</a>
@@ -165,11 +166,14 @@
         <button class="tab-btn" data-tab="zeroheap" onclick="switchTab('zeroheap',this)" id="tab-zeroheap-btn">
             <i class="fas fa-memory mr-1.5"></i>Zero-Heap Demo
         </button>
+        <button class="tab-btn" data-tab="llm" onclick="switchTab('llm',this)" id="tab-llm-btn">
+            <i class="fas fa-robot mr-1.5"></i>Browser LLM
+        </button>
     </div>
 
-    <!-- ═══════════════════════════════════════════════════
-         TAB 0 — CI PLATFORM SUITE (real JSON from qualia-cli bench)
-    ═══════════════════════════════════════════════════ -->
+    <!-- â•â•â•â•â•â•â•â•â•â•â•â•â•â•â•â•â•â•â•â•â•â•â•â•â•â•â•â•â•â•â•â•â•â•â•â•â•â•â•â•â•â•â•â•â•â•â•â•â•â•â•
+         TAB 0 â€” CI PLATFORM SUITE (real JSON from qualia-cli bench)
+    â•â•â•â•â•â•â•â•â•â•â•â•â•â•â•â•â•â•â•â•â•â•â•â•â•â•â•â•â•â•â•â•â•â•â•â•â•â•â•â•â•â•â•â•â•â•â•â•â•â•â• -->
     <div id="tab-ci" class="tab-pane active">
         <div class="glass-strong rounded-3xl p-6 mb-6">
             <h3 class="text-xl font-semibold mb-2 flex items-center gap-2">
@@ -177,22 +181,22 @@
                 CI Platform Suite
             </h3>
             <p class="text-white/60 text-sm mb-4">Live measurements from <code class="text-cyan-400">qualia-cli bench --suite full</code> committed as <code class="text-cyan-400">llm_benchmark_results.json</code>. Includes graph primitives, Sentinel governance, lazy streaming, and WordNet/SHACL highlights.</p>
-            <div id="ci-suite-root" class="text-sm text-white/50 font-mono">Loading CI results…</div>
+            <div id="ci-suite-root" class="text-sm text-white/50 font-mono">Loading CI resultsâ€¦</div>
         </div>
     </div>
 
-    <!-- ═══════════════════════════════════════════════════
-         TAB 1 — GRAPH OPERATIONS
-    ═══════════════════════════════════════════════════ -->
+    <!-- â•â•â•â•â•â•â•â•â•â•â•â•â•â•â•â•â•â•â•â•â•â•â•â•â•â•â•â•â•â•â•â•â•â•â•â•â•â•â•â•â•â•â•â•â•â•â•â•â•â•â•
+         TAB 1 â€” GRAPH OPERATIONS
+    â•â•â•â•â•â•â•â•â•â•â•â•â•â•â•â•â•â•â•â•â•â•â•â•â•â•â•â•â•â•â•â•â•â•â•â•â•â•â•â•â•â•â•â•â•â•â•â•â•â•â• -->
     <div id="tab-graph" class="tab-pane">
         <div class="glass-strong rounded-3xl p-6 mb-6">
             <h3 class="text-xl font-semibold mb-4 flex items-center gap-2">
                 <i class="fas fa-project-diagram text-emerald-400"></i>
                 Graph Operation Benchmarks
             </h3>
-            <p class="text-white/60 text-sm mb-4">Core semantic graph operations — point lookup, two-hop traversal, predicate filtering, and ingestion performance.</p>
+            <p class="text-white/60 text-sm mb-4">Core semantic graph operations â€” point lookup, two-hop traversal, predicate filtering, and ingestion performance.</p>
             <div class="mb-6 rounded-xl border border-amber-500/30 bg-amber-500/10 px-4 py-3 text-xs text-amber-200/90">
-                <i class="fas fa-info-circle mr-1"></i> Live demo — graph parsed and queries compiled in-browser via <code>parse_turtle_wasm</code> + <code>compile_query_to_json</code> (timings measured here). For multi-engine graph comparisons use the <strong>CI Platform Suite</strong> tab or <a href="comparative_benchmarks.html" class="underline">comparative benchmarks</a>.
+                <i class="fas fa-info-circle mr-1"></i> Live demo â€” graph parsed and queries compiled in-browser via <code>parse_turtle_wasm</code> + <code>compile_query_to_json</code> (timings measured here). For multi-engine graph comparisons use the <strong>CI Platform Suite</strong> tab or <a href="comparative_benchmarks.html" class="underline">comparative benchmarks</a>.
             </div>
 
             <div class="grid grid-cols-1 md:grid-cols-2 gap-4 mb-6">
@@ -216,7 +220,7 @@
                 </div>
             </div>
 
-            <div id="graph-dataset-meta" class="text-xs text-white/50 mb-4">Loading dataset profile…</div>
+            <div id="graph-dataset-meta" class="text-xs text-white/50 mb-4">Loading dataset profileâ€¦</div>
 
             <div class="flex gap-3 mb-6">
                 <button onclick="runGraphBenchmark()" id="btn-graph-run" class="spinbtn">
@@ -230,7 +234,7 @@
             <div class="code-block text-sm mb-4" id="graph-output">Ready to run benchmark...</div>
 
             <div class="glass-panel rounded-2xl p-4 mb-4">
-                <h4 class="text-sm font-semibold mb-3 text-emerald-400"><i class="fas fa-circle-nodes mr-1"></i>Live graph (parsed by <code>parse_turtle_wasm</code>) — drag nodes · scroll to zoom</h4>
+                <h4 class="text-sm font-semibold mb-3 text-emerald-400"><i class="fas fa-circle-nodes mr-1"></i>Live graph (parsed by <code>parse_turtle_wasm</code>) â€” drag nodes Â· scroll to zoom</h4>
                 <canvas id="graph-viz-canvas" style="width:100%;height:340px;max-height:340px;display:block"></canvas>
             </div>
 
@@ -252,17 +256,17 @@
         </div>
     </div>
 
-    <!-- ═══════════════════════════════════════════════════
-         TAB 2 — SCIENTIFIC COMPUTING
-    ═══════════════════════════════════════════════════ -->
+    <!-- â•â•â•â•â•â•â•â•â•â•â•â•â•â•â•â•â•â•â•â•â•â•â•â•â•â•â•â•â•â•â•â•â•â•â•â•â•â•â•â•â•â•â•â•â•â•â•â•â•â•â•
+         TAB 2 â€” SCIENTIFIC COMPUTING
+    â•â•â•â•â•â•â•â•â•â•â•â•â•â•â•â•â•â•â•â•â•â•â•â•â•â•â•â•â•â•â•â•â•â•â•â•â•â•â•â•â•â•â•â•â•â•â•â•â•â•â• -->
     <div id="tab-scientific" class="tab-pane">
         <div class="glass-strong rounded-3xl p-6 mb-6">
             <h3 class="text-xl font-semibold mb-4 flex items-center gap-2">
                 <i class="fas fa-flask text-emerald-400"></i>
                 Scientific Computing Primitives
             </h3>
-            <p class="text-white/60 text-sm mb-4">Native scientific primitives integrated with the semantic graph — thermodynamics, ODE solvers, bioinformatics, and clinical risk calculations.</p>
-            <div class="mb-6 rounded-xl border border-amber-500/30 bg-amber-500/10 px-4 py-3 text-xs text-amber-200/90">Browser microbench demo — models expected engine classes; run native CLI for audited scientific primitive timings.</div>
+            <p class="text-white/60 text-sm mb-4">Native scientific primitives integrated with the semantic graph â€” thermodynamics, ODE solvers, bioinformatics, and clinical risk calculations.</p>
+            <div class="mb-6 rounded-xl border border-amber-500/30 bg-amber-500/10 px-4 py-3 text-xs text-amber-200/90">Browser microbench demo â€” models expected engine classes; run native CLI for audited scientific primitive timings.</div>
 
             <div class="grid grid-cols-1 md:grid-cols-3 gap-4 mb-6">
                 <div>
@@ -313,16 +317,16 @@
         </div>
     </div>
 
-    <!-- ═══════════════════════════════════════════════════
-         TAB 3 — SPATIAL MATHEMATICS
-    ═══════════════════════════════════════════════════ -->
+    <!-- â•â•â•â•â•â•â•â•â•â•â•â•â•â•â•â•â•â•â•â•â•â•â•â•â•â•â•â•â•â•â•â•â•â•â•â•â•â•â•â•â•â•â•â•â•â•â•â•â•â•â•
+         TAB 3 â€” SPATIAL MATHEMATICS
+    â•â•â•â•â•â•â•â•â•â•â•â•â•â•â•â•â•â•â•â•â•â•â•â•â•â•â•â•â•â•â•â•â•â•â•â•â•â•â•â•â•â•â•â•â•â•â•â•â•â•â• -->
     <div id="tab-spatial" class="tab-pane">
         <div class="glass-strong rounded-3xl p-6 mb-6">
             <h3 class="text-xl font-semibold mb-4 flex items-center gap-2">
                 <i class="fas fa-cube text-emerald-400"></i>
                 Spatial Mathematics Benchmarking
             </h3>
-            <p class="text-white/60 text-sm mb-6">Geometric algebra, spatial indexing, and topological operations — benchmarking spatial query performance.</p>
+            <p class="text-white/60 text-sm mb-6">Geometric algebra, spatial indexing, and topological operations â€” benchmarking spatial query performance.</p>
 
             <div class="grid grid-cols-1 md:grid-cols-3 gap-4 mb-6">
                 <div>
@@ -362,7 +366,7 @@
 
             <div class="glass-panel rounded-2xl p-4 mb-4">
                 <div class="flex items-center justify-between mb-3 gap-3 flex-wrap">
-                    <h4 class="text-sm font-semibold text-emerald-400"><i class="fas fa-cube mr-1"></i>Interactive 3D object — drag to rotate · scroll to zoom</h4>
+                    <h4 class="text-sm font-semibold text-emerald-400"><i class="fas fa-cube mr-1"></i>Interactive 3D object â€” drag to rotate Â· scroll to zoom</h4>
                     <select id="spatial-shape" class="input-field" style="width:auto">
                         <option value="icosahedron">Icosahedron</option>
                         <option value="tetrahedron">Tetrahedron</option>
@@ -388,16 +392,16 @@
         </div>
     </div>
 
-    <!-- ═══════════════════════════════════════════════════
-         TAB 4 — Q42 10D TENSOR
-    ═══════════════════════════════════════════════════ -->
+    <!-- â•â•â•â•â•â•â•â•â•â•â•â•â•â•â•â•â•â•â•â•â•â•â•â•â•â•â•â•â•â•â•â•â•â•â•â•â•â•â•â•â•â•â•â•â•â•â•â•â•â•â•
+         TAB 4 â€” Q42 10D TENSOR
+    â•â•â•â•â•â•â•â•â•â•â•â•â•â•â•â•â•â•â•â•â•â•â•â•â•â•â•â•â•â•â•â•â•â•â•â•â•â•â•â•â•â•â•â•â•â•â•â•â•â•â• -->
     <div id="tab-tensor" class="tab-pane">
         <div class="glass-strong rounded-3xl p-6 mb-6">
             <h3 class="text-xl font-semibold mb-4 flex items-center gap-2">
                 <i class="fas fa-th text-emerald-400"></i>
                 Q42 10D Tensor Benchmarking
             </h3>
-            <p class="text-white/60 text-sm mb-6">High-dimensional tensor operations using the QualiaQuin 48-byte structure — benchmarking 10D tensor performance with zero-heap compliance.</p>
+            <p class="text-white/60 text-sm mb-6">High-dimensional tensor operations using the QualiaQuin 48-byte structure â€” benchmarking 10D tensor performance with zero-heap compliance.</p>
 
             <div class="grid grid-cols-1 md:grid-cols-3 gap-4 mb-6">
                 <div>
@@ -447,16 +451,16 @@
         </div>
     </div>
 
-    <!-- ═══════════════════════════════════════════════════
-         TAB 5 — SPARQL QUERIES
-    ═══════════════════════════════════════════════════ -->
+    <!-- â•â•â•â•â•â•â•â•â•â•â•â•â•â•â•â•â•â•â•â•â•â•â•â•â•â•â•â•â•â•â•â•â•â•â•â•â•â•â•â•â•â•â•â•â•â•â•â•â•â•â•
+         TAB 5 â€” SPARQL QUERIES
+    â•â•â•â•â•â•â•â•â•â•â•â•â•â•â•â•â•â•â•â•â•â•â•â•â•â•â•â•â•â•â•â•â•â•â•â•â•â•â•â•â•â•â•â•â•â•â•â•â•â•â• -->
     <div id="tab-sparql" class="tab-pane">
         <div class="glass-strong rounded-3xl p-6 mb-6">
             <h3 class="text-xl font-semibold mb-4 flex items-center gap-2">
                 <i class="fas fa-database text-emerald-400"></i>
                 SPARQL Query Integration
             </h3>
-            <p class="text-white/60 text-sm mb-6">Benchmark SPARQL query performance over QualiaQuin storage — comparing native SPARQL vs QualiaDB optimized queries.</p>
+            <p class="text-white/60 text-sm mb-6">Benchmark SPARQL query performance over QualiaQuin storage â€” comparing native SPARQL vs QualiaDB optimized queries.</p>
 
             <div class="grid grid-cols-1 md:grid-cols-2 gap-4 mb-6">
                 <div>
@@ -499,6 +503,19 @@ LIMIT 100</textarea>
 
             <div class="code-block text-sm mb-4" id="sparql-output">Ready to run SPARQL benchmark...</div>
 
+            <div class="glass-panel rounded-2xl p-4 mb-4">
+                <div class="flex items-center justify-between mb-3 gap-3 flex-wrap">
+                    <h4 class="text-sm font-semibold text-emerald-400"><i class="fas fa-project-diagram mr-1"></i>Live query graph - measured matches</h4>
+                    <div class="text-xs text-white/45">Click a node to inspect the measured subgraph.</div>
+                </div>
+                <canvas id="sparql-graph-canvas" style="width:100%;height:320px;max-height:340px;display:block"></canvas>
+            </div>
+
+            <div class="glass-panel rounded-2xl p-4 mb-4">
+                <h4 class="text-sm font-semibold mb-3 text-emerald-400"><i class="fas fa-binoculars mr-1"></i>SPARQL Match Explorer</h4>
+                <div id="sparql-node-viewer" class="text-sm text-white/45">Run a SPARQL benchmark to inspect the measured query graph.</div>
+            </div>
+
             <div class="grid grid-cols-1 md:grid-cols-2 gap-4">
                 <div class="glass-panel rounded-2xl p-4">
                     <h4 class="text-sm font-semibold mb-3 text-emerald-400">Query Latency Distribution</h4>
@@ -512,16 +529,16 @@ LIMIT 100</textarea>
         </div>
     </div>
 
-    <!-- ═══════════════════════════════════════════════════
-         TAB 6 — ZERO-HEAP DEMO
-    ═══════════════════════════════════════════════════ -->
+    <!-- â•â•â•â•â•â•â•â•â•â•â•â•â•â•â•â•â•â•â•â•â•â•â•â•â•â•â•â•â•â•â•â•â•â•â•â•â•â•â•â•â•â•â•â•â•â•â•â•â•â•â•
+         TAB 6 â€” ZERO-HEAP DEMO
+    â•â•â•â•â•â•â•â•â•â•â•â•â•â•â•â•â•â•â•â•â•â•â•â•â•â•â•â•â•â•â•â•â•â•â•â•â•â•â•â•â•â•â•â•â•â•â•â•â•â•â• -->
     <div id="tab-zeroheap" class="tab-pane">
         <div class="glass-strong rounded-3xl p-6 mb-6">
             <h3 class="text-xl font-semibold mb-4 flex items-center gap-2">
                 <i class="fas fa-memory text-emerald-400"></i>
                 Zero-Heap Compliance Demonstration
             </h3>
-            <p class="text-white/60 text-sm mb-6">Demonstrating QualiaDB's zero-heap compliance — all operations use fixed-size buffers and stack allocation, no dynamic memory allocation in hot paths.</p>
+            <p class="text-white/60 text-sm mb-6">Demonstrating QualiaDB's zero-heap compliance â€” all operations use fixed-size buffers and stack allocation, no dynamic memory allocation in hot paths.</p>
 
             <div class="grid grid-cols-1 md:grid-cols-3 gap-4 mb-6">
                 <div>
@@ -573,19 +590,19 @@ LIMIT 100</textarea>
                 <h4 class="text-sm font-semibold mb-3 text-emerald-400">Zero-Heap Compliance Status</h4>
                 <div class="grid grid-cols-2 md:grid-cols-4 gap-4">
                     <div class="text-center">
-                        <div class="text-2xl font-bold text-emerald-400" id="zeroheap-status-alloc">✓</div>
+                        <div class="text-2xl font-bold text-emerald-400" id="zeroheap-status-alloc">âœ“</div>
                         <div class="text-xs text-white/60">No Dynamic Alloc</div>
                     </div>
                     <div class="text-center">
-                        <div class="text-2xl font-bold text-emerald-400" id="zeroheap-status-stack">✓</div>
+                        <div class="text-2xl font-bold text-emerald-400" id="zeroheap-status-stack">âœ“</div>
                         <div class="text-xs text-white/60">Stack-Only Buffers</div>
                     </div>
                     <div class="text-center">
-                        <div class="text-2xl font-bold text-emerald-400" id="zeroheap-status-arena">✓</div>
+                        <div class="text-2xl font-bold text-emerald-400" id="zeroheap-status-arena">âœ“</div>
                         <div class="text-xs text-white/60">Arena Allocation</div>
                     </div>
                     <div class="text-center">
-                        <div class="text-2xl font-bold text-emerald-400" id="zeroheap-status-42mb">✓</div>
+                        <div class="text-2xl font-bold text-emerald-400" id="zeroheap-status-42mb">âœ“</div>
                         <div class="text-xs text-white/60">&lt;42MB Sentinel</div>
                     </div>
                 </div>
@@ -593,21 +610,33 @@ LIMIT 100</textarea>
         </div>
     </div>
 
+    <!-- ═══ TAB 7 — BROWSER LLM (integrated from benchmarks.html) ═══ -->
+    <div id="tab-llm" class="tab-pane">
+        <div class="card rounded-2xl p-6">
+            <h2 class="text-xl font-bold mb-1">Browser LLM Benchmarks</h2>
+            <p class="text-white/60 text-sm mb-4">QualiaDB's native WASM + WebGPU LLM (<code class="text-cyan-400">.q42</code> AOT, ~5.9 tok/s on SmolLM2-360M) vs WebLLM / Transformers.js. Loaded on demand — the LLM engine and comparison adapters initialise only when you open this tab.</p>
+            <iframe id="llm-bench-frame" title="Browser LLM Benchmarks"
+                    style="width:100%; height:1500px; border:0; border-radius:12px; background:transparent;"
+                    allow="cross-origin-isolated"></iframe>
+        </div>
+    </div>
+
     <!-- Footer -->
     <div class="text-center text-white/50 text-sm mt-12">
-        <p>QualiaDB v0.0.17 • Zero-Heap Semantic Graph Engine • Built for the Edge</p>
+        <p>QualiaDB v0.0.18 â€¢ Zero-Heap Semantic Graph Engine â€¢ Built for the Edge</p>
     </div>
 </div>
 
 <script type="module">
     import { fetchJson, renderPlatformSuite } from './js/benchmark-shared.js';
-    import { Object3DViewer, GraphViewer, runSpatialLive, runGraphLive, initializeGraphBenchmarkUi } from './js/benchmark-live.js';
+    import { Object3DViewer, GraphViewer, runSpatialLive, runGraphLive, runSparqlLive, initializeGraphBenchmarkUi } from './js/benchmark-live.js';
 
-    // ── Live (real-WASM) Spatial & Graph tabs + interactive viewers ──
-    let obj3d = null, graphViz = null;
+    // â”€â”€ Live (real-WASM) Spatial & Graph tabs + interactive viewers â”€â”€
+    let obj3d = null, graphViz = null, sparqlGraphViz = null;
     function ensureViewers() {
         if (!obj3d) { const c = document.getElementById('spatial-3d-canvas'); if (c) obj3d = new Object3DViewer(c); }
         if (!graphViz) { const c = document.getElementById('graph-viz-canvas'); if (c) graphViz = new GraphViewer(c); }
+        if (!sparqlGraphViz) { const c = document.getElementById('sparql-graph-canvas'); if (c) sparqlGraphViz = new GraphViewer(c); }
     }
     ensureViewers();
     const shapeSel = document.getElementById('spatial-shape');
@@ -625,7 +654,7 @@ LIMIT 100</textarea>
     window.runSpatialBenchmark = function () {
         ensureViewers();
         const btn = document.getElementById('btn-spatial-run'); if (btn) btn.disabled = true;
-        const output = document.getElementById('spatial-output'); output.textContent = 'Running live spatial benchmark…';
+        const output = document.getElementById('spatial-output'); output.textContent = 'Running live spatial benchmarkâ€¦';
         setTimeout(() => {
             try {
                 const count = parseInt(document.getElementById('spatial-count').value, 10) || 10000;
@@ -674,7 +703,7 @@ LIMIT 100</textarea>
     window.runGraphBenchmark = async function () {
         ensureViewers();
         const btn = document.getElementById('btn-graph-run'); if (btn) btn.disabled = true;
-        const output = document.getElementById('graph-output'); output.textContent = 'Running real graph benchmark…';
+        const output = document.getElementById('graph-output'); output.textContent = 'Running real graph benchmarkâ€¦';
         try {
             const operation = document.getElementById('graph-operation').value;
             const datasetId = document.getElementById('graph-dataset').value;
@@ -736,7 +765,7 @@ LIMIT 100</textarea>
         }
     }
 
-    // Load from document-relative playground/ (not js/playground/) — matches scientific-computing.html
+    // Load from document-relative playground/ (not js/playground/) â€” matches scientific-computing.html
     async function loadWasmEngine() {
         const dot = document.getElementById('wasm-dot');
         const badge = document.getElementById('wasm-badge');
@@ -812,6 +841,15 @@ LIMIT 100</textarea>
         window.dispatchEvent(new CustomEvent('benchtab', { detail: { tabId } }));
     }
     window.switchTab = switchTab;
+
+    // Browser LLM tab: lazy-load the embedded benchmark only when first opened, so the LLM WASM
+    // engine + comparison CDNs (WebLLM / Transformers.js) stay out of the hub's initial load.
+    window.addEventListener('benchtab', (e) => {
+        if (e.detail?.tabId === 'llm') {
+            const f = document.getElementById('llm-bench-frame');
+            if (f && !f.getAttribute('src')) f.setAttribute('src', 'benchmarks.html');
+        }
+    });
 
     // Activate the tab named in the URL fragment on load (e.g. #spatial), and
     // keep tabs in sync when the user navigates history / edits the hash.
@@ -980,10 +1018,10 @@ LIMIT 100</textarea>
         charts.sparqlLatency = new Chart(document.getElementById('sparql-latency-chart'), {
             type: 'bar',
             data: {
-                labels: ['SELECT', 'CONSTRUCT', 'ASK', 'DESCRIBE'],
+                labels: [],
                 datasets: [{
-                    label: 'Latency (ms)',
-                    data: [0, 0, 0, 0],
+                    label: 'Total time (ms)',
+                    data: [],
                     backgroundColor: 'rgba(52, 211, 153, 0.5)',
                     borderColor: 'rgba(52, 211, 153, 1)',
                     borderWidth: 1
@@ -995,10 +1033,10 @@ LIMIT 100</textarea>
         charts.sparqlComplexity = new Chart(document.getElementById('sparql-complexity-chart'), {
             type: 'line',
             data: {
-                labels: ['Simple', 'Medium', 'Complex'],
+                labels: [],
                 datasets: [{
-                    label: 'Time (ms)',
-                    data: [0, 0, 0],
+                    label: 'Compile + execute p50 (ms)',
+                    data: [],
                     borderColor: 'rgba(59, 130, 246, 1)',
                     backgroundColor: 'rgba(59, 130, 246, 0.1)',
                     fill: true,
@@ -1098,7 +1136,7 @@ LIMIT 100</textarea>
             ];
             charts.sciPrecision.update();
 
-            output.textContent = `✓ ${domain.toUpperCase()} benchmark complete\nIterations: ${iterations.toLocaleString()}\nPrecision: ${precision}\nOps/sec: ${adjustedOps.toLocaleString()}\nAvg time: ${result.time}ms\nHeap allocations: 0`;
+            output.textContent = `âœ“ ${domain.toUpperCase()} benchmark complete\nIterations: ${iterations.toLocaleString()}\nPrecision: ${precision}\nOps/sec: ${adjustedOps.toLocaleString()}\nAvg time: ${result.time}ms\nHeap allocations: 0`;
             btn.disabled = false;
         }, 2000);
     }
@@ -1112,7 +1150,7 @@ LIMIT 100</textarea>
         updateMetrics(0, 0, 0, 0);
     }
 
-    // Spatial benchmark — runSpatialBenchmark / resetSpatialBenchmark are now REAL
+    // Spatial benchmark â€” runSpatialBenchmark / resetSpatialBenchmark are now REAL
     // (geometric_algebra_operation) and defined in the module script above via
     // js/benchmark-live.js. The previous simulated (hardcoded) versions were removed.
 
@@ -1160,7 +1198,7 @@ LIMIT 100</textarea>
             charts.tensorDimension.data.datasets[0].data = dimData;
             charts.tensorDimension.update();
 
-            output.textContent = `✓ ${operation.toUpperCase()} benchmark complete\nSize: ${size.toUpperCase()}\nDimensions: ${dims}D\nOps/sec: ${adjustedOps.toLocaleString()}\nTime: ${adjustedTime.toFixed(2)}ms\nHeap allocations: 0\n48-byte Quin compliance: ✓`;
+            output.textContent = `âœ“ ${operation.toUpperCase()} benchmark complete\nSize: ${size.toUpperCase()}\nDimensions: ${dims}D\nOps/sec: ${adjustedOps.toLocaleString()}\nTime: ${adjustedTime.toFixed(2)}ms\nHeap allocations: 0\n48-byte Quin compliance: âœ“`;
             btn.disabled = false;
         }, 2500);
     }
@@ -1179,54 +1217,51 @@ LIMIT 100</textarea>
         const btn = document.getElementById('btn-sparql-run');
         const output = document.getElementById('sparql-output');
         btn.disabled = true;
-        output.textContent = 'Running SPARQL benchmark...';
+        output.textContent = 'Running live SPARQL benchmark...';
 
-        setTimeout(() => {
-            const type = document.getElementById('sparql-type').value;
-            const complexity = document.getElementById('sparql-complexity').value;
-            const query = document.getElementById('sparql-query').value;
+        setTimeout(async () => {
+            try {
+                const type = document.getElementById('sparql-type').value;
+                const complexity = document.getElementById('sparql-complexity').value;
+                const query = document.getElementById('sparql-query').value;
+                const datasetId = document.getElementById('graph-dataset')?.value || 'schemaorg-30';
+                const inspectorTarget = document.getElementById('sparql-node-viewer');
+                ensureViewers();
+                const result = await runSparqlLive({
+                    wasm: window.qualiaWasm,
+                    charts,
+                    output,
+                    viewer: sparqlGraphViz,
+                    inspectorTarget,
+                    query,
+                    queryType: type,
+                    complexity,
+                    datasetId
+                });
 
-            // Simulated results
-            const results = {
-                select: { latency: 0.35, rows: 100 },
-                construct: { latency: 0.42, rows: 85 },
-                ask: { latency: 0.18, rows: 1 },
-                describe: { latency: 0.38, rows: 50 }
-            };
-
-            const result = results[type];
-            const complexityMultiplier = complexity === 'simple' ? 1.0 : complexity === 'medium' ? 2.5 : 5.0;
-            const adjustedLatency = result.latency * complexityMultiplier;
-
-            updateMetrics(Math.floor(result.rows / adjustedLatency * 1000), adjustedLatency, 0, 36);
-
-            // Update charts
-            charts.sparqlLatency.data.datasets[0].data = [
-                results.select.latency,
-                results.construct.latency,
-                results.ask.latency,
-                results.describe.latency
-            ];
-            charts.sparqlLatency.update();
-
-            charts.sparqlComplexity.data.datasets[0].data = [
-                result.latency,
-                result.latency * 2.5,
-                result.latency * 5.0
-            ];
-            charts.sparqlComplexity.update();
-
-            output.textContent = `✓ ${type.toUpperCase()} benchmark complete\nComplexity: ${complexity.toUpperCase()}\nLatency: ${adjustedLatency.toFixed(2)}ms\nRows returned: ${result.rows}\nQuery length: ${query.length} chars\nHeap allocations: 0\nQualiaQuin storage: ✓`;
+                if (result?.active) {
+                    const p50 = result.active.summary?.p50 ?? 0;
+                    const rowsPerSec = Math.round(((result.active.resultCount || 0) * 1000) / Math.max(p50, 0.001));
+                    updateMetrics(rowsPerSec, Number(p50.toFixed(3)), 0, 36);
+                }
+            } catch (e) {
+                output.textContent = 'Error: ' + (e?.message || e);
+            }
             btn.disabled = false;
-        }, 2000);
+        }, 30);
     }
 
     function resetSparqlBenchmark() {
         document.getElementById('sparql-output').textContent = 'Ready to run SPARQL benchmark...';
-        charts.sparqlLatency.data.datasets[0].data = [0, 0, 0, 0];
+        charts.sparqlLatency.data.labels = [];
+        charts.sparqlLatency.data.datasets[0].data = [];
         charts.sparqlLatency.update();
-        charts.sparqlComplexity.data.datasets[0].data = [0, 0, 0];
+        charts.sparqlComplexity.data.labels = [];
+        charts.sparqlComplexity.data.datasets[0].data = [];
         charts.sparqlComplexity.update();
+        sparqlGraphViz?.setData({ nodes: [], edges: [] });
+        const inspector = document.getElementById('sparql-node-viewer');
+        if (inspector) inspector.innerHTML = '<div class="text-sm text-white/45">Run a SPARQL benchmark to inspect the measured query graph.</div>';
         updateMetrics(0, 0, 0, 0);
     }
 
@@ -1274,7 +1309,7 @@ LIMIT 100</textarea>
             charts.zeroheapAllocation.data.datasets[0].data = heapData;
             charts.zeroheapAllocation.update();
 
-            output.textContent = `✓ ${operation.toUpperCase()} benchmark complete\nIterations: ${iterations.toLocaleString()}\nBuffer: ${buffer.toUpperCase()}\nOps/sec: ${adjustedOps.toLocaleString()}\nTime: ${result.time}ms\nHeap allocations: 0 ✓\nStack buffers: ✓\nArena allocation: ✓\n42MB sentinel: ✓`;
+            output.textContent = `âœ“ ${operation.toUpperCase()} benchmark complete\nIterations: ${iterations.toLocaleString()}\nBuffer: ${buffer.toUpperCase()}\nOps/sec: ${adjustedOps.toLocaleString()}\nTime: ${result.time}ms\nHeap allocations: 0 âœ“\nStack buffers: âœ“\nArena allocation: âœ“\n42MB sentinel: âœ“`;
             btn.disabled = false;
         }, 2200);
     }
@@ -1311,3 +1346,4 @@ LIMIT 100</textarea>
 </script>
 </body>
 </html>
+

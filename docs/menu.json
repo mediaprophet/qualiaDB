@@ -37,6 +37,12 @@
       "group": "Benchmarks"
     },
     {
+      "label": "Browser LLM",
+      "href": "benchmark.html#llm",
+      "icon": "fa-robot",
+      "group": "Benchmarks"
+    },
+    {
       "label": "Comparative",
       "href": "comparative_benchmarks.html",
       "icon": "fa-chart-line",
