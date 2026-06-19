@@ -43,17 +43,17 @@
   "metrics": {
     "cyclic": {
       "oxi": "TIMEOUT",
-      "qualia": "0.06 ms",
+      "qualia": "0.07 ms",
       "surreal": "TIMEOUT"
     },
     "filter": {
       "oxi": "2.1 ms",
-      "qualia": "0.08 ms",
+      "qualia": "0.06 ms",
       "surreal": "1.4 ms"
     },
     "ingestion": {
       "oxi": "OOM",
-      "qualia": "0.27 ms (0 alloc style)",
+      "qualia": "0.34 ms (0 alloc style)",
       "surreal": "OOM"
     },
     "intercept": {
@@ -68,12 +68,12 @@
     },
     "nym_partition": {
       "oxi": "650 ms (RLS decay)",
-      "qualia": "0.05 ms (O(1) style)",
+      "qualia": "0.07 ms (O(1) style)",
       "surreal": "340 ms"
     },
     "obligation_escrow": {
       "oxi": "TIMEOUT (10k joins)",
-      "qualia": "0.21 ms",
+      "qualia": "0.23 ms",
       "surreal": "4800 ms"
     },
     "point": {
@@ -83,22 +83,22 @@
     },
     "provenance_val": {
       "oxi": "150 ms",
-      "qualia": "0.07 ms",
+      "qualia": "0.04 ms",
       "surreal": "85 ms"
     },
     "sync": {
       "oxi": "N/A",
-      "qualia": "0.84 ms",
+      "qualia": "1.22 ms",
       "surreal": "2450 ms"
     },
     "ttfq": {
       "oxi": "1240 ms",
-      "qualia": "0.03 ms",
+      "qualia": "0.05 ms",
       "surreal": "1850 ms"
     },
     "twohop": {
       "oxi": "1.5 ms",
-      "qualia": "0.00 ms",
+      "qualia": "0.01 ms",
       "surreal": "3.2 ms"
     },
     "wordnet_compression": {
@@ -108,7 +108,7 @@
     },
     "wordnet_defeasible": {
       "oxi": "TIMEOUT",
-      "qualia": "0.06 ms (lexical rights)",
+      "qualia": "0.07 ms (lexical rights)",
       "surreal": "TIMEOUT"
     },
     "wordnet_p2p_stream": {
@@ -136,46 +136,46 @@
   },
   "qualia_latency_stats": {
     "filter": {
-      "max": 58.979,
-      "mean": 38.90424500000003,
-      "min": 37.557,
-      "p50": 37.876999999999995,
-      "p95": 43.756,
-      "p99": 57.387,
+      "max": 3093.387,
+      "mean": 78.93275500000001,
+      "min": 52.99,
+      "p50": 61.995999999999995,
+      "p95": 84.789,
+      "p99": 96.732,
       "samples": 200,
       "unit": "microseconds",
       "warmup_samples": 20
     },
     "ingestion_10k_quins": {
-      "max": 73.922,
-      "mean": 37.16629500000002,
-      "min": 34.912,
-      "p50": 34.972,
-      "p95": 49.244,
-      "p99": 63.426,
+      "max": 104.296,
+      "mean": 55.6202,
+      "min": 46.647000000000006,
+      "p50": 53.440000000000005,
+      "p95": 74.04899999999999,
+      "p99": 79.52900000000001,
       "samples": 200,
       "unit": "microseconds",
       "warmup_samples": 20
     },
     "point": {
-      "max": 0.08,
-      "mean": 0.04516999999999999,
-      "min": 0.04,
-      "p50": 0.041,
-      "p95": 0.049999999999999996,
-      "p99": 0.051,
+      "max": 0.09,
+      "mean": 0.05360500000000001,
+      "min": 0.049,
+      "p50": 0.049999999999999996,
+      "p95": 0.06,
+      "p99": 0.061000000000000006,
       "samples": 200,
       "unit": "microseconds",
       "warmup_samples": 20
     },
     "sample_subject_count": 10000,
     "twohop": {
-      "max": 0.08,
-      "mean": 0.0655000000000001,
-      "min": 0.06,
-      "p50": 0.07,
-      "p95": 0.071,
-      "p99": 0.071,
+      "max": 0.12,
+      "mean": 0.08112999999999998,
+      "min": 0.06899999999999999,
+      "p50": 0.08,
+      "p95": 0.09,
+      "p99": 0.09999999999999999,
       "samples": 200,
       "unit": "microseconds",
       "warmup_samples": 20
@@ -184,37 +184,37 @@
   "qualia_scaling_stats": {
     "10000": {
       "filter": {
-        "max": 52.289,
-        "mean": 38.77892000000001,
-        "min": 37.036,
-        "p50": 37.226,
-        "p95": 47.982,
-        "p99": 52.289,
+        "max": 50.834999999999994,
+        "mean": 40.79402000000001,
+        "min": 40.035,
+        "p50": 40.315999999999995,
+        "p95": 41.568,
+        "p99": 50.834999999999994,
         "samples": 50,
         "unit": "microseconds",
         "warmup_samples": 5
       },
       "materialized_entries": 10000,
       "point": {
-        "max": 0.07,
-        "mean": 0.045080000000000016,
+        "max": 0.09,
+        "mean": 0.04268000000000001,
         "min": 0.04,
-        "p50": 0.041,
-        "p95": 0.051,
-        "p99": 0.07,
+        "p50": 0.04,
+        "p95": 0.049999999999999996,
+        "p99": 0.09,
         "samples": 50,
         "unit": "microseconds",
         "warmup_samples": 5
       },
-      "rss_after_materialize_mb": 14.29296875,
+      "rss_after_materialize_mb": 14.4609375,
       "subjects": 10000,
       "twohop": {
-        "max": 0.081,
-        "mean": 0.06351999999999997,
-        "min": 0.06,
+        "max": 0.061000000000000006,
+        "mean": 0.059460000000000034,
+        "min": 0.049,
         "p50": 0.06,
-        "p95": 0.07,
-        "p99": 0.081,
+        "p95": 0.061000000000000006,
+        "p99": 0.061000000000000006,
         "samples": 50,
         "unit": "microseconds",
         "warmup_samples": 5
@@ -222,37 +222,37 @@
     },
     "100000": {
       "filter": {
-        "max": 512.623,
-        "mean": 484.4756,
-        "min": 451.582,
-        "p50": 484.491,
-        "p95": 510.68100000000004,
-        "p99": 512.623,
+        "max": 728.057,
+        "mean": 459.85920000000004,
+        "min": 414.218,
+        "p50": 429.747,
+        "p95": 611.898,
+        "p99": 728.057,
         "samples": 50,
         "unit": "microseconds",
         "warmup_samples": 5
       },
       "materialized_entries": 100000,
       "point": {
-        "max": 0.08,
-        "mean": 0.045260000000000036,
+        "max": 0.09,
+        "mean": 0.04168000000000001,
         "min": 0.04,
         "p50": 0.04,
-        "p95": 0.051,
-        "p99": 0.08,
+        "p95": 0.049999999999999996,
+        "p99": 0.09,
         "samples": 50,
         "unit": "microseconds",
         "warmup_samples": 5
       },
-      "rss_after_materialize_mb": 25.45703125,
+      "rss_after_materialize_mb": 25.6328125,
       "subjects": 100000,
       "twohop": {
-        "max": 0.09,
-        "mean": 0.06487999999999998,
-        "min": 0.06,
+        "max": 0.061000000000000006,
+        "mean": 0.05852000000000003,
+        "min": 0.049999999999999996,
         "p50": 0.06,
-        "p95": 0.071,
-        "p99": 0.09,
+        "p95": 0.061000000000000006,
+        "p99": 0.061000000000000006,
         "samples": 50,
         "unit": "microseconds",
         "warmup_samples": 5
@@ -260,37 +260,37 @@
     },
     "1000000": {
       "filter": {
-        "max": 25302.951,
-        "mean": 23533.74194,
-        "min": 23108.745,
-        "p50": 23412.494,
-        "p95": 24154.383,
-        "p99": 25302.951,
+        "max": 21310.745,
+        "mean": 20023.987399999998,
+        "min": 19492.712,
+        "p50": 19978.304,
+        "p95": 20722.681,
+        "p99": 21310.745,
         "samples": 50,
         "unit": "microseconds",
         "warmup_samples": 5
       },
       "materialized_entries": 1000000,
       "point": {
-        "max": 0.08,
-        "mean": 0.04604000000000001,
+        "max": 0.09999999999999999,
+        "mean": 0.044060000000000016,
         "min": 0.04,
-        "p50": 0.049999999999999996,
-        "p95": 0.049999999999999996,
-        "p99": 0.08,
+        "p50": 0.04,
+        "p95": 0.071,
+        "p99": 0.09999999999999999,
         "samples": 50,
         "unit": "microseconds",
         "warmup_samples": 5
       },
-      "rss_after_materialize_mb": 162.87890625,
+      "rss_after_materialize_mb": 163.04296875,
       "subjects": 1000000,
       "twohop": {
-        "max": 0.08,
-        "mean": 0.06531999999999999,
-        "min": 0.06,
-        "p50": 0.07,
-        "p95": 0.071,
-        "p99": 0.08,
+        "max": 0.07,
+        "mean": 0.05674000000000002,
+        "min": 0.049999999999999996,
+        "p50": 0.06,
+        "p95": 0.061000000000000006,
+        "p99": 0.07,
         "samples": 50,
         "unit": "microseconds",
         "warmup_samples": 5
@@ -298,34 +298,34 @@
     }
   },
   "resource_snapshot": {
-    "peak_rss_during_scaling_mb": 162.87890625,
-    "rss_after_scaling_mb": 89.2421875,
-    "rss_before_scaling_mb": 13.25,
+    "peak_rss_during_scaling_mb": 163.04296875,
+    "rss_after_scaling_mb": 89.41015625,
+    "rss_before_scaling_mb": 13.31640625,
     "rss_note": "Current process RSS sampled via sysinfo before scaling, after each synthetic graph is materialized, and after the scaling section; this is an observed process RSS sample, not an allocator-level heap profile."
   },
   "schema_version": 2,
   "timer_calibration": {
     "empty_benchmark_overhead": {
-      "max": 41.0,
-      "mean": 30.298999999999996,
-      "min": 29.999999999999996,
+      "max": 40.0,
+      "mean": 28.087,
+      "min": 20.0,
       "p50": 29.999999999999996,
       "p95": 31.0,
-      "p99": 40.0,
+      "p99": 31.0,
       "samples": 1000,
       "unit": "nanoseconds"
     },
     "interpretation": "Sub-microsecond operation timings should be read against this calibration; values near the observed timer granularity are useful mainly as flat-scaling signals, not precise latency claims.",
     "observed_timer_granularity": {
       "max": 31.0,
-      "mean": 29.593,
+      "mean": 27.779,
       "min": 20.0,
       "p50": 29.999999999999996,
-      "p95": 29.999999999999996,
+      "p95": 31.0,
       "p99": 31.0,
       "samples": 1000,
       "unit": "nanoseconds"
     }
   },
-  "timestamp": "2026-06-19T09:52:32.282612568+00:00"
+  "timestamp": "2026-06-19T10:05:20.501813791+00:00"
 }
