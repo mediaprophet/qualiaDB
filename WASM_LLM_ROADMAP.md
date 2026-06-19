@@ -22,7 +22,16 @@ libs) + headless-Chrome end-to-end. Hot loop stays zero-heap; AOT compile is the
 
 ---
 
-## 🚧 PART 2 — IMMEDIATE BLOCKER: playground WASM refresh
+## ✅ PART 2 — DONE: playground WASM refresh + llmdemo .q42 port (2026-06-19)
+
+**Resolved.** Refreshed `docs/playground/qualia_core_db.{js,_bg.wasm}` to the superset
+(`portal,wasm-llm,wasm-logic,wasm-scientific,wasm-playground`): 58→75 exports, **0 dropped** (all 6
+science exports retained; acceptance gate met), q42/async-LLM exports added (commit `3bc17e20`).
+`llmdemo/index.html` ported to SmolLM2-360M + `loadOrCompileQ42` (.q42 AOT → OPFS → resident boot) +
+a live generate step — **verified 5.8 tok/s, TTFT 0.88s, coherent `Paris.`** via
+`agent-tools/llmdemo-test.mjs` (commit `6d6a5575`).
+
+<details><summary>Original task (historical)</summary>
 
 **Task:** refresh the shared `docs/playground/qualia_core_db.*` artifact so `llmdemo/index.html` can use
 the OPFS `.q42` AOT pipeline — **without breaking the 6 other pages that import it**
@@ -47,6 +56,8 @@ cp pkg-playground/qualia_core_db_bg.wasm{,.d.ts} docs/playground/
 of the pre-refresh one (no science export dropped) AND contain `compileGgufToQ42` + `q42FormatVersion`;
 load-check all 7 dependent pages parse/import clean before committing. The old artifact is git-tracked →
 revertable. Then port `llmdemo/index.html` to `loadOrCompileQ42` (it keeps its OPFS-GGUF cache until then).
+
+</details>
 
 ---
 
