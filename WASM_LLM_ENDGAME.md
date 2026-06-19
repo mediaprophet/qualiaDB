@@ -148,11 +148,24 @@ This document supersedes `wasm_llm_planning.md` for the final push of Phase 2B a
     ~1.16 s, off the TTFT clock), boots purely from `Q42W` (`[Q42] boot OK: 290 tensors, 32 layers`),
     and outputs **`Paris. The capital of France…`** — TTFT **3891 ms** (gate held). The literal
     "Paris strictly from a `.q42` container" milestone is met.
-* **Remaining Phase 4 (next):** (a) JS **ingest pipeline** — `compileGgufToQ42` on first load → stream
-  `.q42` to OPFS (Phase 3 writer) → boot from `.q42` thereafter (skip GGUF parse on every load); (b) cold
-  CBOR-LD ontology section + `NQuin.metadata` in-shader flag consumption; (c) single-buffer zero-copy
-  bind (bind `.q42` blobs directly, skip the arena copy) + Web-Worker compiler farm; (d) deploy the
-  rebuilt wasm (now carrying `compileGgufToQ42` + the Q42W boot gate) to the production demos.
+* **✅ JS AOT INGEST PIPELINE DONE + VERIFIED (2026-06-19):** `opfs-model-cache.js::loadOrCompileQ42`
+  — compile GGUF→`.q42` **once**, stream the `.q42` to OPFS (chunked `FileSystemWritableFileStream`,
+  never `Cache.put`; only the `.q42` is stored, not the source GGUF), warm-boot from it thereafter.
+  Cache is **version-keyed** via the new `q42FormatVersion()` wasm export (single source of truth — a
+  format bump auto-recompiles instead of booting a stale `.q42`). Hot loop untouched (zero-heap); the
+  one-time GGUF buffer + compile is the cold-path ingest tier, freed immediately.
+  - **Verified (headless Chrome, harness `?q42=1`):** **cold** → download (1 net req) → compile + cache
+    (260 MB, ~3.0 s) → boot; **warm reload** → **OPFS `.q42` hit: 0 network, 0 compile, ~290 ms read**,
+    boot, infer **`Paris`**. Pay the network + compile tax exactly once.
+  - **Ported:** `wasm-llm-test.html` (`?q42=1`) and `online-llm-demo.html` (remote download → AOT,
+    local-file still boots as GGUF via the dual gate).
+* **Remaining Phase 4 (next):** (a) **`llmdemo/index.html` AOT port is BLOCKED** — it imports the shared
+  `docs/playground/qualia_core_db.js` (older build, **no q42 exports**, used by 6 pages); needs a
+  deliberate playground-wasm refresh (same crate/feature set) before porting, to avoid breaking
+  science-playground / scientific-computing / zero-heap-compliance / benchmark. It keeps its working
+  OPFS-GGUF cache for now. (b) cold CBOR-LD ontology section + `NQuin.metadata` in-shader flags;
+  (c) single-buffer zero-copy bind (bind `.q42` blobs directly, skip the arena copy) + Web-Worker
+  compiler farm; (d) the deferred decode-fusion throughput lever (~0.6 tok/s).
 
 ---
 

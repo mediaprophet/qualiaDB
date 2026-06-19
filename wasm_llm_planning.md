@@ -996,6 +996,23 @@ sed -i 's/qualia_core_db_bg\.wasm/qualia_bg.wasm/g' $DOCS/qualia.js
 
 ## 📓 7. PROGRESS LOG (newest first — keep this updated every step)
 
+- **2026-06-19 (ap)** — **Phase 4: JS AOT OPFS ingest pipeline — compile-once, warm-boot from `.q42`.**
+  - **`opfs-model-cache.js::loadOrCompileQ42`:** compile GGUF→`.q42` once → stream `.q42` to OPFS
+    (chunked writable, no `Cache.put`; store only the `.q42`, not the GGUF) → warm-boot from it.
+    **Version-keyed cache** via new `q42FormatVersion()` wasm export (single source of truth → format
+    bump auto-recompiles). Hot loop zero-heap; one-time GGUF+compile = cold-path ingest tier, freed
+    immediately (conformant with the RDF-ingest no-heap posture Timothy asked for).
+  - **Verified (headless Chrome, `?q42=1`):** cold = download(1 net) → compile+cache (260 MB, ~3.0 s) →
+    boot; warm reload = **OPFS `.q42` hit, 0 network, 0 compile, ~290 ms read** → boot → infer `Paris`.
+  - **Ported:** `wasm-llm-test.html` + `online-llm-demo.html` (remote→AOT; local file still GGUF via
+    the dual gate). Load-checked clean.
+  - **`llmdemo` AOT BLOCKED:** imports shared `docs/playground/qualia_core_db.js` (older build, no q42
+    exports, used by 6 pages) — needs a deliberate playground-wasm refresh first; keeps OPFS-GGUF cache
+    for now. (Future-doc `qualia-llm-future-updates.md`: V1 format is forward-compatible for
+    spectral/acoustic/PGA modalities via `role` + `NQuin.metadata`.)
+  - **Next:** playground-wasm refresh → llmdemo AOT; cold CBOR-LD + metadata flags; single-buffer
+    zero-copy bind; decode-fusion throughput.
+
 - **2026-06-19 (ao)** — **Phase 4 v3: `.q42` tokenizer section → self-contained inference; "Paris" from q42 ✅.**
   - **Tokenizer section:** `GgufTokenizer::to_q42_section` / `from_q42_section` (gguf_sharder) —
     vocab/merges/bos/eos/add_bos/pre packed contiguous (no page align), derived maps rebuilt on read,

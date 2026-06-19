@@ -338,3 +338,10 @@ pub fn compile_gguf_to_q42(gguf: js_sys::Uint8Array, page_log2: u16) -> Result<j
         .map_err(|e| JsValue::from_str(&e))?;
     Ok(js_sys::Uint8Array::from(out.as_slice()))
 }
+
+/// Current `.q42` weight-container format version (single source of truth for the JS cache layer,
+/// so a format bump auto-invalidates any stale `.q42` cached in OPFS).
+#[wasm_bindgen(js_name = q42FormatVersion)]
+pub fn q42_format_version() -> u16 {
+    crate::q42_weight::Q42W_VERSION
+}

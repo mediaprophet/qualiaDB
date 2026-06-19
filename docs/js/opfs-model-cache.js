@@ -122,6 +122,101 @@ export async function loadGgufCached(url, name, expectedSize, onProgress) {
   return await bufferedFetch(url, onProgress);
 }
 
+/**
+ * Phase 4 AOT ingest: return a `.q42` container for `ggufUrl`, compiling once and caching the
+ * RESULT in OPFS (the source `.gguf` is never stored). Warm starts read the `.q42` straight from
+ * OPFS with zero network + zero compile. The cache is keyed on the wasm format `version`, so a
+ * format bump auto-recompiles instead of booting a stale container.
+ *
+ * Conformance: the hot loop is untouched; the `.q42` write STREAMS to disk (no Cache.put); the
+ * one-time GGUF buffer + compile is the cold-path ingest tier (LLM-load heap exception), freed
+ * immediately. `compile` = the wasm `compileGgufToQ42`; `formatVersion` = wasm `q42FormatVersion()`.
+ *
+ * @returns {Promise<{bytes: Uint8Array, source: 'opfs-q42-hit'|'compiled'}>}
+ */
+export async function loadOrCompileQ42(ggufUrl, baseName, { compile, formatVersion, onProgress } = {}) {
+  const safe = safeName(baseName) + '.q42';
+  const part = safe + '.part';
+  const root = await opfsRoot();
+
+  // ── Warm: cached .q42 whose magic + format version match the current engine ──
+  if (root) {
+    try {
+      const fh = await root.getFileHandle(safe);
+      const file = await fh.getFile();
+      if (file.size >= 8) {
+        const head = new Uint8Array(await file.slice(0, 8).arrayBuffer());
+        const magicOk = head[0] === 0x51 && head[1] === 0x34 && head[2] === 0x32 && head[3] === 0x57; // "Q42W"
+        const ver = head[4] | (head[5] << 8);
+        if (magicOk && ver === formatVersion) {
+          const bytes = new Uint8Array(await file.arrayBuffer());
+          if (onProgress) onProgress(bytes.length, bytes.length, 'q42-hit');
+          return { bytes, source: 'opfs-q42-hit' };
+        }
+      }
+      try { await root.removeEntry(safe); } catch {} // stale/foreign version → recompile
+    } catch {
+      /* miss → compile */
+    }
+  }
+
+  // ── Cold: fetch GGUF (cold-path buffer), AOT-compile, stream .q42 to OPFS ──
+  const resp = await fetch(ggufUrl);
+  if (!resp.ok) throw new Error(`fetch ${resp.status}`);
+  const total = Number(resp.headers.get('Content-Length')) || 0;
+  let gguf;
+  if (resp.body) {
+    const reader = resp.body.getReader();
+    const chunks = [];
+    let loaded = 0;
+    for (;;) {
+      const { done, value } = await reader.read();
+      if (done) break;
+      chunks.push(value);
+      loaded += value.length;
+      if (onProgress) onProgress(loaded, total, 'download');
+    }
+    gguf = new Uint8Array(loaded);
+    let o = 0;
+    for (const c of chunks) { gguf.set(c, o); o += c.length; }
+  } else {
+    gguf = new Uint8Array(await resp.arrayBuffer());
+  }
+
+  if (onProgress) onProgress(0, 0, 'compile');
+  const q42 = compile(gguf, 14); // wasm AOT compile (16 KB pages) → Uint8Array
+  gguf = null; // free the GGUF cold-path buffer ASAP
+
+  // Stream the .q42 to OPFS in chunks (no whole-blob Cache.put); atomic .part → move.
+  if (root) {
+    try {
+      const partHandle = await root.getFileHandle(part, { create: true });
+      const writable = await partHandle.createWritable();
+      const CHUNK = 8 * 1024 * 1024;
+      for (let off = 0; off < q42.length; off += CHUNK) {
+        await writable.write(q42.subarray(off, Math.min(off + CHUNK, q42.length)));
+      }
+      await writable.close();
+      if (typeof partHandle.move === 'function') {
+        await partHandle.move(safe);
+      } else {
+        const fin = await root.getFileHandle(safe, { create: true });
+        const w = await fin.createWritable();
+        for (let off = 0; off < q42.length; off += CHUNK) {
+          await w.write(q42.subarray(off, Math.min(off + CHUNK, q42.length)));
+        }
+        await w.close();
+        try { await root.removeEntry(part); } catch {}
+      }
+    } catch (e) {
+      console.warn('[q42-cache] OPFS write failed (recompile next load):', e && e.message ? e.message : e);
+      try { const r = await opfsRoot(); if (r) await r.removeEntry(part); } catch {}
+    }
+  }
+  if (onProgress) onProgress(q42.length, q42.length, 'compiled');
+  return { bytes: q42, source: 'compiled' };
+}
+
 /** Remove a single cached model (and any stale .part). */
 export async function clearOpfsModel(name) {
   const root = await opfsRoot();
@@ -142,7 +237,7 @@ export async function clearAllOpfsModels() {
   try {
     const names = [];
     for await (const [n] of root.entries()) {
-      if (n.endsWith('.gguf') || n.endsWith('.gguf.part')) names.push(n);
+      if (/\.(gguf|q42)(\.part)?$/.test(n)) names.push(n);
     }
     for (const n of names) {
       try { await root.removeEntry(n); removed++; } catch {}

@@ -269,8 +269,10 @@ import init, {
     releaseWebgpuEngine,
     isWebgpuEngineReady,
     getEngineVersion,
+    compileGgufToQ42,
+    q42FormatVersion,
 } from './pkg/qualia/qualia.js';
-import { loadGgufCached } from './js/opfs-model-cache.js';
+import { loadGgufCached, loadOrCompileQ42 } from './js/opfs-model-cache.js';
 
 // ── Constants ─────────────────────────────────────────────────────────────────
 
@@ -439,21 +441,29 @@ async function loadModel() {
             ggufBytes = await readLocalGguf(localFiles);
             document.getElementById('dl-progress').style.width = '100%';
         } else {
-            // OPFS-backed: streams the download straight to disk (no multi-GB JS-heap blob)
-            // and serves instantly from cache on repeat loads. Falls back to plain fetch.
+            // Phase 4 AOT: compile GGUF→.q42 once, cache the .q42 in OPFS, warm-boot from it
+            // thereafter (0 network, 0 compile). The .q42 streams to disk; only the .q42 is stored.
             showDlStatus(`Downloading ${name}…`);
-            const { bytes, source } = await loadGgufCached(url, url.split('/').pop(), undefined, (loaded, total, phase) => {
-                if (phase === 'hit') {
-                    document.getElementById('dl-progress').style.width = '100%';
-                    showDlStatus(`Loaded ${name} from browser cache (OPFS)`);
-                } else if (phase === 'download') {
-                    const pct = total ? Math.round(loaded / total * 100) : 0;
-                    document.getElementById('dl-progress').style.width = `${pct}%`;
-                    showDlStatus(`Downloading ${name}: ${pct}% (${(loaded / 1048576).toFixed(1)} MB)`);
-                }
+            const { bytes, source } = await loadOrCompileQ42(url, url.split('/').pop(), {
+                compile: compileGgufToQ42,
+                formatVersion: q42FormatVersion(),
+                onProgress: (loaded, total, phase) => {
+                    if (phase === 'q42-hit') {
+                        document.getElementById('dl-progress').style.width = '100%';
+                        showDlStatus(`Loaded ${name} from .q42 cache`);
+                    } else if (phase === 'download') {
+                        const pct = total ? Math.round(loaded / total * 100) : 0;
+                        document.getElementById('dl-progress').style.width = `${pct}%`;
+                        showDlStatus(`Downloading ${name}: ${pct}% (${(loaded / 1048576).toFixed(1)} MB)`);
+                    } else if (phase === 'compile') {
+                        showDlStatus(`Compiling ${name} → .q42…`);
+                    }
+                },
             });
             ggufBytes = bytes;
-            if (source === 'opfs-miss') showDlStatus(`Downloaded ${name} (cached to OPFS for next time)`);
+            showDlStatus(source === 'opfs-q42-hit'
+                ? `Loaded ${name} from .q42 cache`
+                : `Compiled ${name} → .q42 (cached for next time)`);
         }
 
         showDlStatus('Initialising Qualia WebGPU engine…');

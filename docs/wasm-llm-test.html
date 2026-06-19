@@ -62,9 +62,9 @@
 <script type="module">
 import init, {
   initialize_webgpu_engine, inferWasmAsync, inferWasmStreaming, isWebgpuEngineReady,
-  releaseWebgpuEngine, getEngineVersion, init_panic_hook, compileGgufToQ42,
+  releaseWebgpuEngine, getEngineVersion, init_panic_hook, compileGgufToQ42, q42FormatVersion,
 } from './pkg/qualia/qualia.js';
-import { loadGgufCached, clearAllOpfsModels } from './js/opfs-model-cache.js';
+import { loadGgufCached, loadOrCompileQ42, clearAllOpfsModels } from './js/opfs-model-cache.js';
 
 const USE_ASYNC_GPU = new URLSearchParams(location.search).get('async') !== '0';
 const USE_Q42 = new URLSearchParams(location.search).get('q42') === '1';
@@ -130,13 +130,26 @@ $('load').onclick = async () => {
   $('loadstat').textContent = 'loading…';
   try {
     if (isWebgpuEngineReady()) { await releaseWebgpuEngine(); log('released previous engine', 'dim'); }
-    let bytes = await getModelBytes(url, $('cache').checked);
+    let bytes;
     if (USE_Q42) {
-      // Phase 4: AOT-compile the GGUF to a self-contained .q42 container, then boot from it.
+      // Phase 4 AOT ingest: compile GGUF→.q42 once, cache the .q42 in OPFS, warm-boot from it.
       const tc = performance.now();
-      const q42 = compileGgufToQ42(bytes, 0);
-      log(`compiled .q42 (${(q42.length/1048576).toFixed(1)} MB, ${Math.round(performance.now()-tc)} ms) — booting from Q42W`, 'ok');
+      const { bytes: q42, source } = await loadOrCompileQ42(url, url.split('/').pop(), {
+        compile: compileGgufToQ42,
+        formatVersion: q42FormatVersion(),
+        onProgress: (loaded, total, phase) => {
+          if (phase === 'download' && total) {
+            $('loadstat').textContent = `downloading ${(loaded/1048576).toFixed(0)}/${(total/1048576).toFixed(0)} MB`;
+          } else if (phase === 'compile') {
+            $('loadstat').textContent = 'compiling .q42…';
+          }
+        },
+      });
       bytes = q42;
+      const tag = source === 'opfs-q42-hit' ? 'OPFS .q42 cache HIT (0 network, 0 compile)' : 'compiled + cached to OPFS';
+      log(`${tag} (${(q42.length/1048576).toFixed(1)} MB, ${Math.round(performance.now()-tc)} ms) — booting from Q42W`, 'ok');
+    } else {
+      bytes = await getModelBytes(url, $('cache').checked);
     }
     const t0 = performance.now();
     log('initialize_webgpu_engine…');

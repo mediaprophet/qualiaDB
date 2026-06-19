@@ -1280,6 +1280,16 @@ export function prune_and_validate_mesh(mesh_id) {
 }
 
 /**
+ * Current `.q42` weight-container format version (single source of truth for the JS cache layer,
+ * so a format bump auto-invalidates any stale `.q42` cached in OPFS).
+ * @returns {number}
+ */
+export function q42FormatVersion() {
+    const ret = wasm.q42FormatVersion();
+    return ret;
+}
+
+/**
  * Read a cached SuperBlock from the OPFS vault.
  *
  * Returns the raw 40 960 bytes as `Uint8Array`, or `null` if the block has not
