@@ -22,7 +22,10 @@ struct AttentionParams {
     mask_active: u32, // 0 = dense KV; 1 = graph-guided sparsity (U1 bitmask)
     mask_word_count: u32,
     out_stride_elems: u32, // batched Q row stride (floats); 0 = contiguous in binding
-    _pad0: u32,
+    // Phase 5.5: row stride (floats/token) of a PRE-COMPUTED Q/K/V projection in `hidden` (binding 0).
+    // Non-zero → read the projection directly (the parallel GEMM already did the matmul); 0 → legacy
+    // in-shader matmul via gemm_row. Decouples the heavy projection from this @workgroup_size(1) kernel.
+    proj_row_stride: u32,
     _pad1: u32,
     _pad2: u32,
 }
@@ -256,6 +259,12 @@ fn dequant_weight(row: u32, col: u32) -> f32 {
 }
 
 fn gemm_row(row: u32, token_in_batch: u32) -> f32 {
+    // Phase 5.5 — projection decoupling: when proj_row_stride != 0 the Q/K/V projection was already
+    // computed by the parallel fused_transformer.wgsl GEMM (saturating the GPU) and bound here as
+    // `hidden`. Read it directly instead of re-doing the matmul serially on this 1-thread workgroup.
+    if params.proj_row_stride != 0u {
+        return hidden[token_in_batch * params.proj_row_stride + row];
+    }
     let h_base = token_in_batch * params.n_embd;
     var sum = 0.0;
     for (var j = 0u; j < params.n_embd; j = j + 1u) {

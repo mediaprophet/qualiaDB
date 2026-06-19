@@ -114,8 +114,12 @@ struct AttentionGpuParams {
     mask_active: u32,
     mask_word_count: u32,
     out_stride_elems: u32,
+    /// Phase 5.5: row stride (floats/token) of the PRE-COMPUTED Q/K/V projection bound at binding 0.
+    /// Non-zero → the shader reads the projection directly (parallel GEMM did the matmul) instead of
+    /// doing the per-element `gemm_row` matmul itself. 0 → legacy in-shader projection.
+    proj_row_stride: u32,
     /// WGSL uniform struct size must be a multiple of 16 bytes.
-    _pad: [u32; 3],
+    _pad: [u32; 2],
 }
 
 /// KV attention bitmask words uploaded to `fused_attention.wgsl` binding 5.
@@ -164,7 +168,7 @@ const MC8_ATTN_SLOTS_PER_LAYER: usize = 4;
 #[cfg(target_arch = "wasm32")]
 const MC8_ELEM_SLOTS_PER_LAYER: usize = 6;
 #[cfg(target_arch = "wasm32")]
-const MC8_GEMM_SLOTS_PER_LAYER: usize = 5;
+const MC8_GEMM_SLOTS_PER_LAYER: usize = 8; // o, gate, up, down + Phase 5.5 Q/K/V projection
 #[cfg(target_arch = "wasm32")]
 const MC8_MAX_ATTN_UNIFORM_CHUNK_SLOTS: usize =
     MC8_ATTN_SLOTS_PER_LAYER * MC8_LAYERS_PER_ENCODER as usize;
@@ -240,6 +244,10 @@ struct Mc8PrefillLayerUniforms {
     off_silu: u32,
     off_down: u32,
     off_ffn_res: u32,
+    /// Phase 5.5: dynamic offsets for the Q/K/V projection GEMMs (parallel kernel).
+    off_q_gemm: u32,
+    off_k_gemm: u32,
+    off_v_gemm: u32,
 }
 
 /// Strided work-buffer geometry shared by layer dispatches.
@@ -2374,6 +2382,13 @@ pub struct QTensorEngine {
     prefill_work_buf_a: Option<wgpu::Buffer>,
     #[cfg(target_arch = "wasm32")]
     prefill_work_buf_b: Option<wgpu::Buffer>,
+    /// Phase 5.5: Q/K/V projection scratch (parallel-GEMM output → lightweight attention shader).
+    #[cfg(target_arch = "wasm32")]
+    mc8_q_proj_buf: Option<wgpu::Buffer>,
+    #[cfg(target_arch = "wasm32")]
+    mc8_k_proj_buf: Option<wgpu::Buffer>,
+    #[cfg(target_arch = "wasm32")]
+    mc8_v_proj_buf: Option<wgpu::Buffer>,
     gemm_max_out_dim: u32,
     gemm_max_input_floats: usize,
     /// Static KV ring-buffer (allocated once at `load_gguf`).
@@ -2950,6 +2965,12 @@ impl QTensorEngine {
             prefill_work_buf_a: None,
             #[cfg(target_arch = "wasm32")]
             prefill_work_buf_b: None,
+            #[cfg(target_arch = "wasm32")]
+            mc8_q_proj_buf: None,
+            #[cfg(target_arch = "wasm32")]
+            mc8_k_proj_buf: None,
+            #[cfg(target_arch = "wasm32")]
+            mc8_v_proj_buf: None,
             gemm_max_out_dim: MAX_STACK_GEMM_OUT as u32,
             gemm_max_input_floats: 0,
             kv_layout: None,
@@ -3243,6 +3264,25 @@ impl QTensorEngine {
             }));
             self.prefill_work_buf_b = Some(self.gpu_device().create_buffer(&wgpu::BufferDescriptor {
                 label: Some("PrefillBatchWorkB"),
+                size: work_bytes,
+                usage: work_usage,
+                mapped_at_creation: false,
+            }));
+            // Phase 5.5: Q/K/V projection scratch (parallel-GEMM output). work_bytes ≥ q_dim×tokens.
+            self.mc8_q_proj_buf = Some(self.gpu_device().create_buffer(&wgpu::BufferDescriptor {
+                label: Some("MC8QProj"),
+                size: work_bytes,
+                usage: work_usage,
+                mapped_at_creation: false,
+            }));
+            self.mc8_k_proj_buf = Some(self.gpu_device().create_buffer(&wgpu::BufferDescriptor {
+                label: Some("MC8KProj"),
+                size: work_bytes,
+                usage: work_usage,
+                mapped_at_creation: false,
+            }));
+            self.mc8_v_proj_buf = Some(self.gpu_device().create_buffer(&wgpu::BufferDescriptor {
+                label: Some("MC8VProj"),
                 size: work_bytes,
                 usage: work_usage,
                 mapped_at_creation: false,
@@ -4340,7 +4380,8 @@ impl QTensorEngine {
             mask_active,
             mask_word_count,
             out_stride_elems,
-            _pad: [0; 3],
+            proj_row_stride: 0, // default = legacy in-shader projection; mc8_stage overrides for B
+            _pad: [0; 2],
         }
     }
 
@@ -6052,9 +6093,29 @@ impl QTensorEngine {
                 batch_buf
             };
             let n_kv_wg = n_tokens.saturating_mul(n_kv);
+            // Phase 5.5: K/V projection on the parallel GEMM → proj buffers; the (now lightweight)
+            // attention shader reads the pre-computed projection instead of matmul-ing on 1 thread.
+            let kv_dim = (n_kv * h.head_dim()) as usize;
+            let kv_proj_bytes = (kv_dim * n_tokens as usize * 4) as wgpu::BufferAddress;
+            let k_proj = self.mc8_k_proj_buf.as_ref().unwrap();
+            let v_proj = self.mc8_v_proj_buf.as_ref().unwrap();
+            if !self.encode_gemm_bufs_offset(
+                &mut enc, k_info, k_raw, n_embd, kv_dim, attn_src, 0, geom.batch_in_bytes,
+                k_proj, 0, kv_proj_bytes, n_tokens, n_embd as u32, kv_dim as u32,
+                uniforms.off_k_gemm, layer, Mc8WeightRole::AttnK,
+            ) {
+                break;
+            }
+            if !self.encode_gemm_bufs_offset(
+                &mut enc, v_info, v_raw, n_embd, kv_dim, attn_src, 0, geom.batch_in_bytes,
+                v_proj, 0, kv_proj_bytes, n_tokens, n_embd as u32, kv_dim as u32,
+                uniforms.off_v_gemm, layer, Mc8WeightRole::AttnV,
+            ) {
+                break;
+            }
             if !self.encode_attention_pass_gpu(
                 &mut enc,
-                attn_src,
+                k_proj,
                 token_buf,
                 n_embd,
                 n_tokens,
@@ -6074,7 +6135,7 @@ impl QTensorEngine {
             }
             if !self.encode_attention_pass_gpu(
                 &mut enc,
-                attn_src,
+                v_proj,
                 token_buf,
                 n_embd,
                 n_tokens,
@@ -7058,51 +7119,28 @@ impl QTensorEngine {
             bytes: [0u8; MC8_MAX_ATTN_UNIFORM_SLOTS * MC8_UNIFORM_ALIGN],
             slots: 0,
         };
-        let k_off = attn_base_byte
-            + attn_arena.push(&Self::attention_gpu_params(
-            &h,
-            &layout,
-            layer,
-            batch_start_token_idx,
-            k_info,
-            k_raw.len(),
-            1,
-            n_tokens,
-            batch_start_token_idx,
-            0,
-            0,
-            0,
-        ));
-        let v_off = attn_base_byte
-            + attn_arena.push(&Self::attention_gpu_params(
-            &h,
-            &layout,
-            layer,
-            batch_start_token_idx,
-            v_info,
-            v_raw.len(),
-            2,
-            n_tokens,
-            batch_start_token_idx,
-            0,
-            0,
-            0,
-        ));
-        let q_off = attn_base_byte
-            + attn_arena.push(&Self::attention_gpu_params(
-            &h,
-            &layout,
-            layer,
-            batch_start_token_idx,
-            q_info,
-            q_raw.len(),
-            0,
-            n_tokens,
-            batch_start_token_idx,
-            0,
-            KV_ATTENTION_MASK_WORDS as u32,
-            row_stride_u32,
-        ));
+        // Phase 5.5: projection decoupling — the attention shader reads PRE-COMPUTED Q/K/V
+        // (parallel GEMM) at `proj_row_stride` floats/token instead of doing the matmul itself.
+        let kv_dim = (h.effective_n_kv_head() * h.head_dim()) as u32;
+        let q_dim_u32 = (h.n_head * h.head_dim()) as u32;
+        let mut k_params = Self::attention_gpu_params(
+            &h, &layout, layer, batch_start_token_idx, k_info, k_raw.len(), 1, n_tokens,
+            batch_start_token_idx, 0, 0, 0,
+        );
+        k_params.proj_row_stride = kv_dim;
+        let k_off = attn_base_byte + attn_arena.push(&k_params);
+        let mut v_params = Self::attention_gpu_params(
+            &h, &layout, layer, batch_start_token_idx, v_info, v_raw.len(), 2, n_tokens,
+            batch_start_token_idx, 0, 0, 0,
+        );
+        v_params.proj_row_stride = kv_dim;
+        let v_off = attn_base_byte + attn_arena.push(&v_params);
+        let mut q_params = Self::attention_gpu_params(
+            &h, &layout, layer, batch_start_token_idx, q_info, q_raw.len(), 0, n_tokens,
+            batch_start_token_idx, 0, KV_ATTENTION_MASK_WORDS as u32, row_stride_u32,
+        );
+        q_params.proj_row_stride = q_dim_u32;
+        let q_off = attn_base_byte + attn_arena.push(&q_params);
 
         let mut elem_arena = Mc8ElemUniformArena {
             bytes: [0u8; MC8_MAX_ELEM_UNIFORM_LAYER_SLOTS * MC8_UNIFORM_ALIGN],
@@ -7219,6 +7257,20 @@ impl QTensorEngine {
                 row_stride_u32,
                 row_stride_u32,
             ));
+        // Phase 5.5: Q/K/V projection GEMMs run on the parallel kernel (input contiguous n_embd/token,
+        // output contiguous q_dim|kv_dim/token) — output feeds the now-lightweight attention shader.
+        let off_q_gemm = gemm_base_byte
+            + gemm_arena.push(&Self::mc8_gemm_params(
+                q_info, q_raw.len(), n_embd, q_dim, n_tokens, n_embd as u32, q_dim_u32,
+            ));
+        let off_k_gemm = gemm_base_byte
+            + gemm_arena.push(&Self::mc8_gemm_params(
+                k_info, k_raw.len(), n_embd, kv_dim as usize, n_tokens, n_embd as u32, kv_dim,
+            ));
+        let off_v_gemm = gemm_base_byte
+            + gemm_arena.push(&Self::mc8_gemm_params(
+                v_info, v_raw.len(), n_embd, kv_dim as usize, n_tokens, n_embd as u32, kv_dim,
+            ));
 
         let attn_buf = self.attention_params_buf.as_ref()?;
         let elem_buf = self.elem_params_buf.as_ref()?;
@@ -7245,6 +7297,9 @@ impl QTensorEngine {
                 off_silu,
                 off_down,
                 off_ffn_res,
+                off_q_gemm,
+                off_k_gemm,
+                off_v_gemm,
             },
             geom,
         ))
@@ -7355,13 +7410,24 @@ impl QTensorEngine {
                 Err(_) => return false,
             };
 
-        // Part 3u: Q SDPA — attn params pre-staged at uniforms.q_off.
+        // Phase 5.5: Q projection on the parallel GEMM → q_proj; the (now SDPA-only) attention
+        // shader reads it. Moves the heavy 64×960 matmul off the @workgroup_size(1) attention kernel.
         let q_in = if used_attn_norm { attn_src } else { batch_buf };
+        let q_proj = self.mc8_q_proj_buf.as_ref().unwrap();
+        let q_proj_bytes = (q_dim * n_tokens as usize * 4) as wgpu::BufferAddress;
+        if !self.encode_gemm_bufs_offset(
+            pipeline, q_info, q_raw, n_embd, q_dim, q_in, 0, batch_in_bytes,
+            q_proj, 0, q_proj_bytes, n_tokens, n_embd as u32, q_dim as u32,
+            uniforms.off_q_gemm, layer, Mc8WeightRole::AttnQ,
+        ) {
+            return false;
+        }
+        // Part 3u: Q SDPA — attn params pre-staged at uniforms.q_off (now reads pre-computed Q).
         if !self.encode_attention_batched_q_prefill(
             pipeline,
-            q_in,
+            q_proj,
             0,
-            batch_in_bytes,
+            q_proj_bytes,
             work_a,
             0,
             work_span_bytes,
@@ -7795,10 +7861,28 @@ impl QTensorEngine {
                 batch_buf
             };
             let n_kv_wg = n_tokens.saturating_mul(n_kv);
-            let kv_in = attn_src;
+            // Phase 5.5: K/V projection on the parallel GEMM → proj buffers (attention reads them).
+            let kv_dim = (n_kv * h.head_dim()) as usize;
+            let kv_proj_bytes = (kv_dim * n_tokens as usize * 4) as wgpu::BufferAddress;
+            let k_proj = self.mc8_k_proj_buf.as_ref().unwrap();
+            let v_proj = self.mc8_v_proj_buf.as_ref().unwrap();
+            if !self.encode_gemm_bufs_offset(
+                &mut enc, k_info, k_raw, n_embd, kv_dim, attn_src, 0, geom.batch_in_bytes,
+                k_proj, 0, kv_proj_bytes, n_tokens, n_embd as u32, kv_dim as u32,
+                uniforms.off_k_gemm, layer, Mc8WeightRole::AttnK,
+            ) {
+                return false;
+            }
+            if !self.encode_gemm_bufs_offset(
+                &mut enc, v_info, v_raw, n_embd, kv_dim, attn_src, 0, geom.batch_in_bytes,
+                v_proj, 0, kv_proj_bytes, n_tokens, n_embd as u32, kv_dim as u32,
+                uniforms.off_v_gemm, layer, Mc8WeightRole::AttnV,
+            ) {
+                return false;
+            }
             if !self.encode_attention_pass_gpu(
                 &mut enc,
-                kv_in,
+                k_proj,
                 token_buf,
                 n_embd,
                 n_tokens,
@@ -7818,7 +7902,7 @@ impl QTensorEngine {
             }
             if !self.encode_attention_pass_gpu(
                 &mut enc,
-                kv_in,
+                v_proj,
                 token_buf,
                 n_embd,
                 n_tokens,
