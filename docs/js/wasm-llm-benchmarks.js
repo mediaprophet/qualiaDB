@@ -123,7 +123,7 @@ const ENGINE_DEFS = [
                 key: 'model',
                 label: 'Model URL',
                 type: 'text',
-                value: 'models/SmolLM2-360M-Instruct-Q4_K_M.gguf',
+                value: 'https://huggingface.co/HuggingFaceTB/SmolLM2-360M-Instruct-GGUF/resolve/main/smollm2-360m-instruct-q4_k_m.gguf',
                 placeholder: 'https://…/model.gguf  (or same-origin models/x.gguf)',
             },
             {
