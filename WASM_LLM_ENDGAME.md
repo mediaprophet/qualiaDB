@@ -126,19 +126,26 @@ This document supersedes `wasm_llm_planning.md` for the final push of Phase 2B a
     zero-copy `blob()` view.
   - wasm export `compileGgufToQ42(Uint8Array, page_log2)`.
   - **Dual-format boot gate** in `initialize_webgpu_engine` (`gguf_bridge.rs`): first 4 bytes →
-    `b"GGUF"` (legacy `adopt_resident_mmap`) or `b"Q42W"` (`adopt_resident_q42`). The q42 path
-    validates the container, reserves GEMM/KV arenas from the header hyperparams, and **maps the
-    page-aligned GEMM-role blobs straight into `Mc8WeightArenaBufs`** (`mc8_upload_resident_from_q42`).
-  - **Verified:** native test PASSES — `290 tensors, 32 layers, blob@32768`, reader round-trip +
-    hyperparams + **CRC tamper-detection** (flipped manifest byte rejected). wasm build compiles clean.
-* **Remaining Phase 4 (next):** (a) **inference-from-`.q42` hot path** — source per-tensor params
-  (dims/ggml_type/len) from the manifest instead of `GgufTensorIndex`, so a q42 boot can actually
-  run decode (today it structurally maps weights but the hot path still expects a GGUF index);
-  (b) JS **ingest pipeline** — `compileGgufToQ42` on first load → stream `.q42` to OPFS (Phase 3
-  writer) → boot from `.q42` thereafter; (c) cold CBOR-LD ontology section + `NQuin.metadata` flag
-  consumption in-shader; (d) optional single-buffer zero-copy bind (bind q42 blobs directly, skip the
-  arena copy) + Web-Worker compiler farm. wasm export not yet rebuilt/deployed (no consumer until the
-  JS ingest pipeline lands).
+    `b"GGUF"` (legacy `adopt_resident_mmap`) or `b"Q42W"` (`adopt_resident_q42`).
+
+* **WEIGHT HOT-PATH DECOUPLING DONE + PROVEN (2026-06-19):** rather than branch every `encode_*`,
+  `Q42TensorIndex::to_gguf_index()` builds a **synthetic `GgufTensorIndex`** from the manifest
+  (`GgufTensorIndex::from_components`, `tensor_data_start=0`, absolute offsets) and `adopt_resident_q42`
+  points `gguf_mmap` at the `.q42` bytes — so the **entire** GGUF hot path (get_layer_tensors /
+  fetch_tensor_bytes / `mc8_upload_all_resident_weights`) runs **unchanged and format-agnostic**. No
+  per-`encode_*` churn; the hot path never learns it's reading a `.q42`.
+  - **Proven natively (no browser):** `q42_synthetic_index_matches_gguf` — the synthetic index returns
+    **290 tensors byte-identical** to the GGUF index + matching dims/ggml_type. Identical weights →
+    identical logits → identical output. Wasm compiles clean.
+* **⚠️ Tokenizer gap (surfaced — blocks q42-ONLY inference):** the `.q42` weight container carries
+  weights + hyperparams but **not the tokenizer** (vocab/merges/special tokens). So a q42-only boot
+  maps weights correctly but cannot tokenize a prompt. Literal end-to-end "Paris from q42 alone" needs
+  a **tokenizer section** (v3) — the same class of gap as the hyperparams one. This is the next step.
+* **Remaining Phase 4 (next):** (a) **tokenizer section** in `.q42` (+ `GgufTokenizer::from_q42`) →
+  enables true q42-only boot + the literal end-to-end "Paris" browser test; (b) wire
+  `run_inference_async` index branch to `to_gguf_index()` once the tokenizer lands; (c) JS **ingest
+  pipeline** (`compileGgufToQ42` → OPFS → boot from `.q42`); (d) cold CBOR-LD ontology + `NQuin.metadata`
+  in-shader flags; (e) single-buffer zero-copy bind + Web-Worker compiler farm.
 
 ---
 

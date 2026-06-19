@@ -211,23 +211,6 @@ impl Mc8WeightRole {
     }
 }
 
-/// Map a `.q42` tensor role to a GEMM weight-arena role; `None` for non-GEMM tensors
-/// (norms / token_embd / output) which are not held in `Mc8WeightArenaBufs`.
-#[cfg(target_arch = "wasm32")]
-fn q42_role_to_mc8(role: u16) -> Option<Mc8WeightRole> {
-    use crate::q42_weight as q;
-    match role {
-        q::Q42_ROLE_ATTN_K => Some(Mc8WeightRole::AttnK),
-        q::Q42_ROLE_ATTN_V => Some(Mc8WeightRole::AttnV),
-        q::Q42_ROLE_ATTN_Q => Some(Mc8WeightRole::AttnQ),
-        q::Q42_ROLE_ATTN_OUTPUT => Some(Mc8WeightRole::OProj),
-        q::Q42_ROLE_FFN_GATE => Some(Mc8WeightRole::Gate),
-        q::Q42_ROLE_FFN_UP => Some(Mc8WeightRole::Up),
-        q::Q42_ROLE_FFN_DOWN => Some(Mc8WeightRole::Down),
-        _ => None,
-    }
-}
-
 /// One buffer per GEMM role so mid-layer weight uploads never clobber in-flight dispatches.
 #[cfg(target_arch = "wasm32")]
 struct Mc8WeightArenaBufs {
@@ -648,112 +631,43 @@ impl QTensorEngine {
         true
     }
 
-    /// Phase 4: boot from a `.q42` weight container — validate integrity (CRC), reconstruct
-    /// hyperparameters, reserve GEMM/KV arenas, and map the page-aligned tensor blobs straight into
-    /// the disjoint `Mc8WeightArenaBufs`. (Inference-from-`.q42` hot path — sourcing per-tensor
-    /// params from the manifest rather than a GGUF index — is the next step.)
+    /// Phase 4: boot from a `.q42` weight container. Validates integrity (CRC via `from_q42`), builds
+    /// a synthetic `GgufTensorIndex` from the manifest, points the byte source at the `.q42` bytes
+    /// (`tensor_data_start = 0`, absolute blob offsets), reserves the GEMM/KV arenas, and uploads the
+    /// resident weights via the **standard** path — so the entire GGUF hot path runs unchanged
+    /// (format-agnostic). NOTE: the `.q42` weight container does not yet carry the tokenizer, so a
+    /// q42-only boot maps weights/params but cannot tokenize until a tokenizer section lands.
     fn adopt_resident_q42(&mut self, data: Arc<[u8]>) -> Result<(), String> {
-        let idx = crate::q42_weight::Q42TensorIndex::from_q42(&data)?;
-        let hp = idx.hyperparams();
+        let q = crate::q42_weight::Q42TensorIndex::from_q42(&data)?;
+        let index = q.to_gguf_index();
+        let hp = index.hyperparams;
         if hp.n_layer == 0 || hp.n_embd == 0 {
             return Err("Q42: missing hyperparameters in header".to_string());
         }
         self.hyperparams = hp;
-        let max_layer_bytes = idx
-            .entries
-            .iter()
-            .filter(|e| q42_role_to_mc8(e.role).is_some())
-            .map(|e| e.byte_len as usize)
-            .max()
-            .unwrap_or(4096)
+        self.tensor_data_offset = 0; // q42 blob offsets are absolute
+        let staging = index
+            .max_layer_tensor_bytes
             .max(4096)
             .min(MAX_WGPU_WEIGHT_STAGING);
-        self.ensure_gemm_buffers(max_layer_bytes, MAX_STACK_GEMM_OUT as u32);
+        self.ensure_gemm_buffers(staging, MAX_STACK_GEMM_OUT as u32);
         self.ensure_kv_cache(&hp);
         if self.kv_layout.is_none() || self.kv_cache_cpu.is_none() {
             return Err("Q42: KV cache allocation failed".to_string());
         }
-        if !self.mc8_upload_resident_from_q42(&idx, &data) {
-            return Err("Q42: resident arena mapping failed".to_string());
-        }
+        // Byte source for fetch_tensor_bytes (tensor_data_start=0 + absolute blob offsets).
+        self.gguf_mmap = Some(data.clone());
         self.q42_resident = Some(data);
+        // Resident weight upload reuses the standard path through the synthetic index.
+        if !self.mc8_upload_all_resident_weights(&index) {
+            wlog("[Q42] eager resident upload skipped — will retry lazily");
+        }
         wlog(&format!(
-            "[Q42] structural boot OK: {} tensors -> GEMM arenas, {} layers (inference hot-path pending)",
-            idx.entries.len(),
+            "[Q42] boot OK: {} tensors, {} layers (synthetic GGUF index; weights resident)",
+            q.entries.len(),
             hp.n_layer
         ));
         Ok(())
-    }
-
-    /// Map a parsed `.q42` index's GEMM-role blobs into the resident weight arena (one upload each).
-    fn mc8_upload_resident_from_q42(
-        &mut self,
-        idx: &crate::q42_weight::Q42TensorIndex,
-        data: &[u8],
-    ) -> bool {
-        let n_layer = idx.header.n_layers;
-        if n_layer == 0 || n_layer as usize > 1024 {
-            return false;
-        }
-        // Per-role 256-aligned stride, sized to the largest layer's blob for that role.
-        let mut max_len = [0usize; 7];
-        for e in &idx.entries {
-            if let Some(role) = q42_role_to_mc8(e.role) {
-                let i = role.idx();
-                let bl = e.byte_len as usize;
-                if bl > max_len[i] {
-                    max_len[i] = bl;
-                }
-            }
-        }
-        let mut stride = [0u64; 7];
-        for i in 0..7 {
-            stride[i] = (((max_len[i] + 255) & !255).max(256)) as u64;
-        }
-        let usage = wgpu::BufferUsages::STORAGE | wgpu::BufferUsages::COPY_DST;
-        let arena = {
-            let dev = self.gpu_device();
-            let mk = |i: usize, label: &str| {
-                dev.create_buffer(&wgpu::BufferDescriptor {
-                    label: Some(label),
-                    size: stride[i] * n_layer as u64,
-                    usage,
-                    mapped_at_creation: false,
-                })
-            };
-            Mc8WeightArenaBufs {
-                qkv_k: mk(0, "Q42ResidentAttnK"),
-                qkv_v: mk(1, "Q42ResidentAttnV"),
-                qkv_q: mk(2, "Q42ResidentAttnQ"),
-                o_proj: mk(3, "Q42ResidentOProj"),
-                gate: mk(4, "Q42ResidentGate"),
-                up: mk(5, "Q42ResidentUp"),
-                down: mk(6, "Q42ResidentDown"),
-            }
-        };
-        self.mc8_weight_arena = Some(arena);
-        self.mc8_weight_role_stride = stride;
-        {
-            let queue = self.gpu_queue();
-            for e in &idx.entries {
-                let role = match q42_role_to_mc8(e.role) {
-                    Some(r) => r,
-                    None => continue,
-                };
-                if e.layer as usize >= n_layer as usize {
-                    continue; // GEMM roles are per-layer; skip any global sentinel
-                }
-                let off = e.layer as u64 * stride[role.idx()];
-                let s = e.blob_offset as usize;
-                let l = e.byte_len as usize;
-                if s + l > data.len() {
-                    return false;
-                }
-                queue.write_buffer(self.mc8_weight_role_buf(role), off, &data[s..s + l]);
-            }
-        }
-        self.mc8_weights_resident = true;
-        true
     }
 
     fn mc8_dynamic_uniform_binding(buf: &wgpu::Buffer) -> wgpu::BindingResource<'_> {

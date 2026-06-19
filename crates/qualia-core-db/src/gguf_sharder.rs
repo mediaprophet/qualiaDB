@@ -464,6 +464,44 @@ impl GgufTensorIndex {
         })
     }
 
+    /// Build a synthetic index from an explicit `(name, info)` list — used to boot from a `.q42`
+    /// weight container so the *entire* GGUF-based hot path (get_layer_tensors / fetch_tensor_bytes /
+    /// resident upload) works unchanged. The caller passes absolute blob offsets in each
+    /// `GgufTensorInfo.byte_offset` and `tensor_data_start = 0`, pointing the byte source at the
+    /// `.q42` bytes. Format-agnostic: the hot path never learns it is reading a `.q42`.
+    pub fn from_components(
+        named_tensors: &[(&[u8], GgufTensorInfo)],
+        hyperparams: GgufHyperparams,
+        tensor_data_start: u64,
+    ) -> Self {
+        let mut entries = Vec::with_capacity(named_tensors.len());
+        let mut max_tensor_bytes = 0usize;
+        let mut max_layer_tensor_bytes = 0usize;
+        for (name, info) in named_tensors {
+            if let Some(tb) = crate::ggml_quants::tensor_byte_len(info) {
+                max_tensor_bytes = max_tensor_bytes.max(tb);
+                if is_layer_matmul_tensor_name(name) {
+                    max_layer_tensor_bytes = max_layer_tensor_bytes.max(tb);
+                }
+            }
+            entries.push((gguf_name_hash(name), *info));
+        }
+        let find_h = |h: u64| entries.iter().find(|(eh, _)| *eh == h).map(|(_, i)| *i);
+        let token_embd = find_h(gguf_name_hash(b"token_embd.weight"));
+        let output_weight = find_h(gguf_name_hash(b"output.weight"));
+        let output_norm = find_h(gguf_name_hash(b"output_norm.weight"));
+        Self {
+            entries,
+            tensor_data_start,
+            token_embd,
+            output_weight,
+            output_norm,
+            hyperparams,
+            max_tensor_bytes,
+            max_layer_tensor_bytes,
+        }
+    }
+
     fn find(&self, name: &[u8]) -> Option<GgufTensorInfo> {
         let h = gguf_name_hash(name);
         self.entries

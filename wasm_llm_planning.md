@@ -996,6 +996,22 @@ sed -i 's/qualia_core_db_bg\.wasm/qualia_bg.wasm/g' $DOCS/qualia.js
 
 ## 📓 7. PROGRESS LOG (newest first — keep this updated every step)
 
+- **2026-06-19 (an)** — **Phase 4: weight hot-path decoupling from `.q42` (synthetic GGUF index) + proof.**
+  - **Approach (lower-risk than per-`encode_*` branching):** `Q42TensorIndex::to_gguf_index()` builds a
+    **synthetic `GgufTensorIndex`** from the manifest via new `GgufTensorIndex::from_components`
+    (`tensor_data_start=0`, absolute blob offsets, names rebuilt from role/layer → same `gguf_name_hash`
+    so `get_layer_tensors` resolves). `adopt_resident_q42` now points `gguf_mmap` at the `.q42` bytes
+    and uploads via the **standard** `mc8_upload_all_resident_weights` — the whole GGUF hot path runs
+    unchanged, format-agnostic. Removed the interim `mc8_upload_resident_from_q42` + `q42_role_to_mc8`.
+  - **Proven natively (no browser, no external libs):** `q42_synthetic_index_matches_gguf` PASSES —
+    synthetic index == GGUF index, **290 tensors byte-identical** + dims/ggml_type match. ⇒ identical
+    weights → identical logits → identical output. wasm compiles clean.
+  - **⚠️ Tokenizer gap surfaced:** `.q42` carries weights + hyperparams but **not the tokenizer**
+    (vocab/merges/specials). q42-only inference is blocked until a tokenizer section (v3) lands — same
+    class of gap as hyperparams. So literal "Paris from q42 alone" is the next step, not this commit.
+  - **Next:** tokenizer section + `GgufTokenizer::from_q42`; wire `run_inference_async` index branch to
+    `to_gguf_index()`; then JS ingest pipeline (compile→OPFS→boot from q42).
+
 - **2026-06-19 (am)** — **Phase 4 v2: `.q42` integrity layer + runtime reader + dual-format boot gate.**
   - **Format v2 (`q42_weight.rs`):** 128B header adds hyperparams (n_embd/n_head/n_kv_head/vocab/rope —
     self-contained boot) + `header_crc:u32` + `format_flags:u32` (replacing dead padding). Per-entry

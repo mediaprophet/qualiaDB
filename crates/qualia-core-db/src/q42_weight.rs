@@ -357,6 +357,22 @@ pub fn compile_gguf_to_q42(input: &[u8], page_log2: u16) -> Result<Vec<u8>, Stri
     Ok(out)
 }
 
+/// GGUF tensor-name suffix for a per-layer `.q42` role (None for global tensors, named directly).
+fn q42_role_suffix(role: u16) -> Option<&'static [u8]> {
+    match role {
+        Q42_ROLE_ATTN_K => Some(b"attn_k.weight"),
+        Q42_ROLE_ATTN_V => Some(b"attn_v.weight"),
+        Q42_ROLE_ATTN_Q => Some(b"attn_q.weight"),
+        Q42_ROLE_ATTN_OUTPUT => Some(b"attn_output.weight"),
+        Q42_ROLE_FFN_GATE => Some(b"ffn_gate.weight"),
+        Q42_ROLE_FFN_UP => Some(b"ffn_up.weight"),
+        Q42_ROLE_FFN_DOWN => Some(b"ffn_down.weight"),
+        Q42_ROLE_ATTN_NORM => Some(b"attn_norm.weight"),
+        Q42_ROLE_FFN_NORM => Some(b"ffn_norm.weight"),
+        _ => None,
+    }
+}
+
 /// Runtime reader: parses a `.q42` container's header + manifest in microseconds. Tensor blobs
 /// stay in the caller's byte slice (zero-copy); only the small manifest is materialized. The
 /// `role`/`layer`/`blob_offset` fields map directly to the resident WebGPU weight arenas.
@@ -425,6 +441,40 @@ impl Q42TensorIndex {
     pub fn blob<'a>(&self, data: &'a [u8], entry: &Q42TensorEntry) -> &'a [u8] {
         let s = entry.blob_offset as usize;
         &data[s..s + entry.byte_len as usize]
+    }
+
+    /// Build a GGUF-equivalent `GgufTensorIndex` from this manifest so the existing GGUF hot path
+    /// (get_layer_tensors / fetch_tensor_bytes / resident upload) runs unchanged when booted from a
+    /// `.q42`. The synthetic index uses `tensor_data_start = 0` and absolute blob offsets, so the
+    /// byte source must be the `.q42` bytes themselves.
+    pub fn to_gguf_index(&self) -> GgufTensorIndex {
+        let mut named: Vec<(Vec<u8>, GgufTensorInfo)> = Vec::with_capacity(self.entries.len());
+        for e in &self.entries {
+            let info = GgufTensorInfo {
+                dims: [e.dim0 as u64, e.dim1 as u64, 0, 0],
+                n_dims: if e.dim1 > 0 { 2 } else { 1 },
+                ggml_type: e.ggml_type,
+                byte_offset: e.blob_offset,
+            };
+            let name: Vec<u8> = if e.layer == Q42_LAYER_GLOBAL {
+                match e.role {
+                    Q42_ROLE_TOKEN_EMBD => b"token_embd.weight".to_vec(),
+                    Q42_ROLE_OUTPUT => b"output.weight".to_vec(),
+                    Q42_ROLE_OUTPUT_NORM => b"output_norm.weight".to_vec(),
+                    _ => continue,
+                }
+            } else if let Some(suffix) = q42_role_suffix(e.role) {
+                let mut buf = [0u8; 96];
+                let n = crate::gguf_sharder::write_blk_tensor_name(e.layer as u32, suffix, &mut buf);
+                buf[..n].to_vec()
+            } else {
+                continue;
+            };
+            named.push((name, info));
+        }
+        let refs: Vec<(&[u8], GgufTensorInfo)> =
+            named.iter().map(|(n, i)| (n.as_slice(), *i)).collect();
+        GgufTensorIndex::from_components(&refs, self.hyperparams(), 0)
     }
 }
 
@@ -520,5 +570,61 @@ mod tests {
             "[q42] OK: {n_tensors} tensors, {n_layers} layers, blob@{blob_offset}, total {} MB; reader round-trip + hyperparams verified",
             q42.len() / (1024 * 1024)
         );
+    }
+
+    /// Proves inference-from-`.q42` equivalence WITHOUT a browser: the synthetic GGUF index built
+    /// from the `.q42` manifest returns byte-identical weights + matching metadata vs the original
+    /// GGUF index for every tensor. Identical weights → identical logits → identical output. The
+    /// only piece the `.q42` does not yet carry is the tokenizer (a separate, flagged gap).
+    #[test]
+    fn q42_synthetic_index_matches_gguf() {
+        let path = "C:/Projects/qualiaDB/docs/models/SmolLM2-360M-Instruct-Q4_K_M.gguf";
+        if !std::path::Path::new(path).exists() {
+            eprintln!("[q42] model not present — skipping");
+            return;
+        }
+        let gguf = std::fs::read(path).expect("read gguf");
+        let q42 = compile_gguf_to_q42(&gguf, 0).expect("compile");
+        let orig = GgufTensorIndex::from_gguf(&gguf);
+        let q = Q42TensorIndex::from_q42(&q42).expect("from_q42");
+        let synth = q.to_gguf_index();
+
+        let mut checked = 0usize;
+        let mut cmp = |label: &str, s: Option<GgufTensorInfo>, o: Option<GgufTensorInfo>| {
+            match (s, o) {
+                (Some(s), Some(o)) => {
+                    assert_eq!(s.ggml_type, o.ggml_type, "{label} ggml_type");
+                    assert_eq!(s.dims[0], o.dims[0], "{label} dim0");
+                    assert_eq!(s.dims[1], o.dims[1], "{label} dim1");
+                    let sb = crate::ggml_quants::fetch_tensor_bytes(&q42, synth.tensor_data_start, &s)
+                        .expect("q42 tensor bytes");
+                    let ob = crate::ggml_quants::fetch_tensor_bytes(&gguf, orig.tensor_data_start, &o)
+                        .expect("gguf tensor bytes");
+                    assert_eq!(sb, ob, "{label} weight bytes differ");
+                    checked += 1;
+                }
+                (None, None) => {}
+                _ => panic!("{label}: tensor presence mismatch (synthetic vs gguf)"),
+            }
+        };
+        for l in 0..orig.hyperparams.n_layer {
+            let st = synth.get_layer_tensors(l);
+            let ot = orig.get_layer_tensors(l);
+            cmp(&format!("L{l}.attn_q"), st.attn_q, ot.attn_q);
+            cmp(&format!("L{l}.attn_k"), st.attn_k, ot.attn_k);
+            cmp(&format!("L{l}.attn_v"), st.attn_v, ot.attn_v);
+            cmp(&format!("L{l}.attn_output"), st.attn_output, ot.attn_output);
+            cmp(&format!("L{l}.attn_norm"), st.attn_norm, ot.attn_norm);
+            cmp(&format!("L{l}.ffn_gate"), st.ffn_gate, ot.ffn_gate);
+            cmp(&format!("L{l}.ffn_up"), st.ffn_up, ot.ffn_up);
+            cmp(&format!("L{l}.ffn_down"), st.ffn_down, ot.ffn_down);
+            cmp(&format!("L{l}.ffn_norm"), st.ffn_norm, ot.ffn_norm);
+        }
+        cmp("token_embd", synth.token_embd_info().copied(), orig.token_embd_info().copied());
+        cmp("output", synth.output_weight_info().copied(), orig.output_weight_info().copied());
+        cmp("output_norm", synth.output_norm_info().copied(), orig.output_norm_info().copied());
+
+        assert!(checked >= 32 * 9, "expected ≥288 tensors byte-checked, got {checked}");
+        eprintln!("[q42] synthetic index == GGUF: {checked} tensors byte-identical + metadata match");
     }
 }
