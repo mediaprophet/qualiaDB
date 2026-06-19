@@ -52,9 +52,20 @@ This document supersedes `wasm_llm_planning.md` for the final push of Phase 2B a
   tensor core must emit the highest-logit token, EOS included). The core engine ships greedy/argmax
   for reproducible CI gates.
 
-### Phase 3: OPFS Robust Model Caching
+### Phase 3: OPFS Robust Model Caching — ✅ DONE in harness (2026-06-19), verified
 * **Goal:** Bypass browser heap limits and `Cache Storage` failures for >250MB files.
-* **Context:** Stream the `fetch` response directly into a `FileSystemWritableFileStream` via the Origin Private File System (OPFS) to reliably cache GGUF files on the client.
+* **Delivered:** `docs/js/opfs-model-cache.js` — `loadGgufCached(url, name, expectedSize, onProgress)`.
+  Streams the `fetch` response straight to OPFS via `FileSystemWritableFileStream`
+  (`pipeThrough(progressCounter).pipeTo(writable)`) — no >250MB JS-heap blob. Atomic `.part` →
+  `move()` promotion gated on streamed-bytes == Content-Length. Best-effort: any OPFS failure
+  (quota/unsupported/interrupted) falls back to a plain buffered fetch (loading never blocks).
+  Wired into `docs/wasm-llm-test.html` `getModelBytes()` with progress in `#loadstat`; "Clear cache"
+  now also purges OPFS (`clearAllOpfsModels`). Engine contract unchanged (`Uint8Array`).
+* **Verified (headless Chrome):** miss → streamed 258.1 MB → boot (1 `.gguf` request); reload →
+  **OPFS HIT in 246 ms, 0 `.gguf` requests** → boot. No `cache.put` failure (old Cache Storage bug
+  eliminated). JS-only — no wasm rebuild.
+* **Pending:** port to `online-llm-demo.html` + `llmdemo/index.html` (architect gated until harness
+  proven — now proven). Chunked OPFS→wasm mmap (avoid the one full `arrayBuffer()` read) is Phase 4.
 
 ### Phase 4: AOT `.q42` Compilation (Horizon)
 * **Goal:** Compile GGUF into Qualia-native `.q42` ahead of time to skip runtime parsing.

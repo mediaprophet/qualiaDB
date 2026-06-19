@@ -103,6 +103,7 @@
     <!-- Load the WASM module -->
     <script type="module">
         import init, { initialize_webgpu_engine } from '../playground/qualia_core_db.js';
+        import { loadGgufCached } from '../js/opfs-model-cache.js';
 
         const sysStatus = document.getElementById('sysStatus');
         const btnLoadModel = document.getElementById('btnLoadModel');
@@ -147,55 +148,37 @@
             log("Starting download of gemma-3-1b-it-q4_0.gguf…");
 
             try {
-                let response = null;
+                // OPFS-backed cache: streams to disk (no whole-model JS-heap blob) and serves
+                // instantly on repeat loads. Cache key is the filename, so a hit short-circuits
+                // the URL fallback regardless of which source originally supplied it.
+                const NAME = 'gemma-3-1b-it-q4_0.gguf';
+                let result = null;
                 for (const url of MODEL_URLS) {
                     log(`Trying ${url}…`);
                     try {
-                        response = await fetch(url);
-                        if (response.ok) {
-                            log(`Connected to ${url}`);
-                            break;
-                        }
-                        response = null;
-                    } catch {
-                        response = null;
+                        result = await loadGgufCached(url, NAME, undefined, (loaded, total, phase) => {
+                            if (phase === 'hit') {
+                                progressFill.style.width = '100%';
+                            } else if (phase === 'download' && total) {
+                                progressFill.style.width = (loaded / total * 100) + '%';
+                                if (loaded % (1024 * 1024 * 10) < 65536) {
+                                    log(`Downloaded ${(loaded / 1024 / 1024).toFixed(1)} MB...`);
+                                }
+                            }
+                        });
+                        if (result) { log(`Source: ${url}`); break; }
+                    } catch (err) {
+                        log(`Failed ${url}: ${err.message}`);
+                        result = null;
                     }
                 }
-                if (!response) throw new Error('Could not download model from local server or HuggingFace');
-                
-                const reader = response.body.getReader();
-                const contentLength = +response.headers.get('Content-Length');
-                let receivedLength = 0;
-                let chunks = [];
+                if (!result) throw new Error('Could not download model from local server or HuggingFace');
 
-                while(true) {
-                    const {done, value} = await reader.read();
-                    if (done) break;
-                    chunks.push(value);
-                    receivedLength += value.length;
-                    
-                    if (contentLength) {
-                        const percent = (receivedLength / contentLength) * 100;
-                        progressFill.style.width = percent + '%';
-                        if (receivedLength % (1024*1024*10) < value.length) {
-                             // Log every ~10MB to avoid spam
-                             log(`Downloaded ${(receivedLength/1024/1024).toFixed(1)} MB...`);
-                        }
-                    }
-                }
-
-                let chunksAll = new Uint8Array(receivedLength);
-                let position = 0;
-                for(let chunk of chunks) {
-                    chunksAll.set(chunk, position);
-                    position += chunk.length;
-                }
-                
-                ggufBuffer = chunksAll;
-                log(`Download complete! Total size: ${(receivedLength/1024/1024).toFixed(2)} MB`);
+                ggufBuffer = result.bytes;
+                log(`Model ready (${(ggufBuffer.length / 1024 / 1024).toFixed(2)} MB, ${result.source === 'opfs-hit' ? 'OPFS cache' : 'downloaded + cached'})`);
                 spinner.style.display = 'none';
                 btnInitWasm.disabled = false;
-                
+
             } catch (e) {
                 log(`Error downloading model: ${e.message}`);
                 log("Tip: run serve_models.py on port 8081, or ensure HuggingFace is reachable.");

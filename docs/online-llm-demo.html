@@ -270,6 +270,7 @@ import init, {
     isWebgpuEngineReady,
     getEngineVersion,
 } from './pkg/qualia/qualia.js';
+import { loadGgufCached } from './js/opfs-model-cache.js';
 
 // ── Constants ─────────────────────────────────────────────────────────────────
 
@@ -438,12 +439,21 @@ async function loadModel() {
             ggufBytes = await readLocalGguf(localFiles);
             document.getElementById('dl-progress').style.width = '100%';
         } else {
+            // OPFS-backed: streams the download straight to disk (no multi-GB JS-heap blob)
+            // and serves instantly from cache on repeat loads. Falls back to plain fetch.
             showDlStatus(`Downloading ${name}…`);
-            ggufBytes = await downloadGguf(url, name, (loaded, total) => {
-                const pct = total ? Math.round(loaded / total * 100) : 0;
-                document.getElementById('dl-progress').style.width = `${pct}%`;
-                showDlStatus(`Downloading ${name}: ${pct}% (${(loaded / 1024 / 1024).toFixed(1)} MB)`);
+            const { bytes, source } = await loadGgufCached(url, url.split('/').pop(), undefined, (loaded, total, phase) => {
+                if (phase === 'hit') {
+                    document.getElementById('dl-progress').style.width = '100%';
+                    showDlStatus(`Loaded ${name} from browser cache (OPFS)`);
+                } else if (phase === 'download') {
+                    const pct = total ? Math.round(loaded / total * 100) : 0;
+                    document.getElementById('dl-progress').style.width = `${pct}%`;
+                    showDlStatus(`Downloading ${name}: ${pct}% (${(loaded / 1048576).toFixed(1)} MB)`);
+                }
             });
+            ggufBytes = bytes;
+            if (source === 'opfs-miss') showDlStatus(`Downloaded ${name} (cached to OPFS for next time)`);
         }
 
         showDlStatus('Initialising Qualia WebGPU engine…');

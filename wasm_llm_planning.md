@@ -996,6 +996,18 @@ sed -i 's/qualia_core_db_bg\.wasm/qualia_bg.wasm/g' $DOCS/qualia.js
 
 ## 📓 7. PROGRESS LOG (newest first — keep this updated every step)
 
+- **2026-06-19 (ak)** — **Phase 3: OPFS model caching (JS layer) — done + verified in harness.**
+  - **New:** `docs/js/opfs-model-cache.js` (`loadGgufCached`, `clearOpfsModel`, `clearAllOpfsModels`).
+    Streaming `fetch.body.pipeThrough(progressCounter).pipeTo(FileSystemWritableFileStream)` → no
+    >250MB JS-heap blob; atomic `.part`→`move()` promotion gated on bytes==Content-Length; falls back
+    to buffered fetch on any OPFS error. Engine contract unchanged (`Uint8Array`).
+  - **Wired:** `docs/wasm-llm-test.html` `getModelBytes()` (replaces the failing Cache-Storage
+    `cache.put`), progress → `#loadstat`, "Clear cache" purges OPFS too. **JS-only, no wasm rebuild.**
+  - **Verified (headless Chrome):** miss → streamed 258.1 MB → boot (1 `.gguf` net req); reload →
+    **OPFS HIT 246 ms, 0 net req** → boot. Old `cache.put` large-entry failure gone.
+  - **Pending:** port to `online-llm-demo.html` + `llmdemo/index.html` (was architect-gated on harness
+    proof — now proven). Chunked OPFS→wasm mmap = Phase 4.
+
 - **2026-06-19 (aj)** — **MC7 ChatML investigation: root cause = greedy early-EOS, NOT an engine bug.**
   - Phase 2B banked first: instrumentation stripped, clean rebuild holds gate (TTFT 3849/4001 ms,
     `Paris.` ✅), committed `850ac3b1`, tagged **`v0.0.18-wasm-gpu-phase2b-closed`**.
