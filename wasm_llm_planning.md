@@ -1005,7 +1005,38 @@ sed -i 's/qualia_core_db_bg\.wasm/qualia_bg.wasm/g' $DOCS/qualia.js
 
 ## 📓 7. PROGRESS LOG (newest first — keep this updated every step)
 
-- **2026-06-19 (aw)** — **Phase 5 TRUE ROOT CAUSE (direct profiling): WebGPU queue-submit IPC overhead.**
+- **2026-06-19 (az)** — **Phase 5.5 Option B: parallel Q/K/V projection → ✅ GATE CLEARED, 0.6 → 5.9 tok/s (~10×).**
+  - **Real root cause (shader evidence, supersedes aw):** `fused_attention.wgsl` was `@compute
+    @workgroup_size(1)` — one thread per head doing the entire Q/K/V projection GEMM
+    (head_dim×n_embd per-element dequant) serially → ~15 threads on a 5000-core Ampere (~0.3%
+    occupancy). 49 ms/layer, 1577 ms/token GPU drain. Found by direct shader inspection after the
+    submit/compute/dispatch/dequant hypotheses all gave ~0.
+  - **Fix (commit `73489421`):** route Q/K/V **projection** through the parallel
+    `fused_transformer.wgsl` GEMM (`encode_gemm_bufs_offset`, resident AttnQ/K/V) → dedicated
+    `mc8_q/k/v_proj_buf`; staged 3 extra per-layer GemmParams (`MC8_GEMM_SLOTS_PER_LAYER` 5→8,
+    `off_q/k/v_gemm`). `fused_attention.wgsl::gemm_row` reads the pre-computed projection via new
+    `proj_row_stride` (0 = legacy in-shader matmul, kept for dead paths) — attention kernel is now
+    SDPA-only. Wired in decode forward + prefill loop + shared FFN tail.
+  - **Result:** **5.9 tok/s** (gate >2.0 ✅), coherent `Paris.`. forward 52437→4452 ms (~12×);
+    gpu_drain 1577→114 ms/tok (~14×). argmax (~20 ms/tok) is now the largest single item.
+    Math identical (parallel GEMM computes the same projection gemm_row did).
+
+- **2026-06-19 (ay)** — **Phase 5.4 Stage 2: single-submit forward (64 submits → ~2) — coherent, throughput-neutral.**
+  - One `CommandEncoder` + monotonic uniform cursors across all layers; flush only at
+    `MC8_LAYERS_PER_ENCODER`(64) boundaries + once at end; both per-layer `mc8_flush` deleted.
+    Commit `493b0900`. **Coherent `Paris.` → KV visibility IS fine intra-encoder** (the per-layer
+    flush was masking the write_buffer races, not a hardware KV requirement). cpu_encode 22→13 ms.
+  - **0 tok/s change** ⇒ submit/IPC overhead was NOT the bottleneck (disproved aw). The 1-layer
+    test (11.5 tok/s) + cpu_encode 13 ms vs gpu_drain 1577 ms pinned it to GPU execution → led to az.
+
+- **2026-06-19 (ax)** — **Phase 5.4 Stage 1: resident norm weights (safety foundation).**
+  - `mc8_upload_resident_norms` uploads all layers' attn_norm + ffn_norm once at init (slot 2L/2L+1,
+    256-aligned); 3 hot RMSNorm sites bind a per-layer sub-range via `mc8_norm_source` instead of
+    re-`write_buffer`-ing the shared `norm_weight_buf` every layer. Commit `d66b30d9`. Eliminates the
+    2nd per-layer write_buffer race (after super-arena uniforms) — prerequisite for single-submit.
+    Coherent `Paris.`; cpu_encode 22→15 ms; throughput unchanged (expected).
+
+- **2026-06-19 (aw)** — **Phase 5 TRUE ROOT CAUSE (direct profiling): WebGPU queue-submit IPC overhead.** ⚠️ **PARTIALLY SUPERSEDED by (az)** — submits were not the bottleneck (single-submit gave 0 change); the real cause was the @workgroup_size(1) attention projection. The CPU-vs-GPU split + 1-layer profiling here were the steps that led to az.
   - Added CPU-side `js_sys::Date::now()` phase timing (temporary). Decode = **98.7% forward**
     (`forward=52441ms argmax=667ms / 32 tok` → argmax only ~21 ms/tok).
   - Forward split: **23 ms CPU encode + 1555 ms GPU drain** → GPU-bound, not CPU-encoding. Linear in

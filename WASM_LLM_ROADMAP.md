@@ -1,9 +1,9 @@
 # 📋 QUALIA ENGINE — MASTER EXECUTION ROADMAP
 
 **Date:** 2026-06-19 · **Owner:** Qualia (Timothy Charles Holborn, inventor/curator)
-**Status:** Phase 4 (AOT Ingestion) secured. Phase 5 (throughput) — decode root cause **nailed by
-direct profiling**: WebGPU queue-submit IPC overhead (64 submits/token × ~24 ms). Resident output
-projection (5.3) done; next = single-submit forward (5.4, §Part 3).
+**Status:** Phase 4 (AOT Ingestion) secured. **Phase 5 (throughput) GATE CLEARED — decode 0.6 → 5.9
+tok/s (~10×, gate was >2.0)** by routing Q/K/V projection through the parallel GEMM (the attention
+shader was `@workgroup_size(1)`). Coherent `Paris.` held. (§Part 3.)
 **Companion docs:** [`WASM_LLM_ENDGAME.md`](WASM_LLM_ENDGAME.md) · [`wasm_llm_planning.md`](wasm_llm_planning.md) (per-step log) · [`qualia-llm-future-updates.md`](qualia-llm-future-updates.md) (V2 vision)
 
 ---
@@ -50,9 +50,28 @@ revertable. Then port `llmdemo/index.html` to `loadOrCompileQ42` (it keeps its O
 
 ---
 
-## ⚡ PART 3 — DECODE THROUGHPUT (post-gate) — 🎯 ROOT CAUSE NAILED: WebGPU submit IPC (Phase 5, 2026-06-19)
+## ⚡ PART 3 — DECODE THROUGHPUT — ✅ GATE CLEARED: 0.6 → 5.9 tok/s (Phase 5, 2026-06-19)
 
-**Standing number:** sustained decode ~0.6 tok/s (~1747 ms/token).
+**Result:** sustained decode **5.9 tok/s** (was 0.6; gate >2.0 ✅), coherent `Paris.`. forward
+52437→4452 ms (~12×), GPU drain 1577→114 ms/token (~14×). The fix was Phase 5.5 Option B — see below.
+
+**The win (Phase 5.5, commit `73489421`):** `fused_attention.wgsl` was `@workgroup_size(1)` — one
+thread per head doing the entire Q/K/V projection GEMM serially (~15 threads on a 5000-core Ampere,
+~0.3% occupancy). Option B routes Q/K/V **projection** through the parallel `fused_transformer.wgsl`
+GEMM (dedicated proj buffers + 3 staged GemmParams + `proj_row_stride`), leaving the attention shader
+SDPA-only. Decode forward + prefill + shared tail all wired. The four prior hypotheses (dispatch
+fusion, resident logits, resident norms, single-submit) each gave ~0 tok/s — all real correctness/
+hygiene wins, but none touched the attention shader, which is where the time actually was.
+
+**Next (optional, post-gate):** argmax is now the largest single item (~20 ms/token); attention SDPA
+occupancy is the next compute lever if more headroom is wanted. Temporary `[PROFILE]` timing still in
+tree — strip at sign-off.
+
+---
+
+### ◾ Historical: the hunt (superseded by the win above)
+
+**Standing number (pre-fix):** sustained decode ~0.6 tok/s (~1747 ms/token).
 
 **Direct attribution (CPU-side `js_sys::Date::now()` phase timing, not assumption):**
 - decode = **98.7% forward**; argmax only ~21 ms/token (`forward=52441ms argmax=667ms / 32 tok`).
