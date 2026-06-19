@@ -6012,7 +6012,6 @@ impl QTensorEngine {
         // cursors), so KV/work-buffer visibility relies on WebGPU intra-encoder barriers.
         let mut layer_uniform_cursors = Mc8ChunkUniformCursors { attn: 0, elem: 0, gemm: 0 };
         let mut enc = WasmGpuPipeline::begin(self);
-        let _t_enc = js_sys::Date::now();
         for layer in 0..limit {
             if layer > 0 && (layer % MC8_LAYERS_PER_ENCODER) == 0 {
                 self.mc8_flush(&mut enc);
@@ -6180,19 +6179,8 @@ impl QTensorEngine {
         }
         // Phase 5.4: ONE submit for the whole forward (or per chunk if n_layer > MC8_LAYERS_PER_ENCODER).
         self.mc8_flush(&mut enc);
-        let _enc_ms = js_sys::Date::now() - _t_enc;
-        let _t_rb = js_sys::Date::now();
         if ran > 0 && !self.pipeline_read_hidden(emb_dim, hidden).await {
             return 0;
-        }
-        if token_idx % 16 == 0 {
-            wlog(&format!(
-                "[PROFILE-FWD] tok={} layers={} cpu_encode={:.1}ms gpu_readback_drain={:.1}ms",
-                token_idx,
-                ran,
-                _enc_ms,
-                js_sys::Date::now() - _t_rb
-            ));
         }
         ran
     }
