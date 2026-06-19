@@ -683,6 +683,85 @@ impl QTensorEngine {
         true
     }
 
+    /// Phase 5.4: upload every layer's attn_norm + ffn_norm weights to a resident buffer **once**
+    /// (slot `2L` = attn_norm, `2L+1` = ffn_norm; per-slot stride 256-aligned for binding), so the
+    /// hot-path RMSNorm binds a per-layer sub-range instead of `write_buffer`-ing the shared
+    /// single-layer `norm_weight_buf` every layer. Removes the second per-layer write_buffer race
+    /// (the first being the super-arena uniforms) that forces the per-layer submit flush.
+    fn mc8_upload_resident_norms(&mut self, index: &crate::gguf_sharder::GgufTensorIndex) -> bool {
+        if self.mc8_norm_resident_buf.is_some() {
+            return true;
+        }
+        let n_layer = index.hyperparams.n_layer;
+        let n_embd = index.hyperparams.n_embd as usize;
+        if n_layer == 0 || n_embd == 0 || n_embd > MAX_HIDDEN_DIM {
+            return false;
+        }
+        let mmap_arc = match self.gguf_mmap.clone() {
+            Some(a) => a,
+            None => return false,
+        };
+        let mmap: &[u8] = &mmap_arc;
+        let tds = index.tensor_data_start;
+        let stride_bytes = (((n_embd * 4) + 255) & !255) as u64;
+        let slots = n_layer as u64 * 2;
+        let buf = self.gpu_device().create_buffer(&wgpu::BufferDescriptor {
+            label: Some("MC8ResidentNorms"),
+            size: slots * stride_bytes,
+            usage: wgpu::BufferUsages::STORAGE | wgpu::BufferUsages::COPY_DST,
+            mapped_at_creation: false,
+        });
+        let queue = self.gpu_queue();
+        let mut tmp = [0f32; MAX_HIDDEN_DIM];
+        for layer in 0..n_layer {
+            let t = index.get_layer_tensors(layer);
+            if let Some(info) = t.attn_norm.as_ref() {
+                if dequant_norm_row_into(mmap, tds, info, &mut tmp) < n_embd {
+                    return false;
+                }
+                let off = (2 * layer as u64) * stride_bytes;
+                queue.write_buffer(&buf, off, bytemuck::cast_slice(&tmp[..n_embd]));
+            }
+            if let Some(info) = t.ffn_norm.as_ref() {
+                if dequant_norm_row_into(mmap, tds, info, &mut tmp) < n_embd {
+                    return false;
+                }
+                let off = (2 * layer as u64 + 1) * stride_bytes;
+                queue.write_buffer(&buf, off, bytemuck::cast_slice(&tmp[..n_embd]));
+            }
+        }
+        self.mc8_norm_resident_buf = Some(buf);
+        self.mc8_norm_stride = stride_bytes as u32;
+        wlog(&format!(
+            "[MC8] resident norm weights uploaded once: {} slots × {} B",
+            slots, stride_bytes
+        ));
+        true
+    }
+
+    /// RMSNorm weight source: the resident norm arena sub-range (no per-layer upload → race-free)
+    /// when available, else the per-layer `norm_weight_buf` upload fallback. `is_ffn` picks the
+    /// ffn_norm slot (`2L+1`) vs attn_norm (`2L`).
+    fn mc8_norm_source(
+        &self,
+        mmap: &[u8],
+        tensor_data_start: u64,
+        info: &GgufTensorInfo,
+        n_embd: usize,
+        layer: u32,
+        is_ffn: bool,
+    ) -> Option<(&wgpu::Buffer, wgpu::BufferAddress)> {
+        if let Some(buf) = self.mc8_norm_resident_buf.as_ref() {
+            let slot = 2u64 * layer as u64 + if is_ffn { 1 } else { 0 };
+            Some((buf, slot * self.mc8_norm_stride as u64))
+        } else {
+            if !self.upload_norm_weights(mmap, tensor_data_start, info, n_embd) {
+                return None;
+            }
+            Some((self.norm_weight_buf.as_ref().unwrap(), 0))
+        }
+    }
+
     /// Phase 4: boot from a `.q42` weight container. Validates integrity (CRC via `from_q42`), builds
     /// a synthetic `GgufTensorIndex` from the manifest, points the byte source at the `.q42` bytes
     /// (`tensor_data_start = 0`, absolute blob offsets), reserves the GEMM/KV arenas, and uploads the
@@ -716,6 +795,9 @@ impl QTensorEngine {
         }
         if !self.mc8_upload_resident_logits(&index) {
             wlog("[Q42] resident logits projection skipped — per-token upload fallback");
+        }
+        if !self.mc8_upload_resident_norms(&index) {
+            wlog("[Q42] resident norm weights skipped — per-layer upload fallback");
         }
         wlog(&format!(
             "[Q42] boot OK: {} tensors, {} layers (synthetic GGUF index; weights resident)",
@@ -2325,6 +2407,13 @@ pub struct QTensorEngine {
     mc8_logits_resident_buf: Option<wgpu::Buffer>,
     #[cfg(target_arch = "wasm32")]
     mc8_logits_row_bytes: u32,
+    /// Phase 5.4: all layers' attn_norm + ffn_norm weights resident (slot 2L = attn, 2L+1 = ffn),
+    /// so RMSNorm binds a per-layer sub-range instead of re-`write_buffer`ing a shared single-layer
+    /// `norm_weight_buf` every layer (the second per-layer write_buffer race blocking single-submit).
+    #[cfg(target_arch = "wasm32")]
+    mc8_norm_resident_buf: Option<wgpu::Buffer>,
+    #[cfg(target_arch = "wasm32")]
+    mc8_norm_stride: u32,
 }
 
 impl QTensorEngine {
@@ -2885,6 +2974,10 @@ impl QTensorEngine {
             mc8_logits_resident_buf: None,
             #[cfg(target_arch = "wasm32")]
             mc8_logits_row_bytes: 0,
+            #[cfg(target_arch = "wasm32")]
+            mc8_norm_resident_buf: None,
+            #[cfg(target_arch = "wasm32")]
+            mc8_norm_stride: 0,
         })
     }
 
@@ -3356,6 +3449,10 @@ impl QTensorEngine {
         // per-token re-upload in the decode argmax).
         if !self.mc8_upload_resident_logits(&index) {
             wlog("[MC8] resident logits projection skipped at init — per-token upload fallback");
+        }
+        // Phase 5.4: norm weights resident (removes the per-layer norm write_buffer race).
+        if !self.mc8_upload_resident_norms(&index) {
+            wlog("[MC8] resident norm weights skipped at init — per-layer upload fallback");
         }
         let kv_cache_bytes = self.kv_cache_bytes();
         Ok(GgufLoadReport {
@@ -5912,12 +6009,15 @@ impl QTensorEngine {
             };
             let mut enc = WasmGpuPipeline::begin(self);
             let attn_src = if used_attn_norm {
-                if let Some(norm) = tensors.attn_norm.as_ref() {
-                    if !self.upload_norm_weights(mmap, index.tensor_data_start, norm, n_embd) {
-                        break;
-                    }
-                }
-                if let Some(off) = uniforms.attn_norm_elem_off {
+                if let (Some(norm), Some(off)) =
+                    (tensors.attn_norm.as_ref(), uniforms.attn_norm_elem_off)
+                {
+                    let (norm_b, norm_b_off) = match self
+                        .mc8_norm_source(mmap, index.tensor_data_start, norm, n_embd, layer, false)
+                    {
+                        Some(v) => v,
+                        None => break,
+                    };
                     self.encode_elem_offset(
                         &mut enc,
                         ELEM_OP_RMS_NORM,
@@ -5926,8 +6026,8 @@ impl QTensorEngine {
                         batch_buf,
                         0,
                         geom.batch_in_bytes,
-                        norm_buf,
-                        0,
+                        norm_b,
+                        norm_b_off,
                         geom.n_embd_bytes,
                         prefill_scratch,
                         0,
@@ -7367,9 +7467,12 @@ impl QTensorEngine {
 
         // Part 3s — FFN block: norm + gate/up (one submit via dynamic offsets + weight ping-pong).
         if let Some(norm) = tensors.ffn_norm.as_ref() {
-            if !self.upload_norm_weights(mmap, index.tensor_data_start, norm, n_embd) {
-                return false;
-            }
+            let (norm_b, norm_b_off) = match self
+                .mc8_norm_source(mmap, index.tensor_data_start, norm, n_embd, layer, true)
+            {
+                Some(v) => v,
+                None => return false,
+            };
             self.encode_elem_offset(
                 pipeline,
                 ELEM_OP_RMS_NORM,
@@ -7378,8 +7481,8 @@ impl QTensorEngine {
                 batch_buf,
                 0,
                 batch_in_bytes,
-                norm_buf,
-                0,
+                norm_b,
+                norm_b_off,
                 n_embd_bytes,
                 work_b,
                 0,
@@ -7648,12 +7751,15 @@ impl QTensorEngine {
             };
             let mut enc = WasmGpuPipeline::begin(self);
             let attn_src = if used_attn_norm {
-                if let Some(norm) = tensors.attn_norm.as_ref() {
-                    if !self.upload_norm_weights(mmap, index.tensor_data_start, norm, n_embd) {
-                        return false;
-                    }
-                }
-                if let Some(off) = uniforms.attn_norm_elem_off {
+                if let (Some(norm), Some(off)) =
+                    (tensors.attn_norm.as_ref(), uniforms.attn_norm_elem_off)
+                {
+                    let (norm_b, norm_b_off) = match self
+                        .mc8_norm_source(mmap, index.tensor_data_start, norm, n_embd, layer, false)
+                    {
+                        Some(v) => v,
+                        None => return false,
+                    };
                     self.encode_elem_offset(
                         &mut enc,
                         ELEM_OP_RMS_NORM,
@@ -7662,8 +7768,8 @@ impl QTensorEngine {
                         batch_buf,
                         0,
                         geom.batch_in_bytes,
-                        norm_buf,
-                        0,
+                        norm_b,
+                        norm_b_off,
                         geom.n_embd_bytes,
                         prefill_scratch,
                         0,
