@@ -3196,47 +3196,105 @@ if (caps.includes('BlackScholes')) {
     },
 
     {
-        id: 'wasm.infer',
+        id: 'wasm.initialize_webgpu',
         category: 'WASM API',
-        name: 'infer_wasm()',
-        summary: 'Browser LLM inference via Qualia native WebGPU path (gguf_bridge → llm_agent decode). Requires initialize_webgpu_engine() with a GGUF Uint8Array first. Use inferWasmStreaming() for token deltas.',
+        name: 'initialize_webgpu_engine()',
+        summary: 'Boots the native WebGPU LLM engine from a model Uint8Array. Dual-format: peeks the 4-byte magic — a raw GGUF is parsed into a GgufTensorIndex, or a "Q42W" .q42 container boots zero-parse via adopt_resident_q42 (weights + hyperparams + tokenizer). All weights upload to VRAM once (resident). Phase 5 decode = parallel Q/K/V projection + single-submit forward → ~5.9 tok/s on SmolLM2-360M (Chrome WebGPU / NVIDIA Ampere).',
         params: [
-            { name: 'prompt', type: 'string', desc: 'User prompt string' },
+            { name: 'model_data', type: 'Uint8Array', desc: 'Raw GGUF bytes, or a compiled .q42 container (Q42W magic)' },
         ],
-        returns: 'Promise<string> — generated text (placeholder in current build)',
+        returns: 'Promise<void>',
         snippets: [
             js(`
-import init, { initialize_webgpu_engine, infer_wasm } from './qualia_core_db.js';
+import init, { initialize_webgpu_engine, compileGgufToQ42, q42FormatVersion } from '../playground/qualia_core_db.js';
+import { loadOrCompileQ42 } from '../js/opfs-model-cache.js';
 await init();
 
-// Load GGUF model from OPFS (or fetch from network)
-const modelBytes = await (await fetch('/models/phi3-mini.gguf')).arrayBuffer();
-await initialize_webgpu_engine(new Uint8Array(modelBytes));
-
-const response = await infer_wasm('What is the capital of France?');
-console.log(response);
+// AOT: compile GGUF → .q42 once, cache in OPFS, warm-boot zero-parse thereafter.
+const { bytes } = await loadOrCompileQ42(
+  'https://huggingface.co/HuggingFaceTB/SmolLM2-360M-Instruct-GGUF/resolve/main/smollm2-360m-instruct-q4_k_m.gguf',
+  'SmolLM2-360M-Instruct-Q4_K_M',
+  { compile: compileGgufToQ42, formatVersion: q42FormatVersion() },
+);
+await initialize_webgpu_engine(bytes);  // boots from the .q42
+console.log('Engine resident — ready to generate');
 `),
         ],
     },
 
     {
-        id: 'wasm.initialize_webgpu',
+        id: 'wasm.compileGgufToQ42',
         category: 'WASM API',
-        name: 'initialize_webgpu_engine()',
-        summary: 'Initializes the WebGPU LLM inference engine from a raw GGUF model Uint8Array. Parses the GGUF header, builds the NQuin pointer map via GgufTensorIndex, and instantiates the wgpu device. Must be called before infer_wasm().',
+        name: 'compileGgufToQ42()',
+        summary: 'Ahead-Of-Time compiler: turns a GGUF Uint8Array into a self-contained .q42 weight container — 16 KB-page-aligned weight blobs + hyperparams + tokenizer, "Q42W" magic, CRC-32C integrity. Run once; cache the .q42 in OPFS (loadOrCompileQ42). Every boot after is a zero-parse .q42 load and all inference runs from the .q42; the GGUF is never re-touched.',
         params: [
-            { name: 'gguf_data', type: 'Uint8Array', desc: 'Raw bytes of a GGUF model file' },
+            { name: 'gguf', type: 'Uint8Array', desc: 'Raw GGUF model bytes' },
+            { name: 'page_log2', type: 'u16', desc: 'Page-alignment exponent (14 = 16 KB pages, the default)' },
         ],
-        returns: 'Promise<void>',
+        returns: 'Uint8Array — the .q42 container',
         snippets: [
             js(`
-import init, { initialize_webgpu_engine } from './qualia_core_db.js';
+import init, { compileGgufToQ42, q42FormatVersion } from '../playground/qualia_core_db.js';
 await init();
+const gguf = new Uint8Array(await (await fetch('model.gguf')).arrayBuffer());
+const q42 = compileGgufToQ42(gguf, 14);
+console.log('format v' + q42FormatVersion() + ', ' + (q42.length / 1048576).toFixed(1) + ' MB .q42');
+`),
+        ],
+    },
 
-const resp = await fetch('/models/phi3-mini-4k-q4.gguf');
-const buf  = await resp.arrayBuffer();
-await initialize_webgpu_engine(new Uint8Array(buf));
-console.log('WebGPU engine ready');
+    {
+        id: 'wasm.q42FormatVersion',
+        category: 'WASM API',
+        name: 'q42FormatVersion()',
+        summary: 'Returns the .q42 weight-container format version this build emits/consumes. Used as the OPFS cache key by loadOrCompileQ42 — a cached .q42 whose header version differs is discarded and recompiled, so an engine upgrade never boots a stale container.',
+        params: [],
+        returns: 'number — current .q42 format version',
+        snippets: [
+            js(`import init, { q42FormatVersion } from '../playground/qualia_core_db.js';\nawait init();\nconsole.log('q42 format v' + q42FormatVersion());`),
+        ],
+    },
+
+    {
+        id: 'wasm.inferWasmStreaming',
+        category: 'WASM API',
+        name: 'inferWasmStreaming()',
+        summary: 'Streaming autoregressive decode on the resident WebGPU engine (single-submit forward per token, ~5.9 tok/s on SmolLM2-360M). Calls a callback with each token delta as it is produced. The prompt must already include any chat-template tokens. inferWasmAsync is the alias the demos use.',
+        params: [
+            { name: 'prompt', type: 'string', desc: 'Full prompt (include chat-template markers if applicable)' },
+            { name: 'on_token', type: 'Function', desc: 'Called with each streamed token-delta string' },
+        ],
+        returns: 'Promise<string> — the full generated text',
+        snippets: [
+            js(`
+import init, { inferWasmStreaming } from '../playground/qualia_core_db.js';
+// (initialize_webgpu_engine must have run first)
+let out = '';
+const full = await inferWasmStreaming('The capital of France is', (delta) => {
+  out += delta;
+  document.getElementById('output').textContent = out;
+});
+console.log(full);
+`),
+        ],
+    },
+
+    {
+        id: 'wasm.infer',
+        category: 'WASM API',
+        name: 'infer_wasm()',
+        summary: 'Non-streaming browser LLM inference on the native WebGPU path (gguf_bridge → llm_agent decode). Requires initialize_webgpu_engine() first (GGUF or .q42). For token-by-token UX use inferWasmStreaming(). Phase 5: coherent at ~5.9 tok/s on SmolLM2-360M.',
+        params: [
+            { name: 'prompt', type: 'string', desc: 'User prompt (include chat-template markers if applicable)' },
+        ],
+        returns: 'Promise<string> — generated text',
+        snippets: [
+            js(`
+import init, { initialize_webgpu_engine, infer_wasm } from '../playground/qualia_core_db.js';
+await init();
+const modelBytes = await (await fetch('models/SmolLM2-360M-Instruct-Q4_K_M.gguf')).arrayBuffer();
+await initialize_webgpu_engine(new Uint8Array(modelBytes));
+console.log(await infer_wasm('The capital of France is'));
 `),
         ],
     },
