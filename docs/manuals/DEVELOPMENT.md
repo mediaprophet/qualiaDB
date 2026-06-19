@@ -39,23 +39,43 @@ dx serve --platform desktop
 
 ### WASM browser module
 
-**Portal slim** (spatial demo, GitHub Pages — viewport + U3 acoustic):
+**Main portal + LLM engine** (`docs/pkg/qualia/` — spatial demo, U3 acoustic, **and the WASM
+WebGPU LLM**). Use the script — it sets the SIMD/8 MB-stack/4 GB-memory RUSTFLAGS the LLM call
+tree needs and publishes the canonical `qualia.*` names:
 
 ```powershell
-$env:RUSTFLAGS = "-C target-feature=+simd128"
-wasm-pack build crates/qualia-core-db `
-  --target web --release --out-dir crates/qualia-core-db/pkg-qualia `
-  --no-default-features -- --features portal
-# Copy → docs/pkg/qualia/ (see scripts/package-qualia-wasm.ps1)
+./scripts/package-qualia-wasm.ps1
+# = wasm-pack build … --no-default-features --features portal,wasm-llm,wasm-logic,wasm-scientific
 ```
 
-**Full playground** (logic evaluators, API explorer):
+**Full playground** (the 6 science evaluators + API explorer + the LLM/q42 exports). This is the
+shared `docs/playground/qualia_core_db.*` artifact imported by `science-playground.html`,
+`benchmark.html`, `llmdemo`, etc. — keep it a strict **superset** (no science export dropped):
+
+```powershell
+$env:RUSTFLAGS = "-C target-feature=+simd128 -C link-arg=-zstack-size=8388608 -C link-arg=--max-memory=4294967296"
+wasm-pack build crates/qualia-core-db --target web --out-dir pkg-playground --release -- `
+  --no-default-features --features portal,wasm-llm,wasm-logic,wasm-scientific,wasm-playground
+cp crates/qualia-core-db/pkg-playground/qualia_core_db.{js,d.ts} docs/playground/
+cp crates/qualia-core-db/pkg-playground/qualia_core_db_bg.wasm{,.d.ts} docs/playground/
+```
+
+#### Browser LLM (`.q42` AOT, Phase 5)
+
+The browser engine compiles a GGUF **once** to a self-contained `.q42` container
+(`compileGgufToQ42`, OPFS-cached via `docs/js/opfs-model-cache.js::loadOrCompileQ42`) and then
+boots zero-parse from it — all inference runs from the `.q42`. Decode is ~5.9 tok/s on
+SmolLM2-360M (Q4_K_M). Key source: `gguf_bridge.rs`, `q42_weight.rs`, `shaders/fused_attention.wgsl`,
+`shaders/fused_transformer.wgsl`, `shaders/fused_ffn.wgsl`. Background:
+[`../../WASM_LLM_ROADMAP.md`](../../WASM_LLM_ROADMAP.md), [`../../WASM_LLM_ENDGAME.md`](../../WASM_LLM_ENDGAME.md).
+
+**Headless verification harnesses** (Playwright + Chrome WebGPU):
 
 ```bash
-wasm-pack build crates/qualia-core-db \
-  --target web --release --out-dir docs/playground \
-  --out-name qualia_core_db --no-default-features --no-typescript \
-  -- --features wasm-full
+node agent-tools/wasm-mc2-test.mjs          # decode coherence + tok/s (wasm-llm-test.html)
+WASM_MODEL=models/smollm2-360m-instruct-q8_0.gguf node agent-tools/wasm-mc2-test.mjs  # quant check
+node agent-tools/llmdemo-test.mjs           # end-to-end llmdemo: GGUF→.q42→OPFS→generate
+node agent-tools/gguf-types.mjs <model.gguf>  # dump per-tensor quant types
 ```
 
 Manual: [`qualia-wasm-portal.md`](qualia-wasm-portal.md). Verify: `node docs/tests/phenomenal-verify.mjs`.

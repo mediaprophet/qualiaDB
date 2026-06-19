@@ -65,9 +65,11 @@ Full build instructions, CLI reference, and benchmark guide: [docs/manuals/DEVEL
 
 ## Current status
 
-**v0.0.12-dev** — active development, pre-release.
+**v0.0.18-dev** — active development, pre-release.
 
-This branch includes: in-process LLM inference with GPU dispatch; SPARQL 1.1 + RDF-Star engine; full deontic / epistemic / LTL / paraconsistent modality stack; SHACL biosciences, chemistry, and biomedical extensions; DID Verifiable Credentials; SocialWebNet DNSSEC peer bootstrap; W3C Solid export; 539+ tests.
+This branch includes: in-process LLM inference with GPU dispatch; **browser-native WASM + WebGPU LLM decode at ~5.9 tok/s** (SmolLM2-360M, coherent, zero-heap hot loop) booting from a self-contained `.q42` AOT container cached in OPFS; SPARQL 1.1 + RDF-Star engine; full deontic / epistemic / LTL / paraconsistent modality stack; SHACL biosciences, chemistry, and biomedical extensions; DID Verifiable Credentials; SocialWebNet DNSSEC peer bootstrap; W3C Solid export; 539+ tests.
+
+The browser engine is pure Rust→WASM (no Ollama / llama.cpp / Python). Live demos: [`online-llm-demo.html`](https://mediaprophet.github.io/qualiaDB/online-llm-demo.html) · [`llmdemo`](https://mediaprophet.github.io/qualiaDB/llmdemo/). See [`WASM_LLM_ROADMAP.md`](WASM_LLM_ROADMAP.md).
 
 Known gaps before v0.1.0: ML-DSA-65 (FIPS 204) signing is now **real** (via `fips204`), but VC-issuance wiring and multi-Quin storage of the large signatures remain; full ZK proof backend (currently commitment-only, not real zk-SNARKs). See [CRYPTO_IMPLEMENTATION_PLAN.md](CRYPTO_IMPLEMENTATION_PLAN.md), [docs/CRYPTO_STATUS_2026-06-15.md](docs/CRYPTO_STATUS_2026-06-15.md), and [TODO.md](TODO.md).
 

@@ -392,6 +392,28 @@ When `qualia-core-db` is compiled to the `wasm32-unknown-unknown` target, `infer
 - **Asynchronous Token Routing**: Inference tokens are asynchronously streamed back into the Dioxus or generic UI state via the captured `F: 'static` closure.
 - **WebGPU Fallback**: If the daemon is unreachable, the execution falls back to the in-browser WebGPU engine (subject to RAM constraints).
 
+### Browser WebGPU Decode Pipeline (Phase 5 — `gguf_bridge.rs` + `shaders/`)
+
+The in-browser path (`#[cfg(target_arch = "wasm32")]`) is a fully GPU-resident decode loop:
+
+- **`.q42` AOT container** — a GGUF is compiled **once** (`q42_weight.rs::compile_gguf_to_q42`,
+  `compileGgufToQ42` WASM export) into a 16 KB-page-aligned, `Q42W`-magic, CRC-32C container holding
+  weight blobs + hyperparams + tokenizer. Cached in OPFS (`loadOrCompileQ42`); `initialize_webgpu_engine`
+  boots **zero-parse** from it (`adopt_resident_q42`). All inference thereafter reads from the `.q42`.
+- **Resident everything** — layer weights (7 role buffers), the tied `token_embd` output/logits
+  projection (~50 MB), and per-layer attn/ffn norms are uploaded to VRAM **once at init**. No per-token
+  or per-layer `write_buffer` re-uploads.
+- **Single-submit forward** — all transformer layers encode into one `CommandEncoder` with monotonic
+  dynamic-offset uniform cursors; **one `queue.submit()` per token**. KV-cache + work-buffer visibility
+  rely on WebGPU's automatic intra-encoder barriers (per-layer flushes removed).
+- **Parallel projections + SDPA-only attention** — Q/K/V/O/gate/up/down all run on the parallel
+  `fused_transformer.wgsl` GEMM (saturating the GPU); `fused_attention.wgsl` does only RoPE + KV write +
+  scaled-dot-product attention. (Its earlier `@workgroup_size(1)` serial projection — ~15 threads on a
+  5000-core GPU — was the throughput wall.)
+
+Measured **~5.9 tok/s** on SmolLM2-360M Q4_K_M (coherent, Chrome WebGPU / NVIDIA Ampere; up from 0.6).
+See `WASM_LLM_ROADMAP.md` and `WASM_LLM_ENDGAME.md` for the full progression.
+
 ---
 
 ## 9. Capability Profiles (`profiles.rs`, `resource_catalog.rs`)

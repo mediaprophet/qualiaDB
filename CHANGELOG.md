@@ -6,6 +6,45 @@ The format follows [Keep a Changelog](https://keepachangelog.com/en/1.0.0/).
 
 ---
 
+## [0.0.18] — 2026-06-19
+
+### Added — Browser-native WASM + WebGPU LLM inference (Phase 2B → Phase 5)
+
+- **In-browser decode at ~5.9 tok/s** on SmolLM2-360M (Q4_K_M), coherent, zero-heap hot loop,
+  on a stock NVIDIA Ampere via Chrome WebGPU — up from 0.6 tok/s. Generalised across quant
+  (Q8_0 verified). The whole engine is native Rust→WASM (no Ollama / llama.cpp / Python).
+- **`.q42` AOT weight container** (`q42_weight.rs`): compile a GGUF once → a self-contained,
+  16 KB-page-aligned container (weight blobs + hyperparams + tokenizer, `Q42W` magic, CRC-32C).
+  `compileGgufToQ42` + `q42FormatVersion` WASM exports; cached in OPFS; warm boots are a
+  zero-parse `.q42` load. All inference runs from the `.q42` thereafter.
+- **OPFS model cache** (`docs/js/opfs-model-cache.js`): `loadGgufCached` + `loadOrCompileQ42`
+  stream models to disk (no whole-model JS-heap blob) and serve instantly on repeat loads.
+
+### Changed — Phase 5 decode throughput (the ~10× arc)
+
+- **Parallel Q/K/V projection (Phase 5.5, the win):** `fused_attention.wgsl` was
+  `@workgroup_size(1)` — one thread per head doing the entire projection GEMM serially (~15
+  threads on a 5000-core GPU). Routed Q/K/V projection through the parallel
+  `fused_transformer.wgsl` GEMM (dedicated proj buffers + `proj_row_stride`), leaving the
+  attention kernel SDPA-only. forward 52437→4452 ms (~12×); GPU drain 1577→114 ms/token.
+- **Single-submit forward (Phase 5.4):** one `CommandEncoder` + monotonic uniform cursors
+  across all layers → 64 submits/token → ~2 (per-layer `mc8_flush` removed; KV visibility via
+  WebGPU intra-encoder barriers).
+- **Resident weights / logits / norms:** layer weights, the tied `token_embd` output/logits
+  projection (~50 MB), and per-layer attn/ffn norms uploaded to VRAM once at init — no
+  per-token/per-layer `write_buffer` re-uploads.
+- **Modular fused FFN (Phase 5.0):** `gate·SiLU·up` collapsed into one compute pass, composed
+  from `math_core`/`fused_ffn` WGSL fragments in Rust, with a const Phase-6 deontic-taint seam.
+
+### Changed — Productization
+
+- **Playground WASM refreshed** to the superset (`portal,wasm-llm,wasm-logic,wasm-scientific,
+  wasm-playground`): 75 exports, **0 dropped** (science exports retained) + the q42/async-LLM
+  exports — brings the Phase 5 engine to the shared `docs/playground` artifact.
+- **`llmdemo` + `online-llm-demo`** run the `.q42` AOT/OPFS pipeline end-to-end at ~5.9 tok/s.
+
+---
+
 ## [0.0.17] — 2026-06-17
 
 ### Added — U3 AcousticPlane (symbolic audio on Pages)
