@@ -949,6 +949,113 @@ impl GgufTokenizer {
         })
     }
 
+    /// Phase 4 v3: serialize the tokenizer into a compact, contiguous `.q42` section (no page
+    /// alignment needed). Only the source fields are written (vocab / merges / bos / eos / add_bos /
+    /// pre); the derived maps are rebuilt by [`from_q42_section`]. Heap use here is load-time only.
+    pub fn to_q42_section(&self) -> Vec<u8> {
+        let mut out = Vec::with_capacity(1 << 20);
+        out.extend_from_slice(b"Q42T");
+        out.extend_from_slice(&1u16.to_le_bytes()); // section version
+        out.extend_from_slice(&0u16.to_le_bytes()); // flags
+        out.extend_from_slice(&self.bos_token_id.to_le_bytes());
+        out.extend_from_slice(&self.eos_token_id.to_le_bytes());
+        out.push(self.add_bos_token as u8);
+        out.extend_from_slice(&[0u8; 3]);
+        let put_str = |o: &mut Vec<u8>, s: &str| {
+            o.extend_from_slice(&(s.len() as u32).to_le_bytes());
+            o.extend_from_slice(s.as_bytes());
+        };
+        put_str(&mut out, &self.pre_type);
+        out.extend_from_slice(&(self.vocab.len() as u32).to_le_bytes());
+        for t in &self.vocab {
+            put_str(&mut out, t);
+        }
+        out.extend_from_slice(&(self.merge_pairs.len() as u32).to_le_bytes());
+        for (l, r) in &self.merge_pairs {
+            put_str(&mut out, l);
+            put_str(&mut out, r);
+        }
+        out
+    }
+
+    /// Phase 4 v3: rebuild a tokenizer from a `.q42` tokenizer section — bypasses GGUF KV string-key
+    /// parsing entirely. Fully bounds-checked (the section is untrusted input). Returns `None` on any
+    /// malformed field.
+    pub fn from_q42_section(data: &[u8]) -> Option<Self> {
+        let mut p = 0usize;
+        let take = |p: &mut usize, n: usize| -> Option<&[u8]> {
+            let end = p.checked_add(n)?;
+            if end > data.len() {
+                return None;
+            }
+            let s = &data[*p..end];
+            *p = end;
+            Some(s)
+        };
+        let take_u32 = |p: &mut usize| -> Option<u32> {
+            Some(u32::from_le_bytes(take(p, 4)?.try_into().ok()?))
+        };
+        let take_str = |p: &mut usize| -> Option<String> {
+            let len = take_u32(p)? as usize;
+            Some(String::from_utf8_lossy(take(p, len)?).into_owned())
+        };
+        if take(&mut p, 4)? != b"Q42T" {
+            return None;
+        }
+        let _ver = u16::from_le_bytes(take(&mut p, 2)?.try_into().ok()?);
+        let _flags = take(&mut p, 2)?;
+        let bos = take_u32(&mut p)?;
+        let eos = take_u32(&mut p)?;
+        let add_bos = take(&mut p, 1)?[0] != 0;
+        let _pad = take(&mut p, 3)?;
+        let pre_type = take_str(&mut p)?;
+        let n_vocab = take_u32(&mut p)? as usize;
+        if n_vocab > 1_000_000 {
+            return None;
+        }
+        let mut vocab = Vec::with_capacity(n_vocab);
+        for _ in 0..n_vocab {
+            vocab.push(take_str(&mut p)?);
+        }
+        let n_merges = take_u32(&mut p)? as usize;
+        if n_merges > 5_000_000 {
+            return None;
+        }
+        let mut merge_pairs = Vec::with_capacity(n_merges);
+        for _ in 0..n_merges {
+            let l = take_str(&mut p)?;
+            let r = take_str(&mut p)?;
+            merge_pairs.push((l, r));
+        }
+        // Rebuild the derived maps exactly as `try_parse` does, so encode/decode are identical.
+        let mut t2id: Vec<(String, u32)> = vocab
+            .iter()
+            .enumerate()
+            .map(|(i, s)| (s.clone(), i as u32))
+            .collect();
+        t2id.sort_by(|a, b| b.0.len().cmp(&a.0.len()));
+        let token_to_id_map: HashMap<String, u32> =
+            t2id.iter().map(|(s, id)| (s.clone(), *id)).collect();
+        let mut special_tokens: Vec<(String, u32)> = vocab
+            .iter()
+            .enumerate()
+            .filter(|(_, s)| s.starts_with('<') && s.ends_with('>'))
+            .map(|(i, s)| (s.clone(), i as u32))
+            .collect();
+        special_tokens.sort_by(|a, b| b.0.len().cmp(&a.0.len()));
+        Some(Self {
+            vocab,
+            bos_token_id: bos,
+            eos_token_id: eos,
+            add_bos_token: add_bos,
+            pre_type,
+            merge_pairs,
+            token_to_id_map,
+            special_tokens,
+            token_to_id: t2id,
+        })
+    }
+
     /// Tokenize `text`, prepending [`bos_token_id`] when [`add_bos_token`] is set and absent.
     pub fn encode_prompt(&self, text: &str) -> Vec<u32> {
         let mut ids = self.encode(text);

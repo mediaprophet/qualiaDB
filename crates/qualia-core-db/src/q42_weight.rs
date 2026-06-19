@@ -29,12 +29,13 @@ use crate::NQuin;
 use bytemuck::Zeroable;
 
 pub const Q42W_MAGIC: [u8; 4] = *b"Q42W";
-/// v2 added the hyperparameter block (n_embd/n_head/n_kv_head/vocab/rope) so a `.q42` is a
-/// self-contained execution container — the runtime builds the KV cache without the GGUF.
-pub const Q42W_VERSION: u16 = 2;
+/// v2 added the hyperparameter block; **v3** adds the tokenizer section (`tokenizer_offset`/`_len`)
+/// so a `.q42` is a fully self-contained execution container — weights, hyperparams, AND tokenizer,
+/// no GGUF sidecar required.
+pub const Q42W_VERSION: u16 = 3;
 /// 14 = 16 KB pages (default; minimizes page faults on large FFN blocks). 12 = 4 KB.
 pub const Q42W_DEFAULT_PAGE_LOG2: u16 = 14;
-pub const Q42_WEIGHT_HEADER_BYTES: usize = 128;
+pub const Q42_WEIGHT_HEADER_BYTES: usize = 144;
 pub const Q42_TENSOR_ENTRY_BYTES: usize = 80;
 
 // Tensor roles. 0..=6 mirror the runtime `Mc8WeightRole` GEMM roles; 7..=11 add the
@@ -109,9 +110,11 @@ pub struct Q42WeightHeader {
     pub header_crc: u32,
     /// Container-level flags (reserved: e.g. cold-section present, big-model). (offset 76)
     pub format_flags: u32,
-    // `header_crc`/`format_flags` (8B) keep the 16-aligned NQuin at offset 80, zero padding —
-    // preserving the 128B size assert and the manual LE offsets.
+    // `header_crc`/`format_flags` (8B) keep the 16-aligned NQuin at offset 80, zero padding.
     pub arch_quin: NQuin,
+    /// v3: byte offset + length of the contiguous tokenizer section (0 if absent). (offset 128/136)
+    pub tokenizer_offset: u64,
+    pub tokenizer_len: u64,
 }
 
 #[repr(C, align(16))]
@@ -179,6 +182,8 @@ impl Q42WeightHeader {
         b[72..76].copy_from_slice(&self.header_crc.to_le_bytes());
         b[76..80].copy_from_slice(&self.format_flags.to_le_bytes());
         write_nquin_le(&self.arch_quin, &mut b[80..128]);
+        b[128..136].copy_from_slice(&self.tokenizer_offset.to_le_bytes());
+        b[136..144].copy_from_slice(&self.tokenizer_len.to_le_bytes());
     }
 
     fn read_le(b: &[u8]) -> Self {
@@ -207,6 +212,8 @@ impl Q42WeightHeader {
             header_crc: u32a(72),
             format_flags: u32a(76),
             arch_quin: read_nquin_le(&b[80..128]),
+            tokenizer_offset: u64a(128),
+            tokenizer_len: u64a(136),
         }
     }
 }
@@ -311,9 +318,15 @@ pub fn compile_gguf_to_q42(input: &[u8], page_log2: u16) -> Result<Vec<u8>, Stri
         });
         cur = off + byte_len;
     }
-    let total = align_up(cur, 16);
+    let blob_region_end = cur;
 
-    // 4. Emit: header + manifest + page-aligned blobs (zero-padded gaps).
+    // Tokenizer section (v3): packed contiguous block (no page alignment) appended after the blobs,
+    // so a `.q42` can tokenize prompts with no GGUF sidecar.
+    let tok_section = crate::gguf_sharder::GgufTokenizer::from_gguf(input).to_q42_section();
+    let tokenizer_offset = align_up(blob_region_end, 16);
+    let total = align_up(tokenizer_offset + tok_section.len(), 16);
+
+    // 4. Emit: header + manifest + page-aligned blobs + tokenizer section.
     let hp = &idx.hyperparams;
     let header = Q42WeightHeader {
         magic: Q42W_MAGIC,
@@ -334,6 +347,8 @@ pub fn compile_gguf_to_q42(input: &[u8], page_log2: u16) -> Result<Vec<u8>, Stri
         header_crc: 0,
         format_flags: 0,
         arch_quin: NQuin::zeroed(),
+        tokenizer_offset: tokenizer_offset as u64,
+        tokenizer_len: tok_section.len() as u64,
     };
     let mut out = vec![0u8; total];
     header.write_le(&mut out[0..Q42_WEIGHT_HEADER_BYTES]);
@@ -354,6 +369,7 @@ pub fn compile_gguf_to_q42(input: &[u8], page_log2: u16) -> Result<Vec<u8>, Stri
         let dst = entries[k].blob_offset as usize;
         out[dst..dst + len].copy_from_slice(&input[src..src + len]);
     }
+    out[tokenizer_offset..tokenizer_offset + tok_section.len()].copy_from_slice(&tok_section);
     Ok(out)
 }
 
@@ -441,6 +457,16 @@ impl Q42TensorIndex {
     pub fn blob<'a>(&self, data: &'a [u8], entry: &Q42TensorEntry) -> &'a [u8] {
         let s = entry.blob_offset as usize;
         &data[s..s + entry.byte_len as usize]
+    }
+
+    /// The tokenizer section bytes within the container (empty if absent / out of bounds).
+    pub fn tokenizer_bytes<'a>(&self, data: &'a [u8]) -> &'a [u8] {
+        let o = self.header.tokenizer_offset as usize;
+        let l = self.header.tokenizer_len as usize;
+        match o.checked_add(l) {
+            Some(end) if l > 0 && end <= data.len() => &data[o..end],
+            _ => &[],
+        }
     }
 
     /// Build a GGUF-equivalent `GgufTensorIndex` from this manifest so the existing GGUF hot path
@@ -626,5 +652,48 @@ mod tests {
 
         assert!(checked >= 32 * 9, "expected ≥288 tensors byte-checked, got {checked}");
         eprintln!("[q42] synthetic index == GGUF: {checked} tensors byte-identical + metadata match");
+    }
+
+    /// Proves the v3 tokenizer section round-trips: a tokenizer rebuilt from the `.q42` section
+    /// encodes/decodes identically to the GGUF tokenizer. With weight byte-parity (above), this
+    /// guarantees q42-only inference produces the same tokens as the GGUF path.
+    #[test]
+    fn q42_tokenizer_roundtrip() {
+        use crate::gguf_sharder::GgufTokenizer;
+        let path = "C:/Projects/qualiaDB/docs/models/SmolLM2-360M-Instruct-Q4_K_M.gguf";
+        if !std::path::Path::new(path).exists() {
+            eprintln!("[q42] model not present — skipping");
+            return;
+        }
+        let gguf = std::fs::read(path).expect("read gguf");
+        let q42 = compile_gguf_to_q42(&gguf, 0).expect("compile");
+        let q = Q42TensorIndex::from_q42(&q42).expect("from_q42");
+
+        let tok_bytes = q.tokenizer_bytes(&q42);
+        assert!(!tok_bytes.is_empty(), "tokenizer section present");
+        let tok_q42 = GgufTokenizer::from_q42_section(tok_bytes).expect("from_q42_section");
+        let tok_gguf = GgufTokenizer::from_gguf(&gguf);
+
+        assert_eq!(tok_q42.bos_token_id, tok_gguf.bos_token_id, "bos");
+        assert_eq!(tok_q42.eos_token_id, tok_gguf.eos_token_id, "eos");
+        assert_eq!(tok_q42.add_bos_token, tok_gguf.add_bos_token, "add_bos");
+        assert_eq!(tok_q42.vocab.len(), tok_gguf.vocab.len(), "vocab len");
+        for prompt in [
+            "The capital of France is",
+            "<|im_start|>user\nWhat is the capital of France?<|im_end|>\n<|im_start|>assistant\n",
+        ] {
+            assert_eq!(
+                tok_q42.encode_prompt(prompt),
+                tok_gguf.encode_prompt(prompt),
+                "encode mismatch for {prompt:?}"
+            );
+        }
+        let ids = tok_gguf.encode_prompt("The capital of France is");
+        assert_eq!(tok_q42.decode(&ids), tok_gguf.decode(&ids), "decode mismatch");
+        eprintln!(
+            "[q42] tokenizer round-trip: encode/decode identical to GGUF ({} vocab, section {} KB)",
+            tok_q42.vocab.len(),
+            tok_bytes.len() / 1024
+        );
     }
 }

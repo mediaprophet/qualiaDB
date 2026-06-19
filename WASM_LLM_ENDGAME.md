@@ -137,15 +137,22 @@ This document supersedes `wasm_llm_planning.md` for the final push of Phase 2B a
   - **Proven natively (no browser):** `q42_synthetic_index_matches_gguf` — the synthetic index returns
     **290 tensors byte-identical** to the GGUF index + matching dims/ggml_type. Identical weights →
     identical logits → identical output. Wasm compiles clean.
-* **⚠️ Tokenizer gap (surfaced — blocks q42-ONLY inference):** the `.q42` weight container carries
-  weights + hyperparams but **not the tokenizer** (vocab/merges/special tokens). So a q42-only boot
-  maps weights correctly but cannot tokenize a prompt. Literal end-to-end "Paris from q42 alone" needs
-  a **tokenizer section** (v3) — the same class of gap as the hyperparams one. This is the next step.
-* **Remaining Phase 4 (next):** (a) **tokenizer section** in `.q42` (+ `GgufTokenizer::from_q42`) →
-  enables true q42-only boot + the literal end-to-end "Paris" browser test; (b) wire
-  `run_inference_async` index branch to `to_gguf_index()` once the tokenizer lands; (c) JS **ingest
-  pipeline** (`compileGgufToQ42` → OPFS → boot from `.q42`); (d) cold CBOR-LD ontology + `NQuin.metadata`
-  in-shader flags; (e) single-buffer zero-copy bind + Web-Worker compiler farm.
+* **✅ TOKENIZER SECTION (v3) DONE — self-contained `.q42` inference WORKS END-TO-END (2026-06-19):**
+  the `.q42` now carries the tokenizer too (`GgufTokenizer::to_q42_section` / `from_q42_section` —
+  vocab/merges/specials/bos/eos/pre, packed contiguous; derived maps rebuilt on read, bypassing GGUF
+  KV string-key parsing). Header v3 (144 B) adds `tokenizer_offset`/`tokenizer_len`. `run_inference_async`
+  boots both the synthetic index AND the tokenizer from the container when `q42_resident`.
+  - **Proven natively:** `q42_tokenizer_roundtrip` — encode/decode identical to GGUF (49152 vocab,
+    1.29 MB section); plus the weight byte-parity above ⇒ q42 inference ≡ GGUF inference.
+  - **Verified end-to-end (headless Chrome):** harness compiles GGUF→`.q42` in-browser (260 MB,
+    ~1.16 s, off the TTFT clock), boots purely from `Q42W` (`[Q42] boot OK: 290 tensors, 32 layers`),
+    and outputs **`Paris. The capital of France…`** — TTFT **3891 ms** (gate held). The literal
+    "Paris strictly from a `.q42` container" milestone is met.
+* **Remaining Phase 4 (next):** (a) JS **ingest pipeline** — `compileGgufToQ42` on first load → stream
+  `.q42` to OPFS (Phase 3 writer) → boot from `.q42` thereafter (skip GGUF parse on every load); (b) cold
+  CBOR-LD ontology section + `NQuin.metadata` in-shader flag consumption; (c) single-buffer zero-copy
+  bind (bind `.q42` blobs directly, skip the arena copy) + Web-Worker compiler farm; (d) deploy the
+  rebuilt wasm (now carrying `compileGgufToQ42` + the Q42W boot gate) to the production demos.
 
 ---
 

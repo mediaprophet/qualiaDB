@@ -62,11 +62,12 @@
 <script type="module">
 import init, {
   initialize_webgpu_engine, inferWasmAsync, inferWasmStreaming, isWebgpuEngineReady,
-  releaseWebgpuEngine, getEngineVersion, init_panic_hook,
+  releaseWebgpuEngine, getEngineVersion, init_panic_hook, compileGgufToQ42,
 } from './pkg/qualia/qualia.js';
 import { loadGgufCached, clearAllOpfsModels } from './js/opfs-model-cache.js';
 
 const USE_ASYNC_GPU = new URLSearchParams(location.search).get('async') !== '0';
+const USE_Q42 = new URLSearchParams(location.search).get('q42') === '1';
 
 const CACHE_NAME = 'qualia-gguf-v1';
 const $ = id => document.getElementById(id);
@@ -129,7 +130,14 @@ $('load').onclick = async () => {
   $('loadstat').textContent = 'loading…';
   try {
     if (isWebgpuEngineReady()) { await releaseWebgpuEngine(); log('released previous engine', 'dim'); }
-    const bytes = await getModelBytes(url, $('cache').checked);
+    let bytes = await getModelBytes(url, $('cache').checked);
+    if (USE_Q42) {
+      // Phase 4: AOT-compile the GGUF to a self-contained .q42 container, then boot from it.
+      const tc = performance.now();
+      const q42 = compileGgufToQ42(bytes, 0);
+      log(`compiled .q42 (${(q42.length/1048576).toFixed(1)} MB, ${Math.round(performance.now()-tc)} ms) — booting from Q42W`, 'ok');
+      bytes = q42;
+    }
     const t0 = performance.now();
     log('initialize_webgpu_engine…');
     await initialize_webgpu_engine(bytes);
@@ -144,7 +152,12 @@ $('load').onclick = async () => {
   } finally { $('load').disabled = false; }
 };
 
-$('clearcache').onclick = async () => { await caches.delete(CACHE_NAME); log('cache cleared', 'warn'); };
+$('clearcache').onclick = async () => {
+  try { await caches.delete(CACHE_NAME); } catch {}
+  let n = 0;
+  try { n = await clearAllOpfsModels(); } catch {}
+  log(`cache cleared (Cache Storage + ${n} OPFS model file(s))`, 'warn');
+};
 
 function buildPrompt(tmpl, user) {
   if (tmpl === 'gemma3') return `<start_of_turn>user\n${user}<end_of_turn>\n<start_of_turn>model\n`;

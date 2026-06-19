@@ -78,16 +78,34 @@ async fn run_inference_async(prompt: &str, on_token: Function) -> Result<String,
     let prompt_owned = prompt.to_string();
 
     let result: Result<String, String> = async {
-        let tok = engine
-            .gguf_mmap
-            .as_ref()
-            .map(|m| GgufTokenizer::from_gguf(m))
-            .unwrap_or_default();
-
-        let tensor_idx = engine
-            .gguf_mmap
-            .as_ref()
-            .map(|m| crate::gguf_sharder::GgufTensorIndex::from_gguf(m));
+        // Phase 4: boot purely from the `.q42` container when present — synthetic tensor index +
+        // tokenizer section, no GGUF parse. (gguf_mmap holds the .q42 bytes; the synthetic index
+        // uses tensor_data_start=0 + absolute offsets, so the rest of the path is unchanged.)
+        let (tok, tensor_idx) = if engine.q42_resident.is_some() {
+            let data = engine.q42_resident.clone().unwrap();
+            match crate::q42_weight::Q42TensorIndex::from_q42(&data) {
+                Ok(qi) => {
+                    let tok = GgufTokenizer::from_q42_section(qi.tokenizer_bytes(&data))
+                        .unwrap_or_default();
+                    (tok, Some(qi.to_gguf_index()))
+                }
+                Err(e) => {
+                    crate::gguf_bridge::wlog(&format!("[Q42] container parse failed: {e}"));
+                    (GgufTokenizer::default(), None)
+                }
+            }
+        } else {
+            let tok = engine
+                .gguf_mmap
+                .as_ref()
+                .map(|m| GgufTokenizer::from_gguf(m))
+                .unwrap_or_default();
+            let idx = engine
+                .gguf_mmap
+                .as_ref()
+                .map(|m| crate::gguf_sharder::GgufTensorIndex::from_gguf(m));
+            (tok, idx)
+        };
 
         let mut ctx = tok.encode_prompt(&prompt_owned);
         let eos = tok.eos_token_id;

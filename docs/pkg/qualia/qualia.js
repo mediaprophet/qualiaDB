@@ -733,6 +733,22 @@ export function check_drug_interactions_wasm(val) {
 }
 
 /**
+ * Phase 4 (AOT): compile a flat GGUF byte image into a `.q42` LLM-weight container
+ * (page-aligned tensor blobs + zero-parse NQuin manifest). Run once at ingest; stream the
+ * result to OPFS. `page_log2 == 0` selects the 16 KB default.
+ * @param {Uint8Array} gguf
+ * @param {number} page_log2
+ * @returns {Uint8Array}
+ */
+export function compileGgufToQ42(gguf, page_log2) {
+    const ret = wasm.compileGgufToQ42(gguf, page_log2);
+    if (ret[2]) {
+        throw takeFromExternrefTable0(ret[1]);
+    }
+    return takeFromExternrefTable0(ret[0]);
+}
+
+/**
  * Compiles a query string (SPARQL WHERE-clause or N-Triples pattern) to a JSON
  * description of the Webizen VM bytecode program.  Useful for playground inspection
  * and benchmarking the compilation pipeline without supplying a database.
@@ -2655,17 +2671,17 @@ function __wbg_get_imports() {
             return ret;
         }, arguments); },
         __wbindgen_cast_0000000000000001: function(arg0, arg1) {
-            // Cast intrinsic for `Closure(Closure { owned: true, function: Function { arguments: [Externref], shim_idx: 1092, ret: Unit, inner_ret: Some(Unit) }, mutable: true }) -> Externref`.
+            // Cast intrinsic for `Closure(Closure { owned: true, function: Function { arguments: [Externref], shim_idx: 1097, ret: Unit, inner_ret: Some(Unit) }, mutable: true }) -> Externref`.
             const ret = makeMutClosure(arg0, arg1, wasm_bindgen__convert__closures_____invoke__h9b72b5b1e2f47c84);
             return ret;
         },
         __wbindgen_cast_0000000000000002: function(arg0, arg1) {
-            // Cast intrinsic for `Closure(Closure { owned: true, function: Function { arguments: [Externref], shim_idx: 1230, ret: Result(Unit), inner_ret: Some(Result(Unit)) }, mutable: true }) -> Externref`.
+            // Cast intrinsic for `Closure(Closure { owned: true, function: Function { arguments: [Externref], shim_idx: 1235, ret: Result(Unit), inner_ret: Some(Result(Unit)) }, mutable: true }) -> Externref`.
             const ret = makeMutClosure(arg0, arg1, wasm_bindgen__convert__closures_____invoke__h04e3064d3f666bd6);
             return ret;
         },
         __wbindgen_cast_0000000000000003: function(arg0, arg1) {
-            // Cast intrinsic for `Closure(Closure { owned: true, function: Function { arguments: [NamedExternref("GPUUncapturedErrorEvent")], shim_idx: 1092, ret: Unit, inner_ret: Some(Unit) }, mutable: true }) -> Externref`.
+            // Cast intrinsic for `Closure(Closure { owned: true, function: Function { arguments: [NamedExternref("GPUUncapturedErrorEvent")], shim_idx: 1097, ret: Unit, inner_ret: Some(Unit) }, mutable: true }) -> Externref`.
             const ret = makeMutClosure(arg0, arg1, wasm_bindgen__convert__closures_____invoke__h9b72b5b1e2f47c84_2);
             return ret;
         },

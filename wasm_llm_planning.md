@@ -996,6 +996,22 @@ sed -i 's/qualia_core_db_bg\.wasm/qualia_bg.wasm/g' $DOCS/qualia.js
 
 ## 📓 7. PROGRESS LOG (newest first — keep this updated every step)
 
+- **2026-06-19 (ao)** — **Phase 4 v3: `.q42` tokenizer section → self-contained inference; "Paris" from q42 ✅.**
+  - **Tokenizer section:** `GgufTokenizer::to_q42_section` / `from_q42_section` (gguf_sharder) —
+    vocab/merges/bos/eos/add_bos/pre packed contiguous (no page align), derived maps rebuilt on read,
+    fully bounds-checked. Header v3 (144 B) + `tokenizer_offset`/`tokenizer_len`; compiler appends the
+    section after the blobs. `Q42TensorIndex::tokenizer_bytes()` accessor.
+  - **Boot wiring:** `run_inference_async` builds BOTH the synthetic tensor index and the tokenizer
+    from the `.q42` when `q42_resident` (no GGUF parse). Harness `?q42=1` mode + `WASM_Q42` env compile
+    GGUF→q42 in-browser and boot from `Q42W`.
+  - **Proven natively:** `q42_tokenizer_roundtrip` — encode/decode identical to GGUF (49152 vocab,
+    1.29 MB section). With weight byte-parity (an), q42 inference ≡ GGUF inference.
+  - **End-to-end (headless Chrome):** compile GGUF→`.q42` in-browser (260 MB, ~1.16 s, off TTFT clock),
+    boot purely from `Q42W` (`[Q42] boot OK: 290 tensors, 32 layers`), output **`Paris. The capital of
+    France…`**, **TTFT 3891 ms** (gate held). Self-contained `.q42` execution container milestone met.
+  - **Next:** JS ingest pipeline (compile→OPFS→boot from q42); cold CBOR-LD + metadata flags; deploy
+    rebuilt wasm to production demos.
+
 - **2026-06-19 (an)** — **Phase 4: weight hot-path decoupling from `.q42` (synthetic GGUF index) + proof.**
   - **Approach (lower-risk than per-`encode_*` branching):** `Q42TensorIndex::to_gguf_index()` builds a
     **synthetic `GgufTensorIndex`** from the manifest via new `GgufTensorIndex::from_components`
