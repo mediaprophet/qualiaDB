@@ -1,3 +1,5 @@
+/* @ts-self-types="./qualia_core_db.d.ts" */
+
 /**
  * The Federated Node Manager handles discovery and WebRTC offloading
  */
@@ -756,6 +758,22 @@ export function clinical_risk(input_json) {
 }
 
 /**
+ * Phase 4 (AOT): compile a flat GGUF byte image into a `.q42` LLM-weight container
+ * (page-aligned tensor blobs + zero-parse NQuin manifest). Run once at ingest; stream the
+ * result to OPFS. `page_log2 == 0` selects the 16 KB default.
+ * @param {Uint8Array} gguf
+ * @param {number} page_log2
+ * @returns {Uint8Array}
+ */
+export function compileGgufToQ42(gguf, page_log2) {
+    const ret = wasm.compileGgufToQ42(gguf, page_log2);
+    if (ret[2]) {
+        throw takeFromExternrefTable0(ret[1]);
+    }
+    return takeFromExternrefTable0(ret[0]);
+}
+
+/**
  * Compiles a query string (SPARQL WHERE-clause or N-Triples pattern) to a JSON
  * description of the Webizen VM bytecode program.  Useful for playground inspection
  * and benchmarking the compilation pipeline without supplying a database.
@@ -1063,6 +1081,20 @@ export function get_engine_version() {
 }
 
 /**
+ * Phase 2B: async WebGPU decode — yields to the browser event loop on every `map_async`.
+ * Returns a JS `Promise`; use `await inferWasmAsync(...)` from module code.
+ * @param {string} prompt
+ * @param {Function} on_token
+ * @returns {Promise<string>}
+ */
+export function inferWasmAsync(prompt, on_token) {
+    const ptr0 = passStringToWasm0(prompt, wasm.__wbindgen_malloc, wasm.__wbindgen_realloc);
+    const len0 = WASM_VECTOR_LEN;
+    const ret = wasm.inferWasmAsync(ptr0, len0, on_token);
+    return ret;
+}
+
+/**
  * Stream token deltas to `on_token` (UTF-8 string chunks) while decoding.
  * @param {string} prompt
  * @param {Function} on_token
@@ -1345,6 +1377,16 @@ export function predict_receptor_binding_wasm() {
 export function prune_and_validate_mesh(mesh_id) {
     const ret = wasm.prune_and_validate_mesh(mesh_id);
     return ret !== 0;
+}
+
+/**
+ * Current `.q42` weight-container format version (single source of truth for the JS cache layer,
+ * so a format bump auto-invalidates any stale `.q42` cached in OPFS).
+ * @returns {number}
+ */
+export function q42FormatVersion() {
+    const ret = wasm.q42FormatVersion();
+    return ret;
 }
 
 /**
@@ -2327,6 +2369,9 @@ function __wbg_get_imports() {
         __wbg_lineTo_2a649fce185f0bf0: function(arg0, arg1, arg2) {
             arg0.lineTo(arg1, arg2);
         },
+        __wbg_log_6b5af08dd293697f: function(arg0) {
+            console.log(arg0);
+        },
         __wbg_mapAsync_5dd79aaf4f56c0f0: function(arg0, arg1, arg2, arg3) {
             const ret = arg0.mapAsync(arg1 >>> 0, arg2, arg3);
             return ret;
@@ -2483,6 +2528,10 @@ function __wbg_get_imports() {
         },
         __wbg_new_dcab74c3ef13eacf: function(arg0) {
             const ret = new SharedArrayBuffer(arg0 >>> 0);
+            return ret;
+        },
+        __wbg_new_e66a4b7758dd2e5c: function(arg0, arg1) {
+            const ret = new Error(getStringFromWasm0(arg0, arg1));
             return ret;
         },
         __wbg_new_from_slice_543b875b27789a8f: function(arg0, arg1) {
@@ -2782,18 +2831,18 @@ function __wbg_get_imports() {
             return ret;
         }, arguments); },
         __wbindgen_cast_0000000000000001: function(arg0, arg1) {
-            // Cast intrinsic for `Closure(Closure { owned: true, function: Function { arguments: [Externref], shim_idx: 434, ret: Unit, inner_ret: Some(Unit) }, mutable: true }) -> Externref`.
-            const ret = makeMutClosure(arg0, arg1, wasm_bindgen__convert__closures_____invoke__hacdbfa2f9b9c388f);
+            // Cast intrinsic for `Closure(Closure { owned: true, function: Function { arguments: [Externref], shim_idx: 1115, ret: Unit, inner_ret: Some(Unit) }, mutable: true }) -> Externref`.
+            const ret = makeMutClosure(arg0, arg1, wasm_bindgen__convert__closures_____invoke__h9b72b5b1e2f47c84);
             return ret;
         },
         __wbindgen_cast_0000000000000002: function(arg0, arg1) {
-            // Cast intrinsic for `Closure(Closure { owned: true, function: Function { arguments: [Externref], shim_idx: 568, ret: Result(Unit), inner_ret: Some(Result(Unit)) }, mutable: true }) -> Externref`.
+            // Cast intrinsic for `Closure(Closure { owned: true, function: Function { arguments: [Externref], shim_idx: 1253, ret: Result(Unit), inner_ret: Some(Result(Unit)) }, mutable: true }) -> Externref`.
             const ret = makeMutClosure(arg0, arg1, wasm_bindgen__convert__closures_____invoke__h04e3064d3f666bd6);
             return ret;
         },
         __wbindgen_cast_0000000000000003: function(arg0, arg1) {
-            // Cast intrinsic for `Closure(Closure { owned: true, function: Function { arguments: [NamedExternref("GPUUncapturedErrorEvent")], shim_idx: 434, ret: Unit, inner_ret: Some(Unit) }, mutable: true }) -> Externref`.
-            const ret = makeMutClosure(arg0, arg1, wasm_bindgen__convert__closures_____invoke__hacdbfa2f9b9c388f_2);
+            // Cast intrinsic for `Closure(Closure { owned: true, function: Function { arguments: [NamedExternref("GPUUncapturedErrorEvent")], shim_idx: 1115, ret: Unit, inner_ret: Some(Unit) }, mutable: true }) -> Externref`.
+            const ret = makeMutClosure(arg0, arg1, wasm_bindgen__convert__closures_____invoke__h9b72b5b1e2f47c84_2);
             return ret;
         },
         __wbindgen_cast_0000000000000004: function(arg0) {
@@ -2837,12 +2886,12 @@ function __wbg_get_imports() {
     };
 }
 
-function wasm_bindgen__convert__closures_____invoke__hacdbfa2f9b9c388f(arg0, arg1, arg2) {
-    wasm.wasm_bindgen__convert__closures_____invoke__hacdbfa2f9b9c388f(arg0, arg1, arg2);
+function wasm_bindgen__convert__closures_____invoke__h9b72b5b1e2f47c84(arg0, arg1, arg2) {
+    wasm.wasm_bindgen__convert__closures_____invoke__h9b72b5b1e2f47c84(arg0, arg1, arg2);
 }
 
-function wasm_bindgen__convert__closures_____invoke__hacdbfa2f9b9c388f_2(arg0, arg1, arg2) {
-    wasm.wasm_bindgen__convert__closures_____invoke__hacdbfa2f9b9c388f_2(arg0, arg1, arg2);
+function wasm_bindgen__convert__closures_____invoke__h9b72b5b1e2f47c84_2(arg0, arg1, arg2) {
+    wasm.wasm_bindgen__convert__closures_____invoke__h9b72b5b1e2f47c84_2(arg0, arg1, arg2);
 }
 
 function wasm_bindgen__convert__closures_____invoke__h04e3064d3f666bd6(arg0, arg1, arg2) {
