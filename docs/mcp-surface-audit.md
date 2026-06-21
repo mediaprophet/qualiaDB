@@ -1,21 +1,30 @@
 # QualiaDB MCP Surface Audit
 
-**Date:** 2026-06-17  
+**Date:** 2026-06-17 (rev 2026-06-21 — algebra/CAS tools)  
 **Source of truth:** `crates/qualia-core-db/src/mcp_server.rs`  
 **Server identity:** `qualia-core-db-mcp` (protocol `2025-03-26`)  
 **CLI entry:** `qualia-cli mcp serve` (stdio or TCP `:4244`)
+
+> **Update (2026-06-21):** three new **fully caller-driven** tools were added —
+> `algebra_solve_polynomial`, `algebra_matrix_analyze` (determinant / eigenvalues /
+> eigen_symmetric / svd), and `cas` (symbolic differentiate / simplify / expand / evaluate
+> / solve_quadratic / factor). Unlike most existing public tools (key finding #3), these run
+> on **caller-supplied** data, not fixed demo inputs, so they add to the "fully
+> production-ready" set. The per-layer counts below are the **2026-06-17 snapshot** and have
+> since drifted — re-derive from `mcp_server.rs` (the source of truth) before quoting exact
+> numbers. See `ALGEBRA_MANIFOLD_PLAN.md` and `docs/manuals/standards/q42-symbolic-algebra-encoding.md`.
 
 ---
 
 ## Executive summary
 
-The Qualia MCP server is **not** a full-fidelity API for QualiaDB. It is a **curated agent harness** with three layers that do not fully align:
+The Qualia MCP server is **not** a full-fidelity API for QualiaDB. It is a **curated agent harness** with three layers that do not fully align (counts = 2026-06-17 snapshot):
 
 | Layer | Count | Role |
 |-------|------:|------|
-| **`tools/list` (public)** | 24 | What IDEs and agents see when they discover capabilities |
-| **Dispatch handlers** | 41 | What the server will accept if you call a tool by name |
-| **Fully production-ready** | ~6 | Tools that perform real, caller-driven work end-to-end |
+| **`tools/list` (public)** | 24 (+3) | What IDEs and agents see when they discover capabilities |
+| **Dispatch handlers** | 41 (+3) | What the server will accept if you call a tool by name |
+| **Fully production-ready** | ~6 (+3) | Tools that perform real, caller-driven work end-to-end |
 
 **Key findings:**
 

@@ -23,8 +23,8 @@ This document provides a comprehensive summary of SHACL (Shapes Constraint Langu
 
 ## Total Coverage Statistics
 
-- **Total Modalities Covered:** 20
-- **Total SHACL Constraint Types:** 90+
+- **Total Modalities Covered:** 20 (+ Symbolic Algebra / CAS, 0.0.19)
+- **Total SHACL Constraint Types:** 95+ (5 algebra/CAS shapes added 0.0.19)
 - **Total SHACL TTL Files:** 4
 - **Total Documentation Files:** 3
 
@@ -56,10 +56,17 @@ This document provides a comprehensive summary of SHACL (Shapes Constraint Langu
 **TTL File:** `specialized-libraries.shacl.ttl`  
 **Documentation:** `specialized-libraries-shacl-extensions.md`
 
-#### Linear Algebra (3 constraints)
+#### Linear Algebra (6 constraints)
 - MatrixConfiguration
 - MatrixOperation
 - EigenDecomposition
+- PolynomialSolveConfiguration *(0.0.19)*
+- SvdConfiguration *(0.0.19)*
+- DeterminantConfiguration *(0.0.19)*
+
+#### Symbolic Algebra / CAS (2 constraints) *(0.0.19)*
+- SymbolicExpressionConfiguration
+- SymbolicOperationConfiguration
 
 #### Machine Learning (3 constraints)
 - ModelConfiguration
@@ -215,8 +222,9 @@ This document provides a comprehensive summary of SHACL (Shapes Constraint Langu
 | Logging System | shacl_extensions.rs | ✅ | Full | 5 |
 | System Tray | shacl_extensions.rs | ✅ | Full | 4 |
 | Enhanced Settings | shacl_extensions.rs | ✅ | Full | 4 |
-| **Specialized Libraries** | | | ✅ Full | 30+ |
-| Linear Algebra | specialized_libs_shacl.rs | ✅ | Full | 3 |
+| **Specialized Libraries** | | | ✅ Full | 35+ |
+| Linear Algebra | specialized_libs_shacl.rs | ✅ | Full | 6 |
+| Symbolic Algebra / CAS | specialized_libs_shacl.rs | ✅ | Full | 2 |
 | Machine Learning | specialized_libs_shacl.rs | ✅ | Full | 3 |
 | Physics Simulation | specialized_libs_shacl.rs | ✅ | Full | 3 |
 | Chemistry Modeling | specialized_libs_shacl.rs | ✅ | Full | 3 |

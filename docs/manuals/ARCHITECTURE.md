@@ -230,3 +230,5 @@ Detailed rationale for specific design choices is in [adr/](adr/).
 - [ADR 0004 — Sentinel to Webizen Terminology Rebrand](adr/0004-sentinel-to-webizen-rebrand.md)
 - [ADR 0005 — DNS Frontdoor and HCAI Agreements](adr/0005-dns-frontdoor-and-hcai-agreements.md)
 - [ADR 0006 — Zero-Allocation Solid Bridge Isolation](adr/0006-zero-allocation-solid-bridge.md)
+- [ADR 0007 — U3 Acoustic Plane: Symbolic Audio](adr/0007-u3-acoustic-plane-symbolic-audio.md)
+- [ADR 0008 — FrameLayout ABI for the NQuin's Computational Bytes](adr/0008-frame-layout-abi-and-inline-tags.md)
