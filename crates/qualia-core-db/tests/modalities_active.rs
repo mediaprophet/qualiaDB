@@ -189,3 +189,92 @@ fn paraconsistent_isolate_empty_fails() {
     assert!(!gate(&mut a, SlgOpcode::NativeParaconsistentIsolate, VmFrame::default()),
         "paraconsistent isolation over an empty arena fails the gate");
 }
+
+// ── Probabilistic (belief threshold) ──────────────────────────────────────────────
+
+/// A quin carrying an f32 belief weight in `metadata` (parity excludes metadata,
+/// matching collect_active_quins' fold).
+fn belief(subject: u64, predicate: u64, object: u64, weight: f32) -> NQuin {
+    let mut n = NQuin { subject, predicate, object, context: 0, metadata: weight.to_bits() as u64, parity: 0 };
+    n.parity = n.subject ^ n.predicate ^ n.object ^ n.context;
+    n
+}
+
+#[test]
+fn probabilistic_threshold_active() {
+    let (s, p, o) = (q_hash("belief:rain"), q_hash("p:holds"), q_hash("val:true"));
+    let mut a = SlgArena::new();
+    a.write_table(belief(s, p, o, 0.8));
+    let frame = VmFrame { subject_reg: s, predicate_reg: p, object_reg: o, context_reg: 0 };
+
+    assert!(gate(&mut a, SlgOpcode::NativeProbabilisticThreshold((0.5f32).to_bits()), frame),
+        "belief 0.8 ≥ threshold 0.5 → passes");
+    assert!(!gate(&mut a, SlgOpcode::NativeProbabilisticThreshold((0.9f32).to_bits()), frame),
+        "belief 0.8 < threshold 0.9 → fails");
+}
+
+// ── Description Logic (subsumption / transitive subClassOf) ────────────────────────
+
+#[test]
+fn dl_subsumption_active() {
+    let (dog, mammal, animal) = (q_hash("cls:Dog"), q_hash("cls:Mammal"), q_hash("cls:Animal"));
+    let sub = q_hash("rdfs:subClassOf");
+    let mut a = SlgArena::new();
+    a.write_table(q(dog, sub, mammal));
+    a.write_table(q(mammal, sub, animal));
+
+    let f1 = VmFrame { subject_reg: dog, predicate_reg: 0, object_reg: animal, context_reg: 0 };
+    assert!(gate(&mut a, SlgOpcode::NativeDlSubsumption, f1),
+        "Dog ⊑ Animal via transitive subClassOf closure");
+
+    let f2 = VmFrame { subject_reg: animal, predicate_reg: 0, object_reg: dog, context_reg: 0 };
+    assert!(!gate(&mut a, SlgOpcode::NativeDlSubsumption, f2),
+        "Animal is NOT ⊑ Dog");
+}
+
+// ── Argumentation (Dung grounded semantics) ───────────────────────────────────────
+
+#[test]
+fn argumentation_grounded_active() {
+    let asserts = q_hash("arg:asserts");
+    let attacks = q_hash("arg:attacks");
+    let (a_arg, b_arg, c_arg) = (q_hash("arg:A"), q_hash("arg:B"), q_hash("arg:C"));
+
+    let mut a = SlgArena::new();
+    a.write_table(q(a_arg, asserts, 0));
+    a.write_table(q(b_arg, asserts, 0));
+    a.write_table(q(c_arg, asserts, 0));
+    a.write_table(q(a_arg, attacks, b_arg)); // A attacks B
+    a.write_table(q(b_arg, attacks, c_arg)); // B attacks C
+    // Grounded extension = {A, C}: A is unattacked; B is defeated by A; C's only
+    // attacker (B) is defeated, so C is reinstated.
+
+    let fa = VmFrame { subject_reg: a_arg, predicate_reg: 0, object_reg: 0, context_reg: 0 };
+    assert!(gate(&mut a, SlgOpcode::NativeArgumentationGrounded, fa),
+        "A is justified (unattacked)");
+
+    let fc = VmFrame { subject_reg: c_arg, predicate_reg: 0, object_reg: 0, context_reg: 0 };
+    assert!(gate(&mut a, SlgOpcode::NativeArgumentationGrounded, fc),
+        "C is justified (its attacker B is defeated by A)");
+
+    let fb = VmFrame { subject_reg: b_arg, predicate_reg: 0, object_reg: 0, context_reg: 0 };
+    assert!(!gate(&mut a, SlgOpcode::NativeArgumentationGrounded, fb),
+        "B is NOT justified (defeated by A)");
+}
+
+// ── Defeasible (q42:unless defeater injection) ────────────────────────────────────
+
+#[test]
+fn unless_runs_and_injects_defeater() {
+    // NativeUnless is not a gate; it writes a q42:unless defeater for the goal and
+    // lets the frame continue. Confirm it executes through the VM without failing.
+    let mut a = SlgArena::new();
+    let frame = VmFrame {
+        subject_reg: q_hash("alice"),
+        predicate_reg: (q_hash("discloses") << 8) | 0x12, // packed forbid path
+        object_reg: q_hash("data"),
+        context_reg: q_hash("nda"),
+    };
+    assert!(gate(&mut a, SlgOpcode::NativeUnless, frame),
+        "NativeUnless executes (injects a defeater) and the frame proceeds");
+}

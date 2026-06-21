@@ -3,7 +3,7 @@ use crate::modalities::logic::deontic::{
     norm_has_active_defeater, DeonticStatus, DeonticVerdict, DEFEATER_BIT, MAX_DEFEATER_SLOTS,
     OP_PERMIT,
 };
-use crate::modalities::{asp, dialectical, dl, epistemic, linear, paraconsistent, probabilistic};
+use crate::modalities::{argumentation, asp, dialectical, dl, epistemic, linear, paraconsistent, probabilistic};
 use crate::modalities::temporal_ltl::{self, LtlFormula};
 use crate::modalities::spatio_temporal;
 use crate::domains::financial::tax_schema::TaxRuleSchema;
@@ -576,6 +576,16 @@ pub enum SlgOpcode {
     NativeAspStableModels,
     NativeParaconsistentIsolate,
     NativeDialecticalSynthesis,
+    /// Probabilistic gate: the goal quin's f32 belief weight (in `metadata`) must
+    /// be ≥ the threshold (param = `f32::to_bits`).
+    NativeProbabilisticThreshold(u32),
+    /// Description-logic gate: `frame.subject_reg ⊑ frame.object_reg` over the arena
+    /// TBox (transitive `rdfs:subClassOf` closure).
+    NativeDlSubsumption,
+    /// Argumentation gate (Dung grounded semantics): the goal argument
+    /// (`frame.subject_reg`) must be justified — in the grounded extension built
+    /// from `arg:asserts` / `arg:attacks` quins in the arena.
+    NativeArgumentationGrounded,
 
     // ── Native: cognitive ai (ACT-R) ──────────────────────────────────────────
     NativeRetrieveByActivation,
@@ -1456,6 +1466,66 @@ pub fn execute_vm_frame(
                     frame.context_reg = syn.context;
                 } else {
                     return None;
+                }
+            }
+            SlgOpcode::NativeProbabilisticThreshold(threshold_bits) => {
+                let threshold = f32::from_bits(threshold_bits);
+                // The belief weight lives in the matching arena quin's `metadata`
+                // field (f32 bits); the frame goal selects which belief to test.
+                let mut scratch = [NQuin::default(); 512];
+                let n = arena.collect_active_quins(&mut scratch);
+                let weight = scratch[..n]
+                    .iter()
+                    .find(|q| {
+                        q.subject == frame.subject_reg
+                            && q.predicate == frame.predicate_reg
+                            && q.object == frame.object_reg
+                    })
+                    .map(probabilistic::BayesianNetwork::extract_weight)
+                    .unwrap_or(0.0);
+                if !probabilistic::evaluate_threshold(weight, threshold) {
+                    return None; // belief below threshold → rule frame fails
+                }
+            }
+            SlgOpcode::NativeDlSubsumption => {
+                // TBox = the active arena quins (subClassOf edges subject→object).
+                let mut scratch = [NQuin::default(); 512];
+                let n = arena.collect_active_quins(&mut scratch);
+                if !dl::check_subsumption_quin(frame.subject_reg, frame.object_reg, &scratch[..n]) {
+                    return None; // frame.subject is NOT subsumed by frame.object → fails
+                }
+            }
+            SlgOpcode::NativeArgumentationGrounded => {
+                // Build a Dung framework from the arena: `arg:asserts` quins are
+                // argument nodes (subject = argument id); `arg:attacks` quins are
+                // attack edges (subject attacks object).
+                let mut scratch = [NQuin::default(); 512];
+                let n = arena.collect_active_quins(&mut scratch);
+                let asserts = crate::q_hash("arg:asserts");
+                let attacks = crate::q_hash("arg:attacks");
+                let mut af = argumentation::ArgumentationFramework::new();
+                for q in &scratch[..n] {
+                    if q.predicate == asserts {
+                        af.add_argument(argumentation::Argument::new(
+                            q.subject,
+                            String::new(),
+                            Vec::new(),
+                            *q,
+                        ));
+                    }
+                }
+                for q in &scratch[..n] {
+                    if q.predicate == attacks {
+                        af.add_attack(argumentation::Attack {
+                            attacker: q.subject,
+                            target: q.object,
+                            attack_type: argumentation::AttackType::Rebuttal,
+                            strength: 1.0,
+                        });
+                    }
+                }
+                if !af.grounded_extension().contains(&frame.subject_reg) {
+                    return None; // the goal argument is not justified (defeated) → fails
                 }
             }
             SlgOpcode::NativeUnless => {
