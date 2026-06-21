@@ -957,6 +957,46 @@ mod tests {
         let result = zk_system.verify_proof(&proof).unwrap();
         assert!(result.is_valid);
     }
+
+    #[test]
+    fn test_proof_rejects_falsified_public_input() {
+        // Soundness round-trip: a valid proof for x*y=12 must NOT verify when the
+        // claimed public result is changed to 13. This is the property that makes
+        // the system a real ZK proof rather than a structural check.
+        let mut zk_system = ZkProofSystem::new();
+        zk_system.create_circuit("snd_circuit".to_string()).unwrap();
+        zk_system.add_variable("snd_circuit", "result".to_string(), VariableType::Public).unwrap();
+        zk_system.add_variable("snd_circuit", "x".to_string(), VariableType::Private).unwrap();
+        zk_system.add_variable("snd_circuit", "y".to_string(), VariableType::Private).unwrap();
+        zk_system.add_constraint(
+            "snd_circuit",
+            CircuitExpression::Variable("x".to_string()),
+            CircuitExpression::Variable("y".to_string()),
+            CircuitExpression::Variable("result".to_string()),
+        ).unwrap();
+        zk_system.generate_keys("snd_circuit").unwrap();
+
+        let mut witness = HashMap::new();
+        let mut x_val = [0u8; 32]; x_val[0] = 3;
+        let mut y_val = [0u8; 32]; y_val[0] = 4;
+        let mut res_val = [0u8; 32]; res_val[0] = 12;
+        witness.insert("x".to_string(), FieldElement { value: x_val });
+        witness.insert("y".to_string(), FieldElement { value: y_val });
+        witness.insert("result".to_string(), FieldElement { value: res_val });
+
+        let public_inputs = vec![FieldElement { value: res_val }];
+        let mut proof = zk_system.generate_proof("snd_circuit", witness, public_inputs).unwrap();
+
+        // Tamper: claim the result is 13, not the proven 12.
+        let mut wrong = [0u8; 32]; wrong[0] = 13;
+        proof.public_inputs = vec![FieldElement { value: wrong }];
+
+        let result = zk_system.verify_proof(&proof).unwrap();
+        assert!(
+            !result.is_valid,
+            "a Groth16 proof must NOT verify against a falsified public input"
+        );
+    }
 }
 
 #[cfg(feature = "zk-culling")]
