@@ -217,4 +217,88 @@ fn modality_handlers_are_zero_heap() {
             VmFrame { subject_reg: w0, predicate_reg: 0, object_reg: p, context_reg: 0 }), 0,
             "modal necessity handler must not allocate");
     }
+
+    // ── Remaining original modalities (closing the coverage gap) ──────────────
+
+    // Deontic (verdict scan over a stack [DeonticVerdict; N])
+    {
+        let mut a = SlgArena::new();
+        a.write_table(q(q_hash("zh:alice"), q_hash("zh:forbid"), q_hash("zh:act")));
+        assert_eq!(allocs_during(&mut a, SlgOpcode::NativeDeonticEval, VmFrame::default()), 0,
+            "deontic eval handler must not allocate");
+    }
+
+    // Epistemic (verdict scan over a stack [EpistemicVerdict; N])
+    {
+        let mut a = SlgArena::new();
+        let agent = q_hash("zh:agent");
+        let pred = 0x20u64 | (200u64 << 8); // OP_KNOWS, certainty 200
+        let mut k = NQuin { subject: agent, predicate: pred, object: q_hash("zh:prop"), context: q_hash("zh:world"), metadata: 0, parity: 0 };
+        k.parity = k.subject ^ k.predicate ^ k.object ^ k.context;
+        a.write_table(k);
+        assert_eq!(allocs_during(&mut a, SlgOpcode::NativeEpistemicEval(128),
+            VmFrame { subject_reg: agent, predicate_reg: 0, object_reg: 0, context_reg: q_hash("zh:world") }), 0,
+            "epistemic eval handler must not allocate");
+    }
+
+    // Linear consumption (find_mutable_quin scan)
+    {
+        let mut a = SlgArena::new();
+        let (s, p, o) = (q_hash("zh:lock"), q_hash("zh:tok"), q_hash("zh:r1"));
+        a.write_table(q(s, p, o));
+        assert_eq!(allocs_during(&mut a, SlgOpcode::NativeLinearConsume,
+            VmFrame { subject_reg: s, predicate_reg: p, object_reg: o, context_reg: 0 }), 0,
+            "linear consume handler must not allocate");
+    }
+
+    // Paraconsistent isolation (route over fixed [NQuin; N] buffers)
+    {
+        let mut a = SlgArena::new();
+        a.write_table(q(q_hash("zh:c1"), q_hash("zh:p"), q_hash("zh:v1")));
+        a.write_table(q(q_hash("zh:c2"), q_hash("zh:p"), q_hash("zh:v2")));
+        assert_eq!(allocs_during(&mut a, SlgOpcode::NativeParaconsistentIsolate, VmFrame::default()), 0,
+            "paraconsistent isolate handler must not allocate");
+    }
+
+    // Dialectical synthesis (contradiction → synthesized quin)
+    {
+        let mut a = SlgArena::new();
+        a.write_table(q(q_hash("zh:claim"), q_hash("zh:is"), q_hash("zh:blue")));
+        a.write_table(q(q_hash("zh:claim"), q_hash("zh:is"), q_hash("zh:grey")));
+        assert_eq!(allocs_during(&mut a, SlgOpcode::NativeDialecticalSynthesis, VmFrame::default()), 0,
+            "dialectical synthesis handler must not allocate");
+    }
+
+    // Defeasible (NativeUnless injects a defeater)
+    {
+        let mut a = SlgArena::new();
+        assert_eq!(allocs_during(&mut a, SlgOpcode::NativeUnless,
+            VmFrame { subject_reg: q_hash("zh:a"), predicate_reg: (q_hash("zh:d") << 8) | 0x12, object_reg: q_hash("zh:o"), context_reg: q_hash("zh:c") }), 0,
+            "defeasible (unless) handler must not allocate");
+    }
+
+    // CTL AG (second operator — separate handler arm from EF)
+    {
+        let mut a = SlgArena::new();
+        let (next, holds) = (q_hash("ctl:next"), q_hash("ctl:holds"));
+        let (s1, s2, inv) = (q_hash("zh:a1"), q_hash("zh:a2"), q_hash("zh:inv"));
+        a.write_table(q(s1, next, s2));
+        a.write_table(q(s1, holds, inv));
+        a.write_table(q(s2, holds, inv));
+        assert_eq!(allocs_during(&mut a, SlgOpcode::NativeCtlAlwaysGlobally,
+            VmFrame { subject_reg: s1, predicate_reg: 0, object_reg: inv, context_reg: 0 }), 0,
+            "CTL AG handler must not allocate");
+    }
+
+    // Modal ◇ (second operator — separate handler arm from □)
+    {
+        let mut a = SlgArena::new();
+        let (acc, holds) = (q_hash("modal:accesses"), q_hash("modal:holds"));
+        let (w0, w1, p) = (q_hash("zh:m0"), q_hash("zh:m1"), q_hash("zh:mp"));
+        a.write_table(q(w0, acc, w1));
+        a.write_table(q(w1, holds, p));
+        assert_eq!(allocs_during(&mut a, SlgOpcode::NativeModalPossible,
+            VmFrame { subject_reg: w0, predicate_reg: 0, object_reg: p, context_reg: 0 }), 0,
+            "modal possibility handler must not allocate");
+    }
 }
