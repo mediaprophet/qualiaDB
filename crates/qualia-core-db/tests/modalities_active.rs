@@ -528,3 +528,45 @@ fn modal_active() {
     assert!(gate(&mut a, SlgOpcode::NativeModalNecessary, frame),
         "□p: all accessible worlds satisfy p");
 }
+
+// ── RCC-8 spatial topology (full polygon, zero-heap) ──────────────────────────────
+
+/// Write a region as boundary-point quins (region_id, spatial:boundary, packed_xy;
+/// metadata = vertex sequence).
+fn write_region(a: &mut SlgArena, id: u64, pts: &[(f64, f64)]) {
+    let boundary = q_hash("spatial:boundary");
+    for (seq, &(x, y)) in pts.iter().enumerate() {
+        let mut n = NQuin {
+            subject: id,
+            predicate: boundary,
+            object: qualia_core_db::modalities::spatio_temporal::pack_point(x, y),
+            context: 0,
+            metadata: seq as u64,
+            parity: 0,
+        };
+        n.parity = n.subject ^ n.predicate ^ n.object ^ n.context;
+        a.write_table(n);
+    }
+}
+
+#[test]
+fn rcc8_active() {
+    let region_a = q_hash("geo:A");
+    let region_b = q_hash("geo:B");
+    let mut arena = SlgArena::new();
+    // A = [0,10]^2 ; B = [3,7]^2 strictly inside A.
+    write_region(&mut arena, region_a, &[(0.0, 0.0), (10.0, 0.0), (10.0, 10.0), (0.0, 10.0)]);
+    write_region(&mut arena, region_b, &[(3.0, 3.0), (7.0, 3.0), (7.0, 7.0), (3.0, 7.0)]);
+
+    // B is a NON-tangential proper part of A (relation 5).
+    let frame = VmFrame { subject_reg: region_b, predicate_reg: 0, object_reg: region_a, context_reg: 0 };
+    assert!(gate(&mut arena, SlgOpcode::NativeRcc8(5), frame),
+        "B is a non-tangential proper part of A (NTPP=5)");
+    assert!(!gate(&mut arena, SlgOpcode::NativeRcc8(0), frame),
+        "B is NOT disconnected from A (DC=0)");
+
+    // A contains B → inverse relation (NTPPi=6).
+    let inv = VmFrame { subject_reg: region_a, predicate_reg: 0, object_reg: region_b, context_reg: 0 };
+    assert!(gate(&mut arena, SlgOpcode::NativeRcc8(6), inv),
+        "A non-tangentially contains B (NTPPi=6)");
+}

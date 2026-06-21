@@ -212,6 +212,157 @@ fn check_boundary_touch(region_a: &SpatialRegion, region_b: &SpatialRegion) -> b
     false
 }
 
+// ── Zero-heap RCC-8 over bounded boundary-point slices ───────────────────────────
+//
+// A region is represented as N boundary-point quins
+//   (region_id, q_hash("spatial:boundary"), pack_point(x, y))   [metadata = vertex seq]
+// so full-polygon RCC-8 runs allocation-free over caller-supplied stack slices,
+// fitting the 48-byte NQuin model (no Vec, no SpatialRegion on this path).
+
+/// Max vertices per region on the zero-heap RCC-8 path.
+pub const MAX_BOUNDARY_POINTS: usize = 64;
+
+/// Fixed-point scale for packing a vertex coordinate (6 decimal places).
+const POINT_SCALE: f64 = 1_000_000.0;
+const GEO_EPS: f64 = 1e-9;
+
+/// Pack a 2-D vertex into a u64 object field: signed fixed-point x in the high 32
+/// bits, y in the low 32 bits. Handles negative coordinates (lat/long).
+pub fn pack_point(x: f64, y: f64) -> u64 {
+    let xi = (x * POINT_SCALE).round() as i32 as u32 as u64;
+    let yi = (y * POINT_SCALE).round() as i32 as u32 as u64;
+    (xi << 32) | yi
+}
+
+/// Inverse of [`pack_point`].
+pub fn unpack_point(packed: u64) -> (f64, f64) {
+    let xi = (packed >> 32) as u32 as i32;
+    let yi = (packed & 0xFFFF_FFFF) as u32 as i32;
+    (xi as f64 / POINT_SCALE, yi as f64 / POINT_SCALE)
+}
+
+fn bbox(poly: &[(f64, f64)]) -> (f64, f64, f64, f64) {
+    let mut mnx = f64::INFINITY;
+    let mut mxx = f64::NEG_INFINITY;
+    let mut mny = f64::INFINITY;
+    let mut mxy = f64::NEG_INFINITY;
+    for &(x, y) in poly {
+        mnx = mnx.min(x);
+        mxx = mxx.max(x);
+        mny = mny.min(y);
+        mxy = mxy.max(y);
+    }
+    (mnx, mxx, mny, mxy)
+}
+
+fn bbox_overlap(a: &[(f64, f64)], b: &[(f64, f64)]) -> bool {
+    let (amnx, amxx, amny, amxy) = bbox(a);
+    let (bmnx, bmxx, bmny, bmxy) = bbox(b);
+    !(amnx > bmxx || amxx < bmnx || amny > bmxy || amxy < bmny)
+}
+
+/// Ray-casting point-in-polygon (interior, exclusive of the boundary) over a slice.
+fn point_in_interior(p: (f64, f64), poly: &[(f64, f64)]) -> bool {
+    if poly.len() < 3 {
+        return false;
+    }
+    let (x, y) = p;
+    let mut inside = false;
+    let n = poly.len();
+    for i in 0..n {
+        let j = (i + 1) % n;
+        let (xi, yi) = poly[i];
+        let (xj, yj) = poly[j];
+        if ((yi > y) != (yj > y)) && (x < (xj - xi) * (y - yi) / (yj - yi) + xi) {
+            inside = !inside;
+        }
+    }
+    inside
+}
+
+/// True if `p` lies on an edge of `poly` (within epsilon) — i.e. on the boundary.
+fn point_on_boundary(p: (f64, f64), poly: &[(f64, f64)]) -> bool {
+    let n = poly.len();
+    if n < 2 {
+        return false;
+    }
+    for i in 0..n {
+        let a = poly[i];
+        let b = poly[(i + 1) % n];
+        // collinear (cross product ~ 0) and within the segment's bounding box.
+        let cross = (b.0 - a.0) * (p.1 - a.1) - (b.1 - a.1) * (p.0 - a.0);
+        if cross.abs() <= GEO_EPS
+            && p.0 >= a.0.min(b.0) - GEO_EPS
+            && p.0 <= a.0.max(b.0) + GEO_EPS
+            && p.1 >= a.1.min(b.1) - GEO_EPS
+            && p.1 <= a.1.max(b.1) + GEO_EPS
+        {
+            return true;
+        }
+    }
+    false
+}
+
+#[inline]
+fn inside_or_on(p: (f64, f64), poly: &[(f64, f64)]) -> bool {
+    point_in_interior(p, poly) || point_on_boundary(p, poly)
+}
+
+fn all_inside_or_on(pts: &[(f64, f64)], poly: &[(f64, f64)]) -> bool {
+    !pts.is_empty() && pts.iter().all(|&p| inside_or_on(p, poly))
+}
+
+fn any_on_boundary(pts: &[(f64, f64)], poly: &[(f64, f64)]) -> bool {
+    pts.iter().any(|&p| point_on_boundary(p, poly))
+}
+
+fn interiors_overlap(a: &[(f64, f64)], b: &[(f64, f64)]) -> bool {
+    a.iter().any(|&p| point_in_interior(p, b)) || b.iter().any(|&p| point_in_interior(p, a))
+}
+
+/// Zero-heap, full-polygon RCC-8 over two boundary-vertex slices (+ region ids).
+/// Correctly distinguishes tangential (TPP/TPPi) from non-tangential (NTPP/NTPPi)
+/// proper parts via a point-on-boundary test — unlike `evaluate_rcc8`, which
+/// conflated them. Allocation-free.
+pub fn evaluate_rcc8_points(
+    id_a: u64,
+    a: &[(f64, f64)],
+    id_b: u64,
+    b: &[(f64, f64)],
+) -> Rcc8Relation {
+    if id_a == id_b {
+        return Rcc8Relation::Equal;
+    }
+    if !bbox_overlap(a, b) {
+        return Rcc8Relation::Disconnected;
+    }
+    let a_in_b = all_inside_or_on(a, b);
+    let b_in_a = all_inside_or_on(b, a);
+    if a_in_b && b_in_a {
+        return Rcc8Relation::Equal;
+    }
+    if a_in_b {
+        return if any_on_boundary(a, b) {
+            Rcc8Relation::TangentiallyProperPart
+        } else {
+            Rcc8Relation::NonTangentialProperPart
+        };
+    }
+    if b_in_a {
+        return if any_on_boundary(b, a) {
+            Rcc8Relation::TangentiallyProperPartInverse
+        } else {
+            Rcc8Relation::NonTangentialProperPartInverse
+        };
+    }
+    if interiors_overlap(a, b) {
+        Rcc8Relation::PartiallyOverlapping
+    } else {
+        // bounding boxes overlap and a boundary point touches, but interiors do not.
+        Rcc8Relation::ExternallyConnected
+    }
+}
+
 /// Evaluate temporal relation using Allen's Interval Algebra
 pub fn evaluate_temporal(
     op: TemporalOp,
@@ -294,9 +445,35 @@ mod tests {
     fn test_rcc8_basic_relations() {
         let region_a = SpatialRegion::new(1, vec![(0.0, 0.0), (2.0, 0.0), (2.0, 2.0), (0.0, 2.0)]);
         let region_b = SpatialRegion::new(2, vec![(1.0, 1.0), (3.0, 1.0), (3.0, 3.0), (1.0, 3.0)]);
-        
+
         let relation = evaluate_rcc8(&region_a, &region_b);
         assert_eq!(relation, Rcc8Relation::PartiallyOverlapping);
+    }
+
+    #[test]
+    fn test_rcc8_points_zero_heap() {
+        // Big square A = [0,10]^2; small square B = [3,7]^2 strictly inside A.
+        let big = [(0.0, 0.0), (10.0, 0.0), (10.0, 10.0), (0.0, 10.0)];
+        let small = [(3.0, 3.0), (7.0, 3.0), (7.0, 7.0), (3.0, 7.0)];
+        // B is a NON-tangential proper part of A (strictly inside, no shared boundary).
+        assert_eq!(evaluate_rcc8_points(1, &small, 2, &big), Rcc8Relation::NonTangentialProperPart);
+        assert_eq!(evaluate_rcc8_points(2, &big, 1, &small), Rcc8Relation::NonTangentialProperPartInverse);
+
+        // Disjoint squares → Disconnected.
+        let far = [(20.0, 20.0), (22.0, 20.0), (22.0, 22.0), (20.0, 22.0)];
+        assert_eq!(evaluate_rcc8_points(1, &big, 3, &far), Rcc8Relation::Disconnected);
+
+        // Partially overlapping squares.
+        let a = [(0.0, 0.0), (4.0, 0.0), (4.0, 4.0), (0.0, 4.0)];
+        let b = [(2.0, 2.0), (6.0, 2.0), (6.0, 6.0), (2.0, 6.0)];
+        assert_eq!(evaluate_rcc8_points(1, &a, 2, &b), Rcc8Relation::PartiallyOverlapping);
+
+        // Same region id → Equal.
+        assert_eq!(evaluate_rcc8_points(5, &a, 5, &b), Rcc8Relation::Equal);
+
+        // pack/unpack round-trips (incl. negative coords).
+        let (x, y) = unpack_point(pack_point(-45.123456, 170.654321));
+        assert!((x + 45.123456).abs() < 1e-5 && (y - 170.654321).abs() < 1e-5);
     }
     
     #[test]

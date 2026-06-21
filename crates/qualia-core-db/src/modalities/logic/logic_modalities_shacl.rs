@@ -8,7 +8,7 @@
 
 /// The 20 logic modalities that MUST each have a configuration shape below.
 /// Used by the completeness test so a new modality cannot land without its SHACL.
-pub const LOGIC_MODALITY_SHAPES: [&str; 20] = [
+pub const LOGIC_MODALITY_SHAPES: [&str; 21] = [
     "DeonticConfigurationShape",
     "EpistemicConfigurationShape",
     "LinearConfigurationShape",
@@ -29,6 +29,7 @@ pub const LOGIC_MODALITY_SHAPES: [&str; 20] = [
     "FuzzyConfigurationShape",
     "CtlConfigurationShape",
     "ModalConfigurationShape",
+    "Rcc8ConfigurationShape",
 ];
 
 /// SHACL TTL covering every VM logic modality (configuration + structural shapes).
@@ -149,6 +150,15 @@ q42:ModalConfigurationShape a sh:NodeShape ;
         sh:message "Modal operator: box (□ necessary, all accessible worlds) | diamond (◇ possible, some)." ] ;
     sh:property [ sh:path q42:accessibilityPredicate ; sh:nodeKind sh:IRI ; sh:minCount 1 ;
         sh:message "□/◇ quantify over a Kripke accessibility relation (modal:accesses)." ] .
+
+# ── RCC-8 spatial topology (full polygon, zero-heap) ────────────────────────
+q42:Rcc8ConfigurationShape a sh:NodeShape ;
+    sh:property [ sh:path q42:rcc8Relation ; sh:datatype xsd:unsignedByte ;
+        sh:minInclusive 0 ; sh:maxInclusive 7 ;
+        sh:message "RCC-8 relation ∈ {DC 0, EC 1, PO 2, TPP 3, TPPi 4, NTPP 5, NTPPi 6, EQ 7}." ] ;
+    sh:property [ sh:path q42:maxBoundaryPoints ; sh:datatype xsd:integer ;
+        sh:minInclusive 3 ; sh:maxInclusive 64 ;
+        sh:message "A region is 3–MAX_BOUNDARY_POINTS (64) boundary-point quins (spatial:boundary; metadata = vertex sequence)." ] .
 "#
 }
 

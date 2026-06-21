@@ -116,3 +116,12 @@ q42:ModalConfigurationShape a sh:NodeShape ;
         sh:message "Modal operator: box (necessary, all accessible worlds) | diamond (possible, some)." ] ;
     sh:property [ sh:path q42:accessibilityPredicate ; sh:nodeKind sh:IRI ; sh:minCount 1 ;
         sh:message "box/diamond quantify over a Kripke accessibility relation (modal:accesses)." ] .
+
+# ── RCC-8 spatial topology (full polygon, zero-heap) ────────────────────────
+q42:Rcc8ConfigurationShape a sh:NodeShape ;
+    sh:property [ sh:path q42:rcc8Relation ; sh:datatype xsd:unsignedByte ;
+        sh:minInclusive 0 ; sh:maxInclusive 7 ;
+        sh:message "RCC-8 relation in {DC 0, EC 1, PO 2, TPP 3, TPPi 4, NTPP 5, NTPPi 6, EQ 7}." ] ;
+    sh:property [ sh:path q42:maxBoundaryPoints ; sh:datatype xsd:integer ;
+        sh:minInclusive 3 ; sh:maxInclusive 64 ;
+        sh:message "A region is 3-MAX_BOUNDARY_POINTS (64) boundary-point quins (spatial:boundary; metadata = vertex sequence)." ] .

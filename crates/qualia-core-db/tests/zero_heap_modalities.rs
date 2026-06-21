@@ -301,4 +301,24 @@ fn modality_handlers_are_zero_heap() {
             VmFrame { subject_reg: w0, predicate_reg: 0, object_reg: p, context_reg: 0 }), 0,
             "modal possibility handler must not allocate");
     }
+
+    // RCC-8 spatial (full polygon over bounded stack vertex arrays)
+    {
+        use qualia_core_db::modalities::spatio_temporal::pack_point;
+        let mut a = SlgArena::new();
+        let boundary = q_hash("spatial:boundary");
+        let (ra, rb) = (q_hash("zh:RA"), q_hash("zh:RB"));
+        let write = |a: &mut SlgArena, id: u64, pts: &[(f64, f64)]| {
+            for (seq, &(x, y)) in pts.iter().enumerate() {
+                let mut n = NQuin { subject: id, predicate: boundary, object: pack_point(x, y), context: 0, metadata: seq as u64, parity: 0 };
+                n.parity = n.subject ^ n.predicate ^ n.object ^ n.context;
+                a.write_table(n);
+            }
+        };
+        write(&mut a, ra, &[(0.0, 0.0), (10.0, 0.0), (10.0, 10.0), (0.0, 10.0)]);
+        write(&mut a, rb, &[(3.0, 3.0), (7.0, 3.0), (7.0, 7.0), (3.0, 7.0)]);
+        assert_eq!(allocs_during(&mut a, SlgOpcode::NativeRcc8(5),
+            VmFrame { subject_reg: rb, predicate_reg: 0, object_reg: ra, context_reg: 0 }), 0,
+            "RCC-8 handler must not allocate");
+    }
 }

@@ -629,6 +629,10 @@ pub enum SlgOpcode {
     /// Modal ◇ gate: `frame.object_reg` holds in SOME world accessible from
     /// `frame.subject_reg`.
     NativeModalPossible,
+    /// RCC-8 spatial gate: the topological relation between region `frame.subject_reg`
+    /// and region `frame.object_reg` (each = boundary-point quins) must equal the
+    /// param (0=DC,1=EC,2=PO,3=TPP,4=TPPi,5=NTPP,6=NTPPi,7=EQ).
+    NativeRcc8(u8),
 
     // ── Native: cognitive ai (ACT-R) ──────────────────────────────────────────
     NativeRetrieveByActivation,
@@ -1677,6 +1681,46 @@ pub fn execute_vm_frame(
                 let holds = crate::q_hash("modal:holds");
                 if !modal::possible(&scratch[..n], frame.subject_reg, frame.object_reg, accesses, holds) {
                     return None; // no accessible world satisfies the proposition → fails
+                }
+            }
+            SlgOpcode::NativeRcc8(expected) => {
+                let mut scratch = [NQuin::default(); 512];
+                let n = arena.collect_active_quins(&mut scratch);
+                let boundary = crate::q_hash("spatial:boundary");
+                // Read region A (subject) and B (object) vertices into fixed stack
+                // arrays, indexed by vertex sequence (metadata). Zero-heap.
+                let mut pa = [(0.0f64, 0.0f64); spatio_temporal::MAX_BOUNDARY_POINTS];
+                let mut na = 0usize;
+                let mut pb = [(0.0f64, 0.0f64); spatio_temporal::MAX_BOUNDARY_POINTS];
+                let mut nb = 0usize;
+                for q in &scratch[..n] {
+                    if q.predicate != boundary {
+                        continue;
+                    }
+                    let idx = q.metadata as usize;
+                    if idx >= spatio_temporal::MAX_BOUNDARY_POINTS {
+                        continue;
+                    }
+                    if q.subject == frame.subject_reg {
+                        pa[idx] = spatio_temporal::unpack_point(q.object);
+                        if idx + 1 > na {
+                            na = idx + 1;
+                        }
+                    } else if q.subject == frame.object_reg {
+                        pb[idx] = spatio_temporal::unpack_point(q.object);
+                        if idx + 1 > nb {
+                            nb = idx + 1;
+                        }
+                    }
+                }
+                let rel = spatio_temporal::evaluate_rcc8_points(
+                    frame.subject_reg,
+                    &pa[..na],
+                    frame.object_reg,
+                    &pb[..nb],
+                );
+                if rel as u8 != expected {
+                    return None; // not the expected spatial relation → fails
                 }
             }
             SlgOpcode::NativeUnless => {
