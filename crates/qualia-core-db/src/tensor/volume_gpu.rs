@@ -73,7 +73,11 @@ impl TensorVolumeGpu {
             count_buf: device.create_buffer(&wgpu::BufferDescriptor {
                 label: Some("TensorVolumeHitCount"),
                 size: 4,
-                usage: wgpu::BufferUsages::STORAGE | wgpu::BufferUsages::COPY_SRC,
+                // COPY_DST: reset to 0 each cycle via queue.write_buffer (line ~145);
+                // COPY_SRC: copied to staging_count for readback; STORAGE: shader binding.
+                usage: wgpu::BufferUsages::STORAGE
+                    | wgpu::BufferUsages::COPY_SRC
+                    | wgpu::BufferUsages::COPY_DST,
                 mapped_at_creation: false,
             }),
             staging_hits: device.create_buffer(&wgpu::BufferDescriptor {
