@@ -408,3 +408,69 @@ fn causal_necessity_active() {
     assert!(!gate(&mut b, SlgOpcode::NativeCausalNecessary, frame),
         "C is not necessary when an alternative causal path (via D) exists");
 }
+
+// ── Abductive (inference to best explanation) ─────────────────────────────────────
+
+#[test]
+fn abductive_active() {
+    let explains = q_hash("abduces:explains");
+    let (disease, fever, temp) = (q_hash("ab:disease"), q_hash("ab:fever"), q_hash("ab:temp"));
+
+    // disease → fever → observed temperature: an explanatory hypothesis exists.
+    let mut a = SlgArena::new();
+    a.write_table(q(disease, explains, fever));
+    a.write_table(q(fever, explains, temp));
+    let frame = VmFrame { subject_reg: 0, predicate_reg: 0, object_reg: temp, context_reg: 0 };
+    assert!(gate(&mut a, SlgOpcode::NativeAbduce, frame),
+        "an observation with a backward explanatory chain is abductively explained");
+
+    // An observation with no explanatory hypothesis.
+    let mut b = SlgArena::new();
+    b.write_table(q(disease, explains, fever));
+    let f2 = VmFrame { subject_reg: 0, predicate_reg: 0, object_reg: q_hash("ab:unrelated"), context_reg: 0 };
+    assert!(!gate(&mut b, SlgOpcode::NativeAbduce, f2),
+        "an unexplained observation fails the abductive gate");
+}
+
+// ── Closed-world / negation-as-failure ────────────────────────────────────────────
+
+#[test]
+fn closed_world_active() {
+    let (s, p, o) = (q_hash("cw:s"), q_hash("cw:p"), q_hash("cw:o"));
+    let frame = VmFrame { subject_reg: s, predicate_reg: p, object_reg: o, context_reg: 0 };
+
+    // The proposition is absent → its negation holds by default → gate passes.
+    let mut a = SlgArena::new();
+    a.write_table(q(q_hash("cw:other"), q_hash("cw:x"), q_hash("cw:y")));
+    assert!(gate(&mut a, SlgOpcode::NativeClosedWorld, frame),
+        "an unprovable proposition → the closed-world default (its negation) holds");
+
+    // The proposition is provable → the closed-world default is defeated.
+    let mut b = SlgArena::new();
+    b.write_table(q(s, p, o));
+    assert!(!gate(&mut b, SlgOpcode::NativeClosedWorld, frame),
+        "a provable proposition defeats the closed-world default");
+}
+
+// ── Fuzzy / many-valued conjunction (Gödel t-norm) ────────────────────────────────
+
+fn fz(subject: u64, predicate: u64, degree: f32) -> NQuin {
+    let mut n = NQuin { subject, predicate, object: 0, context: 0, metadata: degree.to_bits() as u64, parity: 0 };
+    n.parity = n.subject ^ n.predicate ^ n.object ^ n.context;
+    n
+}
+
+#[test]
+fn fuzzy_conjunction_active() {
+    let pred = q_hash("fz:satisfies");
+    let mut a = SlgArena::new();
+    a.write_table(fz(1, pred, 0.9));
+    a.write_table(fz(2, pred, 0.6));
+    a.write_table(fz(3, pred, 0.8));
+    let frame = VmFrame { subject_reg: 0, predicate_reg: pred, object_reg: 0, context_reg: 0 };
+
+    assert!(gate(&mut a, SlgOpcode::NativeFuzzyConjunction((0.5f32).to_bits()), frame),
+        "fuzzy conjunction min(0.9,0.6,0.8)=0.6 ≥ threshold 0.5");
+    assert!(!gate(&mut a, SlgOpcode::NativeFuzzyConjunction((0.7f32).to_bits()), frame),
+        "fuzzy conjunction 0.6 < threshold 0.7");
+}

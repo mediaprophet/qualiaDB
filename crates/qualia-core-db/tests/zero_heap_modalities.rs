@@ -159,4 +159,38 @@ fn modality_handlers_are_zero_heap() {
             VmFrame { subject_reg: c, predicate_reg: 0, object_reg: e, context_reg: root }), 0,
             "causal-necessity handler must not allocate");
     }
+
+    // Abductive (backward chain scan)
+    {
+        let mut a = SlgArena::new();
+        let ex = q_hash("abduces:explains");
+        a.write_table(q(q_hash("zh:hyp"), ex, q_hash("zh:obs")));
+        assert_eq!(allocs_during(&mut a, SlgOpcode::NativeAbduce,
+            VmFrame { subject_reg: 0, predicate_reg: 0, object_reg: q_hash("zh:obs"), context_reg: 0 }), 0,
+            "abductive handler must not allocate");
+    }
+
+    // Closed-world / NAF (absence scan)
+    {
+        let mut a = SlgArena::new();
+        a.write_table(q(q_hash("zh:x"), q_hash("zh:y"), q_hash("zh:z")));
+        assert_eq!(allocs_during(&mut a, SlgOpcode::NativeClosedWorld,
+            VmFrame { subject_reg: q_hash("zh:absent"), predicate_reg: q_hash("zh:p"), object_reg: q_hash("zh:o"), context_reg: 0 }), 0,
+            "closed-world handler must not allocate");
+    }
+
+    // Fuzzy conjunction (degree scan)
+    {
+        let mut a = SlgArena::new();
+        let p = q_hash("zh:fuzzy");
+        let mut f1 = NQuin { subject: 1, predicate: p, object: 0, context: 0, metadata: (0.9f32).to_bits() as u64, parity: 0 };
+        f1.parity = f1.subject ^ f1.predicate ^ f1.object ^ f1.context;
+        let mut f2 = NQuin { subject: 2, predicate: p, object: 0, context: 0, metadata: (0.6f32).to_bits() as u64, parity: 0 };
+        f2.parity = f2.subject ^ f2.predicate ^ f2.object ^ f2.context;
+        a.write_table(f1);
+        a.write_table(f2);
+        assert_eq!(allocs_during(&mut a, SlgOpcode::NativeFuzzyConjunction((0.5f32).to_bits()),
+            VmFrame { subject_reg: 0, predicate_reg: p, object_reg: 0, context_reg: 0 }), 0,
+            "fuzzy-conjunction handler must not allocate");
+    }
 }

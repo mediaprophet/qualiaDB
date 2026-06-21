@@ -70,7 +70,7 @@ parses via the in-crate SHACL compiler.
 - [x] Batch 1: MTL, CTD, causal — DONE (no duplicates: MTL→temporal_ltl::holds_within,
       CTD→deontic::evaluate_contrary_to_duty, causal→dialectical::is_necessary_cause;
       all zero-heap, modalities_active 19/19, zero_heap 1/1).
-- [ ] Batch 2: abductive, default, fuzzy
+- [x] Batch 2: abductive, NAF/closed-world (default), fuzzy — DONE (abductive.rs + fuzzy.rs new; default→defeasible::holds_by_default NAF, NOT a defeasible duplicate). modalities_active 22/22.
 - [ ] Batch 3: CTL, modal
 - [ ] SHACL extensions (all modalities)
 

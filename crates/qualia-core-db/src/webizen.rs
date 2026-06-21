@@ -3,7 +3,7 @@ use crate::modalities::logic::deontic::{
     norm_has_active_defeater, DeonticStatus, DeonticVerdict, DEFEATER_BIT, MAX_DEFEATER_SLOTS,
     OP_PERMIT,
 };
-use crate::modalities::{argumentation, asp, dialectical, dl, epistemic, linear, paraconsistent, probabilistic};
+use crate::modalities::{abductive, argumentation, asp, defeasible, dialectical, dl, epistemic, fuzzy, linear, paraconsistent, probabilistic};
 use crate::modalities::temporal_ltl::{self, LtlFormula};
 use crate::modalities::spatio_temporal;
 use crate::domains::financial::tax_schema::TaxRuleSchema;
@@ -608,6 +608,15 @@ pub enum SlgOpcode {
     /// Causal-necessity gate (but-for): `frame.subject_reg` must be a necessary
     /// cause of `frame.object_reg` from origin `frame.context_reg`.
     NativeCausalNecessary,
+    /// Abductive gate: the observation (`frame.object_reg`) must have an explanatory
+    /// hypothesis (backward `abduces:explains` chain) in the arena.
+    NativeAbduce,
+    /// Closed-world / negation-as-failure gate: passes iff the frame goal is ABSENT
+    /// from the arena (its negation holds by default).
+    NativeClosedWorld,
+    /// Fuzzy-conjunction gate: the Gödel t-norm (min) of the truth degrees of all
+    /// quins with predicate `frame.predicate_reg` must be ≥ the param threshold.
+    NativeFuzzyConjunction(u32),
 
     // ── Native: cognitive ai (ACT-R) ──────────────────────────────────────────
     NativeRetrieveByActivation,
@@ -1585,6 +1594,41 @@ pub fn execute_vm_frame(
                     frame.object_reg,
                 ) {
                     return None; // candidate is not a but-for cause of the effect → fails
+                }
+            }
+            SlgOpcode::NativeAbduce => {
+                let mut scratch = [NQuin::default(); 512];
+                let n = arena.collect_active_quins(&mut scratch);
+                let explains = crate::q_hash("abduces:explains");
+                match abductive::abductive_explanation(&scratch[..n], frame.object_reg, explains) {
+                    Some(hypothesis) => {
+                        frame.subject_reg = hypothesis; // bind the explaining hypothesis
+                    }
+                    None => return None, // the observation has no explanation → fails
+                }
+            }
+            SlgOpcode::NativeClosedWorld => {
+                let mut scratch = [NQuin::default(); 512];
+                let n = arena.collect_active_quins(&mut scratch);
+                let goal = frame_to_quin(frame);
+                if !defeasible::holds_by_default(&scratch[..n], &goal) {
+                    return None; // the proposition IS provable → the default does not hold
+                }
+            }
+            SlgOpcode::NativeFuzzyConjunction(threshold_bits) => {
+                let threshold = f32::from_bits(threshold_bits);
+                let mut scratch = [NQuin::default(); 512];
+                let n = arena.collect_active_quins(&mut scratch);
+                let mut acc = 1.0f32;
+                let mut any = false;
+                for q in &scratch[..n] {
+                    if q.predicate == frame.predicate_reg {
+                        acc = fuzzy::t_norm_godel(acc, fuzzy::degree(q));
+                        any = true;
+                    }
+                }
+                if !any || acc < threshold {
+                    return None; // aggregate fuzzy truth below threshold → fails
                 }
             }
             SlgOpcode::NativeUnless => {

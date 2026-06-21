@@ -1,6 +1,8 @@
+pub mod abductive;
 pub mod argumentation;
 pub use argumentation::{Argument, Attack, AttackType, ArgumentationFramework, ARGUMENT_BIT, ATTACK_BIT, DEFENSE_BIT};
 pub mod asp;
+pub mod fuzzy;
 pub use asp::{MAX_STABLE_MODELS, enumerate_stable_models};
 pub mod calculus;
 pub use calculus::{

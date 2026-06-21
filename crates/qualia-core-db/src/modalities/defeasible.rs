@@ -60,6 +60,18 @@ pub fn evaluate_defeasible_frame(
     Ok(count)
 }
 
+/// Negation-as-failure / closed-world assumption: a proposition holds "by default"
+/// (its negation is concluded) exactly when it CANNOT be proven from the closed set
+/// of `facts` — i.e. the `(subject, predicate, object)` triple is absent. This is
+/// the non-monotonic primitive the positive forward-chainer (`fire_guard_rules`)
+/// cannot express; the agent-honesty guard's "Unverified until proven" is an
+/// instance. Zero-heap (single linear scan).
+pub fn holds_by_default(facts: &[NQuin], goal: &NQuin) -> bool {
+    !facts.iter().any(|q| {
+        q.subject == goal.subject && q.predicate == goal.predicate && q.object == goal.object
+    })
+}
+
 #[cfg(test)]
 mod tests {
     use super::*;
