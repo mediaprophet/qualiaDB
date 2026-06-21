@@ -193,6 +193,111 @@ pub fn matrix_operation(args: &[u8]) -> Result<String, McpSystemError> {
     .to_string())
 }
 
+/// Find all roots of a polynomial given DESCENDING coefficients `[cₙ, …, c₁, c₀]`.
+pub fn algebra_solve_polynomial(args: &[u8]) -> Result<String, McpSystemError> {
+    use crate::specialized_libs::linear_algebra::polynomial_roots;
+    let v = parse_tool_args(args)?;
+    let coeffs = json_f64_array(&v, "coeffs")?;
+    let roots = polynomial_roots(&coeffs).map_err(|_| McpSystemError::InvalidParameters)?;
+    let out: Vec<Value> = roots
+        .iter()
+        .map(|r| json!({ "re": r.re, "im": r.im }))
+        .collect();
+    Ok(json!({
+        "degree": coeffs.len().saturating_sub(1),
+        "roots": out
+    })
+    .to_string())
+}
+
+/// Determinant / eigenvalues / symmetric eigensystem / SVD of a row-major matrix.
+pub fn algebra_matrix_analyze(args: &[u8]) -> Result<String, McpSystemError> {
+    use crate::specialized_libs::linear_algebra::{
+        determinant, eigen_symmetric, eigenvalues_general, svd,
+    };
+    let v = parse_tool_args(args)?;
+    let op = json_str(&v, "op", "determinant");
+    let rows = json_u64(&v, "rows", 0) as usize;
+    let cols = json_u64(&v, "cols", 0) as usize;
+    let data = json_f64_array(&v, "data")?;
+    match op {
+        "determinant" => {
+            let d = determinant(rows, &data).map_err(|_| McpSystemError::InvalidParameters)?;
+            Ok(json!({ "op": op, "determinant": d }).to_string())
+        }
+        "eigenvalues" => {
+            let e =
+                eigenvalues_general(rows, &data).map_err(|_| McpSystemError::InvalidParameters)?;
+            let out: Vec<Value> = e.iter().map(|z| json!({ "re": z.re, "im": z.im })).collect();
+            Ok(json!({ "op": op, "eigenvalues": out }).to_string())
+        }
+        "eigen_symmetric" => {
+            let (vals, vecs) =
+                eigen_symmetric(rows, &data).map_err(|_| McpSystemError::InvalidParameters)?;
+            Ok(json!({ "op": op, "n": rows, "eigenvalues": vals, "eigenvectors": vecs })
+                .to_string())
+        }
+        "svd" => {
+            let s = svd(rows, cols, &data).map_err(|_| McpSystemError::InvalidParameters)?;
+            Ok(json!({
+                "op": op, "rows": rows, "cols": cols,
+                "singular_values": s.singular_values, "u": s.u, "v": s.v
+            })
+            .to_string())
+        }
+        _ => Err(McpSystemError::InvalidParameters),
+    }
+}
+
+/// Symbolic algebra: differentiate / simplify / evaluate a text expression, or solve a
+/// quadratic symbolically.
+pub fn cas(args: &[u8]) -> Result<String, McpSystemError> {
+    use crate::specialized_libs::symbolic_algebra as sym;
+    let v = parse_tool_args(args)?;
+    let op = json_str(&v, "op", "simplify");
+    match op {
+        "differentiate" => {
+            let expr_s = json_str(&v, "expr", "");
+            let wrt = json_str(&v, "var", "x");
+            let e = sym::parse(expr_s).map_err(|_| McpSystemError::InvalidParameters)?;
+            let d = sym::simplify(&sym::differentiate(&e, wrt));
+            Ok(json!({ "op": op, "input": expr_s, "var": wrt, "derivative": d.to_string() })
+                .to_string())
+        }
+        "simplify" => {
+            let expr_s = json_str(&v, "expr", "");
+            let e = sym::parse(expr_s).map_err(|_| McpSystemError::InvalidParameters)?;
+            Ok(json!({ "op": op, "input": expr_s, "simplified": sym::simplify(&e).to_string() })
+                .to_string())
+        }
+        "evaluate" => {
+            let expr_s = json_str(&v, "expr", "");
+            let e = sym::parse(expr_s).map_err(|_| McpSystemError::InvalidParameters)?;
+            let mut env = std::collections::HashMap::new();
+            if let Some(obj) = v.get("env").and_then(Value::as_object) {
+                for (k, val) in obj {
+                    if let Some(f) = val.as_f64() {
+                        env.insert(k.clone(), f);
+                    }
+                }
+            }
+            let value = e.eval(&env).ok_or(McpSystemError::InvalidParameters)?;
+            Ok(json!({ "op": op, "input": expr_s, "value": value }).to_string())
+        }
+        "solve_quadratic" => {
+            let a = json_f64(&v, "a", 1.0);
+            let b = json_f64(&v, "b", 0.0);
+            let cc = json_f64(&v, "c", 0.0);
+            let roots: Vec<String> = sym::solve_quadratic_symbolic(a, b, cc)
+                .iter()
+                .map(|r| r.to_string())
+                .collect();
+            Ok(json!({ "op": op, "a": a, "b": b, "c": cc, "roots": roots }).to_string())
+        }
+        _ => Err(McpSystemError::InvalidParameters),
+    }
+}
+
 pub fn ode_solve(args: &[u8]) -> Result<String, McpSystemError> {
     use crate::specialized_libs::physics_simulation::{
         CommunicationPattern, DomainDecomposition, DomainType, LoadBalancing, NumericalMethod,
@@ -1235,6 +1340,64 @@ mod tests {
         let parsed: Value = serde_json::from_str(&out).expect("json");
         assert_eq!(parsed["rows"], 2);
         assert!(parsed["data"].as_array().unwrap()[0].as_f64().unwrap() > 0.0);
+    }
+
+    #[test]
+    fn algebra_solve_polynomial_tool() {
+        // x² − 5x + 6 → roots {2, 3}
+        let args = json!({ "coeffs": [1.0, -5.0, 6.0] });
+        let out = algebra_solve_polynomial(args.to_string().as_bytes()).expect("ok");
+        let parsed: Value = serde_json::from_str(&out).expect("json");
+        let roots = parsed["roots"].as_array().unwrap();
+        assert_eq!(roots.len(), 2);
+        let mut res: Vec<f64> = roots.iter().map(|r| r["re"].as_f64().unwrap()).collect();
+        res.sort_by(|a, b| a.partial_cmp(b).unwrap());
+        assert!((res[0] - 2.0).abs() < 1e-6 && (res[1] - 3.0).abs() < 1e-6);
+    }
+
+    #[test]
+    fn algebra_matrix_analyze_tool() {
+        // determinant of [[1,2],[3,4]] = −2
+        let det = algebra_matrix_analyze(
+            json!({ "op": "determinant", "rows": 2, "cols": 2, "data": [1.0,2.0,3.0,4.0] })
+                .to_string()
+                .as_bytes(),
+        )
+        .expect("ok");
+        let parsed: Value = serde_json::from_str(&det).expect("json");
+        assert!((parsed["determinant"].as_f64().unwrap() + 2.0).abs() < 1e-9);
+
+        // SVD reconstruction shape
+        let svd = algebra_matrix_analyze(
+            json!({ "op": "svd", "rows": 3, "cols": 2, "data": [1.0,0.0,0.0,1.0,1.0,1.0] })
+                .to_string()
+                .as_bytes(),
+        )
+        .expect("ok");
+        assert!(svd.contains("singular_values"));
+    }
+
+    #[test]
+    fn cas_tool_differentiate_and_solve() {
+        // d/dx (x^3 - 2*x^2 + 5) then evaluate at x=2 → 4
+        let d = cas(json!({ "op": "differentiate", "expr": "x^3 - 2*x^2 + 5", "var": "x" })
+            .to_string()
+            .as_bytes())
+        .expect("ok");
+        assert!(d.contains("derivative"));
+
+        let ev = cas(json!({ "op": "evaluate", "expr": "x^2 + 1", "env": { "x": 3.0 } })
+            .to_string()
+            .as_bytes())
+        .expect("ok");
+        let parsed: Value = serde_json::from_str(&ev).expect("json");
+        assert!((parsed["value"].as_f64().unwrap() - 10.0).abs() < 1e-9);
+
+        let q = cas(json!({ "op": "solve_quadratic", "a": 1.0, "b": -5.0, "c": 6.0 })
+            .to_string()
+            .as_bytes())
+        .expect("ok");
+        assert!(q.contains("roots"));
     }
 
     #[test]

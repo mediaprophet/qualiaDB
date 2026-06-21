@@ -211,6 +211,169 @@ pub fn expr_citation_hash(expr: &Expr) -> u64 {
     crate::q_hash(&format!("{expr}"))
 }
 
+// ── parser: text → Expr (recursive descent) ─────────────────────────────────────
+// Grammar:  expr = term (('+'|'-') term)*
+//           term = factor (('*'|'/') factor)*
+//           factor = unary ('^' integer)?
+//           unary = '-' unary | base
+//           base = number | ident | 'sqrt' '(' expr ')' | '(' expr ')'
+
+/// Parse a textual expression like `"x^3 - 2*x^2 + 5"` or `"sqrt(b^2 - 4*a*c)"` into an
+/// [`Expr`]. Supports `+ - * / ^`, parentheses, `sqrt(...)`, numbers and identifiers.
+pub fn parse(input: &str) -> Result<Expr, String> {
+    let tokens = tokenize(input)?;
+    let mut p = Parser { tokens, pos: 0 };
+    let e = p.parse_expr()?;
+    if p.pos != p.tokens.len() {
+        return Err(format!("unexpected trailing tokens at {}", p.pos));
+    }
+    Ok(e)
+}
+
+#[derive(Debug, Clone, PartialEq)]
+enum Tok {
+    Num(f64),
+    Ident(String),
+    Plus,
+    Minus,
+    Star,
+    Slash,
+    Caret,
+    LParen,
+    RParen,
+}
+
+fn tokenize(s: &str) -> Result<Vec<Tok>, String> {
+    let mut out = Vec::new();
+    let chars: Vec<char> = s.chars().collect();
+    let mut i = 0;
+    while i < chars.len() {
+        let ch = chars[i];
+        match ch {
+            ' ' | '\t' | '\n' | '\r' => i += 1,
+            '+' => { out.push(Tok::Plus); i += 1; }
+            '-' => { out.push(Tok::Minus); i += 1; }
+            '*' => { out.push(Tok::Star); i += 1; }
+            '/' => { out.push(Tok::Slash); i += 1; }
+            '^' => { out.push(Tok::Caret); i += 1; }
+            '(' => { out.push(Tok::LParen); i += 1; }
+            ')' => { out.push(Tok::RParen); i += 1; }
+            c if c.is_ascii_digit() || c == '.' => {
+                let start = i;
+                while i < chars.len() && (chars[i].is_ascii_digit() || chars[i] == '.') {
+                    i += 1;
+                }
+                let num: String = chars[start..i].iter().collect();
+                out.push(Tok::Num(num.parse().map_err(|_| format!("bad number '{num}'"))?));
+            }
+            c if c.is_ascii_alphabetic() || c == '_' => {
+                let start = i;
+                while i < chars.len() && (chars[i].is_ascii_alphanumeric() || chars[i] == '_') {
+                    i += 1;
+                }
+                out.push(Tok::Ident(chars[start..i].iter().collect()));
+            }
+            other => return Err(format!("unexpected character '{other}'")),
+        }
+    }
+    Ok(out)
+}
+
+struct Parser {
+    tokens: Vec<Tok>,
+    pos: usize,
+}
+
+impl Parser {
+    fn peek(&self) -> Option<&Tok> { self.tokens.get(self.pos) }
+    fn next(&mut self) -> Option<Tok> {
+        let t = self.tokens.get(self.pos).cloned();
+        if t.is_some() { self.pos += 1; }
+        t
+    }
+
+    fn parse_expr(&mut self) -> Result<Expr, String> {
+        let mut left = self.parse_term()?;
+        while let Some(op) = self.peek() {
+            match op {
+                Tok::Plus => { self.next(); left = add(left, self.parse_term()?); }
+                Tok::Minus => { self.next(); left = sub(left, self.parse_term()?); }
+                _ => break,
+            }
+        }
+        Ok(left)
+    }
+
+    fn parse_term(&mut self) -> Result<Expr, String> {
+        let mut left = self.parse_factor()?;
+        while let Some(op) = self.peek() {
+            match op {
+                Tok::Star => { self.next(); left = mul(left, self.parse_factor()?); }
+                Tok::Slash => { self.next(); left = div(left, self.parse_factor()?); }
+                _ => break,
+            }
+        }
+        Ok(left)
+    }
+
+    fn parse_factor(&mut self) -> Result<Expr, String> {
+        let base = self.parse_unary()?;
+        if let Some(Tok::Caret) = self.peek() {
+            self.next();
+            // exponent must be an integer literal (optionally negated)
+            let neg_exp = matches!(self.peek(), Some(Tok::Minus));
+            if neg_exp { self.next(); }
+            match self.next() {
+                Some(Tok::Num(n)) if n.fract() == 0.0 => {
+                    let e = n as i32 * if neg_exp { -1 } else { 1 };
+                    Ok(pow(base, e))
+                }
+                _ => Err("'^' requires an integer exponent".to_string()),
+            }
+        } else {
+            Ok(base)
+        }
+    }
+
+    fn parse_unary(&mut self) -> Result<Expr, String> {
+        if let Some(Tok::Minus) = self.peek() {
+            self.next();
+            return Ok(neg(self.parse_unary()?));
+        }
+        self.parse_base()
+    }
+
+    fn parse_base(&mut self) -> Result<Expr, String> {
+        match self.next() {
+            Some(Tok::Num(n)) => Ok(c(n)),
+            Some(Tok::Ident(name)) => {
+                if name == "sqrt" {
+                    self.expect(Tok::LParen)?;
+                    let inner = self.parse_expr()?;
+                    self.expect(Tok::RParen)?;
+                    Ok(sqrt(inner))
+                } else {
+                    Ok(var(&name))
+                }
+            }
+            Some(Tok::LParen) => {
+                let inner = self.parse_expr()?;
+                self.expect(Tok::RParen)?;
+                Ok(inner)
+            }
+            other => Err(format!("unexpected token: {other:?}")),
+        }
+    }
+
+    fn expect(&mut self, t: Tok) -> Result<(), String> {
+        if self.next().as_ref() == Some(&t) {
+            Ok(())
+        } else {
+            Err(format!("expected {t:?}"))
+        }
+    }
+}
+
 impl std::fmt::Display for Expr {
     fn fmt(&self, f: &mut std::fmt::Formatter<'_>) -> std::fmt::Result {
         match self {
@@ -273,6 +436,22 @@ mod tests {
         let mut vals: Vec<f64> = roots.iter().map(|r| r.eval(&empty).unwrap()).collect();
         vals.sort_by(|a, b| a.partial_cmp(b).unwrap());
         assert!((vals[0] - 2.0).abs() < 1e-12 && (vals[1] - 3.0).abs() < 1e-12);
+    }
+
+    #[test]
+    fn parse_and_differentiate_roundtrip() {
+        // Parse a textual polynomial, differentiate symbolically, and check the
+        // derivative numerically (d/dx of x^3 - 2x^2 + 5 is 3x^2 - 4x → at x=2: 4).
+        let f = parse("x^3 - 2*x^2 + 5").unwrap();
+        let df = simplify(&differentiate(&f, "x"));
+        assert!((df.eval(&env1("x", 2.0)).unwrap() - 4.0).abs() < 1e-9);
+        // precedence: 2 + 3 * 4 = 14, not 20
+        assert_eq!(parse("2 + 3 * 4").unwrap().eval(&HashMap::new()).unwrap(), 14.0);
+        // sqrt + parens
+        let g = parse("sqrt((a + 3))").unwrap();
+        assert!((g.eval(&env1("a", 1.0)).unwrap() - 2.0).abs() < 1e-12);
+        // bad input errors, not panics
+        assert!(parse("2 +* 3").is_err());
     }
 
     #[test]

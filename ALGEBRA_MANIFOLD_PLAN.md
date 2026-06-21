@@ -34,7 +34,7 @@ Home: `specialized_libs/linear_algebra.rs` (numeric) → later mirrored symbolic
       (all complex roots simultaneously). Companion-matrix route deferred (1.3 suffices).
 - [x] 1.4 Tests: x²−5x+6→{2,3}, x²+1→±i, x²−2x+1→double, linear fallback, cubic
       {1,2,3}, quartic x⁴−1→{1,−1,i,−i}.
-- [ ] 1.5 MCP tool `algebra_solve_polynomial`.
+- [x] 1.5 MCP tool `algebra_solve_polynomial` (coeffs → roots). Tested.
 
 ## Phase 2 — Eigenvalues / SVD / determinant (general N×N)  [core done]
 Home: `specialized_libs/linear_algebra.rs`.
@@ -47,7 +47,8 @@ Home: `specialized_libs/linear_algebra.rs`.
 - [x] 2.5 `svd(m,n,data) -> Svd{singular_values,u,v}` — via eigendecomposition of AᵀA,
       σ descending, U = A·V·Σ⁻¹. Tested by reconstruction ‖A − UΣVᵀ‖ < 1e-9 (3×2 case).
 - [ ] 2.6 More tests: general (non-symmetric) spectra once 2.4 lands.
-- [ ] 2.7 MCP tools: `algebra_eigen`, `algebra_svd`, `algebra_determinant`.
+- [x] 2.7 MCP tool `algebra_matrix_analyze` (op ∈ {determinant, eigenvalues, eigen_symmetric,
+      svd}). Tested.
 
 ## Phase 3 — Symbolic algebra (CAS)  [new module]
 Home: NEW `specialized_libs/symbolic_algebra.rs` (distinct from `solvers/symbolic_logic`).
@@ -57,11 +58,14 @@ Home: NEW `specialized_libs/symbolic_algebra.rs` (distinct from `solvers/symboli
 - [ ] 3.2 `simplify` — constant folding, like-term collection, canonical ordering.
 - [ ] 3.3 `differentiate(expr, var)` — symbolic derivative.
 - [ ] 3.4 `solve_quadratic_symbolic` — exact `(-b ± √(b²−4ac))/2a`, returns Expr roots.
-- [ ] 3.5 `expand` / `factor` (at least quadratics → binomial factors over rationals).
-- [ ] 3.6 Tests: d/dx(x³) = 3x², simplify(x+x) = 2x, symbolic quadratic vs numeric agreement.
-- [ ] 3.7 MCP tools: `cas_differentiate`, `cas_simplify`, `cas_solve`.
-- [ ] 3.8 Bridge: parse `Expr` ↔ q42 / NQuin so symbolic results can be stored & cited
-      (ties to the neuro-symbolic tokenizer→ontology binding in STELLAR_MISSION.md).
+- [x] 3.4b `parse(&str) -> Expr` — recursive-descent parser (`+ - * / ^`, parens, sqrt,
+      vars/numbers) so expressions can come from text. Tested.
+- [ ] 3.5 `expand` / `factor` (at least quadratics → binomial factors over rationals) — TODO.
+- [x] 3.6 Tests: symbolic derivative vs finite difference; simplify identities incl.
+      x+x→2x; symbolic quadratic vs numeric; parse+differentiate roundtrip.
+- [x] 3.7 MCP tool `cas` (op ∈ {differentiate, simplify, evaluate, solve_quadratic}). Tested.
+- [~] 3.8 Bridge: `expr_citation_hash` gives a stable provenance hash so symbolic results can
+      be cited into the graph. Full `Expr` ↔ NQuin-tree encoding still TODO.
 
 ## Phase 4 — wgpu 10D manifold
 Home: `compute_universe.rs` + `tensor/*`.

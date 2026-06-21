@@ -203,6 +203,21 @@ fn stable_mcp_tools() -> &'static [McpToolDescriptor] {
             input_schema: r#"{"type":"object","required":["op"],"properties":{"op":{"type":"string","enum":["multiply","transpose","solve","inverse"]},"left":{"type":"object","properties":{"id":{"type":"string"},"rows":{"type":"integer"},"cols":{"type":"integer"},"data":{"type":"array","items":{"type":"number"}}}},"right":{"type":"object"},"matrices":{"type":"array"},"result_id":{"type":"string"}}}"#,
         },
         McpToolDescriptor {
+            name: "algebra_solve_polynomial",
+            description: "Find all (real + complex) roots of a polynomial given descending coefficients.",
+            input_schema: r#"{"type":"object","required":["coeffs"],"properties":{"coeffs":{"type":"array","items":{"type":"number"},"description":"descending coefficients [c_n, ..., c_1, c_0]"}}}"#,
+        },
+        McpToolDescriptor {
+            name: "algebra_matrix_analyze",
+            description: "Determinant, eigenvalues (general), symmetric eigensystem, or SVD of a row-major matrix.",
+            input_schema: r#"{"type":"object","required":["op","rows","data"],"properties":{"op":{"type":"string","enum":["determinant","eigenvalues","eigen_symmetric","svd"]},"rows":{"type":"integer"},"cols":{"type":"integer"},"data":{"type":"array","items":{"type":"number"}}}}"#,
+        },
+        McpToolDescriptor {
+            name: "cas",
+            description: "Symbolic algebra: differentiate/simplify/evaluate a text expression (e.g. 'x^3 - 2*x^2'), or solve a quadratic symbolically.",
+            input_schema: r#"{"type":"object","required":["op"],"properties":{"op":{"type":"string","enum":["differentiate","simplify","evaluate","solve_quadratic"]},"expr":{"type":"string"},"var":{"type":"string"},"env":{"type":"object"},"a":{"type":"number"},"b":{"type":"number"},"c":{"type":"number"}}}"#,
+        },
+        McpToolDescriptor {
             name: "ode_solve",
             description: "Run a configurable CFD or molecular-dynamics simulation step.",
             input_schema: r#"{"type":"object","properties":{"type":{"type":"string","enum":["cfd","distributed","molecular_dynamics"]},"nx":{"type":"integer"},"ny":{"type":"integer"},"dx":{"type":"number"},"time_step":{"type":"number"},"total_time":{"type":"number"},"num_threads":{"type":"integer"}}}"#,
@@ -365,6 +380,9 @@ pub unsafe fn enforce_fiduciary_tool_dispatch(
 
         // ── Scientific Computing Tools ───────────────────────────────────────
         b"matrix_operation" => execute_matrix_operation(payload.arguments_raw, intent_frame),
+        b"algebra_solve_polynomial" => mcp_tool_impls::algebra_solve_polynomial(payload.arguments_raw),
+        b"algebra_matrix_analyze" => mcp_tool_impls::algebra_matrix_analyze(payload.arguments_raw),
+        b"cas" => mcp_tool_impls::cas(payload.arguments_raw),
 
         b"ode_solve" => execute_ode_solve(payload.arguments_raw, intent_frame),
 
