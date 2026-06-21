@@ -41,16 +41,20 @@ impl ConstraintSynthesizer<Fr> for DeonticAccessCircuit {
             self.temporal_constraint.ok_or(SynthesisError::AssignmentMissing)
         })?;
 
+        // Access constraint: the prover's secret (did, role, action) must sum to the
+        // public `policy_root` — i.e. they hold a credential authorised under the
+        // committed policy. (Simplified additive commitment; Merkle-set membership is
+        // a future hardening, not faked here.)
         cs.enforce_constraint(
             LinearCombination::from(did_var) + role_var + action_var,
             LinearCombination::from(Variable::One),
             LinearCombination::from(root_var),
         )?;
-        cs.enforce_constraint(
-            LinearCombination::from(time_var),
-            LinearCombination::from(Variable::One),
-            LinearCombination::from(time_var),
-        )?;
+        // `temporal_constraint` is bound as a public input (the verifier checks the
+        // proof was generated for this exact timestamp), but range enforcement
+        // (notBefore <= t <= notAfter) is a documented PendingImplementation. We do
+        // NOT fake it with a tautological `t * 1 = t` constraint that enforces nothing.
+        let _ = time_var;
         Ok(())
     }
 }
@@ -116,5 +120,41 @@ mod tests {
     #[test]
     fn test_circuit_setup() {
         assert!(generate_deontic_crs().is_ok());
+    }
+
+    #[test]
+    fn test_deontic_proof_roundtrip_and_soundness() {
+        use ark_ff::UniformRand;
+        let mut rng = ark_std::rand::rngs::OsRng;
+        let (pk, vk) = generate_deontic_crs().unwrap();
+
+        // A satisfying credential: did + role + action == policy_root.
+        let did = Fr::rand(&mut rng);
+        let role = Fr::rand(&mut rng);
+        let action = Fr::rand(&mut rng);
+        let policy_root = did + role + action;
+        let temporal = Fr::from(1_700_000_000u64);
+
+        let circuit = DeonticAccessCircuit {
+            user_did_commitment: Some(did),
+            role_id: Some(role),
+            action_permission: Some(action),
+            policy_root: Some(policy_root),
+            temporal_constraint: Some(temporal),
+        };
+        let proof = Groth16::<Bls12_381>::prove(&pk, circuit, &mut rng).unwrap();
+
+        // Valid: the public inputs match the proven relation.
+        assert!(
+            Groth16::<Bls12_381>::verify(&vk, &[policy_root, temporal], &proof).unwrap(),
+            "a satisfying deontic access proof must verify"
+        );
+
+        // Soundness: a falsified policy_root must be rejected.
+        assert!(
+            !Groth16::<Bls12_381>::verify(&vk, &[policy_root + Fr::from(1u64), temporal], &proof)
+                .unwrap(),
+            "the proof must NOT verify against a falsified policy_root"
+        );
     }
 }

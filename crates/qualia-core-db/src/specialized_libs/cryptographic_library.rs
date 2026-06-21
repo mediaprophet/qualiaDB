@@ -3778,12 +3778,25 @@ impl ProofEngine {
         Ok(&proof_data[32..64] == expected_pub_commit.as_slice())
     }
 
+    /// Reduce a secret WITNESS value to a field element via SHA-256 (the secret
+    /// never leaves the prover; only its field image enters the circuit).
     #[cfg(feature = "zk-culling")]
     fn bytes_to_fr(data: &[u8]) -> ark_bls12_381::Fr {
         use ark_ff::PrimeField;
         use sha2::{Sha256, Digest};
         let hash = Sha256::digest(data);
         ark_bls12_381::Fr::from_be_bytes_mod_order(hash.as_slice())
+    }
+
+    /// Interpret a PUBLIC input as a canonical little-endian field element — NOT
+    /// hashed. Prover and verifier must agree on the exact public value (e.g. a
+    /// `policy_root` the witness genuinely satisfies), so hashing it (as for a
+    /// witness) would make a valid proof unconstructible. Callers serialise the
+    /// field element little-endian (`Fr::into_bigint().to_bytes_le()`).
+    #[cfg(feature = "zk-culling")]
+    fn public_input_to_fr(data: &[u8]) -> ark_bls12_381::Fr {
+        use ark_ff::PrimeField;
+        ark_bls12_381::Fr::from_le_bytes_mod_order(data)
     }
 
     #[cfg(feature = "zk-culling")]
@@ -3816,9 +3829,9 @@ impl ProofEngine {
         let user_did = Self::bytes_to_fr(witness.first().map(|v| v.as_slice()).unwrap_or(b""));
         let role_id = Self::bytes_to_fr(witness.get(1).map(|v| v.as_slice()).unwrap_or(b""));
         let action_permission = Self::bytes_to_fr(witness.get(2).map(|v| v.as_slice()).unwrap_or(b""));
-        let policy_root = Self::bytes_to_fr(public_inputs.first().map(|v| v.as_slice()).unwrap_or(b""));
+        let policy_root = Self::public_input_to_fr(public_inputs.first().map(|v| v.as_slice()).unwrap_or(b""));
         let temporal_constraint =
-            Self::bytes_to_fr(public_inputs.get(1).map(|v| v.as_slice()).unwrap_or(b""));
+            Self::public_input_to_fr(public_inputs.get(1).map(|v| v.as_slice()).unwrap_or(b""));
 
         let circuit = crate::deontic_circuit::DeonticAccessCircuit {
             user_did_commitment: Some(user_did),
@@ -3876,7 +3889,7 @@ impl ProofEngine {
         let (_pk, vk) = Self::deontic_crs()?;
         let public_fr: Vec<Fr> = public_inputs
             .iter()
-            .map(|p| Self::bytes_to_fr(p))
+            .map(|p| Self::public_input_to_fr(p))
             .collect();
         Ok(Groth16::<Bls12_381>::verify(vk, &public_fr, &proof)
             .map_err(|e| CryptographicError::ProofError(e.to_string()))?)
@@ -4589,17 +4602,71 @@ mod tests {
     fn test_zk_proof_verification() {
         let mut library = CryptographicLibrary::new();
         library.initialize().unwrap();
-        
+
         let witness = vec![vec![1u8, 2u8, 3u8]];
         let public_inputs = vec![vec![4u8, 5u8, 6u8]];
-        
+
         let proof = library.generate_zk_proof("test_circuit", &witness, &public_inputs).unwrap();
-        
+
         // Verify proof
         let is_valid = library.verify_zk_proof(&proof.result, &public_inputs).unwrap();
 
         assert!(is_valid.result);
         assert!(is_valid.result);
+    }
+
+    /// Real arkworks Groth16 round-trip + soundness through the public byte API,
+    /// for the plan-critical `deontic_access` credential-gated access circuit.
+    #[cfg(feature = "zk-culling")]
+    #[test]
+    fn test_deontic_groth16_byte_api_roundtrip_and_soundness() {
+        use ark_bls12_381::Fr;
+        use ark_ff::{BigInteger, PrimeField};
+        use sha2::{Digest, Sha256};
+
+        // Mirror the prover's witness reduction (SHA-256 -> Fr) and the public-input
+        // serialisation (canonical little-endian Fr) so we can build a satisfying
+        // instance: did + role + action == policy_root.
+        let hash_to_fr = |d: &[u8]| Fr::from_be_bytes_mod_order(&Sha256::digest(d));
+        let fr_le = |f: &Fr| f.into_bigint().to_bytes_le();
+
+        let mut library = CryptographicLibrary::new();
+        library.initialize().unwrap();
+
+        let did = b"did:webizen:alice".to_vec();
+        let role = b"role:guardian".to_vec();
+        let action = b"action:read-vault".to_vec();
+        let witness = vec![did.clone(), role.clone(), action.clone()];
+
+        let policy_root = hash_to_fr(&did) + hash_to_fr(&role) + hash_to_fr(&action);
+        let temporal = Fr::from(1_700_000_000u64);
+        let public_inputs = vec![fr_le(&policy_root), fr_le(&temporal)];
+
+        let proof = library
+            .generate_zk_proof("deontic_access", &witness, &public_inputs)
+            .unwrap();
+        // Tag 0x02 = the real Groth16 path (not the 0x01 SHA-256 commitment fallback).
+        assert_eq!(
+            proof.result.proof_data[64], 0x02,
+            "deontic_access must route through the real Groth16 path"
+        );
+        assert!(
+            library
+                .verify_zk_proof(&proof.result, &public_inputs)
+                .unwrap()
+                .result,
+            "a valid deontic access proof must verify"
+        );
+
+        // Soundness: falsify the policy_root public input -> must be rejected.
+        let tampered = vec![fr_le(&(policy_root + Fr::from(1u64))), fr_le(&temporal)];
+        assert!(
+            !library
+                .verify_zk_proof(&proof.result, &tampered)
+                .unwrap()
+                .result,
+            "a deontic proof must NOT verify against a falsified policy_root"
+        );
     }
 
     #[test]
