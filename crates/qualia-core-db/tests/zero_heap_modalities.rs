@@ -193,4 +193,28 @@ fn modality_handlers_are_zero_heap() {
             VmFrame { subject_reg: 0, predicate_reg: p, object_reg: 0, context_reg: 0 }), 0,
             "fuzzy-conjunction handler must not allocate");
     }
+
+    // CTL EF (bounded BFS over transition graph)
+    {
+        let mut a = SlgArena::new();
+        let (next, holds) = (q_hash("ctl:next"), q_hash("ctl:holds"));
+        let (s1, s2, goal) = (q_hash("zh:s1"), q_hash("zh:s2"), q_hash("zh:goal"));
+        a.write_table(q(s1, next, s2));
+        a.write_table(q(s2, holds, goal));
+        assert_eq!(allocs_during(&mut a, SlgOpcode::NativeCtlExistsFinally,
+            VmFrame { subject_reg: s1, predicate_reg: 0, object_reg: goal, context_reg: 0 }), 0,
+            "CTL EF handler must not allocate");
+    }
+
+    // Modal □ (accessibility scan)
+    {
+        let mut a = SlgArena::new();
+        let (acc, holds) = (q_hash("modal:accesses"), q_hash("modal:holds"));
+        let (w0, w1, p) = (q_hash("zh:w0"), q_hash("zh:w1"), q_hash("zh:p"));
+        a.write_table(q(w0, acc, w1));
+        a.write_table(q(w1, holds, p));
+        assert_eq!(allocs_during(&mut a, SlgOpcode::NativeModalNecessary,
+            VmFrame { subject_reg: w0, predicate_reg: 0, object_reg: p, context_reg: 0 }), 0,
+            "modal necessity handler must not allocate");
+    }
 }

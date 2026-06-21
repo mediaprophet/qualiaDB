@@ -474,3 +474,57 @@ fn fuzzy_conjunction_active() {
     assert!(!gate(&mut a, SlgOpcode::NativeFuzzyConjunction((0.7f32).to_bits()), frame),
         "fuzzy conjunction 0.6 < threshold 0.7");
 }
+
+// ── CTL (branching-time temporal) ─────────────────────────────────────────────────
+
+#[test]
+fn ctl_active() {
+    let next = q_hash("ctl:next");
+    let holds = q_hash("ctl:holds");
+    let goal = q_hash("ctl:goal");
+    let safe = q_hash("ctl:safe");
+    let (s1, s2, s3) = (q_hash("st:1"), q_hash("st:2"), q_hash("st:3"));
+    let mut a = SlgArena::new();
+    a.write_table(q(s1, next, s2));
+    a.write_table(q(s2, next, s3));
+    a.write_table(q(s3, holds, goal));
+    a.write_table(q(s1, holds, safe));
+    a.write_table(q(s2, holds, safe));
+    a.write_table(q(s3, holds, safe));
+
+    let ef = VmFrame { subject_reg: s1, predicate_reg: 0, object_reg: goal, context_reg: 0 };
+    assert!(gate(&mut a, SlgOpcode::NativeCtlExistsFinally, ef),
+        "EF goal: a path reaches state 3 where the goal holds");
+
+    let ag = VmFrame { subject_reg: s1, predicate_reg: 0, object_reg: safe, context_reg: 0 };
+    assert!(gate(&mut a, SlgOpcode::NativeCtlAlwaysGlobally, ag),
+        "AG safe: every reachable state satisfies the invariant");
+
+    let ag_bad = VmFrame { subject_reg: s1, predicate_reg: 0, object_reg: goal, context_reg: 0 };
+    assert!(!gate(&mut a, SlgOpcode::NativeCtlAlwaysGlobally, ag_bad),
+        "AG goal fails: the start state does not satisfy the invariant");
+}
+
+// ── General modal (Kripke □ / ◇) ──────────────────────────────────────────────────
+
+#[test]
+fn modal_active() {
+    let accesses = q_hash("modal:accesses");
+    let holds = q_hash("modal:holds");
+    let p = q_hash("modal:p");
+    let (w0, w1, w2) = (q_hash("w:0"), q_hash("w:1"), q_hash("w:2"));
+    let mut a = SlgArena::new();
+    a.write_table(q(w0, accesses, w1));
+    a.write_table(q(w0, accesses, w2));
+    a.write_table(q(w1, holds, p));
+    let frame = VmFrame { subject_reg: w0, predicate_reg: 0, object_reg: p, context_reg: 0 };
+
+    assert!(gate(&mut a, SlgOpcode::NativeModalPossible, frame),
+        "◇p: an accessible world (w1) satisfies p");
+    assert!(!gate(&mut a, SlgOpcode::NativeModalNecessary, frame),
+        "□p fails: an accessible world (w2) does not satisfy p");
+
+    a.write_table(q(w2, holds, p));
+    assert!(gate(&mut a, SlgOpcode::NativeModalNecessary, frame),
+        "□p: all accessible worlds satisfy p");
+}

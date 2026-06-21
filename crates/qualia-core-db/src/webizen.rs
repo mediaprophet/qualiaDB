@@ -3,7 +3,7 @@ use crate::modalities::logic::deontic::{
     norm_has_active_defeater, DeonticStatus, DeonticVerdict, DEFEATER_BIT, MAX_DEFEATER_SLOTS,
     OP_PERMIT,
 };
-use crate::modalities::{abductive, argumentation, asp, defeasible, dialectical, dl, epistemic, fuzzy, linear, paraconsistent, probabilistic};
+use crate::modalities::{abductive, argumentation, asp, ctl, defeasible, dialectical, dl, epistemic, fuzzy, linear, modal, paraconsistent, probabilistic};
 use crate::modalities::temporal_ltl::{self, LtlFormula};
 use crate::modalities::spatio_temporal;
 use crate::domains::financial::tax_schema::TaxRuleSchema;
@@ -617,6 +617,18 @@ pub enum SlgOpcode {
     /// Fuzzy-conjunction gate: the Gödel t-norm (min) of the truth degrees of all
     /// quins with predicate `frame.predicate_reg` must be ≥ the param threshold.
     NativeFuzzyConjunction(u32),
+    /// CTL EF gate: from `frame.subject_reg`, SOME path reaches a state satisfying
+    /// `frame.object_reg` (branching-time reachability over `ctl:next`/`ctl:holds`).
+    NativeCtlExistsFinally,
+    /// CTL AG gate: EVERY state reachable from `frame.subject_reg` satisfies the
+    /// invariant `frame.object_reg`.
+    NativeCtlAlwaysGlobally,
+    /// Modal □ gate: `frame.object_reg` holds in ALL worlds accessible from
+    /// `frame.subject_reg` (`modal:accesses`/`modal:holds`).
+    NativeModalNecessary,
+    /// Modal ◇ gate: `frame.object_reg` holds in SOME world accessible from
+    /// `frame.subject_reg`.
+    NativeModalPossible,
 
     // ── Native: cognitive ai (ACT-R) ──────────────────────────────────────────
     NativeRetrieveByActivation,
@@ -1629,6 +1641,42 @@ pub fn execute_vm_frame(
                 }
                 if !any || acc < threshold {
                     return None; // aggregate fuzzy truth below threshold → fails
+                }
+            }
+            SlgOpcode::NativeCtlExistsFinally => {
+                let mut scratch = [NQuin::default(); 512];
+                let n = arena.collect_active_quins(&mut scratch);
+                let next = crate::q_hash("ctl:next");
+                let holds = crate::q_hash("ctl:holds");
+                if !ctl::exists_finally(&scratch[..n], frame.subject_reg, frame.object_reg, next, holds) {
+                    return None; // no path reaches the target state → fails
+                }
+            }
+            SlgOpcode::NativeCtlAlwaysGlobally => {
+                let mut scratch = [NQuin::default(); 512];
+                let n = arena.collect_active_quins(&mut scratch);
+                let next = crate::q_hash("ctl:next");
+                let holds = crate::q_hash("ctl:holds");
+                if !ctl::always_globally(&scratch[..n], frame.subject_reg, frame.object_reg, next, holds) {
+                    return None; // a reachable state violates the invariant → fails
+                }
+            }
+            SlgOpcode::NativeModalNecessary => {
+                let mut scratch = [NQuin::default(); 512];
+                let n = arena.collect_active_quins(&mut scratch);
+                let accesses = crate::q_hash("modal:accesses");
+                let holds = crate::q_hash("modal:holds");
+                if !modal::necessary(&scratch[..n], frame.subject_reg, frame.object_reg, accesses, holds) {
+                    return None; // an accessible world fails the proposition → fails
+                }
+            }
+            SlgOpcode::NativeModalPossible => {
+                let mut scratch = [NQuin::default(); 512];
+                let n = arena.collect_active_quins(&mut scratch);
+                let accesses = crate::q_hash("modal:accesses");
+                let holds = crate::q_hash("modal:holds");
+                if !modal::possible(&scratch[..n], frame.subject_reg, frame.object_reg, accesses, holds) {
+                    return None; // no accessible world satisfies the proposition → fails
                 }
             }
             SlgOpcode::NativeUnless => {

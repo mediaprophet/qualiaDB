@@ -71,7 +71,7 @@ parses via the in-crate SHACL compiler.
       CTD→deontic::evaluate_contrary_to_duty, causal→dialectical::is_necessary_cause;
       all zero-heap, modalities_active 19/19, zero_heap 1/1).
 - [x] Batch 2: abductive, NAF/closed-world (default), fuzzy — DONE (abductive.rs + fuzzy.rs new; default→defeasible::holds_by_default NAF, NOT a defeasible duplicate). modalities_active 22/22.
-- [ ] Batch 3: CTL, modal
+- [x] Batch 3: CTL (branching-time, new ctl.rs) + general modal Kripke □/◇ (new modal.rs) — DONE. modalities_active 24/24, zero_heap 1/1.
 - [ ] SHACL extensions (all modalities)
 
 DUPLICATE-CHECK FINDINGS (check before each build): causal/counterfactual already
