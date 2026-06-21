@@ -223,6 +223,33 @@ mod tests {
     }
 
     #[test]
+    fn test_svd_reconstruction() {
+        // A is 3×2; verify A ≈ U·Σ·Vᵀ and that singular values are descending ≥ 0.
+        let m = 3;
+        let n = 2;
+        let a = vec![1.0, 0.0, 0.0, 1.0, 1.0, 1.0];
+        let decomp = svd(m, n, &a).unwrap();
+
+        assert_eq!(decomp.singular_values.len(), n);
+        assert!(decomp.singular_values[0] >= decomp.singular_values[1] - 1e-12);
+        assert!(decomp.singular_values.iter().all(|&s| s >= -1e-12));
+
+        for i in 0..m {
+            for j in 0..n {
+                let mut recon = 0.0;
+                for k in 0..n {
+                    recon += decomp.u[i * n + k] * decomp.singular_values[k] * decomp.v[j * n + k];
+                }
+                assert!(
+                    (recon - a[i * n + j]).abs() < 1e-9,
+                    "reconstruction[{i}][{j}] = {recon} != {}",
+                    a[i * n + j]
+                );
+            }
+        }
+    }
+
+    #[test]
     fn test_private_matrix_multiplication() {
         let mut library = LinearAlgebraLibrary::new();
         library.initialize().unwrap();
@@ -1019,5 +1046,73 @@ pub fn eigen_symmetric(n: usize, data: &[f64]) -> Result<(Vec<f64>, Vec<f64>), L
 
     let eigenvalues: Vec<f64> = (0..n).map(|i| a[i * n + i]).collect();
     Ok((eigenvalues, v))
+}
+
+/// Result of a (thin) singular value decomposition `A = U·Σ·Vᵀ` of a row-major `m×n`
+/// matrix. `singular_values` (length `n`, descending) is the diagonal of Σ; `u` is
+/// row-major `m×n` with left singular vectors as columns; `v` is row-major `n×n` with
+/// right singular vectors as columns. Reconstruction: `A[i][j] = Σ_k u[i][k]·σ_k·v[j][k]`.
+#[derive(Debug, Clone)]
+pub struct Svd {
+    pub singular_values: Vec<f64>,
+    pub u: Vec<f64>,
+    pub v: Vec<f64>,
+}
+
+/// Singular value decomposition of a row-major `m×n` matrix via the symmetric
+/// eigendecomposition of `AᵀA` (right singular vectors + squared singular values),
+/// then `U = A·V·Σ⁻¹`. Singular values are returned in descending order.
+pub fn svd(m: usize, n: usize, data: &[f64]) -> Result<Svd, LinearAlgebraError> {
+    if m == 0 || n == 0 || data.len() != m * n {
+        return Err(LinearAlgebraError::InvalidDimensions(
+            "svd expects a non-empty m×n matrix".to_string(),
+        ));
+    }
+
+    // M = AᵀA  (n×n, symmetric positive semi-definite).
+    let mut ata = vec![0.0_f64; n * n];
+    for p in 0..n {
+        for q in 0..n {
+            let mut acc = 0.0;
+            for i in 0..m {
+                acc += data[i * n + p] * data[i * n + q];
+            }
+            ata[p * n + q] = acc;
+        }
+    }
+
+    let (eigvals, eigvecs) = eigen_symmetric(n, &ata)?;
+
+    // Sort columns by descending eigenvalue (= descending σ²).
+    let mut order: Vec<usize> = (0..n).collect();
+    order.sort_by(|&i, &j| eigvals[j].partial_cmp(&eigvals[i]).unwrap());
+
+    let mut singular_values = vec![0.0_f64; n];
+    let mut v = vec![0.0_f64; n * n];
+    for (new_col, &old_col) in order.iter().enumerate() {
+        singular_values[new_col] = eigvals[old_col].max(0.0).sqrt();
+        for row in 0..n {
+            v[row * n + new_col] = eigvecs[row * n + old_col];
+        }
+    }
+
+    // U[:,k] = A·V[:,k] / σ_k  (zero column when σ_k ≈ 0).
+    let mut u = vec![0.0_f64; m * n];
+    let smax = singular_values.first().copied().unwrap_or(0.0).max(1.0);
+    for k in 0..n {
+        let sigma = singular_values[k];
+        if sigma <= 1e-12 * smax {
+            continue;
+        }
+        for i in 0..m {
+            let mut acc = 0.0;
+            for p in 0..n {
+                acc += data[i * n + p] * v[p * n + k];
+            }
+            u[i * n + k] = acc / sigma;
+        }
+    }
+
+    Ok(Svd { singular_values, u, v })
 }
 

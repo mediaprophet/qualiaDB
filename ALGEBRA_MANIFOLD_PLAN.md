@@ -44,8 +44,9 @@ Home: `specialized_libs/linear_algebra.rs`.
 - [x] 2.3 `eigen_symmetric(n, data)` — cyclic Jacobi; returns eigenvalues + eigenvector
       columns; rejects asymmetric input. Tested (A·v = λ·v, unit vectors).
 - [ ] 2.4 `eigen_general` — QR + Hessenberg (real + complex spectra).
-- [ ] 2.5 `svd` — via eigendecomposition of AᵀA / AAᵀ (U,Σ,Vᵀ).
-- [ ] 2.6 More tests: SVD reconstruction ‖A − UΣVᵀ‖ < ε; general (non-symmetric) spectra.
+- [x] 2.5 `svd(m,n,data) -> Svd{singular_values,u,v}` — via eigendecomposition of AᵀA,
+      σ descending, U = A·V·Σ⁻¹. Tested by reconstruction ‖A − UΣVᵀ‖ < 1e-9 (3×2 case).
+- [ ] 2.6 More tests: general (non-symmetric) spectra once 2.4 lands.
 - [ ] 2.7 MCP tools: `algebra_eigen`, `algebra_svd`, `algebra_determinant`.
 
 ## Phase 3 — Symbolic algebra (CAS)  [new module]
