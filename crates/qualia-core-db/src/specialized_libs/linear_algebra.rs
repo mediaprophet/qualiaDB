@@ -345,7 +345,27 @@ mod tests {
         assert!(result.privacy_preserved);
         // Row0: [1·7+2·9+3·11, 1·8+2·10+3·12] = [58, 64]
         // Row1: [4·7-5·9+6·11, 4·8-5·10+6·12] = [49, 54]
-        assert_eq!(result.result.data, vec![58.0, 64.0, 49.0, 54.0]);
+        for (got, want) in result.result.data.iter().zip([58.0, 64.0, 49.0, 54.0]) {
+            assert!((got - want).abs() < 1e-4);
+        }
+    }
+
+    #[test]
+    fn test_private_matrix_multiplication_fractional() {
+        // Real-valued (non-integer) matrices must now work via the fixed-point encoding.
+        // [[0.5,1.5],[2.5,0.5]] · [[1.0,0.0],[0.0,2.0]] = [[0.5,3.0],[2.5,1.0]]
+        let mut library = LinearAlgebraLibrary::new();
+        library.initialize().unwrap();
+        library.create_matrix("A".to_string(), 2, 2, DataType::Float64,
+            vec![0.5, 1.5, 2.5, 0.5]).unwrap();
+        library.create_matrix("B".to_string(), 2, 2, DataType::Float64,
+            vec![1.0, 0.0, 0.0, 2.0]).unwrap();
+
+        let result = library.private_matrix_multiply("A", "B", "C").unwrap();
+        assert!(result.privacy_preserved);
+        for (got, want) in result.result.data.iter().zip([0.5, 3.0, 2.5, 1.0]) {
+            assert!((got - want).abs() < 1e-4, "fixed-point ZK result {got} != {want}");
+        }
     }
 }
 
@@ -743,9 +763,10 @@ impl LinearAlgebraLibrary {
     /// set only when that Groth16 proof actually verifies — it is now a genuine
     /// cryptographic attestation, not a structural check.
     ///
-    /// The ZK circuit operates over integers: entries are rounded to the nearest
-    /// integer (exact for integer / fixed-point matrices, which is the intended use).
-    /// The returned matrix holds exactly the values the proof attests.
+    /// The ZK circuit operates over a FIXED-POINT encoding: each entry is scaled by
+    /// 1e6 and rounded to a field integer, so real-valued matrices are supported to
+    /// ~1e-6 precision (integer matrices are encoded exactly). The proof attests the
+    /// exact scaled-integer identity; the returned matrix is that result rescaled.
     pub fn private_matrix_multiply(&mut self, left_id: &str, right_id: &str, result_id: &str) -> Result<LinearAlgebraResult<Matrix>, LinearAlgebraError> {
         let start_time = std::time::Instant::now();
 
@@ -758,9 +779,14 @@ impl LinearAlgebraLibrary {
         }
         let (m, k, n) = (left.rows, left.cols, right.cols);
 
-        // Round entries to field integers for the ZK circuit.
-        let a_int: Vec<i128> = left.data.iter().map(|v| v.round() as i128).collect();
-        let b_int: Vec<i128> = right.data.iter().map(|v| v.round() as i128).collect();
+        // Fixed-point encoding so REAL-valued (not just integer) matrices get a ZK proof.
+        // Each entry is scaled by FIXED_POINT_SCALE and rounded to a field integer, so the
+        // circuit proves the exact integer identity Σ a'·b' = C' where a' = round(a·S),
+        // b' = round(b·S). The product is then scaled by S², so the real result is C'/S².
+        // Precision is ~1/S; for integer matrices the encoding is exact (S·int is integer).
+        const FIXED_POINT_SCALE: f64 = 1_000_000.0;
+        let a_int: Vec<i128> = left.data.iter().map(|v| (v * FIXED_POINT_SCALE).round() as i128).collect();
+        let b_int: Vec<i128> = right.data.iter().map(|v| (v * FIXED_POINT_SCALE).round() as i128).collect();
 
         // Build the real circuit, prove, and verify in zero knowledge.
         let (verified, c_int) = self.privacy_engine.zk_proofs.lock().unwrap()
@@ -773,8 +799,9 @@ impl LinearAlgebraLibrary {
             ));
         }
 
-        // Return exactly the values the proof attests (the integer product).
-        let result_data: Vec<f64> = c_int.iter().map(|&v| v as f64).collect();
+        // Recover the real-valued product from the attested fixed-point integers (÷ S²).
+        let scale_sq = FIXED_POINT_SCALE * FIXED_POINT_SCALE;
+        let result_data: Vec<f64> = c_int.iter().map(|&v| v as f64 / scale_sq).collect();
         let result = self.create_matrix(result_id.to_string(), m, n, left.data_type, result_data)?;
 
         let execution_time = start_time.elapsed().as_millis() as u64;

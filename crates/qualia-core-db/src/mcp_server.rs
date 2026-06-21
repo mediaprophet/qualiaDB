@@ -214,8 +214,8 @@ fn stable_mcp_tools() -> &'static [McpToolDescriptor] {
         },
         McpToolDescriptor {
             name: "cas",
-            description: "Symbolic algebra: differentiate/simplify/evaluate a text expression (e.g. 'x^3 - 2*x^2'), or solve a quadratic symbolically.",
-            input_schema: r#"{"type":"object","required":["op"],"properties":{"op":{"type":"string","enum":["differentiate","simplify","evaluate","solve_quadratic"]},"expr":{"type":"string"},"var":{"type":"string"},"env":{"type":"object"},"a":{"type":"number"},"b":{"type":"number"},"c":{"type":"number"}}}"#,
+            description: "Symbolic algebra: differentiate/simplify/expand/evaluate a text expression (e.g. 'x^3 - 2*x^2'), or solve/factor a quadratic symbolically.",
+            input_schema: r#"{"type":"object","required":["op"],"properties":{"op":{"type":"string","enum":["differentiate","simplify","expand","evaluate","solve_quadratic","factor"]},"expr":{"type":"string"},"var":{"type":"string"},"env":{"type":"object"},"a":{"type":"number"},"b":{"type":"number"},"c":{"type":"number"}}}"#,
         },
         McpToolDescriptor {
             name: "ode_solve",

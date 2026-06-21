@@ -69,7 +69,7 @@ pub struct SymbolicExpressionConfiguration {
 /// `q42:SymbolicOperation` — validates a symbolic algebra operation request
 #[derive(Debug, Clone)]
 pub struct SymbolicOperationConfiguration {
-    pub operation_type: String,     // "differentiate", "simplify", "evaluate", "solve"
+    pub operation_type: String,     // "differentiate","simplify","expand","evaluate","solve","factor"
     pub max_iterations: u32,        // Simplification fixpoint bound
 }
 
@@ -579,7 +579,7 @@ q42:SymbolicExpressionShape a sh:NodeShape ;
 q42:SymbolicOperationShape a sh:NodeShape ;
     sh:property [
         sh:path q42:operationType ;
-        sh:in ("differentiate" "simplify" "evaluate" "solve") ;
+        sh:in ("differentiate" "simplify" "expand" "evaluate" "solve" "factor") ;
         sh:message "Symbolic operation must be supported" ;
     ] .
 

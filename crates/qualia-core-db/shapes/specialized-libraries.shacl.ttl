@@ -197,7 +197,7 @@ q42:SymbolicOperationShape a sh:NodeShape ;
     sh:targetClass q42:SymbolicOperation ;
     sh:property [
         sh:path q42:operationType ;
-        sh:in ("differentiate" "simplify" "evaluate" "solve") ;
+        sh:in ("differentiate" "simplify" "expand" "evaluate" "solve" "factor") ;
         sh:message "Symbolic operation must be supported" ;
         sh:severity sh:Violation ;
     ] .

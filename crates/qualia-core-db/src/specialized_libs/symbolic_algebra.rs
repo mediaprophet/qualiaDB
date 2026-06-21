@@ -9,6 +9,7 @@
 //! NOT be used on an NQuin/SlgArena hot path. Results can be bridged back into the
 //! graph via [`expr_citation_hash`] for provenance.
 
+use crate::NQuin;
 use std::collections::HashMap;
 
 /// A symbolic expression over real constants and named variables.
@@ -204,11 +205,171 @@ pub fn solve_quadratic_symbolic(a: f64, b: f64, cc: f64) -> Vec<Expr> {
     vec![simplify(&root_plus), simplify(&root_minus)]
 }
 
+/// Distribute every product over sums and expand small positive integer powers, so the
+/// result contains no `Mul`/`Pow` node with an additive child. Semantically equal to the
+/// input (verify by evaluation). Powers above 8 are left unexpanded to bound blow-up.
+pub fn expand(expr: &Expr) -> Expr {
+    match expr {
+        Expr::Const(_) | Expr::Var(_) => expr.clone(),
+        Expr::Add(a, b) => add(expand(a), expand(b)),
+        Expr::Sub(a, b) => sub(expand(a), expand(b)),
+        Expr::Neg(a) => neg(expand(a)),
+        Expr::Sqrt(a) => sqrt(expand(a)),
+        Expr::Div(a, b) => div(expand(a), expand(b)),
+        Expr::Mul(a, b) => expand_mul(&expand(a), &expand(b)),
+        Expr::Pow(a, e) => expand_pow(&expand(a), *e),
+    }
+}
+
+fn expand_mul(a: &Expr, b: &Expr) -> Expr {
+    match (a, b) {
+        (Expr::Add(a1, a2), _) => add(expand_mul(a1, b), expand_mul(a2, b)),
+        (Expr::Sub(a1, a2), _) => sub(expand_mul(a1, b), expand_mul(a2, b)),
+        (_, Expr::Add(b1, b2)) => add(expand_mul(a, b1), expand_mul(a, b2)),
+        (_, Expr::Sub(b1, b2)) => sub(expand_mul(a, b1), expand_mul(a, b2)),
+        (Expr::Neg(a1), _) => neg(expand_mul(a1, b)),
+        (_, Expr::Neg(b1)) => neg(expand_mul(a, b1)),
+        _ => mul(a.clone(), b.clone()),
+    }
+}
+
+fn expand_pow(base: &Expr, e: i32) -> Expr {
+    if e <= 1 || e > 8 {
+        return pow(base.clone(), e);
+    }
+    let mut acc = base.clone();
+    for _ in 1..e {
+        acc = expand_mul(&acc, base);
+    }
+    acc
+}
+
+/// Factor a real quadratic `a·x² + b·x + c` into `a·(x − r₁)·(x − r₂)` when it has real
+/// roots. Returns `None` when the discriminant is negative (no real factorisation) or
+/// `a = 0`. Root constants are snapped to integers/halves when numerically close, so the
+/// common rational case factors cleanly.
+pub fn factor_quadratic(a: f64, b: f64, cc: f64, varname: &str) -> Option<Expr> {
+    if a == 0.0 {
+        return None;
+    }
+    let disc = b * b - 4.0 * a * cc;
+    if disc < 0.0 {
+        return None;
+    }
+    let sq = disc.sqrt();
+    let clean = |r: f64| {
+        let halves = (r * 2.0).round() / 2.0;
+        if (halves - r).abs() < 1e-9 { halves } else { r }
+    };
+    let r1 = clean((-b + sq) / (2.0 * a));
+    let r2 = clean((-b - sq) / (2.0 * a));
+    let prod = mul(sub(var(varname), c(r1)), sub(var(varname), c(r2)));
+    Some(if (a - 1.0).abs() < 1e-12 { prod } else { mul(c(a), prod) })
+}
+
 /// A stable provenance hash of an expression's canonical form, for citing symbolic
 /// results back into the graph (Phase 3.8 bridge). Two structurally-equal expressions
 /// hash equally; this is `q_hash` over the canonical `Display` string.
 pub fn expr_citation_hash(expr: &Expr) -> u64 {
     crate::q_hash(&format!("{expr}"))
+}
+
+// ── Expr ↔ NQuin tree encoding (Phase 3.8) ──────────────────────────────────────
+// A symbolic expression is serialised into a post-order `Vec<NQuin>`: each node is one
+// quin that references its children by their index in the vec (the root is the last
+// element). This lets symbolic results be STORED in the graph and CITED, not just hashed.
+//
+// Per-node quin layout (predicate = node-kind tag via q_hash):
+//   const   object = f64 bits
+//   var     object = name packed LE (≤ 8 bytes), metadata = byte length
+//   add/sub/mul/div  object = left child index, context = right child index
+//   pow     object = base child index, metadata = exponent (i32 as u64)
+//   neg/sqrt object = child index
+
+fn name_tag(kind: &str) -> u64 { crate::q_hash(kind) }
+
+fn pack_name(name: &str) -> (u64, u64) {
+    let bytes = name.as_bytes();
+    let len = bytes.len().min(8);
+    let mut v = 0u64;
+    for (i, &b) in bytes.iter().take(8).enumerate() {
+        v |= (b as u64) << (i * 8);
+    }
+    (v, len as u64)
+}
+
+fn unpack_name(v: u64, len: u64) -> String {
+    let len = (len as usize).min(8);
+    let mut s = String::with_capacity(len);
+    for i in 0..len {
+        s.push(((v >> (i * 8)) & 0xFF) as u8 as char);
+    }
+    s
+}
+
+fn push_node(out: &mut Vec<NQuin>, predicate: u64, object: u64, context: u64, metadata: u64) -> usize {
+    let idx = out.len();
+    out.push(NQuin { subject: idx as u64, predicate, object, context, metadata, parity: 0 });
+    idx
+}
+
+fn encode(e: &Expr, out: &mut Vec<NQuin>) -> usize {
+    match e {
+        Expr::Const(k) => push_node(out, name_tag("cas:const"), k.to_bits(), 0, 0),
+        Expr::Var(name) => {
+            let (packed, len) = pack_name(name);
+            push_node(out, name_tag("cas:var"), packed, 0, len)
+        }
+        Expr::Add(a, b) => { let (l, r) = (encode(a, out), encode(b, out)); push_node(out, name_tag("cas:add"), l as u64, r as u64, 0) }
+        Expr::Sub(a, b) => { let (l, r) = (encode(a, out), encode(b, out)); push_node(out, name_tag("cas:sub"), l as u64, r as u64, 0) }
+        Expr::Mul(a, b) => { let (l, r) = (encode(a, out), encode(b, out)); push_node(out, name_tag("cas:mul"), l as u64, r as u64, 0) }
+        Expr::Div(a, b) => { let (l, r) = (encode(a, out), encode(b, out)); push_node(out, name_tag("cas:div"), l as u64, r as u64, 0) }
+        Expr::Pow(a, exp) => { let l = encode(a, out); push_node(out, name_tag("cas:pow"), l as u64, 0, (*exp as i64) as u64) }
+        Expr::Neg(a) => { let l = encode(a, out); push_node(out, name_tag("cas:neg"), l as u64, 0, 0) }
+        Expr::Sqrt(a) => { let l = encode(a, out); push_node(out, name_tag("cas:sqrt"), l as u64, 0, 0) }
+    }
+}
+
+/// Serialise an expression into a post-order `Vec<NQuin>` (the root is the last element).
+pub fn to_quins(expr: &Expr) -> Vec<NQuin> {
+    let mut out = Vec::new();
+    encode(expr, &mut out);
+    out
+}
+
+fn decode(quins: &[NQuin], idx: usize) -> Result<Expr, String> {
+    let node = quins.get(idx).ok_or_else(|| format!("child index {idx} out of range"))?;
+    let p = node.predicate;
+    let child = |i: u64| decode(quins, i as usize);
+    if p == name_tag("cas:const") {
+        Ok(c(f64::from_bits(node.object)))
+    } else if p == name_tag("cas:var") {
+        Ok(var(&unpack_name(node.object, node.metadata)))
+    } else if p == name_tag("cas:add") {
+        Ok(add(child(node.object)?, child(node.context)?))
+    } else if p == name_tag("cas:sub") {
+        Ok(sub(child(node.object)?, child(node.context)?))
+    } else if p == name_tag("cas:mul") {
+        Ok(mul(child(node.object)?, child(node.context)?))
+    } else if p == name_tag("cas:div") {
+        Ok(div(child(node.object)?, child(node.context)?))
+    } else if p == name_tag("cas:pow") {
+        Ok(pow(child(node.object)?, node.metadata as i64 as i32))
+    } else if p == name_tag("cas:neg") {
+        Ok(neg(child(node.object)?))
+    } else if p == name_tag("cas:sqrt") {
+        Ok(sqrt(child(node.object)?))
+    } else {
+        Err(format!("unknown CAS node tag in quin {idx}"))
+    }
+}
+
+/// Reconstruct an expression from a post-order `Vec<NQuin>` produced by [`to_quins`].
+pub fn from_quins(quins: &[NQuin]) -> Result<Expr, String> {
+    if quins.is_empty() {
+        return Err("empty quin sequence".to_string());
+    }
+    decode(quins, quins.len() - 1)
 }
 
 // ── parser: text → Expr (recursive descent) ─────────────────────────────────────
@@ -452,6 +613,50 @@ mod tests {
         assert!((g.eval(&env1("a", 1.0)).unwrap() - 2.0).abs() < 1e-12);
         // bad input errors, not panics
         assert!(parse("2 +* 3").is_err());
+    }
+
+    #[test]
+    fn expand_distributes_and_preserves_value() {
+        // (x + 1)·(x + 2) expands to a sum with no Mul-over-sum; value matches at samples.
+        let e = mul(add(var("x"), c(1.0)), add(var("x"), c(2.0)));
+        let ex = expand(&e);
+        for &x in &[-3.0, 0.0, 2.5, 7.0] {
+            let want = e.eval(&env1("x", x)).unwrap();
+            let got = ex.eval(&env1("x", x)).unwrap();
+            assert!((want - got).abs() < 1e-9, "expand changed value at x={x}");
+        }
+        // (x + 1)^3 expands and still evaluates correctly.
+        let cube = pow(add(var("x"), c(1.0)), 3);
+        let cube_x = expand(&cube);
+        assert!((cube_x.eval(&env1("x", 2.0)).unwrap() - 27.0).abs() < 1e-9);
+    }
+
+    #[test]
+    fn factor_quadratic_inverts_expand() {
+        // x² − 5x + 6 factors to (x−2)(x−3); expanding the factors recovers the value.
+        let f = factor_quadratic(1.0, -5.0, 6.0, "x").unwrap();
+        let original = add(sub(pow(var("x"), 2), mul(c(5.0), var("x"))), c(6.0));
+        for &x in &[-1.0, 0.0, 2.0, 3.0, 5.5] {
+            let a = f.eval(&env1("x", x)).unwrap();
+            let b = original.eval(&env1("x", x)).unwrap();
+            assert!((a - b).abs() < 1e-9, "factored != original at x={x}");
+        }
+        // Negative discriminant → no real factorisation.
+        assert!(factor_quadratic(1.0, 0.0, 1.0, "x").is_none());
+    }
+
+    #[test]
+    fn expr_quin_roundtrip() {
+        // Encode an expression to NQuins and decode it back unchanged.
+        let e = parse("x^2 + 3*x + 2").unwrap();
+        let quins = to_quins(&e);
+        assert!(!quins.is_empty());
+        let back = from_quins(&quins).unwrap();
+        assert_eq!(e, back);
+
+        // Multi-char variable names (≤ 8 bytes) and sqrt/neg survive the round-trip.
+        let e2 = sqrt(neg(sub(var("price"), c(4.0))));
+        assert_eq!(from_quins(&to_quins(&e2)).unwrap(), e2);
     }
 
     #[test]

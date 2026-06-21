@@ -294,6 +294,25 @@ pub fn cas(args: &[u8]) -> Result<String, McpSystemError> {
                 .collect();
             Ok(json!({ "op": op, "a": a, "b": b, "c": cc, "roots": roots }).to_string())
         }
+        "expand" => {
+            let expr_s = json_str(&v, "expr", "");
+            let e = sym::parse(expr_s).map_err(|_| McpSystemError::InvalidParameters)?;
+            Ok(json!({ "op": op, "input": expr_s, "expanded": sym::expand(&e).to_string() })
+                .to_string())
+        }
+        "factor" => {
+            let a = json_f64(&v, "a", 1.0);
+            let b = json_f64(&v, "b", 0.0);
+            let cc = json_f64(&v, "c", 0.0);
+            let varname = json_str(&v, "var", "x");
+            match sym::factor_quadratic(a, b, cc, varname) {
+                Some(f) => Ok(json!({ "op": op, "a": a, "b": b, "c": cc, "factored": f.to_string() })
+                    .to_string()),
+                None => Ok(json!({ "op": op, "a": a, "b": b, "c": cc, "factored": Value::Null,
+                    "note": "no real factorisation (negative discriminant or a = 0)" })
+                    .to_string()),
+            }
+        }
         _ => Err(McpSystemError::InvalidParameters),
     }
 }
@@ -1398,6 +1417,18 @@ mod tests {
             .as_bytes())
         .expect("ok");
         assert!(q.contains("roots"));
+
+        let ex = cas(json!({ "op": "expand", "expr": "(x + 1) * (x + 2)" })
+            .to_string()
+            .as_bytes())
+        .expect("ok");
+        assert!(ex.contains("expanded"));
+
+        let fac = cas(json!({ "op": "factor", "a": 1.0, "b": -5.0, "c": 6.0, "var": "x" })
+            .to_string()
+            .as_bytes())
+        .expect("ok");
+        assert!(fac.contains("factored"));
     }
 
     #[test]
