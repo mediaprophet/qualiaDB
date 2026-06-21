@@ -65,15 +65,23 @@ Home: NEW `specialized_libs/symbolic_algebra.rs` (distinct from `solvers/symboli
 
 ## Phase 4 — wgpu 10D manifold
 Home: `compute_universe.rs` + `tensor/*`.
-- [ ] 4.1 Audit the bake pipeline `bake_quin_to_tensor` (Tensor10D) and the GPU kNN search
-      (`volume_gpu.rs`) for remaining validation/usage-flag gaps (post the COPY_DST fix).
-- [ ] 4.2 CPU reference path for the 10D search so it is testable without a GPU; assert the
-      GPU and CPU producers agree on a fixture.
-- [ ] 4.3 Respect the FrameLayout ABI: the bake `t` clock lives in NQuin metadata [32:60]
-      (see project-frame-layout-abi memory) — any manifold metadata change goes through
-      `frame_layout.rs`.
-- [ ] 4.4 Tests + a small end-to-end producer→route→pop fixture (extend the existing
-      `producer_cycle_with_global_substrate`).
+- [x] 4.1 Audit. FIXED earlier: `count_buf` COPY_DST validation panic (commit 6f4b79a11).
+      FOUND + documented: the GPU search uses the EUCLIDEAN metric (tensor_volume.wgsl,
+      7 dims x,y,z,t,α,μ,σ) but the CPU fallback (`Q42TensorView::tensor_search_into`)
+      uses `full_distance`, which switches on the node `v` topology class. They AGREE for
+      `v == 0` (the common case / producer fixtures) but DIVERGE for `v != 0` — results
+      then depend on GPU availability. Documented at the fallback site in
+      `compute_universe.rs::run_tensor_search_producer_cycle`. **Open follow-up:** unify the
+      metric (port `full_distance` to WGSL, or make the volume search euclidean-only).
+- [x] 4.2 CPU reference: `volume_gpu::cpu_tensor_search_into` — GPU-independent linear scan
+      mirroring the shader's exact 7-dim euclidean metric; the manifold search is now
+      testable without a GPU. Tested analytically (radius sweeps; q/v/w confirmed
+      metric-irrelevant).
+- [x] 4.3 FrameLayout ABI respected — no manifold metadata layout change made; bake `t`
+      clock stays at NQuin metadata [32:60] (see project-frame-layout-abi).
+- [x] 4.4 `producer_cycle_with_global_substrate` passes (post COPY_DST fix); CPU-reference
+      analytic test added. (Exact GPU==CPU-fallback equality cross-check is gated on the
+      4.1 metric unification for v != 0.)
 
 ## Phase 5 — Optional: ZK-private variants
 - [ ] Layer ZK on the new ops using the `prove_matrix_multiply` pattern (private witnesses,

@@ -264,3 +264,71 @@ pub fn try_gpu_tensor_search_into(
 ) -> Option<usize> {
     None
 }
+
+/// CPU reference for the GPU tensor-volume search (ALGEBRA_MANIFOLD_PLAN.md Phase 4.2).
+///
+/// A plain linear scan using the EXACT same 7-dimensional Euclidean metric as
+/// `shaders/tensor_volume.wgsl` — `x, y, z, t, alpha, mu, sigma` (the `q, v, w` fields
+/// are not part of the volume metric). This makes the 10D manifold search testable
+/// without a GPU and gives the GPU path a ground-truth to be cross-checked against.
+///
+/// Matches the shader's semantics: a node is a hit iff `distance <= max_distance`;
+/// indices are written into `out` up to its capacity, and the FULL match count is
+/// returned (which may exceed `out.len()`, exactly like the shader's `hit_count`).
+pub fn cpu_tensor_search_into(
+    query: &Tensor10D,
+    nodes: &[Tensor10D],
+    max_distance: f32,
+    out: &mut [usize],
+) -> usize {
+    let mut matches = 0usize;
+    for (idx, node) in nodes.iter().enumerate() {
+        let dx = query.x - node.x;
+        let dy = query.y - node.y;
+        let dz = query.z - node.z;
+        let dt = query.t - node.t;
+        let da = query.alpha - node.alpha;
+        let dm = query.mu - node.mu;
+        let ds = query.sigma - node.sigma;
+        let dist =
+            (dx * dx + dy * dy + dz * dz + dt * dt + da * da + dm * dm + ds * ds).sqrt();
+        if dist <= max_distance {
+            if matches < out.len() {
+                out[matches] = idx;
+            }
+            matches += 1;
+        }
+    }
+    matches
+}
+
+#[cfg(test)]
+mod cpu_reference_tests {
+    use super::*;
+
+    #[test]
+    fn cpu_tensor_search_matches_metric() {
+        // Nodes vary along single dimensions; query is the origin tensor. The metric
+        // uses x,y,z,t,alpha,mu,sigma and ignores q,v,w.
+        let zeros = Tensor10D::new(0.0, 0.0, 0.0, 0.0, 0.0, 0.0, 0.0, 0.0, 0.0, 0.0);
+        let nodes = [
+            zeros,                                                            // 0: dist 0
+            Tensor10D::new(0.0, 0.0, 0.0, 1.0, 0.0, 0.0, 0.0, 0.0, 0.0, 0.0), // 1: x=1 → dist 1
+            Tensor10D::new(0.0, 0.0, 0.0, 0.0, 0.0, 0.0, 0.0, 0.0, 0.0, 3.0), // 2: sigma=3 → dist 3
+            // q,v,w set but METRIC-IRRELEVANT → still dist 0, must be a hit.
+            Tensor10D::new(9.0, 9.0, 9.0, 0.0, 0.0, 0.0, 0.0, 0.0, 0.0, 0.0), // 3: dist 0
+        ];
+        let mut out = [usize::MAX; 8];
+
+        // radius 1.5 → nodes 0,1,3 (not 2 at dist 3).
+        let n = cpu_tensor_search_into(&zeros, &nodes, 1.5, &mut out);
+        assert_eq!(n, 3);
+        let hits: std::collections::BTreeSet<usize> = out[..n].iter().copied().collect();
+        assert_eq!(hits, [0, 1, 3].into_iter().collect());
+
+        // radius 5 → all four.
+        assert_eq!(cpu_tensor_search_into(&zeros, &nodes, 5.0, &mut out), 4);
+        // radius 0 → only the exact matches (nodes 0 and 3).
+        assert_eq!(cpu_tensor_search_into(&zeros, &nodes, 0.0, &mut out), 2);
+    }
+}

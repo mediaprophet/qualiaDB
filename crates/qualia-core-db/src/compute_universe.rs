@@ -492,6 +492,15 @@ pub fn run_tensor_search_producer_cycle(max_distance: f32, vocab_len: u32) -> us
     let query = load_query_tensor();
     let subject_hash = query_subject_hash();
     let mut hits = [0usize; MAX_KNN_HITS];
+    // AUDIT (ALGEBRA_MANIFOLD_PLAN.md Phase 4.1): the GPU path uses the EUCLIDEAN metric
+    // (shaders/tensor_volume.wgsl — x,y,z,t,alpha,mu,sigma), while this CPU fallback uses
+    // `full_distance`, which switches on the node's `v` topology class
+    // (euclidean / cyclic / hyperbolic / boundary). For `v == 0` nodes (the common case,
+    // and what the producer fixtures use) they are IDENTICAL; for `v != 0` nodes the two
+    // paths can disagree, so results currently depend on GPU availability. The
+    // euclidean ground truth is `volume_gpu::cpu_tensor_search_into`. Unifying the metric
+    // (either port full_distance into WGSL, or make the volume search euclidean-only) is a
+    // tracked follow-up — do not assume GPU/CPU parity for v != 0.
     let hit_count = crate::tensor::volume_gpu::try_gpu_tensor_search_into(&query, max_distance, &mut hits)
         .unwrap_or_else(|| {
             substrate
