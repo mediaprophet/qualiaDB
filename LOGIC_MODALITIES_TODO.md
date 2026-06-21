@@ -62,6 +62,49 @@ asserted verdict), like `tests/deontic_smoke.rs`.
 
 ---
 
+## 1c. Recursive audit — ALL logic/reasoning files (2026-06-21)
+
+Searched `crates/` recursively. Honest status of every logic/reasoning evaluator so
+nothing reads as "done" that isn't:
+
+**VM-active + VM-tested (14)** — `webizen.rs::execute_vm_frame` opcode → real evaluator
+→ `tests/modalities_active.rs` / `deontic_smoke` / `guard_grounding`:
+deontic, epistemic, linear, asp, paraconsistent, dialectical, defeasible (`NativeUnless`),
+LTL×5, Allen-interval, probabilistic, DL-subsumption, argumentation (Dung grounded).
+
+**Real engine, different surface (works, not a VM opcode):**
+- `solvers/symbolic_logic/` — `ForwardChainingDefeasible` + `BoundedSatSolver` (boolean
+  SAT). Exposed via MCP + WASM + `solvers/mod.rs` re-exports; **3/3 unit tests pass**
+  (verified). Could also get a VM opcode (`NativeSat` / `NativeForwardChain`) if useful.
+
+**DEAD / parallel duplicates — 0 references (the "looks implemented but isn't" trap):**
+- `deontic_logic.rs` (10 pub items, **0 external refs**) — superseded by
+  `modalities/logic/deontic.rs` (the wired one).
+- `deontic_mapping.rs` (4 pub items, **0 refs**).
+- `epistemic.rs` at lib root (separate from `modalities/epistemic.rs` which the VM uses;
+  **0 `crate::epistemic::` refs**).
+- **DECISION for Timothy:** delete these, or are they intended future surfaces? They
+  currently inflate the apparent "logic is implemented" footprint without being reachable.
+
+**Unwired by ARCHITECTURE (not a stub — honest limit):**
+- **RCC-8 spatial** (`spatio_temporal::evaluate_rcc8`) is real but operates on
+  `SpatialRegion` with `boundary_points`; the 48-byte `NQuin` (`quin_to_region`) only
+  carries centroid+area, so boundaries don't round-trip. Spatial topology needs the richer
+  §16 encoding (browser+10d+protocol) before it can be a VM modality.
+
+**Redundant:**
+- `modalities/interval_reasoning.rs` — a second Allen impl (`AllenRelation`,
+  `TemporalInterval`), **0 refs in webizen.rs**. The wired Allen uses `spatio_temporal`.
+  Reconcile (pick one) or wire its richer constraint-network features.
+
+**Computational, not deontic-style logic (decide if a VM lane adds value):**
+- `diffusion`, `graph_theory`, `control_feedback`, `modalities/calculus/*` (calculus IS
+  wired: `NativeOdeSolver`/`NativeCalc*`), `qubo` (wired: `NativeQubo*`).
+
+**Intentional Core-2/3 async yields (return None by design, not stubs):**
+- `NativeRetrieveByActivation`/`NativeDecayMetadata` (ACT-R), `NativeQuantumEgress/Ingress`,
+  `NativeLorentzDistance`/`NativeTropicalDistance`/`NativeVerifyProofOfLocation` (geometric).
+
 ## 2. Guard grounding (forward chaining) — follow-ups
 
 Implemented 2026-06-21: `webizen.rs::fire_guard_rules` grounds variable, multi-triple
