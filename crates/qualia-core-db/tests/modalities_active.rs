@@ -11,6 +11,7 @@
 //! wired off `spatio_temporal::evaluate_temporal`), linear consumption, and
 //! dialectical / paraconsistent guards. (Deontic has its own `deontic_smoke` test.)
 
+use qualia_core_db::modalities::epistemic::{OP_BELIEVES, OP_KNOWS};
 use qualia_core_db::webizen::{execute_vm_frame, SlgArena, SlgOpcode, VmFrame};
 use qualia_core_db::{q_hash, NQuin};
 
@@ -277,4 +278,56 @@ fn unless_runs_and_injects_defeater() {
     };
     assert!(gate(&mut a, SlgOpcode::NativeUnless, frame),
         "NativeUnless executes (injects a defeater) and the frame proceeds");
+}
+
+// ── Epistemic (knowledge / belief) ────────────────────────────────────────────────
+
+/// An epistemic claim quin: predicate packs the modal opcode (low byte) and an
+/// 8-bit certainty (bits 8–15); subject = agent, context = world.
+fn claim(agent: u64, opcode: u8, certainty: u8, object: u64, world: u64) -> NQuin {
+    let predicate = (opcode as u64) | ((certainty as u64) << 8);
+    let mut n = NQuin { subject: agent, predicate, object, context: world, metadata: 1, parity: 0 };
+    n.parity = n.subject ^ n.predicate ^ n.object ^ n.context;
+    n
+}
+
+#[test]
+fn epistemic_eval_active() {
+    let agent = q_hash("agent:alice");
+    let world = q_hash("world:w0");
+    let prop = q_hash("prop:sky-blue");
+    let frame = VmFrame { subject_reg: agent, predicate_reg: 0, object_reg: 0, context_reg: world };
+
+    // Knows@200 is Active with certainty 200.
+    let mut a = SlgArena::new();
+    a.write_table(claim(agent, OP_KNOWS, 200, prop, world));
+    assert!(gate(&mut a, SlgOpcode::NativeEpistemicEval(128), frame),
+        "Knows@200 meets min-certainty 128 → active");
+    assert!(!gate(&mut a, SlgOpcode::NativeEpistemicEval(255), frame),
+        "Knows@200 does not meet min-certainty 255 → fails");
+
+    // Believes@50 is Uncertain (certainty < 128, not Knows) → never active.
+    let mut b = SlgArena::new();
+    b.write_table(claim(agent, OP_BELIEVES, 50, prop, world));
+    assert!(!gate(&mut b, SlgOpcode::NativeEpistemicEval(0), frame),
+        "a low-certainty belief is Uncertain, not active");
+}
+
+// ── Answer-Set Programming (stable-model enumeration) ─────────────────────────────
+
+#[test]
+fn asp_enumerates_stable_models_from_arena() {
+    // Two rules in the arena → enumerate_stable_models bifurcates into 2^2 worlds,
+    // so the bound world differs from the base context. (Before the fix the handler
+    // passed an empty rule set and always yielded the single base world.)
+    let base_ctx = q_hash("world:base");
+    let mut a = SlgArena::new();
+    a.write_table(q(q_hash("rule:a"), q_hash("then"), q_hash("x")));
+    a.write_table(q(q_hash("rule:b"), q_hash("then"), q_hash("y")));
+
+    let mut frame = VmFrame { subject_reg: 0, predicate_reg: 0, object_reg: 0, context_reg: base_ctx };
+    let result = execute_vm_frame(&mut a, &[SlgOpcode::NativeAspStableModels, SlgOpcode::Return], &mut frame);
+    let bound = result.expect("ASP must yield at least one stable model");
+    assert_ne!(bound.context, base_ctx,
+        "ASP must enumerate non-trivial worlds from the arena rules, not an empty rule set");
 }

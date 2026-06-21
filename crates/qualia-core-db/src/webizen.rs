@@ -1423,13 +1423,20 @@ pub fn execute_vm_frame(
                 }
             }
             SlgOpcode::NativeAspStableModels => {
+                // Enumerate stable models over the live rules in the arena. (Passing
+                // an empty rule set would trivially yield a single world and ignore
+                // the knowledge base.)
+                let mut rules = [NQuin::default(); asp::MAX_STABLE_MODELS];
+                let nrules = arena.collect_active_quins(&mut rules);
                 let mut out_worlds = [0; asp::MAX_STABLE_MODELS];
                 let goal = frame_to_quin(frame);
-                let world_count = asp::enumerate_stable_models(&goal, &[], &mut out_worlds);
+                let world_count =
+                    asp::enumerate_stable_models(&goal, &rules[..nrules], &mut out_worlds);
                 if world_count == 0 {
                     return None;
                 }
-                frame.context_reg = out_worlds[0];
+                // Bind the frame to the last enumerated stable model.
+                frame.context_reg = out_worlds[world_count - 1];
             }
             SlgOpcode::NativeParaconsistentIsolate => {
                 let mut scratch = [NQuin::default(); 64];
