@@ -24,10 +24,11 @@ pub fn t_conorm_godel(a: f32, b: f32) -> f32 {
     a.max(b)
 }
 
-/// Read a proposition's fuzzy truth degree (f32 in `metadata`), clamped to [0,1].
+/// Read a proposition's fuzzy truth degree (canonical f32 in `metadata`, via the
+/// FrameLayout ABI), clamped to [0,1].
 #[inline]
 pub fn degree(quin: &NQuin) -> f32 {
-    f32::from_bits(quin.metadata as u32).clamp(0.0, 1.0)
+    crate::frame_layout::truth_degree(quin.metadata).clamp(0.0, 1.0)
 }
 
 /// Fuzzy conjunction (Gödel t-norm = min) of the truth degrees carried by `quins`.

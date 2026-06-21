@@ -712,6 +712,7 @@ pub mod indexing;
 ))]
 pub mod ingestion;
 pub mod lexicon;
+pub mod frame_layout;
 #[cfg(not(target_arch = "wasm32"))]
 pub mod npu_ffi;
 #[cfg(not(target_arch = "wasm32"))]

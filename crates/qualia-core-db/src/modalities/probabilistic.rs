@@ -49,9 +49,10 @@ impl BayesianNetwork {
         Ok(())
     }
 
-    /// Extract probability encoded in the Quin's metadata field
+    /// Extract probability encoded in the Quin's metadata field (canonical
+    /// truth-degree via the FrameLayout ABI — shared with fuzzy/stochastic).
     pub fn extract_weight(quin: &NQuin) -> f32 {
-        f32::from_bits(quin.metadata as u32)
+        crate::frame_layout::truth_degree(quin.metadata)
     }
 
     /// Exact inference via variable enumeration.

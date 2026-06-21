@@ -121,8 +121,9 @@ impl WebizenVM {
     pub fn execute_constraint(&mut self, quin: &NQuin) -> bool {
         let mut condition_flag = true;
 
-        // Extract 5th Metadata Vector for Stochastic/Fuzzy logic weight (bottom 16 bits as probability 0.0 - 1.0)
-        let _stochastic_weight = (quin.metadata & 0xFFFF) as f32 / 65535.0;
+        // Stochastic/Fuzzy confidence weight via the canonical FrameLayout ABI
+        // (shared encoding with fuzzy/probabilistic — was a divergent 16-bit form).
+        let _stochastic_weight = crate::frame_layout::truth_degree(quin.metadata);
 
         for op in self.bytecode_buffer.iter().flatten() {
             crate::telemetry::VM_CYCLES_COUNT.fetch_add(1, std::sync::atomic::Ordering::Relaxed);
@@ -213,7 +214,7 @@ impl WebizenVM {
                         .map_or(false, |stress| stress == *stress_threshold as f32);
                 }
                 WebizenOpcode::YieldConfidence(threshold) => {
-                    let stochastic_weight = (quin.metadata & 0xFFFF) as f32 / 65535.0;
+                    let stochastic_weight = crate::frame_layout::truth_degree(quin.metadata);
                     if stochastic_weight < *threshold {
                         condition_flag = false; // For raw constraints, it fails the assertion
                     }
@@ -390,7 +391,7 @@ impl WebizenVM {
                     }
                 }
                 WebizenOpcode::YieldConfidence(threshold) => {
-                    let stochastic_weight = (quin.metadata & 0xFFFF) as f32 / 65535.0;
+                    let stochastic_weight = crate::frame_layout::truth_degree(quin.metadata);
                     if stochastic_weight < *threshold {
                         defeasible_tag = true;
                     }
