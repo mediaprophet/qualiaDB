@@ -459,7 +459,12 @@ impl ZkProofSystem {
         self.create_circuit(circuit_id.clone())?;
         self.build_circuit_from_statement(&circuit_id, &statement)?;
         self.generate_keys(&circuit_id)?;
-        let public_inputs = self.extract_public_inputs(&statement);
+        // Public inputs MUST match the circuit's declared public-input variables
+        // exactly (count and order), otherwise Groth16 setup and verify disagree on
+        // `vk.gamma_abc_g1.len()` and verification fails with MalformedVerifyingKey.
+        // Derive them from the built circuit, reading each value from the same
+        // witness the prover uses, so prove-time and verify-time assignments agree.
+        let public_inputs = self.extract_public_inputs(&circuit_id, &witness);
         let proof = self.generate_proof(&circuit_id, witness, public_inputs)?;
         
         let context = ProofContext {
@@ -557,11 +562,18 @@ impl ZkProofSystem {
 
     /// Build function evaluation circuit
     fn build_function_circuit(&mut self, circuit_id: &str, statement: &MathematicalStatement) -> Result<(), ZkError> {
-        // Build function evaluation circuit
+        // Build function evaluation circuit.
+        // TODO(algebra-zk, see LINEAR_ALGEBRA_ZK_TODO.md §1): this is a STRUCTURAL
+        // PLACEHOLDER. It allocates the statement variables but emits NO constraints
+        // binding the evaluated function (e.g. the matrix product). The resulting
+        // Groth16 proof is a satisfiability proof of an essentially empty circuit and
+        // does not yet cryptographically attest the computation. Emit real
+        // enforce_constraint() relations before treating `privacy_preserved` as a
+        // cryptographic guarantee.
         for var in &statement.variables {
             self.add_variable(circuit_id, var.clone(), VariableType::Private)?;
         }
-        
+
         Ok(())
     }
 
@@ -575,11 +587,21 @@ impl ZkProofSystem {
         Ok(())
     }
 
-    /// Extract public inputs from statement
-    fn extract_public_inputs(&self, statement: &MathematicalStatement) -> Vec<FieldElement> {
-        // Extract public inputs from statement
-        // This is a simplified version
-        vec![FieldElement { value: [0u8; 32] }]
+    /// Extract public inputs in the exact count and order the built circuit
+    /// declares them, so they match the `new_input_variable` allocations made in
+    /// `DynamicCircuit::generate_constraints` (and hence `vk.gamma_abc_g1`). Each
+    /// value is read from the witness (0 if the circuit declares a public input the
+    /// witness does not bind). A circuit with no public inputs yields an empty vec,
+    /// which is the correct input for a satisfiability-only Groth16 proof.
+    fn extract_public_inputs(&self, circuit_id: &str, witness: &HashMap<String, FieldElement>) -> Vec<FieldElement> {
+        match self.circuit_builder.get_circuit(circuit_id) {
+            Ok(circuit) => circuit
+                .public_inputs
+                .iter()
+                .map(|id| witness.get(id).cloned().unwrap_or(FieldElement { value: [0u8; 32] }))
+                .collect(),
+            Err(_) => Vec::new(),
+        }
     }
 
     /// Generate unique proof ID

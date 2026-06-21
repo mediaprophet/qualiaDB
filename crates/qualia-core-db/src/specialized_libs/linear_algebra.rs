@@ -535,6 +535,11 @@ impl LinearAlgebraLibrary {
 
     /// Privacy-preserving matrix multiplication
     pub fn private_matrix_multiply(&mut self, left_id: &str, right_id: &str, result_id: &str) -> Result<LinearAlgebraResult<Matrix>, LinearAlgebraError> {
+        // NOTE(algebra-zk, see LINEAR_ALGEBRA_ZK_TODO.md §1): the Groth16 proof below
+        // is over a placeholder circuit that does NOT yet constrain A·B = C, so
+        // `privacy_preserved: true` currently means "a proof was produced & verified",
+        // not "the multiplication was proven in zero knowledge". Make the circuit real
+        // before relying on this for privacy.
         // Create zero-knowledge proof for the operation
         let statement = crate::zk_proofs::MathematicalStatement {
             statement_id: "private_matrix_mult".to_string(),
