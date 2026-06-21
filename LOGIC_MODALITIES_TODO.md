@@ -95,7 +95,38 @@ Remaining:
 
 ---
 
-## 4. Repo hygiene (low priority)
+## 4. Browser test suite (`docs/tests/`) — foundational honesty
+
+The GitHub Pages suite (`mediaprophet.github.io/qualiaDB/tests/`) looked near-all-green
+but was misleading. Three distinct issues:
+
+- ✅ **FIXED (0.0.19)** — **skip ≡ pass**: the harness scored any test that didn't
+  throw as PASS, so daemon-offline (`if (!ctx.native) return`) and missing-WASM-export
+  tests counted as passes. Now `test-runner.js` counts assertions; a test that asserts
+  nothing is reported **skip**, not pass (+ `runner.skip()`). Browser UI + headless show
+  Passed/Skipped/Failed. Honest now: **wasm mode 496 passed / 15 skipped / 3 failed**
+  (was read as ~514 "passed"); both mode 498/84/3.
+
+- ⬜ **WASM data-format binding bugs (ENGINE, needs WASM rebuild)** — now visible:
+  - `parse_csv_wasm` and `parse_json_mapping_wasm` return structs with u64 quin fields;
+    `wasm_bridge.rs` uses plain `serde_wasm_bindgen::to_value(&result)`, which renders
+    a u64 > 2^53 as a JS Number and throws "can't be represented as a JavaScript number".
+    **Fix:** serialize quin-returning exports with
+    `Serializer::new().serialize_large_number_types_as_bigints(true)`, then `wasm-pack`
+    rebuild → copy to `docs/playground/`.
+  - `parse_json_mapping_wasm` on a JSON **array** (`[{…},{…}]`) returns 0 quins — arrays
+    unhandled. Decide: support arrays, or adjust the test if single-object is by design.
+
+- ⬜ **modality-* suites test JS REIMPLEMENTATIONS, not the engine** — e.g.
+  `modality-ltl.js` reimplements `evaluate_ltl_trace` in JS and tests that copy. Green =
+  "the JS mirror is self-consistent", NOT "the Rust/WASM engine works". Most modalities
+  (deontic/LTL/epistemic/…) are NOT in `EXPECTED_WASM_EXPORTS`, so they can't be tested
+  from the browser at all. Options: (a) expose the modality evaluators as WASM exports and
+  test the real engine; (b) relabel these as "reference-logic self-consistency" suites so
+  they don't read as engine verification. The native Rust tests (`deontic_smoke`,
+  `guard_grounding`, `modalities_active`) ARE the real engine checks.
+
+## 5. Repo hygiene (low priority)
 
 - **4 stray files** committed in the `0.0.19` checkpoint (`7e8b2566f`):
   `crates/webizen-studio/dx-build.log` ×3 (build logs) + `qpu_bridge.rs.bak`
@@ -105,7 +136,7 @@ Remaining:
 
 ---
 
-## 5. Pointers
+## 6. Pointers
 - Reference impl & discipline: `CLAUDE.md`, `AGENTS.md`, `core-ontologies/PLAN.md` §17.
 - Live-lane test template: `crates/qualia-core-db/tests/deontic_smoke.rs`.
 - Grounding test template: `crates/qualia-core-db/tests/guard_grounding.rs`.
