@@ -267,14 +267,15 @@ pub fn try_gpu_tensor_search_into(
 
 /// CPU reference for the GPU tensor-volume search (ALGEBRA_MANIFOLD_PLAN.md Phase 4.2).
 ///
-/// A plain linear scan using the EXACT same 7-dimensional Euclidean metric as
-/// `shaders/tensor_volume.wgsl` — `x, y, z, t, alpha, mu, sigma` (the `q, v, w` fields
-/// are not part of the volume metric). This makes the 10D manifold search testable
-/// without a GPU and gives the GPU path a ground-truth to be cross-checked against.
+/// A plain linear scan using the CANONICAL `Tensor10D::full_distance` metric — the same
+/// metric `shaders/tensor_volume.wgsl` now ports (chosen by the QUERY's `v` topology
+/// class: euclidean / cyclic / hyperbolic / boundary). All three paths — GPU, this
+/// reference, and the substrate CPU fallback — therefore agree for ALL `v`. Makes the
+/// 10D manifold search testable without a GPU.
 ///
-/// Matches the shader's semantics: a node is a hit iff `distance <= max_distance`;
-/// indices are written into `out` up to its capacity, and the FULL match count is
-/// returned (which may exceed `out.len()`, exactly like the shader's `hit_count`).
+/// Semantics match the shader: a node is a hit iff `distance <= max_distance`; indices
+/// are written into `out` up to its capacity, and the FULL match count is returned
+/// (which may exceed `out.len()`, exactly like the shader's `hit_count`).
 pub fn cpu_tensor_search_into(
     query: &Tensor10D,
     nodes: &[Tensor10D],
@@ -283,16 +284,7 @@ pub fn cpu_tensor_search_into(
 ) -> usize {
     let mut matches = 0usize;
     for (idx, node) in nodes.iter().enumerate() {
-        let dx = query.x - node.x;
-        let dy = query.y - node.y;
-        let dz = query.z - node.z;
-        let dt = query.t - node.t;
-        let da = query.alpha - node.alpha;
-        let dm = query.mu - node.mu;
-        let ds = query.sigma - node.sigma;
-        let dist =
-            (dx * dx + dy * dy + dz * dz + dt * dt + da * da + dm * dm + ds * ds).sqrt();
-        if dist <= max_distance {
+        if query.full_distance(node) <= max_distance {
             if matches < out.len() {
                 out[matches] = idx;
             }
@@ -330,5 +322,28 @@ mod cpu_reference_tests {
         assert_eq!(cpu_tensor_search_into(&zeros, &nodes, 5.0, &mut out), 4);
         // radius 0 → only the exact matches (nodes 0 and 3).
         assert_eq!(cpu_tensor_search_into(&zeros, &nodes, 0.0, &mut out), 2);
+    }
+
+    #[test]
+    fn cpu_tensor_search_honors_topology_class() {
+        // Proves the v-switched metric unification (§4.1). A CYCLIC query (v == 1) wraps
+        // x modulo 1, so x=0 and x=0.9 are 0.1 apart — NOT 0.9 as under euclidean.
+        // new(q, v, w, x, y, z, t, alpha, mu, sigma)
+        let query = Tensor10D::new(0.0, 1.0, 0.0, 0.0, 0.0, 0.0, 0.0, 0.0, 0.0, 0.0);
+        let near_wrap = Tensor10D::new(0.0, 1.0, 0.0, 0.9, 0.0, 0.0, 0.0, 0.0, 0.0, 0.0);
+        let mut out = [usize::MAX; 4];
+        // radius 0.2: cyclic distance 0.1 → HIT (euclidean 0.9 would miss).
+        assert_eq!(
+            cpu_tensor_search_into(&query, &[near_wrap], 0.2, &mut out),
+            1,
+            "cyclic metric must wrap x; node should be within 0.2"
+        );
+        // Same geometry under a euclidean query (v == 0) → MISS at radius 0.2.
+        let euclid_query = Tensor10D::new(0.0, 0.0, 0.0, 0.0, 0.0, 0.0, 0.0, 0.0, 0.0, 0.0);
+        let euclid_node = Tensor10D::new(0.0, 0.0, 0.0, 0.9, 0.0, 0.0, 0.0, 0.0, 0.0, 0.0);
+        assert_eq!(
+            cpu_tensor_search_into(&euclid_query, &[euclid_node], 0.2, &mut out),
+            0
+        );
     }
 }

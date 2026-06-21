@@ -223,6 +223,41 @@ mod tests {
     }
 
     #[test]
+    fn test_lu_decompose_reconstructs_and_dets() {
+        // P·A = L·U: reconstruct A from the factors (applying the pivot permutation).
+        let n = 3;
+        let a = [4.0, 3.0, 2.0, 2.0, 1.0, 3.0, 3.0, 2.0, 1.0];
+        let lu = lu_decompose(n, &a).unwrap();
+        assert!(!lu.singular);
+        // det agrees with the standalone determinant fn.
+        assert!((lu.determinant() - determinant(n, &a).unwrap()).abs() < 1e-9);
+
+        // Rebuild L and U, multiply, and compare to the row-permuted A.
+        let mut l = vec![0.0; n * n];
+        let mut u = vec![0.0; n * n];
+        for i in 0..n {
+            l[i * n + i] = 1.0;
+            for j in 0..n {
+                if j < i { l[i * n + j] = lu.lu[i * n + j]; }
+                else { u[i * n + j] = lu.lu[i * n + j]; }
+            }
+        }
+        for i in 0..n {
+            for j in 0..n {
+                let mut acc = 0.0;
+                for k in 0..n { acc += l[i * n + k] * u[k * n + j]; }
+                // (L·U)[i][j] must equal A at the permuted original row.
+                let orig_row = lu.pivots[i];
+                assert!((acc - a[orig_row * n + j]).abs() < 1e-9, "LU != P·A at {i},{j}");
+            }
+        }
+
+        // Singular matrix → flagged + det 0.
+        let sing = lu_decompose(2, &[1.0, 2.0, 2.0, 4.0]).unwrap();
+        assert!(sing.singular && sing.determinant() == 0.0);
+    }
+
+    #[test]
     fn test_eigenvalues_general() {
         // Upper-triangular [[1,2],[0,3]] → eigenvalues {1,3} (real).
         let mut e = eigenvalues_general(2, &[1.0, 2.0, 0.0, 3.0]).unwrap();
@@ -948,16 +983,48 @@ pub fn polynomial_roots(coeffs: &[f64]) -> Result<Vec<Complex>, LinearAlgebraErr
 //  cyclic Jacobi rotations. Inputs are row-major n×n `f64` slices.
 // ════════════════════════════════════════════════════════════════════════════════
 
-/// Determinant of a row-major `n×n` matrix via LU decomposition with partial pivoting.
-/// O(n³), numerically robust; returns 0.0 for a singular matrix.
-pub fn determinant(n: usize, data: &[f64]) -> Result<f64, LinearAlgebraError> {
+/// An in-place LU decomposition with partial pivoting (Doolittle), `P·A = L·U`.
+#[derive(Debug, Clone)]
+pub struct Lu {
+    /// Combined factors, row-major `n×n`: `U` on/above the diagonal, the strictly-lower
+    /// part of `L` below it (L's unit diagonal is implicit).
+    pub lu: Vec<f64>,
+    /// Row permutation: `pivots[i]` is the original row now in position `i`.
+    pub pivots: Vec<usize>,
+    /// Sign of the permutation (`+1`/`-1`), i.e. `det(P)`.
+    pub sign: f64,
+    /// `true` if a zero pivot was encountered (matrix is singular).
+    pub singular: bool,
+    pub n: usize,
+}
+
+impl Lu {
+    /// `det(A) = sign · Π U[i][i]`.
+    pub fn determinant(&self) -> f64 {
+        if self.singular {
+            return 0.0;
+        }
+        let mut det = self.sign;
+        for i in 0..self.n {
+            det *= self.lu[i * self.n + i];
+        }
+        det
+    }
+}
+
+/// LU-decompose a row-major `n×n` matrix with partial pivoting. The reusable primitive
+/// behind `determinant` (and a building block for solves / condition estimates). O(n³).
+pub fn lu_decompose(n: usize, data: &[f64]) -> Result<Lu, LinearAlgebraError> {
     if n == 0 || data.len() != n * n {
         return Err(LinearAlgebraError::InvalidDimensions(
-            "determinant expects a non-empty square n×n matrix".to_string(),
+            "lu_decompose expects a non-empty square n×n matrix".to_string(),
         ));
     }
     let mut a = data.to_vec();
-    let mut det = 1.0_f64;
+    let mut pivots: Vec<usize> = (0..n).collect();
+    let mut sign = 1.0_f64;
+    let mut singular = false;
+
     for col in 0..n {
         // Partial pivot: largest magnitude in this column at/below the diagonal.
         let mut pivot = col;
@@ -970,24 +1037,33 @@ pub fn determinant(n: usize, data: &[f64]) -> Result<f64, LinearAlgebraError> {
             }
         }
         if maxv == 0.0 {
-            return Ok(0.0); // singular column → det = 0
+            singular = true;
+            continue; // leave a zero on the diagonal; det → 0
         }
         if pivot != col {
             for k in 0..n {
                 a.swap(col * n + k, pivot * n + k);
             }
-            det = -det;
+            pivots.swap(col, pivot);
+            sign = -sign;
         }
         let diag = a[col * n + col];
-        det *= diag;
         for r in (col + 1)..n {
             let factor = a[r * n + col] / diag;
-            for k in col..n {
+            a[r * n + col] = factor; // store L's multiplier in the lower triangle
+            for k in (col + 1)..n {
                 a[r * n + k] -= factor * a[col * n + k];
             }
         }
     }
-    Ok(det)
+
+    Ok(Lu { lu: a, pivots, sign, singular, n })
+}
+
+/// Determinant of a row-major `n×n` matrix via LU decomposition with partial pivoting.
+/// O(n³), numerically robust; returns 0.0 for a singular matrix.
+pub fn determinant(n: usize, data: &[f64]) -> Result<f64, LinearAlgebraError> {
+    Ok(lu_decompose(n, data)?.determinant())
 }
 
 /// Eigen-decomposition of a SYMMETRIC row-major `n×n` matrix via cyclic Jacobi
