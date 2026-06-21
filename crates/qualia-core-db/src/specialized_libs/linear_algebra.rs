@@ -131,6 +131,98 @@ mod tests {
     }
 
     #[test]
+    fn test_solve_quadratic_two_real() {
+        // x² − 5x + 6 = 0 → {2, 3}
+        match solve_quadratic(1.0, -5.0, 6.0).unwrap() {
+            QuadraticRoots::TwoReal(lo, hi) => {
+                assert!((lo - 2.0).abs() < 1e-12);
+                assert!((hi - 3.0).abs() < 1e-12);
+            }
+            other => panic!("expected two real roots, got {:?}", other),
+        }
+    }
+
+    #[test]
+    fn test_solve_quadratic_double_and_complex_and_linear() {
+        // x² − 2x + 1 = 0 → double root 1
+        assert_eq!(solve_quadratic(1.0, -2.0, 1.0).unwrap(), QuadraticRoots::DoubleReal(1.0));
+        // x² + 1 = 0 → ±i
+        match solve_quadratic(1.0, 0.0, 1.0).unwrap() {
+            QuadraticRoots::ComplexPair { re, im } => {
+                assert!(re.abs() < 1e-12 && (im - 1.0).abs() < 1e-12);
+            }
+            other => panic!("expected complex pair, got {:?}", other),
+        }
+        // 0·x² + 2x − 4 = 0 → linear root 2
+        assert_eq!(solve_quadratic(0.0, 2.0, -4.0).unwrap(), QuadraticRoots::Linear(2.0));
+    }
+
+    #[test]
+    fn test_polynomial_roots_general() {
+        // (x−1)(x−2)(x−3) = x³ − 6x² + 11x − 6 → real roots {1,2,3}
+        let mut roots = polynomial_roots(&[1.0, -6.0, 11.0, -6.0]).unwrap();
+        assert_eq!(roots.len(), 3);
+        assert!(roots.iter().all(|r| r.is_real(1e-7)));
+        roots.sort_by(|a, b| a.re.partial_cmp(&b.re).unwrap());
+        for (got, want) in roots.iter().zip([1.0, 2.0, 3.0]) {
+            assert!((got.re - want).abs() < 1e-6, "root {:?} != {}", got, want);
+        }
+    }
+
+    #[test]
+    fn test_polynomial_roots_complex_quartic() {
+        // (x²+1)(x²−1) = x⁴ − 1 → roots {1, −1, i, −i}
+        let roots = polynomial_roots(&[1.0, 0.0, 0.0, 0.0, -1.0]).unwrap();
+        assert_eq!(roots.len(), 4);
+        let real_count = roots.iter().filter(|r| r.is_real(1e-7)).count();
+        let imag_count = roots.iter().filter(|r| !r.is_real(1e-7)).count();
+        assert_eq!(real_count, 2, "expected ±1 real");
+        assert_eq!(imag_count, 2, "expected ±i imaginary");
+        // every root satisfies r⁴ = 1 → |r| ≈ 1
+        assert!(roots.iter().all(|r| (r.abs() - 1.0).abs() < 1e-6));
+    }
+
+    #[test]
+    fn test_determinant() {
+        // [[1,2],[3,4]] → −2
+        assert!((determinant(2, &[1.0, 2.0, 3.0, 4.0]).unwrap() + 2.0).abs() < 1e-12);
+        // 3×3 with known det: [[6,1,1],[4,-2,5],[2,8,7]] → −306
+        let d = determinant(3, &[6.0, 1.0, 1.0, 4.0, -2.0, 5.0, 2.0, 8.0, 7.0]).unwrap();
+        assert!((d + 306.0).abs() < 1e-9, "det = {}", d);
+        // Singular matrix → 0
+        assert!(determinant(2, &[1.0, 2.0, 2.0, 4.0]).unwrap().abs() < 1e-12);
+    }
+
+    #[test]
+    fn test_eigen_symmetric() {
+        // [[2,1],[1,2]] → eigenvalues {1, 3}; check A·v = λ·v for each.
+        let a = [2.0, 1.0, 1.0, 2.0];
+        let (mut vals, vecs) = eigen_symmetric(2, &a).unwrap();
+        vals.sort_by(|x, y| x.partial_cmp(y).unwrap());
+        assert!((vals[0] - 1.0).abs() < 1e-9 && (vals[1] - 3.0).abs() < 1e-9, "vals = {:?}", vals);
+
+        // Re-fetch unsorted to pair eigenvalue j with column j.
+        let (vals_u, vecs_u) = eigen_symmetric(2, &a).unwrap();
+        for j in 0..2 {
+            let (v0, v1) = (vecs_u[0 * 2 + j], vecs_u[1 * 2 + j]);
+            // A·v
+            let av0 = a[0] * v0 + a[1] * v1;
+            let av1 = a[2] * v0 + a[3] * v1;
+            // λ·v
+            assert!((av0 - vals_u[j] * v0).abs() < 1e-7, "A·v != λ·v (row0, col{j})");
+            assert!((av1 - vals_u[j] * v1).abs() < 1e-7, "A·v != λ·v (row1, col{j})");
+            // unit eigenvector
+            assert!(((v0 * v0 + v1 * v1).sqrt() - 1.0).abs() < 1e-9);
+        }
+        let _ = vecs;
+    }
+
+    #[test]
+    fn test_eigen_symmetric_rejects_asymmetric() {
+        assert!(eigen_symmetric(2, &[1.0, 2.0, 3.0, 4.0]).is_err());
+    }
+
+    #[test]
     fn test_private_matrix_multiplication() {
         let mut library = LinearAlgebraLibrary::new();
         library.initialize().unwrap();
@@ -625,5 +717,307 @@ impl LinearAlgebraLibrary {
     pub fn get_matrix_info(&self, matrix_id: &str) -> Option<MatrixMetadata> {
         self.matrix_storage.get_matrix_metadata(matrix_id)
     }
+}
+
+// ════════════════════════════════════════════════════════════════════════════════
+//  Polynomial algebra (ALGEBRA_MANIFOLD_PLAN.md Phase 1)
+//  Numeric root finding: quadratics in closed form (stable), general degree via the
+//  dependency-free Durand–Kerner (Weierstrass) iteration. f64, dynamic degree.
+// ════════════════════════════════════════════════════════════════════════════════
+
+/// A complex number `re + im·i`. Minimal arithmetic for polynomial root finding.
+#[derive(Debug, Clone, Copy, PartialEq)]
+pub struct Complex {
+    pub re: f64,
+    pub im: f64,
+}
+
+impl Complex {
+    pub const fn new(re: f64, im: f64) -> Self { Self { re, im } }
+    pub const fn real(re: f64) -> Self { Self { re, im: 0.0 } }
+
+    #[inline]
+    pub fn add(self, o: Complex) -> Complex { Complex::new(self.re + o.re, self.im + o.im) }
+    #[inline]
+    pub fn sub(self, o: Complex) -> Complex { Complex::new(self.re - o.re, self.im - o.im) }
+    #[inline]
+    pub fn mul(self, o: Complex) -> Complex {
+        Complex::new(self.re * o.re - self.im * o.im, self.re * o.im + self.im * o.re)
+    }
+    #[inline]
+    pub fn div(self, o: Complex) -> Complex {
+        let d = o.re * o.re + o.im * o.im;
+        Complex::new(
+            (self.re * o.re + self.im * o.im) / d,
+            (self.im * o.re - self.re * o.im) / d,
+        )
+    }
+    /// Modulus |z|.
+    #[inline]
+    pub fn abs(self) -> f64 { self.re.hypot(self.im) }
+    /// True if within `tol` of the real axis.
+    #[inline]
+    pub fn is_real(self, tol: f64) -> bool { self.im.abs() <= tol }
+}
+
+/// The roots of a real quadratic `a·x² + b·x + c = 0`.
+#[derive(Debug, Clone, Copy, PartialEq)]
+pub enum QuadraticRoots {
+    /// Two distinct real roots, ascending.
+    TwoReal(f64, f64),
+    /// One repeated real root (discriminant ≈ 0).
+    DoubleReal(f64),
+    /// A complex conjugate pair `re ± im·i` (im > 0).
+    ComplexPair { re: f64, im: f64 },
+    /// Degenerate leading coefficient (a ≈ 0): the single linear root of `b·x + c = 0`.
+    Linear(f64),
+}
+
+/// Solve `a·x² + b·x + c = 0` over the reals, numerically stably.
+///
+/// Uses the cancellation-avoiding form `q = -(b + sign(b)·√Δ)/2`, roots `q/a` and `c/q`,
+/// for `Δ > 0`; classifies `Δ ≈ 0` as a double root and `Δ < 0` as a complex pair. Falls
+/// back to the linear root when `a ≈ 0`.
+pub fn solve_quadratic(a: f64, b: f64, c: f64) -> Result<QuadraticRoots, LinearAlgebraError> {
+    if !(a.is_finite() && b.is_finite() && c.is_finite()) {
+        return Err(LinearAlgebraError::ComputationError("non-finite coefficient".to_string()));
+    }
+    let scale = a.abs().max(b.abs()).max(c.abs()).max(1.0);
+
+    // Degenerate leading coefficient → linear (or no/everywhere solution).
+    if a.abs() <= f64::EPSILON * scale {
+        if b.abs() <= f64::EPSILON * scale {
+            return Err(LinearAlgebraError::ComputationError(
+                "degenerate quadratic: a and b are both ~0".to_string(),
+            ));
+        }
+        return Ok(QuadraticRoots::Linear(-c / b));
+    }
+
+    let disc = b * b - 4.0 * a * c;
+    let disc_scale = (b * b).max((4.0 * a * c).abs()).max(1.0);
+    if disc.abs() <= 1e-12 * disc_scale {
+        return Ok(QuadraticRoots::DoubleReal(-b / (2.0 * a)));
+    }
+
+    if disc > 0.0 {
+        let sqrt_d = disc.sqrt();
+        let sign_b = if b >= 0.0 { 1.0 } else { -1.0 };
+        let q = -0.5 * (b + sign_b * sqrt_d);
+        let r1 = q / a;
+        let r2 = c / q;
+        let (lo, hi) = if r1 <= r2 { (r1, r2) } else { (r2, r1) };
+        Ok(QuadraticRoots::TwoReal(lo, hi))
+    } else {
+        let re = -b / (2.0 * a);
+        let im = (-disc).sqrt() / (2.0 * a.abs());
+        Ok(QuadraticRoots::ComplexPair { re, im })
+    }
+}
+
+/// Evaluate a polynomial at a complex point via Horner's method.
+/// `coeffs` are in DESCENDING order: `coeffs[0]·x^n + … + coeffs[n]`.
+fn poly_eval_complex(coeffs: &[f64], x: Complex) -> Complex {
+    let mut acc = Complex::real(0.0);
+    for &c in coeffs {
+        acc = acc.mul(x).add(Complex::real(c));
+    }
+    acc
+}
+
+/// Find all complex roots of a real polynomial (DESCENDING coefficients,
+/// `coeffs[0]·x^n + … + coeffs[n]`) via the Durand–Kerner iteration.
+///
+/// Dependency-free and finds all `n` roots simultaneously; suitable for moderate degree.
+/// Leading/trailing zeros are trimmed. Returns `n` roots (real roots have `im ≈ 0`).
+pub fn polynomial_roots(coeffs: &[f64]) -> Result<Vec<Complex>, LinearAlgebraError> {
+    // Trim leading zeros (they do not change the polynomial's degree meaningfully).
+    let start = coeffs.iter().position(|c| c.abs() > 0.0)
+        .ok_or_else(|| LinearAlgebraError::ComputationError("zero polynomial".to_string()))?;
+    let coeffs = &coeffs[start..];
+    if coeffs.len() == 1 {
+        return Ok(Vec::new()); // a nonzero constant: no roots
+    }
+    if coeffs.iter().any(|c| !c.is_finite()) {
+        return Err(LinearAlgebraError::ComputationError("non-finite coefficient".to_string()));
+    }
+
+    // Normalise to monic.
+    let lead = coeffs[0];
+    let monic: Vec<f64> = coeffs.iter().map(|c| c / lead).collect();
+    let degree = monic.len() - 1;
+
+    // Distinct complex initial guesses on a spiral (the classic 0.4 + 0.9i seed).
+    let seed = Complex::new(0.4, 0.9);
+    let mut roots: Vec<Complex> = (0..degree)
+        .map(|k| {
+            let mut z = Complex::real(1.0);
+            for _ in 0..k { z = z.mul(seed); }
+            z
+        })
+        .collect();
+
+    const MAX_ITERS: usize = 500;
+    const TOL: f64 = 1e-14;
+    for _ in 0..MAX_ITERS {
+        let mut max_delta = 0.0_f64;
+        for i in 0..degree {
+            let zi = roots[i];
+            // denominator = Π_{j≠i} (zi - zj)
+            let mut denom = Complex::real(1.0);
+            for j in 0..degree {
+                if j != i {
+                    denom = denom.mul(zi.sub(roots[j]));
+                }
+            }
+            if denom.abs() == 0.0 {
+                continue; // coincident guesses; perturb on the next sweep
+            }
+            let delta = poly_eval_complex(&monic, zi).div(denom);
+            roots[i] = zi.sub(delta);
+            max_delta = max_delta.max(delta.abs());
+        }
+        if max_delta < TOL {
+            break;
+        }
+    }
+
+    // Snap near-real roots to the real axis for clean output.
+    for r in roots.iter_mut() {
+        if r.im.abs() < 1e-9 * (1.0 + r.re.abs()) {
+            r.im = 0.0;
+        }
+    }
+    Ok(roots)
+}
+
+// ════════════════════════════════════════════════════════════════════════════════
+//  Determinant + eigenvalues (ALGEBRA_MANIFOLD_PLAN.md Phase 2)
+//  Dependency-free: determinant via LU (partial pivoting); symmetric eigensystem via
+//  cyclic Jacobi rotations. Inputs are row-major n×n `f64` slices.
+// ════════════════════════════════════════════════════════════════════════════════
+
+/// Determinant of a row-major `n×n` matrix via LU decomposition with partial pivoting.
+/// O(n³), numerically robust; returns 0.0 for a singular matrix.
+pub fn determinant(n: usize, data: &[f64]) -> Result<f64, LinearAlgebraError> {
+    if n == 0 || data.len() != n * n {
+        return Err(LinearAlgebraError::InvalidDimensions(
+            "determinant expects a non-empty square n×n matrix".to_string(),
+        ));
+    }
+    let mut a = data.to_vec();
+    let mut det = 1.0_f64;
+    for col in 0..n {
+        // Partial pivot: largest magnitude in this column at/below the diagonal.
+        let mut pivot = col;
+        let mut maxv = a[col * n + col].abs();
+        for r in (col + 1)..n {
+            let v = a[r * n + col].abs();
+            if v > maxv {
+                maxv = v;
+                pivot = r;
+            }
+        }
+        if maxv == 0.0 {
+            return Ok(0.0); // singular column → det = 0
+        }
+        if pivot != col {
+            for k in 0..n {
+                a.swap(col * n + k, pivot * n + k);
+            }
+            det = -det;
+        }
+        let diag = a[col * n + col];
+        det *= diag;
+        for r in (col + 1)..n {
+            let factor = a[r * n + col] / diag;
+            for k in col..n {
+                a[r * n + k] -= factor * a[col * n + k];
+            }
+        }
+    }
+    Ok(det)
+}
+
+/// Eigen-decomposition of a SYMMETRIC row-major `n×n` matrix via cyclic Jacobi
+/// rotations. Returns `(eigenvalues, eigenvectors)` where `eigenvectors` is a row-major
+/// `n×n` matrix whose COLUMN `j` is the unit eigenvector for `eigenvalues[j]`.
+/// Errors if the input is not (within tolerance) symmetric.
+pub fn eigen_symmetric(n: usize, data: &[f64]) -> Result<(Vec<f64>, Vec<f64>), LinearAlgebraError> {
+    if n == 0 || data.len() != n * n {
+        return Err(LinearAlgebraError::InvalidDimensions(
+            "eigen_symmetric expects a non-empty square n×n matrix".to_string(),
+        ));
+    }
+    // Symmetry check.
+    let scale = data.iter().fold(0.0_f64, |m, &v| m.max(v.abs())).max(1.0);
+    for i in 0..n {
+        for j in (i + 1)..n {
+            if (data[i * n + j] - data[j * n + i]).abs() > 1e-9 * scale {
+                return Err(LinearAlgebraError::ComputationError(
+                    "eigen_symmetric requires a symmetric matrix".to_string(),
+                ));
+            }
+        }
+    }
+
+    let mut a = data.to_vec();
+    let mut v = vec![0.0_f64; n * n];
+    for i in 0..n {
+        v[i * n + i] = 1.0;
+    }
+
+    const MAX_SWEEPS: usize = 100;
+    for _ in 0..MAX_SWEEPS {
+        // Off-diagonal Frobenius norm; stop when negligible.
+        let mut off = 0.0_f64;
+        for p in 0..n {
+            for q in (p + 1)..n {
+                off += a[p * n + q] * a[p * n + q];
+            }
+        }
+        if off.sqrt() <= 1e-15 * scale {
+            break;
+        }
+        for p in 0..n {
+            for q in (p + 1)..n {
+                let apq = a[p * n + q];
+                if apq == 0.0 {
+                    continue;
+                }
+                let app = a[p * n + p];
+                let aqq = a[q * n + q];
+                let theta = (aqq - app) / (2.0 * apq);
+                let sign = if theta >= 0.0 { 1.0 } else { -1.0 };
+                let t = sign / (theta.abs() + (theta * theta + 1.0).sqrt());
+                let c = 1.0 / (t * t + 1.0).sqrt();
+                let s = t * c;
+                // Rotate columns p,q of A.
+                for k in 0..n {
+                    let akp = a[k * n + p];
+                    let akq = a[k * n + q];
+                    a[k * n + p] = c * akp - s * akq;
+                    a[k * n + q] = s * akp + c * akq;
+                }
+                // Rotate rows p,q of A.
+                for k in 0..n {
+                    let apk = a[p * n + k];
+                    let aqk = a[q * n + k];
+                    a[p * n + k] = c * apk - s * aqk;
+                    a[q * n + k] = s * apk + c * aqk;
+                }
+                // Accumulate the rotation into the eigenvector matrix.
+                for k in 0..n {
+                    let vkp = v[k * n + p];
+                    let vkq = v[k * n + q];
+                    v[k * n + p] = c * vkp - s * vkq;
+                    v[k * n + q] = s * vkp + c * vkq;
+                }
+            }
+        }
+    }
+
+    let eigenvalues: Vec<f64> = (0..n).map(|i| a[i * n + i]).collect();
+    Ok((eigenvalues, v))
 }
 
