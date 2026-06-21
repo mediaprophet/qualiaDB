@@ -72,7 +72,7 @@ parses via the in-crate SHACL compiler.
       all zero-heap, modalities_active 19/19, zero_heap 1/1).
 - [x] Batch 2: abductive, NAF/closed-world (default), fuzzy — DONE (abductive.rs + fuzzy.rs new; default→defeasible::holds_by_default NAF, NOT a defeasible duplicate). modalities_active 22/22.
 - [x] Batch 3: CTL (branching-time, new ctl.rs) + general modal Kripke □/◇ (new modal.rs) — DONE. modalities_active 24/24, zero_heap 1/1.
-- [ ] SHACL extensions (all modalities)
+- [x] SHACL extensions — DONE: logic_modalities_shacl.rs + shapes/logic-modalities.shacl.ttl, 20 NodeShapes (one per modality), rdflib-valid (141 triples), completeness test passes.
 
 DUPLICATE-CHECK FINDINGS (check before each build): causal/counterfactual already
 existed in `dialectical.rs` (counterfactual_query/find_causal_paths — heap); metric

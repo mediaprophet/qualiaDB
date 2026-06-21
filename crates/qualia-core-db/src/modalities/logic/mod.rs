@@ -82,6 +82,9 @@ pub use specialized_libs_shacl::{
 
 // ─── SHACL Extensions for Core Modalities ───────────────────────────────────────
 
+pub mod logic_modalities_shacl;
+pub use logic_modalities_shacl::{get_logic_modalities_shacl_ttl, LOGIC_MODALITY_SHAPES};
+
 pub mod core_modalities_shacl;
 pub use core_modalities_shacl::{
     // Epistemic Logic
