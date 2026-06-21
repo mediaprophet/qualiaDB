@@ -4,9 +4,8 @@
 use crate::NQuin;
 use std::collections::HashMap;
 
-pub const CONTROL_BIT: u64 = 1u64 << 52;
-pub const FEEDBACK_BIT: u64 = 1u64 << 51;
-pub const STABILIZATION_BIT: u64 = 1u64 << 50;
+// Canonical bit positions live in the FrameLayout ABI (single source of truth).
+pub use crate::frame_layout::{CONTROL_BIT, FEEDBACK_BIT, STABILIZATION_BIT};
 
 /// Control system state for feedback loops
 #[derive(Debug, Clone)]

@@ -1,7 +1,8 @@
 use crate::NQuin;
 
-// Marks a Quin as consumed by setting metadata bit 59 (CONSUMED_BIT)
-pub const CONSUMED_BIT: u64 = 1u64 << 59;
+// Marks a Quin as consumed by setting metadata bit 59 (CONSUMED_BIT).
+// Canonical bit position lives in the FrameLayout ABI (single source of truth).
+pub use crate::frame_layout::CONSUMED_BIT;
 
 pub fn consume_quin(q: &mut NQuin) {
     q.metadata |= CONSUMED_BIT;

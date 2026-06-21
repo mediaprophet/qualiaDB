@@ -1,7 +1,8 @@
 use crate::{NQuin, q_hash};
 
 pub const OP_DEFEASIBLE_OVERRIDE: u8 = 0x50;
-pub const DEFEATER_BIT: u64 = 1u64 << 63; // Shared with deontic logic
+// Shared with deontic logic; canonical bit position lives in the FrameLayout ABI.
+pub use crate::frame_layout::DEFEATER_BIT;
 
 #[derive(Debug, PartialEq, Clone, Copy)]
 pub enum DefeasibleStatus {

@@ -1,8 +1,7 @@
 use crate::NQuin;
 
-pub const SYNTHESIZED_BIT: u64 = 1u64 << 58;
-pub const DO_INTERVENTION_BIT: u64 = 1u64 << 57;
-pub const COUNTERFACTUAL_BIT: u64 = 1u64 << 56;
+// Canonical bit positions live in the FrameLayout ABI (single source of truth).
+pub use crate::frame_layout::{COUNTERFACTUAL_BIT, DO_INTERVENTION_BIT, SYNTHESIZED_BIT};
 
 /// Causal intervention operator for do-calculus
 /// Implements P(Y | do(X = x)) by intervening on the causal graph.

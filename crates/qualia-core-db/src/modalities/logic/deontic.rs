@@ -152,7 +152,8 @@ pub const OP_FORBID: u8 = 0x12;
 
 /// Bit 63 of `predicate`: marks a `q42:unless` defeater / exception node.
 /// When set the Quin is *not* a primary norm and defeats matching obligations.
-pub const DEFEATER_BIT: u64 = 1u64 << 63;
+/// Canonical bit position lives in the FrameLayout ABI (single source of truth).
+pub use crate::frame_layout::DEFEATER_BIT;
 
 /// Stack capacity for defeater fingerprints per evaluation call.
 /// 64 slots × 8 bytes = 512 bytes — fits within a single L1 cache-line group.

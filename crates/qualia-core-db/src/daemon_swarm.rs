@@ -543,7 +543,7 @@ pub mod swarm {
             let mut out_quin = crate::NQuin::default();
             out_quin.subject = crate::q_hash(smiles);
             out_quin.predicate = crate::q_hash("has_ground_state_energy");
-            out_quin.object = (0x1 << 60) | ((energy as f32).to_bits() as u64);
+            out_quin.object = crate::frame_layout::pack_float_object(energy as f32);
             Some(out_quin)
         }
     }

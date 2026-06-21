@@ -347,19 +347,20 @@ impl NQuin {
         self.context |= (sensitivity as u64) << 56;
     }
 
-    // ── Quin Type (bits [63:60]) ─────────────────────────────────────────────
-
-    /// Read the 4-bit Quin Type nibble from bits [63:60].
-    /// Note: bits [62:61] within this nibble are also the routing lane.
+    // ── Quin Type (bits [63:60], via the FrameLayout ABI) ────────────────────
+    // Canonical home: `frame_layout::{quin_type, with_quin_type}`. Bits [62:61] of
+    // this nibble double as the permissive-routing lane on routed quins (an
+    // intentional, role-exclusive overlay documented in frame_layout). It is NOT
+    // relocated lower — every lower slot lands inside the tensor-bake clock [32:60].
     #[inline(always)]
     pub fn get_quin_type(&self) -> u8 {
-        ((self.metadata >> 60) & 0xF) as u8
+        crate::frame_layout::quin_type(self.metadata)
     }
 
     /// Write the 4-bit Quin Type nibble into bits [63:60], preserving all other bits.
     #[inline(always)]
     pub fn set_quin_type(&mut self, quin_type: u8) {
-        self.metadata = (self.metadata & !(0xFu64 << 60)) | ((quin_type as u64 & 0xF) << 60);
+        self.metadata = crate::frame_layout::with_quin_type(self.metadata, quin_type);
     }
 
     // ── Sensitivity tier (bits [59:56]) — ODRL layer ─────────────────────────

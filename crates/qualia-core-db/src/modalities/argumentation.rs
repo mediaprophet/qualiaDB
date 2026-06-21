@@ -4,9 +4,8 @@
 use crate::NQuin;
 use std::collections::{HashMap, HashSet};
 
-pub const ARGUMENT_BIT: u64 = 1u64 << 55;
-pub const ATTACK_BIT: u64 = 1u64 << 54;
-pub const DEFENSE_BIT: u64 = 1u64 << 53;
+// Canonical bit positions live in the FrameLayout ABI (single source of truth).
+pub use crate::frame_layout::{ARGUMENT_BIT, ATTACK_BIT, DEFENSE_BIT};
 
 /// Argument in an abstract argumentation framework
 #[derive(Debug, Clone)]
