@@ -175,3 +175,45 @@
 
 - **Convention on the Elimination of All Forms of Discrimination against Women New York, 18 December 1979** — 18 December 1979 · 30 provisions · `un-instruments/convention-elimination-all-forms-discrimination-against-women.n3`
 - **Declaration on the Elimination of Violence against Women** — 20 December 1993 · 6 provisions · `un-instruments/declaration-elimination-violence-against-women.n3`
+
+
+---
+
+## Governance Gap Report  (generated — PLAN §9.1)
+
+Scanned **102 instruments**.
+
+### Field coverage (present / total)
+- `values:tier` — 0/102  ⚠ **all missing**
+- `values:legalForm` — 0/102  ⚠ **all missing**
+- `values:bindingStatus` — 0/102  ⚠ **all missing**
+- `values:integrityHash` — 0/102  ⚠ **all missing**
+- `values:source` — 102/102
+- `values:curationStatus` — 0/102  ⚠ **all missing**
+- `values:category` — 102/102
+- `values:categoryStatus` — 102/102
+- `values:deonticStatus` — 102/102
+- `values:originalText` — 102/102
+
+### Distribution
+- **tier**: (missing) (102)
+- **legalForm**: (missing) (102)
+- **bindingStatus**: (missing) (102)
+- **curationStatus**: (missing) (102)
+- **deonticStatus**: present (102)
+
+### Flags
+- **Scraper boilerplate** (12 files) — strip from `values:originalText`:
+  - `un-instruments/basic-principles-and-guidelines-right-remedy-and-reparation.n3` — Download:, Download: PDF
+  - `un-instruments/basic-principles-treatment-prisoners.n3` — Download:, Download: PDF
+  - `un-instruments/basic-principles-use-force-and-firearms-law-enforcement.n3` — Download:, Download: PDF
+  - `un-instruments/declaration-basic-principles-justice-victims-crime-and-abuse.n3` — Download:, Download: PDF
+  - `un-instruments/guidelines-action-children-criminal-justice-system.n3` — Download:, Download: PDF
+  - `un-instruments/guidelines-role-prosecutors.n3` — Download:, Download: PDF
+  - `un-instruments/principles-effective-prevention-and-investigation-extra-legal.n3` — Download:, Download: PDF
+  - `un-instruments/safeguards-guaranteeing-protection-rights-those-facing-death.n3` — Download:, Download: PDF
+  - `un-instruments/united-nations-principles-older-persons.n3` — Download:, Download: PDF
+  - `un-instruments/united-nations-rules-protection-juveniles-deprived-their-liberty.n3` — Download:, Download: PDF
+  - `un-instruments/united-nations-standard-minimum-rules-non-custodial-measures.n3` — Download:, Download: PDF
+  - `un-instruments/vienna-declaration-and-programme-action.n3` — Download:, Download: PDF
+- **One-provision (soft-law) outliers** (2): `un-instruments/basic-principles-treatment-prisoners.n3`, `un-instruments/safeguards-guaranteeing-protection-rights-those-facing-death.n3`
