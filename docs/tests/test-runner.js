@@ -8,6 +8,15 @@ export class AssertionError extends Error {
     }
 }
 
+/** Thrown by `runner.skip(reason)` to mark a test skipped (not passed, not failed). */
+export class SkipSignal extends Error {
+    constructor(reason) {
+        super(reason || 'skipped');
+        this.name = 'SkipSignal';
+        this.reason = reason || 'skipped';
+    }
+}
+
 function fmt(v) {
     if (typeof v === 'bigint') return v.toString() + 'n';
     if (v === null) return 'null';
@@ -20,14 +29,18 @@ function fmt(v) {
 }
 
 class Expectation {
-    constructor(actual, negated = false) {
+    constructor(actual, negated = false, onAssert = null) {
         this._actual = actual;
         this._negated = negated;
+        this._onAssert = onAssert;
     }
 
-    get not() { return new Expectation(this._actual, !this._negated); }
+    get not() { return new Expectation(this._actual, !this._negated, this._onAssert); }
 
     _pass(cond, msg) {
+        // Count every assertion so a test that asserts NOTHING is reported as a
+        // skip, not a false-green pass.
+        if (this._onAssert) this._onAssert();
         const ok = this._negated ? !cond : cond;
         if (!ok) throw new AssertionError(this._negated ? `Expected NOT: ${msg}` : msg);
     }
@@ -101,6 +114,7 @@ export class TestRunner {
     constructor() {
         this._suites = [];
         this._stack  = [];      // current describe stack
+        this._assertions = 0;   // assertions executed in the current test
     }
 
     describe(name, fn) {
@@ -131,49 +145,62 @@ export class TestRunner {
         if (s) s.tests.push({ name, fn });
     }
 
-    expect(actual) { return new Expectation(actual); }
+    expect(actual) { return new Expectation(actual, false, () => { this._assertions++; }); }
+
+    /** Mark the current test as skipped (e.g. daemon offline, WASM export absent). */
+    skip(reason = '') { throw new SkipSignal(reason); }
 
     // Run all registered suites, emitting events to `emit`.
     // emit(event) where event = { type: 'suite-start'|'pass'|'fail'|'suite-end', ... }
     async run(emit) {
-        let totPassed = 0, totFailed = 0;
+        let totPassed = 0, totFailed = 0, totSkipped = 0;
         for (const suite of this._suites) {
             const r = await this._runSuite(suite, emit, []);
             totPassed += r.passed;
             totFailed += r.failed;
+            totSkipped += r.skipped;
         }
-        return { passed: totPassed, failed: totFailed };
+        return { passed: totPassed, failed: totFailed, skipped: totSkipped };
     }
 
     async _runSuite(suite, emit, path) {
         const fullName = [...path, suite.name].join(' › ');
         emit({ type: 'suite-start', name: fullName, suite });
 
-        let passed = 0, failed = 0;
+        let passed = 0, failed = 0, skipped = 0;
 
         if (suite._beforeAll) {
             try { await suite._beforeAll(); }
             catch (e) {
                 emit({ type: 'fail', name: `${fullName} [beforeAll]`, suite, error: e });
-                emit({ type: 'suite-end', name: fullName, suite, passed, failed: failed + 1 });
-                return { passed, failed: failed + 1 };
+                emit({ type: 'suite-end', name: fullName, suite, passed, failed: failed + 1, skipped });
+                return { passed, failed: failed + 1, skipped };
             }
         }
 
         for (const item of suite.tests) {
             if (item._isSuite) {
                 const r = await this._runSuite(item.suite, emit, [...path, suite.name]);
-                passed += r.passed; failed += r.failed;
+                passed += r.passed; failed += r.failed; skipped += r.skipped;
                 continue;
             }
             let err = null;
+            this._assertions = 0;
             const t0 = performance.now();
             try { await item.fn(); }
             catch (e) { err = e; }
             const ms = performance.now() - t0;
-            if (err) {
+            if (err instanceof SkipSignal) {
+                skipped++;
+                emit({ type: 'skip', name: item.name, suite, reason: err.reason, ms });
+            } else if (err) {
                 failed++;
                 emit({ type: 'fail', name: item.name, suite, error: err, ms });
+            } else if (this._assertions === 0) {
+                // Ran clean but asserted nothing → a skip, not a pass. This is what
+                // stops daemon-offline / missing-WASM-export tests reading as green.
+                skipped++;
+                emit({ type: 'skip', name: item.name, suite, reason: 'no assertions executed', ms });
             } else {
                 passed++;
                 emit({ type: 'pass', name: item.name, suite, ms });
@@ -184,7 +211,7 @@ export class TestRunner {
             try { await suite._afterAll(); } catch (_) {}
         }
 
-        emit({ type: 'suite-end', name: fullName, suite, passed, failed });
-        return { passed, failed };
+        emit({ type: 'suite-end', name: fullName, suite, passed, failed, skipped });
+        return { passed, failed, skipped };
     }
 }

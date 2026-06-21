@@ -268,8 +268,12 @@
             font-size: 12.5px;
         }
         .test-row.pass { color: rgba(255,255,255,.65); }
+        .test-row.skip { color: rgba(250,204,21,.7); }
+        .test-row.skip .test-icon { color: rgba(250,204,21,.8); }
         .test-row.fail { color: var(--fail); background: rgba(248,113,113,.04); }
         .test-row.fail .test-name { color: var(--fail); }
+        .suite-skip { color: rgba(250,204,21,.8); }
+        .badge.skip { color: rgba(250,204,21,.9); }
 
         .test-icon { font-size: 11px; text-align: center; }
         .test-row.pass .test-icon { color: var(--success); }
@@ -425,6 +429,7 @@
 
         <div class="summary-group">
             <span class="badge pass"><span id="summary-passed">0</span> passed</span>
+            <span class="badge skip"><span id="summary-skipped">0</span> skipped</span>
             <span class="badge fail"><span id="summary-failed">0</span> failed</span>
             <span class="badge total"><span id="summary-total">0</span> total</span>
         </div>
