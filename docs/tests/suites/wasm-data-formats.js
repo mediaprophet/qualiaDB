@@ -82,7 +82,9 @@ export function register(runner) {
             const result = mod.serialize_csv_wasm({
                 quins: [
                     packQuin(q_hash('http://example.org/Alice'), q_hash('http://example.org/name'), q_hash('Alice')),
-                    packQuin(q_hash('http://example.org/Alice'), q_hash('http://example.org/age'), (30n << 60n) | 30n),
+                    // Tagged integer 30: type tag in bit 60, value in the low bits.
+                    // (Must stay within u64::MAX — 30n << 60n overflows 64 bits.)
+                    packQuin(q_hash('http://example.org/Alice'), q_hash('http://example.org/age'), (1n << 60n) | 30n),
                 ],
                 field_names: ['name', 'age'],
                 predicate_hashes: [q_hash('http://example.org/name'), q_hash('http://example.org/age')],
