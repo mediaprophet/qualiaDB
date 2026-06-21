@@ -493,6 +493,114 @@ impl ZkProofSystem {
         Ok(())
     }
 
+    /// Prove, in zero knowledge, that `C = A·B` where `A` is `m×k` and `B` is `k×n`
+    /// (both row-major, integer field values), WITHOUT revealing `A` or `B`.
+    ///
+    /// This builds a real R1CS circuit: every `A[i][p]` and `B[p][j]` is a private
+    /// witness, every result entry `C[i][j]` is a public input, and for each `(i,j)`
+    /// the circuit enforces `Σ_p A[i][p]·B[p][j] = C[i][j]`. A Groth16 proof over that
+    /// circuit is generated and verified. `Ok(true)` means the proof verifies — i.e.
+    /// the prover really knows `A`, `B` whose product is the published `C`. (Contrast
+    /// the previous placeholder, which proved an empty circuit and attested nothing.)
+    ///
+    /// `C` is computed here from the integer inputs so the constraint is exact; the
+    /// returned flag reflects genuine cryptographic verification, not a structural
+    /// check. The result entries are returned so the caller can publish/compare them.
+    #[cfg(feature = "zk-culling")]
+    pub fn prove_matrix_multiply(
+        &mut self,
+        m: usize,
+        k: usize,
+        n: usize,
+        a: &[i128],
+        b: &[i128],
+    ) -> Result<(bool, Vec<i128>), ZkError> {
+        use arkworks_groth16::i128_to_field_element;
+
+        if a.len() != m * k || b.len() != k * n {
+            return Err(ZkError::EngineError(
+                "matrix dimensions do not match the supplied data".to_string(),
+            ));
+        }
+
+        // Compute C = A·B over the integers (exact; matches the field constraint).
+        let mut c = vec![0i128; m * n];
+        for i in 0..m {
+            for j in 0..n {
+                let mut acc: i128 = 0;
+                for p in 0..k {
+                    acc += a[i * k + p] * b[p * n + j];
+                }
+                c[i * n + j] = acc;
+            }
+        }
+
+        let circuit_id = format!("matmul_{}x{}x{}_{}", m, k, n, self.generate_proof_id());
+        self.create_circuit(circuit_id.clone())?;
+
+        let mut witness: HashMap<String, FieldElement> = HashMap::new();
+
+        // Public inputs first: the claimed result entries C[i][j].
+        for i in 0..m {
+            for j in 0..n {
+                let id = format!("c_{}_{}", i, j);
+                self.add_variable(&circuit_id, id.clone(), VariableType::Public)?;
+                witness.insert(id, i128_to_field_element(c[i * n + j]));
+            }
+        }
+        // Private witnesses: A and B entries.
+        for i in 0..m {
+            for p in 0..k {
+                let id = format!("a_{}_{}", i, p);
+                self.add_variable(&circuit_id, id.clone(), VariableType::Private)?;
+                witness.insert(id, i128_to_field_element(a[i * k + p]));
+            }
+        }
+        for p in 0..k {
+            for j in 0..n {
+                let id = format!("b_{}_{}", p, j);
+                self.add_variable(&circuit_id, id.clone(), VariableType::Private)?;
+                witness.insert(id, i128_to_field_element(b[p * n + j]));
+            }
+        }
+
+        // One constraint per result entry: (Σ_p a_ip · b_pj) · 1 = c_ij. The inner
+        // products become intermediate witness variables (each with its own
+        // multiplication constraint) inside the circuit synthesizer.
+        let one = CircuitExpression::Constant(i128_to_field_element(1));
+        for i in 0..m {
+            for j in 0..n {
+                let mut sum: Option<CircuitExpression> = None;
+                for p in 0..k {
+                    let term = CircuitExpression::Mul(
+                        Box::new(CircuitExpression::Variable(format!("a_{}_{}", i, p))),
+                        Box::new(CircuitExpression::Variable(format!("b_{}_{}", p, j))),
+                    );
+                    sum = Some(match sum {
+                        None => term,
+                        Some(s) => CircuitExpression::Add(Box::new(s), Box::new(term)),
+                    });
+                }
+                let sum = sum.unwrap_or_else(|| {
+                    CircuitExpression::Constant(i128_to_field_element(0))
+                });
+                self.add_constraint(
+                    &circuit_id,
+                    sum,
+                    one.clone(),
+                    CircuitExpression::Variable(format!("c_{}_{}", i, j)),
+                )?;
+            }
+        }
+
+        // Trusted setup → prove → verify, all on this instance's state under one call.
+        self.generate_keys(&circuit_id)?;
+        let public_inputs = self.extract_public_inputs(&circuit_id, &witness);
+        let proof = self.generate_proof(&circuit_id, witness, public_inputs)?;
+        let result = self.verify_proof(&proof)?;
+        Ok((result.is_valid, c))
+    }
+
     /// Get performance statistics
     pub fn get_performance_stats(&self) -> ZkGlobalMetrics {
         self.performance_monitor.get_global_stats()
@@ -563,13 +671,12 @@ impl ZkProofSystem {
     /// Build function evaluation circuit
     fn build_function_circuit(&mut self, circuit_id: &str, statement: &MathematicalStatement) -> Result<(), ZkError> {
         // Build function evaluation circuit.
-        // TODO(algebra-zk, see LINEAR_ALGEBRA_ZK_TODO.md §1): this is a STRUCTURAL
-        // PLACEHOLDER. It allocates the statement variables but emits NO constraints
-        // binding the evaluated function (e.g. the matrix product). The resulting
-        // Groth16 proof is a satisfiability proof of an essentially empty circuit and
-        // does not yet cryptographically attest the computation. Emit real
-        // enforce_constraint() relations before treating `privacy_preserved` as a
-        // cryptographic guarantee.
+        // TODO(algebra-zk, see LINEAR_ALGEBRA_ZK_TODO.md §1): this GENERIC builder is
+        // still a STRUCTURAL PLACEHOLDER — it allocates the statement variables but
+        // emits NO constraints, so a proof over it attests nothing. Matrix multiply no
+        // longer uses this path (it has a real circuit in `prove_matrix_multiply`);
+        // other StatementType::FunctionEvaluation expressions still need real
+        // enforce_constraint() emission before their `privacy_preserved` is trusted.
         for var in &statement.variables {
             self.add_variable(circuit_id, var.clone(), VariableType::Private)?;
         }
@@ -1019,6 +1126,72 @@ mod tests {
             "a Groth16 proof must NOT verify against a falsified public input"
         );
     }
+
+    #[test]
+    fn test_matrix_multiply_zk_roundtrip() {
+        // The real matrix-multiply circuit accepts the TRUE product and returns it.
+        let mut zk = ZkProofSystem::new();
+        // [[1,2],[3,4]] · [[5,6],[7,8]] = [[19,22],[43,50]].
+        let (ok, c) = zk
+            .prove_matrix_multiply(2, 2, 2, &[1, 2, 3, 4], &[5, 6, 7, 8])
+            .unwrap();
+        assert!(ok, "proof of the correct product must verify");
+        assert_eq!(c, vec![19, 22, 43, 50]);
+    }
+
+    #[test]
+    fn test_matrix_multiply_circuit_rejects_false_product() {
+        // Soundness for the SUM-OF-PRODUCTS construction: build the 1x2x1 dot-product
+        // circuit (c = a0·b0 + a1·b1) exactly as prove_matrix_multiply does, prove the
+        // honest product, then claim a different result — verification must fail.
+        use arkworks_groth16::i128_to_field_element;
+        let mut zk = ZkProofSystem::new();
+        zk.create_circuit("dot".to_string()).unwrap();
+        zk.add_variable("dot", "c".to_string(), VariableType::Public).unwrap();
+        zk.add_variable("dot", "a0".to_string(), VariableType::Private).unwrap();
+        zk.add_variable("dot", "a1".to_string(), VariableType::Private).unwrap();
+        zk.add_variable("dot", "b0".to_string(), VariableType::Private).unwrap();
+        zk.add_variable("dot", "b1".to_string(), VariableType::Private).unwrap();
+        // (a0·b0 + a1·b1) · 1 = c
+        let sum = CircuitExpression::Add(
+            Box::new(CircuitExpression::Mul(
+                Box::new(CircuitExpression::Variable("a0".to_string())),
+                Box::new(CircuitExpression::Variable("b0".to_string())),
+            )),
+            Box::new(CircuitExpression::Mul(
+                Box::new(CircuitExpression::Variable("a1".to_string())),
+                Box::new(CircuitExpression::Variable("b1".to_string())),
+            )),
+        );
+        zk.add_constraint(
+            "dot",
+            sum,
+            CircuitExpression::Constant(i128_to_field_element(1)),
+            CircuitExpression::Variable("c".to_string()),
+        )
+        .unwrap();
+        zk.generate_keys("dot").unwrap();
+
+        // Honest witness: a=[3,4], b=[5,6] → c = 15 + 24 = 39.
+        let mut witness = HashMap::new();
+        witness.insert("a0".to_string(), i128_to_field_element(3));
+        witness.insert("a1".to_string(), i128_to_field_element(4));
+        witness.insert("b0".to_string(), i128_to_field_element(5));
+        witness.insert("b1".to_string(), i128_to_field_element(6));
+        witness.insert("c".to_string(), i128_to_field_element(39));
+
+        let mut proof = zk
+            .generate_proof("dot", witness, vec![i128_to_field_element(39)])
+            .unwrap();
+        assert!(zk.verify_proof(&proof).unwrap().is_valid, "honest dot product must verify");
+
+        // Tamper: claim the dot product is 40, not the proven 39.
+        proof.public_inputs = vec![i128_to_field_element(40)];
+        assert!(
+            !zk.verify_proof(&proof).unwrap().is_valid,
+            "a falsified dot-product result must NOT verify"
+        );
+    }
 }
 
 #[cfg(feature = "zk-culling")]
@@ -1063,6 +1236,23 @@ pub mod arkworks_groth16 {
 
     pub fn field_element_to_fr(fe: &FieldElement) -> Fr {
         Fr::from_le_bytes_mod_order(&fe.value)
+    }
+
+    /// Encode a signed integer as a `FieldElement` in the canonical little-endian
+    /// representation `field_element_to_fr` reads back. Negative values map to the
+    /// field negation `p - |n|`, so signed integer arithmetic over the circuit is
+    /// exact (within the field order, far larger than any realistic matrix entry).
+    pub fn i128_to_field_element(n: i128) -> FieldElement {
+        use ark_ff::BigInteger;
+        let mut fr = Fr::from(n.unsigned_abs());
+        if n < 0 {
+            fr = -fr;
+        }
+        let bytes = fr.into_bigint().to_bytes_le();
+        let mut value = [0u8; 32];
+        let len = bytes.len().min(32);
+        value[..len].copy_from_slice(&bytes[..len]);
+        FieldElement { value }
     }
 
     #[derive(Clone)]

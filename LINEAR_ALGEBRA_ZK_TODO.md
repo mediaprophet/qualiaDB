@@ -1,11 +1,12 @@
 # TODO — Linear algebra, the 10D manifold, and ZK-private computation
 
-> Status note (2026-06-21): the immediate crash is **fixed** — `private_matrix_multiply`
-> and `ZkProofSystem::generate_semantic_proof` no longer panic with
-> `MalformedVerifyingKey`. But that fix only made the Groth16 *plumbing* consistent;
-> the items below are the substantive work that remains. Timothy flagged that algebra
-> generally (matrices, quadratics, the wgpu 10D manifold) is foundational and must not
-> be forgotten. This file is the durable record.
+> Status note (2026-06-21): **§1 is now DONE** — `private_matrix_multiply` is backed by
+> a real R1CS circuit that cryptographically attests `A·B = C` in zero knowledge
+> (round-trip + soundness tests pass). The earlier `MalformedVerifyingKey` crash is also
+> fixed. What remains is §2 (broader algebra coverage) and §3 (the wgpu 10D manifold),
+> plus making the *generic* statement-circuit builders real for the other statement
+> types. Timothy flagged that algebra generally (matrices, quadratics, the wgpu 10D
+> manifold) is foundational and must not be forgotten. This file is the durable record.
 
 ## 1. What was actually wrong (and what the fix did / didn't do)
 
@@ -19,25 +20,30 @@
   variables, in order, reading each value from the same witness the prover uses. Counts
   and assignments now agree by construction.
 
-- **NOT fixed (the real depth):** the statement circuits are **structural placeholders**.
-  `build_function_circuit` / `build_optimization_circuit` add variables but **no
-  constraints**; `build_equality_circuit` / `build_inequality_circuit` add a single
-  constraint over variable names (`"left"`/`"right"`/`"result"`) that were never added to
-  the circuit. So:
-  - The proof produced for `private_matrix_multiply` is a satisfiability proof of an
-    essentially **empty circuit**. It does **not** cryptographically bind the proof to the
-    actual A·B = C computation.
-  - `LinearAlgebraResult.privacy_preserved = true` therefore **overstates** the
-    guarantee. Today it means "a well-formed Groth16 proof was produced and verified",
-    not "the multiplication was proven in zero knowledge".
+- **DONE — matrix multiply is now a real ZK proof.** `ZkProofSystem::prove_matrix_multiply`
+  (`zk_proofs.rs`) builds an actual R1CS circuit: each `A[i][k]` / `B[k][j]` is a private
+  witness, each result entry `C[i][j]` is a public input, and the circuit enforces
+  `Σ_k A[i][k]·B[k][j] = C[i][j]` (inner products become intermediate witness variables
+  with their own multiplication constraints). A Groth16 proof is generated and verified;
+  `private_matrix_multiply` sets `privacy_preserved` only when that proof verifies, and
+  returns exactly the attested product. Signed integers are encoded into the field via
+  `arkworks_groth16::i128_to_field_element`.
+  - Tests: `zk_proofs::tests::test_matrix_multiply_zk_roundtrip` (accepts the true
+    product), `test_matrix_multiply_circuit_rejects_false_product` (a falsified
+    dot-product result fails to verify — soundness for the sum-of-products construction),
+    and `linear_algebra` round-trip + rectangular/negative cases.
+  - **Limitation (documented, not hidden):** the ZK circuit operates over integers —
+    entries are rounded to the nearest integer (exact for integer / fixed-point matrices,
+    the intended use). A fixed-point or field-native fractional encoding is future work.
 
-  **Action:** build a real R1CS circuit for matrix multiply (and for the other statement
-  types): allocate A, B as private witnesses, C's entries as public inputs (or committed),
-  and enforce `C[i][j] = Σ_k A[i][k]·B[k][j]` via `enforce_constraint`. The
-  `DynamicCircuit` evaluator already supports `Mul`/`Add`/`Neg` expression trees, so this
-  can be expressed without new SNARK machinery — it needs the circuit *builders* to emit
-  the constraints. Until then, gate or rename `privacy_preserved` so it doesn't claim more
-  than is true (honesty-guard: see `agent-accountability.n3`).
+- **Still placeholders (other statement types).** The GENERIC statement circuits remain
+  structural stubs: `build_function_circuit` / `build_optimization_circuit` add variables
+  but no constraints; `build_equality_circuit` / `build_inequality_circuit` add a
+  constraint over variable names (`"left"`/`"right"`/`"result"`) that were never added.
+  `generate_semantic_proof` for those `StatementType`s therefore still proves an
+  essentially empty circuit. Matrix multiply no longer routes through that path, but the
+  other types should get real constraint emission before their `privacy_preserved`/
+  attestation is trusted. (Honesty-guard: see `agent-accountability.n3`.)
 
 ## 2. Algebra coverage to build out
 

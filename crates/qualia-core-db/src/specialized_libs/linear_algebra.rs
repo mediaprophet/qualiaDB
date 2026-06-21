@@ -142,10 +142,32 @@ mod tests {
         library.create_matrix("B".to_string(), 2, 2, DataType::Float64, b_data).unwrap();
         
         let result = library.private_matrix_multiply("A", "B", "C").unwrap();
-        
-        assert!(result.privacy_preserved);
+
+        assert!(result.privacy_preserved, "the Groth16 proof of A·B = C must verify");
         assert_eq!(result.result.rows, 2);
         assert_eq!(result.result.cols, 2);
+        // The returned matrix is exactly what the ZK circuit attested: A·B.
+        // [[1,2],[3,4]] · [[5,6],[7,8]] = [[19,22],[43,50]].
+        assert_eq!(result.result.data, vec![19.0, 22.0, 43.0, 50.0]);
+    }
+
+    #[test]
+    fn test_private_matrix_multiplication_rectangular() {
+        // Non-square, with a negative entry, to exercise general dimensions and the
+        // signed field encoding. A is 2x3, B is 3x2.
+        let mut library = LinearAlgebraLibrary::new();
+        library.initialize().unwrap();
+        library.create_matrix("A".to_string(), 2, 3, DataType::Float64,
+            vec![1.0, 2.0, 3.0, 4.0, -5.0, 6.0]).unwrap();
+        library.create_matrix("B".to_string(), 3, 2, DataType::Float64,
+            vec![7.0, 8.0, 9.0, 10.0, 11.0, 12.0]).unwrap();
+
+        let result = library.private_matrix_multiply("A", "B", "C").unwrap();
+
+        assert!(result.privacy_preserved);
+        // Row0: [1·7+2·9+3·11, 1·8+2·10+3·12] = [58, 64]
+        // Row1: [4·7-5·9+6·11, 4·8-5·10+6·12] = [49, 54]
+        assert_eq!(result.result.data, vec![58.0, 64.0, 49.0, 54.0]);
     }
 }
 
@@ -534,44 +556,57 @@ impl LinearAlgebraLibrary {
     }
 
     /// Privacy-preserving matrix multiplication
+    /// Multiply two matrices and produce a zero-knowledge proof that the published
+    /// result really is `A·B`, WITHOUT revealing `A` or `B`.
+    ///
+    /// The proof is over a real R1CS circuit (see `ZkProofSystem::prove_matrix_multiply`):
+    /// the `A`/`B` entries are private witnesses, the result entries are public inputs,
+    /// and the circuit enforces `Σ_k A[i][k]·B[k][j] = C[i][j]`. `privacy_preserved` is
+    /// set only when that Groth16 proof actually verifies — it is now a genuine
+    /// cryptographic attestation, not a structural check.
+    ///
+    /// The ZK circuit operates over integers: entries are rounded to the nearest
+    /// integer (exact for integer / fixed-point matrices, which is the intended use).
+    /// The returned matrix holds exactly the values the proof attests.
     pub fn private_matrix_multiply(&mut self, left_id: &str, right_id: &str, result_id: &str) -> Result<LinearAlgebraResult<Matrix>, LinearAlgebraError> {
-        // NOTE(algebra-zk, see LINEAR_ALGEBRA_ZK_TODO.md §1): the Groth16 proof below
-        // is over a placeholder circuit that does NOT yet constrain A·B = C, so
-        // `privacy_preserved: true` currently means "a proof was produced & verified",
-        // not "the multiplication was proven in zero knowledge". Make the circuit real
-        // before relying on this for privacy.
-        // Create zero-knowledge proof for the operation
-        let statement = crate::zk_proofs::MathematicalStatement {
-            statement_id: "private_matrix_mult".to_string(),
-            statement_type: crate::zk_proofs::StatementType::FunctionEvaluation,
-            expression: "matrix_multiply(A, B)".to_string(),
-            variables: vec!["A".to_string(), "B".to_string()],
-            constraints: vec!["A.cols == B.rows".to_string()],
-        };
+        let start_time = std::time::Instant::now();
 
-        // Generate witness
-        let mut witness = HashMap::new();
-        witness.insert("A".to_string(), crate::zk_proofs::FieldElement { value: [1u8; 32] });
-        witness.insert("B".to_string(), crate::zk_proofs::FieldElement { value: [2u8; 32] });
+        let left = self.matrix_storage.get_matrix(left_id)?;
+        let right = self.matrix_storage.get_matrix(right_id)?;
+        if left.cols != right.rows {
+            return Err(LinearAlgebraError::InvalidDimensions(
+                "Matrix dimensions incompatible for multiplication".to_string(),
+            ));
+        }
+        let (m, k, n) = (left.rows, left.cols, right.cols);
 
-        // Generate semantic proof
-        let mut semantic_proof = self.privacy_engine.zk_proofs.lock().unwrap()
-            .generate_semantic_proof(statement, witness)
+        // Round entries to field integers for the ZK circuit.
+        let a_int: Vec<i128> = left.data.iter().map(|v| v.round() as i128).collect();
+        let b_int: Vec<i128> = right.data.iter().map(|v| v.round() as i128).collect();
+
+        // Build the real circuit, prove, and verify in zero knowledge.
+        let (verified, c_int) = self.privacy_engine.zk_proofs.lock().unwrap()
+            .prove_matrix_multiply(m, k, n, &a_int, &b_int)
             .map_err(|e| LinearAlgebraError::PrivacyError(format!("{:?}", e)))?;
 
-        // Verify proof
-        self.privacy_engine.zk_proofs.lock().unwrap()
-            .verify_semantic_proof(&mut semantic_proof)
-            .map_err(|e| LinearAlgebraError::PrivacyError(format!("{:?}", e)))?;
+        if !verified {
+            return Err(LinearAlgebraError::PrivacyError(
+                "zero-knowledge proof of A·B = C failed to verify".to_string(),
+            ));
+        }
 
-        // Perform the actual multiplication
-        let result = self.matrix_multiply(left_id, right_id, result_id, 1.0, 0.0)?;
+        // Return exactly the values the proof attests (the integer product).
+        let result_data: Vec<f64> = c_int.iter().map(|&v| v as f64).collect();
+        let result = self.create_matrix(result_id.to_string(), m, n, left.data_type, result_data)?;
+
+        let execution_time = start_time.elapsed().as_millis() as u64;
+        self.performance_monitor.record_operation("private_matrix_multiply", execution_time, 0);
 
         Ok(LinearAlgebraResult {
-            result: result.result,
-            execution_time: result.execution_time,
-            memory_usage: result.memory_usage,
-            operations_used: result.operations_used,
+            result,
+            execution_time,
+            memory_usage: 0,
+            operations_used: vec!["private_matrix_multiply".to_string(), "groth16_zk_proof".to_string()],
             privacy_preserved: true,
         })
     }
