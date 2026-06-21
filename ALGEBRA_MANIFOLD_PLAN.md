@@ -40,7 +40,8 @@ Home: `specialized_libs/linear_algebra.rs` (numeric) → later mirrored symbolic
 Home: `specialized_libs/linear_algebra.rs`.
 - [x] 2.1 `determinant(n, data)` via LU (partial pivoting); 0.0 for singular. Tested (2×2,
       3×3 = −306, singular).
-- [ ] 2.2 `lu_decompose` (P,L,U) as a reusable primitive — det currently inlines LU.
+- [x] 2.2 `lu_decompose(n,data) -> Lu{lu,pivots,sign,singular,n}` + `Lu::determinant`;
+      determinant() delegates to it. Tested (P·A=L·U reconstruction, singular flag).
 - [x] 2.3 `eigen_symmetric(n, data)` — cyclic Jacobi; returns eigenvalues + eigenvector
       columns; rejects asymmetric input. Tested (A·v = λ·v, unit vectors).
 - [ ] 2.4 `eigen_general` — QR + Hessenberg (real + complex spectra).
@@ -60,12 +61,15 @@ Home: NEW `specialized_libs/symbolic_algebra.rs` (distinct from `solvers/symboli
 - [ ] 3.4 `solve_quadratic_symbolic` — exact `(-b ± √(b²−4ac))/2a`, returns Expr roots.
 - [x] 3.4b `parse(&str) -> Expr` — recursive-descent parser (`+ - * / ^`, parens, sqrt,
       vars/numbers) so expressions can come from text. Tested.
-- [ ] 3.5 `expand` / `factor` (at least quadratics → binomial factors over rationals) — TODO.
+- [x] 3.5 `expand` (distribute products/powers over sums) + `factor_quadratic`
+      (a·x²+b·x+c → a·(x−r₁)(x−r₂) over reals). Tested (expand preserves value; factor
+      inverts expand). Exposed via `cas` MCP tool.
 - [x] 3.6 Tests: symbolic derivative vs finite difference; simplify identities incl.
       x+x→2x; symbolic quadratic vs numeric; parse+differentiate roundtrip.
 - [x] 3.7 MCP tool `cas` (op ∈ {differentiate, simplify, evaluate, solve_quadratic}). Tested.
-- [~] 3.8 Bridge: `expr_citation_hash` gives a stable provenance hash so symbolic results can
-      be cited into the graph. Full `Expr` ↔ NQuin-tree encoding still TODO.
+- [x] 3.8 Bridge: `to_quins`/`from_quins` serialise an `Expr` to a post-order `Vec<NQuin>`
+      (children by index, root last) and decode it back — round-trip tested. Plus
+      `expr_citation_hash` for provenance. Symbolic results can now be stored & cited.
 
 ## Phase 4 — wgpu 10D manifold
 Home: `compute_universe.rs` + `tensor/*`.
@@ -87,10 +91,13 @@ Home: `compute_universe.rs` + `tensor/*`.
       analytic test added. (Exact GPU==CPU-fallback equality cross-check is gated on the
       4.1 metric unification for v != 0.)
 
-## Phase 5 — Optional: ZK-private variants
-- [ ] Layer ZK on the new ops using the `prove_matrix_multiply` pattern (private witnesses,
-      public result, real R1CS constraints). Only where there is a user-facing privacy need;
-      integer/fixed-point encoding limitation documented.
+## Phase 5 — ZK-private variants
+- [x] ZK matrix multiply upgraded from integer-only to FIXED-POINT (scale 1e6):
+      `private_matrix_multiply` now proves real-valued products (~1e-6 precision; integers
+      exact). Circuit proves the scaled-integer identity Σ a'·b' = C'; result = C'/S². Tested
+      on fractional matrices.
+- [ ] (future) ZK variants of eigen/SVD/solve if a user-facing privacy need arises — layer
+      on the same `prove_matrix_multiply` R1CS pattern.
 
 ## Verification gate (every phase)
 `cargo test -p qualia-core-db --lib <area>` green; full `--lib` stays 990+/0; no new

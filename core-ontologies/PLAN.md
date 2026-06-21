@@ -845,3 +845,57 @@ for test data; `qapp_api.rs`, `daemon_graph.rs`) and `qualia.db/*` (playground d
 PLAN.md (this file) + the project memory are the durable handover; `20260621_HANDOVER_ontologies.md`
 is the START-HERE pointer. A context reset before 17.1 is sensible — implementation is a different
 mode from planning. Nothing is lost: re-enter via this §17.
+
+---
+
+## 19. Computational foundations now available — what was previously missing (2026-06-21)
+
+A parallel work-stream built out the engine's quantitative/symbolic layer (tracked in
+repo-root `ALGEBRA_MANIFOLD_PLAN.md`, commits `60e166251` → `45031468f`, full `--lib`
+1017/0). Several of these were **previously absent or assumed-present-but-weren't**, and they
+change what the values-credentials subsystem can rely on. Consider them when wiring §0(c) and
+the curation overlays (§6).
+
+### 19.1 New primitives the ontology layer can now build on
+- **Computer-algebra system (CAS)** — NEW `specialized_libs/symbolic_algebra.rs`: `Expr` tree,
+  `parse(&str)`, `simplify`, `differentiate`, `expand`, `factor_quadratic`, `solve_quadratic_symbolic`,
+  `eval`. **Previously there was NO CAS** (the similarly-named `solvers/symbolic_logic` is a SAT /
+  defeasible-logic engine, not algebra). Relevant to the **universalisation transform** (R1:
+  every-agent duty → State duty) and any `amendedText`/derived-rule computation that should be
+  *manipulated and checked*, not hand-written — a derived rule can be generated, simplified, and
+  verified symbolically rather than asserted.
+- **`Expr` ↔ `NQuin` bridge** — `to_quins`/`from_quins` serialise a symbolic expression into a
+  post-order `Vec<NQuin>` (round-trips), plus `expr_citation_hash` for provenance. A *computed*
+  credential rule or derived duty can now be **stored in the graph and cited**, satisfying the
+  provenance requirement the curation overlays (§6) need. Previously only an opaque hash existed.
+- **Proven SHACL-extension pattern + real validation tooling** — `specialized_libs_shacl.rs`
+  (Rust vocabulary, `q42:*ConfigurationShape` + `to_opcodes` validators) mirrored by the standalone
+  `shapes/specialized-libraries.shacl.ttl`, and **validated with an actual `rdflib` parse** (not an
+  assertion). This is the concrete template + verification step for the values SHACL beyond
+  `CompliantIntentShape`: author the shape in both places, then parse with rdflib before claiming
+  coverage. (Same `python -c "import rdflib; …"` the `validate_core_ontologies` gate should use.)
+- **General numeric algebra** (`specialized_libs/linear_algebra.rs`): determinant/`lu_decompose`,
+  symmetric + general eigenvalues, SVD, polynomial roots, `Complex`. Available for quantitative
+  ontology analysis (relation-graph spectral/ranking methods, consistency scoring) — listed as
+  *available*, not as a committed deliverable here.
+- **Deterministic sense-layer metric** — the 10D tensor/manifold distance now returns the SAME
+  result on GPU and CPU for **all** topology classes (euclidean/cyclic/hyperbolic/boundary); it
+  previously diverged for `v ≠ 0` depending on GPU availability. The sense / spatio-temporal layer
+  (§3) and any distance-qualified reasoning are now reproducible regardless of hardware.
+- **ZK credential proofs over real values** — `private_matrix_multiply` is a real Groth16 R1CS
+  proof (was a placeholder over an empty circuit) and now uses fixed-point, so **real-valued** (not
+  only integer) computations can be proven in zero knowledge — relevant if the values layer emits
+  privacy-preserving score/eligibility proofs.
+
+### 19.2 The verification lesson, restated with this session's evidence (reinforces §17.4)
+Every item above was reached by **verifying an assumed-present capability and finding it absent or
+wrong** — the exact failure mode §17.4 warns about:
+- the ZK matmul "worked" (compiled, proof verified) but proved an **empty circuit** — attested nothing;
+- the manifold test's "GPU panic" was **not** "no GPU" — it was a real `COPY_DST` buffer-usage bug;
+- the GPU and CPU search **silently disagreed** for `v ≠ 0`;
+- the algebra breadth (quadratics/eigen/SVD/CAS) was **entirely missing** though described as foundational.
+
+**Apply the same discipline to §0(c) wiring.** Do NOT assume the `parse → compile → norm → execute`
+path already evaluates `values.n3` R1/R2/R3 + the person/agent axioms because the deontic VM exists
+(§0). Prove it end-to-end with the smoke test (§11.3) + `validate_core_ontologies` gate **before**
+claiming the values-credentials are live. Assumed-present ≠ present.
