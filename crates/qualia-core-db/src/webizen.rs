@@ -46,6 +46,8 @@ const MAX_RULE_VARS: usize = 16;
 const MAX_GUARD_CONCLUSIONS: usize = 256;
 /// Recursion-depth ceiling for the premise join (premise triple count).
 const MAX_PREMISE_DEPTH: usize = 16;
+/// Max forward-chaining rounds (fixpoint cap) for `fire_guard_rules`.
+const MAX_FIXPOINT_ROUNDS: usize = 16;
 
 /// True when any triple in the rule's premise or conclusion carries a variable.
 /// Such rules cannot compile to a single ground deontic norm and are instead
@@ -313,44 +315,53 @@ impl SlgArena {
     /// (G1/G1') are strict `=>` rules.
     pub fn fire_guard_rules(&mut self) -> usize {
         let rules = self.rule_registry.clone();
+        let mut total = 0usize;
 
-        // Snapshot the live facts once (immutable borrow ends before we assert).
-        let mut facts = [NQuin::default(); 1024];
-        let fact_count = self.collect_active_quins(&mut facts);
+        // Forward-chain to a bounded fixpoint: a conclusion asserted in one round
+        // may satisfy another guard's premise next round (e.g. overclaim → flag →
+        // requiresHumanReview). `has_quin` idempotency guarantees termination.
+        for _round in 0..MAX_FIXPOINT_ROUNDS {
+            // Snapshot the live facts (immutable borrow ends before we assert).
+            let mut facts = [NQuin::default(); 1024];
+            let fact_count = self.collect_active_quins(&mut facts);
 
-        // Stage conclusions, then assert them after the fact snapshot is done.
-        let mut pending = [NQuin::default(); MAX_GUARD_CONCLUSIONS];
-        let mut pending_count = 0usize;
+            let mut pending = [NQuin::default(); MAX_GUARD_CONCLUSIONS];
+            let mut pending_count = 0usize;
 
-        for rule in &rules {
-            if !rule_has_variables(rule) {
-                continue; // ground rules go through the deontic-norm path
+            for rule in &rules {
+                if !rule_has_variables(rule) {
+                    continue; // ground rules go through the deontic-norm path
+                }
+                if rule.premise.triples.is_empty() || rule.conclusion.triples.is_empty() {
+                    continue;
+                }
+                let mut bindings = [(0u64, 0u64); MAX_RULE_VARS];
+                join_premise(
+                    &rule.premise.triples,
+                    &rule.conclusion.triples,
+                    &facts[..fact_count],
+                    0,
+                    &mut bindings,
+                    0,
+                    &mut pending,
+                    &mut pending_count,
+                );
             }
-            if rule.premise.triples.is_empty() || rule.conclusion.triples.is_empty() {
-                continue;
+
+            let mut asserted = 0usize;
+            for q in pending.iter().take(pending_count) {
+                // Idempotent: don't re-assert a conclusion already present.
+                if !self.has_quin(q.subject, q.predicate, q.object) {
+                    self.write_table(*q);
+                    asserted += 1;
+                }
             }
-            let mut bindings = [(0u64, 0u64); MAX_RULE_VARS];
-            join_premise(
-                &rule.premise.triples,
-                &rule.conclusion.triples,
-                &facts[..fact_count],
-                0,
-                &mut bindings,
-                0,
-                &mut pending,
-                &mut pending_count,
-            );
+            total += asserted;
+            if asserted == 0 {
+                break; // fixpoint reached
+            }
         }
-
-        let mut asserted = 0usize;
-        for q in pending.iter().take(pending_count) {
-            // Idempotent: don't re-assert a conclusion already present.
-            if !self.has_quin(q.subject, q.predicate, q.object) {
-                self.write_table(*q);
-                asserted += 1;
-            }
-        }
-        asserted
+        total
     }
 
     /// True when a fact `(subject, predicate, object)` is live in the arena with

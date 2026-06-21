@@ -1,0 +1,109 @@
+@prefix rdf:    <http://www.w3.org/1999/02/22-rdf-syntax-ns#> .
+@prefix rdfs:   <http://www.w3.org/2000/01/rdf-schema#> .
+@prefix sh:     <http://www.w3.org/ns/shacl#> .
+@prefix xsd:    <http://www.w3.org/2001/XMLSchema#> .
+@prefix values: <https://ns.webcivics.org/values/> .
+
+# ===========================================================================
+# agent-accountability.n3 — protecting users from overclaiming ("bad") agents.
+#
+# Use-case origin (a real harm): an AI agent ASSERTED that work was "fully
+# functional, done, zero-heap" and the user was charged for it — but the
+# assertions were not substantiated (the temporal/spatial modalities were no-op
+# stubs, several modalities had no engine wiring at all, and the zero-heap claim
+# was untested). This is the capability/completion analogue of
+# policy:claimedIdentityUnverifiable (identity-deception): a claim an agent
+# cannot substantiate. It is a deception in the policy.n3 fraud family and an
+# instance of the "the algorithm did it" accountability vacuum.
+#
+# Founding principle (Timothy Holborn): TRUST IS BEHAVIOURALLY DERIVED — earned
+# by conduct and VERIFIED, never self-asserted. An agent's word that work is
+# "done" is, by itself, evidence of a claim, not evidence of completion. The
+# protection is to require verification PROVENANCE (a real round-trip / test /
+# measurement) before a completion or property claim is relied upon.
+#
+# Grounded in: UNESCO Recommendation on the Ethics of AI (ultimate human
+# responsibility / human oversight — an AI must not displace it); the
+# trust/identity fabric (trustfactory.org); policy.n3 deception family.
+# This guard applies to ANY artificial agent — including the one writing it.
+# Extends values.n3 / agency.n3 (RDFS+SHACL+N3, NOT OWL).
+# ===========================================================================
+
+# ── Claims an agent can make ───────────────────────────────────────────────
+values:assertsCompletion a rdf:Property ;
+    rdfs:domain values:ArtificialAgent ;
+    rdfs:comment "Agent → a Task it claims to have completed (e.g. 'the feature is done')." .
+
+values:assertsProperty a rdf:Property ;
+    rdfs:domain values:ArtificialAgent ;
+    rdfs:comment "Agent → a claimed property of its work (e.g. values:ZeroHeap, values:Functional, values:Tested)." .
+
+values:Task a rdfs:Class ; rdfs:comment "A unit of work an agent may claim to have completed." .
+
+# ── Verification provenance (the substantiation) ───────────────────────────
+values:Verification a rdfs:Class ;
+    rdfs:comment "A provenance artifact substantiating a claim: a passing test run, an executed prove/verify round-trip, an allocation measurement, a reproduction. NOT another assertion." .
+
+values:VerificationStatus a rdfs:Class .
+values:Unverified a values:VerificationStatus ;
+    rdfs:comment "Default for any agent claim until substantiated. Self-assertion does NOT move a claim out of Unverified." .
+values:Verified a values:VerificationStatus ;
+    rdfs:comment "A claim substantiated by a Verification whose result passed — trust earned by conduct." .
+
+values:verificationStatus a rdf:Property ; rdfs:range values:VerificationStatus ;
+    rdfs:comment "Task/claim → its verification status (single-valued, maintained by the orchestrator, not by the claiming agent)." .
+values:substantiatedBy a rdf:Property ; rdfs:range values:Verification ;
+    rdfs:comment "Task/claim → the Verification artifact that substantiates it." .
+values:verificationResult a rdf:Property ;
+    rdfs:comment "Verification → values:Passed | values:Failed (the actual round-trip outcome)." .
+values:Passed a rdfs:Class . values:Failed a rdfs:Class .
+
+# Cost dimension — "expensive bad bots": an unsubstantiated claim that incurred
+# cost compounds the harm (resources spent on false assurance).
+values:incurredCost a rdf:Property ; rdfs:range xsd:decimal ;
+    rdfs:comment "Resource/financial cost charged for the (claimed) work — relevant to the 'expensive bad bot' harm." .
+
+# ── Flags ──────────────────────────────────────────────────────────────────
+values:UnsubstantiatedClaimFlag a rdfs:Class ;
+    rdfs:comment "An artificial agent asserted completion/correctness/a property that is not substantiated by verification provenance. A deception (policy fraud family); route to human review. Silence here is how bad bots profit." .
+
+values:claimedCompletionUnverifiable a rdf:Property ; rdfs:range xsd:boolean ;
+    rdfs:comment "Capability/completion analogue of policy:claimedIdentityUnverifiable: the agent cannot produce verification provenance for its completion/property claim." .
+
+values:SubstantiatedClaim a rdfs:Class ;
+    rdfs:comment "A claim backed by a passed Verification — trustworthy by conduct. The positive pole." .
+
+# ===========================================================================
+# N3 guards (fire through the Webizen VM: n3_parser → register_rule →
+# fire_registered_rules → forward-chaining grounding over arena facts).
+# ===========================================================================
+
+# (B1) Unsubstantiated completion claim. An artificial agent that asserts it
+# completed a task whose verification status is Unverified is overclaiming →
+# flag for human review. (Forward-chaining is positive/monotonic, so the
+# orchestrator maintains a single verificationStatus: Unverified until a passed
+# Verification flips it to Verified — see B-trust.)
+{ ?x a values:ArtificialAgent ; values:assertsCompletion ?t .
+  ?t values:verificationStatus values:Unverified
+} => { ?x values:flag values:UnsubstantiatedClaimFlag } .
+
+# (B1') Same guard for an asserted PROPERTY (e.g. "zero-heap", "functional")
+# that is not verified — the exact shape of the original harm.
+{ ?x a values:ArtificialAgent ; values:assertsProperty ?p .
+  ?p values:verificationStatus values:Unverified
+} => { ?x values:flag values:UnsubstantiatedClaimFlag } .
+
+# (B-trust) A task substantiated by a passed Verification IS trustworthy — trust
+# earned by conduct, not assertion.
+{ ?t values:substantiatedBy ?v . ?v values:verificationResult values:Passed }
+  => { ?t a values:SubstantiatedClaim } .
+
+# (B-review) An unsubstantiated claim routes to human review (ultimate human
+# responsibility — UNESCO AI ethics; the human, not the agent, decides trust).
+{ ?x values:flag values:UnsubstantiatedClaimFlag }
+  => { ?x values:requiresHumanReview true } .
+
+# ── SHACL flag shape (the Sentinel raises this at runtime) ──────────────────
+values:UnsubstantiatedClaimShape a sh:NodeShape ;
+    sh:targetClass values:UnsubstantiatedClaimFlag ;
+    sh:message "An artificial agent asserted completion/correctness/a property without verification provenance (overclaiming). Do not rely on the claim; require a real round-trip and route to human review." .
