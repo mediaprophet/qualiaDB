@@ -31,11 +31,141 @@ const SLG_ARENA_SIZE: usize = 42 * 1024 * 1024;
 const QUIN_SIZE: usize = 48;
 const MAX_SLOTS: usize = SLG_ARENA_SIZE / QUIN_SIZE; // 917,504 slots
 
-use crate::modalities::logic::n3_parser::Rule;
+use crate::modalities::logic::n3_parser::{Rule, Term, Triple};
 
 /// The 42MB Static Tabling Arena for SLG Resolution
 /// Implemented as a Zero-Allocation Static Ring-Buffer Arena
 const RECENT_SLOT_RING: usize = 512;
+
+// ── Guard-rule grounding (forward chaining) bounds ──────────────────────────────
+/// Max distinct variables bound per guard rule (premise + conclusion).
+const MAX_RULE_VARS: usize = 16;
+/// Max conclusion triples staged across one `fire_guard_rules` pass.
+const MAX_GUARD_CONCLUSIONS: usize = 256;
+/// Recursion-depth ceiling for the premise join (premise triple count).
+const MAX_PREMISE_DEPTH: usize = 16;
+
+/// True when any triple in the rule's premise or conclusion carries a variable.
+/// Such rules cannot compile to a single ground deontic norm and are instead
+/// grounded by forward-chaining (`SlgArena::fire_guard_rules`).
+fn rule_has_variables(rule: &Rule) -> bool {
+    let term_is_var = |t: &Term| matches!(t, Term::Variable(_));
+    rule.premise
+        .triples
+        .iter()
+        .chain(rule.conclusion.triples.iter())
+        .any(|tr| term_is_var(&tr.subject) || term_is_var(&tr.predicate) || term_is_var(&tr.object))
+}
+
+/// Unify one premise-triple field against a fact field under the current bindings.
+///
+/// * IRI / literal term → matches iff `q_hash(term) == field`.
+/// * variable term → matches the existing binding, or (if unbound) binds it to
+///   `field` and grows `nbound`.
+///
+/// Hashing uses the same `q_hash` as `n3_compiler::triple_to_quin`, so a premise
+/// term and an ingested fact agree.
+fn unify_field(term: &Term, field: u64, bindings: &mut [(u64, u64)], nbound: &mut usize) -> bool {
+    match term {
+        Term::Uri(s) | Term::Literal(s) => crate::q_hash(s) == field,
+        Term::Variable(name) => {
+            let key = crate::q_hash(name);
+            for i in 0..*nbound {
+                if bindings[i].0 == key {
+                    return bindings[i].1 == field;
+                }
+            }
+            if *nbound < bindings.len() {
+                bindings[*nbound] = (key, field);
+                *nbound += 1;
+                true
+            } else {
+                false // binding table exhausted — refuse rather than mis-bind
+            }
+        }
+    }
+}
+
+/// Resolve a conclusion-triple field to a concrete hash under the bindings.
+/// Returns `None` for an unbound conclusion variable (a fresh variable not
+/// constrained by the premise) — such conclusions are skipped, never guessed.
+fn resolve_term(term: &Term, bindings: &[(u64, u64)]) -> Option<u64> {
+    match term {
+        Term::Uri(s) | Term::Literal(s) => Some(crate::q_hash(s)),
+        Term::Variable(name) => {
+            let key = crate::q_hash(name);
+            bindings.iter().find(|(k, _)| *k == key).map(|(_, v)| *v)
+        }
+    }
+}
+
+/// Conjunctive backtracking join of a rule's premise triples against the facts.
+///
+/// At full depth (every premise triple satisfied), each conclusion triple is
+/// instantiated with the bound variables and staged into `pending`. Backtracking
+/// is implicit: each fact iteration restarts binding from `nbound`, so bindings a
+/// failed branch added are simply overwritten on the next branch.
+#[allow(clippy::too_many_arguments)]
+fn join_premise(
+    premise: &[Triple],
+    conclusion: &[Triple],
+    facts: &[NQuin],
+    idx: usize,
+    bindings: &mut [(u64, u64)],
+    nbound: usize,
+    pending: &mut [NQuin],
+    pending_count: &mut usize,
+) {
+    if idx >= MAX_PREMISE_DEPTH {
+        return; // guard against pathologically deep premises
+    }
+    if idx == premise.len() {
+        for ct in conclusion {
+            if *pending_count >= pending.len() {
+                return;
+            }
+            let (Some(s), Some(p), Some(o)) = (
+                resolve_term(&ct.subject, &bindings[..nbound]),
+                resolve_term(&ct.predicate, &bindings[..nbound]),
+                resolve_term(&ct.object, &bindings[..nbound]),
+            ) else {
+                continue;
+            };
+            let mut q = NQuin {
+                subject: s,
+                predicate: p,
+                object: o,
+                context: 0,
+                metadata: 1,
+                parity: 0,
+            };
+            q.parity = q.subject ^ q.predicate ^ q.object ^ q.context;
+            pending[*pending_count] = q;
+            *pending_count += 1;
+        }
+        return;
+    }
+
+    let t = &premise[idx];
+    for fact in facts {
+        let mut local_nbound = nbound;
+        if unify_field(&t.subject, fact.subject, bindings, &mut local_nbound)
+            && unify_field(&t.predicate, fact.predicate, bindings, &mut local_nbound)
+            && unify_field(&t.object, fact.object, bindings, &mut local_nbound)
+        {
+            join_premise(
+                premise,
+                conclusion,
+                facts,
+                idx + 1,
+                bindings,
+                local_nbound,
+                pending,
+                pending_count,
+            );
+        }
+    }
+}
 
 pub struct SlgArena {
     // We will use a safe Vec wrapper here since it is allocated strictly once and never grown.
@@ -143,7 +273,92 @@ impl SlgArena {
                 }
             }
         }
+        // Variable (non-ground) rules — e.g. the agency.n3 G1 corporate-capture
+        // guard — cannot compile to a single ground norm; they are grounded by
+        // forward-chaining their premise over the facts live in the arena.
+        fired += self.fire_guard_rules();
         fired
+    }
+
+    /// Forward-chaining grounding pass for variable (non-ground) N3 guard rules.
+    ///
+    /// `fire_registered_rules` handles *ground* deontic rules via
+    /// `compile_n3_rule_to_norm`. This is its complement: for every registered rule
+    /// whose premise contains variables, it performs a conjunctive backtracking join
+    /// of the premise triples against the facts currently live in the arena, and for
+    /// each satisfying binding instantiates and asserts the (variable-substituted)
+    /// conclusion triples back into the arena. Returns the number of conclusion
+    /// triples newly asserted.
+    ///
+    /// Worked example — agency.n3 **G1**:
+    /// ```text
+    /// { ?c a values:CorporatePerson ; values:claims ?r .
+    ///   ?r a values:Right ; values:heldBy values:NaturalPerson }
+    ///   => { ?c values:flag values:PersonhoodCategoryError } .
+    /// ```
+    /// Given facts that a corporate person claims a natural-person right, the guard
+    /// asserts `(?c, values:flag, values:PersonhoodCategoryError)` — the personhood
+    /// category error (a Deny) — observable via [`Self::has_quin`].
+    ///
+    /// Cold path: bounded stack buffers, no hot-path heap growth. Hashing is uniform
+    /// `q_hash` over IRIs/variables/literals (matching `n3_compiler::triple_to_quin`),
+    /// so grounding matches facts ingested through the standard triple path.
+    ///
+    /// Forward chaining asserts the conclusion of any satisfied premise. Defeasible
+    /// *override* of a deontic norm (e.g. a marked corporate overlay defeating a
+    /// prohibition) is handled in the deontic-norm lane via the `q42:unless`
+    /// defeater path (`evaluate_deontic_contract`), not here — the agency.n3 guards
+    /// (G1/G1') are strict `=>` rules.
+    pub fn fire_guard_rules(&mut self) -> usize {
+        let rules = self.rule_registry.clone();
+
+        // Snapshot the live facts once (immutable borrow ends before we assert).
+        let mut facts = [NQuin::default(); 1024];
+        let fact_count = self.collect_active_quins(&mut facts);
+
+        // Stage conclusions, then assert them after the fact snapshot is done.
+        let mut pending = [NQuin::default(); MAX_GUARD_CONCLUSIONS];
+        let mut pending_count = 0usize;
+
+        for rule in &rules {
+            if !rule_has_variables(rule) {
+                continue; // ground rules go through the deontic-norm path
+            }
+            if rule.premise.triples.is_empty() || rule.conclusion.triples.is_empty() {
+                continue;
+            }
+            let mut bindings = [(0u64, 0u64); MAX_RULE_VARS];
+            join_premise(
+                &rule.premise.triples,
+                &rule.conclusion.triples,
+                &facts[..fact_count],
+                0,
+                &mut bindings,
+                0,
+                &mut pending,
+                &mut pending_count,
+            );
+        }
+
+        let mut asserted = 0usize;
+        for q in pending.iter().take(pending_count) {
+            // Idempotent: don't re-assert a conclusion already present.
+            if !self.has_quin(q.subject, q.predicate, q.object) {
+                self.write_table(*q);
+                asserted += 1;
+            }
+        }
+        asserted
+    }
+
+    /// True when a fact `(subject, predicate, object)` is live in the arena with
+    /// valid ECC parity. Used to observe forward-chained guard conclusions.
+    pub fn has_quin(&self, subject: u64, predicate: u64, object: u64) -> bool {
+        let mut scratch = [NQuin::default(); 1024];
+        let n = self.collect_active_quins(&mut scratch);
+        scratch[..n]
+            .iter()
+            .any(|q| q.subject == subject && q.predicate == predicate && q.object == object)
     }
 
     /// Checks the SLG Arena for a previously proven sub-goal.

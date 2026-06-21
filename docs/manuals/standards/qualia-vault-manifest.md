@@ -219,16 +219,16 @@ The CBOR-LD projection has been fully implemented with Q42 lexicon integration:
 **Full CBOR-LD Format:**
 ```json
 {
-  "@context": "https://qualia.org/ld/vault/v1",
+  "@context": "https://webizen.org/ld/vault/v1",
   "@type": "VaultManifest",
   "id": "vault-123",
   "created": "2026-06-10T12:00:00Z",
   "modified": "2026-06-10T12:00:00Z",
   "vocabulary": {
-    "@context": "https://qualia.org/ld/vocab/",
-    "base_uri": "https://qualia.org/ld/vocab/",
+    "@context": "https://webizen.org/ld/vocab/",
+    "base_uri": "https://webizen.org/ld/vocab/",
     "prefixes": {
-      "qualia": "https://qualia.org/ld/vocab/",
+      "qualia": "https://webizen.org/ld/vocab/",
       "did": "https://www.w3.org/TR/did-core/",
       "sec": "https://w3id.org/security/"
     },

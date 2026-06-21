@@ -424,7 +424,7 @@ generate_simple_opcodes!(QuantumBiologyCalculation, max_quantum_states);
 /// Returns comprehensive SHACL TTL vocabulary for all specialized libraries
 pub fn get_specialized_libs_shacl_ttl() -> &'static str {
     r#"
-@prefix q42: <https://qualia.network/q42#> .
+@prefix q42: <https://webizen.org/q42#> .
 @prefix sh: <http://www.w3.org/ns/shacl#> .
 @prefix xsd: <http://www.w3.org/2001/XMLSchema#> .
 

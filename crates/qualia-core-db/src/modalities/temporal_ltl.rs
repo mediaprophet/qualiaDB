@@ -16,6 +16,22 @@ pub enum LtlFormula {
     Release { trigger: u64, invariant: u64 },
 }
 
+#[derive(Debug)]
+pub enum TemporalError {
+    AbortedTimeout,
+}
+
+pub fn evaluate_lock_lease(
+    lock_granted_at: u64,
+    current_time: u64,
+    ttl_seconds: u64,
+) -> Result<(), TemporalError> {
+    if current_time > lock_granted_at + ttl_seconds {
+        return Err(TemporalError::AbortedTimeout);
+    }
+    Ok(())
+}
+
 pub fn evaluate_ltl_trace(trace: &[NQuin], formula: &LtlFormula) -> bool {
     match formula {
         LtlFormula::Globally(p) => {

@@ -516,7 +516,7 @@ impl FeedbackGainConfiguration {
 /// Returns comprehensive SHACL TTL vocabulary for all core modalities
 pub fn get_core_modalities_shacl_ttl() -> &'static str {
     r#"
-@prefix q42: <https://qualia.network/q42#> .
+@prefix q42: <https://webizen.org/q42#> .
 @prefix sh: <http://www.w3.org/ns/shacl#> .
 @prefix xsd: <http://www.w3.org/2001/XMLSchema#> .
 

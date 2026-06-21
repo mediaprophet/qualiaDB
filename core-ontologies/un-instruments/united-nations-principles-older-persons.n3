@@ -1,0 +1,201 @@
+@prefix rdf:    <http://www.w3.org/1999/02/22-rdf-syntax-ns#> .
+@prefix rdfs:   <http://www.w3.org/2000/01/rdf-schema#> .
+@prefix dc:     <http://purl.org/dc/terms/> .
+@prefix values: <https://ns.webcivics.org/values/> .
+@prefix doc:    <https://ns.webcivics.org/values/united-nations-principles-older-persons#> .
+
+# ============================================================
+# United Nations Principles for Older Persons
+# RE-SOURCED from authoritative OHCHR text (verbatim originalText).
+# Deontic typing = lexical heuristic (values:HeuristicDerived) — pending review.
+# states->parties + universalisation = curation overlay (amendedText), pending.
+# ============================================================
+
+doc:Instrument a values:ValuesCredential ;
+    dc:title "United Nations Principles for Older Persons" ;
+    dc:date "16 December 1991" ;
+    values:category "Older persons" ;
+    values:categoryStatus values:AutoAssigned ;
+    values:source <https://www.ohchr.org/en/instruments-mechanisms/instruments/united-nations-principles-older-persons> ;
+    rdfs:comment "Re-sourced from authoritative OHCHR text; deontic + amendment layers pending." .
+
+doc:paragraph-1 a values:Undertaking ;
+    values:partOf doc:Instrument ;
+    dc:title "Paragraph 1" ;
+    values:deonticStatus values:HeuristicDerived ;
+    values:originalText "Download: PDF Table of Contents" .
+
+doc:paragraph-2 a values:Undertaking ;
+    values:partOf doc:Instrument ;
+    dc:title "Paragraph 2" ;
+    values:deonticStatus values:HeuristicDerived ;
+    values:originalText "Independence Participation Care Self-fulfilment Dignity" .
+
+doc:paragraph-3 a values:Undertaking ;
+    values:partOf doc:Instrument ;
+    dc:title "Paragraph 3" ;
+    values:deonticStatus values:HeuristicDerived ;
+    values:originalText "Appreciating the contribution that older persons make to their societies," .
+
+doc:paragraph-4 a values:Undertaking ;
+    values:partOf doc:Instrument ;
+    dc:title "Paragraph 4" ;
+    values:deonticStatus values:HeuristicDerived ;
+    values:originalText "Recognizing that, in the Charter of the United Nations, the peoples of the United Nations declare, inter alia , their determination to reaffirm faith in fundamental human rights, in the dignity and worth of the human person, in the equal rights of men and women and of nations large and small and to promote social progress and better standards of life in larger freedom," .
+
+doc:paragraph-5 a values:Undertaking ;
+    values:partOf doc:Instrument ;
+    dc:title "Paragraph 5" ;
+    values:deonticStatus values:HeuristicDerived ;
+    values:originalText "Noting the elaboration of those rights in the Universal Declaration of Human Rights, the International Covenant on Economic, Social and Cultural Rights and the International Covenant on Civil and Political Rights and other declarations to ensure the application of universal standards to particular groups," .
+
+doc:paragraph-6 a values:Undertaking ;
+    values:partOf doc:Instrument ;
+    dc:title "Paragraph 6" ;
+    values:deonticStatus values:HeuristicDerived ;
+    values:originalText "Appreciating the tremendous diversity in the situation of older persons, not only between countries but within countries and between individuals, which requires a variety of policy responses," .
+
+doc:paragraph-7 a values:Undertaking ;
+    values:partOf doc:Instrument ;
+    dc:title "Paragraph 7" ;
+    values:deonticStatus values:HeuristicDerived ;
+    values:originalText "Aware that in all countries, individuals are reaching an advanced age in greater numbers and in better health than ever before," .
+
+doc:paragraph-8 a values:Undertaking ;
+    values:partOf doc:Instrument ;
+    dc:title "Paragraph 8" ;
+    values:deonticStatus values:HeuristicDerived ;
+    values:originalText "Aware of the scientific research disproving many stereotypes about inevitable and irreversible declines with age," .
+
+doc:paragraph-9 a values:Undertaking ;
+    values:partOf doc:Instrument ;
+    dc:title "Paragraph 9" ;
+    values:deonticStatus values:HeuristicDerived ;
+    values:originalText "Convinced that in a world characterized by an increasing number and proportion of older persons, opportunities must be provided for willing and capable older persons to participate in and contribute to the ongoing activities of society," .
+
+doc:paragraph-10 a values:Undertaking ;
+    values:partOf doc:Instrument ;
+    dc:title "Paragraph 10" ;
+    values:deonticStatus values:HeuristicDerived ;
+    values:originalText "Mindful that the strains on family life in both developed and developing countries require support for those providing care to frail older persons," .
+
+doc:paragraph-11 a values:Undertaking ;
+    values:partOf doc:Instrument ;
+    dc:title "Paragraph 11" ;
+    values:deonticStatus values:HeuristicDerived ;
+    values:originalText "Bearing in mind the standards already set by the International Plan of Action on Ageing and the conventions, recommendations and resolutions of the International Labour Organization, the World Health Organization and other United Nations entities," .
+
+doc:paragraph-12 a values:Undertaking ;
+    values:partOf doc:Instrument ;
+    dc:title "Paragraph 12" ;
+    values:deonticStatus values:HeuristicDerived ;
+    values:originalText "Encourages Governments to incorporate the following principles into their national programmes whenever possible:" .
+
+doc:paragraph-13 a values:Undertaking ;
+    values:partOf doc:Instrument ;
+    dc:title "Paragraph 13" ;
+    values:deonticStatus values:HeuristicDerived ;
+    values:originalText "1. Older persons should have access to adequate food, water, shelter, clothing and health care through the provision of income, family and community support and self-help." .
+
+doc:paragraph-14 a values:Undertaking ;
+    values:partOf doc:Instrument ;
+    dc:title "Paragraph 14" ;
+    values:deonticStatus values:HeuristicDerived ;
+    values:originalText "2. Older persons should have the opportunity to work or to have access to other income-generating opportunities." .
+
+doc:paragraph-15 a values:Undertaking ;
+    values:partOf doc:Instrument ;
+    dc:title "Paragraph 15" ;
+    values:deonticStatus values:HeuristicDerived ;
+    values:originalText "3. Older persons should be able to participate in determining when and at what pace withdrawal from the labour force takes place." .
+
+doc:paragraph-16 a values:Undertaking ;
+    values:partOf doc:Instrument ;
+    dc:title "Paragraph 16" ;
+    values:deonticStatus values:HeuristicDerived ;
+    values:originalText "4. Older persons should have access to appropriate educational and training programmes." .
+
+doc:paragraph-17 a values:Undertaking ;
+    values:partOf doc:Instrument ;
+    dc:title "Paragraph 17" ;
+    values:deonticStatus values:HeuristicDerived ;
+    values:originalText "5. Older persons should be able to live in environments that are safe and adaptable to personal preferences and changing capacities." .
+
+doc:paragraph-18 a values:Undertaking ;
+    values:partOf doc:Instrument ;
+    dc:title "Paragraph 18" ;
+    values:deonticStatus values:HeuristicDerived ;
+    values:originalText "6. Older persons should be able to reside at home for as long as possible." .
+
+doc:paragraph-19 a values:Undertaking ;
+    values:partOf doc:Instrument ;
+    dc:title "Paragraph 19" ;
+    values:deonticStatus values:HeuristicDerived ;
+    values:originalText "7. Older persons should remain integrated in society, participate actively in the formulation and implementation of policies that directly affect their well-being and share their knowledge and skills with younger generations." .
+
+doc:paragraph-20 a values:Undertaking ;
+    values:partOf doc:Instrument ;
+    dc:title "Paragraph 20" ;
+    values:deonticStatus values:HeuristicDerived ;
+    values:originalText "8. Older persons should be able to seek and develop opportunities for service to the community and to serve as volunteers in positions appropriate to their interests and capabilities." .
+
+doc:paragraph-21 a values:Undertaking ;
+    values:partOf doc:Instrument ;
+    dc:title "Paragraph 21" ;
+    values:deonticStatus values:HeuristicDerived ;
+    values:originalText "9. Older persons should be able to form movements or associations of older persons." .
+
+doc:paragraph-22 a values:Undertaking ;
+    values:partOf doc:Instrument ;
+    dc:title "Paragraph 22" ;
+    values:deonticStatus values:HeuristicDerived ;
+    values:originalText "10. Older persons should benefit from family and community care and protection in accordance with each society's system of cultural values." .
+
+doc:paragraph-23 a values:Undertaking ;
+    values:partOf doc:Instrument ;
+    dc:title "Paragraph 23" ;
+    values:deonticStatus values:HeuristicDerived ;
+    values:originalText "11. Older persons should have access to health care to help them to maintain or regain the optimum level of physical, mental and emotional well-being and to prevent or delay the onset of illness." .
+
+doc:paragraph-24 a values:Undertaking ;
+    values:partOf doc:Instrument ;
+    dc:title "Paragraph 24" ;
+    values:deonticStatus values:HeuristicDerived ;
+    values:originalText "12. Older persons should have access to social and legal services to enhance their autonomy, protection and care." .
+
+doc:paragraph-25 a values:Undertaking ;
+    values:partOf doc:Instrument ;
+    dc:title "Paragraph 25" ;
+    values:deonticStatus values:HeuristicDerived ;
+    values:originalText "13. Older persons should be able to utilize appropriate levels of institutional care providing protection, rehabilitation and social and mental stimulation in a humane and secure environment." .
+
+doc:paragraph-26 a values:Right ;
+    values:partOf doc:Instrument ;
+    values:heldBy values:NaturalPerson ;
+    dc:title "Paragraph 26" ;
+    values:deonticStatus values:HeuristicDerived ;
+    values:originalText "14. Older persons should be able to enjoy human rights and fundamental freedoms when residing in any shelter, care or treatment facility, including full respect for their dignity, beliefs, needs and privacy and for the right to make decisions about their care and the quality of their lives." .
+
+doc:paragraph-27 a values:Undertaking ;
+    values:partOf doc:Instrument ;
+    dc:title "Paragraph 27" ;
+    values:deonticStatus values:HeuristicDerived ;
+    values:originalText "15. Older persons should be able to pursue opportunities for the full development of their potential." .
+
+doc:paragraph-28 a values:Undertaking ;
+    values:partOf doc:Instrument ;
+    dc:title "Paragraph 28" ;
+    values:deonticStatus values:HeuristicDerived ;
+    values:originalText "16. Older persons should have access to the educational, cultural, spiritual and recreational resources of society." .
+
+doc:paragraph-29 a values:Undertaking ;
+    values:partOf doc:Instrument ;
+    dc:title "Paragraph 29" ;
+    values:deonticStatus values:HeuristicDerived ;
+    values:originalText "17. Older persons should be able to live in dignity and security and be free of exploitation and physical or mental abuse." .
+
+doc:paragraph-30 a values:Undertaking ;
+    values:partOf doc:Instrument ;
+    dc:title "Paragraph 30" ;
+    values:deonticStatus values:HeuristicDerived ;
+    values:originalText "18. Older persons should be treated fairly regardless of age, gender, racial or ethnic background, disability or other status, and be valued independently of their economic contribution." .

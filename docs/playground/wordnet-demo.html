@@ -1,15 +1,15 @@
-<!DOCTYPE html>
+﻿<!DOCTYPE html>
 <html lang="en">
 <head>
 <meta charset="UTF-8" />
 <meta name="viewport" content="width=device-width, initial-scale=1.0" />
-<title>WordNet Graph Demo — Qualia-DB</title>
+<title>Graph Query Demo - QualiaDB</title>
 <link rel="stylesheet" href="../css/tailwind-built.css" />
 <link rel="stylesheet" href="../css/site-nav.css" />
 <link rel="stylesheet" href="https://cdnjs.cloudflare.com/ajax/libs/font-awesome/6.5.1/css/all.min.css" />
 <link rel="stylesheet" href="style.css" />
 <style>
-  /* style.css centers body with flex — breaks full-width nav on this page */
+  /* style.css centers body with flex â€” breaks full-width nav on this page */
   body { display: block; align-items: initial; width: 100%; }
   .demo-header { max-width: 860px; margin: 3rem auto 1.5rem; text-align: center; }
   .demo-header h1 { font-size: 2rem; font-weight: 800; letter-spacing: -1px; }
@@ -49,12 +49,23 @@
     display: flex; align-items: center; gap: .75rem;
     font-size: .8rem; color: var(--text-muted);
   }
+  .mount-status {
+    display: flex; align-items: flex-start; gap: .5rem;
+    flex: 1 1 320px; min-width: min(100%, 320px);
+  }
   .badge {
     padding: .2rem .65rem; border-radius: 20px; font-size: .75rem; font-weight: 600;
   }
   .badge.green  { background: rgba(16,185,129,.15); color: var(--success); border: 1px solid rgba(16,185,129,.3); }
   .badge.amber  { background: rgba(245,158,11,.1);  color: #fbbf24;        border: 1px solid rgba(245,158,11,.3); }
   .badge.blue   { background: rgba(56,189,248,.1);  color: var(--primary); border: 1px solid rgba(56,189,248,.2); }
+  .mount-badge { white-space: normal; overflow-wrap: anywhere; line-height: 1.35; max-width: 100%; }
+  .icon-btn {
+    background: rgba(56,189,248,.08); border: 1px solid rgba(56,189,248,.2);
+    color: var(--primary); border-radius: 999px; padding: .25rem .55rem;
+    font-size: .72rem; cursor: pointer; white-space: nowrap;
+  }
+  .icon-btn[hidden] { display: none !important; }
 
   .results-grid {
     max-width: 860px; margin: 0 auto 1.5rem;
@@ -95,7 +106,7 @@
   .no-results { text-align: center; color: var(--text-muted); padding: 1.5rem;
     font-size: .88rem; font-style: italic; }
 
-  /* ── System Health Console ── */
+  /* â”€â”€ System Health Console â”€â”€ */
   #health-console {
     position: fixed; bottom: 1.5rem; right: 1.5rem; z-index: 200;
     background: rgba(10, 15, 30, 0.94);
@@ -151,12 +162,12 @@
 
 <!-- Header -->
 <div class="demo-header">
-  <h1>WordNet Graph Query Demo</h1>
+  <h1>Graph Query Demo</h1>
   <p>
-    The Webizen VM runs live in your browser via WebAssembly, querying
-    <a href="https://wordnet.princeton.edu" style="color:var(--primary)">Princeton WordNet 3.1</a>
-    (5.56M triples, ~127&nbsp;MB <code>.q42</code> from 523&nbsp;MB RDF/XML).
-    No server. No SQL. 48-byte records, FNV-1a hashing, HTTP Range demand-paging.
+    The Webizen VM runs live in your browser via WebAssembly across mounted graph datasets,
+    including <a href="https://wordnet.princeton.edu" style="color:var(--primary)">Princeton WordNet 3.1</a>,
+    Schema.org, and bundled ontology volumes. No server. No SQL. 48-byte records, FNV-1a hashing,
+    HTTP Range demand-paging.
   </p>
 </div>
 
@@ -167,7 +178,7 @@
     <select id="dataset-select"
       style="flex:1;min-width:220px;background:var(--code-bg);border:1px solid var(--panel-border);
              border-radius:8px;color:var(--text-main);padding:.45rem .75rem;font-size:.88rem;outline:none">
-      <option value="">— select a dataset —</option>
+      <option value="">â€” select a dataset â€”</option>
     </select>
     <button id="mount-btn" onclick="mountDataset()" disabled
       style="padding:.45rem 1.1rem;background:rgba(56,189,248,.12);border:1px solid rgba(56,189,248,.3);
@@ -175,16 +186,19 @@
              white-space:nowrap">
       Mount
     </button>
-    <span id="mount-badge" class="badge amber" style="white-space:nowrap">No dataset mounted</span>
+    <div class="mount-status">
+      <span id="mount-badge" class="badge amber mount-badge" title="No dataset mounted">No dataset mounted</span>
+      <button id="mount-badge-copy" class="icon-btn" type="button" onclick="copyMountBadge()" hidden>Copy</button>
+    </div>
   </div>
   <div id="dataset-description" style="font-size:.76rem;color:var(--text-muted);margin-top:.55rem;min-height:1rem"></div>
 </div>
 
 <!-- Status bar -->
 <div class="status-bar">
-  <span id="vfs-badge" class="badge amber">VFS loading…</span>
-  <span id="lex-badge" class="badge amber">Lexicon loading…</span>
-  <span id="wasm-badge" class="badge amber">WASM loading…</span>
+  <span id="vfs-badge" class="badge amber">VFS loadingâ€¦</span>
+  <span id="lex-badge" class="badge amber">Lexicon loadingâ€¦</span>
+  <span id="wasm-badge" class="badge amber">WASM loadingâ€¦</span>
   <span id="latency-badge" class="badge blue" style="margin-left:auto"></span>
 </div>
 
@@ -208,7 +222,7 @@
   <div id="mode-nt">
     <div class="search-row">
       <input id="query-input" type="text"
-        placeholder='?s ?p "dog"   or   <did:q42:z6Mk…> ?p ?o' />
+        placeholder='?s ?p "dog"   or   <did:q42:z6Mkâ€¦> ?p ?o' />
       <button id="search-btn" onclick="runQuery()" disabled>Search</button>
     </div>
     <div class="presets">
@@ -222,7 +236,7 @@
     </div>
   </div>
 
-  <!-- SPARQL BGP mode (single triple pattern only — engine constraint) -->
+  <!-- SPARQL BGP mode (single triple pattern only â€” engine constraint) -->
   <div id="mode-sparql" style="display:none">
     <textarea id="sparql-input" rows="4"
       style="width:100%;background:var(--code-bg);border:1px solid var(--panel-border);
@@ -231,7 +245,7 @@
       placeholder="SELECT ?s ?p WHERE {&#10;  ?s ?p &quot;dog&quot;&#10;}"></textarea>
     <div style="display:flex;justify-content:space-between;align-items:center;margin-top:.6rem">
       <span style="font-size:.72rem;color:var(--text-muted)">
-        Single Basic Graph Pattern only — engine constraint
+        Single Basic Graph Pattern only â€” engine constraint
       </span>
       <button onclick="runSparql()"
         style="padding:.45rem 1.1rem;background:var(--primary);color:#0f172a;
@@ -245,7 +259,7 @@
 <!-- Results -->
 <div class="results-grid">
   <div class="panel" style="grid-column: 1 / -1">
-    <h3>Matching triples — <span id="match-count">—</span></h3>
+    <h3>Matching triples â€” <span id="match-count">â€”</span></h3>
     <div id="triple-list" class="triple-list">
       <div class="no-results">Enter a word above to query the WordNet graph.</div>
     </div>
@@ -254,17 +268,17 @@
   <div class="panel">
     <h3>VM Execution Stats</h3>
     <table class="stats-table" id="stats-table">
-      <tr><td>VM Cycles</td><td>—</td></tr>
-      <tr><td>Direct Jump Ops (did:q42)</td><td>—</td></tr>
-      <tr><td>Lexicon Lookup Ops</td><td>—</td></tr>
-      <tr><td>Blocks Scanned</td><td>—</td></tr>
-      <tr><td>Triples in Dataset</td><td>—</td></tr>
+      <tr><td>VM Cycles</td><td>â€”</td></tr>
+      <tr><td>Direct Jump Ops (did:q42)</td><td>â€”</td></tr>
+      <tr><td>Lexicon Lookup Ops</td><td>â€”</td></tr>
+      <tr><td>Blocks Scanned</td><td>â€”</td></tr>
+      <tr><td>Triples in Dataset</td><td>â€”</td></tr>
     </table>
   </div>
 
   <div class="panel">
     <h3>Raw Quin (first match)</h3>
-    <pre id="raw-quin" style="font-size:.73rem;color:var(--text-muted);line-height:1.8;overflow-x:auto">—</pre>
+    <pre id="raw-quin" style="font-size:.73rem;color:var(--text-muted);line-height:1.8;overflow-x:auto">â€”</pre>
   </div>
 
   <!-- Compute cost widget -->
@@ -273,10 +287,10 @@
     <div id="cost-widget" style="display:flex;gap:2rem;flex-wrap:wrap;align-items:flex-start">
       <div style="flex:1;min-width:220px">
         <table style="width:100%;font-size:.82rem;border-collapse:collapse" id="cost-table">
-          <tr><td style="color:var(--text-muted);padding:.3rem 0">VM Cycles</td><td style="text-align:right;font-family:monospace">—</td></tr>
-          <tr><td style="color:var(--text-muted);padding:.3rem 0">Cost (μsat)</td><td style="text-align:right;font-family:monospace">—</td></tr>
-          <tr><td style="color:var(--text-muted);padding:.3rem 0">Cost (sat)</td><td style="text-align:right;font-family:monospace">—</td></tr>
-          <tr><td style="color:var(--text-muted);padding:.3rem 0">Cost (USD ≈)</td><td style="text-align:right;font-family:monospace">—</td></tr>
+          <tr><td style="color:var(--text-muted);padding:.3rem 0">VM Cycles</td><td style="text-align:right;font-family:monospace">â€”</td></tr>
+          <tr><td style="color:var(--text-muted);padding:.3rem 0">Cost (Î¼sat)</td><td style="text-align:right;font-family:monospace">â€”</td></tr>
+          <tr><td style="color:var(--text-muted);padding:.3rem 0">Cost (sat)</td><td style="text-align:right;font-family:monospace">â€”</td></tr>
+          <tr><td style="color:var(--text-muted);padding:.3rem 0">Cost (USD â‰ˆ)</td><td style="text-align:right;font-family:monospace">â€”</td></tr>
         </table>
       </div>
       <div style="flex:1;min-width:220px">
@@ -288,7 +302,7 @@
           <span>0.001</span><span>0.01</span><span>0.1</span><span>1</span><span>10</span>
         </div>
         <div id="rate-label" style="font-size:.78rem;color:var(--primary);margin-top:.4rem;text-align:center">
-          1 μsat / 1 000 VM ops
+          1 Î¼sat / 1 000 VM ops
         </div>
       </div>
     </div>
@@ -309,16 +323,16 @@
 <div id="health-console">
   <div class="hc-title">
     <span>SYS HEALTH</span>
-    <button class="hc-toggle" onclick="toggleHealthConsole()" title="collapse">▼</button>
+    <button class="hc-toggle" onclick="toggleHealthConsole()" title="collapse">â–¼</button>
   </div>
   <div id="hc-body">
     <div class="hc-row">
       <span class="hc-label">COMPUTE COST</span>
-      <span id="hc-cost"   class="hc-val dim">—</span>
+      <span id="hc-cost"   class="hc-val dim">â€”</span>
     </div>
     <div class="hc-row">
       <span class="hc-label">VM CYCLES</span>
-      <span id="hc-cycles" class="hc-val dim">—</span>
+      <span id="hc-cycles" class="hc-val dim">â€”</span>
     </div>
     <div class="hc-row">
       <span class="hc-label">VFS MOUNT</span>
@@ -326,11 +340,11 @@
     </div>
     <div class="hc-row">
       <span class="hc-label">LATENCY</span>
-      <span id="hc-lat"    class="hc-val dim">—</span>
+      <span id="hc-lat"    class="hc-val dim">â€”</span>
     </div>
     <div class="hc-row">
       <span class="hc-label">DAEMON</span>
-      <span id="hc-daemon" class="hc-val dim">…</span>
+      <span id="hc-daemon" class="hc-val dim">â€¦</span>
     </div>
     <div class="hc-row">
       <span class="hc-label">BIDX</span>
@@ -338,15 +352,15 @@
     </div>
     <div class="hc-row">
       <span class="hc-label">NET REQUESTS</span>
-      <span id="hc-net"   class="hc-val dim">—</span>
+      <span id="hc-net"   class="hc-val dim">â€”</span>
     </div>
     <div class="hc-row">
       <span class="hc-label">OPFS HITS</span>
-      <span id="hc-opfs"  class="hc-val dim">—</span>
+      <span id="hc-opfs"  class="hc-val dim">â€”</span>
     </div>
     <div class="hc-row">
       <span class="hc-label">FAULT LATENCY</span>
-      <span id="hc-fault" class="hc-val dim">—</span>
+      <span id="hc-fault" class="hc-val dim">â€”</span>
     </div>
   </div>
 </div>
@@ -354,3 +368,4 @@
 <script type="module" src="wordnet-demo.js"></script>
 </body>
 </html>
+

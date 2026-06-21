@@ -158,7 +158,7 @@
             const hasVC = cred !== 'none';
             const query = hasVC
                 ? `<${agent}> <http://www.w3.org/ns/auth/acl#accessTo> ?resource .`
-                : `<${agent}> <http://qualia.local/rights/requestedAccess> ?o .`;
+                : `<${agent}> <http://webizen.org/rights/requestedAccess> ?o .`;
 
             const t0 = performance.now();
             try {
@@ -188,7 +188,7 @@
             document.getElementById('risk-score').textContent = '…';
 
             // Translate free-text to an N-Triples probe
-            const query = `?node <http://qualia.local/analytics/topic> <http://qualia.local/topic/federated> .`;
+            const query = `?node <http://webizen.org/analytics/topic> <http://webizen.org/topic/federated> .`;
 
             const t0 = performance.now();
             try {

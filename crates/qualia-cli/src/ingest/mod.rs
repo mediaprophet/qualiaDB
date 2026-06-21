@@ -24,6 +24,7 @@ pub mod mapper;
 pub mod csv_mapper;
 pub mod json_mapper;
 pub mod writer;
+pub mod agent_intent;
 
 #[derive(Debug)]
 pub enum IngestError {
@@ -440,6 +441,7 @@ pub fn ingest_auto(
         detect::SemanticFormat::RdfXml       => ingest_rdf_xml(input, output)?,
         detect::SemanticFormat::JsonLd       => ingest_json_ld(input, output)?,
         detect::SemanticFormat::JsonLdStar   => ingest_json_ld_star(input, output)?,
+        detect::SemanticFormat::AgentIntentJsonl => agent_intent::ingest_agent_intent(input, output)?,
         detect::SemanticFormat::CborLd       => ingest_cbor(input, output)?,
         detect::SemanticFormat::Kml          => ingest_kml(input, output)?,
         detect::SemanticFormat::Chk          => ingest_chk(input, output)?,

@@ -725,3 +725,30 @@ mod tests {
         assert!(v.get("qapps").and_then(Value::as_array).is_some());
     }
 }
+
+// ── Orchestration ────────────────────────────────────────────────────────────
+
+pub fn get_pending_tasks(_args: &[u8]) -> Result<String, McpSystemError> {
+    // Currently, we just instantiate a new manager because there is no global singleton.
+    let manager = crate::ambient_orchestration::AmbientOrchestrationManager::new();
+    let tasks = manager.get_pending_tasks();
+    
+    // We manually map it to avoid any lifetime/serde generic issues.
+    let mut mapped_tasks = Vec::new();
+    for task in tasks {
+        mapped_tasks.push(json!({
+            "taskId": task.task_id,
+            "taskType": format!("{:?}", task.task_type),
+            "priority": format!("{:?}", task.priority),
+            "estimatedDuration": task.estimated_duration.as_secs_f64(),
+            "dependencies": task.dependencies,
+        }));
+    }
+    
+    let payload = json!({
+        "pendingTasks": mapped_tasks,
+        "count": mapped_tasks.len(),
+    });
+    
+    serde_json::to_string(&payload).map_err(|_| McpSystemError::ParseError)
+}

@@ -1,0 +1,73 @@
+@prefix rdf:    <http://www.w3.org/1999/02/22-rdf-syntax-ns#> .
+@prefix rdfs:   <http://www.w3.org/2000/01/rdf-schema#> .
+@prefix xsd:    <http://www.w3.org/2001/XMLSchema#> .
+@prefix dc:     <http://purl.org/dc/terms/> .
+@prefix values: <https://ns.webcivics.org/values/> .
+
+# ===========================================================================
+# tiering.n3 — machine-readable tier / legal-form / binding / curation terms.
+# Extends values.n3 (PLAN.md §1, §8.1, §9.1). Pure vocabulary (no rules).
+# Lets SHACL/deontic rules and the governance gap-report key on these instead
+# of prose. Durable Tier A baseline vs versioned Tier B (mutable) law.
+# ===========================================================================
+
+# --- Tier: durable core vs mutable (subject-to-update) law ---
+values:Tier a rdfs:Class ; rdfs:label "Instrument tier" .
+values:Core    a values:Tier ; rdfs:comment "Stable, foundational; the durable baseline." .
+values:Mutable a values:Tier ; rdfs:comment "Subject to updates (statute); versioned, kept separate from baseline reasoning." .
+values:tier a rdf:Property ; rdfs:domain values:ValuesCredential ; rdfs:range values:Tier .
+
+# --- Legal form (what kind of instrument) ---
+values:LegalForm a rdfs:Class ; rdfs:label "Legal form" .
+values:Treaty           a values:LegalForm .
+values:UNGAResolution   a values:LegalForm .
+values:Recommendation   a values:LegalForm .
+values:Statute          a values:LegalForm .
+values:Constitutional   a values:LegalForm .
+values:Declaration      a values:LegalForm .
+values:JudicialReasoning a values:LegalForm .
+values:legalForm a rdf:Property ; rdfs:domain values:ValuesCredential ; rdfs:range values:LegalForm .
+
+# --- Binding status (how it binds; see also the contract route, agency.n3) ---
+values:BindingStatus a rdfs:Class ; rdfs:label "Binding status" .
+values:Binding               a values:BindingStatus ; rdfs:comment "Legally binding (treaty/in-force statute)." .
+values:AffirmativeNonBinding a values:BindingStatus ; rdfs:comment "Soft-law / affirmable undertaking; authoritative floor, not a hard duty." .
+values:ContractuallyBinding  a values:BindingStatus ; rdfs:comment "Bound between parties via contract (incorporation by reference; agency.n3 §4.4)." .
+values:bindingStatus a rdf:Property ; rdfs:range values:BindingStatus .
+
+# --- Curation status (review provenance; prevents silent drift) ---
+values:CurationStatus a rdfs:Class ; rdfs:label "Curation status" .
+values:HeuristicDerived a values:CurationStatus ; rdfs:comment "Lexical/auto heuristic; pending review." .
+values:Curated          a values:CurationStatus ; rdfs:comment "Reviewed by a human curator." .
+values:NeedsReview      a values:CurationStatus ; rdfs:comment "Flagged for review." .
+values:curationStatus a rdf:Property ; rdfs:range values:CurationStatus .
+
+# categoryStatus (already used in the corpus) — make the values explicit
+values:CategoryStatus a rdfs:Class .
+values:AutoAssigned a values:CategoryStatus .
+values:Confirmed    a values:CategoryStatus .
+values:categoryStatus a rdf:Property ; rdfs:range values:CategoryStatus .
+
+# --- Interpretive weight (e.g. AU reconciliation docs preferred in AU context
+#     without false equivalence to binding treaties) ---
+values:interpretiveWeight a rdf:Property ; rdfs:range xsd:decimal ;
+    rdfs:comment "Relative weight for context-sensitive querying; 0..1." .
+
+# --- Tier B manifest fields (per dated file; mutable law) ---
+values:asAtDate      a rdf:Property ; rdfs:range xsd:date .
+values:sourceURL     a rdf:Property ; rdfs:range xsd:anyURI .
+values:integrityHash a rdf:Property ; rdfs:comment "Hash of the source text this file reflects (tamper-evidence)." .
+values:reviewCadence a rdf:Property ; rdfs:comment "How often this mutable instrument must be re-checked." .
+values:lastReviewed  a rdf:Property ; rdfs:range xsd:date .
+
+# --- Watchlist / in-force status (not-yet-in-force or pending instruments,
+#     e.g. the BHR treaty) — avoids freezing a 2026 planning note as durable truth ---
+values:inForceStatus   a rdf:Property ; rdfs:comment "in-force | not-in-force | pending." .
+values:notBeforeDate   a rdf:Property ; rdfs:range xsd:date .
+values:lastChecked     a rdf:Property ; rdfs:range xsd:date .
+values:watchlistStatus a rdf:Property .
+
+# --- Acquisition freshness (current/pending legal material; Codex 2nd pass) ---
+values:retrievalDate    a rdf:Property ; rdfs:range xsd:date .
+values:sourceContentHash a rdf:Property .
+values:generatorVersion a rdf:Property .

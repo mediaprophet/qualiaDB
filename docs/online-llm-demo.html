@@ -286,9 +286,9 @@ const USER_AGENT = 'QualiaDB-OnlineLLMDemo/0.0.18 (https://github.com/mediaproph
 
 const QUALIA_ONTOLOGY = `
 # QualiaDB Ontology Prefixes
-PREFIX q: <https://qualia-db.org/vocab/#>
-PREFIX qr: <https://qualia-db.org/rights/#>
-PREFIX nquin: <https://qualia-db.org/nquin/#>
+PREFIX q: <https://webizen.org/vocab/#>
+PREFIX qr: <https://webizen.org/rights/#>
+PREFIX nquin: <https://webizen.org/nquin/#>
 PREFIX webizen: <https://webizen.org/vocab/#>
 PREFIX schema: <https://schema.org/>
 PREFIX prov: <http://www.w3.org/ns/prov#>
@@ -313,7 +313,7 @@ ${QUALIA_ONTOLOGY}
 Also use standard Wikidata prefixes (wd:, wdt:, wikibase:, bd:) when querying Wikidata.
 If querying Wikidata, use SERVICE <https://query.wikidata.org/sparql> { ... } syntax.`,
     jsonld: `You are a JSON-LD mapping engine for QualiaDB. Convert the user's input into a valid JSON-LD object.
-Use the QualiaDB context: { "@context": { "q": "https://qualia-db.org/vocab/#", "schema": "https://schema.org/", "prov": "http://www.w3.org/ns/prov#" } }
+Use the QualiaDB context: { "@context": { "q": "https://webizen.org/vocab/#", "schema": "https://schema.org/", "prov": "http://www.w3.org/ns/prov#" } }
 Output ONLY the raw JSON-LD object — no explanation, no markdown fences.`,
     lookup: `You are an entity lookup assistant. Given the user's input, identify key named entities (people, organisations, places, concepts). For each entity, output a Wikidata SPARQL query to fetch its label, description, and key properties.
 Format: output one SPARQL query per entity, separated by --- markers. No other text.`,

@@ -1146,7 +1146,7 @@ pub enum LlmAction {
         #[arg(long)]
         quantization: Option<String>,
         /// Enable verbose logging
-        #[arg(long)]
+        #[arg(long, id = "test_verbose")]
         verbose: bool,
     },
     /// Validate model compatibility and format
@@ -1166,7 +1166,7 @@ pub enum LlmAction {
         /// Model name to test
         model: String,
         /// Enable verbose logging
-        #[arg(long)]
+        #[arg(long, id = "comprehensive_verbose")]
         verbose: bool,
     },
     /// Benchmark model performance

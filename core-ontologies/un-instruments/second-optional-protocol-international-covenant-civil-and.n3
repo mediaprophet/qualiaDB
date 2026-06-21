@@ -1,0 +1,91 @@
+@prefix rdf:    <http://www.w3.org/1999/02/22-rdf-syntax-ns#> .
+@prefix rdfs:   <http://www.w3.org/2000/01/rdf-schema#> .
+@prefix dc:     <http://purl.org/dc/terms/> .
+@prefix values: <https://ns.webcivics.org/values/> .
+@prefix doc:    <https://ns.webcivics.org/values/second-optional-protocol-international-covenant-civil-and#> .
+
+# ============================================================
+# Second Optional Protocol to the International Covenant on Civil and Political Rights, aiming at the abolition of the death penalty
+# RE-SOURCED from authoritative OHCHR text (verbatim originalText).
+# Deontic typing = lexical heuristic (values:HeuristicDerived) — pending review.
+# states->parties + universalisation = curation overlay (amendedText), pending.
+# ============================================================
+
+doc:Instrument a values:ValuesCredential ;
+    dc:title "Second Optional Protocol to the International Covenant on Civil and Political Rights, aiming at the abolition of the death penalty" ;
+    dc:date "15 December 1989" ;
+    values:category "Other / thematic" ;
+    values:categoryStatus values:AutoAssigned ;
+    values:source <https://www.ohchr.org/en/instruments-mechanisms/instruments/second-optional-protocol-international-covenant-civil-and> ;
+    rdfs:comment "Re-sourced from authoritative OHCHR text; deontic + amendment layers pending." .
+
+doc:article-1 a values:Prohibition ;
+    values:partOf doc:Instrument ;
+    values:borneBy values:Agent ;
+    dc:title "Article 1" ;
+    values:deonticStatus values:HeuristicDerived ;
+    values:originalText "No one within the jurisdiction of a State Party to the present Protocol shall be executed. Each State Party shall take all necessary measures to abolish the death penalty within its jurisdiction." .
+
+doc:article-2 a values:Prohibition ;
+    values:partOf doc:Instrument ;
+    values:borneBy values:Agent ;
+    dc:title "Article 2" ;
+    values:deonticStatus values:HeuristicDerived ;
+    values:originalText "No reservation is admissible to the present Protocol, except for a reservation made at the time of ratification or accession that provides for the application of the death penalty in time of war pursuant to a conviction for a most serious crime of a military nature committed during wartime. The State Party making such a reservation shall at the time of ratification or accession communicate to the Secretary-General of the United Nations the relevant provisions of its national legislation applicable during wartime. The State Party having made such a reservation shall notify the Secretary-General of the United Nations of any beginning or ending of a state of war applicable to its territory." .
+
+doc:article-3 a values:Undertaking ;
+    values:partOf doc:Instrument ;
+    dc:title "Article 3" ;
+    values:deonticStatus values:HeuristicDerived ;
+    values:originalText "The States Parties to the present Protocol shall include in the reports they submit to the Human Rights Committee, in accordance with article 40 of the Covenant, information on the measures that they have adopted to give effect to the present Protocol." .
+
+doc:article-4 a values:Undertaking ;
+    values:partOf doc:Instrument ;
+    dc:title "Article 4" ;
+    values:deonticStatus values:HeuristicDerived ;
+    values:originalText "With respect to the States Parties to the Covenant that have made a declaration under article 41, the competence of the Human Rights Committee to receive and consider communications when a State Party claims that another State Party is not fulfilling its obligations shall extend to the provisions of the present Protocol, unless the State Party concerned has made a statement to the contrary at the moment of ratification or accession." .
+
+doc:article-5 a values:Undertaking ;
+    values:partOf doc:Instrument ;
+    dc:title "Article 5" ;
+    values:deonticStatus values:HeuristicDerived ;
+    values:originalText "With respect to the States Parties to the first Optional Protocol to the International Covenant on Civil and Political Rights adopted on 16 December 1966, the competence of the Human Rights Committee to receive and consider communications from individuals subject to its jurisdiction shall extend to the provisions of the present Protocol, unless the State Party concerned has made a statement to the contrary at the moment of ratification or accession." .
+
+doc:article-6 a values:Prohibition ;
+    values:partOf doc:Instrument ;
+    values:borneBy values:Agent ;
+    dc:title "Article 6" ;
+    values:deonticStatus values:HeuristicDerived ;
+    values:originalText "The provisions of the present Protocol shall apply as additional provisions to the Covenant. Without prejudice to the possibility of a reservation under article 2 of the present Protocol, the right guaranteed in article 1, paragraph 1, of the present Protocol shall not be subject to any derogation under article 4 of the Covenant." .
+
+doc:article-7 a values:Obligation ;
+    values:partOf doc:Instrument ;
+    values:borneBy values:Agent ;
+    dc:title "Article 7" ;
+    values:deonticStatus values:HeuristicDerived ;
+    values:originalText "The present Protocol is open for signature by any State that has signed the Covenant. The present Protocol is subject to ratification by any State that has ratified the Covenant or acceded to it. Instruments of ratification shall be deposited with the Secretary-General of the United Nations. The present Protocol shall be open to accession by any State that has ratified the Covenant or acceded to it. Accession shall be effected by the deposit of an instrument of accession with the Secretary-General of the United Nations. The Secretary-General of the United Nations shall inform all States that have signed the present Protocol or acceded to it of the deposit of each instrument of ratification or accession." .
+
+doc:article-8 a values:Undertaking ;
+    values:partOf doc:Instrument ;
+    dc:title "Article 8" ;
+    values:deonticStatus values:HeuristicDerived ;
+    values:originalText "The present Protocol shall enter into force three months after the date of the deposit with the Secretary-General of the United Nations of the tenth instrument of ratification or accession. For each State ratifying the present Protocol or acceding to it after the deposit of the tenth instrument of ratification or accession, the present Protocol shall enter into force three months after the date of the deposit of its own instrument of ratification or accession." .
+
+doc:article-9 a values:Undertaking ;
+    values:partOf doc:Instrument ;
+    dc:title "Article 9" ;
+    values:deonticStatus values:HeuristicDerived ;
+    values:originalText "The provisions of the present Protocol shall extend to all parts of federal States without any limitations or exceptions." .
+
+doc:article-10 a values:Undertaking ;
+    values:partOf doc:Instrument ;
+    dc:title "Article 10" ;
+    values:deonticStatus values:HeuristicDerived ;
+    values:originalText "The Secretary-General of the United Nations shall inform all States referred to in article 48, paragraph 1, of the Covenant of the following particulars: Reservations, communications and notifications under article 2 of the present Protocol; Statements made under articles 4 or 5 of the present Protocol; Signatures, ratifications and accessions under article 7 of the present Protocol: The date of the entry into force of the present Protocol under article 8 thereof." .
+
+doc:article-11 a values:Right ;
+    values:partOf doc:Instrument ;
+    values:heldBy values:NaturalPerson ;
+    dc:title "Article 11" ;
+    values:deonticStatus values:HeuristicDerived ;
+    values:originalText "Entry into force: 11 July 1991, in accordance with article 8(1) The States Parties to the present Protocol, Believing that abolition of the death penalty contributes to enhancement of human dignity and progressive development of human rights, Recalling article 3 of the Universal Declaration of Human Rights, adopted on 10 December 1948, and article 6 of the International Covenant on Civil and Political Rights, adopted on 16 December 1966, Noting that article 6 of the International Covenant on Civil and Political Rights refers to abolition of the death penalty in terms that strongly suggest that abolition is desirable, Convinced that all measures of abolition of the death penalty should be considered as progress in the enjoyment of the right to life, Desirous to undertake hereby an international commitment to abolish the death penalty, Have agreed as follows:" .

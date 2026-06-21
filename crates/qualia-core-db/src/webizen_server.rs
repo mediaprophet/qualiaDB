@@ -797,7 +797,7 @@ async fn query_handler(
                 "context": q.context.to_string(), "metadata": q.metadata.to_string(), "parity": q.parity.to_string()
             })).collect();
             response_headers.insert(header::CONTENT_TYPE, HeaderValue::from_static("application/ld+json"));
-            let res = json!({ "@context": { "@vocab": "https://qualia-db.org/vocab#" }, "@graph": graph, "match_count": match_count });
+            let res = json!({ "@context": { "@vocab": "https://webizen.org/vocab#" }, "@graph": graph, "match_count": match_count });
             (StatusCode::OK, response_headers, res.to_string()).into_response()
         }
         OutputFormat::RawQ42 => unreachable!(),

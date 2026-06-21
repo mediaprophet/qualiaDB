@@ -1,0 +1,41 @@
+@prefix rdf:    <http://www.w3.org/1999/02/22-rdf-syntax-ns#> .
+@prefix rdfs:   <http://www.w3.org/2000/01/rdf-schema#> .
+@prefix dc:     <http://purl.org/dc/terms/> .
+@prefix values: <https://ns.webcivics.org/values/> .
+@prefix doc:    <https://ns.webcivics.org/values/recommendation-consent-marriage-minimum-age-marriage-and#> .
+
+# ============================================================
+# Recommendation on Consent to Marriage, Minimum Age for Marriage and Registration of Marriages
+# RE-SOURCED from authoritative OHCHR text (verbatim originalText).
+# Deontic typing = lexical heuristic (values:HeuristicDerived) — pending review.
+# states->parties + universalisation = curation overlay (amendedText), pending.
+# ============================================================
+
+doc:Instrument a values:ValuesCredential ;
+    dc:title "Recommendation on Consent to Marriage, Minimum Age for Marriage and Registration of Marriages" ;
+    dc:date "01 November 1965" ;
+    values:category "Marriage & family" ;
+    values:categoryStatus values:AutoAssigned ;
+    values:source <https://www.ohchr.org/en/instruments-mechanisms/instruments/recommendation-consent-marriage-minimum-age-marriage-and> ;
+    rdfs:comment "Re-sourced from authoritative OHCHR text; deontic + amendment layers pending." .
+
+doc:principle-1 a values:Obligation ;
+    values:partOf doc:Instrument ;
+    values:borneBy values:Agent ;
+    dc:title "Principle 1" ;
+    values:deonticStatus values:HeuristicDerived ;
+    values:originalText "(a) No marriage shall be legally entered into without the full and free consent of both parties, such consent to be expressed by them in person, after due publicity and in the presence of the authority competent to solemnize the marriage and of witnesses, as prescribed by law. (b) Marriage by proxy shall be permitted only when the competent authorities are satisfied that each party has, before a competent authority and in such manner as may be prescribed by law, fully and freely expressed consent before witnesses and not withdrawn such consent." .
+
+doc:principle-2 a values:Prohibition ;
+    values:partOf doc:Instrument ;
+    values:borneBy values:Agent ;
+    dc:title "Principle 2" ;
+    values:deonticStatus values:HeuristicDerived ;
+    values:originalText "Member States shall take legislative action to specify a minimum age for marriage, which in any case shall not be less than fifteen years of age; no marriage shall be legally entered into by any person under this age, except where a competent authority has granted a dispensation as to age, for serious reasons, in the interest of the intending spouses." .
+
+doc:principle-3 a values:Obligation ;
+    values:partOf doc:Instrument ;
+    values:borneBy values:Agent ;
+    dc:title "Principle 3" ;
+    values:deonticStatus values:HeuristicDerived ;
+    values:originalText "All marriages shall be registered in an appropriate official register by the competent authority. 2. Recommends that each Member State should bring the Recommendation on Consent to Marriage, Minimum Age for Marriage and Registration of Marriages contained in the present resolution before the authorities competent to enact legislation or to take other action at the earliest practicable moment and, if possible, no later than eighteen months after the adoption of the Recommendation; 3. Recommends that Member States should inform the Secretary-General, as soon as possible after the action referred to in paragraph 2 above, of the measures taken under the present Recommendation to bring it before the competent authority or authorities, with particulars regarding the authority or authorities considered as competent; 4. Recommends further that Member States should report to the Secretary-General at the end of three years, and thereafter at intervals of five years, on their law and practice with regard to the matters dealt with in the present Recommendation, showing the extent to which effect has been given or is proposed to be given to the provisions of the Recommendation and such modifications as have been found or may be found necessary in adapting or applying it; 5. Requests the Secretary-General to prepare for the Commission on the Status of Women a document containing the reports received from Governments concerning methods of implementing the three basic principles of the present Recommendation; 6. Invites the Commission on the Status of Women to examine the reports received from Member States pursuant to the present Recommendation and to report thereon to the Economic and Social Council with such recommendations as it may deem fitting." .

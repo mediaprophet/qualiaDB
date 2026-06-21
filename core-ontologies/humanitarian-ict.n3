@@ -1,0 +1,51 @@
+@prefix rdf:    <http://www.w3.org/1999/02/22-rdf-syntax-ns#> .
+@prefix rdfs:   <http://www.w3.org/2000/01/rdf-schema#> .
+@prefix dc:     <http://purl.org/dc/terms/> .
+@prefix values: <https://ns.webcivics.org/values/> .
+@prefix policy: <https://ns.webcivics.org/policy/> .
+@prefix hict:   <https://ns.webcivics.org/hict/> .
+
+# ===========================================================================
+# humanitarian-ict.n3 — the POSITIVE pole (PLAN.md §15). Identify + PRIORITISE
+# services/agents/workers that uphold Human Rights + International Humanitarian
+# Law — the "useful activity" half of "distinguish useful activity from abuse".
+# Counterpart to policy.n3's harm categories. Carries forward WebCivics/
+# HumanitarianICT (IETF draft, presented IETF119). Grounded in the SAME corpus
+# (IHL Geneva + HR instruments) as the essential-needs it serves. Umbrella /
+# compliance concept; credentials are LOOSELY coupled (not tightly), per project.
+# ===========================================================================
+hict: dc:source <https://github.com/WebCivics/HumanitarianICT> ;
+    rdfs:comment "Humanitarian ICT: ICT supporting peace infrastructure + human rights / IHL." .
+
+hict:HumanitarianICT a rdfs:Class ;
+    rdfs:comment "ICT (service/site/worker/agent/credential) supporting HR Instruments + IHL; to be PRIORITISED, esp. in adverse conditions (conflict, disaster, low bandwidth)." .
+
+hict:HumanitarianICTWorker  a rdfs:Class ; rdfs:subClassOf values:NaturalPerson ;
+    rdfs:label "Humanitarian ICT worker" .
+hict:HumanitarianICTService a rdfs:Class ; rdfs:label "Humanitarian ICT service/site" .
+hict:HumanitarianICTCredential a rdfs:Class ;
+    rdfs:comment "A LOOSELY-coupled (assistive, not tightly-coupled) credential asserting humanitarian-ICT status." .
+
+# --- Umbrella compliance: compliant iff it supports the essential needs ---
+hict:HumanitarianICTCompliant a rdfs:Class .
+hict:supportsNeed      a rdf:Property ; rdfs:range hict:EssentialNeed .
+hict:upholdsInstrument a rdf:Property ;
+    rdfs:comment "→ a values:ValuesCredential it serves (links the corpus)." .
+
+# --- Essential needs (HumanitarianICTDefinitions.md; grounded in IHL + HR) ---
+hict:EssentialNeed a rdfs:Class .
+hict:ProtectionFromViolence     a hict:EssentialNeed .
+hict:AccessToMedicalCare        a hict:EssentialNeed .
+hict:HumanitarianAssistance     a hict:EssentialNeed .
+hict:ProtectionOfDetainees      a hict:EssentialNeed .
+hict:ProtectionOfCivilians      a hict:EssentialNeed .
+hict:RespectForCulturalProperty a hict:EssentialNeed .
+hict:ProtectionOfEnvironment    a hict:EssentialNeed .
+hict:FreedomFromTorture         a hict:EssentialNeed .
+hict:FundamentalRights          a hict:EssentialNeed .
+
+# --- Discovery + prioritisation (loosely coupled, assistive) ---
+hict:agentDiscovery a rdf:Property ;
+    rdfs:comment "Loosely-coupled, assistive discovery of humanitarian-ICT services/agents (per the IETF draft)." .
+hict:priority a rdf:Property ;
+    rdfs:comment "Marks humanitarian-ICT for policy:Prioritize, especially under adverse conditions." .

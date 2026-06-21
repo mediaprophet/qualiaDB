@@ -26,6 +26,7 @@ pub mod qubo;
 
 // ─── N3 Rule Processing ────────────────────────────────────────────────────────
 
+pub mod n3logic;
 pub mod n3_compiler;
 pub mod n3_parser;
 pub use n3_compiler::{

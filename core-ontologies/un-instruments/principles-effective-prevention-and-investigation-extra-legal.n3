@@ -1,0 +1,170 @@
+@prefix rdf:    <http://www.w3.org/1999/02/22-rdf-syntax-ns#> .
+@prefix rdfs:   <http://www.w3.org/2000/01/rdf-schema#> .
+@prefix dc:     <http://purl.org/dc/terms/> .
+@prefix values: <https://ns.webcivics.org/values/> .
+@prefix doc:    <https://ns.webcivics.org/values/principles-effective-prevention-and-investigation-extra-legal#> .
+
+# ============================================================
+# Principles on the Effective Prevention and Investigation of Extra-legal, Arbitrary and Summary Executions
+# RE-SOURCED from authoritative OHCHR text (verbatim originalText).
+# Deontic typing = lexical heuristic (values:HeuristicDerived) — pending review.
+# states->parties + universalisation = curation overlay (amendedText), pending.
+# ============================================================
+
+doc:Instrument a values:ValuesCredential ;
+    dc:title "Principles on the Effective Prevention and Investigation of Extra-legal, Arbitrary and Summary Executions" ;
+    dc:date "24 May 1989" ;
+    values:category "Administration of justice, detention & law enforcement" ;
+    values:categoryStatus values:AutoAssigned ;
+    values:source <https://www.ohchr.org/en/instruments-mechanisms/instruments/principles-effective-prevention-and-investigation-extra-legal> ;
+    rdfs:comment "Re-sourced from authoritative OHCHR text; deontic + amendment layers pending." .
+
+doc:paragraph-1 a values:Undertaking ;
+    values:partOf doc:Instrument ;
+    dc:title "Paragraph 1" ;
+    values:deonticStatus values:HeuristicDerived ;
+    values:originalText "Download: PDF Table of Contents" .
+
+doc:paragraph-2 a values:Undertaking ;
+    values:partOf doc:Instrument ;
+    dc:title "Paragraph 2" ;
+    values:deonticStatus values:HeuristicDerived ;
+    values:originalText "Prevention Investigation Legal proceedings Prevention" .
+
+doc:paragraph-3 a values:Prohibition ;
+    values:partOf doc:Instrument ;
+    values:borneBy values:Agent ;
+    dc:title "Paragraph 3" ;
+    values:deonticStatus values:HeuristicDerived ;
+    values:originalText "1. Governments shall prohibit by law all extra-legal, arbitrary and summary executions and shall ensure that any such executions are recognized as offences under their criminal laws, and are punishable by appropriate penalties which take into account the seriousness of such offences. Exceptional circumstances including a state of war or threat of war, internal political instability or any other public emergency may not be invoked as a justification of such executions. Such executions shall not be carried out under any circumstances including, but not limited to, situations of internal armed conflict, excessive or illegal use of force by a public official or other person acting in an official capacity or by a person acting at the instigation, or with the consent or acquiescence of such person, and situations in which deaths occur in custody. This prohibition shall prevail over decrees issued by governmental authority." .
+
+doc:paragraph-4 a values:Obligation ;
+    values:partOf doc:Instrument ;
+    values:borneBy values:Agent ;
+    dc:title "Paragraph 4" ;
+    values:deonticStatus values:HeuristicDerived ;
+    values:originalText "2. In order to prevent extra-legal, arbitrary and summary executions, Governments shall ensure strict control, including a clear chain of command over all officials responsible for apprehension, arrest, detention, custody and imprisonment, as well as those officials authorized by law to use force and firearms." .
+
+doc:paragraph-5 a values:Right ;
+    values:partOf doc:Instrument ;
+    values:heldBy values:NaturalPerson ;
+    dc:title "Paragraph 5" ;
+    values:deonticStatus values:HeuristicDerived ;
+    values:originalText "3. Governments shall prohibit orders from superior officers or public authorities authorizing or inciting other persons to carry out any such extra-legal, arbitrary or summary executions. All persons shall have the right and the duty to defy such orders. Training of law enforcement officials shall emphasize the above provisions." .
+
+doc:paragraph-6 a values:Obligation ;
+    values:partOf doc:Instrument ;
+    values:borneBy values:Agent ;
+    dc:title "Paragraph 6" ;
+    values:deonticStatus values:HeuristicDerived ;
+    values:originalText "4. Effective protection through judicial or other means shall be guaranteed to individuals and groups who are in danger of extra-legal, arbitrary or summary executions, including those who receive death threats." .
+
+doc:paragraph-7 a values:Obligation ;
+    values:partOf doc:Instrument ;
+    values:borneBy values:Agent ;
+    dc:title "Paragraph 7" ;
+    values:deonticStatus values:HeuristicDerived ;
+    values:originalText "5. No one shall be involuntarily returned or extradited to a country where there are substantial grounds for believing that he or she may become a victim of extra-legal, arbitrary or summary execution in that country." .
+
+doc:paragraph-8 a values:Obligation ;
+    values:partOf doc:Instrument ;
+    values:borneBy values:Agent ;
+    dc:title "Paragraph 8" ;
+    values:deonticStatus values:HeuristicDerived ;
+    values:originalText "6. Governments shall ensure that persons deprived of their liberty are held in officially recognized places of custody, and that accurate information on their custody and whereabouts, including transfers, is made promptly available to their relatives and lawyer or other persons of confidence." .
+
+doc:paragraph-9 a values:Undertaking ;
+    values:partOf doc:Instrument ;
+    dc:title "Paragraph 9" ;
+    values:deonticStatus values:HeuristicDerived ;
+    values:originalText "7. Qualified inspectors, including medical personnel, or an equivalent independent authority, shall conduct inspections in places of custody on a regular basis, and be empowered to undertake unannounced inspections on their own initiative, with full guarantees of independence in the exercise of this function. The inspectors shall have unrestricted access to all persons in such places of custody, as well as to all their records." .
+
+doc:paragraph-10 a values:Obligation ;
+    values:partOf doc:Instrument ;
+    values:borneBy values:Agent ;
+    dc:title "Paragraph 10" ;
+    values:deonticStatus values:HeuristicDerived ;
+    values:originalText "8. Governments shall make every effort to prevent extra-legal, arbitrary and summary executions through measures such as diplomatic intercession, improved access of complainants to intergovernmental and judicial bodies, and public denunciation. Intergovernmental mechanisms shall be used to investigate reports of any such executions and to take effective action against such practices. Governments, including those of countries where extra-legal, arbitrary and summary executions are reasonably suspected to occur, shall cooperate fully in international investigations on the subject." .
+
+doc:paragraph-11 a values:Obligation ;
+    values:partOf doc:Instrument ;
+    values:borneBy values:Agent ;
+    dc:title "Paragraph 11" ;
+    values:deonticStatus values:HeuristicDerived ;
+    values:originalText "9. There shall be thorough, prompt and impartial investigation of all suspected cases of extra-legal, arbitrary and summary executions, including cases where complaints by relatives or other reliable reports suggest unnatural death in the above circumstances. Governments shall maintain investigative offices and procedures to undertake such inquiries. The purpose of the investigation shall be to determine the cause, manner and time of death, the person responsible, and any pattern or practice which may have brought about that death. It shall include an adequate autopsy, collection and analysis of all physical and documentary evidence and statements from witnesses. The investigation shall distinguish between natural death, accidental death, suicide and homicide." .
+
+doc:paragraph-12 a values:Right ;
+    values:partOf doc:Instrument ;
+    values:heldBy values:NaturalPerson ;
+    dc:title "Paragraph 12" ;
+    values:deonticStatus values:HeuristicDerived ;
+    values:originalText "10. The investigative authority shall have the power to obtain all the information necessary to the inquiry. Those persons conducting the investigation shall have at their disposal all the necessary budgetary and technical resources for effective investigation. They shall also have the authority to oblige officials allegedly involved in any such executions to appear and testify. The same shall apply to any witness. To this end, they shall be entitled to issue summonses to witnesses, including the officials allegedly involved and to demand the production of evidence." .
+
+doc:paragraph-13 a values:Obligation ;
+    values:partOf doc:Instrument ;
+    values:borneBy values:Agent ;
+    dc:title "Paragraph 13" ;
+    values:deonticStatus values:HeuristicDerived ;
+    values:originalText "11. In cases in which the established investigative procedures are inadequate because of lack of expertise or impartiality, because of the importance of the matter or because of the apparent existence of a pattern of abuse, and in cases where there are complaints from the family of the victim about these inadequacies or other substantial reasons, Governments shall pursue investigations through an independent commission of inquiry or similar procedure. Members of such a commission shall be chosen for their recognized impartiality, competence and independence as individuals. In particular, they shall be independent of any institution, agency or person that may be the subject of the inquiry. The commission shall have the authority to obtain all information necessary to the inquiry and shall conduct the inquiry as provided for under these Principles." .
+
+doc:paragraph-14 a values:Prohibition ;
+    values:partOf doc:Instrument ;
+    values:borneBy values:Agent ;
+    dc:title "Paragraph 14" ;
+    values:deonticStatus values:HeuristicDerived ;
+    values:originalText "12. The body of the deceased person shall not be disposed of until an adequate autopsy is conducted by a physician, who shall, if possible, be an expert in forensic pathology. Those conducting the autopsy shall have the right of access to all investigative data, to the place where the body was discovered, and to the place where the death is thought to have occurred. If the body has been buried and it later appears that an investigation is required, the body shall be promptly and competently exhumed for an autopsy. If skeletal remains are discovered, they should be carefully exhumed and studied according to systematic anthropological techniques." .
+
+doc:paragraph-15 a values:Obligation ;
+    values:partOf doc:Instrument ;
+    values:borneBy values:Agent ;
+    dc:title "Paragraph 15" ;
+    values:deonticStatus values:HeuristicDerived ;
+    values:originalText "13. The body of the deceased shall be available to those conducting the autopsy for a sufficient amount of time to enable a thorough investigation to be carried out. The autopsy shall, at a minimum, attempt to establish the identity of the deceased and the cause and manner of death. The time and place of death shall also be determined to the extent possible. Detailed colour photographs of the deceased shall be included in the autopsy report in order to document and support the findings of the investigation. The autopsy report must describe any and all injuries to the deceased including any evidence of torture." .
+
+doc:paragraph-16 a values:Undertaking ;
+    values:partOf doc:Instrument ;
+    dc:title "Paragraph 16" ;
+    values:deonticStatus values:HeuristicDerived ;
+    values:originalText "14. In order to ensure objective results, those conducting the autopsy must be able to function impartially and independently of any potentially implicated persons or organizations or entities." .
+
+doc:paragraph-17 a values:Obligation ;
+    values:partOf doc:Instrument ;
+    values:borneBy values:Agent ;
+    dc:title "Paragraph 17" ;
+    values:deonticStatus values:HeuristicDerived ;
+    values:originalText "15. Complainants, witnesses, those conducting the investigation and their families shall be protected from violence, threats of violence or any other form of intimidation. Those potentially implicated in extra-legal, arbitrary or summary executions shall be removed from any position of control or power, whether direct or indirect. over complainants, witnesses and their families, as well as over those conducting investigations." .
+
+doc:paragraph-18 a values:Right ;
+    values:partOf doc:Instrument ;
+    values:heldBy values:NaturalPerson ;
+    dc:title "Paragraph 18" ;
+    values:deonticStatus values:HeuristicDerived ;
+    values:originalText "16. Families of the deceased and their legal representatives shall be informed of, and have access to. any hearing as well as to all information relevant to the investigation, and shall be entitled to present other evidence. The family of the deceased shall have the right to insist that a medical or other qualified representative be present at the autopsy. When the identity of a deceased person has been determined, a notification of death shall be posted, and the family or relatives of the deceased shall be informed immediately. The body of the deceased shall be returned to them upon completion of the investigation." .
+
+doc:paragraph-19 a values:Obligation ;
+    values:partOf doc:Instrument ;
+    values:borneBy values:Agent ;
+    dc:title "Paragraph 19" ;
+    values:deonticStatus values:HeuristicDerived ;
+    values:originalText "17. A written report shall be made within a reasonable period of time on the methods and findings of such investigations. The report shall be made public immediately and shall include the scope of the inquiry, procedures and methods used to evaluate evidence as well as conclusions and recommendations based on findings of fact and on applicable law. The report shall also describe in detail specific events that were found to have occurred and the evidence upon which such findings were based, and list the names of witnesses who testified, with the exception of those whose identities have been withheld for their own protection. The Government shall, within a reasonable period of time, either reply to the report of the investigation, or indicate the steps to be taken in response to it." .
+
+doc:paragraph-20 a values:Obligation ;
+    values:partOf doc:Instrument ;
+    values:borneBy values:Agent ;
+    dc:title "Paragraph 20" ;
+    values:deonticStatus values:HeuristicDerived ;
+    values:originalText "18. Governments shall ensure that persons identified by the investigation as having participated in extra-legal, arbitrary or summary executions in any territory under their jurisdiction are brought to justice. Governments shall either bring such persons to justice or cooperate to extradite any such persons to other countries wishing to exercise jurisdiction. This principle shall apply irrespective of who and where the perpetrators or the victims are, their nationalities or where the offence was committed." .
+
+doc:paragraph-21 a values:Prohibition ;
+    values:partOf doc:Instrument ;
+    values:borneBy values:Agent ;
+    dc:title "Paragraph 21" ;
+    values:deonticStatus values:HeuristicDerived ;
+    values:originalText "19. Without prejudice to principle 3 above, an order from a superior officer or a public authority may not be invoked as a justification for extra-legal, arbitrary or summary executions. Superiors, officers or other public officials may be held responsible for acts committed by officials under their authority if they had a reasonable opportunity to prevent such acts. In no circumstances, including a state of war, siege or other public emergency, shall blanket immunity from prosecution be granted to any person allegedly involved in extra-legal, arbitrary or summary executions." .
+
+doc:paragraph-22 a values:Right ;
+    values:partOf doc:Instrument ;
+    values:heldBy values:NaturalPerson ;
+    dc:title "Paragraph 22" ;
+    values:deonticStatus values:HeuristicDerived ;
+    values:originalText "20. The families and dependents of victims of extra-legal, arbitrary or summary executions shall be entitled to fair and adequate compensation within a reasonable period of time." .

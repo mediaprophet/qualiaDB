@@ -1,0 +1,75 @@
+@prefix rdf:    <http://www.w3.org/1999/02/22-rdf-syntax-ns#> .
+@prefix rdfs:   <http://www.w3.org/2000/01/rdf-schema#> .
+@prefix sh:     <http://www.w3.org/ns/shacl#> .
+@prefix owl:    <http://www.w3.org/2002/07/owl#> .
+@prefix dc:     <http://purl.org/dc/terms/> .
+@prefix values: <https://ns.webcivics.org/values/> .
+@prefix self:   <https://ns.webcivics.org/self/> .
+
+# ===========================================================================
+# selfhood.n3 — the FOUNDATIONAL ontology of the natural person (PLAN.md §12).
+# Grounds values:NaturalPerson in the conscious, living human with inherent
+# dignity — NOT in "agent that acts" (FOAF) and NOT in owl:Thing ("human not
+# thing"). Carries forward the WebCivics personhood model (ns.thecharter.eco,
+# github.com/WebCivics/ontologies, c.2018) RE-EXPRESSED in RDFS + SHACL.
+# The root frame is moral, not thing-based.
+# ===========================================================================
+self: dc:source <https://github.com/WebCivics/ontologies> ;
+    rdfs:comment "Foundational selfhood/personhood layer; carries forward WebCivics personhood.ttl, re-expressed RDFS+SHACL (not OWL). Root is a moral frame; a human is not an owl:Thing." .
+
+# --- The root is a MORAL FRAME, not a thing (the WebCivics 'MoralGrammar') ---
+self:MoralFrame a rdfs:Class ;
+    rdfs:label "Moral frame" ;
+    rdfs:comment "The foundational frame. NOT rdfs:subClassOf owl:Thing — persons are not things." .
+
+self:Dignity a rdfs:Class ; rdfs:subClassOf self:MoralFrame ;
+    rdfs:label "Dignity" ;
+    rdfs:comment "Inherent worth — worthy of honour and respect (UDHR Art 1). NOT contingent on capacity, utility, productivity, or legal recognition." .
+
+# --- Biosphere grounding: a human is a living, conscious being situated in nature ---
+self:Biosphere a rdfs:Class ; rdfs:subClassOf self:MoralFrame ; rdfs:label "Biosphere / natural world" .
+self:Living    a rdfs:Class ; rdfs:subClassOf self:Biosphere ; rdfs:label "Living being" .
+self:Conscious a rdfs:Class ; rdfs:subClassOf self:Living ; rdfs:label "Conscious being" .
+
+self:HumanBeing a rdfs:Class ; rdfs:subClassOf self:Conscious ;
+    rdfs:label "Human being (homo sapiens)" ;
+    rdfs:comment "The conscious, living human — endowed with reason and conscience (UDHR Art 1), possessing agency, and bearing inherent self:Dignity. The irreducible core beneath every legal/role facet." .
+
+# Inherent attributes (UDHR Art 1: 'endowed with reason and conscience') ---
+self:hasDignity  a rdf:Property ; rdfs:domain self:HumanBeing ; rdfs:range self:Dignity .
+self:reason      a rdf:Property ; rdfs:domain self:HumanBeing .
+self:conscience  a rdf:Property ; rdfs:domain self:HumanBeing .
+self:agency      a rdf:Property ; rdfs:domain self:HumanBeing ; rdfs:comment "Human agency (WebCivics :humanAgency)." .
+
+# --- Selfhood interior: the first-person / felt dimension (the 'qualia' of QualiaDB) ---
+self:Selfhood a rdfs:Class ; rdfs:subClassOf self:MoralFrame ;
+    rdfs:comment "The first-person interior of a human being." .
+self:Affect a rdfs:Class ; rdfs:subClassOf self:Selfhood ;
+    rdfs:comment "Felt/experiential states (the WebCivics emotion taxonomy — Admiration, Awe, Anxiety… — extends here)." .
+self:experiences a rdf:Property ; rdfs:domain self:HumanBeing ; rdfs:range self:Affect .
+
+# ===========================================================================
+# GROUNDING the values lattice: a natural person IS a human being.
+# values:NaturalPerson is the human being CONSIDERED AS a rights/duty bearer;
+# legal personhood (values:JuridicalCapacity, values:LegalPerson) is a FACET on
+# top of the human, never the human itself.
+# ===========================================================================
+values:NaturalPerson rdfs:subClassOf self:HumanBeing .
+
+# --- Facets: roles/aspects attached to a human, which must NOT redefine it ---
+self:Facet a rdfs:Class ;
+    rdfs:comment "A role/aspect of a human (legal, biomedical, economic…) attached via self:hasFacet. A facet must NOT be substituted for, or redefine, the HumanBeing." .
+self:hasFacet a rdf:Property ; rdfs:domain self:HumanBeing ; rdfs:range self:Facet .
+self:BiomedicalFacet a rdfs:Class ; rdfs:subClassOf self:Facet ;
+    rdfs:comment "The body/health aspect — extension point for SNOMED CT / FHIR / HPO / FMA. A human is not a medical record." .
+self:EconomicFacet a rdfs:Class ; rdfs:subClassOf self:Facet ;
+    rdfs:comment "The livelihood/exchange aspect — extension point for GoodRelations / ValueFlows / schema.org. A human is not a consumer/asset." .
+
+# ===========================================================================
+# SHACL — 'human not thing': reassert the guard at the foundational layer
+# (mirrors crates/qualia-core-db/shapes/qualia-agency.shacl.ttl).
+# ===========================================================================
+self:HumanNotThingShape a sh:NodeShape ;
+    sh:targetClass self:HumanBeing ;
+    sh:not [ sh:class owl:Thing ] ;
+    sh:message "A human being is not an owl:Thing, an asset, a resource, or a record — dignity is inherent, not conferred by a facet." .

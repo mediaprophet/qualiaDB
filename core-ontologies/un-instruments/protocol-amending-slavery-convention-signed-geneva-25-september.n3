@@ -1,0 +1,53 @@
+@prefix rdf:    <http://www.w3.org/1999/02/22-rdf-syntax-ns#> .
+@prefix rdfs:   <http://www.w3.org/2000/01/rdf-schema#> .
+@prefix dc:     <http://purl.org/dc/terms/> .
+@prefix values: <https://ns.webcivics.org/values/> .
+@prefix doc:    <https://ns.webcivics.org/values/protocol-amending-slavery-convention-signed-geneva-25-september#> .
+
+# ============================================================
+# Protocol amending the Slavery Convention signed at Geneva on 25 September 1926
+# RE-SOURCED from authoritative OHCHR text (verbatim originalText).
+# Deontic typing = lexical heuristic (values:HeuristicDerived) — pending review.
+# states->parties + universalisation = curation overlay (amendedText), pending.
+# ============================================================
+
+doc:Instrument a values:ValuesCredential ;
+    dc:title "Protocol amending the Slavery Convention signed at Geneva on 25 September 1926" ;
+    dc:date "23 October 1953" ;
+    values:category "Slavery, forced labour & trafficking" ;
+    values:categoryStatus values:AutoAssigned ;
+    values:source <https://www.ohchr.org/en/instruments-mechanisms/instruments/protocol-amending-slavery-convention-signed-geneva-25-september> ;
+    rdfs:comment "Re-sourced from authoritative OHCHR text; deontic + amendment layers pending." .
+
+doc:article-1 a values:Undertaking ;
+    values:partOf doc:Instrument ;
+    dc:title "Article 1" ;
+    values:deonticStatus values:HeuristicDerived ;
+    values:originalText "The States Parties to the present Protocol undertake that as between themselves they will, in accordance with the provisions of the Protocol, attribute full legal force and effect to and duly apply the amendments to the Convention set forth in the annex to the Protocol." .
+
+doc:article-2 a values:Obligation ;
+    values:partOf doc:Instrument ;
+    values:borneBy values:Agent ;
+    dc:title "Article 2" ;
+    values:deonticStatus values:HeuristicDerived ;
+    values:originalText "The present Protocol shall be open for signature or acceptance by any of the States Parties to the Convention to which the Secretary-General has communicated for this purpose a copy of the Protocol. States may become Parties to the present Protocol by: Signature without reservation as to acceptance; Signature with reservation as to acceptance, followed by acceptance; Acceptance. Acceptance shall be effected by the deposit of a formal instrument with the Secretary-General of the United Nations." .
+
+doc:article-3 a values:Obligation ;
+    values:partOf doc:Instrument ;
+    values:borneBy values:Agent ;
+    dc:title "Article 3" ;
+    values:deonticStatus values:HeuristicDerived ;
+    values:originalText "The present Protocol shall come into force on the date on which two States shall have become Parties thereto, and shall thereafter come into force in respect of each State upon the date on which it becomes a Party to the Protocol. The amendments set forth in the annex to the present Protocol shall come into force when twenty-three States shall have become Parties to the Protocol, and consequently any State becoming a Party to the Convention, after the amendments thereto have come into force, shall become a Party to the Convention as so amended." .
+
+doc:article-4 a values:Undertaking ;
+    values:partOf doc:Instrument ;
+    dc:title "Article 4" ;
+    values:deonticStatus values:HeuristicDerived ;
+    values:originalText "In accordance with paragraph 1 of Article 102 of the Charter of the United Nations and the regulations pursuant thereto adopted by the General Assembly, the Secretary-General of the United Nations is authorized to effect registration of the present Protocol and of the amendments made in the Convention by the Protocol on the respective dates of their entry into force and to publish the Protocol and the amended text of the Convention as soon as possible after registration." .
+
+doc:article-5 a values:Obligation ;
+    values:partOf doc:Instrument ;
+    values:borneBy values:Agent ;
+    dc:title "Article 5" ;
+    values:deonticStatus values:HeuristicDerived ;
+    values:originalText "The present Protocol, of which the Chinese, English, French, Russian and Spanish texts are equally authentic, shall be deposited in the archives of the United Nations Secretariat. The texts of the Convention to be amended in accordance with the annex being authentic in the English and French languages only, the English and French texts of the annex shall be equally authentic, and the Chinese, Russian and Spanish texts shall be translations. The Secretary-General shall prepare certified copies of the Protocol, including the annex, for communication to States Parties to the Convention, as well as to all other States Members of the United Nations. He shall likewise prepare for communication to States including States not Members of the United Nations, upon the entry into force of the amendments as provided in article III, certified copies of the Convention as so amended. In witness whereof the undersigned, being duly authorized thereto by their respective Governments, signed the present Protocol on the date appearing opposite their respective signatures. Done at the Headquarters of the United Nations, New York, this seventh day of December one thousand nine hundred and fifty-three. Annex to the Protocol amending the Slavery Convention signed at Geneva on 25 September 1926 In article 7 \"the Secretary-General of the United Nations\" shall be substituted for \"the Secretary-General of the League of Nations\". In article 8 \"the International Court of Justice\" shall be substituted for the \"Permanent Court of International Justice\", and \"the Statute of the International Court of Justice\" shall be substituted for \"the Protocol of December 16th, 1920, relating to the Permanent Court of International Justice\". In the first and second paragraphs of article 10 \"the United Nations\" shall be substituted for \"the League of Nations\". The last three paragraphs of article 11 shall be deleted and the following substituted: \"The present Convention shall be open to accession by all States, including States which are not Members of the United Nations, to which the Secretary-General of the United Nations shall have communicated a certified copy of the Convention. \"Accession shall be effected by the deposit of a formal instrument with the Secretary-General of the United Nations, who shall give notice thereof to all States Parties to the Convention and to all other States contemplated in the present article, informing them of the date on which each such instrument of accession was received in deposit.\" In article 12 \"the United Nations\" shall be substituted for \"the League of Nations\"." .

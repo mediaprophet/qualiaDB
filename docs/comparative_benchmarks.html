@@ -743,13 +743,15 @@
                 const isQualia = isQualiaEngineKey(engine.engine);
 
                 const row = document.createElement('div');
-                row.className = 'flex items-center gap-x-4 text-sm';
+                row.className = 'grid min-w-0 grid-cols-[minmax(0,7rem)_minmax(0,1fr)_5rem] items-center gap-x-4 text-sm';
                 row.innerHTML = `
-                    <div class="w-28 flex-shrink-0 text-right text-xs text-slate-400 truncate">${label}</div>
-                    <div class="flex-1 bg-slate-800 rounded-full p-px">
-                        <div class="bar ${isQualia ? 'bar-qualia' : ''}" style="width: ${pct}%;"></div>
+                    <div class="min-w-0 text-right text-xs text-slate-400 truncate">${label}</div>
+                    <div class="min-w-0 overflow-hidden">
+                        <div class="w-full overflow-hidden rounded-full bg-slate-800 p-px">
+                            <div class="bar ${isQualia ? 'bar-qualia' : ''}" style="width: ${pct}%; max-width: 100%;"></div>
+                        </div>
                     </div>
-                    <div class="w-20 flex-shrink-0 text-right font-mono text-xs">${labelFn(engine, val)}</div>
+                    <div class="text-right font-mono text-xs whitespace-nowrap">${labelFn(engine, val)}</div>
                 `;
                 container.appendChild(row);
             });

@@ -1,0 +1,113 @@
+@prefix rdf:    <http://www.w3.org/1999/02/22-rdf-syntax-ns#> .
+@prefix rdfs:   <http://www.w3.org/2000/01/rdf-schema#> .
+@prefix sh:     <http://www.w3.org/ns/shacl#> .
+@prefix xsd:    <http://www.w3.org/2001/XMLSchema#> .
+@prefix dc:     <http://purl.org/dc/terms/> .
+@prefix values: <https://ns.webcivics.org/values/> .
+@prefix sense:  <https://ns.webcivics.org/sense/> .
+@prefix q42:    <https://ns.webcivics.org/q42/> .
+
+# ===========================================================================
+# sense.n3 — time- and place-qualified word senses (the disambiguation spine).
+# PLAN.md §3. A word's meaning is a FLUENT: it holds only over an
+# EffectivityInterval (temporal) x JurisdictionRegion (spatial). Reuses the
+# engine's existing Allen interval algebra + RCC-8 (spatio_temporal.rs) at
+# evaluation; this file is the vocabulary + the worked PERSON example.
+# WordNet/Wiktionary/Wikidata give the inventory; this layer adds time+space,
+# which they lack ("thongs" = footwear in AU, underwear in US).
+# ===========================================================================
+
+# --- The fluent model ---
+sense:TermSense a rdfs:Class ; rdfs:label "Context-qualified term sense" .
+sense:term       a rdf:Property ; rdfs:domain sense:TermSense ;
+    rdfs:comment "The token / lexical id this sense is a reading of." .
+sense:definition a rdf:Property ; rdfs:domain sense:TermSense ;
+    rdfs:comment "The concept/class this sense resolves the term to." .
+
+sense:EffectivityInterval a rdfs:Class ; rdfs:comment "A temporal extent; reasoned via Allen's interval algebra." .
+sense:from a rdf:Property ; rdfs:domain sense:EffectivityInterval ; rdfs:range xsd:gYear .
+sense:to   a rdf:Property ; rdfs:domain sense:EffectivityInterval ; rdfs:range xsd:gYear .
+sense:Open a sense:EffectivityInterval ; rdfs:comment "Unbounded (all eras)." .
+
+sense:JurisdictionRegion a rdfs:Class ; rdfs:comment "A spatial/jurisdictional region; reasoned via RCC-8 / GeoSPARQL." .
+sense:Universal a sense:JurisdictionRegion ; rdfs:comment "All regions." .
+
+sense:validDuring a rdf:Property ; rdfs:domain sense:TermSense ; rdfs:range sense:EffectivityInterval .
+sense:validIn     a rdf:Property ; rdfs:domain sense:TermSense ; rdfs:range sense:JurisdictionRegion .
+
+# --- Interpretation mode (originalism vs living instrument — explicit, queryable) ---
+sense:InterpretationMode a rdfs:Class .
+sense:Originalist      a sense:InterpretationMode ; rdfs:comment "Read in the sense of the drafting era." .
+sense:LivingInstrument a sense:InterpretationMode ; rdfs:comment "Read in the present sense." .
+sense:interpretationMode a rdf:Property ; rdfs:domain sense:TermSense ; rdfs:range sense:InterpretationMode .
+
+# A sense may WIDEN protection over time, but must NOT widen the rights-HOLDER
+# set to non-humans (the asymmetry; enforced with agency.n3's guard).
+sense:widensProtection  a rdf:Property ; rdfs:range xsd:boolean .
+sense:widensHolderSet   a rdf:Property ; rdfs:range xsd:boolean ;
+    rdfs:comment "If true for a dignity right onto a non-human, it is illegitimate (see agency.n3 G1)." .
+
+# An overlay = a marked, non-default reading that must carry justification.
+sense:overlay a rdf:Property ; rdfs:domain sense:TermSense ;
+    rdfs:comment "Marks a non-default sense (e.g. corporate 'person'); requires era+jurisdiction + justification." .
+sense:requiresHumanReview a rdf:Property ; rdfs:range xsd:boolean .
+
+# The ambiguity halt: two senses valid in the same context => report, never guess.
+q42:AmbiguousMapping a rdfs:Class ; rdfs:comment "Raised when a term resolves to >1 sense valid in the same context." .
+
+# --- Human authority over meaning (WebizenAI/sensedocs) ---
+# A person's words/meaning are theirs. A machine that alters or re-interprets them
+# (autocorrect, disambiguation, summarisation) MUST log the alteration, and the
+# human MUST be able to assert a correction that overrides it. The machine does
+# not get the last word on what a person meant. (Ties the breach-record /
+# court-supporting layer: machine interference is loggable + contestable.)
+sense:MeaningProvenance a rdfs:Class ; rdfs:comment "Provenance of a meaning — who asserted it." .
+sense:assertedBy a rdf:Property ; rdfs:comment "The human author who asserted this meaning." .
+sense:MachineAlteration a rdfs:Class ;
+    rdfs:comment "A machine-made change to a person's words/meaning (autocorrect, re-interpretation) — must be logged, not silent." .
+sense:HumanCorrection a rdfs:Class ;
+    rdfs:comment "A human's assertion correcting a machine alteration; OVERRIDES it." .
+sense:corrects a rdf:Property ; rdfs:domain sense:HumanCorrection ; rdfs:range sense:MachineAlteration .
+
+# ===========================================================================
+# WORKED EXAMPLE: "person" — three senses (PLAN.md §4.1)
+# ===========================================================================
+
+sense:t_person a rdfs:Resource ; rdfs:label "person (token)" .
+
+# 1. Natural person — the human, the dignity bearer. DEFAULT in human-rights instruments.
+sense:person_natural a sense:TermSense ;
+    sense:term sense:t_person ;
+    sense:definition values:NaturalPerson ;
+    sense:validDuring sense:Open ;
+    sense:validIn sense:Universal ;
+    sense:interpretationMode sense:Originalist ;
+    rdfs:comment "The default reading of 'person' in human-rights instruments." .
+
+# 2. Person before the law — the human's juridical capacity (a ROLE; see agency.n3).
+sense:person_beforeLaw a sense:TermSense ;
+    sense:term sense:t_person ;
+    sense:definition values:JuridicalCapacity ;
+    sense:validDuring sense:Open ;
+    sense:validIn sense:Universal ;
+    rdfs:comment "UDHR Art 6 / ICCPR Art 16: recognition/capacity; historically weaponised by DENIAL, not by extension to fictions." .
+
+# 3. Legal/corporate person — a LATER fiction; an OVERLAY, not a default.
+sense:int_corporatePersonhood a sense:EffectivityInterval ; sense:from "1886"^^xsd:gYear .
+sense:reg_commonLaw a sense:JurisdictionRegion ; rdfs:label "common-law jurisdictions (illustrative)" .
+sense:person_legal a sense:TermSense ;
+    sense:term sense:t_person ;
+    sense:definition values:CorporatePerson ;
+    sense:validDuring sense:int_corporatePersonhood ;
+    sense:validIn sense:reg_commonLaw ;
+    sense:overlay true ;
+    sense:requiresHumanReview true ;
+    sense:widensHolderSet true ;
+    rdfs:comment "Corporate personhood (Santa Clara 1886 / Salomon 1897). NOT a default reading of HR 'person'; admissible only as a justified, era+jurisdiction-qualified overlay." .
+
+# ===========================================================================
+# SHACL — ambiguity halt (illustrative target; the Sentinel enforces at runtime)
+# ===========================================================================
+sense:AmbiguityHaltShape a sh:NodeShape ;
+    sh:targetClass q42:AmbiguousMapping ;
+    sh:message "Term resolves to multiple senses valid in the same context — halt and report, do not guess." .

@@ -216,7 +216,7 @@ mod tests {
 
     const SAMPLE_SHACL: &str = r#"
 @prefix sh: <http://www.w3.org/ns/shacl#> .
-@prefix qext: <http://qualia.systems/ext#> .
+@prefix qext: <http://webizen.org/ext#> .
 @prefix ex: <http://example.org/> .
 @prefix xsd: <http://www.w3.org/2001/XMLSchema#> .
 

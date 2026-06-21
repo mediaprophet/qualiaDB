@@ -297,6 +297,11 @@ fn stable_mcp_tools() -> &'static [McpToolDescriptor] {
             description: "Run docs/tests headless suites (logic, wasm, native, or both). Native/both require daemon on localhost:4242.",
             input_schema: r#"{"type":"object","properties":{"mode":{"type":"string","enum":["logic","wasm","native","both"]}}}"#,
         },
+        McpToolDescriptor {
+            name: "get_pending_tasks",
+            description: "Get tasks pending in the ambient orchestrator.",
+            input_schema: r#"{"type":"object","properties":{}}"#,
+        },
     ]
 }
 
@@ -440,9 +445,17 @@ pub unsafe fn enforce_fiduciary_tool_dispatch(
         b"serialize_rdf" => execute_serialize_rdf(payload.arguments_raw, intent_frame),
 
         b"run_docs_tests" => execute_run_docs_tests(payload.arguments_raw, intent_frame),
+        b"get_pending_tasks" => execute_get_pending_tasks(payload.arguments_raw, intent_frame),
 
         _ => Err(McpSystemError::ToolNotFound),
     }
+}
+
+unsafe fn execute_get_pending_tasks(
+    args: &[u8],
+    _intent: &McpIntentFrame,
+) -> Result<String, McpSystemError> {
+    mcp_stub_impls::get_pending_tasks(args)
 }
 
 // ── Graph Engine Implementations ───────────────────────────────────────────

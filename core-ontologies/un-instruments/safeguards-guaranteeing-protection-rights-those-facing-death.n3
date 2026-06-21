@@ -1,0 +1,27 @@
+@prefix rdf:    <http://www.w3.org/1999/02/22-rdf-syntax-ns#> .
+@prefix rdfs:   <http://www.w3.org/2000/01/rdf-schema#> .
+@prefix dc:     <http://purl.org/dc/terms/> .
+@prefix values: <https://ns.webcivics.org/values/> .
+@prefix doc:    <https://ns.webcivics.org/values/safeguards-guaranteeing-protection-rights-those-facing-death#> .
+
+# ============================================================
+# Safeguards guaranteeing protection of the rights of those facing the death penalty
+# RE-SOURCED from authoritative OHCHR text (verbatim originalText).
+# Deontic typing = lexical heuristic (values:HeuristicDerived) — pending review.
+# states->parties + universalisation = curation overlay (amendedText), pending.
+# ============================================================
+
+doc:Instrument a values:ValuesCredential ;
+    dc:title "Safeguards guaranteeing protection of the rights of those facing the death penalty" ;
+    dc:date "25 May 1984" ;
+    values:category "Administration of justice, detention & law enforcement" ;
+    values:categoryStatus values:AutoAssigned ;
+    values:source <https://www.ohchr.org/en/instruments-mechanisms/instruments/safeguards-guaranteeing-protection-rights-those-facing-death> ;
+    rdfs:comment "Re-sourced from authoritative OHCHR text; deontic + amendment layers pending." .
+
+doc:paragraph-1 a values:Prohibition ;
+    values:partOf doc:Instrument ;
+    values:borneBy values:Agent ;
+    dc:title "Paragraph 1" ;
+    values:deonticStatus values:HeuristicDerived ;
+    values:originalText "Download: PDF In countries which have not abolished the death penalty, capital punishment may be imposed only for the most serious crimes, it being understood that their scope should not go beyond intentional crimes with lethal or other extremely grave consequences. Capital punishment may be imposed only for a crime for which the death penalty is prescribed by law at the time of its commission, it being understood that if, subsequent to the commission of the crime, provision is made by law for the imposition of a lighter penalty, the offender shall benefit thereby. Persons below 18 years of age at the time of the commission of the crime shall not be sentenced to death, nor shall the death sentence be carried out on pregnant women, or on new mothers, or on persons who have become insane. Capital punishment may be imposed only when the guilt of the person charged is based upon clear and convincing evidence leaving no room for an alternative explanation of the facts. Capital punishment may only be carried out pursuant to a final judgement rendered by a competent court after legal process which gives all possible safeguards to ensure a fair trial, at least equal to those contained in article 14 of the International Covenant on Civil and Political Rights, including the right of anyone suspected of or charged with a crime for which capital punishment may be imposed to adequate legal assistance at all stages of the proceedings. Anyone sentenced to death shall have the right to appeal to a court of higher jurisdiction, and steps should be taken to ensure that such appeals shall become mandatory. Anyone sentenced to death shall have the right to seek pardon, or commutation of sentence; pardon or commutation of sentence may be granted in all cases of capital punishment. Capital punishment shall not be carried out pending any appeal or other recourse procedure or other proceeding relating to pardon or commutation of the sentence. Where capital punishment occurs, it shall be carried out so as to inflict the minimum possible suffering." .

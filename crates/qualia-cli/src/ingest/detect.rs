@@ -21,6 +21,7 @@ pub enum SemanticFormat {
     Kml,
     Chk,
     Q42,
+    AgentIntentJsonl,
 }
 
 impl SemanticFormat {
@@ -42,6 +43,7 @@ impl SemanticFormat {
             SemanticFormat::Kml          => "KML",
             SemanticFormat::Chk          => "CHK",
             SemanticFormat::Q42          => "Q42",
+            SemanticFormat::AgentIntentJsonl => "Agent-Intent-JSONL",
         }
     }
 }
@@ -101,6 +103,7 @@ pub fn detect_format(path: &Path) -> Option<SemanticFormat> {
     if magic.first().copied() == Some(b'{') || magic.first().copied() == Some(b'[') {
         return match ext.as_deref() {
             Some("jsonld-star") | Some("json-ld-star") => Some(SemanticFormat::JsonLdStar),
+            Some("jsonl") => Some(SemanticFormat::AgentIntentJsonl),
             _ => Some(SemanticFormat::JsonLd),
         };
     }
@@ -120,6 +123,7 @@ pub fn detect_format(path: &Path) -> Option<SemanticFormat> {
         Some("xml")                                 => Some(SemanticFormat::RdfXml),
         Some("jsonld") | Some("json-ld")
             | Some("json")                          => Some(SemanticFormat::JsonLd),
+        Some("jsonl")                               => Some(SemanticFormat::AgentIntentJsonl),
         Some("cbor") | Some("cborld")               => Some(SemanticFormat::CborLd),
         Some("kml")                                 => Some(SemanticFormat::Kml),
         Some("chk") | Some("qchk")                 => Some(SemanticFormat::Chk),

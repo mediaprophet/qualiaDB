@@ -1,0 +1,271 @@
+@prefix rdf:    <http://www.w3.org/1999/02/22-rdf-syntax-ns#> .
+@prefix rdfs:   <http://www.w3.org/2000/01/rdf-schema#> .
+@prefix dc:     <http://purl.org/dc/terms/> .
+@prefix values: <https://ns.webcivics.org/values/> .
+@prefix doc:    <https://ns.webcivics.org/values/guidelines-role-prosecutors#> .
+
+# ============================================================
+# Guidelines on the Role of Prosecutors
+# RE-SOURCED from authoritative OHCHR text (verbatim originalText).
+# Deontic typing = lexical heuristic (values:HeuristicDerived) — pending review.
+# states->parties + universalisation = curation overlay (amendedText), pending.
+# ============================================================
+
+doc:Instrument a values:ValuesCredential ;
+    dc:title "Guidelines on the Role of Prosecutors" ;
+    dc:date "07 September 1990" ;
+    values:category "Administration of justice, detention & law enforcement" ;
+    values:categoryStatus values:AutoAssigned ;
+    values:source <https://www.ohchr.org/en/instruments-mechanisms/instruments/guidelines-role-prosecutors> ;
+    rdfs:comment "Re-sourced from authoritative OHCHR text; deontic + amendment layers pending." .
+
+doc:paragraph-1 a values:Undertaking ;
+    values:partOf doc:Instrument ;
+    dc:title "Paragraph 1" ;
+    values:deonticStatus values:HeuristicDerived ;
+    values:originalText "Download: PDF Table of Contents" .
+
+doc:paragraph-2 a values:Undertaking ;
+    values:partOf doc:Instrument ;
+    dc:title "Paragraph 2" ;
+    values:deonticStatus values:HeuristicDerived ;
+    values:originalText "Qualifications, selection and training Status and conditions of service Freedom of expression and association Role in criminal proceedings Discretionary functions Alternatives to prosecution Relations with other government agencies or institutions Disciplinary proceedings Observance of the Guidelines" .
+
+doc:paragraph-3 a values:Undertaking ;
+    values:partOf doc:Instrument ;
+    dc:title "Paragraph 3" ;
+    values:deonticStatus values:HeuristicDerived ;
+    values:originalText "Whereas in the Charter of the United Nations the peoples of the world affirm, inter alia , their determination to establish conditions under which justice can be maintained, and proclaim as one of their purposes the achievement of international cooperation in promoting and encouraging respect for human rights and fundamental freedoms without distinction as to race, sex, language or religion," .
+
+doc:paragraph-4 a values:Right ;
+    values:partOf doc:Instrument ;
+    values:heldBy values:NaturalPerson ;
+    dc:title "Paragraph 4" ;
+    values:deonticStatus values:HeuristicDerived ;
+    values:originalText "Whereas the Universal Declaration of Human Rights enshrines the principles of equality before the law, the presumption of innocence and the right to a fair and public hearing by an independent and impartial tribunal," .
+
+doc:paragraph-5 a values:Undertaking ;
+    values:partOf doc:Instrument ;
+    dc:title "Paragraph 5" ;
+    values:deonticStatus values:HeuristicDerived ;
+    values:originalText "Whereas frequently there still exists a gap between the vision underlying those principles and the actual situation," .
+
+doc:paragraph-6 a values:Undertaking ;
+    values:partOf doc:Instrument ;
+    dc:title "Paragraph 6" ;
+    values:deonticStatus values:HeuristicDerived ;
+    values:originalText "Whereas the organization and administration of justice in every country should be inspired by those principles, and efforts undertaken to translate them fully into reality," .
+
+doc:paragraph-7 a values:Undertaking ;
+    values:partOf doc:Instrument ;
+    dc:title "Paragraph 7" ;
+    values:deonticStatus values:HeuristicDerived ;
+    values:originalText "Whereas prosecutors play a crucial role in the administration of justice, and rules concerning the performance of their important responsibilities should promote their respect for and compliance with the above-mentioned principles, thus contributing to fair and equitable criminal justice and the effective protection of citizens against crime," .
+
+doc:paragraph-8 a values:Undertaking ;
+    values:partOf doc:Instrument ;
+    dc:title "Paragraph 8" ;
+    values:deonticStatus values:HeuristicDerived ;
+    values:originalText "Whereas it is essential to ensure that prosecutors possess the professional qualifications required for the accomplishment of their functions, through improved methods of recruitment and legal and professional training, and through the provision of all necessary means for the proper performance of their role in combating criminality, particularly in its new forms and dimensions," .
+
+doc:paragraph-9 a values:Undertaking ;
+    values:partOf doc:Instrument ;
+    dc:title "Paragraph 9" ;
+    values:deonticStatus values:HeuristicDerived ;
+    values:originalText "Whereas the Seventh United Nations Congress on the Prevention of Crime and the Treatment of Offenders adopted the Basic Principles on the Independence of the Judiciary, subsequently endorsed by the General Assembly in its resolutions 40/32 of 29 November 1985 and 40/146 of 13 December 1985," .
+
+doc:paragraph-10 a values:Undertaking ;
+    values:partOf doc:Instrument ;
+    dc:title "Paragraph 10" ;
+    values:deonticStatus values:HeuristicDerived ;
+    values:originalText "Whereas the Declaration of Basic Principles of Justice for Victims of Crime and Abuse of Power recommends measures to be taken at the international and national levels to improve access to justice and fair treatment, restitution, compensation and assistance for victims of crime," .
+
+doc:paragraph-11 a values:Undertaking ;
+    values:partOf doc:Instrument ;
+    dc:title "Paragraph 11" ;
+    values:deonticStatus values:HeuristicDerived ;
+    values:originalText "The Guidelines set forth below, which have been formulated to assist Member States in their tasks of securing and promoting the effectiveness, impartiality and fairness of prosecutors in criminal proceedings, should be respected and taken into account by Governments within the framework of their national legislation and practice, and should be brought to the attention of prosecutors, as well as other persons, such as judges, lawyers, members of the executive and the legislature and the public in general. The present Guidelines have been formulated principally with public prosecutors in mind, but they apply equally, as appropriate, to prosecutors appointed on an ad hoc basis." .
+
+doc:paragraph-12 a values:Undertaking ;
+    values:partOf doc:Instrument ;
+    dc:title "Paragraph 12" ;
+    values:deonticStatus values:HeuristicDerived ;
+    values:originalText "Qualifications, selection and training" .
+
+doc:paragraph-13 a values:Obligation ;
+    values:partOf doc:Instrument ;
+    values:borneBy values:Agent ;
+    dc:title "Paragraph 13" ;
+    values:deonticStatus values:HeuristicDerived ;
+    values:originalText "1. Persons selected as prosecutors shall be individuals of integrity and ability, with appropriate training and qualifications." .
+
+doc:paragraph-14 a values:Prohibition ;
+    values:partOf doc:Instrument ;
+    values:borneBy values:Agent ;
+    dc:title "Paragraph 14" ;
+    values:deonticStatus values:HeuristicDerived ;
+    values:originalText "Selection criteria for prosecutors embody safeguards against appointments based on partiality or prejudice, excluding any discrimination against a person on the grounds of race, colour, sex, language, religion, political or other opinion, national, social or ethnic origin, property, birth, economic or other status, except that it shall not be considered discriminatory to require a candidate for prosecutorial office to be a national of the country concerned; Prosecutors have appropriate education and training and should be made aware of the ideals and ethical duties of their office, of the constitutional and statutory protections for the rights of the suspect and the victim, and of human rights and fundamental freedoms recognized by national and international law. Status and conditions of service" .
+
+doc:paragraph-15 a values:Undertaking ;
+    values:partOf doc:Instrument ;
+    dc:title "Paragraph 15" ;
+    values:deonticStatus values:HeuristicDerived ;
+    values:originalText "3. Prosecutors, as essential agents of the administration of justice, shall at all times maintain the honour and dignity of their profession." .
+
+doc:paragraph-16 a values:Obligation ;
+    values:partOf doc:Instrument ;
+    values:borneBy values:Agent ;
+    dc:title "Paragraph 16" ;
+    values:deonticStatus values:HeuristicDerived ;
+    values:originalText "4. States shall ensure that prosecutors are able to perform their professional functions without intimidation, hindrance, harassment, improper interference or unjustified exposure to civil, penal or other liability." .
+
+doc:paragraph-17 a values:Obligation ;
+    values:partOf doc:Instrument ;
+    values:borneBy values:Agent ;
+    dc:title "Paragraph 17" ;
+    values:deonticStatus values:HeuristicDerived ;
+    values:originalText "5. Prosecutors and their families shall be physically protected by the authorities when their personal safety is threatened as a result of the discharge of prosecutorial functions." .
+
+doc:paragraph-18 a values:Obligation ;
+    values:partOf doc:Instrument ;
+    values:borneBy values:Agent ;
+    dc:title "Paragraph 18" ;
+    values:deonticStatus values:HeuristicDerived ;
+    values:originalText "6. Reasonable conditions of service of prosecutors, adequate remuneration and, where applicable, tenure, pension and age of retirement shall be set out by law or published rules or regulations." .
+
+doc:paragraph-19 a values:Obligation ;
+    values:partOf doc:Instrument ;
+    values:borneBy values:Agent ;
+    dc:title "Paragraph 19" ;
+    values:deonticStatus values:HeuristicDerived ;
+    values:originalText "7. Promotion of prosecutors, wherever such a system exists, shall be based on objective factors, in particular professional qualifications, ability, integrity and experience, and decided upon in accordance with fair and impartial procedures." .
+
+doc:paragraph-20 a values:Undertaking ;
+    values:partOf doc:Instrument ;
+    dc:title "Paragraph 20" ;
+    values:deonticStatus values:HeuristicDerived ;
+    values:originalText "Freedom of expression and association" .
+
+doc:paragraph-21 a values:Right ;
+    values:partOf doc:Instrument ;
+    values:heldBy values:NaturalPerson ;
+    dc:title "Paragraph 21" ;
+    values:deonticStatus values:HeuristicDerived ;
+    values:originalText "8. Prosecutors like other citizens are entitled to freedom of expression, belief, association and assembly. In particular, they shall have the right to take part in public discussion of matters concerning the law, the administration of justice and the promotion and protection of human rights and to join or form local, national or international organizations and attend their meetings, without suffering professional disadvantage by reason of their lawful action or their membership in a lawful organization. In exercising these rights, prosecutors shall always conduct themselves in accordance with the law and the recognized standards and ethics of their profession." .
+
+doc:paragraph-22 a values:Obligation ;
+    values:partOf doc:Instrument ;
+    values:borneBy values:Agent ;
+    dc:title "Paragraph 22" ;
+    values:deonticStatus values:HeuristicDerived ;
+    values:originalText "9. Prosecutors shall be free to form and join professional associations or other organizations to represent their interests, to promote their professional training and to protect their status." .
+
+doc:paragraph-23 a values:Obligation ;
+    values:partOf doc:Instrument ;
+    values:borneBy values:Agent ;
+    dc:title "Paragraph 23" ;
+    values:deonticStatus values:HeuristicDerived ;
+    values:originalText "10. The office of prosecutors shall be strictly separated from judicial functions." .
+
+doc:paragraph-24 a values:Undertaking ;
+    values:partOf doc:Instrument ;
+    dc:title "Paragraph 24" ;
+    values:deonticStatus values:HeuristicDerived ;
+    values:originalText "11. Prosecutors shall perform an active role in criminal proceedings, including institution of prosecution and, where authorized by law or consistent with local practice, in the investigation of crime, supervision over the legality of these investigations, supervision of the execution of court decisions and the exercise of other functions as representatives of the public interest." .
+
+doc:paragraph-25 a values:Undertaking ;
+    values:partOf doc:Instrument ;
+    dc:title "Paragraph 25" ;
+    values:deonticStatus values:HeuristicDerived ;
+    values:originalText "12. Prosecutors shall, in accordance with the law, perform their duties fairly, consistently and expeditiously, and respect and protect human dignity and uphold human rights, thus contributing to ensuring due process and the smooth functioning of the criminal justice system." .
+
+doc:paragraph-26 a values:Undertaking ;
+    values:partOf doc:Instrument ;
+    dc:title "Paragraph 26" ;
+    values:deonticStatus values:HeuristicDerived ;
+    values:originalText "13. In the performance of their duties, prosecutors shall:" .
+
+doc:paragraph-27 a values:Undertaking ;
+    values:partOf doc:Instrument ;
+    dc:title "Paragraph 27" ;
+    values:deonticStatus values:HeuristicDerived ;
+    values:originalText "Carry out their functions impartially and avoid all political, social, religious, racial, cultural, sexual or any other kind of discrimination; Protect the public interest, act with objectivity, take proper account of the position of the suspect and the victim, and pay attention to all relevant circumstances, irrespective of whether they are to the advantage or disadvantage of the suspect; Keep matters in their possession confidential, unless the performance of duty or the needs of justice require otherwise; Consider the views and concerns of victims when their personal interests are affected and ensure that victims are informed of their rights in accordance with the Declaration of Basic Principles of Justice for Victims of Crime and Abuse of Power." .
+
+doc:paragraph-28 a values:Prohibition ;
+    values:partOf doc:Instrument ;
+    values:borneBy values:Agent ;
+    dc:title "Paragraph 28" ;
+    values:deonticStatus values:HeuristicDerived ;
+    values:originalText "14. Prosecutors shall not initiate or continue prosecution, or shall make every effort to stay proceedings, when an impartial investigation shows the charge to be unfounded." .
+
+doc:paragraph-29 a values:Undertaking ;
+    values:partOf doc:Instrument ;
+    dc:title "Paragraph 29" ;
+    values:deonticStatus values:HeuristicDerived ;
+    values:originalText "15. Prosecutors shall give due attention to the prosecution of crimes committed by public officials, particularly corruption, abuse of power, grave violations of human rights and other crimes recognized by international law and, where authorized by law or consistent with local practice, the investigation of such offences." .
+
+doc:paragraph-30 a values:Obligation ;
+    values:partOf doc:Instrument ;
+    values:borneBy values:Agent ;
+    dc:title "Paragraph 30" ;
+    values:deonticStatus values:HeuristicDerived ;
+    values:originalText "16. When prosecutors come into possession of evidence against suspects that they know or believe on reasonable grounds was obtained through recourse to unlawful methods, which constitute a grave violation of the suspect's human rights, especially involving torture or cruel, inhuman or degrading treatment or punishment, or other abuses of human rights, they shall refuse to use such evidence against anyone other than those who used such methods, or inform the Court accordingly, and shall take all necessary steps to ensure that those responsible for using such methods are brought to justice." .
+
+doc:paragraph-31 a values:Obligation ;
+    values:partOf doc:Instrument ;
+    values:borneBy values:Agent ;
+    dc:title "Paragraph 31" ;
+    values:deonticStatus values:HeuristicDerived ;
+    values:originalText "17. In countries where prosecutors are vested with discretionary functions, the law or published rules or regulations shall provide guidelines to enhance fairness and consistency of approach in taking decisions in the prosecution process, including institution or waiver of prosecution." .
+
+doc:paragraph-32 a values:Undertaking ;
+    values:partOf doc:Instrument ;
+    dc:title "Paragraph 32" ;
+    values:deonticStatus values:HeuristicDerived ;
+    values:originalText "18. In accordance with national law, prosecutors shall give due consideration to waiving prosecution, discontinuing proceedings conditionally or unconditionally, or diverting criminal cases from the formal justice system, with full respect for the rights of suspect(s) and the victim(s). For this purpose, States should fully explore the possibility of adopting diversion schemes not only to alleviate excessive court loads, but also to avoid the stigmatization of pre-trial detention, indictment and conviction, as well as the possible adverse effects of imprisonment." .
+
+doc:paragraph-33 a values:Obligation ;
+    values:partOf doc:Instrument ;
+    values:borneBy values:Agent ;
+    dc:title "Paragraph 33" ;
+    values:deonticStatus values:HeuristicDerived ;
+    values:originalText "19. In countries where prosecutors are vested with discretionary functions as to the decision whether or not to prosecute a juvenile, special consideration shall be given to the nature and gravity of the offence, protection of society and the personality and background of the juvenile. In making that decision, prosecutors shall particularly consider available alternatives to prosecution under the relevant juvenile justice laws and procedures. Prosecutors shall use their best efforts to take prosecutory action against juveniles only to the extent strictly necessary." .
+
+doc:paragraph-34 a values:Undertaking ;
+    values:partOf doc:Instrument ;
+    dc:title "Paragraph 34" ;
+    values:deonticStatus values:HeuristicDerived ;
+    values:originalText "Relations with other government agencies or institutions" .
+
+doc:paragraph-35 a values:Undertaking ;
+    values:partOf doc:Instrument ;
+    dc:title "Paragraph 35" ;
+    values:deonticStatus values:HeuristicDerived ;
+    values:originalText "20. In order to ensure the fairness and effectiveness of prosecution, prosecutors shall strive to cooperate with the police, the courts, the legal profession, public defenders and other government agencies or institutions." .
+
+doc:paragraph-36 a values:Right ;
+    values:partOf doc:Instrument ;
+    values:heldBy values:NaturalPerson ;
+    dc:title "Paragraph 36" ;
+    values:deonticStatus values:HeuristicDerived ;
+    values:originalText "21. Disciplinary offences of prosecutors shall be based on law or lawful regulations. Complaints against prosecutors which allege that they acted in a manner clearly out of the range of professional standards shall be processed expeditiously and fairly under appropriate procedures. Prosecutors shall have the right to a fair hearing. The decision shall be subject to independent review." .
+
+doc:paragraph-37 a values:Obligation ;
+    values:partOf doc:Instrument ;
+    values:borneBy values:Agent ;
+    dc:title "Paragraph 37" ;
+    values:deonticStatus values:HeuristicDerived ;
+    values:originalText "22. Disciplinary proceedings against prosecutors shall guarantee an objective evaluation and decision. They shall be determined in accordance with the law, the code of professional conduct and other established standards and ethics and in the light of the present Guidelines." .
+
+doc:paragraph-38 a values:Obligation ;
+    values:partOf doc:Instrument ;
+    values:borneBy values:Agent ;
+    dc:title "Paragraph 38" ;
+    values:deonticStatus values:HeuristicDerived ;
+    values:originalText "23. Prosecutors shall respect the present Guidelines. They shall also, to the best of their capability, prevent and actively oppose any violations thereof." .
+
+doc:paragraph-39 a values:Undertaking ;
+    values:partOf doc:Instrument ;
+    dc:title "Paragraph 39" ;
+    values:deonticStatus values:HeuristicDerived ;
+    values:originalText "24. Prosecutors who have reason to believe that a violation of the present Guidelines has occurred or is about to occur shall report the matter to their superior authorities and, where necessary, to other appropriate authorities or organs vested with reviewing or remedial power." .

@@ -266,7 +266,7 @@ impl SecurityConfiguration {
 /// Returns the SHACL TTL vocabulary extensions for the new constraints
 pub fn get_shacl_extensions_ttl() -> &'static str {
     r#"
-@prefix q42: <https://qualia.network/q42#> .
+@prefix q42: <https://webizen.org/q42#> .
 @prefix sh: <http://www.w3.org/ns/shacl#> .
 @prefix xsd: <http://www.w3.org/2001/XMLSchema#> .
 

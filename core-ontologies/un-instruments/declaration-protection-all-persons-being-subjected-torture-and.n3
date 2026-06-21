@@ -1,0 +1,100 @@
+@prefix rdf:    <http://www.w3.org/1999/02/22-rdf-syntax-ns#> .
+@prefix rdfs:   <http://www.w3.org/2000/01/rdf-schema#> .
+@prefix dc:     <http://purl.org/dc/terms/> .
+@prefix values: <https://ns.webcivics.org/values/> .
+@prefix doc:    <https://ns.webcivics.org/values/declaration-protection-all-persons-being-subjected-torture-and#> .
+
+# ============================================================
+# Declaration on the Protection of All Persons from Being Subjected to Torture and Other Cruel, Inhuman or Degrading Treatment or Punishment
+# RE-SOURCED from authoritative OHCHR text (verbatim originalText).
+# Deontic typing = lexical heuristic (values:HeuristicDerived) — pending review.
+# states->parties + universalisation = curation overlay (amendedText), pending.
+# ============================================================
+
+doc:Instrument a values:ValuesCredential ;
+    dc:title "Declaration on the Protection of All Persons from Being Subjected to Torture and Other Cruel, Inhuman or Degrading Treatment or Punishment" ;
+    dc:date "09 December 1975" ;
+    values:category "Torture & ill-treatment" ;
+    values:categoryStatus values:AutoAssigned ;
+    values:source <https://www.ohchr.org/en/instruments-mechanisms/instruments/declaration-protection-all-persons-being-subjected-torture-and> ;
+    rdfs:comment "Re-sourced from authoritative OHCHR text; deontic + amendment layers pending." .
+
+doc:article-1 a values:Undertaking ;
+    values:partOf doc:Instrument ;
+    dc:title "Article 1" ;
+    values:deonticStatus values:HeuristicDerived ;
+    values:originalText "1. For the purpose of this Declaration, torture means any act by which severe pain or suffering, whether physical or mental, is intentionally inflicted by or at the instigation of a public official on a person for such purposes as obtaining from him or a third person information or confession, punishing him for an act he has committed or is suspected of having committed, or intimidating him or other persons. It does not include pain or suffering arising only from, inherent in or incidental to, lawful sanctions to the extent consistent with the Standard Minimum Rules for the Treatment of Prisoners. 2. Torture constitutes an aggravated and deliberate form of cruel, inhuman or degrading treatment or punishment." .
+
+doc:article-2 a values:Obligation ;
+    values:partOf doc:Instrument ;
+    values:borneBy values:Agent ;
+    dc:title "Article 2" ;
+    values:deonticStatus values:HeuristicDerived ;
+    values:originalText "Any act of torture or other cruel, inhuman or degrading treatment or punishment is an offence to human dignity and shall be condemned as a denial of the purposes of the Charter of the United Nations and as a violation of the human rights and fundamental freedoms proclaimed in the Universal Declaration of Human Rights." .
+
+doc:article-3 a values:Prohibition ;
+    values:partOf doc:Instrument ;
+    values:borneBy values:Agent ;
+    dc:title "Article 3" ;
+    values:deonticStatus values:HeuristicDerived ;
+    values:originalText "No State may permit or tolerate torture or other cruel, inhuman or degrading treatment or punishment. Exceptional circumstances such as a state of war or a threat of war, internal political instability or any other public emergency may not be invoked as a justification of torture or other cruel, inhuman or degrading treatment or punishment." .
+
+doc:article-4 a values:Undertaking ;
+    values:partOf doc:Instrument ;
+    dc:title "Article 4" ;
+    values:deonticStatus values:HeuristicDerived ;
+    values:originalText "Each State shall, in accordance with the provisions of this Declaration, take effective measures to prevent torture and other cruel, inhuman or degrading treatment or punishment from being practised within its jurisdiction." .
+
+doc:article-5 a values:Obligation ;
+    values:partOf doc:Instrument ;
+    values:borneBy values:Agent ;
+    dc:title "Article 5" ;
+    values:deonticStatus values:HeuristicDerived ;
+    values:originalText "The training of law enforcement personnel and of other public officials who may be responsible for persons deprived of their liberty shall ensure that full account is taken of the prohibition against torture and other cruel, inhuman or degrading treatment or punishment. This prohibition shall also, where appropriate, be included in such general rules or instructions as are issued in regard to the duties and functions of anyone who may be involved in the custody or treatment of such persons." .
+
+doc:article-6 a values:Undertaking ;
+    values:partOf doc:Instrument ;
+    dc:title "Article 6" ;
+    values:deonticStatus values:HeuristicDerived ;
+    values:originalText "Each State shall keep under systematic review interrogation methods and practices as well as arrangements for the custody and treatment of persons deprived of their liberty in its territory, with a view to preventing any cases of torture or other cruel, inhuman or degrading treatment or punishment." .
+
+doc:article-7 a values:Obligation ;
+    values:partOf doc:Instrument ;
+    values:borneBy values:Agent ;
+    dc:title "Article 7" ;
+    values:deonticStatus values:HeuristicDerived ;
+    values:originalText "Each State shall ensure that all acts of torture as defined in article 1 are offences under its criminal law. The same shall apply in regard to acts which constitute participation in, complicity in, incitement to or an attempt to commit torture." .
+
+doc:article-8 a values:Right ;
+    values:partOf doc:Instrument ;
+    values:heldBy values:NaturalPerson ;
+    dc:title "Article 8" ;
+    values:deonticStatus values:HeuristicDerived ;
+    values:originalText "Any person who alleges that he has been subjected to torture or other cruel, inhuman or degrading treatment or punishment by or at the instigation of a public official shall have the right to complain to, and to have his case impartially examined by, the competent authorities of the State concerned." .
+
+doc:article-9 a values:Undertaking ;
+    values:partOf doc:Instrument ;
+    dc:title "Article 9" ;
+    values:deonticStatus values:HeuristicDerived ;
+    values:originalText "Wherever there is reasonable ground to believe that an act of torture as defined in article 1 has been committed, the competent authorities of the State concerned shall promptly proceed to an impartial investigation even if there has been no formal complaint." .
+
+doc:article-10 a values:Obligation ;
+    values:partOf doc:Instrument ;
+    values:borneBy values:Agent ;
+    dc:title "Article 10" ;
+    values:deonticStatus values:HeuristicDerived ;
+    values:originalText "If an investigation under article 8 or article 9 establishes that an act of torture as defined in article 1 appears to have been committed, criminal proceedings shall be instituted against the alleged offender or offenders in accordance with national law. If an allegation of other forms of cruel, inhuman or degrading treatment or punishment is considered to be well founded, the alleged offender or offenders shall be subject to criminal, disciplinary or other appropriate proceedings." .
+
+doc:article-11 a values:Obligation ;
+    values:partOf doc:Instrument ;
+    values:borneBy values:Agent ;
+    dc:title "Article 11" ;
+    values:deonticStatus values:HeuristicDerived ;
+    values:originalText "Where it is proved that an act of torture or other cruel, inhuman or degrading treatment or punishment has been committed by or at the instigation of a public official, the victim shall be afforded redress and compensation in accordance with national law." .
+
+doc:article-12 a values:Prohibition ;
+    values:partOf doc:Instrument ;
+    values:borneBy values:Agent ;
+    dc:title "Article 12" ;
+    values:deonticStatus values:HeuristicDerived ;
+    values:originalText "Any statement which is established to have been made as a result of torture or other cruel, inhuman or degrading treatment or punishment may not be invoked as evidence against the person concerned or against any other person in any proceedings." .

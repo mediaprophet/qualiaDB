@@ -13,7 +13,7 @@ A QApp **does not** contain executable logic for things like video transcoding o
 
 ```yaml
 ---
-@context: https://qualia.io/q42
+@context: https://webizen.org/q42
 @type: WebizenWorkspace
 
 theme_tokens:

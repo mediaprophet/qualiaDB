@@ -1,0 +1,138 @@
+@prefix rdf:    <http://www.w3.org/1999/02/22-rdf-syntax-ns#> .
+@prefix rdfs:   <http://www.w3.org/2000/01/rdf-schema#> .
+@prefix dc:     <http://purl.org/dc/terms/> .
+@prefix values: <https://ns.webcivics.org/values/> .
+@prefix doc:    <https://ns.webcivics.org/values/principles-effective-investigation-and-documentation-torture-and#> .
+
+# ============================================================
+# Principles on the Effective Investigation and Documentation of Torture and Other Cruel, Inhuman or Degrading Treatment or Punishment
+# RE-SOURCED from authoritative OHCHR text (verbatim originalText).
+# Deontic typing = lexical heuristic (values:HeuristicDerived) — pending review.
+# states->parties + universalisation = curation overlay (amendedText), pending.
+# ============================================================
+
+doc:Instrument a values:ValuesCredential ;
+    dc:title "Principles on the Effective Investigation and Documentation of Torture and Other Cruel, Inhuman or Degrading Treatment or Punishment" ;
+    dc:date "04 December 2000" ;
+    values:category "Torture & ill-treatment" ;
+    values:categoryStatus values:AutoAssigned ;
+    values:source <https://www.ohchr.org/en/instruments-mechanisms/instruments/principles-effective-investigation-and-documentation-torture-and> ;
+    rdfs:comment "Re-sourced from authoritative OHCHR text; deontic + amendment layers pending." .
+
+doc:paragraph-1 a values:Undertaking ;
+    values:partOf doc:Instrument ;
+    dc:title "Paragraph 1" ;
+    values:deonticStatus values:HeuristicDerived ;
+    values:originalText "1. The purposes of effective investigation and documentation of torture and other cruel, inhuman or degrading treatment or punishment (hereinafter \"torture or other ill-treatment\") include the following:" .
+
+doc:paragraph-2 a values:Undertaking ;
+    values:partOf doc:Instrument ;
+    dc:title "Paragraph 2" ;
+    values:deonticStatus values:HeuristicDerived ;
+    values:originalText "(a) Clarification of the facts and establishment and acknowledgement of individual and State responsibility for victims and their families;" .
+
+doc:paragraph-3 a values:Undertaking ;
+    values:partOf doc:Instrument ;
+    dc:title "Paragraph 3" ;
+    values:deonticStatus values:HeuristicDerived ;
+    values:originalText "(b) Identification of measures needed to prevent recurrence;" .
+
+doc:paragraph-4 a values:Undertaking ;
+    values:partOf doc:Instrument ;
+    dc:title "Paragraph 4" ;
+    values:deonticStatus values:HeuristicDerived ;
+    values:originalText "(c) Facilitation of prosecution and/or, as appropriate, disciplinary sanctions for those indicated by the investigation as being responsible and demonstration of the need for full reparation and redress from the State, including fair and adequate financial compensation and provision of the means for medical care and rehabilitation." .
+
+doc:paragraph-5 a values:Obligation ;
+    values:partOf doc:Instrument ;
+    values:borneBy values:Agent ;
+    dc:title "Paragraph 5" ;
+    values:deonticStatus values:HeuristicDerived ;
+    values:originalText "2. States shall ensure that complaints and reports of torture or ill-treatment are promptly and effectively investigated. Even in the absence of an express complaint, an investigation shall be undertaken if there are other indications that torture or ill-treatment might have occurred. The investigators, who shall be independent of the suspected perpetrators and the agency they serve, shall be competent and impartial. They shall have access to, or be empowered to commission investigations by, impartial medical or other experts. The methods used to carry out such investigations shall meet the highest professional standards and the findings shall be made public." .
+
+doc:paragraph-6 a values:Right ;
+    values:partOf doc:Instrument ;
+    values:heldBy values:NaturalPerson ;
+    dc:title "Paragraph 6" ;
+    values:deonticStatus values:HeuristicDerived ;
+    values:originalText "3. (a) The investigative authority shall have the power and obligation to obtain all the information necessary to the inquiry. (1) The persons conducting the investigation shall have at their disposal all the necessary budgetary and technical resources for effective investigation. They shall also have the authority to oblige all those acting in an official capacity allegedly involved in torture or ill-treatment to appear and testify. The same shall apply to any witness. To this end, the investigative authority shall be entitled to issue summonses to witnesses, including any officials allegedly involved, and to demand the production of evidence." .
+
+doc:paragraph-7 a values:Obligation ;
+    values:partOf doc:Instrument ;
+    values:borneBy values:Agent ;
+    dc:title "Paragraph 7" ;
+    values:deonticStatus values:HeuristicDerived ;
+    values:originalText "(b) Alleged victims of torture or ill-treatment, witnesses, those conducting the investigation and their families shall be protected from violence, threats of violence or any other form of intimidation that may arise pursuant to the investigation. Those potentially implicated in torture or ill-treatment shall be removed from any position of control or power, whether direct or indirect, over complainants, witnesses and their families, as well as those conducting the investigation." .
+
+doc:paragraph-8 a values:Right ;
+    values:partOf doc:Instrument ;
+    values:heldBy values:NaturalPerson ;
+    dc:title "Paragraph 8" ;
+    values:deonticStatus values:HeuristicDerived ;
+    values:originalText "4. Alleged victims of torture or ill-treatment and their legal representatives shall be informed of, and have access to, any hearing, as well as to all information relevant to the investigation, and shall be entitled to present other evidence." .
+
+doc:paragraph-9 a values:Obligation ;
+    values:partOf doc:Instrument ;
+    values:borneBy values:Agent ;
+    dc:title "Paragraph 9" ;
+    values:deonticStatus values:HeuristicDerived ;
+    values:originalText "5. (a) In cases in which the established investigative procedures are inadequate because of insufficient expertise or suspected bias, or because of the apparent existence of a pattern of abuse or for other substantial reasons, States shall ensure that investigations are undertaken through an independent commission of inquiry or similar procedure. Members of such a commission shall be chosen for their recognized impartiality, competence and independence as individuals. In particular, they shall be independent of any suspected perpetrators and the institutions or agencies they may serve. The commission shall have the authority to obtain all information necessary to the inquiry and shall conduct the inquiry as provided for under these Principles. 2" .
+
+doc:paragraph-10 a values:Obligation ;
+    values:partOf doc:Instrument ;
+    values:borneBy values:Agent ;
+    dc:title "Paragraph 10" ;
+    values:deonticStatus values:HeuristicDerived ;
+    values:originalText "(b) A written report, made within a reasonable time, shall include the scope of the inquiry, procedures and methods used to evaluate evidence as well as conclusions and recommendations based on findings of fact and on applicable law. Upon completion, the report shall be made public. It shall also describe in detail specific events that were found to have occurred and the evidence upon which such findings were based and list the names of witnesses who testified, with the exception of those whose identities have been withheld for their own protection. The State shall, within a reasonable period of time, reply to the report of the investigation and, as appropriate, indicate steps to be taken in response." .
+
+doc:paragraph-11 a values:Obligation ;
+    values:partOf doc:Instrument ;
+    values:borneBy values:Agent ;
+    dc:title "Paragraph 11" ;
+    values:deonticStatus values:HeuristicDerived ;
+    values:originalText "6. (a) Medical experts involved in the investigation of torture or ill-treatment shall behave at all times in conformity with the highest ethical standards and, in particular, shall obtain informed consent before any examination is undertaken. The examination must conform to established standards of medical practice. In particular, examinations shall be conducted in private under the control of the medical expert and outside the presence of security agents and other government officials." .
+
+doc:paragraph-12 a values:Undertaking ;
+    values:partOf doc:Instrument ;
+    dc:title "Paragraph 12" ;
+    values:deonticStatus values:HeuristicDerived ;
+    values:originalText "(b) The medical expert shall promptly prepare an accurate written report, which shall include at least the following:" .
+
+doc:paragraph-13 a values:Undertaking ;
+    values:partOf doc:Instrument ;
+    dc:title "Paragraph 13" ;
+    values:deonticStatus values:HeuristicDerived ;
+    values:originalText "(i) Circumstances of the interview: name of the subject and name and affiliation of those present at the examination; exact time and date; location, nature and address of the institution (including, where appropriate, the room) where the examination is being conducted (e.g., detention centre, clinic or house); circumstances of the subject at the time of the examination (e.g., nature of any restraints on arrival or during the examination, presence of security forces during the examination, demeanour of those accompanying the prisoner or threatening statements to the examiner); and any other relevant factors;" .
+
+doc:paragraph-14 a values:Undertaking ;
+    values:partOf doc:Instrument ;
+    dc:title "Paragraph 14" ;
+    values:deonticStatus values:HeuristicDerived ;
+    values:originalText "(ii) History: detailed record of the subject's story as given during the interview, including alleged methods of torture or ill-treatment, times when torture or ill-treatment is alleged to have occurred and all complaints of physical and psychological symptoms;" .
+
+doc:paragraph-15 a values:Undertaking ;
+    values:partOf doc:Instrument ;
+    dc:title "Paragraph 15" ;
+    values:deonticStatus values:HeuristicDerived ;
+    values:originalText "(iii) Physical and psychological examination: record of all physical and psychological findings on clinical examination, including appropriate diagnostic tests and, where possible, colour photographs of all injuries;" .
+
+doc:paragraph-16 a values:Obligation ;
+    values:partOf doc:Instrument ;
+    values:borneBy values:Agent ;
+    dc:title "Paragraph 16" ;
+    values:deonticStatus values:HeuristicDerived ;
+    values:originalText "(iv) Opinion: interpretation as to the probable relationship of the physical and psychological findings to possible torture or ill-treatment. A recommendation for any necessary medical and psychological treatment and/or further examination shall be given;" .
+
+doc:paragraph-17 a values:Obligation ;
+    values:partOf doc:Instrument ;
+    values:borneBy values:Agent ;
+    dc:title "Paragraph 17" ;
+    values:deonticStatus values:HeuristicDerived ;
+    values:originalText "(v) Authorship: the report shall clearly identify those carrying out the examination and shall be signed." .
+
+doc:paragraph-18 a values:Prohibition ;
+    values:partOf doc:Instrument ;
+    values:borneBy values:Agent ;
+    dc:title "Paragraph 18" ;
+    values:deonticStatus values:HeuristicDerived ;
+    values:originalText "(c) The report shall be confidential and communicated to the subject or his or her nominated representative. The views of the subject and his or her representative about the examination process shall be solicited and recorded in the report. It shall also be provided in writing, where appropriate, to the authority responsible for investigating the allegation of torture or ill-treatment. It is the responsibility of the State to ensure that it is delivered securely to these persons. The report shall not be made available to any other person, except with the consent of the subject or on the authorization of a court empowered to enforce such a transfer." .

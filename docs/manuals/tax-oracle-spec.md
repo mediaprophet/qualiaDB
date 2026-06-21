@@ -26,7 +26,7 @@ The authority's `.q42` DAG must contain the following structural triples:
 1. **Geographic/Jurisdictional DOAP Binding**:
    The ontology must define exactly which geographic polygons or logical jurisdictions the tax applies to.
    ```n3
-   @prefix tax: <http://qualia.io/ns/tax#> .
+   @prefix tax: <http://webizen.org/ns/tax#> .
    @prefix geo: <http://www.w3.org/2003/01/geo/wgs84_pos#> .
    
    <did:gov:us:ny> tax:claimsJurisdiction [

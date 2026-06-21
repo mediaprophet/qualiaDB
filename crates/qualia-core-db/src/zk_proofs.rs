@@ -293,47 +293,10 @@ pub struct ZkGlobalMetrics {
 }
 
 impl ZkProofSystem {
-    /// Create new zero-knowledge proof system
-    pub fn new() -> Self {
-        Self {
-            proving_key: ProvingKey {
-                key_id: "default_pk".to_string(),
-                circuit_id: "default_circuit".to_string(),
-                key_data: vec![0u8; 1024], // Dummy key data
-                parameters: CircuitParameters {
-                    num_constraints: 1000,
-                    num_variables: 1000,
-                    num_inputs: 10,
-                    security_level: 128,
-                    curve: EllipticCurve::Bls12_381,
-                },
-            },
-            verifying_key: VerifyingKey {
-                key_id: "default_vk".to_string(),
-                circuit_id: "default_circuit".to_string(),
-                key_data: vec![0u8; 512], // Dummy key data
-                parameters: CircuitParameters {
-                    num_constraints: 1000,
-                    num_variables: 1000,
-                    num_inputs: 10,
-                    security_level: 128,
-                    curve: EllipticCurve::Bls12_381,
-                },
-            },
-            circuit_builder: CircuitBuilder::new(),
-            proof_generator: ProofGenerator::new(),
-            proof_verifier: ProofVerifier::new(),
-            performance_monitor: ZkPerformanceMonitor::new(),
-        }
-    }
+    pub fn new() -> Self { Self { proving_key: ProvingKey { key_id: "default_pk".to_string(), circuit_id: "default_circuit".to_string(), key_data: vec![0u8; 1024], parameters: CircuitParameters { num_constraints: 1000, num_variables: 1000, num_inputs: 10, security_level: 128, curve: EllipticCurve::Bls12_381 } }, verifying_key: VerifyingKey { key_id: "default_vk".to_string(), circuit_id: "default_circuit".to_string(), key_data: vec![0u8; 512], parameters: CircuitParameters { num_constraints: 1000, num_variables: 1000, num_inputs: 10, security_level: 128, curve: EllipticCurve::Bls12_381 } }, circuit_builder: CircuitBuilder::new(), proof_generator: ProofGenerator::new(), proof_verifier: ProofVerifier::new(), performance_monitor: ZkPerformanceMonitor::new() } }
 
-    /// Create new circuit
     pub fn create_circuit(&mut self, circuit_id: String) -> Result<(), ZkError> {
         self.circuit_builder.create_circuit(circuit_id.clone())?;
-        
-        // Generate proving and verifying keys
-        self.generate_keys(&circuit_id)?;
-        
         Ok(())
     }
 
@@ -349,117 +312,161 @@ impl ZkProofSystem {
 
     /// Generate proving and verifying keys
     pub fn generate_keys(&mut self, circuit_id: &str) -> Result<(), ZkError> {
-        let circuit = self.circuit_builder.get_circuit(circuit_id)?;
-        
-        // Generate proving key
-        let proving_key = self.proof_generator.generate_proving_key(circuit)?;
-        
-        // Generate verifying key
-        let verifying_key = self.proof_verifier.generate_verifying_key(circuit)?;
-        
-        // Store keys
-        self.proof_generator.store_proving_key(circuit_id.to_string(), proving_key);
-        self.proof_verifier.store_verifying_key(circuit_id.to_string(), verifying_key);
-        
-        Ok(())
+        #[cfg(feature = "zk-culling")]
+        {
+            use ark_snark::SNARK;
+            let circuit = self.circuit_builder.get_circuit(circuit_id)?;
+            let mut rng = ark_std::rand::thread_rng();
+            
+            let dynamic_circuit = arkworks_groth16::DynamicCircuit {
+                circuit: circuit.clone(),
+                witness: None,
+            };
+            
+            let (pk, vk) = ark_groth16::Groth16::<ark_bls12_381::Bls12_381>::circuit_specific_setup(dynamic_circuit, &mut rng)
+                .map_err(|e| ZkError::EngineError(e.to_string()))?;
+                
+            use ark_serialize::CanonicalSerialize;
+            let mut pk_bytes = Vec::new();
+            pk.serialize_compressed(&mut pk_bytes).map_err(|e| ZkError::EngineError(e.to_string()))?;
+            
+            let mut vk_bytes = Vec::new();
+            vk.serialize_compressed(&mut vk_bytes).map_err(|e| ZkError::EngineError(e.to_string()))?;
+            
+            let proving_key = ProvingKey {
+                key_id: format!("pk_{}", circuit_id),
+                circuit_id: circuit_id.to_string(),
+                key_data: pk_bytes,
+                parameters: CircuitParameters {
+                    num_constraints: circuit.constraints.len() as u32,
+                    num_variables: circuit.variables.len() as u32,
+                    num_inputs: circuit.public_inputs.len() as u32,
+                    security_level: 128,
+                    curve: EllipticCurve::Bls12_381,
+                },
+            };
+            
+            let verifying_key = VerifyingKey {
+                key_id: format!("vk_{}", circuit_id),
+                circuit_id: circuit_id.to_string(),
+                key_data: vk_bytes,
+                parameters: CircuitParameters {
+                    num_constraints: circuit.constraints.len() as u32,
+                    num_variables: circuit.variables.len() as u32,
+                    num_inputs: circuit.public_inputs.len() as u32,
+                    security_level: 128,
+                    curve: EllipticCurve::Bls12_381,
+                },
+            };
+            
+            self.proving_key = proving_key;
+            self.verifying_key = verifying_key;
+            
+            Ok(())
+        }
+        #[cfg(not(feature = "zk-culling"))]
+        {
+            Err(ZkError::PendingImplementation("Enable zk-culling feature".to_string()))
+        }
     }
 
     /// Generate zero-knowledge proof
     pub fn generate_proof(&mut self, circuit_id: &str, witness: HashMap<String, FieldElement>, public_inputs: Vec<FieldElement>) -> Result<ZkProof, ZkError> {
-        // Get circuit
-        let circuit = self.circuit_builder.get_circuit(circuit_id)?;
-        
-        // Get proving key
-        let proving_key = self.proof_generator.get_proving_key(circuit_id)?;
-        
-        // Generate witness
-        let full_witness = self.proof_generator.witness_generator.generate_witness(circuit, witness)?;
-        
-        // Generate proof
-        let proof = self.proof_generator.proving_engine.generate_proof(
-            &proving_key,
-            &full_witness,
-            &public_inputs,
-        )?;
-        
-        // Create proof metadata
-        let metadata = ProofMetadata {
-            created_at: std::time::SystemTime::now()
-                .duration_since(std::time::UNIX_EPOCH)
-                .unwrap()
-                .as_secs(),
-            proving_time: 1000, // 1ms (dummy)
-            circuit_size: circuit.constraints.len() as u32,
-            security_level: proving_key.parameters.security_level,
-            prover_id: Some("default_prover".to_string()),
-        };
-        
-        let zk_proof = ZkProof {
-            proof_id: self.generate_proof_id(),
-            circuit_id: circuit_id.to_string(),
-            proof_data: proof,
-            public_inputs,
-            verification_key_id: circuit_id.to_string(),
-            metadata,
-        };
-        
-        // Update performance metrics
-        self.performance_monitor.update_proof_metrics(&zk_proof, true);
-        
-        Ok(zk_proof)
+        #[cfg(feature = "zk-culling")]
+        {
+            use ark_snark::SNARK;
+            let circuit = self.circuit_builder.get_circuit(circuit_id)?;
+            let mut rng = ark_std::rand::thread_rng();
+            
+            let dynamic_circuit = arkworks_groth16::DynamicCircuit {
+                circuit: circuit.clone(),
+                witness: Some(witness),
+            };
+            
+            use ark_serialize::CanonicalDeserialize;
+            let pk = ark_groth16::ProvingKey::<ark_bls12_381::Bls12_381>::deserialize_compressed(&self.proving_key.key_data[..])
+                .map_err(|e| ZkError::EngineError(e.to_string()))?;
+            
+            let proof = ark_groth16::Groth16::<ark_bls12_381::Bls12_381>::prove(&pk, dynamic_circuit, &mut rng)
+                .map_err(|e| ZkError::EngineError(e.to_string()))?;
+                
+            use ark_serialize::CanonicalSerialize;
+            let mut proof_bytes = Vec::new();
+            proof.serialize_compressed(&mut proof_bytes).map_err(|e| ZkError::EngineError(e.to_string()))?;
+            
+            let metadata = ProofMetadata {
+                created_at: std::time::SystemTime::now().duration_since(std::time::UNIX_EPOCH).unwrap().as_secs(),
+                proving_time: 0,
+                circuit_size: circuit.constraints.len() as u32,
+                security_level: 128,
+                prover_id: None,
+            };
+            
+            let zk_proof = ZkProof {
+                proof_id: format!("proof_{}", std::time::SystemTime::now().duration_since(std::time::UNIX_EPOCH).unwrap().as_nanos()),
+                circuit_id: circuit_id.to_string(),
+                proof_data: proof_bytes,
+                public_inputs,
+                verification_key_id: self.verifying_key.key_id.clone(),
+                metadata,
+            };
+            
+            Ok(zk_proof)
+        }
+        #[cfg(not(feature = "zk-culling"))]
+        {
+            Err(ZkError::PendingImplementation("Enable zk-culling feature".to_string()))
+        }
     }
 
     /// Verify zero-knowledge proof
     pub fn verify_proof(&mut self, proof: &ZkProof) -> Result<VerificationResult, ZkError> {
-        // Get verifying key
-        let verifying_key = self.proof_verifier.get_verifying_key(&proof.verification_key_id)?;
-        
-        // Verify proof
-        let start_time = std::time::Instant::now();
-        let is_valid = self.proof_verifier.verification_engine.verify_proof(
-            &verifying_key,
-            &proof.proof_data,
-            &proof.public_inputs,
-        )?;
-        let verification_time = start_time.elapsed().as_millis() as u64;
-        
-        let result = VerificationResult {
-            is_valid,
-            verification_time,
-            error_message: None,
-            proof_id: proof.proof_id.clone(),
-        };
-        
-        // Update performance metrics
-        self.performance_monitor.update_proof_metrics(proof, is_valid);
-        
-        Ok(result)
+        #[cfg(feature = "zk-culling")]
+        {
+            use ark_snark::SNARK;
+            use ark_serialize::CanonicalDeserialize;
+            let vk = ark_groth16::VerifyingKey::<ark_bls12_381::Bls12_381>::deserialize_compressed(&self.verifying_key.key_data[..])
+                .map_err(|e| ZkError::EngineError(e.to_string()))?;
+                
+            let ark_proof = ark_groth16::Proof::<ark_bls12_381::Bls12_381>::deserialize_compressed(&proof.proof_data[..])
+                .map_err(|e| ZkError::EngineError(e.to_string()))?;
+                
+            let mut public_inputs = Vec::new();
+            for pi in &proof.public_inputs {
+                public_inputs.push(arkworks_groth16::field_element_to_fr(pi));
+            }
+            
+            let start = std::time::Instant::now();
+            let is_valid = ark_groth16::Groth16::<ark_bls12_381::Bls12_381>::verify(&vk, &public_inputs, &ark_proof)
+                .map_err(|e| ZkError::EngineError(e.to_string()))?;
+                
+            Ok(VerificationResult {
+                is_valid,
+                verification_time: start.elapsed().as_millis() as u64,
+                error_message: None,
+                proof_id: proof.proof_id.clone(),
+            })
+        }
+        #[cfg(not(feature = "zk-culling"))]
+        {
+            Err(ZkError::PendingImplementation("Enable zk-culling feature".to_string()))
+        }
     }
 
     /// Generate semantic proof for mathematical statement
     pub fn generate_semantic_proof(&mut self, statement: MathematicalStatement, witness: HashMap<String, FieldElement>) -> Result<SemanticProof, ZkError> {
-        // Create circuit for statement
         let circuit_id = format!("circuit_{}", statement.statement_id);
         self.create_circuit(circuit_id.clone())?;
-        
-        // Build circuit from statement
         self.build_circuit_from_statement(&circuit_id, &statement)?;
-        
-        // Generate public inputs
+        self.generate_keys(&circuit_id)?;
         let public_inputs = self.extract_public_inputs(&statement);
-        
-        // Generate proof
         let proof = self.generate_proof(&circuit_id, witness, public_inputs)?;
         
-        // Create context
         let context = ProofContext {
             domain: "mathematical_proofs".to_string(),
             purpose: "statement_verification".to_string(),
-            timestamp: std::time::SystemTime::now()
-                .duration_since(std::time::UNIX_EPOCH)
-                .unwrap()
-                .as_secs(),
-            nonce: self.generate_nonce(),
+            timestamp: std::time::SystemTime::now().duration_since(std::time::UNIX_EPOCH).unwrap().as_secs(),
+            nonce: [0u8; 32],
             additional_data: vec![],
         };
         
@@ -474,13 +481,10 @@ impl ZkProofSystem {
     /// Verify semantic proof
     pub fn verify_semantic_proof(&mut self, semantic_proof: &mut SemanticProof) -> Result<(), ZkError> {
         let result = self.verify_proof(&semantic_proof.proof)?;
-        
         if !result.is_valid {
             return Err(ZkError::VerificationFailed("Proof verification failed".to_string()));
         }
-        
         semantic_proof.verification_result = Some(result);
-        
         Ok(())
     }
 
@@ -604,18 +608,14 @@ impl CircuitBuilder {
 
     /// Create new circuit
     pub fn create_circuit(&mut self, circuit_id: String) -> Result<(), ZkError> {
-        let circuit = ArithmeticCircuit {
-            circuit_id: circuit_id.clone(),
+        self.circuits.insert(circuit_id.clone(), ArithmeticCircuit {
+            circuit_id,
             variables: HashMap::new(),
             constraints: Vec::new(),
             public_inputs: Vec::new(),
             private_inputs: Vec::new(),
             outputs: Vec::new(),
-        };
-
-        self.circuits.insert(circuit_id.clone(), circuit);
-        self.current_circuit = Some(circuit_id);
-        
+        });
         Ok(())
     }
 
@@ -690,40 +690,7 @@ impl ProofGenerator {
     /// Bytes [0..8] are set to the discriminant `b"QUALAPK\x01"` so proving and
     /// verifying keys are unambiguously distinguishable.
     pub fn generate_proving_key(&self, circuit: &ArithmeticCircuit) -> Result<ProvingKey, ZkError> {
-        // Domain-separated seed: proving key discriminant
-        let mut seed_hasher = Sha3_512::new();
-        seed_hasher.update(b"qualia:zk:proving_key:v1");
-        seed_hasher.update(circuit.circuit_id.as_bytes());
-        seed_hasher.update(&(circuit.constraints.len() as u64).to_le_bytes());
-        seed_hasher.update(&(circuit.variables.len() as u64).to_le_bytes());
-        seed_hasher.update(&(circuit.public_inputs.len() as u64).to_le_bytes());
-        let seed: [u8; 64] = seed_hasher.finalize().into();
-
-        // HKDF-like expansion: chain 16 × SHA3-512 blocks = 1024 bytes
-        let mut key_data = Vec::with_capacity(1024);
-        let mut chain = seed;
-        for i in 0u8..16 {
-            let mut h = Sha3_512::new();
-            h.update(&chain);
-            h.update(&[i]);
-            chain = h.finalize().into();
-            key_data.extend_from_slice(&chain);
-        }
-        // Stamp version/discriminant in bytes [0..8]
-        key_data[0..8].copy_from_slice(b"QUALAPK\x01");
-
-        Ok(ProvingKey {
-            key_id: format!("pk_{}", circuit.circuit_id),
-            circuit_id: circuit.circuit_id.clone(),
-            key_data,
-            parameters: CircuitParameters {
-                num_constraints: circuit.constraints.len() as u32,
-                num_variables: circuit.variables.len() as u32,
-                num_inputs: circuit.public_inputs.len() as u32,
-                security_level: 128,
-                curve: EllipticCurve::Bls12_381,
-            },
-        })
+        Err(ZkError::PendingImplementation("MCP Backlog".to_string()))
     }
 
     /// Store proving key
@@ -754,67 +721,7 @@ impl ProofVerifier {
     /// hash so the two keys are related but cryptographically distinct.
     /// Bytes [0..8] are set to `b"QUALAVK\x01"`.
     pub fn generate_verifying_key(&self, circuit: &ArithmeticCircuit) -> Result<VerifyingKey, ZkError> {
-        // Step 1: derive 512-byte base from the "proving key" expansion (first 8 blocks)
-        let mut pk_seed_hasher = Sha3_512::new();
-        pk_seed_hasher.update(b"qualia:zk:proving_key:v1");
-        pk_seed_hasher.update(circuit.circuit_id.as_bytes());
-        pk_seed_hasher.update(&(circuit.constraints.len() as u64).to_le_bytes());
-        pk_seed_hasher.update(&(circuit.variables.len() as u64).to_le_bytes());
-        pk_seed_hasher.update(&(circuit.public_inputs.len() as u64).to_le_bytes());
-        let pk_seed: [u8; 64] = pk_seed_hasher.finalize().into();
-
-        let mut pk_half = Vec::with_capacity(512);
-        let mut chain = pk_seed;
-        for i in 0u8..8 {
-            let mut h = Sha3_512::new();
-            h.update(&chain);
-            h.update(&[i]);
-            chain = h.finalize().into();
-            pk_half.extend_from_slice(&chain);
-        }
-
-        // Step 2: independent verifying-key hash (different domain separator)
-        let mut vk_seed_hasher = Sha3_512::new();
-        vk_seed_hasher.update(b"qualia:zk:verifying_key:v1");
-        vk_seed_hasher.update(circuit.circuit_id.as_bytes());
-        vk_seed_hasher.update(&(circuit.constraints.len() as u64).to_le_bytes());
-        vk_seed_hasher.update(&(circuit.variables.len() as u64).to_le_bytes());
-        vk_seed_hasher.update(&(circuit.public_inputs.len() as u64).to_le_bytes());
-        let vk_seed: [u8; 64] = vk_seed_hasher.finalize().into();
-
-        let mut vk_half = Vec::with_capacity(512);
-        let mut chain = vk_seed;
-        for i in 0u8..8 {
-            let mut h = Sha3_512::new();
-            h.update(&chain);
-            h.update(&[i]);
-            chain = h.finalize().into();
-            vk_half.extend_from_slice(&chain);
-        }
-
-        // Step 3: XOR-fold pk_half with vk_half for the final 512-byte verifying key
-        let key_data: Vec<u8> = pk_half
-            .iter()
-            .zip(vk_half.iter())
-            .map(|(&a, &b)| a ^ b)
-            .collect();
-
-        // Stamp discriminant — also ensures bytes [0..8] are non-zero
-        let mut key_data = key_data;
-        key_data[0..8].copy_from_slice(b"QUALAVK\x01");
-
-        Ok(VerifyingKey {
-            key_id: format!("vk_{}", circuit.circuit_id),
-            circuit_id: circuit.circuit_id.clone(),
-            key_data,
-            parameters: CircuitParameters {
-                num_constraints: circuit.constraints.len() as u32,
-                num_variables: circuit.variables.len() as u32,
-                num_inputs: circuit.public_inputs.len() as u32,
-                security_level: 128,
-                curve: EllipticCurve::Bls12_381,
-            },
-        })
+        Err(ZkError::PendingImplementation("MCP Backlog".to_string()))
     }
 
     /// Store verifying key
@@ -874,44 +781,7 @@ impl ProvingEngine {
     /// bytes are set to `0x51 0x4B 0x5A 0x50` ("QKZP") so they are never
     /// all-zero and pass the structural validator in `verify_proof`.
     pub fn generate_proof(&self, proving_key: &ProvingKey, witness: &HashMap<String, FieldElement>, public_inputs: &[FieldElement]) -> Result<Vec<u8>, ZkError> {
-        // Compute the base digest over: key_data || witness || public_inputs
-        let mut base_hasher = Sha3_512::new();
-        base_hasher.update(b"qualia:zk:proof:v1");
-        base_hasher.update(&proving_key.key_data);
-
-        // Serialise witness in deterministic key-sorted order
-        let mut witness_keys: Vec<&String> = witness.keys().collect();
-        witness_keys.sort();
-        for k in &witness_keys {
-            base_hasher.update(k.as_bytes());
-            base_hasher.update(&witness[*k].value);
-        }
-
-        // Serialise public inputs
-        for pi in public_inputs {
-            base_hasher.update(&pi.value);
-        }
-
-        let base_hash: [u8; 64] = base_hasher.finalize().into();
-
-        // HKDF-like expansion: 16 chains of 64 bytes = 1024 bytes
-        let mut proof = Vec::with_capacity(1024);
-        let mut chain = base_hash;
-        for i in 0u8..16 {
-            let mut h = Sha3_512::new();
-            h.update(&chain);
-            h.update(&[i, b'P']); // 'P' for proof
-            chain = h.finalize().into();
-            proof.extend_from_slice(&chain);
-        }
-
-        // Stamp discriminant in bytes [0..4] so the structural validator passes
-        proof[0] = 0x51; // 'Q'
-        proof[1] = 0x4B; // 'K'
-        proof[2] = 0x5A; // 'Z'
-        proof[3] = 0x50; // 'P'
-
-        Ok(proof)
+        Err(ZkError::PendingImplementation("MCP Backlog".to_string()))
     }
 }
 
@@ -994,6 +864,7 @@ impl ZkPerformanceMonitor {
 /// Zero-knowledge error types
 #[derive(Debug, Clone)]
 pub enum ZkError {
+    PendingImplementation(String),
     CircuitNotFound(String),
     KeyNotFound(String),
     ProofGenerationFailed(String),
@@ -1006,6 +877,7 @@ pub enum ZkError {
 impl std::fmt::Display for ZkError {
     fn fmt(&self, f: &mut std::fmt::Formatter<'_>) -> std::fmt::Result {
         match self {
+            ZkError::PendingImplementation(msg) => write!(f, "Pending implementation (MCP Backlog): {}", msg),
             ZkError::CircuitNotFound(msg) => write!(f, "Circuit not found: {}", msg),
             ZkError::KeyNotFound(msg) => write!(f, "Key not found: {}", msg),
             ZkError::ProofGenerationFailed(msg) => write!(f, "Proof generation failed: {}", msg),
@@ -1054,6 +926,7 @@ mod tests {
         let mut zk_system = ZkProofSystem::new();
         
         zk_system.create_circuit("test_circuit".to_string()).unwrap();
+        zk_system.add_variable("test_circuit", "result".to_string(), VariableType::Public).unwrap();
         zk_system.add_variable("test_circuit", "x".to_string(), VariableType::Private).unwrap();
         zk_system.add_variable("test_circuit", "y".to_string(), VariableType::Private).unwrap();
         
@@ -1068,15 +941,178 @@ mod tests {
         
         // Generate proof
         let mut witness = HashMap::new();
-        witness.insert("x".to_string(), FieldElement { value: [1u8; 32] });
-        witness.insert("y".to_string(), FieldElement { value: [2u8; 32] });
+        let mut x_val = [0u8; 32]; x_val[0] = 3;
+        let mut y_val = [0u8; 32]; y_val[0] = 4;
+        let mut res_val = [0u8; 32]; res_val[0] = 12;
         
-        let public_inputs = vec![FieldElement { value: [3u8; 32] }];
+        witness.insert("x".to_string(), FieldElement { value: x_val });
+        witness.insert("y".to_string(), FieldElement { value: y_val });
+        witness.insert("result".to_string(), FieldElement { value: res_val });
+        
+        let public_inputs = vec![FieldElement { value: res_val }];
         
         let proof = zk_system.generate_proof("test_circuit", witness, public_inputs).unwrap();
         
         // Verify proof
         let result = zk_system.verify_proof(&proof).unwrap();
         assert!(result.is_valid);
+    }
+}
+
+#[cfg(feature = "zk-culling")]
+pub mod arkworks_groth16 {
+    use ark_ff::Field;
+    use ark_relations::r1cs::{ConstraintSynthesizer, ConstraintSystemRef, SynthesisError};
+    use ark_bls12_381::{Bls12_381, Fr};
+    use ark_groth16::{Groth16, ProvingKey, VerifyingKey, Proof};
+    use ark_snark::SNARK;
+    use ark_std::rand::thread_rng;
+
+    /// A real zero-knowledge circuit that proves knowledge of a pre-image
+    /// for a simple equation: a * b = c
+    #[derive(Clone)]
+    pub struct MultiplierCircuit<F: Field> {
+        pub a: Option<F>,
+        pub b: Option<F>,
+    }
+
+    impl<F: Field> ConstraintSynthesizer<F> for MultiplierCircuit<F> {
+        fn generate_constraints(self, cs: ConstraintSystemRef<F>) -> Result<(), SynthesisError> {
+            let a = cs.new_witness_variable(|| self.a.ok_or(SynthesisError::AssignmentMissing))?;
+            let b = cs.new_witness_variable(|| self.b.ok_or(SynthesisError::AssignmentMissing))?;
+            let c = cs.new_input_variable(|| {
+                let mut a_val = self.a.ok_or(SynthesisError::AssignmentMissing)?;
+                let b_val = self.b.ok_or(SynthesisError::AssignmentMissing)?;
+                a_val.mul_assign(&b_val);
+                Ok(a_val)
+            })?;
+
+            cs.enforce_constraint(a.into(), b.into(), c.into())?;
+            Ok(())
+        }
+    }
+
+    
+    use crate::zk_proofs::{ArithmeticCircuit, CircuitExpression, VariableType, FieldElement};
+    use ark_relations::r1cs::{Variable, LinearCombination};
+    use std::collections::HashMap;
+    use ark_ff::PrimeField;
+    use ark_serialize::{CanonicalSerialize, CanonicalDeserialize};
+
+    pub fn field_element_to_fr(fe: &FieldElement) -> Fr {
+        Fr::from_le_bytes_mod_order(&fe.value)
+    }
+
+    #[derive(Clone)]
+    pub struct DynamicCircuit {
+        pub circuit: ArithmeticCircuit,
+        pub witness: Option<HashMap<String, FieldElement>>,
+    }
+
+    impl ConstraintSynthesizer<Fr> for DynamicCircuit {
+        fn generate_constraints(self, cs: ConstraintSystemRef<Fr>) -> Result<(), SynthesisError> {
+            let mut var_map: HashMap<String, Variable> = HashMap::new();
+
+            for var_id in &self.circuit.public_inputs {
+                if let Some(var) = self.circuit.variables.get(var_id) {
+                    let val = self.witness.as_ref().and_then(|w| w.get(var_id).map(field_element_to_fr));
+                    let r1cs_var = cs.new_input_variable(|| val.ok_or(SynthesisError::AssignmentMissing))?;
+                    var_map.insert(var_id.clone(), r1cs_var);
+                }
+            }
+
+            for var_id in &self.circuit.private_inputs {
+                if let Some(var) = self.circuit.variables.get(var_id) {
+                    let val = self.witness.as_ref().and_then(|w| w.get(var_id).map(field_element_to_fr));
+                    let r1cs_var = if var.variable_type == VariableType::Constant {
+                        cs.new_witness_variable(|| val.ok_or(SynthesisError::AssignmentMissing))?
+                    } else {
+                        cs.new_witness_variable(|| val.ok_or(SynthesisError::AssignmentMissing))?
+                    };
+                    var_map.insert(var_id.clone(), r1cs_var);
+                }
+            }
+
+            for constraint in &self.circuit.constraints {
+                let (left_lc, _) = evaluate_expression(cs.clone(), &constraint.left, &var_map, &self.witness)?;
+                let (right_lc, _) = evaluate_expression(cs.clone(), &constraint.right, &var_map, &self.witness)?;
+                let (out_lc, _) = evaluate_expression(cs.clone(), &constraint.output, &var_map, &self.witness)?;
+                
+                cs.enforce_constraint(left_lc, right_lc, out_lc)?;
+            }
+
+            Ok(())
+        }
+    }
+
+    fn evaluate_expression(
+        cs: ConstraintSystemRef<Fr>,
+        expr: &CircuitExpression,
+        var_map: &HashMap<String, Variable>,
+        witness: &Option<HashMap<String, FieldElement>>
+    ) -> Result<(LinearCombination<Fr>, Option<Fr>), SynthesisError> {
+        match expr {
+            CircuitExpression::Variable(id) => {
+                let var = var_map.get(id).ok_or(SynthesisError::AssignmentMissing)?;
+                let val = witness.as_ref().and_then(|w| w.get(id).map(field_element_to_fr));
+                Ok((LinearCombination::from(*var), val))
+            },
+            CircuitExpression::Constant(c) => {
+                let val = field_element_to_fr(c);
+                Ok((LinearCombination::from((val, Variable::One)), Some(val)))
+            },
+            CircuitExpression::Add(a, b) => {
+                let (lc_a, val_a) = evaluate_expression(cs.clone(), a, var_map, witness)?;
+                let (lc_b, val_b) = evaluate_expression(cs.clone(), b, var_map, witness)?;
+                let val = match (val_a, val_b) {
+                    (Some(av), Some(bv)) => Some(av + bv),
+                    _ => None,
+                };
+                Ok((lc_a + lc_b, val))
+            },
+            CircuitExpression::Neg(a) => {
+                let (lc_a, val_a) = evaluate_expression(cs.clone(), a, var_map, witness)?;
+                let val = val_a.map(|v| -v);
+                Ok((-lc_a, val))
+            },
+            CircuitExpression::Mul(a, b) => {
+                let (lc_a, val_a) = evaluate_expression(cs.clone(), a, var_map, witness)?;
+                let (lc_b, val_b) = evaluate_expression(cs.clone(), b, var_map, witness)?;
+                
+                let val = match (val_a, val_b) {
+                    (Some(av), Some(bv)) => Some(av * bv),
+                    _ => None,
+                };
+                
+                let out_var = cs.new_witness_variable(|| val.ok_or(SynthesisError::AssignmentMissing))?;
+                cs.enforce_constraint(lc_a, lc_b, out_var.into())?;
+                
+                Ok((LinearCombination::from(out_var), val))
+            }
+        }
+    }
+
+    pub struct TrueZkSystem {
+        pub pk: ProvingKey<Bls12_381>,
+        pub vk: VerifyingKey<Bls12_381>,
+    }
+
+    impl TrueZkSystem {
+        pub fn setup() -> Result<Self, SynthesisError> {
+            let mut rng = thread_rng();
+            let circuit = MultiplierCircuit::<Fr> { a: None, b: None };
+            let (pk, vk) = Groth16::<Bls12_381>::circuit_specific_setup(circuit, &mut rng).unwrap();
+            Ok(Self { pk, vk })
+        }
+
+        pub fn generate_proof(&self, a: Fr, b: Fr) -> Result<Proof<Bls12_381>, SynthesisError> {
+            let mut rng = thread_rng();
+            let circuit = MultiplierCircuit { a: Some(a), b: Some(b) };
+            Groth16::<Bls12_381>::prove(&self.pk, circuit, &mut rng)
+        }
+
+        pub fn verify_proof(&self, proof: &Proof<Bls12_381>, public_inputs: &[Fr]) -> Result<bool, SynthesisError> {
+            Groth16::<Bls12_381>::verify(&self.vk, public_inputs, proof)
+        }
     }
 }

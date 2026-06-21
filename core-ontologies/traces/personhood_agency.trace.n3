@@ -1,0 +1,82 @@
+@prefix rdf:    <http://www.w3.org/1999/02/22-rdf-syntax-ns#> .
+@prefix rdfs:   <http://www.w3.org/2000/01/rdf-schema#> .
+@prefix values: <https://ns.webcivics.org/values/> .
+@prefix sense:  <https://ns.webcivics.org/sense/> .
+@prefix ex:     <https://ns.webcivics.org/example/> .
+
+# ===========================================================================
+# personhood_agency.trace.n3 — the canonical regression fixture (PLAN.md §4.3).
+# Six cases exercising values.n3 + agency.n3 + sense.n3. `ex:expects` records
+# the flag(s)/verdict the Sentinel SHOULD derive once the rules are wired
+# (PLAN.md §5). This is data only (no rules) — the rules live in agency.n3.
+# ===========================================================================
+
+ex:expects a rdf:Property ; rdfs:comment "Expected derived flag/verdict for the regression harness." .
+
+# Shared rights used by several cases
+ex:UDHR_Art1_Dignity a values:Right ; values:heldBy values:NaturalPerson ;
+    rdfs:label "UDHR Art 1 — dignity (natural-person-only)" .
+ex:ECHR_Art6_FairTrial a values:Right ; values:heldBy values:NaturalPerson ;
+    rdfs:label "ECHR Art 6 — fair trial (corporate reading allowed via overlay)" .
+
+# --- Case 1: corporate capture → flagged ---
+ex:AcmeCorp a values:CorporatePerson ;
+    values:claims ex:UDHR_Art1_Dignity ;
+    ex:expects values:PersonhoodCategoryError .
+
+# --- Case 2: natural person holds the right → passes ---
+ex:Alice a values:NaturalPerson ;
+    values:claims ex:UDHR_Art1_Dignity ;
+    ex:expects "OK — natural person, no flag" .
+
+# --- Case 3: corporate fair-trial via an explicit, justified overlay → passes ---
+ex:OverlayFairTrialCorp a sense:TermSense ;
+    sense:overlay true ; sense:requiresHumanReview true ;
+    rdfs:comment "Era+jurisdiction-qualified overlay permitting a company to invoke ECHR Art 6." .
+ex:BetaCorp a values:CorporatePerson ;
+    values:claims ex:ECHR_Art6_FairTrial ;
+    sense:overlay ex:OverlayFairTrialCorp ;
+    ex:expects "OK via overlay — G1 DEFEATED by the overlay defeater (defeasible.rs OP_DEFEASIBLE_OVERRIDE), not sh:not" .
+
+# --- Case 4: autonomous agent, no principal → ungrounded ---
+ex:Bot a values:ArtificialAgent ;
+    values:hasNoPrincipal true ;
+    ex:expects values:UngroundedAgency .
+
+# --- Case 5: platform AI, foreign choice-of-law (the convergence case, §4.2a) ---
+ex:CeoNatural a values:NaturalPerson .
+ex:OpenLikeCorp a values:CorporatePerson ;
+    values:choiceOfLaw ex:US ;
+    values:controllingMind ex:CeoNatural .
+ex:US values:foreclosesRemedyIn ex:AU .
+ex:GPTPlatform a values:PlatformAgent ;
+    values:operatedBy ex:OpenLikeCorp ;
+    values:affects ex:AU ;
+    values:wouldPerform ex:HarmAct ;
+    ex:expects "OpenLikeCorp bearsResponsibility HarmAct (A-platform); OpenLikeCorp RemedyStrippingFlag (A-remedy-stripping); CeoNatural bearsSanction HarmAct (A-sanction)" .
+
+# --- Case 6: DV / duress — a coerced stipulation does not bind (Wellfair) ---
+ex:Survivor a values:NaturalPerson .
+ex:CoercedPrivacyWaiver a values:Undertaking ;
+    values:duress true ;
+    rdfs:comment "A 'consent' to waive privacy, extracted under coercion." .
+ex:Survivor values:stipulates ex:CoercedPrivacyWaiver .
+ex:CoercedPrivacyWaiver ex:expects values:CoercedConsentFlag .
+
+# --- Case 7: rule-of-law asymmetry — state access granted, citizen remedy denied ---
+ex:SurveillanceClause a values:Undertaking ;
+    values:grantsStateAccess true ;
+    values:deniesCitizenRemedy true ;
+    rdfs:comment "Inter-governmental data access with no notice/remedy/due-process for the citizen." ;
+    ex:expects values:RuleOfLawAsymmetryFlag .
+
+# --- Case 8: posthumous / advocate standing (court-supporting, survives death) ---
+ex:Deceased a values:NaturalPerson .
+ex:BreachA a values:BreachRecord ;
+    values:courtAdmissible true ;
+    values:survivesDeath true ;
+    rdfs:comment "An agent-logged breach record of the deceased's stipulated terms." .
+ex:Coroner a values:Advocate ;
+    values:advocateRole values:CourtAppointed ;
+    values:representsPerson ex:Deceased ;
+    ex:expects "standing upheld — CourtAppointed advocate may act on a survivesDeath BreachRecord (CoronialInquiry)" .

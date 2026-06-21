@@ -1,0 +1,245 @@
+@prefix rdf:    <http://www.w3.org/1999/02/22-rdf-syntax-ns#> .
+@prefix rdfs:   <http://www.w3.org/2000/01/rdf-schema#> .
+@prefix dc:     <http://purl.org/dc/terms/> .
+@prefix values: <https://ns.webcivics.org/values/> .
+@prefix doc:    <https://ns.webcivics.org/values/statute-international-tribunal-prosecution-persons-responsible#> .
+
+# ============================================================
+# Statute of the International Tribunal for the Prosecution of Persons Responsible for Serious Violations of International Humanitarian Law Committed in the Territory of the Former Yugoslavia since 1991 (International Tribunal for the Former Yugoslavia)
+# RE-SOURCED from authoritative OHCHR text (verbatim originalText).
+# Deontic typing = lexical heuristic (values:HeuristicDerived) — pending review.
+# states->parties + universalisation = curation overlay (amendedText), pending.
+# ============================================================
+
+doc:Instrument a values:ValuesCredential ;
+    dc:title "Statute of the International Tribunal for the Prosecution of Persons Responsible for Serious Violations of International Humanitarian Law Committed in the Territory of the Former Yugoslavia since 1991 (International Tribunal for the Former Yugoslavia)" ;
+    dc:date "25 May 1993" ;
+    values:category "International criminal justice" ;
+    values:categoryStatus values:AutoAssigned ;
+    values:source <https://www.ohchr.org/en/instruments-mechanisms/instruments/statute-international-tribunal-prosecution-persons-responsible> ;
+    rdfs:comment "Re-sourced from authoritative OHCHR text; deontic + amendment layers pending." .
+
+doc:article-1 a values:Undertaking ;
+    values:partOf doc:Instrument ;
+    dc:title "Article 1" ;
+    values:deonticStatus values:HeuristicDerived ;
+    values:originalText "The International Tribunal shall have the power to prosecute persons responsible for serious violations of international humanitarian law committed in the territory of the former Yugoslavia since 1991 in accordance with the provisions of the present Statute." .
+
+doc:article-2 a values:Undertaking ;
+    values:partOf doc:Instrument ;
+    dc:title "Article 2" ;
+    values:deonticStatus values:HeuristicDerived ;
+    values:originalText "The International Tribunal shall have the power to prosecute persons committing or ordering to be committed grave breaches of the Geneva Conventions of 12 August 1949, namely the following acts against persons or property protected under the provisions of the relevant Geneva Convention: (a) wilful killing; (b) torture or inhuman treatment, including biological experiments; (c) wilfully causing great suffering or serious injury to body or health; (d) extensive destruction and appropriation of property, not justified by military necessity and carried out unlawfully and wantonly; (e) compelling a prisoner of war or a civilian to serve in the forces of a hostile power; (f) wilfully depriving a prisoner of war or a civilian of the rights of fair and regular trial; (g) unlawful deportation or transfer or unlawful confinement of a civilian; (h) taking civilians as hostages." .
+
+doc:article-3 a values:Undertaking ;
+    values:partOf doc:Instrument ;
+    dc:title "Article 3" ;
+    values:deonticStatus values:HeuristicDerived ;
+    values:originalText "The International Tribunal shall have the power to prosecute persons violating the laws or customs of war. Such violations shall include, but not be limited to: (a) employment of poisonous weapons or other weapons calculated to cause unnecessary suffering; (b) wanton destruction of cities, towns or villages, or devastation not justified by military necessity; (c) attack, or bombardment, by whatever means, of undefended towns, villages, dwellings, or buildings; (d) seizure of, destruction or wilful damage done to institutions dedicated to religion, charity and education, the arts and sciences, historic monuments and works of art and science; (e) plunder of public or private property." .
+
+doc:article-4 a values:Obligation ;
+    values:partOf doc:Instrument ;
+    values:borneBy values:Agent ;
+    dc:title "Article 4" ;
+    values:deonticStatus values:HeuristicDerived ;
+    values:originalText "1. The International Tribunal shall have the power to prosecute persons committing genocide as defined in paragraph 2 of this article or of committing any of the other acts enumerated in paragraph 3 of this article. 2. Genocide means any of the following acts committed with intent to destroy, in whole or in part, a national, ethnical, racial or religious group, as such: (a) killing members of the group; (b) causing serious bodily or mental harm to members of the group; (c) deliberately inflicting on the group conditions of life calculated to bring about its physical destruction in whole or in part; (d) imposing measures intended to prevent births within the group; (e) forcibly transferring children of the group to another group. 3. the following acts shall be punishable: (a) genocide; (b) conspiracy to commit genocide; (c) direct and public incitement to commit genocide; (d) attempt to commit genocide; (e) complicity in genocide." .
+
+doc:article-5 a values:Undertaking ;
+    values:partOf doc:Instrument ;
+    dc:title "Article 5" ;
+    values:deonticStatus values:HeuristicDerived ;
+    values:originalText "The International Tribunal shall have the power to prosecute persons responsible for the following crimes when committed in armed conflict, whether international or internal in character, and directed against any civilian population: (a) murder; (b) extermination; (c) enslavement; (d) deportation; (e) imprisonment; (f) torture; (g) rape; (h) persecutions on political, racial and religious grounds; (i) other inhumane acts." .
+
+doc:article-6 a values:Undertaking ;
+    values:partOf doc:Instrument ;
+    dc:title "Article 6" ;
+    values:deonticStatus values:HeuristicDerived ;
+    values:originalText "The International Tribunal shall have jurisdiction over natural persons pursuant to the provisions of the present Statute." .
+
+doc:article-7 a values:Prohibition ;
+    values:partOf doc:Instrument ;
+    values:borneBy values:Agent ;
+    dc:title "Article 7" ;
+    values:deonticStatus values:HeuristicDerived ;
+    values:originalText "1. A person who planned, instigated, ordered, committed or otherwise aided and abetted in the planning, preparation or execution of a crime referred to in articles 2 to 5 of the present Statute, shall be individually responsible for the crime. 2. The official position of any accused person, whether as Head of State or Government or as a responsible Government official, shall not relieve such person of criminal responsibility nor mitigate punishment. 3. The fact that any of the acts referred to in articles 2 to 5 of the present Statute was committed by a subordinate does not relieve his superior of criminal responsibility if he knew or had reason to know that the subordinate was about to commit such acts or had done so and the superior failed to take the necessary and reasonable measures to prevent such acts or to punish the perpetrators thereof. 4. The fact that an accused person acted pursuant to an order of a Government or of a superior shall not relieve him of criminal responsibility, but may be considered in mitigation of punishment if the International Tribunal determines that justice so requires." .
+
+doc:article-8 a values:Undertaking ;
+    values:partOf doc:Instrument ;
+    dc:title "Article 8" ;
+    values:deonticStatus values:HeuristicDerived ;
+    values:originalText "The territorial jurisdiction of the International Tribunal shall extend to the territory of the former Socialist Federal Republic of Yugoslavia, including its land surface, airspace and territorial waters. The temporal jurisdiction of the International Tribunal shall extend to a period beginning on 1 January 1991." .
+
+doc:article-9 a values:Undertaking ;
+    values:partOf doc:Instrument ;
+    dc:title "Article 9" ;
+    values:deonticStatus values:HeuristicDerived ;
+    values:originalText "1. The International Tribunal and national courts shall have concurrent jurisdiction to prosecute persons for serious violations of international humanitarian law committed in the territory of the former Yugoslavia since 1 January 1991. 2. The International Tribunal shall have primacy over national courts. At any stage of the procedure, the International Tribunal may formally request national courts to defer to the competence of the International Tribunal in accordance with the present Statute and the Rules of Procedure and Evidence of the International Tribunal." .
+
+doc:article-10 a values:Obligation ;
+    values:partOf doc:Instrument ;
+    values:borneBy values:Agent ;
+    dc:title "Article 10" ;
+    values:deonticStatus values:HeuristicDerived ;
+    values:originalText "1. No person shall be tried before a national court for acts constituting serious violations of international humanitarian law under the present Statute, for which he or she has already been tried by the International Tribunal. 2. A person who has been tried by a national court for acts constituting serious violations of international humanitarian law may be subsequently tried by the International Tribunal only if: (a) the act for which he or she was tried was characterized as an ordinary crime; or (b) the national court proceedings were not impartial or independent, were designed to shield the accused from international criminal responsibility, or the case was not diligently prosecuted. 3. In considering the penalty to be imposed on a person convicted of a crime under the present Statute, the International Tribunal shall take into account the extent to which any penalty imposed by a national court on the same person for the same act has already been served." .
+
+doc:article-11 a values:Undertaking ;
+    values:partOf doc:Instrument ;
+    dc:title "Article 11" ;
+    values:deonticStatus values:HeuristicDerived ;
+    values:originalText "The International Tribunal shall consist of the following organs: (a) The Chambers, comprising three Trial Chambers and an Appeals Chamber; (b) The Prosecutor; and (c) A Registry, servicing both the Chambers and the Prosecutor." .
+
+doc:article-12 a values:Obligation ;
+    values:partOf doc:Instrument ;
+    values:borneBy values:Agent ;
+    dc:title "Article 12" ;
+    values:deonticStatus values:HeuristicDerived ;
+    values:originalText "1. The Chambers shall be composed of sixteen permanent independent judges, no two of whom may be nationals of the same State, and a maximum at any one time of nine ad litem independent judges appointed in accordance with article 13 ter, paragraph 2, of the Statute, no two of whom may be nationals of the same State. 2. Three permanent judges and a maximum at any one time of six ad litem judges shall be members of each Trial Chamber. Each Trial Chamber to which ad litem judges are assigned may be divided into sections of three judges each, composed of both permanent and ad litem judges. A section of a Trial Chamber shall have the same powers and responsibilities as a Trial Chamber under the Statute and shall render judgement in accordance with the same rules. 3. Seven of the permanent judges shall be members of the Appeals Chamber. The Appeals Chamber shall, for each appeal, be composed of five of its members. 4. A person who for the purposes of membership of the Chambers of the International Tribunal could be regarded as a national of more than one State shall be deemed to be a national of the State in which that person ordinarily exercises civil and political rights." .
+
+doc:article-13 a values:Obligation ;
+    values:partOf doc:Instrument ;
+    values:borneBy values:Agent ;
+    dc:title "Article 13" ;
+    values:deonticStatus values:HeuristicDerived ;
+    values:originalText "1. Fourteen of the permanent judges of the International Tribunal shall be elected by the General Assembly from a list submitted by the Security Council, in the following manner: (a) The Secretary-General shall invite nominations for judges of the International Tribunal from States Members of the United Nations and non-member States maintaining permanent observer missions at United Nations Headquarters. (b) Within sixty days of the date of the invitation of the Secretary-General, each State may nominate up to two candidates meeting the qualifications set out in article 13 of the Statute, no two of whom shall be of the same nationality and neither of whom shall be of the same nationality as any judge who is a member of the Appeals Chamber and who was elected or appointed a permanent judge of the International Criminal Tribunal for the Prosecution of Persons Responsible for Genocide and Other Serious Violations of International Humanitarian Law Committed in the Territory of Rwanda and Rwandan Citizens Responsible for Genocide and Other Such Violations Committed in the Territory of Neighbouring States, between 1 January 1994 and 31 December 1994 (hereinafter referred to as \"The International Tribunal for Rwanda\") in accordance with article 12 bis of the Statute of that Tribunal. (c) The Secretary-General shall forward the nominations received to the Security Council. From the nominations received the Security Council shall establish a list of not less than twenty-eight and not more than forty-two candidates, taking due account of the adequate representation of the principal legal systems of the world. (d) The President of the Security Council shall transmit the list of candidates to the President of the General Assembly. From that list the General Assembly shall elect fourteen permanent judges of the International Tribunal. The candidates who receive an absolute majority of the votes of the States Members of the United Nations and of the non-member States maintaining permanent observer missions at United Nations Headquarters, shall be declared elected. Should two candidates of the same nationality obtain the required majority vote, the one who received the higher number of votes shall be considered elected. 2. In the event of a vacancy in the Chambers amongst the permanent judges elected or appointed in accordance with this article, after consultation with the Presidents of the Security Council and of the General Assembly, the Secretary-General shall appoint a person meeting the qualifications of article 13 of the Statute, for the remainder of the term of office concerned. 3. The permanent judges elected in accordance with this article shall be elected for a term of four years. The terms and conditions of service shall be those of the judges of the International Court of Justice. They shall be eligible for re-election." .
+
+doc:article-14 a values:Obligation ;
+    values:partOf doc:Instrument ;
+    values:borneBy values:Agent ;
+    dc:title "Article 14" ;
+    values:deonticStatus values:HeuristicDerived ;
+    values:originalText "1. The permanent judges of the International Tribunal shall elect a President from amongst their number. 2. The President of the International Tribunal shall be a member of the Appeals Chamber and shall preside over its proceedings. 3. After consultation with the permanent judges of the International Tribunal, the President shall assign four of the permanent judges elected or appointed in accordance with Article 13 bis of the Statute to the Appeals Chamber and nine to the Trial Chambers. 4. Two of the permanent judges of the International Tribunal for Rwanda elected or appointed in accordance with article 12 bis of the Statute of that Tribunal shall be assigned by the President of that Tribunal, in consultation with the President of the International Tribunal, to be members of the Appeals Chamber and permanent judges of the International Tribunal. 5. After consultation with the permanent judges of the International Tribunal, the President shall assign such ad litem judges as may from time to time be appointed to serve in the International Tribunal to the Trial Chambers. 6. A judge shall serve only in the Chamber to which he or she was assigned. 7. The permanent judges of each Trial Chamber shall elect a Presiding Judge from amongst their number, who shall oversee the work of the Trial Chamber as a whole." .
+
+doc:article-15 a values:Obligation ;
+    values:partOf doc:Instrument ;
+    values:borneBy values:Agent ;
+    dc:title "Article 15" ;
+    values:deonticStatus values:HeuristicDerived ;
+    values:originalText "The judges of the International Tribunal shall adopt rules of procedure and evidence for the conduct of the pre-trial phase of the proceedings, trials and appeals, the admission of evidence, the protection of victims and witnesses and other appropriate matters." .
+
+doc:article-16 a values:Prohibition ;
+    values:partOf doc:Instrument ;
+    values:borneBy values:Agent ;
+    dc:title "Article 16" ;
+    values:deonticStatus values:HeuristicDerived ;
+    values:originalText "1. The Prosecutor shall be responsible for the investigation and prosecution of persons responsible for serious violations of international humanitarian law committed in the territory of the former Yugoslavia since 1 January 1991. 2. The Prosecutor shall act independently as a separate organ of the International Tribunal. He or she shall not seek or receive instructions from any Government or from any other source. 3. The Office of the Prosecutor shall be composed of a Prosecutor and such other qualified staff as may be required. 4. The Prosecutor shall be appointed by the Security Council on nomination by the Secretary-General. He or she shall be of high moral character and possess the highest level of competence and experience in the conduct of investigations and prosecutions of criminal cases. The Prosecutor shall serve for a four-year term and be eligible for reappointment. The terms and conditions of service of the Prosecutor shall be those of an Under-Secretary-General of the United Nations. 5. The staff of the Office of the Prosecutor shall be appointed by the Secretary-General on the recommendation of the Prosecutor." .
+
+doc:article-17 a values:Obligation ;
+    values:partOf doc:Instrument ;
+    values:borneBy values:Agent ;
+    dc:title "Article 17" ;
+    values:deonticStatus values:HeuristicDerived ;
+    values:originalText "1. The Registry shall be responsible for the administration and servicing of the International Tribunal. 2. The Registry shall consist of a Registrar and such other staff as may be required. 3. The Registrar shall be appointed by the Secretary-General after consultation with the President of the International Tribunal. He or she shall serve for a four-year term and be eligible for reappointment. The terms and conditions of service of the Registrar shall be those of an Assistant Secretary-General of the United Nations. 4. The staff of the Registry shall be appointed by the Secretary-General on the recommendation of the Registrar." .
+
+doc:article-18 a values:Right ;
+    values:partOf doc:Instrument ;
+    values:heldBy values:NaturalPerson ;
+    dc:title "Article 18" ;
+    values:deonticStatus values:HeuristicDerived ;
+    values:originalText "1. The Prosecutor shall initiate investigations ex-officio or on the basis of information obtained from any source, particularly from Governments, United Nations organs, intergovernmental and non-governmental organisations. The Prosecutor shall assess the information received or obtained and decide whether there is sufficient basis to proceed. 2. The Prosecutor shall have the power to question suspects, victims and witnesses, to collect evidence and to conduct on-site investigations. In carrying out these tasks, the Prosecutor may, as appropriate, seek the assistance of the State authorities concerned. 3. If questioned, the suspect shall be entitled to be assisted by counsel of his own choice, including the right to have legal assistance assigned to him without payment by him in any such case if he does not have sufficient means to pay for it, as well as to necessary translation into and from a language he speaks and understands. 4. Upon a determination that a prima facie case exists, the Prosecutor shall prepare an indictment containing a concise statement of the facts and the crime or crimes with which the accused is charged under the Statute. The indictment shall be transmitted to a judge of the Trial Chamber." .
+
+doc:article-19 a values:Obligation ;
+    values:partOf doc:Instrument ;
+    values:borneBy values:Agent ;
+    dc:title "Article 19" ;
+    values:deonticStatus values:HeuristicDerived ;
+    values:originalText "1. The judge of the Trial Chamber to whom the indictment has been transmitted shall review it. If satisfied that a prima facie case has been established by the Prosecutor, he shall confirm the indictment. If not so satisfied, the indictment shall be dismissed. 2. Upon confirmation of an indictment, the judge may, at the request of the Prosecutor, issue such orders and warrants for the arrest, detention, surrender or transfer of persons, and any other orders as may be required for the conduct of the trial." .
+
+doc:article-20 a values:Obligation ;
+    values:partOf doc:Instrument ;
+    values:borneBy values:Agent ;
+    dc:title "Article 20" ;
+    values:deonticStatus values:HeuristicDerived ;
+    values:originalText "1. The Trial Chambers shall ensure that a trial is fair and expeditious and that proceedings are conducted in accordance with the rules of procedure and evidence, with full respect for the rights of the accused and due regard for the protection of victims and witnesses. 2. A person against whom an indictment has been confirmed shall, pursuant to an order or an arrest warrant of the International Tribunal, be taken into custody, immediately informed of the charges against him and transferred to the International Tribunal. 3. The Trial Chamber shall read the indictment, satisfy itself that the rights of the accused are respected, confirm that the accused understands the indictment, and instruct the accused to enter a plea. The Trial Chamber shall then set the date for trial. 4. The hearings shall be public unless the Trial Chamber decides to close the proceedings in accordance with its rules of procedure and evidence." .
+
+doc:article-21 a values:Right ;
+    values:partOf doc:Instrument ;
+    values:heldBy values:NaturalPerson ;
+    dc:title "Article 21" ;
+    values:deonticStatus values:HeuristicDerived ;
+    values:originalText "1. All persons shall be equal before the International Tribunal. 2. In the determination of charges against him, the accused shall be entitled to a fair and public hearing, subject to article 22 of the Statute. 3. The accused shall be presumed innocent until proved guilty according to the provisions of the present Statute. 4. In the determination of any charge against the accused pursuant to the present Statute, the accused shall be entitled to the following minimum guarantees, in full equality: (a) to be informed promptly and in detail in a language which he understands of the nature and cause of the charge against him; (b) to have adequate time and facilities for the preparation of his defence and to communicate with counsel of his own choosing; (c) to be tried without undue delay; (d) to be tried in his presence, and to defend himself in person or through legal assistance of his own choosing; to be informed, if he does not have legal assistance, of this right; and to have legal assistance assigned to him, in any case where the interests of justice so require, and without payment by him in any such case if he does not have sufficient means to pay for it; (e) to examine, or have examined, the witnesses against him and to obtain the attendance and examination of witnesses on his behalf under the same conditions as witnesses against him; (f) to have the free assistance of an interpreter if he cannot understand or speak the language used in the International Tribunal; (g) not to be compelled to testify against himself or to confess guilt." .
+
+doc:article-22 a values:Prohibition ;
+    values:partOf doc:Instrument ;
+    values:borneBy values:Agent ;
+    dc:title "Article 22" ;
+    values:deonticStatus values:HeuristicDerived ;
+    values:originalText "The International Tribunal shall provide in its rules of procedure and evidence for the protection of victims and witnesses. Such protection measures shall include, but shall not be limited to, the conduct of in camera proceedings and the protection of the victim's identity." .
+
+doc:article-23 a values:Obligation ;
+    values:partOf doc:Instrument ;
+    values:borneBy values:Agent ;
+    dc:title "Article 23" ;
+    values:deonticStatus values:HeuristicDerived ;
+    values:originalText "1. The Trial Chambers shall pronounce judgements and impose sentences and penalties on persons convicted of serious violations of international humanitarian law. 2. The judgement shall be rendered by a majority of the judges of the Trial Chamber, and shall be delivered by the Trial Chamber in public. It shall be accompanied by a reasoned opinion in writing, to which separate or dissenting opinions may be appended." .
+
+doc:article-24 a values:Obligation ;
+    values:partOf doc:Instrument ;
+    values:borneBy values:Agent ;
+    dc:title "Article 24" ;
+    values:deonticStatus values:HeuristicDerived ;
+    values:originalText "1. The penalty imposed by the Trial Chamber shall be limited to imprisonment. In determining the terms of imprisonment, the Trial Chambers shall have recourse to the general practice regarding prison sentences in the courts of the former Yugoslavia. 2. In imposing the sentences, the Trial Chambers should take into account such factors as the gravity of the offence and the individual circumstances of the convicted person. 3. In addition to imprisonment, the Trial Chambers may order the return of any property and proceeds acquired by criminal conduct, including by means of duress, to their rightful owners." .
+
+doc:article-25 a values:Undertaking ;
+    values:partOf doc:Instrument ;
+    dc:title "Article 25" ;
+    values:deonticStatus values:HeuristicDerived ;
+    values:originalText "1. The Appeals Chamber shall hear appeals from persons convicted by the Trial Chambers or from the Prosecutor on the following grounds: (a) an error on a question of law invalidating the decision; or (b) an error of fact which has occasioned a miscarriage of justice. 2. The Appeals Chamber may affirm, reverse or revise the decisions taken by the Trial Chambers." .
+
+doc:article-26 a values:Undertaking ;
+    values:partOf doc:Instrument ;
+    dc:title "Article 26" ;
+    values:deonticStatus values:HeuristicDerived ;
+    values:originalText "Where a new fact has been discovered which was not known at the time of the proceedings before the Trial Chambers or the Appeals Chamber and which could have been a decisive factor in reaching the decision, the convicted person or the Prosecutor may submit to the International Tribunal an application for review of the judgement." .
+
+doc:article-27 a values:Obligation ;
+    values:partOf doc:Instrument ;
+    values:borneBy values:Agent ;
+    dc:title "Article 27" ;
+    values:deonticStatus values:HeuristicDerived ;
+    values:originalText "Imprisonment shall be served in a State designated by the International Tribunal from a list of States which have indicated to the Security Council their willingness to accept convicted persons. Such imprisonment shall be in accordance with the applicable law of the State concerned, subject to the supervision of the International Tribunal." .
+
+doc:article-28 a values:Prohibition ;
+    values:partOf doc:Instrument ;
+    values:borneBy values:Agent ;
+    dc:title "Article 28" ;
+    values:deonticStatus values:HeuristicDerived ;
+    values:originalText "If, pursuant to the applicable law of the State in which the convicted person is imprisoned, he or she is eligible for pardon or commutation of sentence, the State concerned shall notify the International Tribunal accordingly. The President of the International Tribunal, in consultation with the judges, shall decide the matter on the basis of the interests of justice and the general principles of law." .
+
+doc:article-29 a values:Undertaking ;
+    values:partOf doc:Instrument ;
+    dc:title "Article 29" ;
+    values:deonticStatus values:HeuristicDerived ;
+    values:originalText "1. States shall cooperate with the International Tribunal in the investigation and prosecution of persons accused of committing serious violations of international humanitarian law. 2. States shall comply without undue delay with any request for assistance or an order issued by a Trial Chamber, including, but not limited to: (a) the identification and location of persons; (b) the taking of testimony and the production of evidence; (c) the service of documents; (d) the arrest or detention of persons; (e) the surrender or the transfer of the accused to the International Tribunal." .
+
+doc:article-30 a values:Obligation ;
+    values:partOf doc:Instrument ;
+    values:borneBy values:Agent ;
+    dc:title "Article 30" ;
+    values:deonticStatus values:HeuristicDerived ;
+    values:originalText "1. The Convention on the Privileges and Immunities of the United Nations of 13 February 1946 shall apply to the International Tribunal, the judges, the Prosecutor and his staff, and the Registrar and his staff. 2. The judges, the Prosecutor and the Registrar shall enjoy the privileges and immunities, exemptions and facilities accorded to diplomatic envoys, in accordance with international law. 3. The staff of the Prosecutor and of the Registrar shall enjoy the privileges and immunities accorded to officials of the United Nations under articles V and VII of the Convention referred to in paragraph 1 of this article. 4. Other persons, including the accused, required at the seat of the International Tribunal shall be accorded such treatment as is necessary for the proper functioning of the International Tribunal." .
+
+doc:article-31 a values:Undertaking ;
+    values:partOf doc:Instrument ;
+    dc:title "Article 31" ;
+    values:deonticStatus values:HeuristicDerived ;
+    values:originalText "The International Tribunal shall have its seat at The Hague." .
+
+doc:article-32 a values:Obligation ;
+    values:partOf doc:Instrument ;
+    values:borneBy values:Agent ;
+    dc:title "Article 32" ;
+    values:deonticStatus values:HeuristicDerived ;
+    values:originalText "The expenses of the International Tribunal shall be borne by the regular budget of the United Nations in accordance with Article 17 of the Charter of the United Nations." .
+
+doc:article-33 a values:Obligation ;
+    values:partOf doc:Instrument ;
+    values:borneBy values:Agent ;
+    dc:title "Article 33" ;
+    values:deonticStatus values:HeuristicDerived ;
+    values:originalText "The working languages of the International Tribunal shall be English and French." .
+
+doc:article-34 a values:Undertaking ;
+    values:partOf doc:Instrument ;
+    dc:title "Article 34" ;
+    values:deonticStatus values:HeuristicDerived ;
+    values:originalText "Adopted by Security Council resolution 827 (1993) of 25 May 1993 amended by Security Council resolutions 1166 (1998) of 13 May 1998, 1329 (2000) of 30 November 2000, 1411 (2002) of 17 May 2002 and1431 (2002) of 14 August 2002 Having been established by the Security Council acting under Chapter VII of the Charter of the United Nations, the International Tribunal for the Prosecution of Persons Responsible for Serious Violations of International Humanitarian Law Committed in the Territory of the Former Yugoslavia since 1991 (hereinafter referred to as \"the International Tribunal\") shall function in accordance with the provisions of the present Statute." .

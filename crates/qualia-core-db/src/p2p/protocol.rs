@@ -70,7 +70,7 @@ impl QualiaRequest {
             .unwrap_or(0);
         
         Self::Handshake {
-            context: "https://qualia.org/ld/context/v1".to_string(),
+            context: "https://webizen.org/ld/context/v1".to_string(),
             request_type: "Handshake".to_string(),
             did_q42,
             semantic_context,
@@ -124,7 +124,7 @@ impl QualiaResponse {
             .unwrap_or(0);
         
         Self::HandshakeAck {
-            context: "https://qualia.org/ld/context/v1".to_string(),
+            context: "https://webizen.org/ld/context/v1".to_string(),
             response_type: "HandshakeAck".to_string(),
             success: true,
             did_q42,

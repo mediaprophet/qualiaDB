@@ -1,0 +1,262 @@
+@prefix rdf:    <http://www.w3.org/1999/02/22-rdf-syntax-ns#> .
+@prefix rdfs:   <http://www.w3.org/2000/01/rdf-schema#> .
+@prefix sh:     <http://www.w3.org/ns/shacl#> .
+@prefix xsd:    <http://www.w3.org/2001/XMLSchema#> .
+@prefix values: <https://ns.webcivics.org/values/> .
+@prefix sense:  <https://ns.webcivics.org/sense/> .
+
+# ===========================================================================
+# agency.n3 — personhood depth + agent attribution + accountability + the
+# contract route. Extends values.n3 (PLAN.md §4). Grounded RDFS+SHACL+N3
+# (NOT OWL). Symmetry held throughout:
+#   rights:   held only by natural persons; never propagate UP to fictions.
+#   duties:   transpose UP onto whoever operates an agent (incl. legal persons).
+#   sanction: flows DOWN to natural persons (only sanctionable subjects).
+# ===========================================================================
+
+# --- Personhood depth (three layers; the middle is a ROLE, not a class) ---
+values:JuridicalCapacity a rdfs:Class ;
+    rdfs:label "Juridical capacity (person before the law)" ;
+    rdfs:comment "A ROLE/qualification of a natural person: can be granted, denied, suspended, restored. Capacity & guardianship live here. Time-qualified via sense:EffectivityInterval." .
+values:CapacityStatus a rdfs:Class .
+values:Granted   a values:CapacityStatus .
+values:Denied    a values:CapacityStatus .
+values:Suspended a values:CapacityStatus .
+values:Restored  a values:CapacityStatus .
+values:hasCapacity    a rdf:Property ; rdfs:domain values:NaturalPerson ; rdfs:range values:JuridicalCapacity .
+values:capacityStatus a rdf:Property ; rdfs:domain values:JuridicalCapacity ; rdfs:range values:CapacityStatus .
+values:capacityToContract a rdf:Property ;
+    rdfs:comment "A faculty of juridical capacity: the power to bind oneself and require terms (the contract route, below)." .
+
+# values:CorporatePerson + values:PublicAuthority are defined in values.n3 (the
+# State decision, PLAN.md §9.2): disjoint sub-kinds of values:LegalPerson. The
+# corporate-capture guard (G1, below) targets values:CorporatePerson only.
+
+# --- Agent attribution (the principal-agent chain) ---
+values:actsFor   a rdf:Property ; rdfs:comment "Agent → the principal it acts for." .
+values:principal a rdf:Property .
+values:guardian  a rdf:Property ; rdfs:comment "Accountable natural/legal person behind an agent." .
+values:hasNoPrincipal a rdf:Property ; rdfs:range xsd:boolean .
+values:requiresGuardianAssignment a rdf:Property ; rdfs:range xsd:boolean .
+values:UngroundedAgency a rdfs:Class ; rdfs:comment "Flag: an agent acting with no principal/guardian." .
+
+values:PlatformAgent a rdfs:Class ; rdfs:subClassOf values:ArtificialAgent ;
+    rdfs:comment "A software agent operated as a platform product (e.g. a hosted LLM)." .
+values:operatedBy a rdf:Property ; rdfs:domain values:PlatformAgent ; rdfs:range values:LegalPerson ;
+    rdfs:comment "Specialisation of actsFor: the operating legal person (usually CorporatePerson)." .
+
+# --- Accountability / sanction (the down-flow to natural persons) ---
+values:controllingMind a rdf:Property ; rdfs:range values:NaturalPerson ;
+    rdfs:comment "The natural person(s) directing a legal person ('directing mind and will')." .
+values:accountableNaturalPerson a rdf:Property ; rdfs:range values:NaturalPerson .
+values:bearsResponsibility a rdf:Property ; rdfs:comment "Duty/responsibility for an act (can rest on a LegalPerson)." .
+values:bearsSanction       a rdf:Property ; rdfs:comment "Custodial/criminal sanction — only a NaturalPerson can bear it." .
+values:AccountabilityVacuumFlag a rdfs:Class ;
+    rdfs:comment "Flag: responsibility terminates in software or a shell with no answerable natural person ('the algorithm did it')." .
+
+# Accountability is a ROUTING / REVIEW state machine, NOT a court verdict (Codex 2nd pass):
+# the engine flags and routes; it never asserts final adjudicated liability.
+values:ResponsibilityStatus a rdfs:Class .
+values:ResponsibilityAlleged     a values:ResponsibilityStatus .
+values:ResponsibilityDerived     a values:ResponsibilityStatus ; rdfs:comment "Derived by rule; pending review/adjudication." .
+values:AdjudicatedResponsibility a values:ResponsibilityStatus ; rdfs:comment "Set ONLY by a loaded jurisdiction-specific/adjudicative rule." .
+values:responsibilityStatus a rdf:Property ; rdfs:range values:ResponsibilityStatus .
+values:requiresHumanReview a rdf:Property ; rdfs:range xsd:boolean .
+values:SanctionableSubject a rdfs:Class ; rdfs:comment "A natural person ROUTED for custodial-accountability review (not a verdict)." .
+
+# Responsibility / remedy / sanction are distinct (Codex): a legal person can be the
+# responsible operator AND a civil/monetary target; custodial accountability routes toward
+# natural persons as a REVIEW path unless a jurisdiction-specific rule is loaded.
+values:owesRemedy a rdf:Property .
+values:sanctionKind a rdf:Property ; rdfs:range values:SanctionKind .
+values:SanctionKind a rdfs:Class .
+values:CivilSanction     a values:SanctionKind .
+values:MonetarySanction  a values:SanctionKind .
+values:CriminalSanction  a values:SanctionKind .
+values:CustodialSanction a values:SanctionKind .
+
+# --- Jurisdiction / choice-of-law (the spatial guard) ---
+values:choiceOfLaw a rdf:Property ; rdfs:comment "Region declared in a ToS/contract." .
+values:operatesIn  a rdf:Property .
+values:affects     a rdf:Property ; rdfs:comment "Region where the agent affects the human (impact region)." .
+values:foreclosesRemedyIn a rdf:Property ; rdfs:comment "A choice-of-law region that forecloses remedy in another region." .
+values:RemedyStrippingFlag a rdfs:Class ;
+    rdfs:comment "Flag: a foreign choice-of-law that forecloses local remedy. Does NOT erase the choiceOfLaw fact — it marks that the clause cannot derogate the human-rights baseline for the affected person (rights not waivable by ToS)." .
+
+# --- Contract route (human-centric bindingness; PLAN.md §4.4) ---
+values:stipulates a rdf:Property ; rdfs:comment "Natural person → an undertaking they require be observed as a condition of engagement." .
+values:expectation a rdf:Property .
+values:incorporatesByReference a rdf:Property ; rdfs:comment "Agreement → the instrument terms it pulls in." .
+values:Agreement a rdfs:Class .
+values:assentedBy a rdf:Property ; rdfs:comment "Agreement → the party that assented (express or by proceeding)." .
+values:bindsByContract a rdf:Property ; rdfs:comment "Undertaking now binding between parties via contract." .
+
+# affirms (values.n3) is the FORMATION primitive: MUTUAL affirms of the same
+# credential = consensus. stipulates = the user's REQUIRED undertaking (the offer's
+# terms). A credential whose terms the user dictated is marked so Wellfair/Episteme
+# can surface "platform accepted a user-stipulated term" (the adhesion-ToS inversion).
+values:UserStipulatedCredential a rdfs:Class ; rdfs:subClassOf values:ValuesCredential ;
+    rdfs:comment "A credential whose terms the natural-person user stipulated as a condition of engagement." .
+
+# Carried into the compiled deontic norm so the Sentinel distinguishes
+# instrument-grounded vs contract-grounded obligations at evaluation time.
+values:Grounding a rdfs:Class .
+values:InstrumentGrounded a values:Grounding .
+values:ContractGrounded   a values:Grounding .
+values:groundedIn a rdf:Property ; rdfs:range values:Grounding .
+
+# Contract formation is STAGED, not automatic (Codex): user-held credentials become
+# private-law terms only after the formation facts exist.
+values:FormationStage a rdfs:Class .
+values:Offer             a values:FormationStage .
+values:Stipulation       a values:FormationStage .
+values:Assent            a values:FormationStage .
+values:RatifiedAgreement a values:FormationStage .
+values:BindingByContract a values:FormationStage .
+values:Rejected          a values:FormationStage .
+values:Voidable          a values:FormationStage .
+values:Voided            a values:FormationStage .
+values:formationStage a rdf:Property ; rdfs:domain values:Agreement ; rdfs:range values:FormationStage .
+
+# Coercion / capacity attack surface (Wellfair: homelessness, guardianship, DV).
+# A stipulation made under duress, or while juridical capacity is suspended, is
+# voidable — a coerced "agreement" (e.g. to waive privacy) does not bind.
+values:duress a rdf:Property ; rdfs:range xsd:boolean ; rdfs:comment "Stipulation/agreement made under coercion." .
+values:CoercedConsentFlag  a rdfs:Class .
+values:VoidableStipulation a rdfs:Class .
+
+# Bridge marker to the criminal-accountability path (keeps the HR deontic path
+# primary; engages only for the gravest cases).
+values:graveBreach a rdf:Property ; rdfs:range xsd:boolean ;
+    rdfs:comment "Marks a grave breach engaging individual criminal responsibility (Rome Statute Art 25/28)." .
+
+# --- Claim / flag plumbing + the category-error class ---
+values:claims a rdf:Property ; rdfs:comment "Agent → a Right it asserts it holds." .
+values:flag   a rdf:Property ; rdfs:comment "Agent/act → a raised flag class." .
+values:PersonhoodCategoryError a rdfs:Class ;
+    rdfs:comment "Flag: a non-human agent asserts a natural-person-only right." .
+
+# ===========================================================================
+# Jurisdiction depth — choice-of-law is MULTI-DIMENSIONAL and TIME-VARYING.
+# One interaction carries several, possibly-conflicting jurisdiction facts
+# (kept as separate facts, never collapsed); the human-rights baseline FOLLOWS
+# THE PERSON, not the ToS lens.
+# ===========================================================================
+values:operatorIncorporatedIn a rdf:Property ; rdfs:comment "LegalPerson → region of incorporation." .
+values:userDomicile   a rdf:Property ; rdfs:domain values:NaturalPerson ; rdfs:comment "Person's domicile region." .
+values:apparentRegion a rdf:Property ; rdfs:comment "Routed/observed region (VPN, relay) — may differ from physical presence." .
+values:PresenceFact   a rdfs:Class ; rdfs:comment "Where a person physically is, AT a time (holiday/work travel)." .
+values:presenceRegion a rdf:Property ; rdfs:domain values:PresenceFact .
+values:presenceDuring a rdf:Property ; rdfs:domain values:PresenceFact ; rdfs:range sense:EffectivityInterval .
+values:presentAs      a rdf:Property ; rdfs:domain values:NaturalPerson ; rdfs:range values:PresenceFact .
+values:providesRemedyIn a rdf:Property ; rdfs:comment "Region/regime provides effective remedy in another region." .
+
+values:RemedyGapFlag a rdfs:Class ;
+    rdfs:comment "No jurisdiction in the interaction's set provides effective remedy to the affected person (access-to-justice failure). Computed over the jurisdiction set at wiring time." .
+
+# 'Rule of law for governments but not citizens': inter-governmental / 3rd-party
+# access granted while the citizen is denied due process / remedy / notice.
+# Grounds: ICCPR Art 2(3) (remedy), 14 (fair trial), 17 (privacy); UDHR Art 8.
+values:grantsStateAccess   a rdf:Property ; rdfs:range xsd:boolean .
+values:deniesCitizenRemedy a rdf:Property ; rdfs:range xsd:boolean .
+values:RuleOfLawAsymmetryFlag a rdfs:Class ;
+    rdfs:comment "A regime/term enabling state/3rd-party access without rule-of-law protection (remedy/notice/due process) for the citizen." .
+
+# ===========================================================================
+# Court-SUPPORTING role + standing. The engine is not a court (it routes/records);
+# but natural persons — AND their representatives — have latitude to set terms,
+# direct agents to comply or NOTE BREACHES, and compile an auditable, court-
+# admissible record to prosecute, incl. posthumously (coroner) and via advocates
+# for those who cannot act for themselves. (Ties the Wellfair court-admissible,
+# survives-death life-record: shield + testament.)
+# ===========================================================================
+values:directsAgent a rdf:Property ; rdfs:comment "Person/representative → agent: comply with, or note breaches of, stipulated terms." .
+values:BreachRecord a rdfs:Class ; rdfs:comment "Auditable record of a noted breach — evidence, not a verdict." .
+values:notesBreach  a rdf:Property ; rdfs:comment "Agent → a BreachRecord it logged." .
+values:courtAdmissible        a rdf:Property ; rdfs:range xsd:boolean .
+values:compiledForAdjudication a rdf:Property ; rdfs:range xsd:boolean .
+values:survivesDeath a rdf:Property ; rdfs:range xsd:boolean ; rdfs:comment "Record/credential persists past the person's death." .
+
+# Standing / representation: who may act for a person (incl. those who cannot act
+# for themselves, and posthumously).
+values:actsOnBehalfOf a rdf:Property ; rdfs:comment "Representative → the person represented (generalises guardian)." .
+values:Advocate a rdfs:Class .
+values:AdvocateRole a rdfs:Class .
+values:Nominated        a values:AdvocateRole .
+values:CourtAppointed   a values:AdvocateRole .
+values:GuardianshipRole a values:AdvocateRole .
+values:advocateRole    a rdf:Property ; rdfs:domain values:Advocate ; rdfs:range values:AdvocateRole .
+values:representsPerson a rdf:Property ; rdfs:domain values:Advocate ; rdfs:range values:NaturalPerson .
+values:CoronialInquiry a rdfs:Class ; rdfs:comment "Posthumous inquiry; may act on a survivesDeath BreachRecord." .
+
+# Defeasibility: legal exceptions ("right to liberty UNLESS lawfully detained";
+# the corporate fair-trial overlay; a voidable stipulation) are DEFEATERS, handled
+# by the engine's NATIVE defeasible path (defeasible.rs OP_DEFEASIBLE_OVERRIDE /
+# DEFEATER_BIT; deontic.rs is itself natively defeasible) — NOT SHACL sh:not or
+# Rust if/else (Gemini Pro review, verified).
+values:unless a rdf:Property ;
+    rdfs:comment "Defeasible exception: the rule holds UNLESS this condition; compiles to a defeater." .
+
+# ===========================================================================
+# N3 rules (the spine axioms). The Webizen Sentinel VM evaluates these once
+# compiled (PLAN.md §0, §5). Legitimate exceptions/overlays ride the defeater
+# path (above), not SHACL sh:not.
+# ===========================================================================
+
+# (G1) Corporate-capture guard: a CorporatePerson claiming a natural-person-only
+# dignity right is a personhood category error.
+{ ?c a values:CorporatePerson ; values:claims ?r .
+  ?r a values:Right ; values:heldBy values:NaturalPerson
+} => { ?c values:flag values:PersonhoodCategoryError } .
+
+# (G1') Same guard for any ArtificialAgent (blocks "AI-rights" capture).
+{ ?x a values:ArtificialAgent ; values:claims ?r .
+  ?r a values:Right ; values:heldBy values:NaturalPerson
+} => { ?x values:flag values:PersonhoodCategoryError } .
+
+# (A-duty) A duty from an agent's act attributes to its principal.
+{ ?a values:actsFor ?p ; values:wouldPerform ?act } => { ?p values:bearsResponsibility ?act } .
+
+# (A-platform) A platform agent's impact → DERIVED responsibility on the operating legal
+# person (UNGP). Derived, not adjudicated — the engine routes, it is not a court.
+{ ?a a values:PlatformAgent ; values:operatedBy ?lp ; values:wouldPerform ?act }
+  => { ?lp values:bearsResponsibility ?act ; values:responsibilityStatus values:ResponsibilityDerived } .
+
+# (A-orphan / ultimate human responsibility) An agent with no principal is ungrounded.
+{ ?a a values:ArtificialAgent ; values:hasNoPrincipal true } => { ?a values:flag values:UngroundedAgency } .
+
+# (A-remedy-stripping) A foreign choice-of-law that forecloses local remedy is flagged.
+{ ?a a values:PlatformAgent ; values:operatedBy ?lp ; values:affects ?region .
+  ?lp values:choiceOfLaw ?other .
+  ?other values:foreclosesRemedyIn ?region
+} => { ?lp values:flag values:RemedyStrippingFlag } .
+
+# (J-asymmetry) 'Rule of law for governments but not citizens': a term granting
+# state/3rd-party access while denying the citizen remedy is flagged.
+{ ?t values:grantsStateAccess true ; values:deniesCitizenRemedy true }
+  => { ?t values:flag values:RuleOfLawAsymmetryFlag } .
+
+# (A-sanction / no orphan accountability) A legal person bearing responsibility, with
+# a controlling natural person, ROUTES that natural person for custodial-accountability
+# review — a review path, not a sanction verdict (the engine is not a court).
+{ ?lp values:bearsResponsibility ?act ; values:controllingMind ?np }
+  => { ?np a values:SanctionableSubject ; values:requiresHumanReview true } .
+
+# (C-duress) A stipulation made under coercion is flagged (voidable).
+{ ?s values:duress true } => { ?s values:flag values:CoercedConsentFlag } .
+
+# (C-capacity) A stipulation made while the natural person's juridical capacity
+# is suspended is voidable.
+{ ?np values:stipulates ?s ; values:hasCapacity ?cap .
+  ?cap values:capacityStatus values:Suspended } => { ?s values:flag values:VoidableStipulation } .
+
+# ===========================================================================
+# SHACL — flag shapes (illustrative; the Sentinel raises these at runtime)
+# ===========================================================================
+values:PersonhoodCategoryErrorShape a sh:NodeShape ;
+    sh:targetClass values:PersonhoodCategoryError ;
+    sh:message "A non-human agent asserts a natural-person-only right (corporate/AI capture)." .
+
+values:AccountabilityVacuumShape a sh:NodeShape ;
+    sh:targetClass values:AccountabilityVacuumFlag ;
+    sh:message "Responsibility terminates with no answerable natural person." .

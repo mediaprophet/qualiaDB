@@ -1,0 +1,287 @@
+@prefix rdf:    <http://www.w3.org/1999/02/22-rdf-syntax-ns#> .
+@prefix rdfs:   <http://www.w3.org/2000/01/rdf-schema#> .
+@prefix dc:     <http://purl.org/dc/terms/> .
+@prefix values: <https://ns.webcivics.org/values/> .
+@prefix doc:    <https://ns.webcivics.org/values/body-principles-protection-all-persons-under-any-form-detention#> .
+
+# ============================================================
+# Body of Principles for the Protection of All Persons under Any Form of Detention or Imprisonment
+# RE-SOURCED from authoritative OHCHR text (verbatim originalText).
+# Deontic typing = lexical heuristic (values:HeuristicDerived) — pending review.
+# states->parties + universalisation = curation overlay (amendedText), pending.
+# ============================================================
+
+doc:Instrument a values:ValuesCredential ;
+    dc:title "Body of Principles for the Protection of All Persons under Any Form of Detention or Imprisonment" ;
+    dc:date "09 December 1988" ;
+    values:category "Administration of justice, detention & law enforcement" ;
+    values:categoryStatus values:AutoAssigned ;
+    values:source <https://www.ohchr.org/en/instruments-mechanisms/instruments/body-principles-protection-all-persons-under-any-form-detention> ;
+    rdfs:comment "Re-sourced from authoritative OHCHR text; deontic + amendment layers pending." .
+
+doc:principle-1 a values:Obligation ;
+    values:partOf doc:Instrument ;
+    values:borneBy values:Agent ;
+    dc:title "Principle 1" ;
+    values:deonticStatus values:HeuristicDerived ;
+    values:originalText "All persons under any form of detention or imprisonment shall be treated in a humane manner and with respect for the inherent dignity of the human person." .
+
+doc:principle-2 a values:Undertaking ;
+    values:partOf doc:Instrument ;
+    dc:title "Principle 2" ;
+    values:deonticStatus values:HeuristicDerived ;
+    values:originalText "Arrest, detention or imprisonment shall only be carried out strictly in accordance with the provisions of the law and by competent officials or persons authorized for that purpose." .
+
+doc:principle-3 a values:Obligation ;
+    values:partOf doc:Instrument ;
+    values:borneBy values:Agent ;
+    dc:title "Principle 3" ;
+    values:deonticStatus values:HeuristicDerived ;
+    values:originalText "There shall be no restriction upon or derogation from any of the human rights of persons under any form of detention or imprisonment recognized or existing in any State pursuant to law, conventions, regulations or custom on the pretext that this Body of Principles does not recognize such rights or that it recognizes them to a lesser extent." .
+
+doc:principle-4 a values:Obligation ;
+    values:partOf doc:Instrument ;
+    values:borneBy values:Agent ;
+    dc:title "Principle 4" ;
+    values:deonticStatus values:HeuristicDerived ;
+    values:originalText "Any form of detention or imprisonment and all measures affecting the human rights of a person under any form of detention or imprisonment shall be ordered by, or be subject to the effective control of, a judicial or other authority." .
+
+doc:principle-5 a values:Prohibition ;
+    values:partOf doc:Instrument ;
+    values:borneBy values:Agent ;
+    dc:title "Principle 5" ;
+    values:deonticStatus values:HeuristicDerived ;
+    values:originalText "1. These principles shall be applied to all persons within the territory of any given State, without distinction of any kind, such as race, colour, sex, language, religion or religious belief, political or other opinion, national, ethnic or social origin, property, birth or other status. 2. Measures applied under the law and designed solely to protect the rights and special status of women, especially pregnant women and nursing mothers, children and juveniles, aged, sick or handicapped persons shall not be deemed to be discriminatory. The need for, and the application of, such measures shall always be subject to review by a judicial or other authority." .
+
+doc:principle-6 a values:Prohibition ;
+    values:partOf doc:Instrument ;
+    values:borneBy values:Agent ;
+    dc:title "Principle 6" ;
+    values:deonticStatus values:HeuristicDerived ;
+    values:originalText "No person under any form of detention or imprisonment shall be subjected to torture or to cruel, inhuman or degrading treatment or punishment. 1 No circumstance whatever may be invoked as a justification for torture or other cruel, inhuman or degrading treatment or punishment." .
+
+doc:principle-7 a values:Right ;
+    values:partOf doc:Instrument ;
+    values:heldBy values:NaturalPerson ;
+    dc:title "Principle 7" ;
+    values:deonticStatus values:HeuristicDerived ;
+    values:originalText "1. States should prohibit by law any act contrary to the rights and duties contained in these principles, make any such act subject to appropriate sanctions and conduct impartial investigations upon complaints. 2. Officials who have reason to believe that a violation of this Body of Principles has occurred or is about to occur shall report the matter to their superior authorities and, where necessary, to other appropriate authorities or organs vested with reviewing or remedial powers. 3. Any other person who has ground to believe that a violation of this Body of Principles has occurred or is about to occur shall have the right to report the matter to the superiors of the officials involved as well as to other appropriate authorities or organs vested with reviewing or remedial powers." .
+
+doc:principle-8 a values:Obligation ;
+    values:partOf doc:Instrument ;
+    values:borneBy values:Agent ;
+    dc:title "Principle 8" ;
+    values:deonticStatus values:HeuristicDerived ;
+    values:originalText "Persons in detention shall be subject to treatment appropriate to their unconvicted status. Accordingly, they shall, whenever possible, be kept separate from imprisoned persons." .
+
+doc:principle-9 a values:Obligation ;
+    values:partOf doc:Instrument ;
+    values:borneBy values:Agent ;
+    dc:title "Principle 9" ;
+    values:deonticStatus values:HeuristicDerived ;
+    values:originalText "The authorities which arrest a person, keep him under detention or investigate the case shall exercise only the powers granted to them under the law and the exercise of these powers shall be subject to recourse to a judicial or other authority." .
+
+doc:principle-10 a values:Obligation ;
+    values:partOf doc:Instrument ;
+    values:borneBy values:Agent ;
+    dc:title "Principle 10" ;
+    values:deonticStatus values:HeuristicDerived ;
+    values:originalText "Anyone who is arrested shall be informed at the time of his arrest of the reason for his arrest and shall be promptly informed of any charges against him." .
+
+doc:principle-11 a values:Prohibition ;
+    values:partOf doc:Instrument ;
+    values:borneBy values:Agent ;
+    dc:title "Principle 11" ;
+    values:deonticStatus values:HeuristicDerived ;
+    values:originalText "1. A person shall not be kept in detention without being given an effective opportunity to be heard promptly by a judicial or other authority. A detained person shall have the right to defend himself or to be assisted by counsel as prescribed by law. 2. A detained person and his counsel, if any, shall receive prompt and full communication of any order of detention, together with the reasons therefor. 3. A judicial or other authority shall be empowered to review as appropriate the continuance of detention." .
+
+doc:principle-12 a values:Obligation ;
+    values:partOf doc:Instrument ;
+    values:borneBy values:Agent ;
+    dc:title "Principle 12" ;
+    values:deonticStatus values:HeuristicDerived ;
+    values:originalText "1. There shall be duly recorded: (a) The reasons for the arrest; (b) The time of the arrest and the taking of the arrested person to a place of custody as well as that of his first appearance before a judicial or other authority; (c) The identity of the law enforcement officials concerned; (d) Precise information concerning the place of custody. 2. Such records shall be communicated to the detained person, or his counsel, if any, in the form prescribed by law." .
+
+doc:principle-13 a values:Undertaking ;
+    values:partOf doc:Instrument ;
+    dc:title "Principle 13" ;
+    values:deonticStatus values:HeuristicDerived ;
+    values:originalText "Any person shall, at the moment of arrest and at the commencement of detention or imprisonment, or promptly thereafter, be provided by the authority responsible for his arrest, detention or imprisonment, respectively with information on and an explanation of his rights and how to avail himself of such rights." .
+
+doc:principle-14 a values:Right ;
+    values:partOf doc:Instrument ;
+    values:heldBy values:NaturalPerson ;
+    dc:title "Principle 14" ;
+    values:deonticStatus values:HeuristicDerived ;
+    values:originalText "A person who does not adequately understand or speak the language used by the authorities responsible for his arrest, detention or imprisonment is entitled to receive promptly in a language which he understands the information referred to in principle 10, principle 11, paragraph 2, principle 12, paragraph 1, and principle 13 and to have the assistance, free of charge, if necessary, of an interpreter in connection with legal proceedings subsequent to his arrest." .
+
+doc:principle-15 a values:Prohibition ;
+    values:partOf doc:Instrument ;
+    values:borneBy values:Agent ;
+    dc:title "Principle 15" ;
+    values:deonticStatus values:HeuristicDerived ;
+    values:originalText "Notwithstanding the exceptions contained in principle 16, paragraph 4, and principle 18, paragraph 3, communication of the detained or imprisoned person with the outside world, and in particular his family or counsel, shall not be denied for more than a matter of days." .
+
+doc:principle-16 a values:Right ;
+    values:partOf doc:Instrument ;
+    values:heldBy values:NaturalPerson ;
+    dc:title "Principle 16" ;
+    values:deonticStatus values:HeuristicDerived ;
+    values:originalText "1. Promptly after arrest and after each transfer from one place of detention or imprisonment to another, a detained or imprisoned person shall be entitled to notify or to require the competent authority to notify members of his family or other appropriate persons of his choice of his arrest, detention or imprisonment or of the transfer and of the place where he is kept in custody. 2. If a detained or imprisoned person is a foreigner, he shall also be promptly informed of his right to communicate by appropriate means with a consular post or the diplomatic mission of the State of which he is a national or which is otherwise entitled to receive such communication in accordance with international law or with the representative of the competent international organization, if he is a refugee or is otherwise under the protection of an intergovernmental organization. 3. If a detained or imprisoned person is a juvenile or is incapable of understanding his entitlement, the competent authority shall on its own initiative undertake the notification referred to in the present principle. Special attention shall be given to notifying parents or guardians. 4. Any notification referred to in the present principle shall be made or permitted to be made without delay. The competent authority may however delay a notification for a reasonable period where exceptional needs of the investigation so require." .
+
+doc:principle-17 a values:Right ;
+    values:partOf doc:Instrument ;
+    values:heldBy values:NaturalPerson ;
+    dc:title "Principle 17" ;
+    values:deonticStatus values:HeuristicDerived ;
+    values:originalText "1. A detained person shall be entitled to have the assistance of a legal counsel. He shall be informed of his right by the competent authority promptly after arrest and shall be provided with reasonable facilities for exercising it. 2. If a detained person does not have a legal counsel of his own choice, he shall be entitled to have a legal counsel assigned to him by a judicial or other authority in all cases where the interests of justice so require and without payment by him if he does not have sufficient means to pay." .
+
+doc:principle-18 a values:Prohibition ;
+    values:partOf doc:Instrument ;
+    values:borneBy values:Agent ;
+    dc:title "Principle 18" ;
+    values:deonticStatus values:HeuristicDerived ;
+    values:originalText "1. A detained or imprisoned person shall be entitled to communicate and consult with his legal counsel. 2. A detained or imprisoned person shall be allowed adequate time and facilities for consultation with his legal counsel. 3. The right of a detained or imprisoned person to be visited by and to consult and communicate, without delay or censorship and in full confidentiality, with his legal counsel may not be suspended or restricted save in exceptional circumstances, to be specified by law or lawful regulations, when it is considered indispensable by a judicial or other authority in order to maintain security and good order. 4. Interviews between a detained or imprisoned person and his legal counsel may be within sight, but not within the hearing, of a law enforcement official. 5. Communications between a detained or imprisoned person and his legal counsel mentioned in the present principle shall be inadmissible as evidence against the detained or imprisoned person unless they are connected with a continuing or contemplated crime." .
+
+doc:principle-19 a values:Right ;
+    values:partOf doc:Instrument ;
+    values:heldBy values:NaturalPerson ;
+    dc:title "Principle 19" ;
+    values:deonticStatus values:HeuristicDerived ;
+    values:originalText "A detained or imprisoned person shall have the right to be visited by and to correspond with, in particular, members of his family and shall be given adequate opportunity to communicate with the outside world, subject to reasonable conditions and restrictions as specified by law or lawful regulations." .
+
+doc:principle-20 a values:Undertaking ;
+    values:partOf doc:Instrument ;
+    dc:title "Principle 20" ;
+    values:deonticStatus values:HeuristicDerived ;
+    values:originalText "If a detained or imprisoned person so requests, he shall if possible be kept in a place of detention or imprisonment reasonably near his usual place of residence." .
+
+doc:principle-21 a values:Prohibition ;
+    values:partOf doc:Instrument ;
+    values:borneBy values:Agent ;
+    dc:title "Principle 21" ;
+    values:deonticStatus values:HeuristicDerived ;
+    values:originalText "1. It shall be prohibited to take undue advantage of the situation of a detained or imprisoned person for the purpose of compelling him to confess, to incriminate himself otherwise or to testify against any other person. 2. No detained person while being interrogated shall be subject to violence, threats or methods of interrogation which impair his capacity of decision or his judgement." .
+
+doc:principle-22 a values:Undertaking ;
+    values:partOf doc:Instrument ;
+    dc:title "Principle 22" ;
+    values:deonticStatus values:HeuristicDerived ;
+    values:originalText "No detained or imprisoned person shall, even with his consent, be subjected to any medical or scientific experimentation which may be detrimental to his health." .
+
+doc:principle-23 a values:Obligation ;
+    values:partOf doc:Instrument ;
+    values:borneBy values:Agent ;
+    dc:title "Principle 23" ;
+    values:deonticStatus values:HeuristicDerived ;
+    values:originalText "1. The duration of any interrogation of a detained or imprisoned person and of the intervals between interrogations as well as the identity of the officials who conducted the interrogations and other persons present shall be recorded and certified in such form as may be prescribed by law. 2. A detained or imprisoned person, or his counsel when provided by law, shall have access to the information described in paragraph 1 of the present principle." .
+
+doc:principle-24 a values:Obligation ;
+    values:partOf doc:Instrument ;
+    values:borneBy values:Agent ;
+    dc:title "Principle 24" ;
+    values:deonticStatus values:HeuristicDerived ;
+    values:originalText "A proper medical examination shall be offered to a detained or imprisoned person as promptly as possible after his admission to the place of detention or imprisonment, and thereafter medical care and treatment shall be provided whenever necessary. This care and treatment shall be provided free of charge." .
+
+doc:principle-25 a values:Right ;
+    values:partOf doc:Instrument ;
+    values:heldBy values:NaturalPerson ;
+    dc:title "Principle 25" ;
+    values:deonticStatus values:HeuristicDerived ;
+    values:originalText "A detained or imprisoned person or his counsel shall, subject only to reasonable conditions to ensure security and good order in the place of detention or imprisonment, have the right to request or petition a judicial or other authority for a second medical examination or opinion." .
+
+doc:principle-26 a values:Obligation ;
+    values:partOf doc:Instrument ;
+    values:borneBy values:Agent ;
+    dc:title "Principle 26" ;
+    values:deonticStatus values:HeuristicDerived ;
+    values:originalText "The fact that a detained or imprisoned person underwent a medical examination, the name of the physician and the results of such an examination shall be duly recorded. Access to such records shall be ensured. Modalities therefore shall be in accordance with relevant rules of domestic law." .
+
+doc:principle-27 a values:Obligation ;
+    values:partOf doc:Instrument ;
+    values:borneBy values:Agent ;
+    dc:title "Principle 27" ;
+    values:deonticStatus values:HeuristicDerived ;
+    values:originalText "Non-compliance with these principles in obtaining evidence shall be taken into account in determining the admissibility of such evidence against a detained or imprisoned person." .
+
+doc:principle-28 a values:Right ;
+    values:partOf doc:Instrument ;
+    values:heldBy values:NaturalPerson ;
+    dc:title "Principle 28" ;
+    values:deonticStatus values:HeuristicDerived ;
+    values:originalText "A detained or imprisoned person shall have the right to obtain within the limits of available resources, if from public sources, reasonable quantities of educational, cultural and informational material, subject to reasonable conditions to ensure security and good order in the place of detention or imprisonment." .
+
+doc:principle-29 a values:Right ;
+    values:partOf doc:Instrument ;
+    values:heldBy values:NaturalPerson ;
+    dc:title "Principle 29" ;
+    values:deonticStatus values:HeuristicDerived ;
+    values:originalText "1. In order to supervise the strict observance of relevant laws and regulations, places of detention shall be visited regularly by qualified and experienced persons appointed by, and responsible to, a competent authority distinct from the authority directly in charge of the administration of the place of detention or imprisonment. 2. A detained or imprisoned person shall have the right to communicate freely and in full confidentiality with the persons who visit the places of detention or imprisonment in accordance with paragraph 1 of the present principle, subject to reasonable conditions to ensure security and good order in such places." .
+
+doc:principle-30 a values:Right ;
+    values:partOf doc:Instrument ;
+    values:heldBy values:NaturalPerson ;
+    dc:title "Principle 30" ;
+    values:deonticStatus values:HeuristicDerived ;
+    values:originalText "1. The types of conduct of the detained or imprisoned person that constitute disciplinary offences during detention or imprisonment, the description and duration of disciplinary punishment that may be inflicted and the authorities competent to impose such punishment shall be specified by law or lawful regulations and duly published. 2. A detained or imprisoned person shall have the right to be heard before disciplinary action is taken. He shall have the right to bring such action to higher authorities for review." .
+
+doc:principle-31 a values:Undertaking ;
+    values:partOf doc:Instrument ;
+    dc:title "Principle 31" ;
+    values:deonticStatus values:HeuristicDerived ;
+    values:originalText "The appropriate authorities shall endeavour to ensure, according to domestic law, assistance when needed to dependent and, in particular, minor members of the families of detained or imprisoned persons and shall devote a particular measure of care to the appropriate custody of children left with out supervision." .
+
+doc:principle-32 a values:Obligation ;
+    values:partOf doc:Instrument ;
+    values:borneBy values:Agent ;
+    dc:title "Principle 32" ;
+    values:deonticStatus values:HeuristicDerived ;
+    values:originalText "1. A detained person or his counsel shall be entitled at any time to take proceedings according to domestic law before a judicial or other authority to challenge the lawfulness of his detention in order to obtain his release without delay, if it is unlawful. 2. The proceedings referred to in paragraph 1 of the present principle shall be simple and expeditious and at no cost for detained persons without adequate means. The detaining authority shall produce without unreasonable delay the detained person before the reviewing authority." .
+
+doc:principle-33 a values:Right ;
+    values:partOf doc:Instrument ;
+    values:heldBy values:NaturalPerson ;
+    dc:title "Principle 33" ;
+    values:deonticStatus values:HeuristicDerived ;
+    values:originalText "1. A detained or imprisoned person or his counsel shall have the right to make a request or complaint regarding his treatment, in particular in case of torture or other cruel, inhuman or degrading treatment, to the authorities responsible for the administration of the place of detention and to higher authorities and, when necessary, to appropriate authorities vested with reviewing or remedial powers. 2. In those cases where neither the detained or imprisoned person nor his counsel has the possibility to exercise his rights under paragraph 1 of the present principle, a member of the family of the detained or imprisoned person or any other person who has knowledge of the case may exercise such rights. 3. Confidentiality concerning the request or complaint shall be maintained if so requested by the complainant. 4. Every request or complaint shall be promptly dealt with and replied to without undue delay. If the request or complaint is rejected or, in case of inordinate delay, the complainant shall be entitled to bring it before a judicial or other authority. Neither the detained or imprisoned person nor any complainant under paragraph 1 of the present principle shall suffer prejudice for making a request or complaint." .
+
+doc:principle-34 a values:Obligation ;
+    values:partOf doc:Instrument ;
+    values:borneBy values:Agent ;
+    dc:title "Principle 34" ;
+    values:deonticStatus values:HeuristicDerived ;
+    values:originalText "Whenever the death or disappearance of a detained or imprisoned person occurs during his detention or imprisonment, an inquiry into the cause of death or disappearance shall be held by a judicial or other authority, either on its own motion or at the instance of a member of the family of such a person or any person who has knowledge of the case. When circumstances so warrant, such an inquiry shall be held on the same procedural basis whenever the death or disappearance occurs shortly after the termination of the detention or imprisonment. The findings of such inquiry or a report thereon shall be made available upon request, unless doing so would jeopardize an ongoing criminal investigation." .
+
+doc:principle-35 a values:Obligation ;
+    values:partOf doc:Instrument ;
+    values:borneBy values:Agent ;
+    dc:title "Principle 35" ;
+    values:deonticStatus values:HeuristicDerived ;
+    values:originalText "1. Damage incurred because of acts or omissions by a public official contrary to the rights contained in these principles shall be compensated according to the applicable rules or liability provided by domestic law. 2. Information required to be recorded under these principles shall be available in accordance with procedures provided by domestic law for use in claiming compensation under the present principle." .
+
+doc:principle-36 a values:Obligation ;
+    values:partOf doc:Instrument ;
+    values:borneBy values:Agent ;
+    dc:title "Principle 36" ;
+    values:deonticStatus values:HeuristicDerived ;
+    values:originalText "1. A detained person suspected of or charged with a criminal offence shall be presumed innocent and shall be treated as such until proved guilty according to law in a public trial at which he has had all the guarantees necessary for his defence. 2. The arrest or detention of such a person pending investigation and trial shall be carried out only for the purposes of the administration of justice on grounds and under conditions and procedures specified by law. The imposition of restrictions upon such a person which are not strictly required for the purpose of the detention or to prevent hindrance to the process of investigation or the administration of justice, or for the maintenance of security and good order in the place of detention shall be forbidden." .
+
+doc:principle-37 a values:Right ;
+    values:partOf doc:Instrument ;
+    values:heldBy values:NaturalPerson ;
+    dc:title "Principle 37" ;
+    values:deonticStatus values:HeuristicDerived ;
+    values:originalText "A person detained on a criminal charge shall be brought before a judicial or other authority provided by law promptly after his arrest. Such authority shall decide without delay upon the lawfulness and necessity of detention. No person may be kept under detention pending investigation or trial except upon the written order of such an authority. A detained person shall, when brought before such an authority, have the right to make a statement on the treatment received by him while in custody." .
+
+doc:principle-38 a values:Right ;
+    values:partOf doc:Instrument ;
+    values:heldBy values:NaturalPerson ;
+    dc:title "Principle 38" ;
+    values:deonticStatus values:HeuristicDerived ;
+    values:originalText "A person detained on a criminal charge shall be entitled to trial within a reasonable time or to release pending trial." .
+
+doc:principle-39 a values:Undertaking ;
+    values:partOf doc:Instrument ;
+    dc:title "Principle 39" ;
+    values:deonticStatus values:HeuristicDerived ;
+    values:originalText "General clause Scope of the Body of Principles These principles apply for the protection of all persons under any form of detention or imprisonment. Use of Terms For the purposes of the Body of Principles: (a) \"Arrest\" means the act of apprehending a person for the alleged commission of an offence or by the action of an authority; (b) \"Detained person\" means any person deprived of personal liberty except as a result of conviction for an offence; (c) \"Imprisoned person\" means any person deprived of personal liberty as a result of conviction for an offence; (d) \"Detention\" means the condition of detained persons as defined above; (e) \"Imprisonment\" means the condition of imprisoned persons as defined above; (f) The words \"a judicial or other authority\" means a judicial or other authority under the law whose status and tenure should afford the strongest possible guarantees of competence, impartiality and independence." .

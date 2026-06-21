@@ -1,0 +1,8 @@
+{
+  "name": "get_system_status",
+  "description": "Return runtime status for the Qualia MCP surface.",
+  "inputSchema": {
+    "type": "object",
+    "properties": {}
+  }
+}

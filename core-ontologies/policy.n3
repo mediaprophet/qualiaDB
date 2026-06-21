@@ -1,0 +1,96 @@
+@prefix rdf:    <http://www.w3.org/1999/02/22-rdf-syntax-ns#> .
+@prefix rdfs:   <http://www.w3.org/2000/01/rdf-schema#> .
+@prefix sh:     <http://www.w3.org/ns/shacl#> .
+@prefix xsd:    <http://www.w3.org/2001/XMLSchema#> .
+@prefix values: <https://ns.webcivics.org/values/> .
+@prefix sense:  <https://ns.webcivics.org/sense/> .
+@prefix policy: <https://ns.webcivics.org/policy/> .
+
+# ===========================================================================
+# policy.n3 — enforcement-mode / interaction-governance layer (PLAN.md §14).
+# The ENFORCEMENT half of the evaluation/enforcement split: it decides, per
+# interaction/category, whether to ALLOW + record a verdict (permissive) or to
+# BLOCK preemptively (preventive). This is "Core 2 downstream routing"; the
+# DeonticVerdict path (deontic.rs) feeds it. Primary use: grappling with bad
+# bots + protecting the vulnerable. The protective mode is double-edged and is
+# itself held to rule-of-law — "system determinations" must NOT become
+# unaccountable censorship/control.
+# ===========================================================================
+
+# --- The setting: what happens to an evaluated interaction ---
+policy:EnforcementMode a rdfs:Class .
+policy:PermissiveAudit a policy:EnforcementMode ;
+    rdfs:comment "Allow the interaction; record a DeonticVerdict for later review/prosecution (the verdict path)." .
+policy:PreventiveBlock a policy:EnforcementMode ;
+    rdfs:comment "System determines and BLOCKS preemptively, per instruction, before harm (DenyRollback)." .
+policy:Interactive a policy:EnforcementMode ;
+    rdfs:comment "Halt and ask the human (q42:AmbiguousMapping / human-in-loop)." .
+policy:Prioritize a policy:EnforcementMode ;
+    rdfs:comment "Allow AND give priority (QoS) — the POSITIVE axis: for humanitarian-ICT (humanitarian-ict.n3) in adverse conditions. The promote half of distinguish-useful-from-abuse." .
+
+# --- A policy: a rule governing a category, with a mode + a source ---
+policy:Policy a rdfs:Class .
+policy:governsCategory a rdf:Property ; rdfs:domain policy:Policy ; rdfs:range policy:Category .
+policy:enforcementMode a rdf:Property ; rdfs:domain policy:Policy ; rdfs:range policy:EnforcementMode .
+policy:policySource    a rdf:Property ; rdfs:domain policy:Policy ; rdfs:range policy:PolicySource .
+policy:appliesToAgent  a rdf:Property ; rdfs:comment "The person/dependent this policy protects or serves." .
+policy:derogable       a rdf:Property ; rdfs:range xsd:boolean .
+
+# --- Who sets it (the spectrum) ---
+policy:PolicySource a rdfs:Class .
+policy:MandatoryBaseline a policy:PolicySource ;
+    rdfs:comment "Non-derogable protective rule (child safety, illegal conduct). MUST be law-grounded + contestable (policy:MandatoryLegitimacyShape) — not platform fiat." .
+policy:GuardianPolicy a policy:PolicySource ;
+    rdfs:comment "Set by a guardian for a dependent (ties values:guardian; must respect the child's evolving capacity — CRC)." .
+policy:UserPreference a policy:PolicySource ;
+    rdfs:comment "Set by the natural person for their OWN engagement (their agency; ties the §4.4 stipulation route)." .
+
+# Precedence (enforced at wiring): a non-derogable MandatoryBaseline cannot be
+# relaxed by a Guardian/User policy; Guardian/User may only be STRICTER (more
+# protective). Within what the baseline permits, Guardian (for dependents) then
+# User set the terms. A user/guardian policy that tries to UNBLOCK a non-derogable
+# mandatory rule is void.
+policy:precedenceRank a rdf:Property ; rdfs:comment "MandatoryBaseline > GuardianPolicy > UserPreference; ties break toward the stricter (more protective)." .
+
+# --- Categories (STARTER taxonomy; extensible; definitions are sense-qualified) ---
+policy:Category a rdfs:Class .
+policy:senseQualified a rdf:Property ; rdfs:range xsd:boolean ;
+    rdfs:comment "Category whose definition varies by jurisdiction/era/age — resolved via sense.n3, not silently fixed." .
+policy:ChildSafety                a policy:Category .
+policy:MisleadingDeceptiveConduct a policy:Category .
+policy:OrganizedCrime            a policy:Category .
+policy:Extortion                 a policy:Category .
+policy:Tracking                  a policy:Category ; rdfs:comment "Tracking cookies / cross-site tracking." .
+policy:AdultContent              a policy:Category ; policy:senseQualified true ;
+    rdfs:comment "Sub-categories extend here; what counts varies by jurisdiction/age (sense.n3)." .
+
+# Deception & fraud family — the mass-scale "bad bots" in practice; PreventiveBlock-eligible.
+policy:Scam          a policy:Category ; rdfs:comment "Deception for gain (fraud); MandatoryBaseline-eligible (fraud law)." .
+policy:Phishing      a policy:Category ;
+    rdfs:comment "Credential/identity theft via deception — an IDENTITY-deception; the signal is policy:claimedIdentityUnverifiable, resolved against the signed-identity/provenance fabric." .
+policy:Impersonation a policy:Category ;
+    rdfs:comment "Spoofing a person/institution; identity-deception — ties values:actsFor/principal + selfhood/identity (an agent claiming an identity/principal it cannot substantiate)." .
+policy:Spam          a policy:Category ; rdfs:comment "Unsolicited bulk contact; ties policy:unsolicited + UserPreference/consent (+ anti-spam law where applicable)." .
+policy:Malware       a policy:Category ; rdfs:comment "Malicious code/payload; MandatoryBaseline-eligible." .
+policy:SocialEngineering a policy:Category ;
+    rdfs:comment "Manipulation to extract info/action; overlaps the coercion/duress surface (agency.n3 CoercedConsentFlag)." .
+
+policy:unsolicited a rdf:Property ; rdfs:range xsd:boolean ;
+    rdfs:comment "Marks consent-violating contact (spam)." .
+policy:claimedIdentityUnverifiable a rdf:Property ; rdfs:range xsd:boolean ;
+    rdfs:comment "An agent asserts an identity/principal it cannot substantiate — the core phishing/impersonation signal; checked against the signed-identity / provenance fabric." .
+
+# ===========================================================================
+# Rule-of-law guard ON the protective mode itself. A MandatoryBaseline that
+# BLOCKS without law-grounding + an appeal/contest path is OVERREACH — the
+# enforcement layer must not become unaccountable censorship. Mirror of
+# values:RuleOfLawAsymmetryFlag (agency.n3): rule of law protects the citizen
+# FROM the enforcer too.
+# ===========================================================================
+policy:groundedIn  a rdf:Property ; rdfs:comment "The law/instrument a mandatory policy is grounded in (e.g. CRC for child safety)." .
+policy:appealPath  a rdf:Property ; rdfs:comment "How a person contests a block (court-supporting; agency.n3 §10.5)." .
+policy:OverreachFlag a rdfs:Class .
+
+policy:MandatoryLegitimacyShape a sh:NodeShape ;
+    sh:targetClass policy:Policy ;
+    sh:message "A mandatory preventive-block policy MUST carry policy:groundedIn (law) AND policy:appealPath (contestable); otherwise it is policy:OverreachFlag. (Conditional enforced at wiring: source=MandatoryBaseline ∧ mode=PreventiveBlock ⇒ groundedIn≥1 ∧ appealPath≥1.)" .

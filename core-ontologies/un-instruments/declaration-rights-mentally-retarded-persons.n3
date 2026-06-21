@@ -1,0 +1,108 @@
+@prefix rdf:    <http://www.w3.org/1999/02/22-rdf-syntax-ns#> .
+@prefix rdfs:   <http://www.w3.org/2000/01/rdf-schema#> .
+@prefix dc:     <http://purl.org/dc/terms/> .
+@prefix values: <https://ns.webcivics.org/values/> .
+@prefix doc:    <https://ns.webcivics.org/values/declaration-rights-mentally-retarded-persons#> .
+
+# ============================================================
+# Declaration on the Rights of Mentally Retarded Persons
+# RE-SOURCED from authoritative OHCHR text (verbatim originalText).
+# Deontic typing = lexical heuristic (values:HeuristicDerived) — pending review.
+# states->parties + universalisation = curation overlay (amendedText), pending.
+# ============================================================
+
+doc:Instrument a values:ValuesCredential ;
+    dc:title "Declaration on the Rights of Mentally Retarded Persons" ;
+    dc:date "20 December 1971" ;
+    values:category "Persons with disabilities" ;
+    values:categoryStatus values:AutoAssigned ;
+    values:source <https://www.ohchr.org/en/instruments-mechanisms/instruments/declaration-rights-mentally-retarded-persons> ;
+    rdfs:comment "Re-sourced from authoritative OHCHR text; deontic + amendment layers pending." .
+
+doc:paragraph-1 a values:Undertaking ;
+    values:partOf doc:Instrument ;
+    dc:title "Paragraph 1" ;
+    values:deonticStatus values:HeuristicDerived ;
+    values:originalText "Mindful of the pledge of the States Members of the United Nations under the Charter to take joint and separate action in co-operation with the Organization to promote higher standards of living, full employment and conditions of economic and social progress and development," .
+
+doc:paragraph-2 a values:Undertaking ;
+    values:partOf doc:Instrument ;
+    dc:title "Paragraph 2" ;
+    values:deonticStatus values:HeuristicDerived ;
+    values:originalText "Reaffirming faith in human rights and fundamental freedoms and in the principles of peace, of the dignity and worth of the human person and of social justice proclaimed in the Charter," .
+
+doc:paragraph-3 a values:Undertaking ;
+    values:partOf doc:Instrument ;
+    dc:title "Paragraph 3" ;
+    values:deonticStatus values:HeuristicDerived ;
+    values:originalText "Recalling the principles of the Universal Declaration of Human Rights, the International Covenants on Human Rights, the Declaration of the Rights of the Child and the standards already set for social progress in the constitutions, conventions, recommendations and resolutions of the International Labour Organisation, the United Nations Educational, Scientific and Cultural Organization, the World Health Organization, the United Nations Children's Fund and other organizations concerned," .
+
+doc:paragraph-4 a values:Undertaking ;
+    values:partOf doc:Instrument ;
+    dc:title "Paragraph 4" ;
+    values:deonticStatus values:HeuristicDerived ;
+    values:originalText "Emphasizing that the Declaration on Social Progress and Development has proclaimed the necessity of protecting the rights and assuring the welfare and rehabilitation of the physically and mentally disadvantaged," .
+
+doc:paragraph-5 a values:Undertaking ;
+    values:partOf doc:Instrument ;
+    dc:title "Paragraph 5" ;
+    values:deonticStatus values:HeuristicDerived ;
+    values:originalText "Bearing in mind the necessity of assisting mentally retarded persons to develop their abilities in various fields of activities and of promoting their integration as far as possible in normal life," .
+
+doc:paragraph-6 a values:Undertaking ;
+    values:partOf doc:Instrument ;
+    dc:title "Paragraph 6" ;
+    values:deonticStatus values:HeuristicDerived ;
+    values:originalText "Aware that certain countries, at their present stage of development, can devote only limited efforts to this end," .
+
+doc:paragraph-7 a values:Undertaking ;
+    values:partOf doc:Instrument ;
+    dc:title "Paragraph 7" ;
+    values:deonticStatus values:HeuristicDerived ;
+    values:originalText "Proclaims this Declaration on the Rights of Mentally Retarded Persons and calls for national and international action to en sure that it will be used as a common basis and frame of reference for the protection of these rights:" .
+
+doc:paragraph-8 a values:Undertaking ;
+    values:partOf doc:Instrument ;
+    dc:title "Paragraph 8" ;
+    values:deonticStatus values:HeuristicDerived ;
+    values:originalText "1. The mentally retarded person has, to the maximum degree of feasibility, the same rights as other human beings." .
+
+doc:paragraph-9 a values:Right ;
+    values:partOf doc:Instrument ;
+    values:heldBy values:NaturalPerson ;
+    dc:title "Paragraph 9" ;
+    values:deonticStatus values:HeuristicDerived ;
+    values:originalText "2. The mentally retarded person has a right to proper medical care and physical therapy and to such education, training, rehabilitation and guidance as will enable him to develop his ability and maximum potential." .
+
+doc:paragraph-10 a values:Right ;
+    values:partOf doc:Instrument ;
+    values:heldBy values:NaturalPerson ;
+    dc:title "Paragraph 10" ;
+    values:deonticStatus values:HeuristicDerived ;
+    values:originalText "3. The mentally retarded person has a right to economic security and to a decent standard of living. He has a right to perform productive work or to engage in any other meaningful occupation to the fullest possible extent of his capabilities." .
+
+doc:paragraph-11 a values:Undertaking ;
+    values:partOf doc:Instrument ;
+    dc:title "Paragraph 11" ;
+    values:deonticStatus values:HeuristicDerived ;
+    values:originalText "4. Whenever possible, the mentally retarded person should live with his own family or with foster parents and participate in different forms of community life. The family with which he lives should receive assistance. If care in an institution becomes necessary, it should be provided in surroundings and other circumstances as close as possible to those of normal life." .
+
+doc:paragraph-12 a values:Right ;
+    values:partOf doc:Instrument ;
+    values:heldBy values:NaturalPerson ;
+    dc:title "Paragraph 12" ;
+    values:deonticStatus values:HeuristicDerived ;
+    values:originalText "5. The mentally retarded person has a right to a qualified guardian when this is required to protect his personal well-being and interests." .
+
+doc:paragraph-13 a values:Right ;
+    values:partOf doc:Instrument ;
+    values:heldBy values:NaturalPerson ;
+    dc:title "Paragraph 13" ;
+    values:deonticStatus values:HeuristicDerived ;
+    values:originalText "6. The mentally retarded person has a right to protection from exploitation, abuse and degrading treatment. If prosecuted for any offence, he shall have a right to due process of law with full recognition being given to his degree of mental responsibility." .
+
+doc:paragraph-14 a values:Undertaking ;
+    values:partOf doc:Instrument ;
+    dc:title "Paragraph 14" ;
+    values:deonticStatus values:HeuristicDerived ;
+    values:originalText "7. Whenever mentally retarded persons are unable, because of the severity of their handicap, to exercise all their rights in a meaningful way or it should become necessary to restrict or deny some or all of these rights, the procedure used for that restriction or denial of rights must contain proper legal safeguards against every form of abuse. This procedure must be based on an evaluation of the social capability of the mentally retarded person by qualified experts and must be subject to periodic review and to the right of appeal to higher authorities." .

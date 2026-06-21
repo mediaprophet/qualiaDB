@@ -178,7 +178,7 @@ Create a JSON-LD profile file `my-profile.jsonld`:
 
 ```json
 {
-  "@context": "https://qualia.io/q42",
+  "@context": "https://webizen.org/q42",
   "@type": "CapabilityProfile",
   "profile_id": "my-custom-profile",
   "allowed_namespaces": [

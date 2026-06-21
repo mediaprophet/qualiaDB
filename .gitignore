@@ -135,3 +135,18 @@ reports/
 # Local test GGUF models (not deployed)
 docs/models/
 models/
+
+# personal info
+provenance/
+
+# Track the authored core-ontologies spine (overrides the blanket *.n3 rule above)
+!core-ontologies/**/*.n3
+
+# Local caches / build artefacts / agent scratch — not for version control
+/.wordnet_build/
+/.w3c_mail_cache/
+/.qualia/
+/terminals/
+/agent-tools/
+/agent-intents/
+fix_quotes.py

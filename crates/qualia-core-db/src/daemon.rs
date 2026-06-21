@@ -455,14 +455,14 @@ pub async fn start_local_daemon_with_options(
                                             println!("[Qualia Daemon] Dropping Handshake from {}: Unauthorized Group DID.", peer);
                                             let _ = swarm.behaviour_mut().request_response.send_response(
                                                 channel,
-                                                crate::p2p::protocol::QualiaResponse::HandshakeAck { context: "https://qualia.org/ld/context/v1".to_string(), response_type: "HandshakeAck".to_string(), success: false, did_q42: 0, semantic_context: 0 }
+                                                crate::p2p::protocol::QualiaResponse::HandshakeAck { context: "https://webizen.org/ld/context/v1".to_string(), response_type: "HandshakeAck".to_string(), success: false, did_q42: 0, semantic_context: 0 }
                                             );
                                             let _ = swarm.disconnect_peer_id(peer);
                                         } else {
                                             println!("[Qualia Daemon] Handshake approved for {}. Upgrading trust.", peer);
                                             let _ = swarm.behaviour_mut().request_response.send_response(
                                                 channel,
-                                                crate::p2p::protocol::QualiaResponse::HandshakeAck { context: "https://qualia.org/ld/context/v1".to_string(), response_type: "HandshakeAck".to_string(), success: true, did_q42: 0, semantic_context: 0 }
+                                                crate::p2p::protocol::QualiaResponse::HandshakeAck { context: "https://webizen.org/ld/context/v1".to_string(), response_type: "HandshakeAck".to_string(), success: true, did_q42: 0, semantic_context: 0 }
                                             );
                                         }
                                     },
@@ -483,13 +483,13 @@ pub async fn start_local_daemon_with_options(
                                         }
 
                                         let response = if is_authorized {
-                                            crate::p2p::protocol::QualiaResponse::SyncAck { context: "https://qualia.org/ld/context/v1".to_string(), response_type: "SyncAck".to_string(), did_q42: 0, routing_constraints: 0,
+                                            crate::p2p::protocol::QualiaResponse::SyncAck { context: "https://webizen.org/ld/context/v1".to_string(), response_type: "SyncAck".to_string(), did_q42: 0, routing_constraints: 0,
                                                 success: true,
                                                 message: "Sync Approved".to_string(),
                                                 blocks_sent: 42,
                                             }
                                         } else {
-                                            crate::p2p::protocol::QualiaResponse::SyncAck { context: "https://qualia.org/ld/context/v1".to_string(), response_type: "SyncAck".to_string(), did_q42: 0, routing_constraints: 0,
+                                            crate::p2p::protocol::QualiaResponse::SyncAck { context: "https://webizen.org/ld/context/v1".to_string(), response_type: "SyncAck".to_string(), did_q42: 0, routing_constraints: 0,
                                                 success: false,
                                                 message: "RequiresGatekeeperChallenge".to_string(),
                                                 blocks_sent: 0,

@@ -24,7 +24,7 @@ const QUERIES = {
     coldstart: ()  => `SELECT * WHERE { ?s ?p ?o } LIMIT 1`,
     jitter:    (i) => `SELECT ?s WHERE { ?s <http://schema.org/name> "Entity${i % 200}" }`,
     crdt:      (i) => `SELECT ?s ?p ?o WHERE { ?s ?p ?o . FILTER(?s > <http://example.org/e${i % 100}>) }`,
-    intercept: ()  => `@prefix q: <http://qualia-db.org/> .\n{ ?vec q:bound ?b . ?b q:exceeds q:local } => { ?vec q:clipped true } .`,
+    intercept: ()  => `@prefix q: <http://webizen.org/> .\n{ ?vec q:bound ?b . ?b q:exceeds q:local } => { ?vec q:clipped true } .`,
     escrow:    ()  => `@prefix : <http://example.org/> .\n{ ?asset :cost ?c . ?payment :amount ?a . ?a :gte ?c } => { ?asset :licenseShifted true } .`,
     provenance:(i) => `SELECT ?creator WHERE { <http://example.org/commit${i % 200}> <http://purl.org/dc/terms/creator> ?creator }`,
     nym:       (i) => `@prefix : <http://example.org/> .\n{ ?user :nym ?id . ?id :partition ${i % 16} } => { ?user :isolated true } .`,

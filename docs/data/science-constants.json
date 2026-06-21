@@ -79,7 +79,7 @@
   },
   "q42_pack_metadata": {
     "format_version": 3,
-    "schema_iri": "https://qualia-db.org/vocab/science-constants#",
+    "schema_iri": "https://webizen.org/vocab/science-constants#",
     "domains": ["physics","chemistry","mathematics","biology","finance"],
     "total_constants": 21,
     "rust_mapping": {

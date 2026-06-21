@@ -1,0 +1,249 @@
+@prefix rdf:    <http://www.w3.org/1999/02/22-rdf-syntax-ns#> .
+@prefix rdfs:   <http://www.w3.org/2000/01/rdf-schema#> .
+@prefix dc:     <http://purl.org/dc/terms/> .
+@prefix values: <https://ns.webcivics.org/values/> .
+@prefix doc:    <https://ns.webcivics.org/values/basic-principles-independence-judiciary#> .
+
+# ============================================================
+# Basic Principles on the Independence of the Judiciary
+# RE-SOURCED from authoritative OHCHR text (verbatim originalText).
+# Deontic typing = lexical heuristic (values:HeuristicDerived) — pending review.
+# states->parties + universalisation = curation overlay (amendedText), pending.
+# ============================================================
+
+doc:Instrument a values:ValuesCredential ;
+    dc:title "Basic Principles on the Independence of the Judiciary" ;
+    dc:date "06 September 1985" ;
+    values:category "Administration of justice, detention & law enforcement" ;
+    values:categoryStatus values:AutoAssigned ;
+    values:source <https://www.ohchr.org/en/instruments-mechanisms/instruments/basic-principles-independence-judiciary> ;
+    rdfs:comment "Re-sourced from authoritative OHCHR text; deontic + amendment layers pending." .
+
+doc:paragraph-1 a values:Undertaking ;
+    values:partOf doc:Instrument ;
+    dc:title "Paragraph 1" ;
+    values:deonticStatus values:HeuristicDerived ;
+    values:originalText "Independence of the judiciary Freedom of expression and association Qualifications, selection and training Conditions of service and tenure Professional secrecy and immunity Discipline, suspension and removal" .
+
+doc:paragraph-2 a values:Undertaking ;
+    values:partOf doc:Instrument ;
+    dc:title "Paragraph 2" ;
+    values:deonticStatus values:HeuristicDerived ;
+    values:originalText "Adopted by the Seventh United Nations Congress on the Prevention of Crime and the Treatment of Offenders held at Milan from 26 August to 6 September 1985 and endorsed by General Assembly resolutions 40/32 of 29 November 1985 and 40/146 of 13 December 1985" .
+
+doc:paragraph-3 a values:Undertaking ;
+    values:partOf doc:Instrument ;
+    dc:title "Paragraph 3" ;
+    values:deonticStatus values:HeuristicDerived ;
+    values:originalText "Whereas in the Charter of the United Nations the peoples of the world affirm, inter alia , their determination to establish conditions under which justice can be maintained to achieve international co-operation in promoting and encouraging respect for human rights and fundamental freedoms without any discrimination," .
+
+doc:paragraph-4 a values:Right ;
+    values:partOf doc:Instrument ;
+    values:heldBy values:NaturalPerson ;
+    dc:title "Paragraph 4" ;
+    values:deonticStatus values:HeuristicDerived ;
+    values:originalText "Whereas the Universal Declaration of Human Rights enshrines in particular the principles of equality before the law, of the presumption of innocence and of the right to a fair and public hearing by a competent, independent and impartial tribunal established by law," .
+
+doc:paragraph-5 a values:Right ;
+    values:partOf doc:Instrument ;
+    values:heldBy values:NaturalPerson ;
+    dc:title "Paragraph 5" ;
+    values:deonticStatus values:HeuristicDerived ;
+    values:originalText "Whereas the International Covenants on Economic, Social and Cultural Rights and on Civil and Political Rights both guarantee the exercise of those rights, and in addition, the Covenant on Civil and Political Rights further guarantees the right to be tried without undue delay," .
+
+doc:paragraph-6 a values:Undertaking ;
+    values:partOf doc:Instrument ;
+    dc:title "Paragraph 6" ;
+    values:deonticStatus values:HeuristicDerived ;
+    values:originalText "Whereas frequently there still exists a gap between the vision underlying those principles and the actual situation," .
+
+doc:paragraph-7 a values:Undertaking ;
+    values:partOf doc:Instrument ;
+    dc:title "Paragraph 7" ;
+    values:deonticStatus values:HeuristicDerived ;
+    values:originalText "Whereas the organization and administration of justice in every country should be inspired by those principles, and efforts should be undertaken to translate them fully into reality," .
+
+doc:paragraph-8 a values:Undertaking ;
+    values:partOf doc:Instrument ;
+    dc:title "Paragraph 8" ;
+    values:deonticStatus values:HeuristicDerived ;
+    values:originalText "Whereas rules concerning the exercise of judicial office should aim at enabling judges to act in accordance with those principles," .
+
+doc:paragraph-9 a values:Undertaking ;
+    values:partOf doc:Instrument ;
+    dc:title "Paragraph 9" ;
+    values:deonticStatus values:HeuristicDerived ;
+    values:originalText "Whereas judges are charged with the ultimate decision over life, freedoms, rights, duties and property of citizens," .
+
+doc:paragraph-10 a values:Undertaking ;
+    values:partOf doc:Instrument ;
+    dc:title "Paragraph 10" ;
+    values:deonticStatus values:HeuristicDerived ;
+    values:originalText "Whereas it is, therefore, appropriate that consideration be first given to the role of judges in relation to the system of justice and to the importance of their selection, training and conduct," .
+
+doc:paragraph-11 a values:Undertaking ;
+    values:partOf doc:Instrument ;
+    dc:title "Paragraph 11" ;
+    values:deonticStatus values:HeuristicDerived ;
+    values:originalText "The following basic principles, formulated to assist Member States in their task of securing and promoting the independence of the judiciary should be taken into account and respected by Governments within the framework of their national legislation and practice and be brought to the attention of judges, lawyers, members of the executive and the legislature and the public in general. The principles have been formulated principally with professional judges in mind, but they apply equally, as appropriate, to lay judges, where they exist." .
+
+doc:paragraph-12 a values:Obligation ;
+    values:partOf doc:Instrument ;
+    values:borneBy values:Agent ;
+    dc:title "Paragraph 12" ;
+    values:deonticStatus values:HeuristicDerived ;
+    values:originalText "1. The independence of the judiciary shall be guaranteed by the State and enshrined in the Constitution or the law of the country. It is the duty of all governmental and other institutions to respect and observe the independence of the judiciary." .
+
+doc:paragraph-13 a values:Undertaking ;
+    values:partOf doc:Instrument ;
+    dc:title "Paragraph 13" ;
+    values:deonticStatus values:HeuristicDerived ;
+    values:originalText "2. The judiciary shall decide matters before them impartially, on the basis of facts and in accordance with the law, without any restrictions, improper influences, inducements, pressures, threats or interferences, direct or indirect, from any quarter or for any reason." .
+
+doc:paragraph-14 a values:Undertaking ;
+    values:partOf doc:Instrument ;
+    dc:title "Paragraph 14" ;
+    values:deonticStatus values:HeuristicDerived ;
+    values:originalText "3. The judiciary shall have jurisdiction over all issues of a judicial nature and shall have exclusive authority to decide whether an issue submitted for its decision is within its competence as defined by law." .
+
+doc:paragraph-15 a values:Prohibition ;
+    values:partOf doc:Instrument ;
+    values:borneBy values:Agent ;
+    dc:title "Paragraph 15" ;
+    values:deonticStatus values:HeuristicDerived ;
+    values:originalText "4. There shall not be any inappropriate or unwarranted interference with the judicial process, nor shall judicial decisions by the courts be subject to revision. This principle is without prejudice to judicial review or to mitigation or commutation by competent authorities of sentences imposed by the judiciary, in accordance with the law." .
+
+doc:paragraph-16 a values:Prohibition ;
+    values:partOf doc:Instrument ;
+    values:borneBy values:Agent ;
+    dc:title "Paragraph 16" ;
+    values:deonticStatus values:HeuristicDerived ;
+    values:originalText "5. Everyone shall have the right to be tried by ordinary courts or tribunals using established legal procedures. Tribunals that do not use the duly established procedures of the legal process shall not be created to displace the jurisdiction belonging to the ordinary courts or judicial tribunals." .
+
+doc:paragraph-17 a values:Undertaking ;
+    values:partOf doc:Instrument ;
+    dc:title "Paragraph 17" ;
+    values:deonticStatus values:HeuristicDerived ;
+    values:originalText "6. The principle of the independence of the judiciary entitles and requires the judiciary to ensure that judicial proceedings are conducted fairly and that the rights of the parties are respected." .
+
+doc:paragraph-18 a values:Undertaking ;
+    values:partOf doc:Instrument ;
+    dc:title "Paragraph 18" ;
+    values:deonticStatus values:HeuristicDerived ;
+    values:originalText "7. It is the duty of each Member State to provide adequate resources to enable the judiciary to properly perform its functions." .
+
+doc:paragraph-19 a values:Undertaking ;
+    values:partOf doc:Instrument ;
+    dc:title "Paragraph 19" ;
+    values:deonticStatus values:HeuristicDerived ;
+    values:originalText "Freedom of expression and association" .
+
+doc:paragraph-20 a values:Right ;
+    values:partOf doc:Instrument ;
+    values:heldBy values:NaturalPerson ;
+    dc:title "Paragraph 20" ;
+    values:deonticStatus values:HeuristicDerived ;
+    values:originalText "8. In accordance with the Universal Declaration of Human Rights, members of the judiciary are like other citizens entitled to freedom of expression, belief, association and assembly; provided, however, that in exercising such rights, judges shall always conduct themselves in such a manner as to preserve the dignity of their office and the impartiality and independence of the judiciary." .
+
+doc:paragraph-21 a values:Obligation ;
+    values:partOf doc:Instrument ;
+    values:borneBy values:Agent ;
+    dc:title "Paragraph 21" ;
+    values:deonticStatus values:HeuristicDerived ;
+    values:originalText "9. Judges shall be free to form and join associations of judges or other organizations to represent their interests, to promote their professional training and to protect their judicial independence." .
+
+doc:paragraph-22 a values:Undertaking ;
+    values:partOf doc:Instrument ;
+    dc:title "Paragraph 22" ;
+    values:deonticStatus values:HeuristicDerived ;
+    values:originalText "Qualifications, selection and training" .
+
+doc:paragraph-23 a values:Prohibition ;
+    values:partOf doc:Instrument ;
+    values:borneBy values:Agent ;
+    dc:title "Paragraph 23" ;
+    values:deonticStatus values:HeuristicDerived ;
+    values:originalText "10. Persons selected for judicial office shall be individuals of integrity and ability with appropriate training or qualifications in law. Any method of judicial selection shall safeguard against judicial appointments for improper motives. In the selection of judges, there shall be no discrimination against a person on the grounds of race, colour, sex, religion, political or other opinion, national or social origin, property, birth or status, except that a requirement, that a candidate for judicial office must be a national of the country concerned, shall not be considered discriminatory." .
+
+doc:paragraph-24 a values:Undertaking ;
+    values:partOf doc:Instrument ;
+    dc:title "Paragraph 24" ;
+    values:deonticStatus values:HeuristicDerived ;
+    values:originalText "Conditions of service and tenure" .
+
+doc:paragraph-25 a values:Obligation ;
+    values:partOf doc:Instrument ;
+    values:borneBy values:Agent ;
+    dc:title "Paragraph 25" ;
+    values:deonticStatus values:HeuristicDerived ;
+    values:originalText "11. The term of office of judges, their independence, security, adequate remuneration, conditions of service, pensions and the age of retirement shall be adequately secured by law." .
+
+doc:paragraph-26 a values:Undertaking ;
+    values:partOf doc:Instrument ;
+    dc:title "Paragraph 26" ;
+    values:deonticStatus values:HeuristicDerived ;
+    values:originalText "12. Judges, whether appointed or elected, shall have guaranteed tenure until a mandatory retirement age or the expiry of their term of office, where such exists." .
+
+doc:paragraph-27 a values:Undertaking ;
+    values:partOf doc:Instrument ;
+    dc:title "Paragraph 27" ;
+    values:deonticStatus values:HeuristicDerived ;
+    values:originalText "13. Promotion of judges, wherever such a system exists, should be based on objective factors, in particular ability, integrity and experience." .
+
+doc:paragraph-28 a values:Undertaking ;
+    values:partOf doc:Instrument ;
+    dc:title "Paragraph 28" ;
+    values:deonticStatus values:HeuristicDerived ;
+    values:originalText "14. The assignment of cases to judges within the court to which they belong is an internal matter of judicial administration." .
+
+doc:paragraph-29 a values:Undertaking ;
+    values:partOf doc:Instrument ;
+    dc:title "Paragraph 29" ;
+    values:deonticStatus values:HeuristicDerived ;
+    values:originalText "Professional secrecy and immunity" .
+
+doc:paragraph-30 a values:Prohibition ;
+    values:partOf doc:Instrument ;
+    values:borneBy values:Agent ;
+    dc:title "Paragraph 30" ;
+    values:deonticStatus values:HeuristicDerived ;
+    values:originalText "15. The judiciary shall be bound by professional secrecy with regard to their deliberations and to confidential information acquired in the course of their duties other than in public proceedings, and shall not be compelled to testify on such matters." .
+
+doc:paragraph-31 a values:Undertaking ;
+    values:partOf doc:Instrument ;
+    dc:title "Paragraph 31" ;
+    values:deonticStatus values:HeuristicDerived ;
+    values:originalText "16. Without prejudice to any disciplinary procedure or to any right of appeal or to compensation from the State, in accordance with national law, judges should enjoy personal immunity from civil suits for monetary damages for improper acts or omissions in the exercise of their judicial functions." .
+
+doc:paragraph-32 a values:Undertaking ;
+    values:partOf doc:Instrument ;
+    dc:title "Paragraph 32" ;
+    values:deonticStatus values:HeuristicDerived ;
+    values:originalText "Discipline, suspension and removal" .
+
+doc:paragraph-33 a values:Right ;
+    values:partOf doc:Instrument ;
+    values:heldBy values:NaturalPerson ;
+    dc:title "Paragraph 33" ;
+    values:deonticStatus values:HeuristicDerived ;
+    values:originalText "17. A charge or complaint made against a judge in his/her judicial and professional capacity shall be processed expeditiously and fairly under an appropriate procedure. The judge shall have the right to a fair hearing. The examination of the matter at its initial stage shall be kept confidential, unless otherwise requested by the judge." .
+
+doc:paragraph-34 a values:Obligation ;
+    values:partOf doc:Instrument ;
+    values:borneBy values:Agent ;
+    dc:title "Paragraph 34" ;
+    values:deonticStatus values:HeuristicDerived ;
+    values:originalText "18. Judges shall be subject to suspension or removal only for reasons of incapacity or behaviour that renders them unfit to discharge their duties." .
+
+doc:paragraph-35 a values:Obligation ;
+    values:partOf doc:Instrument ;
+    values:borneBy values:Agent ;
+    dc:title "Paragraph 35" ;
+    values:deonticStatus values:HeuristicDerived ;
+    values:originalText "19. All disciplinary, suspension or removal proceedings shall be determined in accordance with established standards of judicial conduct." .
+
+doc:paragraph-36 a values:Undertaking ;
+    values:partOf doc:Instrument ;
+    dc:title "Paragraph 36" ;
+    values:deonticStatus values:HeuristicDerived ;
+    values:originalText "20. Decisions in disciplinary, suspension or removal proceedings should be subject to an independent review. This principle may not apply to the decisions of the highest court and those of the legislature in impeachment or similar proceedings." .

@@ -1,5 +1,5 @@
 {
-  "version": "0.0.17",
+  "version": "0.0.18",
   "brand": {
     "name": "QualiaDB",
     "tagline": "Human-Centric Semantic Engine",
@@ -34,6 +34,12 @@
       "label": "Benchmark Hub",
       "href": "benchmark.html",
       "icon": "fa-gauge-high",
+      "group": "Benchmarks"
+    },
+    {
+      "label": "Browser LLM",
+      "href": "benchmark.html#llm",
+      "icon": "fa-robot",
       "group": "Benchmarks"
     },
     {

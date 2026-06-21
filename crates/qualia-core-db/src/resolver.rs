@@ -57,9 +57,9 @@ pub const INLINE_VALUE_MASK: u64 = !(MSB_FLAG | INLINE_TAG_MASK);
 // via `q_hash`, which is `const fn`.
 
 static DEMO_LEXICON: &[(u64, &[u8])] = &[
-    (crate::q_hash("Alice"), b"http://qualia-db.org/demo/Alice"),
-    (crate::q_hash("Bob"), b"http://qualia-db.org/demo/Bob"),
-    (crate::q_hash("Carol"), b"http://qualia-db.org/demo/Carol"),
+    (crate::q_hash("Alice"), b"http://webizen.org/demo/Alice"),
+    (crate::q_hash("Bob"), b"http://webizen.org/demo/Bob"),
+    (crate::q_hash("Carol"), b"http://webizen.org/demo/Carol"),
     (crate::q_hash("knows"), b"http://schema.org/knows"),
     (crate::q_hash("likes"), b"http://schema.org/likes"),
     (
@@ -74,21 +74,21 @@ static DEMO_LEXICON: &[(u64, &[u8])] = &[
     (crate::q_hash("name"), b"http://schema.org/name"),
     (
         crate::q_hash("guardian"),
-        b"http://qualia-db.org/vocab#guardian",
+        b"http://webizen.org/vocab#guardian",
     ),
-    (crate::q_hash("ward"), b"http://qualia-db.org/vocab#ward"),
+    (crate::q_hash("ward"), b"http://webizen.org/vocab#ward"),
     (
         crate::q_hash("has_symptom"),
-        b"http://qualia-db.org/medical#hasSymptom",
+        b"http://webizen.org/medical#hasSymptom",
     ),
     (crate::q_hash("Fever"), b"http://snomed.info/id/386661006"),
     (
         crate::q_hash("income"),
-        b"http://qualia-db.org/finance#income",
+        b"http://webizen.org/finance#income",
     ),
     (
         crate::q_hash("balance"),
-        b"http://qualia-db.org/finance#balance",
+        b"http://webizen.org/finance#balance",
     ),
 ];
 
@@ -347,7 +347,7 @@ mod tests {
     fn known_hash_resolves_to_uri() {
         let hash = crate::q_hash("Alice");
         let result = resolve_hash(hash).unwrap();
-        assert_eq!(result, b"http://qualia-db.org/demo/Alice");
+        assert_eq!(result, b"http://webizen.org/demo/Alice");
     }
 
     #[test]
@@ -367,7 +367,7 @@ mod tests {
     fn known_iri_rendered_with_angle_brackets() {
         let mut buf = Vec::new();
         write_iri_term(crate::q_hash("Alice"), &mut buf).unwrap();
-        assert_eq!(buf, b"<http://qualia-db.org/demo/Alice>");
+        assert_eq!(buf, b"<http://webizen.org/demo/Alice>");
     }
 
     #[test]
@@ -473,12 +473,12 @@ mod tests {
         );
         let out = render(&[q]);
         assert!(
-            out.contains("<http://qualia-db.org/demo/Alice>"),
+            out.contains("<http://webizen.org/demo/Alice>"),
             "got: {out}"
         );
         assert!(out.contains("<http://schema.org/knows>"), "got: {out}");
         assert!(
-            out.contains("<http://qualia-db.org/demo/Bob>"),
+            out.contains("<http://webizen.org/demo/Bob>"),
             "got: {out}"
         );
         assert!(out.ends_with(" .\n"));

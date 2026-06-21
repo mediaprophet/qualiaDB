@@ -355,7 +355,7 @@ The previous contradictions have been resolved through the implementation of CBO
 **Semantic Payload Structure:**
 ```json
 {
-  "@context": "https://qualia.org/ld/context/v1",
+  "@context": "https://webizen.org/ld/context/v1",
   "@type": "Handshake" | "Sync" | "HandshakeAck" | "SyncAck",
   "did_q42": "did:q42:...",
   "semantic_context": 12345,

@@ -114,7 +114,7 @@ impl VaultManifestProcessor {
     pub fn to_cbor_ld(&self, manifest: &VaultManifest) -> Result<Vec<u8>, CborLdError> {
         // Ensure manifest has proper Q42 context
         let mut enhanced_manifest = manifest.clone();
-        enhanced_manifest.context = "https://qualia.org/ld/vault/v1".to_string();
+        enhanced_manifest.context = "https://webizen.org/ld/vault/v1".to_string();
         
         // Serialize to CBOR-LD
         let mut buffer = Vec::new();
@@ -130,7 +130,7 @@ impl VaultManifestProcessor {
             .map_err(|_| CborLdError::InvalidValueType)?;
         
         // Validate context
-        if manifest.context != "https://qualia.org/ld/vault/v1" {
+        if manifest.context != "https://webizen.org/ld/vault/v1" {
             return Err(CborLdError::InvalidUtf8);
         }
         
@@ -266,14 +266,14 @@ impl CompactVaultManifest {
             created: self.created.clone(),
             modified: self.modified.clone(),
             vocabulary: VocabularyLD {
-                context: "https://qualia.org/ld/vocab/".to_string(),
-                base_uri: "https://qualia.org/ld/vocab/".to_string(),
+                context: "https://webizen.org/ld/vocab/".to_string(),
+                base_uri: "https://webizen.org/ld/vocab/".to_string(),
                 prefixes: HashMap::new(),
                 terms: HashMap::new(),
             },
             collections: self.collections.iter()
                 .map(|c| CollectionLD {
-                    context: "https://qualia.org/ld/vault/v1".to_string(),
+                    context: "https://webizen.org/ld/vault/v1".to_string(),
                     collection_type: "Collection".to_string(),
                     id: c.id.clone(),
                     name: c.name.clone(),
@@ -285,7 +285,7 @@ impl CompactVaultManifest {
                 .collect(),
             capabilities: self.capabilities.iter()
                 .map(|c| CapabilityLD {
-                    context: "https://qualia.org/ld/vault/v1".to_string(),
+                    context: "https://webizen.org/ld/vault/v1".to_string(),
                     capability_type: "Capability".to_string(),
                     id: c.id.clone(),
                     name: c.name.clone(),
@@ -308,17 +308,17 @@ impl VaultManifest {
         let now = chrono::Utc::now().to_rfc3339();
         
         Self {
-            context: "https://qualia.org/ld/vault/v1".to_string(),
+            context: "https://webizen.org/ld/vault/v1".to_string(),
             manifest_type: "VaultManifest".to_string(),
             id,
             created: now.clone(),
             modified: now,
             vocabulary: VocabularyLD {
-                context: "https://qualia.org/ld/vocab/".to_string(),
-                base_uri: "https://qualia.org/ld/vocab/".to_string(),
+                context: "https://webizen.org/ld/vocab/".to_string(),
+                base_uri: "https://webizen.org/ld/vocab/".to_string(),
                 prefixes: {
                     let mut prefixes = HashMap::new();
-                    prefixes.insert("qualia".to_string(), "https://qualia.org/ld/vocab/".to_string());
+                    prefixes.insert("qualia".to_string(), "https://webizen.org/ld/vocab/".to_string());
                     prefixes.insert("did".to_string(), "https://www.w3.org/TR/did-core/".to_string());
                     prefixes.insert("sec".to_string(), "https://w3id.org/security/".to_string());
                     prefixes.insert("xsd".to_string(), "http://www.w3.org/2001/XMLSchema#".to_string());
@@ -410,7 +410,7 @@ mod tests {
         
         assert_eq!(manifest.id, "test-vault-123");
         assert_eq!(manifest.manifest_type, "VaultManifest");
-        assert_eq!(manifest.context, "https://qualia.org/ld/vault/v1");
+        assert_eq!(manifest.context, "https://webizen.org/ld/vault/v1");
         assert!(!manifest.created.is_empty());
         assert!(!manifest.modified.is_empty());
         assert!(manifest.collections.is_empty());
@@ -423,7 +423,7 @@ mod tests {
         
         // Add test collection
         full_manifest.add_collection(CollectionLD {
-            context: "https://qualia.org/ld/vault/v1".to_string(),
+            context: "https://webizen.org/ld/vault/v1".to_string(),
             collection_type: "Collection".to_string(),
             id: "collection-1".to_string(),
             name: "Test Collection".to_string(),
@@ -435,7 +435,7 @@ mod tests {
         
         // Add test capability
         full_manifest.add_capability(CapabilityLD {
-            context: "https://qualia.org/ld/vault/v1".to_string(),
+            context: "https://webizen.org/ld/vault/v1".to_string(),
             capability_type: "Capability".to_string(),
             id: "capability-1".to_string(),
             name: "Test Capability".to_string(),
@@ -481,7 +481,7 @@ mod tests {
         
         // Add invalid collection
         manifest.add_collection(CollectionLD {
-            context: "https://qualia.org/ld/vault/v1".to_string(),
+            context: "https://webizen.org/ld/vault/v1".to_string(),
             collection_type: "Collection".to_string(),
             id: "".to_string(), // Empty ID
             name: "Test Collection".to_string(),

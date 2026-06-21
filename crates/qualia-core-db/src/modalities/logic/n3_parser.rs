@@ -66,6 +66,13 @@ impl<R: BufRead> N3Parser<R> {
         let mut in_diffuse_block = false;
         let mut diffuse_content = String::new();
 
+        // Accumulator for a single (possibly multi-line) N3 statement. A statement
+        // terminates on a top-level `.` — i.e. brace depth back to zero — so a
+        // multi-triple, multi-line rule premise (e.g. agency.n3 G1) assembles into
+        // one `Rule` rather than being lost line-by-line.
+        let mut stmt = String::new();
+        let mut brace_depth: i32 = 0;
+
         while self.reader.read_line(&mut buffer)? > 0 {
             let line = buffer.trim();
 
@@ -95,39 +102,85 @@ impl<R: BufRead> N3Parser<R> {
                 continue;
             }
 
-            if line.starts_with("#asp {") {
+            // Block openers are only recognised between statements (never while a
+            // brace-balanced accumulation is in progress).
+            if stmt.is_empty() && line.starts_with("#asp {") {
                 in_asp_block = true;
                 buffer.clear();
                 continue;
             }
-
-            if line.starts_with("qualia:diffuse {") {
+            if stmt.is_empty() && line.starts_with("qualia:diffuse {") {
                 in_diffuse_block = true;
                 buffer.clear();
                 continue;
             }
 
+            // Skip blank / full-line-comment / @prefix lines — including mid-statement
+            // (a comment line may sit between a rule's premise triples).
             if line.is_empty() || line.starts_with('#') || line.starts_with("@prefix") {
                 buffer.clear();
                 continue;
             }
 
-            // Heuristic for Rule: contains => or ~> or ^> or -o and braces
-            if line.contains("=>")
-                || line.contains("~>")
-                || line.contains("^>")
-                || line.contains("-o")
-            {
-                if let Some(rule) = Self::parse_rule(line) {
-                    callback(N3Event::LogicRule(rule))?;
+            // Strip a trailing inline comment. URIs/IRIs contain no spaces, so " #"
+            // unambiguously begins a comment for the rule/fact shapes we parse.
+            let line = match line.find(" #") {
+                Some(idx) => line[..idx].trim_end(),
+                None => line,
+            };
+
+            if !line.is_empty() {
+                if !stmt.is_empty() {
+                    stmt.push(' ');
                 }
-            } else {
-                // Heuristic for standard Triple
-                if let Some(triple) = Self::parse_triple(line) {
-                    callback(N3Event::StaticTriple(triple))?;
+                stmt.push_str(line);
+                for ch in line.chars() {
+                    match ch {
+                        '{' => brace_depth += 1,
+                        '}' => brace_depth -= 1,
+                        _ => {}
+                    }
                 }
             }
+
+            // Complete when braces balance AND the statement ends with `.`.
+            if brace_depth <= 0 && stmt.trim_end().ends_with('.') {
+                Self::dispatch_statement(&stmt, &mut callback)?;
+                stmt.clear();
+                brace_depth = 0;
+            }
+
             buffer.clear();
+        }
+
+        // Best-effort flush of a trailing statement that lacked a final `.`.
+        if !stmt.trim().is_empty() {
+            Self::dispatch_statement(&stmt, &mut callback)?;
+        }
+        Ok(())
+    }
+
+    /// Classify one fully-accumulated statement and emit the corresponding event(s).
+    /// A logic rule (`=>` / `~>` / `^>` / ` -o `) becomes one `LogicRule`; anything
+    /// else is parsed as one-or-more `StaticTriple`s (`;`/`,`/`.` lists expanded).
+    fn dispatch_statement<F>(stmt: &str, callback: &mut F) -> Result<(), Error>
+    where
+        F: FnMut(N3Event) -> Result<(), Error>,
+    {
+        let s = stmt.trim();
+        if s.is_empty() {
+            return Ok(());
+        }
+        let looks_like_rule =
+            s.contains("=>") || s.contains("~>") || s.contains("^>") || s.contains(" -o ");
+        if looks_like_rule {
+            if let Some(rule) = Self::parse_rule(s) {
+                callback(N3Event::LogicRule(rule))?;
+                return Ok(());
+            }
+        }
+        for triple in Self::parse_formula_triples(s.trim_end_matches('.')) {
+            callback(N3Event::StaticTriple(triple))?;
         }
         Ok(())
     }
@@ -195,27 +248,52 @@ impl<R: BufRead> N3Parser<R> {
         })
     }
 
+    /// Parse a formula body into its component triples, expanding Turtle/N3
+    /// abbreviations: `.` ends a triple, `;` repeats the subject with a new
+    /// predicate-object list, and `,` repeats the subject+predicate with a new
+    /// object. Whitespace tokenisation is used so that a `.` inside an IRI
+    /// (`<http://ex.org/Alice>`) is part of a single token and never mistaken for a
+    /// statement terminator. A bare single triple still yields exactly one triple,
+    /// preserving backward compatibility.
     fn parse_formula_triples(content: &str) -> Vec<Triple> {
         let mut triples = Vec::new();
-        // Just extract single triple for MVP (this assumes one triple per formula for now)
-        if let Some(t) = Self::parse_triple(content) {
-            triples.push(t);
-        }
-        triples
-    }
+        let tokens: Vec<&str> = content.split_whitespace().collect();
 
-    fn parse_triple(line: &str) -> Option<Triple> {
-        let clean_line = line.trim_end_matches('.').trim();
-        let tokens: Vec<&str> = clean_line.split_whitespace().collect();
-        if tokens.len() >= 3 {
-            Some(Triple {
-                subject: Self::parse_term(tokens[0]),
-                predicate: Self::parse_term(tokens[1]),
-                object: Self::parse_term(tokens[2]),
-            })
-        } else {
-            None
+        let mut subject: Option<Term> = None;
+        let mut predicate: Option<Term> = None;
+
+        for &tok in &tokens {
+            match tok {
+                "." => {
+                    subject = None;
+                    predicate = None;
+                }
+                ";" => {
+                    // keep subject, expect a fresh predicate next
+                    predicate = None;
+                }
+                "," => {
+                    // keep subject + predicate, expect a fresh object next
+                }
+                _ => {
+                    if subject.is_none() {
+                        subject = Some(Self::parse_term(tok));
+                    } else if predicate.is_none() {
+                        predicate = Some(Self::parse_term(tok));
+                    } else {
+                        // An object completes a triple; subject + predicate persist
+                        // so a following `,`/`;` list reuses them.
+                        triples.push(Triple {
+                            subject: subject.clone().unwrap(),
+                            predicate: predicate.clone().unwrap(),
+                            object: Self::parse_term(tok),
+                        });
+                    }
+                }
+            }
         }
+
+        triples
     }
 
     fn parse_term(token: &str) -> Term {
@@ -298,5 +376,57 @@ mod tests {
             }
             other => panic!("expected static triple, got {:?}", other),
         }
+    }
+
+    #[test]
+    fn parses_multiline_rule_with_semicolon_and_inner_dot() {
+        // The real agency.n3 G1 shape: multi-line, a `;` predicate-list, and a `.`
+        // separating premise triples — all inside the braces.
+        let events = collect_events(
+            "# leading comment\n\
+             { ?c a values:CorporatePerson ; values:claims ?r .\n\
+               ?r a values:Right ; values:heldBy values:NaturalPerson\n\
+             } => { ?c values:flag values:PersonhoodCategoryError } .\n",
+        );
+        assert_eq!(events.len(), 1, "exactly one rule across the lines");
+        match &events[0] {
+            N3Event::LogicRule(rule) => {
+                assert_eq!(rule.rule_type, RuleType::Strict);
+                assert_eq!(
+                    rule.premise.triples.len(),
+                    4,
+                    "premise expands to 4 triples: {:?}",
+                    rule.premise.triples
+                );
+                assert_eq!(rule.conclusion.triples.len(), 1);
+                // Spot-check one expanded triple from the `;` list.
+                let has_claims = rule.premise.triples.iter().any(|t| {
+                    matches!(&t.subject, Term::Variable(v) if v == "?c")
+                        && matches!(&t.predicate, Term::Uri(u) if u == "values:claims")
+                        && matches!(&t.object, Term::Variable(v) if v == "?r")
+                });
+                assert!(has_claims, "?c values:claims ?r must be one of the triples");
+            }
+            other => panic!("expected logic rule, got {:?}", other),
+        }
+    }
+
+    #[test]
+    fn expands_comma_object_list_in_facts() {
+        // `,` object list repeats subject+predicate.
+        let events = collect_events("ex:s ex:p ex:a , ex:b , ex:c .");
+        assert_eq!(events.len(), 3, "three triples from the object list");
+        for ev in &events {
+            assert!(matches!(ev, N3Event::StaticTriple(_)));
+        }
+    }
+
+    #[test]
+    fn multiline_fact_block_with_semicolons() {
+        // A `;`-list fact block spanning lines yields one triple per predicate.
+        let events = collect_events(
+            "ex:Acme a values:CorporatePerson ;\n  values:claims ex:R1 .\n",
+        );
+        assert_eq!(events.len(), 2);
     }
 }

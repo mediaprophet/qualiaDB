@@ -31,7 +31,7 @@ pub const SHAPE_PREFIXES: &str = r#"@prefix sh: <http://www.w3.org/ns/shacl#> .
 @prefix owl: <http://www.w3.org/2002/07/owl#> .
 @prefix rdfs: <http://www.w3.org/2000/01/rdf-schema#> .
 @prefix xsd: <http://www.w3.org/2001/XMLSchema#> .
-@prefix q42: <https://qualia.id/ns/> .
+@prefix q42: <https://ns.webcivics.org/> .
 @prefix hc: <http://purl.org/healthcarevocab/v1#> .
 @prefix radlex: <http://www.radlex.org/RID/> .
 "#;
@@ -109,8 +109,8 @@ fn curie_for_uri(uri: &str) -> String {
     if let Some(tag) = uri.strip_prefix("http://www.radlex.org/RID/") {
         return format!("radlex:{tag}");
     }
-    if uri.starts_with("https://qualia.id/ns/") {
-        let tag = uri.trim_start_matches("https://qualia.id/ns/");
+    if uri.starts_with("https://ns.webcivics.org/") {
+        let tag = uri.trim_start_matches("https://ns.webcivics.org/");
         return format!("q42:{tag}");
     }
     format!("<{uri}>")
@@ -672,5 +672,57 @@ mod tests {
         assert!(text.contains("q42:PrincipalShape"));
         assert!(text.contains("sh:not"));
         assert!(text.contains("q42:hasCondition"));
+    }
+
+    /// Regression guard for the human-centric PRIMITIVE: a natural person must be
+    /// grounded in RDFS (rdfs:Class), never in OWL (owl:Class) — because under OWL
+    /// semantics every owl:Class individual is implicitly an owl:Thing, which reduces
+    /// a person to a "thing". This invariant was reverted once by a careless agent and
+    /// only caught by manual inspection; this test stops that recurring silently.
+    #[test]
+    fn principal_is_rdfs_grounded_not_owl_thing() {
+        let p = std::path::PathBuf::from(env!("CARGO_MANIFEST_DIR"))
+            .join("shapes/qualia-agency.shacl.ttl");
+        let text = fs::read_to_string(p).unwrap();
+
+        // The Principal (and the native q42 classes) MUST be rdfs:Class, never owl:Class.
+        assert!(
+            text.contains("q42:Principal a rdfs:Class"),
+            "q42:Principal must be grounded as rdfs:Class (a natural person is not an owl:Thing)"
+        );
+        assert!(
+            !text.contains("q42:Principal a owl:Class"),
+            "q42:Principal must NOT be declared a owl:Class — that re-imports owl:Thing semantics"
+        );
+
+        // owl: may appear ONLY as a guard target (sh:not owl:Thing), never as a person's type.
+        assert!(
+            text.contains("A Principal must not be typed as owl:Thing"),
+            "the sh:not owl:Thing dignity guard must remain"
+        );
+
+        // The native vocabulary uses rdf:Property, not owl:ObjectProperty.
+        assert!(
+            !text.contains("a owl:ObjectProperty"),
+            "native possession relations must be rdf:Property, not owl:ObjectProperty"
+        );
+    }
+
+    /// The `.q42` format lexicon must register SHACL (`sh`) as a first-class prefix —
+    /// SHACL is the enforcement layer for the human-centric primitive, so the format
+    /// must be able to name it (it was previously omitted while owl: was registered).
+    #[test]
+    fn q42_lexicon_registers_shacl_prefix() {
+        let ctx = crate::q42_lexicon::Q42Context::new();
+        assert_eq!(
+            ctx.vocabulary.get("sh").map(String::as_str),
+            Some("http://www.w3.org/ns/shacl#"),
+            "q42 context must register the SHACL (sh:) namespace"
+        );
+        assert_eq!(
+            ctx.vocabulary.get("hcai").map(String::as_str),
+            Some("http://www.w3.org/ns/hcai#"),
+            "q42 context must register the human-centric (hcai:) namespace"
+        );
     }
 }

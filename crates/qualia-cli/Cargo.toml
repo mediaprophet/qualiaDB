@@ -9,6 +9,9 @@ default-run = "qualia-cli"
 name = "q42_comparative_bench"
 path = "src/bin/q42_comparative_bench.rs"
 
+[features]
+mock-agent = []
+
 [dependencies]
 clap = { version = "4.6.1", features = ["derive"] }
 qualia-core-db = { path = "../qualia-core-db" }
@@ -43,4 +46,3 @@ spargebra = "0.3"
 
 [target.'cfg(target_os = "linux")'.dependencies]
 io-uring = "0.7.12"
-

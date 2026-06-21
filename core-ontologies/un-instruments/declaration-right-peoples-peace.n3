@@ -1,0 +1,63 @@
+@prefix rdf:    <http://www.w3.org/1999/02/22-rdf-syntax-ns#> .
+@prefix rdfs:   <http://www.w3.org/2000/01/rdf-schema#> .
+@prefix dc:     <http://purl.org/dc/terms/> .
+@prefix values: <https://ns.webcivics.org/values/> .
+@prefix doc:    <https://ns.webcivics.org/values/declaration-right-peoples-peace#> .
+
+# ============================================================
+# Declaration on the Right of Peoples to Peace
+# RE-SOURCED from authoritative OHCHR text (verbatim originalText).
+# Deontic typing = lexical heuristic (values:HeuristicDerived) — pending review.
+# states->parties + universalisation = curation overlay (amendedText), pending.
+# ============================================================
+
+doc:Instrument a values:ValuesCredential ;
+    dc:title "Declaration on the Right of Peoples to Peace" ;
+    dc:date "12 November 1984" ;
+    values:category "Development, peace, food & solidarity rights" ;
+    values:categoryStatus values:AutoAssigned ;
+    values:source <https://www.ohchr.org/en/instruments-mechanisms/instruments/declaration-right-peoples-peace> ;
+    rdfs:comment "Re-sourced from authoritative OHCHR text; deontic + amendment layers pending." .
+
+doc:paragraph-1 a values:Undertaking ;
+    values:partOf doc:Instrument ;
+    dc:title "Paragraph 1" ;
+    values:deonticStatus values:HeuristicDerived ;
+    values:originalText "Reaffirming that the principal aim of the United Nations is the maintenance of international peace and security," .
+
+doc:paragraph-2 a values:Undertaking ;
+    values:partOf doc:Instrument ;
+    dc:title "Paragraph 2" ;
+    values:deonticStatus values:HeuristicDerived ;
+    values:originalText "Bearing in mind the fundamental principles of international law set forth in the Charter of the United Nations," .
+
+doc:paragraph-3 a values:Undertaking ;
+    values:partOf doc:Instrument ;
+    dc:title "Paragraph 3" ;
+    values:deonticStatus values:HeuristicDerived ;
+    values:originalText "Expressing the will and the aspirations of all peoples to eradicate war from the life of mankind and, above all, to avert a world-wide nuclear catastrophe," .
+
+doc:paragraph-4 a values:Undertaking ;
+    values:partOf doc:Instrument ;
+    dc:title "Paragraph 4" ;
+    values:deonticStatus values:HeuristicDerived ;
+    values:originalText "Convinced that life without war serves as the primary international prerequisite for the material well-being, development and progress of countries, and for the full implementation of the rights and fundamental human freedoms proclaimed by the United Nations," .
+
+doc:paragraph-5 a values:Undertaking ;
+    values:partOf doc:Instrument ;
+    dc:title "Paragraph 5" ;
+    values:deonticStatus values:HeuristicDerived ;
+    values:originalText "Aware that in the nuclear age the establishment of a lasting peace on Earth represents the primary condition for the preservation of human civilization and the survival of mankind," .
+
+doc:paragraph-6 a values:Undertaking ;
+    values:partOf doc:Instrument ;
+    dc:title "Paragraph 6" ;
+    values:deonticStatus values:HeuristicDerived ;
+    values:originalText "Recognizing that the maintenance of a peaceful life for peoples is the sacred duty of each State," .
+
+doc:paragraph-7 a values:Right ;
+    values:partOf doc:Instrument ;
+    values:heldBy values:NaturalPerson ;
+    dc:title "Paragraph 7" ;
+    values:deonticStatus values:HeuristicDerived ;
+    values:originalText "Solemnly proclaims that the peoples of our planet have a sacred right to peace; Solemnly declares that the preservation of the right of peoples to peace and the promotion of its implementation constitute a fundamental obligation of each State; Emphasizes that ensuring the exercise of the right of peoples to peace demands that the policies of States be directed towards the elimination of the threat of war, particularly nuclear war, the renunciation of the use of force in international relations and the settlement of international disputes by peaceful means on the basis of the Charter of the United Nations; Appeals to all States and international organizations to do their utmost to assist in implementing the right of peoples to peace through the adoption of appropriate measures at both the national and the international level." .

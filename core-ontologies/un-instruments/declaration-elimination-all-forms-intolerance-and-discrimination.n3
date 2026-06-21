@@ -1,0 +1,76 @@
+@prefix rdf:    <http://www.w3.org/1999/02/22-rdf-syntax-ns#> .
+@prefix rdfs:   <http://www.w3.org/2000/01/rdf-schema#> .
+@prefix dc:     <http://purl.org/dc/terms/> .
+@prefix values: <https://ns.webcivics.org/values/> .
+@prefix doc:    <https://ns.webcivics.org/values/declaration-elimination-all-forms-intolerance-and-discrimination#> .
+
+# ============================================================
+# Declaration on the Elimination of All Forms of Intolerance and of Discrimination Based on Religion or Belief
+# RE-SOURCED from authoritative OHCHR text (verbatim originalText).
+# Deontic typing = lexical heuristic (values:HeuristicDerived) — pending review.
+# states->parties + universalisation = curation overlay (amendedText), pending.
+# ============================================================
+
+doc:Instrument a values:ValuesCredential ;
+    dc:title "Declaration on the Elimination of All Forms of Intolerance and of Discrimination Based on Religion or Belief" ;
+    dc:date "25 November 1981" ;
+    values:category "Equality & non-discrimination" ;
+    values:categoryStatus values:AutoAssigned ;
+    values:source <https://www.ohchr.org/en/instruments-mechanisms/instruments/declaration-elimination-all-forms-intolerance-and-discrimination> ;
+    rdfs:comment "Re-sourced from authoritative OHCHR text; deontic + amendment layers pending." .
+
+doc:article-1 a values:Right ;
+    values:partOf doc:Instrument ;
+    values:heldBy values:NaturalPerson ;
+    dc:title "Article 1" ;
+    values:deonticStatus values:HeuristicDerived ;
+    values:originalText "1. Everyone shall have the right to freedom of thought, conscience and religion. This right shall include freedom to have a religion or whatever belief of his choice, and freedom, either individually or in community with others and in public or private, to manifest his religion or belief in worship, observance, practice and teaching. 2. No one shall be subject to coercion which would impair his freedom to have a religion or belief of his choice. 3. Freedom to manifest one's religion or belief may be subject only to such limitations as are prescribed by law and are necessary to protect public safety, order, health or morals or the fundamental rights and freedoms of others." .
+
+doc:article-2 a values:Obligation ;
+    values:partOf doc:Instrument ;
+    values:borneBy values:Agent ;
+    dc:title "Article 2" ;
+    values:deonticStatus values:HeuristicDerived ;
+    values:originalText "1. No one shall be subject to discrimination by any State, institution, group of persons, or person on the grounds of religion or belief. 2. For the purposes of the present Declaration, the expression \"intolerance and discrimination based on religion or belief\" means any distinction, exclusion, restriction or preference based on religion or belief and having as its purpose or as its effect nullification or impairment of the recognition, enjoyment or exercise of human rights and fundamental freedoms on an equal basis." .
+
+doc:article-3 a values:Obligation ;
+    values:partOf doc:Instrument ;
+    values:borneBy values:Agent ;
+    dc:title "Article 3" ;
+    values:deonticStatus values:HeuristicDerived ;
+    values:originalText "Discrimination between human beings on the grounds of religion or belief constitutes an affront to human dignity and a disavowal of the principles of the Charter of the United Nations, and shall be condemned as a violation of the human rights and fundamental freedoms proclaimed in the Universal Declaration of Human Rights and enunciated in detail in the International Covenants on Human Rights, and as an obstacle to friendly and peaceful relations between nations." .
+
+doc:article-4 a values:Obligation ;
+    values:partOf doc:Instrument ;
+    values:borneBy values:Agent ;
+    dc:title "Article 4" ;
+    values:deonticStatus values:HeuristicDerived ;
+    values:originalText "1. All States shall take effective measures to prevent and eliminate discrimination on the grounds of religion or belief in the recognition, exercise and enjoyment of human rights and fundamental freedoms in all fields of civil, economic, political, social and cultural life. 2. All States shall make all efforts to enact or rescind legislation where necessary to prohibit any such discrimination, and to take all appropriate measures to combat intolerance on the grounds of religion or belief in this matter." .
+
+doc:article-5 a values:Prohibition ;
+    values:partOf doc:Instrument ;
+    values:borneBy values:Agent ;
+    dc:title "Article 5" ;
+    values:deonticStatus values:HeuristicDerived ;
+    values:originalText "1. The parents or, as the case may be, the legal guardians of the child have the right to organize the life within the family in accordance with their religion or belief and bearing in mind the moral education in which they believe the child should be brought up. 2. Every child shall enjoy the right to have access to education in the matter of religion or belief in accordance with the wishes of his parents or, as the case may be, legal guardians, and shall not be compelled to receive teaching on religion or belief against the wishes of his parents or legal guardians, the best interests of the child being the guiding principle. 3. The child shall be protected from any form of discrimination on the ground of religion or belief. He shall be brought up in a spirit of understanding, tolerance, friendship among peoples, peace and universal brotherhood, respect for freedom of religion or belief of others, and in full consciousness that his energy and talents should be devoted to the service of his fellow men. 4. In the case of a child who is not under the care either of his parents or of legal guardians, due account shall be taken of their expressed wishes or of any other proof of their wishes in the matter of religion or belief, the best interests of the child being the guiding principle. 5. Practices of a religion or belief in which a child is brought up must not be injurious to his physical or mental health or to his full development, taking into account article 1, paragraph 3, of the present Declaration." .
+
+doc:article-6 a values:Right ;
+    values:partOf doc:Instrument ;
+    values:heldBy values:NaturalPerson ;
+    dc:title "Article 6" ;
+    values:deonticStatus values:HeuristicDerived ;
+    values:originalText "In accordance with article 1 of the present Declaration, and subject to the provisions of article 1, paragraph 3, the right to freedom of thought, conscience, religion or belief shall include, inter alia , the following freedoms: (a) To worship or assemble in connection with a religion or belief, and to establish and maintain places for these purposes; (b) To establish and maintain appropriate charitable or humanitarian institutions; (c) To make, acquire and use to an adequate extent the necessary articles and materials related to the rites or customs of a religion or belief; (d) To write, issue and disseminate relevant publications in these areas; (e) To teach a religion or belief in places suitable for these purposes; (f) To solicit and receive voluntary financial and other contributions from individuals and institutions; (g) To train, appoint, elect or designate by succession appropriate leaders called for by the requirements and standards of any religion or belief; (h) To observe days of rest and to celebrate holidays and ceremonies in accordance with the precepts of one's religion or belief;" .
+
+doc:article-7 a values:Obligation ;
+    values:partOf doc:Instrument ;
+    values:borneBy values:Agent ;
+    dc:title "Article 7" ;
+    values:deonticStatus values:HeuristicDerived ;
+    values:originalText "The rights and freedoms set forth in the present Declaration shall be accorded in national legislation in such a manner that everyone shall be able to avail himself of such rights and freedoms in practice." .
+
+doc:article-8 a values:Right ;
+    values:partOf doc:Instrument ;
+    values:heldBy values:NaturalPerson ;
+    dc:title "Article 8" ;
+    values:deonticStatus values:HeuristicDerived ;
+    values:originalText "The General Assembly, Considering that one of the basic principles of the Charter of the United Nations is that of the dignity and equality inherent in all human beings, and that all Member States have pledged themselves to take joint and separate action in co-operation with the United Nations to promote and encourage universal respect for and observance of human rights and fundamental freedoms for all, without distinction as to race, sex, language or religion, Considering that the Universal Declaration of Human Rights and the International Covenants on Human Rights proclaim the principles of non-discrimination and equality before the law and the right to freedom of thought, conscience, religion or belief, Considering that the disregard and infringement of human rights and fundamental freedoms, in particular of the right to freedom of thought, conscience, religion or whatever belief, have brought, directly or indirectly, wars and great suffering to mankind, especially where they serve as a means of foreign interference in the internal affairs of other States and amount to kindling hatred between peoples and nations, Considering that religion or belief, for anyone who professes either, is one of the fundamental elements in his conception of life and that freedom of religion or belief should be fully respected and guaranteed, Considering that it is essential to promote understanding, tolerance and respect in matters relating to freedom of religion or belief and to ensure that the use of religion or belief for ends inconsistent with the Charter, other relevant instruments of the United Nations and the purposes and principles of the present Declaration is inadmissible, Convinced that freedom of religion or belief should also contribute to the attainment of the goals of world peace, social justice and friendship among peoples and to the elimination of ideologies or practices of colonialism and racial discrimination, Noting with satisfaction the adoption of several, and the coming into force of some, conventions, under the aegis of the United Nations and of the specialized agencies, for the elimination of various forms of discrimination, Concerned by manifestations of intolerance and by the existence of discrimination in matters of religion or belief still in evidence in some areas of the world, Resolved to adopt all necessary measures for the speedy elimination of such intolerance in all its forms and manifestations and to prevent and combat discrimination on the ground of religion or belief, Proclaims this Declaration on the Elimination of All Forms of Intolerance and of Discrimination Based on Religion or Belief:" .

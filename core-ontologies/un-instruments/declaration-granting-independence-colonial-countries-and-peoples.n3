@@ -1,0 +1,100 @@
+@prefix rdf:    <http://www.w3.org/1999/02/22-rdf-syntax-ns#> .
+@prefix rdfs:   <http://www.w3.org/2000/01/rdf-schema#> .
+@prefix dc:     <http://purl.org/dc/terms/> .
+@prefix values: <https://ns.webcivics.org/values/> .
+@prefix doc:    <https://ns.webcivics.org/values/declaration-granting-independence-colonial-countries-and-peoples#> .
+
+# ============================================================
+# Declaration on the Granting of Independence to Colonial Countries and Peoples
+# RE-SOURCED from authoritative OHCHR text (verbatim originalText).
+# Deontic typing = lexical heuristic (values:HeuristicDerived) — pending review.
+# states->parties + universalisation = curation overlay (amendedText), pending.
+# ============================================================
+
+doc:Instrument a values:ValuesCredential ;
+    dc:title "Declaration on the Granting of Independence to Colonial Countries and Peoples" ;
+    dc:date "14 December 1960" ;
+    values:category "Indigenous, minorities & self-determination" ;
+    values:categoryStatus values:AutoAssigned ;
+    values:source <https://www.ohchr.org/en/instruments-mechanisms/instruments/declaration-granting-independence-colonial-countries-and-peoples> ;
+    rdfs:comment "Re-sourced from authoritative OHCHR text; deontic + amendment layers pending." .
+
+doc:paragraph-1 a values:Undertaking ;
+    values:partOf doc:Instrument ;
+    dc:title "Paragraph 1" ;
+    values:deonticStatus values:HeuristicDerived ;
+    values:originalText "Mindful of the determination proclaimed by the peoples of the world in the Charter of the United Nations to reaffirm faith in fundamental human rights, in the dignity and worth of the human person, in the equal rights of men and women and of nations large and small and to promote social progress and better standards of life in larger freedom," .
+
+doc:paragraph-2 a values:Undertaking ;
+    values:partOf doc:Instrument ;
+    dc:title "Paragraph 2" ;
+    values:deonticStatus values:HeuristicDerived ;
+    values:originalText "Conscious of the need for the creation of conditions of stability and well-being and peaceful and friendly relations based on respect for the principles of equal rights and self-determination of all peoples, and of universal respect for, and observance of, human rights and fundamental freedoms for all without distinction as to race, sex, language or religion," .
+
+doc:paragraph-3 a values:Undertaking ;
+    values:partOf doc:Instrument ;
+    dc:title "Paragraph 3" ;
+    values:deonticStatus values:HeuristicDerived ;
+    values:originalText "Recognizing the passionate yearning for freedom in all dependent peoples and the decisive role of such peoples in the attainment of their independence," .
+
+doc:paragraph-4 a values:Undertaking ;
+    values:partOf doc:Instrument ;
+    dc:title "Paragraph 4" ;
+    values:deonticStatus values:HeuristicDerived ;
+    values:originalText "Aware of the increasing conflicts resulting from the denial of or impediments in the way of the freedom of such peoples, which constitute a serious threat to world peace," .
+
+doc:paragraph-5 a values:Undertaking ;
+    values:partOf doc:Instrument ;
+    dc:title "Paragraph 5" ;
+    values:deonticStatus values:HeuristicDerived ;
+    values:originalText "Considering the important role of the United Nations in assisting the movement for independence in Trust and Non-Self-Governing Territories," .
+
+doc:paragraph-6 a values:Undertaking ;
+    values:partOf doc:Instrument ;
+    dc:title "Paragraph 6" ;
+    values:deonticStatus values:HeuristicDerived ;
+    values:originalText "Recognizing that the peoples of the world ardently desire the end of colonialism in all its manifestations," .
+
+doc:paragraph-7 a values:Undertaking ;
+    values:partOf doc:Instrument ;
+    dc:title "Paragraph 7" ;
+    values:deonticStatus values:HeuristicDerived ;
+    values:originalText "Convinced that the continued existence of colonialism prevents the development of international economic co-operation, impedes the social, cultural and economic development of dependent peoples and militates against the United Nations ideal of universal peace," .
+
+doc:paragraph-8 a values:Undertaking ;
+    values:partOf doc:Instrument ;
+    dc:title "Paragraph 8" ;
+    values:deonticStatus values:HeuristicDerived ;
+    values:originalText "Affirming that peoples may, for their own ends, freely dispose of their natural wealth and resources without prejudice to any obligations arising out of international economic co-operation, based upon the principle of mutual benefit, and international law," .
+
+doc:paragraph-9 a values:Undertaking ;
+    values:partOf doc:Instrument ;
+    dc:title "Paragraph 9" ;
+    values:deonticStatus values:HeuristicDerived ;
+    values:originalText "Believing that the process of liberation is irresistible and irreversible and that, in order to avoid serious crises, an end must be put to colonialism and all practices of segregation and discrimination associated therewith," .
+
+doc:paragraph-10 a values:Undertaking ;
+    values:partOf doc:Instrument ;
+    dc:title "Paragraph 10" ;
+    values:deonticStatus values:HeuristicDerived ;
+    values:originalText "Welcoming the emergence in recent years of a large number of dependent territories into freedom and independence, and recognizing the increasingly powerful trends towards freedom in such territories which have not yet attained independence," .
+
+doc:paragraph-11 a values:Right ;
+    values:partOf doc:Instrument ;
+    values:heldBy values:NaturalPerson ;
+    dc:title "Paragraph 11" ;
+    values:deonticStatus values:HeuristicDerived ;
+    values:originalText "Convinced that all peoples have an inalienable right to complete freedom, the exercise of their sovereignty and the integrity of their national territory," .
+
+doc:paragraph-12 a values:Undertaking ;
+    values:partOf doc:Instrument ;
+    dc:title "Paragraph 12" ;
+    values:deonticStatus values:HeuristicDerived ;
+    values:originalText "Solemnly proclaims the necessity of bringing to a speedy and unconditional end colonialism in all its forms and manifestations;" .
+
+doc:paragraph-13 a values:Right ;
+    values:partOf doc:Instrument ;
+    values:heldBy values:NaturalPerson ;
+    dc:title "Paragraph 13" ;
+    values:deonticStatus values:HeuristicDerived ;
+    values:originalText "The subjection of peoples to alien subjugation, domination and exploitation constitutes a denial of fundamental human rights, is contrary to the Charter of the United Nations and is an impediment to the promotion of world peace and co-operation. All peoples have the right to self-determination; by virtue of that right they freely determine their political status and freely pursue their economic, social and cultural development. Inadequacy of political, economic, social or educational preparedness should never serve as a pretext for delaying independence. All armed action or repressive measures of all kinds directed against dependent peoples shall cease in order to enable them to exercise peacefully and freely their right to complete independence, and the integrity of their national territory shall be respected. Immediate steps shall be taken, in Trust and Non-Self-Governing Territories or all other territories which have not yet attained independence, to transfer all powers to the peoples of those territories, without any conditions or reservations, in accordance with their freely expressed will and desire, without any distinction as to race, creed or colour, in order to enable them to enjoy complete independence and freedom. Any attempt aimed at the partial or total disruption of the national unity and the territorial integrity of a country is incompatible with the purposes and principles of the Charter of the United Nations. All States shall observe faithfully and strictly the provisions of the Charter of the United Nations, the Universal Declaration of Human Rights and the present Declaration on the basis of equality, non-interference in the internal affairs of all States, and respect for the sovereign rights of all peoples and their territorial integrity." .

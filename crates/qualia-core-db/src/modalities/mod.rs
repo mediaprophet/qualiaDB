@@ -12,6 +12,10 @@ pub mod control_feedback;
 pub use control_feedback::{ControlState, CONTROL_BIT, FEEDBACK_BIT, STABILIZATION_BIT};
 pub mod dialectical;
 pub use dialectical::{do_intervention, SYNTHESIZED_BIT, DO_INTERVENTION_BIT, COUNTERFACTUAL_BIT};
+pub mod defeasible;
+pub use defeasible::{
+    OP_DEFEASIBLE_OVERRIDE, DEFEATER_BIT, DefeasibleStatus, DefeasibleError, DefeasibleVerdict, evaluate_defeasible_frame
+};
 pub mod diffusion;
 pub use diffusion::{trigger_diffusion, execute_diffusion_pass};
 pub mod dl;

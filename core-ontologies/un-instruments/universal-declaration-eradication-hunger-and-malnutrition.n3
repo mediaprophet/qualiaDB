@@ -1,0 +1,240 @@
+@prefix rdf:    <http://www.w3.org/1999/02/22-rdf-syntax-ns#> .
+@prefix rdfs:   <http://www.w3.org/2000/01/rdf-schema#> .
+@prefix dc:     <http://purl.org/dc/terms/> .
+@prefix values: <https://ns.webcivics.org/values/> .
+@prefix doc:    <https://ns.webcivics.org/values/universal-declaration-eradication-hunger-and-malnutrition#> .
+
+# ============================================================
+# Universal Declaration on the Eradication of Hunger and Malnutrition
+# RE-SOURCED from authoritative OHCHR text (verbatim originalText).
+# Deontic typing = lexical heuristic (values:HeuristicDerived) — pending review.
+# states->parties + universalisation = curation overlay (amendedText), pending.
+# ============================================================
+
+doc:Instrument a values:ValuesCredential ;
+    dc:title "Universal Declaration on the Eradication of Hunger and Malnutrition" ;
+    dc:date "16 November 1974" ;
+    values:category "Development, peace, food & solidarity rights" ;
+    values:categoryStatus values:AutoAssigned ;
+    values:source <https://www.ohchr.org/en/instruments-mechanisms/instruments/universal-declaration-eradication-hunger-and-malnutrition> ;
+    rdfs:comment "Re-sourced from authoritative OHCHR text; deontic + amendment layers pending." .
+
+doc:paragraph-1 a values:Undertaking ;
+    values:partOf doc:Instrument ;
+    dc:title "Paragraph 1" ;
+    values:deonticStatus values:HeuristicDerived ;
+    values:originalText "UNIVERSAL DECLARATION ON THE ERADICATION OF HUNGER AND MALNUTRITION" .
+
+doc:paragraph-2 a values:Undertaking ;
+    values:partOf doc:Instrument ;
+    dc:title "Paragraph 2" ;
+    values:deonticStatus values:HeuristicDerived ;
+    values:originalText "Convened by the General Assembly of the United Nations and entrusted with developing ways and means whereby the international community, as a whole, could take specific action to resolve the world food problem within the broader context of development and international economic co-operation," .
+
+doc:paragraph-3 a values:Undertaking ;
+    values:partOf doc:Instrument ;
+    dc:title "Paragraph 3" ;
+    values:deonticStatus values:HeuristicDerived ;
+    values:originalText "Adopts the following Declaration:" .
+
+doc:paragraph-4 a values:Undertaking ;
+    values:partOf doc:Instrument ;
+    dc:title "Paragraph 4" ;
+    values:deonticStatus values:HeuristicDerived ;
+    values:originalText "UNIVERSAL DECLARATION ON THE ERADICATION OF HUNGER AND MALNUTRITION" .
+
+doc:paragraph-5 a values:Right ;
+    values:partOf doc:Instrument ;
+    values:heldBy values:NaturalPerson ;
+    dc:title "Paragraph 5" ;
+    values:deonticStatus values:HeuristicDerived ;
+    values:originalText "(a) The grave food crisis that is afflicting the peoples of the developing countries where most of the world's hungry and ill-nourished live and where more than two thirds of the world's population produce about one third of the world's food-an imbalance which threatens to increase in the next 10 years-is not only fraught with grave economic and social implications, but also acutely jeopardizes the most fundamental principles and values associated with the right to life and human dignity as enshrined in the Universal Declaration of Human Rights;" .
+
+doc:paragraph-6 a values:Undertaking ;
+    values:partOf doc:Instrument ;
+    dc:title "Paragraph 6" ;
+    values:deonticStatus values:HeuristicDerived ;
+    values:originalText "(b) The elimination of hunger and malnutrition, included as one of the objectives in the United Nations Declaration on Social Progress and Development, and the elimination of the causes that determine this situation are the common objectives of all nations;" .
+
+doc:paragraph-7 a values:Undertaking ;
+    values:partOf doc:Instrument ;
+    dc:title "Paragraph 7" ;
+    values:deonticStatus values:HeuristicDerived ;
+    values:originalText "(c) The situation of the peoples afflicted by hunger and malnutrition arises from their historical circumstances, especially social inequalities, including in many cases alien and colonial domination, foreign occupation, racial discrimination, apartheid and neo-colonialism in all its forms, which continue to be among the greatest obstacles to the full emancipation and progress of the developing countries and all the peoples involved;" .
+
+doc:paragraph-8 a values:Undertaking ;
+    values:partOf doc:Instrument ;
+    dc:title "Paragraph 8" ;
+    values:deonticStatus values:HeuristicDerived ;
+    values:originalText "(d) This situation has been aggravated in recent years by a series of crises to which the world economy has been subjected, such as the deterioration in the international monetary system, the inflationary increase in import costs, the heavy burdens imposed by external debt on the balance of payments of many developing countries, a rising food demand partly due to demographic pressure, speculation, and a shortage of, and increased costs for, essential agricultural inputs;" .
+
+doc:paragraph-9 a values:Undertaking ;
+    values:partOf doc:Instrument ;
+    dc:title "Paragraph 9" ;
+    values:deonticStatus values:HeuristicDerived ;
+    values:originalText "(e) These phenomena should be considered within the framework of the on-going negotiations on the Charter of Economic Rights and Duties of States, and the General Assembly of the United Nations should be urged unanimously to agree upon, and to adopt, a Charter that will be an effective instrument for the establishment of new international economic relations based on principles of equity and justice;" .
+
+doc:paragraph-10 a values:Right ;
+    values:partOf doc:Instrument ;
+    values:heldBy values:NaturalPerson ;
+    dc:title "Paragraph 10" ;
+    values:deonticStatus values:HeuristicDerived ;
+    values:originalText "(f) All countries, big or small, rich or poor, are equal. All countries have the full right to participate in the decisions on the food problem;" .
+
+doc:paragraph-11 a values:Undertaking ;
+    values:partOf doc:Instrument ;
+    dc:title "Paragraph 11" ;
+    values:deonticStatus values:HeuristicDerived ;
+    values:originalText "(g) The well-being of the peoples of the world largely depends on the adequate production and distribution of food as well as the establishment of a world food security system which would ensure adequate availability of, and reasonable prices for, food at all times, irrespective of periodic fluctuations and vagaries of weather and free of political and economic pressures, and should thus facilitate, amongst other things, the development process of developing countries;" .
+
+doc:paragraph-12 a values:Right ;
+    values:partOf doc:Instrument ;
+    values:heldBy values:NaturalPerson ;
+    dc:title "Paragraph 12" ;
+    values:deonticStatus values:HeuristicDerived ;
+    values:originalText "(h) Peace and justice encompass an economic dimension helping the solution of the world economic problems, the liquidation of under-development, offering a lasting and definitive solution of the food problem for all peoples and guaranteeing to all countries the right to implement freely and effectively their development programmes. To this effect, it is necessary to eliminate threats and resort to force and to promote peaceful co-operation between States to the fullest extent possible, to apply the principles of non-interference in the internal affairs of other States, full equality of rights and respect of national independence and sovereignty, as well as to encourage the peaceful co-operation between all States, irrespective of their political, social and economic systems. The further improvement of international relations will create better conditions for international o-operation in all fields which should make possible large financial and material resources to be used, inter alia , for developing agricultural production and substantially improving world food security;" .
+
+doc:paragraph-13 a values:Undertaking ;
+    values:partOf doc:Instrument ;
+    dc:title "Paragraph 13" ;
+    values:deonticStatus values:HeuristicDerived ;
+    values:originalText "(i) For a lasting solution of the food problem all efforts should be made to eliminate the widening gaps which today separate developed and developing countries and to bring about a new international economic order. It should be possible for all countries to participate actively and effectively in the new international economic relations by the establishment of suitable international systems, where appropriate, capable of producing adequate action in order to establish just and equitable relations in international economic co-operation;" .
+
+doc:paragraph-14 a values:Undertaking ;
+    values:partOf doc:Instrument ;
+    dc:title "Paragraph 14" ;
+    values:deonticStatus values:HeuristicDerived ;
+    values:originalText "(j) Developing countries reaffirm their belief that the primary responsibility for ensuring their own rapid development rests with themselves. They declare, therefore, their readiness to continue to intensify their individual and collective efforts with a view to expanding their mutual co-operation in the field of agricultural development and food production, including the eradication of hunger and malnutrition;" .
+
+doc:paragraph-15 a values:Undertaking ;
+    values:partOf doc:Instrument ;
+    dc:title "Paragraph 15" ;
+    values:deonticStatus values:HeuristicDerived ;
+    values:originalText "(k) Since, for various reasons, many developing countries are not yet always able to meet their own food needs, urgent and effective international action should be taken to assist them, free of political pressures." .
+
+doc:paragraph-16 a values:Undertaking ;
+    values:partOf doc:Instrument ;
+    dc:title "Paragraph 16" ;
+    values:deonticStatus values:HeuristicDerived ;
+    values:originalText "Consistent with the aims and objectives of the Declaration on the Establishment of a New International Economic Order and the Programme of Action adopted by the General Assembly at its sixth special session," .
+
+doc:paragraph-17 a values:Undertaking ;
+    values:partOf doc:Instrument ;
+    dc:title "Paragraph 17" ;
+    values:deonticStatus values:HeuristicDerived ;
+    values:originalText "The Conference consequently solemnly proclaims :" .
+
+doc:paragraph-18 a values:Right ;
+    values:partOf doc:Instrument ;
+    values:heldBy values:NaturalPerson ;
+    dc:title "Paragraph 18" ;
+    values:deonticStatus values:HeuristicDerived ;
+    values:originalText "1. Every man, woman and child has the inalienable right to be free from hunger and malnutrition in order to develop fully and maintain their physical and mental faculties. Society today already possesses sufficient resources, organizational ability and technology and hence the competence to achieve this objective. Accordingly, the eradication of hunger is a common objective of all the countries of the international community, especially of the developed countries and others in a position to help." .
+
+doc:paragraph-19 a values:Undertaking ;
+    values:partOf doc:Instrument ;
+    dc:title "Paragraph 19" ;
+    values:deonticStatus values:HeuristicDerived ;
+    values:originalText "2. It is a fundamental responsibility of Governments to work together for higher food production and a more equitable and efficient distribution of food between countries and within countries. Governments should initiate immediately a greater concerted attack on chronic malnutrition and deficiency diseases among the vulnerable and lower income groups. In order to ensure adequate nutrition for all, Governments should formulate appropriate food and nutrition policies integrated in overall socio-economic and agricultural development plans based on adequate knowledge of available as well as potential food resources. The importance of human milk in this connection should be stressed on nutritional grounds." .
+
+doc:paragraph-20 a values:Undertaking ;
+    values:partOf doc:Instrument ;
+    dc:title "Paragraph 20" ;
+    values:deonticStatus values:HeuristicDerived ;
+    values:originalText "3. Food problems must be tackled during the preparation and implementation of national plans and programmes for economic and social development, with emphasis on their humanitarian aspects." .
+
+doc:paragraph-21 a values:Undertaking ;
+    values:partOf doc:Instrument ;
+    dc:title "Paragraph 21" ;
+    values:deonticStatus values:HeuristicDerived ;
+    values:originalText "4. It is a responsibility of each State concerned, in accordance with its sovereign judgement and internal legislation, to remove the obstacles to food production and to provide proper incentives to agricultural producers. Of prime importance for the attainment of these objectives are effective measures of socio-economic transformation by agrarian, tax, credit and investment policy reform and the reorganization of rural structures, such as the reform of the conditions of ownership, the encouragement of producer and consumer co-operatives, the mobilization of the full potential of human resources, both male and female, in the developing countries for an integrated rural development and the involvement of small farmers, fishermen and landless workers in attaining the required food production and employment targets. Moreover, it is necessary to recognize the key role of women in agricultural production and rural economy in many countries, and to ensure that appropriate education, extension programmes and financial facilities are made available to women on equal terms with men." .
+
+doc:paragraph-22 a values:Undertaking ;
+    values:partOf doc:Instrument ;
+    dc:title "Paragraph 22" ;
+    values:deonticStatus values:HeuristicDerived ;
+    values:originalText "5. Marine and inland water resources are today becoming more important than ever as a source of food and economic prosperity. Accordingly, action should be taken to promote a rational exploitation of these resources, preferably for direct consumption, in order to contribute to meeting the food requirements of all peoples." .
+
+doc:paragraph-23 a values:Undertaking ;
+    values:partOf doc:Instrument ;
+    dc:title "Paragraph 23" ;
+    values:deonticStatus values:HeuristicDerived ;
+    values:originalText "6. The efforts to increase food production should be complemented by every endeavour to prevent wastage of food in all its forms." .
+
+doc:paragraph-24 a values:Undertaking ;
+    values:partOf doc:Instrument ;
+    dc:title "Paragraph 24" ;
+    values:deonticStatus values:HeuristicDerived ;
+    values:originalText "7. To give impetus to food production in developing countries and in particular in the least developed and most seriously affected among them, urgent and effective international action should be taken, by the developed countries and other countries in a position to do so, to provide them with sustained additional technical and financial assistance on favourable terms and in a volume sufficient to their needs on the basis of bilateral and multilateral arrangements. This assistance must be free of conditions inconsistent with the sovereignty of the receiving States." .
+
+doc:paragraph-25 a values:Undertaking ;
+    values:partOf doc:Instrument ;
+    dc:title "Paragraph 25" ;
+    values:deonticStatus values:HeuristicDerived ;
+    values:originalText "8. All countries, and primarily the highly industrialized countries, should promote the advancement of food production technology and should make all efforts to promote the transfer, adaptation and dissemination of appropriate food production technology for the benefit of the developing countries and, to that end, they should inter alia make all efforts to disseminate the results of their research work to Governments and scientific institutions of developing countries in order to enable them to promote a sustained agricultural development." .
+
+doc:paragraph-26 a values:Undertaking ;
+    values:partOf doc:Instrument ;
+    dc:title "Paragraph 26" ;
+    values:deonticStatus values:HeuristicDerived ;
+    values:originalText "9. To assure the proper conservation of natural resources being utilized, or which might be utilized, for food production, all countries must collaborate in order to facilitate the preservation of the environment, including the marine environment." .
+
+doc:paragraph-27 a values:Undertaking ;
+    values:partOf doc:Instrument ;
+    dc:title "Paragraph 27" ;
+    values:deonticStatus values:HeuristicDerived ;
+    values:originalText "10. All developed countries and others able to do so should collaborate technically and financially with the developing countries in their efforts to expand land and water resources for agricultural production and to assure a rapid increase in the availability, at fair costs, of agricultural inputs such as fertilizers and other chemicals, high-quality seeds, credit and technology. Co-operation among developing countries, in this connection, is also important." .
+
+doc:paragraph-28 a values:Undertaking ;
+    values:partOf doc:Instrument ;
+    dc:title "Paragraph 28" ;
+    values:deonticStatus values:HeuristicDerived ;
+    values:originalText "11. All States should strive to the utmost to readjust, where appropriate, their agricultural policies to give priority to food production, recognizing in this connection the interrelationship between the world food problem and international trade. In the determination of attitudes towards farm support programmes for domestic food production, developed countries should take into account, as far as possible, the interest of the food-exporting developing countries, in order to avoid detrimental effect on their exports. Moreover, all countries should co-operate to devise effective steps to deal with the problem of stabilizing world markets and promoting equitable and remunerative prices, where appropriate through international arrangements, to improve access to markets through reduction or elimination of tariff and non-tariff barriers on the products of interest to the developing countries, to substantially increase the export earnings of these countries, to contribute to the diversification of their exports, and apply to them, in the multilateral trade negotiations, the principles as agreed upon in the Tokyo Declaration, including the concept of non-reciprocity and more favourable treatment." .
+
+doc:paragraph-29 a values:Undertaking ;
+    values:partOf doc:Instrument ;
+    dc:title "Paragraph 29" ;
+    values:deonticStatus values:HeuristicDerived ;
+    values:originalText "12. As it is the common responsibility of the entire international community to ensure the availability at all times of adequate world supplies of basic food-stuffs by way of appropriate reserves, including emergency reserves, all countries should co-operate in the establishment of an effective system of world food security by:" .
+
+doc:paragraph-30 a values:Undertaking ;
+    values:partOf doc:Instrument ;
+    dc:title "Paragraph 30" ;
+    values:deonticStatus values:HeuristicDerived ;
+    values:originalText "Participating in and supporting the operation of the Global Information and Early Warning System on Food and Agriculture;" .
+
+doc:paragraph-31 a values:Undertaking ;
+    values:partOf doc:Instrument ;
+    dc:title "Paragraph 31" ;
+    values:deonticStatus values:HeuristicDerived ;
+    values:originalText "Adhering to the objectives, policies and guidelines of the proposed International Undertaking on World Food Security as endorsed by the World Food Conference;" .
+
+doc:paragraph-32 a values:Undertaking ;
+    values:partOf doc:Instrument ;
+    dc:title "Paragraph 32" ;
+    values:deonticStatus values:HeuristicDerived ;
+    values:originalText "Earmarking, where possible, stocks or funds for meeting international emergency food requirements as envisaged in the proposed International Undertaking on World Food Security and developing international guidelines to provide for the co-ordination and the utilization of such stocks;" .
+
+doc:paragraph-33 a values:Undertaking ;
+    values:partOf doc:Instrument ;
+    dc:title "Paragraph 33" ;
+    values:deonticStatus values:HeuristicDerived ;
+    values:originalText "Co-operating in the provision of food aid for meeting emergency and nutritional needs as well as for stimulating rural employment through development projects." .
+
+doc:paragraph-34 a values:Undertaking ;
+    values:partOf doc:Instrument ;
+    dc:title "Paragraph 34" ;
+    values:deonticStatus values:HeuristicDerived ;
+    values:originalText "All donor countries should accept and implement the concept of forward planning of food aid and make all efforts to provide commodities and/or financial assistance that will ensure adequate quantities of grains and other food commodities." .
+
+doc:paragraph-35 a values:Undertaking ;
+    values:partOf doc:Instrument ;
+    dc:title "Paragraph 35" ;
+    values:deonticStatus values:HeuristicDerived ;
+    values:originalText "Time is short. Urgent and sustained action is vital. The Conference, therefore, calls upon all peoples expressing their will as individuals, and through their Governments, and non-governmental organizations, to work together to bring about the end of the age-old scourge of hunger." .
+
+doc:paragraph-36 a values:Undertaking ;
+    values:partOf doc:Instrument ;
+    dc:title "Paragraph 36" ;
+    values:deonticStatus values:HeuristicDerived ;
+    values:originalText "The determination of the participating States to make full use of the United Nations system in the implementation of this Declaration and the other decisions adopted by the Conference." .
