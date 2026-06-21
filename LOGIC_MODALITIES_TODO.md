@@ -26,9 +26,9 @@ asserted verdict), like `tests/deontic_smoke.rs`.
 | **defeasible** | `defeasible.rs` | 1 | `NativeUnless` | **real** | live-lane smoke test |
 | **temporal LTL** | `temporal_ltl.rs` (`evaluate_ltl_trace`) | 5 | `NativeLtlGlobally/Finally/Next/Until/Release` | **real** ✅ (wired 0.0.19) | live-lane test in `tests/modalities_active.rs` ✅ |
 | **Allen interval / RCC-8** | `spatio_temporal.rs`, `interval_reasoning.rs` | 3 + 6 | `NativeAllenInterval(u8)` | **real** ✅ (wired 0.0.19) | RCC-8 spatial opcode still unwired; review 5+2 stub markers |
-| **probabilistic** | `probabilistic.rs` | 1 | none | — | decide: needs a VM lane? |
-| **description logic (DL)** | `dl.rs` | 1 | none | — | decide: needs a VM lane? |
-| **argumentation** | `argumentation.rs` | 5 | none | — | decide: needs a VM lane? |
+| **probabilistic** | `probabilistic.rs` | 1 | `NativeProbabilisticThreshold(u32)` | **real** ✅ (wired 0.0.19) | belief-threshold gate; Bayesian-network inference not yet a lane |
+| **description logic (DL)** | `dl.rs` | 1 | `NativeDlSubsumption` | **real** ✅ (wired 0.0.19) | transitive subClassOf; richer TBox (∩/∃/¬) later |
+| **argumentation** | `argumentation.rs` | 5 | `NativeArgumentationGrounded` | **real** ✅ (wired 0.0.19) | Dung grounded semantics; preferred/stable extensions later |
 | **diffusion** | `diffusion.rs` | 1 | none | — | decide: needs a VM lane? (`qualia:diffuse` block) |
 | **graph theory** | `graph_theory.rs` | 7 | none | — | library-only; fine? |
 | **control feedback** | `control_feedback.rs` | 4 | none | — | review 1 stub marker |
@@ -44,9 +44,16 @@ asserted verdict), like `tests/deontic_smoke.rs`.
    `spatio_temporal::evaluate_temporal` (frame regs = the two intervals' bounds).
    Live-lane tests in `tests/modalities_active.rs`. STILL TODO: the **RCC-8 spatial**
    relation has no VM opcode (`evaluate_rcc8` is library-only) — add `NativeRcc8`.
-3. **Live-lane smoke tests** for the remaining wired modalities (epistemic, asp,
-   defeasible/`NativeUnless`) mirroring `deontic_smoke.rs`. `linear`, `dialectical`,
-   `paraconsistent` are now covered in `tests/modalities_active.rs`.
+3. **Live-lane smoke tests** — covered in `tests/modalities_active.rs` (14 tests):
+   LTL×5, Allen, linear, dialectical, paraconsistent, probabilistic, DL,
+   argumentation, defeasible/`NativeUnless`. Still TODO: **epistemic**
+   (`NativeEpistemicEval`) and **asp** (`NativeAspStableModels`) need a VM-lane test
+   (their evaluators take specific quin shapes — read `epistemic::evaluate_epistemic_frame`
+   and `asp::enumerate_stable_models` first).
+4. **Remaining unwired** (decide if each needs a deontic-style VM lane): RCC-8
+   spatial (`evaluate_rcc8`, pairs with the wired Allen temporal), `diffusion`,
+   `graph_theory`, `control_feedback` — these are more computational than
+   deontic-style logics.
 4. **Audit stub markers**: `spatio_temporal.rs` (5), `dialectical.rs` (2),
    `interval_reasoning.rs` (2), `control_feedback.rs`/`core.rs`/`rules.rs` (1 each)
    — confirm each is real or convert to `PendingImplementation`.
