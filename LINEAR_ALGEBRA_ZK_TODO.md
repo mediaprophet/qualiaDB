@@ -65,9 +65,10 @@ Wanted, per Timothy ("algebra generally … quadratic equations … is incredibl
 (`compute_universe.rs`, the `fused_*` shaders).
 
 - The `bake_quin_to_tensor` → `Tensor10D` pipeline and the wgpu device path need more
-  work. Note `compute_universe::producer_cycle_with_global_substrate` currently panics
-  inside `wgpu-0.19.4` device code on machines without a usable GPU (a separate,
-  pre-existing, environment-dependent failure — *not* caused by the algebra/ZK work).
+  work. (Fixed 2026-06-21: `compute_universe::producer_cycle_with_global_substrate` was
+  panicking with a wgpu **validation error** — `count_buf` in `tensor/volume_gpu.rs` was
+  written via `queue.write_buffer` but created without `COPY_DST`. This was a real code
+  bug, NOT "no GPU"; the missing usage flag was added. The broader manifold work remains.)
 - The 10D manifold encoding shares the NQuin metadata field (the bake `t` clock lives at
   metadata `[32..60]`); any change there must respect the FrameLayout ABI
   (`frame_layout.rs`) — see the role-keyed-overlay rules so the clock doesn't collide
@@ -75,7 +76,7 @@ Wanted, per Timothy ("algebra generally … quadratic equations … is incredibl
 
 ## 4. Verification status (this change)
 
-`cargo test -p qualia-core-db --lib` — `zk_proofs` (5), `specialized_libs::linear_algebra`
-(7), `semantic_culler` (3) all pass. The one remaining lib failure,
-`compute_universe::producer_cycle_with_global_substrate`, is the pre-existing wgpu GPU
-panic in §3, unrelated to this work.
+`cargo test -p qualia-core-db --lib` — **990 passed, 0 failed**. Includes `zk_proofs`
+(now with the real matrix-multiply round-trip + soundness tests),
+`specialized_libs::linear_algebra`, `semantic_culler`, and
+`compute_universe::producer_cycle_with_global_substrate` (the wgpu COPY_DST fix in §3).
