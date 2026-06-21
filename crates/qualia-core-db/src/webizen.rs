@@ -1520,29 +1520,23 @@ pub fn execute_vm_frame(
                 let mut scratch = [NQuin::default(); 512];
                 let n = arena.collect_active_quins(&mut scratch);
                 let asserts = crate::q_hash("arg:asserts");
-                let attacks = crate::q_hash("arg:attacks");
-                let mut af = argumentation::ArgumentationFramework::new();
+                let attacks_pred = crate::q_hash("arg:attacks");
+                // Collect argument ids + attack edges into fixed stack buffers (zero
+                // heap), then run the bounded zero-heap grounded-extension test.
+                let mut args = [0u64; argumentation::MAX_GROUNDED_ARGS];
+                let mut nargs = 0usize;
+                let mut atks = [(0u64, 0u64); 256];
+                let mut natks = 0usize;
                 for q in &scratch[..n] {
-                    if q.predicate == asserts {
-                        af.add_argument(argumentation::Argument::new(
-                            q.subject,
-                            String::new(),
-                            Vec::new(),
-                            *q,
-                        ));
+                    if q.predicate == asserts && nargs < args.len() {
+                        args[nargs] = q.subject;
+                        nargs += 1;
+                    } else if q.predicate == attacks_pred && natks < atks.len() {
+                        atks[natks] = (q.subject, q.object);
+                        natks += 1;
                     }
                 }
-                for q in &scratch[..n] {
-                    if q.predicate == attacks {
-                        af.add_attack(argumentation::Attack {
-                            attacker: q.subject,
-                            target: q.object,
-                            attack_type: argumentation::AttackType::Rebuttal,
-                            strength: 1.0,
-                        });
-                    }
-                }
-                if !af.grounded_extension().contains(&frame.subject_reg) {
+                if !argumentation::grounded_contains(&args[..nargs], &atks[..natks], frame.subject_reg) {
                     return None; // the goal argument is not justified (defeated) → fails
                 }
             }

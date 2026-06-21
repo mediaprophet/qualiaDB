@@ -375,9 +375,84 @@ pub fn create_sanctuary_debate() -> ArgumentationFramework {
     framework
 }
 
+/// Max arguments considered by the zero-heap grounded-extension membership test.
+pub const MAX_GROUNDED_ARGS: usize = 128;
+
+/// Zero-heap Dung (1995) grounded-extension membership test over caller-supplied,
+/// bounded argument and attack arrays. Returns whether `goal` is justified (in the
+/// grounded extension). No allocation — fixed stack buffers only; suitable for the
+/// Webizen VM hot path. (`ArgumentationFramework::grounded_extension` is the
+/// heap-using batch variant for the cold path.)
+pub fn grounded_contains(args: &[u64], attacks: &[(u64, u64)], goal: u64) -> bool {
+    let n = args.len().min(MAX_GROUNDED_ARGS);
+    let mut grounded = [false; MAX_GROUNDED_ARGS];
+    let mut defeated = [false; MAX_GROUNDED_ARGS];
+
+    let index_of = |id: u64| -> Option<usize> { args[..n].iter().position(|&a| a == id) };
+
+    loop {
+        // defeated = arguments attacked by a current grounded member.
+        for d in defeated.iter_mut().take(n) {
+            *d = false;
+        }
+        for &(attacker, target) in attacks {
+            if let Some(ai) = index_of(attacker) {
+                if grounded[ai] {
+                    if let Some(ti) = index_of(target) {
+                        defeated[ti] = true;
+                    }
+                }
+            }
+        }
+
+        let mut changed = false;
+        for i in 0..n {
+            if grounded[i] {
+                continue;
+            }
+            // args[i] joins the grounded set iff every attacker of it is defeated.
+            let mut all_attackers_defeated = true;
+            for &(attacker, target) in attacks {
+                if target == args[i] {
+                    match index_of(attacker) {
+                        Some(ai) if defeated[ai] => {}
+                        _ => {
+                            all_attackers_defeated = false;
+                            break;
+                        }
+                    }
+                }
+            }
+            if all_attackers_defeated {
+                grounded[i] = true;
+                changed = true;
+            }
+        }
+        if !changed {
+            break;
+        }
+    }
+
+    match index_of(goal) {
+        Some(gi) => grounded[gi],
+        None => false,
+    }
+}
+
 #[cfg(test)]
 mod tests {
     use super::*;
+
+    #[test]
+    fn grounded_contains_zero_heap_matches_dung() {
+        // A unattacked; A attacks B; B attacks C. Grounded = {A, C}.
+        let args = [1u64, 2, 3];
+        let attacks = [(1u64, 2u64), (2, 3)];
+        assert!(grounded_contains(&args, &attacks, 1), "A is justified");
+        assert!(!grounded_contains(&args, &attacks, 2), "B is defeated by A");
+        assert!(grounded_contains(&args, &attacks, 3), "C is reinstated (its attacker B is defeated)");
+        assert!(!grounded_contains(&args, &attacks, 99), "unknown argument is not justified");
+    }
     
     #[test]
     fn test_grounded_extension() {

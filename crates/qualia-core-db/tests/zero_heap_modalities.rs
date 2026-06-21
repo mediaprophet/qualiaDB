@@ -1,0 +1,124 @@
+//! Empirical zero-heap verification of the VM modality gate handlers.
+//!
+//! The "zero-heap per the mandate" claim must be MEASURED, not asserted (it was
+//! previously overclaimed). A counting global allocator records every heap
+//! allocation; we measure only the `execute_vm_frame` window (arena/fact setup is
+//! excluded) and assert ZERO allocations for each modality handler — including
+//! argumentation, whose grounded-extension was rewritten to a bounded stack form.
+//!
+//! Single test in this file on purpose: a global allocation counter would be
+//! polluted by tests running in parallel within the same binary.
+
+use std::alloc::{GlobalAlloc, Layout, System};
+use std::sync::atomic::{AtomicUsize, Ordering};
+
+use qualia_core_db::webizen::{execute_vm_frame, SlgArena, SlgOpcode, VmFrame};
+use qualia_core_db::{q_hash, NQuin};
+
+static ALLOCS: AtomicUsize = AtomicUsize::new(0);
+
+struct Counting;
+unsafe impl GlobalAlloc for Counting {
+    unsafe fn alloc(&self, l: Layout) -> *mut u8 {
+        ALLOCS.fetch_add(1, Ordering::SeqCst);
+        System.alloc(l)
+    }
+    unsafe fn dealloc(&self, p: *mut u8, l: Layout) {
+        System.dealloc(p, l)
+    }
+}
+
+#[global_allocator]
+static GA: Counting = Counting;
+
+fn q(subject: u64, predicate: u64, object: u64) -> NQuin {
+    let mut n = NQuin { subject, predicate, object, context: 0, metadata: 1, parity: 0 };
+    n.parity = n.subject ^ n.predicate ^ n.object ^ n.context;
+    n
+}
+
+/// Allocations performed strictly during `[op, Return]` execution.
+fn allocs_during(arena: &mut SlgArena, op: SlgOpcode, mut frame: VmFrame) -> usize {
+    let before = ALLOCS.load(Ordering::SeqCst);
+    let _ = execute_vm_frame(arena, &[op, SlgOpcode::Return], &mut frame);
+    ALLOCS.load(Ordering::SeqCst).wrapping_sub(before)
+}
+
+fn prop_frame(p: u64) -> VmFrame {
+    VmFrame { subject_reg: 0, predicate_reg: p, object_reg: 0, context_reg: 0 }
+}
+
+#[test]
+fn modality_handlers_are_zero_heap() {
+    // Warm up any one-time lazy init outside the measured windows.
+    {
+        let mut w = SlgArena::new();
+        let _ = allocs_during(&mut w, SlgOpcode::NativeAllenInterval(0),
+            VmFrame { subject_reg: 1, predicate_reg: 2, object_reg: 5, context_reg: 6 });
+    }
+
+    // LTL (trace scan + in-place reverse)
+    {
+        let mut a = SlgArena::new();
+        let safe = q_hash("zh:safe");
+        for i in 0..3 { a.write_table(q(i + 1, safe, 0)); }
+        assert_eq!(allocs_during(&mut a, SlgOpcode::NativeLtlGlobally, prop_frame(safe)), 0,
+            "LTL Globally handler must not allocate");
+    }
+
+    // Allen interval (pure register arithmetic)
+    {
+        let mut a = SlgArena::new();
+        assert_eq!(allocs_during(&mut a, SlgOpcode::NativeAllenInterval(0),
+            VmFrame { subject_reg: 1, predicate_reg: 2, object_reg: 5, context_reg: 6 }), 0,
+            "Allen interval handler must not allocate");
+    }
+
+    // Description-logic subsumption (TBox scan)
+    {
+        let mut a = SlgArena::new();
+        let (dog, animal, sub) = (q_hash("zh:Dog"), q_hash("zh:Animal"), q_hash("rdfs:subClassOf"));
+        a.write_table(q(dog, sub, animal));
+        assert_eq!(allocs_during(&mut a, SlgOpcode::NativeDlSubsumption,
+            VmFrame { subject_reg: dog, predicate_reg: 0, object_reg: animal, context_reg: 0 }), 0,
+            "DL subsumption handler must not allocate");
+    }
+
+    // Probabilistic threshold (scan + f32 extract)
+    {
+        let mut a = SlgArena::new();
+        let (s, p, o) = (q_hash("zh:rain"), q_hash("zh:p"), q_hash("zh:true"));
+        let mut bel = NQuin { subject: s, predicate: p, object: o, context: 0,
+            metadata: (0.9f32).to_bits() as u64, parity: 0 };
+        bel.parity = bel.subject ^ bel.predicate ^ bel.object ^ bel.context;
+        a.write_table(bel);
+        assert_eq!(allocs_during(&mut a, SlgOpcode::NativeProbabilisticThreshold((0.5f32).to_bits()),
+            VmFrame { subject_reg: s, predicate_reg: p, object_reg: o, context_reg: 0 }), 0,
+            "probabilistic threshold handler must not allocate");
+    }
+
+    // ASP (rule collect + enumerate, fixed buffers)
+    {
+        let mut a = SlgArena::new();
+        a.write_table(q(q_hash("zh:r1"), q_hash("zh:then"), q_hash("zh:x")));
+        a.write_table(q(q_hash("zh:r2"), q_hash("zh:then"), q_hash("zh:y")));
+        assert_eq!(allocs_during(&mut a, SlgOpcode::NativeAspStableModels,
+            VmFrame { subject_reg: 0, predicate_reg: 0, object_reg: 0, context_reg: q_hash("zh:base") }), 0,
+            "ASP stable-model handler must not allocate");
+    }
+
+    // Argumentation (the rewritten bounded zero-heap grounded extension)
+    {
+        let mut a = SlgArena::new();
+        let (asserts, attacks) = (q_hash("arg:asserts"), q_hash("arg:attacks"));
+        let (aa, bb, cc) = (q_hash("zh:A"), q_hash("zh:B"), q_hash("zh:C"));
+        a.write_table(q(aa, asserts, 0));
+        a.write_table(q(bb, asserts, 0));
+        a.write_table(q(cc, asserts, 0));
+        a.write_table(q(aa, attacks, bb));
+        a.write_table(q(bb, attacks, cc));
+        assert_eq!(allocs_during(&mut a, SlgOpcode::NativeArgumentationGrounded,
+            VmFrame { subject_reg: aa, predicate_reg: 0, object_reg: 0, context_reg: 0 }), 0,
+            "argumentation grounded handler must not allocate (bounded stack form)");
+    }
+}
