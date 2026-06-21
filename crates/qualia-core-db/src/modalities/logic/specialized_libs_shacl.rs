@@ -35,6 +35,44 @@ pub struct EigenDecomposition {
     pub algorithm_type: String,     // "qr", "power", "jacobi"
 }
 
+/// `q42:PolynomialSolve` — validates polynomial root-finding parameters
+#[derive(Debug, Clone)]
+pub struct PolynomialSolveConfiguration {
+    pub max_degree: u32,            // Maximum polynomial degree
+    pub method: String,            // "quadratic_closed_form", "durand_kerner", "companion"
+    pub max_iterations: u32,        // Iteration cap for iterative methods
+}
+
+/// `q42:SingularValueDecomposition` — validates SVD parameters
+#[derive(Debug, Clone)]
+pub struct SvdConfiguration {
+    pub max_dimension: u32,         // Maximum of m, n
+    pub compute_vectors: bool,      // Whether U/V are returned
+    pub method: String,            // "ata_eigen", "golub_reinsch"
+}
+
+/// `q42:Determinant` — validates determinant computation parameters
+#[derive(Debug, Clone)]
+pub struct DeterminantConfiguration {
+    pub max_dimension: u32,         // Maximum n for an n×n matrix
+    pub method: String,            // "lu", "cofactor"
+}
+
+/// `q42:SymbolicExpression` — validates symbolic (CAS) expression structure
+#[derive(Debug, Clone)]
+pub struct SymbolicExpressionConfiguration {
+    pub max_depth: u32,            // Maximum expression-tree depth
+    pub max_variables: u32,        // Maximum distinct variables
+    pub allowed_operators: Vec<String>, // ["add","sub","mul","div","pow","neg","sqrt"]
+}
+
+/// `q42:SymbolicOperation` — validates a symbolic algebra operation request
+#[derive(Debug, Clone)]
+pub struct SymbolicOperationConfiguration {
+    pub operation_type: String,     // "differentiate", "simplify", "evaluate", "solve"
+    pub max_iterations: u32,        // Simplification fixpoint bound
+}
+
 // ── Machine Learning Constraints ─────────────────────────────────────────────
 
 /// `q42:ModelConfiguration` — validates ML model configuration
@@ -395,6 +433,28 @@ macro_rules! generate_simple_opcodes {
 }
 
 generate_simple_opcodes!(EigenDecomposition, max_iterations);
+generate_simple_opcodes!(SvdConfiguration, max_dimension);
+generate_simple_opcodes!(DeterminantConfiguration, max_dimension);
+generate_simple_opcodes!(SymbolicExpressionConfiguration, max_depth);
+
+impl PolynomialSolveConfiguration {
+    pub fn to_opcodes(&self) -> Vec<SlgOpcode> {
+        vec![
+            SlgOpcode::CheckMaxInclusive(self.max_degree as f64),
+            SlgOpcode::CheckHasValue(crate::q_hash(&self.method)),
+            SlgOpcode::CheckMaxInclusive(self.max_iterations as f64),
+        ]
+    }
+}
+
+impl SymbolicOperationConfiguration {
+    pub fn to_opcodes(&self) -> Vec<SlgOpcode> {
+        vec![
+            SlgOpcode::CheckHasValue(crate::q_hash(&self.operation_type)),
+            SlgOpcode::CheckMaxInclusive(self.max_iterations as f64),
+        ]
+    }
+}
 generate_simple_opcodes!(InferenceConfiguration, max_batch_size);
 generate_simple_opcodes!(BoundaryConditions, max_gradient);
 generate_simple_opcodes!(MeshConfiguration, max_elements);
@@ -449,7 +509,7 @@ q42:MatrixConfigurationShape a sh:NodeShape ;
 q42:MatrixOperationShape a sh:NodeShape ;
     sh:property [
         sh:path q42:operationType ;
-        sh:in ("multiply" "add" "subtract" "invert" "transpose" "decompose") ;
+        sh:in ("multiply" "add" "subtract" "invert" "transpose" "decompose" "determinant" "eigen" "svd") ;
         sh:message "Operation type must be a valid matrix operation" ;
     ] ;
     sh:property [
@@ -458,6 +518,69 @@ q42:MatrixOperationShape a sh:NodeShape ;
         sh:minInclusive 1.0 ;
         sh:maxInclusive 1e15 ;
         sh:message "Condition number must be reasonable for numerical stability" ;
+    ] .
+
+q42:PolynomialSolveShape a sh:NodeShape ;
+    sh:property [
+        sh:path q42:maxDegree ;
+        sh:datatype xsd:integer ;
+        sh:minInclusive 1 ;
+        sh:maxInclusive 256 ;
+        sh:message "Polynomial degree must be between 1 and 256" ;
+    ] ;
+    sh:property [
+        sh:path q42:method ;
+        sh:in ("quadratic_closed_form" "durand_kerner" "companion") ;
+        sh:message "Root-finding method must be supported" ;
+    ] .
+
+q42:SingularValueDecompositionShape a sh:NodeShape ;
+    sh:property [
+        sh:path q42:maxDimension ;
+        sh:datatype xsd:integer ;
+        sh:minInclusive 1 ;
+        sh:maxInclusive 100000 ;
+        sh:message "SVD dimension must be between 1 and 100,000" ;
+    ] ;
+    sh:property [
+        sh:path q42:method ;
+        sh:in ("ata_eigen" "golub_reinsch") ;
+        sh:message "SVD method must be supported" ;
+    ] .
+
+q42:DeterminantShape a sh:NodeShape ;
+    sh:property [
+        sh:path q42:maxDimension ;
+        sh:datatype xsd:integer ;
+        sh:minInclusive 1 ;
+        sh:maxInclusive 100000 ;
+        sh:message "Determinant dimension must be between 1 and 100,000" ;
+    ] ;
+    sh:property [
+        sh:path q42:method ;
+        sh:in ("lu" "cofactor") ;
+        sh:message "Determinant method must be supported" ;
+    ] .
+
+q42:SymbolicExpressionShape a sh:NodeShape ;
+    sh:property [
+        sh:path q42:maxDepth ;
+        sh:datatype xsd:integer ;
+        sh:minInclusive 1 ;
+        sh:maxInclusive 1024 ;
+        sh:message "Symbolic expression depth must be between 1 and 1024" ;
+    ] ;
+    sh:property [
+        sh:path q42:allowedOperators ;
+        sh:in ("add" "sub" "mul" "div" "pow" "neg" "sqrt") ;
+        sh:message "Operator must be a supported CAS operator" ;
+    ] .
+
+q42:SymbolicOperationShape a sh:NodeShape ;
+    sh:property [
+        sh:path q42:operationType ;
+        sh:in ("differentiate" "simplify" "evaluate" "solve") ;
+        sh:message "Symbolic operation must be supported" ;
     ] .
 
 # ── Machine Learning Constraints ─────────────────────────────────────────────
@@ -589,4 +712,62 @@ q42:QPUConfigurationShape a sh:NodeShape ;
         sh:message "QPU type must be supported" ;
     ] .
 "#
+}
+
+#[cfg(test)]
+mod tests {
+    use super::*;
+
+    #[test]
+    fn algebra_and_cas_shapes_present() {
+        // Every new algebra/CAS capability must have a SHACL NodeShape in the Rust
+        // vocabulary (full coverage — mirrors shapes/specialized-libraries.shacl.ttl).
+        let ttl = get_specialized_libs_shacl_ttl();
+        for shape in [
+            "q42:PolynomialSolveShape",
+            "q42:SingularValueDecompositionShape",
+            "q42:DeterminantShape",
+            "q42:SymbolicExpressionShape",
+            "q42:SymbolicOperationShape",
+        ] {
+            assert!(ttl.contains(shape), "missing SHACL shape: {shape}");
+        }
+    }
+
+    #[test]
+    fn algebra_and_cas_configs_generate_opcodes() {
+        assert!(!PolynomialSolveConfiguration {
+            max_degree: 8,
+            method: "durand_kerner".to_string(),
+            max_iterations: 500,
+        }
+        .to_opcodes()
+        .is_empty());
+        assert!(!SvdConfiguration {
+            max_dimension: 256,
+            compute_vectors: true,
+            method: "ata_eigen".to_string(),
+        }
+        .to_opcodes()
+        .is_empty());
+        assert!(!DeterminantConfiguration {
+            max_dimension: 256,
+            method: "lu".to_string(),
+        }
+        .to_opcodes()
+        .is_empty());
+        assert!(!SymbolicExpressionConfiguration {
+            max_depth: 32,
+            max_variables: 8,
+            allowed_operators: vec!["add".to_string(), "mul".to_string()],
+        }
+        .to_opcodes()
+        .is_empty());
+        assert!(!SymbolicOperationConfiguration {
+            operation_type: "differentiate".to_string(),
+            max_iterations: 16,
+        }
+        .to_opcodes()
+        .is_empty());
+    }
 }

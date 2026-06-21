@@ -58,6 +58,8 @@ pub mod specialized_libs_shacl;
 pub use specialized_libs_shacl::{
     // Linear Algebra
     MatrixConfiguration, MatrixOperation, EigenDecomposition,
+    PolynomialSolveConfiguration, SvdConfiguration, DeterminantConfiguration,
+    SymbolicExpressionConfiguration, SymbolicOperationConfiguration,
     // Machine Learning
     ModelConfiguration, TrainingConfiguration, InferenceConfiguration,
     // Physics Simulation
