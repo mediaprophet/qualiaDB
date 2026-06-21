@@ -223,6 +223,30 @@ mod tests {
     }
 
     #[test]
+    fn test_eigenvalues_general() {
+        // Upper-triangular [[1,2],[0,3]] → eigenvalues {1,3} (real).
+        let mut e = eigenvalues_general(2, &[1.0, 2.0, 0.0, 3.0]).unwrap();
+        e.sort_by(|a, b| a.re.partial_cmp(&b.re).unwrap());
+        assert!(e.iter().all(|z| z.is_real(1e-7)));
+        assert!((e[0].re - 1.0).abs() < 1e-6 && (e[1].re - 3.0).abs() < 1e-6);
+
+        // Rotation [[0,-1],[1,0]] → eigenvalues ±i (non-symmetric, complex).
+        let r = eigenvalues_general(2, &[0.0, -1.0, 1.0, 0.0]).unwrap();
+        assert_eq!(r.len(), 2);
+        assert!(r.iter().all(|z| z.re.abs() < 1e-6 && (z.im.abs() - 1.0).abs() < 1e-6));
+    }
+
+    #[test]
+    fn test_characteristic_polynomial_determinant_link() {
+        // det(A) = (-1)ⁿ · cₙ for A = [[1,2],[3,4]] (det = −2, n = 2 → cₙ = −2).
+        let c = characteristic_polynomial(2, &[1.0, 2.0, 3.0, 4.0]).unwrap();
+        assert_eq!(c.len(), 3); // [1, c1, c2]
+        assert!((c[1] + 5.0).abs() < 1e-12); // -trace = -(1+4) = -5
+        let det_from_poly = c[2]; // (-1)^2 · c2 = c2
+        assert!((det_from_poly - determinant(2, &[1.0, 2.0, 3.0, 4.0]).unwrap()).abs() < 1e-9);
+    }
+
+    #[test]
     fn test_svd_reconstruction() {
         // A is 3×2; verify A ≈ U·Σ·Vᵀ and that singular values are descending ≥ 0.
         let m = 3;
@@ -1046,6 +1070,63 @@ pub fn eigen_symmetric(n: usize, data: &[f64]) -> Result<(Vec<f64>, Vec<f64>), L
 
     let eigenvalues: Vec<f64> = (0..n).map(|i| a[i * n + i]).collect();
     Ok((eigenvalues, v))
+}
+
+/// Characteristic polynomial of a row-major `n×n` matrix via the Faddeev–LeVerrier
+/// algorithm. Returns DESCENDING coefficients `[1, c₁, …, cₙ]` of
+/// `p(λ) = λⁿ + c₁λⁿ⁻¹ + … + cₙ` (so `det(A) = (-1)ⁿ·cₙ`). Exact for integer matrices;
+/// for large/ill-conditioned matrices prefer an iterative eigensolver (documented).
+pub fn characteristic_polynomial(n: usize, data: &[f64]) -> Result<Vec<f64>, LinearAlgebraError> {
+    if n == 0 || data.len() != n * n {
+        return Err(LinearAlgebraError::InvalidDimensions(
+            "characteristic_polynomial expects a non-empty square n×n matrix".to_string(),
+        ));
+    }
+    let mul = |x: &[f64], y: &[f64]| -> Vec<f64> {
+        let mut out = vec![0.0_f64; n * n];
+        for i in 0..n {
+            for k in 0..n {
+                let xik = x[i * n + k];
+                if xik == 0.0 {
+                    continue;
+                }
+                for j in 0..n {
+                    out[i * n + j] += xik * y[k * n + j];
+                }
+            }
+        }
+        out
+    };
+    let trace = |x: &[f64]| -> f64 { (0..n).map(|i| x[i * n + i]).sum() };
+
+    let mut coeffs = vec![0.0_f64; n + 1];
+    coeffs[0] = 1.0;
+    // M starts as the identity.
+    let mut m = vec![0.0_f64; n * n];
+    for i in 0..n {
+        m[i * n + i] = 1.0;
+    }
+    for k in 1..=n {
+        let am = mul(data, &m);
+        let ck = -trace(&am) / (k as f64);
+        coeffs[k] = ck;
+        // M ← A·M + ck·I  (not needed after the final iteration).
+        m = am;
+        for i in 0..n {
+            m[i * n + i] += ck;
+        }
+    }
+    Ok(coeffs)
+}
+
+/// Eigenvalues of a GENERAL (not necessarily symmetric) row-major `n×n` matrix, as
+/// complex numbers. Computes the characteristic polynomial (Faddeev–LeVerrier) and
+/// finds its roots (`polynomial_roots`). Returns all `n` eigenvalues; real ones have
+/// `im ≈ 0`. For symmetric matrices prefer `eigen_symmetric` (also yields eigenvectors
+/// and is more stable at scale).
+pub fn eigenvalues_general(n: usize, data: &[f64]) -> Result<Vec<Complex>, LinearAlgebraError> {
+    let charpoly = characteristic_polynomial(n, data)?;
+    polynomial_roots(&charpoly)
 }
 
 /// Result of a (thin) singular value decomposition `A = U·Σ·Vᵀ` of a row-major `m×n`
