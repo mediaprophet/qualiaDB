@@ -15,8 +15,14 @@
 //!   0     │ 0b0011       │ 0 or 1        │ Inline xsd:boolean literal
 //!   0     │ 0b001        │ embedded hash │ SPARQL-Star embedded triple <<s p o>>
 //!   0     │ 0b1000       │ webizen id    │ Sovereign WebID agent identifier
-//!   0     │ 0b0101–0b0111│ reserved      │ Treated as IRI hash (future use)
+//!   0     │ 0b0101       │ f32 bits      │ Inline xsd:float literal (computed values)
+//!   0     │ 0b0110–0b0111│ reserved      │ Treated as IRI hash (future use)
 //! ```
+//!
+//! NOTE: `0b0101` (`INLINE_TAG_FLOAT`) was formally allocated to inline `xsd:float`
+//! in 0.0.19 to resolve the float-vs-integer tag clash — computed f32 values used to
+//! squat on the `0b0001` integer tag. The Webizen VM, `frame_layout`, and this
+//! resolver now agree on `0b0101`. See `AGENTS.md §4-D` and `ALGEBRA_MANIFOLD_PLAN.md`.
 //!
 //! The inline-type encoding is applied by the ingest layer, which masks
 //! FNV-1a hash values to 60 bits before storing them so there is no
@@ -38,6 +44,10 @@ pub const INLINE_TAG_MASK: u64 = 0b111u64 << 60; // bits 60-62 (only when MSB=0)
 pub const INLINE_TAG_INTEGER: u64 = 0b001u64 << 60;
 pub const INLINE_TAG_DECIMAL: u64 = 0b010u64 << 60;
 pub const INLINE_TAG_BOOLEAN: u64 = 0b011u64 << 60;
+/// Inline `xsd:float` literal: bits 0-31 are raw IEEE-754 f32 bits. Allocated 0.0.19 to
+/// end the float-vs-integer clash (formerly squatted on `INLINE_TAG_INTEGER`). Canonical
+/// home for this tag; `frame_layout` re-exports it.
+pub const INLINE_TAG_FLOAT: u64 = 0b101u64 << 60;
 /// SPARQL-Star embedded triple tag: indicates the value is a Virtual ID for <<s p o>>
 pub const TAG_EMBEDDED: u64 = 0b001u64 << 60;
 /// Webizen identity tag: indicates the value is a sovereign WebID agent identifier
@@ -243,6 +253,11 @@ pub(crate) fn write_object_term<W: io::Write>(val: u64, out: &mut W) -> io::Resu
             let lit = if (val & 1) != 0 { "true" } else { "false" };
             write!(out, "\"{lit}\"^^<http://www.w3.org/2001/XMLSchema#boolean>")
         }
+        INLINE_TAG_FLOAT => {
+            // Lower 32 bits are raw IEEE-754 f32 bits (see pack_float_object).
+            let f = f32::from_bits((val & 0xFFFF_FFFF) as u32);
+            write!(out, "\"{f}\"^^<http://www.w3.org/2001/XMLSchema#float>")
+        }
         _ => write!(out, "<quin:hash/{val:016x}>"),
     }
 }
@@ -428,6 +443,21 @@ mod tests {
             String::from_utf8(buf).unwrap(),
             "\"3.141592\"^^<http://www.w3.org/2001/XMLSchema#decimal>"
         );
+    }
+
+    #[test]
+    fn inline_float_object() {
+        // Computed f32 values carry the 0b101 FLOAT tag (formerly squatted on INTEGER).
+        let val = INLINE_TAG_FLOAT | (3.5f32.to_bits() as u64);
+        let mut buf = Vec::new();
+        write_object_term(val, &mut buf).unwrap();
+        assert_eq!(
+            String::from_utf8(buf).unwrap(),
+            "\"3.5\"^^<http://www.w3.org/2001/XMLSchema#float>"
+        );
+        // Round-trips through the FrameLayout packer too.
+        let packed = crate::frame_layout::pack_float_object(3.5);
+        assert_eq!(packed & crate::frame_layout::INLINE_TAG_MASK, INLINE_TAG_FLOAT);
     }
 
     #[test]

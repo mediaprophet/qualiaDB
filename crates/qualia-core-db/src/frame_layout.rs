@@ -75,13 +75,11 @@ pub const fn pack_predicate(opcode: u8, path_hash: u64, defeater: bool) -> u64 {
 //  object field — inline literal datatype tags (canonical in `resolver`)
 // ════════════════════════════════════════════════════════════════════════════════
 pub use crate::resolver::{
-    INLINE_TAG_BOOLEAN, INLINE_TAG_DECIMAL, INLINE_TAG_INTEGER, INLINE_TAG_MASK,
-    INLINE_VALUE_MASK, MSB_FLAG,
+    INLINE_TAG_BOOLEAN, INLINE_TAG_DECIMAL, INLINE_TAG_FLOAT, INLINE_TAG_INTEGER,
+    INLINE_TAG_MASK, INLINE_VALUE_MASK, MSB_FLAG,
 };
 /// Blob/byte-offset pointer tag (canonical in `dicom`).
 pub const INLINE_TAG_BLOB: u64 = 0b100u64 << 60;
-/// Raw IEEE-754 f32 bits tag (NEW — was incorrectly sharing INTEGER's `0b001`).
-pub const INLINE_TAG_FLOAT: u64 = 0b101u64 << 60;
 
 /// The 3-bit inline datatype tag of an object value (only meaningful when MSB clear).
 #[inline]
