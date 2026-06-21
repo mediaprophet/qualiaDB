@@ -507,12 +507,65 @@ pub fn compile_norm_quin(
     }
 }
 
+// ─── Contrary-to-duty (dyadic deontic) ──────────────────────────────────────────
+
+/// Contrary-to-duty obligation `O(reparation / breach)`: a *secondary* obligation
+/// that arises precisely because a *primary* obligation was breached (the
+/// remedy/reparation logic — Geneva/ICCPR remedy instruments). Returns `true` iff
+/// the CTD is satisfied: either the primary was NOT breached by the party (the
+/// CTD is not triggered), or it was breached AND the reparation has been fulfilled.
+///
+/// Facts convention: a breach is `(party, q42:breached, primary)`; a fulfilled
+/// reparation is `(party, q42:fulfilled, reparation)`. Zero-heap (linear scans).
+pub fn evaluate_contrary_to_duty(
+    facts: &[NQuin],
+    party: u64,
+    primary: u64,
+    reparation: u64,
+) -> bool {
+    let breached = q_hash("q42:breached");
+    let fulfilled = q_hash("q42:fulfilled");
+    let breach = facts.iter().any(|q| {
+        q.subject == party && q.predicate == breached && q.object == primary
+    });
+    if !breach {
+        return true; // no breach → the contrary-to-duty obligation is not triggered
+    }
+    // A breach occurred: the secondary (reparation) obligation must be fulfilled.
+    facts.iter().any(|q| {
+        q.subject == party && q.predicate == fulfilled && q.object == reparation
+    })
+}
+
 // ─── Tests ────────────────────────────────────────────────────────────────────
 
 #[cfg(test)]
 mod tests {
     use super::*;
     use crate::q_hash;
+
+    #[test]
+    fn contrary_to_duty_requires_reparation_after_breach() {
+        let party = q_hash("did:web:acme");
+        let primary = q_hash("q42:protectData");
+        let reparation = q_hash("q42:notifyAndRemedy");
+        let mk = |s: u64, p: u64, o: u64| {
+            let mut q = NQuin { subject: s, predicate: p, object: o, context: 0, metadata: 0, parity: 0 };
+            q.parity = q.subject ^ q.predicate ^ q.object ^ q.context;
+            q
+        };
+        // No breach → satisfied (CTD not triggered).
+        assert!(evaluate_contrary_to_duty(&[], party, primary, reparation));
+        // Breach without reparation → NOT satisfied.
+        let breach = [mk(party, q_hash("q42:breached"), primary)];
+        assert!(!evaluate_contrary_to_duty(&breach, party, primary, reparation));
+        // Breach WITH reparation → satisfied.
+        let repaired = [
+            mk(party, q_hash("q42:breached"), primary),
+            mk(party, q_hash("q42:fulfilled"), reparation),
+        ];
+        assert!(evaluate_contrary_to_duty(&repaired, party, primary, reparation));
+    }
 
     fn alice() -> u64 {
         q_hash("did:web:alice.example")

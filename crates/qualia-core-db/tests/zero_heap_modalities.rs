@@ -121,4 +121,42 @@ fn modality_handlers_are_zero_heap() {
             VmFrame { subject_reg: aa, predicate_reg: 0, object_reg: 0, context_reg: 0 }), 0,
             "argumentation grounded handler must not allocate (bounded stack form)");
     }
+
+    // Metric temporal (timestamp scan)
+    {
+        let mut a = SlgArena::new();
+        let (br, rm) = (q_hash("zh:breach"), q_hash("zh:remedy"));
+        let mut e1 = NQuin { subject: 1, predicate: br, object: 0, context: 0, metadata: 10, parity: 0 };
+        e1.parity = e1.subject ^ e1.predicate ^ e1.object ^ e1.context;
+        let mut e2 = NQuin { subject: 2, predicate: rm, object: 0, context: 0, metadata: 25, parity: 0 };
+        e2.parity = e2.subject ^ e2.predicate ^ e2.object ^ e2.context;
+        a.write_table(e1);
+        a.write_table(e2);
+        assert_eq!(allocs_during(&mut a, SlgOpcode::NativeMtlWithin(30),
+            VmFrame { subject_reg: 0, predicate_reg: br, object_reg: rm, context_reg: 0 }), 0,
+            "metric-temporal handler must not allocate");
+    }
+
+    // Contrary-to-duty (fact scan)
+    {
+        let mut a = SlgArena::new();
+        let (party, primary, rep) = (q_hash("zh:p"), q_hash("zh:prim"), q_hash("zh:rep"));
+        a.write_table(q(party, q_hash("q42:breached"), primary));
+        a.write_table(q(party, q_hash("q42:fulfilled"), rep));
+        assert_eq!(allocs_during(&mut a, SlgOpcode::NativeContraryToDuty,
+            VmFrame { subject_reg: party, predicate_reg: primary, object_reg: rep, context_reg: 0 }), 0,
+            "contrary-to-duty handler must not allocate");
+    }
+
+    // Causal necessity (bounded BFS over fixed buffers)
+    {
+        let mut a = SlgArena::new();
+        let causes = q_hash("causal:causes");
+        let (root, c, e) = (q_hash("zh:root"), q_hash("zh:C"), q_hash("zh:E"));
+        a.write_table(q(root, causes, c));
+        a.write_table(q(c, causes, e));
+        assert_eq!(allocs_during(&mut a, SlgOpcode::NativeCausalNecessary,
+            VmFrame { subject_reg: c, predicate_reg: 0, object_reg: e, context_reg: root }), 0,
+            "causal-necessity handler must not allocate");
+    }
 }

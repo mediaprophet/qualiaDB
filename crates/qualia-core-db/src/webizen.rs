@@ -597,6 +597,17 @@ pub enum SlgOpcode {
     /// (`frame.subject_reg`) must be justified — in the grounded extension built
     /// from `arg:asserts` / `arg:attacks` quins in the arena.
     NativeArgumentationGrounded,
+    /// Metric-temporal gate (MTL "within"): `target` (`frame.object_reg`) must
+    /// occur within the param window of the earliest `trigger` (`frame.predicate_reg`);
+    /// event timestamps are in each quin's `metadata`.
+    NativeMtlWithin(u32),
+    /// Contrary-to-duty gate (dyadic deontic): if the party (`frame.subject_reg`)
+    /// breached the primary obligation (`frame.predicate_reg`), the reparation
+    /// (`frame.object_reg`) must be fulfilled.
+    NativeContraryToDuty,
+    /// Causal-necessity gate (but-for): `frame.subject_reg` must be a necessary
+    /// cause of `frame.object_reg` from origin `frame.context_reg`.
+    NativeCausalNecessary,
 
     // ── Native: cognitive ai (ACT-R) ──────────────────────────────────────────
     NativeRetrieveByActivation,
@@ -1538,6 +1549,42 @@ pub fn execute_vm_frame(
                 }
                 if !argumentation::grounded_contains(&args[..nargs], &atks[..natks], frame.subject_reg) {
                     return None; // the goal argument is not justified (defeated) → fails
+                }
+            }
+            SlgOpcode::NativeMtlWithin(window) => {
+                let mut scratch = [NQuin::default(); 512];
+                let n = arena.collect_active_quins(&mut scratch);
+                if !temporal_ltl::holds_within(
+                    &scratch[..n],
+                    frame.predicate_reg,
+                    frame.object_reg,
+                    window as u64,
+                ) {
+                    return None; // target did not occur within the deadline → fails
+                }
+            }
+            SlgOpcode::NativeContraryToDuty => {
+                let mut scratch = [NQuin::default(); 512];
+                let n = arena.collect_active_quins(&mut scratch);
+                if !crate::modalities::logic::deontic::evaluate_contrary_to_duty(
+                    &scratch[..n],
+                    frame.subject_reg,
+                    frame.predicate_reg,
+                    frame.object_reg,
+                ) {
+                    return None; // breach without reparation → secondary obligation unmet
+                }
+            }
+            SlgOpcode::NativeCausalNecessary => {
+                let mut scratch = [NQuin::default(); 512];
+                let n = arena.collect_active_quins(&mut scratch);
+                if !dialectical::is_necessary_cause(
+                    &scratch[..n],
+                    frame.context_reg,
+                    frame.subject_reg,
+                    frame.object_reg,
+                ) {
+                    return None; // candidate is not a but-for cause of the effect → fails
                 }
             }
             SlgOpcode::NativeUnless => {

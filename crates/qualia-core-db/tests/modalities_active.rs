@@ -331,3 +331,80 @@ fn asp_enumerates_stable_models_from_arena() {
     assert_ne!(bound.context, base_ctx,
         "ASP must enumerate non-trivial worlds from the arena rules, not an empty rule set");
 }
+
+// ── Metric/timed temporal (MTL "within") ──────────────────────────────────────────
+
+/// A timed event quin: timestamp in `metadata`.
+fn timed(subject: u64, predicate: u64, t: u64) -> NQuin {
+    let mut n = NQuin { subject, predicate, object: 0, context: 0, metadata: t, parity: 0 };
+    n.parity = n.subject ^ n.predicate ^ n.object ^ n.context;
+    n
+}
+
+#[test]
+fn mtl_within_active() {
+    let breach = q_hash("mtl:breach");
+    let remedy = q_hash("mtl:remedy");
+    let mut a = SlgArena::new();
+    a.write_table(timed(1, breach, 10));
+    a.write_table(timed(2, remedy, 25));
+    let frame = VmFrame { subject_reg: 0, predicate_reg: breach, object_reg: remedy, context_reg: 0 };
+
+    assert!(gate(&mut a, SlgOpcode::NativeMtlWithin(30), frame),
+        "remedy (t=25) is within 30 of breach (t=10)");
+    assert!(!gate(&mut a, SlgOpcode::NativeMtlWithin(10), frame),
+        "remedy (t=25) is NOT within 10 of breach (t=10) — deadline missed");
+}
+
+// ── Contrary-to-duty (dyadic deontic / reparation) ────────────────────────────────
+
+#[test]
+fn contrary_to_duty_active() {
+    let party = q_hash("ctd:acme");
+    let primary = q_hash("ctd:protectData");
+    let reparation = q_hash("ctd:remedy");
+    let frame = VmFrame { subject_reg: party, predicate_reg: primary, object_reg: reparation, context_reg: 0 };
+
+    // Breach without reparation → the secondary obligation is unmet.
+    let mut a = SlgArena::new();
+    a.write_table(q(party, q_hash("q42:breached"), primary));
+    assert!(!gate(&mut a, SlgOpcode::NativeContraryToDuty, frame),
+        "a breach without reparation fails the contrary-to-duty obligation");
+
+    // Breach WITH reparation fulfilled → satisfied.
+    let mut b = SlgArena::new();
+    b.write_table(q(party, q_hash("q42:breached"), primary));
+    b.write_table(q(party, q_hash("q42:fulfilled"), reparation));
+    assert!(gate(&mut b, SlgOpcode::NativeContraryToDuty, frame),
+        "breach + fulfilled reparation satisfies the contrary-to-duty obligation");
+
+    // No breach → CTD not triggered (vacuously satisfied).
+    let mut c = SlgArena::new();
+    assert!(gate(&mut c, SlgOpcode::NativeContraryToDuty, frame),
+        "no breach → the contrary-to-duty obligation is not triggered");
+}
+
+// ── Causal necessity (but-for) ────────────────────────────────────────────────────
+
+#[test]
+fn causal_necessity_active() {
+    let causes = q_hash("causal:causes");
+    let (root, c, d, effect) = (q_hash("c:root"), q_hash("c:C"), q_hash("c:D"), q_hash("c:E"));
+    let frame = VmFrame { subject_reg: c, predicate_reg: 0, object_reg: effect, context_reg: root };
+
+    // Chain root → C → effect: C is a necessary (but-for) cause.
+    let mut a = SlgArena::new();
+    a.write_table(q(root, causes, c));
+    a.write_table(q(c, causes, effect));
+    assert!(gate(&mut a, SlgOpcode::NativeCausalNecessary, frame),
+        "C is necessary: removing it disconnects the effect");
+
+    // Diamond root → C → effect AND root → D → effect: C is NOT necessary.
+    let mut b = SlgArena::new();
+    b.write_table(q(root, causes, c));
+    b.write_table(q(c, causes, effect));
+    b.write_table(q(root, causes, d));
+    b.write_table(q(d, causes, effect));
+    assert!(!gate(&mut b, SlgOpcode::NativeCausalNecessary, frame),
+        "C is not necessary when an alternative causal path (via D) exists");
+}

@@ -264,9 +264,87 @@ pub fn synthesize_dialectical(thesis: &NQuin, antithesis: &NQuin) -> Option<NQui
     None
 }
 
+// ─── Causal necessity (but-for) — zero-heap reachability ─────────────────────────
+
+/// Max nodes for the bounded zero-heap causal reachability search.
+pub const MAX_CAUSAL_NODES: usize = 256;
+
+/// Zero-heap reachability over causal edges (`subject → object`): is `target`
+/// reachable from `source` WITHOUT ever passing through `avoid`? Bounded BFS over
+/// fixed stack buffers (no allocation). Pass `avoid == u64::MAX` to avoid nothing.
+/// (The heap variant `find_causal_paths` enumerates *all* paths for analysis;
+/// this answers the yes/no reachability the but-for test needs, allocation-free.)
+pub fn reachable_avoiding(graph: &[NQuin], source: u64, target: u64, avoid: u64) -> bool {
+    if source == avoid {
+        return false;
+    }
+    if source == target {
+        return true;
+    }
+    let mut stack = [0u64; MAX_CAUSAL_NODES];
+    let mut slen = 1usize;
+    stack[0] = source;
+    let mut visited = [0u64; MAX_CAUSAL_NODES];
+    let mut vlen = 1usize;
+    visited[0] = source;
+
+    while slen > 0 {
+        slen -= 1;
+        let node = stack[slen];
+        for q in graph {
+            if q.subject != node || q.object == avoid {
+                continue;
+            }
+            if q.object == target {
+                return true;
+            }
+            let mut seen = false;
+            for &v in visited.iter().take(vlen) {
+                if v == q.object {
+                    seen = true;
+                    break;
+                }
+            }
+            if !seen && vlen < MAX_CAUSAL_NODES && slen < MAX_CAUSAL_NODES {
+                visited[vlen] = q.object;
+                vlen += 1;
+                stack[slen] = q.object;
+                slen += 1;
+            }
+        }
+    }
+    false
+}
+
+/// But-for causal necessity: `candidate` is a NECESSARY cause of `effect` (from
+/// origin `root`) iff `effect` is reachable from `root`, but is NOT reachable once
+/// `candidate` is removed from the causal graph. The attribution/liability test
+/// ("would the harm have occurred but for this agent's act?"). Zero-heap.
+pub fn is_necessary_cause(graph: &[NQuin], root: u64, candidate: u64, effect: u64) -> bool {
+    reachable_avoiding(graph, root, effect, u64::MAX)
+        && !reachable_avoiding(graph, root, effect, candidate)
+}
+
 #[cfg(test)]
 mod tests {
     use super::*;
+
+    fn edge(cause: u64, effect: u64) -> NQuin {
+        let mut q = NQuin { subject: cause, predicate: crate::q_hash("causal:causes"), object: effect, context: 0, metadata: 0, parity: 0 };
+        q.parity = q.subject ^ q.predicate ^ q.object ^ q.context;
+        q
+    }
+
+    #[test]
+    fn but_for_causal_necessity() {
+        // Chain: root → C → effect. C is necessary (removing it disconnects effect).
+        let chain = [edge(1, 2), edge(2, 3)];
+        assert!(is_necessary_cause(&chain, 1, 2, 3), "C is a necessary cause in a chain");
+        // Diamond: root → C → effect AND root → D → effect. C is NOT necessary.
+        let diamond = [edge(1, 2), edge(2, 4), edge(1, 3), edge(3, 4)];
+        assert!(!is_necessary_cause(&diamond, 1, 2, 4), "C is not necessary when an alternative path exists");
+        assert!(reachable_avoiding(&diamond, 1, 4, u64::MAX), "effect is reachable normally");
+    }
 
     #[test]
     fn test_synthesize_dialectical() {
