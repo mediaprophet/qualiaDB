@@ -24,8 +24,8 @@ asserted verdict), like `tests/deontic_smoke.rs`.
 | **paraconsistent** | `paraconsistent.rs` | 1 | `NativeParaconsistentIsolate` | **real** | live-lane smoke test |
 | **dialectical** | `dialectical.rs` | 6 | `NativeDialecticalSynthesis` | **real** | review 2 stub markers |
 | **defeasible** | `defeasible.rs` | 1 | `NativeUnless` | **real** | live-lane smoke test |
-| **temporal LTL** | `temporal_ltl.rs` (`evaluate_ltl_trace`) | 5 | `NativeLtlGlobally/Finally/Next/Until/Release` | **NO-OP (vm_log only)** | ⚠ **wire opcodes to `evaluate_ltl_trace`** |
-| **Allen interval / RCC-8** | `spatio_temporal.rs`, `interval_reasoning.rs` | 3 + 6 | `NativeAllenInterval(u8)` | **NO-OP (vm_log only)** | ⚠ **wire opcode to interval algebra**; review 5+2 stub markers |
+| **temporal LTL** | `temporal_ltl.rs` (`evaluate_ltl_trace`) | 5 | `NativeLtlGlobally/Finally/Next/Until/Release` | **real** ✅ (wired 0.0.19) | live-lane test in `tests/modalities_active.rs` ✅ |
+| **Allen interval / RCC-8** | `spatio_temporal.rs`, `interval_reasoning.rs` | 3 + 6 | `NativeAllenInterval(u8)` | **real** ✅ (wired 0.0.19) | RCC-8 spatial opcode still unwired; review 5+2 stub markers |
 | **probabilistic** | `probabilistic.rs` | 1 | none | — | decide: needs a VM lane? |
 | **description logic (DL)** | `dl.rs` | 1 | none | — | decide: needs a VM lane? |
 | **argumentation** | `argumentation.rs` | 5 | none | — | decide: needs a VM lane? |
@@ -34,17 +34,19 @@ asserted verdict), like `tests/deontic_smoke.rs`.
 | **control feedback** | `control_feedback.rs` | 4 | none | — | review 1 stub marker |
 
 ### Highest-value items (§1)
-1. **Wire LTL opcodes** — `NativeLtlGlobally/Finally/Next/Until/Release` currently
-   only `vm_log!`. Connect to `temporal_ltl::evaluate_ltl_trace` (the real,
-   tested evaluator) so temporal rules actually evaluate in the live lane. **Pin
-   the §9.2 predicate-packing convention first** (`temporal_ltl.rs` compares the
-   FULL `NQuin.predicate`; a packed property-path hash will silently fail to match).
-2. **Wire Allen-interval opcode** — `NativeAllenInterval(mode)` is a no-op; connect
-   to `spatio_temporal.rs` / `interval_reasoning.rs`.
-3. **Live-lane smoke tests** for each already-wired modality (epistemic, linear,
-   asp, paraconsistent, defeasible) mirroring `deontic_smoke.rs` — prove the
-   `Native*Eval` opcode produces the asserted verdict, not just that the library
-   passes unit tests.
+1. ✅ **DONE (0.0.19)** — **Wire LTL opcodes** to `temporal_ltl::evaluate_ltl_trace`
+   (gate semantics: temporal property violated → frame fails). Live-lane tests for
+   all 5 operators in `tests/modalities_active.rs`. NOTE the §9.2 predicate-packing
+   convention is still UNPINNED — LTL compares the FULL `NQuin.predicate`; the
+   ontology compiler must use unpacked predicates for temporal rules or they'll
+   silently fail to match. **Pin this before compiling sense/temporal N3 rules.**
+2. ✅ **DONE (0.0.19)** — **Wire Allen-interval opcode** to
+   `spatio_temporal::evaluate_temporal` (frame regs = the two intervals' bounds).
+   Live-lane tests in `tests/modalities_active.rs`. STILL TODO: the **RCC-8 spatial**
+   relation has no VM opcode (`evaluate_rcc8` is library-only) — add `NativeRcc8`.
+3. **Live-lane smoke tests** for the remaining wired modalities (epistemic, asp,
+   defeasible/`NativeUnless`) mirroring `deontic_smoke.rs`. `linear`, `dialectical`,
+   `paraconsistent` are now covered in `tests/modalities_active.rs`.
 4. **Audit stub markers**: `spatio_temporal.rs` (5), `dialectical.rs` (2),
    `interval_reasoning.rs` (2), `control_feedback.rs`/`core.rs`/`rules.rs` (1 each)
    — confirm each is real or convert to `PendingImplementation`.

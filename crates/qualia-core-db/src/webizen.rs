@@ -4,6 +4,8 @@ use crate::modalities::logic::deontic::{
     OP_PERMIT,
 };
 use crate::modalities::{asp, dialectical, dl, epistemic, linear, paraconsistent, probabilistic};
+use crate::modalities::temporal_ltl::{self, LtlFormula};
+use crate::modalities::spatio_temporal;
 use crate::domains::financial::tax_schema::TaxRuleSchema;
 use crate::NQuin;
 
@@ -1482,13 +1484,58 @@ pub fn execute_vm_frame(
             | SlgOpcode::NativeLtlNext
             | SlgOpcode::NativeLtlUntil
             | SlgOpcode::NativeLtlRelease => {
-                vm_log!("[Webizen] NativeLtl: evaluating temporal bounds natively on Core 1 using 64-bit bounds in Metadata");
+                // Build a chronological trace from the arena (collect_active_quins
+                // returns most-recent-first; reverse to oldest-first event order).
+                let mut scratch = [NQuin::default(); 512];
+                let n = arena.collect_active_quins(&mut scratch);
+                let trace = &mut scratch[..n];
+                trace.reverse();
+                // The frame registers carry the propositions to check temporally
+                // (full predicate hashes — see PLAN §9.2: evaluate_ltl_trace compares
+                // the whole NQuin.predicate, so traces must use unpacked predicates).
+                let formula = match opcode {
+                    SlgOpcode::NativeLtlGlobally => LtlFormula::Globally(frame.predicate_reg),
+                    SlgOpcode::NativeLtlFinally => LtlFormula::Finally(frame.predicate_reg),
+                    SlgOpcode::NativeLtlNext => LtlFormula::Next(frame.predicate_reg),
+                    SlgOpcode::NativeLtlUntil => LtlFormula::Until {
+                        ante: frame.predicate_reg,
+                        consequent: frame.object_reg,
+                    },
+                    SlgOpcode::NativeLtlRelease => LtlFormula::Release {
+                        trigger: frame.predicate_reg,
+                        invariant: frame.object_reg,
+                    },
+                    _ => unreachable!(),
+                };
+                if !temporal_ltl::evaluate_ltl_trace(trace, &formula) {
+                    return None; // temporal property violated → rule frame fails
+                }
+                vm_log!("[Webizen] NativeLtl: temporal property held over {} states", n);
             }
             SlgOpcode::NativeAllenInterval(mode) => {
-                vm_log!(
-                    "[Webizen] NativeAllenInterval: evaluating interval algebra mode {}",
-                    mode
+                // The frame registers carry the two intervals' bounds:
+                //   subject = t1_start, predicate = t1_end,
+                //   object  = t2_start, context   = t2_end.
+                let op = match mode {
+                    0 => spatio_temporal::TemporalOp::Before,
+                    1 => spatio_temporal::TemporalOp::Meets,
+                    2 => spatio_temporal::TemporalOp::Overlaps,
+                    3 => spatio_temporal::TemporalOp::Starts,
+                    4 => spatio_temporal::TemporalOp::During,
+                    5 => spatio_temporal::TemporalOp::Finishes,
+                    _ => spatio_temporal::TemporalOp::Equals,
+                };
+                let holds = spatio_temporal::evaluate_temporal(
+                    op,
+                    frame.subject_reg as i64,
+                    frame.predicate_reg as i64,
+                    frame.object_reg as i64,
+                    frame.context_reg as i64,
                 );
+                if !holds {
+                    return None; // the interval relation does not hold → frame fails
+                }
+                vm_log!("[Webizen] NativeAllenInterval: relation mode {} holds", mode);
             }
             SlgOpcode::NativeLorentzDistance
             | SlgOpcode::NativeTropicalDistance
