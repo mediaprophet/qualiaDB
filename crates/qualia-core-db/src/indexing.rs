@@ -90,6 +90,55 @@ impl QuinIndex {
             .collect()
     }
 
+    // ── Zero-allocation accessors (the modal-kind resolution hot path, task #22) ──
+    // The `by_*` methods above each return `Vec<NQuin>` — one heap allocation per
+    // call, unacceptable for continuous resolution. These yield `NQuin` BY VALUE (it
+    // is `Copy`, 48 bytes) while borrowing the index: no per-call heap alloc, and —
+    // because they yield copies, not `&NQuin` into the backing `Vec` — they remain
+    // valid across the incremental `insert()` that may reallocate it. Keep them OUT of
+    // the SIMD/GPU vectorized loop (random-access gather): this is the CPU/logic-layer
+    // resolution path (see `frame_layout` "Tag policy").
+
+    /// Zero-alloc: every quin with this subject, yielded by copy.
+    pub fn iter_by_subject(&self, s: u64) -> impl Iterator<Item = NQuin> + '_ {
+        self.by_subject
+            .get(&s)
+            .map(Vec::as_slice)
+            .unwrap_or(&[])
+            .iter()
+            .map(move |&i| self.quins[i])
+    }
+
+    /// Zero-alloc: every quin matching subject AND predicate, yielded by copy.
+    pub fn iter_by_subject_and_predicate(
+        &self,
+        s: u64,
+        p: u64,
+    ) -> impl Iterator<Item = NQuin> + '_ {
+        self.iter_by_subject(s).filter(move |q| q.predicate == p)
+    }
+
+    /// Zero-alloc modal-kind resolution primitive: the first object of `(s, p)`.
+    /// e.g. `object_of(identifier, has_modality_kind)` resolves an identifier's kind
+    /// in one point lookup with no heap allocation.
+    pub fn object_of(&self, s: u64, p: u64) -> Option<u64> {
+        self.iter_by_subject_and_predicate(s, p)
+            .next()
+            .map(|q| q.object)
+    }
+
+    /// Zero-copy raw backing-store row indices for a subject, for callers that gather
+    /// into their own contiguous scratch buffer (pair with `quin_at`).
+    pub fn rows_by_subject(&self, s: u64) -> &[usize] {
+        self.by_subject.get(&s).map(Vec::as_slice).unwrap_or(&[])
+    }
+
+    /// The quin at a backing-store row index. Copy, no allocation.
+    #[inline]
+    pub fn quin_at(&self, i: usize) -> NQuin {
+        self.quins[i]
+    }
+
     fn lookup(&self, map: &HashMap<u64, Vec<usize>>, key: u64) -> Vec<NQuin> {
         map.get(&key)
             .map(|indices| indices.iter().map(|&i| self.quins[i]).collect())
