@@ -3,8 +3,11 @@ use std::collections::HashMap;
 
 /// In-memory inverted index over a `NQuin` collection.
 ///
-/// Provides O(1) average lookup by subject, predicate, object, or context.
-/// Built once from a slice of quins; not designed for incremental updates.
+/// Provides O(1) average lookup by subject, predicate, object, or context. Build once
+/// from a slice (`from_slice`) or grow incrementally (`insert`); the zero-alloc
+/// `iter_*` / `object_of` accessors yield copies, so they stay valid across the `Vec`
+/// reallocation an `insert` can trigger. Designed to live per 512 MB cell; wiring it to
+/// BIDX/demand-paging across cells is separate (task #22).
 pub struct QuinIndex {
     quins: Vec<NQuin>,
     by_subject: HashMap<u64, Vec<usize>>,
@@ -213,5 +216,27 @@ mod tests {
         let hits = idx.by_subject_and_predicate(1, 10);
         assert_eq!(hits.len(), 1);
         assert_eq!(hits[0].object, 100);
+    }
+
+    #[test]
+    fn incremental_insert_survives_reallocation_with_zero_alloc_accessors() {
+        // Grow well past initial capacity so the backing Vec reallocates, then confirm
+        // the copy-yielding accessors still resolve correctly (the basis for per-cell
+        // incremental indexing — task #22).
+        let mut idx = QuinIndex::new();
+        // Kind subjects are OUTSIDE the growth range (0..2000) so each appears once.
+        idx.insert(make_quin(5000, 101, 12345, 0)); // before the growth
+        for i in 0..2000u64 {
+            idx.insert(make_quin(i, 200, i + 1, 0));
+        }
+        idx.insert(make_quin(6000, 101, 67890, 0)); // and one after
+        assert_eq!(idx.len(), 2002);
+
+        // object_of / iter_* yield copies, so they survive the reallocation above.
+        assert_eq!(idx.object_of(5000, 101), Some(12345));
+        assert_eq!(idx.object_of(6000, 101), Some(67890));
+        assert_eq!(idx.iter_by_subject(5000).count(), 1);
+        assert_eq!(idx.iter_by_subject_and_predicate(6000, 101).count(), 1);
+        assert!(idx.object_of(5000, 999).is_none());
     }
 }
