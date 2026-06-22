@@ -665,6 +665,7 @@ impl Drop for QualiaSuperBlock {
 }
 
 pub mod agency;
+pub mod agent;
 pub mod cbor_compiler;
 #[cfg(any(
     not(target_arch = "wasm32"),
