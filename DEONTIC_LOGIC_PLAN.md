@@ -278,8 +278,12 @@ sensitive-vocab decisions (DV / coercion / guardianship), §20 on the STELLAR ma
   **1153 passed**): `transaction_status` (multi-party commits only on full consensus),
   `is_globally_valid` (local ≠ global until synced), `survives_partition` /
   `can_form_joint_during_partition` (partition tolerance).
-- [ ] §29 multi-modal carriers (PDF/PNG baked VCs) — **task #9** (real codec work, not a stub).
-- [ ] §20 wave-physics manifold (10D tensor) — **STELLAR tasks #11–13** (heavy GPU/tensor work).
+- [x] §20 wave-physics **logic** ✅ `manifold_logic.rs` (2 tests): `wave_eval` (Ψ at a coord),
+  `integrate_abs`, `continuous_to_fact` (`∫Ψ > τ → Fact(p)` — the continuous→discrete bridge to
+  epistemic.rs). **Substrate remaining:** the GPU-enumerated 10D-tensor *renderer* = STELLAR #11–13.
+- [x] §29 multi-modal binding **logic** ✅ `carrier.rs` (3 tests): `media_tag` (real BLAKE3
+  content-address), `verify_binding` (tamper-evident media↔graph binding), `extract_payload`.
+  **Substrate remaining:** the binary container *codecs* (PDF/A-3, XMP, PNG) = task #9.
 
 ---
 

@@ -111,6 +111,10 @@ pub use consensus::{
     TxStatus, transaction_status, is_globally_valid, survives_partition,
     can_form_joint_during_partition,
 };
+pub mod manifold_logic;
+pub use manifold_logic::{WaveCoord, wave_eval, integrate_abs, continuous_to_fact};
+pub mod carrier;
+pub use carrier::{media_tag, verify_binding, extract_payload};
 pub mod temporal_ltl;
 pub use temporal_ltl::{
     OP_LTL_GLOBALLY, OP_LTL_FINALLY, OP_LTL_NEXT, OP_LTL_UNTIL, OP_LTL_RELEASE,
