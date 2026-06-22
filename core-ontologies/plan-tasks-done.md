@@ -74,9 +74,16 @@ section/line; this file copies, it does not replace. Generated 2026-06-22; not a
 ---
 
 ## NOT done (pointer only — see PLAN §21.2/§21.3, `../MULTI_AGENT_MCP_PLAN.md`, `../RENDERER_SURVEY.md`)
-- **Renderer**: currently a **~2.5D particle-field projection** of the 10D manifold — **no
-  depth-stencil / mesh / 3D asset import** yet (STELLAR §E). Spectral wave-physics (§D), singular
-  pipeline (§F), manifold-native transcode (§A), heterogeneous compute core (§G) = **decided,
-  not built**. *(PLAN §21.2)*
+- **Renderer (per our discussion):** render is a **projection of the 10D manifold**, not a
+  separate 2D engine — *(this corrects an earlier "2D renderer" mischaracterisation by the tool)*.
+  Its **current** output is a **~2.5D particle field**: the view-proj + camera + PGA are in place,
+  but there is **no depth-stencil, no mesh, no `.obj`/`.stl`/OpenUSD asset import** — 3D assets are
+  **not yet rendered**. The close-out is a world-space scene + physics-of-artefacts + spatio-temporal
+  binding (RCC-8 / Allen). The renderer belongs in the qualiaDB libraries (single-source engine;
+  the browser is an optional shell) per `20260621_webizen-browser-engine-migration-review.md`, and
+  the full multi-modal definition (EM-spectrum source-of-truth, visual SPD + audio STFT/CQT) is
+  `10d/q42-10d-volumetric-tensor-spec.md`. Spectral wave-physics (§D), singular pipeline (§F),
+  manifold-native transcode (§A), heterogeneous compute core (§G) = **decided, not built**.
+  *(PLAN §21.2; `../RENDERER_SURVEY.md`)*
 - **LLM → `.q42` pipeline** (broken); CBOR-LD `@context` expansion; document codec (PDF); chained
   credentials; the deferred backlog (PLAN §13); the unified to-do (PLAN §21.3).

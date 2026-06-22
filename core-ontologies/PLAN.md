@@ -344,62 +344,12 @@ user can stipulate that it be observed, and on acceptance that **binds the parti
 
 - **Step 2**: CML-HTML + `.q42` layers per instrument.
 
-  ✅ **`.q42` LAYER DONE + faithful Turtle parsing (2026-06-22).** `tools/build_q42.py` compiles
-  every `*.n3` in the corpus to a native per-instrument `.q42` SuperBlock volume via the real
-  engine pipeline (`qualia-cli ingest semantic` → `ingest_auto` → `ingest_n3` →
-  `parse_turtle_doc_stream` → `ExternalSorter` → SuperBlocks) and **verifies the round-trip** by
-  querying each volume back. Result: **111/111 volumes, 21 321 triples in → 21 321 quins read
-  back** (lossless). Output to `core-ontologies/dist/q42/` + `manifest.json` (git-ignored — `.n3`
-  is the source of truth; volumes are reproducible artifacts).
-
-  **HONEST CORRECTION to the first pass.** The first ingest used the line-oriented
-  `n3_star`/`turtle_star` parsers, which split each physical line on whitespace and keep three
-  tokens. That **shredded real Turtle**: only one-line three-token statements survived (e.g.
-  `doc:article-N a values:Undertaking`), while every `;`/`,` continuation (`dc:title`,
-  `values:partOf`, `originalText`, …) lost its subject and every multi-word literal was split
-  into word-fragments. Type-level queries worked; content did not (`?s dc:title ?o` → **0**;
-  `dc:title` was wrongly a subject **11×**). "Queryable" was overstated.
-
-  **Fixed** with a new `parsers/turtle_doc.rs` (proper Turtle-subset parser) routed for `.n3`/`.ttl`
-  ingest: `@prefix`/`@base` expansion, multi-line statements, `;`/`,` lists, `a`→rdf:type,
-  multi-word/`"""…"""` quoted literals (lang/datatype tags dropped). Terms hash over the **expanded
-  IRI**, matching the SPARQL query path (`parse_term` now also maps `a`→rdf:type). Now standards-
-  correct SPARQL works against the corpus — `?s <http://purl.org/dc/terms/title> ?o` → 11;
-  `PREFIX values: … { ?a a values:Undertaking }` → the 5 articles; `?a values:partOf ?i` → 10. And
-  because `doc:` is expanded per-instrument, the cross-instrument **collision is gone** — a merged
-  corpus volume is now safe (per-instrument volumes still the default artifact).
-
-  Two **engine bugs** were also found + fixed closing this loop (regression tests; full lib suite
-  **1050/1050**):
-  1. **Query path panicked on every `.q42`** (`OutputSliceWouldHaveSlop`). `run_sparql_query`
-     `bytemuck::cast_slice`'d the whole file as `[NQuin]`, but a `.q42` is LZ4-compressed
-     SuperBlocks with 160-byte headers. Added `Q42Volume::read_all_quins` (`q42_volume.rs`).
-  2. **Typed BGP queries failed to parse** ("No triple patterns found"). `split_triple_patterns`
-     (`sparql_parser.rs`) only tracked `<<…>>` depth, so dots inside a single `<…>` IRI were
-     mistaken for triple terminators. Now tracks angle-bracket + quote depth.
-
-  ✅ **Front-of-file lexicon (2026-06-22, Timothy directive).** The lexicon is now **embedded at
-  the front of the `.q42`** (right after the 256-byte header, per the v3 layout) — no separate
-  `.q42.lex` sidecar. The streaming ingest (`ExternalSorter`) collects every term's
-  `hash → lexical string` during parsing (`QuinSink::push_lex`, default no-op for other sinks) and
-  `merge` writes it via `UnifiedVolumeBuilder::with_lex_map` (was `with_empty_lex`). The CLI query
-  path resolves result hashes back through the embedded lex, so `originalText`, titles, and IRIs
-  come back as **human-readable strings from the `.q42` alone**. Verified: Article 1's full treaty
-  text is recovered verbatim by query. Regression test `streaming_ingest_embeds_recoverable_lex`
-  (`q42_volume.rs`); full lib **1051/1051**. (`build_q42.py` hardened too: UTF-8 decode + lean
-  subject-only verify, since objects now resolve to full clause text.)
-
-  ✅ **CML Concept-Graph architecture committed (2026-06-22)** → [`CML_CONCEPT_GRAPH.md`](CML_CONCEPT_GRAPH.md).
-  The immutable 3-layer foundation: **TEXT** (verbatim `originalText`, cold in the front-of-file
-  lexicon) → **CONCEPT** (a concept identifier represented natively as the NQuin **Context hash /
-  Vector 4**, owning a sub-graph) → **LOGIC** (per-concept modality sub-graphs executed by the
-  Sentinel, masked on the context hash). Bindings: SKOS `skos:Concept` + W3C Web-Annotation
-  `realized-by` media-fragment selectors; nanopublication-aligned. **Curation Prime Directive**
-  (load-bearing): automated systems may assert only `skos:closeMatch`/`related`; only a
-  cryptographically-signed human action may assert `skos:exactMatch` — already enforceable via
-  `agent-accountability.n3` (`UnsubstantiatedClaimFlag`) + `fire_guard_rules`. Per-clause deontic
-  schema = Hohfeld's 8 jural relations → `compile_norm_quin` → `values_evaluate`. Worked pilot:
-  `concept:DutyToSuppressForcedLabour`.
+  ✅ **DONE — moved to [`plan-tasks-done.md`](plan-tasks-done.md) §5.** The `.q42` layer + faithful
+  Unicode-correct Turtle parsing (`parsers/turtle_doc.rs`, round-trip-verified per-instrument
+  volumes), the front-of-file lexicon (literals recoverable from the `.q42` alone), and the
+  committed CML Concept-Graph 3-layer architecture ([`CML_CONCEPT_GRAPH.md`](CML_CONCEPT_GRAPH.md):
+  TEXT→CONCEPT→LOGIC + the Curation Prime Directive). *(NB the full corpus is now lifted into the
+  concept layer — 101 instruments / 3,518 concepts — see `plan-tasks-done.md` §2026-06-22.)*
 
   ⏭ **Next:** build the concept layer for the pilot instrument, attach the deontic (+temporal)
   sub-graphs, and run `values_evaluate` over the concept hash. The `closeMatch` proposal heuristics
@@ -578,22 +528,9 @@ capacity/agent/guardian + category-error shapes → four-case trace + Rust regre
 ## 10. Spine BUILT + Codex/Grok 2nd-pass incorporations — 2026-06-21
 
 ### 10.1 Authored & validated (rdflib, all green)
-- **`core-ontologies/tiering.n3`** — tier / legalForm / bindingStatus / curationStatus /
-  interpretiveWeight, Tier B manifest fields, **watchlist** (`inForceStatus`/`notBeforeDate`/
-  `lastChecked`/`watchlistStatus`) + **acquisition freshness** (`retrievalDate`/
-  `sourceContentHash`/`generatorVersion`).
-- **`core-ontologies/sense.n3`** — fluent sense model (`TermSense`, `EffectivityInterval`,
-  `JurisdictionRegion`, `validDuring`/`validIn`, `interpretationMode` Originalist/Living,
-  `overlay`, `widensProtection`/`widensHolderSet`, `requiresHumanReview`,
-  `q42:AmbiguousMapping`) + the **PERSON** worked example (natural / before-law / corporate).
-- **`core-ontologies/agency.n3`** — personhood depth (`JuridicalCapacity` role +
-  `CapacityStatus`), agent attribution (`actsFor`/`principal`/`guardian`/`PlatformAgent`/
-  `operatedBy`), accountability, jurisdiction guard, contract route, + N3 rules
-  G1/G1'/A-duty/A-platform/A-orphan/A-remedy-stripping/A-sanction/C-duress/C-capacity + SHACL
-  flag shapes.
-- **`core-ontologies/traces/personhood_agency.trace.n3`** — the 6-case regression fixture
-  (corporate capture, natural-person pass, overlay fair-trial, ungrounded agent, platform/
-  foreign-law convergence, DV/duress voidable stipulation) with `ex:expects` annotations.
+✅ **DONE — moved to [`plan-tasks-done.md`](plan-tasks-done.md) §10.** `tiering.n3`, `sense.n3`
+(+ PERSON example), `agency.n3` (personhood/agent/guardian N3 rules + SHACL flags),
+`traces/personhood_agency.trace.n3` (6-case fixture) — all authored & validated.
 
 ### 10.2 State decision RESOLVED (§9.2)
 `values.n3`: `values:LegalPerson` split into disjoint `values:PublicAuthority` (←`State`) vs
@@ -1211,42 +1148,12 @@ evaluator EXISTS (`webizen.rs`); 4 external reviews converged. Do NOT attempt "a
 once — implement in **verified vertical slices**, gates first, then parallelise.
 
 ### 17.1 First slice — ONE careful session, fully verified (no agents yet)
-1. ✅ **DONE (2026-06-21) — Webizen values-credential smoke test** (§11.3):
-   `crates/qualia-core-db/src/modalities/logic/deontic.rs::tests::values_credential_deontic_smoke`
-   — PASSES. Drives the real lane: a values prohibition (UDHR Art 30 family, `ns.webcivics.org`)
-   as an N3 `Rule` → `compile_n3_rule_to_norm` → `evaluate_deontic_contract` → `DeonticVerdict`
-   = `Active` (prohibition live), then `Defeated` when a `q42:unless` defeater is added (native
-   defeasibility). `n3logic.rs` NOT on the path. **Honest scope:** this proves the native deontic
-   evaluator (`evaluate_deontic_contract`, the function the `NativeDeonticEval` opcode dispatches
-   to) genuinely evaluates a values-sourced norm + honours defeaters. It does NOT yet exercise the
-   full `register_rule` → `fire_registered_rules` → `compile_rule_to_opcodes` → `execute_vm_frame`
-   bytecode-VM wrapper — that is step 2.
-2. ✅ **DONE (2026-06-21) — deontic wiring, guard path** (§5):
-   `webizen.rs::tests::values_guard_g1_corporate_capture_fires` — PASSES. The agency.n3 **G1**
-   corporate-capture guard, registered as an N3 `Rule`, fires end-to-end through the bytecode VM
-   (`register_rule` → `fire_registered_rules` → `fire_guard_rules` forward-chaining) and asserts
-   `PersonhoodCategoryError` (observable via `has_quin`); a NaturalPerson claiming the same right
-   is NOT flagged (negative control). ✅ **FILE→ENGINE loop CLOSED** —
-   `webizen.rs::tests::agency_n3_file_parses_and_g1_fires_end_to_end` PASSES: the engine parses
-   its OWN `core-ontologies/agency.n3` with the native `N3Parser` (`;`-lists + multi-line `{…}`
-   rules handled), registers the parsed rules, and G1 fires from the **file** → flags
-   `PersonhoodCategoryError`. (The earlier "MVP parser can't do multi-triple variable rules" note
-   was STALE — the parser was upgraded; verified by running.) The `.n3` files are now the live
-   source of truth, not hand-built structs.
-3. ✅ **DONE (2026-06-21) — `validate_core_ontologies` native gate** (§9.1):
-   `crates/qualia-core-db/tests/validate_core_ontologies.rs` — PASSES (102 instruments + 7 spine,
-   0 hard violations). Native Rust, zero-Python CI check. HARD-fails on: `qualia.id/ns` regression,
-   scraper boilerplate, structural breakage (ValuesCredential/title/source/≥1 provision), Tier-B
-   outside `mutable/`, missing spine file. WARNs on governance-field coverage (curation pending).
-   **It earned its keep immediately** — it caught the 12 scraper-boilerplate files; fixed at root
-   (`generate_n3_from_ohchr.py::strip_boilerplate` + regen) so it can't recur; the SKIP_SLUGS dedup
-   (GC III/IV, AP I/II → ICRC) is now durable across regen. `build_index.py` gap-report ✅ working.
-   *Together these are the SAFETY GATES that make agent parallelisation (§17.2) checkable.*
-
-**First slice (§17.1) COMPLETE** — the values system now (1) evaluates norms [step 1], (2) enforces
-the anti-capture guard end-to-end through the VM [step 2], (3) is governance-gated [step 3]. Three
-green tests; the executable, falsifiable spine is in place. Agent-parallelised acquisition (§17.2)
-is now safe to begin.
+✅ **DONE (2026-06-21) — COMPLETE, moved to [`plan-tasks-done.md`](plan-tasks-done.md) §17.1.**
+Three green tests: (1) the Webizen values-credential smoke test (N3 rule → `evaluate_deontic_contract`
+→ Active→Defeated); (2) the agency.n3 **G1** corporate-capture guard fires end-to-end through the VM,
+with the **FILE→ENGINE loop CLOSED** (engine parses its own `agency.n3`); (3) the
+`validate_core_ontologies` native governance gate + `build_index.py` gap-report. The executable,
+falsifiable spine + the safety gates that make agent parallelisation (§17.2) checkable.
 
 ### 17.2 Then parallelise with agents — ONLY after 17.1 (output is gate-checkable)
 Mechanical, well-specified, each verified against the gate:
@@ -1421,35 +1328,12 @@ change what the values-credentials subsystem can rely on. Consider them when wir
 the curation overlays (§6).
 
 ### 19.1 New primitives the ontology layer can now build on
-- **Computer-algebra system (CAS)** — NEW `specialized_libs/symbolic_algebra.rs`: `Expr` tree,
-  `parse(&str)`, `simplify`, `differentiate`, `expand`, `factor_quadratic`, `solve_quadratic_symbolic`,
-  `eval`. **Previously there was NO CAS** (the similarly-named `solvers/symbolic_logic` is a SAT /
-  defeasible-logic engine, not algebra). Relevant to the **universalisation transform** (R1:
-  every-agent duty → State duty) and any `amendedText`/derived-rule computation that should be
-  *manipulated and checked*, not hand-written — a derived rule can be generated, simplified, and
-  verified symbolically rather than asserted.
-- **`Expr` ↔ `NQuin` bridge** — `to_quins`/`from_quins` serialise a symbolic expression into a
-  post-order `Vec<NQuin>` (round-trips), plus `expr_citation_hash` for provenance. A *computed*
-  credential rule or derived duty can now be **stored in the graph and cited**, satisfying the
-  provenance requirement the curation overlays (§6) need. Previously only an opaque hash existed.
-- **Proven SHACL-extension pattern + real validation tooling** — `specialized_libs_shacl.rs`
-  (Rust vocabulary, `q42:*ConfigurationShape` + `to_opcodes` validators) mirrored by the standalone
-  `shapes/specialized-libraries.shacl.ttl`, and **validated with an actual `rdflib` parse** (not an
-  assertion). This is the concrete template + verification step for the values SHACL beyond
-  `CompliantIntentShape`: author the shape in both places, then parse with rdflib before claiming
-  coverage. (Same `python -c "import rdflib; …"` the `validate_core_ontologies` gate should use.)
-- **General numeric algebra** (`specialized_libs/linear_algebra.rs`): determinant/`lu_decompose`,
-  symmetric + general eigenvalues, SVD, polynomial roots, `Complex`. Available for quantitative
-  ontology analysis (relation-graph spectral/ranking methods, consistency scoring) — listed as
-  *available*, not as a committed deliverable here.
-- **Deterministic sense-layer metric** — the 10D tensor/manifold distance now returns the SAME
-  result on GPU and CPU for **all** topology classes (euclidean/cyclic/hyperbolic/boundary); it
-  previously diverged for `v ≠ 0` depending on GPU availability. The sense / spatio-temporal layer
-  (§3) and any distance-qualified reasoning are now reproducible regardless of hardware.
-- **ZK credential proofs over real values** — `private_matrix_multiply` is a real Groth16 R1CS
-  proof (was a placeholder over an empty circuit) and now uses fixed-point, so **real-valued** (not
-  only integer) computations can be proven in zero knowledge — relevant if the values layer emits
-  privacy-preserving score/eligibility proofs.
+✅ **DONE / available — moved to [`plan-tasks-done.md`](plan-tasks-done.md) §19.** The CAS
+(`symbolic_algebra.rs`: parse/simplify/differentiate/expand/factor/solve/eval) + `Expr`↔`NQuin`
+bridge (`to_quins`/`from_quins` + `expr_citation_hash` provenance); the proven SHACL-extension
+pattern + rdflib validation tooling; general numeric algebra (determinant/eigen/SVD/polynomial
+roots); the **deterministic sense-layer metric** (GPU = CPU for all topology classes); real
+Groth16 ZK proofs over fixed-point (real-valued) computations.
 
 ### 19.2 The verification lesson, restated with this session's evidence (reinforces §17.4)
 Every item above was reached by **verifying an assumed-present capability and finding it absent or
@@ -1472,18 +1356,11 @@ This session settled the **cross-cutting architecture** the values/CML work runs
 keystone. Full specs live where noted; this is the index + the prioritised to-do for full implementation.
 
 ### 21.1 Built this session (DONE, tested)
-- **Front-of-file lexicon** — streaming ingest now embeds Q42LEX (literals recoverable from the `.q42`
-  alone); the CML TEXT-layer prerequisite. (§5)
-- **Faithful Turtle parser** — `turtle_doc.rs`: `@prefix` expansion + multi-line `;`/`,` + multi-word
-  literals + **Unicode-correct** (Arabic/CJK/Ge'ez/em-dash round-trip). Replaced the line-shredding
-  `n3_star`/`turtle_star` for corpus ingest. (§5)
-- **One hash-space** — CBOR-LD parser unified to `generate_60bit_token` (was SipHash); same IRI hashes
-  identically across Turtle/N3/CBOR-LD. (§10.2g; remaining: CBOR-LD `@context` expansion.)
-- **CML concept-graph keystone** — `cml.n3` axioms + pilot `concept:DutyToSuppressForcedLabour`; the
-  deontic logic library runs **against the concept** (`cml_concept_deontic_pilot`: Active → Defeated).
-  (CML_CONCEPT_GRAPH §7; full lib 1054/1054, gate 1/1.)
-- **CML Studio** — `docs/cml-studio.html`: Canvas2D mind-map (drag nodes/connectors, assign predicate +
-  any of 18 logic modalities, live Turtle). On the Webizen render contract (Canvas2D → wgpu).
+✅ **DONE — moved to [`plan-tasks-done.md`](plan-tasks-done.md) §5/§21.1.** Front-of-file lexicon
+(Q42LEX recoverable from the `.q42`); faithful Unicode-correct Turtle parser (`turtle_doc.rs`);
+one hash-space (CBOR-LD parser → `generate_60bit_token`); the CML concept-graph keystone (`cml.n3`
++ pilot `concept:DutyToSuppressForcedLabour`, runs against the concept); CML Studio
+(`docs/cml-studio.html`).
 
 ### 21.2 Cross-cutting architecture decided (specs in STELLAR_MISSION.md)
 - **Spectral / wave-physics + zero-heap** (STELLAR §D) — EMF + acoustic + sensors → one *wave coordinate*
