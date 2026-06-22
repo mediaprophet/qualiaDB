@@ -6,6 +6,89 @@ The format follows [Keep a Changelog](https://keepachangelog.com/en/1.0.0/).
 
 ---
 
+## [0.0.19] — 2026-06-22
+
+A large release centred on the **human-rights / values-credentials subsystem** and a complete
+**computational legal-logic engine**, plus the algebra/CAS/ZK and hybrid-modality groundwork
+that preceded it. Engine `--lib` suite green throughout (1153–1160 tests by series end).
+
+### Added — Computational legal-logic stack (`legal_logic.md` §1–§30; plan: `DEONTIC_LOGIC_PLAN.md`)
+All §1–§30 logic operators implemented as tested `modalities/*.rs` (only the two heavy
+*substrates* remain — GPU 10D renderer #11–13, binary carrier codecs #9):
+- **SDL⁺ core** (`deontic.rs`): O/P/F + Optionality/Gratuitousness, the full lifecycle
+  (Pending/Active/Violated/Defeated/Discharged/Expired), rebutting **and** undercutting
+  defeaters (`DefeatKind`), first-class dyadic `O(q|p)` (CTD generalised).
+- **Hohfeldian jural square** (`jural.rs`): 8 correlative positions, correlativity, unmet-duty
+  legibility, personhood category-error; ontology `core-ontologies/jural.n3`.
+- **STIT agency** (`stit.rs`): duty-bearer vs bystander, omission, joint/shared liability.
+- **Compositions** (`deontic_compose.rs`): deontic × temporal (`O(Gφ)`/`O(φ U ψ)`), × epistemic
+  (**mens rea**), × spatial (jurisdictional subsumption), × linear (discharge), × argumentation
+  (Dung grounded extension), × fuzzy/probabilistic, × ASP/abductive.
+- **Causal** (`causal.rs`): but-for causation, root-node dependency cascade, overdetermination.
+- **Capacity/delegation/contract** (`capacity.rs`, `delegation.rs`, `contract.rs`): duress →
+  voidable-at-election (confirmed by Timothy), guardianship, posthumous standing, delegation +
+  revocation cascade, Offer→Assent→Binding.
+- **Economic/identity** (`value_flow.rs`, `capability_gap.rs`, `identity_fabric.rs`): Permissive
+  Commons capped-ROI threshold discharge, RPL capability gap, k-of-n resilient identity.
+- **Meta-deontic / governance** (`meta_deontic.rs`, `interaction_governance.rs`,
+  `responsibility.rs`): provenance-anchored court-admissible WAL BreachRecords with ed25519
+  endorsement; verdict → PolicyMode (PreventiveBlock/PermissiveAudit/Prioritize/Interactive);
+  allegation→adjudication; systemic meta-guards (rule-of-law asymmetry, overreach, accountability
+  vacuum). Composition wires for ZK-gate, proportionality (CAS), sense-translation, consensus,
+  wave→fact, content-addressed carriers.
+
+### Added — Values-credentials subsystem (`core-ontologies/`)
+- 101 UN/IHL instruments lifted into a **CML 3-layer concept graph** (TEXT→CONCEPT→LOGIC):
+  3,518 concepts / 3,619 deontic norms, all `cml:Proposed` pending human attestation.
+- `values.n3` Agent lattice, `agency.n3` grounding, `jurisdiction.n3` (ratification + AU pilot),
+  `modal-junctures.n3` (illocutionary force + epistemic strength bands), "person" as
+  **frame-relative** (per-document reading, not global).
+- **BCP-47 `@en` language tags** across the corpus (multilingual foundation).
+- 220 round-trip-verified `.q42` volumes; `docs/values-credentials.html` demo over real data.
+- **CML library-upgrade protocol**: `SCHEMA_VERSION` + `cml:schemaVersion` stamps,
+  `tools/reprocess_library.py` (idempotent, `--check` staleness gate), `CML_UPGRADE.md` +
+  `CML_VERSIONS.md` — regeneration preserves human curation (SOURCE/GENERATED split).
+
+### Added — MCP cooperation & governance surface
+- **Agent-cooperation gate** (`mcp_cooperation.rs`): verified + grounded (agency.n3 G1') caller
+  standpoint → deontic gate; **flag-gated dispatch enforcement** (`QUALIA_MCP_ENFORCE`, default
+  off) so every call can be required to carry a standpoint.
+- MCP tools: `values_check`, `values_evaluate`, `jural_correlate`, `deontic_govern`,
+  `mcp_cooperate`, `graph_resolve`.
+- Native **verifiable credentials** (`verifiable_credential.rs`): issue/verify (ed25519) +
+  issuer grounding. Runtime **agent-type resolution** (`agent.rs`).
+
+### Added — Algebra, symbolic CAS, ZK, manifold (earlier 0.0.19)
+- Polynomial roots, determinant, symmetric + general eigensolvers, SVD; a symbolic CAS
+  (`Expr`/simplify/differentiate/parse/expand/factor, Expr↔NQuin); MCP algebra/CAS tools.
+- Real **R1CS zero-knowledge** proof of matrix multiplication (A·B=C), Groth16 (arkworks).
+- Manifold GPU/CPU volume-metric unification + CPU reference search + metric-parity audit;
+  **RCC-8** spatial topology (zero-heap, full-polygon).
+
+### Added — Hybrid-modality engine (#22) + FrameLayout ABI
+- Zero-alloc `QuinIndex` accessors, revision-cached per-cell index, `modal_kind` resolution,
+  unified resolver + `graph_resolve`, collision-aware lexicon interner (the lexicon backstop).
+- `frame_layout.rs` as the canonical ABI for the NQuin's 6 computational bytes.
+
+### Added — SHACL coverage
+- `logic_modalities_shacl.rs` now carries **42** `q42:<Name>ConfigurationShape`s (the whole
+  legal-logic surface) with engine↔SHACL completeness tests; epistemic shape fully fleshed out.
+
+### Added — Surface
+- Modalities Observatory: **38** live demo cards (incl. the full §1–§30 legal-logic stack);
+  enriched epistemic + deontic demos; CML Studio linked into the nav.
+
+### Changed
+- **One 60-bit hash space**: `q_hash` ≡ `generate_60bit_token` (top 4 bits = type/modality tag).
+- `FrameLayout`: `0b101` formally allocated as inline `xsd:float` (resolver float-tag fix).
+
+### Fixed
+- **Non-derogable immunity** blocks the Exemptive override (ICCPR Art. 4(2)) — a derogation can
+  no longer defeat the right to life, etc.
+- GPU `count_buf` `COPY_DST` wgpu validation error (was misreported as "no GPU").
+
+---
+
 ## [0.0.18] — 2026-06-19
 
 ### Added — Browser-native WASM + WebGPU LLM inference (Phase 2B → Phase 5)
