@@ -93,6 +93,31 @@ mod tests {
         assert_eq!(token >> 60, 0, "Token spilled over 60 bits");
     }
 
+    /// Regression guard for the hash-space unification (task #14): the compile-time
+    /// `q_hash` and the runtime `generate_60bit_token` MUST be one identity space,
+    /// or compile-time-baked URIs (deontic/values/MCP) won't join runtime-parsed/
+    /// ingested URIs (turtle/SPARQL/SHACL/corpus). If this ever fails, the two
+    /// drifted apart again — fix the divergence, don't relax the test.
+    #[test]
+    fn q_hash_and_generate_60bit_token_are_one_space() {
+        for s in [
+            "",
+            "Bob",
+            "http://www.w3.org/ns/shacl#maxInclusive",
+            "https://ns.webcivics.org/values/NaturalPerson",
+            "q42:Principal",
+            "naïve—prière—母語", // non-ASCII must agree too
+        ] {
+            assert_eq!(
+                crate::q_hash(s),
+                generate_60bit_token(s.as_bytes()),
+                "q_hash and generate_60bit_token diverged for {s:?}",
+            );
+            // Both are pure 60-bit identifiers: top 4 bits reserved for the tag overlay.
+            assert_eq!(crate::q_hash(s) >> 60, 0, "q_hash spilled past 60 bits for {s:?}");
+        }
+    }
+
     #[test]
     fn test_determinism() {
         let uri = "qualia:guardian";

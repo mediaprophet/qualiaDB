@@ -65,8 +65,12 @@ pub fn parse_did_q42(uri: &[u8]) -> Result<u64, IdentifierError> {
     Ok(pointer)
 }
 
-/// FNV-1a over a raw byte slice — identical algorithm to `crate::q_hash`.
+/// FNV-1a over a raw byte slice — identical to `crate::q_hash` (60-bit identity).
 /// Kept local so this module has no runtime dependency on the crate root.
+/// Truncated to 60 bits so a did:q42 topological pointer shares the ONE identity
+/// space (low 60 bits) with dictionary hashes, differing only by its MSB tag —
+/// and so dictionary hashes (MSB always 0) never collide with topological
+/// pointers (MSB set), making the MSB a reliable discriminator.
 #[inline(always)]
 fn fnv1a(bytes: &[u8]) -> u64 {
     let mut hash: u64 = 0xcbf29ce484222325;
@@ -74,7 +78,7 @@ fn fnv1a(bytes: &[u8]) -> u64 {
         hash ^= b as u64;
         hash = hash.wrapping_mul(0x100000001b3);
     }
-    hash
+    hash & 0x0FFF_FFFF_FFFF_FFFF
 }
 
 #[cfg(test)]

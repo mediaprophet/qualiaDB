@@ -482,7 +482,9 @@ fn make_temporal_quin(subject: u64, predicate: u64, timestamp_ms: u64) -> NQuin 
     NQuin { subject, predicate, object: timestamp_ms, context: T_CONTEXT, metadata: 0, parity: 0 }
 }
 
-/// FNV-1a — matches `crate::q_hash` but operates on `&[u8]` for runtime strings.
+/// FNV-1a — matches `crate::q_hash` (60-bit identity) but operates on `&[u8]` for
+/// runtime strings, so geo-feature IRIs hashed here share the ONE identity space
+/// and join terms hashed via q_hash / generate_60bit_token.
 #[inline]
 fn fnv_hash(bytes: &[u8]) -> u64 {
     let mut h: u64 = 0xcbf29ce484222325;
@@ -490,7 +492,7 @@ fn fnv_hash(bytes: &[u8]) -> u64 {
         h ^= b as u64;
         h = h.wrapping_mul(0x100000001b3);
     }
-    h
+    h & 0x0FFF_FFFF_FFFF_FFFF
 }
 
 /// Encode (lon, lat) into a 64-bit interleaved GeoHash integer.

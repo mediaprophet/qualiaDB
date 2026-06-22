@@ -51,6 +51,9 @@ pub fn ldp_to_quins(payload: &[u8]) -> Vec<NQuin> {
     quins
 }
 
+// 60-bit identity, in lockstep with qualia_core_db::q_hash — so a Solid LDP
+// resource's subject hash shares the ONE identity space with its q_hash-derived
+// predicate/context (and with the rest of the graph).
 fn fast_hash_bytes(bytes: &[u8]) -> u64 {
     let mut hash: u64 = 0xcbf29ce484222325;
     let mut i = 0;
@@ -59,7 +62,7 @@ fn fast_hash_bytes(bytes: &[u8]) -> u64 {
         hash = hash.wrapping_mul(0x100000001b3);
         i += 1;
     }
-    hash
+    hash & 0x0FFF_FFFF_FFFF_FFFF
 }
 
 /// Compiles a standard WAC .acl file down to Webizen Bytecode (N3Logic)

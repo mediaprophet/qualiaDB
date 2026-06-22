@@ -791,7 +791,13 @@ pub mod wasm_edge;
 pub mod wasm_storage;
 
 /// A zero-allocation compile-time hashing function for Q-Turtle macros.
-/// Uses the FNV-1a algorithm to hash strings into 64-bit Quin vectors natively.
+/// Uses FNV-1a, then truncates to 60 bits so the result is a pure IDENTIFIER:
+/// the top 4 bits [60..63] are reserved as the role-keyed type/modality/tag
+/// overlay (inline datatype tags in the Object register, the deontic
+/// DEFEATER_BIT in the Predicate, etc.). This is the ONE canonical term-identity
+/// hash — it MUST stay bit-for-bit identical to `lexicon::generate_60bit_token`
+/// (same FNV constants + the same 0x0FFF_FFFF_FFFF_FFFF mask) so compile-time-baked
+/// URIs and runtime-parsed/ingested URIs share a single hash space and JOIN.
 pub const fn q_hash(s: &str) -> u64 {
     let mut hash: u64 = 0xcbf29ce484222325;
     let bytes = s.as_bytes();
@@ -801,7 +807,8 @@ pub const fn q_hash(s: &str) -> u64 {
         hash = hash.wrapping_mul(0x100000001b3);
         i += 1;
     }
-    hash
+    // Truncate to 60 bits (top 4 reserved for the type/modality/tag overlay).
+    hash & 0x0FFF_FFFF_FFFF_FFFF
 }
 
 /// Advanced 2026 Q-Turtle Macro

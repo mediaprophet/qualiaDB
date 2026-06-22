@@ -21,6 +21,21 @@
 //! **FLOAT 101** (new — raw f32 bits; resolves the prior clash where f32 squatted
 //! on the INTEGER tag).
 //!
+//! ## Tag policy — closed datatypes inline, open identifier *kinds* in the graph
+//! The `object` inline-tag region is reserved STRICTLY for the small, CLOSED set of
+//! structural **datatypes** the GPU/SIMD hot path must read in-register (the tags
+//! above: INTEGER/DECIMAL/BOOLEAN/BLOB/FLOAT + the embedded-triple / pointer flags).
+//! Open, extensible **identifier *kinds* / namespaces** (Webizen, did:q42, DID,
+//! content-hash, instrument-language, cluster-node, …) are NOT inline tags — they are
+//! scoped by **modal predicates** in the graph (`<X> <has-modality-kind> <…>`),
+//! resolved at the logic layer via `indexing::QuinIndex` point lookups, with the
+//! **lexicon as the collision backstop** (the u64 is a *handle* to a full value, so a
+//! handle collision is detectable + resolvable, never silent corruption). Rationale:
+//! datatypes are a fixed vocabulary that belongs in the bit-budget; identifier kinds
+//! are an open fabric that belongs in the relations (identifiers-not-identity). This
+//! is why a dictionary identity is 60-bit (top nibble = the datatype overlay) while
+//! identifier-kind breadth lives in predicates, not in more inline tag bits.
+//!
 //! ## `metadata` — a ROLE-KEYED OVERLAY field (read this carefully)
 //! Unlike `predicate`/`object`, the 32 high bits of `metadata` are NOT a flat set
 //! of independently-addressable sub-fields. They are a union of overlays, each

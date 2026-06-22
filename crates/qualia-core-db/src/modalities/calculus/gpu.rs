@@ -462,7 +462,8 @@ pub fn create_gpu_job_quin(
 
 // ─── Helper Functions ───────────────────────────────────────────────────────────
 
-/// Compile-time hashing function (reused from lib.rs).
+/// Compile-time hashing function (reused from lib.rs) — 60-bit identity, in
+/// lockstep with `crate::q_hash` so the "calculus:gpu" predicate path joins.
 const fn q_hash(s: &str) -> u64 {
     let mut hash: u64 = 0xcbf29ce484222325;
     let bytes = s.as_bytes();
@@ -472,7 +473,7 @@ const fn q_hash(s: &str) -> u64 {
         hash = hash.wrapping_mul(0x100000001b3);
         i += 1;
     }
-    hash
+    hash & 0x0FFF_FFFF_FFFF_FFFF
 }
 
 // ─── Tests ─────────────────────────────────────────────────────────────────────

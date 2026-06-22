@@ -8,8 +8,10 @@ use qualia_core_db::lexicon::{generate_embedded_triple_id, TAG_EMBEDDED};
 
 #[test]
 fn test_tag_embedded_bit_pattern() {
-    // Verify TAG_EMBEDDED is the correct bit pattern
-    assert_eq!(TAG_EMBEDDED, 0b100u64 << 60);
+    // Verify TAG_EMBEDDED is the correct bit pattern.
+    // (0b001<<60 — NOT 0b100<<60, which is INLINE_TAG_BLOB; the literal was stale
+    // after the resolver/frame_layout tag-region rework.)
+    assert_eq!(TAG_EMBEDDED, 0b001u64 << 60);
 }
 
 #[test]
