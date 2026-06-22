@@ -274,8 +274,12 @@ sensitive-vocab decisions (DV / coercion / guardianship), §20 on the STELLAR ma
   human attests exactMatch; untranslatable → human review).
 
 ### Deferred / heavier
-- [ ] §28 Distributed state / consensus (composes CRDT); §29 multi-modal carriers (task #9 PDF/PNG);
-  §20 wave-physics manifold (STELLAR tasks #11–13).
+- [x] §28 Distributed state / consensus ✅ `modalities/consensus.rs` (3 tests; full suite
+  **1153 passed**): `transaction_status` (multi-party commits only on full consensus),
+  `is_globally_valid` (local ≠ global until synced), `survives_partition` /
+  `can_form_joint_during_partition` (partition tolerance).
+- [ ] §29 multi-modal carriers (PDF/PNG baked VCs) — **task #9** (real codec work, not a stub).
+- [ ] §20 wave-physics manifold (10D tensor) — **STELLAR tasks #11–13** (heavy GPU/tensor work).
 
 ---
 
