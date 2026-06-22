@@ -82,6 +82,17 @@ pub use responsibility::{
     ResponsibilityStatus, adjudicate, is_enforceable_fact,
     rule_of_law_asymmetry, enforcer_overreach, accountability_vacuum,
 };
+pub mod capacity;
+pub use capacity::{
+    CapacityStatus, stipulation_binding, stipulation_voidable, effective_principal,
+    posthumous_standing,
+};
+pub mod delegation;
+pub use delegation::{
+    has_delegated_authority, authority_after_revocation, revoked_descendants,
+};
+pub mod contract;
+pub use contract::{FormationStage, formation_stage, is_binding_contract, incorporates_by_reference};
 pub mod temporal_ltl;
 pub use temporal_ltl::{
     OP_LTL_GLOBALLY, OP_LTL_FINALLY, OP_LTL_NEXT, OP_LTL_UNTIL, OP_LTL_RELEASE,

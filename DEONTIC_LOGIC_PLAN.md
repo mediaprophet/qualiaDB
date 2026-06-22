@@ -239,11 +239,18 @@ sensitive-vocab decisions (DV / coercion / guardianship), §20 on the STELLAR ma
   `enforcer_overreach` (no appeal path), `accountability_vacuum` — the person protected from
   the system.
 
-### Phase 9 — Capacity, delegation, contract  (§18 partially gated)
-- [ ] §18 Juridical capacity / duress→voidable / guardianship-delegation / posthumous standing
-  — **conservative engine over EXISTING ontology vocab**; flag any contested semantics to Timothy.
-- [ ] §21 Delegation & credential-chain: authority delegation + revocation-cascade defeat.
-- [ ] §22 Contractual formation: Offer → Assent → Binding state machine.
+### Phase 9 — Capacity, delegation, contract ✅ DONE 2026-06-22
+**Test:** capacity 4 + delegation 2 + contract 3; full lib suite **1140 passed, 0 failed**.
+- [x] §18 `capacity.rs` (over EXISTING vocab): `CapacityStatus {Intact, Impaired, UnderDuress}`,
+  `stipulation_binding` (Intact only), `stipulation_voidable` (duress → **voidable at victim's
+  election, NOT auto-void** — flagged), `effective_principal` (guardian carries the dependent's
+  weight), `posthumous_standing` (deceased + representative).
+- [x] §21 `delegation.rs`: `has_delegated_authority` (transitive delegation chain) +
+  `authority_after_revocation` / `revoked_descendants` (**revocation cascade** — revoke upstream,
+  every downstream dependent is defeated; independent chains survive). Bounded BFS, zero-heap.
+- [x] §22 `contract.rs`: `FormationStage {None, Offer, Binding}` + `is_binding_contract`
+  (composes §18 — binding needs assent AND both parties' capacity intact) +
+  `incorporates_by_reference`.
 
 ### Phase 10 — Economic, capability, identity
 - [ ] §23 Value-flow / Permissive-Commons: cost anchoring, proportional royalty, pool →
