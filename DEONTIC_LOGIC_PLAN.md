@@ -98,11 +98,18 @@ Hohfeld correlativity, STIT operator, mens-rea composition).
   composed with the deontic verdict** — that composition is Phase 4. 🔬 markers in §1 → ✅
   *standalone* (not ✅ *composed*).
 
-### Phase 1 — Deontic core extensions  [`deontic.rs`]
-- [ ] Lifecycle states: `Pending / Violated / Discharged` + transition fn + tests.
-- [ ] `Optionality (U)` and `Gratuitousness (G)` as derived predicates + tests.
-- [ ] Undercutting defeater (rebut-vs-undercut metadata bit) + tests.
-- [ ] First-class dyadic `O(q|p)` operator (generalise CTD) + tests.
+### Phase 1 — Deontic core extensions  [`deontic.rs`] ✅ DONE 2026-06-22
+**Test:** `cargo test -p qualia-core-db --lib modalities::logic::deontic::` → **21 passed**
+(was 15); full lib suite **1090 passed, 0 failed**.
+- [x] Lifecycle states: `Pending(0x04) / Violated(0x05) / Discharged(0x06)` (additive enum) +
+  `norm_lifecycle_status()` (effectivity → expiry → defeater → facts {fulfilled→Discharged,
+  breached/performed→Violated}) + tests.
+- [x] `Optionality (U, 0x13)` / `Gratuitousness (G, 0x14)`: opcodes + derived `is_optional`
+  (`¬O ∧ ¬F`) / `is_gratuitous` (`¬O`) + tests.
+- [x] Undercutting defeater (`OP_UNDERCUT 0x17`) vs rebutting — classified via new
+  `DefeatKind` on the verdict (opcode-based, no layout change; metadata bit not needed) + tests.
+- [x] First-class dyadic `O(q|p)` — `evaluate_conditional_obligation()`; CTD refactored to a
+  special case; `OP_CONDITIONAL 0x15` reserved + tests.
 
 ### Phase 2 — Hohfeldian jural square  [new `jural.rs` + `values.n3`/`agency.n3`]
 - [ ] 8 relations: Claim↔Duty, Privilege↔No-Right, Power↔Liability, Immunity↔Disability.

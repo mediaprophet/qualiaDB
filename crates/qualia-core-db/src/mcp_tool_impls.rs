@@ -381,6 +381,15 @@ pub fn values_evaluate(args: &[u8]) -> Result<String, McpSystemError> {
         DeonticStatus::Malformed => {
             ("Malformed", "the norm could not be interpreted".to_string())
         }
+        DeonticStatus::Pending => {
+            ("Pending", format!("the {verb} is valid but not yet in its effective window"))
+        }
+        DeonticStatus::Violated => {
+            ("Violated", format!("the {verb} is in force but the facts show it was not met"))
+        }
+        DeonticStatus::Discharged => {
+            ("Discharged", format!("the {verb} has been fulfilled and the duty terminates"))
+        }
     };
     Ok(json!({
         "tool": "values_evaluate",
