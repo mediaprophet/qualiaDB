@@ -4,6 +4,7 @@
 @prefix xsd:    <http://www.w3.org/2001/XMLSchema#> .
 @prefix dc:     <http://purl.org/dc/terms/> .
 @prefix hcai:   <http://www.w3.org/ns/hcai#> .
+@prefix skos:   <http://www.w3.org/2004/02/skos/core#> .
 @prefix values: <https://ns.webcivics.org/values/> .
 
 # ===========================================================================
@@ -23,7 +24,36 @@ values:NaturalPerson a rdfs:Class ;
     rdfs:seeAlso hcai:NaturalPerson ;
     rdfs:label "Natural person" .
 
-values:LegalPerson    a rdfs:Class ; rdfs:subClassOf values:Agent ; rdfs:label "Legal person (juridical personality)" .
+# --- "PERSON" = THE HUMAN (NOT corporate personhood / legal personality) ---
+# CRITICAL DISAMBIGUATION: in law the bare word "person" silently includes corporations
+# (legal personality) — the very ambiguity through which corporate personhood captures
+# human rights. Here the UNQUALIFIED "person" is the PERSON OF HUMAN DIGNITY = the human
+# being = values:NaturalPerson. A Definitional binding (modal-junctures: Definitional →
+# ConceptBinding → skos:exactMatch), foundationally human-attested (Timothy's axiom).
+values:Person a rdfs:Class ;
+    rdfs:subClassOf values:NaturalPerson ;
+    skos:exactMatch values:NaturalPerson ;
+    rdfs:label "Person (the human being of human rights)" ;
+    rdfs:comment "The dignity-bearing 'person' of the instruments = the HUMAN = values:NaturalPerson. NOT legal/corporate personality; a corporation is not a person in this sense." .
+
+# Only the human bears INHERENT DIGNITY (UDHR Preamble / Art 1 — 'the inherent dignity ...
+# of all members of the human family'). A legal person bears FUNCTIONAL juridical capacity
+# (contract, property, treaty), NEVER inherent dignity.
+values:inherentDignity a rdf:Property ; rdfs:range xsd:boolean ;
+    rdfs:comment "Inherent human dignity — held ONLY by a NaturalPerson/Person; never by a LegalPerson / CorporatePerson / ArtificialAgent." .
+values:NaturalPerson values:inherentDignity true .
+
+# DISJOINTNESS (the anti-conflation axiom): a legal person is NOT a natural person; an
+# artificial agent is neither. "Legal personality" uses "person" by analogy/construct (the
+# 'world of man'; OWL-appropriate), never as the dignity-Person (the natural world; RDFS).
+values:PersonhoodDisjointnessShape a sh:NodeShape ;
+    sh:targetClass values:NaturalPerson ;
+    sh:not [ sh:class values:LegalPerson ] ;
+    sh:not [ sh:class values:ArtificialAgent ] ;
+    sh:message "A natural person (the human, dignity-bearer) is NOT a legal/corporate person or an artificial agent — 'person' here means the human, not corporate personhood." .
+
+values:LegalPerson    a rdfs:Class ; rdfs:subClassOf values:Agent ; rdfs:label "Legal person (juridical personality)" ;
+    rdfs:comment "Juridical personality (contracts, bears treaties) — NOT a values:Person and NOT a bearer of inherent dignity. Disjoint from values:NaturalPerson." .
 values:ArtificialAgent a rdfs:Class ; rdfs:subClassOf values:Agent ; rdfs:label "Artificial agent (software/AI)" .
 
 # STATE DECISION (PLAN.md §9.2, resolved 2026-06-21): a State HAS juridical
