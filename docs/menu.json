@@ -159,6 +159,13 @@
       "group": "Tools"
     },
     {
+      "label": "Values Credentials",
+      "href": "values-credentials.html",
+      "icon": "fa-scale-balanced",
+      "highlight": true,
+      "group": "Tools"
+    },
+    {
       "label": "Playground",
       "href": "playground/index.html",
       "icon": "fa-play",
