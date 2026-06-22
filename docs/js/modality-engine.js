@@ -322,6 +322,73 @@ export const MODALITIES = [
         },
     },
     {
+        id: 'jural', name: 'Hohfeldian Jural Square', category: 'governance', opcode: '0x30–0x37',
+        icon: 'fa-scale-unbalanced', hue: 'rose', wasm: false,
+        blurb: 'The 8 positions paired as correlatives: a right A holds toward B entails the correlative B necessarily bears. A Claim with no Duty-bearer is a legible structural gap (jural.rs).',
+        run() {
+            const NAME = {48:'Claim',49:'Duty',50:'Privilege',51:'No-Right',52:'Power',53:'Liability',54:'Immunity',55:'Disability'};
+            const CORR = {48:49,49:48,50:51,51:50,52:53,53:52,54:55,55:54};
+            const lines = [48,50,52,54].map(p => `A holds ${NAME[p].padEnd(9)} toward B  ⟹  B bears ${NAME[CORR[p]]}`);
+            lines.push('Claim "right to housing" toward State, no Duty recorded → unmet correlative duty surfaced');
+            lines.push('the non-derogable core (ICCPR Art 4(2)) is an Immunity ↔ State Disability');
+            return { lines, visual: 'verdicts' };
+        },
+    },
+    {
+        id: 'stit', name: 'STIT Agency', category: 'governance', opcode: '0x16',
+        icon: 'fa-people-arrows', hue: 'rose', wasm: false,
+        blurb: '"α sees to it that φ" — binds the duty to the causal agent: duty-bearer vs bystander, omission, and joint/shared liability (stit.rs).',
+        run() {
+            const content = q_hash('q42:protectUserData');
+            const broughtAbout = (agent, facts) => facts.some(f => f.a === agent && f.c === content);
+            const members = [['principal', q_hash('did:principal')], ['platform', q_hash('did:platformAgent')]];
+            const lines = ['O[{principal, platform} stit protectUserData]'];
+            // (1) neither acts → joint obligation Violated, BOTH share liability.
+            const none = [];
+            const dischargedNone = members.some(([, m]) => broughtAbout(m, none));
+            lines.push(`neither acts → ${dischargedNone ? 'Discharged' : 'Violated'}; shared liability:`);
+            members.forEach(([n]) => lines.push(`    ${n} → liable`));
+            // (2) one acts → Discharged, no one liable (joint sufficiency).
+            const acted = [{ a: q_hash('did:platformAgent'), c: content }];
+            lines.push(`platform sees to it → ${members.some(([, m]) => broughtAbout(m, acted)) ? 'Discharged' : 'Violated'} (no one liable)`);
+            return { lines, visual: 'verdicts' };
+        },
+    },
+    {
+        id: 'mensrea', name: 'Mens Rea (epistemic × deontic)', category: 'governance', opcode: '0x20 × F',
+        icon: 'fa-brain', hue: 'rose', wasm: false,
+        blurb: 'Grades a violation by the actor’s mind: knowing vs ignorant — and ignorantia juris non excusat: ignorance is no excuse when a duty-to-know was in force (deontic_compose.rs).',
+        run() {
+            const classify = (didIt, knew, dutyToKnow) =>
+                !didIt ? 'NoViolation' : knew ? 'Knowing' : dutyToKnow ? 'InexcusableIgnorance' : 'Ignorant';
+            return { lines: [
+                `did it, knew it was forbidden          → ${classify(true, true, false)}`,
+                `did it, didn't know, no duty to know   → ${classify(true, false, false)}`,
+                `did it, didn't know, HAD duty to know  → ${classify(true, false, true)}`,
+                `did not do it                          → ${classify(false, false, false)}`,
+            ], visual: 'verdicts' };
+        },
+    },
+    {
+        id: 'governance', name: 'Interaction Governance', category: 'governance', opcode: 'policy',
+        icon: 'fa-traffic-light', hue: 'rose', wasm: false,
+        blurb: 'Maps a verdict to the runtime action: non-derogable breach → DenyRollback; ordinary breach → audit to WAL; humanitarian → prioritize; ambiguous → defer to a human (interaction_governance.rs).',
+        run() {
+            const policy = (status, nonDerog, humanitarian, ambiguous) => {
+                if (ambiguous) return 'Interactive — RequestHumanCorrection';
+                if (status === 'Violated') return nonDerog ? 'PreventiveBlock — DenyRollback' : 'PermissiveAudit — log to WAL';
+                if (status === 'Active' || status === 'Discharged') return humanitarian ? 'Prioritize — grant QoS' : 'Allow';
+                return 'Allow';
+            };
+            return { lines: [
+                `Violated + non-derogable  → ${policy('Violated', true, false, false)}`,
+                `Violated + ordinary       → ${policy('Violated', false, false, false)}`,
+                `Active + humanitarian     → ${policy('Active', false, true, false)}`,
+                `any + ambiguous mapping   → ${policy('Violated', true, false, true)}`,
+            ], visual: 'verdicts' };
+        },
+    },
+    {
         id: 'n3-defeasible', name: 'N3 Defeasible Chain', category: 'governance', opcode: '=> ~> ^>',
         icon: 'fa-forward', hue: 'rose', wasm: 'forward_chain_wasm',
         blurb: 'Notation3 arrows compile to norms; forward-chaining defeasible engine resolves conflicts.',
