@@ -705,6 +705,7 @@ pub mod ontology_loader;
 #[cfg(not(target_arch = "wasm32"))]
 pub mod ilp_dispatcher;
 pub mod indexing;
+pub mod modal_kind;
 #[cfg(any(
     not(target_arch = "wasm32"),
     feature = "wasm-logic",
