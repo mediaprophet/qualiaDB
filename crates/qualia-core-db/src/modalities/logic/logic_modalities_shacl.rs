@@ -8,7 +8,7 @@
 
 /// The logic modalities that MUST each have a configuration shape below.
 /// Used by the completeness test so a new modality cannot land without its SHACL.
-pub const LOGIC_MODALITY_SHAPES: [&str; 28] = [
+pub const LOGIC_MODALITY_SHAPES: [&str; 42] = [
     "DeonticConfigurationShape",
     "EpistemicConfigurationShape",
     "LinearConfigurationShape",
@@ -38,6 +38,21 @@ pub const LOGIC_MODALITY_SHAPES: [&str; 28] = [
     "MensReaConfigurationShape",
     "InteractionGovernanceConfigurationShape",
     "MetaDeonticConfigurationShape",
+    // ── Extended legal-logic stack (legal_logic.md §16–§30) ──
+    "ResponsibilityStatusConfigurationShape",
+    "SystemicMetaGuardConfigurationShape",
+    "JuridicalCapacityConfigurationShape",
+    "DelegationChainConfigurationShape",
+    "ContractFormationConfigurationShape",
+    "ValueFlowConfigurationShape",
+    "CapabilityGapConfigurationShape",
+    "ResilientIdentityConfigurationShape",
+    "ZkGatedConfigurationShape",
+    "ProportionalityConfigurationShape",
+    "SenseTranslationConfigurationShape",
+    "ConsensusConfigurationShape",
+    "ManifoldLogicConfigurationShape",
+    "CarrierBindingConfigurationShape",
 ];
 
 /// SHACL TTL covering every VM logic modality (configuration + structural shapes).
@@ -232,6 +247,81 @@ q42:MetaDeonticConfigurationShape a sh:NodeShape ;
         sh:message "A BreachRecord is anchored (context) to the instrument the breached norm derived from (prov:wasDerivedFrom)." ] ;
     sh:property [ sh:path q42:endorser ; sh:nodeKind sh:IRI ;
         sh:message "An endorsement is an Ed25519-signed Credential by a (human) endorser — Curation Directive; the engine holds no keys." ] .
+
+# ════════════════════════════════════════════════════════════════════════════
+# Extended legal-logic stack (legal_logic.md §16–§30) — full coverage
+# ════════════════════════════════════════════════════════════════════════════
+
+# ── §25 Responsibility status (allegation → adjudication) ────────────────────
+q42:ResponsibilityStatusConfigurationShape a sh:NodeShape ;
+    sh:property [ sh:path q42:responsibilityStatus ; sh:in ( "Alleged" "Adjudicated" "Dismissed" ) ;
+        sh:message "A claim of conduct is Alleged until an authority adjudicates; only Adjudicated is an enforceable fact." ] .
+
+# ── §30 Systemic meta-guard (the person protected from the system) ───────────
+q42:SystemicMetaGuardConfigurationShape a sh:NodeShape ;
+    sh:property [ sh:path q42:metaGuardFlag ;
+        sh:in ( "RuleOfLawAsymmetry" "EnforcerOverreach" "AccountabilityVacuum" ) ;
+        sh:message "The enforcer is bound by the baselines it enforces: no power-without-remedy, no block-without-appeal, no harm-without-accountable-person." ] .
+
+# ── §18 Juridical capacity (duress → voidable, not void) ─────────────────────
+q42:JuridicalCapacityConfigurationShape a sh:NodeShape ;
+    sh:property [ sh:path q42:capacityStatus ; sh:in ( "Intact" "Impaired" "UnderDuress" ) ;
+        sh:message "Stipulation binding only when Intact; UnderDuress → VOIDABLE at the victim's election (not auto-void)." ] .
+
+# ── §21 Delegation chain (authority + revocation cascade) ────────────────────
+q42:DelegationChainConfigurationShape a sh:NodeShape ;
+    sh:property [ sh:path q42:delegatesTo ; sh:nodeKind sh:IRI ; sh:minCount 1 ;
+        sh:message "Authority flows along (delegator, q42:delegatesTo, delegatee) edges; revoking an upstream node defeats all descendants." ] .
+
+# ── §22 Contract formation (Offer → Assent → Binding) ────────────────────────
+q42:ContractFormationConfigurationShape a sh:NodeShape ;
+    sh:property [ sh:path q42:formationStage ; sh:in ( "None" "Offer" "Binding" ) ;
+        sh:message "Binding needs offer + assent AND both parties' capacity Intact (composes §18)." ] .
+
+# ── §23 Value-flow / Permissive Commons (capped ROI, threshold discharge) ────
+q42:ValueFlowConfigurationShape a sh:NodeShape ;
+    sh:property [ sh:path q42:roiCapPercent ; sh:datatype xsd:integer ; sh:minInclusive 0 ;
+        sh:message "Commons cost = production cost + a legally CAPPED ROI margin (extraction guard); pool ≥ cost → Discharged, freed globally." ] .
+
+# ── §24 Capability gap / RPL (computable set-difference) ─────────────────────
+q42:CapabilityGapConfigurationShape a sh:NodeShape ;
+    sh:property [ sh:path q42:requiredCapability ; sh:nodeKind sh:IRI ; sh:minCount 1 ;
+        sh:message "Gap = Req \\ Holds; experiential skos:closeMatch counts as held (RPL)." ] .
+
+# ── §27 Resilient relational identity (k-of-n fabric recovery) ───────────────
+q42:ResilientIdentityConfigurationShape a sh:NodeShape ;
+    sh:property [ sh:path q42:recoveryQuorum ; sh:datatype xsd:integer ; sh:minInclusive 1 ;
+        sh:message "An identifier is not an identity; identity survives key loss iff a quorum (≥1) of the anchor fabric remains." ] .
+
+# ── §17 ZK-gated eligibility (privacy-preserving) ────────────────────────────
+q42:ZkGatedConfigurationShape a sh:NodeShape ;
+    sh:property [ sh:path q42:zkVerified ; sh:datatype xsd:boolean ;
+        sh:message "A ZK-gated obligation applies iff the proof verifies (zk_proofs Groth16); the private witness stays hidden, else claimedIdentityUnverifiable." ] .
+
+# ── §26 Proportionality (CAS-derived) ────────────────────────────────────────
+q42:ProportionalityConfigurationShape a sh:NodeShape ;
+    sh:property [ sh:path q42:advantageThreshold ; sh:datatype xsd:decimal ;
+        sh:message "Proportionate iff ∂Harm/∂x < Advantage (symbolic_algebra differentiate/eval)." ] .
+
+# ── §19 Sense translation (Curation Directive gating) ────────────────────────
+q42:SenseTranslationConfigurationShape a sh:NodeShape ;
+    sh:property [ sh:path q42:matchStatus ; sh:in ( "CloseMatch" "ExactMatch" "RequiresHumanReview" ) ;
+        sh:message "Machine proposes skos:closeMatch; only a human attests skos:exactMatch; untranslatable → human review (never flattened)." ] .
+
+# ── §28 Distributed consensus (suspended tx, partition tolerance) ────────────
+q42:ConsensusConfigurationShape a sh:NodeShape ;
+    sh:property [ sh:path q42:txStatus ; sh:in ( "Suspended" "Committed" ) ;
+        sh:message "A multi-party obligation commits only on full consensus; local validity ≠ global until synced; pre-partition duties survive." ] .
+
+# ── §20 Manifold logic (continuous → discrete) ───────────────────────────────
+q42:ManifoldLogicConfigurationShape a sh:NodeShape ;
+    sh:property [ sh:path q42:signalThreshold ; sh:datatype xsd:decimal ;
+        sh:message "∫Ψ over the wave samples > threshold → instantiate a discrete factual quin (bridge to epistemic.rs). GPU 10D renderer is separate (STELLAR)." ] .
+
+# ── §29 Carrier binding (content-addressed, tamper-evident) ──────────────────
+q42:CarrierBindingConfigurationShape a sh:NodeShape ;
+    sh:property [ sh:path q42:mediaTag ; sh:datatype xsd:unsignedLong ;
+        sh:message "media_tag = BLAKE3(blob); the carried graph is bound to THAT media — any edit breaks the binding. Container codecs (PDF/A-3, PNG) are separate (task #9)." ] .
 "#
 }
 
@@ -288,5 +378,25 @@ mod tests {
         for band in ["affirms 230", "considers 128", "doubts 20"] {
             assert!(ttl.contains(band), "certainty band '{band}' documented");
         }
+    }
+
+    #[test]
+    fn extended_legal_logic_16_30_has_full_shacl_coverage() {
+        let ttl = get_logic_modalities_shacl_ttl();
+        for s in [
+            "ResponsibilityStatusConfigurationShape", "SystemicMetaGuardConfigurationShape",
+            "JuridicalCapacityConfigurationShape", "DelegationChainConfigurationShape",
+            "ContractFormationConfigurationShape", "ValueFlowConfigurationShape",
+            "CapabilityGapConfigurationShape", "ResilientIdentityConfigurationShape",
+            "ZkGatedConfigurationShape", "ProportionalityConfigurationShape",
+            "SenseTranslationConfigurationShape", "ConsensusConfigurationShape",
+            "ManifoldLogicConfigurationShape", "CarrierBindingConfigurationShape",
+        ] {
+            assert!(ttl.contains(s), "§16–§30 shape {s} missing");
+        }
+        // A few load-bearing semantics are stated (engine ↔ SHACL parity).
+        assert!(ttl.contains("VOIDABLE at the victim's election"), "§18 duress reading documented");
+        assert!(ttl.contains("only Adjudicated is an enforceable fact"), "§25 due-process gate");
+        assert!(ttl.contains("∂Harm/∂x < Advantage"), "§26 proportionality test");
     }
 }
