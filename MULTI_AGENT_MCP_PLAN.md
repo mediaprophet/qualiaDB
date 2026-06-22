@@ -76,6 +76,21 @@ documented surface)**. L4 is mostly wiring once L1–L3 hold.
 - [ ] Multi-agent task: agents propose → the deontic gate evaluates → policy mode (allow / audit /
       block / ask-human) → WAL record. This is the goal realised.
 
+**Track D.0 — the job/task dispatch pipeline ("send a job to a folder, agents get onto it") —
+HONEST STATE: pieces exist, the pipeline does NOT** (verified 2026-06-22):
+- **What's there:** an *in-memory* task queue (`ambient_orchestration.rs` —
+  `pending_tasks.push` / `get_pending_tasks`; not durable, lost on restart); a **read-only** MCP
+  `get_pending_tasks` (surfaces the `PendingImplementation` backlog — read, not a queue agents
+  write to); a **file-backed chat inbox** (`chat_relay_daemon.rs` — `inbox.jsonl` per session +
+  `/chat/publish` + `/chat/pull`) — the closest "drop here, poll it" mechanism, but it carries
+  *chat messages*, not typed jobs.
+- **The gap (buildable; the natural first step of Track D):** a **durable job store** (a folder /
+  file-backed queue) that verified+grounded agents `submit_task` (enqueue) / `claim_task` /
+  `complete_task` over MCP, each call gated by the L1 cooperation gate (already built) and each
+  transition WAL'd. Natural path: generalise the chat-relay file inbox into a typed job queue +
+  add the three MCP verbs (today only `get_pending_tasks` reads). This is the concrete substrate
+  for "agents get onto jobs."
+
 ---
 
 ## 4. Recommended sequence (solo capacity, honest)
