@@ -93,6 +93,14 @@ pub use delegation::{
 };
 pub mod contract;
 pub use contract::{FormationStage, formation_stage, is_binding_contract, incorporates_by_reference};
+pub mod value_flow;
+pub use value_flow::{commons_cost, royalty, pool_after, is_commons_discharged, outstanding};
+pub mod capability_gap;
+pub use capability_gap::{capability_gap, requirements_met};
+pub mod identity_fabric;
+pub use identity_fabric::{
+    identity_survives_loss, surviving_anchors, recompute_fabric, identifier_is_not_identity,
+};
 pub mod temporal_ltl;
 pub use temporal_ltl::{
     OP_LTL_GLOBALLY, OP_LTL_FINALLY, OP_LTL_NEXT, OP_LTL_UNTIL, OP_LTL_RELEASE,

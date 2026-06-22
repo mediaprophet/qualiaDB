@@ -252,11 +252,16 @@ sensitive-vocab decisions (DV / coercion / guardianship), §20 on the STELLAR ma
   (composes §18 — binding needs assent AND both parties' capacity intact) +
   `incorporates_by_reference`.
 
-### Phase 10 — Economic, capability, identity
-- [ ] §23 Value-flow / Permissive-Commons: cost anchoring, proportional royalty, pool →
-  Discharged at threshold.
-- [ ] §24 Gap analysis / RPL: capability set-difference (computable gap).
-- [ ] §27 Resilient relational identity: re-computation from surviving fabric.
+### Phase 10 — Economic, capability, identity ✅ DONE 2026-06-22
+**Test:** value_flow 3 + capability_gap 2 + identity_fabric 2; full lib suite **1147 passed, 0 failed**.
+- [x] §23 `value_flow.rs`: `commons_cost` (production cost + **capped** ROI), `royalty` (scaled
+  by agent category), `pool_after`, `is_commons_discharged` (pool ≥ cost → freed globally),
+  `outstanding`. Integer, deterministic.
+- [x] §24 `capability_gap.rs`: `capability_gap` (Req \ Holds set-difference) + `requirements_met`,
+  with experiential `skos:closeMatch` equivalence closing the gap (RPL).
+- [x] §27 `identity_fabric.rs`: `identity_survives_loss` (k-of-n quorum recovery),
+  `recompute_fabric` (re-compute identity from surviving anchors after key loss/theft),
+  `identifier_is_not_identity` axiom.
 
 ### Phase 11 — Composition wires (compose existing real primitives into the deontic path)
 - [ ] §17 ZK-gated obligation `O(p | ZK(...))` + selective disclosure (composes `zk_proofs.rs`).
