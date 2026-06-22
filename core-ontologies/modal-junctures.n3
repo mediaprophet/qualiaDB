@@ -5,58 +5,132 @@
 @prefix mj:    <https://ns.webcivics.org/modal-juncture/> .
 
 # ===========================================================================
-# Modal linguistic junctures — the verbs that carry modality in the instruments.
-# KNOWS / BELIEVES are only the doxastic-STRENGTH axis. The full range needs TWO axes:
-#   1. ILLOCUTIONARY FORCE (Searle's speech-act taxonomy) — what the utterance DOES.
-#   2. EPISTEMIC STRENGTH (certainty band 0..255) — for assertive/expressive stances.
-# The UN instruments are saturated with these: preambular "Considering / Recognizing /
-# Affirming / Proclaiming / Recalling" + operative "Decides / Recommends / Urges /
-# Calls upon / Undertakes". This vocabulary lets each be REPRESENTED and routed to the
-# right engine modality, instead of collapsing them all into "Undertaking".
+# Illocutionary vocabulary for legal & diplomatic instruments (comprehensive
+# codification). Every modal juncture triggers a distinct ENGINE STATE. Axes:
+#   force/sub-class (Searle, adapted) · register (Preambular|Operative) ·
+#   certaintyBand 0..255 (epistemic strength, assertives) ·
+#   bindingWeight 0..255 (deontic force, for CONFLICT RESOLUTION — illocution.rs) ·
+#   authorityScaled (directive weight x speaker authority).
 # ===========================================================================
 
-# --- Axis 1: illocutionary force (Searle) ----------------------------------
-mj:IllocutionaryForce a rdfs:Class .
-mj:Assertive   a mj:IllocutionaryForce ; rdfs:comment "Commits the speaker to a proposition's TRUTH (states/claims) → epistemic, with a certainty band." .
-mj:Directive   a mj:IllocutionaryForce ; rdfs:comment "Attempts to get the addressee to ACT (recommends/urges/calls-upon) → soft-deontic." .
-mj:Commissive  a mj:IllocutionaryForce ; rdfs:comment "Commits the SPEAKER to future action (undertakes/pledges) → deontic Obligation." .
-mj:Declarative a mj:IllocutionaryForce ; rdfs:comment "PERFORMATIVE — changes status by being uttered (proclaims/declares/decides)." .
-mj:Expressive  a mj:IllocutionaryForce ; rdfs:comment "Expresses a stance/attitude (affirms/recognizes/recalls/considers) — the preambular register." .
+# --- Engine states (how a juncture maps to the running engine) -------------
+mj:EngineState a rdfs:Class .
+mj:EpistemicAbsolute a mj:EngineState ; rdfs:comment "epistemic OP_KNOWS — hard fact into shared context." .
+mj:EpistemicWeighted a mj:EngineState ; rdfs:comment "epistemic OP_BELIEVES — belief/hypothesis with a certainty band." .
+mj:ContextualAnchor  a mj:EngineState ; rdfs:comment "links an operative clause to an existing historical/legal graph node." .
+mj:ObligateSelf      a mj:EngineState ; rdfs:comment "deontic OP_OBLIGATE, party = the asserting agent." .
+mj:ObligateSelfLiability a mj:EngineState ; rdfs:comment "OP_OBLIGATE + a conditional liability trigger if the state fails." .
+mj:ObligateTarget    a mj:EngineState ; rdfs:comment "OP_OBLIGATE for a TARGET agent, evaluated against speaker authority." .
+mj:Recommend         a mj:EngineState ; rdfs:comment "soft duty / directional vector; becomes OP_OBLIGATE only with hierarchical superiority." .
+mj:QueueAwait        a mj:EngineState ; rdfs:comment "SuspendedTransactionQueue — await the target agent's assent." .
+mj:Instantiate       a mj:EngineState ; rdfs:comment "activates a new baseline / temporal effectivity window (Active)." .
+mj:DefeatExpire      a mj:EngineState ; rdfs:comment "terminates an effectivity window / sets Defeated on existing norms." .
+mj:ConceptBinding    a mj:EngineState ; rdfs:comment "ontological mapping (skos:exactMatch / structural equivalent) — human-attested." .
+mj:Permit            a mj:EngineState ; rdfs:comment "deontic OP_PERMIT — explicitly grants a right/capability." .
+mj:DefeaterUnless    a mj:EngineState ; rdfs:comment "OP_DEFEASIBLE_OVERRIDE / q42:unless — bypasses an active Obligate/Forbid." .
+mj:Forbid            a mj:EngineState ; rdfs:comment "deontic OP_FORBID — hard constraint." .
+mj:ForbidTemporal    a mj:EngineState ; rdfs:comment "OP_FORBID bounded to a spatial/temporal box." .
+mj:AlignmentPositive a mj:EngineState ; rdfs:comment "positive relational stance toward an agent/node." .
+mj:AlignmentNegative a mj:EngineState ; rdfs:comment "negative relational stance — precursor to a Sanction state." .
 
-# --- A juncture: a verb classified by force (+ for assertives, a certainty band) -------
+# --- Force classes + sub-classes -------------------------------------------
+mj:IllocutionaryForce a rdfs:Class .
+mj:Assertive a mj:IllocutionaryForce . mj:Commissive a mj:IllocutionaryForce .
+mj:Directive a mj:IllocutionaryForce . mj:Declarative a mj:IllocutionaryForce .
+mj:Permissive a mj:IllocutionaryForce . mj:Prohibitive a mj:IllocutionaryForce .
+mj:Expressive a mj:IllocutionaryForce .
+
+mj:Register a rdfs:Class . mj:Preambular a mj:Register . mj:Operative a mj:Register .
+
 mj:Juncture a rdfs:Class ; rdfs:subClassOf skos:Concept .
 mj:force a rdf:Property ; rdfs:domain mj:Juncture ; rdfs:range mj:IllocutionaryForce .
-mj:certaintyBand a rdf:Property ; rdfs:domain mj:Juncture ; rdfs:range xsd:integer ;
-    rdfs:comment "0..255 epistemic-strength, maps to modalities/epistemic.rs CERTAINTY; eval is Active at >=128." .
-mj:bridgesTo a rdf:Property ; rdfs:domain mj:Juncture ;
-    rdfs:comment "The engine modality this juncture compiles to (epistemic / deontic / soft-deontic / performative)." .
+mj:subClass a rdf:Property ; rdfs:domain mj:Juncture .
+mj:engineState a rdf:Property ; rdfs:domain mj:Juncture ; rdfs:range mj:EngineState .
+mj:register a rdf:Property ; rdfs:domain mj:Juncture ; rdfs:range mj:Register .
+mj:certaintyBand a rdf:Property ; rdfs:domain mj:Juncture ; rdfs:range xsd:integer .
+mj:bindingWeight a rdf:Property ; rdfs:domain mj:Juncture ; rdfs:range xsd:integer ;
+    rdfs:comment "deontic force for conflict resolution: higher governs a conflicting lower; 0 = no binding." .
+mj:authorityScaled a rdf:Property ; rdfs:domain mj:Juncture ; rdfs:range xsd:boolean .
 
-# --- EPISTEMIC ATTITUDES (gradient along the certainty band) ----------------
-mj:Knows      a mj:Juncture ; skos:prefLabel "knows" ; skos:altLabel "is certain" ; mj:force mj:Assertive ;   mj:certaintyBand 255 ; mj:bridgesTo "epistemic OP_KNOWS (factive)" .
-mj:Believes   a mj:Juncture ; skos:prefLabel "believes" ; mj:force mj:Assertive ;  mj:certaintyBand 200 ; mj:bridgesTo "epistemic OP_BELIEVES" .
-mj:Considers  a mj:Juncture ; skos:prefLabel "considers" ; skos:altLabel "considering" ; mj:force mj:Expressive ; mj:certaintyBand 128 .
-mj:Supposes   a mj:Juncture ; skos:prefLabel "supposes" ; mj:force mj:Assertive ;  mj:certaintyBand 100 .
-mj:Suspects   a mj:Juncture ; skos:prefLabel "suspects" ; mj:force mj:Assertive ;  mj:certaintyBand 80 .
-mj:Speculates a mj:Juncture ; skos:prefLabel "speculates" ; mj:force mj:Assertive ; mj:certaintyBand 50 ; mj:bridgesTo "epistemic OP_BELIEVES, low certainty -> Uncertain" .
-mj:Doubts     a mj:Juncture ; skos:prefLabel "doubts" ; mj:force mj:Assertive ;    mj:certaintyBand 20 .
+# === ASSERTIVE ===
+mj:Finds       a mj:Juncture ; skos:prefLabel "finds" ;       mj:force mj:Assertive ; mj:subClass "Factive" ; mj:engineState mj:EpistemicAbsolute ; mj:register mj:Operative ; mj:certaintyBand 255 ; mj:bindingWeight 0 .
+mj:Establishes a mj:Juncture ; skos:prefLabel "establishes" ; mj:force mj:Assertive ; mj:subClass "Factive" ; mj:engineState mj:EpistemicAbsolute ; mj:register mj:Operative ; mj:certaintyBand 255 ; mj:bindingWeight 0 .
+mj:Determines  a mj:Juncture ; skos:prefLabel "determines" ;  mj:force mj:Assertive ; mj:subClass "Factive" ; mj:engineState mj:EpistemicAbsolute ; mj:register mj:Operative ; mj:certaintyBand 255 ; mj:bindingWeight 0 .
+mj:Concludes   a mj:Juncture ; skos:prefLabel "concludes" ;   mj:force mj:Assertive ; mj:subClass "Factive" ; mj:engineState mj:EpistemicAbsolute ; mj:register mj:Operative ; mj:certaintyBand 255 ; mj:bindingWeight 0 .
+mj:Believes    a mj:Juncture ; skos:prefLabel "believes" ;    mj:force mj:Assertive ; mj:subClass "Doxastic" ; mj:engineState mj:EpistemicWeighted ; mj:register mj:Preambular ; mj:certaintyBand 200 ; mj:bindingWeight 0 .
+mj:Considers   a mj:Juncture ; skos:prefLabel "considers" ; skos:altLabel "considering" ; mj:force mj:Assertive ; mj:subClass "Doxastic" ; mj:engineState mj:EpistemicWeighted ; mj:register mj:Preambular ; mj:certaintyBand 128 ; mj:bindingWeight 0 .
+mj:Speculates  a mj:Juncture ; skos:prefLabel "speculates" ;  mj:force mj:Assertive ; mj:subClass "Doxastic" ; mj:engineState mj:EpistemicWeighted ; mj:register mj:Preambular ; mj:certaintyBand 50 ; mj:bindingWeight 0 .
+mj:Assumes     a mj:Juncture ; skos:prefLabel "assumes" ;     mj:force mj:Assertive ; mj:subClass "Doxastic" ; mj:engineState mj:EpistemicWeighted ; mj:register mj:Preambular ; mj:certaintyBand 90 ; mj:bindingWeight 0 .
+mj:Recalls     a mj:Juncture ; skos:prefLabel "recalls" ; skos:altLabel "recalling" ; mj:force mj:Assertive ; mj:subClass "Retrospective" ; mj:engineState mj:ContextualAnchor ; mj:register mj:Preambular ; mj:bindingWeight 0 .
+mj:Reaffirms   a mj:Juncture ; skos:prefLabel "reaffirms" ; skos:altLabel "reaffirming" ; mj:force mj:Assertive ; mj:subClass "Retrospective" ; mj:engineState mj:ContextualAnchor ; mj:register mj:Preambular ; mj:bindingWeight 0 .
+mj:Notes       a mj:Juncture ; skos:prefLabel "notes" ; skos:altLabel "noting" ; mj:force mj:Assertive ; mj:subClass "Retrospective" ; mj:engineState mj:ContextualAnchor ; mj:register mj:Preambular ; mj:bindingWeight 0 .
+mj:Acknowledges a mj:Juncture ; skos:prefLabel "acknowledges" ; mj:force mj:Assertive ; mj:subClass "Retrospective" ; mj:engineState mj:ContextualAnchor ; mj:register mj:Preambular ; mj:bindingWeight 0 .
 
-# --- SPEECH ACTS (non-assertive forces — a different axis, not certainty) ---
-mj:Proclaims  a mj:Juncture ; skos:prefLabel "proclaims" ; skos:altLabel "proclaiming" ; mj:force mj:Declarative ; mj:bridgesTo "performative (status change by utterance)" .
-mj:Declares   a mj:Juncture ; skos:prefLabel "declares" ; mj:force mj:Declarative .
-mj:Decides    a mj:Juncture ; skos:prefLabel "decides" ; mj:force mj:Declarative ; mj:bridgesTo "performative + deontic" .
-mj:Undertakes a mj:Juncture ; skos:prefLabel "undertakes" ; skos:altLabel "undertake to" ; mj:force mj:Commissive ; mj:bridgesTo "deontic OP_OBLIGATE" .
-mj:Pledges    a mj:Juncture ; skos:prefLabel "pledges" ; mj:force mj:Commissive ; mj:bridgesTo "deontic OP_OBLIGATE" .
-mj:Recommends a mj:Juncture ; skos:prefLabel "recommends" ; mj:force mj:Directive ; mj:bridgesTo "soft-deontic (recommendation)" .
-mj:Urges      a mj:Juncture ; skos:prefLabel "urges" ; mj:force mj:Directive .
-mj:CallsUpon  a mj:Juncture ; skos:prefLabel "calls upon" ; mj:force mj:Directive .
-mj:Affirms    a mj:Juncture ; skos:prefLabel "affirms" ; skos:altLabel "affirming" ; mj:force mj:Expressive ; mj:certaintyBand 230 .
-mj:Recognizes a mj:Juncture ; skos:prefLabel "recognizes" ; skos:altLabel "recognizing" ; mj:force mj:Expressive ; mj:certaintyBand 200 .
-mj:Recalls    a mj:Juncture ; skos:prefLabel "recalls" ; skos:altLabel "recalling" ; mj:force mj:Expressive .
-mj:BearingInMind a mj:Juncture ; skos:prefLabel "bearing in mind" ; mj:force mj:Expressive .
+# === COMMISSIVE ===
+mj:Undertakes  a mj:Juncture ; skos:prefLabel "undertakes" ; skos:altLabel "undertake to" ; mj:force mj:Commissive ; mj:subClass "Promissive" ; mj:engineState mj:ObligateSelf ; mj:register mj:Operative ; mj:bindingWeight 200 .
+mj:Pledges     a mj:Juncture ; skos:prefLabel "pledges" ;  mj:force mj:Commissive ; mj:subClass "Promissive" ; mj:engineState mj:ObligateSelf ; mj:register mj:Operative ; mj:bindingWeight 200 .
+mj:Commits     a mj:Juncture ; skos:prefLabel "commits" ;  mj:force mj:Commissive ; mj:subClass "Promissive" ; mj:engineState mj:ObligateSelf ; mj:register mj:Operative ; mj:bindingWeight 200 .
+mj:Vows        a mj:Juncture ; skos:prefLabel "vows" ;     mj:force mj:Commissive ; mj:subClass "Promissive" ; mj:engineState mj:ObligateSelf ; mj:register mj:Operative ; mj:bindingWeight 200 .
+mj:Ensures     a mj:Juncture ; skos:prefLabel "ensures" ;  mj:force mj:Commissive ; mj:subClass "Guarantive" ; mj:engineState mj:ObligateSelfLiability ; mj:register mj:Operative ; mj:bindingWeight 220 .
+mj:Guarantees  a mj:Juncture ; skos:prefLabel "guarantees" ; mj:force mj:Commissive ; mj:subClass "Guarantive" ; mj:engineState mj:ObligateSelfLiability ; mj:register mj:Operative ; mj:bindingWeight 220 .
+mj:Warrants    a mj:Juncture ; skos:prefLabel "warrants" ; mj:force mj:Commissive ; mj:subClass "Guarantive" ; mj:engineState mj:ObligateSelfLiability ; mj:register mj:Operative ; mj:bindingWeight 220 .
 
-# ENGINE BINDING (how each force routes): Assertive/Expressive-with-band -> the epistemic
-# modality (modalities/epistemic.rs, certainty band); Commissive -> deontic (OP_OBLIGATE);
-# Directive -> a soft-deontic (recommendation, weaker than obligation); Declarative ->
-# a performative/speech-act modality (TO WIRE — proclamations change status by utterance).
-# The CML generator's lexical typing should detect the operative juncture verb and route
-# accordingly, instead of the "Undertaking" catch-all.
+# === DIRECTIVE (authority-scaled) ===
+mj:Demands   a mj:Juncture ; skos:prefLabel "demands" ;   mj:force mj:Directive ; mj:subClass "Imperative" ; mj:engineState mj:ObligateTarget ; mj:register mj:Operative ; mj:bindingWeight 160 ; mj:authorityScaled true .
+mj:Requires  a mj:Juncture ; skos:prefLabel "requires" ;  mj:force mj:Directive ; mj:subClass "Imperative" ; mj:engineState mj:ObligateTarget ; mj:register mj:Operative ; mj:bindingWeight 170 ; mj:authorityScaled true .
+mj:Instructs a mj:Juncture ; skos:prefLabel "instructs" ; mj:force mj:Directive ; mj:subClass "Imperative" ; mj:engineState mj:ObligateTarget ; mj:register mj:Operative ; mj:bindingWeight 160 ; mj:authorityScaled true .
+mj:Orders    a mj:Juncture ; skos:prefLabel "orders" ;    mj:force mj:Directive ; mj:subClass "Imperative" ; mj:engineState mj:ObligateTarget ; mj:register mj:Operative ; mj:bindingWeight 170 ; mj:authorityScaled true .
+mj:Urges     a mj:Juncture ; skos:prefLabel "urges" ;     mj:force mj:Directive ; mj:subClass "Exhortative" ; mj:engineState mj:Recommend ; mj:register mj:Operative ; mj:bindingWeight 50 ; mj:authorityScaled true .
+mj:CallsUpon a mj:Juncture ; skos:prefLabel "calls upon" ; mj:force mj:Directive ; mj:subClass "Exhortative" ; mj:engineState mj:Recommend ; mj:register mj:Operative ; mj:bindingWeight 60 ; mj:authorityScaled true .
+mj:Encourages a mj:Juncture ; skos:prefLabel "encourages" ; mj:force mj:Directive ; mj:subClass "Exhortative" ; mj:engineState mj:Recommend ; mj:register mj:Operative ; mj:bindingWeight 40 ; mj:authorityScaled true .
+mj:Recommends a mj:Juncture ; skos:prefLabel "recommends" ; mj:force mj:Directive ; mj:subClass "Exhortative" ; mj:engineState mj:Recommend ; mj:register mj:Operative ; mj:bindingWeight 50 ; mj:authorityScaled true .
+mj:Requests  a mj:Juncture ; skos:prefLabel "requests" ;  mj:force mj:Directive ; mj:subClass "Rogative" ; mj:engineState mj:QueueAwait ; mj:register mj:Operative ; mj:bindingWeight 30 ; mj:authorityScaled true .
+mj:Invites   a mj:Juncture ; skos:prefLabel "invites" ;   mj:force mj:Directive ; mj:subClass "Rogative" ; mj:engineState mj:QueueAwait ; mj:register mj:Operative ; mj:bindingWeight 20 ; mj:authorityScaled true .
+mj:Petitions a mj:Juncture ; skos:prefLabel "petitions" ; mj:force mj:Directive ; mj:subClass "Rogative" ; mj:engineState mj:QueueAwait ; mj:register mj:Operative ; mj:bindingWeight 20 ; mj:authorityScaled true .
+
+# === DECLARATIVE (performative) ===
+mj:Proclaims   a mj:Juncture ; skos:prefLabel "proclaims" ; skos:altLabel "proclaiming" ; mj:force mj:Declarative ; mj:subClass "Enactive" ; mj:engineState mj:Instantiate ; mj:register mj:Operative ; mj:bindingWeight 0 .
+mj:Adopts      a mj:Juncture ; skos:prefLabel "adopts" ;   mj:force mj:Declarative ; mj:subClass "Enactive" ; mj:engineState mj:Instantiate ; mj:register mj:Operative ; mj:bindingWeight 0 .
+mj:Promulgates a mj:Juncture ; skos:prefLabel "promulgates" ; mj:force mj:Declarative ; mj:subClass "Enactive" ; mj:engineState mj:Instantiate ; mj:register mj:Operative ; mj:bindingWeight 0 .
+mj:Ratifies    a mj:Juncture ; skos:prefLabel "ratifies" ; mj:force mj:Declarative ; mj:subClass "Enactive" ; mj:engineState mj:Instantiate ; mj:register mj:Operative ; mj:bindingWeight 0 .
+mj:Revokes     a mj:Juncture ; skos:prefLabel "revokes" ;  mj:force mj:Declarative ; mj:subClass "Terminative" ; mj:engineState mj:DefeatExpire ; mj:register mj:Operative ; mj:bindingWeight 0 .
+mj:Annuls      a mj:Juncture ; skos:prefLabel "annuls" ;   mj:force mj:Declarative ; mj:subClass "Terminative" ; mj:engineState mj:DefeatExpire ; mj:register mj:Operative ; mj:bindingWeight 0 .
+mj:Repeals     a mj:Juncture ; skos:prefLabel "repeals" ;  mj:force mj:Declarative ; mj:subClass "Terminative" ; mj:engineState mj:DefeatExpire ; mj:register mj:Operative ; mj:bindingWeight 0 .
+mj:Withdraws   a mj:Juncture ; skos:prefLabel "withdraws" ; skos:altLabel "denounces" ; mj:force mj:Declarative ; mj:subClass "Terminative" ; mj:engineState mj:DefeatExpire ; mj:register mj:Operative ; mj:bindingWeight 0 .
+mj:Defines     a mj:Juncture ; skos:prefLabel "defines" ;  mj:force mj:Declarative ; mj:subClass "Definitional" ; mj:engineState mj:ConceptBinding ; mj:register mj:Operative ; mj:bindingWeight 0 .
+mj:Designates  a mj:Juncture ; skos:prefLabel "designates" ; mj:force mj:Declarative ; mj:subClass "Definitional" ; mj:engineState mj:ConceptBinding ; mj:register mj:Operative ; mj:bindingWeight 0 .
+mj:Construes   a mj:Juncture ; skos:prefLabel "construes" ; mj:force mj:Declarative ; mj:subClass "Definitional" ; mj:engineState mj:ConceptBinding ; mj:register mj:Operative ; mj:bindingWeight 0 .
+
+# === PERMISSIVE ===
+mj:Permits     a mj:Juncture ; skos:prefLabel "permits" ;  mj:force mj:Permissive ; mj:subClass "Authoritative" ; mj:engineState mj:Permit ; mj:register mj:Operative ; mj:bindingWeight 128 .
+mj:Allows      a mj:Juncture ; skos:prefLabel "allows" ;   mj:force mj:Permissive ; mj:subClass "Authoritative" ; mj:engineState mj:Permit ; mj:register mj:Operative ; mj:bindingWeight 128 .
+mj:Authorizes  a mj:Juncture ; skos:prefLabel "authorizes" ; mj:force mj:Permissive ; mj:subClass "Authoritative" ; mj:engineState mj:Permit ; mj:register mj:Operative ; mj:bindingWeight 140 .
+mj:Grants      a mj:Juncture ; skos:prefLabel "grants" ;   mj:force mj:Permissive ; mj:subClass "Authoritative" ; mj:engineState mj:Permit ; mj:register mj:Operative ; mj:bindingWeight 140 .
+mj:Exempts     a mj:Juncture ; skos:prefLabel "exempts" ;  mj:force mj:Permissive ; mj:subClass "Exemptive" ; mj:engineState mj:DefeaterUnless ; mj:register mj:Operative ; mj:bindingWeight 250 .
+mj:Derogates   a mj:Juncture ; skos:prefLabel "derogates" ; mj:force mj:Permissive ; mj:subClass "Exemptive" ; mj:engineState mj:DefeaterUnless ; mj:register mj:Operative ; mj:bindingWeight 250 .
+mj:Waives      a mj:Juncture ; skos:prefLabel "waives" ;   mj:force mj:Permissive ; mj:subClass "Exemptive" ; mj:engineState mj:DefeaterUnless ; mj:register mj:Operative ; mj:bindingWeight 250 .
+mj:Excuses     a mj:Juncture ; skos:prefLabel "excuses" ;  mj:force mj:Permissive ; mj:subClass "Exemptive" ; mj:engineState mj:DefeaterUnless ; mj:register mj:Operative ; mj:bindingWeight 250 .
+
+# === PROHIBITIVE ===
+mj:Forbids   a mj:Juncture ; skos:prefLabel "forbids" ;   mj:force mj:Prohibitive ; mj:subClass "Interdictive" ; mj:engineState mj:Forbid ; mj:register mj:Operative ; mj:bindingWeight 200 .
+mj:Prohibits a mj:Juncture ; skos:prefLabel "prohibits" ; skos:altLabel "shall be prohibited" ; mj:force mj:Prohibitive ; mj:subClass "Interdictive" ; mj:engineState mj:Forbid ; mj:register mj:Operative ; mj:bindingWeight 200 .
+mj:Bans      a mj:Juncture ; skos:prefLabel "bans" ;      mj:force mj:Prohibitive ; mj:subClass "Interdictive" ; mj:engineState mj:Forbid ; mj:register mj:Operative ; mj:bindingWeight 200 .
+mj:Outlaws   a mj:Juncture ; skos:prefLabel "outlaws" ;   mj:force mj:Prohibitive ; mj:subClass "Interdictive" ; mj:engineState mj:Forbid ; mj:register mj:Operative ; mj:bindingWeight 200 .
+mj:Enjoins   a mj:Juncture ; skos:prefLabel "enjoins" ;   mj:force mj:Prohibitive ; mj:subClass "Injunctive" ; mj:engineState mj:ForbidTemporal ; mj:register mj:Operative ; mj:bindingWeight 190 .
+mj:Restrains a mj:Juncture ; skos:prefLabel "restrains" ; mj:force mj:Prohibitive ; mj:subClass "Injunctive" ; mj:engineState mj:ForbidTemporal ; mj:register mj:Operative ; mj:bindingWeight 190 .
+
+# === EXPRESSIVE ===
+mj:Welcomes    a mj:Juncture ; skos:prefLabel "welcomes" ;  mj:force mj:Expressive ; mj:subClass "Approbative" ; mj:engineState mj:AlignmentPositive ; mj:register mj:Preambular ; mj:bindingWeight 0 .
+mj:Commends    a mj:Juncture ; skos:prefLabel "commends" ;  mj:force mj:Expressive ; mj:subClass "Approbative" ; mj:engineState mj:AlignmentPositive ; mj:register mj:Preambular ; mj:bindingWeight 0 .
+mj:Appreciates a mj:Juncture ; skos:prefLabel "appreciates" ; mj:force mj:Expressive ; mj:subClass "Approbative" ; mj:engineState mj:AlignmentPositive ; mj:register mj:Preambular ; mj:bindingWeight 0 .
+mj:Endorses    a mj:Juncture ; skos:prefLabel "endorses" ;  mj:force mj:Expressive ; mj:subClass "Approbative" ; mj:engineState mj:AlignmentPositive ; mj:register mj:Preambular ; mj:bindingWeight 0 .
+mj:Condemns    a mj:Juncture ; skos:prefLabel "condemns" ;  mj:force mj:Expressive ; mj:subClass "Disapprobative" ; mj:engineState mj:AlignmentNegative ; mj:register mj:Preambular ; mj:bindingWeight 0 .
+mj:Deplores    a mj:Juncture ; skos:prefLabel "deplores" ;  mj:force mj:Expressive ; mj:subClass "Disapprobative" ; mj:engineState mj:AlignmentNegative ; mj:register mj:Preambular ; mj:bindingWeight 0 .
+mj:Regrets     a mj:Juncture ; skos:prefLabel "regrets" ;   mj:force mj:Expressive ; mj:subClass "Disapprobative" ; mj:engineState mj:AlignmentNegative ; mj:register mj:Preambular ; mj:bindingWeight 0 .
+mj:ExpressesConcern a mj:Juncture ; skos:prefLabel "expresses concern" ; mj:force mj:Expressive ; mj:subClass "Disapprobative" ; mj:engineState mj:AlignmentNegative ; mj:register mj:Preambular ; mj:bindingWeight 0 .
+
+# CONFLICT RESOLUTION (illocution.rs): for norms on the same (party, action), an Exemptive
+# (DefeaterUnless, 250) overrides; otherwise the higher EFFECTIVE bindingWeight governs
+# (directives scaled by speaker authority first); equal weights = a GENUINE conflict held
+# paraconsistently for adjudication. A soft Directive (Recommend 50) never overrides a hard
+# Commissive (200) or Prohibitive (200).
