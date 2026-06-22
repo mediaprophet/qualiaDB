@@ -19,6 +19,10 @@ pub struct ExternalSorter {
     /// front-of-file Q42LEX section so literals/IRIs are recoverable from the `.q42`
     /// alone (no separate `.lex` sidecar). Cold ingest path — heap is expected here.
     lex: HashMap<u64, String>,
+    /// Count of genuine 60-bit handle collisions seen at intern (distinct terms, same
+    /// token). First writer is kept; this makes a collision LOUD instead of a silent
+    /// assumption (lexicon collision backstop, task #22).
+    lex_collisions: u64,
 }
 
 impl ExternalSorter {
@@ -31,6 +35,7 @@ impl ExternalSorter {
             temp_dir,
             total_quins: 0,
             lex: HashMap::new(),
+            lex_collisions: 0,
         }
     }
 
@@ -44,9 +49,27 @@ impl ExternalSorter {
     }
 
     /// Record a term so its hash resolves back to its lexical string in the volume.
+    ///
+    /// First writer wins for the stored value. A genuine handle collision (a DIFFERENT
+    /// term hashing to an already-seen token) is COUNTED rather than silently assumed
+    /// impossible, so ingest can surface it (lexicon collision backstop, task #22).
     pub fn push_lex(&mut self, hash: u64, term: &str) {
-        // First writer wins; identical hash ⇒ identical string (collision-free 60-bit token).
-        self.lex.entry(hash).or_insert_with(|| term.to_string());
+        match self.lex.get(&hash) {
+            None => {
+                self.lex.insert(hash, term.to_string());
+            }
+            Some(existing) if existing == term => {} // idempotent: same token, same term
+            Some(_) => {
+                self.lex_collisions += 1;
+            }
+        }
+    }
+
+    /// Number of distinct-term / same-token collisions detected during ingest. Non-zero
+    /// means a 60-bit handle was reused for different lexical values — rare, but no
+    /// longer silent. (See `lexicon::LexiconInterner` for the value-preserving form.)
+    pub fn lex_collision_count(&self) -> u64 {
+        self.lex_collisions
     }
 
     fn flush_chunk(&mut self) -> std::io::Result<()> {
@@ -78,6 +101,14 @@ impl ExternalSorter {
     pub fn merge(mut self, final_q42: &Path) -> std::io::Result<u64> {
         // Flush any remaining quins
         self.flush_chunk()?;
+
+        if self.lex_collisions > 0 {
+            eprintln!(
+                "warning: {} lexicon handle collision(s) during ingest — distinct terms \
+                 shared a 60-bit token; first writer kept (task #22 backstop)",
+                self.lex_collisions
+            );
+        }
 
         let mut builder = UnifiedVolumeBuilder::with_lex_map(&self.lex);
 
@@ -181,5 +212,32 @@ impl ExternalSorter {
             Err(e) if e.kind() == std::io::ErrorKind::UnexpectedEof => Ok(None),
             Err(e) => Err(e),
         }
+    }
+}
+
+#[cfg(test)]
+mod tests {
+    use super::*;
+
+    #[test]
+    fn push_lex_detects_handle_collisions_without_silent_assumption() {
+        let dir = std::env::temp_dir().join("qualia_extsort_lex_collision_test");
+        let mut s = ExternalSorter::new(dir);
+        let h = 0x0123_4567_89AB_CDEF;
+        s.push_lex(h, "alpha"); // New
+        s.push_lex(h, "alpha"); // idempotent — same token, same term
+        assert_eq!(
+            s.lex_collision_count(),
+            0,
+            "re-interning the same term is not a collision"
+        );
+        s.push_lex(h, "beta"); // distinct term, same token -> a real collision
+        assert_eq!(
+            s.lex_collision_count(),
+            1,
+            "a distinct term on an already-seen token must be counted, not silently ignored"
+        );
+        s.push_lex(0x0FED_CBA9_8765_4321, "gamma"); // different token -> no collision
+        assert_eq!(s.lex_collision_count(), 1);
     }
 }
