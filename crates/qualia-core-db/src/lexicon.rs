@@ -80,6 +80,103 @@ impl LexiconManager {
     }
 }
 
+use std::collections::HashMap;
+
+/// Outcome of interning a `(handle, value)` pair into a collision-aware lexicon.
+#[derive(Debug, PartialEq, Eq, Clone, Copy)]
+pub enum Intern {
+    /// First time this handle is seen.
+    New,
+    /// Same handle, SAME value — an idempotent re-intern.
+    Seen,
+    /// Same handle, DIFFERENT value — a genuine handle collision (both values kept).
+    Collision,
+}
+
+/// Collision-aware string interner — the lexicon collision backstop (task #22).
+///
+/// The plain build-time map (`HashMap<u64, String>` in `external_sort`) silently
+/// OVERWRITES on a handle collision (two distinct strings hashing to the same 60-bit
+/// token), losing data with no signal. This interner DETECTS the collision at intern
+/// time — O(1), off the resolution hot path — and KEEPS BOTH values, so a collision
+/// becomes loud + recoverable rather than silent corruption. Resolution stays
+/// single-value and fast for the (overwhelmingly common) collision-free handles; only
+/// a flagged handle pays a comparison over its small bucket (length-gated by `str` eq),
+/// from memory. This is a host-side structure (`HashMap`/`String`), separate from the
+/// 42 MB `SlgArena` — its allocations are one-time intern cost, not per-resolution.
+#[derive(Default)]
+pub struct LexiconInterner {
+    /// handle -> first-interned value (the fast, common path).
+    map: HashMap<u64, String>,
+    /// handle -> all distinct values, populated ONLY when a collision occurs.
+    buckets: HashMap<u64, Vec<String>>,
+}
+
+impl LexiconInterner {
+    pub fn new() -> Self {
+        Self::default()
+    }
+
+    /// Intern `(generate_60bit_token(value), value)`. Returns the collision outcome.
+    pub fn intern_str(&mut self, value: &str) -> Intern {
+        self.intern(generate_60bit_token(value.as_bytes()), value)
+    }
+
+    /// Intern an explicit `(handle, value)` pair — the handle need not be
+    /// `generate_60bit_token(value)` (e.g. did:q42 / Webizen handles). Detects a
+    /// same-handle / different-value collision and preserves both values.
+    pub fn intern(&mut self, handle: u64, value: &str) -> Intern {
+        match self.map.get(&handle) {
+            None => {
+                self.map.insert(handle, value.to_string());
+                Intern::New
+            }
+            Some(existing) if existing == value => Intern::Seen,
+            Some(existing) => {
+                // Genuine collision: preserve BOTH values; never silently overwrite.
+                let bucket = self
+                    .buckets
+                    .entry(handle)
+                    .or_insert_with(|| vec![existing.clone()]);
+                if !bucket.iter().any(|v| v == value) {
+                    bucket.push(value.to_string());
+                }
+                Intern::Collision
+            }
+        }
+    }
+
+    /// Whether `handle` has more than one distinct interned value (a collision).
+    #[inline]
+    pub fn is_collision(&self, handle: u64) -> bool {
+        self.buckets.contains_key(&handle)
+    }
+
+    /// Resolve `handle` -> value with collision awareness. Collision-free (common): the
+    /// single value, no comparison. Collided (rare): `None` — there is no single answer,
+    /// so the caller disambiguates with the query value via [`Self::resolve_value`]
+    /// rather than receiving a silently-wrong one.
+    pub fn resolve(&self, handle: u64) -> Option<&str> {
+        if self.buckets.contains_key(&handle) {
+            return None;
+        }
+        self.map.get(&handle).map(String::as_str)
+    }
+
+    /// Disambiguating resolve — the backstop. Returns the stored value equal to `query`
+    /// iff `handle` interns it. `str` equality length-gates before the byte compare, so
+    /// the rare collision path stays cheap.
+    pub fn resolve_value(&self, handle: u64, query: &str) -> Option<&str> {
+        if let Some(bucket) = self.buckets.get(&handle) {
+            return bucket.iter().map(String::as_str).find(|&s| s == query);
+        }
+        self.map
+            .get(&handle)
+            .map(String::as_str)
+            .filter(|&s| s == query)
+    }
+}
+
 #[cfg(test)]
 mod tests {
     use super::*;
@@ -116,6 +213,41 @@ mod tests {
             // Both are pure 60-bit identifiers: top 4 bits reserved for the tag overlay.
             assert_eq!(crate::q_hash(s) >> 60, 0, "q_hash spilled past 60 bits for {s:?}");
         }
+    }
+
+    #[test]
+    fn interner_detects_collision_and_keeps_both_values() {
+        let mut lx = LexiconInterner::new();
+        // Force a handle collision (same handle, different values) by interning explicit
+        // handles — a natural 60-bit FNV collision is infeasible to find in a test.
+        let h = 0x0ABC_DEF0_1234_5678;
+        assert_eq!(lx.intern(h, "alpha"), Intern::New);
+        assert_eq!(lx.intern(h, "alpha"), Intern::Seen); // idempotent
+        assert_eq!(lx.intern(h, "beta"), Intern::Collision); // genuine collision
+        assert!(lx.is_collision(h));
+
+        // Both values survive and are recoverable via the disambiguating resolve —
+        // unlike a plain HashMap, where "alpha" would have been silently overwritten.
+        assert_eq!(lx.resolve_value(h, "alpha"), Some("alpha"));
+        assert_eq!(lx.resolve_value(h, "beta"), Some("beta"));
+        assert_eq!(lx.resolve_value(h, "gamma"), None);
+
+        // Bare resolve refuses to guess on an ambiguous handle (no silent wrong answer).
+        assert_eq!(lx.resolve(h), None);
+    }
+
+    #[test]
+    fn interner_collision_free_is_the_fast_single_value_path() {
+        let mut lx = LexiconInterner::new();
+        let iri = "https://ns.webcivics.org/values/State";
+        assert_eq!(lx.intern_str(iri), Intern::New);
+        assert_eq!(lx.intern_str(iri), Intern::Seen);
+
+        // q_hash == generate_60bit_token (post-#14), so this is the interned handle.
+        let h = crate::q_hash(iri);
+        assert!(!lx.is_collision(h));
+        // Collision-free: bare resolve returns the single value directly, no comparison.
+        assert_eq!(lx.resolve(h), Some(iri));
     }
 
     #[test]
