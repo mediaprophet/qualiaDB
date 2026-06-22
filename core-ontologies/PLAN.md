@@ -6,6 +6,30 @@ notes in `../20260621_HANDOVER_ontologies.md`. Model lives in `values.n3`; corpu
 
 ---
 
+## ⚡ Status update — 2026-06-22 (legal-logic engine + library-upgrade protocol)
+
+Two cross-cutting build-outs landed since this plan was first written; this section is the
+pointer so the rest of the plan stays coherent.
+
+- **The full computational legal-logic stack is built + tested** — engine-side plan in
+  [`../DEONTIC_LOGIC_PLAN.md`](../DEONTIC_LOGIC_PLAN.md), spec in [`../legal_logic.md`](../legal_logic.md).
+  §1–§30 logic operators all implemented as `modalities/*.rs` (SDL⁺ core, Hohfeld jural square,
+  STIT, mens rea, causal/but-for, defeasible rebut+undercut, lifecycle, value-flow, capability
+  gap, resilient identity, ZK-gate, proportionality, consensus, meta-deontic, interaction
+  governance, …). Only the two heavy *substrates* remain (GPU 10D manifold renderer → STELLAR
+  #11–13; binary carrier codecs → task #9). Full lib suite green; **SHACL coverage** for all of
+  it in `modalities/logic/logic_modalities_shacl.rs` (42 configuration shapes). MCP surface:
+  `values_check`, `values_evaluate`, `jural_correlate`, `deontic_govern`, `mcp_cooperate`.
+- **CML library-upgrade protocol** — [`CML_UPGRADE.md`](CML_UPGRADE.md) + [`CML_VERSIONS.md`](CML_VERSIONS.md)
+  + [`SCHEMA_VERSION`](SCHEMA_VERSION) + [`tools/reprocess_library.py`](tools/reprocess_library.py).
+  When the logic/CML schema changes, one idempotent command reprocesses the library
+  (concepts → `.q42` → demo → INDEX) at a stamped version; the SOURCE/GENERATED split means
+  human curation (overlays, `cml:Attested`/`exactMatch`, the KEEP set) is **never** clobbered by
+  regeneration. `--check` is the CI staleness gate. This operationalises the §5/§6/§9.1
+  overlay-and-curation architecture below.
+
+---
+
 ## 0. Status snapshot (what exists)
 
 - **102 instruments**, 102/102 valid Turtle, 24 categories: 94 OHCHR + 7 ICRC (Geneva I–IV,
