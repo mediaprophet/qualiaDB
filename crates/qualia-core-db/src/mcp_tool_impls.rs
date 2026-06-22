@@ -298,11 +298,10 @@ pub fn graph_resolve(args: &[u8]) -> Result<String, McpSystemError> {
         return Err(McpSystemError::InvalidParameters);
     }
     let id = crate::q_hash(iri);
-    // Scope the read guard so the RwLock is released before building the response.
-    let resolved = {
-        let guard = crate::daemon_graph::graph_read_guard();
-        crate::resolve::resolve_in_slice(guard.as_slice(), id)
-    };
+    // Resolve through the revision-cached per-cell index (rebuilt only when the graph
+    // actually changes), so a burst of resolves shares one O(n) build.
+    let resolved =
+        crate::graph_index::with_graph_index(|idx| crate::resolve::resolve_in_index(idx, id));
     let kind_name = resolved.kind.and_then(crate::modal_kind::kind_name);
     Ok(json!({
         "tool": "graph_resolve",

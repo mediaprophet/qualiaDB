@@ -704,6 +704,7 @@ pub mod deontic_logic;
 pub mod ontology_loader;
 #[cfg(not(target_arch = "wasm32"))]
 pub mod ilp_dispatcher;
+pub mod graph_index;
 pub mod indexing;
 pub mod modal_kind;
 pub mod resolve;
