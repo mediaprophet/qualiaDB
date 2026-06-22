@@ -124,9 +124,14 @@ full lib suite **1095 passed, 0 failed**.
   Privilege/Immunity, composing `dl::check_subsumption_quin` disjointness.
 - [x] `core-ontologies/jural.n3` curated vocabulary mirroring the Rust.
 
-### Phase 3 — STIT agency  [`deontic.rs` + `agent.rs`]
-- [ ] Agent-bound `O[α stit p]` / `P` / `F` (operator or bearer-tag) + tests.
-- [ ] Joint action `O[{α,β} stit p]` (shared liability) + tests.
+### Phase 3 — STIT agency  [`modalities/stit.rs`] ✅ DONE 2026-06-22
+**Test:** `cargo test … modalities::stit::` → **4 passed**; full lib suite **1099 passed, 0 failed**.
+- [x] Agent-bound `O[α stit φ]` / `F[α stit φ]` over the deontic norm Quin (subject = α, the
+  causal force); `brought_about` fact convention `(α, q42:broughtAbout, φ)`.
+- [x] `is_duty_bearer` (duty-bearer vs bystander) + `agentive_status` (post-hoc: brought
+  about → Discharged; obligation not met → omission → Violated; forbidden act done → Violated).
+- [x] Joint action `O[{α,β} stit φ]`: `joint_discharged` (any member suffices) +
+  `joint_liable_members` (shared liability — all members liable if undischarged).
 
 ### Phase 4 — Compositions with deontic (the bulk of §8–10, §13–14)
 - [ ] deontic × temporal: `O(Gp)`, `O(p U q)`, deadline-miss → CTD (compose `temporal_ltl.rs`).
