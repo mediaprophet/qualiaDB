@@ -1,0 +1,2899 @@
+@prefix rdf:     <http://www.w3.org/1999/02/22-rdf-syntax-ns#> .
+@prefix rdfs:    <http://www.w3.org/2000/01/rdf-schema#> .
+@prefix skos:    <http://www.w3.org/2004/02/skos/core#> .
+@prefix dc:      <http://purl.org/dc/terms/> .
+@prefix prov:    <http://www.w3.org/ns/prov#> .
+@prefix values:  <https://ns.webcivics.org/values/> .
+@prefix cml:     <https://ns.webcivics.org/cml/> .
+@prefix concept: <https://ns.webcivics.org/concept/> .
+@prefix doc:     <https://ns.webcivics.org/values/vienna-declaration-and-programme-action#> .
+
+# ============================================================
+# CML concept layer (LOGIC) — Vienna Declaration and Programme of Action
+# MACHINE-DERIVED from the TEXT layer (un-instruments) — cml:Proposed,
+# values:HeuristicDerived. Pending human attestation (cml:Attested / exactMatch).
+# One cml:Concept per provision; cml:realizedBy the provision; cml:asserts the
+# deontic norm. R1 universalisation materialised for duties borne by every Agent.
+# ============================================================
+
+concept:vienna-declaration-and-programme-action-paragraph-2 a cml:Concept ;
+    skos:prefLabel "Paragraph 2" ;
+    cml:realizedBy doc:paragraph-2 ;
+    cml:curationStatus cml:Proposed ;
+    prov:wasDerivedFrom <https://www.ohchr.org/en/instruments-mechanisms/instruments/vienna-declaration-and-programme-action> ;
+    dc:date "25 June 1993" ;
+    values:category "Foundational declarations" ;
+    cml:asserts concept:vienna-declaration-and-programme-action-paragraph-2-norm .
+
+concept:vienna-declaration-and-programme-action-paragraph-2-norm a values:Undertaking ;
+    cml:modality cml:Deontic ;
+    values:partOf concept:vienna-declaration-and-programme-action-paragraph-2 ;
+    values:deonticStatus values:HeuristicDerived ;
+    cml:curationStatus cml:Proposed .
+
+concept:vienna-declaration-and-programme-action-paragraph-3 a cml:Concept ;
+    skos:prefLabel "Paragraph 3" ;
+    cml:realizedBy doc:paragraph-3 ;
+    cml:curationStatus cml:Proposed ;
+    prov:wasDerivedFrom <https://www.ohchr.org/en/instruments-mechanisms/instruments/vienna-declaration-and-programme-action> ;
+    dc:date "25 June 1993" ;
+    values:category "Foundational declarations" ;
+    cml:asserts concept:vienna-declaration-and-programme-action-paragraph-3-norm .
+
+concept:vienna-declaration-and-programme-action-paragraph-3-norm a values:Undertaking ;
+    cml:modality cml:Deontic ;
+    values:partOf concept:vienna-declaration-and-programme-action-paragraph-3 ;
+    values:deonticStatus values:HeuristicDerived ;
+    cml:curationStatus cml:Proposed .
+
+concept:vienna-declaration-and-programme-action-paragraph-4 a cml:Concept ;
+    skos:prefLabel "Paragraph 4" ;
+    cml:realizedBy doc:paragraph-4 ;
+    cml:curationStatus cml:Proposed ;
+    prov:wasDerivedFrom <https://www.ohchr.org/en/instruments-mechanisms/instruments/vienna-declaration-and-programme-action> ;
+    dc:date "25 June 1993" ;
+    values:category "Foundational declarations" ;
+    cml:asserts concept:vienna-declaration-and-programme-action-paragraph-4-norm .
+
+concept:vienna-declaration-and-programme-action-paragraph-4-norm a values:Undertaking ;
+    cml:modality cml:Deontic ;
+    values:partOf concept:vienna-declaration-and-programme-action-paragraph-4 ;
+    values:deonticStatus values:HeuristicDerived ;
+    cml:curationStatus cml:Proposed .
+
+concept:vienna-declaration-and-programme-action-paragraph-5 a cml:Concept ;
+    skos:prefLabel "Paragraph 5" ;
+    cml:realizedBy doc:paragraph-5 ;
+    cml:curationStatus cml:Proposed ;
+    prov:wasDerivedFrom <https://www.ohchr.org/en/instruments-mechanisms/instruments/vienna-declaration-and-programme-action> ;
+    dc:date "25 June 1993" ;
+    values:category "Foundational declarations" ;
+    cml:asserts concept:vienna-declaration-and-programme-action-paragraph-5-norm .
+
+concept:vienna-declaration-and-programme-action-paragraph-5-norm a values:Undertaking ;
+    cml:modality cml:Deontic ;
+    values:partOf concept:vienna-declaration-and-programme-action-paragraph-5 ;
+    values:deonticStatus values:HeuristicDerived ;
+    cml:curationStatus cml:Proposed .
+
+concept:vienna-declaration-and-programme-action-paragraph-6 a cml:Concept ;
+    skos:prefLabel "Paragraph 6" ;
+    cml:realizedBy doc:paragraph-6 ;
+    cml:curationStatus cml:Proposed ;
+    prov:wasDerivedFrom <https://www.ohchr.org/en/instruments-mechanisms/instruments/vienna-declaration-and-programme-action> ;
+    dc:date "25 June 1993" ;
+    values:category "Foundational declarations" ;
+    cml:asserts concept:vienna-declaration-and-programme-action-paragraph-6-norm .
+
+concept:vienna-declaration-and-programme-action-paragraph-6-norm a values:Undertaking ;
+    cml:modality cml:Deontic ;
+    values:partOf concept:vienna-declaration-and-programme-action-paragraph-6 ;
+    values:deonticStatus values:HeuristicDerived ;
+    cml:curationStatus cml:Proposed .
+
+concept:vienna-declaration-and-programme-action-paragraph-7 a cml:Concept ;
+    skos:prefLabel "Paragraph 7" ;
+    cml:realizedBy doc:paragraph-7 ;
+    cml:curationStatus cml:Proposed ;
+    prov:wasDerivedFrom <https://www.ohchr.org/en/instruments-mechanisms/instruments/vienna-declaration-and-programme-action> ;
+    dc:date "25 June 1993" ;
+    values:category "Foundational declarations" ;
+    cml:asserts concept:vienna-declaration-and-programme-action-paragraph-7-norm .
+
+concept:vienna-declaration-and-programme-action-paragraph-7-norm a values:Undertaking ;
+    cml:modality cml:Deontic ;
+    values:partOf concept:vienna-declaration-and-programme-action-paragraph-7 ;
+    values:deonticStatus values:HeuristicDerived ;
+    cml:curationStatus cml:Proposed .
+
+concept:vienna-declaration-and-programme-action-paragraph-8 a cml:Concept ;
+    skos:prefLabel "Paragraph 8" ;
+    cml:realizedBy doc:paragraph-8 ;
+    cml:curationStatus cml:Proposed ;
+    prov:wasDerivedFrom <https://www.ohchr.org/en/instruments-mechanisms/instruments/vienna-declaration-and-programme-action> ;
+    dc:date "25 June 1993" ;
+    values:category "Foundational declarations" ;
+    cml:asserts concept:vienna-declaration-and-programme-action-paragraph-8-norm .
+
+concept:vienna-declaration-and-programme-action-paragraph-8-norm a values:Undertaking ;
+    cml:modality cml:Deontic ;
+    values:partOf concept:vienna-declaration-and-programme-action-paragraph-8 ;
+    values:deonticStatus values:HeuristicDerived ;
+    cml:curationStatus cml:Proposed .
+
+concept:vienna-declaration-and-programme-action-paragraph-9 a cml:Concept ;
+    skos:prefLabel "Paragraph 9" ;
+    cml:realizedBy doc:paragraph-9 ;
+    cml:curationStatus cml:Proposed ;
+    prov:wasDerivedFrom <https://www.ohchr.org/en/instruments-mechanisms/instruments/vienna-declaration-and-programme-action> ;
+    dc:date "25 June 1993" ;
+    values:category "Foundational declarations" ;
+    cml:asserts concept:vienna-declaration-and-programme-action-paragraph-9-norm .
+
+concept:vienna-declaration-and-programme-action-paragraph-9-norm a values:Undertaking ;
+    cml:modality cml:Deontic ;
+    values:partOf concept:vienna-declaration-and-programme-action-paragraph-9 ;
+    values:deonticStatus values:HeuristicDerived ;
+    cml:curationStatus cml:Proposed .
+
+concept:vienna-declaration-and-programme-action-paragraph-10 a cml:Concept ;
+    skos:prefLabel "Paragraph 10" ;
+    cml:realizedBy doc:paragraph-10 ;
+    cml:curationStatus cml:Proposed ;
+    prov:wasDerivedFrom <https://www.ohchr.org/en/instruments-mechanisms/instruments/vienna-declaration-and-programme-action> ;
+    dc:date "25 June 1993" ;
+    values:category "Foundational declarations" ;
+    cml:asserts concept:vienna-declaration-and-programme-action-paragraph-10-norm .
+
+concept:vienna-declaration-and-programme-action-paragraph-10-norm a values:Undertaking ;
+    cml:modality cml:Deontic ;
+    values:partOf concept:vienna-declaration-and-programme-action-paragraph-10 ;
+    values:deonticStatus values:HeuristicDerived ;
+    cml:curationStatus cml:Proposed .
+
+concept:vienna-declaration-and-programme-action-paragraph-11 a cml:Concept ;
+    skos:prefLabel "Paragraph 11" ;
+    cml:realizedBy doc:paragraph-11 ;
+    cml:curationStatus cml:Proposed ;
+    prov:wasDerivedFrom <https://www.ohchr.org/en/instruments-mechanisms/instruments/vienna-declaration-and-programme-action> ;
+    dc:date "25 June 1993" ;
+    values:category "Foundational declarations" ;
+    cml:asserts concept:vienna-declaration-and-programme-action-paragraph-11-norm .
+
+concept:vienna-declaration-and-programme-action-paragraph-11-norm a values:Undertaking ;
+    cml:modality cml:Deontic ;
+    values:partOf concept:vienna-declaration-and-programme-action-paragraph-11 ;
+    values:deonticStatus values:HeuristicDerived ;
+    cml:curationStatus cml:Proposed .
+
+concept:vienna-declaration-and-programme-action-paragraph-12 a cml:Concept ;
+    skos:prefLabel "Paragraph 12" ;
+    cml:realizedBy doc:paragraph-12 ;
+    cml:curationStatus cml:Proposed ;
+    prov:wasDerivedFrom <https://www.ohchr.org/en/instruments-mechanisms/instruments/vienna-declaration-and-programme-action> ;
+    dc:date "25 June 1993" ;
+    values:category "Foundational declarations" ;
+    cml:asserts concept:vienna-declaration-and-programme-action-paragraph-12-norm .
+
+concept:vienna-declaration-and-programme-action-paragraph-12-norm a values:Undertaking ;
+    cml:modality cml:Deontic ;
+    values:partOf concept:vienna-declaration-and-programme-action-paragraph-12 ;
+    values:deonticStatus values:HeuristicDerived ;
+    cml:curationStatus cml:Proposed .
+
+concept:vienna-declaration-and-programme-action-paragraph-13 a cml:Concept ;
+    skos:prefLabel "Paragraph 13" ;
+    cml:realizedBy doc:paragraph-13 ;
+    cml:curationStatus cml:Proposed ;
+    prov:wasDerivedFrom <https://www.ohchr.org/en/instruments-mechanisms/instruments/vienna-declaration-and-programme-action> ;
+    dc:date "25 June 1993" ;
+    values:category "Foundational declarations" ;
+    cml:asserts concept:vienna-declaration-and-programme-action-paragraph-13-norm .
+
+concept:vienna-declaration-and-programme-action-paragraph-13-norm a values:Undertaking ;
+    cml:modality cml:Deontic ;
+    values:partOf concept:vienna-declaration-and-programme-action-paragraph-13 ;
+    values:deonticStatus values:HeuristicDerived ;
+    cml:curationStatus cml:Proposed .
+
+concept:vienna-declaration-and-programme-action-paragraph-14 a cml:Concept ;
+    skos:prefLabel "Paragraph 14" ;
+    cml:realizedBy doc:paragraph-14 ;
+    cml:curationStatus cml:Proposed ;
+    prov:wasDerivedFrom <https://www.ohchr.org/en/instruments-mechanisms/instruments/vienna-declaration-and-programme-action> ;
+    dc:date "25 June 1993" ;
+    values:category "Foundational declarations" ;
+    cml:asserts concept:vienna-declaration-and-programme-action-paragraph-14-norm .
+
+concept:vienna-declaration-and-programme-action-paragraph-14-norm a values:Undertaking ;
+    cml:modality cml:Deontic ;
+    values:partOf concept:vienna-declaration-and-programme-action-paragraph-14 ;
+    values:deonticStatus values:HeuristicDerived ;
+    cml:curationStatus cml:Proposed .
+
+concept:vienna-declaration-and-programme-action-paragraph-15 a cml:Concept ;
+    skos:prefLabel "Paragraph 15" ;
+    cml:realizedBy doc:paragraph-15 ;
+    cml:curationStatus cml:Proposed ;
+    prov:wasDerivedFrom <https://www.ohchr.org/en/instruments-mechanisms/instruments/vienna-declaration-and-programme-action> ;
+    dc:date "25 June 1993" ;
+    values:category "Foundational declarations" ;
+    cml:asserts concept:vienna-declaration-and-programme-action-paragraph-15-norm .
+
+concept:vienna-declaration-and-programme-action-paragraph-15-norm a values:Undertaking ;
+    cml:modality cml:Deontic ;
+    values:partOf concept:vienna-declaration-and-programme-action-paragraph-15 ;
+    values:deonticStatus values:HeuristicDerived ;
+    cml:curationStatus cml:Proposed .
+
+concept:vienna-declaration-and-programme-action-paragraph-16 a cml:Concept ;
+    skos:prefLabel "Paragraph 16" ;
+    cml:realizedBy doc:paragraph-16 ;
+    cml:curationStatus cml:Proposed ;
+    prov:wasDerivedFrom <https://www.ohchr.org/en/instruments-mechanisms/instruments/vienna-declaration-and-programme-action> ;
+    dc:date "25 June 1993" ;
+    values:category "Foundational declarations" ;
+    cml:asserts concept:vienna-declaration-and-programme-action-paragraph-16-norm .
+
+concept:vienna-declaration-and-programme-action-paragraph-16-norm a values:Undertaking ;
+    cml:modality cml:Deontic ;
+    values:partOf concept:vienna-declaration-and-programme-action-paragraph-16 ;
+    values:deonticStatus values:HeuristicDerived ;
+    cml:curationStatus cml:Proposed .
+
+concept:vienna-declaration-and-programme-action-paragraph-17 a cml:Concept ;
+    skos:prefLabel "Paragraph 17" ;
+    cml:realizedBy doc:paragraph-17 ;
+    cml:curationStatus cml:Proposed ;
+    prov:wasDerivedFrom <https://www.ohchr.org/en/instruments-mechanisms/instruments/vienna-declaration-and-programme-action> ;
+    dc:date "25 June 1993" ;
+    values:category "Foundational declarations" ;
+    cml:asserts concept:vienna-declaration-and-programme-action-paragraph-17-norm .
+
+concept:vienna-declaration-and-programme-action-paragraph-17-norm a values:Undertaking ;
+    cml:modality cml:Deontic ;
+    values:partOf concept:vienna-declaration-and-programme-action-paragraph-17 ;
+    values:deonticStatus values:HeuristicDerived ;
+    cml:curationStatus cml:Proposed .
+
+concept:vienna-declaration-and-programme-action-paragraph-18 a cml:Concept ;
+    skos:prefLabel "Paragraph 18" ;
+    cml:realizedBy doc:paragraph-18 ;
+    cml:curationStatus cml:Proposed ;
+    prov:wasDerivedFrom <https://www.ohchr.org/en/instruments-mechanisms/instruments/vienna-declaration-and-programme-action> ;
+    dc:date "25 June 1993" ;
+    values:category "Foundational declarations" ;
+    cml:asserts concept:vienna-declaration-and-programme-action-paragraph-18-norm .
+
+concept:vienna-declaration-and-programme-action-paragraph-18-norm a values:Undertaking ;
+    cml:modality cml:Deontic ;
+    values:partOf concept:vienna-declaration-and-programme-action-paragraph-18 ;
+    values:deonticStatus values:HeuristicDerived ;
+    cml:curationStatus cml:Proposed .
+
+concept:vienna-declaration-and-programme-action-paragraph-19 a cml:Concept ;
+    skos:prefLabel "Paragraph 19" ;
+    cml:realizedBy doc:paragraph-19 ;
+    cml:curationStatus cml:Proposed ;
+    prov:wasDerivedFrom <https://www.ohchr.org/en/instruments-mechanisms/instruments/vienna-declaration-and-programme-action> ;
+    dc:date "25 June 1993" ;
+    values:category "Foundational declarations" ;
+    cml:asserts concept:vienna-declaration-and-programme-action-paragraph-19-norm .
+
+concept:vienna-declaration-and-programme-action-paragraph-19-norm a values:Undertaking ;
+    cml:modality cml:Deontic ;
+    values:partOf concept:vienna-declaration-and-programme-action-paragraph-19 ;
+    values:deonticStatus values:HeuristicDerived ;
+    cml:curationStatus cml:Proposed .
+
+concept:vienna-declaration-and-programme-action-paragraph-20 a cml:Concept ;
+    skos:prefLabel "Paragraph 20" ;
+    cml:realizedBy doc:paragraph-20 ;
+    cml:curationStatus cml:Proposed ;
+    prov:wasDerivedFrom <https://www.ohchr.org/en/instruments-mechanisms/instruments/vienna-declaration-and-programme-action> ;
+    dc:date "25 June 1993" ;
+    values:category "Foundational declarations" ;
+    cml:asserts concept:vienna-declaration-and-programme-action-paragraph-20-norm .
+
+concept:vienna-declaration-and-programme-action-paragraph-20-norm a values:Undertaking ;
+    cml:modality cml:Deontic ;
+    values:partOf concept:vienna-declaration-and-programme-action-paragraph-20 ;
+    values:deonticStatus values:HeuristicDerived ;
+    cml:curationStatus cml:Proposed .
+
+concept:vienna-declaration-and-programme-action-paragraph-21 a cml:Concept ;
+    skos:prefLabel "Paragraph 21" ;
+    cml:realizedBy doc:paragraph-21 ;
+    cml:curationStatus cml:Proposed ;
+    prov:wasDerivedFrom <https://www.ohchr.org/en/instruments-mechanisms/instruments/vienna-declaration-and-programme-action> ;
+    dc:date "25 June 1993" ;
+    values:category "Foundational declarations" ;
+    cml:asserts concept:vienna-declaration-and-programme-action-paragraph-21-norm .
+
+concept:vienna-declaration-and-programme-action-paragraph-21-norm a values:Undertaking ;
+    cml:modality cml:Deontic ;
+    values:partOf concept:vienna-declaration-and-programme-action-paragraph-21 ;
+    values:deonticStatus values:HeuristicDerived ;
+    cml:curationStatus cml:Proposed .
+
+concept:vienna-declaration-and-programme-action-paragraph-22 a cml:Concept ;
+    skos:prefLabel "Paragraph 22" ;
+    cml:realizedBy doc:paragraph-22 ;
+    cml:curationStatus cml:Proposed ;
+    prov:wasDerivedFrom <https://www.ohchr.org/en/instruments-mechanisms/instruments/vienna-declaration-and-programme-action> ;
+    dc:date "25 June 1993" ;
+    values:category "Foundational declarations" ;
+    cml:asserts concept:vienna-declaration-and-programme-action-paragraph-22-norm .
+
+concept:vienna-declaration-and-programme-action-paragraph-22-norm a values:Undertaking ;
+    cml:modality cml:Deontic ;
+    values:partOf concept:vienna-declaration-and-programme-action-paragraph-22 ;
+    values:deonticStatus values:HeuristicDerived ;
+    cml:curationStatus cml:Proposed .
+
+concept:vienna-declaration-and-programme-action-paragraph-23 a cml:Concept ;
+    skos:prefLabel "Paragraph 23" ;
+    cml:realizedBy doc:paragraph-23 ;
+    cml:curationStatus cml:Proposed ;
+    prov:wasDerivedFrom <https://www.ohchr.org/en/instruments-mechanisms/instruments/vienna-declaration-and-programme-action> ;
+    dc:date "25 June 1993" ;
+    values:category "Foundational declarations" ;
+    cml:asserts concept:vienna-declaration-and-programme-action-paragraph-23-norm .
+
+concept:vienna-declaration-and-programme-action-paragraph-23-norm a values:Undertaking ;
+    cml:modality cml:Deontic ;
+    values:partOf concept:vienna-declaration-and-programme-action-paragraph-23 ;
+    values:deonticStatus values:HeuristicDerived ;
+    cml:curationStatus cml:Proposed .
+
+concept:vienna-declaration-and-programme-action-paragraph-24 a cml:Concept ;
+    skos:prefLabel "Paragraph 24" ;
+    cml:realizedBy doc:paragraph-24 ;
+    cml:curationStatus cml:Proposed ;
+    prov:wasDerivedFrom <https://www.ohchr.org/en/instruments-mechanisms/instruments/vienna-declaration-and-programme-action> ;
+    dc:date "25 June 1993" ;
+    values:category "Foundational declarations" ;
+    cml:asserts concept:vienna-declaration-and-programme-action-paragraph-24-norm .
+
+concept:vienna-declaration-and-programme-action-paragraph-24-norm a values:Right ;
+    cml:modality cml:Deontic ;
+    values:partOf concept:vienna-declaration-and-programme-action-paragraph-24 ;
+    values:heldBy values:NaturalPerson ;
+    values:deonticStatus values:HeuristicDerived ;
+    cml:curationStatus cml:Proposed .
+
+concept:vienna-declaration-and-programme-action-paragraph-25 a cml:Concept ;
+    skos:prefLabel "Paragraph 25" ;
+    cml:realizedBy doc:paragraph-25 ;
+    cml:curationStatus cml:Proposed ;
+    prov:wasDerivedFrom <https://www.ohchr.org/en/instruments-mechanisms/instruments/vienna-declaration-and-programme-action> ;
+    dc:date "25 June 1993" ;
+    values:category "Foundational declarations" ;
+    cml:asserts concept:vienna-declaration-and-programme-action-paragraph-25-norm .
+
+concept:vienna-declaration-and-programme-action-paragraph-25-norm a values:Undertaking ;
+    cml:modality cml:Deontic ;
+    values:partOf concept:vienna-declaration-and-programme-action-paragraph-25 ;
+    values:deonticStatus values:HeuristicDerived ;
+    cml:curationStatus cml:Proposed .
+
+concept:vienna-declaration-and-programme-action-paragraph-26 a cml:Concept ;
+    skos:prefLabel "Paragraph 26" ;
+    cml:realizedBy doc:paragraph-26 ;
+    cml:curationStatus cml:Proposed ;
+    prov:wasDerivedFrom <https://www.ohchr.org/en/instruments-mechanisms/instruments/vienna-declaration-and-programme-action> ;
+    dc:date "25 June 1993" ;
+    values:category "Foundational declarations" ;
+    cml:asserts concept:vienna-declaration-and-programme-action-paragraph-26-norm .
+
+concept:vienna-declaration-and-programme-action-paragraph-26-norm a values:Prohibition ;
+    cml:modality cml:Deontic ;
+    values:partOf concept:vienna-declaration-and-programme-action-paragraph-26 ;
+    values:borneBy values:Agent ;
+    values:deonticStatus values:HeuristicDerived ;
+    cml:curationStatus cml:Proposed .
+
+concept:vienna-declaration-and-programme-action-paragraph-27 a cml:Concept ;
+    skos:prefLabel "Paragraph 27" ;
+    cml:realizedBy doc:paragraph-27 ;
+    cml:curationStatus cml:Proposed ;
+    prov:wasDerivedFrom <https://www.ohchr.org/en/instruments-mechanisms/instruments/vienna-declaration-and-programme-action> ;
+    dc:date "25 June 1993" ;
+    values:category "Foundational declarations" ;
+    cml:asserts concept:vienna-declaration-and-programme-action-paragraph-27-norm .
+
+concept:vienna-declaration-and-programme-action-paragraph-27-norm a values:Undertaking ;
+    cml:modality cml:Deontic ;
+    values:partOf concept:vienna-declaration-and-programme-action-paragraph-27 ;
+    values:deonticStatus values:HeuristicDerived ;
+    cml:curationStatus cml:Proposed .
+
+concept:vienna-declaration-and-programme-action-paragraph-28 a cml:Concept ;
+    skos:prefLabel "Paragraph 28" ;
+    cml:realizedBy doc:paragraph-28 ;
+    cml:curationStatus cml:Proposed ;
+    prov:wasDerivedFrom <https://www.ohchr.org/en/instruments-mechanisms/instruments/vienna-declaration-and-programme-action> ;
+    dc:date "25 June 1993" ;
+    values:category "Foundational declarations" ;
+    cml:asserts concept:vienna-declaration-and-programme-action-paragraph-28-norm .
+
+concept:vienna-declaration-and-programme-action-paragraph-28-norm a values:Undertaking ;
+    cml:modality cml:Deontic ;
+    values:partOf concept:vienna-declaration-and-programme-action-paragraph-28 ;
+    values:deonticStatus values:HeuristicDerived ;
+    cml:curationStatus cml:Proposed .
+
+concept:vienna-declaration-and-programme-action-paragraph-29 a cml:Concept ;
+    skos:prefLabel "Paragraph 29" ;
+    cml:realizedBy doc:paragraph-29 ;
+    cml:curationStatus cml:Proposed ;
+    prov:wasDerivedFrom <https://www.ohchr.org/en/instruments-mechanisms/instruments/vienna-declaration-and-programme-action> ;
+    dc:date "25 June 1993" ;
+    values:category "Foundational declarations" ;
+    cml:asserts concept:vienna-declaration-and-programme-action-paragraph-29-norm .
+
+concept:vienna-declaration-and-programme-action-paragraph-29-norm a values:Undertaking ;
+    cml:modality cml:Deontic ;
+    values:partOf concept:vienna-declaration-and-programme-action-paragraph-29 ;
+    values:deonticStatus values:HeuristicDerived ;
+    cml:curationStatus cml:Proposed .
+
+concept:vienna-declaration-and-programme-action-paragraph-30 a cml:Concept ;
+    skos:prefLabel "Paragraph 30" ;
+    cml:realizedBy doc:paragraph-30 ;
+    cml:curationStatus cml:Proposed ;
+    prov:wasDerivedFrom <https://www.ohchr.org/en/instruments-mechanisms/instruments/vienna-declaration-and-programme-action> ;
+    dc:date "25 June 1993" ;
+    values:category "Foundational declarations" ;
+    cml:asserts concept:vienna-declaration-and-programme-action-paragraph-30-norm .
+
+concept:vienna-declaration-and-programme-action-paragraph-30-norm a values:Undertaking ;
+    cml:modality cml:Deontic ;
+    values:partOf concept:vienna-declaration-and-programme-action-paragraph-30 ;
+    values:deonticStatus values:HeuristicDerived ;
+    cml:curationStatus cml:Proposed .
+
+concept:vienna-declaration-and-programme-action-paragraph-31 a cml:Concept ;
+    skos:prefLabel "Paragraph 31" ;
+    cml:realizedBy doc:paragraph-31 ;
+    cml:curationStatus cml:Proposed ;
+    prov:wasDerivedFrom <https://www.ohchr.org/en/instruments-mechanisms/instruments/vienna-declaration-and-programme-action> ;
+    dc:date "25 June 1993" ;
+    values:category "Foundational declarations" ;
+    cml:asserts concept:vienna-declaration-and-programme-action-paragraph-31-norm .
+
+concept:vienna-declaration-and-programme-action-paragraph-31-norm a values:Undertaking ;
+    cml:modality cml:Deontic ;
+    values:partOf concept:vienna-declaration-and-programme-action-paragraph-31 ;
+    values:deonticStatus values:HeuristicDerived ;
+    cml:curationStatus cml:Proposed .
+
+concept:vienna-declaration-and-programme-action-paragraph-32 a cml:Concept ;
+    skos:prefLabel "Paragraph 32" ;
+    cml:realizedBy doc:paragraph-32 ;
+    cml:curationStatus cml:Proposed ;
+    prov:wasDerivedFrom <https://www.ohchr.org/en/instruments-mechanisms/instruments/vienna-declaration-and-programme-action> ;
+    dc:date "25 June 1993" ;
+    values:category "Foundational declarations" ;
+    cml:asserts concept:vienna-declaration-and-programme-action-paragraph-32-norm .
+
+concept:vienna-declaration-and-programme-action-paragraph-32-norm a values:Undertaking ;
+    cml:modality cml:Deontic ;
+    values:partOf concept:vienna-declaration-and-programme-action-paragraph-32 ;
+    values:deonticStatus values:HeuristicDerived ;
+    cml:curationStatus cml:Proposed .
+
+concept:vienna-declaration-and-programme-action-paragraph-33 a cml:Concept ;
+    skos:prefLabel "Paragraph 33" ;
+    cml:realizedBy doc:paragraph-33 ;
+    cml:curationStatus cml:Proposed ;
+    prov:wasDerivedFrom <https://www.ohchr.org/en/instruments-mechanisms/instruments/vienna-declaration-and-programme-action> ;
+    dc:date "25 June 1993" ;
+    values:category "Foundational declarations" ;
+    cml:asserts concept:vienna-declaration-and-programme-action-paragraph-33-norm .
+
+concept:vienna-declaration-and-programme-action-paragraph-33-norm a values:Undertaking ;
+    cml:modality cml:Deontic ;
+    values:partOf concept:vienna-declaration-and-programme-action-paragraph-33 ;
+    values:deonticStatus values:HeuristicDerived ;
+    cml:curationStatus cml:Proposed .
+
+concept:vienna-declaration-and-programme-action-paragraph-34 a cml:Concept ;
+    skos:prefLabel "Paragraph 34" ;
+    cml:realizedBy doc:paragraph-34 ;
+    cml:curationStatus cml:Proposed ;
+    prov:wasDerivedFrom <https://www.ohchr.org/en/instruments-mechanisms/instruments/vienna-declaration-and-programme-action> ;
+    dc:date "25 June 1993" ;
+    values:category "Foundational declarations" ;
+    cml:asserts concept:vienna-declaration-and-programme-action-paragraph-34-norm .
+
+concept:vienna-declaration-and-programme-action-paragraph-34-norm a values:Right ;
+    cml:modality cml:Deontic ;
+    values:partOf concept:vienna-declaration-and-programme-action-paragraph-34 ;
+    values:heldBy values:NaturalPerson ;
+    values:deonticStatus values:HeuristicDerived ;
+    cml:curationStatus cml:Proposed .
+
+concept:vienna-declaration-and-programme-action-paragraph-35 a cml:Concept ;
+    skos:prefLabel "Paragraph 35" ;
+    cml:realizedBy doc:paragraph-35 ;
+    cml:curationStatus cml:Proposed ;
+    prov:wasDerivedFrom <https://www.ohchr.org/en/instruments-mechanisms/instruments/vienna-declaration-and-programme-action> ;
+    dc:date "25 June 1993" ;
+    values:category "Foundational declarations" ;
+    cml:asserts concept:vienna-declaration-and-programme-action-paragraph-35-norm .
+
+concept:vienna-declaration-and-programme-action-paragraph-35-norm a values:Right ;
+    cml:modality cml:Deontic ;
+    values:partOf concept:vienna-declaration-and-programme-action-paragraph-35 ;
+    values:heldBy values:NaturalPerson ;
+    values:deonticStatus values:HeuristicDerived ;
+    cml:curationStatus cml:Proposed .
+
+concept:vienna-declaration-and-programme-action-paragraph-36 a cml:Concept ;
+    skos:prefLabel "Paragraph 36" ;
+    cml:realizedBy doc:paragraph-36 ;
+    cml:curationStatus cml:Proposed ;
+    prov:wasDerivedFrom <https://www.ohchr.org/en/instruments-mechanisms/instruments/vienna-declaration-and-programme-action> ;
+    dc:date "25 June 1993" ;
+    values:category "Foundational declarations" ;
+    cml:asserts concept:vienna-declaration-and-programme-action-paragraph-36-norm .
+
+concept:vienna-declaration-and-programme-action-paragraph-36-norm a values:Prohibition ;
+    cml:modality cml:Deontic ;
+    values:partOf concept:vienna-declaration-and-programme-action-paragraph-36 ;
+    values:borneBy values:Agent ;
+    values:deonticStatus values:HeuristicDerived ;
+    cml:curationStatus cml:Proposed .
+
+concept:vienna-declaration-and-programme-action-paragraph-37 a cml:Concept ;
+    skos:prefLabel "Paragraph 37" ;
+    cml:realizedBy doc:paragraph-37 ;
+    cml:curationStatus cml:Proposed ;
+    prov:wasDerivedFrom <https://www.ohchr.org/en/instruments-mechanisms/instruments/vienna-declaration-and-programme-action> ;
+    dc:date "25 June 1993" ;
+    values:category "Foundational declarations" ;
+    cml:asserts concept:vienna-declaration-and-programme-action-paragraph-37-norm .
+
+concept:vienna-declaration-and-programme-action-paragraph-37-norm a values:Right ;
+    cml:modality cml:Deontic ;
+    values:partOf concept:vienna-declaration-and-programme-action-paragraph-37 ;
+    values:heldBy values:NaturalPerson ;
+    values:deonticStatus values:HeuristicDerived ;
+    cml:curationStatus cml:Proposed .
+
+concept:vienna-declaration-and-programme-action-paragraph-38 a cml:Concept ;
+    skos:prefLabel "Paragraph 38" ;
+    cml:realizedBy doc:paragraph-38 ;
+    cml:curationStatus cml:Proposed ;
+    prov:wasDerivedFrom <https://www.ohchr.org/en/instruments-mechanisms/instruments/vienna-declaration-and-programme-action> ;
+    dc:date "25 June 1993" ;
+    values:category "Foundational declarations" ;
+    cml:asserts concept:vienna-declaration-and-programme-action-paragraph-38-norm .
+
+concept:vienna-declaration-and-programme-action-paragraph-38-norm a values:Right ;
+    cml:modality cml:Deontic ;
+    values:partOf concept:vienna-declaration-and-programme-action-paragraph-38 ;
+    values:heldBy values:NaturalPerson ;
+    values:deonticStatus values:HeuristicDerived ;
+    cml:curationStatus cml:Proposed .
+
+concept:vienna-declaration-and-programme-action-paragraph-39 a cml:Concept ;
+    skos:prefLabel "Paragraph 39" ;
+    cml:realizedBy doc:paragraph-39 ;
+    cml:curationStatus cml:Proposed ;
+    prov:wasDerivedFrom <https://www.ohchr.org/en/instruments-mechanisms/instruments/vienna-declaration-and-programme-action> ;
+    dc:date "25 June 1993" ;
+    values:category "Foundational declarations" ;
+    cml:asserts concept:vienna-declaration-and-programme-action-paragraph-39-norm .
+
+concept:vienna-declaration-and-programme-action-paragraph-39-norm a values:Right ;
+    cml:modality cml:Deontic ;
+    values:partOf concept:vienna-declaration-and-programme-action-paragraph-39 ;
+    values:heldBy values:NaturalPerson ;
+    values:deonticStatus values:HeuristicDerived ;
+    cml:curationStatus cml:Proposed .
+
+concept:vienna-declaration-and-programme-action-paragraph-40 a cml:Concept ;
+    skos:prefLabel "Paragraph 40" ;
+    cml:realizedBy doc:paragraph-40 ;
+    cml:curationStatus cml:Proposed ;
+    prov:wasDerivedFrom <https://www.ohchr.org/en/instruments-mechanisms/instruments/vienna-declaration-and-programme-action> ;
+    dc:date "25 June 1993" ;
+    values:category "Foundational declarations" ;
+    cml:asserts concept:vienna-declaration-and-programme-action-paragraph-40-norm .
+
+concept:vienna-declaration-and-programme-action-paragraph-40-norm a values:Undertaking ;
+    cml:modality cml:Deontic ;
+    values:partOf concept:vienna-declaration-and-programme-action-paragraph-40 ;
+    values:deonticStatus values:HeuristicDerived ;
+    cml:curationStatus cml:Proposed .
+
+concept:vienna-declaration-and-programme-action-paragraph-41 a cml:Concept ;
+    skos:prefLabel "Paragraph 41" ;
+    cml:realizedBy doc:paragraph-41 ;
+    cml:curationStatus cml:Proposed ;
+    prov:wasDerivedFrom <https://www.ohchr.org/en/instruments-mechanisms/instruments/vienna-declaration-and-programme-action> ;
+    dc:date "25 June 1993" ;
+    values:category "Foundational declarations" ;
+    cml:asserts concept:vienna-declaration-and-programme-action-paragraph-41-norm .
+
+concept:vienna-declaration-and-programme-action-paragraph-41-norm a values:Right ;
+    cml:modality cml:Deontic ;
+    values:partOf concept:vienna-declaration-and-programme-action-paragraph-41 ;
+    values:heldBy values:NaturalPerson ;
+    values:deonticStatus values:HeuristicDerived ;
+    cml:curationStatus cml:Proposed .
+
+concept:vienna-declaration-and-programme-action-paragraph-42 a cml:Concept ;
+    skos:prefLabel "Paragraph 42" ;
+    cml:realizedBy doc:paragraph-42 ;
+    cml:curationStatus cml:Proposed ;
+    prov:wasDerivedFrom <https://www.ohchr.org/en/instruments-mechanisms/instruments/vienna-declaration-and-programme-action> ;
+    dc:date "25 June 1993" ;
+    values:category "Foundational declarations" ;
+    cml:asserts concept:vienna-declaration-and-programme-action-paragraph-42-norm .
+
+concept:vienna-declaration-and-programme-action-paragraph-42-norm a values:Undertaking ;
+    cml:modality cml:Deontic ;
+    values:partOf concept:vienna-declaration-and-programme-action-paragraph-42 ;
+    values:deonticStatus values:HeuristicDerived ;
+    cml:curationStatus cml:Proposed .
+
+concept:vienna-declaration-and-programme-action-paragraph-43 a cml:Concept ;
+    skos:prefLabel "Paragraph 43" ;
+    cml:realizedBy doc:paragraph-43 ;
+    cml:curationStatus cml:Proposed ;
+    prov:wasDerivedFrom <https://www.ohchr.org/en/instruments-mechanisms/instruments/vienna-declaration-and-programme-action> ;
+    dc:date "25 June 1993" ;
+    values:category "Foundational declarations" ;
+    cml:asserts concept:vienna-declaration-and-programme-action-paragraph-43-norm .
+
+concept:vienna-declaration-and-programme-action-paragraph-43-norm a values:Undertaking ;
+    cml:modality cml:Deontic ;
+    values:partOf concept:vienna-declaration-and-programme-action-paragraph-43 ;
+    values:deonticStatus values:HeuristicDerived ;
+    cml:curationStatus cml:Proposed .
+
+concept:vienna-declaration-and-programme-action-paragraph-44 a cml:Concept ;
+    skos:prefLabel "Paragraph 44" ;
+    cml:realizedBy doc:paragraph-44 ;
+    cml:curationStatus cml:Proposed ;
+    prov:wasDerivedFrom <https://www.ohchr.org/en/instruments-mechanisms/instruments/vienna-declaration-and-programme-action> ;
+    dc:date "25 June 1993" ;
+    values:category "Foundational declarations" ;
+    cml:asserts concept:vienna-declaration-and-programme-action-paragraph-44-norm .
+
+concept:vienna-declaration-and-programme-action-paragraph-44-norm a values:Undertaking ;
+    cml:modality cml:Deontic ;
+    values:partOf concept:vienna-declaration-and-programme-action-paragraph-44 ;
+    values:deonticStatus values:HeuristicDerived ;
+    cml:curationStatus cml:Proposed .
+
+concept:vienna-declaration-and-programme-action-paragraph-45 a cml:Concept ;
+    skos:prefLabel "Paragraph 45" ;
+    cml:realizedBy doc:paragraph-45 ;
+    cml:curationStatus cml:Proposed ;
+    prov:wasDerivedFrom <https://www.ohchr.org/en/instruments-mechanisms/instruments/vienna-declaration-and-programme-action> ;
+    dc:date "25 June 1993" ;
+    values:category "Foundational declarations" ;
+    cml:asserts concept:vienna-declaration-and-programme-action-paragraph-45-norm .
+
+concept:vienna-declaration-and-programme-action-paragraph-45-norm a values:Undertaking ;
+    cml:modality cml:Deontic ;
+    values:partOf concept:vienna-declaration-and-programme-action-paragraph-45 ;
+    values:deonticStatus values:HeuristicDerived ;
+    cml:curationStatus cml:Proposed .
+
+concept:vienna-declaration-and-programme-action-paragraph-46 a cml:Concept ;
+    skos:prefLabel "Paragraph 46" ;
+    cml:realizedBy doc:paragraph-46 ;
+    cml:curationStatus cml:Proposed ;
+    prov:wasDerivedFrom <https://www.ohchr.org/en/instruments-mechanisms/instruments/vienna-declaration-and-programme-action> ;
+    dc:date "25 June 1993" ;
+    values:category "Foundational declarations" ;
+    cml:asserts concept:vienna-declaration-and-programme-action-paragraph-46-norm .
+
+concept:vienna-declaration-and-programme-action-paragraph-46-norm a values:Undertaking ;
+    cml:modality cml:Deontic ;
+    values:partOf concept:vienna-declaration-and-programme-action-paragraph-46 ;
+    values:deonticStatus values:HeuristicDerived ;
+    cml:curationStatus cml:Proposed .
+
+concept:vienna-declaration-and-programme-action-paragraph-47 a cml:Concept ;
+    skos:prefLabel "Paragraph 47" ;
+    cml:realizedBy doc:paragraph-47 ;
+    cml:curationStatus cml:Proposed ;
+    prov:wasDerivedFrom <https://www.ohchr.org/en/instruments-mechanisms/instruments/vienna-declaration-and-programme-action> ;
+    dc:date "25 June 1993" ;
+    values:category "Foundational declarations" ;
+    cml:asserts concept:vienna-declaration-and-programme-action-paragraph-47-norm .
+
+concept:vienna-declaration-and-programme-action-paragraph-47-norm a values:Undertaking ;
+    cml:modality cml:Deontic ;
+    values:partOf concept:vienna-declaration-and-programme-action-paragraph-47 ;
+    values:deonticStatus values:HeuristicDerived ;
+    cml:curationStatus cml:Proposed .
+
+concept:vienna-declaration-and-programme-action-paragraph-48 a cml:Concept ;
+    skos:prefLabel "Paragraph 48" ;
+    cml:realizedBy doc:paragraph-48 ;
+    cml:curationStatus cml:Proposed ;
+    prov:wasDerivedFrom <https://www.ohchr.org/en/instruments-mechanisms/instruments/vienna-declaration-and-programme-action> ;
+    dc:date "25 June 1993" ;
+    values:category "Foundational declarations" ;
+    cml:asserts concept:vienna-declaration-and-programme-action-paragraph-48-norm .
+
+concept:vienna-declaration-and-programme-action-paragraph-48-norm a values:Undertaking ;
+    cml:modality cml:Deontic ;
+    values:partOf concept:vienna-declaration-and-programme-action-paragraph-48 ;
+    values:deonticStatus values:HeuristicDerived ;
+    cml:curationStatus cml:Proposed .
+
+concept:vienna-declaration-and-programme-action-paragraph-49 a cml:Concept ;
+    skos:prefLabel "Paragraph 49" ;
+    cml:realizedBy doc:paragraph-49 ;
+    cml:curationStatus cml:Proposed ;
+    prov:wasDerivedFrom <https://www.ohchr.org/en/instruments-mechanisms/instruments/vienna-declaration-and-programme-action> ;
+    dc:date "25 June 1993" ;
+    values:category "Foundational declarations" ;
+    cml:asserts concept:vienna-declaration-and-programme-action-paragraph-49-norm .
+
+concept:vienna-declaration-and-programme-action-paragraph-49-norm a values:Undertaking ;
+    cml:modality cml:Deontic ;
+    values:partOf concept:vienna-declaration-and-programme-action-paragraph-49 ;
+    values:deonticStatus values:HeuristicDerived ;
+    cml:curationStatus cml:Proposed .
+
+concept:vienna-declaration-and-programme-action-paragraph-50 a cml:Concept ;
+    skos:prefLabel "Paragraph 50" ;
+    cml:realizedBy doc:paragraph-50 ;
+    cml:curationStatus cml:Proposed ;
+    prov:wasDerivedFrom <https://www.ohchr.org/en/instruments-mechanisms/instruments/vienna-declaration-and-programme-action> ;
+    dc:date "25 June 1993" ;
+    values:category "Foundational declarations" ;
+    cml:asserts concept:vienna-declaration-and-programme-action-paragraph-50-norm .
+
+concept:vienna-declaration-and-programme-action-paragraph-50-norm a values:Undertaking ;
+    cml:modality cml:Deontic ;
+    values:partOf concept:vienna-declaration-and-programme-action-paragraph-50 ;
+    values:deonticStatus values:HeuristicDerived ;
+    cml:curationStatus cml:Proposed .
+
+concept:vienna-declaration-and-programme-action-paragraph-51 a cml:Concept ;
+    skos:prefLabel "Paragraph 51" ;
+    cml:realizedBy doc:paragraph-51 ;
+    cml:curationStatus cml:Proposed ;
+    prov:wasDerivedFrom <https://www.ohchr.org/en/instruments-mechanisms/instruments/vienna-declaration-and-programme-action> ;
+    dc:date "25 June 1993" ;
+    values:category "Foundational declarations" ;
+    cml:asserts concept:vienna-declaration-and-programme-action-paragraph-51-norm .
+
+concept:vienna-declaration-and-programme-action-paragraph-51-norm a values:Undertaking ;
+    cml:modality cml:Deontic ;
+    values:partOf concept:vienna-declaration-and-programme-action-paragraph-51 ;
+    values:deonticStatus values:HeuristicDerived ;
+    cml:curationStatus cml:Proposed .
+
+concept:vienna-declaration-and-programme-action-paragraph-52 a cml:Concept ;
+    skos:prefLabel "Paragraph 52" ;
+    cml:realizedBy doc:paragraph-52 ;
+    cml:curationStatus cml:Proposed ;
+    prov:wasDerivedFrom <https://www.ohchr.org/en/instruments-mechanisms/instruments/vienna-declaration-and-programme-action> ;
+    dc:date "25 June 1993" ;
+    values:category "Foundational declarations" ;
+    cml:asserts concept:vienna-declaration-and-programme-action-paragraph-52-norm .
+
+concept:vienna-declaration-and-programme-action-paragraph-52-norm a values:Undertaking ;
+    cml:modality cml:Deontic ;
+    values:partOf concept:vienna-declaration-and-programme-action-paragraph-52 ;
+    values:deonticStatus values:HeuristicDerived ;
+    cml:curationStatus cml:Proposed .
+
+concept:vienna-declaration-and-programme-action-paragraph-53 a cml:Concept ;
+    skos:prefLabel "Paragraph 53" ;
+    cml:realizedBy doc:paragraph-53 ;
+    cml:curationStatus cml:Proposed ;
+    prov:wasDerivedFrom <https://www.ohchr.org/en/instruments-mechanisms/instruments/vienna-declaration-and-programme-action> ;
+    dc:date "25 June 1993" ;
+    values:category "Foundational declarations" ;
+    cml:asserts concept:vienna-declaration-and-programme-action-paragraph-53-norm .
+
+concept:vienna-declaration-and-programme-action-paragraph-53-norm a values:Undertaking ;
+    cml:modality cml:Deontic ;
+    values:partOf concept:vienna-declaration-and-programme-action-paragraph-53 ;
+    values:deonticStatus values:HeuristicDerived ;
+    cml:curationStatus cml:Proposed .
+
+concept:vienna-declaration-and-programme-action-paragraph-54 a cml:Concept ;
+    skos:prefLabel "Paragraph 54" ;
+    cml:realizedBy doc:paragraph-54 ;
+    cml:curationStatus cml:Proposed ;
+    prov:wasDerivedFrom <https://www.ohchr.org/en/instruments-mechanisms/instruments/vienna-declaration-and-programme-action> ;
+    dc:date "25 June 1993" ;
+    values:category "Foundational declarations" ;
+    cml:asserts concept:vienna-declaration-and-programme-action-paragraph-54-norm .
+
+concept:vienna-declaration-and-programme-action-paragraph-54-norm a values:Undertaking ;
+    cml:modality cml:Deontic ;
+    values:partOf concept:vienna-declaration-and-programme-action-paragraph-54 ;
+    values:deonticStatus values:HeuristicDerived ;
+    cml:curationStatus cml:Proposed .
+
+concept:vienna-declaration-and-programme-action-paragraph-55 a cml:Concept ;
+    skos:prefLabel "Paragraph 55" ;
+    cml:realizedBy doc:paragraph-55 ;
+    cml:curationStatus cml:Proposed ;
+    prov:wasDerivedFrom <https://www.ohchr.org/en/instruments-mechanisms/instruments/vienna-declaration-and-programme-action> ;
+    dc:date "25 June 1993" ;
+    values:category "Foundational declarations" ;
+    cml:asserts concept:vienna-declaration-and-programme-action-paragraph-55-norm .
+
+concept:vienna-declaration-and-programme-action-paragraph-55-norm a values:Right ;
+    cml:modality cml:Deontic ;
+    values:partOf concept:vienna-declaration-and-programme-action-paragraph-55 ;
+    values:heldBy values:NaturalPerson ;
+    values:deonticStatus values:HeuristicDerived ;
+    cml:curationStatus cml:Proposed .
+
+concept:vienna-declaration-and-programme-action-paragraph-56 a cml:Concept ;
+    skos:prefLabel "Paragraph 56" ;
+    cml:realizedBy doc:paragraph-56 ;
+    cml:curationStatus cml:Proposed ;
+    prov:wasDerivedFrom <https://www.ohchr.org/en/instruments-mechanisms/instruments/vienna-declaration-and-programme-action> ;
+    dc:date "25 June 1993" ;
+    values:category "Foundational declarations" ;
+    cml:asserts concept:vienna-declaration-and-programme-action-paragraph-56-norm .
+
+concept:vienna-declaration-and-programme-action-paragraph-56-norm a values:Undertaking ;
+    cml:modality cml:Deontic ;
+    values:partOf concept:vienna-declaration-and-programme-action-paragraph-56 ;
+    values:deonticStatus values:HeuristicDerived ;
+    cml:curationStatus cml:Proposed .
+
+concept:vienna-declaration-and-programme-action-paragraph-57 a cml:Concept ;
+    skos:prefLabel "Paragraph 57" ;
+    cml:realizedBy doc:paragraph-57 ;
+    cml:curationStatus cml:Proposed ;
+    prov:wasDerivedFrom <https://www.ohchr.org/en/instruments-mechanisms/instruments/vienna-declaration-and-programme-action> ;
+    dc:date "25 June 1993" ;
+    values:category "Foundational declarations" ;
+    cml:asserts concept:vienna-declaration-and-programme-action-paragraph-57-norm .
+
+concept:vienna-declaration-and-programme-action-paragraph-57-norm a values:Undertaking ;
+    cml:modality cml:Deontic ;
+    values:partOf concept:vienna-declaration-and-programme-action-paragraph-57 ;
+    values:deonticStatus values:HeuristicDerived ;
+    cml:curationStatus cml:Proposed .
+
+concept:vienna-declaration-and-programme-action-paragraph-58 a cml:Concept ;
+    skos:prefLabel "Paragraph 58" ;
+    cml:realizedBy doc:paragraph-58 ;
+    cml:curationStatus cml:Proposed ;
+    prov:wasDerivedFrom <https://www.ohchr.org/en/instruments-mechanisms/instruments/vienna-declaration-and-programme-action> ;
+    dc:date "25 June 1993" ;
+    values:category "Foundational declarations" ;
+    cml:asserts concept:vienna-declaration-and-programme-action-paragraph-58-norm .
+
+concept:vienna-declaration-and-programme-action-paragraph-58-norm a values:Undertaking ;
+    cml:modality cml:Deontic ;
+    values:partOf concept:vienna-declaration-and-programme-action-paragraph-58 ;
+    values:deonticStatus values:HeuristicDerived ;
+    cml:curationStatus cml:Proposed .
+
+concept:vienna-declaration-and-programme-action-paragraph-59 a cml:Concept ;
+    skos:prefLabel "Paragraph 59" ;
+    cml:realizedBy doc:paragraph-59 ;
+    cml:curationStatus cml:Proposed ;
+    prov:wasDerivedFrom <https://www.ohchr.org/en/instruments-mechanisms/instruments/vienna-declaration-and-programme-action> ;
+    dc:date "25 June 1993" ;
+    values:category "Foundational declarations" ;
+    cml:asserts concept:vienna-declaration-and-programme-action-paragraph-59-norm .
+
+concept:vienna-declaration-and-programme-action-paragraph-59-norm a values:Undertaking ;
+    cml:modality cml:Deontic ;
+    values:partOf concept:vienna-declaration-and-programme-action-paragraph-59 ;
+    values:deonticStatus values:HeuristicDerived ;
+    cml:curationStatus cml:Proposed .
+
+concept:vienna-declaration-and-programme-action-paragraph-60 a cml:Concept ;
+    skos:prefLabel "Paragraph 60" ;
+    cml:realizedBy doc:paragraph-60 ;
+    cml:curationStatus cml:Proposed ;
+    prov:wasDerivedFrom <https://www.ohchr.org/en/instruments-mechanisms/instruments/vienna-declaration-and-programme-action> ;
+    dc:date "25 June 1993" ;
+    values:category "Foundational declarations" ;
+    cml:asserts concept:vienna-declaration-and-programme-action-paragraph-60-norm .
+
+concept:vienna-declaration-and-programme-action-paragraph-60-norm a values:Right ;
+    cml:modality cml:Deontic ;
+    values:partOf concept:vienna-declaration-and-programme-action-paragraph-60 ;
+    values:heldBy values:NaturalPerson ;
+    values:deonticStatus values:HeuristicDerived ;
+    cml:curationStatus cml:Proposed .
+
+concept:vienna-declaration-and-programme-action-paragraph-61 a cml:Concept ;
+    skos:prefLabel "Paragraph 61" ;
+    cml:realizedBy doc:paragraph-61 ;
+    cml:curationStatus cml:Proposed ;
+    prov:wasDerivedFrom <https://www.ohchr.org/en/instruments-mechanisms/instruments/vienna-declaration-and-programme-action> ;
+    dc:date "25 June 1993" ;
+    values:category "Foundational declarations" ;
+    cml:asserts concept:vienna-declaration-and-programme-action-paragraph-61-norm .
+
+concept:vienna-declaration-and-programme-action-paragraph-61-norm a values:Undertaking ;
+    cml:modality cml:Deontic ;
+    values:partOf concept:vienna-declaration-and-programme-action-paragraph-61 ;
+    values:deonticStatus values:HeuristicDerived ;
+    cml:curationStatus cml:Proposed .
+
+concept:vienna-declaration-and-programme-action-paragraph-62 a cml:Concept ;
+    skos:prefLabel "Paragraph 62" ;
+    cml:realizedBy doc:paragraph-62 ;
+    cml:curationStatus cml:Proposed ;
+    prov:wasDerivedFrom <https://www.ohchr.org/en/instruments-mechanisms/instruments/vienna-declaration-and-programme-action> ;
+    dc:date "25 June 1993" ;
+    values:category "Foundational declarations" ;
+    cml:asserts concept:vienna-declaration-and-programme-action-paragraph-62-norm .
+
+concept:vienna-declaration-and-programme-action-paragraph-62-norm a values:Undertaking ;
+    cml:modality cml:Deontic ;
+    values:partOf concept:vienna-declaration-and-programme-action-paragraph-62 ;
+    values:deonticStatus values:HeuristicDerived ;
+    cml:curationStatus cml:Proposed .
+
+concept:vienna-declaration-and-programme-action-paragraph-63 a cml:Concept ;
+    skos:prefLabel "Paragraph 63" ;
+    cml:realizedBy doc:paragraph-63 ;
+    cml:curationStatus cml:Proposed ;
+    prov:wasDerivedFrom <https://www.ohchr.org/en/instruments-mechanisms/instruments/vienna-declaration-and-programme-action> ;
+    dc:date "25 June 1993" ;
+    values:category "Foundational declarations" ;
+    cml:asserts concept:vienna-declaration-and-programme-action-paragraph-63-norm .
+
+concept:vienna-declaration-and-programme-action-paragraph-63-norm a values:Undertaking ;
+    cml:modality cml:Deontic ;
+    values:partOf concept:vienna-declaration-and-programme-action-paragraph-63 ;
+    values:deonticStatus values:HeuristicDerived ;
+    cml:curationStatus cml:Proposed .
+
+concept:vienna-declaration-and-programme-action-paragraph-64 a cml:Concept ;
+    skos:prefLabel "Paragraph 64" ;
+    cml:realizedBy doc:paragraph-64 ;
+    cml:curationStatus cml:Proposed ;
+    prov:wasDerivedFrom <https://www.ohchr.org/en/instruments-mechanisms/instruments/vienna-declaration-and-programme-action> ;
+    dc:date "25 June 1993" ;
+    values:category "Foundational declarations" ;
+    cml:asserts concept:vienna-declaration-and-programme-action-paragraph-64-norm .
+
+concept:vienna-declaration-and-programme-action-paragraph-64-norm a values:Undertaking ;
+    cml:modality cml:Deontic ;
+    values:partOf concept:vienna-declaration-and-programme-action-paragraph-64 ;
+    values:deonticStatus values:HeuristicDerived ;
+    cml:curationStatus cml:Proposed .
+
+concept:vienna-declaration-and-programme-action-paragraph-65 a cml:Concept ;
+    skos:prefLabel "Paragraph 65" ;
+    cml:realizedBy doc:paragraph-65 ;
+    cml:curationStatus cml:Proposed ;
+    prov:wasDerivedFrom <https://www.ohchr.org/en/instruments-mechanisms/instruments/vienna-declaration-and-programme-action> ;
+    dc:date "25 June 1993" ;
+    values:category "Foundational declarations" ;
+    cml:asserts concept:vienna-declaration-and-programme-action-paragraph-65-norm .
+
+concept:vienna-declaration-and-programme-action-paragraph-65-norm a values:Undertaking ;
+    cml:modality cml:Deontic ;
+    values:partOf concept:vienna-declaration-and-programme-action-paragraph-65 ;
+    values:deonticStatus values:HeuristicDerived ;
+    cml:curationStatus cml:Proposed .
+
+concept:vienna-declaration-and-programme-action-paragraph-66 a cml:Concept ;
+    skos:prefLabel "Paragraph 66" ;
+    cml:realizedBy doc:paragraph-66 ;
+    cml:curationStatus cml:Proposed ;
+    prov:wasDerivedFrom <https://www.ohchr.org/en/instruments-mechanisms/instruments/vienna-declaration-and-programme-action> ;
+    dc:date "25 June 1993" ;
+    values:category "Foundational declarations" ;
+    cml:asserts concept:vienna-declaration-and-programme-action-paragraph-66-norm .
+
+concept:vienna-declaration-and-programme-action-paragraph-66-norm a values:Undertaking ;
+    cml:modality cml:Deontic ;
+    values:partOf concept:vienna-declaration-and-programme-action-paragraph-66 ;
+    values:deonticStatus values:HeuristicDerived ;
+    cml:curationStatus cml:Proposed .
+
+concept:vienna-declaration-and-programme-action-paragraph-67 a cml:Concept ;
+    skos:prefLabel "Paragraph 67" ;
+    cml:realizedBy doc:paragraph-67 ;
+    cml:curationStatus cml:Proposed ;
+    prov:wasDerivedFrom <https://www.ohchr.org/en/instruments-mechanisms/instruments/vienna-declaration-and-programme-action> ;
+    dc:date "25 June 1993" ;
+    values:category "Foundational declarations" ;
+    cml:asserts concept:vienna-declaration-and-programme-action-paragraph-67-norm .
+
+concept:vienna-declaration-and-programme-action-paragraph-67-norm a values:Undertaking ;
+    cml:modality cml:Deontic ;
+    values:partOf concept:vienna-declaration-and-programme-action-paragraph-67 ;
+    values:deonticStatus values:HeuristicDerived ;
+    cml:curationStatus cml:Proposed .
+
+concept:vienna-declaration-and-programme-action-paragraph-68 a cml:Concept ;
+    skos:prefLabel "Paragraph 68" ;
+    cml:realizedBy doc:paragraph-68 ;
+    cml:curationStatus cml:Proposed ;
+    prov:wasDerivedFrom <https://www.ohchr.org/en/instruments-mechanisms/instruments/vienna-declaration-and-programme-action> ;
+    dc:date "25 June 1993" ;
+    values:category "Foundational declarations" ;
+    cml:asserts concept:vienna-declaration-and-programme-action-paragraph-68-norm .
+
+concept:vienna-declaration-and-programme-action-paragraph-68-norm a values:Undertaking ;
+    cml:modality cml:Deontic ;
+    values:partOf concept:vienna-declaration-and-programme-action-paragraph-68 ;
+    values:deonticStatus values:HeuristicDerived ;
+    cml:curationStatus cml:Proposed .
+
+concept:vienna-declaration-and-programme-action-paragraph-69 a cml:Concept ;
+    skos:prefLabel "Paragraph 69" ;
+    cml:realizedBy doc:paragraph-69 ;
+    cml:curationStatus cml:Proposed ;
+    prov:wasDerivedFrom <https://www.ohchr.org/en/instruments-mechanisms/instruments/vienna-declaration-and-programme-action> ;
+    dc:date "25 June 1993" ;
+    values:category "Foundational declarations" ;
+    cml:asserts concept:vienna-declaration-and-programme-action-paragraph-69-norm .
+
+concept:vienna-declaration-and-programme-action-paragraph-69-norm a values:Undertaking ;
+    cml:modality cml:Deontic ;
+    values:partOf concept:vienna-declaration-and-programme-action-paragraph-69 ;
+    values:deonticStatus values:HeuristicDerived ;
+    cml:curationStatus cml:Proposed .
+
+concept:vienna-declaration-and-programme-action-paragraph-70 a cml:Concept ;
+    skos:prefLabel "Paragraph 70" ;
+    cml:realizedBy doc:paragraph-70 ;
+    cml:curationStatus cml:Proposed ;
+    prov:wasDerivedFrom <https://www.ohchr.org/en/instruments-mechanisms/instruments/vienna-declaration-and-programme-action> ;
+    dc:date "25 June 1993" ;
+    values:category "Foundational declarations" ;
+    cml:asserts concept:vienna-declaration-and-programme-action-paragraph-70-norm .
+
+concept:vienna-declaration-and-programme-action-paragraph-70-norm a values:Undertaking ;
+    cml:modality cml:Deontic ;
+    values:partOf concept:vienna-declaration-and-programme-action-paragraph-70 ;
+    values:deonticStatus values:HeuristicDerived ;
+    cml:curationStatus cml:Proposed .
+
+concept:vienna-declaration-and-programme-action-paragraph-71 a cml:Concept ;
+    skos:prefLabel "Paragraph 71" ;
+    cml:realizedBy doc:paragraph-71 ;
+    cml:curationStatus cml:Proposed ;
+    prov:wasDerivedFrom <https://www.ohchr.org/en/instruments-mechanisms/instruments/vienna-declaration-and-programme-action> ;
+    dc:date "25 June 1993" ;
+    values:category "Foundational declarations" ;
+    cml:asserts concept:vienna-declaration-and-programme-action-paragraph-71-norm .
+
+concept:vienna-declaration-and-programme-action-paragraph-71-norm a values:Undertaking ;
+    cml:modality cml:Deontic ;
+    values:partOf concept:vienna-declaration-and-programme-action-paragraph-71 ;
+    values:deonticStatus values:HeuristicDerived ;
+    cml:curationStatus cml:Proposed .
+
+concept:vienna-declaration-and-programme-action-paragraph-72 a cml:Concept ;
+    skos:prefLabel "Paragraph 72" ;
+    cml:realizedBy doc:paragraph-72 ;
+    cml:curationStatus cml:Proposed ;
+    prov:wasDerivedFrom <https://www.ohchr.org/en/instruments-mechanisms/instruments/vienna-declaration-and-programme-action> ;
+    dc:date "25 June 1993" ;
+    values:category "Foundational declarations" ;
+    cml:asserts concept:vienna-declaration-and-programme-action-paragraph-72-norm .
+
+concept:vienna-declaration-and-programme-action-paragraph-72-norm a values:Undertaking ;
+    cml:modality cml:Deontic ;
+    values:partOf concept:vienna-declaration-and-programme-action-paragraph-72 ;
+    values:deonticStatus values:HeuristicDerived ;
+    cml:curationStatus cml:Proposed .
+
+concept:vienna-declaration-and-programme-action-paragraph-73 a cml:Concept ;
+    skos:prefLabel "Paragraph 73" ;
+    cml:realizedBy doc:paragraph-73 ;
+    cml:curationStatus cml:Proposed ;
+    prov:wasDerivedFrom <https://www.ohchr.org/en/instruments-mechanisms/instruments/vienna-declaration-and-programme-action> ;
+    dc:date "25 June 1993" ;
+    values:category "Foundational declarations" ;
+    cml:asserts concept:vienna-declaration-and-programme-action-paragraph-73-norm .
+
+concept:vienna-declaration-and-programme-action-paragraph-73-norm a values:Undertaking ;
+    cml:modality cml:Deontic ;
+    values:partOf concept:vienna-declaration-and-programme-action-paragraph-73 ;
+    values:deonticStatus values:HeuristicDerived ;
+    cml:curationStatus cml:Proposed .
+
+concept:vienna-declaration-and-programme-action-paragraph-74 a cml:Concept ;
+    skos:prefLabel "Paragraph 74" ;
+    cml:realizedBy doc:paragraph-74 ;
+    cml:curationStatus cml:Proposed ;
+    prov:wasDerivedFrom <https://www.ohchr.org/en/instruments-mechanisms/instruments/vienna-declaration-and-programme-action> ;
+    dc:date "25 June 1993" ;
+    values:category "Foundational declarations" ;
+    cml:asserts concept:vienna-declaration-and-programme-action-paragraph-74-norm .
+
+concept:vienna-declaration-and-programme-action-paragraph-74-norm a values:Undertaking ;
+    cml:modality cml:Deontic ;
+    values:partOf concept:vienna-declaration-and-programme-action-paragraph-74 ;
+    values:deonticStatus values:HeuristicDerived ;
+    cml:curationStatus cml:Proposed .
+
+concept:vienna-declaration-and-programme-action-paragraph-75 a cml:Concept ;
+    skos:prefLabel "Paragraph 75" ;
+    cml:realizedBy doc:paragraph-75 ;
+    cml:curationStatus cml:Proposed ;
+    prov:wasDerivedFrom <https://www.ohchr.org/en/instruments-mechanisms/instruments/vienna-declaration-and-programme-action> ;
+    dc:date "25 June 1993" ;
+    values:category "Foundational declarations" ;
+    cml:asserts concept:vienna-declaration-and-programme-action-paragraph-75-norm .
+
+concept:vienna-declaration-and-programme-action-paragraph-75-norm a values:Undertaking ;
+    cml:modality cml:Deontic ;
+    values:partOf concept:vienna-declaration-and-programme-action-paragraph-75 ;
+    values:deonticStatus values:HeuristicDerived ;
+    cml:curationStatus cml:Proposed .
+
+concept:vienna-declaration-and-programme-action-paragraph-76 a cml:Concept ;
+    skos:prefLabel "Paragraph 76" ;
+    cml:realizedBy doc:paragraph-76 ;
+    cml:curationStatus cml:Proposed ;
+    prov:wasDerivedFrom <https://www.ohchr.org/en/instruments-mechanisms/instruments/vienna-declaration-and-programme-action> ;
+    dc:date "25 June 1993" ;
+    values:category "Foundational declarations" ;
+    cml:asserts concept:vienna-declaration-and-programme-action-paragraph-76-norm .
+
+concept:vienna-declaration-and-programme-action-paragraph-76-norm a values:Undertaking ;
+    cml:modality cml:Deontic ;
+    values:partOf concept:vienna-declaration-and-programme-action-paragraph-76 ;
+    values:deonticStatus values:HeuristicDerived ;
+    cml:curationStatus cml:Proposed .
+
+concept:vienna-declaration-and-programme-action-paragraph-77 a cml:Concept ;
+    skos:prefLabel "Paragraph 77" ;
+    cml:realizedBy doc:paragraph-77 ;
+    cml:curationStatus cml:Proposed ;
+    prov:wasDerivedFrom <https://www.ohchr.org/en/instruments-mechanisms/instruments/vienna-declaration-and-programme-action> ;
+    dc:date "25 June 1993" ;
+    values:category "Foundational declarations" ;
+    cml:asserts concept:vienna-declaration-and-programme-action-paragraph-77-norm .
+
+concept:vienna-declaration-and-programme-action-paragraph-77-norm a values:Undertaking ;
+    cml:modality cml:Deontic ;
+    values:partOf concept:vienna-declaration-and-programme-action-paragraph-77 ;
+    values:deonticStatus values:HeuristicDerived ;
+    cml:curationStatus cml:Proposed .
+
+concept:vienna-declaration-and-programme-action-paragraph-78 a cml:Concept ;
+    skos:prefLabel "Paragraph 78" ;
+    cml:realizedBy doc:paragraph-78 ;
+    cml:curationStatus cml:Proposed ;
+    prov:wasDerivedFrom <https://www.ohchr.org/en/instruments-mechanisms/instruments/vienna-declaration-and-programme-action> ;
+    dc:date "25 June 1993" ;
+    values:category "Foundational declarations" ;
+    cml:asserts concept:vienna-declaration-and-programme-action-paragraph-78-norm .
+
+concept:vienna-declaration-and-programme-action-paragraph-78-norm a values:Undertaking ;
+    cml:modality cml:Deontic ;
+    values:partOf concept:vienna-declaration-and-programme-action-paragraph-78 ;
+    values:deonticStatus values:HeuristicDerived ;
+    cml:curationStatus cml:Proposed .
+
+concept:vienna-declaration-and-programme-action-paragraph-79 a cml:Concept ;
+    skos:prefLabel "Paragraph 79" ;
+    cml:realizedBy doc:paragraph-79 ;
+    cml:curationStatus cml:Proposed ;
+    prov:wasDerivedFrom <https://www.ohchr.org/en/instruments-mechanisms/instruments/vienna-declaration-and-programme-action> ;
+    dc:date "25 June 1993" ;
+    values:category "Foundational declarations" ;
+    cml:asserts concept:vienna-declaration-and-programme-action-paragraph-79-norm .
+
+concept:vienna-declaration-and-programme-action-paragraph-79-norm a values:Undertaking ;
+    cml:modality cml:Deontic ;
+    values:partOf concept:vienna-declaration-and-programme-action-paragraph-79 ;
+    values:deonticStatus values:HeuristicDerived ;
+    cml:curationStatus cml:Proposed .
+
+concept:vienna-declaration-and-programme-action-paragraph-80 a cml:Concept ;
+    skos:prefLabel "Paragraph 80" ;
+    cml:realizedBy doc:paragraph-80 ;
+    cml:curationStatus cml:Proposed ;
+    prov:wasDerivedFrom <https://www.ohchr.org/en/instruments-mechanisms/instruments/vienna-declaration-and-programme-action> ;
+    dc:date "25 June 1993" ;
+    values:category "Foundational declarations" ;
+    cml:asserts concept:vienna-declaration-and-programme-action-paragraph-80-norm .
+
+concept:vienna-declaration-and-programme-action-paragraph-80-norm a values:Undertaking ;
+    cml:modality cml:Deontic ;
+    values:partOf concept:vienna-declaration-and-programme-action-paragraph-80 ;
+    values:deonticStatus values:HeuristicDerived ;
+    cml:curationStatus cml:Proposed .
+
+concept:vienna-declaration-and-programme-action-paragraph-81 a cml:Concept ;
+    skos:prefLabel "Paragraph 81" ;
+    cml:realizedBy doc:paragraph-81 ;
+    cml:curationStatus cml:Proposed ;
+    prov:wasDerivedFrom <https://www.ohchr.org/en/instruments-mechanisms/instruments/vienna-declaration-and-programme-action> ;
+    dc:date "25 June 1993" ;
+    values:category "Foundational declarations" ;
+    cml:asserts concept:vienna-declaration-and-programme-action-paragraph-81-norm .
+
+concept:vienna-declaration-and-programme-action-paragraph-81-norm a values:Undertaking ;
+    cml:modality cml:Deontic ;
+    values:partOf concept:vienna-declaration-and-programme-action-paragraph-81 ;
+    values:deonticStatus values:HeuristicDerived ;
+    cml:curationStatus cml:Proposed .
+
+concept:vienna-declaration-and-programme-action-paragraph-82 a cml:Concept ;
+    skos:prefLabel "Paragraph 82" ;
+    cml:realizedBy doc:paragraph-82 ;
+    cml:curationStatus cml:Proposed ;
+    prov:wasDerivedFrom <https://www.ohchr.org/en/instruments-mechanisms/instruments/vienna-declaration-and-programme-action> ;
+    dc:date "25 June 1993" ;
+    values:category "Foundational declarations" ;
+    cml:asserts concept:vienna-declaration-and-programme-action-paragraph-82-norm .
+
+concept:vienna-declaration-and-programme-action-paragraph-82-norm a values:Undertaking ;
+    cml:modality cml:Deontic ;
+    values:partOf concept:vienna-declaration-and-programme-action-paragraph-82 ;
+    values:deonticStatus values:HeuristicDerived ;
+    cml:curationStatus cml:Proposed .
+
+concept:vienna-declaration-and-programme-action-paragraph-83 a cml:Concept ;
+    skos:prefLabel "Paragraph 83" ;
+    cml:realizedBy doc:paragraph-83 ;
+    cml:curationStatus cml:Proposed ;
+    prov:wasDerivedFrom <https://www.ohchr.org/en/instruments-mechanisms/instruments/vienna-declaration-and-programme-action> ;
+    dc:date "25 June 1993" ;
+    values:category "Foundational declarations" ;
+    cml:asserts concept:vienna-declaration-and-programme-action-paragraph-83-norm .
+
+concept:vienna-declaration-and-programme-action-paragraph-83-norm a values:Undertaking ;
+    cml:modality cml:Deontic ;
+    values:partOf concept:vienna-declaration-and-programme-action-paragraph-83 ;
+    values:deonticStatus values:HeuristicDerived ;
+    cml:curationStatus cml:Proposed .
+
+concept:vienna-declaration-and-programme-action-paragraph-84 a cml:Concept ;
+    skos:prefLabel "Paragraph 84" ;
+    cml:realizedBy doc:paragraph-84 ;
+    cml:curationStatus cml:Proposed ;
+    prov:wasDerivedFrom <https://www.ohchr.org/en/instruments-mechanisms/instruments/vienna-declaration-and-programme-action> ;
+    dc:date "25 June 1993" ;
+    values:category "Foundational declarations" ;
+    cml:asserts concept:vienna-declaration-and-programme-action-paragraph-84-norm .
+
+concept:vienna-declaration-and-programme-action-paragraph-84-norm a values:Prohibition ;
+    cml:modality cml:Deontic ;
+    values:partOf concept:vienna-declaration-and-programme-action-paragraph-84 ;
+    values:borneBy values:Agent ;
+    values:deonticStatus values:HeuristicDerived ;
+    cml:curationStatus cml:Proposed .
+
+concept:vienna-declaration-and-programme-action-paragraph-85 a cml:Concept ;
+    skos:prefLabel "Paragraph 85" ;
+    cml:realizedBy doc:paragraph-85 ;
+    cml:curationStatus cml:Proposed ;
+    prov:wasDerivedFrom <https://www.ohchr.org/en/instruments-mechanisms/instruments/vienna-declaration-and-programme-action> ;
+    dc:date "25 June 1993" ;
+    values:category "Foundational declarations" ;
+    cml:asserts concept:vienna-declaration-and-programme-action-paragraph-85-norm .
+
+concept:vienna-declaration-and-programme-action-paragraph-85-norm a values:Undertaking ;
+    cml:modality cml:Deontic ;
+    values:partOf concept:vienna-declaration-and-programme-action-paragraph-85 ;
+    values:deonticStatus values:HeuristicDerived ;
+    cml:curationStatus cml:Proposed .
+
+concept:vienna-declaration-and-programme-action-paragraph-86 a cml:Concept ;
+    skos:prefLabel "Paragraph 86" ;
+    cml:realizedBy doc:paragraph-86 ;
+    cml:curationStatus cml:Proposed ;
+    prov:wasDerivedFrom <https://www.ohchr.org/en/instruments-mechanisms/instruments/vienna-declaration-and-programme-action> ;
+    dc:date "25 June 1993" ;
+    values:category "Foundational declarations" ;
+    cml:asserts concept:vienna-declaration-and-programme-action-paragraph-86-norm .
+
+concept:vienna-declaration-and-programme-action-paragraph-86-norm a values:Undertaking ;
+    cml:modality cml:Deontic ;
+    values:partOf concept:vienna-declaration-and-programme-action-paragraph-86 ;
+    values:deonticStatus values:HeuristicDerived ;
+    cml:curationStatus cml:Proposed .
+
+concept:vienna-declaration-and-programme-action-paragraph-87 a cml:Concept ;
+    skos:prefLabel "Paragraph 87" ;
+    cml:realizedBy doc:paragraph-87 ;
+    cml:curationStatus cml:Proposed ;
+    prov:wasDerivedFrom <https://www.ohchr.org/en/instruments-mechanisms/instruments/vienna-declaration-and-programme-action> ;
+    dc:date "25 June 1993" ;
+    values:category "Foundational declarations" ;
+    cml:asserts concept:vienna-declaration-and-programme-action-paragraph-87-norm .
+
+concept:vienna-declaration-and-programme-action-paragraph-87-norm a values:Undertaking ;
+    cml:modality cml:Deontic ;
+    values:partOf concept:vienna-declaration-and-programme-action-paragraph-87 ;
+    values:deonticStatus values:HeuristicDerived ;
+    cml:curationStatus cml:Proposed .
+
+concept:vienna-declaration-and-programme-action-paragraph-88 a cml:Concept ;
+    skos:prefLabel "Paragraph 88" ;
+    cml:realizedBy doc:paragraph-88 ;
+    cml:curationStatus cml:Proposed ;
+    prov:wasDerivedFrom <https://www.ohchr.org/en/instruments-mechanisms/instruments/vienna-declaration-and-programme-action> ;
+    dc:date "25 June 1993" ;
+    values:category "Foundational declarations" ;
+    cml:asserts concept:vienna-declaration-and-programme-action-paragraph-88-norm .
+
+concept:vienna-declaration-and-programme-action-paragraph-88-norm a values:Undertaking ;
+    cml:modality cml:Deontic ;
+    values:partOf concept:vienna-declaration-and-programme-action-paragraph-88 ;
+    values:deonticStatus values:HeuristicDerived ;
+    cml:curationStatus cml:Proposed .
+
+concept:vienna-declaration-and-programme-action-paragraph-89 a cml:Concept ;
+    skos:prefLabel "Paragraph 89" ;
+    cml:realizedBy doc:paragraph-89 ;
+    cml:curationStatus cml:Proposed ;
+    prov:wasDerivedFrom <https://www.ohchr.org/en/instruments-mechanisms/instruments/vienna-declaration-and-programme-action> ;
+    dc:date "25 June 1993" ;
+    values:category "Foundational declarations" ;
+    cml:asserts concept:vienna-declaration-and-programme-action-paragraph-89-norm .
+
+concept:vienna-declaration-and-programme-action-paragraph-89-norm a values:Undertaking ;
+    cml:modality cml:Deontic ;
+    values:partOf concept:vienna-declaration-and-programme-action-paragraph-89 ;
+    values:deonticStatus values:HeuristicDerived ;
+    cml:curationStatus cml:Proposed .
+
+concept:vienna-declaration-and-programme-action-paragraph-90 a cml:Concept ;
+    skos:prefLabel "Paragraph 90" ;
+    cml:realizedBy doc:paragraph-90 ;
+    cml:curationStatus cml:Proposed ;
+    prov:wasDerivedFrom <https://www.ohchr.org/en/instruments-mechanisms/instruments/vienna-declaration-and-programme-action> ;
+    dc:date "25 June 1993" ;
+    values:category "Foundational declarations" ;
+    cml:asserts concept:vienna-declaration-and-programme-action-paragraph-90-norm .
+
+concept:vienna-declaration-and-programme-action-paragraph-90-norm a values:Undertaking ;
+    cml:modality cml:Deontic ;
+    values:partOf concept:vienna-declaration-and-programme-action-paragraph-90 ;
+    values:deonticStatus values:HeuristicDerived ;
+    cml:curationStatus cml:Proposed .
+
+concept:vienna-declaration-and-programme-action-paragraph-91 a cml:Concept ;
+    skos:prefLabel "Paragraph 91" ;
+    cml:realizedBy doc:paragraph-91 ;
+    cml:curationStatus cml:Proposed ;
+    prov:wasDerivedFrom <https://www.ohchr.org/en/instruments-mechanisms/instruments/vienna-declaration-and-programme-action> ;
+    dc:date "25 June 1993" ;
+    values:category "Foundational declarations" ;
+    cml:asserts concept:vienna-declaration-and-programme-action-paragraph-91-norm .
+
+concept:vienna-declaration-and-programme-action-paragraph-91-norm a values:Undertaking ;
+    cml:modality cml:Deontic ;
+    values:partOf concept:vienna-declaration-and-programme-action-paragraph-91 ;
+    values:deonticStatus values:HeuristicDerived ;
+    cml:curationStatus cml:Proposed .
+
+concept:vienna-declaration-and-programme-action-paragraph-92 a cml:Concept ;
+    skos:prefLabel "Paragraph 92" ;
+    cml:realizedBy doc:paragraph-92 ;
+    cml:curationStatus cml:Proposed ;
+    prov:wasDerivedFrom <https://www.ohchr.org/en/instruments-mechanisms/instruments/vienna-declaration-and-programme-action> ;
+    dc:date "25 June 1993" ;
+    values:category "Foundational declarations" ;
+    cml:asserts concept:vienna-declaration-and-programme-action-paragraph-92-norm .
+
+concept:vienna-declaration-and-programme-action-paragraph-92-norm a values:Undertaking ;
+    cml:modality cml:Deontic ;
+    values:partOf concept:vienna-declaration-and-programme-action-paragraph-92 ;
+    values:deonticStatus values:HeuristicDerived ;
+    cml:curationStatus cml:Proposed .
+
+concept:vienna-declaration-and-programme-action-paragraph-93 a cml:Concept ;
+    skos:prefLabel "Paragraph 93" ;
+    cml:realizedBy doc:paragraph-93 ;
+    cml:curationStatus cml:Proposed ;
+    prov:wasDerivedFrom <https://www.ohchr.org/en/instruments-mechanisms/instruments/vienna-declaration-and-programme-action> ;
+    dc:date "25 June 1993" ;
+    values:category "Foundational declarations" ;
+    cml:asserts concept:vienna-declaration-and-programme-action-paragraph-93-norm .
+
+concept:vienna-declaration-and-programme-action-paragraph-93-norm a values:Undertaking ;
+    cml:modality cml:Deontic ;
+    values:partOf concept:vienna-declaration-and-programme-action-paragraph-93 ;
+    values:deonticStatus values:HeuristicDerived ;
+    cml:curationStatus cml:Proposed .
+
+concept:vienna-declaration-and-programme-action-paragraph-94 a cml:Concept ;
+    skos:prefLabel "Paragraph 94" ;
+    cml:realizedBy doc:paragraph-94 ;
+    cml:curationStatus cml:Proposed ;
+    prov:wasDerivedFrom <https://www.ohchr.org/en/instruments-mechanisms/instruments/vienna-declaration-and-programme-action> ;
+    dc:date "25 June 1993" ;
+    values:category "Foundational declarations" ;
+    cml:asserts concept:vienna-declaration-and-programme-action-paragraph-94-norm .
+
+concept:vienna-declaration-and-programme-action-paragraph-94-norm a values:Undertaking ;
+    cml:modality cml:Deontic ;
+    values:partOf concept:vienna-declaration-and-programme-action-paragraph-94 ;
+    values:deonticStatus values:HeuristicDerived ;
+    cml:curationStatus cml:Proposed .
+
+concept:vienna-declaration-and-programme-action-paragraph-95 a cml:Concept ;
+    skos:prefLabel "Paragraph 95" ;
+    cml:realizedBy doc:paragraph-95 ;
+    cml:curationStatus cml:Proposed ;
+    prov:wasDerivedFrom <https://www.ohchr.org/en/instruments-mechanisms/instruments/vienna-declaration-and-programme-action> ;
+    dc:date "25 June 1993" ;
+    values:category "Foundational declarations" ;
+    cml:asserts concept:vienna-declaration-and-programme-action-paragraph-95-norm .
+
+concept:vienna-declaration-and-programme-action-paragraph-95-norm a values:Undertaking ;
+    cml:modality cml:Deontic ;
+    values:partOf concept:vienna-declaration-and-programme-action-paragraph-95 ;
+    values:deonticStatus values:HeuristicDerived ;
+    cml:curationStatus cml:Proposed .
+
+concept:vienna-declaration-and-programme-action-paragraph-96 a cml:Concept ;
+    skos:prefLabel "Paragraph 96" ;
+    cml:realizedBy doc:paragraph-96 ;
+    cml:curationStatus cml:Proposed ;
+    prov:wasDerivedFrom <https://www.ohchr.org/en/instruments-mechanisms/instruments/vienna-declaration-and-programme-action> ;
+    dc:date "25 June 1993" ;
+    values:category "Foundational declarations" ;
+    cml:asserts concept:vienna-declaration-and-programme-action-paragraph-96-norm .
+
+concept:vienna-declaration-and-programme-action-paragraph-96-norm a values:Undertaking ;
+    cml:modality cml:Deontic ;
+    values:partOf concept:vienna-declaration-and-programme-action-paragraph-96 ;
+    values:deonticStatus values:HeuristicDerived ;
+    cml:curationStatus cml:Proposed .
+
+concept:vienna-declaration-and-programme-action-paragraph-97 a cml:Concept ;
+    skos:prefLabel "Paragraph 97" ;
+    cml:realizedBy doc:paragraph-97 ;
+    cml:curationStatus cml:Proposed ;
+    prov:wasDerivedFrom <https://www.ohchr.org/en/instruments-mechanisms/instruments/vienna-declaration-and-programme-action> ;
+    dc:date "25 June 1993" ;
+    values:category "Foundational declarations" ;
+    cml:asserts concept:vienna-declaration-and-programme-action-paragraph-97-norm .
+
+concept:vienna-declaration-and-programme-action-paragraph-97-norm a values:Undertaking ;
+    cml:modality cml:Deontic ;
+    values:partOf concept:vienna-declaration-and-programme-action-paragraph-97 ;
+    values:deonticStatus values:HeuristicDerived ;
+    cml:curationStatus cml:Proposed .
+
+concept:vienna-declaration-and-programme-action-paragraph-98 a cml:Concept ;
+    skos:prefLabel "Paragraph 98" ;
+    cml:realizedBy doc:paragraph-98 ;
+    cml:curationStatus cml:Proposed ;
+    prov:wasDerivedFrom <https://www.ohchr.org/en/instruments-mechanisms/instruments/vienna-declaration-and-programme-action> ;
+    dc:date "25 June 1993" ;
+    values:category "Foundational declarations" ;
+    cml:asserts concept:vienna-declaration-and-programme-action-paragraph-98-norm .
+
+concept:vienna-declaration-and-programme-action-paragraph-98-norm a values:Undertaking ;
+    cml:modality cml:Deontic ;
+    values:partOf concept:vienna-declaration-and-programme-action-paragraph-98 ;
+    values:deonticStatus values:HeuristicDerived ;
+    cml:curationStatus cml:Proposed .
+
+concept:vienna-declaration-and-programme-action-paragraph-99 a cml:Concept ;
+    skos:prefLabel "Paragraph 99" ;
+    cml:realizedBy doc:paragraph-99 ;
+    cml:curationStatus cml:Proposed ;
+    prov:wasDerivedFrom <https://www.ohchr.org/en/instruments-mechanisms/instruments/vienna-declaration-and-programme-action> ;
+    dc:date "25 June 1993" ;
+    values:category "Foundational declarations" ;
+    cml:asserts concept:vienna-declaration-and-programme-action-paragraph-99-norm .
+
+concept:vienna-declaration-and-programme-action-paragraph-99-norm a values:Undertaking ;
+    cml:modality cml:Deontic ;
+    values:partOf concept:vienna-declaration-and-programme-action-paragraph-99 ;
+    values:deonticStatus values:HeuristicDerived ;
+    cml:curationStatus cml:Proposed .
+
+concept:vienna-declaration-and-programme-action-paragraph-100 a cml:Concept ;
+    skos:prefLabel "Paragraph 100" ;
+    cml:realizedBy doc:paragraph-100 ;
+    cml:curationStatus cml:Proposed ;
+    prov:wasDerivedFrom <https://www.ohchr.org/en/instruments-mechanisms/instruments/vienna-declaration-and-programme-action> ;
+    dc:date "25 June 1993" ;
+    values:category "Foundational declarations" ;
+    cml:asserts concept:vienna-declaration-and-programme-action-paragraph-100-norm .
+
+concept:vienna-declaration-and-programme-action-paragraph-100-norm a values:Undertaking ;
+    cml:modality cml:Deontic ;
+    values:partOf concept:vienna-declaration-and-programme-action-paragraph-100 ;
+    values:deonticStatus values:HeuristicDerived ;
+    cml:curationStatus cml:Proposed .
+
+concept:vienna-declaration-and-programme-action-paragraph-101 a cml:Concept ;
+    skos:prefLabel "Paragraph 101" ;
+    cml:realizedBy doc:paragraph-101 ;
+    cml:curationStatus cml:Proposed ;
+    prov:wasDerivedFrom <https://www.ohchr.org/en/instruments-mechanisms/instruments/vienna-declaration-and-programme-action> ;
+    dc:date "25 June 1993" ;
+    values:category "Foundational declarations" ;
+    cml:asserts concept:vienna-declaration-and-programme-action-paragraph-101-norm .
+
+concept:vienna-declaration-and-programme-action-paragraph-101-norm a values:Undertaking ;
+    cml:modality cml:Deontic ;
+    values:partOf concept:vienna-declaration-and-programme-action-paragraph-101 ;
+    values:deonticStatus values:HeuristicDerived ;
+    cml:curationStatus cml:Proposed .
+
+concept:vienna-declaration-and-programme-action-paragraph-102 a cml:Concept ;
+    skos:prefLabel "Paragraph 102" ;
+    cml:realizedBy doc:paragraph-102 ;
+    cml:curationStatus cml:Proposed ;
+    prov:wasDerivedFrom <https://www.ohchr.org/en/instruments-mechanisms/instruments/vienna-declaration-and-programme-action> ;
+    dc:date "25 June 1993" ;
+    values:category "Foundational declarations" ;
+    cml:asserts concept:vienna-declaration-and-programme-action-paragraph-102-norm .
+
+concept:vienna-declaration-and-programme-action-paragraph-102-norm a values:Undertaking ;
+    cml:modality cml:Deontic ;
+    values:partOf concept:vienna-declaration-and-programme-action-paragraph-102 ;
+    values:deonticStatus values:HeuristicDerived ;
+    cml:curationStatus cml:Proposed .
+
+concept:vienna-declaration-and-programme-action-paragraph-103 a cml:Concept ;
+    skos:prefLabel "Paragraph 103" ;
+    cml:realizedBy doc:paragraph-103 ;
+    cml:curationStatus cml:Proposed ;
+    prov:wasDerivedFrom <https://www.ohchr.org/en/instruments-mechanisms/instruments/vienna-declaration-and-programme-action> ;
+    dc:date "25 June 1993" ;
+    values:category "Foundational declarations" ;
+    cml:asserts concept:vienna-declaration-and-programme-action-paragraph-103-norm .
+
+concept:vienna-declaration-and-programme-action-paragraph-103-norm a values:Undertaking ;
+    cml:modality cml:Deontic ;
+    values:partOf concept:vienna-declaration-and-programme-action-paragraph-103 ;
+    values:deonticStatus values:HeuristicDerived ;
+    cml:curationStatus cml:Proposed .
+
+concept:vienna-declaration-and-programme-action-paragraph-104 a cml:Concept ;
+    skos:prefLabel "Paragraph 104" ;
+    cml:realizedBy doc:paragraph-104 ;
+    cml:curationStatus cml:Proposed ;
+    prov:wasDerivedFrom <https://www.ohchr.org/en/instruments-mechanisms/instruments/vienna-declaration-and-programme-action> ;
+    dc:date "25 June 1993" ;
+    values:category "Foundational declarations" ;
+    cml:asserts concept:vienna-declaration-and-programme-action-paragraph-104-norm .
+
+concept:vienna-declaration-and-programme-action-paragraph-104-norm a values:Undertaking ;
+    cml:modality cml:Deontic ;
+    values:partOf concept:vienna-declaration-and-programme-action-paragraph-104 ;
+    values:deonticStatus values:HeuristicDerived ;
+    cml:curationStatus cml:Proposed .
+
+concept:vienna-declaration-and-programme-action-paragraph-105 a cml:Concept ;
+    skos:prefLabel "Paragraph 105" ;
+    cml:realizedBy doc:paragraph-105 ;
+    cml:curationStatus cml:Proposed ;
+    prov:wasDerivedFrom <https://www.ohchr.org/en/instruments-mechanisms/instruments/vienna-declaration-and-programme-action> ;
+    dc:date "25 June 1993" ;
+    values:category "Foundational declarations" ;
+    cml:asserts concept:vienna-declaration-and-programme-action-paragraph-105-norm .
+
+concept:vienna-declaration-and-programme-action-paragraph-105-norm a values:Undertaking ;
+    cml:modality cml:Deontic ;
+    values:partOf concept:vienna-declaration-and-programme-action-paragraph-105 ;
+    values:deonticStatus values:HeuristicDerived ;
+    cml:curationStatus cml:Proposed .
+
+concept:vienna-declaration-and-programme-action-paragraph-106 a cml:Concept ;
+    skos:prefLabel "Paragraph 106" ;
+    cml:realizedBy doc:paragraph-106 ;
+    cml:curationStatus cml:Proposed ;
+    prov:wasDerivedFrom <https://www.ohchr.org/en/instruments-mechanisms/instruments/vienna-declaration-and-programme-action> ;
+    dc:date "25 June 1993" ;
+    values:category "Foundational declarations" ;
+    cml:asserts concept:vienna-declaration-and-programme-action-paragraph-106-norm .
+
+concept:vienna-declaration-and-programme-action-paragraph-106-norm a values:Undertaking ;
+    cml:modality cml:Deontic ;
+    values:partOf concept:vienna-declaration-and-programme-action-paragraph-106 ;
+    values:deonticStatus values:HeuristicDerived ;
+    cml:curationStatus cml:Proposed .
+
+concept:vienna-declaration-and-programme-action-paragraph-107 a cml:Concept ;
+    skos:prefLabel "Paragraph 107" ;
+    cml:realizedBy doc:paragraph-107 ;
+    cml:curationStatus cml:Proposed ;
+    prov:wasDerivedFrom <https://www.ohchr.org/en/instruments-mechanisms/instruments/vienna-declaration-and-programme-action> ;
+    dc:date "25 June 1993" ;
+    values:category "Foundational declarations" ;
+    cml:asserts concept:vienna-declaration-and-programme-action-paragraph-107-norm .
+
+concept:vienna-declaration-and-programme-action-paragraph-107-norm a values:Undertaking ;
+    cml:modality cml:Deontic ;
+    values:partOf concept:vienna-declaration-and-programme-action-paragraph-107 ;
+    values:deonticStatus values:HeuristicDerived ;
+    cml:curationStatus cml:Proposed .
+
+concept:vienna-declaration-and-programme-action-paragraph-108 a cml:Concept ;
+    skos:prefLabel "Paragraph 108" ;
+    cml:realizedBy doc:paragraph-108 ;
+    cml:curationStatus cml:Proposed ;
+    prov:wasDerivedFrom <https://www.ohchr.org/en/instruments-mechanisms/instruments/vienna-declaration-and-programme-action> ;
+    dc:date "25 June 1993" ;
+    values:category "Foundational declarations" ;
+    cml:asserts concept:vienna-declaration-and-programme-action-paragraph-108-norm .
+
+concept:vienna-declaration-and-programme-action-paragraph-108-norm a values:Undertaking ;
+    cml:modality cml:Deontic ;
+    values:partOf concept:vienna-declaration-and-programme-action-paragraph-108 ;
+    values:deonticStatus values:HeuristicDerived ;
+    cml:curationStatus cml:Proposed .
+
+concept:vienna-declaration-and-programme-action-paragraph-109 a cml:Concept ;
+    skos:prefLabel "Paragraph 109" ;
+    cml:realizedBy doc:paragraph-109 ;
+    cml:curationStatus cml:Proposed ;
+    prov:wasDerivedFrom <https://www.ohchr.org/en/instruments-mechanisms/instruments/vienna-declaration-and-programme-action> ;
+    dc:date "25 June 1993" ;
+    values:category "Foundational declarations" ;
+    cml:asserts concept:vienna-declaration-and-programme-action-paragraph-109-norm .
+
+concept:vienna-declaration-and-programme-action-paragraph-109-norm a values:Right ;
+    cml:modality cml:Deontic ;
+    values:partOf concept:vienna-declaration-and-programme-action-paragraph-109 ;
+    values:heldBy values:NaturalPerson ;
+    values:deonticStatus values:HeuristicDerived ;
+    cml:curationStatus cml:Proposed .
+
+concept:vienna-declaration-and-programme-action-paragraph-110 a cml:Concept ;
+    skos:prefLabel "Paragraph 110" ;
+    cml:realizedBy doc:paragraph-110 ;
+    cml:curationStatus cml:Proposed ;
+    prov:wasDerivedFrom <https://www.ohchr.org/en/instruments-mechanisms/instruments/vienna-declaration-and-programme-action> ;
+    dc:date "25 June 1993" ;
+    values:category "Foundational declarations" ;
+    cml:asserts concept:vienna-declaration-and-programme-action-paragraph-110-norm .
+
+concept:vienna-declaration-and-programme-action-paragraph-110-norm a values:Undertaking ;
+    cml:modality cml:Deontic ;
+    values:partOf concept:vienna-declaration-and-programme-action-paragraph-110 ;
+    values:deonticStatus values:HeuristicDerived ;
+    cml:curationStatus cml:Proposed .
+
+concept:vienna-declaration-and-programme-action-paragraph-111 a cml:Concept ;
+    skos:prefLabel "Paragraph 111" ;
+    cml:realizedBy doc:paragraph-111 ;
+    cml:curationStatus cml:Proposed ;
+    prov:wasDerivedFrom <https://www.ohchr.org/en/instruments-mechanisms/instruments/vienna-declaration-and-programme-action> ;
+    dc:date "25 June 1993" ;
+    values:category "Foundational declarations" ;
+    cml:asserts concept:vienna-declaration-and-programme-action-paragraph-111-norm .
+
+concept:vienna-declaration-and-programme-action-paragraph-111-norm a values:Right ;
+    cml:modality cml:Deontic ;
+    values:partOf concept:vienna-declaration-and-programme-action-paragraph-111 ;
+    values:heldBy values:NaturalPerson ;
+    values:deonticStatus values:HeuristicDerived ;
+    cml:curationStatus cml:Proposed .
+
+concept:vienna-declaration-and-programme-action-paragraph-112 a cml:Concept ;
+    skos:prefLabel "Paragraph 112" ;
+    cml:realizedBy doc:paragraph-112 ;
+    cml:curationStatus cml:Proposed ;
+    prov:wasDerivedFrom <https://www.ohchr.org/en/instruments-mechanisms/instruments/vienna-declaration-and-programme-action> ;
+    dc:date "25 June 1993" ;
+    values:category "Foundational declarations" ;
+    cml:asserts concept:vienna-declaration-and-programme-action-paragraph-112-norm .
+
+concept:vienna-declaration-and-programme-action-paragraph-112-norm a values:Undertaking ;
+    cml:modality cml:Deontic ;
+    values:partOf concept:vienna-declaration-and-programme-action-paragraph-112 ;
+    values:deonticStatus values:HeuristicDerived ;
+    cml:curationStatus cml:Proposed .
+
+concept:vienna-declaration-and-programme-action-paragraph-113 a cml:Concept ;
+    skos:prefLabel "Paragraph 113" ;
+    cml:realizedBy doc:paragraph-113 ;
+    cml:curationStatus cml:Proposed ;
+    prov:wasDerivedFrom <https://www.ohchr.org/en/instruments-mechanisms/instruments/vienna-declaration-and-programme-action> ;
+    dc:date "25 June 1993" ;
+    values:category "Foundational declarations" ;
+    cml:asserts concept:vienna-declaration-and-programme-action-paragraph-113-norm .
+
+concept:vienna-declaration-and-programme-action-paragraph-113-norm a values:Undertaking ;
+    cml:modality cml:Deontic ;
+    values:partOf concept:vienna-declaration-and-programme-action-paragraph-113 ;
+    values:deonticStatus values:HeuristicDerived ;
+    cml:curationStatus cml:Proposed .
+
+concept:vienna-declaration-and-programme-action-paragraph-114 a cml:Concept ;
+    skos:prefLabel "Paragraph 114" ;
+    cml:realizedBy doc:paragraph-114 ;
+    cml:curationStatus cml:Proposed ;
+    prov:wasDerivedFrom <https://www.ohchr.org/en/instruments-mechanisms/instruments/vienna-declaration-and-programme-action> ;
+    dc:date "25 June 1993" ;
+    values:category "Foundational declarations" ;
+    cml:asserts concept:vienna-declaration-and-programme-action-paragraph-114-norm .
+
+concept:vienna-declaration-and-programme-action-paragraph-114-norm a values:Undertaking ;
+    cml:modality cml:Deontic ;
+    values:partOf concept:vienna-declaration-and-programme-action-paragraph-114 ;
+    values:deonticStatus values:HeuristicDerived ;
+    cml:curationStatus cml:Proposed .
+
+concept:vienna-declaration-and-programme-action-paragraph-115 a cml:Concept ;
+    skos:prefLabel "Paragraph 115" ;
+    cml:realizedBy doc:paragraph-115 ;
+    cml:curationStatus cml:Proposed ;
+    prov:wasDerivedFrom <https://www.ohchr.org/en/instruments-mechanisms/instruments/vienna-declaration-and-programme-action> ;
+    dc:date "25 June 1993" ;
+    values:category "Foundational declarations" ;
+    cml:asserts concept:vienna-declaration-and-programme-action-paragraph-115-norm .
+
+concept:vienna-declaration-and-programme-action-paragraph-115-norm a values:Undertaking ;
+    cml:modality cml:Deontic ;
+    values:partOf concept:vienna-declaration-and-programme-action-paragraph-115 ;
+    values:deonticStatus values:HeuristicDerived ;
+    cml:curationStatus cml:Proposed .
+
+concept:vienna-declaration-and-programme-action-paragraph-116 a cml:Concept ;
+    skos:prefLabel "Paragraph 116" ;
+    cml:realizedBy doc:paragraph-116 ;
+    cml:curationStatus cml:Proposed ;
+    prov:wasDerivedFrom <https://www.ohchr.org/en/instruments-mechanisms/instruments/vienna-declaration-and-programme-action> ;
+    dc:date "25 June 1993" ;
+    values:category "Foundational declarations" ;
+    cml:asserts concept:vienna-declaration-and-programme-action-paragraph-116-norm .
+
+concept:vienna-declaration-and-programme-action-paragraph-116-norm a values:Undertaking ;
+    cml:modality cml:Deontic ;
+    values:partOf concept:vienna-declaration-and-programme-action-paragraph-116 ;
+    values:deonticStatus values:HeuristicDerived ;
+    cml:curationStatus cml:Proposed .
+
+concept:vienna-declaration-and-programme-action-paragraph-117 a cml:Concept ;
+    skos:prefLabel "Paragraph 117" ;
+    cml:realizedBy doc:paragraph-117 ;
+    cml:curationStatus cml:Proposed ;
+    prov:wasDerivedFrom <https://www.ohchr.org/en/instruments-mechanisms/instruments/vienna-declaration-and-programme-action> ;
+    dc:date "25 June 1993" ;
+    values:category "Foundational declarations" ;
+    cml:asserts concept:vienna-declaration-and-programme-action-paragraph-117-norm .
+
+concept:vienna-declaration-and-programme-action-paragraph-117-norm a values:Undertaking ;
+    cml:modality cml:Deontic ;
+    values:partOf concept:vienna-declaration-and-programme-action-paragraph-117 ;
+    values:deonticStatus values:HeuristicDerived ;
+    cml:curationStatus cml:Proposed .
+
+concept:vienna-declaration-and-programme-action-paragraph-118 a cml:Concept ;
+    skos:prefLabel "Paragraph 118" ;
+    cml:realizedBy doc:paragraph-118 ;
+    cml:curationStatus cml:Proposed ;
+    prov:wasDerivedFrom <https://www.ohchr.org/en/instruments-mechanisms/instruments/vienna-declaration-and-programme-action> ;
+    dc:date "25 June 1993" ;
+    values:category "Foundational declarations" ;
+    cml:asserts concept:vienna-declaration-and-programme-action-paragraph-118-norm .
+
+concept:vienna-declaration-and-programme-action-paragraph-118-norm a values:Undertaking ;
+    cml:modality cml:Deontic ;
+    values:partOf concept:vienna-declaration-and-programme-action-paragraph-118 ;
+    values:deonticStatus values:HeuristicDerived ;
+    cml:curationStatus cml:Proposed .
+
+concept:vienna-declaration-and-programme-action-paragraph-119 a cml:Concept ;
+    skos:prefLabel "Paragraph 119" ;
+    cml:realizedBy doc:paragraph-119 ;
+    cml:curationStatus cml:Proposed ;
+    prov:wasDerivedFrom <https://www.ohchr.org/en/instruments-mechanisms/instruments/vienna-declaration-and-programme-action> ;
+    dc:date "25 June 1993" ;
+    values:category "Foundational declarations" ;
+    cml:asserts concept:vienna-declaration-and-programme-action-paragraph-119-norm .
+
+concept:vienna-declaration-and-programme-action-paragraph-119-norm a values:Undertaking ;
+    cml:modality cml:Deontic ;
+    values:partOf concept:vienna-declaration-and-programme-action-paragraph-119 ;
+    values:deonticStatus values:HeuristicDerived ;
+    cml:curationStatus cml:Proposed .
+
+concept:vienna-declaration-and-programme-action-paragraph-120 a cml:Concept ;
+    skos:prefLabel "Paragraph 120" ;
+    cml:realizedBy doc:paragraph-120 ;
+    cml:curationStatus cml:Proposed ;
+    prov:wasDerivedFrom <https://www.ohchr.org/en/instruments-mechanisms/instruments/vienna-declaration-and-programme-action> ;
+    dc:date "25 June 1993" ;
+    values:category "Foundational declarations" ;
+    cml:asserts concept:vienna-declaration-and-programme-action-paragraph-120-norm .
+
+concept:vienna-declaration-and-programme-action-paragraph-120-norm a values:Undertaking ;
+    cml:modality cml:Deontic ;
+    values:partOf concept:vienna-declaration-and-programme-action-paragraph-120 ;
+    values:deonticStatus values:HeuristicDerived ;
+    cml:curationStatus cml:Proposed .
+
+concept:vienna-declaration-and-programme-action-paragraph-121 a cml:Concept ;
+    skos:prefLabel "Paragraph 121" ;
+    cml:realizedBy doc:paragraph-121 ;
+    cml:curationStatus cml:Proposed ;
+    prov:wasDerivedFrom <https://www.ohchr.org/en/instruments-mechanisms/instruments/vienna-declaration-and-programme-action> ;
+    dc:date "25 June 1993" ;
+    values:category "Foundational declarations" ;
+    cml:asserts concept:vienna-declaration-and-programme-action-paragraph-121-norm .
+
+concept:vienna-declaration-and-programme-action-paragraph-121-norm a values:Undertaking ;
+    cml:modality cml:Deontic ;
+    values:partOf concept:vienna-declaration-and-programme-action-paragraph-121 ;
+    values:deonticStatus values:HeuristicDerived ;
+    cml:curationStatus cml:Proposed .
+
+concept:vienna-declaration-and-programme-action-paragraph-122 a cml:Concept ;
+    skos:prefLabel "Paragraph 122" ;
+    cml:realizedBy doc:paragraph-122 ;
+    cml:curationStatus cml:Proposed ;
+    prov:wasDerivedFrom <https://www.ohchr.org/en/instruments-mechanisms/instruments/vienna-declaration-and-programme-action> ;
+    dc:date "25 June 1993" ;
+    values:category "Foundational declarations" ;
+    cml:asserts concept:vienna-declaration-and-programme-action-paragraph-122-norm .
+
+concept:vienna-declaration-and-programme-action-paragraph-122-norm a values:Undertaking ;
+    cml:modality cml:Deontic ;
+    values:partOf concept:vienna-declaration-and-programme-action-paragraph-122 ;
+    values:deonticStatus values:HeuristicDerived ;
+    cml:curationStatus cml:Proposed .
+
+concept:vienna-declaration-and-programme-action-paragraph-123 a cml:Concept ;
+    skos:prefLabel "Paragraph 123" ;
+    cml:realizedBy doc:paragraph-123 ;
+    cml:curationStatus cml:Proposed ;
+    prov:wasDerivedFrom <https://www.ohchr.org/en/instruments-mechanisms/instruments/vienna-declaration-and-programme-action> ;
+    dc:date "25 June 1993" ;
+    values:category "Foundational declarations" ;
+    cml:asserts concept:vienna-declaration-and-programme-action-paragraph-123-norm .
+
+concept:vienna-declaration-and-programme-action-paragraph-123-norm a values:Undertaking ;
+    cml:modality cml:Deontic ;
+    values:partOf concept:vienna-declaration-and-programme-action-paragraph-123 ;
+    values:deonticStatus values:HeuristicDerived ;
+    cml:curationStatus cml:Proposed .
+
+concept:vienna-declaration-and-programme-action-paragraph-124 a cml:Concept ;
+    skos:prefLabel "Paragraph 124" ;
+    cml:realizedBy doc:paragraph-124 ;
+    cml:curationStatus cml:Proposed ;
+    prov:wasDerivedFrom <https://www.ohchr.org/en/instruments-mechanisms/instruments/vienna-declaration-and-programme-action> ;
+    dc:date "25 June 1993" ;
+    values:category "Foundational declarations" ;
+    cml:asserts concept:vienna-declaration-and-programme-action-paragraph-124-norm .
+
+concept:vienna-declaration-and-programme-action-paragraph-124-norm a values:Undertaking ;
+    cml:modality cml:Deontic ;
+    values:partOf concept:vienna-declaration-and-programme-action-paragraph-124 ;
+    values:deonticStatus values:HeuristicDerived ;
+    cml:curationStatus cml:Proposed .
+
+concept:vienna-declaration-and-programme-action-paragraph-125 a cml:Concept ;
+    skos:prefLabel "Paragraph 125" ;
+    cml:realizedBy doc:paragraph-125 ;
+    cml:curationStatus cml:Proposed ;
+    prov:wasDerivedFrom <https://www.ohchr.org/en/instruments-mechanisms/instruments/vienna-declaration-and-programme-action> ;
+    dc:date "25 June 1993" ;
+    values:category "Foundational declarations" ;
+    cml:asserts concept:vienna-declaration-and-programme-action-paragraph-125-norm .
+
+concept:vienna-declaration-and-programme-action-paragraph-125-norm a values:Undertaking ;
+    cml:modality cml:Deontic ;
+    values:partOf concept:vienna-declaration-and-programme-action-paragraph-125 ;
+    values:deonticStatus values:HeuristicDerived ;
+    cml:curationStatus cml:Proposed .
+
+concept:vienna-declaration-and-programme-action-paragraph-126 a cml:Concept ;
+    skos:prefLabel "Paragraph 126" ;
+    cml:realizedBy doc:paragraph-126 ;
+    cml:curationStatus cml:Proposed ;
+    prov:wasDerivedFrom <https://www.ohchr.org/en/instruments-mechanisms/instruments/vienna-declaration-and-programme-action> ;
+    dc:date "25 June 1993" ;
+    values:category "Foundational declarations" ;
+    cml:asserts concept:vienna-declaration-and-programme-action-paragraph-126-norm .
+
+concept:vienna-declaration-and-programme-action-paragraph-126-norm a values:Undertaking ;
+    cml:modality cml:Deontic ;
+    values:partOf concept:vienna-declaration-and-programme-action-paragraph-126 ;
+    values:deonticStatus values:HeuristicDerived ;
+    cml:curationStatus cml:Proposed .
+
+concept:vienna-declaration-and-programme-action-paragraph-127 a cml:Concept ;
+    skos:prefLabel "Paragraph 127" ;
+    cml:realizedBy doc:paragraph-127 ;
+    cml:curationStatus cml:Proposed ;
+    prov:wasDerivedFrom <https://www.ohchr.org/en/instruments-mechanisms/instruments/vienna-declaration-and-programme-action> ;
+    dc:date "25 June 1993" ;
+    values:category "Foundational declarations" ;
+    cml:asserts concept:vienna-declaration-and-programme-action-paragraph-127-norm .
+
+concept:vienna-declaration-and-programme-action-paragraph-127-norm a values:Undertaking ;
+    cml:modality cml:Deontic ;
+    values:partOf concept:vienna-declaration-and-programme-action-paragraph-127 ;
+    values:deonticStatus values:HeuristicDerived ;
+    cml:curationStatus cml:Proposed .
+
+concept:vienna-declaration-and-programme-action-paragraph-128 a cml:Concept ;
+    skos:prefLabel "Paragraph 128" ;
+    cml:realizedBy doc:paragraph-128 ;
+    cml:curationStatus cml:Proposed ;
+    prov:wasDerivedFrom <https://www.ohchr.org/en/instruments-mechanisms/instruments/vienna-declaration-and-programme-action> ;
+    dc:date "25 June 1993" ;
+    values:category "Foundational declarations" ;
+    cml:asserts concept:vienna-declaration-and-programme-action-paragraph-128-norm .
+
+concept:vienna-declaration-and-programme-action-paragraph-128-norm a values:Undertaking ;
+    cml:modality cml:Deontic ;
+    values:partOf concept:vienna-declaration-and-programme-action-paragraph-128 ;
+    values:deonticStatus values:HeuristicDerived ;
+    cml:curationStatus cml:Proposed .
+
+concept:vienna-declaration-and-programme-action-paragraph-129 a cml:Concept ;
+    skos:prefLabel "Paragraph 129" ;
+    cml:realizedBy doc:paragraph-129 ;
+    cml:curationStatus cml:Proposed ;
+    prov:wasDerivedFrom <https://www.ohchr.org/en/instruments-mechanisms/instruments/vienna-declaration-and-programme-action> ;
+    dc:date "25 June 1993" ;
+    values:category "Foundational declarations" ;
+    cml:asserts concept:vienna-declaration-and-programme-action-paragraph-129-norm .
+
+concept:vienna-declaration-and-programme-action-paragraph-129-norm a values:Undertaking ;
+    cml:modality cml:Deontic ;
+    values:partOf concept:vienna-declaration-and-programme-action-paragraph-129 ;
+    values:deonticStatus values:HeuristicDerived ;
+    cml:curationStatus cml:Proposed .
+
+concept:vienna-declaration-and-programme-action-paragraph-130 a cml:Concept ;
+    skos:prefLabel "Paragraph 130" ;
+    cml:realizedBy doc:paragraph-130 ;
+    cml:curationStatus cml:Proposed ;
+    prov:wasDerivedFrom <https://www.ohchr.org/en/instruments-mechanisms/instruments/vienna-declaration-and-programme-action> ;
+    dc:date "25 June 1993" ;
+    values:category "Foundational declarations" ;
+    cml:asserts concept:vienna-declaration-and-programme-action-paragraph-130-norm .
+
+concept:vienna-declaration-and-programme-action-paragraph-130-norm a values:Right ;
+    cml:modality cml:Deontic ;
+    values:partOf concept:vienna-declaration-and-programme-action-paragraph-130 ;
+    values:heldBy values:NaturalPerson ;
+    values:deonticStatus values:HeuristicDerived ;
+    cml:curationStatus cml:Proposed .
+
+concept:vienna-declaration-and-programme-action-paragraph-131 a cml:Concept ;
+    skos:prefLabel "Paragraph 131" ;
+    cml:realizedBy doc:paragraph-131 ;
+    cml:curationStatus cml:Proposed ;
+    prov:wasDerivedFrom <https://www.ohchr.org/en/instruments-mechanisms/instruments/vienna-declaration-and-programme-action> ;
+    dc:date "25 June 1993" ;
+    values:category "Foundational declarations" ;
+    cml:asserts concept:vienna-declaration-and-programme-action-paragraph-131-norm .
+
+concept:vienna-declaration-and-programme-action-paragraph-131-norm a values:Undertaking ;
+    cml:modality cml:Deontic ;
+    values:partOf concept:vienna-declaration-and-programme-action-paragraph-131 ;
+    values:deonticStatus values:HeuristicDerived ;
+    cml:curationStatus cml:Proposed .
+
+concept:vienna-declaration-and-programme-action-paragraph-132 a cml:Concept ;
+    skos:prefLabel "Paragraph 132" ;
+    cml:realizedBy doc:paragraph-132 ;
+    cml:curationStatus cml:Proposed ;
+    prov:wasDerivedFrom <https://www.ohchr.org/en/instruments-mechanisms/instruments/vienna-declaration-and-programme-action> ;
+    dc:date "25 June 1993" ;
+    values:category "Foundational declarations" ;
+    cml:asserts concept:vienna-declaration-and-programme-action-paragraph-132-norm .
+
+concept:vienna-declaration-and-programme-action-paragraph-132-norm a values:Undertaking ;
+    cml:modality cml:Deontic ;
+    values:partOf concept:vienna-declaration-and-programme-action-paragraph-132 ;
+    values:deonticStatus values:HeuristicDerived ;
+    cml:curationStatus cml:Proposed .
+
+concept:vienna-declaration-and-programme-action-paragraph-133 a cml:Concept ;
+    skos:prefLabel "Paragraph 133" ;
+    cml:realizedBy doc:paragraph-133 ;
+    cml:curationStatus cml:Proposed ;
+    prov:wasDerivedFrom <https://www.ohchr.org/en/instruments-mechanisms/instruments/vienna-declaration-and-programme-action> ;
+    dc:date "25 June 1993" ;
+    values:category "Foundational declarations" ;
+    cml:asserts concept:vienna-declaration-and-programme-action-paragraph-133-norm .
+
+concept:vienna-declaration-and-programme-action-paragraph-133-norm a values:Undertaking ;
+    cml:modality cml:Deontic ;
+    values:partOf concept:vienna-declaration-and-programme-action-paragraph-133 ;
+    values:deonticStatus values:HeuristicDerived ;
+    cml:curationStatus cml:Proposed .
+
+concept:vienna-declaration-and-programme-action-paragraph-134 a cml:Concept ;
+    skos:prefLabel "Paragraph 134" ;
+    cml:realizedBy doc:paragraph-134 ;
+    cml:curationStatus cml:Proposed ;
+    prov:wasDerivedFrom <https://www.ohchr.org/en/instruments-mechanisms/instruments/vienna-declaration-and-programme-action> ;
+    dc:date "25 June 1993" ;
+    values:category "Foundational declarations" ;
+    cml:asserts concept:vienna-declaration-and-programme-action-paragraph-134-norm .
+
+concept:vienna-declaration-and-programme-action-paragraph-134-norm a values:Undertaking ;
+    cml:modality cml:Deontic ;
+    values:partOf concept:vienna-declaration-and-programme-action-paragraph-134 ;
+    values:deonticStatus values:HeuristicDerived ;
+    cml:curationStatus cml:Proposed .
+
+concept:vienna-declaration-and-programme-action-paragraph-135 a cml:Concept ;
+    skos:prefLabel "Paragraph 135" ;
+    cml:realizedBy doc:paragraph-135 ;
+    cml:curationStatus cml:Proposed ;
+    prov:wasDerivedFrom <https://www.ohchr.org/en/instruments-mechanisms/instruments/vienna-declaration-and-programme-action> ;
+    dc:date "25 June 1993" ;
+    values:category "Foundational declarations" ;
+    cml:asserts concept:vienna-declaration-and-programme-action-paragraph-135-norm .
+
+concept:vienna-declaration-and-programme-action-paragraph-135-norm a values:Undertaking ;
+    cml:modality cml:Deontic ;
+    values:partOf concept:vienna-declaration-and-programme-action-paragraph-135 ;
+    values:deonticStatus values:HeuristicDerived ;
+    cml:curationStatus cml:Proposed .
+
+concept:vienna-declaration-and-programme-action-paragraph-136 a cml:Concept ;
+    skos:prefLabel "Paragraph 136" ;
+    cml:realizedBy doc:paragraph-136 ;
+    cml:curationStatus cml:Proposed ;
+    prov:wasDerivedFrom <https://www.ohchr.org/en/instruments-mechanisms/instruments/vienna-declaration-and-programme-action> ;
+    dc:date "25 June 1993" ;
+    values:category "Foundational declarations" ;
+    cml:asserts concept:vienna-declaration-and-programme-action-paragraph-136-norm .
+
+concept:vienna-declaration-and-programme-action-paragraph-136-norm a values:Undertaking ;
+    cml:modality cml:Deontic ;
+    values:partOf concept:vienna-declaration-and-programme-action-paragraph-136 ;
+    values:deonticStatus values:HeuristicDerived ;
+    cml:curationStatus cml:Proposed .
+
+concept:vienna-declaration-and-programme-action-paragraph-137 a cml:Concept ;
+    skos:prefLabel "Paragraph 137" ;
+    cml:realizedBy doc:paragraph-137 ;
+    cml:curationStatus cml:Proposed ;
+    prov:wasDerivedFrom <https://www.ohchr.org/en/instruments-mechanisms/instruments/vienna-declaration-and-programme-action> ;
+    dc:date "25 June 1993" ;
+    values:category "Foundational declarations" ;
+    cml:asserts concept:vienna-declaration-and-programme-action-paragraph-137-norm .
+
+concept:vienna-declaration-and-programme-action-paragraph-137-norm a values:Undertaking ;
+    cml:modality cml:Deontic ;
+    values:partOf concept:vienna-declaration-and-programme-action-paragraph-137 ;
+    values:deonticStatus values:HeuristicDerived ;
+    cml:curationStatus cml:Proposed .
+
+concept:vienna-declaration-and-programme-action-paragraph-138 a cml:Concept ;
+    skos:prefLabel "Paragraph 138" ;
+    cml:realizedBy doc:paragraph-138 ;
+    cml:curationStatus cml:Proposed ;
+    prov:wasDerivedFrom <https://www.ohchr.org/en/instruments-mechanisms/instruments/vienna-declaration-and-programme-action> ;
+    dc:date "25 June 1993" ;
+    values:category "Foundational declarations" ;
+    cml:asserts concept:vienna-declaration-and-programme-action-paragraph-138-norm .
+
+concept:vienna-declaration-and-programme-action-paragraph-138-norm a values:Undertaking ;
+    cml:modality cml:Deontic ;
+    values:partOf concept:vienna-declaration-and-programme-action-paragraph-138 ;
+    values:deonticStatus values:HeuristicDerived ;
+    cml:curationStatus cml:Proposed .
+
+concept:vienna-declaration-and-programme-action-paragraph-139 a cml:Concept ;
+    skos:prefLabel "Paragraph 139" ;
+    cml:realizedBy doc:paragraph-139 ;
+    cml:curationStatus cml:Proposed ;
+    prov:wasDerivedFrom <https://www.ohchr.org/en/instruments-mechanisms/instruments/vienna-declaration-and-programme-action> ;
+    dc:date "25 June 1993" ;
+    values:category "Foundational declarations" ;
+    cml:asserts concept:vienna-declaration-and-programme-action-paragraph-139-norm .
+
+concept:vienna-declaration-and-programme-action-paragraph-139-norm a values:Undertaking ;
+    cml:modality cml:Deontic ;
+    values:partOf concept:vienna-declaration-and-programme-action-paragraph-139 ;
+    values:deonticStatus values:HeuristicDerived ;
+    cml:curationStatus cml:Proposed .
+
+concept:vienna-declaration-and-programme-action-paragraph-140 a cml:Concept ;
+    skos:prefLabel "Paragraph 140" ;
+    cml:realizedBy doc:paragraph-140 ;
+    cml:curationStatus cml:Proposed ;
+    prov:wasDerivedFrom <https://www.ohchr.org/en/instruments-mechanisms/instruments/vienna-declaration-and-programme-action> ;
+    dc:date "25 June 1993" ;
+    values:category "Foundational declarations" ;
+    cml:asserts concept:vienna-declaration-and-programme-action-paragraph-140-norm .
+
+concept:vienna-declaration-and-programme-action-paragraph-140-norm a values:Undertaking ;
+    cml:modality cml:Deontic ;
+    values:partOf concept:vienna-declaration-and-programme-action-paragraph-140 ;
+    values:deonticStatus values:HeuristicDerived ;
+    cml:curationStatus cml:Proposed .
+
+concept:vienna-declaration-and-programme-action-paragraph-141 a cml:Concept ;
+    skos:prefLabel "Paragraph 141" ;
+    cml:realizedBy doc:paragraph-141 ;
+    cml:curationStatus cml:Proposed ;
+    prov:wasDerivedFrom <https://www.ohchr.org/en/instruments-mechanisms/instruments/vienna-declaration-and-programme-action> ;
+    dc:date "25 June 1993" ;
+    values:category "Foundational declarations" ;
+    cml:asserts concept:vienna-declaration-and-programme-action-paragraph-141-norm .
+
+concept:vienna-declaration-and-programme-action-paragraph-141-norm a values:Undertaking ;
+    cml:modality cml:Deontic ;
+    values:partOf concept:vienna-declaration-and-programme-action-paragraph-141 ;
+    values:deonticStatus values:HeuristicDerived ;
+    cml:curationStatus cml:Proposed .
+
+concept:vienna-declaration-and-programme-action-paragraph-142 a cml:Concept ;
+    skos:prefLabel "Paragraph 142" ;
+    cml:realizedBy doc:paragraph-142 ;
+    cml:curationStatus cml:Proposed ;
+    prov:wasDerivedFrom <https://www.ohchr.org/en/instruments-mechanisms/instruments/vienna-declaration-and-programme-action> ;
+    dc:date "25 June 1993" ;
+    values:category "Foundational declarations" ;
+    cml:asserts concept:vienna-declaration-and-programme-action-paragraph-142-norm .
+
+concept:vienna-declaration-and-programme-action-paragraph-142-norm a values:Undertaking ;
+    cml:modality cml:Deontic ;
+    values:partOf concept:vienna-declaration-and-programme-action-paragraph-142 ;
+    values:deonticStatus values:HeuristicDerived ;
+    cml:curationStatus cml:Proposed .
+
+concept:vienna-declaration-and-programme-action-paragraph-143 a cml:Concept ;
+    skos:prefLabel "Paragraph 143" ;
+    cml:realizedBy doc:paragraph-143 ;
+    cml:curationStatus cml:Proposed ;
+    prov:wasDerivedFrom <https://www.ohchr.org/en/instruments-mechanisms/instruments/vienna-declaration-and-programme-action> ;
+    dc:date "25 June 1993" ;
+    values:category "Foundational declarations" ;
+    cml:asserts concept:vienna-declaration-and-programme-action-paragraph-143-norm .
+
+concept:vienna-declaration-and-programme-action-paragraph-143-norm a values:Undertaking ;
+    cml:modality cml:Deontic ;
+    values:partOf concept:vienna-declaration-and-programme-action-paragraph-143 ;
+    values:deonticStatus values:HeuristicDerived ;
+    cml:curationStatus cml:Proposed .
+
+concept:vienna-declaration-and-programme-action-paragraph-144 a cml:Concept ;
+    skos:prefLabel "Paragraph 144" ;
+    cml:realizedBy doc:paragraph-144 ;
+    cml:curationStatus cml:Proposed ;
+    prov:wasDerivedFrom <https://www.ohchr.org/en/instruments-mechanisms/instruments/vienna-declaration-and-programme-action> ;
+    dc:date "25 June 1993" ;
+    values:category "Foundational declarations" ;
+    cml:asserts concept:vienna-declaration-and-programme-action-paragraph-144-norm .
+
+concept:vienna-declaration-and-programme-action-paragraph-144-norm a values:Undertaking ;
+    cml:modality cml:Deontic ;
+    values:partOf concept:vienna-declaration-and-programme-action-paragraph-144 ;
+    values:deonticStatus values:HeuristicDerived ;
+    cml:curationStatus cml:Proposed .
+
+concept:vienna-declaration-and-programme-action-paragraph-145 a cml:Concept ;
+    skos:prefLabel "Paragraph 145" ;
+    cml:realizedBy doc:paragraph-145 ;
+    cml:curationStatus cml:Proposed ;
+    prov:wasDerivedFrom <https://www.ohchr.org/en/instruments-mechanisms/instruments/vienna-declaration-and-programme-action> ;
+    dc:date "25 June 1993" ;
+    values:category "Foundational declarations" ;
+    cml:asserts concept:vienna-declaration-and-programme-action-paragraph-145-norm .
+
+concept:vienna-declaration-and-programme-action-paragraph-145-norm a values:Undertaking ;
+    cml:modality cml:Deontic ;
+    values:partOf concept:vienna-declaration-and-programme-action-paragraph-145 ;
+    values:deonticStatus values:HeuristicDerived ;
+    cml:curationStatus cml:Proposed .
+
+concept:vienna-declaration-and-programme-action-paragraph-146 a cml:Concept ;
+    skos:prefLabel "Paragraph 146" ;
+    cml:realizedBy doc:paragraph-146 ;
+    cml:curationStatus cml:Proposed ;
+    prov:wasDerivedFrom <https://www.ohchr.org/en/instruments-mechanisms/instruments/vienna-declaration-and-programme-action> ;
+    dc:date "25 June 1993" ;
+    values:category "Foundational declarations" ;
+    cml:asserts concept:vienna-declaration-and-programme-action-paragraph-146-norm .
+
+concept:vienna-declaration-and-programme-action-paragraph-146-norm a values:Undertaking ;
+    cml:modality cml:Deontic ;
+    values:partOf concept:vienna-declaration-and-programme-action-paragraph-146 ;
+    values:deonticStatus values:HeuristicDerived ;
+    cml:curationStatus cml:Proposed .
+
+concept:vienna-declaration-and-programme-action-paragraph-147 a cml:Concept ;
+    skos:prefLabel "Paragraph 147" ;
+    cml:realizedBy doc:paragraph-147 ;
+    cml:curationStatus cml:Proposed ;
+    prov:wasDerivedFrom <https://www.ohchr.org/en/instruments-mechanisms/instruments/vienna-declaration-and-programme-action> ;
+    dc:date "25 June 1993" ;
+    values:category "Foundational declarations" ;
+    cml:asserts concept:vienna-declaration-and-programme-action-paragraph-147-norm .
+
+concept:vienna-declaration-and-programme-action-paragraph-147-norm a values:Undertaking ;
+    cml:modality cml:Deontic ;
+    values:partOf concept:vienna-declaration-and-programme-action-paragraph-147 ;
+    values:deonticStatus values:HeuristicDerived ;
+    cml:curationStatus cml:Proposed .
+
+concept:vienna-declaration-and-programme-action-paragraph-148 a cml:Concept ;
+    skos:prefLabel "Paragraph 148" ;
+    cml:realizedBy doc:paragraph-148 ;
+    cml:curationStatus cml:Proposed ;
+    prov:wasDerivedFrom <https://www.ohchr.org/en/instruments-mechanisms/instruments/vienna-declaration-and-programme-action> ;
+    dc:date "25 June 1993" ;
+    values:category "Foundational declarations" ;
+    cml:asserts concept:vienna-declaration-and-programme-action-paragraph-148-norm .
+
+concept:vienna-declaration-and-programme-action-paragraph-148-norm a values:Undertaking ;
+    cml:modality cml:Deontic ;
+    values:partOf concept:vienna-declaration-and-programme-action-paragraph-148 ;
+    values:deonticStatus values:HeuristicDerived ;
+    cml:curationStatus cml:Proposed .
+
+concept:vienna-declaration-and-programme-action-paragraph-149 a cml:Concept ;
+    skos:prefLabel "Paragraph 149" ;
+    cml:realizedBy doc:paragraph-149 ;
+    cml:curationStatus cml:Proposed ;
+    prov:wasDerivedFrom <https://www.ohchr.org/en/instruments-mechanisms/instruments/vienna-declaration-and-programme-action> ;
+    dc:date "25 June 1993" ;
+    values:category "Foundational declarations" ;
+    cml:asserts concept:vienna-declaration-and-programme-action-paragraph-149-norm .
+
+concept:vienna-declaration-and-programme-action-paragraph-149-norm a values:Undertaking ;
+    cml:modality cml:Deontic ;
+    values:partOf concept:vienna-declaration-and-programme-action-paragraph-149 ;
+    values:deonticStatus values:HeuristicDerived ;
+    cml:curationStatus cml:Proposed .
+
+concept:vienna-declaration-and-programme-action-paragraph-150 a cml:Concept ;
+    skos:prefLabel "Paragraph 150" ;
+    cml:realizedBy doc:paragraph-150 ;
+    cml:curationStatus cml:Proposed ;
+    prov:wasDerivedFrom <https://www.ohchr.org/en/instruments-mechanisms/instruments/vienna-declaration-and-programme-action> ;
+    dc:date "25 June 1993" ;
+    values:category "Foundational declarations" ;
+    cml:asserts concept:vienna-declaration-and-programme-action-paragraph-150-norm .
+
+concept:vienna-declaration-and-programme-action-paragraph-150-norm a values:Undertaking ;
+    cml:modality cml:Deontic ;
+    values:partOf concept:vienna-declaration-and-programme-action-paragraph-150 ;
+    values:deonticStatus values:HeuristicDerived ;
+    cml:curationStatus cml:Proposed .
+
+concept:vienna-declaration-and-programme-action-paragraph-151 a cml:Concept ;
+    skos:prefLabel "Paragraph 151" ;
+    cml:realizedBy doc:paragraph-151 ;
+    cml:curationStatus cml:Proposed ;
+    prov:wasDerivedFrom <https://www.ohchr.org/en/instruments-mechanisms/instruments/vienna-declaration-and-programme-action> ;
+    dc:date "25 June 1993" ;
+    values:category "Foundational declarations" ;
+    cml:asserts concept:vienna-declaration-and-programme-action-paragraph-151-norm .
+
+concept:vienna-declaration-and-programme-action-paragraph-151-norm a values:Undertaking ;
+    cml:modality cml:Deontic ;
+    values:partOf concept:vienna-declaration-and-programme-action-paragraph-151 ;
+    values:deonticStatus values:HeuristicDerived ;
+    cml:curationStatus cml:Proposed .
+
+concept:vienna-declaration-and-programme-action-paragraph-152 a cml:Concept ;
+    skos:prefLabel "Paragraph 152" ;
+    cml:realizedBy doc:paragraph-152 ;
+    cml:curationStatus cml:Proposed ;
+    prov:wasDerivedFrom <https://www.ohchr.org/en/instruments-mechanisms/instruments/vienna-declaration-and-programme-action> ;
+    dc:date "25 June 1993" ;
+    values:category "Foundational declarations" ;
+    cml:asserts concept:vienna-declaration-and-programme-action-paragraph-152-norm .
+
+concept:vienna-declaration-and-programme-action-paragraph-152-norm a values:Undertaking ;
+    cml:modality cml:Deontic ;
+    values:partOf concept:vienna-declaration-and-programme-action-paragraph-152 ;
+    values:deonticStatus values:HeuristicDerived ;
+    cml:curationStatus cml:Proposed .
+
+concept:vienna-declaration-and-programme-action-paragraph-153 a cml:Concept ;
+    skos:prefLabel "Paragraph 153" ;
+    cml:realizedBy doc:paragraph-153 ;
+    cml:curationStatus cml:Proposed ;
+    prov:wasDerivedFrom <https://www.ohchr.org/en/instruments-mechanisms/instruments/vienna-declaration-and-programme-action> ;
+    dc:date "25 June 1993" ;
+    values:category "Foundational declarations" ;
+    cml:asserts concept:vienna-declaration-and-programme-action-paragraph-153-norm .
+
+concept:vienna-declaration-and-programme-action-paragraph-153-norm a values:Undertaking ;
+    cml:modality cml:Deontic ;
+    values:partOf concept:vienna-declaration-and-programme-action-paragraph-153 ;
+    values:deonticStatus values:HeuristicDerived ;
+    cml:curationStatus cml:Proposed .
+
+concept:vienna-declaration-and-programme-action-paragraph-154 a cml:Concept ;
+    skos:prefLabel "Paragraph 154" ;
+    cml:realizedBy doc:paragraph-154 ;
+    cml:curationStatus cml:Proposed ;
+    prov:wasDerivedFrom <https://www.ohchr.org/en/instruments-mechanisms/instruments/vienna-declaration-and-programme-action> ;
+    dc:date "25 June 1993" ;
+    values:category "Foundational declarations" ;
+    cml:asserts concept:vienna-declaration-and-programme-action-paragraph-154-norm .
+
+concept:vienna-declaration-and-programme-action-paragraph-154-norm a values:Undertaking ;
+    cml:modality cml:Deontic ;
+    values:partOf concept:vienna-declaration-and-programme-action-paragraph-154 ;
+    values:deonticStatus values:HeuristicDerived ;
+    cml:curationStatus cml:Proposed .
+
+concept:vienna-declaration-and-programme-action-paragraph-155 a cml:Concept ;
+    skos:prefLabel "Paragraph 155" ;
+    cml:realizedBy doc:paragraph-155 ;
+    cml:curationStatus cml:Proposed ;
+    prov:wasDerivedFrom <https://www.ohchr.org/en/instruments-mechanisms/instruments/vienna-declaration-and-programme-action> ;
+    dc:date "25 June 1993" ;
+    values:category "Foundational declarations" ;
+    cml:asserts concept:vienna-declaration-and-programme-action-paragraph-155-norm .
+
+concept:vienna-declaration-and-programme-action-paragraph-155-norm a values:Undertaking ;
+    cml:modality cml:Deontic ;
+    values:partOf concept:vienna-declaration-and-programme-action-paragraph-155 ;
+    values:deonticStatus values:HeuristicDerived ;
+    cml:curationStatus cml:Proposed .
+
+concept:vienna-declaration-and-programme-action-paragraph-156 a cml:Concept ;
+    skos:prefLabel "Paragraph 156" ;
+    cml:realizedBy doc:paragraph-156 ;
+    cml:curationStatus cml:Proposed ;
+    prov:wasDerivedFrom <https://www.ohchr.org/en/instruments-mechanisms/instruments/vienna-declaration-and-programme-action> ;
+    dc:date "25 June 1993" ;
+    values:category "Foundational declarations" ;
+    cml:asserts concept:vienna-declaration-and-programme-action-paragraph-156-norm .
+
+concept:vienna-declaration-and-programme-action-paragraph-156-norm a values:Undertaking ;
+    cml:modality cml:Deontic ;
+    values:partOf concept:vienna-declaration-and-programme-action-paragraph-156 ;
+    values:deonticStatus values:HeuristicDerived ;
+    cml:curationStatus cml:Proposed .
+
+concept:vienna-declaration-and-programme-action-paragraph-157 a cml:Concept ;
+    skos:prefLabel "Paragraph 157" ;
+    cml:realizedBy doc:paragraph-157 ;
+    cml:curationStatus cml:Proposed ;
+    prov:wasDerivedFrom <https://www.ohchr.org/en/instruments-mechanisms/instruments/vienna-declaration-and-programme-action> ;
+    dc:date "25 June 1993" ;
+    values:category "Foundational declarations" ;
+    cml:asserts concept:vienna-declaration-and-programme-action-paragraph-157-norm .
+
+concept:vienna-declaration-and-programme-action-paragraph-157-norm a values:Undertaking ;
+    cml:modality cml:Deontic ;
+    values:partOf concept:vienna-declaration-and-programme-action-paragraph-157 ;
+    values:deonticStatus values:HeuristicDerived ;
+    cml:curationStatus cml:Proposed .
+
+concept:vienna-declaration-and-programme-action-paragraph-158 a cml:Concept ;
+    skos:prefLabel "Paragraph 158" ;
+    cml:realizedBy doc:paragraph-158 ;
+    cml:curationStatus cml:Proposed ;
+    prov:wasDerivedFrom <https://www.ohchr.org/en/instruments-mechanisms/instruments/vienna-declaration-and-programme-action> ;
+    dc:date "25 June 1993" ;
+    values:category "Foundational declarations" ;
+    cml:asserts concept:vienna-declaration-and-programme-action-paragraph-158-norm .
+
+concept:vienna-declaration-and-programme-action-paragraph-158-norm a values:Undertaking ;
+    cml:modality cml:Deontic ;
+    values:partOf concept:vienna-declaration-and-programme-action-paragraph-158 ;
+    values:deonticStatus values:HeuristicDerived ;
+    cml:curationStatus cml:Proposed .
+
+concept:vienna-declaration-and-programme-action-paragraph-159 a cml:Concept ;
+    skos:prefLabel "Paragraph 159" ;
+    cml:realizedBy doc:paragraph-159 ;
+    cml:curationStatus cml:Proposed ;
+    prov:wasDerivedFrom <https://www.ohchr.org/en/instruments-mechanisms/instruments/vienna-declaration-and-programme-action> ;
+    dc:date "25 June 1993" ;
+    values:category "Foundational declarations" ;
+    cml:asserts concept:vienna-declaration-and-programme-action-paragraph-159-norm .
+
+concept:vienna-declaration-and-programme-action-paragraph-159-norm a values:Undertaking ;
+    cml:modality cml:Deontic ;
+    values:partOf concept:vienna-declaration-and-programme-action-paragraph-159 ;
+    values:deonticStatus values:HeuristicDerived ;
+    cml:curationStatus cml:Proposed .
+
+concept:vienna-declaration-and-programme-action-paragraph-160 a cml:Concept ;
+    skos:prefLabel "Paragraph 160" ;
+    cml:realizedBy doc:paragraph-160 ;
+    cml:curationStatus cml:Proposed ;
+    prov:wasDerivedFrom <https://www.ohchr.org/en/instruments-mechanisms/instruments/vienna-declaration-and-programme-action> ;
+    dc:date "25 June 1993" ;
+    values:category "Foundational declarations" ;
+    cml:asserts concept:vienna-declaration-and-programme-action-paragraph-160-norm .
+
+concept:vienna-declaration-and-programme-action-paragraph-160-norm a values:Undertaking ;
+    cml:modality cml:Deontic ;
+    values:partOf concept:vienna-declaration-and-programme-action-paragraph-160 ;
+    values:deonticStatus values:HeuristicDerived ;
+    cml:curationStatus cml:Proposed .
+
+concept:vienna-declaration-and-programme-action-paragraph-161 a cml:Concept ;
+    skos:prefLabel "Paragraph 161" ;
+    cml:realizedBy doc:paragraph-161 ;
+    cml:curationStatus cml:Proposed ;
+    prov:wasDerivedFrom <https://www.ohchr.org/en/instruments-mechanisms/instruments/vienna-declaration-and-programme-action> ;
+    dc:date "25 June 1993" ;
+    values:category "Foundational declarations" ;
+    cml:asserts concept:vienna-declaration-and-programme-action-paragraph-161-norm .
+
+concept:vienna-declaration-and-programme-action-paragraph-161-norm a values:Undertaking ;
+    cml:modality cml:Deontic ;
+    values:partOf concept:vienna-declaration-and-programme-action-paragraph-161 ;
+    values:deonticStatus values:HeuristicDerived ;
+    cml:curationStatus cml:Proposed .
+
+concept:vienna-declaration-and-programme-action-paragraph-162 a cml:Concept ;
+    skos:prefLabel "Paragraph 162" ;
+    cml:realizedBy doc:paragraph-162 ;
+    cml:curationStatus cml:Proposed ;
+    prov:wasDerivedFrom <https://www.ohchr.org/en/instruments-mechanisms/instruments/vienna-declaration-and-programme-action> ;
+    dc:date "25 June 1993" ;
+    values:category "Foundational declarations" ;
+    cml:asserts concept:vienna-declaration-and-programme-action-paragraph-162-norm .
+
+concept:vienna-declaration-and-programme-action-paragraph-162-norm a values:Right ;
+    cml:modality cml:Deontic ;
+    values:partOf concept:vienna-declaration-and-programme-action-paragraph-162 ;
+    values:heldBy values:NaturalPerson ;
+    values:deonticStatus values:HeuristicDerived ;
+    cml:curationStatus cml:Proposed .
+
+concept:vienna-declaration-and-programme-action-paragraph-163 a cml:Concept ;
+    skos:prefLabel "Paragraph 163" ;
+    cml:realizedBy doc:paragraph-163 ;
+    cml:curationStatus cml:Proposed ;
+    prov:wasDerivedFrom <https://www.ohchr.org/en/instruments-mechanisms/instruments/vienna-declaration-and-programme-action> ;
+    dc:date "25 June 1993" ;
+    values:category "Foundational declarations" ;
+    cml:asserts concept:vienna-declaration-and-programme-action-paragraph-163-norm .
+
+concept:vienna-declaration-and-programme-action-paragraph-163-norm a values:Right ;
+    cml:modality cml:Deontic ;
+    values:partOf concept:vienna-declaration-and-programme-action-paragraph-163 ;
+    values:heldBy values:NaturalPerson ;
+    values:deonticStatus values:HeuristicDerived ;
+    cml:curationStatus cml:Proposed .
+
+concept:vienna-declaration-and-programme-action-paragraph-164 a cml:Concept ;
+    skos:prefLabel "Paragraph 164" ;
+    cml:realizedBy doc:paragraph-164 ;
+    cml:curationStatus cml:Proposed ;
+    prov:wasDerivedFrom <https://www.ohchr.org/en/instruments-mechanisms/instruments/vienna-declaration-and-programme-action> ;
+    dc:date "25 June 1993" ;
+    values:category "Foundational declarations" ;
+    cml:asserts concept:vienna-declaration-and-programme-action-paragraph-164-norm .
+
+concept:vienna-declaration-and-programme-action-paragraph-164-norm a values:Undertaking ;
+    cml:modality cml:Deontic ;
+    values:partOf concept:vienna-declaration-and-programme-action-paragraph-164 ;
+    values:deonticStatus values:HeuristicDerived ;
+    cml:curationStatus cml:Proposed .
+
+concept:vienna-declaration-and-programme-action-paragraph-165 a cml:Concept ;
+    skos:prefLabel "Paragraph 165" ;
+    cml:realizedBy doc:paragraph-165 ;
+    cml:curationStatus cml:Proposed ;
+    prov:wasDerivedFrom <https://www.ohchr.org/en/instruments-mechanisms/instruments/vienna-declaration-and-programme-action> ;
+    dc:date "25 June 1993" ;
+    values:category "Foundational declarations" ;
+    cml:asserts concept:vienna-declaration-and-programme-action-paragraph-165-norm .
+
+concept:vienna-declaration-and-programme-action-paragraph-165-norm a values:Undertaking ;
+    cml:modality cml:Deontic ;
+    values:partOf concept:vienna-declaration-and-programme-action-paragraph-165 ;
+    values:deonticStatus values:HeuristicDerived ;
+    cml:curationStatus cml:Proposed .
+
+concept:vienna-declaration-and-programme-action-paragraph-166 a cml:Concept ;
+    skos:prefLabel "Paragraph 166" ;
+    cml:realizedBy doc:paragraph-166 ;
+    cml:curationStatus cml:Proposed ;
+    prov:wasDerivedFrom <https://www.ohchr.org/en/instruments-mechanisms/instruments/vienna-declaration-and-programme-action> ;
+    dc:date "25 June 1993" ;
+    values:category "Foundational declarations" ;
+    cml:asserts concept:vienna-declaration-and-programme-action-paragraph-166-norm .
+
+concept:vienna-declaration-and-programme-action-paragraph-166-norm a values:Undertaking ;
+    cml:modality cml:Deontic ;
+    values:partOf concept:vienna-declaration-and-programme-action-paragraph-166 ;
+    values:deonticStatus values:HeuristicDerived ;
+    cml:curationStatus cml:Proposed .
+
+concept:vienna-declaration-and-programme-action-paragraph-167 a cml:Concept ;
+    skos:prefLabel "Paragraph 167" ;
+    cml:realizedBy doc:paragraph-167 ;
+    cml:curationStatus cml:Proposed ;
+    prov:wasDerivedFrom <https://www.ohchr.org/en/instruments-mechanisms/instruments/vienna-declaration-and-programme-action> ;
+    dc:date "25 June 1993" ;
+    values:category "Foundational declarations" ;
+    cml:asserts concept:vienna-declaration-and-programme-action-paragraph-167-norm .
+
+concept:vienna-declaration-and-programme-action-paragraph-167-norm a values:Undertaking ;
+    cml:modality cml:Deontic ;
+    values:partOf concept:vienna-declaration-and-programme-action-paragraph-167 ;
+    values:deonticStatus values:HeuristicDerived ;
+    cml:curationStatus cml:Proposed .
+
+concept:vienna-declaration-and-programme-action-paragraph-168 a cml:Concept ;
+    skos:prefLabel "Paragraph 168" ;
+    cml:realizedBy doc:paragraph-168 ;
+    cml:curationStatus cml:Proposed ;
+    prov:wasDerivedFrom <https://www.ohchr.org/en/instruments-mechanisms/instruments/vienna-declaration-and-programme-action> ;
+    dc:date "25 June 1993" ;
+    values:category "Foundational declarations" ;
+    cml:asserts concept:vienna-declaration-and-programme-action-paragraph-168-norm .
+
+concept:vienna-declaration-and-programme-action-paragraph-168-norm a values:Undertaking ;
+    cml:modality cml:Deontic ;
+    values:partOf concept:vienna-declaration-and-programme-action-paragraph-168 ;
+    values:deonticStatus values:HeuristicDerived ;
+    cml:curationStatus cml:Proposed .
+
+concept:vienna-declaration-and-programme-action-paragraph-169 a cml:Concept ;
+    skos:prefLabel "Paragraph 169" ;
+    cml:realizedBy doc:paragraph-169 ;
+    cml:curationStatus cml:Proposed ;
+    prov:wasDerivedFrom <https://www.ohchr.org/en/instruments-mechanisms/instruments/vienna-declaration-and-programme-action> ;
+    dc:date "25 June 1993" ;
+    values:category "Foundational declarations" ;
+    cml:asserts concept:vienna-declaration-and-programme-action-paragraph-169-norm .
+
+concept:vienna-declaration-and-programme-action-paragraph-169-norm a values:Undertaking ;
+    cml:modality cml:Deontic ;
+    values:partOf concept:vienna-declaration-and-programme-action-paragraph-169 ;
+    values:deonticStatus values:HeuristicDerived ;
+    cml:curationStatus cml:Proposed .
+
+concept:vienna-declaration-and-programme-action-paragraph-170 a cml:Concept ;
+    skos:prefLabel "Paragraph 170" ;
+    cml:realizedBy doc:paragraph-170 ;
+    cml:curationStatus cml:Proposed ;
+    prov:wasDerivedFrom <https://www.ohchr.org/en/instruments-mechanisms/instruments/vienna-declaration-and-programme-action> ;
+    dc:date "25 June 1993" ;
+    values:category "Foundational declarations" ;
+    cml:asserts concept:vienna-declaration-and-programme-action-paragraph-170-norm .
+
+concept:vienna-declaration-and-programme-action-paragraph-170-norm a values:Undertaking ;
+    cml:modality cml:Deontic ;
+    values:partOf concept:vienna-declaration-and-programme-action-paragraph-170 ;
+    values:deonticStatus values:HeuristicDerived ;
+    cml:curationStatus cml:Proposed .
+
+concept:vienna-declaration-and-programme-action-paragraph-171 a cml:Concept ;
+    skos:prefLabel "Paragraph 171" ;
+    cml:realizedBy doc:paragraph-171 ;
+    cml:curationStatus cml:Proposed ;
+    prov:wasDerivedFrom <https://www.ohchr.org/en/instruments-mechanisms/instruments/vienna-declaration-and-programme-action> ;
+    dc:date "25 June 1993" ;
+    values:category "Foundational declarations" ;
+    cml:asserts concept:vienna-declaration-and-programme-action-paragraph-171-norm .
+
+concept:vienna-declaration-and-programme-action-paragraph-171-norm a values:Undertaking ;
+    cml:modality cml:Deontic ;
+    values:partOf concept:vienna-declaration-and-programme-action-paragraph-171 ;
+    values:deonticStatus values:HeuristicDerived ;
+    cml:curationStatus cml:Proposed .
+
+concept:vienna-declaration-and-programme-action-paragraph-172 a cml:Concept ;
+    skos:prefLabel "Paragraph 172" ;
+    cml:realizedBy doc:paragraph-172 ;
+    cml:curationStatus cml:Proposed ;
+    prov:wasDerivedFrom <https://www.ohchr.org/en/instruments-mechanisms/instruments/vienna-declaration-and-programme-action> ;
+    dc:date "25 June 1993" ;
+    values:category "Foundational declarations" ;
+    cml:asserts concept:vienna-declaration-and-programme-action-paragraph-172-norm .
+
+concept:vienna-declaration-and-programme-action-paragraph-172-norm a values:Undertaking ;
+    cml:modality cml:Deontic ;
+    values:partOf concept:vienna-declaration-and-programme-action-paragraph-172 ;
+    values:deonticStatus values:HeuristicDerived ;
+    cml:curationStatus cml:Proposed .
+
+concept:vienna-declaration-and-programme-action-paragraph-173 a cml:Concept ;
+    skos:prefLabel "Paragraph 173" ;
+    cml:realizedBy doc:paragraph-173 ;
+    cml:curationStatus cml:Proposed ;
+    prov:wasDerivedFrom <https://www.ohchr.org/en/instruments-mechanisms/instruments/vienna-declaration-and-programme-action> ;
+    dc:date "25 June 1993" ;
+    values:category "Foundational declarations" ;
+    cml:asserts concept:vienna-declaration-and-programme-action-paragraph-173-norm .
+
+concept:vienna-declaration-and-programme-action-paragraph-173-norm a values:Undertaking ;
+    cml:modality cml:Deontic ;
+    values:partOf concept:vienna-declaration-and-programme-action-paragraph-173 ;
+    values:deonticStatus values:HeuristicDerived ;
+    cml:curationStatus cml:Proposed .
+
+concept:vienna-declaration-and-programme-action-paragraph-174 a cml:Concept ;
+    skos:prefLabel "Paragraph 174" ;
+    cml:realizedBy doc:paragraph-174 ;
+    cml:curationStatus cml:Proposed ;
+    prov:wasDerivedFrom <https://www.ohchr.org/en/instruments-mechanisms/instruments/vienna-declaration-and-programme-action> ;
+    dc:date "25 June 1993" ;
+    values:category "Foundational declarations" ;
+    cml:asserts concept:vienna-declaration-and-programme-action-paragraph-174-norm .
+
+concept:vienna-declaration-and-programme-action-paragraph-174-norm a values:Undertaking ;
+    cml:modality cml:Deontic ;
+    values:partOf concept:vienna-declaration-and-programme-action-paragraph-174 ;
+    values:deonticStatus values:HeuristicDerived ;
+    cml:curationStatus cml:Proposed .
+
+concept:vienna-declaration-and-programme-action-paragraph-175 a cml:Concept ;
+    skos:prefLabel "Paragraph 175" ;
+    cml:realizedBy doc:paragraph-175 ;
+    cml:curationStatus cml:Proposed ;
+    prov:wasDerivedFrom <https://www.ohchr.org/en/instruments-mechanisms/instruments/vienna-declaration-and-programme-action> ;
+    dc:date "25 June 1993" ;
+    values:category "Foundational declarations" ;
+    cml:asserts concept:vienna-declaration-and-programme-action-paragraph-175-norm .
+
+concept:vienna-declaration-and-programme-action-paragraph-175-norm a values:Undertaking ;
+    cml:modality cml:Deontic ;
+    values:partOf concept:vienna-declaration-and-programme-action-paragraph-175 ;
+    values:deonticStatus values:HeuristicDerived ;
+    cml:curationStatus cml:Proposed .
+
+concept:vienna-declaration-and-programme-action-paragraph-176 a cml:Concept ;
+    skos:prefLabel "Paragraph 176" ;
+    cml:realizedBy doc:paragraph-176 ;
+    cml:curationStatus cml:Proposed ;
+    prov:wasDerivedFrom <https://www.ohchr.org/en/instruments-mechanisms/instruments/vienna-declaration-and-programme-action> ;
+    dc:date "25 June 1993" ;
+    values:category "Foundational declarations" ;
+    cml:asserts concept:vienna-declaration-and-programme-action-paragraph-176-norm .
+
+concept:vienna-declaration-and-programme-action-paragraph-176-norm a values:Undertaking ;
+    cml:modality cml:Deontic ;
+    values:partOf concept:vienna-declaration-and-programme-action-paragraph-176 ;
+    values:deonticStatus values:HeuristicDerived ;
+    cml:curationStatus cml:Proposed .
+
+concept:vienna-declaration-and-programme-action-paragraph-177 a cml:Concept ;
+    skos:prefLabel "Paragraph 177" ;
+    cml:realizedBy doc:paragraph-177 ;
+    cml:curationStatus cml:Proposed ;
+    prov:wasDerivedFrom <https://www.ohchr.org/en/instruments-mechanisms/instruments/vienna-declaration-and-programme-action> ;
+    dc:date "25 June 1993" ;
+    values:category "Foundational declarations" ;
+    cml:asserts concept:vienna-declaration-and-programme-action-paragraph-177-norm .
+
+concept:vienna-declaration-and-programme-action-paragraph-177-norm a values:Undertaking ;
+    cml:modality cml:Deontic ;
+    values:partOf concept:vienna-declaration-and-programme-action-paragraph-177 ;
+    values:deonticStatus values:HeuristicDerived ;
+    cml:curationStatus cml:Proposed .
+
+concept:vienna-declaration-and-programme-action-paragraph-178 a cml:Concept ;
+    skos:prefLabel "Paragraph 178" ;
+    cml:realizedBy doc:paragraph-178 ;
+    cml:curationStatus cml:Proposed ;
+    prov:wasDerivedFrom <https://www.ohchr.org/en/instruments-mechanisms/instruments/vienna-declaration-and-programme-action> ;
+    dc:date "25 June 1993" ;
+    values:category "Foundational declarations" ;
+    cml:asserts concept:vienna-declaration-and-programme-action-paragraph-178-norm .
+
+concept:vienna-declaration-and-programme-action-paragraph-178-norm a values:Undertaking ;
+    cml:modality cml:Deontic ;
+    values:partOf concept:vienna-declaration-and-programme-action-paragraph-178 ;
+    values:deonticStatus values:HeuristicDerived ;
+    cml:curationStatus cml:Proposed .
+
+concept:vienna-declaration-and-programme-action-paragraph-179 a cml:Concept ;
+    skos:prefLabel "Paragraph 179" ;
+    cml:realizedBy doc:paragraph-179 ;
+    cml:curationStatus cml:Proposed ;
+    prov:wasDerivedFrom <https://www.ohchr.org/en/instruments-mechanisms/instruments/vienna-declaration-and-programme-action> ;
+    dc:date "25 June 1993" ;
+    values:category "Foundational declarations" ;
+    cml:asserts concept:vienna-declaration-and-programme-action-paragraph-179-norm .
+
+concept:vienna-declaration-and-programme-action-paragraph-179-norm a values:Undertaking ;
+    cml:modality cml:Deontic ;
+    values:partOf concept:vienna-declaration-and-programme-action-paragraph-179 ;
+    values:deonticStatus values:HeuristicDerived ;
+    cml:curationStatus cml:Proposed .
+
+concept:vienna-declaration-and-programme-action-paragraph-180 a cml:Concept ;
+    skos:prefLabel "Paragraph 180" ;
+    cml:realizedBy doc:paragraph-180 ;
+    cml:curationStatus cml:Proposed ;
+    prov:wasDerivedFrom <https://www.ohchr.org/en/instruments-mechanisms/instruments/vienna-declaration-and-programme-action> ;
+    dc:date "25 June 1993" ;
+    values:category "Foundational declarations" ;
+    cml:asserts concept:vienna-declaration-and-programme-action-paragraph-180-norm .
+
+concept:vienna-declaration-and-programme-action-paragraph-180-norm a values:Undertaking ;
+    cml:modality cml:Deontic ;
+    values:partOf concept:vienna-declaration-and-programme-action-paragraph-180 ;
+    values:deonticStatus values:HeuristicDerived ;
+    cml:curationStatus cml:Proposed .
+
+concept:vienna-declaration-and-programme-action-paragraph-181 a cml:Concept ;
+    skos:prefLabel "Paragraph 181" ;
+    cml:realizedBy doc:paragraph-181 ;
+    cml:curationStatus cml:Proposed ;
+    prov:wasDerivedFrom <https://www.ohchr.org/en/instruments-mechanisms/instruments/vienna-declaration-and-programme-action> ;
+    dc:date "25 June 1993" ;
+    values:category "Foundational declarations" ;
+    cml:asserts concept:vienna-declaration-and-programme-action-paragraph-181-norm .
+
+concept:vienna-declaration-and-programme-action-paragraph-181-norm a values:Undertaking ;
+    cml:modality cml:Deontic ;
+    values:partOf concept:vienna-declaration-and-programme-action-paragraph-181 ;
+    values:deonticStatus values:HeuristicDerived ;
+    cml:curationStatus cml:Proposed .
+
+concept:vienna-declaration-and-programme-action-paragraph-182 a cml:Concept ;
+    skos:prefLabel "Paragraph 182" ;
+    cml:realizedBy doc:paragraph-182 ;
+    cml:curationStatus cml:Proposed ;
+    prov:wasDerivedFrom <https://www.ohchr.org/en/instruments-mechanisms/instruments/vienna-declaration-and-programme-action> ;
+    dc:date "25 June 1993" ;
+    values:category "Foundational declarations" ;
+    cml:asserts concept:vienna-declaration-and-programme-action-paragraph-182-norm .
+
+concept:vienna-declaration-and-programme-action-paragraph-182-norm a values:Undertaking ;
+    cml:modality cml:Deontic ;
+    values:partOf concept:vienna-declaration-and-programme-action-paragraph-182 ;
+    values:deonticStatus values:HeuristicDerived ;
+    cml:curationStatus cml:Proposed .
+
+concept:vienna-declaration-and-programme-action-paragraph-183 a cml:Concept ;
+    skos:prefLabel "Paragraph 183" ;
+    cml:realizedBy doc:paragraph-183 ;
+    cml:curationStatus cml:Proposed ;
+    prov:wasDerivedFrom <https://www.ohchr.org/en/instruments-mechanisms/instruments/vienna-declaration-and-programme-action> ;
+    dc:date "25 June 1993" ;
+    values:category "Foundational declarations" ;
+    cml:asserts concept:vienna-declaration-and-programme-action-paragraph-183-norm .
+
+concept:vienna-declaration-and-programme-action-paragraph-183-norm a values:Undertaking ;
+    cml:modality cml:Deontic ;
+    values:partOf concept:vienna-declaration-and-programme-action-paragraph-183 ;
+    values:deonticStatus values:HeuristicDerived ;
+    cml:curationStatus cml:Proposed .
+
+concept:vienna-declaration-and-programme-action-paragraph-184 a cml:Concept ;
+    skos:prefLabel "Paragraph 184" ;
+    cml:realizedBy doc:paragraph-184 ;
+    cml:curationStatus cml:Proposed ;
+    prov:wasDerivedFrom <https://www.ohchr.org/en/instruments-mechanisms/instruments/vienna-declaration-and-programme-action> ;
+    dc:date "25 June 1993" ;
+    values:category "Foundational declarations" ;
+    cml:asserts concept:vienna-declaration-and-programme-action-paragraph-184-norm .
+
+concept:vienna-declaration-and-programme-action-paragraph-184-norm a values:Undertaking ;
+    cml:modality cml:Deontic ;
+    values:partOf concept:vienna-declaration-and-programme-action-paragraph-184 ;
+    values:deonticStatus values:HeuristicDerived ;
+    cml:curationStatus cml:Proposed .
+
+concept:vienna-declaration-and-programme-action-paragraph-185 a cml:Concept ;
+    skos:prefLabel "Paragraph 185" ;
+    cml:realizedBy doc:paragraph-185 ;
+    cml:curationStatus cml:Proposed ;
+    prov:wasDerivedFrom <https://www.ohchr.org/en/instruments-mechanisms/instruments/vienna-declaration-and-programme-action> ;
+    dc:date "25 June 1993" ;
+    values:category "Foundational declarations" ;
+    cml:asserts concept:vienna-declaration-and-programme-action-paragraph-185-norm .
+
+concept:vienna-declaration-and-programme-action-paragraph-185-norm a values:Undertaking ;
+    cml:modality cml:Deontic ;
+    values:partOf concept:vienna-declaration-and-programme-action-paragraph-185 ;
+    values:deonticStatus values:HeuristicDerived ;
+    cml:curationStatus cml:Proposed .
+
+concept:vienna-declaration-and-programme-action-paragraph-186 a cml:Concept ;
+    skos:prefLabel "Paragraph 186" ;
+    cml:realizedBy doc:paragraph-186 ;
+    cml:curationStatus cml:Proposed ;
+    prov:wasDerivedFrom <https://www.ohchr.org/en/instruments-mechanisms/instruments/vienna-declaration-and-programme-action> ;
+    dc:date "25 June 1993" ;
+    values:category "Foundational declarations" ;
+    cml:asserts concept:vienna-declaration-and-programme-action-paragraph-186-norm .
+
+concept:vienna-declaration-and-programme-action-paragraph-186-norm a values:Undertaking ;
+    cml:modality cml:Deontic ;
+    values:partOf concept:vienna-declaration-and-programme-action-paragraph-186 ;
+    values:deonticStatus values:HeuristicDerived ;
+    cml:curationStatus cml:Proposed .
+
+concept:vienna-declaration-and-programme-action-paragraph-187 a cml:Concept ;
+    skos:prefLabel "Paragraph 187" ;
+    cml:realizedBy doc:paragraph-187 ;
+    cml:curationStatus cml:Proposed ;
+    prov:wasDerivedFrom <https://www.ohchr.org/en/instruments-mechanisms/instruments/vienna-declaration-and-programme-action> ;
+    dc:date "25 June 1993" ;
+    values:category "Foundational declarations" ;
+    cml:asserts concept:vienna-declaration-and-programme-action-paragraph-187-norm .
+
+concept:vienna-declaration-and-programme-action-paragraph-187-norm a values:Undertaking ;
+    cml:modality cml:Deontic ;
+    values:partOf concept:vienna-declaration-and-programme-action-paragraph-187 ;
+    values:deonticStatus values:HeuristicDerived ;
+    cml:curationStatus cml:Proposed .
+
+concept:vienna-declaration-and-programme-action-paragraph-188 a cml:Concept ;
+    skos:prefLabel "Paragraph 188" ;
+    cml:realizedBy doc:paragraph-188 ;
+    cml:curationStatus cml:Proposed ;
+    prov:wasDerivedFrom <https://www.ohchr.org/en/instruments-mechanisms/instruments/vienna-declaration-and-programme-action> ;
+    dc:date "25 June 1993" ;
+    values:category "Foundational declarations" ;
+    cml:asserts concept:vienna-declaration-and-programme-action-paragraph-188-norm .
+
+concept:vienna-declaration-and-programme-action-paragraph-188-norm a values:Undertaking ;
+    cml:modality cml:Deontic ;
+    values:partOf concept:vienna-declaration-and-programme-action-paragraph-188 ;
+    values:deonticStatus values:HeuristicDerived ;
+    cml:curationStatus cml:Proposed .
+
+concept:vienna-declaration-and-programme-action-paragraph-189 a cml:Concept ;
+    skos:prefLabel "Paragraph 189" ;
+    cml:realizedBy doc:paragraph-189 ;
+    cml:curationStatus cml:Proposed ;
+    prov:wasDerivedFrom <https://www.ohchr.org/en/instruments-mechanisms/instruments/vienna-declaration-and-programme-action> ;
+    dc:date "25 June 1993" ;
+    values:category "Foundational declarations" ;
+    cml:asserts concept:vienna-declaration-and-programme-action-paragraph-189-norm .
+
+concept:vienna-declaration-and-programme-action-paragraph-189-norm a values:Undertaking ;
+    cml:modality cml:Deontic ;
+    values:partOf concept:vienna-declaration-and-programme-action-paragraph-189 ;
+    values:deonticStatus values:HeuristicDerived ;
+    cml:curationStatus cml:Proposed .
+
+concept:vienna-declaration-and-programme-action-paragraph-190 a cml:Concept ;
+    skos:prefLabel "Paragraph 190" ;
+    cml:realizedBy doc:paragraph-190 ;
+    cml:curationStatus cml:Proposed ;
+    prov:wasDerivedFrom <https://www.ohchr.org/en/instruments-mechanisms/instruments/vienna-declaration-and-programme-action> ;
+    dc:date "25 June 1993" ;
+    values:category "Foundational declarations" ;
+    cml:asserts concept:vienna-declaration-and-programme-action-paragraph-190-norm .
+
+concept:vienna-declaration-and-programme-action-paragraph-190-norm a values:Undertaking ;
+    cml:modality cml:Deontic ;
+    values:partOf concept:vienna-declaration-and-programme-action-paragraph-190 ;
+    values:deonticStatus values:HeuristicDerived ;
+    cml:curationStatus cml:Proposed .
+
+concept:vienna-declaration-and-programme-action-paragraph-191 a cml:Concept ;
+    skos:prefLabel "Paragraph 191" ;
+    cml:realizedBy doc:paragraph-191 ;
+    cml:curationStatus cml:Proposed ;
+    prov:wasDerivedFrom <https://www.ohchr.org/en/instruments-mechanisms/instruments/vienna-declaration-and-programme-action> ;
+    dc:date "25 June 1993" ;
+    values:category "Foundational declarations" ;
+    cml:asserts concept:vienna-declaration-and-programme-action-paragraph-191-norm .
+
+concept:vienna-declaration-and-programme-action-paragraph-191-norm a values:Undertaking ;
+    cml:modality cml:Deontic ;
+    values:partOf concept:vienna-declaration-and-programme-action-paragraph-191 ;
+    values:deonticStatus values:HeuristicDerived ;
+    cml:curationStatus cml:Proposed .
+
+concept:vienna-declaration-and-programme-action-paragraph-192 a cml:Concept ;
+    skos:prefLabel "Paragraph 192" ;
+    cml:realizedBy doc:paragraph-192 ;
+    cml:curationStatus cml:Proposed ;
+    prov:wasDerivedFrom <https://www.ohchr.org/en/instruments-mechanisms/instruments/vienna-declaration-and-programme-action> ;
+    dc:date "25 June 1993" ;
+    values:category "Foundational declarations" ;
+    cml:asserts concept:vienna-declaration-and-programme-action-paragraph-192-norm .
+
+concept:vienna-declaration-and-programme-action-paragraph-192-norm a values:Undertaking ;
+    cml:modality cml:Deontic ;
+    values:partOf concept:vienna-declaration-and-programme-action-paragraph-192 ;
+    values:deonticStatus values:HeuristicDerived ;
+    cml:curationStatus cml:Proposed .

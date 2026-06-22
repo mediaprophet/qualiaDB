@@ -1,0 +1,171 @@
+@prefix rdf:     <http://www.w3.org/1999/02/22-rdf-syntax-ns#> .
+@prefix rdfs:    <http://www.w3.org/2000/01/rdf-schema#> .
+@prefix skos:    <http://www.w3.org/2004/02/skos/core#> .
+@prefix dc:      <http://purl.org/dc/terms/> .
+@prefix prov:    <http://www.w3.org/ns/prov#> .
+@prefix values:  <https://ns.webcivics.org/values/> .
+@prefix cml:     <https://ns.webcivics.org/cml/> .
+@prefix concept: <https://ns.webcivics.org/concept/> .
+@prefix doc:     <https://ns.webcivics.org/values/declaration-race-and-racial-prejudice#> .
+
+# ============================================================
+# CML concept layer (LOGIC) — Declaration on Race and Racial Prejudice
+# MACHINE-DERIVED from the TEXT layer (un-instruments) — cml:Proposed,
+# values:HeuristicDerived. Pending human attestation (cml:Attested / exactMatch).
+# One cml:Concept per provision; cml:realizedBy the provision; cml:asserts the
+# deontic norm. R1 universalisation materialised for duties borne by every Agent.
+# ============================================================
+
+concept:declaration-race-and-racial-prejudice-article-1 a cml:Concept ;
+    skos:prefLabel "Article 1" ;
+    cml:realizedBy doc:article-1 ;
+    cml:curationStatus cml:Proposed ;
+    prov:wasDerivedFrom <https://www.ohchr.org/en/instruments-mechanisms/instruments/declaration-race-and-racial-prejudice> ;
+    dc:date "27 November 1978" ;
+    values:category "Equality & non-discrimination" ;
+    cml:asserts concept:declaration-race-and-racial-prejudice-article-1-norm .
+
+concept:declaration-race-and-racial-prejudice-article-1-norm a values:Right ;
+    cml:modality cml:Deontic ;
+    values:partOf concept:declaration-race-and-racial-prejudice-article-1 ;
+    values:heldBy values:NaturalPerson ;
+    values:deonticStatus values:HeuristicDerived ;
+    cml:curationStatus cml:Proposed .
+
+concept:declaration-race-and-racial-prejudice-article-2 a cml:Concept ;
+    skos:prefLabel "Article 2" ;
+    cml:realizedBy doc:article-2 ;
+    cml:curationStatus cml:Proposed ;
+    prov:wasDerivedFrom <https://www.ohchr.org/en/instruments-mechanisms/instruments/declaration-race-and-racial-prejudice> ;
+    dc:date "27 November 1978" ;
+    values:category "Equality & non-discrimination" ;
+    cml:asserts concept:declaration-race-and-racial-prejudice-article-2-norm .
+
+concept:declaration-race-and-racial-prejudice-article-2-norm a values:Right ;
+    cml:modality cml:Deontic ;
+    values:partOf concept:declaration-race-and-racial-prejudice-article-2 ;
+    values:heldBy values:NaturalPerson ;
+    values:deonticStatus values:HeuristicDerived ;
+    cml:curationStatus cml:Proposed .
+
+concept:declaration-race-and-racial-prejudice-article-3 a cml:Concept ;
+    skos:prefLabel "Article 3" ;
+    cml:realizedBy doc:article-3 ;
+    cml:curationStatus cml:Proposed ;
+    prov:wasDerivedFrom <https://www.ohchr.org/en/instruments-mechanisms/instruments/declaration-race-and-racial-prejudice> ;
+    dc:date "27 November 1978" ;
+    values:category "Equality & non-discrimination" ;
+    cml:asserts concept:declaration-race-and-racial-prejudice-article-3-norm .
+
+concept:declaration-race-and-racial-prejudice-article-3-norm a values:Right ;
+    cml:modality cml:Deontic ;
+    values:partOf concept:declaration-race-and-racial-prejudice-article-3 ;
+    values:heldBy values:NaturalPerson ;
+    values:deonticStatus values:HeuristicDerived ;
+    cml:curationStatus cml:Proposed .
+
+concept:declaration-race-and-racial-prejudice-article-4 a cml:Concept ;
+    skos:prefLabel "Article 4" ;
+    cml:realizedBy doc:article-4 ;
+    cml:curationStatus cml:Proposed ;
+    prov:wasDerivedFrom <https://www.ohchr.org/en/instruments-mechanisms/instruments/declaration-race-and-racial-prejudice> ;
+    dc:date "27 November 1978" ;
+    values:category "Equality & non-discrimination" ;
+    cml:asserts concept:declaration-race-and-racial-prejudice-article-4-norm .
+
+concept:declaration-race-and-racial-prejudice-article-4-norm a values:Undertaking ;
+    cml:modality cml:Deontic ;
+    values:partOf concept:declaration-race-and-racial-prejudice-article-4 ;
+    values:deonticStatus values:HeuristicDerived ;
+    cml:curationStatus cml:Proposed .
+
+concept:declaration-race-and-racial-prejudice-article-5 a cml:Concept ;
+    skos:prefLabel "Article 5" ;
+    cml:realizedBy doc:article-5 ;
+    cml:curationStatus cml:Proposed ;
+    prov:wasDerivedFrom <https://www.ohchr.org/en/instruments-mechanisms/instruments/declaration-race-and-racial-prejudice> ;
+    dc:date "27 November 1978" ;
+    values:category "Equality & non-discrimination" ;
+    cml:asserts concept:declaration-race-and-racial-prejudice-article-5-norm .
+
+concept:declaration-race-and-racial-prejudice-article-5-norm a values:Undertaking ;
+    cml:modality cml:Deontic ;
+    values:partOf concept:declaration-race-and-racial-prejudice-article-5 ;
+    values:deonticStatus values:HeuristicDerived ;
+    cml:curationStatus cml:Proposed .
+
+concept:declaration-race-and-racial-prejudice-article-6 a cml:Concept ;
+    skos:prefLabel "Article 6" ;
+    cml:realizedBy doc:article-6 ;
+    cml:curationStatus cml:Proposed ;
+    prov:wasDerivedFrom <https://www.ohchr.org/en/instruments-mechanisms/instruments/declaration-race-and-racial-prejudice> ;
+    dc:date "27 November 1978" ;
+    values:category "Equality & non-discrimination" ;
+    cml:asserts concept:declaration-race-and-racial-prejudice-article-6-norm .
+
+concept:declaration-race-and-racial-prejudice-article-6-norm a values:Undertaking ;
+    cml:modality cml:Deontic ;
+    values:partOf concept:declaration-race-and-racial-prejudice-article-6 ;
+    values:deonticStatus values:HeuristicDerived ;
+    cml:curationStatus cml:Proposed .
+
+concept:declaration-race-and-racial-prejudice-article-7 a cml:Concept ;
+    skos:prefLabel "Article 7" ;
+    cml:realizedBy doc:article-7 ;
+    cml:curationStatus cml:Proposed ;
+    prov:wasDerivedFrom <https://www.ohchr.org/en/instruments-mechanisms/instruments/declaration-race-and-racial-prejudice> ;
+    dc:date "27 November 1978" ;
+    values:category "Equality & non-discrimination" ;
+    cml:asserts concept:declaration-race-and-racial-prejudice-article-7-norm .
+
+concept:declaration-race-and-racial-prejudice-article-7-norm a values:Undertaking ;
+    cml:modality cml:Deontic ;
+    values:partOf concept:declaration-race-and-racial-prejudice-article-7 ;
+    values:deonticStatus values:HeuristicDerived ;
+    cml:curationStatus cml:Proposed .
+
+concept:declaration-race-and-racial-prejudice-article-8 a cml:Concept ;
+    skos:prefLabel "Article 8" ;
+    cml:realizedBy doc:article-8 ;
+    cml:curationStatus cml:Proposed ;
+    prov:wasDerivedFrom <https://www.ohchr.org/en/instruments-mechanisms/instruments/declaration-race-and-racial-prejudice> ;
+    dc:date "27 November 1978" ;
+    values:category "Equality & non-discrimination" ;
+    cml:asserts concept:declaration-race-and-racial-prejudice-article-8-norm .
+
+concept:declaration-race-and-racial-prejudice-article-8-norm a values:Right ;
+    cml:modality cml:Deontic ;
+    values:partOf concept:declaration-race-and-racial-prejudice-article-8 ;
+    values:heldBy values:NaturalPerson ;
+    values:deonticStatus values:HeuristicDerived ;
+    cml:curationStatus cml:Proposed .
+
+concept:declaration-race-and-racial-prejudice-article-9 a cml:Concept ;
+    skos:prefLabel "Article 9" ;
+    cml:realizedBy doc:article-9 ;
+    cml:curationStatus cml:Proposed ;
+    prov:wasDerivedFrom <https://www.ohchr.org/en/instruments-mechanisms/instruments/declaration-race-and-racial-prejudice> ;
+    dc:date "27 November 1978" ;
+    values:category "Equality & non-discrimination" ;
+    cml:asserts concept:declaration-race-and-racial-prejudice-article-9-norm .
+
+concept:declaration-race-and-racial-prejudice-article-9-norm a values:Undertaking ;
+    cml:modality cml:Deontic ;
+    values:partOf concept:declaration-race-and-racial-prejudice-article-9 ;
+    values:deonticStatus values:HeuristicDerived ;
+    cml:curationStatus cml:Proposed .
+
+concept:declaration-race-and-racial-prejudice-article-10 a cml:Concept ;
+    skos:prefLabel "Article 10" ;
+    cml:realizedBy doc:article-10 ;
+    cml:curationStatus cml:Proposed ;
+    prov:wasDerivedFrom <https://www.ohchr.org/en/instruments-mechanisms/instruments/declaration-race-and-racial-prejudice> ;
+    dc:date "27 November 1978" ;
+    values:category "Equality & non-discrimination" ;
+    cml:asserts concept:declaration-race-and-racial-prejudice-article-10-norm .
+
+concept:declaration-race-and-racial-prejudice-article-10-norm a values:Undertaking ;
+    cml:modality cml:Deontic ;
+    values:partOf concept:declaration-race-and-racial-prejudice-article-10 ;
+    values:deonticStatus values:HeuristicDerived ;
+    cml:curationStatus cml:Proposed .

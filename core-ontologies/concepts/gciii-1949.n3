@@ -1,0 +1,2375 @@
+@prefix rdf:     <http://www.w3.org/1999/02/22-rdf-syntax-ns#> .
+@prefix rdfs:    <http://www.w3.org/2000/01/rdf-schema#> .
+@prefix skos:    <http://www.w3.org/2004/02/skos/core#> .
+@prefix dc:      <http://purl.org/dc/terms/> .
+@prefix prov:    <http://www.w3.org/ns/prov#> .
+@prefix values:  <https://ns.webcivics.org/values/> .
+@prefix cml:     <https://ns.webcivics.org/cml/> .
+@prefix concept: <https://ns.webcivics.org/concept/> .
+@prefix doc:     <https://ns.webcivics.org/values/gciii-1949#> .
+
+# ============================================================
+# CML concept layer (LOGIC) — Convention (III) relative to the Treatment of Prisoners of War. Geneva, 12 August 1949.
+# MACHINE-DERIVED from the TEXT layer (un-instruments) — cml:Proposed,
+# values:HeuristicDerived. Pending human attestation (cml:Attested / exactMatch).
+# One cml:Concept per provision; cml:realizedBy the provision; cml:asserts the
+# deontic norm. R1 universalisation materialised for duties borne by every Agent.
+# ============================================================
+
+concept:gciii-1949-article-1 a cml:Concept ;
+    skos:prefLabel "Article 1 - Respect for the Convention" ;
+    cml:realizedBy doc:article-1 ;
+    cml:curationStatus cml:Proposed ;
+    prov:wasDerivedFrom <https://ihl-databases.icrc.org/en/ihl-treaties/gciii-1949> ;
+    dc:date "1949-08-12" ;
+    values:category "International Humanitarian Law (Law of War)" ;
+    cml:asserts concept:gciii-1949-article-1-norm .
+
+concept:gciii-1949-article-1-norm a values:Obligation ;
+    cml:modality cml:Deontic ;
+    values:partOf concept:gciii-1949-article-1 ;
+    values:borneBy values:Agent ;
+    values:borneBy values:State ;   # R1 universalisation (Derived)
+    values:deonticStatus values:HeuristicDerived ;
+    cml:curationStatus cml:Proposed .
+
+concept:gciii-1949-article-2 a cml:Concept ;
+    skos:prefLabel "Article 2 - Application of the Convention" ;
+    cml:realizedBy doc:article-2 ;
+    cml:curationStatus cml:Proposed ;
+    prov:wasDerivedFrom <https://ihl-databases.icrc.org/en/ihl-treaties/gciii-1949> ;
+    dc:date "1949-08-12" ;
+    values:category "International Humanitarian Law (Law of War)" ;
+    cml:asserts concept:gciii-1949-article-2-norm .
+
+concept:gciii-1949-article-2-norm a values:Prohibition ;
+    cml:modality cml:Deontic ;
+    values:partOf concept:gciii-1949-article-2 ;
+    values:borneBy values:Agent ;
+    values:deonticStatus values:HeuristicDerived ;
+    cml:curationStatus cml:Proposed .
+
+concept:gciii-1949-article-3 a cml:Concept ;
+    skos:prefLabel "Article 3 - Conflicts not of an international character" ;
+    cml:realizedBy doc:article-3 ;
+    cml:curationStatus cml:Proposed ;
+    prov:wasDerivedFrom <https://ihl-databases.icrc.org/en/ihl-treaties/gciii-1949> ;
+    dc:date "1949-08-12" ;
+    values:category "International Humanitarian Law (Law of War)" ;
+    cml:asserts concept:gciii-1949-article-3-norm .
+
+concept:gciii-1949-article-3-norm a values:Prohibition ;
+    cml:modality cml:Deontic ;
+    values:partOf concept:gciii-1949-article-3 ;
+    values:borneBy values:Agent ;
+    values:deonticStatus values:HeuristicDerived ;
+    cml:curationStatus cml:Proposed .
+
+concept:gciii-1949-article-4 a cml:Concept ;
+    skos:prefLabel "Article 4 - Prisoners of war" ;
+    cml:realizedBy doc:article-4 ;
+    cml:curationStatus cml:Proposed ;
+    prov:wasDerivedFrom <https://ihl-databases.icrc.org/en/ihl-treaties/gciii-1949> ;
+    dc:date "1949-08-12" ;
+    values:category "International Humanitarian Law (Law of War)" ;
+    cml:asserts concept:gciii-1949-article-4-norm .
+
+concept:gciii-1949-article-4-norm a values:Obligation ;
+    cml:modality cml:Deontic ;
+    values:partOf concept:gciii-1949-article-4 ;
+    values:borneBy values:Agent ;
+    values:borneBy values:State ;   # R1 universalisation (Derived)
+    values:deonticStatus values:HeuristicDerived ;
+    cml:curationStatus cml:Proposed .
+
+concept:gciii-1949-article-5 a cml:Concept ;
+    skos:prefLabel "Article 5 - Beginning and end of application" ;
+    cml:realizedBy doc:article-5 ;
+    cml:curationStatus cml:Proposed ;
+    prov:wasDerivedFrom <https://ihl-databases.icrc.org/en/ihl-treaties/gciii-1949> ;
+    dc:date "1949-08-12" ;
+    values:category "International Humanitarian Law (Law of War)" ;
+    cml:asserts concept:gciii-1949-article-5-norm .
+
+concept:gciii-1949-article-5-norm a values:Obligation ;
+    cml:modality cml:Deontic ;
+    values:partOf concept:gciii-1949-article-5 ;
+    values:borneBy values:Agent ;
+    values:borneBy values:State ;   # R1 universalisation (Derived)
+    values:deonticStatus values:HeuristicDerived ;
+    cml:curationStatus cml:Proposed .
+
+concept:gciii-1949-article-6 a cml:Concept ;
+    skos:prefLabel "Article 6 - Special agreements" ;
+    cml:realizedBy doc:article-6 ;
+    cml:curationStatus cml:Proposed ;
+    prov:wasDerivedFrom <https://ihl-databases.icrc.org/en/ihl-treaties/gciii-1949> ;
+    dc:date "1949-08-12" ;
+    values:category "International Humanitarian Law (Law of War)" ;
+    cml:asserts concept:gciii-1949-article-6-norm .
+
+concept:gciii-1949-article-6-norm a values:Undertaking ;
+    cml:modality cml:Deontic ;
+    values:partOf concept:gciii-1949-article-6 ;
+    values:borneBy values:Agent ;
+    values:deonticStatus values:HeuristicDerived ;
+    cml:curationStatus cml:Proposed .
+
+concept:gciii-1949-article-7 a cml:Concept ;
+    skos:prefLabel "Article 7 - Non-renunciation of rights" ;
+    cml:realizedBy doc:article-7 ;
+    cml:curationStatus cml:Proposed ;
+    prov:wasDerivedFrom <https://ihl-databases.icrc.org/en/ihl-treaties/gciii-1949> ;
+    dc:date "1949-08-12" ;
+    values:category "International Humanitarian Law (Law of War)" ;
+    cml:asserts concept:gciii-1949-article-7-norm .
+
+concept:gciii-1949-article-7-norm a values:Undertaking ;
+    cml:modality cml:Deontic ;
+    values:partOf concept:gciii-1949-article-7 ;
+    values:borneBy values:Agent ;
+    values:deonticStatus values:HeuristicDerived ;
+    cml:curationStatus cml:Proposed .
+
+concept:gciii-1949-article-8 a cml:Concept ;
+    skos:prefLabel "Article 8 - Protecting Powers" ;
+    cml:realizedBy doc:article-8 ;
+    cml:curationStatus cml:Proposed ;
+    prov:wasDerivedFrom <https://ihl-databases.icrc.org/en/ihl-treaties/gciii-1949> ;
+    dc:date "1949-08-12" ;
+    values:category "International Humanitarian Law (Law of War)" ;
+    cml:asserts concept:gciii-1949-article-8-norm .
+
+concept:gciii-1949-article-8-norm a values:Prohibition ;
+    cml:modality cml:Deontic ;
+    values:partOf concept:gciii-1949-article-8 ;
+    values:borneBy values:Agent ;
+    values:deonticStatus values:HeuristicDerived ;
+    cml:curationStatus cml:Proposed .
+
+concept:gciii-1949-article-9 a cml:Concept ;
+    skos:prefLabel "Article 9 - Activities of the ICRC and other impartial humanitarian organizations" ;
+    cml:realizedBy doc:article-9 ;
+    cml:curationStatus cml:Proposed ;
+    prov:wasDerivedFrom <https://ihl-databases.icrc.org/en/ihl-treaties/gciii-1949> ;
+    dc:date "1949-08-12" ;
+    values:category "International Humanitarian Law (Law of War)" ;
+    cml:asserts concept:gciii-1949-article-9-norm .
+
+concept:gciii-1949-article-9-norm a values:Undertaking ;
+    cml:modality cml:Deontic ;
+    values:partOf concept:gciii-1949-article-9 ;
+    values:borneBy values:Agent ;
+    values:deonticStatus values:HeuristicDerived ;
+    cml:curationStatus cml:Proposed .
+
+concept:gciii-1949-article-10 a cml:Concept ;
+    skos:prefLabel "Article 10 - Substitutes for Protecting Powers" ;
+    cml:realizedBy doc:article-10 ;
+    cml:curationStatus cml:Proposed ;
+    prov:wasDerivedFrom <https://ihl-databases.icrc.org/en/ihl-treaties/gciii-1949> ;
+    dc:date "1949-08-12" ;
+    values:category "International Humanitarian Law (Law of War)" ;
+    cml:asserts concept:gciii-1949-article-10-norm .
+
+concept:gciii-1949-article-10-norm a values:Obligation ;
+    cml:modality cml:Deontic ;
+    values:partOf concept:gciii-1949-article-10 ;
+    values:borneBy values:Agent ;
+    values:borneBy values:State ;   # R1 universalisation (Derived)
+    values:deonticStatus values:HeuristicDerived ;
+    cml:curationStatus cml:Proposed .
+
+concept:gciii-1949-article-11 a cml:Concept ;
+    skos:prefLabel "Article 11 - Conciliation procedure" ;
+    cml:realizedBy doc:article-11 ;
+    cml:curationStatus cml:Proposed ;
+    prov:wasDerivedFrom <https://ihl-databases.icrc.org/en/ihl-treaties/gciii-1949> ;
+    dc:date "1949-08-12" ;
+    values:category "International Humanitarian Law (Law of War)" ;
+    cml:asserts concept:gciii-1949-article-11-norm .
+
+concept:gciii-1949-article-11-norm a values:Obligation ;
+    cml:modality cml:Deontic ;
+    values:partOf concept:gciii-1949-article-11 ;
+    values:borneBy values:Agent ;
+    values:borneBy values:State ;   # R1 universalisation (Derived)
+    values:deonticStatus values:HeuristicDerived ;
+    cml:curationStatus cml:Proposed .
+
+concept:gciii-1949-article-12 a cml:Concept ;
+    skos:prefLabel "Article 12 - Responsibility for the treatment of prisoners and conditions for their transfer to another Power" ;
+    cml:realizedBy doc:article-12 ;
+    cml:curationStatus cml:Proposed ;
+    prov:wasDerivedFrom <https://ihl-databases.icrc.org/en/ihl-treaties/gciii-1949> ;
+    dc:date "1949-08-12" ;
+    values:category "International Humanitarian Law (Law of War)" ;
+    cml:asserts concept:gciii-1949-article-12-norm .
+
+concept:gciii-1949-article-12-norm a values:Undertaking ;
+    cml:modality cml:Deontic ;
+    values:partOf concept:gciii-1949-article-12 ;
+    values:borneBy values:Agent ;
+    values:deonticStatus values:HeuristicDerived ;
+    cml:curationStatus cml:Proposed .
+
+concept:gciii-1949-article-13 a cml:Concept ;
+    skos:prefLabel "Article 13 - Humane treatment of prisoners" ;
+    cml:realizedBy doc:article-13 ;
+    cml:curationStatus cml:Proposed ;
+    prov:wasDerivedFrom <https://ihl-databases.icrc.org/en/ihl-treaties/gciii-1949> ;
+    dc:date "1949-08-12" ;
+    values:category "International Humanitarian Law (Law of War)" ;
+    cml:asserts concept:gciii-1949-article-13-norm .
+
+concept:gciii-1949-article-13-norm a values:Prohibition ;
+    cml:modality cml:Deontic ;
+    values:partOf concept:gciii-1949-article-13 ;
+    values:borneBy values:Agent ;
+    values:deonticStatus values:HeuristicDerived ;
+    cml:curationStatus cml:Proposed .
+
+concept:gciii-1949-article-14 a cml:Concept ;
+    skos:prefLabel "Article 14 - Respect for the persons and honour of prisoners" ;
+    cml:realizedBy doc:article-14 ;
+    cml:curationStatus cml:Proposed ;
+    prov:wasDerivedFrom <https://ihl-databases.icrc.org/en/ihl-treaties/gciii-1949> ;
+    dc:date "1949-08-12" ;
+    values:category "International Humanitarian Law (Law of War)" ;
+    cml:asserts concept:gciii-1949-article-14-norm .
+
+concept:gciii-1949-article-14-norm a values:Obligation ;
+    cml:modality cml:Deontic ;
+    values:partOf concept:gciii-1949-article-14 ;
+    values:borneBy values:Agent ;
+    values:borneBy values:State ;   # R1 universalisation (Derived)
+    values:deonticStatus values:HeuristicDerived ;
+    cml:curationStatus cml:Proposed .
+
+concept:gciii-1949-article-15 a cml:Concept ;
+    skos:prefLabel "Article 15 - Maintenance of prisoners" ;
+    cml:realizedBy doc:article-15 ;
+    cml:curationStatus cml:Proposed ;
+    prov:wasDerivedFrom <https://ihl-databases.icrc.org/en/ihl-treaties/gciii-1949> ;
+    dc:date "1949-08-12" ;
+    values:category "International Humanitarian Law (Law of War)" ;
+    cml:asserts concept:gciii-1949-article-15-norm .
+
+concept:gciii-1949-article-15-norm a values:Obligation ;
+    cml:modality cml:Deontic ;
+    values:partOf concept:gciii-1949-article-15 ;
+    values:borneBy values:Agent ;
+    values:borneBy values:State ;   # R1 universalisation (Derived)
+    values:deonticStatus values:HeuristicDerived ;
+    cml:curationStatus cml:Proposed .
+
+concept:gciii-1949-article-16 a cml:Concept ;
+    skos:prefLabel "Article 16 - Equality of treatment of prisoners" ;
+    cml:realizedBy doc:article-16 ;
+    cml:curationStatus cml:Proposed ;
+    prov:wasDerivedFrom <https://ihl-databases.icrc.org/en/ihl-treaties/gciii-1949> ;
+    dc:date "1949-08-12" ;
+    values:category "International Humanitarian Law (Law of War)" ;
+    cml:asserts concept:gciii-1949-article-16-norm .
+
+concept:gciii-1949-article-16-norm a values:Obligation ;
+    cml:modality cml:Deontic ;
+    values:partOf concept:gciii-1949-article-16 ;
+    values:borneBy values:Agent ;
+    values:borneBy values:State ;   # R1 universalisation (Derived)
+    values:deonticStatus values:HeuristicDerived ;
+    cml:curationStatus cml:Proposed .
+
+concept:gciii-1949-article-17 a cml:Concept ;
+    skos:prefLabel "Article 17 - Questioning of prisoners" ;
+    cml:realizedBy doc:article-17 ;
+    cml:curationStatus cml:Proposed ;
+    prov:wasDerivedFrom <https://ihl-databases.icrc.org/en/ihl-treaties/gciii-1949> ;
+    dc:date "1949-08-12" ;
+    values:category "International Humanitarian Law (Law of War)" ;
+    cml:asserts concept:gciii-1949-article-17-norm .
+
+concept:gciii-1949-article-17-norm a values:Prohibition ;
+    cml:modality cml:Deontic ;
+    values:partOf concept:gciii-1949-article-17 ;
+    values:borneBy values:Agent ;
+    values:deonticStatus values:HeuristicDerived ;
+    cml:curationStatus cml:Proposed .
+
+concept:gciii-1949-article-18 a cml:Concept ;
+    skos:prefLabel "Article 18 - Property of prisoners" ;
+    cml:realizedBy doc:article-18 ;
+    cml:curationStatus cml:Proposed ;
+    prov:wasDerivedFrom <https://ihl-databases.icrc.org/en/ihl-treaties/gciii-1949> ;
+    dc:date "1949-08-12" ;
+    values:category "International Humanitarian Law (Law of War)" ;
+    cml:asserts concept:gciii-1949-article-18-norm .
+
+concept:gciii-1949-article-18-norm a values:Prohibition ;
+    cml:modality cml:Deontic ;
+    values:partOf concept:gciii-1949-article-18 ;
+    values:borneBy values:Agent ;
+    values:deonticStatus values:HeuristicDerived ;
+    cml:curationStatus cml:Proposed .
+
+concept:gciii-1949-article-19 a cml:Concept ;
+    skos:prefLabel "Article 19 - Evacuation of prisoners" ;
+    cml:realizedBy doc:article-19 ;
+    cml:curationStatus cml:Proposed ;
+    prov:wasDerivedFrom <https://ihl-databases.icrc.org/en/ihl-treaties/gciii-1949> ;
+    dc:date "1949-08-12" ;
+    values:category "International Humanitarian Law (Law of War)" ;
+    cml:asserts concept:gciii-1949-article-19-norm .
+
+concept:gciii-1949-article-19-norm a values:Prohibition ;
+    cml:modality cml:Deontic ;
+    values:partOf concept:gciii-1949-article-19 ;
+    values:borneBy values:Agent ;
+    values:deonticStatus values:HeuristicDerived ;
+    cml:curationStatus cml:Proposed .
+
+concept:gciii-1949-article-20 a cml:Concept ;
+    skos:prefLabel "Article 20 - Conditions of evacuation of prisoners" ;
+    cml:realizedBy doc:article-20 ;
+    cml:curationStatus cml:Proposed ;
+    prov:wasDerivedFrom <https://ihl-databases.icrc.org/en/ihl-treaties/gciii-1949> ;
+    dc:date "1949-08-12" ;
+    values:category "International Humanitarian Law (Law of War)" ;
+    cml:asserts concept:gciii-1949-article-20-norm .
+
+concept:gciii-1949-article-20-norm a values:Obligation ;
+    cml:modality cml:Deontic ;
+    values:partOf concept:gciii-1949-article-20 ;
+    values:borneBy values:Agent ;
+    values:borneBy values:State ;   # R1 universalisation (Derived)
+    values:deonticStatus values:HeuristicDerived ;
+    cml:curationStatus cml:Proposed .
+
+concept:gciii-1949-article-21 a cml:Concept ;
+    skos:prefLabel "Article 21 - Restriction of liberty of movement and release on parole" ;
+    cml:realizedBy doc:article-21 ;
+    cml:curationStatus cml:Proposed ;
+    prov:wasDerivedFrom <https://ihl-databases.icrc.org/en/ihl-treaties/gciii-1949> ;
+    dc:date "1949-08-12" ;
+    values:category "International Humanitarian Law (Law of War)" ;
+    cml:asserts concept:gciii-1949-article-21-norm .
+
+concept:gciii-1949-article-21-norm a values:Prohibition ;
+    cml:modality cml:Deontic ;
+    values:partOf concept:gciii-1949-article-21 ;
+    values:borneBy values:Agent ;
+    values:deonticStatus values:HeuristicDerived ;
+    cml:curationStatus cml:Proposed .
+
+concept:gciii-1949-article-22 a cml:Concept ;
+    skos:prefLabel "Article 22 - Places and conditions of internment" ;
+    cml:realizedBy doc:article-22 ;
+    cml:curationStatus cml:Proposed ;
+    prov:wasDerivedFrom <https://ihl-databases.icrc.org/en/ihl-treaties/gciii-1949> ;
+    dc:date "1949-08-12" ;
+    values:category "International Humanitarian Law (Law of War)" ;
+    cml:asserts concept:gciii-1949-article-22-norm .
+
+concept:gciii-1949-article-22-norm a values:Prohibition ;
+    cml:modality cml:Deontic ;
+    values:partOf concept:gciii-1949-article-22 ;
+    values:borneBy values:Agent ;
+    values:deonticStatus values:HeuristicDerived ;
+    cml:curationStatus cml:Proposed .
+
+concept:gciii-1949-article-23 a cml:Concept ;
+    skos:prefLabel "Article 23 - Security of prisoners" ;
+    cml:realizedBy doc:article-23 ;
+    cml:curationStatus cml:Proposed ;
+    prov:wasDerivedFrom <https://ihl-databases.icrc.org/en/ihl-treaties/gciii-1949> ;
+    dc:date "1949-08-12" ;
+    values:category "International Humanitarian Law (Law of War)" ;
+    cml:asserts concept:gciii-1949-article-23-norm .
+
+concept:gciii-1949-article-23-norm a values:Obligation ;
+    cml:modality cml:Deontic ;
+    values:partOf concept:gciii-1949-article-23 ;
+    values:borneBy values:Agent ;
+    values:borneBy values:State ;   # R1 universalisation (Derived)
+    values:deonticStatus values:HeuristicDerived ;
+    cml:curationStatus cml:Proposed .
+
+concept:gciii-1949-article-24 a cml:Concept ;
+    skos:prefLabel "Article 24 - Permanent transit camps" ;
+    cml:realizedBy doc:article-24 ;
+    cml:curationStatus cml:Proposed ;
+    prov:wasDerivedFrom <https://ihl-databases.icrc.org/en/ihl-treaties/gciii-1949> ;
+    dc:date "1949-08-12" ;
+    values:category "International Humanitarian Law (Law of War)" ;
+    cml:asserts concept:gciii-1949-article-24-norm .
+
+concept:gciii-1949-article-24-norm a values:Obligation ;
+    cml:modality cml:Deontic ;
+    values:partOf concept:gciii-1949-article-24 ;
+    values:borneBy values:Agent ;
+    values:borneBy values:State ;   # R1 universalisation (Derived)
+    values:deonticStatus values:HeuristicDerived ;
+    cml:curationStatus cml:Proposed .
+
+concept:gciii-1949-article-25 a cml:Concept ;
+    skos:prefLabel "Article 25 - Quarters" ;
+    cml:realizedBy doc:article-25 ;
+    cml:curationStatus cml:Proposed ;
+    prov:wasDerivedFrom <https://ihl-databases.icrc.org/en/ihl-treaties/gciii-1949> ;
+    dc:date "1949-08-12" ;
+    values:category "International Humanitarian Law (Law of War)" ;
+    cml:asserts concept:gciii-1949-article-25-norm .
+
+concept:gciii-1949-article-25-norm a values:Obligation ;
+    cml:modality cml:Deontic ;
+    values:partOf concept:gciii-1949-article-25 ;
+    values:borneBy values:Agent ;
+    values:borneBy values:State ;   # R1 universalisation (Derived)
+    values:deonticStatus values:HeuristicDerived ;
+    cml:curationStatus cml:Proposed .
+
+concept:gciii-1949-article-26 a cml:Concept ;
+    skos:prefLabel "Article 26 - Food" ;
+    cml:realizedBy doc:article-26 ;
+    cml:curationStatus cml:Proposed ;
+    prov:wasDerivedFrom <https://ihl-databases.icrc.org/en/ihl-treaties/gciii-1949> ;
+    dc:date "1949-08-12" ;
+    values:category "International Humanitarian Law (Law of War)" ;
+    cml:asserts concept:gciii-1949-article-26-norm .
+
+concept:gciii-1949-article-26-norm a values:Prohibition ;
+    cml:modality cml:Deontic ;
+    values:partOf concept:gciii-1949-article-26 ;
+    values:borneBy values:Agent ;
+    values:deonticStatus values:HeuristicDerived ;
+    cml:curationStatus cml:Proposed .
+
+concept:gciii-1949-article-27 a cml:Concept ;
+    skos:prefLabel "Article 27 - Clothing" ;
+    cml:realizedBy doc:article-27 ;
+    cml:curationStatus cml:Proposed ;
+    prov:wasDerivedFrom <https://ihl-databases.icrc.org/en/ihl-treaties/gciii-1949> ;
+    dc:date "1949-08-12" ;
+    values:category "International Humanitarian Law (Law of War)" ;
+    cml:asserts concept:gciii-1949-article-27-norm .
+
+concept:gciii-1949-article-27-norm a values:Obligation ;
+    cml:modality cml:Deontic ;
+    values:partOf concept:gciii-1949-article-27 ;
+    values:borneBy values:Agent ;
+    values:borneBy values:State ;   # R1 universalisation (Derived)
+    values:deonticStatus values:HeuristicDerived ;
+    cml:curationStatus cml:Proposed .
+
+concept:gciii-1949-article-28 a cml:Concept ;
+    skos:prefLabel "Article 28 - Canteens" ;
+    cml:realizedBy doc:article-28 ;
+    cml:curationStatus cml:Proposed ;
+    prov:wasDerivedFrom <https://ihl-databases.icrc.org/en/ihl-treaties/gciii-1949> ;
+    dc:date "1949-08-12" ;
+    values:category "International Humanitarian Law (Law of War)" ;
+    cml:asserts concept:gciii-1949-article-28-norm .
+
+concept:gciii-1949-article-28-norm a values:Right ;
+    cml:modality cml:Deontic ;
+    values:partOf concept:gciii-1949-article-28 ;
+    values:heldBy values:NaturalPerson ;
+    values:deonticStatus values:HeuristicDerived ;
+    cml:curationStatus cml:Proposed .
+
+concept:gciii-1949-article-29 a cml:Concept ;
+    skos:prefLabel "Article 29 - Hygiene" ;
+    cml:realizedBy doc:article-29 ;
+    cml:curationStatus cml:Proposed ;
+    prov:wasDerivedFrom <https://ihl-databases.icrc.org/en/ihl-treaties/gciii-1949> ;
+    dc:date "1949-08-12" ;
+    values:category "International Humanitarian Law (Law of War)" ;
+    cml:asserts concept:gciii-1949-article-29-norm .
+
+concept:gciii-1949-article-29-norm a values:Obligation ;
+    cml:modality cml:Deontic ;
+    values:partOf concept:gciii-1949-article-29 ;
+    values:borneBy values:Agent ;
+    values:borneBy values:State ;   # R1 universalisation (Derived)
+    values:deonticStatus values:HeuristicDerived ;
+    cml:curationStatus cml:Proposed .
+
+concept:gciii-1949-article-30 a cml:Concept ;
+    skos:prefLabel "Article 30 - Medical attention" ;
+    cml:realizedBy doc:article-30 ;
+    cml:curationStatus cml:Proposed ;
+    prov:wasDerivedFrom <https://ihl-databases.icrc.org/en/ihl-treaties/gciii-1949> ;
+    dc:date "1949-08-12" ;
+    values:category "International Humanitarian Law (Law of War)" ;
+    cml:asserts concept:gciii-1949-article-30-norm .
+
+concept:gciii-1949-article-30-norm a values:Prohibition ;
+    cml:modality cml:Deontic ;
+    values:partOf concept:gciii-1949-article-30 ;
+    values:borneBy values:Agent ;
+    values:deonticStatus values:HeuristicDerived ;
+    cml:curationStatus cml:Proposed .
+
+concept:gciii-1949-article-31 a cml:Concept ;
+    skos:prefLabel "Article 31 - Medical inspections" ;
+    cml:realizedBy doc:article-31 ;
+    cml:curationStatus cml:Proposed ;
+    prov:wasDerivedFrom <https://ihl-databases.icrc.org/en/ihl-treaties/gciii-1949> ;
+    dc:date "1949-08-12" ;
+    values:category "International Humanitarian Law (Law of War)" ;
+    cml:asserts concept:gciii-1949-article-31-norm .
+
+concept:gciii-1949-article-31-norm a values:Obligation ;
+    cml:modality cml:Deontic ;
+    values:partOf concept:gciii-1949-article-31 ;
+    values:borneBy values:Agent ;
+    values:borneBy values:State ;   # R1 universalisation (Derived)
+    values:deonticStatus values:HeuristicDerived ;
+    cml:curationStatus cml:Proposed .
+
+concept:gciii-1949-article-32 a cml:Concept ;
+    skos:prefLabel "Article 32 - Prisoners engaged on medical duties" ;
+    cml:realizedBy doc:article-32 ;
+    cml:curationStatus cml:Proposed ;
+    prov:wasDerivedFrom <https://ihl-databases.icrc.org/en/ihl-treaties/gciii-1949> ;
+    dc:date "1949-08-12" ;
+    values:category "International Humanitarian Law (Law of War)" ;
+    cml:asserts concept:gciii-1949-article-32-norm .
+
+concept:gciii-1949-article-32-norm a values:Obligation ;
+    cml:modality cml:Deontic ;
+    values:partOf concept:gciii-1949-article-32 ;
+    values:borneBy values:Agent ;
+    values:borneBy values:State ;   # R1 universalisation (Derived)
+    values:deonticStatus values:HeuristicDerived ;
+    cml:curationStatus cml:Proposed .
+
+concept:gciii-1949-article-33 a cml:Concept ;
+    skos:prefLabel "Article 33 - Rights and privileges of retained personnel" ;
+    cml:realizedBy doc:article-33 ;
+    cml:curationStatus cml:Proposed ;
+    prov:wasDerivedFrom <https://ihl-databases.icrc.org/en/ihl-treaties/gciii-1949> ;
+    dc:date "1949-08-12" ;
+    values:category "International Humanitarian Law (Law of War)" ;
+    cml:asserts concept:gciii-1949-article-33-norm .
+
+concept:gciii-1949-article-33-norm a values:Prohibition ;
+    cml:modality cml:Deontic ;
+    values:partOf concept:gciii-1949-article-33 ;
+    values:borneBy values:Agent ;
+    values:deonticStatus values:HeuristicDerived ;
+    cml:curationStatus cml:Proposed .
+
+concept:gciii-1949-article-34 a cml:Concept ;
+    skos:prefLabel "Article 34 - Religious duties" ;
+    cml:realizedBy doc:article-34 ;
+    cml:curationStatus cml:Proposed ;
+    prov:wasDerivedFrom <https://ihl-databases.icrc.org/en/ihl-treaties/gciii-1949> ;
+    dc:date "1949-08-12" ;
+    values:category "International Humanitarian Law (Law of War)" ;
+    cml:asserts concept:gciii-1949-article-34-norm .
+
+concept:gciii-1949-article-34-norm a values:Obligation ;
+    cml:modality cml:Deontic ;
+    values:partOf concept:gciii-1949-article-34 ;
+    values:borneBy values:Agent ;
+    values:borneBy values:State ;   # R1 universalisation (Derived)
+    values:deonticStatus values:HeuristicDerived ;
+    cml:curationStatus cml:Proposed .
+
+concept:gciii-1949-article-35 a cml:Concept ;
+    skos:prefLabel "Article 35 - Retained chaplains assisting prisoners" ;
+    cml:realizedBy doc:article-35 ;
+    cml:curationStatus cml:Proposed ;
+    prov:wasDerivedFrom <https://ihl-databases.icrc.org/en/ihl-treaties/gciii-1949> ;
+    dc:date "1949-08-12" ;
+    values:category "International Humanitarian Law (Law of War)" ;
+    cml:asserts concept:gciii-1949-article-35-norm .
+
+concept:gciii-1949-article-35-norm a values:Obligation ;
+    cml:modality cml:Deontic ;
+    values:partOf concept:gciii-1949-article-35 ;
+    values:borneBy values:Agent ;
+    values:borneBy values:State ;   # R1 universalisation (Derived)
+    values:deonticStatus values:HeuristicDerived ;
+    cml:curationStatus cml:Proposed .
+
+concept:gciii-1949-article-36 a cml:Concept ;
+    skos:prefLabel "Article 36 - Prisoners who are ministers of religion" ;
+    cml:realizedBy doc:article-36 ;
+    cml:curationStatus cml:Proposed ;
+    prov:wasDerivedFrom <https://ihl-databases.icrc.org/en/ihl-treaties/gciii-1949> ;
+    dc:date "1949-08-12" ;
+    values:category "International Humanitarian Law (Law of War)" ;
+    cml:asserts concept:gciii-1949-article-36-norm .
+
+concept:gciii-1949-article-36-norm a values:Prohibition ;
+    cml:modality cml:Deontic ;
+    values:partOf concept:gciii-1949-article-36 ;
+    values:borneBy values:Agent ;
+    values:deonticStatus values:HeuristicDerived ;
+    cml:curationStatus cml:Proposed .
+
+concept:gciii-1949-article-37 a cml:Concept ;
+    skos:prefLabel "Article 37 - Prisoners without a minister of their religion" ;
+    cml:realizedBy doc:article-37 ;
+    cml:curationStatus cml:Proposed ;
+    prov:wasDerivedFrom <https://ihl-databases.icrc.org/en/ihl-treaties/gciii-1949> ;
+    dc:date "1949-08-12" ;
+    values:category "International Humanitarian Law (Law of War)" ;
+    cml:asserts concept:gciii-1949-article-37-norm .
+
+concept:gciii-1949-article-37-norm a values:Obligation ;
+    cml:modality cml:Deontic ;
+    values:partOf concept:gciii-1949-article-37 ;
+    values:borneBy values:Agent ;
+    values:borneBy values:State ;   # R1 universalisation (Derived)
+    values:deonticStatus values:HeuristicDerived ;
+    cml:curationStatus cml:Proposed .
+
+concept:gciii-1949-article-38 a cml:Concept ;
+    skos:prefLabel "Article 38 - Intellectual, educational and recreational pursuits, sports and games" ;
+    cml:realizedBy doc:article-38 ;
+    cml:curationStatus cml:Proposed ;
+    prov:wasDerivedFrom <https://ihl-databases.icrc.org/en/ihl-treaties/gciii-1949> ;
+    dc:date "1949-08-12" ;
+    values:category "International Humanitarian Law (Law of War)" ;
+    cml:asserts concept:gciii-1949-article-38-norm .
+
+concept:gciii-1949-article-38-norm a values:Obligation ;
+    cml:modality cml:Deontic ;
+    values:partOf concept:gciii-1949-article-38 ;
+    values:borneBy values:Agent ;
+    values:borneBy values:State ;   # R1 universalisation (Derived)
+    values:deonticStatus values:HeuristicDerived ;
+    cml:curationStatus cml:Proposed .
+
+concept:gciii-1949-article-39 a cml:Concept ;
+    skos:prefLabel "Article 39 - Administration. Saluting" ;
+    cml:realizedBy doc:article-39 ;
+    cml:curationStatus cml:Proposed ;
+    prov:wasDerivedFrom <https://ihl-databases.icrc.org/en/ihl-treaties/gciii-1949> ;
+    dc:date "1949-08-12" ;
+    values:category "International Humanitarian Law (Law of War)" ;
+    cml:asserts concept:gciii-1949-article-39-norm .
+
+concept:gciii-1949-article-39-norm a values:Obligation ;
+    cml:modality cml:Deontic ;
+    values:partOf concept:gciii-1949-article-39 ;
+    values:borneBy values:Agent ;
+    values:borneBy values:State ;   # R1 universalisation (Derived)
+    values:deonticStatus values:HeuristicDerived ;
+    cml:curationStatus cml:Proposed .
+
+concept:gciii-1949-article-40 a cml:Concept ;
+    skos:prefLabel "Article 40 - The wearing of badges and decorations" ;
+    cml:realizedBy doc:article-40 ;
+    cml:curationStatus cml:Proposed ;
+    prov:wasDerivedFrom <https://ihl-databases.icrc.org/en/ihl-treaties/gciii-1949> ;
+    dc:date "1949-08-12" ;
+    values:category "International Humanitarian Law (Law of War)" ;
+    cml:asserts concept:gciii-1949-article-40-norm .
+
+concept:gciii-1949-article-40-norm a values:Obligation ;
+    cml:modality cml:Deontic ;
+    values:partOf concept:gciii-1949-article-40 ;
+    values:borneBy values:Agent ;
+    values:borneBy values:State ;   # R1 universalisation (Derived)
+    values:deonticStatus values:HeuristicDerived ;
+    cml:curationStatus cml:Proposed .
+
+concept:gciii-1949-article-41 a cml:Concept ;
+    skos:prefLabel "Article 41 - Posting of the Convention, and of regulations and orders concerning prisoners" ;
+    cml:realizedBy doc:article-41 ;
+    cml:curationStatus cml:Proposed ;
+    prov:wasDerivedFrom <https://ihl-databases.icrc.org/en/ihl-treaties/gciii-1949> ;
+    dc:date "1949-08-12" ;
+    values:category "International Humanitarian Law (Law of War)" ;
+    cml:asserts concept:gciii-1949-article-41-norm .
+
+concept:gciii-1949-article-41-norm a values:Obligation ;
+    cml:modality cml:Deontic ;
+    values:partOf concept:gciii-1949-article-41 ;
+    values:borneBy values:Agent ;
+    values:borneBy values:State ;   # R1 universalisation (Derived)
+    values:deonticStatus values:HeuristicDerived ;
+    cml:curationStatus cml:Proposed .
+
+concept:gciii-1949-article-42 a cml:Concept ;
+    skos:prefLabel "Article 42 - Use of weapons against prisoners of war" ;
+    cml:realizedBy doc:article-42 ;
+    cml:curationStatus cml:Proposed ;
+    prov:wasDerivedFrom <https://ihl-databases.icrc.org/en/ihl-treaties/gciii-1949> ;
+    dc:date "1949-08-12" ;
+    values:category "International Humanitarian Law (Law of War)" ;
+    cml:asserts concept:gciii-1949-article-42-norm .
+
+concept:gciii-1949-article-42-norm a values:Undertaking ;
+    cml:modality cml:Deontic ;
+    values:partOf concept:gciii-1949-article-42 ;
+    values:borneBy values:Agent ;
+    values:deonticStatus values:HeuristicDerived ;
+    cml:curationStatus cml:Proposed .
+
+concept:gciii-1949-article-43 a cml:Concept ;
+    skos:prefLabel "Article 43 - Notification of ranks" ;
+    cml:realizedBy doc:article-43 ;
+    cml:curationStatus cml:Proposed ;
+    prov:wasDerivedFrom <https://ihl-databases.icrc.org/en/ihl-treaties/gciii-1949> ;
+    dc:date "1949-08-12" ;
+    values:category "International Humanitarian Law (Law of War)" ;
+    cml:asserts concept:gciii-1949-article-43-norm .
+
+concept:gciii-1949-article-43-norm a values:Obligation ;
+    cml:modality cml:Deontic ;
+    values:partOf concept:gciii-1949-article-43 ;
+    values:borneBy values:Agent ;
+    values:borneBy values:State ;   # R1 universalisation (Derived)
+    values:deonticStatus values:HeuristicDerived ;
+    cml:curationStatus cml:Proposed .
+
+concept:gciii-1949-article-44 a cml:Concept ;
+    skos:prefLabel "Article 44 - Treatment of officers" ;
+    cml:realizedBy doc:article-44 ;
+    cml:curationStatus cml:Proposed ;
+    prov:wasDerivedFrom <https://ihl-databases.icrc.org/en/ihl-treaties/gciii-1949> ;
+    dc:date "1949-08-12" ;
+    values:category "International Humanitarian Law (Law of War)" ;
+    cml:asserts concept:gciii-1949-article-44-norm .
+
+concept:gciii-1949-article-44-norm a values:Prohibition ;
+    cml:modality cml:Deontic ;
+    values:partOf concept:gciii-1949-article-44 ;
+    values:borneBy values:Agent ;
+    values:deonticStatus values:HeuristicDerived ;
+    cml:curationStatus cml:Proposed .
+
+concept:gciii-1949-article-45 a cml:Concept ;
+    skos:prefLabel "Article 45 - Treatment of other prisoners of war" ;
+    cml:realizedBy doc:article-45 ;
+    cml:curationStatus cml:Proposed ;
+    prov:wasDerivedFrom <https://ihl-databases.icrc.org/en/ihl-treaties/gciii-1949> ;
+    dc:date "1949-08-12" ;
+    values:category "International Humanitarian Law (Law of War)" ;
+    cml:asserts concept:gciii-1949-article-45-norm .
+
+concept:gciii-1949-article-45-norm a values:Obligation ;
+    cml:modality cml:Deontic ;
+    values:partOf concept:gciii-1949-article-45 ;
+    values:borneBy values:Agent ;
+    values:borneBy values:State ;   # R1 universalisation (Derived)
+    values:deonticStatus values:HeuristicDerived ;
+    cml:curationStatus cml:Proposed .
+
+concept:gciii-1949-article-46 a cml:Concept ;
+    skos:prefLabel "Article 46 - Conditions for transfer of prisoners" ;
+    cml:realizedBy doc:article-46 ;
+    cml:curationStatus cml:Proposed ;
+    prov:wasDerivedFrom <https://ihl-databases.icrc.org/en/ihl-treaties/gciii-1949> ;
+    dc:date "1949-08-12" ;
+    values:category "International Humanitarian Law (Law of War)" ;
+    cml:asserts concept:gciii-1949-article-46-norm .
+
+concept:gciii-1949-article-46-norm a values:Obligation ;
+    cml:modality cml:Deontic ;
+    values:partOf concept:gciii-1949-article-46 ;
+    values:borneBy values:Agent ;
+    values:borneBy values:State ;   # R1 universalisation (Derived)
+    values:deonticStatus values:HeuristicDerived ;
+    cml:curationStatus cml:Proposed .
+
+concept:gciii-1949-article-47 a cml:Concept ;
+    skos:prefLabel "Article 47 - Circumstances precluding transfer of prisoners" ;
+    cml:realizedBy doc:article-47 ;
+    cml:curationStatus cml:Proposed ;
+    prov:wasDerivedFrom <https://ihl-databases.icrc.org/en/ihl-treaties/gciii-1949> ;
+    dc:date "1949-08-12" ;
+    values:category "International Humanitarian Law (Law of War)" ;
+    cml:asserts concept:gciii-1949-article-47-norm .
+
+concept:gciii-1949-article-47-norm a values:Prohibition ;
+    cml:modality cml:Deontic ;
+    values:partOf concept:gciii-1949-article-47 ;
+    values:borneBy values:Agent ;
+    values:deonticStatus values:HeuristicDerived ;
+    cml:curationStatus cml:Proposed .
+
+concept:gciii-1949-article-48 a cml:Concept ;
+    skos:prefLabel "Article 48 - Procedure for transfer of prisoners" ;
+    cml:realizedBy doc:article-48 ;
+    cml:curationStatus cml:Proposed ;
+    prov:wasDerivedFrom <https://ihl-databases.icrc.org/en/ihl-treaties/gciii-1949> ;
+    dc:date "1949-08-12" ;
+    values:category "International Humanitarian Law (Law of War)" ;
+    cml:asserts concept:gciii-1949-article-48-norm .
+
+concept:gciii-1949-article-48-norm a values:Obligation ;
+    cml:modality cml:Deontic ;
+    values:partOf concept:gciii-1949-article-48 ;
+    values:borneBy values:Agent ;
+    values:borneBy values:State ;   # R1 universalisation (Derived)
+    values:deonticStatus values:HeuristicDerived ;
+    cml:curationStatus cml:Proposed .
+
+concept:gciii-1949-article-49 a cml:Concept ;
+    skos:prefLabel "Article 49 - General observations on labour of prisoners of war" ;
+    cml:realizedBy doc:article-49 ;
+    cml:curationStatus cml:Proposed ;
+    prov:wasDerivedFrom <https://ihl-databases.icrc.org/en/ihl-treaties/gciii-1949> ;
+    dc:date "1949-08-12" ;
+    values:category "International Humanitarian Law (Law of War)" ;
+    cml:asserts concept:gciii-1949-article-49-norm .
+
+concept:gciii-1949-article-49-norm a values:Obligation ;
+    cml:modality cml:Deontic ;
+    values:partOf concept:gciii-1949-article-49 ;
+    values:borneBy values:Agent ;
+    values:borneBy values:State ;   # R1 universalisation (Derived)
+    values:deonticStatus values:HeuristicDerived ;
+    cml:curationStatus cml:Proposed .
+
+concept:gciii-1949-article-50 a cml:Concept ;
+    skos:prefLabel "Article 50 - Authorized work" ;
+    cml:realizedBy doc:article-50 ;
+    cml:curationStatus cml:Proposed ;
+    prov:wasDerivedFrom <https://ihl-databases.icrc.org/en/ihl-treaties/gciii-1949> ;
+    dc:date "1949-08-12" ;
+    values:category "International Humanitarian Law (Law of War)" ;
+    cml:asserts concept:gciii-1949-article-50-norm .
+
+concept:gciii-1949-article-50-norm a values:Obligation ;
+    cml:modality cml:Deontic ;
+    values:partOf concept:gciii-1949-article-50 ;
+    values:borneBy values:Agent ;
+    values:borneBy values:State ;   # R1 universalisation (Derived)
+    values:deonticStatus values:HeuristicDerived ;
+    cml:curationStatus cml:Proposed .
+
+concept:gciii-1949-article-51 a cml:Concept ;
+    skos:prefLabel "Article 51 - Working conditions" ;
+    cml:realizedBy doc:article-51 ;
+    cml:curationStatus cml:Proposed ;
+    prov:wasDerivedFrom <https://ihl-databases.icrc.org/en/ihl-treaties/gciii-1949> ;
+    dc:date "1949-08-12" ;
+    values:category "International Humanitarian Law (Law of War)" ;
+    cml:asserts concept:gciii-1949-article-51-norm .
+
+concept:gciii-1949-article-51-norm a values:Prohibition ;
+    cml:modality cml:Deontic ;
+    values:partOf concept:gciii-1949-article-51 ;
+    values:borneBy values:Agent ;
+    values:deonticStatus values:HeuristicDerived ;
+    cml:curationStatus cml:Proposed .
+
+concept:gciii-1949-article-52 a cml:Concept ;
+    skos:prefLabel "Article 52 - Dangerous and humiliating labour" ;
+    cml:realizedBy doc:article-52 ;
+    cml:curationStatus cml:Proposed ;
+    prov:wasDerivedFrom <https://ihl-databases.icrc.org/en/ihl-treaties/gciii-1949> ;
+    dc:date "1949-08-12" ;
+    values:category "International Humanitarian Law (Law of War)" ;
+    cml:asserts concept:gciii-1949-article-52-norm .
+
+concept:gciii-1949-article-52-norm a values:Obligation ;
+    cml:modality cml:Deontic ;
+    values:partOf concept:gciii-1949-article-52 ;
+    values:borneBy values:Agent ;
+    values:borneBy values:State ;   # R1 universalisation (Derived)
+    values:deonticStatus values:HeuristicDerived ;
+    cml:curationStatus cml:Proposed .
+
+concept:gciii-1949-article-53 a cml:Concept ;
+    skos:prefLabel "Article 53 - Duration of labour" ;
+    cml:realizedBy doc:article-53 ;
+    cml:curationStatus cml:Proposed ;
+    prov:wasDerivedFrom <https://ihl-databases.icrc.org/en/ihl-treaties/gciii-1949> ;
+    dc:date "1949-08-12" ;
+    values:category "International Humanitarian Law (Law of War)" ;
+    cml:asserts concept:gciii-1949-article-53-norm .
+
+concept:gciii-1949-article-53-norm a values:Prohibition ;
+    cml:modality cml:Deontic ;
+    values:partOf concept:gciii-1949-article-53 ;
+    values:borneBy values:Agent ;
+    values:deonticStatus values:HeuristicDerived ;
+    cml:curationStatus cml:Proposed .
+
+concept:gciii-1949-article-54 a cml:Concept ;
+    skos:prefLabel "Article 54 - Working pay. Occupational accidents and diseases" ;
+    cml:realizedBy doc:article-54 ;
+    cml:curationStatus cml:Proposed ;
+    prov:wasDerivedFrom <https://ihl-databases.icrc.org/en/ihl-treaties/gciii-1949> ;
+    dc:date "1949-08-12" ;
+    values:category "International Humanitarian Law (Law of War)" ;
+    cml:asserts concept:gciii-1949-article-54-norm .
+
+concept:gciii-1949-article-54-norm a values:Obligation ;
+    cml:modality cml:Deontic ;
+    values:partOf concept:gciii-1949-article-54 ;
+    values:borneBy values:Agent ;
+    values:borneBy values:State ;   # R1 universalisation (Derived)
+    values:deonticStatus values:HeuristicDerived ;
+    cml:curationStatus cml:Proposed .
+
+concept:gciii-1949-article-55 a cml:Concept ;
+    skos:prefLabel "Article 55 - Medical supervision" ;
+    cml:realizedBy doc:article-55 ;
+    cml:curationStatus cml:Proposed ;
+    prov:wasDerivedFrom <https://ihl-databases.icrc.org/en/ihl-treaties/gciii-1949> ;
+    dc:date "1949-08-12" ;
+    values:category "International Humanitarian Law (Law of War)" ;
+    cml:asserts concept:gciii-1949-article-55-norm .
+
+concept:gciii-1949-article-55-norm a values:Obligation ;
+    cml:modality cml:Deontic ;
+    values:partOf concept:gciii-1949-article-55 ;
+    values:borneBy values:Agent ;
+    values:borneBy values:State ;   # R1 universalisation (Derived)
+    values:deonticStatus values:HeuristicDerived ;
+    cml:curationStatus cml:Proposed .
+
+concept:gciii-1949-article-56 a cml:Concept ;
+    skos:prefLabel "Article 56 - Labour detachments" ;
+    cml:realizedBy doc:article-56 ;
+    cml:curationStatus cml:Proposed ;
+    prov:wasDerivedFrom <https://ihl-databases.icrc.org/en/ihl-treaties/gciii-1949> ;
+    dc:date "1949-08-12" ;
+    values:category "International Humanitarian Law (Law of War)" ;
+    cml:asserts concept:gciii-1949-article-56-norm .
+
+concept:gciii-1949-article-56-norm a values:Obligation ;
+    cml:modality cml:Deontic ;
+    values:partOf concept:gciii-1949-article-56 ;
+    values:borneBy values:Agent ;
+    values:borneBy values:State ;   # R1 universalisation (Derived)
+    values:deonticStatus values:HeuristicDerived ;
+    cml:curationStatus cml:Proposed .
+
+concept:gciii-1949-article-57 a cml:Concept ;
+    skos:prefLabel "Article 57 - Prisoners working for private employers" ;
+    cml:realizedBy doc:article-57 ;
+    cml:curationStatus cml:Proposed ;
+    prov:wasDerivedFrom <https://ihl-databases.icrc.org/en/ihl-treaties/gciii-1949> ;
+    dc:date "1949-08-12" ;
+    values:category "International Humanitarian Law (Law of War)" ;
+    cml:asserts concept:gciii-1949-article-57-norm .
+
+concept:gciii-1949-article-57-norm a values:Prohibition ;
+    cml:modality cml:Deontic ;
+    values:partOf concept:gciii-1949-article-57 ;
+    values:borneBy values:Agent ;
+    values:deonticStatus values:HeuristicDerived ;
+    cml:curationStatus cml:Proposed .
+
+concept:gciii-1949-article-58 a cml:Concept ;
+    skos:prefLabel "Article 58 - Ready money" ;
+    cml:realizedBy doc:article-58 ;
+    cml:curationStatus cml:Proposed ;
+    prov:wasDerivedFrom <https://ihl-databases.icrc.org/en/ihl-treaties/gciii-1949> ;
+    dc:date "1949-08-12" ;
+    values:category "International Humanitarian Law (Law of War)" ;
+    cml:asserts concept:gciii-1949-article-58-norm .
+
+concept:gciii-1949-article-58-norm a values:Prohibition ;
+    cml:modality cml:Deontic ;
+    values:partOf concept:gciii-1949-article-58 ;
+    values:borneBy values:Agent ;
+    values:deonticStatus values:HeuristicDerived ;
+    cml:curationStatus cml:Proposed .
+
+concept:gciii-1949-article-59 a cml:Concept ;
+    skos:prefLabel "Article 59 - Amounts in cash taken from prisoners" ;
+    cml:realizedBy doc:article-59 ;
+    cml:curationStatus cml:Proposed ;
+    prov:wasDerivedFrom <https://ihl-databases.icrc.org/en/ihl-treaties/gciii-1949> ;
+    dc:date "1949-08-12" ;
+    values:category "International Humanitarian Law (Law of War)" ;
+    cml:asserts concept:gciii-1949-article-59-norm .
+
+concept:gciii-1949-article-59-norm a values:Obligation ;
+    cml:modality cml:Deontic ;
+    values:partOf concept:gciii-1949-article-59 ;
+    values:borneBy values:Agent ;
+    values:borneBy values:State ;   # R1 universalisation (Derived)
+    values:deonticStatus values:HeuristicDerived ;
+    cml:curationStatus cml:Proposed .
+
+concept:gciii-1949-article-60 a cml:Concept ;
+    skos:prefLabel "Article 60 - Advances in pay" ;
+    cml:realizedBy doc:article-60 ;
+    cml:curationStatus cml:Proposed ;
+    prov:wasDerivedFrom <https://ihl-databases.icrc.org/en/ihl-treaties/gciii-1949> ;
+    dc:date "1949-08-12" ;
+    values:category "International Humanitarian Law (Law of War)" ;
+    cml:asserts concept:gciii-1949-article-60-norm .
+
+concept:gciii-1949-article-60-norm a values:Obligation ;
+    cml:modality cml:Deontic ;
+    values:partOf concept:gciii-1949-article-60 ;
+    values:borneBy values:Agent ;
+    values:borneBy values:State ;   # R1 universalisation (Derived)
+    values:deonticStatus values:HeuristicDerived ;
+    cml:curationStatus cml:Proposed .
+
+concept:gciii-1949-article-61 a cml:Concept ;
+    skos:prefLabel "Article 61 - Supplementary pay" ;
+    cml:realizedBy doc:article-61 ;
+    cml:curationStatus cml:Proposed ;
+    prov:wasDerivedFrom <https://ihl-databases.icrc.org/en/ihl-treaties/gciii-1949> ;
+    dc:date "1949-08-12" ;
+    values:category "International Humanitarian Law (Law of War)" ;
+    cml:asserts concept:gciii-1949-article-61-norm .
+
+concept:gciii-1949-article-61-norm a values:Prohibition ;
+    cml:modality cml:Deontic ;
+    values:partOf concept:gciii-1949-article-61 ;
+    values:borneBy values:Agent ;
+    values:deonticStatus values:HeuristicDerived ;
+    cml:curationStatus cml:Proposed .
+
+concept:gciii-1949-article-62 a cml:Concept ;
+    skos:prefLabel "Article 62 - Working pay" ;
+    cml:realizedBy doc:article-62 ;
+    cml:curationStatus cml:Proposed ;
+    prov:wasDerivedFrom <https://ihl-databases.icrc.org/en/ihl-treaties/gciii-1949> ;
+    dc:date "1949-08-12" ;
+    values:category "International Humanitarian Law (Law of War)" ;
+    cml:asserts concept:gciii-1949-article-62-norm .
+
+concept:gciii-1949-article-62-norm a values:Obligation ;
+    cml:modality cml:Deontic ;
+    values:partOf concept:gciii-1949-article-62 ;
+    values:borneBy values:Agent ;
+    values:borneBy values:State ;   # R1 universalisation (Derived)
+    values:deonticStatus values:HeuristicDerived ;
+    cml:curationStatus cml:Proposed .
+
+concept:gciii-1949-article-63 a cml:Concept ;
+    skos:prefLabel "Article 63 - Transfer of funds" ;
+    cml:realizedBy doc:article-63 ;
+    cml:curationStatus cml:Proposed ;
+    prov:wasDerivedFrom <https://ihl-databases.icrc.org/en/ihl-treaties/gciii-1949> ;
+    dc:date "1949-08-12" ;
+    values:category "International Humanitarian Law (Law of War)" ;
+    cml:asserts concept:gciii-1949-article-63-norm .
+
+concept:gciii-1949-article-63-norm a values:Obligation ;
+    cml:modality cml:Deontic ;
+    values:partOf concept:gciii-1949-article-63 ;
+    values:borneBy values:Agent ;
+    values:borneBy values:State ;   # R1 universalisation (Derived)
+    values:deonticStatus values:HeuristicDerived ;
+    cml:curationStatus cml:Proposed .
+
+concept:gciii-1949-article-64 a cml:Concept ;
+    skos:prefLabel "Article 64 - Prisoners' accounts" ;
+    cml:realizedBy doc:article-64 ;
+    cml:curationStatus cml:Proposed ;
+    prov:wasDerivedFrom <https://ihl-databases.icrc.org/en/ihl-treaties/gciii-1949> ;
+    dc:date "1949-08-12" ;
+    values:category "International Humanitarian Law (Law of War)" ;
+    cml:asserts concept:gciii-1949-article-64-norm .
+
+concept:gciii-1949-article-64-norm a values:Undertaking ;
+    cml:modality cml:Deontic ;
+    values:partOf concept:gciii-1949-article-64 ;
+    values:borneBy values:Agent ;
+    values:deonticStatus values:HeuristicDerived ;
+    cml:curationStatus cml:Proposed .
+
+concept:gciii-1949-article-65 a cml:Concept ;
+    skos:prefLabel "Article 65 - Management of prisoners' accounts" ;
+    cml:realizedBy doc:article-65 ;
+    cml:curationStatus cml:Proposed ;
+    prov:wasDerivedFrom <https://ihl-databases.icrc.org/en/ihl-treaties/gciii-1949> ;
+    dc:date "1949-08-12" ;
+    values:category "International Humanitarian Law (Law of War)" ;
+    cml:asserts concept:gciii-1949-article-65-norm .
+
+concept:gciii-1949-article-65-norm a values:Obligation ;
+    cml:modality cml:Deontic ;
+    values:partOf concept:gciii-1949-article-65 ;
+    values:borneBy values:Agent ;
+    values:borneBy values:State ;   # R1 universalisation (Derived)
+    values:deonticStatus values:HeuristicDerived ;
+    cml:curationStatus cml:Proposed .
+
+concept:gciii-1949-article-66 a cml:Concept ;
+    skos:prefLabel "Article 66 - Winding up of prisoners accounts" ;
+    cml:realizedBy doc:article-66 ;
+    cml:curationStatus cml:Proposed ;
+    prov:wasDerivedFrom <https://ihl-databases.icrc.org/en/ihl-treaties/gciii-1949> ;
+    dc:date "1949-08-12" ;
+    values:category "International Humanitarian Law (Law of War)" ;
+    cml:asserts concept:gciii-1949-article-66-norm .
+
+concept:gciii-1949-article-66-norm a values:Obligation ;
+    cml:modality cml:Deontic ;
+    values:partOf concept:gciii-1949-article-66 ;
+    values:borneBy values:Agent ;
+    values:borneBy values:State ;   # R1 universalisation (Derived)
+    values:deonticStatus values:HeuristicDerived ;
+    cml:curationStatus cml:Proposed .
+
+concept:gciii-1949-article-67 a cml:Concept ;
+    skos:prefLabel "Article 67 - Arrangements between Parties to the conflict" ;
+    cml:realizedBy doc:article-67 ;
+    cml:curationStatus cml:Proposed ;
+    prov:wasDerivedFrom <https://ihl-databases.icrc.org/en/ihl-treaties/gciii-1949> ;
+    dc:date "1949-08-12" ;
+    values:category "International Humanitarian Law (Law of War)" ;
+    cml:asserts concept:gciii-1949-article-67-norm .
+
+concept:gciii-1949-article-67-norm a values:Obligation ;
+    cml:modality cml:Deontic ;
+    values:partOf concept:gciii-1949-article-67 ;
+    values:borneBy values:Agent ;
+    values:borneBy values:State ;   # R1 universalisation (Derived)
+    values:deonticStatus values:HeuristicDerived ;
+    cml:curationStatus cml:Proposed .
+
+concept:gciii-1949-article-68 a cml:Concept ;
+    skos:prefLabel "Article 68 - Claims for compensation" ;
+    cml:realizedBy doc:article-68 ;
+    cml:curationStatus cml:Proposed ;
+    prov:wasDerivedFrom <https://ihl-databases.icrc.org/en/ihl-treaties/gciii-1949> ;
+    dc:date "1949-08-12" ;
+    values:category "International Humanitarian Law (Law of War)" ;
+    cml:asserts concept:gciii-1949-article-68-norm .
+
+concept:gciii-1949-article-68-norm a values:Obligation ;
+    cml:modality cml:Deontic ;
+    values:partOf concept:gciii-1949-article-68 ;
+    values:borneBy values:Agent ;
+    values:borneBy values:State ;   # R1 universalisation (Derived)
+    values:deonticStatus values:HeuristicDerived ;
+    cml:curationStatus cml:Proposed .
+
+concept:gciii-1949-article-69 a cml:Concept ;
+    skos:prefLabel "Article 69 - Notification of measures taken" ;
+    cml:realizedBy doc:article-69 ;
+    cml:curationStatus cml:Proposed ;
+    prov:wasDerivedFrom <https://ihl-databases.icrc.org/en/ihl-treaties/gciii-1949> ;
+    dc:date "1949-08-12" ;
+    values:category "International Humanitarian Law (Law of War)" ;
+    cml:asserts concept:gciii-1949-article-69-norm .
+
+concept:gciii-1949-article-69-norm a values:Undertaking ;
+    cml:modality cml:Deontic ;
+    values:partOf concept:gciii-1949-article-69 ;
+    values:borneBy values:Agent ;
+    values:deonticStatus values:HeuristicDerived ;
+    cml:curationStatus cml:Proposed .
+
+concept:gciii-1949-article-70 a cml:Concept ;
+    skos:prefLabel "Article 70 - Capture cards" ;
+    cml:realizedBy doc:article-70 ;
+    cml:curationStatus cml:Proposed ;
+    prov:wasDerivedFrom <https://ihl-databases.icrc.org/en/ihl-treaties/gciii-1949> ;
+    dc:date "1949-08-12" ;
+    values:category "International Humanitarian Law (Law of War)" ;
+    cml:asserts concept:gciii-1949-article-70-norm .
+
+concept:gciii-1949-article-70-norm a values:Prohibition ;
+    cml:modality cml:Deontic ;
+    values:partOf concept:gciii-1949-article-70 ;
+    values:borneBy values:Agent ;
+    values:deonticStatus values:HeuristicDerived ;
+    cml:curationStatus cml:Proposed .
+
+concept:gciii-1949-article-71 a cml:Concept ;
+    skos:prefLabel "Article 71 - Correspondence" ;
+    cml:realizedBy doc:article-71 ;
+    cml:curationStatus cml:Proposed ;
+    prov:wasDerivedFrom <https://ihl-databases.icrc.org/en/ihl-treaties/gciii-1949> ;
+    dc:date "1949-08-12" ;
+    values:category "International Humanitarian Law (Law of War)" ;
+    cml:asserts concept:gciii-1949-article-71-norm .
+
+concept:gciii-1949-article-71-norm a values:Prohibition ;
+    cml:modality cml:Deontic ;
+    values:partOf concept:gciii-1949-article-71 ;
+    values:borneBy values:Agent ;
+    values:deonticStatus values:HeuristicDerived ;
+    cml:curationStatus cml:Proposed .
+
+concept:gciii-1949-article-72 a cml:Concept ;
+    skos:prefLabel "Article 72 - Relief shipments: General principles" ;
+    cml:realizedBy doc:article-72 ;
+    cml:curationStatus cml:Proposed ;
+    prov:wasDerivedFrom <https://ihl-databases.icrc.org/en/ihl-treaties/gciii-1949> ;
+    dc:date "1949-08-12" ;
+    values:category "International Humanitarian Law (Law of War)" ;
+    cml:asserts concept:gciii-1949-article-72-norm .
+
+concept:gciii-1949-article-72-norm a values:Prohibition ;
+    cml:modality cml:Deontic ;
+    values:partOf concept:gciii-1949-article-72 ;
+    values:borneBy values:Agent ;
+    values:deonticStatus values:HeuristicDerived ;
+    cml:curationStatus cml:Proposed .
+
+concept:gciii-1949-article-73 a cml:Concept ;
+    skos:prefLabel "Article 73 - Collective relief shipments" ;
+    cml:realizedBy doc:article-73 ;
+    cml:curationStatus cml:Proposed ;
+    prov:wasDerivedFrom <https://ihl-databases.icrc.org/en/ihl-treaties/gciii-1949> ;
+    dc:date "1949-08-12" ;
+    values:category "International Humanitarian Law (Law of War)" ;
+    cml:asserts concept:gciii-1949-article-73-norm .
+
+concept:gciii-1949-article-73-norm a values:Obligation ;
+    cml:modality cml:Deontic ;
+    values:partOf concept:gciii-1949-article-73 ;
+    values:borneBy values:Agent ;
+    values:borneBy values:State ;   # R1 universalisation (Derived)
+    values:deonticStatus values:HeuristicDerived ;
+    cml:curationStatus cml:Proposed .
+
+concept:gciii-1949-article-74 a cml:Concept ;
+    skos:prefLabel "Article 74 - Relief shipments: Exemption from charges and dues" ;
+    cml:realizedBy doc:article-74 ;
+    cml:curationStatus cml:Proposed ;
+    prov:wasDerivedFrom <https://ihl-databases.icrc.org/en/ihl-treaties/gciii-1949> ;
+    dc:date "1949-08-12" ;
+    values:category "International Humanitarian Law (Law of War)" ;
+    cml:asserts concept:gciii-1949-article-74-norm .
+
+concept:gciii-1949-article-74-norm a values:Obligation ;
+    cml:modality cml:Deontic ;
+    values:partOf concept:gciii-1949-article-74 ;
+    values:borneBy values:Agent ;
+    values:borneBy values:State ;   # R1 universalisation (Derived)
+    values:deonticStatus values:HeuristicDerived ;
+    cml:curationStatus cml:Proposed .
+
+concept:gciii-1949-article-75 a cml:Concept ;
+    skos:prefLabel "Article 75 - Special means of transport" ;
+    cml:realizedBy doc:article-75 ;
+    cml:curationStatus cml:Proposed ;
+    prov:wasDerivedFrom <https://ihl-databases.icrc.org/en/ihl-treaties/gciii-1949> ;
+    dc:date "1949-08-12" ;
+    values:category "International Humanitarian Law (Law of War)" ;
+    cml:asserts concept:gciii-1949-article-75-norm .
+
+concept:gciii-1949-article-75-norm a values:Obligation ;
+    cml:modality cml:Deontic ;
+    values:partOf concept:gciii-1949-article-75 ;
+    values:borneBy values:Agent ;
+    values:borneBy values:State ;   # R1 universalisation (Derived)
+    values:deonticStatus values:HeuristicDerived ;
+    cml:curationStatus cml:Proposed .
+
+concept:gciii-1949-article-76 a cml:Concept ;
+    skos:prefLabel "Article 76 - Censorship and examination" ;
+    cml:realizedBy doc:article-76 ;
+    cml:curationStatus cml:Proposed ;
+    prov:wasDerivedFrom <https://ihl-databases.icrc.org/en/ihl-treaties/gciii-1949> ;
+    dc:date "1949-08-12" ;
+    values:category "International Humanitarian Law (Law of War)" ;
+    cml:asserts concept:gciii-1949-article-76-norm .
+
+concept:gciii-1949-article-76-norm a values:Prohibition ;
+    cml:modality cml:Deontic ;
+    values:partOf concept:gciii-1949-article-76 ;
+    values:borneBy values:Agent ;
+    values:deonticStatus values:HeuristicDerived ;
+    cml:curationStatus cml:Proposed .
+
+concept:gciii-1949-article-77 a cml:Concept ;
+    skos:prefLabel "Article 77 - Preparation, execution and transmission of legal documents" ;
+    cml:realizedBy doc:article-77 ;
+    cml:curationStatus cml:Proposed ;
+    prov:wasDerivedFrom <https://ihl-databases.icrc.org/en/ihl-treaties/gciii-1949> ;
+    dc:date "1949-08-12" ;
+    values:category "International Humanitarian Law (Law of War)" ;
+    cml:asserts concept:gciii-1949-article-77-norm .
+
+concept:gciii-1949-article-77-norm a values:Obligation ;
+    cml:modality cml:Deontic ;
+    values:partOf concept:gciii-1949-article-77 ;
+    values:borneBy values:Agent ;
+    values:borneBy values:State ;   # R1 universalisation (Derived)
+    values:deonticStatus values:HeuristicDerived ;
+    cml:curationStatus cml:Proposed .
+
+concept:gciii-1949-article-78 a cml:Concept ;
+    skos:prefLabel "Article 78 - Complaints and requests from prisoners" ;
+    cml:realizedBy doc:article-78 ;
+    cml:curationStatus cml:Proposed ;
+    prov:wasDerivedFrom <https://ihl-databases.icrc.org/en/ihl-treaties/gciii-1949> ;
+    dc:date "1949-08-12" ;
+    values:category "International Humanitarian Law (Law of War)" ;
+    cml:asserts concept:gciii-1949-article-78-norm .
+
+concept:gciii-1949-article-78-norm a values:Prohibition ;
+    cml:modality cml:Deontic ;
+    values:partOf concept:gciii-1949-article-78 ;
+    values:borneBy values:Agent ;
+    values:deonticStatus values:HeuristicDerived ;
+    cml:curationStatus cml:Proposed .
+
+concept:gciii-1949-article-79 a cml:Concept ;
+    skos:prefLabel "Article 79 - Election of prisoners representatives" ;
+    cml:realizedBy doc:article-79 ;
+    cml:curationStatus cml:Proposed ;
+    prov:wasDerivedFrom <https://ihl-databases.icrc.org/en/ihl-treaties/gciii-1949> ;
+    dc:date "1949-08-12" ;
+    values:category "International Humanitarian Law (Law of War)" ;
+    cml:asserts concept:gciii-1949-article-79-norm .
+
+concept:gciii-1949-article-79-norm a values:Right ;
+    cml:modality cml:Deontic ;
+    values:partOf concept:gciii-1949-article-79 ;
+    values:heldBy values:NaturalPerson ;
+    values:deonticStatus values:HeuristicDerived ;
+    cml:curationStatus cml:Proposed .
+
+concept:gciii-1949-article-80 a cml:Concept ;
+    skos:prefLabel "Article 80 - Duties of prisoners representatives" ;
+    cml:realizedBy doc:article-80 ;
+    cml:curationStatus cml:Proposed ;
+    prov:wasDerivedFrom <https://ihl-databases.icrc.org/en/ihl-treaties/gciii-1949> ;
+    dc:date "1949-08-12" ;
+    values:category "International Humanitarian Law (Law of War)" ;
+    cml:asserts concept:gciii-1949-article-80-norm .
+
+concept:gciii-1949-article-80-norm a values:Prohibition ;
+    cml:modality cml:Deontic ;
+    values:partOf concept:gciii-1949-article-80 ;
+    values:borneBy values:Agent ;
+    values:deonticStatus values:HeuristicDerived ;
+    cml:curationStatus cml:Proposed .
+
+concept:gciii-1949-article-81 a cml:Concept ;
+    skos:prefLabel "Article 81 - Prerogatives of prisoners representatives" ;
+    cml:realizedBy doc:article-81 ;
+    cml:curationStatus cml:Proposed ;
+    prov:wasDerivedFrom <https://ihl-databases.icrc.org/en/ihl-treaties/gciii-1949> ;
+    dc:date "1949-08-12" ;
+    values:category "International Humanitarian Law (Law of War)" ;
+    cml:asserts concept:gciii-1949-article-81-norm .
+
+concept:gciii-1949-article-81-norm a values:Prohibition ;
+    cml:modality cml:Deontic ;
+    values:partOf concept:gciii-1949-article-81 ;
+    values:borneBy values:Agent ;
+    values:deonticStatus values:HeuristicDerived ;
+    cml:curationStatus cml:Proposed .
+
+concept:gciii-1949-article-82 a cml:Concept ;
+    skos:prefLabel "Article 82 - Applicable legislation" ;
+    cml:realizedBy doc:article-82 ;
+    cml:curationStatus cml:Proposed ;
+    prov:wasDerivedFrom <https://ihl-databases.icrc.org/en/ihl-treaties/gciii-1949> ;
+    dc:date "1949-08-12" ;
+    values:category "International Humanitarian Law (Law of War)" ;
+    cml:asserts concept:gciii-1949-article-82-norm .
+
+concept:gciii-1949-article-82-norm a values:Obligation ;
+    cml:modality cml:Deontic ;
+    values:partOf concept:gciii-1949-article-82 ;
+    values:borneBy values:Agent ;
+    values:borneBy values:State ;   # R1 universalisation (Derived)
+    values:deonticStatus values:HeuristicDerived ;
+    cml:curationStatus cml:Proposed .
+
+concept:gciii-1949-article-83 a cml:Concept ;
+    skos:prefLabel "Article 83 - Choice of disciplinary or judicial proceedings" ;
+    cml:realizedBy doc:article-83 ;
+    cml:curationStatus cml:Proposed ;
+    prov:wasDerivedFrom <https://ihl-databases.icrc.org/en/ihl-treaties/gciii-1949> ;
+    dc:date "1949-08-12" ;
+    values:category "International Humanitarian Law (Law of War)" ;
+    cml:asserts concept:gciii-1949-article-83-norm .
+
+concept:gciii-1949-article-83-norm a values:Obligation ;
+    cml:modality cml:Deontic ;
+    values:partOf concept:gciii-1949-article-83 ;
+    values:borneBy values:Agent ;
+    values:borneBy values:State ;   # R1 universalisation (Derived)
+    values:deonticStatus values:HeuristicDerived ;
+    cml:curationStatus cml:Proposed .
+
+concept:gciii-1949-article-84 a cml:Concept ;
+    skos:prefLabel "Article 84 - Courts" ;
+    cml:realizedBy doc:article-84 ;
+    cml:curationStatus cml:Proposed ;
+    prov:wasDerivedFrom <https://ihl-databases.icrc.org/en/ihl-treaties/gciii-1949> ;
+    dc:date "1949-08-12" ;
+    values:category "International Humanitarian Law (Law of War)" ;
+    cml:asserts concept:gciii-1949-article-84-norm .
+
+concept:gciii-1949-article-84-norm a values:Obligation ;
+    cml:modality cml:Deontic ;
+    values:partOf concept:gciii-1949-article-84 ;
+    values:borneBy values:Agent ;
+    values:borneBy values:State ;   # R1 universalisation (Derived)
+    values:deonticStatus values:HeuristicDerived ;
+    cml:curationStatus cml:Proposed .
+
+concept:gciii-1949-article-85 a cml:Concept ;
+    skos:prefLabel "Article 85 - Offences committed before capture" ;
+    cml:realizedBy doc:article-85 ;
+    cml:curationStatus cml:Proposed ;
+    prov:wasDerivedFrom <https://ihl-databases.icrc.org/en/ihl-treaties/gciii-1949> ;
+    dc:date "1949-08-12" ;
+    values:category "International Humanitarian Law (Law of War)" ;
+    cml:asserts concept:gciii-1949-article-85-norm .
+
+concept:gciii-1949-article-85-norm a values:Undertaking ;
+    cml:modality cml:Deontic ;
+    values:partOf concept:gciii-1949-article-85 ;
+    values:borneBy values:Agent ;
+    values:deonticStatus values:HeuristicDerived ;
+    cml:curationStatus cml:Proposed .
+
+concept:gciii-1949-article-86 a cml:Concept ;
+    skos:prefLabel "Article 86 - The prohibition against double jeopardy (non bis in idem)" ;
+    cml:realizedBy doc:article-86 ;
+    cml:curationStatus cml:Proposed ;
+    prov:wasDerivedFrom <https://ihl-databases.icrc.org/en/ihl-treaties/gciii-1949> ;
+    dc:date "1949-08-12" ;
+    values:category "International Humanitarian Law (Law of War)" ;
+    cml:asserts concept:gciii-1949-article-86-norm .
+
+concept:gciii-1949-article-86-norm a values:Undertaking ;
+    cml:modality cml:Deontic ;
+    values:partOf concept:gciii-1949-article-86 ;
+    values:borneBy values:Agent ;
+    values:deonticStatus values:HeuristicDerived ;
+    cml:curationStatus cml:Proposed .
+
+concept:gciii-1949-article-87 a cml:Concept ;
+    skos:prefLabel "Article 87 - Penalties" ;
+    cml:realizedBy doc:article-87 ;
+    cml:curationStatus cml:Proposed ;
+    prov:wasDerivedFrom <https://ihl-databases.icrc.org/en/ihl-treaties/gciii-1949> ;
+    dc:date "1949-08-12" ;
+    values:category "International Humanitarian Law (Law of War)" ;
+    cml:asserts concept:gciii-1949-article-87-norm .
+
+concept:gciii-1949-article-87-norm a values:Prohibition ;
+    cml:modality cml:Deontic ;
+    values:partOf concept:gciii-1949-article-87 ;
+    values:borneBy values:Agent ;
+    values:deonticStatus values:HeuristicDerived ;
+    cml:curationStatus cml:Proposed .
+
+concept:gciii-1949-article-88 a cml:Concept ;
+    skos:prefLabel "Article 88 - Execution of penalties" ;
+    cml:realizedBy doc:article-88 ;
+    cml:curationStatus cml:Proposed ;
+    prov:wasDerivedFrom <https://ihl-databases.icrc.org/en/ihl-treaties/gciii-1949> ;
+    dc:date "1949-08-12" ;
+    values:category "International Humanitarian Law (Law of War)" ;
+    cml:asserts concept:gciii-1949-article-88-norm .
+
+concept:gciii-1949-article-88-norm a values:Prohibition ;
+    cml:modality cml:Deontic ;
+    values:partOf concept:gciii-1949-article-88 ;
+    values:borneBy values:Agent ;
+    values:deonticStatus values:HeuristicDerived ;
+    cml:curationStatus cml:Proposed .
+
+concept:gciii-1949-article-89 a cml:Concept ;
+    skos:prefLabel "Article 89 - Forms of disciplinary punishment" ;
+    cml:realizedBy doc:article-89 ;
+    cml:curationStatus cml:Proposed ;
+    prov:wasDerivedFrom <https://ihl-databases.icrc.org/en/ihl-treaties/gciii-1949> ;
+    dc:date "1949-08-12" ;
+    values:category "International Humanitarian Law (Law of War)" ;
+    cml:asserts concept:gciii-1949-article-89-norm .
+
+concept:gciii-1949-article-89-norm a values:Prohibition ;
+    cml:modality cml:Deontic ;
+    values:partOf concept:gciii-1949-article-89 ;
+    values:borneBy values:Agent ;
+    values:deonticStatus values:HeuristicDerived ;
+    cml:curationStatus cml:Proposed .
+
+concept:gciii-1949-article-90 a cml:Concept ;
+    skos:prefLabel "Article 90 - Duration of disciplinary punishments" ;
+    cml:realizedBy doc:article-90 ;
+    cml:curationStatus cml:Proposed ;
+    prov:wasDerivedFrom <https://ihl-databases.icrc.org/en/ihl-treaties/gciii-1949> ;
+    dc:date "1949-08-12" ;
+    values:category "International Humanitarian Law (Law of War)" ;
+    cml:asserts concept:gciii-1949-article-90-norm .
+
+concept:gciii-1949-article-90-norm a values:Prohibition ;
+    cml:modality cml:Deontic ;
+    values:partOf concept:gciii-1949-article-90 ;
+    values:borneBy values:Agent ;
+    values:deonticStatus values:HeuristicDerived ;
+    cml:curationStatus cml:Proposed .
+
+concept:gciii-1949-article-91 a cml:Concept ;
+    skos:prefLabel "Article 91 - Successful escape" ;
+    cml:realizedBy doc:article-91 ;
+    cml:curationStatus cml:Proposed ;
+    prov:wasDerivedFrom <https://ihl-databases.icrc.org/en/ihl-treaties/gciii-1949> ;
+    dc:date "1949-08-12" ;
+    values:category "International Humanitarian Law (Law of War)" ;
+    cml:asserts concept:gciii-1949-article-91-norm .
+
+concept:gciii-1949-article-91-norm a values:Prohibition ;
+    cml:modality cml:Deontic ;
+    values:partOf concept:gciii-1949-article-91 ;
+    values:borneBy values:Agent ;
+    values:deonticStatus values:HeuristicDerived ;
+    cml:curationStatus cml:Proposed .
+
+concept:gciii-1949-article-92 a cml:Concept ;
+    skos:prefLabel "Article 92 - Unsuccessful escape" ;
+    cml:realizedBy doc:article-92 ;
+    cml:curationStatus cml:Proposed ;
+    prov:wasDerivedFrom <https://ihl-databases.icrc.org/en/ihl-treaties/gciii-1949> ;
+    dc:date "1949-08-12" ;
+    values:category "International Humanitarian Law (Law of War)" ;
+    cml:asserts concept:gciii-1949-article-92-norm .
+
+concept:gciii-1949-article-92-norm a values:Obligation ;
+    cml:modality cml:Deontic ;
+    values:partOf concept:gciii-1949-article-92 ;
+    values:borneBy values:Agent ;
+    values:borneBy values:State ;   # R1 universalisation (Derived)
+    values:deonticStatus values:HeuristicDerived ;
+    cml:curationStatus cml:Proposed .
+
+concept:gciii-1949-article-93 a cml:Concept ;
+    skos:prefLabel "Article 93 - Escapes: Connected offences" ;
+    cml:realizedBy doc:article-93 ;
+    cml:curationStatus cml:Proposed ;
+    prov:wasDerivedFrom <https://ihl-databases.icrc.org/en/ihl-treaties/gciii-1949> ;
+    dc:date "1949-08-12" ;
+    values:category "International Humanitarian Law (Law of War)" ;
+    cml:asserts concept:gciii-1949-article-93-norm .
+
+concept:gciii-1949-article-93-norm a values:Prohibition ;
+    cml:modality cml:Deontic ;
+    values:partOf concept:gciii-1949-article-93 ;
+    values:borneBy values:Agent ;
+    values:deonticStatus values:HeuristicDerived ;
+    cml:curationStatus cml:Proposed .
+
+concept:gciii-1949-article-94 a cml:Concept ;
+    skos:prefLabel "Article 94 - Escapes: Notification of recapture" ;
+    cml:realizedBy doc:article-94 ;
+    cml:curationStatus cml:Proposed ;
+    prov:wasDerivedFrom <https://ihl-databases.icrc.org/en/ihl-treaties/gciii-1949> ;
+    dc:date "1949-08-12" ;
+    values:category "International Humanitarian Law (Law of War)" ;
+    cml:asserts concept:gciii-1949-article-94-norm .
+
+concept:gciii-1949-article-94-norm a values:Obligation ;
+    cml:modality cml:Deontic ;
+    values:partOf concept:gciii-1949-article-94 ;
+    values:borneBy values:Agent ;
+    values:borneBy values:State ;   # R1 universalisation (Derived)
+    values:deonticStatus values:HeuristicDerived ;
+    cml:curationStatus cml:Proposed .
+
+concept:gciii-1949-article-95 a cml:Concept ;
+    skos:prefLabel "Article 95 - Disciplinary procedure: Confinement awaiting hearing" ;
+    cml:realizedBy doc:article-95 ;
+    cml:curationStatus cml:Proposed ;
+    prov:wasDerivedFrom <https://ihl-databases.icrc.org/en/ihl-treaties/gciii-1949> ;
+    dc:date "1949-08-12" ;
+    values:category "International Humanitarian Law (Law of War)" ;
+    cml:asserts concept:gciii-1949-article-95-norm .
+
+concept:gciii-1949-article-95-norm a values:Prohibition ;
+    cml:modality cml:Deontic ;
+    values:partOf concept:gciii-1949-article-95 ;
+    values:borneBy values:Agent ;
+    values:deonticStatus values:HeuristicDerived ;
+    cml:curationStatus cml:Proposed .
+
+concept:gciii-1949-article-96 a cml:Concept ;
+    skos:prefLabel "Article 96 - Disciplinary procedure: Competent authorities and right of defence" ;
+    cml:realizedBy doc:article-96 ;
+    cml:curationStatus cml:Proposed ;
+    prov:wasDerivedFrom <https://ihl-databases.icrc.org/en/ihl-treaties/gciii-1949> ;
+    dc:date "1949-08-12" ;
+    values:category "International Humanitarian Law (Law of War)" ;
+    cml:asserts concept:gciii-1949-article-96-norm .
+
+concept:gciii-1949-article-96-norm a values:Obligation ;
+    cml:modality cml:Deontic ;
+    values:partOf concept:gciii-1949-article-96 ;
+    values:borneBy values:Agent ;
+    values:borneBy values:State ;   # R1 universalisation (Derived)
+    values:deonticStatus values:HeuristicDerived ;
+    cml:curationStatus cml:Proposed .
+
+concept:gciii-1949-article-97 a cml:Concept ;
+    skos:prefLabel "Article 97 - Execution of disciplinary punishment: Premises" ;
+    cml:realizedBy doc:article-97 ;
+    cml:curationStatus cml:Proposed ;
+    prov:wasDerivedFrom <https://ihl-databases.icrc.org/en/ihl-treaties/gciii-1949> ;
+    dc:date "1949-08-12" ;
+    values:category "International Humanitarian Law (Law of War)" ;
+    cml:asserts concept:gciii-1949-article-97-norm .
+
+concept:gciii-1949-article-97-norm a values:Prohibition ;
+    cml:modality cml:Deontic ;
+    values:partOf concept:gciii-1949-article-97 ;
+    values:borneBy values:Agent ;
+    values:deonticStatus values:HeuristicDerived ;
+    cml:curationStatus cml:Proposed .
+
+concept:gciii-1949-article-98 a cml:Concept ;
+    skos:prefLabel "Article 98 - Execution of disciplinary punishment: Essential safeguards" ;
+    cml:realizedBy doc:article-98 ;
+    cml:curationStatus cml:Proposed ;
+    prov:wasDerivedFrom <https://ihl-databases.icrc.org/en/ihl-treaties/gciii-1949> ;
+    dc:date "1949-08-12" ;
+    values:category "International Humanitarian Law (Law of War)" ;
+    cml:asserts concept:gciii-1949-article-98-norm .
+
+concept:gciii-1949-article-98-norm a values:Prohibition ;
+    cml:modality cml:Deontic ;
+    values:partOf concept:gciii-1949-article-98 ;
+    values:borneBy values:Agent ;
+    values:deonticStatus values:HeuristicDerived ;
+    cml:curationStatus cml:Proposed .
+
+concept:gciii-1949-article-99 a cml:Concept ;
+    skos:prefLabel "Article 99 - Judicial procedure: General principles" ;
+    cml:realizedBy doc:article-99 ;
+    cml:curationStatus cml:Proposed ;
+    prov:wasDerivedFrom <https://ihl-databases.icrc.org/en/ihl-treaties/gciii-1949> ;
+    dc:date "1949-08-12" ;
+    values:category "International Humanitarian Law (Law of War)" ;
+    cml:asserts concept:gciii-1949-article-99-norm .
+
+concept:gciii-1949-article-99-norm a values:Undertaking ;
+    cml:modality cml:Deontic ;
+    values:partOf concept:gciii-1949-article-99 ;
+    values:borneBy values:Agent ;
+    values:deonticStatus values:HeuristicDerived ;
+    cml:curationStatus cml:Proposed .
+
+concept:gciii-1949-article-100 a cml:Concept ;
+    skos:prefLabel "Article 100 - Death penalty" ;
+    cml:realizedBy doc:article-100 ;
+    cml:curationStatus cml:Proposed ;
+    prov:wasDerivedFrom <https://ihl-databases.icrc.org/en/ihl-treaties/gciii-1949> ;
+    dc:date "1949-08-12" ;
+    values:category "International Humanitarian Law (Law of War)" ;
+    cml:asserts concept:gciii-1949-article-100-norm .
+
+concept:gciii-1949-article-100-norm a values:Prohibition ;
+    cml:modality cml:Deontic ;
+    values:partOf concept:gciii-1949-article-100 ;
+    values:borneBy values:Agent ;
+    values:deonticStatus values:HeuristicDerived ;
+    cml:curationStatus cml:Proposed .
+
+concept:gciii-1949-article-101 a cml:Concept ;
+    skos:prefLabel "Article 101 - Delay in execution of the death penalty" ;
+    cml:realizedBy doc:article-101 ;
+    cml:curationStatus cml:Proposed ;
+    prov:wasDerivedFrom <https://ihl-databases.icrc.org/en/ihl-treaties/gciii-1949> ;
+    dc:date "1949-08-12" ;
+    values:category "International Humanitarian Law (Law of War)" ;
+    cml:asserts concept:gciii-1949-article-101-norm .
+
+concept:gciii-1949-article-101-norm a values:Prohibition ;
+    cml:modality cml:Deontic ;
+    values:partOf concept:gciii-1949-article-101 ;
+    values:borneBy values:Agent ;
+    values:deonticStatus values:HeuristicDerived ;
+    cml:curationStatus cml:Proposed .
+
+concept:gciii-1949-article-102 a cml:Concept ;
+    skos:prefLabel "Article 102 - Judicial procedure: Conditions for validity of sentence" ;
+    cml:realizedBy doc:article-102 ;
+    cml:curationStatus cml:Proposed ;
+    prov:wasDerivedFrom <https://ihl-databases.icrc.org/en/ihl-treaties/gciii-1949> ;
+    dc:date "1949-08-12" ;
+    values:category "International Humanitarian Law (Law of War)" ;
+    cml:asserts concept:gciii-1949-article-102-norm .
+
+concept:gciii-1949-article-102-norm a values:Undertaking ;
+    cml:modality cml:Deontic ;
+    values:partOf concept:gciii-1949-article-102 ;
+    values:borneBy values:Agent ;
+    values:deonticStatus values:HeuristicDerived ;
+    cml:curationStatus cml:Proposed .
+
+concept:gciii-1949-article-103 a cml:Concept ;
+    skos:prefLabel "Article 103 - Judicial investigations and confinement awaiting trial" ;
+    cml:realizedBy doc:article-103 ;
+    cml:curationStatus cml:Proposed ;
+    prov:wasDerivedFrom <https://ihl-databases.icrc.org/en/ihl-treaties/gciii-1949> ;
+    dc:date "1949-08-12" ;
+    values:category "International Humanitarian Law (Law of War)" ;
+    cml:asserts concept:gciii-1949-article-103-norm .
+
+concept:gciii-1949-article-103-norm a values:Prohibition ;
+    cml:modality cml:Deontic ;
+    values:partOf concept:gciii-1949-article-103 ;
+    values:borneBy values:Agent ;
+    values:deonticStatus values:HeuristicDerived ;
+    cml:curationStatus cml:Proposed .
+
+concept:gciii-1949-article-104 a cml:Concept ;
+    skos:prefLabel "Article 104 - Notification of judicial proceedings" ;
+    cml:realizedBy doc:article-104 ;
+    cml:curationStatus cml:Proposed ;
+    prov:wasDerivedFrom <https://ihl-databases.icrc.org/en/ihl-treaties/gciii-1949> ;
+    dc:date "1949-08-12" ;
+    values:category "International Humanitarian Law (Law of War)" ;
+    cml:asserts concept:gciii-1949-article-104-norm .
+
+concept:gciii-1949-article-104-norm a values:Prohibition ;
+    cml:modality cml:Deontic ;
+    values:partOf concept:gciii-1949-article-104 ;
+    values:borneBy values:Agent ;
+    values:deonticStatus values:HeuristicDerived ;
+    cml:curationStatus cml:Proposed .
+
+concept:gciii-1949-article-105 a cml:Concept ;
+    skos:prefLabel "Article 105 - Rights and means of defence" ;
+    cml:realizedBy doc:article-105 ;
+    cml:curationStatus cml:Proposed ;
+    prov:wasDerivedFrom <https://ihl-databases.icrc.org/en/ihl-treaties/gciii-1949> ;
+    dc:date "1949-08-12" ;
+    values:category "International Humanitarian Law (Law of War)" ;
+    cml:asserts concept:gciii-1949-article-105-norm .
+
+concept:gciii-1949-article-105-norm a values:Right ;
+    cml:modality cml:Deontic ;
+    values:partOf concept:gciii-1949-article-105 ;
+    values:heldBy values:NaturalPerson ;
+    values:deonticStatus values:HeuristicDerived ;
+    cml:curationStatus cml:Proposed .
+
+concept:gciii-1949-article-106 a cml:Concept ;
+    skos:prefLabel "Article 106 - Appeals" ;
+    cml:realizedBy doc:article-106 ;
+    cml:curationStatus cml:Proposed ;
+    prov:wasDerivedFrom <https://ihl-databases.icrc.org/en/ihl-treaties/gciii-1949> ;
+    dc:date "1949-08-12" ;
+    values:category "International Humanitarian Law (Law of War)" ;
+    cml:asserts concept:gciii-1949-article-106-norm .
+
+concept:gciii-1949-article-106-norm a values:Obligation ;
+    cml:modality cml:Deontic ;
+    values:partOf concept:gciii-1949-article-106 ;
+    values:borneBy values:Agent ;
+    values:borneBy values:State ;   # R1 universalisation (Derived)
+    values:deonticStatus values:HeuristicDerived ;
+    cml:curationStatus cml:Proposed .
+
+concept:gciii-1949-article-107 a cml:Concept ;
+    skos:prefLabel "Article 107 - Notification of judgments and sentences" ;
+    cml:realizedBy doc:article-107 ;
+    cml:curationStatus cml:Proposed ;
+    prov:wasDerivedFrom <https://ihl-databases.icrc.org/en/ihl-treaties/gciii-1949> ;
+    dc:date "1949-08-12" ;
+    values:category "International Humanitarian Law (Law of War)" ;
+    cml:asserts concept:gciii-1949-article-107-norm .
+
+concept:gciii-1949-article-107-norm a values:Right ;
+    cml:modality cml:Deontic ;
+    values:partOf concept:gciii-1949-article-107 ;
+    values:heldBy values:NaturalPerson ;
+    values:deonticStatus values:HeuristicDerived ;
+    cml:curationStatus cml:Proposed .
+
+concept:gciii-1949-article-108 a cml:Concept ;
+    skos:prefLabel "Article 108 - Execution of judicial penalties: Premises and essential safeguards" ;
+    cml:realizedBy doc:article-108 ;
+    cml:curationStatus cml:Proposed ;
+    prov:wasDerivedFrom <https://ihl-databases.icrc.org/en/ihl-treaties/gciii-1949> ;
+    dc:date "1949-08-12" ;
+    values:category "International Humanitarian Law (Law of War)" ;
+    cml:asserts concept:gciii-1949-article-108-norm .
+
+concept:gciii-1949-article-108-norm a values:Right ;
+    cml:modality cml:Deontic ;
+    values:partOf concept:gciii-1949-article-108 ;
+    values:heldBy values:NaturalPerson ;
+    values:deonticStatus values:HeuristicDerived ;
+    cml:curationStatus cml:Proposed .
+
+concept:gciii-1949-article-109 a cml:Concept ;
+    skos:prefLabel "Article 109 - Direct repatriation and accommodation in neutral countries: General observations" ;
+    cml:realizedBy doc:article-109 ;
+    cml:curationStatus cml:Proposed ;
+    prov:wasDerivedFrom <https://ihl-databases.icrc.org/en/ihl-treaties/gciii-1949> ;
+    dc:date "1949-08-12" ;
+    values:category "International Humanitarian Law (Law of War)" ;
+    cml:asserts concept:gciii-1949-article-109-norm .
+
+concept:gciii-1949-article-109-norm a values:Undertaking ;
+    cml:modality cml:Deontic ;
+    values:partOf concept:gciii-1949-article-109 ;
+    values:borneBy values:Agent ;
+    values:deonticStatus values:HeuristicDerived ;
+    cml:curationStatus cml:Proposed .
+
+concept:gciii-1949-article-110 a cml:Concept ;
+    skos:prefLabel "Article 110 - Cases of repatriation and accommodation" ;
+    cml:realizedBy doc:article-110 ;
+    cml:curationStatus cml:Proposed ;
+    prov:wasDerivedFrom <https://ihl-databases.icrc.org/en/ihl-treaties/gciii-1949> ;
+    dc:date "1949-08-12" ;
+    values:category "International Humanitarian Law (Law of War)" ;
+    cml:asserts concept:gciii-1949-article-110-norm .
+
+concept:gciii-1949-article-110-norm a values:Obligation ;
+    cml:modality cml:Deontic ;
+    values:partOf concept:gciii-1949-article-110 ;
+    values:borneBy values:Agent ;
+    values:borneBy values:State ;   # R1 universalisation (Derived)
+    values:deonticStatus values:HeuristicDerived ;
+    cml:curationStatus cml:Proposed .
+
+concept:gciii-1949-article-111 a cml:Concept ;
+    skos:prefLabel "Article 111 - Internment in a neutral country" ;
+    cml:realizedBy doc:article-111 ;
+    cml:curationStatus cml:Proposed ;
+    prov:wasDerivedFrom <https://ihl-databases.icrc.org/en/ihl-treaties/gciii-1949> ;
+    dc:date "1949-08-12" ;
+    values:category "International Humanitarian Law (Law of War)" ;
+    cml:asserts concept:gciii-1949-article-111-norm .
+
+concept:gciii-1949-article-111-norm a values:Undertaking ;
+    cml:modality cml:Deontic ;
+    values:partOf concept:gciii-1949-article-111 ;
+    values:borneBy values:Agent ;
+    values:deonticStatus values:HeuristicDerived ;
+    cml:curationStatus cml:Proposed .
+
+concept:gciii-1949-article-112 a cml:Concept ;
+    skos:prefLabel "Article 112 - Mixed Medical Commissions" ;
+    cml:realizedBy doc:article-112 ;
+    cml:curationStatus cml:Proposed ;
+    prov:wasDerivedFrom <https://ihl-databases.icrc.org/en/ihl-treaties/gciii-1949> ;
+    dc:date "1949-08-12" ;
+    values:category "International Humanitarian Law (Law of War)" ;
+    cml:asserts concept:gciii-1949-article-112-norm .
+
+concept:gciii-1949-article-112-norm a values:Obligation ;
+    cml:modality cml:Deontic ;
+    values:partOf concept:gciii-1949-article-112 ;
+    values:borneBy values:Agent ;
+    values:borneBy values:State ;   # R1 universalisation (Derived)
+    values:deonticStatus values:HeuristicDerived ;
+    cml:curationStatus cml:Proposed .
+
+concept:gciii-1949-article-113 a cml:Concept ;
+    skos:prefLabel "Article 113 - Prisoners entitled to examination by Mixed Medical Commissions" ;
+    cml:realizedBy doc:article-113 ;
+    cml:curationStatus cml:Proposed ;
+    prov:wasDerivedFrom <https://ihl-databases.icrc.org/en/ihl-treaties/gciii-1949> ;
+    dc:date "1949-08-12" ;
+    values:category "International Humanitarian Law (Law of War)" ;
+    cml:asserts concept:gciii-1949-article-113-norm .
+
+concept:gciii-1949-article-113-norm a values:Right ;
+    cml:modality cml:Deontic ;
+    values:partOf concept:gciii-1949-article-113 ;
+    values:heldBy values:NaturalPerson ;
+    values:deonticStatus values:HeuristicDerived ;
+    cml:curationStatus cml:Proposed .
+
+concept:gciii-1949-article-114 a cml:Concept ;
+    skos:prefLabel "Article 114 - Prisoners meeting with accidents" ;
+    cml:realizedBy doc:article-114 ;
+    cml:curationStatus cml:Proposed ;
+    prov:wasDerivedFrom <https://ihl-databases.icrc.org/en/ihl-treaties/gciii-1949> ;
+    dc:date "1949-08-12" ;
+    values:category "International Humanitarian Law (Law of War)" ;
+    cml:asserts concept:gciii-1949-article-114-norm .
+
+concept:gciii-1949-article-114-norm a values:Undertaking ;
+    cml:modality cml:Deontic ;
+    values:partOf concept:gciii-1949-article-114 ;
+    values:borneBy values:Agent ;
+    values:deonticStatus values:HeuristicDerived ;
+    cml:curationStatus cml:Proposed .
+
+concept:gciii-1949-article-115 a cml:Concept ;
+    skos:prefLabel "Article 115 - Prisoners serving a sentence" ;
+    cml:realizedBy doc:article-115 ;
+    cml:curationStatus cml:Proposed ;
+    prov:wasDerivedFrom <https://ihl-databases.icrc.org/en/ihl-treaties/gciii-1949> ;
+    dc:date "1949-08-12" ;
+    values:category "International Humanitarian Law (Law of War)" ;
+    cml:asserts concept:gciii-1949-article-115-norm .
+
+concept:gciii-1949-article-115-norm a values:Undertaking ;
+    cml:modality cml:Deontic ;
+    values:partOf concept:gciii-1949-article-115 ;
+    values:borneBy values:Agent ;
+    values:deonticStatus values:HeuristicDerived ;
+    cml:curationStatus cml:Proposed .
+
+concept:gciii-1949-article-116 a cml:Concept ;
+    skos:prefLabel "Article 116 - Costs of repatriation" ;
+    cml:realizedBy doc:article-116 ;
+    cml:curationStatus cml:Proposed ;
+    prov:wasDerivedFrom <https://ihl-databases.icrc.org/en/ihl-treaties/gciii-1949> ;
+    dc:date "1949-08-12" ;
+    values:category "International Humanitarian Law (Law of War)" ;
+    cml:asserts concept:gciii-1949-article-116-norm .
+
+concept:gciii-1949-article-116-norm a values:Obligation ;
+    cml:modality cml:Deontic ;
+    values:partOf concept:gciii-1949-article-116 ;
+    values:borneBy values:Agent ;
+    values:borneBy values:State ;   # R1 universalisation (Derived)
+    values:deonticStatus values:HeuristicDerived ;
+    cml:curationStatus cml:Proposed .
+
+concept:gciii-1949-article-117 a cml:Concept ;
+    skos:prefLabel "Article 117 - Activity after repatriation" ;
+    cml:realizedBy doc:article-117 ;
+    cml:curationStatus cml:Proposed ;
+    prov:wasDerivedFrom <https://ihl-databases.icrc.org/en/ihl-treaties/gciii-1949> ;
+    dc:date "1949-08-12" ;
+    values:category "International Humanitarian Law (Law of War)" ;
+    cml:asserts concept:gciii-1949-article-117-norm .
+
+concept:gciii-1949-article-117-norm a values:Undertaking ;
+    cml:modality cml:Deontic ;
+    values:partOf concept:gciii-1949-article-117 ;
+    values:borneBy values:Agent ;
+    values:deonticStatus values:HeuristicDerived ;
+    cml:curationStatus cml:Proposed .
+
+concept:gciii-1949-article-118 a cml:Concept ;
+    skos:prefLabel "Article 118 - Release and repatriation" ;
+    cml:realizedBy doc:article-118 ;
+    cml:curationStatus cml:Proposed ;
+    prov:wasDerivedFrom <https://ihl-databases.icrc.org/en/ihl-treaties/gciii-1949> ;
+    dc:date "1949-08-12" ;
+    values:category "International Humanitarian Law (Law of War)" ;
+    cml:asserts concept:gciii-1949-article-118-norm .
+
+concept:gciii-1949-article-118-norm a values:Obligation ;
+    cml:modality cml:Deontic ;
+    values:partOf concept:gciii-1949-article-118 ;
+    values:borneBy values:Agent ;
+    values:borneBy values:State ;   # R1 universalisation (Derived)
+    values:deonticStatus values:HeuristicDerived ;
+    cml:curationStatus cml:Proposed .
+
+concept:gciii-1949-article-119 a cml:Concept ;
+    skos:prefLabel "Article 119 - Details of repatriation procedure" ;
+    cml:realizedBy doc:article-119 ;
+    cml:curationStatus cml:Proposed ;
+    prov:wasDerivedFrom <https://ihl-databases.icrc.org/en/ihl-treaties/gciii-1949> ;
+    dc:date "1949-08-12" ;
+    values:category "International Humanitarian Law (Law of War)" ;
+    cml:asserts concept:gciii-1949-article-119-norm .
+
+concept:gciii-1949-article-119-norm a values:Obligation ;
+    cml:modality cml:Deontic ;
+    values:partOf concept:gciii-1949-article-119 ;
+    values:borneBy values:Agent ;
+    values:borneBy values:State ;   # R1 universalisation (Derived)
+    values:deonticStatus values:HeuristicDerived ;
+    cml:curationStatus cml:Proposed .
+
+concept:gciii-1949-article-120 a cml:Concept ;
+    skos:prefLabel "Article 120 - Prescriptions regarding the dead, including wills and death certificates" ;
+    cml:realizedBy doc:article-120 ;
+    cml:curationStatus cml:Proposed ;
+    prov:wasDerivedFrom <https://ihl-databases.icrc.org/en/ihl-treaties/gciii-1949> ;
+    dc:date "1949-08-12" ;
+    values:category "International Humanitarian Law (Law of War)" ;
+    cml:asserts concept:gciii-1949-article-120-norm .
+
+concept:gciii-1949-article-120-norm a values:Obligation ;
+    cml:modality cml:Deontic ;
+    values:partOf concept:gciii-1949-article-120 ;
+    values:borneBy values:Agent ;
+    values:borneBy values:State ;   # R1 universalisation (Derived)
+    values:deonticStatus values:HeuristicDerived ;
+    cml:curationStatus cml:Proposed .
+
+concept:gciii-1949-article-121 a cml:Concept ;
+    skos:prefLabel "Article 121 - Prisoners killed or injured in special circumstances" ;
+    cml:realizedBy doc:article-121 ;
+    cml:curationStatus cml:Proposed ;
+    prov:wasDerivedFrom <https://ihl-databases.icrc.org/en/ihl-treaties/gciii-1949> ;
+    dc:date "1949-08-12" ;
+    values:category "International Humanitarian Law (Law of War)" ;
+    cml:asserts concept:gciii-1949-article-121-norm .
+
+concept:gciii-1949-article-121-norm a values:Obligation ;
+    cml:modality cml:Deontic ;
+    values:partOf concept:gciii-1949-article-121 ;
+    values:borneBy values:Agent ;
+    values:borneBy values:State ;   # R1 universalisation (Derived)
+    values:deonticStatus values:HeuristicDerived ;
+    cml:curationStatus cml:Proposed .
+
+concept:gciii-1949-article-122 a cml:Concept ;
+    skos:prefLabel "Article 122 - National information bureaux" ;
+    cml:realizedBy doc:article-122 ;
+    cml:curationStatus cml:Proposed ;
+    prov:wasDerivedFrom <https://ihl-databases.icrc.org/en/ihl-treaties/gciii-1949> ;
+    dc:date "1949-08-12" ;
+    values:category "International Humanitarian Law (Law of War)" ;
+    cml:asserts concept:gciii-1949-article-122-norm .
+
+concept:gciii-1949-article-122-norm a values:Obligation ;
+    cml:modality cml:Deontic ;
+    values:partOf concept:gciii-1949-article-122 ;
+    values:borneBy values:Agent ;
+    values:borneBy values:State ;   # R1 universalisation (Derived)
+    values:deonticStatus values:HeuristicDerived ;
+    cml:curationStatus cml:Proposed .
+
+concept:gciii-1949-article-123 a cml:Concept ;
+    skos:prefLabel "Article 123 - Central Tracing Agency" ;
+    cml:realizedBy doc:article-123 ;
+    cml:curationStatus cml:Proposed ;
+    prov:wasDerivedFrom <https://ihl-databases.icrc.org/en/ihl-treaties/gciii-1949> ;
+    dc:date "1949-08-12" ;
+    values:category "International Humanitarian Law (Law of War)" ;
+    cml:asserts concept:gciii-1949-article-123-norm .
+
+concept:gciii-1949-article-123-norm a values:Obligation ;
+    cml:modality cml:Deontic ;
+    values:partOf concept:gciii-1949-article-123 ;
+    values:borneBy values:Agent ;
+    values:borneBy values:State ;   # R1 universalisation (Derived)
+    values:deonticStatus values:HeuristicDerived ;
+    cml:curationStatus cml:Proposed .
+
+concept:gciii-1949-article-124 a cml:Concept ;
+    skos:prefLabel "Article 124 - Exemption from charges of national information bureaux and the Central Tracing Agency" ;
+    cml:realizedBy doc:article-124 ;
+    cml:curationStatus cml:Proposed ;
+    prov:wasDerivedFrom <https://ihl-databases.icrc.org/en/ihl-treaties/gciii-1949> ;
+    dc:date "1949-08-12" ;
+    values:category "International Humanitarian Law (Law of War)" ;
+    cml:asserts concept:gciii-1949-article-124-norm .
+
+concept:gciii-1949-article-124-norm a values:Obligation ;
+    cml:modality cml:Deontic ;
+    values:partOf concept:gciii-1949-article-124 ;
+    values:borneBy values:Agent ;
+    values:borneBy values:State ;   # R1 universalisation (Derived)
+    values:deonticStatus values:HeuristicDerived ;
+    cml:curationStatus cml:Proposed .
+
+concept:gciii-1949-article-125 a cml:Concept ;
+    skos:prefLabel "Article 125 - Facilities for relief societies and other organizations assisting prisoners of war" ;
+    cml:realizedBy doc:article-125 ;
+    cml:curationStatus cml:Proposed ;
+    prov:wasDerivedFrom <https://ihl-databases.icrc.org/en/ihl-treaties/gciii-1949> ;
+    dc:date "1949-08-12" ;
+    values:category "International Humanitarian Law (Law of War)" ;
+    cml:asserts concept:gciii-1949-article-125-norm .
+
+concept:gciii-1949-article-125-norm a values:Prohibition ;
+    cml:modality cml:Deontic ;
+    values:partOf concept:gciii-1949-article-125 ;
+    values:borneBy values:Agent ;
+    values:deonticStatus values:HeuristicDerived ;
+    cml:curationStatus cml:Proposed .
+
+concept:gciii-1949-article-126 a cml:Concept ;
+    skos:prefLabel "Article 126 - Supervision by the Protecting Powers and the ICRC" ;
+    cml:realizedBy doc:article-126 ;
+    cml:curationStatus cml:Proposed ;
+    prov:wasDerivedFrom <https://ihl-databases.icrc.org/en/ihl-treaties/gciii-1949> ;
+    dc:date "1949-08-12" ;
+    values:category "International Humanitarian Law (Law of War)" ;
+    cml:asserts concept:gciii-1949-article-126-norm .
+
+concept:gciii-1949-article-126-norm a values:Prohibition ;
+    cml:modality cml:Deontic ;
+    values:partOf concept:gciii-1949-article-126 ;
+    values:borneBy values:Agent ;
+    values:deonticStatus values:HeuristicDerived ;
+    cml:curationStatus cml:Proposed .
+
+concept:gciii-1949-article-127 a cml:Concept ;
+    skos:prefLabel "Article 127 - Dissemination of the Convention" ;
+    cml:realizedBy doc:article-127 ;
+    cml:curationStatus cml:Proposed ;
+    prov:wasDerivedFrom <https://ihl-databases.icrc.org/en/ihl-treaties/gciii-1949> ;
+    dc:date "1949-08-12" ;
+    values:category "International Humanitarian Law (Law of War)" ;
+    cml:asserts concept:gciii-1949-article-127-norm .
+
+concept:gciii-1949-article-127-norm a values:Undertaking ;
+    cml:modality cml:Deontic ;
+    values:partOf concept:gciii-1949-article-127 ;
+    values:borneBy values:Agent ;
+    values:deonticStatus values:HeuristicDerived ;
+    cml:curationStatus cml:Proposed .
+
+concept:gciii-1949-article-128 a cml:Concept ;
+    skos:prefLabel "Article 128 - Translation. Implementing laws and regulations" ;
+    cml:realizedBy doc:article-128 ;
+    cml:curationStatus cml:Proposed ;
+    prov:wasDerivedFrom <https://ihl-databases.icrc.org/en/ihl-treaties/gciii-1949> ;
+    dc:date "1949-08-12" ;
+    values:category "International Humanitarian Law (Law of War)" ;
+    cml:asserts concept:gciii-1949-article-128-norm .
+
+concept:gciii-1949-article-128-norm a values:Undertaking ;
+    cml:modality cml:Deontic ;
+    values:partOf concept:gciii-1949-article-128 ;
+    values:borneBy values:Agent ;
+    values:deonticStatus values:HeuristicDerived ;
+    cml:curationStatus cml:Proposed .
+
+concept:gciii-1949-article-129 a cml:Concept ;
+    skos:prefLabel "Article 129 - Penal sanctions" ;
+    cml:realizedBy doc:article-129 ;
+    cml:curationStatus cml:Proposed ;
+    prov:wasDerivedFrom <https://ihl-databases.icrc.org/en/ihl-treaties/gciii-1949> ;
+    dc:date "1949-08-12" ;
+    values:category "International Humanitarian Law (Law of War)" ;
+    cml:asserts concept:gciii-1949-article-129-norm .
+
+concept:gciii-1949-article-129-norm a values:Prohibition ;
+    cml:modality cml:Deontic ;
+    values:partOf concept:gciii-1949-article-129 ;
+    values:borneBy values:Agent ;
+    values:deonticStatus values:HeuristicDerived ;
+    cml:curationStatus cml:Proposed .
+
+concept:gciii-1949-article-130 a cml:Concept ;
+    skos:prefLabel "Article 130 - Grave breaches" ;
+    cml:realizedBy doc:article-130 ;
+    cml:curationStatus cml:Proposed ;
+    prov:wasDerivedFrom <https://ihl-databases.icrc.org/en/ihl-treaties/gciii-1949> ;
+    dc:date "1949-08-12" ;
+    values:category "International Humanitarian Law (Law of War)" ;
+    cml:asserts concept:gciii-1949-article-130-norm .
+
+concept:gciii-1949-article-130-norm a values:Obligation ;
+    cml:modality cml:Deontic ;
+    values:partOf concept:gciii-1949-article-130 ;
+    values:borneBy values:Agent ;
+    values:borneBy values:State ;   # R1 universalisation (Derived)
+    values:deonticStatus values:HeuristicDerived ;
+    cml:curationStatus cml:Proposed .
+
+concept:gciii-1949-article-131 a cml:Concept ;
+    skos:prefLabel "Article 131 - Responsibilities of the Contracting Parties" ;
+    cml:realizedBy doc:article-131 ;
+    cml:curationStatus cml:Proposed ;
+    prov:wasDerivedFrom <https://ihl-databases.icrc.org/en/ihl-treaties/gciii-1949> ;
+    dc:date "1949-08-12" ;
+    values:category "International Humanitarian Law (Law of War)" ;
+    cml:asserts concept:gciii-1949-article-131-norm .
+
+concept:gciii-1949-article-131-norm a values:Obligation ;
+    cml:modality cml:Deontic ;
+    values:partOf concept:gciii-1949-article-131 ;
+    values:borneBy values:Agent ;
+    values:borneBy values:State ;   # R1 universalisation (Derived)
+    values:deonticStatus values:HeuristicDerived ;
+    cml:curationStatus cml:Proposed .
+
+concept:gciii-1949-article-132 a cml:Concept ;
+    skos:prefLabel "Article 132 - Enquiry procedure" ;
+    cml:realizedBy doc:article-132 ;
+    cml:curationStatus cml:Proposed ;
+    prov:wasDerivedFrom <https://ihl-databases.icrc.org/en/ihl-treaties/gciii-1949> ;
+    dc:date "1949-08-12" ;
+    values:category "International Humanitarian Law (Law of War)" ;
+    cml:asserts concept:gciii-1949-article-132-norm .
+
+concept:gciii-1949-article-132-norm a values:Obligation ;
+    cml:modality cml:Deontic ;
+    values:partOf concept:gciii-1949-article-132 ;
+    values:borneBy values:Agent ;
+    values:borneBy values:State ;   # R1 universalisation (Derived)
+    values:deonticStatus values:HeuristicDerived ;
+    cml:curationStatus cml:Proposed .
+
+concept:gciii-1949-article-133 a cml:Concept ;
+    skos:prefLabel "Article 133 - Languages" ;
+    cml:realizedBy doc:article-133 ;
+    cml:curationStatus cml:Proposed ;
+    prov:wasDerivedFrom <https://ihl-databases.icrc.org/en/ihl-treaties/gciii-1949> ;
+    dc:date "1949-08-12" ;
+    values:category "International Humanitarian Law (Law of War)" ;
+    cml:asserts concept:gciii-1949-article-133-norm .
+
+concept:gciii-1949-article-133-norm a values:Undertaking ;
+    cml:modality cml:Deontic ;
+    values:partOf concept:gciii-1949-article-133 ;
+    values:borneBy values:Agent ;
+    values:deonticStatus values:HeuristicDerived ;
+    cml:curationStatus cml:Proposed .
+
+concept:gciii-1949-article-134 a cml:Concept ;
+    skos:prefLabel "Article 134 - Relation to the 1929 Convention" ;
+    cml:realizedBy doc:article-134 ;
+    cml:curationStatus cml:Proposed ;
+    prov:wasDerivedFrom <https://ihl-databases.icrc.org/en/ihl-treaties/gciii-1949> ;
+    dc:date "1949-08-12" ;
+    values:category "International Humanitarian Law (Law of War)" ;
+    cml:asserts concept:gciii-1949-article-134-norm .
+
+concept:gciii-1949-article-134-norm a values:Undertaking ;
+    cml:modality cml:Deontic ;
+    values:partOf concept:gciii-1949-article-134 ;
+    values:borneBy values:Agent ;
+    values:deonticStatus values:HeuristicDerived ;
+    cml:curationStatus cml:Proposed .
+
+concept:gciii-1949-article-135 a cml:Concept ;
+    skos:prefLabel "Article 135 - Relation to the 1899 and 1907 Hague Conventions" ;
+    cml:realizedBy doc:article-135 ;
+    cml:curationStatus cml:Proposed ;
+    prov:wasDerivedFrom <https://ihl-databases.icrc.org/en/ihl-treaties/gciii-1949> ;
+    dc:date "1949-08-12" ;
+    values:category "International Humanitarian Law (Law of War)" ;
+    cml:asserts concept:gciii-1949-article-135-norm .
+
+concept:gciii-1949-article-135-norm a values:Obligation ;
+    cml:modality cml:Deontic ;
+    values:partOf concept:gciii-1949-article-135 ;
+    values:borneBy values:Agent ;
+    values:borneBy values:State ;   # R1 universalisation (Derived)
+    values:deonticStatus values:HeuristicDerived ;
+    cml:curationStatus cml:Proposed .
+
+concept:gciii-1949-article-136 a cml:Concept ;
+    skos:prefLabel "Article 136 - Signature" ;
+    cml:realizedBy doc:article-136 ;
+    cml:curationStatus cml:Proposed ;
+    prov:wasDerivedFrom <https://ihl-databases.icrc.org/en/ihl-treaties/gciii-1949> ;
+    dc:date "1949-08-12" ;
+    values:category "International Humanitarian Law (Law of War)" ;
+    cml:asserts concept:gciii-1949-article-136-norm .
+
+concept:gciii-1949-article-136-norm a values:Undertaking ;
+    cml:modality cml:Deontic ;
+    values:partOf concept:gciii-1949-article-136 ;
+    values:borneBy values:Agent ;
+    values:deonticStatus values:HeuristicDerived ;
+    cml:curationStatus cml:Proposed .
+
+concept:gciii-1949-article-137 a cml:Concept ;
+    skos:prefLabel "Article 137 - Ratification" ;
+    cml:realizedBy doc:article-137 ;
+    cml:curationStatus cml:Proposed ;
+    prov:wasDerivedFrom <https://ihl-databases.icrc.org/en/ihl-treaties/gciii-1949> ;
+    dc:date "1949-08-12" ;
+    values:category "International Humanitarian Law (Law of War)" ;
+    cml:asserts concept:gciii-1949-article-137-norm .
+
+concept:gciii-1949-article-137-norm a values:Obligation ;
+    cml:modality cml:Deontic ;
+    values:partOf concept:gciii-1949-article-137 ;
+    values:borneBy values:Agent ;
+    values:borneBy values:State ;   # R1 universalisation (Derived)
+    values:deonticStatus values:HeuristicDerived ;
+    cml:curationStatus cml:Proposed .
+
+concept:gciii-1949-article-138 a cml:Concept ;
+    skos:prefLabel "Article 138 - Coming into force" ;
+    cml:realizedBy doc:article-138 ;
+    cml:curationStatus cml:Proposed ;
+    prov:wasDerivedFrom <https://ihl-databases.icrc.org/en/ihl-treaties/gciii-1949> ;
+    dc:date "1949-08-12" ;
+    values:category "International Humanitarian Law (Law of War)" ;
+    cml:asserts concept:gciii-1949-article-138-norm .
+
+concept:gciii-1949-article-138-norm a values:Undertaking ;
+    cml:modality cml:Deontic ;
+    values:partOf concept:gciii-1949-article-138 ;
+    values:borneBy values:Agent ;
+    values:deonticStatus values:HeuristicDerived ;
+    cml:curationStatus cml:Proposed .
+
+concept:gciii-1949-article-139 a cml:Concept ;
+    skos:prefLabel "Article 139 - Accession" ;
+    cml:realizedBy doc:article-139 ;
+    cml:curationStatus cml:Proposed ;
+    prov:wasDerivedFrom <https://ihl-databases.icrc.org/en/ihl-treaties/gciii-1949> ;
+    dc:date "1949-08-12" ;
+    values:category "International Humanitarian Law (Law of War)" ;
+    cml:asserts concept:gciii-1949-article-139-norm .
+
+concept:gciii-1949-article-139-norm a values:Obligation ;
+    cml:modality cml:Deontic ;
+    values:partOf concept:gciii-1949-article-139 ;
+    values:borneBy values:Agent ;
+    values:borneBy values:State ;   # R1 universalisation (Derived)
+    values:deonticStatus values:HeuristicDerived ;
+    cml:curationStatus cml:Proposed .
+
+concept:gciii-1949-article-140 a cml:Concept ;
+    skos:prefLabel "Article 140 - Notification of accessions" ;
+    cml:realizedBy doc:article-140 ;
+    cml:curationStatus cml:Proposed ;
+    prov:wasDerivedFrom <https://ihl-databases.icrc.org/en/ihl-treaties/gciii-1949> ;
+    dc:date "1949-08-12" ;
+    values:category "International Humanitarian Law (Law of War)" ;
+    cml:asserts concept:gciii-1949-article-140-norm .
+
+concept:gciii-1949-article-140-norm a values:Obligation ;
+    cml:modality cml:Deontic ;
+    values:partOf concept:gciii-1949-article-140 ;
+    values:borneBy values:Agent ;
+    values:borneBy values:State ;   # R1 universalisation (Derived)
+    values:deonticStatus values:HeuristicDerived ;
+    cml:curationStatus cml:Proposed .
+
+concept:gciii-1949-article-141 a cml:Concept ;
+    skos:prefLabel "Article 141 - Immediate effect" ;
+    cml:realizedBy doc:article-141 ;
+    cml:curationStatus cml:Proposed ;
+    prov:wasDerivedFrom <https://ihl-databases.icrc.org/en/ihl-treaties/gciii-1949> ;
+    dc:date "1949-08-12" ;
+    values:category "International Humanitarian Law (Law of War)" ;
+    cml:asserts concept:gciii-1949-article-141-norm .
+
+concept:gciii-1949-article-141-norm a values:Undertaking ;
+    cml:modality cml:Deontic ;
+    values:partOf concept:gciii-1949-article-141 ;
+    values:borneBy values:Agent ;
+    values:deonticStatus values:HeuristicDerived ;
+    cml:curationStatus cml:Proposed .
+
+concept:gciii-1949-article-142 a cml:Concept ;
+    skos:prefLabel "Article 142 - Denunciation" ;
+    cml:realizedBy doc:article-142 ;
+    cml:curationStatus cml:Proposed ;
+    prov:wasDerivedFrom <https://ihl-databases.icrc.org/en/ihl-treaties/gciii-1949> ;
+    dc:date "1949-08-12" ;
+    values:category "International Humanitarian Law (Law of War)" ;
+    cml:asserts concept:gciii-1949-article-142-norm .
+
+concept:gciii-1949-article-142-norm a values:Prohibition ;
+    cml:modality cml:Deontic ;
+    values:partOf concept:gciii-1949-article-142 ;
+    values:borneBy values:Agent ;
+    values:deonticStatus values:HeuristicDerived ;
+    cml:curationStatus cml:Proposed .
+
+concept:gciii-1949-article-143 a cml:Concept ;
+    skos:prefLabel "Article 143 - Registration with the United Nations" ;
+    cml:realizedBy doc:article-143 ;
+    cml:curationStatus cml:Proposed ;
+    prov:wasDerivedFrom <https://ihl-databases.icrc.org/en/ihl-treaties/gciii-1949> ;
+    dc:date "1949-08-12" ;
+    values:category "International Humanitarian Law (Law of War)" ;
+    cml:asserts concept:gciii-1949-article-143-norm .
+
+concept:gciii-1949-article-143-norm a values:Obligation ;
+    cml:modality cml:Deontic ;
+    values:partOf concept:gciii-1949-article-143 ;
+    values:borneBy values:Agent ;
+    values:borneBy values:State ;   # R1 universalisation (Derived)
+    values:deonticStatus values:HeuristicDerived ;
+    cml:curationStatus cml:Proposed .
