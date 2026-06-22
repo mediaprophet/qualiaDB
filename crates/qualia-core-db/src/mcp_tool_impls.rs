@@ -407,6 +407,78 @@ pub fn values_evaluate(args: &[u8]) -> Result<String, McpSystemError> {
     .to_string())
 }
 
+/// MCP `jural_correlate` — Hohfeldian correlativity: given a jural position, return the
+/// correlative the counterparty necessarily bears, the jural opposite, and its order.
+/// Composes `modalities::jural`. Args: `{ "position": "claim"|"duty"|"privilege"|"no-right"|
+/// "power"|"liability"|"immunity"|"disability" }`.
+pub fn jural_correlate(args: &[u8]) -> Result<String, McpSystemError> {
+    use crate::modalities::jural::{
+        correlative, is_first_order, jural_opposite, position_name, JURAL_CLAIM, JURAL_DISABILITY,
+        JURAL_DUTY, JURAL_IMMUNITY, JURAL_LIABILITY, JURAL_NO_RIGHT, JURAL_POWER, JURAL_PRIVILEGE,
+    };
+    let v = parse_tool_args(args)?;
+    let pos = match json_str(&v, "position", "").to_ascii_lowercase().as_str() {
+        "claim" | "right" => JURAL_CLAIM,
+        "duty" => JURAL_DUTY,
+        "privilege" | "liberty" => JURAL_PRIVILEGE,
+        "no-right" | "noright" => JURAL_NO_RIGHT,
+        "power" => JURAL_POWER,
+        "liability" => JURAL_LIABILITY,
+        "immunity" => JURAL_IMMUNITY,
+        "disability" | "no-power" => JURAL_DISABILITY,
+        _ => return Err(McpSystemError::InvalidParameters),
+    };
+    Ok(json!({
+        "tool": "jural_correlate",
+        "position": position_name(pos),
+        "opcode": format!("0x{:02X}", pos),
+        "correlative": position_name(correlative(pos)),
+        "opposite": position_name(jural_opposite(pos)),
+        "order": if is_first_order(pos) { "first-order (conduct)" } else { "second-order (control)" },
+        "meaning": "if A holds this position toward B, B NECESSARILY bears the correlative toward A",
+        "basis": "Hohfeld (1913) jural relations — modalities/jural.rs"
+    })
+    .to_string())
+}
+
+/// MCP `deontic_govern` — map a deontic verdict status + classification to the runtime
+/// PolicyMode the Webizen VM enacts. Composes `modalities::interaction_governance`.
+/// Args: `{ "status": "active"|"violated"|..., "nonDerogable": bool?, "humanitarian": bool?,
+/// "ambiguous": bool? }`.
+pub fn deontic_govern(args: &[u8]) -> Result<String, McpSystemError> {
+    use crate::modalities::interaction_governance::{
+        map_policy, permits_execution, policy_action, Governance,
+    };
+    use crate::modalities::logic::deontic::DeonticStatus;
+    let v = parse_tool_args(args)?;
+    let status = match json_str(&v, "status", "").to_ascii_lowercase().as_str() {
+        "active" => DeonticStatus::Active,
+        "defeated" => DeonticStatus::Defeated,
+        "expired" => DeonticStatus::Expired,
+        "pending" => DeonticStatus::Pending,
+        "violated" => DeonticStatus::Violated,
+        "discharged" => DeonticStatus::Discharged,
+        "malformed" => DeonticStatus::Malformed,
+        _ => return Err(McpSystemError::InvalidParameters),
+    };
+    let bool_of = |k: &str| v.get(k).and_then(Value::as_bool).unwrap_or(false);
+    let g = Governance {
+        non_derogable: bool_of("nonDerogable"),
+        humanitarian: bool_of("humanitarian"),
+        ambiguous: bool_of("ambiguous"),
+    };
+    let mode = map_policy(status, g);
+    Ok(json!({
+        "tool": "deontic_govern",
+        "status": format!("{status:?}"),
+        "policyMode": format!("{mode:?}"),
+        "action": policy_action(mode),
+        "permitsExecution": permits_execution(mode),
+        "basis": "interaction_governance::map_policy — verdict → Webizen VM policy mode"
+    })
+    .to_string())
+}
+
 pub fn cas(args: &[u8]) -> Result<String, McpSystemError> {
     use crate::specialized_libs::symbolic_algebra as sym;
     let v = parse_tool_args(args)?;
@@ -1550,6 +1622,44 @@ mod tests {
         let p3: Value = serde_json::from_str(&out3).expect("json");
         assert_eq!(p3["status"], "Expired");
         assert_eq!(p3["modality"], "obligation");
+    }
+
+    #[test]
+    fn jural_correlate_tool() {
+        let out = jural_correlate(br#"{"position":"claim"}"#).expect("ok");
+        let p: Value = serde_json::from_str(&out).expect("json");
+        assert_eq!(p["position"], "Claim");
+        assert_eq!(p["correlative"], "Duty");
+        assert_eq!(p["opposite"], "No-Right");
+        assert_eq!(p["order"], "first-order (conduct)");
+
+        let out2 = jural_correlate(br#"{"position":"immunity"}"#).expect("ok");
+        let p2: Value = serde_json::from_str(&out2).expect("json");
+        assert_eq!(p2["correlative"], "Disability");
+        assert_eq!(p2["order"], "second-order (control)");
+
+        assert!(jural_correlate(br#"{"position":"nonsense"}"#).is_err());
+    }
+
+    #[test]
+    fn deontic_govern_tool() {
+        // Non-derogable violation → PreventiveBlock, does NOT permit execution.
+        let out = deontic_govern(br#"{"status":"violated","nonDerogable":true}"#).expect("ok");
+        let p: Value = serde_json::from_str(&out).expect("json");
+        assert_eq!(p["policyMode"], "PreventiveBlock");
+        assert_eq!(p["action"], "DenyRollback");
+        assert_eq!(p["permitsExecution"], false);
+
+        // Ordinary violation → audit, permits execution.
+        let out2 = deontic_govern(br#"{"status":"violated"}"#).expect("ok");
+        let p2: Value = serde_json::from_str(&out2).expect("json");
+        assert_eq!(p2["policyMode"], "PermissiveAudit");
+        assert_eq!(p2["permitsExecution"], true);
+
+        // Ambiguity defers to a human.
+        let out3 = deontic_govern(br#"{"status":"active","ambiguous":true}"#).expect("ok");
+        let p3: Value = serde_json::from_str(&out3).expect("json");
+        assert_eq!(p3["policyMode"], "Interactive");
     }
 
     #[test]

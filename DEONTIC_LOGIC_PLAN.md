@@ -183,10 +183,16 @@ full lib suite **1108 passed, 0 failed**.
 - [x] **Epistemic shape enriched** (was `certainty`-only) → opcodes 0x20–0x22, the 9 named
   certainty bands, nesting depth, world/agent scoping. Completeness tests gate engine↔SHACL parity.
 
-### Phase 7 — Surface (no logic in the UI; mirror the engine)
-- [ ] Modalities Observatory demo cards for each new capability (faithful to the Rust).
-- [ ] values-credentials.html panels (jural square; lifecycle; mens rea).
-- [ ] MCP tools exposing the new evaluators.
+### Phase 7 — Surface (no logic in the UI; mirror the engine) ✅ DONE 2026-06-22
+**Test:** `mcp_tool_impls::tests::` → 11 passed; full lib suite **1120 passed, 0 failed**;
+Observatory cards verified live in-browser.
+- [x] Modalities Observatory demo cards (`modality-engine.js`, 21→25): Hohfeldian Jural Square,
+  STIT Agency, Mens Rea, Interaction Governance — faithful JS mirrors, verified in-browser.
+- [x] MCP tools: `jural_correlate` (Hohfeld correlativity) + `deontic_govern` (verdict →
+  PolicyMode), registered in `mcp_server.rs`, tested. (The category-error is already exposed
+  via `values_check`; the deontic VM via `values_evaluate`.)
+- [~] values-credentials.html panels — deferred (lower value; the Observatory is the live
+  demo surface and the values page already covers the rights corpus). Reopen if wanted.
 
 ### Sensitive-vocab gate (Timothy)
 - [ ] Coin the contested ontology terms with Timothy before use: `dutyToVerify`,
