@@ -8,6 +8,14 @@ against those specs* and records two concrete verified facts. It also corrects a
 mischaracterisation of the renderer as "2D" — it is not (see §1).
 
 ## 0. Authoritative definition (Timothy's, not to be re-derived)
+- **[`STELLAR_MISSION.md`](STELLAR_MISSION.md) — the renderer/manifold architecture (the primary
+  spec home):** **§D Multimodal as physics** (acoustic STFT/CQT manifolds, spectral tensors over
+  RGB, EVM `portal_spectral.wgsl`, the wave-coordinate substrate — frequency·amplitude·phase + μ/σ;
+  *EMF ≠ acoustic, don't flatten*; `spectral → percept → render`); **§E The manifold renderer**
+  (render = a projection of the 10D manifold; `.obj`/`.stl`/**OpenUSD** load; geometric/CAD/
+  photogrammetry — with the **honest current state**: ~2.5D ambient particle field, no depth-stencil/
+  mesh/asset import, **3D assets not yet rendered**); plus **§A** transcode→manifold-native, **§C**
+  10D→5D NQuin, **§F** cross-manifold fused kernel, **§G** heterogeneous compute.
 - **[`10d/q42-10d-volumetric-tensor-spec.md`](10d/q42-10d-volumetric-tensor-spec.md)** — the
   renderer/manifold spec: a **10-D spacetime manifold** `[q, v, w, x, y, z, t, α, μ, σ]` with a
   **Spectral-Logical payload `[α, μ, σ]`** (Amplitude / Modulation / Spectral Signature) — *EM
