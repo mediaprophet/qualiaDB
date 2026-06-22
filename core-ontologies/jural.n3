@@ -1,0 +1,67 @@
+@prefix rdf:   <http://www.w3.org/1999/02/22-rdf-syntax-ns#> .
+@prefix rdfs:  <http://www.w3.org/2000/01/rdf-schema#> .
+@prefix owl:   <http://www.w3.org/2002/07/owl#> .
+@prefix skos:  <http://www.w3.org/2004/02/skos/core#> .
+@prefix dc:    <http://purl.org/dc/terms/> .
+@prefix values:<https://ns.webcivics.org/values/> .
+@prefix jural: <https://ns.webcivics.org/jural/> .
+
+# ============================================================================
+# Hohfeldian jural relations — the ontology surface of modalities/jural.rs.
+# Decomposes the ambiguous "right" into 8 strict positions, paired as CORRELATIVES
+# (what the counterparty necessarily holds) and OPPOSITES (what negates it for the
+# holder). The engine evaluates these; this file is the curated vocabulary.
+# ============================================================================
+
+jural: a owl:Ontology ;
+    dc:title "Hohfeldian Jural Relations"@en ;
+    rdfs:comment "Eight fundamental legal positions (Hohfeld 1913) as correlatives + opposites."@en .
+
+jural:JuralRelation a rdfs:Class ;
+    skos:prefLabel "jural relation"@en ;
+    rdfs:comment "A position one agent holds, over some content, TOWARD another agent, within a frame."@en .
+
+jural:FirstOrder  a rdfs:Class ; rdfs:subClassOf jural:JuralRelation ;
+    rdfs:comment "Rules of conduct (Claim/Duty, Privilege/No-Right)."@en .
+jural:SecondOrder a rdfs:Class ; rdfs:subClassOf jural:JuralRelation ;
+    rdfs:comment "Rules of control / mutation of legal positions (Power/Liability, Immunity/Disability)."@en .
+
+# Pairing properties.
+jural:correlative a rdf:Property ; rdfs:domain jural:JuralRelation ; rdfs:range jural:JuralRelation ;
+    rdfs:comment "If A holds P toward B over φ, B holds correlative(P) toward A over φ. Involutive."@en .
+jural:opposite    a rdf:Property ; rdfs:domain jural:JuralRelation ; rdfs:range jural:JuralRelation ;
+    rdfs:comment "The position whose holding by the same agent negates this one. Involutive."@en .
+jural:heldBy        a rdf:Property ; rdfs:range values:Agent .
+jural:toward        a rdf:Property ; rdfs:range values:Agent .
+jural:overContent   a rdf:Property .
+jural:opcode        a rdf:Property ; rdfs:comment "The u8 engine opcode (jural.rs), 0x30–0x37."@en .
+
+# ── First-order: rules of conduct ───────────────────────────────────────────
+jural:Claim     a jural:FirstOrder ; skos:prefLabel "claim"@en ;     skos:altLabel "right (claim-right)"@en ;
+    jural:opcode 48 ; jural:correlative jural:Duty ;      jural:opposite jural:NoRight ;
+    rdfs:comment "A has a Claim that B do φ  ⟺  B has a Duty to A to do φ."@en .
+jural:Duty      a jural:FirstOrder ; skos:prefLabel "duty"@en ;
+    jural:opcode 49 ; jural:correlative jural:Claim ;     jural:opposite jural:Privilege .
+jural:Privilege a jural:FirstOrder ; skos:prefLabel "privilege"@en ; skos:altLabel "liberty"@en ;
+    jural:opcode 50 ; jural:correlative jural:NoRight ;   jural:opposite jural:Duty ;
+    rdfs:comment "A has a Privilege to do φ  ⟺  B has No-Right that A not do φ."@en .
+jural:NoRight   a jural:FirstOrder ; skos:prefLabel "no-right"@en ;
+    jural:opcode 51 ; jural:correlative jural:Privilege ; jural:opposite jural:Claim .
+
+# ── Second-order: rules of control ──────────────────────────────────────────
+jural:Power      a jural:SecondOrder ; skos:prefLabel "power"@en ;
+    jural:opcode 52 ; jural:correlative jural:Liability ;  jural:opposite jural:Disability ;
+    rdfs:comment "A has Power to alter B's legal position  ⟺  B has Liability to be so altered."@en .
+jural:Liability  a jural:SecondOrder ; skos:prefLabel "liability"@en ;
+    jural:opcode 53 ; jural:correlative jural:Power ;      jural:opposite jural:Immunity .
+jural:Immunity   a jural:SecondOrder ; skos:prefLabel "immunity"@en ;
+    jural:opcode 54 ; jural:correlative jural:Disability ; jural:opposite jural:Liability ;
+    rdfs:comment "A has Immunity from B altering A's position  ⟺  B has Disability (no-power) to do so. The non-derogable core (ICCPR Art 4(2)) is an Immunity."@en .
+jural:Disability a jural:SecondOrder ; skos:prefLabel "disability"@en ; skos:altLabel "no-power"@en ;
+    jural:opcode 55 ; jural:correlative jural:Immunity ;   jural:opposite jural:Power .
+
+# A Claim/Privilege/Immunity to a NaturalPerson-only content (e.g. values:inherentDignity)
+# held by a non-NaturalPerson is a values:PersonhoodCategoryError (jural.rs
+# personhood_category_error, composing the DL disjointness check).
+jural:naturalPersonExclusive a rdf:Property ;
+    rdfs:comment "Marks a content whose benefit positions are exclusive to values:NaturalPerson."@en .

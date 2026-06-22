@@ -111,11 +111,18 @@ Hohfeld correlativity, STIT operator, mens-rea composition).
 - [x] First-class dyadic `O(q|p)` — `evaluate_conditional_obligation()`; CTD refactored to a
   special case; `OP_CONDITIONAL 0x15` reserved + tests.
 
-### Phase 2 — Hohfeldian jural square  [new `jural.rs` + `values.n3`/`agency.n3`]
-- [ ] 8 relations: Claim↔Duty, Privilege↔No-Right, Power↔Liability, Immunity↔Disability.
-- [ ] Correlativity checker (A holds X toward B ⟹ B holds correlative) + tests.
-- [ ] Category-error: a CorporatePerson asserting a NaturalPerson-only claim → flag
-  (compose with `dl.rs` disjointness) + tests.
+### Phase 2 — Hohfeldian jural square  [`modalities/jural.rs` + `core-ontologies/jural.n3`] ✅ DONE 2026-06-22
+**Test:** `cargo test … modalities::jural::` → **5 passed**; jural.n3 ingests (76 triples);
+full lib suite **1095 passed, 0 failed**.
+- [x] 8 positions (opcodes 0x30–0x37): Claim↔Duty, Privilege↔No-Right, Power↔Liability,
+  Immunity↔Disability; `correlative()` (involutive) + `jural_opposite()`.
+- [x] NQuin encoding (`compile_jural_quin`: holder→subject, counterparty→object,
+  content|position→predicate, frame→context) + `correlative_quin()` + `jural_correlativity_holds()`.
+- [x] `find_unmet_correlatives()` — "make the absence legible": a Claim with no Duty-bearer
+  surfaces the missing duty (feeds Phase 4 linear unmet-correlative-duty).
+- [x] `personhood_category_error()` — a non-NaturalPerson asserting a human-only Claim/
+  Privilege/Immunity, composing `dl::check_subsumption_quin` disjointness.
+- [x] `core-ontologies/jural.n3` curated vocabulary mirroring the Rust.
 
 ### Phase 3 — STIT agency  [`deontic.rs` + `agent.rs`]
 - [ ] Agent-bound `O[α stit p]` / `P` / `F` (operator or bearer-tag) + tests.

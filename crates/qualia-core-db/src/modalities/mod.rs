@@ -36,6 +36,13 @@ pub use graph_theory::{
 };
 pub mod interval_reasoning;
 pub use interval_reasoning::TemporalInterval;
+pub mod jural;
+pub use jural::{
+    JURAL_CLAIM, JURAL_DUTY, JURAL_PRIVILEGE, JURAL_NO_RIGHT,
+    JURAL_POWER, JURAL_LIABILITY, JURAL_IMMUNITY, JURAL_DISABILITY,
+    correlative, jural_opposite, compile_jural_quin, correlative_quin,
+    jural_correlativity_holds, find_unmet_correlatives, personhood_category_error,
+};
 pub mod linear;
 pub use linear::{CONSUMED_BIT, consume_quin, is_consumed};
 pub mod logic;
