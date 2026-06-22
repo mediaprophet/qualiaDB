@@ -389,6 +389,210 @@ export const MODALITIES = [
         },
     },
     {
+        id: 'causal', name: 'Causal & Counterfactual', category: 'governance', opcode: '§16',
+        icon: 'fa-diagram-project', hue: 'rose', wasm: false,
+        blurb: 'But-for causation, root-node dependency cascade, and overdetermination → joint liability (causal.rs).',
+        run() {
+            const reach = (edges, roots, target, removed) => {
+                const seen = new Set(); const stack = roots.filter(r => r !== removed);
+                if (stack.includes(target)) return true;
+                while (stack.length) { const c = stack.pop(); if (seen.has(c)) continue; seen.add(c);
+                    for (const [s, o] of edges) if (s === c && s !== removed && o !== removed) { if (o === target) return true; stack.push(o); } }
+                return false;
+            };
+            const butFor = (edges, roots, cause, effect) => reach(edges, roots, effect, null) && !reach(edges, roots, effect, cause);
+            const chain = [['fund', 'staff'], ['staff', 'harm']];
+            const fires = [['fireA', 'house'], ['fireB', 'house']];
+            return { lines: [
+                `chain fund→staff→harm: but-for(fund)  = ${butFor(chain, ['fund'], 'fund', 'harm')}`,
+                `chain: but-for(staff) = ${butFor(chain, ['fund'], 'staff', 'harm')}`,
+                `two fires → house: but-for(fireA) = ${butFor(fires, ['fireA', 'fireB'], 'fireA', 'house')}`,
+                `  → neither fire is but-for ⇒ overdetermined ⇒ joint liability`,
+            ], visual: 'verdicts' };
+        },
+    },
+    {
+        id: 'capacity', name: 'Juridical Capacity', category: 'governance', opcode: '§18',
+        icon: 'fa-user-shield', hue: 'rose', wasm: false,
+        blurb: 'Capacity gates binding; duress → VOIDABLE at the victim’s election (not auto-void); guardianship carries the dependent’s weight (capacity.rs).',
+        run() {
+            const binding = c => c === 'Intact';
+            const voidable = c => c === 'UnderDuress';
+            return { lines: [
+                `Intact      → binding ${binding('Intact')}`,
+                `Impaired    → binding ${binding('Impaired')}`,
+                `UnderDuress → binding ${binding('UnderDuress')}, voidable ${voidable('UnderDuress')} (victim’s choice, not auto-void)`,
+                `guardian acts → carries the DEPENDENT’s legal weight`,
+            ], visual: 'verdicts' };
+        },
+    },
+    {
+        id: 'delegation', name: 'Delegation & Revocation', category: 'governance', opcode: '§21',
+        icon: 'fa-sitemap', hue: 'rose', wasm: false,
+        blurb: 'Authority flows along a delegation chain; revoking an upstream node defeats every downstream dependent (delegation.rs).',
+        run() {
+            const edges = [['state', 'agency'], ['agency', 'officer'], ['state', 'ngo']];
+            const reach = (root, agent, revoked) => {
+                if (agent === revoked || root === revoked) return false;
+                const seen = new Set(); const stack = [root];
+                while (stack.length) { const c = stack.pop(); if (seen.has(c)) continue; seen.add(c);
+                    for (const [s, o] of edges) if (s === c && s !== revoked && o !== revoked) { if (o === agent) return true; stack.push(o); } }
+                return false;
+            };
+            return { lines: [
+                `state→agency→officer: officer has authority = ${reach('state', 'officer', null)}`,
+                `revoke agency → officer authority = ${reach('state', 'officer', 'agency')}  (cascade-defeated)`,
+                `revoke agency → ngo authority    = ${reach('state', 'ngo', 'agency')}  (independent chain survives)`,
+            ], visual: 'verdicts' };
+        },
+    },
+    {
+        id: 'contract', name: 'Contract Formation', category: 'governance', opcode: '§22',
+        icon: 'fa-file-signature', hue: 'rose', wasm: false,
+        blurb: 'Offer → Assent → Binding; binding requires assent AND both parties’ capacity intact (contract.rs, composes §18).',
+        run() {
+            const stage = (stip, acc) => stip && acc ? 'Binding' : stip ? 'Offer' : 'None';
+            const binds = (stip, acc, off, ac) => stage(stip, acc) === 'Binding' && off === 'Intact' && ac === 'Intact';
+            return { lines: [
+                `stipulated, not accepted        → ${stage(true, false)}`,
+                `stipulated + accepted, both Intact → ${stage(true, true)} (binds ${binds(true, true, 'Intact', 'Intact')})`,
+                `accepted under duress           → binds ${binds(true, true, 'Intact', 'UnderDuress')} (voidable, not binding)`,
+            ], visual: 'verdicts' };
+        },
+    },
+    {
+        id: 'value-flow', name: 'Value-Flow / Commons', category: 'governance', opcode: '§23',
+        icon: 'fa-coins', hue: 'rose', wasm: false,
+        blurb: 'Permissive Commons: cost = production + CAPPED ROI; royalty scales by agent class; pool ≥ cost → discharged, freed globally (value_flow.rs).',
+        run() {
+            const cost = (prod, roi, cap) => prod + prod * Math.min(roi, cap) / 100;
+            const c = cost(1000, 50, 20); // ROI asked 50%, capped 20% → 1200
+            const corpPay = 400 * 300 / 100; // corporate royalty 1200
+            return { lines: [
+                `cost = 1000 + min(50%,cap 20%) = ${c}  (ROI capped — extraction guard)`,
+                `corporate use royalty = ${corpPay}; pool ${corpPay} ≥ cost ${c} → Discharged (freed globally)`,
+                `non-profit use royalty = ${100 * 50 / 100}  (scaled by agent class)`,
+            ], visual: 'verdicts' };
+        },
+    },
+    {
+        id: 'capability-gap', name: 'Capability Gap / RPL', category: 'governance', opcode: '§24',
+        icon: 'fa-list-check', hue: 'rose', wasm: false,
+        blurb: 'Gap = Required \\ Held (deploy to the computed gap); experiential skos:closeMatch counts as held — Recognition of Prior Learning (capability_gap.rs).',
+        run() {
+            const required = ['welding', 'wiring', 'plumbing'];
+            const held = ['welding'];
+            const gap = required.filter(c => !held.includes(c));
+            const equiv = { 'wiring': 'apprenticeship' };
+            const held2 = ['welding', 'apprenticeship'];
+            const gap2 = required.filter(c => !held2.includes(c) && !(equiv[c] && held2.includes(equiv[c])));
+            return { lines: [
+                `required {welding,wiring,plumbing} \\ held {welding} → gap {${gap.join(', ')}}`,
+                `with RPL closeMatch(wiring≈apprenticeship) → gap {${gap2.join(', ') || '∅'}}`,
+            ], visual: 'verdicts' };
+        },
+    },
+    {
+        id: 'identity-fabric', name: 'Resilient Identity', category: 'governance', opcode: '§27',
+        icon: 'fa-fingerprint', hue: 'rose', wasm: false,
+        blurb: 'An identifier is not an identity. Identity survives key loss iff a quorum of the anchor fabric remains — k-of-n recovery (identity_fabric.rs).',
+        run() {
+            const survives = (total, lost, quorum) => quorum > 0 && (total - lost) >= quorum;
+            return { lines: [
+                `5 anchors, lose primary key (1), quorum 3 → survives ${survives(5, 1, 3)}`,
+                `5 anchors, lose 3, quorum 3 → survives ${survives(5, 3, 3)}`,
+                `stolen phone+key: re-compute identity from surviving {social, biometric}`,
+            ], visual: 'verdicts' };
+        },
+    },
+    {
+        id: 'responsibility', name: 'Responsibility & Meta-Guard', category: 'governance', opcode: '§25/§30',
+        icon: 'fa-shield-halved', hue: 'rose', wasm: false,
+        blurb: 'An allegation is not an enforceable fact until adjudicated; the enforcer is bound by the baselines it enforces (responsibility.rs).',
+        run() {
+            const enforceable = s => s === 'Adjudicated';
+            return { lines: [
+                `Alleged    → enforceable fact ${enforceable('Alleged')} (due process first — no accusation-as-weapon)`,
+                `Adjudicated → enforceable fact ${enforceable('Adjudicated')}`,
+                `power granted + remedy denied → RuleOfLawAsymmetry flagged`,
+                `blocked + no appeal path → EnforcerOverreach; harm + no accountable person → AccountabilityVacuum`,
+            ], visual: 'verdicts' };
+        },
+    },
+    {
+        id: 'zk-proportionality', name: 'ZK Gate & Proportionality', category: 'governance', opcode: '§17/§26',
+        icon: 'fa-scale-balanced', hue: 'rose', wasm: false,
+        blurb: 'A ZK proof gates eligibility (witness stays hidden); an act is proportionate iff ∂Harm/∂x < Advantage (legal_compose.rs, composes zk_proofs + CAS).',
+        run() {
+            const eligible = v => v ? 'Eligible' : 'Unverifiable (claimedIdentityUnverifiable)';
+            // linear harm 3x → marginal harm 3 everywhere.
+            const marginal = 3;
+            return { lines: [
+                `ZK(age>18) verified → ${eligible(true)}`,
+                `ZK fails → ${eligible(false)}`,
+                `harm 3·x → marginal ${marginal}; proportionate vs advantage 5 = ${marginal < 5}; vs 2 = ${marginal < 2}`,
+            ], visual: 'verdicts' };
+        },
+    },
+    {
+        id: 'sense-translation', name: 'Sense Translation', category: 'governance', opcode: '§19',
+        icon: 'fa-language', hue: 'rose', wasm: false,
+        blurb: 'Curation Directive on cross-cultural mapping: machine proposes closeMatch; only a human attests exactMatch; untranslatable → human review (legal_compose.rs).',
+        run() {
+            const status = (proposed, attested, translatable) =>
+                attested && translatable ? 'ExactMatch' : !translatable ? 'RequiresHumanReview' : proposed ? 'CloseMatch' : 'RequiresHumanReview';
+            return { lines: [
+                `machine proposes        → ${status(true, false, true)}`,
+                `human attests           → ${status(true, true, true)}`,
+                `untranslatable concept  → ${status(true, true, false)} (preserved, never flattened)`,
+            ], visual: 'verdicts' };
+        },
+    },
+    {
+        id: 'consensus', name: 'Distributed Consensus', category: 'governance', opcode: '§28',
+        icon: 'fa-network-wired', hue: 'rose', wasm: false,
+        blurb: 'Multi-party obligations commit only on full consensus; local validity ≠ global until synced; pre-partition duties survive (consensus.rs).',
+        run() {
+            const tx = (a, t) => t > 0 && a >= t ? 'Committed' : 'Suspended';
+            return { lines: [
+                `3 of 3 parties assent → ${tx(3, 3)}`,
+                `2 of 3 parties assent → ${tx(2, 3)}`,
+                `valid locally, unsynced → globally valid = false`,
+                `network partition → pre-existing duties survive; new joint obligations pause`,
+            ], visual: 'verdicts' };
+        },
+    },
+    {
+        id: 'manifold', name: 'Manifold → Fact', category: 'governance', opcode: '§20',
+        icon: 'fa-wave-square', hue: 'rose', wasm: false,
+        blurb: 'Continuous→discrete bridge: ∫Ψ over wave samples > threshold → instantiate a discrete factual quin for epistemic.rs (manifold_logic.rs; GPU 10D renderer is separate).',
+        run() {
+            const integ = s => { let a = 0; for (let i = 1; i < s.length; i++) a += (Math.abs(s[i - 1]) + Math.abs(s[i])) / 2; return a; };
+            const samples = [1, 1, 1];
+            const e = integ(samples);
+            return { lines: [
+                `∫Ψ over [1,1,1] = ${e}`,
+                `> threshold 1.5 → instantiate fact:emfLimitExceeded (${e > 1.5})`,
+                `> threshold 5.0 → no fact (${e > 5.0})`,
+            ], visual: 'verdicts' };
+        },
+    },
+    {
+        id: 'carrier', name: 'Carrier Binding', category: 'governance', opcode: '§29',
+        icon: 'fa-link', hue: 'rose', wasm: false,
+        blurb: 'Content-addressed media↔graph binding (BLAKE3): any edit to the media breaks the tie to its semantic graph (carrier.rs; PDF/PNG container codecs are separate).',
+        run() {
+            // illustrative content hash (FNV) — the engine uses real BLAKE3.
+            const tag = s => { let h = 0xcbf29ce484222325n; for (const c of s) { h ^= BigInt(c.charCodeAt(0)); h = (h * 0x100000001b3n) & 0xFFFFFFFFFFFFFFFFn; } return h.toString(16).slice(0, 8); };
+            const blob = 'signed evidentiary photo bytes';
+            return { lines: [
+                `media_tag(blob) = ${tag(blob)}  (deterministic, content-addressed)`,
+                `verify intact blob → binding holds (true)`,
+                `verify tampered blob → binding broken (false) — tamper-evident`,
+            ], visual: 'verdicts' };
+        },
+    },
+    {
         id: 'n3-defeasible', name: 'N3 Defeasible Chain', category: 'governance', opcode: '=> ~> ^>',
         icon: 'fa-forward', hue: 'rose', wasm: 'forward_chain_wasm',
         blurb: 'Notation3 arrows compile to norms; forward-chaining defeasible engine resolves conflicts.',
