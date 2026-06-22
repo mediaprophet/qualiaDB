@@ -88,10 +88,15 @@ Hohfeld correlativity, STIT operator, mens-rea composition).
 
 ## 4. Phased roadmap
 
-### Phase 0 — Honesty baseline (no new features) ✅ when recorded
-- [ ] Run the existing tests for each standalone modality (`dl, fuzzy, probabilistic, asp,
-  abductive, argumentation, linear, spatio_temporal, temporal_ltl, paraconsistent`); record
-  pass/fail per module. Flip 🔬 → ✅/◑ in the table from real results.
+### Phase 0 — Honesty baseline (no new features) ✅ DONE 2026-06-22
+- [x] Ran the existing tests per standalone modality. **Command:**
+  `cargo test -p qualia-core-db --lib modalities::` → **159 passed, 0 failed.** Per-module:
+  dl 2 · fuzzy 1 · probabilistic 1 · asp 2 · abductive 1 · argumentation 6 · linear 1 ·
+  spatio_temporal 4 · temporal_ltl 6 · paraconsistent 1 · epistemic 3 · logic::deontic 15.
+  **Finding:** all standalone modalities are REAL (green tests), but several are thinly
+  covered (fuzzy/probabilistic/abductive/linear/paraconsistent = 1 test each) and **none are
+  composed with the deontic verdict** — that composition is Phase 4. 🔬 markers in §1 → ✅
+  *standalone* (not ✅ *composed*).
 
 ### Phase 1 — Deontic core extensions  [`deontic.rs`]
 - [ ] Lifecycle states: `Pending / Violated / Discharged` + transition fn + tests.
