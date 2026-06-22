@@ -175,6 +175,14 @@ full lib suite **1108 passed, 0 failed**.
   audit; in-force humanitarian → prioritize; else allow. `permits_execution` go/no-go bit +
   `policy_action` labels. (Reusable by both the VM and Track M's MCP gate.)
 
+### SHACL coverage (cross-cutting) ✅ DONE 2026-06-22
+**Test:** `cargo test … logic_modalities_shacl` → **3 passed**; full lib suite **1118 passed, 0 failed**.
+- [x] `logic_modalities_shacl.rs` `q42:<Name>ConfigurationShape` added for every SDL⁺ construct:
+  DeonticLifecycle, DeonticExt (Optionality/Gratuitousness/Conditional/Undercut + DefeatKind),
+  Jural, Stit, MensRea, InteractionGovernance, MetaDeontic (`LOGIC_MODALITY_SHAPES` 21→28).
+- [x] **Epistemic shape enriched** (was `certainty`-only) → opcodes 0x20–0x22, the 9 named
+  certainty bands, nesting depth, world/agent scoping. Completeness tests gate engine↔SHACL parity.
+
 ### Phase 7 — Surface (no logic in the UI; mirror the engine)
 - [ ] Modalities Observatory demo cards for each new capability (faithful to the Rust).
 - [ ] values-credentials.html panels (jural square; lifecycle; mens rea).
