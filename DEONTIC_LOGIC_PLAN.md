@@ -243,7 +243,7 @@ sensitive-vocab decisions (DV / coercion / guardianship), §20 on the STELLAR ma
 **Test:** capacity 4 + delegation 2 + contract 3; full lib suite **1140 passed, 0 failed**.
 - [x] §18 `capacity.rs` (over EXISTING vocab): `CapacityStatus {Intact, Impaired, UnderDuress}`,
   `stipulation_binding` (Intact only), `stipulation_voidable` (duress → **voidable at victim's
-  election, NOT auto-void** — flagged), `effective_principal` (guardian carries the dependent's
+  election, NOT auto-void** — ✓ CONFIRMED by Timothy 2026-06-22), `effective_principal` (guardian carries the dependent's
   weight), `posthumous_standing` (deceased + representative).
 - [x] §21 `delegation.rs`: `has_delegated_authority` (transitive delegation chain) +
   `authority_after_revocation` / `revoked_descendants` (**revocation cascade** — revoke upstream,
