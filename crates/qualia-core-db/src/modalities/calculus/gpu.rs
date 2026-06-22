@@ -131,6 +131,7 @@ impl WebGpuIntegrator {
                 layout: None,
                 module: &shader,
                 entry_point: "simpsons_integration",
+                compilation_options: Default::default(),
             });
 
         let rk4_pipeline = device
@@ -139,6 +140,7 @@ impl WebGpuIntegrator {
                 layout: None,
                 module: &shader,
                 entry_point: "rk4_step",
+                compilation_options: Default::default(),
             });
 
         Ok(Self {

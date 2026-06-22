@@ -2566,6 +2566,7 @@ impl QTensorEngine {
             layout: Some(&mc8_gemm_pipeline_layout),
             module: &shader,
             entry_point: "main",
+            compilation_options: Default::default(),
         });
         #[cfg(not(target_arch = "wasm32"))]
         let pipeline = device.create_compute_pipeline(&wgpu::ComputePipelineDescriptor {
@@ -2573,6 +2574,7 @@ impl QTensorEngine {
             layout: None,
             module: &shader,
             entry_point: "main",
+            compilation_options: Default::default(),
         });
 
         let mock_shader = device.create_shader_module(wgpu::ShaderModuleDescriptor {
@@ -2586,6 +2588,7 @@ impl QTensorEngine {
             layout: None,
             module: &mock_shader,
             entry_point: "main",
+            compilation_options: Default::default(),
         });
 
         let emb_shader = device.create_shader_module(wgpu::ShaderModuleDescriptor {
@@ -2599,6 +2602,7 @@ impl QTensorEngine {
             layout: None,
             module: &emb_shader,
             entry_point: "main",
+            compilation_options: Default::default(),
         });
 
         let attn_shader = device.create_shader_module(wgpu::ShaderModuleDescriptor {
@@ -2683,6 +2687,7 @@ impl QTensorEngine {
             layout: Some(&mc8_attn_pipeline_layout),
             module: &attn_shader,
             entry_point: "main",
+            compilation_options: Default::default(),
         });
         #[cfg(not(target_arch = "wasm32"))]
         let attention_pipeline = device.create_compute_pipeline(&wgpu::ComputePipelineDescriptor {
@@ -2690,6 +2695,7 @@ impl QTensorEngine {
             layout: None,
             module: &attn_shader,
             entry_point: "main",
+            compilation_options: Default::default(),
         });
 
         let elem_shader = device.create_shader_module(wgpu::ShaderModuleDescriptor {
@@ -2755,6 +2761,7 @@ impl QTensorEngine {
                 layout: Some(&mc8_elem_pipeline_layout),
                 module: &elem_shader,
                 entry_point: "rms_norm_batch",
+                compilation_options: Default::default(),
             });
         #[cfg(target_arch = "wasm32")]
         let elem_silu_mul_pipeline =
@@ -2763,6 +2770,7 @@ impl QTensorEngine {
                 layout: Some(&mc8_elem_pipeline_layout),
                 module: &elem_shader,
                 entry_point: "silu_mul_main",
+                compilation_options: Default::default(),
             });
         #[cfg(target_arch = "wasm32")]
         let elem_add_residual_pipeline =
@@ -2771,6 +2779,7 @@ impl QTensorEngine {
                 layout: Some(&mc8_elem_pipeline_layout),
                 module: &elem_shader,
                 entry_point: "add_residual_main",
+                compilation_options: Default::default(),
             });
         #[cfg(not(target_arch = "wasm32"))]
         let elem_rms_norm_pipeline =
@@ -2779,6 +2788,7 @@ impl QTensorEngine {
                 layout: None,
                 module: &elem_shader,
                 entry_point: "rms_norm_batch",
+                compilation_options: Default::default(),
             });
         #[cfg(not(target_arch = "wasm32"))]
         let elem_silu_mul_pipeline =
@@ -2787,6 +2797,7 @@ impl QTensorEngine {
                 layout: None,
                 module: &elem_shader,
                 entry_point: "silu_mul_main",
+                compilation_options: Default::default(),
             });
         #[cfg(not(target_arch = "wasm32"))]
         let elem_add_residual_pipeline =
@@ -2795,6 +2806,7 @@ impl QTensorEngine {
                 layout: None,
                 module: &elem_shader,
                 entry_point: "add_residual_main",
+                compilation_options: Default::default(),
             });
 
         // Phase 5 — Fused FFN expansion pipeline (gate · SiLU · up in one dispatch).
@@ -2890,6 +2902,7 @@ impl QTensorEngine {
                 layout: Some(&layout),
                 module: &module,
                 entry_point: "fused_ffn_expansion",
+                compilation_options: Default::default(),
             })
         };
 

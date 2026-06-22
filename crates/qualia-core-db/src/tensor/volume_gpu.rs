@@ -41,6 +41,7 @@ impl TensorVolumeGpu {
             layout: None,
             module: &shader,
             entry_point: "main",
+            compilation_options: Default::default(),
         });
         let max_nodes = MAX_RESIDENT_NODES as u32;
         let node_floats = max_nodes * TENSOR_VOLUME_STRIDE_FLOATS;

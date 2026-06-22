@@ -98,6 +98,7 @@ impl LoRAGpuApplicator {
             layout:      Some(&pl),
             module:      &shader,
             entry_point: "apply_lora",
+            compilation_options: Default::default(),
         });
 
         Ok(Self { device, queue, pipeline, bgl })

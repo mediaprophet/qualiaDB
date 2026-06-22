@@ -103,9 +103,12 @@ pub use identity_fabric::{
 };
 pub mod legal_compose;
 pub use legal_compose::{
-    Eligibility, zk_eligibility, selective_disclosure, marginal_harm, proportionality_met,
+    Eligibility, zk_eligibility, selective_disclosure,
     MatchStatus, translation_status,
 };
+// §26 proportionality composes the native-only CAS — gated to native (see legal_compose.rs).
+#[cfg(not(target_arch = "wasm32"))]
+pub use legal_compose::{marginal_harm, proportionality_met};
 pub mod consensus;
 pub use consensus::{
     TxStatus, transaction_status, is_globally_valid, survives_partition,

@@ -50,6 +50,7 @@ pub mod gpu_sieve {
                     layout: None,
                     module: &shader,
                     entry_point: "main",
+                    compilation_options: Default::default(),
                 });
 
             Some(Self {

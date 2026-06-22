@@ -10,6 +10,9 @@
 //!     mapping: the machine may propose `skos:closeMatch`; only a human attests `skos:exactMatch`;
 //!     an untranslatable concept routes to human review (never force-flattened).
 
+// §26 proportionality composes the CAS, which lives in native-only `specialized_libs`. §17/§19
+// below have no such dependency, so only the §26 functions are gated to native.
+#[cfg(not(target_arch = "wasm32"))]
 use crate::specialized_libs::symbolic_algebra::{differentiate, parse};
 use std::collections::HashMap;
 
@@ -56,6 +59,7 @@ pub fn selective_disclosure(all_claims: &[u64], reveal: &[u64], out: &mut [u64])
 
 /// The marginal harm `d/d(wrt) harm_expr` evaluated at `at` — parses + differentiates +
 /// evaluates via `symbolic_algebra`. `None` if the expression won't parse/evaluate.
+#[cfg(not(target_arch = "wasm32"))]
 pub fn marginal_harm(harm_expr: &str, wrt: &str, at: f64) -> Option<f64> {
     let expr = parse(harm_expr).ok()?;
     let d = differentiate(&expr, wrt);
@@ -67,6 +71,7 @@ pub fn marginal_harm(harm_expr: &str, wrt: &str, at: f64) -> Option<f64> {
 /// **Proportionality test**: an act is proportionate iff its marginal harm is strictly less
 /// than the `advantage` it secures (`∂Harm/∂x < Advantage`). `None` if the harm model is
 /// unparseable. The legal proportionality / necessity calculus.
+#[cfg(not(target_arch = "wasm32"))]
 pub fn proportionality_met(harm_expr: &str, wrt: &str, at: f64, advantage: f64) -> Option<bool> {
     Some(marginal_harm(harm_expr, wrt, at)? < advantage)
 }

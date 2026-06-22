@@ -129,7 +129,7 @@ async-trait = "0.1.89"
 dashmap = "6.2.1"
 rand_distr = "0.6.0"
 fast_qr = { version = "0.13.1", features = ["svg"] }
-wgpu = { version = "0.19", features = ["webgpu"] }
+wgpu = { version = "0.20", features = ["webgpu"] }
 
 
 [lib]
@@ -222,7 +222,7 @@ serde-wasm-bindgen = "0.6.5"
 io-uring = "0.7.12"
 
 [dev-dependencies]
-naga = { version = "0.19", features = ["wgsl-in"] }
+naga = { version = "0.20", features = ["wgsl-in"] }
 criterion = "0.8.2"
 dhat = "0.3.3"
 proptest = "1.11.0"

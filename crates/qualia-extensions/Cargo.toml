@@ -20,7 +20,7 @@ clap = { version = "4.0", features = ["derive"] }
 qualia-core-db = { path = "../qualia-core-db", optional = true }
 
 # WebGPU dependencies
-wgpu = { version = "0.19", optional = true }
+wgpu = { version = "0.20", optional = true }
 winit = { version = "0.29", optional = true }
 
 # HTTP client for QPU APIs

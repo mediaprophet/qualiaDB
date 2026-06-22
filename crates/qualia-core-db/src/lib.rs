@@ -667,6 +667,16 @@ impl Drop for QualiaSuperBlock {
 pub mod agency;
 pub mod agent;
 pub mod verifiable_credential;
+// Track M cooperation gate composes `modalities::interaction_governance`, so it can only
+// compile where `modalities` does (native, or the logic-enabled wasm profiles). Its only
+// consumers — mcp_server / mcp_tool_impls — are themselves native-only, so the slim `portal`
+// wasm bundle never needs it.
+#[cfg(any(
+    not(target_arch = "wasm32"),
+    feature = "wasm-logic",
+    feature = "wasm-scientific",
+    feature = "wasm-full"
+))]
 pub mod mcp_cooperation;
 pub mod cbor_compiler;
 #[cfg(any(

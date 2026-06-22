@@ -290,11 +290,13 @@ impl PortalGpu {
             vertex: wgpu::VertexState {
                 module: &ambient_shader,
                 entry_point: "vertex_main",
+                compilation_options: Default::default(),
                 buffers: &[],
             },
             fragment: Some(wgpu::FragmentState {
                 module: &ambient_shader,
                 entry_point: "fragment_main",
+                compilation_options: Default::default(),
                 targets: &[Some(color_target_state(format))],
             }),
             primitive: wgpu::PrimitiveState {
@@ -312,11 +314,13 @@ impl PortalGpu {
             vertex: wgpu::VertexState {
                 module: &projector_shader,
                 entry_point: "vertex_main",
+                compilation_options: Default::default(),
                 buffers: &[],
             },
             fragment: Some(wgpu::FragmentState {
                 module: &projector_shader,
                 entry_point: "fragment_main",
+                compilation_options: Default::default(),
                 targets: &[Some(color_target_state(format))],
             }),
             primitive: wgpu::PrimitiveState {
@@ -334,11 +338,13 @@ impl PortalGpu {
             vertex: wgpu::VertexState {
                 module: &projector_shader,
                 entry_point: "vertex_main",
+                compilation_options: Default::default(),
                 buffers: &[],
             },
             fragment: Some(wgpu::FragmentState {
                 module: &projector_shader,
                 entry_point: "picking_fragment_main",
+                compilation_options: Default::default(),
                 targets: &[Some(picking_color_target_state())],
             }),
             primitive: wgpu::PrimitiveState {
@@ -365,11 +371,13 @@ impl PortalGpu {
                 vertex: wgpu::VertexState {
                     module: &ambient_shader,
                     entry_point: "vertex_main",
+                    compilation_options: Default::default(),
                     buffers: &[],
                 },
                 fragment: Some(wgpu::FragmentState {
                     module: &ambient_shader,
                     entry_point: "fragment_main",
+                    compilation_options: Default::default(),
                     targets: &[Some(hdr_color_target_state())],
                 }),
                 primitive: wgpu::PrimitiveState {
@@ -386,11 +394,13 @@ impl PortalGpu {
                 vertex: wgpu::VertexState {
                     module: &projector_shader,
                     entry_point: "vertex_main",
+                    compilation_options: Default::default(),
                     buffers: &[],
                 },
                 fragment: Some(wgpu::FragmentState {
                     module: &projector_shader,
                     entry_point: "fragment_main",
+                    compilation_options: Default::default(),
                     targets: &[Some(hdr_color_target_state())],
                 }),
                 primitive: wgpu::PrimitiveState {
@@ -1332,11 +1342,13 @@ fn create_bloom_chain(
         vertex: wgpu::VertexState {
             module: &bloom_shader,
             entry_point: "extract_vs",
+            compilation_options: Default::default(),
             buffers: &[],
         },
         fragment: Some(wgpu::FragmentState {
             module: &bloom_shader,
             entry_point: "extract_fs",
+            compilation_options: Default::default(),
             targets: &[Some(wgpu::ColorTargetState {
                 format: HDR_FORMAT,
                 blend: None,
@@ -1355,11 +1367,13 @@ fn create_bloom_chain(
         vertex: wgpu::VertexState {
             module: &bloom_shader,
             entry_point: "kawase_vs",
+            compilation_options: Default::default(),
             buffers: &[],
         },
         fragment: Some(wgpu::FragmentState {
             module: &bloom_shader,
             entry_point: "kawase_fs",
+            compilation_options: Default::default(),
             targets: &[Some(wgpu::ColorTargetState {
                 format: HDR_FORMAT,
                 blend: None,
@@ -1378,11 +1392,13 @@ fn create_bloom_chain(
         vertex: wgpu::VertexState {
             module: &bloom_shader,
             entry_point: "composite_vs",
+            compilation_options: Default::default(),
             buffers: &[],
         },
         fragment: Some(wgpu::FragmentState {
             module: &bloom_shader,
             entry_point: "composite_fs",
+            compilation_options: Default::default(),
             targets: &[Some(wgpu::ColorTargetState {
                 format: surface_format,
                 blend: None,

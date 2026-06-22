@@ -62,6 +62,9 @@ static GRAPH_INDEX: RevisionCache<QuinIndex> = RevisionCache::new();
 /// graph revision has changed since the last build. This is what `graph_resolve` (and
 /// other index consumers) route through, so a burst of resolves between graph changes
 /// shares a single O(n) build.
+// Routes through `daemon_graph` (the native daemon's in-memory graph), which does not exist on
+// wasm32; the only caller (mcp_tool_impls) is native-only too.
+#[cfg(not(target_arch = "wasm32"))]
 pub fn with_graph_index<R>(f: impl FnOnce(&QuinIndex) -> R) -> R {
     let revision = crate::daemon_graph::graph_revision();
     GRAPH_INDEX.with(

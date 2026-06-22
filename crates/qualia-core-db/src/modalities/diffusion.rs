@@ -38,6 +38,7 @@ pub async fn execute_diffusion_pass(graph: &mut [NQuin]) -> Result<(), String> {
         layout: None,
         module: &shader,
         entry_point: "main",
+        compilation_options: Default::default(),
     });
 
     // NQuin is 48 bytes. Cast to u8 for wgpu buffer.
