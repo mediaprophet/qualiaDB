@@ -20,6 +20,7 @@ concept:united-nations-rules-protection-juveniles-deprived-their-liberty-paragra
     skos:prefLabel "Paragraph 2"@en ;
     cml:realizedBy doc:paragraph-2 ;
     cml:curationStatus cml:Proposed ;
+    cml:schemaVersion "2" ;   # regenerable — see CML_UPGRADE.md
     prov:wasDerivedFrom <https://www.ohchr.org/en/instruments-mechanisms/instruments/united-nations-rules-protection-juveniles-deprived-their-liberty> ;
     dc:date "14 December 1990" ;
     values:category "Administration of justice, detention & law enforcement" ;
@@ -35,6 +36,7 @@ concept:united-nations-rules-protection-juveniles-deprived-their-liberty-paragra
     skos:prefLabel "Paragraph 3"@en ;
     cml:realizedBy doc:paragraph-3 ;
     cml:curationStatus cml:Proposed ;
+    cml:schemaVersion "2" ;   # regenerable — see CML_UPGRADE.md
     prov:wasDerivedFrom <https://www.ohchr.org/en/instruments-mechanisms/instruments/united-nations-rules-protection-juveniles-deprived-their-liberty> ;
     dc:date "14 December 1990" ;
     values:category "Administration of justice, detention & law enforcement" ;
@@ -50,6 +52,7 @@ concept:united-nations-rules-protection-juveniles-deprived-their-liberty-paragra
     skos:prefLabel "Paragraph 4"@en ;
     cml:realizedBy doc:paragraph-4 ;
     cml:curationStatus cml:Proposed ;
+    cml:schemaVersion "2" ;   # regenerable — see CML_UPGRADE.md
     prov:wasDerivedFrom <https://www.ohchr.org/en/instruments-mechanisms/instruments/united-nations-rules-protection-juveniles-deprived-their-liberty> ;
     dc:date "14 December 1990" ;
     values:category "Administration of justice, detention & law enforcement" ;
@@ -65,6 +68,7 @@ concept:united-nations-rules-protection-juveniles-deprived-their-liberty-paragra
     skos:prefLabel "Paragraph 5"@en ;
     cml:realizedBy doc:paragraph-5 ;
     cml:curationStatus cml:Proposed ;
+    cml:schemaVersion "2" ;   # regenerable — see CML_UPGRADE.md
     prov:wasDerivedFrom <https://www.ohchr.org/en/instruments-mechanisms/instruments/united-nations-rules-protection-juveniles-deprived-their-liberty> ;
     dc:date "14 December 1990" ;
     values:category "Administration of justice, detention & law enforcement" ;
@@ -80,6 +84,7 @@ concept:united-nations-rules-protection-juveniles-deprived-their-liberty-paragra
     skos:prefLabel "Paragraph 6"@en ;
     cml:realizedBy doc:paragraph-6 ;
     cml:curationStatus cml:Proposed ;
+    cml:schemaVersion "2" ;   # regenerable — see CML_UPGRADE.md
     prov:wasDerivedFrom <https://www.ohchr.org/en/instruments-mechanisms/instruments/united-nations-rules-protection-juveniles-deprived-their-liberty> ;
     dc:date "14 December 1990" ;
     values:category "Administration of justice, detention & law enforcement" ;
@@ -95,6 +100,7 @@ concept:united-nations-rules-protection-juveniles-deprived-their-liberty-paragra
     skos:prefLabel "Paragraph 7"@en ;
     cml:realizedBy doc:paragraph-7 ;
     cml:curationStatus cml:Proposed ;
+    cml:schemaVersion "2" ;   # regenerable — see CML_UPGRADE.md
     prov:wasDerivedFrom <https://www.ohchr.org/en/instruments-mechanisms/instruments/united-nations-rules-protection-juveniles-deprived-their-liberty> ;
     dc:date "14 December 1990" ;
     values:category "Administration of justice, detention & law enforcement" ;
@@ -110,6 +116,7 @@ concept:united-nations-rules-protection-juveniles-deprived-their-liberty-paragra
     skos:prefLabel "Paragraph 8"@en ;
     cml:realizedBy doc:paragraph-8 ;
     cml:curationStatus cml:Proposed ;
+    cml:schemaVersion "2" ;   # regenerable — see CML_UPGRADE.md
     prov:wasDerivedFrom <https://www.ohchr.org/en/instruments-mechanisms/instruments/united-nations-rules-protection-juveniles-deprived-their-liberty> ;
     dc:date "14 December 1990" ;
     values:category "Administration of justice, detention & law enforcement" ;
@@ -126,6 +133,7 @@ concept:united-nations-rules-protection-juveniles-deprived-their-liberty-paragra
     skos:prefLabel "Paragraph 9"@en ;
     cml:realizedBy doc:paragraph-9 ;
     cml:curationStatus cml:Proposed ;
+    cml:schemaVersion "2" ;   # regenerable — see CML_UPGRADE.md
     prov:wasDerivedFrom <https://www.ohchr.org/en/instruments-mechanisms/instruments/united-nations-rules-protection-juveniles-deprived-their-liberty> ;
     dc:date "14 December 1990" ;
     values:category "Administration of justice, detention & law enforcement" ;
@@ -141,6 +149,7 @@ concept:united-nations-rules-protection-juveniles-deprived-their-liberty-paragra
     skos:prefLabel "Paragraph 10"@en ;
     cml:realizedBy doc:paragraph-10 ;
     cml:curationStatus cml:Proposed ;
+    cml:schemaVersion "2" ;   # regenerable — see CML_UPGRADE.md
     prov:wasDerivedFrom <https://www.ohchr.org/en/instruments-mechanisms/instruments/united-nations-rules-protection-juveniles-deprived-their-liberty> ;
     dc:date "14 December 1990" ;
     values:category "Administration of justice, detention & law enforcement" ;
@@ -156,6 +165,7 @@ concept:united-nations-rules-protection-juveniles-deprived-their-liberty-paragra
     skos:prefLabel "Paragraph 11"@en ;
     cml:realizedBy doc:paragraph-11 ;
     cml:curationStatus cml:Proposed ;
+    cml:schemaVersion "2" ;   # regenerable — see CML_UPGRADE.md
     prov:wasDerivedFrom <https://www.ohchr.org/en/instruments-mechanisms/instruments/united-nations-rules-protection-juveniles-deprived-their-liberty> ;
     dc:date "14 December 1990" ;
     values:category "Administration of justice, detention & law enforcement" ;
@@ -171,6 +181,7 @@ concept:united-nations-rules-protection-juveniles-deprived-their-liberty-paragra
     skos:prefLabel "Paragraph 12"@en ;
     cml:realizedBy doc:paragraph-12 ;
     cml:curationStatus cml:Proposed ;
+    cml:schemaVersion "2" ;   # regenerable — see CML_UPGRADE.md
     prov:wasDerivedFrom <https://www.ohchr.org/en/instruments-mechanisms/instruments/united-nations-rules-protection-juveniles-deprived-their-liberty> ;
     dc:date "14 December 1990" ;
     values:category "Administration of justice, detention & law enforcement" ;
@@ -188,6 +199,7 @@ concept:united-nations-rules-protection-juveniles-deprived-their-liberty-paragra
     skos:prefLabel "Paragraph 13"@en ;
     cml:realizedBy doc:paragraph-13 ;
     cml:curationStatus cml:Proposed ;
+    cml:schemaVersion "2" ;   # regenerable — see CML_UPGRADE.md
     prov:wasDerivedFrom <https://www.ohchr.org/en/instruments-mechanisms/instruments/united-nations-rules-protection-juveniles-deprived-their-liberty> ;
     dc:date "14 December 1990" ;
     values:category "Administration of justice, detention & law enforcement" ;
@@ -203,6 +215,7 @@ concept:united-nations-rules-protection-juveniles-deprived-their-liberty-paragra
     skos:prefLabel "Paragraph 14"@en ;
     cml:realizedBy doc:paragraph-14 ;
     cml:curationStatus cml:Proposed ;
+    cml:schemaVersion "2" ;   # regenerable — see CML_UPGRADE.md
     prov:wasDerivedFrom <https://www.ohchr.org/en/instruments-mechanisms/instruments/united-nations-rules-protection-juveniles-deprived-their-liberty> ;
     dc:date "14 December 1990" ;
     values:category "Administration of justice, detention & law enforcement" ;
@@ -218,6 +231,7 @@ concept:united-nations-rules-protection-juveniles-deprived-their-liberty-paragra
     skos:prefLabel "Paragraph 15"@en ;
     cml:realizedBy doc:paragraph-15 ;
     cml:curationStatus cml:Proposed ;
+    cml:schemaVersion "2" ;   # regenerable — see CML_UPGRADE.md
     prov:wasDerivedFrom <https://www.ohchr.org/en/instruments-mechanisms/instruments/united-nations-rules-protection-juveniles-deprived-their-liberty> ;
     dc:date "14 December 1990" ;
     values:category "Administration of justice, detention & law enforcement" ;
@@ -233,6 +247,7 @@ concept:united-nations-rules-protection-juveniles-deprived-their-liberty-paragra
     skos:prefLabel "Paragraph 16"@en ;
     cml:realizedBy doc:paragraph-16 ;
     cml:curationStatus cml:Proposed ;
+    cml:schemaVersion "2" ;   # regenerable — see CML_UPGRADE.md
     prov:wasDerivedFrom <https://www.ohchr.org/en/instruments-mechanisms/instruments/united-nations-rules-protection-juveniles-deprived-their-liberty> ;
     dc:date "14 December 1990" ;
     values:category "Administration of justice, detention & law enforcement" ;
@@ -248,6 +263,7 @@ concept:united-nations-rules-protection-juveniles-deprived-their-liberty-paragra
     skos:prefLabel "Paragraph 17"@en ;
     cml:realizedBy doc:paragraph-17 ;
     cml:curationStatus cml:Proposed ;
+    cml:schemaVersion "2" ;   # regenerable — see CML_UPGRADE.md
     prov:wasDerivedFrom <https://www.ohchr.org/en/instruments-mechanisms/instruments/united-nations-rules-protection-juveniles-deprived-their-liberty> ;
     dc:date "14 December 1990" ;
     values:category "Administration of justice, detention & law enforcement" ;
@@ -264,6 +280,7 @@ concept:united-nations-rules-protection-juveniles-deprived-their-liberty-paragra
     skos:prefLabel "Paragraph 18"@en ;
     cml:realizedBy doc:paragraph-18 ;
     cml:curationStatus cml:Proposed ;
+    cml:schemaVersion "2" ;   # regenerable — see CML_UPGRADE.md
     prov:wasDerivedFrom <https://www.ohchr.org/en/instruments-mechanisms/instruments/united-nations-rules-protection-juveniles-deprived-their-liberty> ;
     dc:date "14 December 1990" ;
     values:category "Administration of justice, detention & law enforcement" ;
@@ -281,6 +298,7 @@ concept:united-nations-rules-protection-juveniles-deprived-their-liberty-paragra
     skos:prefLabel "Paragraph 19"@en ;
     cml:realizedBy doc:paragraph-19 ;
     cml:curationStatus cml:Proposed ;
+    cml:schemaVersion "2" ;   # regenerable — see CML_UPGRADE.md
     prov:wasDerivedFrom <https://www.ohchr.org/en/instruments-mechanisms/instruments/united-nations-rules-protection-juveniles-deprived-their-liberty> ;
     dc:date "14 December 1990" ;
     values:category "Administration of justice, detention & law enforcement" ;
@@ -296,6 +314,7 @@ concept:united-nations-rules-protection-juveniles-deprived-their-liberty-paragra
     skos:prefLabel "Paragraph 20"@en ;
     cml:realizedBy doc:paragraph-20 ;
     cml:curationStatus cml:Proposed ;
+    cml:schemaVersion "2" ;   # regenerable — see CML_UPGRADE.md
     prov:wasDerivedFrom <https://www.ohchr.org/en/instruments-mechanisms/instruments/united-nations-rules-protection-juveniles-deprived-their-liberty> ;
     dc:date "14 December 1990" ;
     values:category "Administration of justice, detention & law enforcement" ;
@@ -313,6 +332,7 @@ concept:united-nations-rules-protection-juveniles-deprived-their-liberty-paragra
     skos:prefLabel "Paragraph 21"@en ;
     cml:realizedBy doc:paragraph-21 ;
     cml:curationStatus cml:Proposed ;
+    cml:schemaVersion "2" ;   # regenerable — see CML_UPGRADE.md
     prov:wasDerivedFrom <https://www.ohchr.org/en/instruments-mechanisms/instruments/united-nations-rules-protection-juveniles-deprived-their-liberty> ;
     dc:date "14 December 1990" ;
     values:category "Administration of justice, detention & law enforcement" ;
@@ -328,6 +348,7 @@ concept:united-nations-rules-protection-juveniles-deprived-their-liberty-paragra
     skos:prefLabel "Paragraph 22"@en ;
     cml:realizedBy doc:paragraph-22 ;
     cml:curationStatus cml:Proposed ;
+    cml:schemaVersion "2" ;   # regenerable — see CML_UPGRADE.md
     prov:wasDerivedFrom <https://www.ohchr.org/en/instruments-mechanisms/instruments/united-nations-rules-protection-juveniles-deprived-their-liberty> ;
     dc:date "14 December 1990" ;
     values:category "Administration of justice, detention & law enforcement" ;
@@ -345,6 +366,7 @@ concept:united-nations-rules-protection-juveniles-deprived-their-liberty-paragra
     skos:prefLabel "Paragraph 23"@en ;
     cml:realizedBy doc:paragraph-23 ;
     cml:curationStatus cml:Proposed ;
+    cml:schemaVersion "2" ;   # regenerable — see CML_UPGRADE.md
     prov:wasDerivedFrom <https://www.ohchr.org/en/instruments-mechanisms/instruments/united-nations-rules-protection-juveniles-deprived-their-liberty> ;
     dc:date "14 December 1990" ;
     values:category "Administration of justice, detention & law enforcement" ;
@@ -360,6 +382,7 @@ concept:united-nations-rules-protection-juveniles-deprived-their-liberty-paragra
     skos:prefLabel "Paragraph 24"@en ;
     cml:realizedBy doc:paragraph-24 ;
     cml:curationStatus cml:Proposed ;
+    cml:schemaVersion "2" ;   # regenerable — see CML_UPGRADE.md
     prov:wasDerivedFrom <https://www.ohchr.org/en/instruments-mechanisms/instruments/united-nations-rules-protection-juveniles-deprived-their-liberty> ;
     dc:date "14 December 1990" ;
     values:category "Administration of justice, detention & law enforcement" ;
@@ -376,6 +399,7 @@ concept:united-nations-rules-protection-juveniles-deprived-their-liberty-paragra
     skos:prefLabel "Paragraph 25"@en ;
     cml:realizedBy doc:paragraph-25 ;
     cml:curationStatus cml:Proposed ;
+    cml:schemaVersion "2" ;   # regenerable — see CML_UPGRADE.md
     prov:wasDerivedFrom <https://www.ohchr.org/en/instruments-mechanisms/instruments/united-nations-rules-protection-juveniles-deprived-their-liberty> ;
     dc:date "14 December 1990" ;
     values:category "Administration of justice, detention & law enforcement" ;
@@ -392,6 +416,7 @@ concept:united-nations-rules-protection-juveniles-deprived-their-liberty-paragra
     skos:prefLabel "Paragraph 26"@en ;
     cml:realizedBy doc:paragraph-26 ;
     cml:curationStatus cml:Proposed ;
+    cml:schemaVersion "2" ;   # regenerable — see CML_UPGRADE.md
     prov:wasDerivedFrom <https://www.ohchr.org/en/instruments-mechanisms/instruments/united-nations-rules-protection-juveniles-deprived-their-liberty> ;
     dc:date "14 December 1990" ;
     values:category "Administration of justice, detention & law enforcement" ;
@@ -407,6 +432,7 @@ concept:united-nations-rules-protection-juveniles-deprived-their-liberty-paragra
     skos:prefLabel "Paragraph 27"@en ;
     cml:realizedBy doc:paragraph-27 ;
     cml:curationStatus cml:Proposed ;
+    cml:schemaVersion "2" ;   # regenerable — see CML_UPGRADE.md
     prov:wasDerivedFrom <https://www.ohchr.org/en/instruments-mechanisms/instruments/united-nations-rules-protection-juveniles-deprived-their-liberty> ;
     dc:date "14 December 1990" ;
     values:category "Administration of justice, detention & law enforcement" ;
@@ -422,6 +448,7 @@ concept:united-nations-rules-protection-juveniles-deprived-their-liberty-paragra
     skos:prefLabel "Paragraph 28"@en ;
     cml:realizedBy doc:paragraph-28 ;
     cml:curationStatus cml:Proposed ;
+    cml:schemaVersion "2" ;   # regenerable — see CML_UPGRADE.md
     prov:wasDerivedFrom <https://www.ohchr.org/en/instruments-mechanisms/instruments/united-nations-rules-protection-juveniles-deprived-their-liberty> ;
     dc:date "14 December 1990" ;
     values:category "Administration of justice, detention & law enforcement" ;
@@ -437,6 +464,7 @@ concept:united-nations-rules-protection-juveniles-deprived-their-liberty-paragra
     skos:prefLabel "Paragraph 29"@en ;
     cml:realizedBy doc:paragraph-29 ;
     cml:curationStatus cml:Proposed ;
+    cml:schemaVersion "2" ;   # regenerable — see CML_UPGRADE.md
     prov:wasDerivedFrom <https://www.ohchr.org/en/instruments-mechanisms/instruments/united-nations-rules-protection-juveniles-deprived-their-liberty> ;
     dc:date "14 December 1990" ;
     values:category "Administration of justice, detention & law enforcement" ;
@@ -452,6 +480,7 @@ concept:united-nations-rules-protection-juveniles-deprived-their-liberty-paragra
     skos:prefLabel "Paragraph 30"@en ;
     cml:realizedBy doc:paragraph-30 ;
     cml:curationStatus cml:Proposed ;
+    cml:schemaVersion "2" ;   # regenerable — see CML_UPGRADE.md
     prov:wasDerivedFrom <https://www.ohchr.org/en/instruments-mechanisms/instruments/united-nations-rules-protection-juveniles-deprived-their-liberty> ;
     dc:date "14 December 1990" ;
     values:category "Administration of justice, detention & law enforcement" ;
@@ -467,6 +496,7 @@ concept:united-nations-rules-protection-juveniles-deprived-their-liberty-paragra
     skos:prefLabel "Paragraph 31"@en ;
     cml:realizedBy doc:paragraph-31 ;
     cml:curationStatus cml:Proposed ;
+    cml:schemaVersion "2" ;   # regenerable — see CML_UPGRADE.md
     prov:wasDerivedFrom <https://www.ohchr.org/en/instruments-mechanisms/instruments/united-nations-rules-protection-juveniles-deprived-their-liberty> ;
     dc:date "14 December 1990" ;
     values:category "Administration of justice, detention & law enforcement" ;
@@ -482,6 +512,7 @@ concept:united-nations-rules-protection-juveniles-deprived-their-liberty-paragra
     skos:prefLabel "Paragraph 32"@en ;
     cml:realizedBy doc:paragraph-32 ;
     cml:curationStatus cml:Proposed ;
+    cml:schemaVersion "2" ;   # regenerable — see CML_UPGRADE.md
     prov:wasDerivedFrom <https://www.ohchr.org/en/instruments-mechanisms/instruments/united-nations-rules-protection-juveniles-deprived-their-liberty> ;
     dc:date "14 December 1990" ;
     values:category "Administration of justice, detention & law enforcement" ;
@@ -499,6 +530,7 @@ concept:united-nations-rules-protection-juveniles-deprived-their-liberty-paragra
     skos:prefLabel "Paragraph 33"@en ;
     cml:realizedBy doc:paragraph-33 ;
     cml:curationStatus cml:Proposed ;
+    cml:schemaVersion "2" ;   # regenerable — see CML_UPGRADE.md
     prov:wasDerivedFrom <https://www.ohchr.org/en/instruments-mechanisms/instruments/united-nations-rules-protection-juveniles-deprived-their-liberty> ;
     dc:date "14 December 1990" ;
     values:category "Administration of justice, detention & law enforcement" ;
@@ -514,6 +546,7 @@ concept:united-nations-rules-protection-juveniles-deprived-their-liberty-paragra
     skos:prefLabel "Paragraph 34"@en ;
     cml:realizedBy doc:paragraph-34 ;
     cml:curationStatus cml:Proposed ;
+    cml:schemaVersion "2" ;   # regenerable — see CML_UPGRADE.md
     prov:wasDerivedFrom <https://www.ohchr.org/en/instruments-mechanisms/instruments/united-nations-rules-protection-juveniles-deprived-their-liberty> ;
     dc:date "14 December 1990" ;
     values:category "Administration of justice, detention & law enforcement" ;
@@ -529,6 +562,7 @@ concept:united-nations-rules-protection-juveniles-deprived-their-liberty-paragra
     skos:prefLabel "Paragraph 35"@en ;
     cml:realizedBy doc:paragraph-35 ;
     cml:curationStatus cml:Proposed ;
+    cml:schemaVersion "2" ;   # regenerable — see CML_UPGRADE.md
     prov:wasDerivedFrom <https://www.ohchr.org/en/instruments-mechanisms/instruments/united-nations-rules-protection-juveniles-deprived-their-liberty> ;
     dc:date "14 December 1990" ;
     values:category "Administration of justice, detention & law enforcement" ;
@@ -544,6 +578,7 @@ concept:united-nations-rules-protection-juveniles-deprived-their-liberty-paragra
     skos:prefLabel "Paragraph 36"@en ;
     cml:realizedBy doc:paragraph-36 ;
     cml:curationStatus cml:Proposed ;
+    cml:schemaVersion "2" ;   # regenerable — see CML_UPGRADE.md
     prov:wasDerivedFrom <https://www.ohchr.org/en/instruments-mechanisms/instruments/united-nations-rules-protection-juveniles-deprived-their-liberty> ;
     dc:date "14 December 1990" ;
     values:category "Administration of justice, detention & law enforcement" ;
@@ -559,6 +594,7 @@ concept:united-nations-rules-protection-juveniles-deprived-their-liberty-paragra
     skos:prefLabel "Paragraph 37"@en ;
     cml:realizedBy doc:paragraph-37 ;
     cml:curationStatus cml:Proposed ;
+    cml:schemaVersion "2" ;   # regenerable — see CML_UPGRADE.md
     prov:wasDerivedFrom <https://www.ohchr.org/en/instruments-mechanisms/instruments/united-nations-rules-protection-juveniles-deprived-their-liberty> ;
     dc:date "14 December 1990" ;
     values:category "Administration of justice, detention & law enforcement" ;
@@ -574,6 +610,7 @@ concept:united-nations-rules-protection-juveniles-deprived-their-liberty-paragra
     skos:prefLabel "Paragraph 38"@en ;
     cml:realizedBy doc:paragraph-38 ;
     cml:curationStatus cml:Proposed ;
+    cml:schemaVersion "2" ;   # regenerable — see CML_UPGRADE.md
     prov:wasDerivedFrom <https://www.ohchr.org/en/instruments-mechanisms/instruments/united-nations-rules-protection-juveniles-deprived-their-liberty> ;
     dc:date "14 December 1990" ;
     values:category "Administration of justice, detention & law enforcement" ;
@@ -589,6 +626,7 @@ concept:united-nations-rules-protection-juveniles-deprived-their-liberty-paragra
     skos:prefLabel "Paragraph 39"@en ;
     cml:realizedBy doc:paragraph-39 ;
     cml:curationStatus cml:Proposed ;
+    cml:schemaVersion "2" ;   # regenerable — see CML_UPGRADE.md
     prov:wasDerivedFrom <https://www.ohchr.org/en/instruments-mechanisms/instruments/united-nations-rules-protection-juveniles-deprived-their-liberty> ;
     dc:date "14 December 1990" ;
     values:category "Administration of justice, detention & law enforcement" ;
@@ -604,6 +642,7 @@ concept:united-nations-rules-protection-juveniles-deprived-their-liberty-paragra
     skos:prefLabel "Paragraph 40"@en ;
     cml:realizedBy doc:paragraph-40 ;
     cml:curationStatus cml:Proposed ;
+    cml:schemaVersion "2" ;   # regenerable — see CML_UPGRADE.md
     prov:wasDerivedFrom <https://www.ohchr.org/en/instruments-mechanisms/instruments/united-nations-rules-protection-juveniles-deprived-their-liberty> ;
     dc:date "14 December 1990" ;
     values:category "Administration of justice, detention & law enforcement" ;
@@ -619,6 +658,7 @@ concept:united-nations-rules-protection-juveniles-deprived-their-liberty-paragra
     skos:prefLabel "Paragraph 41"@en ;
     cml:realizedBy doc:paragraph-41 ;
     cml:curationStatus cml:Proposed ;
+    cml:schemaVersion "2" ;   # regenerable — see CML_UPGRADE.md
     prov:wasDerivedFrom <https://www.ohchr.org/en/instruments-mechanisms/instruments/united-nations-rules-protection-juveniles-deprived-their-liberty> ;
     dc:date "14 December 1990" ;
     values:category "Administration of justice, detention & law enforcement" ;
@@ -635,6 +675,7 @@ concept:united-nations-rules-protection-juveniles-deprived-their-liberty-paragra
     skos:prefLabel "Paragraph 42"@en ;
     cml:realizedBy doc:paragraph-42 ;
     cml:curationStatus cml:Proposed ;
+    cml:schemaVersion "2" ;   # regenerable — see CML_UPGRADE.md
     prov:wasDerivedFrom <https://www.ohchr.org/en/instruments-mechanisms/instruments/united-nations-rules-protection-juveniles-deprived-their-liberty> ;
     dc:date "14 December 1990" ;
     values:category "Administration of justice, detention & law enforcement" ;
@@ -650,6 +691,7 @@ concept:united-nations-rules-protection-juveniles-deprived-their-liberty-paragra
     skos:prefLabel "Paragraph 43"@en ;
     cml:realizedBy doc:paragraph-43 ;
     cml:curationStatus cml:Proposed ;
+    cml:schemaVersion "2" ;   # regenerable — see CML_UPGRADE.md
     prov:wasDerivedFrom <https://www.ohchr.org/en/instruments-mechanisms/instruments/united-nations-rules-protection-juveniles-deprived-their-liberty> ;
     dc:date "14 December 1990" ;
     values:category "Administration of justice, detention & law enforcement" ;
@@ -665,6 +707,7 @@ concept:united-nations-rules-protection-juveniles-deprived-their-liberty-paragra
     skos:prefLabel "Paragraph 44"@en ;
     cml:realizedBy doc:paragraph-44 ;
     cml:curationStatus cml:Proposed ;
+    cml:schemaVersion "2" ;   # regenerable — see CML_UPGRADE.md
     prov:wasDerivedFrom <https://www.ohchr.org/en/instruments-mechanisms/instruments/united-nations-rules-protection-juveniles-deprived-their-liberty> ;
     dc:date "14 December 1990" ;
     values:category "Administration of justice, detention & law enforcement" ;
@@ -680,6 +723,7 @@ concept:united-nations-rules-protection-juveniles-deprived-their-liberty-paragra
     skos:prefLabel "Paragraph 45"@en ;
     cml:realizedBy doc:paragraph-45 ;
     cml:curationStatus cml:Proposed ;
+    cml:schemaVersion "2" ;   # regenerable — see CML_UPGRADE.md
     prov:wasDerivedFrom <https://www.ohchr.org/en/instruments-mechanisms/instruments/united-nations-rules-protection-juveniles-deprived-their-liberty> ;
     dc:date "14 December 1990" ;
     values:category "Administration of justice, detention & law enforcement" ;
@@ -696,6 +740,7 @@ concept:united-nations-rules-protection-juveniles-deprived-their-liberty-paragra
     skos:prefLabel "Paragraph 46"@en ;
     cml:realizedBy doc:paragraph-46 ;
     cml:curationStatus cml:Proposed ;
+    cml:schemaVersion "2" ;   # regenerable — see CML_UPGRADE.md
     prov:wasDerivedFrom <https://www.ohchr.org/en/instruments-mechanisms/instruments/united-nations-rules-protection-juveniles-deprived-their-liberty> ;
     dc:date "14 December 1990" ;
     values:category "Administration of justice, detention & law enforcement" ;
@@ -712,6 +757,7 @@ concept:united-nations-rules-protection-juveniles-deprived-their-liberty-paragra
     skos:prefLabel "Paragraph 47"@en ;
     cml:realizedBy doc:paragraph-47 ;
     cml:curationStatus cml:Proposed ;
+    cml:schemaVersion "2" ;   # regenerable — see CML_UPGRADE.md
     prov:wasDerivedFrom <https://www.ohchr.org/en/instruments-mechanisms/instruments/united-nations-rules-protection-juveniles-deprived-their-liberty> ;
     dc:date "14 December 1990" ;
     values:category "Administration of justice, detention & law enforcement" ;
@@ -729,6 +775,7 @@ concept:united-nations-rules-protection-juveniles-deprived-their-liberty-paragra
     skos:prefLabel "Paragraph 48"@en ;
     cml:realizedBy doc:paragraph-48 ;
     cml:curationStatus cml:Proposed ;
+    cml:schemaVersion "2" ;   # regenerable — see CML_UPGRADE.md
     prov:wasDerivedFrom <https://www.ohchr.org/en/instruments-mechanisms/instruments/united-nations-rules-protection-juveniles-deprived-their-liberty> ;
     dc:date "14 December 1990" ;
     values:category "Administration of justice, detention & law enforcement" ;
@@ -744,6 +791,7 @@ concept:united-nations-rules-protection-juveniles-deprived-their-liberty-paragra
     skos:prefLabel "Paragraph 49"@en ;
     cml:realizedBy doc:paragraph-49 ;
     cml:curationStatus cml:Proposed ;
+    cml:schemaVersion "2" ;   # regenerable — see CML_UPGRADE.md
     prov:wasDerivedFrom <https://www.ohchr.org/en/instruments-mechanisms/instruments/united-nations-rules-protection-juveniles-deprived-their-liberty> ;
     dc:date "14 December 1990" ;
     values:category "Administration of justice, detention & law enforcement" ;
@@ -760,6 +808,7 @@ concept:united-nations-rules-protection-juveniles-deprived-their-liberty-paragra
     skos:prefLabel "Paragraph 50"@en ;
     cml:realizedBy doc:paragraph-50 ;
     cml:curationStatus cml:Proposed ;
+    cml:schemaVersion "2" ;   # regenerable — see CML_UPGRADE.md
     prov:wasDerivedFrom <https://www.ohchr.org/en/instruments-mechanisms/instruments/united-nations-rules-protection-juveniles-deprived-their-liberty> ;
     dc:date "14 December 1990" ;
     values:category "Administration of justice, detention & law enforcement" ;
@@ -775,6 +824,7 @@ concept:united-nations-rules-protection-juveniles-deprived-their-liberty-paragra
     skos:prefLabel "Paragraph 51"@en ;
     cml:realizedBy doc:paragraph-51 ;
     cml:curationStatus cml:Proposed ;
+    cml:schemaVersion "2" ;   # regenerable — see CML_UPGRADE.md
     prov:wasDerivedFrom <https://www.ohchr.org/en/instruments-mechanisms/instruments/united-nations-rules-protection-juveniles-deprived-their-liberty> ;
     dc:date "14 December 1990" ;
     values:category "Administration of justice, detention & law enforcement" ;
@@ -790,6 +840,7 @@ concept:united-nations-rules-protection-juveniles-deprived-their-liberty-paragra
     skos:prefLabel "Paragraph 52"@en ;
     cml:realizedBy doc:paragraph-52 ;
     cml:curationStatus cml:Proposed ;
+    cml:schemaVersion "2" ;   # regenerable — see CML_UPGRADE.md
     prov:wasDerivedFrom <https://www.ohchr.org/en/instruments-mechanisms/instruments/united-nations-rules-protection-juveniles-deprived-their-liberty> ;
     dc:date "14 December 1990" ;
     values:category "Administration of justice, detention & law enforcement" ;
@@ -805,6 +856,7 @@ concept:united-nations-rules-protection-juveniles-deprived-their-liberty-paragra
     skos:prefLabel "Paragraph 53"@en ;
     cml:realizedBy doc:paragraph-53 ;
     cml:curationStatus cml:Proposed ;
+    cml:schemaVersion "2" ;   # regenerable — see CML_UPGRADE.md
     prov:wasDerivedFrom <https://www.ohchr.org/en/instruments-mechanisms/instruments/united-nations-rules-protection-juveniles-deprived-their-liberty> ;
     dc:date "14 December 1990" ;
     values:category "Administration of justice, detention & law enforcement" ;
@@ -821,6 +873,7 @@ concept:united-nations-rules-protection-juveniles-deprived-their-liberty-paragra
     skos:prefLabel "Paragraph 54"@en ;
     cml:realizedBy doc:paragraph-54 ;
     cml:curationStatus cml:Proposed ;
+    cml:schemaVersion "2" ;   # regenerable — see CML_UPGRADE.md
     prov:wasDerivedFrom <https://www.ohchr.org/en/instruments-mechanisms/instruments/united-nations-rules-protection-juveniles-deprived-their-liberty> ;
     dc:date "14 December 1990" ;
     values:category "Administration of justice, detention & law enforcement" ;
@@ -836,6 +889,7 @@ concept:united-nations-rules-protection-juveniles-deprived-their-liberty-paragra
     skos:prefLabel "Paragraph 55"@en ;
     cml:realizedBy doc:paragraph-55 ;
     cml:curationStatus cml:Proposed ;
+    cml:schemaVersion "2" ;   # regenerable — see CML_UPGRADE.md
     prov:wasDerivedFrom <https://www.ohchr.org/en/instruments-mechanisms/instruments/united-nations-rules-protection-juveniles-deprived-their-liberty> ;
     dc:date "14 December 1990" ;
     values:category "Administration of justice, detention & law enforcement" ;
@@ -851,6 +905,7 @@ concept:united-nations-rules-protection-juveniles-deprived-their-liberty-paragra
     skos:prefLabel "Paragraph 56"@en ;
     cml:realizedBy doc:paragraph-56 ;
     cml:curationStatus cml:Proposed ;
+    cml:schemaVersion "2" ;   # regenerable — see CML_UPGRADE.md
     prov:wasDerivedFrom <https://www.ohchr.org/en/instruments-mechanisms/instruments/united-nations-rules-protection-juveniles-deprived-their-liberty> ;
     dc:date "14 December 1990" ;
     values:category "Administration of justice, detention & law enforcement" ;
@@ -866,6 +921,7 @@ concept:united-nations-rules-protection-juveniles-deprived-their-liberty-paragra
     skos:prefLabel "Paragraph 57"@en ;
     cml:realizedBy doc:paragraph-57 ;
     cml:curationStatus cml:Proposed ;
+    cml:schemaVersion "2" ;   # regenerable — see CML_UPGRADE.md
     prov:wasDerivedFrom <https://www.ohchr.org/en/instruments-mechanisms/instruments/united-nations-rules-protection-juveniles-deprived-their-liberty> ;
     dc:date "14 December 1990" ;
     values:category "Administration of justice, detention & law enforcement" ;
@@ -882,6 +938,7 @@ concept:united-nations-rules-protection-juveniles-deprived-their-liberty-paragra
     skos:prefLabel "Paragraph 58"@en ;
     cml:realizedBy doc:paragraph-58 ;
     cml:curationStatus cml:Proposed ;
+    cml:schemaVersion "2" ;   # regenerable — see CML_UPGRADE.md
     prov:wasDerivedFrom <https://www.ohchr.org/en/instruments-mechanisms/instruments/united-nations-rules-protection-juveniles-deprived-their-liberty> ;
     dc:date "14 December 1990" ;
     values:category "Administration of justice, detention & law enforcement" ;
@@ -898,6 +955,7 @@ concept:united-nations-rules-protection-juveniles-deprived-their-liberty-paragra
     skos:prefLabel "Paragraph 59"@en ;
     cml:realizedBy doc:paragraph-59 ;
     cml:curationStatus cml:Proposed ;
+    cml:schemaVersion "2" ;   # regenerable — see CML_UPGRADE.md
     prov:wasDerivedFrom <https://www.ohchr.org/en/instruments-mechanisms/instruments/united-nations-rules-protection-juveniles-deprived-their-liberty> ;
     dc:date "14 December 1990" ;
     values:category "Administration of justice, detention & law enforcement" ;
@@ -914,6 +972,7 @@ concept:united-nations-rules-protection-juveniles-deprived-their-liberty-paragra
     skos:prefLabel "Paragraph 60"@en ;
     cml:realizedBy doc:paragraph-60 ;
     cml:curationStatus cml:Proposed ;
+    cml:schemaVersion "2" ;   # regenerable — see CML_UPGRADE.md
     prov:wasDerivedFrom <https://www.ohchr.org/en/instruments-mechanisms/instruments/united-nations-rules-protection-juveniles-deprived-their-liberty> ;
     dc:date "14 December 1990" ;
     values:category "Administration of justice, detention & law enforcement" ;
@@ -929,6 +988,7 @@ concept:united-nations-rules-protection-juveniles-deprived-their-liberty-paragra
     skos:prefLabel "Paragraph 61"@en ;
     cml:realizedBy doc:paragraph-61 ;
     cml:curationStatus cml:Proposed ;
+    cml:schemaVersion "2" ;   # regenerable — see CML_UPGRADE.md
     prov:wasDerivedFrom <https://www.ohchr.org/en/instruments-mechanisms/instruments/united-nations-rules-protection-juveniles-deprived-their-liberty> ;
     dc:date "14 December 1990" ;
     values:category "Administration of justice, detention & law enforcement" ;
@@ -945,6 +1005,7 @@ concept:united-nations-rules-protection-juveniles-deprived-their-liberty-paragra
     skos:prefLabel "Paragraph 62"@en ;
     cml:realizedBy doc:paragraph-62 ;
     cml:curationStatus cml:Proposed ;
+    cml:schemaVersion "2" ;   # regenerable — see CML_UPGRADE.md
     prov:wasDerivedFrom <https://www.ohchr.org/en/instruments-mechanisms/instruments/united-nations-rules-protection-juveniles-deprived-their-liberty> ;
     dc:date "14 December 1990" ;
     values:category "Administration of justice, detention & law enforcement" ;
@@ -960,6 +1021,7 @@ concept:united-nations-rules-protection-juveniles-deprived-their-liberty-paragra
     skos:prefLabel "Paragraph 63"@en ;
     cml:realizedBy doc:paragraph-63 ;
     cml:curationStatus cml:Proposed ;
+    cml:schemaVersion "2" ;   # regenerable — see CML_UPGRADE.md
     prov:wasDerivedFrom <https://www.ohchr.org/en/instruments-mechanisms/instruments/united-nations-rules-protection-juveniles-deprived-their-liberty> ;
     dc:date "14 December 1990" ;
     values:category "Administration of justice, detention & law enforcement" ;
@@ -975,6 +1037,7 @@ concept:united-nations-rules-protection-juveniles-deprived-their-liberty-paragra
     skos:prefLabel "Paragraph 64"@en ;
     cml:realizedBy doc:paragraph-64 ;
     cml:curationStatus cml:Proposed ;
+    cml:schemaVersion "2" ;   # regenerable — see CML_UPGRADE.md
     prov:wasDerivedFrom <https://www.ohchr.org/en/instruments-mechanisms/instruments/united-nations-rules-protection-juveniles-deprived-their-liberty> ;
     dc:date "14 December 1990" ;
     values:category "Administration of justice, detention & law enforcement" ;
@@ -990,6 +1053,7 @@ concept:united-nations-rules-protection-juveniles-deprived-their-liberty-paragra
     skos:prefLabel "Paragraph 65"@en ;
     cml:realizedBy doc:paragraph-65 ;
     cml:curationStatus cml:Proposed ;
+    cml:schemaVersion "2" ;   # regenerable — see CML_UPGRADE.md
     prov:wasDerivedFrom <https://www.ohchr.org/en/instruments-mechanisms/instruments/united-nations-rules-protection-juveniles-deprived-their-liberty> ;
     dc:date "14 December 1990" ;
     values:category "Administration of justice, detention & law enforcement" ;
@@ -1005,6 +1069,7 @@ concept:united-nations-rules-protection-juveniles-deprived-their-liberty-paragra
     skos:prefLabel "Paragraph 66"@en ;
     cml:realizedBy doc:paragraph-66 ;
     cml:curationStatus cml:Proposed ;
+    cml:schemaVersion "2" ;   # regenerable — see CML_UPGRADE.md
     prov:wasDerivedFrom <https://www.ohchr.org/en/instruments-mechanisms/instruments/united-nations-rules-protection-juveniles-deprived-their-liberty> ;
     dc:date "14 December 1990" ;
     values:category "Administration of justice, detention & law enforcement" ;
@@ -1020,6 +1085,7 @@ concept:united-nations-rules-protection-juveniles-deprived-their-liberty-paragra
     skos:prefLabel "Paragraph 67"@en ;
     cml:realizedBy doc:paragraph-67 ;
     cml:curationStatus cml:Proposed ;
+    cml:schemaVersion "2" ;   # regenerable — see CML_UPGRADE.md
     prov:wasDerivedFrom <https://www.ohchr.org/en/instruments-mechanisms/instruments/united-nations-rules-protection-juveniles-deprived-their-liberty> ;
     dc:date "14 December 1990" ;
     values:category "Administration of justice, detention & law enforcement" ;
@@ -1035,6 +1101,7 @@ concept:united-nations-rules-protection-juveniles-deprived-their-liberty-paragra
     skos:prefLabel "Paragraph 68"@en ;
     cml:realizedBy doc:paragraph-68 ;
     cml:curationStatus cml:Proposed ;
+    cml:schemaVersion "2" ;   # regenerable — see CML_UPGRADE.md
     prov:wasDerivedFrom <https://www.ohchr.org/en/instruments-mechanisms/instruments/united-nations-rules-protection-juveniles-deprived-their-liberty> ;
     dc:date "14 December 1990" ;
     values:category "Administration of justice, detention & law enforcement" ;
@@ -1051,6 +1118,7 @@ concept:united-nations-rules-protection-juveniles-deprived-their-liberty-paragra
     skos:prefLabel "Paragraph 69"@en ;
     cml:realizedBy doc:paragraph-69 ;
     cml:curationStatus cml:Proposed ;
+    cml:schemaVersion "2" ;   # regenerable — see CML_UPGRADE.md
     prov:wasDerivedFrom <https://www.ohchr.org/en/instruments-mechanisms/instruments/united-nations-rules-protection-juveniles-deprived-their-liberty> ;
     dc:date "14 December 1990" ;
     values:category "Administration of justice, detention & law enforcement" ;
@@ -1067,6 +1135,7 @@ concept:united-nations-rules-protection-juveniles-deprived-their-liberty-paragra
     skos:prefLabel "Paragraph 70"@en ;
     cml:realizedBy doc:paragraph-70 ;
     cml:curationStatus cml:Proposed ;
+    cml:schemaVersion "2" ;   # regenerable — see CML_UPGRADE.md
     prov:wasDerivedFrom <https://www.ohchr.org/en/instruments-mechanisms/instruments/united-nations-rules-protection-juveniles-deprived-their-liberty> ;
     dc:date "14 December 1990" ;
     values:category "Administration of justice, detention & law enforcement" ;
@@ -1082,6 +1151,7 @@ concept:united-nations-rules-protection-juveniles-deprived-their-liberty-paragra
     skos:prefLabel "Paragraph 71"@en ;
     cml:realizedBy doc:paragraph-71 ;
     cml:curationStatus cml:Proposed ;
+    cml:schemaVersion "2" ;   # regenerable — see CML_UPGRADE.md
     prov:wasDerivedFrom <https://www.ohchr.org/en/instruments-mechanisms/instruments/united-nations-rules-protection-juveniles-deprived-their-liberty> ;
     dc:date "14 December 1990" ;
     values:category "Administration of justice, detention & law enforcement" ;
@@ -1097,6 +1167,7 @@ concept:united-nations-rules-protection-juveniles-deprived-their-liberty-paragra
     skos:prefLabel "Paragraph 72"@en ;
     cml:realizedBy doc:paragraph-72 ;
     cml:curationStatus cml:Proposed ;
+    cml:schemaVersion "2" ;   # regenerable — see CML_UPGRADE.md
     prov:wasDerivedFrom <https://www.ohchr.org/en/instruments-mechanisms/instruments/united-nations-rules-protection-juveniles-deprived-their-liberty> ;
     dc:date "14 December 1990" ;
     values:category "Administration of justice, detention & law enforcement" ;
@@ -1113,6 +1184,7 @@ concept:united-nations-rules-protection-juveniles-deprived-their-liberty-paragra
     skos:prefLabel "Paragraph 73"@en ;
     cml:realizedBy doc:paragraph-73 ;
     cml:curationStatus cml:Proposed ;
+    cml:schemaVersion "2" ;   # regenerable — see CML_UPGRADE.md
     prov:wasDerivedFrom <https://www.ohchr.org/en/instruments-mechanisms/instruments/united-nations-rules-protection-juveniles-deprived-their-liberty> ;
     dc:date "14 December 1990" ;
     values:category "Administration of justice, detention & law enforcement" ;
@@ -1129,6 +1201,7 @@ concept:united-nations-rules-protection-juveniles-deprived-their-liberty-paragra
     skos:prefLabel "Paragraph 74"@en ;
     cml:realizedBy doc:paragraph-74 ;
     cml:curationStatus cml:Proposed ;
+    cml:schemaVersion "2" ;   # regenerable — see CML_UPGRADE.md
     prov:wasDerivedFrom <https://www.ohchr.org/en/instruments-mechanisms/instruments/united-nations-rules-protection-juveniles-deprived-their-liberty> ;
     dc:date "14 December 1990" ;
     values:category "Administration of justice, detention & law enforcement" ;
@@ -1145,6 +1218,7 @@ concept:united-nations-rules-protection-juveniles-deprived-their-liberty-paragra
     skos:prefLabel "Paragraph 75"@en ;
     cml:realizedBy doc:paragraph-75 ;
     cml:curationStatus cml:Proposed ;
+    cml:schemaVersion "2" ;   # regenerable — see CML_UPGRADE.md
     prov:wasDerivedFrom <https://www.ohchr.org/en/instruments-mechanisms/instruments/united-nations-rules-protection-juveniles-deprived-their-liberty> ;
     dc:date "14 December 1990" ;
     values:category "Administration of justice, detention & law enforcement" ;
@@ -1160,6 +1234,7 @@ concept:united-nations-rules-protection-juveniles-deprived-their-liberty-paragra
     skos:prefLabel "Paragraph 76"@en ;
     cml:realizedBy doc:paragraph-76 ;
     cml:curationStatus cml:Proposed ;
+    cml:schemaVersion "2" ;   # regenerable — see CML_UPGRADE.md
     prov:wasDerivedFrom <https://www.ohchr.org/en/instruments-mechanisms/instruments/united-nations-rules-protection-juveniles-deprived-their-liberty> ;
     dc:date "14 December 1990" ;
     values:category "Administration of justice, detention & law enforcement" ;
@@ -1175,6 +1250,7 @@ concept:united-nations-rules-protection-juveniles-deprived-their-liberty-paragra
     skos:prefLabel "Paragraph 77"@en ;
     cml:realizedBy doc:paragraph-77 ;
     cml:curationStatus cml:Proposed ;
+    cml:schemaVersion "2" ;   # regenerable — see CML_UPGRADE.md
     prov:wasDerivedFrom <https://www.ohchr.org/en/instruments-mechanisms/instruments/united-nations-rules-protection-juveniles-deprived-their-liberty> ;
     dc:date "14 December 1990" ;
     values:category "Administration of justice, detention & law enforcement" ;
@@ -1190,6 +1266,7 @@ concept:united-nations-rules-protection-juveniles-deprived-their-liberty-paragra
     skos:prefLabel "Paragraph 78"@en ;
     cml:realizedBy doc:paragraph-78 ;
     cml:curationStatus cml:Proposed ;
+    cml:schemaVersion "2" ;   # regenerable — see CML_UPGRADE.md
     prov:wasDerivedFrom <https://www.ohchr.org/en/instruments-mechanisms/instruments/united-nations-rules-protection-juveniles-deprived-their-liberty> ;
     dc:date "14 December 1990" ;
     values:category "Administration of justice, detention & law enforcement" ;
@@ -1205,6 +1282,7 @@ concept:united-nations-rules-protection-juveniles-deprived-their-liberty-paragra
     skos:prefLabel "Paragraph 79"@en ;
     cml:realizedBy doc:paragraph-79 ;
     cml:curationStatus cml:Proposed ;
+    cml:schemaVersion "2" ;   # regenerable — see CML_UPGRADE.md
     prov:wasDerivedFrom <https://www.ohchr.org/en/instruments-mechanisms/instruments/united-nations-rules-protection-juveniles-deprived-their-liberty> ;
     dc:date "14 December 1990" ;
     values:category "Administration of justice, detention & law enforcement" ;
@@ -1220,6 +1298,7 @@ concept:united-nations-rules-protection-juveniles-deprived-their-liberty-paragra
     skos:prefLabel "Paragraph 80"@en ;
     cml:realizedBy doc:paragraph-80 ;
     cml:curationStatus cml:Proposed ;
+    cml:schemaVersion "2" ;   # regenerable — see CML_UPGRADE.md
     prov:wasDerivedFrom <https://www.ohchr.org/en/instruments-mechanisms/instruments/united-nations-rules-protection-juveniles-deprived-their-liberty> ;
     dc:date "14 December 1990" ;
     values:category "Administration of justice, detention & law enforcement" ;
@@ -1235,6 +1314,7 @@ concept:united-nations-rules-protection-juveniles-deprived-their-liberty-paragra
     skos:prefLabel "Paragraph 81"@en ;
     cml:realizedBy doc:paragraph-81 ;
     cml:curationStatus cml:Proposed ;
+    cml:schemaVersion "2" ;   # regenerable — see CML_UPGRADE.md
     prov:wasDerivedFrom <https://www.ohchr.org/en/instruments-mechanisms/instruments/united-nations-rules-protection-juveniles-deprived-their-liberty> ;
     dc:date "14 December 1990" ;
     values:category "Administration of justice, detention & law enforcement" ;
@@ -1252,6 +1332,7 @@ concept:united-nations-rules-protection-juveniles-deprived-their-liberty-paragra
     skos:prefLabel "Paragraph 82"@en ;
     cml:realizedBy doc:paragraph-82 ;
     cml:curationStatus cml:Proposed ;
+    cml:schemaVersion "2" ;   # regenerable — see CML_UPGRADE.md
     prov:wasDerivedFrom <https://www.ohchr.org/en/instruments-mechanisms/instruments/united-nations-rules-protection-juveniles-deprived-their-liberty> ;
     dc:date "14 December 1990" ;
     values:category "Administration of justice, detention & law enforcement" ;
@@ -1267,6 +1348,7 @@ concept:united-nations-rules-protection-juveniles-deprived-their-liberty-paragra
     skos:prefLabel "Paragraph 83"@en ;
     cml:realizedBy doc:paragraph-83 ;
     cml:curationStatus cml:Proposed ;
+    cml:schemaVersion "2" ;   # regenerable — see CML_UPGRADE.md
     prov:wasDerivedFrom <https://www.ohchr.org/en/instruments-mechanisms/instruments/united-nations-rules-protection-juveniles-deprived-their-liberty> ;
     dc:date "14 December 1990" ;
     values:category "Administration of justice, detention & law enforcement" ;
@@ -1282,6 +1364,7 @@ concept:united-nations-rules-protection-juveniles-deprived-their-liberty-paragra
     skos:prefLabel "Paragraph 84"@en ;
     cml:realizedBy doc:paragraph-84 ;
     cml:curationStatus cml:Proposed ;
+    cml:schemaVersion "2" ;   # regenerable — see CML_UPGRADE.md
     prov:wasDerivedFrom <https://www.ohchr.org/en/instruments-mechanisms/instruments/united-nations-rules-protection-juveniles-deprived-their-liberty> ;
     dc:date "14 December 1990" ;
     values:category "Administration of justice, detention & law enforcement" ;
@@ -1297,6 +1380,7 @@ concept:united-nations-rules-protection-juveniles-deprived-their-liberty-paragra
     skos:prefLabel "Paragraph 85"@en ;
     cml:realizedBy doc:paragraph-85 ;
     cml:curationStatus cml:Proposed ;
+    cml:schemaVersion "2" ;   # regenerable — see CML_UPGRADE.md
     prov:wasDerivedFrom <https://www.ohchr.org/en/instruments-mechanisms/instruments/united-nations-rules-protection-juveniles-deprived-their-liberty> ;
     dc:date "14 December 1990" ;
     values:category "Administration of justice, detention & law enforcement" ;
@@ -1312,6 +1396,7 @@ concept:united-nations-rules-protection-juveniles-deprived-their-liberty-paragra
     skos:prefLabel "Paragraph 86"@en ;
     cml:realizedBy doc:paragraph-86 ;
     cml:curationStatus cml:Proposed ;
+    cml:schemaVersion "2" ;   # regenerable — see CML_UPGRADE.md
     prov:wasDerivedFrom <https://www.ohchr.org/en/instruments-mechanisms/instruments/united-nations-rules-protection-juveniles-deprived-their-liberty> ;
     dc:date "14 December 1990" ;
     values:category "Administration of justice, detention & law enforcement" ;
@@ -1327,6 +1412,7 @@ concept:united-nations-rules-protection-juveniles-deprived-their-liberty-paragra
     skos:prefLabel "Paragraph 87"@en ;
     cml:realizedBy doc:paragraph-87 ;
     cml:curationStatus cml:Proposed ;
+    cml:schemaVersion "2" ;   # regenerable — see CML_UPGRADE.md
     prov:wasDerivedFrom <https://www.ohchr.org/en/instruments-mechanisms/instruments/united-nations-rules-protection-juveniles-deprived-their-liberty> ;
     dc:date "14 December 1990" ;
     values:category "Administration of justice, detention & law enforcement" ;
@@ -1342,6 +1428,7 @@ concept:united-nations-rules-protection-juveniles-deprived-their-liberty-paragra
     skos:prefLabel "Paragraph 88"@en ;
     cml:realizedBy doc:paragraph-88 ;
     cml:curationStatus cml:Proposed ;
+    cml:schemaVersion "2" ;   # regenerable — see CML_UPGRADE.md
     prov:wasDerivedFrom <https://www.ohchr.org/en/instruments-mechanisms/instruments/united-nations-rules-protection-juveniles-deprived-their-liberty> ;
     dc:date "14 December 1990" ;
     values:category "Administration of justice, detention & law enforcement" ;
@@ -1358,6 +1445,7 @@ concept:united-nations-rules-protection-juveniles-deprived-their-liberty-paragra
     skos:prefLabel "Paragraph 89"@en ;
     cml:realizedBy doc:paragraph-89 ;
     cml:curationStatus cml:Proposed ;
+    cml:schemaVersion "2" ;   # regenerable — see CML_UPGRADE.md
     prov:wasDerivedFrom <https://www.ohchr.org/en/instruments-mechanisms/instruments/united-nations-rules-protection-juveniles-deprived-their-liberty> ;
     dc:date "14 December 1990" ;
     values:category "Administration of justice, detention & law enforcement" ;
@@ -1373,6 +1461,7 @@ concept:united-nations-rules-protection-juveniles-deprived-their-liberty-paragra
     skos:prefLabel "Paragraph 90"@en ;
     cml:realizedBy doc:paragraph-90 ;
     cml:curationStatus cml:Proposed ;
+    cml:schemaVersion "2" ;   # regenerable — see CML_UPGRADE.md
     prov:wasDerivedFrom <https://www.ohchr.org/en/instruments-mechanisms/instruments/united-nations-rules-protection-juveniles-deprived-their-liberty> ;
     dc:date "14 December 1990" ;
     values:category "Administration of justice, detention & law enforcement" ;
@@ -1388,6 +1477,7 @@ concept:united-nations-rules-protection-juveniles-deprived-their-liberty-paragra
     skos:prefLabel "Paragraph 91"@en ;
     cml:realizedBy doc:paragraph-91 ;
     cml:curationStatus cml:Proposed ;
+    cml:schemaVersion "2" ;   # regenerable — see CML_UPGRADE.md
     prov:wasDerivedFrom <https://www.ohchr.org/en/instruments-mechanisms/instruments/united-nations-rules-protection-juveniles-deprived-their-liberty> ;
     dc:date "14 December 1990" ;
     values:category "Administration of justice, detention & law enforcement" ;
@@ -1404,6 +1494,7 @@ concept:united-nations-rules-protection-juveniles-deprived-their-liberty-paragra
     skos:prefLabel "Paragraph 92"@en ;
     cml:realizedBy doc:paragraph-92 ;
     cml:curationStatus cml:Proposed ;
+    cml:schemaVersion "2" ;   # regenerable — see CML_UPGRADE.md
     prov:wasDerivedFrom <https://www.ohchr.org/en/instruments-mechanisms/instruments/united-nations-rules-protection-juveniles-deprived-their-liberty> ;
     dc:date "14 December 1990" ;
     values:category "Administration of justice, detention & law enforcement" ;
@@ -1419,6 +1510,7 @@ concept:united-nations-rules-protection-juveniles-deprived-their-liberty-paragra
     skos:prefLabel "Paragraph 93"@en ;
     cml:realizedBy doc:paragraph-93 ;
     cml:curationStatus cml:Proposed ;
+    cml:schemaVersion "2" ;   # regenerable — see CML_UPGRADE.md
     prov:wasDerivedFrom <https://www.ohchr.org/en/instruments-mechanisms/instruments/united-nations-rules-protection-juveniles-deprived-their-liberty> ;
     dc:date "14 December 1990" ;
     values:category "Administration of justice, detention & law enforcement" ;
@@ -1435,6 +1527,7 @@ concept:united-nations-rules-protection-juveniles-deprived-their-liberty-paragra
     skos:prefLabel "Paragraph 94"@en ;
     cml:realizedBy doc:paragraph-94 ;
     cml:curationStatus cml:Proposed ;
+    cml:schemaVersion "2" ;   # regenerable — see CML_UPGRADE.md
     prov:wasDerivedFrom <https://www.ohchr.org/en/instruments-mechanisms/instruments/united-nations-rules-protection-juveniles-deprived-their-liberty> ;
     dc:date "14 December 1990" ;
     values:category "Administration of justice, detention & law enforcement" ;
@@ -1450,6 +1543,7 @@ concept:united-nations-rules-protection-juveniles-deprived-their-liberty-paragra
     skos:prefLabel "Paragraph 95"@en ;
     cml:realizedBy doc:paragraph-95 ;
     cml:curationStatus cml:Proposed ;
+    cml:schemaVersion "2" ;   # regenerable — see CML_UPGRADE.md
     prov:wasDerivedFrom <https://www.ohchr.org/en/instruments-mechanisms/instruments/united-nations-rules-protection-juveniles-deprived-their-liberty> ;
     dc:date "14 December 1990" ;
     values:category "Administration of justice, detention & law enforcement" ;
@@ -1465,6 +1559,7 @@ concept:united-nations-rules-protection-juveniles-deprived-their-liberty-paragra
     skos:prefLabel "Paragraph 96"@en ;
     cml:realizedBy doc:paragraph-96 ;
     cml:curationStatus cml:Proposed ;
+    cml:schemaVersion "2" ;   # regenerable — see CML_UPGRADE.md
     prov:wasDerivedFrom <https://www.ohchr.org/en/instruments-mechanisms/instruments/united-nations-rules-protection-juveniles-deprived-their-liberty> ;
     dc:date "14 December 1990" ;
     values:category "Administration of justice, detention & law enforcement" ;
@@ -1480,6 +1575,7 @@ concept:united-nations-rules-protection-juveniles-deprived-their-liberty-paragra
     skos:prefLabel "Paragraph 97"@en ;
     cml:realizedBy doc:paragraph-97 ;
     cml:curationStatus cml:Proposed ;
+    cml:schemaVersion "2" ;   # regenerable — see CML_UPGRADE.md
     prov:wasDerivedFrom <https://www.ohchr.org/en/instruments-mechanisms/instruments/united-nations-rules-protection-juveniles-deprived-their-liberty> ;
     dc:date "14 December 1990" ;
     values:category "Administration of justice, detention & law enforcement" ;
@@ -1495,6 +1591,7 @@ concept:united-nations-rules-protection-juveniles-deprived-their-liberty-paragra
     skos:prefLabel "Paragraph 98"@en ;
     cml:realizedBy doc:paragraph-98 ;
     cml:curationStatus cml:Proposed ;
+    cml:schemaVersion "2" ;   # regenerable — see CML_UPGRADE.md
     prov:wasDerivedFrom <https://www.ohchr.org/en/instruments-mechanisms/instruments/united-nations-rules-protection-juveniles-deprived-their-liberty> ;
     dc:date "14 December 1990" ;
     values:category "Administration of justice, detention & law enforcement" ;
@@ -1510,6 +1607,7 @@ concept:united-nations-rules-protection-juveniles-deprived-their-liberty-paragra
     skos:prefLabel "Paragraph 99"@en ;
     cml:realizedBy doc:paragraph-99 ;
     cml:curationStatus cml:Proposed ;
+    cml:schemaVersion "2" ;   # regenerable — see CML_UPGRADE.md
     prov:wasDerivedFrom <https://www.ohchr.org/en/instruments-mechanisms/instruments/united-nations-rules-protection-juveniles-deprived-their-liberty> ;
     dc:date "14 December 1990" ;
     values:category "Administration of justice, detention & law enforcement" ;
@@ -1525,6 +1623,7 @@ concept:united-nations-rules-protection-juveniles-deprived-their-liberty-paragra
     skos:prefLabel "Paragraph 100"@en ;
     cml:realizedBy doc:paragraph-100 ;
     cml:curationStatus cml:Proposed ;
+    cml:schemaVersion "2" ;   # regenerable — see CML_UPGRADE.md
     prov:wasDerivedFrom <https://www.ohchr.org/en/instruments-mechanisms/instruments/united-nations-rules-protection-juveniles-deprived-their-liberty> ;
     dc:date "14 December 1990" ;
     values:category "Administration of justice, detention & law enforcement" ;
@@ -1540,6 +1639,7 @@ concept:united-nations-rules-protection-juveniles-deprived-their-liberty-paragra
     skos:prefLabel "Paragraph 101"@en ;
     cml:realizedBy doc:paragraph-101 ;
     cml:curationStatus cml:Proposed ;
+    cml:schemaVersion "2" ;   # regenerable — see CML_UPGRADE.md
     prov:wasDerivedFrom <https://www.ohchr.org/en/instruments-mechanisms/instruments/united-nations-rules-protection-juveniles-deprived-their-liberty> ;
     dc:date "14 December 1990" ;
     values:category "Administration of justice, detention & law enforcement" ;
@@ -1555,6 +1655,7 @@ concept:united-nations-rules-protection-juveniles-deprived-their-liberty-paragra
     skos:prefLabel "Paragraph 102"@en ;
     cml:realizedBy doc:paragraph-102 ;
     cml:curationStatus cml:Proposed ;
+    cml:schemaVersion "2" ;   # regenerable — see CML_UPGRADE.md
     prov:wasDerivedFrom <https://www.ohchr.org/en/instruments-mechanisms/instruments/united-nations-rules-protection-juveniles-deprived-their-liberty> ;
     dc:date "14 December 1990" ;
     values:category "Administration of justice, detention & law enforcement" ;
@@ -1570,6 +1671,7 @@ concept:united-nations-rules-protection-juveniles-deprived-their-liberty-paragra
     skos:prefLabel "Paragraph 103"@en ;
     cml:realizedBy doc:paragraph-103 ;
     cml:curationStatus cml:Proposed ;
+    cml:schemaVersion "2" ;   # regenerable — see CML_UPGRADE.md
     prov:wasDerivedFrom <https://www.ohchr.org/en/instruments-mechanisms/instruments/united-nations-rules-protection-juveniles-deprived-their-liberty> ;
     dc:date "14 December 1990" ;
     values:category "Administration of justice, detention & law enforcement" ;

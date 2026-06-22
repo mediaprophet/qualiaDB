@@ -20,6 +20,7 @@ concept:international-covenant-civil-and-political-rights-article-1 a cml:Concep
     skos:prefLabel "Article 1"@en ;
     cml:realizedBy doc:article-1 ;
     cml:curationStatus cml:Proposed ;
+    cml:schemaVersion "2" ;   # regenerable — see CML_UPGRADE.md
     prov:wasDerivedFrom <https://www.ohchr.org/en/instruments-mechanisms/instruments/international-covenant-civil-and-political-rights> ;
     dc:date "16 December 1966" ;
     values:category "International Bill of Human Rights" ;
@@ -35,6 +36,7 @@ concept:international-covenant-civil-and-political-rights-article-2 a cml:Concep
     skos:prefLabel "Article 2"@en ;
     cml:realizedBy doc:article-2 ;
     cml:curationStatus cml:Proposed ;
+    cml:schemaVersion "2" ;   # regenerable — see CML_UPGRADE.md
     prov:wasDerivedFrom <https://www.ohchr.org/en/instruments-mechanisms/instruments/international-covenant-civil-and-political-rights> ;
     dc:date "16 December 1966" ;
     values:category "International Bill of Human Rights" ;
@@ -50,6 +52,7 @@ concept:international-covenant-civil-and-political-rights-article-3 a cml:Concep
     skos:prefLabel "Article 3"@en ;
     cml:realizedBy doc:article-3 ;
     cml:curationStatus cml:Proposed ;
+    cml:schemaVersion "2" ;   # regenerable — see CML_UPGRADE.md
     prov:wasDerivedFrom <https://www.ohchr.org/en/instruments-mechanisms/instruments/international-covenant-civil-and-political-rights> ;
     dc:date "16 December 1966" ;
     values:category "International Bill of Human Rights" ;
@@ -67,6 +70,7 @@ concept:international-covenant-civil-and-political-rights-article-4 a cml:Concep
     skos:prefLabel "Article 4"@en ;
     cml:realizedBy doc:article-4 ;
     cml:curationStatus cml:Proposed ;
+    cml:schemaVersion "2" ;   # regenerable — see CML_UPGRADE.md
     prov:wasDerivedFrom <https://www.ohchr.org/en/instruments-mechanisms/instruments/international-covenant-civil-and-political-rights> ;
     dc:date "16 December 1966" ;
     values:category "International Bill of Human Rights" ;
@@ -84,6 +88,7 @@ concept:international-covenant-civil-and-political-rights-article-5 a cml:Concep
     skos:prefLabel "Article 5"@en ;
     cml:realizedBy doc:article-5 ;
     cml:curationStatus cml:Proposed ;
+    cml:schemaVersion "2" ;   # regenerable — see CML_UPGRADE.md
     prov:wasDerivedFrom <https://www.ohchr.org/en/instruments-mechanisms/instruments/international-covenant-civil-and-political-rights> ;
     dc:date "16 December 1966" ;
     values:category "International Bill of Human Rights" ;
@@ -100,6 +105,7 @@ concept:international-covenant-civil-and-political-rights-article-6 a cml:Concep
     skos:prefLabel "Article 6"@en ;
     cml:realizedBy doc:article-6 ;
     cml:curationStatus cml:Proposed ;
+    cml:schemaVersion "2" ;   # regenerable — see CML_UPGRADE.md
     prov:wasDerivedFrom <https://www.ohchr.org/en/instruments-mechanisms/instruments/international-covenant-civil-and-political-rights> ;
     dc:date "16 December 1966" ;
     values:category "International Bill of Human Rights" ;
@@ -116,6 +122,7 @@ concept:international-covenant-civil-and-political-rights-article-7 a cml:Concep
     skos:prefLabel "Article 7"@en ;
     cml:realizedBy doc:article-7 ;
     cml:curationStatus cml:Proposed ;
+    cml:schemaVersion "2" ;   # regenerable — see CML_UPGRADE.md
     prov:wasDerivedFrom <https://www.ohchr.org/en/instruments-mechanisms/instruments/international-covenant-civil-and-political-rights> ;
     dc:date "16 December 1966" ;
     values:category "International Bill of Human Rights" ;
@@ -132,6 +139,7 @@ concept:international-covenant-civil-and-political-rights-article-8 a cml:Concep
     skos:prefLabel "Article 8"@en ;
     cml:realizedBy doc:article-8 ;
     cml:curationStatus cml:Proposed ;
+    cml:schemaVersion "2" ;   # regenerable — see CML_UPGRADE.md
     prov:wasDerivedFrom <https://www.ohchr.org/en/instruments-mechanisms/instruments/international-covenant-civil-and-political-rights> ;
     dc:date "16 December 1966" ;
     values:category "International Bill of Human Rights" ;
@@ -148,6 +156,7 @@ concept:international-covenant-civil-and-political-rights-article-9 a cml:Concep
     skos:prefLabel "Article 9"@en ;
     cml:realizedBy doc:article-9 ;
     cml:curationStatus cml:Proposed ;
+    cml:schemaVersion "2" ;   # regenerable — see CML_UPGRADE.md
     prov:wasDerivedFrom <https://www.ohchr.org/en/instruments-mechanisms/instruments/international-covenant-civil-and-political-rights> ;
     dc:date "16 December 1966" ;
     values:category "International Bill of Human Rights" ;
@@ -164,6 +173,7 @@ concept:international-covenant-civil-and-political-rights-article-10 a cml:Conce
     skos:prefLabel "Article 10"@en ;
     cml:realizedBy doc:article-10 ;
     cml:curationStatus cml:Proposed ;
+    cml:schemaVersion "2" ;   # regenerable — see CML_UPGRADE.md
     prov:wasDerivedFrom <https://www.ohchr.org/en/instruments-mechanisms/instruments/international-covenant-civil-and-political-rights> ;
     dc:date "16 December 1966" ;
     values:category "International Bill of Human Rights" ;
@@ -181,6 +191,7 @@ concept:international-covenant-civil-and-political-rights-article-11 a cml:Conce
     skos:prefLabel "Article 11"@en ;
     cml:realizedBy doc:article-11 ;
     cml:curationStatus cml:Proposed ;
+    cml:schemaVersion "2" ;   # regenerable — see CML_UPGRADE.md
     prov:wasDerivedFrom <https://www.ohchr.org/en/instruments-mechanisms/instruments/international-covenant-civil-and-political-rights> ;
     dc:date "16 December 1966" ;
     values:category "International Bill of Human Rights" ;
@@ -197,6 +208,7 @@ concept:international-covenant-civil-and-political-rights-article-12 a cml:Conce
     skos:prefLabel "Article 12"@en ;
     cml:realizedBy doc:article-12 ;
     cml:curationStatus cml:Proposed ;
+    cml:schemaVersion "2" ;   # regenerable — see CML_UPGRADE.md
     prov:wasDerivedFrom <https://www.ohchr.org/en/instruments-mechanisms/instruments/international-covenant-civil-and-political-rights> ;
     dc:date "16 December 1966" ;
     values:category "International Bill of Human Rights" ;
@@ -213,6 +225,7 @@ concept:international-covenant-civil-and-political-rights-article-13 a cml:Conce
     skos:prefLabel "Article 13"@en ;
     cml:realizedBy doc:article-13 ;
     cml:curationStatus cml:Proposed ;
+    cml:schemaVersion "2" ;   # regenerable — see CML_UPGRADE.md
     prov:wasDerivedFrom <https://www.ohchr.org/en/instruments-mechanisms/instruments/international-covenant-civil-and-political-rights> ;
     dc:date "16 December 1966" ;
     values:category "International Bill of Human Rights" ;
@@ -228,6 +241,7 @@ concept:international-covenant-civil-and-political-rights-article-14 a cml:Conce
     skos:prefLabel "Article 14"@en ;
     cml:realizedBy doc:article-14 ;
     cml:curationStatus cml:Proposed ;
+    cml:schemaVersion "2" ;   # regenerable — see CML_UPGRADE.md
     prov:wasDerivedFrom <https://www.ohchr.org/en/instruments-mechanisms/instruments/international-covenant-civil-and-political-rights> ;
     dc:date "16 December 1966" ;
     values:category "International Bill of Human Rights" ;
@@ -244,6 +258,7 @@ concept:international-covenant-civil-and-political-rights-article-15 a cml:Conce
     skos:prefLabel "Article 15"@en ;
     cml:realizedBy doc:article-15 ;
     cml:curationStatus cml:Proposed ;
+    cml:schemaVersion "2" ;   # regenerable — see CML_UPGRADE.md
     prov:wasDerivedFrom <https://www.ohchr.org/en/instruments-mechanisms/instruments/international-covenant-civil-and-political-rights> ;
     dc:date "16 December 1966" ;
     values:category "International Bill of Human Rights" ;
@@ -261,6 +276,7 @@ concept:international-covenant-civil-and-political-rights-article-16 a cml:Conce
     skos:prefLabel "Article 16"@en ;
     cml:realizedBy doc:article-16 ;
     cml:curationStatus cml:Proposed ;
+    cml:schemaVersion "2" ;   # regenerable — see CML_UPGRADE.md
     prov:wasDerivedFrom <https://www.ohchr.org/en/instruments-mechanisms/instruments/international-covenant-civil-and-political-rights> ;
     dc:date "16 December 1966" ;
     values:category "International Bill of Human Rights" ;
@@ -277,6 +293,7 @@ concept:international-covenant-civil-and-political-rights-article-17 a cml:Conce
     skos:prefLabel "Article 17"@en ;
     cml:realizedBy doc:article-17 ;
     cml:curationStatus cml:Proposed ;
+    cml:schemaVersion "2" ;   # regenerable — see CML_UPGRADE.md
     prov:wasDerivedFrom <https://www.ohchr.org/en/instruments-mechanisms/instruments/international-covenant-civil-and-political-rights> ;
     dc:date "16 December 1966" ;
     values:category "International Bill of Human Rights" ;
@@ -293,6 +310,7 @@ concept:international-covenant-civil-and-political-rights-article-18 a cml:Conce
     skos:prefLabel "Article 18"@en ;
     cml:realizedBy doc:article-18 ;
     cml:curationStatus cml:Proposed ;
+    cml:schemaVersion "2" ;   # regenerable — see CML_UPGRADE.md
     prov:wasDerivedFrom <https://www.ohchr.org/en/instruments-mechanisms/instruments/international-covenant-civil-and-political-rights> ;
     dc:date "16 December 1966" ;
     values:category "International Bill of Human Rights" ;
@@ -309,6 +327,7 @@ concept:international-covenant-civil-and-political-rights-article-19 a cml:Conce
     skos:prefLabel "Article 19"@en ;
     cml:realizedBy doc:article-19 ;
     cml:curationStatus cml:Proposed ;
+    cml:schemaVersion "2" ;   # regenerable — see CML_UPGRADE.md
     prov:wasDerivedFrom <https://www.ohchr.org/en/instruments-mechanisms/instruments/international-covenant-civil-and-political-rights> ;
     dc:date "16 December 1966" ;
     values:category "International Bill of Human Rights" ;
@@ -325,6 +344,7 @@ concept:international-covenant-civil-and-political-rights-article-20 a cml:Conce
     skos:prefLabel "Article 20"@en ;
     cml:realizedBy doc:article-20 ;
     cml:curationStatus cml:Proposed ;
+    cml:schemaVersion "2" ;   # regenerable — see CML_UPGRADE.md
     prov:wasDerivedFrom <https://www.ohchr.org/en/instruments-mechanisms/instruments/international-covenant-civil-and-political-rights> ;
     dc:date "16 December 1966" ;
     values:category "International Bill of Human Rights" ;
@@ -341,6 +361,7 @@ concept:international-covenant-civil-and-political-rights-article-21 a cml:Conce
     skos:prefLabel "Article 21"@en ;
     cml:realizedBy doc:article-21 ;
     cml:curationStatus cml:Proposed ;
+    cml:schemaVersion "2" ;   # regenerable — see CML_UPGRADE.md
     prov:wasDerivedFrom <https://www.ohchr.org/en/instruments-mechanisms/instruments/international-covenant-civil-and-political-rights> ;
     dc:date "16 December 1966" ;
     values:category "International Bill of Human Rights" ;
@@ -358,6 +379,7 @@ concept:international-covenant-civil-and-political-rights-article-22 a cml:Conce
     skos:prefLabel "Article 22"@en ;
     cml:realizedBy doc:article-22 ;
     cml:curationStatus cml:Proposed ;
+    cml:schemaVersion "2" ;   # regenerable — see CML_UPGRADE.md
     prov:wasDerivedFrom <https://www.ohchr.org/en/instruments-mechanisms/instruments/international-covenant-civil-and-political-rights> ;
     dc:date "16 December 1966" ;
     values:category "International Bill of Human Rights" ;
@@ -374,6 +396,7 @@ concept:international-covenant-civil-and-political-rights-article-23 a cml:Conce
     skos:prefLabel "Article 23"@en ;
     cml:realizedBy doc:article-23 ;
     cml:curationStatus cml:Proposed ;
+    cml:schemaVersion "2" ;   # regenerable — see CML_UPGRADE.md
     prov:wasDerivedFrom <https://www.ohchr.org/en/instruments-mechanisms/instruments/international-covenant-civil-and-political-rights> ;
     dc:date "16 December 1966" ;
     values:category "International Bill of Human Rights" ;
@@ -390,6 +413,7 @@ concept:international-covenant-civil-and-political-rights-article-24 a cml:Conce
     skos:prefLabel "Article 24"@en ;
     cml:realizedBy doc:article-24 ;
     cml:curationStatus cml:Proposed ;
+    cml:schemaVersion "2" ;   # regenerable — see CML_UPGRADE.md
     prov:wasDerivedFrom <https://www.ohchr.org/en/instruments-mechanisms/instruments/international-covenant-civil-and-political-rights> ;
     dc:date "16 December 1966" ;
     values:category "International Bill of Human Rights" ;
@@ -406,6 +430,7 @@ concept:international-covenant-civil-and-political-rights-article-25 a cml:Conce
     skos:prefLabel "Article 25"@en ;
     cml:realizedBy doc:article-25 ;
     cml:curationStatus cml:Proposed ;
+    cml:schemaVersion "2" ;   # regenerable — see CML_UPGRADE.md
     prov:wasDerivedFrom <https://www.ohchr.org/en/instruments-mechanisms/instruments/international-covenant-civil-and-political-rights> ;
     dc:date "16 December 1966" ;
     values:category "International Bill of Human Rights" ;
@@ -422,6 +447,7 @@ concept:international-covenant-civil-and-political-rights-article-26 a cml:Conce
     skos:prefLabel "Article 26"@en ;
     cml:realizedBy doc:article-26 ;
     cml:curationStatus cml:Proposed ;
+    cml:schemaVersion "2" ;   # regenerable — see CML_UPGRADE.md
     prov:wasDerivedFrom <https://www.ohchr.org/en/instruments-mechanisms/instruments/international-covenant-civil-and-political-rights> ;
     dc:date "16 December 1966" ;
     values:category "International Bill of Human Rights" ;
@@ -439,6 +465,7 @@ concept:international-covenant-civil-and-political-rights-article-27 a cml:Conce
     skos:prefLabel "Article 27"@en ;
     cml:realizedBy doc:article-27 ;
     cml:curationStatus cml:Proposed ;
+    cml:schemaVersion "2" ;   # regenerable — see CML_UPGRADE.md
     prov:wasDerivedFrom <https://www.ohchr.org/en/instruments-mechanisms/instruments/international-covenant-civil-and-political-rights> ;
     dc:date "16 December 1966" ;
     values:category "International Bill of Human Rights" ;
@@ -455,6 +482,7 @@ concept:international-covenant-civil-and-political-rights-article-28 a cml:Conce
     skos:prefLabel "Article 28"@en ;
     cml:realizedBy doc:article-28 ;
     cml:curationStatus cml:Proposed ;
+    cml:schemaVersion "2" ;   # regenerable — see CML_UPGRADE.md
     prov:wasDerivedFrom <https://www.ohchr.org/en/instruments-mechanisms/instruments/international-covenant-civil-and-political-rights> ;
     dc:date "16 December 1966" ;
     values:category "International Bill of Human Rights" ;
@@ -472,6 +500,7 @@ concept:international-covenant-civil-and-political-rights-article-29 a cml:Conce
     skos:prefLabel "Article 29"@en ;
     cml:realizedBy doc:article-29 ;
     cml:curationStatus cml:Proposed ;
+    cml:schemaVersion "2" ;   # regenerable — see CML_UPGRADE.md
     prov:wasDerivedFrom <https://www.ohchr.org/en/instruments-mechanisms/instruments/international-covenant-civil-and-political-rights> ;
     dc:date "16 December 1966" ;
     values:category "International Bill of Human Rights" ;
@@ -489,6 +518,7 @@ concept:international-covenant-civil-and-political-rights-article-30 a cml:Conce
     skos:prefLabel "Article 30"@en ;
     cml:realizedBy doc:article-30 ;
     cml:curationStatus cml:Proposed ;
+    cml:schemaVersion "2" ;   # regenerable — see CML_UPGRADE.md
     prov:wasDerivedFrom <https://www.ohchr.org/en/instruments-mechanisms/instruments/international-covenant-civil-and-political-rights> ;
     dc:date "16 December 1966" ;
     values:category "International Bill of Human Rights" ;
@@ -506,6 +536,7 @@ concept:international-covenant-civil-and-political-rights-article-31 a cml:Conce
     skos:prefLabel "Article 31"@en ;
     cml:realizedBy doc:article-31 ;
     cml:curationStatus cml:Proposed ;
+    cml:schemaVersion "2" ;   # regenerable — see CML_UPGRADE.md
     prov:wasDerivedFrom <https://www.ohchr.org/en/instruments-mechanisms/instruments/international-covenant-civil-and-political-rights> ;
     dc:date "16 December 1966" ;
     values:category "International Bill of Human Rights" ;
@@ -523,6 +554,7 @@ concept:international-covenant-civil-and-political-rights-article-32 a cml:Conce
     skos:prefLabel "Article 32"@en ;
     cml:realizedBy doc:article-32 ;
     cml:curationStatus cml:Proposed ;
+    cml:schemaVersion "2" ;   # regenerable — see CML_UPGRADE.md
     prov:wasDerivedFrom <https://www.ohchr.org/en/instruments-mechanisms/instruments/international-covenant-civil-and-political-rights> ;
     dc:date "16 December 1966" ;
     values:category "International Bill of Human Rights" ;
@@ -540,6 +572,7 @@ concept:international-covenant-civil-and-political-rights-article-33 a cml:Conce
     skos:prefLabel "Article 33"@en ;
     cml:realizedBy doc:article-33 ;
     cml:curationStatus cml:Proposed ;
+    cml:schemaVersion "2" ;   # regenerable — see CML_UPGRADE.md
     prov:wasDerivedFrom <https://www.ohchr.org/en/instruments-mechanisms/instruments/international-covenant-civil-and-political-rights> ;
     dc:date "16 December 1966" ;
     values:category "International Bill of Human Rights" ;
@@ -556,6 +589,7 @@ concept:international-covenant-civil-and-political-rights-article-34 a cml:Conce
     skos:prefLabel "Article 34"@en ;
     cml:realizedBy doc:article-34 ;
     cml:curationStatus cml:Proposed ;
+    cml:schemaVersion "2" ;   # regenerable — see CML_UPGRADE.md
     prov:wasDerivedFrom <https://www.ohchr.org/en/instruments-mechanisms/instruments/international-covenant-civil-and-political-rights> ;
     dc:date "16 December 1966" ;
     values:category "International Bill of Human Rights" ;
@@ -572,6 +606,7 @@ concept:international-covenant-civil-and-political-rights-article-35 a cml:Conce
     skos:prefLabel "Article 35"@en ;
     cml:realizedBy doc:article-35 ;
     cml:curationStatus cml:Proposed ;
+    cml:schemaVersion "2" ;   # regenerable — see CML_UPGRADE.md
     prov:wasDerivedFrom <https://www.ohchr.org/en/instruments-mechanisms/instruments/international-covenant-civil-and-political-rights> ;
     dc:date "16 December 1966" ;
     values:category "International Bill of Human Rights" ;
@@ -587,6 +622,7 @@ concept:international-covenant-civil-and-political-rights-article-36 a cml:Conce
     skos:prefLabel "Article 36"@en ;
     cml:realizedBy doc:article-36 ;
     cml:curationStatus cml:Proposed ;
+    cml:schemaVersion "2" ;   # regenerable — see CML_UPGRADE.md
     prov:wasDerivedFrom <https://www.ohchr.org/en/instruments-mechanisms/instruments/international-covenant-civil-and-political-rights> ;
     dc:date "16 December 1966" ;
     values:category "International Bill of Human Rights" ;
@@ -604,6 +640,7 @@ concept:international-covenant-civil-and-political-rights-article-37 a cml:Conce
     skos:prefLabel "Article 37"@en ;
     cml:realizedBy doc:article-37 ;
     cml:curationStatus cml:Proposed ;
+    cml:schemaVersion "2" ;   # regenerable — see CML_UPGRADE.md
     prov:wasDerivedFrom <https://www.ohchr.org/en/instruments-mechanisms/instruments/international-covenant-civil-and-political-rights> ;
     dc:date "16 December 1966" ;
     values:category "International Bill of Human Rights" ;
@@ -621,6 +658,7 @@ concept:international-covenant-civil-and-political-rights-article-38 a cml:Conce
     skos:prefLabel "Article 38"@en ;
     cml:realizedBy doc:article-38 ;
     cml:curationStatus cml:Proposed ;
+    cml:schemaVersion "2" ;   # regenerable — see CML_UPGRADE.md
     prov:wasDerivedFrom <https://www.ohchr.org/en/instruments-mechanisms/instruments/international-covenant-civil-and-political-rights> ;
     dc:date "16 December 1966" ;
     values:category "International Bill of Human Rights" ;
@@ -636,6 +674,7 @@ concept:international-covenant-civil-and-political-rights-article-39 a cml:Conce
     skos:prefLabel "Article 39"@en ;
     cml:realizedBy doc:article-39 ;
     cml:curationStatus cml:Proposed ;
+    cml:schemaVersion "2" ;   # regenerable — see CML_UPGRADE.md
     prov:wasDerivedFrom <https://www.ohchr.org/en/instruments-mechanisms/instruments/international-covenant-civil-and-political-rights> ;
     dc:date "16 December 1966" ;
     values:category "International Bill of Human Rights" ;
@@ -653,6 +692,7 @@ concept:international-covenant-civil-and-political-rights-article-40 a cml:Conce
     skos:prefLabel "Article 40"@en ;
     cml:realizedBy doc:article-40 ;
     cml:curationStatus cml:Proposed ;
+    cml:schemaVersion "2" ;   # regenerable — see CML_UPGRADE.md
     prov:wasDerivedFrom <https://www.ohchr.org/en/instruments-mechanisms/instruments/international-covenant-civil-and-political-rights> ;
     dc:date "16 December 1966" ;
     values:category "International Bill of Human Rights" ;
@@ -670,6 +710,7 @@ concept:international-covenant-civil-and-political-rights-article-41 a cml:Conce
     skos:prefLabel "Article 41"@en ;
     cml:realizedBy doc:article-41 ;
     cml:curationStatus cml:Proposed ;
+    cml:schemaVersion "2" ;   # regenerable — see CML_UPGRADE.md
     prov:wasDerivedFrom <https://www.ohchr.org/en/instruments-mechanisms/instruments/international-covenant-civil-and-political-rights> ;
     dc:date "16 December 1966" ;
     values:category "International Bill of Human Rights" ;
@@ -686,6 +727,7 @@ concept:international-covenant-civil-and-political-rights-article-42 a cml:Conce
     skos:prefLabel "Article 42"@en ;
     cml:realizedBy doc:article-42 ;
     cml:curationStatus cml:Proposed ;
+    cml:schemaVersion "2" ;   # regenerable — see CML_UPGRADE.md
     prov:wasDerivedFrom <https://www.ohchr.org/en/instruments-mechanisms/instruments/international-covenant-civil-and-political-rights> ;
     dc:date "16 December 1966" ;
     values:category "International Bill of Human Rights" ;
@@ -702,6 +744,7 @@ concept:international-covenant-civil-and-political-rights-article-43 a cml:Conce
     skos:prefLabel "Article 43"@en ;
     cml:realizedBy doc:article-43 ;
     cml:curationStatus cml:Proposed ;
+    cml:schemaVersion "2" ;   # regenerable — see CML_UPGRADE.md
     prov:wasDerivedFrom <https://www.ohchr.org/en/instruments-mechanisms/instruments/international-covenant-civil-and-political-rights> ;
     dc:date "16 December 1966" ;
     values:category "International Bill of Human Rights" ;
@@ -718,6 +761,7 @@ concept:international-covenant-civil-and-political-rights-article-44 a cml:Conce
     skos:prefLabel "Article 44"@en ;
     cml:realizedBy doc:article-44 ;
     cml:curationStatus cml:Proposed ;
+    cml:schemaVersion "2" ;   # regenerable — see CML_UPGRADE.md
     prov:wasDerivedFrom <https://www.ohchr.org/en/instruments-mechanisms/instruments/international-covenant-civil-and-political-rights> ;
     dc:date "16 December 1966" ;
     values:category "International Bill of Human Rights" ;
@@ -734,6 +778,7 @@ concept:international-covenant-civil-and-political-rights-article-45 a cml:Conce
     skos:prefLabel "Article 45"@en ;
     cml:realizedBy doc:article-45 ;
     cml:curationStatus cml:Proposed ;
+    cml:schemaVersion "2" ;   # regenerable — see CML_UPGRADE.md
     prov:wasDerivedFrom <https://www.ohchr.org/en/instruments-mechanisms/instruments/international-covenant-civil-and-political-rights> ;
     dc:date "16 December 1966" ;
     values:category "International Bill of Human Rights" ;
@@ -749,6 +794,7 @@ concept:international-covenant-civil-and-political-rights-article-46 a cml:Conce
     skos:prefLabel "Article 46"@en ;
     cml:realizedBy doc:article-46 ;
     cml:curationStatus cml:Proposed ;
+    cml:schemaVersion "2" ;   # regenerable — see CML_UPGRADE.md
     prov:wasDerivedFrom <https://www.ohchr.org/en/instruments-mechanisms/instruments/international-covenant-civil-and-political-rights> ;
     dc:date "16 December 1966" ;
     values:category "International Bill of Human Rights" ;
@@ -765,6 +811,7 @@ concept:international-covenant-civil-and-political-rights-article-47 a cml:Conce
     skos:prefLabel "Article 47"@en ;
     cml:realizedBy doc:article-47 ;
     cml:curationStatus cml:Proposed ;
+    cml:schemaVersion "2" ;   # regenerable — see CML_UPGRADE.md
     prov:wasDerivedFrom <https://www.ohchr.org/en/instruments-mechanisms/instruments/international-covenant-civil-and-political-rights> ;
     dc:date "16 December 1966" ;
     values:category "International Bill of Human Rights" ;
@@ -781,6 +828,7 @@ concept:international-covenant-civil-and-political-rights-article-48 a cml:Conce
     skos:prefLabel "Article 48"@en ;
     cml:realizedBy doc:article-48 ;
     cml:curationStatus cml:Proposed ;
+    cml:schemaVersion "2" ;   # regenerable — see CML_UPGRADE.md
     prov:wasDerivedFrom <https://www.ohchr.org/en/instruments-mechanisms/instruments/international-covenant-civil-and-political-rights> ;
     dc:date "16 December 1966" ;
     values:category "International Bill of Human Rights" ;
@@ -798,6 +846,7 @@ concept:international-covenant-civil-and-political-rights-article-49 a cml:Conce
     skos:prefLabel "Article 49"@en ;
     cml:realizedBy doc:article-49 ;
     cml:curationStatus cml:Proposed ;
+    cml:schemaVersion "2" ;   # regenerable — see CML_UPGRADE.md
     prov:wasDerivedFrom <https://www.ohchr.org/en/instruments-mechanisms/instruments/international-covenant-civil-and-political-rights> ;
     dc:date "16 December 1966" ;
     values:category "International Bill of Human Rights" ;
@@ -813,6 +862,7 @@ concept:international-covenant-civil-and-political-rights-article-50 a cml:Conce
     skos:prefLabel "Article 50"@en ;
     cml:realizedBy doc:article-50 ;
     cml:curationStatus cml:Proposed ;
+    cml:schemaVersion "2" ;   # regenerable — see CML_UPGRADE.md
     prov:wasDerivedFrom <https://www.ohchr.org/en/instruments-mechanisms/instruments/international-covenant-civil-and-political-rights> ;
     dc:date "16 December 1966" ;
     values:category "International Bill of Human Rights" ;
@@ -828,6 +878,7 @@ concept:international-covenant-civil-and-political-rights-article-51 a cml:Conce
     skos:prefLabel "Article 51"@en ;
     cml:realizedBy doc:article-51 ;
     cml:curationStatus cml:Proposed ;
+    cml:schemaVersion "2" ;   # regenerable — see CML_UPGRADE.md
     prov:wasDerivedFrom <https://www.ohchr.org/en/instruments-mechanisms/instruments/international-covenant-civil-and-political-rights> ;
     dc:date "16 December 1966" ;
     values:category "International Bill of Human Rights" ;
@@ -845,6 +896,7 @@ concept:international-covenant-civil-and-political-rights-article-52 a cml:Conce
     skos:prefLabel "Article 52"@en ;
     cml:realizedBy doc:article-52 ;
     cml:curationStatus cml:Proposed ;
+    cml:schemaVersion "2" ;   # regenerable — see CML_UPGRADE.md
     prov:wasDerivedFrom <https://www.ohchr.org/en/instruments-mechanisms/instruments/international-covenant-civil-and-political-rights> ;
     dc:date "16 December 1966" ;
     values:category "International Bill of Human Rights" ;
@@ -860,6 +912,7 @@ concept:international-covenant-civil-and-political-rights-article-53 a cml:Conce
     skos:prefLabel "Article 53"@en ;
     cml:realizedBy doc:article-53 ;
     cml:curationStatus cml:Proposed ;
+    cml:schemaVersion "2" ;   # regenerable — see CML_UPGRADE.md
     prov:wasDerivedFrom <https://www.ohchr.org/en/instruments-mechanisms/instruments/international-covenant-civil-and-political-rights> ;
     dc:date "16 December 1966" ;
     values:category "International Bill of Human Rights" ;

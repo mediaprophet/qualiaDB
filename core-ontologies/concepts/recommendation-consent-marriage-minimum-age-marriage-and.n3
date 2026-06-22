@@ -20,6 +20,7 @@ concept:recommendation-consent-marriage-minimum-age-marriage-and-principle-1 a c
     skos:prefLabel "Principle 1"@en ;
     cml:realizedBy doc:principle-1 ;
     cml:curationStatus cml:Proposed ;
+    cml:schemaVersion "2" ;   # regenerable — see CML_UPGRADE.md
     prov:wasDerivedFrom <https://www.ohchr.org/en/instruments-mechanisms/instruments/recommendation-consent-marriage-minimum-age-marriage-and> ;
     dc:date "01 November 1965" ;
     values:category "Marriage & family" ;
@@ -37,6 +38,7 @@ concept:recommendation-consent-marriage-minimum-age-marriage-and-principle-2 a c
     skos:prefLabel "Principle 2"@en ;
     cml:realizedBy doc:principle-2 ;
     cml:curationStatus cml:Proposed ;
+    cml:schemaVersion "2" ;   # regenerable — see CML_UPGRADE.md
     prov:wasDerivedFrom <https://www.ohchr.org/en/instruments-mechanisms/instruments/recommendation-consent-marriage-minimum-age-marriage-and> ;
     dc:date "01 November 1965" ;
     values:category "Marriage & family" ;
@@ -53,6 +55,7 @@ concept:recommendation-consent-marriage-minimum-age-marriage-and-principle-3 a c
     skos:prefLabel "Principle 3"@en ;
     cml:realizedBy doc:principle-3 ;
     cml:curationStatus cml:Proposed ;
+    cml:schemaVersion "2" ;   # regenerable — see CML_UPGRADE.md
     prov:wasDerivedFrom <https://www.ohchr.org/en/instruments-mechanisms/instruments/recommendation-consent-marriage-minimum-age-marriage-and> ;
     dc:date "01 November 1965" ;
     values:category "Marriage & family" ;

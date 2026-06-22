@@ -20,6 +20,7 @@ concept:basic-principles-treatment-prisoners-paragraph-1 a cml:Concept ;
     skos:prefLabel "Paragraph 1"@en ;
     cml:realizedBy doc:paragraph-1 ;
     cml:curationStatus cml:Proposed ;
+    cml:schemaVersion "2" ;   # regenerable — see CML_UPGRADE.md
     prov:wasDerivedFrom <https://www.ohchr.org/en/instruments-mechanisms/instruments/basic-principles-treatment-prisoners> ;
     dc:date "14 December 1990" ;
     values:category "Administration of justice, detention & law enforcement" ;

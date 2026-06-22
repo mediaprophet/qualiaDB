@@ -20,6 +20,7 @@ concept:convention-consent-marriage-minimum-age-marriage-and-article-1 a cml:Con
     skos:prefLabel "Article 1"@en ;
     cml:realizedBy doc:article-1 ;
     cml:curationStatus cml:Proposed ;
+    cml:schemaVersion "2" ;   # regenerable — see CML_UPGRADE.md
     prov:wasDerivedFrom <https://www.ohchr.org/en/instruments-mechanisms/instruments/convention-consent-marriage-minimum-age-marriage-and> ;
     dc:date "07 November 1962" ;
     values:category "Marriage & family" ;
@@ -36,6 +37,7 @@ concept:convention-consent-marriage-minimum-age-marriage-and-article-2 a cml:Con
     skos:prefLabel "Article 2"@en ;
     cml:realizedBy doc:article-2 ;
     cml:curationStatus cml:Proposed ;
+    cml:schemaVersion "2" ;   # regenerable — see CML_UPGRADE.md
     prov:wasDerivedFrom <https://www.ohchr.org/en/instruments-mechanisms/instruments/convention-consent-marriage-minimum-age-marriage-and> ;
     dc:date "07 November 1962" ;
     values:category "Marriage & family" ;
@@ -53,6 +55,7 @@ concept:convention-consent-marriage-minimum-age-marriage-and-article-3 a cml:Con
     skos:prefLabel "Article 3"@en ;
     cml:realizedBy doc:article-3 ;
     cml:curationStatus cml:Proposed ;
+    cml:schemaVersion "2" ;   # regenerable — see CML_UPGRADE.md
     prov:wasDerivedFrom <https://www.ohchr.org/en/instruments-mechanisms/instruments/convention-consent-marriage-minimum-age-marriage-and> ;
     dc:date "07 November 1962" ;
     values:category "Marriage & family" ;
@@ -70,6 +73,7 @@ concept:convention-consent-marriage-minimum-age-marriage-and-article-4 a cml:Con
     skos:prefLabel "Article 4"@en ;
     cml:realizedBy doc:article-4 ;
     cml:curationStatus cml:Proposed ;
+    cml:schemaVersion "2" ;   # regenerable — see CML_UPGRADE.md
     prov:wasDerivedFrom <https://www.ohchr.org/en/instruments-mechanisms/instruments/convention-consent-marriage-minimum-age-marriage-and> ;
     dc:date "07 November 1962" ;
     values:category "Marriage & family" ;
@@ -87,6 +91,7 @@ concept:convention-consent-marriage-minimum-age-marriage-and-article-5 a cml:Con
     skos:prefLabel "Article 5"@en ;
     cml:realizedBy doc:article-5 ;
     cml:curationStatus cml:Proposed ;
+    cml:schemaVersion "2" ;   # regenerable — see CML_UPGRADE.md
     prov:wasDerivedFrom <https://www.ohchr.org/en/instruments-mechanisms/instruments/convention-consent-marriage-minimum-age-marriage-and> ;
     dc:date "07 November 1962" ;
     values:category "Marriage & family" ;
@@ -104,6 +109,7 @@ concept:convention-consent-marriage-minimum-age-marriage-and-article-6 a cml:Con
     skos:prefLabel "Article 6"@en ;
     cml:realizedBy doc:article-6 ;
     cml:curationStatus cml:Proposed ;
+    cml:schemaVersion "2" ;   # regenerable — see CML_UPGRADE.md
     prov:wasDerivedFrom <https://www.ohchr.org/en/instruments-mechanisms/instruments/convention-consent-marriage-minimum-age-marriage-and> ;
     dc:date "07 November 1962" ;
     values:category "Marriage & family" ;
@@ -119,6 +125,7 @@ concept:convention-consent-marriage-minimum-age-marriage-and-article-7 a cml:Con
     skos:prefLabel "Article 7"@en ;
     cml:realizedBy doc:article-7 ;
     cml:curationStatus cml:Proposed ;
+    cml:schemaVersion "2" ;   # regenerable — see CML_UPGRADE.md
     prov:wasDerivedFrom <https://www.ohchr.org/en/instruments-mechanisms/instruments/convention-consent-marriage-minimum-age-marriage-and> ;
     dc:date "07 November 1962" ;
     values:category "Marriage & family" ;
@@ -136,6 +143,7 @@ concept:convention-consent-marriage-minimum-age-marriage-and-article-8 a cml:Con
     skos:prefLabel "Article 8"@en ;
     cml:realizedBy doc:article-8 ;
     cml:curationStatus cml:Proposed ;
+    cml:schemaVersion "2" ;   # regenerable — see CML_UPGRADE.md
     prov:wasDerivedFrom <https://www.ohchr.org/en/instruments-mechanisms/instruments/convention-consent-marriage-minimum-age-marriage-and> ;
     dc:date "07 November 1962" ;
     values:category "Marriage & family" ;
@@ -151,6 +159,7 @@ concept:convention-consent-marriage-minimum-age-marriage-and-article-9 a cml:Con
     skos:prefLabel "Article 9"@en ;
     cml:realizedBy doc:article-9 ;
     cml:curationStatus cml:Proposed ;
+    cml:schemaVersion "2" ;   # regenerable — see CML_UPGRADE.md
     prov:wasDerivedFrom <https://www.ohchr.org/en/instruments-mechanisms/instruments/convention-consent-marriage-minimum-age-marriage-and> ;
     dc:date "07 November 1962" ;
     values:category "Marriage & family" ;
@@ -167,6 +176,7 @@ concept:convention-consent-marriage-minimum-age-marriage-and-article-10 a cml:Co
     skos:prefLabel "Article 10"@en ;
     cml:realizedBy doc:article-10 ;
     cml:curationStatus cml:Proposed ;
+    cml:schemaVersion "2" ;   # regenerable — see CML_UPGRADE.md
     prov:wasDerivedFrom <https://www.ohchr.org/en/instruments-mechanisms/instruments/convention-consent-marriage-minimum-age-marriage-and> ;
     dc:date "07 November 1962" ;
     values:category "Marriage & family" ;

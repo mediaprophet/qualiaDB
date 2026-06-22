@@ -20,6 +20,7 @@ concept:gciv-1949-article-1 a cml:Concept ;
     skos:prefLabel "Article 1 - Respect for the Convention"@en ;
     cml:realizedBy doc:article-1 ;
     cml:curationStatus cml:Proposed ;
+    cml:schemaVersion "2" ;   # regenerable — see CML_UPGRADE.md
     prov:wasDerivedFrom <https://ihl-databases.icrc.org/en/ihl-treaties/gciv-1949> ;
     dc:date "1949-08-12" ;
     values:category "International Humanitarian Law (Law of War)" ;
@@ -36,6 +37,7 @@ concept:gciv-1949-article-2 a cml:Concept ;
     skos:prefLabel "Article 2 - Application of the Convention"@en ;
     cml:realizedBy doc:article-2 ;
     cml:curationStatus cml:Proposed ;
+    cml:schemaVersion "2" ;   # regenerable — see CML_UPGRADE.md
     prov:wasDerivedFrom <https://ihl-databases.icrc.org/en/ihl-treaties/gciv-1949> ;
     dc:date "1949-08-12" ;
     values:category "International Humanitarian Law (Law of War)" ;
@@ -52,6 +54,7 @@ concept:gciv-1949-article-3 a cml:Concept ;
     skos:prefLabel "Article 3 - Conflicts not of an international character"@en ;
     cml:realizedBy doc:article-3 ;
     cml:curationStatus cml:Proposed ;
+    cml:schemaVersion "2" ;   # regenerable — see CML_UPGRADE.md
     prov:wasDerivedFrom <https://ihl-databases.icrc.org/en/ihl-treaties/gciv-1949> ;
     dc:date "1949-08-12" ;
     values:category "International Humanitarian Law (Law of War)" ;
@@ -68,6 +71,7 @@ concept:gciv-1949-article-4 a cml:Concept ;
     skos:prefLabel "Article 4 - Definition of protected persons"@en ;
     cml:realizedBy doc:article-4 ;
     cml:curationStatus cml:Proposed ;
+    cml:schemaVersion "2" ;   # regenerable — see CML_UPGRADE.md
     prov:wasDerivedFrom <https://ihl-databases.icrc.org/en/ihl-treaties/gciv-1949> ;
     dc:date "1949-08-12" ;
     values:category "International Humanitarian Law (Law of War)" ;
@@ -84,6 +88,7 @@ concept:gciv-1949-article-5 a cml:Concept ;
     skos:prefLabel "Article 5 - Derogations"@en ;
     cml:realizedBy doc:article-5 ;
     cml:curationStatus cml:Proposed ;
+    cml:schemaVersion "2" ;   # regenerable — see CML_UPGRADE.md
     prov:wasDerivedFrom <https://ihl-databases.icrc.org/en/ihl-treaties/gciv-1949> ;
     dc:date "1949-08-12" ;
     values:category "International Humanitarian Law (Law of War)" ;
@@ -100,6 +105,7 @@ concept:gciv-1949-article-6 a cml:Concept ;
     skos:prefLabel "Article 6 - Beginning and end of application of the Convention"@en ;
     cml:realizedBy doc:article-6 ;
     cml:curationStatus cml:Proposed ;
+    cml:schemaVersion "2" ;   # regenerable — see CML_UPGRADE.md
     prov:wasDerivedFrom <https://ihl-databases.icrc.org/en/ihl-treaties/gciv-1949> ;
     dc:date "1949-08-12" ;
     values:category "International Humanitarian Law (Law of War)" ;
@@ -116,6 +122,7 @@ concept:gciv-1949-article-7 a cml:Concept ;
     skos:prefLabel "Article 7 - Special agreements"@en ;
     cml:realizedBy doc:article-7 ;
     cml:curationStatus cml:Proposed ;
+    cml:schemaVersion "2" ;   # regenerable — see CML_UPGRADE.md
     prov:wasDerivedFrom <https://ihl-databases.icrc.org/en/ihl-treaties/gciv-1949> ;
     dc:date "1949-08-12" ;
     values:category "International Humanitarian Law (Law of War)" ;
@@ -132,6 +139,7 @@ concept:gciv-1949-article-8 a cml:Concept ;
     skos:prefLabel "Article 8 - Non-renunciation of rights"@en ;
     cml:realizedBy doc:article-8 ;
     cml:curationStatus cml:Proposed ;
+    cml:schemaVersion "2" ;   # regenerable — see CML_UPGRADE.md
     prov:wasDerivedFrom <https://ihl-databases.icrc.org/en/ihl-treaties/gciv-1949> ;
     dc:date "1949-08-12" ;
     values:category "International Humanitarian Law (Law of War)" ;
@@ -148,6 +156,7 @@ concept:gciv-1949-article-9 a cml:Concept ;
     skos:prefLabel "Article 9 - Protecting Powers"@en ;
     cml:realizedBy doc:article-9 ;
     cml:curationStatus cml:Proposed ;
+    cml:schemaVersion "2" ;   # regenerable — see CML_UPGRADE.md
     prov:wasDerivedFrom <https://ihl-databases.icrc.org/en/ihl-treaties/gciv-1949> ;
     dc:date "1949-08-12" ;
     values:category "International Humanitarian Law (Law of War)" ;
@@ -164,6 +173,7 @@ concept:gciv-1949-article-10 a cml:Concept ;
     skos:prefLabel "Article 10 - Activities of the ICRC and other impartial humanitarian organizations"@en ;
     cml:realizedBy doc:article-10 ;
     cml:curationStatus cml:Proposed ;
+    cml:schemaVersion "2" ;   # regenerable — see CML_UPGRADE.md
     prov:wasDerivedFrom <https://ihl-databases.icrc.org/en/ihl-treaties/gciv-1949> ;
     dc:date "1949-08-12" ;
     values:category "International Humanitarian Law (Law of War)" ;
@@ -180,6 +190,7 @@ concept:gciv-1949-article-11 a cml:Concept ;
     skos:prefLabel "Article 11 - Substitutes for Protecting Powers"@en ;
     cml:realizedBy doc:article-11 ;
     cml:curationStatus cml:Proposed ;
+    cml:schemaVersion "2" ;   # regenerable — see CML_UPGRADE.md
     prov:wasDerivedFrom <https://ihl-databases.icrc.org/en/ihl-treaties/gciv-1949> ;
     dc:date "1949-08-12" ;
     values:category "International Humanitarian Law (Law of War)" ;
@@ -196,6 +207,7 @@ concept:gciv-1949-article-12 a cml:Concept ;
     skos:prefLabel "Article 12 - Conciliation procedure"@en ;
     cml:realizedBy doc:article-12 ;
     cml:curationStatus cml:Proposed ;
+    cml:schemaVersion "2" ;   # regenerable — see CML_UPGRADE.md
     prov:wasDerivedFrom <https://ihl-databases.icrc.org/en/ihl-treaties/gciv-1949> ;
     dc:date "1949-08-12" ;
     values:category "International Humanitarian Law (Law of War)" ;
@@ -212,6 +224,7 @@ concept:gciv-1949-article-13 a cml:Concept ;
     skos:prefLabel "Article 13 - Field of application of Part II"@en ;
     cml:realizedBy doc:article-13 ;
     cml:curationStatus cml:Proposed ;
+    cml:schemaVersion "2" ;   # regenerable — see CML_UPGRADE.md
     prov:wasDerivedFrom <https://ihl-databases.icrc.org/en/ihl-treaties/gciv-1949> ;
     dc:date "1949-08-12" ;
     values:category "International Humanitarian Law (Law of War)" ;
@@ -228,6 +241,7 @@ concept:gciv-1949-article-14 a cml:Concept ;
     skos:prefLabel "Article 14 - Hospital and safety zones and localities"@en ;
     cml:realizedBy doc:article-14 ;
     cml:curationStatus cml:Proposed ;
+    cml:schemaVersion "2" ;   # regenerable — see CML_UPGRADE.md
     prov:wasDerivedFrom <https://ihl-databases.icrc.org/en/ihl-treaties/gciv-1949> ;
     dc:date "1949-08-12" ;
     values:category "International Humanitarian Law (Law of War)" ;
@@ -244,6 +258,7 @@ concept:gciv-1949-article-15 a cml:Concept ;
     skos:prefLabel "Article 15 - Neutralized zones"@en ;
     cml:realizedBy doc:article-15 ;
     cml:curationStatus cml:Proposed ;
+    cml:schemaVersion "2" ;   # regenerable — see CML_UPGRADE.md
     prov:wasDerivedFrom <https://ihl-databases.icrc.org/en/ihl-treaties/gciv-1949> ;
     dc:date "1949-08-12" ;
     values:category "International Humanitarian Law (Law of War)" ;
@@ -260,6 +275,7 @@ concept:gciv-1949-article-16 a cml:Concept ;
     skos:prefLabel "Article 16 - Wounded and sick: General protection"@en ;
     cml:realizedBy doc:article-16 ;
     cml:curationStatus cml:Proposed ;
+    cml:schemaVersion "2" ;   # regenerable — see CML_UPGRADE.md
     prov:wasDerivedFrom <https://ihl-databases.icrc.org/en/ihl-treaties/gciv-1949> ;
     dc:date "1949-08-12" ;
     values:category "International Humanitarian Law (Law of War)" ;
@@ -276,6 +292,7 @@ concept:gciv-1949-article-17 a cml:Concept ;
     skos:prefLabel "Article 17 - Evacuation from besieged or encircled areas"@en ;
     cml:realizedBy doc:article-17 ;
     cml:curationStatus cml:Proposed ;
+    cml:schemaVersion "2" ;   # regenerable — see CML_UPGRADE.md
     prov:wasDerivedFrom <https://ihl-databases.icrc.org/en/ihl-treaties/gciv-1949> ;
     dc:date "1949-08-12" ;
     values:category "International Humanitarian Law (Law of War)" ;
@@ -292,6 +309,7 @@ concept:gciv-1949-article-18 a cml:Concept ;
     skos:prefLabel "Article 18 - Protection of civilian hospitals"@en ;
     cml:realizedBy doc:article-18 ;
     cml:curationStatus cml:Proposed ;
+    cml:schemaVersion "2" ;   # regenerable — see CML_UPGRADE.md
     prov:wasDerivedFrom <https://ihl-databases.icrc.org/en/ihl-treaties/gciv-1949> ;
     dc:date "1949-08-12" ;
     values:category "International Humanitarian Law (Law of War)" ;
@@ -308,6 +326,7 @@ concept:gciv-1949-article-19 a cml:Concept ;
     skos:prefLabel "Article 19 - Discontinuance of protection of civilian hospitals"@en ;
     cml:realizedBy doc:article-19 ;
     cml:curationStatus cml:Proposed ;
+    cml:schemaVersion "2" ;   # regenerable — see CML_UPGRADE.md
     prov:wasDerivedFrom <https://ihl-databases.icrc.org/en/ihl-treaties/gciv-1949> ;
     dc:date "1949-08-12" ;
     values:category "International Humanitarian Law (Law of War)" ;
@@ -324,6 +343,7 @@ concept:gciv-1949-article-20 a cml:Concept ;
     skos:prefLabel "Article 20 - Protection of civilian hospital staff"@en ;
     cml:realizedBy doc:article-20 ;
     cml:curationStatus cml:Proposed ;
+    cml:schemaVersion "2" ;   # regenerable — see CML_UPGRADE.md
     prov:wasDerivedFrom <https://ihl-databases.icrc.org/en/ihl-treaties/gciv-1949> ;
     dc:date "1949-08-12" ;
     values:category "International Humanitarian Law (Law of War)" ;
@@ -340,6 +360,7 @@ concept:gciv-1949-article-21 a cml:Concept ;
     skos:prefLabel "Article 21 - Protection of medical land and sea transport"@en ;
     cml:realizedBy doc:article-21 ;
     cml:curationStatus cml:Proposed ;
+    cml:schemaVersion "2" ;   # regenerable — see CML_UPGRADE.md
     prov:wasDerivedFrom <https://ihl-databases.icrc.org/en/ihl-treaties/gciv-1949> ;
     dc:date "1949-08-12" ;
     values:category "International Humanitarian Law (Law of War)" ;
@@ -356,6 +377,7 @@ concept:gciv-1949-article-22 a cml:Concept ;
     skos:prefLabel "Article 22 - Protection of medical air transport"@en ;
     cml:realizedBy doc:article-22 ;
     cml:curationStatus cml:Proposed ;
+    cml:schemaVersion "2" ;   # regenerable — see CML_UPGRADE.md
     prov:wasDerivedFrom <https://ihl-databases.icrc.org/en/ihl-treaties/gciv-1949> ;
     dc:date "1949-08-12" ;
     values:category "International Humanitarian Law (Law of War)" ;
@@ -372,6 +394,7 @@ concept:gciv-1949-article-23 a cml:Concept ;
     skos:prefLabel "Article 23 - Consignments of medical supplies, food and clothing"@en ;
     cml:realizedBy doc:article-23 ;
     cml:curationStatus cml:Proposed ;
+    cml:schemaVersion "2" ;   # regenerable — see CML_UPGRADE.md
     prov:wasDerivedFrom <https://ihl-databases.icrc.org/en/ihl-treaties/gciv-1949> ;
     dc:date "1949-08-12" ;
     values:category "International Humanitarian Law (Law of War)" ;
@@ -388,6 +411,7 @@ concept:gciv-1949-article-24 a cml:Concept ;
     skos:prefLabel "Article 24 - Measures relating to child welfare"@en ;
     cml:realizedBy doc:article-24 ;
     cml:curationStatus cml:Proposed ;
+    cml:schemaVersion "2" ;   # regenerable — see CML_UPGRADE.md
     prov:wasDerivedFrom <https://ihl-databases.icrc.org/en/ihl-treaties/gciv-1949> ;
     dc:date "1949-08-12" ;
     values:category "International Humanitarian Law (Law of War)" ;
@@ -404,6 +428,7 @@ concept:gciv-1949-article-25 a cml:Concept ;
     skos:prefLabel "Article 25 - Family news"@en ;
     cml:realizedBy doc:article-25 ;
     cml:curationStatus cml:Proposed ;
+    cml:schemaVersion "2" ;   # regenerable — see CML_UPGRADE.md
     prov:wasDerivedFrom <https://ihl-databases.icrc.org/en/ihl-treaties/gciv-1949> ;
     dc:date "1949-08-12" ;
     values:category "International Humanitarian Law (Law of War)" ;
@@ -420,6 +445,7 @@ concept:gciv-1949-article-26 a cml:Concept ;
     skos:prefLabel "Article 26 - Dispersed families"@en ;
     cml:realizedBy doc:article-26 ;
     cml:curationStatus cml:Proposed ;
+    cml:schemaVersion "2" ;   # regenerable — see CML_UPGRADE.md
     prov:wasDerivedFrom <https://ihl-databases.icrc.org/en/ihl-treaties/gciv-1949> ;
     dc:date "1949-08-12" ;
     values:category "International Humanitarian Law (Law of War)" ;
@@ -436,6 +462,7 @@ concept:gciv-1949-article-27 a cml:Concept ;
     skos:prefLabel "Article 27 - Treatment of protected persons: General observations"@en ;
     cml:realizedBy doc:article-27 ;
     cml:curationStatus cml:Proposed ;
+    cml:schemaVersion "2" ;   # regenerable — see CML_UPGRADE.md
     prov:wasDerivedFrom <https://ihl-databases.icrc.org/en/ihl-treaties/gciv-1949> ;
     dc:date "1949-08-12" ;
     values:category "International Humanitarian Law (Law of War)" ;
@@ -452,6 +479,7 @@ concept:gciv-1949-article-28 a cml:Concept ;
     skos:prefLabel "Article 28 - Prohibition of using human shields"@en ;
     cml:realizedBy doc:article-28 ;
     cml:curationStatus cml:Proposed ;
+    cml:schemaVersion "2" ;   # regenerable — see CML_UPGRADE.md
     prov:wasDerivedFrom <https://ihl-databases.icrc.org/en/ihl-treaties/gciv-1949> ;
     dc:date "1949-08-12" ;
     values:category "International Humanitarian Law (Law of War)" ;
@@ -468,6 +496,7 @@ concept:gciv-1949-article-29 a cml:Concept ;
     skos:prefLabel "Article 29 - Responsibility for the treatment of protected persons"@en ;
     cml:realizedBy doc:article-29 ;
     cml:curationStatus cml:Proposed ;
+    cml:schemaVersion "2" ;   # regenerable — see CML_UPGRADE.md
     prov:wasDerivedFrom <https://ihl-databases.icrc.org/en/ihl-treaties/gciv-1949> ;
     dc:date "1949-08-12" ;
     values:category "International Humanitarian Law (Law of War)" ;
@@ -484,6 +513,7 @@ concept:gciv-1949-article-30 a cml:Concept ;
     skos:prefLabel "Article 30 - Application to Protecting Powers and relief organizations"@en ;
     cml:realizedBy doc:article-30 ;
     cml:curationStatus cml:Proposed ;
+    cml:schemaVersion "2" ;   # regenerable — see CML_UPGRADE.md
     prov:wasDerivedFrom <https://ihl-databases.icrc.org/en/ihl-treaties/gciv-1949> ;
     dc:date "1949-08-12" ;
     values:category "International Humanitarian Law (Law of War)" ;
@@ -500,6 +530,7 @@ concept:gciv-1949-article-31 a cml:Concept ;
     skos:prefLabel "Article 31 - Prohibition of coercion"@en ;
     cml:realizedBy doc:article-31 ;
     cml:curationStatus cml:Proposed ;
+    cml:schemaVersion "2" ;   # regenerable — see CML_UPGRADE.md
     prov:wasDerivedFrom <https://ihl-databases.icrc.org/en/ihl-treaties/gciv-1949> ;
     dc:date "1949-08-12" ;
     values:category "International Humanitarian Law (Law of War)" ;
@@ -516,6 +547,7 @@ concept:gciv-1949-article-32 a cml:Concept ;
     skos:prefLabel "Article 32 - Prohibition of murder, torture, corporal punishment and other measures of brutality"@en ;
     cml:realizedBy doc:article-32 ;
     cml:curationStatus cml:Proposed ;
+    cml:schemaVersion "2" ;   # regenerable — see CML_UPGRADE.md
     prov:wasDerivedFrom <https://ihl-databases.icrc.org/en/ihl-treaties/gciv-1949> ;
     dc:date "1949-08-12" ;
     values:category "International Humanitarian Law (Law of War)" ;
@@ -532,6 +564,7 @@ concept:gciv-1949-article-33 a cml:Concept ;
     skos:prefLabel "Article 33 - Principle of individual responsibility and prohibitions of collective punishment, intimidation, terrorism, pillage and reprisals"@en ;
     cml:realizedBy doc:article-33 ;
     cml:curationStatus cml:Proposed ;
+    cml:schemaVersion "2" ;   # regenerable — see CML_UPGRADE.md
     prov:wasDerivedFrom <https://ihl-databases.icrc.org/en/ihl-treaties/gciv-1949> ;
     dc:date "1949-08-12" ;
     values:category "International Humanitarian Law (Law of War)" ;
@@ -548,6 +581,7 @@ concept:gciv-1949-article-34 a cml:Concept ;
     skos:prefLabel "Article 34 - Prohibition of hostage-taking"@en ;
     cml:realizedBy doc:article-34 ;
     cml:curationStatus cml:Proposed ;
+    cml:schemaVersion "2" ;   # regenerable — see CML_UPGRADE.md
     prov:wasDerivedFrom <https://ihl-databases.icrc.org/en/ihl-treaties/gciv-1949> ;
     dc:date "1949-08-12" ;
     values:category "International Humanitarian Law (Law of War)" ;
@@ -564,6 +598,7 @@ concept:gciv-1949-article-35 a cml:Concept ;
     skos:prefLabel "Article 35 - Right to leave the territory"@en ;
     cml:realizedBy doc:article-35 ;
     cml:curationStatus cml:Proposed ;
+    cml:schemaVersion "2" ;   # regenerable — see CML_UPGRADE.md
     prov:wasDerivedFrom <https://ihl-databases.icrc.org/en/ihl-treaties/gciv-1949> ;
     dc:date "1949-08-12" ;
     values:category "International Humanitarian Law (Law of War)" ;
@@ -580,6 +615,7 @@ concept:gciv-1949-article-36 a cml:Concept ;
     skos:prefLabel "Article 36 - Method of departure"@en ;
     cml:realizedBy doc:article-36 ;
     cml:curationStatus cml:Proposed ;
+    cml:schemaVersion "2" ;   # regenerable — see CML_UPGRADE.md
     prov:wasDerivedFrom <https://ihl-databases.icrc.org/en/ihl-treaties/gciv-1949> ;
     dc:date "1949-08-12" ;
     values:category "International Humanitarian Law (Law of War)" ;
@@ -596,6 +632,7 @@ concept:gciv-1949-article-37 a cml:Concept ;
     skos:prefLabel "Article 37 - Persons in confinement"@en ;
     cml:realizedBy doc:article-37 ;
     cml:curationStatus cml:Proposed ;
+    cml:schemaVersion "2" ;   # regenerable — see CML_UPGRADE.md
     prov:wasDerivedFrom <https://ihl-databases.icrc.org/en/ihl-treaties/gciv-1949> ;
     dc:date "1949-08-12" ;
     values:category "International Humanitarian Law (Law of War)" ;
@@ -612,6 +649,7 @@ concept:gciv-1949-article-38 a cml:Concept ;
     skos:prefLabel "Article 38 - Non-repatriated persons: General observations"@en ;
     cml:realizedBy doc:article-38 ;
     cml:curationStatus cml:Proposed ;
+    cml:schemaVersion "2" ;   # regenerable — see CML_UPGRADE.md
     prov:wasDerivedFrom <https://ihl-databases.icrc.org/en/ihl-treaties/gciv-1949> ;
     dc:date "1949-08-12" ;
     values:category "International Humanitarian Law (Law of War)" ;
@@ -628,6 +666,7 @@ concept:gciv-1949-article-39 a cml:Concept ;
     skos:prefLabel "Article 39 - Means of existence of non-repatriated persons"@en ;
     cml:realizedBy doc:article-39 ;
     cml:curationStatus cml:Proposed ;
+    cml:schemaVersion "2" ;   # regenerable — see CML_UPGRADE.md
     prov:wasDerivedFrom <https://ihl-databases.icrc.org/en/ihl-treaties/gciv-1949> ;
     dc:date "1949-08-12" ;
     values:category "International Humanitarian Law (Law of War)" ;
@@ -644,6 +683,7 @@ concept:gciv-1949-article-40 a cml:Concept ;
     skos:prefLabel "Article 40 - Employment of non-repatriated persons"@en ;
     cml:realizedBy doc:article-40 ;
     cml:curationStatus cml:Proposed ;
+    cml:schemaVersion "2" ;   # regenerable — see CML_UPGRADE.md
     prov:wasDerivedFrom <https://ihl-databases.icrc.org/en/ihl-treaties/gciv-1949> ;
     dc:date "1949-08-12" ;
     values:category "International Humanitarian Law (Law of War)" ;
@@ -660,6 +700,7 @@ concept:gciv-1949-article-41 a cml:Concept ;
     skos:prefLabel "Article 41 - Assigned residence or internment of protected persons"@en ;
     cml:realizedBy doc:article-41 ;
     cml:curationStatus cml:Proposed ;
+    cml:schemaVersion "2" ;   # regenerable — see CML_UPGRADE.md
     prov:wasDerivedFrom <https://ihl-databases.icrc.org/en/ihl-treaties/gciv-1949> ;
     dc:date "1949-08-12" ;
     values:category "International Humanitarian Law (Law of War)" ;
@@ -676,6 +717,7 @@ concept:gciv-1949-article-42 a cml:Concept ;
     skos:prefLabel "Article 42 - Grounds for internment or assigned residence of protected persons. Voluntary internment"@en ;
     cml:realizedBy doc:article-42 ;
     cml:curationStatus cml:Proposed ;
+    cml:schemaVersion "2" ;   # regenerable — see CML_UPGRADE.md
     prov:wasDerivedFrom <https://ihl-databases.icrc.org/en/ihl-treaties/gciv-1949> ;
     dc:date "1949-08-12" ;
     values:category "International Humanitarian Law (Law of War)" ;
@@ -692,6 +734,7 @@ concept:gciv-1949-article-43 a cml:Concept ;
     skos:prefLabel "Article 43 - Procedure for review of a decision to intern or place in assigned residence"@en ;
     cml:realizedBy doc:article-43 ;
     cml:curationStatus cml:Proposed ;
+    cml:schemaVersion "2" ;   # regenerable — see CML_UPGRADE.md
     prov:wasDerivedFrom <https://ihl-databases.icrc.org/en/ihl-treaties/gciv-1949> ;
     dc:date "1949-08-12" ;
     values:category "International Humanitarian Law (Law of War)" ;
@@ -708,6 +751,7 @@ concept:gciv-1949-article-44 a cml:Concept ;
     skos:prefLabel "Article 44 - Refugees"@en ;
     cml:realizedBy doc:article-44 ;
     cml:curationStatus cml:Proposed ;
+    cml:schemaVersion "2" ;   # regenerable — see CML_UPGRADE.md
     prov:wasDerivedFrom <https://ihl-databases.icrc.org/en/ihl-treaties/gciv-1949> ;
     dc:date "1949-08-12" ;
     values:category "International Humanitarian Law (Law of War)" ;
@@ -724,6 +768,7 @@ concept:gciv-1949-article-45 a cml:Concept ;
     skos:prefLabel "Article 45 - Transfer of protected persons to another Power"@en ;
     cml:realizedBy doc:article-45 ;
     cml:curationStatus cml:Proposed ;
+    cml:schemaVersion "2" ;   # regenerable — see CML_UPGRADE.md
     prov:wasDerivedFrom <https://ihl-databases.icrc.org/en/ihl-treaties/gciv-1949> ;
     dc:date "1949-08-12" ;
     values:category "International Humanitarian Law (Law of War)" ;
@@ -740,6 +785,7 @@ concept:gciv-1949-article-46 a cml:Concept ;
     skos:prefLabel "Article 46 - Cancellation of restrictive measures taken regarding protected persons"@en ;
     cml:realizedBy doc:article-46 ;
     cml:curationStatus cml:Proposed ;
+    cml:schemaVersion "2" ;   # regenerable — see CML_UPGRADE.md
     prov:wasDerivedFrom <https://ihl-databases.icrc.org/en/ihl-treaties/gciv-1949> ;
     dc:date "1949-08-12" ;
     values:category "International Humanitarian Law (Law of War)" ;
@@ -756,6 +802,7 @@ concept:gciv-1949-article-47 a cml:Concept ;
     skos:prefLabel "Article 47 - Inviolability of rights of protected persons"@en ;
     cml:realizedBy doc:article-47 ;
     cml:curationStatus cml:Proposed ;
+    cml:schemaVersion "2" ;   # regenerable — see CML_UPGRADE.md
     prov:wasDerivedFrom <https://ihl-databases.icrc.org/en/ihl-treaties/gciv-1949> ;
     dc:date "1949-08-12" ;
     values:category "International Humanitarian Law (Law of War)" ;
@@ -772,6 +819,7 @@ concept:gciv-1949-article-48 a cml:Concept ;
     skos:prefLabel "Article 48 - Right to leave occupied territory"@en ;
     cml:realizedBy doc:article-48 ;
     cml:curationStatus cml:Proposed ;
+    cml:schemaVersion "2" ;   # regenerable — see CML_UPGRADE.md
     prov:wasDerivedFrom <https://ihl-databases.icrc.org/en/ihl-treaties/gciv-1949> ;
     dc:date "1949-08-12" ;
     values:category "International Humanitarian Law (Law of War)" ;
@@ -788,6 +836,7 @@ concept:gciv-1949-article-49 a cml:Concept ;
     skos:prefLabel "Article 49 - Deportations, transfers, evacuations"@en ;
     cml:realizedBy doc:article-49 ;
     cml:curationStatus cml:Proposed ;
+    cml:schemaVersion "2" ;   # regenerable — see CML_UPGRADE.md
     prov:wasDerivedFrom <https://ihl-databases.icrc.org/en/ihl-treaties/gciv-1949> ;
     dc:date "1949-08-12" ;
     values:category "International Humanitarian Law (Law of War)" ;
@@ -804,6 +853,7 @@ concept:gciv-1949-article-50 a cml:Concept ;
     skos:prefLabel "Article 50 - Protection of children"@en ;
     cml:realizedBy doc:article-50 ;
     cml:curationStatus cml:Proposed ;
+    cml:schemaVersion "2" ;   # regenerable — see CML_UPGRADE.md
     prov:wasDerivedFrom <https://ihl-databases.icrc.org/en/ihl-treaties/gciv-1949> ;
     dc:date "1949-08-12" ;
     values:category "International Humanitarian Law (Law of War)" ;
@@ -820,6 +870,7 @@ concept:gciv-1949-article-51 a cml:Concept ;
     skos:prefLabel "Article 51 - Enlistment, labour"@en ;
     cml:realizedBy doc:article-51 ;
     cml:curationStatus cml:Proposed ;
+    cml:schemaVersion "2" ;   # regenerable — see CML_UPGRADE.md
     prov:wasDerivedFrom <https://ihl-databases.icrc.org/en/ihl-treaties/gciv-1949> ;
     dc:date "1949-08-12" ;
     values:category "International Humanitarian Law (Law of War)" ;
@@ -836,6 +887,7 @@ concept:gciv-1949-article-52 a cml:Concept ;
     skos:prefLabel "Article 52 - Protection of workers"@en ;
     cml:realizedBy doc:article-52 ;
     cml:curationStatus cml:Proposed ;
+    cml:schemaVersion "2" ;   # regenerable — see CML_UPGRADE.md
     prov:wasDerivedFrom <https://ihl-databases.icrc.org/en/ihl-treaties/gciv-1949> ;
     dc:date "1949-08-12" ;
     values:category "International Humanitarian Law (Law of War)" ;
@@ -852,6 +904,7 @@ concept:gciv-1949-article-53 a cml:Concept ;
     skos:prefLabel "Article 53 - Prohibited destruction of property"@en ;
     cml:realizedBy doc:article-53 ;
     cml:curationStatus cml:Proposed ;
+    cml:schemaVersion "2" ;   # regenerable — see CML_UPGRADE.md
     prov:wasDerivedFrom <https://ihl-databases.icrc.org/en/ihl-treaties/gciv-1949> ;
     dc:date "1949-08-12" ;
     values:category "International Humanitarian Law (Law of War)" ;
@@ -868,6 +921,7 @@ concept:gciv-1949-article-54 a cml:Concept ;
     skos:prefLabel "Article 54 - Judges and public officials"@en ;
     cml:realizedBy doc:article-54 ;
     cml:curationStatus cml:Proposed ;
+    cml:schemaVersion "2" ;   # regenerable — see CML_UPGRADE.md
     prov:wasDerivedFrom <https://ihl-databases.icrc.org/en/ihl-treaties/gciv-1949> ;
     dc:date "1949-08-12" ;
     values:category "International Humanitarian Law (Law of War)" ;
@@ -884,6 +938,7 @@ concept:gciv-1949-article-55 a cml:Concept ;
     skos:prefLabel "Article 55 - Food and medical supplies for the population"@en ;
     cml:realizedBy doc:article-55 ;
     cml:curationStatus cml:Proposed ;
+    cml:schemaVersion "2" ;   # regenerable — see CML_UPGRADE.md
     prov:wasDerivedFrom <https://ihl-databases.icrc.org/en/ihl-treaties/gciv-1949> ;
     dc:date "1949-08-12" ;
     values:category "International Humanitarian Law (Law of War)" ;
@@ -900,6 +955,7 @@ concept:gciv-1949-article-56 a cml:Concept ;
     skos:prefLabel "Article 56 - Hygiene and public health"@en ;
     cml:realizedBy doc:article-56 ;
     cml:curationStatus cml:Proposed ;
+    cml:schemaVersion "2" ;   # regenerable — see CML_UPGRADE.md
     prov:wasDerivedFrom <https://ihl-databases.icrc.org/en/ihl-treaties/gciv-1949> ;
     dc:date "1949-08-12" ;
     values:category "International Humanitarian Law (Law of War)" ;
@@ -916,6 +972,7 @@ concept:gciv-1949-article-57 a cml:Concept ;
     skos:prefLabel "Article 57 - Requisition of civilian hospitals"@en ;
     cml:realizedBy doc:article-57 ;
     cml:curationStatus cml:Proposed ;
+    cml:schemaVersion "2" ;   # regenerable — see CML_UPGRADE.md
     prov:wasDerivedFrom <https://ihl-databases.icrc.org/en/ihl-treaties/gciv-1949> ;
     dc:date "1949-08-12" ;
     values:category "International Humanitarian Law (Law of War)" ;
@@ -932,6 +989,7 @@ concept:gciv-1949-article-58 a cml:Concept ;
     skos:prefLabel "Article 58 - Spiritual assistance"@en ;
     cml:realizedBy doc:article-58 ;
     cml:curationStatus cml:Proposed ;
+    cml:schemaVersion "2" ;   # regenerable — see CML_UPGRADE.md
     prov:wasDerivedFrom <https://ihl-databases.icrc.org/en/ihl-treaties/gciv-1949> ;
     dc:date "1949-08-12" ;
     values:category "International Humanitarian Law (Law of War)" ;
@@ -948,6 +1006,7 @@ concept:gciv-1949-article-59 a cml:Concept ;
     skos:prefLabel "Article 59 - Collective relief in occupied territory"@en ;
     cml:realizedBy doc:article-59 ;
     cml:curationStatus cml:Proposed ;
+    cml:schemaVersion "2" ;   # regenerable — see CML_UPGRADE.md
     prov:wasDerivedFrom <https://ihl-databases.icrc.org/en/ihl-treaties/gciv-1949> ;
     dc:date "1949-08-12" ;
     values:category "International Humanitarian Law (Law of War)" ;
@@ -964,6 +1023,7 @@ concept:gciv-1949-article-60 a cml:Concept ;
     skos:prefLabel "Article 60 - Responsibilities of the Occupying Power"@en ;
     cml:realizedBy doc:article-60 ;
     cml:curationStatus cml:Proposed ;
+    cml:schemaVersion "2" ;   # regenerable — see CML_UPGRADE.md
     prov:wasDerivedFrom <https://ihl-databases.icrc.org/en/ihl-treaties/gciv-1949> ;
     dc:date "1949-08-12" ;
     values:category "International Humanitarian Law (Law of War)" ;
@@ -980,6 +1040,7 @@ concept:gciv-1949-article-61 a cml:Concept ;
     skos:prefLabel "Article 61 - Distribution of relief consignments in occupied territory"@en ;
     cml:realizedBy doc:article-61 ;
     cml:curationStatus cml:Proposed ;
+    cml:schemaVersion "2" ;   # regenerable — see CML_UPGRADE.md
     prov:wasDerivedFrom <https://ihl-databases.icrc.org/en/ihl-treaties/gciv-1949> ;
     dc:date "1949-08-12" ;
     values:category "International Humanitarian Law (Law of War)" ;
@@ -996,6 +1057,7 @@ concept:gciv-1949-article-62 a cml:Concept ;
     skos:prefLabel "Article 62 - Individual relief in occupied territory"@en ;
     cml:realizedBy doc:article-62 ;
     cml:curationStatus cml:Proposed ;
+    cml:schemaVersion "2" ;   # regenerable — see CML_UPGRADE.md
     prov:wasDerivedFrom <https://ihl-databases.icrc.org/en/ihl-treaties/gciv-1949> ;
     dc:date "1949-08-12" ;
     values:category "International Humanitarian Law (Law of War)" ;
@@ -1012,6 +1074,7 @@ concept:gciv-1949-article-63 a cml:Concept ;
     skos:prefLabel "Article 63 - National Red Cross and Red Crescent Societies, other relief societies and special organizations of a non-military character in occupied territory"@en ;
     cml:realizedBy doc:article-63 ;
     cml:curationStatus cml:Proposed ;
+    cml:schemaVersion "2" ;   # regenerable — see CML_UPGRADE.md
     prov:wasDerivedFrom <https://ihl-databases.icrc.org/en/ihl-treaties/gciv-1949> ;
     dc:date "1949-08-12" ;
     values:category "International Humanitarian Law (Law of War)" ;
@@ -1028,6 +1091,7 @@ concept:gciv-1949-article-64 a cml:Concept ;
     skos:prefLabel "Article 64 - Penal legislation: General observations"@en ;
     cml:realizedBy doc:article-64 ;
     cml:curationStatus cml:Proposed ;
+    cml:schemaVersion "2" ;   # regenerable — see CML_UPGRADE.md
     prov:wasDerivedFrom <https://ihl-databases.icrc.org/en/ihl-treaties/gciv-1949> ;
     dc:date "1949-08-12" ;
     values:category "International Humanitarian Law (Law of War)" ;
@@ -1044,6 +1108,7 @@ concept:gciv-1949-article-65 a cml:Concept ;
     skos:prefLabel "Article 65 - Publication of penal legislation"@en ;
     cml:realizedBy doc:article-65 ;
     cml:curationStatus cml:Proposed ;
+    cml:schemaVersion "2" ;   # regenerable — see CML_UPGRADE.md
     prov:wasDerivedFrom <https://ihl-databases.icrc.org/en/ihl-treaties/gciv-1949> ;
     dc:date "1949-08-12" ;
     values:category "International Humanitarian Law (Law of War)" ;
@@ -1060,6 +1125,7 @@ concept:gciv-1949-article-66 a cml:Concept ;
     skos:prefLabel "Article 66 - Competent courts"@en ;
     cml:realizedBy doc:article-66 ;
     cml:curationStatus cml:Proposed ;
+    cml:schemaVersion "2" ;   # regenerable — see CML_UPGRADE.md
     prov:wasDerivedFrom <https://ihl-databases.icrc.org/en/ihl-treaties/gciv-1949> ;
     dc:date "1949-08-12" ;
     values:category "International Humanitarian Law (Law of War)" ;
@@ -1076,6 +1142,7 @@ concept:gciv-1949-article-67 a cml:Concept ;
     skos:prefLabel "Article 67 - Applicable provisions"@en ;
     cml:realizedBy doc:article-67 ;
     cml:curationStatus cml:Proposed ;
+    cml:schemaVersion "2" ;   # regenerable — see CML_UPGRADE.md
     prov:wasDerivedFrom <https://ihl-databases.icrc.org/en/ihl-treaties/gciv-1949> ;
     dc:date "1949-08-12" ;
     values:category "International Humanitarian Law (Law of War)" ;
@@ -1092,6 +1159,7 @@ concept:gciv-1949-article-68 a cml:Concept ;
     skos:prefLabel "Article 68 - Penalities. Death penalty"@en ;
     cml:realizedBy doc:article-68 ;
     cml:curationStatus cml:Proposed ;
+    cml:schemaVersion "2" ;   # regenerable — see CML_UPGRADE.md
     prov:wasDerivedFrom <https://ihl-databases.icrc.org/en/ihl-treaties/gciv-1949> ;
     dc:date "1949-08-12" ;
     values:category "International Humanitarian Law (Law of War)" ;
@@ -1108,6 +1176,7 @@ concept:gciv-1949-article-69 a cml:Concept ;
     skos:prefLabel "Article 69 - Deduction from sentence of period spent under arrest"@en ;
     cml:realizedBy doc:article-69 ;
     cml:curationStatus cml:Proposed ;
+    cml:schemaVersion "2" ;   # regenerable — see CML_UPGRADE.md
     prov:wasDerivedFrom <https://ihl-databases.icrc.org/en/ihl-treaties/gciv-1949> ;
     dc:date "1949-08-12" ;
     values:category "International Humanitarian Law (Law of War)" ;
@@ -1124,6 +1193,7 @@ concept:gciv-1949-article-70 a cml:Concept ;
     skos:prefLabel "Article 70 - Offences committed before occupation"@en ;
     cml:realizedBy doc:article-70 ;
     cml:curationStatus cml:Proposed ;
+    cml:schemaVersion "2" ;   # regenerable — see CML_UPGRADE.md
     prov:wasDerivedFrom <https://ihl-databases.icrc.org/en/ihl-treaties/gciv-1949> ;
     dc:date "1949-08-12" ;
     values:category "International Humanitarian Law (Law of War)" ;
@@ -1140,6 +1210,7 @@ concept:gciv-1949-article-71 a cml:Concept ;
     skos:prefLabel "Article 71 - Penal procedure: General observations"@en ;
     cml:realizedBy doc:article-71 ;
     cml:curationStatus cml:Proposed ;
+    cml:schemaVersion "2" ;   # regenerable — see CML_UPGRADE.md
     prov:wasDerivedFrom <https://ihl-databases.icrc.org/en/ihl-treaties/gciv-1949> ;
     dc:date "1949-08-12" ;
     values:category "International Humanitarian Law (Law of War)" ;
@@ -1156,6 +1227,7 @@ concept:gciv-1949-article-72 a cml:Concept ;
     skos:prefLabel "Article 72 - Penal procedure: Right of defence"@en ;
     cml:realizedBy doc:article-72 ;
     cml:curationStatus cml:Proposed ;
+    cml:schemaVersion "2" ;   # regenerable — see CML_UPGRADE.md
     prov:wasDerivedFrom <https://ihl-databases.icrc.org/en/ihl-treaties/gciv-1949> ;
     dc:date "1949-08-12" ;
     values:category "International Humanitarian Law (Law of War)" ;
@@ -1172,6 +1244,7 @@ concept:gciv-1949-article-73 a cml:Concept ;
     skos:prefLabel "Article 73 - Penal procedure: Right of appeal"@en ;
     cml:realizedBy doc:article-73 ;
     cml:curationStatus cml:Proposed ;
+    cml:schemaVersion "2" ;   # regenerable — see CML_UPGRADE.md
     prov:wasDerivedFrom <https://ihl-databases.icrc.org/en/ihl-treaties/gciv-1949> ;
     dc:date "1949-08-12" ;
     values:category "International Humanitarian Law (Law of War)" ;
@@ -1188,6 +1261,7 @@ concept:gciv-1949-article-74 a cml:Concept ;
     skos:prefLabel "Article 74 - Penal procedure: Assistance by the Protecting Power"@en ;
     cml:realizedBy doc:article-74 ;
     cml:curationStatus cml:Proposed ;
+    cml:schemaVersion "2" ;   # regenerable — see CML_UPGRADE.md
     prov:wasDerivedFrom <https://ihl-databases.icrc.org/en/ihl-treaties/gciv-1949> ;
     dc:date "1949-08-12" ;
     values:category "International Humanitarian Law (Law of War)" ;
@@ -1204,6 +1278,7 @@ concept:gciv-1949-article-75 a cml:Concept ;
     skos:prefLabel "Article 75 - Penal procedure: Death sentence"@en ;
     cml:realizedBy doc:article-75 ;
     cml:curationStatus cml:Proposed ;
+    cml:schemaVersion "2" ;   # regenerable — see CML_UPGRADE.md
     prov:wasDerivedFrom <https://ihl-databases.icrc.org/en/ihl-treaties/gciv-1949> ;
     dc:date "1949-08-12" ;
     values:category "International Humanitarian Law (Law of War)" ;
@@ -1220,6 +1295,7 @@ concept:gciv-1949-article-76 a cml:Concept ;
     skos:prefLabel "Article 76 - Treatment of detainees"@en ;
     cml:realizedBy doc:article-76 ;
     cml:curationStatus cml:Proposed ;
+    cml:schemaVersion "2" ;   # regenerable — see CML_UPGRADE.md
     prov:wasDerivedFrom <https://ihl-databases.icrc.org/en/ihl-treaties/gciv-1949> ;
     dc:date "1949-08-12" ;
     values:category "International Humanitarian Law (Law of War)" ;
@@ -1236,6 +1312,7 @@ concept:gciv-1949-article-77 a cml:Concept ;
     skos:prefLabel "Article 77 - Handover of accused or convicted persons at the close of occupation"@en ;
     cml:realizedBy doc:article-77 ;
     cml:curationStatus cml:Proposed ;
+    cml:schemaVersion "2" ;   # regenerable — see CML_UPGRADE.md
     prov:wasDerivedFrom <https://ihl-databases.icrc.org/en/ihl-treaties/gciv-1949> ;
     dc:date "1949-08-12" ;
     values:category "International Humanitarian Law (Law of War)" ;
@@ -1252,6 +1329,7 @@ concept:gciv-1949-article-78 a cml:Concept ;
     skos:prefLabel "Article 78 - Internment and assigned residence in occupied territory"@en ;
     cml:realizedBy doc:article-78 ;
     cml:curationStatus cml:Proposed ;
+    cml:schemaVersion "2" ;   # regenerable — see CML_UPGRADE.md
     prov:wasDerivedFrom <https://ihl-databases.icrc.org/en/ihl-treaties/gciv-1949> ;
     dc:date "1949-08-12" ;
     values:category "International Humanitarian Law (Law of War)" ;
@@ -1268,6 +1346,7 @@ concept:gciv-1949-article-79 a cml:Concept ;
     skos:prefLabel "Article 79 - Cases of internment and applicable provisions"@en ;
     cml:realizedBy doc:article-79 ;
     cml:curationStatus cml:Proposed ;
+    cml:schemaVersion "2" ;   # regenerable — see CML_UPGRADE.md
     prov:wasDerivedFrom <https://ihl-databases.icrc.org/en/ihl-treaties/gciv-1949> ;
     dc:date "1949-08-12" ;
     values:category "International Humanitarian Law (Law of War)" ;
@@ -1284,6 +1363,7 @@ concept:gciv-1949-article-80 a cml:Concept ;
     skos:prefLabel "Article 80 - Civil capacity of internees"@en ;
     cml:realizedBy doc:article-80 ;
     cml:curationStatus cml:Proposed ;
+    cml:schemaVersion "2" ;   # regenerable — see CML_UPGRADE.md
     prov:wasDerivedFrom <https://ihl-databases.icrc.org/en/ihl-treaties/gciv-1949> ;
     dc:date "1949-08-12" ;
     values:category "International Humanitarian Law (Law of War)" ;
@@ -1300,6 +1380,7 @@ concept:gciv-1949-article-81 a cml:Concept ;
     skos:prefLabel "Article 81 - Maintenance of internees"@en ;
     cml:realizedBy doc:article-81 ;
     cml:curationStatus cml:Proposed ;
+    cml:schemaVersion "2" ;   # regenerable — see CML_UPGRADE.md
     prov:wasDerivedFrom <https://ihl-databases.icrc.org/en/ihl-treaties/gciv-1949> ;
     dc:date "1949-08-12" ;
     values:category "International Humanitarian Law (Law of War)" ;
@@ -1316,6 +1397,7 @@ concept:gciv-1949-article-82 a cml:Concept ;
     skos:prefLabel "Article 82 - Grouping of internees"@en ;
     cml:realizedBy doc:article-82 ;
     cml:curationStatus cml:Proposed ;
+    cml:schemaVersion "2" ;   # regenerable — see CML_UPGRADE.md
     prov:wasDerivedFrom <https://ihl-databases.icrc.org/en/ihl-treaties/gciv-1949> ;
     dc:date "1949-08-12" ;
     values:category "International Humanitarian Law (Law of War)" ;
@@ -1332,6 +1414,7 @@ concept:gciv-1949-article-83 a cml:Concept ;
     skos:prefLabel "Article 83 - Location and marking of places of internment"@en ;
     cml:realizedBy doc:article-83 ;
     cml:curationStatus cml:Proposed ;
+    cml:schemaVersion "2" ;   # regenerable — see CML_UPGRADE.md
     prov:wasDerivedFrom <https://ihl-databases.icrc.org/en/ihl-treaties/gciv-1949> ;
     dc:date "1949-08-12" ;
     values:category "International Humanitarian Law (Law of War)" ;
@@ -1348,6 +1431,7 @@ concept:gciv-1949-article-84 a cml:Concept ;
     skos:prefLabel "Article 84 - Separate internment"@en ;
     cml:realizedBy doc:article-84 ;
     cml:curationStatus cml:Proposed ;
+    cml:schemaVersion "2" ;   # regenerable — see CML_UPGRADE.md
     prov:wasDerivedFrom <https://ihl-databases.icrc.org/en/ihl-treaties/gciv-1949> ;
     dc:date "1949-08-12" ;
     values:category "International Humanitarian Law (Law of War)" ;
@@ -1364,6 +1448,7 @@ concept:gciv-1949-article-85 a cml:Concept ;
     skos:prefLabel "Article 85 - Accommodation and hygiene"@en ;
     cml:realizedBy doc:article-85 ;
     cml:curationStatus cml:Proposed ;
+    cml:schemaVersion "2" ;   # regenerable — see CML_UPGRADE.md
     prov:wasDerivedFrom <https://ihl-databases.icrc.org/en/ihl-treaties/gciv-1949> ;
     dc:date "1949-08-12" ;
     values:category "International Humanitarian Law (Law of War)" ;
@@ -1380,6 +1465,7 @@ concept:gciv-1949-article-86 a cml:Concept ;
     skos:prefLabel "Article 86 - Premises for religious services"@en ;
     cml:realizedBy doc:article-86 ;
     cml:curationStatus cml:Proposed ;
+    cml:schemaVersion "2" ;   # regenerable — see CML_UPGRADE.md
     prov:wasDerivedFrom <https://ihl-databases.icrc.org/en/ihl-treaties/gciv-1949> ;
     dc:date "1949-08-12" ;
     values:category "International Humanitarian Law (Law of War)" ;
@@ -1396,6 +1482,7 @@ concept:gciv-1949-article-87 a cml:Concept ;
     skos:prefLabel "Article 87 - Canteens"@en ;
     cml:realizedBy doc:article-87 ;
     cml:curationStatus cml:Proposed ;
+    cml:schemaVersion "2" ;   # regenerable — see CML_UPGRADE.md
     prov:wasDerivedFrom <https://ihl-databases.icrc.org/en/ihl-treaties/gciv-1949> ;
     dc:date "1949-08-12" ;
     values:category "International Humanitarian Law (Law of War)" ;
@@ -1412,6 +1499,7 @@ concept:gciv-1949-article-88 a cml:Concept ;
     skos:prefLabel "Article 88 - Air raid shelters. Protective measures"@en ;
     cml:realizedBy doc:article-88 ;
     cml:curationStatus cml:Proposed ;
+    cml:schemaVersion "2" ;   # regenerable — see CML_UPGRADE.md
     prov:wasDerivedFrom <https://ihl-databases.icrc.org/en/ihl-treaties/gciv-1949> ;
     dc:date "1949-08-12" ;
     values:category "International Humanitarian Law (Law of War)" ;
@@ -1428,6 +1516,7 @@ concept:gciv-1949-article-89 a cml:Concept ;
     skos:prefLabel "Article 89 - Food"@en ;
     cml:realizedBy doc:article-89 ;
     cml:curationStatus cml:Proposed ;
+    cml:schemaVersion "2" ;   # regenerable — see CML_UPGRADE.md
     prov:wasDerivedFrom <https://ihl-databases.icrc.org/en/ihl-treaties/gciv-1949> ;
     dc:date "1949-08-12" ;
     values:category "International Humanitarian Law (Law of War)" ;
@@ -1444,6 +1533,7 @@ concept:gciv-1949-article-90 a cml:Concept ;
     skos:prefLabel "Article 90 - Clothing"@en ;
     cml:realizedBy doc:article-90 ;
     cml:curationStatus cml:Proposed ;
+    cml:schemaVersion "2" ;   # regenerable — see CML_UPGRADE.md
     prov:wasDerivedFrom <https://ihl-databases.icrc.org/en/ihl-treaties/gciv-1949> ;
     dc:date "1949-08-12" ;
     values:category "International Humanitarian Law (Law of War)" ;
@@ -1460,6 +1550,7 @@ concept:gciv-1949-article-91 a cml:Concept ;
     skos:prefLabel "Article 91 - Medical attention"@en ;
     cml:realizedBy doc:article-91 ;
     cml:curationStatus cml:Proposed ;
+    cml:schemaVersion "2" ;   # regenerable — see CML_UPGRADE.md
     prov:wasDerivedFrom <https://ihl-databases.icrc.org/en/ihl-treaties/gciv-1949> ;
     dc:date "1949-08-12" ;
     values:category "International Humanitarian Law (Law of War)" ;
@@ -1476,6 +1567,7 @@ concept:gciv-1949-article-92 a cml:Concept ;
     skos:prefLabel "Article 92 - Medical inspections"@en ;
     cml:realizedBy doc:article-92 ;
     cml:curationStatus cml:Proposed ;
+    cml:schemaVersion "2" ;   # regenerable — see CML_UPGRADE.md
     prov:wasDerivedFrom <https://ihl-databases.icrc.org/en/ihl-treaties/gciv-1949> ;
     dc:date "1949-08-12" ;
     values:category "International Humanitarian Law (Law of War)" ;
@@ -1492,6 +1584,7 @@ concept:gciv-1949-article-93 a cml:Concept ;
     skos:prefLabel "Article 93 - Religious duties"@en ;
     cml:realizedBy doc:article-93 ;
     cml:curationStatus cml:Proposed ;
+    cml:schemaVersion "2" ;   # regenerable — see CML_UPGRADE.md
     prov:wasDerivedFrom <https://ihl-databases.icrc.org/en/ihl-treaties/gciv-1949> ;
     dc:date "1949-08-12" ;
     values:category "International Humanitarian Law (Law of War)" ;
@@ -1508,6 +1601,7 @@ concept:gciv-1949-article-94 a cml:Concept ;
     skos:prefLabel "Article 94 - Intellectual, educational and recreational pursuits"@en ;
     cml:realizedBy doc:article-94 ;
     cml:curationStatus cml:Proposed ;
+    cml:schemaVersion "2" ;   # regenerable — see CML_UPGRADE.md
     prov:wasDerivedFrom <https://ihl-databases.icrc.org/en/ihl-treaties/gciv-1949> ;
     dc:date "1949-08-12" ;
     values:category "International Humanitarian Law (Law of War)" ;
@@ -1524,6 +1618,7 @@ concept:gciv-1949-article-95 a cml:Concept ;
     skos:prefLabel "Article 95 - Working conditions"@en ;
     cml:realizedBy doc:article-95 ;
     cml:curationStatus cml:Proposed ;
+    cml:schemaVersion "2" ;   # regenerable — see CML_UPGRADE.md
     prov:wasDerivedFrom <https://ihl-databases.icrc.org/en/ihl-treaties/gciv-1949> ;
     dc:date "1949-08-12" ;
     values:category "International Humanitarian Law (Law of War)" ;
@@ -1540,6 +1635,7 @@ concept:gciv-1949-article-96 a cml:Concept ;
     skos:prefLabel "Article 96 - Labour detachments"@en ;
     cml:realizedBy doc:article-96 ;
     cml:curationStatus cml:Proposed ;
+    cml:schemaVersion "2" ;   # regenerable — see CML_UPGRADE.md
     prov:wasDerivedFrom <https://ihl-databases.icrc.org/en/ihl-treaties/gciv-1949> ;
     dc:date "1949-08-12" ;
     values:category "International Humanitarian Law (Law of War)" ;
@@ -1556,6 +1652,7 @@ concept:gciv-1949-article-97 a cml:Concept ;
     skos:prefLabel "Article 97 - Valuables and personal effects"@en ;
     cml:realizedBy doc:article-97 ;
     cml:curationStatus cml:Proposed ;
+    cml:schemaVersion "2" ;   # regenerable — see CML_UPGRADE.md
     prov:wasDerivedFrom <https://ihl-databases.icrc.org/en/ihl-treaties/gciv-1949> ;
     dc:date "1949-08-12" ;
     values:category "International Humanitarian Law (Law of War)" ;
@@ -1572,6 +1669,7 @@ concept:gciv-1949-article-98 a cml:Concept ;
     skos:prefLabel "Article 98 - Financial resources and individual accounts"@en ;
     cml:realizedBy doc:article-98 ;
     cml:curationStatus cml:Proposed ;
+    cml:schemaVersion "2" ;   # regenerable — see CML_UPGRADE.md
     prov:wasDerivedFrom <https://ihl-databases.icrc.org/en/ihl-treaties/gciv-1949> ;
     dc:date "1949-08-12" ;
     values:category "International Humanitarian Law (Law of War)" ;
@@ -1588,6 +1686,7 @@ concept:gciv-1949-article-99 a cml:Concept ;
     skos:prefLabel "Article 99 - Administration of places of internment. Posting of the Conventions and of orders"@en ;
     cml:realizedBy doc:article-99 ;
     cml:curationStatus cml:Proposed ;
+    cml:schemaVersion "2" ;   # regenerable — see CML_UPGRADE.md
     prov:wasDerivedFrom <https://ihl-databases.icrc.org/en/ihl-treaties/gciv-1949> ;
     dc:date "1949-08-12" ;
     values:category "International Humanitarian Law (Law of War)" ;
@@ -1604,6 +1703,7 @@ concept:gciv-1949-article-100 a cml:Concept ;
     skos:prefLabel "Article 100 - Disciplinary regime in places of internment"@en ;
     cml:realizedBy doc:article-100 ;
     cml:curationStatus cml:Proposed ;
+    cml:schemaVersion "2" ;   # regenerable — see CML_UPGRADE.md
     prov:wasDerivedFrom <https://ihl-databases.icrc.org/en/ihl-treaties/gciv-1949> ;
     dc:date "1949-08-12" ;
     values:category "International Humanitarian Law (Law of War)" ;
@@ -1620,6 +1720,7 @@ concept:gciv-1949-article-101 a cml:Concept ;
     skos:prefLabel "Article 101 - Complaints and petitions of internees"@en ;
     cml:realizedBy doc:article-101 ;
     cml:curationStatus cml:Proposed ;
+    cml:schemaVersion "2" ;   # regenerable — see CML_UPGRADE.md
     prov:wasDerivedFrom <https://ihl-databases.icrc.org/en/ihl-treaties/gciv-1949> ;
     dc:date "1949-08-12" ;
     values:category "International Humanitarian Law (Law of War)" ;
@@ -1636,6 +1737,7 @@ concept:gciv-1949-article-102 a cml:Concept ;
     skos:prefLabel "Article 102 - Election of members of Internee Committees"@en ;
     cml:realizedBy doc:article-102 ;
     cml:curationStatus cml:Proposed ;
+    cml:schemaVersion "2" ;   # regenerable — see CML_UPGRADE.md
     prov:wasDerivedFrom <https://ihl-databases.icrc.org/en/ihl-treaties/gciv-1949> ;
     dc:date "1949-08-12" ;
     values:category "International Humanitarian Law (Law of War)" ;
@@ -1652,6 +1754,7 @@ concept:gciv-1949-article-103 a cml:Concept ;
     skos:prefLabel "Article 103 - Duties of Internee Committees"@en ;
     cml:realizedBy doc:article-103 ;
     cml:curationStatus cml:Proposed ;
+    cml:schemaVersion "2" ;   # regenerable — see CML_UPGRADE.md
     prov:wasDerivedFrom <https://ihl-databases.icrc.org/en/ihl-treaties/gciv-1949> ;
     dc:date "1949-08-12" ;
     values:category "International Humanitarian Law (Law of War)" ;
@@ -1668,6 +1771,7 @@ concept:gciv-1949-article-104 a cml:Concept ;
     skos:prefLabel "Article 104 - Prerogatives of members of Internee Committees"@en ;
     cml:realizedBy doc:article-104 ;
     cml:curationStatus cml:Proposed ;
+    cml:schemaVersion "2" ;   # regenerable — see CML_UPGRADE.md
     prov:wasDerivedFrom <https://ihl-databases.icrc.org/en/ihl-treaties/gciv-1949> ;
     dc:date "1949-08-12" ;
     values:category "International Humanitarian Law (Law of War)" ;
@@ -1684,6 +1788,7 @@ concept:gciv-1949-article-105 a cml:Concept ;
     skos:prefLabel "Article 105 - Information regarding measures taken"@en ;
     cml:realizedBy doc:article-105 ;
     cml:curationStatus cml:Proposed ;
+    cml:schemaVersion "2" ;   # regenerable — see CML_UPGRADE.md
     prov:wasDerivedFrom <https://ihl-databases.icrc.org/en/ihl-treaties/gciv-1949> ;
     dc:date "1949-08-12" ;
     values:category "International Humanitarian Law (Law of War)" ;
@@ -1700,6 +1805,7 @@ concept:gciv-1949-article-106 a cml:Concept ;
     skos:prefLabel "Article 106 - Internment cards"@en ;
     cml:realizedBy doc:article-106 ;
     cml:curationStatus cml:Proposed ;
+    cml:schemaVersion "2" ;   # regenerable — see CML_UPGRADE.md
     prov:wasDerivedFrom <https://ihl-databases.icrc.org/en/ihl-treaties/gciv-1949> ;
     dc:date "1949-08-12" ;
     values:category "International Humanitarian Law (Law of War)" ;
@@ -1716,6 +1822,7 @@ concept:gciv-1949-article-107 a cml:Concept ;
     skos:prefLabel "Article 107 - Correspondence"@en ;
     cml:realizedBy doc:article-107 ;
     cml:curationStatus cml:Proposed ;
+    cml:schemaVersion "2" ;   # regenerable — see CML_UPGRADE.md
     prov:wasDerivedFrom <https://ihl-databases.icrc.org/en/ihl-treaties/gciv-1949> ;
     dc:date "1949-08-12" ;
     values:category "International Humanitarian Law (Law of War)" ;
@@ -1732,6 +1839,7 @@ concept:gciv-1949-article-108 a cml:Concept ;
     skos:prefLabel "Article 108 - Relief shipments for internees: General principles"@en ;
     cml:realizedBy doc:article-108 ;
     cml:curationStatus cml:Proposed ;
+    cml:schemaVersion "2" ;   # regenerable — see CML_UPGRADE.md
     prov:wasDerivedFrom <https://ihl-databases.icrc.org/en/ihl-treaties/gciv-1949> ;
     dc:date "1949-08-12" ;
     values:category "International Humanitarian Law (Law of War)" ;
@@ -1748,6 +1856,7 @@ concept:gciv-1949-article-109 a cml:Concept ;
     skos:prefLabel "Article 109 - Collective relief shipments for internees"@en ;
     cml:realizedBy doc:article-109 ;
     cml:curationStatus cml:Proposed ;
+    cml:schemaVersion "2" ;   # regenerable — see CML_UPGRADE.md
     prov:wasDerivedFrom <https://ihl-databases.icrc.org/en/ihl-treaties/gciv-1949> ;
     dc:date "1949-08-12" ;
     values:category "International Humanitarian Law (Law of War)" ;
@@ -1764,6 +1873,7 @@ concept:gciv-1949-article-110 a cml:Concept ;
     skos:prefLabel "Article 110 - Relief shipments for internees: Exemption from charges and duties"@en ;
     cml:realizedBy doc:article-110 ;
     cml:curationStatus cml:Proposed ;
+    cml:schemaVersion "2" ;   # regenerable — see CML_UPGRADE.md
     prov:wasDerivedFrom <https://ihl-databases.icrc.org/en/ihl-treaties/gciv-1949> ;
     dc:date "1949-08-12" ;
     values:category "International Humanitarian Law (Law of War)" ;
@@ -1780,6 +1890,7 @@ concept:gciv-1949-article-111 a cml:Concept ;
     skos:prefLabel "Article 111 - Special means of transport"@en ;
     cml:realizedBy doc:article-111 ;
     cml:curationStatus cml:Proposed ;
+    cml:schemaVersion "2" ;   # regenerable — see CML_UPGRADE.md
     prov:wasDerivedFrom <https://ihl-databases.icrc.org/en/ihl-treaties/gciv-1949> ;
     dc:date "1949-08-12" ;
     values:category "International Humanitarian Law (Law of War)" ;
@@ -1796,6 +1907,7 @@ concept:gciv-1949-article-112 a cml:Concept ;
     skos:prefLabel "Article 112 - Censorship and examination"@en ;
     cml:realizedBy doc:article-112 ;
     cml:curationStatus cml:Proposed ;
+    cml:schemaVersion "2" ;   # regenerable — see CML_UPGRADE.md
     prov:wasDerivedFrom <https://ihl-databases.icrc.org/en/ihl-treaties/gciv-1949> ;
     dc:date "1949-08-12" ;
     values:category "International Humanitarian Law (Law of War)" ;
@@ -1812,6 +1924,7 @@ concept:gciv-1949-article-113 a cml:Concept ;
     skos:prefLabel "Article 113 - Execution and transmission of documents"@en ;
     cml:realizedBy doc:article-113 ;
     cml:curationStatus cml:Proposed ;
+    cml:schemaVersion "2" ;   # regenerable — see CML_UPGRADE.md
     prov:wasDerivedFrom <https://ihl-databases.icrc.org/en/ihl-treaties/gciv-1949> ;
     dc:date "1949-08-12" ;
     values:category "International Humanitarian Law (Law of War)" ;
@@ -1828,6 +1941,7 @@ concept:gciv-1949-article-114 a cml:Concept ;
     skos:prefLabel "Article 114 - Management of internees’ property"@en ;
     cml:realizedBy doc:article-114 ;
     cml:curationStatus cml:Proposed ;
+    cml:schemaVersion "2" ;   # regenerable — see CML_UPGRADE.md
     prov:wasDerivedFrom <https://ihl-databases.icrc.org/en/ihl-treaties/gciv-1949> ;
     dc:date "1949-08-12" ;
     values:category "International Humanitarian Law (Law of War)" ;
@@ -1844,6 +1958,7 @@ concept:gciv-1949-article-115 a cml:Concept ;
     skos:prefLabel "Article 115 - Facilities for preparation and conduct of cases"@en ;
     cml:realizedBy doc:article-115 ;
     cml:curationStatus cml:Proposed ;
+    cml:schemaVersion "2" ;   # regenerable — see CML_UPGRADE.md
     prov:wasDerivedFrom <https://ihl-databases.icrc.org/en/ihl-treaties/gciv-1949> ;
     dc:date "1949-08-12" ;
     values:category "International Humanitarian Law (Law of War)" ;
@@ -1860,6 +1975,7 @@ concept:gciv-1949-article-116 a cml:Concept ;
     skos:prefLabel "Article 116 - Visits"@en ;
     cml:realizedBy doc:article-116 ;
     cml:curationStatus cml:Proposed ;
+    cml:schemaVersion "2" ;   # regenerable — see CML_UPGRADE.md
     prov:wasDerivedFrom <https://ihl-databases.icrc.org/en/ihl-treaties/gciv-1949> ;
     dc:date "1949-08-12" ;
     values:category "International Humanitarian Law (Law of War)" ;
@@ -1876,6 +1992,7 @@ concept:gciv-1949-article-117 a cml:Concept ;
     skos:prefLabel "Article 117 - Applicable legislation and prohibition of double jeopardy"@en ;
     cml:realizedBy doc:article-117 ;
     cml:curationStatus cml:Proposed ;
+    cml:schemaVersion "2" ;   # regenerable — see CML_UPGRADE.md
     prov:wasDerivedFrom <https://ihl-databases.icrc.org/en/ihl-treaties/gciv-1949> ;
     dc:date "1949-08-12" ;
     values:category "International Humanitarian Law (Law of War)" ;
@@ -1892,6 +2009,7 @@ concept:gciv-1949-article-118 a cml:Concept ;
     skos:prefLabel "Article 118 - Penalties"@en ;
     cml:realizedBy doc:article-118 ;
     cml:curationStatus cml:Proposed ;
+    cml:schemaVersion "2" ;   # regenerable — see CML_UPGRADE.md
     prov:wasDerivedFrom <https://ihl-databases.icrc.org/en/ihl-treaties/gciv-1949> ;
     dc:date "1949-08-12" ;
     values:category "International Humanitarian Law (Law of War)" ;
@@ -1908,6 +2026,7 @@ concept:gciv-1949-article-119 a cml:Concept ;
     skos:prefLabel "Article 119 - Disciplinary punishments"@en ;
     cml:realizedBy doc:article-119 ;
     cml:curationStatus cml:Proposed ;
+    cml:schemaVersion "2" ;   # regenerable — see CML_UPGRADE.md
     prov:wasDerivedFrom <https://ihl-databases.icrc.org/en/ihl-treaties/gciv-1949> ;
     dc:date "1949-08-12" ;
     values:category "International Humanitarian Law (Law of War)" ;
@@ -1924,6 +2043,7 @@ concept:gciv-1949-article-120 a cml:Concept ;
     skos:prefLabel "Article 120 - Escapes"@en ;
     cml:realizedBy doc:article-120 ;
     cml:curationStatus cml:Proposed ;
+    cml:schemaVersion "2" ;   # regenerable — see CML_UPGRADE.md
     prov:wasDerivedFrom <https://ihl-databases.icrc.org/en/ihl-treaties/gciv-1949> ;
     dc:date "1949-08-12" ;
     values:category "International Humanitarian Law (Law of War)" ;
@@ -1940,6 +2060,7 @@ concept:gciv-1949-article-121 a cml:Concept ;
     skos:prefLabel "Article 121 - Punishment of offences connected to escapes. Choice of disciplinary or judicial proceedings"@en ;
     cml:realizedBy doc:article-121 ;
     cml:curationStatus cml:Proposed ;
+    cml:schemaVersion "2" ;   # regenerable — see CML_UPGRADE.md
     prov:wasDerivedFrom <https://ihl-databases.icrc.org/en/ihl-treaties/gciv-1949> ;
     dc:date "1949-08-12" ;
     values:category "International Humanitarian Law (Law of War)" ;
@@ -1956,6 +2077,7 @@ concept:gciv-1949-article-122 a cml:Concept ;
     skos:prefLabel "Article 122 - Disciplinary procedure: Investigations and confinement awaiting hearing"@en ;
     cml:realizedBy doc:article-122 ;
     cml:curationStatus cml:Proposed ;
+    cml:schemaVersion "2" ;   # regenerable — see CML_UPGRADE.md
     prov:wasDerivedFrom <https://ihl-databases.icrc.org/en/ihl-treaties/gciv-1949> ;
     dc:date "1949-08-12" ;
     values:category "International Humanitarian Law (Law of War)" ;
@@ -1972,6 +2094,7 @@ concept:gciv-1949-article-123 a cml:Concept ;
     skos:prefLabel "Article 123 - Disciplinary procedure: Competent authorities, rights of defence and timing of punishments"@en ;
     cml:realizedBy doc:article-123 ;
     cml:curationStatus cml:Proposed ;
+    cml:schemaVersion "2" ;   # regenerable — see CML_UPGRADE.md
     prov:wasDerivedFrom <https://ihl-databases.icrc.org/en/ihl-treaties/gciv-1949> ;
     dc:date "1949-08-12" ;
     values:category "International Humanitarian Law (Law of War)" ;
@@ -1988,6 +2111,7 @@ concept:gciv-1949-article-124 a cml:Concept ;
     skos:prefLabel "Article 124 - Premises for disciplinary punishments"@en ;
     cml:realizedBy doc:article-124 ;
     cml:curationStatus cml:Proposed ;
+    cml:schemaVersion "2" ;   # regenerable — see CML_UPGRADE.md
     prov:wasDerivedFrom <https://ihl-databases.icrc.org/en/ihl-treaties/gciv-1949> ;
     dc:date "1949-08-12" ;
     values:category "International Humanitarian Law (Law of War)" ;
@@ -2004,6 +2128,7 @@ concept:gciv-1949-article-125 a cml:Concept ;
     skos:prefLabel "Article 125 - Essential safeguards for the execution of disciplinary punishments"@en ;
     cml:realizedBy doc:article-125 ;
     cml:curationStatus cml:Proposed ;
+    cml:schemaVersion "2" ;   # regenerable — see CML_UPGRADE.md
     prov:wasDerivedFrom <https://ihl-databases.icrc.org/en/ihl-treaties/gciv-1949> ;
     dc:date "1949-08-12" ;
     values:category "International Humanitarian Law (Law of War)" ;
@@ -2020,6 +2145,7 @@ concept:gciv-1949-article-126 a cml:Concept ;
     skos:prefLabel "Article 126 - Provisions applicable to judicial proceedings"@en ;
     cml:realizedBy doc:article-126 ;
     cml:curationStatus cml:Proposed ;
+    cml:schemaVersion "2" ;   # regenerable — see CML_UPGRADE.md
     prov:wasDerivedFrom <https://ihl-databases.icrc.org/en/ihl-treaties/gciv-1949> ;
     dc:date "1949-08-12" ;
     values:category "International Humanitarian Law (Law of War)" ;
@@ -2036,6 +2162,7 @@ concept:gciv-1949-article-127 a cml:Concept ;
     skos:prefLabel "Article 127 - Conditions for transfer of internees and circumstances precluding transfer"@en ;
     cml:realizedBy doc:article-127 ;
     cml:curationStatus cml:Proposed ;
+    cml:schemaVersion "2" ;   # regenerable — see CML_UPGRADE.md
     prov:wasDerivedFrom <https://ihl-databases.icrc.org/en/ihl-treaties/gciv-1949> ;
     dc:date "1949-08-12" ;
     values:category "International Humanitarian Law (Law of War)" ;
@@ -2052,6 +2179,7 @@ concept:gciv-1949-article-128 a cml:Concept ;
     skos:prefLabel "Article 128 - Procedure for transfer of internees"@en ;
     cml:realizedBy doc:article-128 ;
     cml:curationStatus cml:Proposed ;
+    cml:schemaVersion "2" ;   # regenerable — see CML_UPGRADE.md
     prov:wasDerivedFrom <https://ihl-databases.icrc.org/en/ihl-treaties/gciv-1949> ;
     dc:date "1949-08-12" ;
     values:category "International Humanitarian Law (Law of War)" ;
@@ -2068,6 +2196,7 @@ concept:gciv-1949-article-129 a cml:Concept ;
     skos:prefLabel "Article 129 - Prescriptions regarding the dead: Wills and death certificates"@en ;
     cml:realizedBy doc:article-129 ;
     cml:curationStatus cml:Proposed ;
+    cml:schemaVersion "2" ;   # regenerable — see CML_UPGRADE.md
     prov:wasDerivedFrom <https://ihl-databases.icrc.org/en/ihl-treaties/gciv-1949> ;
     dc:date "1949-08-12" ;
     values:category "International Humanitarian Law (Law of War)" ;
@@ -2084,6 +2213,7 @@ concept:gciv-1949-article-130 a cml:Concept ;
     skos:prefLabel "Article 130 - Prescriptions regarding the dead: Burial and cremation"@en ;
     cml:realizedBy doc:article-130 ;
     cml:curationStatus cml:Proposed ;
+    cml:schemaVersion "2" ;   # regenerable — see CML_UPGRADE.md
     prov:wasDerivedFrom <https://ihl-databases.icrc.org/en/ihl-treaties/gciv-1949> ;
     dc:date "1949-08-12" ;
     values:category "International Humanitarian Law (Law of War)" ;
@@ -2100,6 +2230,7 @@ concept:gciv-1949-article-131 a cml:Concept ;
     skos:prefLabel "Article 131 - Internees killed or injured in special circumstances"@en ;
     cml:realizedBy doc:article-131 ;
     cml:curationStatus cml:Proposed ;
+    cml:schemaVersion "2" ;   # regenerable — see CML_UPGRADE.md
     prov:wasDerivedFrom <https://ihl-databases.icrc.org/en/ihl-treaties/gciv-1949> ;
     dc:date "1949-08-12" ;
     values:category "International Humanitarian Law (Law of War)" ;
@@ -2116,6 +2247,7 @@ concept:gciv-1949-article-132 a cml:Concept ;
     skos:prefLabel "Article 132 - Release, repatriation, return to places of residence and accommodation in neutral countries during hostilities or occupation"@en ;
     cml:realizedBy doc:article-132 ;
     cml:curationStatus cml:Proposed ;
+    cml:schemaVersion "2" ;   # regenerable — see CML_UPGRADE.md
     prov:wasDerivedFrom <https://ihl-databases.icrc.org/en/ihl-treaties/gciv-1949> ;
     dc:date "1949-08-12" ;
     values:category "International Humanitarian Law (Law of War)" ;
@@ -2132,6 +2264,7 @@ concept:gciv-1949-article-133 a cml:Concept ;
     skos:prefLabel "Article 133 - Release after the close of hostilities"@en ;
     cml:realizedBy doc:article-133 ;
     cml:curationStatus cml:Proposed ;
+    cml:schemaVersion "2" ;   # regenerable — see CML_UPGRADE.md
     prov:wasDerivedFrom <https://ihl-databases.icrc.org/en/ihl-treaties/gciv-1949> ;
     dc:date "1949-08-12" ;
     values:category "International Humanitarian Law (Law of War)" ;
@@ -2148,6 +2281,7 @@ concept:gciv-1949-article-134 a cml:Concept ;
     skos:prefLabel "Article 134 - Return to last place of residence or repatriation"@en ;
     cml:realizedBy doc:article-134 ;
     cml:curationStatus cml:Proposed ;
+    cml:schemaVersion "2" ;   # regenerable — see CML_UPGRADE.md
     prov:wasDerivedFrom <https://ihl-databases.icrc.org/en/ihl-treaties/gciv-1949> ;
     dc:date "1949-08-12" ;
     values:category "International Humanitarian Law (Law of War)" ;
@@ -2164,6 +2298,7 @@ concept:gciv-1949-article-135 a cml:Concept ;
     skos:prefLabel "Article 135 - Costs of return, repatriation or transfer"@en ;
     cml:realizedBy doc:article-135 ;
     cml:curationStatus cml:Proposed ;
+    cml:schemaVersion "2" ;   # regenerable — see CML_UPGRADE.md
     prov:wasDerivedFrom <https://ihl-databases.icrc.org/en/ihl-treaties/gciv-1949> ;
     dc:date "1949-08-12" ;
     values:category "International Humanitarian Law (Law of War)" ;
@@ -2180,6 +2315,7 @@ concept:gciv-1949-article-136 a cml:Concept ;
     skos:prefLabel "Article 136 - National information bureaux"@en ;
     cml:realizedBy doc:article-136 ;
     cml:curationStatus cml:Proposed ;
+    cml:schemaVersion "2" ;   # regenerable — see CML_UPGRADE.md
     prov:wasDerivedFrom <https://ihl-databases.icrc.org/en/ihl-treaties/gciv-1949> ;
     dc:date "1949-08-12" ;
     values:category "International Humanitarian Law (Law of War)" ;
@@ -2196,6 +2332,7 @@ concept:gciv-1949-article-137 a cml:Concept ;
     skos:prefLabel "Article 137 - Transmission of information by the national information bureaux"@en ;
     cml:realizedBy doc:article-137 ;
     cml:curationStatus cml:Proposed ;
+    cml:schemaVersion "2" ;   # regenerable — see CML_UPGRADE.md
     prov:wasDerivedFrom <https://ihl-databases.icrc.org/en/ihl-treaties/gciv-1949> ;
     dc:date "1949-08-12" ;
     values:category "International Humanitarian Law (Law of War)" ;
@@ -2212,6 +2349,7 @@ concept:gciv-1949-article-138 a cml:Concept ;
     skos:prefLabel "Article 138 - Particulars required by the national information bureaux"@en ;
     cml:realizedBy doc:article-138 ;
     cml:curationStatus cml:Proposed ;
+    cml:schemaVersion "2" ;   # regenerable — see CML_UPGRADE.md
     prov:wasDerivedFrom <https://ihl-databases.icrc.org/en/ihl-treaties/gciv-1949> ;
     dc:date "1949-08-12" ;
     values:category "International Humanitarian Law (Law of War)" ;
@@ -2228,6 +2366,7 @@ concept:gciv-1949-article-139 a cml:Concept ;
     skos:prefLabel "Article 139 - Forwarding of personal valuables by the national information bureaux"@en ;
     cml:realizedBy doc:article-139 ;
     cml:curationStatus cml:Proposed ;
+    cml:schemaVersion "2" ;   # regenerable — see CML_UPGRADE.md
     prov:wasDerivedFrom <https://ihl-databases.icrc.org/en/ihl-treaties/gciv-1949> ;
     dc:date "1949-08-12" ;
     values:category "International Humanitarian Law (Law of War)" ;
@@ -2244,6 +2383,7 @@ concept:gciv-1949-article-140 a cml:Concept ;
     skos:prefLabel "Article 140 - Central Tracing Agency"@en ;
     cml:realizedBy doc:article-140 ;
     cml:curationStatus cml:Proposed ;
+    cml:schemaVersion "2" ;   # regenerable — see CML_UPGRADE.md
     prov:wasDerivedFrom <https://ihl-databases.icrc.org/en/ihl-treaties/gciv-1949> ;
     dc:date "1949-08-12" ;
     values:category "International Humanitarian Law (Law of War)" ;
@@ -2260,6 +2400,7 @@ concept:gciv-1949-article-141 a cml:Concept ;
     skos:prefLabel "Article 141 - Exemption from charges of national information bureaux and the Central Tracing Agency"@en ;
     cml:realizedBy doc:article-141 ;
     cml:curationStatus cml:Proposed ;
+    cml:schemaVersion "2" ;   # regenerable — see CML_UPGRADE.md
     prov:wasDerivedFrom <https://ihl-databases.icrc.org/en/ihl-treaties/gciv-1949> ;
     dc:date "1949-08-12" ;
     values:category "International Humanitarian Law (Law of War)" ;
@@ -2276,6 +2417,7 @@ concept:gciv-1949-article-142 a cml:Concept ;
     skos:prefLabel "Article 142 - Facilities for relief societies and other organizations assisting protected persons"@en ;
     cml:realizedBy doc:article-142 ;
     cml:curationStatus cml:Proposed ;
+    cml:schemaVersion "2" ;   # regenerable — see CML_UPGRADE.md
     prov:wasDerivedFrom <https://ihl-databases.icrc.org/en/ihl-treaties/gciv-1949> ;
     dc:date "1949-08-12" ;
     values:category "International Humanitarian Law (Law of War)" ;
@@ -2292,6 +2434,7 @@ concept:gciv-1949-article-143 a cml:Concept ;
     skos:prefLabel "Article 143 - Supervision by the Protecting Powers and the ICRC"@en ;
     cml:realizedBy doc:article-143 ;
     cml:curationStatus cml:Proposed ;
+    cml:schemaVersion "2" ;   # regenerable — see CML_UPGRADE.md
     prov:wasDerivedFrom <https://ihl-databases.icrc.org/en/ihl-treaties/gciv-1949> ;
     dc:date "1949-08-12" ;
     values:category "International Humanitarian Law (Law of War)" ;
@@ -2308,6 +2451,7 @@ concept:gciv-1949-article-144 a cml:Concept ;
     skos:prefLabel "Article 144 - Dissemination of the Convention"@en ;
     cml:realizedBy doc:article-144 ;
     cml:curationStatus cml:Proposed ;
+    cml:schemaVersion "2" ;   # regenerable — see CML_UPGRADE.md
     prov:wasDerivedFrom <https://ihl-databases.icrc.org/en/ihl-treaties/gciv-1949> ;
     dc:date "1949-08-12" ;
     values:category "International Humanitarian Law (Law of War)" ;
@@ -2324,6 +2468,7 @@ concept:gciv-1949-article-145 a cml:Concept ;
     skos:prefLabel "Article 145 - Translations. Implementing laws and regulations"@en ;
     cml:realizedBy doc:article-145 ;
     cml:curationStatus cml:Proposed ;
+    cml:schemaVersion "2" ;   # regenerable — see CML_UPGRADE.md
     prov:wasDerivedFrom <https://ihl-databases.icrc.org/en/ihl-treaties/gciv-1949> ;
     dc:date "1949-08-12" ;
     values:category "International Humanitarian Law (Law of War)" ;
@@ -2340,6 +2485,7 @@ concept:gciv-1949-article-146 a cml:Concept ;
     skos:prefLabel "Article 146 - Penal sanctions"@en ;
     cml:realizedBy doc:article-146 ;
     cml:curationStatus cml:Proposed ;
+    cml:schemaVersion "2" ;   # regenerable — see CML_UPGRADE.md
     prov:wasDerivedFrom <https://ihl-databases.icrc.org/en/ihl-treaties/gciv-1949> ;
     dc:date "1949-08-12" ;
     values:category "International Humanitarian Law (Law of War)" ;
@@ -2356,6 +2502,7 @@ concept:gciv-1949-article-147 a cml:Concept ;
     skos:prefLabel "Article 147 - Grave breaches"@en ;
     cml:realizedBy doc:article-147 ;
     cml:curationStatus cml:Proposed ;
+    cml:schemaVersion "2" ;   # regenerable — see CML_UPGRADE.md
     prov:wasDerivedFrom <https://ihl-databases.icrc.org/en/ihl-treaties/gciv-1949> ;
     dc:date "1949-08-12" ;
     values:category "International Humanitarian Law (Law of War)" ;
@@ -2372,6 +2519,7 @@ concept:gciv-1949-article-148 a cml:Concept ;
     skos:prefLabel "Article 148 - Responsibilities of the Contracting Parties"@en ;
     cml:realizedBy doc:article-148 ;
     cml:curationStatus cml:Proposed ;
+    cml:schemaVersion "2" ;   # regenerable — see CML_UPGRADE.md
     prov:wasDerivedFrom <https://ihl-databases.icrc.org/en/ihl-treaties/gciv-1949> ;
     dc:date "1949-08-12" ;
     values:category "International Humanitarian Law (Law of War)" ;
@@ -2388,6 +2536,7 @@ concept:gciv-1949-article-149 a cml:Concept ;
     skos:prefLabel "Article 149 - Enquiry procedure"@en ;
     cml:realizedBy doc:article-149 ;
     cml:curationStatus cml:Proposed ;
+    cml:schemaVersion "2" ;   # regenerable — see CML_UPGRADE.md
     prov:wasDerivedFrom <https://ihl-databases.icrc.org/en/ihl-treaties/gciv-1949> ;
     dc:date "1949-08-12" ;
     values:category "International Humanitarian Law (Law of War)" ;
@@ -2404,6 +2553,7 @@ concept:gciv-1949-article-150 a cml:Concept ;
     skos:prefLabel "Article 150 - Languages"@en ;
     cml:realizedBy doc:article-150 ;
     cml:curationStatus cml:Proposed ;
+    cml:schemaVersion "2" ;   # regenerable — see CML_UPGRADE.md
     prov:wasDerivedFrom <https://ihl-databases.icrc.org/en/ihl-treaties/gciv-1949> ;
     dc:date "1949-08-12" ;
     values:category "International Humanitarian Law (Law of War)" ;
@@ -2420,6 +2570,7 @@ concept:gciv-1949-article-151 a cml:Concept ;
     skos:prefLabel "Article 151 - Signature"@en ;
     cml:realizedBy doc:article-151 ;
     cml:curationStatus cml:Proposed ;
+    cml:schemaVersion "2" ;   # regenerable — see CML_UPGRADE.md
     prov:wasDerivedFrom <https://ihl-databases.icrc.org/en/ihl-treaties/gciv-1949> ;
     dc:date "1949-08-12" ;
     values:category "International Humanitarian Law (Law of War)" ;
@@ -2436,6 +2587,7 @@ concept:gciv-1949-article-152 a cml:Concept ;
     skos:prefLabel "Article 152 - Ratification"@en ;
     cml:realizedBy doc:article-152 ;
     cml:curationStatus cml:Proposed ;
+    cml:schemaVersion "2" ;   # regenerable — see CML_UPGRADE.md
     prov:wasDerivedFrom <https://ihl-databases.icrc.org/en/ihl-treaties/gciv-1949> ;
     dc:date "1949-08-12" ;
     values:category "International Humanitarian Law (Law of War)" ;
@@ -2452,6 +2604,7 @@ concept:gciv-1949-article-153 a cml:Concept ;
     skos:prefLabel "Article 153 - Coming into force"@en ;
     cml:realizedBy doc:article-153 ;
     cml:curationStatus cml:Proposed ;
+    cml:schemaVersion "2" ;   # regenerable — see CML_UPGRADE.md
     prov:wasDerivedFrom <https://ihl-databases.icrc.org/en/ihl-treaties/gciv-1949> ;
     dc:date "1949-08-12" ;
     values:category "International Humanitarian Law (Law of War)" ;
@@ -2468,6 +2621,7 @@ concept:gciv-1949-article-154 a cml:Concept ;
     skos:prefLabel "Article 154 - Relation to the 1899 and 1907 Hague Conventions"@en ;
     cml:realizedBy doc:article-154 ;
     cml:curationStatus cml:Proposed ;
+    cml:schemaVersion "2" ;   # regenerable — see CML_UPGRADE.md
     prov:wasDerivedFrom <https://ihl-databases.icrc.org/en/ihl-treaties/gciv-1949> ;
     dc:date "1949-08-12" ;
     values:category "International Humanitarian Law (Law of War)" ;
@@ -2484,6 +2638,7 @@ concept:gciv-1949-article-155 a cml:Concept ;
     skos:prefLabel "Article 155 - Accession"@en ;
     cml:realizedBy doc:article-155 ;
     cml:curationStatus cml:Proposed ;
+    cml:schemaVersion "2" ;   # regenerable — see CML_UPGRADE.md
     prov:wasDerivedFrom <https://ihl-databases.icrc.org/en/ihl-treaties/gciv-1949> ;
     dc:date "1949-08-12" ;
     values:category "International Humanitarian Law (Law of War)" ;
@@ -2500,6 +2655,7 @@ concept:gciv-1949-article-156 a cml:Concept ;
     skos:prefLabel "Article 156 - Notifications of accessions"@en ;
     cml:realizedBy doc:article-156 ;
     cml:curationStatus cml:Proposed ;
+    cml:schemaVersion "2" ;   # regenerable — see CML_UPGRADE.md
     prov:wasDerivedFrom <https://ihl-databases.icrc.org/en/ihl-treaties/gciv-1949> ;
     dc:date "1949-08-12" ;
     values:category "International Humanitarian Law (Law of War)" ;
@@ -2516,6 +2672,7 @@ concept:gciv-1949-article-157 a cml:Concept ;
     skos:prefLabel "Article 157 - Immediate effect"@en ;
     cml:realizedBy doc:article-157 ;
     cml:curationStatus cml:Proposed ;
+    cml:schemaVersion "2" ;   # regenerable — see CML_UPGRADE.md
     prov:wasDerivedFrom <https://ihl-databases.icrc.org/en/ihl-treaties/gciv-1949> ;
     dc:date "1949-08-12" ;
     values:category "International Humanitarian Law (Law of War)" ;
@@ -2532,6 +2689,7 @@ concept:gciv-1949-article-158 a cml:Concept ;
     skos:prefLabel "Article 158 - Denunciation"@en ;
     cml:realizedBy doc:article-158 ;
     cml:curationStatus cml:Proposed ;
+    cml:schemaVersion "2" ;   # regenerable — see CML_UPGRADE.md
     prov:wasDerivedFrom <https://ihl-databases.icrc.org/en/ihl-treaties/gciv-1949> ;
     dc:date "1949-08-12" ;
     values:category "International Humanitarian Law (Law of War)" ;
@@ -2548,6 +2706,7 @@ concept:gciv-1949-article-159 a cml:Concept ;
     skos:prefLabel "Article 159 - Registration with the United Nations"@en ;
     cml:realizedBy doc:article-159 ;
     cml:curationStatus cml:Proposed ;
+    cml:schemaVersion "2" ;   # regenerable — see CML_UPGRADE.md
     prov:wasDerivedFrom <https://ihl-databases.icrc.org/en/ihl-treaties/gciv-1949> ;
     dc:date "1949-08-12" ;
     values:category "International Humanitarian Law (Law of War)" ;

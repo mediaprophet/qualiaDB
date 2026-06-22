@@ -20,6 +20,7 @@ concept:declaration-social-progress-and-development-article-1 a cml:Concept ;
     skos:prefLabel "Article 1"@en ;
     cml:realizedBy doc:article-1 ;
     cml:curationStatus cml:Proposed ;
+    cml:schemaVersion "2" ;   # regenerable — see CML_UPGRADE.md
     prov:wasDerivedFrom <https://www.ohchr.org/en/instruments-mechanisms/instruments/declaration-social-progress-and-development> ;
     dc:date "11 December 1969" ;
     values:category "Development, peace, food & solidarity rights" ;
@@ -36,6 +37,7 @@ concept:declaration-social-progress-and-development-article-2 a cml:Concept ;
     skos:prefLabel "Article 2"@en ;
     cml:realizedBy doc:article-2 ;
     cml:curationStatus cml:Proposed ;
+    cml:schemaVersion "2" ;   # regenerable — see CML_UPGRADE.md
     prov:wasDerivedFrom <https://www.ohchr.org/en/instruments-mechanisms/instruments/declaration-social-progress-and-development> ;
     dc:date "11 December 1969" ;
     values:category "Development, peace, food & solidarity rights" ;
@@ -53,6 +55,7 @@ concept:declaration-social-progress-and-development-article-3 a cml:Concept ;
     skos:prefLabel "Article 3"@en ;
     cml:realizedBy doc:article-3 ;
     cml:curationStatus cml:Proposed ;
+    cml:schemaVersion "2" ;   # regenerable — see CML_UPGRADE.md
     prov:wasDerivedFrom <https://www.ohchr.org/en/instruments-mechanisms/instruments/declaration-social-progress-and-development> ;
     dc:date "11 December 1969" ;
     values:category "Development, peace, food & solidarity rights" ;
@@ -68,6 +71,7 @@ concept:declaration-social-progress-and-development-article-4 a cml:Concept ;
     skos:prefLabel "Article 4"@en ;
     cml:realizedBy doc:article-4 ;
     cml:curationStatus cml:Proposed ;
+    cml:schemaVersion "2" ;   # regenerable — see CML_UPGRADE.md
     prov:wasDerivedFrom <https://www.ohchr.org/en/instruments-mechanisms/instruments/declaration-social-progress-and-development> ;
     dc:date "11 December 1969" ;
     values:category "Development, peace, food & solidarity rights" ;
@@ -84,6 +88,7 @@ concept:declaration-social-progress-and-development-article-5 a cml:Concept ;
     skos:prefLabel "Article 5"@en ;
     cml:realizedBy doc:article-5 ;
     cml:curationStatus cml:Proposed ;
+    cml:schemaVersion "2" ;   # regenerable — see CML_UPGRADE.md
     prov:wasDerivedFrom <https://www.ohchr.org/en/instruments-mechanisms/instruments/declaration-social-progress-and-development> ;
     dc:date "11 December 1969" ;
     values:category "Development, peace, food & solidarity rights" ;
@@ -99,6 +104,7 @@ concept:declaration-social-progress-and-development-article-6 a cml:Concept ;
     skos:prefLabel "Article 6"@en ;
     cml:realizedBy doc:article-6 ;
     cml:curationStatus cml:Proposed ;
+    cml:schemaVersion "2" ;   # regenerable — see CML_UPGRADE.md
     prov:wasDerivedFrom <https://www.ohchr.org/en/instruments-mechanisms/instruments/declaration-social-progress-and-development> ;
     dc:date "11 December 1969" ;
     values:category "Development, peace, food & solidarity rights" ;
@@ -115,6 +121,7 @@ concept:declaration-social-progress-and-development-article-7 a cml:Concept ;
     skos:prefLabel "Article 7"@en ;
     cml:realizedBy doc:article-7 ;
     cml:curationStatus cml:Proposed ;
+    cml:schemaVersion "2" ;   # regenerable — see CML_UPGRADE.md
     prov:wasDerivedFrom <https://www.ohchr.org/en/instruments-mechanisms/instruments/declaration-social-progress-and-development> ;
     dc:date "11 December 1969" ;
     values:category "Development, peace, food & solidarity rights" ;
@@ -130,6 +137,7 @@ concept:declaration-social-progress-and-development-article-8 a cml:Concept ;
     skos:prefLabel "Article 8"@en ;
     cml:realizedBy doc:article-8 ;
     cml:curationStatus cml:Proposed ;
+    cml:schemaVersion "2" ;   # regenerable — see CML_UPGRADE.md
     prov:wasDerivedFrom <https://www.ohchr.org/en/instruments-mechanisms/instruments/declaration-social-progress-and-development> ;
     dc:date "11 December 1969" ;
     values:category "Development, peace, food & solidarity rights" ;
@@ -147,6 +155,7 @@ concept:declaration-social-progress-and-development-article-9 a cml:Concept ;
     skos:prefLabel "Article 9"@en ;
     cml:realizedBy doc:article-9 ;
     cml:curationStatus cml:Proposed ;
+    cml:schemaVersion "2" ;   # regenerable — see CML_UPGRADE.md
     prov:wasDerivedFrom <https://www.ohchr.org/en/instruments-mechanisms/instruments/declaration-social-progress-and-development> ;
     dc:date "11 December 1969" ;
     values:category "Development, peace, food & solidarity rights" ;
@@ -162,6 +171,7 @@ concept:declaration-social-progress-and-development-article-10 a cml:Concept ;
     skos:prefLabel "Article 10"@en ;
     cml:realizedBy doc:article-10 ;
     cml:curationStatus cml:Proposed ;
+    cml:schemaVersion "2" ;   # regenerable — see CML_UPGRADE.md
     prov:wasDerivedFrom <https://www.ohchr.org/en/instruments-mechanisms/instruments/declaration-social-progress-and-development> ;
     dc:date "11 December 1969" ;
     values:category "Development, peace, food & solidarity rights" ;
@@ -178,6 +188,7 @@ concept:declaration-social-progress-and-development-article-11 a cml:Concept ;
     skos:prefLabel "Article 11"@en ;
     cml:realizedBy doc:article-11 ;
     cml:curationStatus cml:Proposed ;
+    cml:schemaVersion "2" ;   # regenerable — see CML_UPGRADE.md
     prov:wasDerivedFrom <https://www.ohchr.org/en/instruments-mechanisms/instruments/declaration-social-progress-and-development> ;
     dc:date "11 December 1969" ;
     values:category "Development, peace, food & solidarity rights" ;
@@ -193,6 +204,7 @@ concept:declaration-social-progress-and-development-article-12 a cml:Concept ;
     skos:prefLabel "Article 12"@en ;
     cml:realizedBy doc:article-12 ;
     cml:curationStatus cml:Proposed ;
+    cml:schemaVersion "2" ;   # regenerable — see CML_UPGRADE.md
     prov:wasDerivedFrom <https://www.ohchr.org/en/instruments-mechanisms/instruments/declaration-social-progress-and-development> ;
     dc:date "11 December 1969" ;
     values:category "Development, peace, food & solidarity rights" ;
@@ -208,6 +220,7 @@ concept:declaration-social-progress-and-development-article-13 a cml:Concept ;
     skos:prefLabel "Article 13"@en ;
     cml:realizedBy doc:article-13 ;
     cml:curationStatus cml:Proposed ;
+    cml:schemaVersion "2" ;   # regenerable — see CML_UPGRADE.md
     prov:wasDerivedFrom <https://www.ohchr.org/en/instruments-mechanisms/instruments/declaration-social-progress-and-development> ;
     dc:date "11 December 1969" ;
     values:category "Development, peace, food & solidarity rights" ;
@@ -223,6 +236,7 @@ concept:declaration-social-progress-and-development-article-14 a cml:Concept ;
     skos:prefLabel "Article 14"@en ;
     cml:realizedBy doc:article-14 ;
     cml:curationStatus cml:Proposed ;
+    cml:schemaVersion "2" ;   # regenerable — see CML_UPGRADE.md
     prov:wasDerivedFrom <https://www.ohchr.org/en/instruments-mechanisms/instruments/declaration-social-progress-and-development> ;
     dc:date "11 December 1969" ;
     values:category "Development, peace, food & solidarity rights" ;
@@ -238,6 +252,7 @@ concept:declaration-social-progress-and-development-article-15 a cml:Concept ;
     skos:prefLabel "Article 15"@en ;
     cml:realizedBy doc:article-15 ;
     cml:curationStatus cml:Proposed ;
+    cml:schemaVersion "2" ;   # regenerable — see CML_UPGRADE.md
     prov:wasDerivedFrom <https://www.ohchr.org/en/instruments-mechanisms/instruments/declaration-social-progress-and-development> ;
     dc:date "11 December 1969" ;
     values:category "Development, peace, food & solidarity rights" ;
@@ -253,6 +268,7 @@ concept:declaration-social-progress-and-development-article-16 a cml:Concept ;
     skos:prefLabel "Article 16"@en ;
     cml:realizedBy doc:article-16 ;
     cml:curationStatus cml:Proposed ;
+    cml:schemaVersion "2" ;   # regenerable — see CML_UPGRADE.md
     prov:wasDerivedFrom <https://www.ohchr.org/en/instruments-mechanisms/instruments/declaration-social-progress-and-development> ;
     dc:date "11 December 1969" ;
     values:category "Development, peace, food & solidarity rights" ;
@@ -268,6 +284,7 @@ concept:declaration-social-progress-and-development-article-17 a cml:Concept ;
     skos:prefLabel "Article 17"@en ;
     cml:realizedBy doc:article-17 ;
     cml:curationStatus cml:Proposed ;
+    cml:schemaVersion "2" ;   # regenerable — see CML_UPGRADE.md
     prov:wasDerivedFrom <https://www.ohchr.org/en/instruments-mechanisms/instruments/declaration-social-progress-and-development> ;
     dc:date "11 December 1969" ;
     values:category "Development, peace, food & solidarity rights" ;
@@ -283,6 +300,7 @@ concept:declaration-social-progress-and-development-article-18 a cml:Concept ;
     skos:prefLabel "Article 18"@en ;
     cml:realizedBy doc:article-18 ;
     cml:curationStatus cml:Proposed ;
+    cml:schemaVersion "2" ;   # regenerable — see CML_UPGRADE.md
     prov:wasDerivedFrom <https://www.ohchr.org/en/instruments-mechanisms/instruments/declaration-social-progress-and-development> ;
     dc:date "11 December 1969" ;
     values:category "Development, peace, food & solidarity rights" ;
@@ -298,6 +316,7 @@ concept:declaration-social-progress-and-development-article-19 a cml:Concept ;
     skos:prefLabel "Article 19"@en ;
     cml:realizedBy doc:article-19 ;
     cml:curationStatus cml:Proposed ;
+    cml:schemaVersion "2" ;   # regenerable — see CML_UPGRADE.md
     prov:wasDerivedFrom <https://www.ohchr.org/en/instruments-mechanisms/instruments/declaration-social-progress-and-development> ;
     dc:date "11 December 1969" ;
     values:category "Development, peace, food & solidarity rights" ;
@@ -313,6 +332,7 @@ concept:declaration-social-progress-and-development-article-20 a cml:Concept ;
     skos:prefLabel "Article 20"@en ;
     cml:realizedBy doc:article-20 ;
     cml:curationStatus cml:Proposed ;
+    cml:schemaVersion "2" ;   # regenerable — see CML_UPGRADE.md
     prov:wasDerivedFrom <https://www.ohchr.org/en/instruments-mechanisms/instruments/declaration-social-progress-and-development> ;
     dc:date "11 December 1969" ;
     values:category "Development, peace, food & solidarity rights" ;
@@ -329,6 +349,7 @@ concept:declaration-social-progress-and-development-article-21 a cml:Concept ;
     skos:prefLabel "Article 21"@en ;
     cml:realizedBy doc:article-21 ;
     cml:curationStatus cml:Proposed ;
+    cml:schemaVersion "2" ;   # regenerable — see CML_UPGRADE.md
     prov:wasDerivedFrom <https://www.ohchr.org/en/instruments-mechanisms/instruments/declaration-social-progress-and-development> ;
     dc:date "11 December 1969" ;
     values:category "Development, peace, food & solidarity rights" ;
@@ -344,6 +365,7 @@ concept:declaration-social-progress-and-development-article-22 a cml:Concept ;
     skos:prefLabel "Article 22"@en ;
     cml:realizedBy doc:article-22 ;
     cml:curationStatus cml:Proposed ;
+    cml:schemaVersion "2" ;   # regenerable — see CML_UPGRADE.md
     prov:wasDerivedFrom <https://www.ohchr.org/en/instruments-mechanisms/instruments/declaration-social-progress-and-development> ;
     dc:date "11 December 1969" ;
     values:category "Development, peace, food & solidarity rights" ;
@@ -360,6 +382,7 @@ concept:declaration-social-progress-and-development-article-23 a cml:Concept ;
     skos:prefLabel "Article 23"@en ;
     cml:realizedBy doc:article-23 ;
     cml:curationStatus cml:Proposed ;
+    cml:schemaVersion "2" ;   # regenerable — see CML_UPGRADE.md
     prov:wasDerivedFrom <https://www.ohchr.org/en/instruments-mechanisms/instruments/declaration-social-progress-and-development> ;
     dc:date "11 December 1969" ;
     values:category "Development, peace, food & solidarity rights" ;
@@ -375,6 +398,7 @@ concept:declaration-social-progress-and-development-article-24 a cml:Concept ;
     skos:prefLabel "Article 24"@en ;
     cml:realizedBy doc:article-24 ;
     cml:curationStatus cml:Proposed ;
+    cml:schemaVersion "2" ;   # regenerable — see CML_UPGRADE.md
     prov:wasDerivedFrom <https://www.ohchr.org/en/instruments-mechanisms/instruments/declaration-social-progress-and-development> ;
     dc:date "11 December 1969" ;
     values:category "Development, peace, food & solidarity rights" ;
@@ -390,6 +414,7 @@ concept:declaration-social-progress-and-development-article-25 a cml:Concept ;
     skos:prefLabel "Article 25"@en ;
     cml:realizedBy doc:article-25 ;
     cml:curationStatus cml:Proposed ;
+    cml:schemaVersion "2" ;   # regenerable — see CML_UPGRADE.md
     prov:wasDerivedFrom <https://www.ohchr.org/en/instruments-mechanisms/instruments/declaration-social-progress-and-development> ;
     dc:date "11 December 1969" ;
     values:category "Development, peace, food & solidarity rights" ;
@@ -405,6 +430,7 @@ concept:declaration-social-progress-and-development-article-26 a cml:Concept ;
     skos:prefLabel "Article 26"@en ;
     cml:realizedBy doc:article-26 ;
     cml:curationStatus cml:Proposed ;
+    cml:schemaVersion "2" ;   # regenerable — see CML_UPGRADE.md
     prov:wasDerivedFrom <https://www.ohchr.org/en/instruments-mechanisms/instruments/declaration-social-progress-and-development> ;
     dc:date "11 December 1969" ;
     values:category "Development, peace, food & solidarity rights" ;
@@ -420,6 +446,7 @@ concept:declaration-social-progress-and-development-article-27 a cml:Concept ;
     skos:prefLabel "Article 27"@en ;
     cml:realizedBy doc:article-27 ;
     cml:curationStatus cml:Proposed ;
+    cml:schemaVersion "2" ;   # regenerable — see CML_UPGRADE.md
     prov:wasDerivedFrom <https://www.ohchr.org/en/instruments-mechanisms/instruments/declaration-social-progress-and-development> ;
     dc:date "11 December 1969" ;
     values:category "Development, peace, food & solidarity rights" ;

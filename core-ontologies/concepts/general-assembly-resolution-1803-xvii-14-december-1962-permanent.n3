@@ -20,6 +20,7 @@ concept:general-assembly-resolution-1803-xvii-14-december-1962-permanent-paragra
     skos:prefLabel "Paragraph 1"@en ;
     cml:realizedBy doc:paragraph-1 ;
     cml:curationStatus cml:Proposed ;
+    cml:schemaVersion "2" ;   # regenerable — see CML_UPGRADE.md
     prov:wasDerivedFrom <https://www.ohchr.org/en/instruments-mechanisms/instruments/general-assembly-resolution-1803-xvii-14-december-1962-permanent> ;
     dc:date "14 December 1962" ;
     values:category "Indigenous, minorities & self-determination" ;
@@ -35,6 +36,7 @@ concept:general-assembly-resolution-1803-xvii-14-december-1962-permanent-paragra
     skos:prefLabel "Paragraph 2"@en ;
     cml:realizedBy doc:paragraph-2 ;
     cml:curationStatus cml:Proposed ;
+    cml:schemaVersion "2" ;   # regenerable — see CML_UPGRADE.md
     prov:wasDerivedFrom <https://www.ohchr.org/en/instruments-mechanisms/instruments/general-assembly-resolution-1803-xvii-14-december-1962-permanent> ;
     dc:date "14 December 1962" ;
     values:category "Indigenous, minorities & self-determination" ;
@@ -50,6 +52,7 @@ concept:general-assembly-resolution-1803-xvii-14-december-1962-permanent-paragra
     skos:prefLabel "Paragraph 3"@en ;
     cml:realizedBy doc:paragraph-3 ;
     cml:curationStatus cml:Proposed ;
+    cml:schemaVersion "2" ;   # regenerable — see CML_UPGRADE.md
     prov:wasDerivedFrom <https://www.ohchr.org/en/instruments-mechanisms/instruments/general-assembly-resolution-1803-xvii-14-december-1962-permanent> ;
     dc:date "14 December 1962" ;
     values:category "Indigenous, minorities & self-determination" ;
@@ -65,6 +68,7 @@ concept:general-assembly-resolution-1803-xvii-14-december-1962-permanent-paragra
     skos:prefLabel "Paragraph 4"@en ;
     cml:realizedBy doc:paragraph-4 ;
     cml:curationStatus cml:Proposed ;
+    cml:schemaVersion "2" ;   # regenerable — see CML_UPGRADE.md
     prov:wasDerivedFrom <https://www.ohchr.org/en/instruments-mechanisms/instruments/general-assembly-resolution-1803-xvii-14-december-1962-permanent> ;
     dc:date "14 December 1962" ;
     values:category "Indigenous, minorities & self-determination" ;
@@ -80,6 +84,7 @@ concept:general-assembly-resolution-1803-xvii-14-december-1962-permanent-paragra
     skos:prefLabel "Paragraph 5"@en ;
     cml:realizedBy doc:paragraph-5 ;
     cml:curationStatus cml:Proposed ;
+    cml:schemaVersion "2" ;   # regenerable — see CML_UPGRADE.md
     prov:wasDerivedFrom <https://www.ohchr.org/en/instruments-mechanisms/instruments/general-assembly-resolution-1803-xvii-14-december-1962-permanent> ;
     dc:date "14 December 1962" ;
     values:category "Indigenous, minorities & self-determination" ;
@@ -95,6 +100,7 @@ concept:general-assembly-resolution-1803-xvii-14-december-1962-permanent-paragra
     skos:prefLabel "Paragraph 6"@en ;
     cml:realizedBy doc:paragraph-6 ;
     cml:curationStatus cml:Proposed ;
+    cml:schemaVersion "2" ;   # regenerable — see CML_UPGRADE.md
     prov:wasDerivedFrom <https://www.ohchr.org/en/instruments-mechanisms/instruments/general-assembly-resolution-1803-xvii-14-december-1962-permanent> ;
     dc:date "14 December 1962" ;
     values:category "Indigenous, minorities & self-determination" ;
@@ -110,6 +116,7 @@ concept:general-assembly-resolution-1803-xvii-14-december-1962-permanent-paragra
     skos:prefLabel "Paragraph 7"@en ;
     cml:realizedBy doc:paragraph-7 ;
     cml:curationStatus cml:Proposed ;
+    cml:schemaVersion "2" ;   # regenerable — see CML_UPGRADE.md
     prov:wasDerivedFrom <https://www.ohchr.org/en/instruments-mechanisms/instruments/general-assembly-resolution-1803-xvii-14-december-1962-permanent> ;
     dc:date "14 December 1962" ;
     values:category "Indigenous, minorities & self-determination" ;
@@ -125,6 +132,7 @@ concept:general-assembly-resolution-1803-xvii-14-december-1962-permanent-paragra
     skos:prefLabel "Paragraph 8"@en ;
     cml:realizedBy doc:paragraph-8 ;
     cml:curationStatus cml:Proposed ;
+    cml:schemaVersion "2" ;   # regenerable — see CML_UPGRADE.md
     prov:wasDerivedFrom <https://www.ohchr.org/en/instruments-mechanisms/instruments/general-assembly-resolution-1803-xvii-14-december-1962-permanent> ;
     dc:date "14 December 1962" ;
     values:category "Indigenous, minorities & self-determination" ;
@@ -140,6 +148,7 @@ concept:general-assembly-resolution-1803-xvii-14-december-1962-permanent-paragra
     skos:prefLabel "Paragraph 9"@en ;
     cml:realizedBy doc:paragraph-9 ;
     cml:curationStatus cml:Proposed ;
+    cml:schemaVersion "2" ;   # regenerable — see CML_UPGRADE.md
     prov:wasDerivedFrom <https://www.ohchr.org/en/instruments-mechanisms/instruments/general-assembly-resolution-1803-xvii-14-december-1962-permanent> ;
     dc:date "14 December 1962" ;
     values:category "Indigenous, minorities & self-determination" ;
@@ -155,6 +164,7 @@ concept:general-assembly-resolution-1803-xvii-14-december-1962-permanent-paragra
     skos:prefLabel "Paragraph 10"@en ;
     cml:realizedBy doc:paragraph-10 ;
     cml:curationStatus cml:Proposed ;
+    cml:schemaVersion "2" ;   # regenerable — see CML_UPGRADE.md
     prov:wasDerivedFrom <https://www.ohchr.org/en/instruments-mechanisms/instruments/general-assembly-resolution-1803-xvii-14-december-1962-permanent> ;
     dc:date "14 December 1962" ;
     values:category "Indigenous, minorities & self-determination" ;
@@ -170,6 +180,7 @@ concept:general-assembly-resolution-1803-xvii-14-december-1962-permanent-paragra
     skos:prefLabel "Paragraph 11"@en ;
     cml:realizedBy doc:paragraph-11 ;
     cml:curationStatus cml:Proposed ;
+    cml:schemaVersion "2" ;   # regenerable — see CML_UPGRADE.md
     prov:wasDerivedFrom <https://www.ohchr.org/en/instruments-mechanisms/instruments/general-assembly-resolution-1803-xvii-14-december-1962-permanent> ;
     dc:date "14 December 1962" ;
     values:category "Indigenous, minorities & self-determination" ;
@@ -185,6 +196,7 @@ concept:general-assembly-resolution-1803-xvii-14-december-1962-permanent-paragra
     skos:prefLabel "Paragraph 12"@en ;
     cml:realizedBy doc:paragraph-12 ;
     cml:curationStatus cml:Proposed ;
+    cml:schemaVersion "2" ;   # regenerable — see CML_UPGRADE.md
     prov:wasDerivedFrom <https://www.ohchr.org/en/instruments-mechanisms/instruments/general-assembly-resolution-1803-xvii-14-december-1962-permanent> ;
     dc:date "14 December 1962" ;
     values:category "Indigenous, minorities & self-determination" ;
@@ -200,6 +212,7 @@ concept:general-assembly-resolution-1803-xvii-14-december-1962-permanent-paragra
     skos:prefLabel "Paragraph 13"@en ;
     cml:realizedBy doc:paragraph-13 ;
     cml:curationStatus cml:Proposed ;
+    cml:schemaVersion "2" ;   # regenerable — see CML_UPGRADE.md
     prov:wasDerivedFrom <https://www.ohchr.org/en/instruments-mechanisms/instruments/general-assembly-resolution-1803-xvii-14-december-1962-permanent> ;
     dc:date "14 December 1962" ;
     values:category "Indigenous, minorities & self-determination" ;
@@ -217,6 +230,7 @@ concept:general-assembly-resolution-1803-xvii-14-december-1962-permanent-paragra
     skos:prefLabel "Paragraph 14"@en ;
     cml:realizedBy doc:paragraph-14 ;
     cml:curationStatus cml:Proposed ;
+    cml:schemaVersion "2" ;   # regenerable — see CML_UPGRADE.md
     prov:wasDerivedFrom <https://www.ohchr.org/en/instruments-mechanisms/instruments/general-assembly-resolution-1803-xvii-14-december-1962-permanent> ;
     dc:date "14 December 1962" ;
     values:category "Indigenous, minorities & self-determination" ;
@@ -234,6 +248,7 @@ concept:general-assembly-resolution-1803-xvii-14-december-1962-permanent-paragra
     skos:prefLabel "Paragraph 15"@en ;
     cml:realizedBy doc:paragraph-15 ;
     cml:curationStatus cml:Proposed ;
+    cml:schemaVersion "2" ;   # regenerable — see CML_UPGRADE.md
     prov:wasDerivedFrom <https://www.ohchr.org/en/instruments-mechanisms/instruments/general-assembly-resolution-1803-xvii-14-december-1962-permanent> ;
     dc:date "14 December 1962" ;
     values:category "Indigenous, minorities & self-determination" ;
@@ -249,6 +264,7 @@ concept:general-assembly-resolution-1803-xvii-14-december-1962-permanent-paragra
     skos:prefLabel "Paragraph 16"@en ;
     cml:realizedBy doc:paragraph-16 ;
     cml:curationStatus cml:Proposed ;
+    cml:schemaVersion "2" ;   # regenerable — see CML_UPGRADE.md
     prov:wasDerivedFrom <https://www.ohchr.org/en/instruments-mechanisms/instruments/general-assembly-resolution-1803-xvii-14-december-1962-permanent> ;
     dc:date "14 December 1962" ;
     values:category "Indigenous, minorities & self-determination" ;
@@ -266,6 +282,7 @@ concept:general-assembly-resolution-1803-xvii-14-december-1962-permanent-paragra
     skos:prefLabel "Paragraph 17"@en ;
     cml:realizedBy doc:paragraph-17 ;
     cml:curationStatus cml:Proposed ;
+    cml:schemaVersion "2" ;   # regenerable — see CML_UPGRADE.md
     prov:wasDerivedFrom <https://www.ohchr.org/en/instruments-mechanisms/instruments/general-assembly-resolution-1803-xvii-14-december-1962-permanent> ;
     dc:date "14 December 1962" ;
     values:category "Indigenous, minorities & self-determination" ;
@@ -281,6 +298,7 @@ concept:general-assembly-resolution-1803-xvii-14-december-1962-permanent-paragra
     skos:prefLabel "Paragraph 18"@en ;
     cml:realizedBy doc:paragraph-18 ;
     cml:curationStatus cml:Proposed ;
+    cml:schemaVersion "2" ;   # regenerable — see CML_UPGRADE.md
     prov:wasDerivedFrom <https://www.ohchr.org/en/instruments-mechanisms/instruments/general-assembly-resolution-1803-xvii-14-december-1962-permanent> ;
     dc:date "14 December 1962" ;
     values:category "Indigenous, minorities & self-determination" ;

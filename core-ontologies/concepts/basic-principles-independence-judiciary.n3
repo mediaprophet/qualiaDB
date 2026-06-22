@@ -20,6 +20,7 @@ concept:basic-principles-independence-judiciary-paragraph-1 a cml:Concept ;
     skos:prefLabel "Paragraph 1"@en ;
     cml:realizedBy doc:paragraph-1 ;
     cml:curationStatus cml:Proposed ;
+    cml:schemaVersion "2" ;   # regenerable — see CML_UPGRADE.md
     prov:wasDerivedFrom <https://www.ohchr.org/en/instruments-mechanisms/instruments/basic-principles-independence-judiciary> ;
     dc:date "06 September 1985" ;
     values:category "Administration of justice, detention & law enforcement" ;
@@ -35,6 +36,7 @@ concept:basic-principles-independence-judiciary-paragraph-2 a cml:Concept ;
     skos:prefLabel "Paragraph 2"@en ;
     cml:realizedBy doc:paragraph-2 ;
     cml:curationStatus cml:Proposed ;
+    cml:schemaVersion "2" ;   # regenerable — see CML_UPGRADE.md
     prov:wasDerivedFrom <https://www.ohchr.org/en/instruments-mechanisms/instruments/basic-principles-independence-judiciary> ;
     dc:date "06 September 1985" ;
     values:category "Administration of justice, detention & law enforcement" ;
@@ -50,6 +52,7 @@ concept:basic-principles-independence-judiciary-paragraph-3 a cml:Concept ;
     skos:prefLabel "Paragraph 3"@en ;
     cml:realizedBy doc:paragraph-3 ;
     cml:curationStatus cml:Proposed ;
+    cml:schemaVersion "2" ;   # regenerable — see CML_UPGRADE.md
     prov:wasDerivedFrom <https://www.ohchr.org/en/instruments-mechanisms/instruments/basic-principles-independence-judiciary> ;
     dc:date "06 September 1985" ;
     values:category "Administration of justice, detention & law enforcement" ;
@@ -65,6 +68,7 @@ concept:basic-principles-independence-judiciary-paragraph-4 a cml:Concept ;
     skos:prefLabel "Paragraph 4"@en ;
     cml:realizedBy doc:paragraph-4 ;
     cml:curationStatus cml:Proposed ;
+    cml:schemaVersion "2" ;   # regenerable — see CML_UPGRADE.md
     prov:wasDerivedFrom <https://www.ohchr.org/en/instruments-mechanisms/instruments/basic-principles-independence-judiciary> ;
     dc:date "06 September 1985" ;
     values:category "Administration of justice, detention & law enforcement" ;
@@ -81,6 +85,7 @@ concept:basic-principles-independence-judiciary-paragraph-5 a cml:Concept ;
     skos:prefLabel "Paragraph 5"@en ;
     cml:realizedBy doc:paragraph-5 ;
     cml:curationStatus cml:Proposed ;
+    cml:schemaVersion "2" ;   # regenerable — see CML_UPGRADE.md
     prov:wasDerivedFrom <https://www.ohchr.org/en/instruments-mechanisms/instruments/basic-principles-independence-judiciary> ;
     dc:date "06 September 1985" ;
     values:category "Administration of justice, detention & law enforcement" ;
@@ -97,6 +102,7 @@ concept:basic-principles-independence-judiciary-paragraph-6 a cml:Concept ;
     skos:prefLabel "Paragraph 6"@en ;
     cml:realizedBy doc:paragraph-6 ;
     cml:curationStatus cml:Proposed ;
+    cml:schemaVersion "2" ;   # regenerable — see CML_UPGRADE.md
     prov:wasDerivedFrom <https://www.ohchr.org/en/instruments-mechanisms/instruments/basic-principles-independence-judiciary> ;
     dc:date "06 September 1985" ;
     values:category "Administration of justice, detention & law enforcement" ;
@@ -112,6 +118,7 @@ concept:basic-principles-independence-judiciary-paragraph-7 a cml:Concept ;
     skos:prefLabel "Paragraph 7"@en ;
     cml:realizedBy doc:paragraph-7 ;
     cml:curationStatus cml:Proposed ;
+    cml:schemaVersion "2" ;   # regenerable — see CML_UPGRADE.md
     prov:wasDerivedFrom <https://www.ohchr.org/en/instruments-mechanisms/instruments/basic-principles-independence-judiciary> ;
     dc:date "06 September 1985" ;
     values:category "Administration of justice, detention & law enforcement" ;
@@ -127,6 +134,7 @@ concept:basic-principles-independence-judiciary-paragraph-8 a cml:Concept ;
     skos:prefLabel "Paragraph 8"@en ;
     cml:realizedBy doc:paragraph-8 ;
     cml:curationStatus cml:Proposed ;
+    cml:schemaVersion "2" ;   # regenerable — see CML_UPGRADE.md
     prov:wasDerivedFrom <https://www.ohchr.org/en/instruments-mechanisms/instruments/basic-principles-independence-judiciary> ;
     dc:date "06 September 1985" ;
     values:category "Administration of justice, detention & law enforcement" ;
@@ -142,6 +150,7 @@ concept:basic-principles-independence-judiciary-paragraph-9 a cml:Concept ;
     skos:prefLabel "Paragraph 9"@en ;
     cml:realizedBy doc:paragraph-9 ;
     cml:curationStatus cml:Proposed ;
+    cml:schemaVersion "2" ;   # regenerable — see CML_UPGRADE.md
     prov:wasDerivedFrom <https://www.ohchr.org/en/instruments-mechanisms/instruments/basic-principles-independence-judiciary> ;
     dc:date "06 September 1985" ;
     values:category "Administration of justice, detention & law enforcement" ;
@@ -157,6 +166,7 @@ concept:basic-principles-independence-judiciary-paragraph-10 a cml:Concept ;
     skos:prefLabel "Paragraph 10"@en ;
     cml:realizedBy doc:paragraph-10 ;
     cml:curationStatus cml:Proposed ;
+    cml:schemaVersion "2" ;   # regenerable — see CML_UPGRADE.md
     prov:wasDerivedFrom <https://www.ohchr.org/en/instruments-mechanisms/instruments/basic-principles-independence-judiciary> ;
     dc:date "06 September 1985" ;
     values:category "Administration of justice, detention & law enforcement" ;
@@ -172,6 +182,7 @@ concept:basic-principles-independence-judiciary-paragraph-11 a cml:Concept ;
     skos:prefLabel "Paragraph 11"@en ;
     cml:realizedBy doc:paragraph-11 ;
     cml:curationStatus cml:Proposed ;
+    cml:schemaVersion "2" ;   # regenerable — see CML_UPGRADE.md
     prov:wasDerivedFrom <https://www.ohchr.org/en/instruments-mechanisms/instruments/basic-principles-independence-judiciary> ;
     dc:date "06 September 1985" ;
     values:category "Administration of justice, detention & law enforcement" ;
@@ -187,6 +198,7 @@ concept:basic-principles-independence-judiciary-paragraph-12 a cml:Concept ;
     skos:prefLabel "Paragraph 12"@en ;
     cml:realizedBy doc:paragraph-12 ;
     cml:curationStatus cml:Proposed ;
+    cml:schemaVersion "2" ;   # regenerable — see CML_UPGRADE.md
     prov:wasDerivedFrom <https://www.ohchr.org/en/instruments-mechanisms/instruments/basic-principles-independence-judiciary> ;
     dc:date "06 September 1985" ;
     values:category "Administration of justice, detention & law enforcement" ;
@@ -204,6 +216,7 @@ concept:basic-principles-independence-judiciary-paragraph-13 a cml:Concept ;
     skos:prefLabel "Paragraph 13"@en ;
     cml:realizedBy doc:paragraph-13 ;
     cml:curationStatus cml:Proposed ;
+    cml:schemaVersion "2" ;   # regenerable — see CML_UPGRADE.md
     prov:wasDerivedFrom <https://www.ohchr.org/en/instruments-mechanisms/instruments/basic-principles-independence-judiciary> ;
     dc:date "06 September 1985" ;
     values:category "Administration of justice, detention & law enforcement" ;
@@ -219,6 +232,7 @@ concept:basic-principles-independence-judiciary-paragraph-14 a cml:Concept ;
     skos:prefLabel "Paragraph 14"@en ;
     cml:realizedBy doc:paragraph-14 ;
     cml:curationStatus cml:Proposed ;
+    cml:schemaVersion "2" ;   # regenerable — see CML_UPGRADE.md
     prov:wasDerivedFrom <https://www.ohchr.org/en/instruments-mechanisms/instruments/basic-principles-independence-judiciary> ;
     dc:date "06 September 1985" ;
     values:category "Administration of justice, detention & law enforcement" ;
@@ -234,6 +248,7 @@ concept:basic-principles-independence-judiciary-paragraph-15 a cml:Concept ;
     skos:prefLabel "Paragraph 15"@en ;
     cml:realizedBy doc:paragraph-15 ;
     cml:curationStatus cml:Proposed ;
+    cml:schemaVersion "2" ;   # regenerable — see CML_UPGRADE.md
     prov:wasDerivedFrom <https://www.ohchr.org/en/instruments-mechanisms/instruments/basic-principles-independence-judiciary> ;
     dc:date "06 September 1985" ;
     values:category "Administration of justice, detention & law enforcement" ;
@@ -250,6 +265,7 @@ concept:basic-principles-independence-judiciary-paragraph-16 a cml:Concept ;
     skos:prefLabel "Paragraph 16"@en ;
     cml:realizedBy doc:paragraph-16 ;
     cml:curationStatus cml:Proposed ;
+    cml:schemaVersion "2" ;   # regenerable — see CML_UPGRADE.md
     prov:wasDerivedFrom <https://www.ohchr.org/en/instruments-mechanisms/instruments/basic-principles-independence-judiciary> ;
     dc:date "06 September 1985" ;
     values:category "Administration of justice, detention & law enforcement" ;
@@ -266,6 +282,7 @@ concept:basic-principles-independence-judiciary-paragraph-17 a cml:Concept ;
     skos:prefLabel "Paragraph 17"@en ;
     cml:realizedBy doc:paragraph-17 ;
     cml:curationStatus cml:Proposed ;
+    cml:schemaVersion "2" ;   # regenerable — see CML_UPGRADE.md
     prov:wasDerivedFrom <https://www.ohchr.org/en/instruments-mechanisms/instruments/basic-principles-independence-judiciary> ;
     dc:date "06 September 1985" ;
     values:category "Administration of justice, detention & law enforcement" ;
@@ -281,6 +298,7 @@ concept:basic-principles-independence-judiciary-paragraph-18 a cml:Concept ;
     skos:prefLabel "Paragraph 18"@en ;
     cml:realizedBy doc:paragraph-18 ;
     cml:curationStatus cml:Proposed ;
+    cml:schemaVersion "2" ;   # regenerable — see CML_UPGRADE.md
     prov:wasDerivedFrom <https://www.ohchr.org/en/instruments-mechanisms/instruments/basic-principles-independence-judiciary> ;
     dc:date "06 September 1985" ;
     values:category "Administration of justice, detention & law enforcement" ;
@@ -296,6 +314,7 @@ concept:basic-principles-independence-judiciary-paragraph-19 a cml:Concept ;
     skos:prefLabel "Paragraph 19"@en ;
     cml:realizedBy doc:paragraph-19 ;
     cml:curationStatus cml:Proposed ;
+    cml:schemaVersion "2" ;   # regenerable — see CML_UPGRADE.md
     prov:wasDerivedFrom <https://www.ohchr.org/en/instruments-mechanisms/instruments/basic-principles-independence-judiciary> ;
     dc:date "06 September 1985" ;
     values:category "Administration of justice, detention & law enforcement" ;
@@ -311,6 +330,7 @@ concept:basic-principles-independence-judiciary-paragraph-20 a cml:Concept ;
     skos:prefLabel "Paragraph 20"@en ;
     cml:realizedBy doc:paragraph-20 ;
     cml:curationStatus cml:Proposed ;
+    cml:schemaVersion "2" ;   # regenerable — see CML_UPGRADE.md
     prov:wasDerivedFrom <https://www.ohchr.org/en/instruments-mechanisms/instruments/basic-principles-independence-judiciary> ;
     dc:date "06 September 1985" ;
     values:category "Administration of justice, detention & law enforcement" ;
@@ -327,6 +347,7 @@ concept:basic-principles-independence-judiciary-paragraph-21 a cml:Concept ;
     skos:prefLabel "Paragraph 21"@en ;
     cml:realizedBy doc:paragraph-21 ;
     cml:curationStatus cml:Proposed ;
+    cml:schemaVersion "2" ;   # regenerable — see CML_UPGRADE.md
     prov:wasDerivedFrom <https://www.ohchr.org/en/instruments-mechanisms/instruments/basic-principles-independence-judiciary> ;
     dc:date "06 September 1985" ;
     values:category "Administration of justice, detention & law enforcement" ;
@@ -344,6 +365,7 @@ concept:basic-principles-independence-judiciary-paragraph-22 a cml:Concept ;
     skos:prefLabel "Paragraph 22"@en ;
     cml:realizedBy doc:paragraph-22 ;
     cml:curationStatus cml:Proposed ;
+    cml:schemaVersion "2" ;   # regenerable — see CML_UPGRADE.md
     prov:wasDerivedFrom <https://www.ohchr.org/en/instruments-mechanisms/instruments/basic-principles-independence-judiciary> ;
     dc:date "06 September 1985" ;
     values:category "Administration of justice, detention & law enforcement" ;
@@ -359,6 +381,7 @@ concept:basic-principles-independence-judiciary-paragraph-23 a cml:Concept ;
     skos:prefLabel "Paragraph 23"@en ;
     cml:realizedBy doc:paragraph-23 ;
     cml:curationStatus cml:Proposed ;
+    cml:schemaVersion "2" ;   # regenerable — see CML_UPGRADE.md
     prov:wasDerivedFrom <https://www.ohchr.org/en/instruments-mechanisms/instruments/basic-principles-independence-judiciary> ;
     dc:date "06 September 1985" ;
     values:category "Administration of justice, detention & law enforcement" ;
@@ -375,6 +398,7 @@ concept:basic-principles-independence-judiciary-paragraph-24 a cml:Concept ;
     skos:prefLabel "Paragraph 24"@en ;
     cml:realizedBy doc:paragraph-24 ;
     cml:curationStatus cml:Proposed ;
+    cml:schemaVersion "2" ;   # regenerable — see CML_UPGRADE.md
     prov:wasDerivedFrom <https://www.ohchr.org/en/instruments-mechanisms/instruments/basic-principles-independence-judiciary> ;
     dc:date "06 September 1985" ;
     values:category "Administration of justice, detention & law enforcement" ;
@@ -390,6 +414,7 @@ concept:basic-principles-independence-judiciary-paragraph-25 a cml:Concept ;
     skos:prefLabel "Paragraph 25"@en ;
     cml:realizedBy doc:paragraph-25 ;
     cml:curationStatus cml:Proposed ;
+    cml:schemaVersion "2" ;   # regenerable — see CML_UPGRADE.md
     prov:wasDerivedFrom <https://www.ohchr.org/en/instruments-mechanisms/instruments/basic-principles-independence-judiciary> ;
     dc:date "06 September 1985" ;
     values:category "Administration of justice, detention & law enforcement" ;
@@ -407,6 +432,7 @@ concept:basic-principles-independence-judiciary-paragraph-26 a cml:Concept ;
     skos:prefLabel "Paragraph 26"@en ;
     cml:realizedBy doc:paragraph-26 ;
     cml:curationStatus cml:Proposed ;
+    cml:schemaVersion "2" ;   # regenerable — see CML_UPGRADE.md
     prov:wasDerivedFrom <https://www.ohchr.org/en/instruments-mechanisms/instruments/basic-principles-independence-judiciary> ;
     dc:date "06 September 1985" ;
     values:category "Administration of justice, detention & law enforcement" ;
@@ -422,6 +448,7 @@ concept:basic-principles-independence-judiciary-paragraph-27 a cml:Concept ;
     skos:prefLabel "Paragraph 27"@en ;
     cml:realizedBy doc:paragraph-27 ;
     cml:curationStatus cml:Proposed ;
+    cml:schemaVersion "2" ;   # regenerable — see CML_UPGRADE.md
     prov:wasDerivedFrom <https://www.ohchr.org/en/instruments-mechanisms/instruments/basic-principles-independence-judiciary> ;
     dc:date "06 September 1985" ;
     values:category "Administration of justice, detention & law enforcement" ;
@@ -437,6 +464,7 @@ concept:basic-principles-independence-judiciary-paragraph-28 a cml:Concept ;
     skos:prefLabel "Paragraph 28"@en ;
     cml:realizedBy doc:paragraph-28 ;
     cml:curationStatus cml:Proposed ;
+    cml:schemaVersion "2" ;   # regenerable — see CML_UPGRADE.md
     prov:wasDerivedFrom <https://www.ohchr.org/en/instruments-mechanisms/instruments/basic-principles-independence-judiciary> ;
     dc:date "06 September 1985" ;
     values:category "Administration of justice, detention & law enforcement" ;
@@ -452,6 +480,7 @@ concept:basic-principles-independence-judiciary-paragraph-29 a cml:Concept ;
     skos:prefLabel "Paragraph 29"@en ;
     cml:realizedBy doc:paragraph-29 ;
     cml:curationStatus cml:Proposed ;
+    cml:schemaVersion "2" ;   # regenerable — see CML_UPGRADE.md
     prov:wasDerivedFrom <https://www.ohchr.org/en/instruments-mechanisms/instruments/basic-principles-independence-judiciary> ;
     dc:date "06 September 1985" ;
     values:category "Administration of justice, detention & law enforcement" ;
@@ -467,6 +496,7 @@ concept:basic-principles-independence-judiciary-paragraph-30 a cml:Concept ;
     skos:prefLabel "Paragraph 30"@en ;
     cml:realizedBy doc:paragraph-30 ;
     cml:curationStatus cml:Proposed ;
+    cml:schemaVersion "2" ;   # regenerable — see CML_UPGRADE.md
     prov:wasDerivedFrom <https://www.ohchr.org/en/instruments-mechanisms/instruments/basic-principles-independence-judiciary> ;
     dc:date "06 September 1985" ;
     values:category "Administration of justice, detention & law enforcement" ;
@@ -483,6 +513,7 @@ concept:basic-principles-independence-judiciary-paragraph-31 a cml:Concept ;
     skos:prefLabel "Paragraph 31"@en ;
     cml:realizedBy doc:paragraph-31 ;
     cml:curationStatus cml:Proposed ;
+    cml:schemaVersion "2" ;   # regenerable — see CML_UPGRADE.md
     prov:wasDerivedFrom <https://www.ohchr.org/en/instruments-mechanisms/instruments/basic-principles-independence-judiciary> ;
     dc:date "06 September 1985" ;
     values:category "Administration of justice, detention & law enforcement" ;
@@ -498,6 +529,7 @@ concept:basic-principles-independence-judiciary-paragraph-32 a cml:Concept ;
     skos:prefLabel "Paragraph 32"@en ;
     cml:realizedBy doc:paragraph-32 ;
     cml:curationStatus cml:Proposed ;
+    cml:schemaVersion "2" ;   # regenerable — see CML_UPGRADE.md
     prov:wasDerivedFrom <https://www.ohchr.org/en/instruments-mechanisms/instruments/basic-principles-independence-judiciary> ;
     dc:date "06 September 1985" ;
     values:category "Administration of justice, detention & law enforcement" ;
@@ -513,6 +545,7 @@ concept:basic-principles-independence-judiciary-paragraph-33 a cml:Concept ;
     skos:prefLabel "Paragraph 33"@en ;
     cml:realizedBy doc:paragraph-33 ;
     cml:curationStatus cml:Proposed ;
+    cml:schemaVersion "2" ;   # regenerable — see CML_UPGRADE.md
     prov:wasDerivedFrom <https://www.ohchr.org/en/instruments-mechanisms/instruments/basic-principles-independence-judiciary> ;
     dc:date "06 September 1985" ;
     values:category "Administration of justice, detention & law enforcement" ;
@@ -529,6 +562,7 @@ concept:basic-principles-independence-judiciary-paragraph-34 a cml:Concept ;
     skos:prefLabel "Paragraph 34"@en ;
     cml:realizedBy doc:paragraph-34 ;
     cml:curationStatus cml:Proposed ;
+    cml:schemaVersion "2" ;   # regenerable — see CML_UPGRADE.md
     prov:wasDerivedFrom <https://www.ohchr.org/en/instruments-mechanisms/instruments/basic-principles-independence-judiciary> ;
     dc:date "06 September 1985" ;
     values:category "Administration of justice, detention & law enforcement" ;
@@ -546,6 +580,7 @@ concept:basic-principles-independence-judiciary-paragraph-35 a cml:Concept ;
     skos:prefLabel "Paragraph 35"@en ;
     cml:realizedBy doc:paragraph-35 ;
     cml:curationStatus cml:Proposed ;
+    cml:schemaVersion "2" ;   # regenerable — see CML_UPGRADE.md
     prov:wasDerivedFrom <https://www.ohchr.org/en/instruments-mechanisms/instruments/basic-principles-independence-judiciary> ;
     dc:date "06 September 1985" ;
     values:category "Administration of justice, detention & law enforcement" ;
@@ -563,6 +598,7 @@ concept:basic-principles-independence-judiciary-paragraph-36 a cml:Concept ;
     skos:prefLabel "Paragraph 36"@en ;
     cml:realizedBy doc:paragraph-36 ;
     cml:curationStatus cml:Proposed ;
+    cml:schemaVersion "2" ;   # regenerable — see CML_UPGRADE.md
     prov:wasDerivedFrom <https://www.ohchr.org/en/instruments-mechanisms/instruments/basic-principles-independence-judiciary> ;
     dc:date "06 September 1985" ;
     values:category "Administration of justice, detention & law enforcement" ;

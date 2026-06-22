@@ -20,6 +20,7 @@ concept:standard-rules-equalization-opportunities-persons-disabilities-rule-1 a 
     skos:prefLabel "Rule 1"@en ;
     cml:realizedBy doc:rule-1 ;
     cml:curationStatus cml:Proposed ;
+    cml:schemaVersion "2" ;   # regenerable — see CML_UPGRADE.md
     prov:wasDerivedFrom <https://www.ohchr.org/en/instruments-mechanisms/instruments/standard-rules-equalization-opportunities-persons-disabilities> ;
     dc:date "20 December 1993" ;
     values:category "Persons with disabilities" ;
@@ -35,6 +36,7 @@ concept:standard-rules-equalization-opportunities-persons-disabilities-rule-2 a 
     skos:prefLabel "Rule 2"@en ;
     cml:realizedBy doc:rule-2 ;
     cml:curationStatus cml:Proposed ;
+    cml:schemaVersion "2" ;   # regenerable — see CML_UPGRADE.md
     prov:wasDerivedFrom <https://www.ohchr.org/en/instruments-mechanisms/instruments/standard-rules-equalization-opportunities-persons-disabilities> ;
     dc:date "20 December 1993" ;
     values:category "Persons with disabilities" ;
@@ -50,6 +52,7 @@ concept:standard-rules-equalization-opportunities-persons-disabilities-rule-3 a 
     skos:prefLabel "Rule 3"@en ;
     cml:realizedBy doc:rule-3 ;
     cml:curationStatus cml:Proposed ;
+    cml:schemaVersion "2" ;   # regenerable — see CML_UPGRADE.md
     prov:wasDerivedFrom <https://www.ohchr.org/en/instruments-mechanisms/instruments/standard-rules-equalization-opportunities-persons-disabilities> ;
     dc:date "20 December 1993" ;
     values:category "Persons with disabilities" ;
@@ -65,6 +68,7 @@ concept:standard-rules-equalization-opportunities-persons-disabilities-rule-4 a 
     skos:prefLabel "Rule 4"@en ;
     cml:realizedBy doc:rule-4 ;
     cml:curationStatus cml:Proposed ;
+    cml:schemaVersion "2" ;   # regenerable — see CML_UPGRADE.md
     prov:wasDerivedFrom <https://www.ohchr.org/en/instruments-mechanisms/instruments/standard-rules-equalization-opportunities-persons-disabilities> ;
     dc:date "20 December 1993" ;
     values:category "Persons with disabilities" ;
@@ -80,6 +84,7 @@ concept:standard-rules-equalization-opportunities-persons-disabilities-rule-5 a 
     skos:prefLabel "Rule 5"@en ;
     cml:realizedBy doc:rule-5 ;
     cml:curationStatus cml:Proposed ;
+    cml:schemaVersion "2" ;   # regenerable — see CML_UPGRADE.md
     prov:wasDerivedFrom <https://www.ohchr.org/en/instruments-mechanisms/instruments/standard-rules-equalization-opportunities-persons-disabilities> ;
     dc:date "20 December 1993" ;
     values:category "Persons with disabilities" ;
@@ -95,6 +100,7 @@ concept:standard-rules-equalization-opportunities-persons-disabilities-rule-6 a 
     skos:prefLabel "Rule 6"@en ;
     cml:realizedBy doc:rule-6 ;
     cml:curationStatus cml:Proposed ;
+    cml:schemaVersion "2" ;   # regenerable — see CML_UPGRADE.md
     prov:wasDerivedFrom <https://www.ohchr.org/en/instruments-mechanisms/instruments/standard-rules-equalization-opportunities-persons-disabilities> ;
     dc:date "20 December 1993" ;
     values:category "Persons with disabilities" ;
@@ -110,6 +116,7 @@ concept:standard-rules-equalization-opportunities-persons-disabilities-rule-7 a 
     skos:prefLabel "Rule 7"@en ;
     cml:realizedBy doc:rule-7 ;
     cml:curationStatus cml:Proposed ;
+    cml:schemaVersion "2" ;   # regenerable — see CML_UPGRADE.md
     prov:wasDerivedFrom <https://www.ohchr.org/en/instruments-mechanisms/instruments/standard-rules-equalization-opportunities-persons-disabilities> ;
     dc:date "20 December 1993" ;
     values:category "Persons with disabilities" ;
@@ -125,6 +132,7 @@ concept:standard-rules-equalization-opportunities-persons-disabilities-rule-8 a 
     skos:prefLabel "Rule 8"@en ;
     cml:realizedBy doc:rule-8 ;
     cml:curationStatus cml:Proposed ;
+    cml:schemaVersion "2" ;   # regenerable — see CML_UPGRADE.md
     prov:wasDerivedFrom <https://www.ohchr.org/en/instruments-mechanisms/instruments/standard-rules-equalization-opportunities-persons-disabilities> ;
     dc:date "20 December 1993" ;
     values:category "Persons with disabilities" ;
@@ -140,6 +148,7 @@ concept:standard-rules-equalization-opportunities-persons-disabilities-rule-9 a 
     skos:prefLabel "Rule 9"@en ;
     cml:realizedBy doc:rule-9 ;
     cml:curationStatus cml:Proposed ;
+    cml:schemaVersion "2" ;   # regenerable — see CML_UPGRADE.md
     prov:wasDerivedFrom <https://www.ohchr.org/en/instruments-mechanisms/instruments/standard-rules-equalization-opportunities-persons-disabilities> ;
     dc:date "20 December 1993" ;
     values:category "Persons with disabilities" ;
@@ -156,6 +165,7 @@ concept:standard-rules-equalization-opportunities-persons-disabilities-rule-10 a
     skos:prefLabel "Rule 10"@en ;
     cml:realizedBy doc:rule-10 ;
     cml:curationStatus cml:Proposed ;
+    cml:schemaVersion "2" ;   # regenerable — see CML_UPGRADE.md
     prov:wasDerivedFrom <https://www.ohchr.org/en/instruments-mechanisms/instruments/standard-rules-equalization-opportunities-persons-disabilities> ;
     dc:date "20 December 1993" ;
     values:category "Persons with disabilities" ;
@@ -171,6 +181,7 @@ concept:standard-rules-equalization-opportunities-persons-disabilities-rule-11 a
     skos:prefLabel "Rule 11"@en ;
     cml:realizedBy doc:rule-11 ;
     cml:curationStatus cml:Proposed ;
+    cml:schemaVersion "2" ;   # regenerable — see CML_UPGRADE.md
     prov:wasDerivedFrom <https://www.ohchr.org/en/instruments-mechanisms/instruments/standard-rules-equalization-opportunities-persons-disabilities> ;
     dc:date "20 December 1993" ;
     values:category "Persons with disabilities" ;
@@ -186,6 +197,7 @@ concept:standard-rules-equalization-opportunities-persons-disabilities-rule-12 a
     skos:prefLabel "Rule 12"@en ;
     cml:realizedBy doc:rule-12 ;
     cml:curationStatus cml:Proposed ;
+    cml:schemaVersion "2" ;   # regenerable — see CML_UPGRADE.md
     prov:wasDerivedFrom <https://www.ohchr.org/en/instruments-mechanisms/instruments/standard-rules-equalization-opportunities-persons-disabilities> ;
     dc:date "20 December 1993" ;
     values:category "Persons with disabilities" ;
@@ -201,6 +213,7 @@ concept:standard-rules-equalization-opportunities-persons-disabilities-rule-13 a
     skos:prefLabel "Rule 13"@en ;
     cml:realizedBy doc:rule-13 ;
     cml:curationStatus cml:Proposed ;
+    cml:schemaVersion "2" ;   # regenerable — see CML_UPGRADE.md
     prov:wasDerivedFrom <https://www.ohchr.org/en/instruments-mechanisms/instruments/standard-rules-equalization-opportunities-persons-disabilities> ;
     dc:date "20 December 1993" ;
     values:category "Persons with disabilities" ;
@@ -216,6 +229,7 @@ concept:standard-rules-equalization-opportunities-persons-disabilities-rule-14 a
     skos:prefLabel "Rule 14"@en ;
     cml:realizedBy doc:rule-14 ;
     cml:curationStatus cml:Proposed ;
+    cml:schemaVersion "2" ;   # regenerable — see CML_UPGRADE.md
     prov:wasDerivedFrom <https://www.ohchr.org/en/instruments-mechanisms/instruments/standard-rules-equalization-opportunities-persons-disabilities> ;
     dc:date "20 December 1993" ;
     values:category "Persons with disabilities" ;
@@ -231,6 +245,7 @@ concept:standard-rules-equalization-opportunities-persons-disabilities-rule-15 a
     skos:prefLabel "Rule 15"@en ;
     cml:realizedBy doc:rule-15 ;
     cml:curationStatus cml:Proposed ;
+    cml:schemaVersion "2" ;   # regenerable — see CML_UPGRADE.md
     prov:wasDerivedFrom <https://www.ohchr.org/en/instruments-mechanisms/instruments/standard-rules-equalization-opportunities-persons-disabilities> ;
     dc:date "20 December 1993" ;
     values:category "Persons with disabilities" ;
@@ -246,6 +261,7 @@ concept:standard-rules-equalization-opportunities-persons-disabilities-rule-16 a
     skos:prefLabel "Rule 16"@en ;
     cml:realizedBy doc:rule-16 ;
     cml:curationStatus cml:Proposed ;
+    cml:schemaVersion "2" ;   # regenerable — see CML_UPGRADE.md
     prov:wasDerivedFrom <https://www.ohchr.org/en/instruments-mechanisms/instruments/standard-rules-equalization-opportunities-persons-disabilities> ;
     dc:date "20 December 1993" ;
     values:category "Persons with disabilities" ;
@@ -261,6 +277,7 @@ concept:standard-rules-equalization-opportunities-persons-disabilities-rule-17 a
     skos:prefLabel "Rule 17"@en ;
     cml:realizedBy doc:rule-17 ;
     cml:curationStatus cml:Proposed ;
+    cml:schemaVersion "2" ;   # regenerable — see CML_UPGRADE.md
     prov:wasDerivedFrom <https://www.ohchr.org/en/instruments-mechanisms/instruments/standard-rules-equalization-opportunities-persons-disabilities> ;
     dc:date "20 December 1993" ;
     values:category "Persons with disabilities" ;
@@ -276,6 +293,7 @@ concept:standard-rules-equalization-opportunities-persons-disabilities-rule-18 a
     skos:prefLabel "Rule 18"@en ;
     cml:realizedBy doc:rule-18 ;
     cml:curationStatus cml:Proposed ;
+    cml:schemaVersion "2" ;   # regenerable — see CML_UPGRADE.md
     prov:wasDerivedFrom <https://www.ohchr.org/en/instruments-mechanisms/instruments/standard-rules-equalization-opportunities-persons-disabilities> ;
     dc:date "20 December 1993" ;
     values:category "Persons with disabilities" ;
@@ -291,6 +309,7 @@ concept:standard-rules-equalization-opportunities-persons-disabilities-rule-19 a
     skos:prefLabel "Rule 19"@en ;
     cml:realizedBy doc:rule-19 ;
     cml:curationStatus cml:Proposed ;
+    cml:schemaVersion "2" ;   # regenerable — see CML_UPGRADE.md
     prov:wasDerivedFrom <https://www.ohchr.org/en/instruments-mechanisms/instruments/standard-rules-equalization-opportunities-persons-disabilities> ;
     dc:date "20 December 1993" ;
     values:category "Persons with disabilities" ;
@@ -306,6 +325,7 @@ concept:standard-rules-equalization-opportunities-persons-disabilities-rule-20 a
     skos:prefLabel "Rule 20"@en ;
     cml:realizedBy doc:rule-20 ;
     cml:curationStatus cml:Proposed ;
+    cml:schemaVersion "2" ;   # regenerable — see CML_UPGRADE.md
     prov:wasDerivedFrom <https://www.ohchr.org/en/instruments-mechanisms/instruments/standard-rules-equalization-opportunities-persons-disabilities> ;
     dc:date "20 December 1993" ;
     values:category "Persons with disabilities" ;
@@ -321,6 +341,7 @@ concept:standard-rules-equalization-opportunities-persons-disabilities-rule-21 a
     skos:prefLabel "Rule 21"@en ;
     cml:realizedBy doc:rule-21 ;
     cml:curationStatus cml:Proposed ;
+    cml:schemaVersion "2" ;   # regenerable — see CML_UPGRADE.md
     prov:wasDerivedFrom <https://www.ohchr.org/en/instruments-mechanisms/instruments/standard-rules-equalization-opportunities-persons-disabilities> ;
     dc:date "20 December 1993" ;
     values:category "Persons with disabilities" ;
@@ -336,6 +357,7 @@ concept:standard-rules-equalization-opportunities-persons-disabilities-rule-22 a
     skos:prefLabel "Rule 22"@en ;
     cml:realizedBy doc:rule-22 ;
     cml:curationStatus cml:Proposed ;
+    cml:schemaVersion "2" ;   # regenerable — see CML_UPGRADE.md
     prov:wasDerivedFrom <https://www.ohchr.org/en/instruments-mechanisms/instruments/standard-rules-equalization-opportunities-persons-disabilities> ;
     dc:date "20 December 1993" ;
     values:category "Persons with disabilities" ;

@@ -20,6 +20,7 @@ concept:international-convention-protection-rights-all-migrant-workers-article-1
     skos:prefLabel "Article 1"@en ;
     cml:realizedBy doc:article-1 ;
     cml:curationStatus cml:Proposed ;
+    cml:schemaVersion "2" ;   # regenerable — see CML_UPGRADE.md
     prov:wasDerivedFrom <https://www.ohchr.org/en/instruments-mechanisms/instruments/international-convention-protection-rights-all-migrant-workers> ;
     dc:date "18 December 1990" ;
     values:category "Migrants & non-nationals" ;
@@ -35,6 +36,7 @@ concept:international-convention-protection-rights-all-migrant-workers-article-2
     skos:prefLabel "Article 2"@en ;
     cml:realizedBy doc:article-2 ;
     cml:curationStatus cml:Proposed ;
+    cml:schemaVersion "2" ;   # regenerable — see CML_UPGRADE.md
     prov:wasDerivedFrom <https://www.ohchr.org/en/instruments-mechanisms/instruments/international-convention-protection-rights-all-migrant-workers> ;
     dc:date "18 December 1990" ;
     values:category "Migrants & non-nationals" ;
@@ -50,6 +52,7 @@ concept:international-convention-protection-rights-all-migrant-workers-article-3
     skos:prefLabel "Article 3"@en ;
     cml:realizedBy doc:article-3 ;
     cml:curationStatus cml:Proposed ;
+    cml:schemaVersion "2" ;   # regenerable — see CML_UPGRADE.md
     prov:wasDerivedFrom <https://www.ohchr.org/en/instruments-mechanisms/instruments/international-convention-protection-rights-all-migrant-workers> ;
     dc:date "18 December 1990" ;
     values:category "Migrants & non-nationals" ;
@@ -66,6 +69,7 @@ concept:international-convention-protection-rights-all-migrant-workers-article-4
     skos:prefLabel "Article 4"@en ;
     cml:realizedBy doc:article-4 ;
     cml:curationStatus cml:Proposed ;
+    cml:schemaVersion "2" ;   # regenerable — see CML_UPGRADE.md
     prov:wasDerivedFrom <https://www.ohchr.org/en/instruments-mechanisms/instruments/international-convention-protection-rights-all-migrant-workers> ;
     dc:date "18 December 1990" ;
     values:category "Migrants & non-nationals" ;
@@ -81,6 +85,7 @@ concept:international-convention-protection-rights-all-migrant-workers-article-5
     skos:prefLabel "Article 5"@en ;
     cml:realizedBy doc:article-5 ;
     cml:curationStatus cml:Proposed ;
+    cml:schemaVersion "2" ;   # regenerable — see CML_UPGRADE.md
     prov:wasDerivedFrom <https://www.ohchr.org/en/instruments-mechanisms/instruments/international-convention-protection-rights-all-migrant-workers> ;
     dc:date "18 December 1990" ;
     values:category "Migrants & non-nationals" ;
@@ -96,6 +101,7 @@ concept:international-convention-protection-rights-all-migrant-workers-article-6
     skos:prefLabel "Article 6"@en ;
     cml:realizedBy doc:article-6 ;
     cml:curationStatus cml:Proposed ;
+    cml:schemaVersion "2" ;   # regenerable — see CML_UPGRADE.md
     prov:wasDerivedFrom <https://www.ohchr.org/en/instruments-mechanisms/instruments/international-convention-protection-rights-all-migrant-workers> ;
     dc:date "18 December 1990" ;
     values:category "Migrants & non-nationals" ;
@@ -111,6 +117,7 @@ concept:international-convention-protection-rights-all-migrant-workers-article-7
     skos:prefLabel "Article 7"@en ;
     cml:realizedBy doc:article-7 ;
     cml:curationStatus cml:Proposed ;
+    cml:schemaVersion "2" ;   # regenerable — see CML_UPGRADE.md
     prov:wasDerivedFrom <https://www.ohchr.org/en/instruments-mechanisms/instruments/international-convention-protection-rights-all-migrant-workers> ;
     dc:date "18 December 1990" ;
     values:category "Migrants & non-nationals" ;
@@ -126,6 +133,7 @@ concept:international-convention-protection-rights-all-migrant-workers-article-8
     skos:prefLabel "Article 8"@en ;
     cml:realizedBy doc:article-8 ;
     cml:curationStatus cml:Proposed ;
+    cml:schemaVersion "2" ;   # regenerable — see CML_UPGRADE.md
     prov:wasDerivedFrom <https://www.ohchr.org/en/instruments-mechanisms/instruments/international-convention-protection-rights-all-migrant-workers> ;
     dc:date "18 December 1990" ;
     values:category "Migrants & non-nationals" ;
@@ -142,6 +150,7 @@ concept:international-convention-protection-rights-all-migrant-workers-article-9
     skos:prefLabel "Article 9"@en ;
     cml:realizedBy doc:article-9 ;
     cml:curationStatus cml:Proposed ;
+    cml:schemaVersion "2" ;   # regenerable — see CML_UPGRADE.md
     prov:wasDerivedFrom <https://www.ohchr.org/en/instruments-mechanisms/instruments/international-convention-protection-rights-all-migrant-workers> ;
     dc:date "18 December 1990" ;
     values:category "Migrants & non-nationals" ;
@@ -158,6 +167,7 @@ concept:international-convention-protection-rights-all-migrant-workers-article-1
     skos:prefLabel "Article 10"@en ;
     cml:realizedBy doc:article-10 ;
     cml:curationStatus cml:Proposed ;
+    cml:schemaVersion "2" ;   # regenerable — see CML_UPGRADE.md
     prov:wasDerivedFrom <https://www.ohchr.org/en/instruments-mechanisms/instruments/international-convention-protection-rights-all-migrant-workers> ;
     dc:date "18 December 1990" ;
     values:category "Migrants & non-nationals" ;
@@ -175,6 +185,7 @@ concept:international-convention-protection-rights-all-migrant-workers-article-1
     skos:prefLabel "Article 11"@en ;
     cml:realizedBy doc:article-11 ;
     cml:curationStatus cml:Proposed ;
+    cml:schemaVersion "2" ;   # regenerable — see CML_UPGRADE.md
     prov:wasDerivedFrom <https://www.ohchr.org/en/instruments-mechanisms/instruments/international-convention-protection-rights-all-migrant-workers> ;
     dc:date "18 December 1990" ;
     values:category "Migrants & non-nationals" ;
@@ -191,6 +202,7 @@ concept:international-convention-protection-rights-all-migrant-workers-article-1
     skos:prefLabel "Article 12"@en ;
     cml:realizedBy doc:article-12 ;
     cml:curationStatus cml:Proposed ;
+    cml:schemaVersion "2" ;   # regenerable — see CML_UPGRADE.md
     prov:wasDerivedFrom <https://www.ohchr.org/en/instruments-mechanisms/instruments/international-convention-protection-rights-all-migrant-workers> ;
     dc:date "18 December 1990" ;
     values:category "Migrants & non-nationals" ;
@@ -207,6 +219,7 @@ concept:international-convention-protection-rights-all-migrant-workers-article-1
     skos:prefLabel "Article 13"@en ;
     cml:realizedBy doc:article-13 ;
     cml:curationStatus cml:Proposed ;
+    cml:schemaVersion "2" ;   # regenerable — see CML_UPGRADE.md
     prov:wasDerivedFrom <https://www.ohchr.org/en/instruments-mechanisms/instruments/international-convention-protection-rights-all-migrant-workers> ;
     dc:date "18 December 1990" ;
     values:category "Migrants & non-nationals" ;
@@ -223,6 +236,7 @@ concept:international-convention-protection-rights-all-migrant-workers-article-1
     skos:prefLabel "Article 14"@en ;
     cml:realizedBy doc:article-14 ;
     cml:curationStatus cml:Proposed ;
+    cml:schemaVersion "2" ;   # regenerable — see CML_UPGRADE.md
     prov:wasDerivedFrom <https://www.ohchr.org/en/instruments-mechanisms/instruments/international-convention-protection-rights-all-migrant-workers> ;
     dc:date "18 December 1990" ;
     values:category "Migrants & non-nationals" ;
@@ -239,6 +253,7 @@ concept:international-convention-protection-rights-all-migrant-workers-article-1
     skos:prefLabel "Article 15"@en ;
     cml:realizedBy doc:article-15 ;
     cml:curationStatus cml:Proposed ;
+    cml:schemaVersion "2" ;   # regenerable — see CML_UPGRADE.md
     prov:wasDerivedFrom <https://www.ohchr.org/en/instruments-mechanisms/instruments/international-convention-protection-rights-all-migrant-workers> ;
     dc:date "18 December 1990" ;
     values:category "Migrants & non-nationals" ;
@@ -255,6 +270,7 @@ concept:international-convention-protection-rights-all-migrant-workers-article-1
     skos:prefLabel "Article 16"@en ;
     cml:realizedBy doc:article-16 ;
     cml:curationStatus cml:Proposed ;
+    cml:schemaVersion "2" ;   # regenerable — see CML_UPGRADE.md
     prov:wasDerivedFrom <https://www.ohchr.org/en/instruments-mechanisms/instruments/international-convention-protection-rights-all-migrant-workers> ;
     dc:date "18 December 1990" ;
     values:category "Migrants & non-nationals" ;
@@ -271,6 +287,7 @@ concept:international-convention-protection-rights-all-migrant-workers-article-1
     skos:prefLabel "Article 17"@en ;
     cml:realizedBy doc:article-17 ;
     cml:curationStatus cml:Proposed ;
+    cml:schemaVersion "2" ;   # regenerable — see CML_UPGRADE.md
     prov:wasDerivedFrom <https://www.ohchr.org/en/instruments-mechanisms/instruments/international-convention-protection-rights-all-migrant-workers> ;
     dc:date "18 December 1990" ;
     values:category "Migrants & non-nationals" ;
@@ -287,6 +304,7 @@ concept:international-convention-protection-rights-all-migrant-workers-article-1
     skos:prefLabel "Article 18"@en ;
     cml:realizedBy doc:article-18 ;
     cml:curationStatus cml:Proposed ;
+    cml:schemaVersion "2" ;   # regenerable — see CML_UPGRADE.md
     prov:wasDerivedFrom <https://www.ohchr.org/en/instruments-mechanisms/instruments/international-convention-protection-rights-all-migrant-workers> ;
     dc:date "18 December 1990" ;
     values:category "Migrants & non-nationals" ;
@@ -303,6 +321,7 @@ concept:international-convention-protection-rights-all-migrant-workers-article-1
     skos:prefLabel "Article 19"@en ;
     cml:realizedBy doc:article-19 ;
     cml:curationStatus cml:Proposed ;
+    cml:schemaVersion "2" ;   # regenerable — see CML_UPGRADE.md
     prov:wasDerivedFrom <https://www.ohchr.org/en/instruments-mechanisms/instruments/international-convention-protection-rights-all-migrant-workers> ;
     dc:date "18 December 1990" ;
     values:category "Migrants & non-nationals" ;
@@ -320,6 +339,7 @@ concept:international-convention-protection-rights-all-migrant-workers-article-2
     skos:prefLabel "Article 20"@en ;
     cml:realizedBy doc:article-20 ;
     cml:curationStatus cml:Proposed ;
+    cml:schemaVersion "2" ;   # regenerable — see CML_UPGRADE.md
     prov:wasDerivedFrom <https://www.ohchr.org/en/instruments-mechanisms/instruments/international-convention-protection-rights-all-migrant-workers> ;
     dc:date "18 December 1990" ;
     values:category "Migrants & non-nationals" ;
@@ -337,6 +357,7 @@ concept:international-convention-protection-rights-all-migrant-workers-article-2
     skos:prefLabel "Article 21"@en ;
     cml:realizedBy doc:article-21 ;
     cml:curationStatus cml:Proposed ;
+    cml:schemaVersion "2" ;   # regenerable — see CML_UPGRADE.md
     prov:wasDerivedFrom <https://www.ohchr.org/en/instruments-mechanisms/instruments/international-convention-protection-rights-all-migrant-workers> ;
     dc:date "18 December 1990" ;
     values:category "Migrants & non-nationals" ;
@@ -354,6 +375,7 @@ concept:international-convention-protection-rights-all-migrant-workers-article-2
     skos:prefLabel "Article 22"@en ;
     cml:realizedBy doc:article-22 ;
     cml:curationStatus cml:Proposed ;
+    cml:schemaVersion "2" ;   # regenerable — see CML_UPGRADE.md
     prov:wasDerivedFrom <https://www.ohchr.org/en/instruments-mechanisms/instruments/international-convention-protection-rights-all-migrant-workers> ;
     dc:date "18 December 1990" ;
     values:category "Migrants & non-nationals" ;
@@ -370,6 +392,7 @@ concept:international-convention-protection-rights-all-migrant-workers-article-2
     skos:prefLabel "Article 23"@en ;
     cml:realizedBy doc:article-23 ;
     cml:curationStatus cml:Proposed ;
+    cml:schemaVersion "2" ;   # regenerable — see CML_UPGRADE.md
     prov:wasDerivedFrom <https://www.ohchr.org/en/instruments-mechanisms/instruments/international-convention-protection-rights-all-migrant-workers> ;
     dc:date "18 December 1990" ;
     values:category "Migrants & non-nationals" ;
@@ -386,6 +409,7 @@ concept:international-convention-protection-rights-all-migrant-workers-article-2
     skos:prefLabel "Article 24"@en ;
     cml:realizedBy doc:article-24 ;
     cml:curationStatus cml:Proposed ;
+    cml:schemaVersion "2" ;   # regenerable — see CML_UPGRADE.md
     prov:wasDerivedFrom <https://www.ohchr.org/en/instruments-mechanisms/instruments/international-convention-protection-rights-all-migrant-workers> ;
     dc:date "18 December 1990" ;
     values:category "Migrants & non-nationals" ;
@@ -402,6 +426,7 @@ concept:international-convention-protection-rights-all-migrant-workers-article-2
     skos:prefLabel "Article 25"@en ;
     cml:realizedBy doc:article-25 ;
     cml:curationStatus cml:Proposed ;
+    cml:schemaVersion "2" ;   # regenerable — see CML_UPGRADE.md
     prov:wasDerivedFrom <https://www.ohchr.org/en/instruments-mechanisms/instruments/international-convention-protection-rights-all-migrant-workers> ;
     dc:date "18 December 1990" ;
     values:category "Migrants & non-nationals" ;
@@ -418,6 +443,7 @@ concept:international-convention-protection-rights-all-migrant-workers-article-2
     skos:prefLabel "Article 26"@en ;
     cml:realizedBy doc:article-26 ;
     cml:curationStatus cml:Proposed ;
+    cml:schemaVersion "2" ;   # regenerable — see CML_UPGRADE.md
     prov:wasDerivedFrom <https://www.ohchr.org/en/instruments-mechanisms/instruments/international-convention-protection-rights-all-migrant-workers> ;
     dc:date "18 December 1990" ;
     values:category "Migrants & non-nationals" ;
@@ -433,6 +459,7 @@ concept:international-convention-protection-rights-all-migrant-workers-article-2
     skos:prefLabel "Article 27"@en ;
     cml:realizedBy doc:article-27 ;
     cml:curationStatus cml:Proposed ;
+    cml:schemaVersion "2" ;   # regenerable — see CML_UPGRADE.md
     prov:wasDerivedFrom <https://www.ohchr.org/en/instruments-mechanisms/instruments/international-convention-protection-rights-all-migrant-workers> ;
     dc:date "18 December 1990" ;
     values:category "Migrants & non-nationals" ;
@@ -448,6 +475,7 @@ concept:international-convention-protection-rights-all-migrant-workers-article-2
     skos:prefLabel "Article 28"@en ;
     cml:realizedBy doc:article-28 ;
     cml:curationStatus cml:Proposed ;
+    cml:schemaVersion "2" ;   # regenerable — see CML_UPGRADE.md
     prov:wasDerivedFrom <https://www.ohchr.org/en/instruments-mechanisms/instruments/international-convention-protection-rights-all-migrant-workers> ;
     dc:date "18 December 1990" ;
     values:category "Migrants & non-nationals" ;
@@ -464,6 +492,7 @@ concept:international-convention-protection-rights-all-migrant-workers-article-2
     skos:prefLabel "Article 29"@en ;
     cml:realizedBy doc:article-29 ;
     cml:curationStatus cml:Proposed ;
+    cml:schemaVersion "2" ;   # regenerable — see CML_UPGRADE.md
     prov:wasDerivedFrom <https://www.ohchr.org/en/instruments-mechanisms/instruments/international-convention-protection-rights-all-migrant-workers> ;
     dc:date "18 December 1990" ;
     values:category "Migrants & non-nationals" ;
@@ -480,6 +509,7 @@ concept:international-convention-protection-rights-all-migrant-workers-article-3
     skos:prefLabel "Article 30"@en ;
     cml:realizedBy doc:article-30 ;
     cml:curationStatus cml:Proposed ;
+    cml:schemaVersion "2" ;   # regenerable — see CML_UPGRADE.md
     prov:wasDerivedFrom <https://www.ohchr.org/en/instruments-mechanisms/instruments/international-convention-protection-rights-all-migrant-workers> ;
     dc:date "18 December 1990" ;
     values:category "Migrants & non-nationals" ;
@@ -496,6 +526,7 @@ concept:international-convention-protection-rights-all-migrant-workers-article-3
     skos:prefLabel "Article 31"@en ;
     cml:realizedBy doc:article-31 ;
     cml:curationStatus cml:Proposed ;
+    cml:schemaVersion "2" ;   # regenerable — see CML_UPGRADE.md
     prov:wasDerivedFrom <https://www.ohchr.org/en/instruments-mechanisms/instruments/international-convention-protection-rights-all-migrant-workers> ;
     dc:date "18 December 1990" ;
     values:category "Migrants & non-nationals" ;
@@ -512,6 +543,7 @@ concept:international-convention-protection-rights-all-migrant-workers-article-3
     skos:prefLabel "Article 32"@en ;
     cml:realizedBy doc:article-32 ;
     cml:curationStatus cml:Proposed ;
+    cml:schemaVersion "2" ;   # regenerable — see CML_UPGRADE.md
     prov:wasDerivedFrom <https://www.ohchr.org/en/instruments-mechanisms/instruments/international-convention-protection-rights-all-migrant-workers> ;
     dc:date "18 December 1990" ;
     values:category "Migrants & non-nationals" ;
@@ -528,6 +560,7 @@ concept:international-convention-protection-rights-all-migrant-workers-article-3
     skos:prefLabel "Article 33"@en ;
     cml:realizedBy doc:article-33 ;
     cml:curationStatus cml:Proposed ;
+    cml:schemaVersion "2" ;   # regenerable — see CML_UPGRADE.md
     prov:wasDerivedFrom <https://www.ohchr.org/en/instruments-mechanisms/instruments/international-convention-protection-rights-all-migrant-workers> ;
     dc:date "18 December 1990" ;
     values:category "Migrants & non-nationals" ;
@@ -544,6 +577,7 @@ concept:international-convention-protection-rights-all-migrant-workers-article-3
     skos:prefLabel "Article 34"@en ;
     cml:realizedBy doc:article-34 ;
     cml:curationStatus cml:Proposed ;
+    cml:schemaVersion "2" ;   # regenerable — see CML_UPGRADE.md
     prov:wasDerivedFrom <https://www.ohchr.org/en/instruments-mechanisms/instruments/international-convention-protection-rights-all-migrant-workers> ;
     dc:date "18 December 1990" ;
     values:category "Migrants & non-nationals" ;
@@ -560,6 +594,7 @@ concept:international-convention-protection-rights-all-migrant-workers-article-3
     skos:prefLabel "Article 35"@en ;
     cml:realizedBy doc:article-35 ;
     cml:curationStatus cml:Proposed ;
+    cml:schemaVersion "2" ;   # regenerable — see CML_UPGRADE.md
     prov:wasDerivedFrom <https://www.ohchr.org/en/instruments-mechanisms/instruments/international-convention-protection-rights-all-migrant-workers> ;
     dc:date "18 December 1990" ;
     values:category "Migrants & non-nationals" ;
@@ -576,6 +611,7 @@ concept:international-convention-protection-rights-all-migrant-workers-article-3
     skos:prefLabel "Article 36"@en ;
     cml:realizedBy doc:article-36 ;
     cml:curationStatus cml:Proposed ;
+    cml:schemaVersion "2" ;   # regenerable — see CML_UPGRADE.md
     prov:wasDerivedFrom <https://www.ohchr.org/en/instruments-mechanisms/instruments/international-convention-protection-rights-all-migrant-workers> ;
     dc:date "18 December 1990" ;
     values:category "Migrants & non-nationals" ;
@@ -591,6 +627,7 @@ concept:international-convention-protection-rights-all-migrant-workers-article-3
     skos:prefLabel "Article 37"@en ;
     cml:realizedBy doc:article-37 ;
     cml:curationStatus cml:Proposed ;
+    cml:schemaVersion "2" ;   # regenerable — see CML_UPGRADE.md
     prov:wasDerivedFrom <https://www.ohchr.org/en/instruments-mechanisms/instruments/international-convention-protection-rights-all-migrant-workers> ;
     dc:date "18 December 1990" ;
     values:category "Migrants & non-nationals" ;
@@ -607,6 +644,7 @@ concept:international-convention-protection-rights-all-migrant-workers-article-3
     skos:prefLabel "Article 38"@en ;
     cml:realizedBy doc:article-38 ;
     cml:curationStatus cml:Proposed ;
+    cml:schemaVersion "2" ;   # regenerable — see CML_UPGRADE.md
     prov:wasDerivedFrom <https://www.ohchr.org/en/instruments-mechanisms/instruments/international-convention-protection-rights-all-migrant-workers> ;
     dc:date "18 December 1990" ;
     values:category "Migrants & non-nationals" ;
@@ -623,6 +661,7 @@ concept:international-convention-protection-rights-all-migrant-workers-article-3
     skos:prefLabel "Article 39"@en ;
     cml:realizedBy doc:article-39 ;
     cml:curationStatus cml:Proposed ;
+    cml:schemaVersion "2" ;   # regenerable — see CML_UPGRADE.md
     prov:wasDerivedFrom <https://www.ohchr.org/en/instruments-mechanisms/instruments/international-convention-protection-rights-all-migrant-workers> ;
     dc:date "18 December 1990" ;
     values:category "Migrants & non-nationals" ;
@@ -639,6 +678,7 @@ concept:international-convention-protection-rights-all-migrant-workers-article-4
     skos:prefLabel "Article 40"@en ;
     cml:realizedBy doc:article-40 ;
     cml:curationStatus cml:Proposed ;
+    cml:schemaVersion "2" ;   # regenerable — see CML_UPGRADE.md
     prov:wasDerivedFrom <https://www.ohchr.org/en/instruments-mechanisms/instruments/international-convention-protection-rights-all-migrant-workers> ;
     dc:date "18 December 1990" ;
     values:category "Migrants & non-nationals" ;
@@ -655,6 +695,7 @@ concept:international-convention-protection-rights-all-migrant-workers-article-4
     skos:prefLabel "Article 41"@en ;
     cml:realizedBy doc:article-41 ;
     cml:curationStatus cml:Proposed ;
+    cml:schemaVersion "2" ;   # regenerable — see CML_UPGRADE.md
     prov:wasDerivedFrom <https://www.ohchr.org/en/instruments-mechanisms/instruments/international-convention-protection-rights-all-migrant-workers> ;
     dc:date "18 December 1990" ;
     values:category "Migrants & non-nationals" ;
@@ -671,6 +712,7 @@ concept:international-convention-protection-rights-all-migrant-workers-article-4
     skos:prefLabel "Article 42"@en ;
     cml:realizedBy doc:article-42 ;
     cml:curationStatus cml:Proposed ;
+    cml:schemaVersion "2" ;   # regenerable — see CML_UPGRADE.md
     prov:wasDerivedFrom <https://www.ohchr.org/en/instruments-mechanisms/instruments/international-convention-protection-rights-all-migrant-workers> ;
     dc:date "18 December 1990" ;
     values:category "Migrants & non-nationals" ;
@@ -686,6 +728,7 @@ concept:international-convention-protection-rights-all-migrant-workers-article-4
     skos:prefLabel "Article 43"@en ;
     cml:realizedBy doc:article-43 ;
     cml:curationStatus cml:Proposed ;
+    cml:schemaVersion "2" ;   # regenerable — see CML_UPGRADE.md
     prov:wasDerivedFrom <https://www.ohchr.org/en/instruments-mechanisms/instruments/international-convention-protection-rights-all-migrant-workers> ;
     dc:date "18 December 1990" ;
     values:category "Migrants & non-nationals" ;
@@ -702,6 +745,7 @@ concept:international-convention-protection-rights-all-migrant-workers-article-4
     skos:prefLabel "Article 44"@en ;
     cml:realizedBy doc:article-44 ;
     cml:curationStatus cml:Proposed ;
+    cml:schemaVersion "2" ;   # regenerable — see CML_UPGRADE.md
     prov:wasDerivedFrom <https://www.ohchr.org/en/instruments-mechanisms/instruments/international-convention-protection-rights-all-migrant-workers> ;
     dc:date "18 December 1990" ;
     values:category "Migrants & non-nationals" ;
@@ -718,6 +762,7 @@ concept:international-convention-protection-rights-all-migrant-workers-article-4
     skos:prefLabel "Article 45"@en ;
     cml:realizedBy doc:article-45 ;
     cml:curationStatus cml:Proposed ;
+    cml:schemaVersion "2" ;   # regenerable — see CML_UPGRADE.md
     prov:wasDerivedFrom <https://www.ohchr.org/en/instruments-mechanisms/instruments/international-convention-protection-rights-all-migrant-workers> ;
     dc:date "18 December 1990" ;
     values:category "Migrants & non-nationals" ;
@@ -733,6 +778,7 @@ concept:international-convention-protection-rights-all-migrant-workers-article-4
     skos:prefLabel "Article 46"@en ;
     cml:realizedBy doc:article-46 ;
     cml:curationStatus cml:Proposed ;
+    cml:schemaVersion "2" ;   # regenerable — see CML_UPGRADE.md
     prov:wasDerivedFrom <https://www.ohchr.org/en/instruments-mechanisms/instruments/international-convention-protection-rights-all-migrant-workers> ;
     dc:date "18 December 1990" ;
     values:category "Migrants & non-nationals" ;
@@ -748,6 +794,7 @@ concept:international-convention-protection-rights-all-migrant-workers-article-4
     skos:prefLabel "Article 47"@en ;
     cml:realizedBy doc:article-47 ;
     cml:curationStatus cml:Proposed ;
+    cml:schemaVersion "2" ;   # regenerable — see CML_UPGRADE.md
     prov:wasDerivedFrom <https://www.ohchr.org/en/instruments-mechanisms/instruments/international-convention-protection-rights-all-migrant-workers> ;
     dc:date "18 December 1990" ;
     values:category "Migrants & non-nationals" ;
@@ -764,6 +811,7 @@ concept:international-convention-protection-rights-all-migrant-workers-article-4
     skos:prefLabel "Article 48"@en ;
     cml:realizedBy doc:article-48 ;
     cml:curationStatus cml:Proposed ;
+    cml:schemaVersion "2" ;   # regenerable — see CML_UPGRADE.md
     prov:wasDerivedFrom <https://www.ohchr.org/en/instruments-mechanisms/instruments/international-convention-protection-rights-all-migrant-workers> ;
     dc:date "18 December 1990" ;
     values:category "Migrants & non-nationals" ;
@@ -780,6 +828,7 @@ concept:international-convention-protection-rights-all-migrant-workers-article-4
     skos:prefLabel "Article 49"@en ;
     cml:realizedBy doc:article-49 ;
     cml:curationStatus cml:Proposed ;
+    cml:schemaVersion "2" ;   # regenerable — see CML_UPGRADE.md
     prov:wasDerivedFrom <https://www.ohchr.org/en/instruments-mechanisms/instruments/international-convention-protection-rights-all-migrant-workers> ;
     dc:date "18 December 1990" ;
     values:category "Migrants & non-nationals" ;
@@ -796,6 +845,7 @@ concept:international-convention-protection-rights-all-migrant-workers-article-5
     skos:prefLabel "Article 50"@en ;
     cml:realizedBy doc:article-50 ;
     cml:curationStatus cml:Proposed ;
+    cml:schemaVersion "2" ;   # regenerable — see CML_UPGRADE.md
     prov:wasDerivedFrom <https://www.ohchr.org/en/instruments-mechanisms/instruments/international-convention-protection-rights-all-migrant-workers> ;
     dc:date "18 December 1990" ;
     values:category "Migrants & non-nationals" ;
@@ -812,6 +862,7 @@ concept:international-convention-protection-rights-all-migrant-workers-article-5
     skos:prefLabel "Article 51"@en ;
     cml:realizedBy doc:article-51 ;
     cml:curationStatus cml:Proposed ;
+    cml:schemaVersion "2" ;   # regenerable — see CML_UPGRADE.md
     prov:wasDerivedFrom <https://www.ohchr.org/en/instruments-mechanisms/instruments/international-convention-protection-rights-all-migrant-workers> ;
     dc:date "18 December 1990" ;
     values:category "Migrants & non-nationals" ;
@@ -828,6 +879,7 @@ concept:international-convention-protection-rights-all-migrant-workers-article-5
     skos:prefLabel "Article 52"@en ;
     cml:realizedBy doc:article-52 ;
     cml:curationStatus cml:Proposed ;
+    cml:schemaVersion "2" ;   # regenerable — see CML_UPGRADE.md
     prov:wasDerivedFrom <https://www.ohchr.org/en/instruments-mechanisms/instruments/international-convention-protection-rights-all-migrant-workers> ;
     dc:date "18 December 1990" ;
     values:category "Migrants & non-nationals" ;
@@ -844,6 +896,7 @@ concept:international-convention-protection-rights-all-migrant-workers-article-5
     skos:prefLabel "Article 53"@en ;
     cml:realizedBy doc:article-53 ;
     cml:curationStatus cml:Proposed ;
+    cml:schemaVersion "2" ;   # regenerable — see CML_UPGRADE.md
     prov:wasDerivedFrom <https://www.ohchr.org/en/instruments-mechanisms/instruments/international-convention-protection-rights-all-migrant-workers> ;
     dc:date "18 December 1990" ;
     values:category "Migrants & non-nationals" ;
@@ -861,6 +914,7 @@ concept:international-convention-protection-rights-all-migrant-workers-article-5
     skos:prefLabel "Article 54"@en ;
     cml:realizedBy doc:article-54 ;
     cml:curationStatus cml:Proposed ;
+    cml:schemaVersion "2" ;   # regenerable — see CML_UPGRADE.md
     prov:wasDerivedFrom <https://www.ohchr.org/en/instruments-mechanisms/instruments/international-convention-protection-rights-all-migrant-workers> ;
     dc:date "18 December 1990" ;
     values:category "Migrants & non-nationals" ;
@@ -877,6 +931,7 @@ concept:international-convention-protection-rights-all-migrant-workers-article-5
     skos:prefLabel "Article 55"@en ;
     cml:realizedBy doc:article-55 ;
     cml:curationStatus cml:Proposed ;
+    cml:schemaVersion "2" ;   # regenerable — see CML_UPGRADE.md
     prov:wasDerivedFrom <https://www.ohchr.org/en/instruments-mechanisms/instruments/international-convention-protection-rights-all-migrant-workers> ;
     dc:date "18 December 1990" ;
     values:category "Migrants & non-nationals" ;
@@ -893,6 +948,7 @@ concept:international-convention-protection-rights-all-migrant-workers-article-5
     skos:prefLabel "Article 56"@en ;
     cml:realizedBy doc:article-56 ;
     cml:curationStatus cml:Proposed ;
+    cml:schemaVersion "2" ;   # regenerable — see CML_UPGRADE.md
     prov:wasDerivedFrom <https://www.ohchr.org/en/instruments-mechanisms/instruments/international-convention-protection-rights-all-migrant-workers> ;
     dc:date "18 December 1990" ;
     values:category "Migrants & non-nationals" ;
@@ -909,6 +965,7 @@ concept:international-convention-protection-rights-all-migrant-workers-article-5
     skos:prefLabel "Article 57"@en ;
     cml:realizedBy doc:article-57 ;
     cml:curationStatus cml:Proposed ;
+    cml:schemaVersion "2" ;   # regenerable — see CML_UPGRADE.md
     prov:wasDerivedFrom <https://www.ohchr.org/en/instruments-mechanisms/instruments/international-convention-protection-rights-all-migrant-workers> ;
     dc:date "18 December 1990" ;
     values:category "Migrants & non-nationals" ;
@@ -924,6 +981,7 @@ concept:international-convention-protection-rights-all-migrant-workers-article-5
     skos:prefLabel "Article 58"@en ;
     cml:realizedBy doc:article-58 ;
     cml:curationStatus cml:Proposed ;
+    cml:schemaVersion "2" ;   # regenerable — see CML_UPGRADE.md
     prov:wasDerivedFrom <https://www.ohchr.org/en/instruments-mechanisms/instruments/international-convention-protection-rights-all-migrant-workers> ;
     dc:date "18 December 1990" ;
     values:category "Migrants & non-nationals" ;
@@ -940,6 +998,7 @@ concept:international-convention-protection-rights-all-migrant-workers-article-5
     skos:prefLabel "Article 59"@en ;
     cml:realizedBy doc:article-59 ;
     cml:curationStatus cml:Proposed ;
+    cml:schemaVersion "2" ;   # regenerable — see CML_UPGRADE.md
     prov:wasDerivedFrom <https://www.ohchr.org/en/instruments-mechanisms/instruments/international-convention-protection-rights-all-migrant-workers> ;
     dc:date "18 December 1990" ;
     values:category "Migrants & non-nationals" ;
@@ -956,6 +1015,7 @@ concept:international-convention-protection-rights-all-migrant-workers-article-6
     skos:prefLabel "Article 60"@en ;
     cml:realizedBy doc:article-60 ;
     cml:curationStatus cml:Proposed ;
+    cml:schemaVersion "2" ;   # regenerable — see CML_UPGRADE.md
     prov:wasDerivedFrom <https://www.ohchr.org/en/instruments-mechanisms/instruments/international-convention-protection-rights-all-migrant-workers> ;
     dc:date "18 December 1990" ;
     values:category "Migrants & non-nationals" ;
@@ -972,6 +1032,7 @@ concept:international-convention-protection-rights-all-migrant-workers-article-6
     skos:prefLabel "Article 61"@en ;
     cml:realizedBy doc:article-61 ;
     cml:curationStatus cml:Proposed ;
+    cml:schemaVersion "2" ;   # regenerable — see CML_UPGRADE.md
     prov:wasDerivedFrom <https://www.ohchr.org/en/instruments-mechanisms/instruments/international-convention-protection-rights-all-migrant-workers> ;
     dc:date "18 December 1990" ;
     values:category "Migrants & non-nationals" ;
@@ -988,6 +1049,7 @@ concept:international-convention-protection-rights-all-migrant-workers-article-6
     skos:prefLabel "Article 62"@en ;
     cml:realizedBy doc:article-62 ;
     cml:curationStatus cml:Proposed ;
+    cml:schemaVersion "2" ;   # regenerable — see CML_UPGRADE.md
     prov:wasDerivedFrom <https://www.ohchr.org/en/instruments-mechanisms/instruments/international-convention-protection-rights-all-migrant-workers> ;
     dc:date "18 December 1990" ;
     values:category "Migrants & non-nationals" ;
@@ -1004,6 +1066,7 @@ concept:international-convention-protection-rights-all-migrant-workers-article-6
     skos:prefLabel "Article 63"@en ;
     cml:realizedBy doc:article-63 ;
     cml:curationStatus cml:Proposed ;
+    cml:schemaVersion "2" ;   # regenerable — see CML_UPGRADE.md
     prov:wasDerivedFrom <https://www.ohchr.org/en/instruments-mechanisms/instruments/international-convention-protection-rights-all-migrant-workers> ;
     dc:date "18 December 1990" ;
     values:category "Migrants & non-nationals" ;
@@ -1020,6 +1083,7 @@ concept:international-convention-protection-rights-all-migrant-workers-article-6
     skos:prefLabel "Article 64"@en ;
     cml:realizedBy doc:article-64 ;
     cml:curationStatus cml:Proposed ;
+    cml:schemaVersion "2" ;   # regenerable — see CML_UPGRADE.md
     prov:wasDerivedFrom <https://www.ohchr.org/en/instruments-mechanisms/instruments/international-convention-protection-rights-all-migrant-workers> ;
     dc:date "18 December 1990" ;
     values:category "Migrants & non-nationals" ;
@@ -1037,6 +1101,7 @@ concept:international-convention-protection-rights-all-migrant-workers-article-6
     skos:prefLabel "Article 65"@en ;
     cml:realizedBy doc:article-65 ;
     cml:curationStatus cml:Proposed ;
+    cml:schemaVersion "2" ;   # regenerable — see CML_UPGRADE.md
     prov:wasDerivedFrom <https://www.ohchr.org/en/instruments-mechanisms/instruments/international-convention-protection-rights-all-migrant-workers> ;
     dc:date "18 December 1990" ;
     values:category "Migrants & non-nationals" ;
@@ -1052,6 +1117,7 @@ concept:international-convention-protection-rights-all-migrant-workers-article-6
     skos:prefLabel "Article 66"@en ;
     cml:realizedBy doc:article-66 ;
     cml:curationStatus cml:Proposed ;
+    cml:schemaVersion "2" ;   # regenerable — see CML_UPGRADE.md
     prov:wasDerivedFrom <https://www.ohchr.org/en/instruments-mechanisms/instruments/international-convention-protection-rights-all-migrant-workers> ;
     dc:date "18 December 1990" ;
     values:category "Migrants & non-nationals" ;
@@ -1068,6 +1134,7 @@ concept:international-convention-protection-rights-all-migrant-workers-article-6
     skos:prefLabel "Article 67"@en ;
     cml:realizedBy doc:article-67 ;
     cml:curationStatus cml:Proposed ;
+    cml:schemaVersion "2" ;   # regenerable — see CML_UPGRADE.md
     prov:wasDerivedFrom <https://www.ohchr.org/en/instruments-mechanisms/instruments/international-convention-protection-rights-all-migrant-workers> ;
     dc:date "18 December 1990" ;
     values:category "Migrants & non-nationals" ;
@@ -1083,6 +1150,7 @@ concept:international-convention-protection-rights-all-migrant-workers-article-6
     skos:prefLabel "Article 68"@en ;
     cml:realizedBy doc:article-68 ;
     cml:curationStatus cml:Proposed ;
+    cml:schemaVersion "2" ;   # regenerable — see CML_UPGRADE.md
     prov:wasDerivedFrom <https://www.ohchr.org/en/instruments-mechanisms/instruments/international-convention-protection-rights-all-migrant-workers> ;
     dc:date "18 December 1990" ;
     values:category "Migrants & non-nationals" ;
@@ -1099,6 +1167,7 @@ concept:international-convention-protection-rights-all-migrant-workers-article-6
     skos:prefLabel "Article 69"@en ;
     cml:realizedBy doc:article-69 ;
     cml:curationStatus cml:Proposed ;
+    cml:schemaVersion "2" ;   # regenerable — see CML_UPGRADE.md
     prov:wasDerivedFrom <https://www.ohchr.org/en/instruments-mechanisms/instruments/international-convention-protection-rights-all-migrant-workers> ;
     dc:date "18 December 1990" ;
     values:category "Migrants & non-nationals" ;
@@ -1116,6 +1185,7 @@ concept:international-convention-protection-rights-all-migrant-workers-article-7
     skos:prefLabel "Article 70"@en ;
     cml:realizedBy doc:article-70 ;
     cml:curationStatus cml:Proposed ;
+    cml:schemaVersion "2" ;   # regenerable — see CML_UPGRADE.md
     prov:wasDerivedFrom <https://www.ohchr.org/en/instruments-mechanisms/instruments/international-convention-protection-rights-all-migrant-workers> ;
     dc:date "18 December 1990" ;
     values:category "Migrants & non-nationals" ;
@@ -1133,6 +1203,7 @@ concept:international-convention-protection-rights-all-migrant-workers-article-7
     skos:prefLabel "Article 71"@en ;
     cml:realizedBy doc:article-71 ;
     cml:curationStatus cml:Proposed ;
+    cml:schemaVersion "2" ;   # regenerable — see CML_UPGRADE.md
     prov:wasDerivedFrom <https://www.ohchr.org/en/instruments-mechanisms/instruments/international-convention-protection-rights-all-migrant-workers> ;
     dc:date "18 December 1990" ;
     values:category "Migrants & non-nationals" ;
@@ -1150,6 +1221,7 @@ concept:international-convention-protection-rights-all-migrant-workers-article-7
     skos:prefLabel "Article 72"@en ;
     cml:realizedBy doc:article-72 ;
     cml:curationStatus cml:Proposed ;
+    cml:schemaVersion "2" ;   # regenerable — see CML_UPGRADE.md
     prov:wasDerivedFrom <https://www.ohchr.org/en/instruments-mechanisms/instruments/international-convention-protection-rights-all-migrant-workers> ;
     dc:date "18 December 1990" ;
     values:category "Migrants & non-nationals" ;
@@ -1166,6 +1238,7 @@ concept:international-convention-protection-rights-all-migrant-workers-article-7
     skos:prefLabel "Article 73"@en ;
     cml:realizedBy doc:article-73 ;
     cml:curationStatus cml:Proposed ;
+    cml:schemaVersion "2" ;   # regenerable — see CML_UPGRADE.md
     prov:wasDerivedFrom <https://www.ohchr.org/en/instruments-mechanisms/instruments/international-convention-protection-rights-all-migrant-workers> ;
     dc:date "18 December 1990" ;
     values:category "Migrants & non-nationals" ;
@@ -1183,6 +1256,7 @@ concept:international-convention-protection-rights-all-migrant-workers-article-7
     skos:prefLabel "Article 74"@en ;
     cml:realizedBy doc:article-74 ;
     cml:curationStatus cml:Proposed ;
+    cml:schemaVersion "2" ;   # regenerable — see CML_UPGRADE.md
     prov:wasDerivedFrom <https://www.ohchr.org/en/instruments-mechanisms/instruments/international-convention-protection-rights-all-migrant-workers> ;
     dc:date "18 December 1990" ;
     values:category "Migrants & non-nationals" ;
@@ -1200,6 +1274,7 @@ concept:international-convention-protection-rights-all-migrant-workers-article-7
     skos:prefLabel "Article 75"@en ;
     cml:realizedBy doc:article-75 ;
     cml:curationStatus cml:Proposed ;
+    cml:schemaVersion "2" ;   # regenerable — see CML_UPGRADE.md
     prov:wasDerivedFrom <https://www.ohchr.org/en/instruments-mechanisms/instruments/international-convention-protection-rights-all-migrant-workers> ;
     dc:date "18 December 1990" ;
     values:category "Migrants & non-nationals" ;
@@ -1217,6 +1292,7 @@ concept:international-convention-protection-rights-all-migrant-workers-article-7
     skos:prefLabel "Article 76"@en ;
     cml:realizedBy doc:article-76 ;
     cml:curationStatus cml:Proposed ;
+    cml:schemaVersion "2" ;   # regenerable — see CML_UPGRADE.md
     prov:wasDerivedFrom <https://www.ohchr.org/en/instruments-mechanisms/instruments/international-convention-protection-rights-all-migrant-workers> ;
     dc:date "18 December 1990" ;
     values:category "Migrants & non-nationals" ;
@@ -1233,6 +1309,7 @@ concept:international-convention-protection-rights-all-migrant-workers-article-7
     skos:prefLabel "Article 77"@en ;
     cml:realizedBy doc:article-77 ;
     cml:curationStatus cml:Proposed ;
+    cml:schemaVersion "2" ;   # regenerable — see CML_UPGRADE.md
     prov:wasDerivedFrom <https://www.ohchr.org/en/instruments-mechanisms/instruments/international-convention-protection-rights-all-migrant-workers> ;
     dc:date "18 December 1990" ;
     values:category "Migrants & non-nationals" ;
@@ -1249,6 +1326,7 @@ concept:international-convention-protection-rights-all-migrant-workers-article-7
     skos:prefLabel "Article 78"@en ;
     cml:realizedBy doc:article-78 ;
     cml:curationStatus cml:Proposed ;
+    cml:schemaVersion "2" ;   # regenerable — see CML_UPGRADE.md
     prov:wasDerivedFrom <https://www.ohchr.org/en/instruments-mechanisms/instruments/international-convention-protection-rights-all-migrant-workers> ;
     dc:date "18 December 1990" ;
     values:category "Migrants & non-nationals" ;
@@ -1265,6 +1343,7 @@ concept:international-convention-protection-rights-all-migrant-workers-article-7
     skos:prefLabel "Article 79"@en ;
     cml:realizedBy doc:article-79 ;
     cml:curationStatus cml:Proposed ;
+    cml:schemaVersion "2" ;   # regenerable — see CML_UPGRADE.md
     prov:wasDerivedFrom <https://www.ohchr.org/en/instruments-mechanisms/instruments/international-convention-protection-rights-all-migrant-workers> ;
     dc:date "18 December 1990" ;
     values:category "Migrants & non-nationals" ;
@@ -1281,6 +1360,7 @@ concept:international-convention-protection-rights-all-migrant-workers-article-8
     skos:prefLabel "Article 80"@en ;
     cml:realizedBy doc:article-80 ;
     cml:curationStatus cml:Proposed ;
+    cml:schemaVersion "2" ;   # regenerable — see CML_UPGRADE.md
     prov:wasDerivedFrom <https://www.ohchr.org/en/instruments-mechanisms/instruments/international-convention-protection-rights-all-migrant-workers> ;
     dc:date "18 December 1990" ;
     values:category "Migrants & non-nationals" ;
@@ -1297,6 +1377,7 @@ concept:international-convention-protection-rights-all-migrant-workers-article-8
     skos:prefLabel "Article 81"@en ;
     cml:realizedBy doc:article-81 ;
     cml:curationStatus cml:Proposed ;
+    cml:schemaVersion "2" ;   # regenerable — see CML_UPGRADE.md
     prov:wasDerivedFrom <https://www.ohchr.org/en/instruments-mechanisms/instruments/international-convention-protection-rights-all-migrant-workers> ;
     dc:date "18 December 1990" ;
     values:category "Migrants & non-nationals" ;
@@ -1313,6 +1394,7 @@ concept:international-convention-protection-rights-all-migrant-workers-article-8
     skos:prefLabel "Article 82"@en ;
     cml:realizedBy doc:article-82 ;
     cml:curationStatus cml:Proposed ;
+    cml:schemaVersion "2" ;   # regenerable — see CML_UPGRADE.md
     prov:wasDerivedFrom <https://www.ohchr.org/en/instruments-mechanisms/instruments/international-convention-protection-rights-all-migrant-workers> ;
     dc:date "18 December 1990" ;
     values:category "Migrants & non-nationals" ;
@@ -1329,6 +1411,7 @@ concept:international-convention-protection-rights-all-migrant-workers-article-8
     skos:prefLabel "Article 83"@en ;
     cml:realizedBy doc:article-83 ;
     cml:curationStatus cml:Proposed ;
+    cml:schemaVersion "2" ;   # regenerable — see CML_UPGRADE.md
     prov:wasDerivedFrom <https://www.ohchr.org/en/instruments-mechanisms/instruments/international-convention-protection-rights-all-migrant-workers> ;
     dc:date "18 December 1990" ;
     values:category "Migrants & non-nationals" ;
@@ -1344,6 +1427,7 @@ concept:international-convention-protection-rights-all-migrant-workers-article-8
     skos:prefLabel "Article 84"@en ;
     cml:realizedBy doc:article-84 ;
     cml:curationStatus cml:Proposed ;
+    cml:schemaVersion "2" ;   # regenerable — see CML_UPGRADE.md
     prov:wasDerivedFrom <https://www.ohchr.org/en/instruments-mechanisms/instruments/international-convention-protection-rights-all-migrant-workers> ;
     dc:date "18 December 1990" ;
     values:category "Migrants & non-nationals" ;
@@ -1359,6 +1443,7 @@ concept:international-convention-protection-rights-all-migrant-workers-article-8
     skos:prefLabel "Article 85"@en ;
     cml:realizedBy doc:article-85 ;
     cml:curationStatus cml:Proposed ;
+    cml:schemaVersion "2" ;   # regenerable — see CML_UPGRADE.md
     prov:wasDerivedFrom <https://www.ohchr.org/en/instruments-mechanisms/instruments/international-convention-protection-rights-all-migrant-workers> ;
     dc:date "18 December 1990" ;
     values:category "Migrants & non-nationals" ;
@@ -1374,6 +1459,7 @@ concept:international-convention-protection-rights-all-migrant-workers-article-8
     skos:prefLabel "Article 86"@en ;
     cml:realizedBy doc:article-86 ;
     cml:curationStatus cml:Proposed ;
+    cml:schemaVersion "2" ;   # regenerable — see CML_UPGRADE.md
     prov:wasDerivedFrom <https://www.ohchr.org/en/instruments-mechanisms/instruments/international-convention-protection-rights-all-migrant-workers> ;
     dc:date "18 December 1990" ;
     values:category "Migrants & non-nationals" ;
@@ -1391,6 +1477,7 @@ concept:international-convention-protection-rights-all-migrant-workers-article-8
     skos:prefLabel "Article 87"@en ;
     cml:realizedBy doc:article-87 ;
     cml:curationStatus cml:Proposed ;
+    cml:schemaVersion "2" ;   # regenerable — see CML_UPGRADE.md
     prov:wasDerivedFrom <https://www.ohchr.org/en/instruments-mechanisms/instruments/international-convention-protection-rights-all-migrant-workers> ;
     dc:date "18 December 1990" ;
     values:category "Migrants & non-nationals" ;
@@ -1406,6 +1493,7 @@ concept:international-convention-protection-rights-all-migrant-workers-article-8
     skos:prefLabel "Article 88"@en ;
     cml:realizedBy doc:article-88 ;
     cml:curationStatus cml:Proposed ;
+    cml:schemaVersion "2" ;   # regenerable — see CML_UPGRADE.md
     prov:wasDerivedFrom <https://www.ohchr.org/en/instruments-mechanisms/instruments/international-convention-protection-rights-all-migrant-workers> ;
     dc:date "18 December 1990" ;
     values:category "Migrants & non-nationals" ;
@@ -1421,6 +1509,7 @@ concept:international-convention-protection-rights-all-migrant-workers-article-8
     skos:prefLabel "Article 89"@en ;
     cml:realizedBy doc:article-89 ;
     cml:curationStatus cml:Proposed ;
+    cml:schemaVersion "2" ;   # regenerable — see CML_UPGRADE.md
     prov:wasDerivedFrom <https://www.ohchr.org/en/instruments-mechanisms/instruments/international-convention-protection-rights-all-migrant-workers> ;
     dc:date "18 December 1990" ;
     values:category "Migrants & non-nationals" ;
@@ -1437,6 +1526,7 @@ concept:international-convention-protection-rights-all-migrant-workers-article-9
     skos:prefLabel "Article 90"@en ;
     cml:realizedBy doc:article-90 ;
     cml:curationStatus cml:Proposed ;
+    cml:schemaVersion "2" ;   # regenerable — see CML_UPGRADE.md
     prov:wasDerivedFrom <https://www.ohchr.org/en/instruments-mechanisms/instruments/international-convention-protection-rights-all-migrant-workers> ;
     dc:date "18 December 1990" ;
     values:category "Migrants & non-nationals" ;
@@ -1454,6 +1544,7 @@ concept:international-convention-protection-rights-all-migrant-workers-article-9
     skos:prefLabel "Article 91"@en ;
     cml:realizedBy doc:article-91 ;
     cml:curationStatus cml:Proposed ;
+    cml:schemaVersion "2" ;   # regenerable — see CML_UPGRADE.md
     prov:wasDerivedFrom <https://www.ohchr.org/en/instruments-mechanisms/instruments/international-convention-protection-rights-all-migrant-workers> ;
     dc:date "18 December 1990" ;
     values:category "Migrants & non-nationals" ;
@@ -1470,6 +1561,7 @@ concept:international-convention-protection-rights-all-migrant-workers-article-9
     skos:prefLabel "Article 92"@en ;
     cml:realizedBy doc:article-92 ;
     cml:curationStatus cml:Proposed ;
+    cml:schemaVersion "2" ;   # regenerable — see CML_UPGRADE.md
     prov:wasDerivedFrom <https://www.ohchr.org/en/instruments-mechanisms/instruments/international-convention-protection-rights-all-migrant-workers> ;
     dc:date "18 December 1990" ;
     values:category "Migrants & non-nationals" ;
@@ -1486,6 +1578,7 @@ concept:international-convention-protection-rights-all-migrant-workers-article-9
     skos:prefLabel "Article 93"@en ;
     cml:realizedBy doc:article-93 ;
     cml:curationStatus cml:Proposed ;
+    cml:schemaVersion "2" ;   # regenerable — see CML_UPGRADE.md
     prov:wasDerivedFrom <https://www.ohchr.org/en/instruments-mechanisms/instruments/international-convention-protection-rights-all-migrant-workers> ;
     dc:date "18 December 1990" ;
     values:category "Migrants & non-nationals" ;

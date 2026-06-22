@@ -20,6 +20,7 @@ concept:supplementary-convention-abolition-slavery-slave-trade-and-article-1 a c
     skos:prefLabel "Article 1"@en ;
     cml:realizedBy doc:article-1 ;
     cml:curationStatus cml:Proposed ;
+    cml:schemaVersion "2" ;   # regenerable — see CML_UPGRADE.md
     prov:wasDerivedFrom <https://www.ohchr.org/en/instruments-mechanisms/instruments/supplementary-convention-abolition-slavery-slave-trade-and> ;
     dc:date "07 September 1956" ;
     values:category "Slavery, forced labour & trafficking" ;
@@ -36,6 +37,7 @@ concept:supplementary-convention-abolition-slavery-slave-trade-and-article-2 a c
     skos:prefLabel "Article 2"@en ;
     cml:realizedBy doc:article-2 ;
     cml:curationStatus cml:Proposed ;
+    cml:schemaVersion "2" ;   # regenerable — see CML_UPGRADE.md
     prov:wasDerivedFrom <https://www.ohchr.org/en/instruments-mechanisms/instruments/supplementary-convention-abolition-slavery-slave-trade-and> ;
     dc:date "07 September 1956" ;
     values:category "Slavery, forced labour & trafficking" ;
@@ -53,6 +55,7 @@ concept:supplementary-convention-abolition-slavery-slave-trade-and-article-3 a c
     skos:prefLabel "Article 3"@en ;
     cml:realizedBy doc:article-3 ;
     cml:curationStatus cml:Proposed ;
+    cml:schemaVersion "2" ;   # regenerable — see CML_UPGRADE.md
     prov:wasDerivedFrom <https://www.ohchr.org/en/instruments-mechanisms/instruments/supplementary-convention-abolition-slavery-slave-trade-and> ;
     dc:date "07 September 1956" ;
     values:category "Slavery, forced labour & trafficking" ;
@@ -70,6 +73,7 @@ concept:supplementary-convention-abolition-slavery-slave-trade-and-article-4 a c
     skos:prefLabel "Article 4"@en ;
     cml:realizedBy doc:article-4 ;
     cml:curationStatus cml:Proposed ;
+    cml:schemaVersion "2" ;   # regenerable — see CML_UPGRADE.md
     prov:wasDerivedFrom <https://www.ohchr.org/en/instruments-mechanisms/instruments/supplementary-convention-abolition-slavery-slave-trade-and> ;
     dc:date "07 September 1956" ;
     values:category "Slavery, forced labour & trafficking" ;
@@ -85,6 +89,7 @@ concept:supplementary-convention-abolition-slavery-slave-trade-and-article-5 a c
     skos:prefLabel "Article 5"@en ;
     cml:realizedBy doc:article-5 ;
     cml:curationStatus cml:Proposed ;
+    cml:schemaVersion "2" ;   # regenerable — see CML_UPGRADE.md
     prov:wasDerivedFrom <https://www.ohchr.org/en/instruments-mechanisms/instruments/supplementary-convention-abolition-slavery-slave-trade-and> ;
     dc:date "07 September 1956" ;
     values:category "Slavery, forced labour & trafficking" ;
@@ -102,6 +107,7 @@ concept:supplementary-convention-abolition-slavery-slave-trade-and-article-6 a c
     skos:prefLabel "Article 6"@en ;
     cml:realizedBy doc:article-6 ;
     cml:curationStatus cml:Proposed ;
+    cml:schemaVersion "2" ;   # regenerable — see CML_UPGRADE.md
     prov:wasDerivedFrom <https://www.ohchr.org/en/instruments-mechanisms/instruments/supplementary-convention-abolition-slavery-slave-trade-and> ;
     dc:date "07 September 1956" ;
     values:category "Slavery, forced labour & trafficking" ;
@@ -119,6 +125,7 @@ concept:supplementary-convention-abolition-slavery-slave-trade-and-article-7 a c
     skos:prefLabel "Article 7"@en ;
     cml:realizedBy doc:article-7 ;
     cml:curationStatus cml:Proposed ;
+    cml:schemaVersion "2" ;   # regenerable — see CML_UPGRADE.md
     prov:wasDerivedFrom <https://www.ohchr.org/en/instruments-mechanisms/instruments/supplementary-convention-abolition-slavery-slave-trade-and> ;
     dc:date "07 September 1956" ;
     values:category "Slavery, forced labour & trafficking" ;
@@ -134,6 +141,7 @@ concept:supplementary-convention-abolition-slavery-slave-trade-and-article-8 a c
     skos:prefLabel "Article 8"@en ;
     cml:realizedBy doc:article-8 ;
     cml:curationStatus cml:Proposed ;
+    cml:schemaVersion "2" ;   # regenerable — see CML_UPGRADE.md
     prov:wasDerivedFrom <https://www.ohchr.org/en/instruments-mechanisms/instruments/supplementary-convention-abolition-slavery-slave-trade-and> ;
     dc:date "07 September 1956" ;
     values:category "Slavery, forced labour & trafficking" ;
@@ -151,6 +159,7 @@ concept:supplementary-convention-abolition-slavery-slave-trade-and-article-9 a c
     skos:prefLabel "Article 9"@en ;
     cml:realizedBy doc:article-9 ;
     cml:curationStatus cml:Proposed ;
+    cml:schemaVersion "2" ;   # regenerable — see CML_UPGRADE.md
     prov:wasDerivedFrom <https://www.ohchr.org/en/instruments-mechanisms/instruments/supplementary-convention-abolition-slavery-slave-trade-and> ;
     dc:date "07 September 1956" ;
     values:category "Slavery, forced labour & trafficking" ;
@@ -166,6 +175,7 @@ concept:supplementary-convention-abolition-slavery-slave-trade-and-article-10 a 
     skos:prefLabel "Article 10"@en ;
     cml:realizedBy doc:article-10 ;
     cml:curationStatus cml:Proposed ;
+    cml:schemaVersion "2" ;   # regenerable — see CML_UPGRADE.md
     prov:wasDerivedFrom <https://www.ohchr.org/en/instruments-mechanisms/instruments/supplementary-convention-abolition-slavery-slave-trade-and> ;
     dc:date "07 September 1956" ;
     values:category "Slavery, forced labour & trafficking" ;
@@ -183,6 +193,7 @@ concept:supplementary-convention-abolition-slavery-slave-trade-and-article-11 a 
     skos:prefLabel "Article 11"@en ;
     cml:realizedBy doc:article-11 ;
     cml:curationStatus cml:Proposed ;
+    cml:schemaVersion "2" ;   # regenerable — see CML_UPGRADE.md
     prov:wasDerivedFrom <https://www.ohchr.org/en/instruments-mechanisms/instruments/supplementary-convention-abolition-slavery-slave-trade-and> ;
     dc:date "07 September 1956" ;
     values:category "Slavery, forced labour & trafficking" ;
@@ -200,6 +211,7 @@ concept:supplementary-convention-abolition-slavery-slave-trade-and-article-12 a 
     skos:prefLabel "Article 12"@en ;
     cml:realizedBy doc:article-12 ;
     cml:curationStatus cml:Proposed ;
+    cml:schemaVersion "2" ;   # regenerable — see CML_UPGRADE.md
     prov:wasDerivedFrom <https://www.ohchr.org/en/instruments-mechanisms/instruments/supplementary-convention-abolition-slavery-slave-trade-and> ;
     dc:date "07 September 1956" ;
     values:category "Slavery, forced labour & trafficking" ;
@@ -216,6 +228,7 @@ concept:supplementary-convention-abolition-slavery-slave-trade-and-article-13 a 
     skos:prefLabel "Article 13"@en ;
     cml:realizedBy doc:article-13 ;
     cml:curationStatus cml:Proposed ;
+    cml:schemaVersion "2" ;   # regenerable — see CML_UPGRADE.md
     prov:wasDerivedFrom <https://www.ohchr.org/en/instruments-mechanisms/instruments/supplementary-convention-abolition-slavery-slave-trade-and> ;
     dc:date "07 September 1956" ;
     values:category "Slavery, forced labour & trafficking" ;
@@ -231,6 +244,7 @@ concept:supplementary-convention-abolition-slavery-slave-trade-and-article-14 a 
     skos:prefLabel "Article 14"@en ;
     cml:realizedBy doc:article-14 ;
     cml:curationStatus cml:Proposed ;
+    cml:schemaVersion "2" ;   # regenerable — see CML_UPGRADE.md
     prov:wasDerivedFrom <https://www.ohchr.org/en/instruments-mechanisms/instruments/supplementary-convention-abolition-slavery-slave-trade-and> ;
     dc:date "07 September 1956" ;
     values:category "Slavery, forced labour & trafficking" ;
@@ -247,6 +261,7 @@ concept:supplementary-convention-abolition-slavery-slave-trade-and-article-15 a 
     skos:prefLabel "Article 15"@en ;
     cml:realizedBy doc:article-15 ;
     cml:curationStatus cml:Proposed ;
+    cml:schemaVersion "2" ;   # regenerable — see CML_UPGRADE.md
     prov:wasDerivedFrom <https://www.ohchr.org/en/instruments-mechanisms/instruments/supplementary-convention-abolition-slavery-slave-trade-and> ;
     dc:date "07 September 1956" ;
     values:category "Slavery, forced labour & trafficking" ;

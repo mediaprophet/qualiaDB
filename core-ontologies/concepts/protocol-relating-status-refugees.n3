@@ -20,6 +20,7 @@ concept:protocol-relating-status-refugees-article-1 a cml:Concept ;
     skos:prefLabel "Article 1"@en ;
     cml:realizedBy doc:article-1 ;
     cml:curationStatus cml:Proposed ;
+    cml:schemaVersion "2" ;   # regenerable — see CML_UPGRADE.md
     prov:wasDerivedFrom <https://www.ohchr.org/en/instruments-mechanisms/instruments/protocol-relating-status-refugees> ;
     dc:date "16 December 1966" ;
     values:category "Refugees & statelessness" ;
@@ -37,6 +38,7 @@ concept:protocol-relating-status-refugees-article-2 a cml:Concept ;
     skos:prefLabel "Article 2"@en ;
     cml:realizedBy doc:article-2 ;
     cml:curationStatus cml:Proposed ;
+    cml:schemaVersion "2" ;   # regenerable — see CML_UPGRADE.md
     prov:wasDerivedFrom <https://www.ohchr.org/en/instruments-mechanisms/instruments/protocol-relating-status-refugees> ;
     dc:date "16 December 1966" ;
     values:category "Refugees & statelessness" ;
@@ -54,6 +56,7 @@ concept:protocol-relating-status-refugees-article-3 a cml:Concept ;
     skos:prefLabel "Article 3"@en ;
     cml:realizedBy doc:article-3 ;
     cml:curationStatus cml:Proposed ;
+    cml:schemaVersion "2" ;   # regenerable — see CML_UPGRADE.md
     prov:wasDerivedFrom <https://www.ohchr.org/en/instruments-mechanisms/instruments/protocol-relating-status-refugees> ;
     dc:date "16 December 1966" ;
     values:category "Refugees & statelessness" ;
@@ -69,6 +72,7 @@ concept:protocol-relating-status-refugees-article-4 a cml:Concept ;
     skos:prefLabel "Article 4"@en ;
     cml:realizedBy doc:article-4 ;
     cml:curationStatus cml:Proposed ;
+    cml:schemaVersion "2" ;   # regenerable — see CML_UPGRADE.md
     prov:wasDerivedFrom <https://www.ohchr.org/en/instruments-mechanisms/instruments/protocol-relating-status-refugees> ;
     dc:date "16 December 1966" ;
     values:category "Refugees & statelessness" ;
@@ -86,6 +90,7 @@ concept:protocol-relating-status-refugees-article-5 a cml:Concept ;
     skos:prefLabel "Article 5"@en ;
     cml:realizedBy doc:article-5 ;
     cml:curationStatus cml:Proposed ;
+    cml:schemaVersion "2" ;   # regenerable — see CML_UPGRADE.md
     prov:wasDerivedFrom <https://www.ohchr.org/en/instruments-mechanisms/instruments/protocol-relating-status-refugees> ;
     dc:date "16 December 1966" ;
     values:category "Refugees & statelessness" ;
@@ -103,6 +108,7 @@ concept:protocol-relating-status-refugees-article-6 a cml:Concept ;
     skos:prefLabel "Article 6"@en ;
     cml:realizedBy doc:article-6 ;
     cml:curationStatus cml:Proposed ;
+    cml:schemaVersion "2" ;   # regenerable — see CML_UPGRADE.md
     prov:wasDerivedFrom <https://www.ohchr.org/en/instruments-mechanisms/instruments/protocol-relating-status-refugees> ;
     dc:date "16 December 1966" ;
     values:category "Refugees & statelessness" ;
@@ -118,6 +124,7 @@ concept:protocol-relating-status-refugees-article-7 a cml:Concept ;
     skos:prefLabel "Article 7"@en ;
     cml:realizedBy doc:article-7 ;
     cml:curationStatus cml:Proposed ;
+    cml:schemaVersion "2" ;   # regenerable — see CML_UPGRADE.md
     prov:wasDerivedFrom <https://www.ohchr.org/en/instruments-mechanisms/instruments/protocol-relating-status-refugees> ;
     dc:date "16 December 1966" ;
     values:category "Refugees & statelessness" ;
@@ -134,6 +141,7 @@ concept:protocol-relating-status-refugees-article-8 a cml:Concept ;
     skos:prefLabel "Article 8"@en ;
     cml:realizedBy doc:article-8 ;
     cml:curationStatus cml:Proposed ;
+    cml:schemaVersion "2" ;   # regenerable — see CML_UPGRADE.md
     prov:wasDerivedFrom <https://www.ohchr.org/en/instruments-mechanisms/instruments/protocol-relating-status-refugees> ;
     dc:date "16 December 1966" ;
     values:category "Refugees & statelessness" ;
@@ -149,6 +157,7 @@ concept:protocol-relating-status-refugees-article-9 a cml:Concept ;
     skos:prefLabel "Article 9"@en ;
     cml:realizedBy doc:article-9 ;
     cml:curationStatus cml:Proposed ;
+    cml:schemaVersion "2" ;   # regenerable — see CML_UPGRADE.md
     prov:wasDerivedFrom <https://www.ohchr.org/en/instruments-mechanisms/instruments/protocol-relating-status-refugees> ;
     dc:date "16 December 1966" ;
     values:category "Refugees & statelessness" ;
@@ -166,6 +175,7 @@ concept:protocol-relating-status-refugees-article-10 a cml:Concept ;
     skos:prefLabel "Article 10"@en ;
     cml:realizedBy doc:article-10 ;
     cml:curationStatus cml:Proposed ;
+    cml:schemaVersion "2" ;   # regenerable — see CML_UPGRADE.md
     prov:wasDerivedFrom <https://www.ohchr.org/en/instruments-mechanisms/instruments/protocol-relating-status-refugees> ;
     dc:date "16 December 1966" ;
     values:category "Refugees & statelessness" ;
@@ -181,6 +191,7 @@ concept:protocol-relating-status-refugees-article-11 a cml:Concept ;
     skos:prefLabel "Article 11"@en ;
     cml:realizedBy doc:article-11 ;
     cml:curationStatus cml:Proposed ;
+    cml:schemaVersion "2" ;   # regenerable — see CML_UPGRADE.md
     prov:wasDerivedFrom <https://www.ohchr.org/en/instruments-mechanisms/instruments/protocol-relating-status-refugees> ;
     dc:date "16 December 1966" ;
     values:category "Refugees & statelessness" ;

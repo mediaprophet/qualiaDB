@@ -20,6 +20,7 @@ concept:guidelines-action-children-criminal-justice-system-paragraph-2 a cml:Con
     skos:prefLabel "Paragraph 2"@en ;
     cml:realizedBy doc:paragraph-2 ;
     cml:curationStatus cml:Proposed ;
+    cml:schemaVersion "2" ;   # regenerable — see CML_UPGRADE.md
     prov:wasDerivedFrom <https://www.ohchr.org/en/instruments-mechanisms/instruments/guidelines-action-children-criminal-justice-system> ;
     dc:date "21 July 1997" ;
     values:category "Administration of justice, detention & law enforcement" ;
@@ -35,6 +36,7 @@ concept:guidelines-action-children-criminal-justice-system-paragraph-3 a cml:Con
     skos:prefLabel "Paragraph 3"@en ;
     cml:realizedBy doc:paragraph-3 ;
     cml:curationStatus cml:Proposed ;
+    cml:schemaVersion "2" ;   # regenerable — see CML_UPGRADE.md
     prov:wasDerivedFrom <https://www.ohchr.org/en/instruments-mechanisms/instruments/guidelines-action-children-criminal-justice-system> ;
     dc:date "21 July 1997" ;
     values:category "Administration of justice, detention & law enforcement" ;
@@ -50,6 +52,7 @@ concept:guidelines-action-children-criminal-justice-system-paragraph-4 a cml:Con
     skos:prefLabel "Paragraph 4"@en ;
     cml:realizedBy doc:paragraph-4 ;
     cml:curationStatus cml:Proposed ;
+    cml:schemaVersion "2" ;   # regenerable — see CML_UPGRADE.md
     prov:wasDerivedFrom <https://www.ohchr.org/en/instruments-mechanisms/instruments/guidelines-action-children-criminal-justice-system> ;
     dc:date "21 July 1997" ;
     values:category "Administration of justice, detention & law enforcement" ;
@@ -65,6 +68,7 @@ concept:guidelines-action-children-criminal-justice-system-paragraph-5 a cml:Con
     skos:prefLabel "Paragraph 5"@en ;
     cml:realizedBy doc:paragraph-5 ;
     cml:curationStatus cml:Proposed ;
+    cml:schemaVersion "2" ;   # regenerable — see CML_UPGRADE.md
     prov:wasDerivedFrom <https://www.ohchr.org/en/instruments-mechanisms/instruments/guidelines-action-children-criminal-justice-system> ;
     dc:date "21 July 1997" ;
     values:category "Administration of justice, detention & law enforcement" ;
@@ -80,6 +84,7 @@ concept:guidelines-action-children-criminal-justice-system-paragraph-6 a cml:Con
     skos:prefLabel "Paragraph 6"@en ;
     cml:realizedBy doc:paragraph-6 ;
     cml:curationStatus cml:Proposed ;
+    cml:schemaVersion "2" ;   # regenerable — see CML_UPGRADE.md
     prov:wasDerivedFrom <https://www.ohchr.org/en/instruments-mechanisms/instruments/guidelines-action-children-criminal-justice-system> ;
     dc:date "21 July 1997" ;
     values:category "Administration of justice, detention & law enforcement" ;
@@ -95,6 +100,7 @@ concept:guidelines-action-children-criminal-justice-system-paragraph-7 a cml:Con
     skos:prefLabel "Paragraph 7"@en ;
     cml:realizedBy doc:paragraph-7 ;
     cml:curationStatus cml:Proposed ;
+    cml:schemaVersion "2" ;   # regenerable — see CML_UPGRADE.md
     prov:wasDerivedFrom <https://www.ohchr.org/en/instruments-mechanisms/instruments/guidelines-action-children-criminal-justice-system> ;
     dc:date "21 July 1997" ;
     values:category "Administration of justice, detention & law enforcement" ;
@@ -110,6 +116,7 @@ concept:guidelines-action-children-criminal-justice-system-paragraph-8 a cml:Con
     skos:prefLabel "Paragraph 8"@en ;
     cml:realizedBy doc:paragraph-8 ;
     cml:curationStatus cml:Proposed ;
+    cml:schemaVersion "2" ;   # regenerable — see CML_UPGRADE.md
     prov:wasDerivedFrom <https://www.ohchr.org/en/instruments-mechanisms/instruments/guidelines-action-children-criminal-justice-system> ;
     dc:date "21 July 1997" ;
     values:category "Administration of justice, detention & law enforcement" ;
@@ -125,6 +132,7 @@ concept:guidelines-action-children-criminal-justice-system-paragraph-9 a cml:Con
     skos:prefLabel "Paragraph 9"@en ;
     cml:realizedBy doc:paragraph-9 ;
     cml:curationStatus cml:Proposed ;
+    cml:schemaVersion "2" ;   # regenerable — see CML_UPGRADE.md
     prov:wasDerivedFrom <https://www.ohchr.org/en/instruments-mechanisms/instruments/guidelines-action-children-criminal-justice-system> ;
     dc:date "21 July 1997" ;
     values:category "Administration of justice, detention & law enforcement" ;
@@ -140,6 +148,7 @@ concept:guidelines-action-children-criminal-justice-system-paragraph-10 a cml:Co
     skos:prefLabel "Paragraph 10"@en ;
     cml:realizedBy doc:paragraph-10 ;
     cml:curationStatus cml:Proposed ;
+    cml:schemaVersion "2" ;   # regenerable — see CML_UPGRADE.md
     prov:wasDerivedFrom <https://www.ohchr.org/en/instruments-mechanisms/instruments/guidelines-action-children-criminal-justice-system> ;
     dc:date "21 July 1997" ;
     values:category "Administration of justice, detention & law enforcement" ;
@@ -155,6 +164,7 @@ concept:guidelines-action-children-criminal-justice-system-paragraph-11 a cml:Co
     skos:prefLabel "Paragraph 11"@en ;
     cml:realizedBy doc:paragraph-11 ;
     cml:curationStatus cml:Proposed ;
+    cml:schemaVersion "2" ;   # regenerable — see CML_UPGRADE.md
     prov:wasDerivedFrom <https://www.ohchr.org/en/instruments-mechanisms/instruments/guidelines-action-children-criminal-justice-system> ;
     dc:date "21 July 1997" ;
     values:category "Administration of justice, detention & law enforcement" ;
@@ -170,6 +180,7 @@ concept:guidelines-action-children-criminal-justice-system-paragraph-12 a cml:Co
     skos:prefLabel "Paragraph 12"@en ;
     cml:realizedBy doc:paragraph-12 ;
     cml:curationStatus cml:Proposed ;
+    cml:schemaVersion "2" ;   # regenerable — see CML_UPGRADE.md
     prov:wasDerivedFrom <https://www.ohchr.org/en/instruments-mechanisms/instruments/guidelines-action-children-criminal-justice-system> ;
     dc:date "21 July 1997" ;
     values:category "Administration of justice, detention & law enforcement" ;
@@ -185,6 +196,7 @@ concept:guidelines-action-children-criminal-justice-system-paragraph-13 a cml:Co
     skos:prefLabel "Paragraph 13"@en ;
     cml:realizedBy doc:paragraph-13 ;
     cml:curationStatus cml:Proposed ;
+    cml:schemaVersion "2" ;   # regenerable — see CML_UPGRADE.md
     prov:wasDerivedFrom <https://www.ohchr.org/en/instruments-mechanisms/instruments/guidelines-action-children-criminal-justice-system> ;
     dc:date "21 July 1997" ;
     values:category "Administration of justice, detention & law enforcement" ;
@@ -201,6 +213,7 @@ concept:guidelines-action-children-criminal-justice-system-paragraph-14 a cml:Co
     skos:prefLabel "Paragraph 14"@en ;
     cml:realizedBy doc:paragraph-14 ;
     cml:curationStatus cml:Proposed ;
+    cml:schemaVersion "2" ;   # regenerable — see CML_UPGRADE.md
     prov:wasDerivedFrom <https://www.ohchr.org/en/instruments-mechanisms/instruments/guidelines-action-children-criminal-justice-system> ;
     dc:date "21 July 1997" ;
     values:category "Administration of justice, detention & law enforcement" ;
@@ -216,6 +229,7 @@ concept:guidelines-action-children-criminal-justice-system-paragraph-15 a cml:Co
     skos:prefLabel "Paragraph 15"@en ;
     cml:realizedBy doc:paragraph-15 ;
     cml:curationStatus cml:Proposed ;
+    cml:schemaVersion "2" ;   # regenerable — see CML_UPGRADE.md
     prov:wasDerivedFrom <https://www.ohchr.org/en/instruments-mechanisms/instruments/guidelines-action-children-criminal-justice-system> ;
     dc:date "21 July 1997" ;
     values:category "Administration of justice, detention & law enforcement" ;
@@ -231,6 +245,7 @@ concept:guidelines-action-children-criminal-justice-system-paragraph-16 a cml:Co
     skos:prefLabel "Paragraph 16"@en ;
     cml:realizedBy doc:paragraph-16 ;
     cml:curationStatus cml:Proposed ;
+    cml:schemaVersion "2" ;   # regenerable — see CML_UPGRADE.md
     prov:wasDerivedFrom <https://www.ohchr.org/en/instruments-mechanisms/instruments/guidelines-action-children-criminal-justice-system> ;
     dc:date "21 July 1997" ;
     values:category "Administration of justice, detention & law enforcement" ;
@@ -246,6 +261,7 @@ concept:guidelines-action-children-criminal-justice-system-paragraph-17 a cml:Co
     skos:prefLabel "Paragraph 17"@en ;
     cml:realizedBy doc:paragraph-17 ;
     cml:curationStatus cml:Proposed ;
+    cml:schemaVersion "2" ;   # regenerable — see CML_UPGRADE.md
     prov:wasDerivedFrom <https://www.ohchr.org/en/instruments-mechanisms/instruments/guidelines-action-children-criminal-justice-system> ;
     dc:date "21 July 1997" ;
     values:category "Administration of justice, detention & law enforcement" ;
@@ -261,6 +277,7 @@ concept:guidelines-action-children-criminal-justice-system-paragraph-18 a cml:Co
     skos:prefLabel "Paragraph 18"@en ;
     cml:realizedBy doc:paragraph-18 ;
     cml:curationStatus cml:Proposed ;
+    cml:schemaVersion "2" ;   # regenerable — see CML_UPGRADE.md
     prov:wasDerivedFrom <https://www.ohchr.org/en/instruments-mechanisms/instruments/guidelines-action-children-criminal-justice-system> ;
     dc:date "21 July 1997" ;
     values:category "Administration of justice, detention & law enforcement" ;
@@ -276,6 +293,7 @@ concept:guidelines-action-children-criminal-justice-system-paragraph-19 a cml:Co
     skos:prefLabel "Paragraph 19"@en ;
     cml:realizedBy doc:paragraph-19 ;
     cml:curationStatus cml:Proposed ;
+    cml:schemaVersion "2" ;   # regenerable — see CML_UPGRADE.md
     prov:wasDerivedFrom <https://www.ohchr.org/en/instruments-mechanisms/instruments/guidelines-action-children-criminal-justice-system> ;
     dc:date "21 July 1997" ;
     values:category "Administration of justice, detention & law enforcement" ;
@@ -291,6 +309,7 @@ concept:guidelines-action-children-criminal-justice-system-paragraph-20 a cml:Co
     skos:prefLabel "Paragraph 20"@en ;
     cml:realizedBy doc:paragraph-20 ;
     cml:curationStatus cml:Proposed ;
+    cml:schemaVersion "2" ;   # regenerable — see CML_UPGRADE.md
     prov:wasDerivedFrom <https://www.ohchr.org/en/instruments-mechanisms/instruments/guidelines-action-children-criminal-justice-system> ;
     dc:date "21 July 1997" ;
     values:category "Administration of justice, detention & law enforcement" ;
@@ -306,6 +325,7 @@ concept:guidelines-action-children-criminal-justice-system-paragraph-21 a cml:Co
     skos:prefLabel "Paragraph 21"@en ;
     cml:realizedBy doc:paragraph-21 ;
     cml:curationStatus cml:Proposed ;
+    cml:schemaVersion "2" ;   # regenerable — see CML_UPGRADE.md
     prov:wasDerivedFrom <https://www.ohchr.org/en/instruments-mechanisms/instruments/guidelines-action-children-criminal-justice-system> ;
     dc:date "21 July 1997" ;
     values:category "Administration of justice, detention & law enforcement" ;
@@ -321,6 +341,7 @@ concept:guidelines-action-children-criminal-justice-system-paragraph-22 a cml:Co
     skos:prefLabel "Paragraph 22"@en ;
     cml:realizedBy doc:paragraph-22 ;
     cml:curationStatus cml:Proposed ;
+    cml:schemaVersion "2" ;   # regenerable — see CML_UPGRADE.md
     prov:wasDerivedFrom <https://www.ohchr.org/en/instruments-mechanisms/instruments/guidelines-action-children-criminal-justice-system> ;
     dc:date "21 July 1997" ;
     values:category "Administration of justice, detention & law enforcement" ;
@@ -336,6 +357,7 @@ concept:guidelines-action-children-criminal-justice-system-paragraph-23 a cml:Co
     skos:prefLabel "Paragraph 23"@en ;
     cml:realizedBy doc:paragraph-23 ;
     cml:curationStatus cml:Proposed ;
+    cml:schemaVersion "2" ;   # regenerable — see CML_UPGRADE.md
     prov:wasDerivedFrom <https://www.ohchr.org/en/instruments-mechanisms/instruments/guidelines-action-children-criminal-justice-system> ;
     dc:date "21 July 1997" ;
     values:category "Administration of justice, detention & law enforcement" ;
@@ -351,6 +373,7 @@ concept:guidelines-action-children-criminal-justice-system-paragraph-24 a cml:Co
     skos:prefLabel "Paragraph 24"@en ;
     cml:realizedBy doc:paragraph-24 ;
     cml:curationStatus cml:Proposed ;
+    cml:schemaVersion "2" ;   # regenerable — see CML_UPGRADE.md
     prov:wasDerivedFrom <https://www.ohchr.org/en/instruments-mechanisms/instruments/guidelines-action-children-criminal-justice-system> ;
     dc:date "21 July 1997" ;
     values:category "Administration of justice, detention & law enforcement" ;
@@ -366,6 +389,7 @@ concept:guidelines-action-children-criminal-justice-system-paragraph-25 a cml:Co
     skos:prefLabel "Paragraph 25"@en ;
     cml:realizedBy doc:paragraph-25 ;
     cml:curationStatus cml:Proposed ;
+    cml:schemaVersion "2" ;   # regenerable — see CML_UPGRADE.md
     prov:wasDerivedFrom <https://www.ohchr.org/en/instruments-mechanisms/instruments/guidelines-action-children-criminal-justice-system> ;
     dc:date "21 July 1997" ;
     values:category "Administration of justice, detention & law enforcement" ;
@@ -381,6 +405,7 @@ concept:guidelines-action-children-criminal-justice-system-paragraph-26 a cml:Co
     skos:prefLabel "Paragraph 26"@en ;
     cml:realizedBy doc:paragraph-26 ;
     cml:curationStatus cml:Proposed ;
+    cml:schemaVersion "2" ;   # regenerable — see CML_UPGRADE.md
     prov:wasDerivedFrom <https://www.ohchr.org/en/instruments-mechanisms/instruments/guidelines-action-children-criminal-justice-system> ;
     dc:date "21 July 1997" ;
     values:category "Administration of justice, detention & law enforcement" ;
@@ -396,6 +421,7 @@ concept:guidelines-action-children-criminal-justice-system-paragraph-27 a cml:Co
     skos:prefLabel "Paragraph 27"@en ;
     cml:realizedBy doc:paragraph-27 ;
     cml:curationStatus cml:Proposed ;
+    cml:schemaVersion "2" ;   # regenerable — see CML_UPGRADE.md
     prov:wasDerivedFrom <https://www.ohchr.org/en/instruments-mechanisms/instruments/guidelines-action-children-criminal-justice-system> ;
     dc:date "21 July 1997" ;
     values:category "Administration of justice, detention & law enforcement" ;
@@ -412,6 +438,7 @@ concept:guidelines-action-children-criminal-justice-system-paragraph-28 a cml:Co
     skos:prefLabel "Paragraph 28"@en ;
     cml:realizedBy doc:paragraph-28 ;
     cml:curationStatus cml:Proposed ;
+    cml:schemaVersion "2" ;   # regenerable — see CML_UPGRADE.md
     prov:wasDerivedFrom <https://www.ohchr.org/en/instruments-mechanisms/instruments/guidelines-action-children-criminal-justice-system> ;
     dc:date "21 July 1997" ;
     values:category "Administration of justice, detention & law enforcement" ;
@@ -427,6 +454,7 @@ concept:guidelines-action-children-criminal-justice-system-paragraph-29 a cml:Co
     skos:prefLabel "Paragraph 29"@en ;
     cml:realizedBy doc:paragraph-29 ;
     cml:curationStatus cml:Proposed ;
+    cml:schemaVersion "2" ;   # regenerable — see CML_UPGRADE.md
     prov:wasDerivedFrom <https://www.ohchr.org/en/instruments-mechanisms/instruments/guidelines-action-children-criminal-justice-system> ;
     dc:date "21 July 1997" ;
     values:category "Administration of justice, detention & law enforcement" ;
@@ -442,6 +470,7 @@ concept:guidelines-action-children-criminal-justice-system-paragraph-30 a cml:Co
     skos:prefLabel "Paragraph 30"@en ;
     cml:realizedBy doc:paragraph-30 ;
     cml:curationStatus cml:Proposed ;
+    cml:schemaVersion "2" ;   # regenerable — see CML_UPGRADE.md
     prov:wasDerivedFrom <https://www.ohchr.org/en/instruments-mechanisms/instruments/guidelines-action-children-criminal-justice-system> ;
     dc:date "21 July 1997" ;
     values:category "Administration of justice, detention & law enforcement" ;
@@ -457,6 +486,7 @@ concept:guidelines-action-children-criminal-justice-system-paragraph-31 a cml:Co
     skos:prefLabel "Paragraph 31"@en ;
     cml:realizedBy doc:paragraph-31 ;
     cml:curationStatus cml:Proposed ;
+    cml:schemaVersion "2" ;   # regenerable — see CML_UPGRADE.md
     prov:wasDerivedFrom <https://www.ohchr.org/en/instruments-mechanisms/instruments/guidelines-action-children-criminal-justice-system> ;
     dc:date "21 July 1997" ;
     values:category "Administration of justice, detention & law enforcement" ;
@@ -472,6 +502,7 @@ concept:guidelines-action-children-criminal-justice-system-paragraph-32 a cml:Co
     skos:prefLabel "Paragraph 32"@en ;
     cml:realizedBy doc:paragraph-32 ;
     cml:curationStatus cml:Proposed ;
+    cml:schemaVersion "2" ;   # regenerable — see CML_UPGRADE.md
     prov:wasDerivedFrom <https://www.ohchr.org/en/instruments-mechanisms/instruments/guidelines-action-children-criminal-justice-system> ;
     dc:date "21 July 1997" ;
     values:category "Administration of justice, detention & law enforcement" ;
@@ -487,6 +518,7 @@ concept:guidelines-action-children-criminal-justice-system-paragraph-33 a cml:Co
     skos:prefLabel "Paragraph 33"@en ;
     cml:realizedBy doc:paragraph-33 ;
     cml:curationStatus cml:Proposed ;
+    cml:schemaVersion "2" ;   # regenerable — see CML_UPGRADE.md
     prov:wasDerivedFrom <https://www.ohchr.org/en/instruments-mechanisms/instruments/guidelines-action-children-criminal-justice-system> ;
     dc:date "21 July 1997" ;
     values:category "Administration of justice, detention & law enforcement" ;
@@ -502,6 +534,7 @@ concept:guidelines-action-children-criminal-justice-system-paragraph-34 a cml:Co
     skos:prefLabel "Paragraph 34"@en ;
     cml:realizedBy doc:paragraph-34 ;
     cml:curationStatus cml:Proposed ;
+    cml:schemaVersion "2" ;   # regenerable — see CML_UPGRADE.md
     prov:wasDerivedFrom <https://www.ohchr.org/en/instruments-mechanisms/instruments/guidelines-action-children-criminal-justice-system> ;
     dc:date "21 July 1997" ;
     values:category "Administration of justice, detention & law enforcement" ;
@@ -517,6 +550,7 @@ concept:guidelines-action-children-criminal-justice-system-paragraph-35 a cml:Co
     skos:prefLabel "Paragraph 35"@en ;
     cml:realizedBy doc:paragraph-35 ;
     cml:curationStatus cml:Proposed ;
+    cml:schemaVersion "2" ;   # regenerable — see CML_UPGRADE.md
     prov:wasDerivedFrom <https://www.ohchr.org/en/instruments-mechanisms/instruments/guidelines-action-children-criminal-justice-system> ;
     dc:date "21 July 1997" ;
     values:category "Administration of justice, detention & law enforcement" ;
@@ -532,6 +566,7 @@ concept:guidelines-action-children-criminal-justice-system-paragraph-36 a cml:Co
     skos:prefLabel "Paragraph 36"@en ;
     cml:realizedBy doc:paragraph-36 ;
     cml:curationStatus cml:Proposed ;
+    cml:schemaVersion "2" ;   # regenerable — see CML_UPGRADE.md
     prov:wasDerivedFrom <https://www.ohchr.org/en/instruments-mechanisms/instruments/guidelines-action-children-criminal-justice-system> ;
     dc:date "21 July 1997" ;
     values:category "Administration of justice, detention & law enforcement" ;
@@ -547,6 +582,7 @@ concept:guidelines-action-children-criminal-justice-system-paragraph-37 a cml:Co
     skos:prefLabel "Paragraph 37"@en ;
     cml:realizedBy doc:paragraph-37 ;
     cml:curationStatus cml:Proposed ;
+    cml:schemaVersion "2" ;   # regenerable — see CML_UPGRADE.md
     prov:wasDerivedFrom <https://www.ohchr.org/en/instruments-mechanisms/instruments/guidelines-action-children-criminal-justice-system> ;
     dc:date "21 July 1997" ;
     values:category "Administration of justice, detention & law enforcement" ;
@@ -562,6 +598,7 @@ concept:guidelines-action-children-criminal-justice-system-paragraph-38 a cml:Co
     skos:prefLabel "Paragraph 38"@en ;
     cml:realizedBy doc:paragraph-38 ;
     cml:curationStatus cml:Proposed ;
+    cml:schemaVersion "2" ;   # regenerable — see CML_UPGRADE.md
     prov:wasDerivedFrom <https://www.ohchr.org/en/instruments-mechanisms/instruments/guidelines-action-children-criminal-justice-system> ;
     dc:date "21 July 1997" ;
     values:category "Administration of justice, detention & law enforcement" ;
@@ -577,6 +614,7 @@ concept:guidelines-action-children-criminal-justice-system-paragraph-39 a cml:Co
     skos:prefLabel "Paragraph 39"@en ;
     cml:realizedBy doc:paragraph-39 ;
     cml:curationStatus cml:Proposed ;
+    cml:schemaVersion "2" ;   # regenerable — see CML_UPGRADE.md
     prov:wasDerivedFrom <https://www.ohchr.org/en/instruments-mechanisms/instruments/guidelines-action-children-criminal-justice-system> ;
     dc:date "21 July 1997" ;
     values:category "Administration of justice, detention & law enforcement" ;
@@ -592,6 +630,7 @@ concept:guidelines-action-children-criminal-justice-system-paragraph-40 a cml:Co
     skos:prefLabel "Paragraph 40"@en ;
     cml:realizedBy doc:paragraph-40 ;
     cml:curationStatus cml:Proposed ;
+    cml:schemaVersion "2" ;   # regenerable — see CML_UPGRADE.md
     prov:wasDerivedFrom <https://www.ohchr.org/en/instruments-mechanisms/instruments/guidelines-action-children-criminal-justice-system> ;
     dc:date "21 July 1997" ;
     values:category "Administration of justice, detention & law enforcement" ;
@@ -607,6 +646,7 @@ concept:guidelines-action-children-criminal-justice-system-paragraph-41 a cml:Co
     skos:prefLabel "Paragraph 41"@en ;
     cml:realizedBy doc:paragraph-41 ;
     cml:curationStatus cml:Proposed ;
+    cml:schemaVersion "2" ;   # regenerable — see CML_UPGRADE.md
     prov:wasDerivedFrom <https://www.ohchr.org/en/instruments-mechanisms/instruments/guidelines-action-children-criminal-justice-system> ;
     dc:date "21 July 1997" ;
     values:category "Administration of justice, detention & law enforcement" ;
@@ -622,6 +662,7 @@ concept:guidelines-action-children-criminal-justice-system-paragraph-42 a cml:Co
     skos:prefLabel "Paragraph 42"@en ;
     cml:realizedBy doc:paragraph-42 ;
     cml:curationStatus cml:Proposed ;
+    cml:schemaVersion "2" ;   # regenerable — see CML_UPGRADE.md
     prov:wasDerivedFrom <https://www.ohchr.org/en/instruments-mechanisms/instruments/guidelines-action-children-criminal-justice-system> ;
     dc:date "21 July 1997" ;
     values:category "Administration of justice, detention & law enforcement" ;
@@ -637,6 +678,7 @@ concept:guidelines-action-children-criminal-justice-system-paragraph-43 a cml:Co
     skos:prefLabel "Paragraph 43"@en ;
     cml:realizedBy doc:paragraph-43 ;
     cml:curationStatus cml:Proposed ;
+    cml:schemaVersion "2" ;   # regenerable — see CML_UPGRADE.md
     prov:wasDerivedFrom <https://www.ohchr.org/en/instruments-mechanisms/instruments/guidelines-action-children-criminal-justice-system> ;
     dc:date "21 July 1997" ;
     values:category "Administration of justice, detention & law enforcement" ;
@@ -652,6 +694,7 @@ concept:guidelines-action-children-criminal-justice-system-paragraph-44 a cml:Co
     skos:prefLabel "Paragraph 44"@en ;
     cml:realizedBy doc:paragraph-44 ;
     cml:curationStatus cml:Proposed ;
+    cml:schemaVersion "2" ;   # regenerable — see CML_UPGRADE.md
     prov:wasDerivedFrom <https://www.ohchr.org/en/instruments-mechanisms/instruments/guidelines-action-children-criminal-justice-system> ;
     dc:date "21 July 1997" ;
     values:category "Administration of justice, detention & law enforcement" ;
@@ -667,6 +710,7 @@ concept:guidelines-action-children-criminal-justice-system-paragraph-45 a cml:Co
     skos:prefLabel "Paragraph 45"@en ;
     cml:realizedBy doc:paragraph-45 ;
     cml:curationStatus cml:Proposed ;
+    cml:schemaVersion "2" ;   # regenerable — see CML_UPGRADE.md
     prov:wasDerivedFrom <https://www.ohchr.org/en/instruments-mechanisms/instruments/guidelines-action-children-criminal-justice-system> ;
     dc:date "21 July 1997" ;
     values:category "Administration of justice, detention & law enforcement" ;
@@ -682,6 +726,7 @@ concept:guidelines-action-children-criminal-justice-system-paragraph-46 a cml:Co
     skos:prefLabel "Paragraph 46"@en ;
     cml:realizedBy doc:paragraph-46 ;
     cml:curationStatus cml:Proposed ;
+    cml:schemaVersion "2" ;   # regenerable — see CML_UPGRADE.md
     prov:wasDerivedFrom <https://www.ohchr.org/en/instruments-mechanisms/instruments/guidelines-action-children-criminal-justice-system> ;
     dc:date "21 July 1997" ;
     values:category "Administration of justice, detention & law enforcement" ;
@@ -697,6 +742,7 @@ concept:guidelines-action-children-criminal-justice-system-paragraph-47 a cml:Co
     skos:prefLabel "Paragraph 47"@en ;
     cml:realizedBy doc:paragraph-47 ;
     cml:curationStatus cml:Proposed ;
+    cml:schemaVersion "2" ;   # regenerable — see CML_UPGRADE.md
     prov:wasDerivedFrom <https://www.ohchr.org/en/instruments-mechanisms/instruments/guidelines-action-children-criminal-justice-system> ;
     dc:date "21 July 1997" ;
     values:category "Administration of justice, detention & law enforcement" ;
@@ -712,6 +758,7 @@ concept:guidelines-action-children-criminal-justice-system-paragraph-48 a cml:Co
     skos:prefLabel "Paragraph 48"@en ;
     cml:realizedBy doc:paragraph-48 ;
     cml:curationStatus cml:Proposed ;
+    cml:schemaVersion "2" ;   # regenerable — see CML_UPGRADE.md
     prov:wasDerivedFrom <https://www.ohchr.org/en/instruments-mechanisms/instruments/guidelines-action-children-criminal-justice-system> ;
     dc:date "21 July 1997" ;
     values:category "Administration of justice, detention & law enforcement" ;
@@ -727,6 +774,7 @@ concept:guidelines-action-children-criminal-justice-system-paragraph-49 a cml:Co
     skos:prefLabel "Paragraph 49"@en ;
     cml:realizedBy doc:paragraph-49 ;
     cml:curationStatus cml:Proposed ;
+    cml:schemaVersion "2" ;   # regenerable — see CML_UPGRADE.md
     prov:wasDerivedFrom <https://www.ohchr.org/en/instruments-mechanisms/instruments/guidelines-action-children-criminal-justice-system> ;
     dc:date "21 July 1997" ;
     values:category "Administration of justice, detention & law enforcement" ;
@@ -742,6 +790,7 @@ concept:guidelines-action-children-criminal-justice-system-paragraph-50 a cml:Co
     skos:prefLabel "Paragraph 50"@en ;
     cml:realizedBy doc:paragraph-50 ;
     cml:curationStatus cml:Proposed ;
+    cml:schemaVersion "2" ;   # regenerable — see CML_UPGRADE.md
     prov:wasDerivedFrom <https://www.ohchr.org/en/instruments-mechanisms/instruments/guidelines-action-children-criminal-justice-system> ;
     dc:date "21 July 1997" ;
     values:category "Administration of justice, detention & law enforcement" ;
@@ -757,6 +806,7 @@ concept:guidelines-action-children-criminal-justice-system-paragraph-51 a cml:Co
     skos:prefLabel "Paragraph 51"@en ;
     cml:realizedBy doc:paragraph-51 ;
     cml:curationStatus cml:Proposed ;
+    cml:schemaVersion "2" ;   # regenerable — see CML_UPGRADE.md
     prov:wasDerivedFrom <https://www.ohchr.org/en/instruments-mechanisms/instruments/guidelines-action-children-criminal-justice-system> ;
     dc:date "21 July 1997" ;
     values:category "Administration of justice, detention & law enforcement" ;
@@ -772,6 +822,7 @@ concept:guidelines-action-children-criminal-justice-system-paragraph-52 a cml:Co
     skos:prefLabel "Paragraph 52"@en ;
     cml:realizedBy doc:paragraph-52 ;
     cml:curationStatus cml:Proposed ;
+    cml:schemaVersion "2" ;   # regenerable — see CML_UPGRADE.md
     prov:wasDerivedFrom <https://www.ohchr.org/en/instruments-mechanisms/instruments/guidelines-action-children-criminal-justice-system> ;
     dc:date "21 July 1997" ;
     values:category "Administration of justice, detention & law enforcement" ;
@@ -787,6 +838,7 @@ concept:guidelines-action-children-criminal-justice-system-paragraph-53 a cml:Co
     skos:prefLabel "Paragraph 53"@en ;
     cml:realizedBy doc:paragraph-53 ;
     cml:curationStatus cml:Proposed ;
+    cml:schemaVersion "2" ;   # regenerable — see CML_UPGRADE.md
     prov:wasDerivedFrom <https://www.ohchr.org/en/instruments-mechanisms/instruments/guidelines-action-children-criminal-justice-system> ;
     dc:date "21 July 1997" ;
     values:category "Administration of justice, detention & law enforcement" ;
@@ -802,6 +854,7 @@ concept:guidelines-action-children-criminal-justice-system-paragraph-54 a cml:Co
     skos:prefLabel "Paragraph 54"@en ;
     cml:realizedBy doc:paragraph-54 ;
     cml:curationStatus cml:Proposed ;
+    cml:schemaVersion "2" ;   # regenerable — see CML_UPGRADE.md
     prov:wasDerivedFrom <https://www.ohchr.org/en/instruments-mechanisms/instruments/guidelines-action-children-criminal-justice-system> ;
     dc:date "21 July 1997" ;
     values:category "Administration of justice, detention & law enforcement" ;
@@ -817,6 +870,7 @@ concept:guidelines-action-children-criminal-justice-system-paragraph-55 a cml:Co
     skos:prefLabel "Paragraph 55"@en ;
     cml:realizedBy doc:paragraph-55 ;
     cml:curationStatus cml:Proposed ;
+    cml:schemaVersion "2" ;   # regenerable — see CML_UPGRADE.md
     prov:wasDerivedFrom <https://www.ohchr.org/en/instruments-mechanisms/instruments/guidelines-action-children-criminal-justice-system> ;
     dc:date "21 July 1997" ;
     values:category "Administration of justice, detention & law enforcement" ;
@@ -832,6 +886,7 @@ concept:guidelines-action-children-criminal-justice-system-paragraph-56 a cml:Co
     skos:prefLabel "Paragraph 56"@en ;
     cml:realizedBy doc:paragraph-56 ;
     cml:curationStatus cml:Proposed ;
+    cml:schemaVersion "2" ;   # regenerable — see CML_UPGRADE.md
     prov:wasDerivedFrom <https://www.ohchr.org/en/instruments-mechanisms/instruments/guidelines-action-children-criminal-justice-system> ;
     dc:date "21 July 1997" ;
     values:category "Administration of justice, detention & law enforcement" ;
@@ -847,6 +902,7 @@ concept:guidelines-action-children-criminal-justice-system-paragraph-57 a cml:Co
     skos:prefLabel "Paragraph 57"@en ;
     cml:realizedBy doc:paragraph-57 ;
     cml:curationStatus cml:Proposed ;
+    cml:schemaVersion "2" ;   # regenerable — see CML_UPGRADE.md
     prov:wasDerivedFrom <https://www.ohchr.org/en/instruments-mechanisms/instruments/guidelines-action-children-criminal-justice-system> ;
     dc:date "21 July 1997" ;
     values:category "Administration of justice, detention & law enforcement" ;
@@ -862,6 +918,7 @@ concept:guidelines-action-children-criminal-justice-system-paragraph-58 a cml:Co
     skos:prefLabel "Paragraph 58"@en ;
     cml:realizedBy doc:paragraph-58 ;
     cml:curationStatus cml:Proposed ;
+    cml:schemaVersion "2" ;   # regenerable — see CML_UPGRADE.md
     prov:wasDerivedFrom <https://www.ohchr.org/en/instruments-mechanisms/instruments/guidelines-action-children-criminal-justice-system> ;
     dc:date "21 July 1997" ;
     values:category "Administration of justice, detention & law enforcement" ;
@@ -877,6 +934,7 @@ concept:guidelines-action-children-criminal-justice-system-paragraph-59 a cml:Co
     skos:prefLabel "Paragraph 59"@en ;
     cml:realizedBy doc:paragraph-59 ;
     cml:curationStatus cml:Proposed ;
+    cml:schemaVersion "2" ;   # regenerable — see CML_UPGRADE.md
     prov:wasDerivedFrom <https://www.ohchr.org/en/instruments-mechanisms/instruments/guidelines-action-children-criminal-justice-system> ;
     dc:date "21 July 1997" ;
     values:category "Administration of justice, detention & law enforcement" ;
@@ -892,6 +950,7 @@ concept:guidelines-action-children-criminal-justice-system-paragraph-60 a cml:Co
     skos:prefLabel "Paragraph 60"@en ;
     cml:realizedBy doc:paragraph-60 ;
     cml:curationStatus cml:Proposed ;
+    cml:schemaVersion "2" ;   # regenerable — see CML_UPGRADE.md
     prov:wasDerivedFrom <https://www.ohchr.org/en/instruments-mechanisms/instruments/guidelines-action-children-criminal-justice-system> ;
     dc:date "21 July 1997" ;
     values:category "Administration of justice, detention & law enforcement" ;
@@ -907,6 +966,7 @@ concept:guidelines-action-children-criminal-justice-system-paragraph-61 a cml:Co
     skos:prefLabel "Paragraph 61"@en ;
     cml:realizedBy doc:paragraph-61 ;
     cml:curationStatus cml:Proposed ;
+    cml:schemaVersion "2" ;   # regenerable — see CML_UPGRADE.md
     prov:wasDerivedFrom <https://www.ohchr.org/en/instruments-mechanisms/instruments/guidelines-action-children-criminal-justice-system> ;
     dc:date "21 July 1997" ;
     values:category "Administration of justice, detention & law enforcement" ;
@@ -922,6 +982,7 @@ concept:guidelines-action-children-criminal-justice-system-paragraph-62 a cml:Co
     skos:prefLabel "Paragraph 62"@en ;
     cml:realizedBy doc:paragraph-62 ;
     cml:curationStatus cml:Proposed ;
+    cml:schemaVersion "2" ;   # regenerable — see CML_UPGRADE.md
     prov:wasDerivedFrom <https://www.ohchr.org/en/instruments-mechanisms/instruments/guidelines-action-children-criminal-justice-system> ;
     dc:date "21 July 1997" ;
     values:category "Administration of justice, detention & law enforcement" ;
@@ -937,6 +998,7 @@ concept:guidelines-action-children-criminal-justice-system-paragraph-63 a cml:Co
     skos:prefLabel "Paragraph 63"@en ;
     cml:realizedBy doc:paragraph-63 ;
     cml:curationStatus cml:Proposed ;
+    cml:schemaVersion "2" ;   # regenerable — see CML_UPGRADE.md
     prov:wasDerivedFrom <https://www.ohchr.org/en/instruments-mechanisms/instruments/guidelines-action-children-criminal-justice-system> ;
     dc:date "21 July 1997" ;
     values:category "Administration of justice, detention & law enforcement" ;
@@ -952,6 +1014,7 @@ concept:guidelines-action-children-criminal-justice-system-paragraph-64 a cml:Co
     skos:prefLabel "Paragraph 64"@en ;
     cml:realizedBy doc:paragraph-64 ;
     cml:curationStatus cml:Proposed ;
+    cml:schemaVersion "2" ;   # regenerable — see CML_UPGRADE.md
     prov:wasDerivedFrom <https://www.ohchr.org/en/instruments-mechanisms/instruments/guidelines-action-children-criminal-justice-system> ;
     dc:date "21 July 1997" ;
     values:category "Administration of justice, detention & law enforcement" ;
@@ -967,6 +1030,7 @@ concept:guidelines-action-children-criminal-justice-system-paragraph-65 a cml:Co
     skos:prefLabel "Paragraph 65"@en ;
     cml:realizedBy doc:paragraph-65 ;
     cml:curationStatus cml:Proposed ;
+    cml:schemaVersion "2" ;   # regenerable — see CML_UPGRADE.md
     prov:wasDerivedFrom <https://www.ohchr.org/en/instruments-mechanisms/instruments/guidelines-action-children-criminal-justice-system> ;
     dc:date "21 July 1997" ;
     values:category "Administration of justice, detention & law enforcement" ;
@@ -982,6 +1046,7 @@ concept:guidelines-action-children-criminal-justice-system-paragraph-66 a cml:Co
     skos:prefLabel "Paragraph 66"@en ;
     cml:realizedBy doc:paragraph-66 ;
     cml:curationStatus cml:Proposed ;
+    cml:schemaVersion "2" ;   # regenerable — see CML_UPGRADE.md
     prov:wasDerivedFrom <https://www.ohchr.org/en/instruments-mechanisms/instruments/guidelines-action-children-criminal-justice-system> ;
     dc:date "21 July 1997" ;
     values:category "Administration of justice, detention & law enforcement" ;
@@ -997,6 +1062,7 @@ concept:guidelines-action-children-criminal-justice-system-paragraph-67 a cml:Co
     skos:prefLabel "Paragraph 67"@en ;
     cml:realizedBy doc:paragraph-67 ;
     cml:curationStatus cml:Proposed ;
+    cml:schemaVersion "2" ;   # regenerable — see CML_UPGRADE.md
     prov:wasDerivedFrom <https://www.ohchr.org/en/instruments-mechanisms/instruments/guidelines-action-children-criminal-justice-system> ;
     dc:date "21 July 1997" ;
     values:category "Administration of justice, detention & law enforcement" ;
@@ -1012,6 +1078,7 @@ concept:guidelines-action-children-criminal-justice-system-paragraph-68 a cml:Co
     skos:prefLabel "Paragraph 68"@en ;
     cml:realizedBy doc:paragraph-68 ;
     cml:curationStatus cml:Proposed ;
+    cml:schemaVersion "2" ;   # regenerable — see CML_UPGRADE.md
     prov:wasDerivedFrom <https://www.ohchr.org/en/instruments-mechanisms/instruments/guidelines-action-children-criminal-justice-system> ;
     dc:date "21 July 1997" ;
     values:category "Administration of justice, detention & law enforcement" ;
@@ -1027,6 +1094,7 @@ concept:guidelines-action-children-criminal-justice-system-paragraph-69 a cml:Co
     skos:prefLabel "Paragraph 69"@en ;
     cml:realizedBy doc:paragraph-69 ;
     cml:curationStatus cml:Proposed ;
+    cml:schemaVersion "2" ;   # regenerable — see CML_UPGRADE.md
     prov:wasDerivedFrom <https://www.ohchr.org/en/instruments-mechanisms/instruments/guidelines-action-children-criminal-justice-system> ;
     dc:date "21 July 1997" ;
     values:category "Administration of justice, detention & law enforcement" ;
@@ -1042,6 +1110,7 @@ concept:guidelines-action-children-criminal-justice-system-paragraph-70 a cml:Co
     skos:prefLabel "Paragraph 70"@en ;
     cml:realizedBy doc:paragraph-70 ;
     cml:curationStatus cml:Proposed ;
+    cml:schemaVersion "2" ;   # regenerable — see CML_UPGRADE.md
     prov:wasDerivedFrom <https://www.ohchr.org/en/instruments-mechanisms/instruments/guidelines-action-children-criminal-justice-system> ;
     dc:date "21 July 1997" ;
     values:category "Administration of justice, detention & law enforcement" ;
@@ -1057,6 +1126,7 @@ concept:guidelines-action-children-criminal-justice-system-paragraph-71 a cml:Co
     skos:prefLabel "Paragraph 71"@en ;
     cml:realizedBy doc:paragraph-71 ;
     cml:curationStatus cml:Proposed ;
+    cml:schemaVersion "2" ;   # regenerable — see CML_UPGRADE.md
     prov:wasDerivedFrom <https://www.ohchr.org/en/instruments-mechanisms/instruments/guidelines-action-children-criminal-justice-system> ;
     dc:date "21 July 1997" ;
     values:category "Administration of justice, detention & law enforcement" ;
@@ -1072,6 +1142,7 @@ concept:guidelines-action-children-criminal-justice-system-paragraph-72 a cml:Co
     skos:prefLabel "Paragraph 72"@en ;
     cml:realizedBy doc:paragraph-72 ;
     cml:curationStatus cml:Proposed ;
+    cml:schemaVersion "2" ;   # regenerable — see CML_UPGRADE.md
     prov:wasDerivedFrom <https://www.ohchr.org/en/instruments-mechanisms/instruments/guidelines-action-children-criminal-justice-system> ;
     dc:date "21 July 1997" ;
     values:category "Administration of justice, detention & law enforcement" ;
@@ -1087,6 +1158,7 @@ concept:guidelines-action-children-criminal-justice-system-paragraph-73 a cml:Co
     skos:prefLabel "Paragraph 73"@en ;
     cml:realizedBy doc:paragraph-73 ;
     cml:curationStatus cml:Proposed ;
+    cml:schemaVersion "2" ;   # regenerable — see CML_UPGRADE.md
     prov:wasDerivedFrom <https://www.ohchr.org/en/instruments-mechanisms/instruments/guidelines-action-children-criminal-justice-system> ;
     dc:date "21 July 1997" ;
     values:category "Administration of justice, detention & law enforcement" ;
@@ -1102,6 +1174,7 @@ concept:guidelines-action-children-criminal-justice-system-paragraph-74 a cml:Co
     skos:prefLabel "Paragraph 74"@en ;
     cml:realizedBy doc:paragraph-74 ;
     cml:curationStatus cml:Proposed ;
+    cml:schemaVersion "2" ;   # regenerable — see CML_UPGRADE.md
     prov:wasDerivedFrom <https://www.ohchr.org/en/instruments-mechanisms/instruments/guidelines-action-children-criminal-justice-system> ;
     dc:date "21 July 1997" ;
     values:category "Administration of justice, detention & law enforcement" ;
@@ -1117,6 +1190,7 @@ concept:guidelines-action-children-criminal-justice-system-paragraph-75 a cml:Co
     skos:prefLabel "Paragraph 75"@en ;
     cml:realizedBy doc:paragraph-75 ;
     cml:curationStatus cml:Proposed ;
+    cml:schemaVersion "2" ;   # regenerable — see CML_UPGRADE.md
     prov:wasDerivedFrom <https://www.ohchr.org/en/instruments-mechanisms/instruments/guidelines-action-children-criminal-justice-system> ;
     dc:date "21 July 1997" ;
     values:category "Administration of justice, detention & law enforcement" ;
@@ -1134,6 +1208,7 @@ concept:guidelines-action-children-criminal-justice-system-paragraph-76 a cml:Co
     skos:prefLabel "Paragraph 76"@en ;
     cml:realizedBy doc:paragraph-76 ;
     cml:curationStatus cml:Proposed ;
+    cml:schemaVersion "2" ;   # regenerable — see CML_UPGRADE.md
     prov:wasDerivedFrom <https://www.ohchr.org/en/instruments-mechanisms/instruments/guidelines-action-children-criminal-justice-system> ;
     dc:date "21 July 1997" ;
     values:category "Administration of justice, detention & law enforcement" ;
@@ -1149,6 +1224,7 @@ concept:guidelines-action-children-criminal-justice-system-paragraph-77 a cml:Co
     skos:prefLabel "Paragraph 77"@en ;
     cml:realizedBy doc:paragraph-77 ;
     cml:curationStatus cml:Proposed ;
+    cml:schemaVersion "2" ;   # regenerable — see CML_UPGRADE.md
     prov:wasDerivedFrom <https://www.ohchr.org/en/instruments-mechanisms/instruments/guidelines-action-children-criminal-justice-system> ;
     dc:date "21 July 1997" ;
     values:category "Administration of justice, detention & law enforcement" ;
@@ -1165,6 +1241,7 @@ concept:guidelines-action-children-criminal-justice-system-paragraph-78 a cml:Co
     skos:prefLabel "Paragraph 78"@en ;
     cml:realizedBy doc:paragraph-78 ;
     cml:curationStatus cml:Proposed ;
+    cml:schemaVersion "2" ;   # regenerable — see CML_UPGRADE.md
     prov:wasDerivedFrom <https://www.ohchr.org/en/instruments-mechanisms/instruments/guidelines-action-children-criminal-justice-system> ;
     dc:date "21 July 1997" ;
     values:category "Administration of justice, detention & law enforcement" ;
@@ -1180,6 +1257,7 @@ concept:guidelines-action-children-criminal-justice-system-paragraph-79 a cml:Co
     skos:prefLabel "Paragraph 79"@en ;
     cml:realizedBy doc:paragraph-79 ;
     cml:curationStatus cml:Proposed ;
+    cml:schemaVersion "2" ;   # regenerable — see CML_UPGRADE.md
     prov:wasDerivedFrom <https://www.ohchr.org/en/instruments-mechanisms/instruments/guidelines-action-children-criminal-justice-system> ;
     dc:date "21 July 1997" ;
     values:category "Administration of justice, detention & law enforcement" ;
@@ -1195,6 +1273,7 @@ concept:guidelines-action-children-criminal-justice-system-paragraph-80 a cml:Co
     skos:prefLabel "Paragraph 80"@en ;
     cml:realizedBy doc:paragraph-80 ;
     cml:curationStatus cml:Proposed ;
+    cml:schemaVersion "2" ;   # regenerable — see CML_UPGRADE.md
     prov:wasDerivedFrom <https://www.ohchr.org/en/instruments-mechanisms/instruments/guidelines-action-children-criminal-justice-system> ;
     dc:date "21 July 1997" ;
     values:category "Administration of justice, detention & law enforcement" ;
@@ -1210,6 +1289,7 @@ concept:guidelines-action-children-criminal-justice-system-paragraph-81 a cml:Co
     skos:prefLabel "Paragraph 81"@en ;
     cml:realizedBy doc:paragraph-81 ;
     cml:curationStatus cml:Proposed ;
+    cml:schemaVersion "2" ;   # regenerable — see CML_UPGRADE.md
     prov:wasDerivedFrom <https://www.ohchr.org/en/instruments-mechanisms/instruments/guidelines-action-children-criminal-justice-system> ;
     dc:date "21 July 1997" ;
     values:category "Administration of justice, detention & law enforcement" ;
@@ -1225,6 +1305,7 @@ concept:guidelines-action-children-criminal-justice-system-paragraph-82 a cml:Co
     skos:prefLabel "Paragraph 82"@en ;
     cml:realizedBy doc:paragraph-82 ;
     cml:curationStatus cml:Proposed ;
+    cml:schemaVersion "2" ;   # regenerable — see CML_UPGRADE.md
     prov:wasDerivedFrom <https://www.ohchr.org/en/instruments-mechanisms/instruments/guidelines-action-children-criminal-justice-system> ;
     dc:date "21 July 1997" ;
     values:category "Administration of justice, detention & law enforcement" ;
@@ -1240,6 +1321,7 @@ concept:guidelines-action-children-criminal-justice-system-paragraph-83 a cml:Co
     skos:prefLabel "Paragraph 83"@en ;
     cml:realizedBy doc:paragraph-83 ;
     cml:curationStatus cml:Proposed ;
+    cml:schemaVersion "2" ;   # regenerable — see CML_UPGRADE.md
     prov:wasDerivedFrom <https://www.ohchr.org/en/instruments-mechanisms/instruments/guidelines-action-children-criminal-justice-system> ;
     dc:date "21 July 1997" ;
     values:category "Administration of justice, detention & law enforcement" ;
@@ -1255,6 +1337,7 @@ concept:guidelines-action-children-criminal-justice-system-paragraph-84 a cml:Co
     skos:prefLabel "Paragraph 84"@en ;
     cml:realizedBy doc:paragraph-84 ;
     cml:curationStatus cml:Proposed ;
+    cml:schemaVersion "2" ;   # regenerable — see CML_UPGRADE.md
     prov:wasDerivedFrom <https://www.ohchr.org/en/instruments-mechanisms/instruments/guidelines-action-children-criminal-justice-system> ;
     dc:date "21 July 1997" ;
     values:category "Administration of justice, detention & law enforcement" ;
@@ -1270,6 +1353,7 @@ concept:guidelines-action-children-criminal-justice-system-paragraph-85 a cml:Co
     skos:prefLabel "Paragraph 85"@en ;
     cml:realizedBy doc:paragraph-85 ;
     cml:curationStatus cml:Proposed ;
+    cml:schemaVersion "2" ;   # regenerable — see CML_UPGRADE.md
     prov:wasDerivedFrom <https://www.ohchr.org/en/instruments-mechanisms/instruments/guidelines-action-children-criminal-justice-system> ;
     dc:date "21 July 1997" ;
     values:category "Administration of justice, detention & law enforcement" ;
@@ -1285,6 +1369,7 @@ concept:guidelines-action-children-criminal-justice-system-paragraph-86 a cml:Co
     skos:prefLabel "Paragraph 86"@en ;
     cml:realizedBy doc:paragraph-86 ;
     cml:curationStatus cml:Proposed ;
+    cml:schemaVersion "2" ;   # regenerable — see CML_UPGRADE.md
     prov:wasDerivedFrom <https://www.ohchr.org/en/instruments-mechanisms/instruments/guidelines-action-children-criminal-justice-system> ;
     dc:date "21 July 1997" ;
     values:category "Administration of justice, detention & law enforcement" ;
@@ -1300,6 +1385,7 @@ concept:guidelines-action-children-criminal-justice-system-paragraph-87 a cml:Co
     skos:prefLabel "Paragraph 87"@en ;
     cml:realizedBy doc:paragraph-87 ;
     cml:curationStatus cml:Proposed ;
+    cml:schemaVersion "2" ;   # regenerable — see CML_UPGRADE.md
     prov:wasDerivedFrom <https://www.ohchr.org/en/instruments-mechanisms/instruments/guidelines-action-children-criminal-justice-system> ;
     dc:date "21 July 1997" ;
     values:category "Administration of justice, detention & law enforcement" ;
@@ -1315,6 +1401,7 @@ concept:guidelines-action-children-criminal-justice-system-paragraph-88 a cml:Co
     skos:prefLabel "Paragraph 88"@en ;
     cml:realizedBy doc:paragraph-88 ;
     cml:curationStatus cml:Proposed ;
+    cml:schemaVersion "2" ;   # regenerable — see CML_UPGRADE.md
     prov:wasDerivedFrom <https://www.ohchr.org/en/instruments-mechanisms/instruments/guidelines-action-children-criminal-justice-system> ;
     dc:date "21 July 1997" ;
     values:category "Administration of justice, detention & law enforcement" ;
@@ -1330,6 +1417,7 @@ concept:guidelines-action-children-criminal-justice-system-paragraph-89 a cml:Co
     skos:prefLabel "Paragraph 89"@en ;
     cml:realizedBy doc:paragraph-89 ;
     cml:curationStatus cml:Proposed ;
+    cml:schemaVersion "2" ;   # regenerable — see CML_UPGRADE.md
     prov:wasDerivedFrom <https://www.ohchr.org/en/instruments-mechanisms/instruments/guidelines-action-children-criminal-justice-system> ;
     dc:date "21 July 1997" ;
     values:category "Administration of justice, detention & law enforcement" ;

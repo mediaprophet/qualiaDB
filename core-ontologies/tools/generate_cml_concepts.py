@@ -21,6 +21,18 @@ import re, os, glob
 
 SRC = "core-ontologies/un-instruments"
 OUT = "core-ontologies/concepts"
+
+def _schema_version() -> str:
+    """The canonical CML schema version (core-ontologies/SCHEMA_VERSION); stamped on every
+    generated concept so staleness is detectable (see CML_UPGRADE.md)."""
+    try:
+        with open("core-ontologies/SCHEMA_VERSION", encoding="utf-8") as f:
+            return f.read().strip() or "0"
+    except OSError:
+        return "0"
+
+SCHEMA_VERSION = _schema_version()
+
 # Hand-crafted, human-curated concept files — never overwrite or shadow.
 KEEP = {"duty-to-suppress-forced-labour"}
 
@@ -90,6 +102,7 @@ def emit(slug, doc_ns, title, date, source, category, provisions):
         L.append(f'    skos:prefLabel "{esc(ptitle)}"@en ;')
         L.append(f"    cml:realizedBy doc:{kind}-{n} ;")
         L.append("    cml:curationStatus cml:Proposed ;")
+        L.append(f'    cml:schemaVersion "{SCHEMA_VERSION}" ;   # regenerable — see CML_UPGRADE.md')
         if source:
             L.append(f"    prov:wasDerivedFrom <{source}> ;")
         if date:

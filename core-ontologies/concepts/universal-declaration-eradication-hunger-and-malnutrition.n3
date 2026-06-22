@@ -20,6 +20,7 @@ concept:universal-declaration-eradication-hunger-and-malnutrition-paragraph-1 a 
     skos:prefLabel "Paragraph 1"@en ;
     cml:realizedBy doc:paragraph-1 ;
     cml:curationStatus cml:Proposed ;
+    cml:schemaVersion "2" ;   # regenerable — see CML_UPGRADE.md
     prov:wasDerivedFrom <https://www.ohchr.org/en/instruments-mechanisms/instruments/universal-declaration-eradication-hunger-and-malnutrition> ;
     dc:date "16 November 1974" ;
     values:category "Development, peace, food & solidarity rights" ;
@@ -35,6 +36,7 @@ concept:universal-declaration-eradication-hunger-and-malnutrition-paragraph-2 a 
     skos:prefLabel "Paragraph 2"@en ;
     cml:realizedBy doc:paragraph-2 ;
     cml:curationStatus cml:Proposed ;
+    cml:schemaVersion "2" ;   # regenerable — see CML_UPGRADE.md
     prov:wasDerivedFrom <https://www.ohchr.org/en/instruments-mechanisms/instruments/universal-declaration-eradication-hunger-and-malnutrition> ;
     dc:date "16 November 1974" ;
     values:category "Development, peace, food & solidarity rights" ;
@@ -50,6 +52,7 @@ concept:universal-declaration-eradication-hunger-and-malnutrition-paragraph-3 a 
     skos:prefLabel "Paragraph 3"@en ;
     cml:realizedBy doc:paragraph-3 ;
     cml:curationStatus cml:Proposed ;
+    cml:schemaVersion "2" ;   # regenerable — see CML_UPGRADE.md
     prov:wasDerivedFrom <https://www.ohchr.org/en/instruments-mechanisms/instruments/universal-declaration-eradication-hunger-and-malnutrition> ;
     dc:date "16 November 1974" ;
     values:category "Development, peace, food & solidarity rights" ;
@@ -65,6 +68,7 @@ concept:universal-declaration-eradication-hunger-and-malnutrition-paragraph-4 a 
     skos:prefLabel "Paragraph 4"@en ;
     cml:realizedBy doc:paragraph-4 ;
     cml:curationStatus cml:Proposed ;
+    cml:schemaVersion "2" ;   # regenerable — see CML_UPGRADE.md
     prov:wasDerivedFrom <https://www.ohchr.org/en/instruments-mechanisms/instruments/universal-declaration-eradication-hunger-and-malnutrition> ;
     dc:date "16 November 1974" ;
     values:category "Development, peace, food & solidarity rights" ;
@@ -80,6 +84,7 @@ concept:universal-declaration-eradication-hunger-and-malnutrition-paragraph-5 a 
     skos:prefLabel "Paragraph 5"@en ;
     cml:realizedBy doc:paragraph-5 ;
     cml:curationStatus cml:Proposed ;
+    cml:schemaVersion "2" ;   # regenerable — see CML_UPGRADE.md
     prov:wasDerivedFrom <https://www.ohchr.org/en/instruments-mechanisms/instruments/universal-declaration-eradication-hunger-and-malnutrition> ;
     dc:date "16 November 1974" ;
     values:category "Development, peace, food & solidarity rights" ;
@@ -96,6 +101,7 @@ concept:universal-declaration-eradication-hunger-and-malnutrition-paragraph-6 a 
     skos:prefLabel "Paragraph 6"@en ;
     cml:realizedBy doc:paragraph-6 ;
     cml:curationStatus cml:Proposed ;
+    cml:schemaVersion "2" ;   # regenerable — see CML_UPGRADE.md
     prov:wasDerivedFrom <https://www.ohchr.org/en/instruments-mechanisms/instruments/universal-declaration-eradication-hunger-and-malnutrition> ;
     dc:date "16 November 1974" ;
     values:category "Development, peace, food & solidarity rights" ;
@@ -111,6 +117,7 @@ concept:universal-declaration-eradication-hunger-and-malnutrition-paragraph-7 a 
     skos:prefLabel "Paragraph 7"@en ;
     cml:realizedBy doc:paragraph-7 ;
     cml:curationStatus cml:Proposed ;
+    cml:schemaVersion "2" ;   # regenerable — see CML_UPGRADE.md
     prov:wasDerivedFrom <https://www.ohchr.org/en/instruments-mechanisms/instruments/universal-declaration-eradication-hunger-and-malnutrition> ;
     dc:date "16 November 1974" ;
     values:category "Development, peace, food & solidarity rights" ;
@@ -126,6 +133,7 @@ concept:universal-declaration-eradication-hunger-and-malnutrition-paragraph-8 a 
     skos:prefLabel "Paragraph 8"@en ;
     cml:realizedBy doc:paragraph-8 ;
     cml:curationStatus cml:Proposed ;
+    cml:schemaVersion "2" ;   # regenerable — see CML_UPGRADE.md
     prov:wasDerivedFrom <https://www.ohchr.org/en/instruments-mechanisms/instruments/universal-declaration-eradication-hunger-and-malnutrition> ;
     dc:date "16 November 1974" ;
     values:category "Development, peace, food & solidarity rights" ;
@@ -141,6 +149,7 @@ concept:universal-declaration-eradication-hunger-and-malnutrition-paragraph-9 a 
     skos:prefLabel "Paragraph 9"@en ;
     cml:realizedBy doc:paragraph-9 ;
     cml:curationStatus cml:Proposed ;
+    cml:schemaVersion "2" ;   # regenerable — see CML_UPGRADE.md
     prov:wasDerivedFrom <https://www.ohchr.org/en/instruments-mechanisms/instruments/universal-declaration-eradication-hunger-and-malnutrition> ;
     dc:date "16 November 1974" ;
     values:category "Development, peace, food & solidarity rights" ;
@@ -156,6 +165,7 @@ concept:universal-declaration-eradication-hunger-and-malnutrition-paragraph-10 a
     skos:prefLabel "Paragraph 10"@en ;
     cml:realizedBy doc:paragraph-10 ;
     cml:curationStatus cml:Proposed ;
+    cml:schemaVersion "2" ;   # regenerable — see CML_UPGRADE.md
     prov:wasDerivedFrom <https://www.ohchr.org/en/instruments-mechanisms/instruments/universal-declaration-eradication-hunger-and-malnutrition> ;
     dc:date "16 November 1974" ;
     values:category "Development, peace, food & solidarity rights" ;
@@ -172,6 +182,7 @@ concept:universal-declaration-eradication-hunger-and-malnutrition-paragraph-11 a
     skos:prefLabel "Paragraph 11"@en ;
     cml:realizedBy doc:paragraph-11 ;
     cml:curationStatus cml:Proposed ;
+    cml:schemaVersion "2" ;   # regenerable — see CML_UPGRADE.md
     prov:wasDerivedFrom <https://www.ohchr.org/en/instruments-mechanisms/instruments/universal-declaration-eradication-hunger-and-malnutrition> ;
     dc:date "16 November 1974" ;
     values:category "Development, peace, food & solidarity rights" ;
@@ -187,6 +198,7 @@ concept:universal-declaration-eradication-hunger-and-malnutrition-paragraph-12 a
     skos:prefLabel "Paragraph 12"@en ;
     cml:realizedBy doc:paragraph-12 ;
     cml:curationStatus cml:Proposed ;
+    cml:schemaVersion "2" ;   # regenerable — see CML_UPGRADE.md
     prov:wasDerivedFrom <https://www.ohchr.org/en/instruments-mechanisms/instruments/universal-declaration-eradication-hunger-and-malnutrition> ;
     dc:date "16 November 1974" ;
     values:category "Development, peace, food & solidarity rights" ;
@@ -203,6 +215,7 @@ concept:universal-declaration-eradication-hunger-and-malnutrition-paragraph-13 a
     skos:prefLabel "Paragraph 13"@en ;
     cml:realizedBy doc:paragraph-13 ;
     cml:curationStatus cml:Proposed ;
+    cml:schemaVersion "2" ;   # regenerable — see CML_UPGRADE.md
     prov:wasDerivedFrom <https://www.ohchr.org/en/instruments-mechanisms/instruments/universal-declaration-eradication-hunger-and-malnutrition> ;
     dc:date "16 November 1974" ;
     values:category "Development, peace, food & solidarity rights" ;
@@ -218,6 +231,7 @@ concept:universal-declaration-eradication-hunger-and-malnutrition-paragraph-14 a
     skos:prefLabel "Paragraph 14"@en ;
     cml:realizedBy doc:paragraph-14 ;
     cml:curationStatus cml:Proposed ;
+    cml:schemaVersion "2" ;   # regenerable — see CML_UPGRADE.md
     prov:wasDerivedFrom <https://www.ohchr.org/en/instruments-mechanisms/instruments/universal-declaration-eradication-hunger-and-malnutrition> ;
     dc:date "16 November 1974" ;
     values:category "Development, peace, food & solidarity rights" ;
@@ -233,6 +247,7 @@ concept:universal-declaration-eradication-hunger-and-malnutrition-paragraph-15 a
     skos:prefLabel "Paragraph 15"@en ;
     cml:realizedBy doc:paragraph-15 ;
     cml:curationStatus cml:Proposed ;
+    cml:schemaVersion "2" ;   # regenerable — see CML_UPGRADE.md
     prov:wasDerivedFrom <https://www.ohchr.org/en/instruments-mechanisms/instruments/universal-declaration-eradication-hunger-and-malnutrition> ;
     dc:date "16 November 1974" ;
     values:category "Development, peace, food & solidarity rights" ;
@@ -248,6 +263,7 @@ concept:universal-declaration-eradication-hunger-and-malnutrition-paragraph-16 a
     skos:prefLabel "Paragraph 16"@en ;
     cml:realizedBy doc:paragraph-16 ;
     cml:curationStatus cml:Proposed ;
+    cml:schemaVersion "2" ;   # regenerable — see CML_UPGRADE.md
     prov:wasDerivedFrom <https://www.ohchr.org/en/instruments-mechanisms/instruments/universal-declaration-eradication-hunger-and-malnutrition> ;
     dc:date "16 November 1974" ;
     values:category "Development, peace, food & solidarity rights" ;
@@ -263,6 +279,7 @@ concept:universal-declaration-eradication-hunger-and-malnutrition-paragraph-17 a
     skos:prefLabel "Paragraph 17"@en ;
     cml:realizedBy doc:paragraph-17 ;
     cml:curationStatus cml:Proposed ;
+    cml:schemaVersion "2" ;   # regenerable — see CML_UPGRADE.md
     prov:wasDerivedFrom <https://www.ohchr.org/en/instruments-mechanisms/instruments/universal-declaration-eradication-hunger-and-malnutrition> ;
     dc:date "16 November 1974" ;
     values:category "Development, peace, food & solidarity rights" ;
@@ -278,6 +295,7 @@ concept:universal-declaration-eradication-hunger-and-malnutrition-paragraph-18 a
     skos:prefLabel "Paragraph 18"@en ;
     cml:realizedBy doc:paragraph-18 ;
     cml:curationStatus cml:Proposed ;
+    cml:schemaVersion "2" ;   # regenerable — see CML_UPGRADE.md
     prov:wasDerivedFrom <https://www.ohchr.org/en/instruments-mechanisms/instruments/universal-declaration-eradication-hunger-and-malnutrition> ;
     dc:date "16 November 1974" ;
     values:category "Development, peace, food & solidarity rights" ;
@@ -294,6 +312,7 @@ concept:universal-declaration-eradication-hunger-and-malnutrition-paragraph-19 a
     skos:prefLabel "Paragraph 19"@en ;
     cml:realizedBy doc:paragraph-19 ;
     cml:curationStatus cml:Proposed ;
+    cml:schemaVersion "2" ;   # regenerable — see CML_UPGRADE.md
     prov:wasDerivedFrom <https://www.ohchr.org/en/instruments-mechanisms/instruments/universal-declaration-eradication-hunger-and-malnutrition> ;
     dc:date "16 November 1974" ;
     values:category "Development, peace, food & solidarity rights" ;
@@ -309,6 +328,7 @@ concept:universal-declaration-eradication-hunger-and-malnutrition-paragraph-20 a
     skos:prefLabel "Paragraph 20"@en ;
     cml:realizedBy doc:paragraph-20 ;
     cml:curationStatus cml:Proposed ;
+    cml:schemaVersion "2" ;   # regenerable — see CML_UPGRADE.md
     prov:wasDerivedFrom <https://www.ohchr.org/en/instruments-mechanisms/instruments/universal-declaration-eradication-hunger-and-malnutrition> ;
     dc:date "16 November 1974" ;
     values:category "Development, peace, food & solidarity rights" ;
@@ -324,6 +344,7 @@ concept:universal-declaration-eradication-hunger-and-malnutrition-paragraph-21 a
     skos:prefLabel "Paragraph 21"@en ;
     cml:realizedBy doc:paragraph-21 ;
     cml:curationStatus cml:Proposed ;
+    cml:schemaVersion "2" ;   # regenerable — see CML_UPGRADE.md
     prov:wasDerivedFrom <https://www.ohchr.org/en/instruments-mechanisms/instruments/universal-declaration-eradication-hunger-and-malnutrition> ;
     dc:date "16 November 1974" ;
     values:category "Development, peace, food & solidarity rights" ;
@@ -339,6 +360,7 @@ concept:universal-declaration-eradication-hunger-and-malnutrition-paragraph-22 a
     skos:prefLabel "Paragraph 22"@en ;
     cml:realizedBy doc:paragraph-22 ;
     cml:curationStatus cml:Proposed ;
+    cml:schemaVersion "2" ;   # regenerable — see CML_UPGRADE.md
     prov:wasDerivedFrom <https://www.ohchr.org/en/instruments-mechanisms/instruments/universal-declaration-eradication-hunger-and-malnutrition> ;
     dc:date "16 November 1974" ;
     values:category "Development, peace, food & solidarity rights" ;
@@ -354,6 +376,7 @@ concept:universal-declaration-eradication-hunger-and-malnutrition-paragraph-23 a
     skos:prefLabel "Paragraph 23"@en ;
     cml:realizedBy doc:paragraph-23 ;
     cml:curationStatus cml:Proposed ;
+    cml:schemaVersion "2" ;   # regenerable — see CML_UPGRADE.md
     prov:wasDerivedFrom <https://www.ohchr.org/en/instruments-mechanisms/instruments/universal-declaration-eradication-hunger-and-malnutrition> ;
     dc:date "16 November 1974" ;
     values:category "Development, peace, food & solidarity rights" ;
@@ -369,6 +392,7 @@ concept:universal-declaration-eradication-hunger-and-malnutrition-paragraph-24 a
     skos:prefLabel "Paragraph 24"@en ;
     cml:realizedBy doc:paragraph-24 ;
     cml:curationStatus cml:Proposed ;
+    cml:schemaVersion "2" ;   # regenerable — see CML_UPGRADE.md
     prov:wasDerivedFrom <https://www.ohchr.org/en/instruments-mechanisms/instruments/universal-declaration-eradication-hunger-and-malnutrition> ;
     dc:date "16 November 1974" ;
     values:category "Development, peace, food & solidarity rights" ;
@@ -384,6 +408,7 @@ concept:universal-declaration-eradication-hunger-and-malnutrition-paragraph-25 a
     skos:prefLabel "Paragraph 25"@en ;
     cml:realizedBy doc:paragraph-25 ;
     cml:curationStatus cml:Proposed ;
+    cml:schemaVersion "2" ;   # regenerable — see CML_UPGRADE.md
     prov:wasDerivedFrom <https://www.ohchr.org/en/instruments-mechanisms/instruments/universal-declaration-eradication-hunger-and-malnutrition> ;
     dc:date "16 November 1974" ;
     values:category "Development, peace, food & solidarity rights" ;
@@ -399,6 +424,7 @@ concept:universal-declaration-eradication-hunger-and-malnutrition-paragraph-26 a
     skos:prefLabel "Paragraph 26"@en ;
     cml:realizedBy doc:paragraph-26 ;
     cml:curationStatus cml:Proposed ;
+    cml:schemaVersion "2" ;   # regenerable — see CML_UPGRADE.md
     prov:wasDerivedFrom <https://www.ohchr.org/en/instruments-mechanisms/instruments/universal-declaration-eradication-hunger-and-malnutrition> ;
     dc:date "16 November 1974" ;
     values:category "Development, peace, food & solidarity rights" ;
@@ -414,6 +440,7 @@ concept:universal-declaration-eradication-hunger-and-malnutrition-paragraph-27 a
     skos:prefLabel "Paragraph 27"@en ;
     cml:realizedBy doc:paragraph-27 ;
     cml:curationStatus cml:Proposed ;
+    cml:schemaVersion "2" ;   # regenerable — see CML_UPGRADE.md
     prov:wasDerivedFrom <https://www.ohchr.org/en/instruments-mechanisms/instruments/universal-declaration-eradication-hunger-and-malnutrition> ;
     dc:date "16 November 1974" ;
     values:category "Development, peace, food & solidarity rights" ;
@@ -429,6 +456,7 @@ concept:universal-declaration-eradication-hunger-and-malnutrition-paragraph-28 a
     skos:prefLabel "Paragraph 28"@en ;
     cml:realizedBy doc:paragraph-28 ;
     cml:curationStatus cml:Proposed ;
+    cml:schemaVersion "2" ;   # regenerable — see CML_UPGRADE.md
     prov:wasDerivedFrom <https://www.ohchr.org/en/instruments-mechanisms/instruments/universal-declaration-eradication-hunger-and-malnutrition> ;
     dc:date "16 November 1974" ;
     values:category "Development, peace, food & solidarity rights" ;
@@ -444,6 +472,7 @@ concept:universal-declaration-eradication-hunger-and-malnutrition-paragraph-29 a
     skos:prefLabel "Paragraph 29"@en ;
     cml:realizedBy doc:paragraph-29 ;
     cml:curationStatus cml:Proposed ;
+    cml:schemaVersion "2" ;   # regenerable — see CML_UPGRADE.md
     prov:wasDerivedFrom <https://www.ohchr.org/en/instruments-mechanisms/instruments/universal-declaration-eradication-hunger-and-malnutrition> ;
     dc:date "16 November 1974" ;
     values:category "Development, peace, food & solidarity rights" ;
@@ -459,6 +488,7 @@ concept:universal-declaration-eradication-hunger-and-malnutrition-paragraph-30 a
     skos:prefLabel "Paragraph 30"@en ;
     cml:realizedBy doc:paragraph-30 ;
     cml:curationStatus cml:Proposed ;
+    cml:schemaVersion "2" ;   # regenerable — see CML_UPGRADE.md
     prov:wasDerivedFrom <https://www.ohchr.org/en/instruments-mechanisms/instruments/universal-declaration-eradication-hunger-and-malnutrition> ;
     dc:date "16 November 1974" ;
     values:category "Development, peace, food & solidarity rights" ;
@@ -474,6 +504,7 @@ concept:universal-declaration-eradication-hunger-and-malnutrition-paragraph-31 a
     skos:prefLabel "Paragraph 31"@en ;
     cml:realizedBy doc:paragraph-31 ;
     cml:curationStatus cml:Proposed ;
+    cml:schemaVersion "2" ;   # regenerable — see CML_UPGRADE.md
     prov:wasDerivedFrom <https://www.ohchr.org/en/instruments-mechanisms/instruments/universal-declaration-eradication-hunger-and-malnutrition> ;
     dc:date "16 November 1974" ;
     values:category "Development, peace, food & solidarity rights" ;
@@ -489,6 +520,7 @@ concept:universal-declaration-eradication-hunger-and-malnutrition-paragraph-32 a
     skos:prefLabel "Paragraph 32"@en ;
     cml:realizedBy doc:paragraph-32 ;
     cml:curationStatus cml:Proposed ;
+    cml:schemaVersion "2" ;   # regenerable — see CML_UPGRADE.md
     prov:wasDerivedFrom <https://www.ohchr.org/en/instruments-mechanisms/instruments/universal-declaration-eradication-hunger-and-malnutrition> ;
     dc:date "16 November 1974" ;
     values:category "Development, peace, food & solidarity rights" ;
@@ -504,6 +536,7 @@ concept:universal-declaration-eradication-hunger-and-malnutrition-paragraph-33 a
     skos:prefLabel "Paragraph 33"@en ;
     cml:realizedBy doc:paragraph-33 ;
     cml:curationStatus cml:Proposed ;
+    cml:schemaVersion "2" ;   # regenerable — see CML_UPGRADE.md
     prov:wasDerivedFrom <https://www.ohchr.org/en/instruments-mechanisms/instruments/universal-declaration-eradication-hunger-and-malnutrition> ;
     dc:date "16 November 1974" ;
     values:category "Development, peace, food & solidarity rights" ;
@@ -519,6 +552,7 @@ concept:universal-declaration-eradication-hunger-and-malnutrition-paragraph-34 a
     skos:prefLabel "Paragraph 34"@en ;
     cml:realizedBy doc:paragraph-34 ;
     cml:curationStatus cml:Proposed ;
+    cml:schemaVersion "2" ;   # regenerable — see CML_UPGRADE.md
     prov:wasDerivedFrom <https://www.ohchr.org/en/instruments-mechanisms/instruments/universal-declaration-eradication-hunger-and-malnutrition> ;
     dc:date "16 November 1974" ;
     values:category "Development, peace, food & solidarity rights" ;
@@ -534,6 +568,7 @@ concept:universal-declaration-eradication-hunger-and-malnutrition-paragraph-35 a
     skos:prefLabel "Paragraph 35"@en ;
     cml:realizedBy doc:paragraph-35 ;
     cml:curationStatus cml:Proposed ;
+    cml:schemaVersion "2" ;   # regenerable — see CML_UPGRADE.md
     prov:wasDerivedFrom <https://www.ohchr.org/en/instruments-mechanisms/instruments/universal-declaration-eradication-hunger-and-malnutrition> ;
     dc:date "16 November 1974" ;
     values:category "Development, peace, food & solidarity rights" ;
@@ -549,6 +584,7 @@ concept:universal-declaration-eradication-hunger-and-malnutrition-paragraph-36 a
     skos:prefLabel "Paragraph 36"@en ;
     cml:realizedBy doc:paragraph-36 ;
     cml:curationStatus cml:Proposed ;
+    cml:schemaVersion "2" ;   # regenerable — see CML_UPGRADE.md
     prov:wasDerivedFrom <https://www.ohchr.org/en/instruments-mechanisms/instruments/universal-declaration-eradication-hunger-and-malnutrition> ;
     dc:date "16 November 1974" ;
     values:category "Development, peace, food & solidarity rights" ;

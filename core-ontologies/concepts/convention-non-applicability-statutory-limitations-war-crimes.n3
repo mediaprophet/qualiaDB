@@ -20,6 +20,7 @@ concept:convention-non-applicability-statutory-limitations-war-crimes-article-1 
     skos:prefLabel "Article 1"@en ;
     cml:realizedBy doc:article-1 ;
     cml:curationStatus cml:Proposed ;
+    cml:schemaVersion "2" ;   # regenerable — see CML_UPGRADE.md
     prov:wasDerivedFrom <https://www.ohchr.org/en/instruments-mechanisms/instruments/convention-non-applicability-statutory-limitations-war-crimes> ;
     dc:date "26 November 1968" ;
     values:category "International criminal justice" ;
@@ -35,6 +36,7 @@ concept:convention-non-applicability-statutory-limitations-war-crimes-article-2 
     skos:prefLabel "Article 2"@en ;
     cml:realizedBy doc:article-2 ;
     cml:curationStatus cml:Proposed ;
+    cml:schemaVersion "2" ;   # regenerable — see CML_UPGRADE.md
     prov:wasDerivedFrom <https://www.ohchr.org/en/instruments-mechanisms/instruments/convention-non-applicability-statutory-limitations-war-crimes> ;
     dc:date "26 November 1968" ;
     values:category "International criminal justice" ;
@@ -50,6 +52,7 @@ concept:convention-non-applicability-statutory-limitations-war-crimes-article-3 
     skos:prefLabel "Article 3"@en ;
     cml:realizedBy doc:article-3 ;
     cml:curationStatus cml:Proposed ;
+    cml:schemaVersion "2" ;   # regenerable — see CML_UPGRADE.md
     prov:wasDerivedFrom <https://www.ohchr.org/en/instruments-mechanisms/instruments/convention-non-applicability-statutory-limitations-war-crimes> ;
     dc:date "26 November 1968" ;
     values:category "International criminal justice" ;
@@ -67,6 +70,7 @@ concept:convention-non-applicability-statutory-limitations-war-crimes-article-4 
     skos:prefLabel "Article 4"@en ;
     cml:realizedBy doc:article-4 ;
     cml:curationStatus cml:Proposed ;
+    cml:schemaVersion "2" ;   # regenerable — see CML_UPGRADE.md
     prov:wasDerivedFrom <https://www.ohchr.org/en/instruments-mechanisms/instruments/convention-non-applicability-statutory-limitations-war-crimes> ;
     dc:date "26 November 1968" ;
     values:category "International criminal justice" ;
@@ -83,6 +87,7 @@ concept:convention-non-applicability-statutory-limitations-war-crimes-article-5 
     skos:prefLabel "Article 5"@en ;
     cml:realizedBy doc:article-5 ;
     cml:curationStatus cml:Proposed ;
+    cml:schemaVersion "2" ;   # regenerable — see CML_UPGRADE.md
     prov:wasDerivedFrom <https://www.ohchr.org/en/instruments-mechanisms/instruments/convention-non-applicability-statutory-limitations-war-crimes> ;
     dc:date "26 November 1968" ;
     values:category "International criminal justice" ;
@@ -98,6 +103,7 @@ concept:convention-non-applicability-statutory-limitations-war-crimes-article-6 
     skos:prefLabel "Article 6"@en ;
     cml:realizedBy doc:article-6 ;
     cml:curationStatus cml:Proposed ;
+    cml:schemaVersion "2" ;   # regenerable — see CML_UPGRADE.md
     prov:wasDerivedFrom <https://www.ohchr.org/en/instruments-mechanisms/instruments/convention-non-applicability-statutory-limitations-war-crimes> ;
     dc:date "26 November 1968" ;
     values:category "International criminal justice" ;
@@ -115,6 +121,7 @@ concept:convention-non-applicability-statutory-limitations-war-crimes-article-7 
     skos:prefLabel "Article 7"@en ;
     cml:realizedBy doc:article-7 ;
     cml:curationStatus cml:Proposed ;
+    cml:schemaVersion "2" ;   # regenerable — see CML_UPGRADE.md
     prov:wasDerivedFrom <https://www.ohchr.org/en/instruments-mechanisms/instruments/convention-non-applicability-statutory-limitations-war-crimes> ;
     dc:date "26 November 1968" ;
     values:category "International criminal justice" ;
@@ -132,6 +139,7 @@ concept:convention-non-applicability-statutory-limitations-war-crimes-article-8 
     skos:prefLabel "Article 8"@en ;
     cml:realizedBy doc:article-8 ;
     cml:curationStatus cml:Proposed ;
+    cml:schemaVersion "2" ;   # regenerable — see CML_UPGRADE.md
     prov:wasDerivedFrom <https://www.ohchr.org/en/instruments-mechanisms/instruments/convention-non-applicability-statutory-limitations-war-crimes> ;
     dc:date "26 November 1968" ;
     values:category "International criminal justice" ;
@@ -147,6 +155,7 @@ concept:convention-non-applicability-statutory-limitations-war-crimes-article-9 
     skos:prefLabel "Article 9"@en ;
     cml:realizedBy doc:article-9 ;
     cml:curationStatus cml:Proposed ;
+    cml:schemaVersion "2" ;   # regenerable — see CML_UPGRADE.md
     prov:wasDerivedFrom <https://www.ohchr.org/en/instruments-mechanisms/instruments/convention-non-applicability-statutory-limitations-war-crimes> ;
     dc:date "26 November 1968" ;
     values:category "International criminal justice" ;
@@ -162,6 +171,7 @@ concept:convention-non-applicability-statutory-limitations-war-crimes-article-10
     skos:prefLabel "Article 10"@en ;
     cml:realizedBy doc:article-10 ;
     cml:curationStatus cml:Proposed ;
+    cml:schemaVersion "2" ;   # regenerable — see CML_UPGRADE.md
     prov:wasDerivedFrom <https://www.ohchr.org/en/instruments-mechanisms/instruments/convention-non-applicability-statutory-limitations-war-crimes> ;
     dc:date "26 November 1968" ;
     values:category "International criminal justice" ;
@@ -179,6 +189,7 @@ concept:convention-non-applicability-statutory-limitations-war-crimes-article-11
     skos:prefLabel "Article 11"@en ;
     cml:realizedBy doc:article-11 ;
     cml:curationStatus cml:Proposed ;
+    cml:schemaVersion "2" ;   # regenerable — see CML_UPGRADE.md
     prov:wasDerivedFrom <https://www.ohchr.org/en/instruments-mechanisms/instruments/convention-non-applicability-statutory-limitations-war-crimes> ;
     dc:date "26 November 1968" ;
     values:category "International criminal justice" ;
