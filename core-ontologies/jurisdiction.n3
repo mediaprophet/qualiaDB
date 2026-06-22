@@ -1,0 +1,99 @@
+@prefix rdf:     <http://www.w3.org/1999/02/22-rdf-syntax-ns#> .
+@prefix rdfs:    <http://www.w3.org/2000/01/rdf-schema#> .
+@prefix sh:      <http://www.w3.org/ns/shacl#> .
+@prefix xsd:     <http://www.w3.org/2001/XMLSchema#> .
+@prefix skos:    <http://www.w3.org/2004/02/skos/core#> .
+@prefix dcterms: <http://purl.org/dc/terms/> .
+@prefix time:    <http://www.w3.org/2006/time#> .
+@prefix geo:     <http://www.opengis.net/ont/geosparql#> .
+@prefix prov:    <http://www.w3.org/ns/prov#> .
+@prefix values:  <https://ns.webcivics.org/values/> .
+@prefix jur:     <https://ns.webcivics.org/jurisdiction/> .
+
+# ===========================================================================
+# Spatio-temporal RATIFICATION + JURISDICTION layer.
+# A human-rights instrument's norms bind a State only FROM that State's ratification /
+# entry-into-force date — so the in-force window is PER-JURISDICTION, and the
+# jurisdiction (+ ratification time) IS the frame in the frame-relative resolution
+# (Axiom 2 / task #15): "ICCPR Art.3 is in force FOR Australia from 1980-11-13."
+# Implementation can differ across SUB-state jurisdictions (federal systems).
+# Authoritative per-State data is sourced from treaties.un.org (per instrument);
+# the Australia entries below are ILLUSTRATIVE pending that sourcing.
+# ===========================================================================
+
+# --- Jurisdictions (a polity with legal authority over a territory) ---------
+jur:Jurisdiction a rdfs:Class ; rdfs:label "Jurisdiction" .
+jur:State a rdfs:Class ; rdfs:subClassOf jur:Jurisdiction ;
+    rdfs:comment "A UN member State — the unit that ratifies international instruments." .
+jur:SubStateJurisdiction a rdfs:Class ; rdfs:subClassOf jur:Jurisdiction ;
+    rdfs:comment "A province / state / territory within a State (federal systems) — where implementation is realised." .
+jur:hasJurisdiction a rdf:Property ; rdfs:domain jur:State ; rdfs:range jur:Jurisdiction ;
+    rdfs:comment "A State contains a sub-state jurisdiction." .
+jur:within a rdf:Property ; rdfs:domain jur:Jurisdiction ; rdfs:range jur:Jurisdiction ;
+    rdfs:comment "Containment (sub → parent); inverse of hasJurisdiction." .
+jur:isoCode a rdf:Property ; rdfs:domain jur:Jurisdiction ; rdfs:range xsd:string .
+# geo:hasGeometry / geo:asWKT carry the spatial extent (GeoSPARQL; kml_bridge ingests it).
+
+# --- Ratification (the per-(instrument × State) binding) --------------------
+jur:Ratification a rdfs:Class ;
+    rdfs:comment "A State's adoption of an instrument: status + dates + reservations. The norms bind the State within [entryIntoForceForState, denunciation)." .
+jur:ratifies a rdf:Property ; rdfs:domain jur:Ratification ;
+    rdfs:comment "The instrument adopted (a values:ValuesCredential doc:Instrument)." .
+jur:ratifiedBy a rdf:Property ; rdfs:domain jur:Ratification ; rdfs:range jur:State .
+jur:ratificationStatus a rdf:Property ; rdfs:domain jur:Ratification ; rdfs:range jur:RatificationStatus .
+jur:signatureDate a rdf:Property ; rdfs:domain jur:Ratification ; rdfs:range xsd:date .
+jur:ratificationDate a rdf:Property ; rdfs:domain jur:Ratification ; rdfs:range xsd:date .
+jur:entryIntoForceForState a rdf:Property ; rdfs:domain jur:Ratification ; rdfs:range xsd:date ;
+    rdfs:comment "When the instrument became BINDING for this State — the start of its per-jurisdiction in-force frame." .
+jur:reservation a rdf:Property ; rdfs:domain jur:Ratification ;
+    rdfs:comment "A reservation/declaration narrowing the binding (scopes which norms apply)." .
+
+jur:RatificationStatus a rdfs:Class .
+jur:Signed a jur:RatificationStatus . jur:Ratified a jur:RatificationStatus .
+jur:Acceded a jur:RatificationStatus . jur:Succeeded a jur:RatificationStatus .
+jur:Denounced a jur:RatificationStatus .
+
+# --- Instrument-level temporal (richer than the dc:date adoption string) ----
+jur:adopted a rdf:Property ; rdfs:range xsd:date ; rdfs:comment "Adoption date (typed)." .
+jur:entryIntoForce a rdf:Property ; rdfs:range xsd:date ; rdfs:comment "General entry-into-force date of the instrument." .
+
+# ===========================================================================
+# SHACL — a ratification must be a well-formed binding
+# ===========================================================================
+jur:RatificationShape a sh:NodeShape ;
+    sh:targetClass jur:Ratification ;
+    sh:property [ sh:path jur:ratifies ; sh:minCount 1 ;
+        sh:message "A ratification must name the instrument it binds the State to." ] ;
+    sh:property [ sh:path jur:ratifiedBy ; sh:minCount 1 ; sh:class jur:State ;
+        sh:message "A ratification must be by a State." ] ;
+    sh:property [ sh:path jur:entryIntoForceForState ; sh:minCount 1 ;
+        sh:message "A ratification must record when it became binding (the in-force frame start)." ] .
+
+# ===========================================================================
+# PILOT — Commonwealth of Australia + its sub-state jurisdictions (ILLUSTRATIVE).
+# Authoritative per-State ratification data: treaties.un.org. dataStatus = Illustrative.
+# ===========================================================================
+jur:Australia a jur:State ;
+    skos:prefLabel "Commonwealth of Australia" ;
+    jur:isoCode "AU" ;
+    jur:hasJurisdiction jur:AU-NSW, jur:AU-VIC, jur:AU-QLD, jur:AU-WA, jur:AU-SA,
+        jur:AU-TAS, jur:AU-ACT, jur:AU-NT .
+
+jur:AU-NSW a jur:SubStateJurisdiction ; skos:prefLabel "New South Wales" ; jur:within jur:Australia .
+jur:AU-VIC a jur:SubStateJurisdiction ; skos:prefLabel "Victoria" ; jur:within jur:Australia .
+jur:AU-QLD a jur:SubStateJurisdiction ; skos:prefLabel "Queensland" ; jur:within jur:Australia .
+jur:AU-WA  a jur:SubStateJurisdiction ; skos:prefLabel "Western Australia" ; jur:within jur:Australia .
+jur:AU-SA  a jur:SubStateJurisdiction ; skos:prefLabel "South Australia" ; jur:within jur:Australia .
+jur:AU-TAS a jur:SubStateJurisdiction ; skos:prefLabel "Tasmania" ; jur:within jur:Australia .
+jur:AU-ACT a jur:SubStateJurisdiction ; skos:prefLabel "Australian Capital Territory" ; jur:within jur:Australia .
+jur:AU-NT  a jur:SubStateJurisdiction ; skos:prefLabel "Northern Territory" ; jur:within jur:Australia .
+
+# Australia's ratification of the ICCPR (ILLUSTRATIVE — confirm against treaties.un.org).
+jur:ratification-AU-ICCPR a jur:Ratification ;
+    jur:ratifies <https://ns.webcivics.org/values/international-covenant-civil-and-political-rights#Instrument> ;
+    jur:ratifiedBy jur:Australia ;
+    jur:ratificationStatus jur:Ratified ;
+    jur:ratificationDate "1980-08-13"^^xsd:date ;
+    jur:entryIntoForceForState "1980-11-13"^^xsd:date ;
+    values:dataStatus values:Illustrative ;
+    prov:wasDerivedFrom <https://treaties.un.org/> .
