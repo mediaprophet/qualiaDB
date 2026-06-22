@@ -1,0 +1,42 @@
+@prefix rdf:     <http://www.w3.org/1999/02/22-rdf-syntax-ns#> .
+@prefix rdfs:    <http://www.w3.org/2000/01/rdf-schema#> .
+@prefix prov:    <http://www.w3.org/ns/prov#> .
+@prefix values:  <https://ns.webcivics.org/values/> .
+@prefix concept: <https://ns.webcivics.org/concept/> .
+
+# ===========================================================================
+# ICCPR Art. 4(2) — the explicitly NON-DEROGABLE articles (Hohfeldian immunity).
+# An Exemptive (an Art. 4 derogation in a public emergency) CANNOT defeat these
+# (illocution.rs Norm::immune blocks the override). VERBATIM list from Art. 4(2):
+# "No derogation from articles 6, 7, 8 (paragraphs 1 and 2), 11, 15, 16 and 18 may be
+# made under this provision." — factual transcription, not a curation judgment.
+# ===========================================================================
+
+concept:international-covenant-civil-and-political-rights-article-6-norm
+    values:nonDerogable true ;
+    prov:wasDerivedFrom <https://www.ohchr.org/en/instruments-mechanisms/instruments/international-covenant-civil-and-political-rights> ;
+    rdfs:comment "Right to life — non-derogable (ICCPR Art. 4(2))." .
+
+concept:international-covenant-civil-and-political-rights-article-7-norm
+    values:nonDerogable true ;
+    rdfs:comment "Freedom from torture / cruel, inhuman or degrading treatment — non-derogable (Art. 4(2))." .
+
+concept:international-covenant-civil-and-political-rights-article-8-norm
+    values:nonDerogable true ;
+    rdfs:comment "Freedom from slavery and servitude (paras 1-2) — non-derogable (Art. 4(2))." .
+
+concept:international-covenant-civil-and-political-rights-article-11-norm
+    values:nonDerogable true ;
+    rdfs:comment "No imprisonment merely for inability to fulfil a contractual obligation — non-derogable (Art. 4(2))." .
+
+concept:international-covenant-civil-and-political-rights-article-15-norm
+    values:nonDerogable true ;
+    rdfs:comment "No retroactive criminal law (nullum crimen sine lege) — non-derogable (Art. 4(2))." .
+
+concept:international-covenant-civil-and-political-rights-article-16-norm
+    values:nonDerogable true ;
+    rdfs:comment "Right to recognition as a person before the law — non-derogable (Art. 4(2))." .
+
+concept:international-covenant-civil-and-political-rights-article-18-norm
+    values:nonDerogable true ;
+    rdfs:comment "Freedom of thought, conscience and religion — non-derogable (Art. 4(2))." .

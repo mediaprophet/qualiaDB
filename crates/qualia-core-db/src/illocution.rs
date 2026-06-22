@@ -71,17 +71,49 @@ pub enum Resolution {
     GenuineConflict,
 }
 
-/// Resolve two CONFLICTING norms by effective binding weight + the Exemptive override.
-/// `a`/`b` are `(effective_weight, is_exemptive)`.
-pub fn resolve_conflict(a: (u8, bool), b: (u8, bool)) -> Resolution {
-    // An Exemptive (derogation/waiver) defeats a non-exemptive norm regardless of weight.
-    match (a.1, b.1) {
-        (true, false) => return Resolution::AGoverns,
-        (false, true) => return Resolution::BGoverns,
+/// A norm participating in a conflict: effective binding weight, whether it is an
+/// Exemptive (derogation/waiver), and whether it is IMMUNE — non-derogable, a Hohfeldian
+/// immunity (e.g. ICCPR Art. 4(2): no derogation from the right to life, freedom from
+/// torture, etc.).
+#[derive(Debug, Clone, Copy)]
+pub struct Norm {
+    pub weight: u8,
+    pub exemptive: bool,
+    pub immune: bool,
+}
+
+impl Norm {
+    /// An ordinary norm of the given binding weight.
+    pub fn new(weight: u8) -> Self {
+        Self { weight, exemptive: false, immune: false }
+    }
+    /// An Exemptive (derogation / waiver → the q42:unless defeater).
+    pub fn exemptive(weight: u8) -> Self {
+        Self { weight, exemptive: true, immune: false }
+    }
+    /// A non-derogable norm (Hohfeldian immunity) — cannot be defeated by an Exemptive.
+    pub fn immune(weight: u8) -> Self {
+        Self { weight, exemptive: false, immune: true }
+    }
+}
+
+/// Resolve two CONFLICTING norms (same party + action): the Exemptive override (BOUNDED
+/// by immunity), then effective binding weight.
+pub fn resolve_conflict(a: Norm, b: Norm) -> Resolution {
+    // An Exemptive defeats the other norm regardless of weight — UNLESS that norm is
+    // non-derogable (immune), in which case the derogation is invalid and the immune norm
+    // STANDS (ICCPR Art. 4(2): the right to life etc. cannot be derogated).
+    match (a.exemptive, b.exemptive) {
+        (true, false) => {
+            return if b.immune { Resolution::BGoverns } else { Resolution::AGoverns };
+        }
+        (false, true) => {
+            return if a.immune { Resolution::AGoverns } else { Resolution::BGoverns };
+        }
         _ => {}
     }
     use std::cmp::Ordering::*;
-    match a.0.cmp(&b.0) {
+    match a.weight.cmp(&b.weight) {
         Greater => Resolution::AGoverns,
         Less => Resolution::BGoverns,
         Equal => Resolution::GenuineConflict,
@@ -95,26 +127,36 @@ mod tests {
     #[test]
     fn soft_directive_never_overrides_a_hard_commissive() {
         // "Recommends X" vs "Undertakes not-X" on the same party+action.
-        let recommend = (W_RECOMMEND, false);
-        let undertake = (W_OBLIGATE, false);
+        let recommend = Norm::new(W_RECOMMEND);
+        let undertake = Norm::new(W_OBLIGATE);
         assert_eq!(resolve_conflict(undertake, recommend), Resolution::AGoverns);
         assert_eq!(resolve_conflict(recommend, undertake), Resolution::BGoverns);
     }
 
     #[test]
-    fn exemptive_overrides_an_obligation_regardless_of_weight() {
-        // A derogation/waiver (Exemptive → q42:unless) defeats even a hard obligation.
-        let derogation = (W_EXEMPT, true);
-        let obligation = (W_OBLIGATE, false);
+    fn exemptive_overrides_a_derogable_obligation() {
+        // A derogation/waiver (Exemptive → q42:unless) defeats a DEROGABLE obligation.
+        let derogation = Norm::exemptive(W_EXEMPT);
+        let obligation = Norm::new(W_OBLIGATE);
         assert_eq!(resolve_conflict(derogation, obligation), Resolution::AGoverns);
         assert_eq!(resolve_conflict(obligation, derogation), Resolution::BGoverns);
+    }
+
+    #[test]
+    fn exemptive_cannot_defeat_a_non_derogable_norm() {
+        // ICCPR Art. 4 derogation (Exemptive) vs Art. 6 right to life — non-derogable per
+        // Art. 4(2). The immune norm STANDS; the derogation is invalid against it.
+        let derogation = Norm::exemptive(W_EXEMPT);
+        let right_to_life = Norm::immune(W_OBLIGATE);
+        assert_eq!(resolve_conflict(derogation, right_to_life), Resolution::BGoverns);
+        assert_eq!(resolve_conflict(right_to_life, derogation), Resolution::AGoverns);
     }
 
     #[test]
     fn equal_force_is_a_genuine_paraconsistent_conflict() {
         // e.g. an Obligate and a Forbid of equal weight on the same act — held, not crashed.
         assert_eq!(
-            resolve_conflict((W_OBLIGATE, false), (W_OBLIGATE, false)),
+            resolve_conflict(Norm::new(W_OBLIGATE), Norm::new(W_OBLIGATE)),
             Resolution::GenuineConflict
         );
     }
@@ -126,9 +168,9 @@ mod tests {
         let treaty_body = effective_weight(W_DIRECTIVE_HARD, true, 255); // high authority
         assert!(ngo < treaty_body);
         // An NGO's demand loses to a hard commitment; the treaty body's competes/wins.
-        assert_eq!(resolve_conflict((ngo, false), (W_OBLIGATE, false)), Resolution::BGoverns);
+        assert_eq!(resolve_conflict(Norm::new(ngo), Norm::new(W_OBLIGATE)), Resolution::BGoverns);
         assert_eq!(
-            resolve_conflict((treaty_body, false), (W_RECOMMEND, false)),
+            resolve_conflict(Norm::new(treaty_body), Norm::new(W_RECOMMEND)),
             Resolution::AGoverns
         );
     }
