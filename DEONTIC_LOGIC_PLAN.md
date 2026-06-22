@@ -166,9 +166,14 @@ full lib suite **1108 passed, 0 failed**.
   a `Credential` claim, signed by the identity layer (`verifiable_credential::issue`) and
   verified (`::verify`) — engine never holds keys; tamper-detection tested.
 
-### Phase 6 — Interaction Governance  [Webizen VM]
-- [ ] `DeonticVerdict → PolicyMode {PreventiveBlock(DenyRollback) | PermissiveAudit(WAL) |
-  Prioritize(hict QoS) | Interactive(sense:HumanCorrection)}` + tests.
+### Phase 6 — Interaction Governance  [`modalities/interaction_governance.rs`] ✅ DONE 2026-06-22
+**Test:** `cargo test … modalities::interaction_governance::` → **5 passed**; full lib suite **1116 passed, 0 failed**.
+- [x] `map_policy(status, Governance{non_derogable, humanitarian, ambiguous}) → PolicyMode
+  {PreventiveBlock(DenyRollback) | PermissiveAudit(WAL) | Prioritize(hict QoS) |
+  Interactive(HumanCorrection) | Allow}`. Pure decision layer (effects performed by caller).
+- [x] Precedence: ambiguity → human; non-derogable violation → block; ordinary violation →
+  audit; in-force humanitarian → prioritize; else allow. `permits_execution` go/no-go bit +
+  `policy_action` labels. (Reusable by both the VM and Track M's MCP gate.)
 
 ### Phase 7 — Surface (no logic in the UI; mirror the engine)
 - [ ] Modalities Observatory demo cards for each new capability (faithful to the Rust).
