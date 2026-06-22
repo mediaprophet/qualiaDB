@@ -156,9 +156,15 @@ full lib suite **1108 passed, 0 failed**.
 - [x] deontic × ASP/abductive: `remedy_scenarios` (under-determined remedy → stable models)
   + `diagnose_breach` (backward chain to root cause). Composes `asp` + `abductive`.
 
-### Phase 5 — Meta-deontic  [`wal.rs` + provenance]
-- [ ] Provenance anchoring + ed25519 endorsement folded into the verdict (Curation Directive).
-- [ ] `BreachRecord` → WAL (court-admissible, Merkle-DAG linked) + tests.
+### Phase 5 — Meta-deontic  [`modalities/meta_deontic.rs`] ✅ DONE 2026-06-22
+**Test:** `cargo test … modalities::meta_deontic::` → **3 passed**; full lib suite **1111 passed, 0 failed**.
+- [x] Provenance anchoring: `build_breach_record` stamps the source instrument in `context`
+  (`prov:wasDerivedFrom`); `breach_provenance` reads it back.
+- [x] `BreachRecord` → WAL: `record_breach_to_wal` writes a `Violated` verdict to the
+  Merkle-DAG–linked WAL (court-admissible); round-trips via `wal::recover` (tempfile-tested).
+- [x] ed25519 endorsement (Curation Directive): `endorsement_credential` wraps the record as
+  a `Credential` claim, signed by the identity layer (`verifiable_credential::issue`) and
+  verified (`::verify`) — engine never holds keys; tamper-detection tested.
 
 ### Phase 6 — Interaction Governance  [Webizen VM]
 - [ ] `DeonticVerdict → PolicyMode {PreventiveBlock(DenyRollback) | PermissiveAudit(WAL) |
