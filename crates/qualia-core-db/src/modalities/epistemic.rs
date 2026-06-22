@@ -11,6 +11,22 @@ pub const OP_NAMESPACE_IS_LOCKED: u8 = 0x26;
 pub const CERTAINTY_BIT_SHIFT: u32 = 8;
 pub const NESTING_BIT_SHIFT: u32 = 16;
 
+// Named epistemic-strength bands for the `certainty` byte — the assertive/doxastic axis
+// (see core-ontologies/modal-junctures.n3). A juncture verb maps to a band; the eval is
+// Active at >= 128, so Knows/Affirms/Believes/Recognizes/Considers are Active and
+// Supposes/Suspects/Speculates/Doubts are Uncertain ("speculates" = a low-certainty
+// belief). The ILLOCUTIONARY speech acts (proclaims/declares/recommends/undertakes) are a
+// SEPARATE axis, not certainty — they route to deontic / soft-deontic / performative.
+pub const CERTAINTY_KNOWS: u8 = 255;
+pub const CERTAINTY_AFFIRMS: u8 = 230;
+pub const CERTAINTY_BELIEVES: u8 = 200;
+pub const CERTAINTY_RECOGNIZES: u8 = 200;
+pub const CERTAINTY_CONSIDERS: u8 = 128;
+pub const CERTAINTY_SUPPOSES: u8 = 100;
+pub const CERTAINTY_SUSPECTS: u8 = 80;
+pub const CERTAINTY_SPECULATES: u8 = 50;
+pub const CERTAINTY_DOUBTS: u8 = 20;
+
 #[derive(Debug, PartialEq, Clone, Copy)]
 pub enum EpistemicStatus {
     Active,
@@ -182,6 +198,39 @@ mod tests {
         // 4. Empty slice
         let count4 = evaluate_epistemic_frame(&[], 0, 0, &mut out2).unwrap();
         assert_eq!(count4, 0);
+    }
+
+    #[test]
+    fn epistemic_strength_bands_map_to_active_or_uncertain() {
+        // The named certainty bands (modal-junctures.n3) route through the eval: confident
+        // attitudes (knows/believes/considers) are Active; tentative ones (supposes/
+        // speculates/doubts) are Uncertain — "speculates" as a low-certainty belief.
+        let agent = q_hash("agent");
+        let world = q_hash("world");
+        let mk = |band: u8| {
+            let mut q = NQuin::default();
+            q.subject = agent;
+            q.predicate = ((band as u64) << CERTAINTY_BIT_SHIFT) | (OP_BELIEVES as u64);
+            q.context = world;
+            q
+        };
+        let mut out = vec![
+            EpistemicVerdict {
+                claim: NQuin::default(),
+                status: EpistemicStatus::Skipped,
+                certainty: 0,
+            };
+            4
+        ];
+
+        for b in [CERTAINTY_KNOWS, CERTAINTY_BELIEVES, CERTAINTY_CONSIDERS] {
+            evaluate_epistemic_frame(&[mk(b)], agent, world, &mut out).unwrap();
+            assert_eq!(out[0].status, EpistemicStatus::Active, "band {b} should be Active");
+        }
+        for b in [CERTAINTY_SUPPOSES, CERTAINTY_SPECULATES, CERTAINTY_DOUBTS] {
+            evaluate_epistemic_frame(&[mk(b)], agent, world, &mut out).unwrap();
+            assert_eq!(out[0].status, EpistemicStatus::Uncertain, "band {b} should be Uncertain");
+        }
     }
 
     #[test]

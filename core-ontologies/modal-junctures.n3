@@ -1,0 +1,62 @@
+@prefix rdf:   <http://www.w3.org/1999/02/22-rdf-syntax-ns#> .
+@prefix rdfs:  <http://www.w3.org/2000/01/rdf-schema#> .
+@prefix skos:  <http://www.w3.org/2004/02/skos/core#> .
+@prefix xsd:   <http://www.w3.org/2001/XMLSchema#> .
+@prefix mj:    <https://ns.webcivics.org/modal-juncture/> .
+
+# ===========================================================================
+# Modal linguistic junctures — the verbs that carry modality in the instruments.
+# KNOWS / BELIEVES are only the doxastic-STRENGTH axis. The full range needs TWO axes:
+#   1. ILLOCUTIONARY FORCE (Searle's speech-act taxonomy) — what the utterance DOES.
+#   2. EPISTEMIC STRENGTH (certainty band 0..255) — for assertive/expressive stances.
+# The UN instruments are saturated with these: preambular "Considering / Recognizing /
+# Affirming / Proclaiming / Recalling" + operative "Decides / Recommends / Urges /
+# Calls upon / Undertakes". This vocabulary lets each be REPRESENTED and routed to the
+# right engine modality, instead of collapsing them all into "Undertaking".
+# ===========================================================================
+
+# --- Axis 1: illocutionary force (Searle) ----------------------------------
+mj:IllocutionaryForce a rdfs:Class .
+mj:Assertive   a mj:IllocutionaryForce ; rdfs:comment "Commits the speaker to a proposition's TRUTH (states/claims) → epistemic, with a certainty band." .
+mj:Directive   a mj:IllocutionaryForce ; rdfs:comment "Attempts to get the addressee to ACT (recommends/urges/calls-upon) → soft-deontic." .
+mj:Commissive  a mj:IllocutionaryForce ; rdfs:comment "Commits the SPEAKER to future action (undertakes/pledges) → deontic Obligation." .
+mj:Declarative a mj:IllocutionaryForce ; rdfs:comment "PERFORMATIVE — changes status by being uttered (proclaims/declares/decides)." .
+mj:Expressive  a mj:IllocutionaryForce ; rdfs:comment "Expresses a stance/attitude (affirms/recognizes/recalls/considers) — the preambular register." .
+
+# --- A juncture: a verb classified by force (+ for assertives, a certainty band) -------
+mj:Juncture a rdfs:Class ; rdfs:subClassOf skos:Concept .
+mj:force a rdf:Property ; rdfs:domain mj:Juncture ; rdfs:range mj:IllocutionaryForce .
+mj:certaintyBand a rdf:Property ; rdfs:domain mj:Juncture ; rdfs:range xsd:integer ;
+    rdfs:comment "0..255 epistemic-strength, maps to modalities/epistemic.rs CERTAINTY; eval is Active at >=128." .
+mj:bridgesTo a rdf:Property ; rdfs:domain mj:Juncture ;
+    rdfs:comment "The engine modality this juncture compiles to (epistemic / deontic / soft-deontic / performative)." .
+
+# --- EPISTEMIC ATTITUDES (gradient along the certainty band) ----------------
+mj:Knows      a mj:Juncture ; skos:prefLabel "knows" ; skos:altLabel "is certain" ; mj:force mj:Assertive ;   mj:certaintyBand 255 ; mj:bridgesTo "epistemic OP_KNOWS (factive)" .
+mj:Believes   a mj:Juncture ; skos:prefLabel "believes" ; mj:force mj:Assertive ;  mj:certaintyBand 200 ; mj:bridgesTo "epistemic OP_BELIEVES" .
+mj:Considers  a mj:Juncture ; skos:prefLabel "considers" ; skos:altLabel "considering" ; mj:force mj:Expressive ; mj:certaintyBand 128 .
+mj:Supposes   a mj:Juncture ; skos:prefLabel "supposes" ; mj:force mj:Assertive ;  mj:certaintyBand 100 .
+mj:Suspects   a mj:Juncture ; skos:prefLabel "suspects" ; mj:force mj:Assertive ;  mj:certaintyBand 80 .
+mj:Speculates a mj:Juncture ; skos:prefLabel "speculates" ; mj:force mj:Assertive ; mj:certaintyBand 50 ; mj:bridgesTo "epistemic OP_BELIEVES, low certainty -> Uncertain" .
+mj:Doubts     a mj:Juncture ; skos:prefLabel "doubts" ; mj:force mj:Assertive ;    mj:certaintyBand 20 .
+
+# --- SPEECH ACTS (non-assertive forces — a different axis, not certainty) ---
+mj:Proclaims  a mj:Juncture ; skos:prefLabel "proclaims" ; skos:altLabel "proclaiming" ; mj:force mj:Declarative ; mj:bridgesTo "performative (status change by utterance)" .
+mj:Declares   a mj:Juncture ; skos:prefLabel "declares" ; mj:force mj:Declarative .
+mj:Decides    a mj:Juncture ; skos:prefLabel "decides" ; mj:force mj:Declarative ; mj:bridgesTo "performative + deontic" .
+mj:Undertakes a mj:Juncture ; skos:prefLabel "undertakes" ; skos:altLabel "undertake to" ; mj:force mj:Commissive ; mj:bridgesTo "deontic OP_OBLIGATE" .
+mj:Pledges    a mj:Juncture ; skos:prefLabel "pledges" ; mj:force mj:Commissive ; mj:bridgesTo "deontic OP_OBLIGATE" .
+mj:Recommends a mj:Juncture ; skos:prefLabel "recommends" ; mj:force mj:Directive ; mj:bridgesTo "soft-deontic (recommendation)" .
+mj:Urges      a mj:Juncture ; skos:prefLabel "urges" ; mj:force mj:Directive .
+mj:CallsUpon  a mj:Juncture ; skos:prefLabel "calls upon" ; mj:force mj:Directive .
+mj:Affirms    a mj:Juncture ; skos:prefLabel "affirms" ; skos:altLabel "affirming" ; mj:force mj:Expressive ; mj:certaintyBand 230 .
+mj:Recognizes a mj:Juncture ; skos:prefLabel "recognizes" ; skos:altLabel "recognizing" ; mj:force mj:Expressive ; mj:certaintyBand 200 .
+mj:Recalls    a mj:Juncture ; skos:prefLabel "recalls" ; skos:altLabel "recalling" ; mj:force mj:Expressive .
+mj:BearingInMind a mj:Juncture ; skos:prefLabel "bearing in mind" ; mj:force mj:Expressive .
+
+# ENGINE BINDING (how each force routes): Assertive/Expressive-with-band -> the epistemic
+# modality (modalities/epistemic.rs, certainty band); Commissive -> deontic (OP_OBLIGATE);
+# Directive -> a soft-deontic (recommendation, weaker than obligation); Declarative ->
+# a performative/speech-act modality (TO WIRE — proclamations change status by utterance).
+# The CML generator's lexical typing should detect the operative juncture verb and route
+# accordingly, instead of the "Undertaking" catch-all.
