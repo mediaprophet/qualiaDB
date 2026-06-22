@@ -138,6 +138,63 @@ pub fn obligation_applies_in(
     check_subsumption_quin(target_jurisdiction, norm_jurisdiction, within)
 }
 
+// ════════════════════════════════════════════════════════════════════════════════
+// Cluster B — reasoning-engine joins (all zero-heap; bounded fixed-array backends)
+// ════════════════════════════════════════════════════════════════════════════════
+
+// ─── deontic × argumentation (conflict → grounded extension → verdict) ────────────
+
+/// Resolve a normative conflict by Dung's grounded semantics: given the competing norm IDs
+/// and the `attacks` pairs `(attacker, target)`, does `goal` SURVIVE (belong to the grounded
+/// extension)? The survivor is the objectively defensible verdict after all attacks and
+/// defences resolve — e.g. a general duty reinstated when an emergency override defeats its
+/// exception. Composes `argumentation::grounded_contains` (bounded, zero-heap).
+pub fn norm_survives_conflict(norm_ids: &[u64], attacks: &[(u64, u64)], goal: u64) -> bool {
+    crate::modalities::argumentation::grounded_contains(norm_ids, attacks, goal)
+}
+
+// ─── deontic × fuzzy / probabilistic (partial fulfilment, trust) ──────────────────
+
+/// Degree to which a *progressively-realised* obligation is fulfilled: the Gödel t-norm
+/// (min) of its sub-requirements' truth degrees — the weakest link gates the whole (the
+/// ICESCR "progressive realization" reading). Each requirement carries its degree in
+/// `metadata`. Composes `fuzzy::conjunction`.
+pub fn fulfilment_degree(requirements: &[NQuin]) -> f32 {
+    crate::modalities::fuzzy::conjunction(requirements)
+}
+
+/// Is a progressively-realised obligation met to at least `threshold` ∈ [0,1]?
+pub fn obligation_fuzzily_met(requirements: &[NQuin], threshold: f32) -> bool {
+    fulfilment_degree(requirements) >= threshold
+}
+
+/// Behavioural-trust gate: a permission/capability activates only when the holder's derived
+/// trust `weight` exceeds `threshold` τ. Composes `probabilistic::evaluate_threshold`.
+pub fn trust_gate(weight: f32, threshold: f32) -> bool {
+    crate::modalities::probabilistic::evaluate_threshold(weight, threshold)
+}
+
+// ─── deontic × ASP / abductive (multi-remedy scenarios, breach diagnosis) ─────────
+
+/// Enumerate the valid compliance scenarios when an instrument under-determines the remedy
+/// ("the State shall provide remedy X, Y, or Z"): the stable models (answer sets) of the
+/// remedy `rules` over `atoms`, written to `out` as bitmasks over atom indices. Composes
+/// `asp::compute_answer_sets`.
+pub fn remedy_scenarios(
+    atoms: &[u64],
+    rules: &[crate::modalities::asp::AspRule],
+    out: &mut [u64],
+) -> usize {
+    crate::modalities::asp::compute_answer_sets(atoms, rules, out)
+}
+
+/// Abductive breach diagnosis: walk backward from an observed `violation` along the
+/// explanatory `rules` (predicate == `explains`) to the root cause — the missing duty or bad
+/// act that accounts for it. Composes `abductive::abductive_explanation`.
+pub fn diagnose_breach(rules: &[NQuin], violation: u64, explains: u64) -> Option<u64> {
+    crate::modalities::abductive::abductive_explanation(rules, violation, explains)
+}
+
 #[cfg(test)]
 mod tests {
     use super::*;
@@ -230,5 +287,68 @@ mod tests {
         assert!(obligation_applies_in(au, melbourne, &graph));
         // It does not reach a different State.
         assert!(!obligation_applies_in(au, nz, &graph));
+    }
+
+    // ─── Cluster B ──────────────────────────────────────────────────────────────
+
+    #[test]
+    fn argumentation_resolves_norm_conflict() {
+        // General duty A is attacked by exception E; E is attacked by override O (unattacked).
+        // Grounded: O survives → defeats E → A is reinstated.
+        let a = q_hash("norm:dutyToStop");
+        let e = q_hash("norm:exceptionPolice");
+        let o = q_hash("norm:overrideEmergency");
+        let ids = [a, e, o];
+        let attacks = [(e, a), (o, e)];
+        assert!(norm_survives_conflict(&ids, &attacks, a), "A reinstated by O defeating E");
+        assert!(norm_survives_conflict(&ids, &attacks, o), "O is unattacked → survives");
+        assert!(!norm_survives_conflict(&ids, &attacks, e), "E is defeated by O");
+    }
+
+    fn deg(d: f32) -> NQuin {
+        let mut q = NQuin::default();
+        q.metadata = d.to_bits() as u64; // truth degree in metadata (fuzzy::degree)
+        q
+    }
+
+    #[test]
+    fn fuzzy_partial_fulfilment_and_trust() {
+        // Progressive realization: the weakest sub-requirement gates the whole.
+        let reqs = [deg(0.9), deg(0.6), deg(0.8)];
+        assert!((fulfilment_degree(&reqs) - 0.6).abs() < 1e-6);
+        assert!(obligation_fuzzily_met(&reqs, 0.5));
+        assert!(!obligation_fuzzily_met(&reqs, 0.7));
+        // Behavioural-trust gate.
+        assert!(trust_gate(0.85, 0.7));
+        assert!(!trust_gate(0.5, 0.7));
+    }
+
+    #[test]
+    fn asp_multi_remedy_scenarios() {
+        use crate::modalities::asp::AspRule;
+        // Under-determined remedy: x :- not y ; y :- not x → two stable models {x}, {y}.
+        let x = q_hash("remedy:compensation");
+        let y = q_hash("remedy:restitution");
+        let atoms = [x, y];
+        let rules = [AspRule::new(x, &[], &[y]), AspRule::new(y, &[], &[x])];
+        let mut out = [0u64; 8];
+        let n = remedy_scenarios(&atoms, &rules, &mut out);
+        assert_eq!(n, 2, "two valid remedy scenarios");
+    }
+
+    #[test]
+    fn abductive_breach_diagnosis() {
+        // missing-funding → no-staff → service-failure (the observed breach). Root = missing-funding.
+        let explains = q_hash("q42:explains");
+        let edge = |h: u64, eff: u64| {
+            let mut q = NQuin { subject: h, predicate: explains, object: eff, context: 0, metadata: 0, parity: 0 };
+            q.parity = q.subject ^ q.predicate ^ q.object ^ q.context;
+            q
+        };
+        let breach = q_hash("breach:serviceFailure");
+        let nostaff = q_hash("cause:noStaff");
+        let nofunding = q_hash("cause:missingFunding");
+        let rules = [edge(nofunding, nostaff), edge(nostaff, breach)];
+        assert_eq!(diagnose_breach(&rules, breach, explains), Some(nofunding), "root cause surfaced");
     }
 }

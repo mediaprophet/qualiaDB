@@ -145,10 +145,16 @@ full lib suite **1095 passed, 0 failed**.
 - [x] deontic × linear: `discharge_obligation` — fulfilment → `Discharged` AND consumes the
   duty (`linear::consume_quin`). Unmet-correlative-duty already shipped in Phase 2
   (`jural::find_unmet_correlatives`).
-**Cluster B (heap-using reasoning engines) — remaining:**
-- [ ] deontic × argumentation: conflicting norms → grounded extension → final verdict.
-- [ ] deontic × probabilistic/fuzzy: partial fulfillment `μ∈[0,1]`; trust threshold.
-- [ ] deontic × ASP/abductive: multi-remedy stable models; breach → minimal-cause diagnosis.
+**Cluster B ✅ DONE 2026-06-22** (all zero-heap — the engines use bounded fixed arrays, not
+heap, contrary to the earlier guess) — `modalities::deontic_compose::` → **9 passed** (A+B);
+full lib suite **1108 passed, 0 failed**.
+- [x] deontic × argumentation: `norm_survives_conflict` — Dung grounded extension picks the
+  verdict winner (general duty reinstated when an override defeats its exception). Composes
+  `argumentation::grounded_contains`.
+- [x] deontic × probabilistic/fuzzy: `fulfilment_degree` / `obligation_fuzzily_met` (Gödel
+  t-norm, progressive realization) + `trust_gate` (`probabilistic::evaluate_threshold`).
+- [x] deontic × ASP/abductive: `remedy_scenarios` (under-determined remedy → stable models)
+  + `diagnose_breach` (backward chain to root cause). Composes `asp` + `abductive`.
 
 ### Phase 5 — Meta-deontic  [`wal.rs` + provenance]
 - [ ] Provenance anchoring + ed25519 endorsement folded into the verdict (Curation Directive).
