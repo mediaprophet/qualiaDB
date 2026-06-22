@@ -12,7 +12,7 @@
 # ============================================================
 
 doc:Instrument a values:ValuesCredential ;
-    dc:title "Guidelines for Action on Children in the Criminal Justice System" ;
+    dc:title "Guidelines for Action on Children in the Criminal Justice System"@en ;
     dc:date "21 July 1997" ;
     values:category "Administration of justice, detention & law enforcement" ;
     values:categoryStatus values:AutoAssigned ;
@@ -21,532 +21,532 @@ doc:Instrument a values:ValuesCredential ;
 
 doc:paragraph-2 a values:Undertaking ;
     values:partOf doc:Instrument ;
-    dc:title "Paragraph 2" ;
+    dc:title "Paragraph 2"@en ;
     values:deonticStatus values:HeuristicDerived ;
-    values:originalText "I. Aims, objectives and basic considerations II. Plans for the implementation of the Convention on the Rights of the Child, the pursuit of its goals and the use and application of international standards and norms in juvenile justice - A. Measures of general application - B. Specific targets - C. Measures to be taken at the international level - D. Mechanisms for the implementation of technical advice and assistance projects - E. Further considerations for the implementation of country projects III. Plans concerned with child victims and witnesses" .
+    values:originalText "I. Aims, objectives and basic considerations II. Plans for the implementation of the Convention on the Rights of the Child, the pursuit of its goals and the use and application of international standards and norms in juvenile justice - A. Measures of general application - B. Specific targets - C. Measures to be taken at the international level - D. Mechanisms for the implementation of technical advice and assistance projects - E. Further considerations for the implementation of country projects III. Plans concerned with child victims and witnesses"@en .
 
 doc:paragraph-3 a values:Undertaking ;
     values:partOf doc:Instrument ;
-    dc:title "Paragraph 3" ;
+    dc:title "Paragraph 3"@en ;
     values:deonticStatus values:HeuristicDerived ;
-    values:originalText "2. Twenty-nine experts from eleven States in different regions, representatives of the Centre for Human Rights of the Secretariat, the United Nations Children's Fund and the Committee on the Rights of the Child, as well as observers for non-governmental organizations concerned with juvenile justice, participated in the meeting." .
+    values:originalText "2. Twenty-nine experts from eleven States in different regions, representatives of the Centre for Human Rights of the Secretariat, the United Nations Children's Fund and the Committee on the Rights of the Child, as well as observers for non-governmental organizations concerned with juvenile justice, participated in the meeting."@en .
 
 doc:paragraph-4 a values:Undertaking ;
     values:partOf doc:Instrument ;
-    dc:title "Paragraph 4" ;
+    dc:title "Paragraph 4"@en ;
     values:deonticStatus values:HeuristicDerived ;
-    values:originalText "3. The Guidelines for Action are addressed to the Secretary-General and relevant United Nations agencies and programmes, States parties to the Convention on the Rights of the Child, as regards its implementation, as well as Member States as regards the use and application of the United Nations Standard Minimum Rules for the Administration of Juvenile Justice (The Beijing Rules), the United Nations Guidelines for the Prevention of Juvenile Delinquency (The Riyadh Guidelines) and the United Nations Rules for the Protection of Juveniles Deprived of their Liberty, hereinafter together referred to as United Nations standards and norms in juvenile justice." .
+    values:originalText "3. The Guidelines for Action are addressed to the Secretary-General and relevant United Nations agencies and programmes, States parties to the Convention on the Rights of the Child, as regards its implementation, as well as Member States as regards the use and application of the United Nations Standard Minimum Rules for the Administration of Juvenile Justice (The Beijing Rules), the United Nations Guidelines for the Prevention of Juvenile Delinquency (The Riyadh Guidelines) and the United Nations Rules for the Protection of Juveniles Deprived of their Liberty, hereinafter together referred to as United Nations standards and norms in juvenile justice."@en .
 
 doc:paragraph-5 a values:Undertaking ;
     values:partOf doc:Instrument ;
-    dc:title "Paragraph 5" ;
+    dc:title "Paragraph 5"@en ;
     values:deonticStatus values:HeuristicDerived ;
-    values:originalText "I. Aims, objectives and basic considerations" .
+    values:originalText "I. Aims, objectives and basic considerations"@en .
 
 doc:paragraph-6 a values:Undertaking ;
     values:partOf doc:Instrument ;
-    dc:title "Paragraph 6" ;
+    dc:title "Paragraph 6"@en ;
     values:deonticStatus values:HeuristicDerived ;
-    values:originalText "4. The aims of the Guidelines for Action are to provide a framework to achieve the following objectives:" .
+    values:originalText "4. The aims of the Guidelines for Action are to provide a framework to achieve the following objectives:"@en .
 
 doc:paragraph-7 a values:Undertaking ;
     values:partOf doc:Instrument ;
-    dc:title "Paragraph 7" ;
+    dc:title "Paragraph 7"@en ;
     values:deonticStatus values:HeuristicDerived ;
-    values:originalText "(a) To implement the Convention on the Rights of the Child and to pursue the goals set forth in the Convention with regard to children in the context of the administration of juvenile justice, as well as to use and apply the United Nations standards and norms in juvenile justice and other related instruments, such as the Declaration of Basic Principles of Justice for Victims of Crime and Abuse of Power;" .
+    values:originalText "(a) To implement the Convention on the Rights of the Child and to pursue the goals set forth in the Convention with regard to children in the context of the administration of juvenile justice, as well as to use and apply the United Nations standards and norms in juvenile justice and other related instruments, such as the Declaration of Basic Principles of Justice for Victims of Crime and Abuse of Power;"@en .
 
 doc:paragraph-8 a values:Undertaking ;
     values:partOf doc:Instrument ;
-    dc:title "Paragraph 8" ;
+    dc:title "Paragraph 8"@en ;
     values:deonticStatus values:HeuristicDerived ;
-    values:originalText "(b) To facilitate the provision of assistance to States parties for the effective implementation of the Convention on the Rights of the Child and related instruments." .
+    values:originalText "(b) To facilitate the provision of assistance to States parties for the effective implementation of the Convention on the Rights of the Child and related instruments."@en .
 
 doc:paragraph-9 a values:Undertaking ;
     values:partOf doc:Instrument ;
-    dc:title "Paragraph 9" ;
+    dc:title "Paragraph 9"@en ;
     values:deonticStatus values:HeuristicDerived ;
-    values:originalText "5. In order to ensure effective use of the Guidelines for Action, improved cooperation between Governments, relevant entities of the United Nations system, non-governmental organizations, professional groups, the media, academic institutions, children and other members of civil society is essential." .
+    values:originalText "5. In order to ensure effective use of the Guidelines for Action, improved cooperation between Governments, relevant entities of the United Nations system, non-governmental organizations, professional groups, the media, academic institutions, children and other members of civil society is essential."@en .
 
 doc:paragraph-10 a values:Undertaking ;
     values:partOf doc:Instrument ;
-    dc:title "Paragraph 10" ;
+    dc:title "Paragraph 10"@en ;
     values:deonticStatus values:HeuristicDerived ;
-    values:originalText "6. The Guidelines for Action should be based on the principle that the responsibility to implement the Convention clearly rests with the States parties thereto." .
+    values:originalText "6. The Guidelines for Action should be based on the principle that the responsibility to implement the Convention clearly rests with the States parties thereto."@en .
 
 doc:paragraph-11 a values:Undertaking ;
     values:partOf doc:Instrument ;
-    dc:title "Paragraph 11" ;
+    dc:title "Paragraph 11"@en ;
     values:deonticStatus values:HeuristicDerived ;
-    values:originalText "7. The basis for the use of the Guidelines for Action should be the recommendations of the Committee on the Rights of the Child." .
+    values:originalText "7. The basis for the use of the Guidelines for Action should be the recommendations of the Committee on the Rights of the Child."@en .
 
 doc:paragraph-12 a values:Undertaking ;
     values:partOf doc:Instrument ;
-    dc:title "Paragraph 12" ;
+    dc:title "Paragraph 12"@en ;
     values:deonticStatus values:HeuristicDerived ;
-    values:originalText "8. In the use of the Guidelines for Action at both the international and national levels, consideration should be given to the following:" .
+    values:originalText "8. In the use of the Guidelines for Action at both the international and national levels, consideration should be given to the following:"@en .
 
 doc:paragraph-13 a values:Right ;
     values:partOf doc:Instrument ;
     values:heldBy values:NaturalPerson ;
-    dc:title "Paragraph 13" ;
+    dc:title "Paragraph 13"@en ;
     values:deonticStatus values:HeuristicDerived ;
-    values:originalText "(a) Respect for human dignity, compatible with the four general principles underlying the Convention, namely: non-discrimination, including gender-sensitivity; upholding the best interests of the child; the right to life, survival and development; and respect for the views of the child;" .
+    values:originalText "(a) Respect for human dignity, compatible with the four general principles underlying the Convention, namely: non-discrimination, including gender-sensitivity; upholding the best interests of the child; the right to life, survival and development; and respect for the views of the child;"@en .
 
 doc:paragraph-14 a values:Undertaking ;
     values:partOf doc:Instrument ;
-    dc:title "Paragraph 14" ;
+    dc:title "Paragraph 14"@en ;
     values:deonticStatus values:HeuristicDerived ;
-    values:originalText "(b) A rights-based orientation;" .
+    values:originalText "(b) A rights-based orientation;"@en .
 
 doc:paragraph-15 a values:Undertaking ;
     values:partOf doc:Instrument ;
-    dc:title "Paragraph 15" ;
+    dc:title "Paragraph 15"@en ;
     values:deonticStatus values:HeuristicDerived ;
-    values:originalText "(c) A holistic approach to implementation through maximization of resources and efforts;" .
+    values:originalText "(c) A holistic approach to implementation through maximization of resources and efforts;"@en .
 
 doc:paragraph-16 a values:Undertaking ;
     values:partOf doc:Instrument ;
-    dc:title "Paragraph 16" ;
+    dc:title "Paragraph 16"@en ;
     values:deonticStatus values:HeuristicDerived ;
-    values:originalText "(d) The integration of services on an interdisciplinary basis;" .
+    values:originalText "(d) The integration of services on an interdisciplinary basis;"@en .
 
 doc:paragraph-17 a values:Undertaking ;
     values:partOf doc:Instrument ;
-    dc:title "Paragraph 17" ;
+    dc:title "Paragraph 17"@en ;
     values:deonticStatus values:HeuristicDerived ;
-    values:originalText "(e) Participation of children and concerned sectors of society;" .
+    values:originalText "(e) Participation of children and concerned sectors of society;"@en .
 
 doc:paragraph-18 a values:Undertaking ;
     values:partOf doc:Instrument ;
-    dc:title "Paragraph 18" ;
+    dc:title "Paragraph 18"@en ;
     values:deonticStatus values:HeuristicDerived ;
-    values:originalText "(f) Empowerment of partners through a developmental process;" .
+    values:originalText "(f) Empowerment of partners through a developmental process;"@en .
 
 doc:paragraph-19 a values:Undertaking ;
     values:partOf doc:Instrument ;
-    dc:title "Paragraph 19" ;
+    dc:title "Paragraph 19"@en ;
     values:deonticStatus values:HeuristicDerived ;
-    values:originalText "(g) Sustainability without continuing dependency on external bodies;" .
+    values:originalText "(g) Sustainability without continuing dependency on external bodies;"@en .
 
 doc:paragraph-20 a values:Undertaking ;
     values:partOf doc:Instrument ;
-    dc:title "Paragraph 20" ;
+    dc:title "Paragraph 20"@en ;
     values:deonticStatus values:HeuristicDerived ;
-    values:originalText "(h) Equitable application and accessibility to those in greatest need;" .
+    values:originalText "(h) Equitable application and accessibility to those in greatest need;"@en .
 
 doc:paragraph-21 a values:Undertaking ;
     values:partOf doc:Instrument ;
-    dc:title "Paragraph 21" ;
+    dc:title "Paragraph 21"@en ;
     values:deonticStatus values:HeuristicDerived ;
-    values:originalText "(i) Accountability and transparency of operations;" .
+    values:originalText "(i) Accountability and transparency of operations;"@en .
 
 doc:paragraph-22 a values:Undertaking ;
     values:partOf doc:Instrument ;
-    dc:title "Paragraph 22" ;
+    dc:title "Paragraph 22"@en ;
     values:deonticStatus values:HeuristicDerived ;
-    values:originalText "(j) Proactive responses based on effective preventive and remedial measures." .
+    values:originalText "(j) Proactive responses based on effective preventive and remedial measures."@en .
 
 doc:paragraph-23 a values:Undertaking ;
     values:partOf doc:Instrument ;
-    dc:title "Paragraph 23" ;
+    dc:title "Paragraph 23"@en ;
     values:deonticStatus values:HeuristicDerived ;
-    values:originalText "9. Adequate resources (human, organizational, technological, financial and information) should be allocated and utilized efficiently at all levels (international, regional, national, provincial and local) and in collaboration with relevant partners, including Governments, United Nations entities, non-governmental organizations, professional groups, the media, academic institutions, children and other members of civil society, as well as other partners." .
+    values:originalText "9. Adequate resources (human, organizational, technological, financial and information) should be allocated and utilized efficiently at all levels (international, regional, national, provincial and local) and in collaboration with relevant partners, including Governments, United Nations entities, non-governmental organizations, professional groups, the media, academic institutions, children and other members of civil society, as well as other partners."@en .
 
 doc:paragraph-24 a values:Undertaking ;
     values:partOf doc:Instrument ;
-    dc:title "Paragraph 24" ;
+    dc:title "Paragraph 24"@en ;
     values:deonticStatus values:HeuristicDerived ;
-    values:originalText "II. Plans for the implementation of the Convention on the Rights of the Child, the pursuit of its goals and the use and application of international standards and norms in juvenile justice A. Measures of general application" .
+    values:originalText "II. Plans for the implementation of the Convention on the Rights of the Child, the pursuit of its goals and the use and application of international standards and norms in juvenile justice A. Measures of general application"@en .
 
 doc:paragraph-25 a values:Undertaking ;
     values:partOf doc:Instrument ;
-    dc:title "Paragraph 25" ;
+    dc:title "Paragraph 25"@en ;
     values:deonticStatus values:HeuristicDerived ;
-    values:originalText "10. The importance of a comprehensive and consistent national approach in the area of juvenile justice should be recognized, with respect for the interdependence and indivisibility of all rights of the child." .
+    values:originalText "10. The importance of a comprehensive and consistent national approach in the area of juvenile justice should be recognized, with respect for the interdependence and indivisibility of all rights of the child."@en .
 
 doc:paragraph-26 a values:Undertaking ;
     values:partOf doc:Instrument ;
-    dc:title "Paragraph 26" ;
+    dc:title "Paragraph 26"@en ;
     values:deonticStatus values:HeuristicDerived ;
-    values:originalText "11. Measures relating to policy, decision-making, leadership and reform should be taken, with the goal of ensuring that:" .
+    values:originalText "11. Measures relating to policy, decision-making, leadership and reform should be taken, with the goal of ensuring that:"@en .
 
 doc:paragraph-27 a values:Right ;
     values:partOf doc:Instrument ;
     values:heldBy values:NaturalPerson ;
-    dc:title "Paragraph 27" ;
+    dc:title "Paragraph 27"@en ;
     values:deonticStatus values:HeuristicDerived ;
-    values:originalText "(a) The principles and provisions of the Convention on the Rights of the Child and the United Nations standards and norms in juvenile justice are fully reflected in national and local legislation policy and practice, in particular by establishing a child-oriented juvenile justice system that guarantees the rights of children, prevents the violation of the rights of children, promotes children's sense of dignity and worth, and fully respects their age, stage of development and their right to participate meaningfully in, and contribute to, society;" .
+    values:originalText "(a) The principles and provisions of the Convention on the Rights of the Child and the United Nations standards and norms in juvenile justice are fully reflected in national and local legislation policy and practice, in particular by establishing a child-oriented juvenile justice system that guarantees the rights of children, prevents the violation of the rights of children, promotes children's sense of dignity and worth, and fully respects their age, stage of development and their right to participate meaningfully in, and contribute to, society;"@en .
 
 doc:paragraph-28 a values:Undertaking ;
     values:partOf doc:Instrument ;
-    dc:title "Paragraph 28" ;
+    dc:title "Paragraph 28"@en ;
     values:deonticStatus values:HeuristicDerived ;
-    values:originalText "(b) The relevant contents of the above-mentioned instruments are made widely known to children in language accessible to children. In addition, if necessary, procedures should be established to ensure that each and every child is provided with the relevant information on his or her rights set out in those instruments, at least from his or her first contact with the criminal justice system, and is reminded of his or her obligation to obey the law;" .
+    values:originalText "(b) The relevant contents of the above-mentioned instruments are made widely known to children in language accessible to children. In addition, if necessary, procedures should be established to ensure that each and every child is provided with the relevant information on his or her rights set out in those instruments, at least from his or her first contact with the criminal justice system, and is reminded of his or her obligation to obey the law;"@en .
 
 doc:paragraph-29 a values:Undertaking ;
     values:partOf doc:Instrument ;
-    dc:title "Paragraph 29" ;
+    dc:title "Paragraph 29"@en ;
     values:deonticStatus values:HeuristicDerived ;
-    values:originalText "(c) The public's and the media's understanding of the spirit, aims and principles of justice centred on the child is promoted in accordance with the United Nations standards and norms in juvenile justice." .
+    values:originalText "(c) The public's and the media's understanding of the spirit, aims and principles of justice centred on the child is promoted in accordance with the United Nations standards and norms in juvenile justice."@en .
 
 doc:paragraph-30 a values:Undertaking ;
     values:partOf doc:Instrument ;
-    dc:title "Paragraph 30" ;
+    dc:title "Paragraph 30"@en ;
     values:deonticStatus values:HeuristicDerived ;
-    values:originalText "12. States should ensure the effectiveness of their birth registration programmes. In those instances where the age of the child involved in the justice system is unknown, measures should be taken to ensure that the true age of a child is ascertained by independent and objective assessment." .
+    values:originalText "12. States should ensure the effectiveness of their birth registration programmes. In those instances where the age of the child involved in the justice system is unknown, measures should be taken to ensure that the true age of a child is ascertained by independent and objective assessment."@en .
 
 doc:paragraph-31 a values:Undertaking ;
     values:partOf doc:Instrument ;
-    dc:title "Paragraph 31" ;
+    dc:title "Paragraph 31"@en ;
     values:deonticStatus values:HeuristicDerived ;
-    values:originalText "13. Notwithstanding the age of criminal responsibility, civil majority and the age of consent as defined by national legislation, States should ensure that children benefit from all their rights, as guaranteed to them by international law, specifically in this context those set forth in articles 3, 37 and 40 of the Convention." .
+    values:originalText "13. Notwithstanding the age of criminal responsibility, civil majority and the age of consent as defined by national legislation, States should ensure that children benefit from all their rights, as guaranteed to them by international law, specifically in this context those set forth in articles 3, 37 and 40 of the Convention."@en .
 
 doc:paragraph-32 a values:Undertaking ;
     values:partOf doc:Instrument ;
-    dc:title "Paragraph 32" ;
+    dc:title "Paragraph 32"@en ;
     values:deonticStatus values:HeuristicDerived ;
-    values:originalText "14. Particular attention should be given to the following points:" .
+    values:originalText "14. Particular attention should be given to the following points:"@en .
 
 doc:paragraph-33 a values:Undertaking ;
     values:partOf doc:Instrument ;
-    dc:title "Paragraph 33" ;
+    dc:title "Paragraph 33"@en ;
     values:deonticStatus values:HeuristicDerived ;
-    values:originalText "(a) There should be a comprehensive child-centred juvenile justice process;" .
+    values:originalText "(a) There should be a comprehensive child-centred juvenile justice process;"@en .
 
 doc:paragraph-34 a values:Undertaking ;
     values:partOf doc:Instrument ;
-    dc:title "Paragraph 34" ;
+    dc:title "Paragraph 34"@en ;
     values:deonticStatus values:HeuristicDerived ;
-    values:originalText "(b) Independent expert or other types of panels should review existing and proposed juvenile justice laws and their impact on children;" .
+    values:originalText "(b) Independent expert or other types of panels should review existing and proposed juvenile justice laws and their impact on children;"@en .
 
 doc:paragraph-35 a values:Undertaking ;
     values:partOf doc:Instrument ;
-    dc:title "Paragraph 35" ;
+    dc:title "Paragraph 35"@en ;
     values:deonticStatus values:HeuristicDerived ;
-    values:originalText "(c) No child who is under the legal age of criminal responsibility should be subject to criminal charges;" .
+    values:originalText "(c) No child who is under the legal age of criminal responsibility should be subject to criminal charges;"@en .
 
 doc:paragraph-36 a values:Undertaking ;
     values:partOf doc:Instrument ;
-    dc:title "Paragraph 36" ;
+    dc:title "Paragraph 36"@en ;
     values:deonticStatus values:HeuristicDerived ;
-    values:originalText "(d) States should establish juvenile courts with primary jurisdiction over juveniles who commit criminal acts and special procedures should be designed to take into account the specific needs of children. As an alternative, regular courts should incorporate such procedures, as appropriate. Wherever necessary, national legislative and other measures should be considered to accord all the rights of and protection for the child, where the child is brought before a court other than a juvenile court, in accordance with articles 3, 37 and 40 of the Convention." .
+    values:originalText "(d) States should establish juvenile courts with primary jurisdiction over juveniles who commit criminal acts and special procedures should be designed to take into account the specific needs of children. As an alternative, regular courts should incorporate such procedures, as appropriate. Wherever necessary, national legislative and other measures should be considered to accord all the rights of and protection for the child, where the child is brought before a court other than a juvenile court, in accordance with articles 3, 37 and 40 of the Convention."@en .
 
 doc:paragraph-37 a values:Undertaking ;
     values:partOf doc:Instrument ;
-    dc:title "Paragraph 37" ;
+    dc:title "Paragraph 37"@en ;
     values:deonticStatus values:HeuristicDerived ;
-    values:originalText "15. A review of existing procedures should be undertaken and, where possible, diversion or other alternative initiatives to the classical criminal justice systems should be developed to avoid recourse to the criminal justice systems for young persons accused of an offence. Appropriate steps should be taken to make available throughout the State a broad range of alternative and educative measures at the pre-arrest, pre-trial, trial and post-trial stages, in order to prevent recidivism and promote the social rehabilitation of child offenders. Whenever appropriate, mechanisms for the informal resolution of disputes in cases involving a child offender should be utilized, including mediation and restorative justice practices, particularly processes involving victims. In the various measures to be adopted, the family should be involved, to the extent that it operates in favour of the good of the child offender. States should ensure that alternative measures comply with the Convention, the United Nations standards and norms in juvenile justice, as well as other existing standards and norms in crime prevention and criminal justice, such as the United Nations Standard Minimum Rules for Non-custodial Measures (The Tokyo Rules), with special regard to ensuring respect for due process rules in applying such measures and for the principle of minimum intervention." .
+    values:originalText "15. A review of existing procedures should be undertaken and, where possible, diversion or other alternative initiatives to the classical criminal justice systems should be developed to avoid recourse to the criminal justice systems for young persons accused of an offence. Appropriate steps should be taken to make available throughout the State a broad range of alternative and educative measures at the pre-arrest, pre-trial, trial and post-trial stages, in order to prevent recidivism and promote the social rehabilitation of child offenders. Whenever appropriate, mechanisms for the informal resolution of disputes in cases involving a child offender should be utilized, including mediation and restorative justice practices, particularly processes involving victims. In the various measures to be adopted, the family should be involved, to the extent that it operates in favour of the good of the child offender. States should ensure that alternative measures comply with the Convention, the United Nations standards and norms in juvenile justice, as well as other existing standards and norms in crime prevention and criminal justice, such as the United Nations Standard Minimum Rules for Non-custodial Measures (The Tokyo Rules), with special regard to ensuring respect for due process rules in applying such measures and for the principle of minimum intervention."@en .
 
 doc:paragraph-38 a values:Undertaking ;
     values:partOf doc:Instrument ;
-    dc:title "Paragraph 38" ;
+    dc:title "Paragraph 38"@en ;
     values:deonticStatus values:HeuristicDerived ;
-    values:originalText "16. Priority should be given to setting up agencies and programmes to provide legal and other assistance to children, if needed free of charge, such as interpretation services, and, in particular, to ensure that the right of every child to have access to such assistance from the moment that the child is detained is respected in practice." .
+    values:originalText "16. Priority should be given to setting up agencies and programmes to provide legal and other assistance to children, if needed free of charge, such as interpretation services, and, in particular, to ensure that the right of every child to have access to such assistance from the moment that the child is detained is respected in practice."@en .
 
 doc:paragraph-39 a values:Undertaking ;
     values:partOf doc:Instrument ;
-    dc:title "Paragraph 39" ;
+    dc:title "Paragraph 39"@en ;
     values:deonticStatus values:HeuristicDerived ;
-    values:originalText "17. Appropriate action should be ensured to alleviate the problem of children in need of special protection measures, such as children working or living on the streets or children permanently deprived of a family environment, children with disabilities, children of minorities, immigrants and indigenous peoples and other vulnerable groups of children." .
+    values:originalText "17. Appropriate action should be ensured to alleviate the problem of children in need of special protection measures, such as children working or living on the streets or children permanently deprived of a family environment, children with disabilities, children of minorities, immigrants and indigenous peoples and other vulnerable groups of children."@en .
 
 doc:paragraph-40 a values:Undertaking ;
     values:partOf doc:Instrument ;
-    dc:title "Paragraph 40" ;
+    dc:title "Paragraph 40"@en ;
     values:deonticStatus values:HeuristicDerived ;
-    values:originalText "18. The placement of children in closed institutions should be reduced. Such placement of children should only take place in accordance with the provisions of article 37 (b) of the Convention and as a matter of last resort and for the shortest period of time. Corporal punishment in the child justice and welfare systems should be prohibited." .
+    values:originalText "18. The placement of children in closed institutions should be reduced. Such placement of children should only take place in accordance with the provisions of article 37 (b) of the Convention and as a matter of last resort and for the shortest period of time. Corporal punishment in the child justice and welfare systems should be prohibited."@en .
 
 doc:paragraph-41 a values:Undertaking ;
     values:partOf doc:Instrument ;
-    dc:title "Paragraph 41" ;
+    dc:title "Paragraph 41"@en ;
     values:deonticStatus values:HeuristicDerived ;
-    values:originalText "19. The United Nations Rules for the Protection of Juveniles Deprived of their Liberty and article 37 (d) of the Convention also apply to any public or private setting from which the child cannot leave at will, by order of any judicial, administrative or other public authority." .
+    values:originalText "19. The United Nations Rules for the Protection of Juveniles Deprived of their Liberty and article 37 (d) of the Convention also apply to any public or private setting from which the child cannot leave at will, by order of any judicial, administrative or other public authority."@en .
 
 doc:paragraph-42 a values:Undertaking ;
     values:partOf doc:Instrument ;
-    dc:title "Paragraph 42" ;
+    dc:title "Paragraph 42"@en ;
     values:deonticStatus values:HeuristicDerived ;
-    values:originalText "20. In order to maintain a link between the detained child and his or her family and community, and to facilitate his or her social reintegration, it is important to ensure easy access by relatives and persons who have a legitimate interest in the child to institutions where children are deprived of their liberty, unless the best interests of the child would suggest otherwise." .
+    values:originalText "20. In order to maintain a link between the detained child and his or her family and community, and to facilitate his or her social reintegration, it is important to ensure easy access by relatives and persons who have a legitimate interest in the child to institutions where children are deprived of their liberty, unless the best interests of the child would suggest otherwise."@en .
 
 doc:paragraph-43 a values:Undertaking ;
     values:partOf doc:Instrument ;
-    dc:title "Paragraph 43" ;
+    dc:title "Paragraph 43"@en ;
     values:deonticStatus values:HeuristicDerived ;
-    values:originalText "21. An independent body to monitor and report regularly on conditions in custodial facilities should be established, if necessary. Monitoring should take place within the framework of the United Nations standards and norms in juvenile justice, in particular the United Nations Rules for the Protection of Juveniles Deprived of their Liberty. States should permit children to communicate freely and confidentially with the monitoring bodies." .
+    values:originalText "21. An independent body to monitor and report regularly on conditions in custodial facilities should be established, if necessary. Monitoring should take place within the framework of the United Nations standards and norms in juvenile justice, in particular the United Nations Rules for the Protection of Juveniles Deprived of their Liberty. States should permit children to communicate freely and confidentially with the monitoring bodies."@en .
 
 doc:paragraph-44 a values:Undertaking ;
     values:partOf doc:Instrument ;
-    dc:title "Paragraph 44" ;
+    dc:title "Paragraph 44"@en ;
     values:deonticStatus values:HeuristicDerived ;
-    values:originalText "22. States should consider positively requests from concerned humanitarian, human rights and other organizations for access to custodial facilities, where appropriate." .
+    values:originalText "22. States should consider positively requests from concerned humanitarian, human rights and other organizations for access to custodial facilities, where appropriate."@en .
 
 doc:paragraph-45 a values:Undertaking ;
     values:partOf doc:Instrument ;
-    dc:title "Paragraph 45" ;
+    dc:title "Paragraph 45"@en ;
     values:deonticStatus values:HeuristicDerived ;
-    values:originalText "23. In relation to children in the criminal justice system, due account should be taken of concerns raised by intergovernmental and non-governmental organizations and other interested parties, in particular systemic issues, including inappropriate admissions and lengthy delays that have an impact on children deprived of their liberty." .
+    values:originalText "23. In relation to children in the criminal justice system, due account should be taken of concerns raised by intergovernmental and non-governmental organizations and other interested parties, in particular systemic issues, including inappropriate admissions and lengthy delays that have an impact on children deprived of their liberty."@en .
 
 doc:paragraph-46 a values:Undertaking ;
     values:partOf doc:Instrument ;
-    dc:title "Paragraph 46" ;
+    dc:title "Paragraph 46"@en ;
     values:deonticStatus values:HeuristicDerived ;
-    values:originalText "24. All persons having contact with, or being responsible for, children in the criminal justice system should receive education and training in human rights, the principles and provisions of the Convention and other United Nations standards and norms in juvenile justice as an integral part of their training programmes. Such persons include police and other law enforcement officials; judges and magistrates, prosecutors, lawyers and administrators; prison officers and other professionals working in institutions where children are deprived of their liberty; and health personnel, social workers, peacekeepers and other professionals concerned with juvenile justice." .
+    values:originalText "24. All persons having contact with, or being responsible for, children in the criminal justice system should receive education and training in human rights, the principles and provisions of the Convention and other United Nations standards and norms in juvenile justice as an integral part of their training programmes. Such persons include police and other law enforcement officials; judges and magistrates, prosecutors, lawyers and administrators; prison officers and other professionals working in institutions where children are deprived of their liberty; and health personnel, social workers, peacekeepers and other professionals concerned with juvenile justice."@en .
 
 doc:paragraph-47 a values:Undertaking ;
     values:partOf doc:Instrument ;
-    dc:title "Paragraph 47" ;
+    dc:title "Paragraph 47"@en ;
     values:deonticStatus values:HeuristicDerived ;
-    values:originalText "25. In the light of existing international standards, States should establish mechanisms to ensure a prompt, thorough and impartial investigation into allegations against officials of deliberate violation of the fundamental rights and freedoms of children. States should equally ensure that those found responsible are duly sanctioned." .
+    values:originalText "25. In the light of existing international standards, States should establish mechanisms to ensure a prompt, thorough and impartial investigation into allegations against officials of deliberate violation of the fundamental rights and freedoms of children. States should equally ensure that those found responsible are duly sanctioned."@en .
 
 doc:paragraph-48 a values:Undertaking ;
     values:partOf doc:Instrument ;
-    dc:title "Paragraph 48" ;
+    dc:title "Paragraph 48"@en ;
     values:deonticStatus values:HeuristicDerived ;
-    values:originalText "C. Measures to be taken at the international level" .
+    values:originalText "C. Measures to be taken at the international level"@en .
 
 doc:paragraph-49 a values:Undertaking ;
     values:partOf doc:Instrument ;
-    dc:title "Paragraph 49" ;
+    dc:title "Paragraph 49"@en ;
     values:deonticStatus values:HeuristicDerived ;
-    values:originalText "26. Juvenile justice should be given due attention internationally, regionally and nationally, including within the framework of the United Nations system-wide action." .
+    values:originalText "26. Juvenile justice should be given due attention internationally, regionally and nationally, including within the framework of the United Nations system-wide action."@en .
 
 doc:paragraph-50 a values:Undertaking ;
     values:partOf doc:Instrument ;
-    dc:title "Paragraph 50" ;
+    dc:title "Paragraph 50"@en ;
     values:deonticStatus values:HeuristicDerived ;
-    values:originalText "27. There is an urgent need for close cooperation between all bodies in this field, in particular, the Crime Prevention and Criminal Justice Division of the Secretariat, the Office of the United Nations High Commissioner for Human Rights/Centre for Human Rights, the Office of the United Nations High Commissioner for Refugees, the United Nations Children's Fund, the United Nations Development Programme, the Committee on the Rights of the Child, the International Labour Organization, the United Nations Educational, Scientific and Cultural Organization and the World Health Organization. In addition, the World Bank and other international and regional financial institutions and organizations, as well as non-governmental organizations and academic institutions, are invited to support the provision of advisory services and technical assistance in the field of juvenile justice. Cooperation should therefore be strengthened, in particular with regard to research, dissemination of information, training, implementation and monitoring of the Convention on the Rights of the Child and the use and application of existing standards, as well as with regard to the provision of technical advice and assistance programmes, for example by making use of existing international networks on juvenile justice." .
+    values:originalText "27. There is an urgent need for close cooperation between all bodies in this field, in particular, the Crime Prevention and Criminal Justice Division of the Secretariat, the Office of the United Nations High Commissioner for Human Rights/Centre for Human Rights, the Office of the United Nations High Commissioner for Refugees, the United Nations Children's Fund, the United Nations Development Programme, the Committee on the Rights of the Child, the International Labour Organization, the United Nations Educational, Scientific and Cultural Organization and the World Health Organization. In addition, the World Bank and other international and regional financial institutions and organizations, as well as non-governmental organizations and academic institutions, are invited to support the provision of advisory services and technical assistance in the field of juvenile justice. Cooperation should therefore be strengthened, in particular with regard to research, dissemination of information, training, implementation and monitoring of the Convention on the Rights of the Child and the use and application of existing standards, as well as with regard to the provision of technical advice and assistance programmes, for example by making use of existing international networks on juvenile justice."@en .
 
 doc:paragraph-51 a values:Undertaking ;
     values:partOf doc:Instrument ;
-    dc:title "Paragraph 51" ;
+    dc:title "Paragraph 51"@en ;
     values:deonticStatus values:HeuristicDerived ;
-    values:originalText "28. The effective implementation of the Convention on the Rights of the Child, as well as the use and application of international standards through technical cooperation and advisory service programmes, should be ensured by giving particular attention to the following aspects related to protecting and promoting human rights of children in detention, strengthening the rule of law and improving the administration of the juvenile justice system:" .
+    values:originalText "28. The effective implementation of the Convention on the Rights of the Child, as well as the use and application of international standards through technical cooperation and advisory service programmes, should be ensured by giving particular attention to the following aspects related to protecting and promoting human rights of children in detention, strengthening the rule of law and improving the administration of the juvenile justice system:"@en .
 
 doc:paragraph-52 a values:Undertaking ;
     values:partOf doc:Instrument ;
-    dc:title "Paragraph 52" ;
+    dc:title "Paragraph 52"@en ;
     values:deonticStatus values:HeuristicDerived ;
-    values:originalText "(a) Assistance in legal reform;" .
+    values:originalText "(a) Assistance in legal reform;"@en .
 
 doc:paragraph-53 a values:Undertaking ;
     values:partOf doc:Instrument ;
-    dc:title "Paragraph 53" ;
+    dc:title "Paragraph 53"@en ;
     values:deonticStatus values:HeuristicDerived ;
-    values:originalText "(b) Strengthening national capacities and infrastructures;" .
+    values:originalText "(b) Strengthening national capacities and infrastructures;"@en .
 
 doc:paragraph-54 a values:Undertaking ;
     values:partOf doc:Instrument ;
-    dc:title "Paragraph 54" ;
+    dc:title "Paragraph 54"@en ;
     values:deonticStatus values:HeuristicDerived ;
-    values:originalText "(c) Training programmes for police and other law enforcement officials, judges and magistrates, prosecutors, lawyers, administrators, prison officers and other professionals working in institutions where children are deprived of their liberty, health personnel, social workers, peacekeepers and other professionals concerned with juvenile justice;" .
+    values:originalText "(c) Training programmes for police and other law enforcement officials, judges and magistrates, prosecutors, lawyers, administrators, prison officers and other professionals working in institutions where children are deprived of their liberty, health personnel, social workers, peacekeepers and other professionals concerned with juvenile justice;"@en .
 
 doc:paragraph-55 a values:Undertaking ;
     values:partOf doc:Instrument ;
-    dc:title "Paragraph 55" ;
+    dc:title "Paragraph 55"@en ;
     values:deonticStatus values:HeuristicDerived ;
-    values:originalText "(d) Preparation of training manuals;" .
+    values:originalText "(d) Preparation of training manuals;"@en .
 
 doc:paragraph-56 a values:Undertaking ;
     values:partOf doc:Instrument ;
-    dc:title "Paragraph 56" ;
+    dc:title "Paragraph 56"@en ;
     values:deonticStatus values:HeuristicDerived ;
-    values:originalText "(e) Preparation of information and education material to inform children about their rights in juvenile justice;" .
+    values:originalText "(e) Preparation of information and education material to inform children about their rights in juvenile justice;"@en .
 
 doc:paragraph-57 a values:Undertaking ;
     values:partOf doc:Instrument ;
-    dc:title "Paragraph 57" ;
+    dc:title "Paragraph 57"@en ;
     values:deonticStatus values:HeuristicDerived ;
-    values:originalText "(f) Assistance with the development of information and management systems." .
+    values:originalText "(f) Assistance with the development of information and management systems."@en .
 
 doc:paragraph-58 a values:Undertaking ;
     values:partOf doc:Instrument ;
-    dc:title "Paragraph 58" ;
+    dc:title "Paragraph 58"@en ;
     values:deonticStatus values:HeuristicDerived ;
-    values:originalText "29. Close cooperation should be maintained between the Crime Prevention and Criminal Justice Division and the Department of Peacekeeping Operations of the Secretariat in view of the relevance of the protection of children's rights in peacekeeping operations, including the problems of children and youth as victims and perpetrators of crime in peace-building and post-conflict or other emerging situations." .
+    values:originalText "29. Close cooperation should be maintained between the Crime Prevention and Criminal Justice Division and the Department of Peacekeeping Operations of the Secretariat in view of the relevance of the protection of children's rights in peacekeeping operations, including the problems of children and youth as victims and perpetrators of crime in peace-building and post-conflict or other emerging situations."@en .
 
 doc:paragraph-59 a values:Undertaking ;
     values:partOf doc:Instrument ;
-    dc:title "Paragraph 59" ;
+    dc:title "Paragraph 59"@en ;
     values:deonticStatus values:HeuristicDerived ;
-    values:originalText "D. Mechanisms for the implementation of technical advice and assistance projects" .
+    values:originalText "D. Mechanisms for the implementation of technical advice and assistance projects"@en .
 
 doc:paragraph-60 a values:Undertaking ;
     values:partOf doc:Instrument ;
-    dc:title "Paragraph 60" ;
+    dc:title "Paragraph 60"@en ;
     values:deonticStatus values:HeuristicDerived ;
-    values:originalText "30. In accordance with articles 43, 44 and 45 of the Convention, the Committee on the Rights of the Child reviews the reports of States parties on the implementation of the Convention. According to article 44 of the Convention, these reports should indicate factors and difficulties, if any, affecting the degree of fulfilment of the obligations under the Convention." .
+    values:originalText "30. In accordance with articles 43, 44 and 45 of the Convention, the Committee on the Rights of the Child reviews the reports of States parties on the implementation of the Convention. According to article 44 of the Convention, these reports should indicate factors and difficulties, if any, affecting the degree of fulfilment of the obligations under the Convention."@en .
 
 doc:paragraph-61 a values:Undertaking ;
     values:partOf doc:Instrument ;
-    dc:title "Paragraph 61" ;
+    dc:title "Paragraph 61"@en ;
     values:deonticStatus values:HeuristicDerived ;
-    values:originalText "31. States parties to the Convention are invited to provide in their initial and periodic reports comprehensive information, data and indicators on the implementation of the provisions of the Convention and on the use and application of the United Nations standards and norms in juvenile justice." .
+    values:originalText "31. States parties to the Convention are invited to provide in their initial and periodic reports comprehensive information, data and indicators on the implementation of the provisions of the Convention and on the use and application of the United Nations standards and norms in juvenile justice."@en .
 
 doc:paragraph-62 a values:Undertaking ;
     values:partOf doc:Instrument ;
-    dc:title "Paragraph 62" ;
+    dc:title "Paragraph 62"@en ;
     values:deonticStatus values:HeuristicDerived ;
-    values:originalText "32. As a result of the process of examining the progress made by States parties in fulfilling their obligations under the Convention, the Committee may make suggestions and general recommendations to the State party to ensure full compliance with the Convention (in accordance with article 45 (d) of the Convention). In order to foster the effective implementation of the Convention and to encourage international cooperation in the area of juvenile justice, the Committee transmits, as it may consider appropriate, to specialized agencies, the United Nations Children's Fund and other competent bodies any reports from States parties that contain a request, or indicate a need, for advisory services and technical assistance, together with observations and suggestions of the Committee, if any, on those requests or indications (in accordance with article 45 (b) of the Convention)." .
+    values:originalText "32. As a result of the process of examining the progress made by States parties in fulfilling their obligations under the Convention, the Committee may make suggestions and general recommendations to the State party to ensure full compliance with the Convention (in accordance with article 45 (d) of the Convention). In order to foster the effective implementation of the Convention and to encourage international cooperation in the area of juvenile justice, the Committee transmits, as it may consider appropriate, to specialized agencies, the United Nations Children's Fund and other competent bodies any reports from States parties that contain a request, or indicate a need, for advisory services and technical assistance, together with observations and suggestions of the Committee, if any, on those requests or indications (in accordance with article 45 (b) of the Convention)."@en .
 
 doc:paragraph-63 a values:Undertaking ;
     values:partOf doc:Instrument ;
-    dc:title "Paragraph 63" ;
+    dc:title "Paragraph 63"@en ;
     values:deonticStatus values:HeuristicDerived ;
-    values:originalText "33. Accordingly, should a State party report and the review process by the Committee reveal any necessity to initiate reform in the area of juvenile justice, including through assistance by the United Nations technical advice and assistance programmes or those of the specialized agencies, the State party may request such assistance, including assistance from the Crime Prevention and Criminal Justice Division, the Centre for Human Rights and the United Nations Children's Fund." .
+    values:originalText "33. Accordingly, should a State party report and the review process by the Committee reveal any necessity to initiate reform in the area of juvenile justice, including through assistance by the United Nations technical advice and assistance programmes or those of the specialized agencies, the State party may request such assistance, including assistance from the Crime Prevention and Criminal Justice Division, the Centre for Human Rights and the United Nations Children's Fund."@en .
 
 doc:paragraph-64 a values:Undertaking ;
     values:partOf doc:Instrument ;
-    dc:title "Paragraph 64" ;
+    dc:title "Paragraph 64"@en ;
     values:deonticStatus values:HeuristicDerived ;
-    values:originalText "34. In order to provide adequate assistance in response to those requests, a coordination panel on technical advice and assistance in juvenile justice should be established, to be convened at least annually by the Secretary-General. The panel will consist of representatives of the Division, the Office of the United Nations High Commissioner for Human Rights/Centre for Human Rights, the United Nations Children's Fund, the United Nations Development Programme, the Committee on the Rights of the Child, the institutes comprising the United Nations Crime Prevention and Criminal Justice Programme network and other relevant United Nations entities, as well as other interested intergovernmental, regional and non-governmental organizations, including international networks on juvenile justice and academic institutions involved in the provision of technical advice and assistance, in accordance with paragraph 39 below." .
+    values:originalText "34. In order to provide adequate assistance in response to those requests, a coordination panel on technical advice and assistance in juvenile justice should be established, to be convened at least annually by the Secretary-General. The panel will consist of representatives of the Division, the Office of the United Nations High Commissioner for Human Rights/Centre for Human Rights, the United Nations Children's Fund, the United Nations Development Programme, the Committee on the Rights of the Child, the institutes comprising the United Nations Crime Prevention and Criminal Justice Programme network and other relevant United Nations entities, as well as other interested intergovernmental, regional and non-governmental organizations, including international networks on juvenile justice and academic institutions involved in the provision of technical advice and assistance, in accordance with paragraph 39 below."@en .
 
 doc:paragraph-65 a values:Undertaking ;
     values:partOf doc:Instrument ;
-    dc:title "Paragraph 65" ;
+    dc:title "Paragraph 65"@en ;
     values:deonticStatus values:HeuristicDerived ;
-    values:originalText "35. Prior to the first meeting of the coordination panel, a strategy should be elaborated for addressing the issue of how to activate further international cooperation in the field of juvenile justice. The coordination panel should also facilitate the identification of common problems, the compilation of examples of good practice and the analysis of shared experiences and needs, which in turn would lead to a more strategic approach to needs assessment and to effective proposals for action. Such a compilation would allow for concerted advisory services and technical assistance in juvenile justice, including an early agreement with the Government requesting such assistance, as well as with all other partners having the capacity and competence to implement the various segments of a country project, thus ensuring the most effective and problem-oriented action. This compilation should be developed continuously in close cooperation with all parties involved. It will take into account the possible introduction of diversion programmes and measures to improve the administration of juvenile justice, to reduce the use of remand s and pre-trial detention, to improve the treatment of children deprived of their liberty and to create effective reintegration and recovery programmes." .
+    values:originalText "35. Prior to the first meeting of the coordination panel, a strategy should be elaborated for addressing the issue of how to activate further international cooperation in the field of juvenile justice. The coordination panel should also facilitate the identification of common problems, the compilation of examples of good practice and the analysis of shared experiences and needs, which in turn would lead to a more strategic approach to needs assessment and to effective proposals for action. Such a compilation would allow for concerted advisory services and technical assistance in juvenile justice, including an early agreement with the Government requesting such assistance, as well as with all other partners having the capacity and competence to implement the various segments of a country project, thus ensuring the most effective and problem-oriented action. This compilation should be developed continuously in close cooperation with all parties involved. It will take into account the possible introduction of diversion programmes and measures to improve the administration of juvenile justice, to reduce the use of remand s and pre-trial detention, to improve the treatment of children deprived of their liberty and to create effective reintegration and recovery programmes."@en .
 
 doc:paragraph-66 a values:Undertaking ;
     values:partOf doc:Instrument ;
-    dc:title "Paragraph 66" ;
+    dc:title "Paragraph 66"@en ;
     values:deonticStatus values:HeuristicDerived ;
-    values:originalText "36. Emphasis should be placed on formulating comprehensive prevention plans, as called for in the United Nations Guidelines for the Prevention of Juvenile Delinquency (the Riyadh Guidelines). Projects should focus on strategies to socialize and integrate all children and young persons successfully, in particular through the family, the community, peer groups, schools, vocational training and the world of work. These projects should pay particular attention to children in need of special protection measures, such as children working or living on the streets or children permanently deprived of a family environment, children with disabilities, children of minorities, immigrants and indigenous peoples and other vulnerable groups of children. In particular, the placement of these children in institutions should be proscribed as much as possible. Measures of social protection should be developed in order to limit the risks of criminalization for these children." .
+    values:originalText "36. Emphasis should be placed on formulating comprehensive prevention plans, as called for in the United Nations Guidelines for the Prevention of Juvenile Delinquency (the Riyadh Guidelines). Projects should focus on strategies to socialize and integrate all children and young persons successfully, in particular through the family, the community, peer groups, schools, vocational training and the world of work. These projects should pay particular attention to children in need of special protection measures, such as children working or living on the streets or children permanently deprived of a family environment, children with disabilities, children of minorities, immigrants and indigenous peoples and other vulnerable groups of children. In particular, the placement of these children in institutions should be proscribed as much as possible. Measures of social protection should be developed in order to limit the risks of criminalization for these children."@en .
 
 doc:paragraph-67 a values:Undertaking ;
     values:partOf doc:Instrument ;
-    dc:title "Paragraph 67" ;
+    dc:title "Paragraph 67"@en ;
     values:deonticStatus values:HeuristicDerived ;
-    values:originalText "37. The strategy will also set out a coordinated process for the delivery of international advisory services and technical assistance to States parties to the Convention, on the basis of joint missions to be undertaken, whenever appropriate, by staff of the different organizations and agencies involved, with a view to devising longer term technical assistance projects." .
+    values:originalText "37. The strategy will also set out a coordinated process for the delivery of international advisory services and technical assistance to States parties to the Convention, on the basis of joint missions to be undertaken, whenever appropriate, by staff of the different organizations and agencies involved, with a view to devising longer term technical assistance projects."@en .
 
 doc:paragraph-68 a values:Undertaking ;
     values:partOf doc:Instrument ;
-    dc:title "Paragraph 68" ;
+    dc:title "Paragraph 68"@en ;
     values:deonticStatus values:HeuristicDerived ;
-    values:originalText "38. Important actors in the delivery of advisory services and technical assistance programmes at the country level are the United Nations resident coordinators, with significant roles to be played by the field offices of the Office of the United Nations High Commissioner for Human Rights/Centre for Human Rights, the United Nations Children's Fund and the United Nations Development Programme. The vital nature of the integration of juvenile justice technical cooperation in country planning and programming, including through the United Nations country strategy note, is emphasized." .
+    values:originalText "38. Important actors in the delivery of advisory services and technical assistance programmes at the country level are the United Nations resident coordinators, with significant roles to be played by the field offices of the Office of the United Nations High Commissioner for Human Rights/Centre for Human Rights, the United Nations Children's Fund and the United Nations Development Programme. The vital nature of the integration of juvenile justice technical cooperation in country planning and programming, including through the United Nations country strategy note, is emphasized."@en .
 
 doc:paragraph-69 a values:Undertaking ;
     values:partOf doc:Instrument ;
-    dc:title "Paragraph 69" ;
+    dc:title "Paragraph 69"@en ;
     values:deonticStatus values:HeuristicDerived ;
-    values:originalText "39. Resources must be mobilized for both the coordinating mechanism of the coordination panel and regional and country projects formulated to improve observance of the Convention. Resources for those purposes (see paragraphs 34 to 38 above) will come either from regular budgets or from extrabudgetary resources. Most of the resources for specific projects will have to be mobilized from external sources." .
+    values:originalText "39. Resources must be mobilized for both the coordinating mechanism of the coordination panel and regional and country projects formulated to improve observance of the Convention. Resources for those purposes (see paragraphs 34 to 38 above) will come either from regular budgets or from extrabudgetary resources. Most of the resources for specific projects will have to be mobilized from external sources."@en .
 
 doc:paragraph-70 a values:Undertaking ;
     values:partOf doc:Instrument ;
-    dc:title "Paragraph 70" ;
+    dc:title "Paragraph 70"@en ;
     values:deonticStatus values:HeuristicDerived ;
-    values:originalText "40. The coordination panel may wish to encourage, and in fact be the vehicle for, a coordinated approach to resource mobilization in this area. Such resource mobilization should be on the basis of a common strategy as contained in a programme document drawn up in support of a global programme in this area. All interested United Nations bodies and agencies as well as non-governmental organizations that have a demonstrated capacity to deliver technical cooperation services in this area should be invited to participate in such a process." .
+    values:originalText "40. The coordination panel may wish to encourage, and in fact be the vehicle for, a coordinated approach to resource mobilization in this area. Such resource mobilization should be on the basis of a common strategy as contained in a programme document drawn up in support of a global programme in this area. All interested United Nations bodies and agencies as well as non-governmental organizations that have a demonstrated capacity to deliver technical cooperation services in this area should be invited to participate in such a process."@en .
 
 doc:paragraph-71 a values:Undertaking ;
     values:partOf doc:Instrument ;
-    dc:title "Paragraph 71" ;
+    dc:title "Paragraph 71"@en ;
     values:deonticStatus values:HeuristicDerived ;
-    values:originalText "E. Further considerations for the implementation of country projects" .
+    values:originalText "E. Further considerations for the implementation of country projects"@en .
 
 doc:paragraph-72 a values:Undertaking ;
     values:partOf doc:Instrument ;
-    dc:title "Paragraph 72" ;
+    dc:title "Paragraph 72"@en ;
     values:deonticStatus values:HeuristicDerived ;
-    values:originalText "41. One of the obvious tenets in juvenile delinquency prevention and juvenile justice is that long-term change is brought about not only when symptoms are treated but also when root causes are addressed. For example, excessive use of juvenile detention will be dealt with adequately only by applying a comprehensive approach, which involves both organizational and managerial structures at all levels of investigation, prosecution and the judiciary, as well as the penitentiary system. This requires communication, inter alia, with and among police, prosecutors, judges and magistrates, authorities of local communities, administration authorities and with the relevant authorities of detention centres. In addition, it requires the will and ability to cooperate closely with each other." .
+    values:originalText "41. One of the obvious tenets in juvenile delinquency prevention and juvenile justice is that long-term change is brought about not only when symptoms are treated but also when root causes are addressed. For example, excessive use of juvenile detention will be dealt with adequately only by applying a comprehensive approach, which involves both organizational and managerial structures at all levels of investigation, prosecution and the judiciary, as well as the penitentiary system. This requires communication, inter alia, with and among police, prosecutors, judges and magistrates, authorities of local communities, administration authorities and with the relevant authorities of detention centres. In addition, it requires the will and ability to cooperate closely with each other."@en .
 
 doc:paragraph-73 a values:Undertaking ;
     values:partOf doc:Instrument ;
-    dc:title "Paragraph 73" ;
+    dc:title "Paragraph 73"@en ;
     values:deonticStatus values:HeuristicDerived ;
-    values:originalText "42. To prevent further overreliance on criminal justice measures to deal with children's behaviour, efforts should be made to establish and apply programmes aimed at strengthening social assistance, which would allow for the diversion of children from the justice system, as appropriate, as well as improving the application of non-custodial measures and reintegration programmes. To establish and apply such programmes, it is necessary to foster close cooperation between the child justice sectors, different services in charge of law enforcement, social welfare and education sectors." .
+    values:originalText "42. To prevent further overreliance on criminal justice measures to deal with children's behaviour, efforts should be made to establish and apply programmes aimed at strengthening social assistance, which would allow for the diversion of children from the justice system, as appropriate, as well as improving the application of non-custodial measures and reintegration programmes. To establish and apply such programmes, it is necessary to foster close cooperation between the child justice sectors, different services in charge of law enforcement, social welfare and education sectors."@en .
 
 doc:paragraph-74 a values:Undertaking ;
     values:partOf doc:Instrument ;
-    dc:title "Paragraph 74" ;
+    dc:title "Paragraph 74"@en ;
     values:deonticStatus values:HeuristicDerived ;
-    values:originalText "III. Plans concerned with child victims and witnesses" .
+    values:originalText "III. Plans concerned with child victims and witnesses"@en .
 
 doc:paragraph-75 a values:Obligation ;
     values:partOf doc:Instrument ;
     values:borneBy values:Agent ;
-    dc:title "Paragraph 75" ;
+    dc:title "Paragraph 75"@en ;
     values:deonticStatus values:HeuristicDerived ;
-    values:originalText "43. In accordance with the Declaration of Basic Principles of Justice for Victims of Crime and Abuse of Power, States should undertake to ensure that child victims and witnesses are provided with appropriate access to justice and fair treatment, restitution, compensation and social assistance. If applicable, measures should be taken to prevent the settling of penal matters through compensation outside the justice system, when doing so is not in the best interests of the child." .
+    values:originalText "43. In accordance with the Declaration of Basic Principles of Justice for Victims of Crime and Abuse of Power, States should undertake to ensure that child victims and witnesses are provided with appropriate access to justice and fair treatment, restitution, compensation and social assistance. If applicable, measures should be taken to prevent the settling of penal matters through compensation outside the justice system, when doing so is not in the best interests of the child."@en .
 
 doc:paragraph-76 a values:Undertaking ;
     values:partOf doc:Instrument ;
-    dc:title "Paragraph 76" ;
+    dc:title "Paragraph 76"@en ;
     values:deonticStatus values:HeuristicDerived ;
-    values:originalText "44. Police, lawyers, the judiciary and other court personnel should receive training in dealing with cases where children are victims. States should consider establishing, if they have not yet done so, specialized offices and units to deal with cases involving offences against children. States should establish, as appropriate, a code of practice for proper management of cases involving child victims." .
+    values:originalText "44. Police, lawyers, the judiciary and other court personnel should receive training in dealing with cases where children are victims. States should consider establishing, if they have not yet done so, specialized offices and units to deal with cases involving offences against children. States should establish, as appropriate, a code of practice for proper management of cases involving child victims."@en .
 
 doc:paragraph-77 a values:Right ;
     values:partOf doc:Instrument ;
     values:heldBy values:NaturalPerson ;
-    dc:title "Paragraph 77" ;
+    dc:title "Paragraph 77"@en ;
     values:deonticStatus values:HeuristicDerived ;
-    values:originalText "45. Child victims should be treated with compassion and respect for their dignity. They are entitled to access to the mechanisms of justice and to prompt redress, as provided for by national legislation, for the harm they have suffered." .
+    values:originalText "45. Child victims should be treated with compassion and respect for their dignity. They are entitled to access to the mechanisms of justice and to prompt redress, as provided for by national legislation, for the harm they have suffered."@en .
 
 doc:paragraph-78 a values:Undertaking ;
     values:partOf doc:Instrument ;
-    dc:title "Paragraph 78" ;
+    dc:title "Paragraph 78"@en ;
     values:deonticStatus values:HeuristicDerived ;
-    values:originalText "46. Child victims should have access to assistance that meets their needs, such as advocacy, protection, economic assistance, counselling, health and social services, social reintegration and physical and psychological recovery services. Special assistance should be given to those children who are disabled or ill. Emphasis should be placed upon family- and community-based rehabilitation rather than institutionalization." .
+    values:originalText "46. Child victims should have access to assistance that meets their needs, such as advocacy, protection, economic assistance, counselling, health and social services, social reintegration and physical and psychological recovery services. Special assistance should be given to those children who are disabled or ill. Emphasis should be placed upon family- and community-based rehabilitation rather than institutionalization."@en .
 
 doc:paragraph-79 a values:Undertaking ;
     values:partOf doc:Instrument ;
-    dc:title "Paragraph 79" ;
+    dc:title "Paragraph 79"@en ;
     values:deonticStatus values:HeuristicDerived ;
-    values:originalText "47. Judicial and administrative mechanisms should be established and strengthened where necessary to enable child victims to obtain redress through formal or informal procedures that are prompt, fair and accessible. Child victims and/or their legal representatives should be informed accordingly." .
+    values:originalText "47. Judicial and administrative mechanisms should be established and strengthened where necessary to enable child victims to obtain redress through formal or informal procedures that are prompt, fair and accessible. Child victims and/or their legal representatives should be informed accordingly."@en .
 
 doc:paragraph-80 a values:Undertaking ;
     values:partOf doc:Instrument ;
-    dc:title "Paragraph 80" ;
+    dc:title "Paragraph 80"@en ;
     values:deonticStatus values:HeuristicDerived ;
-    values:originalText "48. Access should be allowed to fair and adequate compensation for all child victims of violations of human rights, specifically torture and other cruel, inhuman or degrading treatment or punishment, including rape and sexual abuse, unlawful or arbitrary deprivation of liberty, unjustifiable detention and miscarriage of justice. Necessary legal representation to bring an action within an appropriate court or tribunal, as well as interpretation into the native language of the child, if necessary, should be available." .
+    values:originalText "48. Access should be allowed to fair and adequate compensation for all child victims of violations of human rights, specifically torture and other cruel, inhuman or degrading treatment or punishment, including rape and sexual abuse, unlawful or arbitrary deprivation of liberty, unjustifiable detention and miscarriage of justice. Necessary legal representation to bring an action within an appropriate court or tribunal, as well as interpretation into the native language of the child, if necessary, should be available."@en .
 
 doc:paragraph-81 a values:Undertaking ;
     values:partOf doc:Instrument ;
-    dc:title "Paragraph 81" ;
+    dc:title "Paragraph 81"@en ;
     values:deonticStatus values:HeuristicDerived ;
-    values:originalText "49. Child witnesses need assistance in the judicial and administrative processes. States should review, evaluate and improve, as necessary, the situation for children as witnesses of crime in their evidential and procedural law to ensure that the rights of children are fully protected. In accordance with the different law traditions, practices and legal framework, direct contact should be avoided between the child victim and the offender during the process of investigation and prosecution as well as during trial hearings as much as possible. The identification of the child victim in the media should be prohibited, where necessary to protect the privacy of the child. Where prohibition is contrary to the fundamental legal principles of Member States, such identification should be discouraged." .
+    values:originalText "49. Child witnesses need assistance in the judicial and administrative processes. States should review, evaluate and improve, as necessary, the situation for children as witnesses of crime in their evidential and procedural law to ensure that the rights of children are fully protected. In accordance with the different law traditions, practices and legal framework, direct contact should be avoided between the child victim and the offender during the process of investigation and prosecution as well as during trial hearings as much as possible. The identification of the child victim in the media should be prohibited, where necessary to protect the privacy of the child. Where prohibition is contrary to the fundamental legal principles of Member States, such identification should be discouraged."@en .
 
 doc:paragraph-82 a values:Undertaking ;
     values:partOf doc:Instrument ;
-    dc:title "Paragraph 82" ;
+    dc:title "Paragraph 82"@en ;
     values:deonticStatus values:HeuristicDerived ;
-    values:originalText "50. States should consider, if necessary, amendments of their penal procedural codes to allow for, inter alia, videotaping of the child's testimony and presentation of the videotaped testimony in court as an official piece of evidence. In particular, police, prosecutors, judges and magistrates should apply more child-friendly practices, for example, in police operations and interviews of child witnesses." .
+    values:originalText "50. States should consider, if necessary, amendments of their penal procedural codes to allow for, inter alia, videotaping of the child's testimony and presentation of the videotaped testimony in court as an official piece of evidence. In particular, police, prosecutors, judges and magistrates should apply more child-friendly practices, for example, in police operations and interviews of child witnesses."@en .
 
 doc:paragraph-83 a values:Undertaking ;
     values:partOf doc:Instrument ;
-    dc:title "Paragraph 83" ;
+    dc:title "Paragraph 83"@en ;
     values:deonticStatus values:HeuristicDerived ;
-    values:originalText "51. The responsiveness of judicial and administrative processes to the needs of child victims and witnesses should be facilitated by:" .
+    values:originalText "51. The responsiveness of judicial and administrative processes to the needs of child victims and witnesses should be facilitated by:"@en .
 
 doc:paragraph-84 a values:Undertaking ;
     values:partOf doc:Instrument ;
-    dc:title "Paragraph 84" ;
+    dc:title "Paragraph 84"@en ;
     values:deonticStatus values:HeuristicDerived ;
-    values:originalText "(a) Informing child victims of their role and the scope, timing and progress of the proceedings and of the disposition of their cases, especially where serious crimes are involved;" .
+    values:originalText "(a) Informing child victims of their role and the scope, timing and progress of the proceedings and of the disposition of their cases, especially where serious crimes are involved;"@en .
 
 doc:paragraph-85 a values:Undertaking ;
     values:partOf doc:Instrument ;
-    dc:title "Paragraph 85" ;
+    dc:title "Paragraph 85"@en ;
     values:deonticStatus values:HeuristicDerived ;
-    values:originalText "(b) Encouraging the development of child witness preparation schemes to familiarize children with the criminal justice process prior to giving evidence. Appropriate assistance should be provided to child victims and witnesses throughout the legal process;" .
+    values:originalText "(b) Encouraging the development of child witness preparation schemes to familiarize children with the criminal justice process prior to giving evidence. Appropriate assistance should be provided to child victims and witnesses throughout the legal process;"@en .
 
 doc:paragraph-86 a values:Undertaking ;
     values:partOf doc:Instrument ;
-    dc:title "Paragraph 86" ;
+    dc:title "Paragraph 86"@en ;
     values:deonticStatus values:HeuristicDerived ;
-    values:originalText "(c) Allowing the views and concerns of child victims to be presented and considered at appropriate stages of the proceedings where their personal interests are affected, without prejudice to the accused and in accordance with the relevant national criminal justice system;" .
+    values:originalText "(c) Allowing the views and concerns of child victims to be presented and considered at appropriate stages of the proceedings where their personal interests are affected, without prejudice to the accused and in accordance with the relevant national criminal justice system;"@en .
 
 doc:paragraph-87 a values:Undertaking ;
     values:partOf doc:Instrument ;
-    dc:title "Paragraph 87" ;
+    dc:title "Paragraph 87"@en ;
     values:deonticStatus values:HeuristicDerived ;
-    values:originalText "(d) Taking measures to minimize delays in the criminal justice process, protecting the privacy of child victims and witnesses and, when necessary, ensuring their safety from intimidation and retaliation." .
+    values:originalText "(d) Taking measures to minimize delays in the criminal justice process, protecting the privacy of child victims and witnesses and, when necessary, ensuring their safety from intimidation and retaliation."@en .
 
 doc:paragraph-88 a values:Undertaking ;
     values:partOf doc:Instrument ;
-    dc:title "Paragraph 88" ;
+    dc:title "Paragraph 88"@en ;
     values:deonticStatus values:HeuristicDerived ;
-    values:originalText "52. Children displaced illegally or wrongfully retained across borders are as a general principle to be returned to the country of origin. Due attention should be paid to their safety, and they should be treated humanely and receive necessary assistance, pending their return. They should be returned promptly to ensure compliance with the Convention on the Rights of the Child. Where the Hague Convention on the Civil Aspects of International Child Abduction of 1980 or the Hague Convention on the Protection of Children and Cooperation in respect of Inter-Country Adoption of 1993, approved by the Hague Conference on Private International Law, the Convention on Jurisdiction, Applicable Law, Recognition, Enforcement and Cooperation in Respect of Parental Responsibility and Measures for the Protection of the Child are applicable, the provisions of these conventions with regard to the return of the child should be promptly applied. Upon the return of the child, the country of origin should treat the child with respect, in accordance with international principles of human rights, and offer adequate family-based rehabilitation measures." .
+    values:originalText "52. Children displaced illegally or wrongfully retained across borders are as a general principle to be returned to the country of origin. Due attention should be paid to their safety, and they should be treated humanely and receive necessary assistance, pending their return. They should be returned promptly to ensure compliance with the Convention on the Rights of the Child. Where the Hague Convention on the Civil Aspects of International Child Abduction of 1980 or the Hague Convention on the Protection of Children and Cooperation in respect of Inter-Country Adoption of 1993, approved by the Hague Conference on Private International Law, the Convention on Jurisdiction, Applicable Law, Recognition, Enforcement and Cooperation in Respect of Parental Responsibility and Measures for the Protection of the Child are applicable, the provisions of these conventions with regard to the return of the child should be promptly applied. Upon the return of the child, the country of origin should treat the child with respect, in accordance with international principles of human rights, and offer adequate family-based rehabilitation measures."@en .
 
 doc:paragraph-89 a values:Undertaking ;
     values:partOf doc:Instrument ;
-    dc:title "Paragraph 89" ;
+    dc:title "Paragraph 89"@en ;
     values:deonticStatus values:HeuristicDerived ;
-    values:originalText "53. The United Nations Crime Prevention and Criminal Justice Programme, including the institutes comprising the Programme network, the Office of the United Nations High Commissioner for Human Rights/Centre for Human Rights, the United Nations Children's Fund, the United Nations Development Programme, the Committee on the Rights of the Child, the United Nations Educational, Scientific and Cultural Organization, the World Bank and interested non-governmental organizations should assist Member States, at their request, within the overall appropriations of the United Nations budgets or from extrabudgetary resources, in developing multidisciplinary training, education and information activities for law enforcement and other criminal justice personnel, including police officers, prosecutors, judges and magistrates." .
+    values:originalText "53. The United Nations Crime Prevention and Criminal Justice Programme, including the institutes comprising the Programme network, the Office of the United Nations High Commissioner for Human Rights/Centre for Human Rights, the United Nations Children's Fund, the United Nations Development Programme, the Committee on the Rights of the Child, the United Nations Educational, Scientific and Cultural Organization, the World Bank and interested non-governmental organizations should assist Member States, at their request, within the overall appropriations of the United Nations budgets or from extrabudgetary resources, in developing multidisciplinary training, education and information activities for law enforcement and other criminal justice personnel, including police officers, prosecutors, judges and magistrates."@en .

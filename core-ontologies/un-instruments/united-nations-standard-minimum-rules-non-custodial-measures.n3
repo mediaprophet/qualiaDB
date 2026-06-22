@@ -12,7 +12,7 @@
 # ============================================================
 
 doc:Instrument a values:ValuesCredential ;
-    dc:title "United Nations Standard Minimum Rules for Non-custodial Measures (The Tokyo Rules)" ;
+    dc:title "United Nations Standard Minimum Rules for Non-custodial Measures (The Tokyo Rules)"@en ;
     dc:date "14 December 1990" ;
     values:category "Administration of justice, detention & law enforcement" ;
     values:categoryStatus values:AutoAssigned ;
@@ -21,711 +21,711 @@ doc:Instrument a values:ValuesCredential ;
 
 doc:paragraph-2 a values:Undertaking ;
     values:partOf doc:Instrument ;
-    dc:title "Paragraph 2" ;
+    dc:title "Paragraph 2"@en ;
     values:deonticStatus values:HeuristicDerived ;
-    values:originalText "1. Fundamental aims 2. The scope of non-custodial measures 3. Legal safeguards 4. Saving clause" .
+    values:originalText "1. Fundamental aims 2. The scope of non-custodial measures 3. Legal safeguards 4. Saving clause"@en .
 
 doc:paragraph-3 a values:Undertaking ;
     values:partOf doc:Instrument ;
-    dc:title "Paragraph 3" ;
+    dc:title "Paragraph 3"@en ;
     values:deonticStatus values:HeuristicDerived ;
-    values:originalText "III. Trial and sentencing stage" .
+    values:originalText "III. Trial and sentencing stage"@en .
 
 doc:paragraph-4 a values:Undertaking ;
     values:partOf doc:Instrument ;
-    dc:title "Paragraph 4" ;
+    dc:title "Paragraph 4"@en ;
     values:deonticStatus values:HeuristicDerived ;
-    values:originalText "V. Implementation of non-custodial measures" .
+    values:originalText "V. Implementation of non-custodial measures"@en .
 
 doc:paragraph-5 a values:Undertaking ;
     values:partOf doc:Instrument ;
-    dc:title "Paragraph 5" ;
+    dc:title "Paragraph 5"@en ;
     values:deonticStatus values:HeuristicDerived ;
-    values:originalText "VII. Volunteers and other community resources" .
+    values:originalText "VII. Volunteers and other community resources"@en .
 
 doc:paragraph-6 a values:Undertaking ;
     values:partOf doc:Instrument ;
-    dc:title "Paragraph 6" ;
+    dc:title "Paragraph 6"@en ;
     values:deonticStatus values:HeuristicDerived ;
-    values:originalText "VIII. Research, planning, policy formulation and evalution" .
+    values:originalText "VIII. Research, planning, policy formulation and evalution"@en .
 
 doc:paragraph-7 a values:Undertaking ;
     values:partOf doc:Instrument ;
-    dc:title "Paragraph 7" ;
+    dc:title "Paragraph 7"@en ;
     values:deonticStatus values:HeuristicDerived ;
-    values:originalText "I. General principles 1. Fundamental aims" .
+    values:originalText "I. General principles 1. Fundamental aims"@en .
 
 doc:paragraph-8 a values:Undertaking ;
     values:partOf doc:Instrument ;
-    dc:title "Paragraph 8" ;
+    dc:title "Paragraph 8"@en ;
     values:deonticStatus values:HeuristicDerived ;
-    values:originalText "1.1 The present Standard Minimum Rules provide a set of basic principles to promote the use of non-custodial measures, as well as minimum safeguards for persons subject to alternatives to imprisonment." .
+    values:originalText "1.1 The present Standard Minimum Rules provide a set of basic principles to promote the use of non-custodial measures, as well as minimum safeguards for persons subject to alternatives to imprisonment."@en .
 
 doc:paragraph-9 a values:Undertaking ;
     values:partOf doc:Instrument ;
-    dc:title "Paragraph 9" ;
+    dc:title "Paragraph 9"@en ;
     values:deonticStatus values:HeuristicDerived ;
-    values:originalText "1.2 The Rules are intended to promote greater community involvement in the management of criminal justice, specifically in the treatment of offenders, as well as to promote among offenders a sense of responsibility towards society." .
+    values:originalText "1.2 The Rules are intended to promote greater community involvement in the management of criminal justice, specifically in the treatment of offenders, as well as to promote among offenders a sense of responsibility towards society."@en .
 
 doc:paragraph-10 a values:Obligation ;
     values:partOf doc:Instrument ;
     values:borneBy values:Agent ;
-    dc:title "Paragraph 10" ;
+    dc:title "Paragraph 10"@en ;
     values:deonticStatus values:HeuristicDerived ;
-    values:originalText "1.3 The Rules shall be implemented taking into account the political, economic, social and cultural conditions of each country and the aims and objectives of its criminal justice system." .
+    values:originalText "1.3 The Rules shall be implemented taking into account the political, economic, social and cultural conditions of each country and the aims and objectives of its criminal justice system."@en .
 
 doc:paragraph-11 a values:Undertaking ;
     values:partOf doc:Instrument ;
-    dc:title "Paragraph 11" ;
+    dc:title "Paragraph 11"@en ;
     values:deonticStatus values:HeuristicDerived ;
-    values:originalText "1.4 When implementing the Rules, Member States shall endeavour to ensure a proper balance between the rights of individual offenders, the rights of victims, and the concern of society for public safety and crime prevention." .
+    values:originalText "1.4 When implementing the Rules, Member States shall endeavour to ensure a proper balance between the rights of individual offenders, the rights of victims, and the concern of society for public safety and crime prevention."@en .
 
 doc:paragraph-12 a values:Undertaking ;
     values:partOf doc:Instrument ;
-    dc:title "Paragraph 12" ;
+    dc:title "Paragraph 12"@en ;
     values:deonticStatus values:HeuristicDerived ;
-    values:originalText "1.5 Member States shall develop non-custodial measures within their legal systems to provide other options, thus reducing the use of imprisonment, and to rationalize criminal justice policies, taking into account the observance of human rights, the requirements of social justice and the rehabilitation needs of the offender." .
+    values:originalText "1.5 Member States shall develop non-custodial measures within their legal systems to provide other options, thus reducing the use of imprisonment, and to rationalize criminal justice policies, taking into account the observance of human rights, the requirements of social justice and the rehabilitation needs of the offender."@en .
 
 doc:paragraph-13 a values:Undertaking ;
     values:partOf doc:Instrument ;
-    dc:title "Paragraph 13" ;
+    dc:title "Paragraph 13"@en ;
     values:deonticStatus values:HeuristicDerived ;
-    values:originalText "2. The scope of non-custodial measures" .
+    values:originalText "2. The scope of non-custodial measures"@en .
 
 doc:paragraph-14 a values:Obligation ;
     values:partOf doc:Instrument ;
     values:borneBy values:Agent ;
-    dc:title "Paragraph 14" ;
+    dc:title "Paragraph 14"@en ;
     values:deonticStatus values:HeuristicDerived ;
-    values:originalText "2.1 The relevant provisions of the present Rules shall be applied to all persons subject to prosecution, trial or the execution of a sentence, at all stages of the administration of criminal justice. For the purposes of the Rules, these persons are referred to as \"offenders\", irrespective of whether they are suspected, accused or sentenced." .
+    values:originalText "2.1 The relevant provisions of the present Rules shall be applied to all persons subject to prosecution, trial or the execution of a sentence, at all stages of the administration of criminal justice. For the purposes of the Rules, these persons are referred to as \"offenders\", irrespective of whether they are suspected, accused or sentenced."@en .
 
 doc:paragraph-15 a values:Obligation ;
     values:partOf doc:Instrument ;
     values:borneBy values:Agent ;
-    dc:title "Paragraph 15" ;
+    dc:title "Paragraph 15"@en ;
     values:deonticStatus values:HeuristicDerived ;
-    values:originalText "2.2 The Rules shall be applied without any discrimination on the grounds of race, colour, sex, age, language, religion, political or other opinion, national or social origin, property, birth or other status." .
+    values:originalText "2.2 The Rules shall be applied without any discrimination on the grounds of race, colour, sex, age, language, religion, political or other opinion, national or social origin, property, birth or other status."@en .
 
 doc:paragraph-16 a values:Undertaking ;
     values:partOf doc:Instrument ;
-    dc:title "Paragraph 16" ;
+    dc:title "Paragraph 16"@en ;
     values:deonticStatus values:HeuristicDerived ;
-    values:originalText "2.3 In order to provide greater flexibility consistent with the nature and gravity of the offence, with the personality and background of the offender and with the protection of society and to avoid unnecessary use of imprisonment, the criminal justice system should provide a wide range of non-custodial measures, from pre-trial to post-sentencing dispositions. The number and types of non-custodial measures available should be determined in such a way so that consistent sentencing remains possible." .
+    values:originalText "2.3 In order to provide greater flexibility consistent with the nature and gravity of the offence, with the personality and background of the offender and with the protection of society and to avoid unnecessary use of imprisonment, the criminal justice system should provide a wide range of non-custodial measures, from pre-trial to post-sentencing dispositions. The number and types of non-custodial measures available should be determined in such a way so that consistent sentencing remains possible."@en .
 
 doc:paragraph-17 a values:Undertaking ;
     values:partOf doc:Instrument ;
-    dc:title "Paragraph 17" ;
+    dc:title "Paragraph 17"@en ;
     values:deonticStatus values:HeuristicDerived ;
-    values:originalText "2.4 The development of new non-custodial measures should be encouraged and closely monitored and their use systematically evaluated." .
+    values:originalText "2.4 The development of new non-custodial measures should be encouraged and closely monitored and their use systematically evaluated."@en .
 
 doc:paragraph-18 a values:Obligation ;
     values:partOf doc:Instrument ;
     values:borneBy values:Agent ;
-    dc:title "Paragraph 18" ;
+    dc:title "Paragraph 18"@en ;
     values:deonticStatus values:HeuristicDerived ;
-    values:originalText "2.5 Consideration shall be given to dealing with offenders in the community avoiding as far as possible resort to formal proceedings or trial by a court, in accordance with legal safeguards and the rule of law." .
+    values:originalText "2.5 Consideration shall be given to dealing with offenders in the community avoiding as far as possible resort to formal proceedings or trial by a court, in accordance with legal safeguards and the rule of law."@en .
 
 doc:paragraph-19 a values:Undertaking ;
     values:partOf doc:Instrument ;
-    dc:title "Paragraph 19" ;
+    dc:title "Paragraph 19"@en ;
     values:deonticStatus values:HeuristicDerived ;
-    values:originalText "2.6 Non-custodial measures should be used in accordance with the principle of minimum intervention." .
+    values:originalText "2.6 Non-custodial measures should be used in accordance with the principle of minimum intervention."@en .
 
 doc:paragraph-20 a values:Undertaking ;
     values:partOf doc:Instrument ;
-    dc:title "Paragraph 20" ;
+    dc:title "Paragraph 20"@en ;
     values:deonticStatus values:HeuristicDerived ;
-    values:originalText "2.7 The use of non-custodial measures should be part of the movement towards depenalization and decriminalization instead of interfering with or delaying efforts in that direction." .
+    values:originalText "2.7 The use of non-custodial measures should be part of the movement towards depenalization and decriminalization instead of interfering with or delaying efforts in that direction."@en .
 
 doc:paragraph-21 a values:Obligation ;
     values:partOf doc:Instrument ;
     values:borneBy values:Agent ;
-    dc:title "Paragraph 21" ;
+    dc:title "Paragraph 21"@en ;
     values:deonticStatus values:HeuristicDerived ;
-    values:originalText "3.1 The introduction, definition and application of non-custodial measures shall be prescribed by law." .
+    values:originalText "3.1 The introduction, definition and application of non-custodial measures shall be prescribed by law."@en .
 
 doc:paragraph-22 a values:Obligation ;
     values:partOf doc:Instrument ;
     values:borneBy values:Agent ;
-    dc:title "Paragraph 22" ;
+    dc:title "Paragraph 22"@en ;
     values:deonticStatus values:HeuristicDerived ;
-    values:originalText "3.2 The selection of a non-custodial measure shall be based on an assessment of established criteria in respect of both the nature and gravity of the offence and the personality, background of the offender, the purposes of sentencing and the rights of victims." .
+    values:originalText "3.2 The selection of a non-custodial measure shall be based on an assessment of established criteria in respect of both the nature and gravity of the offence and the personality, background of the offender, the purposes of sentencing and the rights of victims."@en .
 
 doc:paragraph-23 a values:Obligation ;
     values:partOf doc:Instrument ;
     values:borneBy values:Agent ;
-    dc:title "Paragraph 23" ;
+    dc:title "Paragraph 23"@en ;
     values:deonticStatus values:HeuristicDerived ;
-    values:originalText "3.3 Discretion by the judicial or other competent independent authority shall be exercised at all stages of the proceedings by ensuring full accountability and only in accordance with the rule of law." .
+    values:originalText "3.3 Discretion by the judicial or other competent independent authority shall be exercised at all stages of the proceedings by ensuring full accountability and only in accordance with the rule of law."@en .
 
 doc:paragraph-24 a values:Undertaking ;
     values:partOf doc:Instrument ;
-    dc:title "Paragraph 24" ;
+    dc:title "Paragraph 24"@en ;
     values:deonticStatus values:HeuristicDerived ;
-    values:originalText "3.4 Non-custodial measures imposing an obligation on the offender, applied before or instead of formal proceedings or trial , shall require the offender's consent." .
+    values:originalText "3.4 Non-custodial measures imposing an obligation on the offender, applied before or instead of formal proceedings or trial , shall require the offender's consent."@en .
 
 doc:paragraph-25 a values:Obligation ;
     values:partOf doc:Instrument ;
     values:borneBy values:Agent ;
-    dc:title "Paragraph 25" ;
+    dc:title "Paragraph 25"@en ;
     values:deonticStatus values:HeuristicDerived ;
-    values:originalText "3.5 Decisions on the imposition of non-custodial measures shall be subject to review by a judicial or other competent independent authority, upon application by the offender." .
+    values:originalText "3.5 Decisions on the imposition of non-custodial measures shall be subject to review by a judicial or other competent independent authority, upon application by the offender."@en .
 
 doc:paragraph-26 a values:Right ;
     values:partOf doc:Instrument ;
     values:heldBy values:NaturalPerson ;
-    dc:title "Paragraph 26" ;
+    dc:title "Paragraph 26"@en ;
     values:deonticStatus values:HeuristicDerived ;
-    values:originalText "3.6 The offender shall be entitled to make a request or complaint to a judicial or other competent independent authority on matters affecting his or her individual rights in the implementation of non-custodial measures." .
+    values:originalText "3.6 The offender shall be entitled to make a request or complaint to a judicial or other competent independent authority on matters affecting his or her individual rights in the implementation of non-custodial measures."@en .
 
 doc:paragraph-27 a values:Obligation ;
     values:partOf doc:Instrument ;
     values:borneBy values:Agent ;
-    dc:title "Paragraph 27" ;
+    dc:title "Paragraph 27"@en ;
     values:deonticStatus values:HeuristicDerived ;
-    values:originalText "3.7 Appropriate machinery shall be provided for the recourse and, if possible, redress of any grievance related to non-compliance with internationally recognized human rights." .
+    values:originalText "3.7 Appropriate machinery shall be provided for the recourse and, if possible, redress of any grievance related to non-compliance with internationally recognized human rights."@en .
 
 doc:paragraph-28 a values:Prohibition ;
     values:partOf doc:Instrument ;
     values:borneBy values:Agent ;
-    dc:title "Paragraph 28" ;
+    dc:title "Paragraph 28"@en ;
     values:deonticStatus values:HeuristicDerived ;
-    values:originalText "3.8 Non-custodial measures shall not involve medical or psychological experimentation on, or undue risk of physical or mental injury to, the offender." .
+    values:originalText "3.8 Non-custodial measures shall not involve medical or psychological experimentation on, or undue risk of physical or mental injury to, the offender."@en .
 
 doc:paragraph-29 a values:Obligation ;
     values:partOf doc:Instrument ;
     values:borneBy values:Agent ;
-    dc:title "Paragraph 29" ;
+    dc:title "Paragraph 29"@en ;
     values:deonticStatus values:HeuristicDerived ;
-    values:originalText "3.9 The dignity of the offender subject to non-custodial measures shall be protected at all times." .
+    values:originalText "3.9 The dignity of the offender subject to non-custodial measures shall be protected at all times."@en .
 
 doc:paragraph-30 a values:Prohibition ;
     values:partOf doc:Instrument ;
     values:borneBy values:Agent ;
-    dc:title "Paragraph 30" ;
+    dc:title "Paragraph 30"@en ;
     values:deonticStatus values:HeuristicDerived ;
-    values:originalText "3.10 In the implementation of non-custodial measures, the offender's rights shall not be restricted further than was authorized by the competent authority that rendered the original decision." .
+    values:originalText "3.10 In the implementation of non-custodial measures, the offender's rights shall not be restricted further than was authorized by the competent authority that rendered the original decision."@en .
 
 doc:paragraph-31 a values:Right ;
     values:partOf doc:Instrument ;
     values:heldBy values:NaturalPerson ;
-    dc:title "Paragraph 31" ;
+    dc:title "Paragraph 31"@en ;
     values:deonticStatus values:HeuristicDerived ;
-    values:originalText "3.11 In the application of non-custodial measures, the offender's right to privacy shall be respected, as shall be the right to privacy of the offender's family." .
+    values:originalText "3.11 In the application of non-custodial measures, the offender's right to privacy shall be respected, as shall be the right to privacy of the offender's family."@en .
 
 doc:paragraph-32 a values:Obligation ;
     values:partOf doc:Instrument ;
     values:borneBy values:Agent ;
-    dc:title "Paragraph 32" ;
+    dc:title "Paragraph 32"@en ;
     values:deonticStatus values:HeuristicDerived ;
-    values:originalText "3.12 The offender's personal records shall be kept strictly confidential and closed to third parties. Access to such records shall be limited to persons directly concerned with the disposition of the offender's case or to other duly authorized persons." .
+    values:originalText "3.12 The offender's personal records shall be kept strictly confidential and closed to third parties. Access to such records shall be limited to persons directly concerned with the disposition of the offender's case or to other duly authorized persons."@en .
 
 doc:paragraph-33 a values:Obligation ;
     values:partOf doc:Instrument ;
     values:borneBy values:Agent ;
-    dc:title "Paragraph 33" ;
+    dc:title "Paragraph 33"@en ;
     values:deonticStatus values:HeuristicDerived ;
-    values:originalText "4.1 Nothing in these Rules shall be interpreted as precluding the application of the Standard Minimum Rules for the Treatment of Prisoners, the United Nations Standard Minimum Rules for the Administration of Juvenile Justice, the Body of Principles for the Protection of All Persons under Any Form of Detention or Imprisonment or any other human rights instruments and standards recognized by the international community and relating to the treatment of offenders and the protection of their basic human rights." .
+    values:originalText "4.1 Nothing in these Rules shall be interpreted as precluding the application of the Standard Minimum Rules for the Treatment of Prisoners, the United Nations Standard Minimum Rules for the Administration of Juvenile Justice, the Body of Principles for the Protection of All Persons under Any Form of Detention or Imprisonment or any other human rights instruments and standards recognized by the international community and relating to the treatment of offenders and the protection of their basic human rights."@en .
 
 doc:paragraph-34 a values:Undertaking ;
     values:partOf doc:Instrument ;
-    dc:title "Paragraph 34" ;
+    dc:title "Paragraph 34"@en ;
     values:deonticStatus values:HeuristicDerived ;
-    values:originalText "II. Pre-trial stage 5. Pre-trial dispositions" .
+    values:originalText "II. Pre-trial stage 5. Pre-trial dispositions"@en .
 
 doc:paragraph-35 a values:Obligation ;
     values:partOf doc:Instrument ;
     values:borneBy values:Agent ;
-    dc:title "Paragraph 35" ;
+    dc:title "Paragraph 35"@en ;
     values:deonticStatus values:HeuristicDerived ;
-    values:originalText "5.1 Where appropriate and compatible with the legal system, the police, the prosecution service or other agencies dealing with criminal cases should be empowered to discharge the offender if they consider that it is not necessary to proceed with the case for the protection of society, crime prevention or the promotion of respect for the law and the rights of victims. For the purpose of deciding upon the appropriateness of discharge or determination of proceedings, a set of established criteria shall be developed within each legal system. For minor cases the prosecutor may impose suitable non-custodial measures, as appropriate." .
+    values:originalText "5.1 Where appropriate and compatible with the legal system, the police, the prosecution service or other agencies dealing with criminal cases should be empowered to discharge the offender if they consider that it is not necessary to proceed with the case for the protection of society, crime prevention or the promotion of respect for the law and the rights of victims. For the purpose of deciding upon the appropriateness of discharge or determination of proceedings, a set of established criteria shall be developed within each legal system. For minor cases the prosecutor may impose suitable non-custodial measures, as appropriate."@en .
 
 doc:paragraph-36 a values:Undertaking ;
     values:partOf doc:Instrument ;
-    dc:title "Paragraph 36" ;
+    dc:title "Paragraph 36"@en ;
     values:deonticStatus values:HeuristicDerived ;
-    values:originalText "6. Avoidance of pre-trial detention" .
+    values:originalText "6. Avoidance of pre-trial detention"@en .
 
 doc:paragraph-37 a values:Obligation ;
     values:partOf doc:Instrument ;
     values:borneBy values:Agent ;
-    dc:title "Paragraph 37" ;
+    dc:title "Paragraph 37"@en ;
     values:deonticStatus values:HeuristicDerived ;
-    values:originalText "6.1 Pre-trial detention shall be used as a means of last resort in criminal proceedings, with due regard for the investigation of the alleged offence and for the protection of society and the victim." .
+    values:originalText "6.1 Pre-trial detention shall be used as a means of last resort in criminal proceedings, with due regard for the investigation of the alleged offence and for the protection of society and the victim."@en .
 
 doc:paragraph-38 a values:Obligation ;
     values:partOf doc:Instrument ;
     values:borneBy values:Agent ;
-    dc:title "Paragraph 38" ;
+    dc:title "Paragraph 38"@en ;
     values:deonticStatus values:HeuristicDerived ;
-    values:originalText "6.2 Alternatives to pre-trial detention shall be employed at as early a stage as possible. Pre-trial detention shall last no longer than necessary to achieve the objectives stated under rule 5.1 and shall be administered humanely and with respect for the inherent dignity of human beings." .
+    values:originalText "6.2 Alternatives to pre-trial detention shall be employed at as early a stage as possible. Pre-trial detention shall last no longer than necessary to achieve the objectives stated under rule 5.1 and shall be administered humanely and with respect for the inherent dignity of human beings."@en .
 
 doc:paragraph-39 a values:Right ;
     values:partOf doc:Instrument ;
     values:heldBy values:NaturalPerson ;
-    dc:title "Paragraph 39" ;
+    dc:title "Paragraph 39"@en ;
     values:deonticStatus values:HeuristicDerived ;
-    values:originalText "6.3 The offender shall have the right to appeal to a judicial or other competent independent authority in cases where pre-trial detention is employed." .
+    values:originalText "6.3 The offender shall have the right to appeal to a judicial or other competent independent authority in cases where pre-trial detention is employed."@en .
 
 doc:paragraph-40 a values:Undertaking ;
     values:partOf doc:Instrument ;
-    dc:title "Paragraph 40" ;
+    dc:title "Paragraph 40"@en ;
     values:deonticStatus values:HeuristicDerived ;
-    values:originalText "III. Trial and sentencing stage 7. Social inquiry reports" .
+    values:originalText "III. Trial and sentencing stage 7. Social inquiry reports"@en .
 
 doc:paragraph-41 a values:Obligation ;
     values:partOf doc:Instrument ;
     values:borneBy values:Agent ;
-    dc:title "Paragraph 41" ;
+    dc:title "Paragraph 41"@en ;
     values:deonticStatus values:HeuristicDerived ;
-    values:originalText "7.1 If the possibility of social inquiry reports exists, the judicial authority may avail itself of a report prepared by a competent, authorized official or agency. The report should contain social information on the offender that is relevant to the person's pattern of offending and current offences. It should also contain information and recommendations that are relevant to the sentencing procedure. The report shall be factual, objective and unbiased, with any expression of opinion clearly identified." .
+    values:originalText "7.1 If the possibility of social inquiry reports exists, the judicial authority may avail itself of a report prepared by a competent, authorized official or agency. The report should contain social information on the offender that is relevant to the person's pattern of offending and current offences. It should also contain information and recommendations that are relevant to the sentencing procedure. The report shall be factual, objective and unbiased, with any expression of opinion clearly identified."@en .
 
 doc:paragraph-42 a values:Undertaking ;
     values:partOf doc:Instrument ;
-    dc:title "Paragraph 42" ;
+    dc:title "Paragraph 42"@en ;
     values:deonticStatus values:HeuristicDerived ;
-    values:originalText "8.1 The judicial authority, having at its disposal a range of non-custodial measures, should take into consideration in making its decision the rehabilitative needs of the offender, the protection of society and the interests of the victim, who should be consulted whenever appropriate." .
+    values:originalText "8.1 The judicial authority, having at its disposal a range of non-custodial measures, should take into consideration in making its decision the rehabilitative needs of the offender, the protection of society and the interests of the victim, who should be consulted whenever appropriate."@en .
 
 doc:paragraph-43 a values:Undertaking ;
     values:partOf doc:Instrument ;
-    dc:title "Paragraph 43" ;
+    dc:title "Paragraph 43"@en ;
     values:deonticStatus values:HeuristicDerived ;
-    values:originalText "8.2 Sentencing authorities may dispose of cases in the following ways:" .
+    values:originalText "8.2 Sentencing authorities may dispose of cases in the following ways:"@en .
 
 doc:paragraph-44 a values:Undertaking ;
     values:partOf doc:Instrument ;
-    dc:title "Paragraph 44" ;
+    dc:title "Paragraph 44"@en ;
     values:deonticStatus values:HeuristicDerived ;
-    values:originalText "(a) Verbal sanctions, such as admonition, reprimand and warning;" .
+    values:originalText "(a) Verbal sanctions, such as admonition, reprimand and warning;"@en .
 
 doc:paragraph-45 a values:Undertaking ;
     values:partOf doc:Instrument ;
-    dc:title "Paragraph 45" ;
+    dc:title "Paragraph 45"@en ;
     values:deonticStatus values:HeuristicDerived ;
-    values:originalText "(d) Economic sanctions and monetary penalties, such as fines and day-fines;" .
+    values:originalText "(d) Economic sanctions and monetary penalties, such as fines and day-fines;"@en .
 
 doc:paragraph-46 a values:Undertaking ;
     values:partOf doc:Instrument ;
-    dc:title "Paragraph 46" ;
+    dc:title "Paragraph 46"@en ;
     values:deonticStatus values:HeuristicDerived ;
-    values:originalText "(e) Confiscation or an expropriation order;" .
+    values:originalText "(e) Confiscation or an expropriation order;"@en .
 
 doc:paragraph-47 a values:Undertaking ;
     values:partOf doc:Instrument ;
-    dc:title "Paragraph 47" ;
+    dc:title "Paragraph 47"@en ;
     values:deonticStatus values:HeuristicDerived ;
-    values:originalText "(f) Restitution to the victim or a compensation order;" .
+    values:originalText "(f) Restitution to the victim or a compensation order;"@en .
 
 doc:paragraph-48 a values:Undertaking ;
     values:partOf doc:Instrument ;
-    dc:title "Paragraph 48" ;
+    dc:title "Paragraph 48"@en ;
     values:deonticStatus values:HeuristicDerived ;
-    values:originalText "(g) Suspended or deferred sentence;" .
+    values:originalText "(g) Suspended or deferred sentence;"@en .
 
 doc:paragraph-49 a values:Undertaking ;
     values:partOf doc:Instrument ;
-    dc:title "Paragraph 49" ;
+    dc:title "Paragraph 49"@en ;
     values:deonticStatus values:HeuristicDerived ;
-    values:originalText "(h) Probation and judicial supervision;" .
+    values:originalText "(h) Probation and judicial supervision;"@en .
 
 doc:paragraph-50 a values:Undertaking ;
     values:partOf doc:Instrument ;
-    dc:title "Paragraph 50" ;
+    dc:title "Paragraph 50"@en ;
     values:deonticStatus values:HeuristicDerived ;
-    values:originalText "(i) A community service order;" .
+    values:originalText "(i) A community service order;"@en .
 
 doc:paragraph-51 a values:Undertaking ;
     values:partOf doc:Instrument ;
-    dc:title "Paragraph 51" ;
+    dc:title "Paragraph 51"@en ;
     values:deonticStatus values:HeuristicDerived ;
-    values:originalText "(j) Referral to an attendance centre;" .
+    values:originalText "(j) Referral to an attendance centre;"@en .
 
 doc:paragraph-52 a values:Undertaking ;
     values:partOf doc:Instrument ;
-    dc:title "Paragraph 52" ;
+    dc:title "Paragraph 52"@en ;
     values:deonticStatus values:HeuristicDerived ;
-    values:originalText "(l) Any other mode of non-institutional treatment;" .
+    values:originalText "(l) Any other mode of non-institutional treatment;"@en .
 
 doc:paragraph-53 a values:Undertaking ;
     values:partOf doc:Instrument ;
-    dc:title "Paragraph 53" ;
+    dc:title "Paragraph 53"@en ;
     values:deonticStatus values:HeuristicDerived ;
-    values:originalText "(m) Some combination of the measures listed above." .
+    values:originalText "(m) Some combination of the measures listed above."@en .
 
 doc:paragraph-54 a values:Undertaking ;
     values:partOf doc:Instrument ;
-    dc:title "Paragraph 54" ;
+    dc:title "Paragraph 54"@en ;
     values:deonticStatus values:HeuristicDerived ;
-    values:originalText "IV. Post-sentencing stage 9 . Post-sentencing dispositions" .
+    values:originalText "IV. Post-sentencing stage 9 . Post-sentencing dispositions"@en .
 
 doc:paragraph-55 a values:Undertaking ;
     values:partOf doc:Instrument ;
-    dc:title "Paragraph 55" ;
+    dc:title "Paragraph 55"@en ;
     values:deonticStatus values:HeuristicDerived ;
-    values:originalText "9.1 The competent authority shall have at its disposal a wide range of post-sentencing alternatives in order to avoid institutionalization and to assist offenders in their early reintegration into society." .
+    values:originalText "9.1 The competent authority shall have at its disposal a wide range of post-sentencing alternatives in order to avoid institutionalization and to assist offenders in their early reintegration into society."@en .
 
 doc:paragraph-56 a values:Undertaking ;
     values:partOf doc:Instrument ;
-    dc:title "Paragraph 56" ;
+    dc:title "Paragraph 56"@en ;
     values:deonticStatus values:HeuristicDerived ;
-    values:originalText "9.2 Post-sentencing dispositions may include:" .
+    values:originalText "9.2 Post-sentencing dispositions may include:"@en .
 
 doc:paragraph-57 a values:Undertaking ;
     values:partOf doc:Instrument ;
-    dc:title "Paragraph 57" ;
+    dc:title "Paragraph 57"@en ;
     values:deonticStatus values:HeuristicDerived ;
-    values:originalText "(a) Furlough and half-way houses;" .
+    values:originalText "(a) Furlough and half-way houses;"@en .
 
 doc:paragraph-58 a values:Undertaking ;
     values:partOf doc:Instrument ;
-    dc:title "Paragraph 58" ;
+    dc:title "Paragraph 58"@en ;
     values:deonticStatus values:HeuristicDerived ;
-    values:originalText "(b) Work or education release;" .
+    values:originalText "(b) Work or education release;"@en .
 
 doc:paragraph-59 a values:Obligation ;
     values:partOf doc:Instrument ;
     values:borneBy values:Agent ;
-    dc:title "Paragraph 59" ;
+    dc:title "Paragraph 59"@en ;
     values:deonticStatus values:HeuristicDerived ;
-    values:originalText "9.3 The decision on post-sentencing dispositions, except in the case of pardon, shall be subject to review by a judicial or other competent independent authority, upon application of the offender." .
+    values:originalText "9.3 The decision on post-sentencing dispositions, except in the case of pardon, shall be subject to review by a judicial or other competent independent authority, upon application of the offender."@en .
 
 doc:paragraph-60 a values:Obligation ;
     values:partOf doc:Instrument ;
     values:borneBy values:Agent ;
-    dc:title "Paragraph 60" ;
+    dc:title "Paragraph 60"@en ;
     values:deonticStatus values:HeuristicDerived ;
-    values:originalText "9.4 Any form of release from an institution to a non-custodial programme shall be considered at the earliest possible stage." .
+    values:originalText "9.4 Any form of release from an institution to a non-custodial programme shall be considered at the earliest possible stage."@en .
 
 doc:paragraph-61 a values:Undertaking ;
     values:partOf doc:Instrument ;
-    dc:title "Paragraph 61" ;
+    dc:title "Paragraph 61"@en ;
     values:deonticStatus values:HeuristicDerived ;
-    values:originalText "V. Implementation of non-custodial measures 10. Supervision" .
+    values:originalText "V. Implementation of non-custodial measures 10. Supervision"@en .
 
 doc:paragraph-62 a values:Undertaking ;
     values:partOf doc:Instrument ;
-    dc:title "Paragraph 62" ;
+    dc:title "Paragraph 62"@en ;
     values:deonticStatus values:HeuristicDerived ;
-    values:originalText "10.1 The purpose of supervision is to reduce reoffending and to assist the offender's integration into society in a way which minimizes the likelihood of a return to crime." .
+    values:originalText "10.1 The purpose of supervision is to reduce reoffending and to assist the offender's integration into society in a way which minimizes the likelihood of a return to crime."@en .
 
 doc:paragraph-63 a values:Obligation ;
     values:partOf doc:Instrument ;
     values:borneBy values:Agent ;
-    dc:title "Paragraph 63" ;
+    dc:title "Paragraph 63"@en ;
     values:deonticStatus values:HeuristicDerived ;
-    values:originalText "10.2 If a non-custodial measure entails supervision, the latter shall be carried out by a competent authority under the specific conditions prescribed by law." .
+    values:originalText "10.2 If a non-custodial measure entails supervision, the latter shall be carried out by a competent authority under the specific conditions prescribed by law."@en .
 
 doc:paragraph-64 a values:Undertaking ;
     values:partOf doc:Instrument ;
-    dc:title "Paragraph 64" ;
+    dc:title "Paragraph 64"@en ;
     values:deonticStatus values:HeuristicDerived ;
-    values:originalText "10.3 Within the framework of a given non-custodial measure, the most suitable type of supervision and treatment should be determined for each individual case aimed at assisting the offender to work on his or her offending. Supervision and treatment should be periodically reviewed and adjusted as necessary." .
+    values:originalText "10.3 Within the framework of a given non-custodial measure, the most suitable type of supervision and treatment should be determined for each individual case aimed at assisting the offender to work on his or her offending. Supervision and treatment should be periodically reviewed and adjusted as necessary."@en .
 
 doc:paragraph-65 a values:Undertaking ;
     values:partOf doc:Instrument ;
-    dc:title "Paragraph 65" ;
+    dc:title "Paragraph 65"@en ;
     values:deonticStatus values:HeuristicDerived ;
-    values:originalText "10.4 Offenders should, when needed, be provided with psychological, social and material assistance and with opportunities to strengthen links with the community and facilitate their reintegration into society." .
+    values:originalText "10.4 Offenders should, when needed, be provided with psychological, social and material assistance and with opportunities to strengthen links with the community and facilitate their reintegration into society."@en .
 
 doc:paragraph-66 a values:Prohibition ;
     values:partOf doc:Instrument ;
     values:borneBy values:Agent ;
-    dc:title "Paragraph 66" ;
+    dc:title "Paragraph 66"@en ;
     values:deonticStatus values:HeuristicDerived ;
-    values:originalText "11.1 The duration of a non-custodial measure shall not exceed the period established by the competent authority in accordance with the law." .
+    values:originalText "11.1 The duration of a non-custodial measure shall not exceed the period established by the competent authority in accordance with the law."@en .
 
 doc:paragraph-67 a values:Undertaking ;
     values:partOf doc:Instrument ;
-    dc:title "Paragraph 67" ;
+    dc:title "Paragraph 67"@en ;
     values:deonticStatus values:HeuristicDerived ;
-    values:originalText "11.2 Provision may be made for early termination of the measure if the offender has responded favourably to it." .
+    values:originalText "11.2 Provision may be made for early termination of the measure if the offender has responded favourably to it."@en .
 
 doc:paragraph-68 a values:Undertaking ;
     values:partOf doc:Instrument ;
-    dc:title "Paragraph 68" ;
+    dc:title "Paragraph 68"@en ;
     values:deonticStatus values:HeuristicDerived ;
-    values:originalText "12.1 If the competent authority shall determine the conditions to be observed by the offender, it should take into account both the needs of society and the needs and rights of the offender and the victim." .
+    values:originalText "12.1 If the competent authority shall determine the conditions to be observed by the offender, it should take into account both the needs of society and the needs and rights of the offender and the victim."@en .
 
 doc:paragraph-69 a values:Obligation ;
     values:partOf doc:Instrument ;
     values:borneBy values:Agent ;
-    dc:title "Paragraph 69" ;
+    dc:title "Paragraph 69"@en ;
     values:deonticStatus values:HeuristicDerived ;
-    values:originalText "12.2 The conditions to be observed shall be practical, precise and as few as possible, and be aimed at reducing the likelihood of an offender relapsing into criminal behaviour and of increasing the offender's chances of social integration, taking into account the needs of the victim." .
+    values:originalText "12.2 The conditions to be observed shall be practical, precise and as few as possible, and be aimed at reducing the likelihood of an offender relapsing into criminal behaviour and of increasing the offender's chances of social integration, taking into account the needs of the victim."@en .
 
 doc:paragraph-70 a values:Undertaking ;
     values:partOf doc:Instrument ;
-    dc:title "Paragraph 70" ;
+    dc:title "Paragraph 70"@en ;
     values:deonticStatus values:HeuristicDerived ;
-    values:originalText "12.3 At the beginning of the application of a non-custodial measure, the offender shall receive an explanation, orally and in writing, of the conditions governing the application of the measure, including the offender's obligations and rights." .
+    values:originalText "12.3 At the beginning of the application of a non-custodial measure, the offender shall receive an explanation, orally and in writing, of the conditions governing the application of the measure, including the offender's obligations and rights."@en .
 
 doc:paragraph-71 a values:Undertaking ;
     values:partOf doc:Instrument ;
-    dc:title "Paragraph 71" ;
+    dc:title "Paragraph 71"@en ;
     values:deonticStatus values:HeuristicDerived ;
-    values:originalText "12.4 The conditions may be modified by the competent authority under the established statutory provisions, in accordance with the progress made by the offender." .
+    values:originalText "12.4 The conditions may be modified by the competent authority under the established statutory provisions, in accordance with the progress made by the offender."@en .
 
 doc:paragraph-72 a values:Undertaking ;
     values:partOf doc:Instrument ;
-    dc:title "Paragraph 72" ;
+    dc:title "Paragraph 72"@en ;
     values:deonticStatus values:HeuristicDerived ;
-    values:originalText "13.1 Within the framework of a given non-custodial measure, in appropriate cases, various schemes, such as case-work, group therapy, residential programmes and the specialized treatment of various categories of offenders, should be developed to meet the needs of offenders more effectively." .
+    values:originalText "13.1 Within the framework of a given non-custodial measure, in appropriate cases, various schemes, such as case-work, group therapy, residential programmes and the specialized treatment of various categories of offenders, should be developed to meet the needs of offenders more effectively."@en .
 
 doc:paragraph-73 a values:Undertaking ;
     values:partOf doc:Instrument ;
-    dc:title "Paragraph 73" ;
+    dc:title "Paragraph 73"@en ;
     values:deonticStatus values:HeuristicDerived ;
-    values:originalText "13.2 Treatment should be conducted by professionals who have suitable training and practical experience." .
+    values:originalText "13.2 Treatment should be conducted by professionals who have suitable training and practical experience."@en .
 
 doc:paragraph-74 a values:Undertaking ;
     values:partOf doc:Instrument ;
-    dc:title "Paragraph 74" ;
+    dc:title "Paragraph 74"@en ;
     values:deonticStatus values:HeuristicDerived ;
-    values:originalText "13.3 When it is decided that treatment is necessary, efforts should be made to understand the offender's background, personality, aptitude, intelligence, values and, especially, the circumstances leading to the commission of the offence." .
+    values:originalText "13.3 When it is decided that treatment is necessary, efforts should be made to understand the offender's background, personality, aptitude, intelligence, values and, especially, the circumstances leading to the commission of the offence."@en .
 
 doc:paragraph-75 a values:Undertaking ;
     values:partOf doc:Instrument ;
-    dc:title "Paragraph 75" ;
+    dc:title "Paragraph 75"@en ;
     values:deonticStatus values:HeuristicDerived ;
-    values:originalText "13.4 The competent authority may involve the community and social support systems in the application of non-custodial measures." .
+    values:originalText "13.4 The competent authority may involve the community and social support systems in the application of non-custodial measures."@en .
 
 doc:paragraph-76 a values:Obligation ;
     values:partOf doc:Instrument ;
     values:borneBy values:Agent ;
-    dc:title "Paragraph 76" ;
+    dc:title "Paragraph 76"@en ;
     values:deonticStatus values:HeuristicDerived ;
-    values:originalText "13.5 Case-load assignments shall be maintained as far as practicable at a manageable level to ensure the effective implementation of treatment programmes." .
+    values:originalText "13.5 Case-load assignments shall be maintained as far as practicable at a manageable level to ensure the effective implementation of treatment programmes."@en .
 
 doc:paragraph-77 a values:Obligation ;
     values:partOf doc:Instrument ;
     values:borneBy values:Agent ;
-    dc:title "Paragraph 77" ;
+    dc:title "Paragraph 77"@en ;
     values:deonticStatus values:HeuristicDerived ;
-    values:originalText "13.6 For each offender, a case record shall be established and maintained by the competent authority." .
+    values:originalText "13.6 For each offender, a case record shall be established and maintained by the competent authority."@en .
 
 doc:paragraph-78 a values:Undertaking ;
     values:partOf doc:Instrument ;
-    dc:title "Paragraph 78" ;
+    dc:title "Paragraph 78"@en ;
     values:deonticStatus values:HeuristicDerived ;
-    values:originalText "14. Discipline and breach of conditions" .
+    values:originalText "14. Discipline and breach of conditions"@en .
 
 doc:paragraph-79 a values:Undertaking ;
     values:partOf doc:Instrument ;
-    dc:title "Paragraph 79" ;
+    dc:title "Paragraph 79"@en ;
     values:deonticStatus values:HeuristicDerived ;
-    values:originalText "14.1 A breach of the conditions to be observed by the offender may result in a modification or revocation of the non-custodial measure." .
+    values:originalText "14.1 A breach of the conditions to be observed by the offender may result in a modification or revocation of the non-custodial measure."@en .
 
 doc:paragraph-80 a values:Obligation ;
     values:partOf doc:Instrument ;
     values:borneBy values:Agent ;
-    dc:title "Paragraph 80" ;
+    dc:title "Paragraph 80"@en ;
     values:deonticStatus values:HeuristicDerived ;
-    values:originalText "14.2 The modification or revocation of the non-custodial measure shall be made by the competent authority; this shall be done only after a careful examination of the facts adduced by both the supervising officer and the offender." .
+    values:originalText "14.2 The modification or revocation of the non-custodial measure shall be made by the competent authority; this shall be done only after a careful examination of the facts adduced by both the supervising officer and the offender."@en .
 
 doc:paragraph-81 a values:Undertaking ;
     values:partOf doc:Instrument ;
-    dc:title "Paragraph 81" ;
+    dc:title "Paragraph 81"@en ;
     values:deonticStatus values:HeuristicDerived ;
-    values:originalText "14.3 The failure of a non-custodial measure should not automatically lead to the imposition of a custodial measure." .
+    values:originalText "14.3 The failure of a non-custodial measure should not automatically lead to the imposition of a custodial measure."@en .
 
 doc:paragraph-82 a values:Undertaking ;
     values:partOf doc:Instrument ;
-    dc:title "Paragraph 82" ;
+    dc:title "Paragraph 82"@en ;
     values:deonticStatus values:HeuristicDerived ;
-    values:originalText "14.4 In the event of a modification or revocation of the non-custodial measure, the competent authority shall attempt to establish a suitable alternative non-custodial measure. A sentence of imprisonment may be imposed only in the absence of other suitable alternatives." .
+    values:originalText "14.4 In the event of a modification or revocation of the non-custodial measure, the competent authority shall attempt to establish a suitable alternative non-custodial measure. A sentence of imprisonment may be imposed only in the absence of other suitable alternatives."@en .
 
 doc:paragraph-83 a values:Obligation ;
     values:partOf doc:Instrument ;
     values:borneBy values:Agent ;
-    dc:title "Paragraph 83" ;
+    dc:title "Paragraph 83"@en ;
     values:deonticStatus values:HeuristicDerived ;
-    values:originalText "14.5 The power to arrest and detain the offender under supervision in cases where there is a breach of the conditions shall be prescribed by law." .
+    values:originalText "14.5 The power to arrest and detain the offender under supervision in cases where there is a breach of the conditions shall be prescribed by law."@en .
 
 doc:paragraph-84 a values:Right ;
     values:partOf doc:Instrument ;
     values:heldBy values:NaturalPerson ;
-    dc:title "Paragraph 84" ;
+    dc:title "Paragraph 84"@en ;
     values:deonticStatus values:HeuristicDerived ;
-    values:originalText "14.6 Upon modification or revocation of the non-custodial measure, the offender shall have the right to appeal to a judicial or other competent independent authority." .
+    values:originalText "14.6 Upon modification or revocation of the non-custodial measure, the offender shall have the right to appeal to a judicial or other competent independent authority."@en .
 
 doc:paragraph-85 a values:Obligation ;
     values:partOf doc:Instrument ;
     values:borneBy values:Agent ;
-    dc:title "Paragraph 85" ;
+    dc:title "Paragraph 85"@en ;
     values:deonticStatus values:HeuristicDerived ;
-    values:originalText "15.1 There shall be no discrimination in the recruitment of staff on the grounds of race, colour, sex, age, language, religion, political or other opinion, national or social origin, property, birth or other status. The policy regarding staff recruitment should take into consideration national policies of affirmative action and reflect the diversity of the offenders to be supervised." .
+    values:originalText "15.1 There shall be no discrimination in the recruitment of staff on the grounds of race, colour, sex, age, language, religion, political or other opinion, national or social origin, property, birth or other status. The policy regarding staff recruitment should take into consideration national policies of affirmative action and reflect the diversity of the offenders to be supervised."@en .
 
 doc:paragraph-86 a values:Obligation ;
     values:partOf doc:Instrument ;
     values:borneBy values:Agent ;
-    dc:title "Paragraph 86" ;
+    dc:title "Paragraph 86"@en ;
     values:deonticStatus values:HeuristicDerived ;
-    values:originalText "15.2 Persons appointed to apply non-custodial measures should be personally suitable and, whenever possible, have appropriate professional training and practical experience. Such qualifications shall be clearly specified." .
+    values:originalText "15.2 Persons appointed to apply non-custodial measures should be personally suitable and, whenever possible, have appropriate professional training and practical experience. Such qualifications shall be clearly specified."@en .
 
 doc:paragraph-87 a values:Undertaking ;
     values:partOf doc:Instrument ;
-    dc:title "Paragraph 87" ;
+    dc:title "Paragraph 87"@en ;
     values:deonticStatus values:HeuristicDerived ;
-    values:originalText "15.3 To secure and retain qualified professional staff, appropriate service status, adequate salary and benefits commensurate with the nature of the work should be ensured and ample opportunities should be provided for professional growth and career development." .
+    values:originalText "15.3 To secure and retain qualified professional staff, appropriate service status, adequate salary and benefits commensurate with the nature of the work should be ensured and ample opportunities should be provided for professional growth and career development."@en .
 
 doc:paragraph-88 a values:Obligation ;
     values:partOf doc:Instrument ;
     values:borneBy values:Agent ;
-    dc:title "Paragraph 88" ;
+    dc:title "Paragraph 88"@en ;
     values:deonticStatus values:HeuristicDerived ;
-    values:originalText "16.1 The objective of training shall be to make clear to staff their responsibilities with regard to rehabilitating the offender, ensuring the offender's rights and protecting society. Training should also give staff an understanding of the need to cooperate in and coordinate activities with the agencies concerned." .
+    values:originalText "16.1 The objective of training shall be to make clear to staff their responsibilities with regard to rehabilitating the offender, ensuring the offender's rights and protecting society. Training should also give staff an understanding of the need to cooperate in and coordinate activities with the agencies concerned."@en .
 
 doc:paragraph-89 a values:Obligation ;
     values:partOf doc:Instrument ;
     values:borneBy values:Agent ;
-    dc:title "Paragraph 89" ;
+    dc:title "Paragraph 89"@en ;
     values:deonticStatus values:HeuristicDerived ;
-    values:originalText "16.2 Before entering duty, staff shall be given training that includes instruction on the nature of non-custodial measures, the purposes of supervision and the various modalities of the application of non-custodial measures." .
+    values:originalText "16.2 Before entering duty, staff shall be given training that includes instruction on the nature of non-custodial measures, the purposes of supervision and the various modalities of the application of non-custodial measures."@en .
 
 doc:paragraph-90 a values:Obligation ;
     values:partOf doc:Instrument ;
     values:borneBy values:Agent ;
-    dc:title "Paragraph 90" ;
+    dc:title "Paragraph 90"@en ;
     values:deonticStatus values:HeuristicDerived ;
-    values:originalText "16.3 After entering duty, staff shall maintain and improve their knowledge and professional capacity by attending in-service training and refresher courses. Adequate facilities shall be made available for that purpose." .
+    values:originalText "16.3 After entering duty, staff shall maintain and improve their knowledge and professional capacity by attending in-service training and refresher courses. Adequate facilities shall be made available for that purpose."@en .
 
 doc:paragraph-91 a values:Undertaking ;
     values:partOf doc:Instrument ;
-    dc:title "Paragraph 91" ;
+    dc:title "Paragraph 91"@en ;
     values:deonticStatus values:HeuristicDerived ;
-    values:originalText "VII. Volunteers and other community resources 17. Public participation" .
+    values:originalText "VII. Volunteers and other community resources 17. Public participation"@en .
 
 doc:paragraph-92 a values:Undertaking ;
     values:partOf doc:Instrument ;
-    dc:title "Paragraph 92" ;
+    dc:title "Paragraph 92"@en ;
     values:deonticStatus values:HeuristicDerived ;
-    values:originalText "17.1 Public participation should be encouraged as it is a major resource and one of the most important factors in improving ties between offenders undergoing non-custodial measures and the family and community. It should complement the efforts of the criminal justice administration." .
+    values:originalText "17.1 Public participation should be encouraged as it is a major resource and one of the most important factors in improving ties between offenders undergoing non-custodial measures and the family and community. It should complement the efforts of the criminal justice administration."@en .
 
 doc:paragraph-93 a values:Undertaking ;
     values:partOf doc:Instrument ;
-    dc:title "Paragraph 93" ;
+    dc:title "Paragraph 93"@en ;
     values:deonticStatus values:HeuristicDerived ;
-    values:originalText "17.2 Public participation should be regarded as an opportunity for members of the community to contribute to the protection of their society." .
+    values:originalText "17.2 Public participation should be regarded as an opportunity for members of the community to contribute to the protection of their society."@en .
 
 doc:paragraph-94 a values:Undertaking ;
     values:partOf doc:Instrument ;
-    dc:title "Paragraph 94" ;
+    dc:title "Paragraph 94"@en ;
     values:deonticStatus values:HeuristicDerived ;
-    values:originalText "18 . Public understanding and cooperation" .
+    values:originalText "18 . Public understanding and cooperation"@en .
 
 doc:paragraph-95 a values:Undertaking ;
     values:partOf doc:Instrument ;
-    dc:title "Paragraph 95" ;
+    dc:title "Paragraph 95"@en ;
     values:deonticStatus values:HeuristicDerived ;
-    values:originalText "18.1 Government agencies, the private sector and the general public should be encouraged to support voluntary organizations that promote noncustodial measures." .
+    values:originalText "18.1 Government agencies, the private sector and the general public should be encouraged to support voluntary organizations that promote noncustodial measures."@en .
 
 doc:paragraph-96 a values:Undertaking ;
     values:partOf doc:Instrument ;
-    dc:title "Paragraph 96" ;
+    dc:title "Paragraph 96"@en ;
     values:deonticStatus values:HeuristicDerived ;
-    values:originalText "18.2 Conferences, seminars, symposia and other activities should be regularly organized to stimulate awareness of the need for public participation in the application of non-custodial measures." .
+    values:originalText "18.2 Conferences, seminars, symposia and other activities should be regularly organized to stimulate awareness of the need for public participation in the application of non-custodial measures."@en .
 
 doc:paragraph-97 a values:Undertaking ;
     values:partOf doc:Instrument ;
-    dc:title "Paragraph 97" ;
+    dc:title "Paragraph 97"@en ;
     values:deonticStatus values:HeuristicDerived ;
-    values:originalText "18.3 All forms of the mass media should be utilized to help to create a constructive public attitude, leading to activities conducive to a broader application of non-custodial treatment and the social integration of offenders." .
+    values:originalText "18.3 All forms of the mass media should be utilized to help to create a constructive public attitude, leading to activities conducive to a broader application of non-custodial treatment and the social integration of offenders."@en .
 
 doc:paragraph-98 a values:Undertaking ;
     values:partOf doc:Instrument ;
-    dc:title "Paragraph 98" ;
+    dc:title "Paragraph 98"@en ;
     values:deonticStatus values:HeuristicDerived ;
-    values:originalText "18.4 Every effort should be made to inform the public of the importance of its role in the implementation of non-custodial measures." .
+    values:originalText "18.4 Every effort should be made to inform the public of the importance of its role in the implementation of non-custodial measures."@en .
 
 doc:paragraph-99 a values:Obligation ;
     values:partOf doc:Instrument ;
     values:borneBy values:Agent ;
-    dc:title "Paragraph 99" ;
+    dc:title "Paragraph 99"@en ;
     values:deonticStatus values:HeuristicDerived ;
-    values:originalText "19.1 Volunteers shall be carefully screened and recruited on the basis of their aptitude for and interest in the work involved. They shall be properly trained for the specific responsibilities to be discharged by them and shall have access to support and counselling from, and the opportunity to consult with, the competent authority." .
+    values:originalText "19.1 Volunteers shall be carefully screened and recruited on the basis of their aptitude for and interest in the work involved. They shall be properly trained for the specific responsibilities to be discharged by them and shall have access to support and counselling from, and the opportunity to consult with, the competent authority."@en .
 
 doc:paragraph-100 a values:Undertaking ;
     values:partOf doc:Instrument ;
-    dc:title "Paragraph 100" ;
+    dc:title "Paragraph 100"@en ;
     values:deonticStatus values:HeuristicDerived ;
-    values:originalText "19.2 Volunteers should encourage offenders and their families to develop meaningful ties with the community and a broader sphere of contact by providing counselling and other appropriate forms of assistance according to their capacity and the offenders' needs." .
+    values:originalText "19.2 Volunteers should encourage offenders and their families to develop meaningful ties with the community and a broader sphere of contact by providing counselling and other appropriate forms of assistance according to their capacity and the offenders' needs."@en .
 
 doc:paragraph-101 a values:Obligation ;
     values:partOf doc:Instrument ;
     values:borneBy values:Agent ;
-    dc:title "Paragraph 101" ;
+    dc:title "Paragraph 101"@en ;
     values:deonticStatus values:HeuristicDerived ;
-    values:originalText "19.3 Volunteers shall be insured against accident, injury and public liability when carrying out their duties. They shall be reimbursed for authorized expenditures incurred in the course of their work. Public recognition should be extended to them for the services they render for the well-being of the community." .
+    values:originalText "19.3 Volunteers shall be insured against accident, injury and public liability when carrying out their duties. They shall be reimbursed for authorized expenditures incurred in the course of their work. Public recognition should be extended to them for the services they render for the well-being of the community."@en .
 
 doc:paragraph-102 a values:Undertaking ;
     values:partOf doc:Instrument ;
-    dc:title "Paragraph 102" ;
+    dc:title "Paragraph 102"@en ;
     values:deonticStatus values:HeuristicDerived ;
-    values:originalText "VIII. Research, planning, policy formulation and evalution 20. Research and planning" .
+    values:originalText "VIII. Research, planning, policy formulation and evalution 20. Research and planning"@en .
 
 doc:paragraph-103 a values:Undertaking ;
     values:partOf doc:Instrument ;
-    dc:title "Paragraph 103" ;
+    dc:title "Paragraph 103"@en ;
     values:deonticStatus values:HeuristicDerived ;
-    values:originalText "20.1 As an essential aspect of the planning process, efforts should be made to involve both public and private bodies in the organization and promotion of research on the non-custodial treatment of offenders." .
+    values:originalText "20.1 As an essential aspect of the planning process, efforts should be made to involve both public and private bodies in the organization and promotion of research on the non-custodial treatment of offenders."@en .
 
 doc:paragraph-104 a values:Undertaking ;
     values:partOf doc:Instrument ;
-    dc:title "Paragraph 104" ;
+    dc:title "Paragraph 104"@en ;
     values:deonticStatus values:HeuristicDerived ;
-    values:originalText "20.2 Research on the problems that confront clients, practitioners, the community and policy-makers should be carried out on a regular basis." .
+    values:originalText "20.2 Research on the problems that confront clients, practitioners, the community and policy-makers should be carried out on a regular basis."@en .
 
 doc:paragraph-105 a values:Undertaking ;
     values:partOf doc:Instrument ;
-    dc:title "Paragraph 105" ;
+    dc:title "Paragraph 105"@en ;
     values:deonticStatus values:HeuristicDerived ;
-    values:originalText "20.3 Research and information mechanisms should be built into the criminal justice system for the collection and analysis of data and statistics on the implementation of non-custodial treatment for offenders." .
+    values:originalText "20.3 Research and information mechanisms should be built into the criminal justice system for the collection and analysis of data and statistics on the implementation of non-custodial treatment for offenders."@en .
 
 doc:paragraph-106 a values:Undertaking ;
     values:partOf doc:Instrument ;
-    dc:title "Paragraph 106" ;
+    dc:title "Paragraph 106"@en ;
     values:deonticStatus values:HeuristicDerived ;
-    values:originalText "21. Policy formulation and programme development" .
+    values:originalText "21. Policy formulation and programme development"@en .
 
 doc:paragraph-107 a values:Undertaking ;
     values:partOf doc:Instrument ;
-    dc:title "Paragraph 107" ;
+    dc:title "Paragraph 107"@en ;
     values:deonticStatus values:HeuristicDerived ;
-    values:originalText "21.1 Programmes for non-custodial measures should be systematically planned and implemented as an integral part of the criminal justice system within the national development process." .
+    values:originalText "21.1 Programmes for non-custodial measures should be systematically planned and implemented as an integral part of the criminal justice system within the national development process."@en .
 
 doc:paragraph-108 a values:Undertaking ;
     values:partOf doc:Instrument ;
-    dc:title "Paragraph 108" ;
+    dc:title "Paragraph 108"@en ;
     values:deonticStatus values:HeuristicDerived ;
-    values:originalText "21.2 Regular evaluations should be carried out with a view to implementing non-custodial measures more effectively." .
+    values:originalText "21.2 Regular evaluations should be carried out with a view to implementing non-custodial measures more effectively."@en .
 
 doc:paragraph-109 a values:Undertaking ;
     values:partOf doc:Instrument ;
-    dc:title "Paragraph 109" ;
+    dc:title "Paragraph 109"@en ;
     values:deonticStatus values:HeuristicDerived ;
-    values:originalText "21.3 Periodic reviews should be concluded to assess the objectives, functioning and effectiveness of non-custodial measures." .
+    values:originalText "21.3 Periodic reviews should be concluded to assess the objectives, functioning and effectiveness of non-custodial measures."@en .
 
 doc:paragraph-110 a values:Undertaking ;
     values:partOf doc:Instrument ;
-    dc:title "Paragraph 110" ;
+    dc:title "Paragraph 110"@en ;
     values:deonticStatus values:HeuristicDerived ;
-    values:originalText "22. Linkages with relevant agencies and activities" .
+    values:originalText "22. Linkages with relevant agencies and activities"@en .
 
 doc:paragraph-111 a values:Undertaking ;
     values:partOf doc:Instrument ;
-    dc:title "Paragraph 111" ;
+    dc:title "Paragraph 111"@en ;
     values:deonticStatus values:HeuristicDerived ;
-    values:originalText "22.1 Suitable mechanisms should be evolved at various levels to facilitate the establishment of linkages between services responsible for non-custodial measures, other branches of the criminal justice system, social development and welfare agencies, both governmental and non-governmental, in such fields as health, housing, education and labour, and the mass media." .
+    values:originalText "22.1 Suitable mechanisms should be evolved at various levels to facilitate the establishment of linkages between services responsible for non-custodial measures, other branches of the criminal justice system, social development and welfare agencies, both governmental and non-governmental, in such fields as health, housing, education and labour, and the mass media."@en .
 
 doc:paragraph-112 a values:Obligation ;
     values:partOf doc:Instrument ;
     values:borneBy values:Agent ;
-    dc:title "Paragraph 112" ;
+    dc:title "Paragraph 112"@en ;
     values:deonticStatus values:HeuristicDerived ;
-    values:originalText "23.1 Efforts shall be made to promote scientific cooperation between countries in the field of non-institutional treatment. Research, training, technical assistance and the exchange of information among Member States on non-custodial measures should be strengthened, through the United Nations institutes for the prevention of crime and the treatment of offenders, in close collaboration with the Crime Prevention and Criminal Justice Branch of the Centre for Social Development and Humanitarian Affairs of the United Nations Secretariat." .
+    values:originalText "23.1 Efforts shall be made to promote scientific cooperation between countries in the field of non-institutional treatment. Research, training, technical assistance and the exchange of information among Member States on non-custodial measures should be strengthened, through the United Nations institutes for the prevention of crime and the treatment of offenders, in close collaboration with the Crime Prevention and Criminal Justice Branch of the Centre for Social Development and Humanitarian Affairs of the United Nations Secretariat."@en .
 
 doc:paragraph-113 a values:Undertaking ;
     values:partOf doc:Instrument ;
-    dc:title "Paragraph 113" ;
+    dc:title "Paragraph 113"@en ;
     values:deonticStatus values:HeuristicDerived ;
-    values:originalText "23.2 Comparative studies and the harmonization of legislative provisions should be furthered to expand the range of non-institutional options and facilitate their application across national frontiers, in accordance with the Model Treaty on the Transfer of Supervision of Offenders Conditionally Sentenced or Conditionally Released." .
+    values:originalText "23.2 Comparative studies and the harmonization of legislative provisions should be furthered to expand the range of non-institutional options and facilitate their application across national frontiers, in accordance with the Model Treaty on the Transfer of Supervision of Offenders Conditionally Sentenced or Conditionally Released."@en .

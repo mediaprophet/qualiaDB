@@ -12,7 +12,7 @@
 # ============================================================
 
 doc:Instrument a values:ValuesCredential ;
-    dc:title "Basic Principles on the Use of Force and Firearms by Law Enforcement Officials" ;
+    dc:title "Basic Principles on the Use of Force and Firearms by Law Enforcement Officials"@en ;
     dc:date "07 September 1990" ;
     values:category "Administration of justice, detention & law enforcement" ;
     values:categoryStatus values:AutoAssigned ;
@@ -21,304 +21,304 @@ doc:Instrument a values:ValuesCredential ;
 
 doc:paragraph-2 a values:Undertaking ;
     values:partOf doc:Instrument ;
-    dc:title "Paragraph 2" ;
+    dc:title "Paragraph 2"@en ;
     values:deonticStatus values:HeuristicDerived ;
-    values:originalText "General provisions Special provisions Policing unlawful assemblies Policing persons in custody or detention Qualifications, training and counselling Reporting and review procedures" .
+    values:originalText "General provisions Special provisions Policing unlawful assemblies Policing persons in custody or detention Qualifications, training and counselling Reporting and review procedures"@en .
 
 doc:paragraph-3 a values:Undertaking ;
     values:partOf doc:Instrument ;
-    dc:title "Paragraph 3" ;
+    dc:title "Paragraph 3"@en ;
     values:deonticStatus values:HeuristicDerived ;
-    values:originalText "Whereas the work of law enforcement officials 1 is a social service of great importance and there is, therefore, a need to maintain and, whenever necessary, to improve the working conditions and status of these officials," .
+    values:originalText "Whereas the work of law enforcement officials 1 is a social service of great importance and there is, therefore, a need to maintain and, whenever necessary, to improve the working conditions and status of these officials,"@en .
 
 doc:paragraph-4 a values:Undertaking ;
     values:partOf doc:Instrument ;
-    dc:title "Paragraph 4" ;
+    dc:title "Paragraph 4"@en ;
     values:deonticStatus values:HeuristicDerived ;
-    values:originalText "Whereas a threat to the life and safety of law enforcement officials must be seen as a threat to the stability of society as a whole," .
+    values:originalText "Whereas a threat to the life and safety of law enforcement officials must be seen as a threat to the stability of society as a whole,"@en .
 
 doc:paragraph-5 a values:Right ;
     values:partOf doc:Instrument ;
     values:heldBy values:NaturalPerson ;
-    dc:title "Paragraph 5" ;
+    dc:title "Paragraph 5"@en ;
     values:deonticStatus values:HeuristicDerived ;
-    values:originalText "Whereas law enforcement officials have a vital role in the protection of the right to life, liberty and security of the person, as guaranteed in the Universal Declaration of Human Rights and reaffirmed in the International Covenant on Civil and Political Rights," .
+    values:originalText "Whereas law enforcement officials have a vital role in the protection of the right to life, liberty and security of the person, as guaranteed in the Universal Declaration of Human Rights and reaffirmed in the International Covenant on Civil and Political Rights,"@en .
 
 doc:paragraph-6 a values:Undertaking ;
     values:partOf doc:Instrument ;
-    dc:title "Paragraph 6" ;
+    dc:title "Paragraph 6"@en ;
     values:deonticStatus values:HeuristicDerived ;
-    values:originalText "Whereas the Standard Minimum Rules for the Treatment of Prisoners provide for the circumstances in which prison officials may use force in the course of their duties," .
+    values:originalText "Whereas the Standard Minimum Rules for the Treatment of Prisoners provide for the circumstances in which prison officials may use force in the course of their duties,"@en .
 
 doc:paragraph-7 a values:Undertaking ;
     values:partOf doc:Instrument ;
-    dc:title "Paragraph 7" ;
+    dc:title "Paragraph 7"@en ;
     values:deonticStatus values:HeuristicDerived ;
-    values:originalText "Whereas article 3 of the Code of Conduct for Law Enforcement Officials provides that law enforcement officials may use force only when strictly necessary and to the extent required for the performance of their duty," .
+    values:originalText "Whereas article 3 of the Code of Conduct for Law Enforcement Officials provides that law enforcement officials may use force only when strictly necessary and to the extent required for the performance of their duty,"@en .
 
 doc:paragraph-8 a values:Undertaking ;
     values:partOf doc:Instrument ;
-    dc:title "Paragraph 8" ;
+    dc:title "Paragraph 8"@en ;
     values:deonticStatus values:HeuristicDerived ;
-    values:originalText "Whereas the preparatory meeting for the Seventh United Nations Congress on the Prevention of Crime and the Treatment of Offenders, held at Varenna, Italy, agreed on elements to be considered in the course of further work on restraints on the use of force and firearms by law enforcement officials," .
+    values:originalText "Whereas the preparatory meeting for the Seventh United Nations Congress on the Prevention of Crime and the Treatment of Offenders, held at Varenna, Italy, agreed on elements to be considered in the course of further work on restraints on the use of force and firearms by law enforcement officials,"@en .
 
 doc:paragraph-9 a values:Right ;
     values:partOf doc:Instrument ;
     values:heldBy values:NaturalPerson ;
-    dc:title "Paragraph 9" ;
+    dc:title "Paragraph 9"@en ;
     values:deonticStatus values:HeuristicDerived ;
-    values:originalText "Whereas it is appropriate that, with due regard to their personal safety, consideration be given to the role of law enforcement officials in relation to the administration of justice, to the protection of the right to life, liberty and security of the person, to their responsibility to maintain public safety and social peace and to the importance of their qualifications, training and conduct," .
+    values:originalText "Whereas it is appropriate that, with due regard to their personal safety, consideration be given to the role of law enforcement officials in relation to the administration of justice, to the protection of the right to life, liberty and security of the person, to their responsibility to maintain public safety and social peace and to the importance of their qualifications, training and conduct,"@en .
 
 doc:paragraph-10 a values:Undertaking ;
     values:partOf doc:Instrument ;
-    dc:title "Paragraph 10" ;
+    dc:title "Paragraph 10"@en ;
     values:deonticStatus values:HeuristicDerived ;
-    values:originalText "The basic principles set forth below, which have been formulated to assist Member States in their task of ensuring and promoting the proper role of law enforcement officials, should be taken into account and respected by Governments within the framework of their national legislation and practice, and be brought to the attention of law enforcement officials as well as other persons, such as judges, prosecutors, lawyers, members of the executive branch and the legislature, and the public." .
+    values:originalText "The basic principles set forth below, which have been formulated to assist Member States in their task of ensuring and promoting the proper role of law enforcement officials, should be taken into account and respected by Governments within the framework of their national legislation and practice, and be brought to the attention of law enforcement officials as well as other persons, such as judges, prosecutors, lawyers, members of the executive branch and the legislature, and the public."@en .
 
 doc:paragraph-11 a values:Obligation ;
     values:partOf doc:Instrument ;
     values:borneBy values:Agent ;
-    dc:title "Paragraph 11" ;
+    dc:title "Paragraph 11"@en ;
     values:deonticStatus values:HeuristicDerived ;
-    values:originalText "1. Governments and law enforcement agencies shall adopt and implement rules and regulations on the use of force and firearms against persons by law enforcement officials. In developing such rules and regulations, Governments and law enforcement agencies shall keep the ethical issues associated with the use of force and firearms constantly under review." .
+    values:originalText "1. Governments and law enforcement agencies shall adopt and implement rules and regulations on the use of force and firearms against persons by law enforcement officials. In developing such rules and regulations, Governments and law enforcement agencies shall keep the ethical issues associated with the use of force and firearms constantly under review."@en .
 
 doc:paragraph-12 a values:Undertaking ;
     values:partOf doc:Instrument ;
-    dc:title "Paragraph 12" ;
+    dc:title "Paragraph 12"@en ;
     values:deonticStatus values:HeuristicDerived ;
-    values:originalText "2. Governments and law enforcement agencies should develop a range of means as broad as possible and equip law enforcement officials with various types of weapons and ammunition that would allow for a differentiated use of force and firearms. These should include the development of non-lethal incapacitating weapons for use in appropriate situations, with a view to increasingly restraining the application of means capable of causing death or injury to persons. For the same purpose, it should also be possible for law enforcement officials to be equipped with self-defensive equipment such as shields, helmets, bullet-proof vests and bullet-proof means of transportation, in order to decrease the need to use weapons of any kind." .
+    values:originalText "2. Governments and law enforcement agencies should develop a range of means as broad as possible and equip law enforcement officials with various types of weapons and ammunition that would allow for a differentiated use of force and firearms. These should include the development of non-lethal incapacitating weapons for use in appropriate situations, with a view to increasingly restraining the application of means capable of causing death or injury to persons. For the same purpose, it should also be possible for law enforcement officials to be equipped with self-defensive equipment such as shields, helmets, bullet-proof vests and bullet-proof means of transportation, in order to decrease the need to use weapons of any kind."@en .
 
 doc:paragraph-13 a values:Undertaking ;
     values:partOf doc:Instrument ;
-    dc:title "Paragraph 13" ;
+    dc:title "Paragraph 13"@en ;
     values:deonticStatus values:HeuristicDerived ;
-    values:originalText "3. The development and deployment of non-lethal incapacitating weapons should be carefully evaluated in order to minimize the risk of endangering uninvolved persons, and the use of such weapons should be carefully controlled." .
+    values:originalText "3. The development and deployment of non-lethal incapacitating weapons should be carefully evaluated in order to minimize the risk of endangering uninvolved persons, and the use of such weapons should be carefully controlled."@en .
 
 doc:paragraph-14 a values:Undertaking ;
     values:partOf doc:Instrument ;
-    dc:title "Paragraph 14" ;
+    dc:title "Paragraph 14"@en ;
     values:deonticStatus values:HeuristicDerived ;
-    values:originalText "4. Law enforcement officials, in carrying out their duty, shall, as far as possible, apply non-violent means before resorting to the use of force and firearms. They may use force and firearms only if other means remain ineffective or without any promise of achieving the intended result." .
+    values:originalText "4. Law enforcement officials, in carrying out their duty, shall, as far as possible, apply non-violent means before resorting to the use of force and firearms. They may use force and firearms only if other means remain ineffective or without any promise of achieving the intended result."@en .
 
 doc:paragraph-15 a values:Undertaking ;
     values:partOf doc:Instrument ;
-    dc:title "Paragraph 15" ;
+    dc:title "Paragraph 15"@en ;
     values:deonticStatus values:HeuristicDerived ;
-    values:originalText "5. Whenever the lawful use of force and firearms is unavoidable, law enforcement officials shall:" .
+    values:originalText "5. Whenever the lawful use of force and firearms is unavoidable, law enforcement officials shall:"@en .
 
 doc:paragraph-16 a values:Undertaking ;
     values:partOf doc:Instrument ;
-    dc:title "Paragraph 16" ;
+    dc:title "Paragraph 16"@en ;
     values:deonticStatus values:HeuristicDerived ;
-    values:originalText "(a) Exercise restraint in such use and act in proportion to the seriousness of the offence and the legitimate objective to be achieved;" .
+    values:originalText "(a) Exercise restraint in such use and act in proportion to the seriousness of the offence and the legitimate objective to be achieved;"@en .
 
 doc:paragraph-17 a values:Undertaking ;
     values:partOf doc:Instrument ;
-    dc:title "Paragraph 17" ;
+    dc:title "Paragraph 17"@en ;
     values:deonticStatus values:HeuristicDerived ;
-    values:originalText "(b) Minimize damage and injury, and respect and preserve human life;" .
+    values:originalText "(b) Minimize damage and injury, and respect and preserve human life;"@en .
 
 doc:paragraph-18 a values:Undertaking ;
     values:partOf doc:Instrument ;
-    dc:title "Paragraph 18" ;
+    dc:title "Paragraph 18"@en ;
     values:deonticStatus values:HeuristicDerived ;
-    values:originalText "(c) Ensure that assistance and medical aid are rendered to any injured or affected persons at the earliest possible moment;" .
+    values:originalText "(c) Ensure that assistance and medical aid are rendered to any injured or affected persons at the earliest possible moment;"@en .
 
 doc:paragraph-19 a values:Undertaking ;
     values:partOf doc:Instrument ;
-    dc:title "Paragraph 19" ;
+    dc:title "Paragraph 19"@en ;
     values:deonticStatus values:HeuristicDerived ;
-    values:originalText "(d) Ensure that relatives or close friends of the injured or affected person are notified at the earliest possible moment." .
+    values:originalText "(d) Ensure that relatives or close friends of the injured or affected person are notified at the earliest possible moment."@en .
 
 doc:paragraph-20 a values:Undertaking ;
     values:partOf doc:Instrument ;
-    dc:title "Paragraph 20" ;
+    dc:title "Paragraph 20"@en ;
     values:deonticStatus values:HeuristicDerived ;
-    values:originalText "6. Where injury or death is caused by the use of force and firearms by law enforcement officials, they shall report the incident promptly to their superiors, in accordance with principle 22." .
+    values:originalText "6. Where injury or death is caused by the use of force and firearms by law enforcement officials, they shall report the incident promptly to their superiors, in accordance with principle 22."@en .
 
 doc:paragraph-21 a values:Obligation ;
     values:partOf doc:Instrument ;
     values:borneBy values:Agent ;
-    dc:title "Paragraph 21" ;
+    dc:title "Paragraph 21"@en ;
     values:deonticStatus values:HeuristicDerived ;
-    values:originalText "7. Governments shall ensure that arbitrary or abusive use of force and firearms by law enforcement officials is punished as a criminal offence under their law." .
+    values:originalText "7. Governments shall ensure that arbitrary or abusive use of force and firearms by law enforcement officials is punished as a criminal offence under their law."@en .
 
 doc:paragraph-22 a values:Prohibition ;
     values:partOf doc:Instrument ;
     values:borneBy values:Agent ;
-    dc:title "Paragraph 22" ;
+    dc:title "Paragraph 22"@en ;
     values:deonticStatus values:HeuristicDerived ;
-    values:originalText "8. Exceptional circumstances such as internal political instability or any other public emergency may not be invoked to justify any departure from these basic principles." .
+    values:originalText "8. Exceptional circumstances such as internal political instability or any other public emergency may not be invoked to justify any departure from these basic principles."@en .
 
 doc:paragraph-23 a values:Prohibition ;
     values:partOf doc:Instrument ;
     values:borneBy values:Agent ;
-    dc:title "Paragraph 23" ;
+    dc:title "Paragraph 23"@en ;
     values:deonticStatus values:HeuristicDerived ;
-    values:originalText "9. Law enforcement officials shall not use firearms against persons except in self-defence or defence of others against the imminent threat of death or serious injury, to prevent the perpetration of a particularly serious crime involving grave threat to life, to arrest a person presenting such a danger and resisting their authority, or to prevent his or her escape, and only when less extreme means are insufficient to achieve these objectives. In any event, intentional lethal use of firearms may only be made when strictly unavoidable in order to protect life." .
+    values:originalText "9. Law enforcement officials shall not use firearms against persons except in self-defence or defence of others against the imminent threat of death or serious injury, to prevent the perpetration of a particularly serious crime involving grave threat to life, to arrest a person presenting such a danger and resisting their authority, or to prevent his or her escape, and only when less extreme means are insufficient to achieve these objectives. In any event, intentional lethal use of firearms may only be made when strictly unavoidable in order to protect life."@en .
 
 doc:paragraph-24 a values:Undertaking ;
     values:partOf doc:Instrument ;
-    dc:title "Paragraph 24" ;
+    dc:title "Paragraph 24"@en ;
     values:deonticStatus values:HeuristicDerived ;
-    values:originalText "10. In the circumstances provided for under principle 9, law enforcement officials shall identify themselves as such and give a clear warning of their intent to use firearms, with sufficient time for the warning to be observed, unless to do so would unduly place the law enforcement officials at risk or would create a risk of death or serious harm to other persons, or would be clearly inappropriate or pointless in the circumstances of the incident." .
+    values:originalText "10. In the circumstances provided for under principle 9, law enforcement officials shall identify themselves as such and give a clear warning of their intent to use firearms, with sufficient time for the warning to be observed, unless to do so would unduly place the law enforcement officials at risk or would create a risk of death or serious harm to other persons, or would be clearly inappropriate or pointless in the circumstances of the incident."@en .
 
 doc:paragraph-25 a values:Undertaking ;
     values:partOf doc:Instrument ;
-    dc:title "Paragraph 25" ;
+    dc:title "Paragraph 25"@en ;
     values:deonticStatus values:HeuristicDerived ;
-    values:originalText "11. Rules and regulations on the use of firearms by law enforcement officials should include guidelines that:" .
+    values:originalText "11. Rules and regulations on the use of firearms by law enforcement officials should include guidelines that:"@en .
 
 doc:paragraph-26 a values:Undertaking ;
     values:partOf doc:Instrument ;
-    dc:title "Paragraph 26" ;
+    dc:title "Paragraph 26"@en ;
     values:deonticStatus values:HeuristicDerived ;
-    values:originalText "(a) Specify the circumstances under which law enforcement officials are authorized to carry firearms and prescribe the types of firearms and ammunition permitted;" .
+    values:originalText "(a) Specify the circumstances under which law enforcement officials are authorized to carry firearms and prescribe the types of firearms and ammunition permitted;"@en .
 
 doc:paragraph-27 a values:Undertaking ;
     values:partOf doc:Instrument ;
-    dc:title "Paragraph 27" ;
+    dc:title "Paragraph 27"@en ;
     values:deonticStatus values:HeuristicDerived ;
-    values:originalText "(b) Ensure that firearms are used only in appropriate circumstances and in a manner likely to decrease the risk of unnecessary harm;" .
+    values:originalText "(b) Ensure that firearms are used only in appropriate circumstances and in a manner likely to decrease the risk of unnecessary harm;"@en .
 
 doc:paragraph-28 a values:Undertaking ;
     values:partOf doc:Instrument ;
-    dc:title "Paragraph 28" ;
+    dc:title "Paragraph 28"@en ;
     values:deonticStatus values:HeuristicDerived ;
-    values:originalText "(c) Prohibit the use of those firearms and ammunition that cause unwarranted injury or present an unwarranted risk;" .
+    values:originalText "(c) Prohibit the use of those firearms and ammunition that cause unwarranted injury or present an unwarranted risk;"@en .
 
 doc:paragraph-29 a values:Undertaking ;
     values:partOf doc:Instrument ;
-    dc:title "Paragraph 29" ;
+    dc:title "Paragraph 29"@en ;
     values:deonticStatus values:HeuristicDerived ;
-    values:originalText "(d) Regulate the control, storage and issuing of firearms, including procedures for ensuring that law enforcement officials are accountable for the firearms and ammunition issued to them;" .
+    values:originalText "(d) Regulate the control, storage and issuing of firearms, including procedures for ensuring that law enforcement officials are accountable for the firearms and ammunition issued to them;"@en .
 
 doc:paragraph-30 a values:Undertaking ;
     values:partOf doc:Instrument ;
-    dc:title "Paragraph 30" ;
+    dc:title "Paragraph 30"@en ;
     values:deonticStatus values:HeuristicDerived ;
-    values:originalText "(e) Provide for warnings to be given, if appropriate, when firearms are to be discharged;" .
+    values:originalText "(e) Provide for warnings to be given, if appropriate, when firearms are to be discharged;"@en .
 
 doc:paragraph-31 a values:Undertaking ;
     values:partOf doc:Instrument ;
-    dc:title "Paragraph 31" ;
+    dc:title "Paragraph 31"@en ;
     values:deonticStatus values:HeuristicDerived ;
-    values:originalText "(f) Provide for a system of reporting whenever law enforcement officials use firearms in the performance of their duty." .
+    values:originalText "(f) Provide for a system of reporting whenever law enforcement officials use firearms in the performance of their duty."@en .
 
 doc:paragraph-32 a values:Obligation ;
     values:partOf doc:Instrument ;
     values:borneBy values:Agent ;
-    dc:title "Paragraph 32" ;
+    dc:title "Paragraph 32"@en ;
     values:deonticStatus values:HeuristicDerived ;
-    values:originalText "12. As everyone is allowed to participate in lawful and peaceful assemblies, in accordance with the principles embodied in the Universal Declaration of Human Rights and the International Covenant on Civil and Political Rights, Governments and law enforcement agencies and officials shall recognize that force and firearms may be used only in accordance with principles 13 and 14." .
+    values:originalText "12. As everyone is allowed to participate in lawful and peaceful assemblies, in accordance with the principles embodied in the Universal Declaration of Human Rights and the International Covenant on Civil and Political Rights, Governments and law enforcement agencies and officials shall recognize that force and firearms may be used only in accordance with principles 13 and 14."@en .
 
 doc:paragraph-33 a values:Undertaking ;
     values:partOf doc:Instrument ;
-    dc:title "Paragraph 33" ;
+    dc:title "Paragraph 33"@en ;
     values:deonticStatus values:HeuristicDerived ;
-    values:originalText "13. In the dispersal of assemblies that are unlawful but non-violent, law enforcement officials shall avoid the use of force or, where that is not practicable, shall restrict such force to the minimum extent necessary." .
+    values:originalText "13. In the dispersal of assemblies that are unlawful but non-violent, law enforcement officials shall avoid the use of force or, where that is not practicable, shall restrict such force to the minimum extent necessary."@en .
 
 doc:paragraph-34 a values:Prohibition ;
     values:partOf doc:Instrument ;
     values:borneBy values:Agent ;
-    dc:title "Paragraph 34" ;
+    dc:title "Paragraph 34"@en ;
     values:deonticStatus values:HeuristicDerived ;
-    values:originalText "14. In the dispersal of violent assemblies, law enforcement officials may use firearms only when less dangerous means are not practicable and only to the minimum extent necessary. Law enforcement officials shall not use firearms in such cases, except under the conditions stipulated in principle 9." .
+    values:originalText "14. In the dispersal of violent assemblies, law enforcement officials may use firearms only when less dangerous means are not practicable and only to the minimum extent necessary. Law enforcement officials shall not use firearms in such cases, except under the conditions stipulated in principle 9."@en .
 
 doc:paragraph-35 a values:Undertaking ;
     values:partOf doc:Instrument ;
-    dc:title "Paragraph 35" ;
+    dc:title "Paragraph 35"@en ;
     values:deonticStatus values:HeuristicDerived ;
-    values:originalText "Policing persons in custody or detention" .
+    values:originalText "Policing persons in custody or detention"@en .
 
 doc:paragraph-36 a values:Prohibition ;
     values:partOf doc:Instrument ;
     values:borneBy values:Agent ;
-    dc:title "Paragraph 36" ;
+    dc:title "Paragraph 36"@en ;
     values:deonticStatus values:HeuristicDerived ;
-    values:originalText "15. Law enforcement officials, in their relations with persons in custody or detention, shall not use force, except when strictly necessary for the maintenance of security and order within the institution, or when personal safety is threatened." .
+    values:originalText "15. Law enforcement officials, in their relations with persons in custody or detention, shall not use force, except when strictly necessary for the maintenance of security and order within the institution, or when personal safety is threatened."@en .
 
 doc:paragraph-37 a values:Prohibition ;
     values:partOf doc:Instrument ;
     values:borneBy values:Agent ;
-    dc:title "Paragraph 37" ;
+    dc:title "Paragraph 37"@en ;
     values:deonticStatus values:HeuristicDerived ;
-    values:originalText "16. Law enforcement officials, in their relations with persons in custody or detention, shall not use firearms, except in self-defence or in the defence of others against the immediate threat of death or serious injury, or when strictly necessary to prevent the escape of a person in custody or detention presenting the danger referred to in principle 9." .
+    values:originalText "16. Law enforcement officials, in their relations with persons in custody or detention, shall not use firearms, except in self-defence or in the defence of others against the immediate threat of death or serious injury, or when strictly necessary to prevent the escape of a person in custody or detention presenting the danger referred to in principle 9."@en .
 
 doc:paragraph-38 a values:Undertaking ;
     values:partOf doc:Instrument ;
-    dc:title "Paragraph 38" ;
+    dc:title "Paragraph 38"@en ;
     values:deonticStatus values:HeuristicDerived ;
-    values:originalText "17. The preceding principles are without prejudice to the rights, duties and responsibilities of prison officials, as set out in the Standard Minimum Rules for the Treatment of Prisoners, particularly rules 33, 34 and 54." .
+    values:originalText "17. The preceding principles are without prejudice to the rights, duties and responsibilities of prison officials, as set out in the Standard Minimum Rules for the Treatment of Prisoners, particularly rules 33, 34 and 54."@en .
 
 doc:paragraph-39 a values:Undertaking ;
     values:partOf doc:Instrument ;
-    dc:title "Paragraph 39" ;
+    dc:title "Paragraph 39"@en ;
     values:deonticStatus values:HeuristicDerived ;
-    values:originalText "Qualifications, training and counselling" .
+    values:originalText "Qualifications, training and counselling"@en .
 
 doc:paragraph-40 a values:Obligation ;
     values:partOf doc:Instrument ;
     values:borneBy values:Agent ;
-    dc:title "Paragraph 40" ;
+    dc:title "Paragraph 40"@en ;
     values:deonticStatus values:HeuristicDerived ;
-    values:originalText "18. Governments and law enforcement agencies shall ensure that all law enforcement officials are selected by proper screening procedures, have appropriate moral, psychological and physical qualities for the effective exercise of their functions and receive continuous and thorough professional training. Their continued fitness to perform these functions should be subject to periodic review." .
+    values:originalText "18. Governments and law enforcement agencies shall ensure that all law enforcement officials are selected by proper screening procedures, have appropriate moral, psychological and physical qualities for the effective exercise of their functions and receive continuous and thorough professional training. Their continued fitness to perform these functions should be subject to periodic review."@en .
 
 doc:paragraph-41 a values:Obligation ;
     values:partOf doc:Instrument ;
     values:borneBy values:Agent ;
-    dc:title "Paragraph 41" ;
+    dc:title "Paragraph 41"@en ;
     values:deonticStatus values:HeuristicDerived ;
-    values:originalText "19. Governments and law enforcement agencies shall ensure that all law enforcement officials are provided with training and are tested in accordance with appropriate proficiency standards in the use of force. Those law enforcement officials who are required to carry firearms should be authorized to do so only upon completion of special training in their use." .
+    values:originalText "19. Governments and law enforcement agencies shall ensure that all law enforcement officials are provided with training and are tested in accordance with appropriate proficiency standards in the use of force. Those law enforcement officials who are required to carry firearms should be authorized to do so only upon completion of special training in their use."@en .
 
 doc:paragraph-42 a values:Undertaking ;
     values:partOf doc:Instrument ;
-    dc:title "Paragraph 42" ;
+    dc:title "Paragraph 42"@en ;
     values:deonticStatus values:HeuristicDerived ;
-    values:originalText "20. In the training of law enforcement officials, Governments and law enforcement agencies shall give special attention to issues of police ethics and human rights, especially in the investigative process, to alternatives to the use of force and firearms, including the peaceful settlement of conflicts, the understanding of crowd behaviour, and the methods of persuasion, negotiation and mediation, as well as to technical means, with a view to limiting the use of force and firearms. Law enforcement agencies should review their training programmes and operational procedures in the light of particular incidents." .
+    values:originalText "20. In the training of law enforcement officials, Governments and law enforcement agencies shall give special attention to issues of police ethics and human rights, especially in the investigative process, to alternatives to the use of force and firearms, including the peaceful settlement of conflicts, the understanding of crowd behaviour, and the methods of persuasion, negotiation and mediation, as well as to technical means, with a view to limiting the use of force and firearms. Law enforcement agencies should review their training programmes and operational procedures in the light of particular incidents."@en .
 
 doc:paragraph-43 a values:Undertaking ;
     values:partOf doc:Instrument ;
-    dc:title "Paragraph 43" ;
+    dc:title "Paragraph 43"@en ;
     values:deonticStatus values:HeuristicDerived ;
-    values:originalText "21. Governments and law enforcement agencies shall make stress counselling available to law enforcement officials who are involved in situations where force and firearms are used." .
+    values:originalText "21. Governments and law enforcement agencies shall make stress counselling available to law enforcement officials who are involved in situations where force and firearms are used."@en .
 
 doc:paragraph-44 a values:Undertaking ;
     values:partOf doc:Instrument ;
-    dc:title "Paragraph 44" ;
+    dc:title "Paragraph 44"@en ;
     values:deonticStatus values:HeuristicDerived ;
-    values:originalText "Reporting and review procedures" .
+    values:originalText "Reporting and review procedures"@en .
 
 doc:paragraph-45 a values:Obligation ;
     values:partOf doc:Instrument ;
     values:borneBy values:Agent ;
-    dc:title "Paragraph 45" ;
+    dc:title "Paragraph 45"@en ;
     values:deonticStatus values:HeuristicDerived ;
-    values:originalText "22. Governments and law enforcement agencies shall establish effective reporting and review procedures for all incidents referred to in principles 6 and 11 (f). For incidents reported pursuant to these principles, Governments and law enforcement agencies shall ensure that an effective review process is available and that independent administrative or prosecutorial authorities are in a position to exercise jurisdiction in appropriate circumstances. In cases of death and serious injury or other grave consequences, a detailed report shall be sent promptly to the competent authorities responsible for administrative review and judicial control." .
+    values:originalText "22. Governments and law enforcement agencies shall establish effective reporting and review procedures for all incidents referred to in principles 6 and 11 (f). For incidents reported pursuant to these principles, Governments and law enforcement agencies shall ensure that an effective review process is available and that independent administrative or prosecutorial authorities are in a position to exercise jurisdiction in appropriate circumstances. In cases of death and serious injury or other grave consequences, a detailed report shall be sent promptly to the competent authorities responsible for administrative review and judicial control."@en .
 
 doc:paragraph-46 a values:Undertaking ;
     values:partOf doc:Instrument ;
-    dc:title "Paragraph 46" ;
+    dc:title "Paragraph 46"@en ;
     values:deonticStatus values:HeuristicDerived ;
-    values:originalText "23. Persons affected by the use of force and firearms or their legal representatives shall have access to an independent process, including a judicial process. In the event of the death of such persons, this provision shall apply to their dependants accordingly." .
+    values:originalText "23. Persons affected by the use of force and firearms or their legal representatives shall have access to an independent process, including a judicial process. In the event of the death of such persons, this provision shall apply to their dependants accordingly."@en .
 
 doc:paragraph-47 a values:Obligation ;
     values:partOf doc:Instrument ;
     values:borneBy values:Agent ;
-    dc:title "Paragraph 47" ;
+    dc:title "Paragraph 47"@en ;
     values:deonticStatus values:HeuristicDerived ;
-    values:originalText "24. Governments and law enforcement agencies shall ensure that superior officers are held responsible if they know, or should have known, that law enforcement officials under their command are resorting, or have resorted, to the unlawful use of force and firearms, and they did not take all measures in their power to prevent, suppress or report such use." .
+    values:originalText "24. Governments and law enforcement agencies shall ensure that superior officers are held responsible if they know, or should have known, that law enforcement officials under their command are resorting, or have resorted, to the unlawful use of force and firearms, and they did not take all measures in their power to prevent, suppress or report such use."@en .
 
 doc:paragraph-48 a values:Obligation ;
     values:partOf doc:Instrument ;
     values:borneBy values:Agent ;
-    dc:title "Paragraph 48" ;
+    dc:title "Paragraph 48"@en ;
     values:deonticStatus values:HeuristicDerived ;
-    values:originalText "25. Governments and law enforcement agencies shall ensure that no criminal or disciplinary sanction is imposed on law enforcement officials who, in compliance with the Code of Conduct for Law Enforcement Officials and these basic principles, refuse to carry out an order to use force and firearms, or who report such use by other officials." .
+    values:originalText "25. Governments and law enforcement agencies shall ensure that no criminal or disciplinary sanction is imposed on law enforcement officials who, in compliance with the Code of Conduct for Law Enforcement Officials and these basic principles, refuse to carry out an order to use force and firearms, or who report such use by other officials."@en .
 
 doc:paragraph-49 a values:Obligation ;
     values:partOf doc:Instrument ;
     values:borneBy values:Agent ;
-    dc:title "Paragraph 49" ;
+    dc:title "Paragraph 49"@en ;
     values:deonticStatus values:HeuristicDerived ;
-    values:originalText "26. Obedience to superior orders shall be no defence if law enforcement officials knew that an order to use force and firearms resulting in the death or serious injury of a person was manifestly unlawful and had a reasonable opportunity to refuse to follow it. In any case, responsibility also rests on the superiors who gave the unlawful orders." .
+    values:originalText "26. Obedience to superior orders shall be no defence if law enforcement officials knew that an order to use force and firearms resulting in the death or serious injury of a person was manifestly unlawful and had a reasonable opportunity to refuse to follow it. In any case, responsibility also rests on the superiors who gave the unlawful orders."@en .

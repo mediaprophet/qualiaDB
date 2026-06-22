@@ -12,7 +12,7 @@
 # ============================================================
 
 doc:Instrument a values:ValuesCredential ;
-    dc:title "General Assembly Resolution 1803 Xvii 14 December 1962 Permanent" ;
+    dc:title "General Assembly Resolution 1803 Xvii 14 December 1962 Permanent"@en ;
     dc:date "14 December 1962" ;
     values:category "Indigenous, minorities & self-determination" ;
     values:categoryStatus values:AutoAssigned ;
@@ -21,112 +21,112 @@ doc:Instrument a values:ValuesCredential ;
 
 doc:paragraph-1 a values:Undertaking ;
     values:partOf doc:Instrument ;
-    dc:title "Paragraph 1" ;
+    dc:title "Paragraph 1"@en ;
     values:deonticStatus values:HeuristicDerived ;
-    values:originalText "Recalling its resolutions 523 (VI) of 12 January 1952 and 626 (VII) of 21 December 1952," .
+    values:originalText "Recalling its resolutions 523 (VI) of 12 January 1952 and 626 (VII) of 21 December 1952,"@en .
 
 doc:paragraph-2 a values:Undertaking ;
     values:partOf doc:Instrument ;
-    dc:title "Paragraph 2" ;
+    dc:title "Paragraph 2"@en ;
     values:deonticStatus values:HeuristicDerived ;
-    values:originalText "Considering that any measure in this respect must be based on the recognition of the inalienable right of all States freely to dispose of their natural wealth and resources in accordance with their national interests, and on respect for the economic independence of States," .
+    values:originalText "Considering that any measure in this respect must be based on the recognition of the inalienable right of all States freely to dispose of their natural wealth and resources in accordance with their national interests, and on respect for the economic independence of States,"@en .
 
 doc:paragraph-3 a values:Undertaking ;
     values:partOf doc:Instrument ;
-    dc:title "Paragraph 3" ;
+    dc:title "Paragraph 3"@en ;
     values:deonticStatus values:HeuristicDerived ;
-    values:originalText "Considering that nothing in paragraph 4 below in any way prejudices the position of any Member State on any aspect of the question of the rights and obligations of successor States and Governments in respect of property acquired before the accession to complete sovereignty of countries formerly under colonial rule," .
+    values:originalText "Considering that nothing in paragraph 4 below in any way prejudices the position of any Member State on any aspect of the question of the rights and obligations of successor States and Governments in respect of property acquired before the accession to complete sovereignty of countries formerly under colonial rule,"@en .
 
 doc:paragraph-4 a values:Undertaking ;
     values:partOf doc:Instrument ;
-    dc:title "Paragraph 4" ;
+    dc:title "Paragraph 4"@en ;
     values:deonticStatus values:HeuristicDerived ;
-    values:originalText "Noting that the subject of succession of States and Governments is being examined as a matter of priority by the International Law Commission," .
+    values:originalText "Noting that the subject of succession of States and Governments is being examined as a matter of priority by the International Law Commission,"@en .
 
 doc:paragraph-5 a values:Undertaking ;
     values:partOf doc:Instrument ;
-    dc:title "Paragraph 5" ;
+    dc:title "Paragraph 5"@en ;
     values:deonticStatus values:HeuristicDerived ;
-    values:originalText "Considering that it is desirable to promote international co-operation for the economic development of developing countries, and that economic and financial agreements between the developed and the developing countries must be based on the principles of equality and of the right of peoples and nations to self-determination," .
+    values:originalText "Considering that it is desirable to promote international co-operation for the economic development of developing countries, and that economic and financial agreements between the developed and the developing countries must be based on the principles of equality and of the right of peoples and nations to self-determination,"@en .
 
 doc:paragraph-6 a values:Undertaking ;
     values:partOf doc:Instrument ;
-    dc:title "Paragraph 6" ;
+    dc:title "Paragraph 6"@en ;
     values:deonticStatus values:HeuristicDerived ;
-    values:originalText "Considering that the provision of economic and technical assistance, loans and increased foreign investment must not be subject to conditions which conflict with the interests of the recipient State," .
+    values:originalText "Considering that the provision of economic and technical assistance, loans and increased foreign investment must not be subject to conditions which conflict with the interests of the recipient State,"@en .
 
 doc:paragraph-7 a values:Undertaking ;
     values:partOf doc:Instrument ;
-    dc:title "Paragraph 7" ;
+    dc:title "Paragraph 7"@en ;
     values:deonticStatus values:HeuristicDerived ;
-    values:originalText "Considering the benefits to be derived from exchanges of technical and scientific information likely to promote the development and use of such resources and wealth, and the important part which the United Nations and other international organizations are called upon to play in that connection," .
+    values:originalText "Considering the benefits to be derived from exchanges of technical and scientific information likely to promote the development and use of such resources and wealth, and the important part which the United Nations and other international organizations are called upon to play in that connection,"@en .
 
 doc:paragraph-8 a values:Undertaking ;
     values:partOf doc:Instrument ;
-    dc:title "Paragraph 8" ;
+    dc:title "Paragraph 8"@en ;
     values:deonticStatus values:HeuristicDerived ;
-    values:originalText "Attaching particular importance to the question of promoting the economic development of developing countries and securing their economic independence," .
+    values:originalText "Attaching particular importance to the question of promoting the economic development of developing countries and securing their economic independence,"@en .
 
 doc:paragraph-9 a values:Undertaking ;
     values:partOf doc:Instrument ;
-    dc:title "Paragraph 9" ;
+    dc:title "Paragraph 9"@en ;
     values:deonticStatus values:HeuristicDerived ;
-    values:originalText "Noting that the creation and strengthening of the inalienable sovereignty of States over their natural wealth and resources reinforces their economic independence," .
+    values:originalText "Noting that the creation and strengthening of the inalienable sovereignty of States over their natural wealth and resources reinforces their economic independence,"@en .
 
 doc:paragraph-10 a values:Undertaking ;
     values:partOf doc:Instrument ;
-    dc:title "Paragraph 10" ;
+    dc:title "Paragraph 10"@en ;
     values:deonticStatus values:HeuristicDerived ;
-    values:originalText "Desiring that there should be further consideration by the United Nations of the subject of permanent sovereignty over natural resources in the spirit of international co-operation in the field of economic development, particularly that of the developing countries," .
+    values:originalText "Desiring that there should be further consideration by the United Nations of the subject of permanent sovereignty over natural resources in the spirit of international co-operation in the field of economic development, particularly that of the developing countries,"@en .
 
 doc:paragraph-11 a values:Undertaking ;
     values:partOf doc:Instrument ;
-    dc:title "Paragraph 11" ;
+    dc:title "Paragraph 11"@en ;
     values:deonticStatus values:HeuristicDerived ;
-    values:originalText "1. The right of peoples and nations to permanent sovereignty over their natural wealth and resources must be exercised in the interest of their national development and of the well-being of the people of the State concerned." .
+    values:originalText "1. The right of peoples and nations to permanent sovereignty over their natural wealth and resources must be exercised in the interest of their national development and of the well-being of the people of the State concerned."@en .
 
 doc:paragraph-12 a values:Undertaking ;
     values:partOf doc:Instrument ;
-    dc:title "Paragraph 12" ;
+    dc:title "Paragraph 12"@en ;
     values:deonticStatus values:HeuristicDerived ;
-    values:originalText "2. The exploration, development and disposition of such resources, as well as the import of the foreign capital required for these purposes, should be in conformity with the rules and conditions which the peoples and nations freely consider to be necessary or desirable with regard to the authorization, restriction or prohibition of such activities." .
+    values:originalText "2. The exploration, development and disposition of such resources, as well as the import of the foreign capital required for these purposes, should be in conformity with the rules and conditions which the peoples and nations freely consider to be necessary or desirable with regard to the authorization, restriction or prohibition of such activities."@en .
 
 doc:paragraph-13 a values:Obligation ;
     values:partOf doc:Instrument ;
     values:borneBy values:Agent ;
-    dc:title "Paragraph 13" ;
+    dc:title "Paragraph 13"@en ;
     values:deonticStatus values:HeuristicDerived ;
-    values:originalText "3. In cases where authorization is granted, the capital imported and the earnings on that capital shall be governed by the terms thereof, by the national legislation in force, and by international law. The profits derived must be shared in the proportions freely agreed upon, in each case, between the investors and the recipient State, due care being taken to ensure that there is no impairment, for any reason, of that State's sovereignty over its natural wealth and resources." .
+    values:originalText "3. In cases where authorization is granted, the capital imported and the earnings on that capital shall be governed by the terms thereof, by the national legislation in force, and by international law. The profits derived must be shared in the proportions freely agreed upon, in each case, between the investors and the recipient State, due care being taken to ensure that there is no impairment, for any reason, of that State's sovereignty over its natural wealth and resources."@en .
 
 doc:paragraph-14 a values:Obligation ;
     values:partOf doc:Instrument ;
     values:borneBy values:Agent ;
-    dc:title "Paragraph 14" ;
+    dc:title "Paragraph 14"@en ;
     values:deonticStatus values:HeuristicDerived ;
-    values:originalText "4. Nationalization, expropriation or requisitioning shall be based on grounds or reasons of public utility, security or the national interest which are recognized as overriding purely individual or private interests, both domestic and foreign. In such cases the owner shall be paid appropriate compensation, in accordance with the rules in force in the State taking such measures in the exercise of its sovereignty and in accordance with international law. In any case where the question of compensation gives rise to a controversy, the national jurisdiction of the State taking such measures shall be exhausted. However, upon agreement by sovereign States and other parties concerned, settlement of the dispute should be made through arbitration or international adjudication." .
+    values:originalText "4. Nationalization, expropriation or requisitioning shall be based on grounds or reasons of public utility, security or the national interest which are recognized as overriding purely individual or private interests, both domestic and foreign. In such cases the owner shall be paid appropriate compensation, in accordance with the rules in force in the State taking such measures in the exercise of its sovereignty and in accordance with international law. In any case where the question of compensation gives rise to a controversy, the national jurisdiction of the State taking such measures shall be exhausted. However, upon agreement by sovereign States and other parties concerned, settlement of the dispute should be made through arbitration or international adjudication."@en .
 
 doc:paragraph-15 a values:Undertaking ;
     values:partOf doc:Instrument ;
-    dc:title "Paragraph 15" ;
+    dc:title "Paragraph 15"@en ;
     values:deonticStatus values:HeuristicDerived ;
-    values:originalText "5. The free and beneficial exercise of the sovereignty of peoples and nations over their natural resources must be furthered by the mutual respect of States based on their sovereign equality." .
+    values:originalText "5. The free and beneficial exercise of the sovereignty of peoples and nations over their natural resources must be furthered by the mutual respect of States based on their sovereign equality."@en .
 
 doc:paragraph-16 a values:Obligation ;
     values:partOf doc:Instrument ;
     values:borneBy values:Agent ;
-    dc:title "Paragraph 16" ;
+    dc:title "Paragraph 16"@en ;
     values:deonticStatus values:HeuristicDerived ;
-    values:originalText "6. International co-operation for the economic development of developing countries, whether in the form of public or private capital investments, exchange of goods and services, technical assistance, or exchange of scientific information, shall be such as to further their independent national development and shall be based upon respect for their sovereignty over their natural wealth and resources." .
+    values:originalText "6. International co-operation for the economic development of developing countries, whether in the form of public or private capital investments, exchange of goods and services, technical assistance, or exchange of scientific information, shall be such as to further their independent national development and shall be based upon respect for their sovereignty over their natural wealth and resources."@en .
 
 doc:paragraph-17 a values:Undertaking ;
     values:partOf doc:Instrument ;
-    dc:title "Paragraph 17" ;
+    dc:title "Paragraph 17"@en ;
     values:deonticStatus values:HeuristicDerived ;
-    values:originalText "7. Violation of the rights of peoples and nations to sovereignty over their natural wealth and resources is contrary to the spirit and principles of the Charter of the United Nations and hinders the development of international co-operation and the maintenance of peace." .
+    values:originalText "7. Violation of the rights of peoples and nations to sovereignty over their natural wealth and resources is contrary to the spirit and principles of the Charter of the United Nations and hinders the development of international co-operation and the maintenance of peace."@en .
 
 doc:paragraph-18 a values:Obligation ;
     values:partOf doc:Instrument ;
     values:borneBy values:Agent ;
-    dc:title "Paragraph 18" ;
+    dc:title "Paragraph 18"@en ;
     values:deonticStatus values:HeuristicDerived ;
-    values:originalText "8. Foreign investment agreements freely entered into by or between sovereign States shall be observed in good faith; States and international organizations shall strictly and conscientiously respect the sovereignty of peoples and nations over their natural wealth and resources in accordance with the Charter and the principles set forth in the present resolution." .
+    values:originalText "8. Foreign investment agreements freely entered into by or between sovereign States shall be observed in good faith; States and international organizations shall strictly and conscientiously respect the sovereignty of peoples and nations over their natural wealth and resources in accordance with the Charter and the principles set forth in the present resolution."@en .

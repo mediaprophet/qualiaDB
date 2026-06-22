@@ -17,7 +17,7 @@
 # ============================================================
 
 concept:api-1977-article-1 a cml:Concept ;
-    skos:prefLabel "Article 1 - General principles and scope of application" ;
+    skos:prefLabel "Article 1 - General principles and scope of application"@en ;
     cml:realizedBy doc:article-1 ;
     cml:curationStatus cml:Proposed ;
     prov:wasDerivedFrom <https://ihl-databases.icrc.org/en/ihl-treaties/api-1977> ;
@@ -34,7 +34,7 @@ concept:api-1977-article-1-norm a values:Obligation ;
     cml:curationStatus cml:Proposed .
 
 concept:api-1977-article-2 a cml:Concept ;
-    skos:prefLabel "Article 2 - Definitions" ;
+    skos:prefLabel "Article 2 - Definitions"@en ;
     cml:realizedBy doc:article-2 ;
     cml:curationStatus cml:Proposed ;
     prov:wasDerivedFrom <https://ihl-databases.icrc.org/en/ihl-treaties/api-1977> ;
@@ -50,7 +50,7 @@ concept:api-1977-article-2-norm a values:Undertaking ;
     cml:curationStatus cml:Proposed .
 
 concept:api-1977-article-3 a cml:Concept ;
-    skos:prefLabel "Article 3 - Beginning and end of application" ;
+    skos:prefLabel "Article 3 - Beginning and end of application"@en ;
     cml:realizedBy doc:article-3 ;
     cml:curationStatus cml:Proposed ;
     prov:wasDerivedFrom <https://ihl-databases.icrc.org/en/ihl-treaties/api-1977> ;
@@ -66,7 +66,7 @@ concept:api-1977-article-3-norm a values:Undertaking ;
     cml:curationStatus cml:Proposed .
 
 concept:api-1977-article-4 a cml:Concept ;
-    skos:prefLabel "Article 4 - Legal status of the Parties to the conflict" ;
+    skos:prefLabel "Article 4 - Legal status of the Parties to the conflict"@en ;
     cml:realizedBy doc:article-4 ;
     cml:curationStatus cml:Proposed ;
     prov:wasDerivedFrom <https://ihl-databases.icrc.org/en/ihl-treaties/api-1977> ;
@@ -82,7 +82,7 @@ concept:api-1977-article-4-norm a values:Prohibition ;
     cml:curationStatus cml:Proposed .
 
 concept:api-1977-article-5 a cml:Concept ;
-    skos:prefLabel "Article 5 - Appointment of Protecting Powers and of their substitute" ;
+    skos:prefLabel "Article 5 - Appointment of Protecting Powers and of their substitute"@en ;
     cml:realizedBy doc:article-5 ;
     cml:curationStatus cml:Proposed ;
     prov:wasDerivedFrom <https://ihl-databases.icrc.org/en/ihl-treaties/api-1977> ;
@@ -98,7 +98,7 @@ concept:api-1977-article-5-norm a values:Prohibition ;
     cml:curationStatus cml:Proposed .
 
 concept:api-1977-article-6 a cml:Concept ;
-    skos:prefLabel "Article 6 - Qualified persons" ;
+    skos:prefLabel "Article 6 - Qualified persons"@en ;
     cml:realizedBy doc:article-6 ;
     cml:curationStatus cml:Proposed ;
     prov:wasDerivedFrom <https://ihl-databases.icrc.org/en/ihl-treaties/api-1977> ;
@@ -114,7 +114,7 @@ concept:api-1977-article-6-norm a values:Undertaking ;
     cml:curationStatus cml:Proposed .
 
 concept:api-1977-article-7 a cml:Concept ;
-    skos:prefLabel "Article 7 - Meetings" ;
+    skos:prefLabel "Article 7 - Meetings"@en ;
     cml:realizedBy doc:article-7 ;
     cml:curationStatus cml:Proposed ;
     prov:wasDerivedFrom <https://ihl-databases.icrc.org/en/ihl-treaties/api-1977> ;
@@ -130,7 +130,7 @@ concept:api-1977-article-7-norm a values:Undertaking ;
     cml:curationStatus cml:Proposed .
 
 concept:api-1977-article-8 a cml:Concept ;
-    skos:prefLabel "Article 8 - Terminology" ;
+    skos:prefLabel "Article 8 - Terminology"@en ;
     cml:realizedBy doc:article-8 ;
     cml:curationStatus cml:Proposed ;
     prov:wasDerivedFrom <https://ihl-databases.icrc.org/en/ihl-treaties/api-1977> ;
@@ -146,7 +146,7 @@ concept:api-1977-article-8-norm a values:Undertaking ;
     cml:curationStatus cml:Proposed .
 
 concept:api-1977-article-9 a cml:Concept ;
-    skos:prefLabel "Article 9 - Field of application" ;
+    skos:prefLabel "Article 9 - Field of application"@en ;
     cml:realizedBy doc:article-9 ;
     cml:curationStatus cml:Proposed ;
     prov:wasDerivedFrom <https://ihl-databases.icrc.org/en/ihl-treaties/api-1977> ;
@@ -162,7 +162,7 @@ concept:api-1977-article-9-norm a values:Undertaking ;
     cml:curationStatus cml:Proposed .
 
 concept:api-1977-article-10 a cml:Concept ;
-    skos:prefLabel "Article 10 - Protection and care" ;
+    skos:prefLabel "Article 10 - Protection and care"@en ;
     cml:realizedBy doc:article-10 ;
     cml:curationStatus cml:Proposed ;
     prov:wasDerivedFrom <https://ihl-databases.icrc.org/en/ihl-treaties/api-1977> ;
@@ -179,7 +179,7 @@ concept:api-1977-article-10-norm a values:Obligation ;
     cml:curationStatus cml:Proposed .
 
 concept:api-1977-article-11 a cml:Concept ;
-    skos:prefLabel "Article 11 - Protection of persons" ;
+    skos:prefLabel "Article 11 - Protection of persons"@en ;
     cml:realizedBy doc:article-11 ;
     cml:curationStatus cml:Proposed ;
     prov:wasDerivedFrom <https://ihl-databases.icrc.org/en/ihl-treaties/api-1977> ;
@@ -195,7 +195,7 @@ concept:api-1977-article-11-norm a values:Prohibition ;
     cml:curationStatus cml:Proposed .
 
 concept:api-1977-article-12 a cml:Concept ;
-    skos:prefLabel "Article 12 - Protection of medical units" ;
+    skos:prefLabel "Article 12 - Protection of medical units"@en ;
     cml:realizedBy doc:article-12 ;
     cml:curationStatus cml:Proposed ;
     prov:wasDerivedFrom <https://ihl-databases.icrc.org/en/ihl-treaties/api-1977> ;
@@ -211,7 +211,7 @@ concept:api-1977-article-12-norm a values:Prohibition ;
     cml:curationStatus cml:Proposed .
 
 concept:api-1977-article-13 a cml:Concept ;
-    skos:prefLabel "Article 13 - Discontinuance of protection of civilian medical units" ;
+    skos:prefLabel "Article 13 - Discontinuance of protection of civilian medical units"@en ;
     cml:realizedBy doc:article-13 ;
     cml:curationStatus cml:Proposed ;
     prov:wasDerivedFrom <https://ihl-databases.icrc.org/en/ihl-treaties/api-1977> ;
@@ -227,7 +227,7 @@ concept:api-1977-article-13-norm a values:Prohibition ;
     cml:curationStatus cml:Proposed .
 
 concept:api-1977-article-14 a cml:Concept ;
-    skos:prefLabel "Article 14 - Limitations on requisition of civilian medical units" ;
+    skos:prefLabel "Article 14 - Limitations on requisition of civilian medical units"@en ;
     cml:realizedBy doc:article-14 ;
     cml:curationStatus cml:Proposed ;
     prov:wasDerivedFrom <https://ihl-databases.icrc.org/en/ihl-treaties/api-1977> ;
@@ -243,7 +243,7 @@ concept:api-1977-article-14-norm a values:Prohibition ;
     cml:curationStatus cml:Proposed .
 
 concept:api-1977-article-15 a cml:Concept ;
-    skos:prefLabel "Article 15 - Protection of civilian medical and religious personnel" ;
+    skos:prefLabel "Article 15 - Protection of civilian medical and religious personnel"@en ;
     cml:realizedBy doc:article-15 ;
     cml:curationStatus cml:Proposed ;
     prov:wasDerivedFrom <https://ihl-databases.icrc.org/en/ihl-treaties/api-1977> ;
@@ -259,7 +259,7 @@ concept:api-1977-article-15-norm a values:Prohibition ;
     cml:curationStatus cml:Proposed .
 
 concept:api-1977-article-16 a cml:Concept ;
-    skos:prefLabel "Article 16 - General protection of medical duties" ;
+    skos:prefLabel "Article 16 - General protection of medical duties"@en ;
     cml:realizedBy doc:article-16 ;
     cml:curationStatus cml:Proposed ;
     prov:wasDerivedFrom <https://ihl-databases.icrc.org/en/ihl-treaties/api-1977> ;
@@ -275,7 +275,7 @@ concept:api-1977-article-16-norm a values:Prohibition ;
     cml:curationStatus cml:Proposed .
 
 concept:api-1977-article-17 a cml:Concept ;
-    skos:prefLabel "Article 17 - Role of the civilian population and of aid societies" ;
+    skos:prefLabel "Article 17 - Role of the civilian population and of aid societies"@en ;
     cml:realizedBy doc:article-17 ;
     cml:curationStatus cml:Proposed ;
     prov:wasDerivedFrom <https://ihl-databases.icrc.org/en/ihl-treaties/api-1977> ;
@@ -292,7 +292,7 @@ concept:api-1977-article-17-norm a values:Obligation ;
     cml:curationStatus cml:Proposed .
 
 concept:api-1977-article-18 a cml:Concept ;
-    skos:prefLabel "Article 18 - Identification" ;
+    skos:prefLabel "Article 18 - Identification"@en ;
     cml:realizedBy doc:article-18 ;
     cml:curationStatus cml:Proposed ;
     prov:wasDerivedFrom <https://ihl-databases.icrc.org/en/ihl-treaties/api-1977> ;
@@ -308,7 +308,7 @@ concept:api-1977-article-18-norm a values:Prohibition ;
     cml:curationStatus cml:Proposed .
 
 concept:api-1977-article-19 a cml:Concept ;
-    skos:prefLabel "Article 19 - Neutral and other States not Parties to the conflict" ;
+    skos:prefLabel "Article 19 - Neutral and other States not Parties to the conflict"@en ;
     cml:realizedBy doc:article-19 ;
     cml:curationStatus cml:Proposed ;
     prov:wasDerivedFrom <https://ihl-databases.icrc.org/en/ihl-treaties/api-1977> ;
@@ -324,7 +324,7 @@ concept:api-1977-article-19-norm a values:Undertaking ;
     cml:curationStatus cml:Proposed .
 
 concept:api-1977-article-20 a cml:Concept ;
-    skos:prefLabel "Article 20 - Prohibition of reprisals" ;
+    skos:prefLabel "Article 20 - Prohibition of reprisals"@en ;
     cml:realizedBy doc:article-20 ;
     cml:curationStatus cml:Proposed ;
     prov:wasDerivedFrom <https://ihl-databases.icrc.org/en/ihl-treaties/api-1977> ;
@@ -340,7 +340,7 @@ concept:api-1977-article-20-norm a values:Prohibition ;
     cml:curationStatus cml:Proposed .
 
 concept:api-1977-article-21 a cml:Concept ;
-    skos:prefLabel "Article 21 - Medical vehicles" ;
+    skos:prefLabel "Article 21 - Medical vehicles"@en ;
     cml:realizedBy doc:article-21 ;
     cml:curationStatus cml:Proposed ;
     prov:wasDerivedFrom <https://ihl-databases.icrc.org/en/ihl-treaties/api-1977> ;
@@ -357,7 +357,7 @@ concept:api-1977-article-21-norm a values:Obligation ;
     cml:curationStatus cml:Proposed .
 
 concept:api-1977-article-22 a cml:Concept ;
-    skos:prefLabel "Article 22 - Hospital ships and coastal rescue craft" ;
+    skos:prefLabel "Article 22 - Hospital ships and coastal rescue craft"@en ;
     cml:realizedBy doc:article-22 ;
     cml:curationStatus cml:Proposed ;
     prov:wasDerivedFrom <https://ihl-databases.icrc.org/en/ihl-treaties/api-1977> ;
@@ -373,7 +373,7 @@ concept:api-1977-article-22-norm a values:Prohibition ;
     cml:curationStatus cml:Proposed .
 
 concept:api-1977-article-23 a cml:Concept ;
-    skos:prefLabel "Article 23 - Other medical ships and craft" ;
+    skos:prefLabel "Article 23 - Other medical ships and craft"@en ;
     cml:realizedBy doc:article-23 ;
     cml:curationStatus cml:Proposed ;
     prov:wasDerivedFrom <https://ihl-databases.icrc.org/en/ihl-treaties/api-1977> ;
@@ -389,7 +389,7 @@ concept:api-1977-article-23-norm a values:Prohibition ;
     cml:curationStatus cml:Proposed .
 
 concept:api-1977-article-24 a cml:Concept ;
-    skos:prefLabel "Article 24 - Protection of medical aircraft" ;
+    skos:prefLabel "Article 24 - Protection of medical aircraft"@en ;
     cml:realizedBy doc:article-24 ;
     cml:curationStatus cml:Proposed ;
     prov:wasDerivedFrom <https://ihl-databases.icrc.org/en/ihl-treaties/api-1977> ;
@@ -406,7 +406,7 @@ concept:api-1977-article-24-norm a values:Obligation ;
     cml:curationStatus cml:Proposed .
 
 concept:api-1977-article-25 a cml:Concept ;
-    skos:prefLabel "Article 25 - Medical aircraft in areas not controlled by an adverse Party" ;
+    skos:prefLabel "Article 25 - Medical aircraft in areas not controlled by an adverse Party"@en ;
     cml:realizedBy doc:article-25 ;
     cml:curationStatus cml:Proposed ;
     prov:wasDerivedFrom <https://ihl-databases.icrc.org/en/ihl-treaties/api-1977> ;
@@ -422,7 +422,7 @@ concept:api-1977-article-25-norm a values:Undertaking ;
     cml:curationStatus cml:Proposed .
 
 concept:api-1977-article-26 a cml:Concept ;
-    skos:prefLabel "Article 26 - Medical aircraft in contact or similar zones" ;
+    skos:prefLabel "Article 26 - Medical aircraft in contact or similar zones"@en ;
     cml:realizedBy doc:article-26 ;
     cml:curationStatus cml:Proposed ;
     prov:wasDerivedFrom <https://ihl-databases.icrc.org/en/ihl-treaties/api-1977> ;
@@ -438,7 +438,7 @@ concept:api-1977-article-26-norm a values:Undertaking ;
     cml:curationStatus cml:Proposed .
 
 concept:api-1977-article-27 a cml:Concept ;
-    skos:prefLabel "Article 27 - Medical aircraft in areas controlled by an adverse Party" ;
+    skos:prefLabel "Article 27 - Medical aircraft in areas controlled by an adverse Party"@en ;
     cml:realizedBy doc:article-27 ;
     cml:curationStatus cml:Proposed ;
     prov:wasDerivedFrom <https://ihl-databases.icrc.org/en/ihl-treaties/api-1977> ;
@@ -454,7 +454,7 @@ concept:api-1977-article-27-norm a values:Undertaking ;
     cml:curationStatus cml:Proposed .
 
 concept:api-1977-article-28 a cml:Concept ;
-    skos:prefLabel "Article 28 - Restrictions on operations of medical aircraft" ;
+    skos:prefLabel "Article 28 - Restrictions on operations of medical aircraft"@en ;
     cml:realizedBy doc:article-28 ;
     cml:curationStatus cml:Proposed ;
     prov:wasDerivedFrom <https://ihl-databases.icrc.org/en/ihl-treaties/api-1977> ;
@@ -470,7 +470,7 @@ concept:api-1977-article-28-norm a values:Prohibition ;
     cml:curationStatus cml:Proposed .
 
 concept:api-1977-article-29 a cml:Concept ;
-    skos:prefLabel "Article 29 - Notifications and agreements concerning medical aircraft" ;
+    skos:prefLabel "Article 29 - Notifications and agreements concerning medical aircraft"@en ;
     cml:realizedBy doc:article-29 ;
     cml:curationStatus cml:Proposed ;
     prov:wasDerivedFrom <https://ihl-databases.icrc.org/en/ihl-treaties/api-1977> ;
@@ -486,7 +486,7 @@ concept:api-1977-article-29-norm a values:Prohibition ;
     cml:curationStatus cml:Proposed .
 
 concept:api-1977-article-30 a cml:Concept ;
-    skos:prefLabel "Article 30 - Landing and inspection of medical aircraft" ;
+    skos:prefLabel "Article 30 - Landing and inspection of medical aircraft"@en ;
     cml:realizedBy doc:article-30 ;
     cml:curationStatus cml:Proposed ;
     prov:wasDerivedFrom <https://ihl-databases.icrc.org/en/ihl-treaties/api-1977> ;
@@ -502,7 +502,7 @@ concept:api-1977-article-30-norm a values:Prohibition ;
     cml:curationStatus cml:Proposed .
 
 concept:api-1977-article-31 a cml:Concept ;
-    skos:prefLabel "Article 31 - Neutral or other States not Parties to the conflict" ;
+    skos:prefLabel "Article 31 - Neutral or other States not Parties to the conflict"@en ;
     cml:realizedBy doc:article-31 ;
     cml:curationStatus cml:Proposed ;
     prov:wasDerivedFrom <https://ihl-databases.icrc.org/en/ihl-treaties/api-1977> ;
@@ -518,7 +518,7 @@ concept:api-1977-article-31-norm a values:Prohibition ;
     cml:curationStatus cml:Proposed .
 
 concept:api-1977-article-32 a cml:Concept ;
-    skos:prefLabel "Article 32 - General principle" ;
+    skos:prefLabel "Article 32 - General principle"@en ;
     cml:realizedBy doc:article-32 ;
     cml:curationStatus cml:Proposed ;
     prov:wasDerivedFrom <https://ihl-databases.icrc.org/en/ihl-treaties/api-1977> ;
@@ -535,7 +535,7 @@ concept:api-1977-article-32-norm a values:Obligation ;
     cml:curationStatus cml:Proposed .
 
 concept:api-1977-article-33 a cml:Concept ;
-    skos:prefLabel "Article 33 - Missing persons" ;
+    skos:prefLabel "Article 33 - Missing persons"@en ;
     cml:realizedBy doc:article-33 ;
     cml:curationStatus cml:Proposed ;
     prov:wasDerivedFrom <https://ihl-databases.icrc.org/en/ihl-treaties/api-1977> ;
@@ -552,7 +552,7 @@ concept:api-1977-article-33-norm a values:Obligation ;
     cml:curationStatus cml:Proposed .
 
 concept:api-1977-article-34 a cml:Concept ;
-    skos:prefLabel "Article 34 - Remains of deceased" ;
+    skos:prefLabel "Article 34 - Remains of deceased"@en ;
     cml:realizedBy doc:article-34 ;
     cml:curationStatus cml:Proposed ;
     prov:wasDerivedFrom <https://ihl-databases.icrc.org/en/ihl-treaties/api-1977> ;
@@ -569,7 +569,7 @@ concept:api-1977-article-34-norm a values:Obligation ;
     cml:curationStatus cml:Proposed .
 
 concept:api-1977-article-35 a cml:Concept ;
-    skos:prefLabel "Article 35 - Basic rules" ;
+    skos:prefLabel "Article 35 - Basic rules"@en ;
     cml:realizedBy doc:article-35 ;
     cml:curationStatus cml:Proposed ;
     prov:wasDerivedFrom <https://ihl-databases.icrc.org/en/ihl-treaties/api-1977> ;
@@ -585,7 +585,7 @@ concept:api-1977-article-35-norm a values:Prohibition ;
     cml:curationStatus cml:Proposed .
 
 concept:api-1977-article-36 a cml:Concept ;
-    skos:prefLabel "Article 36 - New weapons" ;
+    skos:prefLabel "Article 36 - New weapons"@en ;
     cml:realizedBy doc:article-36 ;
     cml:curationStatus cml:Proposed ;
     prov:wasDerivedFrom <https://ihl-databases.icrc.org/en/ihl-treaties/api-1977> ;
@@ -601,7 +601,7 @@ concept:api-1977-article-36-norm a values:Undertaking ;
     cml:curationStatus cml:Proposed .
 
 concept:api-1977-article-37 a cml:Concept ;
-    skos:prefLabel "Article 37 - Prohibition of perfidy" ;
+    skos:prefLabel "Article 37 - Prohibition of perfidy"@en ;
     cml:realizedBy doc:article-37 ;
     cml:curationStatus cml:Proposed ;
     prov:wasDerivedFrom <https://ihl-databases.icrc.org/en/ihl-treaties/api-1977> ;
@@ -617,7 +617,7 @@ concept:api-1977-article-37-norm a values:Prohibition ;
     cml:curationStatus cml:Proposed .
 
 concept:api-1977-article-38 a cml:Concept ;
-    skos:prefLabel "Article 38 - Recognized emblems" ;
+    skos:prefLabel "Article 38 - Recognized emblems"@en ;
     cml:realizedBy doc:article-38 ;
     cml:curationStatus cml:Proposed ;
     prov:wasDerivedFrom <https://ihl-databases.icrc.org/en/ihl-treaties/api-1977> ;
@@ -633,7 +633,7 @@ concept:api-1977-article-38-norm a values:Prohibition ;
     cml:curationStatus cml:Proposed .
 
 concept:api-1977-article-39 a cml:Concept ;
-    skos:prefLabel "Article 39 - Emblems of nationality" ;
+    skos:prefLabel "Article 39 - Emblems of nationality"@en ;
     cml:realizedBy doc:article-39 ;
     cml:curationStatus cml:Proposed ;
     prov:wasDerivedFrom <https://ihl-databases.icrc.org/en/ihl-treaties/api-1977> ;
@@ -649,7 +649,7 @@ concept:api-1977-article-39-norm a values:Prohibition ;
     cml:curationStatus cml:Proposed .
 
 concept:api-1977-article-40 a cml:Concept ;
-    skos:prefLabel "Article 40 - Quarter" ;
+    skos:prefLabel "Article 40 - Quarter"@en ;
     cml:realizedBy doc:article-40 ;
     cml:curationStatus cml:Proposed ;
     prov:wasDerivedFrom <https://ihl-databases.icrc.org/en/ihl-treaties/api-1977> ;
@@ -665,7 +665,7 @@ concept:api-1977-article-40-norm a values:Prohibition ;
     cml:curationStatus cml:Proposed .
 
 concept:api-1977-article-41 a cml:Concept ;
-    skos:prefLabel "Article 41 - Safeguard of an enemy hors de combat" ;
+    skos:prefLabel "Article 41 - Safeguard of an enemy hors de combat"@en ;
     cml:realizedBy doc:article-41 ;
     cml:curationStatus cml:Proposed ;
     prov:wasDerivedFrom <https://ihl-databases.icrc.org/en/ihl-treaties/api-1977> ;
@@ -681,7 +681,7 @@ concept:api-1977-article-41-norm a values:Prohibition ;
     cml:curationStatus cml:Proposed .
 
 concept:api-1977-article-42 a cml:Concept ;
-    skos:prefLabel "Article 42 - Occupants of aircraft" ;
+    skos:prefLabel "Article 42 - Occupants of aircraft"@en ;
     cml:realizedBy doc:article-42 ;
     cml:curationStatus cml:Proposed ;
     prov:wasDerivedFrom <https://ihl-databases.icrc.org/en/ihl-treaties/api-1977> ;
@@ -698,7 +698,7 @@ concept:api-1977-article-42-norm a values:Obligation ;
     cml:curationStatus cml:Proposed .
 
 concept:api-1977-article-43 a cml:Concept ;
-    skos:prefLabel "Article 43 - Armed forces" ;
+    skos:prefLabel "Article 43 - Armed forces"@en ;
     cml:realizedBy doc:article-43 ;
     cml:curationStatus cml:Proposed ;
     prov:wasDerivedFrom <https://ihl-databases.icrc.org/en/ihl-treaties/api-1977> ;
@@ -714,7 +714,7 @@ concept:api-1977-article-43-norm a values:Right ;
     cml:curationStatus cml:Proposed .
 
 concept:api-1977-article-44 a cml:Concept ;
-    skos:prefLabel "Article 44 - Combatants and prisoners of war" ;
+    skos:prefLabel "Article 44 - Combatants and prisoners of war"@en ;
     cml:realizedBy doc:article-44 ;
     cml:curationStatus cml:Proposed ;
     prov:wasDerivedFrom <https://ihl-databases.icrc.org/en/ihl-treaties/api-1977> ;
@@ -730,7 +730,7 @@ concept:api-1977-article-44-norm a values:Prohibition ;
     cml:curationStatus cml:Proposed .
 
 concept:api-1977-article-45 a cml:Concept ;
-    skos:prefLabel "Article 45 - Protection of persons who have taken part in hostilities" ;
+    skos:prefLabel "Article 45 - Protection of persons who have taken part in hostilities"@en ;
     cml:realizedBy doc:article-45 ;
     cml:curationStatus cml:Proposed ;
     prov:wasDerivedFrom <https://ihl-databases.icrc.org/en/ihl-treaties/api-1977> ;
@@ -746,7 +746,7 @@ concept:api-1977-article-45-norm a values:Right ;
     cml:curationStatus cml:Proposed .
 
 concept:api-1977-article-46 a cml:Concept ;
-    skos:prefLabel "Article 46 - Spies" ;
+    skos:prefLabel "Article 46 - Spies"@en ;
     cml:realizedBy doc:article-46 ;
     cml:curationStatus cml:Proposed ;
     prov:wasDerivedFrom <https://ihl-databases.icrc.org/en/ihl-treaties/api-1977> ;
@@ -762,7 +762,7 @@ concept:api-1977-article-46-norm a values:Prohibition ;
     cml:curationStatus cml:Proposed .
 
 concept:api-1977-article-47 a cml:Concept ;
-    skos:prefLabel "Article 47 - Mercenaries" ;
+    skos:prefLabel "Article 47 - Mercenaries"@en ;
     cml:realizedBy doc:article-47 ;
     cml:curationStatus cml:Proposed ;
     prov:wasDerivedFrom <https://ihl-databases.icrc.org/en/ihl-treaties/api-1977> ;
@@ -778,7 +778,7 @@ concept:api-1977-article-47-norm a values:Prohibition ;
     cml:curationStatus cml:Proposed .
 
 concept:api-1977-article-48 a cml:Concept ;
-    skos:prefLabel "Article 48 - Basic rule" ;
+    skos:prefLabel "Article 48 - Basic rule"@en ;
     cml:realizedBy doc:article-48 ;
     cml:curationStatus cml:Proposed ;
     prov:wasDerivedFrom <https://ihl-databases.icrc.org/en/ihl-treaties/api-1977> ;
@@ -794,7 +794,7 @@ concept:api-1977-article-48-norm a values:Undertaking ;
     cml:curationStatus cml:Proposed .
 
 concept:api-1977-article-49 a cml:Concept ;
-    skos:prefLabel "Article 49 - Definition of attacks and scope of application" ;
+    skos:prefLabel "Article 49 - Definition of attacks and scope of application"@en ;
     cml:realizedBy doc:article-49 ;
     cml:curationStatus cml:Proposed ;
     prov:wasDerivedFrom <https://ihl-databases.icrc.org/en/ihl-treaties/api-1977> ;
@@ -810,7 +810,7 @@ concept:api-1977-article-49-norm a values:Undertaking ;
     cml:curationStatus cml:Proposed .
 
 concept:api-1977-article-50 a cml:Concept ;
-    skos:prefLabel "Article 50 - Definition of civilians and civilian population" ;
+    skos:prefLabel "Article 50 - Definition of civilians and civilian population"@en ;
     cml:realizedBy doc:article-50 ;
     cml:curationStatus cml:Proposed ;
     prov:wasDerivedFrom <https://ihl-databases.icrc.org/en/ihl-treaties/api-1977> ;
@@ -827,7 +827,7 @@ concept:api-1977-article-50-norm a values:Obligation ;
     cml:curationStatus cml:Proposed .
 
 concept:api-1977-article-51 a cml:Concept ;
-    skos:prefLabel "Article 51 - Protection of the civilian population" ;
+    skos:prefLabel "Article 51 - Protection of the civilian population"@en ;
     cml:realizedBy doc:article-51 ;
     cml:curationStatus cml:Proposed ;
     prov:wasDerivedFrom <https://ihl-databases.icrc.org/en/ihl-treaties/api-1977> ;
@@ -843,7 +843,7 @@ concept:api-1977-article-51-norm a values:Prohibition ;
     cml:curationStatus cml:Proposed .
 
 concept:api-1977-article-52 a cml:Concept ;
-    skos:prefLabel "Article 52 - General protection of civilian objects" ;
+    skos:prefLabel "Article 52 - General protection of civilian objects"@en ;
     cml:realizedBy doc:article-52 ;
     cml:curationStatus cml:Proposed ;
     prov:wasDerivedFrom <https://ihl-databases.icrc.org/en/ihl-treaties/api-1977> ;
@@ -859,7 +859,7 @@ concept:api-1977-article-52-norm a values:Prohibition ;
     cml:curationStatus cml:Proposed .
 
 concept:api-1977-article-53 a cml:Concept ;
-    skos:prefLabel "Article 53 - Protection of cultural objects and of places of worship" ;
+    skos:prefLabel "Article 53 - Protection of cultural objects and of places of worship"@en ;
     cml:realizedBy doc:article-53 ;
     cml:curationStatus cml:Proposed ;
     prov:wasDerivedFrom <https://ihl-databases.icrc.org/en/ihl-treaties/api-1977> ;
@@ -875,7 +875,7 @@ concept:api-1977-article-53-norm a values:Prohibition ;
     cml:curationStatus cml:Proposed .
 
 concept:api-1977-article-54 a cml:Concept ;
-    skos:prefLabel "Article 54 - Protection of objects indispensable to the survival of the civilian population" ;
+    skos:prefLabel "Article 54 - Protection of objects indispensable to the survival of the civilian population"@en ;
     cml:realizedBy doc:article-54 ;
     cml:curationStatus cml:Proposed ;
     prov:wasDerivedFrom <https://ihl-databases.icrc.org/en/ihl-treaties/api-1977> ;
@@ -891,7 +891,7 @@ concept:api-1977-article-54-norm a values:Prohibition ;
     cml:curationStatus cml:Proposed .
 
 concept:api-1977-article-55 a cml:Concept ;
-    skos:prefLabel "Article 55 - Protection of the natural environment" ;
+    skos:prefLabel "Article 55 - Protection of the natural environment"@en ;
     cml:realizedBy doc:article-55 ;
     cml:curationStatus cml:Proposed ;
     prov:wasDerivedFrom <https://ihl-databases.icrc.org/en/ihl-treaties/api-1977> ;
@@ -907,7 +907,7 @@ concept:api-1977-article-55-norm a values:Prohibition ;
     cml:curationStatus cml:Proposed .
 
 concept:api-1977-article-56 a cml:Concept ;
-    skos:prefLabel "Article 56 - Protection of works and installations containing dangerous forces" ;
+    skos:prefLabel "Article 56 - Protection of works and installations containing dangerous forces"@en ;
     cml:realizedBy doc:article-56 ;
     cml:curationStatus cml:Proposed ;
     prov:wasDerivedFrom <https://ihl-databases.icrc.org/en/ihl-treaties/api-1977> ;
@@ -923,7 +923,7 @@ concept:api-1977-article-56-norm a values:Prohibition ;
     cml:curationStatus cml:Proposed .
 
 concept:api-1977-article-57 a cml:Concept ;
-    skos:prefLabel "Article 57 - Precautions in attack" ;
+    skos:prefLabel "Article 57 - Precautions in attack"@en ;
     cml:realizedBy doc:article-57 ;
     cml:curationStatus cml:Proposed ;
     prov:wasDerivedFrom <https://ihl-databases.icrc.org/en/ihl-treaties/api-1977> ;
@@ -940,7 +940,7 @@ concept:api-1977-article-57-norm a values:Obligation ;
     cml:curationStatus cml:Proposed .
 
 concept:api-1977-article-58 a cml:Concept ;
-    skos:prefLabel "Article 58 - Precautions against the effects of attacks" ;
+    skos:prefLabel "Article 58 - Precautions against the effects of attacks"@en ;
     cml:realizedBy doc:article-58 ;
     cml:curationStatus cml:Proposed ;
     prov:wasDerivedFrom <https://ihl-databases.icrc.org/en/ihl-treaties/api-1977> ;
@@ -956,7 +956,7 @@ concept:api-1977-article-58-norm a values:Undertaking ;
     cml:curationStatus cml:Proposed .
 
 concept:api-1977-article-59 a cml:Concept ;
-    skos:prefLabel "Article 59 - Non-defended localities" ;
+    skos:prefLabel "Article 59 - Non-defended localities"@en ;
     cml:realizedBy doc:article-59 ;
     cml:curationStatus cml:Proposed ;
     prov:wasDerivedFrom <https://ihl-databases.icrc.org/en/ihl-treaties/api-1977> ;
@@ -972,7 +972,7 @@ concept:api-1977-article-59-norm a values:Prohibition ;
     cml:curationStatus cml:Proposed .
 
 concept:api-1977-article-60 a cml:Concept ;
-    skos:prefLabel "Article 60 - Demilitarized zones" ;
+    skos:prefLabel "Article 60 - Demilitarized zones"@en ;
     cml:realizedBy doc:article-60 ;
     cml:curationStatus cml:Proposed ;
     prov:wasDerivedFrom <https://ihl-databases.icrc.org/en/ihl-treaties/api-1977> ;
@@ -988,7 +988,7 @@ concept:api-1977-article-60-norm a values:Prohibition ;
     cml:curationStatus cml:Proposed .
 
 concept:api-1977-article-61 a cml:Concept ;
-    skos:prefLabel "Article 61 - Definitions and scope" ;
+    skos:prefLabel "Article 61 - Definitions and scope"@en ;
     cml:realizedBy doc:article-61 ;
     cml:curationStatus cml:Proposed ;
     prov:wasDerivedFrom <https://ihl-databases.icrc.org/en/ihl-treaties/api-1977> ;
@@ -1004,7 +1004,7 @@ concept:api-1977-article-61-norm a values:Undertaking ;
     cml:curationStatus cml:Proposed .
 
 concept:api-1977-article-62 a cml:Concept ;
-    skos:prefLabel "Article 62 - General protection" ;
+    skos:prefLabel "Article 62 - General protection"@en ;
     cml:realizedBy doc:article-62 ;
     cml:curationStatus cml:Proposed ;
     prov:wasDerivedFrom <https://ihl-databases.icrc.org/en/ihl-treaties/api-1977> ;
@@ -1020,7 +1020,7 @@ concept:api-1977-article-62-norm a values:Prohibition ;
     cml:curationStatus cml:Proposed .
 
 concept:api-1977-article-63 a cml:Concept ;
-    skos:prefLabel "Article 63 - Civil defence in occupied territories" ;
+    skos:prefLabel "Article 63 - Civil defence in occupied territories"@en ;
     cml:realizedBy doc:article-63 ;
     cml:curationStatus cml:Proposed ;
     prov:wasDerivedFrom <https://ihl-databases.icrc.org/en/ihl-treaties/api-1977> ;
@@ -1036,7 +1036,7 @@ concept:api-1977-article-63-norm a values:Prohibition ;
     cml:curationStatus cml:Proposed .
 
 concept:api-1977-article-64 a cml:Concept ;
-    skos:prefLabel "Article 64 - Civilian civil defence organizations of neutral or other States not Parties to the conflict and international co-ordinating organizations" ;
+    skos:prefLabel "Article 64 - Civilian civil defence organizations of neutral or other States not Parties to the conflict and international co-ordinating organizations"@en ;
     cml:realizedBy doc:article-64 ;
     cml:curationStatus cml:Proposed ;
     prov:wasDerivedFrom <https://ihl-databases.icrc.org/en/ihl-treaties/api-1977> ;
@@ -1053,7 +1053,7 @@ concept:api-1977-article-64-norm a values:Obligation ;
     cml:curationStatus cml:Proposed .
 
 concept:api-1977-article-65 a cml:Concept ;
-    skos:prefLabel "Article 65 - Cessation of protection" ;
+    skos:prefLabel "Article 65 - Cessation of protection"@en ;
     cml:realizedBy doc:article-65 ;
     cml:curationStatus cml:Proposed ;
     prov:wasDerivedFrom <https://ihl-databases.icrc.org/en/ihl-treaties/api-1977> ;
@@ -1069,7 +1069,7 @@ concept:api-1977-article-65-norm a values:Prohibition ;
     cml:curationStatus cml:Proposed .
 
 concept:api-1977-article-66 a cml:Concept ;
-    skos:prefLabel "Article 66 - Identification" ;
+    skos:prefLabel "Article 66 - Identification"@en ;
     cml:realizedBy doc:article-66 ;
     cml:curationStatus cml:Proposed ;
     prov:wasDerivedFrom <https://ihl-databases.icrc.org/en/ihl-treaties/api-1977> ;
@@ -1086,7 +1086,7 @@ concept:api-1977-article-66-norm a values:Obligation ;
     cml:curationStatus cml:Proposed .
 
 concept:api-1977-article-67 a cml:Concept ;
-    skos:prefLabel "Article 67 - Members of the armed forces and military units assigned to civil defence organizations" ;
+    skos:prefLabel "Article 67 - Members of the armed forces and military units assigned to civil defence organizations"@en ;
     cml:realizedBy doc:article-67 ;
     cml:curationStatus cml:Proposed ;
     prov:wasDerivedFrom <https://ihl-databases.icrc.org/en/ihl-treaties/api-1977> ;
@@ -1102,7 +1102,7 @@ concept:api-1977-article-67-norm a values:Prohibition ;
     cml:curationStatus cml:Proposed .
 
 concept:api-1977-article-68 a cml:Concept ;
-    skos:prefLabel "Article 68 - Field of application" ;
+    skos:prefLabel "Article 68 - Field of application"@en ;
     cml:realizedBy doc:article-68 ;
     cml:curationStatus cml:Proposed ;
     prov:wasDerivedFrom <https://ihl-databases.icrc.org/en/ihl-treaties/api-1977> ;
@@ -1118,7 +1118,7 @@ concept:api-1977-article-68-norm a values:Undertaking ;
     cml:curationStatus cml:Proposed .
 
 concept:api-1977-article-69 a cml:Concept ;
-    skos:prefLabel "Article 69 - Basic needs in occupied territories" ;
+    skos:prefLabel "Article 69 - Basic needs in occupied territories"@en ;
     cml:realizedBy doc:article-69 ;
     cml:curationStatus cml:Proposed ;
     prov:wasDerivedFrom <https://ihl-databases.icrc.org/en/ihl-treaties/api-1977> ;
@@ -1135,7 +1135,7 @@ concept:api-1977-article-69-norm a values:Obligation ;
     cml:curationStatus cml:Proposed .
 
 concept:api-1977-article-70 a cml:Concept ;
-    skos:prefLabel "Article 70 - Relief actions" ;
+    skos:prefLabel "Article 70 - Relief actions"@en ;
     cml:realizedBy doc:article-70 ;
     cml:curationStatus cml:Proposed ;
     prov:wasDerivedFrom <https://ihl-databases.icrc.org/en/ihl-treaties/api-1977> ;
@@ -1151,7 +1151,7 @@ concept:api-1977-article-70-norm a values:Prohibition ;
     cml:curationStatus cml:Proposed .
 
 concept:api-1977-article-71 a cml:Concept ;
-    skos:prefLabel "Article 71 - Personnel participating in relief actions" ;
+    skos:prefLabel "Article 71 - Personnel participating in relief actions"@en ;
     cml:realizedBy doc:article-71 ;
     cml:curationStatus cml:Proposed ;
     prov:wasDerivedFrom <https://ihl-databases.icrc.org/en/ihl-treaties/api-1977> ;
@@ -1168,7 +1168,7 @@ concept:api-1977-article-71-norm a values:Obligation ;
     cml:curationStatus cml:Proposed .
 
 concept:api-1977-article-72 a cml:Concept ;
-    skos:prefLabel "Article 72 - Field of application" ;
+    skos:prefLabel "Article 72 - Field of application"@en ;
     cml:realizedBy doc:article-72 ;
     cml:curationStatus cml:Proposed ;
     prov:wasDerivedFrom <https://ihl-databases.icrc.org/en/ihl-treaties/api-1977> ;
@@ -1184,7 +1184,7 @@ concept:api-1977-article-72-norm a values:Undertaking ;
     cml:curationStatus cml:Proposed .
 
 concept:api-1977-article-73 a cml:Concept ;
-    skos:prefLabel "Article 73 - Refugees and stateless persons" ;
+    skos:prefLabel "Article 73 - Refugees and stateless persons"@en ;
     cml:realizedBy doc:article-73 ;
     cml:curationStatus cml:Proposed ;
     prov:wasDerivedFrom <https://ihl-databases.icrc.org/en/ihl-treaties/api-1977> ;
@@ -1201,7 +1201,7 @@ concept:api-1977-article-73-norm a values:Obligation ;
     cml:curationStatus cml:Proposed .
 
 concept:api-1977-article-74 a cml:Concept ;
-    skos:prefLabel "Article 74 - Reunion of dispersed families" ;
+    skos:prefLabel "Article 74 - Reunion of dispersed families"@en ;
     cml:realizedBy doc:article-74 ;
     cml:curationStatus cml:Proposed ;
     prov:wasDerivedFrom <https://ihl-databases.icrc.org/en/ihl-treaties/api-1977> ;
@@ -1217,7 +1217,7 @@ concept:api-1977-article-74-norm a values:Undertaking ;
     cml:curationStatus cml:Proposed .
 
 concept:api-1977-article-75 a cml:Concept ;
-    skos:prefLabel "Article 75 - Fundamental guarantees" ;
+    skos:prefLabel "Article 75 - Fundamental guarantees"@en ;
     cml:realizedBy doc:article-75 ;
     cml:curationStatus cml:Proposed ;
     prov:wasDerivedFrom <https://ihl-databases.icrc.org/en/ihl-treaties/api-1977> ;
@@ -1233,7 +1233,7 @@ concept:api-1977-article-75-norm a values:Right ;
     cml:curationStatus cml:Proposed .
 
 concept:api-1977-article-76 a cml:Concept ;
-    skos:prefLabel "Article 76 - Protection of women" ;
+    skos:prefLabel "Article 76 - Protection of women"@en ;
     cml:realizedBy doc:article-76 ;
     cml:curationStatus cml:Proposed ;
     prov:wasDerivedFrom <https://ihl-databases.icrc.org/en/ihl-treaties/api-1977> ;
@@ -1249,7 +1249,7 @@ concept:api-1977-article-76-norm a values:Prohibition ;
     cml:curationStatus cml:Proposed .
 
 concept:api-1977-article-77 a cml:Concept ;
-    skos:prefLabel "Article 77 - Protection of children" ;
+    skos:prefLabel "Article 77 - Protection of children"@en ;
     cml:realizedBy doc:article-77 ;
     cml:curationStatus cml:Proposed ;
     prov:wasDerivedFrom <https://ihl-databases.icrc.org/en/ihl-treaties/api-1977> ;
@@ -1265,7 +1265,7 @@ concept:api-1977-article-77-norm a values:Prohibition ;
     cml:curationStatus cml:Proposed .
 
 concept:api-1977-article-78 a cml:Concept ;
-    skos:prefLabel "Article 78 - Evacuation of children" ;
+    skos:prefLabel "Article 78 - Evacuation of children"@en ;
     cml:realizedBy doc:article-78 ;
     cml:curationStatus cml:Proposed ;
     prov:wasDerivedFrom <https://ihl-databases.icrc.org/en/ihl-treaties/api-1977> ;
@@ -1282,7 +1282,7 @@ concept:api-1977-article-78-norm a values:Obligation ;
     cml:curationStatus cml:Proposed .
 
 concept:api-1977-article-79 a cml:Concept ;
-    skos:prefLabel "Article 79 - Measures of protection for journalists" ;
+    skos:prefLabel "Article 79 - Measures of protection for journalists"@en ;
     cml:realizedBy doc:article-79 ;
     cml:curationStatus cml:Proposed ;
     prov:wasDerivedFrom <https://ihl-databases.icrc.org/en/ihl-treaties/api-1977> ;
@@ -1299,7 +1299,7 @@ concept:api-1977-article-79-norm a values:Obligation ;
     cml:curationStatus cml:Proposed .
 
 concept:api-1977-article-80 a cml:Concept ;
-    skos:prefLabel "Article 80 - Measures for execution" ;
+    skos:prefLabel "Article 80 - Measures for execution"@en ;
     cml:realizedBy doc:article-80 ;
     cml:curationStatus cml:Proposed ;
     prov:wasDerivedFrom <https://ihl-databases.icrc.org/en/ihl-treaties/api-1977> ;
@@ -1315,7 +1315,7 @@ concept:api-1977-article-80-norm a values:Undertaking ;
     cml:curationStatus cml:Proposed .
 
 concept:api-1977-article-81 a cml:Concept ;
-    skos:prefLabel "Article 81 - Activities of the Red Cross and other humanitarian organizations" ;
+    skos:prefLabel "Article 81 - Activities of the Red Cross and other humanitarian organizations"@en ;
     cml:realizedBy doc:article-81 ;
     cml:curationStatus cml:Proposed ;
     prov:wasDerivedFrom <https://ihl-databases.icrc.org/en/ihl-treaties/api-1977> ;
@@ -1332,7 +1332,7 @@ concept:api-1977-article-81-norm a values:Obligation ;
     cml:curationStatus cml:Proposed .
 
 concept:api-1977-article-82 a cml:Concept ;
-    skos:prefLabel "Article 82 - Legal advisers in armed forces" ;
+    skos:prefLabel "Article 82 - Legal advisers in armed forces"@en ;
     cml:realizedBy doc:article-82 ;
     cml:curationStatus cml:Proposed ;
     prov:wasDerivedFrom <https://ihl-databases.icrc.org/en/ihl-treaties/api-1977> ;
@@ -1349,7 +1349,7 @@ concept:api-1977-article-82-norm a values:Obligation ;
     cml:curationStatus cml:Proposed .
 
 concept:api-1977-article-83 a cml:Concept ;
-    skos:prefLabel "Article 83 - Dissemination" ;
+    skos:prefLabel "Article 83 - Dissemination"@en ;
     cml:realizedBy doc:article-83 ;
     cml:curationStatus cml:Proposed ;
     prov:wasDerivedFrom <https://ihl-databases.icrc.org/en/ihl-treaties/api-1977> ;
@@ -1366,7 +1366,7 @@ concept:api-1977-article-83-norm a values:Obligation ;
     cml:curationStatus cml:Proposed .
 
 concept:api-1977-article-84 a cml:Concept ;
-    skos:prefLabel "Article 84 - Rules of application" ;
+    skos:prefLabel "Article 84 - Rules of application"@en ;
     cml:realizedBy doc:article-84 ;
     cml:curationStatus cml:Proposed ;
     prov:wasDerivedFrom <https://ihl-databases.icrc.org/en/ihl-treaties/api-1977> ;
@@ -1382,7 +1382,7 @@ concept:api-1977-article-84-norm a values:Undertaking ;
     cml:curationStatus cml:Proposed .
 
 concept:api-1977-article-85 a cml:Concept ;
-    skos:prefLabel "Article 85 - Repression of breaches of this Protocol" ;
+    skos:prefLabel "Article 85 - Repression of breaches of this Protocol"@en ;
     cml:realizedBy doc:article-85 ;
     cml:curationStatus cml:Proposed ;
     prov:wasDerivedFrom <https://ihl-databases.icrc.org/en/ihl-treaties/api-1977> ;
@@ -1399,7 +1399,7 @@ concept:api-1977-article-85-norm a values:Obligation ;
     cml:curationStatus cml:Proposed .
 
 concept:api-1977-article-86 a cml:Concept ;
-    skos:prefLabel "Article 86 - Failure to act" ;
+    skos:prefLabel "Article 86 - Failure to act"@en ;
     cml:realizedBy doc:article-86 ;
     cml:curationStatus cml:Proposed ;
     prov:wasDerivedFrom <https://ihl-databases.icrc.org/en/ihl-treaties/api-1977> ;
@@ -1415,7 +1415,7 @@ concept:api-1977-article-86-norm a values:Undertaking ;
     cml:curationStatus cml:Proposed .
 
 concept:api-1977-article-87 a cml:Concept ;
-    skos:prefLabel "Article 87 - Duty of commanders" ;
+    skos:prefLabel "Article 87 - Duty of commanders"@en ;
     cml:realizedBy doc:article-87 ;
     cml:curationStatus cml:Proposed ;
     prov:wasDerivedFrom <https://ihl-databases.icrc.org/en/ihl-treaties/api-1977> ;
@@ -1431,7 +1431,7 @@ concept:api-1977-article-87-norm a values:Undertaking ;
     cml:curationStatus cml:Proposed .
 
 concept:api-1977-article-88 a cml:Concept ;
-    skos:prefLabel "Article 88 - Mutual assistance in criminal matters" ;
+    skos:prefLabel "Article 88 - Mutual assistance in criminal matters"@en ;
     cml:realizedBy doc:article-88 ;
     cml:curationStatus cml:Proposed ;
     prov:wasDerivedFrom <https://ihl-databases.icrc.org/en/ihl-treaties/api-1977> ;
@@ -1447,7 +1447,7 @@ concept:api-1977-article-88-norm a values:Prohibition ;
     cml:curationStatus cml:Proposed .
 
 concept:api-1977-article-89 a cml:Concept ;
-    skos:prefLabel "Article 89 - Co-operation" ;
+    skos:prefLabel "Article 89 - Co-operation"@en ;
     cml:realizedBy doc:article-89 ;
     cml:curationStatus cml:Proposed ;
     prov:wasDerivedFrom <https://ihl-databases.icrc.org/en/ihl-treaties/api-1977> ;
@@ -1464,7 +1464,7 @@ concept:api-1977-article-89-norm a values:Obligation ;
     cml:curationStatus cml:Proposed .
 
 concept:api-1977-article-90 a cml:Concept ;
-    skos:prefLabel "Article 90 - International Fact-Finding Commission" ;
+    skos:prefLabel "Article 90 - International Fact-Finding Commission"@en ;
     cml:realizedBy doc:article-90 ;
     cml:curationStatus cml:Proposed ;
     prov:wasDerivedFrom <https://ihl-databases.icrc.org/en/ihl-treaties/api-1977> ;
@@ -1480,7 +1480,7 @@ concept:api-1977-article-90-norm a values:Prohibition ;
     cml:curationStatus cml:Proposed .
 
 concept:api-1977-article-91 a cml:Concept ;
-    skos:prefLabel "Article 91 - Responsibility" ;
+    skos:prefLabel "Article 91 - Responsibility"@en ;
     cml:realizedBy doc:article-91 ;
     cml:curationStatus cml:Proposed ;
     prov:wasDerivedFrom <https://ihl-databases.icrc.org/en/ihl-treaties/api-1977> ;
@@ -1497,7 +1497,7 @@ concept:api-1977-article-91-norm a values:Obligation ;
     cml:curationStatus cml:Proposed .
 
 concept:api-1977-article-92 a cml:Concept ;
-    skos:prefLabel "Article 92 - Signature" ;
+    skos:prefLabel "Article 92 - Signature"@en ;
     cml:realizedBy doc:article-92 ;
     cml:curationStatus cml:Proposed ;
     prov:wasDerivedFrom <https://ihl-databases.icrc.org/en/ihl-treaties/api-1977> ;
@@ -1514,7 +1514,7 @@ concept:api-1977-article-92-norm a values:Obligation ;
     cml:curationStatus cml:Proposed .
 
 concept:api-1977-article-93 a cml:Concept ;
-    skos:prefLabel "Article 93 - Ratification" ;
+    skos:prefLabel "Article 93 - Ratification"@en ;
     cml:realizedBy doc:article-93 ;
     cml:curationStatus cml:Proposed ;
     prov:wasDerivedFrom <https://ihl-databases.icrc.org/en/ihl-treaties/api-1977> ;
@@ -1531,7 +1531,7 @@ concept:api-1977-article-93-norm a values:Obligation ;
     cml:curationStatus cml:Proposed .
 
 concept:api-1977-article-94 a cml:Concept ;
-    skos:prefLabel "Article 94 - Accession" ;
+    skos:prefLabel "Article 94 - Accession"@en ;
     cml:realizedBy doc:article-94 ;
     cml:curationStatus cml:Proposed ;
     prov:wasDerivedFrom <https://ihl-databases.icrc.org/en/ihl-treaties/api-1977> ;
@@ -1548,7 +1548,7 @@ concept:api-1977-article-94-norm a values:Obligation ;
     cml:curationStatus cml:Proposed .
 
 concept:api-1977-article-95 a cml:Concept ;
-    skos:prefLabel "Article 95 - Entry into force" ;
+    skos:prefLabel "Article 95 - Entry into force"@en ;
     cml:realizedBy doc:article-95 ;
     cml:curationStatus cml:Proposed ;
     prov:wasDerivedFrom <https://ihl-databases.icrc.org/en/ihl-treaties/api-1977> ;
@@ -1564,7 +1564,7 @@ concept:api-1977-article-95-norm a values:Undertaking ;
     cml:curationStatus cml:Proposed .
 
 concept:api-1977-article-96 a cml:Concept ;
-    skos:prefLabel "Article 96 - Treaty relations upon entry into force of this Protocol" ;
+    skos:prefLabel "Article 96 - Treaty relations upon entry into force of this Protocol"@en ;
     cml:realizedBy doc:article-96 ;
     cml:curationStatus cml:Proposed ;
     prov:wasDerivedFrom <https://ihl-databases.icrc.org/en/ihl-treaties/api-1977> ;
@@ -1581,7 +1581,7 @@ concept:api-1977-article-96-norm a values:Obligation ;
     cml:curationStatus cml:Proposed .
 
 concept:api-1977-article-97 a cml:Concept ;
-    skos:prefLabel "Article 97 - Amendment" ;
+    skos:prefLabel "Article 97 - Amendment"@en ;
     cml:realizedBy doc:article-97 ;
     cml:curationStatus cml:Proposed ;
     prov:wasDerivedFrom <https://ihl-databases.icrc.org/en/ihl-treaties/api-1977> ;
@@ -1598,7 +1598,7 @@ concept:api-1977-article-97-norm a values:Obligation ;
     cml:curationStatus cml:Proposed .
 
 concept:api-1977-article-98 a cml:Concept ;
-    skos:prefLabel "Article 98 - Revision of Annex I" ;
+    skos:prefLabel "Article 98 - Revision of Annex I"@en ;
     cml:realizedBy doc:article-98 ;
     cml:curationStatus cml:Proposed ;
     prov:wasDerivedFrom <https://ihl-databases.icrc.org/en/ihl-treaties/api-1977> ;
@@ -1614,7 +1614,7 @@ concept:api-1977-article-98-norm a values:Prohibition ;
     cml:curationStatus cml:Proposed .
 
 concept:api-1977-article-99 a cml:Concept ;
-    skos:prefLabel "Article 99 - Denunciation" ;
+    skos:prefLabel "Article 99 - Denunciation"@en ;
     cml:realizedBy doc:article-99 ;
     cml:curationStatus cml:Proposed ;
     prov:wasDerivedFrom <https://ihl-databases.icrc.org/en/ihl-treaties/api-1977> ;
@@ -1630,7 +1630,7 @@ concept:api-1977-article-99-norm a values:Prohibition ;
     cml:curationStatus cml:Proposed .
 
 concept:api-1977-article-100 a cml:Concept ;
-    skos:prefLabel "Article 100 - Notifications" ;
+    skos:prefLabel "Article 100 - Notifications"@en ;
     cml:realizedBy doc:article-100 ;
     cml:curationStatus cml:Proposed ;
     prov:wasDerivedFrom <https://ihl-databases.icrc.org/en/ihl-treaties/api-1977> ;
@@ -1647,7 +1647,7 @@ concept:api-1977-article-100-norm a values:Obligation ;
     cml:curationStatus cml:Proposed .
 
 concept:api-1977-article-101 a cml:Concept ;
-    skos:prefLabel "Article 101 - Registration" ;
+    skos:prefLabel "Article 101 - Registration"@en ;
     cml:realizedBy doc:article-101 ;
     cml:curationStatus cml:Proposed ;
     prov:wasDerivedFrom <https://ihl-databases.icrc.org/en/ihl-treaties/api-1977> ;
@@ -1664,7 +1664,7 @@ concept:api-1977-article-101-norm a values:Obligation ;
     cml:curationStatus cml:Proposed .
 
 concept:api-1977-article-102 a cml:Concept ;
-    skos:prefLabel "Article 102 - Authentic texts" ;
+    skos:prefLabel "Article 102 - Authentic texts"@en ;
     cml:realizedBy doc:article-102 ;
     cml:curationStatus cml:Proposed ;
     prov:wasDerivedFrom <https://ihl-databases.icrc.org/en/ihl-treaties/api-1977> ;

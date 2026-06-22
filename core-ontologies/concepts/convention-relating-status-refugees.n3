@@ -17,7 +17,7 @@
 # ============================================================
 
 concept:convention-relating-status-refugees-article-1 a cml:Concept ;
-    skos:prefLabel "Article 1" ;
+    skos:prefLabel "Article 1"@en ;
     cml:realizedBy doc:article-1 ;
     cml:curationStatus cml:Proposed ;
     prov:wasDerivedFrom <https://www.ohchr.org/en/instruments-mechanisms/instruments/convention-relating-status-refugees> ;
@@ -33,7 +33,7 @@ concept:convention-relating-status-refugees-article-1-norm a values:Prohibition 
     cml:curationStatus cml:Proposed .
 
 concept:convention-relating-status-refugees-article-2 a cml:Concept ;
-    skos:prefLabel "Article 2" ;
+    skos:prefLabel "Article 2"@en ;
     cml:realizedBy doc:article-2 ;
     cml:curationStatus cml:Proposed ;
     prov:wasDerivedFrom <https://www.ohchr.org/en/instruments-mechanisms/instruments/convention-relating-status-refugees> ;
@@ -48,7 +48,7 @@ concept:convention-relating-status-refugees-article-2-norm a values:Undertaking 
     cml:curationStatus cml:Proposed .
 
 concept:convention-relating-status-refugees-article-3 a cml:Concept ;
-    skos:prefLabel "Article 3" ;
+    skos:prefLabel "Article 3"@en ;
     cml:realizedBy doc:article-3 ;
     cml:curationStatus cml:Proposed ;
     prov:wasDerivedFrom <https://www.ohchr.org/en/instruments-mechanisms/instruments/convention-relating-status-refugees> ;
@@ -63,7 +63,7 @@ concept:convention-relating-status-refugees-article-3-norm a values:Undertaking 
     cml:curationStatus cml:Proposed .
 
 concept:convention-relating-status-refugees-article-4 a cml:Concept ;
-    skos:prefLabel "Article 4" ;
+    skos:prefLabel "Article 4"@en ;
     cml:realizedBy doc:article-4 ;
     cml:curationStatus cml:Proposed ;
     prov:wasDerivedFrom <https://www.ohchr.org/en/instruments-mechanisms/instruments/convention-relating-status-refugees> ;
@@ -78,7 +78,7 @@ concept:convention-relating-status-refugees-article-4-norm a values:Undertaking 
     cml:curationStatus cml:Proposed .
 
 concept:convention-relating-status-refugees-article-5 a cml:Concept ;
-    skos:prefLabel "Article 5" ;
+    skos:prefLabel "Article 5"@en ;
     cml:realizedBy doc:article-5 ;
     cml:curationStatus cml:Proposed ;
     prov:wasDerivedFrom <https://www.ohchr.org/en/instruments-mechanisms/instruments/convention-relating-status-refugees> ;
@@ -94,7 +94,7 @@ concept:convention-relating-status-refugees-article-5-norm a values:Prohibition 
     cml:curationStatus cml:Proposed .
 
 concept:convention-relating-status-refugees-article-6 a cml:Concept ;
-    skos:prefLabel "Article 6" ;
+    skos:prefLabel "Article 6"@en ;
     cml:realizedBy doc:article-6 ;
     cml:curationStatus cml:Proposed ;
     prov:wasDerivedFrom <https://www.ohchr.org/en/instruments-mechanisms/instruments/convention-relating-status-refugees> ;
@@ -109,7 +109,7 @@ concept:convention-relating-status-refugees-article-6-norm a values:Undertaking 
     cml:curationStatus cml:Proposed .
 
 concept:convention-relating-status-refugees-article-7 a cml:Concept ;
-    skos:prefLabel "Article 7" ;
+    skos:prefLabel "Article 7"@en ;
     cml:realizedBy doc:article-7 ;
     cml:curationStatus cml:Proposed ;
     prov:wasDerivedFrom <https://www.ohchr.org/en/instruments-mechanisms/instruments/convention-relating-status-refugees> ;
@@ -124,7 +124,7 @@ concept:convention-relating-status-refugees-article-7-norm a values:Undertaking 
     cml:curationStatus cml:Proposed .
 
 concept:convention-relating-status-refugees-article-8 a cml:Concept ;
-    skos:prefLabel "Article 8" ;
+    skos:prefLabel "Article 8"@en ;
     cml:realizedBy doc:article-8 ;
     cml:curationStatus cml:Proposed ;
     prov:wasDerivedFrom <https://www.ohchr.org/en/instruments-mechanisms/instruments/convention-relating-status-refugees> ;
@@ -140,7 +140,7 @@ concept:convention-relating-status-refugees-article-8-norm a values:Prohibition 
     cml:curationStatus cml:Proposed .
 
 concept:convention-relating-status-refugees-article-9 a cml:Concept ;
-    skos:prefLabel "Article 9" ;
+    skos:prefLabel "Article 9"@en ;
     cml:realizedBy doc:article-9 ;
     cml:curationStatus cml:Proposed ;
     prov:wasDerivedFrom <https://www.ohchr.org/en/instruments-mechanisms/instruments/convention-relating-status-refugees> ;
@@ -156,7 +156,7 @@ concept:convention-relating-status-refugees-article-9-norm a values:Prohibition 
     cml:curationStatus cml:Proposed .
 
 concept:convention-relating-status-refugees-article-10 a cml:Concept ;
-    skos:prefLabel "Article 10" ;
+    skos:prefLabel "Article 10"@en ;
     cml:realizedBy doc:article-10 ;
     cml:curationStatus cml:Proposed ;
     prov:wasDerivedFrom <https://www.ohchr.org/en/instruments-mechanisms/instruments/convention-relating-status-refugees> ;
@@ -173,7 +173,7 @@ concept:convention-relating-status-refugees-article-10-norm a values:Obligation 
     cml:curationStatus cml:Proposed .
 
 concept:convention-relating-status-refugees-article-11 a cml:Concept ;
-    skos:prefLabel "Article 11" ;
+    skos:prefLabel "Article 11"@en ;
     cml:realizedBy doc:article-11 ;
     cml:curationStatus cml:Proposed ;
     prov:wasDerivedFrom <https://www.ohchr.org/en/instruments-mechanisms/instruments/convention-relating-status-refugees> ;
@@ -188,7 +188,7 @@ concept:convention-relating-status-refugees-article-11-norm a values:Undertaking
     cml:curationStatus cml:Proposed .
 
 concept:convention-relating-status-refugees-article-12 a cml:Concept ;
-    skos:prefLabel "Article 12" ;
+    skos:prefLabel "Article 12"@en ;
     cml:realizedBy doc:article-12 ;
     cml:curationStatus cml:Proposed ;
     prov:wasDerivedFrom <https://www.ohchr.org/en/instruments-mechanisms/instruments/convention-relating-status-refugees> ;
@@ -205,7 +205,7 @@ concept:convention-relating-status-refugees-article-12-norm a values:Obligation 
     cml:curationStatus cml:Proposed .
 
 concept:convention-relating-status-refugees-article-13 a cml:Concept ;
-    skos:prefLabel "Article 13" ;
+    skos:prefLabel "Article 13"@en ;
     cml:realizedBy doc:article-13 ;
     cml:curationStatus cml:Proposed ;
     prov:wasDerivedFrom <https://www.ohchr.org/en/instruments-mechanisms/instruments/convention-relating-status-refugees> ;
@@ -220,7 +220,7 @@ concept:convention-relating-status-refugees-article-13-norm a values:Undertaking
     cml:curationStatus cml:Proposed .
 
 concept:convention-relating-status-refugees-article-14 a cml:Concept ;
-    skos:prefLabel "Article 14" ;
+    skos:prefLabel "Article 14"@en ;
     cml:realizedBy doc:article-14 ;
     cml:curationStatus cml:Proposed ;
     prov:wasDerivedFrom <https://www.ohchr.org/en/instruments-mechanisms/instruments/convention-relating-status-refugees> ;
@@ -237,7 +237,7 @@ concept:convention-relating-status-refugees-article-14-norm a values:Obligation 
     cml:curationStatus cml:Proposed .
 
 concept:convention-relating-status-refugees-article-15 a cml:Concept ;
-    skos:prefLabel "Article 15" ;
+    skos:prefLabel "Article 15"@en ;
     cml:realizedBy doc:article-15 ;
     cml:curationStatus cml:Proposed ;
     prov:wasDerivedFrom <https://www.ohchr.org/en/instruments-mechanisms/instruments/convention-relating-status-refugees> ;
@@ -252,7 +252,7 @@ concept:convention-relating-status-refugees-article-15-norm a values:Undertaking
     cml:curationStatus cml:Proposed .
 
 concept:convention-relating-status-refugees-article-16 a cml:Concept ;
-    skos:prefLabel "Article 16" ;
+    skos:prefLabel "Article 16"@en ;
     cml:realizedBy doc:article-16 ;
     cml:curationStatus cml:Proposed ;
     prov:wasDerivedFrom <https://www.ohchr.org/en/instruments-mechanisms/instruments/convention-relating-status-refugees> ;
@@ -269,7 +269,7 @@ concept:convention-relating-status-refugees-article-16-norm a values:Obligation 
     cml:curationStatus cml:Proposed .
 
 concept:convention-relating-status-refugees-article-17 a cml:Concept ;
-    skos:prefLabel "Article 17" ;
+    skos:prefLabel "Article 17"@en ;
     cml:realizedBy doc:article-17 ;
     cml:curationStatus cml:Proposed ;
     prov:wasDerivedFrom <https://www.ohchr.org/en/instruments-mechanisms/instruments/convention-relating-status-refugees> ;
@@ -285,7 +285,7 @@ concept:convention-relating-status-refugees-article-17-norm a values:Prohibition
     cml:curationStatus cml:Proposed .
 
 concept:convention-relating-status-refugees-article-18 a cml:Concept ;
-    skos:prefLabel "Article 18" ;
+    skos:prefLabel "Article 18"@en ;
     cml:realizedBy doc:article-18 ;
     cml:curationStatus cml:Proposed ;
     prov:wasDerivedFrom <https://www.ohchr.org/en/instruments-mechanisms/instruments/convention-relating-status-refugees> ;
@@ -301,7 +301,7 @@ concept:convention-relating-status-refugees-article-18-norm a values:Right ;
     cml:curationStatus cml:Proposed .
 
 concept:convention-relating-status-refugees-article-19 a cml:Concept ;
-    skos:prefLabel "Article 19" ;
+    skos:prefLabel "Article 19"@en ;
     cml:realizedBy doc:article-19 ;
     cml:curationStatus cml:Proposed ;
     prov:wasDerivedFrom <https://www.ohchr.org/en/instruments-mechanisms/instruments/convention-relating-status-refugees> ;
@@ -316,7 +316,7 @@ concept:convention-relating-status-refugees-article-19-norm a values:Undertaking
     cml:curationStatus cml:Proposed .
 
 concept:convention-relating-status-refugees-article-20 a cml:Concept ;
-    skos:prefLabel "Article 20" ;
+    skos:prefLabel "Article 20"@en ;
     cml:realizedBy doc:article-20 ;
     cml:curationStatus cml:Proposed ;
     prov:wasDerivedFrom <https://www.ohchr.org/en/instruments-mechanisms/instruments/convention-relating-status-refugees> ;
@@ -333,7 +333,7 @@ concept:convention-relating-status-refugees-article-20-norm a values:Obligation 
     cml:curationStatus cml:Proposed .
 
 concept:convention-relating-status-refugees-article-21 a cml:Concept ;
-    skos:prefLabel "Article 21" ;
+    skos:prefLabel "Article 21"@en ;
     cml:realizedBy doc:article-21 ;
     cml:curationStatus cml:Proposed ;
     prov:wasDerivedFrom <https://www.ohchr.org/en/instruments-mechanisms/instruments/convention-relating-status-refugees> ;
@@ -348,7 +348,7 @@ concept:convention-relating-status-refugees-article-21-norm a values:Undertaking
     cml:curationStatus cml:Proposed .
 
 concept:convention-relating-status-refugees-article-22 a cml:Concept ;
-    skos:prefLabel "Article 22" ;
+    skos:prefLabel "Article 22"@en ;
     cml:realizedBy doc:article-22 ;
     cml:curationStatus cml:Proposed ;
     prov:wasDerivedFrom <https://www.ohchr.org/en/instruments-mechanisms/instruments/convention-relating-status-refugees> ;
@@ -363,7 +363,7 @@ concept:convention-relating-status-refugees-article-22-norm a values:Undertaking
     cml:curationStatus cml:Proposed .
 
 concept:convention-relating-status-refugees-article-23 a cml:Concept ;
-    skos:prefLabel "Article 23" ;
+    skos:prefLabel "Article 23"@en ;
     cml:realizedBy doc:article-23 ;
     cml:curationStatus cml:Proposed ;
     prov:wasDerivedFrom <https://www.ohchr.org/en/instruments-mechanisms/instruments/convention-relating-status-refugees> ;
@@ -378,7 +378,7 @@ concept:convention-relating-status-refugees-article-23-norm a values:Undertaking
     cml:curationStatus cml:Proposed .
 
 concept:convention-relating-status-refugees-article-24 a cml:Concept ;
-    skos:prefLabel "Article 24" ;
+    skos:prefLabel "Article 24"@en ;
     cml:realizedBy doc:article-24 ;
     cml:curationStatus cml:Proposed ;
     prov:wasDerivedFrom <https://www.ohchr.org/en/instruments-mechanisms/instruments/convention-relating-status-refugees> ;
@@ -394,7 +394,7 @@ concept:convention-relating-status-refugees-article-24-norm a values:Prohibition
     cml:curationStatus cml:Proposed .
 
 concept:convention-relating-status-refugees-article-25 a cml:Concept ;
-    skos:prefLabel "Article 25" ;
+    skos:prefLabel "Article 25"@en ;
     cml:realizedBy doc:article-25 ;
     cml:curationStatus cml:Proposed ;
     prov:wasDerivedFrom <https://www.ohchr.org/en/instruments-mechanisms/instruments/convention-relating-status-refugees> ;
@@ -411,7 +411,7 @@ concept:convention-relating-status-refugees-article-25-norm a values:Obligation 
     cml:curationStatus cml:Proposed .
 
 concept:convention-relating-status-refugees-article-26 a cml:Concept ;
-    skos:prefLabel "Article 26" ;
+    skos:prefLabel "Article 26"@en ;
     cml:realizedBy doc:article-26 ;
     cml:curationStatus cml:Proposed ;
     prov:wasDerivedFrom <https://www.ohchr.org/en/instruments-mechanisms/instruments/convention-relating-status-refugees> ;
@@ -427,7 +427,7 @@ concept:convention-relating-status-refugees-article-26-norm a values:Right ;
     cml:curationStatus cml:Proposed .
 
 concept:convention-relating-status-refugees-article-27 a cml:Concept ;
-    skos:prefLabel "Article 27" ;
+    skos:prefLabel "Article 27"@en ;
     cml:realizedBy doc:article-27 ;
     cml:curationStatus cml:Proposed ;
     prov:wasDerivedFrom <https://www.ohchr.org/en/instruments-mechanisms/instruments/convention-relating-status-refugees> ;
@@ -442,7 +442,7 @@ concept:convention-relating-status-refugees-article-27-norm a values:Undertaking
     cml:curationStatus cml:Proposed .
 
 concept:convention-relating-status-refugees-article-28 a cml:Concept ;
-    skos:prefLabel "Article 28" ;
+    skos:prefLabel "Article 28"@en ;
     cml:realizedBy doc:article-28 ;
     cml:curationStatus cml:Proposed ;
     prov:wasDerivedFrom <https://www.ohchr.org/en/instruments-mechanisms/instruments/convention-relating-status-refugees> ;
@@ -459,7 +459,7 @@ concept:convention-relating-status-refugees-article-28-norm a values:Obligation 
     cml:curationStatus cml:Proposed .
 
 concept:convention-relating-status-refugees-article-29 a cml:Concept ;
-    skos:prefLabel "Article 29" ;
+    skos:prefLabel "Article 29"@en ;
     cml:realizedBy doc:article-29 ;
     cml:curationStatus cml:Proposed ;
     prov:wasDerivedFrom <https://www.ohchr.org/en/instruments-mechanisms/instruments/convention-relating-status-refugees> ;
@@ -475,7 +475,7 @@ concept:convention-relating-status-refugees-article-29-norm a values:Prohibition
     cml:curationStatus cml:Proposed .
 
 concept:convention-relating-status-refugees-article-30 a cml:Concept ;
-    skos:prefLabel "Article 30" ;
+    skos:prefLabel "Article 30"@en ;
     cml:realizedBy doc:article-30 ;
     cml:curationStatus cml:Proposed ;
     prov:wasDerivedFrom <https://www.ohchr.org/en/instruments-mechanisms/instruments/convention-relating-status-refugees> ;
@@ -490,7 +490,7 @@ concept:convention-relating-status-refugees-article-30-norm a values:Undertaking
     cml:curationStatus cml:Proposed .
 
 concept:convention-relating-status-refugees-article-31 a cml:Concept ;
-    skos:prefLabel "Article 31" ;
+    skos:prefLabel "Article 31"@en ;
     cml:realizedBy doc:article-31 ;
     cml:curationStatus cml:Proposed ;
     prov:wasDerivedFrom <https://www.ohchr.org/en/instruments-mechanisms/instruments/convention-relating-status-refugees> ;
@@ -506,7 +506,7 @@ concept:convention-relating-status-refugees-article-31-norm a values:Prohibition
     cml:curationStatus cml:Proposed .
 
 concept:convention-relating-status-refugees-article-32 a cml:Concept ;
-    skos:prefLabel "Article 32" ;
+    skos:prefLabel "Article 32"@en ;
     cml:realizedBy doc:article-32 ;
     cml:curationStatus cml:Proposed ;
     prov:wasDerivedFrom <https://www.ohchr.org/en/instruments-mechanisms/instruments/convention-relating-status-refugees> ;
@@ -522,7 +522,7 @@ concept:convention-relating-status-refugees-article-32-norm a values:Prohibition
     cml:curationStatus cml:Proposed .
 
 concept:convention-relating-status-refugees-article-33 a cml:Concept ;
-    skos:prefLabel "Article 33" ;
+    skos:prefLabel "Article 33"@en ;
     cml:realizedBy doc:article-33 ;
     cml:curationStatus cml:Proposed ;
     prov:wasDerivedFrom <https://www.ohchr.org/en/instruments-mechanisms/instruments/convention-relating-status-refugees> ;
@@ -537,7 +537,7 @@ concept:convention-relating-status-refugees-article-33-norm a values:Undertaking
     cml:curationStatus cml:Proposed .
 
 concept:convention-relating-status-refugees-article-34 a cml:Concept ;
-    skos:prefLabel "Article 34" ;
+    skos:prefLabel "Article 34"@en ;
     cml:realizedBy doc:article-34 ;
     cml:curationStatus cml:Proposed ;
     prov:wasDerivedFrom <https://www.ohchr.org/en/instruments-mechanisms/instruments/convention-relating-status-refugees> ;
@@ -552,7 +552,7 @@ concept:convention-relating-status-refugees-article-34-norm a values:Undertaking
     cml:curationStatus cml:Proposed .
 
 concept:convention-relating-status-refugees-article-35 a cml:Concept ;
-    skos:prefLabel "Article 35" ;
+    skos:prefLabel "Article 35"@en ;
     cml:realizedBy doc:article-35 ;
     cml:curationStatus cml:Proposed ;
     prov:wasDerivedFrom <https://www.ohchr.org/en/instruments-mechanisms/instruments/convention-relating-status-refugees> ;
@@ -569,7 +569,7 @@ concept:convention-relating-status-refugees-article-35-norm a values:Obligation 
     cml:curationStatus cml:Proposed .
 
 concept:convention-relating-status-refugees-article-36 a cml:Concept ;
-    skos:prefLabel "Article 36" ;
+    skos:prefLabel "Article 36"@en ;
     cml:realizedBy doc:article-36 ;
     cml:curationStatus cml:Proposed ;
     prov:wasDerivedFrom <https://www.ohchr.org/en/instruments-mechanisms/instruments/convention-relating-status-refugees> ;
@@ -584,7 +584,7 @@ concept:convention-relating-status-refugees-article-36-norm a values:Undertaking
     cml:curationStatus cml:Proposed .
 
 concept:convention-relating-status-refugees-article-37 a cml:Concept ;
-    skos:prefLabel "Article 37" ;
+    skos:prefLabel "Article 37"@en ;
     cml:realizedBy doc:article-37 ;
     cml:curationStatus cml:Proposed ;
     prov:wasDerivedFrom <https://www.ohchr.org/en/instruments-mechanisms/instruments/convention-relating-status-refugees> ;
@@ -599,7 +599,7 @@ concept:convention-relating-status-refugees-article-37-norm a values:Undertaking
     cml:curationStatus cml:Proposed .
 
 concept:convention-relating-status-refugees-article-38 a cml:Concept ;
-    skos:prefLabel "Article 38" ;
+    skos:prefLabel "Article 38"@en ;
     cml:realizedBy doc:article-38 ;
     cml:curationStatus cml:Proposed ;
     prov:wasDerivedFrom <https://www.ohchr.org/en/instruments-mechanisms/instruments/convention-relating-status-refugees> ;
@@ -616,7 +616,7 @@ concept:convention-relating-status-refugees-article-38-norm a values:Obligation 
     cml:curationStatus cml:Proposed .
 
 concept:convention-relating-status-refugees-article-39 a cml:Concept ;
-    skos:prefLabel "Article 39" ;
+    skos:prefLabel "Article 39"@en ;
     cml:realizedBy doc:article-39 ;
     cml:curationStatus cml:Proposed ;
     prov:wasDerivedFrom <https://www.ohchr.org/en/instruments-mechanisms/instruments/convention-relating-status-refugees> ;
@@ -633,7 +633,7 @@ concept:convention-relating-status-refugees-article-39-norm a values:Obligation 
     cml:curationStatus cml:Proposed .
 
 concept:convention-relating-status-refugees-article-40 a cml:Concept ;
-    skos:prefLabel "Article 40" ;
+    skos:prefLabel "Article 40"@en ;
     cml:realizedBy doc:article-40 ;
     cml:curationStatus cml:Proposed ;
     prov:wasDerivedFrom <https://www.ohchr.org/en/instruments-mechanisms/instruments/convention-relating-status-refugees> ;
@@ -650,7 +650,7 @@ concept:convention-relating-status-refugees-article-40-norm a values:Obligation 
     cml:curationStatus cml:Proposed .
 
 concept:convention-relating-status-refugees-article-41 a cml:Concept ;
-    skos:prefLabel "Article 41" ;
+    skos:prefLabel "Article 41"@en ;
     cml:realizedBy doc:article-41 ;
     cml:curationStatus cml:Proposed ;
     prov:wasDerivedFrom <https://www.ohchr.org/en/instruments-mechanisms/instruments/convention-relating-status-refugees> ;
@@ -665,7 +665,7 @@ concept:convention-relating-status-refugees-article-41-norm a values:Undertaking
     cml:curationStatus cml:Proposed .
 
 concept:convention-relating-status-refugees-article-42 a cml:Concept ;
-    skos:prefLabel "Article 42" ;
+    skos:prefLabel "Article 42"@en ;
     cml:realizedBy doc:article-42 ;
     cml:curationStatus cml:Proposed ;
     prov:wasDerivedFrom <https://www.ohchr.org/en/instruments-mechanisms/instruments/convention-relating-status-refugees> ;
@@ -680,7 +680,7 @@ concept:convention-relating-status-refugees-article-42-norm a values:Undertaking
     cml:curationStatus cml:Proposed .
 
 concept:convention-relating-status-refugees-article-43 a cml:Concept ;
-    skos:prefLabel "Article 43" ;
+    skos:prefLabel "Article 43"@en ;
     cml:realizedBy doc:article-43 ;
     cml:curationStatus cml:Proposed ;
     prov:wasDerivedFrom <https://www.ohchr.org/en/instruments-mechanisms/instruments/convention-relating-status-refugees> ;
@@ -695,7 +695,7 @@ concept:convention-relating-status-refugees-article-43-norm a values:Undertaking
     cml:curationStatus cml:Proposed .
 
 concept:convention-relating-status-refugees-article-44 a cml:Concept ;
-    skos:prefLabel "Article 44" ;
+    skos:prefLabel "Article 44"@en ;
     cml:realizedBy doc:article-44 ;
     cml:curationStatus cml:Proposed ;
     prov:wasDerivedFrom <https://www.ohchr.org/en/instruments-mechanisms/instruments/convention-relating-status-refugees> ;
@@ -712,7 +712,7 @@ concept:convention-relating-status-refugees-article-44-norm a values:Obligation 
     cml:curationStatus cml:Proposed .
 
 concept:convention-relating-status-refugees-article-45 a cml:Concept ;
-    skos:prefLabel "Article 45" ;
+    skos:prefLabel "Article 45"@en ;
     cml:realizedBy doc:article-45 ;
     cml:curationStatus cml:Proposed ;
     prov:wasDerivedFrom <https://www.ohchr.org/en/instruments-mechanisms/instruments/convention-relating-status-refugees> ;
@@ -727,7 +727,7 @@ concept:convention-relating-status-refugees-article-45-norm a values:Undertaking
     cml:curationStatus cml:Proposed .
 
 concept:convention-relating-status-refugees-article-46 a cml:Concept ;
-    skos:prefLabel "Article 46" ;
+    skos:prefLabel "Article 46"@en ;
     cml:realizedBy doc:article-46 ;
     cml:curationStatus cml:Proposed ;
     prov:wasDerivedFrom <https://www.ohchr.org/en/instruments-mechanisms/instruments/convention-relating-status-refugees> ;

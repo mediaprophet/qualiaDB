@@ -87,7 +87,7 @@ def emit(slug, doc_ns, title, date, source, category, provisions):
         nid = f"{cid}-norm"
         n_concepts += 1
         L.append(f"{cid} a cml:Concept ;")
-        L.append(f'    skos:prefLabel "{esc(ptitle)}" ;')
+        L.append(f'    skos:prefLabel "{esc(ptitle)}"@en ;')
         L.append(f"    cml:realizedBy doc:{kind}-{n} ;")
         L.append("    cml:curationStatus cml:Proposed ;")
         if source:

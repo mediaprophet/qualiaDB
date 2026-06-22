@@ -17,7 +17,7 @@
 # ============================================================
 
 concept:basic-principles-use-force-and-firearms-law-enforcement-paragraph-2 a cml:Concept ;
-    skos:prefLabel "Paragraph 2" ;
+    skos:prefLabel "Paragraph 2"@en ;
     cml:realizedBy doc:paragraph-2 ;
     cml:curationStatus cml:Proposed ;
     prov:wasDerivedFrom <https://www.ohchr.org/en/instruments-mechanisms/instruments/basic-principles-use-force-and-firearms-law-enforcement> ;
@@ -32,7 +32,7 @@ concept:basic-principles-use-force-and-firearms-law-enforcement-paragraph-2-norm
     cml:curationStatus cml:Proposed .
 
 concept:basic-principles-use-force-and-firearms-law-enforcement-paragraph-3 a cml:Concept ;
-    skos:prefLabel "Paragraph 3" ;
+    skos:prefLabel "Paragraph 3"@en ;
     cml:realizedBy doc:paragraph-3 ;
     cml:curationStatus cml:Proposed ;
     prov:wasDerivedFrom <https://www.ohchr.org/en/instruments-mechanisms/instruments/basic-principles-use-force-and-firearms-law-enforcement> ;
@@ -47,7 +47,7 @@ concept:basic-principles-use-force-and-firearms-law-enforcement-paragraph-3-norm
     cml:curationStatus cml:Proposed .
 
 concept:basic-principles-use-force-and-firearms-law-enforcement-paragraph-4 a cml:Concept ;
-    skos:prefLabel "Paragraph 4" ;
+    skos:prefLabel "Paragraph 4"@en ;
     cml:realizedBy doc:paragraph-4 ;
     cml:curationStatus cml:Proposed ;
     prov:wasDerivedFrom <https://www.ohchr.org/en/instruments-mechanisms/instruments/basic-principles-use-force-and-firearms-law-enforcement> ;
@@ -62,7 +62,7 @@ concept:basic-principles-use-force-and-firearms-law-enforcement-paragraph-4-norm
     cml:curationStatus cml:Proposed .
 
 concept:basic-principles-use-force-and-firearms-law-enforcement-paragraph-5 a cml:Concept ;
-    skos:prefLabel "Paragraph 5" ;
+    skos:prefLabel "Paragraph 5"@en ;
     cml:realizedBy doc:paragraph-5 ;
     cml:curationStatus cml:Proposed ;
     prov:wasDerivedFrom <https://www.ohchr.org/en/instruments-mechanisms/instruments/basic-principles-use-force-and-firearms-law-enforcement> ;
@@ -78,7 +78,7 @@ concept:basic-principles-use-force-and-firearms-law-enforcement-paragraph-5-norm
     cml:curationStatus cml:Proposed .
 
 concept:basic-principles-use-force-and-firearms-law-enforcement-paragraph-6 a cml:Concept ;
-    skos:prefLabel "Paragraph 6" ;
+    skos:prefLabel "Paragraph 6"@en ;
     cml:realizedBy doc:paragraph-6 ;
     cml:curationStatus cml:Proposed ;
     prov:wasDerivedFrom <https://www.ohchr.org/en/instruments-mechanisms/instruments/basic-principles-use-force-and-firearms-law-enforcement> ;
@@ -93,7 +93,7 @@ concept:basic-principles-use-force-and-firearms-law-enforcement-paragraph-6-norm
     cml:curationStatus cml:Proposed .
 
 concept:basic-principles-use-force-and-firearms-law-enforcement-paragraph-7 a cml:Concept ;
-    skos:prefLabel "Paragraph 7" ;
+    skos:prefLabel "Paragraph 7"@en ;
     cml:realizedBy doc:paragraph-7 ;
     cml:curationStatus cml:Proposed ;
     prov:wasDerivedFrom <https://www.ohchr.org/en/instruments-mechanisms/instruments/basic-principles-use-force-and-firearms-law-enforcement> ;
@@ -108,7 +108,7 @@ concept:basic-principles-use-force-and-firearms-law-enforcement-paragraph-7-norm
     cml:curationStatus cml:Proposed .
 
 concept:basic-principles-use-force-and-firearms-law-enforcement-paragraph-8 a cml:Concept ;
-    skos:prefLabel "Paragraph 8" ;
+    skos:prefLabel "Paragraph 8"@en ;
     cml:realizedBy doc:paragraph-8 ;
     cml:curationStatus cml:Proposed ;
     prov:wasDerivedFrom <https://www.ohchr.org/en/instruments-mechanisms/instruments/basic-principles-use-force-and-firearms-law-enforcement> ;
@@ -123,7 +123,7 @@ concept:basic-principles-use-force-and-firearms-law-enforcement-paragraph-8-norm
     cml:curationStatus cml:Proposed .
 
 concept:basic-principles-use-force-and-firearms-law-enforcement-paragraph-9 a cml:Concept ;
-    skos:prefLabel "Paragraph 9" ;
+    skos:prefLabel "Paragraph 9"@en ;
     cml:realizedBy doc:paragraph-9 ;
     cml:curationStatus cml:Proposed ;
     prov:wasDerivedFrom <https://www.ohchr.org/en/instruments-mechanisms/instruments/basic-principles-use-force-and-firearms-law-enforcement> ;
@@ -139,7 +139,7 @@ concept:basic-principles-use-force-and-firearms-law-enforcement-paragraph-9-norm
     cml:curationStatus cml:Proposed .
 
 concept:basic-principles-use-force-and-firearms-law-enforcement-paragraph-10 a cml:Concept ;
-    skos:prefLabel "Paragraph 10" ;
+    skos:prefLabel "Paragraph 10"@en ;
     cml:realizedBy doc:paragraph-10 ;
     cml:curationStatus cml:Proposed ;
     prov:wasDerivedFrom <https://www.ohchr.org/en/instruments-mechanisms/instruments/basic-principles-use-force-and-firearms-law-enforcement> ;
@@ -154,7 +154,7 @@ concept:basic-principles-use-force-and-firearms-law-enforcement-paragraph-10-nor
     cml:curationStatus cml:Proposed .
 
 concept:basic-principles-use-force-and-firearms-law-enforcement-paragraph-11 a cml:Concept ;
-    skos:prefLabel "Paragraph 11" ;
+    skos:prefLabel "Paragraph 11"@en ;
     cml:realizedBy doc:paragraph-11 ;
     cml:curationStatus cml:Proposed ;
     prov:wasDerivedFrom <https://www.ohchr.org/en/instruments-mechanisms/instruments/basic-principles-use-force-and-firearms-law-enforcement> ;
@@ -171,7 +171,7 @@ concept:basic-principles-use-force-and-firearms-law-enforcement-paragraph-11-nor
     cml:curationStatus cml:Proposed .
 
 concept:basic-principles-use-force-and-firearms-law-enforcement-paragraph-12 a cml:Concept ;
-    skos:prefLabel "Paragraph 12" ;
+    skos:prefLabel "Paragraph 12"@en ;
     cml:realizedBy doc:paragraph-12 ;
     cml:curationStatus cml:Proposed ;
     prov:wasDerivedFrom <https://www.ohchr.org/en/instruments-mechanisms/instruments/basic-principles-use-force-and-firearms-law-enforcement> ;
@@ -186,7 +186,7 @@ concept:basic-principles-use-force-and-firearms-law-enforcement-paragraph-12-nor
     cml:curationStatus cml:Proposed .
 
 concept:basic-principles-use-force-and-firearms-law-enforcement-paragraph-13 a cml:Concept ;
-    skos:prefLabel "Paragraph 13" ;
+    skos:prefLabel "Paragraph 13"@en ;
     cml:realizedBy doc:paragraph-13 ;
     cml:curationStatus cml:Proposed ;
     prov:wasDerivedFrom <https://www.ohchr.org/en/instruments-mechanisms/instruments/basic-principles-use-force-and-firearms-law-enforcement> ;
@@ -201,7 +201,7 @@ concept:basic-principles-use-force-and-firearms-law-enforcement-paragraph-13-nor
     cml:curationStatus cml:Proposed .
 
 concept:basic-principles-use-force-and-firearms-law-enforcement-paragraph-14 a cml:Concept ;
-    skos:prefLabel "Paragraph 14" ;
+    skos:prefLabel "Paragraph 14"@en ;
     cml:realizedBy doc:paragraph-14 ;
     cml:curationStatus cml:Proposed ;
     prov:wasDerivedFrom <https://www.ohchr.org/en/instruments-mechanisms/instruments/basic-principles-use-force-and-firearms-law-enforcement> ;
@@ -216,7 +216,7 @@ concept:basic-principles-use-force-and-firearms-law-enforcement-paragraph-14-nor
     cml:curationStatus cml:Proposed .
 
 concept:basic-principles-use-force-and-firearms-law-enforcement-paragraph-15 a cml:Concept ;
-    skos:prefLabel "Paragraph 15" ;
+    skos:prefLabel "Paragraph 15"@en ;
     cml:realizedBy doc:paragraph-15 ;
     cml:curationStatus cml:Proposed ;
     prov:wasDerivedFrom <https://www.ohchr.org/en/instruments-mechanisms/instruments/basic-principles-use-force-and-firearms-law-enforcement> ;
@@ -231,7 +231,7 @@ concept:basic-principles-use-force-and-firearms-law-enforcement-paragraph-15-nor
     cml:curationStatus cml:Proposed .
 
 concept:basic-principles-use-force-and-firearms-law-enforcement-paragraph-16 a cml:Concept ;
-    skos:prefLabel "Paragraph 16" ;
+    skos:prefLabel "Paragraph 16"@en ;
     cml:realizedBy doc:paragraph-16 ;
     cml:curationStatus cml:Proposed ;
     prov:wasDerivedFrom <https://www.ohchr.org/en/instruments-mechanisms/instruments/basic-principles-use-force-and-firearms-law-enforcement> ;
@@ -246,7 +246,7 @@ concept:basic-principles-use-force-and-firearms-law-enforcement-paragraph-16-nor
     cml:curationStatus cml:Proposed .
 
 concept:basic-principles-use-force-and-firearms-law-enforcement-paragraph-17 a cml:Concept ;
-    skos:prefLabel "Paragraph 17" ;
+    skos:prefLabel "Paragraph 17"@en ;
     cml:realizedBy doc:paragraph-17 ;
     cml:curationStatus cml:Proposed ;
     prov:wasDerivedFrom <https://www.ohchr.org/en/instruments-mechanisms/instruments/basic-principles-use-force-and-firearms-law-enforcement> ;
@@ -261,7 +261,7 @@ concept:basic-principles-use-force-and-firearms-law-enforcement-paragraph-17-nor
     cml:curationStatus cml:Proposed .
 
 concept:basic-principles-use-force-and-firearms-law-enforcement-paragraph-18 a cml:Concept ;
-    skos:prefLabel "Paragraph 18" ;
+    skos:prefLabel "Paragraph 18"@en ;
     cml:realizedBy doc:paragraph-18 ;
     cml:curationStatus cml:Proposed ;
     prov:wasDerivedFrom <https://www.ohchr.org/en/instruments-mechanisms/instruments/basic-principles-use-force-and-firearms-law-enforcement> ;
@@ -276,7 +276,7 @@ concept:basic-principles-use-force-and-firearms-law-enforcement-paragraph-18-nor
     cml:curationStatus cml:Proposed .
 
 concept:basic-principles-use-force-and-firearms-law-enforcement-paragraph-19 a cml:Concept ;
-    skos:prefLabel "Paragraph 19" ;
+    skos:prefLabel "Paragraph 19"@en ;
     cml:realizedBy doc:paragraph-19 ;
     cml:curationStatus cml:Proposed ;
     prov:wasDerivedFrom <https://www.ohchr.org/en/instruments-mechanisms/instruments/basic-principles-use-force-and-firearms-law-enforcement> ;
@@ -291,7 +291,7 @@ concept:basic-principles-use-force-and-firearms-law-enforcement-paragraph-19-nor
     cml:curationStatus cml:Proposed .
 
 concept:basic-principles-use-force-and-firearms-law-enforcement-paragraph-20 a cml:Concept ;
-    skos:prefLabel "Paragraph 20" ;
+    skos:prefLabel "Paragraph 20"@en ;
     cml:realizedBy doc:paragraph-20 ;
     cml:curationStatus cml:Proposed ;
     prov:wasDerivedFrom <https://www.ohchr.org/en/instruments-mechanisms/instruments/basic-principles-use-force-and-firearms-law-enforcement> ;
@@ -306,7 +306,7 @@ concept:basic-principles-use-force-and-firearms-law-enforcement-paragraph-20-nor
     cml:curationStatus cml:Proposed .
 
 concept:basic-principles-use-force-and-firearms-law-enforcement-paragraph-21 a cml:Concept ;
-    skos:prefLabel "Paragraph 21" ;
+    skos:prefLabel "Paragraph 21"@en ;
     cml:realizedBy doc:paragraph-21 ;
     cml:curationStatus cml:Proposed ;
     prov:wasDerivedFrom <https://www.ohchr.org/en/instruments-mechanisms/instruments/basic-principles-use-force-and-firearms-law-enforcement> ;
@@ -323,7 +323,7 @@ concept:basic-principles-use-force-and-firearms-law-enforcement-paragraph-21-nor
     cml:curationStatus cml:Proposed .
 
 concept:basic-principles-use-force-and-firearms-law-enforcement-paragraph-22 a cml:Concept ;
-    skos:prefLabel "Paragraph 22" ;
+    skos:prefLabel "Paragraph 22"@en ;
     cml:realizedBy doc:paragraph-22 ;
     cml:curationStatus cml:Proposed ;
     prov:wasDerivedFrom <https://www.ohchr.org/en/instruments-mechanisms/instruments/basic-principles-use-force-and-firearms-law-enforcement> ;
@@ -339,7 +339,7 @@ concept:basic-principles-use-force-and-firearms-law-enforcement-paragraph-22-nor
     cml:curationStatus cml:Proposed .
 
 concept:basic-principles-use-force-and-firearms-law-enforcement-paragraph-23 a cml:Concept ;
-    skos:prefLabel "Paragraph 23" ;
+    skos:prefLabel "Paragraph 23"@en ;
     cml:realizedBy doc:paragraph-23 ;
     cml:curationStatus cml:Proposed ;
     prov:wasDerivedFrom <https://www.ohchr.org/en/instruments-mechanisms/instruments/basic-principles-use-force-and-firearms-law-enforcement> ;
@@ -355,7 +355,7 @@ concept:basic-principles-use-force-and-firearms-law-enforcement-paragraph-23-nor
     cml:curationStatus cml:Proposed .
 
 concept:basic-principles-use-force-and-firearms-law-enforcement-paragraph-24 a cml:Concept ;
-    skos:prefLabel "Paragraph 24" ;
+    skos:prefLabel "Paragraph 24"@en ;
     cml:realizedBy doc:paragraph-24 ;
     cml:curationStatus cml:Proposed ;
     prov:wasDerivedFrom <https://www.ohchr.org/en/instruments-mechanisms/instruments/basic-principles-use-force-and-firearms-law-enforcement> ;
@@ -370,7 +370,7 @@ concept:basic-principles-use-force-and-firearms-law-enforcement-paragraph-24-nor
     cml:curationStatus cml:Proposed .
 
 concept:basic-principles-use-force-and-firearms-law-enforcement-paragraph-25 a cml:Concept ;
-    skos:prefLabel "Paragraph 25" ;
+    skos:prefLabel "Paragraph 25"@en ;
     cml:realizedBy doc:paragraph-25 ;
     cml:curationStatus cml:Proposed ;
     prov:wasDerivedFrom <https://www.ohchr.org/en/instruments-mechanisms/instruments/basic-principles-use-force-and-firearms-law-enforcement> ;
@@ -385,7 +385,7 @@ concept:basic-principles-use-force-and-firearms-law-enforcement-paragraph-25-nor
     cml:curationStatus cml:Proposed .
 
 concept:basic-principles-use-force-and-firearms-law-enforcement-paragraph-26 a cml:Concept ;
-    skos:prefLabel "Paragraph 26" ;
+    skos:prefLabel "Paragraph 26"@en ;
     cml:realizedBy doc:paragraph-26 ;
     cml:curationStatus cml:Proposed ;
     prov:wasDerivedFrom <https://www.ohchr.org/en/instruments-mechanisms/instruments/basic-principles-use-force-and-firearms-law-enforcement> ;
@@ -400,7 +400,7 @@ concept:basic-principles-use-force-and-firearms-law-enforcement-paragraph-26-nor
     cml:curationStatus cml:Proposed .
 
 concept:basic-principles-use-force-and-firearms-law-enforcement-paragraph-27 a cml:Concept ;
-    skos:prefLabel "Paragraph 27" ;
+    skos:prefLabel "Paragraph 27"@en ;
     cml:realizedBy doc:paragraph-27 ;
     cml:curationStatus cml:Proposed ;
     prov:wasDerivedFrom <https://www.ohchr.org/en/instruments-mechanisms/instruments/basic-principles-use-force-and-firearms-law-enforcement> ;
@@ -415,7 +415,7 @@ concept:basic-principles-use-force-and-firearms-law-enforcement-paragraph-27-nor
     cml:curationStatus cml:Proposed .
 
 concept:basic-principles-use-force-and-firearms-law-enforcement-paragraph-28 a cml:Concept ;
-    skos:prefLabel "Paragraph 28" ;
+    skos:prefLabel "Paragraph 28"@en ;
     cml:realizedBy doc:paragraph-28 ;
     cml:curationStatus cml:Proposed ;
     prov:wasDerivedFrom <https://www.ohchr.org/en/instruments-mechanisms/instruments/basic-principles-use-force-and-firearms-law-enforcement> ;
@@ -430,7 +430,7 @@ concept:basic-principles-use-force-and-firearms-law-enforcement-paragraph-28-nor
     cml:curationStatus cml:Proposed .
 
 concept:basic-principles-use-force-and-firearms-law-enforcement-paragraph-29 a cml:Concept ;
-    skos:prefLabel "Paragraph 29" ;
+    skos:prefLabel "Paragraph 29"@en ;
     cml:realizedBy doc:paragraph-29 ;
     cml:curationStatus cml:Proposed ;
     prov:wasDerivedFrom <https://www.ohchr.org/en/instruments-mechanisms/instruments/basic-principles-use-force-and-firearms-law-enforcement> ;
@@ -445,7 +445,7 @@ concept:basic-principles-use-force-and-firearms-law-enforcement-paragraph-29-nor
     cml:curationStatus cml:Proposed .
 
 concept:basic-principles-use-force-and-firearms-law-enforcement-paragraph-30 a cml:Concept ;
-    skos:prefLabel "Paragraph 30" ;
+    skos:prefLabel "Paragraph 30"@en ;
     cml:realizedBy doc:paragraph-30 ;
     cml:curationStatus cml:Proposed ;
     prov:wasDerivedFrom <https://www.ohchr.org/en/instruments-mechanisms/instruments/basic-principles-use-force-and-firearms-law-enforcement> ;
@@ -460,7 +460,7 @@ concept:basic-principles-use-force-and-firearms-law-enforcement-paragraph-30-nor
     cml:curationStatus cml:Proposed .
 
 concept:basic-principles-use-force-and-firearms-law-enforcement-paragraph-31 a cml:Concept ;
-    skos:prefLabel "Paragraph 31" ;
+    skos:prefLabel "Paragraph 31"@en ;
     cml:realizedBy doc:paragraph-31 ;
     cml:curationStatus cml:Proposed ;
     prov:wasDerivedFrom <https://www.ohchr.org/en/instruments-mechanisms/instruments/basic-principles-use-force-and-firearms-law-enforcement> ;
@@ -475,7 +475,7 @@ concept:basic-principles-use-force-and-firearms-law-enforcement-paragraph-31-nor
     cml:curationStatus cml:Proposed .
 
 concept:basic-principles-use-force-and-firearms-law-enforcement-paragraph-32 a cml:Concept ;
-    skos:prefLabel "Paragraph 32" ;
+    skos:prefLabel "Paragraph 32"@en ;
     cml:realizedBy doc:paragraph-32 ;
     cml:curationStatus cml:Proposed ;
     prov:wasDerivedFrom <https://www.ohchr.org/en/instruments-mechanisms/instruments/basic-principles-use-force-and-firearms-law-enforcement> ;
@@ -492,7 +492,7 @@ concept:basic-principles-use-force-and-firearms-law-enforcement-paragraph-32-nor
     cml:curationStatus cml:Proposed .
 
 concept:basic-principles-use-force-and-firearms-law-enforcement-paragraph-33 a cml:Concept ;
-    skos:prefLabel "Paragraph 33" ;
+    skos:prefLabel "Paragraph 33"@en ;
     cml:realizedBy doc:paragraph-33 ;
     cml:curationStatus cml:Proposed ;
     prov:wasDerivedFrom <https://www.ohchr.org/en/instruments-mechanisms/instruments/basic-principles-use-force-and-firearms-law-enforcement> ;
@@ -507,7 +507,7 @@ concept:basic-principles-use-force-and-firearms-law-enforcement-paragraph-33-nor
     cml:curationStatus cml:Proposed .
 
 concept:basic-principles-use-force-and-firearms-law-enforcement-paragraph-34 a cml:Concept ;
-    skos:prefLabel "Paragraph 34" ;
+    skos:prefLabel "Paragraph 34"@en ;
     cml:realizedBy doc:paragraph-34 ;
     cml:curationStatus cml:Proposed ;
     prov:wasDerivedFrom <https://www.ohchr.org/en/instruments-mechanisms/instruments/basic-principles-use-force-and-firearms-law-enforcement> ;
@@ -523,7 +523,7 @@ concept:basic-principles-use-force-and-firearms-law-enforcement-paragraph-34-nor
     cml:curationStatus cml:Proposed .
 
 concept:basic-principles-use-force-and-firearms-law-enforcement-paragraph-35 a cml:Concept ;
-    skos:prefLabel "Paragraph 35" ;
+    skos:prefLabel "Paragraph 35"@en ;
     cml:realizedBy doc:paragraph-35 ;
     cml:curationStatus cml:Proposed ;
     prov:wasDerivedFrom <https://www.ohchr.org/en/instruments-mechanisms/instruments/basic-principles-use-force-and-firearms-law-enforcement> ;
@@ -538,7 +538,7 @@ concept:basic-principles-use-force-and-firearms-law-enforcement-paragraph-35-nor
     cml:curationStatus cml:Proposed .
 
 concept:basic-principles-use-force-and-firearms-law-enforcement-paragraph-36 a cml:Concept ;
-    skos:prefLabel "Paragraph 36" ;
+    skos:prefLabel "Paragraph 36"@en ;
     cml:realizedBy doc:paragraph-36 ;
     cml:curationStatus cml:Proposed ;
     prov:wasDerivedFrom <https://www.ohchr.org/en/instruments-mechanisms/instruments/basic-principles-use-force-and-firearms-law-enforcement> ;
@@ -554,7 +554,7 @@ concept:basic-principles-use-force-and-firearms-law-enforcement-paragraph-36-nor
     cml:curationStatus cml:Proposed .
 
 concept:basic-principles-use-force-and-firearms-law-enforcement-paragraph-37 a cml:Concept ;
-    skos:prefLabel "Paragraph 37" ;
+    skos:prefLabel "Paragraph 37"@en ;
     cml:realizedBy doc:paragraph-37 ;
     cml:curationStatus cml:Proposed ;
     prov:wasDerivedFrom <https://www.ohchr.org/en/instruments-mechanisms/instruments/basic-principles-use-force-and-firearms-law-enforcement> ;
@@ -570,7 +570,7 @@ concept:basic-principles-use-force-and-firearms-law-enforcement-paragraph-37-nor
     cml:curationStatus cml:Proposed .
 
 concept:basic-principles-use-force-and-firearms-law-enforcement-paragraph-38 a cml:Concept ;
-    skos:prefLabel "Paragraph 38" ;
+    skos:prefLabel "Paragraph 38"@en ;
     cml:realizedBy doc:paragraph-38 ;
     cml:curationStatus cml:Proposed ;
     prov:wasDerivedFrom <https://www.ohchr.org/en/instruments-mechanisms/instruments/basic-principles-use-force-and-firearms-law-enforcement> ;
@@ -585,7 +585,7 @@ concept:basic-principles-use-force-and-firearms-law-enforcement-paragraph-38-nor
     cml:curationStatus cml:Proposed .
 
 concept:basic-principles-use-force-and-firearms-law-enforcement-paragraph-39 a cml:Concept ;
-    skos:prefLabel "Paragraph 39" ;
+    skos:prefLabel "Paragraph 39"@en ;
     cml:realizedBy doc:paragraph-39 ;
     cml:curationStatus cml:Proposed ;
     prov:wasDerivedFrom <https://www.ohchr.org/en/instruments-mechanisms/instruments/basic-principles-use-force-and-firearms-law-enforcement> ;
@@ -600,7 +600,7 @@ concept:basic-principles-use-force-and-firearms-law-enforcement-paragraph-39-nor
     cml:curationStatus cml:Proposed .
 
 concept:basic-principles-use-force-and-firearms-law-enforcement-paragraph-40 a cml:Concept ;
-    skos:prefLabel "Paragraph 40" ;
+    skos:prefLabel "Paragraph 40"@en ;
     cml:realizedBy doc:paragraph-40 ;
     cml:curationStatus cml:Proposed ;
     prov:wasDerivedFrom <https://www.ohchr.org/en/instruments-mechanisms/instruments/basic-principles-use-force-and-firearms-law-enforcement> ;
@@ -617,7 +617,7 @@ concept:basic-principles-use-force-and-firearms-law-enforcement-paragraph-40-nor
     cml:curationStatus cml:Proposed .
 
 concept:basic-principles-use-force-and-firearms-law-enforcement-paragraph-41 a cml:Concept ;
-    skos:prefLabel "Paragraph 41" ;
+    skos:prefLabel "Paragraph 41"@en ;
     cml:realizedBy doc:paragraph-41 ;
     cml:curationStatus cml:Proposed ;
     prov:wasDerivedFrom <https://www.ohchr.org/en/instruments-mechanisms/instruments/basic-principles-use-force-and-firearms-law-enforcement> ;
@@ -634,7 +634,7 @@ concept:basic-principles-use-force-and-firearms-law-enforcement-paragraph-41-nor
     cml:curationStatus cml:Proposed .
 
 concept:basic-principles-use-force-and-firearms-law-enforcement-paragraph-42 a cml:Concept ;
-    skos:prefLabel "Paragraph 42" ;
+    skos:prefLabel "Paragraph 42"@en ;
     cml:realizedBy doc:paragraph-42 ;
     cml:curationStatus cml:Proposed ;
     prov:wasDerivedFrom <https://www.ohchr.org/en/instruments-mechanisms/instruments/basic-principles-use-force-and-firearms-law-enforcement> ;
@@ -649,7 +649,7 @@ concept:basic-principles-use-force-and-firearms-law-enforcement-paragraph-42-nor
     cml:curationStatus cml:Proposed .
 
 concept:basic-principles-use-force-and-firearms-law-enforcement-paragraph-43 a cml:Concept ;
-    skos:prefLabel "Paragraph 43" ;
+    skos:prefLabel "Paragraph 43"@en ;
     cml:realizedBy doc:paragraph-43 ;
     cml:curationStatus cml:Proposed ;
     prov:wasDerivedFrom <https://www.ohchr.org/en/instruments-mechanisms/instruments/basic-principles-use-force-and-firearms-law-enforcement> ;
@@ -664,7 +664,7 @@ concept:basic-principles-use-force-and-firearms-law-enforcement-paragraph-43-nor
     cml:curationStatus cml:Proposed .
 
 concept:basic-principles-use-force-and-firearms-law-enforcement-paragraph-44 a cml:Concept ;
-    skos:prefLabel "Paragraph 44" ;
+    skos:prefLabel "Paragraph 44"@en ;
     cml:realizedBy doc:paragraph-44 ;
     cml:curationStatus cml:Proposed ;
     prov:wasDerivedFrom <https://www.ohchr.org/en/instruments-mechanisms/instruments/basic-principles-use-force-and-firearms-law-enforcement> ;
@@ -679,7 +679,7 @@ concept:basic-principles-use-force-and-firearms-law-enforcement-paragraph-44-nor
     cml:curationStatus cml:Proposed .
 
 concept:basic-principles-use-force-and-firearms-law-enforcement-paragraph-45 a cml:Concept ;
-    skos:prefLabel "Paragraph 45" ;
+    skos:prefLabel "Paragraph 45"@en ;
     cml:realizedBy doc:paragraph-45 ;
     cml:curationStatus cml:Proposed ;
     prov:wasDerivedFrom <https://www.ohchr.org/en/instruments-mechanisms/instruments/basic-principles-use-force-and-firearms-law-enforcement> ;
@@ -696,7 +696,7 @@ concept:basic-principles-use-force-and-firearms-law-enforcement-paragraph-45-nor
     cml:curationStatus cml:Proposed .
 
 concept:basic-principles-use-force-and-firearms-law-enforcement-paragraph-46 a cml:Concept ;
-    skos:prefLabel "Paragraph 46" ;
+    skos:prefLabel "Paragraph 46"@en ;
     cml:realizedBy doc:paragraph-46 ;
     cml:curationStatus cml:Proposed ;
     prov:wasDerivedFrom <https://www.ohchr.org/en/instruments-mechanisms/instruments/basic-principles-use-force-and-firearms-law-enforcement> ;
@@ -711,7 +711,7 @@ concept:basic-principles-use-force-and-firearms-law-enforcement-paragraph-46-nor
     cml:curationStatus cml:Proposed .
 
 concept:basic-principles-use-force-and-firearms-law-enforcement-paragraph-47 a cml:Concept ;
-    skos:prefLabel "Paragraph 47" ;
+    skos:prefLabel "Paragraph 47"@en ;
     cml:realizedBy doc:paragraph-47 ;
     cml:curationStatus cml:Proposed ;
     prov:wasDerivedFrom <https://www.ohchr.org/en/instruments-mechanisms/instruments/basic-principles-use-force-and-firearms-law-enforcement> ;
@@ -728,7 +728,7 @@ concept:basic-principles-use-force-and-firearms-law-enforcement-paragraph-47-nor
     cml:curationStatus cml:Proposed .
 
 concept:basic-principles-use-force-and-firearms-law-enforcement-paragraph-48 a cml:Concept ;
-    skos:prefLabel "Paragraph 48" ;
+    skos:prefLabel "Paragraph 48"@en ;
     cml:realizedBy doc:paragraph-48 ;
     cml:curationStatus cml:Proposed ;
     prov:wasDerivedFrom <https://www.ohchr.org/en/instruments-mechanisms/instruments/basic-principles-use-force-and-firearms-law-enforcement> ;
@@ -745,7 +745,7 @@ concept:basic-principles-use-force-and-firearms-law-enforcement-paragraph-48-nor
     cml:curationStatus cml:Proposed .
 
 concept:basic-principles-use-force-and-firearms-law-enforcement-paragraph-49 a cml:Concept ;
-    skos:prefLabel "Paragraph 49" ;
+    skos:prefLabel "Paragraph 49"@en ;
     cml:realizedBy doc:paragraph-49 ;
     cml:curationStatus cml:Proposed ;
     prov:wasDerivedFrom <https://www.ohchr.org/en/instruments-mechanisms/instruments/basic-principles-use-force-and-firearms-law-enforcement> ;

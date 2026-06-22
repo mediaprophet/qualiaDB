@@ -17,7 +17,7 @@
 # ============================================================
 
 concept:united-nations-rules-treatment-women-prisoners-and-non-custodial-rule-1 a cml:Concept ;
-    skos:prefLabel "Rule 1" ;
+    skos:prefLabel "Rule 1"@en ;
     cml:realizedBy doc:rule-1 ;
     cml:curationStatus cml:Proposed ;
     prov:wasDerivedFrom <https://www.ohchr.org/en/instruments-mechanisms/instruments/united-nations-rules-treatment-women-prisoners-and-non-custodial> ;
@@ -33,7 +33,7 @@ concept:united-nations-rules-treatment-women-prisoners-and-non-custodial-rule-1-
     cml:curationStatus cml:Proposed .
 
 concept:united-nations-rules-treatment-women-prisoners-and-non-custodial-rule-2 a cml:Concept ;
-    skos:prefLabel "Rule 2" ;
+    skos:prefLabel "Rule 2"@en ;
     cml:realizedBy doc:rule-2 ;
     cml:curationStatus cml:Proposed ;
     prov:wasDerivedFrom <https://www.ohchr.org/en/instruments-mechanisms/instruments/united-nations-rules-treatment-women-prisoners-and-non-custodial> ;
@@ -50,7 +50,7 @@ concept:united-nations-rules-treatment-women-prisoners-and-non-custodial-rule-2-
     cml:curationStatus cml:Proposed .
 
 concept:united-nations-rules-treatment-women-prisoners-and-non-custodial-rule-3 a cml:Concept ;
-    skos:prefLabel "Rule 3" ;
+    skos:prefLabel "Rule 3"@en ;
     cml:realizedBy doc:rule-3 ;
     cml:curationStatus cml:Proposed ;
     prov:wasDerivedFrom <https://www.ohchr.org/en/instruments-mechanisms/instruments/united-nations-rules-treatment-women-prisoners-and-non-custodial> ;
@@ -67,7 +67,7 @@ concept:united-nations-rules-treatment-women-prisoners-and-non-custodial-rule-3-
     cml:curationStatus cml:Proposed .
 
 concept:united-nations-rules-treatment-women-prisoners-and-non-custodial-rule-4 a cml:Concept ;
-    skos:prefLabel "Rule 4" ;
+    skos:prefLabel "Rule 4"@en ;
     cml:realizedBy doc:rule-4 ;
     cml:curationStatus cml:Proposed ;
     prov:wasDerivedFrom <https://www.ohchr.org/en/instruments-mechanisms/instruments/united-nations-rules-treatment-women-prisoners-and-non-custodial> ;
@@ -84,7 +84,7 @@ concept:united-nations-rules-treatment-women-prisoners-and-non-custodial-rule-4-
     cml:curationStatus cml:Proposed .
 
 concept:united-nations-rules-treatment-women-prisoners-and-non-custodial-rule-5 a cml:Concept ;
-    skos:prefLabel "Rule 5" ;
+    skos:prefLabel "Rule 5"@en ;
     cml:realizedBy doc:rule-5 ;
     cml:curationStatus cml:Proposed ;
     prov:wasDerivedFrom <https://www.ohchr.org/en/instruments-mechanisms/instruments/united-nations-rules-treatment-women-prisoners-and-non-custodial> ;
@@ -99,7 +99,7 @@ concept:united-nations-rules-treatment-women-prisoners-and-non-custodial-rule-5-
     cml:curationStatus cml:Proposed .
 
 concept:united-nations-rules-treatment-women-prisoners-and-non-custodial-rule-6 a cml:Concept ;
-    skos:prefLabel "Rule 6" ;
+    skos:prefLabel "Rule 6"@en ;
     cml:realizedBy doc:rule-6 ;
     cml:curationStatus cml:Proposed ;
     prov:wasDerivedFrom <https://www.ohchr.org/en/instruments-mechanisms/instruments/united-nations-rules-treatment-women-prisoners-and-non-custodial> ;
@@ -114,7 +114,7 @@ concept:united-nations-rules-treatment-women-prisoners-and-non-custodial-rule-6-
     cml:curationStatus cml:Proposed .
 
 concept:united-nations-rules-treatment-women-prisoners-and-non-custodial-rule-7 a cml:Concept ;
-    skos:prefLabel "Rule 7" ;
+    skos:prefLabel "Rule 7"@en ;
     cml:realizedBy doc:rule-7 ;
     cml:curationStatus cml:Proposed ;
     prov:wasDerivedFrom <https://www.ohchr.org/en/instruments-mechanisms/instruments/united-nations-rules-treatment-women-prisoners-and-non-custodial> ;
@@ -130,7 +130,7 @@ concept:united-nations-rules-treatment-women-prisoners-and-non-custodial-rule-7-
     cml:curationStatus cml:Proposed .
 
 concept:united-nations-rules-treatment-women-prisoners-and-non-custodial-rule-8 a cml:Concept ;
-    skos:prefLabel "Rule 8" ;
+    skos:prefLabel "Rule 8"@en ;
     cml:realizedBy doc:rule-8 ;
     cml:curationStatus cml:Proposed ;
     prov:wasDerivedFrom <https://www.ohchr.org/en/instruments-mechanisms/instruments/united-nations-rules-treatment-women-prisoners-and-non-custodial> ;
@@ -147,7 +147,7 @@ concept:united-nations-rules-treatment-women-prisoners-and-non-custodial-rule-8-
     cml:curationStatus cml:Proposed .
 
 concept:united-nations-rules-treatment-women-prisoners-and-non-custodial-rule-9 a cml:Concept ;
-    skos:prefLabel "Rule 9" ;
+    skos:prefLabel "Rule 9"@en ;
     cml:realizedBy doc:rule-9 ;
     cml:curationStatus cml:Proposed ;
     prov:wasDerivedFrom <https://www.ohchr.org/en/instruments-mechanisms/instruments/united-nations-rules-treatment-women-prisoners-and-non-custodial> ;
@@ -164,7 +164,7 @@ concept:united-nations-rules-treatment-women-prisoners-and-non-custodial-rule-9-
     cml:curationStatus cml:Proposed .
 
 concept:united-nations-rules-treatment-women-prisoners-and-non-custodial-rule-10 a cml:Concept ;
-    skos:prefLabel "Rule 10" ;
+    skos:prefLabel "Rule 10"@en ;
     cml:realizedBy doc:rule-10 ;
     cml:curationStatus cml:Proposed ;
     prov:wasDerivedFrom <https://www.ohchr.org/en/instruments-mechanisms/instruments/united-nations-rules-treatment-women-prisoners-and-non-custodial> ;
@@ -181,7 +181,7 @@ concept:united-nations-rules-treatment-women-prisoners-and-non-custodial-rule-10
     cml:curationStatus cml:Proposed .
 
 concept:united-nations-rules-treatment-women-prisoners-and-non-custodial-rule-11 a cml:Concept ;
-    skos:prefLabel "Rule 11" ;
+    skos:prefLabel "Rule 11"@en ;
     cml:realizedBy doc:rule-11 ;
     cml:curationStatus cml:Proposed ;
     prov:wasDerivedFrom <https://www.ohchr.org/en/instruments-mechanisms/instruments/united-nations-rules-treatment-women-prisoners-and-non-custodial> ;
@@ -198,7 +198,7 @@ concept:united-nations-rules-treatment-women-prisoners-and-non-custodial-rule-11
     cml:curationStatus cml:Proposed .
 
 concept:united-nations-rules-treatment-women-prisoners-and-non-custodial-rule-12 a cml:Concept ;
-    skos:prefLabel "Rule 12" ;
+    skos:prefLabel "Rule 12"@en ;
     cml:realizedBy doc:rule-12 ;
     cml:curationStatus cml:Proposed ;
     prov:wasDerivedFrom <https://www.ohchr.org/en/instruments-mechanisms/instruments/united-nations-rules-treatment-women-prisoners-and-non-custodial> ;
@@ -215,7 +215,7 @@ concept:united-nations-rules-treatment-women-prisoners-and-non-custodial-rule-12
     cml:curationStatus cml:Proposed .
 
 concept:united-nations-rules-treatment-women-prisoners-and-non-custodial-rule-13 a cml:Concept ;
-    skos:prefLabel "Rule 13" ;
+    skos:prefLabel "Rule 13"@en ;
     cml:realizedBy doc:rule-13 ;
     cml:curationStatus cml:Proposed ;
     prov:wasDerivedFrom <https://www.ohchr.org/en/instruments-mechanisms/instruments/united-nations-rules-treatment-women-prisoners-and-non-custodial> ;
@@ -232,7 +232,7 @@ concept:united-nations-rules-treatment-women-prisoners-and-non-custodial-rule-13
     cml:curationStatus cml:Proposed .
 
 concept:united-nations-rules-treatment-women-prisoners-and-non-custodial-rule-14 a cml:Concept ;
-    skos:prefLabel "Rule 14" ;
+    skos:prefLabel "Rule 14"@en ;
     cml:realizedBy doc:rule-14 ;
     cml:curationStatus cml:Proposed ;
     prov:wasDerivedFrom <https://www.ohchr.org/en/instruments-mechanisms/instruments/united-nations-rules-treatment-women-prisoners-and-non-custodial> ;
@@ -249,7 +249,7 @@ concept:united-nations-rules-treatment-women-prisoners-and-non-custodial-rule-14
     cml:curationStatus cml:Proposed .
 
 concept:united-nations-rules-treatment-women-prisoners-and-non-custodial-rule-15 a cml:Concept ;
-    skos:prefLabel "Rule 15" ;
+    skos:prefLabel "Rule 15"@en ;
     cml:realizedBy doc:rule-15 ;
     cml:curationStatus cml:Proposed ;
     prov:wasDerivedFrom <https://www.ohchr.org/en/instruments-mechanisms/instruments/united-nations-rules-treatment-women-prisoners-and-non-custodial> ;
@@ -266,7 +266,7 @@ concept:united-nations-rules-treatment-women-prisoners-and-non-custodial-rule-15
     cml:curationStatus cml:Proposed .
 
 concept:united-nations-rules-treatment-women-prisoners-and-non-custodial-rule-16 a cml:Concept ;
-    skos:prefLabel "Rule 16" ;
+    skos:prefLabel "Rule 16"@en ;
     cml:realizedBy doc:rule-16 ;
     cml:curationStatus cml:Proposed ;
     prov:wasDerivedFrom <https://www.ohchr.org/en/instruments-mechanisms/instruments/united-nations-rules-treatment-women-prisoners-and-non-custodial> ;
@@ -283,7 +283,7 @@ concept:united-nations-rules-treatment-women-prisoners-and-non-custodial-rule-16
     cml:curationStatus cml:Proposed .
 
 concept:united-nations-rules-treatment-women-prisoners-and-non-custodial-rule-17 a cml:Concept ;
-    skos:prefLabel "Rule 17" ;
+    skos:prefLabel "Rule 17"@en ;
     cml:realizedBy doc:rule-17 ;
     cml:curationStatus cml:Proposed ;
     prov:wasDerivedFrom <https://www.ohchr.org/en/instruments-mechanisms/instruments/united-nations-rules-treatment-women-prisoners-and-non-custodial> ;
@@ -298,7 +298,7 @@ concept:united-nations-rules-treatment-women-prisoners-and-non-custodial-rule-17
     cml:curationStatus cml:Proposed .
 
 concept:united-nations-rules-treatment-women-prisoners-and-non-custodial-rule-18 a cml:Concept ;
-    skos:prefLabel "Rule 18" ;
+    skos:prefLabel "Rule 18"@en ;
     cml:realizedBy doc:rule-18 ;
     cml:curationStatus cml:Proposed ;
     prov:wasDerivedFrom <https://www.ohchr.org/en/instruments-mechanisms/instruments/united-nations-rules-treatment-women-prisoners-and-non-custodial> ;
@@ -315,7 +315,7 @@ concept:united-nations-rules-treatment-women-prisoners-and-non-custodial-rule-18
     cml:curationStatus cml:Proposed .
 
 concept:united-nations-rules-treatment-women-prisoners-and-non-custodial-rule-19 a cml:Concept ;
-    skos:prefLabel "Rule 19" ;
+    skos:prefLabel "Rule 19"@en ;
     cml:realizedBy doc:rule-19 ;
     cml:curationStatus cml:Proposed ;
     prov:wasDerivedFrom <https://www.ohchr.org/en/instruments-mechanisms/instruments/united-nations-rules-treatment-women-prisoners-and-non-custodial> ;
@@ -332,7 +332,7 @@ concept:united-nations-rules-treatment-women-prisoners-and-non-custodial-rule-19
     cml:curationStatus cml:Proposed .
 
 concept:united-nations-rules-treatment-women-prisoners-and-non-custodial-rule-20 a cml:Concept ;
-    skos:prefLabel "Rule 20" ;
+    skos:prefLabel "Rule 20"@en ;
     cml:realizedBy doc:rule-20 ;
     cml:curationStatus cml:Proposed ;
     prov:wasDerivedFrom <https://www.ohchr.org/en/instruments-mechanisms/instruments/united-nations-rules-treatment-women-prisoners-and-non-custodial> ;
@@ -349,7 +349,7 @@ concept:united-nations-rules-treatment-women-prisoners-and-non-custodial-rule-20
     cml:curationStatus cml:Proposed .
 
 concept:united-nations-rules-treatment-women-prisoners-and-non-custodial-rule-21 a cml:Concept ;
-    skos:prefLabel "Rule 21" ;
+    skos:prefLabel "Rule 21"@en ;
     cml:realizedBy doc:rule-21 ;
     cml:curationStatus cml:Proposed ;
     prov:wasDerivedFrom <https://www.ohchr.org/en/instruments-mechanisms/instruments/united-nations-rules-treatment-women-prisoners-and-non-custodial> ;
@@ -364,7 +364,7 @@ concept:united-nations-rules-treatment-women-prisoners-and-non-custodial-rule-21
     cml:curationStatus cml:Proposed .
 
 concept:united-nations-rules-treatment-women-prisoners-and-non-custodial-rule-22 a cml:Concept ;
-    skos:prefLabel "Rule 22" ;
+    skos:prefLabel "Rule 22"@en ;
     cml:realizedBy doc:rule-22 ;
     cml:curationStatus cml:Proposed ;
     prov:wasDerivedFrom <https://www.ohchr.org/en/instruments-mechanisms/instruments/united-nations-rules-treatment-women-prisoners-and-non-custodial> ;
@@ -380,7 +380,7 @@ concept:united-nations-rules-treatment-women-prisoners-and-non-custodial-rule-22
     cml:curationStatus cml:Proposed .
 
 concept:united-nations-rules-treatment-women-prisoners-and-non-custodial-rule-23 a cml:Concept ;
-    skos:prefLabel "Rule 23" ;
+    skos:prefLabel "Rule 23"@en ;
     cml:realizedBy doc:rule-23 ;
     cml:curationStatus cml:Proposed ;
     prov:wasDerivedFrom <https://www.ohchr.org/en/instruments-mechanisms/instruments/united-nations-rules-treatment-women-prisoners-and-non-custodial> ;
@@ -396,7 +396,7 @@ concept:united-nations-rules-treatment-women-prisoners-and-non-custodial-rule-23
     cml:curationStatus cml:Proposed .
 
 concept:united-nations-rules-treatment-women-prisoners-and-non-custodial-rule-24 a cml:Concept ;
-    skos:prefLabel "Rule 24" ;
+    skos:prefLabel "Rule 24"@en ;
     cml:realizedBy doc:rule-24 ;
     cml:curationStatus cml:Proposed ;
     prov:wasDerivedFrom <https://www.ohchr.org/en/instruments-mechanisms/instruments/united-nations-rules-treatment-women-prisoners-and-non-custodial> ;
@@ -411,7 +411,7 @@ concept:united-nations-rules-treatment-women-prisoners-and-non-custodial-rule-24
     cml:curationStatus cml:Proposed .
 
 concept:united-nations-rules-treatment-women-prisoners-and-non-custodial-rule-25 a cml:Concept ;
-    skos:prefLabel "Rule 25" ;
+    skos:prefLabel "Rule 25"@en ;
     cml:realizedBy doc:rule-25 ;
     cml:curationStatus cml:Proposed ;
     prov:wasDerivedFrom <https://www.ohchr.org/en/instruments-mechanisms/instruments/united-nations-rules-treatment-women-prisoners-and-non-custodial> ;
@@ -428,7 +428,7 @@ concept:united-nations-rules-treatment-women-prisoners-and-non-custodial-rule-25
     cml:curationStatus cml:Proposed .
 
 concept:united-nations-rules-treatment-women-prisoners-and-non-custodial-rule-26 a cml:Concept ;
-    skos:prefLabel "Rule 26" ;
+    skos:prefLabel "Rule 26"@en ;
     cml:realizedBy doc:rule-26 ;
     cml:curationStatus cml:Proposed ;
     prov:wasDerivedFrom <https://www.ohchr.org/en/instruments-mechanisms/instruments/united-nations-rules-treatment-women-prisoners-and-non-custodial> ;
@@ -445,7 +445,7 @@ concept:united-nations-rules-treatment-women-prisoners-and-non-custodial-rule-26
     cml:curationStatus cml:Proposed .
 
 concept:united-nations-rules-treatment-women-prisoners-and-non-custodial-rule-27 a cml:Concept ;
-    skos:prefLabel "Rule 27" ;
+    skos:prefLabel "Rule 27"@en ;
     cml:realizedBy doc:rule-27 ;
     cml:curationStatus cml:Proposed ;
     prov:wasDerivedFrom <https://www.ohchr.org/en/instruments-mechanisms/instruments/united-nations-rules-treatment-women-prisoners-and-non-custodial> ;
@@ -462,7 +462,7 @@ concept:united-nations-rules-treatment-women-prisoners-and-non-custodial-rule-27
     cml:curationStatus cml:Proposed .
 
 concept:united-nations-rules-treatment-women-prisoners-and-non-custodial-rule-28 a cml:Concept ;
-    skos:prefLabel "Rule 28" ;
+    skos:prefLabel "Rule 28"@en ;
     cml:realizedBy doc:rule-28 ;
     cml:curationStatus cml:Proposed ;
     prov:wasDerivedFrom <https://www.ohchr.org/en/instruments-mechanisms/instruments/united-nations-rules-treatment-women-prisoners-and-non-custodial> ;
@@ -479,7 +479,7 @@ concept:united-nations-rules-treatment-women-prisoners-and-non-custodial-rule-28
     cml:curationStatus cml:Proposed .
 
 concept:united-nations-rules-treatment-women-prisoners-and-non-custodial-rule-29 a cml:Concept ;
-    skos:prefLabel "Rule 29" ;
+    skos:prefLabel "Rule 29"@en ;
     cml:realizedBy doc:rule-29 ;
     cml:curationStatus cml:Proposed ;
     prov:wasDerivedFrom <https://www.ohchr.org/en/instruments-mechanisms/instruments/united-nations-rules-treatment-women-prisoners-and-non-custodial> ;
@@ -494,7 +494,7 @@ concept:united-nations-rules-treatment-women-prisoners-and-non-custodial-rule-29
     cml:curationStatus cml:Proposed .
 
 concept:united-nations-rules-treatment-women-prisoners-and-non-custodial-rule-30 a cml:Concept ;
-    skos:prefLabel "Rule 30" ;
+    skos:prefLabel "Rule 30"@en ;
     cml:realizedBy doc:rule-30 ;
     cml:curationStatus cml:Proposed ;
     prov:wasDerivedFrom <https://www.ohchr.org/en/instruments-mechanisms/instruments/united-nations-rules-treatment-women-prisoners-and-non-custodial> ;
@@ -511,7 +511,7 @@ concept:united-nations-rules-treatment-women-prisoners-and-non-custodial-rule-30
     cml:curationStatus cml:Proposed .
 
 concept:united-nations-rules-treatment-women-prisoners-and-non-custodial-rule-31 a cml:Concept ;
-    skos:prefLabel "Rule 31" ;
+    skos:prefLabel "Rule 31"@en ;
     cml:realizedBy doc:rule-31 ;
     cml:curationStatus cml:Proposed ;
     prov:wasDerivedFrom <https://www.ohchr.org/en/instruments-mechanisms/instruments/united-nations-rules-treatment-women-prisoners-and-non-custodial> ;
@@ -528,7 +528,7 @@ concept:united-nations-rules-treatment-women-prisoners-and-non-custodial-rule-31
     cml:curationStatus cml:Proposed .
 
 concept:united-nations-rules-treatment-women-prisoners-and-non-custodial-rule-32 a cml:Concept ;
-    skos:prefLabel "Rule 32" ;
+    skos:prefLabel "Rule 32"@en ;
     cml:realizedBy doc:rule-32 ;
     cml:curationStatus cml:Proposed ;
     prov:wasDerivedFrom <https://www.ohchr.org/en/instruments-mechanisms/instruments/united-nations-rules-treatment-women-prisoners-and-non-custodial> ;
@@ -543,7 +543,7 @@ concept:united-nations-rules-treatment-women-prisoners-and-non-custodial-rule-32
     cml:curationStatus cml:Proposed .
 
 concept:united-nations-rules-treatment-women-prisoners-and-non-custodial-rule-33 a cml:Concept ;
-    skos:prefLabel "Rule 33" ;
+    skos:prefLabel "Rule 33"@en ;
     cml:realizedBy doc:rule-33 ;
     cml:curationStatus cml:Proposed ;
     prov:wasDerivedFrom <https://www.ohchr.org/en/instruments-mechanisms/instruments/united-nations-rules-treatment-women-prisoners-and-non-custodial> ;
@@ -560,7 +560,7 @@ concept:united-nations-rules-treatment-women-prisoners-and-non-custodial-rule-33
     cml:curationStatus cml:Proposed .
 
 concept:united-nations-rules-treatment-women-prisoners-and-non-custodial-rule-34 a cml:Concept ;
-    skos:prefLabel "Rule 34" ;
+    skos:prefLabel "Rule 34"@en ;
     cml:realizedBy doc:rule-34 ;
     cml:curationStatus cml:Proposed ;
     prov:wasDerivedFrom <https://www.ohchr.org/en/instruments-mechanisms/instruments/united-nations-rules-treatment-women-prisoners-and-non-custodial> ;
@@ -577,7 +577,7 @@ concept:united-nations-rules-treatment-women-prisoners-and-non-custodial-rule-34
     cml:curationStatus cml:Proposed .
 
 concept:united-nations-rules-treatment-women-prisoners-and-non-custodial-rule-35 a cml:Concept ;
-    skos:prefLabel "Rule 35" ;
+    skos:prefLabel "Rule 35"@en ;
     cml:realizedBy doc:rule-35 ;
     cml:curationStatus cml:Proposed ;
     prov:wasDerivedFrom <https://www.ohchr.org/en/instruments-mechanisms/instruments/united-nations-rules-treatment-women-prisoners-and-non-custodial> ;
@@ -594,7 +594,7 @@ concept:united-nations-rules-treatment-women-prisoners-and-non-custodial-rule-35
     cml:curationStatus cml:Proposed .
 
 concept:united-nations-rules-treatment-women-prisoners-and-non-custodial-rule-36 a cml:Concept ;
-    skos:prefLabel "Rule 36" ;
+    skos:prefLabel "Rule 36"@en ;
     cml:realizedBy doc:rule-36 ;
     cml:curationStatus cml:Proposed ;
     prov:wasDerivedFrom <https://www.ohchr.org/en/instruments-mechanisms/instruments/united-nations-rules-treatment-women-prisoners-and-non-custodial> ;
@@ -609,7 +609,7 @@ concept:united-nations-rules-treatment-women-prisoners-and-non-custodial-rule-36
     cml:curationStatus cml:Proposed .
 
 concept:united-nations-rules-treatment-women-prisoners-and-non-custodial-rule-37 a cml:Concept ;
-    skos:prefLabel "Rule 37" ;
+    skos:prefLabel "Rule 37"@en ;
     cml:realizedBy doc:rule-37 ;
     cml:curationStatus cml:Proposed ;
     prov:wasDerivedFrom <https://www.ohchr.org/en/instruments-mechanisms/instruments/united-nations-rules-treatment-women-prisoners-and-non-custodial> ;
@@ -624,7 +624,7 @@ concept:united-nations-rules-treatment-women-prisoners-and-non-custodial-rule-37
     cml:curationStatus cml:Proposed .
 
 concept:united-nations-rules-treatment-women-prisoners-and-non-custodial-rule-38 a cml:Concept ;
-    skos:prefLabel "Rule 38" ;
+    skos:prefLabel "Rule 38"@en ;
     cml:realizedBy doc:rule-38 ;
     cml:curationStatus cml:Proposed ;
     prov:wasDerivedFrom <https://www.ohchr.org/en/instruments-mechanisms/instruments/united-nations-rules-treatment-women-prisoners-and-non-custodial> ;
@@ -639,7 +639,7 @@ concept:united-nations-rules-treatment-women-prisoners-and-non-custodial-rule-38
     cml:curationStatus cml:Proposed .
 
 concept:united-nations-rules-treatment-women-prisoners-and-non-custodial-rule-39 a cml:Concept ;
-    skos:prefLabel "Rule 39" ;
+    skos:prefLabel "Rule 39"@en ;
     cml:realizedBy doc:rule-39 ;
     cml:curationStatus cml:Proposed ;
     prov:wasDerivedFrom <https://www.ohchr.org/en/instruments-mechanisms/instruments/united-nations-rules-treatment-women-prisoners-and-non-custodial> ;
@@ -656,7 +656,7 @@ concept:united-nations-rules-treatment-women-prisoners-and-non-custodial-rule-39
     cml:curationStatus cml:Proposed .
 
 concept:united-nations-rules-treatment-women-prisoners-and-non-custodial-rule-40 a cml:Concept ;
-    skos:prefLabel "Rule 40" ;
+    skos:prefLabel "Rule 40"@en ;
     cml:realizedBy doc:rule-40 ;
     cml:curationStatus cml:Proposed ;
     prov:wasDerivedFrom <https://www.ohchr.org/en/instruments-mechanisms/instruments/united-nations-rules-treatment-women-prisoners-and-non-custodial> ;
@@ -671,7 +671,7 @@ concept:united-nations-rules-treatment-women-prisoners-and-non-custodial-rule-40
     cml:curationStatus cml:Proposed .
 
 concept:united-nations-rules-treatment-women-prisoners-and-non-custodial-rule-41 a cml:Concept ;
-    skos:prefLabel "Rule 41" ;
+    skos:prefLabel "Rule 41"@en ;
     cml:realizedBy doc:rule-41 ;
     cml:curationStatus cml:Proposed ;
     prov:wasDerivedFrom <https://www.ohchr.org/en/instruments-mechanisms/instruments/united-nations-rules-treatment-women-prisoners-and-non-custodial> ;
@@ -686,7 +686,7 @@ concept:united-nations-rules-treatment-women-prisoners-and-non-custodial-rule-41
     cml:curationStatus cml:Proposed .
 
 concept:united-nations-rules-treatment-women-prisoners-and-non-custodial-rule-42 a cml:Concept ;
-    skos:prefLabel "Rule 42" ;
+    skos:prefLabel "Rule 42"@en ;
     cml:realizedBy doc:rule-42 ;
     cml:curationStatus cml:Proposed ;
     prov:wasDerivedFrom <https://www.ohchr.org/en/instruments-mechanisms/instruments/united-nations-rules-treatment-women-prisoners-and-non-custodial> ;
@@ -703,7 +703,7 @@ concept:united-nations-rules-treatment-women-prisoners-and-non-custodial-rule-42
     cml:curationStatus cml:Proposed .
 
 concept:united-nations-rules-treatment-women-prisoners-and-non-custodial-rule-43 a cml:Concept ;
-    skos:prefLabel "Rule 43" ;
+    skos:prefLabel "Rule 43"@en ;
     cml:realizedBy doc:rule-43 ;
     cml:curationStatus cml:Proposed ;
     prov:wasDerivedFrom <https://www.ohchr.org/en/instruments-mechanisms/instruments/united-nations-rules-treatment-women-prisoners-and-non-custodial> ;
@@ -718,7 +718,7 @@ concept:united-nations-rules-treatment-women-prisoners-and-non-custodial-rule-43
     cml:curationStatus cml:Proposed .
 
 concept:united-nations-rules-treatment-women-prisoners-and-non-custodial-rule-44 a cml:Concept ;
-    skos:prefLabel "Rule 44" ;
+    skos:prefLabel "Rule 44"@en ;
     cml:realizedBy doc:rule-44 ;
     cml:curationStatus cml:Proposed ;
     prov:wasDerivedFrom <https://www.ohchr.org/en/instruments-mechanisms/instruments/united-nations-rules-treatment-women-prisoners-and-non-custodial> ;
@@ -735,7 +735,7 @@ concept:united-nations-rules-treatment-women-prisoners-and-non-custodial-rule-44
     cml:curationStatus cml:Proposed .
 
 concept:united-nations-rules-treatment-women-prisoners-and-non-custodial-rule-45 a cml:Concept ;
-    skos:prefLabel "Rule 45" ;
+    skos:prefLabel "Rule 45"@en ;
     cml:realizedBy doc:rule-45 ;
     cml:curationStatus cml:Proposed ;
     prov:wasDerivedFrom <https://www.ohchr.org/en/instruments-mechanisms/instruments/united-nations-rules-treatment-women-prisoners-and-non-custodial> ;
@@ -750,7 +750,7 @@ concept:united-nations-rules-treatment-women-prisoners-and-non-custodial-rule-45
     cml:curationStatus cml:Proposed .
 
 concept:united-nations-rules-treatment-women-prisoners-and-non-custodial-rule-46 a cml:Concept ;
-    skos:prefLabel "Rule 46" ;
+    skos:prefLabel "Rule 46"@en ;
     cml:realizedBy doc:rule-46 ;
     cml:curationStatus cml:Proposed ;
     prov:wasDerivedFrom <https://www.ohchr.org/en/instruments-mechanisms/instruments/united-nations-rules-treatment-women-prisoners-and-non-custodial> ;
@@ -765,7 +765,7 @@ concept:united-nations-rules-treatment-women-prisoners-and-non-custodial-rule-46
     cml:curationStatus cml:Proposed .
 
 concept:united-nations-rules-treatment-women-prisoners-and-non-custodial-rule-47 a cml:Concept ;
-    skos:prefLabel "Rule 47" ;
+    skos:prefLabel "Rule 47"@en ;
     cml:realizedBy doc:rule-47 ;
     cml:curationStatus cml:Proposed ;
     prov:wasDerivedFrom <https://www.ohchr.org/en/instruments-mechanisms/instruments/united-nations-rules-treatment-women-prisoners-and-non-custodial> ;
@@ -782,7 +782,7 @@ concept:united-nations-rules-treatment-women-prisoners-and-non-custodial-rule-47
     cml:curationStatus cml:Proposed .
 
 concept:united-nations-rules-treatment-women-prisoners-and-non-custodial-rule-48 a cml:Concept ;
-    skos:prefLabel "Rule 48" ;
+    skos:prefLabel "Rule 48"@en ;
     cml:realizedBy doc:rule-48 ;
     cml:curationStatus cml:Proposed ;
     prov:wasDerivedFrom <https://www.ohchr.org/en/instruments-mechanisms/instruments/united-nations-rules-treatment-women-prisoners-and-non-custodial> ;
@@ -798,7 +798,7 @@ concept:united-nations-rules-treatment-women-prisoners-and-non-custodial-rule-48
     cml:curationStatus cml:Proposed .
 
 concept:united-nations-rules-treatment-women-prisoners-and-non-custodial-rule-49 a cml:Concept ;
-    skos:prefLabel "Rule 49" ;
+    skos:prefLabel "Rule 49"@en ;
     cml:realizedBy doc:rule-49 ;
     cml:curationStatus cml:Proposed ;
     prov:wasDerivedFrom <https://www.ohchr.org/en/instruments-mechanisms/instruments/united-nations-rules-treatment-women-prisoners-and-non-custodial> ;
@@ -815,7 +815,7 @@ concept:united-nations-rules-treatment-women-prisoners-and-non-custodial-rule-49
     cml:curationStatus cml:Proposed .
 
 concept:united-nations-rules-treatment-women-prisoners-and-non-custodial-rule-50 a cml:Concept ;
-    skos:prefLabel "Rule 50" ;
+    skos:prefLabel "Rule 50"@en ;
     cml:realizedBy doc:rule-50 ;
     cml:curationStatus cml:Proposed ;
     prov:wasDerivedFrom <https://www.ohchr.org/en/instruments-mechanisms/instruments/united-nations-rules-treatment-women-prisoners-and-non-custodial> ;
@@ -832,7 +832,7 @@ concept:united-nations-rules-treatment-women-prisoners-and-non-custodial-rule-50
     cml:curationStatus cml:Proposed .
 
 concept:united-nations-rules-treatment-women-prisoners-and-non-custodial-rule-51 a cml:Concept ;
-    skos:prefLabel "Rule 51" ;
+    skos:prefLabel "Rule 51"@en ;
     cml:realizedBy doc:rule-51 ;
     cml:curationStatus cml:Proposed ;
     prov:wasDerivedFrom <https://www.ohchr.org/en/instruments-mechanisms/instruments/united-nations-rules-treatment-women-prisoners-and-non-custodial> ;
@@ -849,7 +849,7 @@ concept:united-nations-rules-treatment-women-prisoners-and-non-custodial-rule-51
     cml:curationStatus cml:Proposed .
 
 concept:united-nations-rules-treatment-women-prisoners-and-non-custodial-rule-52 a cml:Concept ;
-    skos:prefLabel "Rule 52" ;
+    skos:prefLabel "Rule 52"@en ;
     cml:realizedBy doc:rule-52 ;
     cml:curationStatus cml:Proposed ;
     prov:wasDerivedFrom <https://www.ohchr.org/en/instruments-mechanisms/instruments/united-nations-rules-treatment-women-prisoners-and-non-custodial> ;
@@ -866,7 +866,7 @@ concept:united-nations-rules-treatment-women-prisoners-and-non-custodial-rule-52
     cml:curationStatus cml:Proposed .
 
 concept:united-nations-rules-treatment-women-prisoners-and-non-custodial-rule-53 a cml:Concept ;
-    skos:prefLabel "Rule 53" ;
+    skos:prefLabel "Rule 53"@en ;
     cml:realizedBy doc:rule-53 ;
     cml:curationStatus cml:Proposed ;
     prov:wasDerivedFrom <https://www.ohchr.org/en/instruments-mechanisms/instruments/united-nations-rules-treatment-women-prisoners-and-non-custodial> ;
@@ -883,7 +883,7 @@ concept:united-nations-rules-treatment-women-prisoners-and-non-custodial-rule-53
     cml:curationStatus cml:Proposed .
 
 concept:united-nations-rules-treatment-women-prisoners-and-non-custodial-rule-54 a cml:Concept ;
-    skos:prefLabel "Rule 54" ;
+    skos:prefLabel "Rule 54"@en ;
     cml:realizedBy doc:rule-54 ;
     cml:curationStatus cml:Proposed ;
     prov:wasDerivedFrom <https://www.ohchr.org/en/instruments-mechanisms/instruments/united-nations-rules-treatment-women-prisoners-and-non-custodial> ;
@@ -900,7 +900,7 @@ concept:united-nations-rules-treatment-women-prisoners-and-non-custodial-rule-54
     cml:curationStatus cml:Proposed .
 
 concept:united-nations-rules-treatment-women-prisoners-and-non-custodial-rule-55 a cml:Concept ;
-    skos:prefLabel "Rule 55" ;
+    skos:prefLabel "Rule 55"@en ;
     cml:realizedBy doc:rule-55 ;
     cml:curationStatus cml:Proposed ;
     prov:wasDerivedFrom <https://www.ohchr.org/en/instruments-mechanisms/instruments/united-nations-rules-treatment-women-prisoners-and-non-custodial> ;
@@ -917,7 +917,7 @@ concept:united-nations-rules-treatment-women-prisoners-and-non-custodial-rule-55
     cml:curationStatus cml:Proposed .
 
 concept:united-nations-rules-treatment-women-prisoners-and-non-custodial-rule-56 a cml:Concept ;
-    skos:prefLabel "Rule 56" ;
+    skos:prefLabel "Rule 56"@en ;
     cml:realizedBy doc:rule-56 ;
     cml:curationStatus cml:Proposed ;
     prov:wasDerivedFrom <https://www.ohchr.org/en/instruments-mechanisms/instruments/united-nations-rules-treatment-women-prisoners-and-non-custodial> ;
@@ -934,7 +934,7 @@ concept:united-nations-rules-treatment-women-prisoners-and-non-custodial-rule-56
     cml:curationStatus cml:Proposed .
 
 concept:united-nations-rules-treatment-women-prisoners-and-non-custodial-rule-57 a cml:Concept ;
-    skos:prefLabel "Rule 57" ;
+    skos:prefLabel "Rule 57"@en ;
     cml:realizedBy doc:rule-57 ;
     cml:curationStatus cml:Proposed ;
     prov:wasDerivedFrom <https://www.ohchr.org/en/instruments-mechanisms/instruments/united-nations-rules-treatment-women-prisoners-and-non-custodial> ;
@@ -951,7 +951,7 @@ concept:united-nations-rules-treatment-women-prisoners-and-non-custodial-rule-57
     cml:curationStatus cml:Proposed .
 
 concept:united-nations-rules-treatment-women-prisoners-and-non-custodial-rule-58 a cml:Concept ;
-    skos:prefLabel "Rule 58" ;
+    skos:prefLabel "Rule 58"@en ;
     cml:realizedBy doc:rule-58 ;
     cml:curationStatus cml:Proposed ;
     prov:wasDerivedFrom <https://www.ohchr.org/en/instruments-mechanisms/instruments/united-nations-rules-treatment-women-prisoners-and-non-custodial> ;
@@ -967,7 +967,7 @@ concept:united-nations-rules-treatment-women-prisoners-and-non-custodial-rule-58
     cml:curationStatus cml:Proposed .
 
 concept:united-nations-rules-treatment-women-prisoners-and-non-custodial-rule-59 a cml:Concept ;
-    skos:prefLabel "Rule 59" ;
+    skos:prefLabel "Rule 59"@en ;
     cml:realizedBy doc:rule-59 ;
     cml:curationStatus cml:Proposed ;
     prov:wasDerivedFrom <https://www.ohchr.org/en/instruments-mechanisms/instruments/united-nations-rules-treatment-women-prisoners-and-non-custodial> ;
@@ -983,7 +983,7 @@ concept:united-nations-rules-treatment-women-prisoners-and-non-custodial-rule-59
     cml:curationStatus cml:Proposed .
 
 concept:united-nations-rules-treatment-women-prisoners-and-non-custodial-rule-60 a cml:Concept ;
-    skos:prefLabel "Rule 60" ;
+    skos:prefLabel "Rule 60"@en ;
     cml:realizedBy doc:rule-60 ;
     cml:curationStatus cml:Proposed ;
     prov:wasDerivedFrom <https://www.ohchr.org/en/instruments-mechanisms/instruments/united-nations-rules-treatment-women-prisoners-and-non-custodial> ;
@@ -1000,7 +1000,7 @@ concept:united-nations-rules-treatment-women-prisoners-and-non-custodial-rule-60
     cml:curationStatus cml:Proposed .
 
 concept:united-nations-rules-treatment-women-prisoners-and-non-custodial-rule-61 a cml:Concept ;
-    skos:prefLabel "Rule 61" ;
+    skos:prefLabel "Rule 61"@en ;
     cml:realizedBy doc:rule-61 ;
     cml:curationStatus cml:Proposed ;
     prov:wasDerivedFrom <https://www.ohchr.org/en/instruments-mechanisms/instruments/united-nations-rules-treatment-women-prisoners-and-non-custodial> ;
@@ -1015,7 +1015,7 @@ concept:united-nations-rules-treatment-women-prisoners-and-non-custodial-rule-61
     cml:curationStatus cml:Proposed .
 
 concept:united-nations-rules-treatment-women-prisoners-and-non-custodial-rule-62 a cml:Concept ;
-    skos:prefLabel "Rule 62" ;
+    skos:prefLabel "Rule 62"@en ;
     cml:realizedBy doc:rule-62 ;
     cml:curationStatus cml:Proposed ;
     prov:wasDerivedFrom <https://www.ohchr.org/en/instruments-mechanisms/instruments/united-nations-rules-treatment-women-prisoners-and-non-custodial> ;
@@ -1032,7 +1032,7 @@ concept:united-nations-rules-treatment-women-prisoners-and-non-custodial-rule-62
     cml:curationStatus cml:Proposed .
 
 concept:united-nations-rules-treatment-women-prisoners-and-non-custodial-rule-63 a cml:Concept ;
-    skos:prefLabel "Rule 63" ;
+    skos:prefLabel "Rule 63"@en ;
     cml:realizedBy doc:rule-63 ;
     cml:curationStatus cml:Proposed ;
     prov:wasDerivedFrom <https://www.ohchr.org/en/instruments-mechanisms/instruments/united-nations-rules-treatment-women-prisoners-and-non-custodial> ;
@@ -1047,7 +1047,7 @@ concept:united-nations-rules-treatment-women-prisoners-and-non-custodial-rule-63
     cml:curationStatus cml:Proposed .
 
 concept:united-nations-rules-treatment-women-prisoners-and-non-custodial-rule-64 a cml:Concept ;
-    skos:prefLabel "Rule 64" ;
+    skos:prefLabel "Rule 64"@en ;
     cml:realizedBy doc:rule-64 ;
     cml:curationStatus cml:Proposed ;
     prov:wasDerivedFrom <https://www.ohchr.org/en/instruments-mechanisms/instruments/united-nations-rules-treatment-women-prisoners-and-non-custodial> ;
@@ -1064,7 +1064,7 @@ concept:united-nations-rules-treatment-women-prisoners-and-non-custodial-rule-64
     cml:curationStatus cml:Proposed .
 
 concept:united-nations-rules-treatment-women-prisoners-and-non-custodial-rule-65 a cml:Concept ;
-    skos:prefLabel "Rule 65" ;
+    skos:prefLabel "Rule 65"@en ;
     cml:realizedBy doc:rule-65 ;
     cml:curationStatus cml:Proposed ;
     prov:wasDerivedFrom <https://www.ohchr.org/en/instruments-mechanisms/instruments/united-nations-rules-treatment-women-prisoners-and-non-custodial> ;
@@ -1081,7 +1081,7 @@ concept:united-nations-rules-treatment-women-prisoners-and-non-custodial-rule-65
     cml:curationStatus cml:Proposed .
 
 concept:united-nations-rules-treatment-women-prisoners-and-non-custodial-rule-66 a cml:Concept ;
-    skos:prefLabel "Rule 66" ;
+    skos:prefLabel "Rule 66"@en ;
     cml:realizedBy doc:rule-66 ;
     cml:curationStatus cml:Proposed ;
     prov:wasDerivedFrom <https://www.ohchr.org/en/instruments-mechanisms/instruments/united-nations-rules-treatment-women-prisoners-and-non-custodial> ;
@@ -1098,7 +1098,7 @@ concept:united-nations-rules-treatment-women-prisoners-and-non-custodial-rule-66
     cml:curationStatus cml:Proposed .
 
 concept:united-nations-rules-treatment-women-prisoners-and-non-custodial-rule-67 a cml:Concept ;
-    skos:prefLabel "Rule 67" ;
+    skos:prefLabel "Rule 67"@en ;
     cml:realizedBy doc:rule-67 ;
     cml:curationStatus cml:Proposed ;
     prov:wasDerivedFrom <https://www.ohchr.org/en/instruments-mechanisms/instruments/united-nations-rules-treatment-women-prisoners-and-non-custodial> ;
@@ -1115,7 +1115,7 @@ concept:united-nations-rules-treatment-women-prisoners-and-non-custodial-rule-67
     cml:curationStatus cml:Proposed .
 
 concept:united-nations-rules-treatment-women-prisoners-and-non-custodial-rule-68 a cml:Concept ;
-    skos:prefLabel "Rule 68" ;
+    skos:prefLabel "Rule 68"@en ;
     cml:realizedBy doc:rule-68 ;
     cml:curationStatus cml:Proposed ;
     prov:wasDerivedFrom <https://www.ohchr.org/en/instruments-mechanisms/instruments/united-nations-rules-treatment-women-prisoners-and-non-custodial> ;
@@ -1132,7 +1132,7 @@ concept:united-nations-rules-treatment-women-prisoners-and-non-custodial-rule-68
     cml:curationStatus cml:Proposed .
 
 concept:united-nations-rules-treatment-women-prisoners-and-non-custodial-rule-69 a cml:Concept ;
-    skos:prefLabel "Rule 69" ;
+    skos:prefLabel "Rule 69"@en ;
     cml:realizedBy doc:rule-69 ;
     cml:curationStatus cml:Proposed ;
     prov:wasDerivedFrom <https://www.ohchr.org/en/instruments-mechanisms/instruments/united-nations-rules-treatment-women-prisoners-and-non-custodial> ;
@@ -1149,7 +1149,7 @@ concept:united-nations-rules-treatment-women-prisoners-and-non-custodial-rule-69
     cml:curationStatus cml:Proposed .
 
 concept:united-nations-rules-treatment-women-prisoners-and-non-custodial-rule-70 a cml:Concept ;
-    skos:prefLabel "Rule 70" ;
+    skos:prefLabel "Rule 70"@en ;
     cml:realizedBy doc:rule-70 ;
     cml:curationStatus cml:Proposed ;
     prov:wasDerivedFrom <https://www.ohchr.org/en/instruments-mechanisms/instruments/united-nations-rules-treatment-women-prisoners-and-non-custodial> ;

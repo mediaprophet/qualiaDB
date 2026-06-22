@@ -12,7 +12,7 @@
 # ============================================================
 
 doc:Instrument a values:ValuesCredential ;
-    dc:title "United Nations Guidelines for the Prevention of Juvenile Delinquency (The Riyadh Guidelines)" ;
+    dc:title "United Nations Guidelines for the Prevention of Juvenile Delinquency (The Riyadh Guidelines)"@en ;
     dc:date "14 December 1990" ;
     values:category "Administration of justice, detention & law enforcement" ;
     values:categoryStatus values:AutoAssigned ;
@@ -21,552 +21,552 @@ doc:Instrument a values:ValuesCredential ;
 
 doc:paragraph-1 a values:Undertaking ;
     values:partOf doc:Instrument ;
-    dc:title "Paragraph 1" ;
+    dc:title "Paragraph 1"@en ;
     values:deonticStatus values:HeuristicDerived ;
-    values:originalText "I. Fundamental principles II. Scope of the Guidelines III. General prevention IV. Socialization processes - A. Family - B. Education - C . Community - D. Mass media V. Social policy VI. Legislation and juvenile justice administration VII. Research, policy development and coordination I. Fundamental principles" .
+    values:originalText "I. Fundamental principles II. Scope of the Guidelines III. General prevention IV. Socialization processes - A. Family - B. Education - C . Community - D. Mass media V. Social policy VI. Legislation and juvenile justice administration VII. Research, policy development and coordination I. Fundamental principles"@en .
 
 doc:paragraph-2 a values:Undertaking ;
     values:partOf doc:Instrument ;
-    dc:title "Paragraph 2" ;
+    dc:title "Paragraph 2"@en ;
     values:deonticStatus values:HeuristicDerived ;
-    values:originalText "1. The prevention of juvenile delinquency is an essential part of crime prevention in society. By engaging in lawful, socially useful activities and adopting a humanistic orientation towards society and outlook on life, young persons can develop non-criminogenic attitudes." .
+    values:originalText "1. The prevention of juvenile delinquency is an essential part of crime prevention in society. By engaging in lawful, socially useful activities and adopting a humanistic orientation towards society and outlook on life, young persons can develop non-criminogenic attitudes."@en .
 
 doc:paragraph-3 a values:Undertaking ;
     values:partOf doc:Instrument ;
-    dc:title "Paragraph 3" ;
+    dc:title "Paragraph 3"@en ;
     values:deonticStatus values:HeuristicDerived ;
-    values:originalText "2. The successful prevention of juvenile delinquency requires efforts on the part of the entire society to ensure the harmonious development of adolescents, with respect for and promotion of their personality from early childhood." .
+    values:originalText "2. The successful prevention of juvenile delinquency requires efforts on the part of the entire society to ensure the harmonious development of adolescents, with respect for and promotion of their personality from early childhood."@en .
 
 doc:paragraph-4 a values:Undertaking ;
     values:partOf doc:Instrument ;
-    dc:title "Paragraph 4" ;
+    dc:title "Paragraph 4"@en ;
     values:deonticStatus values:HeuristicDerived ;
-    values:originalText "3. For the purposes of the interpretation of the present Guidelines, a child-centred orientation should be pursued. Young persons should have an active role and partnership within society and should not be considered as mere objects of socialization or control." .
+    values:originalText "3. For the purposes of the interpretation of the present Guidelines, a child-centred orientation should be pursued. Young persons should have an active role and partnership within society and should not be considered as mere objects of socialization or control."@en .
 
 doc:paragraph-5 a values:Undertaking ;
     values:partOf doc:Instrument ;
-    dc:title "Paragraph 5" ;
+    dc:title "Paragraph 5"@en ;
     values:deonticStatus values:HeuristicDerived ;
-    values:originalText "4. In the implementation of the present Guidelines, in accordance with national legal systems, the well-being of young persons from their early childhood should be the focus of any preventive programme." .
+    values:originalText "4. In the implementation of the present Guidelines, in accordance with national legal systems, the well-being of young persons from their early childhood should be the focus of any preventive programme."@en .
 
 doc:paragraph-6 a values:Undertaking ;
     values:partOf doc:Instrument ;
-    dc:title "Paragraph 6" ;
+    dc:title "Paragraph 6"@en ;
     values:deonticStatus values:HeuristicDerived ;
-    values:originalText "5. The need for and importance of progressive delinquency prevention policies and the systematic study and the elaboration of measures should be recognized. These should avoid criminalizing and penalizing a child for behaviour that does not cause serious damage to the development of the child or harm to others. Such policies and measures should involve:" .
+    values:originalText "5. The need for and importance of progressive delinquency prevention policies and the systematic study and the elaboration of measures should be recognized. These should avoid criminalizing and penalizing a child for behaviour that does not cause serious damage to the development of the child or harm to others. Such policies and measures should involve:"@en .
 
 doc:paragraph-7 a values:Undertaking ;
     values:partOf doc:Instrument ;
-    dc:title "Paragraph 7" ;
+    dc:title "Paragraph 7"@en ;
     values:deonticStatus values:HeuristicDerived ;
-    values:originalText "(a) The provision of opportunities, in particular educational opportunities, to meet the varying needs of young persons and to serve as a supportive framework for safeguarding the personal development of all young persons, particularly those who are demonstrably endangered or at social risk and are in need of special care and protection;" .
+    values:originalText "(a) The provision of opportunities, in particular educational opportunities, to meet the varying needs of young persons and to serve as a supportive framework for safeguarding the personal development of all young persons, particularly those who are demonstrably endangered or at social risk and are in need of special care and protection;"@en .
 
 doc:paragraph-8 a values:Undertaking ;
     values:partOf doc:Instrument ;
-    dc:title "Paragraph 8" ;
+    dc:title "Paragraph 8"@en ;
     values:deonticStatus values:HeuristicDerived ;
-    values:originalText "(b) Specialized philosophies and approaches for delinquency prevention, on the basis of laws, processes, institutions, facilities and a service delivery network aimed at reducing the motivation, need and opportunity for, or conditions giving rise to, the commission of infractions;" .
+    values:originalText "(b) Specialized philosophies and approaches for delinquency prevention, on the basis of laws, processes, institutions, facilities and a service delivery network aimed at reducing the motivation, need and opportunity for, or conditions giving rise to, the commission of infractions;"@en .
 
 doc:paragraph-9 a values:Undertaking ;
     values:partOf doc:Instrument ;
-    dc:title "Paragraph 9" ;
+    dc:title "Paragraph 9"@en ;
     values:deonticStatus values:HeuristicDerived ;
-    values:originalText "(c) Official intervention to be pursued primarily in the overall interest of the young person and guided by fairness and equity;" .
+    values:originalText "(c) Official intervention to be pursued primarily in the overall interest of the young person and guided by fairness and equity;"@en .
 
 doc:paragraph-10 a values:Undertaking ;
     values:partOf doc:Instrument ;
-    dc:title "Paragraph 10" ;
+    dc:title "Paragraph 10"@en ;
     values:deonticStatus values:HeuristicDerived ;
-    values:originalText "(d) Safeguarding the well-being, development, rights and interests of all young persons;" .
+    values:originalText "(d) Safeguarding the well-being, development, rights and interests of all young persons;"@en .
 
 doc:paragraph-11 a values:Undertaking ;
     values:partOf doc:Instrument ;
-    dc:title "Paragraph 11" ;
+    dc:title "Paragraph 11"@en ;
     values:deonticStatus values:HeuristicDerived ;
-    values:originalText "(e) Consideration that youthful behaviour or conduct that does not conform to overall social norms and values is often part of the maturation and growth process and tends to disappear spontaneously in most individuals with the transition to adulthood;" .
+    values:originalText "(e) Consideration that youthful behaviour or conduct that does not conform to overall social norms and values is often part of the maturation and growth process and tends to disappear spontaneously in most individuals with the transition to adulthood;"@en .
 
 doc:paragraph-12 a values:Undertaking ;
     values:partOf doc:Instrument ;
-    dc:title "Paragraph 12" ;
+    dc:title "Paragraph 12"@en ;
     values:deonticStatus values:HeuristicDerived ;
-    values:originalText "(f) Awareness that, in the predominant opinion of experts, labelling a young person as \"deviant\"', \"delinquent\" or \"pre-delinquent\" often contributes to the development of a consistent pattern of undesirable behaviour by young persons." .
+    values:originalText "(f) Awareness that, in the predominant opinion of experts, labelling a young person as \"deviant\"', \"delinquent\" or \"pre-delinquent\" often contributes to the development of a consistent pattern of undesirable behaviour by young persons."@en .
 
 doc:paragraph-13 a values:Undertaking ;
     values:partOf doc:Instrument ;
-    dc:title "Paragraph 13" ;
+    dc:title "Paragraph 13"@en ;
     values:deonticStatus values:HeuristicDerived ;
-    values:originalText "6. Community-based services and programmes should be developed for the prevention of juvenile delinquency, particularly where no agencies have yet been established. Formal agencies of social control should only be utilized as a means of last resort." .
+    values:originalText "6. Community-based services and programmes should be developed for the prevention of juvenile delinquency, particularly where no agencies have yet been established. Formal agencies of social control should only be utilized as a means of last resort."@en .
 
 doc:paragraph-14 a values:Undertaking ;
     values:partOf doc:Instrument ;
-    dc:title "Paragraph 14" ;
+    dc:title "Paragraph 14"@en ;
     values:deonticStatus values:HeuristicDerived ;
-    values:originalText "7. The present Guidelines should be interpreted and implemented within the broad framework of the Universal Declaration of Human Rights, the International Covenant on Economic, Social and Cultural Rights, the International Covenant on Civil and Political Rights, the Declaration of the Rights of the Child and the Convention on the Rights of the Child, and in the context of the United Nations Standard Minimum Rules for the Administration of Juvenile Justice (The Beijing Rules), as well as other instruments and norms relating to the rights, interests and well-being of all children and young persons." .
+    values:originalText "7. The present Guidelines should be interpreted and implemented within the broad framework of the Universal Declaration of Human Rights, the International Covenant on Economic, Social and Cultural Rights, the International Covenant on Civil and Political Rights, the Declaration of the Rights of the Child and the Convention on the Rights of the Child, and in the context of the United Nations Standard Minimum Rules for the Administration of Juvenile Justice (The Beijing Rules), as well as other instruments and norms relating to the rights, interests and well-being of all children and young persons."@en .
 
 doc:paragraph-15 a values:Undertaking ;
     values:partOf doc:Instrument ;
-    dc:title "Paragraph 15" ;
+    dc:title "Paragraph 15"@en ;
     values:deonticStatus values:HeuristicDerived ;
-    values:originalText "8. The present Guidelines should also be implemented in the context of the economic, social and cultural conditions prevailing in each Member State." .
+    values:originalText "8. The present Guidelines should also be implemented in the context of the economic, social and cultural conditions prevailing in each Member State."@en .
 
 doc:paragraph-16 a values:Undertaking ;
     values:partOf doc:Instrument ;
-    dc:title "Paragraph 16" ;
+    dc:title "Paragraph 16"@en ;
     values:deonticStatus values:HeuristicDerived ;
-    values:originalText "9. Comprehensive prevention plans should be instituted at every level of Government and include the following:" .
+    values:originalText "9. Comprehensive prevention plans should be instituted at every level of Government and include the following:"@en .
 
 doc:paragraph-17 a values:Undertaking ;
     values:partOf doc:Instrument ;
-    dc:title "Paragraph 17" ;
+    dc:title "Paragraph 17"@en ;
     values:deonticStatus values:HeuristicDerived ;
-    values:originalText "(a) In-depth analyses of the problem and inventories of programmes, services, facilities and resources available;" .
+    values:originalText "(a) In-depth analyses of the problem and inventories of programmes, services, facilities and resources available;"@en .
 
 doc:paragraph-18 a values:Undertaking ;
     values:partOf doc:Instrument ;
-    dc:title "Paragraph 18" ;
+    dc:title "Paragraph 18"@en ;
     values:deonticStatus values:HeuristicDerived ;
-    values:originalText "(b) Well-defined responsibilities for the qualified agencies, institutions and personnel involved in preventive efforts;" .
+    values:originalText "(b) Well-defined responsibilities for the qualified agencies, institutions and personnel involved in preventive efforts;"@en .
 
 doc:paragraph-19 a values:Undertaking ;
     values:partOf doc:Instrument ;
-    dc:title "Paragraph 19" ;
+    dc:title "Paragraph 19"@en ;
     values:deonticStatus values:HeuristicDerived ;
-    values:originalText "(c) Mechanisms for the appropriate co-ordination of prevention efforts between governmental and non-governmental agencies;" .
+    values:originalText "(c) Mechanisms for the appropriate co-ordination of prevention efforts between governmental and non-governmental agencies;"@en .
 
 doc:paragraph-20 a values:Undertaking ;
     values:partOf doc:Instrument ;
-    dc:title "Paragraph 20" ;
+    dc:title "Paragraph 20"@en ;
     values:deonticStatus values:HeuristicDerived ;
-    values:originalText "(d) Policies, programmes and strategies based on prognostic studies to be continuously monitored and carefully evaluated in the course of implementation;" .
+    values:originalText "(d) Policies, programmes and strategies based on prognostic studies to be continuously monitored and carefully evaluated in the course of implementation;"@en .
 
 doc:paragraph-21 a values:Undertaking ;
     values:partOf doc:Instrument ;
-    dc:title "Paragraph 21" ;
+    dc:title "Paragraph 21"@en ;
     values:deonticStatus values:HeuristicDerived ;
-    values:originalText "(e) Methods for effectively reducing the opportunity to commit delinquent acts;" .
+    values:originalText "(e) Methods for effectively reducing the opportunity to commit delinquent acts;"@en .
 
 doc:paragraph-22 a values:Undertaking ;
     values:partOf doc:Instrument ;
-    dc:title "Paragraph 22" ;
+    dc:title "Paragraph 22"@en ;
     values:deonticStatus values:HeuristicDerived ;
-    values:originalText "(f) Community involvement through a wide range of services and programmes;" .
+    values:originalText "(f) Community involvement through a wide range of services and programmes;"@en .
 
 doc:paragraph-23 a values:Undertaking ;
     values:partOf doc:Instrument ;
-    dc:title "Paragraph 23" ;
+    dc:title "Paragraph 23"@en ;
     values:deonticStatus values:HeuristicDerived ;
-    values:originalText "(g) Close interdisciplinary co-operation between national, State, provincial and local governments, with the involvement of the private sector, representative citizens of the community to be served, and labour, child-care, health education, social, law enforcement and judicial agencies in taking concerted action to prevent juvenile delinquency and youth crime;" .
+    values:originalText "(g) Close interdisciplinary co-operation between national, State, provincial and local governments, with the involvement of the private sector, representative citizens of the community to be served, and labour, child-care, health education, social, law enforcement and judicial agencies in taking concerted action to prevent juvenile delinquency and youth crime;"@en .
 
 doc:paragraph-24 a values:Undertaking ;
     values:partOf doc:Instrument ;
-    dc:title "Paragraph 24" ;
+    dc:title "Paragraph 24"@en ;
     values:deonticStatus values:HeuristicDerived ;
-    values:originalText "(h) Youth participation in delinquency prevention policies and processes, including recourse to community resources, youth self-help, and victim compensation and assistance programmes;" .
+    values:originalText "(h) Youth participation in delinquency prevention policies and processes, including recourse to community resources, youth self-help, and victim compensation and assistance programmes;"@en .
 
 doc:paragraph-25 a values:Undertaking ;
     values:partOf doc:Instrument ;
-    dc:title "Paragraph 25" ;
+    dc:title "Paragraph 25"@en ;
     values:deonticStatus values:HeuristicDerived ;
-    values:originalText "(i) Specialized personnel at all levels." .
+    values:originalText "(i) Specialized personnel at all levels."@en .
 
 doc:paragraph-26 a values:Undertaking ;
     values:partOf doc:Instrument ;
-    dc:title "Paragraph 26" ;
+    dc:title "Paragraph 26"@en ;
     values:deonticStatus values:HeuristicDerived ;
-    values:originalText "10. Emphasis should be placed on preventive policies facilitating the successful socialization and integration of all children and young persons, in particular through the family, the community, peer groups, schools, vocational training and the world of work, as well as through voluntary organizations. Due respect should be given to the proper personal development of children and young persons, and they should be accepted as full and equal partners in socialization and integration processes." .
+    values:originalText "10. Emphasis should be placed on preventive policies facilitating the successful socialization and integration of all children and young persons, in particular through the family, the community, peer groups, schools, vocational training and the world of work, as well as through voluntary organizations. Due respect should be given to the proper personal development of children and young persons, and they should be accepted as full and equal partners in socialization and integration processes."@en .
 
 doc:paragraph-27 a values:Undertaking ;
     values:partOf doc:Instrument ;
-    dc:title "Paragraph 27" ;
+    dc:title "Paragraph 27"@en ;
     values:deonticStatus values:HeuristicDerived ;
-    values:originalText "11. Every society should place a high priority on the needs and well-being of the family and of all its members." .
+    values:originalText "11. Every society should place a high priority on the needs and well-being of the family and of all its members."@en .
 
 doc:paragraph-28 a values:Undertaking ;
     values:partOf doc:Instrument ;
-    dc:title "Paragraph 28" ;
+    dc:title "Paragraph 28"@en ;
     values:deonticStatus values:HeuristicDerived ;
-    values:originalText "12. Since the family is the central unit responsible for the primary socialization of children, governmental and social efforts to preserve the integrity of the family, including the extended family, should be pursued. The society has a responsibility to assist the family in providing care and protection and in ensuring the physical and mental well-being of children. Adequate arrangements including day-care should be provided." .
+    values:originalText "12. Since the family is the central unit responsible for the primary socialization of children, governmental and social efforts to preserve the integrity of the family, including the extended family, should be pursued. The society has a responsibility to assist the family in providing care and protection and in ensuring the physical and mental well-being of children. Adequate arrangements including day-care should be provided."@en .
 
 doc:paragraph-29 a values:Undertaking ;
     values:partOf doc:Instrument ;
-    dc:title "Paragraph 29" ;
+    dc:title "Paragraph 29"@en ;
     values:deonticStatus values:HeuristicDerived ;
-    values:originalText "13. Governments should establish policies that are conducive to the bringing up of children in stable and settled family environments. Families in need of assistance in the resolution of conditions of instability or conflict should be provided with requisite services." .
+    values:originalText "13. Governments should establish policies that are conducive to the bringing up of children in stable and settled family environments. Families in need of assistance in the resolution of conditions of instability or conflict should be provided with requisite services."@en .
 
 doc:paragraph-30 a values:Undertaking ;
     values:partOf doc:Instrument ;
-    dc:title "Paragraph 30" ;
+    dc:title "Paragraph 30"@en ;
     values:deonticStatus values:HeuristicDerived ;
-    values:originalText "14. Where a stable and settled family environment is lacking and when community efforts to assist parents in this regard have failed and the extended family cannot fulfil this role, alternative placements, including foster care and adoption, should be considered. Such placements should replicate, to the extent possible, a stable and settled family environment, while, at the same time, establishing a sense of permanency for children, thus avoiding problems associated with \"foster drift\"." .
+    values:originalText "14. Where a stable and settled family environment is lacking and when community efforts to assist parents in this regard have failed and the extended family cannot fulfil this role, alternative placements, including foster care and adoption, should be considered. Such placements should replicate, to the extent possible, a stable and settled family environment, while, at the same time, establishing a sense of permanency for children, thus avoiding problems associated with \"foster drift\"."@en .
 
 doc:paragraph-31 a values:Undertaking ;
     values:partOf doc:Instrument ;
-    dc:title "Paragraph 31" ;
+    dc:title "Paragraph 31"@en ;
     values:deonticStatus values:HeuristicDerived ;
-    values:originalText "15. Special attention should be given to children of families affected by problems brought about by rapid and uneven economic, social and cultural change, in particular the children of indigenous, migrant and refugee families. As such changes may disrupt the social capacity of the family to secure the traditional rearing and nurturing of children, often as a result of role and culture conflict, innovative and socially constructive modalities for the socialization of children have to be designed." .
+    values:originalText "15. Special attention should be given to children of families affected by problems brought about by rapid and uneven economic, social and cultural change, in particular the children of indigenous, migrant and refugee families. As such changes may disrupt the social capacity of the family to secure the traditional rearing and nurturing of children, often as a result of role and culture conflict, innovative and socially constructive modalities for the socialization of children have to be designed."@en .
 
 doc:paragraph-32 a values:Undertaking ;
     values:partOf doc:Instrument ;
-    dc:title "Paragraph 32" ;
+    dc:title "Paragraph 32"@en ;
     values:deonticStatus values:HeuristicDerived ;
-    values:originalText "16. Measures should be taken and programmes developed to provide families with the opportunity to learn about parental roles and obligations as regards child development and child care, promoting positive parent-child relationships, sensitizing parents to the problems of children and young persons and encouraging their involvement in family and community-based activities." .
+    values:originalText "16. Measures should be taken and programmes developed to provide families with the opportunity to learn about parental roles and obligations as regards child development and child care, promoting positive parent-child relationships, sensitizing parents to the problems of children and young persons and encouraging their involvement in family and community-based activities."@en .
 
 doc:paragraph-33 a values:Undertaking ;
     values:partOf doc:Instrument ;
-    dc:title "Paragraph 33" ;
+    dc:title "Paragraph 33"@en ;
     values:deonticStatus values:HeuristicDerived ;
-    values:originalText "17. Governments should take measures to promote family cohesion and harmony and to discourage the separation of children from their parents, unless circumstances affecting the welfare and future of the child leave no viable alternative." .
+    values:originalText "17. Governments should take measures to promote family cohesion and harmony and to discourage the separation of children from their parents, unless circumstances affecting the welfare and future of the child leave no viable alternative."@en .
 
 doc:paragraph-34 a values:Undertaking ;
     values:partOf doc:Instrument ;
-    dc:title "Paragraph 34" ;
+    dc:title "Paragraph 34"@en ;
     values:deonticStatus values:HeuristicDerived ;
-    values:originalText "18. It is important to emphasize the socialization function of the family and extended family; it is also equally important to recognize the future role, responsibilities, participation and partnership of young persons in society." .
+    values:originalText "18. It is important to emphasize the socialization function of the family and extended family; it is also equally important to recognize the future role, responsibilities, participation and partnership of young persons in society."@en .
 
 doc:paragraph-35 a values:Undertaking ;
     values:partOf doc:Instrument ;
-    dc:title "Paragraph 35" ;
+    dc:title "Paragraph 35"@en ;
     values:deonticStatus values:HeuristicDerived ;
-    values:originalText "19. In ensuring the right of the child to proper socialization, Governments and other agencies should rely on existing social and legal agencies, but, whenever traditional institutions and customs are no longer effective, they should also provide and allow for innovative measures." .
+    values:originalText "19. In ensuring the right of the child to proper socialization, Governments and other agencies should rely on existing social and legal agencies, but, whenever traditional institutions and customs are no longer effective, they should also provide and allow for innovative measures."@en .
 
 doc:paragraph-36 a values:Undertaking ;
     values:partOf doc:Instrument ;
-    dc:title "Paragraph 36" ;
+    dc:title "Paragraph 36"@en ;
     values:deonticStatus values:HeuristicDerived ;
-    values:originalText "20. Governments are under an obligation to make public education accessible to all young persons." .
+    values:originalText "20. Governments are under an obligation to make public education accessible to all young persons."@en .
 
 doc:paragraph-37 a values:Undertaking ;
     values:partOf doc:Instrument ;
-    dc:title "Paragraph 37" ;
+    dc:title "Paragraph 37"@en ;
     values:deonticStatus values:HeuristicDerived ;
-    values:originalText "21. Education systems should, in addition to their academic and vocational training activities, devote particular attention to the following:" .
+    values:originalText "21. Education systems should, in addition to their academic and vocational training activities, devote particular attention to the following:"@en .
 
 doc:paragraph-38 a values:Undertaking ;
     values:partOf doc:Instrument ;
-    dc:title "Paragraph 38" ;
+    dc:title "Paragraph 38"@en ;
     values:deonticStatus values:HeuristicDerived ;
-    values:originalText "(a) Teaching of basic values and developing respect for the child's own cultural identity and patterns, for the social values of the country in which the child is living, for civilizations different from the child's own and for human rights and fundamental freedoms;" .
+    values:originalText "(a) Teaching of basic values and developing respect for the child's own cultural identity and patterns, for the social values of the country in which the child is living, for civilizations different from the child's own and for human rights and fundamental freedoms;"@en .
 
 doc:paragraph-39 a values:Undertaking ;
     values:partOf doc:Instrument ;
-    dc:title "Paragraph 39" ;
+    dc:title "Paragraph 39"@en ;
     values:deonticStatus values:HeuristicDerived ;
-    values:originalText "(b) Promotion and development of the personality, talents and mental and physical abilities of young people to their fullest potential;" .
+    values:originalText "(b) Promotion and development of the personality, talents and mental and physical abilities of young people to their fullest potential;"@en .
 
 doc:paragraph-40 a values:Undertaking ;
     values:partOf doc:Instrument ;
-    dc:title "Paragraph 40" ;
+    dc:title "Paragraph 40"@en ;
     values:deonticStatus values:HeuristicDerived ;
-    values:originalText "(c) Involvement of young persons as active and effective participants in, rather than mere objects of, the educational process;" .
+    values:originalText "(c) Involvement of young persons as active and effective participants in, rather than mere objects of, the educational process;"@en .
 
 doc:paragraph-41 a values:Undertaking ;
     values:partOf doc:Instrument ;
-    dc:title "Paragraph 41" ;
+    dc:title "Paragraph 41"@en ;
     values:deonticStatus values:HeuristicDerived ;
-    values:originalText "(d) Undertaking activities that foster a sense of identity with and of belonging to the school and the community;" .
+    values:originalText "(d) Undertaking activities that foster a sense of identity with and of belonging to the school and the community;"@en .
 
 doc:paragraph-42 a values:Undertaking ;
     values:partOf doc:Instrument ;
-    dc:title "Paragraph 42" ;
+    dc:title "Paragraph 42"@en ;
     values:deonticStatus values:HeuristicDerived ;
-    values:originalText "(e) Encouragement of young persons to understand and respect diverse views and opinions, as well as cultural and other differences;" .
+    values:originalText "(e) Encouragement of young persons to understand and respect diverse views and opinions, as well as cultural and other differences;"@en .
 
 doc:paragraph-43 a values:Undertaking ;
     values:partOf doc:Instrument ;
-    dc:title "Paragraph 43" ;
+    dc:title "Paragraph 43"@en ;
     values:deonticStatus values:HeuristicDerived ;
-    values:originalText "(f) Provision of information and guidance regarding vocational training, employment opportunities and career development;" .
+    values:originalText "(f) Provision of information and guidance regarding vocational training, employment opportunities and career development;"@en .
 
 doc:paragraph-44 a values:Undertaking ;
     values:partOf doc:Instrument ;
-    dc:title "Paragraph 44" ;
+    dc:title "Paragraph 44"@en ;
     values:deonticStatus values:HeuristicDerived ;
-    values:originalText "(g) Provision of positive emotional support to young persons and the avoidance of psychological maltreatment;" .
+    values:originalText "(g) Provision of positive emotional support to young persons and the avoidance of psychological maltreatment;"@en .
 
 doc:paragraph-45 a values:Undertaking ;
     values:partOf doc:Instrument ;
-    dc:title "Paragraph 45" ;
+    dc:title "Paragraph 45"@en ;
     values:deonticStatus values:HeuristicDerived ;
-    values:originalText "(h) Avoidance of harsh disciplinary measures, particularly corporal punishment." .
+    values:originalText "(h) Avoidance of harsh disciplinary measures, particularly corporal punishment."@en .
 
 doc:paragraph-46 a values:Undertaking ;
     values:partOf doc:Instrument ;
-    dc:title "Paragraph 46" ;
+    dc:title "Paragraph 46"@en ;
     values:deonticStatus values:HeuristicDerived ;
-    values:originalText "22. Educational systems should seek to work together with parents, community organizations and agencies concerned with the activities of young persons." .
+    values:originalText "22. Educational systems should seek to work together with parents, community organizations and agencies concerned with the activities of young persons."@en .
 
 doc:paragraph-47 a values:Undertaking ;
     values:partOf doc:Instrument ;
-    dc:title "Paragraph 47" ;
+    dc:title "Paragraph 47"@en ;
     values:deonticStatus values:HeuristicDerived ;
-    values:originalText "23. Young persons and their families should be informed about the law and their rights and responsibilities under the law, as well as the universal value system, including United Nations instruments." .
+    values:originalText "23. Young persons and their families should be informed about the law and their rights and responsibilities under the law, as well as the universal value system, including United Nations instruments."@en .
 
 doc:paragraph-48 a values:Undertaking ;
     values:partOf doc:Instrument ;
-    dc:title "Paragraph 48" ;
+    dc:title "Paragraph 48"@en ;
     values:deonticStatus values:HeuristicDerived ;
-    values:originalText "24. Educational systems should extend particular care and attention to young persons who are at social risk. Specialized prevention programmes and educational materials, curricula, approaches and tools should be developed and fully utilized." .
+    values:originalText "24. Educational systems should extend particular care and attention to young persons who are at social risk. Specialized prevention programmes and educational materials, curricula, approaches and tools should be developed and fully utilized."@en .
 
 doc:paragraph-49 a values:Undertaking ;
     values:partOf doc:Instrument ;
-    dc:title "Paragraph 49" ;
+    dc:title "Paragraph 49"@en ;
     values:deonticStatus values:HeuristicDerived ;
-    values:originalText "25. Special attention should be given to comprehensive policies and strategies for the prevention of alcohol, drug and other substance abuse by young persons. Teachers and other professionals should be equipped and trained to prevent and deal with these problems. Information on the use and abuse of drugs, including alcohol, should be made available to the student body." .
+    values:originalText "25. Special attention should be given to comprehensive policies and strategies for the prevention of alcohol, drug and other substance abuse by young persons. Teachers and other professionals should be equipped and trained to prevent and deal with these problems. Information on the use and abuse of drugs, including alcohol, should be made available to the student body."@en .
 
 doc:paragraph-50 a values:Undertaking ;
     values:partOf doc:Instrument ;
-    dc:title "Paragraph 50" ;
+    dc:title "Paragraph 50"@en ;
     values:deonticStatus values:HeuristicDerived ;
-    values:originalText "26. Schools should serve as resource and referral centres for the provision of medical, counselling and other services to young persons, particularly those with special needs and suffering from abuse, neglect, victimization and exploitation." .
+    values:originalText "26. Schools should serve as resource and referral centres for the provision of medical, counselling and other services to young persons, particularly those with special needs and suffering from abuse, neglect, victimization and exploitation."@en .
 
 doc:paragraph-51 a values:Undertaking ;
     values:partOf doc:Instrument ;
-    dc:title "Paragraph 51" ;
+    dc:title "Paragraph 51"@en ;
     values:deonticStatus values:HeuristicDerived ;
-    values:originalText "27. Through a variety of educational programmes, teachers and other adults and the student body should be sensitized to the problems, needs and perceptions of young persons, particularly those belonging to underprivileged, disadvantaged, ethnic or other minority and low-income groups." .
+    values:originalText "27. Through a variety of educational programmes, teachers and other adults and the student body should be sensitized to the problems, needs and perceptions of young persons, particularly those belonging to underprivileged, disadvantaged, ethnic or other minority and low-income groups."@en .
 
 doc:paragraph-52 a values:Undertaking ;
     values:partOf doc:Instrument ;
-    dc:title "Paragraph 52" ;
+    dc:title "Paragraph 52"@en ;
     values:deonticStatus values:HeuristicDerived ;
-    values:originalText "28. School systems should attempt to meet and promote the highest professional and educational standards with respect to curricula, teaching and learning methods and approaches, and the recruitment and training of qualified teachers. Regular monitoring and assessment of performance by the appropriate professional organizations and authorities should be ensured." .
+    values:originalText "28. School systems should attempt to meet and promote the highest professional and educational standards with respect to curricula, teaching and learning methods and approaches, and the recruitment and training of qualified teachers. Regular monitoring and assessment of performance by the appropriate professional organizations and authorities should be ensured."@en .
 
 doc:paragraph-53 a values:Undertaking ;
     values:partOf doc:Instrument ;
-    dc:title "Paragraph 53" ;
+    dc:title "Paragraph 53"@en ;
     values:deonticStatus values:HeuristicDerived ;
-    values:originalText "29. School systems should plan, develop and implement extracurricular activities of interest to young persons, in co-operation with community groups." .
+    values:originalText "29. School systems should plan, develop and implement extracurricular activities of interest to young persons, in co-operation with community groups."@en .
 
 doc:paragraph-54 a values:Undertaking ;
     values:partOf doc:Instrument ;
-    dc:title "Paragraph 54" ;
+    dc:title "Paragraph 54"@en ;
     values:deonticStatus values:HeuristicDerived ;
-    values:originalText "30. Special assistance should be given to children and young persons who find it difficult to comply with attendance codes, and to \"drop-outs\"." .
+    values:originalText "30. Special assistance should be given to children and young persons who find it difficult to comply with attendance codes, and to \"drop-outs\"."@en .
 
 doc:paragraph-55 a values:Undertaking ;
     values:partOf doc:Instrument ;
-    dc:title "Paragraph 55" ;
+    dc:title "Paragraph 55"@en ;
     values:deonticStatus values:HeuristicDerived ;
-    values:originalText "31. Schools should promote policies and rules that are fair and just; students should be represented in bodies formulating school policy, including policy on discipline, and decision-making." .
+    values:originalText "31. Schools should promote policies and rules that are fair and just; students should be represented in bodies formulating school policy, including policy on discipline, and decision-making."@en .
 
 doc:paragraph-56 a values:Undertaking ;
     values:partOf doc:Instrument ;
-    dc:title "Paragraph 56" ;
+    dc:title "Paragraph 56"@en ;
     values:deonticStatus values:HeuristicDerived ;
-    values:originalText "32. Community-based services and programmes which respond to the special needs, problems, interests and concerns of young persons and which offer appropriate counselling and guidance to young persons and their families should be developed, or strengthened where they exist." .
+    values:originalText "32. Community-based services and programmes which respond to the special needs, problems, interests and concerns of young persons and which offer appropriate counselling and guidance to young persons and their families should be developed, or strengthened where they exist."@en .
 
 doc:paragraph-57 a values:Undertaking ;
     values:partOf doc:Instrument ;
-    dc:title "Paragraph 57" ;
+    dc:title "Paragraph 57"@en ;
     values:deonticStatus values:HeuristicDerived ;
-    values:originalText "33. Communities should provide, or strengthen where they exist, a wide range of community-based support measures for young persons, including community development centres, recreational facilities and services to respond to the special problems of children who are at social risk. In providing these helping measures, respect for individual rights should be ensured." .
+    values:originalText "33. Communities should provide, or strengthen where they exist, a wide range of community-based support measures for young persons, including community development centres, recreational facilities and services to respond to the special problems of children who are at social risk. In providing these helping measures, respect for individual rights should be ensured."@en .
 
 doc:paragraph-58 a values:Undertaking ;
     values:partOf doc:Instrument ;
-    dc:title "Paragraph 58" ;
+    dc:title "Paragraph 58"@en ;
     values:deonticStatus values:HeuristicDerived ;
-    values:originalText "34. Special facilities should be set up to provide adequate shelter for young persons who are no longer able to live at or who do not have s to live in." .
+    values:originalText "34. Special facilities should be set up to provide adequate shelter for young persons who are no longer able to live at or who do not have s to live in."@en .
 
 doc:paragraph-59 a values:Undertaking ;
     values:partOf doc:Instrument ;
-    dc:title "Paragraph 59" ;
+    dc:title "Paragraph 59"@en ;
     values:deonticStatus values:HeuristicDerived ;
-    values:originalText "35. A range of services and helping measures should be provided to deal with the difficulties experienced by young persons in the transition to adulthood. Such services should include special programmes for young drug abusers which emphasize care, counselling, assistance and therapy-oriented interventions." .
+    values:originalText "35. A range of services and helping measures should be provided to deal with the difficulties experienced by young persons in the transition to adulthood. Such services should include special programmes for young drug abusers which emphasize care, counselling, assistance and therapy-oriented interventions."@en .
 
 doc:paragraph-60 a values:Undertaking ;
     values:partOf doc:Instrument ;
-    dc:title "Paragraph 60" ;
+    dc:title "Paragraph 60"@en ;
     values:deonticStatus values:HeuristicDerived ;
-    values:originalText "36. Voluntary organizations providing services for young persons should be given financial and other support by Governments and other institutions." .
+    values:originalText "36. Voluntary organizations providing services for young persons should be given financial and other support by Governments and other institutions."@en .
 
 doc:paragraph-61 a values:Undertaking ;
     values:partOf doc:Instrument ;
-    dc:title "Paragraph 61" ;
+    dc:title "Paragraph 61"@en ;
     values:deonticStatus values:HeuristicDerived ;
-    values:originalText "37. Youth organizations should be created or strengthened at the local level and given full participatory status in the management of community affairs. These organizations should encourage youth to organize collective and voluntary projects, particularly projects aimed at helping young persons in need of assistance." .
+    values:originalText "37. Youth organizations should be created or strengthened at the local level and given full participatory status in the management of community affairs. These organizations should encourage youth to organize collective and voluntary projects, particularly projects aimed at helping young persons in need of assistance."@en .
 
 doc:paragraph-62 a values:Undertaking ;
     values:partOf doc:Instrument ;
-    dc:title "Paragraph 62" ;
+    dc:title "Paragraph 62"@en ;
     values:deonticStatus values:HeuristicDerived ;
-    values:originalText "38. Government agencies should take special responsibility and provide necessary services for less or street children; information about local facilities, accommodation, employment and other forms and sources of help should be made readily available to young persons." .
+    values:originalText "38. Government agencies should take special responsibility and provide necessary services for less or street children; information about local facilities, accommodation, employment and other forms and sources of help should be made readily available to young persons."@en .
 
 doc:paragraph-63 a values:Undertaking ;
     values:partOf doc:Instrument ;
-    dc:title "Paragraph 63" ;
+    dc:title "Paragraph 63"@en ;
     values:deonticStatus values:HeuristicDerived ;
-    values:originalText "39. A wide range of recreational facilities and services of particular interest to young persons should be established and made easily accessible to them." .
+    values:originalText "39. A wide range of recreational facilities and services of particular interest to young persons should be established and made easily accessible to them."@en .
 
 doc:paragraph-64 a values:Undertaking ;
     values:partOf doc:Instrument ;
-    dc:title "Paragraph 64" ;
+    dc:title "Paragraph 64"@en ;
     values:deonticStatus values:HeuristicDerived ;
-    values:originalText "40. The mass media should be encouraged to ensure that young persons have access to information and material from a diversity of national and international sources." .
+    values:originalText "40. The mass media should be encouraged to ensure that young persons have access to information and material from a diversity of national and international sources."@en .
 
 doc:paragraph-65 a values:Undertaking ;
     values:partOf doc:Instrument ;
-    dc:title "Paragraph 65" ;
+    dc:title "Paragraph 65"@en ;
     values:deonticStatus values:HeuristicDerived ;
-    values:originalText "41. The mass media should be encouraged to portray the positive contribution of young persons to society." .
+    values:originalText "41. The mass media should be encouraged to portray the positive contribution of young persons to society."@en .
 
 doc:paragraph-66 a values:Undertaking ;
     values:partOf doc:Instrument ;
-    dc:title "Paragraph 66" ;
+    dc:title "Paragraph 66"@en ;
     values:deonticStatus values:HeuristicDerived ;
-    values:originalText "42. The mass media should be encouraged to disseminate information on the existence of services, facilities and opportunities for young persons in society." .
+    values:originalText "42. The mass media should be encouraged to disseminate information on the existence of services, facilities and opportunities for young persons in society."@en .
 
 doc:paragraph-67 a values:Undertaking ;
     values:partOf doc:Instrument ;
-    dc:title "Paragraph 67" ;
+    dc:title "Paragraph 67"@en ;
     values:deonticStatus values:HeuristicDerived ;
-    values:originalText "43. The mass media generally, and the television and film media in particular, should be encouraged to minimize the level of pornography, drugs and violence portrayed and to display violence and exploitation disfavourably, as well as to avoid demeaning and degrading presentations, especially of children, women and interpersonal relations, and to promote egalitarian principles and roles." .
+    values:originalText "43. The mass media generally, and the television and film media in particular, should be encouraged to minimize the level of pornography, drugs and violence portrayed and to display violence and exploitation disfavourably, as well as to avoid demeaning and degrading presentations, especially of children, women and interpersonal relations, and to promote egalitarian principles and roles."@en .
 
 doc:paragraph-68 a values:Undertaking ;
     values:partOf doc:Instrument ;
-    dc:title "Paragraph 68" ;
+    dc:title "Paragraph 68"@en ;
     values:deonticStatus values:HeuristicDerived ;
-    values:originalText "44. The mass media should be aware of its extensive social role and responsibility, as well as its influence, in communications relating to youthful drug and alcohol abuse. It should use its power for drug abuse prevention by relaying consistent messages through a balanced approach. Effective drug awareness campaigns at all levels should be promoted." .
+    values:originalText "44. The mass media should be aware of its extensive social role and responsibility, as well as its influence, in communications relating to youthful drug and alcohol abuse. It should use its power for drug abuse prevention by relaying consistent messages through a balanced approach. Effective drug awareness campaigns at all levels should be promoted."@en .
 
 doc:paragraph-69 a values:Undertaking ;
     values:partOf doc:Instrument ;
-    dc:title "Paragraph 69" ;
+    dc:title "Paragraph 69"@en ;
     values:deonticStatus values:HeuristicDerived ;
-    values:originalText "45. Government agencies should give high priority to plans and programmes for young persons and should provide sufficient funds and other resources for the effective delivery of services, facilities and staff for adequate medical and mental health care, nutrition, housing and other relevant services, including drug and alcohol abuse prevention and treatment, ensuring that such resources reach and actually benefit young persons." .
+    values:originalText "45. Government agencies should give high priority to plans and programmes for young persons and should provide sufficient funds and other resources for the effective delivery of services, facilities and staff for adequate medical and mental health care, nutrition, housing and other relevant services, including drug and alcohol abuse prevention and treatment, ensuring that such resources reach and actually benefit young persons."@en .
 
 doc:paragraph-70 a values:Undertaking ;
     values:partOf doc:Instrument ;
-    dc:title "Paragraph 70" ;
+    dc:title "Paragraph 70"@en ;
     values:deonticStatus values:HeuristicDerived ;
-    values:originalText "46. The institutionalization of young persons should be a measure of last resort and for the minimum necessary period, and the best interests of the young person should be of paramount importance. Criteria authorizing formal intervention of this type should be strictly defined and limited to the following situations: (a) where the child or young person has suffered harm that has been inflicted by the parents or guardians; (b) where the child or young person has been sexually, physically or emotionally abused by the parents or guardians; (c) where the child or young person has been neglected, abandoned or exploited by the parents or guardians; (d) where the child or young person is threatened by physical or moral danger due to the behaviour of the parents or guardians; and (e) where a serious physical or psychological danger to the child or young person has manifested itself in his or her own behaviour and neither the parents, the guardians, the juvenile himself or herself nor non-residential community services can meet the danger by means other than institutionalization." .
+    values:originalText "46. The institutionalization of young persons should be a measure of last resort and for the minimum necessary period, and the best interests of the young person should be of paramount importance. Criteria authorizing formal intervention of this type should be strictly defined and limited to the following situations: (a) where the child or young person has suffered harm that has been inflicted by the parents or guardians; (b) where the child or young person has been sexually, physically or emotionally abused by the parents or guardians; (c) where the child or young person has been neglected, abandoned or exploited by the parents or guardians; (d) where the child or young person is threatened by physical or moral danger due to the behaviour of the parents or guardians; and (e) where a serious physical or psychological danger to the child or young person has manifested itself in his or her own behaviour and neither the parents, the guardians, the juvenile himself or herself nor non-residential community services can meet the danger by means other than institutionalization."@en .
 
 doc:paragraph-71 a values:Undertaking ;
     values:partOf doc:Instrument ;
-    dc:title "Paragraph 71" ;
+    dc:title "Paragraph 71"@en ;
     values:deonticStatus values:HeuristicDerived ;
-    values:originalText "47. Government agencies should provide young persons with the opportunity of continuing in full-time education, funded by the State where parents or guardians are unable to support the young persons, and of receiving work experience." .
+    values:originalText "47. Government agencies should provide young persons with the opportunity of continuing in full-time education, funded by the State where parents or guardians are unable to support the young persons, and of receiving work experience."@en .
 
 doc:paragraph-72 a values:Undertaking ;
     values:partOf doc:Instrument ;
-    dc:title "Paragraph 72" ;
+    dc:title "Paragraph 72"@en ;
     values:deonticStatus values:HeuristicDerived ;
-    values:originalText "48. Programmes to prevent delinquency should be planned and developed on the basis of reliable, scientific research findings, and periodically monitored, evaluated and adjusted accordingly." .
+    values:originalText "48. Programmes to prevent delinquency should be planned and developed on the basis of reliable, scientific research findings, and periodically monitored, evaluated and adjusted accordingly."@en .
 
 doc:paragraph-73 a values:Undertaking ;
     values:partOf doc:Instrument ;
-    dc:title "Paragraph 73" ;
+    dc:title "Paragraph 73"@en ;
     values:deonticStatus values:HeuristicDerived ;
-    values:originalText "49. Scientific information should be disseminated to the professional community and to the public at large about the sort of behaviour or situation which indicates or may result in physical and psychological victimization, harm and abuse, as well as exploitation, of young persons." .
+    values:originalText "49. Scientific information should be disseminated to the professional community and to the public at large about the sort of behaviour or situation which indicates or may result in physical and psychological victimization, harm and abuse, as well as exploitation, of young persons."@en .
 
 doc:paragraph-74 a values:Undertaking ;
     values:partOf doc:Instrument ;
-    dc:title "Paragraph 74" ;
+    dc:title "Paragraph 74"@en ;
     values:deonticStatus values:HeuristicDerived ;
-    values:originalText "50. Generally, participation in plans and programmes should be voluntary. Young persons themselves should be involved in their formulation, development and implementation." .
+    values:originalText "50. Generally, participation in plans and programmes should be voluntary. Young persons themselves should be involved in their formulation, development and implementation."@en .
 
 doc:paragraph-75 a values:Undertaking ;
     values:partOf doc:Instrument ;
-    dc:title "Paragraph 75" ;
+    dc:title "Paragraph 75"@en ;
     values:deonticStatus values:HeuristicDerived ;
-    values:originalText "51. Government should begin or continue to explore, develop and implement policies, measures and strategies within and outside the criminal justice system to prevent domestic violence against and affecting young persons and to ensure fair treatment to these victims of domestic violence." .
+    values:originalText "51. Government should begin or continue to explore, develop and implement policies, measures and strategies within and outside the criminal justice system to prevent domestic violence against and affecting young persons and to ensure fair treatment to these victims of domestic violence."@en .
 
 doc:paragraph-76 a values:Undertaking ;
     values:partOf doc:Instrument ;
-    dc:title "Paragraph 76" ;
+    dc:title "Paragraph 76"@en ;
     values:deonticStatus values:HeuristicDerived ;
-    values:originalText "VI. Legislation and juvenile justice administration" .
+    values:originalText "VI. Legislation and juvenile justice administration"@en .
 
 doc:paragraph-77 a values:Undertaking ;
     values:partOf doc:Instrument ;
-    dc:title "Paragraph 77" ;
+    dc:title "Paragraph 77"@en ;
     values:deonticStatus values:HeuristicDerived ;
-    values:originalText "52. Governments should enact and enforce specific laws and procedures to promote and protect the rights and well-being of all young persons." .
+    values:originalText "52. Governments should enact and enforce specific laws and procedures to promote and protect the rights and well-being of all young persons."@en .
 
 doc:paragraph-78 a values:Undertaking ;
     values:partOf doc:Instrument ;
-    dc:title "Paragraph 78" ;
+    dc:title "Paragraph 78"@en ;
     values:deonticStatus values:HeuristicDerived ;
-    values:originalText "53. Legislation preventing the victimization, abuse, exploitation and the use for criminal activities of children and young persons should be enacted and enforced." .
+    values:originalText "53. Legislation preventing the victimization, abuse, exploitation and the use for criminal activities of children and young persons should be enacted and enforced."@en .
 
 doc:paragraph-79 a values:Undertaking ;
     values:partOf doc:Instrument ;
-    dc:title "Paragraph 79" ;
+    dc:title "Paragraph 79"@en ;
     values:deonticStatus values:HeuristicDerived ;
-    values:originalText "54. No child or young person should be subjected to harsh or degrading correction or punishment measures at , in schools or in any other institutions." .
+    values:originalText "54. No child or young person should be subjected to harsh or degrading correction or punishment measures at , in schools or in any other institutions."@en .
 
 doc:paragraph-80 a values:Undertaking ;
     values:partOf doc:Instrument ;
-    dc:title "Paragraph 80" ;
+    dc:title "Paragraph 80"@en ;
     values:deonticStatus values:HeuristicDerived ;
-    values:originalText "55. Legislation and enforcement aimed at restricting and controlling accessibility of weapons of any sort to children and young persons should be pursued." .
+    values:originalText "55. Legislation and enforcement aimed at restricting and controlling accessibility of weapons of any sort to children and young persons should be pursued."@en .
 
 doc:paragraph-81 a values:Undertaking ;
     values:partOf doc:Instrument ;
-    dc:title "Paragraph 81" ;
+    dc:title "Paragraph 81"@en ;
     values:deonticStatus values:HeuristicDerived ;
-    values:originalText "56. In order to prevent further stigmatization, victimization and criminalization of young persons, legislation should be enacted to ensure that any conduct not considered an offence or not penalized if committed by an adult is not considered an offence and not penalized if committed by a young person." .
+    values:originalText "56. In order to prevent further stigmatization, victimization and criminalization of young persons, legislation should be enacted to ensure that any conduct not considered an offence or not penalized if committed by an adult is not considered an offence and not penalized if committed by a young person."@en .
 
 doc:paragraph-82 a values:Undertaking ;
     values:partOf doc:Instrument ;
-    dc:title "Paragraph 82" ;
+    dc:title "Paragraph 82"@en ;
     values:deonticStatus values:HeuristicDerived ;
-    values:originalText "57. Consideration should be given to the establishment of an office of ombudsman or similar independent organ, which would ensure that the status, rights and interests of young persons are upheld and that proper referral to available services is made. The ombudsman or other organ designated would also supervise the implementation of the Riyadh Guidelines, the Beijing Rules and the Rules for the Protection of Juveniles Deprived of their Liberty. The ombudsman or other organ would, at regular intervals, publish a report on the progress made and on the difficulties encountered in the implementation of the instrument. Child advocacy services should also be established." .
+    values:originalText "57. Consideration should be given to the establishment of an office of ombudsman or similar independent organ, which would ensure that the status, rights and interests of young persons are upheld and that proper referral to available services is made. The ombudsman or other organ designated would also supervise the implementation of the Riyadh Guidelines, the Beijing Rules and the Rules for the Protection of Juveniles Deprived of their Liberty. The ombudsman or other organ would, at regular intervals, publish a report on the progress made and on the difficulties encountered in the implementation of the instrument. Child advocacy services should also be established."@en .
 
 doc:paragraph-83 a values:Undertaking ;
     values:partOf doc:Instrument ;
-    dc:title "Paragraph 83" ;
+    dc:title "Paragraph 83"@en ;
     values:deonticStatus values:HeuristicDerived ;
-    values:originalText "58. Law enforcement and other relevant personnel, of both sexes, should be trained to respond to the special needs of young persons and should be familiar with and use, to the maximum extent possible, programmes and referral possibilities for the diversion of young persons from the justice system." .
+    values:originalText "58. Law enforcement and other relevant personnel, of both sexes, should be trained to respond to the special needs of young persons and should be familiar with and use, to the maximum extent possible, programmes and referral possibilities for the diversion of young persons from the justice system."@en .
 
 doc:paragraph-84 a values:Undertaking ;
     values:partOf doc:Instrument ;
-    dc:title "Paragraph 84" ;
+    dc:title "Paragraph 84"@en ;
     values:deonticStatus values:HeuristicDerived ;
-    values:originalText "59. Legislation should be enacted and strictly enforced to protect children and young persons from drug abuse and drug traffickers." .
+    values:originalText "59. Legislation should be enacted and strictly enforced to protect children and young persons from drug abuse and drug traffickers."@en .
 
 doc:paragraph-85 a values:Undertaking ;
     values:partOf doc:Instrument ;
-    dc:title "Paragraph 85" ;
+    dc:title "Paragraph 85"@en ;
     values:deonticStatus values:HeuristicDerived ;
-    values:originalText "VII. Research, policy development and coordination" .
+    values:originalText "VII. Research, policy development and coordination"@en .
 
 doc:paragraph-86 a values:Undertaking ;
     values:partOf doc:Instrument ;
-    dc:title "Paragraph 86" ;
+    dc:title "Paragraph 86"@en ;
     values:deonticStatus values:HeuristicDerived ;
-    values:originalText "60. Efforts should be made and appropriate mechanisms established to promote, on both a multidisciplinary and an intradisciplinary basis, interaction and coordination between economic, social, education and health agencies and services, the justice system, youth, community and development agencies and other relevant institutions." .
+    values:originalText "60. Efforts should be made and appropriate mechanisms established to promote, on both a multidisciplinary and an intradisciplinary basis, interaction and coordination between economic, social, education and health agencies and services, the justice system, youth, community and development agencies and other relevant institutions."@en .
 
 doc:paragraph-87 a values:Undertaking ;
     values:partOf doc:Instrument ;
-    dc:title "Paragraph 87" ;
+    dc:title "Paragraph 87"@en ;
     values:deonticStatus values:HeuristicDerived ;
-    values:originalText "61. The exchange of information, experience and expertise gained through projects, programmes, practices and initiatives relating to youth crime, delinquency prevention and juvenile justice should be intensified at the national, regional and international levels." .
+    values:originalText "61. The exchange of information, experience and expertise gained through projects, programmes, practices and initiatives relating to youth crime, delinquency prevention and juvenile justice should be intensified at the national, regional and international levels."@en .
 
 doc:paragraph-88 a values:Undertaking ;
     values:partOf doc:Instrument ;
-    dc:title "Paragraph 88" ;
+    dc:title "Paragraph 88"@en ;
     values:deonticStatus values:HeuristicDerived ;
-    values:originalText "62. Regional and international co-operation on matters of youth crime, delinquency prevention and juvenile justice involving practitioners, experts and decision makers should be further developed and strengthened." .
+    values:originalText "62. Regional and international co-operation on matters of youth crime, delinquency prevention and juvenile justice involving practitioners, experts and decision makers should be further developed and strengthened."@en .
 
 doc:paragraph-89 a values:Undertaking ;
     values:partOf doc:Instrument ;
-    dc:title "Paragraph 89" ;
+    dc:title "Paragraph 89"@en ;
     values:deonticStatus values:HeuristicDerived ;
-    values:originalText "63. Technical and scientific cooperation on practical and policy-related matters, particularly in training, pilot and demonstration projects, and on specific issues concerning the prevention of youth crime and juvenile delinquency should be strongly supported by all Governments, the United Nations system and other concerned organizations." .
+    values:originalText "63. Technical and scientific cooperation on practical and policy-related matters, particularly in training, pilot and demonstration projects, and on specific issues concerning the prevention of youth crime and juvenile delinquency should be strongly supported by all Governments, the United Nations system and other concerned organizations."@en .
 
 doc:paragraph-90 a values:Undertaking ;
     values:partOf doc:Instrument ;
-    dc:title "Paragraph 90" ;
+    dc:title "Paragraph 90"@en ;
     values:deonticStatus values:HeuristicDerived ;
-    values:originalText "64. Collaboration should be encouraged in undertaking scientific research with respect to effective modalities for youth crime and juvenile delinquency prevention and the findings of such research should be widely disseminated and evaluated." .
+    values:originalText "64. Collaboration should be encouraged in undertaking scientific research with respect to effective modalities for youth crime and juvenile delinquency prevention and the findings of such research should be widely disseminated and evaluated."@en .
 
 doc:paragraph-91 a values:Undertaking ;
     values:partOf doc:Instrument ;
-    dc:title "Paragraph 91" ;
+    dc:title "Paragraph 91"@en ;
     values:deonticStatus values:HeuristicDerived ;
-    values:originalText "65. Appropriate United Nations bodies, institutes, agencies and offices should pursue close collaboration and coordination on various questions related to children juvenile justice and youth crime and juvenile delinquency prevention." .
+    values:originalText "65. Appropriate United Nations bodies, institutes, agencies and offices should pursue close collaboration and coordination on various questions related to children juvenile justice and youth crime and juvenile delinquency prevention."@en .
 
 doc:paragraph-92 a values:Undertaking ;
     values:partOf doc:Instrument ;
-    dc:title "Paragraph 92" ;
+    dc:title "Paragraph 92"@en ;
     values:deonticStatus values:HeuristicDerived ;
-    values:originalText "66. On the basis of the present Guidelines, the United Nations Secretariat, in cooperation with interested institutions, should play an active role in the conduct of research, scientific collaboration, the formulation of policy options and the review and monitoring of their implementation, and should serve as a source of reliable information on effective modalities for delinquency prevention." .
+    values:originalText "66. On the basis of the present Guidelines, the United Nations Secretariat, in cooperation with interested institutions, should play an active role in the conduct of research, scientific collaboration, the formulation of policy options and the review and monitoring of their implementation, and should serve as a source of reliable information on effective modalities for delinquency prevention."@en .

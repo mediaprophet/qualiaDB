@@ -17,7 +17,7 @@
 # ============================================================
 
 concept:safeguards-guaranteeing-protection-rights-those-facing-death-paragraph-1 a cml:Concept ;
-    skos:prefLabel "Paragraph 1" ;
+    skos:prefLabel "Paragraph 1"@en ;
     cml:realizedBy doc:paragraph-1 ;
     cml:curationStatus cml:Proposed ;
     prov:wasDerivedFrom <https://www.ohchr.org/en/instruments-mechanisms/instruments/safeguards-guaranteeing-protection-rights-those-facing-death> ;

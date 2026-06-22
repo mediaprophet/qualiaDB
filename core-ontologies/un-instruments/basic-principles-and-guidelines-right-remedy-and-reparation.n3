@@ -12,7 +12,7 @@
 # ============================================================
 
 doc:Instrument a values:ValuesCredential ;
-    dc:title "Basic Principles and Guidelines on the Right to a Remedy and Reparation for Victims of Gross Violations of International Human Rights Law and Serious Violations of International Humanitarian Law" ;
+    dc:title "Basic Principles and Guidelines on the Right to a Remedy and Reparation for Victims of Gross Violations of International Human Rights Law and Serious Violations of International Humanitarian Law"@en ;
     dc:date "16 December 2005" ;
     values:category "Administration of justice, detention & law enforcement" ;
     values:categoryStatus values:AutoAssigned ;
@@ -22,555 +22,555 @@ doc:Instrument a values:ValuesCredential ;
 doc:paragraph-2 a values:Right ;
     values:partOf doc:Instrument ;
     values:heldBy values:NaturalPerson ;
-    dc:title "Paragraph 2" ;
+    dc:title "Paragraph 2"@en ;
     values:deonticStatus values:HeuristicDerived ;
-    values:originalText "Annex Basic Principles and Guidelines on the Right to a Remedy and Reparation for Victims of Gross Violations of International Human Rights Law and Serious Violations of International Humanitarian Law Preamble I. Obligation to respect, ensure respect for and implement international human rights law and international humanitarian law II. Scope of the obligation III. Gross violations of international human rights law and serious violations of international humanitarian law that constitute crimes under international law IV. Statutes of limitations V. Victims of gross violations of international human rights law and serious violations of international humanitarian law VI. Treatment of victims VII. Victims’ right to remedies VIII. Access to justice IX. Reparation for harm suffered X. Access to relevant information concerning violations and reparation mechanisms XI. Non-discrimination XII. Non-derogation XIII. Rights of others" .
+    values:originalText "Annex Basic Principles and Guidelines on the Right to a Remedy and Reparation for Victims of Gross Violations of International Human Rights Law and Serious Violations of International Humanitarian Law Preamble I. Obligation to respect, ensure respect for and implement international human rights law and international humanitarian law II. Scope of the obligation III. Gross violations of international human rights law and serious violations of international humanitarian law that constitute crimes under international law IV. Statutes of limitations V. Victims of gross violations of international human rights law and serious violations of international humanitarian law VI. Treatment of victims VII. Victims’ right to remedies VIII. Access to justice IX. Reparation for harm suffered X. Access to relevant information concerning violations and reparation mechanisms XI. Non-discrimination XII. Non-derogation XIII. Rights of others"@en .
 
 doc:paragraph-3 a values:Undertaking ;
     values:partOf doc:Instrument ;
-    dc:title "Paragraph 3" ;
+    dc:title "Paragraph 3"@en ;
     values:deonticStatus values:HeuristicDerived ;
-    values:originalText "Guided by the Charter of the United Nations, the Universal Declaration of Human Rights, the International Covenants on Human Rights, other relevant human rights instruments and the Vienna Declaration and Programme of Action," .
+    values:originalText "Guided by the Charter of the United Nations, the Universal Declaration of Human Rights, the International Covenants on Human Rights, other relevant human rights instruments and the Vienna Declaration and Programme of Action,"@en .
 
 doc:paragraph-4 a values:Undertaking ;
     values:partOf doc:Instrument ;
-    dc:title "Paragraph 4" ;
+    dc:title "Paragraph 4"@en ;
     values:deonticStatus values:HeuristicDerived ;
-    values:originalText "Affirming the importance of addressing the question of remedies and reparation for victims of gross violations of international human rights law and serious violations of international humanitarian law in a systematic and thorough way at the national and international levels," .
+    values:originalText "Affirming the importance of addressing the question of remedies and reparation for victims of gross violations of international human rights law and serious violations of international humanitarian law in a systematic and thorough way at the national and international levels,"@en .
 
 doc:paragraph-5 a values:Right ;
     values:partOf doc:Instrument ;
     values:heldBy values:NaturalPerson ;
-    dc:title "Paragraph 5" ;
+    dc:title "Paragraph 5"@en ;
     values:deonticStatus values:HeuristicDerived ;
-    values:originalText "Recognizing that, in honouring the victims’ right to benefit from remedies and reparation, the international community keeps faith with the plight of victims, survivors and future human generations and reaffirms international law in the field," .
+    values:originalText "Recognizing that, in honouring the victims’ right to benefit from remedies and reparation, the international community keeps faith with the plight of victims, survivors and future human generations and reaffirms international law in the field,"@en .
 
 doc:paragraph-6 a values:Right ;
     values:partOf doc:Instrument ;
     values:heldBy values:NaturalPerson ;
-    dc:title "Paragraph 6" ;
+    dc:title "Paragraph 6"@en ;
     values:deonticStatus values:HeuristicDerived ;
-    values:originalText "1. Adopts the Basic Principles and Guidelines on the Right to a Remedy and Reparation for Victims of Gross Violations of International Human Rights Law and Serious Violations of International Humanitarian Law annexed to the present resolution;" .
+    values:originalText "1. Adopts the Basic Principles and Guidelines on the Right to a Remedy and Reparation for Victims of Gross Violations of International Human Rights Law and Serious Violations of International Humanitarian Law annexed to the present resolution;"@en .
 
 doc:paragraph-7 a values:Undertaking ;
     values:partOf doc:Instrument ;
-    dc:title "Paragraph 7" ;
+    dc:title "Paragraph 7"@en ;
     values:deonticStatus values:HeuristicDerived ;
-    values:originalText "2. Recommends that States take the Basic Principles and Guidelines into account, promote respect thereof and bring them to the attention of members of the executive bodies of government, in particular law enforcement officials and military and security forces, legislative bodies, the judiciary, victims and their representatives, human rights defenders and lawyers, the media and the public in general;" .
+    values:originalText "2. Recommends that States take the Basic Principles and Guidelines into account, promote respect thereof and bring them to the attention of members of the executive bodies of government, in particular law enforcement officials and military and security forces, legislative bodies, the judiciary, victims and their representatives, human rights defenders and lawyers, the media and the public in general;"@en .
 
 doc:paragraph-8 a values:Undertaking ;
     values:partOf doc:Instrument ;
-    dc:title "Paragraph 8" ;
+    dc:title "Paragraph 8"@en ;
     values:deonticStatus values:HeuristicDerived ;
-    values:originalText "3. Requests the Secretary-General to take steps to ensure the widest possible dissemination of the Basic Principles and Guidelines in all the official languages of the United Nations, including by transmitting them to Governments and intergovernmental and non-governmental organizations and by including the Basic Principles and Guidelines in the United Nations publication entitled Human Rights: A Compilation of International Instruments." .
+    values:originalText "3. Requests the Secretary-General to take steps to ensure the widest possible dissemination of the Basic Principles and Guidelines in all the official languages of the United Nations, including by transmitting them to Governments and intergovernmental and non-governmental organizations and by including the Basic Principles and Guidelines in the United Nations publication entitled Human Rights: A Compilation of International Instruments."@en .
 
 doc:paragraph-9 a values:Undertaking ;
     values:partOf doc:Instrument ;
-    dc:title "Paragraph 9" ;
+    dc:title "Paragraph 9"@en ;
     values:deonticStatus values:HeuristicDerived ;
-    values:originalText "64th plenary meeting 16 December 2005" .
+    values:originalText "64th plenary meeting 16 December 2005"@en .
 
 doc:paragraph-10 a values:Right ;
     values:partOf doc:Instrument ;
     values:heldBy values:NaturalPerson ;
-    dc:title "Paragraph 10" ;
+    dc:title "Paragraph 10"@en ;
     values:deonticStatus values:HeuristicDerived ;
-    values:originalText "Annex Basic Principles and Guidelines on the Right to a Remedy and Reparation for Victims of Gross Violations of International Human Rights Law and Serious Violations of International Humanitarian Law Preamble" .
+    values:originalText "Annex Basic Principles and Guidelines on the Right to a Remedy and Reparation for Victims of Gross Violations of International Human Rights Law and Serious Violations of International Humanitarian Law Preamble"@en .
 
 doc:paragraph-11 a values:Right ;
     values:partOf doc:Instrument ;
     values:heldBy values:NaturalPerson ;
-    dc:title "Paragraph 11" ;
+    dc:title "Paragraph 11"@en ;
     values:deonticStatus values:HeuristicDerived ;
-    values:originalText "Recalling the provisions providing a right to a remedy for victims of violations of international human rights law found in numerous international instruments, in particular article 8 of the Universal Declaration of Human Rights, article 2 of the International Covenant on Civil and Political Rights, article 6 of the International Convention on the Elimination of All Forms of Racial Discrimination, article 14 of the Convention against Torture and Other Cruel, Inhuman or Degrading Treatment or Punishment, and article 39 of the Convention on the Rights of the Child, and of international humanitarian law as found in article 3 of the Hague Convention respecting the Laws and Customs of War on Land of 18 October 1907 (Convention IV), article 91 of the Protocol Additional to the Geneva Conventions of 12 August 1949, and relating to the Protection of Victims of International Armed Conflicts (Protocol I) of 8 June 1977, and articles 68 and 75 of the Rome Statute of the International Criminal Court," .
+    values:originalText "Recalling the provisions providing a right to a remedy for victims of violations of international human rights law found in numerous international instruments, in particular article 8 of the Universal Declaration of Human Rights, article 2 of the International Covenant on Civil and Political Rights, article 6 of the International Convention on the Elimination of All Forms of Racial Discrimination, article 14 of the Convention against Torture and Other Cruel, Inhuman or Degrading Treatment or Punishment, and article 39 of the Convention on the Rights of the Child, and of international humanitarian law as found in article 3 of the Hague Convention respecting the Laws and Customs of War on Land of 18 October 1907 (Convention IV), article 91 of the Protocol Additional to the Geneva Conventions of 12 August 1949, and relating to the Protection of Victims of International Armed Conflicts (Protocol I) of 8 June 1977, and articles 68 and 75 of the Rome Statute of the International Criminal Court,"@en .
 
 doc:paragraph-12 a values:Right ;
     values:partOf doc:Instrument ;
     values:heldBy values:NaturalPerson ;
-    dc:title "Paragraph 12" ;
+    dc:title "Paragraph 12"@en ;
     values:deonticStatus values:HeuristicDerived ;
-    values:originalText "Recalling the provisions providing a right to a remedy for victims of violations of international human rights found in regional conventions, in particular article 7 of the African Charter on Human and Peoples’ Rights, article 25 of the American Convention on Human Rights, and article 13 of the Convention for the Protection of Human Rights and Fundamental Freedoms," .
+    values:originalText "Recalling the provisions providing a right to a remedy for victims of violations of international human rights found in regional conventions, in particular article 7 of the African Charter on Human and Peoples’ Rights, article 25 of the American Convention on Human Rights, and article 13 of the Convention for the Protection of Human Rights and Fundamental Freedoms,"@en .
 
 doc:paragraph-13 a values:Right ;
     values:partOf doc:Instrument ;
     values:heldBy values:NaturalPerson ;
-    dc:title "Paragraph 13" ;
+    dc:title "Paragraph 13"@en ;
     values:deonticStatus values:HeuristicDerived ;
-    values:originalText "Reaffirming the principles enunciated in the Declaration of Basic Principles of Justice for Victims of Crime and Abuse of Power, including that victims should be treated with compassion and respect for their dignity, have their right to access to justice and redress mechanisms fully respected, and that the establishment, strengthening and expansion of national funds for compensation to victims should be encouraged, together with the expeditious development of appropriate rights and remedies for victims," .
+    values:originalText "Reaffirming the principles enunciated in the Declaration of Basic Principles of Justice for Victims of Crime and Abuse of Power, including that victims should be treated with compassion and respect for their dignity, have their right to access to justice and redress mechanisms fully respected, and that the establishment, strengthening and expansion of national funds for compensation to victims should be encouraged, together with the expeditious development of appropriate rights and remedies for victims,"@en .
 
 doc:paragraph-14 a values:Undertaking ;
     values:partOf doc:Instrument ;
-    dc:title "Paragraph 14" ;
+    dc:title "Paragraph 14"@en ;
     values:deonticStatus values:HeuristicDerived ;
-    values:originalText "Noting that the Rome Statute of the International Criminal Court requires the establishment of “principles relating to reparations to, or in respect of, victims, including restitution, compensation and rehabilitation”, requires the Assembly of States Parties to establish a trust fund for the benefit of victims of crimes within the jurisdiction of the Court, and of the families of such victims, and mandates the Court “to protect the safety, physical and psychological well-being, dignity and privacy of victims” and to permit the participation of victims at all “stages of the proceedings determined to be appropriate by the Court”," .
+    values:originalText "Noting that the Rome Statute of the International Criminal Court requires the establishment of “principles relating to reparations to, or in respect of, victims, including restitution, compensation and rehabilitation”, requires the Assembly of States Parties to establish a trust fund for the benefit of victims of crimes within the jurisdiction of the Court, and of the families of such victims, and mandates the Court “to protect the safety, physical and psychological well-being, dignity and privacy of victims” and to permit the participation of victims at all “stages of the proceedings determined to be appropriate by the Court”,"@en .
 
 doc:paragraph-15 a values:Undertaking ;
     values:partOf doc:Instrument ;
-    dc:title "Paragraph 15" ;
+    dc:title "Paragraph 15"@en ;
     values:deonticStatus values:HeuristicDerived ;
-    values:originalText "Affirming that the Basic Principles and Guidelines contained herein are directed at gross violations of international human rights law and serious violations of international humanitarian law which, by their very grave nature, constitute an affront to human dignity," .
+    values:originalText "Affirming that the Basic Principles and Guidelines contained herein are directed at gross violations of international human rights law and serious violations of international humanitarian law which, by their very grave nature, constitute an affront to human dignity,"@en .
 
 doc:paragraph-16 a values:Undertaking ;
     values:partOf doc:Instrument ;
-    dc:title "Paragraph 16" ;
+    dc:title "Paragraph 16"@en ;
     values:deonticStatus values:HeuristicDerived ;
-    values:originalText "Emphasizing that the Basic Principles and Guidelines contained herein do not entail new international or domestic legal obligations but identify mechanisms, modalities, procedures and methods for the implementation of existing legal obligations under international human rights law and international humanitarian law which are complementary though different as to their norms," .
+    values:originalText "Emphasizing that the Basic Principles and Guidelines contained herein do not entail new international or domestic legal obligations but identify mechanisms, modalities, procedures and methods for the implementation of existing legal obligations under international human rights law and international humanitarian law which are complementary though different as to their norms,"@en .
 
 doc:paragraph-17 a values:Undertaking ;
     values:partOf doc:Instrument ;
-    dc:title "Paragraph 17" ;
+    dc:title "Paragraph 17"@en ;
     values:deonticStatus values:HeuristicDerived ;
-    values:originalText "Recalling that international law contains the obligation to prosecute perpetrators of certain international crimes in accordance with international obligations of States and the requirements of national law or as provided for in the applicable statutes of international judicial organs, and that the duty to prosecute reinforces the international legal obligations to be carried out in accordance with national legal requirements and procedures and supports the concept of complementarity," .
+    values:originalText "Recalling that international law contains the obligation to prosecute perpetrators of certain international crimes in accordance with international obligations of States and the requirements of national law or as provided for in the applicable statutes of international judicial organs, and that the duty to prosecute reinforces the international legal obligations to be carried out in accordance with national legal requirements and procedures and supports the concept of complementarity,"@en .
 
 doc:paragraph-18 a values:Undertaking ;
     values:partOf doc:Instrument ;
-    dc:title "Paragraph 18" ;
+    dc:title "Paragraph 18"@en ;
     values:deonticStatus values:HeuristicDerived ;
-    values:originalText "Noting that contemporary forms of victimization, while essentially directed against persons, may nevertheless also be directed against groups of persons who are targeted collectively," .
+    values:originalText "Noting that contemporary forms of victimization, while essentially directed against persons, may nevertheless also be directed against groups of persons who are targeted collectively,"@en .
 
 doc:paragraph-19 a values:Right ;
     values:partOf doc:Instrument ;
     values:heldBy values:NaturalPerson ;
-    dc:title "Paragraph 19" ;
+    dc:title "Paragraph 19"@en ;
     values:deonticStatus values:HeuristicDerived ;
-    values:originalText "Recognizing that, in honouring the victims’ right to benefit from remedies and reparation, the international community keeps faith with the plight of victims, survivors and future human generations and reaffirms the international legal principles of accountability, justice and the rule of law," .
+    values:originalText "Recognizing that, in honouring the victims’ right to benefit from remedies and reparation, the international community keeps faith with the plight of victims, survivors and future human generations and reaffirms the international legal principles of accountability, justice and the rule of law,"@en .
 
 doc:paragraph-20 a values:Undertaking ;
     values:partOf doc:Instrument ;
-    dc:title "Paragraph 20" ;
+    dc:title "Paragraph 20"@en ;
     values:deonticStatus values:HeuristicDerived ;
-    values:originalText "Convinced that, in adopting a victim-oriented perspective, the international community affirms its human solidarity with victims of violations of international law, including violations of international human rights law and international humanitarian law, as well as with humanity at large, in accordance with the following Basic Principles and Guidelines," .
+    values:originalText "Convinced that, in adopting a victim-oriented perspective, the international community affirms its human solidarity with victims of violations of international law, including violations of international human rights law and international humanitarian law, as well as with humanity at large, in accordance with the following Basic Principles and Guidelines,"@en .
 
 doc:paragraph-21 a values:Undertaking ;
     values:partOf doc:Instrument ;
-    dc:title "Paragraph 21" ;
+    dc:title "Paragraph 21"@en ;
     values:deonticStatus values:HeuristicDerived ;
-    values:originalText "Adopts the following Basic Principles and Guidelines:" .
+    values:originalText "Adopts the following Basic Principles and Guidelines:"@en .
 
 doc:paragraph-22 a values:Undertaking ;
     values:partOf doc:Instrument ;
-    dc:title "Paragraph 22" ;
+    dc:title "Paragraph 22"@en ;
     values:deonticStatus values:HeuristicDerived ;
-    values:originalText "I. Obligation to respect, ensure respect for and implement international human rights law and international humanitarian law" .
+    values:originalText "I. Obligation to respect, ensure respect for and implement international human rights law and international humanitarian law"@en .
 
 doc:paragraph-23 a values:Undertaking ;
     values:partOf doc:Instrument ;
-    dc:title "Paragraph 23" ;
+    dc:title "Paragraph 23"@en ;
     values:deonticStatus values:HeuristicDerived ;
-    values:originalText "1. The obligation to respect, ensure respect for and implement international human rights law and international humanitarian law as provided for under the respective bodies of law emanates from:" .
+    values:originalText "1. The obligation to respect, ensure respect for and implement international human rights law and international humanitarian law as provided for under the respective bodies of law emanates from:"@en .
 
 doc:paragraph-24 a values:Undertaking ;
     values:partOf doc:Instrument ;
-    dc:title "Paragraph 24" ;
+    dc:title "Paragraph 24"@en ;
     values:deonticStatus values:HeuristicDerived ;
-    values:originalText "(a) Treaties to which a State is a party;" .
+    values:originalText "(a) Treaties to which a State is a party;"@en .
 
 doc:paragraph-25 a values:Undertaking ;
     values:partOf doc:Instrument ;
-    dc:title "Paragraph 25" ;
+    dc:title "Paragraph 25"@en ;
     values:deonticStatus values:HeuristicDerived ;
-    values:originalText "(b) Customary international law;" .
+    values:originalText "(b) Customary international law;"@en .
 
 doc:paragraph-26 a values:Undertaking ;
     values:partOf doc:Instrument ;
-    dc:title "Paragraph 26" ;
+    dc:title "Paragraph 26"@en ;
     values:deonticStatus values:HeuristicDerived ;
-    values:originalText "(c) The domestic law of each State." .
+    values:originalText "(c) The domestic law of each State."@en .
 
 doc:paragraph-27 a values:Undertaking ;
     values:partOf doc:Instrument ;
-    dc:title "Paragraph 27" ;
+    dc:title "Paragraph 27"@en ;
     values:deonticStatus values:HeuristicDerived ;
-    values:originalText "2. If they have not already done so, States shall, as required under international law, ensure that their domestic law is consistent with their international legal obligations by:" .
+    values:originalText "2. If they have not already done so, States shall, as required under international law, ensure that their domestic law is consistent with their international legal obligations by:"@en .
 
 doc:paragraph-28 a values:Undertaking ;
     values:partOf doc:Instrument ;
-    dc:title "Paragraph 28" ;
+    dc:title "Paragraph 28"@en ;
     values:deonticStatus values:HeuristicDerived ;
-    values:originalText "(a) Incorporating norms of international human rights law and international humanitarian law into their domestic law, or otherwise implementing them in their domestic legal system;" .
+    values:originalText "(a) Incorporating norms of international human rights law and international humanitarian law into their domestic law, or otherwise implementing them in their domestic legal system;"@en .
 
 doc:paragraph-29 a values:Undertaking ;
     values:partOf doc:Instrument ;
-    dc:title "Paragraph 29" ;
+    dc:title "Paragraph 29"@en ;
     values:deonticStatus values:HeuristicDerived ;
-    values:originalText "(b) Adopting appropriate and effective legislative and administrative procedures and other appropriate measures that provide fair, effective and prompt access to justice;" .
+    values:originalText "(b) Adopting appropriate and effective legislative and administrative procedures and other appropriate measures that provide fair, effective and prompt access to justice;"@en .
 
 doc:paragraph-30 a values:Undertaking ;
     values:partOf doc:Instrument ;
-    dc:title "Paragraph 30" ;
+    dc:title "Paragraph 30"@en ;
     values:deonticStatus values:HeuristicDerived ;
-    values:originalText "(c) Making available adequate, effective, prompt and appropriate remedies, including reparation, as defined below;" .
+    values:originalText "(c) Making available adequate, effective, prompt and appropriate remedies, including reparation, as defined below;"@en .
 
 doc:paragraph-31 a values:Undertaking ;
     values:partOf doc:Instrument ;
-    dc:title "Paragraph 31" ;
+    dc:title "Paragraph 31"@en ;
     values:deonticStatus values:HeuristicDerived ;
-    values:originalText "(d) Ensuring that their domestic law provides at least the same level of protection for victims as that required by their international obligations." .
+    values:originalText "(d) Ensuring that their domestic law provides at least the same level of protection for victims as that required by their international obligations."@en .
 
 doc:paragraph-32 a values:Undertaking ;
     values:partOf doc:Instrument ;
-    dc:title "Paragraph 32" ;
+    dc:title "Paragraph 32"@en ;
     values:deonticStatus values:HeuristicDerived ;
-    values:originalText "3. The obligation to respect, ensure respect for and implement international human rights law and international humanitarian law as provided for under the respective bodies of law, includes, inter alia, the duty to:" .
+    values:originalText "3. The obligation to respect, ensure respect for and implement international human rights law and international humanitarian law as provided for under the respective bodies of law, includes, inter alia, the duty to:"@en .
 
 doc:paragraph-33 a values:Undertaking ;
     values:partOf doc:Instrument ;
-    dc:title "Paragraph 33" ;
+    dc:title "Paragraph 33"@en ;
     values:deonticStatus values:HeuristicDerived ;
-    values:originalText "(a) Take appropriate legislative and administrative and other appropriate measures to prevent violations;" .
+    values:originalText "(a) Take appropriate legislative and administrative and other appropriate measures to prevent violations;"@en .
 
 doc:paragraph-34 a values:Undertaking ;
     values:partOf doc:Instrument ;
-    dc:title "Paragraph 34" ;
+    dc:title "Paragraph 34"@en ;
     values:deonticStatus values:HeuristicDerived ;
-    values:originalText "(b) Investigate violations effectively, promptly, thoroughly and impartially and, where appropriate, take action against those allegedly responsible in accordance with domestic and international law;" .
+    values:originalText "(b) Investigate violations effectively, promptly, thoroughly and impartially and, where appropriate, take action against those allegedly responsible in accordance with domestic and international law;"@en .
 
 doc:paragraph-35 a values:Undertaking ;
     values:partOf doc:Instrument ;
-    dc:title "Paragraph 35" ;
+    dc:title "Paragraph 35"@en ;
     values:deonticStatus values:HeuristicDerived ;
-    values:originalText "(c) Provide those who claim to be victims of a human rights or humanitarian law violation with equal and effective access to justice, as described below, irrespective of who may ultimately be the bearer of responsibility for the violation; and" .
+    values:originalText "(c) Provide those who claim to be victims of a human rights or humanitarian law violation with equal and effective access to justice, as described below, irrespective of who may ultimately be the bearer of responsibility for the violation; and"@en .
 
 doc:paragraph-36 a values:Undertaking ;
     values:partOf doc:Instrument ;
-    dc:title "Paragraph 36" ;
+    dc:title "Paragraph 36"@en ;
     values:deonticStatus values:HeuristicDerived ;
-    values:originalText "(d) Provide effective remedies to victims, including reparation, as described below." .
+    values:originalText "(d) Provide effective remedies to victims, including reparation, as described below."@en .
 
 doc:paragraph-37 a values:Undertaking ;
     values:partOf doc:Instrument ;
-    dc:title "Paragraph 37" ;
+    dc:title "Paragraph 37"@en ;
     values:deonticStatus values:HeuristicDerived ;
-    values:originalText "III. Gross violations of international human rights law and serious violations of international humanitarian law that constitute crimes under international law" .
+    values:originalText "III. Gross violations of international human rights law and serious violations of international humanitarian law that constitute crimes under international law"@en .
 
 doc:paragraph-38 a values:Undertaking ;
     values:partOf doc:Instrument ;
-    dc:title "Paragraph 38" ;
+    dc:title "Paragraph 38"@en ;
     values:deonticStatus values:HeuristicDerived ;
-    values:originalText "4. In cases of gross violations of international human rights law and serious violations of international humanitarian law constituting crimes under international law, States have the duty to investigate and, if there is sufficient evidence, the duty to submit to prosecution the person allegedly responsible for the violations and, if found guilty, the duty to punish her or him. Moreover, in these cases, States should, in accordance with international law, cooperate with one another and assist international judicial organs competent in the investigation and prosecution of these violations." .
+    values:originalText "4. In cases of gross violations of international human rights law and serious violations of international humanitarian law constituting crimes under international law, States have the duty to investigate and, if there is sufficient evidence, the duty to submit to prosecution the person allegedly responsible for the violations and, if found guilty, the duty to punish her or him. Moreover, in these cases, States should, in accordance with international law, cooperate with one another and assist international judicial organs competent in the investigation and prosecution of these violations."@en .
 
 doc:paragraph-39 a values:Undertaking ;
     values:partOf doc:Instrument ;
-    dc:title "Paragraph 39" ;
+    dc:title "Paragraph 39"@en ;
     values:deonticStatus values:HeuristicDerived ;
-    values:originalText "5. To that end, where so provided in an applicable treaty or under other international law obligations, States shall incorporate or otherwise implement within their domestic law appropriate provisions for universal jurisdiction. Moreover, where it is so provided for in an applicable treaty or other international legal obligations, States should facilitate extradition or surrender offenders to other States and to appropriate international judicial bodies and provide judicial assistance and other forms of cooperation in the pursuit of international justice, including assistance to, and protection of, victims and witnesses, consistent with international human rights legal standards and subject to international legal requirements such as those relating to the prohibition of torture and other forms of cruel, inhuman or degrading treatment or punishment." .
+    values:originalText "5. To that end, where so provided in an applicable treaty or under other international law obligations, States shall incorporate or otherwise implement within their domestic law appropriate provisions for universal jurisdiction. Moreover, where it is so provided for in an applicable treaty or other international legal obligations, States should facilitate extradition or surrender offenders to other States and to appropriate international judicial bodies and provide judicial assistance and other forms of cooperation in the pursuit of international justice, including assistance to, and protection of, victims and witnesses, consistent with international human rights legal standards and subject to international legal requirements such as those relating to the prohibition of torture and other forms of cruel, inhuman or degrading treatment or punishment."@en .
 
 doc:paragraph-40 a values:Prohibition ;
     values:partOf doc:Instrument ;
     values:borneBy values:Agent ;
-    dc:title "Paragraph 40" ;
+    dc:title "Paragraph 40"@en ;
     values:deonticStatus values:HeuristicDerived ;
-    values:originalText "6. Where so provided for in an applicable treaty or contained in other international legal obligations, statutes of limitations shall not apply to gross violations of international human rights law and serious violations of international humanitarian law which constitute crimes under international law." .
+    values:originalText "6. Where so provided for in an applicable treaty or contained in other international legal obligations, statutes of limitations shall not apply to gross violations of international human rights law and serious violations of international humanitarian law which constitute crimes under international law."@en .
 
 doc:paragraph-41 a values:Undertaking ;
     values:partOf doc:Instrument ;
-    dc:title "Paragraph 41" ;
+    dc:title "Paragraph 41"@en ;
     values:deonticStatus values:HeuristicDerived ;
-    values:originalText "7. Domestic statutes of limitations for other types of violations that do not constitute crimes under international law, including those time limitations applicable to civil claims and other procedures, should not be unduly restrictive." .
+    values:originalText "7. Domestic statutes of limitations for other types of violations that do not constitute crimes under international law, including those time limitations applicable to civil claims and other procedures, should not be unduly restrictive."@en .
 
 doc:paragraph-42 a values:Undertaking ;
     values:partOf doc:Instrument ;
-    dc:title "Paragraph 42" ;
+    dc:title "Paragraph 42"@en ;
     values:deonticStatus values:HeuristicDerived ;
-    values:originalText "V. Victims of gross violations of international human rights law and serious violations of international humanitarian law" .
+    values:originalText "V. Victims of gross violations of international human rights law and serious violations of international humanitarian law"@en .
 
 doc:paragraph-43 a values:Undertaking ;
     values:partOf doc:Instrument ;
-    dc:title "Paragraph 43" ;
+    dc:title "Paragraph 43"@en ;
     values:deonticStatus values:HeuristicDerived ;
-    values:originalText "8. For purposes of the present document, victims are persons who individually or collectively suffered harm, including physical or mental injury, emotional suffering, economic loss or substantial impairment of their fundamental rights, through acts or omissions that constitute gross violations of international human rights law, or serious violations of international humanitarian law. Where appropriate, and in accordance with domestic law, the term “victim” also includes the immediate family or dependants of the direct victim and persons who have suffered harm in intervening to assist victims in distress or to prevent victimization." .
+    values:originalText "8. For purposes of the present document, victims are persons who individually or collectively suffered harm, including physical or mental injury, emotional suffering, economic loss or substantial impairment of their fundamental rights, through acts or omissions that constitute gross violations of international human rights law, or serious violations of international humanitarian law. Where appropriate, and in accordance with domestic law, the term “victim” also includes the immediate family or dependants of the direct victim and persons who have suffered harm in intervening to assist victims in distress or to prevent victimization."@en .
 
 doc:paragraph-44 a values:Obligation ;
     values:partOf doc:Instrument ;
     values:borneBy values:Agent ;
-    dc:title "Paragraph 44" ;
+    dc:title "Paragraph 44"@en ;
     values:deonticStatus values:HeuristicDerived ;
-    values:originalText "9. A person shall be considered a victim regardless of whether the perpetrator of the violation is identified, apprehended, prosecuted, or convicted and regardless of the familial relationship between the perpetrator and the victim." .
+    values:originalText "9. A person shall be considered a victim regardless of whether the perpetrator of the violation is identified, apprehended, prosecuted, or convicted and regardless of the familial relationship between the perpetrator and the victim."@en .
 
 doc:paragraph-45 a values:Undertaking ;
     values:partOf doc:Instrument ;
-    dc:title "Paragraph 45" ;
+    dc:title "Paragraph 45"@en ;
     values:deonticStatus values:HeuristicDerived ;
-    values:originalText "10. Victims should be treated with humanity and respect for their dignity and human rights, and appropriate measures should be taken to ensure their safety, physical and psychological well-being and privacy, as well as those of their families. The State should ensure that its domestic laws, to the extent possible, provide that a victim who has suffered violence or trauma should benefit from special consideration and care to avoid his or her re-traumatization in the course of legal and administrative procedures designed to provide justice and reparation." .
+    values:originalText "10. Victims should be treated with humanity and respect for their dignity and human rights, and appropriate measures should be taken to ensure their safety, physical and psychological well-being and privacy, as well as those of their families. The State should ensure that its domestic laws, to the extent possible, provide that a victim who has suffered violence or trauma should benefit from special consideration and care to avoid his or her re-traumatization in the course of legal and administrative procedures designed to provide justice and reparation."@en .
 
 doc:paragraph-46 a values:Right ;
     values:partOf doc:Instrument ;
     values:heldBy values:NaturalPerson ;
-    dc:title "Paragraph 46" ;
+    dc:title "Paragraph 46"@en ;
     values:deonticStatus values:HeuristicDerived ;
-    values:originalText "VII. Victims’ right to remedies" .
+    values:originalText "VII. Victims’ right to remedies"@en .
 
 doc:paragraph-47 a values:Right ;
     values:partOf doc:Instrument ;
     values:heldBy values:NaturalPerson ;
-    dc:title "Paragraph 47" ;
+    dc:title "Paragraph 47"@en ;
     values:deonticStatus values:HeuristicDerived ;
-    values:originalText "11. Remedies for gross violations of international human rights law and serious violations of international humanitarian law include the victim’s right to the following as provided for under international law:" .
+    values:originalText "11. Remedies for gross violations of international human rights law and serious violations of international humanitarian law include the victim’s right to the following as provided for under international law:"@en .
 
 doc:paragraph-48 a values:Undertaking ;
     values:partOf doc:Instrument ;
-    dc:title "Paragraph 48" ;
+    dc:title "Paragraph 48"@en ;
     values:deonticStatus values:HeuristicDerived ;
-    values:originalText "(a) Equal and effective access to justice;" .
+    values:originalText "(a) Equal and effective access to justice;"@en .
 
 doc:paragraph-49 a values:Undertaking ;
     values:partOf doc:Instrument ;
-    dc:title "Paragraph 49" ;
+    dc:title "Paragraph 49"@en ;
     values:deonticStatus values:HeuristicDerived ;
-    values:originalText "(b) Adequate, effective and prompt reparation for harm suffered;" .
+    values:originalText "(b) Adequate, effective and prompt reparation for harm suffered;"@en .
 
 doc:paragraph-50 a values:Undertaking ;
     values:partOf doc:Instrument ;
-    dc:title "Paragraph 50" ;
+    dc:title "Paragraph 50"@en ;
     values:deonticStatus values:HeuristicDerived ;
-    values:originalText "(c) Access to relevant information concerning violations and reparation mechanisms." .
+    values:originalText "(c) Access to relevant information concerning violations and reparation mechanisms."@en .
 
 doc:paragraph-51 a values:Right ;
     values:partOf doc:Instrument ;
     values:heldBy values:NaturalPerson ;
-    dc:title "Paragraph 51" ;
+    dc:title "Paragraph 51"@en ;
     values:deonticStatus values:HeuristicDerived ;
-    values:originalText "12. A victim of a gross violation of international human rights law or of a serious violation of international humanitarian law shall have equal access to an effective judicial remedy as provided for under international law. Other remedies available to the victim include access to administrative and other bodies, as well as mechanisms, modalities and proceedings conducted in accordance with domestic law. Obligations arising under international law to secure the right to access justice and fair and impartial proceedings shall be reflected in domestic laws. To that end, States should:" .
+    values:originalText "12. A victim of a gross violation of international human rights law or of a serious violation of international humanitarian law shall have equal access to an effective judicial remedy as provided for under international law. Other remedies available to the victim include access to administrative and other bodies, as well as mechanisms, modalities and proceedings conducted in accordance with domestic law. Obligations arising under international law to secure the right to access justice and fair and impartial proceedings shall be reflected in domestic laws. To that end, States should:"@en .
 
 doc:paragraph-52 a values:Undertaking ;
     values:partOf doc:Instrument ;
-    dc:title "Paragraph 52" ;
+    dc:title "Paragraph 52"@en ;
     values:deonticStatus values:HeuristicDerived ;
-    values:originalText "(a) Disseminate, through public and private mechanisms, information about all available remedies for gross violations of international human rights law and serious violations of international humanitarian law;" .
+    values:originalText "(a) Disseminate, through public and private mechanisms, information about all available remedies for gross violations of international human rights law and serious violations of international humanitarian law;"@en .
 
 doc:paragraph-53 a values:Undertaking ;
     values:partOf doc:Instrument ;
-    dc:title "Paragraph 53" ;
+    dc:title "Paragraph 53"@en ;
     values:deonticStatus values:HeuristicDerived ;
-    values:originalText "(b) Take measures to minimize the inconvenience to victims and their representatives, protect against unlawful interference with their privacy as appropriate and ensure their safety from intimidation and retaliation, as well as that of their families and witnesses, before, during and after judicial, administrative, or other proceedings that affect the interests of victims;" .
+    values:originalText "(b) Take measures to minimize the inconvenience to victims and their representatives, protect against unlawful interference with their privacy as appropriate and ensure their safety from intimidation and retaliation, as well as that of their families and witnesses, before, during and after judicial, administrative, or other proceedings that affect the interests of victims;"@en .
 
 doc:paragraph-54 a values:Undertaking ;
     values:partOf doc:Instrument ;
-    dc:title "Paragraph 54" ;
+    dc:title "Paragraph 54"@en ;
     values:deonticStatus values:HeuristicDerived ;
-    values:originalText "(c) Provide proper assistance to victims seeking access to justice;" .
+    values:originalText "(c) Provide proper assistance to victims seeking access to justice;"@en .
 
 doc:paragraph-55 a values:Undertaking ;
     values:partOf doc:Instrument ;
-    dc:title "Paragraph 55" ;
+    dc:title "Paragraph 55"@en ;
     values:deonticStatus values:HeuristicDerived ;
-    values:originalText "(d) Make available all appropriate legal, diplomatic and consular means to ensure that victims can exercise their rights to remedy for gross violations of international human rights law or serious violations of international humanitarian law." .
+    values:originalText "(d) Make available all appropriate legal, diplomatic and consular means to ensure that victims can exercise their rights to remedy for gross violations of international human rights law or serious violations of international humanitarian law."@en .
 
 doc:paragraph-56 a values:Undertaking ;
     values:partOf doc:Instrument ;
-    dc:title "Paragraph 56" ;
+    dc:title "Paragraph 56"@en ;
     values:deonticStatus values:HeuristicDerived ;
-    values:originalText "13. In addition to individual access to justice, States should endeavour to develop procedures to allow groups of victims to present claims for reparation and to receive reparation, as appropriate." .
+    values:originalText "13. In addition to individual access to justice, States should endeavour to develop procedures to allow groups of victims to present claims for reparation and to receive reparation, as appropriate."@en .
 
 doc:paragraph-57 a values:Undertaking ;
     values:partOf doc:Instrument ;
-    dc:title "Paragraph 57" ;
+    dc:title "Paragraph 57"@en ;
     values:deonticStatus values:HeuristicDerived ;
-    values:originalText "14. An adequate, effective and prompt remedy for gross violations of international human rights law or serious violations of international humanitarian law should include all available and appropriate international processes in which a person may have legal standing and should be without prejudice to any other domestic remedies." .
+    values:originalText "14. An adequate, effective and prompt remedy for gross violations of international human rights law or serious violations of international humanitarian law should include all available and appropriate international processes in which a person may have legal standing and should be without prejudice to any other domestic remedies."@en .
 
 doc:paragraph-58 a values:Undertaking ;
     values:partOf doc:Instrument ;
-    dc:title "Paragraph 58" ;
+    dc:title "Paragraph 58"@en ;
     values:deonticStatus values:HeuristicDerived ;
-    values:originalText "IX. Reparation for harm suffered" .
+    values:originalText "IX. Reparation for harm suffered"@en .
 
 doc:paragraph-59 a values:Obligation ;
     values:partOf doc:Instrument ;
     values:borneBy values:Agent ;
-    dc:title "Paragraph 59" ;
+    dc:title "Paragraph 59"@en ;
     values:deonticStatus values:HeuristicDerived ;
-    values:originalText "15. Adequate, effective and prompt reparation is intended to promote justice by redressing gross violations of international human rights law or serious violations of international humanitarian law. Reparation should be proportional to the gravity of the violations and the harm suffered. In accordance with its domestic laws and international legal obligations, a State shall provide reparation to victims for acts or omissions which can be attributed to the State and constitute gross violations of international human rights law or serious violations of international humanitarian law. In cases where a person, a legal person, or other entity is found liable for reparation to a victim, such party should provide reparation to the victim or compensate the State if the State has already provided reparation to the victim." .
+    values:originalText "15. Adequate, effective and prompt reparation is intended to promote justice by redressing gross violations of international human rights law or serious violations of international humanitarian law. Reparation should be proportional to the gravity of the violations and the harm suffered. In accordance with its domestic laws and international legal obligations, a State shall provide reparation to victims for acts or omissions which can be attributed to the State and constitute gross violations of international human rights law or serious violations of international humanitarian law. In cases where a person, a legal person, or other entity is found liable for reparation to a victim, such party should provide reparation to the victim or compensate the State if the State has already provided reparation to the victim."@en .
 
 doc:paragraph-60 a values:Undertaking ;
     values:partOf doc:Instrument ;
-    dc:title "Paragraph 60" ;
+    dc:title "Paragraph 60"@en ;
     values:deonticStatus values:HeuristicDerived ;
-    values:originalText "16. States should endeavour to establish national programmes for reparation and other assistance to victims in the event that the parties liable for the harm suffered are unable or unwilling to meet their obligations." .
+    values:originalText "16. States should endeavour to establish national programmes for reparation and other assistance to victims in the event that the parties liable for the harm suffered are unable or unwilling to meet their obligations."@en .
 
 doc:paragraph-61 a values:Undertaking ;
     values:partOf doc:Instrument ;
-    dc:title "Paragraph 61" ;
+    dc:title "Paragraph 61"@en ;
     values:deonticStatus values:HeuristicDerived ;
-    values:originalText "17. States shall, with respect to claims by victims, enforce domestic judgements for reparation against individuals or entities liable for the harm suffered and endeavour to enforce valid foreign legal judgements for reparation in accordance with domestic law and international legal obligations. To that end, States should provide under their domestic laws effective mechanisms for the enforcement of reparation judgements." .
+    values:originalText "17. States shall, with respect to claims by victims, enforce domestic judgements for reparation against individuals or entities liable for the harm suffered and endeavour to enforce valid foreign legal judgements for reparation in accordance with domestic law and international legal obligations. To that end, States should provide under their domestic laws effective mechanisms for the enforcement of reparation judgements."@en .
 
 doc:paragraph-62 a values:Undertaking ;
     values:partOf doc:Instrument ;
-    dc:title "Paragraph 62" ;
+    dc:title "Paragraph 62"@en ;
     values:deonticStatus values:HeuristicDerived ;
-    values:originalText "18. In accordance with domestic law and international law, and taking account of individual circumstances, victims of gross violations of international human rights law and serious violations of international humanitarian law should, as appropriate and proportional to the gravity of the violation and the circumstances of each case, be provided with full and effective reparation, as laid out in principles 19 to 23, which include the following forms: restitution, compensation, rehabilitation, satisfaction and guarantees of non-repetition." .
+    values:originalText "18. In accordance with domestic law and international law, and taking account of individual circumstances, victims of gross violations of international human rights law and serious violations of international humanitarian law should, as appropriate and proportional to the gravity of the violation and the circumstances of each case, be provided with full and effective reparation, as laid out in principles 19 to 23, which include the following forms: restitution, compensation, rehabilitation, satisfaction and guarantees of non-repetition."@en .
 
 doc:paragraph-63 a values:Undertaking ;
     values:partOf doc:Instrument ;
-    dc:title "Paragraph 63" ;
+    dc:title "Paragraph 63"@en ;
     values:deonticStatus values:HeuristicDerived ;
-    values:originalText "19. Restitution should, whenever possible, restore the victim to the original situation before the gross violations of international human rights law or serious violations of international humanitarian law occurred. Restitution includes, as appropriate: restoration of liberty, enjoyment of human rights, identity, family life and citizenship, return to one’s place of residence, restoration of employment and return of property." .
+    values:originalText "19. Restitution should, whenever possible, restore the victim to the original situation before the gross violations of international human rights law or serious violations of international humanitarian law occurred. Restitution includes, as appropriate: restoration of liberty, enjoyment of human rights, identity, family life and citizenship, return to one’s place of residence, restoration of employment and return of property."@en .
 
 doc:paragraph-64 a values:Undertaking ;
     values:partOf doc:Instrument ;
-    dc:title "Paragraph 64" ;
+    dc:title "Paragraph 64"@en ;
     values:deonticStatus values:HeuristicDerived ;
-    values:originalText "20. Compensation should be provided for any economically assessable damage, as appropriate and proportional to the gravity of the violation and the circumstances of each case, resulting from gross violations of international human rights law and serious violations of international humanitarian law, such as:" .
+    values:originalText "20. Compensation should be provided for any economically assessable damage, as appropriate and proportional to the gravity of the violation and the circumstances of each case, resulting from gross violations of international human rights law and serious violations of international humanitarian law, such as:"@en .
 
 doc:paragraph-65 a values:Undertaking ;
     values:partOf doc:Instrument ;
-    dc:title "Paragraph 65" ;
+    dc:title "Paragraph 65"@en ;
     values:deonticStatus values:HeuristicDerived ;
-    values:originalText "(b) Lost opportunities, including employment, education and social benefits;" .
+    values:originalText "(b) Lost opportunities, including employment, education and social benefits;"@en .
 
 doc:paragraph-66 a values:Undertaking ;
     values:partOf doc:Instrument ;
-    dc:title "Paragraph 66" ;
+    dc:title "Paragraph 66"@en ;
     values:deonticStatus values:HeuristicDerived ;
-    values:originalText "(c) Material damages and loss of earnings, including loss of earning potential;" .
+    values:originalText "(c) Material damages and loss of earnings, including loss of earning potential;"@en .
 
 doc:paragraph-67 a values:Undertaking ;
     values:partOf doc:Instrument ;
-    dc:title "Paragraph 67" ;
+    dc:title "Paragraph 67"@en ;
     values:deonticStatus values:HeuristicDerived ;
-    values:originalText "(e) Costs required for legal or expert assistance, medicine and medical services, and psychological and social services." .
+    values:originalText "(e) Costs required for legal or expert assistance, medicine and medical services, and psychological and social services."@en .
 
 doc:paragraph-68 a values:Undertaking ;
     values:partOf doc:Instrument ;
-    dc:title "Paragraph 68" ;
+    dc:title "Paragraph 68"@en ;
     values:deonticStatus values:HeuristicDerived ;
-    values:originalText "21. Rehabilitation should include medical and psychological care as well as legal and social services." .
+    values:originalText "21. Rehabilitation should include medical and psychological care as well as legal and social services."@en .
 
 doc:paragraph-69 a values:Undertaking ;
     values:partOf doc:Instrument ;
-    dc:title "Paragraph 69" ;
+    dc:title "Paragraph 69"@en ;
     values:deonticStatus values:HeuristicDerived ;
-    values:originalText "22. Satisfaction should include, where applicable, any or all of the following:" .
+    values:originalText "22. Satisfaction should include, where applicable, any or all of the following:"@en .
 
 doc:paragraph-70 a values:Undertaking ;
     values:partOf doc:Instrument ;
-    dc:title "Paragraph 70" ;
+    dc:title "Paragraph 70"@en ;
     values:deonticStatus values:HeuristicDerived ;
-    values:originalText "(a) Effective measures aimed at the cessation of continuing violations;" .
+    values:originalText "(a) Effective measures aimed at the cessation of continuing violations;"@en .
 
 doc:paragraph-71 a values:Undertaking ;
     values:partOf doc:Instrument ;
-    dc:title "Paragraph 71" ;
+    dc:title "Paragraph 71"@en ;
     values:deonticStatus values:HeuristicDerived ;
-    values:originalText "(b) Verification of the facts and full and public disclosure of the truth to the extent that such disclosure does not cause further harm or threaten the safety and interests of the victim, the victim’s relatives, witnesses, or persons who have intervened to assist the victim or prevent the occurrence of further violations;" .
+    values:originalText "(b) Verification of the facts and full and public disclosure of the truth to the extent that such disclosure does not cause further harm or threaten the safety and interests of the victim, the victim’s relatives, witnesses, or persons who have intervened to assist the victim or prevent the occurrence of further violations;"@en .
 
 doc:paragraph-72 a values:Undertaking ;
     values:partOf doc:Instrument ;
-    dc:title "Paragraph 72" ;
+    dc:title "Paragraph 72"@en ;
     values:deonticStatus values:HeuristicDerived ;
-    values:originalText "(c) The search for the whereabouts of the disappeared, for the identities of the children abducted, and for the bodies of those killed, and assistance in the recovery, identification and reburial of the bodies in accordance with the expressed or presumed wish of the victims, or the cultural practices of the families and communities;" .
+    values:originalText "(c) The search for the whereabouts of the disappeared, for the identities of the children abducted, and for the bodies of those killed, and assistance in the recovery, identification and reburial of the bodies in accordance with the expressed or presumed wish of the victims, or the cultural practices of the families and communities;"@en .
 
 doc:paragraph-73 a values:Undertaking ;
     values:partOf doc:Instrument ;
-    dc:title "Paragraph 73" ;
+    dc:title "Paragraph 73"@en ;
     values:deonticStatus values:HeuristicDerived ;
-    values:originalText "(d) An official declaration or a judicial decision restoring the dignity, the reputation and the rights of the victim and of persons closely connected with the victim;" .
+    values:originalText "(d) An official declaration or a judicial decision restoring the dignity, the reputation and the rights of the victim and of persons closely connected with the victim;"@en .
 
 doc:paragraph-74 a values:Undertaking ;
     values:partOf doc:Instrument ;
-    dc:title "Paragraph 74" ;
+    dc:title "Paragraph 74"@en ;
     values:deonticStatus values:HeuristicDerived ;
-    values:originalText "(e) Public apology, including acknowledgement of the facts and acceptance of responsibility;" .
+    values:originalText "(e) Public apology, including acknowledgement of the facts and acceptance of responsibility;"@en .
 
 doc:paragraph-75 a values:Undertaking ;
     values:partOf doc:Instrument ;
-    dc:title "Paragraph 75" ;
+    dc:title "Paragraph 75"@en ;
     values:deonticStatus values:HeuristicDerived ;
-    values:originalText "(f) Judicial and administrative sanctions against persons liable for the violations;" .
+    values:originalText "(f) Judicial and administrative sanctions against persons liable for the violations;"@en .
 
 doc:paragraph-76 a values:Undertaking ;
     values:partOf doc:Instrument ;
-    dc:title "Paragraph 76" ;
+    dc:title "Paragraph 76"@en ;
     values:deonticStatus values:HeuristicDerived ;
-    values:originalText "(g) Commemorations and tributes to the victims;" .
+    values:originalText "(g) Commemorations and tributes to the victims;"@en .
 
 doc:paragraph-77 a values:Undertaking ;
     values:partOf doc:Instrument ;
-    dc:title "Paragraph 77" ;
+    dc:title "Paragraph 77"@en ;
     values:deonticStatus values:HeuristicDerived ;
-    values:originalText "(h) Inclusion of an accurate account of the violations that occurred in international human rights law and international humanitarian law training and in educational material at all levels." .
+    values:originalText "(h) Inclusion of an accurate account of the violations that occurred in international human rights law and international humanitarian law training and in educational material at all levels."@en .
 
 doc:paragraph-78 a values:Undertaking ;
     values:partOf doc:Instrument ;
-    dc:title "Paragraph 78" ;
+    dc:title "Paragraph 78"@en ;
     values:deonticStatus values:HeuristicDerived ;
-    values:originalText "23. Guarantees of non-repetition should include, where applicable, any or all of the following measures, which will also contribute to prevention:" .
+    values:originalText "23. Guarantees of non-repetition should include, where applicable, any or all of the following measures, which will also contribute to prevention:"@en .
 
 doc:paragraph-79 a values:Undertaking ;
     values:partOf doc:Instrument ;
-    dc:title "Paragraph 79" ;
+    dc:title "Paragraph 79"@en ;
     values:deonticStatus values:HeuristicDerived ;
-    values:originalText "(a) Ensuring effective civilian control of military and security forces;" .
+    values:originalText "(a) Ensuring effective civilian control of military and security forces;"@en .
 
 doc:paragraph-80 a values:Undertaking ;
     values:partOf doc:Instrument ;
-    dc:title "Paragraph 80" ;
+    dc:title "Paragraph 80"@en ;
     values:deonticStatus values:HeuristicDerived ;
-    values:originalText "(b) Ensuring that all civilian and military proceedings abide by international standards of due process, fairness and impartiality;" .
+    values:originalText "(b) Ensuring that all civilian and military proceedings abide by international standards of due process, fairness and impartiality;"@en .
 
 doc:paragraph-81 a values:Undertaking ;
     values:partOf doc:Instrument ;
-    dc:title "Paragraph 81" ;
+    dc:title "Paragraph 81"@en ;
     values:deonticStatus values:HeuristicDerived ;
-    values:originalText "(c) Strengthening the independence of the judiciary;" .
+    values:originalText "(c) Strengthening the independence of the judiciary;"@en .
 
 doc:paragraph-82 a values:Undertaking ;
     values:partOf doc:Instrument ;
-    dc:title "Paragraph 82" ;
+    dc:title "Paragraph 82"@en ;
     values:deonticStatus values:HeuristicDerived ;
-    values:originalText "(d) Protecting persons in the legal, medical and health-care professions, the media and other related professions, and human rights defenders;" .
+    values:originalText "(d) Protecting persons in the legal, medical and health-care professions, the media and other related professions, and human rights defenders;"@en .
 
 doc:paragraph-83 a values:Undertaking ;
     values:partOf doc:Instrument ;
-    dc:title "Paragraph 83" ;
+    dc:title "Paragraph 83"@en ;
     values:deonticStatus values:HeuristicDerived ;
-    values:originalText "(e) Providing, on a priority and continued basis, human rights and international humanitarian law education to all sectors of society and training for law enforcement officials as well as military and security forces;" .
+    values:originalText "(e) Providing, on a priority and continued basis, human rights and international humanitarian law education to all sectors of society and training for law enforcement officials as well as military and security forces;"@en .
 
 doc:paragraph-84 a values:Undertaking ;
     values:partOf doc:Instrument ;
-    dc:title "Paragraph 84" ;
+    dc:title "Paragraph 84"@en ;
     values:deonticStatus values:HeuristicDerived ;
-    values:originalText "(f) Promoting the observance of codes of conduct and ethical norms, in particular international standards, by public servants, including law enforcement, correctional, media, medical, psychological, social service and military personnel, as well as by economic enterprises;" .
+    values:originalText "(f) Promoting the observance of codes of conduct and ethical norms, in particular international standards, by public servants, including law enforcement, correctional, media, medical, psychological, social service and military personnel, as well as by economic enterprises;"@en .
 
 doc:paragraph-85 a values:Undertaking ;
     values:partOf doc:Instrument ;
-    dc:title "Paragraph 85" ;
+    dc:title "Paragraph 85"@en ;
     values:deonticStatus values:HeuristicDerived ;
-    values:originalText "(g) Promoting mechanisms for preventing and monitoring social conflicts and their resolution;" .
+    values:originalText "(g) Promoting mechanisms for preventing and monitoring social conflicts and their resolution;"@en .
 
 doc:paragraph-86 a values:Undertaking ;
     values:partOf doc:Instrument ;
-    dc:title "Paragraph 86" ;
+    dc:title "Paragraph 86"@en ;
     values:deonticStatus values:HeuristicDerived ;
-    values:originalText "(h) Reviewing and reforming laws contributing to or allowing gross violations of international human rights law and serious violations of international humanitarian law." .
+    values:originalText "(h) Reviewing and reforming laws contributing to or allowing gross violations of international human rights law and serious violations of international humanitarian law."@en .
 
 doc:paragraph-87 a values:Undertaking ;
     values:partOf doc:Instrument ;
-    dc:title "Paragraph 87" ;
+    dc:title "Paragraph 87"@en ;
     values:deonticStatus values:HeuristicDerived ;
-    values:originalText "X. Access to relevant information concerning violations and reparation mechanisms" .
+    values:originalText "X. Access to relevant information concerning violations and reparation mechanisms"@en .
 
 doc:paragraph-88 a values:Right ;
     values:partOf doc:Instrument ;
     values:heldBy values:NaturalPerson ;
-    dc:title "Paragraph 88" ;
+    dc:title "Paragraph 88"@en ;
     values:deonticStatus values:HeuristicDerived ;
-    values:originalText "24. States should develop means of informing the general public and, in particular, victims of gross violations of international human rights law and serious violations of international humanitarian law of the rights and remedies addressed by these Basic Principles and Guidelines and of all available legal, medical, psychological, social, administrative and all other services to which victims may have a right of access. Moreover, victims and their representatives should be entitled to seek and obtain information on the causes leading to their victimization and on the causes and conditions pertaining to the gross violations of international human rights law and serious violations of international humanitarian law and to learn the truth in regard to these violations." .
+    values:originalText "24. States should develop means of informing the general public and, in particular, victims of gross violations of international human rights law and serious violations of international humanitarian law of the rights and remedies addressed by these Basic Principles and Guidelines and of all available legal, medical, psychological, social, administrative and all other services to which victims may have a right of access. Moreover, victims and their representatives should be entitled to seek and obtain information on the causes leading to their victimization and on the causes and conditions pertaining to the gross violations of international human rights law and serious violations of international humanitarian law and to learn the truth in regard to these violations."@en .
 
 doc:paragraph-89 a values:Undertaking ;
     values:partOf doc:Instrument ;
-    dc:title "Paragraph 89" ;
+    dc:title "Paragraph 89"@en ;
     values:deonticStatus values:HeuristicDerived ;
-    values:originalText "25. The application and interpretation of these Basic Principles and Guidelines must be consistent with international human rights law and international humanitarian law and be without any discrimination of any kind or on any ground, without exception." .
+    values:originalText "25. The application and interpretation of these Basic Principles and Guidelines must be consistent with international human rights law and international humanitarian law and be without any discrimination of any kind or on any ground, without exception."@en .
 
 doc:paragraph-90 a values:Right ;
     values:partOf doc:Instrument ;
     values:heldBy values:NaturalPerson ;
-    dc:title "Paragraph 90" ;
+    dc:title "Paragraph 90"@en ;
     values:deonticStatus values:HeuristicDerived ;
-    values:originalText "26. Nothing in these Basic Principles and Guidelines shall be construed as restricting or derogating from any rights or obligations arising under domestic and international law. In particular, it is understood that the present Basic Principles and Guidelines are without prejudice to the right to a remedy and reparation for victims of all violations of international human rights law and international humanitarian law. It is further understood that these Basic Principles and Guidelines are without prejudice to special rules of international law." .
+    values:originalText "26. Nothing in these Basic Principles and Guidelines shall be construed as restricting or derogating from any rights or obligations arising under domestic and international law. In particular, it is understood that the present Basic Principles and Guidelines are without prejudice to the right to a remedy and reparation for victims of all violations of international human rights law and international humanitarian law. It is further understood that these Basic Principles and Guidelines are without prejudice to special rules of international law."@en .
 
 doc:paragraph-91 a values:Undertaking ;
     values:partOf doc:Instrument ;
-    dc:title "Paragraph 91" ;
+    dc:title "Paragraph 91"@en ;
     values:deonticStatus values:HeuristicDerived ;
-    values:originalText "27. Nothing in this document is to be construed as derogating from internationally or nationally protected rights of others, in particular the right of an accused person to benefit from applicable standards of due process." .
+    values:originalText "27. Nothing in this document is to be construed as derogating from internationally or nationally protected rights of others, in particular the right of an accused person to benefit from applicable standards of due process."@en .

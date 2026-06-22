@@ -12,7 +12,7 @@
 # ============================================================
 
 doc:Instrument a values:ValuesCredential ;
-    dc:title "Declaration on the Use of Scientific and Technological Progress in the Interests of Peace and for the Benefit of Mankind" ;
+    dc:title "Declaration on the Use of Scientific and Technological Progress in the Interests of Peace and for the Benefit of Mankind"@en ;
     dc:date "10 November 1975" ;
     values:category "Bioethics, science & culture" ;
     values:categoryStatus values:AutoAssigned ;
@@ -21,61 +21,61 @@ doc:Instrument a values:ValuesCredential ;
 
 doc:paragraph-1 a values:Undertaking ;
     values:partOf doc:Instrument ;
-    dc:title "Paragraph 1" ;
+    dc:title "Paragraph 1"@en ;
     values:deonticStatus values:HeuristicDerived ;
-    values:originalText "Noting that scientific and technological progress has become one of the most important factors in the development of human society," .
+    values:originalText "Noting that scientific and technological progress has become one of the most important factors in the development of human society,"@en .
 
 doc:paragraph-2 a values:Undertaking ;
     values:partOf doc:Instrument ;
-    dc:title "Paragraph 2" ;
+    dc:title "Paragraph 2"@en ;
     values:deonticStatus values:HeuristicDerived ;
-    values:originalText "Taking into consideration that, while scientific and technological developments provide ever increasing opportunities to better the conditions of life of peoples and nations, in a number of instances they can give rise to social problems, as well as threaten the human rights and fundamental freedoms of the individual," .
+    values:originalText "Taking into consideration that, while scientific and technological developments provide ever increasing opportunities to better the conditions of life of peoples and nations, in a number of instances they can give rise to social problems, as well as threaten the human rights and fundamental freedoms of the individual,"@en .
 
 doc:paragraph-3 a values:Undertaking ;
     values:partOf doc:Instrument ;
-    dc:title "Paragraph 3" ;
+    dc:title "Paragraph 3"@en ;
     values:deonticStatus values:HeuristicDerived ;
-    values:originalText "Noting with concern that scientific and technological achievements can be used to intensify the arms race, suppress national liberation movements and deprive individuals and peoples of their human rights and fundamental freedoms," .
+    values:originalText "Noting with concern that scientific and technological achievements can be used to intensify the arms race, suppress national liberation movements and deprive individuals and peoples of their human rights and fundamental freedoms,"@en .
 
 doc:paragraph-4 a values:Undertaking ;
     values:partOf doc:Instrument ;
-    dc:title "Paragraph 4" ;
+    dc:title "Paragraph 4"@en ;
     values:deonticStatus values:HeuristicDerived ;
-    values:originalText "Also noting with concern that scientific and technological achievements can entail dangers for the civil and political rights of the individual or of the group and for human dignity," .
+    values:originalText "Also noting with concern that scientific and technological achievements can entail dangers for the civil and political rights of the individual or of the group and for human dignity,"@en .
 
 doc:paragraph-5 a values:Undertaking ;
     values:partOf doc:Instrument ;
-    dc:title "Paragraph 5" ;
+    dc:title "Paragraph 5"@en ;
     values:deonticStatus values:HeuristicDerived ;
-    values:originalText "Noting the urgent need to make full use of scientific and technological developments for the welfare of man and to neutralize the present and possible future harmful consequences of certain scientific and technological achievements," .
+    values:originalText "Noting the urgent need to make full use of scientific and technological developments for the welfare of man and to neutralize the present and possible future harmful consequences of certain scientific and technological achievements,"@en .
 
 doc:paragraph-6 a values:Undertaking ;
     values:partOf doc:Instrument ;
-    dc:title "Paragraph 6" ;
+    dc:title "Paragraph 6"@en ;
     values:deonticStatus values:HeuristicDerived ;
-    values:originalText "Recognizing that scientific and technological progress is of great importance in accelerating the social and economic development of developing countries," .
+    values:originalText "Recognizing that scientific and technological progress is of great importance in accelerating the social and economic development of developing countries,"@en .
 
 doc:paragraph-7 a values:Undertaking ;
     values:partOf doc:Instrument ;
-    dc:title "Paragraph 7" ;
+    dc:title "Paragraph 7"@en ;
     values:deonticStatus values:HeuristicDerived ;
-    values:originalText "Aware that the transfer of science and technology is one of the principal ways of accelerating the economic development of developing countries," .
+    values:originalText "Aware that the transfer of science and technology is one of the principal ways of accelerating the economic development of developing countries,"@en .
 
 doc:paragraph-8 a values:Undertaking ;
     values:partOf doc:Instrument ;
-    dc:title "Paragraph 8" ;
+    dc:title "Paragraph 8"@en ;
     values:deonticStatus values:HeuristicDerived ;
-    values:originalText "Reaffirming the right of peoples to self-determination and the need to respect human rights and freedoms and the dignity of the human person in the conditions of scientific and technological progress," .
+    values:originalText "Reaffirming the right of peoples to self-determination and the need to respect human rights and freedoms and the dignity of the human person in the conditions of scientific and technological progress,"@en .
 
 doc:paragraph-9 a values:Undertaking ;
     values:partOf doc:Instrument ;
-    dc:title "Paragraph 9" ;
+    dc:title "Paragraph 9"@en ;
     values:deonticStatus values:HeuristicDerived ;
-    values:originalText "Desiring to promote the realization of the principles which form the basis of the Charter of the United Nations, the Universal Declaration of Human Rights, the International Covenants on Human Rights, the Declaration on the Granting of Independence to Colonial Countries and Peoples, the Declaration on Principles of International Law concerning Friendly Relations and Co-operation among States in accordance with the Charter of the United Nations, the Declaration on Social Progress and Development, and the Charter of Economic Rights and Duties of States;" .
+    values:originalText "Desiring to promote the realization of the principles which form the basis of the Charter of the United Nations, the Universal Declaration of Human Rights, the International Covenants on Human Rights, the Declaration on the Granting of Independence to Colonial Countries and Peoples, the Declaration on Principles of International Law concerning Friendly Relations and Co-operation among States in accordance with the Charter of the United Nations, the Declaration on Social Progress and Development, and the Charter of Economic Rights and Duties of States;"@en .
 
 doc:paragraph-10 a values:Obligation ;
     values:partOf doc:Instrument ;
     values:borneBy values:Agent ;
-    dc:title "Paragraph 10" ;
+    dc:title "Paragraph 10"@en ;
     values:deonticStatus values:HeuristicDerived ;
-    values:originalText "All States shall promote international co-operation to ensure that the results of scientific and technological developments are used in the interests of strengthening international peace and security, freedom and independence, and also for the purpose of the economic and social development of peoples and the realization of human rights and freedoms in accordance with the Charter of the United Nations. All States shall take appropriate measures to prevent the use of scientific and technological developments, particularly by the State organs, to limit or interfere with the enjoyment of the human rights and fundamental freedoms of the individual as enshrined in the Universal Declaration of Human Rights, the International Covenants on Human Rights and other relevant international instruments. All States shall take measures to ensure that scientific and technological achievements satisfy the material and spiritual needs for all sectors of the population. All States shall refrain from any acts involving the use of scientific and technological achievements for the purposes of violating the sovereignty and territorial integrity of other States, interfering in their internal affairs, waging aggressive wars, suppressing national liberation movements or pursuing a policy of racial discrimination. Such acts are not only a flagrant violation of the Charter of the United Nations and principles of international law, but constitute an inadmissible distortion of the purposes that should guide scientific and technological developments for the benefit of mankind. All States shall co-operate in the establishment, strengthening and development of the scientific and technological capacity of developing countries with a view to accelerating the realization of the social and economic rights of the peoples of those countries. All States shall take measures to extend the benefits of science and technology to all strata of the population and to protect them, both socially and materially, from possible harmful effects of the misuse of scientific and technological developments, including their misuse to infringe upon the rights of the individual or of the group, particularly with regard to respect for privacy and the protection of the human personality and its physical and intellectual integrity. All States shall take the necessary measures, including legislative measures, to ensure that the utilization of scientific and technological achievements promotes the fullest realization of human rights and fundamental freedoms without any discrimination whatsoever on grounds of race, sex, language or religious beliefs. All States shall take effective measures, including legislative measures, to prevent and preclude the utilization of scientific and technological achievements to the detriment of human rights and fundamental freedoms and the dignity of the human person. All States shall, whenever necessary, take action to ensure compliance with legislation guaranteeing human rights and freedoms in the conditions of scientific and technological developments." .
+    values:originalText "All States shall promote international co-operation to ensure that the results of scientific and technological developments are used in the interests of strengthening international peace and security, freedom and independence, and also for the purpose of the economic and social development of peoples and the realization of human rights and freedoms in accordance with the Charter of the United Nations. All States shall take appropriate measures to prevent the use of scientific and technological developments, particularly by the State organs, to limit or interfere with the enjoyment of the human rights and fundamental freedoms of the individual as enshrined in the Universal Declaration of Human Rights, the International Covenants on Human Rights and other relevant international instruments. All States shall take measures to ensure that scientific and technological achievements satisfy the material and spiritual needs for all sectors of the population. All States shall refrain from any acts involving the use of scientific and technological achievements for the purposes of violating the sovereignty and territorial integrity of other States, interfering in their internal affairs, waging aggressive wars, suppressing national liberation movements or pursuing a policy of racial discrimination. Such acts are not only a flagrant violation of the Charter of the United Nations and principles of international law, but constitute an inadmissible distortion of the purposes that should guide scientific and technological developments for the benefit of mankind. All States shall co-operate in the establishment, strengthening and development of the scientific and technological capacity of developing countries with a view to accelerating the realization of the social and economic rights of the peoples of those countries. All States shall take measures to extend the benefits of science and technology to all strata of the population and to protect them, both socially and materially, from possible harmful effects of the misuse of scientific and technological developments, including their misuse to infringe upon the rights of the individual or of the group, particularly with regard to respect for privacy and the protection of the human personality and its physical and intellectual integrity. All States shall take the necessary measures, including legislative measures, to ensure that the utilization of scientific and technological achievements promotes the fullest realization of human rights and fundamental freedoms without any discrimination whatsoever on grounds of race, sex, language or religious beliefs. All States shall take effective measures, including legislative measures, to prevent and preclude the utilization of scientific and technological achievements to the detriment of human rights and fundamental freedoms and the dignity of the human person. All States shall, whenever necessary, take action to ensure compliance with legislation guaranteeing human rights and freedoms in the conditions of scientific and technological developments."@en .

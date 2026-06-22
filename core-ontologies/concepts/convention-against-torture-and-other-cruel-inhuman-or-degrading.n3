@@ -17,7 +17,7 @@
 # ============================================================
 
 concept:convention-against-torture-and-other-cruel-inhuman-or-degrading-article-1 a cml:Concept ;
-    skos:prefLabel "Article 1" ;
+    skos:prefLabel "Article 1"@en ;
     cml:realizedBy doc:article-1 ;
     cml:curationStatus cml:Proposed ;
     prov:wasDerivedFrom <https://www.ohchr.org/en/instruments-mechanisms/instruments/convention-against-torture-and-other-cruel-inhuman-or-degrading> ;
@@ -32,7 +32,7 @@ concept:convention-against-torture-and-other-cruel-inhuman-or-degrading-article-
     cml:curationStatus cml:Proposed .
 
 concept:convention-against-torture-and-other-cruel-inhuman-or-degrading-article-2 a cml:Concept ;
-    skos:prefLabel "Article 2" ;
+    skos:prefLabel "Article 2"@en ;
     cml:realizedBy doc:article-2 ;
     cml:curationStatus cml:Proposed ;
     prov:wasDerivedFrom <https://www.ohchr.org/en/instruments-mechanisms/instruments/convention-against-torture-and-other-cruel-inhuman-or-degrading> ;
@@ -48,7 +48,7 @@ concept:convention-against-torture-and-other-cruel-inhuman-or-degrading-article-
     cml:curationStatus cml:Proposed .
 
 concept:convention-against-torture-and-other-cruel-inhuman-or-degrading-article-3 a cml:Concept ;
-    skos:prefLabel "Article 3" ;
+    skos:prefLabel "Article 3"@en ;
     cml:realizedBy doc:article-3 ;
     cml:curationStatus cml:Proposed ;
     prov:wasDerivedFrom <https://www.ohchr.org/en/instruments-mechanisms/instruments/convention-against-torture-and-other-cruel-inhuman-or-degrading> ;
@@ -65,7 +65,7 @@ concept:convention-against-torture-and-other-cruel-inhuman-or-degrading-article-
     cml:curationStatus cml:Proposed .
 
 concept:convention-against-torture-and-other-cruel-inhuman-or-degrading-article-4 a cml:Concept ;
-    skos:prefLabel "Article 4" ;
+    skos:prefLabel "Article 4"@en ;
     cml:realizedBy doc:article-4 ;
     cml:curationStatus cml:Proposed ;
     prov:wasDerivedFrom <https://www.ohchr.org/en/instruments-mechanisms/instruments/convention-against-torture-and-other-cruel-inhuman-or-degrading> ;
@@ -82,7 +82,7 @@ concept:convention-against-torture-and-other-cruel-inhuman-or-degrading-article-
     cml:curationStatus cml:Proposed .
 
 concept:convention-against-torture-and-other-cruel-inhuman-or-degrading-article-5 a cml:Concept ;
-    skos:prefLabel "Article 5" ;
+    skos:prefLabel "Article 5"@en ;
     cml:realizedBy doc:article-5 ;
     cml:curationStatus cml:Proposed ;
     prov:wasDerivedFrom <https://www.ohchr.org/en/instruments-mechanisms/instruments/convention-against-torture-and-other-cruel-inhuman-or-degrading> ;
@@ -99,7 +99,7 @@ concept:convention-against-torture-and-other-cruel-inhuman-or-degrading-article-
     cml:curationStatus cml:Proposed .
 
 concept:convention-against-torture-and-other-cruel-inhuman-or-degrading-article-6 a cml:Concept ;
-    skos:prefLabel "Article 6" ;
+    skos:prefLabel "Article 6"@en ;
     cml:realizedBy doc:article-6 ;
     cml:curationStatus cml:Proposed ;
     prov:wasDerivedFrom <https://www.ohchr.org/en/instruments-mechanisms/instruments/convention-against-torture-and-other-cruel-inhuman-or-degrading> ;
@@ -116,7 +116,7 @@ concept:convention-against-torture-and-other-cruel-inhuman-or-degrading-article-
     cml:curationStatus cml:Proposed .
 
 concept:convention-against-torture-and-other-cruel-inhuman-or-degrading-article-7 a cml:Concept ;
-    skos:prefLabel "Article 7" ;
+    skos:prefLabel "Article 7"@en ;
     cml:realizedBy doc:article-7 ;
     cml:curationStatus cml:Proposed ;
     prov:wasDerivedFrom <https://www.ohchr.org/en/instruments-mechanisms/instruments/convention-against-torture-and-other-cruel-inhuman-or-degrading> ;
@@ -133,7 +133,7 @@ concept:convention-against-torture-and-other-cruel-inhuman-or-degrading-article-
     cml:curationStatus cml:Proposed .
 
 concept:convention-against-torture-and-other-cruel-inhuman-or-degrading-article-8 a cml:Concept ;
-    skos:prefLabel "Article 8" ;
+    skos:prefLabel "Article 8"@en ;
     cml:realizedBy doc:article-8 ;
     cml:curationStatus cml:Proposed ;
     prov:wasDerivedFrom <https://www.ohchr.org/en/instruments-mechanisms/instruments/convention-against-torture-and-other-cruel-inhuman-or-degrading> ;
@@ -150,7 +150,7 @@ concept:convention-against-torture-and-other-cruel-inhuman-or-degrading-article-
     cml:curationStatus cml:Proposed .
 
 concept:convention-against-torture-and-other-cruel-inhuman-or-degrading-article-9 a cml:Concept ;
-    skos:prefLabel "Article 9" ;
+    skos:prefLabel "Article 9"@en ;
     cml:realizedBy doc:article-9 ;
     cml:curationStatus cml:Proposed ;
     prov:wasDerivedFrom <https://www.ohchr.org/en/instruments-mechanisms/instruments/convention-against-torture-and-other-cruel-inhuman-or-degrading> ;
@@ -165,7 +165,7 @@ concept:convention-against-torture-and-other-cruel-inhuman-or-degrading-article-
     cml:curationStatus cml:Proposed .
 
 concept:convention-against-torture-and-other-cruel-inhuman-or-degrading-article-10 a cml:Concept ;
-    skos:prefLabel "Article 10" ;
+    skos:prefLabel "Article 10"@en ;
     cml:realizedBy doc:article-10 ;
     cml:curationStatus cml:Proposed ;
     prov:wasDerivedFrom <https://www.ohchr.org/en/instruments-mechanisms/instruments/convention-against-torture-and-other-cruel-inhuman-or-degrading> ;
@@ -182,7 +182,7 @@ concept:convention-against-torture-and-other-cruel-inhuman-or-degrading-article-
     cml:curationStatus cml:Proposed .
 
 concept:convention-against-torture-and-other-cruel-inhuman-or-degrading-article-11 a cml:Concept ;
-    skos:prefLabel "Article 11" ;
+    skos:prefLabel "Article 11"@en ;
     cml:realizedBy doc:article-11 ;
     cml:curationStatus cml:Proposed ;
     prov:wasDerivedFrom <https://www.ohchr.org/en/instruments-mechanisms/instruments/convention-against-torture-and-other-cruel-inhuman-or-degrading> ;
@@ -197,7 +197,7 @@ concept:convention-against-torture-and-other-cruel-inhuman-or-degrading-article-
     cml:curationStatus cml:Proposed .
 
 concept:convention-against-torture-and-other-cruel-inhuman-or-degrading-article-12 a cml:Concept ;
-    skos:prefLabel "Article 12" ;
+    skos:prefLabel "Article 12"@en ;
     cml:realizedBy doc:article-12 ;
     cml:curationStatus cml:Proposed ;
     prov:wasDerivedFrom <https://www.ohchr.org/en/instruments-mechanisms/instruments/convention-against-torture-and-other-cruel-inhuman-or-degrading> ;
@@ -214,7 +214,7 @@ concept:convention-against-torture-and-other-cruel-inhuman-or-degrading-article-
     cml:curationStatus cml:Proposed .
 
 concept:convention-against-torture-and-other-cruel-inhuman-or-degrading-article-13 a cml:Concept ;
-    skos:prefLabel "Article 13" ;
+    skos:prefLabel "Article 13"@en ;
     cml:realizedBy doc:article-13 ;
     cml:curationStatus cml:Proposed ;
     prov:wasDerivedFrom <https://www.ohchr.org/en/instruments-mechanisms/instruments/convention-against-torture-and-other-cruel-inhuman-or-degrading> ;
@@ -230,7 +230,7 @@ concept:convention-against-torture-and-other-cruel-inhuman-or-degrading-article-
     cml:curationStatus cml:Proposed .
 
 concept:convention-against-torture-and-other-cruel-inhuman-or-degrading-article-14 a cml:Concept ;
-    skos:prefLabel "Article 14" ;
+    skos:prefLabel "Article 14"@en ;
     cml:realizedBy doc:article-14 ;
     cml:curationStatus cml:Proposed ;
     prov:wasDerivedFrom <https://www.ohchr.org/en/instruments-mechanisms/instruments/convention-against-torture-and-other-cruel-inhuman-or-degrading> ;
@@ -246,7 +246,7 @@ concept:convention-against-torture-and-other-cruel-inhuman-or-degrading-article-
     cml:curationStatus cml:Proposed .
 
 concept:convention-against-torture-and-other-cruel-inhuman-or-degrading-article-15 a cml:Concept ;
-    skos:prefLabel "Article 15" ;
+    skos:prefLabel "Article 15"@en ;
     cml:realizedBy doc:article-15 ;
     cml:curationStatus cml:Proposed ;
     prov:wasDerivedFrom <https://www.ohchr.org/en/instruments-mechanisms/instruments/convention-against-torture-and-other-cruel-inhuman-or-degrading> ;
@@ -262,7 +262,7 @@ concept:convention-against-torture-and-other-cruel-inhuman-or-degrading-article-
     cml:curationStatus cml:Proposed .
 
 concept:convention-against-torture-and-other-cruel-inhuman-or-degrading-article-16 a cml:Concept ;
-    skos:prefLabel "Article 16" ;
+    skos:prefLabel "Article 16"@en ;
     cml:realizedBy doc:article-16 ;
     cml:curationStatus cml:Proposed ;
     prov:wasDerivedFrom <https://www.ohchr.org/en/instruments-mechanisms/instruments/convention-against-torture-and-other-cruel-inhuman-or-degrading> ;
@@ -279,7 +279,7 @@ concept:convention-against-torture-and-other-cruel-inhuman-or-degrading-article-
     cml:curationStatus cml:Proposed .
 
 concept:convention-against-torture-and-other-cruel-inhuman-or-degrading-article-17 a cml:Concept ;
-    skos:prefLabel "Article 17" ;
+    skos:prefLabel "Article 17"@en ;
     cml:realizedBy doc:article-17 ;
     cml:curationStatus cml:Proposed ;
     prov:wasDerivedFrom <https://www.ohchr.org/en/instruments-mechanisms/instruments/convention-against-torture-and-other-cruel-inhuman-or-degrading> ;
@@ -296,7 +296,7 @@ concept:convention-against-torture-and-other-cruel-inhuman-or-degrading-article-
     cml:curationStatus cml:Proposed .
 
 concept:convention-against-torture-and-other-cruel-inhuman-or-degrading-article-18 a cml:Concept ;
-    skos:prefLabel "Article 18" ;
+    skos:prefLabel "Article 18"@en ;
     cml:realizedBy doc:article-18 ;
     cml:curationStatus cml:Proposed ;
     prov:wasDerivedFrom <https://www.ohchr.org/en/instruments-mechanisms/instruments/convention-against-torture-and-other-cruel-inhuman-or-degrading> ;
@@ -313,7 +313,7 @@ concept:convention-against-torture-and-other-cruel-inhuman-or-degrading-article-
     cml:curationStatus cml:Proposed .
 
 concept:convention-against-torture-and-other-cruel-inhuman-or-degrading-article-19 a cml:Concept ;
-    skos:prefLabel "Article 19" ;
+    skos:prefLabel "Article 19"@en ;
     cml:realizedBy doc:article-19 ;
     cml:curationStatus cml:Proposed ;
     prov:wasDerivedFrom <https://www.ohchr.org/en/instruments-mechanisms/instruments/convention-against-torture-and-other-cruel-inhuman-or-degrading> ;
@@ -330,7 +330,7 @@ concept:convention-against-torture-and-other-cruel-inhuman-or-degrading-article-
     cml:curationStatus cml:Proposed .
 
 concept:convention-against-torture-and-other-cruel-inhuman-or-degrading-article-20 a cml:Concept ;
-    skos:prefLabel "Article 20" ;
+    skos:prefLabel "Article 20"@en ;
     cml:realizedBy doc:article-20 ;
     cml:curationStatus cml:Proposed ;
     prov:wasDerivedFrom <https://www.ohchr.org/en/instruments-mechanisms/instruments/convention-against-torture-and-other-cruel-inhuman-or-degrading> ;
@@ -347,7 +347,7 @@ concept:convention-against-torture-and-other-cruel-inhuman-or-degrading-article-
     cml:curationStatus cml:Proposed .
 
 concept:convention-against-torture-and-other-cruel-inhuman-or-degrading-article-21 a cml:Concept ;
-    skos:prefLabel "Article 21" ;
+    skos:prefLabel "Article 21"@en ;
     cml:realizedBy doc:article-21 ;
     cml:curationStatus cml:Proposed ;
     prov:wasDerivedFrom <https://www.ohchr.org/en/instruments-mechanisms/instruments/convention-against-torture-and-other-cruel-inhuman-or-degrading> ;
@@ -363,7 +363,7 @@ concept:convention-against-torture-and-other-cruel-inhuman-or-degrading-article-
     cml:curationStatus cml:Proposed .
 
 concept:convention-against-torture-and-other-cruel-inhuman-or-degrading-article-22 a cml:Concept ;
-    skos:prefLabel "Article 22" ;
+    skos:prefLabel "Article 22"@en ;
     cml:realizedBy doc:article-22 ;
     cml:curationStatus cml:Proposed ;
     prov:wasDerivedFrom <https://www.ohchr.org/en/instruments-mechanisms/instruments/convention-against-torture-and-other-cruel-inhuman-or-degrading> ;
@@ -379,7 +379,7 @@ concept:convention-against-torture-and-other-cruel-inhuman-or-degrading-article-
     cml:curationStatus cml:Proposed .
 
 concept:convention-against-torture-and-other-cruel-inhuman-or-degrading-article-23 a cml:Concept ;
-    skos:prefLabel "Article 23" ;
+    skos:prefLabel "Article 23"@en ;
     cml:realizedBy doc:article-23 ;
     cml:curationStatus cml:Proposed ;
     prov:wasDerivedFrom <https://www.ohchr.org/en/instruments-mechanisms/instruments/convention-against-torture-and-other-cruel-inhuman-or-degrading> ;
@@ -395,7 +395,7 @@ concept:convention-against-torture-and-other-cruel-inhuman-or-degrading-article-
     cml:curationStatus cml:Proposed .
 
 concept:convention-against-torture-and-other-cruel-inhuman-or-degrading-article-24 a cml:Concept ;
-    skos:prefLabel "Article 24" ;
+    skos:prefLabel "Article 24"@en ;
     cml:realizedBy doc:article-24 ;
     cml:curationStatus cml:Proposed ;
     prov:wasDerivedFrom <https://www.ohchr.org/en/instruments-mechanisms/instruments/convention-against-torture-and-other-cruel-inhuman-or-degrading> ;
@@ -410,7 +410,7 @@ concept:convention-against-torture-and-other-cruel-inhuman-or-degrading-article-
     cml:curationStatus cml:Proposed .
 
 concept:convention-against-torture-and-other-cruel-inhuman-or-degrading-article-25 a cml:Concept ;
-    skos:prefLabel "Article 25" ;
+    skos:prefLabel "Article 25"@en ;
     cml:realizedBy doc:article-25 ;
     cml:curationStatus cml:Proposed ;
     prov:wasDerivedFrom <https://www.ohchr.org/en/instruments-mechanisms/instruments/convention-against-torture-and-other-cruel-inhuman-or-degrading> ;
@@ -427,7 +427,7 @@ concept:convention-against-torture-and-other-cruel-inhuman-or-degrading-article-
     cml:curationStatus cml:Proposed .
 
 concept:convention-against-torture-and-other-cruel-inhuman-or-degrading-article-26 a cml:Concept ;
-    skos:prefLabel "Article 26" ;
+    skos:prefLabel "Article 26"@en ;
     cml:realizedBy doc:article-26 ;
     cml:curationStatus cml:Proposed ;
     prov:wasDerivedFrom <https://www.ohchr.org/en/instruments-mechanisms/instruments/convention-against-torture-and-other-cruel-inhuman-or-degrading> ;
@@ -444,7 +444,7 @@ concept:convention-against-torture-and-other-cruel-inhuman-or-degrading-article-
     cml:curationStatus cml:Proposed .
 
 concept:convention-against-torture-and-other-cruel-inhuman-or-degrading-article-27 a cml:Concept ;
-    skos:prefLabel "Article 27" ;
+    skos:prefLabel "Article 27"@en ;
     cml:realizedBy doc:article-27 ;
     cml:curationStatus cml:Proposed ;
     prov:wasDerivedFrom <https://www.ohchr.org/en/instruments-mechanisms/instruments/convention-against-torture-and-other-cruel-inhuman-or-degrading> ;
@@ -459,7 +459,7 @@ concept:convention-against-torture-and-other-cruel-inhuman-or-degrading-article-
     cml:curationStatus cml:Proposed .
 
 concept:convention-against-torture-and-other-cruel-inhuman-or-degrading-article-28 a cml:Concept ;
-    skos:prefLabel "Article 28" ;
+    skos:prefLabel "Article 28"@en ;
     cml:realizedBy doc:article-28 ;
     cml:curationStatus cml:Proposed ;
     prov:wasDerivedFrom <https://www.ohchr.org/en/instruments-mechanisms/instruments/convention-against-torture-and-other-cruel-inhuman-or-degrading> ;
@@ -474,7 +474,7 @@ concept:convention-against-torture-and-other-cruel-inhuman-or-degrading-article-
     cml:curationStatus cml:Proposed .
 
 concept:convention-against-torture-and-other-cruel-inhuman-or-degrading-article-29 a cml:Concept ;
-    skos:prefLabel "Article 29" ;
+    skos:prefLabel "Article 29"@en ;
     cml:realizedBy doc:article-29 ;
     cml:curationStatus cml:Proposed ;
     prov:wasDerivedFrom <https://www.ohchr.org/en/instruments-mechanisms/instruments/convention-against-torture-and-other-cruel-inhuman-or-degrading> ;
@@ -491,7 +491,7 @@ concept:convention-against-torture-and-other-cruel-inhuman-or-degrading-article-
     cml:curationStatus cml:Proposed .
 
 concept:convention-against-torture-and-other-cruel-inhuman-or-degrading-article-30 a cml:Concept ;
-    skos:prefLabel "Article 30" ;
+    skos:prefLabel "Article 30"@en ;
     cml:realizedBy doc:article-30 ;
     cml:curationStatus cml:Proposed ;
     prov:wasDerivedFrom <https://www.ohchr.org/en/instruments-mechanisms/instruments/convention-against-torture-and-other-cruel-inhuman-or-degrading> ;
@@ -507,7 +507,7 @@ concept:convention-against-torture-and-other-cruel-inhuman-or-degrading-article-
     cml:curationStatus cml:Proposed .
 
 concept:convention-against-torture-and-other-cruel-inhuman-or-degrading-article-31 a cml:Concept ;
-    skos:prefLabel "Article 31" ;
+    skos:prefLabel "Article 31"@en ;
     cml:realizedBy doc:article-31 ;
     cml:curationStatus cml:Proposed ;
     prov:wasDerivedFrom <https://www.ohchr.org/en/instruments-mechanisms/instruments/convention-against-torture-and-other-cruel-inhuman-or-degrading> ;
@@ -523,7 +523,7 @@ concept:convention-against-torture-and-other-cruel-inhuman-or-degrading-article-
     cml:curationStatus cml:Proposed .
 
 concept:convention-against-torture-and-other-cruel-inhuman-or-degrading-article-32 a cml:Concept ;
-    skos:prefLabel "Article 32" ;
+    skos:prefLabel "Article 32"@en ;
     cml:realizedBy doc:article-32 ;
     cml:curationStatus cml:Proposed ;
     prov:wasDerivedFrom <https://www.ohchr.org/en/instruments-mechanisms/instruments/convention-against-torture-and-other-cruel-inhuman-or-degrading> ;
@@ -538,7 +538,7 @@ concept:convention-against-torture-and-other-cruel-inhuman-or-degrading-article-
     cml:curationStatus cml:Proposed .
 
 concept:convention-against-torture-and-other-cruel-inhuman-or-degrading-article-33 a cml:Concept ;
-    skos:prefLabel "Article 33" ;
+    skos:prefLabel "Article 33"@en ;
     cml:realizedBy doc:article-33 ;
     cml:curationStatus cml:Proposed ;
     prov:wasDerivedFrom <https://www.ohchr.org/en/instruments-mechanisms/instruments/convention-against-torture-and-other-cruel-inhuman-or-degrading> ;

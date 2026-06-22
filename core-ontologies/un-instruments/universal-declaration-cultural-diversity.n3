@@ -12,7 +12,7 @@
 # ============================================================
 
 doc:Instrument a values:ValuesCredential ;
-    dc:title "Universal Declaration on Cultural Diversity" ;
+    dc:title "Universal Declaration on Cultural Diversity"@en ;
     dc:date "02 November 2001" ;
     values:category "Bioethics, science & culture" ;
     values:categoryStatus values:AutoAssigned ;
@@ -21,73 +21,73 @@ doc:Instrument a values:ValuesCredential ;
 
 doc:article-1 a values:Undertaking ;
     values:partOf doc:Instrument ;
-    dc:title "Article 1" ;
+    dc:title "Article 1"@en ;
     values:deonticStatus values:HeuristicDerived ;
-    values:originalText "Culture takes diverse forms across time and space. This diversity is embodied in the uniqueness and plurality of the identities of the groups and societies making up humankind. As a source of exchange, innovation and creativity, cultural diversity is as necessary for humankind as biodiversity is for nature. In this sense, it is the common heritage of humanity and should be recognized and affirmed for the benefit of present and future generations." .
+    values:originalText "Culture takes diverse forms across time and space. This diversity is embodied in the uniqueness and plurality of the identities of the groups and societies making up humankind. As a source of exchange, innovation and creativity, cultural diversity is as necessary for humankind as biodiversity is for nature. In this sense, it is the common heritage of humanity and should be recognized and affirmed for the benefit of present and future generations."@en .
 
 doc:article-2 a values:Undertaking ;
     values:partOf doc:Instrument ;
-    dc:title "Article 2" ;
+    dc:title "Article 2"@en ;
     values:deonticStatus values:HeuristicDerived ;
-    values:originalText "In our increasingly diverse societies, it is essential to ensure harmonious interaction among people and groups with plural, varied and dynamic cultural identities as well as their willingness to live together. Policies for the inclusion and participation of all citizens are guarantees of social cohesion, the vitality of civil society and peace. Thus defined, cultural pluralism gives policy expression to the reality of cultural diversity. Indissociable from a democratic framework, cultural pluralism is conducive to cultural exchange and to the flourishing of creative capacities that sustain public life." .
+    values:originalText "In our increasingly diverse societies, it is essential to ensure harmonious interaction among people and groups with plural, varied and dynamic cultural identities as well as their willingness to live together. Policies for the inclusion and participation of all citizens are guarantees of social cohesion, the vitality of civil society and peace. Thus defined, cultural pluralism gives policy expression to the reality of cultural diversity. Indissociable from a democratic framework, cultural pluralism is conducive to cultural exchange and to the flourishing of creative capacities that sustain public life."@en .
 
 doc:article-3 a values:Undertaking ;
     values:partOf doc:Instrument ;
-    dc:title "Article 3" ;
+    dc:title "Article 3"@en ;
     values:deonticStatus values:HeuristicDerived ;
-    values:originalText "Cultural diversity and human rights Articles Cultural diversity and creativity Articles Cultural diversity and international solidarity Articles The General Conference , Committed to the full implementation of the human rights and fundamental freedoms proclaimed in the Universal Declaration of Human Rights and other universally recognized legal instruments, such as the two International Covenants of 1966 relating respectively to civil and political rights and to economic, social and cultural rights, Recalling that the Preamble to the Constitution of UNESCO affirms \"that the wide diffusion of culture, and the education of humanity for justice and liberty and peace are indispensable to the dignity of man and constitute a sacred duty which all the nations must fulfil in a spirit of mutual assistance and concern\", Further recalling Article 1 of the Constitution, which assigns to UNESCO among other purposes that of recommending \"such international agreements as may be necessary to promote the free flow of ideas by word and image\", Referring to the provisions relating to cultural diversity and the exercise of cultural rights in the international instruments enacted by UNESCO, 1 Reaffirming that culture should be regarded as the set of distinctive spiritual, material, intellectual and emotional features of society or a social group, and that it encompasses, in addition to art and literature, lifestyles, ways of living together, value systems, traditions and beliefs, 2 Noting that culture is at the heart of contemporary debates about identity, social cohesion, and the development of a knowledge-based economy, Affirming that respect for the diversity of cultures, tolerance, dialogue and cooperation, in a climate of mutual trust and understanding are among the best guarantees of international peace and security, Aspiring to greater solidarity on the basis of recognition of cultural diversity, of awareness of the unity of humankind, and of the development of intercultural exchanges, Considering that the process of globalization, facilitated by the rapid development of new information and communication technologies, though representing a challenge for cultural diversity, creates the conditions for renewed dialogue among cultures and civilizations, Aware of the specific mandate which has been entrusted to UNESCO, within the United Nations system, to ensure the preservation and promotion of the fruitful diversity of cultures, Proclaims the following principles and adopts the present Declaration: Identity, diversity and pluralism" .
+    values:originalText "Cultural diversity and human rights Articles Cultural diversity and creativity Articles Cultural diversity and international solidarity Articles The General Conference , Committed to the full implementation of the human rights and fundamental freedoms proclaimed in the Universal Declaration of Human Rights and other universally recognized legal instruments, such as the two International Covenants of 1966 relating respectively to civil and political rights and to economic, social and cultural rights, Recalling that the Preamble to the Constitution of UNESCO affirms \"that the wide diffusion of culture, and the education of humanity for justice and liberty and peace are indispensable to the dignity of man and constitute a sacred duty which all the nations must fulfil in a spirit of mutual assistance and concern\", Further recalling Article 1 of the Constitution, which assigns to UNESCO among other purposes that of recommending \"such international agreements as may be necessary to promote the free flow of ideas by word and image\", Referring to the provisions relating to cultural diversity and the exercise of cultural rights in the international instruments enacted by UNESCO, 1 Reaffirming that culture should be regarded as the set of distinctive spiritual, material, intellectual and emotional features of society or a social group, and that it encompasses, in addition to art and literature, lifestyles, ways of living together, value systems, traditions and beliefs, 2 Noting that culture is at the heart of contemporary debates about identity, social cohesion, and the development of a knowledge-based economy, Affirming that respect for the diversity of cultures, tolerance, dialogue and cooperation, in a climate of mutual trust and understanding are among the best guarantees of international peace and security, Aspiring to greater solidarity on the basis of recognition of cultural diversity, of awareness of the unity of humankind, and of the development of intercultural exchanges, Considering that the process of globalization, facilitated by the rapid development of new information and communication technologies, though representing a challenge for cultural diversity, creates the conditions for renewed dialogue among cultures and civilizations, Aware of the specific mandate which has been entrusted to UNESCO, within the United Nations system, to ensure the preservation and promotion of the fruitful diversity of cultures, Proclaims the following principles and adopts the present Declaration: Identity, diversity and pluralism"@en .
 
 doc:article-4 a values:Undertaking ;
     values:partOf doc:Instrument ;
-    dc:title "Article 4" ;
+    dc:title "Article 4"@en ;
     values:deonticStatus values:HeuristicDerived ;
-    values:originalText "The defence of cultural diversity is an ethical imperative, inseparable from respect for human dignity. It implies a commitment to human rights and fundamental freedoms, in particular the rights of persons belonging to minorities and those of indigenous peoples. No one may invoke cultural diversity to infringe upon human rights guaranteed by international law, nor to limit their scope." .
+    values:originalText "The defence of cultural diversity is an ethical imperative, inseparable from respect for human dignity. It implies a commitment to human rights and fundamental freedoms, in particular the rights of persons belonging to minorities and those of indigenous peoples. No one may invoke cultural diversity to infringe upon human rights guaranteed by international law, nor to limit their scope."@en .
 
 doc:article-5 a values:Right ;
     values:partOf doc:Instrument ;
     values:heldBy values:NaturalPerson ;
-    dc:title "Article 5" ;
+    dc:title "Article 5"@en ;
     values:deonticStatus values:HeuristicDerived ;
-    values:originalText "Cultural rights are an integral part of human rights, which are universal, indivisible and interdependent. The flourishing of creative diversity requires the full implementation of cultural rights as defined in Article 27 of the Universal Declaration of Human Rights and in Articles 13 and 15 of the International Covenant on Economic, Social and cultural Rights. All persons should therefore be able to express themselves and to create and disseminate their work in the language of their choice, and particularly in their mother tongue; all persons should be entitled to quality education and training that fully respect their cultural identity; and all persons have the right to participate in the cultural life of their choice and conduct their own cultural practices, subject to respect for human rights and fundamental freedoms." .
+    values:originalText "Cultural rights are an integral part of human rights, which are universal, indivisible and interdependent. The flourishing of creative diversity requires the full implementation of cultural rights as defined in Article 27 of the Universal Declaration of Human Rights and in Articles 13 and 15 of the International Covenant on Economic, Social and cultural Rights. All persons should therefore be able to express themselves and to create and disseminate their work in the language of their choice, and particularly in their mother tongue; all persons should be entitled to quality education and training that fully respect their cultural identity; and all persons have the right to participate in the cultural life of their choice and conduct their own cultural practices, subject to respect for human rights and fundamental freedoms."@en .
 
 doc:article-6 a values:Undertaking ;
     values:partOf doc:Instrument ;
-    dc:title "Article 6" ;
+    dc:title "Article 6"@en ;
     values:deonticStatus values:HeuristicDerived ;
-    values:originalText "While ensuring the free flow of ideas by word and image, care should be exercised so that all cultures can express themselves and make themselves known. Freedom of expression, media pluralism, multilingualism, equal access to art and to scientific and technological knowledge, including in digital form, and the possibility for all cultures to have access to the means of expression and dissemination are the guarantees of cultural diversity. Cultural diversity and creativity" .
+    values:originalText "While ensuring the free flow of ideas by word and image, care should be exercised so that all cultures can express themselves and make themselves known. Freedom of expression, media pluralism, multilingualism, equal access to art and to scientific and technological knowledge, including in digital form, and the possibility for all cultures to have access to the means of expression and dissemination are the guarantees of cultural diversity. Cultural diversity and creativity"@en .
 
 doc:article-7 a values:Undertaking ;
     values:partOf doc:Instrument ;
-    dc:title "Article 7" ;
+    dc:title "Article 7"@en ;
     values:deonticStatus values:HeuristicDerived ;
-    values:originalText "Creation draws on the roots of cultural tradition, but flourishes in contact with other cultures. For this reason, heritage in all its forms must be preserved, enhanced and handed on to future generations as a record of human experience and aspirations, so as to foster creativity in all its diversity and to inspire genuine dialogue among cultures." .
+    values:originalText "Creation draws on the roots of cultural tradition, but flourishes in contact with other cultures. For this reason, heritage in all its forms must be preserved, enhanced and handed on to future generations as a record of human experience and aspirations, so as to foster creativity in all its diversity and to inspire genuine dialogue among cultures."@en .
 
 doc:article-8 a values:Undertaking ;
     values:partOf doc:Instrument ;
-    dc:title "Article 8" ;
+    dc:title "Article 8"@en ;
     values:deonticStatus values:HeuristicDerived ;
-    values:originalText "In the face of present-day economic and technological change, opening up vast prospects for creation and innovation, particular attention must be paid to the diversity of the supply of creative work, to due recognition of the rights of authors and artists and to the specificity of cultural goods and services which, as vectors of identity, values and meaning, must not be treated as mere commodities or consumer goods." .
+    values:originalText "In the face of present-day economic and technological change, opening up vast prospects for creation and innovation, particular attention must be paid to the diversity of the supply of creative work, to due recognition of the rights of authors and artists and to the specificity of cultural goods and services which, as vectors of identity, values and meaning, must not be treated as mere commodities or consumer goods."@en .
 
 doc:article-9 a values:Undertaking ;
     values:partOf doc:Instrument ;
-    dc:title "Article 9" ;
+    dc:title "Article 9"@en ;
     values:deonticStatus values:HeuristicDerived ;
-    values:originalText "While ensuring the free circulation of ideas and works, cultural policies must create conditions conducive to the production and dissemination of diversified cultural goods and services through cultural industries that have the means to assert themselves at the local and global level. It is for each State, with due regard to its international obligations, to define its cultural policy and to implement it through the means it considers fit, whether by operational support or appropriate regulations. Cultural diversity and international solidarity" .
+    values:originalText "While ensuring the free circulation of ideas and works, cultural policies must create conditions conducive to the production and dissemination of diversified cultural goods and services through cultural industries that have the means to assert themselves at the local and global level. It is for each State, with due regard to its international obligations, to define its cultural policy and to implement it through the means it considers fit, whether by operational support or appropriate regulations. Cultural diversity and international solidarity"@en .
 
 doc:article-10 a values:Undertaking ;
     values:partOf doc:Instrument ;
-    dc:title "Article 10" ;
+    dc:title "Article 10"@en ;
     values:deonticStatus values:HeuristicDerived ;
-    values:originalText "In the face of current imbalances in flows and exchanges of cultural goods and services at the global level, it is necessary to reinforce international cooperation and solidarity aimed at enabling all countries, especially developing countries and countries in transition, to establish cultural industries that are viable and competitive at national and international level." .
+    values:originalText "In the face of current imbalances in flows and exchanges of cultural goods and services at the global level, it is necessary to reinforce international cooperation and solidarity aimed at enabling all countries, especially developing countries and countries in transition, to establish cultural industries that are viable and competitive at national and international level."@en .
 
 doc:article-11 a values:Undertaking ;
     values:partOf doc:Instrument ;
-    dc:title "Article 11" ;
+    dc:title "Article 11"@en ;
     values:deonticStatus values:HeuristicDerived ;
-    values:originalText "Market forces alone cannot guarantee the preservation and promotion of cultural diversity, which is the key to sustainable human development. From this perspective, the pre-eminence of public policy, in partnership with the private sector and civil society, must be reaffirmed." .
+    values:originalText "Market forces alone cannot guarantee the preservation and promotion of cultural diversity, which is the key to sustainable human development. From this perspective, the pre-eminence of public policy, in partnership with the private sector and civil society, must be reaffirmed."@en .
 
 doc:article-12 a values:Undertaking ;
     values:partOf doc:Instrument ;
-    dc:title "Article 12" ;
+    dc:title "Article 12"@en ;
     values:deonticStatus values:HeuristicDerived ;
-    values:originalText "UNESCO, by virtue of its mandate and functions, has the responsibility to: (a) Promote the incorporation of the principles set out in the present Declaration into the development strategies drawn up within the various intergovernmental bodies; (b) Serve as a reference point and a forum where States, international governmental and non-governmental organizations, civil society and the private sector may join together in elaborating concepts, objectives and policies in favour of cultural diversity; (c) Pursue its activities in standard-setting, awareness-raising and capacity-building in the areas related to the present Declaration within its fields of competence; (d) Facilitate the implementation of the Action Plan, the main lines of which are appended to the present Declaration." .
+    values:originalText "UNESCO, by virtue of its mandate and functions, has the responsibility to: (a) Promote the incorporation of the principles set out in the present Declaration into the development strategies drawn up within the various intergovernmental bodies; (b) Serve as a reference point and a forum where States, international governmental and non-governmental organizations, civil society and the private sector may join together in elaborating concepts, objectives and policies in favour of cultural diversity; (c) Pursue its activities in standard-setting, awareness-raising and capacity-building in the areas related to the present Declaration within its fields of competence; (d) Facilitate the implementation of the Action Plan, the main lines of which are appended to the present Declaration."@en .

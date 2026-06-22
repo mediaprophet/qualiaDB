@@ -17,7 +17,7 @@
 # ============================================================
 
 concept:gci-1949-article-1 a cml:Concept ;
-    skos:prefLabel "Article 1 - Respect for the Convention" ;
+    skos:prefLabel "Article 1 - Respect for the Convention"@en ;
     cml:realizedBy doc:article-1 ;
     cml:curationStatus cml:Proposed ;
     prov:wasDerivedFrom <https://ihl-databases.icrc.org/en/ihl-treaties/gci-1949> ;
@@ -34,7 +34,7 @@ concept:gci-1949-article-1-norm a values:Obligation ;
     cml:curationStatus cml:Proposed .
 
 concept:gci-1949-article-2 a cml:Concept ;
-    skos:prefLabel "Article 2 - Application of the Convention" ;
+    skos:prefLabel "Article 2 - Application of the Convention"@en ;
     cml:realizedBy doc:article-2 ;
     cml:curationStatus cml:Proposed ;
     prov:wasDerivedFrom <https://ihl-databases.icrc.org/en/ihl-treaties/gci-1949> ;
@@ -50,7 +50,7 @@ concept:gci-1949-article-2-norm a values:Prohibition ;
     cml:curationStatus cml:Proposed .
 
 concept:gci-1949-article-3 a cml:Concept ;
-    skos:prefLabel "Article 3 - Conflicts not of an international character" ;
+    skos:prefLabel "Article 3 - Conflicts not of an international character"@en ;
     cml:realizedBy doc:article-3 ;
     cml:curationStatus cml:Proposed ;
     prov:wasDerivedFrom <https://ihl-databases.icrc.org/en/ihl-treaties/gci-1949> ;
@@ -66,7 +66,7 @@ concept:gci-1949-article-3-norm a values:Prohibition ;
     cml:curationStatus cml:Proposed .
 
 concept:gci-1949-article-4 a cml:Concept ;
-    skos:prefLabel "Article 4 - Application by neutral Powers" ;
+    skos:prefLabel "Article 4 - Application by neutral Powers"@en ;
     cml:realizedBy doc:article-4 ;
     cml:curationStatus cml:Proposed ;
     prov:wasDerivedFrom <https://ihl-databases.icrc.org/en/ihl-treaties/gci-1949> ;
@@ -82,7 +82,7 @@ concept:gci-1949-article-4-norm a values:Undertaking ;
     cml:curationStatus cml:Proposed .
 
 concept:gci-1949-article-5 a cml:Concept ;
-    skos:prefLabel "Article 5 - Duration of application" ;
+    skos:prefLabel "Article 5 - Duration of application"@en ;
     cml:realizedBy doc:article-5 ;
     cml:curationStatus cml:Proposed ;
     prov:wasDerivedFrom <https://ihl-databases.icrc.org/en/ihl-treaties/gci-1949> ;
@@ -98,7 +98,7 @@ concept:gci-1949-article-5-norm a values:Undertaking ;
     cml:curationStatus cml:Proposed .
 
 concept:gci-1949-article-6 a cml:Concept ;
-    skos:prefLabel "Article 6 - Special agreements" ;
+    skos:prefLabel "Article 6 - Special agreements"@en ;
     cml:realizedBy doc:article-6 ;
     cml:curationStatus cml:Proposed ;
     prov:wasDerivedFrom <https://ihl-databases.icrc.org/en/ihl-treaties/gci-1949> ;
@@ -114,7 +114,7 @@ concept:gci-1949-article-6-norm a values:Undertaking ;
     cml:curationStatus cml:Proposed .
 
 concept:gci-1949-article-7 a cml:Concept ;
-    skos:prefLabel "Article 7 - Non-renunciation of rights" ;
+    skos:prefLabel "Article 7 - Non-renunciation of rights"@en ;
     cml:realizedBy doc:article-7 ;
     cml:curationStatus cml:Proposed ;
     prov:wasDerivedFrom <https://ihl-databases.icrc.org/en/ihl-treaties/gci-1949> ;
@@ -130,7 +130,7 @@ concept:gci-1949-article-7-norm a values:Undertaking ;
     cml:curationStatus cml:Proposed .
 
 concept:gci-1949-article-8 a cml:Concept ;
-    skos:prefLabel "Article 8 - Protecting Powers" ;
+    skos:prefLabel "Article 8 - Protecting Powers"@en ;
     cml:realizedBy doc:article-8 ;
     cml:curationStatus cml:Proposed ;
     prov:wasDerivedFrom <https://ihl-databases.icrc.org/en/ihl-treaties/gci-1949> ;
@@ -146,7 +146,7 @@ concept:gci-1949-article-8-norm a values:Prohibition ;
     cml:curationStatus cml:Proposed .
 
 concept:gci-1949-article-9 a cml:Concept ;
-    skos:prefLabel "Article 9 - Activities of the ICRC and other impartial humanitarian organizations" ;
+    skos:prefLabel "Article 9 - Activities of the ICRC and other impartial humanitarian organizations"@en ;
     cml:realizedBy doc:article-9 ;
     cml:curationStatus cml:Proposed ;
     prov:wasDerivedFrom <https://ihl-databases.icrc.org/en/ihl-treaties/gci-1949> ;
@@ -162,7 +162,7 @@ concept:gci-1949-article-9-norm a values:Undertaking ;
     cml:curationStatus cml:Proposed .
 
 concept:gci-1949-article-10 a cml:Concept ;
-    skos:prefLabel "Article 10 - Substitutes for Protecting Powers" ;
+    skos:prefLabel "Article 10 - Substitutes for Protecting Powers"@en ;
     cml:realizedBy doc:article-10 ;
     cml:curationStatus cml:Proposed ;
     prov:wasDerivedFrom <https://ihl-databases.icrc.org/en/ihl-treaties/gci-1949> ;
@@ -179,7 +179,7 @@ concept:gci-1949-article-10-norm a values:Obligation ;
     cml:curationStatus cml:Proposed .
 
 concept:gci-1949-article-11 a cml:Concept ;
-    skos:prefLabel "Article 11 - Conciliation procedure" ;
+    skos:prefLabel "Article 11 - Conciliation procedure"@en ;
     cml:realizedBy doc:article-11 ;
     cml:curationStatus cml:Proposed ;
     prov:wasDerivedFrom <https://ihl-databases.icrc.org/en/ihl-treaties/gci-1949> ;
@@ -196,7 +196,7 @@ concept:gci-1949-article-11-norm a values:Obligation ;
     cml:curationStatus cml:Proposed .
 
 concept:gci-1949-article-12 a cml:Concept ;
-    skos:prefLabel "Article 12 - Protection and care of the wounded and sick" ;
+    skos:prefLabel "Article 12 - Protection and care of the wounded and sick"@en ;
     cml:realizedBy doc:article-12 ;
     cml:curationStatus cml:Proposed ;
     prov:wasDerivedFrom <https://ihl-databases.icrc.org/en/ihl-treaties/gci-1949> ;
@@ -212,7 +212,7 @@ concept:gci-1949-article-12-norm a values:Prohibition ;
     cml:curationStatus cml:Proposed .
 
 concept:gci-1949-article-13 a cml:Concept ;
-    skos:prefLabel "Article 13 - Protected persons" ;
+    skos:prefLabel "Article 13 - Protected persons"@en ;
     cml:realizedBy doc:article-13 ;
     cml:curationStatus cml:Proposed ;
     prov:wasDerivedFrom <https://ihl-databases.icrc.org/en/ihl-treaties/gci-1949> ;
@@ -228,7 +228,7 @@ concept:gci-1949-article-13-norm a values:Undertaking ;
     cml:curationStatus cml:Proposed .
 
 concept:gci-1949-article-14 a cml:Concept ;
-    skos:prefLabel "Article 14 - Status of the wounded and sick who have fallen into enemy hands" ;
+    skos:prefLabel "Article 14 - Status of the wounded and sick who have fallen into enemy hands"@en ;
     cml:realizedBy doc:article-14 ;
     cml:curationStatus cml:Proposed ;
     prov:wasDerivedFrom <https://ihl-databases.icrc.org/en/ihl-treaties/gci-1949> ;
@@ -245,7 +245,7 @@ concept:gci-1949-article-14-norm a values:Obligation ;
     cml:curationStatus cml:Proposed .
 
 concept:gci-1949-article-15 a cml:Concept ;
-    skos:prefLabel "Article 15 - Search for casualties. Evacuation" ;
+    skos:prefLabel "Article 15 - Search for casualties. Evacuation"@en ;
     cml:realizedBy doc:article-15 ;
     cml:curationStatus cml:Proposed ;
     prov:wasDerivedFrom <https://ihl-databases.icrc.org/en/ihl-treaties/gci-1949> ;
@@ -262,7 +262,7 @@ concept:gci-1949-article-15-norm a values:Obligation ;
     cml:curationStatus cml:Proposed .
 
 concept:gci-1949-article-16 a cml:Concept ;
-    skos:prefLabel "Article 16 - Recording and forwarding of information" ;
+    skos:prefLabel "Article 16 - Recording and forwarding of information"@en ;
     cml:realizedBy doc:article-16 ;
     cml:curationStatus cml:Proposed ;
     prov:wasDerivedFrom <https://ihl-databases.icrc.org/en/ihl-treaties/gci-1949> ;
@@ -279,7 +279,7 @@ concept:gci-1949-article-16-norm a values:Obligation ;
     cml:curationStatus cml:Proposed .
 
 concept:gci-1949-article-17 a cml:Concept ;
-    skos:prefLabel "Article 17 - Prescriptions regarding the dead. Graves Registration Service" ;
+    skos:prefLabel "Article 17 - Prescriptions regarding the dead. Graves Registration Service"@en ;
     cml:realizedBy doc:article-17 ;
     cml:curationStatus cml:Proposed ;
     prov:wasDerivedFrom <https://ihl-databases.icrc.org/en/ihl-treaties/gci-1949> ;
@@ -295,7 +295,7 @@ concept:gci-1949-article-17-norm a values:Prohibition ;
     cml:curationStatus cml:Proposed .
 
 concept:gci-1949-article-18 a cml:Concept ;
-    skos:prefLabel "Article 18 - Role of the population" ;
+    skos:prefLabel "Article 18 - Role of the population"@en ;
     cml:realizedBy doc:article-18 ;
     cml:curationStatus cml:Proposed ;
     prov:wasDerivedFrom <https://ihl-databases.icrc.org/en/ihl-treaties/gci-1949> ;
@@ -312,7 +312,7 @@ concept:gci-1949-article-18-norm a values:Obligation ;
     cml:curationStatus cml:Proposed .
 
 concept:gci-1949-article-19 a cml:Concept ;
-    skos:prefLabel "Article 19 - Protection of medical units and establishments" ;
+    skos:prefLabel "Article 19 - Protection of medical units and establishments"@en ;
     cml:realizedBy doc:article-19 ;
     cml:curationStatus cml:Proposed ;
     prov:wasDerivedFrom <https://ihl-databases.icrc.org/en/ihl-treaties/gci-1949> ;
@@ -329,7 +329,7 @@ concept:gci-1949-article-19-norm a values:Obligation ;
     cml:curationStatus cml:Proposed .
 
 concept:gci-1949-article-20 a cml:Concept ;
-    skos:prefLabel "Article 20 - Protection of hospital ships" ;
+    skos:prefLabel "Article 20 - Protection of hospital ships"@en ;
     cml:realizedBy doc:article-20 ;
     cml:curationStatus cml:Proposed ;
     prov:wasDerivedFrom <https://ihl-databases.icrc.org/en/ihl-treaties/gci-1949> ;
@@ -345,7 +345,7 @@ concept:gci-1949-article-20-norm a values:Prohibition ;
     cml:curationStatus cml:Proposed .
 
 concept:gci-1949-article-21 a cml:Concept ;
-    skos:prefLabel "Article 21 - Discontinuance of protection of medical establishments and units" ;
+    skos:prefLabel "Article 21 - Discontinuance of protection of medical establishments and units"@en ;
     cml:realizedBy doc:article-21 ;
     cml:curationStatus cml:Proposed ;
     prov:wasDerivedFrom <https://ihl-databases.icrc.org/en/ihl-treaties/gci-1949> ;
@@ -361,7 +361,7 @@ concept:gci-1949-article-21-norm a values:Prohibition ;
     cml:curationStatus cml:Proposed .
 
 concept:gci-1949-article-22 a cml:Concept ;
-    skos:prefLabel "Article 22 - Conditions not depriving medical units and establishments of protection" ;
+    skos:prefLabel "Article 22 - Conditions not depriving medical units and establishments of protection"@en ;
     cml:realizedBy doc:article-22 ;
     cml:curationStatus cml:Proposed ;
     prov:wasDerivedFrom <https://ihl-databases.icrc.org/en/ihl-treaties/gci-1949> ;
@@ -377,7 +377,7 @@ concept:gci-1949-article-22-norm a values:Prohibition ;
     cml:curationStatus cml:Proposed .
 
 concept:gci-1949-article-23 a cml:Concept ;
-    skos:prefLabel "Article 23 - Hospital zones and localities" ;
+    skos:prefLabel "Article 23 - Hospital zones and localities"@en ;
     cml:realizedBy doc:article-23 ;
     cml:curationStatus cml:Proposed ;
     prov:wasDerivedFrom <https://ihl-databases.icrc.org/en/ihl-treaties/gci-1949> ;
@@ -393,7 +393,7 @@ concept:gci-1949-article-23-norm a values:Undertaking ;
     cml:curationStatus cml:Proposed .
 
 concept:gci-1949-article-24 a cml:Concept ;
-    skos:prefLabel "Article 24 - Protection of permanent personnel" ;
+    skos:prefLabel "Article 24 - Protection of permanent personnel"@en ;
     cml:realizedBy doc:article-24 ;
     cml:curationStatus cml:Proposed ;
     prov:wasDerivedFrom <https://ihl-databases.icrc.org/en/ihl-treaties/gci-1949> ;
@@ -410,7 +410,7 @@ concept:gci-1949-article-24-norm a values:Obligation ;
     cml:curationStatus cml:Proposed .
 
 concept:gci-1949-article-25 a cml:Concept ;
-    skos:prefLabel "Article 25 - Protection of auxiliary personnel" ;
+    skos:prefLabel "Article 25 - Protection of auxiliary personnel"@en ;
     cml:realizedBy doc:article-25 ;
     cml:curationStatus cml:Proposed ;
     prov:wasDerivedFrom <https://ihl-databases.icrc.org/en/ihl-treaties/gci-1949> ;
@@ -426,7 +426,7 @@ concept:gci-1949-article-25-norm a values:Undertaking ;
     cml:curationStatus cml:Proposed .
 
 concept:gci-1949-article-26 a cml:Concept ;
-    skos:prefLabel "Article 26 - Personnel of aid societies" ;
+    skos:prefLabel "Article 26 - Personnel of aid societies"@en ;
     cml:realizedBy doc:article-26 ;
     cml:curationStatus cml:Proposed ;
     prov:wasDerivedFrom <https://ihl-databases.icrc.org/en/ihl-treaties/gci-1949> ;
@@ -442,7 +442,7 @@ concept:gci-1949-article-26-norm a values:Prohibition ;
     cml:curationStatus cml:Proposed .
 
 concept:gci-1949-article-27 a cml:Concept ;
-    skos:prefLabel "Article 27 - Societies of neutral countries" ;
+    skos:prefLabel "Article 27 - Societies of neutral countries"@en ;
     cml:realizedBy doc:article-27 ;
     cml:curationStatus cml:Proposed ;
     prov:wasDerivedFrom <https://ihl-databases.icrc.org/en/ihl-treaties/gci-1949> ;
@@ -458,7 +458,7 @@ concept:gci-1949-article-27-norm a values:Prohibition ;
     cml:curationStatus cml:Proposed .
 
 concept:gci-1949-article-28 a cml:Concept ;
-    skos:prefLabel "Article 28 - Retained personnel" ;
+    skos:prefLabel "Article 28 - Retained personnel"@en ;
     cml:realizedBy doc:article-28 ;
     cml:curationStatus cml:Proposed ;
     prov:wasDerivedFrom <https://ihl-databases.icrc.org/en/ihl-treaties/gci-1949> ;
@@ -474,7 +474,7 @@ concept:gci-1949-article-28-norm a values:Prohibition ;
     cml:curationStatus cml:Proposed .
 
 concept:gci-1949-article-29 a cml:Concept ;
-    skos:prefLabel "Article 29 - Status of auxiliary personnel who have fallen into enemy hands" ;
+    skos:prefLabel "Article 29 - Status of auxiliary personnel who have fallen into enemy hands"@en ;
     cml:realizedBy doc:article-29 ;
     cml:curationStatus cml:Proposed ;
     prov:wasDerivedFrom <https://ihl-databases.icrc.org/en/ihl-treaties/gci-1949> ;
@@ -491,7 +491,7 @@ concept:gci-1949-article-29-norm a values:Obligation ;
     cml:curationStatus cml:Proposed .
 
 concept:gci-1949-article-30 a cml:Concept ;
-    skos:prefLabel "Article 30 - Return of medical and religious personnel" ;
+    skos:prefLabel "Article 30 - Return of medical and religious personnel"@en ;
     cml:realizedBy doc:article-30 ;
     cml:curationStatus cml:Proposed ;
     prov:wasDerivedFrom <https://ihl-databases.icrc.org/en/ihl-treaties/gci-1949> ;
@@ -507,7 +507,7 @@ concept:gci-1949-article-30-norm a values:Prohibition ;
     cml:curationStatus cml:Proposed .
 
 concept:gci-1949-article-31 a cml:Concept ;
-    skos:prefLabel "Article 31 - Selection of personnel for return" ;
+    skos:prefLabel "Article 31 - Selection of personnel for return"@en ;
     cml:realizedBy doc:article-31 ;
     cml:curationStatus cml:Proposed ;
     prov:wasDerivedFrom <https://ihl-databases.icrc.org/en/ihl-treaties/gci-1949> ;
@@ -524,7 +524,7 @@ concept:gci-1949-article-31-norm a values:Obligation ;
     cml:curationStatus cml:Proposed .
 
 concept:gci-1949-article-32 a cml:Concept ;
-    skos:prefLabel "Article 32 - Return of personnel belonging to neutral countries" ;
+    skos:prefLabel "Article 32 - Return of personnel belonging to neutral countries"@en ;
     cml:realizedBy doc:article-32 ;
     cml:curationStatus cml:Proposed ;
     prov:wasDerivedFrom <https://ihl-databases.icrc.org/en/ihl-treaties/gci-1949> ;
@@ -540,7 +540,7 @@ concept:gci-1949-article-32-norm a values:Prohibition ;
     cml:curationStatus cml:Proposed .
 
 concept:gci-1949-article-33 a cml:Concept ;
-    skos:prefLabel "Article 33 - Buildings and material of medical units and establishments" ;
+    skos:prefLabel "Article 33 - Buildings and material of medical units and establishments"@en ;
     cml:realizedBy doc:article-33 ;
     cml:curationStatus cml:Proposed ;
     prov:wasDerivedFrom <https://ihl-databases.icrc.org/en/ihl-treaties/gci-1949> ;
@@ -556,7 +556,7 @@ concept:gci-1949-article-33-norm a values:Prohibition ;
     cml:curationStatus cml:Proposed .
 
 concept:gci-1949-article-34 a cml:Concept ;
-    skos:prefLabel "Article 34 - Property of aid societies" ;
+    skos:prefLabel "Article 34 - Property of aid societies"@en ;
     cml:realizedBy doc:article-34 ;
     cml:curationStatus cml:Proposed ;
     prov:wasDerivedFrom <https://ihl-databases.icrc.org/en/ihl-treaties/gci-1949> ;
@@ -572,7 +572,7 @@ concept:gci-1949-article-34-norm a values:Prohibition ;
     cml:curationStatus cml:Proposed .
 
 concept:gci-1949-article-35 a cml:Concept ;
-    skos:prefLabel "Article 35 - Protection of medical transports" ;
+    skos:prefLabel "Article 35 - Protection of medical transports"@en ;
     cml:realizedBy doc:article-35 ;
     cml:curationStatus cml:Proposed ;
     prov:wasDerivedFrom <https://ihl-databases.icrc.org/en/ihl-treaties/gci-1949> ;
@@ -589,7 +589,7 @@ concept:gci-1949-article-35-norm a values:Obligation ;
     cml:curationStatus cml:Proposed .
 
 concept:gci-1949-article-36 a cml:Concept ;
-    skos:prefLabel "Article 36 - Medical aircraft" ;
+    skos:prefLabel "Article 36 - Medical aircraft"@en ;
     cml:realizedBy doc:article-36 ;
     cml:curationStatus cml:Proposed ;
     prov:wasDerivedFrom <https://ihl-databases.icrc.org/en/ihl-treaties/gci-1949> ;
@@ -605,7 +605,7 @@ concept:gci-1949-article-36-norm a values:Prohibition ;
     cml:curationStatus cml:Proposed .
 
 concept:gci-1949-article-37 a cml:Concept ;
-    skos:prefLabel "Article 37 - Flight over neutral countries. Landing of the wounded and sick" ;
+    skos:prefLabel "Article 37 - Flight over neutral countries. Landing of the wounded and sick"@en ;
     cml:realizedBy doc:article-37 ;
     cml:curationStatus cml:Proposed ;
     prov:wasDerivedFrom <https://ihl-databases.icrc.org/en/ihl-treaties/gci-1949> ;
@@ -622,7 +622,7 @@ concept:gci-1949-article-37-norm a values:Obligation ;
     cml:curationStatus cml:Proposed .
 
 concept:gci-1949-article-38 a cml:Concept ;
-    skos:prefLabel "Article 38 - Emblem of the Convention" ;
+    skos:prefLabel "Article 38 - Emblem of the Convention"@en ;
     cml:realizedBy doc:article-38 ;
     cml:curationStatus cml:Proposed ;
     prov:wasDerivedFrom <https://ihl-databases.icrc.org/en/ihl-treaties/gci-1949> ;
@@ -638,7 +638,7 @@ concept:gci-1949-article-38-norm a values:Undertaking ;
     cml:curationStatus cml:Proposed .
 
 concept:gci-1949-article-39 a cml:Concept ;
-    skos:prefLabel "Article 39 - Use of the emblem" ;
+    skos:prefLabel "Article 39 - Use of the emblem"@en ;
     cml:realizedBy doc:article-39 ;
     cml:curationStatus cml:Proposed ;
     prov:wasDerivedFrom <https://ihl-databases.icrc.org/en/ihl-treaties/gci-1949> ;
@@ -655,7 +655,7 @@ concept:gci-1949-article-39-norm a values:Obligation ;
     cml:curationStatus cml:Proposed .
 
 concept:gci-1949-article-40 a cml:Concept ;
-    skos:prefLabel "Article 40 - Identification of medical and religious personnel" ;
+    skos:prefLabel "Article 40 - Identification of medical and religious personnel"@en ;
     cml:realizedBy doc:article-40 ;
     cml:curationStatus cml:Proposed ;
     prov:wasDerivedFrom <https://ihl-databases.icrc.org/en/ihl-treaties/gci-1949> ;
@@ -671,7 +671,7 @@ concept:gci-1949-article-40-norm a values:Right ;
     cml:curationStatus cml:Proposed .
 
 concept:gci-1949-article-41 a cml:Concept ;
-    skos:prefLabel "Article 41 - Identification of auxiliary personnel" ;
+    skos:prefLabel "Article 41 - Identification of auxiliary personnel"@en ;
     cml:realizedBy doc:article-41 ;
     cml:curationStatus cml:Proposed ;
     prov:wasDerivedFrom <https://ihl-databases.icrc.org/en/ihl-treaties/gci-1949> ;
@@ -688,7 +688,7 @@ concept:gci-1949-article-41-norm a values:Obligation ;
     cml:curationStatus cml:Proposed .
 
 concept:gci-1949-article-42 a cml:Concept ;
-    skos:prefLabel "Article 42 - Marking of medical units and establishments" ;
+    skos:prefLabel "Article 42 - Marking of medical units and establishments"@en ;
     cml:realizedBy doc:article-42 ;
     cml:curationStatus cml:Proposed ;
     prov:wasDerivedFrom <https://ihl-databases.icrc.org/en/ihl-treaties/gci-1949> ;
@@ -704,7 +704,7 @@ concept:gci-1949-article-42-norm a values:Prohibition ;
     cml:curationStatus cml:Proposed .
 
 concept:gci-1949-article-43 a cml:Concept ;
-    skos:prefLabel "Article 43 - Marking of units of neutral countries" ;
+    skos:prefLabel "Article 43 - Marking of units of neutral countries"@en ;
     cml:realizedBy doc:article-43 ;
     cml:curationStatus cml:Proposed ;
     prov:wasDerivedFrom <https://ihl-databases.icrc.org/en/ihl-treaties/gci-1949> ;
@@ -720,7 +720,7 @@ concept:gci-1949-article-43-norm a values:Undertaking ;
     cml:curationStatus cml:Proposed .
 
 concept:gci-1949-article-44 a cml:Concept ;
-    skos:prefLabel "Article 44 - Restrictions in the use of the emblem. Exceptions" ;
+    skos:prefLabel "Article 44 - Restrictions in the use of the emblem. Exceptions"@en ;
     cml:realizedBy doc:article-44 ;
     cml:curationStatus cml:Proposed ;
     prov:wasDerivedFrom <https://ihl-databases.icrc.org/en/ihl-treaties/gci-1949> ;
@@ -736,7 +736,7 @@ concept:gci-1949-article-44-norm a values:Prohibition ;
     cml:curationStatus cml:Proposed .
 
 concept:gci-1949-article-45 a cml:Concept ;
-    skos:prefLabel "Article 45 - Detailed execution. Unforeseen cases" ;
+    skos:prefLabel "Article 45 - Detailed execution. Unforeseen cases"@en ;
     cml:realizedBy doc:article-45 ;
     cml:curationStatus cml:Proposed ;
     prov:wasDerivedFrom <https://ihl-databases.icrc.org/en/ihl-treaties/gci-1949> ;
@@ -753,7 +753,7 @@ concept:gci-1949-article-45-norm a values:Obligation ;
     cml:curationStatus cml:Proposed .
 
 concept:gci-1949-article-46 a cml:Concept ;
-    skos:prefLabel "Article 46 - Prohibition of reprisals" ;
+    skos:prefLabel "Article 46 - Prohibition of reprisals"@en ;
     cml:realizedBy doc:article-46 ;
     cml:curationStatus cml:Proposed ;
     prov:wasDerivedFrom <https://ihl-databases.icrc.org/en/ihl-treaties/gci-1949> ;
@@ -769,7 +769,7 @@ concept:gci-1949-article-46-norm a values:Prohibition ;
     cml:curationStatus cml:Proposed .
 
 concept:gci-1949-article-47 a cml:Concept ;
-    skos:prefLabel "Article 47 - Dissemination of the Convention" ;
+    skos:prefLabel "Article 47 - Dissemination of the Convention"@en ;
     cml:realizedBy doc:article-47 ;
     cml:curationStatus cml:Proposed ;
     prov:wasDerivedFrom <https://ihl-databases.icrc.org/en/ihl-treaties/gci-1949> ;
@@ -785,7 +785,7 @@ concept:gci-1949-article-47-norm a values:Undertaking ;
     cml:curationStatus cml:Proposed .
 
 concept:gci-1949-article-48 a cml:Concept ;
-    skos:prefLabel "Article 48 - Translations. Implementing laws and regulations" ;
+    skos:prefLabel "Article 48 - Translations. Implementing laws and regulations"@en ;
     cml:realizedBy doc:article-48 ;
     cml:curationStatus cml:Proposed ;
     prov:wasDerivedFrom <https://ihl-databases.icrc.org/en/ihl-treaties/gci-1949> ;
@@ -801,7 +801,7 @@ concept:gci-1949-article-48-norm a values:Undertaking ;
     cml:curationStatus cml:Proposed .
 
 concept:gci-1949-article-49 a cml:Concept ;
-    skos:prefLabel "Article 49 - Penal sanctions" ;
+    skos:prefLabel "Article 49 - Penal sanctions"@en ;
     cml:realizedBy doc:article-49 ;
     cml:curationStatus cml:Proposed ;
     prov:wasDerivedFrom <https://ihl-databases.icrc.org/en/ihl-treaties/gci-1949> ;
@@ -817,7 +817,7 @@ concept:gci-1949-article-49-norm a values:Prohibition ;
     cml:curationStatus cml:Proposed .
 
 concept:gci-1949-article-50 a cml:Concept ;
-    skos:prefLabel "Article 50 - Grave breaches" ;
+    skos:prefLabel "Article 50 - Grave breaches"@en ;
     cml:realizedBy doc:article-50 ;
     cml:curationStatus cml:Proposed ;
     prov:wasDerivedFrom <https://ihl-databases.icrc.org/en/ihl-treaties/gci-1949> ;
@@ -834,7 +834,7 @@ concept:gci-1949-article-50-norm a values:Obligation ;
     cml:curationStatus cml:Proposed .
 
 concept:gci-1949-article-51 a cml:Concept ;
-    skos:prefLabel "Article 51 - Responsibilities of the Contracting Parties" ;
+    skos:prefLabel "Article 51 - Responsibilities of the Contracting Parties"@en ;
     cml:realizedBy doc:article-51 ;
     cml:curationStatus cml:Proposed ;
     prov:wasDerivedFrom <https://ihl-databases.icrc.org/en/ihl-treaties/gci-1949> ;
@@ -851,7 +851,7 @@ concept:gci-1949-article-51-norm a values:Obligation ;
     cml:curationStatus cml:Proposed .
 
 concept:gci-1949-article-52 a cml:Concept ;
-    skos:prefLabel "Article 52 - Enquiry procedure" ;
+    skos:prefLabel "Article 52 - Enquiry procedure"@en ;
     cml:realizedBy doc:article-52 ;
     cml:curationStatus cml:Proposed ;
     prov:wasDerivedFrom <https://ihl-databases.icrc.org/en/ihl-treaties/gci-1949> ;
@@ -868,7 +868,7 @@ concept:gci-1949-article-52-norm a values:Obligation ;
     cml:curationStatus cml:Proposed .
 
 concept:gci-1949-article-53 a cml:Concept ;
-    skos:prefLabel "Article 53 - Misuse of the emblem" ;
+    skos:prefLabel "Article 53 - Misuse of the emblem"@en ;
     cml:realizedBy doc:article-53 ;
     cml:curationStatus cml:Proposed ;
     prov:wasDerivedFrom <https://ihl-databases.icrc.org/en/ihl-treaties/gci-1949> ;
@@ -884,7 +884,7 @@ concept:gci-1949-article-53-norm a values:Prohibition ;
     cml:curationStatus cml:Proposed .
 
 concept:gci-1949-article-54 a cml:Concept ;
-    skos:prefLabel "Article 54 - Prevention of misuse of the emblem" ;
+    skos:prefLabel "Article 54 - Prevention of misuse of the emblem"@en ;
     cml:realizedBy doc:article-54 ;
     cml:curationStatus cml:Proposed ;
     prov:wasDerivedFrom <https://ihl-databases.icrc.org/en/ihl-treaties/gci-1949> ;
@@ -900,7 +900,7 @@ concept:gci-1949-article-54-norm a values:Undertaking ;
     cml:curationStatus cml:Proposed .
 
 concept:gci-1949-article-55 a cml:Concept ;
-    skos:prefLabel "Article 55 - Languages" ;
+    skos:prefLabel "Article 55 - Languages"@en ;
     cml:realizedBy doc:article-55 ;
     cml:curationStatus cml:Proposed ;
     prov:wasDerivedFrom <https://ihl-databases.icrc.org/en/ihl-treaties/gci-1949> ;
@@ -916,7 +916,7 @@ concept:gci-1949-article-55-norm a values:Undertaking ;
     cml:curationStatus cml:Proposed .
 
 concept:gci-1949-article-56 a cml:Concept ;
-    skos:prefLabel "Article 56 - Signature" ;
+    skos:prefLabel "Article 56 - Signature"@en ;
     cml:realizedBy doc:article-56 ;
     cml:curationStatus cml:Proposed ;
     prov:wasDerivedFrom <https://ihl-databases.icrc.org/en/ihl-treaties/gci-1949> ;
@@ -932,7 +932,7 @@ concept:gci-1949-article-56-norm a values:Undertaking ;
     cml:curationStatus cml:Proposed .
 
 concept:gci-1949-article-57 a cml:Concept ;
-    skos:prefLabel "Article 57 - Ratification" ;
+    skos:prefLabel "Article 57 - Ratification"@en ;
     cml:realizedBy doc:article-57 ;
     cml:curationStatus cml:Proposed ;
     prov:wasDerivedFrom <https://ihl-databases.icrc.org/en/ihl-treaties/gci-1949> ;
@@ -949,7 +949,7 @@ concept:gci-1949-article-57-norm a values:Obligation ;
     cml:curationStatus cml:Proposed .
 
 concept:gci-1949-article-58 a cml:Concept ;
-    skos:prefLabel "Article 58 - Coming into force" ;
+    skos:prefLabel "Article 58 - Coming into force"@en ;
     cml:realizedBy doc:article-58 ;
     cml:curationStatus cml:Proposed ;
     prov:wasDerivedFrom <https://ihl-databases.icrc.org/en/ihl-treaties/gci-1949> ;
@@ -965,7 +965,7 @@ concept:gci-1949-article-58-norm a values:Undertaking ;
     cml:curationStatus cml:Proposed .
 
 concept:gci-1949-article-59 a cml:Concept ;
-    skos:prefLabel "Article 59 - Relation to previous Conventions" ;
+    skos:prefLabel "Article 59 - Relation to previous Conventions"@en ;
     cml:realizedBy doc:article-59 ;
     cml:curationStatus cml:Proposed ;
     prov:wasDerivedFrom <https://ihl-databases.icrc.org/en/ihl-treaties/gci-1949> ;
@@ -981,7 +981,7 @@ concept:gci-1949-article-59-norm a values:Undertaking ;
     cml:curationStatus cml:Proposed .
 
 concept:gci-1949-article-60 a cml:Concept ;
-    skos:prefLabel "Article 60 - Accession" ;
+    skos:prefLabel "Article 60 - Accession"@en ;
     cml:realizedBy doc:article-60 ;
     cml:curationStatus cml:Proposed ;
     prov:wasDerivedFrom <https://ihl-databases.icrc.org/en/ihl-treaties/gci-1949> ;
@@ -998,7 +998,7 @@ concept:gci-1949-article-60-norm a values:Obligation ;
     cml:curationStatus cml:Proposed .
 
 concept:gci-1949-article-61 a cml:Concept ;
-    skos:prefLabel "Article 61 - Notification of accessions" ;
+    skos:prefLabel "Article 61 - Notification of accessions"@en ;
     cml:realizedBy doc:article-61 ;
     cml:curationStatus cml:Proposed ;
     prov:wasDerivedFrom <https://ihl-databases.icrc.org/en/ihl-treaties/gci-1949> ;
@@ -1015,7 +1015,7 @@ concept:gci-1949-article-61-norm a values:Obligation ;
     cml:curationStatus cml:Proposed .
 
 concept:gci-1949-article-62 a cml:Concept ;
-    skos:prefLabel "Article 62 - Immediate effect" ;
+    skos:prefLabel "Article 62 - Immediate effect"@en ;
     cml:realizedBy doc:article-62 ;
     cml:curationStatus cml:Proposed ;
     prov:wasDerivedFrom <https://ihl-databases.icrc.org/en/ihl-treaties/gci-1949> ;
@@ -1031,7 +1031,7 @@ concept:gci-1949-article-62-norm a values:Undertaking ;
     cml:curationStatus cml:Proposed .
 
 concept:gci-1949-article-63 a cml:Concept ;
-    skos:prefLabel "Article 63 - Denunciation" ;
+    skos:prefLabel "Article 63 - Denunciation"@en ;
     cml:realizedBy doc:article-63 ;
     cml:curationStatus cml:Proposed ;
     prov:wasDerivedFrom <https://ihl-databases.icrc.org/en/ihl-treaties/gci-1949> ;
@@ -1047,7 +1047,7 @@ concept:gci-1949-article-63-norm a values:Prohibition ;
     cml:curationStatus cml:Proposed .
 
 concept:gci-1949-article-64 a cml:Concept ;
-    skos:prefLabel "Article 64 - Registration with the United Nations" ;
+    skos:prefLabel "Article 64 - Registration with the United Nations"@en ;
     cml:realizedBy doc:article-64 ;
     cml:curationStatus cml:Proposed ;
     prov:wasDerivedFrom <https://ihl-databases.icrc.org/en/ihl-treaties/gci-1949> ;

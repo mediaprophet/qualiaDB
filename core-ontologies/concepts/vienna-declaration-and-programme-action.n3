@@ -17,7 +17,7 @@
 # ============================================================
 
 concept:vienna-declaration-and-programme-action-paragraph-2 a cml:Concept ;
-    skos:prefLabel "Paragraph 2" ;
+    skos:prefLabel "Paragraph 2"@en ;
     cml:realizedBy doc:paragraph-2 ;
     cml:curationStatus cml:Proposed ;
     prov:wasDerivedFrom <https://www.ohchr.org/en/instruments-mechanisms/instruments/vienna-declaration-and-programme-action> ;
@@ -32,7 +32,7 @@ concept:vienna-declaration-and-programme-action-paragraph-2-norm a values:Undert
     cml:curationStatus cml:Proposed .
 
 concept:vienna-declaration-and-programme-action-paragraph-3 a cml:Concept ;
-    skos:prefLabel "Paragraph 3" ;
+    skos:prefLabel "Paragraph 3"@en ;
     cml:realizedBy doc:paragraph-3 ;
     cml:curationStatus cml:Proposed ;
     prov:wasDerivedFrom <https://www.ohchr.org/en/instruments-mechanisms/instruments/vienna-declaration-and-programme-action> ;
@@ -47,7 +47,7 @@ concept:vienna-declaration-and-programme-action-paragraph-3-norm a values:Undert
     cml:curationStatus cml:Proposed .
 
 concept:vienna-declaration-and-programme-action-paragraph-4 a cml:Concept ;
-    skos:prefLabel "Paragraph 4" ;
+    skos:prefLabel "Paragraph 4"@en ;
     cml:realizedBy doc:paragraph-4 ;
     cml:curationStatus cml:Proposed ;
     prov:wasDerivedFrom <https://www.ohchr.org/en/instruments-mechanisms/instruments/vienna-declaration-and-programme-action> ;
@@ -62,7 +62,7 @@ concept:vienna-declaration-and-programme-action-paragraph-4-norm a values:Undert
     cml:curationStatus cml:Proposed .
 
 concept:vienna-declaration-and-programme-action-paragraph-5 a cml:Concept ;
-    skos:prefLabel "Paragraph 5" ;
+    skos:prefLabel "Paragraph 5"@en ;
     cml:realizedBy doc:paragraph-5 ;
     cml:curationStatus cml:Proposed ;
     prov:wasDerivedFrom <https://www.ohchr.org/en/instruments-mechanisms/instruments/vienna-declaration-and-programme-action> ;
@@ -77,7 +77,7 @@ concept:vienna-declaration-and-programme-action-paragraph-5-norm a values:Undert
     cml:curationStatus cml:Proposed .
 
 concept:vienna-declaration-and-programme-action-paragraph-6 a cml:Concept ;
-    skos:prefLabel "Paragraph 6" ;
+    skos:prefLabel "Paragraph 6"@en ;
     cml:realizedBy doc:paragraph-6 ;
     cml:curationStatus cml:Proposed ;
     prov:wasDerivedFrom <https://www.ohchr.org/en/instruments-mechanisms/instruments/vienna-declaration-and-programme-action> ;
@@ -92,7 +92,7 @@ concept:vienna-declaration-and-programme-action-paragraph-6-norm a values:Undert
     cml:curationStatus cml:Proposed .
 
 concept:vienna-declaration-and-programme-action-paragraph-7 a cml:Concept ;
-    skos:prefLabel "Paragraph 7" ;
+    skos:prefLabel "Paragraph 7"@en ;
     cml:realizedBy doc:paragraph-7 ;
     cml:curationStatus cml:Proposed ;
     prov:wasDerivedFrom <https://www.ohchr.org/en/instruments-mechanisms/instruments/vienna-declaration-and-programme-action> ;
@@ -107,7 +107,7 @@ concept:vienna-declaration-and-programme-action-paragraph-7-norm a values:Undert
     cml:curationStatus cml:Proposed .
 
 concept:vienna-declaration-and-programme-action-paragraph-8 a cml:Concept ;
-    skos:prefLabel "Paragraph 8" ;
+    skos:prefLabel "Paragraph 8"@en ;
     cml:realizedBy doc:paragraph-8 ;
     cml:curationStatus cml:Proposed ;
     prov:wasDerivedFrom <https://www.ohchr.org/en/instruments-mechanisms/instruments/vienna-declaration-and-programme-action> ;
@@ -122,7 +122,7 @@ concept:vienna-declaration-and-programme-action-paragraph-8-norm a values:Undert
     cml:curationStatus cml:Proposed .
 
 concept:vienna-declaration-and-programme-action-paragraph-9 a cml:Concept ;
-    skos:prefLabel "Paragraph 9" ;
+    skos:prefLabel "Paragraph 9"@en ;
     cml:realizedBy doc:paragraph-9 ;
     cml:curationStatus cml:Proposed ;
     prov:wasDerivedFrom <https://www.ohchr.org/en/instruments-mechanisms/instruments/vienna-declaration-and-programme-action> ;
@@ -137,7 +137,7 @@ concept:vienna-declaration-and-programme-action-paragraph-9-norm a values:Undert
     cml:curationStatus cml:Proposed .
 
 concept:vienna-declaration-and-programme-action-paragraph-10 a cml:Concept ;
-    skos:prefLabel "Paragraph 10" ;
+    skos:prefLabel "Paragraph 10"@en ;
     cml:realizedBy doc:paragraph-10 ;
     cml:curationStatus cml:Proposed ;
     prov:wasDerivedFrom <https://www.ohchr.org/en/instruments-mechanisms/instruments/vienna-declaration-and-programme-action> ;
@@ -152,7 +152,7 @@ concept:vienna-declaration-and-programme-action-paragraph-10-norm a values:Under
     cml:curationStatus cml:Proposed .
 
 concept:vienna-declaration-and-programme-action-paragraph-11 a cml:Concept ;
-    skos:prefLabel "Paragraph 11" ;
+    skos:prefLabel "Paragraph 11"@en ;
     cml:realizedBy doc:paragraph-11 ;
     cml:curationStatus cml:Proposed ;
     prov:wasDerivedFrom <https://www.ohchr.org/en/instruments-mechanisms/instruments/vienna-declaration-and-programme-action> ;
@@ -167,7 +167,7 @@ concept:vienna-declaration-and-programme-action-paragraph-11-norm a values:Under
     cml:curationStatus cml:Proposed .
 
 concept:vienna-declaration-and-programme-action-paragraph-12 a cml:Concept ;
-    skos:prefLabel "Paragraph 12" ;
+    skos:prefLabel "Paragraph 12"@en ;
     cml:realizedBy doc:paragraph-12 ;
     cml:curationStatus cml:Proposed ;
     prov:wasDerivedFrom <https://www.ohchr.org/en/instruments-mechanisms/instruments/vienna-declaration-and-programme-action> ;
@@ -182,7 +182,7 @@ concept:vienna-declaration-and-programme-action-paragraph-12-norm a values:Under
     cml:curationStatus cml:Proposed .
 
 concept:vienna-declaration-and-programme-action-paragraph-13 a cml:Concept ;
-    skos:prefLabel "Paragraph 13" ;
+    skos:prefLabel "Paragraph 13"@en ;
     cml:realizedBy doc:paragraph-13 ;
     cml:curationStatus cml:Proposed ;
     prov:wasDerivedFrom <https://www.ohchr.org/en/instruments-mechanisms/instruments/vienna-declaration-and-programme-action> ;
@@ -197,7 +197,7 @@ concept:vienna-declaration-and-programme-action-paragraph-13-norm a values:Under
     cml:curationStatus cml:Proposed .
 
 concept:vienna-declaration-and-programme-action-paragraph-14 a cml:Concept ;
-    skos:prefLabel "Paragraph 14" ;
+    skos:prefLabel "Paragraph 14"@en ;
     cml:realizedBy doc:paragraph-14 ;
     cml:curationStatus cml:Proposed ;
     prov:wasDerivedFrom <https://www.ohchr.org/en/instruments-mechanisms/instruments/vienna-declaration-and-programme-action> ;
@@ -212,7 +212,7 @@ concept:vienna-declaration-and-programme-action-paragraph-14-norm a values:Under
     cml:curationStatus cml:Proposed .
 
 concept:vienna-declaration-and-programme-action-paragraph-15 a cml:Concept ;
-    skos:prefLabel "Paragraph 15" ;
+    skos:prefLabel "Paragraph 15"@en ;
     cml:realizedBy doc:paragraph-15 ;
     cml:curationStatus cml:Proposed ;
     prov:wasDerivedFrom <https://www.ohchr.org/en/instruments-mechanisms/instruments/vienna-declaration-and-programme-action> ;
@@ -227,7 +227,7 @@ concept:vienna-declaration-and-programme-action-paragraph-15-norm a values:Under
     cml:curationStatus cml:Proposed .
 
 concept:vienna-declaration-and-programme-action-paragraph-16 a cml:Concept ;
-    skos:prefLabel "Paragraph 16" ;
+    skos:prefLabel "Paragraph 16"@en ;
     cml:realizedBy doc:paragraph-16 ;
     cml:curationStatus cml:Proposed ;
     prov:wasDerivedFrom <https://www.ohchr.org/en/instruments-mechanisms/instruments/vienna-declaration-and-programme-action> ;
@@ -242,7 +242,7 @@ concept:vienna-declaration-and-programme-action-paragraph-16-norm a values:Under
     cml:curationStatus cml:Proposed .
 
 concept:vienna-declaration-and-programme-action-paragraph-17 a cml:Concept ;
-    skos:prefLabel "Paragraph 17" ;
+    skos:prefLabel "Paragraph 17"@en ;
     cml:realizedBy doc:paragraph-17 ;
     cml:curationStatus cml:Proposed ;
     prov:wasDerivedFrom <https://www.ohchr.org/en/instruments-mechanisms/instruments/vienna-declaration-and-programme-action> ;
@@ -257,7 +257,7 @@ concept:vienna-declaration-and-programme-action-paragraph-17-norm a values:Under
     cml:curationStatus cml:Proposed .
 
 concept:vienna-declaration-and-programme-action-paragraph-18 a cml:Concept ;
-    skos:prefLabel "Paragraph 18" ;
+    skos:prefLabel "Paragraph 18"@en ;
     cml:realizedBy doc:paragraph-18 ;
     cml:curationStatus cml:Proposed ;
     prov:wasDerivedFrom <https://www.ohchr.org/en/instruments-mechanisms/instruments/vienna-declaration-and-programme-action> ;
@@ -272,7 +272,7 @@ concept:vienna-declaration-and-programme-action-paragraph-18-norm a values:Under
     cml:curationStatus cml:Proposed .
 
 concept:vienna-declaration-and-programme-action-paragraph-19 a cml:Concept ;
-    skos:prefLabel "Paragraph 19" ;
+    skos:prefLabel "Paragraph 19"@en ;
     cml:realizedBy doc:paragraph-19 ;
     cml:curationStatus cml:Proposed ;
     prov:wasDerivedFrom <https://www.ohchr.org/en/instruments-mechanisms/instruments/vienna-declaration-and-programme-action> ;
@@ -287,7 +287,7 @@ concept:vienna-declaration-and-programme-action-paragraph-19-norm a values:Under
     cml:curationStatus cml:Proposed .
 
 concept:vienna-declaration-and-programme-action-paragraph-20 a cml:Concept ;
-    skos:prefLabel "Paragraph 20" ;
+    skos:prefLabel "Paragraph 20"@en ;
     cml:realizedBy doc:paragraph-20 ;
     cml:curationStatus cml:Proposed ;
     prov:wasDerivedFrom <https://www.ohchr.org/en/instruments-mechanisms/instruments/vienna-declaration-and-programme-action> ;
@@ -302,7 +302,7 @@ concept:vienna-declaration-and-programme-action-paragraph-20-norm a values:Under
     cml:curationStatus cml:Proposed .
 
 concept:vienna-declaration-and-programme-action-paragraph-21 a cml:Concept ;
-    skos:prefLabel "Paragraph 21" ;
+    skos:prefLabel "Paragraph 21"@en ;
     cml:realizedBy doc:paragraph-21 ;
     cml:curationStatus cml:Proposed ;
     prov:wasDerivedFrom <https://www.ohchr.org/en/instruments-mechanisms/instruments/vienna-declaration-and-programme-action> ;
@@ -317,7 +317,7 @@ concept:vienna-declaration-and-programme-action-paragraph-21-norm a values:Under
     cml:curationStatus cml:Proposed .
 
 concept:vienna-declaration-and-programme-action-paragraph-22 a cml:Concept ;
-    skos:prefLabel "Paragraph 22" ;
+    skos:prefLabel "Paragraph 22"@en ;
     cml:realizedBy doc:paragraph-22 ;
     cml:curationStatus cml:Proposed ;
     prov:wasDerivedFrom <https://www.ohchr.org/en/instruments-mechanisms/instruments/vienna-declaration-and-programme-action> ;
@@ -332,7 +332,7 @@ concept:vienna-declaration-and-programme-action-paragraph-22-norm a values:Under
     cml:curationStatus cml:Proposed .
 
 concept:vienna-declaration-and-programme-action-paragraph-23 a cml:Concept ;
-    skos:prefLabel "Paragraph 23" ;
+    skos:prefLabel "Paragraph 23"@en ;
     cml:realizedBy doc:paragraph-23 ;
     cml:curationStatus cml:Proposed ;
     prov:wasDerivedFrom <https://www.ohchr.org/en/instruments-mechanisms/instruments/vienna-declaration-and-programme-action> ;
@@ -347,7 +347,7 @@ concept:vienna-declaration-and-programme-action-paragraph-23-norm a values:Under
     cml:curationStatus cml:Proposed .
 
 concept:vienna-declaration-and-programme-action-paragraph-24 a cml:Concept ;
-    skos:prefLabel "Paragraph 24" ;
+    skos:prefLabel "Paragraph 24"@en ;
     cml:realizedBy doc:paragraph-24 ;
     cml:curationStatus cml:Proposed ;
     prov:wasDerivedFrom <https://www.ohchr.org/en/instruments-mechanisms/instruments/vienna-declaration-and-programme-action> ;
@@ -363,7 +363,7 @@ concept:vienna-declaration-and-programme-action-paragraph-24-norm a values:Right
     cml:curationStatus cml:Proposed .
 
 concept:vienna-declaration-and-programme-action-paragraph-25 a cml:Concept ;
-    skos:prefLabel "Paragraph 25" ;
+    skos:prefLabel "Paragraph 25"@en ;
     cml:realizedBy doc:paragraph-25 ;
     cml:curationStatus cml:Proposed ;
     prov:wasDerivedFrom <https://www.ohchr.org/en/instruments-mechanisms/instruments/vienna-declaration-and-programme-action> ;
@@ -378,7 +378,7 @@ concept:vienna-declaration-and-programme-action-paragraph-25-norm a values:Under
     cml:curationStatus cml:Proposed .
 
 concept:vienna-declaration-and-programme-action-paragraph-26 a cml:Concept ;
-    skos:prefLabel "Paragraph 26" ;
+    skos:prefLabel "Paragraph 26"@en ;
     cml:realizedBy doc:paragraph-26 ;
     cml:curationStatus cml:Proposed ;
     prov:wasDerivedFrom <https://www.ohchr.org/en/instruments-mechanisms/instruments/vienna-declaration-and-programme-action> ;
@@ -394,7 +394,7 @@ concept:vienna-declaration-and-programme-action-paragraph-26-norm a values:Prohi
     cml:curationStatus cml:Proposed .
 
 concept:vienna-declaration-and-programme-action-paragraph-27 a cml:Concept ;
-    skos:prefLabel "Paragraph 27" ;
+    skos:prefLabel "Paragraph 27"@en ;
     cml:realizedBy doc:paragraph-27 ;
     cml:curationStatus cml:Proposed ;
     prov:wasDerivedFrom <https://www.ohchr.org/en/instruments-mechanisms/instruments/vienna-declaration-and-programme-action> ;
@@ -409,7 +409,7 @@ concept:vienna-declaration-and-programme-action-paragraph-27-norm a values:Under
     cml:curationStatus cml:Proposed .
 
 concept:vienna-declaration-and-programme-action-paragraph-28 a cml:Concept ;
-    skos:prefLabel "Paragraph 28" ;
+    skos:prefLabel "Paragraph 28"@en ;
     cml:realizedBy doc:paragraph-28 ;
     cml:curationStatus cml:Proposed ;
     prov:wasDerivedFrom <https://www.ohchr.org/en/instruments-mechanisms/instruments/vienna-declaration-and-programme-action> ;
@@ -424,7 +424,7 @@ concept:vienna-declaration-and-programme-action-paragraph-28-norm a values:Under
     cml:curationStatus cml:Proposed .
 
 concept:vienna-declaration-and-programme-action-paragraph-29 a cml:Concept ;
-    skos:prefLabel "Paragraph 29" ;
+    skos:prefLabel "Paragraph 29"@en ;
     cml:realizedBy doc:paragraph-29 ;
     cml:curationStatus cml:Proposed ;
     prov:wasDerivedFrom <https://www.ohchr.org/en/instruments-mechanisms/instruments/vienna-declaration-and-programme-action> ;
@@ -439,7 +439,7 @@ concept:vienna-declaration-and-programme-action-paragraph-29-norm a values:Under
     cml:curationStatus cml:Proposed .
 
 concept:vienna-declaration-and-programme-action-paragraph-30 a cml:Concept ;
-    skos:prefLabel "Paragraph 30" ;
+    skos:prefLabel "Paragraph 30"@en ;
     cml:realizedBy doc:paragraph-30 ;
     cml:curationStatus cml:Proposed ;
     prov:wasDerivedFrom <https://www.ohchr.org/en/instruments-mechanisms/instruments/vienna-declaration-and-programme-action> ;
@@ -454,7 +454,7 @@ concept:vienna-declaration-and-programme-action-paragraph-30-norm a values:Under
     cml:curationStatus cml:Proposed .
 
 concept:vienna-declaration-and-programme-action-paragraph-31 a cml:Concept ;
-    skos:prefLabel "Paragraph 31" ;
+    skos:prefLabel "Paragraph 31"@en ;
     cml:realizedBy doc:paragraph-31 ;
     cml:curationStatus cml:Proposed ;
     prov:wasDerivedFrom <https://www.ohchr.org/en/instruments-mechanisms/instruments/vienna-declaration-and-programme-action> ;
@@ -469,7 +469,7 @@ concept:vienna-declaration-and-programme-action-paragraph-31-norm a values:Under
     cml:curationStatus cml:Proposed .
 
 concept:vienna-declaration-and-programme-action-paragraph-32 a cml:Concept ;
-    skos:prefLabel "Paragraph 32" ;
+    skos:prefLabel "Paragraph 32"@en ;
     cml:realizedBy doc:paragraph-32 ;
     cml:curationStatus cml:Proposed ;
     prov:wasDerivedFrom <https://www.ohchr.org/en/instruments-mechanisms/instruments/vienna-declaration-and-programme-action> ;
@@ -484,7 +484,7 @@ concept:vienna-declaration-and-programme-action-paragraph-32-norm a values:Under
     cml:curationStatus cml:Proposed .
 
 concept:vienna-declaration-and-programme-action-paragraph-33 a cml:Concept ;
-    skos:prefLabel "Paragraph 33" ;
+    skos:prefLabel "Paragraph 33"@en ;
     cml:realizedBy doc:paragraph-33 ;
     cml:curationStatus cml:Proposed ;
     prov:wasDerivedFrom <https://www.ohchr.org/en/instruments-mechanisms/instruments/vienna-declaration-and-programme-action> ;
@@ -499,7 +499,7 @@ concept:vienna-declaration-and-programme-action-paragraph-33-norm a values:Under
     cml:curationStatus cml:Proposed .
 
 concept:vienna-declaration-and-programme-action-paragraph-34 a cml:Concept ;
-    skos:prefLabel "Paragraph 34" ;
+    skos:prefLabel "Paragraph 34"@en ;
     cml:realizedBy doc:paragraph-34 ;
     cml:curationStatus cml:Proposed ;
     prov:wasDerivedFrom <https://www.ohchr.org/en/instruments-mechanisms/instruments/vienna-declaration-and-programme-action> ;
@@ -515,7 +515,7 @@ concept:vienna-declaration-and-programme-action-paragraph-34-norm a values:Right
     cml:curationStatus cml:Proposed .
 
 concept:vienna-declaration-and-programme-action-paragraph-35 a cml:Concept ;
-    skos:prefLabel "Paragraph 35" ;
+    skos:prefLabel "Paragraph 35"@en ;
     cml:realizedBy doc:paragraph-35 ;
     cml:curationStatus cml:Proposed ;
     prov:wasDerivedFrom <https://www.ohchr.org/en/instruments-mechanisms/instruments/vienna-declaration-and-programme-action> ;
@@ -531,7 +531,7 @@ concept:vienna-declaration-and-programme-action-paragraph-35-norm a values:Right
     cml:curationStatus cml:Proposed .
 
 concept:vienna-declaration-and-programme-action-paragraph-36 a cml:Concept ;
-    skos:prefLabel "Paragraph 36" ;
+    skos:prefLabel "Paragraph 36"@en ;
     cml:realizedBy doc:paragraph-36 ;
     cml:curationStatus cml:Proposed ;
     prov:wasDerivedFrom <https://www.ohchr.org/en/instruments-mechanisms/instruments/vienna-declaration-and-programme-action> ;
@@ -547,7 +547,7 @@ concept:vienna-declaration-and-programme-action-paragraph-36-norm a values:Prohi
     cml:curationStatus cml:Proposed .
 
 concept:vienna-declaration-and-programme-action-paragraph-37 a cml:Concept ;
-    skos:prefLabel "Paragraph 37" ;
+    skos:prefLabel "Paragraph 37"@en ;
     cml:realizedBy doc:paragraph-37 ;
     cml:curationStatus cml:Proposed ;
     prov:wasDerivedFrom <https://www.ohchr.org/en/instruments-mechanisms/instruments/vienna-declaration-and-programme-action> ;
@@ -563,7 +563,7 @@ concept:vienna-declaration-and-programme-action-paragraph-37-norm a values:Right
     cml:curationStatus cml:Proposed .
 
 concept:vienna-declaration-and-programme-action-paragraph-38 a cml:Concept ;
-    skos:prefLabel "Paragraph 38" ;
+    skos:prefLabel "Paragraph 38"@en ;
     cml:realizedBy doc:paragraph-38 ;
     cml:curationStatus cml:Proposed ;
     prov:wasDerivedFrom <https://www.ohchr.org/en/instruments-mechanisms/instruments/vienna-declaration-and-programme-action> ;
@@ -579,7 +579,7 @@ concept:vienna-declaration-and-programme-action-paragraph-38-norm a values:Right
     cml:curationStatus cml:Proposed .
 
 concept:vienna-declaration-and-programme-action-paragraph-39 a cml:Concept ;
-    skos:prefLabel "Paragraph 39" ;
+    skos:prefLabel "Paragraph 39"@en ;
     cml:realizedBy doc:paragraph-39 ;
     cml:curationStatus cml:Proposed ;
     prov:wasDerivedFrom <https://www.ohchr.org/en/instruments-mechanisms/instruments/vienna-declaration-and-programme-action> ;
@@ -595,7 +595,7 @@ concept:vienna-declaration-and-programme-action-paragraph-39-norm a values:Right
     cml:curationStatus cml:Proposed .
 
 concept:vienna-declaration-and-programme-action-paragraph-40 a cml:Concept ;
-    skos:prefLabel "Paragraph 40" ;
+    skos:prefLabel "Paragraph 40"@en ;
     cml:realizedBy doc:paragraph-40 ;
     cml:curationStatus cml:Proposed ;
     prov:wasDerivedFrom <https://www.ohchr.org/en/instruments-mechanisms/instruments/vienna-declaration-and-programme-action> ;
@@ -610,7 +610,7 @@ concept:vienna-declaration-and-programme-action-paragraph-40-norm a values:Under
     cml:curationStatus cml:Proposed .
 
 concept:vienna-declaration-and-programme-action-paragraph-41 a cml:Concept ;
-    skos:prefLabel "Paragraph 41" ;
+    skos:prefLabel "Paragraph 41"@en ;
     cml:realizedBy doc:paragraph-41 ;
     cml:curationStatus cml:Proposed ;
     prov:wasDerivedFrom <https://www.ohchr.org/en/instruments-mechanisms/instruments/vienna-declaration-and-programme-action> ;
@@ -626,7 +626,7 @@ concept:vienna-declaration-and-programme-action-paragraph-41-norm a values:Right
     cml:curationStatus cml:Proposed .
 
 concept:vienna-declaration-and-programme-action-paragraph-42 a cml:Concept ;
-    skos:prefLabel "Paragraph 42" ;
+    skos:prefLabel "Paragraph 42"@en ;
     cml:realizedBy doc:paragraph-42 ;
     cml:curationStatus cml:Proposed ;
     prov:wasDerivedFrom <https://www.ohchr.org/en/instruments-mechanisms/instruments/vienna-declaration-and-programme-action> ;
@@ -641,7 +641,7 @@ concept:vienna-declaration-and-programme-action-paragraph-42-norm a values:Under
     cml:curationStatus cml:Proposed .
 
 concept:vienna-declaration-and-programme-action-paragraph-43 a cml:Concept ;
-    skos:prefLabel "Paragraph 43" ;
+    skos:prefLabel "Paragraph 43"@en ;
     cml:realizedBy doc:paragraph-43 ;
     cml:curationStatus cml:Proposed ;
     prov:wasDerivedFrom <https://www.ohchr.org/en/instruments-mechanisms/instruments/vienna-declaration-and-programme-action> ;
@@ -656,7 +656,7 @@ concept:vienna-declaration-and-programme-action-paragraph-43-norm a values:Under
     cml:curationStatus cml:Proposed .
 
 concept:vienna-declaration-and-programme-action-paragraph-44 a cml:Concept ;
-    skos:prefLabel "Paragraph 44" ;
+    skos:prefLabel "Paragraph 44"@en ;
     cml:realizedBy doc:paragraph-44 ;
     cml:curationStatus cml:Proposed ;
     prov:wasDerivedFrom <https://www.ohchr.org/en/instruments-mechanisms/instruments/vienna-declaration-and-programme-action> ;
@@ -671,7 +671,7 @@ concept:vienna-declaration-and-programme-action-paragraph-44-norm a values:Under
     cml:curationStatus cml:Proposed .
 
 concept:vienna-declaration-and-programme-action-paragraph-45 a cml:Concept ;
-    skos:prefLabel "Paragraph 45" ;
+    skos:prefLabel "Paragraph 45"@en ;
     cml:realizedBy doc:paragraph-45 ;
     cml:curationStatus cml:Proposed ;
     prov:wasDerivedFrom <https://www.ohchr.org/en/instruments-mechanisms/instruments/vienna-declaration-and-programme-action> ;
@@ -686,7 +686,7 @@ concept:vienna-declaration-and-programme-action-paragraph-45-norm a values:Under
     cml:curationStatus cml:Proposed .
 
 concept:vienna-declaration-and-programme-action-paragraph-46 a cml:Concept ;
-    skos:prefLabel "Paragraph 46" ;
+    skos:prefLabel "Paragraph 46"@en ;
     cml:realizedBy doc:paragraph-46 ;
     cml:curationStatus cml:Proposed ;
     prov:wasDerivedFrom <https://www.ohchr.org/en/instruments-mechanisms/instruments/vienna-declaration-and-programme-action> ;
@@ -701,7 +701,7 @@ concept:vienna-declaration-and-programme-action-paragraph-46-norm a values:Under
     cml:curationStatus cml:Proposed .
 
 concept:vienna-declaration-and-programme-action-paragraph-47 a cml:Concept ;
-    skos:prefLabel "Paragraph 47" ;
+    skos:prefLabel "Paragraph 47"@en ;
     cml:realizedBy doc:paragraph-47 ;
     cml:curationStatus cml:Proposed ;
     prov:wasDerivedFrom <https://www.ohchr.org/en/instruments-mechanisms/instruments/vienna-declaration-and-programme-action> ;
@@ -716,7 +716,7 @@ concept:vienna-declaration-and-programme-action-paragraph-47-norm a values:Under
     cml:curationStatus cml:Proposed .
 
 concept:vienna-declaration-and-programme-action-paragraph-48 a cml:Concept ;
-    skos:prefLabel "Paragraph 48" ;
+    skos:prefLabel "Paragraph 48"@en ;
     cml:realizedBy doc:paragraph-48 ;
     cml:curationStatus cml:Proposed ;
     prov:wasDerivedFrom <https://www.ohchr.org/en/instruments-mechanisms/instruments/vienna-declaration-and-programme-action> ;
@@ -731,7 +731,7 @@ concept:vienna-declaration-and-programme-action-paragraph-48-norm a values:Under
     cml:curationStatus cml:Proposed .
 
 concept:vienna-declaration-and-programme-action-paragraph-49 a cml:Concept ;
-    skos:prefLabel "Paragraph 49" ;
+    skos:prefLabel "Paragraph 49"@en ;
     cml:realizedBy doc:paragraph-49 ;
     cml:curationStatus cml:Proposed ;
     prov:wasDerivedFrom <https://www.ohchr.org/en/instruments-mechanisms/instruments/vienna-declaration-and-programme-action> ;
@@ -746,7 +746,7 @@ concept:vienna-declaration-and-programme-action-paragraph-49-norm a values:Under
     cml:curationStatus cml:Proposed .
 
 concept:vienna-declaration-and-programme-action-paragraph-50 a cml:Concept ;
-    skos:prefLabel "Paragraph 50" ;
+    skos:prefLabel "Paragraph 50"@en ;
     cml:realizedBy doc:paragraph-50 ;
     cml:curationStatus cml:Proposed ;
     prov:wasDerivedFrom <https://www.ohchr.org/en/instruments-mechanisms/instruments/vienna-declaration-and-programme-action> ;
@@ -761,7 +761,7 @@ concept:vienna-declaration-and-programme-action-paragraph-50-norm a values:Under
     cml:curationStatus cml:Proposed .
 
 concept:vienna-declaration-and-programme-action-paragraph-51 a cml:Concept ;
-    skos:prefLabel "Paragraph 51" ;
+    skos:prefLabel "Paragraph 51"@en ;
     cml:realizedBy doc:paragraph-51 ;
     cml:curationStatus cml:Proposed ;
     prov:wasDerivedFrom <https://www.ohchr.org/en/instruments-mechanisms/instruments/vienna-declaration-and-programme-action> ;
@@ -776,7 +776,7 @@ concept:vienna-declaration-and-programme-action-paragraph-51-norm a values:Under
     cml:curationStatus cml:Proposed .
 
 concept:vienna-declaration-and-programme-action-paragraph-52 a cml:Concept ;
-    skos:prefLabel "Paragraph 52" ;
+    skos:prefLabel "Paragraph 52"@en ;
     cml:realizedBy doc:paragraph-52 ;
     cml:curationStatus cml:Proposed ;
     prov:wasDerivedFrom <https://www.ohchr.org/en/instruments-mechanisms/instruments/vienna-declaration-and-programme-action> ;
@@ -791,7 +791,7 @@ concept:vienna-declaration-and-programme-action-paragraph-52-norm a values:Under
     cml:curationStatus cml:Proposed .
 
 concept:vienna-declaration-and-programme-action-paragraph-53 a cml:Concept ;
-    skos:prefLabel "Paragraph 53" ;
+    skos:prefLabel "Paragraph 53"@en ;
     cml:realizedBy doc:paragraph-53 ;
     cml:curationStatus cml:Proposed ;
     prov:wasDerivedFrom <https://www.ohchr.org/en/instruments-mechanisms/instruments/vienna-declaration-and-programme-action> ;
@@ -806,7 +806,7 @@ concept:vienna-declaration-and-programme-action-paragraph-53-norm a values:Under
     cml:curationStatus cml:Proposed .
 
 concept:vienna-declaration-and-programme-action-paragraph-54 a cml:Concept ;
-    skos:prefLabel "Paragraph 54" ;
+    skos:prefLabel "Paragraph 54"@en ;
     cml:realizedBy doc:paragraph-54 ;
     cml:curationStatus cml:Proposed ;
     prov:wasDerivedFrom <https://www.ohchr.org/en/instruments-mechanisms/instruments/vienna-declaration-and-programme-action> ;
@@ -821,7 +821,7 @@ concept:vienna-declaration-and-programme-action-paragraph-54-norm a values:Under
     cml:curationStatus cml:Proposed .
 
 concept:vienna-declaration-and-programme-action-paragraph-55 a cml:Concept ;
-    skos:prefLabel "Paragraph 55" ;
+    skos:prefLabel "Paragraph 55"@en ;
     cml:realizedBy doc:paragraph-55 ;
     cml:curationStatus cml:Proposed ;
     prov:wasDerivedFrom <https://www.ohchr.org/en/instruments-mechanisms/instruments/vienna-declaration-and-programme-action> ;
@@ -837,7 +837,7 @@ concept:vienna-declaration-and-programme-action-paragraph-55-norm a values:Right
     cml:curationStatus cml:Proposed .
 
 concept:vienna-declaration-and-programme-action-paragraph-56 a cml:Concept ;
-    skos:prefLabel "Paragraph 56" ;
+    skos:prefLabel "Paragraph 56"@en ;
     cml:realizedBy doc:paragraph-56 ;
     cml:curationStatus cml:Proposed ;
     prov:wasDerivedFrom <https://www.ohchr.org/en/instruments-mechanisms/instruments/vienna-declaration-and-programme-action> ;
@@ -852,7 +852,7 @@ concept:vienna-declaration-and-programme-action-paragraph-56-norm a values:Under
     cml:curationStatus cml:Proposed .
 
 concept:vienna-declaration-and-programme-action-paragraph-57 a cml:Concept ;
-    skos:prefLabel "Paragraph 57" ;
+    skos:prefLabel "Paragraph 57"@en ;
     cml:realizedBy doc:paragraph-57 ;
     cml:curationStatus cml:Proposed ;
     prov:wasDerivedFrom <https://www.ohchr.org/en/instruments-mechanisms/instruments/vienna-declaration-and-programme-action> ;
@@ -867,7 +867,7 @@ concept:vienna-declaration-and-programme-action-paragraph-57-norm a values:Under
     cml:curationStatus cml:Proposed .
 
 concept:vienna-declaration-and-programme-action-paragraph-58 a cml:Concept ;
-    skos:prefLabel "Paragraph 58" ;
+    skos:prefLabel "Paragraph 58"@en ;
     cml:realizedBy doc:paragraph-58 ;
     cml:curationStatus cml:Proposed ;
     prov:wasDerivedFrom <https://www.ohchr.org/en/instruments-mechanisms/instruments/vienna-declaration-and-programme-action> ;
@@ -882,7 +882,7 @@ concept:vienna-declaration-and-programme-action-paragraph-58-norm a values:Under
     cml:curationStatus cml:Proposed .
 
 concept:vienna-declaration-and-programme-action-paragraph-59 a cml:Concept ;
-    skos:prefLabel "Paragraph 59" ;
+    skos:prefLabel "Paragraph 59"@en ;
     cml:realizedBy doc:paragraph-59 ;
     cml:curationStatus cml:Proposed ;
     prov:wasDerivedFrom <https://www.ohchr.org/en/instruments-mechanisms/instruments/vienna-declaration-and-programme-action> ;
@@ -897,7 +897,7 @@ concept:vienna-declaration-and-programme-action-paragraph-59-norm a values:Under
     cml:curationStatus cml:Proposed .
 
 concept:vienna-declaration-and-programme-action-paragraph-60 a cml:Concept ;
-    skos:prefLabel "Paragraph 60" ;
+    skos:prefLabel "Paragraph 60"@en ;
     cml:realizedBy doc:paragraph-60 ;
     cml:curationStatus cml:Proposed ;
     prov:wasDerivedFrom <https://www.ohchr.org/en/instruments-mechanisms/instruments/vienna-declaration-and-programme-action> ;
@@ -913,7 +913,7 @@ concept:vienna-declaration-and-programme-action-paragraph-60-norm a values:Right
     cml:curationStatus cml:Proposed .
 
 concept:vienna-declaration-and-programme-action-paragraph-61 a cml:Concept ;
-    skos:prefLabel "Paragraph 61" ;
+    skos:prefLabel "Paragraph 61"@en ;
     cml:realizedBy doc:paragraph-61 ;
     cml:curationStatus cml:Proposed ;
     prov:wasDerivedFrom <https://www.ohchr.org/en/instruments-mechanisms/instruments/vienna-declaration-and-programme-action> ;
@@ -928,7 +928,7 @@ concept:vienna-declaration-and-programme-action-paragraph-61-norm a values:Under
     cml:curationStatus cml:Proposed .
 
 concept:vienna-declaration-and-programme-action-paragraph-62 a cml:Concept ;
-    skos:prefLabel "Paragraph 62" ;
+    skos:prefLabel "Paragraph 62"@en ;
     cml:realizedBy doc:paragraph-62 ;
     cml:curationStatus cml:Proposed ;
     prov:wasDerivedFrom <https://www.ohchr.org/en/instruments-mechanisms/instruments/vienna-declaration-and-programme-action> ;
@@ -943,7 +943,7 @@ concept:vienna-declaration-and-programme-action-paragraph-62-norm a values:Under
     cml:curationStatus cml:Proposed .
 
 concept:vienna-declaration-and-programme-action-paragraph-63 a cml:Concept ;
-    skos:prefLabel "Paragraph 63" ;
+    skos:prefLabel "Paragraph 63"@en ;
     cml:realizedBy doc:paragraph-63 ;
     cml:curationStatus cml:Proposed ;
     prov:wasDerivedFrom <https://www.ohchr.org/en/instruments-mechanisms/instruments/vienna-declaration-and-programme-action> ;
@@ -958,7 +958,7 @@ concept:vienna-declaration-and-programme-action-paragraph-63-norm a values:Under
     cml:curationStatus cml:Proposed .
 
 concept:vienna-declaration-and-programme-action-paragraph-64 a cml:Concept ;
-    skos:prefLabel "Paragraph 64" ;
+    skos:prefLabel "Paragraph 64"@en ;
     cml:realizedBy doc:paragraph-64 ;
     cml:curationStatus cml:Proposed ;
     prov:wasDerivedFrom <https://www.ohchr.org/en/instruments-mechanisms/instruments/vienna-declaration-and-programme-action> ;
@@ -973,7 +973,7 @@ concept:vienna-declaration-and-programme-action-paragraph-64-norm a values:Under
     cml:curationStatus cml:Proposed .
 
 concept:vienna-declaration-and-programme-action-paragraph-65 a cml:Concept ;
-    skos:prefLabel "Paragraph 65" ;
+    skos:prefLabel "Paragraph 65"@en ;
     cml:realizedBy doc:paragraph-65 ;
     cml:curationStatus cml:Proposed ;
     prov:wasDerivedFrom <https://www.ohchr.org/en/instruments-mechanisms/instruments/vienna-declaration-and-programme-action> ;
@@ -988,7 +988,7 @@ concept:vienna-declaration-and-programme-action-paragraph-65-norm a values:Under
     cml:curationStatus cml:Proposed .
 
 concept:vienna-declaration-and-programme-action-paragraph-66 a cml:Concept ;
-    skos:prefLabel "Paragraph 66" ;
+    skos:prefLabel "Paragraph 66"@en ;
     cml:realizedBy doc:paragraph-66 ;
     cml:curationStatus cml:Proposed ;
     prov:wasDerivedFrom <https://www.ohchr.org/en/instruments-mechanisms/instruments/vienna-declaration-and-programme-action> ;
@@ -1003,7 +1003,7 @@ concept:vienna-declaration-and-programme-action-paragraph-66-norm a values:Under
     cml:curationStatus cml:Proposed .
 
 concept:vienna-declaration-and-programme-action-paragraph-67 a cml:Concept ;
-    skos:prefLabel "Paragraph 67" ;
+    skos:prefLabel "Paragraph 67"@en ;
     cml:realizedBy doc:paragraph-67 ;
     cml:curationStatus cml:Proposed ;
     prov:wasDerivedFrom <https://www.ohchr.org/en/instruments-mechanisms/instruments/vienna-declaration-and-programme-action> ;
@@ -1018,7 +1018,7 @@ concept:vienna-declaration-and-programme-action-paragraph-67-norm a values:Under
     cml:curationStatus cml:Proposed .
 
 concept:vienna-declaration-and-programme-action-paragraph-68 a cml:Concept ;
-    skos:prefLabel "Paragraph 68" ;
+    skos:prefLabel "Paragraph 68"@en ;
     cml:realizedBy doc:paragraph-68 ;
     cml:curationStatus cml:Proposed ;
     prov:wasDerivedFrom <https://www.ohchr.org/en/instruments-mechanisms/instruments/vienna-declaration-and-programme-action> ;
@@ -1033,7 +1033,7 @@ concept:vienna-declaration-and-programme-action-paragraph-68-norm a values:Under
     cml:curationStatus cml:Proposed .
 
 concept:vienna-declaration-and-programme-action-paragraph-69 a cml:Concept ;
-    skos:prefLabel "Paragraph 69" ;
+    skos:prefLabel "Paragraph 69"@en ;
     cml:realizedBy doc:paragraph-69 ;
     cml:curationStatus cml:Proposed ;
     prov:wasDerivedFrom <https://www.ohchr.org/en/instruments-mechanisms/instruments/vienna-declaration-and-programme-action> ;
@@ -1048,7 +1048,7 @@ concept:vienna-declaration-and-programme-action-paragraph-69-norm a values:Under
     cml:curationStatus cml:Proposed .
 
 concept:vienna-declaration-and-programme-action-paragraph-70 a cml:Concept ;
-    skos:prefLabel "Paragraph 70" ;
+    skos:prefLabel "Paragraph 70"@en ;
     cml:realizedBy doc:paragraph-70 ;
     cml:curationStatus cml:Proposed ;
     prov:wasDerivedFrom <https://www.ohchr.org/en/instruments-mechanisms/instruments/vienna-declaration-and-programme-action> ;
@@ -1063,7 +1063,7 @@ concept:vienna-declaration-and-programme-action-paragraph-70-norm a values:Under
     cml:curationStatus cml:Proposed .
 
 concept:vienna-declaration-and-programme-action-paragraph-71 a cml:Concept ;
-    skos:prefLabel "Paragraph 71" ;
+    skos:prefLabel "Paragraph 71"@en ;
     cml:realizedBy doc:paragraph-71 ;
     cml:curationStatus cml:Proposed ;
     prov:wasDerivedFrom <https://www.ohchr.org/en/instruments-mechanisms/instruments/vienna-declaration-and-programme-action> ;
@@ -1078,7 +1078,7 @@ concept:vienna-declaration-and-programme-action-paragraph-71-norm a values:Under
     cml:curationStatus cml:Proposed .
 
 concept:vienna-declaration-and-programme-action-paragraph-72 a cml:Concept ;
-    skos:prefLabel "Paragraph 72" ;
+    skos:prefLabel "Paragraph 72"@en ;
     cml:realizedBy doc:paragraph-72 ;
     cml:curationStatus cml:Proposed ;
     prov:wasDerivedFrom <https://www.ohchr.org/en/instruments-mechanisms/instruments/vienna-declaration-and-programme-action> ;
@@ -1093,7 +1093,7 @@ concept:vienna-declaration-and-programme-action-paragraph-72-norm a values:Under
     cml:curationStatus cml:Proposed .
 
 concept:vienna-declaration-and-programme-action-paragraph-73 a cml:Concept ;
-    skos:prefLabel "Paragraph 73" ;
+    skos:prefLabel "Paragraph 73"@en ;
     cml:realizedBy doc:paragraph-73 ;
     cml:curationStatus cml:Proposed ;
     prov:wasDerivedFrom <https://www.ohchr.org/en/instruments-mechanisms/instruments/vienna-declaration-and-programme-action> ;
@@ -1108,7 +1108,7 @@ concept:vienna-declaration-and-programme-action-paragraph-73-norm a values:Under
     cml:curationStatus cml:Proposed .
 
 concept:vienna-declaration-and-programme-action-paragraph-74 a cml:Concept ;
-    skos:prefLabel "Paragraph 74" ;
+    skos:prefLabel "Paragraph 74"@en ;
     cml:realizedBy doc:paragraph-74 ;
     cml:curationStatus cml:Proposed ;
     prov:wasDerivedFrom <https://www.ohchr.org/en/instruments-mechanisms/instruments/vienna-declaration-and-programme-action> ;
@@ -1123,7 +1123,7 @@ concept:vienna-declaration-and-programme-action-paragraph-74-norm a values:Under
     cml:curationStatus cml:Proposed .
 
 concept:vienna-declaration-and-programme-action-paragraph-75 a cml:Concept ;
-    skos:prefLabel "Paragraph 75" ;
+    skos:prefLabel "Paragraph 75"@en ;
     cml:realizedBy doc:paragraph-75 ;
     cml:curationStatus cml:Proposed ;
     prov:wasDerivedFrom <https://www.ohchr.org/en/instruments-mechanisms/instruments/vienna-declaration-and-programme-action> ;
@@ -1138,7 +1138,7 @@ concept:vienna-declaration-and-programme-action-paragraph-75-norm a values:Under
     cml:curationStatus cml:Proposed .
 
 concept:vienna-declaration-and-programme-action-paragraph-76 a cml:Concept ;
-    skos:prefLabel "Paragraph 76" ;
+    skos:prefLabel "Paragraph 76"@en ;
     cml:realizedBy doc:paragraph-76 ;
     cml:curationStatus cml:Proposed ;
     prov:wasDerivedFrom <https://www.ohchr.org/en/instruments-mechanisms/instruments/vienna-declaration-and-programme-action> ;
@@ -1153,7 +1153,7 @@ concept:vienna-declaration-and-programme-action-paragraph-76-norm a values:Under
     cml:curationStatus cml:Proposed .
 
 concept:vienna-declaration-and-programme-action-paragraph-77 a cml:Concept ;
-    skos:prefLabel "Paragraph 77" ;
+    skos:prefLabel "Paragraph 77"@en ;
     cml:realizedBy doc:paragraph-77 ;
     cml:curationStatus cml:Proposed ;
     prov:wasDerivedFrom <https://www.ohchr.org/en/instruments-mechanisms/instruments/vienna-declaration-and-programme-action> ;
@@ -1168,7 +1168,7 @@ concept:vienna-declaration-and-programme-action-paragraph-77-norm a values:Under
     cml:curationStatus cml:Proposed .
 
 concept:vienna-declaration-and-programme-action-paragraph-78 a cml:Concept ;
-    skos:prefLabel "Paragraph 78" ;
+    skos:prefLabel "Paragraph 78"@en ;
     cml:realizedBy doc:paragraph-78 ;
     cml:curationStatus cml:Proposed ;
     prov:wasDerivedFrom <https://www.ohchr.org/en/instruments-mechanisms/instruments/vienna-declaration-and-programme-action> ;
@@ -1183,7 +1183,7 @@ concept:vienna-declaration-and-programme-action-paragraph-78-norm a values:Under
     cml:curationStatus cml:Proposed .
 
 concept:vienna-declaration-and-programme-action-paragraph-79 a cml:Concept ;
-    skos:prefLabel "Paragraph 79" ;
+    skos:prefLabel "Paragraph 79"@en ;
     cml:realizedBy doc:paragraph-79 ;
     cml:curationStatus cml:Proposed ;
     prov:wasDerivedFrom <https://www.ohchr.org/en/instruments-mechanisms/instruments/vienna-declaration-and-programme-action> ;
@@ -1198,7 +1198,7 @@ concept:vienna-declaration-and-programme-action-paragraph-79-norm a values:Under
     cml:curationStatus cml:Proposed .
 
 concept:vienna-declaration-and-programme-action-paragraph-80 a cml:Concept ;
-    skos:prefLabel "Paragraph 80" ;
+    skos:prefLabel "Paragraph 80"@en ;
     cml:realizedBy doc:paragraph-80 ;
     cml:curationStatus cml:Proposed ;
     prov:wasDerivedFrom <https://www.ohchr.org/en/instruments-mechanisms/instruments/vienna-declaration-and-programme-action> ;
@@ -1213,7 +1213,7 @@ concept:vienna-declaration-and-programme-action-paragraph-80-norm a values:Under
     cml:curationStatus cml:Proposed .
 
 concept:vienna-declaration-and-programme-action-paragraph-81 a cml:Concept ;
-    skos:prefLabel "Paragraph 81" ;
+    skos:prefLabel "Paragraph 81"@en ;
     cml:realizedBy doc:paragraph-81 ;
     cml:curationStatus cml:Proposed ;
     prov:wasDerivedFrom <https://www.ohchr.org/en/instruments-mechanisms/instruments/vienna-declaration-and-programme-action> ;
@@ -1228,7 +1228,7 @@ concept:vienna-declaration-and-programme-action-paragraph-81-norm a values:Under
     cml:curationStatus cml:Proposed .
 
 concept:vienna-declaration-and-programme-action-paragraph-82 a cml:Concept ;
-    skos:prefLabel "Paragraph 82" ;
+    skos:prefLabel "Paragraph 82"@en ;
     cml:realizedBy doc:paragraph-82 ;
     cml:curationStatus cml:Proposed ;
     prov:wasDerivedFrom <https://www.ohchr.org/en/instruments-mechanisms/instruments/vienna-declaration-and-programme-action> ;
@@ -1243,7 +1243,7 @@ concept:vienna-declaration-and-programme-action-paragraph-82-norm a values:Under
     cml:curationStatus cml:Proposed .
 
 concept:vienna-declaration-and-programme-action-paragraph-83 a cml:Concept ;
-    skos:prefLabel "Paragraph 83" ;
+    skos:prefLabel "Paragraph 83"@en ;
     cml:realizedBy doc:paragraph-83 ;
     cml:curationStatus cml:Proposed ;
     prov:wasDerivedFrom <https://www.ohchr.org/en/instruments-mechanisms/instruments/vienna-declaration-and-programme-action> ;
@@ -1258,7 +1258,7 @@ concept:vienna-declaration-and-programme-action-paragraph-83-norm a values:Under
     cml:curationStatus cml:Proposed .
 
 concept:vienna-declaration-and-programme-action-paragraph-84 a cml:Concept ;
-    skos:prefLabel "Paragraph 84" ;
+    skos:prefLabel "Paragraph 84"@en ;
     cml:realizedBy doc:paragraph-84 ;
     cml:curationStatus cml:Proposed ;
     prov:wasDerivedFrom <https://www.ohchr.org/en/instruments-mechanisms/instruments/vienna-declaration-and-programme-action> ;
@@ -1274,7 +1274,7 @@ concept:vienna-declaration-and-programme-action-paragraph-84-norm a values:Prohi
     cml:curationStatus cml:Proposed .
 
 concept:vienna-declaration-and-programme-action-paragraph-85 a cml:Concept ;
-    skos:prefLabel "Paragraph 85" ;
+    skos:prefLabel "Paragraph 85"@en ;
     cml:realizedBy doc:paragraph-85 ;
     cml:curationStatus cml:Proposed ;
     prov:wasDerivedFrom <https://www.ohchr.org/en/instruments-mechanisms/instruments/vienna-declaration-and-programme-action> ;
@@ -1289,7 +1289,7 @@ concept:vienna-declaration-and-programme-action-paragraph-85-norm a values:Under
     cml:curationStatus cml:Proposed .
 
 concept:vienna-declaration-and-programme-action-paragraph-86 a cml:Concept ;
-    skos:prefLabel "Paragraph 86" ;
+    skos:prefLabel "Paragraph 86"@en ;
     cml:realizedBy doc:paragraph-86 ;
     cml:curationStatus cml:Proposed ;
     prov:wasDerivedFrom <https://www.ohchr.org/en/instruments-mechanisms/instruments/vienna-declaration-and-programme-action> ;
@@ -1304,7 +1304,7 @@ concept:vienna-declaration-and-programme-action-paragraph-86-norm a values:Under
     cml:curationStatus cml:Proposed .
 
 concept:vienna-declaration-and-programme-action-paragraph-87 a cml:Concept ;
-    skos:prefLabel "Paragraph 87" ;
+    skos:prefLabel "Paragraph 87"@en ;
     cml:realizedBy doc:paragraph-87 ;
     cml:curationStatus cml:Proposed ;
     prov:wasDerivedFrom <https://www.ohchr.org/en/instruments-mechanisms/instruments/vienna-declaration-and-programme-action> ;
@@ -1319,7 +1319,7 @@ concept:vienna-declaration-and-programme-action-paragraph-87-norm a values:Under
     cml:curationStatus cml:Proposed .
 
 concept:vienna-declaration-and-programme-action-paragraph-88 a cml:Concept ;
-    skos:prefLabel "Paragraph 88" ;
+    skos:prefLabel "Paragraph 88"@en ;
     cml:realizedBy doc:paragraph-88 ;
     cml:curationStatus cml:Proposed ;
     prov:wasDerivedFrom <https://www.ohchr.org/en/instruments-mechanisms/instruments/vienna-declaration-and-programme-action> ;
@@ -1334,7 +1334,7 @@ concept:vienna-declaration-and-programme-action-paragraph-88-norm a values:Under
     cml:curationStatus cml:Proposed .
 
 concept:vienna-declaration-and-programme-action-paragraph-89 a cml:Concept ;
-    skos:prefLabel "Paragraph 89" ;
+    skos:prefLabel "Paragraph 89"@en ;
     cml:realizedBy doc:paragraph-89 ;
     cml:curationStatus cml:Proposed ;
     prov:wasDerivedFrom <https://www.ohchr.org/en/instruments-mechanisms/instruments/vienna-declaration-and-programme-action> ;
@@ -1349,7 +1349,7 @@ concept:vienna-declaration-and-programme-action-paragraph-89-norm a values:Under
     cml:curationStatus cml:Proposed .
 
 concept:vienna-declaration-and-programme-action-paragraph-90 a cml:Concept ;
-    skos:prefLabel "Paragraph 90" ;
+    skos:prefLabel "Paragraph 90"@en ;
     cml:realizedBy doc:paragraph-90 ;
     cml:curationStatus cml:Proposed ;
     prov:wasDerivedFrom <https://www.ohchr.org/en/instruments-mechanisms/instruments/vienna-declaration-and-programme-action> ;
@@ -1364,7 +1364,7 @@ concept:vienna-declaration-and-programme-action-paragraph-90-norm a values:Under
     cml:curationStatus cml:Proposed .
 
 concept:vienna-declaration-and-programme-action-paragraph-91 a cml:Concept ;
-    skos:prefLabel "Paragraph 91" ;
+    skos:prefLabel "Paragraph 91"@en ;
     cml:realizedBy doc:paragraph-91 ;
     cml:curationStatus cml:Proposed ;
     prov:wasDerivedFrom <https://www.ohchr.org/en/instruments-mechanisms/instruments/vienna-declaration-and-programme-action> ;
@@ -1379,7 +1379,7 @@ concept:vienna-declaration-and-programme-action-paragraph-91-norm a values:Under
     cml:curationStatus cml:Proposed .
 
 concept:vienna-declaration-and-programme-action-paragraph-92 a cml:Concept ;
-    skos:prefLabel "Paragraph 92" ;
+    skos:prefLabel "Paragraph 92"@en ;
     cml:realizedBy doc:paragraph-92 ;
     cml:curationStatus cml:Proposed ;
     prov:wasDerivedFrom <https://www.ohchr.org/en/instruments-mechanisms/instruments/vienna-declaration-and-programme-action> ;
@@ -1394,7 +1394,7 @@ concept:vienna-declaration-and-programme-action-paragraph-92-norm a values:Under
     cml:curationStatus cml:Proposed .
 
 concept:vienna-declaration-and-programme-action-paragraph-93 a cml:Concept ;
-    skos:prefLabel "Paragraph 93" ;
+    skos:prefLabel "Paragraph 93"@en ;
     cml:realizedBy doc:paragraph-93 ;
     cml:curationStatus cml:Proposed ;
     prov:wasDerivedFrom <https://www.ohchr.org/en/instruments-mechanisms/instruments/vienna-declaration-and-programme-action> ;
@@ -1409,7 +1409,7 @@ concept:vienna-declaration-and-programme-action-paragraph-93-norm a values:Under
     cml:curationStatus cml:Proposed .
 
 concept:vienna-declaration-and-programme-action-paragraph-94 a cml:Concept ;
-    skos:prefLabel "Paragraph 94" ;
+    skos:prefLabel "Paragraph 94"@en ;
     cml:realizedBy doc:paragraph-94 ;
     cml:curationStatus cml:Proposed ;
     prov:wasDerivedFrom <https://www.ohchr.org/en/instruments-mechanisms/instruments/vienna-declaration-and-programme-action> ;
@@ -1424,7 +1424,7 @@ concept:vienna-declaration-and-programme-action-paragraph-94-norm a values:Under
     cml:curationStatus cml:Proposed .
 
 concept:vienna-declaration-and-programme-action-paragraph-95 a cml:Concept ;
-    skos:prefLabel "Paragraph 95" ;
+    skos:prefLabel "Paragraph 95"@en ;
     cml:realizedBy doc:paragraph-95 ;
     cml:curationStatus cml:Proposed ;
     prov:wasDerivedFrom <https://www.ohchr.org/en/instruments-mechanisms/instruments/vienna-declaration-and-programme-action> ;
@@ -1439,7 +1439,7 @@ concept:vienna-declaration-and-programme-action-paragraph-95-norm a values:Under
     cml:curationStatus cml:Proposed .
 
 concept:vienna-declaration-and-programme-action-paragraph-96 a cml:Concept ;
-    skos:prefLabel "Paragraph 96" ;
+    skos:prefLabel "Paragraph 96"@en ;
     cml:realizedBy doc:paragraph-96 ;
     cml:curationStatus cml:Proposed ;
     prov:wasDerivedFrom <https://www.ohchr.org/en/instruments-mechanisms/instruments/vienna-declaration-and-programme-action> ;
@@ -1454,7 +1454,7 @@ concept:vienna-declaration-and-programme-action-paragraph-96-norm a values:Under
     cml:curationStatus cml:Proposed .
 
 concept:vienna-declaration-and-programme-action-paragraph-97 a cml:Concept ;
-    skos:prefLabel "Paragraph 97" ;
+    skos:prefLabel "Paragraph 97"@en ;
     cml:realizedBy doc:paragraph-97 ;
     cml:curationStatus cml:Proposed ;
     prov:wasDerivedFrom <https://www.ohchr.org/en/instruments-mechanisms/instruments/vienna-declaration-and-programme-action> ;
@@ -1469,7 +1469,7 @@ concept:vienna-declaration-and-programme-action-paragraph-97-norm a values:Under
     cml:curationStatus cml:Proposed .
 
 concept:vienna-declaration-and-programme-action-paragraph-98 a cml:Concept ;
-    skos:prefLabel "Paragraph 98" ;
+    skos:prefLabel "Paragraph 98"@en ;
     cml:realizedBy doc:paragraph-98 ;
     cml:curationStatus cml:Proposed ;
     prov:wasDerivedFrom <https://www.ohchr.org/en/instruments-mechanisms/instruments/vienna-declaration-and-programme-action> ;
@@ -1484,7 +1484,7 @@ concept:vienna-declaration-and-programme-action-paragraph-98-norm a values:Under
     cml:curationStatus cml:Proposed .
 
 concept:vienna-declaration-and-programme-action-paragraph-99 a cml:Concept ;
-    skos:prefLabel "Paragraph 99" ;
+    skos:prefLabel "Paragraph 99"@en ;
     cml:realizedBy doc:paragraph-99 ;
     cml:curationStatus cml:Proposed ;
     prov:wasDerivedFrom <https://www.ohchr.org/en/instruments-mechanisms/instruments/vienna-declaration-and-programme-action> ;
@@ -1499,7 +1499,7 @@ concept:vienna-declaration-and-programme-action-paragraph-99-norm a values:Under
     cml:curationStatus cml:Proposed .
 
 concept:vienna-declaration-and-programme-action-paragraph-100 a cml:Concept ;
-    skos:prefLabel "Paragraph 100" ;
+    skos:prefLabel "Paragraph 100"@en ;
     cml:realizedBy doc:paragraph-100 ;
     cml:curationStatus cml:Proposed ;
     prov:wasDerivedFrom <https://www.ohchr.org/en/instruments-mechanisms/instruments/vienna-declaration-and-programme-action> ;
@@ -1514,7 +1514,7 @@ concept:vienna-declaration-and-programme-action-paragraph-100-norm a values:Unde
     cml:curationStatus cml:Proposed .
 
 concept:vienna-declaration-and-programme-action-paragraph-101 a cml:Concept ;
-    skos:prefLabel "Paragraph 101" ;
+    skos:prefLabel "Paragraph 101"@en ;
     cml:realizedBy doc:paragraph-101 ;
     cml:curationStatus cml:Proposed ;
     prov:wasDerivedFrom <https://www.ohchr.org/en/instruments-mechanisms/instruments/vienna-declaration-and-programme-action> ;
@@ -1529,7 +1529,7 @@ concept:vienna-declaration-and-programme-action-paragraph-101-norm a values:Unde
     cml:curationStatus cml:Proposed .
 
 concept:vienna-declaration-and-programme-action-paragraph-102 a cml:Concept ;
-    skos:prefLabel "Paragraph 102" ;
+    skos:prefLabel "Paragraph 102"@en ;
     cml:realizedBy doc:paragraph-102 ;
     cml:curationStatus cml:Proposed ;
     prov:wasDerivedFrom <https://www.ohchr.org/en/instruments-mechanisms/instruments/vienna-declaration-and-programme-action> ;
@@ -1544,7 +1544,7 @@ concept:vienna-declaration-and-programme-action-paragraph-102-norm a values:Unde
     cml:curationStatus cml:Proposed .
 
 concept:vienna-declaration-and-programme-action-paragraph-103 a cml:Concept ;
-    skos:prefLabel "Paragraph 103" ;
+    skos:prefLabel "Paragraph 103"@en ;
     cml:realizedBy doc:paragraph-103 ;
     cml:curationStatus cml:Proposed ;
     prov:wasDerivedFrom <https://www.ohchr.org/en/instruments-mechanisms/instruments/vienna-declaration-and-programme-action> ;
@@ -1559,7 +1559,7 @@ concept:vienna-declaration-and-programme-action-paragraph-103-norm a values:Unde
     cml:curationStatus cml:Proposed .
 
 concept:vienna-declaration-and-programme-action-paragraph-104 a cml:Concept ;
-    skos:prefLabel "Paragraph 104" ;
+    skos:prefLabel "Paragraph 104"@en ;
     cml:realizedBy doc:paragraph-104 ;
     cml:curationStatus cml:Proposed ;
     prov:wasDerivedFrom <https://www.ohchr.org/en/instruments-mechanisms/instruments/vienna-declaration-and-programme-action> ;
@@ -1574,7 +1574,7 @@ concept:vienna-declaration-and-programme-action-paragraph-104-norm a values:Unde
     cml:curationStatus cml:Proposed .
 
 concept:vienna-declaration-and-programme-action-paragraph-105 a cml:Concept ;
-    skos:prefLabel "Paragraph 105" ;
+    skos:prefLabel "Paragraph 105"@en ;
     cml:realizedBy doc:paragraph-105 ;
     cml:curationStatus cml:Proposed ;
     prov:wasDerivedFrom <https://www.ohchr.org/en/instruments-mechanisms/instruments/vienna-declaration-and-programme-action> ;
@@ -1589,7 +1589,7 @@ concept:vienna-declaration-and-programme-action-paragraph-105-norm a values:Unde
     cml:curationStatus cml:Proposed .
 
 concept:vienna-declaration-and-programme-action-paragraph-106 a cml:Concept ;
-    skos:prefLabel "Paragraph 106" ;
+    skos:prefLabel "Paragraph 106"@en ;
     cml:realizedBy doc:paragraph-106 ;
     cml:curationStatus cml:Proposed ;
     prov:wasDerivedFrom <https://www.ohchr.org/en/instruments-mechanisms/instruments/vienna-declaration-and-programme-action> ;
@@ -1604,7 +1604,7 @@ concept:vienna-declaration-and-programme-action-paragraph-106-norm a values:Unde
     cml:curationStatus cml:Proposed .
 
 concept:vienna-declaration-and-programme-action-paragraph-107 a cml:Concept ;
-    skos:prefLabel "Paragraph 107" ;
+    skos:prefLabel "Paragraph 107"@en ;
     cml:realizedBy doc:paragraph-107 ;
     cml:curationStatus cml:Proposed ;
     prov:wasDerivedFrom <https://www.ohchr.org/en/instruments-mechanisms/instruments/vienna-declaration-and-programme-action> ;
@@ -1619,7 +1619,7 @@ concept:vienna-declaration-and-programme-action-paragraph-107-norm a values:Unde
     cml:curationStatus cml:Proposed .
 
 concept:vienna-declaration-and-programme-action-paragraph-108 a cml:Concept ;
-    skos:prefLabel "Paragraph 108" ;
+    skos:prefLabel "Paragraph 108"@en ;
     cml:realizedBy doc:paragraph-108 ;
     cml:curationStatus cml:Proposed ;
     prov:wasDerivedFrom <https://www.ohchr.org/en/instruments-mechanisms/instruments/vienna-declaration-and-programme-action> ;
@@ -1634,7 +1634,7 @@ concept:vienna-declaration-and-programme-action-paragraph-108-norm a values:Unde
     cml:curationStatus cml:Proposed .
 
 concept:vienna-declaration-and-programme-action-paragraph-109 a cml:Concept ;
-    skos:prefLabel "Paragraph 109" ;
+    skos:prefLabel "Paragraph 109"@en ;
     cml:realizedBy doc:paragraph-109 ;
     cml:curationStatus cml:Proposed ;
     prov:wasDerivedFrom <https://www.ohchr.org/en/instruments-mechanisms/instruments/vienna-declaration-and-programme-action> ;
@@ -1650,7 +1650,7 @@ concept:vienna-declaration-and-programme-action-paragraph-109-norm a values:Righ
     cml:curationStatus cml:Proposed .
 
 concept:vienna-declaration-and-programme-action-paragraph-110 a cml:Concept ;
-    skos:prefLabel "Paragraph 110" ;
+    skos:prefLabel "Paragraph 110"@en ;
     cml:realizedBy doc:paragraph-110 ;
     cml:curationStatus cml:Proposed ;
     prov:wasDerivedFrom <https://www.ohchr.org/en/instruments-mechanisms/instruments/vienna-declaration-and-programme-action> ;
@@ -1665,7 +1665,7 @@ concept:vienna-declaration-and-programme-action-paragraph-110-norm a values:Unde
     cml:curationStatus cml:Proposed .
 
 concept:vienna-declaration-and-programme-action-paragraph-111 a cml:Concept ;
-    skos:prefLabel "Paragraph 111" ;
+    skos:prefLabel "Paragraph 111"@en ;
     cml:realizedBy doc:paragraph-111 ;
     cml:curationStatus cml:Proposed ;
     prov:wasDerivedFrom <https://www.ohchr.org/en/instruments-mechanisms/instruments/vienna-declaration-and-programme-action> ;
@@ -1681,7 +1681,7 @@ concept:vienna-declaration-and-programme-action-paragraph-111-norm a values:Righ
     cml:curationStatus cml:Proposed .
 
 concept:vienna-declaration-and-programme-action-paragraph-112 a cml:Concept ;
-    skos:prefLabel "Paragraph 112" ;
+    skos:prefLabel "Paragraph 112"@en ;
     cml:realizedBy doc:paragraph-112 ;
     cml:curationStatus cml:Proposed ;
     prov:wasDerivedFrom <https://www.ohchr.org/en/instruments-mechanisms/instruments/vienna-declaration-and-programme-action> ;
@@ -1696,7 +1696,7 @@ concept:vienna-declaration-and-programme-action-paragraph-112-norm a values:Unde
     cml:curationStatus cml:Proposed .
 
 concept:vienna-declaration-and-programme-action-paragraph-113 a cml:Concept ;
-    skos:prefLabel "Paragraph 113" ;
+    skos:prefLabel "Paragraph 113"@en ;
     cml:realizedBy doc:paragraph-113 ;
     cml:curationStatus cml:Proposed ;
     prov:wasDerivedFrom <https://www.ohchr.org/en/instruments-mechanisms/instruments/vienna-declaration-and-programme-action> ;
@@ -1711,7 +1711,7 @@ concept:vienna-declaration-and-programme-action-paragraph-113-norm a values:Unde
     cml:curationStatus cml:Proposed .
 
 concept:vienna-declaration-and-programme-action-paragraph-114 a cml:Concept ;
-    skos:prefLabel "Paragraph 114" ;
+    skos:prefLabel "Paragraph 114"@en ;
     cml:realizedBy doc:paragraph-114 ;
     cml:curationStatus cml:Proposed ;
     prov:wasDerivedFrom <https://www.ohchr.org/en/instruments-mechanisms/instruments/vienna-declaration-and-programme-action> ;
@@ -1726,7 +1726,7 @@ concept:vienna-declaration-and-programme-action-paragraph-114-norm a values:Unde
     cml:curationStatus cml:Proposed .
 
 concept:vienna-declaration-and-programme-action-paragraph-115 a cml:Concept ;
-    skos:prefLabel "Paragraph 115" ;
+    skos:prefLabel "Paragraph 115"@en ;
     cml:realizedBy doc:paragraph-115 ;
     cml:curationStatus cml:Proposed ;
     prov:wasDerivedFrom <https://www.ohchr.org/en/instruments-mechanisms/instruments/vienna-declaration-and-programme-action> ;
@@ -1741,7 +1741,7 @@ concept:vienna-declaration-and-programme-action-paragraph-115-norm a values:Unde
     cml:curationStatus cml:Proposed .
 
 concept:vienna-declaration-and-programme-action-paragraph-116 a cml:Concept ;
-    skos:prefLabel "Paragraph 116" ;
+    skos:prefLabel "Paragraph 116"@en ;
     cml:realizedBy doc:paragraph-116 ;
     cml:curationStatus cml:Proposed ;
     prov:wasDerivedFrom <https://www.ohchr.org/en/instruments-mechanisms/instruments/vienna-declaration-and-programme-action> ;
@@ -1756,7 +1756,7 @@ concept:vienna-declaration-and-programme-action-paragraph-116-norm a values:Unde
     cml:curationStatus cml:Proposed .
 
 concept:vienna-declaration-and-programme-action-paragraph-117 a cml:Concept ;
-    skos:prefLabel "Paragraph 117" ;
+    skos:prefLabel "Paragraph 117"@en ;
     cml:realizedBy doc:paragraph-117 ;
     cml:curationStatus cml:Proposed ;
     prov:wasDerivedFrom <https://www.ohchr.org/en/instruments-mechanisms/instruments/vienna-declaration-and-programme-action> ;
@@ -1771,7 +1771,7 @@ concept:vienna-declaration-and-programme-action-paragraph-117-norm a values:Unde
     cml:curationStatus cml:Proposed .
 
 concept:vienna-declaration-and-programme-action-paragraph-118 a cml:Concept ;
-    skos:prefLabel "Paragraph 118" ;
+    skos:prefLabel "Paragraph 118"@en ;
     cml:realizedBy doc:paragraph-118 ;
     cml:curationStatus cml:Proposed ;
     prov:wasDerivedFrom <https://www.ohchr.org/en/instruments-mechanisms/instruments/vienna-declaration-and-programme-action> ;
@@ -1786,7 +1786,7 @@ concept:vienna-declaration-and-programme-action-paragraph-118-norm a values:Unde
     cml:curationStatus cml:Proposed .
 
 concept:vienna-declaration-and-programme-action-paragraph-119 a cml:Concept ;
-    skos:prefLabel "Paragraph 119" ;
+    skos:prefLabel "Paragraph 119"@en ;
     cml:realizedBy doc:paragraph-119 ;
     cml:curationStatus cml:Proposed ;
     prov:wasDerivedFrom <https://www.ohchr.org/en/instruments-mechanisms/instruments/vienna-declaration-and-programme-action> ;
@@ -1801,7 +1801,7 @@ concept:vienna-declaration-and-programme-action-paragraph-119-norm a values:Unde
     cml:curationStatus cml:Proposed .
 
 concept:vienna-declaration-and-programme-action-paragraph-120 a cml:Concept ;
-    skos:prefLabel "Paragraph 120" ;
+    skos:prefLabel "Paragraph 120"@en ;
     cml:realizedBy doc:paragraph-120 ;
     cml:curationStatus cml:Proposed ;
     prov:wasDerivedFrom <https://www.ohchr.org/en/instruments-mechanisms/instruments/vienna-declaration-and-programme-action> ;
@@ -1816,7 +1816,7 @@ concept:vienna-declaration-and-programme-action-paragraph-120-norm a values:Unde
     cml:curationStatus cml:Proposed .
 
 concept:vienna-declaration-and-programme-action-paragraph-121 a cml:Concept ;
-    skos:prefLabel "Paragraph 121" ;
+    skos:prefLabel "Paragraph 121"@en ;
     cml:realizedBy doc:paragraph-121 ;
     cml:curationStatus cml:Proposed ;
     prov:wasDerivedFrom <https://www.ohchr.org/en/instruments-mechanisms/instruments/vienna-declaration-and-programme-action> ;
@@ -1831,7 +1831,7 @@ concept:vienna-declaration-and-programme-action-paragraph-121-norm a values:Unde
     cml:curationStatus cml:Proposed .
 
 concept:vienna-declaration-and-programme-action-paragraph-122 a cml:Concept ;
-    skos:prefLabel "Paragraph 122" ;
+    skos:prefLabel "Paragraph 122"@en ;
     cml:realizedBy doc:paragraph-122 ;
     cml:curationStatus cml:Proposed ;
     prov:wasDerivedFrom <https://www.ohchr.org/en/instruments-mechanisms/instruments/vienna-declaration-and-programme-action> ;
@@ -1846,7 +1846,7 @@ concept:vienna-declaration-and-programme-action-paragraph-122-norm a values:Unde
     cml:curationStatus cml:Proposed .
 
 concept:vienna-declaration-and-programme-action-paragraph-123 a cml:Concept ;
-    skos:prefLabel "Paragraph 123" ;
+    skos:prefLabel "Paragraph 123"@en ;
     cml:realizedBy doc:paragraph-123 ;
     cml:curationStatus cml:Proposed ;
     prov:wasDerivedFrom <https://www.ohchr.org/en/instruments-mechanisms/instruments/vienna-declaration-and-programme-action> ;
@@ -1861,7 +1861,7 @@ concept:vienna-declaration-and-programme-action-paragraph-123-norm a values:Unde
     cml:curationStatus cml:Proposed .
 
 concept:vienna-declaration-and-programme-action-paragraph-124 a cml:Concept ;
-    skos:prefLabel "Paragraph 124" ;
+    skos:prefLabel "Paragraph 124"@en ;
     cml:realizedBy doc:paragraph-124 ;
     cml:curationStatus cml:Proposed ;
     prov:wasDerivedFrom <https://www.ohchr.org/en/instruments-mechanisms/instruments/vienna-declaration-and-programme-action> ;
@@ -1876,7 +1876,7 @@ concept:vienna-declaration-and-programme-action-paragraph-124-norm a values:Unde
     cml:curationStatus cml:Proposed .
 
 concept:vienna-declaration-and-programme-action-paragraph-125 a cml:Concept ;
-    skos:prefLabel "Paragraph 125" ;
+    skos:prefLabel "Paragraph 125"@en ;
     cml:realizedBy doc:paragraph-125 ;
     cml:curationStatus cml:Proposed ;
     prov:wasDerivedFrom <https://www.ohchr.org/en/instruments-mechanisms/instruments/vienna-declaration-and-programme-action> ;
@@ -1891,7 +1891,7 @@ concept:vienna-declaration-and-programme-action-paragraph-125-norm a values:Unde
     cml:curationStatus cml:Proposed .
 
 concept:vienna-declaration-and-programme-action-paragraph-126 a cml:Concept ;
-    skos:prefLabel "Paragraph 126" ;
+    skos:prefLabel "Paragraph 126"@en ;
     cml:realizedBy doc:paragraph-126 ;
     cml:curationStatus cml:Proposed ;
     prov:wasDerivedFrom <https://www.ohchr.org/en/instruments-mechanisms/instruments/vienna-declaration-and-programme-action> ;
@@ -1906,7 +1906,7 @@ concept:vienna-declaration-and-programme-action-paragraph-126-norm a values:Unde
     cml:curationStatus cml:Proposed .
 
 concept:vienna-declaration-and-programme-action-paragraph-127 a cml:Concept ;
-    skos:prefLabel "Paragraph 127" ;
+    skos:prefLabel "Paragraph 127"@en ;
     cml:realizedBy doc:paragraph-127 ;
     cml:curationStatus cml:Proposed ;
     prov:wasDerivedFrom <https://www.ohchr.org/en/instruments-mechanisms/instruments/vienna-declaration-and-programme-action> ;
@@ -1921,7 +1921,7 @@ concept:vienna-declaration-and-programme-action-paragraph-127-norm a values:Unde
     cml:curationStatus cml:Proposed .
 
 concept:vienna-declaration-and-programme-action-paragraph-128 a cml:Concept ;
-    skos:prefLabel "Paragraph 128" ;
+    skos:prefLabel "Paragraph 128"@en ;
     cml:realizedBy doc:paragraph-128 ;
     cml:curationStatus cml:Proposed ;
     prov:wasDerivedFrom <https://www.ohchr.org/en/instruments-mechanisms/instruments/vienna-declaration-and-programme-action> ;
@@ -1936,7 +1936,7 @@ concept:vienna-declaration-and-programme-action-paragraph-128-norm a values:Unde
     cml:curationStatus cml:Proposed .
 
 concept:vienna-declaration-and-programme-action-paragraph-129 a cml:Concept ;
-    skos:prefLabel "Paragraph 129" ;
+    skos:prefLabel "Paragraph 129"@en ;
     cml:realizedBy doc:paragraph-129 ;
     cml:curationStatus cml:Proposed ;
     prov:wasDerivedFrom <https://www.ohchr.org/en/instruments-mechanisms/instruments/vienna-declaration-and-programme-action> ;
@@ -1951,7 +1951,7 @@ concept:vienna-declaration-and-programme-action-paragraph-129-norm a values:Unde
     cml:curationStatus cml:Proposed .
 
 concept:vienna-declaration-and-programme-action-paragraph-130 a cml:Concept ;
-    skos:prefLabel "Paragraph 130" ;
+    skos:prefLabel "Paragraph 130"@en ;
     cml:realizedBy doc:paragraph-130 ;
     cml:curationStatus cml:Proposed ;
     prov:wasDerivedFrom <https://www.ohchr.org/en/instruments-mechanisms/instruments/vienna-declaration-and-programme-action> ;
@@ -1967,7 +1967,7 @@ concept:vienna-declaration-and-programme-action-paragraph-130-norm a values:Righ
     cml:curationStatus cml:Proposed .
 
 concept:vienna-declaration-and-programme-action-paragraph-131 a cml:Concept ;
-    skos:prefLabel "Paragraph 131" ;
+    skos:prefLabel "Paragraph 131"@en ;
     cml:realizedBy doc:paragraph-131 ;
     cml:curationStatus cml:Proposed ;
     prov:wasDerivedFrom <https://www.ohchr.org/en/instruments-mechanisms/instruments/vienna-declaration-and-programme-action> ;
@@ -1982,7 +1982,7 @@ concept:vienna-declaration-and-programme-action-paragraph-131-norm a values:Unde
     cml:curationStatus cml:Proposed .
 
 concept:vienna-declaration-and-programme-action-paragraph-132 a cml:Concept ;
-    skos:prefLabel "Paragraph 132" ;
+    skos:prefLabel "Paragraph 132"@en ;
     cml:realizedBy doc:paragraph-132 ;
     cml:curationStatus cml:Proposed ;
     prov:wasDerivedFrom <https://www.ohchr.org/en/instruments-mechanisms/instruments/vienna-declaration-and-programme-action> ;
@@ -1997,7 +1997,7 @@ concept:vienna-declaration-and-programme-action-paragraph-132-norm a values:Unde
     cml:curationStatus cml:Proposed .
 
 concept:vienna-declaration-and-programme-action-paragraph-133 a cml:Concept ;
-    skos:prefLabel "Paragraph 133" ;
+    skos:prefLabel "Paragraph 133"@en ;
     cml:realizedBy doc:paragraph-133 ;
     cml:curationStatus cml:Proposed ;
     prov:wasDerivedFrom <https://www.ohchr.org/en/instruments-mechanisms/instruments/vienna-declaration-and-programme-action> ;
@@ -2012,7 +2012,7 @@ concept:vienna-declaration-and-programme-action-paragraph-133-norm a values:Unde
     cml:curationStatus cml:Proposed .
 
 concept:vienna-declaration-and-programme-action-paragraph-134 a cml:Concept ;
-    skos:prefLabel "Paragraph 134" ;
+    skos:prefLabel "Paragraph 134"@en ;
     cml:realizedBy doc:paragraph-134 ;
     cml:curationStatus cml:Proposed ;
     prov:wasDerivedFrom <https://www.ohchr.org/en/instruments-mechanisms/instruments/vienna-declaration-and-programme-action> ;
@@ -2027,7 +2027,7 @@ concept:vienna-declaration-and-programme-action-paragraph-134-norm a values:Unde
     cml:curationStatus cml:Proposed .
 
 concept:vienna-declaration-and-programme-action-paragraph-135 a cml:Concept ;
-    skos:prefLabel "Paragraph 135" ;
+    skos:prefLabel "Paragraph 135"@en ;
     cml:realizedBy doc:paragraph-135 ;
     cml:curationStatus cml:Proposed ;
     prov:wasDerivedFrom <https://www.ohchr.org/en/instruments-mechanisms/instruments/vienna-declaration-and-programme-action> ;
@@ -2042,7 +2042,7 @@ concept:vienna-declaration-and-programme-action-paragraph-135-norm a values:Unde
     cml:curationStatus cml:Proposed .
 
 concept:vienna-declaration-and-programme-action-paragraph-136 a cml:Concept ;
-    skos:prefLabel "Paragraph 136" ;
+    skos:prefLabel "Paragraph 136"@en ;
     cml:realizedBy doc:paragraph-136 ;
     cml:curationStatus cml:Proposed ;
     prov:wasDerivedFrom <https://www.ohchr.org/en/instruments-mechanisms/instruments/vienna-declaration-and-programme-action> ;
@@ -2057,7 +2057,7 @@ concept:vienna-declaration-and-programme-action-paragraph-136-norm a values:Unde
     cml:curationStatus cml:Proposed .
 
 concept:vienna-declaration-and-programme-action-paragraph-137 a cml:Concept ;
-    skos:prefLabel "Paragraph 137" ;
+    skos:prefLabel "Paragraph 137"@en ;
     cml:realizedBy doc:paragraph-137 ;
     cml:curationStatus cml:Proposed ;
     prov:wasDerivedFrom <https://www.ohchr.org/en/instruments-mechanisms/instruments/vienna-declaration-and-programme-action> ;
@@ -2072,7 +2072,7 @@ concept:vienna-declaration-and-programme-action-paragraph-137-norm a values:Unde
     cml:curationStatus cml:Proposed .
 
 concept:vienna-declaration-and-programme-action-paragraph-138 a cml:Concept ;
-    skos:prefLabel "Paragraph 138" ;
+    skos:prefLabel "Paragraph 138"@en ;
     cml:realizedBy doc:paragraph-138 ;
     cml:curationStatus cml:Proposed ;
     prov:wasDerivedFrom <https://www.ohchr.org/en/instruments-mechanisms/instruments/vienna-declaration-and-programme-action> ;
@@ -2087,7 +2087,7 @@ concept:vienna-declaration-and-programme-action-paragraph-138-norm a values:Unde
     cml:curationStatus cml:Proposed .
 
 concept:vienna-declaration-and-programme-action-paragraph-139 a cml:Concept ;
-    skos:prefLabel "Paragraph 139" ;
+    skos:prefLabel "Paragraph 139"@en ;
     cml:realizedBy doc:paragraph-139 ;
     cml:curationStatus cml:Proposed ;
     prov:wasDerivedFrom <https://www.ohchr.org/en/instruments-mechanisms/instruments/vienna-declaration-and-programme-action> ;
@@ -2102,7 +2102,7 @@ concept:vienna-declaration-and-programme-action-paragraph-139-norm a values:Unde
     cml:curationStatus cml:Proposed .
 
 concept:vienna-declaration-and-programme-action-paragraph-140 a cml:Concept ;
-    skos:prefLabel "Paragraph 140" ;
+    skos:prefLabel "Paragraph 140"@en ;
     cml:realizedBy doc:paragraph-140 ;
     cml:curationStatus cml:Proposed ;
     prov:wasDerivedFrom <https://www.ohchr.org/en/instruments-mechanisms/instruments/vienna-declaration-and-programme-action> ;
@@ -2117,7 +2117,7 @@ concept:vienna-declaration-and-programme-action-paragraph-140-norm a values:Unde
     cml:curationStatus cml:Proposed .
 
 concept:vienna-declaration-and-programme-action-paragraph-141 a cml:Concept ;
-    skos:prefLabel "Paragraph 141" ;
+    skos:prefLabel "Paragraph 141"@en ;
     cml:realizedBy doc:paragraph-141 ;
     cml:curationStatus cml:Proposed ;
     prov:wasDerivedFrom <https://www.ohchr.org/en/instruments-mechanisms/instruments/vienna-declaration-and-programme-action> ;
@@ -2132,7 +2132,7 @@ concept:vienna-declaration-and-programme-action-paragraph-141-norm a values:Unde
     cml:curationStatus cml:Proposed .
 
 concept:vienna-declaration-and-programme-action-paragraph-142 a cml:Concept ;
-    skos:prefLabel "Paragraph 142" ;
+    skos:prefLabel "Paragraph 142"@en ;
     cml:realizedBy doc:paragraph-142 ;
     cml:curationStatus cml:Proposed ;
     prov:wasDerivedFrom <https://www.ohchr.org/en/instruments-mechanisms/instruments/vienna-declaration-and-programme-action> ;
@@ -2147,7 +2147,7 @@ concept:vienna-declaration-and-programme-action-paragraph-142-norm a values:Unde
     cml:curationStatus cml:Proposed .
 
 concept:vienna-declaration-and-programme-action-paragraph-143 a cml:Concept ;
-    skos:prefLabel "Paragraph 143" ;
+    skos:prefLabel "Paragraph 143"@en ;
     cml:realizedBy doc:paragraph-143 ;
     cml:curationStatus cml:Proposed ;
     prov:wasDerivedFrom <https://www.ohchr.org/en/instruments-mechanisms/instruments/vienna-declaration-and-programme-action> ;
@@ -2162,7 +2162,7 @@ concept:vienna-declaration-and-programme-action-paragraph-143-norm a values:Unde
     cml:curationStatus cml:Proposed .
 
 concept:vienna-declaration-and-programme-action-paragraph-144 a cml:Concept ;
-    skos:prefLabel "Paragraph 144" ;
+    skos:prefLabel "Paragraph 144"@en ;
     cml:realizedBy doc:paragraph-144 ;
     cml:curationStatus cml:Proposed ;
     prov:wasDerivedFrom <https://www.ohchr.org/en/instruments-mechanisms/instruments/vienna-declaration-and-programme-action> ;
@@ -2177,7 +2177,7 @@ concept:vienna-declaration-and-programme-action-paragraph-144-norm a values:Unde
     cml:curationStatus cml:Proposed .
 
 concept:vienna-declaration-and-programme-action-paragraph-145 a cml:Concept ;
-    skos:prefLabel "Paragraph 145" ;
+    skos:prefLabel "Paragraph 145"@en ;
     cml:realizedBy doc:paragraph-145 ;
     cml:curationStatus cml:Proposed ;
     prov:wasDerivedFrom <https://www.ohchr.org/en/instruments-mechanisms/instruments/vienna-declaration-and-programme-action> ;
@@ -2192,7 +2192,7 @@ concept:vienna-declaration-and-programme-action-paragraph-145-norm a values:Unde
     cml:curationStatus cml:Proposed .
 
 concept:vienna-declaration-and-programme-action-paragraph-146 a cml:Concept ;
-    skos:prefLabel "Paragraph 146" ;
+    skos:prefLabel "Paragraph 146"@en ;
     cml:realizedBy doc:paragraph-146 ;
     cml:curationStatus cml:Proposed ;
     prov:wasDerivedFrom <https://www.ohchr.org/en/instruments-mechanisms/instruments/vienna-declaration-and-programme-action> ;
@@ -2207,7 +2207,7 @@ concept:vienna-declaration-and-programme-action-paragraph-146-norm a values:Unde
     cml:curationStatus cml:Proposed .
 
 concept:vienna-declaration-and-programme-action-paragraph-147 a cml:Concept ;
-    skos:prefLabel "Paragraph 147" ;
+    skos:prefLabel "Paragraph 147"@en ;
     cml:realizedBy doc:paragraph-147 ;
     cml:curationStatus cml:Proposed ;
     prov:wasDerivedFrom <https://www.ohchr.org/en/instruments-mechanisms/instruments/vienna-declaration-and-programme-action> ;
@@ -2222,7 +2222,7 @@ concept:vienna-declaration-and-programme-action-paragraph-147-norm a values:Unde
     cml:curationStatus cml:Proposed .
 
 concept:vienna-declaration-and-programme-action-paragraph-148 a cml:Concept ;
-    skos:prefLabel "Paragraph 148" ;
+    skos:prefLabel "Paragraph 148"@en ;
     cml:realizedBy doc:paragraph-148 ;
     cml:curationStatus cml:Proposed ;
     prov:wasDerivedFrom <https://www.ohchr.org/en/instruments-mechanisms/instruments/vienna-declaration-and-programme-action> ;
@@ -2237,7 +2237,7 @@ concept:vienna-declaration-and-programme-action-paragraph-148-norm a values:Unde
     cml:curationStatus cml:Proposed .
 
 concept:vienna-declaration-and-programme-action-paragraph-149 a cml:Concept ;
-    skos:prefLabel "Paragraph 149" ;
+    skos:prefLabel "Paragraph 149"@en ;
     cml:realizedBy doc:paragraph-149 ;
     cml:curationStatus cml:Proposed ;
     prov:wasDerivedFrom <https://www.ohchr.org/en/instruments-mechanisms/instruments/vienna-declaration-and-programme-action> ;
@@ -2252,7 +2252,7 @@ concept:vienna-declaration-and-programme-action-paragraph-149-norm a values:Unde
     cml:curationStatus cml:Proposed .
 
 concept:vienna-declaration-and-programme-action-paragraph-150 a cml:Concept ;
-    skos:prefLabel "Paragraph 150" ;
+    skos:prefLabel "Paragraph 150"@en ;
     cml:realizedBy doc:paragraph-150 ;
     cml:curationStatus cml:Proposed ;
     prov:wasDerivedFrom <https://www.ohchr.org/en/instruments-mechanisms/instruments/vienna-declaration-and-programme-action> ;
@@ -2267,7 +2267,7 @@ concept:vienna-declaration-and-programme-action-paragraph-150-norm a values:Unde
     cml:curationStatus cml:Proposed .
 
 concept:vienna-declaration-and-programme-action-paragraph-151 a cml:Concept ;
-    skos:prefLabel "Paragraph 151" ;
+    skos:prefLabel "Paragraph 151"@en ;
     cml:realizedBy doc:paragraph-151 ;
     cml:curationStatus cml:Proposed ;
     prov:wasDerivedFrom <https://www.ohchr.org/en/instruments-mechanisms/instruments/vienna-declaration-and-programme-action> ;
@@ -2282,7 +2282,7 @@ concept:vienna-declaration-and-programme-action-paragraph-151-norm a values:Unde
     cml:curationStatus cml:Proposed .
 
 concept:vienna-declaration-and-programme-action-paragraph-152 a cml:Concept ;
-    skos:prefLabel "Paragraph 152" ;
+    skos:prefLabel "Paragraph 152"@en ;
     cml:realizedBy doc:paragraph-152 ;
     cml:curationStatus cml:Proposed ;
     prov:wasDerivedFrom <https://www.ohchr.org/en/instruments-mechanisms/instruments/vienna-declaration-and-programme-action> ;
@@ -2297,7 +2297,7 @@ concept:vienna-declaration-and-programme-action-paragraph-152-norm a values:Unde
     cml:curationStatus cml:Proposed .
 
 concept:vienna-declaration-and-programme-action-paragraph-153 a cml:Concept ;
-    skos:prefLabel "Paragraph 153" ;
+    skos:prefLabel "Paragraph 153"@en ;
     cml:realizedBy doc:paragraph-153 ;
     cml:curationStatus cml:Proposed ;
     prov:wasDerivedFrom <https://www.ohchr.org/en/instruments-mechanisms/instruments/vienna-declaration-and-programme-action> ;
@@ -2312,7 +2312,7 @@ concept:vienna-declaration-and-programme-action-paragraph-153-norm a values:Unde
     cml:curationStatus cml:Proposed .
 
 concept:vienna-declaration-and-programme-action-paragraph-154 a cml:Concept ;
-    skos:prefLabel "Paragraph 154" ;
+    skos:prefLabel "Paragraph 154"@en ;
     cml:realizedBy doc:paragraph-154 ;
     cml:curationStatus cml:Proposed ;
     prov:wasDerivedFrom <https://www.ohchr.org/en/instruments-mechanisms/instruments/vienna-declaration-and-programme-action> ;
@@ -2327,7 +2327,7 @@ concept:vienna-declaration-and-programme-action-paragraph-154-norm a values:Unde
     cml:curationStatus cml:Proposed .
 
 concept:vienna-declaration-and-programme-action-paragraph-155 a cml:Concept ;
-    skos:prefLabel "Paragraph 155" ;
+    skos:prefLabel "Paragraph 155"@en ;
     cml:realizedBy doc:paragraph-155 ;
     cml:curationStatus cml:Proposed ;
     prov:wasDerivedFrom <https://www.ohchr.org/en/instruments-mechanisms/instruments/vienna-declaration-and-programme-action> ;
@@ -2342,7 +2342,7 @@ concept:vienna-declaration-and-programme-action-paragraph-155-norm a values:Unde
     cml:curationStatus cml:Proposed .
 
 concept:vienna-declaration-and-programme-action-paragraph-156 a cml:Concept ;
-    skos:prefLabel "Paragraph 156" ;
+    skos:prefLabel "Paragraph 156"@en ;
     cml:realizedBy doc:paragraph-156 ;
     cml:curationStatus cml:Proposed ;
     prov:wasDerivedFrom <https://www.ohchr.org/en/instruments-mechanisms/instruments/vienna-declaration-and-programme-action> ;
@@ -2357,7 +2357,7 @@ concept:vienna-declaration-and-programme-action-paragraph-156-norm a values:Unde
     cml:curationStatus cml:Proposed .
 
 concept:vienna-declaration-and-programme-action-paragraph-157 a cml:Concept ;
-    skos:prefLabel "Paragraph 157" ;
+    skos:prefLabel "Paragraph 157"@en ;
     cml:realizedBy doc:paragraph-157 ;
     cml:curationStatus cml:Proposed ;
     prov:wasDerivedFrom <https://www.ohchr.org/en/instruments-mechanisms/instruments/vienna-declaration-and-programme-action> ;
@@ -2372,7 +2372,7 @@ concept:vienna-declaration-and-programme-action-paragraph-157-norm a values:Unde
     cml:curationStatus cml:Proposed .
 
 concept:vienna-declaration-and-programme-action-paragraph-158 a cml:Concept ;
-    skos:prefLabel "Paragraph 158" ;
+    skos:prefLabel "Paragraph 158"@en ;
     cml:realizedBy doc:paragraph-158 ;
     cml:curationStatus cml:Proposed ;
     prov:wasDerivedFrom <https://www.ohchr.org/en/instruments-mechanisms/instruments/vienna-declaration-and-programme-action> ;
@@ -2387,7 +2387,7 @@ concept:vienna-declaration-and-programme-action-paragraph-158-norm a values:Unde
     cml:curationStatus cml:Proposed .
 
 concept:vienna-declaration-and-programme-action-paragraph-159 a cml:Concept ;
-    skos:prefLabel "Paragraph 159" ;
+    skos:prefLabel "Paragraph 159"@en ;
     cml:realizedBy doc:paragraph-159 ;
     cml:curationStatus cml:Proposed ;
     prov:wasDerivedFrom <https://www.ohchr.org/en/instruments-mechanisms/instruments/vienna-declaration-and-programme-action> ;
@@ -2402,7 +2402,7 @@ concept:vienna-declaration-and-programme-action-paragraph-159-norm a values:Unde
     cml:curationStatus cml:Proposed .
 
 concept:vienna-declaration-and-programme-action-paragraph-160 a cml:Concept ;
-    skos:prefLabel "Paragraph 160" ;
+    skos:prefLabel "Paragraph 160"@en ;
     cml:realizedBy doc:paragraph-160 ;
     cml:curationStatus cml:Proposed ;
     prov:wasDerivedFrom <https://www.ohchr.org/en/instruments-mechanisms/instruments/vienna-declaration-and-programme-action> ;
@@ -2417,7 +2417,7 @@ concept:vienna-declaration-and-programme-action-paragraph-160-norm a values:Unde
     cml:curationStatus cml:Proposed .
 
 concept:vienna-declaration-and-programme-action-paragraph-161 a cml:Concept ;
-    skos:prefLabel "Paragraph 161" ;
+    skos:prefLabel "Paragraph 161"@en ;
     cml:realizedBy doc:paragraph-161 ;
     cml:curationStatus cml:Proposed ;
     prov:wasDerivedFrom <https://www.ohchr.org/en/instruments-mechanisms/instruments/vienna-declaration-and-programme-action> ;
@@ -2432,7 +2432,7 @@ concept:vienna-declaration-and-programme-action-paragraph-161-norm a values:Unde
     cml:curationStatus cml:Proposed .
 
 concept:vienna-declaration-and-programme-action-paragraph-162 a cml:Concept ;
-    skos:prefLabel "Paragraph 162" ;
+    skos:prefLabel "Paragraph 162"@en ;
     cml:realizedBy doc:paragraph-162 ;
     cml:curationStatus cml:Proposed ;
     prov:wasDerivedFrom <https://www.ohchr.org/en/instruments-mechanisms/instruments/vienna-declaration-and-programme-action> ;
@@ -2448,7 +2448,7 @@ concept:vienna-declaration-and-programme-action-paragraph-162-norm a values:Righ
     cml:curationStatus cml:Proposed .
 
 concept:vienna-declaration-and-programme-action-paragraph-163 a cml:Concept ;
-    skos:prefLabel "Paragraph 163" ;
+    skos:prefLabel "Paragraph 163"@en ;
     cml:realizedBy doc:paragraph-163 ;
     cml:curationStatus cml:Proposed ;
     prov:wasDerivedFrom <https://www.ohchr.org/en/instruments-mechanisms/instruments/vienna-declaration-and-programme-action> ;
@@ -2464,7 +2464,7 @@ concept:vienna-declaration-and-programme-action-paragraph-163-norm a values:Righ
     cml:curationStatus cml:Proposed .
 
 concept:vienna-declaration-and-programme-action-paragraph-164 a cml:Concept ;
-    skos:prefLabel "Paragraph 164" ;
+    skos:prefLabel "Paragraph 164"@en ;
     cml:realizedBy doc:paragraph-164 ;
     cml:curationStatus cml:Proposed ;
     prov:wasDerivedFrom <https://www.ohchr.org/en/instruments-mechanisms/instruments/vienna-declaration-and-programme-action> ;
@@ -2479,7 +2479,7 @@ concept:vienna-declaration-and-programme-action-paragraph-164-norm a values:Unde
     cml:curationStatus cml:Proposed .
 
 concept:vienna-declaration-and-programme-action-paragraph-165 a cml:Concept ;
-    skos:prefLabel "Paragraph 165" ;
+    skos:prefLabel "Paragraph 165"@en ;
     cml:realizedBy doc:paragraph-165 ;
     cml:curationStatus cml:Proposed ;
     prov:wasDerivedFrom <https://www.ohchr.org/en/instruments-mechanisms/instruments/vienna-declaration-and-programme-action> ;
@@ -2494,7 +2494,7 @@ concept:vienna-declaration-and-programme-action-paragraph-165-norm a values:Unde
     cml:curationStatus cml:Proposed .
 
 concept:vienna-declaration-and-programme-action-paragraph-166 a cml:Concept ;
-    skos:prefLabel "Paragraph 166" ;
+    skos:prefLabel "Paragraph 166"@en ;
     cml:realizedBy doc:paragraph-166 ;
     cml:curationStatus cml:Proposed ;
     prov:wasDerivedFrom <https://www.ohchr.org/en/instruments-mechanisms/instruments/vienna-declaration-and-programme-action> ;
@@ -2509,7 +2509,7 @@ concept:vienna-declaration-and-programme-action-paragraph-166-norm a values:Unde
     cml:curationStatus cml:Proposed .
 
 concept:vienna-declaration-and-programme-action-paragraph-167 a cml:Concept ;
-    skos:prefLabel "Paragraph 167" ;
+    skos:prefLabel "Paragraph 167"@en ;
     cml:realizedBy doc:paragraph-167 ;
     cml:curationStatus cml:Proposed ;
     prov:wasDerivedFrom <https://www.ohchr.org/en/instruments-mechanisms/instruments/vienna-declaration-and-programme-action> ;
@@ -2524,7 +2524,7 @@ concept:vienna-declaration-and-programme-action-paragraph-167-norm a values:Unde
     cml:curationStatus cml:Proposed .
 
 concept:vienna-declaration-and-programme-action-paragraph-168 a cml:Concept ;
-    skos:prefLabel "Paragraph 168" ;
+    skos:prefLabel "Paragraph 168"@en ;
     cml:realizedBy doc:paragraph-168 ;
     cml:curationStatus cml:Proposed ;
     prov:wasDerivedFrom <https://www.ohchr.org/en/instruments-mechanisms/instruments/vienna-declaration-and-programme-action> ;
@@ -2539,7 +2539,7 @@ concept:vienna-declaration-and-programme-action-paragraph-168-norm a values:Unde
     cml:curationStatus cml:Proposed .
 
 concept:vienna-declaration-and-programme-action-paragraph-169 a cml:Concept ;
-    skos:prefLabel "Paragraph 169" ;
+    skos:prefLabel "Paragraph 169"@en ;
     cml:realizedBy doc:paragraph-169 ;
     cml:curationStatus cml:Proposed ;
     prov:wasDerivedFrom <https://www.ohchr.org/en/instruments-mechanisms/instruments/vienna-declaration-and-programme-action> ;
@@ -2554,7 +2554,7 @@ concept:vienna-declaration-and-programme-action-paragraph-169-norm a values:Unde
     cml:curationStatus cml:Proposed .
 
 concept:vienna-declaration-and-programme-action-paragraph-170 a cml:Concept ;
-    skos:prefLabel "Paragraph 170" ;
+    skos:prefLabel "Paragraph 170"@en ;
     cml:realizedBy doc:paragraph-170 ;
     cml:curationStatus cml:Proposed ;
     prov:wasDerivedFrom <https://www.ohchr.org/en/instruments-mechanisms/instruments/vienna-declaration-and-programme-action> ;
@@ -2569,7 +2569,7 @@ concept:vienna-declaration-and-programme-action-paragraph-170-norm a values:Unde
     cml:curationStatus cml:Proposed .
 
 concept:vienna-declaration-and-programme-action-paragraph-171 a cml:Concept ;
-    skos:prefLabel "Paragraph 171" ;
+    skos:prefLabel "Paragraph 171"@en ;
     cml:realizedBy doc:paragraph-171 ;
     cml:curationStatus cml:Proposed ;
     prov:wasDerivedFrom <https://www.ohchr.org/en/instruments-mechanisms/instruments/vienna-declaration-and-programme-action> ;
@@ -2584,7 +2584,7 @@ concept:vienna-declaration-and-programme-action-paragraph-171-norm a values:Unde
     cml:curationStatus cml:Proposed .
 
 concept:vienna-declaration-and-programme-action-paragraph-172 a cml:Concept ;
-    skos:prefLabel "Paragraph 172" ;
+    skos:prefLabel "Paragraph 172"@en ;
     cml:realizedBy doc:paragraph-172 ;
     cml:curationStatus cml:Proposed ;
     prov:wasDerivedFrom <https://www.ohchr.org/en/instruments-mechanisms/instruments/vienna-declaration-and-programme-action> ;
@@ -2599,7 +2599,7 @@ concept:vienna-declaration-and-programme-action-paragraph-172-norm a values:Unde
     cml:curationStatus cml:Proposed .
 
 concept:vienna-declaration-and-programme-action-paragraph-173 a cml:Concept ;
-    skos:prefLabel "Paragraph 173" ;
+    skos:prefLabel "Paragraph 173"@en ;
     cml:realizedBy doc:paragraph-173 ;
     cml:curationStatus cml:Proposed ;
     prov:wasDerivedFrom <https://www.ohchr.org/en/instruments-mechanisms/instruments/vienna-declaration-and-programme-action> ;
@@ -2614,7 +2614,7 @@ concept:vienna-declaration-and-programme-action-paragraph-173-norm a values:Unde
     cml:curationStatus cml:Proposed .
 
 concept:vienna-declaration-and-programme-action-paragraph-174 a cml:Concept ;
-    skos:prefLabel "Paragraph 174" ;
+    skos:prefLabel "Paragraph 174"@en ;
     cml:realizedBy doc:paragraph-174 ;
     cml:curationStatus cml:Proposed ;
     prov:wasDerivedFrom <https://www.ohchr.org/en/instruments-mechanisms/instruments/vienna-declaration-and-programme-action> ;
@@ -2629,7 +2629,7 @@ concept:vienna-declaration-and-programme-action-paragraph-174-norm a values:Unde
     cml:curationStatus cml:Proposed .
 
 concept:vienna-declaration-and-programme-action-paragraph-175 a cml:Concept ;
-    skos:prefLabel "Paragraph 175" ;
+    skos:prefLabel "Paragraph 175"@en ;
     cml:realizedBy doc:paragraph-175 ;
     cml:curationStatus cml:Proposed ;
     prov:wasDerivedFrom <https://www.ohchr.org/en/instruments-mechanisms/instruments/vienna-declaration-and-programme-action> ;
@@ -2644,7 +2644,7 @@ concept:vienna-declaration-and-programme-action-paragraph-175-norm a values:Unde
     cml:curationStatus cml:Proposed .
 
 concept:vienna-declaration-and-programme-action-paragraph-176 a cml:Concept ;
-    skos:prefLabel "Paragraph 176" ;
+    skos:prefLabel "Paragraph 176"@en ;
     cml:realizedBy doc:paragraph-176 ;
     cml:curationStatus cml:Proposed ;
     prov:wasDerivedFrom <https://www.ohchr.org/en/instruments-mechanisms/instruments/vienna-declaration-and-programme-action> ;
@@ -2659,7 +2659,7 @@ concept:vienna-declaration-and-programme-action-paragraph-176-norm a values:Unde
     cml:curationStatus cml:Proposed .
 
 concept:vienna-declaration-and-programme-action-paragraph-177 a cml:Concept ;
-    skos:prefLabel "Paragraph 177" ;
+    skos:prefLabel "Paragraph 177"@en ;
     cml:realizedBy doc:paragraph-177 ;
     cml:curationStatus cml:Proposed ;
     prov:wasDerivedFrom <https://www.ohchr.org/en/instruments-mechanisms/instruments/vienna-declaration-and-programme-action> ;
@@ -2674,7 +2674,7 @@ concept:vienna-declaration-and-programme-action-paragraph-177-norm a values:Unde
     cml:curationStatus cml:Proposed .
 
 concept:vienna-declaration-and-programme-action-paragraph-178 a cml:Concept ;
-    skos:prefLabel "Paragraph 178" ;
+    skos:prefLabel "Paragraph 178"@en ;
     cml:realizedBy doc:paragraph-178 ;
     cml:curationStatus cml:Proposed ;
     prov:wasDerivedFrom <https://www.ohchr.org/en/instruments-mechanisms/instruments/vienna-declaration-and-programme-action> ;
@@ -2689,7 +2689,7 @@ concept:vienna-declaration-and-programme-action-paragraph-178-norm a values:Unde
     cml:curationStatus cml:Proposed .
 
 concept:vienna-declaration-and-programme-action-paragraph-179 a cml:Concept ;
-    skos:prefLabel "Paragraph 179" ;
+    skos:prefLabel "Paragraph 179"@en ;
     cml:realizedBy doc:paragraph-179 ;
     cml:curationStatus cml:Proposed ;
     prov:wasDerivedFrom <https://www.ohchr.org/en/instruments-mechanisms/instruments/vienna-declaration-and-programme-action> ;
@@ -2704,7 +2704,7 @@ concept:vienna-declaration-and-programme-action-paragraph-179-norm a values:Unde
     cml:curationStatus cml:Proposed .
 
 concept:vienna-declaration-and-programme-action-paragraph-180 a cml:Concept ;
-    skos:prefLabel "Paragraph 180" ;
+    skos:prefLabel "Paragraph 180"@en ;
     cml:realizedBy doc:paragraph-180 ;
     cml:curationStatus cml:Proposed ;
     prov:wasDerivedFrom <https://www.ohchr.org/en/instruments-mechanisms/instruments/vienna-declaration-and-programme-action> ;
@@ -2719,7 +2719,7 @@ concept:vienna-declaration-and-programme-action-paragraph-180-norm a values:Unde
     cml:curationStatus cml:Proposed .
 
 concept:vienna-declaration-and-programme-action-paragraph-181 a cml:Concept ;
-    skos:prefLabel "Paragraph 181" ;
+    skos:prefLabel "Paragraph 181"@en ;
     cml:realizedBy doc:paragraph-181 ;
     cml:curationStatus cml:Proposed ;
     prov:wasDerivedFrom <https://www.ohchr.org/en/instruments-mechanisms/instruments/vienna-declaration-and-programme-action> ;
@@ -2734,7 +2734,7 @@ concept:vienna-declaration-and-programme-action-paragraph-181-norm a values:Unde
     cml:curationStatus cml:Proposed .
 
 concept:vienna-declaration-and-programme-action-paragraph-182 a cml:Concept ;
-    skos:prefLabel "Paragraph 182" ;
+    skos:prefLabel "Paragraph 182"@en ;
     cml:realizedBy doc:paragraph-182 ;
     cml:curationStatus cml:Proposed ;
     prov:wasDerivedFrom <https://www.ohchr.org/en/instruments-mechanisms/instruments/vienna-declaration-and-programme-action> ;
@@ -2749,7 +2749,7 @@ concept:vienna-declaration-and-programme-action-paragraph-182-norm a values:Unde
     cml:curationStatus cml:Proposed .
 
 concept:vienna-declaration-and-programme-action-paragraph-183 a cml:Concept ;
-    skos:prefLabel "Paragraph 183" ;
+    skos:prefLabel "Paragraph 183"@en ;
     cml:realizedBy doc:paragraph-183 ;
     cml:curationStatus cml:Proposed ;
     prov:wasDerivedFrom <https://www.ohchr.org/en/instruments-mechanisms/instruments/vienna-declaration-and-programme-action> ;
@@ -2764,7 +2764,7 @@ concept:vienna-declaration-and-programme-action-paragraph-183-norm a values:Unde
     cml:curationStatus cml:Proposed .
 
 concept:vienna-declaration-and-programme-action-paragraph-184 a cml:Concept ;
-    skos:prefLabel "Paragraph 184" ;
+    skos:prefLabel "Paragraph 184"@en ;
     cml:realizedBy doc:paragraph-184 ;
     cml:curationStatus cml:Proposed ;
     prov:wasDerivedFrom <https://www.ohchr.org/en/instruments-mechanisms/instruments/vienna-declaration-and-programme-action> ;
@@ -2779,7 +2779,7 @@ concept:vienna-declaration-and-programme-action-paragraph-184-norm a values:Unde
     cml:curationStatus cml:Proposed .
 
 concept:vienna-declaration-and-programme-action-paragraph-185 a cml:Concept ;
-    skos:prefLabel "Paragraph 185" ;
+    skos:prefLabel "Paragraph 185"@en ;
     cml:realizedBy doc:paragraph-185 ;
     cml:curationStatus cml:Proposed ;
     prov:wasDerivedFrom <https://www.ohchr.org/en/instruments-mechanisms/instruments/vienna-declaration-and-programme-action> ;
@@ -2794,7 +2794,7 @@ concept:vienna-declaration-and-programme-action-paragraph-185-norm a values:Unde
     cml:curationStatus cml:Proposed .
 
 concept:vienna-declaration-and-programme-action-paragraph-186 a cml:Concept ;
-    skos:prefLabel "Paragraph 186" ;
+    skos:prefLabel "Paragraph 186"@en ;
     cml:realizedBy doc:paragraph-186 ;
     cml:curationStatus cml:Proposed ;
     prov:wasDerivedFrom <https://www.ohchr.org/en/instruments-mechanisms/instruments/vienna-declaration-and-programme-action> ;
@@ -2809,7 +2809,7 @@ concept:vienna-declaration-and-programme-action-paragraph-186-norm a values:Unde
     cml:curationStatus cml:Proposed .
 
 concept:vienna-declaration-and-programme-action-paragraph-187 a cml:Concept ;
-    skos:prefLabel "Paragraph 187" ;
+    skos:prefLabel "Paragraph 187"@en ;
     cml:realizedBy doc:paragraph-187 ;
     cml:curationStatus cml:Proposed ;
     prov:wasDerivedFrom <https://www.ohchr.org/en/instruments-mechanisms/instruments/vienna-declaration-and-programme-action> ;
@@ -2824,7 +2824,7 @@ concept:vienna-declaration-and-programme-action-paragraph-187-norm a values:Unde
     cml:curationStatus cml:Proposed .
 
 concept:vienna-declaration-and-programme-action-paragraph-188 a cml:Concept ;
-    skos:prefLabel "Paragraph 188" ;
+    skos:prefLabel "Paragraph 188"@en ;
     cml:realizedBy doc:paragraph-188 ;
     cml:curationStatus cml:Proposed ;
     prov:wasDerivedFrom <https://www.ohchr.org/en/instruments-mechanisms/instruments/vienna-declaration-and-programme-action> ;
@@ -2839,7 +2839,7 @@ concept:vienna-declaration-and-programme-action-paragraph-188-norm a values:Unde
     cml:curationStatus cml:Proposed .
 
 concept:vienna-declaration-and-programme-action-paragraph-189 a cml:Concept ;
-    skos:prefLabel "Paragraph 189" ;
+    skos:prefLabel "Paragraph 189"@en ;
     cml:realizedBy doc:paragraph-189 ;
     cml:curationStatus cml:Proposed ;
     prov:wasDerivedFrom <https://www.ohchr.org/en/instruments-mechanisms/instruments/vienna-declaration-and-programme-action> ;
@@ -2854,7 +2854,7 @@ concept:vienna-declaration-and-programme-action-paragraph-189-norm a values:Unde
     cml:curationStatus cml:Proposed .
 
 concept:vienna-declaration-and-programme-action-paragraph-190 a cml:Concept ;
-    skos:prefLabel "Paragraph 190" ;
+    skos:prefLabel "Paragraph 190"@en ;
     cml:realizedBy doc:paragraph-190 ;
     cml:curationStatus cml:Proposed ;
     prov:wasDerivedFrom <https://www.ohchr.org/en/instruments-mechanisms/instruments/vienna-declaration-and-programme-action> ;
@@ -2869,7 +2869,7 @@ concept:vienna-declaration-and-programme-action-paragraph-190-norm a values:Unde
     cml:curationStatus cml:Proposed .
 
 concept:vienna-declaration-and-programme-action-paragraph-191 a cml:Concept ;
-    skos:prefLabel "Paragraph 191" ;
+    skos:prefLabel "Paragraph 191"@en ;
     cml:realizedBy doc:paragraph-191 ;
     cml:curationStatus cml:Proposed ;
     prov:wasDerivedFrom <https://www.ohchr.org/en/instruments-mechanisms/instruments/vienna-declaration-and-programme-action> ;
@@ -2884,7 +2884,7 @@ concept:vienna-declaration-and-programme-action-paragraph-191-norm a values:Unde
     cml:curationStatus cml:Proposed .
 
 concept:vienna-declaration-and-programme-action-paragraph-192 a cml:Concept ;
-    skos:prefLabel "Paragraph 192" ;
+    skos:prefLabel "Paragraph 192"@en ;
     cml:realizedBy doc:paragraph-192 ;
     cml:curationStatus cml:Proposed ;
     prov:wasDerivedFrom <https://www.ohchr.org/en/instruments-mechanisms/instruments/vienna-declaration-and-programme-action> ;

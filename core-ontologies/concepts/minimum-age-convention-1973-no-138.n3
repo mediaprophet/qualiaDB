@@ -17,7 +17,7 @@
 # ============================================================
 
 concept:minimum-age-convention-1973-no-138-article-1 a cml:Concept ;
-    skos:prefLabel "Article 1" ;
+    skos:prefLabel "Article 1"@en ;
     cml:realizedBy doc:article-1 ;
     cml:curationStatus cml:Proposed ;
     prov:wasDerivedFrom <https://www.ohchr.org/en/instruments-mechanisms/instruments/minimum-age-convention-1973-no-138> ;
@@ -32,7 +32,7 @@ concept:minimum-age-convention-1973-no-138-article-1-norm a values:Undertaking ;
     cml:curationStatus cml:Proposed .
 
 concept:minimum-age-convention-1973-no-138-article-2 a cml:Concept ;
-    skos:prefLabel "Article 2" ;
+    skos:prefLabel "Article 2"@en ;
     cml:realizedBy doc:article-2 ;
     cml:curationStatus cml:Proposed ;
     prov:wasDerivedFrom <https://www.ohchr.org/en/instruments-mechanisms/instruments/minimum-age-convention-1973-no-138> ;
@@ -48,7 +48,7 @@ concept:minimum-age-convention-1973-no-138-article-2-norm a values:Prohibition ;
     cml:curationStatus cml:Proposed .
 
 concept:minimum-age-convention-1973-no-138-article-3 a cml:Concept ;
-    skos:prefLabel "Article 3" ;
+    skos:prefLabel "Article 3"@en ;
     cml:realizedBy doc:article-3 ;
     cml:curationStatus cml:Proposed ;
     prov:wasDerivedFrom <https://www.ohchr.org/en/instruments-mechanisms/instruments/minimum-age-convention-1973-no-138> ;
@@ -64,7 +64,7 @@ concept:minimum-age-convention-1973-no-138-article-3-norm a values:Prohibition ;
     cml:curationStatus cml:Proposed .
 
 concept:minimum-age-convention-1973-no-138-article-4 a cml:Concept ;
-    skos:prefLabel "Article 4" ;
+    skos:prefLabel "Article 4"@en ;
     cml:realizedBy doc:article-4 ;
     cml:curationStatus cml:Proposed ;
     prov:wasDerivedFrom <https://www.ohchr.org/en/instruments-mechanisms/instruments/minimum-age-convention-1973-no-138> ;
@@ -80,7 +80,7 @@ concept:minimum-age-convention-1973-no-138-article-4-norm a values:Prohibition ;
     cml:curationStatus cml:Proposed .
 
 concept:minimum-age-convention-1973-no-138-article-5 a cml:Concept ;
-    skos:prefLabel "Article 5" ;
+    skos:prefLabel "Article 5"@en ;
     cml:realizedBy doc:article-5 ;
     cml:curationStatus cml:Proposed ;
     prov:wasDerivedFrom <https://www.ohchr.org/en/instruments-mechanisms/instruments/minimum-age-convention-1973-no-138> ;
@@ -97,7 +97,7 @@ concept:minimum-age-convention-1973-no-138-article-5-norm a values:Obligation ;
     cml:curationStatus cml:Proposed .
 
 concept:minimum-age-convention-1973-no-138-article-6 a cml:Concept ;
-    skos:prefLabel "Article 6" ;
+    skos:prefLabel "Article 6"@en ;
     cml:realizedBy doc:article-6 ;
     cml:curationStatus cml:Proposed ;
     prov:wasDerivedFrom <https://www.ohchr.org/en/instruments-mechanisms/instruments/minimum-age-convention-1973-no-138> ;
@@ -112,7 +112,7 @@ concept:minimum-age-convention-1973-no-138-article-6-norm a values:Undertaking ;
     cml:curationStatus cml:Proposed .
 
 concept:minimum-age-convention-1973-no-138-article-7 a cml:Concept ;
-    skos:prefLabel "Article 7" ;
+    skos:prefLabel "Article 7"@en ;
     cml:realizedBy doc:article-7 ;
     cml:curationStatus cml:Proposed ;
     prov:wasDerivedFrom <https://www.ohchr.org/en/instruments-mechanisms/instruments/minimum-age-convention-1973-no-138> ;
@@ -127,7 +127,7 @@ concept:minimum-age-convention-1973-no-138-article-7-norm a values:Undertaking ;
     cml:curationStatus cml:Proposed .
 
 concept:minimum-age-convention-1973-no-138-article-8 a cml:Concept ;
-    skos:prefLabel "Article 8" ;
+    skos:prefLabel "Article 8"@en ;
     cml:realizedBy doc:article-8 ;
     cml:curationStatus cml:Proposed ;
     prov:wasDerivedFrom <https://www.ohchr.org/en/instruments-mechanisms/instruments/minimum-age-convention-1973-no-138> ;
@@ -142,7 +142,7 @@ concept:minimum-age-convention-1973-no-138-article-8-norm a values:Undertaking ;
     cml:curationStatus cml:Proposed .
 
 concept:minimum-age-convention-1973-no-138-article-9 a cml:Concept ;
-    skos:prefLabel "Article 9" ;
+    skos:prefLabel "Article 9"@en ;
     cml:realizedBy doc:article-9 ;
     cml:curationStatus cml:Proposed ;
     prov:wasDerivedFrom <https://www.ohchr.org/en/instruments-mechanisms/instruments/minimum-age-convention-1973-no-138> ;
@@ -159,7 +159,7 @@ concept:minimum-age-convention-1973-no-138-article-9-norm a values:Obligation ;
     cml:curationStatus cml:Proposed .
 
 concept:minimum-age-convention-1973-no-138-article-10 a cml:Concept ;
-    skos:prefLabel "Article 10" ;
+    skos:prefLabel "Article 10"@en ;
     cml:realizedBy doc:article-10 ;
     cml:curationStatus cml:Proposed ;
     prov:wasDerivedFrom <https://www.ohchr.org/en/instruments-mechanisms/instruments/minimum-age-convention-1973-no-138> ;
@@ -175,7 +175,7 @@ concept:minimum-age-convention-1973-no-138-article-10-norm a values:Prohibition 
     cml:curationStatus cml:Proposed .
 
 concept:minimum-age-convention-1973-no-138-article-11 a cml:Concept ;
-    skos:prefLabel "Article 11" ;
+    skos:prefLabel "Article 11"@en ;
     cml:realizedBy doc:article-11 ;
     cml:curationStatus cml:Proposed ;
     prov:wasDerivedFrom <https://www.ohchr.org/en/instruments-mechanisms/instruments/minimum-age-convention-1973-no-138> ;
@@ -192,7 +192,7 @@ concept:minimum-age-convention-1973-no-138-article-11-norm a values:Obligation ;
     cml:curationStatus cml:Proposed .
 
 concept:minimum-age-convention-1973-no-138-article-12 a cml:Concept ;
-    skos:prefLabel "Article 12" ;
+    skos:prefLabel "Article 12"@en ;
     cml:realizedBy doc:article-12 ;
     cml:curationStatus cml:Proposed ;
     prov:wasDerivedFrom <https://www.ohchr.org/en/instruments-mechanisms/instruments/minimum-age-convention-1973-no-138> ;
@@ -209,7 +209,7 @@ concept:minimum-age-convention-1973-no-138-article-12-norm a values:Obligation ;
     cml:curationStatus cml:Proposed .
 
 concept:minimum-age-convention-1973-no-138-article-13 a cml:Concept ;
-    skos:prefLabel "Article 13" ;
+    skos:prefLabel "Article 13"@en ;
     cml:realizedBy doc:article-13 ;
     cml:curationStatus cml:Proposed ;
     prov:wasDerivedFrom <https://www.ohchr.org/en/instruments-mechanisms/instruments/minimum-age-convention-1973-no-138> ;
@@ -224,7 +224,7 @@ concept:minimum-age-convention-1973-no-138-article-13-norm a values:Undertaking 
     cml:curationStatus cml:Proposed .
 
 concept:minimum-age-convention-1973-no-138-article-14 a cml:Concept ;
-    skos:prefLabel "Article 14" ;
+    skos:prefLabel "Article 14"@en ;
     cml:realizedBy doc:article-14 ;
     cml:curationStatus cml:Proposed ;
     prov:wasDerivedFrom <https://www.ohchr.org/en/instruments-mechanisms/instruments/minimum-age-convention-1973-no-138> ;
@@ -240,7 +240,7 @@ concept:minimum-age-convention-1973-no-138-article-14-norm a values:Prohibition 
     cml:curationStatus cml:Proposed .
 
 concept:minimum-age-convention-1973-no-138-article-15 a cml:Concept ;
-    skos:prefLabel "Article 15" ;
+    skos:prefLabel "Article 15"@en ;
     cml:realizedBy doc:article-15 ;
     cml:curationStatus cml:Proposed ;
     prov:wasDerivedFrom <https://www.ohchr.org/en/instruments-mechanisms/instruments/minimum-age-convention-1973-no-138> ;
@@ -255,7 +255,7 @@ concept:minimum-age-convention-1973-no-138-article-15-norm a values:Undertaking 
     cml:curationStatus cml:Proposed .
 
 concept:minimum-age-convention-1973-no-138-article-16 a cml:Concept ;
-    skos:prefLabel "Article 16" ;
+    skos:prefLabel "Article 16"@en ;
     cml:realizedBy doc:article-16 ;
     cml:curationStatus cml:Proposed ;
     prov:wasDerivedFrom <https://www.ohchr.org/en/instruments-mechanisms/instruments/minimum-age-convention-1973-no-138> ;
@@ -270,7 +270,7 @@ concept:minimum-age-convention-1973-no-138-article-16-norm a values:Undertaking 
     cml:curationStatus cml:Proposed .
 
 concept:minimum-age-convention-1973-no-138-article-17 a cml:Concept ;
-    skos:prefLabel "Article 17" ;
+    skos:prefLabel "Article 17"@en ;
     cml:realizedBy doc:article-17 ;
     cml:curationStatus cml:Proposed ;
     prov:wasDerivedFrom <https://www.ohchr.org/en/instruments-mechanisms/instruments/minimum-age-convention-1973-no-138> ;
@@ -285,7 +285,7 @@ concept:minimum-age-convention-1973-no-138-article-17-norm a values:Undertaking 
     cml:curationStatus cml:Proposed .
 
 concept:minimum-age-convention-1973-no-138-article-18 a cml:Concept ;
-    skos:prefLabel "Article 18" ;
+    skos:prefLabel "Article 18"@en ;
     cml:realizedBy doc:article-18 ;
     cml:curationStatus cml:Proposed ;
     prov:wasDerivedFrom <https://www.ohchr.org/en/instruments-mechanisms/instruments/minimum-age-convention-1973-no-138> ;

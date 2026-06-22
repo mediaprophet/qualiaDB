@@ -17,7 +17,7 @@
 # ============================================================
 
 concept:protocol-amending-slavery-convention-signed-geneva-25-september-article-1 a cml:Concept ;
-    skos:prefLabel "Article 1" ;
+    skos:prefLabel "Article 1"@en ;
     cml:realizedBy doc:article-1 ;
     cml:curationStatus cml:Proposed ;
     prov:wasDerivedFrom <https://www.ohchr.org/en/instruments-mechanisms/instruments/protocol-amending-slavery-convention-signed-geneva-25-september> ;
@@ -32,7 +32,7 @@ concept:protocol-amending-slavery-convention-signed-geneva-25-september-article-
     cml:curationStatus cml:Proposed .
 
 concept:protocol-amending-slavery-convention-signed-geneva-25-september-article-2 a cml:Concept ;
-    skos:prefLabel "Article 2" ;
+    skos:prefLabel "Article 2"@en ;
     cml:realizedBy doc:article-2 ;
     cml:curationStatus cml:Proposed ;
     prov:wasDerivedFrom <https://www.ohchr.org/en/instruments-mechanisms/instruments/protocol-amending-slavery-convention-signed-geneva-25-september> ;
@@ -49,7 +49,7 @@ concept:protocol-amending-slavery-convention-signed-geneva-25-september-article-
     cml:curationStatus cml:Proposed .
 
 concept:protocol-amending-slavery-convention-signed-geneva-25-september-article-3 a cml:Concept ;
-    skos:prefLabel "Article 3" ;
+    skos:prefLabel "Article 3"@en ;
     cml:realizedBy doc:article-3 ;
     cml:curationStatus cml:Proposed ;
     prov:wasDerivedFrom <https://www.ohchr.org/en/instruments-mechanisms/instruments/protocol-amending-slavery-convention-signed-geneva-25-september> ;
@@ -66,7 +66,7 @@ concept:protocol-amending-slavery-convention-signed-geneva-25-september-article-
     cml:curationStatus cml:Proposed .
 
 concept:protocol-amending-slavery-convention-signed-geneva-25-september-article-4 a cml:Concept ;
-    skos:prefLabel "Article 4" ;
+    skos:prefLabel "Article 4"@en ;
     cml:realizedBy doc:article-4 ;
     cml:curationStatus cml:Proposed ;
     prov:wasDerivedFrom <https://www.ohchr.org/en/instruments-mechanisms/instruments/protocol-amending-slavery-convention-signed-geneva-25-september> ;
@@ -81,7 +81,7 @@ concept:protocol-amending-slavery-convention-signed-geneva-25-september-article-
     cml:curationStatus cml:Proposed .
 
 concept:protocol-amending-slavery-convention-signed-geneva-25-september-article-5 a cml:Concept ;
-    skos:prefLabel "Article 5" ;
+    skos:prefLabel "Article 5"@en ;
     cml:realizedBy doc:article-5 ;
     cml:curationStatus cml:Proposed ;
     prov:wasDerivedFrom <https://www.ohchr.org/en/instruments-mechanisms/instruments/protocol-amending-slavery-convention-signed-geneva-25-september> ;

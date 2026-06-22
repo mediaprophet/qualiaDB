@@ -12,7 +12,7 @@
 # ============================================================
 
 doc:Instrument a values:ValuesCredential ;
-    dc:title "Declaration on the Right of Peoples to Peace" ;
+    dc:title "Declaration on the Right of Peoples to Peace"@en ;
     dc:date "12 November 1984" ;
     values:category "Development, peace, food & solidarity rights" ;
     values:categoryStatus values:AutoAssigned ;
@@ -21,43 +21,43 @@ doc:Instrument a values:ValuesCredential ;
 
 doc:paragraph-1 a values:Undertaking ;
     values:partOf doc:Instrument ;
-    dc:title "Paragraph 1" ;
+    dc:title "Paragraph 1"@en ;
     values:deonticStatus values:HeuristicDerived ;
-    values:originalText "Reaffirming that the principal aim of the United Nations is the maintenance of international peace and security," .
+    values:originalText "Reaffirming that the principal aim of the United Nations is the maintenance of international peace and security,"@en .
 
 doc:paragraph-2 a values:Undertaking ;
     values:partOf doc:Instrument ;
-    dc:title "Paragraph 2" ;
+    dc:title "Paragraph 2"@en ;
     values:deonticStatus values:HeuristicDerived ;
-    values:originalText "Bearing in mind the fundamental principles of international law set forth in the Charter of the United Nations," .
+    values:originalText "Bearing in mind the fundamental principles of international law set forth in the Charter of the United Nations,"@en .
 
 doc:paragraph-3 a values:Undertaking ;
     values:partOf doc:Instrument ;
-    dc:title "Paragraph 3" ;
+    dc:title "Paragraph 3"@en ;
     values:deonticStatus values:HeuristicDerived ;
-    values:originalText "Expressing the will and the aspirations of all peoples to eradicate war from the life of mankind and, above all, to avert a world-wide nuclear catastrophe," .
+    values:originalText "Expressing the will and the aspirations of all peoples to eradicate war from the life of mankind and, above all, to avert a world-wide nuclear catastrophe,"@en .
 
 doc:paragraph-4 a values:Undertaking ;
     values:partOf doc:Instrument ;
-    dc:title "Paragraph 4" ;
+    dc:title "Paragraph 4"@en ;
     values:deonticStatus values:HeuristicDerived ;
-    values:originalText "Convinced that life without war serves as the primary international prerequisite for the material well-being, development and progress of countries, and for the full implementation of the rights and fundamental human freedoms proclaimed by the United Nations," .
+    values:originalText "Convinced that life without war serves as the primary international prerequisite for the material well-being, development and progress of countries, and for the full implementation of the rights and fundamental human freedoms proclaimed by the United Nations,"@en .
 
 doc:paragraph-5 a values:Undertaking ;
     values:partOf doc:Instrument ;
-    dc:title "Paragraph 5" ;
+    dc:title "Paragraph 5"@en ;
     values:deonticStatus values:HeuristicDerived ;
-    values:originalText "Aware that in the nuclear age the establishment of a lasting peace on Earth represents the primary condition for the preservation of human civilization and the survival of mankind," .
+    values:originalText "Aware that in the nuclear age the establishment of a lasting peace on Earth represents the primary condition for the preservation of human civilization and the survival of mankind,"@en .
 
 doc:paragraph-6 a values:Undertaking ;
     values:partOf doc:Instrument ;
-    dc:title "Paragraph 6" ;
+    dc:title "Paragraph 6"@en ;
     values:deonticStatus values:HeuristicDerived ;
-    values:originalText "Recognizing that the maintenance of a peaceful life for peoples is the sacred duty of each State," .
+    values:originalText "Recognizing that the maintenance of a peaceful life for peoples is the sacred duty of each State,"@en .
 
 doc:paragraph-7 a values:Right ;
     values:partOf doc:Instrument ;
     values:heldBy values:NaturalPerson ;
-    dc:title "Paragraph 7" ;
+    dc:title "Paragraph 7"@en ;
     values:deonticStatus values:HeuristicDerived ;
-    values:originalText "Solemnly proclaims that the peoples of our planet have a sacred right to peace; Solemnly declares that the preservation of the right of peoples to peace and the promotion of its implementation constitute a fundamental obligation of each State; Emphasizes that ensuring the exercise of the right of peoples to peace demands that the policies of States be directed towards the elimination of the threat of war, particularly nuclear war, the renunciation of the use of force in international relations and the settlement of international disputes by peaceful means on the basis of the Charter of the United Nations; Appeals to all States and international organizations to do their utmost to assist in implementing the right of peoples to peace through the adoption of appropriate measures at both the national and the international level." .
+    values:originalText "Solemnly proclaims that the peoples of our planet have a sacred right to peace; Solemnly declares that the preservation of the right of peoples to peace and the promotion of its implementation constitute a fundamental obligation of each State; Emphasizes that ensuring the exercise of the right of peoples to peace demands that the policies of States be directed towards the elimination of the threat of war, particularly nuclear war, the renunciation of the use of force in international relations and the settlement of international disputes by peaceful means on the basis of the Charter of the United Nations; Appeals to all States and international organizations to do their utmost to assist in implementing the right of peoples to peace through the adoption of appropriate measures at both the national and the international level."@en .

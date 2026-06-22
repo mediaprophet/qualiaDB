@@ -12,7 +12,7 @@
 # ============================================================
 
 doc:Instrument a values:ValuesCredential ;
-    dc:title "Freedom of Association and Protection of the Right to Organize Convention, 1948 (No. 87)" ;
+    dc:title "Freedom of Association and Protection of the Right to Organize Convention, 1948 (No. 87)"@en ;
     dc:date "09 July 1948" ;
     values:category "Labour rights (ILO)" ;
     values:categoryStatus values:AutoAssigned ;
@@ -21,141 +21,141 @@ doc:Instrument a values:ValuesCredential ;
 
 doc:article-1 a values:Undertaking ;
     values:partOf doc:Instrument ;
-    dc:title "Article 1" ;
+    dc:title "Article 1"@en ;
     values:deonticStatus values:HeuristicDerived ;
-    values:originalText "Each Member of the International Labour Organisation for which this Convention is in force undertakes to give effect to the following provisions." .
+    values:originalText "Each Member of the International Labour Organisation for which this Convention is in force undertakes to give effect to the following provisions."@en .
 
 doc:article-2 a values:Right ;
     values:partOf doc:Instrument ;
     values:heldBy values:NaturalPerson ;
-    dc:title "Article 2" ;
+    dc:title "Article 2"@en ;
     values:deonticStatus values:HeuristicDerived ;
-    values:originalText "Workers and employers, without distinction whatsoever, shall have the right to establish and, subject only to the rules of the organisation concerned, to join organisations of their own choosing without previous authorisation." .
+    values:originalText "Workers and employers, without distinction whatsoever, shall have the right to establish and, subject only to the rules of the organisation concerned, to join organisations of their own choosing without previous authorisation."@en .
 
 doc:article-3 a values:Right ;
     values:partOf doc:Instrument ;
     values:heldBy values:NaturalPerson ;
-    dc:title "Article 3" ;
+    dc:title "Article 3"@en ;
     values:deonticStatus values:HeuristicDerived ;
-    values:originalText "1. Workers' and employers' organisations shall have the right to draw up their constitutions and rules, to elect their representatives in full freedom, to organise their administration and activities and to formulate their programmes. 2. The public authorities shall refrain from any interference which would restrict this right or impede the lawful exercise thereof." .
+    values:originalText "1. Workers' and employers' organisations shall have the right to draw up their constitutions and rules, to elect their representatives in full freedom, to organise their administration and activities and to formulate their programmes. 2. The public authorities shall refrain from any interference which would restrict this right or impede the lawful exercise thereof."@en .
 
 doc:article-4 a values:Prohibition ;
     values:partOf doc:Instrument ;
     values:borneBy values:Agent ;
-    dc:title "Article 4" ;
+    dc:title "Article 4"@en ;
     values:deonticStatus values:HeuristicDerived ;
-    values:originalText "Workers' and employers' organisations shall not be liable to be dissolved or suspended by administrative authority." .
+    values:originalText "Workers' and employers' organisations shall not be liable to be dissolved or suspended by administrative authority."@en .
 
 doc:article-5 a values:Right ;
     values:partOf doc:Instrument ;
     values:heldBy values:NaturalPerson ;
-    dc:title "Article 5" ;
+    dc:title "Article 5"@en ;
     values:deonticStatus values:HeuristicDerived ;
-    values:originalText "Workers' and employers' organisations shall have the right to establish and join federations and confederations and any such organisation, federation or confederation shall have the right to affiliate with international organisations of workers and employers." .
+    values:originalText "Workers' and employers' organisations shall have the right to establish and join federations and confederations and any such organisation, federation or confederation shall have the right to affiliate with international organisations of workers and employers."@en .
 
 doc:article-6 a values:Undertaking ;
     values:partOf doc:Instrument ;
-    dc:title "Article 6" ;
+    dc:title "Article 6"@en ;
     values:deonticStatus values:HeuristicDerived ;
-    values:originalText "The provisions of articles 2, 3 and 4 hereof apply to federations and confederations of workers' and employers' organisations." .
+    values:originalText "The provisions of articles 2, 3 and 4 hereof apply to federations and confederations of workers' and employers' organisations."@en .
 
 doc:article-7 a values:Prohibition ;
     values:partOf doc:Instrument ;
     values:borneBy values:Agent ;
-    dc:title "Article 7" ;
+    dc:title "Article 7"@en ;
     values:deonticStatus values:HeuristicDerived ;
-    values:originalText "The acquisition of legal personality by workers' and employers' organisations, federations and confederations shall not be made subject to conditions of such a character as to restrict the application of the provisions of articles 2, 3 and 4 hereof." .
+    values:originalText "The acquisition of legal personality by workers' and employers' organisations, federations and confederations shall not be made subject to conditions of such a character as to restrict the application of the provisions of articles 2, 3 and 4 hereof."@en .
 
 doc:article-8 a values:Prohibition ;
     values:partOf doc:Instrument ;
     values:borneBy values:Agent ;
-    dc:title "Article 8" ;
+    dc:title "Article 8"@en ;
     values:deonticStatus values:HeuristicDerived ;
-    values:originalText "1. In exercising the rights provided for in this Convention workers and employers and their respective organisations, like other persons or organised collectivities, shall respect the law of the land. 2. The law of the land shall not be such as to impair, nor shall it be so applied as to impair, the guarantees provided for in this Convention." .
+    values:originalText "1. In exercising the rights provided for in this Convention workers and employers and their respective organisations, like other persons or organised collectivities, shall respect the law of the land. 2. The law of the land shall not be such as to impair, nor shall it be so applied as to impair, the guarantees provided for in this Convention."@en .
 
 doc:article-9 a values:Prohibition ;
     values:partOf doc:Instrument ;
     values:borneBy values:Agent ;
-    dc:title "Article 9" ;
+    dc:title "Article 9"@en ;
     values:deonticStatus values:HeuristicDerived ;
-    values:originalText "1. The extent to which the guarantees provided for in this Convention shall apply to the armed forces and the police shall be determined by national laws or regulations. 2. In accordance with the principle set forth in paragraph 8 of article 19 of the Constitution of the International Labour Organisation, the ratification of this Convention by any Member shall not be deemed to affect any existing law, award, custom or agreement in virtue of which members of the armed forces or the police enjoy any right guaranteed by this Convention." .
+    values:originalText "1. The extent to which the guarantees provided for in this Convention shall apply to the armed forces and the police shall be determined by national laws or regulations. 2. In accordance with the principle set forth in paragraph 8 of article 19 of the Constitution of the International Labour Organisation, the ratification of this Convention by any Member shall not be deemed to affect any existing law, award, custom or agreement in virtue of which members of the armed forces or the police enjoy any right guaranteed by this Convention."@en .
 
 doc:article-10 a values:Right ;
     values:partOf doc:Instrument ;
     values:heldBy values:NaturalPerson ;
-    dc:title "Article 10" ;
+    dc:title "Article 10"@en ;
     values:deonticStatus values:HeuristicDerived ;
-    values:originalText "In this Convention the term \"organisation\" means any organisation of workers or of employers for furthering and defending the interests of workers or of employers. Part II PROTECTION OF THE RIGHT TO ORGANISE" .
+    values:originalText "In this Convention the term \"organisation\" means any organisation of workers or of employers for furthering and defending the interests of workers or of employers. Part II PROTECTION OF THE RIGHT TO ORGANISE"@en .
 
 doc:article-11 a values:Right ;
     values:partOf doc:Instrument ;
     values:heldBy values:NaturalPerson ;
-    dc:title "Article 11" ;
+    dc:title "Article 11"@en ;
     values:deonticStatus values:HeuristicDerived ;
-    values:originalText "Each Member of the International Labour Organisation for which this Convention is in force undertakes to take all necessary and appropriate measures to ensure that workers and employers may exercise freely the right to organise. Part III MISCELLANEOUS PROVISIONS" .
+    values:originalText "Each Member of the International Labour Organisation for which this Convention is in force undertakes to take all necessary and appropriate measures to ensure that workers and employers may exercise freely the right to organise. Part III MISCELLANEOUS PROVISIONS"@en .
 
 doc:article-12 a values:Obligation ;
     values:partOf doc:Instrument ;
     values:borneBy values:Agent ;
-    dc:title "Article 12" ;
+    dc:title "Article 12"@en ;
     values:deonticStatus values:HeuristicDerived ;
-    values:originalText "1. In respect of the territories referred to in article 35 of the Constitution of the International Labour Organisation as amended by the Constitution of the International Labour Organisation Instrument of Amendment, 1946, other than the territories referred to in paragraphs 4 and 5 of the said article as so amended, each Member of the Organisation which ratifies this Convention shall communicate to the Director-General of the International Labour Office with or as soon as possible after its ratification a declaration stating: (a) The territories in respect of which it undertakes that the provisions of the Convention shall be applied without modification; (b) The territories in respect of which it undertakes that the provisions of the Convention shall be applied subject to modifications, together with details of the said modifications; (c) The territories in respect of which the Convention is inapplicable and in such cases the grounds on which it is inapplicable; (d) The territories in respect of which it reserves its decision. 2. The undertakings referred to in subparagraphs (a) and (b) of paragraph 1 of this article shall be deemed to be an integral part of the ratification and shall have the force of ratification. 3. Any Member may at any time by a subsequent declaration cancel in whole or in part any reservations made in its original declaration in virtue of subparagraphs (b), (c) or (d) of paragraph 1 of this article. 4. Any Member may, at any time at which this Convention is subject to denunciation in accordance with the provisions of article 16, communicate to the Director-General a declaration modifying in any other respect the terms of any former declaration and stating the present position in respect of such territories as it may specify." .
+    values:originalText "1. In respect of the territories referred to in article 35 of the Constitution of the International Labour Organisation as amended by the Constitution of the International Labour Organisation Instrument of Amendment, 1946, other than the territories referred to in paragraphs 4 and 5 of the said article as so amended, each Member of the Organisation which ratifies this Convention shall communicate to the Director-General of the International Labour Office with or as soon as possible after its ratification a declaration stating: (a) The territories in respect of which it undertakes that the provisions of the Convention shall be applied without modification; (b) The territories in respect of which it undertakes that the provisions of the Convention shall be applied subject to modifications, together with details of the said modifications; (c) The territories in respect of which the Convention is inapplicable and in such cases the grounds on which it is inapplicable; (d) The territories in respect of which it reserves its decision. 2. The undertakings referred to in subparagraphs (a) and (b) of paragraph 1 of this article shall be deemed to be an integral part of the ratification and shall have the force of ratification. 3. Any Member may at any time by a subsequent declaration cancel in whole or in part any reservations made in its original declaration in virtue of subparagraphs (b), (c) or (d) of paragraph 1 of this article. 4. Any Member may, at any time at which this Convention is subject to denunciation in accordance with the provisions of article 16, communicate to the Director-General a declaration modifying in any other respect the terms of any former declaration and stating the present position in respect of such territories as it may specify."@en .
 
 doc:article-13 a values:Right ;
     values:partOf doc:Instrument ;
     values:heldBy values:NaturalPerson ;
-    dc:title "Article 13" ;
+    dc:title "Article 13"@en ;
     values:deonticStatus values:HeuristicDerived ;
-    values:originalText "1. Where the subject-matter of this Convention is within the self-governing powers of any non-metropolitan territory, the Member responsible for the international relations of that territory may, in agreement with the government of the territory, communicate to the Director-General of the International Labour Office a declaration accepting on behalf of the territory the obligations of this Convention. 2. A declaration accepting the obligations of this Convention may be communicated to the Director-General of the International Labour Office: (a) By two or more Members of the Organisation in respect of any territory which is under their joint authority; or (b) By any international authority responsible for the administration of any territory, in virtue of the Charter of the United Nations or otherwise, in respect of any such territory. 3. Declarations communicated to the Director-General of the International Labour Office in accordance with the preceding paragraphs of this article shall indicate whether the provisions of the Convention will be applied in the territory concerned without modification or subject to modifications; when the declaration indicates that the provisions of the Convention will be applied subject to modifications it shall give details of the said modifications. 4. The Member, Members or international authority concerned may at any time by a subsequent declaration renounce in whole or in part the right to have recourse to any modification indicated in any former declaration. 5. The Member, Members or international authority concerned may, at any time at which this Convention is subject to denunciation in accordance with the provisions of article 16, communicate to the Director-General of the International Labour Office a declaration modifying in any other respect the terms of any former declaration and stating the present position in respect of the application of the Convention. Part IV FINAL PROVISIONS" .
+    values:originalText "1. Where the subject-matter of this Convention is within the self-governing powers of any non-metropolitan territory, the Member responsible for the international relations of that territory may, in agreement with the government of the territory, communicate to the Director-General of the International Labour Office a declaration accepting on behalf of the territory the obligations of this Convention. 2. A declaration accepting the obligations of this Convention may be communicated to the Director-General of the International Labour Office: (a) By two or more Members of the Organisation in respect of any territory which is under their joint authority; or (b) By any international authority responsible for the administration of any territory, in virtue of the Charter of the United Nations or otherwise, in respect of any such territory. 3. Declarations communicated to the Director-General of the International Labour Office in accordance with the preceding paragraphs of this article shall indicate whether the provisions of the Convention will be applied in the territory concerned without modification or subject to modifications; when the declaration indicates that the provisions of the Convention will be applied subject to modifications it shall give details of the said modifications. 4. The Member, Members or international authority concerned may at any time by a subsequent declaration renounce in whole or in part the right to have recourse to any modification indicated in any former declaration. 5. The Member, Members or international authority concerned may, at any time at which this Convention is subject to denunciation in accordance with the provisions of article 16, communicate to the Director-General of the International Labour Office a declaration modifying in any other respect the terms of any former declaration and stating the present position in respect of the application of the Convention. Part IV FINAL PROVISIONS"@en .
 
 doc:article-14 a values:Obligation ;
     values:partOf doc:Instrument ;
     values:borneBy values:Agent ;
-    dc:title "Article 14" ;
+    dc:title "Article 14"@en ;
     values:deonticStatus values:HeuristicDerived ;
-    values:originalText "The formal ratifications of this Convention shall be communicated to the Director-General of the International Labour Office for registration." .
+    values:originalText "The formal ratifications of this Convention shall be communicated to the Director-General of the International Labour Office for registration."@en .
 
 doc:article-15 a values:Obligation ;
     values:partOf doc:Instrument ;
     values:borneBy values:Agent ;
-    dc:title "Article 15" ;
+    dc:title "Article 15"@en ;
     values:deonticStatus values:HeuristicDerived ;
-    values:originalText "1. This Convention shall be binding only upon those Members of the International Labour Organisation whose ratifications have been registered with the Director-General. 2. It shall come into force twelve months after the date on which the ratifications of two Members have been registered with the Director-General. 3. Thereafter, this Convention shall come into force for any Member twelve months after the date on which its ratification has been registered." .
+    values:originalText "1. This Convention shall be binding only upon those Members of the International Labour Organisation whose ratifications have been registered with the Director-General. 2. It shall come into force twelve months after the date on which the ratifications of two Members have been registered with the Director-General. 3. Thereafter, this Convention shall come into force for any Member twelve months after the date on which its ratification has been registered."@en .
 
 doc:article-16 a values:Prohibition ;
     values:partOf doc:Instrument ;
     values:borneBy values:Agent ;
-    dc:title "Article 16" ;
+    dc:title "Article 16"@en ;
     values:deonticStatus values:HeuristicDerived ;
-    values:originalText "1. A Member which has ratified this Convention may denounce it after the expiration of ten years from the date on which the Convention first comes into force, by an act communicated to the Director-General of the International Labour Office for registration. Such denunciation shall not take effect until one year after the date on which it is registered. 2. Each Member which has ratified this Convention and which does not, within the year following the expiration of the period of ten years mentioned in the preceding paragraph, exercise the right of denunciation provided for in this article, will be bound for another period of ten years and, thereafter, may denounce this Convention at the expiration of each period of ten years under the terms provided for in this article." .
+    values:originalText "1. A Member which has ratified this Convention may denounce it after the expiration of ten years from the date on which the Convention first comes into force, by an act communicated to the Director-General of the International Labour Office for registration. Such denunciation shall not take effect until one year after the date on which it is registered. 2. Each Member which has ratified this Convention and which does not, within the year following the expiration of the period of ten years mentioned in the preceding paragraph, exercise the right of denunciation provided for in this article, will be bound for another period of ten years and, thereafter, may denounce this Convention at the expiration of each period of ten years under the terms provided for in this article."@en .
 
 doc:article-17 a values:Prohibition ;
     values:partOf doc:Instrument ;
     values:borneBy values:Agent ;
-    dc:title "Article 17" ;
+    dc:title "Article 17"@en ;
     values:deonticStatus values:HeuristicDerived ;
-    values:originalText "1 . The Director-General of the International Labour Office shall notify all Members of the International Labour Organisation of the registration of all ratifications, declarations and denunciations communicated to him by the Members of the Organisation. 2. When notifying the Members of the Organisation of the registration of the second ratification communicated to him, the Director-General shall draw the attention of the Members of the Organisation to the date upon which the Convention will come into force." .
+    values:originalText "1 . The Director-General of the International Labour Office shall notify all Members of the International Labour Organisation of the registration of all ratifications, declarations and denunciations communicated to him by the Members of the Organisation. 2. When notifying the Members of the Organisation of the registration of the second ratification communicated to him, the Director-General shall draw the attention of the Members of the Organisation to the date upon which the Convention will come into force."@en .
 
 doc:article-18 a values:Undertaking ;
     values:partOf doc:Instrument ;
-    dc:title "Article 18" ;
+    dc:title "Article 18"@en ;
     values:deonticStatus values:HeuristicDerived ;
-    values:originalText "The Director-General of the International Labour Office shall communicate to the Secretary-General of the United Nations for registration in accordance with Article 102 of the Charter of the United Nations full particulars of all ratifications, declarations and acts of denunciation registered by him in accordance with the provisions of the preceding articles." .
+    values:originalText "The Director-General of the International Labour Office shall communicate to the Secretary-General of the United Nations for registration in accordance with Article 102 of the Charter of the United Nations full particulars of all ratifications, declarations and acts of denunciation registered by him in accordance with the provisions of the preceding articles."@en .
 
 doc:article-19 a values:Undertaking ;
     values:partOf doc:Instrument ;
-    dc:title "Article 19" ;
+    dc:title "Article 19"@en ;
     values:deonticStatus values:HeuristicDerived ;
-    values:originalText "At the expiration of each period of ten years after the coming into force of this Convention, the Governing Body of the International Labour Office shall present to the General Conference a report on the working of this Convention and shall consider the desirability of placing on the agenda of the Conference the question of its revision in whole or in part." .
+    values:originalText "At the expiration of each period of ten years after the coming into force of this Convention, the Governing Body of the International Labour Office shall present to the General Conference a report on the working of this Convention and shall consider the desirability of placing on the agenda of the Conference the question of its revision in whole or in part."@en .
 
 doc:article-20 a values:Undertaking ;
     values:partOf doc:Instrument ;
-    dc:title "Article 20" ;
+    dc:title "Article 20"@en ;
     values:deonticStatus values:HeuristicDerived ;
-    values:originalText "1. Should the Conference adopt a new Convention revising this Convention in whole or in part, then, unless the new Convention otherwise provides: (a) The ratification by a Member of the new revising Convention shall ipso jure involve the immediate denunciation of this Convention, notwithstanding the provisions of article 16 above, if and when the new revising Convention shall have come into force; (b) As from the date when the new revising Convention comes into force this Convention shall cease to be open to ratification by the Members. 2. This Convention shall in any case remain in force in its actual form and content for those Members which have ratified it but have not ratified the revising Convention." .
+    values:originalText "1. Should the Conference adopt a new Convention revising this Convention in whole or in part, then, unless the new Convention otherwise provides: (a) The ratification by a Member of the new revising Convention shall ipso jure involve the immediate denunciation of this Convention, notwithstanding the provisions of article 16 above, if and when the new revising Convention shall have come into force; (b) As from the date when the new revising Convention comes into force this Convention shall cease to be open to ratification by the Members. 2. This Convention shall in any case remain in force in its actual form and content for those Members which have ratified it but have not ratified the revising Convention."@en .
 
 doc:article-21 a values:Undertaking ;
     values:partOf doc:Instrument ;
-    dc:title "Article 21" ;
+    dc:title "Article 21"@en ;
     values:deonticStatus values:HeuristicDerived ;
-    values:originalText "The English and French versions of the text of this Convention are equally authoritative. The foregoing is the authentic text of the Convention duly adopted by the General Conference of the International Labour Organisation during its thirty-first session which was held at San Francisco and declared closed the tenth day of July 1948. In faith whereof we have appended our signatures this thirty-first day of August 1948." .
+    values:originalText "The English and French versions of the text of this Convention are equally authoritative. The foregoing is the authentic text of the Convention duly adopted by the General Conference of the International Labour Organisation during its thirty-first session which was held at San Francisco and declared closed the tenth day of July 1948. In faith whereof we have appended our signatures this thirty-first day of August 1948."@en .

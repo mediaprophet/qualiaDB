@@ -12,7 +12,7 @@
 # ============================================================
 
 doc:Instrument a values:ValuesCredential ;
-    dc:title "Convention on Consent to Marriage, Minimum Age for Marriage and Registration of Marriages" ;
+    dc:title "Convention on Consent to Marriage, Minimum Age for Marriage and Registration of Marriages"@en ;
     dc:date "07 November 1962" ;
     values:category "Marriage & family" ;
     values:categoryStatus values:AutoAssigned ;
@@ -22,67 +22,67 @@ doc:Instrument a values:ValuesCredential ;
 doc:article-1 a values:Prohibition ;
     values:partOf doc:Instrument ;
     values:borneBy values:Agent ;
-    dc:title "Article 1" ;
+    dc:title "Article 1"@en ;
     values:deonticStatus values:HeuristicDerived ;
-    values:originalText "1. No marriage shall be legally entered into without the full and free consent of both parties, such consent to be expressed by them in person after due publicity and in the presence of the authority competent to solemnize the marriage and of witnesses, as prescribed by law. 2. Notwithstanding anything in paragraph 1 above, it shall not be necessary for one of the parties to be present when the competent authority is satisfied that the circumstances are exceptional and that the party has, before a competent authority and in such manner as may be prescribed by law, expressed and not withdrawn consent." .
+    values:originalText "1. No marriage shall be legally entered into without the full and free consent of both parties, such consent to be expressed by them in person after due publicity and in the presence of the authority competent to solemnize the marriage and of witnesses, as prescribed by law. 2. Notwithstanding anything in paragraph 1 above, it shall not be necessary for one of the parties to be present when the competent authority is satisfied that the circumstances are exceptional and that the party has, before a competent authority and in such manner as may be prescribed by law, expressed and not withdrawn consent."@en .
 
 doc:article-2 a values:Obligation ;
     values:partOf doc:Instrument ;
     values:borneBy values:Agent ;
-    dc:title "Article 2" ;
+    dc:title "Article 2"@en ;
     values:deonticStatus values:HeuristicDerived ;
-    values:originalText "States Parties to the present Convention shall take legislative action to specify a minimum age for marriage. No marriage shall be legally entered into by any person under this age, except where a competent authority has granted a dispensation as to age, for serious reasons, in the interest of the intending spouses." .
+    values:originalText "States Parties to the present Convention shall take legislative action to specify a minimum age for marriage. No marriage shall be legally entered into by any person under this age, except where a competent authority has granted a dispensation as to age, for serious reasons, in the interest of the intending spouses."@en .
 
 doc:article-3 a values:Obligation ;
     values:partOf doc:Instrument ;
     values:borneBy values:Agent ;
-    dc:title "Article 3" ;
+    dc:title "Article 3"@en ;
     values:deonticStatus values:HeuristicDerived ;
-    values:originalText "All marriages shall be registered in an appropriate official register by the competent authority." .
+    values:originalText "All marriages shall be registered in an appropriate official register by the competent authority."@en .
 
 doc:article-4 a values:Obligation ;
     values:partOf doc:Instrument ;
     values:borneBy values:Agent ;
-    dc:title "Article 4" ;
+    dc:title "Article 4"@en ;
     values:deonticStatus values:HeuristicDerived ;
-    values:originalText "1. The present Convention shall, until 31 December 1963, be open for signature on behalf of all States Members of the United Nations or members of any of the specialized agencies, and of any other State invited by the General Assembly of the United Nations to become a Party to the Convention. 2. The present Convention is subject to ratification. The instruments of ratification shall be deposited with the Secretary-General of the United Nations." .
+    values:originalText "1. The present Convention shall, until 31 December 1963, be open for signature on behalf of all States Members of the United Nations or members of any of the specialized agencies, and of any other State invited by the General Assembly of the United Nations to become a Party to the Convention. 2. The present Convention is subject to ratification. The instruments of ratification shall be deposited with the Secretary-General of the United Nations."@en .
 
 doc:article-5 a values:Obligation ;
     values:partOf doc:Instrument ;
     values:borneBy values:Agent ;
-    dc:title "Article 5" ;
+    dc:title "Article 5"@en ;
     values:deonticStatus values:HeuristicDerived ;
-    values:originalText "1. The present Convention shall be open for accession to all States referred to in article 4, paragraph 1. 2. Accession shall be effected by the deposit of an instrument of accession with the Secretary-General of the United Nations." .
+    values:originalText "1. The present Convention shall be open for accession to all States referred to in article 4, paragraph 1. 2. Accession shall be effected by the deposit of an instrument of accession with the Secretary-General of the United Nations."@en .
 
 doc:article-6 a values:Undertaking ;
     values:partOf doc:Instrument ;
-    dc:title "Article 6" ;
+    dc:title "Article 6"@en ;
     values:deonticStatus values:HeuristicDerived ;
-    values:originalText "1. The present Convention shall come into force on the ninetieth day following the date of deposit of the eighth instrument of ratification or accession. 2. For each State ratifying or acceding to the Convention after the deposit of the eighth instrument of ratification or accession, the Convention shall enter into force on the ninetieth day after deposit by such State of its instrument of ratification or accession." .
+    values:originalText "1. The present Convention shall come into force on the ninetieth day following the date of deposit of the eighth instrument of ratification or accession. 2. For each State ratifying or acceding to the Convention after the deposit of the eighth instrument of ratification or accession, the Convention shall enter into force on the ninetieth day after deposit by such State of its instrument of ratification or accession."@en .
 
 doc:article-7 a values:Obligation ;
     values:partOf doc:Instrument ;
     values:borneBy values:Agent ;
-    dc:title "Article 7" ;
+    dc:title "Article 7"@en ;
     values:deonticStatus values:HeuristicDerived ;
-    values:originalText "1. Any Contracting State may denounce the present Convention by written notification to the Secretary-General of the United Nations. Denunciation shall take effect one year after the date of receipt of the notification by the Secretary-General. 2. The present Convention shall cease to be in force as from the date when the denunciation which reduces the number of Parties to less than eight becomes effective." .
+    values:originalText "1. Any Contracting State may denounce the present Convention by written notification to the Secretary-General of the United Nations. Denunciation shall take effect one year after the date of receipt of the notification by the Secretary-General. 2. The present Convention shall cease to be in force as from the date when the denunciation which reduces the number of Parties to less than eight becomes effective."@en .
 
 doc:article-8 a values:Undertaking ;
     values:partOf doc:Instrument ;
-    dc:title "Article 8" ;
+    dc:title "Article 8"@en ;
     values:deonticStatus values:HeuristicDerived ;
-    values:originalText "Any dispute which may arise between any two or more Contracting States concerning the interpretation or application of the present Convention which is not settled by negotiation shall, at the request of all the parties to the dispute, be referred to the International Court of Justice for decision, unless the parties agree to another mode of settlement." .
+    values:originalText "Any dispute which may arise between any two or more Contracting States concerning the interpretation or application of the present Convention which is not settled by negotiation shall, at the request of all the parties to the dispute, be referred to the International Court of Justice for decision, unless the parties agree to another mode of settlement."@en .
 
 doc:article-9 a values:Prohibition ;
     values:partOf doc:Instrument ;
     values:borneBy values:Agent ;
-    dc:title "Article 9" ;
+    dc:title "Article 9"@en ;
     values:deonticStatus values:HeuristicDerived ;
-    values:originalText "The Secretary-General of the United Nations shall notify all States Members of the United Nations and the non-member States contemplated in article 4, paragraph 1, of the present Convention of the following: (a) Signatures and instruments of ratification received in accordance with article 4; (b) Instruments of accession received in accordance with article 5; (c) The date upon which the Convention enters into force in accordance with article 6; (d) Notifications of denunciation received in accordance with article 7, paragraph l; (e) Abrogation in accordance with article 7, paragraph 2." .
+    values:originalText "The Secretary-General of the United Nations shall notify all States Members of the United Nations and the non-member States contemplated in article 4, paragraph 1, of the present Convention of the following: (a) Signatures and instruments of ratification received in accordance with article 4; (b) Instruments of accession received in accordance with article 5; (c) The date upon which the Convention enters into force in accordance with article 6; (d) Notifications of denunciation received in accordance with article 7, paragraph l; (e) Abrogation in accordance with article 7, paragraph 2."@en .
 
 doc:article-10 a values:Right ;
     values:partOf doc:Instrument ;
     values:heldBy values:NaturalPerson ;
-    dc:title "Article 10" ;
+    dc:title "Article 10"@en ;
     values:deonticStatus values:HeuristicDerived ;
-    values:originalText "Entry into force: 9 December 1964, in accordance with article 6 The Contracting States , Desiring, in conformity with the Charter of the United Nations, to promote universal respect for, and observance of, human rights and fundamental freedoms for all, without distinction as to race, sex, language or religion, Recalling that article 16 of the Universal Declaration of Human Rights states that: (1) Men and women of full age, without any limitation due to race, nationality or religion, have the right to marry and to found a family. They are entitled to equal rights as to marriage, during marriage and at its dissolution. (2) Marriage shall be entered into only with the free and full consent of the intending spouses, Recalling further that the General Assembly of the United Nations declared, by resolution 843 (IX) of 17 December 1954, that certain customs, ancient laws and practices relating to marriage and the family were inconsistent with the principles set forth in the Charter of the United Nations and in the Universal Declaration of Human Rights, Reaffirming that all States, including those which have or assume responsibility for the administration of Non-Self-Governing and Trust Territories until their achievement of independence, should take all appropriate measures with a view to abolishing such customs, ancient laws and practices by ensuring, inter alia , complete freedom in the choice of a spouse, eliminating completely child marriages and the betrothal of young girls before the age of puberty, establishing appropriate penalties where necessary and establishing a civil or other register in which all marriages will be recorded, Hereby agree as hereinafter provided:" .
+    values:originalText "Entry into force: 9 December 1964, in accordance with article 6 The Contracting States , Desiring, in conformity with the Charter of the United Nations, to promote universal respect for, and observance of, human rights and fundamental freedoms for all, without distinction as to race, sex, language or religion, Recalling that article 16 of the Universal Declaration of Human Rights states that: (1) Men and women of full age, without any limitation due to race, nationality or religion, have the right to marry and to found a family. They are entitled to equal rights as to marriage, during marriage and at its dissolution. (2) Marriage shall be entered into only with the free and full consent of the intending spouses, Recalling further that the General Assembly of the United Nations declared, by resolution 843 (IX) of 17 December 1954, that certain customs, ancient laws and practices relating to marriage and the family were inconsistent with the principles set forth in the Charter of the United Nations and in the Universal Declaration of Human Rights, Reaffirming that all States, including those which have or assume responsibility for the administration of Non-Self-Governing and Trust Territories until their achievement of independence, should take all appropriate measures with a view to abolishing such customs, ancient laws and practices by ensuring, inter alia , complete freedom in the choice of a spouse, eliminating completely child marriages and the betrothal of young girls before the age of puberty, establishing appropriate penalties where necessary and establishing a civil or other register in which all marriages will be recorded, Hereby agree as hereinafter provided:"@en .

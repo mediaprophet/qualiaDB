@@ -17,7 +17,7 @@
 # ============================================================
 
 concept:apii-1977-article-1 a cml:Concept ;
-    skos:prefLabel "Article 1 - Material field of application" ;
+    skos:prefLabel "Article 1 - Material field of application"@en ;
     cml:realizedBy doc:article-1 ;
     cml:curationStatus cml:Proposed ;
     prov:wasDerivedFrom <https://ihl-databases.icrc.org/en/ihl-treaties/apii-1977> ;
@@ -33,7 +33,7 @@ concept:apii-1977-article-1-norm a values:Prohibition ;
     cml:curationStatus cml:Proposed .
 
 concept:apii-1977-article-2 a cml:Concept ;
-    skos:prefLabel "Article 2 - Personal field of application" ;
+    skos:prefLabel "Article 2 - Personal field of application"@en ;
     cml:realizedBy doc:article-2 ;
     cml:curationStatus cml:Proposed ;
     prov:wasDerivedFrom <https://ihl-databases.icrc.org/en/ihl-treaties/apii-1977> ;
@@ -50,7 +50,7 @@ concept:apii-1977-article-2-norm a values:Obligation ;
     cml:curationStatus cml:Proposed .
 
 concept:apii-1977-article-3 a cml:Concept ;
-    skos:prefLabel "Article 3 - Non-intervention" ;
+    skos:prefLabel "Article 3 - Non-intervention"@en ;
     cml:realizedBy doc:article-3 ;
     cml:curationStatus cml:Proposed ;
     prov:wasDerivedFrom <https://ihl-databases.icrc.org/en/ihl-treaties/apii-1977> ;
@@ -67,7 +67,7 @@ concept:apii-1977-article-3-norm a values:Obligation ;
     cml:curationStatus cml:Proposed .
 
 concept:apii-1977-article-4 a cml:Concept ;
-    skos:prefLabel "Article 4 - Fundamental guarantees" ;
+    skos:prefLabel "Article 4 - Fundamental guarantees"@en ;
     cml:realizedBy doc:article-4 ;
     cml:curationStatus cml:Proposed ;
     prov:wasDerivedFrom <https://ihl-databases.icrc.org/en/ihl-treaties/apii-1977> ;
@@ -83,7 +83,7 @@ concept:apii-1977-article-4-norm a values:Prohibition ;
     cml:curationStatus cml:Proposed .
 
 concept:apii-1977-article-5 a cml:Concept ;
-    skos:prefLabel "Article 5 - Persons whose liberty has been restricted" ;
+    skos:prefLabel "Article 5 - Persons whose liberty has been restricted"@en ;
     cml:realizedBy doc:article-5 ;
     cml:curationStatus cml:Proposed ;
     prov:wasDerivedFrom <https://ihl-databases.icrc.org/en/ihl-treaties/apii-1977> ;
@@ -99,7 +99,7 @@ concept:apii-1977-article-5-norm a values:Prohibition ;
     cml:curationStatus cml:Proposed .
 
 concept:apii-1977-article-6 a cml:Concept ;
-    skos:prefLabel "Article 6 - Penal prosecutions" ;
+    skos:prefLabel "Article 6 - Penal prosecutions"@en ;
     cml:realizedBy doc:article-6 ;
     cml:curationStatus cml:Proposed ;
     prov:wasDerivedFrom <https://ihl-databases.icrc.org/en/ihl-treaties/apii-1977> ;
@@ -115,7 +115,7 @@ concept:apii-1977-article-6-norm a values:Prohibition ;
     cml:curationStatus cml:Proposed .
 
 concept:apii-1977-article-7 a cml:Concept ;
-    skos:prefLabel "Article 7 - Protection and care" ;
+    skos:prefLabel "Article 7 - Protection and care"@en ;
     cml:realizedBy doc:article-7 ;
     cml:curationStatus cml:Proposed ;
     prov:wasDerivedFrom <https://ihl-databases.icrc.org/en/ihl-treaties/apii-1977> ;
@@ -132,7 +132,7 @@ concept:apii-1977-article-7-norm a values:Obligation ;
     cml:curationStatus cml:Proposed .
 
 concept:apii-1977-article-8 a cml:Concept ;
-    skos:prefLabel "Article 8 - Search" ;
+    skos:prefLabel "Article 8 - Search"@en ;
     cml:realizedBy doc:article-8 ;
     cml:curationStatus cml:Proposed ;
     prov:wasDerivedFrom <https://ihl-databases.icrc.org/en/ihl-treaties/apii-1977> ;
@@ -149,7 +149,7 @@ concept:apii-1977-article-8-norm a values:Obligation ;
     cml:curationStatus cml:Proposed .
 
 concept:apii-1977-article-9 a cml:Concept ;
-    skos:prefLabel "Article 9 - Protection of medical and religious personnel" ;
+    skos:prefLabel "Article 9 - Protection of medical and religious personnel"@en ;
     cml:realizedBy doc:article-9 ;
     cml:curationStatus cml:Proposed ;
     prov:wasDerivedFrom <https://ihl-databases.icrc.org/en/ihl-treaties/apii-1977> ;
@@ -165,7 +165,7 @@ concept:apii-1977-article-9-norm a values:Prohibition ;
     cml:curationStatus cml:Proposed .
 
 concept:apii-1977-article-10 a cml:Concept ;
-    skos:prefLabel "Article 10 - General protection of medical duties" ;
+    skos:prefLabel "Article 10 - General protection of medical duties"@en ;
     cml:realizedBy doc:article-10 ;
     cml:curationStatus cml:Proposed ;
     prov:wasDerivedFrom <https://ihl-databases.icrc.org/en/ihl-treaties/apii-1977> ;
@@ -181,7 +181,7 @@ concept:apii-1977-article-10-norm a values:Undertaking ;
     cml:curationStatus cml:Proposed .
 
 concept:apii-1977-article-11 a cml:Concept ;
-    skos:prefLabel "Article 11 - Protection of medical units and transports" ;
+    skos:prefLabel "Article 11 - Protection of medical units and transports"@en ;
     cml:realizedBy doc:article-11 ;
     cml:curationStatus cml:Proposed ;
     prov:wasDerivedFrom <https://ihl-databases.icrc.org/en/ihl-treaties/apii-1977> ;
@@ -197,7 +197,7 @@ concept:apii-1977-article-11-norm a values:Prohibition ;
     cml:curationStatus cml:Proposed .
 
 concept:apii-1977-article-12 a cml:Concept ;
-    skos:prefLabel "Article 12 - The distinctive emblem" ;
+    skos:prefLabel "Article 12 - The distinctive emblem"@en ;
     cml:realizedBy doc:article-12 ;
     cml:curationStatus cml:Proposed ;
     prov:wasDerivedFrom <https://ihl-databases.icrc.org/en/ihl-treaties/apii-1977> ;
@@ -213,7 +213,7 @@ concept:apii-1977-article-12-norm a values:Prohibition ;
     cml:curationStatus cml:Proposed .
 
 concept:apii-1977-article-13 a cml:Concept ;
-    skos:prefLabel "Article 13 - Protection of the civilian population" ;
+    skos:prefLabel "Article 13 - Protection of the civilian population"@en ;
     cml:realizedBy doc:article-13 ;
     cml:curationStatus cml:Proposed ;
     prov:wasDerivedFrom <https://ihl-databases.icrc.org/en/ihl-treaties/apii-1977> ;
@@ -229,7 +229,7 @@ concept:apii-1977-article-13-norm a values:Prohibition ;
     cml:curationStatus cml:Proposed .
 
 concept:apii-1977-article-14 a cml:Concept ;
-    skos:prefLabel "Article 14 - Protection of objects indispensable to the survival of the civilian population" ;
+    skos:prefLabel "Article 14 - Protection of objects indispensable to the survival of the civilian population"@en ;
     cml:realizedBy doc:article-14 ;
     cml:curationStatus cml:Proposed ;
     prov:wasDerivedFrom <https://ihl-databases.icrc.org/en/ihl-treaties/apii-1977> ;
@@ -245,7 +245,7 @@ concept:apii-1977-article-14-norm a values:Prohibition ;
     cml:curationStatus cml:Proposed .
 
 concept:apii-1977-article-15 a cml:Concept ;
-    skos:prefLabel "Article 15 - Protection of works and installations containing dangerous forces" ;
+    skos:prefLabel "Article 15 - Protection of works and installations containing dangerous forces"@en ;
     cml:realizedBy doc:article-15 ;
     cml:curationStatus cml:Proposed ;
     prov:wasDerivedFrom <https://ihl-databases.icrc.org/en/ihl-treaties/apii-1977> ;
@@ -261,7 +261,7 @@ concept:apii-1977-article-15-norm a values:Prohibition ;
     cml:curationStatus cml:Proposed .
 
 concept:apii-1977-article-16 a cml:Concept ;
-    skos:prefLabel "Article 16 - Protection of cultural objects and of places of worship" ;
+    skos:prefLabel "Article 16 - Protection of cultural objects and of places of worship"@en ;
     cml:realizedBy doc:article-16 ;
     cml:curationStatus cml:Proposed ;
     prov:wasDerivedFrom <https://ihl-databases.icrc.org/en/ihl-treaties/apii-1977> ;
@@ -277,7 +277,7 @@ concept:apii-1977-article-16-norm a values:Prohibition ;
     cml:curationStatus cml:Proposed .
 
 concept:apii-1977-article-17 a cml:Concept ;
-    skos:prefLabel "Article 17 - Prohibition of forced movement of civilians" ;
+    skos:prefLabel "Article 17 - Prohibition of forced movement of civilians"@en ;
     cml:realizedBy doc:article-17 ;
     cml:curationStatus cml:Proposed ;
     prov:wasDerivedFrom <https://ihl-databases.icrc.org/en/ihl-treaties/apii-1977> ;
@@ -293,7 +293,7 @@ concept:apii-1977-article-17-norm a values:Prohibition ;
     cml:curationStatus cml:Proposed .
 
 concept:apii-1977-article-18 a cml:Concept ;
-    skos:prefLabel "Article 18 - Relief societies and relief actions" ;
+    skos:prefLabel "Article 18 - Relief societies and relief actions"@en ;
     cml:realizedBy doc:article-18 ;
     cml:curationStatus cml:Proposed ;
     prov:wasDerivedFrom <https://ihl-databases.icrc.org/en/ihl-treaties/apii-1977> ;
@@ -310,7 +310,7 @@ concept:apii-1977-article-18-norm a values:Obligation ;
     cml:curationStatus cml:Proposed .
 
 concept:apii-1977-article-19 a cml:Concept ;
-    skos:prefLabel "Article 19 - Dissemination" ;
+    skos:prefLabel "Article 19 - Dissemination"@en ;
     cml:realizedBy doc:article-19 ;
     cml:curationStatus cml:Proposed ;
     prov:wasDerivedFrom <https://ihl-databases.icrc.org/en/ihl-treaties/apii-1977> ;
@@ -327,7 +327,7 @@ concept:apii-1977-article-19-norm a values:Obligation ;
     cml:curationStatus cml:Proposed .
 
 concept:apii-1977-article-20 a cml:Concept ;
-    skos:prefLabel "Article 20 - Signature" ;
+    skos:prefLabel "Article 20 - Signature"@en ;
     cml:realizedBy doc:article-20 ;
     cml:curationStatus cml:Proposed ;
     prov:wasDerivedFrom <https://ihl-databases.icrc.org/en/ihl-treaties/apii-1977> ;
@@ -344,7 +344,7 @@ concept:apii-1977-article-20-norm a values:Obligation ;
     cml:curationStatus cml:Proposed .
 
 concept:apii-1977-article-21 a cml:Concept ;
-    skos:prefLabel "Article 21 - Ratification" ;
+    skos:prefLabel "Article 21 - Ratification"@en ;
     cml:realizedBy doc:article-21 ;
     cml:curationStatus cml:Proposed ;
     prov:wasDerivedFrom <https://ihl-databases.icrc.org/en/ihl-treaties/apii-1977> ;
@@ -361,7 +361,7 @@ concept:apii-1977-article-21-norm a values:Obligation ;
     cml:curationStatus cml:Proposed .
 
 concept:apii-1977-article-22 a cml:Concept ;
-    skos:prefLabel "Article 22 - Accession" ;
+    skos:prefLabel "Article 22 - Accession"@en ;
     cml:realizedBy doc:article-22 ;
     cml:curationStatus cml:Proposed ;
     prov:wasDerivedFrom <https://ihl-databases.icrc.org/en/ihl-treaties/apii-1977> ;
@@ -378,7 +378,7 @@ concept:apii-1977-article-22-norm a values:Obligation ;
     cml:curationStatus cml:Proposed .
 
 concept:apii-1977-article-23 a cml:Concept ;
-    skos:prefLabel "Article 23 - Entry into force" ;
+    skos:prefLabel "Article 23 - Entry into force"@en ;
     cml:realizedBy doc:article-23 ;
     cml:curationStatus cml:Proposed ;
     prov:wasDerivedFrom <https://ihl-databases.icrc.org/en/ihl-treaties/apii-1977> ;
@@ -394,7 +394,7 @@ concept:apii-1977-article-23-norm a values:Undertaking ;
     cml:curationStatus cml:Proposed .
 
 concept:apii-1977-article-24 a cml:Concept ;
-    skos:prefLabel "Article 24 - Amendment" ;
+    skos:prefLabel "Article 24 - Amendment"@en ;
     cml:realizedBy doc:article-24 ;
     cml:curationStatus cml:Proposed ;
     prov:wasDerivedFrom <https://ihl-databases.icrc.org/en/ihl-treaties/apii-1977> ;
@@ -411,7 +411,7 @@ concept:apii-1977-article-24-norm a values:Obligation ;
     cml:curationStatus cml:Proposed .
 
 concept:apii-1977-article-25 a cml:Concept ;
-    skos:prefLabel "Article 25 - Denunciation" ;
+    skos:prefLabel "Article 25 - Denunciation"@en ;
     cml:realizedBy doc:article-25 ;
     cml:curationStatus cml:Proposed ;
     prov:wasDerivedFrom <https://ihl-databases.icrc.org/en/ihl-treaties/apii-1977> ;
@@ -427,7 +427,7 @@ concept:apii-1977-article-25-norm a values:Prohibition ;
     cml:curationStatus cml:Proposed .
 
 concept:apii-1977-article-26 a cml:Concept ;
-    skos:prefLabel "Article 26 - Notifications" ;
+    skos:prefLabel "Article 26 - Notifications"@en ;
     cml:realizedBy doc:article-26 ;
     cml:curationStatus cml:Proposed ;
     prov:wasDerivedFrom <https://ihl-databases.icrc.org/en/ihl-treaties/apii-1977> ;
@@ -443,7 +443,7 @@ concept:apii-1977-article-26-norm a values:Undertaking ;
     cml:curationStatus cml:Proposed .
 
 concept:apii-1977-article-27 a cml:Concept ;
-    skos:prefLabel "Article 27 - Registration" ;
+    skos:prefLabel "Article 27 - Registration"@en ;
     cml:realizedBy doc:article-27 ;
     cml:curationStatus cml:Proposed ;
     prov:wasDerivedFrom <https://ihl-databases.icrc.org/en/ihl-treaties/apii-1977> ;
@@ -460,7 +460,7 @@ concept:apii-1977-article-27-norm a values:Obligation ;
     cml:curationStatus cml:Proposed .
 
 concept:apii-1977-article-28 a cml:Concept ;
-    skos:prefLabel "Article 28 - Authentic texts" ;
+    skos:prefLabel "Article 28 - Authentic texts"@en ;
     cml:realizedBy doc:article-28 ;
     cml:curationStatus cml:Proposed ;
     prov:wasDerivedFrom <https://ihl-databases.icrc.org/en/ihl-treaties/apii-1977> ;

@@ -17,7 +17,7 @@
 # ============================================================
 
 concept:apiii-2005-article-1 a cml:Concept ;
-    skos:prefLabel "Article 1 - Respect for and scope of application of this Protocol" ;
+    skos:prefLabel "Article 1 - Respect for and scope of application of this Protocol"@en ;
     cml:realizedBy doc:article-1 ;
     cml:curationStatus cml:Proposed ;
     prov:wasDerivedFrom <https://ihl-databases.icrc.org/en/ihl-treaties/apiii-2005> ;
@@ -34,7 +34,7 @@ concept:apiii-2005-article-1-norm a values:Obligation ;
     cml:curationStatus cml:Proposed .
 
 concept:apiii-2005-article-2 a cml:Concept ;
-    skos:prefLabel "Article 2 - Distinctive emblems" ;
+    skos:prefLabel "Article 2 - Distinctive emblems"@en ;
     cml:realizedBy doc:article-2 ;
     cml:curationStatus cml:Proposed ;
     prov:wasDerivedFrom <https://ihl-databases.icrc.org/en/ihl-treaties/apiii-2005> ;
@@ -51,7 +51,7 @@ concept:apiii-2005-article-2-norm a values:Obligation ;
     cml:curationStatus cml:Proposed .
 
 concept:apiii-2005-article-3 a cml:Concept ;
-    skos:prefLabel "Article 3 - Indicative use of the third Protocol emblem" ;
+    skos:prefLabel "Article 3 - Indicative use of the third Protocol emblem"@en ;
     cml:realizedBy doc:article-3 ;
     cml:curationStatus cml:Proposed ;
     prov:wasDerivedFrom <https://ihl-databases.icrc.org/en/ihl-treaties/apiii-2005> ;
@@ -67,7 +67,7 @@ concept:apiii-2005-article-3-norm a values:Undertaking ;
     cml:curationStatus cml:Proposed .
 
 concept:apiii-2005-article-4 a cml:Concept ;
-    skos:prefLabel "Article 4 - International Committee of the Red Cross and International Federation of Red Cross and Red Crescent Societies" ;
+    skos:prefLabel "Article 4 - International Committee of the Red Cross and International Federation of Red Cross and Red Crescent Societies"@en ;
     cml:realizedBy doc:article-4 ;
     cml:curationStatus cml:Proposed ;
     prov:wasDerivedFrom <https://ihl-databases.icrc.org/en/ihl-treaties/apiii-2005> ;
@@ -83,7 +83,7 @@ concept:apiii-2005-article-4-norm a values:Undertaking ;
     cml:curationStatus cml:Proposed .
 
 concept:apiii-2005-article-5 a cml:Concept ;
-    skos:prefLabel "Article 5 - Missions under United Nations auspices" ;
+    skos:prefLabel "Article 5 - Missions under United Nations auspices"@en ;
     cml:realizedBy doc:article-5 ;
     cml:curationStatus cml:Proposed ;
     prov:wasDerivedFrom <https://ihl-databases.icrc.org/en/ihl-treaties/apiii-2005> ;
@@ -99,7 +99,7 @@ concept:apiii-2005-article-5-norm a values:Undertaking ;
     cml:curationStatus cml:Proposed .
 
 concept:apiii-2005-article-6 a cml:Concept ;
-    skos:prefLabel "Article 6 - Prevention and repression of misuse" ;
+    skos:prefLabel "Article 6 - Prevention and repression of misuse"@en ;
     cml:realizedBy doc:article-6 ;
     cml:curationStatus cml:Proposed ;
     prov:wasDerivedFrom <https://ihl-databases.icrc.org/en/ihl-treaties/apiii-2005> ;
@@ -115,7 +115,7 @@ concept:apiii-2005-article-6-norm a values:Prohibition ;
     cml:curationStatus cml:Proposed .
 
 concept:apiii-2005-article-7 a cml:Concept ;
-    skos:prefLabel "Article 7 - Dissemination" ;
+    skos:prefLabel "Article 7 - Dissemination"@en ;
     cml:realizedBy doc:article-7 ;
     cml:curationStatus cml:Proposed ;
     prov:wasDerivedFrom <https://ihl-databases.icrc.org/en/ihl-treaties/apiii-2005> ;
@@ -131,7 +131,7 @@ concept:apiii-2005-article-7-norm a values:Undertaking ;
     cml:curationStatus cml:Proposed .
 
 concept:apiii-2005-article-8 a cml:Concept ;
-    skos:prefLabel "Article 8 - Signature" ;
+    skos:prefLabel "Article 8 - Signature"@en ;
     cml:realizedBy doc:article-8 ;
     cml:curationStatus cml:Proposed ;
     prov:wasDerivedFrom <https://ihl-databases.icrc.org/en/ihl-treaties/apiii-2005> ;
@@ -148,7 +148,7 @@ concept:apiii-2005-article-8-norm a values:Obligation ;
     cml:curationStatus cml:Proposed .
 
 concept:apiii-2005-article-9 a cml:Concept ;
-    skos:prefLabel "Article 9 - Ratification" ;
+    skos:prefLabel "Article 9 - Ratification"@en ;
     cml:realizedBy doc:article-9 ;
     cml:curationStatus cml:Proposed ;
     prov:wasDerivedFrom <https://ihl-databases.icrc.org/en/ihl-treaties/apiii-2005> ;
@@ -165,7 +165,7 @@ concept:apiii-2005-article-9-norm a values:Obligation ;
     cml:curationStatus cml:Proposed .
 
 concept:apiii-2005-article-10 a cml:Concept ;
-    skos:prefLabel "Article 10 - Accession" ;
+    skos:prefLabel "Article 10 - Accession"@en ;
     cml:realizedBy doc:article-10 ;
     cml:curationStatus cml:Proposed ;
     prov:wasDerivedFrom <https://ihl-databases.icrc.org/en/ihl-treaties/apiii-2005> ;
@@ -182,7 +182,7 @@ concept:apiii-2005-article-10-norm a values:Obligation ;
     cml:curationStatus cml:Proposed .
 
 concept:apiii-2005-article-11 a cml:Concept ;
-    skos:prefLabel "Article 11 - Entry into force" ;
+    skos:prefLabel "Article 11 - Entry into force"@en ;
     cml:realizedBy doc:article-11 ;
     cml:curationStatus cml:Proposed ;
     prov:wasDerivedFrom <https://ihl-databases.icrc.org/en/ihl-treaties/apiii-2005> ;
@@ -198,7 +198,7 @@ concept:apiii-2005-article-11-norm a values:Undertaking ;
     cml:curationStatus cml:Proposed .
 
 concept:apiii-2005-article-12 a cml:Concept ;
-    skos:prefLabel "Article 12 - Treaty relations upon entry into force of this Protocol" ;
+    skos:prefLabel "Article 12 - Treaty relations upon entry into force of this Protocol"@en ;
     cml:realizedBy doc:article-12 ;
     cml:curationStatus cml:Proposed ;
     prov:wasDerivedFrom <https://ihl-databases.icrc.org/en/ihl-treaties/apiii-2005> ;
@@ -214,7 +214,7 @@ concept:apiii-2005-article-12-norm a values:Undertaking ;
     cml:curationStatus cml:Proposed .
 
 concept:apiii-2005-article-13 a cml:Concept ;
-    skos:prefLabel "Article 13 - Amendment" ;
+    skos:prefLabel "Article 13 - Amendment"@en ;
     cml:realizedBy doc:article-13 ;
     cml:curationStatus cml:Proposed ;
     prov:wasDerivedFrom <https://ihl-databases.icrc.org/en/ihl-treaties/apiii-2005> ;
@@ -231,7 +231,7 @@ concept:apiii-2005-article-13-norm a values:Obligation ;
     cml:curationStatus cml:Proposed .
 
 concept:apiii-2005-article-14 a cml:Concept ;
-    skos:prefLabel "Article 14 - Denunciation" ;
+    skos:prefLabel "Article 14 - Denunciation"@en ;
     cml:realizedBy doc:article-14 ;
     cml:curationStatus cml:Proposed ;
     prov:wasDerivedFrom <https://ihl-databases.icrc.org/en/ihl-treaties/apiii-2005> ;
@@ -247,7 +247,7 @@ concept:apiii-2005-article-14-norm a values:Prohibition ;
     cml:curationStatus cml:Proposed .
 
 concept:apiii-2005-article-15 a cml:Concept ;
-    skos:prefLabel "Article 15 - Notifications" ;
+    skos:prefLabel "Article 15 - Notifications"@en ;
     cml:realizedBy doc:article-15 ;
     cml:curationStatus cml:Proposed ;
     prov:wasDerivedFrom <https://ihl-databases.icrc.org/en/ihl-treaties/apiii-2005> ;
@@ -263,7 +263,7 @@ concept:apiii-2005-article-15-norm a values:Undertaking ;
     cml:curationStatus cml:Proposed .
 
 concept:apiii-2005-article-16 a cml:Concept ;
-    skos:prefLabel "Article 16 - Registration" ;
+    skos:prefLabel "Article 16 - Registration"@en ;
     cml:realizedBy doc:article-16 ;
     cml:curationStatus cml:Proposed ;
     prov:wasDerivedFrom <https://ihl-databases.icrc.org/en/ihl-treaties/apiii-2005> ;
@@ -280,7 +280,7 @@ concept:apiii-2005-article-16-norm a values:Obligation ;
     cml:curationStatus cml:Proposed .
 
 concept:apiii-2005-article-17 a cml:Concept ;
-    skos:prefLabel "Article 17 - Authentic texts" ;
+    skos:prefLabel "Article 17 - Authentic texts"@en ;
     cml:realizedBy doc:article-17 ;
     cml:curationStatus cml:Proposed ;
     prov:wasDerivedFrom <https://ihl-databases.icrc.org/en/ihl-treaties/apiii-2005> ;

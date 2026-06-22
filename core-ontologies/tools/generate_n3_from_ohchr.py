@@ -178,7 +178,7 @@ def emit(slug, title, date, pre, segs):
          '# states->parties + universalisation = curation overlay (amendedText), pending.',
          '# ============================================================', '',
          'doc:Instrument a values:ValuesCredential ;',
-         f'    dc:title "{esc(title)}" ;']
+         f'    dc:title "{esc(title)}"@en ;']
     if re.search(r"\d{4}", date): L.append(f'    dc:date "{esc(date)}" ;')
     L.append(f'    values:category "{esc(categorize(norm_slug(slug)))}" ;')
     L.append('    values:categoryStatus values:AutoAssigned ;')
@@ -189,7 +189,7 @@ def emit(slug, title, date, pre, segs):
     if len(pre) > 40:
         L += ['doc:preamble a values:Undertaking ; values:partOf doc:Instrument ;',
               '    values:deonticStatus values:HeuristicDerived ;',
-              f'    values:originalText "{esc(pre)}" .', '']
+              f'    values:originalText "{esc(pre)}"@en .', '']
     for n, kind, body in segs:
         body = strip_boilerplate(body)
         if len(body) < 8: continue
@@ -197,9 +197,9 @@ def emit(slug, title, date, pre, segs):
         L.append(f'doc:{kind.lower()}-{n} a {ty} ;')
         L.append('    values:partOf doc:Instrument ;')
         if bearer: L.append(f'    {bearer} ;')
-        L.append(f'    dc:title "{kind} {n}" ;')
+        L.append(f'    dc:title "{kind} {n}"@en ;')
         L.append('    values:deonticStatus values:HeuristicDerived ;')
-        L.append(f'    values:originalText "{esc(body)}" .')
+        L.append(f'    values:originalText "{esc(body)}"@en .')
         L.append('')
     return "\n".join(L)
 

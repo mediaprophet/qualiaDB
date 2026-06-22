@@ -17,7 +17,7 @@
 # ============================================================
 
 concept:principles-medical-ethics-relevant-role-health-personnel-principle-1 a cml:Concept ;
-    skos:prefLabel "Principle 1" ;
+    skos:prefLabel "Principle 1"@en ;
     cml:realizedBy doc:principle-1 ;
     cml:curationStatus cml:Proposed ;
     prov:wasDerivedFrom <https://www.ohchr.org/en/instruments-mechanisms/instruments/principles-medical-ethics-relevant-role-health-personnel> ;
@@ -32,7 +32,7 @@ concept:principles-medical-ethics-relevant-role-health-personnel-principle-1-nor
     cml:curationStatus cml:Proposed .
 
 concept:principles-medical-ethics-relevant-role-health-personnel-principle-2 a cml:Concept ;
-    skos:prefLabel "Principle 2" ;
+    skos:prefLabel "Principle 2"@en ;
     cml:realizedBy doc:principle-2 ;
     cml:curationStatus cml:Proposed ;
     prov:wasDerivedFrom <https://www.ohchr.org/en/instruments-mechanisms/instruments/principles-medical-ethics-relevant-role-health-personnel> ;
@@ -47,7 +47,7 @@ concept:principles-medical-ethics-relevant-role-health-personnel-principle-2-nor
     cml:curationStatus cml:Proposed .
 
 concept:principles-medical-ethics-relevant-role-health-personnel-principle-3 a cml:Concept ;
-    skos:prefLabel "Principle 3" ;
+    skos:prefLabel "Principle 3"@en ;
     cml:realizedBy doc:principle-3 ;
     cml:curationStatus cml:Proposed ;
     prov:wasDerivedFrom <https://www.ohchr.org/en/instruments-mechanisms/instruments/principles-medical-ethics-relevant-role-health-personnel> ;
@@ -62,7 +62,7 @@ concept:principles-medical-ethics-relevant-role-health-personnel-principle-3-nor
     cml:curationStatus cml:Proposed .
 
 concept:principles-medical-ethics-relevant-role-health-personnel-principle-4 a cml:Concept ;
-    skos:prefLabel "Principle 4" ;
+    skos:prefLabel "Principle 4"@en ;
     cml:realizedBy doc:principle-4 ;
     cml:curationStatus cml:Proposed ;
     prov:wasDerivedFrom <https://www.ohchr.org/en/instruments-mechanisms/instruments/principles-medical-ethics-relevant-role-health-personnel> ;
@@ -77,7 +77,7 @@ concept:principles-medical-ethics-relevant-role-health-personnel-principle-4-nor
     cml:curationStatus cml:Proposed .
 
 concept:principles-medical-ethics-relevant-role-health-personnel-principle-5 a cml:Concept ;
-    skos:prefLabel "Principle 5" ;
+    skos:prefLabel "Principle 5"@en ;
     cml:realizedBy doc:principle-5 ;
     cml:curationStatus cml:Proposed ;
     prov:wasDerivedFrom <https://www.ohchr.org/en/instruments-mechanisms/instruments/principles-medical-ethics-relevant-role-health-personnel> ;
@@ -92,7 +92,7 @@ concept:principles-medical-ethics-relevant-role-health-personnel-principle-5-nor
     cml:curationStatus cml:Proposed .
 
 concept:principles-medical-ethics-relevant-role-health-personnel-principle-6 a cml:Concept ;
-    skos:prefLabel "Principle 6" ;
+    skos:prefLabel "Principle 6"@en ;
     cml:realizedBy doc:principle-6 ;
     cml:curationStatus cml:Proposed ;
     prov:wasDerivedFrom <https://www.ohchr.org/en/instruments-mechanisms/instruments/principles-medical-ethics-relevant-role-health-personnel> ;

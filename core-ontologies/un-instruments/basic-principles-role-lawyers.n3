@@ -12,7 +12,7 @@
 # ============================================================
 
 doc:Instrument a values:ValuesCredential ;
-    dc:title "Basic Principles on the Role of Lawyers" ;
+    dc:title "Basic Principles on the Role of Lawyers"@en ;
     dc:date "07 September 1990" ;
     values:category "Administration of justice, detention & law enforcement" ;
     values:categoryStatus values:AutoAssigned ;
@@ -21,317 +21,317 @@ doc:Instrument a values:ValuesCredential ;
 
 doc:paragraph-1 a values:Undertaking ;
     values:partOf doc:Instrument ;
-    dc:title "Paragraph 1" ;
+    dc:title "Paragraph 1"@en ;
     values:deonticStatus values:HeuristicDerived ;
-    values:originalText "Access to lawyers and legal services Special safeguards in criminal justice matters Qualifications and training Duties and responsibilities Guarantees for the functioning of lawyers Freedom of expression and association Professional associations of lawyers Disciplinary proceedings" .
+    values:originalText "Access to lawyers and legal services Special safeguards in criminal justice matters Qualifications and training Duties and responsibilities Guarantees for the functioning of lawyers Freedom of expression and association Professional associations of lawyers Disciplinary proceedings"@en .
 
 doc:paragraph-2 a values:Undertaking ;
     values:partOf doc:Instrument ;
-    dc:title "Paragraph 2" ;
+    dc:title "Paragraph 2"@en ;
     values:deonticStatus values:HeuristicDerived ;
-    values:originalText "Whereas in the Charter of the United Nations the peoples of the world affirm, inter alia , their determination to establish conditions under which justice can be maintained, and proclaim as one of their purposes the achievement of international cooperation in promoting and encouraging respect for human rights and fundamental freedoms without distinction as to race, sex, language or religion," .
+    values:originalText "Whereas in the Charter of the United Nations the peoples of the world affirm, inter alia , their determination to establish conditions under which justice can be maintained, and proclaim as one of their purposes the achievement of international cooperation in promoting and encouraging respect for human rights and fundamental freedoms without distinction as to race, sex, language or religion,"@en .
 
 doc:paragraph-3 a values:Right ;
     values:partOf doc:Instrument ;
     values:heldBy values:NaturalPerson ;
-    dc:title "Paragraph 3" ;
+    dc:title "Paragraph 3"@en ;
     values:deonticStatus values:HeuristicDerived ;
-    values:originalText "Whereas the Universal Declaration of Human Rights enshrines the principles of equality before the law, the presumption of innocence, the right to a fair and public hearing by an independent and impartial tribunal, and all the guarantees necessary for the defence of everyone charged with a penal offence," .
+    values:originalText "Whereas the Universal Declaration of Human Rights enshrines the principles of equality before the law, the presumption of innocence, the right to a fair and public hearing by an independent and impartial tribunal, and all the guarantees necessary for the defence of everyone charged with a penal offence,"@en .
 
 doc:paragraph-4 a values:Right ;
     values:partOf doc:Instrument ;
     values:heldBy values:NaturalPerson ;
-    dc:title "Paragraph 4" ;
+    dc:title "Paragraph 4"@en ;
     values:deonticStatus values:HeuristicDerived ;
-    values:originalText "Whereas the International Covenant on Civil and Political Rights proclaims, in addition, the right to be tried without undue delay and the right to a fair and public hearing by a competent, independent and impartial tribunal established by law," .
+    values:originalText "Whereas the International Covenant on Civil and Political Rights proclaims, in addition, the right to be tried without undue delay and the right to a fair and public hearing by a competent, independent and impartial tribunal established by law,"@en .
 
 doc:paragraph-5 a values:Undertaking ;
     values:partOf doc:Instrument ;
-    dc:title "Paragraph 5" ;
+    dc:title "Paragraph 5"@en ;
     values:deonticStatus values:HeuristicDerived ;
-    values:originalText "Whereas the International Covenant on Economic, Social and Cultural Rights recalls the obligation of States under the Charter to promote universal respect for, and observance of, human rights and freedoms," .
+    values:originalText "Whereas the International Covenant on Economic, Social and Cultural Rights recalls the obligation of States under the Charter to promote universal respect for, and observance of, human rights and freedoms,"@en .
 
 doc:paragraph-6 a values:Right ;
     values:partOf doc:Instrument ;
     values:heldBy values:NaturalPerson ;
-    dc:title "Paragraph 6" ;
+    dc:title "Paragraph 6"@en ;
     values:deonticStatus values:HeuristicDerived ;
-    values:originalText "Whereas the Body of Principles for the Protection of All Persons under Any Form of Detention or Imprisonment provides that a detained person shall be entitled to have the assistance of, and to communicate and consult with, legal counsel," .
+    values:originalText "Whereas the Body of Principles for the Protection of All Persons under Any Form of Detention or Imprisonment provides that a detained person shall be entitled to have the assistance of, and to communicate and consult with, legal counsel,"@en .
 
 doc:paragraph-7 a values:Undertaking ;
     values:partOf doc:Instrument ;
-    dc:title "Paragraph 7" ;
+    dc:title "Paragraph 7"@en ;
     values:deonticStatus values:HeuristicDerived ;
-    values:originalText "Whereas the Standard Minimum Rules for the Treatment of Prisoners recommend, in particular, that legal assistance and confidential communication with counsel should be ensured to untried prisoners," .
+    values:originalText "Whereas the Standard Minimum Rules for the Treatment of Prisoners recommend, in particular, that legal assistance and confidential communication with counsel should be ensured to untried prisoners,"@en .
 
 doc:paragraph-8 a values:Undertaking ;
     values:partOf doc:Instrument ;
-    dc:title "Paragraph 8" ;
+    dc:title "Paragraph 8"@en ;
     values:deonticStatus values:HeuristicDerived ;
-    values:originalText "Whereas the Safeguards guaranteeing protection of those facing the death penalty reaffirm the right of everyone suspected or charged with a crime for which capital punishment may be imposed to adequate legal assistance at all stages of the proceedings, in accordance with article 14 of the International Covenant on Civil and Political Rights," .
+    values:originalText "Whereas the Safeguards guaranteeing protection of those facing the death penalty reaffirm the right of everyone suspected or charged with a crime for which capital punishment may be imposed to adequate legal assistance at all stages of the proceedings, in accordance with article 14 of the International Covenant on Civil and Political Rights,"@en .
 
 doc:paragraph-9 a values:Undertaking ;
     values:partOf doc:Instrument ;
-    dc:title "Paragraph 9" ;
+    dc:title "Paragraph 9"@en ;
     values:deonticStatus values:HeuristicDerived ;
-    values:originalText "Whereas the Declaration of Basic Principles of Justice for Victims of Crime and Abuse of Power recommends measures to be taken at the international and national levels to improve access to justice and fair treatment, restitution, compensation and assistance for victims of crime," .
+    values:originalText "Whereas the Declaration of Basic Principles of Justice for Victims of Crime and Abuse of Power recommends measures to be taken at the international and national levels to improve access to justice and fair treatment, restitution, compensation and assistance for victims of crime,"@en .
 
 doc:paragraph-10 a values:Undertaking ;
     values:partOf doc:Instrument ;
-    dc:title "Paragraph 10" ;
+    dc:title "Paragraph 10"@en ;
     values:deonticStatus values:HeuristicDerived ;
-    values:originalText "Whereas adequate protection of the human rights and fundamental freedoms to which all persons are entitled, be they economic, social and cultural, or civil and political, requires that all persons have effective access to legal services provided by an independent legal profession," .
+    values:originalText "Whereas adequate protection of the human rights and fundamental freedoms to which all persons are entitled, be they economic, social and cultural, or civil and political, requires that all persons have effective access to legal services provided by an independent legal profession,"@en .
 
 doc:paragraph-11 a values:Undertaking ;
     values:partOf doc:Instrument ;
-    dc:title "Paragraph 11" ;
+    dc:title "Paragraph 11"@en ;
     values:deonticStatus values:HeuristicDerived ;
-    values:originalText "Whereas professional associations of lawyers have a vital role to play in upholding professional standards and ethics, protecting their members from persecution and improper restrictions and infringements, providing legal services to all in need of them, and cooperating with governmental and other institutions in furthering the ends of justice and public interest," .
+    values:originalText "Whereas professional associations of lawyers have a vital role to play in upholding professional standards and ethics, protecting their members from persecution and improper restrictions and infringements, providing legal services to all in need of them, and cooperating with governmental and other institutions in furthering the ends of justice and public interest,"@en .
 
 doc:paragraph-12 a values:Undertaking ;
     values:partOf doc:Instrument ;
-    dc:title "Paragraph 12" ;
+    dc:title "Paragraph 12"@en ;
     values:deonticStatus values:HeuristicDerived ;
-    values:originalText "The Basic Principles on the Role of Lawyers, set forth below, which have been formulated to assist Member States in their task of promoting and ensuring the proper role of lawyers, should be respected and taken into account by Governments within the framework of their national legislation and practice and should be brought to the attention of lawyers as well as other persons, such as judges, prosecutors, members of the executive and the legislature, and the public in general. These principles shall also apply, as appropriate, to persons who exercise the functions of lawyers without having the formal status of lawyers." .
+    values:originalText "The Basic Principles on the Role of Lawyers, set forth below, which have been formulated to assist Member States in their task of promoting and ensuring the proper role of lawyers, should be respected and taken into account by Governments within the framework of their national legislation and practice and should be brought to the attention of lawyers as well as other persons, such as judges, prosecutors, members of the executive and the legislature, and the public in general. These principles shall also apply, as appropriate, to persons who exercise the functions of lawyers without having the formal status of lawyers."@en .
 
 doc:paragraph-13 a values:Undertaking ;
     values:partOf doc:Instrument ;
-    dc:title "Paragraph 13" ;
+    dc:title "Paragraph 13"@en ;
     values:deonticStatus values:HeuristicDerived ;
-    values:originalText "Access to lawyers and legal services" .
+    values:originalText "Access to lawyers and legal services"@en .
 
 doc:paragraph-14 a values:Right ;
     values:partOf doc:Instrument ;
     values:heldBy values:NaturalPerson ;
-    dc:title "Paragraph 14" ;
+    dc:title "Paragraph 14"@en ;
     values:deonticStatus values:HeuristicDerived ;
-    values:originalText "1. All persons are entitled to call upon the assistance of a lawyer of their choice to protect and establish their rights and to defend them in all stages of criminal proceedings." .
+    values:originalText "1. All persons are entitled to call upon the assistance of a lawyer of their choice to protect and establish their rights and to defend them in all stages of criminal proceedings."@en .
 
 doc:paragraph-15 a values:Obligation ;
     values:partOf doc:Instrument ;
     values:borneBy values:Agent ;
-    dc:title "Paragraph 15" ;
+    dc:title "Paragraph 15"@en ;
     values:deonticStatus values:HeuristicDerived ;
-    values:originalText "2. Governments shall ensure that efficient procedures and responsive mechanisms for effective and equal access to lawyers are provided for all persons within their territory and subject to their jurisdiction, without distinction of any kind, such as discrimination based on race, colour, ethnic origin, sex, language, religion, political or other opinion, national or social origin, property, birth, economic or other status." .
+    values:originalText "2. Governments shall ensure that efficient procedures and responsive mechanisms for effective and equal access to lawyers are provided for all persons within their territory and subject to their jurisdiction, without distinction of any kind, such as discrimination based on race, colour, ethnic origin, sex, language, religion, political or other opinion, national or social origin, property, birth, economic or other status."@en .
 
 doc:paragraph-16 a values:Obligation ;
     values:partOf doc:Instrument ;
     values:borneBy values:Agent ;
-    dc:title "Paragraph 16" ;
+    dc:title "Paragraph 16"@en ;
     values:deonticStatus values:HeuristicDerived ;
-    values:originalText "3. Governments shall ensure the provision of sufficient funding and other resources for legal services to the poor and, as necessary, to other disadvantaged persons. Professional associations of lawyers shall cooperate in the organization and provision of services, facilities and other resources." .
+    values:originalText "3. Governments shall ensure the provision of sufficient funding and other resources for legal services to the poor and, as necessary, to other disadvantaged persons. Professional associations of lawyers shall cooperate in the organization and provision of services, facilities and other resources."@en .
 
 doc:paragraph-17 a values:Obligation ;
     values:partOf doc:Instrument ;
     values:borneBy values:Agent ;
-    dc:title "Paragraph 17" ;
+    dc:title "Paragraph 17"@en ;
     values:deonticStatus values:HeuristicDerived ;
-    values:originalText "4. Governments and professional associations of lawyers shall promote programmes to inform the public about their rights and duties under the law and the important role of lawyers in protecting their fundamental freedoms. Special attention should be given to assisting the poor and other disadvantaged persons so as to enable them to assert their rights and where necessary call upon the assistance of lawyers." .
+    values:originalText "4. Governments and professional associations of lawyers shall promote programmes to inform the public about their rights and duties under the law and the important role of lawyers in protecting their fundamental freedoms. Special attention should be given to assisting the poor and other disadvantaged persons so as to enable them to assert their rights and where necessary call upon the assistance of lawyers."@en .
 
 doc:paragraph-18 a values:Undertaking ;
     values:partOf doc:Instrument ;
-    dc:title "Paragraph 18" ;
+    dc:title "Paragraph 18"@en ;
     values:deonticStatus values:HeuristicDerived ;
-    values:originalText "Special safeguards in criminal justice matters" .
+    values:originalText "Special safeguards in criminal justice matters"@en .
 
 doc:paragraph-19 a values:Right ;
     values:partOf doc:Instrument ;
     values:heldBy values:NaturalPerson ;
-    dc:title "Paragraph 19" ;
+    dc:title "Paragraph 19"@en ;
     values:deonticStatus values:HeuristicDerived ;
-    values:originalText "5. Governments shall ensure that all persons are immediately informed by the competent authority of their right to be assisted by a lawyer of their own choice upon arrest or detention or when charged with a criminal offence." .
+    values:originalText "5. Governments shall ensure that all persons are immediately informed by the competent authority of their right to be assisted by a lawyer of their own choice upon arrest or detention or when charged with a criminal offence."@en .
 
 doc:paragraph-20 a values:Right ;
     values:partOf doc:Instrument ;
     values:heldBy values:NaturalPerson ;
-    dc:title "Paragraph 20" ;
+    dc:title "Paragraph 20"@en ;
     values:deonticStatus values:HeuristicDerived ;
-    values:originalText "6. Any such persons who do not have a lawyer shall, in all cases in which the interests of justice so require, be entitled to have a lawyer of experience and competence commensurate with the nature of the offence assigned to them in order to provide effective legal assistance, without payment by them if they lack sufficient means to pay for such services." .
+    values:originalText "6. Any such persons who do not have a lawyer shall, in all cases in which the interests of justice so require, be entitled to have a lawyer of experience and competence commensurate with the nature of the offence assigned to them in order to provide effective legal assistance, without payment by them if they lack sufficient means to pay for such services."@en .
 
 doc:paragraph-21 a values:Undertaking ;
     values:partOf doc:Instrument ;
-    dc:title "Paragraph 21" ;
+    dc:title "Paragraph 21"@en ;
     values:deonticStatus values:HeuristicDerived ;
-    values:originalText "7. Governments shall further ensure that all persons arrested or detained, with or without criminal charge, shall have prompt access to a lawyer, and in any case not later than forty-eight hours from the time of arrest or detention." .
+    values:originalText "7. Governments shall further ensure that all persons arrested or detained, with or without criminal charge, shall have prompt access to a lawyer, and in any case not later than forty-eight hours from the time of arrest or detention."@en .
 
 doc:paragraph-22 a values:Obligation ;
     values:partOf doc:Instrument ;
     values:borneBy values:Agent ;
-    dc:title "Paragraph 22" ;
+    dc:title "Paragraph 22"@en ;
     values:deonticStatus values:HeuristicDerived ;
-    values:originalText "8. All arrested, detained or imprisoned persons shall be provided with adequate opportunities, time and facilities to be visited by and to communicate and consult with a lawyer, without delay, interception or censorship and in full confidentiality. Such consultations may be within sight, but not within the hearing, of law enforcement officials." .
+    values:originalText "8. All arrested, detained or imprisoned persons shall be provided with adequate opportunities, time and facilities to be visited by and to communicate and consult with a lawyer, without delay, interception or censorship and in full confidentiality. Such consultations may be within sight, but not within the hearing, of law enforcement officials."@en .
 
 doc:paragraph-23 a values:Obligation ;
     values:partOf doc:Instrument ;
     values:borneBy values:Agent ;
-    dc:title "Paragraph 23" ;
+    dc:title "Paragraph 23"@en ;
     values:deonticStatus values:HeuristicDerived ;
-    values:originalText "9. Governments, professional associations of lawyers and educational institutions shall ensure that lawyers have appropriate education and training and be made aware of the ideals and ethical duties of the lawyer and of human rights and fundamental freedoms recognized by national and international law." .
+    values:originalText "9. Governments, professional associations of lawyers and educational institutions shall ensure that lawyers have appropriate education and training and be made aware of the ideals and ethical duties of the lawyer and of human rights and fundamental freedoms recognized by national and international law."@en .
 
 doc:paragraph-24 a values:Prohibition ;
     values:partOf doc:Instrument ;
     values:borneBy values:Agent ;
-    dc:title "Paragraph 24" ;
+    dc:title "Paragraph 24"@en ;
     values:deonticStatus values:HeuristicDerived ;
-    values:originalText "10. Governments, professional associations of lawyers and educational institutions shall ensure that there is no discrimination against a person with respect to entry into or continued practice within the legal profession on the grounds of race, colour, sex, ethnic origin, religion, political or other opinion, national or social origin, property, birth, economic or other status, except that a requirement, that a lawyer must be a national of the country concerned, shall not be considered discriminatory." .
+    values:originalText "10. Governments, professional associations of lawyers and educational institutions shall ensure that there is no discrimination against a person with respect to entry into or continued practice within the legal profession on the grounds of race, colour, sex, ethnic origin, religion, political or other opinion, national or social origin, property, birth, economic or other status, except that a requirement, that a lawyer must be a national of the country concerned, shall not be considered discriminatory."@en .
 
 doc:paragraph-25 a values:Undertaking ;
     values:partOf doc:Instrument ;
-    dc:title "Paragraph 25" ;
+    dc:title "Paragraph 25"@en ;
     values:deonticStatus values:HeuristicDerived ;
-    values:originalText "11. In countries where there exist groups, communities or regions whose needs for legal services are not met, particularly where such groups have distinct cultures, traditions or languages or have been the victims of past discrimination, Governments, professional associations of lawyers and educational institutions should take special measures to provide opportunities for candidates from these groups to enter the legal profession and should ensure that they receive training appropriate to the needs of their groups." .
+    values:originalText "11. In countries where there exist groups, communities or regions whose needs for legal services are not met, particularly where such groups have distinct cultures, traditions or languages or have been the victims of past discrimination, Governments, professional associations of lawyers and educational institutions should take special measures to provide opportunities for candidates from these groups to enter the legal profession and should ensure that they receive training appropriate to the needs of their groups."@en .
 
 doc:paragraph-26 a values:Undertaking ;
     values:partOf doc:Instrument ;
-    dc:title "Paragraph 26" ;
+    dc:title "Paragraph 26"@en ;
     values:deonticStatus values:HeuristicDerived ;
-    values:originalText "12. Lawyers shall at all times maintain the honour and dignity of their profession as essential agents of the administration of justice." .
+    values:originalText "12. Lawyers shall at all times maintain the honour and dignity of their profession as essential agents of the administration of justice."@en .
 
 doc:paragraph-27 a values:Undertaking ;
     values:partOf doc:Instrument ;
-    dc:title "Paragraph 27" ;
+    dc:title "Paragraph 27"@en ;
     values:deonticStatus values:HeuristicDerived ;
-    values:originalText "13. The duties of lawyers towards their clients shall include:" .
+    values:originalText "13. The duties of lawyers towards their clients shall include:"@en .
 
 doc:paragraph-28 a values:Undertaking ;
     values:partOf doc:Instrument ;
-    dc:title "Paragraph 28" ;
+    dc:title "Paragraph 28"@en ;
     values:deonticStatus values:HeuristicDerived ;
-    values:originalText "(a) Advising clients as to their legal rights and obligations, and as to the working of the legal system in so far as it is relevant to the legal rights and obligations of the clients;" .
+    values:originalText "(a) Advising clients as to their legal rights and obligations, and as to the working of the legal system in so far as it is relevant to the legal rights and obligations of the clients;"@en .
 
 doc:paragraph-29 a values:Undertaking ;
     values:partOf doc:Instrument ;
-    dc:title "Paragraph 29" ;
+    dc:title "Paragraph 29"@en ;
     values:deonticStatus values:HeuristicDerived ;
-    values:originalText "(b) Assisting clients in every appropriate way, and taking legal action to protect their interests;" .
+    values:originalText "(b) Assisting clients in every appropriate way, and taking legal action to protect their interests;"@en .
 
 doc:paragraph-30 a values:Undertaking ;
     values:partOf doc:Instrument ;
-    dc:title "Paragraph 30" ;
+    dc:title "Paragraph 30"@en ;
     values:deonticStatus values:HeuristicDerived ;
-    values:originalText "(c) Assisting clients before courts, tribunals or administrative authorities, where appropriate." .
+    values:originalText "(c) Assisting clients before courts, tribunals or administrative authorities, where appropriate."@en .
 
 doc:paragraph-31 a values:Undertaking ;
     values:partOf doc:Instrument ;
-    dc:title "Paragraph 31" ;
+    dc:title "Paragraph 31"@en ;
     values:deonticStatus values:HeuristicDerived ;
-    values:originalText "14. Lawyers, in protecting the rights of their clients and in promoting the cause of justice, shall seek to uphold human rights and fundamental freedoms recognized by national and international law and shall at all times act freely and diligently in accordance with the law and recognized standards and ethics of the legal profession." .
+    values:originalText "14. Lawyers, in protecting the rights of their clients and in promoting the cause of justice, shall seek to uphold human rights and fundamental freedoms recognized by national and international law and shall at all times act freely and diligently in accordance with the law and recognized standards and ethics of the legal profession."@en .
 
 doc:paragraph-32 a values:Undertaking ;
     values:partOf doc:Instrument ;
-    dc:title "Paragraph 32" ;
+    dc:title "Paragraph 32"@en ;
     values:deonticStatus values:HeuristicDerived ;
-    values:originalText "15. Lawyers shall always loyally respect the interests of their clients." .
+    values:originalText "15. Lawyers shall always loyally respect the interests of their clients."@en .
 
 doc:paragraph-33 a values:Undertaking ;
     values:partOf doc:Instrument ;
-    dc:title "Paragraph 33" ;
+    dc:title "Paragraph 33"@en ;
     values:deonticStatus values:HeuristicDerived ;
-    values:originalText "Guarantees for the functioning of lawyers" .
+    values:originalText "Guarantees for the functioning of lawyers"@en .
 
 doc:paragraph-34 a values:Prohibition ;
     values:partOf doc:Instrument ;
     values:borneBy values:Agent ;
-    dc:title "Paragraph 34" ;
+    dc:title "Paragraph 34"@en ;
     values:deonticStatus values:HeuristicDerived ;
-    values:originalText "16. Governments shall ensure that lawyers (a) are able to perform all of their professional functions without intimidation, hindrance, harassment or improper interference; (b) are able to travel and to consult with their clients freely both within their own country and abroad; and (c) shall not suffer, or be threatened with, prosecution or administrative, economic or other sanctions for any action taken in accordance with recognized professional duties, standards and ethics." .
+    values:originalText "16. Governments shall ensure that lawyers (a) are able to perform all of their professional functions without intimidation, hindrance, harassment or improper interference; (b) are able to travel and to consult with their clients freely both within their own country and abroad; and (c) shall not suffer, or be threatened with, prosecution or administrative, economic or other sanctions for any action taken in accordance with recognized professional duties, standards and ethics."@en .
 
 doc:paragraph-35 a values:Obligation ;
     values:partOf doc:Instrument ;
     values:borneBy values:Agent ;
-    dc:title "Paragraph 35" ;
+    dc:title "Paragraph 35"@en ;
     values:deonticStatus values:HeuristicDerived ;
-    values:originalText "17. Where the security of lawyers is threatened as a result of discharging their functions, they shall be adequately safeguarded by the authorities." .
+    values:originalText "17. Where the security of lawyers is threatened as a result of discharging their functions, they shall be adequately safeguarded by the authorities."@en .
 
 doc:paragraph-36 a values:Prohibition ;
     values:partOf doc:Instrument ;
     values:borneBy values:Agent ;
-    dc:title "Paragraph 36" ;
+    dc:title "Paragraph 36"@en ;
     values:deonticStatus values:HeuristicDerived ;
-    values:originalText "18. Lawyers shall not be identified with their clients or their clients' causes as a result of discharging their functions." .
+    values:originalText "18. Lawyers shall not be identified with their clients or their clients' causes as a result of discharging their functions."@en .
 
 doc:paragraph-37 a values:Right ;
     values:partOf doc:Instrument ;
     values:heldBy values:NaturalPerson ;
-    dc:title "Paragraph 37" ;
+    dc:title "Paragraph 37"@en ;
     values:deonticStatus values:HeuristicDerived ;
-    values:originalText "19. No court or administrative authority before whom the right to counsel is recognized shall refuse to recognize the right of a lawyer to appear before it for his or her client unless that lawyer has been disqualified in accordance with national law and practice and in conformity with these principles." .
+    values:originalText "19. No court or administrative authority before whom the right to counsel is recognized shall refuse to recognize the right of a lawyer to appear before it for his or her client unless that lawyer has been disqualified in accordance with national law and practice and in conformity with these principles."@en .
 
 doc:paragraph-38 a values:Undertaking ;
     values:partOf doc:Instrument ;
-    dc:title "Paragraph 38" ;
+    dc:title "Paragraph 38"@en ;
     values:deonticStatus values:HeuristicDerived ;
-    values:originalText "20. Lawyers shall enjoy civil and penal immunity for relevant statements made in good faith in written or oral pleadings or in their professional appearances before a court, tribunal or other legal or administrative authority." .
+    values:originalText "20. Lawyers shall enjoy civil and penal immunity for relevant statements made in good faith in written or oral pleadings or in their professional appearances before a court, tribunal or other legal or administrative authority."@en .
 
 doc:paragraph-39 a values:Undertaking ;
     values:partOf doc:Instrument ;
-    dc:title "Paragraph 39" ;
+    dc:title "Paragraph 39"@en ;
     values:deonticStatus values:HeuristicDerived ;
-    values:originalText "21. It is the duty of the competent authorities to ensure lawyers access to appropriate information, files and documents in their possession or control in sufficient time to enable lawyers to provide effective legal assistance to their clients. Such access should be provided at the earliest appropriate time." .
+    values:originalText "21. It is the duty of the competent authorities to ensure lawyers access to appropriate information, files and documents in their possession or control in sufficient time to enable lawyers to provide effective legal assistance to their clients. Such access should be provided at the earliest appropriate time."@en .
 
 doc:paragraph-40 a values:Obligation ;
     values:partOf doc:Instrument ;
     values:borneBy values:Agent ;
-    dc:title "Paragraph 40" ;
+    dc:title "Paragraph 40"@en ;
     values:deonticStatus values:HeuristicDerived ;
-    values:originalText "22. Governments shall recognize and respect that all communications and consultations between lawyers and their clients within their professional relationship are confidential." .
+    values:originalText "22. Governments shall recognize and respect that all communications and consultations between lawyers and their clients within their professional relationship are confidential."@en .
 
 doc:paragraph-41 a values:Undertaking ;
     values:partOf doc:Instrument ;
-    dc:title "Paragraph 41" ;
+    dc:title "Paragraph 41"@en ;
     values:deonticStatus values:HeuristicDerived ;
-    values:originalText "Freedom of expression and association" .
+    values:originalText "Freedom of expression and association"@en .
 
 doc:paragraph-42 a values:Right ;
     values:partOf doc:Instrument ;
     values:heldBy values:NaturalPerson ;
-    dc:title "Paragraph 42" ;
+    dc:title "Paragraph 42"@en ;
     values:deonticStatus values:HeuristicDerived ;
-    values:originalText "23. Lawyers like other citizens are entitled to freedom of expression, belief, association and assembly. In particular, they shall have the right to take part in public discussion of matters concerning the law, the administration of justice and the promotion and protection of human rights and to join or form local, national or international organizations and attend their meetings, without suffering professional restrictions by reason of their lawful action or their membership in a lawful organization. In exercising these rights, lawyers shall always conduct themselves in accordance with the law and the recognized standards and ethics of the legal profession." .
+    values:originalText "23. Lawyers like other citizens are entitled to freedom of expression, belief, association and assembly. In particular, they shall have the right to take part in public discussion of matters concerning the law, the administration of justice and the promotion and protection of human rights and to join or form local, national or international organizations and attend their meetings, without suffering professional restrictions by reason of their lawful action or their membership in a lawful organization. In exercising these rights, lawyers shall always conduct themselves in accordance with the law and the recognized standards and ethics of the legal profession."@en .
 
 doc:paragraph-43 a values:Undertaking ;
     values:partOf doc:Instrument ;
-    dc:title "Paragraph 43" ;
+    dc:title "Paragraph 43"@en ;
     values:deonticStatus values:HeuristicDerived ;
-    values:originalText "Professional associations of lawyers" .
+    values:originalText "Professional associations of lawyers"@en .
 
 doc:paragraph-44 a values:Right ;
     values:partOf doc:Instrument ;
     values:heldBy values:NaturalPerson ;
-    dc:title "Paragraph 44" ;
+    dc:title "Paragraph 44"@en ;
     values:deonticStatus values:HeuristicDerived ;
-    values:originalText "24. Lawyers shall be entitled to form and join self-governing professional associations to represent their interests, promote their continuing education and training and protect their professional integrity. The executive body of the professional associations shall be elected by its members and shall exercise its functions without external interference." .
+    values:originalText "24. Lawyers shall be entitled to form and join self-governing professional associations to represent their interests, promote their continuing education and training and protect their professional integrity. The executive body of the professional associations shall be elected by its members and shall exercise its functions without external interference."@en .
 
 doc:paragraph-45 a values:Undertaking ;
     values:partOf doc:Instrument ;
-    dc:title "Paragraph 45" ;
+    dc:title "Paragraph 45"@en ;
     values:deonticStatus values:HeuristicDerived ;
-    values:originalText "25. Professional associations of lawyers shall cooperate with Governments to ensure that everyone has effective and equal access to legal services and that lawyers are able, without improper interference, to counsel and assist their clients in accordance with the law and recognized professional standards and ethics." .
+    values:originalText "25. Professional associations of lawyers shall cooperate with Governments to ensure that everyone has effective and equal access to legal services and that lawyers are able, without improper interference, to counsel and assist their clients in accordance with the law and recognized professional standards and ethics."@en .
 
 doc:paragraph-46 a values:Obligation ;
     values:partOf doc:Instrument ;
     values:borneBy values:Agent ;
-    dc:title "Paragraph 46" ;
+    dc:title "Paragraph 46"@en ;
     values:deonticStatus values:HeuristicDerived ;
-    values:originalText "26. Codes of professional conduct for lawyers shall be established by the legal profession through its appropriate organs, or by legislation, in accordance with national law and custom and recognized international standards and norms." .
+    values:originalText "26. Codes of professional conduct for lawyers shall be established by the legal profession through its appropriate organs, or by legislation, in accordance with national law and custom and recognized international standards and norms."@en .
 
 doc:paragraph-47 a values:Right ;
     values:partOf doc:Instrument ;
     values:heldBy values:NaturalPerson ;
-    dc:title "Paragraph 47" ;
+    dc:title "Paragraph 47"@en ;
     values:deonticStatus values:HeuristicDerived ;
-    values:originalText "27. Charges or complaints made against lawyers in their professional capacity shall be processed expeditiously and fairly under appropriate procedures. Lawyers shall have the right to a fair hearing, including the right to be assisted by a lawyer of their choice." .
+    values:originalText "27. Charges or complaints made against lawyers in their professional capacity shall be processed expeditiously and fairly under appropriate procedures. Lawyers shall have the right to a fair hearing, including the right to be assisted by a lawyer of their choice."@en .
 
 doc:paragraph-48 a values:Obligation ;
     values:partOf doc:Instrument ;
     values:borneBy values:Agent ;
-    dc:title "Paragraph 48" ;
+    dc:title "Paragraph 48"@en ;
     values:deonticStatus values:HeuristicDerived ;
-    values:originalText "28. Disciplinary proceedings against lawyers shall be brought before an impartial disciplinary committee established by the legal profession, before an independent statutory authority, or before a court, and shall be subject to an independent judicial review." .
+    values:originalText "28. Disciplinary proceedings against lawyers shall be brought before an impartial disciplinary committee established by the legal profession, before an independent statutory authority, or before a court, and shall be subject to an independent judicial review."@en .
 
 doc:paragraph-49 a values:Obligation ;
     values:partOf doc:Instrument ;
     values:borneBy values:Agent ;
-    dc:title "Paragraph 49" ;
+    dc:title "Paragraph 49"@en ;
     values:deonticStatus values:HeuristicDerived ;
-    values:originalText "29. All disciplinary proceedings shall be determined in accordance with the code of professional conduct and other recognized standards and ethics of the legal profession and in the light of these principles." .
+    values:originalText "29. All disciplinary proceedings shall be determined in accordance with the code of professional conduct and other recognized standards and ethics of the legal profession and in the light of these principles."@en .

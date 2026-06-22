@@ -12,7 +12,7 @@
 # ============================================================
 
 doc:Instrument a values:ValuesCredential ;
-    dc:title "Declaration of Basic Principles of Justice for Victims of Crime and Abuse of Power" ;
+    dc:title "Declaration of Basic Principles of Justice for Victims of Crime and Abuse of Power"@en ;
     dc:date "29 November 1985" ;
     values:category "Administration of justice, detention & law enforcement" ;
     values:categoryStatus values:AutoAssigned ;
@@ -21,182 +21,182 @@ doc:Instrument a values:ValuesCredential ;
 
 doc:paragraph-2 a values:Undertaking ;
     values:partOf doc:Instrument ;
-    dc:title "Paragraph 2" ;
+    dc:title "Paragraph 2"@en ;
     values:deonticStatus values:HeuristicDerived ;
-    values:originalText "A. Victims of crime Access to justice and fair treatment Restitution Compensation Assistance B. Victims of abuse of power A. Victims of crime" .
+    values:originalText "A. Victims of crime Access to justice and fair treatment Restitution Compensation Assistance B. Victims of abuse of power A. Victims of crime"@en .
 
 doc:paragraph-3 a values:Undertaking ;
     values:partOf doc:Instrument ;
-    dc:title "Paragraph 3" ;
+    dc:title "Paragraph 3"@en ;
     values:deonticStatus values:HeuristicDerived ;
-    values:originalText "1. \"Victims\" means persons who, individually or collectively, have suffered harm, including physical or mental injury, emotional suffering, economic loss or substantial impairment of their fundamental rights, through acts or omissions that are in violation of criminal laws operative within Member States, including those laws proscribing criminal abuse of power." .
+    values:originalText "1. \"Victims\" means persons who, individually or collectively, have suffered harm, including physical or mental injury, emotional suffering, economic loss or substantial impairment of their fundamental rights, through acts or omissions that are in violation of criminal laws operative within Member States, including those laws proscribing criminal abuse of power."@en .
 
 doc:paragraph-4 a values:Undertaking ;
     values:partOf doc:Instrument ;
-    dc:title "Paragraph 4" ;
+    dc:title "Paragraph 4"@en ;
     values:deonticStatus values:HeuristicDerived ;
-    values:originalText "2. A person may be considered a victim, under this Declaration, regardless of whether the perpetrator is identified, apprehended, prosecuted or convicted and regardless of the familial relationship between the perpetrator and the victim. The term \"victim\" also includes, where appropriate, the immediate family or dependants of the direct victim and persons who have suffered harm in intervening to assist victims in distress or to prevent victimization." .
+    values:originalText "2. A person may be considered a victim, under this Declaration, regardless of whether the perpetrator is identified, apprehended, prosecuted or convicted and regardless of the familial relationship between the perpetrator and the victim. The term \"victim\" also includes, where appropriate, the immediate family or dependants of the direct victim and persons who have suffered harm in intervening to assist victims in distress or to prevent victimization."@en .
 
 doc:paragraph-5 a values:Obligation ;
     values:partOf doc:Instrument ;
     values:borneBy values:Agent ;
-    dc:title "Paragraph 5" ;
+    dc:title "Paragraph 5"@en ;
     values:deonticStatus values:HeuristicDerived ;
-    values:originalText "3. The provisions contained herein shall be applicable to all, without distinction of any kind, such as race, colour, sex, age, language, religion, nationality, political or other opinion, cultural beliefs or practices, property, birth or family status, ethnic or social origin, and disability." .
+    values:originalText "3. The provisions contained herein shall be applicable to all, without distinction of any kind, such as race, colour, sex, age, language, religion, nationality, political or other opinion, cultural beliefs or practices, property, birth or family status, ethnic or social origin, and disability."@en .
 
 doc:paragraph-6 a values:Undertaking ;
     values:partOf doc:Instrument ;
-    dc:title "Paragraph 6" ;
+    dc:title "Paragraph 6"@en ;
     values:deonticStatus values:HeuristicDerived ;
-    values:originalText "Access to justice and fair treatment" .
+    values:originalText "Access to justice and fair treatment"@en .
 
 doc:paragraph-7 a values:Right ;
     values:partOf doc:Instrument ;
     values:heldBy values:NaturalPerson ;
-    dc:title "Paragraph 7" ;
+    dc:title "Paragraph 7"@en ;
     values:deonticStatus values:HeuristicDerived ;
-    values:originalText "4. Victims should be treated with compassion and respect for their dignity. They are entitled to access to the mechanisms of justice and to prompt redress, as provided for by national legislation, for the harm that they have suffered." .
+    values:originalText "4. Victims should be treated with compassion and respect for their dignity. They are entitled to access to the mechanisms of justice and to prompt redress, as provided for by national legislation, for the harm that they have suffered."@en .
 
 doc:paragraph-8 a values:Undertaking ;
     values:partOf doc:Instrument ;
-    dc:title "Paragraph 8" ;
+    dc:title "Paragraph 8"@en ;
     values:deonticStatus values:HeuristicDerived ;
-    values:originalText "5. Judicial and administrative mechanisms should be established and strengthened where necessary to enable victims to obtain redress through formal or informal procedures that are expeditious, fair, inexpensive and accessible. Victims should be informed of their rights in seeking redress through such mechanisms." .
+    values:originalText "5. Judicial and administrative mechanisms should be established and strengthened where necessary to enable victims to obtain redress through formal or informal procedures that are expeditious, fair, inexpensive and accessible. Victims should be informed of their rights in seeking redress through such mechanisms."@en .
 
 doc:paragraph-9 a values:Undertaking ;
     values:partOf doc:Instrument ;
-    dc:title "Paragraph 9" ;
+    dc:title "Paragraph 9"@en ;
     values:deonticStatus values:HeuristicDerived ;
-    values:originalText "6. The responsiveness of judicial and administrative processes to the needs of victims should be facilitated by:" .
+    values:originalText "6. The responsiveness of judicial and administrative processes to the needs of victims should be facilitated by:"@en .
 
 doc:paragraph-10 a values:Undertaking ;
     values:partOf doc:Instrument ;
-    dc:title "Paragraph 10" ;
+    dc:title "Paragraph 10"@en ;
     values:deonticStatus values:HeuristicDerived ;
-    values:originalText "(a) Informing victims of their role and the scope, timing and progress of the proceedings and of the disposition of their cases, especially where serious crimes are involved and where they have requested such information;" .
+    values:originalText "(a) Informing victims of their role and the scope, timing and progress of the proceedings and of the disposition of their cases, especially where serious crimes are involved and where they have requested such information;"@en .
 
 doc:paragraph-11 a values:Undertaking ;
     values:partOf doc:Instrument ;
-    dc:title "Paragraph 11" ;
+    dc:title "Paragraph 11"@en ;
     values:deonticStatus values:HeuristicDerived ;
-    values:originalText "(b) Allowing the views and concerns of victims to be presented and considered at appropriate stages of the proceedings where their personal interests are affected, without prejudice to the accused and consistent with the relevant national criminal justice system;" .
+    values:originalText "(b) Allowing the views and concerns of victims to be presented and considered at appropriate stages of the proceedings where their personal interests are affected, without prejudice to the accused and consistent with the relevant national criminal justice system;"@en .
 
 doc:paragraph-12 a values:Undertaking ;
     values:partOf doc:Instrument ;
-    dc:title "Paragraph 12" ;
+    dc:title "Paragraph 12"@en ;
     values:deonticStatus values:HeuristicDerived ;
-    values:originalText "(c) Providing proper assistance to victims throughout the legal process;" .
+    values:originalText "(c) Providing proper assistance to victims throughout the legal process;"@en .
 
 doc:paragraph-13 a values:Undertaking ;
     values:partOf doc:Instrument ;
-    dc:title "Paragraph 13" ;
+    dc:title "Paragraph 13"@en ;
     values:deonticStatus values:HeuristicDerived ;
-    values:originalText "(d) Taking measures to minimize inconvenience to victims, protect their privacy, when necessary, and ensure their safety, as well as that of their families and witnesses on their behalf, from intimidation and retaliation;" .
+    values:originalText "(d) Taking measures to minimize inconvenience to victims, protect their privacy, when necessary, and ensure their safety, as well as that of their families and witnesses on their behalf, from intimidation and retaliation;"@en .
 
 doc:paragraph-14 a values:Undertaking ;
     values:partOf doc:Instrument ;
-    dc:title "Paragraph 14" ;
+    dc:title "Paragraph 14"@en ;
     values:deonticStatus values:HeuristicDerived ;
-    values:originalText "(e) Avoiding unnecessary delay in the disposition of cases and the execution of orders or decrees granting awards to victims." .
+    values:originalText "(e) Avoiding unnecessary delay in the disposition of cases and the execution of orders or decrees granting awards to victims."@en .
 
 doc:paragraph-15 a values:Undertaking ;
     values:partOf doc:Instrument ;
-    dc:title "Paragraph 15" ;
+    dc:title "Paragraph 15"@en ;
     values:deonticStatus values:HeuristicDerived ;
-    values:originalText "7. Informal mechanisms for the resolution of disputes, including mediation, arbitration and customary justice or indigenous practices, should be utilized where appropriate to facilitate conciliation and redress for victims." .
+    values:originalText "7. Informal mechanisms for the resolution of disputes, including mediation, arbitration and customary justice or indigenous practices, should be utilized where appropriate to facilitate conciliation and redress for victims."@en .
 
 doc:paragraph-16 a values:Undertaking ;
     values:partOf doc:Instrument ;
-    dc:title "Paragraph 16" ;
+    dc:title "Paragraph 16"@en ;
     values:deonticStatus values:HeuristicDerived ;
-    values:originalText "8. Offenders or third parties responsible for their behaviour should, where appropriate, make fair restitution to victims, their families or dependants. Such restitution should include the return of property or payment for the harm or loss suffered, reimbursement of expenses incurred as a result of the victimization, the provision of services and the restoration of rights." .
+    values:originalText "8. Offenders or third parties responsible for their behaviour should, where appropriate, make fair restitution to victims, their families or dependants. Such restitution should include the return of property or payment for the harm or loss suffered, reimbursement of expenses incurred as a result of the victimization, the provision of services and the restoration of rights."@en .
 
 doc:paragraph-17 a values:Undertaking ;
     values:partOf doc:Instrument ;
-    dc:title "Paragraph 17" ;
+    dc:title "Paragraph 17"@en ;
     values:deonticStatus values:HeuristicDerived ;
-    values:originalText "9. Governments should review their practices, regulations and laws to consider restitution as an available sentencing option in criminal cases, in addition to other criminal sanctions." .
+    values:originalText "9. Governments should review their practices, regulations and laws to consider restitution as an available sentencing option in criminal cases, in addition to other criminal sanctions."@en .
 
 doc:paragraph-18 a values:Undertaking ;
     values:partOf doc:Instrument ;
-    dc:title "Paragraph 18" ;
+    dc:title "Paragraph 18"@en ;
     values:deonticStatus values:HeuristicDerived ;
-    values:originalText "10. In cases of substantial harm to the environment, restitution, if ordered, should include, as far as possible, restoration of the environment, reconstruction of the infrastructure, replacement of community facilities and reimbursement of the expenses of relocation, whenever such harm results in the dislocation of a community." .
+    values:originalText "10. In cases of substantial harm to the environment, restitution, if ordered, should include, as far as possible, restoration of the environment, reconstruction of the infrastructure, replacement of community facilities and reimbursement of the expenses of relocation, whenever such harm results in the dislocation of a community."@en .
 
 doc:paragraph-19 a values:Undertaking ;
     values:partOf doc:Instrument ;
-    dc:title "Paragraph 19" ;
+    dc:title "Paragraph 19"@en ;
     values:deonticStatus values:HeuristicDerived ;
-    values:originalText "11. Where public officials or other agents acting in an official or quasi-official capacity have violated national criminal laws, the victims should receive restitution from the State whose officials or agents were responsible for the harm inflicted. In cases where the Government under whose authority the victimizing act or omission occurred is no longer in existence, the State or Government successor in title should provide restitution to the victims." .
+    values:originalText "11. Where public officials or other agents acting in an official or quasi-official capacity have violated national criminal laws, the victims should receive restitution from the State whose officials or agents were responsible for the harm inflicted. In cases where the Government under whose authority the victimizing act or omission occurred is no longer in existence, the State or Government successor in title should provide restitution to the victims."@en .
 
 doc:paragraph-20 a values:Undertaking ;
     values:partOf doc:Instrument ;
-    dc:title "Paragraph 20" ;
+    dc:title "Paragraph 20"@en ;
     values:deonticStatus values:HeuristicDerived ;
-    values:originalText "12. When compensation is not fully available from the offender or other sources, States should endeavour to provide financial compensation to:" .
+    values:originalText "12. When compensation is not fully available from the offender or other sources, States should endeavour to provide financial compensation to:"@en .
 
 doc:paragraph-21 a values:Undertaking ;
     values:partOf doc:Instrument ;
-    dc:title "Paragraph 21" ;
+    dc:title "Paragraph 21"@en ;
     values:deonticStatus values:HeuristicDerived ;
-    values:originalText "(a) Victims who have sustained significant bodily injury or impairment of physical or mental health as a result of serious crimes;" .
+    values:originalText "(a) Victims who have sustained significant bodily injury or impairment of physical or mental health as a result of serious crimes;"@en .
 
 doc:paragraph-22 a values:Undertaking ;
     values:partOf doc:Instrument ;
-    dc:title "Paragraph 22" ;
+    dc:title "Paragraph 22"@en ;
     values:deonticStatus values:HeuristicDerived ;
-    values:originalText "(b) The family, in particular dependants of persons who have died or become physically or mentally incapacitated as a result of such victimization." .
+    values:originalText "(b) The family, in particular dependants of persons who have died or become physically or mentally incapacitated as a result of such victimization."@en .
 
 doc:paragraph-23 a values:Undertaking ;
     values:partOf doc:Instrument ;
-    dc:title "Paragraph 23" ;
+    dc:title "Paragraph 23"@en ;
     values:deonticStatus values:HeuristicDerived ;
-    values:originalText "13. The establishment, strengthening and expansion of national funds for compensation to victims should be encouraged. Where appropriate, other funds may also be established for this purpose, including in those cases where the State of which the victim is a national is not in a position to compensate the victim for the harm." .
+    values:originalText "13. The establishment, strengthening and expansion of national funds for compensation to victims should be encouraged. Where appropriate, other funds may also be established for this purpose, including in those cases where the State of which the victim is a national is not in a position to compensate the victim for the harm."@en .
 
 doc:paragraph-24 a values:Undertaking ;
     values:partOf doc:Instrument ;
-    dc:title "Paragraph 24" ;
+    dc:title "Paragraph 24"@en ;
     values:deonticStatus values:HeuristicDerived ;
-    values:originalText "14. Victims should receive the necessary material, medical, psychological and social assistance through governmental, voluntary, community-based and indigenous means." .
+    values:originalText "14. Victims should receive the necessary material, medical, psychological and social assistance through governmental, voluntary, community-based and indigenous means."@en .
 
 doc:paragraph-25 a values:Undertaking ;
     values:partOf doc:Instrument ;
-    dc:title "Paragraph 25" ;
+    dc:title "Paragraph 25"@en ;
     values:deonticStatus values:HeuristicDerived ;
-    values:originalText "15. Victims should be informed of the availability of health and social services and other relevant assistance and be readily afforded access to them." .
+    values:originalText "15. Victims should be informed of the availability of health and social services and other relevant assistance and be readily afforded access to them."@en .
 
 doc:paragraph-26 a values:Undertaking ;
     values:partOf doc:Instrument ;
-    dc:title "Paragraph 26" ;
+    dc:title "Paragraph 26"@en ;
     values:deonticStatus values:HeuristicDerived ;
-    values:originalText "16. Police, justice, health, social service and other personnel concerned should receive training to sensitize them to the needs of victims, and guidelines to ensure proper and prompt aid." .
+    values:originalText "16. Police, justice, health, social service and other personnel concerned should receive training to sensitize them to the needs of victims, and guidelines to ensure proper and prompt aid."@en .
 
 doc:paragraph-27 a values:Undertaking ;
     values:partOf doc:Instrument ;
-    dc:title "Paragraph 27" ;
+    dc:title "Paragraph 27"@en ;
     values:deonticStatus values:HeuristicDerived ;
-    values:originalText "17. In providing services and assistance to victims, attention should be given to those who have special needs because of the nature of the harm inflicted or because of factors such as those mentioned in paragraph 3 above." .
+    values:originalText "17. In providing services and assistance to victims, attention should be given to those who have special needs because of the nature of the harm inflicted or because of factors such as those mentioned in paragraph 3 above."@en .
 
 doc:paragraph-28 a values:Undertaking ;
     values:partOf doc:Instrument ;
-    dc:title "Paragraph 28" ;
+    dc:title "Paragraph 28"@en ;
     values:deonticStatus values:HeuristicDerived ;
-    values:originalText "18. \"Victims\" means persons who, individually or collectively, have suffered harm, including physical or mental injury, emotional suffering, economic loss or substantial impairment of their fundamental rights, through acts or omissions that do not yet constitute violations of national criminal laws but of internationally recognized norms relating to human rights." .
+    values:originalText "18. \"Victims\" means persons who, individually or collectively, have suffered harm, including physical or mental injury, emotional suffering, economic loss or substantial impairment of their fundamental rights, through acts or omissions that do not yet constitute violations of national criminal laws but of internationally recognized norms relating to human rights."@en .
 
 doc:paragraph-29 a values:Undertaking ;
     values:partOf doc:Instrument ;
-    dc:title "Paragraph 29" ;
+    dc:title "Paragraph 29"@en ;
     values:deonticStatus values:HeuristicDerived ;
-    values:originalText "19. States should consider incorporating into the national law norms proscribing abuses of power and providing remedies to victims of such abuses. In particular, such remedies should include restitution and/or compensation, and necessary material, medical, psychological and social assistance and support." .
+    values:originalText "19. States should consider incorporating into the national law norms proscribing abuses of power and providing remedies to victims of such abuses. In particular, such remedies should include restitution and/or compensation, and necessary material, medical, psychological and social assistance and support."@en .
 
 doc:paragraph-30 a values:Undertaking ;
     values:partOf doc:Instrument ;
-    dc:title "Paragraph 30" ;
+    dc:title "Paragraph 30"@en ;
     values:deonticStatus values:HeuristicDerived ;
-    values:originalText "20. States should consider negotiating multilateral international treaties relating to victims, as defined in paragraph 18." .
+    values:originalText "20. States should consider negotiating multilateral international treaties relating to victims, as defined in paragraph 18."@en .
 
 doc:paragraph-31 a values:Undertaking ;
     values:partOf doc:Instrument ;
-    dc:title "Paragraph 31" ;
+    dc:title "Paragraph 31"@en ;
     values:deonticStatus values:HeuristicDerived ;
-    values:originalText "21. States should periodically review existing legislation and practices to ensure their responsiveness to changing circumstances, should enact and enforce, if necessary, legislation proscribing acts that constitute serious abuses of political or economic power, as well as promoting policies and mechanisms for the prevention of such acts, and should develop and make readily available appropriate rights and remedies for victims of such acts." .
+    values:originalText "21. States should periodically review existing legislation and practices to ensure their responsiveness to changing circumstances, should enact and enforce, if necessary, legislation proscribing acts that constitute serious abuses of political or economic power, as well as promoting policies and mechanisms for the prevention of such acts, and should develop and make readily available appropriate rights and remedies for victims of such acts."@en .

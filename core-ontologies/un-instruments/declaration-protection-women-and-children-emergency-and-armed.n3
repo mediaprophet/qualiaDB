@@ -12,7 +12,7 @@
 # ============================================================
 
 doc:Instrument a values:ValuesCredential ;
-    dc:title "Declaration on the Protection of Women and Children in Emergency and Armed Conflict" ;
+    dc:title "Declaration on the Protection of Women and Children in Emergency and Armed Conflict"@en ;
     dc:date "14 December 1974" ;
     values:category "Children" ;
     values:categoryStatus values:AutoAssigned ;
@@ -21,55 +21,55 @@ doc:Instrument a values:ValuesCredential ;
 
 doc:paragraph-1 a values:Undertaking ;
     values:partOf doc:Instrument ;
-    dc:title "Paragraph 1" ;
+    dc:title "Paragraph 1"@en ;
     values:deonticStatus values:HeuristicDerived ;
-    values:originalText "Expressing its deep concern over the sufferings of women and children belonging to the civilian population who in periods of emergency and armed conflict in the struggle for peace, self-determination, national liberation and independence are too often the victims of inhuman acts and consequently suffer serious harm," .
+    values:originalText "Expressing its deep concern over the sufferings of women and children belonging to the civilian population who in periods of emergency and armed conflict in the struggle for peace, self-determination, national liberation and independence are too often the victims of inhuman acts and consequently suffer serious harm,"@en .
 
 doc:paragraph-2 a values:Undertaking ;
     values:partOf doc:Instrument ;
-    dc:title "Paragraph 2" ;
+    dc:title "Paragraph 2"@en ;
     values:deonticStatus values:HeuristicDerived ;
-    values:originalText "Aware of the suffering of women and children in many areas of the world, especially in those areas subject to suppression, aggression, colonialism, racism, alien domination and foreign subjugation," .
+    values:originalText "Aware of the suffering of women and children in many areas of the world, especially in those areas subject to suppression, aggression, colonialism, racism, alien domination and foreign subjugation,"@en .
 
 doc:paragraph-3 a values:Undertaking ;
     values:partOf doc:Instrument ;
-    dc:title "Paragraph 3" ;
+    dc:title "Paragraph 3"@en ;
     values:deonticStatus values:HeuristicDerived ;
-    values:originalText "Deeply concerned by the fact that, despite general and unequivocal condemnation, colonialism, racism and alien and foreign domination continue to subject many peoples under their yoke, cruelly suppressing the national liberation movements and inflicting heavy losses and incalculable sufferings on the populations under their domination, including women and children," .
+    values:originalText "Deeply concerned by the fact that, despite general and unequivocal condemnation, colonialism, racism and alien and foreign domination continue to subject many peoples under their yoke, cruelly suppressing the national liberation movements and inflicting heavy losses and incalculable sufferings on the populations under their domination, including women and children,"@en .
 
 doc:paragraph-4 a values:Undertaking ;
     values:partOf doc:Instrument ;
-    dc:title "Paragraph 4" ;
+    dc:title "Paragraph 4"@en ;
     values:deonticStatus values:HeuristicDerived ;
-    values:originalText "Deploring the fact that grave attacks are still being made on fundamental freedoms and the dignity of the human person and that colonial and racist foreign domination Powers continue to violate international humanitarian law," .
+    values:originalText "Deploring the fact that grave attacks are still being made on fundamental freedoms and the dignity of the human person and that colonial and racist foreign domination Powers continue to violate international humanitarian law,"@en .
 
 doc:paragraph-5 a values:Undertaking ;
     values:partOf doc:Instrument ;
-    dc:title "Paragraph 5" ;
+    dc:title "Paragraph 5"@en ;
     values:deonticStatus values:HeuristicDerived ;
-    values:originalText "Recalling the relevant provisions contained in the instruments of international humanitarian law relative to the protection of women and children in time of peace and war," .
+    values:originalText "Recalling the relevant provisions contained in the instruments of international humanitarian law relative to the protection of women and children in time of peace and war,"@en .
 
 doc:paragraph-6 a values:Undertaking ;
     values:partOf doc:Instrument ;
-    dc:title "Paragraph 6" ;
+    dc:title "Paragraph 6"@en ;
     values:deonticStatus values:HeuristicDerived ;
-    values:originalText "Conscious of its responsibility for the destiny of the rising generation and for the destiny of mothers, who play an important role in society, in the family and particularly in the upbringing of children," .
+    values:originalText "Conscious of its responsibility for the destiny of the rising generation and for the destiny of mothers, who play an important role in society, in the family and particularly in the upbringing of children,"@en .
 
 doc:paragraph-7 a values:Undertaking ;
     values:partOf doc:Instrument ;
-    dc:title "Paragraph 7" ;
+    dc:title "Paragraph 7"@en ;
     values:deonticStatus values:HeuristicDerived ;
-    values:originalText "Bearing in mind the need to provide special protection of women and children belonging to the civilian population," .
+    values:originalText "Bearing in mind the need to provide special protection of women and children belonging to the civilian population,"@en .
 
 doc:paragraph-8 a values:Undertaking ;
     values:partOf doc:Instrument ;
-    dc:title "Paragraph 8" ;
+    dc:title "Paragraph 8"@en ;
     values:deonticStatus values:HeuristicDerived ;
-    values:originalText "Solemnly proclaims this Declaration on the Protection of Women and Children in Emergency and Armed Conflict and calls for the strict observance of the Declaration by all Member States:" .
+    values:originalText "Solemnly proclaims this Declaration on the Protection of Women and Children in Emergency and Armed Conflict and calls for the strict observance of the Declaration by all Member States:"@en .
 
 doc:paragraph-9 a values:Prohibition ;
     values:partOf doc:Instrument ;
     values:borneBy values:Agent ;
-    dc:title "Paragraph 9" ;
+    dc:title "Paragraph 9"@en ;
     values:deonticStatus values:HeuristicDerived ;
-    values:originalText "Attacks and bombings on the civilian population, inflicting incalculable suffering, especially on women and children, who are the most vulnerable members of the population, shall be prohibited, and such acts shall be condemned. The use of chemical and bacteriological weapons in the course of military operations constitutes one of the most flagrant violations of the Geneva Protocol of 1925, the Geneva Conventions of 1949 and the principles of international humanitarian law and inflicts heavy losses on civilian populations, including defenceless women and children, and shall be severely condemned. All States shall abide fully by their obligations under the Geneva Protocol of 1925 and the Geneva Conventions of 1949, as well as other instruments of international law relative to respect for human rights in armed conflicts, which offer important guarantees for the protection of women and children. All efforts shall be made by States involved in armed conflicts, military operations in foreign territories or military operations in territories still under colonial domination to spare women and children from the ravages of war. All the necessary steps shall be taken to ensure the prohibition of measures such as persecution, torture, punitive measures, degrading treatment and violence, particularly against that part of the civilian population that consists of women and children. All forms of repression and cruel and inhuman treatment of women and children, including imprisonment, torture, shooting, mass arrests, collective punishment, destruction of dwellings and forcible eviction, committed by belligerents in the course of military operations or in occupied territories shall be considered criminal. Women and children belonging to the civilian population and finding themselves in circumstances of emergency and armed conflict in the struggle for peace, self-determination, national liberation and independence, or who live in occupied territories, shall not be deprived of shelter, food, medical aid or other inalienable rights, in accordance with the provisions of the Universal Declaration of Human Rights, the International Covenant on Civil and Political Rights, the International Covenant on Economic, Social and Cultural Rights, the Declaration of the Rights of the Child or other instruments of international law." .
+    values:originalText "Attacks and bombings on the civilian population, inflicting incalculable suffering, especially on women and children, who are the most vulnerable members of the population, shall be prohibited, and such acts shall be condemned. The use of chemical and bacteriological weapons in the course of military operations constitutes one of the most flagrant violations of the Geneva Protocol of 1925, the Geneva Conventions of 1949 and the principles of international humanitarian law and inflicts heavy losses on civilian populations, including defenceless women and children, and shall be severely condemned. All States shall abide fully by their obligations under the Geneva Protocol of 1925 and the Geneva Conventions of 1949, as well as other instruments of international law relative to respect for human rights in armed conflicts, which offer important guarantees for the protection of women and children. All efforts shall be made by States involved in armed conflicts, military operations in foreign territories or military operations in territories still under colonial domination to spare women and children from the ravages of war. All the necessary steps shall be taken to ensure the prohibition of measures such as persecution, torture, punitive measures, degrading treatment and violence, particularly against that part of the civilian population that consists of women and children. All forms of repression and cruel and inhuman treatment of women and children, including imprisonment, torture, shooting, mass arrests, collective punishment, destruction of dwellings and forcible eviction, committed by belligerents in the course of military operations or in occupied territories shall be considered criminal. Women and children belonging to the civilian population and finding themselves in circumstances of emergency and armed conflict in the struggle for peace, self-determination, national liberation and independence, or who live in occupied territories, shall not be deprived of shelter, food, medical aid or other inalienable rights, in accordance with the provisions of the Universal Declaration of Human Rights, the International Covenant on Civil and Political Rights, the International Covenant on Economic, Social and Cultural Rights, the Declaration of the Rights of the Child or other instruments of international law."@en .

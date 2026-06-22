@@ -12,7 +12,7 @@
 # ============================================================
 
 doc:Instrument a values:ValuesCredential ;
-    dc:title "Forced Labour Convention, 1930 (No. 29)" ;
+    dc:title "Forced Labour Convention, 1930 (No. 29)"@en ;
     dc:date "28 June 1930" ;
     values:category "Slavery, forced labour & trafficking" ;
     values:categoryStatus values:AutoAssigned ;
@@ -21,221 +21,221 @@ doc:Instrument a values:ValuesCredential ;
 
 doc:article-1 a values:Undertaking ;
     values:partOf doc:Instrument ;
-    dc:title "Article 1" ;
+    dc:title "Article 1"@en ;
     values:deonticStatus values:HeuristicDerived ;
-    values:originalText "Each Member of the International Labour Organisation which ratifies this Convention undertakes to suppress the use of forced or compulsory labour in all its forms within the shortest possible period. With a view to this complete suppression, recourse to forced or compulsory labour may be had, during the transitional period, for public purposes only and as an exceptional measure, subject to the conditions and guarantees hereinafter provided. At the expiration of a period of five years after the coming into force of this Convention, and when the Governing Body of the International Labour Office prepares the report provided for in article 31 below, the said Governing Body shall consider the possibility of the suppression of forced or compulsory labour in all its forms without a further transitional period and the desirability of placing this question on the agenda of the Conference." .
+    values:originalText "Each Member of the International Labour Organisation which ratifies this Convention undertakes to suppress the use of forced or compulsory labour in all its forms within the shortest possible period. With a view to this complete suppression, recourse to forced or compulsory labour may be had, during the transitional period, for public purposes only and as an exceptional measure, subject to the conditions and guarantees hereinafter provided. At the expiration of a period of five years after the coming into force of this Convention, and when the Governing Body of the International Labour Office prepares the report provided for in article 31 below, the said Governing Body shall consider the possibility of the suppression of forced or compulsory labour in all its forms without a further transitional period and the desirability of placing this question on the agenda of the Conference."@en .
 
 doc:article-2 a values:Prohibition ;
     values:partOf doc:Instrument ;
     values:borneBy values:Agent ;
-    dc:title "Article 2" ;
+    dc:title "Article 2"@en ;
     values:deonticStatus values:HeuristicDerived ;
-    values:originalText "For the purposes of this Convention the term \"forced or compulsory labour\" shall mean all work or service which is exacted from any person under the menace of any penalty and for which the said person has not offered himself voluntarily. Nevertheless, for the purposes of this Convention the term \"forced or compulsory labour\" shall not include: Any work or service exacted in virtue of compulsory military service laws for work of a purely military character; Any work or service which forms part of the normal civic obligations of the citizens of a fully self-governing country; Any work or service exacted from any person as a consequence of a conviction in a court of law, provided that the said work or service is carried out under the supervision and control of a public authority and that the said person is not hired to or placed at the disposal of private individuals, companies or associations; Any work or service exacted in cases of emergency, that is to say, in the event of war or of a calamity or threatened calamity, such as fire, flood, famine, earthquake, violent epidemic or epizootic diseases, invasion by animal, insect or vegetable pests, and in general any circumstance that would endanger the existence or the well-being of the whole or part of the population; Minor communal services of a kind which, being performed by the members of the community in the direct interest of the said community, can therefore be considered as normal civic obligations incumbent upon the members of the community, provided that the members of the community or their direct representatives shall have the right to be consulted in regard to the need for such services." .
+    values:originalText "For the purposes of this Convention the term \"forced or compulsory labour\" shall mean all work or service which is exacted from any person under the menace of any penalty and for which the said person has not offered himself voluntarily. Nevertheless, for the purposes of this Convention the term \"forced or compulsory labour\" shall not include: Any work or service exacted in virtue of compulsory military service laws for work of a purely military character; Any work or service which forms part of the normal civic obligations of the citizens of a fully self-governing country; Any work or service exacted from any person as a consequence of a conviction in a court of law, provided that the said work or service is carried out under the supervision and control of a public authority and that the said person is not hired to or placed at the disposal of private individuals, companies or associations; Any work or service exacted in cases of emergency, that is to say, in the event of war or of a calamity or threatened calamity, such as fire, flood, famine, earthquake, violent epidemic or epizootic diseases, invasion by animal, insect or vegetable pests, and in general any circumstance that would endanger the existence or the well-being of the whole or part of the population; Minor communal services of a kind which, being performed by the members of the community in the direct interest of the said community, can therefore be considered as normal civic obligations incumbent upon the members of the community, provided that the members of the community or their direct representatives shall have the right to be consulted in regard to the need for such services."@en .
 
 doc:article-3 a values:Undertaking ;
     values:partOf doc:Instrument ;
-    dc:title "Article 3" ;
+    dc:title "Article 3"@en ;
     values:deonticStatus values:HeuristicDerived ;
-    values:originalText "For the purposes of this Convention the term \"competent authority\" shall mean either an authority of the metropolitan country or the highest central authority in the territory concerned." .
+    values:originalText "For the purposes of this Convention the term \"competent authority\" shall mean either an authority of the metropolitan country or the highest central authority in the territory concerned."@en .
 
 doc:article-4 a values:Prohibition ;
     values:partOf doc:Instrument ;
     values:borneBy values:Agent ;
-    dc:title "Article 4" ;
+    dc:title "Article 4"@en ;
     values:deonticStatus values:HeuristicDerived ;
-    values:originalText "The competent authority shall not impose or permit the imposition of forced or compulsory labour for the benefit of private individuals, companies or associations. Where such forced or compulsory labour for the benefit of private individuals, companies or associations exists at the date on which a Member's ratification of this Convention is registered by the Director-General of the International Labour Office, the Member shall completely suppress such forced or compulsory labour from the date on which this Convention comes into force for that Member." .
+    values:originalText "The competent authority shall not impose or permit the imposition of forced or compulsory labour for the benefit of private individuals, companies or associations. Where such forced or compulsory labour for the benefit of private individuals, companies or associations exists at the date on which a Member's ratification of this Convention is registered by the Director-General of the International Labour Office, the Member shall completely suppress such forced or compulsory labour from the date on which this Convention comes into force for that Member."@en .
 
 doc:article-5 a values:Obligation ;
     values:partOf doc:Instrument ;
     values:borneBy values:Agent ;
-    dc:title "Article 5" ;
+    dc:title "Article 5"@en ;
     values:deonticStatus values:HeuristicDerived ;
-    values:originalText "No concession granted to private individuals, companies or associations shall involve any form of forced or compulsory labour for the production or the collection of products which such private individuals, companies or associations utilise or in which they trade. Where concessions exist containing provisions involving such forced or compulsory labour, such provisions shall be rescinded as soon as possible, in order to comply with article 1 of this Convention." .
+    values:originalText "No concession granted to private individuals, companies or associations shall involve any form of forced or compulsory labour for the production or the collection of products which such private individuals, companies or associations utilise or in which they trade. Where concessions exist containing provisions involving such forced or compulsory labour, such provisions shall be rescinded as soon as possible, in order to comply with article 1 of this Convention."@en .
 
 doc:article-6 a values:Prohibition ;
     values:partOf doc:Instrument ;
     values:borneBy values:Agent ;
-    dc:title "Article 6" ;
+    dc:title "Article 6"@en ;
     values:deonticStatus values:HeuristicDerived ;
-    values:originalText "Officials of the administration, even when they have the duty of encouraging the populations under their charge to engage in some form of labour, shall not put constraint upon the said populations or upon any individual members thereof to work for private individuals, companies or associations." .
+    values:originalText "Officials of the administration, even when they have the duty of encouraging the populations under their charge to engage in some form of labour, shall not put constraint upon the said populations or upon any individual members thereof to work for private individuals, companies or associations."@en .
 
 doc:article-7 a values:Prohibition ;
     values:partOf doc:Instrument ;
     values:borneBy values:Agent ;
-    dc:title "Article 7" ;
+    dc:title "Article 7"@en ;
     values:deonticStatus values:HeuristicDerived ;
-    values:originalText "Chiefs who do not exercise administrative functions shall not have recourse to forced or compulsory labour. Chiefs who exercise administrative functions may, with the express permission of the competent authority, have recourse to forced or compulsory labour, subject to the provisions of article 10 of this Convention. Chiefs who are duly recognised and who do not receive adequate remuneration in other forms may have the enjoyment of personal services, subject to due regulation and provided that all necessary measures are taken to prevent abuses." .
+    values:originalText "Chiefs who do not exercise administrative functions shall not have recourse to forced or compulsory labour. Chiefs who exercise administrative functions may, with the express permission of the competent authority, have recourse to forced or compulsory labour, subject to the provisions of article 10 of this Convention. Chiefs who are duly recognised and who do not receive adequate remuneration in other forms may have the enjoyment of personal services, subject to due regulation and provided that all necessary measures are taken to prevent abuses."@en .
 
 doc:article-8 a values:Undertaking ;
     values:partOf doc:Instrument ;
-    dc:title "Article 8" ;
+    dc:title "Article 8"@en ;
     values:deonticStatus values:HeuristicDerived ;
-    values:originalText "The responsibility for every decision to have recourse to forced or compulsory labour shall rest with the highest civil authority in the territory concerned. Nevertheless, that authority may delegate powers to the highest local authorities to exact forced or compulsory labour which does not involve the removal of the workers from their place of habitual residence. That authority may also delegate, for such periods and subject to such conditions as may be laid down in the regulations provided for in article 23 of this Convention, powers to the highest local authorities to exact forced or compulsory labour which involves the removal of the workers from their place of habitual residence for the purpose of facilitating the movement of officials of the administration, when on duty, and for the transport of Government stores." .
+    values:originalText "The responsibility for every decision to have recourse to forced or compulsory labour shall rest with the highest civil authority in the territory concerned. Nevertheless, that authority may delegate powers to the highest local authorities to exact forced or compulsory labour which does not involve the removal of the workers from their place of habitual residence. That authority may also delegate, for such periods and subject to such conditions as may be laid down in the regulations provided for in article 23 of this Convention, powers to the highest local authorities to exact forced or compulsory labour which involves the removal of the workers from their place of habitual residence for the purpose of facilitating the movement of officials of the administration, when on duty, and for the transport of Government stores."@en .
 
 doc:article-9 a values:Undertaking ;
     values:partOf doc:Instrument ;
-    dc:title "Article 9" ;
+    dc:title "Article 9"@en ;
     values:deonticStatus values:HeuristicDerived ;
-    values:originalText "Except as otherwise provided for in article 10 of this Convention, any authority competent to exact forced or compulsory labour shall, before deciding to have recourse to such labour, satisfy itself: That the work to be done or the service to be rendered is of important direct interest for the community called upon to do the work or render the service; That the work or service is of present or imminent necessity; That it has been impossible to obtain voluntary labour for carrying out the work or rendering the service by the offer of rates of wages and conditions of labour not less favourable than those prevailing in the area concerned for similar work or service; and That the work or service will not lay too heavy a burden upon the present population, having regard to the labour available and its capacity to undertake the work." .
+    values:originalText "Except as otherwise provided for in article 10 of this Convention, any authority competent to exact forced or compulsory labour shall, before deciding to have recourse to such labour, satisfy itself: That the work to be done or the service to be rendered is of important direct interest for the community called upon to do the work or render the service; That the work or service is of present or imminent necessity; That it has been impossible to obtain voluntary labour for carrying out the work or rendering the service by the offer of rates of wages and conditions of labour not less favourable than those prevailing in the area concerned for similar work or service; and That the work or service will not lay too heavy a burden upon the present population, having regard to the labour available and its capacity to undertake the work."@en .
 
 doc:article-10 a values:Obligation ;
     values:partOf doc:Instrument ;
     values:borneBy values:Agent ;
-    dc:title "Article 10" ;
+    dc:title "Article 10"@en ;
     values:deonticStatus values:HeuristicDerived ;
-    values:originalText "Forced or compulsory labour exacted as a tax and forced or compulsory labour to which recourse is had for the execution of public works by chiefs who exercise administrative functions shall be progressively abolished. Meanwhile, where forced or compulsory labour is exacted as a tax, and where recourse is had to forced or compulsory labour for the execution of public works by chiefs who exercise administrative functions, the authority concerned shall first satisfy itself: That the work to be done or the service to be rendered is of important direct interest for the community called upon to do the work or render the service; That the work or the service is of present or imminent necessity; That the work or service will not lay too heavy a burden upon the present population, having regard to the labour available and its capacity to undertake the work; That the work or service will not entail the removal of the workers from their place of habitual residence; That the execution of the work or the rendering of the service will be directed in accordance with the exigencies of religion, social life and agriculture." .
+    values:originalText "Forced or compulsory labour exacted as a tax and forced or compulsory labour to which recourse is had for the execution of public works by chiefs who exercise administrative functions shall be progressively abolished. Meanwhile, where forced or compulsory labour is exacted as a tax, and where recourse is had to forced or compulsory labour for the execution of public works by chiefs who exercise administrative functions, the authority concerned shall first satisfy itself: That the work to be done or the service to be rendered is of important direct interest for the community called upon to do the work or render the service; That the work or the service is of present or imminent necessity; That the work or service will not lay too heavy a burden upon the present population, having regard to the labour available and its capacity to undertake the work; That the work or service will not entail the removal of the workers from their place of habitual residence; That the execution of the work or the rendering of the service will be directed in accordance with the exigencies of religion, social life and agriculture."@en .
 
 doc:article-11 a values:Obligation ;
     values:partOf doc:Instrument ;
     values:borneBy values:Agent ;
-    dc:title "Article 11" ;
+    dc:title "Article 11"@en ;
     values:deonticStatus values:HeuristicDerived ;
-    values:originalText "Only adult able-bodied males who are of an apparent age of not less than 18 and not more than 45 years may be called upon for forced or compulsory labour. Except in respect of the kinds of labour provided for in article 10 of this Convention, the following limitations and conditions shall apply: Whenever possible prior determination by a medical officer appointed by the administration that the persons concerned are not suffering from any infectious or contagious disease and that they are physically fit for the work required and for the conditions under which it is to be carried out; Exemption of school teachers and pupils and of officials of the administration in general; The maintenance in each community of the number of adult able-bodied men indispensable for family and social life; Respect for conjugal and family ties. For the purposes of subparagraph (c) of the preceding paragraph, the regulations provided for in article 23 of this Convention shall fix the proportion of the resident adult able-bodied males who may be taken at any one time for forced or compulsory labour, provided always that this proportion shall in no case exceed 25 per cent. In fixing this proportion the competent authority shall take account of the density of the population, of its social and physical development, of the seasons, and of the work which must be done by the persons concerned on their own behalf in their locality, and, generally, shall have regard to the economic and social necessities of the normal life of the community concerned." .
+    values:originalText "Only adult able-bodied males who are of an apparent age of not less than 18 and not more than 45 years may be called upon for forced or compulsory labour. Except in respect of the kinds of labour provided for in article 10 of this Convention, the following limitations and conditions shall apply: Whenever possible prior determination by a medical officer appointed by the administration that the persons concerned are not suffering from any infectious or contagious disease and that they are physically fit for the work required and for the conditions under which it is to be carried out; Exemption of school teachers and pupils and of officials of the administration in general; The maintenance in each community of the number of adult able-bodied men indispensable for family and social life; Respect for conjugal and family ties. For the purposes of subparagraph (c) of the preceding paragraph, the regulations provided for in article 23 of this Convention shall fix the proportion of the resident adult able-bodied males who may be taken at any one time for forced or compulsory labour, provided always that this proportion shall in no case exceed 25 per cent. In fixing this proportion the competent authority shall take account of the density of the population, of its social and physical development, of the seasons, and of the work which must be done by the persons concerned on their own behalf in their locality, and, generally, shall have regard to the economic and social necessities of the normal life of the community concerned."@en .
 
 doc:article-12 a values:Prohibition ;
     values:partOf doc:Instrument ;
     values:borneBy values:Agent ;
-    dc:title "Article 12" ;
+    dc:title "Article 12"@en ;
     values:deonticStatus values:HeuristicDerived ;
-    values:originalText "The maximum period for which any person may be taken for forced or compulsory labour of all kinds in any one period of twelve months shall not exceed sixty days, including the time spent in going to and from the place of work. Every person from whom forced or compulsory labour is exacted shall be furnished with a certificate indicating the periods of such labour which he has completed." .
+    values:originalText "The maximum period for which any person may be taken for forced or compulsory labour of all kinds in any one period of twelve months shall not exceed sixty days, including the time spent in going to and from the place of work. Every person from whom forced or compulsory labour is exacted shall be furnished with a certificate indicating the periods of such labour which he has completed."@en .
 
 doc:article-13 a values:Obligation ;
     values:partOf doc:Instrument ;
     values:borneBy values:Agent ;
-    dc:title "Article 13" ;
+    dc:title "Article 13"@en ;
     values:deonticStatus values:HeuristicDerived ;
-    values:originalText "The normal working hours of any person from whom forced or compulsory labour is exacted shall be the same as those prevailing in the case of voluntary labour, and the hours worked in excess of the normal working hours shall be remunerated at the rates prevailing in the case of overtime for voluntary labour. A weekly day of rest shall be granted to all persons from whom forced or compulsory labour of any kind is exacted and this day shall coincide as far as possible with the day fixed by tradition or custom in the territories or regions concerned." .
+    values:originalText "The normal working hours of any person from whom forced or compulsory labour is exacted shall be the same as those prevailing in the case of voluntary labour, and the hours worked in excess of the normal working hours shall be remunerated at the rates prevailing in the case of overtime for voluntary labour. A weekly day of rest shall be granted to all persons from whom forced or compulsory labour of any kind is exacted and this day shall coincide as far as possible with the day fixed by tradition or custom in the territories or regions concerned."@en .
 
 doc:article-14 a values:Prohibition ;
     values:partOf doc:Instrument ;
     values:borneBy values:Agent ;
-    dc:title "Article 14" ;
+    dc:title "Article 14"@en ;
     values:deonticStatus values:HeuristicDerived ;
-    values:originalText "With the exception of the forced or compulsory labour provided for in article 10 of this Convention, forced or compulsory labour of all kinds shall be remunerated in cash at rates not less than those prevailing for similar kinds of work either in the district in which the labour is employed or in the district from which the labour is recruited, whichever may be the higher. In the case of labour to which recourse is had by chiefs in the exercise of their administrative functions, payment of wages in accordance with the provisions of the preceding paragraph shall be introduced as soon as possible. The wages shall be paid to each worker individually and not to his tribal chief or to any other authority. For the purpose of payment of wages the days spent in travelling to and from the place of work shall be counted as working days. Nothing in this article shall prevent ordinary rations being given as a part of wages, such rations to be at least equivalent in value to the money payment they are taken to represent, but deductions from wages shall not be made either for the payment of taxes or for special food, clothing or accommodation supplied to a worker for the purpose of maintaining him in a fit condition to carry on his work under the special conditions of any employment, or for the supply of tools." .
+    values:originalText "With the exception of the forced or compulsory labour provided for in article 10 of this Convention, forced or compulsory labour of all kinds shall be remunerated in cash at rates not less than those prevailing for similar kinds of work either in the district in which the labour is employed or in the district from which the labour is recruited, whichever may be the higher. In the case of labour to which recourse is had by chiefs in the exercise of their administrative functions, payment of wages in accordance with the provisions of the preceding paragraph shall be introduced as soon as possible. The wages shall be paid to each worker individually and not to his tribal chief or to any other authority. For the purpose of payment of wages the days spent in travelling to and from the place of work shall be counted as working days. Nothing in this article shall prevent ordinary rations being given as a part of wages, such rations to be at least equivalent in value to the money payment they are taken to represent, but deductions from wages shall not be made either for the payment of taxes or for special food, clothing or accommodation supplied to a worker for the purpose of maintaining him in a fit condition to carry on his work under the special conditions of any employment, or for the supply of tools."@en .
 
 doc:article-15 a values:Obligation ;
     values:partOf doc:Instrument ;
     values:borneBy values:Agent ;
-    dc:title "Article 15" ;
+    dc:title "Article 15"@en ;
     values:deonticStatus values:HeuristicDerived ;
-    values:originalText "Any laws or regulations relating to workmen's compensation for accidents or sickness arising out of the employment of the worker and any laws or regulations providing compensation for the dependants of deceased or incapacitated workers which are or shall be in force in the territory concerned shall be equally applicable to persons from whom forced or compulsory labour is exacted and to voluntary workers. In any case it shall be an obligation on any authority employing any worker on forced or compulsory labour to ensure the subsistence of any such worker who, by accident or sickness arising out of his employment, is rendered wholly or partially incapable of providing for himself, and to take measures to ensure the maintenance of any persons actually dependent upon such a worker in the event of his incapacity or decease arising out of his employment." .
+    values:originalText "Any laws or regulations relating to workmen's compensation for accidents or sickness arising out of the employment of the worker and any laws or regulations providing compensation for the dependants of deceased or incapacitated workers which are or shall be in force in the territory concerned shall be equally applicable to persons from whom forced or compulsory labour is exacted and to voluntary workers. In any case it shall be an obligation on any authority employing any worker on forced or compulsory labour to ensure the subsistence of any such worker who, by accident or sickness arising out of his employment, is rendered wholly or partially incapable of providing for himself, and to take measures to ensure the maintenance of any persons actually dependent upon such a worker in the event of his incapacity or decease arising out of his employment."@en .
 
 doc:article-16 a values:Prohibition ;
     values:partOf doc:Instrument ;
     values:borneBy values:Agent ;
-    dc:title "Article 16" ;
+    dc:title "Article 16"@en ;
     values:deonticStatus values:HeuristicDerived ;
-    values:originalText "Except in cases of special necessity, persons from whom forced or compulsory labour is exacted shall not be transferred to districts where the food and climate differ so considerably from those to which they have been accustomed as to endanger their health. In no case shall the transfer of such workers be permitted unless all measures relating to hygiene and accommodation which are necessary to adapt such workers to the conditions and to safeguard their health can be strictly applied. When such transfer cannot be avoided, measures of gradual habituation to the new conditions of diet and of climate shall be adopted on competent medical advice. In cases where such workers are required to perform regular work to which they are not accustomed, measures shall be taken to ensure their habituation to it, especially as regards progressive training, the hours of work and the provision of rest intervals, and any increase or amelioration of diet which may be necessary." .
+    values:originalText "Except in cases of special necessity, persons from whom forced or compulsory labour is exacted shall not be transferred to districts where the food and climate differ so considerably from those to which they have been accustomed as to endanger their health. In no case shall the transfer of such workers be permitted unless all measures relating to hygiene and accommodation which are necessary to adapt such workers to the conditions and to safeguard their health can be strictly applied. When such transfer cannot be avoided, measures of gradual habituation to the new conditions of diet and of climate shall be adopted on competent medical advice. In cases where such workers are required to perform regular work to which they are not accustomed, measures shall be taken to ensure their habituation to it, especially as regards progressive training, the hours of work and the provision of rest intervals, and any increase or amelioration of diet which may be necessary."@en .
 
 doc:article-17 a values:Right ;
     values:partOf doc:Instrument ;
     values:heldBy values:NaturalPerson ;
-    dc:title "Article 17" ;
+    dc:title "Article 17"@en ;
     values:deonticStatus values:HeuristicDerived ;
-    values:originalText "Before permitting recourse to forced or compulsory labour for works of construction or maintenance which entail the workers remaining at the workplaces for considerable periods, the competent authority shall satisfy itself: That all necessary measures are taken to safeguard the health of the workers and to guarantee the necessary medical care, and, in particular, that the workers are medically examined before commencing the work and at fixed intervals during the period of service, (b) that there is an adequate medical staff, provided with the dispensaries, infirmaries, hospitals and equipment necessary to meet all requirements, and (c) that the sanitary conditions of the workplaces, the supply of drinking water, food, fuel, and cooking utensils, and, where necessary, of housing and clothing are satisfactory; That definite arrangements are made to ensure the subsistence of the families of the workers, in particular by facilitating the remittance, by a safe method, of part of the wages to the family, at the request or with the consent of the workers; That the journey of the workers to and from the workplaces are made at the expense and under the responsibility of the administration, which shall facilitate such journeys by making the fullest use of all available means of transport; That, in case of illness or accident causing incapacity to work of a certain duration, the worker is repatriated at the expense of the administration; That any worker who may wish to remain as a voluntary worker at the end of his period of forced or compulsory labour is permitted to do so without, for a period of two years, losing his right to repatriation free of expense to himself." .
+    values:originalText "Before permitting recourse to forced or compulsory labour for works of construction or maintenance which entail the workers remaining at the workplaces for considerable periods, the competent authority shall satisfy itself: That all necessary measures are taken to safeguard the health of the workers and to guarantee the necessary medical care, and, in particular, that the workers are medically examined before commencing the work and at fixed intervals during the period of service, (b) that there is an adequate medical staff, provided with the dispensaries, infirmaries, hospitals and equipment necessary to meet all requirements, and (c) that the sanitary conditions of the workplaces, the supply of drinking water, food, fuel, and cooking utensils, and, where necessary, of housing and clothing are satisfactory; That definite arrangements are made to ensure the subsistence of the families of the workers, in particular by facilitating the remittance, by a safe method, of part of the wages to the family, at the request or with the consent of the workers; That the journey of the workers to and from the workplaces are made at the expense and under the responsibility of the administration, which shall facilitate such journeys by making the fullest use of all available means of transport; That, in case of illness or accident causing incapacity to work of a certain duration, the worker is repatriated at the expense of the administration; That any worker who may wish to remain as a voluntary worker at the end of his period of forced or compulsory labour is permitted to do so without, for a period of two years, losing his right to repatriation free of expense to himself."@en .
 
 doc:article-18 a values:Prohibition ;
     values:partOf doc:Instrument ;
     values:borneBy values:Agent ;
-    dc:title "Article 18" ;
+    dc:title "Article 18"@en ;
     values:deonticStatus values:HeuristicDerived ;
-    values:originalText "Forced or compulsory labour for the transport of persons or goods, such as the labour of porters or boatmen, shall be abolished within the shortest possible period. Meanwhile the competent authority shall promulgate regulations determining, inter alia , that such labour shall only be employed for the purpose of facilitating the movement of officials of the administration, when on duty, or for the transport of Government stores, or, in cases of very urgent necessity, the transport of persons other than officials, (b) that the workers so employed shall be medically certified to be physically fit, where medical examination is possible, and that where such medical examination is not practicable the person employing such workers shall be held responsible for ensuring that they are physically fit and not suffering from any infectious or contagious diseases, (c) the maximum load which these workers may carry, (d) the maximum distance from their s to which they may be taken, (e) the maximum number of days per month or other period for which they may be taken, including the days spent in returning to their s, and (f) the persons entitled to demand this form of forced or compulsory labour and the extent to which they are entitled to demand it. In fixing the maxima referred to under (c), (d) and (e) in the foregoing paragraph, the competent authority shall have regard to all relevant factors, including the physical development of the population from which the workers are recruited, the nature of the country through which they must travel and the climatic conditions. The competent authority shall further provide that the normal daily journey of such workers shall not exceed a distance corresponding to an average working day of eight hours, it being understood that account shall be taken not only of the weight to be carried and the distance to be covered, but also of the nature of the road, the season and all other relevant factors, and that, where hours of journey in excess of the normal daily journey are exacted, they shall be remunerated at rates higher than the normal rates." .
+    values:originalText "Forced or compulsory labour for the transport of persons or goods, such as the labour of porters or boatmen, shall be abolished within the shortest possible period. Meanwhile the competent authority shall promulgate regulations determining, inter alia , that such labour shall only be employed for the purpose of facilitating the movement of officials of the administration, when on duty, or for the transport of Government stores, or, in cases of very urgent necessity, the transport of persons other than officials, (b) that the workers so employed shall be medically certified to be physically fit, where medical examination is possible, and that where such medical examination is not practicable the person employing such workers shall be held responsible for ensuring that they are physically fit and not suffering from any infectious or contagious diseases, (c) the maximum load which these workers may carry, (d) the maximum distance from their s to which they may be taken, (e) the maximum number of days per month or other period for which they may be taken, including the days spent in returning to their s, and (f) the persons entitled to demand this form of forced or compulsory labour and the extent to which they are entitled to demand it. In fixing the maxima referred to under (c), (d) and (e) in the foregoing paragraph, the competent authority shall have regard to all relevant factors, including the physical development of the population from which the workers are recruited, the nature of the country through which they must travel and the climatic conditions. The competent authority shall further provide that the normal daily journey of such workers shall not exceed a distance corresponding to an average working day of eight hours, it being understood that account shall be taken not only of the weight to be carried and the distance to be covered, but also of the nature of the road, the season and all other relevant factors, and that, where hours of journey in excess of the normal daily journey are exacted, they shall be remunerated at rates higher than the normal rates."@en .
 
 doc:article-19 a values:Obligation ;
     values:partOf doc:Instrument ;
     values:borneBy values:Agent ;
-    dc:title "Article 19" ;
+    dc:title "Article 19"@en ;
     values:deonticStatus values:HeuristicDerived ;
-    values:originalText "The competent authority shall only authorise recourse to compulsory cultivation as a method of precaution against famine or a deficiency of food supplies and always under the condition that the food or produce shall remain the property of the individuals or the community producing it. Nothing in this article shall be construed as abrogating the obligation on members of a community, where production is organised on a communal basis by virtue of law or custom and where the procedure or any profit accruing from the sale thereof remain the property of the community, to perform the work demanded by the community by virtue of law or custom." .
+    values:originalText "The competent authority shall only authorise recourse to compulsory cultivation as a method of precaution against famine or a deficiency of food supplies and always under the condition that the food or produce shall remain the property of the individuals or the community producing it. Nothing in this article shall be construed as abrogating the obligation on members of a community, where production is organised on a communal basis by virtue of law or custom and where the procedure or any profit accruing from the sale thereof remain the property of the community, to perform the work demanded by the community by virtue of law or custom."@en .
 
 doc:article-20 a values:Prohibition ;
     values:partOf doc:Instrument ;
     values:borneBy values:Agent ;
-    dc:title "Article 20" ;
+    dc:title "Article 20"@en ;
     values:deonticStatus values:HeuristicDerived ;
-    values:originalText "Collective punishment laws under which a community may be punished for crimes committed by any of its members shall not contain provisions for forced or compulsory labour by the community as one of the methods of punishment." .
+    values:originalText "Collective punishment laws under which a community may be punished for crimes committed by any of its members shall not contain provisions for forced or compulsory labour by the community as one of the methods of punishment."@en .
 
 doc:article-21 a values:Prohibition ;
     values:partOf doc:Instrument ;
     values:borneBy values:Agent ;
-    dc:title "Article 21" ;
+    dc:title "Article 21"@en ;
     values:deonticStatus values:HeuristicDerived ;
-    values:originalText "Forced or compulsory labour shall not be used for work underground in mines." .
+    values:originalText "Forced or compulsory labour shall not be used for work underground in mines."@en .
 
 doc:article-22 a values:Undertaking ;
     values:partOf doc:Instrument ;
-    dc:title "Article 22" ;
+    dc:title "Article 22"@en ;
     values:deonticStatus values:HeuristicDerived ;
-    values:originalText "The annual reports that Members which ratify this Convention agree to make to the International Labour Office, pursuant to the provisions of article 22 of the Constitution of the International Labour Organisation, on the measures they have taken to give effect to the provisions of this Convention, shall contain as full information as possible, in respect of each territory concerned, regarding the extent to which recourse has been had to forced or compulsory labour in that territory, the purposes for which it has been employed, the sickness and death rates, hours of work, methods of payment of wages and rates of wages, and any other relevant information." .
+    values:originalText "The annual reports that Members which ratify this Convention agree to make to the International Labour Office, pursuant to the provisions of article 22 of the Constitution of the International Labour Organisation, on the measures they have taken to give effect to the provisions of this Convention, shall contain as full information as possible, in respect of each territory concerned, regarding the extent to which recourse has been had to forced or compulsory labour in that territory, the purposes for which it has been employed, the sickness and death rates, hours of work, methods of payment of wages and rates of wages, and any other relevant information."@en .
 
 doc:article-23 a values:Undertaking ;
     values:partOf doc:Instrument ;
-    dc:title "Article 23" ;
+    dc:title "Article 23"@en ;
     values:deonticStatus values:HeuristicDerived ;
-    values:originalText "To give effect to the provisions of this Convention the competent authority shall issue complete and precise regulations governing the use of forced or compulsory labour. These regulations shall contain, inter alia , rules permitting any person from whom forced or compulsory labour is exacted to forward all complaints relative to the conditions of labour to the authorities and ensuring that such complaints will be examined and taken into consideration." .
+    values:originalText "To give effect to the provisions of this Convention the competent authority shall issue complete and precise regulations governing the use of forced or compulsory labour. These regulations shall contain, inter alia , rules permitting any person from whom forced or compulsory labour is exacted to forward all complaints relative to the conditions of labour to the authorities and ensuring that such complaints will be examined and taken into consideration."@en .
 
 doc:article-24 a values:Undertaking ;
     values:partOf doc:Instrument ;
-    dc:title "Article 24" ;
+    dc:title "Article 24"@en ;
     values:deonticStatus values:HeuristicDerived ;
-    values:originalText "Adequate measures shall in all cases be taken to ensure that the regulations governing the employment of forced or compulsory labour are strictly applied, either by extending the duties of any existing labour inspectorate which has been established for the inspection of voluntary labour to cover the inspection of forced or compulsory labour or in some other appropriate manner. Measures shall also be taken to ensure that the regulations are brought to the knowledge of persons from whom such labour is exacted." .
+    values:originalText "Adequate measures shall in all cases be taken to ensure that the regulations governing the employment of forced or compulsory labour are strictly applied, either by extending the duties of any existing labour inspectorate which has been established for the inspection of voluntary labour to cover the inspection of forced or compulsory labour or in some other appropriate manner. Measures shall also be taken to ensure that the regulations are brought to the knowledge of persons from whom such labour is exacted."@en .
 
 doc:article-25 a values:Obligation ;
     values:partOf doc:Instrument ;
     values:borneBy values:Agent ;
-    dc:title "Article 25" ;
+    dc:title "Article 25"@en ;
     values:deonticStatus values:HeuristicDerived ;
-    values:originalText "The illegal exaction of forced or compulsory labour shall be punishable as a penal offence, and it shall be an obligation on any Member ratifying this Convention to ensure that the penalties imposed by law are really adequate and are strictly enforced." .
+    values:originalText "The illegal exaction of forced or compulsory labour shall be punishable as a penal offence, and it shall be an obligation on any Member ratifying this Convention to ensure that the penalties imposed by law are really adequate and are strictly enforced."@en .
 
 doc:article-26 a values:Right ;
     values:partOf doc:Instrument ;
     values:heldBy values:NaturalPerson ;
-    dc:title "Article 26" ;
+    dc:title "Article 26"@en ;
     values:deonticStatus values:HeuristicDerived ;
-    values:originalText "Each Member of the International Labour Organisation which ratifies this Convention undertakes to apply it to the territories placed under its sovereignty, jurisdiction, protection, suzerainty, tutelage or authority, so far as it has the right to accept obligations affecting matters of internal jurisdiction; provided that, if such Member may desire to take advantage of the provisions of article 35 of the Constitution of the International Labour Organisation, it shall append to its ratification a declaration stating: The territories to which it intends to apply the provisions of this Convention without modification; The territories to which it intends to apply the provisions of this Convention with modifications, together with details of the said modifications; The territories in respect of which it reserves its decision. The aforesaid declaration shall be deemed to be an integral part of the ratification and shall have the force of ratification. It shall be open to any Member, by a subsequent declaration, to cancel in whole or in part the reservations made, in pursuance of the provisions of subparagraphs (2) and (3) of this article, in the original declaration." .
+    values:originalText "Each Member of the International Labour Organisation which ratifies this Convention undertakes to apply it to the territories placed under its sovereignty, jurisdiction, protection, suzerainty, tutelage or authority, so far as it has the right to accept obligations affecting matters of internal jurisdiction; provided that, if such Member may desire to take advantage of the provisions of article 35 of the Constitution of the International Labour Organisation, it shall append to its ratification a declaration stating: The territories to which it intends to apply the provisions of this Convention without modification; The territories to which it intends to apply the provisions of this Convention with modifications, together with details of the said modifications; The territories in respect of which it reserves its decision. The aforesaid declaration shall be deemed to be an integral part of the ratification and shall have the force of ratification. It shall be open to any Member, by a subsequent declaration, to cancel in whole or in part the reservations made, in pursuance of the provisions of subparagraphs (2) and (3) of this article, in the original declaration."@en .
 
 doc:article-27 a values:Obligation ;
     values:partOf doc:Instrument ;
     values:borneBy values:Agent ;
-    dc:title "Article 27" ;
+    dc:title "Article 27"@en ;
     values:deonticStatus values:HeuristicDerived ;
-    values:originalText "The formal ratifications of this Convention under the conditions set forth in the Constitution of the International Labour Organisation shall be communicated to the Director-General of the International Labour Office for registration." .
+    values:originalText "The formal ratifications of this Convention under the conditions set forth in the Constitution of the International Labour Organisation shall be communicated to the Director-General of the International Labour Office for registration."@en .
 
 doc:article-28 a values:Obligation ;
     values:partOf doc:Instrument ;
     values:borneBy values:Agent ;
-    dc:title "Article 28" ;
+    dc:title "Article 28"@en ;
     values:deonticStatus values:HeuristicDerived ;
-    values:originalText "This Convention shall be binding only upon those Members whose ratifications have been registered with the International Labour Office. It shall come into force twelve months after the date on which the ratifications of two Members of the International Labour Organisation have been registered with the Director-General. Thereafter, this Convention shall come into force for any Member twelve months after the date on which the ratification has been registered." .
+    values:originalText "This Convention shall be binding only upon those Members whose ratifications have been registered with the International Labour Office. It shall come into force twelve months after the date on which the ratifications of two Members of the International Labour Organisation have been registered with the Director-General. Thereafter, this Convention shall come into force for any Member twelve months after the date on which the ratification has been registered."@en .
 
 doc:article-29 a values:Undertaking ;
     values:partOf doc:Instrument ;
-    dc:title "Article 29" ;
+    dc:title "Article 29"@en ;
     values:deonticStatus values:HeuristicDerived ;
-    values:originalText "As soon as the ratifications of two Members of the International Labour Organisation have been registered with the International Labour Office, the Director-General of the International Labour Office shall so notify all the Members of the International Labour Organisation. He shall likewise notify them of the registration of ratifications which may be communicated subsequently by other Members of the Organisation." .
+    values:originalText "As soon as the ratifications of two Members of the International Labour Organisation have been registered with the International Labour Office, the Director-General of the International Labour Office shall so notify all the Members of the International Labour Organisation. He shall likewise notify them of the registration of ratifications which may be communicated subsequently by other Members of the Organisation."@en .
 
 doc:article-30 a values:Prohibition ;
     values:partOf doc:Instrument ;
     values:borneBy values:Agent ;
-    dc:title "Article 30" ;
+    dc:title "Article 30"@en ;
     values:deonticStatus values:HeuristicDerived ;
-    values:originalText "A Member which has ratified this Convention may denounce it after the expiration of ten years from the date on which the Convention first comes into force, by an act communicated to the Director-General of the International Labour Office for registration. Such denunciation shall not take effect until one year after the date on which it is registered with the International Labour Office. Each Member which has ratified this Convention and which does not, within the year following the expiration of the period of ten years mentioned in the preceding paragraph, exercise the right of denunciation provided for in this article, will be bound for another period of five years and, thereafter, may denounce this Convention at the expiration of each period of five years under the terms provided for in this article." .
+    values:originalText "A Member which has ratified this Convention may denounce it after the expiration of ten years from the date on which the Convention first comes into force, by an act communicated to the Director-General of the International Labour Office for registration. Such denunciation shall not take effect until one year after the date on which it is registered with the International Labour Office. Each Member which has ratified this Convention and which does not, within the year following the expiration of the period of ten years mentioned in the preceding paragraph, exercise the right of denunciation provided for in this article, will be bound for another period of five years and, thereafter, may denounce this Convention at the expiration of each period of five years under the terms provided for in this article."@en .
 
 doc:article-31 a values:Undertaking ;
     values:partOf doc:Instrument ;
-    dc:title "Article 31" ;
+    dc:title "Article 31"@en ;
     values:deonticStatus values:HeuristicDerived ;
-    values:originalText "At the expiration of each period of five years after the coming into force of this Convention, the Governing Body of the International Labour Office shall present to the General Conference a report on the working of this Convention and shall consider the desirability of placing on the agenda of the Conference the question of its revision in whole or in part." .
+    values:originalText "At the expiration of each period of five years after the coming into force of this Convention, the Governing Body of the International Labour Office shall present to the General Conference a report on the working of this Convention and shall consider the desirability of placing on the agenda of the Conference the question of its revision in whole or in part."@en .
 
 doc:article-32 a values:Undertaking ;
     values:partOf doc:Instrument ;
-    dc:title "Article 32" ;
+    dc:title "Article 32"@en ;
     values:deonticStatus values:HeuristicDerived ;
-    values:originalText "Should the Conference adopt a new Convention revising this Convention in whole or in part, the ratification by a Member of the new revising Convention shall ipso jure involve denunciation of this Convention without any requirement of delay, notwithstanding the provisions of article 30 above, if and when the new revising Convention shall have come into force. As from the date of the coming into force of the new revising Convention, the present Convention shall cease to be open to ratification by the Members. Nevertheless, this Convention shall remain in force in its actual form and content for those Members which have ratified it but have not ratified the revising Convention." .
+    values:originalText "Should the Conference adopt a new Convention revising this Convention in whole or in part, the ratification by a Member of the new revising Convention shall ipso jure involve denunciation of this Convention without any requirement of delay, notwithstanding the provisions of article 30 above, if and when the new revising Convention shall have come into force. As from the date of the coming into force of the new revising Convention, the present Convention shall cease to be open to ratification by the Members. Nevertheless, this Convention shall remain in force in its actual form and content for those Members which have ratified it but have not ratified the revising Convention."@en .
 
 doc:article-33 a values:Obligation ;
     values:partOf doc:Instrument ;
     values:borneBy values:Agent ;
-    dc:title "Article 33" ;
+    dc:title "Article 33"@en ;
     values:deonticStatus values:HeuristicDerived ;
-    values:originalText "Entry into force: 1 May 1932, in accordance with article 28 The General Conference of the International Labour Organisation , Having been convened at Geneva by the Governing Body of the International Labour Office, and having met in its fourteenth session on 10 June 1930, and Having decided upon the adoption of certain proposals with regard to forced or compulsory labour, which is included in the first item on the agenda of the session, and Having determined that these proposals shall take the form of an international Convention, Adopts this twenty-eighth day of June of the year one thousand nine hundred and thirty the following Convention, which may be cited as the Forced Labour Convention, 1930, for ratification by the Members of the International Labour Organisation in accordance with the provisions of the Constitution of the International Labour Organisation:" .
+    values:originalText "Entry into force: 1 May 1932, in accordance with article 28 The General Conference of the International Labour Organisation , Having been convened at Geneva by the Governing Body of the International Labour Office, and having met in its fourteenth session on 10 June 1930, and Having decided upon the adoption of certain proposals with regard to forced or compulsory labour, which is included in the first item on the agenda of the session, and Having determined that these proposals shall take the form of an international Convention, Adopts this twenty-eighth day of June of the year one thousand nine hundred and thirty the following Convention, which may be cited as the Forced Labour Convention, 1930, for ratification by the Members of the International Labour Organisation in accordance with the provisions of the Constitution of the International Labour Organisation:"@en .

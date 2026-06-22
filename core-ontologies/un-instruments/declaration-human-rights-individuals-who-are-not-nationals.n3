@@ -12,7 +12,7 @@
 # ============================================================
 
 doc:Instrument a values:ValuesCredential ;
-    dc:title "Declaration on the Human Rights of Individuals who are not nationals of the country in which they live" ;
+    dc:title "Declaration on the Human Rights of Individuals who are not nationals of the country in which they live"@en ;
     dc:date "13 December 1985" ;
     values:category "Migrants & non-nationals" ;
     values:categoryStatus values:AutoAssigned ;
@@ -21,66 +21,66 @@ doc:Instrument a values:ValuesCredential ;
 
 doc:article-1 a values:Undertaking ;
     values:partOf doc:Instrument ;
-    dc:title "Article 1" ;
+    dc:title "Article 1"@en ;
     values:deonticStatus values:HeuristicDerived ;
-    values:originalText "For the purposes of this Declaration, the term \"alien\" shall apply, with due regard to qualifications made in subsequent articles, to any individual who is not a national of the State in which he or she is present." .
+    values:originalText "For the purposes of this Declaration, the term \"alien\" shall apply, with due regard to qualifications made in subsequent articles, to any individual who is not a national of the State in which he or she is present."@en .
 
 doc:article-2 a values:Prohibition ;
     values:partOf doc:Instrument ;
     values:borneBy values:Agent ;
-    dc:title "Article 2" ;
+    dc:title "Article 2"@en ;
     values:deonticStatus values:HeuristicDerived ;
-    values:originalText "1. Nothing in this Declaration shall be interpreted as legitimizing the illegal entry into and presence in a State of any alien, nor shall any provision be interpreted as restricting the right of any State to promulgate laws and regulations concerning the entry of aliens and the terms and conditions of their stay or to establish differences between nationals and aliens. However, such laws and regulations shall not be incompatible with the international legal obligations of that State, including those in the field of human rights. 2. This Declaration shall not prejudice the enjoyment of the rights accorded by domestic law and of the rights which under international law a State is obliged to accord to aliens, even where this Declaration does not recognize such rights or recognizes them to a lesser extent." .
+    values:originalText "1. Nothing in this Declaration shall be interpreted as legitimizing the illegal entry into and presence in a State of any alien, nor shall any provision be interpreted as restricting the right of any State to promulgate laws and regulations concerning the entry of aliens and the terms and conditions of their stay or to establish differences between nationals and aliens. However, such laws and regulations shall not be incompatible with the international legal obligations of that State, including those in the field of human rights. 2. This Declaration shall not prejudice the enjoyment of the rights accorded by domestic law and of the rights which under international law a State is obliged to accord to aliens, even where this Declaration does not recognize such rights or recognizes them to a lesser extent."@en .
 
 doc:article-3 a values:Undertaking ;
     values:partOf doc:Instrument ;
-    dc:title "Article 3" ;
+    dc:title "Article 3"@en ;
     values:deonticStatus values:HeuristicDerived ;
-    values:originalText "Every State shall make public its national legislation or regulations affecting aliens." .
+    values:originalText "Every State shall make public its national legislation or regulations affecting aliens."@en .
 
 doc:article-4 a values:Undertaking ;
     values:partOf doc:Instrument ;
-    dc:title "Article 4" ;
+    dc:title "Article 4"@en ;
     values:deonticStatus values:HeuristicDerived ;
-    values:originalText "Aliens shall observe the laws of the State in which they reside or are present and regard with respect the customs and traditions of the people of that State." .
+    values:originalText "Aliens shall observe the laws of the State in which they reside or are present and regard with respect the customs and traditions of the people of that State."@en .
 
 doc:article-5 a values:Right ;
     values:partOf doc:Instrument ;
     values:heldBy values:NaturalPerson ;
-    dc:title "Article 5" ;
+    dc:title "Article 5"@en ;
     values:deonticStatus values:HeuristicDerived ;
-    values:originalText "1. Aliens shall enjoy, in accordance with domestic law and subject to the relevant international obligations of the State in which they are present, in particular the following rights: (a) The right to life and security of person; no alien shall be subjected to arbitrary arrest or detention; no alien shall be deprived of his or her liberty except on such grounds and in accordance with such procedures as are established by law; (b) The right to protection against arbitrary or unlawful interference with privacy, family, or correspondence; (c) The right to be equal before the courts, tribunals and all other organs and authorities administering justice and, when necessary, to free assistance of an interpreter in criminal proceedings and, when prescribed by law, other proceedings; (d) The right to choose a spouse, to marry, to found a family; (e) The right to freedom of thought, opinion, conscience and religion; the right to manifest their religion or beliefs, subject only to such limitations as are prescribed by law and are necessary to protect public safety, order, health or morals or the fundamental rights and freedoms of others; (f) The right to retain their own language, culture and tradition; (g) The right to transfer abroad earnings, savings or other personal monetary assets, subject to domestic currency regulations. 2. Subject to such restrictions as are prescribed by law and which are necessary in a democratic society to protect national security, public safety, public order, public health or morals or the rights and freedoms of others, and which are consistent with the other rights recognized in the relevant international instruments and those set forth in this Declaration, aliens shall enjoy the following rights: (a) The right to leave the country; (b) The right to freedom of expression; (c) The right to peaceful assembly; (d) The right to own property alone as well as in association with others, subject to domestic law. 3. Subject to the provisions referred to in paragraph 2, aliens lawfully in the territory of a State shall enjoy the right to liberty of movement and freedom to choose their residence within the borders of the State. 4. Subject to national legislation and due authorization, the spouse and minor or dependent children of an alien lawfully residing in the territory of a State shall be admitted to accompany, join and stay with the alien." .
+    values:originalText "1. Aliens shall enjoy, in accordance with domestic law and subject to the relevant international obligations of the State in which they are present, in particular the following rights: (a) The right to life and security of person; no alien shall be subjected to arbitrary arrest or detention; no alien shall be deprived of his or her liberty except on such grounds and in accordance with such procedures as are established by law; (b) The right to protection against arbitrary or unlawful interference with privacy, family, or correspondence; (c) The right to be equal before the courts, tribunals and all other organs and authorities administering justice and, when necessary, to free assistance of an interpreter in criminal proceedings and, when prescribed by law, other proceedings; (d) The right to choose a spouse, to marry, to found a family; (e) The right to freedom of thought, opinion, conscience and religion; the right to manifest their religion or beliefs, subject only to such limitations as are prescribed by law and are necessary to protect public safety, order, health or morals or the fundamental rights and freedoms of others; (f) The right to retain their own language, culture and tradition; (g) The right to transfer abroad earnings, savings or other personal monetary assets, subject to domestic currency regulations. 2. Subject to such restrictions as are prescribed by law and which are necessary in a democratic society to protect national security, public safety, public order, public health or morals or the rights and freedoms of others, and which are consistent with the other rights recognized in the relevant international instruments and those set forth in this Declaration, aliens shall enjoy the following rights: (a) The right to leave the country; (b) The right to freedom of expression; (c) The right to peaceful assembly; (d) The right to own property alone as well as in association with others, subject to domestic law. 3. Subject to the provisions referred to in paragraph 2, aliens lawfully in the territory of a State shall enjoy the right to liberty of movement and freedom to choose their residence within the borders of the State. 4. Subject to national legislation and due authorization, the spouse and minor or dependent children of an alien lawfully residing in the territory of a State shall be admitted to accompany, join and stay with the alien."@en .
 
 doc:article-6 a values:Obligation ;
     values:partOf doc:Instrument ;
     values:borneBy values:Agent ;
-    dc:title "Article 6" ;
+    dc:title "Article 6"@en ;
     values:deonticStatus values:HeuristicDerived ;
-    values:originalText "No alien shall be subjected to torture or to cruel, inhuman or degrading treatment or punishment and, in particular, no alien shall be subjected without his or her free consent to medical or scientific experimentation." .
+    values:originalText "No alien shall be subjected to torture or to cruel, inhuman or degrading treatment or punishment and, in particular, no alien shall be subjected without his or her free consent to medical or scientific experimentation."@en .
 
 doc:article-7 a values:Undertaking ;
     values:partOf doc:Instrument ;
-    dc:title "Article 7" ;
+    dc:title "Article 7"@en ;
     values:deonticStatus values:HeuristicDerived ;
-    values:originalText "An alien lawfully in the territory of a State may be expelled therefrom only in pursuance of a decision reached in accordance with law and shall, except where compelling reasons of national security otherwise require, be allowed to submit the reasons why he or she should not be expelled and to have the case reviewed by, and be represented for the purpose before, the competent authority or a person or persons specially designated by the competent authority. Individual or collective expulsion of such aliens on grounds of race, colour, religion, culture, descent or national or ethnic origin is prohibited." .
+    values:originalText "An alien lawfully in the territory of a State may be expelled therefrom only in pursuance of a decision reached in accordance with law and shall, except where compelling reasons of national security otherwise require, be allowed to submit the reasons why he or she should not be expelled and to have the case reviewed by, and be represented for the purpose before, the competent authority or a person or persons specially designated by the competent authority. Individual or collective expulsion of such aliens on grounds of race, colour, religion, culture, descent or national or ethnic origin is prohibited."@en .
 
 doc:article-8 a values:Right ;
     values:partOf doc:Instrument ;
     values:heldBy values:NaturalPerson ;
-    dc:title "Article 8" ;
+    dc:title "Article 8"@en ;
     values:deonticStatus values:HeuristicDerived ;
-    values:originalText "1. Aliens lawfully residing in the territory of a State shall also enjoy, in accordance with the national laws, the following rights, subject to their obligations under article 4: (a) The right to safe and healthy working conditions, to fair wages and equal remuneration for work of equal value without distinction of any kind, in particular, women being guaranteed conditions of work not inferior to those enjoyed by men, with equal pay for equal work; (b) The right to join trade unions and other organizations or associations of their choice and to participate in their activities. No restrictions may be placed on the exercise of this right other than those prescribed by law and which are necessary, in a democratic society, in the interests of national security or public order or for the protection of the rights and freedoms of others; (c) The right to health protection, medical care, social security, social services, education, rest and leisure, provided that they fulfil the requirements under the relevant regulations for participation and that undue strain is not placed on the resources of the State. 2. With a view to protecting the rights of aliens carrying on lawful paid activities in the country in which they are present, such rights may be specified by the Governments concerned in multilateral or bilateral conventions." .
+    values:originalText "1. Aliens lawfully residing in the territory of a State shall also enjoy, in accordance with the national laws, the following rights, subject to their obligations under article 4: (a) The right to safe and healthy working conditions, to fair wages and equal remuneration for work of equal value without distinction of any kind, in particular, women being guaranteed conditions of work not inferior to those enjoyed by men, with equal pay for equal work; (b) The right to join trade unions and other organizations or associations of their choice and to participate in their activities. No restrictions may be placed on the exercise of this right other than those prescribed by law and which are necessary, in a democratic society, in the interests of national security or public order or for the protection of the rights and freedoms of others; (c) The right to health protection, medical care, social security, social services, education, rest and leisure, provided that they fulfil the requirements under the relevant regulations for participation and that undue strain is not placed on the resources of the State. 2. With a view to protecting the rights of aliens carrying on lawful paid activities in the country in which they are present, such rights may be specified by the Governments concerned in multilateral or bilateral conventions."@en .
 
 doc:article-9 a values:Obligation ;
     values:partOf doc:Instrument ;
     values:borneBy values:Agent ;
-    dc:title "Article 9" ;
+    dc:title "Article 9"@en ;
     values:deonticStatus values:HeuristicDerived ;
-    values:originalText "No alien shall be arbitrarily deprived of his or her lawfully acquired assets." .
+    values:originalText "No alien shall be arbitrarily deprived of his or her lawfully acquired assets."@en .
 
 doc:article-10 a values:Right ;
     values:partOf doc:Instrument ;
     values:heldBy values:NaturalPerson ;
-    dc:title "Article 10" ;
+    dc:title "Article 10"@en ;
     values:deonticStatus values:HeuristicDerived ;
-    values:originalText "The General Assembly , Considering that the Charter of the United Nations encourages universal respect for and observance of the human rights and fundamental freedoms of all human beings, without distinction as to race, sex, language or religion, Considering that the Universal Declaration of Human Rights proclaims that all human beings are born free and equal in dignity and rights and that everyone is entitled to all the rights and freedoms set forth in that Declaration, without distinction of any kind, such as race, colour, sex, language, religion, political or other opinion, national or social origin, property, birth or other status, Considering that the Universal Declaration of Human Rights proclaims further that everyone has the right to recognition everywhere as a person before the law, that all are equal before the law and entitled without any discrimination to equal protection of the law, and that all are entitled to equal protection against any discrimination in violation of that Declaration and against any incitement to such discrimination, Being aware that the States Parties to the International Covenants on Human Rights undertake to guarantee that the rights enunciated in these Covenants will be exercised without discrimination of any kind as to race, colour, sex, language, religion, political or other opinion, national or social origin, property, birth or other status, Conscious that, with improving communications and the development of peaceful and friendly relations among countries, individuals increasingly live in countries of which they are not nationals, Reaffirming the purposes and principles of the Charter of the United Nations, Recognizing that the protection of human rights and fundamental freedoms provided for in international instruments should also be ensured for individuals who are not nationals of the country in which they live, Proclaims this Declaration:" .
+    values:originalText "The General Assembly , Considering that the Charter of the United Nations encourages universal respect for and observance of the human rights and fundamental freedoms of all human beings, without distinction as to race, sex, language or religion, Considering that the Universal Declaration of Human Rights proclaims that all human beings are born free and equal in dignity and rights and that everyone is entitled to all the rights and freedoms set forth in that Declaration, without distinction of any kind, such as race, colour, sex, language, religion, political or other opinion, national or social origin, property, birth or other status, Considering that the Universal Declaration of Human Rights proclaims further that everyone has the right to recognition everywhere as a person before the law, that all are equal before the law and entitled without any discrimination to equal protection of the law, and that all are entitled to equal protection against any discrimination in violation of that Declaration and against any incitement to such discrimination, Being aware that the States Parties to the International Covenants on Human Rights undertake to guarantee that the rights enunciated in these Covenants will be exercised without discrimination of any kind as to race, colour, sex, language, religion, political or other opinion, national or social origin, property, birth or other status, Conscious that, with improving communications and the development of peaceful and friendly relations among countries, individuals increasingly live in countries of which they are not nationals, Reaffirming the purposes and principles of the Charter of the United Nations, Recognizing that the protection of human rights and fundamental freedoms provided for in international instruments should also be ensured for individuals who are not nationals of the country in which they live, Proclaims this Declaration:"@en .

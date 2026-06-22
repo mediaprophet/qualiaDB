@@ -17,7 +17,7 @@
 # ============================================================
 
 concept:united-nations-principles-older-persons-paragraph-2 a cml:Concept ;
-    skos:prefLabel "Paragraph 2" ;
+    skos:prefLabel "Paragraph 2"@en ;
     cml:realizedBy doc:paragraph-2 ;
     cml:curationStatus cml:Proposed ;
     prov:wasDerivedFrom <https://www.ohchr.org/en/instruments-mechanisms/instruments/united-nations-principles-older-persons> ;
@@ -32,7 +32,7 @@ concept:united-nations-principles-older-persons-paragraph-2-norm a values:Undert
     cml:curationStatus cml:Proposed .
 
 concept:united-nations-principles-older-persons-paragraph-3 a cml:Concept ;
-    skos:prefLabel "Paragraph 3" ;
+    skos:prefLabel "Paragraph 3"@en ;
     cml:realizedBy doc:paragraph-3 ;
     cml:curationStatus cml:Proposed ;
     prov:wasDerivedFrom <https://www.ohchr.org/en/instruments-mechanisms/instruments/united-nations-principles-older-persons> ;
@@ -47,7 +47,7 @@ concept:united-nations-principles-older-persons-paragraph-3-norm a values:Undert
     cml:curationStatus cml:Proposed .
 
 concept:united-nations-principles-older-persons-paragraph-4 a cml:Concept ;
-    skos:prefLabel "Paragraph 4" ;
+    skos:prefLabel "Paragraph 4"@en ;
     cml:realizedBy doc:paragraph-4 ;
     cml:curationStatus cml:Proposed ;
     prov:wasDerivedFrom <https://www.ohchr.org/en/instruments-mechanisms/instruments/united-nations-principles-older-persons> ;
@@ -62,7 +62,7 @@ concept:united-nations-principles-older-persons-paragraph-4-norm a values:Undert
     cml:curationStatus cml:Proposed .
 
 concept:united-nations-principles-older-persons-paragraph-5 a cml:Concept ;
-    skos:prefLabel "Paragraph 5" ;
+    skos:prefLabel "Paragraph 5"@en ;
     cml:realizedBy doc:paragraph-5 ;
     cml:curationStatus cml:Proposed ;
     prov:wasDerivedFrom <https://www.ohchr.org/en/instruments-mechanisms/instruments/united-nations-principles-older-persons> ;
@@ -77,7 +77,7 @@ concept:united-nations-principles-older-persons-paragraph-5-norm a values:Undert
     cml:curationStatus cml:Proposed .
 
 concept:united-nations-principles-older-persons-paragraph-6 a cml:Concept ;
-    skos:prefLabel "Paragraph 6" ;
+    skos:prefLabel "Paragraph 6"@en ;
     cml:realizedBy doc:paragraph-6 ;
     cml:curationStatus cml:Proposed ;
     prov:wasDerivedFrom <https://www.ohchr.org/en/instruments-mechanisms/instruments/united-nations-principles-older-persons> ;
@@ -92,7 +92,7 @@ concept:united-nations-principles-older-persons-paragraph-6-norm a values:Undert
     cml:curationStatus cml:Proposed .
 
 concept:united-nations-principles-older-persons-paragraph-7 a cml:Concept ;
-    skos:prefLabel "Paragraph 7" ;
+    skos:prefLabel "Paragraph 7"@en ;
     cml:realizedBy doc:paragraph-7 ;
     cml:curationStatus cml:Proposed ;
     prov:wasDerivedFrom <https://www.ohchr.org/en/instruments-mechanisms/instruments/united-nations-principles-older-persons> ;
@@ -107,7 +107,7 @@ concept:united-nations-principles-older-persons-paragraph-7-norm a values:Undert
     cml:curationStatus cml:Proposed .
 
 concept:united-nations-principles-older-persons-paragraph-8 a cml:Concept ;
-    skos:prefLabel "Paragraph 8" ;
+    skos:prefLabel "Paragraph 8"@en ;
     cml:realizedBy doc:paragraph-8 ;
     cml:curationStatus cml:Proposed ;
     prov:wasDerivedFrom <https://www.ohchr.org/en/instruments-mechanisms/instruments/united-nations-principles-older-persons> ;
@@ -122,7 +122,7 @@ concept:united-nations-principles-older-persons-paragraph-8-norm a values:Undert
     cml:curationStatus cml:Proposed .
 
 concept:united-nations-principles-older-persons-paragraph-9 a cml:Concept ;
-    skos:prefLabel "Paragraph 9" ;
+    skos:prefLabel "Paragraph 9"@en ;
     cml:realizedBy doc:paragraph-9 ;
     cml:curationStatus cml:Proposed ;
     prov:wasDerivedFrom <https://www.ohchr.org/en/instruments-mechanisms/instruments/united-nations-principles-older-persons> ;
@@ -137,7 +137,7 @@ concept:united-nations-principles-older-persons-paragraph-9-norm a values:Undert
     cml:curationStatus cml:Proposed .
 
 concept:united-nations-principles-older-persons-paragraph-10 a cml:Concept ;
-    skos:prefLabel "Paragraph 10" ;
+    skos:prefLabel "Paragraph 10"@en ;
     cml:realizedBy doc:paragraph-10 ;
     cml:curationStatus cml:Proposed ;
     prov:wasDerivedFrom <https://www.ohchr.org/en/instruments-mechanisms/instruments/united-nations-principles-older-persons> ;
@@ -152,7 +152,7 @@ concept:united-nations-principles-older-persons-paragraph-10-norm a values:Under
     cml:curationStatus cml:Proposed .
 
 concept:united-nations-principles-older-persons-paragraph-11 a cml:Concept ;
-    skos:prefLabel "Paragraph 11" ;
+    skos:prefLabel "Paragraph 11"@en ;
     cml:realizedBy doc:paragraph-11 ;
     cml:curationStatus cml:Proposed ;
     prov:wasDerivedFrom <https://www.ohchr.org/en/instruments-mechanisms/instruments/united-nations-principles-older-persons> ;
@@ -167,7 +167,7 @@ concept:united-nations-principles-older-persons-paragraph-11-norm a values:Under
     cml:curationStatus cml:Proposed .
 
 concept:united-nations-principles-older-persons-paragraph-12 a cml:Concept ;
-    skos:prefLabel "Paragraph 12" ;
+    skos:prefLabel "Paragraph 12"@en ;
     cml:realizedBy doc:paragraph-12 ;
     cml:curationStatus cml:Proposed ;
     prov:wasDerivedFrom <https://www.ohchr.org/en/instruments-mechanisms/instruments/united-nations-principles-older-persons> ;
@@ -182,7 +182,7 @@ concept:united-nations-principles-older-persons-paragraph-12-norm a values:Under
     cml:curationStatus cml:Proposed .
 
 concept:united-nations-principles-older-persons-paragraph-13 a cml:Concept ;
-    skos:prefLabel "Paragraph 13" ;
+    skos:prefLabel "Paragraph 13"@en ;
     cml:realizedBy doc:paragraph-13 ;
     cml:curationStatus cml:Proposed ;
     prov:wasDerivedFrom <https://www.ohchr.org/en/instruments-mechanisms/instruments/united-nations-principles-older-persons> ;
@@ -197,7 +197,7 @@ concept:united-nations-principles-older-persons-paragraph-13-norm a values:Under
     cml:curationStatus cml:Proposed .
 
 concept:united-nations-principles-older-persons-paragraph-14 a cml:Concept ;
-    skos:prefLabel "Paragraph 14" ;
+    skos:prefLabel "Paragraph 14"@en ;
     cml:realizedBy doc:paragraph-14 ;
     cml:curationStatus cml:Proposed ;
     prov:wasDerivedFrom <https://www.ohchr.org/en/instruments-mechanisms/instruments/united-nations-principles-older-persons> ;
@@ -212,7 +212,7 @@ concept:united-nations-principles-older-persons-paragraph-14-norm a values:Under
     cml:curationStatus cml:Proposed .
 
 concept:united-nations-principles-older-persons-paragraph-15 a cml:Concept ;
-    skos:prefLabel "Paragraph 15" ;
+    skos:prefLabel "Paragraph 15"@en ;
     cml:realizedBy doc:paragraph-15 ;
     cml:curationStatus cml:Proposed ;
     prov:wasDerivedFrom <https://www.ohchr.org/en/instruments-mechanisms/instruments/united-nations-principles-older-persons> ;
@@ -227,7 +227,7 @@ concept:united-nations-principles-older-persons-paragraph-15-norm a values:Under
     cml:curationStatus cml:Proposed .
 
 concept:united-nations-principles-older-persons-paragraph-16 a cml:Concept ;
-    skos:prefLabel "Paragraph 16" ;
+    skos:prefLabel "Paragraph 16"@en ;
     cml:realizedBy doc:paragraph-16 ;
     cml:curationStatus cml:Proposed ;
     prov:wasDerivedFrom <https://www.ohchr.org/en/instruments-mechanisms/instruments/united-nations-principles-older-persons> ;
@@ -242,7 +242,7 @@ concept:united-nations-principles-older-persons-paragraph-16-norm a values:Under
     cml:curationStatus cml:Proposed .
 
 concept:united-nations-principles-older-persons-paragraph-17 a cml:Concept ;
-    skos:prefLabel "Paragraph 17" ;
+    skos:prefLabel "Paragraph 17"@en ;
     cml:realizedBy doc:paragraph-17 ;
     cml:curationStatus cml:Proposed ;
     prov:wasDerivedFrom <https://www.ohchr.org/en/instruments-mechanisms/instruments/united-nations-principles-older-persons> ;
@@ -257,7 +257,7 @@ concept:united-nations-principles-older-persons-paragraph-17-norm a values:Under
     cml:curationStatus cml:Proposed .
 
 concept:united-nations-principles-older-persons-paragraph-18 a cml:Concept ;
-    skos:prefLabel "Paragraph 18" ;
+    skos:prefLabel "Paragraph 18"@en ;
     cml:realizedBy doc:paragraph-18 ;
     cml:curationStatus cml:Proposed ;
     prov:wasDerivedFrom <https://www.ohchr.org/en/instruments-mechanisms/instruments/united-nations-principles-older-persons> ;
@@ -272,7 +272,7 @@ concept:united-nations-principles-older-persons-paragraph-18-norm a values:Under
     cml:curationStatus cml:Proposed .
 
 concept:united-nations-principles-older-persons-paragraph-19 a cml:Concept ;
-    skos:prefLabel "Paragraph 19" ;
+    skos:prefLabel "Paragraph 19"@en ;
     cml:realizedBy doc:paragraph-19 ;
     cml:curationStatus cml:Proposed ;
     prov:wasDerivedFrom <https://www.ohchr.org/en/instruments-mechanisms/instruments/united-nations-principles-older-persons> ;
@@ -287,7 +287,7 @@ concept:united-nations-principles-older-persons-paragraph-19-norm a values:Under
     cml:curationStatus cml:Proposed .
 
 concept:united-nations-principles-older-persons-paragraph-20 a cml:Concept ;
-    skos:prefLabel "Paragraph 20" ;
+    skos:prefLabel "Paragraph 20"@en ;
     cml:realizedBy doc:paragraph-20 ;
     cml:curationStatus cml:Proposed ;
     prov:wasDerivedFrom <https://www.ohchr.org/en/instruments-mechanisms/instruments/united-nations-principles-older-persons> ;
@@ -302,7 +302,7 @@ concept:united-nations-principles-older-persons-paragraph-20-norm a values:Under
     cml:curationStatus cml:Proposed .
 
 concept:united-nations-principles-older-persons-paragraph-21 a cml:Concept ;
-    skos:prefLabel "Paragraph 21" ;
+    skos:prefLabel "Paragraph 21"@en ;
     cml:realizedBy doc:paragraph-21 ;
     cml:curationStatus cml:Proposed ;
     prov:wasDerivedFrom <https://www.ohchr.org/en/instruments-mechanisms/instruments/united-nations-principles-older-persons> ;
@@ -317,7 +317,7 @@ concept:united-nations-principles-older-persons-paragraph-21-norm a values:Under
     cml:curationStatus cml:Proposed .
 
 concept:united-nations-principles-older-persons-paragraph-22 a cml:Concept ;
-    skos:prefLabel "Paragraph 22" ;
+    skos:prefLabel "Paragraph 22"@en ;
     cml:realizedBy doc:paragraph-22 ;
     cml:curationStatus cml:Proposed ;
     prov:wasDerivedFrom <https://www.ohchr.org/en/instruments-mechanisms/instruments/united-nations-principles-older-persons> ;
@@ -332,7 +332,7 @@ concept:united-nations-principles-older-persons-paragraph-22-norm a values:Under
     cml:curationStatus cml:Proposed .
 
 concept:united-nations-principles-older-persons-paragraph-23 a cml:Concept ;
-    skos:prefLabel "Paragraph 23" ;
+    skos:prefLabel "Paragraph 23"@en ;
     cml:realizedBy doc:paragraph-23 ;
     cml:curationStatus cml:Proposed ;
     prov:wasDerivedFrom <https://www.ohchr.org/en/instruments-mechanisms/instruments/united-nations-principles-older-persons> ;
@@ -347,7 +347,7 @@ concept:united-nations-principles-older-persons-paragraph-23-norm a values:Under
     cml:curationStatus cml:Proposed .
 
 concept:united-nations-principles-older-persons-paragraph-24 a cml:Concept ;
-    skos:prefLabel "Paragraph 24" ;
+    skos:prefLabel "Paragraph 24"@en ;
     cml:realizedBy doc:paragraph-24 ;
     cml:curationStatus cml:Proposed ;
     prov:wasDerivedFrom <https://www.ohchr.org/en/instruments-mechanisms/instruments/united-nations-principles-older-persons> ;
@@ -362,7 +362,7 @@ concept:united-nations-principles-older-persons-paragraph-24-norm a values:Under
     cml:curationStatus cml:Proposed .
 
 concept:united-nations-principles-older-persons-paragraph-25 a cml:Concept ;
-    skos:prefLabel "Paragraph 25" ;
+    skos:prefLabel "Paragraph 25"@en ;
     cml:realizedBy doc:paragraph-25 ;
     cml:curationStatus cml:Proposed ;
     prov:wasDerivedFrom <https://www.ohchr.org/en/instruments-mechanisms/instruments/united-nations-principles-older-persons> ;
@@ -377,7 +377,7 @@ concept:united-nations-principles-older-persons-paragraph-25-norm a values:Under
     cml:curationStatus cml:Proposed .
 
 concept:united-nations-principles-older-persons-paragraph-26 a cml:Concept ;
-    skos:prefLabel "Paragraph 26" ;
+    skos:prefLabel "Paragraph 26"@en ;
     cml:realizedBy doc:paragraph-26 ;
     cml:curationStatus cml:Proposed ;
     prov:wasDerivedFrom <https://www.ohchr.org/en/instruments-mechanisms/instruments/united-nations-principles-older-persons> ;
@@ -393,7 +393,7 @@ concept:united-nations-principles-older-persons-paragraph-26-norm a values:Right
     cml:curationStatus cml:Proposed .
 
 concept:united-nations-principles-older-persons-paragraph-27 a cml:Concept ;
-    skos:prefLabel "Paragraph 27" ;
+    skos:prefLabel "Paragraph 27"@en ;
     cml:realizedBy doc:paragraph-27 ;
     cml:curationStatus cml:Proposed ;
     prov:wasDerivedFrom <https://www.ohchr.org/en/instruments-mechanisms/instruments/united-nations-principles-older-persons> ;
@@ -408,7 +408,7 @@ concept:united-nations-principles-older-persons-paragraph-27-norm a values:Under
     cml:curationStatus cml:Proposed .
 
 concept:united-nations-principles-older-persons-paragraph-28 a cml:Concept ;
-    skos:prefLabel "Paragraph 28" ;
+    skos:prefLabel "Paragraph 28"@en ;
     cml:realizedBy doc:paragraph-28 ;
     cml:curationStatus cml:Proposed ;
     prov:wasDerivedFrom <https://www.ohchr.org/en/instruments-mechanisms/instruments/united-nations-principles-older-persons> ;
@@ -423,7 +423,7 @@ concept:united-nations-principles-older-persons-paragraph-28-norm a values:Under
     cml:curationStatus cml:Proposed .
 
 concept:united-nations-principles-older-persons-paragraph-29 a cml:Concept ;
-    skos:prefLabel "Paragraph 29" ;
+    skos:prefLabel "Paragraph 29"@en ;
     cml:realizedBy doc:paragraph-29 ;
     cml:curationStatus cml:Proposed ;
     prov:wasDerivedFrom <https://www.ohchr.org/en/instruments-mechanisms/instruments/united-nations-principles-older-persons> ;
@@ -438,7 +438,7 @@ concept:united-nations-principles-older-persons-paragraph-29-norm a values:Under
     cml:curationStatus cml:Proposed .
 
 concept:united-nations-principles-older-persons-paragraph-30 a cml:Concept ;
-    skos:prefLabel "Paragraph 30" ;
+    skos:prefLabel "Paragraph 30"@en ;
     cml:realizedBy doc:paragraph-30 ;
     cml:curationStatus cml:Proposed ;
     prov:wasDerivedFrom <https://www.ohchr.org/en/instruments-mechanisms/instruments/united-nations-principles-older-persons> ;

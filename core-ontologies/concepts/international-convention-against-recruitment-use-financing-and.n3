@@ -17,7 +17,7 @@
 # ============================================================
 
 concept:international-convention-against-recruitment-use-financing-and-article-1 a cml:Concept ;
-    skos:prefLabel "Article 1" ;
+    skos:prefLabel "Article 1"@en ;
     cml:realizedBy doc:article-1 ;
     cml:curationStatus cml:Proposed ;
     prov:wasDerivedFrom <https://www.ohchr.org/en/instruments-mechanisms/instruments/international-convention-against-recruitment-use-financing-and> ;
@@ -32,7 +32,7 @@ concept:international-convention-against-recruitment-use-financing-and-article-1
     cml:curationStatus cml:Proposed .
 
 concept:international-convention-against-recruitment-use-financing-and-article-2 a cml:Concept ;
-    skos:prefLabel "Article 2" ;
+    skos:prefLabel "Article 2"@en ;
     cml:realizedBy doc:article-2 ;
     cml:curationStatus cml:Proposed ;
     prov:wasDerivedFrom <https://www.ohchr.org/en/instruments-mechanisms/instruments/international-convention-against-recruitment-use-financing-and> ;
@@ -47,7 +47,7 @@ concept:international-convention-against-recruitment-use-financing-and-article-2
     cml:curationStatus cml:Proposed .
 
 concept:international-convention-against-recruitment-use-financing-and-article-3 a cml:Concept ;
-    skos:prefLabel "Article 3" ;
+    skos:prefLabel "Article 3"@en ;
     cml:realizedBy doc:article-3 ;
     cml:curationStatus cml:Proposed ;
     prov:wasDerivedFrom <https://www.ohchr.org/en/instruments-mechanisms/instruments/international-convention-against-recruitment-use-financing-and> ;
@@ -62,7 +62,7 @@ concept:international-convention-against-recruitment-use-financing-and-article-3
     cml:curationStatus cml:Proposed .
 
 concept:international-convention-against-recruitment-use-financing-and-article-4 a cml:Concept ;
-    skos:prefLabel "Article 4" ;
+    skos:prefLabel "Article 4"@en ;
     cml:realizedBy doc:article-4 ;
     cml:curationStatus cml:Proposed ;
     prov:wasDerivedFrom <https://www.ohchr.org/en/instruments-mechanisms/instruments/international-convention-against-recruitment-use-financing-and> ;
@@ -77,7 +77,7 @@ concept:international-convention-against-recruitment-use-financing-and-article-4
     cml:curationStatus cml:Proposed .
 
 concept:international-convention-against-recruitment-use-financing-and-article-5 a cml:Concept ;
-    skos:prefLabel "Article 5" ;
+    skos:prefLabel "Article 5"@en ;
     cml:realizedBy doc:article-5 ;
     cml:curationStatus cml:Proposed ;
     prov:wasDerivedFrom <https://www.ohchr.org/en/instruments-mechanisms/instruments/international-convention-against-recruitment-use-financing-and> ;
@@ -93,7 +93,7 @@ concept:international-convention-against-recruitment-use-financing-and-article-5
     cml:curationStatus cml:Proposed .
 
 concept:international-convention-against-recruitment-use-financing-and-article-6 a cml:Concept ;
-    skos:prefLabel "Article 6" ;
+    skos:prefLabel "Article 6"@en ;
     cml:realizedBy doc:article-6 ;
     cml:curationStatus cml:Proposed ;
     prov:wasDerivedFrom <https://www.ohchr.org/en/instruments-mechanisms/instruments/international-convention-against-recruitment-use-financing-and> ;
@@ -108,7 +108,7 @@ concept:international-convention-against-recruitment-use-financing-and-article-6
     cml:curationStatus cml:Proposed .
 
 concept:international-convention-against-recruitment-use-financing-and-article-7 a cml:Concept ;
-    skos:prefLabel "Article 7" ;
+    skos:prefLabel "Article 7"@en ;
     cml:realizedBy doc:article-7 ;
     cml:curationStatus cml:Proposed ;
     prov:wasDerivedFrom <https://www.ohchr.org/en/instruments-mechanisms/instruments/international-convention-against-recruitment-use-financing-and> ;
@@ -123,7 +123,7 @@ concept:international-convention-against-recruitment-use-financing-and-article-7
     cml:curationStatus cml:Proposed .
 
 concept:international-convention-against-recruitment-use-financing-and-article-8 a cml:Concept ;
-    skos:prefLabel "Article 8" ;
+    skos:prefLabel "Article 8"@en ;
     cml:realizedBy doc:article-8 ;
     cml:curationStatus cml:Proposed ;
     prov:wasDerivedFrom <https://www.ohchr.org/en/instruments-mechanisms/instruments/international-convention-against-recruitment-use-financing-and> ;
@@ -138,7 +138,7 @@ concept:international-convention-against-recruitment-use-financing-and-article-8
     cml:curationStatus cml:Proposed .
 
 concept:international-convention-against-recruitment-use-financing-and-article-9 a cml:Concept ;
-    skos:prefLabel "Article 9" ;
+    skos:prefLabel "Article 9"@en ;
     cml:realizedBy doc:article-9 ;
     cml:curationStatus cml:Proposed ;
     prov:wasDerivedFrom <https://www.ohchr.org/en/instruments-mechanisms/instruments/international-convention-against-recruitment-use-financing-and> ;
@@ -155,7 +155,7 @@ concept:international-convention-against-recruitment-use-financing-and-article-9
     cml:curationStatus cml:Proposed .
 
 concept:international-convention-against-recruitment-use-financing-and-article-10 a cml:Concept ;
-    skos:prefLabel "Article 10" ;
+    skos:prefLabel "Article 10"@en ;
     cml:realizedBy doc:article-10 ;
     cml:curationStatus cml:Proposed ;
     prov:wasDerivedFrom <https://www.ohchr.org/en/instruments-mechanisms/instruments/international-convention-against-recruitment-use-financing-and> ;
@@ -171,7 +171,7 @@ concept:international-convention-against-recruitment-use-financing-and-article-1
     cml:curationStatus cml:Proposed .
 
 concept:international-convention-against-recruitment-use-financing-and-article-11 a cml:Concept ;
-    skos:prefLabel "Article 11" ;
+    skos:prefLabel "Article 11"@en ;
     cml:realizedBy doc:article-11 ;
     cml:curationStatus cml:Proposed ;
     prov:wasDerivedFrom <https://www.ohchr.org/en/instruments-mechanisms/instruments/international-convention-against-recruitment-use-financing-and> ;
@@ -188,7 +188,7 @@ concept:international-convention-against-recruitment-use-financing-and-article-1
     cml:curationStatus cml:Proposed .
 
 concept:international-convention-against-recruitment-use-financing-and-article-12 a cml:Concept ;
-    skos:prefLabel "Article 12" ;
+    skos:prefLabel "Article 12"@en ;
     cml:realizedBy doc:article-12 ;
     cml:curationStatus cml:Proposed ;
     prov:wasDerivedFrom <https://www.ohchr.org/en/instruments-mechanisms/instruments/international-convention-against-recruitment-use-financing-and> ;
@@ -205,7 +205,7 @@ concept:international-convention-against-recruitment-use-financing-and-article-1
     cml:curationStatus cml:Proposed .
 
 concept:international-convention-against-recruitment-use-financing-and-article-13 a cml:Concept ;
-    skos:prefLabel "Article 13" ;
+    skos:prefLabel "Article 13"@en ;
     cml:realizedBy doc:article-13 ;
     cml:curationStatus cml:Proposed ;
     prov:wasDerivedFrom <https://www.ohchr.org/en/instruments-mechanisms/instruments/international-convention-against-recruitment-use-financing-and> ;
@@ -221,7 +221,7 @@ concept:international-convention-against-recruitment-use-financing-and-article-1
     cml:curationStatus cml:Proposed .
 
 concept:international-convention-against-recruitment-use-financing-and-article-14 a cml:Concept ;
-    skos:prefLabel "Article 14" ;
+    skos:prefLabel "Article 14"@en ;
     cml:realizedBy doc:article-14 ;
     cml:curationStatus cml:Proposed ;
     prov:wasDerivedFrom <https://www.ohchr.org/en/instruments-mechanisms/instruments/international-convention-against-recruitment-use-financing-and> ;
@@ -236,7 +236,7 @@ concept:international-convention-against-recruitment-use-financing-and-article-1
     cml:curationStatus cml:Proposed .
 
 concept:international-convention-against-recruitment-use-financing-and-article-15 a cml:Concept ;
-    skos:prefLabel "Article 15" ;
+    skos:prefLabel "Article 15"@en ;
     cml:realizedBy doc:article-15 ;
     cml:curationStatus cml:Proposed ;
     prov:wasDerivedFrom <https://www.ohchr.org/en/instruments-mechanisms/instruments/international-convention-against-recruitment-use-financing-and> ;
@@ -253,7 +253,7 @@ concept:international-convention-against-recruitment-use-financing-and-article-1
     cml:curationStatus cml:Proposed .
 
 concept:international-convention-against-recruitment-use-financing-and-article-16 a cml:Concept ;
-    skos:prefLabel "Article 16" ;
+    skos:prefLabel "Article 16"@en ;
     cml:realizedBy doc:article-16 ;
     cml:curationStatus cml:Proposed ;
     prov:wasDerivedFrom <https://www.ohchr.org/en/instruments-mechanisms/instruments/international-convention-against-recruitment-use-financing-and> ;
@@ -270,7 +270,7 @@ concept:international-convention-against-recruitment-use-financing-and-article-1
     cml:curationStatus cml:Proposed .
 
 concept:international-convention-against-recruitment-use-financing-and-article-17 a cml:Concept ;
-    skos:prefLabel "Article 17" ;
+    skos:prefLabel "Article 17"@en ;
     cml:realizedBy doc:article-17 ;
     cml:curationStatus cml:Proposed ;
     prov:wasDerivedFrom <https://www.ohchr.org/en/instruments-mechanisms/instruments/international-convention-against-recruitment-use-financing-and> ;
@@ -286,7 +286,7 @@ concept:international-convention-against-recruitment-use-financing-and-article-1
     cml:curationStatus cml:Proposed .
 
 concept:international-convention-against-recruitment-use-financing-and-article-18 a cml:Concept ;
-    skos:prefLabel "Article 18" ;
+    skos:prefLabel "Article 18"@en ;
     cml:realizedBy doc:article-18 ;
     cml:curationStatus cml:Proposed ;
     prov:wasDerivedFrom <https://www.ohchr.org/en/instruments-mechanisms/instruments/international-convention-against-recruitment-use-financing-and> ;
@@ -303,7 +303,7 @@ concept:international-convention-against-recruitment-use-financing-and-article-1
     cml:curationStatus cml:Proposed .
 
 concept:international-convention-against-recruitment-use-financing-and-article-19 a cml:Concept ;
-    skos:prefLabel "Article 19" ;
+    skos:prefLabel "Article 19"@en ;
     cml:realizedBy doc:article-19 ;
     cml:curationStatus cml:Proposed ;
     prov:wasDerivedFrom <https://www.ohchr.org/en/instruments-mechanisms/instruments/international-convention-against-recruitment-use-financing-and> ;
@@ -318,7 +318,7 @@ concept:international-convention-against-recruitment-use-financing-and-article-1
     cml:curationStatus cml:Proposed .
 
 concept:international-convention-against-recruitment-use-financing-and-article-20 a cml:Concept ;
-    skos:prefLabel "Article 20" ;
+    skos:prefLabel "Article 20"@en ;
     cml:realizedBy doc:article-20 ;
     cml:curationStatus cml:Proposed ;
     prov:wasDerivedFrom <https://www.ohchr.org/en/instruments-mechanisms/instruments/international-convention-against-recruitment-use-financing-and> ;
@@ -335,7 +335,7 @@ concept:international-convention-against-recruitment-use-financing-and-article-2
     cml:curationStatus cml:Proposed .
 
 concept:international-convention-against-recruitment-use-financing-and-article-21 a cml:Concept ;
-    skos:prefLabel "Article 21" ;
+    skos:prefLabel "Article 21"@en ;
     cml:realizedBy doc:article-21 ;
     cml:curationStatus cml:Proposed ;
     prov:wasDerivedFrom <https://www.ohchr.org/en/instruments-mechanisms/instruments/international-convention-against-recruitment-use-financing-and> ;

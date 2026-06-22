@@ -17,7 +17,7 @@
 # ============================================================
 
 concept:gciii-1949-article-1 a cml:Concept ;
-    skos:prefLabel "Article 1 - Respect for the Convention" ;
+    skos:prefLabel "Article 1 - Respect for the Convention"@en ;
     cml:realizedBy doc:article-1 ;
     cml:curationStatus cml:Proposed ;
     prov:wasDerivedFrom <https://ihl-databases.icrc.org/en/ihl-treaties/gciii-1949> ;
@@ -34,7 +34,7 @@ concept:gciii-1949-article-1-norm a values:Obligation ;
     cml:curationStatus cml:Proposed .
 
 concept:gciii-1949-article-2 a cml:Concept ;
-    skos:prefLabel "Article 2 - Application of the Convention" ;
+    skos:prefLabel "Article 2 - Application of the Convention"@en ;
     cml:realizedBy doc:article-2 ;
     cml:curationStatus cml:Proposed ;
     prov:wasDerivedFrom <https://ihl-databases.icrc.org/en/ihl-treaties/gciii-1949> ;
@@ -50,7 +50,7 @@ concept:gciii-1949-article-2-norm a values:Prohibition ;
     cml:curationStatus cml:Proposed .
 
 concept:gciii-1949-article-3 a cml:Concept ;
-    skos:prefLabel "Article 3 - Conflicts not of an international character" ;
+    skos:prefLabel "Article 3 - Conflicts not of an international character"@en ;
     cml:realizedBy doc:article-3 ;
     cml:curationStatus cml:Proposed ;
     prov:wasDerivedFrom <https://ihl-databases.icrc.org/en/ihl-treaties/gciii-1949> ;
@@ -66,7 +66,7 @@ concept:gciii-1949-article-3-norm a values:Prohibition ;
     cml:curationStatus cml:Proposed .
 
 concept:gciii-1949-article-4 a cml:Concept ;
-    skos:prefLabel "Article 4 - Prisoners of war" ;
+    skos:prefLabel "Article 4 - Prisoners of war"@en ;
     cml:realizedBy doc:article-4 ;
     cml:curationStatus cml:Proposed ;
     prov:wasDerivedFrom <https://ihl-databases.icrc.org/en/ihl-treaties/gciii-1949> ;
@@ -83,7 +83,7 @@ concept:gciii-1949-article-4-norm a values:Obligation ;
     cml:curationStatus cml:Proposed .
 
 concept:gciii-1949-article-5 a cml:Concept ;
-    skos:prefLabel "Article 5 - Beginning and end of application" ;
+    skos:prefLabel "Article 5 - Beginning and end of application"@en ;
     cml:realizedBy doc:article-5 ;
     cml:curationStatus cml:Proposed ;
     prov:wasDerivedFrom <https://ihl-databases.icrc.org/en/ihl-treaties/gciii-1949> ;
@@ -100,7 +100,7 @@ concept:gciii-1949-article-5-norm a values:Obligation ;
     cml:curationStatus cml:Proposed .
 
 concept:gciii-1949-article-6 a cml:Concept ;
-    skos:prefLabel "Article 6 - Special agreements" ;
+    skos:prefLabel "Article 6 - Special agreements"@en ;
     cml:realizedBy doc:article-6 ;
     cml:curationStatus cml:Proposed ;
     prov:wasDerivedFrom <https://ihl-databases.icrc.org/en/ihl-treaties/gciii-1949> ;
@@ -116,7 +116,7 @@ concept:gciii-1949-article-6-norm a values:Undertaking ;
     cml:curationStatus cml:Proposed .
 
 concept:gciii-1949-article-7 a cml:Concept ;
-    skos:prefLabel "Article 7 - Non-renunciation of rights" ;
+    skos:prefLabel "Article 7 - Non-renunciation of rights"@en ;
     cml:realizedBy doc:article-7 ;
     cml:curationStatus cml:Proposed ;
     prov:wasDerivedFrom <https://ihl-databases.icrc.org/en/ihl-treaties/gciii-1949> ;
@@ -132,7 +132,7 @@ concept:gciii-1949-article-7-norm a values:Undertaking ;
     cml:curationStatus cml:Proposed .
 
 concept:gciii-1949-article-8 a cml:Concept ;
-    skos:prefLabel "Article 8 - Protecting Powers" ;
+    skos:prefLabel "Article 8 - Protecting Powers"@en ;
     cml:realizedBy doc:article-8 ;
     cml:curationStatus cml:Proposed ;
     prov:wasDerivedFrom <https://ihl-databases.icrc.org/en/ihl-treaties/gciii-1949> ;
@@ -148,7 +148,7 @@ concept:gciii-1949-article-8-norm a values:Prohibition ;
     cml:curationStatus cml:Proposed .
 
 concept:gciii-1949-article-9 a cml:Concept ;
-    skos:prefLabel "Article 9 - Activities of the ICRC and other impartial humanitarian organizations" ;
+    skos:prefLabel "Article 9 - Activities of the ICRC and other impartial humanitarian organizations"@en ;
     cml:realizedBy doc:article-9 ;
     cml:curationStatus cml:Proposed ;
     prov:wasDerivedFrom <https://ihl-databases.icrc.org/en/ihl-treaties/gciii-1949> ;
@@ -164,7 +164,7 @@ concept:gciii-1949-article-9-norm a values:Undertaking ;
     cml:curationStatus cml:Proposed .
 
 concept:gciii-1949-article-10 a cml:Concept ;
-    skos:prefLabel "Article 10 - Substitutes for Protecting Powers" ;
+    skos:prefLabel "Article 10 - Substitutes for Protecting Powers"@en ;
     cml:realizedBy doc:article-10 ;
     cml:curationStatus cml:Proposed ;
     prov:wasDerivedFrom <https://ihl-databases.icrc.org/en/ihl-treaties/gciii-1949> ;
@@ -181,7 +181,7 @@ concept:gciii-1949-article-10-norm a values:Obligation ;
     cml:curationStatus cml:Proposed .
 
 concept:gciii-1949-article-11 a cml:Concept ;
-    skos:prefLabel "Article 11 - Conciliation procedure" ;
+    skos:prefLabel "Article 11 - Conciliation procedure"@en ;
     cml:realizedBy doc:article-11 ;
     cml:curationStatus cml:Proposed ;
     prov:wasDerivedFrom <https://ihl-databases.icrc.org/en/ihl-treaties/gciii-1949> ;
@@ -198,7 +198,7 @@ concept:gciii-1949-article-11-norm a values:Obligation ;
     cml:curationStatus cml:Proposed .
 
 concept:gciii-1949-article-12 a cml:Concept ;
-    skos:prefLabel "Article 12 - Responsibility for the treatment of prisoners and conditions for their transfer to another Power" ;
+    skos:prefLabel "Article 12 - Responsibility for the treatment of prisoners and conditions for their transfer to another Power"@en ;
     cml:realizedBy doc:article-12 ;
     cml:curationStatus cml:Proposed ;
     prov:wasDerivedFrom <https://ihl-databases.icrc.org/en/ihl-treaties/gciii-1949> ;
@@ -214,7 +214,7 @@ concept:gciii-1949-article-12-norm a values:Undertaking ;
     cml:curationStatus cml:Proposed .
 
 concept:gciii-1949-article-13 a cml:Concept ;
-    skos:prefLabel "Article 13 - Humane treatment of prisoners" ;
+    skos:prefLabel "Article 13 - Humane treatment of prisoners"@en ;
     cml:realizedBy doc:article-13 ;
     cml:curationStatus cml:Proposed ;
     prov:wasDerivedFrom <https://ihl-databases.icrc.org/en/ihl-treaties/gciii-1949> ;
@@ -230,7 +230,7 @@ concept:gciii-1949-article-13-norm a values:Prohibition ;
     cml:curationStatus cml:Proposed .
 
 concept:gciii-1949-article-14 a cml:Concept ;
-    skos:prefLabel "Article 14 - Respect for the persons and honour of prisoners" ;
+    skos:prefLabel "Article 14 - Respect for the persons and honour of prisoners"@en ;
     cml:realizedBy doc:article-14 ;
     cml:curationStatus cml:Proposed ;
     prov:wasDerivedFrom <https://ihl-databases.icrc.org/en/ihl-treaties/gciii-1949> ;
@@ -247,7 +247,7 @@ concept:gciii-1949-article-14-norm a values:Obligation ;
     cml:curationStatus cml:Proposed .
 
 concept:gciii-1949-article-15 a cml:Concept ;
-    skos:prefLabel "Article 15 - Maintenance of prisoners" ;
+    skos:prefLabel "Article 15 - Maintenance of prisoners"@en ;
     cml:realizedBy doc:article-15 ;
     cml:curationStatus cml:Proposed ;
     prov:wasDerivedFrom <https://ihl-databases.icrc.org/en/ihl-treaties/gciii-1949> ;
@@ -264,7 +264,7 @@ concept:gciii-1949-article-15-norm a values:Obligation ;
     cml:curationStatus cml:Proposed .
 
 concept:gciii-1949-article-16 a cml:Concept ;
-    skos:prefLabel "Article 16 - Equality of treatment of prisoners" ;
+    skos:prefLabel "Article 16 - Equality of treatment of prisoners"@en ;
     cml:realizedBy doc:article-16 ;
     cml:curationStatus cml:Proposed ;
     prov:wasDerivedFrom <https://ihl-databases.icrc.org/en/ihl-treaties/gciii-1949> ;
@@ -281,7 +281,7 @@ concept:gciii-1949-article-16-norm a values:Obligation ;
     cml:curationStatus cml:Proposed .
 
 concept:gciii-1949-article-17 a cml:Concept ;
-    skos:prefLabel "Article 17 - Questioning of prisoners" ;
+    skos:prefLabel "Article 17 - Questioning of prisoners"@en ;
     cml:realizedBy doc:article-17 ;
     cml:curationStatus cml:Proposed ;
     prov:wasDerivedFrom <https://ihl-databases.icrc.org/en/ihl-treaties/gciii-1949> ;
@@ -297,7 +297,7 @@ concept:gciii-1949-article-17-norm a values:Prohibition ;
     cml:curationStatus cml:Proposed .
 
 concept:gciii-1949-article-18 a cml:Concept ;
-    skos:prefLabel "Article 18 - Property of prisoners" ;
+    skos:prefLabel "Article 18 - Property of prisoners"@en ;
     cml:realizedBy doc:article-18 ;
     cml:curationStatus cml:Proposed ;
     prov:wasDerivedFrom <https://ihl-databases.icrc.org/en/ihl-treaties/gciii-1949> ;
@@ -313,7 +313,7 @@ concept:gciii-1949-article-18-norm a values:Prohibition ;
     cml:curationStatus cml:Proposed .
 
 concept:gciii-1949-article-19 a cml:Concept ;
-    skos:prefLabel "Article 19 - Evacuation of prisoners" ;
+    skos:prefLabel "Article 19 - Evacuation of prisoners"@en ;
     cml:realizedBy doc:article-19 ;
     cml:curationStatus cml:Proposed ;
     prov:wasDerivedFrom <https://ihl-databases.icrc.org/en/ihl-treaties/gciii-1949> ;
@@ -329,7 +329,7 @@ concept:gciii-1949-article-19-norm a values:Prohibition ;
     cml:curationStatus cml:Proposed .
 
 concept:gciii-1949-article-20 a cml:Concept ;
-    skos:prefLabel "Article 20 - Conditions of evacuation of prisoners" ;
+    skos:prefLabel "Article 20 - Conditions of evacuation of prisoners"@en ;
     cml:realizedBy doc:article-20 ;
     cml:curationStatus cml:Proposed ;
     prov:wasDerivedFrom <https://ihl-databases.icrc.org/en/ihl-treaties/gciii-1949> ;
@@ -346,7 +346,7 @@ concept:gciii-1949-article-20-norm a values:Obligation ;
     cml:curationStatus cml:Proposed .
 
 concept:gciii-1949-article-21 a cml:Concept ;
-    skos:prefLabel "Article 21 - Restriction of liberty of movement and release on parole" ;
+    skos:prefLabel "Article 21 - Restriction of liberty of movement and release on parole"@en ;
     cml:realizedBy doc:article-21 ;
     cml:curationStatus cml:Proposed ;
     prov:wasDerivedFrom <https://ihl-databases.icrc.org/en/ihl-treaties/gciii-1949> ;
@@ -362,7 +362,7 @@ concept:gciii-1949-article-21-norm a values:Prohibition ;
     cml:curationStatus cml:Proposed .
 
 concept:gciii-1949-article-22 a cml:Concept ;
-    skos:prefLabel "Article 22 - Places and conditions of internment" ;
+    skos:prefLabel "Article 22 - Places and conditions of internment"@en ;
     cml:realizedBy doc:article-22 ;
     cml:curationStatus cml:Proposed ;
     prov:wasDerivedFrom <https://ihl-databases.icrc.org/en/ihl-treaties/gciii-1949> ;
@@ -378,7 +378,7 @@ concept:gciii-1949-article-22-norm a values:Prohibition ;
     cml:curationStatus cml:Proposed .
 
 concept:gciii-1949-article-23 a cml:Concept ;
-    skos:prefLabel "Article 23 - Security of prisoners" ;
+    skos:prefLabel "Article 23 - Security of prisoners"@en ;
     cml:realizedBy doc:article-23 ;
     cml:curationStatus cml:Proposed ;
     prov:wasDerivedFrom <https://ihl-databases.icrc.org/en/ihl-treaties/gciii-1949> ;
@@ -395,7 +395,7 @@ concept:gciii-1949-article-23-norm a values:Obligation ;
     cml:curationStatus cml:Proposed .
 
 concept:gciii-1949-article-24 a cml:Concept ;
-    skos:prefLabel "Article 24 - Permanent transit camps" ;
+    skos:prefLabel "Article 24 - Permanent transit camps"@en ;
     cml:realizedBy doc:article-24 ;
     cml:curationStatus cml:Proposed ;
     prov:wasDerivedFrom <https://ihl-databases.icrc.org/en/ihl-treaties/gciii-1949> ;
@@ -412,7 +412,7 @@ concept:gciii-1949-article-24-norm a values:Obligation ;
     cml:curationStatus cml:Proposed .
 
 concept:gciii-1949-article-25 a cml:Concept ;
-    skos:prefLabel "Article 25 - Quarters" ;
+    skos:prefLabel "Article 25 - Quarters"@en ;
     cml:realizedBy doc:article-25 ;
     cml:curationStatus cml:Proposed ;
     prov:wasDerivedFrom <https://ihl-databases.icrc.org/en/ihl-treaties/gciii-1949> ;
@@ -429,7 +429,7 @@ concept:gciii-1949-article-25-norm a values:Obligation ;
     cml:curationStatus cml:Proposed .
 
 concept:gciii-1949-article-26 a cml:Concept ;
-    skos:prefLabel "Article 26 - Food" ;
+    skos:prefLabel "Article 26 - Food"@en ;
     cml:realizedBy doc:article-26 ;
     cml:curationStatus cml:Proposed ;
     prov:wasDerivedFrom <https://ihl-databases.icrc.org/en/ihl-treaties/gciii-1949> ;
@@ -445,7 +445,7 @@ concept:gciii-1949-article-26-norm a values:Prohibition ;
     cml:curationStatus cml:Proposed .
 
 concept:gciii-1949-article-27 a cml:Concept ;
-    skos:prefLabel "Article 27 - Clothing" ;
+    skos:prefLabel "Article 27 - Clothing"@en ;
     cml:realizedBy doc:article-27 ;
     cml:curationStatus cml:Proposed ;
     prov:wasDerivedFrom <https://ihl-databases.icrc.org/en/ihl-treaties/gciii-1949> ;
@@ -462,7 +462,7 @@ concept:gciii-1949-article-27-norm a values:Obligation ;
     cml:curationStatus cml:Proposed .
 
 concept:gciii-1949-article-28 a cml:Concept ;
-    skos:prefLabel "Article 28 - Canteens" ;
+    skos:prefLabel "Article 28 - Canteens"@en ;
     cml:realizedBy doc:article-28 ;
     cml:curationStatus cml:Proposed ;
     prov:wasDerivedFrom <https://ihl-databases.icrc.org/en/ihl-treaties/gciii-1949> ;
@@ -478,7 +478,7 @@ concept:gciii-1949-article-28-norm a values:Right ;
     cml:curationStatus cml:Proposed .
 
 concept:gciii-1949-article-29 a cml:Concept ;
-    skos:prefLabel "Article 29 - Hygiene" ;
+    skos:prefLabel "Article 29 - Hygiene"@en ;
     cml:realizedBy doc:article-29 ;
     cml:curationStatus cml:Proposed ;
     prov:wasDerivedFrom <https://ihl-databases.icrc.org/en/ihl-treaties/gciii-1949> ;
@@ -495,7 +495,7 @@ concept:gciii-1949-article-29-norm a values:Obligation ;
     cml:curationStatus cml:Proposed .
 
 concept:gciii-1949-article-30 a cml:Concept ;
-    skos:prefLabel "Article 30 - Medical attention" ;
+    skos:prefLabel "Article 30 - Medical attention"@en ;
     cml:realizedBy doc:article-30 ;
     cml:curationStatus cml:Proposed ;
     prov:wasDerivedFrom <https://ihl-databases.icrc.org/en/ihl-treaties/gciii-1949> ;
@@ -511,7 +511,7 @@ concept:gciii-1949-article-30-norm a values:Prohibition ;
     cml:curationStatus cml:Proposed .
 
 concept:gciii-1949-article-31 a cml:Concept ;
-    skos:prefLabel "Article 31 - Medical inspections" ;
+    skos:prefLabel "Article 31 - Medical inspections"@en ;
     cml:realizedBy doc:article-31 ;
     cml:curationStatus cml:Proposed ;
     prov:wasDerivedFrom <https://ihl-databases.icrc.org/en/ihl-treaties/gciii-1949> ;
@@ -528,7 +528,7 @@ concept:gciii-1949-article-31-norm a values:Obligation ;
     cml:curationStatus cml:Proposed .
 
 concept:gciii-1949-article-32 a cml:Concept ;
-    skos:prefLabel "Article 32 - Prisoners engaged on medical duties" ;
+    skos:prefLabel "Article 32 - Prisoners engaged on medical duties"@en ;
     cml:realizedBy doc:article-32 ;
     cml:curationStatus cml:Proposed ;
     prov:wasDerivedFrom <https://ihl-databases.icrc.org/en/ihl-treaties/gciii-1949> ;
@@ -545,7 +545,7 @@ concept:gciii-1949-article-32-norm a values:Obligation ;
     cml:curationStatus cml:Proposed .
 
 concept:gciii-1949-article-33 a cml:Concept ;
-    skos:prefLabel "Article 33 - Rights and privileges of retained personnel" ;
+    skos:prefLabel "Article 33 - Rights and privileges of retained personnel"@en ;
     cml:realizedBy doc:article-33 ;
     cml:curationStatus cml:Proposed ;
     prov:wasDerivedFrom <https://ihl-databases.icrc.org/en/ihl-treaties/gciii-1949> ;
@@ -561,7 +561,7 @@ concept:gciii-1949-article-33-norm a values:Prohibition ;
     cml:curationStatus cml:Proposed .
 
 concept:gciii-1949-article-34 a cml:Concept ;
-    skos:prefLabel "Article 34 - Religious duties" ;
+    skos:prefLabel "Article 34 - Religious duties"@en ;
     cml:realizedBy doc:article-34 ;
     cml:curationStatus cml:Proposed ;
     prov:wasDerivedFrom <https://ihl-databases.icrc.org/en/ihl-treaties/gciii-1949> ;
@@ -578,7 +578,7 @@ concept:gciii-1949-article-34-norm a values:Obligation ;
     cml:curationStatus cml:Proposed .
 
 concept:gciii-1949-article-35 a cml:Concept ;
-    skos:prefLabel "Article 35 - Retained chaplains assisting prisoners" ;
+    skos:prefLabel "Article 35 - Retained chaplains assisting prisoners"@en ;
     cml:realizedBy doc:article-35 ;
     cml:curationStatus cml:Proposed ;
     prov:wasDerivedFrom <https://ihl-databases.icrc.org/en/ihl-treaties/gciii-1949> ;
@@ -595,7 +595,7 @@ concept:gciii-1949-article-35-norm a values:Obligation ;
     cml:curationStatus cml:Proposed .
 
 concept:gciii-1949-article-36 a cml:Concept ;
-    skos:prefLabel "Article 36 - Prisoners who are ministers of religion" ;
+    skos:prefLabel "Article 36 - Prisoners who are ministers of religion"@en ;
     cml:realizedBy doc:article-36 ;
     cml:curationStatus cml:Proposed ;
     prov:wasDerivedFrom <https://ihl-databases.icrc.org/en/ihl-treaties/gciii-1949> ;
@@ -611,7 +611,7 @@ concept:gciii-1949-article-36-norm a values:Prohibition ;
     cml:curationStatus cml:Proposed .
 
 concept:gciii-1949-article-37 a cml:Concept ;
-    skos:prefLabel "Article 37 - Prisoners without a minister of their religion" ;
+    skos:prefLabel "Article 37 - Prisoners without a minister of their religion"@en ;
     cml:realizedBy doc:article-37 ;
     cml:curationStatus cml:Proposed ;
     prov:wasDerivedFrom <https://ihl-databases.icrc.org/en/ihl-treaties/gciii-1949> ;
@@ -628,7 +628,7 @@ concept:gciii-1949-article-37-norm a values:Obligation ;
     cml:curationStatus cml:Proposed .
 
 concept:gciii-1949-article-38 a cml:Concept ;
-    skos:prefLabel "Article 38 - Intellectual, educational and recreational pursuits, sports and games" ;
+    skos:prefLabel "Article 38 - Intellectual, educational and recreational pursuits, sports and games"@en ;
     cml:realizedBy doc:article-38 ;
     cml:curationStatus cml:Proposed ;
     prov:wasDerivedFrom <https://ihl-databases.icrc.org/en/ihl-treaties/gciii-1949> ;
@@ -645,7 +645,7 @@ concept:gciii-1949-article-38-norm a values:Obligation ;
     cml:curationStatus cml:Proposed .
 
 concept:gciii-1949-article-39 a cml:Concept ;
-    skos:prefLabel "Article 39 - Administration. Saluting" ;
+    skos:prefLabel "Article 39 - Administration. Saluting"@en ;
     cml:realizedBy doc:article-39 ;
     cml:curationStatus cml:Proposed ;
     prov:wasDerivedFrom <https://ihl-databases.icrc.org/en/ihl-treaties/gciii-1949> ;
@@ -662,7 +662,7 @@ concept:gciii-1949-article-39-norm a values:Obligation ;
     cml:curationStatus cml:Proposed .
 
 concept:gciii-1949-article-40 a cml:Concept ;
-    skos:prefLabel "Article 40 - The wearing of badges and decorations" ;
+    skos:prefLabel "Article 40 - The wearing of badges and decorations"@en ;
     cml:realizedBy doc:article-40 ;
     cml:curationStatus cml:Proposed ;
     prov:wasDerivedFrom <https://ihl-databases.icrc.org/en/ihl-treaties/gciii-1949> ;
@@ -679,7 +679,7 @@ concept:gciii-1949-article-40-norm a values:Obligation ;
     cml:curationStatus cml:Proposed .
 
 concept:gciii-1949-article-41 a cml:Concept ;
-    skos:prefLabel "Article 41 - Posting of the Convention, and of regulations and orders concerning prisoners" ;
+    skos:prefLabel "Article 41 - Posting of the Convention, and of regulations and orders concerning prisoners"@en ;
     cml:realizedBy doc:article-41 ;
     cml:curationStatus cml:Proposed ;
     prov:wasDerivedFrom <https://ihl-databases.icrc.org/en/ihl-treaties/gciii-1949> ;
@@ -696,7 +696,7 @@ concept:gciii-1949-article-41-norm a values:Obligation ;
     cml:curationStatus cml:Proposed .
 
 concept:gciii-1949-article-42 a cml:Concept ;
-    skos:prefLabel "Article 42 - Use of weapons against prisoners of war" ;
+    skos:prefLabel "Article 42 - Use of weapons against prisoners of war"@en ;
     cml:realizedBy doc:article-42 ;
     cml:curationStatus cml:Proposed ;
     prov:wasDerivedFrom <https://ihl-databases.icrc.org/en/ihl-treaties/gciii-1949> ;
@@ -712,7 +712,7 @@ concept:gciii-1949-article-42-norm a values:Undertaking ;
     cml:curationStatus cml:Proposed .
 
 concept:gciii-1949-article-43 a cml:Concept ;
-    skos:prefLabel "Article 43 - Notification of ranks" ;
+    skos:prefLabel "Article 43 - Notification of ranks"@en ;
     cml:realizedBy doc:article-43 ;
     cml:curationStatus cml:Proposed ;
     prov:wasDerivedFrom <https://ihl-databases.icrc.org/en/ihl-treaties/gciii-1949> ;
@@ -729,7 +729,7 @@ concept:gciii-1949-article-43-norm a values:Obligation ;
     cml:curationStatus cml:Proposed .
 
 concept:gciii-1949-article-44 a cml:Concept ;
-    skos:prefLabel "Article 44 - Treatment of officers" ;
+    skos:prefLabel "Article 44 - Treatment of officers"@en ;
     cml:realizedBy doc:article-44 ;
     cml:curationStatus cml:Proposed ;
     prov:wasDerivedFrom <https://ihl-databases.icrc.org/en/ihl-treaties/gciii-1949> ;
@@ -745,7 +745,7 @@ concept:gciii-1949-article-44-norm a values:Prohibition ;
     cml:curationStatus cml:Proposed .
 
 concept:gciii-1949-article-45 a cml:Concept ;
-    skos:prefLabel "Article 45 - Treatment of other prisoners of war" ;
+    skos:prefLabel "Article 45 - Treatment of other prisoners of war"@en ;
     cml:realizedBy doc:article-45 ;
     cml:curationStatus cml:Proposed ;
     prov:wasDerivedFrom <https://ihl-databases.icrc.org/en/ihl-treaties/gciii-1949> ;
@@ -762,7 +762,7 @@ concept:gciii-1949-article-45-norm a values:Obligation ;
     cml:curationStatus cml:Proposed .
 
 concept:gciii-1949-article-46 a cml:Concept ;
-    skos:prefLabel "Article 46 - Conditions for transfer of prisoners" ;
+    skos:prefLabel "Article 46 - Conditions for transfer of prisoners"@en ;
     cml:realizedBy doc:article-46 ;
     cml:curationStatus cml:Proposed ;
     prov:wasDerivedFrom <https://ihl-databases.icrc.org/en/ihl-treaties/gciii-1949> ;
@@ -779,7 +779,7 @@ concept:gciii-1949-article-46-norm a values:Obligation ;
     cml:curationStatus cml:Proposed .
 
 concept:gciii-1949-article-47 a cml:Concept ;
-    skos:prefLabel "Article 47 - Circumstances precluding transfer of prisoners" ;
+    skos:prefLabel "Article 47 - Circumstances precluding transfer of prisoners"@en ;
     cml:realizedBy doc:article-47 ;
     cml:curationStatus cml:Proposed ;
     prov:wasDerivedFrom <https://ihl-databases.icrc.org/en/ihl-treaties/gciii-1949> ;
@@ -795,7 +795,7 @@ concept:gciii-1949-article-47-norm a values:Prohibition ;
     cml:curationStatus cml:Proposed .
 
 concept:gciii-1949-article-48 a cml:Concept ;
-    skos:prefLabel "Article 48 - Procedure for transfer of prisoners" ;
+    skos:prefLabel "Article 48 - Procedure for transfer of prisoners"@en ;
     cml:realizedBy doc:article-48 ;
     cml:curationStatus cml:Proposed ;
     prov:wasDerivedFrom <https://ihl-databases.icrc.org/en/ihl-treaties/gciii-1949> ;
@@ -812,7 +812,7 @@ concept:gciii-1949-article-48-norm a values:Obligation ;
     cml:curationStatus cml:Proposed .
 
 concept:gciii-1949-article-49 a cml:Concept ;
-    skos:prefLabel "Article 49 - General observations on labour of prisoners of war" ;
+    skos:prefLabel "Article 49 - General observations on labour of prisoners of war"@en ;
     cml:realizedBy doc:article-49 ;
     cml:curationStatus cml:Proposed ;
     prov:wasDerivedFrom <https://ihl-databases.icrc.org/en/ihl-treaties/gciii-1949> ;
@@ -829,7 +829,7 @@ concept:gciii-1949-article-49-norm a values:Obligation ;
     cml:curationStatus cml:Proposed .
 
 concept:gciii-1949-article-50 a cml:Concept ;
-    skos:prefLabel "Article 50 - Authorized work" ;
+    skos:prefLabel "Article 50 - Authorized work"@en ;
     cml:realizedBy doc:article-50 ;
     cml:curationStatus cml:Proposed ;
     prov:wasDerivedFrom <https://ihl-databases.icrc.org/en/ihl-treaties/gciii-1949> ;
@@ -846,7 +846,7 @@ concept:gciii-1949-article-50-norm a values:Obligation ;
     cml:curationStatus cml:Proposed .
 
 concept:gciii-1949-article-51 a cml:Concept ;
-    skos:prefLabel "Article 51 - Working conditions" ;
+    skos:prefLabel "Article 51 - Working conditions"@en ;
     cml:realizedBy doc:article-51 ;
     cml:curationStatus cml:Proposed ;
     prov:wasDerivedFrom <https://ihl-databases.icrc.org/en/ihl-treaties/gciii-1949> ;
@@ -862,7 +862,7 @@ concept:gciii-1949-article-51-norm a values:Prohibition ;
     cml:curationStatus cml:Proposed .
 
 concept:gciii-1949-article-52 a cml:Concept ;
-    skos:prefLabel "Article 52 - Dangerous and humiliating labour" ;
+    skos:prefLabel "Article 52 - Dangerous and humiliating labour"@en ;
     cml:realizedBy doc:article-52 ;
     cml:curationStatus cml:Proposed ;
     prov:wasDerivedFrom <https://ihl-databases.icrc.org/en/ihl-treaties/gciii-1949> ;
@@ -879,7 +879,7 @@ concept:gciii-1949-article-52-norm a values:Obligation ;
     cml:curationStatus cml:Proposed .
 
 concept:gciii-1949-article-53 a cml:Concept ;
-    skos:prefLabel "Article 53 - Duration of labour" ;
+    skos:prefLabel "Article 53 - Duration of labour"@en ;
     cml:realizedBy doc:article-53 ;
     cml:curationStatus cml:Proposed ;
     prov:wasDerivedFrom <https://ihl-databases.icrc.org/en/ihl-treaties/gciii-1949> ;
@@ -895,7 +895,7 @@ concept:gciii-1949-article-53-norm a values:Prohibition ;
     cml:curationStatus cml:Proposed .
 
 concept:gciii-1949-article-54 a cml:Concept ;
-    skos:prefLabel "Article 54 - Working pay. Occupational accidents and diseases" ;
+    skos:prefLabel "Article 54 - Working pay. Occupational accidents and diseases"@en ;
     cml:realizedBy doc:article-54 ;
     cml:curationStatus cml:Proposed ;
     prov:wasDerivedFrom <https://ihl-databases.icrc.org/en/ihl-treaties/gciii-1949> ;
@@ -912,7 +912,7 @@ concept:gciii-1949-article-54-norm a values:Obligation ;
     cml:curationStatus cml:Proposed .
 
 concept:gciii-1949-article-55 a cml:Concept ;
-    skos:prefLabel "Article 55 - Medical supervision" ;
+    skos:prefLabel "Article 55 - Medical supervision"@en ;
     cml:realizedBy doc:article-55 ;
     cml:curationStatus cml:Proposed ;
     prov:wasDerivedFrom <https://ihl-databases.icrc.org/en/ihl-treaties/gciii-1949> ;
@@ -929,7 +929,7 @@ concept:gciii-1949-article-55-norm a values:Obligation ;
     cml:curationStatus cml:Proposed .
 
 concept:gciii-1949-article-56 a cml:Concept ;
-    skos:prefLabel "Article 56 - Labour detachments" ;
+    skos:prefLabel "Article 56 - Labour detachments"@en ;
     cml:realizedBy doc:article-56 ;
     cml:curationStatus cml:Proposed ;
     prov:wasDerivedFrom <https://ihl-databases.icrc.org/en/ihl-treaties/gciii-1949> ;
@@ -946,7 +946,7 @@ concept:gciii-1949-article-56-norm a values:Obligation ;
     cml:curationStatus cml:Proposed .
 
 concept:gciii-1949-article-57 a cml:Concept ;
-    skos:prefLabel "Article 57 - Prisoners working for private employers" ;
+    skos:prefLabel "Article 57 - Prisoners working for private employers"@en ;
     cml:realizedBy doc:article-57 ;
     cml:curationStatus cml:Proposed ;
     prov:wasDerivedFrom <https://ihl-databases.icrc.org/en/ihl-treaties/gciii-1949> ;
@@ -962,7 +962,7 @@ concept:gciii-1949-article-57-norm a values:Prohibition ;
     cml:curationStatus cml:Proposed .
 
 concept:gciii-1949-article-58 a cml:Concept ;
-    skos:prefLabel "Article 58 - Ready money" ;
+    skos:prefLabel "Article 58 - Ready money"@en ;
     cml:realizedBy doc:article-58 ;
     cml:curationStatus cml:Proposed ;
     prov:wasDerivedFrom <https://ihl-databases.icrc.org/en/ihl-treaties/gciii-1949> ;
@@ -978,7 +978,7 @@ concept:gciii-1949-article-58-norm a values:Prohibition ;
     cml:curationStatus cml:Proposed .
 
 concept:gciii-1949-article-59 a cml:Concept ;
-    skos:prefLabel "Article 59 - Amounts in cash taken from prisoners" ;
+    skos:prefLabel "Article 59 - Amounts in cash taken from prisoners"@en ;
     cml:realizedBy doc:article-59 ;
     cml:curationStatus cml:Proposed ;
     prov:wasDerivedFrom <https://ihl-databases.icrc.org/en/ihl-treaties/gciii-1949> ;
@@ -995,7 +995,7 @@ concept:gciii-1949-article-59-norm a values:Obligation ;
     cml:curationStatus cml:Proposed .
 
 concept:gciii-1949-article-60 a cml:Concept ;
-    skos:prefLabel "Article 60 - Advances in pay" ;
+    skos:prefLabel "Article 60 - Advances in pay"@en ;
     cml:realizedBy doc:article-60 ;
     cml:curationStatus cml:Proposed ;
     prov:wasDerivedFrom <https://ihl-databases.icrc.org/en/ihl-treaties/gciii-1949> ;
@@ -1012,7 +1012,7 @@ concept:gciii-1949-article-60-norm a values:Obligation ;
     cml:curationStatus cml:Proposed .
 
 concept:gciii-1949-article-61 a cml:Concept ;
-    skos:prefLabel "Article 61 - Supplementary pay" ;
+    skos:prefLabel "Article 61 - Supplementary pay"@en ;
     cml:realizedBy doc:article-61 ;
     cml:curationStatus cml:Proposed ;
     prov:wasDerivedFrom <https://ihl-databases.icrc.org/en/ihl-treaties/gciii-1949> ;
@@ -1028,7 +1028,7 @@ concept:gciii-1949-article-61-norm a values:Prohibition ;
     cml:curationStatus cml:Proposed .
 
 concept:gciii-1949-article-62 a cml:Concept ;
-    skos:prefLabel "Article 62 - Working pay" ;
+    skos:prefLabel "Article 62 - Working pay"@en ;
     cml:realizedBy doc:article-62 ;
     cml:curationStatus cml:Proposed ;
     prov:wasDerivedFrom <https://ihl-databases.icrc.org/en/ihl-treaties/gciii-1949> ;
@@ -1045,7 +1045,7 @@ concept:gciii-1949-article-62-norm a values:Obligation ;
     cml:curationStatus cml:Proposed .
 
 concept:gciii-1949-article-63 a cml:Concept ;
-    skos:prefLabel "Article 63 - Transfer of funds" ;
+    skos:prefLabel "Article 63 - Transfer of funds"@en ;
     cml:realizedBy doc:article-63 ;
     cml:curationStatus cml:Proposed ;
     prov:wasDerivedFrom <https://ihl-databases.icrc.org/en/ihl-treaties/gciii-1949> ;
@@ -1062,7 +1062,7 @@ concept:gciii-1949-article-63-norm a values:Obligation ;
     cml:curationStatus cml:Proposed .
 
 concept:gciii-1949-article-64 a cml:Concept ;
-    skos:prefLabel "Article 64 - Prisoners' accounts" ;
+    skos:prefLabel "Article 64 - Prisoners' accounts"@en ;
     cml:realizedBy doc:article-64 ;
     cml:curationStatus cml:Proposed ;
     prov:wasDerivedFrom <https://ihl-databases.icrc.org/en/ihl-treaties/gciii-1949> ;
@@ -1078,7 +1078,7 @@ concept:gciii-1949-article-64-norm a values:Undertaking ;
     cml:curationStatus cml:Proposed .
 
 concept:gciii-1949-article-65 a cml:Concept ;
-    skos:prefLabel "Article 65 - Management of prisoners' accounts" ;
+    skos:prefLabel "Article 65 - Management of prisoners' accounts"@en ;
     cml:realizedBy doc:article-65 ;
     cml:curationStatus cml:Proposed ;
     prov:wasDerivedFrom <https://ihl-databases.icrc.org/en/ihl-treaties/gciii-1949> ;
@@ -1095,7 +1095,7 @@ concept:gciii-1949-article-65-norm a values:Obligation ;
     cml:curationStatus cml:Proposed .
 
 concept:gciii-1949-article-66 a cml:Concept ;
-    skos:prefLabel "Article 66 - Winding up of prisoners accounts" ;
+    skos:prefLabel "Article 66 - Winding up of prisoners accounts"@en ;
     cml:realizedBy doc:article-66 ;
     cml:curationStatus cml:Proposed ;
     prov:wasDerivedFrom <https://ihl-databases.icrc.org/en/ihl-treaties/gciii-1949> ;
@@ -1112,7 +1112,7 @@ concept:gciii-1949-article-66-norm a values:Obligation ;
     cml:curationStatus cml:Proposed .
 
 concept:gciii-1949-article-67 a cml:Concept ;
-    skos:prefLabel "Article 67 - Arrangements between Parties to the conflict" ;
+    skos:prefLabel "Article 67 - Arrangements between Parties to the conflict"@en ;
     cml:realizedBy doc:article-67 ;
     cml:curationStatus cml:Proposed ;
     prov:wasDerivedFrom <https://ihl-databases.icrc.org/en/ihl-treaties/gciii-1949> ;
@@ -1129,7 +1129,7 @@ concept:gciii-1949-article-67-norm a values:Obligation ;
     cml:curationStatus cml:Proposed .
 
 concept:gciii-1949-article-68 a cml:Concept ;
-    skos:prefLabel "Article 68 - Claims for compensation" ;
+    skos:prefLabel "Article 68 - Claims for compensation"@en ;
     cml:realizedBy doc:article-68 ;
     cml:curationStatus cml:Proposed ;
     prov:wasDerivedFrom <https://ihl-databases.icrc.org/en/ihl-treaties/gciii-1949> ;
@@ -1146,7 +1146,7 @@ concept:gciii-1949-article-68-norm a values:Obligation ;
     cml:curationStatus cml:Proposed .
 
 concept:gciii-1949-article-69 a cml:Concept ;
-    skos:prefLabel "Article 69 - Notification of measures taken" ;
+    skos:prefLabel "Article 69 - Notification of measures taken"@en ;
     cml:realizedBy doc:article-69 ;
     cml:curationStatus cml:Proposed ;
     prov:wasDerivedFrom <https://ihl-databases.icrc.org/en/ihl-treaties/gciii-1949> ;
@@ -1162,7 +1162,7 @@ concept:gciii-1949-article-69-norm a values:Undertaking ;
     cml:curationStatus cml:Proposed .
 
 concept:gciii-1949-article-70 a cml:Concept ;
-    skos:prefLabel "Article 70 - Capture cards" ;
+    skos:prefLabel "Article 70 - Capture cards"@en ;
     cml:realizedBy doc:article-70 ;
     cml:curationStatus cml:Proposed ;
     prov:wasDerivedFrom <https://ihl-databases.icrc.org/en/ihl-treaties/gciii-1949> ;
@@ -1178,7 +1178,7 @@ concept:gciii-1949-article-70-norm a values:Prohibition ;
     cml:curationStatus cml:Proposed .
 
 concept:gciii-1949-article-71 a cml:Concept ;
-    skos:prefLabel "Article 71 - Correspondence" ;
+    skos:prefLabel "Article 71 - Correspondence"@en ;
     cml:realizedBy doc:article-71 ;
     cml:curationStatus cml:Proposed ;
     prov:wasDerivedFrom <https://ihl-databases.icrc.org/en/ihl-treaties/gciii-1949> ;
@@ -1194,7 +1194,7 @@ concept:gciii-1949-article-71-norm a values:Prohibition ;
     cml:curationStatus cml:Proposed .
 
 concept:gciii-1949-article-72 a cml:Concept ;
-    skos:prefLabel "Article 72 - Relief shipments: General principles" ;
+    skos:prefLabel "Article 72 - Relief shipments: General principles"@en ;
     cml:realizedBy doc:article-72 ;
     cml:curationStatus cml:Proposed ;
     prov:wasDerivedFrom <https://ihl-databases.icrc.org/en/ihl-treaties/gciii-1949> ;
@@ -1210,7 +1210,7 @@ concept:gciii-1949-article-72-norm a values:Prohibition ;
     cml:curationStatus cml:Proposed .
 
 concept:gciii-1949-article-73 a cml:Concept ;
-    skos:prefLabel "Article 73 - Collective relief shipments" ;
+    skos:prefLabel "Article 73 - Collective relief shipments"@en ;
     cml:realizedBy doc:article-73 ;
     cml:curationStatus cml:Proposed ;
     prov:wasDerivedFrom <https://ihl-databases.icrc.org/en/ihl-treaties/gciii-1949> ;
@@ -1227,7 +1227,7 @@ concept:gciii-1949-article-73-norm a values:Obligation ;
     cml:curationStatus cml:Proposed .
 
 concept:gciii-1949-article-74 a cml:Concept ;
-    skos:prefLabel "Article 74 - Relief shipments: Exemption from charges and dues" ;
+    skos:prefLabel "Article 74 - Relief shipments: Exemption from charges and dues"@en ;
     cml:realizedBy doc:article-74 ;
     cml:curationStatus cml:Proposed ;
     prov:wasDerivedFrom <https://ihl-databases.icrc.org/en/ihl-treaties/gciii-1949> ;
@@ -1244,7 +1244,7 @@ concept:gciii-1949-article-74-norm a values:Obligation ;
     cml:curationStatus cml:Proposed .
 
 concept:gciii-1949-article-75 a cml:Concept ;
-    skos:prefLabel "Article 75 - Special means of transport" ;
+    skos:prefLabel "Article 75 - Special means of transport"@en ;
     cml:realizedBy doc:article-75 ;
     cml:curationStatus cml:Proposed ;
     prov:wasDerivedFrom <https://ihl-databases.icrc.org/en/ihl-treaties/gciii-1949> ;
@@ -1261,7 +1261,7 @@ concept:gciii-1949-article-75-norm a values:Obligation ;
     cml:curationStatus cml:Proposed .
 
 concept:gciii-1949-article-76 a cml:Concept ;
-    skos:prefLabel "Article 76 - Censorship and examination" ;
+    skos:prefLabel "Article 76 - Censorship and examination"@en ;
     cml:realizedBy doc:article-76 ;
     cml:curationStatus cml:Proposed ;
     prov:wasDerivedFrom <https://ihl-databases.icrc.org/en/ihl-treaties/gciii-1949> ;
@@ -1277,7 +1277,7 @@ concept:gciii-1949-article-76-norm a values:Prohibition ;
     cml:curationStatus cml:Proposed .
 
 concept:gciii-1949-article-77 a cml:Concept ;
-    skos:prefLabel "Article 77 - Preparation, execution and transmission of legal documents" ;
+    skos:prefLabel "Article 77 - Preparation, execution and transmission of legal documents"@en ;
     cml:realizedBy doc:article-77 ;
     cml:curationStatus cml:Proposed ;
     prov:wasDerivedFrom <https://ihl-databases.icrc.org/en/ihl-treaties/gciii-1949> ;
@@ -1294,7 +1294,7 @@ concept:gciii-1949-article-77-norm a values:Obligation ;
     cml:curationStatus cml:Proposed .
 
 concept:gciii-1949-article-78 a cml:Concept ;
-    skos:prefLabel "Article 78 - Complaints and requests from prisoners" ;
+    skos:prefLabel "Article 78 - Complaints and requests from prisoners"@en ;
     cml:realizedBy doc:article-78 ;
     cml:curationStatus cml:Proposed ;
     prov:wasDerivedFrom <https://ihl-databases.icrc.org/en/ihl-treaties/gciii-1949> ;
@@ -1310,7 +1310,7 @@ concept:gciii-1949-article-78-norm a values:Prohibition ;
     cml:curationStatus cml:Proposed .
 
 concept:gciii-1949-article-79 a cml:Concept ;
-    skos:prefLabel "Article 79 - Election of prisoners representatives" ;
+    skos:prefLabel "Article 79 - Election of prisoners representatives"@en ;
     cml:realizedBy doc:article-79 ;
     cml:curationStatus cml:Proposed ;
     prov:wasDerivedFrom <https://ihl-databases.icrc.org/en/ihl-treaties/gciii-1949> ;
@@ -1326,7 +1326,7 @@ concept:gciii-1949-article-79-norm a values:Right ;
     cml:curationStatus cml:Proposed .
 
 concept:gciii-1949-article-80 a cml:Concept ;
-    skos:prefLabel "Article 80 - Duties of prisoners representatives" ;
+    skos:prefLabel "Article 80 - Duties of prisoners representatives"@en ;
     cml:realizedBy doc:article-80 ;
     cml:curationStatus cml:Proposed ;
     prov:wasDerivedFrom <https://ihl-databases.icrc.org/en/ihl-treaties/gciii-1949> ;
@@ -1342,7 +1342,7 @@ concept:gciii-1949-article-80-norm a values:Prohibition ;
     cml:curationStatus cml:Proposed .
 
 concept:gciii-1949-article-81 a cml:Concept ;
-    skos:prefLabel "Article 81 - Prerogatives of prisoners representatives" ;
+    skos:prefLabel "Article 81 - Prerogatives of prisoners representatives"@en ;
     cml:realizedBy doc:article-81 ;
     cml:curationStatus cml:Proposed ;
     prov:wasDerivedFrom <https://ihl-databases.icrc.org/en/ihl-treaties/gciii-1949> ;
@@ -1358,7 +1358,7 @@ concept:gciii-1949-article-81-norm a values:Prohibition ;
     cml:curationStatus cml:Proposed .
 
 concept:gciii-1949-article-82 a cml:Concept ;
-    skos:prefLabel "Article 82 - Applicable legislation" ;
+    skos:prefLabel "Article 82 - Applicable legislation"@en ;
     cml:realizedBy doc:article-82 ;
     cml:curationStatus cml:Proposed ;
     prov:wasDerivedFrom <https://ihl-databases.icrc.org/en/ihl-treaties/gciii-1949> ;
@@ -1375,7 +1375,7 @@ concept:gciii-1949-article-82-norm a values:Obligation ;
     cml:curationStatus cml:Proposed .
 
 concept:gciii-1949-article-83 a cml:Concept ;
-    skos:prefLabel "Article 83 - Choice of disciplinary or judicial proceedings" ;
+    skos:prefLabel "Article 83 - Choice of disciplinary or judicial proceedings"@en ;
     cml:realizedBy doc:article-83 ;
     cml:curationStatus cml:Proposed ;
     prov:wasDerivedFrom <https://ihl-databases.icrc.org/en/ihl-treaties/gciii-1949> ;
@@ -1392,7 +1392,7 @@ concept:gciii-1949-article-83-norm a values:Obligation ;
     cml:curationStatus cml:Proposed .
 
 concept:gciii-1949-article-84 a cml:Concept ;
-    skos:prefLabel "Article 84 - Courts" ;
+    skos:prefLabel "Article 84 - Courts"@en ;
     cml:realizedBy doc:article-84 ;
     cml:curationStatus cml:Proposed ;
     prov:wasDerivedFrom <https://ihl-databases.icrc.org/en/ihl-treaties/gciii-1949> ;
@@ -1409,7 +1409,7 @@ concept:gciii-1949-article-84-norm a values:Obligation ;
     cml:curationStatus cml:Proposed .
 
 concept:gciii-1949-article-85 a cml:Concept ;
-    skos:prefLabel "Article 85 - Offences committed before capture" ;
+    skos:prefLabel "Article 85 - Offences committed before capture"@en ;
     cml:realizedBy doc:article-85 ;
     cml:curationStatus cml:Proposed ;
     prov:wasDerivedFrom <https://ihl-databases.icrc.org/en/ihl-treaties/gciii-1949> ;
@@ -1425,7 +1425,7 @@ concept:gciii-1949-article-85-norm a values:Undertaking ;
     cml:curationStatus cml:Proposed .
 
 concept:gciii-1949-article-86 a cml:Concept ;
-    skos:prefLabel "Article 86 - The prohibition against double jeopardy (non bis in idem)" ;
+    skos:prefLabel "Article 86 - The prohibition against double jeopardy (non bis in idem)"@en ;
     cml:realizedBy doc:article-86 ;
     cml:curationStatus cml:Proposed ;
     prov:wasDerivedFrom <https://ihl-databases.icrc.org/en/ihl-treaties/gciii-1949> ;
@@ -1441,7 +1441,7 @@ concept:gciii-1949-article-86-norm a values:Undertaking ;
     cml:curationStatus cml:Proposed .
 
 concept:gciii-1949-article-87 a cml:Concept ;
-    skos:prefLabel "Article 87 - Penalties" ;
+    skos:prefLabel "Article 87 - Penalties"@en ;
     cml:realizedBy doc:article-87 ;
     cml:curationStatus cml:Proposed ;
     prov:wasDerivedFrom <https://ihl-databases.icrc.org/en/ihl-treaties/gciii-1949> ;
@@ -1457,7 +1457,7 @@ concept:gciii-1949-article-87-norm a values:Prohibition ;
     cml:curationStatus cml:Proposed .
 
 concept:gciii-1949-article-88 a cml:Concept ;
-    skos:prefLabel "Article 88 - Execution of penalties" ;
+    skos:prefLabel "Article 88 - Execution of penalties"@en ;
     cml:realizedBy doc:article-88 ;
     cml:curationStatus cml:Proposed ;
     prov:wasDerivedFrom <https://ihl-databases.icrc.org/en/ihl-treaties/gciii-1949> ;
@@ -1473,7 +1473,7 @@ concept:gciii-1949-article-88-norm a values:Prohibition ;
     cml:curationStatus cml:Proposed .
 
 concept:gciii-1949-article-89 a cml:Concept ;
-    skos:prefLabel "Article 89 - Forms of disciplinary punishment" ;
+    skos:prefLabel "Article 89 - Forms of disciplinary punishment"@en ;
     cml:realizedBy doc:article-89 ;
     cml:curationStatus cml:Proposed ;
     prov:wasDerivedFrom <https://ihl-databases.icrc.org/en/ihl-treaties/gciii-1949> ;
@@ -1489,7 +1489,7 @@ concept:gciii-1949-article-89-norm a values:Prohibition ;
     cml:curationStatus cml:Proposed .
 
 concept:gciii-1949-article-90 a cml:Concept ;
-    skos:prefLabel "Article 90 - Duration of disciplinary punishments" ;
+    skos:prefLabel "Article 90 - Duration of disciplinary punishments"@en ;
     cml:realizedBy doc:article-90 ;
     cml:curationStatus cml:Proposed ;
     prov:wasDerivedFrom <https://ihl-databases.icrc.org/en/ihl-treaties/gciii-1949> ;
@@ -1505,7 +1505,7 @@ concept:gciii-1949-article-90-norm a values:Prohibition ;
     cml:curationStatus cml:Proposed .
 
 concept:gciii-1949-article-91 a cml:Concept ;
-    skos:prefLabel "Article 91 - Successful escape" ;
+    skos:prefLabel "Article 91 - Successful escape"@en ;
     cml:realizedBy doc:article-91 ;
     cml:curationStatus cml:Proposed ;
     prov:wasDerivedFrom <https://ihl-databases.icrc.org/en/ihl-treaties/gciii-1949> ;
@@ -1521,7 +1521,7 @@ concept:gciii-1949-article-91-norm a values:Prohibition ;
     cml:curationStatus cml:Proposed .
 
 concept:gciii-1949-article-92 a cml:Concept ;
-    skos:prefLabel "Article 92 - Unsuccessful escape" ;
+    skos:prefLabel "Article 92 - Unsuccessful escape"@en ;
     cml:realizedBy doc:article-92 ;
     cml:curationStatus cml:Proposed ;
     prov:wasDerivedFrom <https://ihl-databases.icrc.org/en/ihl-treaties/gciii-1949> ;
@@ -1538,7 +1538,7 @@ concept:gciii-1949-article-92-norm a values:Obligation ;
     cml:curationStatus cml:Proposed .
 
 concept:gciii-1949-article-93 a cml:Concept ;
-    skos:prefLabel "Article 93 - Escapes: Connected offences" ;
+    skos:prefLabel "Article 93 - Escapes: Connected offences"@en ;
     cml:realizedBy doc:article-93 ;
     cml:curationStatus cml:Proposed ;
     prov:wasDerivedFrom <https://ihl-databases.icrc.org/en/ihl-treaties/gciii-1949> ;
@@ -1554,7 +1554,7 @@ concept:gciii-1949-article-93-norm a values:Prohibition ;
     cml:curationStatus cml:Proposed .
 
 concept:gciii-1949-article-94 a cml:Concept ;
-    skos:prefLabel "Article 94 - Escapes: Notification of recapture" ;
+    skos:prefLabel "Article 94 - Escapes: Notification of recapture"@en ;
     cml:realizedBy doc:article-94 ;
     cml:curationStatus cml:Proposed ;
     prov:wasDerivedFrom <https://ihl-databases.icrc.org/en/ihl-treaties/gciii-1949> ;
@@ -1571,7 +1571,7 @@ concept:gciii-1949-article-94-norm a values:Obligation ;
     cml:curationStatus cml:Proposed .
 
 concept:gciii-1949-article-95 a cml:Concept ;
-    skos:prefLabel "Article 95 - Disciplinary procedure: Confinement awaiting hearing" ;
+    skos:prefLabel "Article 95 - Disciplinary procedure: Confinement awaiting hearing"@en ;
     cml:realizedBy doc:article-95 ;
     cml:curationStatus cml:Proposed ;
     prov:wasDerivedFrom <https://ihl-databases.icrc.org/en/ihl-treaties/gciii-1949> ;
@@ -1587,7 +1587,7 @@ concept:gciii-1949-article-95-norm a values:Prohibition ;
     cml:curationStatus cml:Proposed .
 
 concept:gciii-1949-article-96 a cml:Concept ;
-    skos:prefLabel "Article 96 - Disciplinary procedure: Competent authorities and right of defence" ;
+    skos:prefLabel "Article 96 - Disciplinary procedure: Competent authorities and right of defence"@en ;
     cml:realizedBy doc:article-96 ;
     cml:curationStatus cml:Proposed ;
     prov:wasDerivedFrom <https://ihl-databases.icrc.org/en/ihl-treaties/gciii-1949> ;
@@ -1604,7 +1604,7 @@ concept:gciii-1949-article-96-norm a values:Obligation ;
     cml:curationStatus cml:Proposed .
 
 concept:gciii-1949-article-97 a cml:Concept ;
-    skos:prefLabel "Article 97 - Execution of disciplinary punishment: Premises" ;
+    skos:prefLabel "Article 97 - Execution of disciplinary punishment: Premises"@en ;
     cml:realizedBy doc:article-97 ;
     cml:curationStatus cml:Proposed ;
     prov:wasDerivedFrom <https://ihl-databases.icrc.org/en/ihl-treaties/gciii-1949> ;
@@ -1620,7 +1620,7 @@ concept:gciii-1949-article-97-norm a values:Prohibition ;
     cml:curationStatus cml:Proposed .
 
 concept:gciii-1949-article-98 a cml:Concept ;
-    skos:prefLabel "Article 98 - Execution of disciplinary punishment: Essential safeguards" ;
+    skos:prefLabel "Article 98 - Execution of disciplinary punishment: Essential safeguards"@en ;
     cml:realizedBy doc:article-98 ;
     cml:curationStatus cml:Proposed ;
     prov:wasDerivedFrom <https://ihl-databases.icrc.org/en/ihl-treaties/gciii-1949> ;
@@ -1636,7 +1636,7 @@ concept:gciii-1949-article-98-norm a values:Prohibition ;
     cml:curationStatus cml:Proposed .
 
 concept:gciii-1949-article-99 a cml:Concept ;
-    skos:prefLabel "Article 99 - Judicial procedure: General principles" ;
+    skos:prefLabel "Article 99 - Judicial procedure: General principles"@en ;
     cml:realizedBy doc:article-99 ;
     cml:curationStatus cml:Proposed ;
     prov:wasDerivedFrom <https://ihl-databases.icrc.org/en/ihl-treaties/gciii-1949> ;
@@ -1652,7 +1652,7 @@ concept:gciii-1949-article-99-norm a values:Undertaking ;
     cml:curationStatus cml:Proposed .
 
 concept:gciii-1949-article-100 a cml:Concept ;
-    skos:prefLabel "Article 100 - Death penalty" ;
+    skos:prefLabel "Article 100 - Death penalty"@en ;
     cml:realizedBy doc:article-100 ;
     cml:curationStatus cml:Proposed ;
     prov:wasDerivedFrom <https://ihl-databases.icrc.org/en/ihl-treaties/gciii-1949> ;
@@ -1668,7 +1668,7 @@ concept:gciii-1949-article-100-norm a values:Prohibition ;
     cml:curationStatus cml:Proposed .
 
 concept:gciii-1949-article-101 a cml:Concept ;
-    skos:prefLabel "Article 101 - Delay in execution of the death penalty" ;
+    skos:prefLabel "Article 101 - Delay in execution of the death penalty"@en ;
     cml:realizedBy doc:article-101 ;
     cml:curationStatus cml:Proposed ;
     prov:wasDerivedFrom <https://ihl-databases.icrc.org/en/ihl-treaties/gciii-1949> ;
@@ -1684,7 +1684,7 @@ concept:gciii-1949-article-101-norm a values:Prohibition ;
     cml:curationStatus cml:Proposed .
 
 concept:gciii-1949-article-102 a cml:Concept ;
-    skos:prefLabel "Article 102 - Judicial procedure: Conditions for validity of sentence" ;
+    skos:prefLabel "Article 102 - Judicial procedure: Conditions for validity of sentence"@en ;
     cml:realizedBy doc:article-102 ;
     cml:curationStatus cml:Proposed ;
     prov:wasDerivedFrom <https://ihl-databases.icrc.org/en/ihl-treaties/gciii-1949> ;
@@ -1700,7 +1700,7 @@ concept:gciii-1949-article-102-norm a values:Undertaking ;
     cml:curationStatus cml:Proposed .
 
 concept:gciii-1949-article-103 a cml:Concept ;
-    skos:prefLabel "Article 103 - Judicial investigations and confinement awaiting trial" ;
+    skos:prefLabel "Article 103 - Judicial investigations and confinement awaiting trial"@en ;
     cml:realizedBy doc:article-103 ;
     cml:curationStatus cml:Proposed ;
     prov:wasDerivedFrom <https://ihl-databases.icrc.org/en/ihl-treaties/gciii-1949> ;
@@ -1716,7 +1716,7 @@ concept:gciii-1949-article-103-norm a values:Prohibition ;
     cml:curationStatus cml:Proposed .
 
 concept:gciii-1949-article-104 a cml:Concept ;
-    skos:prefLabel "Article 104 - Notification of judicial proceedings" ;
+    skos:prefLabel "Article 104 - Notification of judicial proceedings"@en ;
     cml:realizedBy doc:article-104 ;
     cml:curationStatus cml:Proposed ;
     prov:wasDerivedFrom <https://ihl-databases.icrc.org/en/ihl-treaties/gciii-1949> ;
@@ -1732,7 +1732,7 @@ concept:gciii-1949-article-104-norm a values:Prohibition ;
     cml:curationStatus cml:Proposed .
 
 concept:gciii-1949-article-105 a cml:Concept ;
-    skos:prefLabel "Article 105 - Rights and means of defence" ;
+    skos:prefLabel "Article 105 - Rights and means of defence"@en ;
     cml:realizedBy doc:article-105 ;
     cml:curationStatus cml:Proposed ;
     prov:wasDerivedFrom <https://ihl-databases.icrc.org/en/ihl-treaties/gciii-1949> ;
@@ -1748,7 +1748,7 @@ concept:gciii-1949-article-105-norm a values:Right ;
     cml:curationStatus cml:Proposed .
 
 concept:gciii-1949-article-106 a cml:Concept ;
-    skos:prefLabel "Article 106 - Appeals" ;
+    skos:prefLabel "Article 106 - Appeals"@en ;
     cml:realizedBy doc:article-106 ;
     cml:curationStatus cml:Proposed ;
     prov:wasDerivedFrom <https://ihl-databases.icrc.org/en/ihl-treaties/gciii-1949> ;
@@ -1765,7 +1765,7 @@ concept:gciii-1949-article-106-norm a values:Obligation ;
     cml:curationStatus cml:Proposed .
 
 concept:gciii-1949-article-107 a cml:Concept ;
-    skos:prefLabel "Article 107 - Notification of judgments and sentences" ;
+    skos:prefLabel "Article 107 - Notification of judgments and sentences"@en ;
     cml:realizedBy doc:article-107 ;
     cml:curationStatus cml:Proposed ;
     prov:wasDerivedFrom <https://ihl-databases.icrc.org/en/ihl-treaties/gciii-1949> ;
@@ -1781,7 +1781,7 @@ concept:gciii-1949-article-107-norm a values:Right ;
     cml:curationStatus cml:Proposed .
 
 concept:gciii-1949-article-108 a cml:Concept ;
-    skos:prefLabel "Article 108 - Execution of judicial penalties: Premises and essential safeguards" ;
+    skos:prefLabel "Article 108 - Execution of judicial penalties: Premises and essential safeguards"@en ;
     cml:realizedBy doc:article-108 ;
     cml:curationStatus cml:Proposed ;
     prov:wasDerivedFrom <https://ihl-databases.icrc.org/en/ihl-treaties/gciii-1949> ;
@@ -1797,7 +1797,7 @@ concept:gciii-1949-article-108-norm a values:Right ;
     cml:curationStatus cml:Proposed .
 
 concept:gciii-1949-article-109 a cml:Concept ;
-    skos:prefLabel "Article 109 - Direct repatriation and accommodation in neutral countries: General observations" ;
+    skos:prefLabel "Article 109 - Direct repatriation and accommodation in neutral countries: General observations"@en ;
     cml:realizedBy doc:article-109 ;
     cml:curationStatus cml:Proposed ;
     prov:wasDerivedFrom <https://ihl-databases.icrc.org/en/ihl-treaties/gciii-1949> ;
@@ -1813,7 +1813,7 @@ concept:gciii-1949-article-109-norm a values:Undertaking ;
     cml:curationStatus cml:Proposed .
 
 concept:gciii-1949-article-110 a cml:Concept ;
-    skos:prefLabel "Article 110 - Cases of repatriation and accommodation" ;
+    skos:prefLabel "Article 110 - Cases of repatriation and accommodation"@en ;
     cml:realizedBy doc:article-110 ;
     cml:curationStatus cml:Proposed ;
     prov:wasDerivedFrom <https://ihl-databases.icrc.org/en/ihl-treaties/gciii-1949> ;
@@ -1830,7 +1830,7 @@ concept:gciii-1949-article-110-norm a values:Obligation ;
     cml:curationStatus cml:Proposed .
 
 concept:gciii-1949-article-111 a cml:Concept ;
-    skos:prefLabel "Article 111 - Internment in a neutral country" ;
+    skos:prefLabel "Article 111 - Internment in a neutral country"@en ;
     cml:realizedBy doc:article-111 ;
     cml:curationStatus cml:Proposed ;
     prov:wasDerivedFrom <https://ihl-databases.icrc.org/en/ihl-treaties/gciii-1949> ;
@@ -1846,7 +1846,7 @@ concept:gciii-1949-article-111-norm a values:Undertaking ;
     cml:curationStatus cml:Proposed .
 
 concept:gciii-1949-article-112 a cml:Concept ;
-    skos:prefLabel "Article 112 - Mixed Medical Commissions" ;
+    skos:prefLabel "Article 112 - Mixed Medical Commissions"@en ;
     cml:realizedBy doc:article-112 ;
     cml:curationStatus cml:Proposed ;
     prov:wasDerivedFrom <https://ihl-databases.icrc.org/en/ihl-treaties/gciii-1949> ;
@@ -1863,7 +1863,7 @@ concept:gciii-1949-article-112-norm a values:Obligation ;
     cml:curationStatus cml:Proposed .
 
 concept:gciii-1949-article-113 a cml:Concept ;
-    skos:prefLabel "Article 113 - Prisoners entitled to examination by Mixed Medical Commissions" ;
+    skos:prefLabel "Article 113 - Prisoners entitled to examination by Mixed Medical Commissions"@en ;
     cml:realizedBy doc:article-113 ;
     cml:curationStatus cml:Proposed ;
     prov:wasDerivedFrom <https://ihl-databases.icrc.org/en/ihl-treaties/gciii-1949> ;
@@ -1879,7 +1879,7 @@ concept:gciii-1949-article-113-norm a values:Right ;
     cml:curationStatus cml:Proposed .
 
 concept:gciii-1949-article-114 a cml:Concept ;
-    skos:prefLabel "Article 114 - Prisoners meeting with accidents" ;
+    skos:prefLabel "Article 114 - Prisoners meeting with accidents"@en ;
     cml:realizedBy doc:article-114 ;
     cml:curationStatus cml:Proposed ;
     prov:wasDerivedFrom <https://ihl-databases.icrc.org/en/ihl-treaties/gciii-1949> ;
@@ -1895,7 +1895,7 @@ concept:gciii-1949-article-114-norm a values:Undertaking ;
     cml:curationStatus cml:Proposed .
 
 concept:gciii-1949-article-115 a cml:Concept ;
-    skos:prefLabel "Article 115 - Prisoners serving a sentence" ;
+    skos:prefLabel "Article 115 - Prisoners serving a sentence"@en ;
     cml:realizedBy doc:article-115 ;
     cml:curationStatus cml:Proposed ;
     prov:wasDerivedFrom <https://ihl-databases.icrc.org/en/ihl-treaties/gciii-1949> ;
@@ -1911,7 +1911,7 @@ concept:gciii-1949-article-115-norm a values:Undertaking ;
     cml:curationStatus cml:Proposed .
 
 concept:gciii-1949-article-116 a cml:Concept ;
-    skos:prefLabel "Article 116 - Costs of repatriation" ;
+    skos:prefLabel "Article 116 - Costs of repatriation"@en ;
     cml:realizedBy doc:article-116 ;
     cml:curationStatus cml:Proposed ;
     prov:wasDerivedFrom <https://ihl-databases.icrc.org/en/ihl-treaties/gciii-1949> ;
@@ -1928,7 +1928,7 @@ concept:gciii-1949-article-116-norm a values:Obligation ;
     cml:curationStatus cml:Proposed .
 
 concept:gciii-1949-article-117 a cml:Concept ;
-    skos:prefLabel "Article 117 - Activity after repatriation" ;
+    skos:prefLabel "Article 117 - Activity after repatriation"@en ;
     cml:realizedBy doc:article-117 ;
     cml:curationStatus cml:Proposed ;
     prov:wasDerivedFrom <https://ihl-databases.icrc.org/en/ihl-treaties/gciii-1949> ;
@@ -1944,7 +1944,7 @@ concept:gciii-1949-article-117-norm a values:Undertaking ;
     cml:curationStatus cml:Proposed .
 
 concept:gciii-1949-article-118 a cml:Concept ;
-    skos:prefLabel "Article 118 - Release and repatriation" ;
+    skos:prefLabel "Article 118 - Release and repatriation"@en ;
     cml:realizedBy doc:article-118 ;
     cml:curationStatus cml:Proposed ;
     prov:wasDerivedFrom <https://ihl-databases.icrc.org/en/ihl-treaties/gciii-1949> ;
@@ -1961,7 +1961,7 @@ concept:gciii-1949-article-118-norm a values:Obligation ;
     cml:curationStatus cml:Proposed .
 
 concept:gciii-1949-article-119 a cml:Concept ;
-    skos:prefLabel "Article 119 - Details of repatriation procedure" ;
+    skos:prefLabel "Article 119 - Details of repatriation procedure"@en ;
     cml:realizedBy doc:article-119 ;
     cml:curationStatus cml:Proposed ;
     prov:wasDerivedFrom <https://ihl-databases.icrc.org/en/ihl-treaties/gciii-1949> ;
@@ -1978,7 +1978,7 @@ concept:gciii-1949-article-119-norm a values:Obligation ;
     cml:curationStatus cml:Proposed .
 
 concept:gciii-1949-article-120 a cml:Concept ;
-    skos:prefLabel "Article 120 - Prescriptions regarding the dead, including wills and death certificates" ;
+    skos:prefLabel "Article 120 - Prescriptions regarding the dead, including wills and death certificates"@en ;
     cml:realizedBy doc:article-120 ;
     cml:curationStatus cml:Proposed ;
     prov:wasDerivedFrom <https://ihl-databases.icrc.org/en/ihl-treaties/gciii-1949> ;
@@ -1995,7 +1995,7 @@ concept:gciii-1949-article-120-norm a values:Obligation ;
     cml:curationStatus cml:Proposed .
 
 concept:gciii-1949-article-121 a cml:Concept ;
-    skos:prefLabel "Article 121 - Prisoners killed or injured in special circumstances" ;
+    skos:prefLabel "Article 121 - Prisoners killed or injured in special circumstances"@en ;
     cml:realizedBy doc:article-121 ;
     cml:curationStatus cml:Proposed ;
     prov:wasDerivedFrom <https://ihl-databases.icrc.org/en/ihl-treaties/gciii-1949> ;
@@ -2012,7 +2012,7 @@ concept:gciii-1949-article-121-norm a values:Obligation ;
     cml:curationStatus cml:Proposed .
 
 concept:gciii-1949-article-122 a cml:Concept ;
-    skos:prefLabel "Article 122 - National information bureaux" ;
+    skos:prefLabel "Article 122 - National information bureaux"@en ;
     cml:realizedBy doc:article-122 ;
     cml:curationStatus cml:Proposed ;
     prov:wasDerivedFrom <https://ihl-databases.icrc.org/en/ihl-treaties/gciii-1949> ;
@@ -2029,7 +2029,7 @@ concept:gciii-1949-article-122-norm a values:Obligation ;
     cml:curationStatus cml:Proposed .
 
 concept:gciii-1949-article-123 a cml:Concept ;
-    skos:prefLabel "Article 123 - Central Tracing Agency" ;
+    skos:prefLabel "Article 123 - Central Tracing Agency"@en ;
     cml:realizedBy doc:article-123 ;
     cml:curationStatus cml:Proposed ;
     prov:wasDerivedFrom <https://ihl-databases.icrc.org/en/ihl-treaties/gciii-1949> ;
@@ -2046,7 +2046,7 @@ concept:gciii-1949-article-123-norm a values:Obligation ;
     cml:curationStatus cml:Proposed .
 
 concept:gciii-1949-article-124 a cml:Concept ;
-    skos:prefLabel "Article 124 - Exemption from charges of national information bureaux and the Central Tracing Agency" ;
+    skos:prefLabel "Article 124 - Exemption from charges of national information bureaux and the Central Tracing Agency"@en ;
     cml:realizedBy doc:article-124 ;
     cml:curationStatus cml:Proposed ;
     prov:wasDerivedFrom <https://ihl-databases.icrc.org/en/ihl-treaties/gciii-1949> ;
@@ -2063,7 +2063,7 @@ concept:gciii-1949-article-124-norm a values:Obligation ;
     cml:curationStatus cml:Proposed .
 
 concept:gciii-1949-article-125 a cml:Concept ;
-    skos:prefLabel "Article 125 - Facilities for relief societies and other organizations assisting prisoners of war" ;
+    skos:prefLabel "Article 125 - Facilities for relief societies and other organizations assisting prisoners of war"@en ;
     cml:realizedBy doc:article-125 ;
     cml:curationStatus cml:Proposed ;
     prov:wasDerivedFrom <https://ihl-databases.icrc.org/en/ihl-treaties/gciii-1949> ;
@@ -2079,7 +2079,7 @@ concept:gciii-1949-article-125-norm a values:Prohibition ;
     cml:curationStatus cml:Proposed .
 
 concept:gciii-1949-article-126 a cml:Concept ;
-    skos:prefLabel "Article 126 - Supervision by the Protecting Powers and the ICRC" ;
+    skos:prefLabel "Article 126 - Supervision by the Protecting Powers and the ICRC"@en ;
     cml:realizedBy doc:article-126 ;
     cml:curationStatus cml:Proposed ;
     prov:wasDerivedFrom <https://ihl-databases.icrc.org/en/ihl-treaties/gciii-1949> ;
@@ -2095,7 +2095,7 @@ concept:gciii-1949-article-126-norm a values:Prohibition ;
     cml:curationStatus cml:Proposed .
 
 concept:gciii-1949-article-127 a cml:Concept ;
-    skos:prefLabel "Article 127 - Dissemination of the Convention" ;
+    skos:prefLabel "Article 127 - Dissemination of the Convention"@en ;
     cml:realizedBy doc:article-127 ;
     cml:curationStatus cml:Proposed ;
     prov:wasDerivedFrom <https://ihl-databases.icrc.org/en/ihl-treaties/gciii-1949> ;
@@ -2111,7 +2111,7 @@ concept:gciii-1949-article-127-norm a values:Undertaking ;
     cml:curationStatus cml:Proposed .
 
 concept:gciii-1949-article-128 a cml:Concept ;
-    skos:prefLabel "Article 128 - Translation. Implementing laws and regulations" ;
+    skos:prefLabel "Article 128 - Translation. Implementing laws and regulations"@en ;
     cml:realizedBy doc:article-128 ;
     cml:curationStatus cml:Proposed ;
     prov:wasDerivedFrom <https://ihl-databases.icrc.org/en/ihl-treaties/gciii-1949> ;
@@ -2127,7 +2127,7 @@ concept:gciii-1949-article-128-norm a values:Undertaking ;
     cml:curationStatus cml:Proposed .
 
 concept:gciii-1949-article-129 a cml:Concept ;
-    skos:prefLabel "Article 129 - Penal sanctions" ;
+    skos:prefLabel "Article 129 - Penal sanctions"@en ;
     cml:realizedBy doc:article-129 ;
     cml:curationStatus cml:Proposed ;
     prov:wasDerivedFrom <https://ihl-databases.icrc.org/en/ihl-treaties/gciii-1949> ;
@@ -2143,7 +2143,7 @@ concept:gciii-1949-article-129-norm a values:Prohibition ;
     cml:curationStatus cml:Proposed .
 
 concept:gciii-1949-article-130 a cml:Concept ;
-    skos:prefLabel "Article 130 - Grave breaches" ;
+    skos:prefLabel "Article 130 - Grave breaches"@en ;
     cml:realizedBy doc:article-130 ;
     cml:curationStatus cml:Proposed ;
     prov:wasDerivedFrom <https://ihl-databases.icrc.org/en/ihl-treaties/gciii-1949> ;
@@ -2160,7 +2160,7 @@ concept:gciii-1949-article-130-norm a values:Obligation ;
     cml:curationStatus cml:Proposed .
 
 concept:gciii-1949-article-131 a cml:Concept ;
-    skos:prefLabel "Article 131 - Responsibilities of the Contracting Parties" ;
+    skos:prefLabel "Article 131 - Responsibilities of the Contracting Parties"@en ;
     cml:realizedBy doc:article-131 ;
     cml:curationStatus cml:Proposed ;
     prov:wasDerivedFrom <https://ihl-databases.icrc.org/en/ihl-treaties/gciii-1949> ;
@@ -2177,7 +2177,7 @@ concept:gciii-1949-article-131-norm a values:Obligation ;
     cml:curationStatus cml:Proposed .
 
 concept:gciii-1949-article-132 a cml:Concept ;
-    skos:prefLabel "Article 132 - Enquiry procedure" ;
+    skos:prefLabel "Article 132 - Enquiry procedure"@en ;
     cml:realizedBy doc:article-132 ;
     cml:curationStatus cml:Proposed ;
     prov:wasDerivedFrom <https://ihl-databases.icrc.org/en/ihl-treaties/gciii-1949> ;
@@ -2194,7 +2194,7 @@ concept:gciii-1949-article-132-norm a values:Obligation ;
     cml:curationStatus cml:Proposed .
 
 concept:gciii-1949-article-133 a cml:Concept ;
-    skos:prefLabel "Article 133 - Languages" ;
+    skos:prefLabel "Article 133 - Languages"@en ;
     cml:realizedBy doc:article-133 ;
     cml:curationStatus cml:Proposed ;
     prov:wasDerivedFrom <https://ihl-databases.icrc.org/en/ihl-treaties/gciii-1949> ;
@@ -2210,7 +2210,7 @@ concept:gciii-1949-article-133-norm a values:Undertaking ;
     cml:curationStatus cml:Proposed .
 
 concept:gciii-1949-article-134 a cml:Concept ;
-    skos:prefLabel "Article 134 - Relation to the 1929 Convention" ;
+    skos:prefLabel "Article 134 - Relation to the 1929 Convention"@en ;
     cml:realizedBy doc:article-134 ;
     cml:curationStatus cml:Proposed ;
     prov:wasDerivedFrom <https://ihl-databases.icrc.org/en/ihl-treaties/gciii-1949> ;
@@ -2226,7 +2226,7 @@ concept:gciii-1949-article-134-norm a values:Undertaking ;
     cml:curationStatus cml:Proposed .
 
 concept:gciii-1949-article-135 a cml:Concept ;
-    skos:prefLabel "Article 135 - Relation to the 1899 and 1907 Hague Conventions" ;
+    skos:prefLabel "Article 135 - Relation to the 1899 and 1907 Hague Conventions"@en ;
     cml:realizedBy doc:article-135 ;
     cml:curationStatus cml:Proposed ;
     prov:wasDerivedFrom <https://ihl-databases.icrc.org/en/ihl-treaties/gciii-1949> ;
@@ -2243,7 +2243,7 @@ concept:gciii-1949-article-135-norm a values:Obligation ;
     cml:curationStatus cml:Proposed .
 
 concept:gciii-1949-article-136 a cml:Concept ;
-    skos:prefLabel "Article 136 - Signature" ;
+    skos:prefLabel "Article 136 - Signature"@en ;
     cml:realizedBy doc:article-136 ;
     cml:curationStatus cml:Proposed ;
     prov:wasDerivedFrom <https://ihl-databases.icrc.org/en/ihl-treaties/gciii-1949> ;
@@ -2259,7 +2259,7 @@ concept:gciii-1949-article-136-norm a values:Undertaking ;
     cml:curationStatus cml:Proposed .
 
 concept:gciii-1949-article-137 a cml:Concept ;
-    skos:prefLabel "Article 137 - Ratification" ;
+    skos:prefLabel "Article 137 - Ratification"@en ;
     cml:realizedBy doc:article-137 ;
     cml:curationStatus cml:Proposed ;
     prov:wasDerivedFrom <https://ihl-databases.icrc.org/en/ihl-treaties/gciii-1949> ;
@@ -2276,7 +2276,7 @@ concept:gciii-1949-article-137-norm a values:Obligation ;
     cml:curationStatus cml:Proposed .
 
 concept:gciii-1949-article-138 a cml:Concept ;
-    skos:prefLabel "Article 138 - Coming into force" ;
+    skos:prefLabel "Article 138 - Coming into force"@en ;
     cml:realizedBy doc:article-138 ;
     cml:curationStatus cml:Proposed ;
     prov:wasDerivedFrom <https://ihl-databases.icrc.org/en/ihl-treaties/gciii-1949> ;
@@ -2292,7 +2292,7 @@ concept:gciii-1949-article-138-norm a values:Undertaking ;
     cml:curationStatus cml:Proposed .
 
 concept:gciii-1949-article-139 a cml:Concept ;
-    skos:prefLabel "Article 139 - Accession" ;
+    skos:prefLabel "Article 139 - Accession"@en ;
     cml:realizedBy doc:article-139 ;
     cml:curationStatus cml:Proposed ;
     prov:wasDerivedFrom <https://ihl-databases.icrc.org/en/ihl-treaties/gciii-1949> ;
@@ -2309,7 +2309,7 @@ concept:gciii-1949-article-139-norm a values:Obligation ;
     cml:curationStatus cml:Proposed .
 
 concept:gciii-1949-article-140 a cml:Concept ;
-    skos:prefLabel "Article 140 - Notification of accessions" ;
+    skos:prefLabel "Article 140 - Notification of accessions"@en ;
     cml:realizedBy doc:article-140 ;
     cml:curationStatus cml:Proposed ;
     prov:wasDerivedFrom <https://ihl-databases.icrc.org/en/ihl-treaties/gciii-1949> ;
@@ -2326,7 +2326,7 @@ concept:gciii-1949-article-140-norm a values:Obligation ;
     cml:curationStatus cml:Proposed .
 
 concept:gciii-1949-article-141 a cml:Concept ;
-    skos:prefLabel "Article 141 - Immediate effect" ;
+    skos:prefLabel "Article 141 - Immediate effect"@en ;
     cml:realizedBy doc:article-141 ;
     cml:curationStatus cml:Proposed ;
     prov:wasDerivedFrom <https://ihl-databases.icrc.org/en/ihl-treaties/gciii-1949> ;
@@ -2342,7 +2342,7 @@ concept:gciii-1949-article-141-norm a values:Undertaking ;
     cml:curationStatus cml:Proposed .
 
 concept:gciii-1949-article-142 a cml:Concept ;
-    skos:prefLabel "Article 142 - Denunciation" ;
+    skos:prefLabel "Article 142 - Denunciation"@en ;
     cml:realizedBy doc:article-142 ;
     cml:curationStatus cml:Proposed ;
     prov:wasDerivedFrom <https://ihl-databases.icrc.org/en/ihl-treaties/gciii-1949> ;
@@ -2358,7 +2358,7 @@ concept:gciii-1949-article-142-norm a values:Prohibition ;
     cml:curationStatus cml:Proposed .
 
 concept:gciii-1949-article-143 a cml:Concept ;
-    skos:prefLabel "Article 143 - Registration with the United Nations" ;
+    skos:prefLabel "Article 143 - Registration with the United Nations"@en ;
     cml:realizedBy doc:article-143 ;
     cml:curationStatus cml:Proposed ;
     prov:wasDerivedFrom <https://ihl-databases.icrc.org/en/ihl-treaties/gciii-1949> ;

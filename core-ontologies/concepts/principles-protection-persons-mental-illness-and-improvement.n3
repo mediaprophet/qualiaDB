@@ -17,7 +17,7 @@
 # ============================================================
 
 concept:principles-protection-persons-mental-illness-and-improvement-principle-1 a cml:Concept ;
-    skos:prefLabel "Principle 1" ;
+    skos:prefLabel "Principle 1"@en ;
     cml:realizedBy doc:principle-1 ;
     cml:curationStatus cml:Proposed ;
     prov:wasDerivedFrom <https://www.ohchr.org/en/instruments-mechanisms/instruments/principles-protection-persons-mental-illness-and-improvement> ;
@@ -33,7 +33,7 @@ concept:principles-protection-persons-mental-illness-and-improvement-principle-1
     cml:curationStatus cml:Proposed .
 
 concept:principles-protection-persons-mental-illness-and-improvement-principle-2 a cml:Concept ;
-    skos:prefLabel "Principle 2" ;
+    skos:prefLabel "Principle 2"@en ;
     cml:realizedBy doc:principle-2 ;
     cml:curationStatus cml:Proposed ;
     prov:wasDerivedFrom <https://www.ohchr.org/en/instruments-mechanisms/instruments/principles-protection-persons-mental-illness-and-improvement> ;
@@ -48,7 +48,7 @@ concept:principles-protection-persons-mental-illness-and-improvement-principle-2
     cml:curationStatus cml:Proposed .
 
 concept:principles-protection-persons-mental-illness-and-improvement-principle-3 a cml:Concept ;
-    skos:prefLabel "Principle 3" ;
+    skos:prefLabel "Principle 3"@en ;
     cml:realizedBy doc:principle-3 ;
     cml:curationStatus cml:Proposed ;
     prov:wasDerivedFrom <https://www.ohchr.org/en/instruments-mechanisms/instruments/principles-protection-persons-mental-illness-and-improvement> ;
@@ -64,7 +64,7 @@ concept:principles-protection-persons-mental-illness-and-improvement-principle-3
     cml:curationStatus cml:Proposed .
 
 concept:principles-protection-persons-mental-illness-and-improvement-principle-4 a cml:Concept ;
-    skos:prefLabel "Principle 4" ;
+    skos:prefLabel "Principle 4"@en ;
     cml:realizedBy doc:principle-4 ;
     cml:curationStatus cml:Proposed ;
     prov:wasDerivedFrom <https://www.ohchr.org/en/instruments-mechanisms/instruments/principles-protection-persons-mental-illness-and-improvement> ;
@@ -80,7 +80,7 @@ concept:principles-protection-persons-mental-illness-and-improvement-principle-4
     cml:curationStatus cml:Proposed .
 
 concept:principles-protection-persons-mental-illness-and-improvement-principle-5 a cml:Concept ;
-    skos:prefLabel "Principle 5" ;
+    skos:prefLabel "Principle 5"@en ;
     cml:realizedBy doc:principle-5 ;
     cml:curationStatus cml:Proposed ;
     prov:wasDerivedFrom <https://www.ohchr.org/en/instruments-mechanisms/instruments/principles-protection-persons-mental-illness-and-improvement> ;
@@ -97,7 +97,7 @@ concept:principles-protection-persons-mental-illness-and-improvement-principle-5
     cml:curationStatus cml:Proposed .
 
 concept:principles-protection-persons-mental-illness-and-improvement-principle-6 a cml:Concept ;
-    skos:prefLabel "Principle 6" ;
+    skos:prefLabel "Principle 6"@en ;
     cml:realizedBy doc:principle-6 ;
     cml:curationStatus cml:Proposed ;
     prov:wasDerivedFrom <https://www.ohchr.org/en/instruments-mechanisms/instruments/principles-protection-persons-mental-illness-and-improvement> ;
@@ -114,7 +114,7 @@ concept:principles-protection-persons-mental-illness-and-improvement-principle-6
     cml:curationStatus cml:Proposed .
 
 concept:principles-protection-persons-mental-illness-and-improvement-principle-7 a cml:Concept ;
-    skos:prefLabel "Principle 7" ;
+    skos:prefLabel "Principle 7"@en ;
     cml:realizedBy doc:principle-7 ;
     cml:curationStatus cml:Proposed ;
     prov:wasDerivedFrom <https://www.ohchr.org/en/instruments-mechanisms/instruments/principles-protection-persons-mental-illness-and-improvement> ;
@@ -130,7 +130,7 @@ concept:principles-protection-persons-mental-illness-and-improvement-principle-7
     cml:curationStatus cml:Proposed .
 
 concept:principles-protection-persons-mental-illness-and-improvement-principle-8 a cml:Concept ;
-    skos:prefLabel "Principle 8" ;
+    skos:prefLabel "Principle 8"@en ;
     cml:realizedBy doc:principle-8 ;
     cml:curationStatus cml:Proposed ;
     prov:wasDerivedFrom <https://www.ohchr.org/en/instruments-mechanisms/instruments/principles-protection-persons-mental-illness-and-improvement> ;
@@ -146,7 +146,7 @@ concept:principles-protection-persons-mental-illness-and-improvement-principle-8
     cml:curationStatus cml:Proposed .
 
 concept:principles-protection-persons-mental-illness-and-improvement-principle-9 a cml:Concept ;
-    skos:prefLabel "Principle 9" ;
+    skos:prefLabel "Principle 9"@en ;
     cml:realizedBy doc:principle-9 ;
     cml:curationStatus cml:Proposed ;
     prov:wasDerivedFrom <https://www.ohchr.org/en/instruments-mechanisms/instruments/principles-protection-persons-mental-illness-and-improvement> ;
@@ -162,7 +162,7 @@ concept:principles-protection-persons-mental-illness-and-improvement-principle-9
     cml:curationStatus cml:Proposed .
 
 concept:principles-protection-persons-mental-illness-and-improvement-principle-10 a cml:Concept ;
-    skos:prefLabel "Principle 10" ;
+    skos:prefLabel "Principle 10"@en ;
     cml:realizedBy doc:principle-10 ;
     cml:curationStatus cml:Proposed ;
     prov:wasDerivedFrom <https://www.ohchr.org/en/instruments-mechanisms/instruments/principles-protection-persons-mental-illness-and-improvement> ;
@@ -179,7 +179,7 @@ concept:principles-protection-persons-mental-illness-and-improvement-principle-1
     cml:curationStatus cml:Proposed .
 
 concept:principles-protection-persons-mental-illness-and-improvement-principle-11 a cml:Concept ;
-    skos:prefLabel "Principle 11" ;
+    skos:prefLabel "Principle 11"@en ;
     cml:realizedBy doc:principle-11 ;
     cml:curationStatus cml:Proposed ;
     prov:wasDerivedFrom <https://www.ohchr.org/en/instruments-mechanisms/instruments/principles-protection-persons-mental-illness-and-improvement> ;
@@ -195,7 +195,7 @@ concept:principles-protection-persons-mental-illness-and-improvement-principle-1
     cml:curationStatus cml:Proposed .
 
 concept:principles-protection-persons-mental-illness-and-improvement-principle-12 a cml:Concept ;
-    skos:prefLabel "Principle 12" ;
+    skos:prefLabel "Principle 12"@en ;
     cml:realizedBy doc:principle-12 ;
     cml:curationStatus cml:Proposed ;
     prov:wasDerivedFrom <https://www.ohchr.org/en/instruments-mechanisms/instruments/principles-protection-persons-mental-illness-and-improvement> ;
@@ -211,7 +211,7 @@ concept:principles-protection-persons-mental-illness-and-improvement-principle-1
     cml:curationStatus cml:Proposed .
 
 concept:principles-protection-persons-mental-illness-and-improvement-principle-13 a cml:Concept ;
-    skos:prefLabel "Principle 13" ;
+    skos:prefLabel "Principle 13"@en ;
     cml:realizedBy doc:principle-13 ;
     cml:curationStatus cml:Proposed ;
     prov:wasDerivedFrom <https://www.ohchr.org/en/instruments-mechanisms/instruments/principles-protection-persons-mental-illness-and-improvement> ;
@@ -227,7 +227,7 @@ concept:principles-protection-persons-mental-illness-and-improvement-principle-1
     cml:curationStatus cml:Proposed .
 
 concept:principles-protection-persons-mental-illness-and-improvement-principle-14 a cml:Concept ;
-    skos:prefLabel "Principle 14" ;
+    skos:prefLabel "Principle 14"@en ;
     cml:realizedBy doc:principle-14 ;
     cml:curationStatus cml:Proposed ;
     prov:wasDerivedFrom <https://www.ohchr.org/en/instruments-mechanisms/instruments/principles-protection-persons-mental-illness-and-improvement> ;
@@ -244,7 +244,7 @@ concept:principles-protection-persons-mental-illness-and-improvement-principle-1
     cml:curationStatus cml:Proposed .
 
 concept:principles-protection-persons-mental-illness-and-improvement-principle-15 a cml:Concept ;
-    skos:prefLabel "Principle 15" ;
+    skos:prefLabel "Principle 15"@en ;
     cml:realizedBy doc:principle-15 ;
     cml:curationStatus cml:Proposed ;
     prov:wasDerivedFrom <https://www.ohchr.org/en/instruments-mechanisms/instruments/principles-protection-persons-mental-illness-and-improvement> ;
@@ -260,7 +260,7 @@ concept:principles-protection-persons-mental-illness-and-improvement-principle-1
     cml:curationStatus cml:Proposed .
 
 concept:principles-protection-persons-mental-illness-and-improvement-principle-16 a cml:Concept ;
-    skos:prefLabel "Principle 16" ;
+    skos:prefLabel "Principle 16"@en ;
     cml:realizedBy doc:principle-16 ;
     cml:curationStatus cml:Proposed ;
     prov:wasDerivedFrom <https://www.ohchr.org/en/instruments-mechanisms/instruments/principles-protection-persons-mental-illness-and-improvement> ;
@@ -277,7 +277,7 @@ concept:principles-protection-persons-mental-illness-and-improvement-principle-1
     cml:curationStatus cml:Proposed .
 
 concept:principles-protection-persons-mental-illness-and-improvement-principle-17 a cml:Concept ;
-    skos:prefLabel "Principle 17" ;
+    skos:prefLabel "Principle 17"@en ;
     cml:realizedBy doc:principle-17 ;
     cml:curationStatus cml:Proposed ;
     prov:wasDerivedFrom <https://www.ohchr.org/en/instruments-mechanisms/instruments/principles-protection-persons-mental-illness-and-improvement> ;
@@ -293,7 +293,7 @@ concept:principles-protection-persons-mental-illness-and-improvement-principle-1
     cml:curationStatus cml:Proposed .
 
 concept:principles-protection-persons-mental-illness-and-improvement-principle-18 a cml:Concept ;
-    skos:prefLabel "Principle 18" ;
+    skos:prefLabel "Principle 18"@en ;
     cml:realizedBy doc:principle-18 ;
     cml:curationStatus cml:Proposed ;
     prov:wasDerivedFrom <https://www.ohchr.org/en/instruments-mechanisms/instruments/principles-protection-persons-mental-illness-and-improvement> ;
@@ -309,7 +309,7 @@ concept:principles-protection-persons-mental-illness-and-improvement-principle-1
     cml:curationStatus cml:Proposed .
 
 concept:principles-protection-persons-mental-illness-and-improvement-principle-19 a cml:Concept ;
-    skos:prefLabel "Principle 19" ;
+    skos:prefLabel "Principle 19"@en ;
     cml:realizedBy doc:principle-19 ;
     cml:curationStatus cml:Proposed ;
     prov:wasDerivedFrom <https://www.ohchr.org/en/instruments-mechanisms/instruments/principles-protection-persons-mental-illness-and-improvement> ;
@@ -325,7 +325,7 @@ concept:principles-protection-persons-mental-illness-and-improvement-principle-1
     cml:curationStatus cml:Proposed .
 
 concept:principles-protection-persons-mental-illness-and-improvement-principle-20 a cml:Concept ;
-    skos:prefLabel "Principle 20" ;
+    skos:prefLabel "Principle 20"@en ;
     cml:realizedBy doc:principle-20 ;
     cml:curationStatus cml:Proposed ;
     prov:wasDerivedFrom <https://www.ohchr.org/en/instruments-mechanisms/instruments/principles-protection-persons-mental-illness-and-improvement> ;
@@ -340,7 +340,7 @@ concept:principles-protection-persons-mental-illness-and-improvement-principle-2
     cml:curationStatus cml:Proposed .
 
 concept:principles-protection-persons-mental-illness-and-improvement-principle-21 a cml:Concept ;
-    skos:prefLabel "Principle 21" ;
+    skos:prefLabel "Principle 21"@en ;
     cml:realizedBy doc:principle-21 ;
     cml:curationStatus cml:Proposed ;
     prov:wasDerivedFrom <https://www.ohchr.org/en/instruments-mechanisms/instruments/principles-protection-persons-mental-illness-and-improvement> ;
@@ -356,7 +356,7 @@ concept:principles-protection-persons-mental-illness-and-improvement-principle-2
     cml:curationStatus cml:Proposed .
 
 concept:principles-protection-persons-mental-illness-and-improvement-principle-22 a cml:Concept ;
-    skos:prefLabel "Principle 22" ;
+    skos:prefLabel "Principle 22"@en ;
     cml:realizedBy doc:principle-22 ;
     cml:curationStatus cml:Proposed ;
     prov:wasDerivedFrom <https://www.ohchr.org/en/instruments-mechanisms/instruments/principles-protection-persons-mental-illness-and-improvement> ;
@@ -373,7 +373,7 @@ concept:principles-protection-persons-mental-illness-and-improvement-principle-2
     cml:curationStatus cml:Proposed .
 
 concept:principles-protection-persons-mental-illness-and-improvement-principle-23 a cml:Concept ;
-    skos:prefLabel "Principle 23" ;
+    skos:prefLabel "Principle 23"@en ;
     cml:realizedBy doc:principle-23 ;
     cml:curationStatus cml:Proposed ;
     prov:wasDerivedFrom <https://www.ohchr.org/en/instruments-mechanisms/instruments/principles-protection-persons-mental-illness-and-improvement> ;
@@ -388,7 +388,7 @@ concept:principles-protection-persons-mental-illness-and-improvement-principle-2
     cml:curationStatus cml:Proposed .
 
 concept:principles-protection-persons-mental-illness-and-improvement-principle-24 a cml:Concept ;
-    skos:prefLabel "Principle 24" ;
+    skos:prefLabel "Principle 24"@en ;
     cml:realizedBy doc:principle-24 ;
     cml:curationStatus cml:Proposed ;
     prov:wasDerivedFrom <https://www.ohchr.org/en/instruments-mechanisms/instruments/principles-protection-persons-mental-illness-and-improvement> ;
@@ -403,7 +403,7 @@ concept:principles-protection-persons-mental-illness-and-improvement-principle-2
     cml:curationStatus cml:Proposed .
 
 concept:principles-protection-persons-mental-illness-and-improvement-principle-25 a cml:Concept ;
-    skos:prefLabel "Principle 25" ;
+    skos:prefLabel "Principle 25"@en ;
     cml:realizedBy doc:principle-25 ;
     cml:curationStatus cml:Proposed ;
     prov:wasDerivedFrom <https://www.ohchr.org/en/instruments-mechanisms/instruments/principles-protection-persons-mental-illness-and-improvement> ;

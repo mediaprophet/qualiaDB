@@ -17,7 +17,7 @@
 # ============================================================
 
 concept:principles-effective-investigation-and-documentation-torture-and-paragraph-1 a cml:Concept ;
-    skos:prefLabel "Paragraph 1" ;
+    skos:prefLabel "Paragraph 1"@en ;
     cml:realizedBy doc:paragraph-1 ;
     cml:curationStatus cml:Proposed ;
     prov:wasDerivedFrom <https://www.ohchr.org/en/instruments-mechanisms/instruments/principles-effective-investigation-and-documentation-torture-and> ;
@@ -32,7 +32,7 @@ concept:principles-effective-investigation-and-documentation-torture-and-paragra
     cml:curationStatus cml:Proposed .
 
 concept:principles-effective-investigation-and-documentation-torture-and-paragraph-2 a cml:Concept ;
-    skos:prefLabel "Paragraph 2" ;
+    skos:prefLabel "Paragraph 2"@en ;
     cml:realizedBy doc:paragraph-2 ;
     cml:curationStatus cml:Proposed ;
     prov:wasDerivedFrom <https://www.ohchr.org/en/instruments-mechanisms/instruments/principles-effective-investigation-and-documentation-torture-and> ;
@@ -47,7 +47,7 @@ concept:principles-effective-investigation-and-documentation-torture-and-paragra
     cml:curationStatus cml:Proposed .
 
 concept:principles-effective-investigation-and-documentation-torture-and-paragraph-3 a cml:Concept ;
-    skos:prefLabel "Paragraph 3" ;
+    skos:prefLabel "Paragraph 3"@en ;
     cml:realizedBy doc:paragraph-3 ;
     cml:curationStatus cml:Proposed ;
     prov:wasDerivedFrom <https://www.ohchr.org/en/instruments-mechanisms/instruments/principles-effective-investigation-and-documentation-torture-and> ;
@@ -62,7 +62,7 @@ concept:principles-effective-investigation-and-documentation-torture-and-paragra
     cml:curationStatus cml:Proposed .
 
 concept:principles-effective-investigation-and-documentation-torture-and-paragraph-4 a cml:Concept ;
-    skos:prefLabel "Paragraph 4" ;
+    skos:prefLabel "Paragraph 4"@en ;
     cml:realizedBy doc:paragraph-4 ;
     cml:curationStatus cml:Proposed ;
     prov:wasDerivedFrom <https://www.ohchr.org/en/instruments-mechanisms/instruments/principles-effective-investigation-and-documentation-torture-and> ;
@@ -77,7 +77,7 @@ concept:principles-effective-investigation-and-documentation-torture-and-paragra
     cml:curationStatus cml:Proposed .
 
 concept:principles-effective-investigation-and-documentation-torture-and-paragraph-5 a cml:Concept ;
-    skos:prefLabel "Paragraph 5" ;
+    skos:prefLabel "Paragraph 5"@en ;
     cml:realizedBy doc:paragraph-5 ;
     cml:curationStatus cml:Proposed ;
     prov:wasDerivedFrom <https://www.ohchr.org/en/instruments-mechanisms/instruments/principles-effective-investigation-and-documentation-torture-and> ;
@@ -94,7 +94,7 @@ concept:principles-effective-investigation-and-documentation-torture-and-paragra
     cml:curationStatus cml:Proposed .
 
 concept:principles-effective-investigation-and-documentation-torture-and-paragraph-6 a cml:Concept ;
-    skos:prefLabel "Paragraph 6" ;
+    skos:prefLabel "Paragraph 6"@en ;
     cml:realizedBy doc:paragraph-6 ;
     cml:curationStatus cml:Proposed ;
     prov:wasDerivedFrom <https://www.ohchr.org/en/instruments-mechanisms/instruments/principles-effective-investigation-and-documentation-torture-and> ;
@@ -110,7 +110,7 @@ concept:principles-effective-investigation-and-documentation-torture-and-paragra
     cml:curationStatus cml:Proposed .
 
 concept:principles-effective-investigation-and-documentation-torture-and-paragraph-7 a cml:Concept ;
-    skos:prefLabel "Paragraph 7" ;
+    skos:prefLabel "Paragraph 7"@en ;
     cml:realizedBy doc:paragraph-7 ;
     cml:curationStatus cml:Proposed ;
     prov:wasDerivedFrom <https://www.ohchr.org/en/instruments-mechanisms/instruments/principles-effective-investigation-and-documentation-torture-and> ;
@@ -127,7 +127,7 @@ concept:principles-effective-investigation-and-documentation-torture-and-paragra
     cml:curationStatus cml:Proposed .
 
 concept:principles-effective-investigation-and-documentation-torture-and-paragraph-8 a cml:Concept ;
-    skos:prefLabel "Paragraph 8" ;
+    skos:prefLabel "Paragraph 8"@en ;
     cml:realizedBy doc:paragraph-8 ;
     cml:curationStatus cml:Proposed ;
     prov:wasDerivedFrom <https://www.ohchr.org/en/instruments-mechanisms/instruments/principles-effective-investigation-and-documentation-torture-and> ;
@@ -143,7 +143,7 @@ concept:principles-effective-investigation-and-documentation-torture-and-paragra
     cml:curationStatus cml:Proposed .
 
 concept:principles-effective-investigation-and-documentation-torture-and-paragraph-9 a cml:Concept ;
-    skos:prefLabel "Paragraph 9" ;
+    skos:prefLabel "Paragraph 9"@en ;
     cml:realizedBy doc:paragraph-9 ;
     cml:curationStatus cml:Proposed ;
     prov:wasDerivedFrom <https://www.ohchr.org/en/instruments-mechanisms/instruments/principles-effective-investigation-and-documentation-torture-and> ;
@@ -160,7 +160,7 @@ concept:principles-effective-investigation-and-documentation-torture-and-paragra
     cml:curationStatus cml:Proposed .
 
 concept:principles-effective-investigation-and-documentation-torture-and-paragraph-10 a cml:Concept ;
-    skos:prefLabel "Paragraph 10" ;
+    skos:prefLabel "Paragraph 10"@en ;
     cml:realizedBy doc:paragraph-10 ;
     cml:curationStatus cml:Proposed ;
     prov:wasDerivedFrom <https://www.ohchr.org/en/instruments-mechanisms/instruments/principles-effective-investigation-and-documentation-torture-and> ;
@@ -177,7 +177,7 @@ concept:principles-effective-investigation-and-documentation-torture-and-paragra
     cml:curationStatus cml:Proposed .
 
 concept:principles-effective-investigation-and-documentation-torture-and-paragraph-11 a cml:Concept ;
-    skos:prefLabel "Paragraph 11" ;
+    skos:prefLabel "Paragraph 11"@en ;
     cml:realizedBy doc:paragraph-11 ;
     cml:curationStatus cml:Proposed ;
     prov:wasDerivedFrom <https://www.ohchr.org/en/instruments-mechanisms/instruments/principles-effective-investigation-and-documentation-torture-and> ;
@@ -194,7 +194,7 @@ concept:principles-effective-investigation-and-documentation-torture-and-paragra
     cml:curationStatus cml:Proposed .
 
 concept:principles-effective-investigation-and-documentation-torture-and-paragraph-12 a cml:Concept ;
-    skos:prefLabel "Paragraph 12" ;
+    skos:prefLabel "Paragraph 12"@en ;
     cml:realizedBy doc:paragraph-12 ;
     cml:curationStatus cml:Proposed ;
     prov:wasDerivedFrom <https://www.ohchr.org/en/instruments-mechanisms/instruments/principles-effective-investigation-and-documentation-torture-and> ;
@@ -209,7 +209,7 @@ concept:principles-effective-investigation-and-documentation-torture-and-paragra
     cml:curationStatus cml:Proposed .
 
 concept:principles-effective-investigation-and-documentation-torture-and-paragraph-13 a cml:Concept ;
-    skos:prefLabel "Paragraph 13" ;
+    skos:prefLabel "Paragraph 13"@en ;
     cml:realizedBy doc:paragraph-13 ;
     cml:curationStatus cml:Proposed ;
     prov:wasDerivedFrom <https://www.ohchr.org/en/instruments-mechanisms/instruments/principles-effective-investigation-and-documentation-torture-and> ;
@@ -224,7 +224,7 @@ concept:principles-effective-investigation-and-documentation-torture-and-paragra
     cml:curationStatus cml:Proposed .
 
 concept:principles-effective-investigation-and-documentation-torture-and-paragraph-14 a cml:Concept ;
-    skos:prefLabel "Paragraph 14" ;
+    skos:prefLabel "Paragraph 14"@en ;
     cml:realizedBy doc:paragraph-14 ;
     cml:curationStatus cml:Proposed ;
     prov:wasDerivedFrom <https://www.ohchr.org/en/instruments-mechanisms/instruments/principles-effective-investigation-and-documentation-torture-and> ;
@@ -239,7 +239,7 @@ concept:principles-effective-investigation-and-documentation-torture-and-paragra
     cml:curationStatus cml:Proposed .
 
 concept:principles-effective-investigation-and-documentation-torture-and-paragraph-15 a cml:Concept ;
-    skos:prefLabel "Paragraph 15" ;
+    skos:prefLabel "Paragraph 15"@en ;
     cml:realizedBy doc:paragraph-15 ;
     cml:curationStatus cml:Proposed ;
     prov:wasDerivedFrom <https://www.ohchr.org/en/instruments-mechanisms/instruments/principles-effective-investigation-and-documentation-torture-and> ;
@@ -254,7 +254,7 @@ concept:principles-effective-investigation-and-documentation-torture-and-paragra
     cml:curationStatus cml:Proposed .
 
 concept:principles-effective-investigation-and-documentation-torture-and-paragraph-16 a cml:Concept ;
-    skos:prefLabel "Paragraph 16" ;
+    skos:prefLabel "Paragraph 16"@en ;
     cml:realizedBy doc:paragraph-16 ;
     cml:curationStatus cml:Proposed ;
     prov:wasDerivedFrom <https://www.ohchr.org/en/instruments-mechanisms/instruments/principles-effective-investigation-and-documentation-torture-and> ;
@@ -271,7 +271,7 @@ concept:principles-effective-investigation-and-documentation-torture-and-paragra
     cml:curationStatus cml:Proposed .
 
 concept:principles-effective-investigation-and-documentation-torture-and-paragraph-17 a cml:Concept ;
-    skos:prefLabel "Paragraph 17" ;
+    skos:prefLabel "Paragraph 17"@en ;
     cml:realizedBy doc:paragraph-17 ;
     cml:curationStatus cml:Proposed ;
     prov:wasDerivedFrom <https://www.ohchr.org/en/instruments-mechanisms/instruments/principles-effective-investigation-and-documentation-torture-and> ;
@@ -288,7 +288,7 @@ concept:principles-effective-investigation-and-documentation-torture-and-paragra
     cml:curationStatus cml:Proposed .
 
 concept:principles-effective-investigation-and-documentation-torture-and-paragraph-18 a cml:Concept ;
-    skos:prefLabel "Paragraph 18" ;
+    skos:prefLabel "Paragraph 18"@en ;
     cml:realizedBy doc:paragraph-18 ;
     cml:curationStatus cml:Proposed ;
     prov:wasDerivedFrom <https://www.ohchr.org/en/instruments-mechanisms/instruments/principles-effective-investigation-and-documentation-torture-and> ;

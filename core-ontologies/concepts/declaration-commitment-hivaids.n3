@@ -17,7 +17,7 @@
 # ============================================================
 
 concept:declaration-commitment-hivaids-paragraph-1 a cml:Concept ;
-    skos:prefLabel "Paragraph 1" ;
+    skos:prefLabel "Paragraph 1"@en ;
     cml:realizedBy doc:paragraph-1 ;
     cml:curationStatus cml:Proposed ;
     prov:wasDerivedFrom <https://www.ohchr.org/en/instruments-mechanisms/instruments/declaration-commitment-hivaids> ;
@@ -32,7 +32,7 @@ concept:declaration-commitment-hivaids-paragraph-1-norm a values:Undertaking ;
     cml:curationStatus cml:Proposed .
 
 concept:declaration-commitment-hivaids-paragraph-2 a cml:Concept ;
-    skos:prefLabel "Paragraph 2" ;
+    skos:prefLabel "Paragraph 2"@en ;
     cml:realizedBy doc:paragraph-2 ;
     cml:curationStatus cml:Proposed ;
     prov:wasDerivedFrom <https://www.ohchr.org/en/instruments-mechanisms/instruments/declaration-commitment-hivaids> ;
@@ -47,7 +47,7 @@ concept:declaration-commitment-hivaids-paragraph-2-norm a values:Undertaking ;
     cml:curationStatus cml:Proposed .
 
 concept:declaration-commitment-hivaids-paragraph-3 a cml:Concept ;
-    skos:prefLabel "Paragraph 3" ;
+    skos:prefLabel "Paragraph 3"@en ;
     cml:realizedBy doc:paragraph-3 ;
     cml:curationStatus cml:Proposed ;
     prov:wasDerivedFrom <https://www.ohchr.org/en/instruments-mechanisms/instruments/declaration-commitment-hivaids> ;
@@ -62,7 +62,7 @@ concept:declaration-commitment-hivaids-paragraph-3-norm a values:Undertaking ;
     cml:curationStatus cml:Proposed .
 
 concept:declaration-commitment-hivaids-paragraph-4 a cml:Concept ;
-    skos:prefLabel "Paragraph 4" ;
+    skos:prefLabel "Paragraph 4"@en ;
     cml:realizedBy doc:paragraph-4 ;
     cml:curationStatus cml:Proposed ;
     prov:wasDerivedFrom <https://www.ohchr.org/en/instruments-mechanisms/instruments/declaration-commitment-hivaids> ;
@@ -77,7 +77,7 @@ concept:declaration-commitment-hivaids-paragraph-4-norm a values:Undertaking ;
     cml:curationStatus cml:Proposed .
 
 concept:declaration-commitment-hivaids-paragraph-5 a cml:Concept ;
-    skos:prefLabel "Paragraph 5" ;
+    skos:prefLabel "Paragraph 5"@en ;
     cml:realizedBy doc:paragraph-5 ;
     cml:curationStatus cml:Proposed ;
     prov:wasDerivedFrom <https://www.ohchr.org/en/instruments-mechanisms/instruments/declaration-commitment-hivaids> ;
@@ -92,7 +92,7 @@ concept:declaration-commitment-hivaids-paragraph-5-norm a values:Undertaking ;
     cml:curationStatus cml:Proposed .
 
 concept:declaration-commitment-hivaids-paragraph-6 a cml:Concept ;
-    skos:prefLabel "Paragraph 6" ;
+    skos:prefLabel "Paragraph 6"@en ;
     cml:realizedBy doc:paragraph-6 ;
     cml:curationStatus cml:Proposed ;
     prov:wasDerivedFrom <https://www.ohchr.org/en/instruments-mechanisms/instruments/declaration-commitment-hivaids> ;
@@ -107,7 +107,7 @@ concept:declaration-commitment-hivaids-paragraph-6-norm a values:Undertaking ;
     cml:curationStatus cml:Proposed .
 
 concept:declaration-commitment-hivaids-paragraph-7 a cml:Concept ;
-    skos:prefLabel "Paragraph 7" ;
+    skos:prefLabel "Paragraph 7"@en ;
     cml:realizedBy doc:paragraph-7 ;
     cml:curationStatus cml:Proposed ;
     prov:wasDerivedFrom <https://www.ohchr.org/en/instruments-mechanisms/instruments/declaration-commitment-hivaids> ;
@@ -122,7 +122,7 @@ concept:declaration-commitment-hivaids-paragraph-7-norm a values:Undertaking ;
     cml:curationStatus cml:Proposed .
 
 concept:declaration-commitment-hivaids-paragraph-8 a cml:Concept ;
-    skos:prefLabel "Paragraph 8" ;
+    skos:prefLabel "Paragraph 8"@en ;
     cml:realizedBy doc:paragraph-8 ;
     cml:curationStatus cml:Proposed ;
     prov:wasDerivedFrom <https://www.ohchr.org/en/instruments-mechanisms/instruments/declaration-commitment-hivaids> ;
@@ -137,7 +137,7 @@ concept:declaration-commitment-hivaids-paragraph-8-norm a values:Undertaking ;
     cml:curationStatus cml:Proposed .
 
 concept:declaration-commitment-hivaids-paragraph-9 a cml:Concept ;
-    skos:prefLabel "Paragraph 9" ;
+    skos:prefLabel "Paragraph 9"@en ;
     cml:realizedBy doc:paragraph-9 ;
     cml:curationStatus cml:Proposed ;
     prov:wasDerivedFrom <https://www.ohchr.org/en/instruments-mechanisms/instruments/declaration-commitment-hivaids> ;
@@ -152,7 +152,7 @@ concept:declaration-commitment-hivaids-paragraph-9-norm a values:Undertaking ;
     cml:curationStatus cml:Proposed .
 
 concept:declaration-commitment-hivaids-paragraph-10 a cml:Concept ;
-    skos:prefLabel "Paragraph 10" ;
+    skos:prefLabel "Paragraph 10"@en ;
     cml:realizedBy doc:paragraph-10 ;
     cml:curationStatus cml:Proposed ;
     prov:wasDerivedFrom <https://www.ohchr.org/en/instruments-mechanisms/instruments/declaration-commitment-hivaids> ;
@@ -167,7 +167,7 @@ concept:declaration-commitment-hivaids-paragraph-10-norm a values:Undertaking ;
     cml:curationStatus cml:Proposed .
 
 concept:declaration-commitment-hivaids-paragraph-11 a cml:Concept ;
-    skos:prefLabel "Paragraph 11" ;
+    skos:prefLabel "Paragraph 11"@en ;
     cml:realizedBy doc:paragraph-11 ;
     cml:curationStatus cml:Proposed ;
     prov:wasDerivedFrom <https://www.ohchr.org/en/instruments-mechanisms/instruments/declaration-commitment-hivaids> ;
@@ -182,7 +182,7 @@ concept:declaration-commitment-hivaids-paragraph-11-norm a values:Undertaking ;
     cml:curationStatus cml:Proposed .
 
 concept:declaration-commitment-hivaids-paragraph-12 a cml:Concept ;
-    skos:prefLabel "Paragraph 12" ;
+    skos:prefLabel "Paragraph 12"@en ;
     cml:realizedBy doc:paragraph-12 ;
     cml:curationStatus cml:Proposed ;
     prov:wasDerivedFrom <https://www.ohchr.org/en/instruments-mechanisms/instruments/declaration-commitment-hivaids> ;
@@ -197,7 +197,7 @@ concept:declaration-commitment-hivaids-paragraph-12-norm a values:Undertaking ;
     cml:curationStatus cml:Proposed .
 
 concept:declaration-commitment-hivaids-paragraph-13 a cml:Concept ;
-    skos:prefLabel "Paragraph 13" ;
+    skos:prefLabel "Paragraph 13"@en ;
     cml:realizedBy doc:paragraph-13 ;
     cml:curationStatus cml:Proposed ;
     prov:wasDerivedFrom <https://www.ohchr.org/en/instruments-mechanisms/instruments/declaration-commitment-hivaids> ;
@@ -212,7 +212,7 @@ concept:declaration-commitment-hivaids-paragraph-13-norm a values:Undertaking ;
     cml:curationStatus cml:Proposed .
 
 concept:declaration-commitment-hivaids-paragraph-14 a cml:Concept ;
-    skos:prefLabel "Paragraph 14" ;
+    skos:prefLabel "Paragraph 14"@en ;
     cml:realizedBy doc:paragraph-14 ;
     cml:curationStatus cml:Proposed ;
     prov:wasDerivedFrom <https://www.ohchr.org/en/instruments-mechanisms/instruments/declaration-commitment-hivaids> ;
@@ -227,7 +227,7 @@ concept:declaration-commitment-hivaids-paragraph-14-norm a values:Undertaking ;
     cml:curationStatus cml:Proposed .
 
 concept:declaration-commitment-hivaids-paragraph-15 a cml:Concept ;
-    skos:prefLabel "Paragraph 15" ;
+    skos:prefLabel "Paragraph 15"@en ;
     cml:realizedBy doc:paragraph-15 ;
     cml:curationStatus cml:Proposed ;
     prov:wasDerivedFrom <https://www.ohchr.org/en/instruments-mechanisms/instruments/declaration-commitment-hivaids> ;
@@ -242,7 +242,7 @@ concept:declaration-commitment-hivaids-paragraph-15-norm a values:Undertaking ;
     cml:curationStatus cml:Proposed .
 
 concept:declaration-commitment-hivaids-paragraph-16 a cml:Concept ;
-    skos:prefLabel "Paragraph 16" ;
+    skos:prefLabel "Paragraph 16"@en ;
     cml:realizedBy doc:paragraph-16 ;
     cml:curationStatus cml:Proposed ;
     prov:wasDerivedFrom <https://www.ohchr.org/en/instruments-mechanisms/instruments/declaration-commitment-hivaids> ;
@@ -257,7 +257,7 @@ concept:declaration-commitment-hivaids-paragraph-16-norm a values:Undertaking ;
     cml:curationStatus cml:Proposed .
 
 concept:declaration-commitment-hivaids-paragraph-17 a cml:Concept ;
-    skos:prefLabel "Paragraph 17" ;
+    skos:prefLabel "Paragraph 17"@en ;
     cml:realizedBy doc:paragraph-17 ;
     cml:curationStatus cml:Proposed ;
     prov:wasDerivedFrom <https://www.ohchr.org/en/instruments-mechanisms/instruments/declaration-commitment-hivaids> ;
@@ -272,7 +272,7 @@ concept:declaration-commitment-hivaids-paragraph-17-norm a values:Undertaking ;
     cml:curationStatus cml:Proposed .
 
 concept:declaration-commitment-hivaids-paragraph-18 a cml:Concept ;
-    skos:prefLabel "Paragraph 18" ;
+    skos:prefLabel "Paragraph 18"@en ;
     cml:realizedBy doc:paragraph-18 ;
     cml:curationStatus cml:Proposed ;
     prov:wasDerivedFrom <https://www.ohchr.org/en/instruments-mechanisms/instruments/declaration-commitment-hivaids> ;
@@ -287,7 +287,7 @@ concept:declaration-commitment-hivaids-paragraph-18-norm a values:Undertaking ;
     cml:curationStatus cml:Proposed .
 
 concept:declaration-commitment-hivaids-paragraph-19 a cml:Concept ;
-    skos:prefLabel "Paragraph 19" ;
+    skos:prefLabel "Paragraph 19"@en ;
     cml:realizedBy doc:paragraph-19 ;
     cml:curationStatus cml:Proposed ;
     prov:wasDerivedFrom <https://www.ohchr.org/en/instruments-mechanisms/instruments/declaration-commitment-hivaids> ;
@@ -302,7 +302,7 @@ concept:declaration-commitment-hivaids-paragraph-19-norm a values:Undertaking ;
     cml:curationStatus cml:Proposed .
 
 concept:declaration-commitment-hivaids-paragraph-20 a cml:Concept ;
-    skos:prefLabel "Paragraph 20" ;
+    skos:prefLabel "Paragraph 20"@en ;
     cml:realizedBy doc:paragraph-20 ;
     cml:curationStatus cml:Proposed ;
     prov:wasDerivedFrom <https://www.ohchr.org/en/instruments-mechanisms/instruments/declaration-commitment-hivaids> ;
@@ -317,7 +317,7 @@ concept:declaration-commitment-hivaids-paragraph-20-norm a values:Undertaking ;
     cml:curationStatus cml:Proposed .
 
 concept:declaration-commitment-hivaids-paragraph-21 a cml:Concept ;
-    skos:prefLabel "Paragraph 21" ;
+    skos:prefLabel "Paragraph 21"@en ;
     cml:realizedBy doc:paragraph-21 ;
     cml:curationStatus cml:Proposed ;
     prov:wasDerivedFrom <https://www.ohchr.org/en/instruments-mechanisms/instruments/declaration-commitment-hivaids> ;
@@ -332,7 +332,7 @@ concept:declaration-commitment-hivaids-paragraph-21-norm a values:Undertaking ;
     cml:curationStatus cml:Proposed .
 
 concept:declaration-commitment-hivaids-paragraph-22 a cml:Concept ;
-    skos:prefLabel "Paragraph 22" ;
+    skos:prefLabel "Paragraph 22"@en ;
     cml:realizedBy doc:paragraph-22 ;
     cml:curationStatus cml:Proposed ;
     prov:wasDerivedFrom <https://www.ohchr.org/en/instruments-mechanisms/instruments/declaration-commitment-hivaids> ;
@@ -347,7 +347,7 @@ concept:declaration-commitment-hivaids-paragraph-22-norm a values:Undertaking ;
     cml:curationStatus cml:Proposed .
 
 concept:declaration-commitment-hivaids-paragraph-23 a cml:Concept ;
-    skos:prefLabel "Paragraph 23" ;
+    skos:prefLabel "Paragraph 23"@en ;
     cml:realizedBy doc:paragraph-23 ;
     cml:curationStatus cml:Proposed ;
     prov:wasDerivedFrom <https://www.ohchr.org/en/instruments-mechanisms/instruments/declaration-commitment-hivaids> ;
@@ -362,7 +362,7 @@ concept:declaration-commitment-hivaids-paragraph-23-norm a values:Undertaking ;
     cml:curationStatus cml:Proposed .
 
 concept:declaration-commitment-hivaids-paragraph-24 a cml:Concept ;
-    skos:prefLabel "Paragraph 24" ;
+    skos:prefLabel "Paragraph 24"@en ;
     cml:realizedBy doc:paragraph-24 ;
     cml:curationStatus cml:Proposed ;
     prov:wasDerivedFrom <https://www.ohchr.org/en/instruments-mechanisms/instruments/declaration-commitment-hivaids> ;
@@ -377,7 +377,7 @@ concept:declaration-commitment-hivaids-paragraph-24-norm a values:Undertaking ;
     cml:curationStatus cml:Proposed .
 
 concept:declaration-commitment-hivaids-paragraph-25 a cml:Concept ;
-    skos:prefLabel "Paragraph 25" ;
+    skos:prefLabel "Paragraph 25"@en ;
     cml:realizedBy doc:paragraph-25 ;
     cml:curationStatus cml:Proposed ;
     prov:wasDerivedFrom <https://www.ohchr.org/en/instruments-mechanisms/instruments/declaration-commitment-hivaids> ;
@@ -392,7 +392,7 @@ concept:declaration-commitment-hivaids-paragraph-25-norm a values:Undertaking ;
     cml:curationStatus cml:Proposed .
 
 concept:declaration-commitment-hivaids-paragraph-26 a cml:Concept ;
-    skos:prefLabel "Paragraph 26" ;
+    skos:prefLabel "Paragraph 26"@en ;
     cml:realizedBy doc:paragraph-26 ;
     cml:curationStatus cml:Proposed ;
     prov:wasDerivedFrom <https://www.ohchr.org/en/instruments-mechanisms/instruments/declaration-commitment-hivaids> ;
@@ -407,7 +407,7 @@ concept:declaration-commitment-hivaids-paragraph-26-norm a values:Undertaking ;
     cml:curationStatus cml:Proposed .
 
 concept:declaration-commitment-hivaids-paragraph-27 a cml:Concept ;
-    skos:prefLabel "Paragraph 27" ;
+    skos:prefLabel "Paragraph 27"@en ;
     cml:realizedBy doc:paragraph-27 ;
     cml:curationStatus cml:Proposed ;
     prov:wasDerivedFrom <https://www.ohchr.org/en/instruments-mechanisms/instruments/declaration-commitment-hivaids> ;
@@ -422,7 +422,7 @@ concept:declaration-commitment-hivaids-paragraph-27-norm a values:Undertaking ;
     cml:curationStatus cml:Proposed .
 
 concept:declaration-commitment-hivaids-paragraph-28 a cml:Concept ;
-    skos:prefLabel "Paragraph 28" ;
+    skos:prefLabel "Paragraph 28"@en ;
     cml:realizedBy doc:paragraph-28 ;
     cml:curationStatus cml:Proposed ;
     prov:wasDerivedFrom <https://www.ohchr.org/en/instruments-mechanisms/instruments/declaration-commitment-hivaids> ;
@@ -437,7 +437,7 @@ concept:declaration-commitment-hivaids-paragraph-28-norm a values:Undertaking ;
     cml:curationStatus cml:Proposed .
 
 concept:declaration-commitment-hivaids-paragraph-29 a cml:Concept ;
-    skos:prefLabel "Paragraph 29" ;
+    skos:prefLabel "Paragraph 29"@en ;
     cml:realizedBy doc:paragraph-29 ;
     cml:curationStatus cml:Proposed ;
     prov:wasDerivedFrom <https://www.ohchr.org/en/instruments-mechanisms/instruments/declaration-commitment-hivaids> ;
@@ -452,7 +452,7 @@ concept:declaration-commitment-hivaids-paragraph-29-norm a values:Undertaking ;
     cml:curationStatus cml:Proposed .
 
 concept:declaration-commitment-hivaids-paragraph-30 a cml:Concept ;
-    skos:prefLabel "Paragraph 30" ;
+    skos:prefLabel "Paragraph 30"@en ;
     cml:realizedBy doc:paragraph-30 ;
     cml:curationStatus cml:Proposed ;
     prov:wasDerivedFrom <https://www.ohchr.org/en/instruments-mechanisms/instruments/declaration-commitment-hivaids> ;
@@ -467,7 +467,7 @@ concept:declaration-commitment-hivaids-paragraph-30-norm a values:Undertaking ;
     cml:curationStatus cml:Proposed .
 
 concept:declaration-commitment-hivaids-paragraph-31 a cml:Concept ;
-    skos:prefLabel "Paragraph 31" ;
+    skos:prefLabel "Paragraph 31"@en ;
     cml:realizedBy doc:paragraph-31 ;
     cml:curationStatus cml:Proposed ;
     prov:wasDerivedFrom <https://www.ohchr.org/en/instruments-mechanisms/instruments/declaration-commitment-hivaids> ;
@@ -482,7 +482,7 @@ concept:declaration-commitment-hivaids-paragraph-31-norm a values:Undertaking ;
     cml:curationStatus cml:Proposed .
 
 concept:declaration-commitment-hivaids-paragraph-32 a cml:Concept ;
-    skos:prefLabel "Paragraph 32" ;
+    skos:prefLabel "Paragraph 32"@en ;
     cml:realizedBy doc:paragraph-32 ;
     cml:curationStatus cml:Proposed ;
     prov:wasDerivedFrom <https://www.ohchr.org/en/instruments-mechanisms/instruments/declaration-commitment-hivaids> ;
@@ -497,7 +497,7 @@ concept:declaration-commitment-hivaids-paragraph-32-norm a values:Undertaking ;
     cml:curationStatus cml:Proposed .
 
 concept:declaration-commitment-hivaids-paragraph-33 a cml:Concept ;
-    skos:prefLabel "Paragraph 33" ;
+    skos:prefLabel "Paragraph 33"@en ;
     cml:realizedBy doc:paragraph-33 ;
     cml:curationStatus cml:Proposed ;
     prov:wasDerivedFrom <https://www.ohchr.org/en/instruments-mechanisms/instruments/declaration-commitment-hivaids> ;
@@ -512,7 +512,7 @@ concept:declaration-commitment-hivaids-paragraph-33-norm a values:Undertaking ;
     cml:curationStatus cml:Proposed .
 
 concept:declaration-commitment-hivaids-paragraph-34 a cml:Concept ;
-    skos:prefLabel "Paragraph 34" ;
+    skos:prefLabel "Paragraph 34"@en ;
     cml:realizedBy doc:paragraph-34 ;
     cml:curationStatus cml:Proposed ;
     prov:wasDerivedFrom <https://www.ohchr.org/en/instruments-mechanisms/instruments/declaration-commitment-hivaids> ;
@@ -527,7 +527,7 @@ concept:declaration-commitment-hivaids-paragraph-34-norm a values:Undertaking ;
     cml:curationStatus cml:Proposed .
 
 concept:declaration-commitment-hivaids-paragraph-35 a cml:Concept ;
-    skos:prefLabel "Paragraph 35" ;
+    skos:prefLabel "Paragraph 35"@en ;
     cml:realizedBy doc:paragraph-35 ;
     cml:curationStatus cml:Proposed ;
     prov:wasDerivedFrom <https://www.ohchr.org/en/instruments-mechanisms/instruments/declaration-commitment-hivaids> ;
@@ -542,7 +542,7 @@ concept:declaration-commitment-hivaids-paragraph-35-norm a values:Undertaking ;
     cml:curationStatus cml:Proposed .
 
 concept:declaration-commitment-hivaids-paragraph-36 a cml:Concept ;
-    skos:prefLabel "Paragraph 36" ;
+    skos:prefLabel "Paragraph 36"@en ;
     cml:realizedBy doc:paragraph-36 ;
     cml:curationStatus cml:Proposed ;
     prov:wasDerivedFrom <https://www.ohchr.org/en/instruments-mechanisms/instruments/declaration-commitment-hivaids> ;
@@ -557,7 +557,7 @@ concept:declaration-commitment-hivaids-paragraph-36-norm a values:Undertaking ;
     cml:curationStatus cml:Proposed .
 
 concept:declaration-commitment-hivaids-paragraph-37 a cml:Concept ;
-    skos:prefLabel "Paragraph 37" ;
+    skos:prefLabel "Paragraph 37"@en ;
     cml:realizedBy doc:paragraph-37 ;
     cml:curationStatus cml:Proposed ;
     prov:wasDerivedFrom <https://www.ohchr.org/en/instruments-mechanisms/instruments/declaration-commitment-hivaids> ;
@@ -572,7 +572,7 @@ concept:declaration-commitment-hivaids-paragraph-37-norm a values:Undertaking ;
     cml:curationStatus cml:Proposed .
 
 concept:declaration-commitment-hivaids-paragraph-38 a cml:Concept ;
-    skos:prefLabel "Paragraph 38" ;
+    skos:prefLabel "Paragraph 38"@en ;
     cml:realizedBy doc:paragraph-38 ;
     cml:curationStatus cml:Proposed ;
     prov:wasDerivedFrom <https://www.ohchr.org/en/instruments-mechanisms/instruments/declaration-commitment-hivaids> ;
@@ -587,7 +587,7 @@ concept:declaration-commitment-hivaids-paragraph-38-norm a values:Undertaking ;
     cml:curationStatus cml:Proposed .
 
 concept:declaration-commitment-hivaids-paragraph-39 a cml:Concept ;
-    skos:prefLabel "Paragraph 39" ;
+    skos:prefLabel "Paragraph 39"@en ;
     cml:realizedBy doc:paragraph-39 ;
     cml:curationStatus cml:Proposed ;
     prov:wasDerivedFrom <https://www.ohchr.org/en/instruments-mechanisms/instruments/declaration-commitment-hivaids> ;
@@ -602,7 +602,7 @@ concept:declaration-commitment-hivaids-paragraph-39-norm a values:Undertaking ;
     cml:curationStatus cml:Proposed .
 
 concept:declaration-commitment-hivaids-paragraph-40 a cml:Concept ;
-    skos:prefLabel "Paragraph 40" ;
+    skos:prefLabel "Paragraph 40"@en ;
     cml:realizedBy doc:paragraph-40 ;
     cml:curationStatus cml:Proposed ;
     prov:wasDerivedFrom <https://www.ohchr.org/en/instruments-mechanisms/instruments/declaration-commitment-hivaids> ;
@@ -617,7 +617,7 @@ concept:declaration-commitment-hivaids-paragraph-40-norm a values:Undertaking ;
     cml:curationStatus cml:Proposed .
 
 concept:declaration-commitment-hivaids-paragraph-41 a cml:Concept ;
-    skos:prefLabel "Paragraph 41" ;
+    skos:prefLabel "Paragraph 41"@en ;
     cml:realizedBy doc:paragraph-41 ;
     cml:curationStatus cml:Proposed ;
     prov:wasDerivedFrom <https://www.ohchr.org/en/instruments-mechanisms/instruments/declaration-commitment-hivaids> ;
@@ -632,7 +632,7 @@ concept:declaration-commitment-hivaids-paragraph-41-norm a values:Undertaking ;
     cml:curationStatus cml:Proposed .
 
 concept:declaration-commitment-hivaids-paragraph-42 a cml:Concept ;
-    skos:prefLabel "Paragraph 42" ;
+    skos:prefLabel "Paragraph 42"@en ;
     cml:realizedBy doc:paragraph-42 ;
     cml:curationStatus cml:Proposed ;
     prov:wasDerivedFrom <https://www.ohchr.org/en/instruments-mechanisms/instruments/declaration-commitment-hivaids> ;
@@ -647,7 +647,7 @@ concept:declaration-commitment-hivaids-paragraph-42-norm a values:Undertaking ;
     cml:curationStatus cml:Proposed .
 
 concept:declaration-commitment-hivaids-paragraph-43 a cml:Concept ;
-    skos:prefLabel "Paragraph 43" ;
+    skos:prefLabel "Paragraph 43"@en ;
     cml:realizedBy doc:paragraph-43 ;
     cml:curationStatus cml:Proposed ;
     prov:wasDerivedFrom <https://www.ohchr.org/en/instruments-mechanisms/instruments/declaration-commitment-hivaids> ;
@@ -662,7 +662,7 @@ concept:declaration-commitment-hivaids-paragraph-43-norm a values:Undertaking ;
     cml:curationStatus cml:Proposed .
 
 concept:declaration-commitment-hivaids-paragraph-44 a cml:Concept ;
-    skos:prefLabel "Paragraph 44" ;
+    skos:prefLabel "Paragraph 44"@en ;
     cml:realizedBy doc:paragraph-44 ;
     cml:curationStatus cml:Proposed ;
     prov:wasDerivedFrom <https://www.ohchr.org/en/instruments-mechanisms/instruments/declaration-commitment-hivaids> ;
@@ -677,7 +677,7 @@ concept:declaration-commitment-hivaids-paragraph-44-norm a values:Undertaking ;
     cml:curationStatus cml:Proposed .
 
 concept:declaration-commitment-hivaids-paragraph-45 a cml:Concept ;
-    skos:prefLabel "Paragraph 45" ;
+    skos:prefLabel "Paragraph 45"@en ;
     cml:realizedBy doc:paragraph-45 ;
     cml:curationStatus cml:Proposed ;
     prov:wasDerivedFrom <https://www.ohchr.org/en/instruments-mechanisms/instruments/declaration-commitment-hivaids> ;
@@ -692,7 +692,7 @@ concept:declaration-commitment-hivaids-paragraph-45-norm a values:Undertaking ;
     cml:curationStatus cml:Proposed .
 
 concept:declaration-commitment-hivaids-paragraph-46 a cml:Concept ;
-    skos:prefLabel "Paragraph 46" ;
+    skos:prefLabel "Paragraph 46"@en ;
     cml:realizedBy doc:paragraph-46 ;
     cml:curationStatus cml:Proposed ;
     prov:wasDerivedFrom <https://www.ohchr.org/en/instruments-mechanisms/instruments/declaration-commitment-hivaids> ;
@@ -707,7 +707,7 @@ concept:declaration-commitment-hivaids-paragraph-46-norm a values:Undertaking ;
     cml:curationStatus cml:Proposed .
 
 concept:declaration-commitment-hivaids-paragraph-47 a cml:Concept ;
-    skos:prefLabel "Paragraph 47" ;
+    skos:prefLabel "Paragraph 47"@en ;
     cml:realizedBy doc:paragraph-47 ;
     cml:curationStatus cml:Proposed ;
     prov:wasDerivedFrom <https://www.ohchr.org/en/instruments-mechanisms/instruments/declaration-commitment-hivaids> ;
@@ -722,7 +722,7 @@ concept:declaration-commitment-hivaids-paragraph-47-norm a values:Undertaking ;
     cml:curationStatus cml:Proposed .
 
 concept:declaration-commitment-hivaids-paragraph-48 a cml:Concept ;
-    skos:prefLabel "Paragraph 48" ;
+    skos:prefLabel "Paragraph 48"@en ;
     cml:realizedBy doc:paragraph-48 ;
     cml:curationStatus cml:Proposed ;
     prov:wasDerivedFrom <https://www.ohchr.org/en/instruments-mechanisms/instruments/declaration-commitment-hivaids> ;
@@ -737,7 +737,7 @@ concept:declaration-commitment-hivaids-paragraph-48-norm a values:Undertaking ;
     cml:curationStatus cml:Proposed .
 
 concept:declaration-commitment-hivaids-paragraph-49 a cml:Concept ;
-    skos:prefLabel "Paragraph 49" ;
+    skos:prefLabel "Paragraph 49"@en ;
     cml:realizedBy doc:paragraph-49 ;
     cml:curationStatus cml:Proposed ;
     prov:wasDerivedFrom <https://www.ohchr.org/en/instruments-mechanisms/instruments/declaration-commitment-hivaids> ;
@@ -752,7 +752,7 @@ concept:declaration-commitment-hivaids-paragraph-49-norm a values:Undertaking ;
     cml:curationStatus cml:Proposed .
 
 concept:declaration-commitment-hivaids-paragraph-50 a cml:Concept ;
-    skos:prefLabel "Paragraph 50" ;
+    skos:prefLabel "Paragraph 50"@en ;
     cml:realizedBy doc:paragraph-50 ;
     cml:curationStatus cml:Proposed ;
     prov:wasDerivedFrom <https://www.ohchr.org/en/instruments-mechanisms/instruments/declaration-commitment-hivaids> ;
@@ -767,7 +767,7 @@ concept:declaration-commitment-hivaids-paragraph-50-norm a values:Undertaking ;
     cml:curationStatus cml:Proposed .
 
 concept:declaration-commitment-hivaids-paragraph-51 a cml:Concept ;
-    skos:prefLabel "Paragraph 51" ;
+    skos:prefLabel "Paragraph 51"@en ;
     cml:realizedBy doc:paragraph-51 ;
     cml:curationStatus cml:Proposed ;
     prov:wasDerivedFrom <https://www.ohchr.org/en/instruments-mechanisms/instruments/declaration-commitment-hivaids> ;
@@ -782,7 +782,7 @@ concept:declaration-commitment-hivaids-paragraph-51-norm a values:Undertaking ;
     cml:curationStatus cml:Proposed .
 
 concept:declaration-commitment-hivaids-paragraph-52 a cml:Concept ;
-    skos:prefLabel "Paragraph 52" ;
+    skos:prefLabel "Paragraph 52"@en ;
     cml:realizedBy doc:paragraph-52 ;
     cml:curationStatus cml:Proposed ;
     prov:wasDerivedFrom <https://www.ohchr.org/en/instruments-mechanisms/instruments/declaration-commitment-hivaids> ;
@@ -797,7 +797,7 @@ concept:declaration-commitment-hivaids-paragraph-52-norm a values:Undertaking ;
     cml:curationStatus cml:Proposed .
 
 concept:declaration-commitment-hivaids-paragraph-53 a cml:Concept ;
-    skos:prefLabel "Paragraph 53" ;
+    skos:prefLabel "Paragraph 53"@en ;
     cml:realizedBy doc:paragraph-53 ;
     cml:curationStatus cml:Proposed ;
     prov:wasDerivedFrom <https://www.ohchr.org/en/instruments-mechanisms/instruments/declaration-commitment-hivaids> ;
@@ -812,7 +812,7 @@ concept:declaration-commitment-hivaids-paragraph-53-norm a values:Undertaking ;
     cml:curationStatus cml:Proposed .
 
 concept:declaration-commitment-hivaids-paragraph-54 a cml:Concept ;
-    skos:prefLabel "Paragraph 54" ;
+    skos:prefLabel "Paragraph 54"@en ;
     cml:realizedBy doc:paragraph-54 ;
     cml:curationStatus cml:Proposed ;
     prov:wasDerivedFrom <https://www.ohchr.org/en/instruments-mechanisms/instruments/declaration-commitment-hivaids> ;
@@ -827,7 +827,7 @@ concept:declaration-commitment-hivaids-paragraph-54-norm a values:Undertaking ;
     cml:curationStatus cml:Proposed .
 
 concept:declaration-commitment-hivaids-paragraph-55 a cml:Concept ;
-    skos:prefLabel "Paragraph 55" ;
+    skos:prefLabel "Paragraph 55"@en ;
     cml:realizedBy doc:paragraph-55 ;
     cml:curationStatus cml:Proposed ;
     prov:wasDerivedFrom <https://www.ohchr.org/en/instruments-mechanisms/instruments/declaration-commitment-hivaids> ;
@@ -842,7 +842,7 @@ concept:declaration-commitment-hivaids-paragraph-55-norm a values:Undertaking ;
     cml:curationStatus cml:Proposed .
 
 concept:declaration-commitment-hivaids-paragraph-56 a cml:Concept ;
-    skos:prefLabel "Paragraph 56" ;
+    skos:prefLabel "Paragraph 56"@en ;
     cml:realizedBy doc:paragraph-56 ;
     cml:curationStatus cml:Proposed ;
     prov:wasDerivedFrom <https://www.ohchr.org/en/instruments-mechanisms/instruments/declaration-commitment-hivaids> ;
@@ -858,7 +858,7 @@ concept:declaration-commitment-hivaids-paragraph-56-norm a values:Right ;
     cml:curationStatus cml:Proposed .
 
 concept:declaration-commitment-hivaids-paragraph-57 a cml:Concept ;
-    skos:prefLabel "Paragraph 57" ;
+    skos:prefLabel "Paragraph 57"@en ;
     cml:realizedBy doc:paragraph-57 ;
     cml:curationStatus cml:Proposed ;
     prov:wasDerivedFrom <https://www.ohchr.org/en/instruments-mechanisms/instruments/declaration-commitment-hivaids> ;
@@ -873,7 +873,7 @@ concept:declaration-commitment-hivaids-paragraph-57-norm a values:Undertaking ;
     cml:curationStatus cml:Proposed .
 
 concept:declaration-commitment-hivaids-paragraph-58 a cml:Concept ;
-    skos:prefLabel "Paragraph 58" ;
+    skos:prefLabel "Paragraph 58"@en ;
     cml:realizedBy doc:paragraph-58 ;
     cml:curationStatus cml:Proposed ;
     prov:wasDerivedFrom <https://www.ohchr.org/en/instruments-mechanisms/instruments/declaration-commitment-hivaids> ;
@@ -888,7 +888,7 @@ concept:declaration-commitment-hivaids-paragraph-58-norm a values:Undertaking ;
     cml:curationStatus cml:Proposed .
 
 concept:declaration-commitment-hivaids-paragraph-59 a cml:Concept ;
-    skos:prefLabel "Paragraph 59" ;
+    skos:prefLabel "Paragraph 59"@en ;
     cml:realizedBy doc:paragraph-59 ;
     cml:curationStatus cml:Proposed ;
     prov:wasDerivedFrom <https://www.ohchr.org/en/instruments-mechanisms/instruments/declaration-commitment-hivaids> ;
@@ -903,7 +903,7 @@ concept:declaration-commitment-hivaids-paragraph-59-norm a values:Undertaking ;
     cml:curationStatus cml:Proposed .
 
 concept:declaration-commitment-hivaids-paragraph-60 a cml:Concept ;
-    skos:prefLabel "Paragraph 60" ;
+    skos:prefLabel "Paragraph 60"@en ;
     cml:realizedBy doc:paragraph-60 ;
     cml:curationStatus cml:Proposed ;
     prov:wasDerivedFrom <https://www.ohchr.org/en/instruments-mechanisms/instruments/declaration-commitment-hivaids> ;
@@ -918,7 +918,7 @@ concept:declaration-commitment-hivaids-paragraph-60-norm a values:Undertaking ;
     cml:curationStatus cml:Proposed .
 
 concept:declaration-commitment-hivaids-paragraph-61 a cml:Concept ;
-    skos:prefLabel "Paragraph 61" ;
+    skos:prefLabel "Paragraph 61"@en ;
     cml:realizedBy doc:paragraph-61 ;
     cml:curationStatus cml:Proposed ;
     prov:wasDerivedFrom <https://www.ohchr.org/en/instruments-mechanisms/instruments/declaration-commitment-hivaids> ;
@@ -933,7 +933,7 @@ concept:declaration-commitment-hivaids-paragraph-61-norm a values:Undertaking ;
     cml:curationStatus cml:Proposed .
 
 concept:declaration-commitment-hivaids-paragraph-62 a cml:Concept ;
-    skos:prefLabel "Paragraph 62" ;
+    skos:prefLabel "Paragraph 62"@en ;
     cml:realizedBy doc:paragraph-62 ;
     cml:curationStatus cml:Proposed ;
     prov:wasDerivedFrom <https://www.ohchr.org/en/instruments-mechanisms/instruments/declaration-commitment-hivaids> ;
@@ -948,7 +948,7 @@ concept:declaration-commitment-hivaids-paragraph-62-norm a values:Undertaking ;
     cml:curationStatus cml:Proposed .
 
 concept:declaration-commitment-hivaids-paragraph-63 a cml:Concept ;
-    skos:prefLabel "Paragraph 63" ;
+    skos:prefLabel "Paragraph 63"@en ;
     cml:realizedBy doc:paragraph-63 ;
     cml:curationStatus cml:Proposed ;
     prov:wasDerivedFrom <https://www.ohchr.org/en/instruments-mechanisms/instruments/declaration-commitment-hivaids> ;
@@ -963,7 +963,7 @@ concept:declaration-commitment-hivaids-paragraph-63-norm a values:Undertaking ;
     cml:curationStatus cml:Proposed .
 
 concept:declaration-commitment-hivaids-paragraph-64 a cml:Concept ;
-    skos:prefLabel "Paragraph 64" ;
+    skos:prefLabel "Paragraph 64"@en ;
     cml:realizedBy doc:paragraph-64 ;
     cml:curationStatus cml:Proposed ;
     prov:wasDerivedFrom <https://www.ohchr.org/en/instruments-mechanisms/instruments/declaration-commitment-hivaids> ;
@@ -978,7 +978,7 @@ concept:declaration-commitment-hivaids-paragraph-64-norm a values:Undertaking ;
     cml:curationStatus cml:Proposed .
 
 concept:declaration-commitment-hivaids-paragraph-65 a cml:Concept ;
-    skos:prefLabel "Paragraph 65" ;
+    skos:prefLabel "Paragraph 65"@en ;
     cml:realizedBy doc:paragraph-65 ;
     cml:curationStatus cml:Proposed ;
     prov:wasDerivedFrom <https://www.ohchr.org/en/instruments-mechanisms/instruments/declaration-commitment-hivaids> ;
@@ -993,7 +993,7 @@ concept:declaration-commitment-hivaids-paragraph-65-norm a values:Undertaking ;
     cml:curationStatus cml:Proposed .
 
 concept:declaration-commitment-hivaids-paragraph-66 a cml:Concept ;
-    skos:prefLabel "Paragraph 66" ;
+    skos:prefLabel "Paragraph 66"@en ;
     cml:realizedBy doc:paragraph-66 ;
     cml:curationStatus cml:Proposed ;
     prov:wasDerivedFrom <https://www.ohchr.org/en/instruments-mechanisms/instruments/declaration-commitment-hivaids> ;
@@ -1008,7 +1008,7 @@ concept:declaration-commitment-hivaids-paragraph-66-norm a values:Undertaking ;
     cml:curationStatus cml:Proposed .
 
 concept:declaration-commitment-hivaids-paragraph-67 a cml:Concept ;
-    skos:prefLabel "Paragraph 67" ;
+    skos:prefLabel "Paragraph 67"@en ;
     cml:realizedBy doc:paragraph-67 ;
     cml:curationStatus cml:Proposed ;
     prov:wasDerivedFrom <https://www.ohchr.org/en/instruments-mechanisms/instruments/declaration-commitment-hivaids> ;
@@ -1023,7 +1023,7 @@ concept:declaration-commitment-hivaids-paragraph-67-norm a values:Undertaking ;
     cml:curationStatus cml:Proposed .
 
 concept:declaration-commitment-hivaids-paragraph-68 a cml:Concept ;
-    skos:prefLabel "Paragraph 68" ;
+    skos:prefLabel "Paragraph 68"@en ;
     cml:realizedBy doc:paragraph-68 ;
     cml:curationStatus cml:Proposed ;
     prov:wasDerivedFrom <https://www.ohchr.org/en/instruments-mechanisms/instruments/declaration-commitment-hivaids> ;
@@ -1038,7 +1038,7 @@ concept:declaration-commitment-hivaids-paragraph-68-norm a values:Undertaking ;
     cml:curationStatus cml:Proposed .
 
 concept:declaration-commitment-hivaids-paragraph-69 a cml:Concept ;
-    skos:prefLabel "Paragraph 69" ;
+    skos:prefLabel "Paragraph 69"@en ;
     cml:realizedBy doc:paragraph-69 ;
     cml:curationStatus cml:Proposed ;
     prov:wasDerivedFrom <https://www.ohchr.org/en/instruments-mechanisms/instruments/declaration-commitment-hivaids> ;
@@ -1053,7 +1053,7 @@ concept:declaration-commitment-hivaids-paragraph-69-norm a values:Undertaking ;
     cml:curationStatus cml:Proposed .
 
 concept:declaration-commitment-hivaids-paragraph-70 a cml:Concept ;
-    skos:prefLabel "Paragraph 70" ;
+    skos:prefLabel "Paragraph 70"@en ;
     cml:realizedBy doc:paragraph-70 ;
     cml:curationStatus cml:Proposed ;
     prov:wasDerivedFrom <https://www.ohchr.org/en/instruments-mechanisms/instruments/declaration-commitment-hivaids> ;
@@ -1068,7 +1068,7 @@ concept:declaration-commitment-hivaids-paragraph-70-norm a values:Undertaking ;
     cml:curationStatus cml:Proposed .
 
 concept:declaration-commitment-hivaids-paragraph-71 a cml:Concept ;
-    skos:prefLabel "Paragraph 71" ;
+    skos:prefLabel "Paragraph 71"@en ;
     cml:realizedBy doc:paragraph-71 ;
     cml:curationStatus cml:Proposed ;
     prov:wasDerivedFrom <https://www.ohchr.org/en/instruments-mechanisms/instruments/declaration-commitment-hivaids> ;
@@ -1083,7 +1083,7 @@ concept:declaration-commitment-hivaids-paragraph-71-norm a values:Undertaking ;
     cml:curationStatus cml:Proposed .
 
 concept:declaration-commitment-hivaids-paragraph-72 a cml:Concept ;
-    skos:prefLabel "Paragraph 72" ;
+    skos:prefLabel "Paragraph 72"@en ;
     cml:realizedBy doc:paragraph-72 ;
     cml:curationStatus cml:Proposed ;
     prov:wasDerivedFrom <https://www.ohchr.org/en/instruments-mechanisms/instruments/declaration-commitment-hivaids> ;
@@ -1098,7 +1098,7 @@ concept:declaration-commitment-hivaids-paragraph-72-norm a values:Undertaking ;
     cml:curationStatus cml:Proposed .
 
 concept:declaration-commitment-hivaids-paragraph-73 a cml:Concept ;
-    skos:prefLabel "Paragraph 73" ;
+    skos:prefLabel "Paragraph 73"@en ;
     cml:realizedBy doc:paragraph-73 ;
     cml:curationStatus cml:Proposed ;
     prov:wasDerivedFrom <https://www.ohchr.org/en/instruments-mechanisms/instruments/declaration-commitment-hivaids> ;
@@ -1113,7 +1113,7 @@ concept:declaration-commitment-hivaids-paragraph-73-norm a values:Undertaking ;
     cml:curationStatus cml:Proposed .
 
 concept:declaration-commitment-hivaids-paragraph-74 a cml:Concept ;
-    skos:prefLabel "Paragraph 74" ;
+    skos:prefLabel "Paragraph 74"@en ;
     cml:realizedBy doc:paragraph-74 ;
     cml:curationStatus cml:Proposed ;
     prov:wasDerivedFrom <https://www.ohchr.org/en/instruments-mechanisms/instruments/declaration-commitment-hivaids> ;
@@ -1128,7 +1128,7 @@ concept:declaration-commitment-hivaids-paragraph-74-norm a values:Undertaking ;
     cml:curationStatus cml:Proposed .
 
 concept:declaration-commitment-hivaids-paragraph-75 a cml:Concept ;
-    skos:prefLabel "Paragraph 75" ;
+    skos:prefLabel "Paragraph 75"@en ;
     cml:realizedBy doc:paragraph-75 ;
     cml:curationStatus cml:Proposed ;
     prov:wasDerivedFrom <https://www.ohchr.org/en/instruments-mechanisms/instruments/declaration-commitment-hivaids> ;
@@ -1143,7 +1143,7 @@ concept:declaration-commitment-hivaids-paragraph-75-norm a values:Undertaking ;
     cml:curationStatus cml:Proposed .
 
 concept:declaration-commitment-hivaids-paragraph-76 a cml:Concept ;
-    skos:prefLabel "Paragraph 76" ;
+    skos:prefLabel "Paragraph 76"@en ;
     cml:realizedBy doc:paragraph-76 ;
     cml:curationStatus cml:Proposed ;
     prov:wasDerivedFrom <https://www.ohchr.org/en/instruments-mechanisms/instruments/declaration-commitment-hivaids> ;
@@ -1158,7 +1158,7 @@ concept:declaration-commitment-hivaids-paragraph-76-norm a values:Undertaking ;
     cml:curationStatus cml:Proposed .
 
 concept:declaration-commitment-hivaids-paragraph-77 a cml:Concept ;
-    skos:prefLabel "Paragraph 77" ;
+    skos:prefLabel "Paragraph 77"@en ;
     cml:realizedBy doc:paragraph-77 ;
     cml:curationStatus cml:Proposed ;
     prov:wasDerivedFrom <https://www.ohchr.org/en/instruments-mechanisms/instruments/declaration-commitment-hivaids> ;
@@ -1173,7 +1173,7 @@ concept:declaration-commitment-hivaids-paragraph-77-norm a values:Undertaking ;
     cml:curationStatus cml:Proposed .
 
 concept:declaration-commitment-hivaids-paragraph-78 a cml:Concept ;
-    skos:prefLabel "Paragraph 78" ;
+    skos:prefLabel "Paragraph 78"@en ;
     cml:realizedBy doc:paragraph-78 ;
     cml:curationStatus cml:Proposed ;
     prov:wasDerivedFrom <https://www.ohchr.org/en/instruments-mechanisms/instruments/declaration-commitment-hivaids> ;
@@ -1188,7 +1188,7 @@ concept:declaration-commitment-hivaids-paragraph-78-norm a values:Undertaking ;
     cml:curationStatus cml:Proposed .
 
 concept:declaration-commitment-hivaids-paragraph-79 a cml:Concept ;
-    skos:prefLabel "Paragraph 79" ;
+    skos:prefLabel "Paragraph 79"@en ;
     cml:realizedBy doc:paragraph-79 ;
     cml:curationStatus cml:Proposed ;
     prov:wasDerivedFrom <https://www.ohchr.org/en/instruments-mechanisms/instruments/declaration-commitment-hivaids> ;
@@ -1203,7 +1203,7 @@ concept:declaration-commitment-hivaids-paragraph-79-norm a values:Undertaking ;
     cml:curationStatus cml:Proposed .
 
 concept:declaration-commitment-hivaids-paragraph-80 a cml:Concept ;
-    skos:prefLabel "Paragraph 80" ;
+    skos:prefLabel "Paragraph 80"@en ;
     cml:realizedBy doc:paragraph-80 ;
     cml:curationStatus cml:Proposed ;
     prov:wasDerivedFrom <https://www.ohchr.org/en/instruments-mechanisms/instruments/declaration-commitment-hivaids> ;
@@ -1218,7 +1218,7 @@ concept:declaration-commitment-hivaids-paragraph-80-norm a values:Undertaking ;
     cml:curationStatus cml:Proposed .
 
 concept:declaration-commitment-hivaids-paragraph-81 a cml:Concept ;
-    skos:prefLabel "Paragraph 81" ;
+    skos:prefLabel "Paragraph 81"@en ;
     cml:realizedBy doc:paragraph-81 ;
     cml:curationStatus cml:Proposed ;
     prov:wasDerivedFrom <https://www.ohchr.org/en/instruments-mechanisms/instruments/declaration-commitment-hivaids> ;
@@ -1233,7 +1233,7 @@ concept:declaration-commitment-hivaids-paragraph-81-norm a values:Undertaking ;
     cml:curationStatus cml:Proposed .
 
 concept:declaration-commitment-hivaids-paragraph-82 a cml:Concept ;
-    skos:prefLabel "Paragraph 82" ;
+    skos:prefLabel "Paragraph 82"@en ;
     cml:realizedBy doc:paragraph-82 ;
     cml:curationStatus cml:Proposed ;
     prov:wasDerivedFrom <https://www.ohchr.org/en/instruments-mechanisms/instruments/declaration-commitment-hivaids> ;
@@ -1248,7 +1248,7 @@ concept:declaration-commitment-hivaids-paragraph-82-norm a values:Undertaking ;
     cml:curationStatus cml:Proposed .
 
 concept:declaration-commitment-hivaids-paragraph-83 a cml:Concept ;
-    skos:prefLabel "Paragraph 83" ;
+    skos:prefLabel "Paragraph 83"@en ;
     cml:realizedBy doc:paragraph-83 ;
     cml:curationStatus cml:Proposed ;
     prov:wasDerivedFrom <https://www.ohchr.org/en/instruments-mechanisms/instruments/declaration-commitment-hivaids> ;
@@ -1263,7 +1263,7 @@ concept:declaration-commitment-hivaids-paragraph-83-norm a values:Undertaking ;
     cml:curationStatus cml:Proposed .
 
 concept:declaration-commitment-hivaids-paragraph-84 a cml:Concept ;
-    skos:prefLabel "Paragraph 84" ;
+    skos:prefLabel "Paragraph 84"@en ;
     cml:realizedBy doc:paragraph-84 ;
     cml:curationStatus cml:Proposed ;
     prov:wasDerivedFrom <https://www.ohchr.org/en/instruments-mechanisms/instruments/declaration-commitment-hivaids> ;
@@ -1278,7 +1278,7 @@ concept:declaration-commitment-hivaids-paragraph-84-norm a values:Undertaking ;
     cml:curationStatus cml:Proposed .
 
 concept:declaration-commitment-hivaids-paragraph-85 a cml:Concept ;
-    skos:prefLabel "Paragraph 85" ;
+    skos:prefLabel "Paragraph 85"@en ;
     cml:realizedBy doc:paragraph-85 ;
     cml:curationStatus cml:Proposed ;
     prov:wasDerivedFrom <https://www.ohchr.org/en/instruments-mechanisms/instruments/declaration-commitment-hivaids> ;
@@ -1293,7 +1293,7 @@ concept:declaration-commitment-hivaids-paragraph-85-norm a values:Undertaking ;
     cml:curationStatus cml:Proposed .
 
 concept:declaration-commitment-hivaids-paragraph-86 a cml:Concept ;
-    skos:prefLabel "Paragraph 86" ;
+    skos:prefLabel "Paragraph 86"@en ;
     cml:realizedBy doc:paragraph-86 ;
     cml:curationStatus cml:Proposed ;
     prov:wasDerivedFrom <https://www.ohchr.org/en/instruments-mechanisms/instruments/declaration-commitment-hivaids> ;
@@ -1308,7 +1308,7 @@ concept:declaration-commitment-hivaids-paragraph-86-norm a values:Undertaking ;
     cml:curationStatus cml:Proposed .
 
 concept:declaration-commitment-hivaids-paragraph-87 a cml:Concept ;
-    skos:prefLabel "Paragraph 87" ;
+    skos:prefLabel "Paragraph 87"@en ;
     cml:realizedBy doc:paragraph-87 ;
     cml:curationStatus cml:Proposed ;
     prov:wasDerivedFrom <https://www.ohchr.org/en/instruments-mechanisms/instruments/declaration-commitment-hivaids> ;
@@ -1323,7 +1323,7 @@ concept:declaration-commitment-hivaids-paragraph-87-norm a values:Undertaking ;
     cml:curationStatus cml:Proposed .
 
 concept:declaration-commitment-hivaids-paragraph-88 a cml:Concept ;
-    skos:prefLabel "Paragraph 88" ;
+    skos:prefLabel "Paragraph 88"@en ;
     cml:realizedBy doc:paragraph-88 ;
     cml:curationStatus cml:Proposed ;
     prov:wasDerivedFrom <https://www.ohchr.org/en/instruments-mechanisms/instruments/declaration-commitment-hivaids> ;
@@ -1338,7 +1338,7 @@ concept:declaration-commitment-hivaids-paragraph-88-norm a values:Undertaking ;
     cml:curationStatus cml:Proposed .
 
 concept:declaration-commitment-hivaids-paragraph-89 a cml:Concept ;
-    skos:prefLabel "Paragraph 89" ;
+    skos:prefLabel "Paragraph 89"@en ;
     cml:realizedBy doc:paragraph-89 ;
     cml:curationStatus cml:Proposed ;
     prov:wasDerivedFrom <https://www.ohchr.org/en/instruments-mechanisms/instruments/declaration-commitment-hivaids> ;
@@ -1353,7 +1353,7 @@ concept:declaration-commitment-hivaids-paragraph-89-norm a values:Undertaking ;
     cml:curationStatus cml:Proposed .
 
 concept:declaration-commitment-hivaids-paragraph-90 a cml:Concept ;
-    skos:prefLabel "Paragraph 90" ;
+    skos:prefLabel "Paragraph 90"@en ;
     cml:realizedBy doc:paragraph-90 ;
     cml:curationStatus cml:Proposed ;
     prov:wasDerivedFrom <https://www.ohchr.org/en/instruments-mechanisms/instruments/declaration-commitment-hivaids> ;
@@ -1368,7 +1368,7 @@ concept:declaration-commitment-hivaids-paragraph-90-norm a values:Undertaking ;
     cml:curationStatus cml:Proposed .
 
 concept:declaration-commitment-hivaids-paragraph-91 a cml:Concept ;
-    skos:prefLabel "Paragraph 91" ;
+    skos:prefLabel "Paragraph 91"@en ;
     cml:realizedBy doc:paragraph-91 ;
     cml:curationStatus cml:Proposed ;
     prov:wasDerivedFrom <https://www.ohchr.org/en/instruments-mechanisms/instruments/declaration-commitment-hivaids> ;
@@ -1383,7 +1383,7 @@ concept:declaration-commitment-hivaids-paragraph-91-norm a values:Undertaking ;
     cml:curationStatus cml:Proposed .
 
 concept:declaration-commitment-hivaids-paragraph-92 a cml:Concept ;
-    skos:prefLabel "Paragraph 92" ;
+    skos:prefLabel "Paragraph 92"@en ;
     cml:realizedBy doc:paragraph-92 ;
     cml:curationStatus cml:Proposed ;
     prov:wasDerivedFrom <https://www.ohchr.org/en/instruments-mechanisms/instruments/declaration-commitment-hivaids> ;
@@ -1398,7 +1398,7 @@ concept:declaration-commitment-hivaids-paragraph-92-norm a values:Undertaking ;
     cml:curationStatus cml:Proposed .
 
 concept:declaration-commitment-hivaids-paragraph-93 a cml:Concept ;
-    skos:prefLabel "Paragraph 93" ;
+    skos:prefLabel "Paragraph 93"@en ;
     cml:realizedBy doc:paragraph-93 ;
     cml:curationStatus cml:Proposed ;
     prov:wasDerivedFrom <https://www.ohchr.org/en/instruments-mechanisms/instruments/declaration-commitment-hivaids> ;
@@ -1413,7 +1413,7 @@ concept:declaration-commitment-hivaids-paragraph-93-norm a values:Undertaking ;
     cml:curationStatus cml:Proposed .
 
 concept:declaration-commitment-hivaids-paragraph-94 a cml:Concept ;
-    skos:prefLabel "Paragraph 94" ;
+    skos:prefLabel "Paragraph 94"@en ;
     cml:realizedBy doc:paragraph-94 ;
     cml:curationStatus cml:Proposed ;
     prov:wasDerivedFrom <https://www.ohchr.org/en/instruments-mechanisms/instruments/declaration-commitment-hivaids> ;
@@ -1428,7 +1428,7 @@ concept:declaration-commitment-hivaids-paragraph-94-norm a values:Undertaking ;
     cml:curationStatus cml:Proposed .
 
 concept:declaration-commitment-hivaids-paragraph-95 a cml:Concept ;
-    skos:prefLabel "Paragraph 95" ;
+    skos:prefLabel "Paragraph 95"@en ;
     cml:realizedBy doc:paragraph-95 ;
     cml:curationStatus cml:Proposed ;
     prov:wasDerivedFrom <https://www.ohchr.org/en/instruments-mechanisms/instruments/declaration-commitment-hivaids> ;
@@ -1443,7 +1443,7 @@ concept:declaration-commitment-hivaids-paragraph-95-norm a values:Undertaking ;
     cml:curationStatus cml:Proposed .
 
 concept:declaration-commitment-hivaids-paragraph-96 a cml:Concept ;
-    skos:prefLabel "Paragraph 96" ;
+    skos:prefLabel "Paragraph 96"@en ;
     cml:realizedBy doc:paragraph-96 ;
     cml:curationStatus cml:Proposed ;
     prov:wasDerivedFrom <https://www.ohchr.org/en/instruments-mechanisms/instruments/declaration-commitment-hivaids> ;
@@ -1458,7 +1458,7 @@ concept:declaration-commitment-hivaids-paragraph-96-norm a values:Undertaking ;
     cml:curationStatus cml:Proposed .
 
 concept:declaration-commitment-hivaids-paragraph-97 a cml:Concept ;
-    skos:prefLabel "Paragraph 97" ;
+    skos:prefLabel "Paragraph 97"@en ;
     cml:realizedBy doc:paragraph-97 ;
     cml:curationStatus cml:Proposed ;
     prov:wasDerivedFrom <https://www.ohchr.org/en/instruments-mechanisms/instruments/declaration-commitment-hivaids> ;
@@ -1473,7 +1473,7 @@ concept:declaration-commitment-hivaids-paragraph-97-norm a values:Undertaking ;
     cml:curationStatus cml:Proposed .
 
 concept:declaration-commitment-hivaids-paragraph-98 a cml:Concept ;
-    skos:prefLabel "Paragraph 98" ;
+    skos:prefLabel "Paragraph 98"@en ;
     cml:realizedBy doc:paragraph-98 ;
     cml:curationStatus cml:Proposed ;
     prov:wasDerivedFrom <https://www.ohchr.org/en/instruments-mechanisms/instruments/declaration-commitment-hivaids> ;
@@ -1488,7 +1488,7 @@ concept:declaration-commitment-hivaids-paragraph-98-norm a values:Undertaking ;
     cml:curationStatus cml:Proposed .
 
 concept:declaration-commitment-hivaids-paragraph-99 a cml:Concept ;
-    skos:prefLabel "Paragraph 99" ;
+    skos:prefLabel "Paragraph 99"@en ;
     cml:realizedBy doc:paragraph-99 ;
     cml:curationStatus cml:Proposed ;
     prov:wasDerivedFrom <https://www.ohchr.org/en/instruments-mechanisms/instruments/declaration-commitment-hivaids> ;
@@ -1503,7 +1503,7 @@ concept:declaration-commitment-hivaids-paragraph-99-norm a values:Undertaking ;
     cml:curationStatus cml:Proposed .
 
 concept:declaration-commitment-hivaids-paragraph-100 a cml:Concept ;
-    skos:prefLabel "Paragraph 100" ;
+    skos:prefLabel "Paragraph 100"@en ;
     cml:realizedBy doc:paragraph-100 ;
     cml:curationStatus cml:Proposed ;
     prov:wasDerivedFrom <https://www.ohchr.org/en/instruments-mechanisms/instruments/declaration-commitment-hivaids> ;
@@ -1518,7 +1518,7 @@ concept:declaration-commitment-hivaids-paragraph-100-norm a values:Undertaking ;
     cml:curationStatus cml:Proposed .
 
 concept:declaration-commitment-hivaids-paragraph-101 a cml:Concept ;
-    skos:prefLabel "Paragraph 101" ;
+    skos:prefLabel "Paragraph 101"@en ;
     cml:realizedBy doc:paragraph-101 ;
     cml:curationStatus cml:Proposed ;
     prov:wasDerivedFrom <https://www.ohchr.org/en/instruments-mechanisms/instruments/declaration-commitment-hivaids> ;
@@ -1533,7 +1533,7 @@ concept:declaration-commitment-hivaids-paragraph-101-norm a values:Undertaking ;
     cml:curationStatus cml:Proposed .
 
 concept:declaration-commitment-hivaids-paragraph-102 a cml:Concept ;
-    skos:prefLabel "Paragraph 102" ;
+    skos:prefLabel "Paragraph 102"@en ;
     cml:realizedBy doc:paragraph-102 ;
     cml:curationStatus cml:Proposed ;
     prov:wasDerivedFrom <https://www.ohchr.org/en/instruments-mechanisms/instruments/declaration-commitment-hivaids> ;
@@ -1548,7 +1548,7 @@ concept:declaration-commitment-hivaids-paragraph-102-norm a values:Undertaking ;
     cml:curationStatus cml:Proposed .
 
 concept:declaration-commitment-hivaids-paragraph-103 a cml:Concept ;
-    skos:prefLabel "Paragraph 103" ;
+    skos:prefLabel "Paragraph 103"@en ;
     cml:realizedBy doc:paragraph-103 ;
     cml:curationStatus cml:Proposed ;
     prov:wasDerivedFrom <https://www.ohchr.org/en/instruments-mechanisms/instruments/declaration-commitment-hivaids> ;
@@ -1563,7 +1563,7 @@ concept:declaration-commitment-hivaids-paragraph-103-norm a values:Undertaking ;
     cml:curationStatus cml:Proposed .
 
 concept:declaration-commitment-hivaids-paragraph-104 a cml:Concept ;
-    skos:prefLabel "Paragraph 104" ;
+    skos:prefLabel "Paragraph 104"@en ;
     cml:realizedBy doc:paragraph-104 ;
     cml:curationStatus cml:Proposed ;
     prov:wasDerivedFrom <https://www.ohchr.org/en/instruments-mechanisms/instruments/declaration-commitment-hivaids> ;
@@ -1578,7 +1578,7 @@ concept:declaration-commitment-hivaids-paragraph-104-norm a values:Undertaking ;
     cml:curationStatus cml:Proposed .
 
 concept:declaration-commitment-hivaids-paragraph-105 a cml:Concept ;
-    skos:prefLabel "Paragraph 105" ;
+    skos:prefLabel "Paragraph 105"@en ;
     cml:realizedBy doc:paragraph-105 ;
     cml:curationStatus cml:Proposed ;
     prov:wasDerivedFrom <https://www.ohchr.org/en/instruments-mechanisms/instruments/declaration-commitment-hivaids> ;
@@ -1593,7 +1593,7 @@ concept:declaration-commitment-hivaids-paragraph-105-norm a values:Undertaking ;
     cml:curationStatus cml:Proposed .
 
 concept:declaration-commitment-hivaids-paragraph-106 a cml:Concept ;
-    skos:prefLabel "Paragraph 106" ;
+    skos:prefLabel "Paragraph 106"@en ;
     cml:realizedBy doc:paragraph-106 ;
     cml:curationStatus cml:Proposed ;
     prov:wasDerivedFrom <https://www.ohchr.org/en/instruments-mechanisms/instruments/declaration-commitment-hivaids> ;
@@ -1608,7 +1608,7 @@ concept:declaration-commitment-hivaids-paragraph-106-norm a values:Undertaking ;
     cml:curationStatus cml:Proposed .
 
 concept:declaration-commitment-hivaids-paragraph-107 a cml:Concept ;
-    skos:prefLabel "Paragraph 107" ;
+    skos:prefLabel "Paragraph 107"@en ;
     cml:realizedBy doc:paragraph-107 ;
     cml:curationStatus cml:Proposed ;
     prov:wasDerivedFrom <https://www.ohchr.org/en/instruments-mechanisms/instruments/declaration-commitment-hivaids> ;
@@ -1623,7 +1623,7 @@ concept:declaration-commitment-hivaids-paragraph-107-norm a values:Undertaking ;
     cml:curationStatus cml:Proposed .
 
 concept:declaration-commitment-hivaids-paragraph-108 a cml:Concept ;
-    skos:prefLabel "Paragraph 108" ;
+    skos:prefLabel "Paragraph 108"@en ;
     cml:realizedBy doc:paragraph-108 ;
     cml:curationStatus cml:Proposed ;
     prov:wasDerivedFrom <https://www.ohchr.org/en/instruments-mechanisms/instruments/declaration-commitment-hivaids> ;
@@ -1638,7 +1638,7 @@ concept:declaration-commitment-hivaids-paragraph-108-norm a values:Undertaking ;
     cml:curationStatus cml:Proposed .
 
 concept:declaration-commitment-hivaids-paragraph-109 a cml:Concept ;
-    skos:prefLabel "Paragraph 109" ;
+    skos:prefLabel "Paragraph 109"@en ;
     cml:realizedBy doc:paragraph-109 ;
     cml:curationStatus cml:Proposed ;
     prov:wasDerivedFrom <https://www.ohchr.org/en/instruments-mechanisms/instruments/declaration-commitment-hivaids> ;
@@ -1653,7 +1653,7 @@ concept:declaration-commitment-hivaids-paragraph-109-norm a values:Undertaking ;
     cml:curationStatus cml:Proposed .
 
 concept:declaration-commitment-hivaids-paragraph-110 a cml:Concept ;
-    skos:prefLabel "Paragraph 110" ;
+    skos:prefLabel "Paragraph 110"@en ;
     cml:realizedBy doc:paragraph-110 ;
     cml:curationStatus cml:Proposed ;
     prov:wasDerivedFrom <https://www.ohchr.org/en/instruments-mechanisms/instruments/declaration-commitment-hivaids> ;
@@ -1668,7 +1668,7 @@ concept:declaration-commitment-hivaids-paragraph-110-norm a values:Undertaking ;
     cml:curationStatus cml:Proposed .
 
 concept:declaration-commitment-hivaids-paragraph-111 a cml:Concept ;
-    skos:prefLabel "Paragraph 111" ;
+    skos:prefLabel "Paragraph 111"@en ;
     cml:realizedBy doc:paragraph-111 ;
     cml:curationStatus cml:Proposed ;
     prov:wasDerivedFrom <https://www.ohchr.org/en/instruments-mechanisms/instruments/declaration-commitment-hivaids> ;
@@ -1683,7 +1683,7 @@ concept:declaration-commitment-hivaids-paragraph-111-norm a values:Undertaking ;
     cml:curationStatus cml:Proposed .
 
 concept:declaration-commitment-hivaids-paragraph-112 a cml:Concept ;
-    skos:prefLabel "Paragraph 112" ;
+    skos:prefLabel "Paragraph 112"@en ;
     cml:realizedBy doc:paragraph-112 ;
     cml:curationStatus cml:Proposed ;
     prov:wasDerivedFrom <https://www.ohchr.org/en/instruments-mechanisms/instruments/declaration-commitment-hivaids> ;
@@ -1698,7 +1698,7 @@ concept:declaration-commitment-hivaids-paragraph-112-norm a values:Undertaking ;
     cml:curationStatus cml:Proposed .
 
 concept:declaration-commitment-hivaids-paragraph-113 a cml:Concept ;
-    skos:prefLabel "Paragraph 113" ;
+    skos:prefLabel "Paragraph 113"@en ;
     cml:realizedBy doc:paragraph-113 ;
     cml:curationStatus cml:Proposed ;
     prov:wasDerivedFrom <https://www.ohchr.org/en/instruments-mechanisms/instruments/declaration-commitment-hivaids> ;
@@ -1713,7 +1713,7 @@ concept:declaration-commitment-hivaids-paragraph-113-norm a values:Undertaking ;
     cml:curationStatus cml:Proposed .
 
 concept:declaration-commitment-hivaids-paragraph-114 a cml:Concept ;
-    skos:prefLabel "Paragraph 114" ;
+    skos:prefLabel "Paragraph 114"@en ;
     cml:realizedBy doc:paragraph-114 ;
     cml:curationStatus cml:Proposed ;
     prov:wasDerivedFrom <https://www.ohchr.org/en/instruments-mechanisms/instruments/declaration-commitment-hivaids> ;
@@ -1728,7 +1728,7 @@ concept:declaration-commitment-hivaids-paragraph-114-norm a values:Undertaking ;
     cml:curationStatus cml:Proposed .
 
 concept:declaration-commitment-hivaids-paragraph-115 a cml:Concept ;
-    skos:prefLabel "Paragraph 115" ;
+    skos:prefLabel "Paragraph 115"@en ;
     cml:realizedBy doc:paragraph-115 ;
     cml:curationStatus cml:Proposed ;
     prov:wasDerivedFrom <https://www.ohchr.org/en/instruments-mechanisms/instruments/declaration-commitment-hivaids> ;
@@ -1743,7 +1743,7 @@ concept:declaration-commitment-hivaids-paragraph-115-norm a values:Undertaking ;
     cml:curationStatus cml:Proposed .
 
 concept:declaration-commitment-hivaids-paragraph-116 a cml:Concept ;
-    skos:prefLabel "Paragraph 116" ;
+    skos:prefLabel "Paragraph 116"@en ;
     cml:realizedBy doc:paragraph-116 ;
     cml:curationStatus cml:Proposed ;
     prov:wasDerivedFrom <https://www.ohchr.org/en/instruments-mechanisms/instruments/declaration-commitment-hivaids> ;
@@ -1758,7 +1758,7 @@ concept:declaration-commitment-hivaids-paragraph-116-norm a values:Undertaking ;
     cml:curationStatus cml:Proposed .
 
 concept:declaration-commitment-hivaids-paragraph-117 a cml:Concept ;
-    skos:prefLabel "Paragraph 117" ;
+    skos:prefLabel "Paragraph 117"@en ;
     cml:realizedBy doc:paragraph-117 ;
     cml:curationStatus cml:Proposed ;
     prov:wasDerivedFrom <https://www.ohchr.org/en/instruments-mechanisms/instruments/declaration-commitment-hivaids> ;
@@ -1773,7 +1773,7 @@ concept:declaration-commitment-hivaids-paragraph-117-norm a values:Undertaking ;
     cml:curationStatus cml:Proposed .
 
 concept:declaration-commitment-hivaids-paragraph-118 a cml:Concept ;
-    skos:prefLabel "Paragraph 118" ;
+    skos:prefLabel "Paragraph 118"@en ;
     cml:realizedBy doc:paragraph-118 ;
     cml:curationStatus cml:Proposed ;
     prov:wasDerivedFrom <https://www.ohchr.org/en/instruments-mechanisms/instruments/declaration-commitment-hivaids> ;
@@ -1788,7 +1788,7 @@ concept:declaration-commitment-hivaids-paragraph-118-norm a values:Undertaking ;
     cml:curationStatus cml:Proposed .
 
 concept:declaration-commitment-hivaids-paragraph-119 a cml:Concept ;
-    skos:prefLabel "Paragraph 119" ;
+    skos:prefLabel "Paragraph 119"@en ;
     cml:realizedBy doc:paragraph-119 ;
     cml:curationStatus cml:Proposed ;
     prov:wasDerivedFrom <https://www.ohchr.org/en/instruments-mechanisms/instruments/declaration-commitment-hivaids> ;
@@ -1803,7 +1803,7 @@ concept:declaration-commitment-hivaids-paragraph-119-norm a values:Undertaking ;
     cml:curationStatus cml:Proposed .
 
 concept:declaration-commitment-hivaids-paragraph-120 a cml:Concept ;
-    skos:prefLabel "Paragraph 120" ;
+    skos:prefLabel "Paragraph 120"@en ;
     cml:realizedBy doc:paragraph-120 ;
     cml:curationStatus cml:Proposed ;
     prov:wasDerivedFrom <https://www.ohchr.org/en/instruments-mechanisms/instruments/declaration-commitment-hivaids> ;
@@ -1818,7 +1818,7 @@ concept:declaration-commitment-hivaids-paragraph-120-norm a values:Undertaking ;
     cml:curationStatus cml:Proposed .
 
 concept:declaration-commitment-hivaids-paragraph-121 a cml:Concept ;
-    skos:prefLabel "Paragraph 121" ;
+    skos:prefLabel "Paragraph 121"@en ;
     cml:realizedBy doc:paragraph-121 ;
     cml:curationStatus cml:Proposed ;
     prov:wasDerivedFrom <https://www.ohchr.org/en/instruments-mechanisms/instruments/declaration-commitment-hivaids> ;
@@ -1833,7 +1833,7 @@ concept:declaration-commitment-hivaids-paragraph-121-norm a values:Undertaking ;
     cml:curationStatus cml:Proposed .
 
 concept:declaration-commitment-hivaids-paragraph-122 a cml:Concept ;
-    skos:prefLabel "Paragraph 122" ;
+    skos:prefLabel "Paragraph 122"@en ;
     cml:realizedBy doc:paragraph-122 ;
     cml:curationStatus cml:Proposed ;
     prov:wasDerivedFrom <https://www.ohchr.org/en/instruments-mechanisms/instruments/declaration-commitment-hivaids> ;
@@ -1848,7 +1848,7 @@ concept:declaration-commitment-hivaids-paragraph-122-norm a values:Undertaking ;
     cml:curationStatus cml:Proposed .
 
 concept:declaration-commitment-hivaids-paragraph-123 a cml:Concept ;
-    skos:prefLabel "Paragraph 123" ;
+    skos:prefLabel "Paragraph 123"@en ;
     cml:realizedBy doc:paragraph-123 ;
     cml:curationStatus cml:Proposed ;
     prov:wasDerivedFrom <https://www.ohchr.org/en/instruments-mechanisms/instruments/declaration-commitment-hivaids> ;
@@ -1863,7 +1863,7 @@ concept:declaration-commitment-hivaids-paragraph-123-norm a values:Undertaking ;
     cml:curationStatus cml:Proposed .
 
 concept:declaration-commitment-hivaids-paragraph-124 a cml:Concept ;
-    skos:prefLabel "Paragraph 124" ;
+    skos:prefLabel "Paragraph 124"@en ;
     cml:realizedBy doc:paragraph-124 ;
     cml:curationStatus cml:Proposed ;
     prov:wasDerivedFrom <https://www.ohchr.org/en/instruments-mechanisms/instruments/declaration-commitment-hivaids> ;
@@ -1878,7 +1878,7 @@ concept:declaration-commitment-hivaids-paragraph-124-norm a values:Undertaking ;
     cml:curationStatus cml:Proposed .
 
 concept:declaration-commitment-hivaids-paragraph-125 a cml:Concept ;
-    skos:prefLabel "Paragraph 125" ;
+    skos:prefLabel "Paragraph 125"@en ;
     cml:realizedBy doc:paragraph-125 ;
     cml:curationStatus cml:Proposed ;
     prov:wasDerivedFrom <https://www.ohchr.org/en/instruments-mechanisms/instruments/declaration-commitment-hivaids> ;
@@ -1893,7 +1893,7 @@ concept:declaration-commitment-hivaids-paragraph-125-norm a values:Undertaking ;
     cml:curationStatus cml:Proposed .
 
 concept:declaration-commitment-hivaids-paragraph-126 a cml:Concept ;
-    skos:prefLabel "Paragraph 126" ;
+    skos:prefLabel "Paragraph 126"@en ;
     cml:realizedBy doc:paragraph-126 ;
     cml:curationStatus cml:Proposed ;
     prov:wasDerivedFrom <https://www.ohchr.org/en/instruments-mechanisms/instruments/declaration-commitment-hivaids> ;
@@ -1908,7 +1908,7 @@ concept:declaration-commitment-hivaids-paragraph-126-norm a values:Undertaking ;
     cml:curationStatus cml:Proposed .
 
 concept:declaration-commitment-hivaids-paragraph-127 a cml:Concept ;
-    skos:prefLabel "Paragraph 127" ;
+    skos:prefLabel "Paragraph 127"@en ;
     cml:realizedBy doc:paragraph-127 ;
     cml:curationStatus cml:Proposed ;
     prov:wasDerivedFrom <https://www.ohchr.org/en/instruments-mechanisms/instruments/declaration-commitment-hivaids> ;
@@ -1923,7 +1923,7 @@ concept:declaration-commitment-hivaids-paragraph-127-norm a values:Undertaking ;
     cml:curationStatus cml:Proposed .
 
 concept:declaration-commitment-hivaids-paragraph-128 a cml:Concept ;
-    skos:prefLabel "Paragraph 128" ;
+    skos:prefLabel "Paragraph 128"@en ;
     cml:realizedBy doc:paragraph-128 ;
     cml:curationStatus cml:Proposed ;
     prov:wasDerivedFrom <https://www.ohchr.org/en/instruments-mechanisms/instruments/declaration-commitment-hivaids> ;
@@ -1938,7 +1938,7 @@ concept:declaration-commitment-hivaids-paragraph-128-norm a values:Undertaking ;
     cml:curationStatus cml:Proposed .
 
 concept:declaration-commitment-hivaids-paragraph-129 a cml:Concept ;
-    skos:prefLabel "Paragraph 129" ;
+    skos:prefLabel "Paragraph 129"@en ;
     cml:realizedBy doc:paragraph-129 ;
     cml:curationStatus cml:Proposed ;
     prov:wasDerivedFrom <https://www.ohchr.org/en/instruments-mechanisms/instruments/declaration-commitment-hivaids> ;
@@ -1953,7 +1953,7 @@ concept:declaration-commitment-hivaids-paragraph-129-norm a values:Undertaking ;
     cml:curationStatus cml:Proposed .
 
 concept:declaration-commitment-hivaids-paragraph-130 a cml:Concept ;
-    skos:prefLabel "Paragraph 130" ;
+    skos:prefLabel "Paragraph 130"@en ;
     cml:realizedBy doc:paragraph-130 ;
     cml:curationStatus cml:Proposed ;
     prov:wasDerivedFrom <https://www.ohchr.org/en/instruments-mechanisms/instruments/declaration-commitment-hivaids> ;
@@ -1968,7 +1968,7 @@ concept:declaration-commitment-hivaids-paragraph-130-norm a values:Undertaking ;
     cml:curationStatus cml:Proposed .
 
 concept:declaration-commitment-hivaids-paragraph-131 a cml:Concept ;
-    skos:prefLabel "Paragraph 131" ;
+    skos:prefLabel "Paragraph 131"@en ;
     cml:realizedBy doc:paragraph-131 ;
     cml:curationStatus cml:Proposed ;
     prov:wasDerivedFrom <https://www.ohchr.org/en/instruments-mechanisms/instruments/declaration-commitment-hivaids> ;
@@ -1983,7 +1983,7 @@ concept:declaration-commitment-hivaids-paragraph-131-norm a values:Undertaking ;
     cml:curationStatus cml:Proposed .
 
 concept:declaration-commitment-hivaids-paragraph-132 a cml:Concept ;
-    skos:prefLabel "Paragraph 132" ;
+    skos:prefLabel "Paragraph 132"@en ;
     cml:realizedBy doc:paragraph-132 ;
     cml:curationStatus cml:Proposed ;
     prov:wasDerivedFrom <https://www.ohchr.org/en/instruments-mechanisms/instruments/declaration-commitment-hivaids> ;
@@ -1998,7 +1998,7 @@ concept:declaration-commitment-hivaids-paragraph-132-norm a values:Undertaking ;
     cml:curationStatus cml:Proposed .
 
 concept:declaration-commitment-hivaids-paragraph-133 a cml:Concept ;
-    skos:prefLabel "Paragraph 133" ;
+    skos:prefLabel "Paragraph 133"@en ;
     cml:realizedBy doc:paragraph-133 ;
     cml:curationStatus cml:Proposed ;
     prov:wasDerivedFrom <https://www.ohchr.org/en/instruments-mechanisms/instruments/declaration-commitment-hivaids> ;
@@ -2013,7 +2013,7 @@ concept:declaration-commitment-hivaids-paragraph-133-norm a values:Undertaking ;
     cml:curationStatus cml:Proposed .
 
 concept:declaration-commitment-hivaids-paragraph-134 a cml:Concept ;
-    skos:prefLabel "Paragraph 134" ;
+    skos:prefLabel "Paragraph 134"@en ;
     cml:realizedBy doc:paragraph-134 ;
     cml:curationStatus cml:Proposed ;
     prov:wasDerivedFrom <https://www.ohchr.org/en/instruments-mechanisms/instruments/declaration-commitment-hivaids> ;
@@ -2028,7 +2028,7 @@ concept:declaration-commitment-hivaids-paragraph-134-norm a values:Undertaking ;
     cml:curationStatus cml:Proposed .
 
 concept:declaration-commitment-hivaids-paragraph-135 a cml:Concept ;
-    skos:prefLabel "Paragraph 135" ;
+    skos:prefLabel "Paragraph 135"@en ;
     cml:realizedBy doc:paragraph-135 ;
     cml:curationStatus cml:Proposed ;
     prov:wasDerivedFrom <https://www.ohchr.org/en/instruments-mechanisms/instruments/declaration-commitment-hivaids> ;
@@ -2043,7 +2043,7 @@ concept:declaration-commitment-hivaids-paragraph-135-norm a values:Undertaking ;
     cml:curationStatus cml:Proposed .
 
 concept:declaration-commitment-hivaids-paragraph-136 a cml:Concept ;
-    skos:prefLabel "Paragraph 136" ;
+    skos:prefLabel "Paragraph 136"@en ;
     cml:realizedBy doc:paragraph-136 ;
     cml:curationStatus cml:Proposed ;
     prov:wasDerivedFrom <https://www.ohchr.org/en/instruments-mechanisms/instruments/declaration-commitment-hivaids> ;
@@ -2058,7 +2058,7 @@ concept:declaration-commitment-hivaids-paragraph-136-norm a values:Undertaking ;
     cml:curationStatus cml:Proposed .
 
 concept:declaration-commitment-hivaids-paragraph-137 a cml:Concept ;
-    skos:prefLabel "Paragraph 137" ;
+    skos:prefLabel "Paragraph 137"@en ;
     cml:realizedBy doc:paragraph-137 ;
     cml:curationStatus cml:Proposed ;
     prov:wasDerivedFrom <https://www.ohchr.org/en/instruments-mechanisms/instruments/declaration-commitment-hivaids> ;
@@ -2073,7 +2073,7 @@ concept:declaration-commitment-hivaids-paragraph-137-norm a values:Undertaking ;
     cml:curationStatus cml:Proposed .
 
 concept:declaration-commitment-hivaids-paragraph-138 a cml:Concept ;
-    skos:prefLabel "Paragraph 138" ;
+    skos:prefLabel "Paragraph 138"@en ;
     cml:realizedBy doc:paragraph-138 ;
     cml:curationStatus cml:Proposed ;
     prov:wasDerivedFrom <https://www.ohchr.org/en/instruments-mechanisms/instruments/declaration-commitment-hivaids> ;
@@ -2088,7 +2088,7 @@ concept:declaration-commitment-hivaids-paragraph-138-norm a values:Undertaking ;
     cml:curationStatus cml:Proposed .
 
 concept:declaration-commitment-hivaids-paragraph-139 a cml:Concept ;
-    skos:prefLabel "Paragraph 139" ;
+    skos:prefLabel "Paragraph 139"@en ;
     cml:realizedBy doc:paragraph-139 ;
     cml:curationStatus cml:Proposed ;
     prov:wasDerivedFrom <https://www.ohchr.org/en/instruments-mechanisms/instruments/declaration-commitment-hivaids> ;
@@ -2103,7 +2103,7 @@ concept:declaration-commitment-hivaids-paragraph-139-norm a values:Undertaking ;
     cml:curationStatus cml:Proposed .
 
 concept:declaration-commitment-hivaids-paragraph-140 a cml:Concept ;
-    skos:prefLabel "Paragraph 140" ;
+    skos:prefLabel "Paragraph 140"@en ;
     cml:realizedBy doc:paragraph-140 ;
     cml:curationStatus cml:Proposed ;
     prov:wasDerivedFrom <https://www.ohchr.org/en/instruments-mechanisms/instruments/declaration-commitment-hivaids> ;
@@ -2118,7 +2118,7 @@ concept:declaration-commitment-hivaids-paragraph-140-norm a values:Undertaking ;
     cml:curationStatus cml:Proposed .
 
 concept:declaration-commitment-hivaids-paragraph-141 a cml:Concept ;
-    skos:prefLabel "Paragraph 141" ;
+    skos:prefLabel "Paragraph 141"@en ;
     cml:realizedBy doc:paragraph-141 ;
     cml:curationStatus cml:Proposed ;
     prov:wasDerivedFrom <https://www.ohchr.org/en/instruments-mechanisms/instruments/declaration-commitment-hivaids> ;
