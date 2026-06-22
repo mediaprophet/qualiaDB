@@ -355,13 +355,31 @@ export const MODALITIES = [
     {
         id: 'epistemic', name: 'Epistemic Logic', category: 'epistemic', opcode: '0x20–0x22',
         icon: 'fa-eye', hue: 'purple', wasm: false,
-        blurb: 'Knows, believes, common knowledge — certainty in predicate bits [8..15].',
+        blurb: 'KNOWS · BELIEVES · COMMON_KNOWLEDGE across 9 named certainty bands (knows→doubts) in predicate bits [8..15]; Active ≥128, common knowledge promotes to 255.',
         run() {
-            const agent = q_hash('agent:alice'), claim = q_hash('claim:rain');
-            const knows = buildEpistemicQuin(agent, OP_KNOWS, 220, claim);
-            const believes = buildEpistemicQuin(agent, OP_BELIEVES, 40, claim);
-            const v = evaluateEpistemic([knows, believes], agent);
-            return { lines: v.map(x => `${x.opName} (certainty ${x.certainty}) → ${x.status}`), visual: 'verdicts' };
+            const alice = q_hash('agent:alice'), bob = q_hash('agent:bob');
+            const pad = c => String(c).padStart(3);
+            // (1) The KNOWS operator is categorical — Active regardless of band.
+            const knows = buildEpistemicQuin(alice, OP_KNOWS, 255, q_hash('claim:sun-rose'));
+            // (2) The doxastic axis: the named certainty bands (epistemic.rs / modal-junctures.n3)
+            //     routed through BELIEVES. Active ≥128, else Uncertain.
+            const BANDS = [
+                ['affirms', 230], ['believes', 200], ['recognizes', 200], ['considers', 128],
+                ['supposes', 100], ['suspects', 80], ['speculates', 50], ['doubts', 20],
+            ];
+            const bandQuins = BANDS.map(([verb, c]) => buildEpistemicQuin(alice, OP_BELIEVES, c, q_hash('claim:' + verb)));
+            // (3) COMMON_KNOWLEDGE promotes a weak belief to full certainty (255) → Active.
+            const shared = q_hash('claim:earth-round');
+            const ck = buildEpistemicQuin(0n, OP_CK, 255, shared);
+            const weak = buildEpistemicQuin(bob, OP_BELIEVES, 30, shared);
+
+            const v = evaluateEpistemic([knows, ...bandQuins, ck, weak], 0n); // agent 0 = all agents
+            const lines = [`knows        cert ${pad(v[0].certainty)} → ${v[0].status}   (categorical · OP_KNOWS)`];
+            BANDS.forEach(([verb], i) => lines.push(`${verb.padEnd(12)} cert ${pad(v[i + 1].certainty)} → ${v[i + 1].status}`));
+            const ckv = v[v.length - 2], pv = v[v.length - 1];
+            lines.push(`common-know. cert ${pad(ckv.certainty)} → ${ckv.status}   (shared)`);
+            lines.push(`bob believes cert ${pad(pv.certainty)} → ${pv.status}   (30 → 255, promoted by common knowledge)`);
+            return { lines, visual: 'verdicts' };
         },
     },
     {

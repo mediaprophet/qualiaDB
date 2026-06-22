@@ -166,6 +166,12 @@
       "group": "Tools"
     },
     {
+      "label": "CML Studio",
+      "href": "cml-studio.html",
+      "icon": "fa-diagram-project",
+      "group": "Tools"
+    },
+    {
       "label": "Playground",
       "href": "playground/index.html",
       "icon": "fa-play",
