@@ -346,6 +346,11 @@ fn stable_mcp_tools() -> &'static [McpToolDescriptor] {
             description: "Interaction governance: map a deontic verdict status (active/violated/defeated/expired/pending/discharged/malformed) + classification (nonDerogable/humanitarian/ambiguous) to the runtime PolicyMode the Webizen VM enacts — PreventiveBlock(DenyRollback) | PermissiveAudit(WAL) | Prioritize | Interactive | Allow. Runs interaction_governance::map_policy.",
             input_schema: r#"{"type":"object","required":["status"],"properties":{"status":{"type":"string"},"nonDerogable":{"type":"boolean"},"humanitarian":{"type":"boolean"},"ambiguous":{"type":"boolean"}}}"#,
         },
+        McpToolDescriptor {
+            name: "mcp_cooperate",
+            description: "Agent-cooperation gate (Track M): decide whether a VERIFIED, TYPED, GROUNDED calling agent's request passes the deontic gate before execution. Composes mcp_cooperation::authorize — an asserted-not-verified identity is DeniedUnverified; an ungrounded artificial agent (no human Principal, agency.n3 G1') is DeniedUngrounded; else the request runs the Phase-6 policy gate. Trust is behaviourally derived, not self-asserted.",
+            input_schema: r#"{"type":"object","required":["caller","verified"],"properties":{"caller":{"type":"string"},"role":{"type":"string"},"verified":{"type":"boolean"},"grounded":{"type":"boolean"},"requestStatus":{"type":"string"},"nonDerogable":{"type":"boolean"},"humanitarian":{"type":"boolean"},"ambiguous":{"type":"boolean"}}}"#,
+        },
     ]
 }
 
@@ -502,6 +507,7 @@ pub unsafe fn enforce_fiduciary_tool_dispatch(
         b"values_evaluate" => mcp_tool_impls::values_evaluate(payload.arguments_raw),
         b"jural_correlate" => mcp_tool_impls::jural_correlate(payload.arguments_raw),
         b"deontic_govern" => mcp_tool_impls::deontic_govern(payload.arguments_raw),
+        b"mcp_cooperate" => mcp_tool_impls::mcp_cooperate(payload.arguments_raw),
         b"graph_resolve" => mcp_tool_impls::graph_resolve(payload.arguments_raw),
 
         _ => Err(McpSystemError::ToolNotFound),

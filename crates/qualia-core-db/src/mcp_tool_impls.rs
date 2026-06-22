@@ -479,6 +479,60 @@ pub fn deontic_govern(args: &[u8]) -> Result<String, McpSystemError> {
     .to_string())
 }
 
+/// MCP `mcp_cooperate` — the agent-cooperation gate (Track M, #17): does a **verified, typed,
+/// grounded** caller's request pass the deontic gate? Composes `mcp_cooperation::authorize`
+/// (verified-not-asserted → grounded agency.n3 G1' → Phase 6 policy). Args: `{ "caller":
+/// "<agent>", "role": "<role>"?, "verified": bool, "grounded": bool?, "requestStatus":
+/// "active"|"violated"|..., "nonDerogable"|"humanitarian"|"ambiguous": bool? }`.
+pub fn mcp_cooperate(args: &[u8]) -> Result<String, McpSystemError> {
+    use crate::mcp_cooperation::{authorize, cooperation_label, CallerStandpoint, CooperationVerdict};
+    use crate::modalities::interaction_governance::Governance;
+    use crate::modalities::logic::deontic::DeonticStatus;
+    let v = parse_tool_args(args)?;
+    let caller_s = json_str(&v, "caller", "");
+    if caller_s.is_empty() {
+        return Err(McpSystemError::InvalidParameters);
+    }
+    let bool_of = |k: &str| v.get(k).and_then(Value::as_bool).unwrap_or(false);
+    let standpoint = CallerStandpoint {
+        agent: crate::q_hash(caller_s),
+        role: crate::q_hash(json_str(&v, "role", "role:requester")),
+        verified: bool_of("verified"),
+    };
+    // grounded defaults to true (a human/legal caller); set false to model an ungrounded AI.
+    let grounded = v.get("grounded").and_then(Value::as_bool).unwrap_or(true);
+    let status = match json_str(&v, "requestStatus", "active").to_ascii_lowercase().as_str() {
+        "violated" => DeonticStatus::Violated,
+        "defeated" => DeonticStatus::Defeated,
+        "expired" => DeonticStatus::Expired,
+        "pending" => DeonticStatus::Pending,
+        "discharged" => DeonticStatus::Discharged,
+        "malformed" => DeonticStatus::Malformed,
+        _ => DeonticStatus::Active,
+    };
+    let g = Governance {
+        non_derogable: bool_of("nonDerogable"),
+        humanitarian: bool_of("humanitarian"),
+        ambiguous: bool_of("ambiguous"),
+    };
+    let verdict = authorize(&standpoint, grounded, status, g);
+    let mode = match verdict {
+        CooperationVerdict::Authorized(m) | CooperationVerdict::DeniedByPolicy(m) => Some(format!("{m:?}")),
+        _ => None,
+    };
+    Ok(json!({
+        "tool": "mcp_cooperate",
+        "caller": caller_s,
+        "verified": standpoint.verified,
+        "grounded": grounded,
+        "verdict": cooperation_label(verdict),
+        "policyMode": mode,
+        "permitted": matches!(verdict, CooperationVerdict::Authorized(_)),
+        "basis": "mcp_cooperation::authorize — verified+grounded caller through the deontic gate (Track M, #17)"
+    })
+    .to_string())
+}
+
 pub fn cas(args: &[u8]) -> Result<String, McpSystemError> {
     use crate::specialized_libs::symbolic_algebra as sym;
     let v = parse_tool_args(args)?;
@@ -1660,6 +1714,30 @@ mod tests {
         let out3 = deontic_govern(br#"{"status":"active","ambiguous":true}"#).expect("ok");
         let p3: Value = serde_json::from_str(&out3).expect("json");
         assert_eq!(p3["policyMode"], "Interactive");
+    }
+
+    #[test]
+    fn mcp_cooperate_tool() {
+        // Verified, grounded, ordinary request → Authorized.
+        let ok = mcp_cooperate(br#"{"caller":"did:alice","verified":true,"requestStatus":"active"}"#).expect("ok");
+        let p: Value = serde_json::from_str(&ok).expect("json");
+        assert_eq!(p["verdict"], "Authorized");
+        assert_eq!(p["permitted"], true);
+
+        // Asserted (not verified) → DeniedUnverified.
+        let unv = mcp_cooperate(br#"{"caller":"did:x","verified":false}"#).expect("ok");
+        assert_eq!(serde_json::from_str::<Value>(&unv).unwrap()["verdict"], "DeniedUnverified");
+
+        // Verified but ungrounded AI → DeniedUngrounded.
+        let ung = mcp_cooperate(br#"{"caller":"did:bot","verified":true,"grounded":false}"#).expect("ok");
+        assert_eq!(serde_json::from_str::<Value>(&ung).unwrap()["verdict"], "DeniedUngrounded");
+
+        // Verified + grounded but a non-derogable violation → DeniedByPolicy.
+        let blk = mcp_cooperate(br#"{"caller":"did:alice","verified":true,"requestStatus":"violated","nonDerogable":true}"#).expect("ok");
+        let pb: Value = serde_json::from_str(&blk).unwrap();
+        assert_eq!(pb["verdict"], "DeniedByPolicy");
+        assert_eq!(pb["policyMode"], "PreventiveBlock");
+        assert_eq!(pb["permitted"], false);
     }
 
     #[test]

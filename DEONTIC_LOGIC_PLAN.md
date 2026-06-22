@@ -207,13 +207,17 @@ Flagged by Timothy: this has been orphaned and that's not acceptable — it is l
 the whole thesis (agents verifying each other's conduct; trust behaviourally derived; no
 platform-provider). It is **not** gated behind the deontic work; run it in parallel.
 
-- [ ] Every MCP call bound to a **verified typed calling-agent identity** + standpoint
-  (who is asking, in what role/frame), not anonymous.
-- [ ] Caller identity verified (signed VC / key), not asserted (ties to `verifiable_credential.rs`
-  `verify_grounded` — ungrounded-AI-issuer already rejected).
-- [ ] Standpoint recorded on the interaction record (the interactionism locus, #16).
-- [ ] Deontic gate: an MCP caller's request is evaluated against the rights ontology before
-  execution (this is where Track M meets Phase 6).
+**Mechanism ✅ DONE 2026-06-22** — `mcp_cooperation.rs` + `mcp_cooperate` tool —
+`cargo test … mcp_cooperation::` → 5 passed; mcp tools 12 passed; full lib suite **1126 passed, 0 failed**.
+- [x] `CallerStandpoint {agent, role, verified}` — who is asking, in what typed role, and
+  whether the identity was **verified** (signed VC) vs merely asserted.
+- [x] `authorize` / `authorize_call` gate: verified-not-asserted → grounded (agency.n3 G1',
+  composes `agent::is_ungrounded_agency`) → Phase-6 deontic policy. Verdicts: Authorized /
+  DeniedUnverified / DeniedUngrounded / DeniedByPolicy.
+- [x] `mcp_cooperate` MCP tool exposes the gate (registered in `mcp_server.rs`, tested).
+- [ ] **Mandatory per-call enforcement in the dispatch** — fail-closed on unverified callers
+  for EVERY tool call. This is a deliberate breaking MCP-contract change → **awaiting Timothy's
+  sign-off** before wiring into `enforce_fiduciary_tool_dispatch` (the mechanism is ready).
 
 ---
 
