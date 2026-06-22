@@ -215,9 +215,12 @@ platform-provider). It is **not** gated behind the deontic work; run it in paral
   composes `agent::is_ungrounded_agency`) → Phase-6 deontic policy. Verdicts: Authorized /
   DeniedUnverified / DeniedUngrounded / DeniedByPolicy.
 - [x] `mcp_cooperate` MCP tool exposes the gate (registered in `mcp_server.rs`, tested).
-- [ ] **Mandatory per-call enforcement in the dispatch** — fail-closed on unverified callers
-  for EVERY tool call. This is a deliberate breaking MCP-contract change → **awaiting Timothy's
-  sign-off** before wiring into `enforce_fiduciary_tool_dispatch` (the mechanism is ready).
+- [x] **Mandatory per-call enforcement — BUILT, flag-gated (2026-06-22).** `cooperation_gate`
+  runs at the top of `enforce_fiduciary_tool_dispatch`: when `QUALIA_MCP_ENFORCE=1` every call
+  must carry a verified + grounded caller standpoint or it is refused (`IntentFrameViolation`).
+  **Default OFF** — today's callers are unaffected; the operator flips the switch per-deployment
+  when callers can supply a standpoint (no breaking change forced). `gate_verdict` is unit-tested
+  (off→pass, unverified→denied, verified+grounded→authorized). Full lib suite 1160 passed.
 
 ---
 

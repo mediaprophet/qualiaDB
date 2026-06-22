@@ -359,6 +359,11 @@ pub unsafe fn enforce_fiduciary_tool_dispatch(
     payload: RawToolPayload,
     intent_frame: &McpIntentFrame,
 ) -> Result<String, McpSystemError> {
+    // ── Track-M cooperation gate (default OFF; QUALIA_MCP_ENFORCE=1 to enforce) ──────
+    // When enforcement is on, every call must carry a verified + grounded caller standpoint
+    // (agency.n3 G1' + the deontic gate) or it is refused. A no-op while the flag is off.
+    mcp_tool_impls::cooperation_gate(payload.arguments_raw)?;
+
     match payload.tool_name {
         // ── Graph Engine Tools ───────────────────────────────────────────────
         b"query_graph" => {

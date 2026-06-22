@@ -90,6 +90,17 @@ pub fn authorize_call(
     authorize(standpoint, caller_grounded(index, standpoint.agent), request_status, governance)
 }
 
+/// Is mandatory per-call MCP enforcement turned ON? Default **OFF** (opt-in via the env flag
+/// `QUALIA_MCP_ENFORCE=1`), so today's callers are unaffected; flip it per-deployment when
+/// callers can supply a verified, grounded standpoint. When ON, every dispatched MCP call must
+/// pass [`authorize`] or it is refused. (Track M — the breaking-change switch, held by the operator.)
+pub fn enforcement_enabled() -> bool {
+    matches!(
+        std::env::var("QUALIA_MCP_ENFORCE").ok().as_deref(),
+        Some("1") | Some("true") | Some("TRUE") | Some("on")
+    )
+}
+
 /// Stable label for logs / MCP responses.
 pub const fn cooperation_label(v: CooperationVerdict) -> &'static str {
     match v {

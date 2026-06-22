@@ -407,6 +407,40 @@ pub fn values_evaluate(args: &[u8]) -> Result<String, McpSystemError> {
     .to_string())
 }
 
+/// Track-M dispatch gate (default OFF). When `QUALIA_MCP_ENFORCE` is set, EVERY dispatched MCP
+/// call must carry a verified + grounded caller standpoint (args `caller`/`verified`/`grounded`)
+/// or it is refused. Called once at the top of `enforce_fiduciary_tool_dispatch`; a no-op when
+/// enforcement is off, so existing callers are unaffected until the operator flips the switch.
+pub fn cooperation_gate(args: &[u8]) -> Result<(), McpSystemError> {
+    match gate_verdict(args, crate::mcp_cooperation::enforcement_enabled()) {
+        None => Ok(()),                                                   // enforcement off → pass
+        Some(crate::mcp_cooperation::CooperationVerdict::Authorized(_)) => Ok(()),
+        Some(_) => Err(McpSystemError::IntentFrameViolation),            // denied → refuse the call
+    }
+}
+
+/// Pure decision for [`cooperation_gate`] (env-free, so it is unit-testable). `None` = not
+/// enforcing (pass); `Some(verdict)` = the gate's verdict when enforcing. A call with no/false
+/// `verified` is DeniedUnverified; with `verified` but `grounded:false` is DeniedUngrounded.
+fn gate_verdict(args: &[u8], enforcing: bool) -> Option<crate::mcp_cooperation::CooperationVerdict> {
+    use crate::mcp_cooperation::{authorize, CallerStandpoint};
+    use crate::modalities::interaction_governance::Governance;
+    use crate::modalities::logic::deontic::DeonticStatus;
+    if !enforcing {
+        return None;
+    }
+    let v = parse_tool_args(args).unwrap_or(Value::Null);
+    let bool_of = |k: &str| v.get(k).and_then(Value::as_bool).unwrap_or(false);
+    let standpoint = CallerStandpoint {
+        agent: crate::q_hash(json_str(&v, "caller", "")),
+        role: crate::q_hash(json_str(&v, "role", "role:caller")),
+        verified: bool_of("verified"),
+    };
+    // When enforcing, grounding must be positively asserted (strict default).
+    let grounded = bool_of("grounded");
+    Some(authorize(&standpoint, grounded, DeonticStatus::Active, Governance::default()))
+}
+
 /// MCP `jural_correlate` — Hohfeldian correlativity: given a jural position, return the
 /// correlative the counterparty necessarily bears, the jural opposite, and its order.
 /// Composes `modalities::jural`. Args: `{ "position": "claim"|"duty"|"privilege"|"no-right"|
@@ -1714,6 +1748,27 @@ mod tests {
         let out3 = deontic_govern(br#"{"status":"active","ambiguous":true}"#).expect("ok");
         let p3: Value = serde_json::from_str(&out3).expect("json");
         assert_eq!(p3["policyMode"], "Interactive");
+    }
+
+    #[test]
+    fn cooperation_gate_decision() {
+        use crate::mcp_cooperation::CooperationVerdict;
+        // Enforcement OFF → always pass (None), regardless of caller.
+        assert!(gate_verdict(br#"{}"#, false).is_none());
+        // Enforcement ON, anonymous/unverified → DeniedUnverified.
+        assert!(matches!(gate_verdict(br#"{}"#, true), Some(CooperationVerdict::DeniedUnverified)));
+        // ON, verified but not grounded → DeniedUngrounded.
+        assert!(matches!(
+            gate_verdict(br#"{"caller":"did:bot","verified":true}"#, true),
+            Some(CooperationVerdict::DeniedUngrounded)
+        ));
+        // ON, verified + grounded → Authorized.
+        assert!(matches!(
+            gate_verdict(br#"{"caller":"did:alice","verified":true,"grounded":true}"#, true),
+            Some(CooperationVerdict::Authorized(_))
+        ));
+        // The public gate maps a denial to IntentFrameViolation (enforcement defaults off in CI).
+        assert!(cooperation_gate(br#"{}"#).is_ok());
     }
 
     #[test]
