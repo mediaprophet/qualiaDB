@@ -296,13 +296,29 @@ export const MODALITIES = [
     {
         id: 'deontic', name: 'Deontic Logic', category: 'governance', opcode: '0x10–0x12',
         icon: 'fa-scale-balanced', hue: 'rose', wasm: false,
-        blurb: 'Obligate, permit, forbid norms with DEFEATER_BIT unless-sentinel and contract expiry.',
+        blurb: 'The SDL triad O/P/F (0x10–0x12) with q42:unless defeaters (bit 63) and contract expiry → Active / Defeated / Expired.',
         run() {
-            const alice = q_hash('did:alice'), path = q_hash('q42:disclose'), data = q_hash('q42:data'), nda = q_hash('contract:nda');
-            const auditor = q_hash('q42:role:auditor');
-            const norm = compileNorm(alice, OP_OBLIGATE, path, data, nda, 4e9, false);
-            const unless = compileNorm(alice, OP_PERMIT, path, auditor, nda, 4e9, true);
-            return { lines: evaluateDeontic([norm, unless]).map(v => `${v.opName} → ${v.status}`), visual: 'verdicts' };
+            const alice = q_hash('did:alice'), nda = q_hash('contract:nda');
+            const NOW = 1_700_000_000, FUTURE = 4e9, PAST = 1_600_000_000;
+            // (1) The SDL triad — Obligate / Permit / Forbid, valid and undefeated → Active.
+            const obligate = compileNorm(alice, OP_OBLIGATE, q_hash('q42:report-breach'), q_hash('q42:regulator'), nda, FUTURE, false);
+            const permit   = compileNorm(alice, OP_PERMIT,   q_hash('q42:access-logs'),   q_hash('q42:audit'),     nda, FUTURE, false);
+            const forbid   = compileNorm(alice, OP_FORBID,   q_hash('q42:disclose'),      q_hash('q42:data'),      nda, FUTURE, false);
+            // (2) Defeasibility — an obligation overridden by a matching q42:unless exception.
+            const dutyPath = q_hash('q42:keep-confidential');
+            const duty   = compileNorm(alice, OP_OBLIGATE, dutyPath, q_hash('q42:data'), nda, FUTURE, false);
+            const unless = compileNorm(alice, OP_PERMIT,   dutyPath, q_hash('q42:data'), nda, FUTURE, true); // bit 63 = q42:unless
+            // (3) Temporal — a norm whose contract has expired.
+            const expired = compileNorm(alice, OP_OBLIGATE, q_hash('q42:renew-consent'), q_hash('q42:data'), nda, PAST, false);
+
+            const v = evaluateDeontic([obligate, permit, forbid, duty, unless, expired], NOW);
+            return { lines: [
+                `O(report-breach)     → ${v[0].status}`,
+                `P(access-logs)       → ${v[1].status}`,
+                `F(disclose-data)     → ${v[2].status}`,
+                `O(keep-confidential) → ${v[3].status}   (q42:unless permits → defeated)`,
+                `O(renew-consent)     → ${v[4].status}   (contract expired)`,
+            ], visual: 'verdicts' };
         },
     },
     {
