@@ -263,10 +263,15 @@ sensitive-vocab decisions (DV / coercion / guardianship), §20 on the STELLAR ma
   `recompute_fabric` (re-compute identity from surviving anchors after key loss/theft),
   `identifier_is_not_identity` axiom.
 
-### Phase 11 — Composition wires (compose existing real primitives into the deontic path)
-- [ ] §17 ZK-gated obligation `O(p | ZK(...))` + selective disclosure (composes `zk_proofs.rs`).
-- [ ] §26 Proportionality test (composes `symbolic_algebra.rs` `differentiate`/`eval`).
-- [ ] §19 Sense-translation gating (closeMatch heuristic vs exactMatch human-attested).
+### Phase 11 — Composition wires ✅ DONE 2026-06-22  [`modalities/legal_compose.rs`]
+**Test:** `modalities::legal_compose::` 3 passed; full lib suite **1150 passed, 0 failed**.
+- [x] §17 ZK-gated eligibility (`zk_eligibility` over `zk_proofs` Groth16 verification result) +
+  `selective_disclosure` (reveal only chosen credential claims).
+- [x] §26 Proportionality — `marginal_harm` / `proportionality_met` genuinely compose the CAS
+  (`symbolic_algebra::parse`+`differentiate`+`eval`): `∂Harm/∂x < Advantage`.
+- [x] §19 Sense-translation gate — `translation_status {CloseMatch, ExactMatch,
+  RequiresHumanReview}` enforcing the Curation Directive (machine proposes closeMatch; only a
+  human attests exactMatch; untranslatable → human review).
 
 ### Deferred / heavier
 - [ ] §28 Distributed state / consensus (composes CRDT); §29 multi-modal carriers (task #9 PDF/PNG);

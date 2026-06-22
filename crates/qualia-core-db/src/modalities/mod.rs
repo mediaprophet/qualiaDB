@@ -101,6 +101,11 @@ pub mod identity_fabric;
 pub use identity_fabric::{
     identity_survives_loss, surviving_anchors, recompute_fabric, identifier_is_not_identity,
 };
+pub mod legal_compose;
+pub use legal_compose::{
+    Eligibility, zk_eligibility, selective_disclosure, marginal_harm, proportionality_met,
+    MatchStatus, translation_status,
+};
 pub mod temporal_ltl;
 pub use temporal_ltl::{
     OP_LTL_GLOBALLY, OP_LTL_FINALLY, OP_LTL_NEXT, OP_LTL_UNTIL, OP_LTL_RELEASE,
