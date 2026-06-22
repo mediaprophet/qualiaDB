@@ -251,6 +251,124 @@ pub fn algebra_matrix_analyze(args: &[u8]) -> Result<String, McpSystemError> {
 
 /// Symbolic algebra: differentiate / simplify / evaluate a text expression, or solve a
 /// quadratic symbolically.
+/// MCP `values_check` — make the values engine callable by the agent ecosystem.
+///
+/// Asks the inverse rights-guard whether an agent's claim is a personhood-category abuse:
+/// a non–natural-person agent (a `CorporatePerson`, an `ArtificialAgent`, …) claiming a
+/// natural-person-only dignity right as its own. Runs the REAL agency.n3 G1/G1' guard lane
+/// in the Webizen VM — not a lookup table.
+///
+/// Args: `{ "agentType": "CorporatePerson" | "ArtificialAgent" | "NaturalPerson" | <Class>,
+///          "claimsDignityRight": true }`. `agentType` is the local name of a
+/// `https://ns.webcivics.org/values/` class.
+pub fn values_check(args: &[u8]) -> Result<String, McpSystemError> {
+    let v = parse_tool_args(args)?;
+    let agent_type_short = json_str(&v, "agentType", "NaturalPerson");
+    let claims = v
+        .get("claimsDignityRight")
+        .and_then(Value::as_bool)
+        .unwrap_or(false);
+    let agent_type =
+        crate::q_hash(&format!("https://ns.webcivics.org/values/{agent_type_short}"));
+    let flagged = crate::webizen::check_personhood_category_error(agent_type, claims);
+    Ok(json!({
+        "tool": "values_check",
+        "agentType": agent_type_short,
+        "claimsDignityRight": claims,
+        "flagged": flagged,
+        "flag": if flagged { "values:PersonhoodCategoryError" } else { "" },
+        "verdict": if flagged {
+            "REJECT — a non–natural-person agent cannot hold a human dignity right as its own"
+        } else {
+            "ok"
+        },
+        "basis": "agency.n3 G1/G1' inverse rights-guard (webcivics values lattice)"
+    })
+    .to_string())
+}
+
+/// MCP `values_evaluate` — query the deontic-contract reasoner in values terms.
+///
+/// Where `values_check` answers a binary anti-capture guard, this verb runs the full
+/// **native deontic VM** (`evaluate_deontic_contract`): a norm (forbid / oblige / permit)
+/// bound to a party + action, an optional `unless` exception (compiled to a `q42:unless`
+/// defeater on the same party+path), and an optional temporal window. It returns whether
+/// the norm is currently **Active** (in force), **Defeated** (overridden by an exception),
+/// **Expired** (past its effective window), or **Malformed** — computed, not asserted.
+///
+/// Args: `{ "modality": "forbid"|"oblige"|"permit", "party": "<agent>", "action": "<path>",
+///          "object": "<action object>"?, "now": <unix>?, "expiry": <unix32>?,
+///          "unless": "<exception action>"? }`.
+pub fn values_evaluate(args: &[u8]) -> Result<String, McpSystemError> {
+    use crate::modalities::logic::deontic::{
+        compile_norm_quin, evaluate_deontic_contract, DeonticStatus, DeonticVerdict, OP_FORBID,
+        OP_OBLIGATE, OP_PERMIT,
+    };
+    let v = parse_tool_args(args)?;
+    let modality = json_str(&v, "modality", "forbid");
+    let (opcode, verb) = match modality {
+        "oblige" | "obligate" | "obligation" => (OP_OBLIGATE, "obligation"),
+        "permit" | "permission" => (OP_PERMIT, "permission"),
+        _ => (OP_FORBID, "prohibition"),
+    };
+    let party_s = json_str(&v, "party", "");
+    let action_s = json_str(&v, "action", "");
+    if party_s.is_empty() || action_s.is_empty() {
+        return Err(McpSystemError::InvalidParameters);
+    }
+    let object_s = json_str(&v, "object", action_s);
+    let now = json_u64(&v, "now", 1_717_200_000) as u32;
+    let expiry = json_u64(&v, "expiry", 0) as u32;
+
+    let party = crate::q_hash(party_s);
+    let path = crate::q_hash(action_s);
+    let obj = crate::q_hash(object_s);
+    let contract = crate::q_hash("contract:values-evaluate");
+
+    let norm = compile_norm_quin(party, opcode, path, obj, contract, expiry, false);
+    let mut quins: Vec<NQuin> = vec![norm];
+
+    let mut has_exception = false;
+    if let Some(unless_s) = v.get("unless").and_then(Value::as_str) {
+        if !unless_s.is_empty() {
+            has_exception = true;
+            // A permitting defeater on the SAME party + path + contract defeats the norm.
+            let defeater =
+                compile_norm_quin(party, OP_PERMIT, path, crate::q_hash(unless_s), contract, 0, true);
+            quins.push(defeater);
+        }
+    }
+
+    let mut out = [DeonticVerdict::default(); 8];
+    let n = evaluate_deontic_contract(&quins, now, &mut out)
+        .map_err(|_| McpSystemError::InvalidParameters)?;
+    let verdict = out[..n].first().copied().unwrap_or_default();
+    let (status_s, meaning) = match verdict.status {
+        DeonticStatus::Active => ("Active", format!("the {verb} is in force")),
+        DeonticStatus::Defeated => ("Defeated", format!("the {verb} is overridden by an exception")),
+        DeonticStatus::Expired => {
+            ("Expired", format!("the {verb} has lapsed (past its effective window)"))
+        }
+        DeonticStatus::Malformed => {
+            ("Malformed", "the norm could not be interpreted".to_string())
+        }
+    };
+    Ok(json!({
+        "tool": "values_evaluate",
+        "modality": verb,
+        "party": party_s,
+        "action": action_s,
+        "exception": has_exception,
+        "now": now,
+        "expiry": expiry,
+        "status": status_s,
+        "meaning": meaning,
+        "opcode": format!("0x{:02X}", verdict.opcode),
+        "basis": "native deontic VM (evaluate_deontic_contract) over the webcivics values lattice"
+    })
+    .to_string())
+}
+
 pub fn cas(args: &[u8]) -> Result<String, McpSystemError> {
     use crate::specialized_libs::symbolic_algebra as sym;
     let v = parse_tool_args(args)?;
@@ -1346,6 +1464,55 @@ fn parse_ltl_formula(v: &Value) -> Result<crate::modalities::temporal_ltl::LtlFo
 #[cfg(test)]
 mod tests {
     use super::*;
+
+    #[test]
+    fn values_check_tool_flags_corporate_capture() {
+        // A corporation claiming a human dignity right → REJECT (PersonhoodCategoryError).
+        let out = values_check(
+            br#"{"agentType":"CorporatePerson","claimsDignityRight":true}"#,
+        )
+        .expect("ok");
+        let p: Value = serde_json::from_str(&out).expect("json");
+        assert_eq!(p["flagged"], true);
+        assert_eq!(p["flag"], "values:PersonhoodCategoryError");
+
+        // A natural person holding their own right → ok.
+        let out2 =
+            values_check(br#"{"agentType":"NaturalPerson","claimsDignityRight":true}"#).expect("ok");
+        let p2: Value = serde_json::from_str(&out2).expect("json");
+        assert_eq!(p2["flagged"], false);
+        assert_eq!(p2["verdict"], "ok");
+    }
+
+    #[test]
+    fn values_evaluate_tool_deontic_lifecycle() {
+        // A prohibition with no exception and no expiry → in force (Active).
+        let out = values_evaluate(
+            br#"{"modality":"forbid","party":"values:Agent","action":"values:DestructionOfRights"}"#,
+        )
+        .expect("ok");
+        let p: Value = serde_json::from_str(&out).expect("json");
+        assert_eq!(p["status"], "Active");
+        assert_eq!(p["modality"], "prohibition");
+
+        // Same prohibition with a lawful-authorisation exception → Defeated.
+        let out2 = values_evaluate(
+            br#"{"modality":"forbid","party":"values:Agent","action":"values:DestructionOfRights","unless":"values:lawfullyAuthorised"}"#,
+        )
+        .expect("ok");
+        let p2: Value = serde_json::from_str(&out2).expect("json");
+        assert_eq!(p2["status"], "Defeated");
+        assert_eq!(p2["exception"], true);
+
+        // An obligation whose effective window has passed (expiry << now) → Expired.
+        let out3 = values_evaluate(
+            br#"{"modality":"oblige","party":"values:State","action":"values:ProvideRemedy","expiry":1000000000,"now":1717200000}"#,
+        )
+        .expect("ok");
+        let p3: Value = serde_json::from_str(&out3).expect("json");
+        assert_eq!(p3["status"], "Expired");
+        assert_eq!(p3["modality"], "obligation");
+    }
 
     #[test]
     fn matrix_multiply_caller_matrices() {

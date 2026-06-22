@@ -4,24 +4,24 @@
 
 ## Administration of justice, detention & law enforcement  (19)
 
-- **Basic Principles and Guidelines on the Right to a Remedy and Reparation for Victims of Gross Violations of International Human Rights Law and Serious Violations of International Humanitarian Law** — 16 December 2005 · 91 provisions · `un-instruments/basic-principles-and-guidelines-right-remedy-and-reparation.n3`
+- **Basic Principles and Guidelines on the Right to a Remedy and Reparation for Victims of Gross Violations of International Human Rights Law and Serious Violations of International Humanitarian Law** — 16 December 2005 · 90 provisions · `un-instruments/basic-principles-and-guidelines-right-remedy-and-reparation.n3`
 - **Basic Principles for the Treatment of Prisoners** — 14 December 1990 · 1 provisions · `un-instruments/basic-principles-treatment-prisoners.n3`
 - **Basic Principles on the Independence of the Judiciary** — 06 September 1985 · 36 provisions · `un-instruments/basic-principles-independence-judiciary.n3`
 - **Basic Principles on the Role of Lawyers** — 07 September 1990 · 49 provisions · `un-instruments/basic-principles-role-lawyers.n3`
-- **Basic Principles on the Use of Force and Firearms by Law Enforcement Officials** — 07 September 1990 · 49 provisions · `un-instruments/basic-principles-use-force-and-firearms-law-enforcement.n3`
+- **Basic Principles on the Use of Force and Firearms by Law Enforcement Officials** — 07 September 1990 · 48 provisions · `un-instruments/basic-principles-use-force-and-firearms-law-enforcement.n3`
 - **Body of Principles for the Protection of All Persons under Any Form of Detention or Imprisonment** — 09 December 1988 · 39 provisions · `un-instruments/body-principles-protection-all-persons-under-any-form-detention.n3`
 - **Code of Conduct for Law Enforcement Officials** — 17 December 1979 · 8 provisions · `un-instruments/code-conduct-law-enforcement-officials.n3`
-- **Declaration of Basic Principles of Justice for Victims of Crime and Abuse of Power** — 29 November 1985 · 31 provisions · `un-instruments/declaration-basic-principles-justice-victims-crime-and-abuse.n3`
-- **Guidelines for Action on Children in the Criminal Justice System** — 21 July 1997 · 89 provisions · `un-instruments/guidelines-action-children-criminal-justice-system.n3`
-- **Guidelines on the Role of Prosecutors** — 07 September 1990 · 39 provisions · `un-instruments/guidelines-role-prosecutors.n3`
+- **Declaration of Basic Principles of Justice for Victims of Crime and Abuse of Power** — 29 November 1985 · 30 provisions · `un-instruments/declaration-basic-principles-justice-victims-crime-and-abuse.n3`
+- **Guidelines for Action on Children in the Criminal Justice System** — 21 July 1997 · 88 provisions · `un-instruments/guidelines-action-children-criminal-justice-system.n3`
+- **Guidelines on the Role of Prosecutors** — 07 September 1990 · 38 provisions · `un-instruments/guidelines-role-prosecutors.n3`
 - **Principles of Medical Ethics relevant to the Role of Health Personnel, particularly Physicians, in the Protection of Prisoners and Detainees against Torture and Other Cruel, Inhuman or Degrading Treatment or Punishment** — 18 December 1982 · 6 provisions · `un-instruments/principles-medical-ethics-relevant-role-health-personnel.n3`
 - **Principles of international co-operation in the detection, arrest, extradition and punishment of persons guilty of war crimes and crimes against humanity** — 03 December 1973 · 5 provisions · `un-instruments/principles-international-co-operation-detection-arrest.n3`
-- **Principles on the Effective Prevention and Investigation of Extra-legal, Arbitrary and Summary Executions** — 24 May 1989 · 22 provisions · `un-instruments/principles-effective-prevention-and-investigation-extra-legal.n3`
+- **Principles on the Effective Prevention and Investigation of Extra-legal, Arbitrary and Summary Executions** — 24 May 1989 · 21 provisions · `un-instruments/principles-effective-prevention-and-investigation-extra-legal.n3`
 - **Safeguards guaranteeing protection of the rights of those facing the death penalty** — 25 May 1984 · 1 provisions · `un-instruments/safeguards-guaranteeing-protection-rights-those-facing-death.n3`
 - **United Nations Guidelines for the Prevention of Juvenile Delinquency (The Riyadh Guidelines)** — 14 December 1990 · 92 provisions · `un-instruments/united-nations-guidelines-prevention-juvenile-delinquency-riyadh.n3`
-- **United Nations Rules for the Protection of Juveniles Deprived of their Liberty** — 14 December 1990 · 103 provisions · `un-instruments/united-nations-rules-protection-juveniles-deprived-their-liberty.n3`
+- **United Nations Rules for the Protection of Juveniles Deprived of their Liberty** — 14 December 1990 · 102 provisions · `un-instruments/united-nations-rules-protection-juveniles-deprived-their-liberty.n3`
 - **United Nations Rules for the Treatment of Women Prisoners and Non-custodial Measures for Women Offenders (the Bangkok Rules)** — 21 December 2010 · 70 provisions · `un-instruments/united-nations-rules-treatment-women-prisoners-and-non-custodial.n3`
-- **United Nations Standard Minimum Rules for Non-custodial Measures (The Tokyo Rules)** — 14 December 1990 · 113 provisions · `un-instruments/united-nations-standard-minimum-rules-non-custodial-measures.n3`
+- **United Nations Standard Minimum Rules for Non-custodial Measures (The Tokyo Rules)** — 14 December 1990 · 112 provisions · `un-instruments/united-nations-standard-minimum-rules-non-custodial-measures.n3`
 - **United Nations Standard Minimum Rules for the Administration of Juvenile Justice (The Beijing Rules)** — 29 November 1985 · 19 provisions · `un-instruments/united-nations-standard-minimum-rules-administration-juvenile.n3`
 
 ## Bioethics, science & culture  (3)
@@ -59,7 +59,7 @@
 
 ## Foundational declarations  (1)
 
-- **Vienna Declaration and Programme of Action** — 25 June 1993 · 192 provisions · `un-instruments/vienna-declaration-and-programme-action.n3`
+- **Vienna Declaration and Programme of Action** — 25 June 1993 · 191 provisions · `un-instruments/vienna-declaration-and-programme-action.n3`
 
 ## Genocide & atrocity prevention  (1)
 
@@ -124,7 +124,7 @@
 
 ## Older persons  (1)
 
-- **United Nations Principles for Older Persons** — 16 December 1991 · 30 provisions · `un-instruments/united-nations-principles-older-persons.n3`
+- **United Nations Principles for Older Persons** — 16 December 1991 · 29 provisions · `un-instruments/united-nations-principles-older-persons.n3`
 
 ## Other / thematic  (3)
 
@@ -203,17 +203,5 @@ Scanned **102 instruments**.
 - **deonticStatus**: present (102)
 
 ### Flags
-- **Scraper boilerplate** (12 files) — strip from `values:originalText`:
-  - `un-instruments/basic-principles-and-guidelines-right-remedy-and-reparation.n3` — Download:, Download: PDF
-  - `un-instruments/basic-principles-treatment-prisoners.n3` — Download:, Download: PDF
-  - `un-instruments/basic-principles-use-force-and-firearms-law-enforcement.n3` — Download:, Download: PDF
-  - `un-instruments/declaration-basic-principles-justice-victims-crime-and-abuse.n3` — Download:, Download: PDF
-  - `un-instruments/guidelines-action-children-criminal-justice-system.n3` — Download:, Download: PDF
-  - `un-instruments/guidelines-role-prosecutors.n3` — Download:, Download: PDF
-  - `un-instruments/principles-effective-prevention-and-investigation-extra-legal.n3` — Download:, Download: PDF
-  - `un-instruments/safeguards-guaranteeing-protection-rights-those-facing-death.n3` — Download:, Download: PDF
-  - `un-instruments/united-nations-principles-older-persons.n3` — Download:, Download: PDF
-  - `un-instruments/united-nations-rules-protection-juveniles-deprived-their-liberty.n3` — Download:, Download: PDF
-  - `un-instruments/united-nations-standard-minimum-rules-non-custodial-measures.n3` — Download:, Download: PDF
-  - `un-instruments/vienna-declaration-and-programme-action.n3` — Download:, Download: PDF
+- **Scraper boilerplate** (0 files) — strip from `values:originalText`:
 - **One-provision (soft-law) outliers** (2): `un-instruments/basic-principles-treatment-prisoners.n3`, `un-instruments/safeguards-guaranteeing-protection-rights-those-facing-death.n3`

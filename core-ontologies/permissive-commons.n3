@@ -1,0 +1,83 @@
+@prefix rdf:     <http://www.w3.org/1999/02/22-rdf-syntax-ns#> .
+@prefix rdfs:    <http://www.w3.org/2000/01/rdf-schema#> .
+@prefix sh:      <http://www.w3.org/ns/shacl#> .
+@prefix xsd:     <http://www.w3.org/2001/XMLSchema#> .
+@prefix dcterms: <http://purl.org/dc/terms/> .
+@prefix prov:    <http://www.w3.org/ns/prov#> .
+@prefix odrl:    <http://www.w3.org/ns/odrl/2/> .
+@prefix qudt:    <http://qudt.org/schema/qudt/> .
+@prefix values:  <https://ns.webcivics.org/values/> .
+@prefix cml:     <https://ns.webcivics.org/cml/> .
+@prefix pc:      <https://ns.webcivics.org/permissive-commons/> .
+
+# ===========================================================================
+# Permissive Commons — a cost-recovering, self-extinguishing license that
+# TERMINATES IN THE TRUE COMMONS once creators are made whole.
+# Companion to PLAN.md §10.2e. NOT gratis ("free work does not exist") and NOT
+# enclosure (perpetual rent): a self-extinguishing OBLIGATION discharged on
+# COMPENSATION COMPLETION, after which the work is obligation-free.
+# Commons ≠ uncompensated: open-licensed output + fair compensation are compatible.
+# ===========================================================================
+
+pc:Work a rdfs:Class ; rdfs:label "Permissive-Commons work" ;
+    rdfs:comment "A produced work licensed under Permissive Commons (an ontology, dataset, model, document …)." .
+
+# --- Cost + bounded return (the obligation cost) ---
+pc:productionCost a rdf:Property ; rdfs:domain pc:Work ;
+    rdfs:comment "Recorded resources actually consumed (labour-time, materials). QUDT-quantified; ATTESTABLE via the provenance layer (prov:wasAttributedTo the workers) — signed, never self-asserted (anti-inflation)." .
+pc:roiMultiplier a rdf:Property ; rdfs:domain pc:Work ; rdfs:range xsd:decimal ;
+    rdfs:comment "Fair-return knob ∈ [1, pc:MAX_ROI]. Governance-set value under a HARD SHACL cap (anti-rent-extraction). 1 = pure cost recovery." .
+pc:obligationCost a rdf:Property ; rdfs:domain pc:Work ; rdfs:range xsd:decimal ;
+    rdfs:comment "= productionCost × roiMultiplier — 'what they should have been paid' (cost + bounded benefit). The amount to recover before the work goes obligation-free." .
+pc:amountCompensated a rdf:Property ; rdfs:domain pc:Work ; rdfs:range xsd:decimal ;
+    rdfs:comment "Running total paid down (via pc:Micropayment / pc:SponsorshipLumpSum)." .
+pc:unitOfAccount a rdf:Property ; rdfs:domain pc:Work ;
+    rdfs:comment "Denomination of cost + ROI (fiat / token / resource-unit). OPEN — Timothy to set." .
+
+# --- The self-extinguishing obligation lifecycle ---
+pc:ObligationStatus a rdfs:Class .
+pc:Outstanding a pc:ObligationStatus ; rdfs:comment "obligationCost not yet met — compensation owed." .
+pc:Discharged  a pc:ObligationStatus ; rdfs:comment "amountCompensated ≥ obligationCost → ECONOMIC obligation extinguished; the work passes into the true commons." .
+pc:obligationStatus a rdf:Property ; rdfs:domain pc:Work ; rdfs:range pc:ObligationStatus .
+
+# Discharge condition (the deontic norm with a discharge condition; → deontic VM Active → Discharged):
+#   { ?w pc:amountCompensated ?a ; pc:obligationCost ?c . ?a >= ?c } => { ?w pc:obligationStatus pc:Discharged } .
+# (Engine: a self-extinguishing values:Obligation evaluated like the values_evaluate lifecycle.)
+
+# --- Payment rails ---
+pc:PaymentMethod a rdfs:Class .
+pc:Micropayment a pc:PaymentMethod ; rdfs:comment "ILP / streaming micropayments into the obligation." .
+pc:SponsorshipLumpSum a pc:PaymentMethod ; rdfs:comment "A sponsor liberates the work for all by paying down the pool." .
+pc:paidVia a rdf:Property ; rdfs:domain pc:Work ; rdfs:range pc:PaymentMethod .
+
+# --- Agent-category differentiated terms (ODRL + the values agent lattice) ---
+pc:LicenseTerm a rdfs:Class ; rdfs:comment "An obligation rate/term for a given agent category." .
+pc:appliesToCategory a rdf:Property ; rdfs:domain pc:LicenseTerm ; rdfs:range values:Agent ;
+    rdfs:comment "values:NaturalPerson / values:CorporatePerson / values:PublicAuthority / non-profit — different rates feed the obligation." .
+pc:rate a rdf:Property ; rdfs:domain pc:LicenseTerm ; rdfs:range xsd:decimal .
+# (A use creates an odrl:duty on the using agent to compensate, keyed to its category.)
+
+# --- Attribution is PERMANENT (economic-only discharge) ---
+pc:attributedTo a rdf:Property ; rdfs:domain pc:Work ; rdfs:range prov:Agent ;
+    rdfs:comment "Authorship/provenance — NEVER extinguishes. 'Obligation-free' is ECONOMIC only; discharge frees the USE, not the CREDIT (anti-theft, PLAN §10.2b)." .
+
+# --- Discharge model: OPEN DECISION (Timothy) ---
+pc:DischargeModel a rdfs:Class .
+pc:CollectivePool a pc:DischargeModel ; rdfs:comment "Total compensation from ALL sources meets obligationCost → obligation-free for EVERYONE; category rates feed one pool. (Timothy's phrasing implies this — to confirm.)" .
+pc:PerAgentDebt   a pc:DischargeModel ; rdfs:comment "Each agent owes until it personally pays." .
+pc:dischargeModel a rdf:Property ; rdfs:domain pc:Work ; rdfs:range pc:DischargeModel ;
+    rdfs:comment "DECISION PENDING — collective-pool vs per-agent-debt. Changes the obligation accounting." .
+
+# ===========================================================================
+# SHACL — the hard anti-rent-extraction cap (deterministic firewall)
+# ===========================================================================
+pc:MAX_ROI a xsd:decimal ; rdfs:comment "Hard ceiling for roiMultiplier (≈10×, NEVER 100×). The structural cap; the exact value within it is governance-set." .
+
+pc:RoiMultiplierCapShape a sh:NodeShape ;
+    sh:targetClass pc:Work ;
+    sh:property [
+        sh:path pc:roiMultiplier ;
+        sh:minInclusive 1.0 ;
+        sh:maxInclusive 10.0 ;
+        sh:message "roiMultiplier must be in [1, 10] — Permissive Commons forbids rent-extraction (never 100×)."
+    ] .

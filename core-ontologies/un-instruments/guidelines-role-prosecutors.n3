@@ -19,12 +19,6 @@ doc:Instrument a values:ValuesCredential ;
     values:source <https://www.ohchr.org/en/instruments-mechanisms/instruments/guidelines-role-prosecutors> ;
     rdfs:comment "Re-sourced from authoritative OHCHR text; deontic + amendment layers pending." .
 
-doc:paragraph-1 a values:Undertaking ;
-    values:partOf doc:Instrument ;
-    dc:title "Paragraph 1" ;
-    values:deonticStatus values:HeuristicDerived ;
-    values:originalText "Download: PDF Table of Contents" .
-
 doc:paragraph-2 a values:Undertaking ;
     values:partOf doc:Instrument ;
     dc:title "Paragraph 2" ;

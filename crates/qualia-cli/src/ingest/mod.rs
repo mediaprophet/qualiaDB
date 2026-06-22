@@ -380,7 +380,7 @@ stream_ingest!(ingest_nquads_star,
     "qualia_sort_nqs");
 
 stream_ingest!(ingest_turtle,
-    qualia_core_db::parsers::turtle_star::parse_turtle_star_stream,
+    qualia_core_db::parsers::turtle_doc::parse_turtle_doc_stream,
     "qualia_sort_ttl");
 
 stream_ingest!(ingest_trig,
@@ -392,7 +392,7 @@ stream_ingest!(ingest_trig_star,
     "qualia_sort_trigs");
 
 stream_ingest!(ingest_n3,
-    qualia_core_db::parsers::n3_star::parse_n3_star_stream,
+    qualia_core_db::parsers::turtle_doc::parse_turtle_doc_stream,
     "qualia_sort_n3");
 
 stream_ingest!(ingest_json_ld,

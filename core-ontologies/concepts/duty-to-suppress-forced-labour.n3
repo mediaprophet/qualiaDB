@@ -1,0 +1,49 @@
+@prefix rdf:     <http://www.w3.org/1999/02/22-rdf-syntax-ns#> .
+@prefix skos:    <http://www.w3.org/2004/02/skos/core#> .
+@prefix oa:      <http://www.w3.org/ns/oa#> .
+@prefix dcterms: <http://purl.org/dc/terms/> .
+@prefix values:  <https://ns.webcivics.org/values/> .
+@prefix cml:     <https://ns.webcivics.org/cml/> .
+@prefix concept: <https://ns.webcivics.org/concept/> .
+@prefix act:     <https://ns.webcivics.org/action/> .
+@prefix doc:     <https://ns.webcivics.org/values/abolition-forced-labour-convention-1957-no-105#> .
+
+# ===========================================================================
+# Pilot concept — the end-to-end proof of the CML concept-graph (PLAN §-CML §6).
+# TEXT (Convention 105, Art. 1) → CONCEPT → LOGIC (deontic norm → values_evaluate).
+# The concept hash q_hash("https://ns.webcivics.org/concept/DutyToSuppressForcedLabour")
+# IS the context the Webizen VM masks on when evaluating the assertion below.
+# ===========================================================================
+
+concept:DutyToSuppressForcedLabour a cml:Concept ;
+    skos:prefLabel "duty to suppress forced labour"@en ;
+    skos:definition "A ratifying party's obligation to suppress and not make use of any form of forced or compulsory labour." ;
+    cml:curationStatus cml:Attested ;
+    # --- TEXT realization: Article 1 of ILO Convention 105 (the SAME node ingested from the corpus) ---
+    cml:realizedBy doc:article-1 ;
+    # --- LOGIC: the deontic sub-graph (→ compile_norm_quin → evaluate_deontic_contract) ---
+    cml:asserts concept:DTSFL-deontic .
+
+# The deontic assertion (modality = Deontic). Bearer = the ratifying Party (values:State);
+# R1 derives this a fortiori from a duty borne by every values:Agent.
+concept:DTSFL-deontic a values:Obligation ;
+    cml:modality cml:Deontic ;
+    values:partOf concept:DutyToSuppressForcedLabour ;
+    values:borneBy values:State ;
+    values:requires act:SuppressForcedLabour ;
+    cml:curationStatus cml:Attested .
+
+act:SuppressForcedLabour a values:ActClass ;
+    skos:prefLabel "suppress forced or compulsory labour"@en .
+
+# Formal Web-Annotation realization — pins the concept to the verbatim span of originalText.
+concept:DTSFL-annotation a oa:Annotation ;
+    oa:hasBody concept:DutyToSuppressForcedLabour ;
+    oa:hasTarget [
+        oa:hasSource doc:article-1 ;
+        oa:hasSelector [
+            a oa:TextQuoteSelector ;
+            oa:exact "undertakes to suppress and not to make use of any form of forced or compulsory labour"
+        ]
+    ] ;
+    cml:curationStatus cml:Attested .

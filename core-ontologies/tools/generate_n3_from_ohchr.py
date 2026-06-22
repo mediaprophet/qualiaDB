@@ -15,12 +15,31 @@ OUT  = "core-ontologies/un-instruments"
 BASE_URL = "https://www.ohchr.org/en/instruments-mechanisms/instruments/"
 UDHR_URL = "https://www.ohchr.org/en/human-rights/universal-declaration/translations/english"
 
+# OHCHR slugs SUPERSEDED by the cleaner, fully-segmented ICRC versions
+# (gci/gcii/gciii/gciv-1949, api/apii-1977). Skipped so regen never re-creates the
+# duplicates — the ICRC files are the canonical IHL copies.
+SKIP_SLUGS = {
+    "geneva-convention-relative-protection-civilian-persons-time-war",   # → gciv-1949
+    "geneva-convention-relative-treatment-prisoners-war",                # → gciii-1949
+    "protocol-additional-geneva-conventions-12-august-1949-and",         # → api-1977
+    "protocol-additional-geneva-conventions-12-august-1949-and-0",       # → apii-1977
+}
+
 def slug_to_url(slug):
     return UDHR_URL if slug in ("english","udhr") else BASE_URL + slug
 def norm_slug(slug):
     return "udhr" if slug == "english" else slug
 
 def esc(s): return re.sub(r"\s+"," ", s.replace("\\","\\\\").replace('"','\\"')).strip()
+
+# Scraper/nav boilerplate that must never survive into values:originalText.
+_BOILERPLATE = ("Download: PDF", "Download:", "Table of Contents",
+                "Print this page", "Share via email", "Share via Twitter",
+                "Share via Facebook", "VIEW THIS PAGE IN")
+def strip_boilerplate(t):
+    for b in _BOILERPLATE:
+        t = t.replace(b, " ")
+    return re.sub(r"\s+", " ", t).strip()
 
 def num(tok):
     if tok.isdigit(): return int(tok)
@@ -166,11 +185,13 @@ def emit(slug, title, date, pre, segs):
     L.append(f'    values:source <{slug_to_url(slug)}> ;')
     L.append('    rdfs:comment "Re-sourced from authoritative OHCHR text; deontic + amendment layers pending." .')
     L.append('')
+    pre = strip_boilerplate(pre)
     if len(pre) > 40:
         L += ['doc:preamble a values:Undertaking ; values:partOf doc:Instrument ;',
               '    values:deonticStatus values:HeuristicDerived ;',
               f'    values:originalText "{esc(pre)}" .', '']
     for n, kind, body in segs:
+        body = strip_boilerplate(body)
         if len(body) < 8: continue
         ty, bearer = deontic(body)
         L.append(f'doc:{kind.lower()}-{n} a {ty} ;')
@@ -199,6 +220,8 @@ def main():
         sys.exit("No authoritative text found in " + AUTH)
     idx = {}  # category -> [(title, slug, nprov, date)]
     for slug, text in items:
+        if norm_slug(slug) in SKIP_SLUGS:
+            continue  # superseded by the canonical ICRC version
         title, date, pre, segs = parse_instrument(text, slug)
         ns = norm_slug(slug)
         out = os.path.join(OUT, ns + ".n3")

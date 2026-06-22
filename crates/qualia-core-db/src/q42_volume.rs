@@ -648,6 +648,38 @@ impl Q42Volume {
         out[..n].copy_from_slice(&decoded[..n]);
         Ok(n)
     }
+
+    /// Read every live Quin from this volume's SuperBlocks into a heap `Vec`.
+    ///
+    /// Cold path (CLI / daemon vault load). A `.q42` is **not** a flat array of
+    /// 48-byte records — each SuperBlock is LZ4-compressed and carries a 160-byte
+    /// header whose bytes `[16..24]` hold the block's live quin count. Callers that
+    /// `bytemuck::cast_slice` the raw file will panic (`OutputSliceWouldHaveSlop`)
+    /// because the file length is not a multiple of `QUIN_SIZE`. Use this instead.
+    pub fn read_all_quins(&self) -> io::Result<Vec<crate::NQuin>> {
+        let rd = |b: &[u8], o: usize| u64::from_le_bytes(b[o..o + 8].try_into().unwrap());
+        let mut out = Vec::new();
+        let mut sb = vec![0u8; SUPERBLOCK_SIZE];
+        for i in 0..self.block_count() as usize {
+            self.read_superblock_into(i, &mut sb)?;
+            let quin_count = rd(&sb, 16) as usize;
+            for k in 0..quin_count {
+                let o = SUPERBLOCK_HEADER + k * QUIN_SIZE;
+                if o + QUIN_SIZE > sb.len() {
+                    break;
+                }
+                out.push(crate::NQuin {
+                    subject: rd(&sb, o),
+                    predicate: rd(&sb, o + 8),
+                    object: rd(&sb, o + 16),
+                    context: rd(&sb, o + 24),
+                    metadata: rd(&sb, o + 32),
+                    parity: rd(&sb, o + 40),
+                });
+            }
+        }
+        Ok(out)
+    }
 }
 
 /// BIDX binary search (shared with sidecar format).
@@ -735,6 +767,77 @@ mod tests {
         vol.read_superblock_into(hits[0], &mut block).unwrap();
         let active = u64::from_le_bytes(block[16..24].try_into().unwrap());
         assert_eq!(active, 1);
+    }
+
+    /// Regression: `read_all_quins` must reconstruct every stored Quin across
+    /// SuperBlocks. A `.q42` is not a flat 48-byte array — the CLI query path used
+    /// to `bytemuck::cast_slice` the raw file and panic (`OutputSliceWouldHaveSlop`)
+    /// because the file length is not a multiple of `QUIN_SIZE`.
+    #[test]
+    fn read_all_quins_roundtrip() {
+        let (q1, mut lex) = sample_quin("Alice", "rdf:type", "values:NaturalPerson");
+        let (q2, lex2) = sample_quin("Bob", "values:claims", "values:Right");
+        let (q3, lex3) = sample_quin("AcmeCorp", "rdf:type", "values:CorporatePerson");
+        lex.extend(lex2);
+        lex.extend(lex3);
+
+        let mut blocks = vec![vec![q1], vec![q2], vec![q3]];
+        blocks.sort_by_key(|chunk| chunk[0].object);
+        let ranges: Vec<_> = blocks.iter().map(|c| (c[0].object, c[0].object)).collect();
+
+        let tmp = NamedTempFile::new().unwrap();
+        write_unified_volume(tmp.path(), &lex, &ranges, &blocks).unwrap();
+
+        let vol = Q42Volume::open(tmp.path()).unwrap();
+        let quins = vol.read_all_quins().unwrap();
+        assert_eq!(quins.len(), 3, "read_all_quins must return every stored quin");
+        for q in [q1, q2, q3] {
+            assert!(
+                quins.iter().any(|r| r.subject == q.subject
+                    && r.predicate == q.predicate
+                    && r.object == q.object),
+                "read_all_quins dropped a quin: {q:?}"
+            );
+        }
+    }
+
+    /// The streaming ingest path (`turtle_doc` → `ExternalSorter` → `merge`) must embed a
+    /// populated Q42LEX section at the FRONT of the `.q42` — no separate `.lex` sidecar —
+    /// so literal text and IRIs are recoverable from the volume alone.
+    #[test]
+    fn streaming_ingest_embeds_recoverable_lex() {
+        use crate::external_sort::ExternalSorter;
+        use crate::lexicon::generate_60bit_token;
+        use crate::sparql_library::parsers::turtle_doc::parse_turtle_doc_into;
+
+        let doc = r#"
+@prefix dc:     <http://purl.org/dc/terms/> .
+@prefix values: <https://ns.webcivics.org/values/> .
+@prefix doc:    <https://ns.webcivics.org/values/inst#> .
+doc:article-1 a values:Undertaking ;
+    dc:title "Article 1" ;
+    values:originalText "Each Member undertakes to suppress forced labour." .
+"#;
+        let tmp_dir = std::env::temp_dir().join(format!("q42_lex_rt_{}", std::process::id()));
+        let mut sorter = ExternalSorter::new(tmp_dir);
+        parse_turtle_doc_into(doc.as_bytes(), 0, &mut sorter).unwrap();
+        let out = NamedTempFile::new().unwrap();
+        sorter.merge(out.path()).unwrap();
+
+        let vol = Q42Volume::open(out.path()).unwrap();
+        let lex = vol
+            .lex_view()
+            .expect("volume must carry an embedded front-of-file Q42LEX section");
+
+        // The verbatim literal is recoverable from the .q42 alone — the CML prerequisite.
+        let lit = "Each Member undertakes to suppress forced labour.";
+        assert_eq!(lex.lookup_hash(generate_60bit_token(lit.as_bytes())), Some(lit));
+        // Expanded IRIs are recoverable too (queries become human-readable).
+        let undertaking = "https://ns.webcivics.org/values/Undertaking";
+        assert_eq!(
+            lex.lookup_hash(generate_60bit_token(undertaking.as_bytes())),
+            Some(undertaking)
+        );
     }
 
     #[test]

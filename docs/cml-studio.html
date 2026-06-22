@@ -1,0 +1,352 @@
+<!DOCTYPE html>
+<html lang="en">
+<head>
+    <meta charset="UTF-8">
+    <meta name="viewport" content="width=device-width, initial-scale=1.0">
+    <title>Qualia-DB | CML Studio — inspect &amp; model the concept-graph</title>
+    <link rel="stylesheet" href="css/tailwind-built.css">
+    <link rel="stylesheet" href="css/site-nav.css">
+    <link rel="stylesheet" href="https://cdnjs.cloudflare.com/ajax/libs/font-awesome/6.5.1/css/all.min.css">
+    <style>
+        body { font-family: 'Inter', system-ui, sans-serif; }
+        .glass { background: rgba(17,23,31,0.82); border: 1px solid rgba(148,163,184,0.14); backdrop-filter: blur(20px); }
+        .mono { font-family: 'JetBrains Mono','Fira Code',monospace; }
+        .code-block { font-family:'JetBrains Mono',monospace; font-size:0.76rem; background:rgba(10,10,15,0.7); border:1px solid rgba(255,255,255,0.1); border-radius:12px; padding:1rem; white-space:pre-wrap; line-height:1.5; }
+        .layer { border-radius:14px; padding:0.8rem 1rem; border:1px solid rgba(255,255,255,0.10); }
+        .layer-text{background:rgba(56,189,248,0.08);border-color:rgba(56,189,248,0.3)} .layer-concept{background:rgba(245,158,11,0.1);border-color:rgba(245,158,11,0.35)} .layer-logic{background:rgba(244,63,94,0.08);border-color:rgba(244,63,94,0.3)}
+        .pill { font-size:11px; padding:2px 9px; border-radius:9999px; font-weight:600; }
+        .badge-active{background:rgba(34,197,94,0.18);color:#4ade80;border:1px solid rgba(34,197,94,0.35)} .badge-defeated{background:rgba(245,158,11,0.18);color:#fbbf24;border:1px solid rgba(245,158,11,0.35)} .badge-expired{background:rgba(148,163,184,0.18);color:#cbd5e1;border:1px solid rgba(148,163,184,0.35)}
+        label.fld{font-size:12px;color:rgba(226,232,240,0.6);display:block;margin-bottom:3px} input.fld,select.fld,textarea.fld{width:100%;background:rgba(10,10,15,0.6);border:1px solid rgba(255,255,255,0.12);border-radius:9px;padding:7px 10px;font-size:13px;color:#e2e8f0}
+        input.fld:focus,select.fld:focus,textarea.fld:focus{outline:none;border-color:rgba(245,158,11,0.5)}
+        .arrow{color:rgba(148,163,184,0.55)}
+        /* graph editor — Canvas2D (mirrors the Webizen render contract; wgpu on desktop) */
+        #gcanvas { width:100%; height:520px; display:block; background:#0b0f17; border:1px solid rgba(255,255,255,0.1); border-radius:14px; touch-action:none; cursor:default; }
+        .btn { font-size:12px; padding:6px 12px; border-radius:8px; border:1px solid rgba(255,255,255,0.14); background:rgba(255,255,255,0.05); color:#e2e8f0; cursor:pointer; }
+        .btn:hover { background:rgba(255,255,255,0.1); }
+        .btn-amber { background:rgba(245,158,11,0.15); border-color:rgba(245,158,11,0.4); color:#fcd34d; }
+    </style>
+    <script src="js/menu-loader.js"></script>
+</head>
+<body class="bg-zinc-950 text-zinc-200">
+
+<nav class="sticky top-0 z-50 border-b border-white/10" style="background:rgba(17,23,31,0.9);backdrop-filter:blur(28px)">
+    <div class="max-w-screen-2xl mx-auto px-4 sm:px-6 py-3 flex items-center justify-between">
+        <a href="index.html" class="flex items-center gap-2 font-semibold"><i class="fas fa-diagram-project text-amber-400"></i> Qualia-DB <span class="text-white/40">/ CML Studio</span></a>
+        <div class="text-xs text-white/40 mono hidden sm:block">Context Markup Language — concept-graph</div>
+    </div>
+</nav>
+
+<header class="max-w-screen-2xl mx-auto px-4 sm:px-6 pt-9 pb-5">
+    <h1 class="text-3xl sm:text-4xl font-bold tracking-tight">CML Studio</h1>
+    <p class="text-white/60 mt-2 max-w-3xl">Inspect and <strong>model</strong> the CML concept-graph. Drag nodes, draw connectors, then select a connector to assign its <strong>ontological predicate</strong> and a <strong>logic modality</strong>. The deontic lifecycle preview mirrors the engine's <span class="mono text-amber-300">evaluate_deontic_contract</span>; authoritative evaluation runs in Qualia-DB.</p>
+</header>
+
+<main class="max-w-screen-2xl mx-auto px-4 sm:px-6 pb-20 space-y-8">
+
+    <!-- 3-LAYER MODEL -->
+    <section class="glass rounded-2xl p-5 sm:p-6">
+        <h2 class="text-lg font-semibold mb-3"><i class="fas fa-layer-group text-amber-400 mr-2"></i>The three-layer model</h2>
+        <div class="grid md:grid-cols-3 gap-3">
+            <div class="layer layer-text"><span class="pill" style="background:rgba(56,189,248,0.2);color:#7dd3fc">TEXT</span><p class="mt-1.5 text-sm text-white/75">Verbatim source — immutable, recovered from the front-of-file lexicon. Unit of provenance.</p></div>
+            <div class="layer layer-concept"><span class="pill" style="background:rgba(245,158,11,0.25);color:#fcd34d">CONCEPT</span><p class="mt-1.5 text-sm text-white/75">A node = a context hash that owns the sub-graph. <span class="mono">cml:asserts</span> → <span class="mono">context = q_hash(concept)</span>.</p></div>
+            <div class="layer layer-logic"><span class="pill" style="background:rgba(244,63,94,0.25);color:#fda4af">LOGIC</span><p class="mt-1.5 text-sm text-white/75">Per-concept modality sub-graphs — any of the engine's logic libraries — masked on the concept hash.</p></div>
+        </div>
+    </section>
+
+    <!-- ============ GRAPH / MIND-MAP EDITOR ============ -->
+    <section class="glass rounded-2xl p-5 sm:p-6">
+        <div class="flex items-center justify-between flex-wrap gap-2 mb-3">
+            <h2 class="text-lg font-semibold"><i class="fas fa-circle-nodes text-rose-400 mr-2"></i>Concept-graph editor</h2>
+            <div class="flex items-center gap-2 flex-wrap">
+                <select class="fld" id="add-type" style="width:auto"></select>
+                <button class="btn" id="btn-add"><i class="fas fa-plus"></i> node</button>
+                <button class="btn btn-amber" id="btn-pilot">load pilot</button>
+                <button class="btn" id="btn-clear">clear</button>
+            </div>
+        </div>
+        <p class="text-white/45 text-xs mb-3"><i class="fas fa-hand-pointer"></i> drag a node to move · drag from its <span class="text-white">white handle</span> to another node to connect · click a connector to assign its predicate + logic.</p>
+        <div class="grid lg:grid-cols-3 gap-4">
+            <div class="lg:col-span-2">
+                <canvas id="gcanvas"></canvas>
+            </div>
+            <!-- inspector -->
+            <div id="inspector" class="glass rounded-xl p-4 text-sm">
+                <div id="insp-empty" class="text-white/45 text-sm">Select a connector or node to edit it.</div>
+                <div id="insp-edge" style="display:none">
+                    <div class="font-semibold text-rose-300 mb-2">Connector logic</div>
+                    <div class="text-xs text-white/45 mb-2 mono" id="insp-edge-ends"></div>
+                    <label class="fld">Ontological predicate</label>
+                    <select class="fld" id="insp-predicate"></select>
+                    <label class="fld mt-3">Logic modality (engine library)</label>
+                    <select class="fld" id="insp-modality"></select>
+                    <label class="fld mt-3">Operator / parameter <span id="insp-param-hint" class="text-white/30"></span></label>
+                    <input class="fld mono" id="insp-param" placeholder="e.g. Obligate · AF · 0.8 · 1959-01-17">
+                    <button class="btn mt-3" id="insp-del-edge" style="border-color:rgba(244,63,94,0.4);color:#fda4af"><i class="fas fa-trash"></i> delete connector</button>
+                </div>
+                <div id="insp-node" style="display:none">
+                    <div class="font-semibold text-amber-300 mb-2">Node</div>
+                    <label class="fld">Label</label>
+                    <input class="fld" id="insp-node-label">
+                    <label class="fld mt-3">Type</label>
+                    <select class="fld" id="insp-node-type"></select>
+                    <button class="btn mt-3" id="insp-del-node" style="border-color:rgba(244,63,94,0.4);color:#fda4af"><i class="fas fa-trash"></i> delete node</button>
+                </div>
+                <div class="mt-4 pt-3 border-t border-white/10 flex items-center gap-2">
+                    <span class="text-xs text-white/50">deontic verdict:</span>
+                    <span id="g-verdict" class="pill badge-active">—</span>
+                </div>
+            </div>
+        </div>
+        <label class="fld mt-4">Generated CML (Turtle) — live from the graph</label>
+        <pre class="code-block" id="g-turtle"></pre>
+    </section>
+
+    <!-- AXIOMS + MODALITIES -->
+    <section class="glass rounded-2xl p-5 sm:p-6">
+        <h2 class="text-lg font-semibold mb-3"><i class="fas fa-cubes text-amber-400 mr-2"></i>Axioms, ontology stack &amp; logic modalities</h2>
+        <div class="grid md:grid-cols-3 gap-6">
+            <div>
+                <h3 class="text-sm font-semibold text-white/70 mb-2">CML axioms — <span class="mono">cml.n3</span></h3>
+                <ul class="text-xs text-white/65 space-y-1.5" id="axiom-list"></ul>
+            </div>
+            <div>
+                <h3 class="text-sm font-semibold text-white/70 mb-2">Ontology stack</h3>
+                <div class="flex flex-wrap gap-2 mb-4" id="stack-list"></div>
+                <div class="text-xs text-white/50 glass rounded-xl p-3 border-l-2" style="border-left-color:#f59e0b"><strong class="text-amber-300">Prime Directive:</strong> machine may assert only <span class="mono">closeMatch</span>; only a signed authoritative human may assert <span class="mono">exactMatch</span>.</div>
+            </div>
+            <div>
+                <h3 class="text-sm font-semibold text-white/70 mb-2">Logic modalities (engine libraries)</h3>
+                <div class="flex flex-wrap gap-1.5" id="mod-list"></div>
+            </div>
+        </div>
+        <p class="text-xs text-white/40 mt-5">Files: <span class="mono">core-ontologies/cml.n3</span> · <span class="mono">concepts/duty-to-suppress-forced-labour.n3</span> · <span class="mono">CML_CONCEPT_GRAPH.md</span>. Deontic preview mirrors <span class="mono">evaluate_deontic_contract</span> (expiry→defeater→active); other modalities are modelled here, evaluated by their engine libraries (<span class="mono">modalities/*</span>). The engine is authoritative.</p>
+    </section>
+</main>
+
+<script>
+// ===================== vocab =====================
+const NODE_TYPES = {
+  'cml:Concept':       {fill:'#f59e0b', t:'CONCEPT',     pfx:'concept'},
+  'doc:fragment':      {fill:'#38bdf8', t:'TEXT',        pfx:'doc'},
+  'values:Agent':      {fill:'#22c55e', t:'AGENT/PARTY', pfx:'values'},
+  'act:ActClass':      {fill:'#fb7185', t:'ACTION',      pfx:'act'},
+  'values:Undertaking':{fill:'#a78bfa', t:'UNDERTAKING', pfx:'values'},
+  'values:ValuesCredential':{fill:'#c084fc', t:'INSTRUMENT', pfx:'doc'},
+};
+const PREDICATES = [
+  ['— CML —', ['cml:realizedBy','cml:asserts','cml:modality','cml:curationStatus']],
+  ['— SKOS —', ['skos:broader','skos:narrower','skos:related','skos:closeMatch','skos:exactMatch']],
+  ['— values (deontic / agent) —', ['values:borneBy','values:heldBy','values:requires','values:forbids','values:permits','values:correlativeDuty','values:partOf','values:specialisedFor']],
+  ['— PROV —', ['prov:wasDerivedFrom','prov:wasAttributedTo','prov:wasGeneratedBy']],
+  ['— OA / RDF / DC —', ['rdf:type','oa:hasBody','oa:hasTarget','dcterms:conformsTo','dcterms:references']],
+];
+// engine logic libraries (modalities/*)
+const MODALITIES = [
+  ['none','— structural (no logic) —',''],
+  ['deontic','Deontic',                'Obligate | Permit | Forbid'],
+  ['defeasible','Defeasible',          'unless / defeater'],
+  ['temporal-ltl','Temporal · LTL',    'Globally | Finally | Next | Until | Release'],
+  ['temporal-ctl','Temporal · CTL',    'AF | AG | EF | EG'],
+  ['interval','Allen interval',        'meets | overlaps | during | before'],
+  ['epistemic','Epistemic',            'Knows | Believes | CommonKnowledge'],
+  ['modal','Alethic modal',            'Necessary | Possible'],
+  ['paraconsistent','Paraconsistent',  'isolate contradiction'],
+  ['probabilistic','Probabilistic',    'Bayesian threshold [0,1] / trust'],
+  ['fuzzy','Fuzzy',                    'degree [0,1]'],
+  ['abductive','Abductive',            'best explanation'],
+  ['argumentation','Argumentation',    'supports | attacks'],
+  ['dialectical','Dialectical',        'cause | counterfactual (but-for)'],
+  ['linear','Linear logic',            'consume / one-shot'],
+  ['graph','Graph-theory',             'relationship | standing | centrality'],
+  ['asp','ASP (answer-set)',           'stable model / under-determined'],
+  ['dl','Description Logic',           'subsumption (isA) / DAG closure'],
+  ['spatial','Spatial · RCC-8',        'contains | overlaps (jurisdiction)'],
+];
+const MODMAP = Object.fromEntries(MODALITIES.map(m=>[m[0],{label:m[1],ops:m[2]}]));
+
+// ===================== graph state =====================
+let G = { nodes:[], edges:[], selEdge:null, selNode:null, seq:1 };
+const canvas = document.getElementById('gcanvas');
+const ctx = canvas.getContext('2d');
+
+function addNode(type,label,x,y){ const n={id:'n'+(G.seq++),type,label,x,y}; G.nodes.push(n); return n; }
+function addEdge(from,to){ if(from===to) return null; const e={id:'e'+(G.seq++),from,to,predicate:'values:requires',modality:'deontic',param:'Obligate'}; G.edges.push(e); return e; }
+function nodeById(id){ return G.nodes.find(n=>n.id===id); }
+const NW=150, NH=46;
+const cx=n=>n.x+NW/2, cy=n=>n.y+NH/2;
+
+function loadPilot(){
+  G={nodes:[],edges:[],selEdge:null,selNode:null,seq:1};
+  const frag=addNode('doc:fragment','conv105#article-1',40,40);
+  const con =addNode('cml:Concept','DutyToSuppressForcedLabour',300,180);
+  const st  =addNode('values:Agent','State',560,40);
+  const act =addNode('act:ActClass','SuppressForcedLabour',560,330);
+  let e;
+  e=addEdge(con.id,frag.id); e.predicate='cml:realizedBy'; e.modality='none'; e.param='';
+  e=addEdge(con.id,st.id);   e.predicate='values:borneBy'; e.modality='deontic'; e.param='Obligate';
+  e=addEdge(con.id,act.id);  e.predicate='values:requires';e.modality='deontic'; e.param='Obligate';
+  G.selEdge=null; G.selNode=null; draw(); renderInspector(); refreshTurtle();
+}
+
+// ===================== Canvas2D render (Webizen render contract; wgpu on desktop) =====================
+function resizeCanvas(){
+  const dpr = window.devicePixelRatio || 1;
+  const W = canvas.clientWidth || 700, H = canvas.clientHeight || 520;
+  canvas.width = W*dpr; canvas.height = H*dpr;
+  ctx.setTransform(dpr,0,0,dpr,0,0);
+  draw();
+}
+window.addEventListener('resize', resizeCanvas);
+
+function roundRect(x,y,w,h,r){ ctx.beginPath(); ctx.moveTo(x+r,y); ctx.arcTo(x+w,y,x+w,y+h,r); ctx.arcTo(x+w,y+h,x,y+h,r); ctx.arcTo(x,y+h,x,y,r); ctx.arcTo(x,y,x+w,y,r); ctx.closePath(); }
+function arrowHead(x,y,ux,uy,color){ const a=9, px=-uy, py=ux; ctx.fillStyle=color; ctx.beginPath(); ctx.moveTo(x,y); ctx.lineTo(x-ux*a+px*a*0.45, y-uy*a+py*a*0.45); ctx.lineTo(x-ux*a-px*a*0.45, y-uy*a-py*a*0.45); ctx.closePath(); ctx.fill(); }
+function trunc(s,n){ return s.length>n ? s.slice(0,n-1)+'…' : s; }
+
+function draw(){
+  const W = canvas.clientWidth || 700, H = canvas.clientHeight || 520;
+  ctx.clearRect(0,0,W,H);
+  // grid dots
+  ctx.fillStyle='rgba(255,255,255,0.05)';
+  for(let x=12;x<W;x+=24) for(let y=12;y<H;y+=24) ctx.fillRect(x,y,1.5,1.5);
+  // edges
+  ctx.textAlign='center';
+  for(const e of G.edges){
+    const a=nodeById(e.from), b=nodeById(e.to); if(!a||!b) continue;
+    const x1=cx(a),y1=cy(a),x2=cx(b),y2=cy(b);
+    const dx=x2-x1, dy=y2-y1, L=Math.hypot(dx,dy)||1, ux=dx/L, uy=dy/L;
+    const ex=x2-ux*(NW/2+8), ey=y2-uy*(NH/2+8);
+    const sel=e.id===G.selEdge;
+    ctx.strokeStyle = sel?'#f59e0b':'rgba(148,163,184,0.55)'; ctx.lineWidth=sel?3:2;
+    ctx.beginPath(); ctx.moveTo(x1,y1); ctx.lineTo(ex,ey); ctx.stroke();
+    arrowHead(ex,ey,ux,uy, sel?'#f59e0b':'rgba(148,163,184,0.75)');
+    const mx=(x1+ex)/2, my=(y1+ey)/2;
+    ctx.font='10px JetBrains Mono, monospace';
+    ctx.fillStyle='#cbd5e1'; ctx.fillText(e.predicate, mx, my-6);
+    if(e.modality && e.modality!=='none'){ ctx.fillStyle='#fda4af'; ctx.fillText('⟨'+MODMAP[e.modality].label+(e.param?': '+e.param:'')+'⟩', mx, my+9); }
+  }
+  // nodes
+  for(const n of G.nodes){
+    const ty=NODE_TYPES[n.type]||{fill:'#94a3b8',t:'?'};
+    roundRect(n.x,n.y,NW,NH,10); ctx.fillStyle=ty.fill; ctx.fill();
+    if(n.id===G.selNode){ ctx.strokeStyle='#fff'; ctx.lineWidth=2; ctx.stroke(); }
+    ctx.textAlign='left';
+    ctx.fillStyle='rgba(0,0,0,0.6)'; ctx.font='700 9px Inter, sans-serif'; ctx.fillText(ty.t, n.x+9, n.y+15);
+    ctx.fillStyle='#0b0f17'; ctx.font='600 12px Inter, sans-serif'; ctx.fillText(trunc(n.label,20), n.x+9, n.y+34);
+    // connect handle
+    ctx.beginPath(); ctx.arc(n.x+NW, n.y+NH/2, 6, 0, Math.PI*2); ctx.fillStyle='#fff'; ctx.fill(); ctx.strokeStyle='#0b0f17'; ctx.lineWidth=1.5; ctx.stroke();
+  }
+  ctx.textAlign='center';
+  // temp connect line
+  if(drag && drag.mode==='connect'){
+    ctx.strokeStyle='#f59e0b'; ctx.setLineDash([5,4]); ctx.lineWidth=2;
+    ctx.beginPath(); ctx.moveTo(drag.x0,drag.y0); ctx.lineTo(drag.x,drag.y); ctx.stroke(); ctx.setLineDash([]);
+  }
+}
+
+// ===================== interaction (geometric hit-test) =====================
+let drag=null;
+function pt(e){ const r=canvas.getBoundingClientRect(); return { x:e.clientX-r.left, y:e.clientY-r.top }; }
+function distSeg(px,py,x1,y1,x2,y2){ const dx=x2-x1,dy=y2-y1,L2=dx*dx+dy*dy||1; let t=((px-x1)*dx+(py-y1)*dy)/L2; t=Math.max(0,Math.min(1,t)); return Math.hypot(px-(x1+t*dx), py-(y1+t*dy)); }
+function hitTest(px,py){
+  for(let i=G.nodes.length-1;i>=0;i--){ const n=G.nodes[i]; if(Math.hypot(px-(n.x+NW), py-(n.y+NH/2))<=9) return {type:'handle',id:n.id}; }
+  for(let i=G.nodes.length-1;i>=0;i--){ const n=G.nodes[i]; if(px>=n.x&&px<=n.x+NW&&py>=n.y&&py<=n.y+NH) return {type:'node',id:n.id}; }
+  for(const e of G.edges){ const a=nodeById(e.from),b=nodeById(e.to); if(!a||!b)continue; if(distSeg(px,py,cx(a),cy(a),cx(b),cy(b))<8) return {type:'edge',id:e.id}; }
+  return null;
+}
+
+canvas.addEventListener('pointerdown', e=>{
+  const p=pt(e), h=hitTest(p.x,p.y);
+  if(h && h.type==='handle'){ const n=nodeById(h.id); drag={mode:'connect',from:n.id,x0:cx(n),y0:cy(n),x:p.x,y:p.y}; canvas.setPointerCapture(e.pointerId); }
+  else if(h && h.type==='node'){ const n=nodeById(h.id); drag={mode:'move',id:n.id,ox:p.x-n.x,oy:p.y-n.y}; selectNode(n.id); canvas.setPointerCapture(e.pointerId); }
+  else if(h && h.type==='edge'){ selectEdge(h.id); }
+  else { selectNone(); }
+});
+canvas.addEventListener('pointermove', e=>{
+  if(!drag) return; const p=pt(e);
+  if(drag.mode==='move'){ const n=nodeById(drag.id); n.x=p.x-drag.ox; n.y=p.y-drag.oy; draw(); }
+  else if(drag.mode==='connect'){ drag.x=p.x; drag.y=p.y; draw(); }
+});
+canvas.addEventListener('pointerup', e=>{
+  if(drag && drag.mode==='connect'){
+    const p=pt(e), h=hitTest(p.x,p.y);
+    if(h && (h.type==='node'||h.type==='handle') && h.id!==drag.from){ const ne=addEdge(drag.from,h.id); if(ne){ drag=null; selectEdge(ne.id); refreshTurtle(); return; } }
+  }
+  drag=null; draw(); refreshTurtle();
+});
+
+function selectEdge(id){ G.selEdge=id; G.selNode=null; draw(); renderInspector(); }
+function selectNode(id){ G.selNode=id; G.selEdge=null; draw(); renderInspector(); }
+function selectNone(){ G.selEdge=null; G.selNode=null; draw(); renderInspector(); }
+
+// ===================== inspector =====================
+function renderInspector(){
+  const empty=document.getElementById('insp-empty'), ie=document.getElementById('insp-edge'), inn=document.getElementById('insp-node');
+  empty.style.display=ie.style.display=inn.style.display='none';
+  if(G.selEdge){
+    const e=G.edges.find(x=>x.id===G.selEdge); if(!e){ empty.style.display='block'; return; }
+    ie.style.display='block';
+    const a=nodeById(e.from), b=nodeById(e.to);
+    document.getElementById('insp-edge-ends').textContent = (a?a.label:'?')+'  →  '+(b?b.label:'?');
+    document.getElementById('insp-predicate').value=e.predicate;
+    document.getElementById('insp-modality').value=e.modality;
+    document.getElementById('insp-param').value=e.param||'';
+    document.getElementById('insp-param-hint').textContent = MODMAP[e.modality].ops?('· '+MODMAP[e.modality].ops):'';
+  } else if(G.selNode){
+    const n=nodeById(G.selNode); if(!n){ empty.style.display='block'; return; }
+    inn.style.display='block';
+    document.getElementById('insp-node-label').value=n.label;
+    document.getElementById('insp-node-type').value=n.type;
+  } else { empty.style.display='block'; }
+}
+document.getElementById('insp-predicate').addEventListener('change',e=>{ const ed=G.edges.find(x=>x.id===G.selEdge); if(ed){ed.predicate=e.target.value; draw(); refreshTurtle();} });
+document.getElementById('insp-modality').addEventListener('change',e=>{ const ed=G.edges.find(x=>x.id===G.selEdge); if(ed){ed.modality=e.target.value; document.getElementById('insp-param-hint').textContent=MODMAP[ed.modality].ops?('· '+MODMAP[ed.modality].ops):''; draw(); refreshTurtle();} });
+document.getElementById('insp-param').addEventListener('input',e=>{ const ed=G.edges.find(x=>x.id===G.selEdge); if(ed){ed.param=e.target.value; draw(); refreshTurtle();} });
+document.getElementById('insp-del-edge').addEventListener('click',()=>{ G.edges=G.edges.filter(x=>x.id!==G.selEdge); selectNone(); refreshTurtle(); });
+document.getElementById('insp-node-label').addEventListener('input',e=>{ const n=nodeById(G.selNode); if(n){n.label=e.target.value; draw(); refreshTurtle();} });
+document.getElementById('insp-node-type').addEventListener('change',e=>{ const n=nodeById(G.selNode); if(n){n.type=e.target.value; draw(); refreshTurtle();} });
+document.getElementById('insp-del-node').addEventListener('click',()=>{ G.edges=G.edges.filter(x=>x.from!==G.selNode&&x.to!==G.selNode); G.nodes=G.nodes.filter(n=>n.id!==G.selNode); selectNone(); refreshTurtle(); });
+
+// ===================== toolbar =====================
+document.getElementById('btn-add').addEventListener('click',()=>{ const t=document.getElementById('add-type').value; const n=addNode(t, NODE_TYPES[t].pfx==='values'?'NewParty':'newNode', 300+Math.random()*120, 220+Math.random()*120); selectNode(n.id); refreshTurtle(); });
+document.getElementById('btn-pilot').addEventListener('click',loadPilot);
+document.getElementById('btn-clear').addEventListener('click',()=>{ G={nodes:[],edges:[],selEdge:null,selNode:null,seq:1}; selectNone(); refreshTurtle(); });
+
+// ===================== serialize + verdict =====================
+function iri(n){ const ty=NODE_TYPES[n.type]||{pfx:'concept'}; return ty.pfx+':'+slug(n.label,ty.pfx==='values'); }
+function slug(s,keep){ const c=s.replace(/[^A-Za-z0-9]+/g,' ').trim().split(' ').map(w=>w.charAt(0).toUpperCase()+w.slice(1)).join(''); return c||'X'; }
+function refreshTurtle(){
+  let t='@prefix cml: <https://ns.webcivics.org/cml/> .\n@prefix skos: <http://www.w3.org/2004/02/skos/core#> .\n@prefix values: <https://ns.webcivics.org/values/> .\n@prefix prov: <http://www.w3.org/ns/prov#> .\n@prefix concept: <https://ns.webcivics.org/concept/> .\n@prefix act: <https://ns.webcivics.org/action/> .\n@prefix doc: <https://ns.webcivics.org/values/> .\n\n';
+  for(const n of G.nodes){ t+=`${iri(n)} a ${n.type} .\n`; }
+  if(G.edges.length) t+='\n';
+  for(const e of G.edges){ const a=nodeById(e.from), b=nodeById(e.to); if(!a||!b) continue;
+    let line=`${iri(a)} ${e.predicate} ${iri(b)} .`;
+    if(e.modality&&e.modality!=='none') line+=`   # ⟨${MODMAP[e.modality].label}${e.param?': '+e.param:''}⟩ → engine: modalities/${e.modality.replace('-','_')}`;
+    t+=line+'\n';
+  }
+  document.getElementById('g-turtle').textContent=t.trim();
+  // deontic verdict from the graph: an Obligate/Forbid/Permit deontic edge, defeated if any defeasible edge present
+  const deon=G.edges.find(e=>e.modality==='deontic');
+  const def =G.edges.some(e=>e.modality==='defeasible');
+  const v=document.getElementById('g-verdict');
+  if(!deon){ v.textContent='—'; v.className='pill badge-expired'; }
+  else if(def){ v.textContent='Defeated'; v.className='pill badge-defeated'; }
+  else { v.textContent='Active'; v.className='pill badge-active'; }
+}
+
+// ===================== populate selects + reference panels =====================
+function opt(v,l){ return `<option value="${v}">${l||v}</option>`; }
+document.getElementById('add-type').innerHTML = Object.keys(NODE_TYPES).map(k=>opt(k, NODE_TYPES[k].t+' ('+k+')')).join('');
+document.getElementById('insp-node-type').innerHTML = Object.keys(NODE_TYPES).map(k=>opt(k)).join('');
+document.getElementById('insp-predicate').innerHTML = PREDICATES.map(g=>`<optgroup label="${g[0]}">`+g[1].map(p=>opt(p)).join('')+`</optgroup>`).join('');
+document.getElementById('insp-modality').innerHTML = MODALITIES.map(m=>opt(m[0], m[1]+(m[2]?' — '+m[2]:''))).join('');
+
+const axioms=[['cml:Concept','⊑ skos:Concept (context-hash node)'],['cml:realizedBy','concept ← verbatim text'],['cml:asserts','concept → modality sub-graph'],['cml:curationStatus','Proposed | Attested'],['cml:recognitionBasis','RPL first-class'],['cml:AttestedExactMatchShape','SHACL · exactMatch needs attest']];
+document.getElementById('axiom-list').innerHTML = axioms.map(a=>`<li><span class="mono text-amber-300">${a[0]}</span> <span class="text-white/45">— ${a[1]}</span></li>`).join('');
+document.getElementById('stack-list').innerHTML = ['skos','oa','prov','sec','dcterms','time','odrl','values'].map(s=>`<span class="pill mono" style="background:rgba(255,255,255,0.06);border:1px solid rgba(255,255,255,0.12)">${s}:</span>`).join('');
+document.getElementById('mod-list').innerHTML = MODALITIES.filter(m=>m[0]!=='none').map(m=>`<span class="pill mono" title="${m[2]}" style="background:rgba(244,63,94,0.1);border:1px solid rgba(244,63,94,0.25);color:#fda4af">${m[1]}</span>`).join('');
+
+resizeCanvas();
+loadPilot();
+</script>
+</body>
+</html>

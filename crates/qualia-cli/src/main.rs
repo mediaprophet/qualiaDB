@@ -1267,16 +1267,23 @@ fn run_sparql_query(vault: &std::path::Path, query_str: &str) {
         }
     };
 
-    // 3. Open vault (memmap, zero heap copy)
-    let vault_file = std::fs::File::open(vault).ok();
-    // Safety: read-only mapping of a .q42 vault written by the ingest pipeline.
-    let vault_mmap = vault_file
+    // 3. Open vault. A .q42 is a SuperBlock volume (LZ4-compressed, 160-byte block
+    //    headers) — NOT a flat array of 48-byte Quins. Decode via Q42Volume so the
+    //    headers are skipped and each block's live quin count is honoured. (Casting
+    //    the raw file bytes to &[NQuin] panics with OutputSliceWouldHaveSlop.)
+    let volume = match qualia_core_db::q42_volume::Q42Volume::open(vault) {
+        Ok(v) => Some(v),
+        Err(e) => {
+            eprintln!("Warning: could not open vault '{}': {e}", vault.display());
+            None
+        }
+    };
+    let quins: Vec<qualia_core_db::NQuin> = volume
         .as_ref()
-        .and_then(|f| unsafe { memmap2::Mmap::map(f).ok() });
-    let quins: &[qualia_core_db::NQuin] = vault_mmap
-        .as_deref()
-        .map(bytemuck::cast_slice)
-        .unwrap_or(&[]);
+        .map(|v| v.read_all_quins().unwrap_or_default())
+        .unwrap_or_default();
+    // Front-of-file Q42LEX → resolve term hashes back to their lexical strings.
+    let lex = volume.as_ref().and_then(|v| v.lex_view().ok());
 
     if quins.is_empty() {
         eprintln!(
@@ -1286,7 +1293,7 @@ fn run_sparql_query(vault: &std::path::Path, query_str: &str) {
     }
 
     // 4. Execute
-    let executor = QueryExecutor::new(quins);
+    let executor = QueryExecutor::new(&quins);
     match executor.execute(&plan, &ctx) {
         Err(e) => eprintln!("SPARQL execution error: {e}"),
         Ok(rows) => {
@@ -1295,7 +1302,11 @@ fn run_sparql_query(vault: &std::path::Path, query_str: &str) {
                 print!("[{i:>4}]");
                 for (slot_idx, slot) in row.slots.iter().enumerate() {
                     if let Some(v) = slot {
-                        print!("  ?v{}=0x{v:016x}", slot_idx);
+                        // Resolve via the embedded lexicon when available; fall back to the hash.
+                        match lex.as_ref().and_then(|l| l.lookup_hash(*v)) {
+                            Some(s) => print!("  ?v{slot_idx}={s}"),
+                            None => print!("  ?v{slot_idx}=0x{v:016x}"),
+                        }
                     }
                 }
                 println!();

@@ -41,7 +41,11 @@ pub struct McpIntentFrame {
     pub active_deontic_constraints: Vec<u64>,
     pub active_profile_id: Option<u64>,
     pub session_nonce: u64,
-    pub sanctuary_override: Option<String>,
+    /// A genuine 32-byte cryptographic egress-override token, or `None` when the
+    /// caller supplied no override — or supplied a malformed / placeholder /
+    /// all-zero value, all of which fail closed to `None`. See
+    /// [`parse_sanctuary_override`] for the validation contract.
+    pub sanctuary_override: Option<[u8; 32]>,
     pub qpu_enabled: bool,
     pub llm_enabled: bool,
 }
@@ -317,6 +321,16 @@ fn stable_mcp_tools() -> &'static [McpToolDescriptor] {
             description: "Get tasks pending in the ambient orchestrator.",
             input_schema: r#"{"type":"object","properties":{}}"#,
         },
+        McpToolDescriptor {
+            name: "values_check",
+            description: "Values abuse-check (human-rights guard): does an agent claiming a natural-person-only dignity right trip the inverse rights-guard? Runs the real agency.n3 G1/G1' lane. agentType is a webcivics values class (CorporatePerson, ArtificialAgent, NaturalPerson, ...).",
+            input_schema: r#"{"type":"object","required":["agentType"],"properties":{"agentType":{"type":"string"},"claimsDignityRight":{"type":"boolean"}}}"#,
+        },
+        McpToolDescriptor {
+            name: "values_evaluate",
+            description: "Deontic-contract reasoner in values terms: is a norm (forbid/oblige/permit) bound to a party+action currently in force? Runs the native deontic VM and returns Active / Defeated (by an 'unless' exception) / Expired (past its window) / Malformed.",
+            input_schema: r#"{"type":"object","required":["modality","party","action"],"properties":{"modality":{"type":"string","enum":["forbid","oblige","permit"]},"party":{"type":"string"},"action":{"type":"string"},"object":{"type":"string"},"now":{"type":"integer"},"expiry":{"type":"integer"},"unless":{"type":"string"}}}"#,
+        },
     ]
 }
 
@@ -328,9 +342,12 @@ pub unsafe fn enforce_fiduciary_tool_dispatch(
     match payload.tool_name {
         // ── Graph Engine Tools ───────────────────────────────────────────────
         b"query_graph" => {
+            // `is_none()` here means "no *valid* token": `build_intent_frame` already
+            // rejected missing, malformed, placeholder ("MISSING"), and all-zero
+            // values via `parse_sanctuary_override`. Presence alone never opens egress.
             if intent_frame.sanctuary_override.is_none() {
                 let violation_quin = NQuin::new_conduct_violation(
-                    b"EgressViolation: Missing Cryptographic Sanctuary Override",
+                    b"EgressViolation: Invalid or Missing Cryptographic Sanctuary Override",
                 );
                 let _ = append_mutation(&violation_quin);
                 return Err(McpSystemError::SanctuaryGateTriggered);
@@ -464,6 +481,10 @@ pub unsafe fn enforce_fiduciary_tool_dispatch(
 
         b"run_docs_tests" => execute_run_docs_tests(payload.arguments_raw, intent_frame),
         b"get_pending_tasks" => execute_get_pending_tasks(payload.arguments_raw, intent_frame),
+
+        // ── Values / Human-Rights Governance ────────────────────────────────────
+        b"values_check" => mcp_tool_impls::values_check(payload.arguments_raw),
+        b"values_evaluate" => mcp_tool_impls::values_evaluate(payload.arguments_raw),
 
         _ => Err(McpSystemError::ToolNotFound),
     }
@@ -950,9 +971,56 @@ pub unsafe fn scrub_transient_mcp_buffers(buffer: &mut [u8]) {
     }
 }
 
+/// Map a single ASCII hex digit to its nibble value, or `None` if it is not hex.
+#[inline]
+fn hex_nibble(c: u8) -> Option<u8> {
+    match c {
+        b'0'..=b'9' => Some(c - b'0'),
+        b'a'..=b'f' => Some(c - b'a' + 10),
+        b'A'..=b'F' => Some(c - b'A' + 10),
+        _ => None,
+    }
+}
+
+/// Validate and decode a raw `sanctuary_override` JSON string value into the genuine
+/// 32-byte cryptographic egress-override token, returning `None` for anything that is
+/// **not** a real override. This is the egress firewall's value check — it must never
+/// accept mere field presence.
+///
+/// Fails closed (`None`) for:
+/// * empty / whitespace-only values,
+/// * placeholder text such as `"MISSING"`, `"null"`, `"none"` (any non-hex content),
+/// * the wrong length (a token is exactly 64 hex chars = 32 bytes),
+/// * the forged all-zero token — structurally valid hex that carries no authority and
+///   would otherwise re-open the presence-only bypass.
+///
+/// Decoding is done into a fixed `[u8; 32]` on the stack — **no heap allocation**.
+///
+/// NOTE (MCP cooperation task #17): well-formedness is the *structural* half of the
+/// gate. The token is the seam for binding egress to the caller's *verified* typed
+/// standpoint — cryptographic verification against the standpoint/deontic registry is
+/// performed by that layer once a call carries a verified calling-agent identifier.
+/// This parser deliberately does not forge that check; it only guarantees that an
+/// override which reaches the dispatch gate is a genuine, non-empty token.
+fn parse_sanctuary_override(value: &[u8]) -> Option<[u8; 32]> {
+    if value.len() != 64 {
+        return None;
+    }
+    let mut token = [0u8; 32];
+    for (byte, pair) in token.iter_mut().zip(value.chunks_exact(2)) {
+        let hi = hex_nibble(pair[0])?;
+        let lo = hex_nibble(pair[1])?;
+        *byte = (hi << 4) | lo;
+    }
+    if token.iter().all(|&b| b == 0) {
+        return None;
+    }
+    Some(token)
+}
+
 fn build_intent_frame(arguments: &[u8], qpu_enabled: bool, llm_enabled: bool) -> McpIntentFrame {
     let sanctuary_override = extract_raw_json_string(arguments, b"\"sanctuary_override\"")
-        .map(|override_bytes| String::from_utf8_lossy(override_bytes).into_owned());
+        .and_then(parse_sanctuary_override);
 
     McpIntentFrame {
         purpose_hash: crate::q_hash("purpose:General"),

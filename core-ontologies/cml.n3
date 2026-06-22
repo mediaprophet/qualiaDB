@@ -1,0 +1,114 @@
+@prefix rdf:     <http://www.w3.org/1999/02/22-rdf-syntax-ns#> .
+@prefix rdfs:    <http://www.w3.org/2000/01/rdf-schema#> .
+@prefix sh:      <http://www.w3.org/ns/shacl#> .
+@prefix xsd:     <http://www.w3.org/2001/XMLSchema#> .
+@prefix skos:    <http://www.w3.org/2004/02/skos/core#> .
+@prefix oa:      <http://www.w3.org/ns/oa#> .
+@prefix prov:    <http://www.w3.org/ns/prov#> .
+@prefix dcterms: <http://purl.org/dc/terms/> .
+@prefix time:    <http://www.w3.org/2006/time#> .
+@prefix odrl:    <http://www.w3.org/ns/odrl/2/> .
+@prefix sec:     <https://w3id.org/security#> .
+@prefix values:  <https://ns.webcivics.org/values/> .
+@prefix cml:     <https://ns.webcivics.org/cml/> .
+
+# ===========================================================================
+# CML — Context Markup Language: concept-graph axioms.
+# Companion to core-ontologies/CML_CONCEPT_GRAPH.md and PLAN.md §10.2c–§10.2j.
+#
+# The three-layer model:
+#   TEXT (immutable verbatim provenance)  →  CONCEPT (a first-class node = an NQuin
+#   56-bit context hash that OWNS a sub-graph)  →  LOGIC (modality sub-graphs:
+#   deontic / temporal / defeasible / argumentation / … — subject-matter-selected).
+#
+# Discipline (PLAN §-CML §5a): the given world (people, nature) is modelled in
+# RDFS + SHACL, NEVER OWL. OWL is permitted only for the constructed/man-made world.
+# External vocab mappings carry REFERENCE, not class axioms (no schema:Physician ⊑ Place).
+# ===========================================================================
+
+# --- Ontology stack this layer composes (adopt the vocabulary; execute on the bounded engine) ---
+#   skos    concept identity + cross-tradition/-language mapping
+#   oa      text→concept realization (Web Annotation selectors)
+#   prov    provenance / attribution (machine-generated vs human-attributed)
+#   sec     cryptographic proof of the human-attested action
+#   dcterms structural connective tissue (conformsTo / references / temporal / spatial)
+#   time    OWL-Time *vocabulary* (Allen relations) — evaluated by the native interval engine
+#   odrl    deontic policy expression (compiles to OP_OBLIGATE/PERMIT/FORBID)
+#   values  the human-rights agent lattice + deontic vocabulary (this repo)
+
+# ===========================================================================
+# 1. CONCEPT layer
+# ===========================================================================
+cml:Concept a rdfs:Class ; rdfs:subClassOf skos:Concept ;
+    rdfs:label "CML concept" ;
+    rdfs:comment "A first-class concept node, realised natively as an NQuin context hash that OWNS a logic sub-graph (q_hash of the concept IRI). RDFS+SHACL, not OWL: a concept about the given world is described and validated, never inferred into being. Identity is curation-grade (see §3)." .
+
+# Concepts use skos:prefLabel / skos:definition / skos:broader / skos:narrower / skos:related directly.
+# Cross-tradition & cross-language equivalence:
+#   skos:closeMatch  — MAY be machine-proposed (cml:Proposed)
+#   skos:exactMatch  — ONLY a cml:Attested (signed, authoritative human) action may assert it (§3)
+
+# ===========================================================================
+# 2. TEXT → CONCEPT realization (standoff; verbatim text is never mutated)
+# ===========================================================================
+cml:realizedBy a rdf:Property ;
+    rdfs:domain cml:Concept ;
+    rdfs:comment "A concept is realised by a span of verbatim source text. Shorthand for an oa:Annotation whose body is the concept and whose target is a media-fragment selector (RFC 5147 #char= + oa:TextQuoteSelector + an integrity hash). MANY realizations (across instruments, languages, the universalised amendedText) may realise ONE concept." .
+
+cml:integrityHash a rdf:Property ; rdfs:range xsd:string ;
+    rdfs:comment "Hash of the selected span verified against the recovered originalText (front-of-file Q42LEX)." .
+
+# ===========================================================================
+# 3. CURATION layer — the Prime Directive (machine proposes, human disposes)
+# ===========================================================================
+cml:CurationStatus a rdfs:Class .
+cml:Proposed a cml:CurationStatus ; rdfs:comment "Machine / automated / self-asserted; provisional." .
+cml:Attested a cml:CurationStatus ; rdfs:comment "Confirmed by a signed, contextually/legally-authoritative human action (sec: proof)." .
+
+cml:curationStatus a rdf:Property ; rdfs:range cml:CurationStatus .
+cml:proposedBy a rdf:Property ; rdfs:range prov:Agent ;
+    rdfs:comment "The machine/vector agent that PROPOSED a mapping (prov:wasGeneratedBy)." .
+cml:attestedBy a rdf:Property ; rdfs:range prov:Agent ;
+    rdfs:comment "The authoritative human who RATIFIED it (prov:wasAttributedTo), with a sec: signature." .
+cml:confidence a rdf:Property ; rdfs:range xsd:decimal ;
+    rdfs:comment "Machine-proposal confidence in [0,1] (tuned by the Neuro-Symbolic Sieve spec; out of scope here)." .
+
+# Capability-credential / RPL recognition basis (PLAN §10.2h) — RPL is FIRST-CLASS.
+cml:RecognitionBasis a rdfs:Class .
+cml:Formal a cml:RecognitionBasis . cml:PriorLearning a cml:RecognitionBasis .
+cml:Experiential a cml:RecognitionBasis . cml:PeerAttested a cml:RecognitionBasis .
+cml:recognitionBasis a rdf:Property ; rdfs:range cml:RecognitionBasis .
+
+# ===========================================================================
+# 4. LOGIC layer — putting the math (logic libraries) against the concept
+# ===========================================================================
+cml:Modality a rdfs:Class .
+cml:Deontic a cml:Modality .       cml:Temporal a cml:Modality .
+cml:Defeasible a cml:Modality .    cml:Argumentation a cml:Modality .
+cml:Spatial a cml:Modality .       cml:Probabilistic a cml:Modality .
+
+cml:asserts a rdf:Property ;
+    rdfs:domain cml:Concept ;
+    rdfs:comment "Binds a concept to a logic assertion in one of its modality sub-graphs. ENGINE MAPPING: the asserted quins carry context = q_hash(concept IRI), so the concept's hash IS the sub-graph the Webizen VM masks on. This is how a logic library is run against a concept." .
+
+cml:modality a rdf:Property ; rdfs:range cml:Modality ;
+    rdfs:comment "Which logic library evaluates this assertion (subject-matter-selected)." .
+
+# DEONTIC assertions reuse the values vocabulary and compile to the native deontic VM:
+#   a values:Obligation  via values:requires  → OP_OBLIGATE   (compile_norm_quin → evaluate_deontic_contract)
+#   a values:Prohibition via values:forbids   → OP_FORBID
+#   a values:Permission  via values:permits   → OP_PERMIT
+#   a q42:unless defeater (same party+path)   → flips Active → Defeated
+# TEMPORAL assertions use time: (Allen) → the native interval engine; the concept's
+#   in-force window is time:hasBeginning / time:hasEnd, evaluated, not OWL-inferred.
+
+# ===========================================================================
+# 5. SHACL — the Curation Prime Directive, enforced (closed-world)
+# ===========================================================================
+# An exactMatch must be human-attested. A machine-asserted exactMatch is a conduct
+# violation (agent-accountability.n3 UnsubstantiatedClaimFlag fires via the guard rules).
+cml:AttestedExactMatchShape a sh:NodeShape ;
+    sh:targetSubjectsOf skos:exactMatch ;
+    sh:property [ sh:path cml:curationStatus ; sh:hasValue cml:Attested ;
+                  sh:minCount 1 ;
+                  sh:message "skos:exactMatch requires cml:Attested (a signed authoritative human action); machine agents may assert only skos:closeMatch / skos:related." ] .

@@ -5,7 +5,7 @@ pub mod asp;
 pub mod ctl;
 pub mod fuzzy;
 pub mod modal;
-pub use asp::{MAX_STABLE_MODELS, enumerate_stable_models};
+pub use asp::{MAX_STABLE_MODELS, enumerate_stable_models, compute_answer_sets, AspRule};
 pub mod calculus;
 pub use calculus::{
     OP_SIMPSONS_INTEGRATION, OP_TRAPEZOIDAL_INTEGRATION, OP_RK4_STEP, OP_ADAPTIVE_STEP, OP_GPU_INTEGRATION,

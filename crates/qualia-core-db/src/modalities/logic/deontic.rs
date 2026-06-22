@@ -568,6 +568,81 @@ mod tests {
         assert!(evaluate_contrary_to_duty(&repaired, party, primary, reparation));
     }
 
+    /// Webizen values-credential smoke test (PLAN §11.3 / §17.1) — THE KEYSTONE.
+    ///
+    /// Proves a real values prohibition flows the live deontic lane:
+    ///   N3 `Rule` (ns.webcivics.org) → `compile_n3_rule_to_norm` → `evaluate_deontic_contract`
+    ///   → `DeonticVerdict`  (this is exactly what the `NativeDeonticEval` opcode dispatches to).
+    /// And that the engine's NATIVE defeasibility flips Active → Defeated when a `q42:unless`
+    /// defeater is present. No `n3logic.rs::infer_logic_bindings` on this path.
+    #[test]
+    fn values_credential_deontic_smoke() {
+        use crate::modalities::logic::n3_parser::{Formula, Rule, RuleType, Term, Triple};
+
+        // A values prohibition (UDHR Art 30 family) as a parsed-shape N3 rule:
+        //   { values:Agent  values:forbids  values:DestructionOfRights }
+        let prohibition = Rule {
+            id: Some("UDHR-Art30-smoke".to_string()),
+            rule_type: RuleType::Strict,
+            weight: None,
+            premise: Formula {
+                triples: vec![Triple {
+                    subject: Term::Uri("https://ns.webcivics.org/values/Agent".to_string()),
+                    predicate: Term::Uri("https://ns.webcivics.org/values/forbids".to_string()),
+                    object: Term::Uri(
+                        "https://ns.webcivics.org/values/DestructionOfRights".to_string(),
+                    ),
+                }],
+            },
+            conclusion: Formula { triples: vec![] },
+        };
+        let contract = q_hash("contract:udhr-smoke");
+
+        // ── values rule → norm Quin (the values→deontic bridge) ──
+        let norm = compile_n3_rule_to_norm(&prohibition, contract, 0)
+            .expect("a values prohibition must compile to a norm Quin");
+        assert_eq!(
+            extract_deontic_opcode(norm.predicate),
+            OP_FORBID,
+            "a `values:forbids` rule must compile to an OP_FORBID norm"
+        );
+
+        // ── evaluate via the native deontic VM path → the prohibition is Active (live) ──
+        let mut out = [DeonticVerdict::default(); 4];
+        let n = evaluate_deontic_contract(&[norm], NOW, &mut out)
+            .expect("deontic evaluation must succeed");
+        assert_eq!(n, 1, "exactly one norm verdict expected");
+        assert_eq!(
+            out[0].status,
+            DeonticStatus::Active,
+            "the values prohibition holds (Active) — it is live in the engine, not bot-faked"
+        );
+        assert_eq!(out[0].opcode, OP_FORBID);
+
+        // ── native defeasibility: a `q42:unless` defeater on the same party+path+contract
+        //    flips Active → Defeated ("forbidden ... UNLESS lawfully authorised"). ──
+        let party = q_hash("https://ns.webcivics.org/values/Agent");
+        let path = q_hash("https://ns.webcivics.org/values/forbids");
+        let defeater = compile_norm_quin(
+            party,
+            OP_PERMIT,
+            path,
+            q_hash("https://ns.webcivics.org/values/lawfullyAuthorised"),
+            contract,
+            0,
+            /* is_defeater = */ true,
+        );
+        let mut out2 = [DeonticVerdict::default(); 4];
+        let n2 = evaluate_deontic_contract(&[norm, defeater], NOW, &mut out2)
+            .expect("deontic evaluation with defeater must succeed");
+        assert_eq!(n2, 1, "the defeater is not a primary norm; one verdict expected");
+        assert_eq!(
+            out2[0].status,
+            DeonticStatus::Defeated,
+            "an `unless` defeater on the same party+path must defeat the prohibition"
+        );
+    }
+
     fn alice() -> u64 {
         q_hash("did:web:alice.example")
     }

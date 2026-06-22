@@ -285,20 +285,29 @@ fn parse_triple_patterns(
 fn split_triple_patterns(input: &str) -> Vec<String> {
     let mut parts = Vec::new();
     let mut current = String::new();
-    let mut in_embedded = 0u8;
+    // A `.` only terminates a triple at angle-depth 0 and outside a quoted literal.
+    // Tracking single-`<…>` IRI depth (not just `<<…>>`) is essential: IRIs such as
+    // `<https://ns.webcivics.org/values/Undertaking>` contain dots that would
+    // otherwise be mistaken for pattern terminators, shattering the BGP.
+    let mut angle_depth: i32 = 0;
+    let mut in_quote = false;
     for ch in input.chars() {
         match ch {
-            '<' if current.ends_with('<') => {
-                in_embedded = in_embedded.saturating_add(1);
+            '"' => {
+                in_quote = !in_quote;
                 current.push(ch);
             }
-            '>' => {
+            '<' if !in_quote => {
+                angle_depth += 1;
                 current.push(ch);
-                if in_embedded > 0 {
-                    in_embedded = in_embedded.saturating_sub(1);
+            }
+            '>' if !in_quote => {
+                if angle_depth > 0 {
+                    angle_depth -= 1;
                 }
+                current.push(ch);
             }
-            '.' if in_embedded == 0 => {
+            '.' if angle_depth == 0 && !in_quote => {
                 if !current.trim().is_empty() {
                     parts.push(current.trim().to_string());
                 }
@@ -354,6 +363,12 @@ fn parse_term(
     if term.starts_with('?') || term.starts_with('$') {
         let var_id = ctx.register_variable(term)?;
         Ok(var_id as u64)
+    } else if term == "a" {
+        // Turtle `a` shorthand for rdf:type — must hash to the same expanded IRI the
+        // ingest parser (turtle_doc) stores, so `?s a ?o` matches type triples.
+        Ok(crate::lexicon::generate_60bit_token(
+            b"http://www.w3.org/1999/02/22-rdf-syntax-ns#type",
+        ))
     } else if term.starts_with('<') {
         let iri = term.trim_start_matches('<').trim_end_matches('>');
         Ok(crate::lexicon::generate_60bit_token(iri.as_bytes()))
@@ -445,6 +460,37 @@ fn temporal_is_leap(y: u64) -> bool {
 #[cfg(test)]
 mod tests {
     use super::*;
+
+    /// Regression: dots *inside* a `<…>` IRI must not be treated as triple
+    /// terminators. Before the fix, `<https://ns.webcivics.org/values/Undertaking>`
+    /// (and any dotted IRI) shattered the BGP, yielding "No triple patterns found".
+    #[test]
+    fn split_keeps_dotted_iris_intact() {
+        let bgp = "?a <http://www.w3.org/1999/02/22-rdf-syntax-ns#type> \
+                   <https://ns.webcivics.org/values/Undertaking>";
+        let parts = split_triple_patterns(bgp);
+        assert_eq!(parts.len(), 1, "a single dotted-IRI triple must stay one pattern");
+
+        // Two real triples (terminated by `.`) split into exactly two — the `.`
+        // separator still works at angle-depth 0, dots inside IRIs do not.
+        let two = "?a <https://ns.webcivics.org/values/partOf> <https://ns.webcivics.org/values/x#Instrument> . \
+                   ?a <http://www.w3.org/1999/02/22-rdf-syntax-ns#type> <https://ns.webcivics.org/values/Undertaking>";
+        assert_eq!(split_triple_patterns(two).len(), 2, "the `.` between triples still splits");
+
+        // A dot inside a quoted literal is also not a terminator.
+        let lit = "?a <https://ns.webcivics.org/values/originalText> \"Art. 3 applies.\"";
+        assert_eq!(split_triple_patterns(lit).len(), 1, "dots in quoted literals are not terminators");
+    }
+
+    /// End-to-end parse of a typed BGP with explicit dotted IRIs — must produce a
+    /// triple pattern, not error out.
+    #[test]
+    fn typed_iri_bgp_parses() {
+        let q = "SELECT ?a WHERE { ?a <http://www.w3.org/1999/02/22-rdf-syntax-ns#type> \
+                 <https://ns.webcivics.org/values/Undertaking> }";
+        let (_, ctx) = parse_sparql(q).expect("typed IRI BGP must parse");
+        assert!(ctx.pattern_count > 0, "the typed triple pattern must be allocated");
+    }
 
     #[test]
     fn test_parse_simple_select() {

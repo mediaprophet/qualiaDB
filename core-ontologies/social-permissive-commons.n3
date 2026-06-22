@@ -1,0 +1,146 @@
+@prefix rdf:     <http://www.w3.org/1999/02/22-rdf-syntax-ns#> .
+@prefix rdfs:    <http://www.w3.org/2000/01/rdf-schema#> .
+@prefix sh:      <http://www.w3.org/ns/shacl#> .
+@prefix xsd:     <http://www.w3.org/2001/XMLSchema#> .
+@prefix skos:    <http://www.w3.org/2004/02/skos/core#> .
+@prefix time:    <http://www.w3.org/2006/time#> .
+@prefix prov:    <http://www.w3.org/ns/prov#> .
+@prefix odrl:    <http://www.w3.org/ns/odrl/2/> .
+@prefix dpv:     <https://w3id.org/dpv#> .
+@prefix values:  <https://ns.webcivics.org/values/> .
+@prefix policy:  <https://ns.webcivics.org/policy/> .
+@prefix pc:      <https://ns.webcivics.org/permissive-commons/> .
+@prefix spc:     <https://ns.webcivics.org/social-permissive-commons/> .
+
+# ===========================================================================
+# Social Permissive Commons — the GENERAL framework for any social environment
+# involving 2+ AGENTS (entities, AI software agents, natural persons). A social
+# relation builds a SHARED CORPUS; on EXIT (separation / unsubscribe / role-end)
+# the corpus does NOT uniformly erase ("block") — it decomposes by DIFFERENTIATED
+# PERSISTENCE. A relation is a TIME-BOUNDED CONSENT ENVELOPE; the holdings created
+# inside it have their OWN lifecycles, not coextensive with the relation.
+# Companion: permissive-commons.n3 (economic works), PLAN.md §10.2e.
+#
+# FOUNDATION: there is NO 'platform provider' role in this model at the base.
+# Each agent is their OWN platform provider (self-hosted) and their OWN data
+# controller (self-determination). Relations are PEER agent<->agent. An external
+# legacy platform is only a BOUNDARY / interop case (spc:ExternalPlatformBoundary),
+# NEVER foundational. This is the data-protection "inversion" taken to its root:
+# rights are STRUCTURAL because there is no holder to petition — you hold your own.
+#
+# Use-cases are an OPEN vocabulary (identifiers-not-identity): extend freely.
+# ===========================================================================
+
+# --- The social relation (2+ agents) -------------------------------------
+spc:SocialRelation a rdfs:Class ; rdfs:label "Social relation" ;
+    rdfs:comment "A relation among 2+ agents within which a shared corpus + governing rules form." .
+spc:party a rdf:Property ; rdfs:domain spc:SocialRelation ; rdfs:range values:Agent ;
+    rdfs:comment "A participating agent (>=1 per relation; a relation needs >=2 parties). values:Agent covers natural persons, legal persons, ArtificialAgents." .
+spc:relationType a rdf:Property ; rdfs:domain spc:SocialRelation ; rdfs:range skos:Concept ;
+    rdfs:comment "OPEN, extensible use-case type — a skos:Concept, never a closed enum (so new social-use-cases are added, not pre-decided)." .
+
+# Seed use-case concepts (NOT exhaustive — extend; partnership-separation and
+# platform-unsubscribe are the SAME exit machinery, different relationType):
+spc:Partnership          a skos:Concept ; skos:prefLabel "intimate / domestic partnership" .
+spc:Household            a skos:Concept ; skos:prefLabel "shared household" .
+spc:ExternalPlatformBoundary a skos:Concept ; skos:prefLabel "boundary with an EXTERNAL legacy platform (NOT foundational — interop only; GDPR-shaped). At the foundation each agent is their own platform provider." .
+spc:Employment           a skos:Concept ; skos:prefLabel "employment / engagement" .
+spc:Collaboration        a skos:Concept ; skos:prefLabel "co-creation / collaboration" .
+spc:GuardianshipArrangement a skos:Concept ; skos:prefLabel "guardianship / care arrangement" .
+spc:CommunityMembership  a skos:Concept ; skos:prefLabel "community / group membership" .
+spc:Custodianship        a skos:Concept ; skos:prefLabel "custodianship (e.g. traditional knowledge)" .
+
+spc:RelationStatus a rdfs:Class .
+spc:Active a spc:RelationStatus . spc:Dissolving a spc:RelationStatus . spc:Dissolved a spc:RelationStatus .
+spc:relationStatus a rdf:Property ; rdfs:domain spc:SocialRelation ; rdfs:range spc:RelationStatus ;
+    rdfs:comment "Time-qualified via time:/sense:EffectivityInterval — the relation is the consent ENVELOPE." .
+
+spc:powerProfile a rdf:Property ; rdfs:domain spc:SocialRelation ;
+    rdfs:comment "spc:Symmetric | spc:Asymmetric — feeds the coercion/consent guards. NB: at the peer self-hosting FOUNDATION there is no structural platform-holds-your-data asymmetry; asymmetry comes from the actual social relation (e.g. DV). An ExternalPlatformBoundary is the legacy case where structural asymmetry re-appears (GDPR Recital 43)." .
+spc:Symmetric a rdfs:Class . spc:Asymmetric a rdfs:Class .
+
+# --- The shared corpus + its persistence class ----------------------------
+spc:sharedHolding a rdf:Property ; rdfs:domain spc:SocialRelation ;
+    rdfs:comment "An artifact / capability / record / obligation in the commons." .
+spc:contributedBy a rdf:Property ; rdfs:range values:Agent .
+spc:persistenceClass a rdf:Property ; rdfs:range spc:PersistenceClass ;
+    rdfs:comment "KEY typing — determines a holding's behaviour at relation EXIT." .
+
+spc:PersistenceClass a rdfs:Class .
+spc:RelationGatedCapability a spc:PersistenceClass ;
+    rdfs:comment "REVOKES on exit. Keys (house/car/IoT), joint accounts, platform access. = consent-gated revocable grant." .
+spc:ThirdPartyAnchoredObligation a spc:PersistenceClass ;
+    rdfs:comment "PERSISTS until an external authoritative act. Child guardianship; legal retention (tax/AML). Anchored to a THIRD PARTY's interest -> no party-side defeater." .
+spc:CoOwnedRecord a spc:PersistenceClass ;
+    rdfs:comment "PERSISTS, non-erasable unilaterally. The memories; portable data (GDPR Art 20). Each party keeps their own; 'block' must NOT mean rewriting history." .
+spc:ArtifactAttachedRule a spc:PersistenceClass ;
+    rdfs:comment "PERSISTS independent of the relation, TRAVELS WITH the artifact. e.g. a no-publish prohibition on co-created intimate media; purpose-limitation. = image-based-abuse prevention." .
+
+# --- Per-class behaviour predicates (the differentiated-persistence machinery) ---
+spc:revokesOnExit a rdf:Property ; rdfs:range xsd:boolean ;
+    rdfs:comment "Capability ends when the relation ends (RelationGatedCapability)." .
+spc:persistsUntilAuthority a rdf:Property ; rdfs:range xsd:boolean ;
+    rdfs:comment "Only an external authoritative act (court etc.) terminates (ThirdPartyAnchoredObligation)." .
+spc:anchoredTo a rdf:Property ;
+    rdfs:comment "The third party whose interest anchors a ThirdPartyAnchoredObligation (e.g. the child) — why no party-side defeater is permitted." .
+spc:nonErasableUnilaterally a rdf:Property ; rdfs:range xsd:boolean ;
+    rdfs:comment "No single party may delete it (CoOwnedRecord); each retains their own testimony." .
+spc:travelsWithArtifact a rdf:Property ; rdfs:range xsd:boolean ;
+    rdfs:comment "The rule is bound to the artifact and survives relation-end AND transfer (ArtifactAttachedRule)." .
+spc:attachedRule a rdf:Property ;
+    rdfs:comment "Links a holding to an odrl/deontic rule (compiles to OP_FORBID/OBLIGATE/PERMIT). The no-publish rule is an odrl prohibition." .
+
+# --- The exit transition --------------------------------------------------
+# spc:onExit (engine op, not a fact): at Dissolving/Dissolved, for each sharedHolding
+# apply its persistenceClass behaviour. SAFETY ASYMMETRY: revoke RelationGatedCapability
+# FAST; preserve CoOwnedRecord DURABLY; keep ArtifactAttachedRule prohibitions ABSOLUTE;
+# hold ThirdPartyAnchoredObligation until authority. Separation == unsubscribe == role-end.
+
+# --- Consent scoping (scope- AND time-indexed) ----------------------------
+spc:consentScope a rdf:Property ; rdfs:range skos:Concept ;
+    rdfs:comment "Consent to one scope is NOT consent to another." .
+spc:Create a skos:Concept . spc:Hold a skos:Concept . spc:SharePrivate a skos:Concept . spc:Publish a skos:Concept .
+spc:consentWithdrawable a rdf:Property ; rdfs:range xsd:boolean ;
+    rdfs:comment "Withdrawable for FUTURE use; cannot un-happen PAST lawful use (GDPR Art 7(3))." .
+spc:consentBasis a rdf:Property ; rdfs:range dpv:LegalBasis ;
+    rdfs:comment "Lawful basis — CONSENT IS ONLY 1 OF 6 (GDPR Art 6: + contract, legal-obligation, vital-interest, public-task, legitimate-interest). Do NOT collapse everything to consent." .
+# Coerced consent reuses values:CoercedConsentFlag (agency.n3) + the {duress}=>flag rule.
+
+# ===========================================================================
+# SHACL — deterministic firewalls (the dignity/safety guards)
+# ===========================================================================
+
+# A sticky prohibition (e.g. no-publish on intimate media) MUST travel with the
+# artifact and be non-derogable + contestable — it CANNOT be dropped on exit.
+spc:StickyProhibitionShape a sh:NodeShape ;
+    sh:targetClass spc:ArtifactAttachedRule ;
+    sh:property [ sh:path spc:travelsWithArtifact ; sh:hasValue true ;
+        sh:message "An artifact-attached rule MUST travel with the artifact — a no-publish rule survives separation, transfer, and account-closure." ] .
+
+# A third-party-anchored obligation MUST name the third party it protects and MUST
+# persist until authority — parties cannot collude to drop a child's guardianship.
+spc:ThirdPartyObligationShape a sh:NodeShape ;
+    sh:targetClass spc:ThirdPartyAnchoredObligation ;
+    sh:property [ sh:path spc:anchoredTo ; sh:minCount 1 ;
+        sh:message "A third-party-anchored obligation must name whose interest anchors it (e.g. the child) — that is why no party-side defeater is allowed." ] ;
+    sh:property [ sh:path spc:persistsUntilAuthority ; sh:hasValue true ;
+        sh:message "Terminable only by an external authoritative act (court), not by the parties' will." ] .
+
+# Where power is asymmetric, consent to Hold/Publish must be guarded against coercion
+# (GDPR Recital 43 — consent invalid under a clear power imbalance).
+spc:AsymmetricConsentShape a sh:NodeShape ;
+    sh:targetClass spc:SocialRelation ;
+    sh:property [ sh:path spc:powerProfile ;
+        sh:message "Asymmetric-power relations require heightened consent validity (coercion check) for Hold/Publish scopes — ties values:CoercedConsentFlag." ] .
+
+# --- Abstract worked example (neutral) ------------------------------------
+spc:example-relation a spc:SocialRelation ;
+    spc:relationType spc:Partnership ;
+    spc:powerProfile spc:Symmetric ;
+    spc:relationStatus spc:Dissolved ;
+    spc:sharedHolding spc:ex-doorkey, spc:ex-guardianship, spc:ex-memories, spc:ex-media .
+
+spc:ex-doorkey      spc:persistenceClass spc:RelationGatedCapability ;     spc:revokesOnExit true .
+spc:ex-guardianship spc:persistenceClass spc:ThirdPartyAnchoredObligation ; spc:anchoredTo spc:ex-child ; spc:persistsUntilAuthority true .
+spc:ex-memories     spc:persistenceClass spc:CoOwnedRecord ;              spc:nonErasableUnilaterally true .
+spc:ex-media        spc:persistenceClass spc:ArtifactAttachedRule ;       spc:travelsWithArtifact true ; spc:attachedRule spc:ex-no-publish .

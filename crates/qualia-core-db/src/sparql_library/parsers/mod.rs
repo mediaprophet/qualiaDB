@@ -7,4 +7,5 @@ pub mod n3_star;
 pub mod nquads_star;
 pub mod ntriples_star;
 pub mod trig_star;
+pub mod turtle_doc;
 pub mod turtle_star;

@@ -7,12 +7,12 @@ const CBOR_TAG_SUBJECT: u64 = 104;
 const CBOR_TAG_PREDICATE: u64 = 105;
 const CBOR_TAG_OBJECT: u64 = 106;
 use crate::NQuin;
-use std::hash::{Hash, Hasher};
 
+/// Canonical term hash — MUST match the Turtle/N3/SPARQL path (`generate_60bit_token`) so the
+/// same IRI/literal hashes identically across every ingest format and joins in ONE graph.
+/// (Was `DefaultHasher`/SipHash, which placed CBOR-LD terms in a parallel, non-joinable space.)
 fn hash_str(s: &str) -> u64 {
-    let mut hasher = std::collections::hash_map::DefaultHasher::new();
-    s.hash(&mut hasher);
-    hasher.finish()
+    generate_60bit_token(s.as_bytes())
 }
 
 
@@ -54,7 +54,7 @@ fn parse_embedded_triple(decoder: &mut Decoder) -> Result<(u64, [u64; 3]), Box<d
 fn parse_cbor_value(decoder: &mut Decoder) -> Result<u64, Box<dyn std::error::Error>> {
     let dt = decoder.datatype()?;
     match dt {
-        minicbor::data::Type::String => Ok(hash_bytes(decoder.bytes()?)),
+        minicbor::data::Type::String => Ok(hash_str(decoder.str()?)),
         minicbor::data::Type::Bytes => Ok(hash_bytes(decoder.bytes()?)),
         minicbor::data::Type::U8 | minicbor::data::Type::U16 | minicbor::data::Type::U32 | minicbor::data::Type::U64 => {
             let val = decoder.u64()?;
@@ -82,10 +82,11 @@ fn parse_cbor_value(decoder: &mut Decoder) -> Result<u64, Box<dyn std::error::Er
         }
     }
 }
+/// Byte-sequence term hash — unified with `generate_60bit_token` (see `hash_str`). Medium-
+/// agnostic: hashing canonical bytes is the SAME methodology for text, a byte-string, or any
+/// other medium, so the lexicon extends to any modality without changing the hash path.
 fn hash_bytes(b: &[u8]) -> u64 {
-    let mut hasher = std::collections::hash_map::DefaultHasher::new();
-    b.hash(&mut hasher);
-    hasher.finish()
+    generate_60bit_token(b)
 }
 
 /// Parses a CBOR-LD stream and streams directly into the external sorter.
@@ -149,7 +150,7 @@ fn parse_cbor_object<S: crate::sparql_library::quin_sink::QuinSink>(
         // Value
         let dt = decoder.datatype()?;
         let obj_hash = match dt {
-            minicbor::data::Type::String => hash_bytes(decoder.bytes()?),
+            minicbor::data::Type::String => hash_str(decoder.str()?),
             minicbor::data::Type::Bytes => hash_bytes(decoder.bytes()?),
             minicbor::data::Type::U8
             | minicbor::data::Type::U16
@@ -332,4 +333,52 @@ fn parse_cbor_object_star<S: crate::sparql_library::quin_sink::QuinSink>(
     }
 
     Ok(())
+}
+
+#[cfg(test)]
+mod hash_unification_tests {
+    use super::*;
+    use crate::lexicon::generate_60bit_token;
+    use crate::sparql_library::quin_sink::QuinSink;
+    use crate::NQuin;
+
+    #[derive(Default)]
+    struct VecSink(Vec<NQuin>);
+    impl QuinSink for VecSink {
+        fn push(&mut self, q: NQuin) -> std::io::Result<()> {
+            self.0.push(q);
+            Ok(())
+        }
+    }
+
+    /// Cross-format interop: CBOR-LD terms MUST hash identically to the Turtle/N3/SPARQL path
+    /// (`generate_60bit_token`) so the SAME IRI/literal joins across formats in ONE graph. A
+    /// hand-built CBOR map `{ "@id":"S", "P":"O" }` must yield quin hashes equal to
+    /// `generate_60bit_token` of those term strings — not the old `DefaultHasher`/SipHash values.
+    #[test]
+    fn cbor_terms_share_one_hash_space_with_turtle() {
+        // CBOR: map(2) { tstr "@id": tstr "S", tstr "P": tstr "O" }
+        let buf: [u8; 11] = [
+            0xA2, 0x63, b'@', b'i', b'd', 0x61, b'S', 0x61, b'P', 0x61, b'O',
+        ];
+        let mut dec = Decoder::new(&buf);
+        let mut sink = VecSink::default();
+        let mut count = 0u64;
+        parse_cbor_object(&mut dec, 0, &mut sink, &mut count).unwrap();
+
+        assert_eq!(sink.0.len(), 1, "one non-@id property → one quin");
+        let q = sink.0[0];
+        assert_eq!(q.subject, generate_60bit_token(b"S"), "@id hashes via generate_60bit_token (== Turtle)");
+        assert_eq!(q.predicate, generate_60bit_token(b"P"), "predicate hashes via generate_60bit_token");
+        assert_eq!(q.object, generate_60bit_token(b"O"), "object hashes via generate_60bit_token");
+
+        // Regression guard: must NOT be the old DefaultHasher/SipHash value (parallel hash-space).
+        let sip = {
+            use std::hash::{Hash, Hasher};
+            let mut h = std::collections::hash_map::DefaultHasher::new();
+            "S".hash(&mut h);
+            h.finish()
+        };
+        assert_ne!(q.subject, sip, "CBOR terms must no longer use DefaultHasher");
+    }
 }

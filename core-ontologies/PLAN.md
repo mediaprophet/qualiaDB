@@ -319,6 +319,67 @@ user can stipulate that it be observed, and on acceptance that **binds the parti
 ## 5. Layered outputs & deontic wiring  (existing pending tasks)
 
 - **Step 2**: CML-HTML + `.q42` layers per instrument.
+
+  ✅ **`.q42` LAYER DONE + faithful Turtle parsing (2026-06-22).** `tools/build_q42.py` compiles
+  every `*.n3` in the corpus to a native per-instrument `.q42` SuperBlock volume via the real
+  engine pipeline (`qualia-cli ingest semantic` → `ingest_auto` → `ingest_n3` →
+  `parse_turtle_doc_stream` → `ExternalSorter` → SuperBlocks) and **verifies the round-trip** by
+  querying each volume back. Result: **111/111 volumes, 21 321 triples in → 21 321 quins read
+  back** (lossless). Output to `core-ontologies/dist/q42/` + `manifest.json` (git-ignored — `.n3`
+  is the source of truth; volumes are reproducible artifacts).
+
+  **HONEST CORRECTION to the first pass.** The first ingest used the line-oriented
+  `n3_star`/`turtle_star` parsers, which split each physical line on whitespace and keep three
+  tokens. That **shredded real Turtle**: only one-line three-token statements survived (e.g.
+  `doc:article-N a values:Undertaking`), while every `;`/`,` continuation (`dc:title`,
+  `values:partOf`, `originalText`, …) lost its subject and every multi-word literal was split
+  into word-fragments. Type-level queries worked; content did not (`?s dc:title ?o` → **0**;
+  `dc:title` was wrongly a subject **11×**). "Queryable" was overstated.
+
+  **Fixed** with a new `parsers/turtle_doc.rs` (proper Turtle-subset parser) routed for `.n3`/`.ttl`
+  ingest: `@prefix`/`@base` expansion, multi-line statements, `;`/`,` lists, `a`→rdf:type,
+  multi-word/`"""…"""` quoted literals (lang/datatype tags dropped). Terms hash over the **expanded
+  IRI**, matching the SPARQL query path (`parse_term` now also maps `a`→rdf:type). Now standards-
+  correct SPARQL works against the corpus — `?s <http://purl.org/dc/terms/title> ?o` → 11;
+  `PREFIX values: … { ?a a values:Undertaking }` → the 5 articles; `?a values:partOf ?i` → 10. And
+  because `doc:` is expanded per-instrument, the cross-instrument **collision is gone** — a merged
+  corpus volume is now safe (per-instrument volumes still the default artifact).
+
+  Two **engine bugs** were also found + fixed closing this loop (regression tests; full lib suite
+  **1050/1050**):
+  1. **Query path panicked on every `.q42`** (`OutputSliceWouldHaveSlop`). `run_sparql_query`
+     `bytemuck::cast_slice`'d the whole file as `[NQuin]`, but a `.q42` is LZ4-compressed
+     SuperBlocks with 160-byte headers. Added `Q42Volume::read_all_quins` (`q42_volume.rs`).
+  2. **Typed BGP queries failed to parse** ("No triple patterns found"). `split_triple_patterns`
+     (`sparql_parser.rs`) only tracked `<<…>>` depth, so dots inside a single `<…>` IRI were
+     mistaken for triple terminators. Now tracks angle-bracket + quote depth.
+
+  ✅ **Front-of-file lexicon (2026-06-22, Timothy directive).** The lexicon is now **embedded at
+  the front of the `.q42`** (right after the 256-byte header, per the v3 layout) — no separate
+  `.q42.lex` sidecar. The streaming ingest (`ExternalSorter`) collects every term's
+  `hash → lexical string` during parsing (`QuinSink::push_lex`, default no-op for other sinks) and
+  `merge` writes it via `UnifiedVolumeBuilder::with_lex_map` (was `with_empty_lex`). The CLI query
+  path resolves result hashes back through the embedded lex, so `originalText`, titles, and IRIs
+  come back as **human-readable strings from the `.q42` alone**. Verified: Article 1's full treaty
+  text is recovered verbatim by query. Regression test `streaming_ingest_embeds_recoverable_lex`
+  (`q42_volume.rs`); full lib **1051/1051**. (`build_q42.py` hardened too: UTF-8 decode + lean
+  subject-only verify, since objects now resolve to full clause text.)
+
+  ✅ **CML Concept-Graph architecture committed (2026-06-22)** → [`CML_CONCEPT_GRAPH.md`](CML_CONCEPT_GRAPH.md).
+  The immutable 3-layer foundation: **TEXT** (verbatim `originalText`, cold in the front-of-file
+  lexicon) → **CONCEPT** (a concept identifier represented natively as the NQuin **Context hash /
+  Vector 4**, owning a sub-graph) → **LOGIC** (per-concept modality sub-graphs executed by the
+  Sentinel, masked on the context hash). Bindings: SKOS `skos:Concept` + W3C Web-Annotation
+  `realized-by` media-fragment selectors; nanopublication-aligned. **Curation Prime Directive**
+  (load-bearing): automated systems may assert only `skos:closeMatch`/`related`; only a
+  cryptographically-signed human action may assert `skos:exactMatch` — already enforceable via
+  `agent-accountability.n3` (`UnsubstantiatedClaimFlag`) + `fire_guard_rules`. Per-clause deontic
+  schema = Hohfeld's 8 jural relations → `compile_norm_quin` → `values_evaluate`. Worked pilot:
+  `concept:DutyToSuppressForcedLabour`.
+
+  ⏭ **Next:** build the concept layer for the pilot instrument, attach the deontic (+temporal)
+  sub-graphs, and run `values_evaluate` over the concept hash. The `closeMatch` proposal heuristics
+  are deferred to a separate **Neuro-Symbolic Sieve** spec (policy/tuning, not structure).
 - **Step 3**: deontic **wiring** (the evaluator already exists — the Webizen VM in
   `webizen.rs`, §0, already invoked at `ingest.rs:370/384` + `mcp_server.rs:486`). Chain:
   `n3_parser.rs` (parse `values.n3` rules) → `register_rule()` → `fire_registered_rules()`
@@ -516,6 +577,354 @@ capacity/agent/guardian + category-error shapes → four-case trace + Rust regre
 option b / Grok's PublicAuthority — chosen over making State a bare sibling of Agent, which
 would wrongly strip its juridical personality.)
 
+**Why the disjointness + G1 exist (documented genealogy).** The corporate form began as a *body of
+people* (the City of London livery companies — fellowships representing their members). It was
+re-axiomatised, largely via US law, into a rights-bearing **person** in its own right: Dartmouth v.
+Woodward (1819, contracting person) → the Santa Clara (1886) *headnote* (14th-Amendment "person") →
+Citizens United (2010) / Hobby Lobby (2014). Combined with **limited liability** (immunity from
+consequences) and **shareholder-primacy** fiduciary duty (telos → profit), the result is a
+rights-bearing, consequence-immune entity legally *directed* to profit. G1 + the `CorporatePerson`/
+`NaturalPerson` disjointness are the engine's mechanical **refusal of that drift**: a corporate person
+may not wear a natural person's dignity rights as its own. (This is the same root as the OWL
+man-made/natural boundary, §-CML-§5a: the constructed person is governed by constructed-world rules;
+the given person is not.)
+
+### 10.2a Design requirement — make the ABSENCE legible (the unborne correlative duty)
+Because that telos (amplified by US-English as the global ICT substrate) funded only what served
+profit, the human-rights / natural-world semantics are **absent from the online corpus** — the
+*negative imprint* of the funding structure (not-profitable → not-represented → not-reasoned-over).
+The protection asymmetry is the Hohfeldian form of the same fact: corporate agents carry **immunities**
+(limited liability, insurance), while the duty-bearers of the commons carry the **correlative duty
+unfunded and unprotected**. Requirement: the values layer must represent the **unborne correlative
+duty** as a first-class, queryable fact — R2 already derives that a held right's correlative duty is
+borne by *every* agent; the structural deficiency is the case where **no resourced agent bears it**.
+The engine should surface "right held · correlative duty · no funded bearer" so the omission becomes a
+*named, cited, reasoned-over deficiency*, not an invisible void. Scope honesty: this addresses the
+**informatics** dimension (presence/legibility/machine-actionability), not redistribution — but
+legibility is the precondition for anything downstream. (`PendingImplementation`; relates to the
+wellfair / foundational-supports track.)
+
+### 10.2b The liability-trap, the inspectability inversion, and subject ≠ beneficiary
+**Why the work is structurally unfunded (sharper than §10.2a).** An employee-agent has no *power* to
+commit corporate resources to human-rights work lacking a profit nexus — it would expose the corporate
+person to liability — so the agent role itself forbids it. Doing the work requires *exiting* the agency
+relationship (clear of non-compete / IP-assignment / NDA capture), i.e. forgoing income. The structure
+therefore *selects* the few who bear total cost; that selection effect is the deeper cause of the
+corpus-absence. (Hohfeldian: agent under a *disability*, corporate person holding an *immunity*; the
+exit needed to act removes the material foundation.) **IP capture is the third jaw:** standard
+ICT/liberal-arts contracts assign *IP ownership* to the employer, so even the products of thought are
+enclosed — work distilling shared human values into primitives, done under employment, becomes
+assignable IP (owned, then unused, the purpose being unprofitable). **Corollary requirement: the
+values-credential ontologies must be a commons** — openly licensed, un-assignable, un-capturable — or
+they reproduce the very enclosure they exist to resist. **Commons ≠ uncompensated:** the wrong is
+*theft* (works lifted without the author's knowledge or benefit) or public-good work left *unfunded* —
+not openness. Open-licensed output and fair compensation for the author are *compatible*; the fix is to
+**fund the commons / support the person**, never to enclose the work (enclosure reproduces the theft).
+The mechanical defense against silent misappropriation is the **provenance/attribution layer** —
+tamper-evident authorship, `prov:wasAttributedTo`, third-party-guaranteed origin, signed records
+(components exist: signed provenance, PROV-O, the Merkle-DAG; the operational anti-theft system is
+substrate).
+
+**Governance principle — inspectability of power, protection of persons, due-process-gated.** The
+human-centric inversion of surveillance: make the *constructed / powerful* entity's conduct evidentially
+inspectable (provenanced, tamper-evident, attributable) so it can be **adjudicated by a court** with
+lawful consequence — while the *natural person* is shielded, never the surveilled object. The engine
+makes conduct legible and admissible; it is **not a court** (`requiresHumanReview`; accountability =
+routing/review, §10.3). Unifies the protection-asymmetry fix, accountability-as-routing, and the
+man-made/natural boundary (CML §5a). Components already being assembled — signed provenance, the
+court-admissible record, agent-accountability routing, deontic evaluation — are *substrate*, not yet the
+operational system.
+
+**Subject ≠ beneficiary (jurisdictional disenfranchisement).** A US-origin, US-English substrate encodes
+one nation's constructs as global defaults; most of the world's population is *subject to* those
+definitions (bound by their liabilities) without being *beneficiaries* with standing in them — "legal
+aliens" to the system that governs them. Requirement: (1) ground rights in the **international**
+instruments + the universalisation transform (R1 derives the State's duty *a fortiori* from a duty borne
+by *every* agent — de-particularising universal personhood, not nation-granted benefit); (2) make
+"subject-without-standing" legible like the unborne-duty gap, and compute a person's rights against
+**international baselines that travel with them** (jurisdiction-follows-the-person; `sense.n3`
+`JurisdictionRegion`/`validIn`).
+
+Together with §10.2a, the values layer must make **three structural absences** computable: the duty no
+one is paid to carry, the institutional conduct no one can inspect, and the person bound by a system that
+grants them no standing.
+
+### 10.2c Values are universal at the core, plural in expression (selfhood / sense requirement)
+Shared humanitarian values are universal in their core (dignity, non-harm, reciprocity — the Golden Rule
+recurs across nearly all faith traditions) but **distilled and transmitted through culturally, faith-,
+and linguistically-specific primitives.** The model must hold both layers and do two opposite things at
+once: **never flatten the particular into the universal** (collapsing a tradition's value into a generic
+primitive erases it — the same category-violence as `Physician ⊑ Place`, applied to culture/faith) and
+**never fragment the universal into incommensurable particulars** (relativism that loses the shared
+ground). Mechanism: the concept-graph — a universal value-concept ← `realized-by` ←
+culturally/faith/linguistically-specific expressions; SKOS `broader`/`narrower`/`related` + `closeMatch`
+across traditions + multilingual labels; the Curation Prime Directive holds (machine *proposes*
+`closeMatch`; only human — here **culturally-authoritative** — curation asserts `exactMatch`).
+
+These are **personal attributes of the natural person** — worldview-bearing frames through which a person
+interprets value and meaning — exactly where `foaf:Person` (a contact card) fails, and why the spine is
+purpose-built: **`agency.n3` + `selfhood.n3` + `humanitarian-ict.n3`** (the selfhood/personhood/
+humanitarian-ICT ontology). Man-made/natural nuance (CML §5a): the *traditions themselves* are
+constructed (institutions, canons — world of man); the person's *belonging to and expression of* them is
+an attribute of the **natural person** — given, held, protected, never owned or flattened (RDFS+SHACL;
+protected in ICCPR Art 27, freedom of religion, the cultural-diversity declaration). Sense-making
+(`sense.n3`: `interpretationMode`, `validIn`) is then resolving a universal value-concept into the
+person's particular frame, and back. Continuity: the *needs* layer already refused the single Western
+ladder (Capabilities / Ubuntu / Recognition / Max-Neef over Maslow); this is the same pluralism at the
+*values* layer.
+
+Status: the universal rights core is partly done (lattice, instruments, R1/R2); the
+culturally/faith/linguistically-specific value-primitives + their linkage are **not** — the most
+curation-heavy, least auto-assertable layer (getting it wrong is culturally injurious). Build slowly,
+with culturally-authoritative people; never scale-fast. (`PendingImplementation`.)
+
+### 10.2e Permissive Commons — the licensing framework (cost-recovering, self-extinguishing)
+The license that resolves §10.2b's *commons ≠ uncompensated*. **Not gratis-free** ("free work does not
+exist" — gratis externalises the creator's cost onto the unsupported person, §10.2d) and **not enclosure**
+(perpetual rent). Instead a **self-extinguishing obligation that terminates in the true commons** once
+creators are made whole. Release trigger = **compensation completion** (not a clock, not nothing).
+> NB: supersedes the earlier CC0/CC-BY suggestion — those are exactly the gratis model this rejects.
+
+Mechanism:
+1. **Record production cost** — resources actually consumed (labour-time, materials); attestable via the
+   provenance layer (`prov:wasAttributedTo` the workers) + QUDT-quantified; **signed, not self-asserted**
+   (cost integrity guards against inflation — anti-theft discipline applied to the cost ledger).
+2. **ObligationCost = ProductionCost × ROIMultiplier.** The multiplier is the *fair-return* knob: a
+   governance-set policy value under a **hard SHACL cap** (`sh:maxInclusive` ≈ 10×, never 100× — the
+   anti-rent-extraction firewall; structural cap vs tunable value, as in the closeMatch split). =
+   "what they should have been paid" (cost + bounded benefit).
+3. **Differentiated by agent category** — ODRL (`odrl:duty`/`odrl:assignee`) + the values agent lattice set
+   obligation rates/terms per `NaturalPerson` / `CorporatePerson` / `PublicAuthority` / non-profit, etc.
+4. **Pay down** via ILP micropayments and/or sponsorship lump-sums.
+5. **Discharge → ObligationFree** — when cumulative compensation ≥ ObligationCost the economic obligation is
+   *discharged* and the work passes into the true commons. A deontic norm with a discharge condition:
+   `Active`(Outstanding) → `Discharged`(ObligationFree), computed like the `values_evaluate` lifecycle.
+
+**"Obligation-free" is economic ONLY.** The payment obligation extinguishes; **attribution never does** —
+the provenance/authorship trail (§10.2b anti-theft) persists permanently. Discharge frees the *use*, not the
+*credit*.
+
+Open design questions (Timothy's steer — policy, not structure):
+- **Discharge model:** per-agent debt vs **collective pool** (total compensation from all sources meets the
+  cost → obligation-free for everyone; category-differentiated *rates* feed the pool). His phrasing implies
+  the collective pool — to confirm.
+- **Obligation composition:** does a derivative inherit upstream works' un-discharged obligations (an
+  obligation dependency-graph — the dialectical/dependency modality)?
+- **Unit of account** (fiat / token / resource-unit) for cost + ROI denomination.
+- **Multiplier band + who sets it**, under the hard cap.
+
+Adjacent prior art (interop/grounding, NOT reattribution — distinct synthesis): time-delayed-open (BSL /
+"fair source") releases on a *clock*; Permissive Commons releases on *compensation completion*.
+Steward-ownership / exit-to-community and data-dignity compensation are kin in spirit, none identical. Mostly
+expressible with existing components (deontic discharge + ODRL + agent lattice + SHACL cap + provenance +
+QUDT + ILP). `PendingImplementation`; would become `permissive-commons.n3` + a short spec, and license
+`core-ontologies/` itself.
+
+### 10.2f Civilizational scope — whose knowledge the substrate must carry (and on whose terms)
+Beyond the SDGs, the values layer must bring into the ICT/AI substrate the knowledge held by the
+devalued and the at-risk-of-erasure — or those peoples and worldviews are written out of an AI-mediated
+future (what is absent from the substrate is absent from the future people must live in). The
+expectation that those who hold this knowledge do the work **"for free" to count as good** is itself the
+exploitation (§10.2d; "free work does not exist"). Three fronts and their mechanisms:
+
+- **Linguistic justice.** All mother tongues + languages of prayer as **first-class**, not English-
+  default: multilingual SKOS labels on every value-concept + the sense layer (`interpretationMode`,
+  `validIn`). Anti-flattening at the linguistic level — an English-only substrate erases other
+  conceptual worlds from the machine-mediated future (same fight as `Physician ⊑ Place`).
+  ✅ **Plumbing prerequisite done (2026-06-22):** the `.q42` lexicon + the `turtle_doc` ingest parser
+  are now **Unicode-correct** — byte-exact UTF-8 round-trip for Arabic / CJK / Ge'ez / em-dash /
+  curly-quote literals, regression-tested (`non_ascii_literals_roundtrip_intact`). (A latent
+  `byte as char` defect would have corrupted non-ASCII text and could panic mid-codepoint; current
+  corpus literals were ASCII-only so no live data was harmed, but the multilingual layer cannot be
+  built on a parser that mangles its scripts.)
+- **Traditional knowledge (e.g. medicine), WITHOUT biopiracy.** Knowledge-holders (often remote, often
+  older women whose work the market priced at zero) *start* the corpus; domain experts (biochemistry,
+  …) *validate + improve* it collaboratively (Contextual-Workspace reader=writer; co-location not
+  required). Anti-appropriation guarantees: **provenance/attribution** (originating community credited
+  — §10.2b), **Permissive Commons** (community *compensated* on use, incl. by pharma — §10.2e), and
+  **governance by CARE + FAIR** — FAIR alone *enables* biopiracy; **CARE** (GIDA: Collective benefit,
+  **Authority to control**, Responsibility, Ethics) prevents it, *including the right to WITHHOLD*
+  (sacred/secret knowledge is not auto-open; the community decides what enters the corpus and on what
+  terms). Curation = culturally-authoritative *consent*, incl. consent to **not** encode (extends the
+  §4 Prime Directive: the curator may also say "not for the corpus").
+- **Transposition of state-era obligations to the modern agent lattice.** Instruments were written by/
+  for **States** in pre-internet language; transpose so the agents now wielding rights-affecting power
+  (corporations, platforms, AI/ICT) **bear the correlative duties** *while the BENEFIT stays anchored to
+  the natural person.* **Typed, not blanket:** (i) *universal* duties (don't torture, don't enable
+  abuse) → every agent (R1 a-fortiori); (ii) *public-law* duties (judicial remedy, legislate) → stay
+  with `PublicAuthority` (`specialisedFor`; a platform cannot "provide a court"); (iii) *new ICT-age*
+  duties → platforms/AI acquire correlative duties the drafters could not foresee. Duties extend
+  **outward** (more bearers); rights/benefits stay with `NaturalPerson` — **G1 enforces the asymmetry**
+  (a transposed duty must never become a captured right) = "beneficial relations for human beings
+  specifically, alongside correlated responsibilities." Pre-internet → ICT-age language update rides the
+  sense layer (Originalist/Living `interpretationMode`, `amendedText`). Wired primitives: R1/R2,
+  `specialisedFor`, disjoint lattice, G1, concept-graph; the systematic transposition + language-update
+  overlay are curation-heavy and **not yet done**. (`PendingImplementation`.)
+
+### 10.2g CBOR-LD as the broadening interchange / wire format (one hash-space; `.q42` native)
+**Yes — adopt CBOR-LD as the broadening INTERCHANGE + transmission format, NOT as the native compute
+truth.** Rationale: CBOR-LD is the W3C VC/JSON-LD ecosystem's compact binary wire format — and these are
+*values CREDENTIALS*, so they must travel as that ecosystem's native format (VCDM / mobile credentials);
+compact-binary suits mobile (wellfair) + the Nym mixnet; its `@context` term-dictionary mirrors the
+`.q42` front-of-file lexicon. **Boundary-not-substrate**, as with Solid/ODRL: CBOR-LD at the edges
+(ingest + wire/export), `.q42` (NQuin + hash-lexicon) as the native compute/storage truth; the q42
+lexicon is the engine-side analog of the CBOR-LD `@context` (clean transcoding bridge).
+
+State (verified 2026-06-22): CBOR-LD **ingest** (`cbor_parser.rs::parse_cbor_ld_stream`), **serialize**
+(`CborLdStarSerializer`, `vault_manifest::to_cbor_ld`), and **wire use** (daemon, p2p, vault manifests)
+all exist — so "CBOR-LD natively" is substantially true *at the boundary*. **TWO defects mean it does NOT
+yet broaden the *same* graph (it builds a parallel one):**
+1. ✅ **Hash inconsistency — FIXED (2026-06-22).** `cbor_parser.rs` `hash_str`/`hash_bytes` now delegate
+   to `generate_60bit_token` (were `DefaultHasher`/SipHash), and `Type::String` values are read via
+   `.str()` (were mis-read via `.bytes()`). The same IRI/literal now hashes **identically** across
+   CBOR-LD and Turtle/N3/SPARQL → one joinable graph. Test `cbor_terms_share_one_hash_space_with_turtle`
+   (hand-built CBOR map → quin hashes == `generate_60bit_token` of the terms, ≠ the old SipHash value).
+   Full lib 1053/1053; daemon/p2p/vault consumers didn't rely on the old hash, so no wire breakage.
+2. **Naive-CBOR, not full CBOR-LD.** Hashes whatever string/int it finds; does **not** expand compact
+   term-codes against a JSON-LD `@context` to canonical IRIs. Real CBOR-LD interop = expand-to-IRI,
+   *then* hash.
+
+**Unifying principle (third time we've hit it — after prefix-expansion and Unicode):** every input
+format must funnel to ONE hash-space — *canonicalise the term to its full IRI/literal, then
+`generate_60bit_token`.* Then CBOR-LD genuinely broadens: one graph, many formats —
+N3 / N3-star / Turtle / Turtle-star / RDF-XML / JSON-LD / **CBOR-LD** / KML → quins → `.q42` (native) →
+CBOR-LD (wire/export). ✅ The keystone (unified term hashing) is **done**; remaining follow-on: full
+CBOR-LD **`@context` expansion** (compact term-codes → canonical IRIs *then* hash) and numeric/datatype
+**literal canonicalisation** across formats. (Cross-ref §5 `.q42` layer, §10.2c multilingual.)
+
+**Lexicon methodology is medium-agnostic (any modality, any medium).** The hash path is *byte-based*
+(`generate_60bit_token` over canonical bytes), so it is the SAME methodology for text, a byte-string,
+an image, audio, or a spectral signature — language in any medium maps in by hashing its canonical
+bytes. The `Q42LEX` `LexiconEntry` is already a **tagged** payload (`String` 0x01 / `EmbeddedTriple`
+0x02 / `Webizen` 0x03), so it extends to non-text media by adding a modality-tagged variant
+(e.g. `Media` = modality byte + blob/content-hash ref) — *without changing the hash path*. This is the
+lexicon side of the NQuin modality flags and "multimodal-as-physics". (Extension `PendingImplementation`;
+the methodology already supports it — the Unicode fix proved text; media is the same shape.)
+
+**Credential lineage — Open Badges v3 / baked credentials.** The early credential work became
+**IMS Open Badges v3.0** ([imsglobal.org/spec/ob/v3p0](https://www.imsglobal.org/spec/ob/v3p0)) — a W3C
+Verifiable Credential that can be **baked into an image** (PNG `iTXt` / SVG metadata), so an *image*
+carries a credential = semantic statements + claims + logic. That is precisely "language in a medium":
+the medium is an image, the language is the embedded VC. Ingest path: extract the baked VC →
+JSON-LD/**CBOR-LD** → (now-unified) hash → quins → `.q42`; the lexicon may also hold the carrier image
+as a media entry. Align the values-credentials with **Open Badges v3 + VCDM** as the credential
+surface. (`PendingImplementation`: baked-image VC extraction + the media `LexiconEntry`.)
+
+### 10.2h Capability credentials — RPL + gap analysis (Open Badges lineage; SDG / Peace-Infrastructure)
+The Open Badges lineage (§10.2g) began as **micro-credentials in education**, with the objective of
+**Recognition of Prior Learning (RPL)**: recognising real skills/knowledge gained outside formal
+schooling. The credential machinery (VC/Open Badges + concept-graph + curation) generalises from
+*values*-credentials to **capability-credentials** — a *sibling domain of the same engine*, carrying a
+load-bearing anti-deficit stance.
+
+Model (reuses existing machinery — no new engine):
+- **Capability** = a concept (SKOS `broader`/`narrower`/`related`, multilingual): "potable-water system
+  construction", "solar-array maintenance", "malaria prophylaxis (traditional)".
+- **LearningClaim** = a verifiable claim (Open Badges v3 / VCDM) that a person holds a capability, with
+  the ontological distinctions: **`recognitionBasis`** = `Formal` | `PriorLearning` | `Experiential` |
+  `PeerAttested` (RPL is **first-class** — "no degree" ≠ "knows nothing"); **`evidence`** (PROV-O: what
+  backs it); **`assessmentStatus`** = `Proposed` | `Attested` (curation-gated — machine *proposes* a
+  `closeMatch` between lived experience and a capability; a **contextually-authoritative assessor**
+  confirms — §4 Prime Directive applied to skills).
+- **Gap analysis** = a query; the *make-the-absence-legible* pattern (§10.2a) applied to skills:
+  `Gap = Required ∖ Available` (SKOS subsumption/`closeMatch`), where *Required* is a project's capability
+  set — often a **dependency graph** ("to build X need A+B+C"; TimBL's "if missing, what's blocked?" →
+  dependency/dialectical modality). Output: present capabilities · genuine gaps · **clarifications**
+  (ambiguous `closeMatch` → assessment, never auto-denied).
+
+**Anti-deficit inversion (load-bearing).** The default — "no degrees → bring experts, locals know
+nothing" — is the flattening/erasure pattern again. RPL **inverts** it: recognise what *is* present
+first, then identify *genuine* gaps, then target support that **completes existing capability** rather
+than assuming its absence. Skills-layer form of "inspectability of power / recognition of the custodian";
+continuous with the **Capabilities approach** (Sen/Nussbaum) already in the needs foundation.
+Applications: portable verifiable CVs; and **SDG / Peace-Infrastructure** deployment — when resources are
+sent to construct Peace Infrastructure, a *computable* capability gap-analysis targets support precisely
+instead of parachuting in on a deficit assumption (development-as-recognition, not development-as-erasure).
+
+Reuses: concept-graph + SKOS (capabilities), VC / Open-Badges-v3 / VCDM (claims), PROV-O (evidence),
+gap-as-legible-absence (§10.2a), curation discipline (§4), dependency modality, Permissive Commons
+(recognise + compensate local skill). (`PendingImplementation`; sibling domain of the values-credential
+machinery — values-credentials encode *rights*, capability-credentials encode *learning*, one engine.)
+
+### 10.2i Document codec — bake/extract credentials & semantics in/from documents (PDF; invoices, payslips, pathology)
+Extends the baked-credential model (§10.2g, Open Badges → image) to **PDF and everyday documents**. Two
+directions, both reusing the one-hash-space CBOR-LD pipeline (§10.2g) and the medium-agnostic lexicon.
+
+**ENCODE (bake) — semantics → document.** Embed a *signed* VC / CBOR-LD / `.q42` payload in a PDF via
+**PDF/A-3 embedded files** (ISO 19005-3 — the mechanism Factur-X uses) + **XMP** (ISO 16684, RDF/XML
+metadata). Signed (ed25519 / ML-DSA) → tamper-evident → court-admissible (wellfair). **Tool: a virtual
+"printer driver"** — print-to-PDF (or post-process an existing PDF) that bakes + signs the semantic
+layer; **separately distributable** as a standalone utility AND exposable as a qualiaDB capability/MCP
+tool (one codec, two distributions).
+
+**DECODE (extract) — document → semantics**, tiered by reliability:
+1. **Baked (ours)** → *lossless*: read the embedded VC/CBOR-LD/`.q42` → quins (round-trips like the
+   `.q42` lexicon).
+2. **Structured-standard embedded** → parse the standard: **invoices** (Factur-X / ZUGFeRD / UBL /
+   EN 16931 embedded XML), **pathology/medical** (HL7 FHIR + LOINC/SNOMED), **payslips** (payroll
+   schemas) → quins via the domain libraries (`financial_modeling`, `medical`).
+3. **Unstructured** (arbitrary scan/PDF) → OCR + layout + LLM-assisted mapping → **curation-gated**:
+   machine *proposes* claims (`closeMatch`, confidence), human *confirms* — **never auto-assert** a
+   pathology value or a financial figure (§4 Prime Directive; a wrong medical value is injurious).
+   Hardest, lowest-reliability tier.
+
+**Why it matters (wellfair intake).** Invoices, payslips, pathology results are the documents a life
+generates — exactly the **person-held verifiable claims** the wellfair life-record is built from
+([[project_wellfair_purpose]]): income verification (benefits; RPL-of-work-experience §10.2h), health
+trends over time (pathology series), court-admissible evidence. The codec turns the pile of documents a
+person receives into a queryable, verifiable, gap-analysable graph they hold. Continuous with §10.2h: a
+payslip *is* work-experience evidence (RPL); a pathology series *is* a queryable health trend.
+
+Reuses: medium-agnostic lexicon + one-hash-space CBOR-LD pipeline (§10.2g), VC/Open-Badges/VCDM, PROV-O +
+signing (court-admissibility), domain libraries (financial/medical), curation discipline (§4). Standards
+to align: PDF/A-3, XMP, Factur-X/EN 16931/UBL, HL7 FHIR/LOINC/SNOMED. (`PendingImplementation`: PDF
+embed/extract codec + virtual-printer tool + structured-standard parsers; unstructured tier curation-gated,
+lowest-priority/reliability.)
+
+### 10.2j Chained credentials — plurality of claims, derivation/authorization chains, status propagation
+Confirmed central (the engine is a graph; chains are paths, credentials/claims/instruments are typed
+nodes/edges):
+- **Plurality is native:** a credential is a subject node, its claims are its quins (many
+  predicate-object edges); a Verifiable Presentation bundles many credentials (VCDM).
+- **Two kinds of chain** (typed edges in the concept-graph):
+  - **Derivation / evidence** — C is `prov:wasDerivedFrom` / cites `evidence` A, B (RPL: "master" from
+    "apprentice + safety"; Open Badges v3 `EndorsementCredential` = a credential about another credential).
+  - **Authorization / delegation** — authority to *assert* C is delegated down a chain (ZCAP-LD capability
+    chains, DID issuer-authorization); roots in a legally/culturally-authoritative root; §4 Prime Directive
+    forbids a machine self-authorising a link.
+- **Instrument-anchored:** chains frequently root in an **instrument** (UN convention as `ValuesCredential`)
+  — a fulfilment/relevance claim chains *up* to the instrument's obligation/right (values/deontic layer).
+- **Cryptographic substrate already exists:** the **Merkle-DAG / WAL** (`wal.rs` `prev_dag_hash`,
+  `checkpoint_to_dag`, DagNode store) hash-links records → tamper-evident, court-admissible credential
+  chains (wellfair).
+- **Key subtlety — status PROPAGATES along the chain.** A chained credential's validity is *computed, not
+  static*: revoke/expire/**defeat** an upstream credential → downstream dependents must be re-evaluated.
+  This is the deontic lifecycle (`Active`/`Defeated`/`Expired`, `values_evaluate`) + the dependency/
+  dialectical modality (TimBL "if A removed, what stops working?") + `credentialStatus`/revocation.
+  Revocation/defeat propagation along the dependency DAG is the load-bearing, non-trivial part.
+
+Standards: VCDM (`evidence`, `credentialStatus`, Verifiable Presentations, `termsOfUse`), Open Badges v3
+(`EndorsementCredential`), PROV-O (`wasDerivedFrom`/`wasAttributedTo`), ZCAP-LD (delegation), SKOS
+(`broader`/`related`). Reuses concept-graph + deontic lifecycle + dependency modality + Merkle-DAG +
+curation (§4). (`PendingImplementation`; a property the credential layer must have — confirmed central.)
+
+### 10.2d Foundational supports are the ROOT dependency (the deepest absence)
+Fair compensation, anti-theft, rights, agency, the works themselves — all presuppose a natural person
+**materially supported enough to exist and act.** Foundational supports (food, shelter, security, the
+conditions of continued existence) are not the first item in a list; they are the **root dependency** of
+the agency graph. In the dependency/counterfactual terms of the modalities ("if removed, what stops
+working?"), the answer for foundational support is *everything downstream*. So the engine should
+represent it so: foundational support as the root node whose **unmet state propagates "capacity
+undermined" to every dependent right and work.** This re-orders the three structural absences
+(§10.2a/§10.2b): the unmet duty to support the person is **not one missing duty among them — it is the
+one whose absence voids the others** (an unsupported person cannot sustain the work, pursue the claim, or
+exercise the right). It sharpens the existing chain (*foundational supports → selfhood → personhood →
+agency → rights*) into a dependency with a computable root; grounded in Capabilities / Max-Neef (material
+preconditions of agency), not Maslow's ladder. Scope honesty: the engine makes this *ordering legible* —
+it does not provide the supports; but the prevailing order keeps the foundation *invisible* (treating the
+supported person as given, reasoning only about the works/rights on top), which is how foundational work
+ends up unsupported while the work is used. (`PendingImplementation`.)
+
 ### 10.3 Incorporated from the 2nd-pass reviews
 - **Accountability = routing/REVIEW state machine, NOT a court** (Codex): `ResponsibilityStatus`
   {Alleged, Derived, Adjudicated}, `SanctionableSubject`, `requiresHumanReview`. A-platform
@@ -534,12 +943,11 @@ would wrongly strip its juridical personality.)
 
 ### 10.4 RE-SEQUENCED (Codex highest #1) — wiring/validation BEFORE more acquisition
 1. ✅ `tiering.n3`, `sense.n3`, `agency.n3`, trace fixture — DONE.
-2. **NEXT — the Webizen values-credential smoke test** (Codex highest #2): a Rust test that loads a tiny
-   `values.n3`+facts fixture, registers via `n3_parser` → `register_rule`, fires
-   `fire_registered_rules`, runs the compiled `NativeDeonticEval`/`execute_vm_frame` path, and
-   asserts a typed verdict (e.g. a `PersonhoodCategoryError`/`violates`) is observable —
-   confirming the corpus enters the live parse→compile→execute lane and that `n3logic.rs` is
-   NOT on this path. This is the first executable, falsifiable proof.
+2. ✅ **DONE — the Webizen values-credential smoke test** (Codex highest #2):
+   `deontic.rs::tests::values_credential_deontic_smoke` PASSES (values N3 rule →
+   `compile_n3_rule_to_norm` → `evaluate_deontic_contract` → `DeonticVerdict` Active→Defeated).
+   First executable, falsifiable proof the values deontic semantics are live. (Full
+   `register_rule`/`fire_registered_rules`/`execute_vm_frame` bytecode-VM wrapper = step 2 wiring.)
 3. `validate_core_ontologies` native gate (§9.1).
 4. `build_index.py` governance gap-report (§9.1).
 5. Fix the two under-segmented OHCHR files + strip `Download: PDF` boilerplate.
@@ -779,15 +1187,42 @@ evaluator EXISTS (`webizen.rs`); 4 external reviews converged. Do NOT attempt "a
 once — implement in **verified vertical slices**, gates first, then parallelise.
 
 ### 17.1 First slice — ONE careful session, fully verified (no agents yet)
-1. **Webizen values-credential smoke test** (§11.3): `n3_parser` → `compile_n3_rule_to_norm` (R1/R3 +
-   UDHR Art 30) → malicious `AgentIntent` quin → `register_rule`/`fire_registered_rules` →
-   `NativeDeonticEval`/`execute_vm_frame` w/ stack `[DeonticVerdict; N]` → **assert a Deny
-   verdict**. First falsifiable proof the corpus runs the live lane.
-2. **Deontic wiring** (§5): ingest `values.n3`/`agency.n3` so R1/R3 + guards register & fire;
-   verify what already flows via the ingest path before writing glue.
-3. **`validate_core_ontologies`** native gate (§9.1) + **`build_index.py` gap report** (§9.1).
-   *These two are the SAFETY GATES that make agent work checkable — build them before any agent
-   parallelisation.*
+1. ✅ **DONE (2026-06-21) — Webizen values-credential smoke test** (§11.3):
+   `crates/qualia-core-db/src/modalities/logic/deontic.rs::tests::values_credential_deontic_smoke`
+   — PASSES. Drives the real lane: a values prohibition (UDHR Art 30 family, `ns.webcivics.org`)
+   as an N3 `Rule` → `compile_n3_rule_to_norm` → `evaluate_deontic_contract` → `DeonticVerdict`
+   = `Active` (prohibition live), then `Defeated` when a `q42:unless` defeater is added (native
+   defeasibility). `n3logic.rs` NOT on the path. **Honest scope:** this proves the native deontic
+   evaluator (`evaluate_deontic_contract`, the function the `NativeDeonticEval` opcode dispatches
+   to) genuinely evaluates a values-sourced norm + honours defeaters. It does NOT yet exercise the
+   full `register_rule` → `fire_registered_rules` → `compile_rule_to_opcodes` → `execute_vm_frame`
+   bytecode-VM wrapper — that is step 2.
+2. ✅ **DONE (2026-06-21) — deontic wiring, guard path** (§5):
+   `webizen.rs::tests::values_guard_g1_corporate_capture_fires` — PASSES. The agency.n3 **G1**
+   corporate-capture guard, registered as an N3 `Rule`, fires end-to-end through the bytecode VM
+   (`register_rule` → `fire_registered_rules` → `fire_guard_rules` forward-chaining) and asserts
+   `PersonhoodCategoryError` (observable via `has_quin`); a NaturalPerson claiming the same right
+   is NOT flagged (negative control). ✅ **FILE→ENGINE loop CLOSED** —
+   `webizen.rs::tests::agency_n3_file_parses_and_g1_fires_end_to_end` PASSES: the engine parses
+   its OWN `core-ontologies/agency.n3` with the native `N3Parser` (`;`-lists + multi-line `{…}`
+   rules handled), registers the parsed rules, and G1 fires from the **file** → flags
+   `PersonhoodCategoryError`. (The earlier "MVP parser can't do multi-triple variable rules" note
+   was STALE — the parser was upgraded; verified by running.) The `.n3` files are now the live
+   source of truth, not hand-built structs.
+3. ✅ **DONE (2026-06-21) — `validate_core_ontologies` native gate** (§9.1):
+   `crates/qualia-core-db/tests/validate_core_ontologies.rs` — PASSES (102 instruments + 7 spine,
+   0 hard violations). Native Rust, zero-Python CI check. HARD-fails on: `qualia.id/ns` regression,
+   scraper boilerplate, structural breakage (ValuesCredential/title/source/≥1 provision), Tier-B
+   outside `mutable/`, missing spine file. WARNs on governance-field coverage (curation pending).
+   **It earned its keep immediately** — it caught the 12 scraper-boilerplate files; fixed at root
+   (`generate_n3_from_ohchr.py::strip_boilerplate` + regen) so it can't recur; the SKIP_SLUGS dedup
+   (GC III/IV, AP I/II → ICRC) is now durable across regen. `build_index.py` gap-report ✅ working.
+   *Together these are the SAFETY GATES that make agent parallelisation (§17.2) checkable.*
+
+**First slice (§17.1) COMPLETE** — the values system now (1) evaluates norms [step 1], (2) enforces
+the anti-capture guard end-to-end through the VM [step 2], (3) is governance-gated [step 3]. Three
+green tests; the executable, falsifiable spine is in place. Agent-parallelised acquisition (§17.2)
+is now safe to begin.
 
 ### 17.2 Then parallelise with agents — ONLY after 17.1 (output is gate-checkable)
 Mechanical, well-specified, each verified against the gate:
@@ -848,6 +1283,111 @@ mode from planning. Nothing is lost: re-enter via this §17.
 
 ---
 
+## 20. Modality breadth — the values layer is NOT deontic-only (2026-06-21)
+
+"Is the implementation too narrow?" — it *was* (deontic + defeasible). The values domain genuinely
+needs more of the engine's ~20 modalities, and they're real (153 modality tests green). Now **six**
+are WIRED + tested against real values concerns (all in `webizen.rs`/`deontic.rs` tests):
+
+| values concern | modality | engine surface | status |
+|---|---|---|---|
+| norms (Obligate/Permit/Forbid) | **Deontic** | `evaluate_deontic_contract` | ✅ wired+test |
+| exceptions / overlays ("unless") | **Defeasible** | `DEFEATER_BIT` / `OP_DEFEASIBLE_OVERRIDE` | ✅ wired+test |
+| variable guards (G1 capture) | **Forward-chaining** | `fire_guard_rules` (incl. file→engine) | ✅ wired+test |
+| effectivity / not-yet-in-force / expiry | **Temporal** | `interval_reasoning::TemporalInterval`; expiry in `evaluate_deontic_contract` | ✅ wired+test |
+| remedy / reparation after breach | **Contrary-to-duty (dyadic deontic)** | `evaluate_contrary_to_duty` | ✅ wired+test |
+| rights-conflict resolution | **Argumentation (Dung)** | `argumentation::grounded_extension` | ✅ wired+test |
+| jurisdiction (follows-the-person, RemedyStripping) | **Spatial RCC-8 / GeoSPARQL** | `spatio_temporal::evaluate_rcc8` | ✅ wired+test |
+| conflicting instruments across jurisdictions | **Paraconsistent** | `paraconsistent::route_paraconsistent` (isolates, no ex-falso) | ✅ wired+test |
+| identity-as-known / "person before law" | **Epistemic** | `NativeEpistemicEval` / `epistemic.rs` | design-mapped — next |
+| trust / reputation (behaviourally-derived) | **Probabilistic** | `probabilistic.rs` | trustfactory (future §13) |
+| consistent-scenario enumeration | **ASP** | `asp.rs` | available |
+| best-explanation ("why flagged") | **Abductive** | `abductive.rs` | available |
+
+✅ Spatial + paraconsistent now WIRED+tested (the two most values-load-bearing). Remaining unwired
+logic modality: **epistemic** (identity-as-known / "person before the law" recognition). **TEN
+modalities/domains** now exercised on real values concerns (six logic + algebra + economic + spatial
++ paraconsistent).
+
+### 20.1 Beyond logic modalities — subject-matter-selected DOMAIN reasoning (Timothy, 2026-06-21)
+
+The category isn't just *logic*. Reasoning is **selected by the subject matter** of the instrument/
+claim — and the engine supports domain libraries too (`specialized_libs/`, all real; §19). Two more
+are now WIRED + tested on values:
+
+| values concern | domain modality | engine surface | status |
+|---|---|---|---|
+| legal **proportionality** (IHL AP I 51(5)(b); HR limitation) + computed-rule provenance | **Algebra / CAS** | `symbolic_algebra` (`parse`/`eval`/`simplify`, `to_quins`/`from_quins`, `expr_citation_hash`) | ✅ wired+test |
+| **economic** rights (ICESCR Art 11 standard-of-living; reparation/harm quantification; livelihood facet) | **Economic** | CAS core + `financial_modeling` library | ✅ wired+test (CAS); financial lib available |
+| statistical evidence / disparate-impact / sampling | **Statistics** | `statistical_computing` | available — subject-matter-selected |
+| pattern/risk classification (e.g. fraud signals) | **ML** | `machine_learning` | available |
+| forensic / physical / medical / engineering evidence | Physics / Chemistry / Medical / Engineering | the respective `specialized_libs` | available |
+| privacy-preserving eligibility/score proofs | **ZK (Groth16)** | `zk_proofs` (real arkworks under `zk-culling`) | available (§19) |
+
+**The principle:** an instrument's subject matter picks the modality — a *norm* → deontic; a *time*
+clause → temporal; a *jurisdiction* → spatial; an *economic* right → economic/algebra; a
+*statistical* claim → statistics; etc. The engine is the union of these; the values layer dispatches
+to whichever the subject matter requires.
+
+### 20.2 Full reasoning-surface census (`20260621_reasoning_surfaces_study.md`)
+
+A complete walk of `modalities/` + `solvers/` + `specialized_libs/` + reasoning `src/*.rs` confirms
+the engine is **far broader** than the values layer has touched: **~20 logic modalities, ~7 solver
+families, ~12 domain libraries**, plus DEL / ODRL / ZK / observer-standpoint surfaces in `src/`.
+**TWENTY-TWO** now values-wired + tested (webizen 25/25, deontic 15/15, modalities 158/158, gate
+green): deontic · defeasible · forward-chaining · temporal-interval · contrary-to-duty · argumentation
+· algebra/CAS · economic · spatial/RCC-8 · paraconsistent · DL · modal · epistemic · fuzzy · abductive
+· probabilistic (behavioural trust→trustfactory) · dialectical (but-for causation/liability) · CTL
+(obligations over futures: AF remedy / AG right) · temporal-LTL (deadlines: remedy-within) · linear
+logic (one-shot consent) · graph-theory (relationship/standing network) · **ASP** (true stable-model
+semantics — under-determined norm → multiple consistent scenarios; constraints prune).
+
+- **Identity/personhood spine DONE** (§13 identifier≠identity made computable):
+  `values_identity_classification_via_dl_subsumption` (Agent lattice), `values_identity_is_modal`
+  (◇/□ context-relative), `values_identity_as_known_epistemic` (known vs merely-believed =
+  `claimedIdentityUnverifiable`).
+- **`dl.rs` made COMPREHENSIVE** — was single-parent-chain only; now a zero-heap DAG closure
+  handling **multiple inheritance** + diamonds (`modalities::dl::multiple_inheritance_dag` test).
+- **Fuzzy** (partial right-fulfilment, Gödel/Łukasiewicz) + **Abductive** ("why flagged" → root
+  cause) wired.
+
+**Maturity finding (corrected my own "thin=deficient" assumption):** read all the small modalities —
+most are **compact-but-COMPLETE** (`modal` real Kripke; `abductive` real bounded backward-chaining;
+`fuzzy` real t-norms; `diffusion` real wgpu compute). Rewriting them would be churn. The genuine
+deficiencies were **`dl`** (fixed → multiple inheritance) and **`asp`** (simplified context-bifurcation,
+not true stable-model semantics — documented `PendingImplementation`, lower values-priority).
+✅ **ASP rewritten** — `compute_answer_sets` (`asp.rs`): real Gelfond-Lifschitz reduct + least-fixpoint
++ stability + integrity constraints, bounded zero-heap; tests `answer_sets_even_loop_and_constraint`
++ `values_underdetermined_norm_answer_sets`. The legacy `enumerate_stable_models` heuristic is kept
+(its callers untouched); the real solver is re-exported. **The entire values-relevant LOGIC surface is
+now wired AND comprehensive — no deficient modality remains.**
+
+✅ **MCP abuse-check surface LIVE** — `values_check` tool (`mcp_server.rs` descriptor + dispatch →
+`mcp_tool_impls::values_check` → `webizen::check_personhood_category_error`). Makes the human-rights
+guard callable by the agent ecosystem: given `{agentType, claimsDignityRight}` it runs the **real
+agency.n3 G1/G1' inverse rights-guard lane** (a `CorporatePerson` or `ArtificialAgent` claiming a
+natural-person-only dignity right → `values:PersonhoodCategoryError`) and returns a structured verdict.
+Tested at the JSON boundary (`values_check_tool_flags_corporate_capture`) and the engine helper
+(`values_check_helper_anti_capture`). The existing `evaluate_modality` tool already exposes ltl / asp /
+deontic / epistemic / dl / paraconsistent / probabilistic to agents; `values_check` adds the dedicated
+values surface.
+
+✅ **MCP deontic-contract reasoner LIVE** — `values_evaluate` tool (descriptor + dispatch →
+`mcp_tool_impls::values_evaluate`). Where `values_check` is a binary anti-capture guard, this runs the
+**full native deontic VM** (`compile_norm_quin` + `evaluate_deontic_contract`): a norm
+(forbid/oblige/permit) bound to a party+action, an optional `unless` exception (compiled to a
+`q42:unless` defeater on the same party+path), and an optional temporal window → returns **Active**
+(in force) / **Defeated** (overridden) / **Expired** (past its window) / **Malformed**. Computed, not
+asserted. Tested across the full lifecycle (`values_evaluate_tool_deontic_lifecycle`: Active→Defeated
+via exception, Expired via lapsed window). Full lib suite **1045/1045**; webizen 26/26, mcp 25/25,
+modalities 158/158.
+
+**Remaining** (not logic-modality work): the distinct `deontic_logic.rs` (ODRL policy) /
+`deontic_circuit.rs`+`zk_proofs.rs` (ZK-deontic) **surfaces** (wire when the agreements/privacy layers
+need them); the **domain libraries** (full `financial_modeling`, statistics, ML, medical, physics —
+subject-matter-selected, available); and broader per-instrument MCP verbs (the abuse-check entry point
+now exists). Non-values modalities (control_feedback, calculus, qubo, diffusion) serve other domains.
+
 ## 19. Computational foundations now available — what was previously missing (2026-06-21)
 
 A parallel work-stream built out the engine's quantitative/symbolic layer (tracked in
@@ -899,3 +1439,80 @@ wrong** — the exact failure mode §17.4 warns about:
 path already evaluates `values.n3` R1/R2/R3 + the person/agent axioms because the deontic VM exists
 (§0). Prove it end-to-end with the smoke test (§11.3) + `validate_core_ontologies` gate **before**
 claiming the values-credentials are live. Assumed-present ≠ present.
+
+---
+
+## 21. Consolidation + unified to-do (2026-06-22 architecture session)
+
+This session settled the **cross-cutting architecture** the values/CML work runs on, and built the CML
+keystone. Full specs live where noted; this is the index + the prioritised to-do for full implementation.
+
+### 21.1 Built this session (DONE, tested)
+- **Front-of-file lexicon** — streaming ingest now embeds Q42LEX (literals recoverable from the `.q42`
+  alone); the CML TEXT-layer prerequisite. (§5)
+- **Faithful Turtle parser** — `turtle_doc.rs`: `@prefix` expansion + multi-line `;`/`,` + multi-word
+  literals + **Unicode-correct** (Arabic/CJK/Ge'ez/em-dash round-trip). Replaced the line-shredding
+  `n3_star`/`turtle_star` for corpus ingest. (§5)
+- **One hash-space** — CBOR-LD parser unified to `generate_60bit_token` (was SipHash); same IRI hashes
+  identically across Turtle/N3/CBOR-LD. (§10.2g; remaining: CBOR-LD `@context` expansion.)
+- **CML concept-graph keystone** — `cml.n3` axioms + pilot `concept:DutyToSuppressForcedLabour`; the
+  deontic logic library runs **against the concept** (`cml_concept_deontic_pilot`: Active → Defeated).
+  (CML_CONCEPT_GRAPH §7; full lib 1054/1054, gate 1/1.)
+- **CML Studio** — `docs/cml-studio.html`: Canvas2D mind-map (drag nodes/connectors, assign predicate +
+  any of 18 logic modalities, live Turtle). On the Webizen render contract (Canvas2D → wgpu).
+
+### 21.2 Cross-cutting architecture decided (specs in STELLAR_MISSION.md)
+- **Spectral / wave-physics + zero-heap** (STELLAR §D) — EMF + acoustic + sensors → one *wave coordinate*
+  (freq/wavelength · amplitude · phase) in fixed 10D dims; percepts (colour, pitch) **enumerated** as
+  pure functions over fixed coords; representation + enumeration + complex eval all **zero-heap**. EMF ≠
+  acoustic (distinct kinds, don't flatten).
+- **Manifold renderer** (STELLAR §E) — render is a **projection of the 10D manifold** (2D/3D/4D enumerated
+  from it). *Current gap:* output is a ~2.5D particle field — **no depth-stencil / mesh / asset import**;
+  3D assets not yet rendered. Close with world-space scene + physics-of-artefacts + spatio-temporal
+  binding (RCC-8 / Allen), reusing the existing view-proj + camera + PGA.
+- **Singular pipeline manifold** (STELLAR §F) — `compute_universe.rs`: one `wgpu::Device`, graph–tensor
+  duality (NQuin graph = `Tensor10D` SOA on one resident substrate), U0(LLM)/U1(tensor)/Sentinel
+  universes over lock-free rings, one VramLedger. *The reason the LLM/display/audio are in-engine.* Encode
+  once → GPU **enumerates** for all consumers simultaneously, zero-heap. Remaining: render/audio fully
+  under the universe orchestration + the single cross-manifold fused pass.
+- **Heterogeneous compute core** (STELLAR §G) — the **bedrock under the fabric**: route each math to its
+  silicon — **CPU** (deterministic logic + deontic/DID gatekeeper), **GPU** (physics/spatial), **NPU**
+  (tensor contraction without flattening) — with **QPU hooks** (`qpu_ingress` / `qubo_compiler`,
+  classical-solve-by-default + optional external-provider dispatch, `qpu_enabled`) for future/rare quantum
+  offload. Part of the q42 design; QPU is hooks, **never hot-path**.
+- **Manifold-native transcode** (STELLAR §A) — GGUF / **safetensor** (add to `ingest/detect.rs`) →
+  weights as `Tensor10D` SOA on the shared substrate (not an opaque blob): GPU-enumerable,
+  fused-kernel-ready, zero-heap, compressed during transcode. The model becomes substrate, not a blob.
+
+### 21.3 Unified to-do (prioritised — "continue with full implementation")
+**Near-term (values/CML plan — the current build):**
+1. ✅ **Temporal bounds + SHACL firewall on the pilot** — DONE 2026-06-22
+   (`cml_concept_temporal_and_shacl_firewall`): in-force `TemporalInterval` window + SHACL
+   `ForcedLabourComplianceShape` (Class) gated on norm validity. Both CML pilots moved to the corpus hash
+   (`generate_60bit_token`) so they join the ingested `.q42`. Full lib 1055/1055.
+2. **Concept-layer scale-up** — concept identifiers + `realizedBy` + SKOS relations across instruments
+   (curation-paced; `closeMatch` heuristics deferred to the Neuro-Symbolic Sieve). ⚠ **BLOCKED on the
+   hash-space unification (below).**
+
+> ⚠ **BLOCKER found 2026-06-22 (during item 1).** Two hash functions exist: **`q_hash`** (`lib.rs`, full
+> 64-bit FNV — the deontic/values guards · `SlgArena` · MCP `values_check`+`values_evaluate`) vs
+> **`generate_60bit_token`** (`lexicon.rs`, FNV **truncated to 60 bits** — ingest/`turtle_doc` · SPARQL ·
+> SHACL · CBOR · the ingested `.q42` corpus). They differ in the top 4 bits → the *same IRI hashes
+> differently*. The CML pilots now use `generate_60bit_token` (so they join the corpus); but the values
+> guards/MCP tools still use `q_hash`, so they do **not** match ingested-corpus hashes — which blocks
+> evaluating values/deontic logic *over the ingested concept-graph* (#2, and the MCP-over-corpus path).
+> **Decision needed (Timothy):** make `generate_60bit_token` (the serialized/corpus space) canonical and
+> migrate the `q_hash` call sites in the values/deontic/MCP layer (+ re-verify ~14 tests). Cross-cutting +
+> architectural — **not** auto-migrated (task #14).
+3. **CBOR-LD `@context` expansion** — finish the one-hash-space (compact term-codes → canonical IRI).
+4. **Credential codecs** — media `LexiconEntry` + baked-PDF / Open-Badges-v3 codec (§10.2g/§10.2i);
+   capability/RPL credentials + gap analysis (§10.2h); chained credentials + status propagation (§10.2j).
+5. **Permissive Commons** (§10.2e) — `permissive-commons.n3` + license `core-ontologies/`.
+
+**Infrastructure track (STELLAR — bigger, enables the above at scale):**
+6. **Manifold renderer** (§E) — depth-stencil + meshes + `.obj`/`.stl`/OpenUSD + physics + spatio-temporal.
+7. **Manifold-native transcode** (§A) — safetensor in `detect.rs`; GGUF/safetensor → resident-substrate.
+8. **Compute-universe fusion** (§F) — render/audio universes; the single cross-manifold fused pass.
+
+Honest framing: 1–5 are buildable now on the existing engine; 6–8 are the STELLAR infra track (larger,
+GPU-heavy) that the architecture is now specced for. Resume at **#1**.

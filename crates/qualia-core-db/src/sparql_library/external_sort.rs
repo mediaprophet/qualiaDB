@@ -2,7 +2,7 @@
 use crate::q42_volume::UnifiedVolumeBuilder;
 use crate::{NQuin, QUINS_PER_BLOCK};
 use std::cmp::Ordering;
-use std::collections::BinaryHeap;
+use std::collections::{BinaryHeap, HashMap};
 use std::fs::File;
 use std::io::{BufReader, Read, Write};
 use std::path::{Path, PathBuf};
@@ -15,6 +15,10 @@ pub struct ExternalSorter {
     chunk_files: Vec<PathBuf>,
     temp_dir: PathBuf,
     total_quins: u64,
+    /// `hash → lexical string` for every term seen, written to the volume's
+    /// front-of-file Q42LEX section so literals/IRIs are recoverable from the `.q42`
+    /// alone (no separate `.lex` sidecar). Cold ingest path — heap is expected here.
+    lex: HashMap<u64, String>,
 }
 
 impl ExternalSorter {
@@ -26,6 +30,7 @@ impl ExternalSorter {
             chunk_files: Vec::new(),
             temp_dir,
             total_quins: 0,
+            lex: HashMap::new(),
         }
     }
 
@@ -36,6 +41,12 @@ impl ExternalSorter {
             self.flush_chunk()?;
         }
         Ok(())
+    }
+
+    /// Record a term so its hash resolves back to its lexical string in the volume.
+    pub fn push_lex(&mut self, hash: u64, term: &str) {
+        // First writer wins; identical hash ⇒ identical string (collision-free 60-bit token).
+        self.lex.entry(hash).or_insert_with(|| term.to_string());
     }
 
     fn flush_chunk(&mut self) -> std::io::Result<()> {
@@ -68,7 +79,7 @@ impl ExternalSorter {
         // Flush any remaining quins
         self.flush_chunk()?;
 
-        let mut builder = UnifiedVolumeBuilder::with_empty_lex();
+        let mut builder = UnifiedVolumeBuilder::with_lex_map(&self.lex);
 
         if self.chunk_files.is_empty() {
             builder.finish(final_q42)?;

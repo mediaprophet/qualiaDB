@@ -78,6 +78,13 @@ opposed to the extractive "SSI-wallet / person-as-issued-root-key" counterfeit.
   itself. Stream in ~256 MB chunks across Web Workers (avoid main-thread block); flush page-aligned blocks to
   OPFS immediately. (Times: 360M ~2–5 s; 3–4B ~25–45 s; 8B ~1.5–3 min.)
 - **Demand-paged mmap** — run models exceeding physical RAM (page layers in at microsecond of use).
+- **Transcode → manifold-native, not an opaque blob** (the singular-pipeline payoff): GGUF / **safetensor**
+  (add safetensor to `ingest/detect.rs` — currently absent) → the native format encodes weights as
+  `Tensor10D` SOA on the **shared resident substrate** (graph–tensor duality, `compute_universe.rs`), so the
+  model becomes part of the *same* manifold the logic / render / audio operate on — directly **GPU-enumerable,
+  fused-kernel-ready (§F), zero-heap** — with the §A compression (ternary / KIVI / W4A4) applied *during*
+  transcode and the lexicon / CBOR-LD header (the wave-coordinate substrate, §D) carried natively. The model
+  stops being a blob you query and becomes substrate the whole pipeline computes over.
 - **Distribution**: pre-compile `.q42` and host on Hugging Face / WebTorrent swarm → end-user TTFT ≈ 0.
 
 ### B. Neuro-symbolic binding — tokenizer → ontology (the differentiator)
@@ -117,8 +124,35 @@ opposed to the extractive "SSI-wallet / person-as-issued-root-key" counterfeit.
   (1/500 px) bio-telemetry. Domains to pilot first: **structural-mechanical monitoring** and **human
   bio-telemetry** (bind aberrations to RadLex; runs on local silicon, biometrics never leave the device).
 
-### E. 3D / geometric / CAD / photogrammetry
-*Goal: constraint-satisfying geometric modelling, not probabilistic 3D "guessing."*
+**The unifying substrate — wave coordinates in fixed 10D dims (THE zero-heap mechanism).** EMF (light /
+thermal / RF / X-ray), acoustic (sound / ultrasound), and other sensor signals all reduce to a common **wave
+coordinate** — frequency/wavelength · amplitude · phase (+ modulation μ, signature σ) — which is exactly
+`SpectralDecomposition{amplitude,phase,frequency}` and the 10D spectral axes (α/μ/σ). Because these are
+**fixed tensor dimensions**, not token arrays or sample buffers, the representation is **zero-heap for *any*
+modality**: no `Vec` of samples, no per-pixel RGB objects, no `String` — one fixed stride (the same invariant
+as the 48-byte NQuin). This is *why* multimodal-as-physics is the design: it makes representation, enumeration,
+and complex evaluation all zero-heap on one substrate.
+  - **Percepts are *enumerated*, not stored.** Colour, pitch, brightness, timbre, heat are **pure functions
+    over the fixed coordinates within a band** — colour = f(wavelength, amplitude) in the visible-EMF band;
+    pitch = f(frequency) in the audible-acoustic band (CQT). Computed on the fly from fixed dims → no
+    allocation. ("Enumerate down to colour" = a projection of the manifold, exactly like 3D from 10D.)
+  - **Complex eval is zero-heap** — multimodal reasoning runs as tensor ops on the fixed manifold (the
+    cross-manifold fused kernel §F, masking on dims): fixed strides, no heap. Tokens/buffers are
+    variable-length/heap; wave-physics in fixed 10D dims is representation **+** enumeration **+** evaluation
+    in one zero-heap substrate.
+  - **EMF ≠ acoustic — don't flatten.** They share the *wave abstraction* but are physically distinct kinds
+    (EM transverse waves, `c`, vacuum vs mechanical pressure waves, medium-dependent `v`). The kind is a
+    tagged band parameter so enumeration + propagation physics respect it (colour from EMF-visible, pitch from
+    acoustic-audible) — the same anti-flattening discipline as the man-made/natural boundary.
+  - **Sensor-extensible** — a new modality = a new band/projection of the same wave substrate (SOSA/SSN
+    observation + the spectral dims). The manifold renderer (§E) draws colour from the spectral *signature*,
+    not an RGB literal: **spectral → percept → render** is one chain.
+
+### E. The manifold renderer — 3D / geometric / CAD / photogrammetry (projections of the 10D foundation)
+*Goal: constraint-satisfying geometric modelling, not probabilistic 3D "guessing." The renderer is a
+**projection of the 10D manifold**, not a bolt-on 3D engine: 2D screen, 3D scene, and 4D spacetime views are
+**enumerated from the same 10D structure** — the reason 10D is the foundation (lower dimensionalities derive
+from it). Artefacts carry their **physics** and their **place/space/time** situation, not merely geometry.*
 - **Projective Geometric Algebra (PGA)** multivectors `M = α + v + B + T` bound to `kinematics.wgsl`; the
   geometry **refuses to contract** when a suggested action violates the physical bounding box (deterministic
   prevention).
@@ -129,6 +163,33 @@ opposed to the extractive "SSI-wallet / person-as-issued-root-key" counterfeit.
 - **Direct-load** `.obj` / `.stl` / **OpenUSD**; assets = *physical manifold + kinematic multivector* (joints
   as multivectors in the 5th dimension).
 
+**Current state (honest, 2026-06-22) — the gap to close FIRST.** The *data* is genuinely 10D with real 3D
+(`Tensor10D{q,v,w,x,y,z,t,α,μ,σ}`, `SpacetimeCoord{x,y,z,t}`), and `webizen-render` has 3D scaffolding (a 4×4
+`view_projection` matrix + look-at `SceneCamera`, PGA math, z-depth scaling). **But the implemented output is
+the ~2.5D ambient particle field** (50k points, screen-space positions + z-for-depth) — there is **no
+depth-stencil buffer, no mesh vertex/index geometry, and no `.obj`/`.stl`/OpenUSD import**. So **3D *assets*
+are not yet rendered**; the renderer projects a point/particle field, not a world-space scene. An
+output/renderer gap on a sound foundation, *not* a dimensional limit.
+
+**Closing it — the manifold renderer (elevated to near-term, Timothy 2026-06-22):**
+1. **World-space 3D scene** — reuse the existing `view_projection` matrix + `SceneCamera` + PGA; add a
+   **depth-stencil buffer** (occlusion), **mesh vertex/index buffers** (geometry), and **asset import**
+   (`.obj`/`.stl`/OpenUSD).
+2. **Physics of artefacts** — each asset = *physical manifold + kinematic multivector* (mass/material/momentum
+   `P` in the Manifold-Coordinate §C; `specialized_libs/physics_simulation`; PGA "refuses to contract" on a
+   bounding-box violation). An artefact *behaves* physically, it is not just a shape.
+3. **Place / space / time (spatio-temporal binding)** — `x,y,z` (space) + `t` (time → temporal evolution /
+   animation) + **place/jurisdiction** (GeoSPARQL) evaluated by native **RCC-8** (`spatio_temporal.rs`) and
+   Allen/LTL temporal reasoning. An artefact is situated in space **and** time **and** place, and that
+   spatio-temporal logic is queryable by the *same modalities* the values layer uses.
+4. **One projection, many views** — a single `project: 10D → target` enumerates the 2D / 3D / 4D views from the
+   manifold (the volume metric in `tensor/volume_gpu.rs` / `manifold.rs`). The CML Studio 2D canvas and a 3D
+   scene are the *same manifold* at different projections.
+
+Leverages: `tensor/` (coordinate · spacetime · manifold · volume_gpu · spectral · topology), `webizen-render`
+scaffolding (view-proj · camera · PGA), `specialized_libs/physics_simulation`, `spatio_temporal` (RCC-8),
+`interval_reasoning` / `temporal_ltl`. (`PendingImplementation`.)
+
 ### F. The cross-manifold fused kernel
 - Upgrade `fused_attention.wgsl` / `tensor_volume.wgsl` to **parallel dot-product contraction across all
   orthogonal manifolds** (semantic Quins, spectral tensors, acoustic wave-functions, PGA multivectors)
@@ -137,13 +198,38 @@ opposed to the extractive "SSI-wallet / person-as-issued-root-key" counterfeit.
   deontic gateway** that reduces the 10D manifold to what's critical for the current Quin and discards
   irrelevant/forbidden sensor data at the hardware bus (ultimate efficiency).
 
-### G. Heterogeneous compute — the CPU + GPU + NPU trinity
-*Goal: route each math to the silicon designed for it (via WebNN + WebGPU + WASM).*
+**The fabric this runs on already exists (honest, 2026-06-22) — `compute_universe.rs`.** This is *why* the
+LLM, display, and audio were brought *into* the engine rather than federated as separate processes: a **single
+pipeline manifold**. One physical `wgpu::Device` (`gpu_context::shared_gpu`); the semantic `NQuin` graph and
+the `Tensor10D` SOA **share one resident substrate** (graph–tensor duality); compute runs as coordinated
+**universes** — U0 (LLM) · U1 (tensor) · Sentinel (governance) — over lock-free SPSC rings (the Phase-8
+bifurcation), under one `VramLedger`. The 10D manifold *metric* is already GPU-resident (`tensor_volume.wgsl`
+ports `Tensor10D::full_distance`). So data is encoded **once** on the shared substrate and the GPU
+**enumerates** it for every consumer — no inter-engine marshalling, no heap copies between an LLM process and a
+renderer process. *That* is the performance argument: separate engines each copy/convert (heap + latency); one
+manifold + one device + GPU enumeration serves LLM inference, logic-modality eval, render, and audio
+**simultaneously**, zero-heap.
+
+**Remaining for §F:** (a) bring the **render (`viewport/`) and audio (`spectral` / STFT-CQT)** functions fully
+*under* the universe orchestration (they live in the same engine on the shared device today, but as distinct
+pipelines, not yet formal universes in the fabric); (b) the **single fused pass** that reduces *all* orthogonal
+manifolds at once (above) — currently separate wgsl shaders (`fused_attention`, `tensor_volume`, `ambient`,
+`sieve`, …) dispatched on the one device, not yet one cross-manifold kernel.
+
+### G. Heterogeneous compute — CPU + GPU + NPU (+ QPU hooks): the underlying core
+*Goal: route each math to the silicon built for it (WebNN + WebGPU + WASM). This is the **bedrock under the
+`compute_universe` fabric (§F)** — the universes dispatch each operation to the right processor over the one
+shared resident substrate.*
 - **NPU (WebNN)** — tensor contraction as a primitive: multi-way relational/dot-product reductions on PGA /
   10D volumetric tensors **without flattening** the geometry; power-efficient.
 - **GPU (WebGPU)** — continuous physics & spatial dataflow (`kinematics.wgsl`, `tensor_volume.wgsl`).
 - **CPU (WASM)** — deterministic logic & the deontic/DID gatekeeper (`shacl_compiler.rs`, `n3_parser.rs`):
   short-circuits the bus before an unlawful/unsafe vector is ever dispatched.
+- **QPU (hooks — future / rare, part of the q42 design)** — `qpu_ingress` + `qubo_compiler` *formulate* a
+  QUBO / circuit job; **classical solve by default**, with optional **external-provider dispatch** (8
+  providers: IBM / D-Wave / IonQ / Rigetti / Azure / Braket / Google / Quantinuum) gated by `qpu_enabled` +
+  a signed commitment. MCP: `qpu_optimize` / `qpu_dft` / `qpu_status`. Hooks now; rare/optional quantum
+  offload later — **never on the hot path**.
 
 ### H. Federated, energy-opportunistic, provenanced training
 *Goal: turn excess (e.g. solar) energy into collaborative, trustworthy model improvement — without a cloud.*
