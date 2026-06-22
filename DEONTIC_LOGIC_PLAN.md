@@ -221,6 +221,47 @@ platform-provider). It is **not** gated behind the deontic work; run it in paral
 
 ---
 
+## Phases 8–N — §16–§30 (the extended legal-logic stack, from `legal_logic.md`)
+
+Same honesty contract. Built in clusters by value + buildability. **§18 (capacity / duress /
+guardianship / posthumous) and §20 (wave-physics manifold) are gated** — §18 on Timothy's
+sensitive-vocab decisions (DV / coercion / guardianship), §20 on the STELLAR manifold tasks.
+
+### Phase 8 — Liability & accountability cluster ✅ DONE 2026-06-22
+**Test:** `modalities::causal::` 3 + `modalities::responsibility::` 2; full lib suite **1131 passed, 0 failed**.
+- [x] §16 Causal & counterfactual (`causal.rs`): `but_for_cause` (sine-qua-non), `is_voided_by`
+  / `dependents_voided` (root-node dependency cascade — deepest-absence), `is_overdetermined`
+  (joint liability when no single cause is but-for). Bounded BFS, zero-heap.
+- [x] §25 Meta-statement (`responsibility.rs`): `ResponsibilityStatus {Alleged, Adjudicated,
+  Dismissed}` + `adjudicate` + `is_enforceable_fact` (an allegation is NOT a fact until
+  adjudicated — stops accusation-as-weapon).
+- [x] §30 Systemic meta-guard (`responsibility.rs`): `rule_of_law_asymmetry`,
+  `enforcer_overreach` (no appeal path), `accountability_vacuum` — the person protected from
+  the system.
+
+### Phase 9 — Capacity, delegation, contract  (§18 partially gated)
+- [ ] §18 Juridical capacity / duress→voidable / guardianship-delegation / posthumous standing
+  — **conservative engine over EXISTING ontology vocab**; flag any contested semantics to Timothy.
+- [ ] §21 Delegation & credential-chain: authority delegation + revocation-cascade defeat.
+- [ ] §22 Contractual formation: Offer → Assent → Binding state machine.
+
+### Phase 10 — Economic, capability, identity
+- [ ] §23 Value-flow / Permissive-Commons: cost anchoring, proportional royalty, pool →
+  Discharged at threshold.
+- [ ] §24 Gap analysis / RPL: capability set-difference (computable gap).
+- [ ] §27 Resilient relational identity: re-computation from surviving fabric.
+
+### Phase 11 — Composition wires (compose existing real primitives into the deontic path)
+- [ ] §17 ZK-gated obligation `O(p | ZK(...))` + selective disclosure (composes `zk_proofs.rs`).
+- [ ] §26 Proportionality test (composes `symbolic_algebra.rs` `differentiate`/`eval`).
+- [ ] §19 Sense-translation gating (closeMatch heuristic vs exactMatch human-attested).
+
+### Deferred / heavier
+- [ ] §28 Distributed state / consensus (composes CRDT); §29 multi-modal carriers (task #9 PDF/PNG);
+  §20 wave-physics manifold (STELLAR tasks #11–13).
+
+---
+
 ## Anti-drift protocol
 - One phase (or sub-item) = one commit; tests green; message records the test command + result.
 - Tick the checkbox here in the same commit. Never tick without a green test.

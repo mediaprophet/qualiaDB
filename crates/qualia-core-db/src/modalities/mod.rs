@@ -73,6 +73,15 @@ pub mod interaction_governance;
 pub use interaction_governance::{
     PolicyMode, Governance, map_policy, govern_verdict, permits_execution, policy_action,
 };
+pub mod causal;
+pub use causal::{
+    caused, but_for_cause, is_voided_by, dependents_voided, is_overdetermined,
+};
+pub mod responsibility;
+pub use responsibility::{
+    ResponsibilityStatus, adjudicate, is_enforceable_fact,
+    rule_of_law_asymmetry, enforcer_overreach, accountability_vacuum,
+};
 pub mod temporal_ltl;
 pub use temporal_ltl::{
     OP_LTL_GLOBALLY, OP_LTL_FINALLY, OP_LTL_NEXT, OP_LTL_UNTIL, OP_LTL_RELEASE,
