@@ -59,6 +59,11 @@ pub mod stit;
 pub use stit::{
     brought_about, is_duty_bearer, agentive_status, joint_discharged, joint_liable_members,
 };
+pub mod deontic_compose;
+pub use deontic_compose::{
+    obligation_globally, obligation_until, MensRea, agent_knows, classify_mens_rea,
+    discharge_obligation, obligation_applies_in,
+};
 pub mod temporal_ltl;
 pub use temporal_ltl::{
     OP_LTL_GLOBALLY, OP_LTL_FINALLY, OP_LTL_NEXT, OP_LTL_UNTIL, OP_LTL_RELEASE,

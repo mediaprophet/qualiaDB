@@ -133,13 +133,19 @@ full lib suite **1095 passed, 0 failed**.
 - [x] Joint action `O[{α,β} stit φ]`: `joint_discharged` (any member suffices) +
   `joint_liable_members` (shared liability — all members liable if undischarged).
 
-### Phase 4 — Compositions with deontic (the bulk of §8–10, §13–14)
-- [ ] deontic × temporal: `O(Gp)`, `O(p U q)`, deadline-miss → CTD (compose `temporal_ltl.rs`).
-- [ ] deontic × epistemic: mens rea — `O(K_α p)`, knowing vs ignorant violation, omission
-  (compose `epistemic.rs` + lifecycle `Violated`).
-- [ ] deontic × spatial: locative obligation + jurisdictional subsumption via `jur:within`.
-- [ ] deontic × linear: discharge → lifecycle `Discharged`; unmet-correlative-duty (Claim with
-  no funded duty-bearer) → structural-gap report (compose `linear.rs` + Phase 2).
+### Phase 4 — Compositions with deontic (the bulk of §8–10, §13–14)  [`modalities/deontic_compose.rs`]
+**Cluster A (zero-heap) ✅ DONE 2026-06-22** — `cargo test … modalities::deontic_compose::`
+→ **5 passed**; full lib suite **1104 passed, 0 failed**.
+- [x] deontic × temporal: `obligation_globally` (`O(Gφ)`) + `obligation_until` (`O(φ U ψ)`)
+  via `temporal_ltl::evaluate_ltl_trace`.
+- [x] deontic × epistemic: mens rea — `MensRea {Knowing, Ignorant, InexcusableIgnorance}` +
+  `classify_mens_rea` + `agent_knows` (ignorantia juris non excusat when duty-to-know).
+- [x] deontic × spatial: `obligation_applies_in` — jurisdictional subsumption via `jur:within`
+  (DL transitive closure; not RCC-8 geometry, per §1).
+- [x] deontic × linear: `discharge_obligation` — fulfilment → `Discharged` AND consumes the
+  duty (`linear::consume_quin`). Unmet-correlative-duty already shipped in Phase 2
+  (`jural::find_unmet_correlatives`).
+**Cluster B (heap-using reasoning engines) — remaining:**
 - [ ] deontic × argumentation: conflicting norms → grounded extension → final verdict.
 - [ ] deontic × probabilistic/fuzzy: partial fulfillment `μ∈[0,1]`; trust threshold.
 - [ ] deontic × ASP/abductive: multi-remedy stable models; breach → minimal-cause diagnosis.
