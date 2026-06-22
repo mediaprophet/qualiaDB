@@ -54,6 +54,41 @@ values:PersonhoodDisjointnessShape a sh:NodeShape ;
 
 values:LegalPerson    a rdfs:Class ; rdfs:subClassOf values:Agent ; rdfs:label "Legal person (juridical personality)" ;
     rdfs:comment "Juridical personality (contracts, bears treaties) — NOT a values:Person and NOT a bearer of inherent dignity. Disjoint from values:NaturalPerson." .
+
+# --- "PERSON" IS RESOLVED PER DOCUMENT — the reading is CONTEXTUAL (frame-relative #15) ---
+# values:Person above is the DIGNITY CONCEPT (the human). But the WORD "person" in a given
+# document does NOT globally mean that — its reading is contextual to the document /
+# jurisdiction / author. The UN instruments INTEND "human being"; later documents vary. So
+# "person" is resolved per the document's personReading (the document is the FRAME); it
+# equals values:Person (the dignity-human) ONLY under a HumanOnly reading.
+
+# WHAT a document's "person" denotes:
+values:PersonReading a rdfs:Class .
+values:HumanOnly     a values:PersonReading ; rdfs:comment "'person' = the human being (the dignity sense; = values:Person)." .
+values:Incorporative a values:PersonReading ; rdfs:comment "'person' INCLUDES legal/corporate personality — a capture-risk reading." .
+values:MixedReading  a values:PersonReading ; rdfs:comment "Both human and legal, unseparated." .
+
+# HOW well-determined that reading is (provenance / epistemic quality of the definition):
+values:ReadingStatus a rdfs:Class .
+values:Intended            a values:ReadingStatus ; rdfs:comment "Contextually clear from purpose (e.g. the UN human-rights instruments)." .
+values:Declared            a values:ReadingStatus ; rdfs:comment "Explicitly defined in the document (a Definitional illocutionary act)." .
+values:AmbiguousReading    a values:ReadingStatus ; rdfs:comment "Unresolved — multiple candidate readings; HELD, not collapsed (paraconsistent)." .
+values:IntentionallyOpaque a values:ReadingStatus ; rdfs:comment "Deliberately vague to enable capture — an abuse signal." .
+values:AuthorUnaware       a values:ReadingStatus ; rdfs:comment "The author does not understand the human/legal distinction — low epistemic quality." .
+
+values:personReading a rdf:Property ; rdfs:comment "Document/context → how 'person' is read there (values:PersonReading)." .
+values:personReadingStatus a rdf:Property ; rdfs:comment "Document/context → how well-determined that reading is (values:ReadingStatus)." .
+
+values:PersonhoodCaptureRiskFlag a rdfs:Class ;
+    rdfs:comment "Flag: a document reads 'person' incorporatively or opaquely — corporate-personhood capture risk; routed to the values abuse-check (not auto-judged)." .
+
+# Default for the UN human-rights corpus: a values:ValuesCredential reads "person" as the
+# human being (HumanOnly / Intended) unless the document declares otherwise.
+{ ?d a values:ValuesCredential } => { ?d values:personReading values:HumanOnly ; values:personReadingStatus values:Intended } .
+
+# An incorporative or intentionally-opaque reading raises the capture-risk flag.
+{ ?doc values:personReading values:Incorporative } => { ?doc values:flag values:PersonhoodCaptureRiskFlag } .
+{ ?doc values:personReadingStatus values:IntentionallyOpaque } => { ?doc values:flag values:PersonhoodCaptureRiskFlag } .
 values:ArtificialAgent a rdfs:Class ; rdfs:subClassOf values:Agent ; rdfs:label "Artificial agent (software/AI)" .
 
 # STATE DECISION (PLAN.md §9.2, resolved 2026-06-21): a State HAS juridical
