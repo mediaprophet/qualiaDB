@@ -287,6 +287,36 @@ pub fn values_check(args: &[u8]) -> Result<String, McpSystemError> {
     .to_string())
 }
 
+/// MCP `graph_resolve` — resolve an IRI against the LIVE daemon graph through the
+/// unified hybrid-modality resolver: its modal identifier-KIND (open kind fabric) and
+/// out-degree. The kind is resolved via the modal predicate, not an inline tag, so
+/// full-width identifiers resolve; `None` kind = a plain dictionary reference.
+pub fn graph_resolve(args: &[u8]) -> Result<String, McpSystemError> {
+    let v = parse_tool_args(args)?;
+    let iri = json_str(&v, "iri", "");
+    if iri.is_empty() {
+        return Err(McpSystemError::InvalidParameters);
+    }
+    let id = crate::q_hash(iri);
+    // Scope the read guard so the RwLock is released before building the response.
+    let resolved = {
+        let guard = crate::daemon_graph::graph_read_guard();
+        crate::resolve::resolve_in_slice(guard.as_slice(), id)
+    };
+    let kind_name = resolved.kind.and_then(crate::modal_kind::kind_name);
+    Ok(json!({
+        "tool": "graph_resolve",
+        "iri": iri,
+        "identifier": id,
+        "kind": resolved.kind,
+        "kindName": kind_name,
+        "outDegree": resolved.out_degree,
+        "present": resolved.out_degree > 0,
+        "basis": "hybrid-modality resolver: modal-predicate identifier-kind (open fabric) over the live graph; None kind = plain dictionary reference"
+    })
+    .to_string())
+}
+
 /// MCP `values_evaluate` — query the deontic-contract reasoner in values terms.
 ///
 /// Where `values_check` answers a binary anti-capture guard, this verb runs the full

@@ -54,6 +54,20 @@ pub fn resolve_kind(index: &QuinIndex, identifier: u64) -> Option<u64> {
     index.object_of(identifier, HAS_MODALITY_KIND)
 }
 
+/// Human-readable name for a known kind constant (`None` for an extension kind not in
+/// the seed vocabulary — those are still valid, just not built-in).
+pub fn kind_name(kind: u64) -> Option<&'static str> {
+    match kind {
+        KIND_DICTIONARY => Some("DictionaryHash"),
+        KIND_WEBIZEN => Some("WebizenId"),
+        KIND_DID_Q42 => Some("DidQ42"),
+        KIND_DID => Some("Did"),
+        KIND_CONTENT_HASH => Some("ContentHash"),
+        KIND_CLUSTER_NODE => Some("ClusterNode"),
+        _ => None,
+    }
+}
+
 #[cfg(test)]
 mod tests {
     use super::*;

@@ -331,6 +331,11 @@ fn stable_mcp_tools() -> &'static [McpToolDescriptor] {
             description: "Deontic-contract reasoner in values terms: is a norm (forbid/oblige/permit) bound to a party+action currently in force? Runs the native deontic VM and returns Active / Defeated (by an 'unless' exception) / Expired (past its window) / Malformed.",
             input_schema: r#"{"type":"object","required":["modality","party","action"],"properties":{"modality":{"type":"string","enum":["forbid","oblige","permit"]},"party":{"type":"string"},"action":{"type":"string"},"object":{"type":"string"},"now":{"type":"integer"},"expiry":{"type":"integer"},"unless":{"type":"string"}}}"#,
         },
+        McpToolDescriptor {
+            name: "graph_resolve",
+            description: "Resolve an identifier (IRI) against the live daemon graph: returns its modal identifier-KIND (open kind fabric — WebizenId / DidQ42 / ContentHash / ... or none for a plain dictionary reference) and its out-degree. Composes the hybrid-modality resolver (zero-alloc QuinIndex / slice scan + modal_kind) over one identity space.",
+            input_schema: r#"{"type":"object","required":["iri"],"properties":{"iri":{"type":"string"}}}"#,
+        },
     ]
 }
 
@@ -485,6 +490,7 @@ pub unsafe fn enforce_fiduciary_tool_dispatch(
         // ── Values / Human-Rights Governance ────────────────────────────────────
         b"values_check" => mcp_tool_impls::values_check(payload.arguments_raw),
         b"values_evaluate" => mcp_tool_impls::values_evaluate(payload.arguments_raw),
+        b"graph_resolve" => mcp_tool_impls::graph_resolve(payload.arguments_raw),
 
         _ => Err(McpSystemError::ToolNotFound),
     }
