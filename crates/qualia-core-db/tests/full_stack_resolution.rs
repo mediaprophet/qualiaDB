@@ -51,7 +51,7 @@ fn whole_stack_resolves_one_identifier_end_to_end() {
     assert!(!quins.is_empty(), "ingest produced no quins");
 
     // ── 2. Tag the obligation node with a modal identifier-KIND (open kind fabric). ──
-    let deontic = q_hash("https://ns.webcivics.org/concept/DTSFL-deontic");
+    let deontic = q_hash("https://ns.webcivics.net/concept/DTSFL-deontic");
     quins.push(tag_kind(deontic, KIND_DICTIONARY));
 
     // ── 3. Build the zero-alloc index and resolve the identifier through resolve.rs. ──
@@ -66,18 +66,18 @@ fn whole_stack_resolves_one_identifier_end_to_end() {
     );
 
     // ── 4. #14 bridge: read the bearer + required act OUT OF the ingested corpus. ──
-    let borne_by = q_hash("https://ns.webcivics.org/values/borneBy");
-    let requires = q_hash("https://ns.webcivics.org/values/requires");
+    let borne_by = q_hash("https://ns.webcivics.net/values/borneBy");
+    let requires = q_hash("https://ns.webcivics.net/values/requires");
     let party = idx
         .object_of(deontic, borne_by)
         .expect("bearer found in corpus");
     let action = idx
         .object_of(deontic, requires)
         .expect("required act found in corpus");
-    assert_eq!(party, q_hash("https://ns.webcivics.org/values/State"));
+    assert_eq!(party, q_hash("https://ns.webcivics.net/values/State"));
     assert_eq!(
         action,
-        q_hash("https://ns.webcivics.org/action/SuppressForcedLabour")
+        q_hash("https://ns.webcivics.net/action/SuppressForcedLabour")
     );
 
     // ── 5. Deontic governance: the State's obligation is Active over corpus terms. ──
@@ -95,11 +95,11 @@ fn whole_stack_resolves_one_identifier_end_to_end() {
     // ── 6. Lexicon value recovery: the handle resolves to its human-readable IRI. ──
     assert_eq!(
         lex.resolve(party),
-        Some("https://ns.webcivics.org/values/State"),
+        Some("https://ns.webcivics.net/values/State"),
         "the bearer handle recovers its lexical value through the lexicon backstop"
     );
     assert_eq!(
         lex.resolve(action),
-        Some("https://ns.webcivics.org/action/SuppressForcedLabour")
+        Some("https://ns.webcivics.net/action/SuppressForcedLabour")
     );
 }

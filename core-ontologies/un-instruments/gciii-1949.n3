@@ -1,8 +1,8 @@
 @prefix rdf:    <http://www.w3.org/1999/02/22-rdf-syntax-ns#> .
 @prefix rdfs:   <http://www.w3.org/2000/01/rdf-schema#> .
 @prefix dc:     <http://purl.org/dc/terms/> .
-@prefix values: <https://ns.webcivics.org/values/> .
-@prefix doc:    <https://ns.webcivics.org/values/gciii-1949#> .
+@prefix values: <https://ns.webcivics.net/values/> .
+@prefix doc:    <https://ns.webcivics.net/values/gciii-1949#> .
 
 # ============================================================
 # Convention (III) relative to the Treatment of Prisoners of War. Geneva, 12 August 1949.

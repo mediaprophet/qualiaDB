@@ -260,7 +260,7 @@ pub fn algebra_matrix_analyze(args: &[u8]) -> Result<String, McpSystemError> {
 ///
 /// Args: `{ "agentType": "CorporatePerson" | "ArtificialAgent" | "NaturalPerson" | <Class>,
 ///          "claimsDignityRight": true }`. `agentType` is the local name of a
-/// `https://ns.webcivics.org/values/` class.
+/// `https://ns.webcivics.net/values/` class.
 pub fn values_check(args: &[u8]) -> Result<String, McpSystemError> {
     let v = parse_tool_args(args)?;
     let agent_type_short = json_str(&v, "agentType", "NaturalPerson");
@@ -269,7 +269,7 @@ pub fn values_check(args: &[u8]) -> Result<String, McpSystemError> {
         .and_then(Value::as_bool)
         .unwrap_or(false);
     let agent_type =
-        crate::q_hash(&format!("https://ns.webcivics.org/values/{agent_type_short}"));
+        crate::q_hash(&format!("https://ns.webcivics.net/values/{agent_type_short}"));
     let flagged = crate::webizen::check_personhood_category_error(agent_type, claims);
     Ok(json!({
         "tool": "values_check",

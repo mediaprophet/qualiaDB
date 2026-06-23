@@ -24,7 +24,7 @@ agreement-forming process (`docs/manuals/standards/.../agreements`). Not MCP-spe
    an N3 rule entails the state-duty from the universal-agent-duty). This makes the values bind AI agents
    and institutions alike, and *supports* (rather than replaces) the state's responsibility.
 
-## Vocabulary (`values:` = `https://ns.webcivics.org/values/`)
+## Vocabulary (`values:` = `https://ns.webcivics.net/values/`)
 | Term | Kind | Meaning |
 |---|---|---|
 | `values:Agent` | rdfs:Class | Any entity bearing rights/duties — human **or** otherwise. Root of the duty model. **Not** `owl:Thing`. |

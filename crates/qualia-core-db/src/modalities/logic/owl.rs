@@ -31,7 +31,7 @@ pub const SHAPE_PREFIXES: &str = r#"@prefix sh: <http://www.w3.org/ns/shacl#> .
 @prefix owl: <http://www.w3.org/2002/07/owl#> .
 @prefix rdfs: <http://www.w3.org/2000/01/rdf-schema#> .
 @prefix xsd: <http://www.w3.org/2001/XMLSchema#> .
-@prefix q42: <https://ns.webcivics.org/> .
+@prefix q42: <https://ns.webcivics.net/> .
 @prefix hc: <http://purl.org/healthcarevocab/v1#> .
 @prefix radlex: <http://www.radlex.org/RID/> .
 "#;
@@ -109,8 +109,8 @@ fn curie_for_uri(uri: &str) -> String {
     if let Some(tag) = uri.strip_prefix("http://www.radlex.org/RID/") {
         return format!("radlex:{tag}");
     }
-    if uri.starts_with("https://ns.webcivics.org/") {
-        let tag = uri.trim_start_matches("https://ns.webcivics.org/");
+    if uri.starts_with("https://ns.webcivics.net/") {
+        let tag = uri.trim_start_matches("https://ns.webcivics.net/");
         return format!("q42:{tag}");
     }
     format!("<{uri}>")

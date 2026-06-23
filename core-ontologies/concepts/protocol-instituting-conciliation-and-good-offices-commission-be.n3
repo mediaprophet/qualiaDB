@@ -3,10 +3,10 @@
 @prefix skos:    <http://www.w3.org/2004/02/skos/core#> .
 @prefix dc:      <http://purl.org/dc/terms/> .
 @prefix prov:    <http://www.w3.org/ns/prov#> .
-@prefix values:  <https://ns.webcivics.org/values/> .
-@prefix cml:     <https://ns.webcivics.org/cml/> .
-@prefix concept: <https://ns.webcivics.org/concept/> .
-@prefix doc:     <https://ns.webcivics.org/values/protocol-instituting-conciliation-and-good-offices-commission-be#> .
+@prefix values:  <https://ns.webcivics.net/values/> .
+@prefix cml:     <https://ns.webcivics.net/cml/> .
+@prefix concept: <https://ns.webcivics.net/concept/> .
+@prefix doc:     <https://ns.webcivics.net/values/protocol-instituting-conciliation-and-good-offices-commission-be#> .
 
 # ============================================================
 # CML concept layer (LOGIC) — Protocol Instituting a Conciliation and Good Offices Commission to be responsible for seeking a settlement of any disputes which may arise between States Parties to the Convention against Discrimination in Education

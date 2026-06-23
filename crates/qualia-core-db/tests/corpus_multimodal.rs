@@ -39,9 +39,9 @@ fn epistemic_and_temporal_modalities_compose_over_the_corpus() {
     let corpus = ingest(ICCPR_CONCEPTS);
 
     // A real generated norm from the corpus (ICCPR Art. 3 — equal rights of men & women).
-    let norm = q_hash("https://ns.webcivics.org/concept/international-covenant-civil-and-political-rights-article-3-norm");
+    let norm = q_hash("https://ns.webcivics.net/concept/international-covenant-civil-and-political-rights-article-3-norm");
     let rdf_type = q_hash("http://www.w3.org/1999/02/22-rdf-syntax-ns#type");
-    let obligation = q_hash("https://ns.webcivics.org/values/Obligation");
+    let obligation = q_hash("https://ns.webcivics.net/values/Obligation");
     // Deontic content is present: this corpus term IS typed an Obligation.
     assert!(
         corpus.iter().any(|q| q.subject == norm && q.predicate == rdf_type && q.object == obligation),

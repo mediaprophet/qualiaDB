@@ -634,7 +634,7 @@ principled extract; full curation is a later pass.
   modelling, and reconciliation across selfhood/values/sense. Likely needs its own dedicated
   design pass.
 - **Namespace standardisation** — ✅ values layer DONE (2026-06-21): canonical root
-  **`https://ns.webcivics.org/`** (qualia.id was unavailable). Migrated all `core-ontologies/`
+  **`https://ns.webcivics.net/`** (qualia.id was unavailable). Migrated all `core-ontologies/`
   files (110 `.n3` + 5 generators) + the `owl.rs` runtime refs + 2 residual shape files
   (`qualia-agency.shacl.ttl`, `docs/manuals/qualia_shapes.ttl`): 236 occurrences; all `.n3`
   re-validated, `owl.rs` tests pass; **zero `qualia.id/ns` left repo-wide**.
@@ -780,7 +780,7 @@ Run the actual round-trip test; **verify every agent claim against the tree**. T
 
 ### 17.5 Decisions to pin before specific work
 - **Predicate-packing convention** (§9.2) — before compiling sense/temporal rules.
-- ✅ **Namespace scheme** — DECIDED + migrated: `https://ns.webcivics.org/` (§13).
+- ✅ **Namespace scheme** — DECIDED + migrated: `https://ns.webcivics.net/` (§13).
 
 ### 17.0 Phase 0 — namespace remediation (do BEFORE the smoke test) → see §18
 
@@ -788,7 +788,7 @@ Run the actual round-trip test; **verify every agent claim against the tree**. T
 
 ## 18. Namespace remediation map — engine `qualia.*` → `webizen.org`
 
-Trinity (§13): `ns.webcivics.org` = vocab/standards (✅ done) · `trustfactory.org` = trust (future)
+Trinity (§13): `ns.webcivics.net` = vocab/standards (✅ done) · `trustfactory.org` = trust (future)
 · `webizen.org` = engine. Remaining: migrate the unowned `qualia.*` **engine** namespaces →
 `webizen.org`. **Every one is CODE-COUPLED** — `.rs` constructs/compares the URI, so the
 `.ttl`/`.json`/`.js` **and** `.rs` must move TOGETHER (the owl.rs lesson), then **full `cargo build`

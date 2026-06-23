@@ -3,8 +3,8 @@
 @prefix owl:   <http://www.w3.org/2002/07/owl#> .
 @prefix skos:  <http://www.w3.org/2004/02/skos/core#> .
 @prefix dc:    <http://purl.org/dc/terms/> .
-@prefix values:<https://ns.webcivics.org/values/> .
-@prefix jural: <https://ns.webcivics.org/jural/> .
+@prefix values:<https://ns.webcivics.net/values/> .
+@prefix jural: <https://ns.webcivics.net/jural/> .
 
 # ============================================================================
 # Hohfeldian jural relations — the ontology surface of modalities/jural.rs.

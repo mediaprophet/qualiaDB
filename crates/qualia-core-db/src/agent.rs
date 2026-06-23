@@ -14,14 +14,14 @@ use crate::q_hash;
 
 pub const P_RDF_TYPE: u64 = q_hash("http://www.w3.org/1999/02/22-rdf-syntax-ns#type");
 /// The accountable principal behind an agent (agency.n3 `values:operatedBy`).
-pub const P_OPERATED_BY: u64 = q_hash("https://ns.webcivics.org/values/operatedBy");
+pub const P_OPERATED_BY: u64 = q_hash("https://ns.webcivics.net/values/operatedBy");
 
 // The values agent lattice (agency.n3).
-pub const A_NATURAL_PERSON: u64 = q_hash("https://ns.webcivics.org/values/NaturalPerson");
-pub const A_LEGAL_PERSON: u64 = q_hash("https://ns.webcivics.org/values/LegalPerson");
-pub const A_PUBLIC_AUTHORITY: u64 = q_hash("https://ns.webcivics.org/values/PublicAuthority");
-pub const A_ARTIFICIAL_AGENT: u64 = q_hash("https://ns.webcivics.org/values/ArtificialAgent");
-pub const A_PLATFORM_AGENT: u64 = q_hash("https://ns.webcivics.org/values/PlatformAgent");
+pub const A_NATURAL_PERSON: u64 = q_hash("https://ns.webcivics.net/values/NaturalPerson");
+pub const A_LEGAL_PERSON: u64 = q_hash("https://ns.webcivics.net/values/LegalPerson");
+pub const A_PUBLIC_AUTHORITY: u64 = q_hash("https://ns.webcivics.net/values/PublicAuthority");
+pub const A_ARTIFICIAL_AGENT: u64 = q_hash("https://ns.webcivics.net/values/ArtificialAgent");
+pub const A_PLATFORM_AGENT: u64 = q_hash("https://ns.webcivics.net/values/PlatformAgent");
 
 /// The declared agent class of `agent` (its `rdf:type`), if any.
 pub fn agent_type(index: &QuinIndex, agent: u64) -> Option<u64> {

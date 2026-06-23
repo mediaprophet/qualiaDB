@@ -19,16 +19,16 @@ use crate::indexing::QuinIndex;
 use crate::{q_hash, NQuin};
 
 /// The modal predicate that scopes an identifier's kind.
-pub const HAS_MODALITY_KIND: u64 = q_hash("https://ns.webcivics.org/cml/hasModalityKind");
+pub const HAS_MODALITY_KIND: u64 = q_hash("https://ns.webcivics.net/cml/hasModalityKind");
 
 // ── Open kind vocabulary ─────────────────────────────────────────────────────────
 // Not exhaustive — new kinds are added as graph terms, never as new inline-tag bits.
-pub const KIND_DICTIONARY: u64 = q_hash("https://ns.webcivics.org/kind/DictionaryHash");
-pub const KIND_WEBIZEN: u64 = q_hash("https://ns.webcivics.org/kind/WebizenId");
-pub const KIND_DID_Q42: u64 = q_hash("https://ns.webcivics.org/kind/DidQ42");
-pub const KIND_DID: u64 = q_hash("https://ns.webcivics.org/kind/Did");
-pub const KIND_CONTENT_HASH: u64 = q_hash("https://ns.webcivics.org/kind/ContentHash");
-pub const KIND_CLUSTER_NODE: u64 = q_hash("https://ns.webcivics.org/kind/ClusterNode");
+pub const KIND_DICTIONARY: u64 = q_hash("https://ns.webcivics.net/kind/DictionaryHash");
+pub const KIND_WEBIZEN: u64 = q_hash("https://ns.webcivics.net/kind/WebizenId");
+pub const KIND_DID_Q42: u64 = q_hash("https://ns.webcivics.net/kind/DidQ42");
+pub const KIND_DID: u64 = q_hash("https://ns.webcivics.net/kind/Did");
+pub const KIND_CONTENT_HASH: u64 = q_hash("https://ns.webcivics.net/kind/ContentHash");
+pub const KIND_CLUSTER_NODE: u64 = q_hash("https://ns.webcivics.net/kind/ClusterNode");
 
 /// Build the modal-kind quin asserting `identifier` is of `kind`.
 ///

@@ -1,8 +1,8 @@
 @prefix rdf:    <http://www.w3.org/1999/02/22-rdf-syntax-ns#> .
 @prefix rdfs:   <http://www.w3.org/2000/01/rdf-schema#> .
 @prefix dc:     <http://purl.org/dc/terms/> .
-@prefix values: <https://ns.webcivics.org/values/> .
-@prefix doc:    <https://ns.webcivics.org/values/general-assembly-resolution-1803-xvii-14-december-1962-permanent#> .
+@prefix values: <https://ns.webcivics.net/values/> .
+@prefix doc:    <https://ns.webcivics.net/values/general-assembly-resolution-1803-xvii-14-december-1962-permanent#> .
 
 # ============================================================
 # General Assembly Resolution 1803 Xvii 14 December 1962 Permanent

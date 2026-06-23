@@ -3,9 +3,9 @@
 @prefix sh:     <http://www.w3.org/ns/shacl#> .
 @prefix xsd:    <http://www.w3.org/2001/XMLSchema#> .
 @prefix dc:     <http://purl.org/dc/terms/> .
-@prefix values: <https://ns.webcivics.org/values/> .
-@prefix sense:  <https://ns.webcivics.org/sense/> .
-@prefix q42:    <https://ns.webcivics.org/q42/> .
+@prefix values: <https://ns.webcivics.net/values/> .
+@prefix sense:  <https://ns.webcivics.net/sense/> .
+@prefix q42:    <https://ns.webcivics.net/q42/> .
 
 # ===========================================================================
 # sense.n3 — time- and place-qualified word senses (the disambiguation spine).

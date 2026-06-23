@@ -762,7 +762,7 @@ mod tests {
     /// Webizen values-credential smoke test (PLAN §11.3 / §17.1) — THE KEYSTONE.
     ///
     /// Proves a real values prohibition flows the live deontic lane:
-    ///   N3 `Rule` (ns.webcivics.org) → `compile_n3_rule_to_norm` → `evaluate_deontic_contract`
+    ///   N3 `Rule` (ns.webcivics.net) → `compile_n3_rule_to_norm` → `evaluate_deontic_contract`
     ///   → `DeonticVerdict`  (this is exactly what the `NativeDeonticEval` opcode dispatches to).
     /// And that the engine's NATIVE defeasibility flips Active → Defeated when a `q42:unless`
     /// defeater is present. No `n3logic.rs::infer_logic_bindings` on this path.
@@ -778,10 +778,10 @@ mod tests {
             weight: None,
             premise: Formula {
                 triples: vec![Triple {
-                    subject: Term::Uri("https://ns.webcivics.org/values/Agent".to_string()),
-                    predicate: Term::Uri("https://ns.webcivics.org/values/forbids".to_string()),
+                    subject: Term::Uri("https://ns.webcivics.net/values/Agent".to_string()),
+                    predicate: Term::Uri("https://ns.webcivics.net/values/forbids".to_string()),
                     object: Term::Uri(
-                        "https://ns.webcivics.org/values/DestructionOfRights".to_string(),
+                        "https://ns.webcivics.net/values/DestructionOfRights".to_string(),
                     ),
                 }],
             },
@@ -812,13 +812,13 @@ mod tests {
 
         // ── native defeasibility: a `q42:unless` defeater on the same party+path+contract
         //    flips Active → Defeated ("forbidden ... UNLESS lawfully authorised"). ──
-        let party = q_hash("https://ns.webcivics.org/values/Agent");
-        let path = q_hash("https://ns.webcivics.org/values/forbids");
+        let party = q_hash("https://ns.webcivics.net/values/Agent");
+        let path = q_hash("https://ns.webcivics.net/values/forbids");
         let defeater = compile_norm_quin(
             party,
             OP_PERMIT,
             path,
-            q_hash("https://ns.webcivics.org/values/lawfullyAuthorised"),
+            q_hash("https://ns.webcivics.net/values/lawfullyAuthorised"),
             contract,
             0,
             /* is_defeater = */ true,

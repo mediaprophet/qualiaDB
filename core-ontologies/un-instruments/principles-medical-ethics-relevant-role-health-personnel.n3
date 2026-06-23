@@ -1,8 +1,8 @@
 @prefix rdf:    <http://www.w3.org/1999/02/22-rdf-syntax-ns#> .
 @prefix rdfs:   <http://www.w3.org/2000/01/rdf-schema#> .
 @prefix dc:     <http://purl.org/dc/terms/> .
-@prefix values: <https://ns.webcivics.org/values/> .
-@prefix doc:    <https://ns.webcivics.org/values/principles-medical-ethics-relevant-role-health-personnel#> .
+@prefix values: <https://ns.webcivics.net/values/> .
+@prefix doc:    <https://ns.webcivics.net/values/principles-medical-ethics-relevant-role-health-personnel#> .
 
 # ============================================================
 # Principles of Medical Ethics relevant to the Role of Health Personnel, particularly Physicians, in the Protection of Prisoners and Detainees against Torture and Other Cruel, Inhuman or Degrading Treatment or Punishment

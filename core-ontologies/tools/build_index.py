@@ -14,7 +14,7 @@ import os, glob, rdflib
 
 ROOT = "core-ontologies"
 DIRS = ["un-instruments", "regional", "mutable"]
-V  = rdflib.Namespace("https://ns.webcivics.org/values/")
+V  = rdflib.Namespace("https://ns.webcivics.net/values/")
 DC = rdflib.Namespace("http://purl.org/dc/terms/")
 
 # Governance fields on the CREDENTIAL node (predicate local-name on V).

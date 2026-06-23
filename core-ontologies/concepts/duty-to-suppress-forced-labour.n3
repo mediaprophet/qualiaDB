@@ -2,16 +2,16 @@
 @prefix skos:    <http://www.w3.org/2004/02/skos/core#> .
 @prefix oa:      <http://www.w3.org/ns/oa#> .
 @prefix dcterms: <http://purl.org/dc/terms/> .
-@prefix values:  <https://ns.webcivics.org/values/> .
-@prefix cml:     <https://ns.webcivics.org/cml/> .
-@prefix concept: <https://ns.webcivics.org/concept/> .
-@prefix act:     <https://ns.webcivics.org/action/> .
-@prefix doc:     <https://ns.webcivics.org/values/abolition-forced-labour-convention-1957-no-105#> .
+@prefix values:  <https://ns.webcivics.net/values/> .
+@prefix cml:     <https://ns.webcivics.net/cml/> .
+@prefix concept: <https://ns.webcivics.net/concept/> .
+@prefix act:     <https://ns.webcivics.net/action/> .
+@prefix doc:     <https://ns.webcivics.net/values/abolition-forced-labour-convention-1957-no-105#> .
 
 # ===========================================================================
 # Pilot concept — the end-to-end proof of the CML concept-graph (PLAN §-CML §6).
 # TEXT (Convention 105, Art. 1) → CONCEPT → LOGIC (deontic norm → values_evaluate).
-# The concept hash q_hash("https://ns.webcivics.org/concept/DutyToSuppressForcedLabour")
+# The concept hash q_hash("https://ns.webcivics.net/concept/DutyToSuppressForcedLabour")
 # IS the context the Webizen VM masks on when evaluating the assertion below.
 # ===========================================================================
 

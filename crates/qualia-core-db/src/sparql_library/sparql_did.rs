@@ -110,18 +110,23 @@ impl<'a> SparqlDidHandler<'a> {
             return Err("Invalid DID: missing 0x8 prefix".to_string());
         }
 
-        // In production, this would:
-        // 1. Resolve DID to get verification method
-        // 2. Extract public key from verification method
-        // 3. Verify signature using stack-allocated key frame (no heap allocation)
-        // 4. Return verification result
+        let _ = (signature, data);
 
-        // Simplified: always valid for now
-        Ok(DidVerificationResult {
-            did,
-            valid: true,
-            algorithm: 1, // Ed25519
-        })
+        // FAIL CLOSED. This read-side SPARQL/DID shim resolves DIDs to u64 pointers
+        // and deliberately strips heavy crypto payloads at the boundary (see
+        // `authenticate_did` / `sign_with_did`). It holds no public-key material in a
+        // verifiable form and the SPARQL `did:verify` wrapper only forwards placeholder
+        // bytes, so it cannot perform a real Ed25519/ML-DSA check here. Returning
+        // `valid: true` would forge a positive verification.
+        //
+        // Verify signatures in the identity / key-vault layer instead, where the
+        // public key is available: `key_vault::KeyVault::verify_signature` or
+        // `WebizenIdentityRegistry::verify_signature`.
+        Err("did:verify is not available in the SPARQL query layer: \
+             no resolvable verification key is provisioned here. Verify via the \
+             identity/key-vault layer (KeyVault::verify_signature / \
+             WebizenIdentityRegistry::verify_signature)."
+            .to_string())
     }
 
     /// Check DID permission for graph access
@@ -136,16 +141,16 @@ impl<'a> SparqlDidHandler<'a> {
             return Err("Invalid DID: missing 0x8 prefix".to_string());
         }
 
-        // Query quins for permission triples
-        // In production, query access control graph
-        let has_permission = true; // Simplified
+        let _ = (graph, permission_type);
 
-        Ok(DidPermissionResult {
-            did,
-            graph,
-            has_permission,
-            permission_type,
-        })
+        // FAIL CLOSED. Access control must be decided by an authority that has
+        // actually evaluated the permission graph (the Webizen VM / deontic policy
+        // layer), not granted unconditionally here. Returning `has_permission: true`
+        // would be an authorization bypass: any caller would be granted any graph.
+        Err("did:permission is not available in the SPARQL query layer: \
+             access-control decisions must be evaluated against the policy graph by \
+             the governance layer, not granted unconditionally here."
+            .to_string())
     }
 
     /// Authenticate with DID (strips heavy payloads at boundary)
@@ -160,14 +165,17 @@ impl<'a> SparqlDidHandler<'a> {
             return Err("Invalid DID: missing 0x8 prefix".to_string());
         }
 
-        // In production:
-        // 1. Verify auth_payload is valid for auth_method
-        // 2. Extract DID and verification method
-        // 3. Return structural pointer (did, verification_method)
-        // 4. Strip heavy payload (JSON-LD signature, VC) - never enters query loop
+        let _ = auth_method;
 
-        // Simplified: always valid
-        Ok(true)
+        // FAIL CLOSED. Authentication requires verifying `_auth_payload` (a JSON-LD
+        // proof / VC / challenge response) against a resolved verification method.
+        // This shim strips that payload at the boundary and holds no key material, so
+        // it cannot authenticate anyone. Returning `Ok(true)` would authenticate every
+        // caller. Route authentication through the identity layer instead.
+        Err("did:auth is not available in the SPARQL query layer: \
+             the authentication proof is stripped at this boundary and cannot be \
+             verified here. Authenticate via the identity/key-vault layer."
+            .to_string())
     }
 
     fn current_timestamp(&self) -> u64 {
@@ -356,24 +364,37 @@ mod tests {
     }
 
     #[test]
-    fn test_verify_signature() {
+    fn test_verify_signature_fails_closed() {
+        // Security regression: the SPARQL/DID query shim must NOT rubber-stamp
+        // signatures. It has no resolvable key here and must fail closed so callers
+        // route verification through the key-vault/identity layer.
         let quins = vec![];
         let handler = SparqlDidHandler::new(&quins);
-        
+
         let signature = &[0u8; 64];
         let data = &[0u8; 256];
-        
+
         let result = handler.verify_signature(0x8000000000000001, signature, data);
-        assert!(result.is_ok());
-        assert!(result.unwrap().valid);
+        assert!(result.is_err(), "verify_signature must fail closed, not return valid");
     }
 
     #[test]
-    fn test_check_permission() {
+    fn test_check_permission_fails_closed() {
+        // Security regression: permission must not be granted unconditionally.
         let quins = vec![];
         let handler = SparqlDidHandler::new(&quins);
-        
+
         let result = handler.check_permission(0x8000000000000001, 123, 0);
-        assert!(result.is_ok());
+        assert!(result.is_err(), "check_permission must fail closed, not grant access");
+    }
+
+    #[test]
+    fn test_authenticate_did_fails_closed() {
+        // Security regression: authentication must not succeed for everyone.
+        let quins = vec![];
+        let handler = SparqlDidHandler::new(&quins);
+
+        let result = handler.authenticate_did(0x8000000000000001, 1, &[0u8; 256]);
+        assert!(result.is_err(), "authenticate_did must fail closed, not authenticate all");
     }
 }

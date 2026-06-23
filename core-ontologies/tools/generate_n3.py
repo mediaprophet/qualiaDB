@@ -104,13 +104,13 @@ def main():
         if name.lower() in SKIP or not provs:
             continue
         sg = slug(name)
-        ns = f"https://ns.webcivics.org/values/{sg}#"
+        ns = f"https://ns.webcivics.net/values/{sg}#"
         path = os.path.join(OUT, f"{sg}.n3")
         L = []
         L.append("@prefix rdf:    <http://www.w3.org/1999/02/22-rdf-syntax-ns#> .")
         L.append("@prefix rdfs:   <http://www.w3.org/2000/01/rdf-schema#> .")
         L.append("@prefix dc:     <http://purl.org/dc/terms/> .")
-        L.append("@prefix values: <https://ns.webcivics.org/values/> .")
+        L.append("@prefix values: <https://ns.webcivics.net/values/> .")
         L.append(f"@prefix doc:    <{ns}> .")
         L.append("")
         L.append("# ============================================================")

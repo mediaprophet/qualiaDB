@@ -345,8 +345,8 @@ mod tests {
     fn multiline_predicate_object_list_with_prefix_and_literals() {
         let doc = r#"
 @prefix dc:     <http://purl.org/dc/terms/> .
-@prefix values: <https://ns.webcivics.org/values/> .
-@prefix doc:    <https://ns.webcivics.org/values/inst#> .
+@prefix values: <https://ns.webcivics.net/values/> .
+@prefix doc:    <https://ns.webcivics.net/values/inst#> .
 
 doc:article-1 a values:Undertaking ;
     dc:title "Article 1" ;
@@ -356,11 +356,11 @@ doc:article-1 a values:Undertaking ;
         let quins = parse(doc);
         assert_eq!(quins.len(), 4, "subject reused across `;` → four triples");
 
-        let art1 = h(b"https://ns.webcivics.org/values/inst#article-1");
+        let art1 = h(b"https://ns.webcivics.net/values/inst#article-1");
         let rdf_type = h(b"http://www.w3.org/1999/02/22-rdf-syntax-ns#type");
-        let undertaking = h(b"https://ns.webcivics.org/values/Undertaking");
+        let undertaking = h(b"https://ns.webcivics.net/values/Undertaking");
         let dc_title = h(b"http://purl.org/dc/terms/title");
-        let part_of = h(b"https://ns.webcivics.org/values/partOf");
+        let part_of = h(b"https://ns.webcivics.net/values/partOf");
 
         // `a` expands to rdf:type; CURIEs expand via @prefix.
         assert!(quins.iter().any(|q| q.subject == art1 && q.predicate == rdf_type && q.object == undertaking));
@@ -370,20 +370,20 @@ doc:article-1 a values:Undertaking ;
         let title = h(b"Article 1");
         assert!(quins.iter().any(|q| q.predicate == dc_title && q.object == title));
         // partOf links to the doc:-expanded Instrument (now namespace-unique).
-        let instrument = h(b"https://ns.webcivics.org/values/inst#Instrument");
+        let instrument = h(b"https://ns.webcivics.net/values/inst#Instrument");
         assert!(quins.iter().any(|q| q.subject == art1 && q.predicate == part_of && q.object == instrument));
     }
 
     #[test]
     fn object_list_comma_repeats_subject_and_predicate() {
         let doc = r#"
-@prefix values: <https://ns.webcivics.org/values/> .
+@prefix values: <https://ns.webcivics.net/values/> .
 values:State values:bears values:DutyA , values:DutyB , values:DutyC .
 "#;
         let quins = parse(doc);
         assert_eq!(quins.len(), 3, "`,` repeats subject+predicate → three triples");
-        let state = h(b"https://ns.webcivics.org/values/State");
-        let bears = h(b"https://ns.webcivics.org/values/bears");
+        let state = h(b"https://ns.webcivics.net/values/State");
+        let bears = h(b"https://ns.webcivics.net/values/bears");
         assert!(quins.iter().all(|q| q.subject == state && q.predicate == bears));
     }
 
@@ -392,11 +392,11 @@ values:State values:bears values:DutyA , values:DutyB , values:DutyC .
     /// `byte as char` reconstruction would hash differently (and could panic mid-codepoint).
     #[test]
     fn non_ascii_literals_roundtrip_intact() {
-        let doc = "@prefix v: <https://ns.webcivics.org/values/> .\n\
+        let doc = "@prefix v: <https://ns.webcivics.net/values/> .\n\
                    v:x v:label \"صحة\" ; v:note \"健康 — wellbeing's “root”\" .";
         let quins = parse(doc);
-        let label = h(b"https://ns.webcivics.org/values/label");
-        let note = h(b"https://ns.webcivics.org/values/note");
+        let label = h(b"https://ns.webcivics.net/values/label");
+        let note = h(b"https://ns.webcivics.net/values/note");
         assert!(
             quins.iter().any(|q| q.predicate == label && q.object == h("صحة".as_bytes())),
             "Arabic literal must hash to its exact UTF-8 bytes"

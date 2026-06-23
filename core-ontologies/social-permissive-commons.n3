@@ -7,10 +7,10 @@
 @prefix prov:    <http://www.w3.org/ns/prov#> .
 @prefix odrl:    <http://www.w3.org/ns/odrl/2/> .
 @prefix dpv:     <https://w3id.org/dpv#> .
-@prefix values:  <https://ns.webcivics.org/values/> .
-@prefix policy:  <https://ns.webcivics.org/policy/> .
-@prefix pc:      <https://ns.webcivics.org/permissive-commons/> .
-@prefix spc:     <https://ns.webcivics.org/social-permissive-commons/> .
+@prefix values:  <https://ns.webcivics.net/values/> .
+@prefix policy:  <https://ns.webcivics.net/policy/> .
+@prefix pc:      <https://ns.webcivics.net/permissive-commons/> .
+@prefix spc:     <https://ns.webcivics.net/social-permissive-commons/> .
 
 # ===========================================================================
 # Social Permissive Commons — the GENERAL framework for any social environment

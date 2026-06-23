@@ -315,7 +315,7 @@ document.getElementById('btn-clear').addEventListener('click',()=>{ G={nodes:[],
 function iri(n){ const ty=NODE_TYPES[n.type]||{pfx:'concept'}; return ty.pfx+':'+slug(n.label,ty.pfx==='values'); }
 function slug(s,keep){ const c=s.replace(/[^A-Za-z0-9]+/g,' ').trim().split(' ').map(w=>w.charAt(0).toUpperCase()+w.slice(1)).join(''); return c||'X'; }
 function refreshTurtle(){
-  let t='@prefix cml: <https://ns.webcivics.org/cml/> .\n@prefix skos: <http://www.w3.org/2004/02/skos/core#> .\n@prefix values: <https://ns.webcivics.org/values/> .\n@prefix prov: <http://www.w3.org/ns/prov#> .\n@prefix concept: <https://ns.webcivics.org/concept/> .\n@prefix act: <https://ns.webcivics.org/action/> .\n@prefix doc: <https://ns.webcivics.org/values/> .\n\n';
+  let t='@prefix cml: <https://ns.webcivics.net/cml/> .\n@prefix skos: <http://www.w3.org/2004/02/skos/core#> .\n@prefix values: <https://ns.webcivics.net/values/> .\n@prefix prov: <http://www.w3.org/ns/prov#> .\n@prefix concept: <https://ns.webcivics.net/concept/> .\n@prefix act: <https://ns.webcivics.net/action/> .\n@prefix doc: <https://ns.webcivics.net/values/> .\n\n';
   for(const n of G.nodes){ t+=`${iri(n)} a ${n.type} .\n`; }
   if(G.edges.length) t+='\n';
   for(const e of G.edges){ const a=nodeById(e.from), b=nodeById(e.to); if(!a||!b) continue;

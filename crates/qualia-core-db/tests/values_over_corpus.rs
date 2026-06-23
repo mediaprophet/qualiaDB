@@ -53,11 +53,11 @@ fn values_logic_runs_over_ingested_instrument_corpus() {
     assert!(!corpus.is_empty(), "ingest produced no quins");
 
     // Engine-side terms: q_hash over the SAME expanded IRIs the corpus stored.
-    let deontic = q_hash("https://ns.webcivics.org/concept/DTSFL-deontic");
+    let deontic = q_hash("https://ns.webcivics.net/concept/DTSFL-deontic");
     let rdf_type = q_hash("http://www.w3.org/1999/02/22-rdf-syntax-ns#type");
-    let obligation = q_hash("https://ns.webcivics.org/values/Obligation");
-    let borne_by = q_hash("https://ns.webcivics.org/values/borneBy");
-    let requires = q_hash("https://ns.webcivics.org/values/requires");
+    let obligation = q_hash("https://ns.webcivics.net/values/Obligation");
+    let borne_by = q_hash("https://ns.webcivics.net/values/borneBy");
+    let requires = q_hash("https://ns.webcivics.net/values/requires");
 
     // ── BRIDGE PROOF (#14): the engine's q_hash terms LOCATE the ingested obligation,
     // which entered the graph via generate_60bit_token. Before #14 this join was empty.
@@ -74,10 +74,10 @@ fn values_logic_runs_over_ingested_instrument_corpus() {
         .expect("the required act (values:requires) must be found in the ingested corpus");
 
     // …and they ARE the engine's q_hash of the same IRIs (the bridge, made explicit).
-    assert_eq!(party, q_hash("https://ns.webcivics.org/values/State"));
+    assert_eq!(party, q_hash("https://ns.webcivics.net/values/State"));
     assert_eq!(
         action,
-        q_hash("https://ns.webcivics.org/action/SuppressForcedLabour")
+        q_hash("https://ns.webcivics.net/action/SuppressForcedLabour")
     );
 
     // ── VALUES LOGIC over corpus-sourced terms: the State is OBLIGATED to suppress
@@ -102,14 +102,14 @@ fn values_logic_runs_over_ingested_instrument_corpus() {
 #[test]
 fn unrelated_term_does_not_join_the_corpus() {
     let corpus = ingest(CONCEPT_N3);
-    let deontic = q_hash("https://ns.webcivics.org/concept/DTSFL-deontic");
-    let borne_by = q_hash("https://ns.webcivics.org/values/borneBy");
+    let deontic = q_hash("https://ns.webcivics.net/concept/DTSFL-deontic");
+    let borne_by = q_hash("https://ns.webcivics.net/values/borneBy");
 
     let party = object_of(&corpus, deontic, borne_by).expect("bearer present");
     // The bearer is values:State, NOT some unrelated corporation IRI.
     assert_ne!(
         party,
-        q_hash("https://ns.webcivics.org/values/AcmeCorp"),
+        q_hash("https://ns.webcivics.net/values/AcmeCorp"),
         "the ingested bearer must be the actual State term, not an arbitrary one",
     );
 }

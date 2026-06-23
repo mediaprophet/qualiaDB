@@ -5,7 +5,7 @@
 @prefix dc:     <http://purl.org/dc/terms/> .
 @prefix hcai:   <http://www.w3.org/ns/hcai#> .
 @prefix skos:   <http://www.w3.org/2004/02/skos/core#> .
-@prefix values: <https://ns.webcivics.org/values/> .
+@prefix values: <https://ns.webcivics.net/values/> .
 
 # ===========================================================================
 # Values-Credential vocabulary — the shared model for the UN human-rights

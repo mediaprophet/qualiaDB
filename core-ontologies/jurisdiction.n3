@@ -7,8 +7,8 @@
 @prefix time:    <http://www.w3.org/2006/time#> .
 @prefix geo:     <http://www.opengis.net/ont/geosparql#> .
 @prefix prov:    <http://www.w3.org/ns/prov#> .
-@prefix values:  <https://ns.webcivics.org/values/> .
-@prefix jur:     <https://ns.webcivics.org/jurisdiction/> .
+@prefix values:  <https://ns.webcivics.net/values/> .
+@prefix jur:     <https://ns.webcivics.net/jurisdiction/> .
 
 # ===========================================================================
 # Spatio-temporal RATIFICATION + JURISDICTION layer.
@@ -90,7 +90,7 @@ jur:AU-NT  a jur:SubStateJurisdiction ; skos:prefLabel "Northern Territory" ; ju
 
 # Australia's ratification of the ICCPR (ILLUSTRATIVE — confirm against treaties.un.org).
 jur:ratification-AU-ICCPR a jur:Ratification ;
-    jur:ratifies <https://ns.webcivics.org/values/international-covenant-civil-and-political-rights#Instrument> ;
+    jur:ratifies <https://ns.webcivics.net/values/international-covenant-civil-and-political-rights#Instrument> ;
     jur:ratifiedBy jur:Australia ;
     jur:ratificationStatus jur:Ratified ;
     jur:ratificationDate "1980-08-13"^^xsd:date ;

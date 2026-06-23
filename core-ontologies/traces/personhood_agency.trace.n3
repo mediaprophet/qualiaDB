@@ -1,8 +1,8 @@
 @prefix rdf:    <http://www.w3.org/1999/02/22-rdf-syntax-ns#> .
 @prefix rdfs:   <http://www.w3.org/2000/01/rdf-schema#> .
-@prefix values: <https://ns.webcivics.org/values/> .
-@prefix sense:  <https://ns.webcivics.org/sense/> .
-@prefix ex:     <https://ns.webcivics.org/example/> .
+@prefix values: <https://ns.webcivics.net/values/> .
+@prefix sense:  <https://ns.webcivics.net/sense/> .
+@prefix ex:     <https://ns.webcivics.net/example/> .
 
 # ===========================================================================
 # personhood_agency.trace.n3 — the canonical regression fixture (PLAN.md §4.3).

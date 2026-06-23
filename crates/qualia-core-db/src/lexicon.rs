@@ -201,7 +201,7 @@ mod tests {
             "",
             "Bob",
             "http://www.w3.org/ns/shacl#maxInclusive",
-            "https://ns.webcivics.org/values/NaturalPerson",
+            "https://ns.webcivics.net/values/NaturalPerson",
             "q42:Principal",
             "naïve—prière—母語", // non-ASCII must agree too
         ] {
@@ -239,7 +239,7 @@ mod tests {
     #[test]
     fn interner_collision_free_is_the_fast_single_value_path() {
         let mut lx = LexiconInterner::new();
-        let iri = "https://ns.webcivics.org/values/State";
+        let iri = "https://ns.webcivics.net/values/State";
         assert_eq!(lx.intern_str(iri), Intern::New);
         assert_eq!(lx.intern_str(iri), Intern::Seen);
 

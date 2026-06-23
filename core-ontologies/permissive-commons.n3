@@ -6,9 +6,9 @@
 @prefix prov:    <http://www.w3.org/ns/prov#> .
 @prefix odrl:    <http://www.w3.org/ns/odrl/2/> .
 @prefix qudt:    <http://qudt.org/schema/qudt/> .
-@prefix values:  <https://ns.webcivics.org/values/> .
-@prefix cml:     <https://ns.webcivics.org/cml/> .
-@prefix pc:      <https://ns.webcivics.org/permissive-commons/> .
+@prefix values:  <https://ns.webcivics.net/values/> .
+@prefix cml:     <https://ns.webcivics.net/cml/> .
+@prefix pc:      <https://ns.webcivics.net/permissive-commons/> .
 
 # ===========================================================================
 # Permissive Commons — a cost-recovering, self-extinguishing license that

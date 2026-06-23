@@ -275,7 +275,7 @@ mod tests {
         let vic = q_hash("jur:Victoria");
         let melbourne = q_hash("jur:Melbourne");
         let nz = q_hash("jur:New-Zealand");
-        let within = q_hash("https://ns.webcivics.org/jurisdiction/within");
+        let within = q_hash("https://ns.webcivics.net/jurisdiction/within");
         let e = |s: u64, o: u64| {
             let mut q = NQuin { subject: s, predicate: within, object: o, context: 0, metadata: 0, parity: 0 };
             q.parity = q.subject ^ q.predicate ^ q.object ^ q.context;

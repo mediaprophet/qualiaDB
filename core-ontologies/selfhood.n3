@@ -3,8 +3,8 @@
 @prefix sh:     <http://www.w3.org/ns/shacl#> .
 @prefix owl:    <http://www.w3.org/2002/07/owl#> .
 @prefix dc:     <http://purl.org/dc/terms/> .
-@prefix values: <https://ns.webcivics.org/values/> .
-@prefix self:   <https://ns.webcivics.org/self/> .
+@prefix values: <https://ns.webcivics.net/values/> .
+@prefix self:   <https://ns.webcivics.net/self/> .
 
 # ===========================================================================
 # selfhood.n3 — the FOUNDATIONAL ontology of the natural person (PLAN.md §12).

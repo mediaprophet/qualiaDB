@@ -287,7 +287,7 @@ fn split_triple_patterns(input: &str) -> Vec<String> {
     let mut current = String::new();
     // A `.` only terminates a triple at angle-depth 0 and outside a quoted literal.
     // Tracking single-`<…>` IRI depth (not just `<<…>>`) is essential: IRIs such as
-    // `<https://ns.webcivics.org/values/Undertaking>` contain dots that would
+    // `<https://ns.webcivics.net/values/Undertaking>` contain dots that would
     // otherwise be mistaken for pattern terminators, shattering the BGP.
     let mut angle_depth: i32 = 0;
     let mut in_quote = false;
@@ -462,23 +462,23 @@ mod tests {
     use super::*;
 
     /// Regression: dots *inside* a `<…>` IRI must not be treated as triple
-    /// terminators. Before the fix, `<https://ns.webcivics.org/values/Undertaking>`
+    /// terminators. Before the fix, `<https://ns.webcivics.net/values/Undertaking>`
     /// (and any dotted IRI) shattered the BGP, yielding "No triple patterns found".
     #[test]
     fn split_keeps_dotted_iris_intact() {
         let bgp = "?a <http://www.w3.org/1999/02/22-rdf-syntax-ns#type> \
-                   <https://ns.webcivics.org/values/Undertaking>";
+                   <https://ns.webcivics.net/values/Undertaking>";
         let parts = split_triple_patterns(bgp);
         assert_eq!(parts.len(), 1, "a single dotted-IRI triple must stay one pattern");
 
         // Two real triples (terminated by `.`) split into exactly two — the `.`
         // separator still works at angle-depth 0, dots inside IRIs do not.
-        let two = "?a <https://ns.webcivics.org/values/partOf> <https://ns.webcivics.org/values/x#Instrument> . \
-                   ?a <http://www.w3.org/1999/02/22-rdf-syntax-ns#type> <https://ns.webcivics.org/values/Undertaking>";
+        let two = "?a <https://ns.webcivics.net/values/partOf> <https://ns.webcivics.net/values/x#Instrument> . \
+                   ?a <http://www.w3.org/1999/02/22-rdf-syntax-ns#type> <https://ns.webcivics.net/values/Undertaking>";
         assert_eq!(split_triple_patterns(two).len(), 2, "the `.` between triples still splits");
 
         // A dot inside a quoted literal is also not a terminator.
-        let lit = "?a <https://ns.webcivics.org/values/originalText> \"Art. 3 applies.\"";
+        let lit = "?a <https://ns.webcivics.net/values/originalText> \"Art. 3 applies.\"";
         assert_eq!(split_triple_patterns(lit).len(), 1, "dots in quoted literals are not terminators");
     }
 
@@ -487,7 +487,7 @@ mod tests {
     #[test]
     fn typed_iri_bgp_parses() {
         let q = "SELECT ?a WHERE { ?a <http://www.w3.org/1999/02/22-rdf-syntax-ns#type> \
-                 <https://ns.webcivics.org/values/Undertaking> }";
+                 <https://ns.webcivics.net/values/Undertaking> }";
         let (_, ctx) = parse_sparql(q).expect("typed IRI BGP must parse");
         assert!(ctx.pattern_count > 0, "the typed triple pattern must be allocated");
     }

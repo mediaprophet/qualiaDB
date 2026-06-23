@@ -3,10 +3,10 @@
 @prefix skos:    <http://www.w3.org/2004/02/skos/core#> .
 @prefix dc:      <http://purl.org/dc/terms/> .
 @prefix prov:    <http://www.w3.org/ns/prov#> .
-@prefix values:  <https://ns.webcivics.org/values/> .
-@prefix cml:     <https://ns.webcivics.org/cml/> .
-@prefix concept: <https://ns.webcivics.org/concept/> .
-@prefix doc:     <https://ns.webcivics.org/values/worst-forms-child-labour-convention-1999-no-182#> .
+@prefix values:  <https://ns.webcivics.net/values/> .
+@prefix cml:     <https://ns.webcivics.net/cml/> .
+@prefix concept: <https://ns.webcivics.net/concept/> .
+@prefix doc:     <https://ns.webcivics.net/values/worst-forms-child-labour-convention-1999-no-182#> .
 
 # ============================================================
 # CML concept layer (LOGIC) — Worst Forms of Child Labour Convention, 1999 (No. 182)

@@ -2,7 +2,7 @@
 @prefix rdfs:  <http://www.w3.org/2000/01/rdf-schema#> .
 @prefix skos:  <http://www.w3.org/2004/02/skos/core#> .
 @prefix xsd:   <http://www.w3.org/2001/XMLSchema#> .
-@prefix mj:    <https://ns.webcivics.org/modal-juncture/> .
+@prefix mj:    <https://ns.webcivics.net/modal-juncture/> .
 
 # ===========================================================================
 # Illocutionary vocabulary for legal & diplomatic instruments (comprehensive

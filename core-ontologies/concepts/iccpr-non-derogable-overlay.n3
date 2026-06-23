@@ -1,8 +1,8 @@
 @prefix rdf:     <http://www.w3.org/1999/02/22-rdf-syntax-ns#> .
 @prefix rdfs:    <http://www.w3.org/2000/01/rdf-schema#> .
 @prefix prov:    <http://www.w3.org/ns/prov#> .
-@prefix values:  <https://ns.webcivics.org/values/> .
-@prefix concept: <https://ns.webcivics.org/concept/> .
+@prefix values:  <https://ns.webcivics.net/values/> .
+@prefix concept: <https://ns.webcivics.net/concept/> .
 
 # ===========================================================================
 # ICCPR Art. 4(2) — the explicitly NON-DEROGABLE articles (Hohfeldian immunity).

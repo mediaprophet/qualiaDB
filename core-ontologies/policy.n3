@@ -2,9 +2,9 @@
 @prefix rdfs:   <http://www.w3.org/2000/01/rdf-schema#> .
 @prefix sh:     <http://www.w3.org/ns/shacl#> .
 @prefix xsd:    <http://www.w3.org/2001/XMLSchema#> .
-@prefix values: <https://ns.webcivics.org/values/> .
-@prefix sense:  <https://ns.webcivics.org/sense/> .
-@prefix policy: <https://ns.webcivics.org/policy/> .
+@prefix values: <https://ns.webcivics.net/values/> .
+@prefix sense:  <https://ns.webcivics.net/sense/> .
+@prefix policy: <https://ns.webcivics.net/policy/> .
 
 # ===========================================================================
 # policy.n3 — enforcement-mode / interaction-governance layer (PLAN.md §14).

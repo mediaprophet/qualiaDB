@@ -2068,12 +2068,12 @@ impl AgreementDID {
 /// right trips `values:PersonhoodCategoryError`. This is the anti-capture invariant — a
 /// `CorporatePerson` or an `ArtificialAgent` cannot wear a human's dignity right as its own.
 ///
-/// `agent_type` is `q_hash("https://ns.webcivics.org/values/<Class>")`. Returns `true` iff the
+/// `agent_type` is `q_hash("https://ns.webcivics.net/values/<Class>")`. Returns `true` iff the
 /// guard fires. A `NaturalPerson` (or a non-claiming agent) is never flagged. Cold path — uses
 /// the same `Rule`/`Formula` machinery as `register_rule`, never a hot-path allocation.
 pub fn check_personhood_category_error(agent_type: u64, claims_dignity_right: bool) -> bool {
     use crate::modalities::logic::n3_parser::{Formula, Rule, RuleType, Term, Triple};
-    const B: &str = "https://ns.webcivics.org/values/";
+    const B: &str = "https://ns.webcivics.net/values/";
     let vh = |s: &str| crate::q_hash(s);
     let u = |s: String| Term::Uri(s);
     let var = |n: &str| Term::Variable(n.to_string());
@@ -2294,7 +2294,7 @@ mod tests {
     #[test]
     fn values_guard_g1_corporate_capture_fires() {
         use crate::modalities::logic::n3_parser::{Formula, Rule, RuleType, Term, Triple};
-        const B: &str = "https://ns.webcivics.org/values/";
+        const B: &str = "https://ns.webcivics.net/values/";
         let vh = |s: &str| crate::q_hash(s);
         let u = |s: String| Term::Uri(s);
         let var = |n: &str| Term::Variable(n.to_string());
@@ -2327,11 +2327,11 @@ mod tests {
         };
         let flag = vh(&format!("{B}flag"));
         let pce = vh(&format!("{B}PersonhoodCategoryError"));
-        let right = vh("https://ns.webcivics.org/example/UDHR_Art1_Dignity");
+        let right = vh("https://ns.webcivics.net/example/UDHR_Art1_Dignity");
 
         // ── Positive: AcmeCorp (CorporatePerson) claims a NaturalPerson-held right → FLAGGED ──
         let mut arena = SlgArena::new();
-        let acme = vh("https://ns.webcivics.org/example/AcmeCorp");
+        let acme = vh("https://ns.webcivics.net/example/AcmeCorp");
         fact(&mut arena, acme, vh("a"), vh(&format!("{B}CorporatePerson")));
         fact(&mut arena, acme, vh(&format!("{B}claims")), right);
         fact(&mut arena, right, vh("a"), vh(&format!("{B}Right")));
@@ -2345,7 +2345,7 @@ mod tests {
 
         // ── Negative control: a NaturalPerson claiming the SAME right is NOT flagged ──
         let mut arena2 = SlgArena::new();
-        let alice = vh("https://ns.webcivics.org/example/Alice");
+        let alice = vh("https://ns.webcivics.net/example/Alice");
         fact(&mut arena2, alice, vh("a"), vh(&format!("{B}NaturalPerson")));
         fact(&mut arena2, alice, vh(&format!("{B}claims")), right);
         fact(&mut arena2, right, vh("a"), vh(&format!("{B}Right")));
@@ -2362,7 +2362,7 @@ mod tests {
     /// agents are caught; a natural person, and any non-claiming agent, are not.
     #[test]
     fn values_check_helper_anti_capture() {
-        const B: &str = "https://ns.webcivics.org/values/";
+        const B: &str = "https://ns.webcivics.net/values/";
         let ct = |c: &str| crate::q_hash(&format!("{B}{c}"));
         // A corporation claiming a human dignity right → category error.
         assert!(super::check_personhood_category_error(ct("CorporatePerson"), true));
@@ -2390,10 +2390,10 @@ mod tests {
         // the pilot's concept hash equal the .q42-ingested concept's hash. (See PLAN §21.3 hash-unify.)
         let h = |s: &str| crate::lexicon::generate_60bit_token(s.as_bytes());
         // The concept node = the context hash (cml:asserts → quins live in this sub-graph).
-        let concept = h("https://ns.webcivics.org/concept/DutyToSuppressForcedLabour");
-        let party = h("https://ns.webcivics.org/values/State"); // ratifying Party (R1 a-fortiori)
-        let path = h("https://ns.webcivics.org/values/requires");
-        let action = h("https://ns.webcivics.org/action/SuppressForcedLabour");
+        let concept = h("https://ns.webcivics.net/concept/DutyToSuppressForcedLabour");
+        let party = h("https://ns.webcivics.net/values/State"); // ratifying Party (R1 a-fortiori)
+        let path = h("https://ns.webcivics.net/values/requires");
+        let action = h("https://ns.webcivics.net/action/SuppressForcedLabour");
         let now = 1_717_200_000u32;
 
         // The concept's deontic sub-graph: a State obligation to suppress forced labour.
@@ -2412,7 +2412,7 @@ mod tests {
             party,
             OP_PERMIT,
             path,
-            h("https://ns.webcivics.org/values/lawfullyAuthorised"),
+            h("https://ns.webcivics.net/values/lawfullyAuthorised"),
             concept,
             0,
             true,
@@ -2440,7 +2440,7 @@ mod tests {
         // Corpus hash (generate_60bit_token) — the SHACL validator hashes rdf:type this way, and it is
         // the space the ingested concept-graph lives in (NOT q_hash). One hash-space (PLAN §21.3).
         let h = |s: &str| crate::lexicon::generate_60bit_token(s.as_bytes());
-        let concept = h("https://ns.webcivics.org/concept/DutyToSuppressForcedLabour");
+        let concept = h("https://ns.webcivics.net/concept/DutyToSuppressForcedLabour");
 
         // ── VALIDITY: binding NOW = deontic Active AND within the in-force window ──
         let now = 1_717_200_000i64; // ~2024
@@ -2451,10 +2451,10 @@ mod tests {
         assert!(!in_force.contains(before_eif), "not binding before entry into force");
 
         let norm = compile_norm_quin(
-            h("https://ns.webcivics.org/values/State"),
+            h("https://ns.webcivics.net/values/State"),
             OP_OBLIGATE,
-            h("https://ns.webcivics.org/values/requires"),
-            h("https://ns.webcivics.org/action/SuppressForcedLabour"),
+            h("https://ns.webcivics.net/values/requires"),
+            h("https://ns.webcivics.net/action/SuppressForcedLabour"),
             concept,
             0,
             false,
@@ -2468,8 +2468,8 @@ mod tests {
         // ForcedLabourComplianceShape: an AgentState MUST be a values:CompliantState.
         let rdf_type = h("http://www.w3.org/1999/02/22-rdf-syntax-ns#type");
         let agent_state = h("urn:pilot:acme-operations");
-        let compliant = h("https://ns.webcivics.org/values/CompliantState");
-        let exploitative = h("https://ns.webcivics.org/values/ExploitativeState");
+        let compliant = h("https://ns.webcivics.net/values/CompliantState");
+        let exploitative = h("https://ns.webcivics.net/values/ExploitativeState");
         let q = |s, p, o| NQuin {
             subject: s,
             predicate: p,
@@ -2488,7 +2488,7 @@ mod tests {
             .add_constraint(ShaclConstraint::Class { class_iri: compliant })
             .unwrap();
         let mut shape = ShaclShape {
-            shape_iri: h("https://ns.webcivics.org/values/ForcedLabourComplianceShape"),
+            shape_iri: h("https://ns.webcivics.net/values/ForcedLabourComplianceShape"),
             target_class: None,
             target_node: Some(agent_state),
             constraints: [0; 32],
@@ -2597,9 +2597,9 @@ mod tests {
     #[test]
     fn values_remedy_pillar_contrary_to_duty() {
         use crate::modalities::logic::deontic::evaluate_contrary_to_duty;
-        let party = crate::q_hash("https://ns.webcivics.org/example/OpenLikeCorp");
-        let primary = crate::q_hash("https://ns.webcivics.org/values/responsibilityToRespect");
-        let remedy = crate::q_hash("https://ns.webcivics.org/values/provideRemedy");
+        let party = crate::q_hash("https://ns.webcivics.net/example/OpenLikeCorp");
+        let primary = crate::q_hash("https://ns.webcivics.net/values/responsibilityToRespect");
+        let remedy = crate::q_hash("https://ns.webcivics.net/values/provideRemedy");
         let mk = |s: u64, p: u64, o: u64| NQuin { subject: s, predicate: p, object: o, context: 0, metadata: 0, parity: s ^ p ^ o };
         assert!(evaluate_contrary_to_duty(&[], party, primary, remedy), "no breach → no remedy owed");
         let breach = [mk(party, crate::q_hash("q42:breached"), primary)];

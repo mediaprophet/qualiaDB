@@ -2,7 +2,7 @@
 @prefix rdfs:   <http://www.w3.org/2000/01/rdf-schema#> .
 @prefix sh:     <http://www.w3.org/ns/shacl#> .
 @prefix xsd:    <http://www.w3.org/2001/XMLSchema#> .
-@prefix values: <https://ns.webcivics.org/values/> .
+@prefix values: <https://ns.webcivics.net/values/> .
 
 # ===========================================================================
 # agent-accountability.n3 — protecting users from overclaiming ("bad") agents.

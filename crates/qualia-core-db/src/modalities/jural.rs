@@ -280,9 +280,9 @@ mod tests {
     fn corporate_person_claiming_human_only_right_is_category_error() {
         // TBox: CorporatePerson ⊑ LegalPerson; NaturalPerson ⊑ Agent (disjoint branches).
         let np = A_NATURAL_PERSON;
-        let legal = q_hash("https://ns.webcivics.org/values/LegalPerson");
-        let corp = q_hash("https://ns.webcivics.org/values/CorporatePerson");
-        let agent = q_hash("https://ns.webcivics.org/values/Agent");
+        let legal = q_hash("https://ns.webcivics.net/values/LegalPerson");
+        let corp = q_hash("https://ns.webcivics.net/values/CorporatePerson");
+        let agent = q_hash("https://ns.webcivics.net/values/Agent");
         let sub = q_hash("http://www.w3.org/2000/01/rdf-schema#subClassOf");
         let e = |s: u64, o: u64| NQuin { subject: s, predicate: sub, object: o, context: 0, metadata: 0, parity: 0 };
         let tbox = [e(corp, legal), e(legal, agent), e(np, agent)];

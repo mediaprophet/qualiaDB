@@ -9,8 +9,8 @@
 @prefix time:    <http://www.w3.org/2006/time#> .
 @prefix odrl:    <http://www.w3.org/ns/odrl/2/> .
 @prefix sec:     <https://w3id.org/security#> .
-@prefix values:  <https://ns.webcivics.org/values/> .
-@prefix cml:     <https://ns.webcivics.org/cml/> .
+@prefix values:  <https://ns.webcivics.net/values/> .
+@prefix cml:     <https://ns.webcivics.net/cml/> .
 
 # ===========================================================================
 # CML — Context Markup Language: concept-graph axioms.

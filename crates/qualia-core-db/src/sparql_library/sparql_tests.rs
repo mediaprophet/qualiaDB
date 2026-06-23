@@ -356,30 +356,32 @@ mod sparql_tests {
 
     #[test]
     fn test_did_verify_signature() {
+        // Security regression: must fail closed, never assert a valid signature here.
         let quins = vec![];
         let handler = SparqlDidHandler::new(&quins);
         let signature = &[0u8; 64];
         let data = &[0u8; 256];
         let result = handler.verify_signature(0x8000000000000001, signature, data);
-        assert!(result.is_ok());
-        assert!(result.unwrap().valid);
+        assert!(result.is_err());
     }
 
     #[test]
     fn test_did_check_permission() {
+        // Security regression: must fail closed, never grant access unconditionally.
         let quins = vec![];
         let handler = SparqlDidHandler::new(&quins);
         let result = handler.check_permission(0x8000000000000001, 123, 0);
-        assert!(result.is_ok());
+        assert!(result.is_err());
     }
 
     #[test]
     fn test_did_authenticate() {
+        // Security regression: must fail closed, never authenticate everyone.
         let quins = vec![];
         let handler = SparqlDidHandler::new(&quins);
         let auth_payload = &[0u8; 256];
         let result = handler.authenticate_did(0x8000000000000001, 1, auth_payload);
-        assert!(result.is_ok());
+        assert!(result.is_err());
     }
 
     #[test]

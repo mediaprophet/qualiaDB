@@ -123,7 +123,7 @@ mod tests {
             valid_until: 2_000,
             claims: vec![quin(
                 q_hash("did:example:alice"),
-                q_hash("https://ns.webcivics.org/capability/heldBy"),
+                q_hash("https://ns.webcivics.net/capability/heldBy"),
                 q_hash("cap:FluidDynamics"),
             )],
         }

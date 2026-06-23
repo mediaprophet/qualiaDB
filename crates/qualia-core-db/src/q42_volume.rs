@@ -812,8 +812,8 @@ mod tests {
 
         let doc = r#"
 @prefix dc:     <http://purl.org/dc/terms/> .
-@prefix values: <https://ns.webcivics.org/values/> .
-@prefix doc:    <https://ns.webcivics.org/values/inst#> .
+@prefix values: <https://ns.webcivics.net/values/> .
+@prefix doc:    <https://ns.webcivics.net/values/inst#> .
 doc:article-1 a values:Undertaking ;
     dc:title "Article 1" ;
     values:originalText "Each Member undertakes to suppress forced labour." .
@@ -833,7 +833,7 @@ doc:article-1 a values:Undertaking ;
         let lit = "Each Member undertakes to suppress forced labour.";
         assert_eq!(lex.lookup_hash(generate_60bit_token(lit.as_bytes())), Some(lit));
         // Expanded IRIs are recoverable too (queries become human-readable).
-        let undertaking = "https://ns.webcivics.org/values/Undertaking";
+        let undertaking = "https://ns.webcivics.net/values/Undertaking";
         assert_eq!(
             lex.lookup_hash(generate_60bit_token(undertaking.as_bytes())),
             Some(undertaking)

@@ -2,7 +2,7 @@
 @prefix rdfs:   <http://www.w3.org/2000/01/rdf-schema#> .
 @prefix xsd:    <http://www.w3.org/2001/XMLSchema#> .
 @prefix dc:     <http://purl.org/dc/terms/> .
-@prefix values: <https://ns.webcivics.org/values/> .
+@prefix values: <https://ns.webcivics.net/values/> .
 
 # ===========================================================================
 # tiering.n3 — machine-readable tier / legal-form / binding / curation terms.

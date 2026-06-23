@@ -33,7 +33,7 @@ section/line; this file copies, it does not replace. Generated 2026-06-22; not a
   SipHash). *(§10.2g · L801/L815/L1480)* — remaining: CBOR-LD `@context` expansion.
 
 ## §13 — Namespace
-- ✅ **Namespace scheme decided + migrated** — `https://ns.webcivics.org/` across
+- ✅ **Namespace scheme decided + migrated** — `https://ns.webcivics.net/` across
   values/sense/selfhood/agency/policy/humanitarian-ict. *(§13 · L1094/L1102/L1271)*
 
 ## §17.1 — First implementation slice (verified, no agents)

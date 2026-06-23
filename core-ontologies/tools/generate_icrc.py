@@ -119,11 +119,11 @@ def parse_block(slug, block):
     return title, date, source, preamble, segs, annex
 
 def emit(slug, title, date, source, preamble, segs, annex):
-    ns = "https://ns.webcivics.org/values/" + slug + "#"
+    ns = "https://ns.webcivics.net/values/" + slug + "#"
     L = ['@prefix rdf:    <http://www.w3.org/1999/02/22-rdf-syntax-ns#> .',
          '@prefix rdfs:   <http://www.w3.org/2000/01/rdf-schema#> .',
          '@prefix dc:     <http://purl.org/dc/terms/> .',
-         '@prefix values: <https://ns.webcivics.org/values/> .',
+         '@prefix values: <https://ns.webcivics.net/values/> .',
          f'@prefix doc:    <{ns}> .', '',
          '# ============================================================',
          f'# {title}',
