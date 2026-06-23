@@ -373,6 +373,163 @@ pub fn compile_gguf_to_q42(input: &[u8], page_log2: u16) -> Result<Vec<u8>, Stri
     Ok(out)
 }
 
+/// `format_flags` bit: container produced by the **raw streaming transcode** (safetensor/MLX →
+/// Q42W) — tensors are verbatim high-fidelity blobs not yet mapped to engine GEMM roles, and the
+/// GGUF hyperparameter block is absent. (Distinguishes it from a `compile_gguf_to_q42` container.)
+pub const FORMAT_FLAG_RAW_TRANSCODE: u32 = 1 << 0;
+
+/// Outcome of a streaming transcode — the numbers that make the memory claim falsifiable.
+#[derive(Debug, Clone, Copy, PartialEq, Eq)]
+pub struct TranscodeReport {
+    pub n_tensors: usize,
+    pub bytes_written: usize,
+    pub largest_tensor_bytes: usize,
+    pub total_tensor_bytes: usize,
+    /// High-water mark of the transcoder's working buffer — one tensor in flight, so ≈ the largest
+    /// single tensor, **never** the whole file.
+    pub peak_working_bytes: usize,
+}
+
+/// Phase 6 / task #12 — **streaming, versioned transcode: safetensor (high-fidelity) → Q42W**.
+///
+/// Writes a valid Q42W container to `out` forward-only (round-trips through [`Q42TensorIndex::from_q42`]).
+/// The full layout is computed from the safetensor *header* alone (no tensor reads), so each tensor's
+/// bytes pass through **one reused scratch buffer** — the transcoder's peak working memory is ≈ the
+/// largest single tensor, not the whole file. On the real path `src` is an `mmap` (demand-paged by
+/// the OS), so the file is never resident in full.
+///
+/// Rejects low-precision (`Q4`-class) inputs — high-fidelity (`F32/F16/BF16/Q8`) only. The legacy
+/// `compile_gguf_to_q42` path is untouched (GGUF support unchanged).
+pub fn transcode_safetensor_to_q42<W: std::io::Write>(
+    src: &[u8],
+    page_log2: u16,
+    out: &mut W,
+) -> Result<TranscodeReport, String> {
+    use crate::safetensor::{is_high_fidelity_ggml, parse_safetensor_header, safetensor_dtype_to_ggml};
+
+    let page_log2 = if page_log2 == 0 { Q42W_DEFAULT_PAGE_LOG2 } else { page_log2 };
+    if page_log2 < 8 || page_log2 > 30 {
+        return Err(format!("page_log2 {page_log2} out of range"));
+    }
+    let page = 1usize << page_log2;
+
+    let plan = parse_safetensor_header(src)?;
+    if plan.tensors.is_empty() {
+        return Err("safetensor: no tensors".to_string());
+    }
+
+    // 1) dtype gate (high-fidelity only — reject Q4 / low precision) + GGML mapping.
+    let mut ggml_types = Vec::with_capacity(plan.tensors.len());
+    for t in &plan.tensors {
+        let g = safetensor_dtype_to_ggml(&t.dtype).ok_or_else(|| {
+            format!("transcode: tensor '{}' dtype {} is not a high-fidelity source (rejected)", t.name, t.dtype)
+        })?;
+        if !is_high_fidelity_ggml(g) {
+            return Err(format!("transcode: tensor '{}' is low-precision (Q4-class) — rejected", t.name));
+        }
+        ggml_types.push(g);
+    }
+
+    // 2) Layout (from the header alone — no tensor reads): header → manifest → page-aligned blobs.
+    let n = plan.tensors.len();
+    let manifest_offset = align_up(Q42_WEIGHT_HEADER_BYTES, 16);
+    let manifest_size = Q42_TENSOR_ENTRY_BYTES * n;
+    let blob_offset = align_up(manifest_offset + manifest_size, page);
+    let mut entries: Vec<Q42TensorEntry> = Vec::with_capacity(n);
+    let mut cur = blob_offset;
+    let mut total_tensor_bytes = 0usize;
+    let mut largest = 0usize;
+    for (i, t) in plan.tensors.iter().enumerate() {
+        let blen = t.byte_len();
+        let off = align_up(cur, page);
+        let mut e = Q42TensorEntry {
+            role: Q42_LAYER_GLOBAL, // raw transcode: name→engine-role mapping is future work
+            layer: Q42_LAYER_GLOBAL,
+            ggml_type: ggml_types[i],
+            dim0: *t.shape.first().unwrap_or(&1) as u32,
+            dim1: *t.shape.get(1).unwrap_or(&1) as u32,
+            blob_offset: off as u64,
+            byte_len: blen as u64,
+            scaffold_quin: NQuin::zeroed(),
+        };
+        e.scaffold_quin.subject = crate::q_hash(t.name.as_str()); // tensor identity (name hash)
+        total_tensor_bytes += blen;
+        largest = largest.max(blen);
+        entries.push(e);
+        cur = off + blen;
+    }
+
+    // 3) Header + manifest in a small bounded buffer (size ∝ tensor count, not file), CRC, then write.
+    let manifest_end = manifest_offset + manifest_size;
+    let mut head = vec![0u8; manifest_end];
+    let header = Q42WeightHeader {
+        magic: Q42W_MAGIC,
+        version: Q42W_VERSION,
+        page_log2,
+        n_tensors: n as u32,
+        n_layers: 0,
+        n_embd: 0,
+        n_head: 0,
+        n_kv_head: 0,
+        vocab_size: 0,
+        rope_freq_base: 0.0,
+        rope_scale: 0.0,
+        manifest_offset: manifest_offset as u64,
+        blob_offset: blob_offset as u64,
+        cold_offset: 0,
+        cold_len: 0,
+        header_crc: 0,
+        format_flags: FORMAT_FLAG_RAW_TRANSCODE,
+        arch_quin: NQuin::zeroed(),
+        tokenizer_offset: 0,
+        tokenizer_len: 0,
+    };
+    header.write_le(&mut head[0..Q42_WEIGHT_HEADER_BYTES]);
+    for (k, e) in entries.iter().enumerate() {
+        let o = manifest_offset + k * Q42_TENSOR_ENTRY_BYTES;
+        e.write_le(&mut head[o..o + Q42_TENSOR_ENTRY_BYTES]);
+        let entry_crc = crc32c(&head[o..o + 32]) as u64;
+        head[o + 72..o + 80].copy_from_slice(&entry_crc.to_le_bytes());
+    }
+    let hc = crc32c_update(crc32c_update(0xFFFF_FFFF, &head[0..72]), &head[76..manifest_end]);
+    head[72..76].copy_from_slice(&(!hc).to_le_bytes());
+    out.write_all(&head).map_err(|e| e.to_string())?;
+    let mut bytes_written = head.len();
+
+    // 4) Stream each blob through ONE reused scratch (peak ≈ largest tensor), page-aligned.
+    let zeros = [0u8; 4096];
+    let mut scratch: Vec<u8> = Vec::new();
+    let mut peak_working = 0usize;
+    for (i, t) in plan.tensors.iter().enumerate() {
+        let target = entries[i].blob_offset as usize;
+        let mut pad = target.saturating_sub(bytes_written);
+        while pad > 0 {
+            let chunk = pad.min(zeros.len());
+            out.write_all(&zeros[..chunk]).map_err(|e| e.to_string())?;
+            bytes_written += chunk;
+            pad -= chunk;
+        }
+        let begin = plan.data_start + t.begin;
+        let end = plan.data_start + t.end;
+        if end > src.len() {
+            return Err(format!("transcode: tensor '{}' out of source bounds", t.name));
+        }
+        scratch.clear();
+        scratch.extend_from_slice(&src[begin..end]); // exactly one tensor in flight
+        peak_working = peak_working.max(scratch.len());
+        out.write_all(&scratch).map_err(|e| e.to_string())?;
+        bytes_written += scratch.len();
+    }
+
+    Ok(TranscodeReport {
+        n_tensors: n,
+        bytes_written,
+        largest_tensor_bytes: largest,
+        total_tensor_bytes,
+        peak_working_bytes: peak_working,
+    })
+}
+
 /// GGUF tensor-name suffix for a per-layer `.q42` role (None for global tensors, named directly).
 fn q42_role_suffix(role: u16) -> Option<&'static [u8]> {
     match role {
@@ -507,6 +664,82 @@ impl Q42TensorIndex {
 #[cfg(test)]
 mod tests {
     use super::*;
+
+    /// Build a minimal safetensor with the given `(name, dtype, shape, nbytes)` tensors (zeroed
+    /// data, but each tensor stamped with a distinct first byte so round-trips are checkable).
+    fn synth_safetensor(t: &[(&str, &str, Vec<usize>, usize)]) -> Vec<u8> {
+        let mut entries = serde_json::Map::new();
+        let mut cursor = 0usize;
+        for (name, dtype, shape, nbytes) in t {
+            let (begin, end) = (cursor, cursor + nbytes);
+            cursor = end;
+            entries.insert(
+                (*name).to_string(),
+                serde_json::json!({ "dtype": dtype, "shape": shape, "data_offsets": [begin, end] }),
+            );
+        }
+        let header_bytes = serde_json::to_vec(&serde_json::Value::Object(entries)).unwrap();
+        let mut out = Vec::new();
+        out.extend_from_slice(&(header_bytes.len() as u64).to_le_bytes());
+        out.extend_from_slice(&header_bytes);
+        let data_start = out.len();
+        out.resize(out.len() + cursor, 0u8);
+        // stamp each tensor's first byte with an index so we can verify the right bytes landed.
+        let plan = crate::safetensor::parse_safetensor_header(&out).unwrap();
+        for (i, te) in plan.tensors.iter().enumerate() {
+            out[data_start + te.begin] = (i as u8) + 1;
+        }
+        out
+    }
+
+    /// GATE B: streaming safetensor → Q42W round-trips, and peak working memory ≈ the largest
+    /// single tensor (NOT the whole file).
+    #[test]
+    fn transcode_safetensor_streams_and_round_trips() {
+        // three F16 tensors of 8 / 64 / 16 bytes (largest = 64; total = 88).
+        let src = synth_safetensor(&[
+            ("a", "F16", vec![4], 8),
+            ("big", "F16", vec![32], 64),
+            ("c", "F16", vec![8], 16),
+        ]);
+        let mut out = Vec::new();
+        let report = transcode_safetensor_to_q42(&src, 12, &mut out).unwrap();
+
+        // peak working memory == largest tensor, and strictly less than the sum (not the whole file).
+        assert_eq!(report.n_tensors, 3);
+        assert_eq!(report.largest_tensor_bytes, 64);
+        assert_eq!(report.total_tensor_bytes, 88);
+        assert_eq!(report.peak_working_bytes, 64, "one tensor in flight = largest, not the file");
+        assert!(report.peak_working_bytes < report.total_tensor_bytes);
+
+        // the emitted container is a valid Q42W and parses back.
+        let idx = Q42TensorIndex::from_q42(&out).expect("transcoded container must round-trip");
+        assert_eq!(idx.header.n_tensors, 3);
+        assert_eq!(idx.header.format_flags & FORMAT_FLAG_RAW_TRANSCODE, FORMAT_FLAG_RAW_TRANSCODE);
+        assert_eq!(idx.entries.len(), 3);
+
+        // tensor bytes survived verbatim: each blob's first byte is its stamp; sizes match.
+        let plan = crate::safetensor::parse_safetensor_header(&src).unwrap();
+        for (i, (e, st)) in idx.entries.iter().zip(plan.tensors.iter()).enumerate() {
+            let blob = idx.blob(&out, e);
+            assert_eq!(blob.len(), st.byte_len());
+            assert_eq!(blob[0], (i as u8) + 1, "tensor {i} bytes mismatch");
+            // identity preserved as the name hash.
+            assert_eq!(e.scaffold_quin.subject, crate::q_hash(st.name.as_str()));
+        }
+    }
+
+    /// GATE B: a low-precision (Q4-class) dtype is rejected — high-fidelity sources only.
+    #[test]
+    fn transcode_rejects_low_precision() {
+        // "U8" is not a high-fidelity weight dtype → the dtype gate rejects it.
+        let src = synth_safetensor(&[("w", "U8", vec![16], 16)]);
+        let mut out = Vec::new();
+        let err = transcode_safetensor_to_q42(&src, 12, &mut out).unwrap_err();
+        assert!(err.contains("high-fidelity") || err.contains("rejected"), "got: {err}");
+        // and the underlying GGML gate rejects Q4_K directly.
+        assert!(!crate::safetensor::is_high_fidelity_ggml(12));
+    }
 
     fn le_u16(b: &[u8], o: usize) -> u16 {
         u16::from_le_bytes(b[o..o + 2].try_into().unwrap())

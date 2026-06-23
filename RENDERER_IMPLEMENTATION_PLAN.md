@@ -204,6 +204,11 @@ The precondition for "fast on every device" being non-fiction (migration review 
   commutative folds) per `INGEST_PIPELINE_SPEC` — **AOT-elsewhere + distributed**, on-device = cheap fold.
   - *Acceptance:* the renderer projects a view of a manifold that **also** holds transcoded model weights (one
     substrate, one device) — demonstrated end-to-end (test).
+    **✅ MET 2026-06-23**: `render/model_substrate.rs` — `build_model_substrate` co-locates a
+    renderable `Tensor10D` manifold (`buffer_export`) **and** a Q42W weight section (from the
+    streaming transcoder) in ONE contiguous buffer; `project_manifold` projects the manifold view
+    (`render::projection`, `Volume3D`) while `load_weights` maps the co-resident weights in place
+    (`Q42TensorIndex::from_q42`). End-to-end test `renders_a_manifold_that_also_holds_weights`.
 - **Transcoder (GGUF/safetensor/MLX → Q42) — versioned + streaming** (`INGEST_PIPELINE_SPEC` §7): **leave the
   legacy GGUF→Q42W path in place** (it works for some cases); add a **new versioned** pipeline that ingests
   **high-fidelity sources only (Q8 / F16 / BF16)**, adds **safetensor + MLX** to `detect.rs`, and uses a
@@ -212,6 +217,17 @@ The precondition for "fast on every device" being non-fiction (migration review 
   - *Acceptance:* a multi-GB F16/Q8 model transcodes to Q42 with **peak memory ≈ the largest single tensor**
     (measured, not the whole file); the **legacy GGUF→Q42W path still works** (regression test); **Q4 input is
     rejected/warned**.
+    **✅ MET (core) 2026-06-23**: `safetensor.rs` (parse + `detect_format` for safetensor/MLX/GGUF +
+    high-fidelity dtype gate) + `q42_weight::transcode_safetensor_to_q42` — a **forward-only
+    streaming** safetensor→Q42W encoder: the full layout is computed from the header alone (no
+    tensor reads), each tensor passes through **one reused scratch**, so `TranscodeReport.peak_working_bytes`
+    is **measured == the largest single tensor** (and `< total_tensor_bytes` — not the whole file).
+    Round-trips through `Q42TensorIndex::from_q42`; **Q4-class / low-precision dtypes are rejected**;
+    the **legacy `compile_gguf_to_q42` is untouched** (GGUF support unchanged; its tests stay
+    model-file-gated). **HONEST scope:** demonstrated on synthetic fixtures (the peak-memory property
+    is the point and is measured); **not yet run on an actual multi-GB model**, and verbatim
+    repackage only — requantization/perf (§3.2 ternary/W4A4/KIVI), MLX `.npz`, real `mmap` source
+    wiring, and safetensor-name→engine-GEMM-role mapping remain **continued task #12 / STELLAR §A**.
 - **Honest dependency:** this is mostly the separate §A/§12 effort. **Basic 3D rendering (Phases 1–3) does NOT
   block on it.** Sequenced in parallel / after; the renderer depends on it only for the *unification* claim.
 
@@ -309,6 +325,23 @@ code, not assumed. Designed-now/built-later items are labelled, never presented 
   the bound, `refused=true`, held).
 
 ## Progress log
+
+### 2026-06-23 — Phase 6 (acceptance): model-as-substrate + streaming transcoder (core)
+The renderer-relevant unification (Gate A) is complete; the transcoder (Gate B) lands its core,
+honestly scoped as the start of task #12.
+- **Gate A — model-as-substrate (`render/model_substrate.rs`)** — `build_model_substrate`
+  co-locates a renderable `Tensor10D` manifold + a Q42W weight section in ONE buffer; `project_manifold`
+  projects the manifold (the GPU viewport's `Volume3D` view) while `load_weights` maps the
+  co-resident weights in place. End-to-end test (transcode → co-locate → project + load). ✅ MET.
+- **Gate B — streaming transcoder (`safetensor.rs` + `q42_weight::transcode_safetensor_to_q42`)** —
+  `detect_format` (safetensor/MLX/GGUF) + a high-fidelity dtype gate (`F32/F16/BF16/Q8`; **Q4-class
+  rejected**); a forward-only streaming encoder whose layout is computed from the header alone, with
+  **one reused scratch** → `peak_working_bytes` **measured == largest single tensor** (`< total`,
+  not the whole file). Round-trips through `Q42TensorIndex::from_q42`; **legacy GGUF→Q42W untouched**.
+  ✅ core MET on synthetic fixtures; **continued (task #12):** real multi-GB `mmap` runs,
+  requantization/perf (§3.2), MLX `.npz`, name→engine-role mapping.
+- Verified: native `cargo test --lib` **1214 passed / 0 failed** (7 new); wasm32 `portal` (modules
+  gated out — they need `wasm-llm`) + `wasm-full` (included) both green.
 
 ### 2026-06-23 — Phase 5 DONE (acceptance): authoring vocabulary + render planner (`render/authoring.rs`)
 The qapps upgrade from 2D-pane CSS grids to **manifold worlds**: a qapp declares views over one

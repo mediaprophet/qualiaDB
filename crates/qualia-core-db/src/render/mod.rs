@@ -47,6 +47,11 @@ pub mod sense;
     feature = "wasm-full"
 ))]
 pub mod authoring;
+/// Model-as-substrate (Phase 6, §F): one buffer holds a renderable manifold AND the transcoded
+/// Q42W weights; the renderer projects the manifold while the weights are co-resident. Gated to
+/// where `crate::q42_weight` (the transcoder) compiles.
+#[cfg(any(not(target_arch = "wasm32"), feature = "wasm-llm"))]
+pub mod model_substrate;
 pub mod contract;
 pub mod spectral;
 pub mod acoustic;
