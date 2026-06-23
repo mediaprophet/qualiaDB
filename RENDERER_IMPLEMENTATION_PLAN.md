@@ -240,9 +240,13 @@ not pushed.
   camera. `QualiaPortal.upload_mesh_asset(bytes, hint)` centres+scales to the orbit frame and uploads.
   **Verified in Chrome:** a 12-triangle cube OBJ renders as a solid, depth-tested, perspective surface.
 - **UI** — spatial.html "Load 3D Asset (OBJ/STL/GLB)" picker → `loadMeshAsset` → `upload_mesh_asset`.
-- **Remaining in Phase 1:** **1.4** unified `project: 10D → target` (one `project()` yielding both a 2D
-  and a 3D view of the same manifold). Note: orbit-drag on a loaded mesh not re-verified this run (the
-  camera transform applies — perspective is correct — but the drag→orbit input binding wasn't confirmed).
+- **1.4 unified projection — CORE DONE** (`1c79a8e11`): `manifold_project.rs` — one `project(tensor,
+  time, target)` over the parity-tested `portal_pga` oracle yields the same manifold world point as a
+  3D volume position OR its 2D planar shadow; the "one projection, many views" property is unit-tested
+  (3/3). **Remaining for 1.4:** wire a *live* 2D canvas view off `project()` next to the 3D scene (the
+  screenshot half of acceptance). With this, **Phase 1 is substantially complete** (1.0–1.3 done, 1.4 core).
+- Note: orbit-drag on a loaded mesh not re-verified this run (the camera transform applies — perspective
+  is correct — but the drag→orbit input binding wasn't confirmed).
 
 ### 2026-06-23 (later) — Phase 0.1 browser-accepted + Phase 0.3 + Phase 1.0 DONE: WebGPU 3D viewport live in Chrome
 Committed `13f9a3346` (branch `0.0.19`, not pushed).
