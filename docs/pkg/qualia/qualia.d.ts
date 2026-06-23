@@ -137,6 +137,14 @@ export class QualiaPortal {
     t_window(): number;
     tick(canvas: HTMLCanvasElement, dt_ms: number): void;
     tier(): number;
+    /**
+     * Import a 3D mesh asset (OBJ / STL / GLB bytes) and render it as a solid surface (Phase 1.2).
+     * The mesh is centred on its bounding-box centroid and scaled so its largest extent is ~1.6
+     * units — fitting the orbit camera's default frame (eye at distance 3.5, looking at the origin)
+     * — then uploaded to the GPU. `hint` is an optional lowercase extension ("obj"/"stl"/"glb");
+     * empty = sniff from the bytes. Returns the triangle count (0 if the GPU path isn't active).
+     */
+    upload_mesh_asset(bytes: Uint8Array, hint: string): number;
     upload_tensor_buffer(bytes: Uint8Array): void;
 }
 
@@ -305,11 +313,44 @@ export interface InitOutput {
     readonly geosparql_operation_wasm: (a: number, b: number) => [number, number, number];
     readonly is_opfs_block_cached: (a: number) => any;
     readonly pack_quins_into_superblock: (a: bigint, b: bigint, c: number, d: number) => [number, number, number];
+    readonly parse_cbor_ld_wasm: (a: number, b: number) => any;
+    readonly parse_json_wasm: (a: number, b: number) => any;
     readonly read_opfs_block: (a: number) => any;
     readonly sample_browser_telemetry_wasm: () => [number, number, number];
     readonly spatial_encode_wasm: (a: number, b: number) => [number, number, number];
     readonly verify_superblock_ecc: (a: number, b: number) => [number, number];
     readonly write_opfs_block: (a: number, b: number, c: number) => any;
+    readonly __wbg_webengine_free: (a: number, b: number) => void;
+    readonly create_canvas: (a: number, b: number) => [number, number, number];
+    readonly webengine_last_parsed: (a: number) => any;
+    readonly webengine_load_json_scene: (a: number, b: number, c: number) => [number, number, number];
+    readonly webengine_load_q42: (a: number, b: number, c: number) => [number, number, number];
+    readonly webengine_mount_qapp: (a: number, b: number, c: number) => [number, number];
+    readonly webengine_new: () => [number, number, number];
+    readonly webengine_render_to_canvas: (a: number) => [number, number];
+    readonly init_panic_hook: () => void;
+    readonly __wbg_federatednodemanager_free: (a: number, b: number) => void;
+    readonly __wbg_get_wasmoffloadintent_opcode: (a: number) => number;
+    readonly __wbg_get_wasmoffloadintent_payload_size: (a: number) => number;
+    readonly __wbg_get_wasmoffloadintent_priority: (a: number) => number;
+    readonly __wbg_set_wasmoffloadintent_opcode: (a: number, b: number) => void;
+    readonly __wbg_set_wasmoffloadintent_payload_size: (a: number, b: number) => void;
+    readonly __wbg_set_wasmoffloadintent_priority: (a: number, b: number) => void;
+    readonly __wbg_wasmoffloadintent_free: (a: number, b: number) => void;
+    readonly enforce_rights_ontology: (a: bigint) => number;
+    readonly federatednodemanager_discover_capabilities: (a: number) => number;
+    readonly federatednodemanager_new: () => number;
+    readonly federatednodemanager_offload_intent: (a: number, b: number) => [number, number, number, number];
+    readonly intercept_computational_opcode: (a: number, b: number) => number;
+    readonly intercept_pharmacogenomics_intent: (a: number, b: number) => number;
+    readonly serialize_float64_array: (a: number, b: number) => any;
+    readonly serialize_float_array: (a: number, b: number) => any;
+    readonly wasmoffloadintent_new: (a: number, b: number, c: number) => number;
+    readonly wasmoffloadintent_with_string_payload: (a: number, b: number, c: number, d: number) => number;
+    readonly webizen_poll_agreements: () => [number, number];
+    readonly webizen_propose_agreement: (a: any, b: number, c: number, d: number, e: number, f: number) => bigint;
+    readonly webizen_sign_agreement: (a: bigint, b: number, c: number) => void;
+    readonly prune_and_validate_mesh: (a: bigint) => number;
     readonly __wbg_qualiaportal_free: (a: number, b: number) => void;
     readonly portal_init_webgpu: (a: any) => any;
     readonly qualiaportal_acoustic_enabled: (a: number) => number;
@@ -357,41 +398,9 @@ export interface InitOutput {
     readonly qualiaportal_t_window: (a: number) => number;
     readonly qualiaportal_tick: (a: number, b: any, c: number) => [number, number];
     readonly qualiaportal_tier: (a: number) => number;
+    readonly qualiaportal_upload_mesh_asset: (a: number, b: number, c: number, d: number, e: number) => [number, number, number];
     readonly qualiaportal_upload_tensor_buffer: (a: number, b: number, c: number) => [number, number];
     readonly qualiaportal_selected_node_index: (a: number) => number;
-    readonly __wbg_webengine_free: (a: number, b: number) => void;
-    readonly create_canvas: (a: number, b: number) => [number, number, number];
-    readonly webengine_last_parsed: (a: number) => any;
-    readonly webengine_load_json_scene: (a: number, b: number, c: number) => [number, number, number];
-    readonly webengine_load_q42: (a: number, b: number, c: number) => [number, number, number];
-    readonly webengine_mount_qapp: (a: number, b: number, c: number) => [number, number];
-    readonly webengine_new: () => [number, number, number];
-    readonly webengine_render_to_canvas: (a: number) => [number, number];
-    readonly init_panic_hook: () => void;
-    readonly __wbg_federatednodemanager_free: (a: number, b: number) => void;
-    readonly __wbg_get_wasmoffloadintent_opcode: (a: number) => number;
-    readonly __wbg_get_wasmoffloadintent_payload_size: (a: number) => number;
-    readonly __wbg_get_wasmoffloadintent_priority: (a: number) => number;
-    readonly __wbg_set_wasmoffloadintent_opcode: (a: number, b: number) => void;
-    readonly __wbg_set_wasmoffloadintent_payload_size: (a: number, b: number) => void;
-    readonly __wbg_set_wasmoffloadintent_priority: (a: number, b: number) => void;
-    readonly __wbg_wasmoffloadintent_free: (a: number, b: number) => void;
-    readonly enforce_rights_ontology: (a: bigint) => number;
-    readonly federatednodemanager_discover_capabilities: (a: number) => number;
-    readonly federatednodemanager_new: () => number;
-    readonly federatednodemanager_offload_intent: (a: number, b: number) => [number, number, number, number];
-    readonly intercept_computational_opcode: (a: number, b: number) => number;
-    readonly intercept_pharmacogenomics_intent: (a: number, b: number) => number;
-    readonly serialize_float64_array: (a: number, b: number) => any;
-    readonly serialize_float_array: (a: number, b: number) => any;
-    readonly wasmoffloadintent_new: (a: number, b: number, c: number) => number;
-    readonly wasmoffloadintent_with_string_payload: (a: number, b: number, c: number, d: number) => number;
-    readonly webizen_poll_agreements: () => [number, number];
-    readonly webizen_propose_agreement: (a: any, b: number, c: number, d: number, e: number, f: number) => bigint;
-    readonly webizen_sign_agreement: (a: bigint, b: number, c: number) => void;
-    readonly prune_and_validate_mesh: (a: bigint) => number;
-    readonly parse_cbor_ld_wasm: (a: number, b: number) => any;
-    readonly parse_json_wasm: (a: number, b: number) => any;
     readonly wasm_bindgen__convert__closures_____invoke__h04e3064d3f666bd6: (a: number, b: number, c: any) => [number, number];
     readonly wasm_bindgen__convert__closures_____invoke__h710533e233c29f5b: (a: number, b: number, c: any, d: any) => void;
     readonly wasm_bindgen__convert__closures_____invoke__h59d672308a0bcda2: (a: number, b: number, c: any) => void;

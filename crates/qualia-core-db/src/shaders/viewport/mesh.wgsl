@@ -1,0 +1,41 @@
+// Triangle-mesh renderer — imported OBJ / STL / GLB surfaces (Phase 1.2,
+// RENDERER_IMPLEMENTATION_PLAN.md). Flat-shaded from screen-space derivatives, so no per-vertex
+// normal buffer is needed for this first cut. Shares the orbit camera with the projector/ambient.
+
+struct Camera {
+    view_projection: mat4x4<f32>,
+    yaw: f32,
+    pitch: f32,
+    zoom: f32,
+    tensor_mode: u32,
+    _padding: array<f32, 12>,
+};
+
+@group(0) @binding(0) var<uniform> camera: Camera;
+
+struct VertexOutput {
+    @builtin(position) clip_position: vec4<f32>,
+    @location(0) world_pos: vec3<f32>,
+};
+
+@vertex
+fn vertex_main(@location(0) position: vec3<f32>) -> VertexOutput {
+    var output: VertexOutput;
+    output.world_pos = position;
+    output.clip_position = camera.view_projection * vec4<f32>(position, 1.0);
+    return output;
+}
+
+@fragment
+fn fragment_main(input: VertexOutput) -> @location(0) vec4<f32> {
+    // Flat per-face normal from the derivative of world position across the triangle.
+    let n = normalize(cross(dpdx(input.world_pos), dpdy(input.world_pos)));
+    let key = normalize(vec3<f32>(0.45, 0.8, 0.55));
+    let diffuse = clamp(dot(n, key), 0.0, 1.0);
+    // Cheap rim term so silhouettes read against the dark field.
+    let facing = clamp(abs(n.z), 0.0, 1.0);
+    let rim = pow(1.0 - facing, 2.0);
+    let base = vec3<f32>(0.50, 0.60, 0.82);
+    let col = base * (0.22 + 0.78 * diffuse) + vec3<f32>(0.10, 0.14, 0.22) * rim;
+    return vec4<f32>(col, 1.0);
+}

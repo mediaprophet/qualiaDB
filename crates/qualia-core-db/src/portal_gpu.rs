@@ -10,7 +10,7 @@ use crate::portal_camera::CameraState;
 use crate::portal_navigation::PICK_SENTINEL;
 use crate::portal_standpoint::spectator_default;
 use crate::portal_telemetry::{AmbientUniforms, ObserverStandpoint, ParticleInstance, SystemTelemetry};
-use crate::shaders::viewport::{AMBIENT_WGSL, BLOOM_WGSL, PROJECTOR_WGSL};
+use crate::shaders::viewport::{AMBIENT_WGSL, BLOOM_WGSL, MESH_WGSL, PROJECTOR_WGSL};
 use crate::tensor::buffer_export::{
     read_tensor_at, tensor_node_count, TENSOR_HEADER_BYTES, TENSOR_STRIDE,
 };
@@ -73,6 +73,14 @@ struct BloomChain {
 }
 
 /// WebGPU phenomenal viewport — tensor projector + ambient particles.
+/// GPU buffers for an imported triangle mesh (Phase 1.2). Positions are model-space `f32x3`
+/// (already centred + scaled to the orbit frame by the caller); `index_count` is `triangles * 3`.
+struct MeshGpu {
+    vertex_buf: wgpu::Buffer,
+    index_buf: wgpu::Buffer,
+    index_count: u32,
+}
+
 pub struct PortalGpu {
     device: Arc<wgpu::Device>,
     queue: Arc<wgpu::Queue>,
@@ -91,6 +99,9 @@ pub struct PortalGpu {
     projector_pipeline: wgpu::RenderPipeline,
     ambient_pipeline_hdr: Option<wgpu::RenderPipeline>,
     projector_pipeline_hdr: Option<wgpu::RenderPipeline>,
+    mesh_pipeline: wgpu::RenderPipeline,
+    mesh_pipeline_hdr: Option<wgpu::RenderPipeline>,
+    mesh: Option<MeshGpu>,
     bloom: Option<BloomChain>,
     ambient_bind_group_layout: wgpu::BindGroupLayout,
     ambient_bind_group: wgpu::BindGroup,
@@ -246,6 +257,11 @@ impl PortalGpu {
             source: wgpu::ShaderSource::Wgsl(PROJECTOR_WGSL.into()),
         });
 
+        let mesh_shader = device.create_shader_module(wgpu::ShaderModuleDescriptor {
+            label: Some("portal-mesh"),
+            source: wgpu::ShaderSource::Wgsl(MESH_WGSL.into()),
+        });
+
         let ambient_bind_group_layout =
             device.create_bind_group_layout(&wgpu::BindGroupLayoutDescriptor {
                 label: Some("portal-ambient-layout"),
@@ -356,6 +372,48 @@ impl PortalGpu {
             multiview: None,
         });
 
+        // Triangle-mesh pipeline (Phase 1.2). Reuses the projector camera bind layout (mesh shader
+        // declares only camera@0, a valid subset); one f32x3 vertex buffer at slot 0; cull disabled
+        // (imported meshes carry inconsistent winding). HDR variant built in the bloom block below.
+        let mesh_pipeline_layout = device.create_pipeline_layout(&wgpu::PipelineLayoutDescriptor {
+            label: Some("portal-mesh-pipeline-layout"),
+            bind_group_layouts: &[&projector_camera_layout],
+            push_constant_ranges: &[],
+        });
+        let mesh_vertex_layout = wgpu::VertexBufferLayout {
+            array_stride: 12,
+            step_mode: wgpu::VertexStepMode::Vertex,
+            attributes: &[wgpu::VertexAttribute {
+                format: wgpu::VertexFormat::Float32x3,
+                offset: 0,
+                shader_location: 0,
+            }],
+        };
+        let mesh_pipeline = device.create_render_pipeline(&wgpu::RenderPipelineDescriptor {
+            label: Some("portal-mesh-pipeline"),
+            layout: Some(&mesh_pipeline_layout),
+            vertex: wgpu::VertexState {
+                module: &mesh_shader,
+                entry_point: "vertex_main",
+                compilation_options: Default::default(),
+                buffers: &[mesh_vertex_layout.clone()],
+            },
+            fragment: Some(wgpu::FragmentState {
+                module: &mesh_shader,
+                entry_point: "fragment_main",
+                compilation_options: Default::default(),
+                targets: &[Some(color_target_state(format))],
+            }),
+            primitive: wgpu::PrimitiveState {
+                topology: wgpu::PrimitiveTopology::TriangleList,
+                cull_mode: None,
+                ..Default::default()
+            },
+            depth_stencil: Some(depth_state.clone()),
+            multisample: wgpu::MultisampleState::default(),
+            multiview: None,
+        });
+
         let picking_pipeline = device.create_render_pipeline(&wgpu::RenderPipelineDescriptor {
             label: Some("portal-picking-pipeline"),
             layout: Some(&projector_pipeline_layout),
@@ -388,7 +446,7 @@ impl PortalGpu {
         });
 
         let bloom_wanted = portal_bloom_enabled() && probe_hdr_format(&device);
-        let (ambient_pipeline_hdr, projector_pipeline_hdr, bloom) = if bloom_wanted {
+        let (ambient_pipeline_hdr, projector_pipeline_hdr, mesh_pipeline_hdr, bloom) = if bloom_wanted {
             let ambient_hdr = device.create_render_pipeline(&wgpu::RenderPipelineDescriptor {
                 label: Some("portal-ambient-hdr"),
                 layout: Some(&ambient_pipeline_layout),
@@ -435,10 +493,34 @@ impl PortalGpu {
                 multisample: wgpu::MultisampleState::default(),
                 multiview: None,
             });
+            let mesh_hdr = device.create_render_pipeline(&wgpu::RenderPipelineDescriptor {
+                label: Some("portal-mesh-hdr"),
+                layout: Some(&mesh_pipeline_layout),
+                vertex: wgpu::VertexState {
+                    module: &mesh_shader,
+                    entry_point: "vertex_main",
+                    compilation_options: Default::default(),
+                    buffers: &[mesh_vertex_layout.clone()],
+                },
+                fragment: Some(wgpu::FragmentState {
+                    module: &mesh_shader,
+                    entry_point: "fragment_main",
+                    compilation_options: Default::default(),
+                    targets: &[Some(hdr_color_target_state())],
+                }),
+                primitive: wgpu::PrimitiveState {
+                    topology: wgpu::PrimitiveTopology::TriangleList,
+                    cull_mode: None,
+                    ..Default::default()
+                },
+                depth_stencil: Some(depth_state.clone()),
+                multisample: wgpu::MultisampleState::default(),
+                multiview: None,
+            });
             let bloom = create_bloom_chain(&device, width, height, format);
-            (Some(ambient_hdr), Some(projector_hdr), bloom)
+            (Some(ambient_hdr), Some(projector_hdr), Some(mesh_hdr), bloom)
         } else {
-            (None, None, None)
+            (None, None, None, None)
         };
 
         let mut render_bytes = (particle_count * std::mem::size_of::<ParticleInstance>()) as u64;
@@ -477,6 +559,9 @@ impl PortalGpu {
             projector_pipeline,
             ambient_pipeline_hdr,
             projector_pipeline_hdr,
+            mesh_pipeline,
+            mesh_pipeline_hdr,
+            mesh: None,
             bloom,
             ambient_bind_group_layout,
             ambient_bind_group,
@@ -564,6 +649,34 @@ impl PortalGpu {
 
     pub fn has_tensor_buffer(&self) -> bool {
         self.tensor_raw_buf.is_some()
+    }
+
+    /// Upload an imported triangle mesh (Phase 1.2). `positions` are model-space `f32x3` (the caller
+    /// centres + scales them to the orbit frame); `indices` is a flat triangle list (`tris * 3`).
+    /// Returns the triangle count; clears any prior mesh when empty.
+    pub fn upload_mesh(&mut self, positions: &[[f32; 3]], indices: &[u32]) -> u32 {
+        if positions.is_empty() || indices.len() < 3 {
+            self.mesh = None;
+            return 0;
+        }
+        let vertex_buf = self.device.create_buffer_init(&wgpu::util::BufferInitDescriptor {
+            label: Some("portal-mesh-verts"),
+            contents: bytemuck::cast_slice(positions),
+            usage: wgpu::BufferUsages::VERTEX | wgpu::BufferUsages::COPY_DST,
+        });
+        let index_buf = self.device.create_buffer_init(&wgpu::util::BufferInitDescriptor {
+            label: Some("portal-mesh-indices"),
+            contents: bytemuck::cast_slice(indices),
+            usage: wgpu::BufferUsages::INDEX | wgpu::BufferUsages::COPY_DST,
+        });
+        let index_count = indices.len() as u32;
+        self.mesh = Some(MeshGpu { vertex_buf, index_buf, index_count });
+        index_count / 3
+    }
+
+    /// Whether a mesh surface is resident.
+    pub fn has_mesh(&self) -> bool {
+        self.mesh.is_some()
     }
 
     pub fn set_camera(&mut self, yaw: f32, pitch: f32, zoom: f32) {
@@ -811,6 +924,7 @@ impl PortalGpu {
             let bloom = self.bloom.as_ref().expect("bloom chain");
             let ambient_hdr = self.ambient_pipeline_hdr.as_ref().expect("ambient hdr");
             let projector_hdr = self.projector_pipeline_hdr.as_ref().expect("projector hdr");
+            let mesh_hdr = self.mesh_pipeline_hdr.as_ref();
 
             {
                 let mut pass = encoder.begin_render_pass(&wgpu::RenderPassDescriptor {
@@ -834,6 +948,14 @@ impl PortalGpu {
                     occlusion_query_set: None,
                     timestamp_writes: None,
                 });
+
+                if let (Some(mesh), Some(mesh_pipe)) = (self.mesh.as_ref(), mesh_hdr) {
+                    pass.set_pipeline(mesh_pipe);
+                    pass.set_bind_group(0, &self.projector_camera_bind, &[]);
+                    pass.set_vertex_buffer(0, mesh.vertex_buf.slice(..));
+                    pass.set_index_buffer(mesh.index_buf.slice(..), wgpu::IndexFormat::Uint32);
+                    pass.draw_indexed(0..mesh.index_count, 0, 0..1);
+                }
 
                 if let (Some(tensor_bind), count) = (
                     self.projector_tensor_bind.as_ref(),
@@ -883,6 +1005,14 @@ impl PortalGpu {
                 occlusion_query_set: None,
                 timestamp_writes: None,
             });
+
+            if let Some(mesh) = self.mesh.as_ref() {
+                pass.set_pipeline(&self.mesh_pipeline);
+                pass.set_bind_group(0, &self.projector_camera_bind, &[]);
+                pass.set_vertex_buffer(0, mesh.vertex_buf.slice(..));
+                pass.set_index_buffer(mesh.index_buf.slice(..), wgpu::IndexFormat::Uint32);
+                pass.draw_indexed(0..mesh.index_count, 0, 0..1);
+            }
 
             if let (Some(tensor_bind), count) = (
                 self.projector_tensor_bind.as_ref(),

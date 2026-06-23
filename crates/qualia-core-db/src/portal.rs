@@ -503,6 +503,41 @@ impl QualiaPortal {
         Ok(parsed)
     }
 
+    /// Import a 3D mesh asset (OBJ / STL / GLB bytes) and render it as a solid surface (Phase 1.2).
+    /// The mesh is centred on its bounding-box centroid and scaled so its largest extent is ~1.6
+    /// units — fitting the orbit camera's default frame (eye at distance 3.5, looking at the origin)
+    /// — then uploaded to the GPU. `hint` is an optional lowercase extension ("obj"/"stl"/"glb");
+    /// empty = sniff from the bytes. Returns the triangle count (0 if the GPU path isn't active).
+    pub fn upload_mesh_asset(&mut self, bytes: &[u8], hint: &str) -> Result<u32, JsValue> {
+        let hint_opt = if hint.is_empty() { None } else { Some(hint) };
+        let mesh = crate::asset_bridge::import_asset(bytes, hint_opt)
+            .map_err(|e| JsValue::from_str(&e.to_string()))?;
+        let c = mesh.centroid();
+        let ext = [
+            mesh.max[0] - mesh.min[0],
+            mesh.max[1] - mesh.min[1],
+            mesh.max[2] - mesh.min[2],
+        ];
+        let span = ext[0].max(ext[1]).max(ext[2]).max(1e-6);
+        let s = 1.6 / span;
+        let positions: Vec<[f32; 3]> = mesh
+            .positions
+            .iter()
+            .map(|p| [(p[0] - c[0]) * s, (p[1] - c[1]) * s, (p[2] - c[2]) * s])
+            .collect();
+        let indices: Vec<u32> = mesh
+            .triangles
+            .iter()
+            .flat_map(|t| [t[0], t[1], t[2]])
+            .collect();
+        let tris = match self.gpu {
+            Some(ref mut gpu) => gpu.upload_mesh(&positions, &indices),
+            None => 0,
+        };
+        self.description = format!("{tris} mesh triangles · T2 surface");
+        Ok(tris)
+    }
+
     pub fn upload_tensor_buffer(&mut self, bytes: &[u8]) -> Result<(), JsValue> {
         let count = tensor_node_count(bytes).unwrap_or(0);
         self.last_tensor = Some(bytes.to_vec());

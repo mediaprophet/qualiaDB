@@ -521,6 +521,27 @@ export class QualiaPortal {
         return ret;
     }
     /**
+     * Import a 3D mesh asset (OBJ / STL / GLB bytes) and render it as a solid surface (Phase 1.2).
+     * The mesh is centred on its bounding-box centroid and scaled so its largest extent is ~1.6
+     * units — fitting the orbit camera's default frame (eye at distance 3.5, looking at the origin)
+     * — then uploaded to the GPU. `hint` is an optional lowercase extension ("obj"/"stl"/"glb");
+     * empty = sniff from the bytes. Returns the triangle count (0 if the GPU path isn't active).
+     * @param {Uint8Array} bytes
+     * @param {string} hint
+     * @returns {number}
+     */
+    upload_mesh_asset(bytes, hint) {
+        const ptr0 = passArray8ToWasm0(bytes, wasm.__wbindgen_malloc);
+        const len0 = WASM_VECTOR_LEN;
+        const ptr1 = passStringToWasm0(hint, wasm.__wbindgen_malloc, wasm.__wbindgen_realloc);
+        const len1 = WASM_VECTOR_LEN;
+        const ret = wasm.qualiaportal_upload_mesh_asset(this.__wbg_ptr, ptr0, len0, ptr1, len1);
+        if (ret[2]) {
+            throw takeFromExternrefTable0(ret[1]);
+        }
+        return ret[0] >>> 0;
+    }
+    /**
      * @param {Uint8Array} bytes
      */
     upload_tensor_buffer(bytes) {
@@ -2081,17 +2102,17 @@ function __wbg_get_imports() {
             return ret;
         }, arguments); },
         __wbindgen_cast_0000000000000001: function(arg0, arg1) {
-            // Cast intrinsic for `Closure(Closure { owned: true, function: Function { arguments: [Externref], shim_idx: 301, ret: Unit, inner_ret: Some(Unit) }, mutable: true }) -> Externref`.
+            // Cast intrinsic for `Closure(Closure { owned: true, function: Function { arguments: [Externref], shim_idx: 310, ret: Unit, inner_ret: Some(Unit) }, mutable: true }) -> Externref`.
             const ret = makeMutClosure(arg0, arg1, wasm_bindgen__convert__closures_____invoke__h59d672308a0bcda2);
             return ret;
         },
         __wbindgen_cast_0000000000000002: function(arg0, arg1) {
-            // Cast intrinsic for `Closure(Closure { owned: true, function: Function { arguments: [Externref], shim_idx: 338, ret: Result(Unit), inner_ret: Some(Result(Unit)) }, mutable: true }) -> Externref`.
+            // Cast intrinsic for `Closure(Closure { owned: true, function: Function { arguments: [Externref], shim_idx: 347, ret: Result(Unit), inner_ret: Some(Result(Unit)) }, mutable: true }) -> Externref`.
             const ret = makeMutClosure(arg0, arg1, wasm_bindgen__convert__closures_____invoke__h04e3064d3f666bd6);
             return ret;
         },
         __wbindgen_cast_0000000000000003: function(arg0, arg1) {
-            // Cast intrinsic for `Closure(Closure { owned: true, function: Function { arguments: [NamedExternref("GPUUncapturedErrorEvent")], shim_idx: 301, ret: Unit, inner_ret: Some(Unit) }, mutable: true }) -> Externref`.
+            // Cast intrinsic for `Closure(Closure { owned: true, function: Function { arguments: [NamedExternref("GPUUncapturedErrorEvent")], shim_idx: 310, ret: Unit, inner_ret: Some(Unit) }, mutable: true }) -> Externref`.
             const ret = makeMutClosure(arg0, arg1, wasm_bindgen__convert__closures_____invoke__h59d672308a0bcda2_2);
             return ret;
         },
