@@ -229,6 +229,21 @@ code, not assumed. Designed-now/built-later items are labelled, never presented 
 
 ## Progress log
 
+### 2026-06-23 (Phase 1.1–1.3 DONE) — imported meshes render as solid 3D surfaces
+Commits `65a14dd74` (import), `c9b0736b3` (surface render), `11b55a178` (picker UI), branch `0.0.19`,
+not pushed.
+- **1.3 asset import** — `asset_bridge.rs`: pure `&[u8]` → `Mesh` + semantic NQuins for OBJ / STL
+  (binary+ASCII) / GLB (no `std::fs`, wasm-safe). 10/10 unit tests; CLI `Mesh` ingest format. `mesh_to_nquins`
+  records the asset as *known* geometry (counts, bbox, centroid, format) in one identity space.
+- **1.1 + 1.2 surface render** — `PortalGpu` mesh pipeline (surface + HDR), f32x3 vertex + u32 index
+  buffers, **depth-tested**, flat-shaded via screen-space derivatives (`mesh.wgsl`); reuses the orbit
+  camera. `QualiaPortal.upload_mesh_asset(bytes, hint)` centres+scales to the orbit frame and uploads.
+  **Verified in Chrome:** a 12-triangle cube OBJ renders as a solid, depth-tested, perspective surface.
+- **UI** — spatial.html "Load 3D Asset (OBJ/STL/GLB)" picker → `loadMeshAsset` → `upload_mesh_asset`.
+- **Remaining in Phase 1:** **1.4** unified `project: 10D → target` (one `project()` yielding both a 2D
+  and a 3D view of the same manifold). Note: orbit-drag on a loaded mesh not re-verified this run (the
+  camera transform applies — perspective is correct — but the drag→orbit input binding wasn't confirmed).
+
 ### 2026-06-23 (later) — Phase 0.1 browser-accepted + Phase 0.3 + Phase 1.0 DONE: WebGPU 3D viewport live in Chrome
 Committed `13f9a3346` (branch `0.0.19`, not pushed).
 - **Phase 0.1 browser acceptance: PASSED.** `requestDevice` succeeds on current Chrome (`wasm32`) — the
