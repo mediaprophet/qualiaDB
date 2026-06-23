@@ -15,13 +15,13 @@
 //! Native only.
 #![cfg(not(target_arch = "wasm32"))]
 
-use serde::Serialize;
+use serde::{Deserialize, Serialize};
 use std::time::Instant;
 
 const GEMV_BENCH_WGSL: &str = include_str!("shaders/gemv_bench.wgsl");
 
 /// A compute circuit's class in the capability matrix.
-#[derive(Debug, Clone, Copy, PartialEq, Eq, Serialize)]
+#[derive(Debug, Clone, Copy, PartialEq, Eq, Serialize, Deserialize)]
 pub enum CircuitKind {
     DiscreteGpu,
     IntegratedGpu,
@@ -42,7 +42,7 @@ impl CircuitKind {
 }
 
 /// One benchmarked circuit.
-#[derive(Debug, Clone, Serialize)]
+#[derive(Debug, Clone, Serialize, Deserialize)]
 pub struct CircuitBench {
     pub label: String,
     pub kind: CircuitKind,
@@ -61,7 +61,7 @@ pub struct CircuitBench {
 }
 
 /// The measured capability matrix — circuits sorted fastest-first. This IS the priority order.
-#[derive(Debug, Clone, Serialize)]
+#[derive(Debug, Clone, Serialize, Deserialize)]
 pub struct CapabilityMatrix {
     pub circuits: Vec<CircuitBench>,
     pub gemv_n: usize,

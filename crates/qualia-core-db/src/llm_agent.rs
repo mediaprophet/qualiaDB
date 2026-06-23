@@ -918,6 +918,8 @@ impl LocalLlmAgent {
                 );
 
                 let t_decode = std::time::Instant::now();
+                // A1a: GPU top-k decode path toggle (default-off; QUALIA_LLM_GPU_TOPK / set_gpu_topk).
+                let gpu_topk_enabled = crate::llm_bench::gpu_topk_enabled();
                 for step in 0..gen_budget {
                     crate::gpu_context::record_llm_decode_step();
 
@@ -1000,7 +1002,20 @@ impl LocalLlmAgent {
                             #[cfg(target_arch = "wasm32")]
                             let _ = engine.apply_output_norm_inplace(idx, &mut emb_buf[..emb_dim], emb_dim);
                             let sieve_mask = sieve.as_ref().map(|s| s.current_mask());
-                            if let Some(argmax) = engine.dispatch_output_argmax_chunked(
+                            // A1a: GPU top-k path (additive, default-off; non-sieve only in v1).
+                            // Returns the argmax token (k=1) via the on-GPU top-k reduction; falls
+                            // through to the existing argmax path if disabled or on any failure — the
+                            // working path is never bypassed.
+                            let topk_hit = if gpu_topk_enabled && sieve_mask.is_none() {
+                                engine
+                                    .dispatch_output_topk_chunked(idx, &emb_buf[..emb_dim], emb_dim, 1)
+                                    .and_then(|t| t.into_iter().next())
+                            } else {
+                                None
+                            };
+                            if let Some(item) = topk_hit {
+                                (item.token_id as usize, item.logit)
+                            } else if let Some(argmax) = engine.dispatch_output_argmax_chunked(
                                 idx,
                                 &emb_buf[..emb_dim],
                                 emb_dim,

@@ -795,6 +795,9 @@ pub mod device_benchmark;
 /// STELLAR §A AH-track H2: residency + device-priority planner (discovery → employment plan, D31).
 #[cfg(not(target_arch = "wasm32"))]
 pub mod residency_planner;
+/// STELLAR §A AH-track H1(a) cache: CBOR hardware passport (cache discovery, fast-boot skip, D26).
+#[cfg(not(target_arch = "wasm32"))]
+pub mod hardware_passport;
 /// STELLAR §A A0 (D17/D22): shared native LLM benchmark harness — the one measurement
 /// surface for the existing F16/Q8 path and the future ternary/top-k paths.
 #[cfg(not(target_arch = "wasm32"))]

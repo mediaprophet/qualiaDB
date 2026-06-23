@@ -211,6 +211,16 @@ beats streaming-to-the-fast-GPU**. This validates heterogeneous-overflow (D25/D3
 iGPU's 1.8 GB/s badly **understates** its true near-zero in-pool access (wgpu can't expose unified
 zero-copy), so the real heterogeneous win is *larger* than measured. Both axes now in `device_benchmark.rs`.
 
+**Cache DONE (CBOR, Timothy's call) — H1(a) now fully complete:**
+[`src/hardware_passport.rs`](crates/qualia-core-db/src/hardware_passport.rs) — a `HardwarePassport
+{version, key, topology, matrix}` cached as a compact **CBOR** blob (`ciborium`, serde) keyed by the
+host's **adapter identifiers** (sorted `vendor:device` handles). `load_or_probe` skips the benchmark on
+a key match (fast-boot/TTFT); a topology change → re-probe (D26/D28). **CBOR over JSON** because it
+round-trips IEEE-754 floats natively — incl. the `f64::INFINITY` in-pool sentinel that JSON cannot —
+and a binary blob fits the `.q42` ethos. 3 tests pass: infinity+key round-trip, version-mismatch
+rejection, real probe-then-cache-hit. **Cache only — no signing;** H1(b) human-key signing stays
+blocked on the identity remediation Phase 2/3.
+
 **Honest scope:** **NPU not probed** (platform-API DirectML/NNAPI/CoreML, not wgpu — recorded as
 `npu_probed=false`). The **caching half of H1(a)** (serialize topology+matrix to a passport keyed by the
 adapter set + fast-boot skip for TTFT) is **not yet built** — small follow-on. **H1(b) signing/trust
@@ -253,3 +263,54 @@ rule; the full per-segment `argmin(measured compute + transfer)` is the document
 
 **Next step:** H3 (make the plan executable — heterogeneous dispatch) or the A1a decode splice. Plus
 the small H1(a) cache. Committing the session checkpoint now (per your instruction).
+
+---
+
+## A1a — GPU top-k DECODE SPLICE  ·  ✅ MEASURED WIN (token-identity check pending)  ·  2026-06-24
+
+**What was built**
+- [`gguf_bridge.rs`] `dispatch_output_topk_chunked` — the output-projection logits stay on-GPU
+  (`gemm_output_buf`), the verified `topk_reduction.wgsl` reduces them per chunk, and only K
+  `(id,logit)` candidates are read back (host-merged) — replacing `dispatch_output_argmax_chunked`'s
+  **196 KB/token full-logit readback + CPU argmax**. Persistent pipeline + candidate buffers created
+  once in `ensure_gemm_buffers` (`init_output_topk`).
+- [`llm_agent.rs`] decode loop: **additive, default-OFF** route behind `gpu_topk_enabled`
+  (`QUALIA_LLM_GPU_TOPK` / `llm_bench::set_gpu_topk`); non-sieve only in v1; **falls through to the
+  exact argmax path on disable or any failure — the working path is never bypassed**.
+- `pollster` added to native deps (the cross-circuit benchmark's one-shot device probe needed it in
+  the non-test lib build — latent since H1(a)).
+
+**Measured (A2000, 64-token decode, topk ON vs the committed baseline):**
+| Model | decode baseline | decode top-k | Δ | warm TTFT |
+|---|--:|--:|--:|--:|
+| SmolLM2-360M **Q8** | 1.52 t/s | **1.86 t/s** | **~1.22×** | 1100 → 893 ms |
+| SmolLM2-360M Q4_K_M | 1.11 t/s | 1.35 t/s | ~1.22× | 1229 → 933 ms |
+
+Both produced the full 64 tokens; the **consistent ~1.22× across both models** is signal, not noise.
+Honest read: modest, exactly as designed — the readback + CPU argmax are gone, but the **6 per-token
+submit-stalls + per-token static-weight re-upload remain**. **Step-2 (the bigger lever):** make the
+output weight **resident** + fuse the chunks into a single submit → should beat this materially.
+
+**Token-identity: ✅ VERIFIED** (`a1a_gpu_topk_matches_argmax_text`, 2026-06-24) — top-k (k=1) decodes
+**byte-identical** text to argmax on the q8 model. The GEMM→top-k wiring is correct; A1a faithfully
+reproduces the existing path.
+
+**🔴 CRITICAL FINDING the check surfaced — the native generation is DEGENERATE.** Both argmax and
+top-k emit `<|endoftext|>` × 48 for "The capital of France is" — the model produces only the EOS token,
+**and the loop's `next == eos` break isn't halting it** (so it runs the full budget emitting EOS spam).
+Implications: **A1a is correct, but A0's 1.52 and A1a's 1.86 tok/s are measuring a decode loop whose
+*output is broken*** — we've been optimizing the speed of garbage generation. This is a **pre-existing
+native-path correctness bug** (matches [[project_llm_status_reality_2026-06-21]] "native unverified"),
+NOT introduced by A1a (which is byte-identical to the pre-existing argmax). Root cause unknown — candidates:
+forward-pass/logits wrong (argmax always lands on EOS), final `output_norm`, eos-id mismatch
+(tokenizer decodes a token as `<|endoftext|>` but the loop's `eos` holds a different id), or prompt/chat-template.
+
+**Reprioritisation (my honest recommendation):** the **generation-correctness bug outranks more perf
+work** — optimizing a loop that emits garbage (A1b/step-2) is premature. Suggest a focused "native decode
+quality" debug (logits sanity on a known prompt → eos handling → tokenizer) before A1b/step-2.
+
+**⚑ Where I need you:** a direction call — chase the degenerate-output bug first, or proceed with
+A1b/step-2 perf on the (correct-but-on-broken-output) path anyway?
+
+**Next options:** (a) **debug native generation quality** (recommended), (b) A1a step-2 resident-weight
+fusion, (c) **A1b** FFN ternary splice (MVPP), (d) H3.

@@ -27,7 +27,7 @@
 #![cfg(not(target_arch = "wasm32"))]
 
 use serde::Serialize;
-use std::sync::atomic::{AtomicU32, AtomicU64, Ordering};
+use std::sync::atomic::{AtomicBool, AtomicU32, AtomicU64, Ordering};
 use std::sync::{Arc, Mutex};
 use std::time::{Duration, Instant};
 
@@ -49,6 +49,27 @@ pub fn set_decode_budget_override(n: u32) {
 #[inline]
 pub fn decode_budget_override() -> u32 {
     DECODE_BUDGET_OVERRIDE.load(Ordering::Relaxed)
+}
+
+// ── A1a GPU top-k toggle (D18) ────────────────────────────────────────────────
+// Additive, default-OFF: routes the output projection through the GPU top-k path
+// (keep logits on-GPU, read back K pairs) instead of the full-logit-readback argmax.
+static GPU_TOPK: AtomicBool = AtomicBool::new(false);
+
+/// Enable/disable the GPU top-k decode path (`QUALIA_LLM_GPU_TOPK`).
+#[inline]
+pub fn set_gpu_topk(on: bool) {
+    GPU_TOPK.store(on, Ordering::Relaxed);
+}
+
+/// Whether the GPU top-k decode path is active (atomic flag OR the env var).
+#[inline]
+pub fn gpu_topk_enabled() -> bool {
+    GPU_TOPK.load(Ordering::Relaxed)
+        || matches!(
+            std::env::var("QUALIA_LLM_GPU_TOPK").ok().as_deref(),
+            Some("1") | Some("true")
+        )
 }
 
 // ── Shared phase metrics ──────────────────────────────────────────────────────
@@ -371,6 +392,57 @@ pub fn run_suite_blocking(cfgs: &[BenchConfig]) -> Vec<BenchResult> {
         .build()
         .expect("tokio multi-thread runtime for llm_bench");
     rt.block_on(async { run_suite(cfgs) })
+}
+
+/// A1a correctness: decode the same prompt with the GPU top-k path **off** then **on** (same resident
+/// model, deterministic argmax) and return both strings. Since k=1 top-k == argmax, the texts must be
+/// byte-identical — this verifies the GEMM→top-k wiring, not just the kernel (which is oracle-tested).
+pub fn compare_topk_decode(
+    model_path: &str,
+    prompt: &str,
+    decode_tokens: u32,
+) -> Result<(String, String), String> {
+    if !std::path::Path::new(model_path).exists() {
+        return Err(format!("model not found: {model_path}"));
+    }
+    let agent = LocalLlmAgent::with_local_backend(
+        "did:qualia:bench",
+        AgentBackend::Local {
+            model_path: model_path.to_string(),
+            context_window: 4096,
+            quantization: "auto".into(),
+            vision_projector_path: None,
+            modality: "text".into(),
+            architecture: None,
+        },
+    );
+    set_decode_budget_override(decode_tokens);
+    let model_id = crate::q_hash(model_path);
+    let _ = crate::resident_model::mount_resident_gguf(model_id, model_path);
+
+    set_gpu_topk(false);
+    let (off_text, _, _, _) = agent.infer_local_model_streaming::<fn(String)>(prompt, "", None);
+    set_gpu_topk(true);
+    let (on_text, _, _, _) = agent.infer_local_model_streaming::<fn(String)>(prompt, "", None);
+
+    set_gpu_topk(false);
+    set_decode_budget_override(0);
+    crate::resident_model::clear_resident_model();
+    Ok((off_text, on_text))
+}
+
+/// `compare_topk_decode` inside a fresh multi-thread runtime (residency mount needs `block_in_place`).
+pub fn compare_topk_decode_blocking(
+    model_path: &str,
+    prompt: &str,
+    decode_tokens: u32,
+) -> Result<(String, String), String> {
+    let rt = tokio::runtime::Builder::new_multi_thread()
+        .worker_threads(2)
+        .enable_all()
+        .build()
+        .map_err(|e| e.to_string())?;
+    rt.block_on(async { compare_topk_decode(model_path, prompt, decode_tokens) })
 }
 
 // ── Reporting ─────────────────────────────────────────────────────────────────

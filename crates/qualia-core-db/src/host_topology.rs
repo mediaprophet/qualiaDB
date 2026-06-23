@@ -11,10 +11,10 @@
 //! Native only — `enumerate_adapters` is not available on the wasm/WebGPU path.
 #![cfg(not(target_arch = "wasm32"))]
 
-use serde::Serialize;
+use serde::{Deserialize, Serialize};
 
 /// Coarse adapter class (maps `wgpu::DeviceType`).
-#[derive(Debug, Clone, Copy, PartialEq, Eq, Serialize)]
+#[derive(Debug, Clone, Copy, PartialEq, Eq, Serialize, Deserialize)]
 pub enum AdapterClass {
     Discrete,
     Integrated,
@@ -36,7 +36,7 @@ impl AdapterClass {
 }
 
 /// Whole-host memory topology: is there a dedicated VRAM pool, or one shared pool?
-#[derive(Debug, Clone, Copy, PartialEq, Eq, Serialize)]
+#[derive(Debug, Clone, Copy, PartialEq, Eq, Serialize, Deserialize)]
 pub enum HostMemoryTopology {
     /// At least one discrete GPU with its own VRAM (PCIe boundary matters).
     Discrete,
@@ -45,7 +45,7 @@ pub enum HostMemoryTopology {
 }
 
 /// One enumerated adapter.
-#[derive(Debug, Clone, Serialize)]
+#[derive(Debug, Clone, Serialize, Deserialize)]
 pub struct AdapterDesc {
     pub name: String,
     pub backend: String,
@@ -57,7 +57,7 @@ pub struct AdapterDesc {
 }
 
 /// The sensed host: adapters, topology, host memory, and the bounded OS floor (D24).
-#[derive(Debug, Clone, Serialize)]
+#[derive(Debug, Clone, Serialize, Deserialize)]
 pub struct HostTopology {
     pub adapters: Vec<AdapterDesc>,
     pub topology: HostMemoryTopology,

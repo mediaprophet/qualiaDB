@@ -2370,6 +2370,14 @@ pub struct QTensorEngine {
     gemm_output_buf: Option<wgpu::Buffer>,
     gemm_params_buf: Option<wgpu::Buffer>,
     gemm_output_staging: Option<wgpu::Buffer>,
+    // A1a (STELLAR §A): persistent GPU top-k output-projection pipeline + small candidate buffers.
+    // Lets the output logits stay on-GPU (top-k over them, read back only K pairs) instead of the
+    // 196 KB/token full-logit readback. Created once in `ensure_gemm_buffers`.
+    output_topk_pipeline: Option<wgpu::ComputePipeline>,
+    topk_cand_val_buf: Option<wgpu::Buffer>,
+    topk_cand_idx_buf: Option<wgpu::Buffer>,
+    topk_cand_staging: Option<wgpu::Buffer>,
+    topk_params_buf: Option<wgpu::Buffer>,
     /// MC8 FFN / attention scratch (gate, up, o_proj).
     gemm_aux_buf: Option<wgpu::Buffer>,
     /// MC8 SwiGLU up-projection scratch (cannot alias gemm_output/work — in-place GEMM invalid).
@@ -2970,6 +2978,11 @@ impl QTensorEngine {
             gemm_output_buf: None,
             gemm_params_buf: None,
             gemm_output_staging: None,
+            output_topk_pipeline: None,
+            topk_cand_val_buf: None,
+            topk_cand_idx_buf: None,
+            topk_cand_staging: None,
+            topk_params_buf: None,
             gemm_aux_buf: None,
             gemm_ffn_buf: None,
             #[cfg(target_arch = "wasm32")]
@@ -3130,6 +3143,12 @@ impl QTensorEngine {
     }
 
     fn ensure_gemm_buffers(&mut self, max_weight_bytes: usize, max_out_dim: u32) {
+        // A1a: build the persistent GPU top-k pipeline + candidate buffers once (additive; the
+        // existing argmax path is unaffected whether or not this succeeds).
+        #[cfg(not(target_arch = "wasm32"))]
+        if self.output_topk_pipeline.is_none() {
+            self.init_output_topk();
+        }
         let need_input = MAX_STACK_GEMM_IN.max(MAX_PREFILL_BATCH_FLOATS);
         let prefill_bufs_ready = {
             #[cfg(target_arch = "wasm32")]
@@ -4080,6 +4099,217 @@ impl QTensorEngine {
             best_token_id,
             max_logit,
         })
+    }
+
+    /// A1a: create the persistent GPU top-k pipeline + small candidate/staging buffers (once).
+    #[cfg(not(target_arch = "wasm32"))]
+    fn init_output_topk(&mut self) {
+        let shader = self
+            .gpu_device()
+            .create_shader_module(wgpu::ShaderModuleDescriptor {
+                label: Some("output_topk"),
+                source: wgpu::ShaderSource::Wgsl(crate::topk::TOPK_REDUCTION_WGSL.into()),
+            });
+        let pipeline = self
+            .gpu_device()
+            .create_compute_pipeline(&wgpu::ComputePipelineDescriptor {
+                label: Some("output_topk_pipeline"),
+                layout: None,
+                module: &shader,
+                entry_point: "topk_block",
+                compilation_options: Default::default(),
+            });
+        // Worst case: a full vocab chunk's blocks × max K candidates.
+        let max_blocks = (VOCAB_CHUNK_ROWS / crate::topk::TOPK_BLOCK_SIZE).max(1);
+        let cand_bytes = ((max_blocks * crate::topk::TOPK_MAX_K).max(1) * 4) as wgpu::BufferAddress;
+        self.topk_cand_val_buf = Some(self.gpu_device().create_buffer(&wgpu::BufferDescriptor {
+            label: Some("TopkCandVal"),
+            size: cand_bytes,
+            usage: wgpu::BufferUsages::STORAGE | wgpu::BufferUsages::COPY_SRC,
+            mapped_at_creation: false,
+        }));
+        self.topk_cand_idx_buf = Some(self.gpu_device().create_buffer(&wgpu::BufferDescriptor {
+            label: Some("TopkCandIdx"),
+            size: cand_bytes,
+            usage: wgpu::BufferUsages::STORAGE | wgpu::BufferUsages::COPY_SRC,
+            mapped_at_creation: false,
+        }));
+        self.topk_cand_staging = Some(self.gpu_device().create_buffer(&wgpu::BufferDescriptor {
+            label: Some("TopkCandStaging"),
+            size: cand_bytes * 2, // packed: [val .. | idx ..]
+            usage: wgpu::BufferUsages::MAP_READ | wgpu::BufferUsages::COPY_DST,
+            mapped_at_creation: false,
+        }));
+        self.topk_params_buf = Some(self.gpu_device().create_buffer(&wgpu::BufferDescriptor {
+            label: Some("TopkParams"),
+            size: 16,
+            usage: wgpu::BufferUsages::UNIFORM | wgpu::BufferUsages::COPY_DST,
+            mapped_at_creation: false,
+        }));
+        self.output_topk_pipeline = Some(pipeline);
+    }
+
+    /// A1a: GPU top-k over the output projection — the logits stay on-GPU (`gemm_output_buf`), the
+    /// top-k kernel reduces them per chunk, and only K `(id, logit)` candidates are read back (vs the
+    /// 196 KB/token full-logit readback + CPU argmax in `dispatch_output_argmax_chunked`). Returns the
+    /// merged global top-K, or `None` to signal the caller to fall back to the argmax path. v1: no
+    /// sieve coupling (caller routes here only when no sieve mask is active).
+    #[cfg(not(target_arch = "wasm32"))]
+    pub fn dispatch_output_topk_chunked(
+        &self,
+        index: &crate::gguf_sharder::GgufTensorIndex,
+        hidden: &[f32],
+        emb_dim: usize,
+        k: usize,
+    ) -> Option<Vec<crate::topk::TopKItem>> {
+        let info = index.logits_projection_info()?;
+        let (n_in, vocab_size) = Self::matmul_dims(info);
+        if n_in == 0 || vocab_size == 0 || n_in > emb_dim || n_in > hidden.len() {
+            return None;
+        }
+        let pipeline = self.output_topk_pipeline.as_ref()?;
+        let input_buf = self.gemm_input_buf.as_ref()?;
+        let weight_buf = self.gemm_weight_buf.as_ref()?;
+        let output_buf = self.gemm_output_buf.as_ref()?;
+        let params_buf = self.gemm_params_buf.as_ref()?;
+        let topk_params_buf = self.topk_params_buf.as_ref()?;
+        let cand_val = self.topk_cand_val_buf.as_ref()?;
+        let cand_idx = self.topk_cand_idx_buf.as_ref()?;
+        let staging = self.topk_cand_staging.as_ref()?;
+        let mmap = self.gguf_mmap.as_deref()?;
+
+        let k = k.clamp(1, crate::topk::TOPK_MAX_K);
+        let block_size = crate::topk::TOPK_BLOCK_SIZE;
+        let full_chunks = vocab_size.div_ceil(VOCAB_CHUNK_ROWS);
+
+        let mut all_val: Vec<f32> = Vec::new();
+        let mut all_idx: Vec<u32> = Vec::new();
+
+        for chunk_idx in 0..full_chunks {
+            let row_start = chunk_idx * VOCAB_CHUNK_ROWS;
+            let chunk_rows = VOCAB_CHUNK_ROWS.min(vocab_size - row_start);
+            let raw = crate::ggml_quants::fetch_tensor_row_range_bytes(
+                mmap,
+                index.tensor_data_start,
+                info,
+                row_start,
+                chunk_rows,
+            )
+            .ok()?;
+            // Only the GPU-quant fast path is supported; otherwise signal fallback to argmax.
+            if !(ggml_gpu_quant_supported(info.ggml_type)
+                && n_in <= MAX_STACK_GEMM_IN
+                && chunk_rows <= self.gemm_max_out_dim as usize
+                && raw.len() <= self.max_tensor_bytes)
+            {
+                return None;
+            }
+
+            let gparams = GemmGpuParams {
+                n_in: n_in as u32,
+                n_out: chunk_rows as u32,
+                weight_ggml_type: info.ggml_type,
+                weight_row_elems: info.dims[0] as u32,
+                weight_byte_len: raw.len() as u32,
+                n_batch: 1,
+                in_row_stride: 0,
+                out_row_stride: 0,
+            };
+            self.gpu_queue()
+                .write_buffer(input_buf, 0, bytemuck::cast_slice(&hidden[..n_in]));
+            self.write_weight_words(raw, self.max_tensor_bytes);
+            self.gpu_queue()
+                .write_buffer(params_buf, 0, bytemuck::bytes_of(&gparams));
+            let tparams = crate::topk::topk_params_bytes(chunk_rows as u32, k as u32, block_size as u32);
+            self.gpu_queue().write_buffer(topk_params_buf, 0, &tparams);
+
+            let num_blocks = chunk_rows.div_ceil(block_size);
+            let cand_count = num_blocks * k;
+
+            let gemm_bind = self.gpu_device().create_bind_group(&wgpu::BindGroupDescriptor {
+                label: Some("TopkGemmBind"),
+                layout: &self.pipeline.get_bind_group_layout(0),
+                entries: &[
+                    wgpu::BindGroupEntry { binding: 0, resource: input_buf.as_entire_binding() },
+                    wgpu::BindGroupEntry { binding: 1, resource: weight_buf.as_entire_binding() },
+                    wgpu::BindGroupEntry { binding: 2, resource: params_buf.as_entire_binding() },
+                    wgpu::BindGroupEntry { binding: 3, resource: output_buf.as_entire_binding() },
+                ],
+            });
+            let topk_bind = self.gpu_device().create_bind_group(&wgpu::BindGroupDescriptor {
+                label: Some("TopkBind"),
+                layout: &pipeline.get_bind_group_layout(0),
+                entries: &[
+                    wgpu::BindGroupEntry { binding: 0, resource: output_buf.as_entire_binding() },
+                    wgpu::BindGroupEntry { binding: 1, resource: topk_params_buf.as_entire_binding() },
+                    wgpu::BindGroupEntry { binding: 2, resource: cand_val.as_entire_binding() },
+                    wgpu::BindGroupEntry { binding: 3, resource: cand_idx.as_entire_binding() },
+                ],
+            });
+
+            let mut encoder = self
+                .device()
+                .create_command_encoder(&wgpu::CommandEncoderDescriptor { label: Some("TopkEncoder") });
+            {
+                let mut cpass = encoder.begin_compute_pass(&wgpu::ComputePassDescriptor {
+                    label: Some("TopkGemmPass"),
+                    timestamp_writes: None,
+                });
+                cpass.set_pipeline(&self.pipeline);
+                cpass.set_bind_group(0, &gemm_bind, &[]);
+                cpass.dispatch_workgroups((chunk_rows as u32 + 63) / 64, 1, 1);
+            }
+            {
+                let mut tpass = encoder.begin_compute_pass(&wgpu::ComputePassDescriptor {
+                    label: Some("TopkReducePass"),
+                    timestamp_writes: None,
+                });
+                tpass.set_pipeline(pipeline);
+                tpass.set_bind_group(0, &topk_bind, &[]);
+                tpass.dispatch_workgroups(num_blocks as u32, 1, 1);
+            }
+            let cand_bytes = (cand_count * 4) as wgpu::BufferAddress;
+            encoder.copy_buffer_to_buffer(cand_val, 0, staging, 0, cand_bytes);
+            encoder.copy_buffer_to_buffer(cand_idx, 0, staging, cand_bytes, cand_bytes);
+            self.gpu_queue().submit(Some(encoder.finish()));
+
+            let map_bytes = cand_bytes * 2;
+            let slice = staging.slice(..map_bytes);
+            let (tx, rx) = futures_channel::oneshot::channel();
+            slice.map_async(wgpu::MapMode::Read, move |r| {
+                let _ = tx.send(r);
+            });
+            self.gpu_device().poll(wgpu::Maintain::Wait);
+            let mapped_ok = if let Ok(handle) = tokio::runtime::Handle::try_current() {
+                handle.block_on(rx).ok().map(|m| m.is_ok()).unwrap_or(false)
+            } else {
+                false
+            };
+            if !mapped_ok {
+                let _ = staging.unmap();
+                return None;
+            }
+            {
+                let data = slice.get_mapped_range();
+                let vals: &[f32] = bytemuck::cast_slice(&data[..cand_count * 4]);
+                let idxs: &[u32] = bytemuck::cast_slice(&data[cand_count * 4..cand_count * 8]);
+                for i in 0..cand_count {
+                    let v = vals[i];
+                    if v > f32::NEG_INFINITY {
+                        all_val.push(v);
+                        all_idx.push(row_start as u32 + idxs[i]);
+                    }
+                }
+            }
+            staging.unmap();
+        }
+
+        let top = crate::topk::merge_block_candidates(&all_val, &all_idx, k, None);
+        if top.is_empty() {
+            None
+        } else {
+            Some(top)
+        }
     }
 
     /// Final `output_norm` RMSNorm in-place before vocabulary projection (Pre-Norm LLM tail).

@@ -109,3 +109,24 @@ cold_ttft={:.0}ms warm_ttft={:.0}ms load={:.0}ms prefill={:.1}t/s decode={:.2}t/
         println!("[a0] wrote {}", csv_path.display());
     }
 }
+
+/// A1a correctness: GPU top-k (k=1) must decode byte-identical text to the argmax path. Skips if the
+/// model is absent. Run: `cargo test -p qualia-core-db --release --test llm_bench_a0
+/// a1a_gpu_topk_matches_argmax_text -- --nocapture`.
+#[test]
+fn a1a_gpu_topk_matches_argmax_text() {
+    let Some(path) = find_model("smollm2-360m-instruct-q8_0.gguf") else {
+        eprintln!("[a1a] q8 model absent — skipping token-identity check");
+        return;
+    };
+    let model = path.to_string_lossy().to_string();
+    let (off, on) = llm_bench::compare_topk_decode_blocking(&model, "The capital of France is", 48)
+        .expect("compare_topk_decode");
+    println!("[a1a] argmax: {off:?}");
+    println!("[a1a] topk  : {on:?}");
+    assert_eq!(
+        off, on,
+        "GPU top-k (k=1) must emit identical text to the argmax path"
+    );
+    println!("[a1a] token-identity verified: top-k == argmax");
+}
