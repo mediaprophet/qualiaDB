@@ -121,12 +121,26 @@ embed lookup
 **NOT yet measured (important gaps):**
 - **No clean current *native* tok/s baseline.** The 5.9 figure is browser/WASM. We need a fresh native
   (DX12, A2000) baseline for F16/Q8.
-- **Ternary inference TPS is unmeasured.** The kernels are proven *correct* on-device, but **not yet
-  spliced into the live FFN dispatch loop**. A standalone A/B microbench was deliberately *not* quoted
-  as a speedup: it showed ~1.02× **only because the standalone dispatcher rebuilds the pipeline +
-  buffers every call** (≈8.4 ms/iter for a 4096² GEMV whose actual compute is microseconds → ~99.9%
-  setup overhead). A true number requires **pipeline/buffer reuse + GPU timestamp queries**, which
-  arrives with the FFN-loop integration.
+- **Kernel-level GEMV benchmark (A2000, measured 2026-06-23).** With a **persistent pipeline + reused
+  buffers** (the fix for the earlier overhead-bound microbench), a `4096×4096` batch-1 GEMV:
+
+  | Kernel | ms/dispatch | vs F16 |
+  |---|---|---|
+  | F16 baseline | 0.963 | 1.00× |
+  | ternary **base-3** (int `/3`,`%3` + branch) | 1.140 | **0.85× — slower than F16** |
+  | ternary **2-bit branchless** (shift/mask + FMA) | **0.544** | **1.77× vs F16 · 2.10× vs base-3** |
+
+  Findings: (1) **base-3 on GPU is a net loss** — its unpack costs more than the bandwidth it saves;
+  (2) **2-bit branchless is the real win** (1.77× over F16); (3) the win is *only* 1.77×, not the ~8×
+  the 16→2-bit bandwidth ratio implies — so **this naive one-output-per-thread GEMV is not yet
+  bandwidth-bound** (uncoalesced access / latency). ⇒ **tiled/coalesced GEMV + subgroup reductions is
+  the next big lever.**
+
+**NOT yet measured (important gaps):**
+- **End-to-end TPS is still unmeasured** — the kernel is fast in isolation but **not yet spliced into
+  the live FFN dispatch loop**, so we cannot yet report a model-level ternary tok/s. (The splice +
+  GPU timestamp queries inside the loop is the next step.)
+- **No clean current *native* tok/s baseline** for a full F16/Q8 model (the 5.9 figure is browser/WASM).
 - **No TTFT numbers** (load time + prefill) captured systematically.
 
 ---

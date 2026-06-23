@@ -263,4 +263,121 @@ mod tests {
             n_out, n_in, base3, bit2, base3 / bit2.max(1e-9)
         );
     }
+
+    /// F16 GEMV baseline shader (same bindings/params as the ternary kernels).
+    const F16_GEMV_WGSL: &str = include_str!("shaders/f16_gemv.wgsl");
+
+    /// Persistent-pipeline, batched-dispatch GEMV timing — fixes the per-call rebuild flaw of the
+    /// indicative test. Pipeline + buffers are created ONCE; `K` dispatches are encoded per submit
+    /// and `S` submits are timed, so per-dispatch time is GPU-execution-dominated (submit/alloc
+    /// overhead amortized away). Returns ms per dispatch.
+    fn bench_kernel(
+        device: &wgpu::Device,
+        queue: &wgpu::Queue,
+        wgsl: &str,
+        entry: &str,
+        weight_bytes: &[u8],
+        n_in: usize,
+        n_out: usize,
+    ) -> f64 {
+        use std::time::Instant;
+        let shader = device.create_shader_module(wgpu::ShaderModuleDescriptor {
+            label: Some("bench"),
+            source: wgpu::ShaderSource::Wgsl(wgsl.into()),
+        });
+        let pipeline = device.create_compute_pipeline(&wgpu::ComputePipelineDescriptor {
+            label: Some("bench_pipeline"),
+            layout: None,
+            module: &shader,
+            entry_point: entry,
+            compilation_options: Default::default(),
+        });
+        let mk = |contents: &[u8], usage: wgpu::BufferUsages| {
+            let b = device.create_buffer(&wgpu::BufferDescriptor {
+                label: None,
+                size: contents.len().max(4) as u64,
+                usage,
+                mapped_at_creation: false,
+            });
+            if !contents.is_empty() {
+                queue.write_buffer(&b, 0, contents);
+            }
+            b
+        };
+        let act = mk(
+            bytemuck::cast_slice(&vec![0.1f32; n_in]),
+            wgpu::BufferUsages::STORAGE | wgpu::BufferUsages::COPY_DST,
+        );
+        let mut w = weight_bytes.to_vec();
+        while w.len() % 4 != 0 || w.is_empty() {
+            w.push(0);
+        }
+        let wbuf = mk(&w, wgpu::BufferUsages::STORAGE | wgpu::BufferUsages::COPY_DST);
+        let params = super::ternary_params_bytes(n_in as u32, n_out as u32, 1, 1.0);
+        let pbuf = mk(&params, wgpu::BufferUsages::UNIFORM | wgpu::BufferUsages::COPY_DST);
+        let obuf = device.create_buffer(&wgpu::BufferDescriptor {
+            label: None,
+            size: (n_out * 4).max(4) as u64,
+            usage: wgpu::BufferUsages::STORAGE,
+            mapped_at_creation: false,
+        });
+        let bind = device.create_bind_group(&wgpu::BindGroupDescriptor {
+            label: None,
+            layout: &pipeline.get_bind_group_layout(0),
+            entries: &[
+                wgpu::BindGroupEntry { binding: 0, resource: act.as_entire_binding() },
+                wgpu::BindGroupEntry { binding: 1, resource: wbuf.as_entire_binding() },
+                wgpu::BindGroupEntry { binding: 2, resource: pbuf.as_entire_binding() },
+                wgpu::BindGroupEntry { binding: 3, resource: obuf.as_entire_binding() },
+            ],
+        });
+        let wg_x = (n_out as u32).div_ceil(64).max(1);
+        let (k, s) = (32u32, 8u32);
+        let submit_batch = || {
+            let mut enc = device.create_command_encoder(&wgpu::CommandEncoderDescriptor { label: None });
+            {
+                let mut pass = enc.begin_compute_pass(&wgpu::ComputePassDescriptor { label: None, timestamp_writes: None });
+                pass.set_pipeline(&pipeline);
+                pass.set_bind_group(0, &bind, &[]);
+                for _ in 0..k {
+                    pass.dispatch_workgroups(wg_x, 1, 1);
+                }
+            }
+            queue.submit(Some(enc.finish()));
+            let _ = device.poll(wgpu::Maintain::Wait);
+        };
+        submit_batch(); // warmup
+        let t0 = Instant::now();
+        for _ in 0..s {
+            submit_batch();
+        }
+        t0.elapsed().as_secs_f64() * 1e3 / (k * s) as f64
+    }
+
+    /// A2000 KERNEL BENCHMARK (real numbers): F16 vs base-3 ternary vs 2-bit branchless ternary, at a
+    /// decode-shape GEMV, with persistent pipeline + buffer reuse. Skips with no GPU.
+    #[test]
+    fn ternary_kernel_benchmark() {
+        use crate::ternary::{pack_trits, pack_trits_2bit};
+        let Some((device, queue)) = try_gpu() else {
+            eprintln!("ternary_kernel_benchmark: no wgpu adapter — skipping");
+            return;
+        };
+        let (n_in, n_out) = (4096usize, 4096usize); // decode GEMV (batch 1)
+        let trits: Vec<i8> = (0..n_in * n_out).map(|k| ((k * 7 + 1) % 3) as i8 - 1).collect();
+        let p3 = pack_trits(&trits);
+        let p2 = pack_trits_2bit(&trits);
+        let f16 = vec![0u8; n_in * n_out * 2]; // f16 weights (size = bandwidth; values irrelevant to timing)
+
+        let f16ms = bench_kernel(&device, &queue, F16_GEMV_WGSL, "f16_gemv", &f16, n_in, n_out);
+        let base3 = bench_kernel(&device, &queue, TERNARY_GEMM_WGSL, "ternary_gemm", &p3, n_in, n_out);
+        let bit2 = bench_kernel(&device, &queue, TERNARY_GEMM_2BIT_WGSL, "ternary_gemm", &p2, n_in, n_out);
+
+        eprintln!("── A2000 GEMV {}x{} batch=1 (persistent pipeline, {}MB/{}KB/{}KB weights) ──",
+            n_out, n_in, f16.len() / (1 << 20), p3.len() >> 10, p2.len() >> 10);
+        eprintln!("  F16 baseline        : {:.4} ms/dispatch", f16ms);
+        eprintln!("  ternary base-3      : {:.4} ms/dispatch  ({:.2}x vs F16)", base3, f16ms / base3.max(1e-12));
+        eprintln!("  ternary 2-bit branchless: {:.4} ms/dispatch  ({:.2}x vs F16, {:.2}x vs base-3)",
+            bit2, f16ms / bit2.max(1e-12), base3 / bit2.max(1e-12));
+    }
 }

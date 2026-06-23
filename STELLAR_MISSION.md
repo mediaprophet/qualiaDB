@@ -85,10 +85,12 @@ opposed to the extractive "SSI-wallet / person-as-issued-root-key" counterfeit.
   device; parity passed **on an NVIDIA A2000** == the CPU oracle). **2-bit branchless variant**
   (external-review-driven): `ternary_gemm_2bit.wgsl` + `pack_trits_2bit` + `ternary_gemm_cpu_2bit` —
   4 trits/byte, shift/mask unpack (no base-3 `/`,`%`), `acc += (f32(c==1)-f32(c==2))*x` (no warp
-  divergence); also on-device-verified on the A2000. *(The GPU win is bandwidth+occupancy, not
-  MAC-elimination — the multiply is a free FMA. A real speedup number needs pipeline/buffer reuse +
-  timestamp queries; the standalone dispatcher rebuilds per call, so its microbench is overhead-bound
-  and inconclusive — that measurement comes with the FFN-loop integration.)* **Remaining (task #12):** splice the dispatcher into the live FFN layer loop
+  divergence); also on-device-verified on the A2000. **Measured on the A2000** (persistent
+  pipeline, 4096² batch-1 GEMV): F16 0.963 ms · base-3 ternary **1.140 ms (0.85× — slower than F16!**
+  the `/3`,`%3` unpack costs more than it saves) · **2-bit branchless 0.544 ms (1.77× vs F16, 2.10× vs
+  base-3)**. The win is only 1.77× (not the ~8× the 16→2-bit ratio implies) ⇒ the naive
+  one-output-per-thread GEMV isn't yet bandwidth-bound; **tiled/coalesced GEMV + subgroups is the next
+  lever**. End-to-end tok/s still needs the FFN-loop splice + in-loop timestamp queries. **Remaining (task #12):** splice the dispatcher into the live FFN layer loop
   (`gguf_bridge::dispatch_transformer_forward` / `encode_fused_ffn_expansion` — branch on
   `ggml_type == TERNARY`, resident + streaming modes) and a real-model end-to-end run + tok/s vs the
   F16 baseline; then the other §A compressions (KIVI, W4A4/AWQ, spec-decode).
