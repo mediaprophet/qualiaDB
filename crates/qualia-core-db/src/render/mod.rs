@@ -15,6 +15,18 @@ pub mod pga;
 pub mod projection;
 /// Physics of artefacts — bbox admission, kinematic joints, material/mass/momentum (Phase 2).
 pub mod physics;
+/// Place / space / time binding — an artefact NQuin queried by the spatio-temporal AND deontic
+/// modalities over one shared identity (Phase 3); delegates to the inherited modality stack.
+/// Gated to exactly the configs where `crate::modalities` (the values/logic layer it builds on)
+/// is compiled — native always; on wasm only with the logic/scientific/full feature sets, not the
+/// minimal `portal` bundle.
+#[cfg(any(
+    not(target_arch = "wasm32"),
+    feature = "wasm-logic",
+    feature = "wasm-scientific",
+    feature = "wasm-full"
+))]
+pub mod place_time;
 pub mod contract;
 pub mod spectral;
 pub mod acoustic;

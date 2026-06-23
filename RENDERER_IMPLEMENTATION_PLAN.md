@@ -134,10 +134,19 @@ The precondition for "fast on every device" being non-fiction (migration review 
 
 ### Phase 3 — Place / space / time *(spatio-temporal binding; STELLAR §E step 3)*
 - `x,y,z` (space) + `t` (temporal evolution / animation) + **GeoSPARQL** place/jurisdiction; native **RCC-8**
-  (`spatio_temporal.rs`) + **Allen / LTL** (`temporal_ltl.rs`).
+  (`modalities/spatio_temporal.rs`) + **Allen** (same file) / **LTL** (`modalities/temporal_ltl.rs`).
   - *Acceptance:* an artefact situated at a place **and** time is queryable by the **same modalities the values
     layer uses** — demonstrate a spatio-temporal query and a deontic query over the **same** NQuin (test).
-- **Rail-check:** spatio-temporal logic uses the inherited modality stack (not a bespoke engine).
+    **✅ MET 2026-06-23**: `render/place_time.rs` — an artefact's situatedness NQuin (place via
+    `pack_point`, valid-time via `pack_interval`) is queried by the spatio-temporal modality (RCC-8
+    place containment + Allen `During`) **and** by the deontic modality (a render norm bound to the
+    artefact's identity); the `same_nquin_two_modalities` test runs both over one artefact NQuin.
+    **4/4 tests**; native (`cargo test --lib` 1194/0) + wasm32 (`wasm-full`) green.
+- **Rail-check:** spatio-temporal logic uses the inherited modality stack (not a bespoke engine). **met** —
+  `place_time` only *binds* (packs place/time into NQuin fields, shapes a footprint polygon) and **delegates**
+  all logic to `modalities::spatio_temporal` (RCC-8/Allen) and `modalities::logic::deontic`; deontic queries
+  **fail closed**. Gated to exactly the configs where `modalities` compiles (so the minimal `portal` bundle,
+  which has no values layer, omits it).
 
 ### Phase 4 — Sense path *(the input twin; STELLAR §D)* — parallelisable after Phase 0
 - SOSA/SSN sensor ingest → **wave coordinates** → the **percept→fact bridge** (`∫Ψ > τ → Fact`, §20
@@ -275,6 +284,22 @@ code, not assumed. Designed-now/built-later items are labelled, never presented 
   the bound, `refused=true`, held).
 
 ## Progress log
+
+### 2026-06-23 — Phase 3 DONE (acceptance): place / space / time binding (`render/place_time.rs`)
+An artefact is an **identifier** (`subject`); Phase 3 adds its spatio-temporal *facts* and shows the
+**same** artefact governed by two inherited modalities — the values layer's own stack, not a bespoke one.
+- **Situatedness NQuin** — `situate_artefact(id, x, y, from, to, frame)`: place in `object`
+  (`spatio_temporal::pack_point`, shared with RCC-8), valid-time in `metadata` (`pack_interval`),
+  jurisdiction in `context`; canonical XOR parity.
+- **Spatio-temporal query** (over the artefact NQuin) — `place_relation` shapes a footprint polygon and
+  delegates to `evaluate_rcc8_points` (RCC-8); `active_during` delegates to `evaluate_temporal` (Allen).
+- **Deontic query** (over the same artefact identity) — `render_norm` compiles a `display(artefact)` norm
+  via `compile_norm_quin`; `render_permitted` runs `evaluate_deontic_contract` and denies on an Active
+  `FORBID` whose action targets the artefact. **Fails closed** (deny) on over-capacity / eval error.
+- **Integrative** — `situated_render_verdict` admits render iff *within place* AND *within time* AND
+  *deontically permitted*; the `same_nquin_two_modalities` test exercises all four legs over one NQuin.
+- Verified: native `cargo test --lib` **1194 passed / 0 failed** (4 new); wasm32 `wasm-full` `cargo check`
+  green; `portal`-only bundle compiles (module correctly gated out where `modalities` is absent).
 
 ### 2026-06-23 — Phase 2 ROUND-OUT: visible deterministic refusal + elapsed-time joint fix
 - **Visible refusal** — `demo_artefact_refusal()` (portal) drives the loaded mesh along +X into a
