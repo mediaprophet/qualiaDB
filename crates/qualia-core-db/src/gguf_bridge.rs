@@ -1883,7 +1883,6 @@ fn relu_inplace(buf: &mut [f32], n: usize) {
 
 /// SiLU (Swish): x * sigmoid(x) = x / (1 + e^{-x}). Llama/SmolLM2 SwiGLU gate activation.
 #[inline]
-#[cfg(target_arch = "wasm32")]
 fn silu_inplace(x: &mut [f32], n: usize) {
     for v in x.iter_mut().take(n) {
         *v = *v / (1.0 + (-*v).exp());
@@ -1933,7 +1932,6 @@ fn dequant_norm_row_into(
 }
 
 /// Pre-norm: copy `hidden` into `h_norm`, apply RMSNorm with `norm_info` weights; return slice to use.
-#[cfg(target_arch = "wasm32")]
 fn prepare_pre_norm_input<'a>(
     hidden: &'a [f32],
     emb_dim: usize,
@@ -4313,7 +4311,7 @@ impl QTensorEngine {
     }
 
     /// Final `output_norm` RMSNorm in-place before vocabulary projection (Pre-Norm LLM tail).
-    #[cfg(target_arch = "wasm32")]
+    /// REQUIRED on all targets — native previously skipped it → logits from an un-normed hidden.
     pub fn apply_output_norm_inplace(
         &self,
         index: &crate::gguf_sharder::GgufTensorIndex,
@@ -4348,7 +4346,8 @@ impl QTensorEngine {
         scratch_a: &mut [f32],
         scratch_b: &mut [f32],
     ) -> bool {
-        #[cfg(target_arch = "wasm32")]
+        // SwiGLU FFN with ffn_norm pre-norm — REQUIRED on all targets (native previously ran a
+        // norm-less ReLU chain on the raw residual → exponential blow-up to inf).
         {
             let mut norm_w_ffn = [0f32; MAX_HIDDEN_DIM];
             let mut h_norm_ffn = [0f32; MAX_HIDDEN_DIM];
@@ -4356,7 +4355,7 @@ impl QTensorEngine {
                 &hidden[..emb_dim],
                 emb_dim,
                 tensors.ffn_norm.as_ref(),
-                self.gguf_mmap.as_deref(),
+                self.gguf_mmap.as_deref().map(|m| &m[..]),
                 index.tensor_data_start,
                 &mut h_norm_ffn,
                 &mut norm_w_ffn,
@@ -4427,54 +4426,6 @@ impl QTensorEngine {
                 emb_dim.min(dn_out),
             );
             return true;
-        }
-
-        #[cfg(not(target_arch = "wasm32"))]
-        {
-            let ffn_input = &hidden[..emb_dim];
-            if let Some(info) = tensors.ffn_gate.as_ref() {
-                let (n_in, n_out) = Self::matmul_dims(info);
-                if n_in <= emb_dim
-                    && self.dispatch_gemm_into(index, info, &ffn_input[..n_in], scratch_a, n_in, n_out)
-                {
-                    relu_inplace(&mut scratch_a[..n_out], n_out);
-                    if let Some(up) = tensors.ffn_up.as_ref() {
-                        let (up_in, up_out) = Self::matmul_dims(up);
-                        if up_in <= n_out
-                            && self.dispatch_gemm_into(
-                                index,
-                                up,
-                                &scratch_a[..up_in],
-                                scratch_b,
-                                up_in,
-                                up_out,
-                            )
-                        {
-                            if let Some(down) = tensors.ffn_down.as_ref() {
-                                let (dn_in, dn_out) = Self::matmul_dims(down);
-                                if dn_in <= up_out
-                                    && self.dispatch_gemm_into(
-                                        index,
-                                        down,
-                                        &scratch_b[..dn_in],
-                                        scratch_a,
-                                        dn_in,
-                                        dn_out,
-                                    )
-                                {
-                                    add_residual_inplace(
-                                        &mut hidden[..emb_dim],
-                                        &scratch_a[..dn_out],
-                                        emb_dim.min(dn_out),
-                                    );
-                                    return true;
-                                }
-                            }
-                        }
-                    }
-                }
-            }
-            false
         }
     }
 
@@ -4660,7 +4611,7 @@ impl QTensorEngine {
         norm_weight: Option<&[f32]>,
         mut readback_out: Option<&mut [f32]>,
     ) -> bool {
-        if !ggml_gpu_quant_supported(info.ggml_type) {
+        if !ggml_gpu_attention_shader_supported(info.ggml_type) {
             wlog(&format!("[attn_pass] GUARD unsupported quant kind={proj_kind}"));
             return false;
         }
@@ -4685,6 +4636,19 @@ impl QTensorEngine {
                 self.attention_params_buf.is_some(),
                 self.attention_mask_buf.is_some(),
             ));
+            if std::env::var("QUALIA_LLM_DEBUG_DECODE").is_ok() {
+                eprintln!(
+                    "[attn_pass] GUARD kind={proj_kind} gemm_in_buf={} kv_gpu={} params={} mask={} hidden_elems={} gemm_max_in={} raw_w={} max_w={}",
+                    self.gemm_input_buf.is_some(),
+                    self.kv_cache_gpu.is_some(),
+                    self.attention_params_buf.is_some(),
+                    self.attention_mask_buf.is_some(),
+                    hidden_elems,
+                    self.gemm_max_input_floats,
+                    raw_weights.len(),
+                    self.max_tensor_bytes,
+                );
+            }
             return false;
         }
 
@@ -5057,6 +5021,21 @@ impl QTensorEngine {
         let n_head = h.n_head as usize;
         let n_kv = h.effective_n_kv_head() as usize;
         let head_dim = h.head_dim() as usize;
+        {
+            use std::sync::atomic::{AtomicBool, Ordering as AO};
+            static A_DBG: AtomicBool = AtomicBool::new(false);
+            if layer == 0
+                && std::env::var("QUALIA_LLM_DEBUG_DECODE").is_ok()
+                && !A_DBG.swap(true, AO::Relaxed)
+            {
+                eprintln!(
+                    "[attn-dbg] n_head={} n_kv={} head_dim={} q_dim={} qty={} kty={} vty={} ashader_q={}",
+                    n_head, n_kv, head_dim, n_head * head_dim,
+                    q_info.ggml_type, k_info.ggml_type, v_info.ggml_type,
+                    ggml_gpu_attention_shader_supported(q_info.ggml_type),
+                );
+            }
+        }
         if head_dim == 0 || n_head == 0 || n_kv == 0 {
             return None;
         }
@@ -5064,9 +5043,11 @@ impl QTensorEngine {
         if q_dim > scratch_a.len() || q_dim > scratch_b.len() || emb_dim < h.n_embd as usize {
             return None;
         }
-        if !ggml_gpu_quant_supported(q_info.ggml_type)
-            || !ggml_gpu_quant_supported(k_info.ggml_type)
-            || !ggml_gpu_quant_supported(v_info.ggml_type)
+        // Use the attention-shader support set (fused_attention.wgsl handles Q4_0/Q5_0/Q8_0/Q4_K/Q6_K)
+        // — NOT the narrower GEMM `ggml_gpu_quant_supported`, which wrongly rejected Q8_0 → no attention.
+        if !ggml_gpu_attention_shader_supported(q_info.ggml_type)
+            || !ggml_gpu_attention_shader_supported(k_info.ggml_type)
+            || !ggml_gpu_attention_shader_supported(v_info.ggml_type)
         {
             return None;
         }
@@ -5080,22 +5061,19 @@ impl QTensorEngine {
             crate::ggml_quants::fetch_tensor_bytes(mmap, index.tensor_data_start, &q_info).ok()?;
         let n_embd = h.n_embd as usize;
 
-        #[cfg(target_arch = "wasm32")]
+        // Pre-norm (attn_norm) on the residual stream before Q/K/V — REQUIRED on all targets.
+        // (Native previously skipped this → the residual stream exploded layer-over-layer to inf.)
         let mut norm_w_attn = [0f32; MAX_HIDDEN_DIM];
-        #[cfg(target_arch = "wasm32")]
         let mut h_norm_attn = [0f32; MAX_HIDDEN_DIM];
-        #[cfg(target_arch = "wasm32")]
         let hidden_input = prepare_pre_norm_input(
             &hidden[..emb_dim],
             emb_dim,
             tensors.attn_norm.as_ref(),
-            Some(mmap),
+            Some(&mmap[..]),
             index.tensor_data_start,
             &mut h_norm_attn,
             &mut norm_w_attn,
         );
-        #[cfg(not(target_arch = "wasm32"))]
-        let hidden_input = &hidden[..emb_dim];
 
         if !self.dispatch_attention_pass(
             hidden_input,
@@ -5209,22 +5187,19 @@ impl QTensorEngine {
                 Err(_) => return false,
             };
         let n_embd = h.n_embd as usize;
-        #[cfg(target_arch = "wasm32")]
+        // Pre-norm (attn_norm) on the residual stream before Q/K/V — REQUIRED on all targets.
+        // (Native previously skipped this → the residual stream exploded layer-over-layer to inf.)
         let mut norm_w_attn = [0f32; MAX_HIDDEN_DIM];
-        #[cfg(target_arch = "wasm32")]
         let mut h_norm_attn = [0f32; MAX_HIDDEN_DIM];
-        #[cfg(target_arch = "wasm32")]
         let hidden_input = prepare_pre_norm_input(
             &hidden[..emb_dim],
             emb_dim,
             tensors.attn_norm.as_ref(),
-            Some(mmap),
+            Some(&mmap[..]),
             index.tensor_data_start,
             &mut h_norm_attn,
             &mut norm_w_attn,
         );
-        #[cfg(not(target_arch = "wasm32"))]
-        let hidden_input = &hidden[..emb_dim];
         if !self.dispatch_attention_pass(
             hidden_input,
             n_embd,
@@ -5675,6 +5650,26 @@ impl QTensorEngine {
             return false;
         }
 
+        // #48 diagnostic: is attention actually running on native? (gated; layer 0 once)
+        {
+            use std::sync::atomic::{AtomicBool, Ordering as DbgO};
+            static L0_DBG: AtomicBool = AtomicBool::new(false);
+            if layer == 0
+                && std::env::var("QUALIA_LLM_DEBUG_DECODE").is_ok()
+                && !L0_DBG.swap(true, DbgO::Relaxed)
+            {
+                eprintln!(
+                    "[layer-dbg] L0 attn_q={} attn_k={} attn_v={} attn_ok={} kv_layout={} ffn_gate={}",
+                    tensors.attn_q.is_some(),
+                    tensors.attn_k.is_some(),
+                    tensors.attn_v.is_some(),
+                    attn_ok,
+                    self.kv_layout.is_some(),
+                    tensors.ffn_gate.is_some(),
+                );
+            }
+        }
+
         self.dispatch_ffn_block_pre_norm(
             index,
             hidden,
@@ -5706,12 +5701,40 @@ impl QTensorEngine {
         } else {
             max_layers.min(n_layer)
         };
+        // #48 diagnostic: localize where the hidden state turns non-finite (gated; runs once).
+        use std::sync::atomic::{AtomicBool, Ordering as DbgOrdering};
+        static FWD_DBG_DONE: AtomicBool = AtomicBool::new(false);
+        let dbg = std::env::var("QUALIA_LLM_DEBUG_DECODE").is_ok()
+            && !FWD_DBG_DONE.swap(true, DbgOrdering::Relaxed);
+        if dbg {
+            let nf = hidden[..emb_dim].iter().filter(|v| !v.is_finite()).count();
+            eprintln!(
+                "[fwd-dbg] post-embed nonfinite={}/{} sample={:?}",
+                nf,
+                emb_dim,
+                &hidden[..emb_dim.min(4)]
+            );
+        }
         let mut ran = 0u32;
         for layer in 0..limit {
             if self.dispatch_transformer_layer(
                 index, layer, token_idx, hidden, emb_dim, scratch_a, scratch_b,
             ) {
                 ran += 1;
+            }
+            if dbg {
+                let nf = hidden[..emb_dim].iter().filter(|v| !v.is_finite()).count();
+                eprintln!(
+                    "[fwd-dbg] after layer {} nonfinite={}/{} ran={} sample={:?}",
+                    layer,
+                    nf,
+                    emb_dim,
+                    ran,
+                    &hidden[..emb_dim.min(4)]
+                );
+                if nf > 0 {
+                    break;
+                }
             }
         }
         ran
@@ -6858,7 +6881,7 @@ impl QTensorEngine {
             &hidden[..emb_dim],
             emb_dim,
             tensors.attn_norm.as_ref(),
-            Some(mmap),
+            Some(&mmap[..]),
             index.tensor_data_start,
             &mut h_norm_attn,
             &mut norm_w_attn,
@@ -7168,7 +7191,7 @@ impl QTensorEngine {
             &hidden[..emb_dim],
             emb_dim,
             tensors.attn_norm.as_ref(),
-            Some(mmap),
+            Some(&mmap[..]),
             index.tensor_data_start,
             &mut h_norm_attn,
             &mut norm_w_attn,

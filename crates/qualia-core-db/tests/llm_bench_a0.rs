@@ -115,12 +115,17 @@ cold_ttft={:.0}ms warm_ttft={:.0}ms load={:.0}ms prefill={:.1}t/s decode={:.2}t/
 /// a1a_gpu_topk_matches_argmax_text -- --nocapture`.
 #[test]
 fn a1a_gpu_topk_matches_argmax_text() {
-    let Some(path) = find_model("smollm2-360m-instruct-q8_0.gguf") else {
-        eprintln!("[a1a] q8 model absent — skipping token-identity check");
+    // Q4_K_M: attention weights are Q4_K, which the native GPU path supports (Q8_0 is not — separate gap).
+    let Some(path) = find_model("SmolLM2-360M-Instruct-Q4_K_M.gguf")
+        .or_else(|| find_model("smollm2-360m-instruct-q8_0.gguf"))
+    else {
+        eprintln!("[a1a] model absent — skipping token-identity check");
         return;
     };
     let model = path.to_string_lossy().to_string();
-    let (off, on) = llm_bench::compare_topk_decode_blocking(&model, "The capital of France is", 48)
+    // Unambiguous continuation prompt — a working forward must produce real words, not EOS/garbage.
+    let prompt = "Once upon a time, there was a";
+    let (off, on) = llm_bench::compare_topk_decode_blocking(&model, prompt, 24)
         .expect("compare_topk_decode");
     println!("[a1a] argmax: {off:?}");
     println!("[a1a] topk  : {on:?}");

@@ -312,5 +312,29 @@ quality" debug (logits sanity on a known prompt → eos handling → tokenizer) 
 **⚑ Where I need you:** a direction call — chase the degenerate-output bug first, or proceed with
 A1b/step-2 perf on the (correct-but-on-broken-output) path anyway?
 
+**ROOT CAUSE LOCALIZED (2026-06-24)** via a gated `[decode-dbg]` print (`QUALIA_LLM_DEBUG_DECODE=1`):
+`step0 eos=2 vlen=49152 top_i=0 top_v=-INF decoded="<|endoftext|>"`. **Two bugs:**
+1. **PRIMARY — the forward pass yields `-inf`/NaN hidden states** (`top_v=-inf`) → all logits `-inf` →
+   argmax defaults to token 0. The logits are meaningless; the model isn't "choosing" EOS.
+   `dispatch_transformer_forward` is numerically collapsing — candidates: RMSNorm div-by-0, attention
+   softmax overflow, uninitialised buffer, KV-cache. **Next: per-stage instrument the forward**
+   (embedding ok? after layer 0? after `output_norm`?) to find where it turns `-inf`.
+2. **SECONDARY — `eos=2` but SmolLM2's `<|endoftext|>` is token id 0**, so `next==eos` never fires →
+   the loop spams token 0 for the full budget. Fix the eos id (GGUF metadata / tokenizer) **and** add a
+   `-inf`/NaN degenerate guard that halts. Smaller fix.
+
+A gated `[decode-dbg]` diagnostic was left in `llm_agent.rs` (env-gated, default off; uncommitted).
+This is a **fresh-context forward-pass numeric debug** — not crammed at this session's tail.
+
+### #48 — FOUR forward-pass bugs fixed (2026-06-24); a fifth (deeper) remains
+The native forward was missing everything the wasm path has. Fixed in `gguf_bridge.rs` + `llm_agent.rs`:
+1. **`attn_norm`** — un-gated `prepare_pre_norm_input`, applied before Q/K/V (killed the `-inf` blow-up; hidden now bounded ~8–15/layer).
+2. **`ffn_norm` + SwiGLU** — native ran a norm-less **ReLU chain**; replaced with the correct `ffn_norm` → parallel gate/up → SiLU → down (un-gated `silu_inplace`).
+3. **final `output_norm`** — un-gated `apply_output_norm_inplace`, now applied before the vocab projection on all targets.
+4. **attention never ran** (the big one) — `dispatch_attention_layer` + `dispatch_attention_pass` guarded on the narrow `ggml_gpu_quant_supported` (Q4_K/Q6_K) instead of `ggml_gpu_attention_shader_supported` (Q4_0/Q5_0/**Q8_0**/Q4_K/Q6_K). Q4_K_M attention = Q6_K(q/k)+**Q8_0(v)**; the Q8_0 V-proj was rejected → attention skipped → FFN-only. Now `attn_ok=true`.
+
+**State now:** bounded hidden, all norms applied, attention runs. **STILL incoherent** — argmax stuck on token 0 (`<|endoftext|>`) even for clear-continuation prompts ("Once upon a time, there was a"). So ≥1 deeper bug remains, now in **attention numerics** (RoPE / scale / causal-mask / KV-index) or the **tied-embedding output projection / logits**. Diagnostics left in (gated `QUALIA_LLM_DEBUG_DECODE`: fwd-dbg / layer-dbg / attn-dbg / decode-dbg). **Next (fresh ctx):** dump step-0 top-5 logits; compare native attention math to the wasm `cpu_attention_pass` reference (RoPE/scale/mask); verify the output projection uses the correct (tied) weights.
+Honest: 4 real bugs down, native forward materially closer to correct, but **generation not yet coherent** — this is committed as progress, #48 stays open.
+
 **Next options:** (a) **debug native generation quality** (recommended), (b) A1a step-2 resident-weight
 fusion, (c) **A1b** FFN ternary splice (MVPP), (d) H3.

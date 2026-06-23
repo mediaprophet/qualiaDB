@@ -999,7 +999,7 @@ impl LocalLlmAgent {
                                 token_idx,
                                 TEST_TRANSFORMER_LAYER_CAP,
                             );
-                            #[cfg(target_arch = "wasm32")]
+                            // Final output_norm before the vocab projection — REQUIRED on all targets.
                             let _ = engine.apply_output_norm_inplace(idx, &mut emb_buf[..emb_dim], emb_dim);
                             let sieve_mask = sieve.as_ref().map(|s| s.current_mask());
                             // A1a: GPU top-k path (additive, default-off; non-sieve only in v1).
@@ -1061,6 +1061,19 @@ impl LocalLlmAgent {
                     } else {
                         0x01u8
                     };
+
+                    // #48 diagnostic: reveal eos vs argmax for the first step (gated, native).
+                    if step == 0 && std::env::var("QUALIA_LLM_DEBUG_DECODE").is_ok() {
+                        eprintln!(
+                            "[decode-dbg] step0 eos={} vlen={} prompt_last={} top_i={} top_v={} decoded={:?}",
+                            eos,
+                            vlen,
+                            cur,
+                            top_i,
+                            top_v,
+                            tok.decode(&[top_i as u32])
+                        );
+                    }
 
                     // Push logit summary; non-blocking — drops silently if ring is full.
                     let _ = lp.push(LlmMsg::Logit(LogitSummary {
@@ -1441,7 +1454,7 @@ impl LocalLlmAgent {
                                 token_idx,
                                 TEST_TRANSFORMER_LAYER_CAP,
                             );
-                            #[cfg(target_arch = "wasm32")]
+                            // Final output_norm before the vocab projection — REQUIRED on all targets.
                             let _ = engine.apply_output_norm_inplace(idx, &mut emb_buf[..emb_dim], emb_dim);
                             let sieve_mask = sieve.as_ref().map(|s| s.current_mask());
                             if let Some(argmax) = engine.dispatch_output_argmax_chunked(
