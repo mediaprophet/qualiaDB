@@ -154,8 +154,17 @@ The precondition for "fast on every device" being non-fiction (migration review 
   deferred** (needs SDR / hardware + permission — honest note, may never be in-browser).
   - *Acceptance:* mic input → STFT → a discrete **Fact** NQuin via the bridge, **under a consent/standpoint
     gate** (test); RF path documented as deferred with the hardware/permission caveat.
+    **✅ MET 2026-06-23**: `render/sense.rs` — real forward DSP (Hann-windowed DFT magnitudes +
+    dominant-bin; verified to resolve a 1 kHz tone to its exact bin), feeding the inherited
+    `manifold_logic::continuous_to_fact` bridge under the inherited `logic::deontic` consent gate;
+    `sense_acoustic_to_fact` emits a discrete percept→fact NQuin (no raw audio). RF is a typed
+    `SenseBand::RadioFrequency` with `band_available() == false` + the deferral caveat in docs.
+    **8/8 tests**; native (`cargo test --lib` 1202/0) + wasm32 (`wasm-full`) green.
 - **Rail-check:** every sense under the deontic/standpoint gate — own-environment + consent; surveillance-
-  refusal; biometrics never leave device.
+  refusal; biometrics never leave device. **met** — the consent gate runs **first** and **fails closed**
+  (no Active `PERMIT` for *this agent + this environment* ⇒ refused; Active `FORBID` always wins; consent is
+  per-environment, tested); the pipeline emits **only** a discrete fact + dominant-Hz/energy scalars, never
+  the samples. Delegates the continuous→discrete and consent decisions to the inherited modalities.
 
 ### Phase 5 — Authoring vocabulary *(the enhanced `ns/ui`; the qapps upgrade; §6/§7)* — depends on Phase 1
 - Design the enhanced `ns/ui` vocabulary: **HTML-like document + 3D scene + SVG vector + spectral/percept
@@ -284,6 +293,26 @@ code, not assumed. Designed-now/built-later items are labelled, never presented 
   the bound, `refused=true`, held).
 
 ## Progress log
+
+### 2026-06-23 — Phase 4 DONE (acceptance): the sense path / input twin (`render/sense.rs`)
+Microphone PCM → forward DSP → the `∫Ψ > τ → Fact` bridge → a discrete Fact NQuin, every capture
+under the consent gate. The renderer's input twin, on the inherited stack.
+- **Real forward DSP** — `dft_magnitudes` (Hann-windowed DFT, zero-heap into a caller slice),
+  `bin_to_hz`, `dominant_bin`. (The crate had no forward analyser — `audio::stft_bake` only
+  *synthesises* sidecar spectra.) Verified: a 1 kHz @ 16 kHz / 256-pt frame resolves to its exact
+  bin (16).
+- **Bridge (inherited)** — `manifold_logic::continuous_to_fact` decides *if* `∫Ψ > τ`;
+  `dominant_bin` decides *what* (the tonal frequency). No bespoke logic engine.
+- **Consent gate (inherited, fail-closed)** — `sense_permitted` runs `evaluate_deontic_contract`
+  and authorises only on an Active `PERMIT` for *this agent + this environment*, with an Active
+  `FORBID` always winning; default deny = **surveillance-refusal**. The gate runs **first**.
+- **Biometrics never leave** — `sense_acoustic_to_fact` returns only a `SenseOutcome::Fact(NQuin)`
+  (a `acousticToneDetected` percept + dominant-Hz/energy scalars in `metadata`) or a refusal; the
+  raw `samples` are never stored or emitted.
+- **RF deferred, honestly** — `SenseBand::RadioFrequency` with `band_available() == false` and the
+  SDR/permission/in-browser caveat documented (not stubbed-as-done).
+- Verified: native `cargo test --lib` **1202 passed / 0 failed** (8 new); wasm32 `wasm-full` green;
+  `portal`-only bundle compiles (module gated out where `modalities` is absent).
 
 ### 2026-06-23 — Phase 3 DONE (acceptance): place / space / time binding (`render/place_time.rs`)
 An artefact is an **identifier** (`subject`); Phase 3 adds its spatio-temporal *facts* and shows the

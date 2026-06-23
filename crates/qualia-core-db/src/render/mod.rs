@@ -27,6 +27,16 @@ pub mod physics;
     feature = "wasm-full"
 ))]
 pub mod place_time;
+/// Sense path — the input twin (Phase 4): microphone PCM → forward DSP → the `∫Ψ > τ → Fact`
+/// bridge, every capture under the deontic/standpoint consent gate (surveillance-refusal default).
+/// Gated like `place_time` (needs `crate::modalities`).
+#[cfg(any(
+    not(target_arch = "wasm32"),
+    feature = "wasm-logic",
+    feature = "wasm-scientific",
+    feature = "wasm-full"
+))]
+pub mod sense;
 pub mod contract;
 pub mod spectral;
 pub mod acoustic;
