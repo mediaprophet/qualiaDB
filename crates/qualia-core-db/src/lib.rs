@@ -777,6 +777,9 @@ pub mod ternary;
 /// Task #12 / STELLAR §A: tensor-name → engine GEMM-role mapping + the ternary (FFN-only) policy.
 #[cfg(any(not(target_arch = "wasm32"), feature = "wasm-llm"))]
 pub mod tensor_roles;
+/// Task #12 / STELLAR §A: native GPU dispatch of the ternary GEMM kernel + on-device parity test.
+#[cfg(not(target_arch = "wasm32"))]
+pub mod ternary_gpu;
 pub mod identifier;
 #[cfg(not(target_arch = "wasm32"))]
 pub mod mcp_server;

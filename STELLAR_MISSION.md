@@ -81,9 +81,12 @@ opposed to the extractive "SSI-wallet / person-as-issued-root-key" counterfeit.
   Plus **name→role mapping + policy transcode** (`tensor_roles.rs`: GGUF + HF naming → engine roles;
   `transcode_safetensor_to_q42_ffn_ternary` ternaries **only** the FFN projections and keeps
   attention/norms/embeddings verbatim — the real §A policy — populating engine roles in the manifest).
-  **Remaining (task #12):** wire the kernel into the live FFN dispatch (`gguf_bridge` pipeline-create +
-  bind), GPU on-device parity (run the shader vs `ternary_gemm_cpu`), and a real-model end-to-end run +
-  tok/s measurement; then the other §A compressions (KIVI, W4A4/AWQ, spec-decode).
+  Plus **native GPU dispatch + on-device parity** (`ternary_gpu.rs::ternary_gemm_gpu` runs
+  `ternary_gemm.wgsl` on a real wgpu device; the parity test passed **on an NVIDIA A2000** == the CPU
+  oracle). **Remaining (task #12):** splice the dispatcher into the live FFN layer loop
+  (`gguf_bridge::dispatch_transformer_forward` / `encode_fused_ffn_expansion` — branch on
+  `ggml_type == TERNARY`, resident + streaming modes) and a real-model end-to-end run + tok/s vs the
+  F16 baseline; then the other §A compressions (KIVI, W4A4/AWQ, spec-decode).
 - **KIVI asymmetric KV-cache**: Key cache per-channel 2-bit, Value cache per-token 4-bit → 100k+ context in
   consumer VRAM via a WGPU ring-buffer.
 - **W4A4 + Activation-Aware (AWQ)**: a calibration "Concentration-Alignment Transform" over the high-fidelity
