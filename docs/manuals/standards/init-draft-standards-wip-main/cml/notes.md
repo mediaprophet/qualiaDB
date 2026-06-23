@@ -1,3 +1,13 @@
+> **⚠ SUPERSEDED — pre-implementation background.** This note describes the *early* CML conception
+> (inline `<cml:context>` HTML tags for LLM disambiguation) and is retained for its HCAI rationale
+> only. The implemented design realises CML as a **concept-graph layer** (a concept *is* a context
+> hash) — see [`README.md`](README.md), [`core-ontologies/cml.n3`](../../../../../core-ontologies/cml.n3),
+> and [`CML_CONCEPT_GRAPH.md`](../../../../../core-ontologies/CML_CONCEPT_GRAPH.md). Where this note
+> and the implementation differ, **the implementation governs.** (It also retains an AI-assistant
+> sign-off at the end, an artefact of its drafting.)
+
+---
+
 The Context Markup Language (CML) proposal, designed to provide inline semantic context within HTML content using URIs and Decentralized Identifiers (DIDs) for software agents like Large Language Models (LLMs), has a significant relationship with the principles of Human-Centric AI (HCAI). HCAI emphasizes AI systems that prioritize the needs, rights, and well-being of natural persons, ensuring ethical, transparent, and trustworthy interactions. Below, I analyze how the CML proposal aligns with HCAI requirements, focusing on its intended purpose of supporting natural persons, the importance of accurate inferred meanings, and the issues arising from a lack of declarative context leading to false assumptions.
 1. Alignment with Human-Centric AI Requirements
 HCAI frameworks, such as those outlined by the European Union’s AI Act or UNESCO’s Recommendation on the Ethics of AI, emphasize principles like transparency, accountability, fairness, and user empowerment. The CML proposal supports these requirements in the following ways:
