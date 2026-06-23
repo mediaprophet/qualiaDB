@@ -264,9 +264,13 @@ code, not assumed. Designed-now/built-later items are labelled, never presented 
   `daemon_tensor` / `webizen_server` / `acoustic_plane` / `buffer_export`).
 
 **Phase 2 physics extensions**
-- **Live viewer integration** — animate a loaded mesh via a joint (the visible half). ← *in progress.*
+- ~~Live viewer integration — animate a loaded mesh via a joint (the visible half).~~ **DONE
+  2026-06-23 (`c84b4d5ae`)**: per-mesh model-transform uniform + `motor_to_mat4_col`; an "Animate
+  artefact" toggle spins a loaded mesh via a revolute joint — verified in Chrome (two poses).
 - Bind momentum `P` to the NQuin Manifold-Coordinate (STELLAR §C file-format work).
 - Inter-artefact collision/contact (current physics is per-artefact admission + kinematics only).
+- Surface the **deterministic refusal** visibly too (e.g. a world-bound demo where a translating
+  joint is admission-clamped at the boundary) — currently refusal is unit-tested, joint is visible.
 
 ## Progress log
 
