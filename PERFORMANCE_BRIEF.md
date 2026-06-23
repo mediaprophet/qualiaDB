@@ -110,14 +110,23 @@ embed lookup
   → 47 MB, i.e. ~1.6 bits/weight); the 2.39× overall is because attention + embeddings + norms (~252
   MB) are deliberately kept verbatim BF16. The ratio improves with model size (FFN is a larger
   fraction of a 7B) and tightens further once attention is quantized too.
-- **Ternary GEMM kernel:** verified **on-device on the A2000** (the WGSL kernel's output matches a
-  byte-exact CPU reference).
+- **Ternary GEMM kernel — two variants, both verified on-device (A2000)** against a byte-exact CPU
+  oracle:
+  - *base-3* (`ternary_gemm.wgsl`) — 1.6 bit, but unpacks with integer `/3`,`%3` and a `trit>0/<0`
+    branch;
+  - ***2-bit branchless*** (`ternary_gemm_2bit.wgsl`) — 4 trits/byte, **shift/mask unpack (no integer
+    division)** and a **divergence-free** body `acc += (f32(c==1) − f32(c==2)) * x` (single FMA,
+    uniform across the warp). This is the intended GPU-resident format (see the reframe in §5).
 
 **NOT yet measured (important gaps):**
 - **No clean current *native* tok/s baseline.** The 5.9 figure is browser/WASM. We need a fresh native
   (DX12, A2000) baseline for F16/Q8.
-- **Ternary inference TPS is unmeasured** — the ternary kernel is proven on-device in isolation but
-  **not yet spliced into the live FFN dispatch loop**, so we cannot yet report a ternary tok/s.
+- **Ternary inference TPS is unmeasured.** The kernels are proven *correct* on-device, but **not yet
+  spliced into the live FFN dispatch loop**. A standalone A/B microbench was deliberately *not* quoted
+  as a speedup: it showed ~1.02× **only because the standalone dispatcher rebuilds the pipeline +
+  buffers every call** (≈8.4 ms/iter for a 4096² GEMV whose actual compute is microseconds → ~99.9%
+  setup overhead). A true number requires **pipeline/buffer reuse + GPU timestamp queries**, which
+  arrives with the FFN-loop integration.
 - **No TTFT numbers** (load time + prefill) captured systematically.
 
 ---
@@ -138,6 +147,12 @@ embed lookup
   prefer native where available; WASM is the zero-install fallback.)
 - **PCIe upload** dominates the *streaming* residency mode (models > VRAM) — one weight upload per
   layer per token.
+- **The "no-multiply" reframe (important):** BitNet's appeal to *avoid the multiply* is a **CPU/ASIC**
+  argument (where a multiplier is real gates/power). On an Ampere GPU the multiply is a **free,
+  pipelined FMA**, while a per-weight `if/else` causes **warp divergence** and integer `/`,`%` (base-3
+  unpack) costs dozens of cycles. So our GPU ternary win is **purely bandwidth + occupancy** (~2 bits
+  vs 16 ≈ ~8× less weight traffic), captured by a **branchless 2-bit FMA** kernel — *not* by avoiding
+  arithmetic. Base-3 stays the on-disk/distribution format; 2-bit unpacks into VRAM.
 
 ---
 
@@ -145,14 +160,30 @@ embed lookup
 
 | Lever | Mechanism | Status |
 |---|---|---|
-| **Ternary FFN (BitNet 1.58b)** | FFN weights → {−1,0,+1} + per-tensor absmean scale, 5 trits/byte (~1.6 bit). GEMM = add/subtract, no per-weight multiply. | **codec ✓, transcode ✓ (real model 2.39×), WGSL kernel ✓ on-device (A2000). PENDING: splice into the live FFN loop + measure tok/s.** |
+| **Ternary FFN (BitNet 1.58b)** | FFN weights → {−1,0,+1} + per-tensor absmean scale. GPU win = bandwidth+occupancy (FMA is free), so **branchless 2-bit** (4/byte, shift/mask) for VRAM, base-3 (1.6 bit) for disk. | codec ✓, transcode ✓ (real model 2.39×), **base-3 + branchless 2-bit kernels ✓ on-device (A2000)**. PENDING: splice into the live FFN loop + measure tok/s (timestamp queries). |
 | **Name→role mapping + policy** | Map GGUF/HF tensor names → engine roles; ternary the FFN only, keep attention/norms/embeddings high-fidelity. | ✓ (validated on real SmolLM2-360M names). |
+| **Double-buffered streaming** | Ping-pong VRAM buffers + async copy: upload layer N+1 while computing layer N → hide PCIe latency for > VRAM models. | planned (the leverage item for a 7B on a 12 GB card). |
 | **KIVI KV-cache** | Key cache 2-bit/channel, Value 4-bit/token → long context in consumer VRAM, less KV bandwidth. | planned. |
 | **W4A4 + AWQ** | Activation-aware 4-bit weights/activations (Q8-equivalent quality at 4-bit speed), scales baked into the header. | planned (the hard one). |
 | **Speculative decoding** | ~100 M draft guesses 4–5 tokens via zero-copy mmap; target verifies in one pass. | planned. |
 | **Demand-paged mmap** | Page layers into VRAM at first use; run > VRAM models. | streaming mode exists; demand-paging refinement planned. |
 | **Pre-compiled `.q42` distribution** | Host pre-built `.q42` on HF/WebTorrent → end-user TTFT ≈ 0 (no runtime transcode). | planned. |
 | **NPU offload** | DirectML / CoreML-ANE / NNAPI for the GEMMs. | partial / bridges exist. |
+
+### 6.1 Multi-modal & resource-consent (design decisions)
+- **3D / spatial assets ingest into the *same* container + latent space** as text (zero-copy
+  `memmap2`; a `fused_spatial_encoder` vectorises geometry into tokens cross-attended by the LLM;
+  output buffers stay in shared VRAM for zero-copy hand-off to the render pipeline).
+- **Precision (decided):** spatial geometry — positions, spherical-harmonic coefficients, opacity,
+  scale — is **kept high-fidelity F16, never ternarised** (1.6-bit coordinates collapse). It joins
+  attention/norms/embeddings in the `ternary_eligible = false` class — **no new mechanism required**.
+- **Sequencing (decided):** *analyze* (ingest + cross-attend to a 3D asset) **before** *generate*
+  (emit/modify geometry). Lock the zero-copy VRAM bindings first.
+- **Resource consent (Human-Centric rail):** capability/hardware shifts are surfaced as **CML tags in
+  the token stream** (`<cml:capability_shift target="spatial_3d" vram_estimated="1.8GB"/>`); the
+  stream parser intercepts them and the UI **requires explicit user consent** before allocating VRAM
+  that could disrupt the user's machine — reusing the existing Phase-4 (sense) and Phase-5
+  (attestation) consent gates. The user retains sovereignty over their own hardware.
 
 ---
 
