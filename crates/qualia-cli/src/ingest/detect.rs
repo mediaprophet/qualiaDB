@@ -22,6 +22,8 @@ pub enum SemanticFormat {
     Chk,
     Q42,
     AgentIntentJsonl,
+    /// 3D mesh asset (Wavefront OBJ, STL, or binary glTF) — geometry → semantic NQuins.
+    Mesh,
 }
 
 impl SemanticFormat {
@@ -44,6 +46,7 @@ impl SemanticFormat {
             SemanticFormat::Chk          => "CHK",
             SemanticFormat::Q42          => "Q42",
             SemanticFormat::AgentIntentJsonl => "Agent-Intent-JSONL",
+            SemanticFormat::Mesh         => "Mesh (OBJ/STL/GLB)",
         }
     }
 }
@@ -76,6 +79,10 @@ pub fn detect_format(path: &Path) -> Option<SemanticFormat> {
     // QCHK / CHK profile blob
     if magic.len() >= 4 && &magic[..4] == b"QCHK" {
         return Some(SemanticFormat::Chk);
+    }
+    // GLB (binary glTF) — "glTF" magic.
+    if magic.starts_with(b"glTF") {
+        return Some(SemanticFormat::Mesh);
     }
     // CBOR-LD: standard CBOR self-describe tag 0xd9 0xd9 0xf7
     if magic.len() >= 3 && magic[0] == 0xd9 && magic[1] == 0xd9 && magic[2] == 0xf7 {
@@ -128,6 +135,8 @@ pub fn detect_format(path: &Path) -> Option<SemanticFormat> {
         Some("kml")                                 => Some(SemanticFormat::Kml),
         Some("chk") | Some("qchk")                 => Some(SemanticFormat::Chk),
         Some("q42")                                 => Some(SemanticFormat::Q42),
+        Some("obj") | Some("stl")
+            | Some("glb") | Some("gltf")            => Some(SemanticFormat::Mesh),
         _                                           => None,
     }
 }

@@ -697,6 +697,7 @@ pub mod daemon_query;
 pub mod fuzz_testing;
 pub mod git_bridge;
 pub mod kml_bridge;
+pub mod asset_bridge;
 pub mod temporal_graph;
 pub mod provenance;
 #[cfg(any(
