@@ -221,6 +221,13 @@
                         <i class="fas fa-microchip mr-2"></i>Encode to Quins (WASM)
                     </button>
 
+                    <input type="file" id="mesh-file" accept=".obj,.stl,.glb,.gltf" class="hidden">
+                    <button type="button" onclick="document.getElementById('mesh-file').click()"
+                            class="spinbtn w-full mt-2" id="load-mesh-btn">
+                        <i class="fas fa-cube mr-2"></i>Load 3D Asset (OBJ/STL/GLB)
+                    </button>
+                    <p class="text-[10px] text-white/45 mt-1" id="mesh-status"></p>
+
                     <div class="icp-chrome mt-4 border-t border-white/10 pt-4" id="icp-link-mount">
                         <div class="text-xs text-white/50 mb-2 font-semibold">Interface Control Plane</div>
                         <p class="text-[10px] text-white/45 mb-2">Arrow keys / wheel orbit · <kbd class="text-emerald-400">H</kbd> home · <kbd class="text-emerald-400">[</kbd> <kbd class="text-emerald-400">]</kbd> time</p>

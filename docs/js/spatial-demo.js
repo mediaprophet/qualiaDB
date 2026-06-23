@@ -609,8 +609,27 @@ export function switchTab(tabId, btn, opts = {}) {
     }
 }
 
+/** Load an OBJ/STL/GLB file picked by the user and render it as a solid 3D surface (Phase 1.2). */
+export async function loadMeshAsset(file) {
+    const statusEl = document.getElementById('mesh-status');
+    if (!file) return;
+    if (!qualiaPortal || typeof qualiaPortal.upload_mesh_asset !== 'function') {
+        if (statusEl) statusEl.textContent = 'GPU viewer not ready (WebGPU required for mesh surfaces).';
+        return;
+    }
+    try {
+        const buf = new Uint8Array(await file.arrayBuffer());
+        const ext = (file.name.split('.').pop() || '').toLowerCase();
+        const tris = qualiaPortal.upload_mesh_asset(buf, ext);
+        if (statusEl) statusEl.textContent = `${file.name}: ${Number(tris).toLocaleString()} triangles`;
+    } catch (e) {
+        if (statusEl) statusEl.textContent = 'Load failed: ' + ((e && (e.message || e)) || 'error');
+    }
+}
+
 if (typeof window !== 'undefined') {
     window.generateGeometry = generateGeometry;
+    window.loadMeshAsset = loadMeshAsset;
     window.updateDisplayMode = updateDisplayMode;
     window.encodeToQuins = encodeToQuins;
     window.runSpatialOp = runSpatialOp;
@@ -656,6 +675,14 @@ export async function bootSpatialPage() {
             wasmSource = 'qualia-core-db';
         }
         await generateGeometry();
+        const meshInput = document.getElementById('mesh-file');
+        if (meshInput && !meshInput.dataset.bound) {
+            meshInput.dataset.bound = '1';
+            meshInput.addEventListener('change', (e) => {
+                loadMeshAsset(e.target.files && e.target.files[0]);
+                e.target.value = '';
+            });
+        }
         activateSpatialTabFromHash();
 
         debugLog('bootSpatialPage wasm ready', { wasmSource, hasPortal: !!qualiaPortal });
