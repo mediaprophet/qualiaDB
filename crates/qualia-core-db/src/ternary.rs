@@ -115,6 +115,63 @@ pub fn ternary_blob(weights: &[f32]) -> Vec<u8> {
     out
 }
 
+// ── GPU ternary GEMM kernel + its CPU oracle ─────────────────────────────────────────────────────
+
+/// The WGSL ternary-GEMM compute kernel (STELLAR §A). Its CPU parity reference is
+/// [`ternary_gemm_cpu`], which mirrors it byte-for-byte (same trit extraction, add/subtract,
+/// end-scale). The GPU pipeline binds: `0` activations (`f32`), `1` packed trits (`u32` words),
+/// `2` `TernaryParams` uniform, `3` output (`f32`).
+pub const TERNARY_GEMM_WGSL: &str = include_str!("shaders/ternary_gemm.wgsl");
+
+/// Extract the ternary value `{-1,0,+1}` at linear weight index `k` from packed trits — the exact
+/// operation `ternary_gemm.wgsl::trit_at` performs (5 trits/byte, base-3).
+#[inline]
+pub fn trit_at(packed: &[u8], k: usize) -> i32 {
+    let byte = packed[k / TRITS_PER_BYTE];
+    let pos = k % TRITS_PER_BYTE;
+    let mut b = byte;
+    for _ in 0..pos {
+        b /= 3;
+    }
+    (b % 3) as i32 - 1
+}
+
+/// **CPU oracle for `ternary_gemm.wgsl`.** Computes `out[m][i] = scale · Σ_j trit(W[i][j])·act[m][j]`
+/// where `packed` holds the row-major trits of an `(n_out × n_in)` weight matrix. The weight
+/// contributes by add/subtract only (the BitNet win); the per-tensor `scale` is applied once per
+/// output element. Zero-heap. Strides default to dense (`n_in` / `n_out`) when `0`.
+#[allow(clippy::too_many_arguments)]
+pub fn ternary_gemm_cpu(
+    activations: &[f32],
+    packed: &[u8],
+    scale: f32,
+    n_in: usize,
+    n_out: usize,
+    n_batch: usize,
+    in_row_stride: usize,
+    out_row_stride: usize,
+    out: &mut [f32],
+) {
+    let in_stride = if in_row_stride > 0 { in_row_stride } else { n_in };
+    let out_stride = if out_row_stride > 0 { out_row_stride } else { n_out };
+    for m in 0..n_batch.max(1) {
+        let in_base = m * in_stride;
+        for i in 0..n_out {
+            let row0 = i * n_in;
+            let mut acc = 0.0f32;
+            for j in 0..n_in {
+                let x = activations[in_base + j];
+                match trit_at(packed, row0 + j) {
+                    t if t > 0 => acc += x,
+                    t if t < 0 => acc -= x,
+                    _ => {}
+                }
+            }
+            out[m * out_stride + i] = scale * acc;
+        }
+    }
+}
+
 /// Decode a [`ternary_blob`] of `count` weights into `out` (zero-heap dequant).
 pub fn dequantize_blob(blob: &[u8], out: &mut [f32]) {
     if blob.len() < 4 {
@@ -180,6 +237,52 @@ mod tests {
         assert!(ratio > 19.0 && ratio < 21.0, "ratio {ratio}");
         let bits_per_weight = (ternary_bytes as f64 * 8.0) / count as f64;
         assert!(bits_per_weight < 1.7, "bits/weight {bits_per_weight}");
+    }
+
+    #[test]
+    fn ternary_gemm_cpu_matches_hand_computation() {
+        // W (n_out=2 × n_in=3) trits row-major: [[1,-1,0],[0,1,1]]; scale = 2.0; act = [1,2,3].
+        let trits: [i8; 6] = [1, -1, 0, 0, 1, 1];
+        let packed = pack_trits(&trits);
+        let act = [1.0_f32, 2.0, 3.0];
+        let mut out = [0.0_f32; 2];
+        ternary_gemm_cpu(&act, &packed, 2.0, 3, 2, 1, 0, 0, &mut out);
+        // out[0] = 2*(1*1 + -1*2 + 0*3) = -2 ; out[1] = 2*(0*1 + 1*2 + 1*3) = 10
+        assert_eq!(out, [-2.0, 10.0]);
+    }
+
+    #[test]
+    fn ternary_gemm_equals_dense_matmul_of_dequantized_weights() {
+        // ternary GEMM must equal a plain f32 matmul over the dequantized weights (scale·trit),
+        // since scale·Σ trit·x == Σ (scale·trit)·x.
+        let (n_in, n_out) = (7usize, 5usize);
+        let scale = 0.37_f32;
+        // arbitrary deterministic trits
+        let trits: Vec<i8> = (0..n_in * n_out).map(|k| (k % 3) as i8 - 1).collect();
+        let packed = pack_trits(&trits);
+        let act: Vec<f32> = (0..n_in).map(|j| (j as f32) * 0.5 - 1.0).collect();
+
+        let mut got = vec![0.0_f32; n_out];
+        ternary_gemm_cpu(&act, &packed, scale, n_in, n_out, 1, 0, 0, &mut got);
+
+        for i in 0..n_out {
+            let mut dense = 0.0_f32;
+            for j in 0..n_in {
+                let w = scale * trits[i * n_in + j] as f32; // dequantized weight
+                dense += w * act[j];
+            }
+            assert!((got[i] - dense).abs() < 1e-5, "row {i}: {} vs {}", got[i], dense);
+        }
+    }
+
+    #[test]
+    fn ternary_gemm_wgsl_parses() {
+        // naga parse-smoke (same gate render::contract uses for the viewport shaders): catches
+        // syntax/type regressions in the kernel on native CI. GPU pipeline validation is the
+        // wasm `portal`/`wasm-full` build when the kernel is wired into a dispatch.
+        naga::front::wgsl::Frontend::new()
+            .parse(TERNARY_GEMM_WGSL)
+            .unwrap_or_else(|e| panic!("ternary_gemm.wgsl parse failed: {e:?}"));
     }
 
     #[test]
