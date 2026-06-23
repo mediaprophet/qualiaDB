@@ -240,11 +240,13 @@ not pushed.
   camera. `QualiaPortal.upload_mesh_asset(bytes, hint)` centres+scales to the orbit frame and uploads.
   **Verified in Chrome:** a 12-triangle cube OBJ renders as a solid, depth-tested, perspective surface.
 - **UI** — spatial.html "Load 3D Asset (OBJ/STL/GLB)" picker → `loadMeshAsset` → `upload_mesh_asset`.
-- **1.4 unified projection — CORE DONE** (`1c79a8e11`): `manifold_project.rs` — one `project(tensor,
-  time, target)` over the parity-tested `portal_pga` oracle yields the same manifold world point as a
-  3D volume position OR its 2D planar shadow; the "one projection, many views" property is unit-tested
-  (3/3). **Remaining for 1.4:** wire a *live* 2D canvas view off `project()` next to the 3D scene (the
-  screenshot half of acceptance). With this, **Phase 1 is substantially complete** (1.0–1.3 done, 1.4 core).
+- **1.4 unified projection — DONE** (`1c79a8e11` core, `fc5b341d0` live view): `manifold_project.rs`
+  exposes one `project(tensor, time, target)` over the parity-tested `portal_pga` oracle — the same
+  manifold world point as a 3D volume position OR its 2D planar shadow (property unit-tested 3/3).
+  `QualiaPortal.project_resident_plane2d` + the spatial.html 2D companion canvas render that 2D view
+  live beside the GPU 3D scene — **verified in Chrome** (screenshot: 3D node scene + 2D shadow inset).
+  Acceptance (test + screenshot) met. Nuance: the 2D view shows all nodes; the 3D view additionally
+  applies the temporal scrub. **➡ Phase 1 COMPLETE** (1.0–1.4).
 - Note: orbit-drag on a loaded mesh not re-verified this run (the camera transform applies — perspective
   is correct — but the drag→orbit input binding wasn't confirmed).
 
