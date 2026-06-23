@@ -8,6 +8,8 @@ use crate::gpu_context::{
 };
 use crate::render::camera::CameraState;
 use crate::render::navigation::PICK_SENTINEL;
+use crate::render::pga::motor_to_mat4_col;
+use crate::render::physics::Joint;
 use crate::render::standpoint::spectator_default;
 use crate::render::telemetry::{AmbientUniforms, ObserverStandpoint, ParticleInstance, SystemTelemetry};
 use crate::shaders::viewport::{AMBIENT_WGSL, BLOOM_WGSL, MESH_WGSL, PROJECTOR_WGSL};
@@ -102,6 +104,9 @@ pub struct PortalGpu {
     mesh_pipeline: wgpu::RenderPipeline,
     mesh_pipeline_hdr: Option<wgpu::RenderPipeline>,
     mesh: Option<MeshGpu>,
+    model_buf: wgpu::Buffer,
+    mesh_model_bind: wgpu::BindGroup,
+    artefact_joint: Option<crate::render::physics::Joint>,
     bloom: Option<BloomChain>,
     ambient_bind_group_layout: wgpu::BindGroupLayout,
     ambient_bind_group: wgpu::BindGroup,
@@ -372,12 +377,46 @@ impl PortalGpu {
             multiview: None,
         });
 
+        // Per-artefact model transform (Phase 2 kinematic joint), group 1 of the mesh pipeline.
+        const IDENTITY_MAT4: [[f32; 4]; 4] = [
+            [1.0, 0.0, 0.0, 0.0],
+            [0.0, 1.0, 0.0, 0.0],
+            [0.0, 0.0, 1.0, 0.0],
+            [0.0, 0.0, 0.0, 1.0],
+        ];
+        let model_buf = device.create_buffer_init(&wgpu::util::BufferInitDescriptor {
+            label: Some("portal-mesh-model"),
+            contents: bytemuck::cast_slice(&IDENTITY_MAT4),
+            usage: wgpu::BufferUsages::UNIFORM | wgpu::BufferUsages::COPY_DST,
+        });
+        let mesh_model_layout = device.create_bind_group_layout(&wgpu::BindGroupLayoutDescriptor {
+            label: Some("portal-mesh-model-layout"),
+            entries: &[wgpu::BindGroupLayoutEntry {
+                binding: 0,
+                visibility: wgpu::ShaderStages::VERTEX,
+                ty: wgpu::BindingType::Buffer {
+                    ty: wgpu::BufferBindingType::Uniform,
+                    has_dynamic_offset: false,
+                    min_binding_size: std::num::NonZeroU64::new(64),
+                },
+                count: None,
+            }],
+        });
+        let mesh_model_bind = device.create_bind_group(&wgpu::BindGroupDescriptor {
+            label: Some("portal-mesh-model-bind"),
+            layout: &mesh_model_layout,
+            entries: &[wgpu::BindGroupEntry {
+                binding: 0,
+                resource: model_buf.as_entire_binding(),
+            }],
+        });
+
         // Triangle-mesh pipeline (Phase 1.2). Reuses the projector camera bind layout (mesh shader
         // declares only camera@0, a valid subset); one f32x3 vertex buffer at slot 0; cull disabled
         // (imported meshes carry inconsistent winding). HDR variant built in the bloom block below.
         let mesh_pipeline_layout = device.create_pipeline_layout(&wgpu::PipelineLayoutDescriptor {
             label: Some("portal-mesh-pipeline-layout"),
-            bind_group_layouts: &[&projector_camera_layout],
+            bind_group_layouts: &[&projector_camera_layout, &mesh_model_layout],
             push_constant_ranges: &[],
         });
         let mesh_vertex_layout = wgpu::VertexBufferLayout {
@@ -562,6 +601,9 @@ impl PortalGpu {
             mesh_pipeline,
             mesh_pipeline_hdr,
             mesh: None,
+            model_buf,
+            mesh_model_bind,
+            artefact_joint: None,
             bloom,
             ambient_bind_group_layout,
             ambient_bind_group,
@@ -645,6 +687,26 @@ impl PortalGpu {
 
     pub fn tensor_node_count(&self) -> u32 {
         self.tensor_node_count
+    }
+
+    /// Drive the loaded mesh by a kinematic joint (Phase 2). `None` freezes it at identity.
+    pub fn set_artefact_joint(&mut self, joint: Option<Joint>) {
+        self.artefact_joint = joint;
+    }
+
+    /// Write the per-artefact model transform for this frame: the joint pose at `time`, or identity.
+    fn write_model_uniform(&self, time: f32) {
+        let model = match self.artefact_joint {
+            Some(j) => motor_to_mat4_col(j.motor_at(time)),
+            None => [
+                [1.0, 0.0, 0.0, 0.0],
+                [0.0, 1.0, 0.0, 0.0],
+                [0.0, 0.0, 1.0, 0.0],
+                [0.0, 0.0, 0.0, 1.0],
+            ],
+        };
+        self.queue
+            .write_buffer(&self.model_buf, 0, bytemuck::cast_slice(&model));
     }
 
     pub fn has_tensor_buffer(&self) -> bool {
@@ -874,6 +936,7 @@ impl PortalGpu {
             .write_buffer(&self.telemetry_buf, 0, bytemuck::bytes_of(telemetry));
         self.write_camera_uniform(time);
         self.write_observer_uniform();
+        self.write_model_uniform(time);
 
         let frame = self
             .surface
@@ -952,6 +1015,7 @@ impl PortalGpu {
                 if let (Some(mesh), Some(mesh_pipe)) = (self.mesh.as_ref(), mesh_hdr) {
                     pass.set_pipeline(mesh_pipe);
                     pass.set_bind_group(0, &self.projector_camera_bind, &[]);
+                    pass.set_bind_group(1, &self.mesh_model_bind, &[]);
                     pass.set_vertex_buffer(0, mesh.vertex_buf.slice(..));
                     pass.set_index_buffer(mesh.index_buf.slice(..), wgpu::IndexFormat::Uint32);
                     pass.draw_indexed(0..mesh.index_count, 0, 0..1);
@@ -1009,6 +1073,7 @@ impl PortalGpu {
             if let Some(mesh) = self.mesh.as_ref() {
                 pass.set_pipeline(&self.mesh_pipeline);
                 pass.set_bind_group(0, &self.projector_camera_bind, &[]);
+                pass.set_bind_group(1, &self.mesh_model_bind, &[]);
                 pass.set_vertex_buffer(0, mesh.vertex_buf.slice(..));
                 pass.set_index_buffer(mesh.index_buf.slice(..), wgpu::IndexFormat::Uint32);
                 pass.draw_indexed(0..mesh.index_count, 0, 0..1);

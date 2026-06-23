@@ -538,6 +538,34 @@ impl QualiaPortal {
         Ok(tris)
     }
 
+    /// Phase 2 — drive the loaded mesh artefact with a kinematic joint (visible physics). `kind` is
+    /// `"prismatic"` (slide) or anything else = `"revolute"` (spin); `(ax,ay,az)` is the axis
+    /// (normalised here; defaults to +Y if zero); `rate` is rad/s (revolute) or units/s (prismatic).
+    pub fn animate_artefact(&mut self, kind: &str, ax: f32, ay: f32, az: f32, rate: f32) {
+        use crate::render::physics::{Joint, JointKind};
+        let len = (ax * ax + ay * ay + az * az).sqrt();
+        let axis = if len > 1e-6 {
+            [ax / len, ay / len, az / len]
+        } else {
+            [0.0, 1.0, 0.0]
+        };
+        let joint = if kind == "prismatic" {
+            Joint { kind: JointKind::Prismatic { axis }, rate }
+        } else {
+            Joint { kind: JointKind::Revolute { axis }, rate }
+        };
+        if let Some(ref mut gpu) = self.gpu {
+            gpu.set_artefact_joint(Some(joint));
+        }
+    }
+
+    /// Phase 2 — freeze the artefact (joint → identity).
+    pub fn stop_artefact_animation(&mut self) {
+        if let Some(ref mut gpu) = self.gpu {
+            gpu.set_artefact_joint(None);
+        }
+    }
+
     /// Phase 1.4 — the **2D view** of the resident manifold: each tensor node's `project(.., Plane2D)`
     /// shadow as a flat `[x0,y0,x1,y1,...]` array (world units, ~[-1,1]). The 3D scene draws the same
     /// nodes through the GPU projector (the `Volume3D` view); both are the *one* manifold projection

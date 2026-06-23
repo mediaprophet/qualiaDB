@@ -123,6 +123,21 @@ export class QualiaPortal {
         return takeFromExternrefTable0(ret[0]);
     }
     /**
+     * Phase 2 — drive the loaded mesh artefact with a kinematic joint (visible physics). `kind` is
+     * `"prismatic"` (slide) or anything else = `"revolute"` (spin); `(ax,ay,az)` is the axis
+     * (normalised here; defaults to +Y if zero); `rate` is rad/s (revolute) or units/s (prismatic).
+     * @param {string} kind
+     * @param {number} ax
+     * @param {number} ay
+     * @param {number} az
+     * @param {number} rate
+     */
+    animate_artefact(kind, ax, ay, az, rate) {
+        const ptr0 = passStringToWasm0(kind, wasm.__wbindgen_malloc, wasm.__wbindgen_realloc);
+        const len0 = WASM_VECTOR_LEN;
+        wasm.qualiaportal_animate_artefact(this.__wbg_ptr, ptr0, len0, ax, ay, az, rate);
+    }
+    /**
      * Cold-bake CQT sidecar (log-spaced bins) for selected tensor node.
      * @param {number} frames
      * @returns {Uint8Array}
@@ -502,6 +517,12 @@ export class QualiaPortal {
     standpoint_class() {
         const ret = wasm.qualiaportal_standpoint_class(this.__wbg_ptr);
         return ret >>> 0;
+    }
+    /**
+     * Phase 2 — freeze the artefact (joint → identity).
+     */
+    stop_artefact_animation() {
+        wasm.qualiaportal_stop_artefact_animation(this.__wbg_ptr);
     }
     /**
      * @returns {number}
@@ -2116,17 +2137,17 @@ function __wbg_get_imports() {
             return ret;
         }, arguments); },
         __wbindgen_cast_0000000000000001: function(arg0, arg1) {
-            // Cast intrinsic for `Closure(Closure { owned: true, function: Function { arguments: [Externref], shim_idx: 311, ret: Unit, inner_ret: Some(Unit) }, mutable: true }) -> Externref`.
+            // Cast intrinsic for `Closure(Closure { owned: true, function: Function { arguments: [Externref], shim_idx: 312, ret: Unit, inner_ret: Some(Unit) }, mutable: true }) -> Externref`.
             const ret = makeMutClosure(arg0, arg1, wasm_bindgen__convert__closures_____invoke__h59d672308a0bcda2);
             return ret;
         },
         __wbindgen_cast_0000000000000002: function(arg0, arg1) {
-            // Cast intrinsic for `Closure(Closure { owned: true, function: Function { arguments: [Externref], shim_idx: 348, ret: Result(Unit), inner_ret: Some(Result(Unit)) }, mutable: true }) -> Externref`.
+            // Cast intrinsic for `Closure(Closure { owned: true, function: Function { arguments: [Externref], shim_idx: 349, ret: Result(Unit), inner_ret: Some(Result(Unit)) }, mutable: true }) -> Externref`.
             const ret = makeMutClosure(arg0, arg1, wasm_bindgen__convert__closures_____invoke__h04e3064d3f666bd6);
             return ret;
         },
         __wbindgen_cast_0000000000000003: function(arg0, arg1) {
-            // Cast intrinsic for `Closure(Closure { owned: true, function: Function { arguments: [NamedExternref("GPUUncapturedErrorEvent")], shim_idx: 311, ret: Unit, inner_ret: Some(Unit) }, mutable: true }) -> Externref`.
+            // Cast intrinsic for `Closure(Closure { owned: true, function: Function { arguments: [NamedExternref("GPUUncapturedErrorEvent")], shim_idx: 312, ret: Unit, inner_ret: Some(Unit) }, mutable: true }) -> Externref`.
             const ret = makeMutClosure(arg0, arg1, wasm_bindgen__convert__closures_____invoke__h59d672308a0bcda2_2);
             return ret;
         },

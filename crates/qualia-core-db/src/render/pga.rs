@@ -335,6 +335,23 @@ pub fn semantic_motor_phase2c(
     motor_mul(t_motor, r_intrinsic)
 }
 
+/// Column-major affine `mat4` (WGSL `mat4x4<f32>`) for a rigid motor (rotation + translation).
+/// Built by sending the origin (→ translation) and the basis vectors (→ rotation columns) through
+/// the sandwich product, so the matrix reproduces `sandwich_point` exactly. Used as the per-artefact
+/// model transform in the mesh shader (Phase 2 kinematic joints).
+pub fn motor_to_mat4_col(m: Motor) -> [[f32; 4]; 4] {
+    let t = sandwich_point(m, [0.0, 0.0, 0.0]);
+    let cx = sandwich_point(m, [1.0, 0.0, 0.0]);
+    let cy = sandwich_point(m, [0.0, 1.0, 0.0]);
+    let cz = sandwich_point(m, [0.0, 0.0, 1.0]);
+    [
+        [cx[0] - t[0], cx[1] - t[1], cx[2] - t[2], 0.0],
+        [cy[0] - t[0], cy[1] - t[1], cy[2] - t[2], 0.0],
+        [cz[0] - t[0], cz[1] - t[1], cz[2] - t[2], 0.0],
+        [t[0], t[1], t[2], 1.0],
+    ]
+}
+
 #[inline]
 fn approx_eq3(a: [f32; 3], b: [f32; 3], eps: f32) -> bool {
     (a[0] - b[0]).abs() <= eps
@@ -352,6 +369,24 @@ mod tests {
     fn identity_sandwich_is_noop() {
         let p = [0.3, -0.7, 0.15];
         assert!(approx_eq3(sandwich_point(Motor::identity(), p), p, EPS));
+    }
+
+    #[test]
+    fn mat4_identity_and_translation() {
+        let id = motor_to_mat4_col(Motor::identity());
+        assert_eq!(
+            id,
+            [
+                [1.0, 0.0, 0.0, 0.0],
+                [0.0, 1.0, 0.0, 0.0],
+                [0.0, 0.0, 1.0, 0.0],
+                [0.0, 0.0, 0.0, 1.0],
+            ]
+        );
+        let tm = motor_to_mat4_col(motor_translate([2.0, -3.0, 4.0]));
+        assert!((tm[3][0] - 2.0).abs() < EPS);
+        assert!((tm[3][1] + 3.0).abs() < EPS);
+        assert!((tm[3][2] - 4.0).abs() < EPS);
     }
 
     #[test]

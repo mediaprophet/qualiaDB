@@ -710,6 +710,18 @@ export async function bootSpatialPage() {
                 e.target.value = '';
             });
         }
+        const animateBox = document.getElementById('animate-artefact');
+        if (animateBox && !animateBox.dataset.bound) {
+            animateBox.dataset.bound = '1';
+            animateBox.addEventListener('change', (e) => {
+                if (!qualiaPortal) return;
+                if (e.target.checked && typeof qualiaPortal.animate_artefact === 'function') {
+                    qualiaPortal.animate_artefact('revolute', 0.0, 1.0, 0.0, 0.8); // Phase 2: spin about Y
+                } else if (typeof qualiaPortal.stop_artefact_animation === 'function') {
+                    qualiaPortal.stop_artefact_animation();
+                }
+            });
+        }
         if (qualiaPortal && !_plane2dRaf) drawPlane2dShadow(); // Phase 1.4 companion 2D view
         activateSpatialTabFromHash();
 
