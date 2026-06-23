@@ -13,6 +13,8 @@ pub mod navigation;
 pub mod pga;
 /// Unified manifold projection — one `project()`, many views (Phase 1.4).
 pub mod projection;
+/// Physics of artefacts — bbox admission, kinematic joints, material/mass/momentum (Phase 2).
+pub mod physics;
 pub mod contract;
 pub mod spectral;
 pub mod acoustic;
