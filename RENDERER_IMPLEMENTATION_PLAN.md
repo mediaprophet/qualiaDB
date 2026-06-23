@@ -127,8 +127,10 @@ The precondition for "fast on every device" being non-fiction (migration review 
 - mass / material / momentum (`P` in the Manifold-Coordinate); `specialized_libs/physics_simulation`; PGA
   geometry that **refuses to contract** on a bounding-box violation; joints as kinematic multivectors.
   - *Acceptance:* an artefact deterministically **refuses** an action that violates its bounding box (test); a
-    kinematic multivector animates a joint over `t` (screenshot/test).
-- **Rail-check:** deterministic prevention (no probabilistic guess); zero-heap operators.
+    kinematic multivector animates a joint over `t` (screenshot/test). **✅ MET 2026-06-23** (`f60df3969`):
+    `render/physics/{aabb,admission,joint,material}.rs` — 16/16 tests; both acceptance items test-verified.
+- **Rail-check:** deterministic prevention (no probabilistic guess); zero-heap operators. **met** (deterministic
+  admission; fixed-array operators). Optional next: live viewer integration (animate a loaded mesh via a joint).
 
 ### Phase 3 — Place / space / time *(spatio-temporal binding; STELLAR §E step 3)*
 - `x,y,z` (space) + `t` (temporal evolution / animation) + **GeoSPARQL** place/jurisdiction; native **RCC-8**
@@ -228,6 +230,15 @@ code, not assumed. Designed-now/built-later items are labelled, never presented 
 ---
 
 ## Progress log
+
+### 2026-06-23 — Phase 2 DONE (acceptance): physics of artefacts (`f60df3969`)
+`render/physics/` — deterministic, zero-alloc, on the `render::pga` motor oracle:
+- **aabb** (artefact extent + rigid/scale transform), **admission** (deterministic refuse of
+  contraction-below-floor / out-of-world — rotation is correctly *not* contraction), **joint**
+  (revolute/prismatic PGA motors over `t`, chainable), **material** (mass = density·volume,
+  momentum `P = m·v`, kinetic energy). **16/16 tests**; native + wasm(portal) green.
+- Acceptance (test-based) met: deterministic bbox refusal + kinematic joint over `t`. Optional
+  follow-up: wire a joint to animate a loaded mesh in the viewport (the visible "screenshot" half).
 
 ### 2026-06-23 — Phase 0.2a DONE: renderer consolidated into a `render/` module tree (no monoliths)
 In-crate restructure (precursor to the 0.2b standalone crate), honouring "libraries with
