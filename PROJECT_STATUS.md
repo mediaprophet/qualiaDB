@@ -14,7 +14,9 @@ A **sovereign, edge-native, neuro-symbolic engine**: a person-controlled semanti
 VM + in-process LLM, written in **Rust + WGSL (wgpu)**, that runs on hardware ordinary people own.
 The mission is human-centric: the system serves the person and is bound by human-ratified values, not
 the other way round. It is **not** an LLM wrapper — it has its own weight format, kernels, and
-governance substrate.
+governance substrate. The LLM is a **substrate for projection and generation, not an oracle**: every
+output remains subject to the attested governance surface (Phase-6 model-as-substrate; the 10D tensor
+manifold is the primary substrate, text/vision are projections of it).
 
 **Non-negotiable constraints (every design + every external suggestion must respect these):**
 - **No external inference/runtime libraries** — no llama.cpp / ggml / ONNXRuntime / PyTorch / Ollama
