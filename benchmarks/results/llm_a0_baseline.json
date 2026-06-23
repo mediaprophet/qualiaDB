@@ -1,0 +1,54 @@
+[
+  {
+    "label": "SmolLM2-360M Q8",
+    "model_path": "../../docs/models/smollm2-360m-instruct-q8_0.gguf",
+    "quantization": "Q8_0",
+    "model": {
+      "n_layer": 32,
+      "n_head": 15,
+      "n_kv_head": 5,
+      "mapped_bytes": 386404992,
+      "kv_cache_bytes": 83886080,
+      "directml_enabled": true
+    },
+    "prompt_tokens": 5,
+    "output_tokens": 64,
+    "cold_ttft_ms": 2728.7418,
+    "cold_total_ms": 42790.5843,
+    "warm_ttft_ms": 1100.4795000000001,
+    "warm_total_ms": 42554.06686666667,
+    "load_ms": 407.7083666666667,
+    "prefill_ms": 0.018266666666666667,
+    "prefill_tok_s": 218978.10218978103,
+    "decode_ms": 42053.4799,
+    "decode_tok_s": 1.521871677497015,
+    "gpu_timestamp_supported": false,
+    "note": ""
+  },
+  {
+    "label": "SmolLM2-360M Q4_K_M",
+    "model_path": "../../docs/models/SmolLM2-360M-Instruct-Q4_K_M.gguf",
+    "quantization": "Q4_K_M",
+    "model": {
+      "n_layer": 32,
+      "n_head": 15,
+      "n_kv_head": 5,
+      "mapped_bytes": 270590880,
+      "kv_cache_bytes": 83886080,
+      "directml_enabled": true
+    },
+    "prompt_tokens": 5,
+    "output_tokens": 64,
+    "cold_ttft_ms": 1459.7856,
+    "cold_total_ms": 56145.981,
+    "warm_ttft_ms": 1229.4392666666668,
+    "warm_total_ms": 57847.487133333336,
+    "load_ms": 393.3225333333333,
+    "prefill_ms": 0.047999999999999994,
+    "prefill_tok_s": 83333.33333333333,
+    "decode_ms": 57400.25726666666,
+    "decode_tok_s": 1.114977581070284,
+    "gpu_timestamp_supported": false,
+    "note": ""
+  }
+]

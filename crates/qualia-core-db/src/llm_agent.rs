@@ -776,6 +776,9 @@ impl LocalLlmAgent {
                     .unwrap_or_else(|e| panic!("Failed to create Tokio runtime for LLM thread: {}", e));
                 let _rt_guard = rt.enter();
 
+                // A0 phase timing (D17/D22): once-per-phase, off the per-token hot path.
+                let t_phase = std::time::Instant::now();
+
                 let lora_adapter = lora_for_thread;
                 let sieve_spec = sieve_spec;
                 let sieve_lex_path = sieve_lex_path;
@@ -827,6 +830,10 @@ impl LocalLlmAgent {
                 let emb_dim = emb_dim.min(MAX_EMB_DIM);
                 engine.reset_kv_cache();
 
+                // Phase boundary: load (mmap/adopt + tokenizer + tensor index + setup) done.
+                crate::llm_bench::record_load_ns(t_phase.elapsed().as_nanos() as u64);
+                let t_prefill = std::time::Instant::now();
+
                 // Chunked prefill: populate KV for prompt tokens [0, prompt_len-1).
                 let prompt_len = ctx.len();
                 crate::tensor::kv_provenance::rebuild_prompt_provenance(
@@ -876,6 +883,12 @@ impl LocalLlmAgent {
                     }
                 }
 
+                // Phase boundary: prefill done. Decode phase begins below.
+                crate::llm_bench::record_prefill(
+                    t_prefill.elapsed().as_nanos() as u64,
+                    prompt_len.saturating_sub(1) as u64,
+                );
+
                 let mut out_ids: Vec<u32> = Vec::new();
                 let mut streamed_len = 0usize;
                 let mut sieve = if use_sieve {
@@ -888,7 +901,13 @@ impl LocalLlmAgent {
                 let gen_budget = if sieve.is_some() {
                     3usize
                 } else {
-                    DECODE_TOKEN_BUDGET as usize
+                    // Benchmark override (A0): a fixed decode count for stable tok/s; 0 = default.
+                    let ov = crate::llm_bench::decode_budget_override();
+                    if ov > 0 {
+                        ov as usize
+                    } else {
+                        DECODE_TOKEN_BUDGET as usize
+                    }
                 };
 
                 #[cfg(not(target_arch = "wasm32"))]
@@ -898,6 +917,7 @@ impl LocalLlmAgent {
                     0,
                 );
 
+                let t_decode = std::time::Instant::now();
                 for step in 0..gen_budget {
                     crate::gpu_context::record_llm_decode_step();
 
@@ -1075,6 +1095,12 @@ impl LocalLlmAgent {
                         }
                     }
                 }
+
+                // Phase boundary: decode loop complete.
+                crate::llm_bench::record_decode(
+                    t_decode.elapsed().as_nanos() as u64,
+                    out_ids.len() as u64,
+                );
 
                 let _ = lp.push(LlmMsg::Eos);
                 let text = if semantic_quin.is_some() {

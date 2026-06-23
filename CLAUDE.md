@@ -136,3 +136,27 @@ These break things if violated:
 - `fiduciary_crypto.rs` is **real ML-DSA-65 (FIPS-204) via the `fips204` crate** as of 0.0.12. It previously contained a SHA3-based *simulation* of ML-DSA — that fake lattice path has been removed, and the serialized key/signature byte layouts changed (1952-byte pk / 4032-byte sk / 3309-byte sig). If recall/older docs describe it as "simplified for demonstration", that is stale.
 - `specialized_libs/cryptographic_library.rs` real primitives: Ed25519 (sign/verify for non-MLDSA keys), **ML-DSA-65** (for `KeyAlgorithm::MLDSA`, via `fiduciary_crypto.rs`), AES-256-GCM + **ChaCha20-Poly1305 + XChaCha20-Poly1305** (AEAD), SHA-256/SHA-512 + **BLAKE3** (hashing), **HKDF-SHA256** (KDF). Still scaffold-only (enum variants without backends): Kyber/NTRU/SPHINCS, RSA/ECDSA, and the zk-SNARK/Groth16/PLONK proof types (`generate_proof_data` is a SHA-256 commitment, not a real proof). See `CRYPTO_IMPLEMENTATION_PLAN.md`.
 - `SparqlDidHandler::sign_with_did` (`sparql_did.rs`) intentionally **fails closed** (returns `Err`) — the SPARQL query layer holds no private keys. Sign via the identity/key-vault layer instead. It previously returned a forged all-zero 64-byte signature.
+
+---
+
+## 9. Per-step progress logging (PROJECT RULE)
+
+When executing a multi-step plan/sequence (e.g. the STELLAR §A phases A0→A7), **append a dated
+entry to a single, well-named progress-log `.md` at the end of every step — before starting the
+next one.** This log is how the human (Timothy) sees results and decides where to help; it is not
+optional.
+
+Each entry must contain, plainly and honestly:
+1. **Step / phase** + status (done / partial / blocked).
+2. **What was built** — files touched, the mechanism in one or two sentences.
+3. **Measured results** — real numbers (or "not measured"); never extrapolate a kernel figure to
+   end-to-end. State the caveats (what the number does and does not mean).
+4. **⚑ Where I need the human** — the curation-grade / out-of-band items only Timothy can decide
+   or supply (eval corpus, attested content, acceptable-quality threshold, direction calls), framed
+   as concrete asks so he can act. If none, say "none this step."
+5. **Next step** + any new follow-ups discovered.
+
+Logs are honest engineering records (errors and regressions included), mirror the measurement-honesty
+rule, and never contain personal circumstances. The active log for the perf push is
+[`STELLAR_A_PROGRESS_LOG.md`](STELLAR_A_PROGRESS_LOG.md); start a new log per major workstream with a
+descriptive name.

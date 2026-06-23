@@ -780,6 +780,25 @@ pub mod tensor_roles;
 /// Task #12 / STELLAR §A: native GPU dispatch of the ternary GEMM kernel + on-device parity test.
 #[cfg(not(target_arch = "wasm32"))]
 pub mod ternary_gpu;
+/// STELLAR §A A1a: GPU top-K reduction — CPU oracle + host merge + the WGSL kernel.
+#[cfg(any(not(target_arch = "wasm32"), feature = "wasm-llm"))]
+pub mod topk;
+/// STELLAR §A A1a: native GPU dispatch of the top-K reduction + on-device parity test.
+#[cfg(not(target_arch = "wasm32"))]
+pub mod topk_gpu;
+/// STELLAR §A AH-track H0: host topology + capability sensor (enumerate all adapters; discrete vs unified).
+#[cfg(not(target_arch = "wasm32"))]
+pub mod host_topology;
+/// STELLAR §A AH-track H1(a): cross-circuit GEMV benchmark → measured capability matrix (CPU/iGPU/GPU).
+#[cfg(not(target_arch = "wasm32"))]
+pub mod device_benchmark;
+/// STELLAR §A AH-track H2: residency + device-priority planner (discovery → employment plan, D31).
+#[cfg(not(target_arch = "wasm32"))]
+pub mod residency_planner;
+/// STELLAR §A A0 (D17/D22): shared native LLM benchmark harness — the one measurement
+/// surface for the existing F16/Q8 path and the future ternary/top-k paths.
+#[cfg(not(target_arch = "wasm32"))]
+pub mod llm_bench;
 pub mod identifier;
 #[cfg(not(target_arch = "wasm32"))]
 pub mod mcp_server;
