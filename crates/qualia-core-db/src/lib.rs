@@ -130,6 +130,7 @@ pub mod portal_standpoint;
 pub mod portal_camera;
 pub mod portal_navigation;
 pub mod portal_pga;
+pub mod manifold_project;
 pub mod portal_phenomenal_contract;
 pub mod portal_spectral;
 pub mod portal_acoustic;
