@@ -556,13 +556,33 @@ impl QualiaPortal {
         };
         if let Some(ref mut gpu) = self.gpu {
             gpu.set_artefact_joint(Some(joint));
+            gpu.set_artefact_world(None); // a free spin/slide — no admission clamp
         }
     }
 
-    /// Phase 2 — freeze the artefact (joint → identity).
+    /// Phase 2 — visible **deterministic refusal**: slide the artefact along +X (prismatic joint)
+    /// into a world bound; the admission gate refuses poses that would leave the bound, so the
+    /// artefact deterministically halts at the wall instead of passing through.
+    pub fn demo_artefact_refusal(&mut self) {
+        use crate::render::physics::{Aabb, Joint, JointKind};
+        let joint = Joint { kind: JointKind::Prismatic { axis: [1.0, 0.0, 0.0] }, rate: 0.4 };
+        let world = Aabb::new([-1.5, -3.0, -3.0], [1.5, 3.0, 3.0]);
+        if let Some(ref mut gpu) = self.gpu {
+            gpu.set_artefact_joint(Some(joint));
+            gpu.set_artefact_world(Some(world));
+        }
+    }
+
+    /// Phase 2 — whether the artefact's proposed motion is currently being refused (clamped).
+    pub fn artefact_refused(&self) -> bool {
+        self.gpu.as_ref().map(|g| g.artefact_refused()).unwrap_or(false)
+    }
+
+    /// Phase 2 — freeze the artefact (joint → identity, no world clamp).
     pub fn stop_artefact_animation(&mut self) {
         if let Some(ref mut gpu) = self.gpu {
             gpu.set_artefact_joint(None);
+            gpu.set_artefact_world(None);
         }
     }
 

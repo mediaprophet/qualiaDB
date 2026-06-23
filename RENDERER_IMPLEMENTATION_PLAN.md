@@ -269,10 +269,26 @@ code, not assumed. Designed-now/built-later items are labelled, never presented 
   artefact" toggle spins a loaded mesh via a revolute joint — verified in Chrome (two poses).
 - Bind momentum `P` to the NQuin Manifold-Coordinate (STELLAR §C file-format work).
 - Inter-artefact collision/contact (current physics is per-artefact admission + kinematics only).
-- Surface the **deterministic refusal** visibly too (e.g. a world-bound demo where a translating
-  joint is admission-clamped at the boundary) — currently refusal is unit-tested, joint is visible.
+- ~~Surface the **deterministic refusal** visibly too.~~ **DONE 2026-06-23**: a "Demo refusal"
+  button slides a loaded mesh (+X prismatic joint) into a world bound; admission clamps it at the
+  wall and `artefact_refused()` flips the on-screen verdict — verified in Chrome (clamped flush at
+  the bound, `refused=true`, held).
 
 ## Progress log
+
+### 2026-06-23 — Phase 2 ROUND-OUT: visible deterministic refusal + elapsed-time joint fix
+- **Visible refusal** — `demo_artefact_refusal()` (portal) drives the loaded mesh along +X into a
+  world `Aabb`; `PortalGpu::update_model` gates each frame's proposed pose through `Admission` and
+  holds the last admitted pose on refusal. `artefact_refused()` surfaces the verdict; the viewer's
+  "Demo refusal" button + `#refusal-status` line show admit→REFUSED live. Deterministic tick probe:
+  `admit` while in-bounds, `REFUSED` once past the bound, then stable.
+- **Bug fixed — joints now driven by *elapsed* time, not absolute sim-time.** `motor_at` was fed the
+  renderer's monotonic `self.time` (accumulating since page load), so arming a prismatic slide late
+  proposed a huge translation on frame 1 → instant refuse, mesh stuck at the origin (never slid).
+  Added `artefact_t0` (latched on the first post-arm frame; reset on `set_artefact_joint`) and drive
+  the joint by `time − t0`. A slide/spin now always starts from rest when armed, regardless of how
+  long the page has been open. Verified: after pushing sim-time to ~60 s, a freshly-armed slide still
+  glides from rest (~8 admitted frames) before clamping.
 
 ### 2026-06-23 — Phase 2 DONE (acceptance): physics of artefacts (`f60df3969`)
 `render/physics/` — deterministic, zero-alloc, on the `render::pga` motor oracle:

@@ -8,8 +8,8 @@ use crate::gpu_context::{
 };
 use crate::render::camera::CameraState;
 use crate::render::navigation::PICK_SENTINEL;
-use crate::render::pga::motor_to_mat4_col;
-use crate::render::physics::Joint;
+use crate::render::pga::{motor_to_mat4_col, Motor};
+use crate::render::physics::{Aabb, Admission, Joint};
 use crate::render::standpoint::spectator_default;
 use crate::render::telemetry::{AmbientUniforms, ObserverStandpoint, ParticleInstance, SystemTelemetry};
 use crate::shaders::viewport::{AMBIENT_WGSL, BLOOM_WGSL, MESH_WGSL, PROJECTOR_WGSL};
@@ -106,7 +106,15 @@ pub struct PortalGpu {
     mesh: Option<MeshGpu>,
     model_buf: wgpu::Buffer,
     mesh_model_bind: wgpu::BindGroup,
-    artefact_joint: Option<crate::render::physics::Joint>,
+    artefact_joint: Option<Joint>,
+    /// Sim-time at which the current joint was engaged; the joint is driven by *elapsed* time
+    /// (`time − artefact_t0`), not absolute sim-time, so a slide/spin always starts from rest when
+    /// armed (set lazily on the first frame after `set_artefact_joint`).
+    artefact_t0: Option<f32>,
+    mesh_base_aabb: Option<Aabb>,
+    artefact_world: Option<Aabb>,
+    last_admitted: Motor,
+    last_refused: bool,
     bloom: Option<BloomChain>,
     ambient_bind_group_layout: wgpu::BindGroupLayout,
     ambient_bind_group: wgpu::BindGroup,
@@ -604,6 +612,11 @@ impl PortalGpu {
             model_buf,
             mesh_model_bind,
             artefact_joint: None,
+            artefact_t0: None,
+            mesh_base_aabb: None,
+            artefact_world: None,
+            last_admitted: Motor::identity(),
+            last_refused: false,
             bloom,
             ambient_bind_group_layout,
             ambient_bind_group,
@@ -692,19 +705,54 @@ impl PortalGpu {
     /// Drive the loaded mesh by a kinematic joint (Phase 2). `None` freezes it at identity.
     pub fn set_artefact_joint(&mut self, joint: Option<Joint>) {
         self.artefact_joint = joint;
+        self.artefact_t0 = None; // re-engage from rest: the slide/spin starts at elapsed t = 0
+        self.last_admitted = Motor::identity();
+        self.last_refused = false;
     }
 
-    /// Write the per-artefact model transform for this frame: the joint pose at `time`, or identity.
-    fn write_model_uniform(&self, time: f32) {
-        let model = match self.artefact_joint {
-            Some(j) => motor_to_mat4_col(j.motor_at(time)),
-            None => [
-                [1.0, 0.0, 0.0, 0.0],
-                [0.0, 1.0, 0.0, 0.0],
-                [0.0, 0.0, 1.0, 0.0],
-                [0.0, 0.0, 0.0, 1.0],
-            ],
+    /// Constrain the artefact to a world bound; a joint pose that would leave it is refused
+    /// (the artefact holds at the last admitted pose). `None` = unconstrained.
+    pub fn set_artefact_world(&mut self, world: Option<Aabb>) {
+        self.artefact_world = world;
+    }
+
+    /// Whether last frame's proposed joint pose was deterministically refused (clamped at the bound).
+    pub fn artefact_refused(&self) -> bool {
+        self.last_refused
+    }
+
+    /// Resolve this frame's per-artefact model transform: the joint pose at `time`, gated through
+    /// the admission policy (refuse out-of-world → hold the last admitted pose), then write it.
+    fn update_model(&mut self, time: f32) {
+        let proposed = match self.artefact_joint {
+            // Drive by *elapsed* time since the joint was engaged, not absolute sim-time, so a slide
+            // always starts from rest when armed (the t0 is latched on this first post-arm frame).
+            Some(j) => {
+                let t0 = *self.artefact_t0.get_or_insert(time);
+                j.motor_at(time - t0)
+            }
+            None => Motor::identity(),
         };
+        let motor = match (self.mesh_base_aabb, self.artefact_world) {
+            (Some(base), Some(world)) => {
+                match Admission::new(0.0, Some(world)).admit(&base, proposed, [1.0, 1.0, 1.0]) {
+                    Ok(_) => {
+                        self.last_refused = false;
+                        self.last_admitted = proposed;
+                        proposed
+                    }
+                    Err(_) => {
+                        self.last_refused = true;
+                        self.last_admitted // deterministic refusal: hold at the boundary
+                    }
+                }
+            }
+            _ => {
+                self.last_refused = false;
+                proposed
+            }
+        };
+        let model = motor_to_mat4_col(motor);
         self.queue
             .write_buffer(&self.model_buf, 0, bytemuck::cast_slice(&model));
     }
@@ -733,6 +781,9 @@ impl PortalGpu {
         });
         let index_count = indices.len() as u32;
         self.mesh = Some(MeshGpu { vertex_buf, index_buf, index_count });
+        self.mesh_base_aabb = Aabb::from_points(positions); // for Phase 2 admission
+        self.last_admitted = Motor::identity();
+        self.last_refused = false;
         index_count / 3
     }
 
@@ -936,7 +987,7 @@ impl PortalGpu {
             .write_buffer(&self.telemetry_buf, 0, bytemuck::bytes_of(telemetry));
         self.write_camera_uniform(time);
         self.write_observer_uniform();
-        self.write_model_uniform(time);
+        self.update_model(time);
 
         let frame = self
             .surface

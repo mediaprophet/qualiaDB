@@ -138,6 +138,14 @@ export class QualiaPortal {
         wasm.qualiaportal_animate_artefact(this.__wbg_ptr, ptr0, len0, ax, ay, az, rate);
     }
     /**
+     * Phase 2 — whether the artefact's proposed motion is currently being refused (clamped).
+     * @returns {boolean}
+     */
+    artefact_refused() {
+        const ret = wasm.qualiaportal_artefact_refused(this.__wbg_ptr);
+        return ret !== 0;
+    }
+    /**
      * Cold-bake CQT sidecar (log-spaced bins) for selected tensor node.
      * @param {number} frames
      * @returns {Uint8Array}
@@ -210,6 +218,14 @@ export class QualiaPortal {
             throw takeFromExternrefTable0(ret[1]);
         }
         return takeFromExternrefTable0(ret[0]);
+    }
+    /**
+     * Phase 2 — visible **deterministic refusal**: slide the artefact along +X (prismatic joint)
+     * into a world bound; the admission gate refuses poses that would leave the bound, so the
+     * artefact deterministically halts at the wall instead of passing through.
+     */
+    demo_artefact_refusal() {
+        wasm.qualiaportal_demo_artefact_refusal(this.__wbg_ptr);
     }
     /**
      * Drain up to `max` control commands and apply to this portal. Returns count applied.
@@ -519,7 +535,7 @@ export class QualiaPortal {
         return ret >>> 0;
     }
     /**
-     * Phase 2 — freeze the artefact (joint → identity).
+     * Phase 2 — freeze the artefact (joint → identity, no world clamp).
      */
     stop_artefact_animation() {
         wasm.qualiaportal_stop_artefact_animation(this.__wbg_ptr);

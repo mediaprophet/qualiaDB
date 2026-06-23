@@ -612,6 +612,7 @@ export function switchTab(tabId, btn, opts = {}) {
 /** Phase 1.4: paint the 2D shadow of the manifold — the SAME project() the 3D scene uses, target
  *  Plane2D — onto the companion canvas, so one projection is visibly shown as two views. */
 let _plane2dRaf = 0;
+let _refusalDemoActive = false; // Phase 2: showing the deterministic-refusal demo
 function drawPlane2dShadow() {
     const cv = document.getElementById('plane2d-canvas');
     if (cv && qualiaPortal && typeof qualiaPortal.project_resident_plane2d === 'function') {
@@ -631,6 +632,17 @@ function drawPlane2dShadow() {
                 ctx.arc(x, y, 2.2, 0, Math.PI * 2);
                 ctx.fill();
             }
+        }
+    }
+    if (_refusalDemoActive && qualiaPortal && typeof qualiaPortal.artefact_refused === 'function') {
+        const rs = document.getElementById('refusal-status');
+        if (rs) {
+            let refused = false;
+            try { refused = qualiaPortal.artefact_refused(); } catch (_) { /* portal busy */ }
+            rs.textContent = refused
+                ? '● REFUSED — admission clamped the artefact at the world bound'
+                : '○ admitted — sliding toward the bound…';
+            rs.style.color = refused ? 'rgb(248,113,113)' : 'rgb(110,231,183)';
         }
     }
     _plane2dRaf = requestAnimationFrame(drawPlane2dShadow);
@@ -715,11 +727,24 @@ export async function bootSpatialPage() {
             animateBox.dataset.bound = '1';
             animateBox.addEventListener('change', (e) => {
                 if (!qualiaPortal) return;
+                _refusalDemoActive = false;
+                const rs = document.getElementById('refusal-status');
+                if (rs) rs.textContent = '';
                 if (e.target.checked && typeof qualiaPortal.animate_artefact === 'function') {
                     qualiaPortal.animate_artefact('revolute', 0.0, 1.0, 0.0, 0.8); // Phase 2: spin about Y
                 } else if (typeof qualiaPortal.stop_artefact_animation === 'function') {
                     qualiaPortal.stop_artefact_animation();
                 }
+            });
+        }
+        const refusalBtn = document.getElementById('demo-refusal-btn');
+        if (refusalBtn && !refusalBtn.dataset.bound) {
+            refusalBtn.dataset.bound = '1';
+            refusalBtn.addEventListener('click', () => {
+                if (!qualiaPortal || typeof qualiaPortal.demo_artefact_refusal !== 'function') return;
+                if (animateBox) animateBox.checked = false; // mutually exclusive with the spin
+                qualiaPortal.demo_artefact_refusal();
+                _refusalDemoActive = true;
             });
         }
         if (qualiaPortal && !_plane2dRaf) drawPlane2dShadow(); // Phase 1.4 companion 2D view
