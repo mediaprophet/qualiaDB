@@ -113,7 +113,19 @@ pub struct PortalGpu {
 }
 
 impl PortalGpu {
+    /// Native sync wrapper around the async initialiser (`block_on` traps in browser WASM, so the
+    /// browser path must call `try_new_async` and await it instead).
+    #[cfg(not(target_arch = "wasm32"))]
     pub fn try_new(canvas: &web_sys::HtmlCanvasElement, particle_cap: usize) -> Result<Self, String> {
+        pollster::block_on(Self::try_new_async(canvas, particle_cap))
+    }
+
+    /// Async WebGPU init — awaits `request_adapter` / `request_device` (the browser main thread
+    /// cannot block). Native callers use the `try_new` wrapper above.
+    pub async fn try_new_async(
+        canvas: &web_sys::HtmlCanvasElement,
+        particle_cap: usize,
+    ) -> Result<Self, String> {
         let width = canvas.width().max(1);
         let height = canvas.height().max(1);
         let _ = particle_cap;
@@ -128,25 +140,37 @@ impl PortalGpu {
             .create_surface(wgpu::SurfaceTarget::Canvas(canvas.clone()))
             .map_err(|e| format!("surface: {e}"))?;
 
-        let adapter = pollster::block_on(instance.request_adapter(&wgpu::RequestAdapterOptions {
-            power_preference: wgpu::PowerPreference::LowPower,
-            compatible_surface: Some(&surface),
-            force_fallback_adapter: false,
-        }))
-        .ok_or_else(|| "no WebGPU adapter".to_string())?;
+        let adapter = instance
+            .request_adapter(&wgpu::RequestAdapterOptions {
+                power_preference: wgpu::PowerPreference::LowPower,
+                compatible_surface: Some(&surface),
+                force_fallback_adapter: false,
+            })
+            .await
+            .ok_or_else(|| "no WebGPU adapter".to_string())?;
 
-        let (device, queue) = pollster::block_on(adapter.request_device(
-            &wgpu::DeviceDescriptor {
-                label: Some("qualia-portal-gpu"),
-                required_features: wgpu::Features::empty(),
-                required_limits: wgpu::Limits::downlevel_webgl2_defaults(),
-            },
-            None,
-        ))
-        .map_err(|e| format!("device: {e}"))?;
+        let (device, queue) = adapter
+            .request_device(
+                &wgpu::DeviceDescriptor {
+                    label: Some("qualia-portal-gpu"),
+                    required_features: wgpu::Features::empty(),
+                    // WebGPU baseline limits — NOT downlevel_webgl2_defaults, which set
+                    // max_storage_buffers_per_shader_stage = 0 and silently invalidate both portal
+                    // pipelines (their vertex shaders read the tensor SOA / particle storage
+                    // buffers), turning the viewport black. Any BROWSER_WEBGPU adapter supports the
+                    // baseline. The limits-shim strips fields Chrome doesn't recognise.
+                    required_limits: wgpu::Limits::default(),
+                },
+                None,
+            )
+            .await
+            .map_err(|e| format!("device: {e}"))?;
 
         let device = Arc::new(device);
         let queue = Arc::new(queue);
+
+        // DIAG: capture deferred pipeline/shader creation validation errors.
+        device.push_error_scope(wgpu::ErrorFilter::Validation);
 
         let caps = surface.get_capabilities(&adapter);
         let format = caps
@@ -423,6 +447,18 @@ impl PortalGpu {
         }
         global_vram_ledger().record_render(render_bytes);
 
+        // Surface otherwise-silent deferred pipeline/shader creation errors. Dawn (WebGPU) is far
+        // stricter than the native backends, so a pipeline that builds on desktop can be invalid in
+        // the browser and silently render nothing; log it instead of leaving a black viewport.
+        let scope_err = device.pop_error_scope().await;
+        #[cfg(target_arch = "wasm32")]
+        if let Some(err) = &scope_err {
+            web_sys::console::error_1(
+                &format!("[portal_gpu] pipeline/shader creation error: {err}").into(),
+            );
+        }
+        let _ = &scope_err;
+
         Ok(Self {
             device,
             queue,
@@ -480,9 +516,16 @@ impl PortalGpu {
             usage: wgpu::BufferUsages::STORAGE | wgpu::BufferUsages::COPY_DST,
         });
 
+        // Upload the SOA *body* only (skip the 32-byte header). WebGPU requires storage-buffer
+        // binding offsets to be a multiple of minStorageBufferOffsetAlignment (256), so we cannot
+        // bind at offset 32 the way native backends allow — start the buffer at the first record
+        // and bind at offset 0.
+        let body = bytes
+            .get(TENSOR_HEADER_BYTES..)
+            .ok_or_else(|| "tensor buffer shorter than header".to_string())?;
         let tensor_raw_buf = self.device.create_buffer_init(&wgpu::util::BufferInitDescriptor {
             label: Some("portal-tensor-raw-soa"),
-            contents: bytes,
+            contents: body,
             usage: wgpu::BufferUsages::STORAGE | wgpu::BufferUsages::COPY_DST,
         });
 
@@ -537,6 +580,13 @@ impl PortalGpu {
 
     pub fn camera_state(&self) -> CameraState {
         self.camera
+    }
+
+    /// Configured surface/depth size. The swapchain texture follows the canvas backing store,
+    /// so callers compare this to `canvas.width()/height()` and `resize()` on divergence —
+    /// otherwise color and depth attachments mismatch and the render pass fails validation.
+    pub fn surface_size(&self) -> (u32, u32) {
+        (self.width, self.height)
     }
 
     pub fn resize(&mut self, width: u32, height: u32) {
@@ -716,6 +766,30 @@ impl PortalGpu {
             .surface
             .get_current_texture()
             .map_err(|e| format!("surface frame: {e}"))?;
+
+        // On the web backend the swapchain texture tracks the canvas backing store, which can
+        // diverge from the size our depth/picking/bloom targets were built at (device-pixel ratio,
+        // layout settle, a ResizeObserver resizing in CSS pixels without a matching `resize()`).
+        // A depth attachment whose dimensions don't match the colour attachment fails render-pass
+        // validation, the whole frame is dropped, and the viewport stays black. Reconcile every
+        // attachment to the *actual* acquired texture before recording any pass.
+        let fw = frame.texture.width();
+        let fh = frame.texture.height();
+        if fw > 0 && fh > 0 && (fw, fh) != (self.width, self.height) {
+            self.width = fw;
+            self.height = fh;
+            self.config.width = fw;
+            self.config.height = fh;
+            let (depth_texture, depth_view) = create_depth_texture(&self.device, fw, fh);
+            let (picking_texture, picking_view) = create_picking_texture(&self.device, fw, fh);
+            self.depth_texture = depth_texture;
+            self.depth_view = depth_view;
+            self.picking_texture = picking_texture;
+            self.picking_view = picking_view;
+            self.sync_bloom_targets();
+            self.write_camera_uniform(time);
+        }
+
         let view = frame
             .texture
             .create_view(&wgpu::TextureViewDescriptor::default());
@@ -1052,7 +1126,9 @@ fn make_projector_tensor_bind_group(
             binding: 0,
             resource: wgpu::BindingResource::Buffer(wgpu::BufferBinding {
                 buffer: tensor_raw_buf,
-                offset: TENSOR_HEADER_BYTES as u64,
+                // Buffer already starts at the first record (header stripped at upload); offset 0
+                // satisfies the 256-byte minStorageBufferOffsetAlignment that Dawn enforces.
+                offset: 0,
                 size: Some(size),
             }),
         }],

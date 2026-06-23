@@ -752,33 +752,37 @@ impl QualiaPortal {
 
         #[cfg(target_arch = "wasm32")]
         {
-            // PortalGpu::try_new uses pollster::block_on; in browser WASM that traps as
-            // "unreachable" (not a catchable Err). Use the canvas2d path until async GPU init lands.
-            let wasm_sync_gpu_ok = false;
-            if self.gpu.is_none() && !self.gpu_init_failed && has_webgpu() && wasm_sync_gpu_ok {
-                let cap = particle_cap_for_mode(mode, 2);
-                match PortalGpu::try_new(canvas, cap) {
-                    Ok(mut gpu) => {
-                        gpu.set_camera(self.camera.yaw, self.camera.pitch, self.camera.zoom);
-                        gpu.set_standpoint(self.standpoint);
-                        if let Some(ref tensor) = self.last_tensor {
-                            if gpu.upload_tensor_buffer(tensor).ok().unwrap_or(0) > 0 {
-                                self.description = format!(
-                                    "{} tensor nodes · T2 phenomenal viewport",
-                                    gpu.tensor_node_count()
-                                );
-                            }
+            // Async WebGPU init (`portal_init_webgpu`, awaited by JS before the render loop starts)
+            // stashes a ready PortalGpu in PENDING_GPU; adopt it on the first frame. The device is
+            // created asynchronously off the loop because the browser main thread cannot `block_on`.
+            if self.gpu.is_none() && !self.gpu_init_failed {
+                if let Some(mut gpu) = PENDING_GPU.with(|p| p.borrow_mut().take()) {
+                    gpu.set_camera(self.camera.yaw, self.camera.pitch, self.camera.zoom);
+                    gpu.set_standpoint(self.standpoint);
+                    if let Some(ref tensor) = self.last_tensor {
+                        if gpu.upload_tensor_buffer(tensor).ok().unwrap_or(0) > 0 {
+                            self.description = format!(
+                                "{} tensor nodes · T2 phenomenal viewport",
+                                gpu.tensor_node_count()
+                            );
                         }
-                        self.tier = 2;
-                        self.gpu = Some(gpu);
                     }
-                    Err(_) => {
-                        self.gpu_init_failed = true;
-                    }
+                    self.tier = 2;
+                    self.gpu = Some(gpu);
                 }
             }
 
             if let Some(ref mut gpu) = self.gpu {
+                // The WebGPU swapchain texture tracks the canvas backing store, but the depth
+                // texture is only re-created on `resize()`. If the canvas was resized after init
+                // (layout settle, DPR, window resize) without a `resize()` call, color and depth
+                // attachments diverge and every render pass fails validation → black viewport.
+                // Reconcile here so the GPU path self-heals to whatever the canvas actually is.
+                let cw = canvas.width();
+                let ch = canvas.height();
+                if cw > 0 && ch > 0 && gpu.surface_size() != (cw, ch) {
+                    gpu.resize(cw, ch);
+                }
                 gpu.sync_bloom_targets();
                 if gpu
                     .render(self.time as f32, &self.telemetry)
@@ -832,6 +836,33 @@ impl QualiaPortal {
     }
 }
 
+/// A PortalGpu created asynchronously by `portal_init_webgpu`, handed to the next `paint_frame`.
+#[cfg(target_arch = "wasm32")]
+thread_local! {
+    static PENDING_GPU: std::cell::RefCell<Option<PortalGpu>> = std::cell::RefCell::new(None);
+}
+
+/// Create the WebGPU device + surface asynchronously and stash it for the render loop to adopt.
+/// JS calls this **once, awaited**, right after constructing the portal and **before** the render
+/// loop starts — the canvas must still be context-free (no 2d context yet) so the WebGPU surface
+/// can bind to it. Returns `true` if the GPU path is now armed; on `false`/throw the portal keeps
+/// the canvas2d fallback.
+#[cfg(target_arch = "wasm32")]
+#[wasm_bindgen]
+pub async fn portal_init_webgpu(canvas: HtmlCanvasElement) -> Result<bool, JsValue> {
+    if !has_webgpu() {
+        return Ok(false);
+    }
+    let cap = particle_cap_for_mode(global_vram_ledger().mode(), 2);
+    match PortalGpu::try_new_async(&canvas, cap).await {
+        Ok(gpu) => {
+            PENDING_GPU.with(|p| *p.borrow_mut() = Some(gpu));
+            Ok(true)
+        }
+        Err(e) => Err(JsValue::from_str(&format!("portal_init_webgpu: {e}"))),
+    }
+}
+
 fn detect_tier() -> u8 {
     if has_webgpu() { 1 } else { 0 }
 }
@@ -847,11 +878,13 @@ fn has_webgpu() -> bool {
         .unwrap_or(false)
 }
 
-fn paint_background(ctx: &CanvasRenderingContext2d, w: f64, h: f64, spectral_shift: f32) {
-    let (r, g, b) = sigma_to_display_rgb(spectral_shift);
+fn paint_background(ctx: &CanvasRenderingContext2d, w: f64, h: f64, _spectral_shift: f32) {
+    // Black background. (Previously a spectral-shift `rgb(r,g,b)` top stop, which read as a pink
+    // wash.) The σ spectral signal still drives the particle colours in `paint_ambient_field`, so
+    // the spectral projection stays visible — on black, where it reads cleanly.
     let gradient = ctx.create_linear_gradient(0.0, 0.0, w, h);
-    let _ = gradient.add_color_stop(0.0, &format!("rgb({r},{g},{b})"));
-    let _ = gradient.add_color_stop(1.0, "#080c12");
+    let _ = gradient.add_color_stop(0.0, "#05070b");
+    let _ = gradient.add_color_stop(1.0, "#000000");
     ctx.set_fill_style(&JsValue::from(gradient));
     ctx.fill_rect(0.0, 0.0, w, h);
 }

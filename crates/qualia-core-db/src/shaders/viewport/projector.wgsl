@@ -61,7 +61,8 @@ struct VertexOutput {
     @location(2) epistemic_q: f32,
     @location(3) v_band: f32,
     @location(4) alpha_gain: f32,
-    @location(5) pick_id: u32,
+    // Dawn (WebGPU) rejects non-flat integral inter-stage outputs; naga (native) is lenient.
+    @location(5) @interpolate(flat) pick_id: u32,
 };
 
 const TWO_PI: f32 = 6.283185307;

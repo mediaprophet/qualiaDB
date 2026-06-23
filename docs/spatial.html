@@ -32,7 +32,7 @@
         .spinbtn:hover { background: rgba(16, 185, 129, 0.3); }
         .spinbtn:disabled { opacity: 0.4; cursor: not-allowed; }
         #canvas-container { border-radius: 16px; overflow: hidden; position: relative; }
-        #ambient-canvas { position: absolute; inset: 0; width: 100%; height: 100%; z-index: 0; cursor: grab; }
+        #ambient-canvas { position: absolute; inset: 0; width: 100%; height: 100%; z-index: 0; cursor: grab; background:#000; }
         .telem-slider::-webkit-slider-thumb { background: #34d399; }
     </style>
     <link rel="stylesheet" href="css/site-nav.css">
@@ -45,6 +45,10 @@
     })();
     </script>
     <script src="js/menu-loader.js"></script>
+    <!-- WebGPU limit shim: drops removed limits (e.g. maxInterStageShaderComponents) before the
+         WASM engine's requestDevice, so the GPU 3D path (PortalGpu) works on current Chrome.
+         Classic script → patches GPUAdapter before the deferred module scripts run. -->
+    <script src="js/webgpu-limits-shim.js"></script>
     <!-- COOP/COEP for SharedArrayBuffer + U3 zero-copy acoustic plane -->
     <script>
     (function () {

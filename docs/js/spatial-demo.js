@@ -641,6 +641,10 @@ export async function bootSpatialPage() {
 
     const bootTimer = debugTime('bootSpatialPage');
     try {
+        // Make the viewer pane visible BEFORE GPU init: wgpu's `getContext('webgpu')` returns null
+        // on a canvas that isn't in the rendered tree, so the WebGPU surface must bind while the
+        // viewer tab is laid out (it's otherwise activated later, after init → canvas2d fallback).
+        switchTab('viewer', null, { silent: true });
         await initQualiaLayer();
         if (!wasm) {
             const module = await import('../playground/qualia_core_db.js');
