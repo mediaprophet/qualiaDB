@@ -377,6 +377,42 @@ pub fn compile_gguf_to_q42(input: &[u8], page_log2: u16) -> Result<Vec<u8>, Stri
 /// Q42W) — tensors are verbatim high-fidelity blobs not yet mapped to engine GEMM roles, and the
 /// GGUF hyperparameter block is absent. (Distinguishes it from a `compile_gguf_to_q42` container.)
 pub const FORMAT_FLAG_RAW_TRANSCODE: u32 = 1 << 0;
+/// `format_flags` bit: tensors were **ternary-quantized (BitNet 1.58b)** during transcode — each
+/// blob is `[scale: f32][packed trits]` (`ggml_type = ternary::GGML_TYPE_TERNARY_158`); decode via
+/// `ternary::dequantize_blob`.
+pub const FORMAT_FLAG_TERNARY: u32 = 1 << 1;
+
+/// Decode a high-fidelity source tensor's bytes (`F32`/`F16`/`BF16`) to `f32` into `out` (cleared
+/// and refilled). Cold-path (ingest) helper for the ternary transcode.
+fn decode_safetensor_to_f32(raw: &[u8], ggml: u32, count: usize, out: &mut Vec<f32>) {
+    use crate::safetensor::{GGML_BF16, GGML_F16, GGML_F32};
+    out.clear();
+    out.reserve(count);
+    match ggml {
+        GGML_F32 => {
+            for k in 0..count {
+                let o = k * 4;
+                if o + 4 > raw.len() { break; }
+                out.push(f32::from_le_bytes([raw[o], raw[o + 1], raw[o + 2], raw[o + 3]]));
+            }
+        }
+        GGML_F16 => {
+            for k in 0..count {
+                let o = k * 2;
+                if o + 2 > raw.len() { break; }
+                out.push(half::f16::from_le_bytes([raw[o], raw[o + 1]]).to_f32());
+            }
+        }
+        GGML_BF16 => {
+            for k in 0..count {
+                let o = k * 2;
+                if o + 2 > raw.len() { break; }
+                out.push(half::bf16::from_le_bytes([raw[o], raw[o + 1]]).to_f32());
+            }
+        }
+        _ => {}
+    }
+}
 
 /// Outcome of a streaming transcode — the numbers that make the memory claim falsifiable.
 #[derive(Debug, Clone, Copy, PartialEq, Eq)]
@@ -526,6 +562,148 @@ pub fn transcode_safetensor_to_q42<W: std::io::Write>(
         bytes_written,
         largest_tensor_bytes: largest,
         total_tensor_bytes,
+        peak_working_bytes: peak_working,
+    })
+}
+
+/// Task #12 / STELLAR §A — **streaming transcode with BitNet 1.58b ternary compression**:
+/// safetensor (high-fidelity) → Q42W, each tensor quantized to `{-1,0,+1}` with a per-tensor
+/// absmean scale and packed at ≈ 1.6 bits/weight (`ternary` module) *during* transcode.
+///
+/// Same streaming discipline as [`transcode_safetensor_to_q42`] (layout from the header; one tensor
+/// in flight). Each blob is `[scale: f32][packed trits]` with `ggml_type =
+/// ternary::GGML_TYPE_TERNARY_158`; the container carries `FORMAT_FLAG_TERNARY`. Decode with
+/// `ternary::dequantize_blob`. Round-trips through [`Q42TensorIndex::from_q42`].
+pub fn transcode_safetensor_to_q42_ternary<W: std::io::Write>(
+    src: &[u8],
+    page_log2: u16,
+    out: &mut W,
+) -> Result<TranscodeReport, String> {
+    use crate::safetensor::{is_high_fidelity_ggml, parse_safetensor_header, safetensor_dtype_to_ggml};
+    use crate::ternary::{ternary_blob, ternary_blob_len, GGML_TYPE_TERNARY_158};
+
+    let page_log2 = if page_log2 == 0 { Q42W_DEFAULT_PAGE_LOG2 } else { page_log2 };
+    if !(8..=30).contains(&page_log2) {
+        return Err(format!("page_log2 {page_log2} out of range"));
+    }
+    let page = 1usize << page_log2;
+
+    let plan = parse_safetensor_header(src)?;
+    if plan.tensors.is_empty() {
+        return Err("safetensor: no tensors".to_string());
+    }
+
+    // 1) dtype gate + element counts (from the header alone).
+    let n = plan.tensors.len();
+    let mut ggml_types = Vec::with_capacity(n);
+    let mut counts = Vec::with_capacity(n);
+    for t in &plan.tensors {
+        let g = safetensor_dtype_to_ggml(&t.dtype).ok_or_else(|| {
+            format!("transcode: tensor '{}' dtype {} is not a high-fidelity source (rejected)", t.name, t.dtype)
+        })?;
+        if !is_high_fidelity_ggml(g) {
+            return Err(format!("transcode: tensor '{}' is low-precision (Q4-class) — rejected", t.name));
+        }
+        let count: usize = if t.shape.is_empty() { 0 } else { t.shape.iter().product() };
+        ggml_types.push(g);
+        counts.push(count);
+    }
+
+    // 2) Layout: each output tensor is a compact ternary blob (size known from the count).
+    let manifest_offset = align_up(Q42_WEIGHT_HEADER_BYTES, 16);
+    let manifest_size = Q42_TENSOR_ENTRY_BYTES * n;
+    let blob_offset = align_up(manifest_offset + manifest_size, page);
+    let mut entries: Vec<Q42TensorEntry> = Vec::with_capacity(n);
+    let mut cur = blob_offset;
+    let mut total_out = 0usize;
+    let mut largest_out = 0usize;
+    for (i, t) in plan.tensors.iter().enumerate() {
+        let blen = ternary_blob_len(counts[i]);
+        let off = align_up(cur, page);
+        let mut e = Q42TensorEntry {
+            role: Q42_LAYER_GLOBAL,
+            layer: Q42_LAYER_GLOBAL,
+            ggml_type: GGML_TYPE_TERNARY_158,
+            dim0: *t.shape.first().unwrap_or(&1) as u32,
+            dim1: *t.shape.get(1).unwrap_or(&1) as u32,
+            blob_offset: off as u64,
+            byte_len: blen as u64,
+            scaffold_quin: NQuin::zeroed(),
+        };
+        e.scaffold_quin.subject = crate::q_hash(t.name.as_str());
+        total_out += blen;
+        largest_out = largest_out.max(blen);
+        entries.push(e);
+        cur = off + blen;
+    }
+
+    // 3) Header + manifest in a small bounded buffer, CRC, then write.
+    let manifest_end = manifest_offset + manifest_size;
+    let mut head = vec![0u8; manifest_end];
+    let header = Q42WeightHeader {
+        magic: Q42W_MAGIC,
+        version: Q42W_VERSION,
+        page_log2,
+        n_tensors: n as u32,
+        n_layers: 0,
+        n_embd: 0,
+        n_head: 0,
+        n_kv_head: 0,
+        vocab_size: 0,
+        rope_freq_base: 0.0,
+        rope_scale: 0.0,
+        manifest_offset: manifest_offset as u64,
+        blob_offset: blob_offset as u64,
+        cold_offset: 0,
+        cold_len: 0,
+        header_crc: 0,
+        format_flags: FORMAT_FLAG_RAW_TRANSCODE | FORMAT_FLAG_TERNARY,
+        arch_quin: NQuin::zeroed(),
+        tokenizer_offset: 0,
+        tokenizer_len: 0,
+    };
+    header.write_le(&mut head[0..Q42_WEIGHT_HEADER_BYTES]);
+    for (k, e) in entries.iter().enumerate() {
+        let o = manifest_offset + k * Q42_TENSOR_ENTRY_BYTES;
+        e.write_le(&mut head[o..o + Q42_TENSOR_ENTRY_BYTES]);
+        let entry_crc = crc32c(&head[o..o + 32]) as u64;
+        head[o + 72..o + 80].copy_from_slice(&entry_crc.to_le_bytes());
+    }
+    let hc = crc32c_update(crc32c_update(0xFFFF_FFFF, &head[0..72]), &head[76..manifest_end]);
+    head[72..76].copy_from_slice(&(!hc).to_le_bytes());
+    out.write_all(&head).map_err(|e| e.to_string())?;
+    let mut bytes_written = head.len();
+
+    // 4) Stream: decode each source tensor → f32 (one in flight) → ternary-pack → write, page-aligned.
+    let zeros = [0u8; 4096];
+    let mut f32_scratch: Vec<f32> = Vec::new();
+    let mut peak_working = 0usize;
+    for (i, t) in plan.tensors.iter().enumerate() {
+        let target = entries[i].blob_offset as usize;
+        let mut pad = target.saturating_sub(bytes_written);
+        while pad > 0 {
+            let chunk = pad.min(zeros.len());
+            out.write_all(&zeros[..chunk]).map_err(|e| e.to_string())?;
+            bytes_written += chunk;
+            pad -= chunk;
+        }
+        let begin = plan.data_start + t.begin;
+        let end = plan.data_start + t.end;
+        if end > src.len() {
+            return Err(format!("transcode: tensor '{}' out of source bounds", t.name));
+        }
+        decode_safetensor_to_f32(&src[begin..end], ggml_types[i], counts[i], &mut f32_scratch);
+        let blob = ternary_blob(&f32_scratch);
+        peak_working = peak_working.max(f32_scratch.len() * 4 + blob.len());
+        out.write_all(&blob).map_err(|e| e.to_string())?;
+        bytes_written += blob.len();
+    }
+
+    Ok(TranscodeReport {
+        n_tensors: n,
+        bytes_written,
+        largest_tensor_bytes: largest_out,
+        total_tensor_bytes: total_out,
         peak_working_bytes: peak_working,
     })
 }
@@ -739,6 +917,45 @@ mod tests {
         assert!(err.contains("high-fidelity") || err.contains("rejected"), "got: {err}");
         // and the underlying GGML gate rejects Q4_K directly.
         assert!(!crate::safetensor::is_high_fidelity_ggml(12));
+    }
+
+    /// TASK #12 (§A): ternary transcode compresses an F16 tensor to ≈1.6 bits/weight and the
+    /// container round-trips + dequantizes correctly.
+    #[test]
+    fn transcode_ternary_compresses_and_round_trips() {
+        // one F16 tensor, 100 weights of alternating ±2.0 (absmean scale = 2.0, exact reconstruction)
+        let count = 100usize;
+        let weights: Vec<f32> = (0..count).map(|i| if i % 2 == 0 { 2.0 } else { -2.0 }).collect();
+        let mut data = Vec::new();
+        for &w in &weights {
+            data.extend_from_slice(&half::f16::from_f32(w).to_le_bytes());
+        }
+        let header = serde_json::json!({ "w": { "dtype": "F16", "shape": [count], "data_offsets": [0, data.len()] } });
+        let hb = serde_json::to_vec(&header).unwrap();
+        let mut src = Vec::new();
+        src.extend_from_slice(&(hb.len() as u64).to_le_bytes());
+        src.extend_from_slice(&hb);
+        src.extend_from_slice(&data);
+
+        let mut out = Vec::new();
+        let report = transcode_safetensor_to_q42_ternary(&src, 12, &mut out).unwrap();
+        assert_eq!(report.n_tensors, 1);
+
+        // source F16 tensor = 200 bytes; ternary blob = 4 + ceil(100/5) = 24 bytes (>8x smaller).
+        assert_eq!(report.total_tensor_bytes, crate::ternary::ternary_blob_len(count));
+        assert!(report.total_tensor_bytes * 5 < data.len(), "ternary must be >5x smaller than F16");
+
+        // container round-trips and is flagged ternary.
+        let idx = Q42TensorIndex::from_q42(&out).expect("ternary container must round-trip");
+        assert_eq!(idx.header.format_flags & FORMAT_FLAG_TERNARY, FORMAT_FLAG_TERNARY);
+        assert_eq!(idx.entries[0].ggml_type, crate::ternary::GGML_TYPE_TERNARY_158);
+
+        // dequantize: uniform ±2.0 → scale (absmean) = 2.0, so reconstruction is exact ±2.0.
+        let blob = idx.blob(&out, &idx.entries[0]);
+        let mut deq = vec![0.0f32; count];
+        crate::ternary::dequantize_blob(blob, &mut deq);
+        assert!((deq[0] - 2.0).abs() < 1e-3, "deq[0] {}", deq[0]);
+        assert!((deq[1] + 2.0).abs() < 1e-3, "deq[1] {}", deq[1]);
     }
 
     fn le_u16(b: &[u8], o: usize) -> u16 {

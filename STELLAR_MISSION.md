@@ -73,6 +73,11 @@ opposed to the extractive "SSI-wallet / person-as-issued-root-key" counterfeit.
 *Goal: 3–6× TPS + 100k-token context on consumer/edge silicon, from a one-time AOT compile.*
 - **Ternary (BitNet 1.58b) packing** of non-critical FFN layers (weights ∈ {-1,0,1}); keep attention at Q4.
   Eliminates FMA → hardware adds/subs in the WGSL kernels. (Reported 3–6× speedups, ~70% energy cut.)
+  **✅ codec + transcode landed 2026-06-23** (`ternary.rs`: absmean-scale quantize + 5-trits/byte base-3
+  pack = ≈1.6 bits/weight, zero-heap dequant; `q42_weight::transcode_safetensor_to_q42_ternary` applies
+  it *during* transcode → a valid Q42W that round-trips, ~8× smaller than F16; 8 tests).
+  **Remaining (task #12):** per-layer policy (ternary FFN / keep attention Q4 — needs name→role mapping),
+  the WGSL ternary GEMM kernel, and a real-model run.
 - **KIVI asymmetric KV-cache**: Key cache per-channel 2-bit, Value cache per-token 4-bit → 100k+ context in
   consumer VRAM via a WGPU ring-buffer.
 - **W4A4 + Activation-Aware (AWQ)**: a calibration "Concentration-Alignment Transform" over the high-fidelity

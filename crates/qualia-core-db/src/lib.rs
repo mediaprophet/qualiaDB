@@ -771,6 +771,9 @@ pub mod q42_weight;
 /// Phase 6 / task #12: safetensor (+ MLX) source parsing + dtype gate for the streaming transcoder.
 #[cfg(any(not(target_arch = "wasm32"), feature = "wasm-llm"))]
 pub mod safetensor;
+/// Task #12 / STELLAR §A: BitNet b1.58 ternary quantization codec (compression during transcode).
+#[cfg(any(not(target_arch = "wasm32"), feature = "wasm-llm"))]
+pub mod ternary;
 pub mod identifier;
 #[cfg(not(target_arch = "wasm32"))]
 pub mod mcp_server;
