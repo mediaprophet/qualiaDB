@@ -229,6 +229,45 @@ code, not assumed. Designed-now/built-later items are labelled, never presented 
 
 ---
 
+## Remaining work & optimizations (renderer) — captured 2026-06-23
+
+**Correctness / latent bugs**
+- **Bloom composite bind group** (`render/gpu/resources.rs` `make_bloom_bind_group`): binding 4
+  (`composite_params`) uses `as_entire_binding()` (offset 0), so the composite shader reads the
+  *bloom* params, not the composite params — `exposure` becomes `BLOOM_THRESHOLD` (1.0) instead of
+  `BLOOM_EXPOSURE` (1.05) and `bloom_strength` becomes `BLOOM_INTENSITY` (1.15) instead of
+  `BLOOM_STRENGTH` (0.85). It *looks* fine (exposure≈1), but the tuning constants are silently
+  ignored. Fix: bind `composite_params` at offset 16 (its own `BufferBinding`) or a separate buffer.
+- **Mesh orbit-drag not re-verified** with a real pointer (synthetic drag didn't visibly rotate; the
+  camera transform itself is correct — perspective is right). Confirm real-user orbit on a mesh.
+
+**Performance**
+- **`sync_bloom_targets()` runs every frame** (called from `paint_frame`) and rebuilds the entire
+  bloom chain — textures + 3 pipelines + uniform buffer — per frame. Should rebuild only on
+  size/mode change. Likely the biggest per-frame waste.
+- **DPR-ignoring resize**: the `ResizeObserver` calls `portal.resize(canvas, clientWidth,
+  clientHeight)` in CSS pixels, so the GPU renders below device resolution (soft). Resize at
+  `×devicePixelRatio` (clamped for the affordability budget) for crisp output.
+
+**Aesthetics (“remarkable”)**
+- Tensor node points read as **hard squares** — bloom blows out the soft-dot alpha falloff. Tune
+  bloom threshold/intensity vs the projector `hdr_gain`, or sharpen the fragment falloff, for soft
+  glowing orbs.
+
+**Structure**
+- `render/portal/mod.rs` (~940) could split into acoustic-API / data-ingestion-API submodules.
+- `render/portal/paint.rs` also holds 3 non-painter helpers (`acoustic_uniform_to_floats`,
+  `html_escape`, `append_parsed_dom`) — relocate for cohesion.
+- Relabel the init validation error-scope comment in `render/gpu/mod.rs` (says “DIAG”, is the
+  permanent safety net).
+- **0.2b** — lift `render/` into a standalone `qualia-render` crate (break the core↔render cycles:
+  `daemon_tensor` / `webizen_server` / `acoustic_plane` / `buffer_export`).
+
+**Phase 2 physics extensions**
+- **Live viewer integration** — animate a loaded mesh via a joint (the visible half). ← *in progress.*
+- Bind momentum `P` to the NQuin Manifold-Coordinate (STELLAR §C file-format work).
+- Inter-artefact collision/contact (current physics is per-artefact admission + kinematics only).
+
 ## Progress log
 
 ### 2026-06-23 — Phase 2 DONE (acceptance): physics of artefacts (`f60df3969`)
