@@ -365,7 +365,7 @@ pub fn ingest_asset(input: &Path, output: &Path) -> Result<IngestStats, Box<dyn 
     let bytes: &[u8] = &mmap;
 
     let hint = input.extension().and_then(|e| e.to_str());
-    let mesh = qualia_core_db::asset_bridge::import_asset(bytes, hint)
+    let mesh = qualia_core_db::render::assets::import_asset(bytes, hint)
         .map_err(|e| format!("asset parse error: {e}"))?;
 
     let asset_uri = format!(
@@ -373,7 +373,7 @@ pub fn ingest_asset(input: &Path, output: &Path) -> Result<IngestStats, Box<dyn 
         input.file_name().and_then(|s| s.to_str()).unwrap_or("mesh")
     );
     let (quins, str_lex) =
-        qualia_core_db::asset_bridge::mesh_to_nquins(&mesh, &asset_uri, hint.unwrap_or("mesh"));
+        qualia_core_db::render::assets::mesh_to_nquins(&mesh, &asset_uri, hint.unwrap_or("mesh"));
 
     // Convert the string lexicon into `LexiconEntry::String` entries.
     let lex: HashMap<u64, qualia_core_db::q42_lex::LexiconEntry> = str_lex

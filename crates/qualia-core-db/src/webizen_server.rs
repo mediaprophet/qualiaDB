@@ -327,7 +327,7 @@ async fn tensor_slice_handler(
         build_tensor_slice_bytes, verify_tensor_slice_signature, TensorSliceAuthError,
         TensorSliceError, TensorSliceLane, TensorSliceRequest, DEFAULT_SLICE_MAX_NODES,
     };
-    use crate::portal_telemetry::STANDPOINT_DID;
+    use crate::render::telemetry::STANDPOINT_DID;
     use crate::tensor::buffer_export::tensor_node_count;
 
     let max_nodes = header_parse_u32(&headers, "x-qualia-max-nodes")

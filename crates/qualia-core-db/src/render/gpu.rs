@@ -6,10 +6,10 @@ use crate::gpu_context::{
     ambient_draw_instances, global_vram_ledger, universe_orchestrator, ComputeUniverse,
     OperationalMode,
 };
-use crate::portal_camera::CameraState;
-use crate::portal_navigation::PICK_SENTINEL;
-use crate::portal_standpoint::spectator_default;
-use crate::portal_telemetry::{AmbientUniforms, ObserverStandpoint, ParticleInstance, SystemTelemetry};
+use crate::render::camera::CameraState;
+use crate::render::navigation::PICK_SENTINEL;
+use crate::render::standpoint::spectator_default;
+use crate::render::telemetry::{AmbientUniforms, ObserverStandpoint, ParticleInstance, SystemTelemetry};
 use crate::shaders::viewport::{AMBIENT_WGSL, BLOOM_WGSL, MESH_WGSL, PROJECTOR_WGSL};
 use crate::tensor::buffer_export::{
     read_tensor_at, tensor_node_count, TENSOR_HEADER_BYTES, TENSOR_STRIDE,
@@ -239,7 +239,7 @@ impl PortalGpu {
             usage: wgpu::BufferUsages::UNIFORM | wgpu::BufferUsages::COPY_DST,
         });
 
-        let session_nonce = crate::portal_standpoint::generate_session_nonce();
+        let session_nonce = crate::render::standpoint::generate_session_nonce();
         let observer = spectator_default(session_nonce);
         let observer_buf = device.create_buffer_init(&wgpu::util::BufferInitDescriptor {
             label: Some("portal-observer"),

@@ -125,30 +125,15 @@ pub mod wasm_bridge;
 pub mod wasm_bridge_core;
 #[cfg(not(target_arch = "wasm32"))]
 pub mod wasm_bridge;
-pub mod portal_telemetry;
-pub mod portal_standpoint;
-pub mod portal_camera;
-pub mod portal_navigation;
-pub mod portal_pga;
-pub mod manifold_project;
-pub mod portal_phenomenal_contract;
-pub mod portal_spectral;
-pub mod portal_acoustic;
-pub mod portal_control;
-#[cfg(all(target_arch = "wasm32", feature = "portal"))]
-pub mod portal_gpu;
-#[cfg(all(target_arch = "wasm32", feature = "portal"))]
-pub mod portal;
-#[cfg(all(target_arch = "wasm32", feature = "portal"))]
-pub mod portal_wasm;
+pub mod render;
 #[cfg(all(target_arch = "wasm32", feature = "wasm-llm"))]
 pub mod wasm_llm;
 #[cfg(all(target_arch = "wasm32", feature = "portal"))]
 pub mod spatial_wasm;
 #[cfg(all(target_arch = "wasm32", feature = "portal"))]
-pub use portal::QualiaPortal;
+pub use render::portal::QualiaPortal;
 #[cfg(all(target_arch = "wasm32", feature = "portal"))]
-pub use portal_wasm::{create_canvas, init_panic_hook, WebEngine};
+pub use render::portal_wasm::{create_canvas, init_panic_hook, WebEngine};
 #[cfg(all(target_arch = "wasm32", feature = "portal"))]
 pub use spatial_wasm::{
     design_encode_wasm, export_tensor_buffer_wasm, export_tensor_slice_wasm,
@@ -698,7 +683,7 @@ pub mod daemon_query;
 pub mod fuzz_testing;
 pub mod git_bridge;
 pub mod kml_bridge;
-pub mod asset_bridge;
+// (asset_bridge moved to render::assets in Phase 0.2a)
 pub mod temporal_graph;
 pub mod provenance;
 #[cfg(any(

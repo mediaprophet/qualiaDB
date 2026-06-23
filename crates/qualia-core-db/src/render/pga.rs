@@ -5,7 +5,7 @@
 //! Phase 2c: bilateral `T_pull` via `motor_translate` composed after intrinsic `R_w · R_q`.
 //! Phase 3: `v`-band topology (`R_toroidal`, `T_radial`, `T_anchor`) inside intrinsic stack.
 
-use crate::portal_telemetry::{
+use crate::render::telemetry::{
     DEONTIC_LANE_BILATERAL, STANDPOINT_DID, STANDPOINT_SPECTATOR, STANDPOINT_VAULT,
 };
 

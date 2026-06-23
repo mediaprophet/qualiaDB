@@ -4,7 +4,7 @@ use wasm_bindgen::prelude::*;
 use wasm_bindgen::JsCast;
 use web_sys::HtmlCanvasElement;
 
-use crate::portal::QualiaPortal;
+use crate::render::portal::QualiaPortal;
 
 #[wasm_bindgen]
 pub fn init_panic_hook() {

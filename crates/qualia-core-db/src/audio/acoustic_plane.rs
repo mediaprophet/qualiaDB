@@ -10,7 +10,7 @@ use bytemuck::{Pod, Zeroable};
 use crate::audio::audio_spectral_sheet::{preview_bins_from_tensor, SPECTRAL_PREVIEW_BINS};
 use crate::audio::dsp_kernel::{configure_voice_from_tensor, epistemic_fm_index};
 use crate::audio::hrtf::{binaural_from_position, room_damp_from_manifold};
-use crate::portal_acoustic::{phenomenal_acoustic_params, phenomenal_fm_index, phenomenal_voice_frequency_hz};
+use crate::render::acoustic::{phenomenal_acoustic_params, phenomenal_fm_index, phenomenal_voice_frequency_hz};
 use crate::gpu_context::{ComputeUniverse, OperationalMode};
 use crate::sonic_token::SonicToken;
 use crate::tensor::Tensor10D;

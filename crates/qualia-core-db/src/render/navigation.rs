@@ -1,7 +1,7 @@
 //! GPU/CPU node picking helpers and camera fly-to for PR-C11 navigation.
 
-use crate::portal_camera::CameraState;
-use crate::portal_telemetry::ObserverStandpoint;
+use crate::render::camera::CameraState;
+use crate::render::telemetry::ObserverStandpoint;
 use crate::tensor::buffer_export::read_tensor_at;
 
 /// Background sentinel in the R32Uint picking attachment.

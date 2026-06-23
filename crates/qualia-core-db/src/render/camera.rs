@@ -1,6 +1,6 @@
 //! Orbit camera → column-major `view_projection` for the Qualia portal (CPU hot path, zero-heap).
 
-use crate::portal_telemetry::CameraUniform;
+use crate::render::telemetry::CameraUniform;
 
 /// Interactive orbit state driven from JS (`set_camera`).
 #[derive(Clone, Copy, Debug, PartialEq)]

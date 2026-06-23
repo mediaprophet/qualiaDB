@@ -3,7 +3,7 @@
 //!
 //! The renderer's foundation is the 10D tensor manifold. A node's *place* is decided once, by the
 //! semantic-motor map `10D → 3D world` (the same map `projector.wgsl` applies on the GPU;
-//! [`crate::portal_pga`] is its parity-tested CPU oracle). Every "view" — the 3D scene, the 2D
+//! [`crate::render::pga`] is its parity-tested CPU oracle). Every "view" — the 3D scene, the 2D
 //! canvas — is then a projection of that **same** world point onto a target, not an independent
 //! re-computation. This module is the single entry point that makes that explicit:
 //!
@@ -11,11 +11,11 @@
 //!   * [`project`] — that world point as the requested [`ProjectionTarget`] (3D volume, or its 2D
 //!     planar shadow). One call, selectable view.
 //!
-//! The 3D *scene* additionally applies the orbit camera ([`crate::portal_camera`]) on top of the
+//! The 3D *scene* additionally applies the orbit camera ([`crate::render::camera`]) on top of the
 //! world point; the 2D *canvas* uses the planar shadow directly. Both start from one `project`.
 
-use crate::portal_pga::{sandwich_point, semantic_motor_intrinsic};
-use crate::portal_telemetry::STANDPOINT_SPECTATOR;
+use crate::render::pga::{sandwich_point, semantic_motor_intrinsic};
+use crate::render::telemetry::STANDPOINT_SPECTATOR;
 use crate::tensor::Tensor10D;
 
 /// Which view of the shared manifold world point to produce.

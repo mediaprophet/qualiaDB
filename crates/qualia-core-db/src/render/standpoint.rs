@@ -1,7 +1,7 @@
 //! Human-Centric observer standpoint — the chosen context and right to perceive
 //! (decoupled from the camera lens; no hardware fingerprinting).
 
-use crate::portal_telemetry::{
+use crate::render::telemetry::{
     ObserverStandpoint, DEONTIC_LANE_BILATERAL, DEONTIC_LANE_COMMONS, FABRIC_VIEWPORT_LOCAL,
     STANDPOINT_DID, STANDPOINT_EPHEMERAL, STANDPOINT_SPECTATOR, STANDPOINT_VAULT,
 };

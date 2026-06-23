@@ -7,9 +7,9 @@ use crate::shaders::viewport::{AMBIENT_WGSL, BLOOM_WGSL, PROJECTOR_WGSL};
 use crate::tensor::buffer_export::{
     TensorBufferHeader, TENSOR_HEADER_BYTES, TENSOR_STRIDE,
 };
-use crate::portal_acoustic::{sigma_to_center_frequency_hz, sigma_to_wavelength_nm, ACOUSTIC_UNIFORM_FLOAT_COUNT};
-use crate::portal_control::{PortalControlCommand, CONTROL_RING_CAP, ICP_MAGIC_BIT};
-use crate::portal_spectral::sigma_to_cie_xyz;
+use crate::render::acoustic::{sigma_to_center_frequency_hz, sigma_to_wavelength_nm, ACOUSTIC_UNIFORM_FLOAT_COUNT};
+use crate::render::control::{PortalControlCommand, CONTROL_RING_CAP, ICP_MAGIC_BIT};
+use crate::render::spectral::sigma_to_cie_xyz;
 use crate::tensor::Tensor10D;
 
 /// Rust `portal_gpu` projector camera bind group (group 0).
@@ -86,8 +86,8 @@ mod tests {
     use crate::gpu_context::{
         ambient_draw_instances_for_mode, ComputeUniverse, OperationalMode, UniverseOrchestrator,
     };
-    use crate::portal_pga::motor_rq_gated;
-    use crate::portal_telemetry::{
+    use crate::render::pga::motor_rq_gated;
+    use crate::render::telemetry::{
         CameraUniform, ObserverStandpoint, ParticleInstance, SystemTelemetry,
         STANDPOINT_DID, STANDPOINT_EPHEMERAL, STANDPOINT_SPECTATOR, STANDPOINT_VAULT,
     };

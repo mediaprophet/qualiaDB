@@ -18,8 +18,8 @@ use crate::audio::audio_spectral_sheet::parse_sidecar_header;
 use crate::audio::cqt_bake::bake_cqt_sidecar_from_preview;
 use crate::audio::stft_bake::bake_tensor_stft_sidecar;
 use crate::audio::audio_spectral_sheet::SPECTRAL_PREVIEW_BINS;
-use crate::portal_acoustic::ACOUSTIC_UNIFORM_FLOAT_COUNT;
-use crate::portal_control::{
+use crate::render::acoustic::ACOUSTIC_UNIFORM_FLOAT_COUNT;
+use crate::render::control::{
     control_pending, pop_control_command, push_control_raw, PortalControlCommand,
     MENU_ACTION_HOME, MENU_ACTION_SONIFY_TOGGLE, OP_BUTTON_ACTION, OP_COLLAPSE_Q,
     OP_MENU_ACTION, OP_NAVIGATE_INDEX, OP_SET_CAMERA_DELTA, OP_SET_STANDPOINT_SCALAR,
@@ -29,11 +29,11 @@ use crate::portal_control::{
 
 use crate::gpu_context::{ambient_draw_instances, global_vram_ledger, OperationalMode};
 use crate::sonic_token::SonicToken;
-use crate::portal_spectral::sigma_to_display_rgb;
-use crate::portal_camera::CameraState;
-use crate::portal_navigation::{camera_frame_node, cpu_pick_node_at, CameraFlyTo, Q_COLLAPSED_EPS};
-use crate::portal_standpoint::{resolve_standpoint_hash, spectator_default};
-use crate::portal_telemetry::{
+use crate::render::spectral::sigma_to_display_rgb;
+use crate::render::camera::CameraState;
+use crate::render::navigation::{camera_frame_node, cpu_pick_node_at, CameraFlyTo, Q_COLLAPSED_EPS};
+use crate::render::standpoint::{resolve_standpoint_hash, spectator_default};
+use crate::render::telemetry::{
     ObserverStandpoint, DEONTIC_LANE_COMMONS, FABRIC_SHARED, FABRIC_VIEWPORT_LOCAL,
     STANDPOINT_DID, STANDPOINT_EPHEMERAL, STANDPOINT_SPECTATOR, STANDPOINT_VAULT,
     SystemTelemetry,
@@ -45,7 +45,7 @@ use crate::{
 };
 
 #[cfg(target_arch = "wasm32")]
-use crate::portal_gpu::{particle_cap_for_mode, PortalGpu};
+use crate::render::gpu::{particle_cap_for_mode, PortalGpu};
 
 /// Viewport display mode (geometry projection style).
 #[repr(u8)]
@@ -113,7 +113,7 @@ impl QualiaPortal {
     #[wasm_bindgen(constructor)]
     pub fn new(canvas: HtmlCanvasElement) -> Result<QualiaPortal, JsValue> {
         let tier = detect_tier();
-        let session_nonce = crate::portal_standpoint::generate_session_nonce();
+        let session_nonce = crate::render::standpoint::generate_session_nonce();
         let standpoint = spectator_default(session_nonce);
         let mut portal = QualiaPortal {
             description: "Qualia portal initialized".to_string(),
@@ -510,7 +510,7 @@ impl QualiaPortal {
     /// empty = sniff from the bytes. Returns the triangle count (0 if the GPU path isn't active).
     pub fn upload_mesh_asset(&mut self, bytes: &[u8], hint: &str) -> Result<u32, JsValue> {
         let hint_opt = if hint.is_empty() { None } else { Some(hint) };
-        let mesh = crate::asset_bridge::import_asset(bytes, hint_opt)
+        let mesh = crate::render::assets::import_asset(bytes, hint_opt)
             .map_err(|e| JsValue::from_str(&e.to_string()))?;
         let c = mesh.centroid();
         let ext = [
@@ -551,10 +551,10 @@ impl QualiaPortal {
         let mut out = Vec::with_capacity(count * 2);
         for i in 0..count {
             if let Ok(t) = crate::tensor::buffer_export::read_tensor_at(bytes, i) {
-                let p = crate::manifold_project::project(
+                let p = crate::render::projection::project(
                     &t,
                     time,
-                    crate::manifold_project::ProjectionTarget::Plane2D,
+                    crate::render::projection::ProjectionTarget::Plane2D,
                 );
                 out.push(p[0]);
                 out.push(p[1]);
@@ -780,7 +780,7 @@ impl QualiaPortal {
         uniform.alpha = self.telemetry.spectral_shift.max(0.05);
         uniform.epistemic_q = self.standpoint.epistemic_q;
         uniform.frequency_hz =
-            crate::portal_acoustic::sigma_to_center_frequency_hz(self.telemetry.spectral_shift);
+            crate::render::acoustic::sigma_to_center_frequency_hz(self.telemetry.spectral_shift);
         apply_binaural_to_uniform(&mut uniform, self.camera.yaw);
         uniform
     }
