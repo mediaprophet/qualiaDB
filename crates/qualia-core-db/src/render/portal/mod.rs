@@ -166,6 +166,18 @@ impl QualiaPortal {
         global_vram_ledger().mode() as u8
     }
 
+    /// Phase 5 (affordability rail) — whether a device tier (`0`=Full, `1`=Eco, `2`=Reserve)
+    /// collapses a qapp's 3D scene to its 2D pane under the budget rule. Pure (no state change);
+    /// the qapp planner (`render::authoring`) uses the same `OperationalMode::supports_3d` source.
+    pub fn budget_collapses_3d(&self, mode_code: u8) -> bool {
+        let mode = match mode_code {
+            0 => OperationalMode::Full,
+            1 => OperationalMode::Eco,
+            _ => OperationalMode::Reserve,
+        };
+        !mode.supports_3d()
+    }
+
     /// Enable or mute U3 AcousticPlane (automatically off in Reserve mode).
     pub fn set_acoustic_enabled(&mut self, enabled: bool) {
         self.acoustic_enabled = enabled;

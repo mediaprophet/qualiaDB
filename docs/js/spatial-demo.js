@@ -747,6 +747,39 @@ export async function bootSpatialPage() {
                 _refusalDemoActive = true;
             });
         }
+        const lowTier = document.getElementById('lowtier-toggle');
+        if (lowTier && !lowTier.dataset.bound) {
+            lowTier.dataset.bound = '1';
+            const canvas3d = document.getElementById('ambient-canvas');
+            const pane2d = document.getElementById('plane2d-canvas');
+            lowTier.addEventListener('change', (e) => {
+                const st = document.getElementById('lowtier-status');
+                // The ENGINE decides (Phase 5 budget rule): Eco (code 1) collapses 3D -> 2D.
+                const collapses = (qualiaPortal && typeof qualiaPortal.budget_collapses_3d === 'function')
+                    ? qualiaPortal.budget_collapses_3d(1)
+                    : true;
+                if (e.target.checked && collapses) {
+                    if (canvas3d) canvas3d.style.opacity = '0.06';
+                    if (pane2d) {
+                        if (pane2d.dataset.prevStyle === undefined) pane2d.dataset.prevStyle = pane2d.getAttribute('style') || '';
+                        pane2d.style.left = '50%';
+                        pane2d.style.top = '50%';
+                        pane2d.style.right = 'auto';
+                        pane2d.style.bottom = 'auto';
+                        pane2d.style.transform = 'translate(-50%, -50%) scale(2.2)';
+                        pane2d.style.zIndex = '20';
+                    }
+                    if (st) { st.textContent = '● low-tier: 3D scene collapsed to its 2D pane (engine budget rule)'; st.style.color = 'rgb(251,191,36)'; }
+                } else {
+                    if (canvas3d) canvas3d.style.opacity = '1';
+                    if (pane2d && pane2d.dataset.prevStyle !== undefined) {
+                        pane2d.setAttribute('style', pane2d.dataset.prevStyle);
+                        delete pane2d.dataset.prevStyle;
+                    }
+                    if (st) { st.textContent = ''; }
+                }
+            });
+        }
         if (qualiaPortal && !_plane2dRaf) drawPlane2dShadow(); // Phase 1.4 companion 2D view
         activateSpatialTabFromHash();
 

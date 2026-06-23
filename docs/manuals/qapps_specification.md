@@ -60,3 +60,32 @@ To install a QApp:
 2. The engine's `POST /manifest` route parses the YAML.
 3. The engine compiles the definitions into 48-byte `NQuin` primitives and appends them to `qualia_global.wal`.
 4. The frontend automatically rehydrates the UI from the log using Last-Writer-Wins (LWW) CRDT deduplication based on Lamport clocks.
+
+## 6. Manifold Worlds (`ns/ui` upgrade — Phase 5)
+
+A QApp is no longer only a grid of 2D panes. A **manifold world** declares one or more **views over a single manifold** — a 3D scene *and* a 2D pane drawn from the *same* source — so the same data is shown two ways (the renderer's `Volume3D` and `Plane2D` projections; see `render::projection`). The runtime that resolves these views is `render::authoring` (`plan_qapp` → a `ViewDisposition` per view). The wire-form (`yaml-ld-q42` → CBOR-LD → NQuin `@context` expansion) is task #8; **ShEx *describes*** the view contract and **SHACL *enforces*** the shape (ADR 0009) — one source.
+
+A view (`QappView`) carries three engine-enforced annotations, resolved **before anything is drawn**:
+
+| Annotation | Vocabulary | Engine behaviour |
+|---|---|---|
+| **Manifold source** | `manifold` (id) | The same id across views = "one manifold, many views". |
+| **Sensitivity** | `Public` \| `RightsBounded` | A `RightsBounded` view is **refused** in a *shared/civic* standpoint without consent (the inherited `logic::deontic` gate; **fails closed**). The owner's *private* view always renders. |
+| **Attestation gate** | `requires_attestation` | The view is **withheld** until an attestation `(attester) attests (manifold)` is present — the human ratifies by signing (wisdom-out-of-band). Signature verification stays in the identity/key-vault layer. |
+| **Budget** | device tier | On a constrained tier (`OperationalMode::Eco`/`Reserve`) a `Scene3D` view **degrades to 2D** (`Collapsed2D`) rather than failing — affordability by construction. |
+
+```yaml
+# a manifold-world page (illustrative; wire-form is task #8)
+pages:
+  - name: "Patient Manifold"
+    views:
+      - manifold: "did:q42:patient1#vitals"
+        kind: Scene3D
+        sensitivity: RightsBounded     # refused in a shared/civic view without consent
+      - manifold: "did:q42:patient1#vitals"   # SAME manifold → the 2D shadow
+        kind: Pane2D
+        sensitivity: RightsBounded
+        requires_attestation: true     # withheld until a clinician attests
+```
+
+Resolution order is **attestation → rights-bounded → budget**: a governance refusal (withheld / refused) takes precedence over budget degradation. The decision is `ViewDisposition`: `Render(kind)`, `Collapsed2D`, `WithheldUnattested`, or `RefusedRightsBounded`. Governance primitives here are the §8 substrate *surfaced* — the QApp author selects them; it does not author new normative rules.

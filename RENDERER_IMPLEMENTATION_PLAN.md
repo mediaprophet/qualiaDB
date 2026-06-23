@@ -178,8 +178,24 @@ The precondition for "fast on every device" being non-fiction (migration review 
   - *Acceptance:* a sample qapp authored in the vocabulary renders a **3D scene + a 2D pane from one manifold**;
     an attestation-gate and a rights-bounded context are **demonstrably enforced**; on a low-tier device
     profile, budget-degradation **collapses 3D→2D** (test + screenshots).
+    **✅ MET 2026-06-23**: `render/authoring.rs` — a `Qapp` declares `QappView`s (`Scene3D` + `Pane2D`)
+    over **one** `manifold` id; `plan_qapp` resolves each to a `ViewDisposition` applying, in order,
+    the **attestation gate** (withhold until attested — wisdom-out-of-band), the **rights-bounded
+    context** (deontic gate; refuse sensitive render in a shared/civic standpoint, fail-closed), and
+    the **budget rule** (`OperationalMode::supports_3d`; `Eco`/`Reserve` → `Collapsed2D`). All four
+    behaviours are **test-verified** (5 tests, incl. gate composition order). **Screenshots:** the
+    3D-scene + 2D-pane *from one manifold* and the *low-tier 3D→2D collapse* are shown in the viewer
+    (the toggle drives the engine's `budget_collapses_3d` rule). The two **deontic** gates are
+    test-verified but **not browser-screenshotted** — by design the governance layer (`modalities`)
+    is absent from the minimal `portal` bundle `spatial.html` loads; surfacing them in a viewer needs
+    the `wasm-full` bundle (a follow-up, noted honestly). **1207/0** native; wasm32 `portal` + `wasm-full` green.
 - **Rail-check:** affordability enforced *at authoring time* (budget-aware syntax); governance primitives are
-  the §8 substrate surfaced; wisdom-out-of-band (attestation gates).
+  the §8 substrate surfaced; wisdom-out-of-band (attestation gates). **met** — budget is a declared
+  per-view property degraded by one shared rule (`OperationalMode::supports_3d`, used by both the planner
+  and the portal); rights-bounded refusal **delegates** to the inherited `logic::deontic` gate (no new
+  doctrine authored); the attestation gate is the human-ratifies hook (presence of a signed attestation;
+  signature *verification* stays in the identity/key-vault layer). The `yaml-ld-q42`/CBOR-LD wire-form +
+  ShEx contract remain task #8 / ADR 0009 (not duplicated here).
 
 ### Phase 6 — Model-as-substrate & ingest/convergence integration *(largely the §A/§12 workstream)*
 - Heterogeneous dispatch (NPU/GPU/CPU, §3.1) + q42 perf (ternary/KIVI/W4A4/spec-decode, §3.2) — **task #12 /
@@ -293,6 +309,27 @@ code, not assumed. Designed-now/built-later items are labelled, never presented 
   the bound, `refused=true`, held).
 
 ## Progress log
+
+### 2026-06-23 — Phase 5 DONE (acceptance): authoring vocabulary + render planner (`render/authoring.rs`)
+The qapps upgrade from 2D-pane CSS grids to **manifold worlds**: a qapp declares views over one
+manifold, and the planner **enforces governance + budget before drawing**.
+- **Vocabulary** — `QappView { manifold, kind: Scene3D|Pane2D, sensitivity: Public|RightsBounded,
+  requires_attestation }`; `RenderStandpoint { id, shared_civic }`; `sample_world_qapp` = a 3D scene
+  + a 2D pane over the **same** manifold id.
+- **Planner** — `plan_view` / `plan_qapp` (zero-heap, caller slices) → `ViewDisposition`:
+  `Render` / `Collapsed2D` / `WithheldUnattested` / `RefusedRightsBounded`, applying the gates in
+  order **attestation → rights-bounded → budget**.
+- **Governance surfaced, not reinvented** — rights-bounded refusal delegates to the inherited
+  `logic::deontic` gate (fail-closed in a shared/civic standpoint; owner's private view always
+  shows); the attestation gate withholds until an attestation quin is present (the human-ratifies
+  hook; signature verification stays in the identity layer).
+- **Affordability rail** — one shared budget rule `OperationalMode::supports_3d` (`Eco`/`Reserve`
+  collapse 3D→2D), used by both the planner and the portal facade (`budget_collapses_3d`).
+- **Verified** — 5 tests (all four acceptance behaviours + composition order); native `cargo test
+  --lib` **1207 passed / 0 failed**; wasm32 `portal` + `wasm-full` green. **Screenshots:** viewer
+  shows the 3D-scene + 2D-pane from one manifold and the low-tier 3D→2D collapse (engine-driven).
+  The deontic gates are test-verified, not browser-screenshotted (the `modalities` layer isn't in
+  the minimal `portal` bundle — a `wasm-full`-viewer follow-up). `qapps_specification.md` upgraded.
 
 ### 2026-06-23 — Phase 4 DONE (acceptance): the sense path / input twin (`render/sense.rs`)
 Microphone PCM → forward DSP → the `∫Ψ > τ → Fact` bridge → a discrete Fact NQuin, every capture

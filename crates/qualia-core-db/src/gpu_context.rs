@@ -49,6 +49,14 @@ impl OperationalMode {
     pub fn bloom_enabled(self) -> bool {
         matches!(self, Self::Full)
     }
+
+    /// Whether this tier can render the full 3D scene. Only [`Self::Full`] does; `Eco`
+    /// (VRAM-conservation) and `Reserve` (engine-only) degrade 3D → 2D — the affordability rail.
+    /// Single source of the Phase-5 budget rule, shared by `render::authoring` and the portal.
+    #[inline]
+    pub fn supports_3d(self) -> bool {
+        matches!(self, Self::Full)
+    }
 }
 
 /// Parallel compute plane on shared silicon (maps to 10D **q** / **w** semantics).

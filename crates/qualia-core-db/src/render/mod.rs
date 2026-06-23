@@ -37,6 +37,16 @@ pub mod place_time;
     feature = "wasm-full"
 ))]
 pub mod sense;
+/// Authoring vocabulary + render planner (Phase 5): a qapp declares 3D + 2D views over one
+/// manifold; the planner enforces attestation gates, rights-bounded contexts, and budget-driven
+/// 3D→2D degradation before drawing. Gated like `place_time` (needs `crate::modalities`).
+#[cfg(any(
+    not(target_arch = "wasm32"),
+    feature = "wasm-logic",
+    feature = "wasm-scientific",
+    feature = "wasm-full"
+))]
+pub mod authoring;
 pub mod contract;
 pub mod spectral;
 pub mod acoustic;

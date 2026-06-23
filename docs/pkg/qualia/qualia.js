@@ -170,6 +170,17 @@ export class QualiaPortal {
         return takeFromExternrefTable0(ret[0]);
     }
     /**
+     * Phase 5 (affordability rail) — whether a device tier (`0`=Full, `1`=Eco, `2`=Reserve)
+     * collapses a qapp's 3D scene to its 2D pane under the budget rule. Pure (no state change);
+     * the qapp planner (`render::authoring`) uses the same `OperationalMode::supports_3d` source.
+     * @param {number} mode_code
+     * @returns {boolean}
+     */
+    budget_collapses_3d(mode_code) {
+        const ret = wasm.qualiaportal_budget_collapses_3d(this.__wbg_ptr, mode_code);
+        return ret !== 0;
+    }
+    /**
      * @returns {number}
      */
     camera_pitch() {
