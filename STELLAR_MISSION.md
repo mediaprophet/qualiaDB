@@ -45,14 +45,20 @@ opposed to the extractive "SSI-wallet / person-as-issued-root-key" counterfeit.
 - **`.q42` weight container** (`Q42W` magic): 16 KB-page-aligned weight blobs + hyperparams + tokenizer,
   CRC-32C, version-gated; AOT **GGUF → .q42** compiler (`compileGgufToQ42`); **OPFS model cache**
   (`loadOrCompileQ42`, zero-parse warm boot).
+- **In-browser 3D manifold renderer** (added 2026-06-23): `spatial.html` now drives the real `PortalGpu`
+  WebGPU path — depth-tested 3D, Kawase bloom, 10D-tensor → node projection, orbit camera — live in Chrome,
+  not the canvas2d fallback. The first concrete slice of §E (the manifold renderer). See
+  `RENDERER_IMPLEMENTATION_PLAN.md` (Phases 0.1 / 0.3 / 1.0) + `memory/project-portal-gpu-dawn-strictness.md`.
 - **Deontic / provenance gate** wired (intent pre-flight, provenance-citation post-flight).
 - **Provenance vault** (`provenance/`, gitignored + out-of-repo for sensitive) — the first real dataset is
   Timothy's own life-record (see `memory/project_provenance_vault.md`, `project_wellfair_purpose.md`).
 - **Draft standards suite** — CML, CMLD, DOA, DOE, HCAIO, DigitalBirthRecord, rights, ulem, etc.
 
 ### Honest open V1 defects (fix before calling V1 done)
-1. **`wgpu 0.19.4` sends `maxInterStageShaderComponents`** → `requestDevice` fails on recent Chrome (the
-   browser LLM won't init for many users). Needs wgpu upgrade (0.20+) + full GPU regression test.
+1. ~~**`wgpu 0.19.4` sends `maxInterStageShaderComponents`** → `requestDevice` fails on recent Chrome.~~
+   **RESOLVED 2026-06-23:** wgpu 0.19→0.20 (1160 lib tests green) + `webgpu-limits-shim.js` strips the
+   removed limit before `requestDevice`; the 3D viewport renders in Chrome. (The browser-LLM prefill path —
+   defect #2 — is a separate bind-group bug still open.)
 2. **1B+ model prefill crash** — `dispatch_prefill_chunk` fails → legacy `dispatch_fused_transformer_block`
    binds a 32-byte `TransformerParams` against `MC8GemmBGL`'s 256-min dynamic uniform → invalid bind group.
    SmolLM2-360M is the only verified config.
