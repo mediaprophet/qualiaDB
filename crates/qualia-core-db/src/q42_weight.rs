@@ -479,8 +479,8 @@ pub fn transcode_safetensor_to_q42<W: std::io::Write>(
         let blen = t.byte_len();
         let off = align_up(cur, page);
         let mut e = Q42TensorEntry {
-            role: Q42_LAYER_GLOBAL, // raw transcode: name→engine-role mapping is future work
-            layer: Q42_LAYER_GLOBAL,
+            role: crate::tensor_roles::name_to_role(&t.name).map(|r| r.role).unwrap_or(Q42_LAYER_GLOBAL),
+            layer: crate::tensor_roles::name_to_role(&t.name).map(|r| r.layer).unwrap_or(Q42_LAYER_GLOBAL),
             ggml_type: ggml_types[i],
             dim0: *t.shape.first().unwrap_or(&1) as u32,
             dim1: *t.shape.get(1).unwrap_or(&1) as u32,
@@ -697,6 +697,162 @@ pub fn transcode_safetensor_to_q42_ternary<W: std::io::Write>(
         peak_working = peak_working.max(f32_scratch.len() * 4 + blob.len());
         out.write_all(&blob).map_err(|e| e.to_string())?;
         bytes_written += blob.len();
+    }
+
+    Ok(TranscodeReport {
+        n_tensors: n,
+        bytes_written,
+        largest_tensor_bytes: largest_out,
+        total_tensor_bytes: total_out,
+        peak_working_bytes: peak_working,
+    })
+}
+
+/// Task #12 / STELLAR §A — **policy transcode**: ternary the FFN projections, keep everything else
+/// (attention, norms, embeddings) verbatim high-fidelity, in ONE Q42W. This is the real §A policy
+/// (`tensor_roles::ternary_eligible`): ternarising attention/norms wrecks coherence, so only
+/// `ffn_gate`/`ffn_up`/`ffn_down` are packed to 1.6 bits; the rest pass through unchanged.
+///
+/// Per tensor the manifest records the engine role (from the name) and `ggml_type =
+/// ternary::GGML_TYPE_TERNARY_158` for ternary blobs (decode via `ternary::dequantize_blob`) or the
+/// source GGML type for verbatim blobs. Round-trips through [`Q42TensorIndex::from_q42`].
+pub fn transcode_safetensor_to_q42_ffn_ternary<W: std::io::Write>(
+    src: &[u8],
+    page_log2: u16,
+    out: &mut W,
+) -> Result<TranscodeReport, String> {
+    use crate::safetensor::{is_high_fidelity_ggml, parse_safetensor_header, safetensor_dtype_to_ggml};
+    use crate::tensor_roles::{name_is_ternary_eligible, name_to_role};
+    use crate::ternary::{ternary_blob, ternary_blob_len, GGML_TYPE_TERNARY_158};
+
+    let page_log2 = if page_log2 == 0 { Q42W_DEFAULT_PAGE_LOG2 } else { page_log2 };
+    if !(8..=30).contains(&page_log2) {
+        return Err(format!("page_log2 {page_log2} out of range"));
+    }
+    let page = 1usize << page_log2;
+
+    let plan = parse_safetensor_header(src)?;
+    if plan.tensors.is_empty() {
+        return Err("safetensor: no tensors".to_string());
+    }
+
+    // 1) dtype gate + per-tensor policy (eligible → ternary; else verbatim).
+    let n = plan.tensors.len();
+    let mut ggml_types = Vec::with_capacity(n);
+    let mut counts = Vec::with_capacity(n);
+    let mut eligible = Vec::with_capacity(n);
+    for t in &plan.tensors {
+        let g = safetensor_dtype_to_ggml(&t.dtype).ok_or_else(|| {
+            format!("transcode: tensor '{}' dtype {} is not a high-fidelity source (rejected)", t.name, t.dtype)
+        })?;
+        if !is_high_fidelity_ggml(g) {
+            return Err(format!("transcode: tensor '{}' is low-precision (Q4-class) — rejected", t.name));
+        }
+        let count: usize = if t.shape.is_empty() { 0 } else { t.shape.iter().product() };
+        ggml_types.push(g);
+        counts.push(count);
+        eligible.push(name_is_ternary_eligible(&t.name));
+    }
+
+    // 2) Layout: ternary blob (small) for eligible tensors, verbatim bytes for the rest.
+    let manifest_offset = align_up(Q42_WEIGHT_HEADER_BYTES, 16);
+    let manifest_size = Q42_TENSOR_ENTRY_BYTES * n;
+    let blob_offset = align_up(manifest_offset + manifest_size, page);
+    let mut entries: Vec<Q42TensorEntry> = Vec::with_capacity(n);
+    let mut cur = blob_offset;
+    let mut total_out = 0usize;
+    let mut largest_out = 0usize;
+    for (i, t) in plan.tensors.iter().enumerate() {
+        let blen = if eligible[i] { ternary_blob_len(counts[i]) } else { t.byte_len() };
+        let ggml_out = if eligible[i] { GGML_TYPE_TERNARY_158 } else { ggml_types[i] };
+        let off = align_up(cur, page);
+        let rl = name_to_role(&t.name);
+        let mut e = Q42TensorEntry {
+            role: rl.map(|r| r.role).unwrap_or(Q42_LAYER_GLOBAL),
+            layer: rl.map(|r| r.layer).unwrap_or(Q42_LAYER_GLOBAL),
+            ggml_type: ggml_out,
+            dim0: *t.shape.first().unwrap_or(&1) as u32,
+            dim1: *t.shape.get(1).unwrap_or(&1) as u32,
+            blob_offset: off as u64,
+            byte_len: blen as u64,
+            scaffold_quin: NQuin::zeroed(),
+        };
+        e.scaffold_quin.subject = crate::q_hash(t.name.as_str());
+        total_out += blen;
+        largest_out = largest_out.max(blen);
+        entries.push(e);
+        cur = off + blen;
+    }
+
+    // 3) Header + manifest + CRC.
+    let manifest_end = manifest_offset + manifest_size;
+    let mut head = vec![0u8; manifest_end];
+    let header = Q42WeightHeader {
+        magic: Q42W_MAGIC,
+        version: Q42W_VERSION,
+        page_log2,
+        n_tensors: n as u32,
+        n_layers: 0,
+        n_embd: 0,
+        n_head: 0,
+        n_kv_head: 0,
+        vocab_size: 0,
+        rope_freq_base: 0.0,
+        rope_scale: 0.0,
+        manifest_offset: manifest_offset as u64,
+        blob_offset: blob_offset as u64,
+        cold_offset: 0,
+        cold_len: 0,
+        header_crc: 0,
+        format_flags: FORMAT_FLAG_RAW_TRANSCODE | FORMAT_FLAG_TERNARY,
+        arch_quin: NQuin::zeroed(),
+        tokenizer_offset: 0,
+        tokenizer_len: 0,
+    };
+    header.write_le(&mut head[0..Q42_WEIGHT_HEADER_BYTES]);
+    for (k, e) in entries.iter().enumerate() {
+        let o = manifest_offset + k * Q42_TENSOR_ENTRY_BYTES;
+        e.write_le(&mut head[o..o + Q42_TENSOR_ENTRY_BYTES]);
+        let entry_crc = crc32c(&head[o..o + 32]) as u64;
+        head[o + 72..o + 80].copy_from_slice(&entry_crc.to_le_bytes());
+    }
+    let hc = crc32c_update(crc32c_update(0xFFFF_FFFF, &head[0..72]), &head[76..manifest_end]);
+    head[72..76].copy_from_slice(&(!hc).to_le_bytes());
+    out.write_all(&head).map_err(|e| e.to_string())?;
+    let mut bytes_written = head.len();
+
+    // 4) Stream blobs: ternary-pack eligible tensors, copy the rest verbatim. One in flight.
+    let zeros = [0u8; 4096];
+    let mut f32_scratch: Vec<f32> = Vec::new();
+    let mut byte_scratch: Vec<u8> = Vec::new();
+    let mut peak_working = 0usize;
+    for (i, t) in plan.tensors.iter().enumerate() {
+        let target = entries[i].blob_offset as usize;
+        let mut pad = target.saturating_sub(bytes_written);
+        while pad > 0 {
+            let chunk = pad.min(zeros.len());
+            out.write_all(&zeros[..chunk]).map_err(|e| e.to_string())?;
+            bytes_written += chunk;
+            pad -= chunk;
+        }
+        let begin = plan.data_start + t.begin;
+        let end = plan.data_start + t.end;
+        if end > src.len() {
+            return Err(format!("transcode: tensor '{}' out of source bounds", t.name));
+        }
+        if eligible[i] {
+            decode_safetensor_to_f32(&src[begin..end], ggml_types[i], counts[i], &mut f32_scratch);
+            let blob = ternary_blob(&f32_scratch);
+            peak_working = peak_working.max(f32_scratch.len() * 4 + blob.len());
+            out.write_all(&blob).map_err(|e| e.to_string())?;
+            bytes_written += blob.len();
+        } else {
+            byte_scratch.clear();
+            byte_scratch.extend_from_slice(&src[begin..end]);
+            peak_working = peak_working.max(byte_scratch.len());
+            out.write_all(&byte_scratch).map_err(|e| e.to_string())?;
+            bytes_written += byte_scratch.len();
+        }
     }
 
     Ok(TranscodeReport {
@@ -956,6 +1112,68 @@ mod tests {
         crate::ternary::dequantize_blob(blob, &mut deq);
         assert!((deq[0] - 2.0).abs() < 1e-3, "deq[0] {}", deq[0]);
         assert!((deq[1] + 2.0).abs() < 1e-3, "deq[1] {}", deq[1]);
+    }
+
+    /// TASK #12 (§A): policy transcode ternaries the FFN, keeps attention/norm verbatim, populates
+    /// engine roles, and round-trips — all in one container.
+    #[test]
+    fn transcode_ffn_ternary_policy_mixed_container() {
+        // Q42_ROLE_* and Q42_LAYER_GLOBAL are in scope via `use super::*`.
+        // three HF-named F16 tensors: an FFN gate (ternary), an attention q_proj + a norm (verbatim).
+        let count = 50usize;
+        let f16 = |v: f32| half::f16::from_f32(v).to_le_bytes();
+        let mut gate = Vec::new();
+        let mut q = Vec::new();
+        let mut norm = Vec::new();
+        for i in 0..count {
+            gate.extend_from_slice(&f16(if i % 2 == 0 { 1.0 } else { -1.0 }));
+            q.extend_from_slice(&f16(0.25));
+            norm.extend_from_slice(&f16(0.5));
+        }
+        let (gl, ql) = (gate.len(), q.len());
+        let header = serde_json::json!({
+            "model.layers.0.mlp.gate_proj.weight": { "dtype": "F16", "shape": [count], "data_offsets": [0, gl] },
+            "model.layers.0.self_attn.q_proj.weight": { "dtype": "F16", "shape": [count], "data_offsets": [gl, gl + ql] },
+            "model.norm.weight": { "dtype": "F16", "shape": [count], "data_offsets": [gl + ql, gl + ql + norm.len()] },
+        });
+        let hb = serde_json::to_vec(&header).unwrap();
+        let mut src = Vec::new();
+        src.extend_from_slice(&(hb.len() as u64).to_le_bytes());
+        src.extend_from_slice(&hb);
+        src.extend_from_slice(&gate);
+        src.extend_from_slice(&q);
+        src.extend_from_slice(&norm);
+
+        let mut out = Vec::new();
+        let report = transcode_safetensor_to_q42_ffn_ternary(&src, 12, &mut out).unwrap();
+        assert_eq!(report.n_tensors, 3);
+
+        let idx = Q42TensorIndex::from_q42(&out).expect("mixed container must round-trip");
+        // entries are ordered by source offset: gate, q_proj, norm.
+        let by_role = |role: u16| idx.entries.iter().find(|e| e.role == role).expect("role present");
+
+        // FFN gate → ternary, FFN_GATE role, much smaller than its F16 source (100 bytes).
+        let g = by_role(Q42_ROLE_FFN_GATE);
+        assert_eq!(g.ggml_type, crate::ternary::GGML_TYPE_TERNARY_158);
+        assert_eq!(g.layer, 0);
+        assert_eq!(g.byte_len as usize, crate::ternary::ternary_blob_len(count)); // 4 + ceil(50/5) = 14
+        assert!((g.byte_len as usize) * 5 < gate.len());
+
+        // attention q_proj → verbatim F16, ATTN_Q role.
+        let a = by_role(Q42_ROLE_ATTN_Q);
+        assert_eq!(a.ggml_type, crate::safetensor::GGML_F16);
+        assert_eq!(a.byte_len as usize, ql); // verbatim, unchanged
+        assert_eq!(idx.blob(&out, a), &q[..]); // bytes preserved exactly
+
+        // norm → verbatim, OUTPUT_NORM (global).
+        let nrm = by_role(Q42_ROLE_OUTPUT_NORM);
+        assert_eq!(nrm.ggml_type, crate::safetensor::GGML_F16);
+        assert_eq!(nrm.layer, Q42_LAYER_GLOBAL);
+
+        // the FFN blob dequantizes (±1.0 uniform → scale 1.0 → ±1.0).
+        let mut deq = vec![0.0f32; count];
+        crate::ternary::dequantize_blob(idx.blob(&out, g), &mut deq);
+        assert!((deq[0] - 1.0).abs() < 1e-3 && (deq[1] + 1.0).abs() < 1e-3);
     }
 
     fn le_u16(b: &[u8], o: usize) -> u16 {

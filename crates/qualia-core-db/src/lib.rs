@@ -774,6 +774,9 @@ pub mod safetensor;
 /// Task #12 / STELLAR §A: BitNet b1.58 ternary quantization codec (compression during transcode).
 #[cfg(any(not(target_arch = "wasm32"), feature = "wasm-llm"))]
 pub mod ternary;
+/// Task #12 / STELLAR §A: tensor-name → engine GEMM-role mapping + the ternary (FFN-only) policy.
+#[cfg(any(not(target_arch = "wasm32"), feature = "wasm-llm"))]
+pub mod tensor_roles;
 pub mod identifier;
 #[cfg(not(target_arch = "wasm32"))]
 pub mod mcp_server;

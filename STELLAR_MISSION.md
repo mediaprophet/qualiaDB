@@ -78,9 +78,12 @@ opposed to the extractive "SSI-wallet / person-as-issued-root-key" counterfeit.
   applies it *during* transcode (valid Q42W, round-trips, ~8× smaller than F16); **`ternary_gemm.wgsl`** —
   the BitNet GEMM (weight = **add/subtract only**, one end-scale; naga-validated) with a byte-exact CPU
   oracle `ternary_gemm_cpu` (parity-tested == dense matmul of the dequantized weights). 11 tests.
-  **Remaining (task #12):** wire the kernel into the live FFN dispatch (`gguf_bridge`) behind a per-layer
-  policy (ternary FFN / keep attention Q4 — needs name→role mapping), GPU on-device parity, and a real-model
-  run.
+  Plus **name→role mapping + policy transcode** (`tensor_roles.rs`: GGUF + HF naming → engine roles;
+  `transcode_safetensor_to_q42_ffn_ternary` ternaries **only** the FFN projections and keeps
+  attention/norms/embeddings verbatim — the real §A policy — populating engine roles in the manifest).
+  **Remaining (task #12):** wire the kernel into the live FFN dispatch (`gguf_bridge` pipeline-create +
+  bind), GPU on-device parity (run the shader vs `ternary_gemm_cpu`), and a real-model end-to-end run +
+  tok/s measurement; then the other §A compressions (KIVI, W4A4/AWQ, spec-decode).
 - **KIVI asymmetric KV-cache**: Key cache per-channel 2-bit, Value cache per-token 4-bit → 100k+ context in
   consumer VRAM via a WGPU ring-buffer.
 - **W4A4 + Activation-Aware (AWQ)**: a calibration "Concentration-Alignment Transform" over the high-fidelity
