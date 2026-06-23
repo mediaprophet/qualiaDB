@@ -373,6 +373,156 @@ pub fn compile_gguf_to_q42(input: &[u8], page_log2: u16) -> Result<Vec<u8>, Stri
     Ok(out)
 }
 
+/// Task #12 / STELLAR §A — like [`compile_gguf_to_q42`] but **ternary-packs the FFN projections**
+/// (gate/up/down) during the compile, producing a **complete, runnable** Q42W: hyperparameters +
+/// tokenizer are preserved (so the live loader boots it and builds the KV cache), while the FFN
+/// tensors are BitNet-1.58b ternary blobs (`ternary::dequantize_blob` / the 2-bit GPU kernel).
+/// Attention / norms / embeddings stay verbatim at their source precision. This is the loadable
+/// container the live FFN-ternary dispatch path will run + measure against.
+pub fn compile_gguf_to_q42_ternary_ffn(input: &[u8], page_log2: u16) -> Result<Vec<u8>, String> {
+    use crate::ternary::{ternary_blob, ternary_blob_len, GGML_TYPE_TERNARY_158};
+
+    let idx = GgufTensorIndex::from_gguf(input);
+    if idx.tensor_data_start == 0 && idx.hyperparams.n_layer == 0 {
+        return Err("GGUF parse failed or yielded no tensor metadata".to_string());
+    }
+    let page_log2 = if page_log2 == 0 { Q42W_DEFAULT_PAGE_LOG2 } else { page_log2 };
+    if !(8..=30).contains(&page_log2) {
+        return Err(format!("page_log2 {page_log2} out of range"));
+    }
+    let page = 1usize << page_log2;
+    let n_layer = idx.hyperparams.n_layer;
+    let tds = idx.tensor_data_start as usize;
+
+    // 1. Enumerate all engine tensors (same set as compile_gguf_to_q42).
+    let mut planned: Vec<(u16, u16, GgufTensorInfo)> = Vec::new();
+    let mut push = |role: u16, layer: u16, t: Option<GgufTensorInfo>| {
+        if let Some(info) = t {
+            planned.push((role, layer, info));
+        }
+    };
+    for layer in 0..n_layer {
+        let t = idx.get_layer_tensors(layer);
+        let l = layer as u16;
+        push(Q42_ROLE_ATTN_NORM, l, t.attn_norm);
+        push(Q42_ROLE_ATTN_Q, l, t.attn_q);
+        push(Q42_ROLE_ATTN_K, l, t.attn_k);
+        push(Q42_ROLE_ATTN_V, l, t.attn_v);
+        push(Q42_ROLE_ATTN_OUTPUT, l, t.attn_output);
+        push(Q42_ROLE_FFN_NORM, l, t.ffn_norm);
+        push(Q42_ROLE_FFN_GATE, l, t.ffn_gate);
+        push(Q42_ROLE_FFN_UP, l, t.ffn_up);
+        push(Q42_ROLE_FFN_DOWN, l, t.ffn_down);
+    }
+    push(Q42_ROLE_TOKEN_EMBD, Q42_LAYER_GLOBAL, idx.token_embd_info().copied());
+    push(Q42_ROLE_OUTPUT, Q42_LAYER_GLOBAL, idx.output_weight_info().copied());
+    push(Q42_ROLE_OUTPUT_NORM, Q42_LAYER_GLOBAL, idx.output_norm_info().copied());
+    if planned.is_empty() {
+        return Err("no tensors enumerated from GGUF".to_string());
+    }
+
+    let is_ffn = |role: u16| matches!(role, Q42_ROLE_FFN_GATE | Q42_ROLE_FFN_UP | Q42_ROLE_FFN_DOWN);
+    let n_elems_of = |info: &GgufTensorInfo| -> usize {
+        let nd = info.n_dims.max(1) as usize;
+        info.dims.iter().take(nd).map(|&d| d.max(1) as usize).product()
+    };
+
+    // 2. Layout: FFN → ternary blob (small); everything else → verbatim source bytes.
+    let manifest_offset = align_up(Q42_WEIGHT_HEADER_BYTES, 16);
+    let manifest_size = Q42_TENSOR_ENTRY_BYTES * planned.len();
+    let blob_offset = align_up(manifest_offset + manifest_size, page);
+    let mut cur = blob_offset;
+    let mut entries: Vec<Q42TensorEntry> = Vec::with_capacity(planned.len());
+    for (role, layer, info) in &planned {
+        let src_len = crate::ggml_quants::tensor_byte_len(info)
+            .ok_or_else(|| format!("unsupported tensor type {} (role {role})", info.ggml_type))?;
+        if tds + info.byte_offset as usize + src_len > input.len() {
+            return Err(format!("tensor (role {role}, layer {layer}) out of GGUF bounds"));
+        }
+        let (out_ggml, byte_len) = if is_ffn(*role) {
+            (GGML_TYPE_TERNARY_158, ternary_blob_len(n_elems_of(info)))
+        } else {
+            (info.ggml_type, src_len)
+        };
+        let off = align_up(cur, page);
+        entries.push(Q42TensorEntry {
+            role: *role,
+            layer: *layer,
+            ggml_type: out_ggml,
+            dim0: info.dims[0] as u32,
+            dim1: info.dims[1] as u32,
+            blob_offset: off as u64,
+            byte_len: byte_len as u64,
+            scaffold_quin: NQuin::zeroed(),
+        });
+        cur = off + byte_len;
+    }
+    let blob_region_end = cur;
+
+    let tok_section = crate::gguf_sharder::GgufTokenizer::from_gguf(input).to_q42_section();
+    let tokenizer_offset = align_up(blob_region_end, 16);
+    let total = align_up(tokenizer_offset + tok_section.len(), 16);
+
+    // 3. Header (complete: hyperparams + tokenizer carried through; flagged ternary).
+    let hp = &idx.hyperparams;
+    let header = Q42WeightHeader {
+        magic: Q42W_MAGIC,
+        version: Q42W_VERSION,
+        page_log2,
+        n_tensors: planned.len() as u32,
+        n_layers: n_layer,
+        n_embd: hp.n_embd,
+        n_head: hp.n_head,
+        n_kv_head: hp.effective_n_kv_head(),
+        vocab_size: idx.vocab_dim() as u32,
+        rope_freq_base: hp.effective_rope_freq_base(),
+        rope_scale: hp.effective_rope_scale(),
+        manifest_offset: manifest_offset as u64,
+        blob_offset: blob_offset as u64,
+        cold_offset: 0,
+        cold_len: 0,
+        header_crc: 0,
+        format_flags: FORMAT_FLAG_TERNARY,
+        arch_quin: NQuin::zeroed(),
+        tokenizer_offset: tokenizer_offset as u64,
+        tokenizer_len: tok_section.len() as u64,
+    };
+    let mut out = vec![0u8; total];
+    header.write_le(&mut out[0..Q42_WEIGHT_HEADER_BYTES]);
+    for (k, e) in entries.iter().enumerate() {
+        let o = manifest_offset + k * Q42_TENSOR_ENTRY_BYTES;
+        e.write_le(&mut out[o..o + Q42_TENSOR_ENTRY_BYTES]);
+        let entry_crc = crc32c(&out[o..o + 32]) as u64;
+        out[o + 72..o + 80].copy_from_slice(&entry_crc.to_le_bytes());
+    }
+    let manifest_end = manifest_offset + Q42_TENSOR_ENTRY_BYTES * entries.len();
+    let hc = crc32c_update(crc32c_update(0xFFFF_FFFF, &out[0..72]), &out[76..manifest_end]);
+    out[72..76].copy_from_slice(&(!hc).to_le_bytes());
+
+    // 4. Blobs: FFN → dequant source → ternary-pack; everything else → verbatim copy.
+    let mut scratch: Vec<f32> = Vec::new();
+    for (k, (role, _, info)) in planned.iter().enumerate() {
+        let src = tds + info.byte_offset as usize;
+        let src_len = crate::ggml_quants::tensor_byte_len(info).unwrap();
+        let dst = entries[k].blob_offset as usize;
+        let blen = entries[k].byte_len as usize;
+        if is_ffn(*role) {
+            let n = n_elems_of(info);
+            if scratch.len() < n {
+                scratch.resize(n, 0.0);
+            }
+            crate::ggml_quants::dequantize_row_into(&input[src..src + src_len], info.ggml_type, n, &mut scratch)
+                .map_err(|e| format!("dequant role {role}: {e:?}"))?;
+            let blob = ternary_blob(&scratch[..n]);
+            out[dst..dst + blob.len()].copy_from_slice(&blob);
+        } else {
+            out[dst..dst + blen].copy_from_slice(&input[src..src + blen]);
+        }
+    }
+    out[tokenizer_offset..tokenizer_offset + tok_section.len()].copy_from_slice(&tok_section);
+    Ok(out)
+}
+
 /// `format_flags` bit: container produced by the **raw streaming transcode** (safetensor/MLX →
 /// Q42W) — tensors are verbatim high-fidelity blobs not yet mapped to engine GEMM roles, and the
 /// GGUF hyperparameter block is absent. (Distinguishes it from a `compile_gguf_to_q42` container.)
