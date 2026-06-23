@@ -229,6 +229,23 @@ code, not assumed. Designed-now/built-later items are labelled, never presented 
 
 ## Progress log
 
+### 2026-06-23 — Phase 0.2a DONE: renderer consolidated into a `render/` module tree (no monoliths)
+In-crate restructure (precursor to the 0.2b standalone crate), honouring "libraries with
+subdirectories, no monolithic files". Verified: native `cargo test --lib` **1173 passed / 0 failed**;
+wasm(`portal`) build green; viewport unchanged in Chrome (3D scene + 2D shadow). JS / wasm-bindgen API
+unchanged; crate-root re-exports (`QualiaPortal`, `WebEngine`) preserved.
+- **Stage 1 (`0f8e9e543`)** — flat `portal_*` / `asset_bridge` / `manifold_project` → one `render/`
+  tree (`telemetry, standpoint, camera, navigation, pga, projection, contract, spectral, acoustic,
+  control, assets, gpu, portal`); `lib.rs` exposes one `pub mod render;`. qualia-cli re-pathed.
+- **Stage 2 (`68a0d5316`)** — `render/gpu.rs` (1764) → `gpu/{mod,bloom,resources,particles}.rs`
+  (Kawase bloom / resource builders / particle field); no file over ~840 lines.
+- **Stage 3 (`2b2c7e95d`)** — `render/portal.rs` (1214) → `portal/{mod,paint}.rs` (canvas2d painters
+  out of the `#[wasm_bindgen]` facade).
+- **Remaining:** **0.2b** — lift `render/` into a standalone `qualia-render` workspace crate (requires
+  breaking the core↔render cycles: `daemon_tensor` / `webizen_server` / `acoustic_plane` /
+  `buffer_export` reach into the renderer). Optional: finer split of `portal/mod.rs` (~940) into
+  acoustic / data-ingestion API submodules.
+
 ### 2026-06-23 (Phase 1.1–1.3 DONE) — imported meshes render as solid 3D surfaces
 Commits `65a14dd74` (import), `c9b0736b3` (surface render), `11b55a178` (picker UI), branch `0.0.19`,
 not pushed.
