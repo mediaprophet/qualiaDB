@@ -334,6 +334,20 @@ export class QualiaPortal {
         return ret;
     }
     /**
+     * Phase 1.4 — the **2D view** of the resident manifold: each tensor node's `project(.., Plane2D)`
+     * shadow as a flat `[x0,y0,x1,y1,...]` array (world units, ~[-1,1]). The 3D scene draws the same
+     * nodes through the GPU projector (the `Volume3D` view); both are the *one* manifold projection
+     * seen two ways (see `manifold_project`). JS paints this on the 2D companion canvas.
+     * @param {number} time
+     * @returns {Float32Array}
+     */
+    project_resident_plane2d(time) {
+        const ret = wasm.qualiaportal_project_resident_plane2d(this.__wbg_ptr, time);
+        var v1 = getArrayF32FromWasm0(ret[0], ret[1]).slice();
+        wasm.__wbindgen_free(ret[0], ret[1] * 4, 4);
+        return v1;
+    }
+    /**
      * Publish phenomenal uniform + pending sonic tokens into SAB.
      * @param {SharedArrayBuffer} sab
      */

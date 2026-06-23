@@ -538,6 +538,31 @@ impl QualiaPortal {
         Ok(tris)
     }
 
+    /// Phase 1.4 — the **2D view** of the resident manifold: each tensor node's `project(.., Plane2D)`
+    /// shadow as a flat `[x0,y0,x1,y1,...]` array (world units, ~[-1,1]). The 3D scene draws the same
+    /// nodes through the GPU projector (the `Volume3D` view); both are the *one* manifold projection
+    /// seen two ways (see `manifold_project`). JS paints this on the 2D companion canvas.
+    pub fn project_resident_plane2d(&self, time: f32) -> Vec<f32> {
+        let bytes = match self.last_tensor.as_ref() {
+            Some(b) => b,
+            None => return Vec::new(),
+        };
+        let count = crate::tensor::buffer_export::tensor_node_count(bytes).unwrap_or(0);
+        let mut out = Vec::with_capacity(count * 2);
+        for i in 0..count {
+            if let Ok(t) = crate::tensor::buffer_export::read_tensor_at(bytes, i) {
+                let p = crate::manifold_project::project(
+                    &t,
+                    time,
+                    crate::manifold_project::ProjectionTarget::Plane2D,
+                );
+                out.push(p[0]);
+                out.push(p[1]);
+            }
+        }
+        out
+    }
+
     pub fn upload_tensor_buffer(&mut self, bytes: &[u8]) -> Result<(), JsValue> {
         let count = tensor_node_count(bytes).unwrap_or(0);
         self.last_tensor = Some(bytes.to_vec());

@@ -609,6 +609,33 @@ export function switchTab(tabId, btn, opts = {}) {
     }
 }
 
+/** Phase 1.4: paint the 2D shadow of the manifold — the SAME project() the 3D scene uses, target
+ *  Plane2D — onto the companion canvas, so one projection is visibly shown as two views. */
+let _plane2dRaf = 0;
+function drawPlane2dShadow() {
+    const cv = document.getElementById('plane2d-canvas');
+    if (cv && qualiaPortal && typeof qualiaPortal.project_resident_plane2d === 'function') {
+        const ctx = cv.getContext('2d');
+        const W = cv.width, H = cv.height;
+        ctx.clearRect(0, 0, W, H);
+        let pts = null;
+        try { pts = qualiaPortal.project_resident_plane2d(performance.now() * 0.001); }
+        catch (_) { /* render loop held the portal this frame; retry next */ }
+        if (pts && pts.length) {
+            const sc = W * 0.40;
+            ctx.fillStyle = 'rgba(110,231,183,0.9)';
+            for (let i = 0; i + 1 < pts.length; i += 2) {
+                const x = W * 0.5 + pts[i] * sc;
+                const y = H * 0.5 - pts[i + 1] * sc; // y up
+                ctx.beginPath();
+                ctx.arc(x, y, 2.2, 0, Math.PI * 2);
+                ctx.fill();
+            }
+        }
+    }
+    _plane2dRaf = requestAnimationFrame(drawPlane2dShadow);
+}
+
 /** Load an OBJ/STL/GLB file picked by the user and render it as a solid 3D surface (Phase 1.2). */
 export async function loadMeshAsset(file) {
     const statusEl = document.getElementById('mesh-status');
@@ -683,6 +710,7 @@ export async function bootSpatialPage() {
                 e.target.value = '';
             });
         }
+        if (qualiaPortal && !_plane2dRaf) drawPlane2dShadow(); // Phase 1.4 companion 2D view
         activateSpatialTabFromHash();
 
         debugLog('bootSpatialPage wasm ready', { wasmSource, hasPortal: !!qualiaPortal });

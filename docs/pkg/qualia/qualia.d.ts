@@ -97,6 +97,13 @@ export class QualiaPortal {
      */
     poll_selected_node(): number;
     /**
+     * Phase 1.4 — the **2D view** of the resident manifold: each tensor node's `project(.., Plane2D)`
+     * shadow as a flat `[x0,y0,x1,y1,...]` array (world units, ~[-1,1]). The 3D scene draws the same
+     * nodes through the GPU projector (the `Volume3D` view); both are the *one* manifold projection
+     * seen two ways (see `manifold_project`). JS paints this on the 2D companion canvas.
+     */
+    project_resident_plane2d(time: number): Float32Array;
+    /**
      * Publish phenomenal uniform + pending sonic tokens into SAB.
      */
     publish_acoustic_sab(sab: SharedArrayBuffer): void;
@@ -306,29 +313,6 @@ export type InitInput = RequestInfo | URL | Response | BufferSource | WebAssembl
 
 export interface InitOutput {
     readonly memory: WebAssembly.Memory;
-    readonly design_encode_wasm: (a: number, b: number) => [number, number, number];
-    readonly estimate_browser_storage: () => any;
-    readonly export_tensor_buffer_wasm: (a: number, b: number) => [number, number, number];
-    readonly export_tensor_slice_wasm: (a: number) => [number, number, number];
-    readonly geosparql_operation_wasm: (a: number, b: number) => [number, number, number];
-    readonly is_opfs_block_cached: (a: number) => any;
-    readonly pack_quins_into_superblock: (a: bigint, b: bigint, c: number, d: number) => [number, number, number];
-    readonly parse_cbor_ld_wasm: (a: number, b: number) => any;
-    readonly parse_json_wasm: (a: number, b: number) => any;
-    readonly read_opfs_block: (a: number) => any;
-    readonly sample_browser_telemetry_wasm: () => [number, number, number];
-    readonly spatial_encode_wasm: (a: number, b: number) => [number, number, number];
-    readonly verify_superblock_ecc: (a: number, b: number) => [number, number];
-    readonly write_opfs_block: (a: number, b: number, c: number) => any;
-    readonly __wbg_webengine_free: (a: number, b: number) => void;
-    readonly create_canvas: (a: number, b: number) => [number, number, number];
-    readonly webengine_last_parsed: (a: number) => any;
-    readonly webengine_load_json_scene: (a: number, b: number, c: number) => [number, number, number];
-    readonly webengine_load_q42: (a: number, b: number, c: number) => [number, number, number];
-    readonly webengine_mount_qapp: (a: number, b: number, c: number) => [number, number];
-    readonly webengine_new: () => [number, number, number];
-    readonly webengine_render_to_canvas: (a: number) => [number, number];
-    readonly init_panic_hook: () => void;
     readonly __wbg_federatednodemanager_free: (a: number, b: number) => void;
     readonly __wbg_get_wasmoffloadintent_opcode: (a: number) => number;
     readonly __wbg_get_wasmoffloadintent_payload_size: (a: number) => number;
@@ -351,6 +335,20 @@ export interface InitOutput {
     readonly webizen_propose_agreement: (a: any, b: number, c: number, d: number, e: number, f: number) => bigint;
     readonly webizen_sign_agreement: (a: bigint, b: number, c: number) => void;
     readonly prune_and_validate_mesh: (a: bigint) => number;
+    readonly design_encode_wasm: (a: number, b: number) => [number, number, number];
+    readonly estimate_browser_storage: () => any;
+    readonly export_tensor_buffer_wasm: (a: number, b: number) => [number, number, number];
+    readonly export_tensor_slice_wasm: (a: number) => [number, number, number];
+    readonly geosparql_operation_wasm: (a: number, b: number) => [number, number, number];
+    readonly is_opfs_block_cached: (a: number) => any;
+    readonly pack_quins_into_superblock: (a: bigint, b: bigint, c: number, d: number) => [number, number, number];
+    readonly parse_cbor_ld_wasm: (a: number, b: number) => any;
+    readonly parse_json_wasm: (a: number, b: number) => any;
+    readonly read_opfs_block: (a: number) => any;
+    readonly sample_browser_telemetry_wasm: () => [number, number, number];
+    readonly spatial_encode_wasm: (a: number, b: number) => [number, number, number];
+    readonly verify_superblock_ecc: (a: number, b: number) => [number, number];
+    readonly write_opfs_block: (a: number, b: number, c: number) => any;
     readonly __wbg_qualiaportal_free: (a: number, b: number) => void;
     readonly portal_init_webgpu: (a: any) => any;
     readonly qualiaportal_acoustic_enabled: (a: number) => number;
@@ -380,6 +378,7 @@ export interface InitOutput {
     readonly qualiaportal_observe_node_at: (a: number, b: number, c: number, d: number, e: number) => [number, number, number];
     readonly qualiaportal_operational_mode: (a: number) => number;
     readonly qualiaportal_poll_selected_node: (a: number) => number;
+    readonly qualiaportal_project_resident_plane2d: (a: number, b: number) => [number, number];
     readonly qualiaportal_publish_acoustic_sab: (a: number, b: any) => [number, number];
     readonly qualiaportal_push_control_command: (a: number, b: bigint) => number;
     readonly qualiaportal_push_sonic_token_raw: (a: number, b: bigint) => number;
@@ -401,6 +400,15 @@ export interface InitOutput {
     readonly qualiaportal_upload_mesh_asset: (a: number, b: number, c: number, d: number, e: number) => [number, number, number];
     readonly qualiaportal_upload_tensor_buffer: (a: number, b: number, c: number) => [number, number];
     readonly qualiaportal_selected_node_index: (a: number) => number;
+    readonly __wbg_webengine_free: (a: number, b: number) => void;
+    readonly create_canvas: (a: number, b: number) => [number, number, number];
+    readonly webengine_last_parsed: (a: number) => any;
+    readonly webengine_load_json_scene: (a: number, b: number, c: number) => [number, number, number];
+    readonly webengine_load_q42: (a: number, b: number, c: number) => [number, number, number];
+    readonly webengine_mount_qapp: (a: number, b: number, c: number) => [number, number];
+    readonly webengine_new: () => [number, number, number];
+    readonly webengine_render_to_canvas: (a: number) => [number, number];
+    readonly init_panic_hook: () => void;
     readonly wasm_bindgen__convert__closures_____invoke__h04e3064d3f666bd6: (a: number, b: number, c: any) => [number, number];
     readonly wasm_bindgen__convert__closures_____invoke__h710533e233c29f5b: (a: number, b: number, c: any, d: any) => void;
     readonly wasm_bindgen__convert__closures_____invoke__h59d672308a0bcda2: (a: number, b: number, c: any) => void;
