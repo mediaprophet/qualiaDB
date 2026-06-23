@@ -81,9 +81,14 @@ opposed to the extractive "SSI-wallet / person-as-issued-root-key" counterfeit.
   Plus **name→role mapping + policy transcode** (`tensor_roles.rs`: GGUF + HF naming → engine roles;
   `transcode_safetensor_to_q42_ffn_ternary` ternaries **only** the FFN projections and keeps
   attention/norms/embeddings verbatim — the real §A policy — populating engine roles in the manifest).
-  Plus **native GPU dispatch + on-device parity** (`ternary_gpu.rs::ternary_gemm_gpu` runs
-  `ternary_gemm.wgsl` on a real wgpu device; the parity test passed **on an NVIDIA A2000** == the CPU
-  oracle). **Remaining (task #12):** splice the dispatcher into the live FFN layer loop
+  Plus **native GPU dispatch + on-device parity** (`ternary_gpu.rs` runs the kernels on a real wgpu
+  device; parity passed **on an NVIDIA A2000** == the CPU oracle). **2-bit branchless variant**
+  (external-review-driven): `ternary_gemm_2bit.wgsl` + `pack_trits_2bit` + `ternary_gemm_cpu_2bit` —
+  4 trits/byte, shift/mask unpack (no base-3 `/`,`%`), `acc += (f32(c==1)-f32(c==2))*x` (no warp
+  divergence); also on-device-verified on the A2000. *(The GPU win is bandwidth+occupancy, not
+  MAC-elimination — the multiply is a free FMA. A real speedup number needs pipeline/buffer reuse +
+  timestamp queries; the standalone dispatcher rebuilds per call, so its microbench is overhead-bound
+  and inconclusive — that measurement comes with the FFN-loop integration.)* **Remaining (task #12):** splice the dispatcher into the live FFN layer loop
   (`gguf_bridge::dispatch_transformer_forward` / `encode_fused_ffn_expansion` — branch on
   `ggml_type == TERNARY`, resident + streaming modes) and a real-model end-to-end run + tok/s vs the
   F16 baseline; then the other §A compressions (KIVI, W4A4/AWQ, spec-decode).

@@ -172,6 +172,86 @@ pub fn ternary_gemm_cpu(
     }
 }
 
+// ── 2-bit (pow-2) packing + branchless GEMM — GPU-optimal (external-review-driven) ───────────────
+//
+// Base-3 packing (above) is densest (1.6 bit) but the GPU kernel must unpack it with integer `/3`
+// and `%3` — dozens of cycles on Ampere — and a `trit>0/<0` branch causes warp divergence. The
+// 2-bit layout below trades 25% more bandwidth (2.0 bit) for **shift/mask unpack + fully branchless
+// math**. On a GPU the per-weight multiply is free (FMA), so the ternary win is *bandwidth +
+// occupancy*, not MAC-elimination — making this the right layout for the GPU resident path. (Base-3
+// remains the better on-disk/distribution format; the two can coexist — base-3 cold, 2-bit hot.)
+
+/// Trits packed 4-per-byte, 2 bits each: `0b00 = 0`, `0b01 = +1`, `0b10 = -1` (`0b11` unused).
+pub const TRITS_PER_BYTE_2BIT: usize = 4;
+
+/// The 2-bit code for a trit (matches `ternary_gemm_2bit.wgsl`).
+#[inline]
+fn trit_code_2bit(t: i8) -> u8 {
+    if t > 0 {
+        1
+    } else if t < 0 {
+        2
+    } else {
+        0
+    }
+}
+
+/// Bytes to pack `count` trits at 2 bits each (4/byte).
+#[inline]
+pub fn packed_trit_len_2bit(count: usize) -> usize {
+    count.div_ceil(TRITS_PER_BYTE_2BIT)
+}
+
+/// Pack ternary values into 2-bit codes, 4 per byte.
+pub fn pack_trits_2bit(trits: &[i8]) -> Vec<u8> {
+    let mut out = vec![0u8; packed_trit_len_2bit(trits.len())];
+    for (k, &t) in trits.iter().enumerate() {
+        out[k / TRITS_PER_BYTE_2BIT] |= trit_code_2bit(t) << ((k % TRITS_PER_BYTE_2BIT) * 2);
+    }
+    out
+}
+
+/// Trit value `{-1,0,+1}` at linear index `k` from 2-bit packing — the **branchless** mirror of
+/// `ternary_gemm_2bit.wgsl::pair_at` (`(code==1) - (code==2)`).
+#[inline]
+pub fn trit_at_2bit(packed: &[u8], k: usize) -> i32 {
+    let code = (packed[k / TRITS_PER_BYTE_2BIT] >> ((k % TRITS_PER_BYTE_2BIT) * 2)) & 3;
+    (code == 1) as i32 - (code == 2) as i32
+}
+
+/// The branchless 2-bit WGSL ternary-GEMM kernel; CPU oracle is [`ternary_gemm_cpu_2bit`].
+pub const TERNARY_GEMM_2BIT_WGSL: &str = include_str!("shaders/ternary_gemm_2bit.wgsl");
+
+/// CPU oracle for `ternary_gemm_2bit.wgsl` — same math as [`ternary_gemm_cpu`], 2-bit packing +
+/// branchless accumulation.
+#[allow(clippy::too_many_arguments)]
+pub fn ternary_gemm_cpu_2bit(
+    activations: &[f32],
+    packed: &[u8],
+    scale: f32,
+    n_in: usize,
+    n_out: usize,
+    n_batch: usize,
+    in_row_stride: usize,
+    out_row_stride: usize,
+    out: &mut [f32],
+) {
+    let in_stride = if in_row_stride > 0 { in_row_stride } else { n_in };
+    let out_stride = if out_row_stride > 0 { out_row_stride } else { n_out };
+    for m in 0..n_batch.max(1) {
+        let in_base = m * in_stride;
+        for i in 0..n_out {
+            let row0 = i * n_in;
+            let mut acc = 0.0f32;
+            for j in 0..n_in {
+                // branchless: trit ∈ {-1,0,+1} as f32, then FMA
+                acc += trit_at_2bit(packed, row0 + j) as f32 * activations[in_base + j];
+            }
+            out[m * out_stride + i] = scale * acc;
+        }
+    }
+}
+
 /// Decode a [`ternary_blob`] of `count` weights into `out` (zero-heap dequant).
 pub fn dequantize_blob(blob: &[u8], out: &mut [f32]) {
     if blob.len() < 4 {

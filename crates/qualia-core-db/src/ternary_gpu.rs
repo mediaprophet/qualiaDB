@@ -8,7 +8,7 @@
 //! Native only — the wasm WebGPU path reuses the same WGSL through `gguf_bridge`'s pipeline set
 //! when the kernel is spliced into the layer loop (the remaining integration step).
 
-use crate::ternary::TERNARY_GEMM_WGSL;
+use crate::ternary::{TERNARY_GEMM_2BIT_WGSL, TERNARY_GEMM_WGSL};
 
 /// 32-byte `TernaryParams` uniform matching `ternary_gemm.wgsl` (n_in, n_out, n_batch,
 /// in_row_stride, out_row_stride, scale, + 2 pad words).
@@ -22,12 +22,42 @@ fn ternary_params_bytes(n_in: u32, n_out: u32, n_batch: u32, scale: f32) -> [u8;
     b
 }
 
-/// Execute the ternary GEMM on the GPU: returns the `n_batch × n_out` output (row-major).
-/// `packed` is the row-major trits of the `(n_out × n_in)` weight (5/byte base-3). Strides default
-/// to dense. Blocking (native readback).
+/// Execute the **base-3** ternary GEMM on the GPU (`ternary_gemm.wgsl`).
 pub fn ternary_gemm_gpu(
     device: &wgpu::Device,
     queue: &wgpu::Queue,
+    activations: &[f32],
+    packed: &[u8],
+    scale: f32,
+    n_in: usize,
+    n_out: usize,
+    n_batch: usize,
+) -> Vec<f32> {
+    run_gemm(device, queue, TERNARY_GEMM_WGSL, activations, packed, scale, n_in, n_out, n_batch)
+}
+
+/// Execute the **2-bit branchless** ternary GEMM on the GPU (`ternary_gemm_2bit.wgsl`). `packed`
+/// must be 2-bit packed (`ternary::pack_trits_2bit`).
+pub fn ternary_gemm_gpu_2bit(
+    device: &wgpu::Device,
+    queue: &wgpu::Queue,
+    activations: &[f32],
+    packed: &[u8],
+    scale: f32,
+    n_in: usize,
+    n_out: usize,
+    n_batch: usize,
+) -> Vec<f32> {
+    run_gemm(device, queue, TERNARY_GEMM_2BIT_WGSL, activations, packed, scale, n_in, n_out, n_batch)
+}
+
+/// Shared dispatch for both ternary GEMM kernels (identical bindings/params; only the WGSL differs).
+/// Returns the `n_batch × n_out` output. Strides default to dense. Blocking (native readback).
+#[allow(clippy::too_many_arguments)]
+fn run_gemm(
+    device: &wgpu::Device,
+    queue: &wgpu::Queue,
+    wgsl: &str,
     activations: &[f32],
     packed: &[u8],
     scale: f32,
@@ -40,7 +70,7 @@ pub fn ternary_gemm_gpu(
 
     let shader = device.create_shader_module(wgpu::ShaderModuleDescriptor {
         label: Some("ternary_gemm"),
-        source: wgpu::ShaderSource::Wgsl(TERNARY_GEMM_WGSL.into()),
+        source: wgpu::ShaderSource::Wgsl(wgsl.into()),
     });
     let pipeline = device.create_compute_pipeline(&wgpu::ComputePipelineDescriptor {
         label: Some("ternary_gemm_pipeline"),
@@ -168,5 +198,69 @@ mod tests {
             assert!((gpu[i] - cpu[i]).abs() < 1e-4, "elem {i}: gpu {} vs cpu {}", gpu[i], cpu[i]);
         }
         eprintln!("ternary_gemm_gpu: on-device parity OK ({} elems)", cpu.len());
+    }
+
+    /// ON-DEVICE PARITY (2-bit branchless): `ternary_gemm_2bit.wgsl` == `ternary_gemm_cpu_2bit`.
+    #[test]
+    fn ternary_gemm_gpu_2bit_matches_cpu_oracle() {
+        use crate::ternary::{pack_trits_2bit, ternary_gemm_cpu_2bit};
+        let Some((device, queue)) = try_gpu() else {
+            eprintln!("ternary_gemm_gpu_2bit: no wgpu adapter — skipping");
+            return;
+        };
+        let (n_in, n_out, n_batch) = (7usize, 5usize, 3usize);
+        let scale = 0.37_f32;
+        let trits: Vec<i8> = (0..n_in * n_out).map(|k| (k % 3) as i8 - 1).collect();
+        let packed = pack_trits_2bit(&trits);
+        let act: Vec<f32> = (0..n_in * n_batch).map(|j| (j as f32) * 0.25 - 1.5).collect();
+
+        let gpu = ternary_gemm_gpu_2bit(&device, &queue, &act, &packed, scale, n_in, n_out, n_batch);
+        let mut cpu = vec![0.0f32; n_batch * n_out];
+        ternary_gemm_cpu_2bit(&act, &packed, scale, n_in, n_out, n_batch, 0, 0, &mut cpu);
+        for i in 0..cpu.len() {
+            assert!((gpu[i] - cpu[i]).abs() < 1e-4, "elem {i}: gpu {} vs cpu {}", gpu[i], cpu[i]);
+        }
+        eprintln!("ternary_gemm_gpu_2bit: on-device parity OK ({} elems)", cpu.len());
+    }
+
+    /// INDICATIVE A/B timing: base-3 branchy vs 2-bit branchless on a large GEMV. Wall-clock incl.
+    /// per-dispatch submit/readback overhead — a *relative* signal, not a rigorous TPS number
+    /// (real measurement needs timestamp queries inside the fused FFN loop). Skips with no GPU.
+    #[test]
+    fn ternary_gemm_2bit_vs_base3_indicative_timing() {
+        use crate::ternary::{pack_trits, pack_trits_2bit};
+        use std::time::Instant;
+        let Some((device, queue)) = try_gpu() else {
+            eprintln!("ternary timing: no wgpu adapter — skipping");
+            return;
+        };
+        let (n_in, n_out, n_batch) = (4096usize, 4096usize, 1usize); // decode-shape GEMV
+        let scale = 0.05_f32;
+        let trits: Vec<i8> = (0..n_in * n_out).map(|k| ((k * 7 + 1) % 3) as i8 - 1).collect();
+        let p3 = pack_trits(&trits);
+        let p2 = pack_trits_2bit(&trits);
+        let act: Vec<f32> = (0..n_in).map(|j| (j as f32 % 13.0) * 0.1 - 0.6).collect();
+        let iters = 60;
+
+        // warmup
+        let _ = ternary_gemm_gpu(&device, &queue, &act, &p3, scale, n_in, n_out, n_batch);
+        let _ = ternary_gemm_gpu_2bit(&device, &queue, &act, &p2, scale, n_in, n_out, n_batch);
+
+        let t0 = Instant::now();
+        for _ in 0..iters {
+            let _ = ternary_gemm_gpu(&device, &queue, &act, &p3, scale, n_in, n_out, n_batch);
+        }
+        let base3 = t0.elapsed().as_secs_f64() / iters as f64 * 1e3;
+
+        let t1 = Instant::now();
+        for _ in 0..iters {
+            let _ = ternary_gemm_gpu_2bit(&device, &queue, &act, &p2, scale, n_in, n_out, n_batch);
+        }
+        let bit2 = t1.elapsed().as_secs_f64() / iters as f64 * 1e3;
+
+        eprintln!(
+            "ternary GEMV {}x{} (indicative, incl. overhead): base-3 branchy {:.3} ms/iter | 2-bit branchless {:.3} ms/iter | speedup {:.2}x",
+            n_out, n_in, base3, bit2, base3 / bit2.max(1e-9)
+        );
     }
 }
