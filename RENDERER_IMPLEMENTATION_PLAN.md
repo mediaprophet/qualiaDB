@@ -34,7 +34,7 @@ These are not phase work; they are gates on all of it (RENDERER_DEFINITION §8; 
   | | **Linux** (x86-64 / arm64) | Vulkan | AVX2 / NEON | |
   | Native mobile | **iOS / iPadOS** (arm64) | Metal | NEON · ANE (CoreML) | via PWA-edge shell / Flutter FRB bridge |
   | | **Android** (arm64) | Vulkan | NEON · NNAPI | via PWA-edge shell / Flutter FRB bridge |
-  | WASM (browser) | **`wasm32`-unknown-unknown** | WebGPU | WASM-SIMD · WebNN | primary web path; gated by the wgpu fix (0.1) |
+  | WASM (browser) | **`wasm32`-unknown-unknown** | WebGPU | WASM-SIMD · WebNN | primary web path; **LIVE in Chrome 2026-06-23** (3D `PortalGpu` viewport) |
   | | **`wasm64` / memory64** | WebGPU | WASM-SIMD · WebNN | **decided, currently unbuilt** — stand up + verify tooling; for >4 GB manifolds/models |
 
   **Verification discipline:** per-phase acceptance is verified on at least the **primary targets** (one native
@@ -91,11 +91,27 @@ The precondition for "fast on every device" being non-fiction (migration review 
     but currently unbuilt; verify tooling) — with **no UI-shell deps**; orphan crates removed; **one** renderer
     source of truth. (Mobile native — iOS/Metal, Android/Vulkan — builds via the shell/bridge, matrix-tracked.)
 - **0.3 Re-light the dev-bench:** fix the WASM bundle so `spatial.html` runs the existing ~2.5D field.
-  - *Acceptance:* `spatial.html` renders the particle field in-browser (no "WASM Engine Required") — screenshot.
+  **✅ DONE 2026-06-23** — exceeded: `spatial.html` runs the *3D* `PortalGpu` path, not just the 2.5D field.
+  - *Acceptance:* `spatial.html` renders the particle field in-browser (no "WASM Engine Required") — screenshot. **met**
 - **Rail-check:** consolidation removes drift (one source); no shell deps in the engine; affordability path
   (one shared device) preserved.
 
 ### Phase 1 — World-space 3D scene *(closes the ~2.5D → 3D gap; STELLAR §E step 1)*
+
+> **Discovered 2026-06-23:** `portal_gpu.rs::PortalGpu` is *already* a real WebGPU 3D renderer —
+> surface-from-canvas, **depth texture + depth-stencil**, render passes, Kawase **bloom**. So much of
+> 1.1 and the render scaffolding already exist. The blocker is that it is **hard-disabled in WASM**
+> (`portal.rs`: `let wasm_sync_gpu_ok = false`) because `PortalGpu::try_new` uses `pollster::block_on`,
+> which traps on the browser main thread. Hence **1.0** below — the real near-term unlock.
+
+- **1.0 — Unlock the existing WebGPU 3D path (async init).** Replace the synchronous
+  `block_on(request_adapter / request_device)` with **async WebGPU init** for wasm32 (await via
+  `wasm-bindgen-futures`; keep `block_on` for native); plumb a one-time async init through the portal's
+  wasm-bindgen API + `loadQualiaPortal`, stash the initialised GPU, and flip the gate so the GPU path
+  engages. The spectral σ data still drives colour; depth + bloom come for free from `PortalGpu`.
+  **✅ DONE 2026-06-23** (commit `13f9a3346`) — async init + the three Dawn-strict fixes (see Progress log).
+  - *Acceptance:* `spatial.html` renders via `PortalGpu` (depth-tested 3D + bloom), **not** canvas2d, in
+    Chrome — screenshot proof; canvas2d remains the fallback when WebGPU is unavailable. **met** (orbit verified)
 - **1.1** depth-stencil buffer (occlusion). **1.2** mesh vertex/index buffers (geometry).
 - **1.3** asset import: **`glb_bridge` as `fn(&[u8]) -> …NQuin…`** (no `std::fs`; the shell hands bytes down —
   migration §2.1); then `.obj`/`.stl`; **OpenUSD deferred** (heavy — built-later).
@@ -212,6 +228,36 @@ code, not assumed. Designed-now/built-later items are labelled, never presented 
 ---
 
 ## Progress log
+
+### 2026-06-23 (later) — Phase 0.1 browser-accepted + Phase 0.3 + Phase 1.0 DONE: WebGPU 3D viewport live in Chrome
+Committed `13f9a3346` (branch `0.0.19`, not pushed).
+- **Phase 0.1 browser acceptance: PASSED.** `requestDevice` succeeds on current Chrome (`wasm32`) — the
+  removed-limit rejection is stripped by `docs/js/webgpu-limits-shim.js` before `requestDevice`. The
+  previously-"pending your hardware" items in the entry below are now resolved (Chrome accepts the device;
+  demo published + browser-tested).
+- **Phase 1.0 (async WebGPU unlock): DONE.** `PortalGpu::try_new_async` replaces `block_on` on the browser
+  main thread; `portal_init_webgpu()` is awaited by `loadQualiaPortal` **before** `new QualiaPortal()` (so the
+  first paint adopts the stashed GPU instead of grabbing a 2d context). The GPU path now engages (tier T2).
+- **The black-viewport saga — three Dawn-strict WebGPU bugs** (native backends tolerate them; only exposed
+  once the path actually ran in a browser). A failed-creation pipeline/bindgroup becomes *deferred-invalid*;
+  binding it voids the whole command buffer so the frame (and its clear) never presents → black, with **no JS
+  error**. Found via `push_error_scope(Validation)` / `pop_error_scope().await`:
+  1. **Device limits** — `downlevel_webgl2_defaults()` sets `max_storage_buffers_per_shader_stage = 0`,
+     invalidating both pipelines (vertex shaders read the tensor SOA / particle SSBOs). → `Limits::default()`.
+  2. **WGSL** — projector `pick_id: u32` inter-stage output needs `@interpolate(flat)` (Dawn rejects non-flat
+     integers; naga is lenient).
+  3. **Storage offset** — tensor SOA bound at offset 32 violates the 256-byte `minStorageBufferOffsetAlignment`;
+     strip the 32-byte header at upload, bind at offset 0.
+- **Canvas-resize hygiene** — `render()` reconciles depth/picking/bloom to the *actual acquired frame texture*;
+  `surface_size()` getter + `paint_frame` self-heal resize. **Safety net** — init validation error scope now
+  surfaces otherwise-silent deferred pipeline-creation errors.
+- **Phase 0.3 (re-light dev-bench): DONE** — `spatial.html` renders via `PortalGpu`, not canvas2d.
+- **Verified in Chrome:** live interactive 3D viewport — bloom + ambient particle field + tensor-node
+  projection + **orbit camera** (drag reframes the cluster); console clean. Rebuilt `docs/pkg/qualia` bundle.
+- **Cosmetic follow-up (not broken):** nodes read as hard squares (bloom blows out the soft-dot alpha
+  falloff — tunable). ~9/52 nodes visible at once = temporal scrub (t = 0.50 ± 0.08) working as designed.
+- **NOT committed this session:** asset-import feature (`asset_bridge.rs` + CLI `Mesh` ingest — complete but
+  not re-verified this session); planning `.md`; personal/staging files. Phase 0.2 still not started.
 
 ### 2026-06-23 — Phase 0.1 (wgpu upgrade): code-complete; all builds + tests green; browser acceptance pending
 - **wgpu 0.19 → 0.20.1** in `qualia-core-db` (+ `qualia-extensions`); naga dev-dep 0.19 → 0.20. Minimal-risk
