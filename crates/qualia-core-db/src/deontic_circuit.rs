@@ -6,7 +6,7 @@ use ark_bls12_381::{Bls12_381, Fr};
 #[cfg(feature = "zk-culling")]
 use ark_groth16::{Groth16, Proof, ProvingKey, VerifyingKey};
 #[cfg(feature = "zk-culling")]
-use ark_relations::r1cs::{ConstraintSynthesizer, ConstraintSystemRef, LinearCombination, SynthesisError, Variable};
+use ark_relations::gr1cs::{ConstraintSynthesizer, ConstraintSystemRef, LinearCombination, SynthesisError, Variable};
 #[cfg(feature = "zk-culling")]
 use ark_serialize::CanonicalDeserialize;
 #[cfg(feature = "zk-culling")]
@@ -45,10 +45,10 @@ impl ConstraintSynthesizer<Fr> for DeonticAccessCircuit {
         // public `policy_root` — i.e. they hold a credential authorised under the
         // committed policy. (Simplified additive commitment; Merkle-set membership is
         // a future hardening, not faked here.)
-        cs.enforce_constraint(
-            LinearCombination::from(did_var) + role_var + action_var,
-            LinearCombination::from(Variable::One),
-            LinearCombination::from(root_var),
+        cs.enforce_r1cs_constraint(
+            || LinearCombination::from(did_var) + role_var + action_var,
+            || LinearCombination::from(Variable::One),
+            || LinearCombination::from(root_var),
         )?;
         // `temporal_constraint` is bound as a public input (the verifier checks the
         // proof was generated for this exact timestamp), but range enforcement

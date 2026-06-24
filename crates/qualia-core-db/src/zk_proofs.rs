@@ -1197,7 +1197,7 @@ mod tests {
 #[cfg(feature = "zk-culling")]
 pub mod arkworks_groth16 {
     use ark_ff::Field;
-    use ark_relations::r1cs::{ConstraintSynthesizer, ConstraintSystemRef, SynthesisError};
+    use ark_relations::gr1cs::{ConstraintSynthesizer, ConstraintSystemRef, SynthesisError};
     use ark_bls12_381::{Bls12_381, Fr};
     use ark_groth16::{Groth16, ProvingKey, VerifyingKey, Proof};
     use ark_snark::SNARK;
@@ -1222,14 +1222,14 @@ pub mod arkworks_groth16 {
                 Ok(a_val)
             })?;
 
-            cs.enforce_constraint(a.into(), b.into(), c.into())?;
+            cs.enforce_r1cs_constraint(|| a.into(), || b.into(), || c.into())?;
             Ok(())
         }
     }
 
     
     use crate::zk_proofs::{ArithmeticCircuit, CircuitExpression, VariableType, FieldElement};
-    use ark_relations::r1cs::{Variable, LinearCombination};
+    use ark_relations::gr1cs::{Variable, LinearCombination};
     use std::collections::HashMap;
     use ark_ff::PrimeField;
     use ark_serialize::{CanonicalSerialize, CanonicalDeserialize};
@@ -1290,7 +1290,7 @@ pub mod arkworks_groth16 {
                 let (right_lc, _) = evaluate_expression(cs.clone(), &constraint.right, &var_map, &self.witness)?;
                 let (out_lc, _) = evaluate_expression(cs.clone(), &constraint.output, &var_map, &self.witness)?;
                 
-                cs.enforce_constraint(left_lc, right_lc, out_lc)?;
+                cs.enforce_r1cs_constraint(|| left_lc, || right_lc, || out_lc)?;
             }
 
             Ok(())
@@ -1337,7 +1337,7 @@ pub mod arkworks_groth16 {
                 };
                 
                 let out_var = cs.new_witness_variable(|| val.ok_or(SynthesisError::AssignmentMissing))?;
-                cs.enforce_constraint(lc_a, lc_b, out_var.into())?;
+                cs.enforce_r1cs_constraint(|| lc_a, || lc_b, || out_var.into())?;
                 
                 Ok((LinearCombination::from(out_var), val))
             }

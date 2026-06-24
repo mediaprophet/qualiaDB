@@ -3821,7 +3821,7 @@ impl ProofEngine {
     ) -> Result<Vec<u8>, CryptographicError> {
         use ark_bls12_381::Bls12_381;
         use ark_groth16::Groth16;
-        use ark_relations::r1cs::ConstraintSynthesizer;
+        use ark_relations::gr1cs::ConstraintSynthesizer;
         use ark_serialize::CanonicalSerialize;
         use ark_snark::SNARK;
         use sha2::{Sha256, Digest};
