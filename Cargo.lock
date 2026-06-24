@@ -5899,7 +5899,7 @@ dependencies = [
  "serde_yaml",
  "sha1 0.11.0",
  "spargebra",
- "sysinfo 0.39.5",
+ "sysinfo",
  "tokio",
  "tokio-tungstenite 0.20.1",
  "tungstenite 0.29.0",
@@ -5934,7 +5934,7 @@ dependencies = [
  "serde_yaml",
  "sha1 0.11.0",
  "sha2 0.11.0",
- "sysinfo 0.30.13",
+ "sysinfo",
  "tiny_http",
  "tokio",
  "url",
@@ -6027,7 +6027,7 @@ dependencies = [
  "sha1 0.11.0",
  "sha2 0.11.0",
  "sha3 0.12.0",
- "sysinfo 0.30.13",
+ "sysinfo",
  "tempfile",
  "thiserror 1.0.69",
  "tokio",
@@ -7721,21 +7721,6 @@ dependencies = [
  "proc-macro2",
  "quote",
  "syn 2.0.118",
-]
-
-[[package]]
-name = "sysinfo"
-version = "0.30.13"
-source = "registry+https://github.com/rust-lang/crates.io-index"
-checksum = "0a5b4ddaee55fb2bea2bf0e5000747e5f5c0de765e5a5ff87f4cd106439f4bb3"
-dependencies = [
- "cfg-if",
- "core-foundation-sys",
- "libc",
- "ntapi",
- "once_cell",
- "rayon",
- "windows 0.52.0",
 ]
 
 [[package]]

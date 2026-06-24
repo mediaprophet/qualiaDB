@@ -572,7 +572,11 @@ impl AmbientOrchestrationManager {
     pub fn discover_devices_into(&mut self, out: &mut [AmbientDeviceHandle]) -> Result<usize, AmbientError> {
         use sysinfo::System;
 
-        let sys = System::new_all();
+        // sysinfo 0.39: explicitly refresh after construction before reading
+        // CPU/memory (matches the ingest.rs pattern). H0 hardware discovery
+        // depends on these values being populated.
+        let mut sys = System::new_all();
+        sys.refresh_all();
         let mut discovered = 0usize;
         self.devices.clear();
 
