@@ -2312,13 +2312,14 @@ fn rope_inplace(
             return;
         }
         for i in 0..half {
-            // NEOX: pair dimension i with i + half (not i + 1).
+            // Interleaved ("normal"/llama) rope: pair adjacent dims (2i, 2i+1). GGUF llama-arch
+            // (SmolLM2) is is_neox=false — weights are permuted for interleaved, NOT split-half.
             let theta = scaled_pos * base.powf(-2.0 * i as f32 / head_dim as f32);
             let (s, c) = theta.sin_cos();
-            let x0 = vec[off + i];
-            let x1 = vec[off + i + half];
-            vec[off + i] = x0 * c - x1 * s;
-            vec[off + i + half] = x0 * s + x1 * c;
+            let x0 = vec[off + 2 * i];
+            let x1 = vec[off + 2 * i + 1];
+            vec[off + 2 * i] = x0 * c - x1 * s;
+            vec[off + 2 * i + 1] = x0 * s + x1 * c;
         }
     }
 }

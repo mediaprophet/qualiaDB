@@ -167,6 +167,162 @@ fn a1c_q8_gemm_decode_coherent() {
     println!("[a1c] GPU Q8_0 GEMM verified coherent.");
 }
 
+/// ChatML tokenizer probe: does the GGUF tokenizer map SmolLM2's chat special tokens
+/// `<|im_start|>`/`<|im_end|>` to single vocabulary IDs (atomic), or shatter them into literal
+/// byte/BPE pieces? If shattered, the instruct chat template can't be expressed and the instruct
+/// behaviour LM Studio shows is unreachable from our path. Diagnostic — prints the IDs + a verdict
+/// (asserts only that tokenisation ran). Forces the Q8 model. Skips if absent. Run:
+/// `cargo test -p qualia-core-db --release --test llm_bench_a0 chatml_tokenizer_check -- --nocapture`.
+#[test]
+fn chatml_tokenizer_check() {
+    use qualia_core_db::gguf_sharder::GgufTokenizer;
+    let Some(path) = find_model("smollm2-360m-instruct-q8_0.gguf") else {
+        eprintln!("[chatml] model absent — skipping tokenizer check");
+        return;
+    };
+    let bytes = std::fs::read(&path).expect("read gguf");
+    let tok = GgufTokenizer::from_gguf(&bytes);
+    println!(
+        "[chatml] bos={} eos={} add_bos={}",
+        tok.bos_token_id, tok.eos_token_id, tok.add_bos_token
+    );
+    for tag in ["<|im_start|>", "<|im_end|>", "<|endoftext|>"] {
+        let ids = tok.encode(tag);
+        println!("[chatml] {tag:?} -> {ids:?} ({} token(s))", ids.len());
+    }
+    let chatml = "<|im_start|>user\nOnce upon a time, there was a<|im_end|>\n<|im_start|>assistant\n";
+    let ids = tok.encode(chatml);
+    println!("[chatml] full ChatML prompt -> {} tokens: {ids:?}", ids.len());
+    assert!(!ids.is_empty(), "tokenizer produced no tokens");
+
+    let start = tok.encode("<|im_start|>");
+    let end = tok.encode("<|im_end|>");
+    if start.len() == 1 && end.len() == 1 {
+        println!(
+            "[chatml] PASS — special tokens are ATOMIC (im_start={}, im_end={}) → chat template is expressible",
+            start[0], end[0]
+        );
+    } else {
+        println!(
+            "[chatml] FAIL — special tokens SHATTERED (im_start={} pieces, im_end={} pieces) → chat template not expressible as-is",
+            start.len(),
+            end.len()
+        );
+    }
+}
+
+/// Tokenizer parity dump (bug-hunt stage 1): print our token IDs + counts for several prompts so they
+/// can be compared against llama.cpp's `prompt_eval_count` / IDs. A first-token generation divergence
+/// from the reference most often originates here. Forces Q8. Skips if absent.
+#[test]
+fn tokenizer_parity_dump() {
+    use qualia_core_db::gguf_sharder::GgufTokenizer;
+    let Some(path) = find_model("smollm2-360m-instruct-q8_0.gguf") else {
+        eprintln!("[tokparity] model absent — skipping");
+        return;
+    };
+    let bytes = std::fs::read(&path).expect("read gguf");
+    let tok = GgufTokenizer::from_gguf(&bytes);
+    for p in [
+        "Once upon a time, there was a",
+        "The capital of France is",
+        "Hello world",
+    ] {
+        let raw = tok.encode(p);
+        let withp = tok.encode_prompt(p);
+        println!("[tokparity] {p:?}");
+        println!("[tokparity]   encode()        = {} toks {raw:?}", raw.len());
+        println!("[tokparity]   encode_prompt() = {} toks {withp:?}", withp.len());
+    }
+}
+
+/// Forward-divergence probe (bug-hunt): run OUR engine greedy on prompts whose llama.cpp greedy
+/// answers are known, to isolate a forward-pass defect from tokenization (counts already match).
+/// Reference (llama.cpp, same weights): "Once upon a time, there was a"→" young…", "The capital of
+/// France is"→" Paris", "Hello world"→"!". Forces Q8. Skips if absent.
+#[test]
+fn forward_divergence_probe() {
+    let Some(path) = find_model("smollm2-360m-instruct-q8_0.gguf") else {
+        eprintln!("[fwddiv] model absent — skipping");
+        return;
+    };
+    let model = path.to_string_lossy().to_string();
+    for p in [
+        "Once upon a time, there was a",
+        "The capital of France is",
+        "Hello world",
+    ] {
+        let (out, _) = llm_bench::compare_topk_decode_blocking(&model, p, 8).expect("decode");
+        println!("[fwddiv] {p:?} -> {out:?}");
+    }
+}
+
+/// Teacher-forcing probe (bug-hunt, decisive): feed our engine llama.cpp's OWN coherent prefix and
+/// see if we continue coherently (→ forward correct; the earlier divergence was a near-tie first-token
+/// flip) or degrade (→ real forward defect that compounds). llama.cpp ref continuation:
+/// ". She spent years saving up her savings, working multiple jobs, and traveling to". Forces Q8.
+#[test]
+fn teacher_forcing_probe() {
+    let Some(path) = find_model("smollm2-360m-instruct-q8_0.gguf") else {
+        eprintln!("[teacher] model absent — skipping");
+        return;
+    };
+    let model = path.to_string_lossy().to_string();
+    let prefix = "Once upon a time, there was a young woman named Sarah who had always dreamed of traveling the world";
+    let (out, _) = llm_bench::compare_topk_decode_blocking(&model, prefix, 16).expect("decode");
+    println!("[teacher] OURS  -> {out:?}");
+    println!("[teacher] LLAMA -> \". She spent years saving up her savings, working multiple jobs, and traveling to\"");
+}
+
+/// Route-mask state probe (bug-hunt): is the neuro-symbolic SPARSE attention route mask active during
+/// a plain (no-graph) decode? If `active_bits`/`seq` stay 0, attention was DENSE → the sparse mask is
+/// NOT the degeneration cause and the hunt continues (KV/prefill numerics). If >0, something published
+/// a sparse mask into base LM decode → that's the bug. Forces Q8. Skips if absent.
+#[test]
+fn route_mask_state_after_decode() {
+    use qualia_core_db::compute_universe::{attention_mask_seq, attention_route_mask};
+    let Some(path) = find_model("smollm2-360m-instruct-q8_0.gguf") else {
+        eprintln!("[mask] model absent — skipping");
+        return;
+    };
+    let model = path.to_string_lossy().to_string();
+    println!(
+        "[mask] before decode: route.active_bits={} mask_seq={}",
+        attention_route_mask().active_bits,
+        attention_mask_seq()
+    );
+    let (out, _) = llm_bench::compare_topk_decode_blocking(&model, "Once upon a time, there was a", 16)
+        .expect("decode");
+    println!(
+        "[mask] after  decode: route.active_bits={} mask_seq={}",
+        attention_route_mask().active_bits,
+        attention_mask_seq()
+    );
+    println!("[mask] out={out:?}");
+}
+
+/// ChatML decode demo: feed the engine the SAME content under (a) raw completion vs (b) the ChatML
+/// instruct template, both pure greedy (no repetition penalty yet), and print both. Isolates the
+/// TEMPLATE's effect on quality from the still-missing sampler/penalty. Forces Q8. Skips if absent.
+/// Run: `cargo test -p qualia-core-db --release --test llm_bench_a0 chatml_decode_demo -- --nocapture`.
+#[test]
+fn chatml_decode_demo() {
+    let Some(path) = find_model("smollm2-360m-instruct-q8_0.gguf") else {
+        eprintln!("[chatml-decode] model absent — skipping");
+        return;
+    };
+    let model = path.to_string_lossy().to_string();
+    let raw = "Once upon a time, there was a";
+    let chatml = "<|im_start|>user\nOnce upon a time, there was a<|im_end|>\n<|im_start|>assistant\n";
+
+    let (raw_out, _) = llm_bench::compare_topk_decode_blocking(&model, raw, 48).expect("raw decode");
+    println!("[chatml-decode] RAW greedy:\n  {raw_out:?}");
+
+    let (tmpl_out, _) =
+        llm_bench::compare_topk_decode_blocking(&model, chatml, 48).expect("templated decode");
+    println!("[chatml-decode] CHATML greedy:\n  {tmpl_out:?}");
+}
+
 /// Decode profiler — localize the ~2 s/token native decode: forward (32 layers) vs output
 /// projection, and split **synchronization** (submit→poll(Wait) round-trips) from **kernel compute**
 /// via an empty-round-trip baseline on the same device. This decides whether the lever is dispatch

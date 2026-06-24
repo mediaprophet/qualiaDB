@@ -290,7 +290,8 @@ fn gemm_row(row: u32, token_in_batch: u32) -> f32 {
     return sum;
 }
 
-// NEOX split-half RoPE: rotate (i, i + head_dim/2) — matches CPU rope_inplace / SmolLM2.
+// Interleaved ("normal"/llama) RoPE: rotate adjacent pairs (2i, 2i+1) — GGUF llama convention
+// (is_neox=false), matches CPU rope_inplace / SmolLM2. (Name kept for history; this is NOT NEOX.)
 fn apply_rope_neox(vec: ptr<function, array<f32, MAX_HEAD_DIM>>, abs_pos: u32) {
     let half_dim = params.head_dim / 2u;
     let scale = select(1.0, params.rope_scale, params.rope_scale > 0.0);
@@ -299,8 +300,8 @@ fn apply_rope_neox(vec: ptr<function, array<f32, MAX_HEAD_DIM>>, abs_pos: u32) {
         let theta = pos * pow(params.rope_theta_base, -2.0 * f32(i) / f32(params.head_dim));
         let cos_t = cos(theta);
         let sin_t = sin(theta);
-        let idx_0 = i;
-        let idx_1 = i + half_dim;
+        let idx_0 = 2u * i;
+        let idx_1 = 2u * i + 1u;
         let v0 = (*vec)[idx_0];
         let v1 = (*vec)[idx_1];
         (*vec)[idx_0] = v0 * cos_t - v1 * sin_t;
@@ -343,7 +344,8 @@ fn attention_parallel(qh: u32, kv_head: u32, token_in_batch: u32, lid: u32) {
     let row_base = qh * params.head_dim;
     let abs_pos = params.batch_start_token_idx + token_in_batch;
 
-    // 1. Cooperatively project Q into shared, then apply NEOX RoPE in shared.
+    // 1. Cooperatively project Q into shared, then apply interleaved (2i,2i+1) RoPE in shared.
+    //    GGUF llama-arch (SmolLM2) uses the "normal"/interleaved rope (is_neox=false), NOT split-half.
     for (var d = lid; d < params.head_dim; d = d + WG_SIZE) {
         q_sh[d] = gemm_row(row_base + d, token_in_batch);
     }
@@ -355,10 +357,10 @@ fn attention_parallel(qh: u32, kv_head: u32, token_in_batch: u32, lid: u32) {
         let theta = rpos * pow(params.rope_theta_base, -2.0 * f32(i) / f32(params.head_dim));
         let cos_t = cos(theta);
         let sin_t = sin(theta);
-        let v0 = q_sh[i];
-        let v1 = q_sh[i + half_dim];
-        q_sh[i] = v0 * cos_t - v1 * sin_t;
-        q_sh[i + half_dim] = v0 * sin_t + v1 * cos_t;
+        let v0 = q_sh[2u * i];
+        let v1 = q_sh[2u * i + 1u];
+        q_sh[2u * i] = v0 * cos_t - v1 * sin_t;
+        q_sh[2u * i + 1u] = v0 * sin_t + v1 * cos_t;
     }
     workgroupBarrier();
 
@@ -462,10 +464,10 @@ fn write_kv_head(kv_head: u32, token_in_batch: u32, abs_pos: u32, apply_rope_k: 
             let theta = rpos * pow(params.rope_theta_base, -2.0 * f32(i) / f32(params.head_dim));
             let cos_t = cos(theta);
             let sin_t = sin(theta);
-            let v0 = q_sh[i];
-            let v1 = q_sh[i + half_dim];
-            q_sh[i] = v0 * cos_t - v1 * sin_t;
-            q_sh[i + half_dim] = v0 * sin_t + v1 * cos_t;
+            let v0 = q_sh[2u * i];
+            let v1 = q_sh[2u * i + 1u];
+            q_sh[2u * i] = v0 * cos_t - v1 * sin_t;
+            q_sh[2u * i + 1u] = v0 * sin_t + v1 * cos_t;
         }
         workgroupBarrier();
     }
