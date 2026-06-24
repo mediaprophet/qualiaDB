@@ -2257,7 +2257,6 @@ pub(crate) fn wlog(_s: &str) {}
 /// In-place NEOX-style RoPE over `n_heads` consecutive `head_dim` blocks of `vec`.
 /// Rotates split-half pairs `(i, i + head_dim/2)` — required for Llama/SmolLM2 GGUF weights.
 /// (`fused_attention.wgsl` mirrors this NEOX split-half layout since MC8 Part 2.)
-#[cfg(target_arch = "wasm32")]
 fn rope_inplace(
     vec: &mut [f32],
     n_heads: usize,
@@ -4611,6 +4610,25 @@ impl QTensorEngine {
         norm_weight: Option<&[f32]>,
         mut readback_out: Option<&mut [f32]>,
     ) -> bool {
+        // #48 correctness path: route native attention through the CPU reference (the wasm-proven
+        // SDPA) when enabled — bypasses the GPU attention shader whose output is currently unbounded.
+        #[cfg(not(target_arch = "wasm32"))]
+        if crate::llm_bench::cpu_attention_enabled() {
+            return self.cpu_attention_pass(
+                hidden,
+                n_embd,
+                num_tokens_in_batch,
+                batch_start_token_idx,
+                layout,
+                layer,
+                h,
+                info,
+                raw_weights,
+                proj_kind,
+                norm_weight,
+                readback_out,
+            );
+        }
         if !ggml_gpu_attention_shader_supported(info.ggml_type) {
             wlog(&format!("[attn_pass] GUARD unsupported quant kind={proj_kind}"));
             return false;
@@ -4805,8 +4823,7 @@ impl QTensorEngine {
 
     /// WASM CPU attention fallback (Phase 2A). Projects one Q/K/V tensor for a batch of
     /// tokens, applies RoPE (Q/K), writes K/V into `kv_cache_cpu`, and runs SDPA for Q.
-    /// `proj_kind`: 0=Q, 1=K, 2=V.
-    #[cfg(target_arch = "wasm32")]
+    /// `proj_kind`: 0=Q, 1=K, 2=V. Available on native too as the #48 correctness reference.
     fn cpu_attention_pass(
         &self,
         hidden: &[f32],
@@ -5326,9 +5343,10 @@ impl QTensorEngine {
                 }
             };
         let n_kv_wg = n_tokens.saturating_mul(n_kv);
-        #[cfg(target_arch = "wasm32")]
+        // attn_norm MUST be applied to the K/V projection input on ALL targets — native previously
+        // passed None here → prefill wrote K/V from the RAW residual → the KV cache exploded across
+        // layers → the whole forward (and decode reading it) blew up. (#48)
         let mut norm_w_attn = [0f32; MAX_HIDDEN_DIM];
-        #[cfg(target_arch = "wasm32")]
         let norm_weight_attn: Option<&[f32]> = tensors.attn_norm.as_ref().and_then(|info| {
             let n = dequant_norm_row_into(mmap, index.tensor_data_start, info, &mut norm_w_attn);
             if n >= n_embd {
@@ -5337,8 +5355,6 @@ impl QTensorEngine {
                 None
             }
         });
-        #[cfg(not(target_arch = "wasm32"))]
-        let norm_weight_attn: Option<&[f32]> = None;
         if !self.dispatch_attention_pass(
             &batch_hidden[..batch_elems],
             n_embd,
@@ -5650,24 +5666,19 @@ impl QTensorEngine {
             return false;
         }
 
-        // #48 diagnostic: is attention actually running on native? (gated; layer 0 once)
-        {
-            use std::sync::atomic::{AtomicBool, Ordering as DbgO};
-            static L0_DBG: AtomicBool = AtomicBool::new(false);
-            if layer == 0
-                && std::env::var("QUALIA_LLM_DEBUG_DECODE").is_ok()
-                && !L0_DBG.swap(true, DbgO::Relaxed)
-            {
-                eprintln!(
-                    "[layer-dbg] L0 attn_q={} attn_k={} attn_v={} attn_ok={} kv_layout={} ffn_gate={}",
-                    tensors.attn_q.is_some(),
-                    tensors.attn_k.is_some(),
-                    tensors.attn_v.is_some(),
-                    attn_ok,
-                    self.kv_layout.is_some(),
-                    tensors.ffn_gate.is_some(),
-                );
-            }
+        // #48 diagnostic: localize the residual explosion — attention output magnitude per layer.
+        if layer < 3 && std::env::var("QUALIA_LLM_DEBUG_DECODE").is_ok() {
+            let max_attn = scratch_a[..emb_dim].iter().fold(0f32, |m, &v| m.max(v.abs()));
+            let max_hid = hidden[..emb_dim].iter().fold(0f32, |m, &v| m.max(v.abs()));
+            eprintln!(
+                "[layer-dbg] L{} attn_ok={} attn_norm={} ffn_norm={} max|attn_out|={:.4} max|hidden_postattn|={:.4}",
+                layer,
+                attn_ok,
+                tensors.attn_norm.is_some(),
+                tensors.ffn_norm.is_some(),
+                max_attn,
+                max_hid,
+            );
         }
 
         self.dispatch_ffn_block_pre_norm(

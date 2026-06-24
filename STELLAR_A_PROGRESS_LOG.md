@@ -336,5 +336,26 @@ The native forward was missing everything the wasm path has. Fixed in `gguf_brid
 **State now:** bounded hidden, all norms applied, attention runs. **STILL incoherent** — argmax stuck on token 0 (`<|endoftext|>`) even for clear-continuation prompts ("Once upon a time, there was a"). So ≥1 deeper bug remains, now in **attention numerics** (RoPE / scale / causal-mask / KV-index) or the **tied-embedding output projection / logits**. Diagnostics left in (gated `QUALIA_LLM_DEBUG_DECODE`: fwd-dbg / layer-dbg / attn-dbg / decode-dbg). **Next (fresh ctx):** dump step-0 top-5 logits; compare native attention math to the wasm `cpu_attention_pass` reference (RoPE/scale/mask); verify the output projection uses the correct (tied) weights.
 Honest: 4 real bugs down, native forward materially closer to correct, but **generation not yet coherent** — this is committed as progress, #48 stays open.
 
+### #48 — ✅ FIXED: native decode generates COHERENT text (2026-06-24)
+**The 5th (root) bug:** `dispatch_prefill_layer_batch` set `norm_weight_attn = None` on native (computed only on
+wasm) → **prefill wrote K/V from the RAW residual** → the KV cache exploded ×~30/layer → decode read it →
+the whole forward blew to `-inf` → token-0 (`<|endoftext|>`) spam. **How it was nailed:** instrumenting the
+attention-output magnitude showed CPU and GPU attention exploded *identically* (32.602596 vs 32.602608) →
+the attention *kernel* was exonerated → the bug was the *input it consumed* (un-normed KV).
+
+**Fix:** compute `norm_weight_attn` on native too; un-gate `cpu_attention_pass` + `rope_inplace`; route native
+attention through the wasm-proven CPU SDPA (which honors `norm_weight`), **default ON** for correctness
+(`cpu_attention_enabled`), opt out via `QUALIA_LLM_GPU_ATTENTION=1`.
+
+**Result (A2000, default native path):**
+`"Once upon a time, there was a"` → `" young man, who had a great and noble knight, who was a knight, who had a
+sword, and a knight"` — grammatical, on-topic (repetitive only because it's a 360M model + greedy decode, no
+rep-penalty). `a1a_gpu_topk_matches_argmax_text` now asserts coherence (regression guard) **and** top-k==argmax.
+
+**⚑ Recontextualises earlier perf numbers:** A0's 1.52 tok/s and A1a's 1.86 were measured on the (then-unknown
+**degenerate**) GPU path. **Correct generation currently runs on CPU attention (slower).** The GPU attention
+path is still degenerate (its `dispatch_attention_pass` GPU branch ignores `norm_weight`) — **task #49**: make it
+honor `norm_weight` (pre-norm prefill K/V) → correct *and* fast; that's the real decode-perf win to re-measure.
+
 **Next options:** (a) **debug native generation quality** (recommended), (b) A1a step-2 resident-weight
 fusion, (c) **A1b** FFN ternary splice (MVPP), (d) H3.

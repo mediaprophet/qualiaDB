@@ -1073,6 +1073,20 @@ impl LocalLlmAgent {
                             top_v,
                             tok.decode(&[top_i as u32])
                         );
+                        if let Some(idx) = tensor_idx.as_ref() {
+                            if let Some(top5) =
+                                engine.dispatch_output_topk_chunked(idx, &emb_buf[..emb_dim], emb_dim, 5)
+                            {
+                                for it in &top5 {
+                                    eprintln!(
+                                        "[top5] id={} logit={:.3} dec={:?}",
+                                        it.token_id,
+                                        it.logit,
+                                        tok.decode(&[it.token_id])
+                                    );
+                                }
+                            }
+                        }
                     }
 
                     // Push logit summary; non-blocking — drops silently if ring is full.

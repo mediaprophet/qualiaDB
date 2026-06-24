@@ -133,5 +133,10 @@ fn a1a_gpu_topk_matches_argmax_text() {
         off, on,
         "GPU top-k (k=1) must emit identical text to the argmax path"
     );
-    println!("[a1a] token-identity verified: top-k == argmax");
+    // #48 regression guard: native decode must produce coherent text, not EOS/garbage spam.
+    assert!(
+        !off.trim_start().starts_with("<|endoftext|>") && off.contains(' ') && off.len() > 8,
+        "native decode must produce coherent text (regression of #48), got: {off:?}"
+    );
+    println!("[a1a] token-identity verified + coherent generation: top-k == argmax");
 }
