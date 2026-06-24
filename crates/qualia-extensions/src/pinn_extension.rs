@@ -993,8 +993,12 @@ impl Extension for PinnExtension {
                         .clone()
                 ).map_err(|e| ExtensionError::ExecutionFailed(format!("Invalid smx_data: {}", e)))?;
 
-                let smx_data = base64::decode(&smx_data_base64)
-                    .map_err(|e| ExtensionError::ExecutionFailed(format!("Base64 decode failed: {}", e)))?;
+                let smx_data = {
+                    use base64::Engine as _;
+                    base64::engine::general_purpose::STANDARD
+                        .decode(&smx_data_base64)
+                        .map_err(|e| ExtensionError::ExecutionFailed(format!("Base64 decode failed: {}", e)))?
+                };
 
                 let model = self.smx_formatter.import_model_smx(&smx_data)?;
                 self.model_manager.write().unwrap().load_model(model)?;
