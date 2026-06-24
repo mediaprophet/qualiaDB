@@ -140,3 +140,82 @@ fn a1a_gpu_topk_matches_argmax_text() {
     );
     println!("[a1a] token-identity verified + coherent generation: top-k == argmax");
 }
+
+/// Decode profiler — localize the ~2 s/token native decode: forward (32 layers) vs output
+/// projection, and split **synchronization** (submit→poll(Wait) round-trips) from **kernel compute**
+/// via an empty-round-trip baseline on the same device. This decides whether the lever is dispatch
+/// fusion (sync-bound) or shader optimization (compute-bound) — no guessing. Skips if model absent.
+/// Run: `cargo test -p qualia-core-db --release --test llm_bench_a0 a0_decode_profile -- --nocapture`.
+#[test]
+fn a0_decode_profile() {
+    let Some(path) = find_model("smollm2-360m-instruct-q8_0.gguf")
+        .or_else(|| find_model("SmolLM2-360M-Instruct-Q4_K_M.gguf"))
+    else {
+        eprintln!("[prof] model absent — skipping decode profile");
+        return;
+    };
+    std::env::set_var("QUALIA_LLM_PROFILE_DECODE", "1");
+
+    let mut cfg = BenchConfig::new(
+        "decode-profile",
+        path.to_string_lossy(),
+        "auto",
+        "Once upon a time, there was a",
+    );
+    cfg.decode_tokens = 16; // bounded; the per-token averages are what matter
+    cfg.warm_repeats = 1; // the single warm run leaves the accumulators populated
+
+    let results = llm_bench::run_suite_blocking(&[cfg]);
+    assert!(
+        !results.is_empty(),
+        "[prof] harness produced no result (model failed to load)"
+    );
+
+    let snap = llm_bench::phase_snapshot();
+    let waits = llm_bench::gpu_wait_count();
+    let (ert_total, ert_n) = llm_bench::empty_rt();
+    let toks = snap.decode_tokens.max(1);
+
+    let per_ms = |ns: u64| (ns as f64 / toks as f64) / 1e6; // ms/token
+    let total_ms = per_ms(snap.decode_ns).max(0.001);
+    let fwd_ms = per_ms(snap.decode_forward_ns);
+    let out_ms = per_ms(snap.decode_output_ns);
+    let other_ms = (total_ms - fwd_ms - out_ms).max(0.0);
+    let waits_per_tok = waits as f64 / toks as f64;
+    let ert_per_ms = if ert_n > 0 {
+        (ert_total as f64 / ert_n as f64) / 1e6
+    } else {
+        0.0
+    };
+    let sync_ms = waits_per_tok * ert_per_ms; // est. fixed fence overhead/token
+    let sync_pct = 100.0 * sync_ms / total_ms;
+
+    println!("\n=== A0 decode profile (SmolLM2-360M, A2000) ===");
+    println!(
+        "[prof] tokens={toks}  total={total_ms:.1} ms/tok  ({:.2} tok/s)",
+        1000.0 / total_ms
+    );
+    println!(
+        "[prof]   forward (32 layers) = {fwd_ms:.1} ms/tok ({:.0}%)",
+        100.0 * fwd_ms / total_ms
+    );
+    println!(
+        "[prof]   output projection   = {out_ms:.1} ms/tok ({:.0}%)",
+        100.0 * out_ms / total_ms
+    );
+    println!("[prof]   host / other        = {other_ms:.1} ms/tok");
+    println!("[prof] GPU submit→wait round-trips = {waits_per_tok:.0}/tok");
+    println!("[prof] empty round-trip baseline   = {ert_per_ms:.3} ms each (n={ert_n})");
+    println!(
+        "[prof] est. fence overhead = {sync_ms:.1} ms/tok ({sync_pct:.0}% of token) → {}",
+        if sync_pct >= 60.0 {
+            "SYNC-BOUND — dispatch fusion is the lever"
+        } else if sync_pct <= 25.0 {
+            "COMPUTE-BOUND — the kernels are slow; optimize shaders"
+        } else {
+            "MIXED — both sync and compute matter"
+        }
+    );
+
+    std::env::remove_var("QUALIA_LLM_PROFILE_DECODE");
+}

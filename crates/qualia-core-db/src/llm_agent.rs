@@ -920,6 +920,16 @@ impl LocalLlmAgent {
                 let t_decode = std::time::Instant::now();
                 // A1a: GPU top-k decode path toggle (default-off; QUALIA_LLM_GPU_TOPK / set_gpu_topk).
                 let gpu_topk_enabled = crate::llm_bench::gpu_topk_enabled();
+                // Decode-profiler (gated): one-shot empty submit→wait baseline on the SAME device, so
+                // the bench can separate per-token fence latency from real kernel compute time.
+                #[cfg(not(target_arch = "wasm32"))]
+                if std::env::var("QUALIA_LLM_PROFILE_DECODE").is_ok() {
+                    let n = 64u32;
+                    crate::llm_bench::record_empty_rt(
+                        engine.bench_empty_submit_roundtrip(n),
+                        n as u64,
+                    );
+                }
                 for step in 0..gen_budget {
                     crate::gpu_context::record_llm_decode_step();
 
@@ -990,6 +1000,8 @@ impl LocalLlmAgent {
                     let (top_i, top_v) = if hidden_ok > 0 {
                         if let Some(idx) = tensor_idx.as_ref() {
                             let token_idx = ctx.len().saturating_sub(1) as u32;
+                            // Decode-profiler: time the 32-layer forward (the suspected bottleneck).
+                            let t_fwd = std::time::Instant::now();
                             let _layers = engine.dispatch_transformer_forward(
                                 idx,
                                 &mut emb_buf[..emb_dim],
@@ -1001,7 +1013,10 @@ impl LocalLlmAgent {
                             );
                             // Final output_norm before the vocab projection — REQUIRED on all targets.
                             let _ = engine.apply_output_norm_inplace(idx, &mut emb_buf[..emb_dim], emb_dim);
+                            crate::llm_bench::add_decode_forward_ns(t_fwd.elapsed().as_nanos() as u64);
                             let sieve_mask = sieve.as_ref().map(|s| s.current_mask());
+                            // Decode-profiler: time the output projection (argmax / top-k).
+                            let t_out = std::time::Instant::now();
                             // A1a: GPU top-k path (additive, default-off; non-sieve only in v1).
                             // Returns the argmax token (k=1) via the on-GPU top-k reduction; falls
                             // through to the existing argmax path if disabled or on any failure — the
@@ -1013,7 +1028,7 @@ impl LocalLlmAgent {
                             } else {
                                 None
                             };
-                            if let Some(item) = topk_hit {
+                            let out_sel = if let Some(item) = topk_hit {
                                 (item.token_id as usize, item.logit)
                             } else if let Some(argmax) = engine.dispatch_output_argmax_chunked(
                                 idx,
@@ -1040,7 +1055,9 @@ impl LocalLlmAgent {
                                         }
                                     },
                                 )
-                            }
+                            };
+                            crate::llm_bench::add_decode_output_ns(t_out.elapsed().as_nanos() as u64);
+                            out_sel
                         } else {
                             (0usize, 0.0)
                         }

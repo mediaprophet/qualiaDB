@@ -2254,6 +2254,23 @@ pub(crate) fn wlog(s: &str) {
 #[inline]
 pub(crate) fn wlog(_s: &str) {}
 
+/// Decode-profiler: count of GPU `submit → poll(Maintain::Wait)` round-trips. Incremented by
+/// `QTensorEngine::poll_wait` (every native blocking sync point routes through it); read/reset by
+/// the bench to derive per-token synchronization overhead.
+pub static GPU_WAIT_COUNT: std::sync::atomic::AtomicU64 = std::sync::atomic::AtomicU64::new(0);
+
+/// Total native GPU blocking-wait round-trips since the last reset.
+#[inline]
+pub fn gpu_wait_count() -> u64 {
+    GPU_WAIT_COUNT.load(std::sync::atomic::Ordering::Relaxed)
+}
+
+/// Reset the GPU blocking-wait counter before a measured run.
+#[inline]
+pub fn reset_gpu_wait_count() {
+    GPU_WAIT_COUNT.store(0, std::sync::atomic::Ordering::Relaxed);
+}
+
 /// In-place NEOX-style RoPE over `n_heads` consecutive `head_dim` blocks of `vec`.
 /// Rotates split-half pairs `(i, i + head_dim/2)` — required for Llama/SmolLM2 GGUF weights.
 /// (`fused_attention.wgsl` mirrors this NEOX split-half layout since MC8 Part 2.)
@@ -3482,6 +3499,35 @@ impl QTensorEngine {
             },
         })
     }
+
+    /// Decode-profiler: blocking GPU fence wait + round-trip counter. Every native sync point routes
+    /// through this (via the `self.gpu_device().poll(Maintain::Wait)` → `self.poll_wait()` rewrite),
+    /// so the bench can count submit→wait round-trips per token and separate synchronization stall
+    /// from real kernel time. Behaviourally identical to a bare blocking poll.
+    #[inline]
+    fn poll_wait(&self) {
+        self.gpu_device().poll(wgpu::Maintain::Wait);
+        GPU_WAIT_COUNT.fetch_add(1, std::sync::atomic::Ordering::Relaxed);
+    }
+
+    /// Decode-profiler: wall-clock for `n` EMPTY `submit → poll(Maintain::Wait)` round-trips (no
+    /// compute dispatched). Isolates the fixed CPU↔GPU fence latency: if a token's forward time ≈
+    /// (its round-trip count × this per-round-trip cost), the bottleneck is synchronization, not
+    /// math; if forward ≫ that, the kernels themselves are slow. Does NOT touch `GPU_WAIT_COUNT`.
+    #[cfg(not(target_arch = "wasm32"))]
+    pub fn bench_empty_submit_roundtrip(&self, n: u32) -> u64 {
+        let t = std::time::Instant::now();
+        for _ in 0..n {
+            let enc = self
+                .device()
+                .create_command_encoder(&wgpu::CommandEncoderDescriptor {
+                    label: Some("EmptyRT"),
+                });
+            self.gpu_queue().submit(Some(enc.finish()));
+            self.gpu_device().poll(wgpu::Maintain::Wait);
+        }
+        t.elapsed().as_nanos() as u64
+    }
     #[cfg(target_arch = "wasm32")]
     pub fn adopt_resident_mmap(&mut self, mmap: Arc<[u8]>) -> Result<GgufLoadReport, String> {
         let file_size = mmap.len();
@@ -3680,7 +3726,7 @@ impl QTensorEngine {
         buffer_slice.map_async(wgpu::MapMode::Read, move |v| {
             let _ = sender.send(v);
         });
-        self.gpu_device().poll(wgpu::Maintain::Wait);
+        self.poll_wait();
 
         #[cfg(not(target_arch = "wasm32"))]
         {
@@ -3863,7 +3909,7 @@ impl QTensorEngine {
         let buffer_slice = staging_buf.slice(..);
         let (sender, receiver) = futures_channel::oneshot::channel();
         buffer_slice.map_async(wgpu::MapMode::Read, move |v| sender.send(v).unwrap());
-        self.gpu_device().poll(wgpu::Maintain::Wait);
+        self.poll_wait();
 
         #[cfg(not(target_arch = "wasm32"))]
         {
@@ -3981,7 +4027,7 @@ impl QTensorEngine {
             slice.map_async(wgpu::MapMode::Read, move |r| {
                 let _ = tx.send(r);
             });
-            self.gpu_device().poll(wgpu::Maintain::Wait);
+            self.poll_wait();
             #[cfg(not(target_arch = "wasm32"))]
             if let Ok(handle) = tokio::runtime::Handle::try_current() {
                 if handle.block_on(rx).ok().map(|m| m.is_ok()).unwrap_or(false) {
@@ -4276,7 +4322,7 @@ impl QTensorEngine {
             slice.map_async(wgpu::MapMode::Read, move |r| {
                 let _ = tx.send(r);
             });
-            self.gpu_device().poll(wgpu::Maintain::Wait);
+            self.poll_wait();
             let mapped_ok = if let Ok(handle) = tokio::runtime::Handle::try_current() {
                 handle.block_on(rx).ok().map(|m| m.is_ok()).unwrap_or(false)
             } else {
@@ -4823,7 +4869,7 @@ impl QTensorEngine {
         slice.map_async(wgpu::MapMode::Read, move |r| {
             let _ = tx.send(r);
         });
-        self.gpu_device().poll(wgpu::Maintain::Wait);
+        self.poll_wait();
         #[cfg(not(target_arch = "wasm32"))]
             if let Ok(handle) = tokio::runtime::Handle::try_current() {
             if handle.block_on(rx).ok().map(|m| m.is_ok()).unwrap_or(false) {

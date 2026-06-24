@@ -108,6 +108,47 @@ static PREFILL_NS: AtomicU64 = AtomicU64::new(0);
 static PREFILL_TOKENS: AtomicU64 = AtomicU64::new(0);
 static DECODE_NS: AtomicU64 = AtomicU64::new(0);
 static DECODE_TOKENS: AtomicU64 = AtomicU64::new(0);
+// Decode-profiler accumulators (summed ACROSS the decode loop; one atomic add per
+// token-phase — nanosecond cost, off the GPU critical path). Localize where the
+// per-token wall-clock goes: transformer forward (32 layers) vs output projection.
+static DECODE_FORWARD_NS: AtomicU64 = AtomicU64::new(0);
+static DECODE_OUTPUT_NS: AtomicU64 = AtomicU64::new(0);
+// One-shot empty submit→poll(Wait) baseline (total ns over N round-trips), measured once per
+// profiled decode so the bench can compare per-round-trip fence latency to real forward time.
+static DECODE_EMPTY_RT_NS: AtomicU64 = AtomicU64::new(0);
+static DECODE_EMPTY_RT_N: AtomicU64 = AtomicU64::new(0);
+
+/// Record the empty-round-trip baseline: `total_ns` measured over `n` empty submit→wait cycles.
+#[inline]
+pub fn record_empty_rt(total_ns: u64, n: u64) {
+    DECODE_EMPTY_RT_NS.store(total_ns, Ordering::Relaxed);
+    DECODE_EMPTY_RT_N.store(n, Ordering::Relaxed);
+}
+/// Read the empty-round-trip baseline as `(total_ns, n)`.
+#[inline]
+pub fn empty_rt() -> (u64, u64) {
+    (
+        DECODE_EMPTY_RT_NS.load(Ordering::Relaxed),
+        DECODE_EMPTY_RT_N.load(Ordering::Relaxed),
+    )
+}
+
+/// Re-export: GPU `submit → poll(Wait)` round-trips counted during the last run (see `gguf_bridge`).
+#[inline]
+pub fn gpu_wait_count() -> u64 {
+    crate::gguf_bridge::gpu_wait_count()
+}
+
+/// Accumulate one token's transformer-forward (32-layer) wall-clock.
+#[inline]
+pub fn add_decode_forward_ns(ns: u64) {
+    DECODE_FORWARD_NS.fetch_add(ns, Ordering::Relaxed);
+}
+/// Accumulate one token's output-projection (argmax/top-k) wall-clock.
+#[inline]
+pub fn add_decode_output_ns(ns: u64) {
+    DECODE_OUTPUT_NS.fetch_add(ns, Ordering::Relaxed);
+}
 
 /// Clear the phase counters before a measured run.
 #[inline]
@@ -117,6 +158,11 @@ pub fn reset_phase_metrics() {
     PREFILL_TOKENS.store(0, Ordering::Relaxed);
     DECODE_NS.store(0, Ordering::Relaxed);
     DECODE_TOKENS.store(0, Ordering::Relaxed);
+    DECODE_FORWARD_NS.store(0, Ordering::Relaxed);
+    DECODE_OUTPUT_NS.store(0, Ordering::Relaxed);
+    DECODE_EMPTY_RT_NS.store(0, Ordering::Relaxed);
+    DECODE_EMPTY_RT_N.store(0, Ordering::Relaxed);
+    crate::gguf_bridge::reset_gpu_wait_count();
 }
 
 /// Record model load/mmap-adopt + pipeline-build time (engine ready → before prefill).
@@ -147,6 +193,8 @@ pub struct LlmPhaseSnapshot {
     pub prefill_tokens: u64,
     pub decode_ns: u64,
     pub decode_tokens: u64,
+    pub decode_forward_ns: u64,
+    pub decode_output_ns: u64,
 }
 
 /// Read the phase counters recorded by the last inference call.
@@ -158,6 +206,8 @@ pub fn phase_snapshot() -> LlmPhaseSnapshot {
         prefill_tokens: PREFILL_TOKENS.load(Ordering::Relaxed),
         decode_ns: DECODE_NS.load(Ordering::Relaxed),
         decode_tokens: DECODE_TOKENS.load(Ordering::Relaxed),
+        decode_forward_ns: DECODE_FORWARD_NS.load(Ordering::Relaxed),
+        decode_output_ns: DECODE_OUTPUT_NS.load(Ordering::Relaxed),
     }
 }
 
