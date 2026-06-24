@@ -184,9 +184,9 @@ pub fn parse_healthcare_owl_turtle(path: &Path) -> Result<HealthcareOwlModel, Ow
 
 /// Parse `.n3` healthcare excerpt (OWL in Notation3/Turtle syntax; tolerates truncated exports).
 pub fn parse_healthcare_owl_n3(path: &Path) -> Result<HealthcareOwlModel, OwlToShaclError> {
-    let file = File::open(path).map_err(|e| OwlToShaclError::Io(e.to_string()))?;
+    let text = std::fs::read_to_string(path).map_err(|e| OwlToShaclError::Io(e.to_string()))?;
     let mut model = HealthcareOwlModel::default();
-    let mut parser = crate::modalities::logic::n3_parser::N3Parser::new(BufReader::new(file));
+    let mut parser = crate::modalities::logic::n3_parser::N3Parser::new(&text);
     let result = parser.parse_all(|event| {
         if let crate::modalities::logic::n3_parser::N3Event::StaticTriple(triple) = event {
             let subject = term_uri(&triple.subject);
@@ -300,9 +300,9 @@ pub fn parse_healthcare_owl(path: &Path) -> Result<HealthcareOwlModel, OwlToShac
 
 fn term_uri(term: &crate::modalities::logic::n3_parser::Term) -> String {
     match term {
-        crate::modalities::logic::n3_parser::Term::Uri(s)
-        | crate::modalities::logic::n3_parser::Term::Literal(s)
-        | crate::modalities::logic::n3_parser::Term::Variable(s) => s.clone(),
+        crate::modalities::logic::n3_parser::Term::Uri(s) => s.to_string(),
+        crate::modalities::logic::n3_parser::Term::Variable(s) => s.to_string(),
+        crate::modalities::logic::n3_parser::Term::Literal(s) => s.to_string(),
     }
 }
 

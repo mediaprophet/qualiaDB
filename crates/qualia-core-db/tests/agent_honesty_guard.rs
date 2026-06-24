@@ -16,12 +16,11 @@ use qualia_core_db::webizen::SlgArena;
 use qualia_core_db::{q_hash, NQuin};
 
 fn register_rules(arena: &mut SlgArena, n3: &str) {
-    let cursor = std::io::Cursor::new(n3.as_bytes());
-    let mut parser = N3Parser::new(cursor);
+    let mut parser = N3Parser::new(n3);
     parser
         .parse_all(|event| {
             if let N3Event::LogicRule(rule) = event {
-                arena.register_rule(rule);
+                arena.register_rule(&rule);
             }
             Ok(())
         })

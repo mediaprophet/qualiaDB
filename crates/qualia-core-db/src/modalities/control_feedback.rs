@@ -7,6 +7,17 @@ use std::collections::HashMap;
 // Canonical bit positions live in the FrameLayout ABI (single source of truth).
 pub use crate::frame_layout::{CONTROL_BIT, FEEDBACK_BIT, STABILIZATION_BIT};
 
+use super::epistemic_boundaries::{identify_degradation_vector, degrade_claim_to_socratic, SocraticDegradation, DegradationVector};
+
+/// Filters definitive claims through the Linguistic Degradation Matrix
+pub fn enforce_linguistic_degradation(claim_quin: &NQuin) -> Option<SocraticDegradation> {
+    let vector = identify_degradation_vector(claim_quin);
+    if vector != DegradationVector::Unknown {
+        return degrade_claim_to_socratic(vector);
+    }
+    None
+}
+
 /// Control system state for feedback loops
 #[derive(Debug, Clone)]
 pub struct ControlState {

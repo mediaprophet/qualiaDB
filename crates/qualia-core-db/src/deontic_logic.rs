@@ -250,7 +250,8 @@ pub fn write_vc_claim_quins(
     ]
 }
 
-use crate::modalities::logic::n3_parser::{Rule, RuleType, Term};
+use crate::modalities::logic::n3_parser::RuleType;
+use crate::modalities::logic::n3_compiler::{CompiledRule, CompiledTerm};
 use crate::modalities::logic::deontic::{OP_OBLIGATE, OP_PERMIT, OP_FORBID, DEFEATER_BIT};
 
 /// Compile an N3 rule into a norm Quin (or a defeater Quin if rule_type is Defeater).
@@ -263,27 +264,20 @@ use crate::modalities::logic::deontic::{OP_OBLIGATE, OP_PERMIT, OP_FORBID, DEFEA
 ///   conclusion.triples[0].subject → contract context hash
 ///
 /// Returns None if the rule does not have the expected triple structure.
-pub fn compile_n3_rule_to_norm(rule: &Rule, contract_hash: u64, expiry_unix32: u32) -> Option<crate::NQuin> {
-    if rule.premise.triples.is_empty() || rule.conclusion.triples.is_empty() {
+pub fn compile_n3_rule_to_norm(rule: &CompiledRule, contract_hash: u64, expiry_unix32: u32) -> Option<crate::NQuin> {
+    if rule.premise.len == 0 || rule.conclusion.len == 0 {
         return None;
     }
 
     let premise_triple = &rule.premise.triples[0];
     let conclusion_triple = &rule.conclusion.triples[0];
 
-    // Helper to extract string from Term
-    let extract_str = |t: &Term| -> String {
-        match t {
-            Term::Uri(s) | Term::Variable(s) | Term::Literal(s) => s.clone(),
-        }
-    };
-
-    let party_did_hash = q_hash(&extract_str(&premise_triple.subject));
-    let property_path_hash = q_hash(&extract_str(&premise_triple.predicate));
-    let action_object_hash = q_hash(&extract_str(&premise_triple.object));
+    let party_did_hash = premise_triple.subject.as_u64();
+    let property_path_hash = premise_triple.predicate.as_u64();
+    let action_object_hash = premise_triple.object.as_u64();
     
     let mapped_contract_hash = if contract_hash == 0 {
-        q_hash(&extract_str(&conclusion_triple.subject))
+        conclusion_triple.subject.as_u64()
     } else {
         contract_hash
     };
@@ -291,18 +285,22 @@ pub fn compile_n3_rule_to_norm(rule: &Rule, contract_hash: u64, expiry_unix32: u
     let mut opcode = OP_PERMIT;
     let mut is_defeater = false;
 
-    let predicate_str = extract_str(&premise_triple.predicate).to_lowercase();
+    let p_hash = property_path_hash;
+    
+    let is_obligate = [crate::q_hash("q42:obligate"), crate::q_hash("q42:must"), crate::q_hash("q42:shall")].contains(&p_hash);
+    let is_permit = [crate::q_hash("q42:permit"), crate::q_hash("q42:may"), crate::q_hash("q42:can")].contains(&p_hash);
+    let is_forbid = [crate::q_hash("q42:forbid"), crate::q_hash("q42:not"), crate::q_hash("q42:prohibit")].contains(&p_hash);
 
     match rule.rule_type {
         RuleType::Strict => {
-            if predicate_str.contains("obligate") || predicate_str.contains("must") || predicate_str.contains("shall") {
+            if is_obligate {
                 opcode = OP_OBLIGATE;
             }
         }
         RuleType::Defeasible => {
-            if predicate_str.contains("permit") || predicate_str.contains("may") || predicate_str.contains("can") {
+            if is_permit {
                 opcode = OP_PERMIT;
-            } else if predicate_str.contains("forbid") || predicate_str.contains("not") || predicate_str.contains("prohibit") {
+            } else if is_forbid {
                 opcode = OP_FORBID;
             }
         }
@@ -311,7 +309,7 @@ pub fn compile_n3_rule_to_norm(rule: &Rule, contract_hash: u64, expiry_unix32: u
             is_defeater = true;
         }
         RuleType::Linear => {
-            if predicate_str.contains("obligate") {
+            if is_obligate {
                 opcode = OP_OBLIGATE;
             }
         }
@@ -472,26 +470,33 @@ mod tests {
 
     #[test]
     fn test_compile_n3_rule_to_norm() {
-        use crate::modalities::logic::n3_parser::{Rule, RuleType, Formula, Triple, Term};
+        use crate::modalities::logic::n3_parser::RuleType;
         
-        let make_rule = |rt: RuleType, pred: &str| -> Rule {
-            Rule {
-                id: None,
+        use crate::modalities::logic::n3_compiler::{CompiledFormula, CompiledTriple};
+        let make_rule = |rt: RuleType, pred: &str| -> CompiledRule {
+            let mut premise_triples = [CompiledTriple { subject: CompiledTerm::Uri(0), predicate: CompiledTerm::Uri(0), object: CompiledTerm::Uri(0) }; 8];
+            premise_triples[0] = CompiledTriple {
+                subject: CompiledTerm::Uri(crate::q_hash("did:party")),
+                predicate: CompiledTerm::Uri(crate::q_hash(pred)),
+                object: CompiledTerm::Uri(crate::q_hash("did:target")),
+            };
+            let mut conclusion_triples = [CompiledTriple { subject: CompiledTerm::Uri(0), predicate: CompiledTerm::Uri(0), object: CompiledTerm::Uri(0) }; 8];
+            conclusion_triples[0] = CompiledTriple {
+                subject: CompiledTerm::Uri(crate::q_hash("urn:contract")),
+                predicate: CompiledTerm::Uri(crate::q_hash("q42:boundBy")),
+                object: CompiledTerm::Uri(crate::q_hash("did:party")),
+            };
+            CompiledRule {
+                id_hash: None,
                 rule_type: rt,
                 weight: None,
-                premise: Formula {
-                    triples: vec![Triple {
-                        subject: Term::Uri("did:party".to_string()),
-                        predicate: Term::Uri(pred.to_string()),
-                        object: Term::Uri("did:target".to_string()),
-                    }],
+                premise: CompiledFormula {
+                    triples: premise_triples,
+                    len: 1,
                 },
-                conclusion: Formula {
-                    triples: vec![Triple {
-                        subject: Term::Uri("urn:contract".to_string()),
-                        predicate: Term::Uri("q42:boundBy".to_string()),
-                        object: Term::Uri("did:party".to_string()),
-                    }],
+                conclusion: CompiledFormula {
+                    triples: conclusion_triples,
+                    len: 1,
                 },
             }
         };
@@ -518,7 +523,7 @@ mod tests {
 
         // 4. Malformed
         let mut malformed = make_rule(RuleType::Strict, "q42:obligate");
-        malformed.premise.triples.clear();
+        malformed.premise.len = 0;
         assert!(compile_n3_rule_to_norm(&malformed, contract_hash, 0).is_none());
     }
 }

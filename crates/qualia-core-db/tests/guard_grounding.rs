@@ -15,13 +15,12 @@ use qualia_core_db::{q_hash, NQuin};
 
 /// Parse N3 text and register every logic rule into the arena. Returns rule count.
 fn register_rules(arena: &mut SlgArena, n3: &str) -> usize {
-    let cursor = std::io::Cursor::new(n3.as_bytes());
-    let mut parser = N3Parser::new(cursor);
+    let mut parser = N3Parser::new(n3);
     let mut count = 0usize;
     parser
         .parse_all(|event| {
             if let N3Event::LogicRule(rule) = event {
-                arena.register_rule(rule);
+                arena.register_rule(&rule);
                 count += 1;
             }
             Ok(())

@@ -61,8 +61,7 @@ const FORBID_PRED: &str = "q42:forbidsHoldingDignityRight";
 
 /// Run the real line-based N3 parser over a fixture, collecting logic rules.
 fn parse_rules(fixture: &str) -> Vec<Rule> {
-    let cursor = std::io::Cursor::new(fixture.as_bytes());
-    let mut parser = N3Parser::new(cursor);
+    let mut parser = N3Parser::new(fixture);
     let mut rules = Vec::new();
     parser
         .parse_all(|event| {
@@ -113,7 +112,7 @@ fn test_deontic_smoke() {
     let mut arena = SlgArena::new();
     let contract = q_hash(CONTRACT);
     for rule in &rules {
-        arena.register_rule(rule.clone());
+        arena.register_rule(rule);
     }
     assert_eq!(arena.rule_count(), 1, "rule registered into the VM registry");
 

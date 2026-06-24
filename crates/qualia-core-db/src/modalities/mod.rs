@@ -29,6 +29,10 @@ pub use epistemic::{
     OP_KNOWS, OP_BELIEVES, OP_COMMON_KNOWLEDGE, CERTAINTY_BIT_SHIFT, NESTING_BIT_SHIFT,
     evaluate_epistemic_frame, EpistemicStatus, EpistemicError, EpistemicVerdict
 };
+pub mod epistemic_boundaries;
+pub use epistemic_boundaries::{
+    DegradationVector, SocraticDegradation, identify_degradation_vector, degrade_claim_to_socratic
+};
 pub mod graph_theory;
 pub use graph_theory::{
     MAX_HEAP_GRAPH_ANALYSIS_QUINS, MAX_BOUNDED_GRAPH_ANALYSIS_NODES,

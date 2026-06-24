@@ -1,3 +1,3 @@
 label,quantization,n_layer,mapped_bytes,prompt_tokens,output_tokens,cold_ttft_ms,cold_total_ms,warm_ttft_ms,warm_total_ms,load_ms,prefill_ms,prefill_tok_s,decode_ms,decode_tok_s,directml,gpu_ts
-SmolLM2-360M Q8,Q8_0,32,386404992,5,64,2728.742,42790.584,1100.480,42554.067,407.708,0.018,218978.10,42053.480,1.52,true,false
-SmolLM2-360M Q4_K_M,Q4_K_M,32,270590880,5,64,1459.786,56145.981,1229.439,57847.487,393.323,0.048,83333.33,57400.257,1.11,true,false
+SmolLM2-360M Q8,Q8_0,32,386404992,5,64,10233.532,148374.170,7530.322,138405.973,305.459,5123.348,0.78,132939.805,0.48,true,false
+SmolLM2-360M Q4_K_M,Q4_K_M,32,270590880,5,64,9073.397,149093.667,8123.747,150487.369,295.397,5616.124,0.71,144540.057,0.44,true,false

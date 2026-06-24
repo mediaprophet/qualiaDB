@@ -289,7 +289,7 @@ impl TaskOrchestrator {
         intent: &AgentIntent,
     ) -> Result<(), &'static str> {
         let mut rules = Vec::new();
-        let mut parser = N3Parser::new(std::io::Cursor::new(text.as_bytes()));
+        let mut parser = N3Parser::new(text);
         parser
             .parse_all(|event| {
                 if let N3Event::LogicRule(rule) = event {
@@ -307,6 +307,8 @@ impl TaskOrchestrator {
         let shapes: Vec<&CompiledShape> = routed_shapes.iter().collect();
         let mut opcodes = [SlgOpcode::Call; 256];
         let mut quins = [crate::NQuin::default(); 64];
+        // The gate validates each Rule against the routed SHACL shapes (fail closed),
+        // then compiles internally — pass the parsed rules directly.
         let program =
             compile_rules_with_shacl_gate(&rules, &shapes, &mut opcodes, &mut quins, contract_hash)
                 .map_err(|_| "SHACL validation failed for LLM N3 output")?;

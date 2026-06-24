@@ -34,6 +34,7 @@ const QUIN_SIZE: usize = 48;
 const MAX_SLOTS: usize = SLG_ARENA_SIZE / QUIN_SIZE; // 917,504 slots
 
 use crate::modalities::logic::n3_parser::{Rule, Term, Triple};
+use crate::modalities::logic::n3_compiler::{compile_rule_to_zero_heap, CompiledRule, CompiledTerm, CompiledTriple};
 
 /// The 42MB Static Tabling Arena for SLG Resolution
 /// Implemented as a Zero-Allocation Static Ring-Buffer Arena
@@ -52,8 +53,8 @@ const MAX_FIXPOINT_ROUNDS: usize = 16;
 /// True when any triple in the rule's premise or conclusion carries a variable.
 /// Such rules cannot compile to a single ground deontic norm and are instead
 /// grounded by forward-chaining (`SlgArena::fire_guard_rules`).
-fn rule_has_variables(rule: &Rule) -> bool {
-    let term_is_var = |t: &Term| matches!(t, Term::Variable(_));
+fn rule_has_variables(rule: &CompiledRule) -> bool {
+    let term_is_var = |t: &crate::modalities::logic::n3_compiler::CompiledTerm| t.is_variable();
     rule.premise
         .triples
         .iter()
@@ -69,18 +70,18 @@ fn rule_has_variables(rule: &Rule) -> bool {
 ///
 /// Hashing uses the same `q_hash` as `n3_compiler::triple_to_quin`, so a premise
 /// term and an ingested fact agree.
-fn unify_field(term: &Term, field: u64, bindings: &mut [(u64, u64)], nbound: &mut usize) -> bool {
-    match term {
-        Term::Uri(s) | Term::Literal(s) => crate::q_hash(s) == field,
-        Term::Variable(name) => {
-            let key = crate::q_hash(name);
+fn unify_field(
+    t: &CompiledTerm, field: u64, bindings: &mut [(u64, u64)], nbound: &mut usize) -> bool {
+    match t {
+        CompiledTerm::Uri(s) | CompiledTerm::Literal(s) => *s == field,
+        CompiledTerm::Variable(key) => {
             for i in 0..*nbound {
-                if bindings[i].0 == key {
+                if bindings[i].0 == *key {
                     return bindings[i].1 == field;
                 }
             }
             if *nbound < bindings.len() {
-                bindings[*nbound] = (key, field);
+                bindings[*nbound] = (*key, field);
                 *nbound += 1;
                 true
             } else {
@@ -93,12 +94,12 @@ fn unify_field(term: &Term, field: u64, bindings: &mut [(u64, u64)], nbound: &mu
 /// Resolve a conclusion-triple field to a concrete hash under the bindings.
 /// Returns `None` for an unbound conclusion variable (a fresh variable not
 /// constrained by the premise) — such conclusions are skipped, never guessed.
-fn resolve_term(term: &Term, bindings: &[(u64, u64)]) -> Option<u64> {
+#[allow(clippy::ptr_arg)]
+fn resolve_term(term: &CompiledTerm, bindings: &[(u64, u64)]) -> Option<u64> {
     match term {
-        Term::Uri(s) | Term::Literal(s) => Some(crate::q_hash(s)),
-        Term::Variable(name) => {
-            let key = crate::q_hash(name);
-            bindings.iter().find(|(k, _)| *k == key).map(|(_, v)| *v)
+        CompiledTerm::Uri(s) | CompiledTerm::Literal(s) => Some(*s),
+        CompiledTerm::Variable(key) => {
+            bindings.iter().find(|(k, _)| *k == *key).map(|(_, v)| *v)
         }
     }
 }
@@ -111,8 +112,8 @@ fn resolve_term(term: &Term, bindings: &[(u64, u64)]) -> Option<u64> {
 /// failed branch added are simply overwritten on the next branch.
 #[allow(clippy::too_many_arguments)]
 fn join_premise(
-    premise: &[Triple],
-    conclusion: &[Triple],
+    premise: &[CompiledTriple],
+    conclusion: &[CompiledTriple],
     facts: &[NQuin],
     idx: usize,
     bindings: &mut [(u64, u64)],
@@ -182,9 +183,9 @@ pub struct SlgArena {
     recent_slot_head: usize,
     // Native Rule Registry to hold N3 Logical Implications
     #[cfg(feature = "alloc_buffers")]
-    rule_registry: alloc::vec::Vec<Rule>,
+    rule_registry: alloc::vec::Vec<CompiledRule>,
     #[cfg(not(feature = "alloc_buffers"))]
-    rule_registry: std::vec::Vec<Rule>,
+    rule_registry: std::vec::Vec<CompiledRule>,
 }
 
 #[cfg(feature = "alloc_buffers")]
@@ -227,9 +228,9 @@ impl SlgArena {
     }
 
     /// Registers a logical implication rule into the Webizen VM
-    pub fn register_rule(&mut self, rule: Rule) {
-        vm_log!("🧠 Webizen registered new N3 Rule: {:?}", rule);
-        self.rule_registry.push(rule);
+    pub fn register_rule(&mut self, rule: &Rule<'_>) {
+        vm_log!("🧠 Webizen registered new Compiled N3 Rule");
+        self.rule_registry.push(compile_rule_to_zero_heap(rule));
     }
 
     pub fn rule_count(&self) -> usize {
@@ -337,7 +338,7 @@ impl SlgArena {
                 }
                 let mut bindings = [(0u64, 0u64); MAX_RULE_VARS];
                 join_premise(
-                    &rule.premise.triples,
+                    &rule.premise.triples[..rule.premise.len],
                     &rule.conclusion.triples,
                     &facts[..fact_count],
                     0,
@@ -2075,34 +2076,34 @@ pub fn check_personhood_category_error(agent_type: u64, claims_dignity_right: bo
     use crate::modalities::logic::n3_parser::{Formula, Rule, RuleType, Term, Triple};
     const B: &str = "https://ns.webcivics.net/values/";
     let vh = |s: &str| crate::q_hash(s);
-    let u = |s: String| Term::Uri(s);
-    let var = |n: &str| Term::Variable(n.to_string());
+    let u = |s: &'static str| Term::Uri(s);
+    let var = |n: &'static str| Term::Variable(n);
 
     // G-guard for a given non-natural-person class: claiming a NaturalPerson-held Right → flag.
-    let guard = |id: &str, class: &str| Rule {
-        id: Some(id.to_string()),
+    let guard = |id: &'static str, class: &'static str| Rule {
+        id: Some(id),
         rule_type: RuleType::Strict,
         weight: None,
         premise: Formula {
             triples: vec![
-                Triple { subject: var("c"), predicate: u("a".to_string()), object: u(format!("{B}{class}")) },
-                Triple { subject: var("c"), predicate: u(format!("{B}claims")), object: var("r") },
-                Triple { subject: var("r"), predicate: u("a".to_string()), object: u(format!("{B}Right")) },
-                Triple { subject: var("r"), predicate: u(format!("{B}heldBy")), object: u(format!("{B}NaturalPerson")) },
+                Triple { subject: var("c"), predicate: u("a"), object: u("dynamic_test_str") },
+                Triple { subject: var("c"), predicate: Term::Uri("q42:dynamic_test_str"), object: var("r") },
+                Triple { subject: var("r"), predicate: u("a"), object: u("dynamic_test_str") },
+                Triple { subject: var("r"), predicate: Term::Uri("q42:dynamic_test_str"), object: Term::Uri("q42:dynamic_test_str") },
             ],
         },
         conclusion: Formula {
             triples: vec![Triple {
                 subject: var("c"),
-                predicate: u(format!("{B}flag")),
-                object: u(format!("{B}PersonhoodCategoryError")),
+                predicate: Term::Uri("q42:dynamic_test_str"),
+                object: Term::Uri("q42:dynamic_test_str"),
             }],
         },
     };
 
     let mut arena = SlgArena::new();
-    arena.register_rule(guard("agency-G1", "CorporatePerson"));
-    arena.register_rule(guard("agency-G1-prime", "ArtificialAgent"));
+    let r1 = guard("agency-G1", "CorporatePerson"); arena.register_rule(&r1);
+    let r2 = guard("agency-G1-prime", "ArtificialAgent"); arena.register_rule(&r2);
 
     let fact = |a: &mut SlgArena, s: u64, p: u64, o: u64| {
         a.write_table(NQuin { subject: s, predicate: p, object: o, context: 0, metadata: 0, parity: s ^ p ^ o });
@@ -2296,28 +2297,28 @@ mod tests {
         use crate::modalities::logic::n3_parser::{Formula, Rule, RuleType, Term, Triple};
         const B: &str = "https://ns.webcivics.net/values/";
         let vh = |s: &str| crate::q_hash(s);
-        let u = |s: String| Term::Uri(s);
-        let var = |n: &str| Term::Variable(n.to_string());
+        let u = |s: &'static str| Term::Uri(s);
+        let var = |n: &'static str| Term::Variable(n);
 
         // agency.n3 G1: { ?c a CorporatePerson ; claims ?r . ?r a Right ; heldBy NaturalPerson }
         //            => { ?c flag PersonhoodCategoryError } .
         let g1 = Rule {
-            id: Some("agency-G1".to_string()),
+            id: Some("agency-G1"),
             rule_type: RuleType::Strict,
             weight: None,
             premise: Formula {
                 triples: vec![
-                    Triple { subject: var("c"), predicate: u("a".to_string()), object: u(format!("{B}CorporatePerson")) },
-                    Triple { subject: var("c"), predicate: u(format!("{B}claims")), object: var("r") },
-                    Triple { subject: var("r"), predicate: u("a".to_string()), object: u(format!("{B}Right")) },
-                    Triple { subject: var("r"), predicate: u(format!("{B}heldBy")), object: u(format!("{B}NaturalPerson")) },
+                    Triple { subject: var("c"), predicate: u("a"), object: Term::Uri("q42:dynamic_test_str") },
+                    Triple { subject: var("c"), predicate: Term::Uri("q42:dynamic_test_str"), object: var("r") },
+                    Triple { subject: var("r"), predicate: u("a"), object: u("dynamic_test_str") },
+                    Triple { subject: var("r"), predicate: Term::Uri("q42:dynamic_test_str"), object: Term::Uri("q42:dynamic_test_str") },
                 ],
             },
             conclusion: Formula {
                 triples: vec![Triple {
                     subject: var("c"),
-                    predicate: u(format!("{B}flag")),
-                    object: u(format!("{B}PersonhoodCategoryError")),
+                    predicate: Term::Uri("q42:dynamic_test_str"),
+                    object: Term::Uri("q42:dynamic_test_str"),
                 }],
             },
         };
@@ -2336,7 +2337,7 @@ mod tests {
         fact(&mut arena, acme, vh(&format!("{B}claims")), right);
         fact(&mut arena, right, vh("a"), vh(&format!("{B}Right")));
         fact(&mut arena, right, vh(&format!("{B}heldBy")), vh(&format!("{B}NaturalPerson")));
-        arena.register_rule(g1.clone());
+        arena.register_rule(&g1);
         let _ = arena.fire_registered_rules(crate::q_hash("contract:g1-smoke"));
         assert!(
             arena.has_quin(acme, flag, pce),
@@ -2350,7 +2351,7 @@ mod tests {
         fact(&mut arena2, alice, vh(&format!("{B}claims")), right);
         fact(&mut arena2, right, vh("a"), vh(&format!("{B}Right")));
         fact(&mut arena2, right, vh(&format!("{B}heldBy")), vh(&format!("{B}NaturalPerson")));
-        arena2.register_rule(g1);
+        arena2.register_rule(&g1);
         let _ = arena2.fire_registered_rules(crate::q_hash("contract:g1-smoke"));
         assert!(
             !arena2.has_quin(alice, flag, pce),
@@ -2529,7 +2530,7 @@ mod tests {
 
         // Parse with the ENGINE's own N3 parser; collect the logic rules.
         let mut rules = Vec::new();
-        let mut parser = N3Parser::new(Cursor::new(text.into_bytes()));
+        let mut parser = N3Parser::new(&text);
         parser
             .parse_all(|ev| {
                 if let N3Event::LogicRule(r) = ev {
@@ -2547,7 +2548,7 @@ mod tests {
         // Register every parsed rule into the Webizen VM.
         let mut arena = SlgArena::new();
         for r in &rules {
-            arena.register_rule(r.clone());
+            arena.register_rule(&r);
         }
 
         // Facts use the SAME token form the parsed rule carries (CURIEs; @prefix is not
