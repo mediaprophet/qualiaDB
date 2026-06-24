@@ -175,7 +175,7 @@ wasm-bindgen-futures = "0.4"
 
 [target.'cfg(all(windows, target_arch = "x86_64"))'.dependencies]
 # Force a specific, stable version to prevent transitive conflicts and 32-bit fallback macros
-windows = { version = "0.58", features = [
+windows = { version = "0.62", features = [
     "Win32_AI_MachineLearning_DirectML",
     "Win32_Graphics_Direct3D",
     "Win32_Graphics_Direct3D12",
