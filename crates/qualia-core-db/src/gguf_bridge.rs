@@ -4714,8 +4714,29 @@ impl QTensorEngine {
         let kv_buf = self.kv_cache_gpu.as_ref().unwrap();
         let staging = self.gemm_output_staging.as_ref().unwrap();
 
-        self.gpu_queue()
-            .write_buffer(input_buf, 0, bytemuck::cast_slice(&hidden[..hidden_elems]));
+        // #49: honor norm_weight on the GPU path. Prefill passes RAW hidden + attn_norm here (the
+        // CPU-reference convention); without per-token RMSNorm the prefill K/V are projected from the
+        // un-normed residual and the KV cache explodes. Decode passes norm_weight=None → single upload.
+        let norm_ok = n_embd <= MAX_HIDDEN_DIM && norm_weight.map_or(false, |w| w.len() >= n_embd);
+        match norm_weight {
+            Some(w) if norm_ok => {
+                let mut norm_tok = [0f32; MAX_HIDDEN_DIM];
+                for t in 0..batch {
+                    let s = t * n_embd;
+                    norm_tok[..n_embd].copy_from_slice(&hidden[s..s + n_embd]);
+                    rms_norm_inplace(&mut norm_tok[..n_embd], &w[..n_embd], RMS_NORM_EPS);
+                    self.gpu_queue().write_buffer(
+                        input_buf,
+                        (s * 4) as wgpu::BufferAddress,
+                        bytemuck::cast_slice(&norm_tok[..n_embd]),
+                    );
+                }
+            }
+            _ => {
+                self.gpu_queue()
+                    .write_buffer(input_buf, 0, bytemuck::cast_slice(&hidden[..hidden_elems]));
+            }
+        }
         self.write_weight_words(raw_weights, self.max_tensor_bytes);
         self.gpu_queue()
             .write_buffer(params_buf, 0, bytemuck::bytes_of(&params));

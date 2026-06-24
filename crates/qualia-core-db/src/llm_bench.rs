@@ -85,20 +85,17 @@ pub fn set_cpu_attention(on: bool) {
 
 /// Whether native attention should use the CPU reference.
 ///
-/// **Default ON** for native: the CPU SDPA produces correct, coherent output, whereas the GPU
-/// attention path still has a remaining bug (its `dispatch_attention_pass` GPU branch ignores
-/// `norm_weight`, so prefill K/V from the raw residual explode). Correctness-first: a correct-but-
-/// slower default beats a fast path that emits garbage. Opt back into the GPU path (once it's fixed)
-/// with `QUALIA_LLM_GPU_ATTENTION=1`.
+/// **Default OFF** (use the GPU attention path) — as of #49 the GPU path also honors `norm_weight`
+/// for prefill K/V and produces coherent output, and it is faster. The CPU SDPA reference remains
+/// available as a correctness fallback / cross-check via `QUALIA_LLM_CPU_ATTENTION=1` or
+/// [`set_cpu_attention`].
 #[inline]
 pub fn cpu_attention_enabled() -> bool {
-    if matches!(
-        std::env::var("QUALIA_LLM_GPU_ATTENTION").ok().as_deref(),
-        Some("1") | Some("true")
-    ) {
-        return false; // explicit opt-in to the faster, currently-buggy GPU attention path
-    }
-    true
+    CPU_ATTENTION.load(Ordering::Relaxed)
+        || matches!(
+            std::env::var("QUALIA_LLM_CPU_ATTENTION").ok().as_deref(),
+            Some("1") | Some("true")
+        )
 }
 
 // ── Shared phase metrics ──────────────────────────────────────────────────────
