@@ -57,7 +57,7 @@ impl std::error::Error for KmlError {}
 /// The lexicon map (hash → string) for any literal values is returned alongside.
 pub fn import_kml(bytes: &[u8]) -> Result<(Vec<NQuin>, std::collections::HashMap<u64, String>), KmlError> {
     let mut reader = Reader::from_reader(bytes);
-    reader.trim_text(true);
+    reader.config_mut().trim_text(true);
 
     let mut quins: Vec<NQuin> = Vec::new();
     let mut lexicon: std::collections::HashMap<u64, String> = std::collections::HashMap::new();
@@ -202,7 +202,12 @@ pub fn import_kml(bytes: &[u8]) -> Result<(Vec<NQuin>, std::collections::HashMap
                 }
             }
             Ok(Event::Text(e)) => {
-                let text = e.unescape().map_err(|e| KmlError::Xml(e.to_string()))?.into_owned();
+                // quick-xml 0.40: `BytesText::unescape` was removed. Reproduce its
+                // behaviour by decoding the bytes then unescaping XML entities.
+                let decoded = e.decode().map_err(|e| KmlError::Xml(e.to_string()))?;
+                let text = quick_xml::escape::unescape(&decoded)
+                    .map_err(|e| KmlError::Xml(e.to_string()))?
+                    .into_owned();
                 if in_poly_coordinates          { polygon_coordinates_text = text; }
                 else if in_coordinates          { coordinates_text = text; }
                 else if in_name                 { name_text = text; }

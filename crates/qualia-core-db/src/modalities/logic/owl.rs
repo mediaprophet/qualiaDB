@@ -444,7 +444,7 @@ pub fn parse_radlex_relations_xml(
 ) -> Result<Vec<RadlexRelation>, OwlToShaclError> {
     let file = File::open(path).map_err(|e| OwlToShaclError::Io(e.to_string()))?;
     let mut reader = Reader::from_reader(BufReader::new(file));
-    reader.trim_text(true);
+    reader.config_mut().trim_text(true);
 
     let mut relations = Vec::new();
     let mut buf = Vec::new();

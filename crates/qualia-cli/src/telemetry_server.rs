@@ -35,7 +35,7 @@ pub async fn start_telemetry_server(rx: broadcast::Receiver<TelemetryPayload>) {
             while let Ok(payload) = rx_clone.recv().await {
                 let json = serde_json::to_string(&payload).unwrap();
                 if ws_stream
-                    .send(tokio_tungstenite::tungstenite::Message::Text(json))
+                    .send(tokio_tungstenite::tungstenite::Message::Text(json.into()))
                     .await
                     .is_err()
                 {

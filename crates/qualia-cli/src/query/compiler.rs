@@ -41,7 +41,9 @@ impl SparqlCompiler {
     }
 
     pub fn compile(&self, sparql_string: &str) -> Result<Vec<u8>, String> {
-        let query = spargebra::Query::parse(sparql_string, None).map_err(|e| e.to_string())?;
+        let query = spargebra::SparqlParser::new()
+            .parse_query(sparql_string)
+            .map_err(|e| e.to_string())?;
         let mut bytecode = Vec::new();
         let mut var_registry = VariableRegistry::new();
 
