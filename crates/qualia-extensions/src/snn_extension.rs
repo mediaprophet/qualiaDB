@@ -491,9 +491,9 @@ impl SnnExtension {
     }
 
     fn generate_noise(&self, amplitude: f64) -> f64 {
-        use rand::Rng;
-        let mut rng = rand::thread_rng();
-        rng.gen_range(-amplitude..amplitude)
+        use rand::RngExt;
+        let mut rng = rand::rng();
+        rng.random_range(-amplitude..amplitude)
     }
 
     fn calculate_learning_metrics(&self, potentials: &[Vec<f64>], weights: &[Vec<f64>]) -> LearningMetrics {
@@ -699,19 +699,19 @@ impl NoiseGenerator {
     }
 
     pub fn generate_noise(&mut self) -> f64 {
-        use rand::Rng;
-        let mut rng = rand::thread_rng();
+        use rand::RngExt;
+        let mut rng = rand::rng();
         
         match self.noise_type {
             NoiseType::Gaussian => {
                 // Box-Muller transform for Gaussian noise
-                let u1: f64 = rng.gen();
-                let u2: f64 = rng.gen();
+                let u1: f64 = rng.random();
+                let u2: f64 = rng.random();
                 let noise = (-2.0 * u1.ln()).sqrt() * (2.0 * std::f64::consts::PI * u2).cos();
                 noise * self.amplitude
             }
             NoiseType::Uniform => {
-                rng.gen_range(-self.amplitude..self.amplitude)
+                rng.random_range(-self.amplitude..self.amplitude)
             }
             _ => 0.0, // Placeholder for other noise types
         }

@@ -729,7 +729,7 @@ fn http_post_sigv4(
     service: &str,
     body: &serde_json::Value,
 ) -> Result<String, String> {
-    use hmac::{Hmac, Mac};
+    use hmac::{Hmac, KeyInit, Mac};
     use sha2::{Digest, Sha256};
 
     type HmacSha256 = Hmac<Sha256>;
