@@ -122,8 +122,9 @@ fn bench_gpu_gemv(device: &wgpu::Device, queue: &wgpu::Queue, n: usize) -> f64 {
         label: Some("gemv_bench_pipeline"),
         layout: None,
         module: &shader,
-        entry_point: "gemv",
+        entry_point: Some("gemv"),
         compilation_options: Default::default(),
+        cache: None,
     });
     let mk = |contents: &[u8], usage: wgpu::BufferUsages| {
         let b = device.create_buffer(&wgpu::BufferDescriptor {
@@ -181,7 +182,7 @@ fn bench_gpu_gemv(device: &wgpu::Device, queue: &wgpu::Queue, n: usize) -> f64 {
             }
         }
         queue.submit(Some(enc.finish()));
-        let _ = device.poll(wgpu::Maintain::Wait);
+        let _ = device.poll(wgpu::PollType::wait_indefinitely());
     };
     submit_batch(); // warmup
     let t0 = Instant::now();
@@ -206,7 +207,7 @@ fn bench_upload_gbps(device: &wgpu::Device, queue: &wgpu::Queue, bytes: usize) -
     let flush = || {
         let enc = device.create_command_encoder(&wgpu::CommandEncoderDescriptor { label: None });
         queue.submit(Some(enc.finish()));
-        let _ = device.poll(wgpu::Maintain::Wait);
+        let _ = device.poll(wgpu::PollType::wait_indefinitely());
     };
     queue.write_buffer(&buf, 0, &data); // warmup
     flush();
@@ -277,7 +278,7 @@ pub fn benchmark_devices(n: usize) -> CapabilityMatrix {
     // the first (best) occurrence per (vendor, device). Skip software CPU adapters + GL phantoms.
     let instance = wgpu::Instance::default();
     let mut cand: Vec<(u8, wgpu::Adapter, wgpu::AdapterInfo)> = Vec::new();
-    for adapter in instance.enumerate_adapters(wgpu::Backends::all()) {
+    for adapter in pollster::block_on(instance.enumerate_adapters(wgpu::Backends::all())) {
         let info = adapter.get_info();
         if info.device_type == wgpu::DeviceType::Cpu || info.device == 0 {
             continue;
@@ -294,7 +295,7 @@ pub fn benchmark_devices(n: usize) -> CapabilityMatrix {
     }
     for (adapter, info) in chosen {
         let Some((device, queue)) =
-            pollster::block_on(adapter.request_device(&wgpu::DeviceDescriptor::default(), None)).ok()
+            pollster::block_on(adapter.request_device(&wgpu::DeviceDescriptor::default())).ok()
         else {
             log::warn!("device_benchmark|skip|{}|request_device failed", info.name);
             continue;

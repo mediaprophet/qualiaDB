@@ -59,13 +59,13 @@ impl LoRAGpuApplicator {
                 ..Default::default()
             })
             .await
-            .ok_or_else(|| LoRAError::Io("no wgpu adapter".into()))?;
+            .map_err(|e| LoRAError::Io(format!("no wgpu adapter: {e}")))?;
 
         // wgpu 0.19: DeviceDescriptor uses Default; features/limits are fields of the
         // inner `wgpu::DeviceDescriptor::default()` but the public struct in this version
         // is just `&wgpu::DeviceDescriptor::default()`.
         let (device, queue) = adapter
-            .request_device(&wgpu::DeviceDescriptor::default(), None)
+            .request_device(&wgpu::DeviceDescriptor::default())
             .await
             .map_err(|e| LoRAError::Io(format!("wgpu device: {e}")))?;
 
@@ -89,16 +89,17 @@ impl LoRAGpuApplicator {
 
         let pl = device.create_pipeline_layout(&wgpu::PipelineLayoutDescriptor {
             label:                Some("lora-pl"),
-            bind_group_layouts:   &[&bgl],
-            push_constant_ranges: &[],
+            bind_group_layouts:   &[Some(&bgl)],
+            immediate_size:       0,
         });
 
         let pipeline = device.create_compute_pipeline(&wgpu::ComputePipelineDescriptor {
             label:       Some("lora-pipeline"),
             layout:      Some(&pl),
             module:      &shader,
-            entry_point: "apply_lora",
+            entry_point: Some("apply_lora"),
             compilation_options: Default::default(),
+            cache:       None,
         });
 
         Ok(Self { device, queue, pipeline, bgl })
@@ -183,7 +184,7 @@ impl LoRAGpuApplicator {
         let slice = out_staging.slice(..);
         let (tx, rx) = std::sync::mpsc::channel();
         slice.map_async(wgpu::MapMode::Read, move |r| { let _ = tx.send(r); });
-        dev.poll(wgpu::Maintain::Wait);
+        let _ = dev.poll(wgpu::PollType::wait_indefinitely());
         rx.recv()
             .map_err(|_| LoRAError::Io("GPU readback channel closed".into()))?
             .map_err(|e| LoRAError::Io(format!("map_async: {e:?}")))?;

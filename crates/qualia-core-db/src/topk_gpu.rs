@@ -36,8 +36,9 @@ pub fn topk_gpu(
         label: Some("topk_pipeline"),
         layout: None,
         module: &shader,
-        entry_point: "topk_block",
+        entry_point: Some("topk_block"),
         compilation_options: Default::default(),
+        cache: None,
     });
 
     let logits_buf = device.create_buffer(&wgpu::BufferDescriptor {
@@ -111,7 +112,7 @@ pub fn topk_gpu(
     let (tx_i, rx_i) = std::sync::mpsc::channel();
     sv.map_async(wgpu::MapMode::Read, move |r| { let _ = tx_v.send(r); });
     si.map_async(wgpu::MapMode::Read, move |r| { let _ = tx_i.send(r); });
-    let _ = device.poll(wgpu::Maintain::Wait);
+    let _ = device.poll(wgpu::PollType::wait_indefinitely());
     rx_v.recv().expect("map val").expect("map topk val");
     rx_i.recv().expect("map idx").expect("map topk idx");
 
@@ -137,8 +138,8 @@ mod tests {
         let adapter = pollster::block_on(instance.request_adapter(&wgpu::RequestAdapterOptions {
             power_preference: wgpu::PowerPreference::HighPerformance,
             ..Default::default()
-        }))?;
-        pollster::block_on(adapter.request_device(&wgpu::DeviceDescriptor::default(), None)).ok()
+        })).ok()?;
+        pollster::block_on(adapter.request_device(&wgpu::DeviceDescriptor::default())).ok()
     }
 
     fn assert_parity(gpu: &[TopKItem], cpu: &[TopKItem]) {

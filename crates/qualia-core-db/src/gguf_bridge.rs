@@ -2531,9 +2531,9 @@ impl QTensorEngine {
             let adapter = instance
                 .request_adapter(&wgpu::RequestAdapterOptions::default())
                 .await
-                .ok_or_else(|| "Failed to find wgpu adapter".to_string())?;
+                .map_err(|e| format!("Failed to find wgpu adapter: {e}"))?;
             adapter
-                .request_device(&wgpu::DeviceDescriptor::default(), None)
+                .request_device(&wgpu::DeviceDescriptor::default())
                 .await
                 .map_err(|e| e.to_string())?
         };
@@ -2596,8 +2596,8 @@ impl QTensorEngine {
         #[cfg(target_arch = "wasm32")]
         let mc8_gemm_pipeline_layout = device.create_pipeline_layout(&wgpu::PipelineLayoutDescriptor {
             label: Some("MC8GemmPL"),
-            bind_group_layouts: &[&mc8_gemm_bind_layout],
-            push_constant_ranges: &[],
+            bind_group_layouts: &[Some(&mc8_gemm_bind_layout)],
+            immediate_size: 0,
         });
 
         #[cfg(target_arch = "wasm32")]
@@ -2605,16 +2605,18 @@ impl QTensorEngine {
             label: Some("Fused Transformer Pipeline"),
             layout: Some(&mc8_gemm_pipeline_layout),
             module: &shader,
-            entry_point: "main",
+            entry_point: Some("main"),
             compilation_options: Default::default(),
+            cache: None,
         });
         #[cfg(not(target_arch = "wasm32"))]
         let pipeline = device.create_compute_pipeline(&wgpu::ComputePipelineDescriptor {
             label: Some("Fused Transformer Pipeline"),
             layout: None,
             module: &shader,
-            entry_point: "main",
+            entry_point: Some("main"),
             compilation_options: Default::default(),
+            cache: None,
         });
 
         let mock_shader = device.create_shader_module(wgpu::ShaderModuleDescriptor {
@@ -2627,8 +2629,9 @@ impl QTensorEngine {
             label: Some("Mock Fused Contraction Pipeline"),
             layout: None,
             module: &mock_shader,
-            entry_point: "main",
+            entry_point: Some("main"),
             compilation_options: Default::default(),
+            cache: None,
         });
 
         let emb_shader = device.create_shader_module(wgpu::ShaderModuleDescriptor {
@@ -2641,8 +2644,9 @@ impl QTensorEngine {
             label: Some("Quantized Embedding Pipeline"),
             layout: None,
             module: &emb_shader,
-            entry_point: "main",
+            entry_point: Some("main"),
             compilation_options: Default::default(),
+            cache: None,
         });
 
         let attn_shader = device.create_shader_module(wgpu::ShaderModuleDescriptor {
@@ -2718,24 +2722,26 @@ impl QTensorEngine {
         #[cfg(target_arch = "wasm32")]
         let mc8_attn_pipeline_layout = device.create_pipeline_layout(&wgpu::PipelineLayoutDescriptor {
             label: Some("MC8AttnPL"),
-            bind_group_layouts: &[&mc8_attn_bind_layout],
-            push_constant_ranges: &[],
+            bind_group_layouts: &[Some(&mc8_attn_bind_layout)],
+            immediate_size: 0,
         });
         #[cfg(target_arch = "wasm32")]
         let attention_pipeline = device.create_compute_pipeline(&wgpu::ComputePipelineDescriptor {
             label: Some("Fused Attention Pipeline"),
             layout: Some(&mc8_attn_pipeline_layout),
             module: &attn_shader,
-            entry_point: "main",
+            entry_point: Some("main"),
             compilation_options: Default::default(),
+            cache: None,
         });
         #[cfg(not(target_arch = "wasm32"))]
         let attention_pipeline = device.create_compute_pipeline(&wgpu::ComputePipelineDescriptor {
             label: Some("Fused Attention Pipeline"),
             layout: None,
             module: &attn_shader,
-            entry_point: "main",
+            entry_point: Some("main"),
             compilation_options: Default::default(),
+            cache: None,
         });
 
         let elem_shader = device.create_shader_module(wgpu::ShaderModuleDescriptor {
@@ -2791,8 +2797,8 @@ impl QTensorEngine {
         #[cfg(target_arch = "wasm32")]
         let mc8_elem_pipeline_layout = device.create_pipeline_layout(&wgpu::PipelineLayoutDescriptor {
             label: Some("MC8ElemPL"),
-            bind_group_layouts: &[&mc8_elem_bind_layout],
-            push_constant_ranges: &[],
+            bind_group_layouts: &[Some(&mc8_elem_bind_layout)],
+            immediate_size: 0,
         });
         #[cfg(target_arch = "wasm32")]
         let elem_rms_norm_pipeline =
@@ -2800,8 +2806,9 @@ impl QTensorEngine {
                 label: Some("ElemRmsNorm"),
                 layout: Some(&mc8_elem_pipeline_layout),
                 module: &elem_shader,
-                entry_point: "rms_norm_batch",
+                entry_point: Some("rms_norm_batch"),
                 compilation_options: Default::default(),
+                cache: None,
             });
         #[cfg(target_arch = "wasm32")]
         let elem_silu_mul_pipeline =
@@ -2809,8 +2816,9 @@ impl QTensorEngine {
                 label: Some("ElemSiluMul"),
                 layout: Some(&mc8_elem_pipeline_layout),
                 module: &elem_shader,
-                entry_point: "silu_mul_main",
+                entry_point: Some("silu_mul_main"),
                 compilation_options: Default::default(),
+                cache: None,
             });
         #[cfg(target_arch = "wasm32")]
         let elem_add_residual_pipeline =
@@ -2818,8 +2826,9 @@ impl QTensorEngine {
                 label: Some("ElemAddResidual"),
                 layout: Some(&mc8_elem_pipeline_layout),
                 module: &elem_shader,
-                entry_point: "add_residual_main",
+                entry_point: Some("add_residual_main"),
                 compilation_options: Default::default(),
+                cache: None,
             });
         #[cfg(not(target_arch = "wasm32"))]
         let elem_rms_norm_pipeline =
@@ -2827,8 +2836,9 @@ impl QTensorEngine {
                 label: Some("ElemRmsNorm"),
                 layout: None,
                 module: &elem_shader,
-                entry_point: "rms_norm_batch",
+                entry_point: Some("rms_norm_batch"),
                 compilation_options: Default::default(),
+                cache: None,
             });
         #[cfg(not(target_arch = "wasm32"))]
         let elem_silu_mul_pipeline =
@@ -2836,8 +2846,9 @@ impl QTensorEngine {
                 label: Some("ElemSiluMul"),
                 layout: None,
                 module: &elem_shader,
-                entry_point: "silu_mul_main",
+                entry_point: Some("silu_mul_main"),
                 compilation_options: Default::default(),
+                cache: None,
             });
         #[cfg(not(target_arch = "wasm32"))]
         let elem_add_residual_pipeline =
@@ -2845,8 +2856,9 @@ impl QTensorEngine {
                 label: Some("ElemAddResidual"),
                 layout: None,
                 module: &elem_shader,
-                entry_point: "add_residual_main",
+                entry_point: Some("add_residual_main"),
                 compilation_options: Default::default(),
+                cache: None,
             });
 
         // Phase 5 — Fused FFN expansion pipeline (gate · SiLU · up in one dispatch).
@@ -2934,15 +2946,16 @@ impl QTensorEngine {
             });
             let layout = device.create_pipeline_layout(&wgpu::PipelineLayoutDescriptor {
                 label: Some("MC8FfnFusedPL"),
-                bind_group_layouts: &[&mc8_ffn_fused_bind_layout],
-                push_constant_ranges: &[],
+                bind_group_layouts: &[Some(&mc8_ffn_fused_bind_layout)],
+                immediate_size: 0,
             });
             device.create_compute_pipeline(&wgpu::ComputePipelineDescriptor {
                 label: Some("FusedFFNExpansionPipeline"),
                 layout: Some(&layout),
                 module: &module,
-                entry_point: "fused_ffn_expansion",
+                entry_point: Some("fused_ffn_expansion"),
                 compilation_options: Default::default(),
+                cache: None,
             })
         };
 
@@ -3582,7 +3595,7 @@ impl QTensorEngine {
     /// from real kernel time. Behaviourally identical to a bare blocking poll.
     #[inline]
     fn poll_wait(&self) {
-        self.gpu_device().poll(wgpu::Maintain::Wait);
+        let _ = self.gpu_device().poll(wgpu::PollType::wait_indefinitely());
         GPU_WAIT_COUNT.fetch_add(1, std::sync::atomic::Ordering::Relaxed);
     }
 
@@ -3600,7 +3613,7 @@ impl QTensorEngine {
                     label: Some("EmptyRT"),
                 });
             self.gpu_queue().submit(Some(enc.finish()));
-            self.gpu_device().poll(wgpu::Maintain::Wait);
+            let _ = self.gpu_device().poll(wgpu::PollType::wait_indefinitely());
         }
         t.elapsed().as_nanos() as u64
     }
@@ -4238,8 +4251,9 @@ impl QTensorEngine {
                 label: Some("output_topk_pipeline"),
                 layout: None,
                 module: &shader,
-                entry_point: "topk_block",
+                entry_point: Some("topk_block"),
                 compilation_options: Default::default(),
+                cache: None,
             });
         // Worst case: a full vocab chunk's blocks × max K candidates.
         let max_blocks = (VOCAB_CHUNK_ROWS / crate::topk::TOPK_BLOCK_SIZE).max(1);

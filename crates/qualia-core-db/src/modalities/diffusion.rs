@@ -21,10 +21,10 @@ pub async fn execute_diffusion_pass(graph: &mut [NQuin]) -> Result<(), String> {
             ..Default::default()
         })
         .await
-        .ok_or("Failed to find wgpu adapter")?;
+        .map_err(|e| format!("Failed to find wgpu adapter: {e}"))?;
 
     let (device, queue) = adapter
-        .request_device(&wgpu::DeviceDescriptor::default(), None)
+        .request_device(&wgpu::DeviceDescriptor::default())
         .await
         .map_err(|e| format!("Failed to create device: {}", e))?;
 
@@ -37,8 +37,9 @@ pub async fn execute_diffusion_pass(graph: &mut [NQuin]) -> Result<(), String> {
         label: Some("Diffusion Pipeline"),
         layout: None,
         module: &shader,
-        entry_point: "main",
+        entry_point: Some("main"),
         compilation_options: Default::default(),
+        cache: None,
     });
 
     // NQuin is 48 bytes. Cast to u8 for wgpu buffer.
@@ -98,7 +99,7 @@ pub async fn execute_diffusion_pass(graph: &mut [NQuin]) -> Result<(), String> {
         tx.send(result).unwrap();
     });
 
-    device.poll(wgpu::Maintain::Wait);
+    let _ = device.poll(wgpu::PollType::wait_indefinitely());
 
     if let Ok(Ok(())) = rx.recv() {
         let data = buffer_slice.get_mapped_range();

@@ -95,7 +95,7 @@ pub fn probe_host_topology() -> HostTopology {
 
     // Enumerate every adapter across every backend, then dedup by physical (vendor, device).
     let instance = wgpu::Instance::default();
-    let raw = instance.enumerate_adapters(wgpu::Backends::all());
+    let raw = pollster::block_on(instance.enumerate_adapters(wgpu::Backends::all()));
     let mut best: std::collections::HashMap<(u32, u32), (u8, AdapterDesc)> = std::collections::HashMap::new();
     for adapter in raw {
         let info = adapter.get_info();

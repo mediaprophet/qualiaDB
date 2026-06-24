@@ -219,8 +219,8 @@ pub(super) fn create_bloom_chain(
 
     let pipeline_layout = device.create_pipeline_layout(&wgpu::PipelineLayoutDescriptor {
         label: Some("portal-bloom-pipeline-layout"),
-        bind_group_layouts: &[&bind_layout],
-        push_constant_ranges: &[],
+        bind_group_layouts: &[Some(&bind_layout)],
+        immediate_size: 0,
     });
 
     let extract_pipeline = device.create_render_pipeline(&wgpu::RenderPipelineDescriptor {
@@ -228,13 +228,13 @@ pub(super) fn create_bloom_chain(
         layout: Some(&pipeline_layout),
         vertex: wgpu::VertexState {
             module: &bloom_shader,
-            entry_point: "extract_vs",
+            entry_point: Some("extract_vs"),
             compilation_options: Default::default(),
             buffers: &[],
         },
         fragment: Some(wgpu::FragmentState {
             module: &bloom_shader,
-            entry_point: "extract_fs",
+            entry_point: Some("extract_fs"),
             compilation_options: Default::default(),
             targets: &[Some(wgpu::ColorTargetState {
                 format: HDR_FORMAT,
@@ -245,7 +245,8 @@ pub(super) fn create_bloom_chain(
         primitive: wgpu::PrimitiveState::default(),
         depth_stencil: None,
         multisample: wgpu::MultisampleState::default(),
-        multiview: None,
+        multiview_mask: None,
+        cache: None,
     });
 
     let kawase_pipeline = device.create_render_pipeline(&wgpu::RenderPipelineDescriptor {
@@ -253,13 +254,13 @@ pub(super) fn create_bloom_chain(
         layout: Some(&pipeline_layout),
         vertex: wgpu::VertexState {
             module: &bloom_shader,
-            entry_point: "kawase_vs",
+            entry_point: Some("kawase_vs"),
             compilation_options: Default::default(),
             buffers: &[],
         },
         fragment: Some(wgpu::FragmentState {
             module: &bloom_shader,
-            entry_point: "kawase_fs",
+            entry_point: Some("kawase_fs"),
             compilation_options: Default::default(),
             targets: &[Some(wgpu::ColorTargetState {
                 format: HDR_FORMAT,
@@ -270,7 +271,8 @@ pub(super) fn create_bloom_chain(
         primitive: wgpu::PrimitiveState::default(),
         depth_stencil: None,
         multisample: wgpu::MultisampleState::default(),
-        multiview: None,
+        multiview_mask: None,
+        cache: None,
     });
 
     let composite_pipeline = device.create_render_pipeline(&wgpu::RenderPipelineDescriptor {
@@ -278,13 +280,13 @@ pub(super) fn create_bloom_chain(
         layout: Some(&pipeline_layout),
         vertex: wgpu::VertexState {
             module: &bloom_shader,
-            entry_point: "composite_vs",
+            entry_point: Some("composite_vs"),
             compilation_options: Default::default(),
             buffers: &[],
         },
         fragment: Some(wgpu::FragmentState {
             module: &bloom_shader,
-            entry_point: "composite_fs",
+            entry_point: Some("composite_fs"),
             compilation_options: Default::default(),
             targets: &[Some(wgpu::ColorTargetState {
                 format: surface_format,
@@ -295,7 +297,8 @@ pub(super) fn create_bloom_chain(
         primitive: wgpu::PrimitiveState::default(),
         depth_stencil: None,
         multisample: wgpu::MultisampleState::default(),
-        multiview: None,
+        multiview_mask: None,
+        cache: None,
     });
 
     let _ = dummy;
@@ -359,6 +362,7 @@ pub(super) fn run_bloom_passes(
             label: Some("portal-bloom-extract"),
             color_attachments: &[Some(wgpu::RenderPassColorAttachment {
                 view: &bloom.blur_a_view,
+                depth_slice: None,
                 resolve_target: None,
                 ops: wgpu::Operations {
                     load: wgpu::LoadOp::Clear(wgpu::Color::BLACK),
@@ -367,6 +371,7 @@ pub(super) fn run_bloom_passes(
             })],
             depth_stencil_attachment: None,
             occlusion_query_set: None,
+            multiview_mask: None,
             timestamp_writes: None,
         });
         pass.set_pipeline(&bloom.extract_pipeline);
@@ -391,6 +396,7 @@ pub(super) fn run_bloom_passes(
                 label: Some("portal-bloom-kawase"),
                 color_attachments: &[Some(wgpu::RenderPassColorAttachment {
                     view: write,
+                    depth_slice: None,
                     resolve_target: None,
                     ops: wgpu::Operations {
                         load: wgpu::LoadOp::Clear(wgpu::Color::BLACK),
@@ -399,6 +405,7 @@ pub(super) fn run_bloom_passes(
                 })],
                 depth_stencil_attachment: None,
                 occlusion_query_set: None,
+                multiview_mask: None,
                 timestamp_writes: None,
             });
             pass.set_pipeline(&bloom.kawase_pipeline);
@@ -423,6 +430,7 @@ pub(super) fn run_bloom_passes(
             label: Some("portal-bloom-composite"),
             color_attachments: &[Some(wgpu::RenderPassColorAttachment {
                 view: surface_view,
+                depth_slice: None,
                 resolve_target: None,
                 ops: wgpu::Operations {
                     load: wgpu::LoadOp::Clear(wgpu::Color {
@@ -436,6 +444,7 @@ pub(super) fn run_bloom_passes(
             })],
             depth_stencil_attachment: None,
             occlusion_query_set: None,
+            multiview_mask: None,
             timestamp_writes: None,
         });
         pass.set_pipeline(&bloom.composite_pipeline);

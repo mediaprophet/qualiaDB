@@ -32,9 +32,10 @@ pub mod gpu_sieve {
                     power_preference: wgpu::PowerPreference::HighPerformance,
                     ..Default::default()
                 })
-                .await?;
+                .await
+                .ok()?;
             let (device, queue) = adapter
-                .request_device(&wgpu::DeviceDescriptor::default(), None)
+                .request_device(&wgpu::DeviceDescriptor::default())
                 .await
                 .ok()?;
 
@@ -49,8 +50,9 @@ pub mod gpu_sieve {
                     label: Some("Sieve Pipeline"),
                     layout: None,
                     module: &shader,
-                    entry_point: "main",
+                    entry_point: Some("main"),
                     compilation_options: Default::default(),
+                    cache: None,
                 });
 
             Some(Self {
@@ -150,7 +152,7 @@ pub mod gpu_sieve {
             let (sender, receiver) = futures_channel::oneshot::channel();
             buffer_slice.map_async(wgpu::MapMode::Read, move |v| sender.send(v).unwrap());
 
-            self.device.poll(wgpu::Maintain::Wait);
+            let _ = self.device.poll(wgpu::PollType::wait_indefinitely());
 
             if receiver.await.is_ok() {
                 let data = buffer_slice.get_mapped_range();

@@ -40,8 +40,9 @@ impl TensorVolumeGpu {
             label: Some("TensorVolumePipeline"),
             layout: None,
             module: &shader,
-            entry_point: "main",
+            entry_point: Some("main"),
             compilation_options: Default::default(),
+            cache: None,
         });
         let max_nodes = MAX_RESIDENT_NODES as u32;
         let node_floats = max_nodes * TENSOR_VOLUME_STRIDE_FLOATS;
@@ -193,13 +194,13 @@ impl TensorVolumeGpu {
         encoder.copy_buffer_to_buffer(&self.count_buf, 0, &self.staging_count, 0, 4);
         queue.submit(Some(encoder.finish()));
 
-        device.poll(wgpu::Maintain::Wait);
+        let _ = device.poll(wgpu::PollType::wait_indefinitely());
         let count_slice = self.staging_count.slice(..4);
         let (tx, rx) = std::sync::mpsc::channel();
         count_slice.map_async(wgpu::MapMode::Read, move |r| {
             let _ = tx.send(r);
         });
-        device.poll(wgpu::Maintain::Wait);
+        let _ = device.poll(wgpu::PollType::wait_indefinitely());
         if rx.recv().ok().and_then(|r| r.ok()).is_none() {
             return 0;
         }
@@ -213,7 +214,7 @@ impl TensorVolumeGpu {
         hits_slice.map_async(wgpu::MapMode::Read, move |r| {
             let _ = tx2.send(r);
         });
-        device.poll(wgpu::Maintain::Wait);
+        let _ = device.poll(wgpu::PollType::wait_indefinitely());
         if rx2.recv().ok().and_then(|r| r.ok()).is_none() {
             return 0;
         }

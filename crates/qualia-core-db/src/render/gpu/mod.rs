@@ -155,10 +155,9 @@ impl PortalGpu {
         let _ = particle_cap;
         let particle_count = MAX_AMBIENT_INSTANCES.max(256);
 
-        let instance = wgpu::Instance::new(wgpu::InstanceDescriptor {
-            backends: wgpu::Backends::BROWSER_WEBGPU,
-            ..Default::default()
-        });
+        let mut instance_desc = wgpu::InstanceDescriptor::new_without_display_handle();
+        instance_desc.backends = wgpu::Backends::BROWSER_WEBGPU;
+        let instance = wgpu::Instance::new(instance_desc);
 
         let surface = instance
             .create_surface(wgpu::SurfaceTarget::Canvas(canvas.clone()))
@@ -171,7 +170,7 @@ impl PortalGpu {
                 force_fallback_adapter: false,
             })
             .await
-            .ok_or_else(|| "no WebGPU adapter".to_string())?;
+            .map_err(|e| format!("no WebGPU adapter: {e}"))?;
 
         let (device, queue) = adapter
             .request_device(
@@ -184,8 +183,8 @@ impl PortalGpu {
                     // buffers), turning the viewport black. Any BROWSER_WEBGPU adapter supports the
                     // baseline. The limits-shim strips fields Chrome doesn't recognise.
                     required_limits: wgpu::Limits::default(),
+                    ..Default::default()
                 },
-                None,
             )
             .await
             .map_err(|e| format!("device: {e}"))?;
@@ -194,7 +193,8 @@ impl PortalGpu {
         let queue = Arc::new(queue);
 
         // DIAG: capture deferred pipeline/shader creation validation errors.
-        device.push_error_scope(wgpu::ErrorFilter::Validation);
+        // wgpu 29: push_error_scope returns an RAII ErrorScopeGuard; hold it and `.pop()` later.
+        let error_scope = device.push_error_scope(wgpu::ErrorFilter::Validation);
 
         let caps = surface.get_capabilities(&adapter);
         let format = caps
@@ -326,15 +326,15 @@ impl PortalGpu {
         let ambient_pipeline_layout =
             device.create_pipeline_layout(&wgpu::PipelineLayoutDescriptor {
                 label: Some("portal-ambient-pipeline-layout"),
-                bind_group_layouts: &[&ambient_bind_group_layout],
-                push_constant_ranges: &[],
+                bind_group_layouts: &[Some(&ambient_bind_group_layout)],
+                immediate_size: 0,
             });
 
         let projector_pipeline_layout =
             device.create_pipeline_layout(&wgpu::PipelineLayoutDescriptor {
                 label: Some("portal-projector-pipeline-layout"),
-                bind_group_layouts: &[&projector_camera_layout, &projector_tensor_layout],
-                push_constant_ranges: &[],
+                bind_group_layouts: &[Some(&projector_camera_layout), Some(&projector_tensor_layout)],
+                immediate_size: 0,
             });
 
         let ambient_pipeline = device.create_render_pipeline(&wgpu::RenderPipelineDescriptor {
@@ -342,13 +342,13 @@ impl PortalGpu {
             layout: Some(&ambient_pipeline_layout),
             vertex: wgpu::VertexState {
                 module: &ambient_shader,
-                entry_point: "vertex_main",
+                entry_point: Some("vertex_main"),
                 compilation_options: Default::default(),
                 buffers: &[],
             },
             fragment: Some(wgpu::FragmentState {
                 module: &ambient_shader,
-                entry_point: "fragment_main",
+                entry_point: Some("fragment_main"),
                 compilation_options: Default::default(),
                 targets: &[Some(color_target_state(format))],
             }),
@@ -358,7 +358,8 @@ impl PortalGpu {
             },
             depth_stencil: Some(depth_stencil_state_read_only()),
             multisample: wgpu::MultisampleState::default(),
-            multiview: None,
+            multiview_mask: None,
+            cache: None,
         });
 
         let projector_pipeline = device.create_render_pipeline(&wgpu::RenderPipelineDescriptor {
@@ -366,13 +367,13 @@ impl PortalGpu {
             layout: Some(&projector_pipeline_layout),
             vertex: wgpu::VertexState {
                 module: &projector_shader,
-                entry_point: "vertex_main",
+                entry_point: Some("vertex_main"),
                 compilation_options: Default::default(),
                 buffers: &[],
             },
             fragment: Some(wgpu::FragmentState {
                 module: &projector_shader,
-                entry_point: "fragment_main",
+                entry_point: Some("fragment_main"),
                 compilation_options: Default::default(),
                 targets: &[Some(color_target_state(format))],
             }),
@@ -382,7 +383,8 @@ impl PortalGpu {
             },
             depth_stencil: Some(depth_state.clone()),
             multisample: wgpu::MultisampleState::default(),
-            multiview: None,
+            multiview_mask: None,
+            cache: None,
         });
 
         // Per-artefact model transform (Phase 2 kinematic joint), group 1 of the mesh pipeline.
@@ -424,8 +426,8 @@ impl PortalGpu {
         // (imported meshes carry inconsistent winding). HDR variant built in the bloom block below.
         let mesh_pipeline_layout = device.create_pipeline_layout(&wgpu::PipelineLayoutDescriptor {
             label: Some("portal-mesh-pipeline-layout"),
-            bind_group_layouts: &[&projector_camera_layout, &mesh_model_layout],
-            push_constant_ranges: &[],
+            bind_group_layouts: &[Some(&projector_camera_layout), Some(&mesh_model_layout)],
+            immediate_size: 0,
         });
         let mesh_vertex_layout = wgpu::VertexBufferLayout {
             array_stride: 12,
@@ -441,13 +443,13 @@ impl PortalGpu {
             layout: Some(&mesh_pipeline_layout),
             vertex: wgpu::VertexState {
                 module: &mesh_shader,
-                entry_point: "vertex_main",
+                entry_point: Some("vertex_main"),
                 compilation_options: Default::default(),
                 buffers: &[mesh_vertex_layout.clone()],
             },
             fragment: Some(wgpu::FragmentState {
                 module: &mesh_shader,
-                entry_point: "fragment_main",
+                entry_point: Some("fragment_main"),
                 compilation_options: Default::default(),
                 targets: &[Some(color_target_state(format))],
             }),
@@ -458,7 +460,8 @@ impl PortalGpu {
             },
             depth_stencil: Some(depth_state.clone()),
             multisample: wgpu::MultisampleState::default(),
-            multiview: None,
+            multiview_mask: None,
+            cache: None,
         });
 
         let picking_pipeline = device.create_render_pipeline(&wgpu::RenderPipelineDescriptor {
@@ -466,13 +469,13 @@ impl PortalGpu {
             layout: Some(&projector_pipeline_layout),
             vertex: wgpu::VertexState {
                 module: &projector_shader,
-                entry_point: "vertex_main",
+                entry_point: Some("vertex_main"),
                 compilation_options: Default::default(),
                 buffers: &[],
             },
             fragment: Some(wgpu::FragmentState {
                 module: &projector_shader,
-                entry_point: "picking_fragment_main",
+                entry_point: Some("picking_fragment_main"),
                 compilation_options: Default::default(),
                 targets: &[Some(picking_color_target_state())],
             }),
@@ -482,7 +485,8 @@ impl PortalGpu {
             },
             depth_stencil: Some(depth_state.clone()),
             multisample: wgpu::MultisampleState::default(),
-            multiview: None,
+            multiview_mask: None,
+            cache: None,
         });
 
         let pick_staging_buf = device.create_buffer(&wgpu::BufferDescriptor {
@@ -499,13 +503,13 @@ impl PortalGpu {
                 layout: Some(&ambient_pipeline_layout),
                 vertex: wgpu::VertexState {
                     module: &ambient_shader,
-                    entry_point: "vertex_main",
+                    entry_point: Some("vertex_main"),
                     compilation_options: Default::default(),
                     buffers: &[],
                 },
                 fragment: Some(wgpu::FragmentState {
                     module: &ambient_shader,
-                    entry_point: "fragment_main",
+                    entry_point: Some("fragment_main"),
                     compilation_options: Default::default(),
                     targets: &[Some(hdr_color_target_state())],
                 }),
@@ -515,20 +519,21 @@ impl PortalGpu {
                 },
                 depth_stencil: Some(depth_stencil_state_read_only()),
                 multisample: wgpu::MultisampleState::default(),
-                multiview: None,
+                multiview_mask: None,
+                cache: None,
             });
             let projector_hdr = device.create_render_pipeline(&wgpu::RenderPipelineDescriptor {
                 label: Some("portal-projector-hdr"),
                 layout: Some(&projector_pipeline_layout),
                 vertex: wgpu::VertexState {
                     module: &projector_shader,
-                    entry_point: "vertex_main",
+                    entry_point: Some("vertex_main"),
                     compilation_options: Default::default(),
                     buffers: &[],
                 },
                 fragment: Some(wgpu::FragmentState {
                     module: &projector_shader,
-                    entry_point: "fragment_main",
+                    entry_point: Some("fragment_main"),
                     compilation_options: Default::default(),
                     targets: &[Some(hdr_color_target_state())],
                 }),
@@ -538,20 +543,21 @@ impl PortalGpu {
                 },
                 depth_stencil: Some(depth_state.clone()),
                 multisample: wgpu::MultisampleState::default(),
-                multiview: None,
+                multiview_mask: None,
+                cache: None,
             });
             let mesh_hdr = device.create_render_pipeline(&wgpu::RenderPipelineDescriptor {
                 label: Some("portal-mesh-hdr"),
                 layout: Some(&mesh_pipeline_layout),
                 vertex: wgpu::VertexState {
                     module: &mesh_shader,
-                    entry_point: "vertex_main",
+                    entry_point: Some("vertex_main"),
                     compilation_options: Default::default(),
                     buffers: &[mesh_vertex_layout.clone()],
                 },
                 fragment: Some(wgpu::FragmentState {
                     module: &mesh_shader,
-                    entry_point: "fragment_main",
+                    entry_point: Some("fragment_main"),
                     compilation_options: Default::default(),
                     targets: &[Some(hdr_color_target_state())],
                 }),
@@ -562,7 +568,8 @@ impl PortalGpu {
                 },
                 depth_stencil: Some(depth_state.clone()),
                 multisample: wgpu::MultisampleState::default(),
-                multiview: None,
+                multiview_mask: None,
+                cache: None,
             });
             let bloom = create_bloom_chain(&device, width, height, format);
             (Some(ambient_hdr), Some(projector_hdr), Some(mesh_hdr), bloom)
@@ -579,7 +586,7 @@ impl PortalGpu {
         // Surface otherwise-silent deferred pipeline/shader creation errors. Dawn (WebGPU) is far
         // stricter than the native backends, so a pipeline that builds on desktop can be invalid in
         // the browser and silently render nothing; log it instead of leaving a black viewport.
-        let scope_err = device.pop_error_scope().await;
+        let scope_err = error_scope.pop().await;
         #[cfg(target_arch = "wasm32")]
         if let Some(err) = &scope_err {
             web_sys::console::error_1(
@@ -888,7 +895,7 @@ impl PortalGpu {
         slice.map_async(wgpu::MapMode::Read, move |result| {
             let _ = tx.send(result);
         });
-        self.device.poll(wgpu::Maintain::Wait);
+        let _ = self.device.poll(wgpu::PollType::wait_indefinitely());
         if !matches!(rx.try_recv(), Ok(Ok(()))) {
             return None;
         }
@@ -917,6 +924,7 @@ impl PortalGpu {
             label: Some("portal-picking-pass"),
             color_attachments: &[Some(wgpu::RenderPassColorAttachment {
                 view: &self.picking_view,
+                depth_slice: None,
                 resolve_target: None,
                 ops: wgpu::Operations {
                     load: wgpu::LoadOp::Clear(wgpu::Color {
@@ -937,6 +945,7 @@ impl PortalGpu {
                 stencil_ops: None,
             }),
             occlusion_query_set: None,
+            multiview_mask: None,
             timestamp_writes: None,
         });
         pass.set_pipeline(&self.picking_pipeline);
@@ -951,15 +960,15 @@ impl PortalGpu {
         };
         let py = self.height.saturating_sub(1) - py;
         encoder.copy_texture_to_buffer(
-            wgpu::ImageCopyTexture {
+            wgpu::TexelCopyTextureInfo {
                 texture: &self.picking_texture,
                 mip_level: 0,
                 origin: wgpu::Origin3d { x: px, y: py, z: 0 },
                 aspect: wgpu::TextureAspect::All,
             },
-            wgpu::ImageCopyBuffer {
+            wgpu::TexelCopyBufferInfo {
                 buffer: &self.pick_staging_buf,
-                layout: wgpu::ImageDataLayout {
+                layout: wgpu::TexelCopyBufferLayout {
                     offset: 0,
                     bytes_per_row: Some(4),
                     rows_per_image: Some(1),
@@ -989,10 +998,11 @@ impl PortalGpu {
         self.write_observer_uniform();
         self.update_model(time);
 
-        let frame = self
-            .surface
-            .get_current_texture()
-            .map_err(|e| format!("surface frame: {e}"))?;
+        // wgpu 29: get_current_texture() returns a CurrentSurfaceTexture enum (not a Result).
+        let frame = match self.surface.get_current_texture() {
+            wgpu::CurrentSurfaceTexture::Success(t) | wgpu::CurrentSurfaceTexture::Suboptimal(t) => t,
+            other => return Err(format!("surface frame unavailable: {other:?}")),
+        };
 
         // On the web backend the swapchain texture tracks the canvas backing store, which can
         // diverge from the size our depth/picking/bloom targets were built at (device-pixel ratio,
@@ -1045,6 +1055,7 @@ impl PortalGpu {
                     label: Some("portal-hdr-scene"),
                     color_attachments: &[Some(wgpu::RenderPassColorAttachment {
                         view: &bloom.hdr_view,
+                        depth_slice: None,
                         resolve_target: None,
                         ops: wgpu::Operations {
                             load: wgpu::LoadOp::Clear(wgpu::Color::BLACK),
@@ -1060,6 +1071,7 @@ impl PortalGpu {
                         stencil_ops: None,
                     }),
                     occlusion_query_set: None,
+                    multiview_mask: None,
                     timestamp_writes: None,
                 });
 
@@ -1098,6 +1110,7 @@ impl PortalGpu {
                 label: Some("portal-phenomenal-pass"),
                 color_attachments: &[Some(wgpu::RenderPassColorAttachment {
                     view: &view,
+                    depth_slice: None,
                     resolve_target: None,
                     ops: wgpu::Operations {
                         load: wgpu::LoadOp::Clear(wgpu::Color {
@@ -1118,6 +1131,7 @@ impl PortalGpu {
                     stencil_ops: None,
                 }),
                 occlusion_query_set: None,
+                multiview_mask: None,
                 timestamp_writes: None,
             });
 

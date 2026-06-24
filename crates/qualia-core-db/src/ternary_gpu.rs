@@ -76,8 +76,9 @@ fn run_gemm(
         label: Some("ternary_gemm_pipeline"),
         layout: None, // auto bind-group layout (native)
         module: &shader,
-        entry_point: "ternary_gemm",
+        entry_point: Some("ternary_gemm"),
         compilation_options: Default::default(),
+        cache: None,
     });
 
     let mk_buf = |label: &str, contents: &[u8], usage: wgpu::BufferUsages| {
@@ -149,7 +150,7 @@ fn run_gemm(
     slice.map_async(wgpu::MapMode::Read, move |r| {
         let _ = tx.send(r);
     });
-    let _ = device.poll(wgpu::Maintain::Wait);
+    let _ = device.poll(wgpu::PollType::wait_indefinitely());
     rx.recv().expect("map channel").expect("map ternary staging");
     let data = slice.get_mapped_range();
     let out: Vec<f32> = bytemuck::cast_slice(&data)[..out_elems].to_vec();
@@ -168,8 +169,8 @@ mod tests {
         let adapter = pollster::block_on(instance.request_adapter(&wgpu::RequestAdapterOptions {
             power_preference: wgpu::PowerPreference::HighPerformance,
             ..Default::default()
-        }))?;
-        pollster::block_on(adapter.request_device(&wgpu::DeviceDescriptor::default(), None)).ok()
+        })).ok()?;
+        pollster::block_on(adapter.request_device(&wgpu::DeviceDescriptor::default())).ok()
     }
 
     /// ON-DEVICE PARITY: `ternary_gemm.wgsl` on a real GPU == `ternary_gemm_cpu`. Skips cleanly with
@@ -289,8 +290,9 @@ mod tests {
             label: Some("bench_pipeline"),
             layout: None,
             module: &shader,
-            entry_point: entry,
+            entry_point: Some(entry),
             compilation_options: Default::default(),
+            cache: None,
         });
         let mk = |contents: &[u8], usage: wgpu::BufferUsages| {
             let b = device.create_buffer(&wgpu::BufferDescriptor {
@@ -344,7 +346,7 @@ mod tests {
                 }
             }
             queue.submit(Some(enc.finish()));
-            let _ = device.poll(wgpu::Maintain::Wait);
+            let _ = device.poll(wgpu::PollType::wait_indefinitely());
         };
         submit_batch(); // warmup
         let t0 = Instant::now();

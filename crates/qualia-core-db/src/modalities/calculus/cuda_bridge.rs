@@ -308,9 +308,10 @@ impl GpuIntegrator for CudaIntegrator {
                 let instance = wgpu::Instance::default();
                 let adapter = instance
                     .request_adapter(&wgpu::RequestAdapterOptions::default())
-                    .await?;
+                    .await
+                    .ok()?;
                 let (device, _) = adapter
-                    .request_device(&wgpu::DeviceDescriptor::default(), None)
+                    .request_device(&wgpu::DeviceDescriptor::default())
                     .await
                     .ok()?;
                 Some(device.limits().max_buffer_size)

@@ -656,7 +656,7 @@ async fn init_shared_gpu_async() -> Result<SharedGpuContext, String> {
             ..Default::default()
         })
         .await
-        .ok_or_else(|| "Failed to find wgpu adapter".to_string())?;
+        .map_err(|e| format!("Failed to find wgpu adapter: {e}"))?;
 
     #[cfg(target_os = "windows")]
     if let Ok(memory) = crate::directml_bridge::probe_best_adapter_memory() {
@@ -670,7 +670,7 @@ async fn init_shared_gpu_async() -> Result<SharedGpuContext, String> {
     }
 
     let (device, queue) = adapter
-        .request_device(&wgpu::DeviceDescriptor::default(), None)
+        .request_device(&wgpu::DeviceDescriptor::default())
         .await
         .map_err(|e| e.to_string())?;
 

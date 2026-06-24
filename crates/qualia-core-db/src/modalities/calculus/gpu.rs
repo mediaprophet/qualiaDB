@@ -111,10 +111,10 @@ impl WebGpuIntegrator {
                 compatible_surface: None,
             })
             .await
-            .ok_or(GpuError::WebGPUUnavailable("No adapter found".to_string()))?;
+            .map_err(|e| GpuError::WebGPUUnavailable(format!("No adapter found: {e}")))?;
         
         let (device, queue) = adapter
-            .request_device(&wgpu::DeviceDescriptor::default(), None)
+            .request_device(&wgpu::DeviceDescriptor::default())
             .await
             .map_err(|e| GpuError::WebGPUUnavailable(format!("Device request failed: {e}")))?;
         
@@ -130,8 +130,9 @@ impl WebGpuIntegrator {
                 label: Some("Calculus Pipeline"),
                 layout: None,
                 module: &shader,
-                entry_point: "simpsons_integration",
+                entry_point: Some("simpsons_integration"),
                 compilation_options: Default::default(),
+                cache: None,
             });
 
         let rk4_pipeline = device
@@ -139,8 +140,9 @@ impl WebGpuIntegrator {
                 label: Some("RK4 Pipeline"),
                 layout: None,
                 module: &shader,
-                entry_point: "rk4_step",
+                entry_point: Some("rk4_step"),
                 compilation_options: Default::default(),
+                cache: None,
             });
 
         Ok(Self {
