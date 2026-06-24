@@ -2460,10 +2460,9 @@ pub struct QTensorEngine {
     mc8_ffn_fused_pipeline: wgpu::ComputePipeline,
     /// Phase 5.3: the output/logits projection (tied `token_embd`, ~50 MB) uploaded to VRAM
     /// once at init so the per-token argmax binds resident sub-ranges instead of re-uploading
-    /// the whole matrix every token (the decode throughput killer).
-    #[cfg(target_arch = "wasm32")]
+    /// the whole matrix every token (the decode throughput killer). A1a step-2 ports this to the
+    /// native top-k decode path, so these two fields are available on both targets.
     mc8_logits_resident_buf: Option<wgpu::Buffer>,
-    #[cfg(target_arch = "wasm32")]
     mc8_logits_row_bytes: u32,
     /// Phase 5.4: all layers' attn_norm + ffn_norm weights resident (slot 2L = attn, 2L+1 = ffn),
     /// so RMSNorm binds a per-layer sub-range instead of re-`write_buffer`ing a shared single-layer
@@ -3052,9 +3051,7 @@ impl QTensorEngine {
             mc8_ffn_fused_bind_layout,
             #[cfg(target_arch = "wasm32")]
             mc8_ffn_fused_pipeline,
-            #[cfg(target_arch = "wasm32")]
             mc8_logits_resident_buf: None,
-            #[cfg(target_arch = "wasm32")]
             mc8_logits_row_bytes: 0,
             #[cfg(target_arch = "wasm32")]
             mc8_norm_resident_buf: None,
@@ -3497,6 +3494,13 @@ impl QTensorEngine {
         self.ensure_gemm_buffers(staging, MAX_STACK_GEMM_OUT as u32);
         self.ensure_kv_cache(&index.hyperparams);
         self.gguf_mmap = Some(mmap);
+        // A1a step-2: make the output/logits projection resident (upload once) so the per-token
+        // top-k decode binds per-chunk 256-aligned sub-ranges instead of re-uploading the whole
+        // ~47 MB matrix every token (the documented decode throughput killer). Fail-soft: a false
+        // return leaves `mc8_logits_resident_buf=None` and the decode keeps its per-token upload.
+        if !self.mc8_upload_resident_logits(&index) {
+            log::info!("LLM_LOAD|resident-logits|0.70|skipped — per-token upload fallback");
+        }
         let kv_cache_bytes = self.kv_cache_bytes();
         Ok(GgufLoadReport {
             mapped_bytes: file_size as u64,
@@ -3517,6 +3521,59 @@ impl QTensorEngine {
                 }
             },
         })
+    }
+
+    /// A1a step-2 (native port of Phase 5.3): upload the output/logits projection (tied
+    /// `token_embd`) to a resident `STORAGE` buffer **once**, so the per-token top-k decode binds
+    /// per-chunk 256-aligned sub-ranges instead of re-uploading the whole ~47 MB matrix every
+    /// token (the decode throughput killer). Idempotent. Returns false (→ per-token upload
+    /// fallback) if the projection is missing or its bytes don't divide evenly into rows.
+    #[cfg(not(target_arch = "wasm32"))]
+    fn mc8_upload_resident_logits(&mut self, index: &crate::gguf_sharder::GgufTensorIndex) -> bool {
+        if self.mc8_logits_resident_buf.is_some() {
+            return true;
+        }
+        let info = match index.logits_projection_info() {
+            Some(i) => i,
+            None => return false,
+        };
+        let (_, vocab) = Self::matmul_dims(info);
+        if vocab == 0 {
+            return false;
+        }
+        // Clone the Arc so the mmap borrow does not block mutating `self` below.
+        let mmap_arc = match self.gguf_mmap.clone() {
+            Some(a) => a,
+            None => return false,
+        };
+        let mmap: &[u8] = &mmap_arc;
+        let raw = match crate::ggml_quants::fetch_tensor_bytes(mmap, index.tensor_data_start, info) {
+            Ok(s) => s,
+            Err(_) => return false,
+        };
+        let total = raw.len();
+        if total == 0 || total % vocab != 0 {
+            return false;
+        }
+        let row_bytes = total / vocab;
+        // VOCAB_CHUNK_ROWS (8192) is a multiple of 256, so every chunk's byte offset
+        // (chunk_idx * VOCAB_CHUNK_ROWS * row_bytes) is 256-aligned for the storage binding.
+        let buf = self.gpu_device().create_buffer(&wgpu::BufferDescriptor {
+            label: Some("ResidentLogits"),
+            size: total as u64,
+            usage: wgpu::BufferUsages::STORAGE | wgpu::BufferUsages::COPY_DST,
+            mapped_at_creation: false,
+        });
+        self.gpu_queue().write_buffer(&buf, 0, raw);
+        self.mc8_logits_resident_buf = Some(buf);
+        self.mc8_logits_row_bytes = row_bytes as u32;
+        log::info!(
+            "LLM_LOAD|resident-logits|0.70|output projection resident once: {:.1} MB ({} rows x {} B)",
+            total as f64 / (1024.0 * 1024.0),
+            vocab,
+            row_bytes
+        );
+        true
     }
 
     /// Decode-profiler: blocking GPU fence wait + round-trip counter. Every native sync point routes
@@ -4250,39 +4307,65 @@ impl QTensorEngine {
         let mut all_val: Vec<f32> = Vec::new();
         let mut all_idx: Vec<u32> = Vec::new();
 
+        // A1a step-2: when the output projection is resident (uploaded once at init), bind the
+        // per-chunk sub-range — zero per-token upload. Each chunk's byte offset is 256-aligned
+        // because VOCAB_CHUNK_ROWS (8192) is a multiple of 256. The bound bytes, quant, shader and
+        // params are identical to the per-chunk-upload fallback, so logits are byte-for-byte equal.
+        let resident_logits = self.mc8_logits_resident_buf.as_ref();
+        let resident_row_bytes = self.mc8_logits_row_bytes as u64;
+
         for chunk_idx in 0..full_chunks {
             let row_start = chunk_idx * VOCAB_CHUNK_ROWS;
             let chunk_rows = VOCAB_CHUNK_ROWS.min(vocab_size - row_start);
-            let raw = crate::ggml_quants::fetch_tensor_row_range_bytes(
-                mmap,
-                index.tensor_data_start,
-                info,
-                row_start,
-                chunk_rows,
-            )
-            .ok()?;
-            // Only the GPU-quant fast path is supported; otherwise signal fallback to argmax.
-            if !(ggml_gpu_quant_supported(info.ggml_type)
-                && n_in <= MAX_STACK_GEMM_IN
-                && chunk_rows <= self.gemm_max_out_dim as usize
-                && raw.len() <= self.max_tensor_bytes)
-            {
-                return None;
-            }
+
+            let (weight_resource, weight_byte_len) = if let Some(buf) = resident_logits {
+                // Only the GPU-quant fast path is supported; otherwise signal fallback to argmax.
+                if !(ggml_gpu_quant_supported(info.ggml_type)
+                    && n_in <= MAX_STACK_GEMM_IN
+                    && chunk_rows <= self.gemm_max_out_dim as usize)
+                {
+                    return None;
+                }
+                let byte_len = chunk_rows as u64 * resident_row_bytes;
+                let res = wgpu::BindingResource::Buffer(wgpu::BufferBinding {
+                    buffer: buf,
+                    offset: row_start as u64 * resident_row_bytes,
+                    size: std::num::NonZeroU64::new(byte_len),
+                });
+                (res, byte_len as u32)
+            } else {
+                let raw = crate::ggml_quants::fetch_tensor_row_range_bytes(
+                    mmap,
+                    index.tensor_data_start,
+                    info,
+                    row_start,
+                    chunk_rows,
+                )
+                .ok()?;
+                if !(ggml_gpu_quant_supported(info.ggml_type)
+                    && n_in <= MAX_STACK_GEMM_IN
+                    && chunk_rows <= self.gemm_max_out_dim as usize
+                    && raw.len() <= self.max_tensor_bytes)
+                {
+                    return None;
+                }
+                let byte_len = raw.len() as u32;
+                self.write_weight_words(raw, self.max_tensor_bytes);
+                (weight_buf.as_entire_binding(), byte_len)
+            };
 
             let gparams = GemmGpuParams {
                 n_in: n_in as u32,
                 n_out: chunk_rows as u32,
                 weight_ggml_type: info.ggml_type,
                 weight_row_elems: info.dims[0] as u32,
-                weight_byte_len: raw.len() as u32,
+                weight_byte_len,
                 n_batch: 1,
                 in_row_stride: 0,
                 out_row_stride: 0,
             };
             self.gpu_queue()
                 .write_buffer(input_buf, 0, bytemuck::cast_slice(&hidden[..n_in]));
-            self.write_weight_words(raw, self.max_tensor_bytes);
             self.gpu_queue()
                 .write_buffer(params_buf, 0, bytemuck::bytes_of(&gparams));
             let tparams = crate::topk::topk_params_bytes(chunk_rows as u32, k as u32, block_size as u32);
@@ -4296,7 +4379,7 @@ impl QTensorEngine {
                 layout: &self.pipeline.get_bind_group_layout(0),
                 entries: &[
                     wgpu::BindGroupEntry { binding: 0, resource: input_buf.as_entire_binding() },
-                    wgpu::BindGroupEntry { binding: 1, resource: weight_buf.as_entire_binding() },
+                    wgpu::BindGroupEntry { binding: 1, resource: weight_resource },
                     wgpu::BindGroupEntry { binding: 2, resource: params_buf.as_entire_binding() },
                     wgpu::BindGroupEntry { binding: 3, resource: output_buf.as_entire_binding() },
                 ],
