@@ -4,6 +4,10 @@
 /crates/qualia-cli/target
 /crates/webizen-desktop/target
 /crates/webizen-studio/dist
+
+# Private Development Documents, not for GitHub (do not publish on repo)
+.dev-docs/
+
 *.rdf
 !bundled/ontologies/fibo/rdf/**/*.rdf
 *.wal
