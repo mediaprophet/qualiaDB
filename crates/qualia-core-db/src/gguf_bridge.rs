@@ -438,6 +438,24 @@ fn ggml_gpu_attention_shader_supported(ggml_type: u32) -> bool {
     )
 }
 
+/// Weight types the native GEMM shader (`fused_transformer.wgsl`) actually dequantizes — WIDER than
+/// `ggml_gpu_quant_supported` (Q4_K/Q6_K only). The GEMM `dequant_weight` also implements
+/// Q4_0/Q5_0/Q8_0 (identical code to the attention shader), but the narrow predicate was silently
+/// routing Q8_0 FFN + output-projection GEMMs to the CPU `stack_gemm_quant` fallback. Widening this
+/// is the GEMM-side analogue of the #49 attention-support fix. Verified end-to-end for Q8_0
+/// (SmolLM2-360M-q8_0); Q4_0/Q5_0 share the proven dequant but have no resident test model yet.
+#[inline]
+fn ggml_gpu_gemm_supported(ggml_type: u32) -> bool {
+    matches!(
+        ggml_type,
+        crate::ggml_quants::GGML_TYPE_Q4_0
+            | crate::ggml_quants::GGML_TYPE_Q5_0
+            | crate::ggml_quants::GGML_TYPE_Q8_0
+            | crate::ggml_quants::GGML_TYPE_Q4_K
+            | crate::ggml_quants::GGML_TYPE_Q6_K
+    )
+}
+
 /// Await `map_async` without `poll(Wait)` — yields to the browser event loop (MC6).
 #[cfg(target_arch = "wasm32")]
 async fn await_wgpu_map(slice: wgpu::BufferSlice<'_>) -> bool {
@@ -3952,7 +3970,10 @@ impl QTensorEngine {
         }
 
         let weight_bytes = raw.len();
-        if ggml_gpu_quant_supported(info.ggml_type)
+        // GEMM shader supports a wider quant set than the legacy `ggml_gpu_quant_supported` (Q4_K/Q6_K)
+        // — notably Q8_0, which was silently falling back to the CPU `stack_gemm_quant` below (the FFN
+        // bottleneck for Q8_0 models). The guards (size/buffer caps) still fail closed → CPU fallback.
+        if ggml_gpu_gemm_supported(info.ggml_type)
             && n_in <= MAX_STACK_GEMM_IN
             && n_out <= self.gemm_max_out_dim as usize
             && weight_bytes <= self.max_tensor_bytes

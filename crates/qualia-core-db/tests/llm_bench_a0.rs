@@ -141,6 +141,32 @@ fn a1a_gpu_topk_matches_argmax_text() {
     println!("[a1a] token-identity verified + coherent generation: top-k == argmax");
 }
 
+/// A1c GEMM Q8 enablement: Q8_0 weights now route to the GPU GEMM shader (`fused_transformer.wgsl`)
+/// instead of the CPU `stack_gemm_quant` fallback (the FFN bottleneck for Q8_0 models). Native decode
+/// must STILL produce coherent text — i.e. the shader's GPU Q8_0 dequant matches the CPU reference.
+/// Forces the Q8_0 model specifically (the a1a test above uses Q4_K_M and would not exercise Q8).
+/// Skips if absent. Run: `cargo test -p qualia-core-db --release --test llm_bench_a0
+/// a1c_q8_gemm_decode_coherent -- --nocapture`.
+#[test]
+fn a1c_q8_gemm_decode_coherent() {
+    let Some(path) = find_model("smollm2-360m-instruct-q8_0.gguf") else {
+        eprintln!("[a1c] Q8_0 model absent — skipping GPU Q8 GEMM coherence check");
+        return;
+    };
+    let model = path.to_string_lossy().to_string();
+    let prompt = "Once upon a time, there was a";
+    let (off, _on) =
+        llm_bench::compare_topk_decode_blocking(&model, prompt, 24).expect("compare_topk_decode (q8)");
+    println!("[a1c] q8 argmax: {off:?}");
+    // If the GPU Q8_0 dequant diverged from the CPU path, the FFN/output projection would corrupt the
+    // residual stream → EOS/garbage (regression of #48). Coherent text == GPU Q8 GEMM matches CPU.
+    assert!(
+        !off.trim_start().starts_with("<|endoftext|>") && off.contains(' ') && off.len() > 8,
+        "GPU Q8_0 GEMM must yield coherent decode (else dequant mismatch vs CPU), got: {off:?}"
+    );
+    println!("[a1c] GPU Q8_0 GEMM verified coherent.");
+}
+
 /// Decode profiler — localize the ~2 s/token native decode: forward (32 layers) vs output
 /// projection, and split **synchronization** (submit→poll(Wait) round-trips) from **kernel compute**
 /// via an empty-round-trip baseline on the same device. This decides whether the lever is dispatch
