@@ -5700,6 +5700,8 @@ impl QTensorEngine {
     ) -> bool {
         let tensors = index.get_layer_tensors(layer);
         let mut attn_ok = false;
+        // Decode-profiler: intra-layer split — attention (this block) vs FFN (below).
+        let t_attn = std::time::Instant::now();
 
         if tensors.attn_q.is_some() && tensors.attn_k.is_some() && tensors.attn_v.is_some() {
             if let Some(n) = self.dispatch_attention_layer(
@@ -5729,6 +5731,8 @@ impl QTensorEngine {
             }
         }
 
+        crate::llm_bench::add_decode_attn_ns(t_attn.elapsed().as_nanos() as u64);
+
         if !attn_ok && tensors.attn_output.is_none() && tensors.ffn_gate.is_none() {
             return false;
         }
@@ -5748,14 +5752,17 @@ impl QTensorEngine {
             );
         }
 
-        self.dispatch_ffn_block_pre_norm(
+        let t_ffn = std::time::Instant::now();
+        let ffn_ok = self.dispatch_ffn_block_pre_norm(
             index,
             hidden,
             emb_dim,
             &tensors,
             scratch_a,
             scratch_b,
-        )
+        );
+        crate::llm_bench::add_decode_ffn_ns(t_ffn.elapsed().as_nanos() as u64);
+        ffn_ok
     }
 
     /// Sequential layer-by-layer forward (one tensor payload in VRAM at a time).

@@ -149,6 +149,28 @@ pub fn add_decode_forward_ns(ns: u64) {
 pub fn add_decode_output_ns(ns: u64) {
     DECODE_OUTPUT_NS.fetch_add(ns, Ordering::Relaxed);
 }
+/// Intra-layer split (summed over all 32 layers of one token): attention vs FFN — localizes which
+/// shader (fused_attention vs the GEMM kernel) bleeds the compute-bound forward time.
+static DECODE_ATTN_NS: AtomicU64 = AtomicU64::new(0);
+static DECODE_FFN_NS: AtomicU64 = AtomicU64::new(0);
+/// Accumulate one layer's attention (QKV-proj + SDPA + O-proj) wall-clock.
+#[inline]
+pub fn add_decode_attn_ns(ns: u64) {
+    DECODE_ATTN_NS.fetch_add(ns, Ordering::Relaxed);
+}
+/// Accumulate one layer's FFN (pre-norm SwiGLU) wall-clock.
+#[inline]
+pub fn add_decode_ffn_ns(ns: u64) {
+    DECODE_FFN_NS.fetch_add(ns, Ordering::Relaxed);
+}
+/// Read the intra-layer attention/FFN accumulators as `(attn_ns, ffn_ns)` (summed over the run).
+#[inline]
+pub fn decode_attn_ffn() -> (u64, u64) {
+    (
+        DECODE_ATTN_NS.load(Ordering::Relaxed),
+        DECODE_FFN_NS.load(Ordering::Relaxed),
+    )
+}
 
 /// Clear the phase counters before a measured run.
 #[inline]
@@ -160,6 +182,8 @@ pub fn reset_phase_metrics() {
     DECODE_TOKENS.store(0, Ordering::Relaxed);
     DECODE_FORWARD_NS.store(0, Ordering::Relaxed);
     DECODE_OUTPUT_NS.store(0, Ordering::Relaxed);
+    DECODE_ATTN_NS.store(0, Ordering::Relaxed);
+    DECODE_FFN_NS.store(0, Ordering::Relaxed);
     DECODE_EMPTY_RT_NS.store(0, Ordering::Relaxed);
     DECODE_EMPTY_RT_N.store(0, Ordering::Relaxed);
     crate::gguf_bridge::reset_gpu_wait_count();

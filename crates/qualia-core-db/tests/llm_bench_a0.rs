@@ -199,6 +199,18 @@ fn a0_decode_profile() {
         "[prof]   forward (32 layers) = {fwd_ms:.1} ms/tok ({:.0}%)",
         100.0 * fwd_ms / total_ms
     );
+    let (attn_ns, ffn_ns) = llm_bench::decode_attn_ffn();
+    let attn_ms = per_ms(attn_ns);
+    let ffn_ms = per_ms(ffn_ns);
+    let fwd_d = fwd_ms.max(0.001);
+    println!(
+        "[prof]     ├─ attention (QKV+SDPA+O, fused_attention shader) = {attn_ms:.1} ms/tok ({:.0}% of fwd)",
+        100.0 * attn_ms / fwd_d
+    );
+    println!(
+        "[prof]     └─ FFN (SwiGLU, GEMM shader)                      = {ffn_ms:.1} ms/tok ({:.0}% of fwd)",
+        100.0 * ffn_ms / fwd_d
+    );
     println!(
         "[prof]   output projection   = {out_ms:.1} ms/tok ({:.0}%)",
         100.0 * out_ms / total_ms
