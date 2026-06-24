@@ -56,6 +56,23 @@ const GGML_TYPE_Q6_K: u32 = 14u;
 const MAX_HEAD_DIM: u32 = 512u;
 const NEG_INF: f32 = -1e30;
 
+// FlashAttention-style key-parallelism: one workgroup per Q head (decode) or per (token,kv_head)
+// (K/V write), WG_SIZE threads cooperating over the context positions. 64 is warp/wavefront friendly
+// (NV=32, AMD=64). The cross-thread online-softmax merge runs in MERGE_TILE-wide columns to bound
+// barriers and shared memory (Limits::default() → 16 KiB workgroup storage).
+const WG_SIZE: u32 = 64u;
+const MERGE_TILE: u32 = 16u;
+// WG_SIZE * MERGE_TILE — kept as a literal because this naga build rejects arithmetic in array sizes.
+const MERGE_SCRATCH: u32 = 1024u;
+
+// Q vector (RoPE-applied), shared across the workgroup so every thread reads the same projection.
+var<workgroup> q_sh: array<f32, MAX_HEAD_DIM>;
+// Scalar online-softmax reduction scratch (per-thread running max / normaliser).
+var<workgroup> red_m: array<f32, WG_SIZE>;
+var<workgroup> red_l: array<f32, WG_SIZE>;
+// Weighted-V accumulator merge scratch: MERGE_TILE columns × WG_SIZE lanes (column-major).
+var<workgroup> red_acc: array<f32, MERGE_SCRATCH>;
+
 fn read_u8_weight(abs_byte: u32) -> u32 {
     let word = abs_byte >> 2u;
     let shift = (abs_byte & 3u) * 8u;
@@ -317,81 +334,164 @@ fn kv_slot_allowed(logical: u32) -> bool {
     return (kv_mask_words[mask_base + word] & (1u << offset)) != 0u;
 }
 
-// Q+attn: abs position must be per batch row (decode: batch=1 → batch_start + 0).
-fn online_softmax_attention(qh: u32, kv_head: u32, token_in_batch: u32) {
-    var q: array<f32, MAX_HEAD_DIM>;
+// Q+attn, key-parallel: WG_SIZE threads split the context positions, each keeping a PRIVATE
+// online-softmax state (m_t, l_t, acc_t[]); a cross-thread merge combines them. abs position is per
+// batch row (decode: batch=1 → batch_start + 0). All threads of the workgroup must reach every
+// workgroupBarrier() — the early guards in `main` are uniform across the workgroup (derived from
+// wg_id), and the per-thread position loop contains no barriers.
+fn attention_parallel(qh: u32, kv_head: u32, token_in_batch: u32, lid: u32) {
     let row_base = qh * params.head_dim;
-    if token_in_batch >= params.num_tokens_in_batch {
-        return;
-    }
-    for (var d = 0u; d < params.head_dim; d = d + 1u) {
-        q[d] = gemm_row(row_base + d, token_in_batch);
-    }
     let abs_pos = params.batch_start_token_idx + token_in_batch;
-    apply_rope_neox(&q, abs_pos);
 
-    var m_max = NEG_INF;
-    var l_sum = 0.0;
-    var out_acc: array<f32, MAX_HEAD_DIM>;
-    for (var d = 0u; d < params.head_dim; d = d + 1u) {
-        out_acc[d] = 0.0;
+    // 1. Cooperatively project Q into shared, then apply NEOX RoPE in shared.
+    for (var d = lid; d < params.head_dim; d = d + WG_SIZE) {
+        q_sh[d] = gemm_row(row_base + d, token_in_batch);
     }
+    workgroupBarrier();
+    let half_dim = params.head_dim / 2u;
+    let rscale = select(1.0, params.rope_scale, params.rope_scale > 0.0);
+    let rpos = f32(abs_pos) / rscale;
+    for (var i = lid; i < half_dim; i = i + WG_SIZE) {
+        let theta = rpos * pow(params.rope_theta_base, -2.0 * f32(i) / f32(params.head_dim));
+        let cos_t = cos(theta);
+        let sin_t = sin(theta);
+        let v0 = q_sh[i];
+        let v1 = q_sh[i + half_dim];
+        q_sh[i] = v0 * cos_t - v1 * sin_t;
+        q_sh[i + half_dim] = v0 * sin_t + v1 * cos_t;
+    }
+    workgroupBarrier();
 
+    // 2. Per-thread partial online softmax over a strided slice of the context positions.
+    var m_t = NEG_INF;
+    var l_t = 0.0;
+    var acc_t: array<f32, MAX_HEAD_DIM>;
+    for (var d = 0u; d < params.head_dim; d = d + 1u) {
+        acc_t[d] = 0.0;
+    }
     let seq_len = abs_pos + 1u;
     let start = select(0u, seq_len - params.max_context, seq_len > params.max_context);
     let scale = 1.0 / sqrt(f32(params.head_dim));
-    for (var logical = start; logical <= abs_pos; logical = logical + 1u) {
+    for (var logical = start + lid; logical <= abs_pos; logical = logical + WG_SIZE) {
         if !kv_slot_allowed(logical) {
             continue;
         }
         let slot = logical % params.max_context;
         var score = 0.0;
         for (var d = 0u; d < params.head_dim; d = d + 1u) {
-            score = score + q[d] * kv_cache[k_cache_idx(slot, kv_head, d)];
+            score = score + q_sh[d] * kv_cache[k_cache_idx(slot, kv_head, d)];
         }
         score = score * scale;
-        let m_new = max(m_max, score);
+        let m_new = max(m_t, score);
         let w = exp(score - m_new);
-        let factor = exp(m_max - m_new);
-        m_max = m_new;
-        l_sum = l_sum * factor + w;
+        let factor = exp(m_t - m_new);
+        m_t = m_new;
+        l_t = l_t * factor + w;
         for (var d = 0u; d < params.head_dim; d = d + 1u) {
-            out_acc[d] = out_acc[d] * factor + w * kv_cache[v_cache_idx(slot, kv_head, d)];
+            acc_t[d] = acc_t[d] * factor + w * kv_cache[v_cache_idx(slot, kv_head, d)];
         }
     }
 
-    let inv = select(0.0, 1.0 / l_sum, l_sum > 0.0);
+    // 3a. Reduce the global max m across threads (tree reduction).
+    red_m[lid] = m_t;
+    workgroupBarrier();
+    for (var s = WG_SIZE / 2u; s > 0u; s = s >> 1u) {
+        if lid < s {
+            red_m[lid] = max(red_m[lid], red_m[lid + s]);
+        }
+        workgroupBarrier();
+    }
+    let m = red_m[0];
+
+    // 3b. Rescale each thread's normaliser to the global max, then reduce the global l.
+    let factor_t = select(0.0, exp(m_t - m), m > NEG_INF);
+    red_l[lid] = l_t * factor_t;
+    workgroupBarrier();
+    for (var s = WG_SIZE / 2u; s > 0u; s = s >> 1u) {
+        if lid < s {
+            red_l[lid] = red_l[lid] + red_l[lid + s];
+        }
+        workgroupBarrier();
+    }
+    let l = red_l[0];
+    let inv = select(0.0, 1.0 / l, l > 0.0);
+
+    // 3c. Merge the weighted-V accumulators in MERGE_TILE-wide columns: each thread contributes
+    // factor_t * acc_t[d]; a per-column tree reduction sums them; thread d writes the normalised out.
     let out_base = params.out_stride_elems * token_in_batch;
-    for (var d = 0u; d < params.head_dim; d = d + 1u) {
-        attn_out[out_base + row_base + d] = out_acc[d] * inv;
+    for (var d0 = 0u; d0 < params.head_dim; d0 = d0 + MERGE_TILE) {
+        for (var c = 0u; c < MERGE_TILE; c = c + 1u) {
+            let d = d0 + c;
+            red_acc[c * WG_SIZE + lid] = select(0.0, acc_t[d] * factor_t, d < params.head_dim);
+        }
+        workgroupBarrier();
+        for (var s = WG_SIZE / 2u; s > 0u; s = s >> 1u) {
+            if lid < s {
+                for (var c = 0u; c < MERGE_TILE; c = c + 1u) {
+                    red_acc[c * WG_SIZE + lid] = red_acc[c * WG_SIZE + lid] + red_acc[c * WG_SIZE + lid + s];
+                }
+            }
+            workgroupBarrier();
+        }
+        if lid < MERGE_TILE {
+            let d = d0 + lid;
+            if d < params.head_dim {
+                attn_out[out_base + row_base + d] = red_acc[lid * WG_SIZE] * inv;
+            }
+        }
+        workgroupBarrier();
     }
 }
 
-fn write_kv_head(kv_head: u32, token_in_batch: u32, abs_pos: u32, apply_rope_k: bool) {
-    var vec: array<f32, MAX_HEAD_DIM>;
+// K/V projection write, key-parallel: the WG_SIZE threads split the head_dim outputs, each computing
+// its strided gemm_row (a full dequant-dot over n_embd when proj_row_stride==0 — the in-shader
+// projection that dominated decode when run on a single lane). Reuses q_sh as the shared K/V vector.
+// Barriers are uniform: proj_kind / apply_rope_k come from the uniform buffer, so the whole workgroup
+// takes the same branch.
+fn write_kv_head(kv_head: u32, token_in_batch: u32, abs_pos: u32, apply_rope_k: bool, lid: u32) {
     let row_base = kv_head * params.head_dim;
-    for (var d = 0u; d < params.head_dim; d = d + 1u) {
-        vec[d] = gemm_row(row_base + d, token_in_batch);
+    for (var d = lid; d < params.head_dim; d = d + WG_SIZE) {
+        q_sh[d] = gemm_row(row_base + d, token_in_batch);
     }
+    workgroupBarrier();
     if apply_rope_k {
-        apply_rope_neox(&vec, abs_pos);
+        let half_dim = params.head_dim / 2u;
+        let rscale = select(1.0, params.rope_scale, params.rope_scale > 0.0);
+        let rpos = f32(abs_pos) / rscale;
+        for (var i = lid; i < half_dim; i = i + WG_SIZE) {
+            let theta = rpos * pow(params.rope_theta_base, -2.0 * f32(i) / f32(params.head_dim));
+            let cos_t = cos(theta);
+            let sin_t = sin(theta);
+            let v0 = q_sh[i];
+            let v1 = q_sh[i + half_dim];
+            q_sh[i] = v0 * cos_t - v1 * sin_t;
+            q_sh[i + half_dim] = v0 * sin_t + v1 * cos_t;
+        }
+        workgroupBarrier();
     }
     let slot = abs_pos % params.max_context;
-    for (var d = 0u; d < params.head_dim; d = d + 1u) {
+    for (var d = lid; d < params.head_dim; d = d + WG_SIZE) {
         if params.proj_kind == 1u {
-            kv_cache[k_cache_idx(slot, kv_head, d)] = vec[d];
+            kv_cache[k_cache_idx(slot, kv_head, d)] = q_sh[d];
         } else {
-            kv_cache[v_cache_idx(slot, kv_head, d)] = vec[d];
+            kv_cache[v_cache_idx(slot, kv_head, d)] = q_sh[d];
         }
     }
 }
 
 // Decode: one workgroup per Q head (proj_kind=0) or KV head (proj_kind=1|2).
 // Prefill: one workgroup per (token_in_batch, kv_head) for batched K/V writes.
-@compute @workgroup_size(1)
-fn main(@builtin(workgroup_id) wg_id: vec3<u32>) {
+// The grid (workgroup count) is unchanged from the @workgroup_size(1) era; WG_SIZE threads now
+// cooperate WITHIN each workgroup (key-parallelism). The K/V projection write is cheap and stays on
+// a single lane; only the Q-attention path (the bottleneck) is parallelised.
+@compute @workgroup_size(64)
+fn main(
+    @builtin(workgroup_id) wg_id: vec3<u32>,
+    @builtin(local_invocation_id) local_id: vec3<u32>,
+) {
+    let lid = local_id.x;
+    q_mask_token = wg_id.y;
     if params.proj_kind == 1u || params.proj_kind == 2u {
-        q_mask_token = 0u;
         let pair = wg_id.x;
         let token_in_batch = pair / params.n_kv_head;
         let kv_head = pair % params.n_kv_head;
@@ -399,11 +499,10 @@ fn main(@builtin(workgroup_id) wg_id: vec3<u32>) {
             return;
         }
         let abs_pos = params.batch_start_token_idx + token_in_batch;
-        write_kv_head(kv_head, token_in_batch, abs_pos, params.proj_kind == 1u);
+        write_kv_head(kv_head, token_in_batch, abs_pos, params.proj_kind == 1u, lid);
         return;
     }
     if params.proj_kind == 0u {
-        q_mask_token = wg_id.y;
         let qh = wg_id.x;
         if qh >= params.n_head {
             return;
@@ -413,6 +512,6 @@ fn main(@builtin(workgroup_id) wg_id: vec3<u32>) {
         if token_ix >= params.num_tokens_in_batch {
             return;
         }
-        online_softmax_attention(qh, kv_head, token_ix);
+        attention_parallel(qh, kv_head, token_ix, lid);
     }
 }
