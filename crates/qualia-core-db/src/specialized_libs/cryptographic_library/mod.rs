@@ -3039,7 +3039,7 @@ impl SignatureEngine {
                     use rsa::{RsaPrivateKey, pkcs8::DecodePrivateKey};
                     use rsa::pkcs1v15::SigningKey;
                     use rsa::signature::{SignatureEncoding, Signer};
-                    use sha2::Sha256;
+                    use rsa::sha2::Sha256;
                     let priv_key = RsaPrivateKey::from_pkcs8_der(&private_key.key_data)
                         .map_err(|e| CryptographicError::SignatureError(e.to_string()))?;
                     let signing_key = SigningKey::<Sha256>::new(priv_key);
@@ -3129,7 +3129,7 @@ impl SignatureEngine {
                     use rsa::{RsaPublicKey, pkcs8::DecodePublicKey};
                     use rsa::pkcs1v15::{Signature as RsaSignature, VerifyingKey};
                     use rsa::signature::Verifier;
-                    use sha2::Sha256;
+                    use rsa::sha2::Sha256;
                     let pub_key = RsaPublicKey::from_public_key_der(&public_key.key_data)
                         .map_err(|e| CryptographicError::SignatureError(e.to_string()))?;
                     let verifying_key = VerifyingKey::<Sha256>::new(pub_key);

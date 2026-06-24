@@ -677,9 +677,10 @@ pub struct InteropEcdsaSignature {
 impl InteropEcdsaSigner {
     /// Generate a new ECDSA keypair
     pub fn generate() -> Result<Self, MlDsaError> {
-        use secp256k1::rand::rngs::OsRng;
+        // secp256k1 0.31: OsRng is now fallible (TryRng); use the rand 0.9 thread
+        // CSPRNG (auto-seeded from OS entropy) which impls the infallible Rng bound.
         let secp = Secp256k1::new();
-        let mut rng = OsRng;
+        let mut rng = secp256k1::rand::rng();
         let (secret_key, public_key) = secp.generate_keypair(&mut rng);
         
         Ok(Self {
@@ -733,7 +734,7 @@ impl InteropEcdsaSigner {
         let msg = Message::from_digest_slice(message)
             .map_err(|e| MlDsaError::SignatureGenerationFailed(e.to_string()))?;
         
-        let sig = secp.sign_ecdsa(&msg, &sk);
+        let sig = secp.sign_ecdsa(msg, &sk);
         
         Ok(InteropEcdsaSignature {
             sig_bytes: sig.serialize_compact().to_vec(),
@@ -754,7 +755,7 @@ impl InteropEcdsaSigner {
         let sig = ecdsa::Signature::from_compact(&signature.sig_bytes)
             .map_err(|e| MlDsaError::SignatureVerificationFailed(e.to_string()))?;
         
-        Ok(secp.verify_ecdsa(&msg, &sig, &pk).is_ok())
+        Ok(secp.verify_ecdsa(msg, &sig, &pk).is_ok())
     }
     
     /// Get the public key
