@@ -272,24 +272,42 @@ pub fn register_query_event(query_event_hash: u64, querying_agent_did: u64, ts: 
 
 // ── Query helpers ─────────────────────────────────────────────────────────────
 
-/// Return all propositions that `agent_did` holds ObjectiveKnowledge of.
-pub fn objective_knowledge_of(quins: &[NQuin], agent_did: u64) -> Vec<u64> {
+/// Write the propositions that `agent_did` holds ObjectiveKnowledge of into `out`.
+///
+/// Zero-heap: scans `quins` and writes matching proposition hashes into the
+/// caller-supplied `out` slice (bounded by `out.len()`); returns the count written.
+/// Matches beyond `out.len()` are dropped.
+pub fn objective_knowledge_of(quins: &[NQuin], agent_did: u64, out: &mut [u64]) -> usize {
     let ctx = agent_epistemic_context(agent_did);
-    quins
-        .iter()
-        .filter(|q| q.context == ctx && q.subject == agent_did && q.predicate == P_KNOWS_DIRECTLY)
-        .map(|q| q.object)
-        .collect()
+    let mut n = 0usize;
+    for q in quins {
+        if q.context == ctx && q.subject == agent_did && q.predicate == P_KNOWS_DIRECTLY {
+            if n >= out.len() {
+                break;
+            }
+            out[n] = q.object;
+            n += 1;
+        }
+    }
+    n
 }
 
-/// Return all propositions that `agent_did` believes via any modality.
-pub fn all_beliefs_of(quins: &[NQuin], agent_did: u64) -> Vec<u64> {
+/// Write the propositions that `agent_did` believes via any modality into `out`.
+///
+/// Zero-heap: see [`objective_knowledge_of`]. Returns the count written.
+pub fn all_beliefs_of(quins: &[NQuin], agent_did: u64, out: &mut [u64]) -> usize {
     let ctx = agent_epistemic_context(agent_did);
-    quins
-        .iter()
-        .filter(|q| q.context == ctx && q.subject == agent_did && q.predicate == P_COG_BELIEVES)
-        .map(|q| q.object)
-        .collect()
+    let mut n = 0usize;
+    for q in quins {
+        if q.context == ctx && q.subject == agent_did && q.predicate == P_COG_BELIEVES {
+            if n >= out.len() {
+                break;
+            }
+            out[n] = q.object;
+            n += 1;
+        }
+    }
+    n
 }
 
 /// Return true if any quin in the slice classifies `proposition` as ObjectiveKnowledge
@@ -406,6 +424,25 @@ mod tests {
         let qs = assert_objective_knowledge(JOHN, MATTER, SENSOR, 1000);
         assert!(has_objective_proof(&qs, MATTER));
         assert!(!has_objective_proof(&qs, 0xFFFF_u64));
+    }
+
+    #[test]
+    fn objective_knowledge_and_beliefs_write_into_caller_buffer() {
+        let qs = assert_objective_knowledge(JOHN, MATTER, SENSOR, 1000);
+
+        let mut buf = [0u64; 8];
+        let n = objective_knowledge_of(&qs, JOHN, &mut buf);
+        assert_eq!(n, 1);
+        assert_eq!(buf[0], MATTER);
+
+        let mut bel = [0u64; 8];
+        let m = all_beliefs_of(&qs, JOHN, &mut bel);
+        assert_eq!(m, 1);
+        assert_eq!(bel[0], MATTER);
+
+        // Bounded by the caller buffer: a zero-length `out` writes nothing.
+        let mut empty: [u64; 0] = [];
+        assert_eq!(objective_knowledge_of(&qs, JOHN, &mut empty), 0);
     }
 
     #[test]

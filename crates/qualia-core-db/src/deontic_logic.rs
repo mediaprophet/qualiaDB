@@ -178,16 +178,20 @@ pub fn evaluate_vc_for_subgraph_key_release(
     }
 }
 
-/// Convenience: evaluate which layers the agent can access and return all permitted keys.
+/// Convenience: evaluate which layers the agent can access and write the permitted
+/// keys into `out`, in ascending layer order.
 ///
-/// Returns `(SubgraphLayer, SubgraphKey)` pairs in ascending layer order.
-/// At most 5 entries (one per layer). This function is not on a hot path.
+/// Zero-heap: writes at most `out.len().min(5)` `(SubgraphLayer, SubgraphKey)` entries
+/// (one per layer) into the caller-supplied slice and returns the count written.
+/// `SubgraphKey` is move-only (it zeroizes on drop), so `out` is a slice of `Option<…>`;
+/// written entries are `Some`. This function is not on a hot path.
 #[cfg(not(target_arch = "wasm32"))]
 pub fn evaluate_accessible_layers(
     vault: &KeyVault,
     vc: &VcAttributes,
     trusted_issuers: &[u64],
-) -> Vec<(SubgraphLayer, SubgraphKey)> {
+    out: &mut [Option<(SubgraphLayer, SubgraphKey)>],
+) -> usize {
     let layers = [
         SubgraphLayer::Public,
         SubgraphLayer::Professional,
@@ -195,15 +199,19 @@ pub fn evaluate_accessible_layers(
         SubgraphLayer::Medical,
         SubgraphLayer::Fiduciary,
     ];
-    let mut result = Vec::with_capacity(layers.len());
+    let mut n = 0usize;
     for layer in layers {
         if let DeonticResult::KeyRelease(key) =
             evaluate_vc_for_subgraph_key_release(vault, vc, layer, trusted_issuers)
         {
-            result.push((layer, key));
+            if n >= out.len() {
+                break;
+            }
+            out[n] = Some((layer, key));
+            n += 1;
         }
     }
-    result
+    n
 }
 
 /// Build the NQuins that record a VC credential claim for an agent, for insertion
@@ -422,9 +430,15 @@ mod tests {
         let vault = test_vault();
         // clearance 2 → Public + Professional + Legal, not Medical or Fiduciary.
         let vc = vc_with_role(0, 2);
-        let accessible = evaluate_accessible_layers(&vault, &vc, &[]);
-        let layers: Vec<SubgraphLayer> = accessible.iter().map(|(l, _)| *l).collect();
-        assert_eq!(layers, vec![SubgraphLayer::Public, SubgraphLayer::Professional, SubgraphLayer::Legal]);
+        let mut out: [Option<(SubgraphLayer, SubgraphKey)>; 5] = [None, None, None, None, None];
+        let count = evaluate_accessible_layers(&vault, &vc, &[], &mut out);
+        assert_eq!(count, 3);
+        let layers = [
+            out[0].as_ref().unwrap().0,
+            out[1].as_ref().unwrap().0,
+            out[2].as_ref().unwrap().0,
+        ];
+        assert_eq!(layers, [SubgraphLayer::Public, SubgraphLayer::Professional, SubgraphLayer::Legal]);
     }
 
     #[test]
