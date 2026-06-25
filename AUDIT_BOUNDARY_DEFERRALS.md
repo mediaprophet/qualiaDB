@@ -45,20 +45,29 @@ items currently in this section.)
 |------|-----|
 | **`n3_parser.rs` (4 items)** | Allocated to the separate active **`qualia-n3-parser` worktree** (WORK_ALLOCATION_PLAN + NOTICES). Left to that worktree; not mine to touch. |
 
-## E. GPU verification boundary — pending Timothy's GPU-test decision
+## E. GPU verification boundary — ✅ RESOLVED (the boundary was dissolved, not waited-out)
 
-The A2000 is reserved for the LLM lane and the standing rule (WAP §0.10) is **never run GPU tests**. I can
-write CPU-side logic but cannot verify GPU paths *green* like everything else. Affected, STILL BLOCKED:
-`calculus/cuda_bridge.rs` (GPUDirect/DirectStorage bridge) and `calculus/host.rs` (SIMD alignment /
-Smith-Waterman SIMD). The `diffusion` GPU pass has its CPU side done.
+This whole section is now moot. Timothy's design call (2026-06-25) **removed CUDA** rather than work around
+the hardware gate:
 
-**Resolved CPU-side (no longer GPU-blocked):** `calculus/ode_solver.rs` advanced integrators are done in
-`ode_advanced.rs` (pure-scalar, no GPU) — `6e53ed467`; `calculus/tensor_provenance.rs` zk + lineage are done
-in `tensor_integrity.rs` (BLAKE3 + CPU Groth16, no GPU) — `6e53ed467`.
+- **`calculus/cuda_bridge.rs` — REMOVED (`a7972e848`).** It was the engine's one vendor-locked appendage
+  (NVIDIA cuFile / GPUDirect-Storage, `#![cfg(linux, cuda_gds)]`) and the *sole* reason its items were
+  "unverifiable without Linux+NVIDIA." Deleted; the 4 capabilities re-delivered on the portable wgpu stack in
+  NEW `hetero_dispatch.rs` (zero-heap, 5 tests, verifiable on any box). No hardware gate remains.
+- **`calculus/host.rs` — its 3 items were MISASSIGNED bio bullets** (host.rs is zero-copy DMA I/O, not
+  bioinformatics). Verified + closed against `bioinformatics.rs` (`d4afe4265`). Never a GPU boundary.
+- **`calculus/ode_solver.rs` / `tensor_provenance.rs`** — done CPU-side in `ode_advanced.rs` /
+  `tensor_integrity.rs` (`6e53ed467`).
 
-⚑ **Decision still needed:** may I use the A2000 to verify the remaining `cuda_bridge.rs` / `host.rs` GPU/SIMD
-items, or do them **CPU-side-only + mark the GPU path unverified**? (Note: QPU/quantum is separately
-**deprioritized** by you — WAP §0.11 — and is out of scope.)
+**The one deliberate decline (design, not a hardware boundary):** GPUDirect-Storage's true NVMe→VRAM DMA has
+no portable wgpu equivalent. It is intentionally NOT ported — vendor-lock off the affordability critical path
+(only matters for a 70B model streamed off an NVMe array into an 80 GB datacenter GPU). The substitute is
+`mmap` + OS page cache + staging upload. A future optional `wgpu-hal` Vulkan `VK_EXT_external_memory_host`
+import fast-path is documented in `hetero_dispatch.rs` (additive, demand-driven, not built — it would
+re-introduce backend-specific `unsafe` coupling).
+
+(Note: the old §0.10 "may the GPU lane verify on the A2000" is a yes-in-practice — the LLM lane's W1/W2/W3
+all ran there this session. QPU/quantum stays deprioritized — WAP §0.11.)
 
 ## F. Deferred structural work — the "library-ization" pass (you directed this)
 
@@ -73,7 +82,10 @@ primitive `grounded_contains` is already zero-heap) — see progress log §8.
 ## ⚑ Consolidated open questions for Timothy
 
 1. **Guardianship vocabulary** — (A) your canonical domain list, or (B) approve a standard renamable placeholder?
-2. **GPU tests** — may I verify GPU `calculus/` items on the A2000, or CPU-side-only + mark GPU paths unverified?
-3. **asp CDNL solver engine** — prioritize as its own project, or leave the capability-complete `[~]`?
+2. **asp CDNL solver engine** — prioritize as its own project, or leave the capability-complete `[~]`?
+
+   _(Resolved 2026-06-25: **GPU-test question is moot** — you removed CUDA by design (`a7972e848`); `cuda_bridge.rs`
+   capabilities now live on the portable wgpu stack (`hetero_dispatch.rs`), verifiable on any box. No GPU hardware
+   gate remains in the prod-excellence lane. See §E.)_
 
    _(Resolved 2026-06-25: the spatio_temporal RCC-8 question is moot — `evaluate_rcc8_points` already does exact float RCC-8 over a bounded vertex slice. No NQuin-layout change needed.)_

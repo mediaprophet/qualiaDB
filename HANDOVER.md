@@ -2,6 +2,16 @@
 
 **Written 2026-06-25 for a context refresh. Read this FIRST, then resume.** Directed by Timothy.
 
+> **⚠ PARTIALLY SUPERSEDED (2026-06-25, later same day).** This snapshot predates a large
+> follow-on session. For the CURRENT state read `AUDIT_PRODUCTION_EXCELLENCE_PROGRESS_LOG.md`
+> **§10–§12** first. Key deltas since this was written: the **MODALITIES section is now COMPLETE**
+> (graph_theory PageRank/subgraph-iso, OWL 2 RL reasoner, identity/sovereignty SHACL, advanced ODE
+> integrators, tensor lineage integrity, bioinformatics UPGMA all landed); and **`cuda_bridge.rs`
+> was REMOVED** — CUDA dropped by design, capabilities folded into the vendor-neutral wgpu stack
+> (`calculus/hetero_dispatch.rs`), so the "GPU/Linux hardware" boundary mentioned below is **dissolved,
+> not pending**. The only MODALITIES file left is `n3_parser.rs` (another worktree's lane). Next section:
+> DOMAINS.
+
 ---
 
 ## 0. TL;DR — resume here

@@ -437,3 +437,41 @@ flagging that this section benefits from your steer on which domain files actual
 
 **Next step:** continue DOMAINS triage (next files in `domains/`), or pivot to the GPU/SIMD MODALITIES tail
 if you answer the GPU question — your call.
+
+## 12 — CUDA removed by design; MODALITIES section closed (2026-06-25)
+
+**Step / phase:** the last open MODALITIES file (`cuda_bridge.rs`) — `done` (by deletion + fold).
+
+**Direction (Timothy):** rather than route the Linux+NVIDIA-only `cuda_bridge.rs` to a special agent or wait
+for hardware, **remove CUDA** — it was the engine's one vendor-locked appendage and the *sole* reason that
+audit item was "unverifiable without Linux+NVIDIA." This is design, not convenience: a vendor-neutral wgpu
+engine shouldn't carry a cuFile/GPUDirect dependency that breaks the affordability rail.
+
+**What was built (`a7972e848`):**
+- **Deleted `cuda_bridge.rs`** (NVIDIA cuFile FFI); removed the `cuda_gds` Cargo feature; `gpu.rs`
+  `PlatformGpuIntegrator` is now unconditionally `WebGpuIntegrator` (callers in `ode_solver`/`webizen`
+  unchanged); dropped the dead `GpuDirectUnavailable` error variant.
+- **NEW `calculus/hetero_dispatch.rs`** — the 4 audit capabilities on the **general wgpu stack**, all
+  zero-heap, 5 tests green: `ZeroCopyStrategy` (unified-memory mmap-direct vs discrete staging — Apple Silicon
+  via Metal #1), `HeterogeneousDispatcher` + `gpu_tiles` (GPU/NPU/CPU fallback + VRAM tiling, no OOM hard-fail
+  #2), `plan_fusion` (element-wise stream fusion #3), `select_precision` (f32/f16/q8/q4 by VRAM/power/thermal
+  #4). Updated `ARCHITECTURE.md` + the status doc.
+
+**Measured results:** `modalities::calculus::hetero_dispatch` 5/5 green; the full lib recompiled clean after
+the removal (proving `ode_solver`/`webizen` `PlatformGpuIntegrator` callers still resolve). CPU-side policy
+tests — no GPU hardware needed (the entire point).
+
+**The one deliberate decline:** GPUDirect-Storage's true NVMe→VRAM DMA has no portable wgpu equivalent and is
+intentionally NOT ported (vendor-lock off the affordability critical path; substitute = mmap + page cache +
+staging upload). A future optional `wgpu-hal` Vulkan `VK_EXT_external_memory_host` fast-path is documented in
+`hetero_dispatch.rs`, not built. Recorded as "superseded by design" in the boundary doc §E (no longer
+"pending hardware").
+
+**⚑ Where I need the human:** the **GPU-test question is now MOOT** (resolved by the removal). Remaining open
+asks unchanged: guardianship vocabulary (capacity.rs); asp CDNL (leave `[~]` or prioritize).
+
+**Status of MODALITIES:** ✅ **COMPLETE.** Every file is checked off except `n3_parser.rs` (the
+`qualia-n3-parser` worktree's allocation — not mine to touch). `host.rs` closed (mis-pasted bio bullets).
+
+**Next step:** DOMAINS section (next files in `domains/`), triaging the boilerplate-mismatch per §0 — unless
+you redirect.
