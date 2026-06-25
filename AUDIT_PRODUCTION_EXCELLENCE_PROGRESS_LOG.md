@@ -265,3 +265,29 @@ standard legal taxonomy as a renamable placeholder.
 `responsibility`, `delegation`, `contract`, `interaction_governance`, `legal_compose`).
 
 ---
+
+## 7 — asp + deontic + deontic/legal/rights family (2026-06-25)
+
+- **`asp.rs`** (`7307de864`): grounder (`ground_rule`), weak-constraint optimization (`optimal_answer_set`),
+  paraconsistent routing (`answer_sets_or_paraconsistent`), cautious/brave. Items 2-4 ✅. **Item 1 honest:**
+  the stable-model solver is correct + feature-complete, but literal *clasp/CDNL performance parity* is a
+  separate multi-year solver-engine effort — `[~]` flagged, not fake-checked. ⚑ Tell me to prioritize CDNL or not.
+- **`deontic.rs`** (`8b876cc41`): `resolve_norm_conflict` (non-derogable→proportionality→human-review) +
+  BLAKE3 `compile_permission_constraint`/`permission_binds_to` (non-fungible). CTD/Chisholm + temporal/epoch
+  verified pre-existing. All 4 ✅. (deontic.rs now ~1380 lines → deferred to the library-ization pass.)
+- **`responsibility` + `delegation` + `contract` + `interaction_governance`** (`df31533e1`, 26 tests): moral
+  appraisal/causal-vectors/double-effect; attenuation/CRL/spatial-temporal bounds; rights-verification/breach-SM/
+  performance-oracle/sub-contract-liability; emergency-override/M-of-N/circuit-breaker/proportionality. All ✅.
+
+**Standing-order refinement recorded (Timothy):** split-as-you-go for files you build out; pre-existing
+monoliths + risky mid-feature splits → a dedicated **library-ization pass after everything works**; priority =
+full implementation, no new monoliths.
+
+**Modality areas complete: 16.** Remaining deontic/legal family: `legal_compose` (mostly done, verify),
+`deontic_compose`, `meta_deontic` (mostly done — cross-jurisdictional translation is the one gap).
+
+**Next:** finish `legal_compose`/`deontic_compose`/`meta_deontic`, then the distributed/identity/value cluster
+(`consensus`, `carrier`, `identity_fabric`, `value_flow`, `capability_gap`, `diffusion`, `manifold_logic`,
+`control_feedback`).
+
+---
