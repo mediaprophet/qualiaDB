@@ -55,10 +55,121 @@ pub fn continuous_to_fact(samples: &[f64], threshold: f64, fact_id: u64) -> Opti
     }
 }
 
+// ─── Topological data analysis: Vietoris-Rips + persistent H0 ─────────────────────
+//
+// Detect topological features (connected components / clusters) in the continuous signal by
+// building a Vietoris-Rips complex at a scale ε and tracking how components are born and die as ε
+// grows (0-dimensional persistent homology). Bounded + zero-heap (fixed union-find arrays).
+
+/// Bound on points in one topological query.
+pub const MAX_MANIFOLD_POINTS: usize = 64;
+
+#[inline]
+fn uf_find(parent: &mut [usize; MAX_MANIFOLD_POINTS], mut x: usize) -> usize {
+    while parent[x] != x {
+        parent[x] = parent[parent[x]];
+        x = parent[x];
+    }
+    x
+}
+#[inline]
+fn uf_union(parent: &mut [usize; MAX_MANIFOLD_POINTS], a: usize, b: usize) {
+    let (ra, rb) = (uf_find(parent, a), uf_find(parent, b));
+    if ra != rb {
+        parent[ra] = rb;
+    }
+}
+
+/// **Betti-0** (number of connected components) of the **Vietoris-Rips** complex at scale
+/// `epsilon`: connect points `i,j` whenever `dist[i*n+j] <= epsilon` (`dist` is a flattened
+/// `n×n` distance matrix). `0` for invalid input. Bounded + zero-heap.
+pub fn vietoris_rips_b0(dist: &[f64], n: usize, epsilon: f64) -> usize {
+    if n == 0 || n > MAX_MANIFOLD_POINTS || dist.len() < n * n {
+        return 0;
+    }
+    let mut parent = [0usize; MAX_MANIFOLD_POINTS];
+    for (i, p) in parent.iter_mut().enumerate().take(n) {
+        *p = i;
+    }
+    for i in 0..n {
+        for j in (i + 1)..n {
+            if dist[i * n + j] <= epsilon {
+                uf_union(&mut parent, i, j);
+            }
+        }
+    }
+    let mut components = 0usize;
+    for i in 0..n {
+        if uf_find(&mut parent, i) == i {
+            components += 1;
+        }
+    }
+    components
+}
+
+/// **Persistent 0-dim homology**: write the Betti-0 (component count) at each scale in `epsilons`
+/// (assumed increasing) into `out_b0` — the barcode of connected features (born at ε=0, dying as
+/// they merge; b0 is monotonically non-increasing). Returns the count written. Zero-heap.
+pub fn persistent_h0(dist: &[f64], n: usize, epsilons: &[f64], out_b0: &mut [usize]) -> usize {
+    let m = epsilons.len().min(out_b0.len());
+    for k in 0..m {
+        out_b0[k] = vietoris_rips_b0(dist, n, epsilons[k]);
+    }
+    m
+}
+
+/// **Topological dimension-bridging**: lift a lower-dimensional sample `low` (e.g. a 1-D audio
+/// sample, or a 7-axis `WaveCoord`) into a higher `out`-dimensional manifold coordinate, zero-
+/// padding the new axes. Returns `false` if `out` is too small. The 1D→10D bridge.
+pub fn bridge_dimensions(low: &[f64], out: &mut [f64]) -> bool {
+    if out.len() < low.len() {
+        return false;
+    }
+    for (i, o) in out.iter_mut().enumerate() {
+        *o = if i < low.len() { low[i] } else { 0.0 };
+    }
+    true
+}
+
 #[cfg(test)]
 mod tests {
     use super::*;
     use crate::q_hash;
+
+    #[test]
+    fn vietoris_rips_and_persistent_h0() {
+        // 4 points on a line at 0,1,2,10 → pairwise |Δ| distance matrix.
+        let pts = [0.0f64, 1.0, 2.0, 10.0];
+        let n = 4;
+        let mut dist = [0.0f64; 16];
+        for i in 0..n {
+            for j in 0..n {
+                dist[i * n + j] = (pts[i] - pts[j]).abs();
+            }
+        }
+        // ε=0.5: nothing connects → 4 components.
+        assert_eq!(vietoris_rips_b0(&dist, n, 0.5), 4);
+        // ε=1.0: the 0-1-2 cluster connects (dist 1 each); 10 stays apart → 2 components.
+        assert_eq!(vietoris_rips_b0(&dist, n, 1.0), 2);
+        // ε=10: everything connects → 1 component.
+        assert_eq!(vietoris_rips_b0(&dist, n, 10.0), 1);
+        // The persistence barcode across an increasing filtration.
+        let mut b0 = [0usize; 3];
+        let m = persistent_h0(&dist, n, &[0.5, 1.0, 10.0], &mut b0);
+        assert_eq!(m, 3);
+        assert_eq!(b0, [4, 2, 1], "b0 is monotonically non-increasing as ε grows");
+    }
+
+    #[test]
+    fn dimension_bridging_zero_pads() {
+        let low = [1.0f64, 2.0, 3.0]; // a 3-D sample
+        let mut out = [9.0f64; 10]; // into the 10-D manifold
+        assert!(bridge_dimensions(&low, &mut out));
+        assert_eq!(&out[..3], &[1.0, 2.0, 3.0]);
+        assert!(out[3..].iter().all(|&v| v == 0.0), "new axes zero-padded");
+        // Too-small target refuses.
+        assert!(!bridge_dimensions(&low, &mut [0.0; 2]));
+    }
 
     #[test]
     fn wave_eval_at_origin_peak() {

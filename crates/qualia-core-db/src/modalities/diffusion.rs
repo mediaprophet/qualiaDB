@@ -113,10 +113,100 @@ pub async fn execute_diffusion_pass(graph: &mut [NQuin]) -> Result<(), String> {
     }
 }
 
+// ─── CPU-side belief diffusion / energy / annealing (zero-heap, GPU-independent) ──
+//
+// The GPU pass above runs the bulk diffusion on tensor cores. These are the CPU reference math
+// for the same operations — gradient-based belief diffusion, dynamic energy injection, and the
+// simulated-annealing schedule for settling conflicted clusters — all zero-heap and testable
+// without a GPU.
+
+/// One CPU step of **gradient-based belief diffusion** (discrete graph Laplacian): each node's
+/// belief moves toward its neighbours' average by `rate ∈ [0,1]`. `edges` are undirected `(i,j)`
+/// index pairs. Writes the updated beliefs into `out`. Zero-heap (caller buffers, no allocation).
+pub fn diffuse_step(beliefs: &[f32], edges: &[(usize, usize)], rate: f32, out: &mut [f32]) -> bool {
+    let n = beliefs.len();
+    if out.len() < n {
+        return false;
+    }
+    for i in 0..n {
+        let mut sum = 0.0f32;
+        let mut deg = 0u32;
+        for &(a, b) in edges {
+            if a == i {
+                sum += beliefs[b];
+                deg += 1;
+            } else if b == i {
+                sum += beliefs[a];
+                deg += 1;
+            }
+        }
+        out[i] = if deg == 0 {
+            beliefs[i]
+        } else {
+            let avg = sum / deg as f32;
+            beliefs[i] + rate * (avg - beliefs[i])
+        };
+    }
+    true
+}
+
+/// **Dynamic energy injection**: boost a (dormant) node's activation by `energy`, clamped to
+/// `[0,1]` — re-activates a subgraph that diffusion can then spread.
+#[inline]
+pub fn inject_energy(belief: f32, energy: f32) -> f32 {
+    (belief + energy).clamp(0.0, 1.0)
+}
+
+/// **Simulated-annealing acceptance**: accept a move with energy change `delta` at `temperature`
+/// with probability `1` if improving (`delta <= 0`), else `exp(-delta/T)`. `rand01 ∈ [0,1)`.
+pub fn anneal_accept(delta: f32, temperature: f32, rand01: f32) -> bool {
+    if delta <= 0.0 {
+        return true;
+    }
+    if temperature <= 0.0 {
+        return false;
+    }
+    rand01 < (-delta / temperature).exp()
+}
+
+/// Geometric cooling schedule `T_{k+1} = T_k · cooling_rate` (`cooling_rate ∈ (0,1)`).
+#[inline]
+pub fn cool(temperature: f32, cooling_rate: f32) -> f32 {
+    temperature * cooling_rate
+}
+
 #[cfg(test)]
 mod tests {
     use super::*;
     use crate::NQuin;
+
+    #[test]
+    fn cpu_belief_diffusion_moves_toward_neighbours() {
+        // Line 0–1–2, beliefs [1,0,0], rate 0.5.
+        let beliefs = [1.0f32, 0.0, 0.0];
+        let edges = [(0usize, 1usize), (1, 2)];
+        let mut out = [0.0f32; 3];
+        assert!(diffuse_step(&beliefs, &edges, 0.5, &mut out));
+        // node0 → toward neighbour 1 (0): 1 + 0.5*(0-1) = 0.5
+        assert!((out[0] - 0.5).abs() < 1e-6);
+        // node1 → toward avg(1,0)=0.5: 0 + 0.5*(0.5-0) = 0.25
+        assert!((out[1] - 0.25).abs() < 1e-6);
+        // node2 → toward neighbour 1 (0): stays 0
+        assert!((out[2] - 0.0).abs() < 1e-6);
+    }
+
+    #[test]
+    fn energy_injection_and_annealing() {
+        assert!((inject_energy(0.6, 0.5) - 1.0).abs() < 1e-6, "clamps to 1");
+        assert!((inject_energy(0.2, 0.3) - 0.5).abs() < 1e-6);
+        // Improving moves always accepted; uphill moves gated by temperature.
+        assert!(anneal_accept(-1.0, 1.0, 0.99));
+        assert!(anneal_accept(1.0, 10.0, 0.5), "hot → likely accept an uphill move");
+        assert!(!anneal_accept(5.0, 0.01, 0.5), "cold → reject an uphill move");
+        assert!(!anneal_accept(1.0, 0.0, 0.0), "zero temperature → no uphill moves");
+        // Cooling shrinks the temperature geometrically.
+        assert!((cool(10.0, 0.9) - 9.0).abs() < 1e-6);
+    }
 
     #[test]
     fn test_execute_diffusion_pass() {
