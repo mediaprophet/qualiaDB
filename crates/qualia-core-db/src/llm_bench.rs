@@ -876,6 +876,9 @@ pub fn perplexity_eval_blocking(model_path: &str, max_tok: usize) -> Result<(f64
                 if n_emb == 0 {
                     return Err(format!("embedding lookup failed for token {}", toks[i]));
                 }
+                // AWQ calibration: reset the per-forward layer cursor so the FFN hook tags layers
+                // 0..n_layer-1 correctly (no-op when AWQ capture is off).
+                crate::llm_awq::begin_forward();
                 let _ = engine.dispatch_transformer_forward(
                     &tensor_idx,
                     &mut emb_buf[..emb_dim],

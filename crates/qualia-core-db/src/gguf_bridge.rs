@@ -4743,6 +4743,9 @@ impl QTensorEngine {
             {
                 return false;
             }
+            // AWQ step 1 (calibration only; no-op in production): record per-input-channel salience
+            // at the post-ffn_norm FFN input — the activation that scales the gate/up projections.
+            crate::llm_awq::record_ffn_input(&ffn_input[..gate_in]);
             let mut gate_buf = [0f32; MAX_STACK_GEMM_DIM];
             let mut up_buf = [0f32; MAX_STACK_GEMM_DIM];
             if !self.dispatch_gemm_into(

@@ -808,6 +808,8 @@ pub mod llm_gpu_profiler;
 pub mod llm_kernel_parity;
 /// STELLAR §A W1: in-project quality oracle (perplexity / KL / coherence + the quant quality gate).
 pub mod llm_eval;
+/// STELLAR §A AWQ: activation-statistics capture (the AWQ forward hook) for calibrated quantization.
+pub mod llm_awq;
 pub mod identifier;
 #[cfg(not(target_arch = "wasm32"))]
 pub mod mcp_server;

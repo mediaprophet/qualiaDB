@@ -723,3 +723,44 @@ fn w1_perplexity_llama3b_fp16_vs_q4() {
     assert!(ppl_ref.is_finite() && ppl_ref > 1.0, "FP16 3B PPL implausible: {ppl_ref}");
     println!("[w1-3b] PASS — FP16 reference runs through the native engine.");
 }
+
+/// AWQ step 1 — activation-statistics capture. Runs a calibration forward of the Q8 reference over the
+/// eval corpus and records per-FFN-layer per-input-channel max |activation|, then verifies the AWQ
+/// premise holds: some channels carry far larger activations than the median (salient channels exist).
+/// Run: `cargo test -p qualia-core-db --release --test llm_bench_a0 w1_awq_activation_capture -- --nocapture`.
+#[test]
+fn w1_awq_activation_capture_smollm2() {
+    use qualia_core_db::llm_awq;
+    use qualia_core_db::llm_bench::perplexity_eval_blocking;
+    let Some(q8) = find_model("smollm2-360m-instruct-q8_0.gguf") else {
+        eprintln!("[awq] SmolLM2 Q8 absent — skipping activation capture");
+        return;
+    };
+    // SmolLM2-360M: 32 FFN layers, n_embd = 960 input channels.
+    llm_awq::enable(32, 960).expect("awq enable");
+    let (_ppl, n) = perplexity_eval_blocking(&q8.to_string_lossy(), 0).expect("capture forward");
+    let stats = llm_awq::snapshot();
+    llm_awq::disable();
+
+    assert!(!stats.is_empty(), "no AWQ layers captured");
+    let n_chan = stats.first().map(|l| l.len()).unwrap_or(0);
+    println!("\n=== W1/AWQ activation capture (SmolLM2-360M, {n} tokens) ===");
+    println!("[awq] {} layers x {} channels", stats.len(), n_chan);
+    let mut any_salient = false;
+    for (l, layer) in stats.iter().enumerate() {
+        let maxc = layer.iter().cloned().fold(0f32, f32::max);
+        let mut sorted = layer.clone();
+        sorted.sort_by(|a, b| a.partial_cmp(b).unwrap_or(std::cmp::Ordering::Equal));
+        let median = sorted[sorted.len() / 2];
+        let ratio = maxc / median.max(1e-9);
+        if l < 3 || l + 1 == stats.len() {
+            println!("[awq] layer {l:>2}: max-chan {maxc:8.3}  median {median:8.4}  salience {ratio:6.1}x");
+        }
+        if ratio > 3.0 {
+            any_salient = true;
+        }
+    }
+    assert!(stats[0].iter().any(|&v| v > 0.0), "layer 0 captured all-zero activations (hook not firing)");
+    assert!(any_salient, "no salient channels (>3x median) — AWQ would have no signal; check the hook");
+    println!("[awq] PASS — activation salience captured; salient channels present → AWQ has signal.");
+}
