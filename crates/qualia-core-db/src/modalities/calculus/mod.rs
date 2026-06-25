@@ -46,6 +46,9 @@ pub mod host;
 #[cfg(not(target_arch = "wasm32"))]
 pub mod gpu;
 
+#[cfg(not(target_arch = "wasm32"))]
+pub mod hetero_dispatch;
+
 pub mod ode_solver;
 pub use ode_solver::{
     ShootingMethod, BvpSystem, Rk4Solver, ExponentialDecay, OdeSystem,
@@ -74,6 +77,13 @@ pub use host::{PAGE_SIZE, DEFAULT_BUFFER_SIZE, IoError, DmaBuffer};
 
 #[cfg(not(target_arch = "wasm32"))]
 pub use gpu::{GpuError, GpuIntegrator, PlatformGpuIntegrator, WebGpuIntegrator};
+
+#[cfg(not(target_arch = "wasm32"))]
+pub use hetero_dispatch::{
+    plan_fusion, select_precision, ComputeBackend, HeterogeneousDispatcher,
+    HostCapabilities, PowerThermalBudget, Precision, TensorOp, TensorOpKind,
+    ZeroCopyStrategy,
+};
 
 // ─── Opcodes ─────────────────────────────────────────────────────────────────────
 //
