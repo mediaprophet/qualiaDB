@@ -410,7 +410,10 @@ impl<'a> N3Parser<'a> {
                 }
             }
 
-            if self.text[i..].starts_with("qualia:diffuse {") {
+            // Gate on the ASCII lead byte 'q' so `self.text[i..]` is only sliced
+            // on a UTF-8 char boundary (continuation bytes of multi-byte chars
+            // in URIs/strings/comments must never reach a `str` slice).
+            if c == 'q' && self.text[i..].starts_with("qualia:diffuse {") {
                 let end = self.text[i..].find('}').unwrap_or(self.text[i..].len());
                 emit_block(BlockKind::Diffuse, self.text[i + 16..i + end].trim(), &mut callback)?;
                 i += end + 1;
@@ -761,6 +764,25 @@ mod tests {
     fn rejects_unbalanced_braces() {
         let mut parser = N3Parser::new("} :a :b :c .");
         assert!(parser.parse_all(|_| Ok(())).is_err());
+    }
+
+    #[test]
+    fn parses_multibyte_utf8_without_panicking() {
+        // Multi-byte UTF-8 outside comments (literals, URIs) must not cause a
+        // mid-character `str` slice panic in the byte-scanning loop.
+        let doc = ":x :label \"café — déjà ➜ vu\" .\n\
+                   <http://例え.example/Ω> :note \":naïve\" .\n";
+        let mut parser = N3Parser::new(doc);
+        let mut n = 0usize;
+        parser
+            .parse_all(|ev| {
+                if let N3Event::StaticTriple(_) = ev {
+                    n += 1;
+                }
+                Ok(())
+            })
+            .unwrap();
+        assert!(n >= 2, "expected both UTF-8 triples, got {n}");
     }
 
     // ── Zero-allocation guarantee (item 1) ──────────────────────────────────

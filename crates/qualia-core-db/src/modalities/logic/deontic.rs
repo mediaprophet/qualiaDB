@@ -532,6 +532,11 @@ pub fn compile_n3_rule_to_norm(
     contract_hash: u64,
     expiry_unix32: u32,
 ) -> Option<NQuin> {
+    // `triples` is a fixed `[_; 8]` array, so `.first()` is always `Some`; an
+    // empty rule must be rejected on `len`, not on `.first()`.
+    if rule.premise.len == 0 {
+        return None;
+    }
     let premise = rule.premise.triples.first()?;
     let party = premise.subject.as_u64();
     let property_path = premise.predicate.as_u64();

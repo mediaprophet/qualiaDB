@@ -2108,30 +2108,33 @@ pub fn check_personhood_category_error(agent_type: u64, claims_dignity_right: bo
     let var = |n: &'static str| Term::Variable(n);
 
     // G-guard for a given non-natural-person class: claiming a NaturalPerson-held Right → flag.
-    let guard = |id: &'static str, class: &'static str| Rule {
+    // `class_uri` is the FULL values: IRI of the guarded class, so its `q_hash`
+    // matches the `agent_type` fact below. Full-IRI `&'static str` literals keep
+    // this zero-heap (the predecessor leaked `format!` Strings via `Box::leak`).
+    let guard = |id: &'static str, class_uri: &'static str| Rule {
         id: Some(id),
         rule_type: RuleType::Strict,
         weight: None,
         premise: Formula {
             triples: vec![
-                Triple { subject: var("c"), predicate: u("a"), object: u("dynamic_test_str") },
-                Triple { subject: var("c"), predicate: Term::Uri("q42:dynamic_test_str"), object: var("r") },
-                Triple { subject: var("r"), predicate: u("a"), object: u("dynamic_test_str") },
-                Triple { subject: var("r"), predicate: Term::Uri("q42:dynamic_test_str"), object: Term::Uri("q42:dynamic_test_str") },
+                Triple { subject: var("c"), predicate: u("a"), object: u(class_uri) },
+                Triple { subject: var("c"), predicate: u("https://ns.webcivics.net/values/claims"), object: var("r") },
+                Triple { subject: var("r"), predicate: u("a"), object: u("https://ns.webcivics.net/values/Right") },
+                Triple { subject: var("r"), predicate: u("https://ns.webcivics.net/values/heldBy"), object: u("https://ns.webcivics.net/values/NaturalPerson") },
             ],
         },
         conclusion: Formula {
             triples: vec![Triple {
                 subject: var("c"),
-                predicate: Term::Uri("q42:dynamic_test_str"),
-                object: Term::Uri("q42:dynamic_test_str"),
+                predicate: u("https://ns.webcivics.net/values/flag"),
+                object: u("https://ns.webcivics.net/values/PersonhoodCategoryError"),
             }],
         },
     };
 
     let mut arena = SlgArena::new();
-    let r1 = guard("agency-G1", "CorporatePerson"); arena.register_rule(&r1);
-    let r2 = guard("agency-G1-prime", "ArtificialAgent"); arena.register_rule(&r2);
+    let r1 = guard("agency-G1", "https://ns.webcivics.net/values/CorporatePerson"); arena.register_rule(&r1);
+    let r2 = guard("agency-G1-prime", "https://ns.webcivics.net/values/ArtificialAgent"); arena.register_rule(&r2);
 
     let fact = |a: &mut SlgArena, s: u64, p: u64, o: u64| {
         a.write_table(NQuin { subject: s, predicate: p, object: o, context: 0, metadata: 0, parity: s ^ p ^ o });
@@ -2372,17 +2375,17 @@ mod tests {
             weight: None,
             premise: Formula {
                 triples: vec![
-                    Triple { subject: var("c"), predicate: u("a"), object: Term::Uri("q42:dynamic_test_str") },
-                    Triple { subject: var("c"), predicate: Term::Uri("q42:dynamic_test_str"), object: var("r") },
-                    Triple { subject: var("r"), predicate: u("a"), object: u("dynamic_test_str") },
-                    Triple { subject: var("r"), predicate: Term::Uri("q42:dynamic_test_str"), object: Term::Uri("q42:dynamic_test_str") },
+                    Triple { subject: var("c"), predicate: u("a"), object: u("https://ns.webcivics.net/values/CorporatePerson") },
+                    Triple { subject: var("c"), predicate: u("https://ns.webcivics.net/values/claims"), object: var("r") },
+                    Triple { subject: var("r"), predicate: u("a"), object: u("https://ns.webcivics.net/values/Right") },
+                    Triple { subject: var("r"), predicate: u("https://ns.webcivics.net/values/heldBy"), object: u("https://ns.webcivics.net/values/NaturalPerson") },
                 ],
             },
             conclusion: Formula {
                 triples: vec![Triple {
                     subject: var("c"),
-                    predicate: Term::Uri("q42:dynamic_test_str"),
-                    object: Term::Uri("q42:dynamic_test_str"),
+                    predicate: u("https://ns.webcivics.net/values/flag"),
+                    object: u("https://ns.webcivics.net/values/PersonhoodCategoryError"),
                 }],
             },
         };
