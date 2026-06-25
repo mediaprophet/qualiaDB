@@ -213,7 +213,23 @@ impl QTensorEngine {
                     .write_buffer(input_buf, 0, bytemuck::cast_slice(&hidden[..hidden_elems]));
             }
         }
-        self.write_weight_words(raw_weights, self.max_tensor_bytes);
+        // Phase 2 (attention): bind this projection's resident VRAM buffer (uploaded once, keyed by
+        // its mmap address) instead of re-uploading the Q/K/V weight into the shared buffer EVERY
+        // token. For a 3B that re-upload is ~30 MB/layer × n_layer ≈ ~0.8 GB/token of PCIe traffic
+        // the GEMM path already shed; attention was still paying it. Output is byte-identical (same
+        // bytes, same offsets). Falls back to the per-token upload when residency is off.
+        let resident = if crate::llm_bench::resident_weights_enabled() {
+            self.resident_weight_buffer(raw_weights.as_ptr() as u64, raw_weights)
+        } else {
+            None
+        };
+        let weight_binding: &wgpu::Buffer = match resident.as_ref() {
+            Some(r) => r,
+            None => {
+                self.write_weight_words(raw_weights, self.max_tensor_bytes);
+                weight_buf
+            }
+        };
         self.gpu_queue()
             .write_buffer(params_buf, 0, bytemuck::bytes_of(&params));
         self.gpu_queue()
@@ -246,7 +262,7 @@ impl QTensorEngine {
                 },
                 wgpu::BindGroupEntry {
                     binding: 1,
-                    resource: weight_buf.as_entire_binding(),
+                    resource: weight_binding.as_entire_binding(),
                 },
                 wgpu::BindGroupEntry {
                     binding: 2,
