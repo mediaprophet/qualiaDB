@@ -124,3 +124,49 @@ conflict resolution (non-derogable human-rights position prevails; genuine propo
 human review).
 
 ---
+
+## 2 — Jural: multi-party chains + rights-collision resolution (2026-06-25)
+
+**Status: done.** Commit `fb2642773`.
+
+**Built (`jural.rs`):** `is_second_order`; `jural_chain_links`/`jural_chain_pivot`/`jural_chain_valid` (model
+"A has Power over B's Duty to C" via a matching pivot party + second-order control position);
+`jural_collision` (same holder assigned a position and its jural opposite over the same content+frame) +
+`resolve_collision` (`CollisionResolution`: a non-derogable human right defeats a derogable one; two
+non-derogable / two derogable positions route to human review — never auto-flattened, per the Curation Directive).
+
+**Measured:** `cargo test -p qualia-core-db --lib modalities::jural` → **7 passed, 0 failed** (incremental build 57s).
+
+**Audit items closed (jural section):** all 4 (8 Hohfeldian incidents [pre-existing, verified], conflict
+resolution, multi-party chains, Webizen-bytecode hooks). **⚑ human:** none.
+
+---
+
+## 3 — Fuzzy / Paraconsistent / Modal (2026-06-25)
+
+**Status: done.** Commit `227cb923e`. Three SEMANTIC-MVP modules raised to real coverage (zero-heap).
+
+**Built:**
+- `fuzzy.rs`: Product + Drastic t-norm/t-conorm families + Łukasiewicz t-conorm (+ existing Gödel/Łukasiewicz);
+  complement; disjunction; Zadeh hedges (very/extremely/more-or-less); four defuzzifiers (centroid/MOM/SOM/bisector).
+- `paraconsistent.rs`: Belnap FOUR (`Neither/True/False/Both`) — negation, conjunction (meet), disjunction (join)
+  over independent evidence bits; contradiction contained as `Both`, no explosion.
+- `modal.rs`: Kripke frame-property checks (reflexive/serial/symmetric/transitive/euclidean) + K/T/D/B/S4/S5
+  via `validates`.
+
+**Measured:** `cargo test -p qualia-core-db --lib -- modalities::fuzzy modalities::paraconsistent modalities::modal`
+→ **8 passed, 0 failed** (compile cached, 1.32s).
+
+**Audit items closed:** fuzzy 3/4 (T-norm families, defuzzification, hedges; **Mamdani/Sugeno FIS left honest**),
+paraconsistent 3/4 (Belnap, quarantine [pre-existing], inconsistency-tolerant reasoning; **saturation metrics left
+honest**), modal 3/4 (axiom systems, frame-property checks, zero-heap reachability; **multi-agent AGM left honest**).
+
+**⚑ Where the human is needed:** none blocking. Note the *honest-left* items above are deliberately unchecked,
+not forgotten — each carries a one-line "what it would take" note in the audit doc.
+
+**Running total:** ~22 items closed across 3 commits; 4 deliberately left honest with notes.
+
+**Next step:** Increment 4 — `capacity.rs` (mission-aligned: legal-capacity thresholds + coercion/duress vectors +
+temporary-impairment decay) batched with another tractable logic module.
+
+---
