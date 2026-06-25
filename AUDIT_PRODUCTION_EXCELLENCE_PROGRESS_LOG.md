@@ -502,3 +502,34 @@ firewall (new `Native*` opcodes + `webizen.rs` handlers), or are the MCP tools +
 concern.) Other open asks unchanged (guardianship vocab; asp CDNL).
 
 **Next step:** back to the DOMAINS section unless you redirect.
+
+## 14 — DOMAINS section COMPLETE (2026-06-25)
+
+**Step / phase:** DOMAINS — `done` (0 unchecked items remain in the section).
+
+**What was built / verified (all tested green):**
+- `bioinformatics.rs` (`d4afe4265`) — UPGMA phylogenetic tree (earlier); alignment+SIMD+privacy verified.
+- `financial/economics.rs` (`cd46b2fb6`) — `propagate_supply_shock` (Leontief I-O shock propagation) +
+  `resilience_resource_pricing` (survival-first shadow pricing). Zero-heap.
+- `financial/tax_schema.rs` (`cd46b2fb6`) — `TaxClearingHouse` (multi-jurisdiction AU/EU/US/zero clearing).
+- `chemical/organic_chemistry.rs` (`54510129e`) — `urea_equilibrium_extent` (Bosch-Meiser), catalyst
+  deactivation, variable-temperature conversion. Builds on the existing Arrhenius/equilibrium primitives.
+- `physical/thermodynamics.rs` (`54510129e`) — `LithiumPack` equivalent circuit, solar `max_power_point`/
+  `array_mppt_power`, heat-transfer efficiency. The off-grid energy trio.
+- **Mis-pasted "economics" block marked misassigned** on `biological/mod.rs`, `mathematical/geometric.rs`,
+  `mathematical/mod.rs` (the "basic fiat tracking" Missing-Doctorate line on a geometry file was the
+  auto-audit copy-paste tell) → checked off against the real home `domains/financial/`.
+
+**Measured results:** targeted tests green — economics+tax 5/5, chemistry+energy 6/6, bioinformatics 17/17.
+Unit-level correctness (Leontief inverse matches the closed form; survival pricing reserves deficit
+resources; tax nets per-jurisdiction; urea extent tracks Le Chatelier; lithium voltage sags by I·R; solar MPP
+< I_sc·V_oc; thermal η falls with worse insulation). Honest scope: these carry the domain ARITHMETIC; attested
+thermodynamic/material/geopolitical data is caller-supplied, never invented (the no-corpus-authority rule).
+
+**⚑ Where I need the human:** the **SOLVERS** section is next and is **heavily QPU/quantum** — which you've
+deprioritized (WAP §0.11). I'll triage it: implement the genuinely-classical solver items, and leave every
+QPU/quantum bullet untouched + clearly marked "deprioritized per §0.11" (NOT done, NOT faked). Flagging so you
+know SOLVERS will come back mostly-deferred-by-your-rule rather than mostly-done. Other open asks unchanged
+(guardianship vocab; asp CDNL; the optional VM-firewall identity enforcement).
+
+**Next step:** SOLVERS triage (classical items only), then OBFUSCATION + SPECIALIZED_LIBS.
