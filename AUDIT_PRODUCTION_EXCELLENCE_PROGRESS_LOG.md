@@ -239,3 +239,29 @@ crossed ~450 yet, so no premature split — I'll split as they cross while compl
 specialized_libs) to genuine completeness, splitting files as they grow.
 
 ---
+
+## 6 — abductive + argumentation libraries (first sub-dir splits) (2026-06-25)
+
+**Status: done.** Applying the new §10 rule, both modules became sub-directory libraries.
+
+- **`abductive/`** (`ea6b2f22a`): all 4 items — `minimal_explanation` (Peirce parsimony), `atms.rs` (de Kleer
+  ATMS: bitset environments, minimal-environment labels, superset-closed nogoods, `holds_in`),
+  `probabilistic.rs` (Bayesian posteriors + MAP), `counter_abduction`. **8 tests pass.**
+- **`argumentation/`** (`e9e8d5f4b`): all 4 items — full Dung family (added `stable_extensions`/
+  `complete_extensions` to the existing grounded/preferred), `vaf.rs` (value-based, human-rights hierarchy
+  decides), `bipolar.rs` (support + complex attacks), `generation.rs` (AF from deontic/LTL traces). **12 tests pass.**
+
+**Modality areas complete: 11** (epistemic-boundaries, jural, fuzzy, paraconsistent, modal, capacity[mech],
+linear, defeasible, abductive, argumentation, + VM ZkConsumeFact). **Remaining in modalities: ~33 files.**
+
+**Boundaries set (per Timothy's "continue"):** leave `n3_parser.rs` to its own `qualia-n3-parser` worktree;
+`spatio_temporal.rs` RCC-8 stays flagged by the unwireable-NQuin invariant (do the other 3 items); `calculus/`
+GPU items handled CPU-side / deferred pending Timothy's GPU-test answer.
+
+**⚑ Still open (one):** guardianship domain taxonomy vocabulary — (A) Timothy's list or (B) approval to bind a
+standard legal taxonomy as a renamable placeholder.
+
+**Next:** `asp.rs`, then the deontic/legal/rights family (`deontic` CTD/Chisholm, `deontic_compose`,
+`responsibility`, `delegation`, `contract`, `interaction_governance`, `legal_compose`).
+
+---
