@@ -104,6 +104,54 @@ pub const fn policy_action(mode: PolicyMode) -> &'static str {
     }
 }
 
+// ─── Dynamic overriding rules (humanitarian emergency) ────────────────────────────
+
+/// A humanitarian emergency may downgrade a [`PolicyMode::PreventiveBlock`] to
+/// [`PolicyMode::PermissiveAudit`] (proceed but record) — EXCEPT for the non-overridable
+/// **hard core** (torture, child safety, the non-derogable absolute prohibitions), which never
+/// bypasses. All other modes pass through unchanged. This is the structured emergency exception,
+/// not an open backdoor.
+pub fn apply_emergency_override(base: PolicyMode, emergency: bool, hard_core: bool) -> PolicyMode {
+    if emergency && base == PolicyMode::PreventiveBlock && !hard_core {
+        PolicyMode::PermissiveAudit
+    } else {
+        base
+    }
+}
+
+// ─── Multi-stakeholder M-of-N threshold ───────────────────────────────────────────
+
+/// A multi-stakeholder governance decision is authorized iff at least `m` stakeholders approved
+/// (an M-of-N threshold; `approvals` is the count of approving stakeholders). `m == 0` is never
+/// authorized (a decision needs at least one approver).
+pub fn threshold_authorized(approvals: usize, m: usize) -> bool {
+    m > 0 && approvals >= m
+}
+
+// ─── Systemic circuit breaker (paraconsistent inconsistency spike) ────────────────
+
+/// Trip the systemic circuit breaker when inconsistency `saturation` (from
+/// `paraconsistent::local_saturation` / `global_saturation`) reaches `threshold`: the system
+/// halts into [`PolicyMode::Interactive`] (ask a human) rather than act on a saturated,
+/// self-contradictory graph. Returns the override mode if tripped, else `None`.
+pub fn circuit_breaker(saturation: f32, threshold: f32) -> Option<PolicyMode> {
+    if saturation >= threshold {
+        Some(PolicyMode::Interactive)
+    } else {
+        None
+    }
+}
+
+// ─── Proportionality binding (human-rights instruments) ───────────────────────────
+
+/// A governance action that **restricts individual agency** is justified only if proportionate —
+/// its `marginal_harm` to the person is strictly less than the `advantage` it secures. Binds
+/// algorithmic governance to the proportionality test of the human-rights instruments. A
+/// non-restricting action is always permitted.
+pub fn restriction_proportionate(restricts_agency: bool, marginal_harm: f64, advantage: f64) -> bool {
+    !restricts_agency || marginal_harm < advantage
+}
+
 #[cfg(test)]
 mod tests {
     use super::*;
@@ -150,5 +198,45 @@ mod tests {
         }
         // Discharged duty, humanitarian context → still prioritized.
         assert_eq!(map_policy(DeonticStatus::Discharged, g(false, true, false)), PolicyMode::Prioritize);
+    }
+
+    #[test]
+    fn humanitarian_emergency_overrides_non_core_blocks_only() {
+        // An ordinary non-derogable block downgrades to audit under emergency…
+        assert_eq!(
+            apply_emergency_override(PolicyMode::PreventiveBlock, true, false),
+            PolicyMode::PermissiveAudit
+        );
+        // …but the hard core (torture / child safety) NEVER bypasses.
+        assert_eq!(
+            apply_emergency_override(PolicyMode::PreventiveBlock, true, true),
+            PolicyMode::PreventiveBlock
+        );
+        // No emergency → unchanged; non-block modes pass through.
+        assert_eq!(apply_emergency_override(PolicyMode::PreventiveBlock, false, false), PolicyMode::PreventiveBlock);
+        assert_eq!(apply_emergency_override(PolicyMode::Allow, true, false), PolicyMode::Allow);
+    }
+
+    #[test]
+    fn m_of_n_threshold_governance() {
+        assert!(threshold_authorized(3, 3));
+        assert!(threshold_authorized(4, 3));
+        assert!(!threshold_authorized(2, 3));
+        assert!(!threshold_authorized(0, 0), "a decision needs at least one approver");
+    }
+
+    #[test]
+    fn circuit_breaker_trips_on_inconsistency_spike() {
+        assert_eq!(circuit_breaker(0.9, 0.8), Some(PolicyMode::Interactive));
+        assert_eq!(circuit_breaker(0.5, 0.8), None);
+    }
+
+    #[test]
+    fn agency_restriction_must_be_proportionate() {
+        // A restriction whose harm < advantage is justified; harm ≥ advantage is not.
+        assert!(restriction_proportionate(true, 1.0, 5.0));
+        assert!(!restriction_proportionate(true, 5.0, 1.0));
+        // A non-restricting action is always permitted.
+        assert!(restriction_proportionate(false, 100.0, 0.0));
     }
 }

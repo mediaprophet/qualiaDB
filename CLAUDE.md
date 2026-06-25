@@ -175,6 +175,12 @@ single `.rs` keep growing. Convert `foo.rs` into `foo/mod.rs` plus focused submo
 - **Each submodule owns its `#[cfg(test)]`.** `mod.rs` re-exports the public surface and wires submodules.
 - Applies to every crate. This keeps modules reviewable and keeps "is this library complete?" answerable
   per-concern instead of by scrolling one 1500-line file.
+- **Refinement (Timothy, 2026-06-25):** the PRIORITY is full implementation **without creating new
+  monolithic files** — split *as you go* for the modality libraries you are actively building out (e.g.
+  `abductive/`, `argumentation/`). **Pre-existing monoliths** (e.g. `deontic.rs`, `graph_theory.rs`) and any
+  split that would be a risky refactor mid-feature are **deferred to a dedicated "library-ization" pass run
+  once everything is working** — that pass also resolves items that couldn't be done otherwise. Do not
+  block a full implementation on a split; flag the file and move on.
 
 ## 11. Completeness bar (PROJECT RULE — Timothy, 2026-06-25)
 
