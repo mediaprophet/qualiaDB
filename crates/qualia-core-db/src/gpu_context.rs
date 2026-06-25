@@ -685,9 +685,23 @@ async fn init_shared_gpu_async() -> Result<SharedGpuContext, String> {
     } else {
         wgpu::Features::empty()
     };
+    // Modern weight tensors blow past the wgpu DEFAULTS (max_buffer_size = 256 MiB,
+    // max_storage_buffer_binding_size = 128 MiB): the all-F16 Llama-3.2-3B tied lm_head
+    // (token_embd, 3072×128256×2 = 751 MiB) is a single resident buffer that the defaults reject
+    // ("Buffer size 788004864 > maximum buffer size 268435456"). Raise both caps to the adapter's
+    // reported maximum — always valid for request_device, so this never fails on weaker GPUs (they
+    // simply get their own, smaller, max). Vendor-neutral: pure wgpu limits, no CUDA / no extra
+    // device feature. Other limits stay at the conservative defaults.
+    let adapter_limits = adapter.limits();
+    let required_limits = wgpu::Limits {
+        max_buffer_size: adapter_limits.max_buffer_size,
+        max_storage_buffer_binding_size: adapter_limits.max_storage_buffer_binding_size,
+        ..wgpu::Limits::default()
+    };
     let (device, queue) = adapter
         .request_device(&wgpu::DeviceDescriptor {
             required_features,
+            required_limits,
             ..Default::default()
         })
         .await
