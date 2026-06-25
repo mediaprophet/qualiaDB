@@ -488,6 +488,8 @@ mod ffn;
 mod gemm;
 mod output;
 mod forward;
+mod async_dispatch;
+mod prefill_async;
 
 /// MC8 pt3e: max abs error over the first `n` elements.
 #[cfg(target_arch = "wasm32")]
