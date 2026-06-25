@@ -65,86 +65,18 @@ impl QTensor {
     }
 }
 
-/// Uniform block passed to `quantized_embedding.wgsl`.
-#[repr(C)]
-#[derive(Copy, Clone, bytemuck::Pod, bytemuck::Zeroable)]
-struct EmbeddingGpuParams {
-    n_embd: u32,
-    ggml_type: u32,
-    n_output: u32,
-    raw_byte_len: u32,
-}
-
-/// Uniform block passed to `fused_transformer.wgsl`.
-#[repr(C)]
-#[derive(Copy, Clone, bytemuck::Pod, bytemuck::Zeroable)]
-struct GemmGpuParams {
-    n_in: u32,
-    n_out: u32,
-    weight_ggml_type: u32,
-    weight_row_elems: u32,
-    weight_byte_len: u32,
-    n_batch: u32,
-    in_row_stride: u32,
-    out_row_stride: u32,
-}
-
-/// Uniform block passed to `fused_attention.wgsl`.
-#[repr(C)]
-#[derive(Copy, Clone, bytemuck::Pod, bytemuck::Zeroable)]
-struct AttentionGpuParams {
-    n_embd: u32,
-    n_head: u32,
-    n_kv_head: u32,
-    head_dim: u32,
-    q_heads_per_kv: u32,
-    token_idx: u32,
-    max_context: u32,
-    layer_idx: u32,
-    layer_stride: u32,
-    slot_kv_elems: u32,
-    weight_ggml_type: u32,
-    weight_row_elems: u32,
-    weight_byte_len: u32,
-    proj_kind: u32,
-    rope_theta_base: f32,
-    rope_scale: f32,
-    num_tokens_in_batch: u32,
-    batch_start_token_idx: u32,
-    mask_active: u32,
-    mask_word_count: u32,
-    out_stride_elems: u32,
-    /// Phase 5.5: row stride (floats/token) of the PRE-COMPUTED Q/K/V projection bound at binding 0.
-    /// Non-zero → the shader reads the projection directly (parallel GEMM did the matmul) instead of
-    /// doing the per-element `gemm_row` matmul itself. 0 → legacy in-shader projection.
-    proj_row_stride: u32,
-    /// WGSL uniform struct size must be a multiple of 16 bytes.
-    _pad: [u32; 2],
-}
+// ── gguf_bridge library submodules (extracted from the former 9k-line monolith) ──
+// GPU uniform-buffer param structs (EmbeddingGpuParams / GemmGpuParams / AttentionGpuParams /
+// ElemGpuParams + ELEM_OP_* codes) and the quant-support gates now live in dedicated files.
+mod gpu_params;
+mod quant_support;
+pub(crate) use gpu_params::*;
+pub(crate) use quant_support::*;
 
 /// KV attention bitmask words uploaded to `fused_attention.wgsl` binding 5.
 pub const KV_ATTENTION_MASK_WORDS: usize = crate::compute_universe::KV_ATTENTION_MASK_WORDS;
 
-/// Uniform block for `wasm_elementwise.wgsl` (MC8 GPU norm / SwiGLU / residual).
-#[repr(C)]
-#[derive(Copy, Clone, bytemuck::Pod, bytemuck::Zeroable)]
-struct ElemGpuParams {
-    n: u32,
-    batch: u32,
-    op: u32,
-    eps: f32,
-    a_row_stride: u32,
-    b_row_stride: u32,
-    out_row_stride: u32,
-    a_slot: u32,
-    b_slot: u32,
-    out_slot: u32,
-    _pad: u32,
-}
-
-const ELEM_OP_RMS_NORM: u32 = 0;
-const ELEM_OP_SILU_MUL: u32 = 1;
-const ELEM_OP_ADD_RESIDUAL: u32 = 2;
+// ElemGpuParams + ELEM_OP_* codes moved to `gpu_params` (see submodule declarations above).
 
 /// MC8 Part 3s: WebGPU dynamic uniform offsets must be multiples of 256 bytes.
 #[cfg(target_arch = "wasm32")]
@@ -402,65 +334,8 @@ struct WasmGpuPipeline {
     encoder: wgpu::CommandEncoder,
 }
 
-#[inline]
-fn ggml_gpu_quant_supported(ggml_type: u32) -> bool {
-    #[cfg(target_arch = "wasm32")]
-    {
-        // WASM CPU fallback dequantizes all stack_gemm-supported types.
-        matches!(
-            ggml_type,
-            crate::ggml_quants::GGML_TYPE_F32
-                | crate::ggml_quants::GGML_TYPE_F16
-                | crate::ggml_quants::GGML_TYPE_Q4_0
-                | crate::ggml_quants::GGML_TYPE_Q5_0
-                | crate::ggml_quants::GGML_TYPE_Q8_0
-                | crate::ggml_quants::GGML_TYPE_Q4_K
-                | crate::ggml_quants::GGML_TYPE_Q6_K
-        )
-    }
-    #[cfg(not(target_arch = "wasm32"))]
-    {
-        ggml_type == crate::ggml_quants::GGML_TYPE_Q4_K
-            || ggml_type == crate::ggml_quants::GGML_TYPE_Q6_K
-    }
-}
-
-/// Weight types implemented in `fused_attention.wgsl` / `fused_transformer.wgsl` dequant.
-/// F16 added for the all-F16 Llama-3.2 family: without it `dispatch_attention_layer` returned
-/// `None` and (because attn_q/k/v are present, skipping the `attn_output`-only fallback) attention
-/// was silently dropped from every block — coherent-looking run, garbage logits. Mirrors the #49
-/// Q8_0 widening. `fused_attention.wgsl::dequant_f16_weight` is the matching shader-side path.
-#[inline]
-fn ggml_gpu_attention_shader_supported(ggml_type: u32) -> bool {
-    matches!(
-        ggml_type,
-        crate::ggml_quants::GGML_TYPE_F16
-            | crate::ggml_quants::GGML_TYPE_Q4_0
-            | crate::ggml_quants::GGML_TYPE_Q5_0
-            | crate::ggml_quants::GGML_TYPE_Q8_0
-            | crate::ggml_quants::GGML_TYPE_Q4_K
-            | crate::ggml_quants::GGML_TYPE_Q6_K
-    )
-}
-
-/// Weight types the native GEMM shader (`fused_transformer.wgsl`) actually dequantizes — WIDER than
-/// `ggml_gpu_quant_supported` (Q4_K/Q6_K only). The GEMM `dequant_weight` also implements
-/// Q4_0/Q5_0/Q8_0 (identical code to the attention shader), but the narrow predicate was silently
-/// routing Q8_0 FFN + output-projection GEMMs to the CPU `stack_gemm_quant` fallback. Widening this
-/// is the GEMM-side analogue of the #49 attention-support fix. Verified end-to-end for Q8_0
-/// (SmolLM2-360M-q8_0); Q4_0/Q5_0 share the proven dequant but have no resident test model yet.
-#[inline]
-fn ggml_gpu_gemm_supported(ggml_type: u32) -> bool {
-    matches!(
-        ggml_type,
-        crate::ggml_quants::GGML_TYPE_F16
-            | crate::ggml_quants::GGML_TYPE_Q4_0
-            | crate::ggml_quants::GGML_TYPE_Q5_0
-            | crate::ggml_quants::GGML_TYPE_Q8_0
-            | crate::ggml_quants::GGML_TYPE_Q4_K
-            | crate::ggml_quants::GGML_TYPE_Q6_K
-    )
-}
+// ggml_gpu_quant_supported / ggml_gpu_attention_shader_supported / ggml_gpu_gemm_supported moved to
+// the `quant_support` submodule (declared above; re-exported via `pub(crate) use quant_support::*`).
 
 /// Await `map_async` without `poll(Wait)` — yields to the browser event loop (MC6).
 #[cfg(target_arch = "wasm32")]
@@ -2556,7 +2431,7 @@ impl QTensorEngine {
 
         let shader = device.create_shader_module(wgpu::ShaderModuleDescriptor {
             label: Some("Fused Transformer Shader"),
-            source: wgpu::ShaderSource::Wgsl(include_str!("shaders/fused_transformer.wgsl").into()),
+            source: wgpu::ShaderSource::Wgsl(include_str!("../shaders/fused_transformer.wgsl").into()),
         });
 
         #[cfg(target_arch = "wasm32")]
@@ -2634,7 +2509,7 @@ impl QTensorEngine {
         let mock_shader = device.create_shader_module(wgpu::ShaderModuleDescriptor {
             label: Some("Mock Fused Contraction Shader"),
             source: wgpu::ShaderSource::Wgsl(
-                include_str!("shaders/fused_tensor_contraction.wgsl").into(),
+                include_str!("../shaders/fused_tensor_contraction.wgsl").into(),
             ),
         });
         let mock_pipeline = device.create_compute_pipeline(&wgpu::ComputePipelineDescriptor {
@@ -2649,7 +2524,7 @@ impl QTensorEngine {
         let emb_shader = device.create_shader_module(wgpu::ShaderModuleDescriptor {
             label: Some("Quantized Embedding Shader"),
             source: wgpu::ShaderSource::Wgsl(
-                include_str!("shaders/quantized_embedding.wgsl").into(),
+                include_str!("../shaders/quantized_embedding.wgsl").into(),
             ),
         });
         let embedding_pipeline = device.create_compute_pipeline(&wgpu::ComputePipelineDescriptor {
@@ -2663,7 +2538,7 @@ impl QTensorEngine {
 
         let attn_shader = device.create_shader_module(wgpu::ShaderModuleDescriptor {
             label: Some("Fused Attention Shader"),
-            source: wgpu::ShaderSource::Wgsl(include_str!("shaders/fused_attention.wgsl").into()),
+            source: wgpu::ShaderSource::Wgsl(include_str!("../shaders/fused_attention.wgsl").into()),
         });
         #[cfg(target_arch = "wasm32")]
         let mc8_attn_bind_layout = device.create_bind_group_layout(&wgpu::BindGroupLayoutDescriptor {
@@ -2758,7 +2633,7 @@ impl QTensorEngine {
 
         let elem_shader = device.create_shader_module(wgpu::ShaderModuleDescriptor {
             label: Some("Wasm Elementwise Shader"),
-            source: wgpu::ShaderSource::Wgsl(include_str!("shaders/wasm_elementwise.wgsl").into()),
+            source: wgpu::ShaderSource::Wgsl(include_str!("../shaders/wasm_elementwise.wgsl").into()),
         });
         #[cfg(target_arch = "wasm32")]
         let mc8_elem_bind_layout = device.create_bind_group_layout(&wgpu::BindGroupLayoutDescriptor {
@@ -2942,10 +2817,10 @@ impl QTensorEngine {
         #[cfg(target_arch = "wasm32")]
         let mc8_ffn_fused_pipeline = {
             // Modular WGSL: shared scaffold + per-role dequant instances composed at runtime.
-            let tpl = include_str!("shaders/dequant_template.wgsl");
+            let tpl = include_str!("../shaders/dequant_template.wgsl");
             let gate_fns = tpl.replace("$W", "gate_words").replace("$S", "_gate");
             let up_fns = tpl.replace("$W", "up_words").replace("$S", "_up");
-            let base = include_str!("shaders/fused_ffn.wgsl");
+            let base = include_str!("../shaders/fused_ffn.wgsl");
             // Inject the per-role dequant math at the marker (between shared helpers and
             // the entry point) so declarations precede their uses.
             let src = base.replace(
