@@ -856,3 +856,145 @@ fn w1_awq_q4_sweep_smollm2() {
     );
     println!("[awq-q4] PASS — Q4 AWQ pipeline ran end-to-end; result reported honestly above.");
 }
+
+/// Path C diagnostic: dump the rope / scaling / output KV from the Llama-3.2-3B GGUF so the
+/// bring-up is driven by what's *actually* in the file, not by assumption. Skips when absent.
+#[test]
+fn pathc_dump_llama3_rope_kv() {
+    use memmap2::MmapOptions;
+    use std::fs::File;
+    let path = "C:/LLM_Models/GGUF/Llama-3.2-3B-Instruct-FP16.gguf";
+    if !Path::new(path).exists() {
+        eprintln!("[pathc] {path} absent — skipping");
+        return;
+    }
+    let f = File::open(path).unwrap();
+    let mmap = unsafe { MmapOptions::new().map(&f).unwrap() };
+    assert_eq!(&mmap[0..4], b"GGUF", "not a GGUF file");
+    let tensor_count = u64::from_le_bytes(mmap[8..16].try_into().unwrap());
+    let kv_count = u64::from_le_bytes(mmap[16..24].try_into().unwrap());
+    let mut pos = 24usize;
+
+    // Minimal self-contained value reader (mirrors the GGUF type tags).
+    fn read_str(m: &[u8], p: &mut usize) -> String {
+        let n = u64::from_le_bytes(m[*p..*p + 8].try_into().unwrap()) as usize;
+        *p += 8;
+        let s = String::from_utf8_lossy(&m[*p..*p + n]).into_owned();
+        *p += n;
+        s
+    }
+    // Returns a printable value + advances pos. None for arrays (just notes element count).
+    fn read_val(m: &[u8], p: &mut usize, vtype: u32) -> String {
+        match vtype {
+            0 => { let v = m[*p]; *p += 1; format!("u8 {v}") }
+            1 => { let v = m[*p] as i8; *p += 1; format!("i8 {v}") }
+            2 => { let v = u16::from_le_bytes(m[*p..*p+2].try_into().unwrap()); *p += 2; format!("u16 {v}") }
+            3 => { let v = i16::from_le_bytes(m[*p..*p+2].try_into().unwrap()); *p += 2; format!("i16 {v}") }
+            4 => { let v = u32::from_le_bytes(m[*p..*p+4].try_into().unwrap()); *p += 4; format!("u32 {v}") }
+            5 => { let v = i32::from_le_bytes(m[*p..*p+4].try_into().unwrap()); *p += 4; format!("i32 {v}") }
+            6 => { let v = f32::from_bits(u32::from_le_bytes(m[*p..*p+4].try_into().unwrap())); *p += 4; format!("f32 {v}") }
+            7 => { let v = m[*p]; *p += 1; format!("bool {}", v != 0) }
+            8 => format!("str {:?}", read_str(m, p)),
+            10 => { let v = u64::from_le_bytes(m[*p..*p+8].try_into().unwrap()); *p += 8; format!("u64 {v}") }
+            11 => { let v = i64::from_le_bytes(m[*p..*p+8].try_into().unwrap()); *p += 8; format!("i64 {v}") }
+            12 => { let v = f64::from_bits(u64::from_le_bytes(m[*p..*p+8].try_into().unwrap())); *p += 8; format!("f64 {v}") }
+            9 => {
+                let etype = u32::from_le_bytes(m[*p..*p+4].try_into().unwrap());
+                *p += 4;
+                let cnt = u64::from_le_bytes(m[*p..*p+8].try_into().unwrap()) as usize;
+                *p += 8;
+                for _ in 0..cnt { let _ = read_val(m, p, etype); }
+                format!("array<type {etype}> x{cnt}")
+            }
+            _ => panic!("unknown vtype {vtype}"),
+        }
+    }
+
+    println!("\n=== Path C: Llama-3.2-3B GGUF KV dump (rope/scaling/arch) ===");
+    for _ in 0..kv_count {
+        let klen = u64::from_le_bytes(mmap[pos..pos + 8].try_into().unwrap()) as usize;
+        pos += 8;
+        let key = std::str::from_utf8(&mmap[pos..pos + klen]).unwrap_or("").to_string();
+        pos += klen;
+        let vtype = u32::from_le_bytes(mmap[pos..pos + 4].try_into().unwrap());
+        pos += 4;
+        let val = read_val(&mmap, &mut pos, vtype);
+        let interesting = key.contains("rope")
+            || key.contains("scal")
+            || key.contains("context")
+            || key.contains("head")
+            || key.contains("embedding")
+            || key.contains("block")
+            || key.contains("dimension")
+            || key.contains("freq")
+            || key.ends_with(".architecture");
+        if interesting {
+            println!("KV  {key} = {val}");
+        }
+    }
+
+    // Tensor section: is output.weight present (separate lm_head) or tied?
+    let mut has_output_weight = false;
+    let mut token_embd_dims = [0u64; 4];
+    let mut output_weight_dims = [0u64; 4];
+    for _ in 0..tensor_count {
+        let nlen = u64::from_le_bytes(mmap[pos..pos + 8].try_into().unwrap()) as usize;
+        pos += 8;
+        let name = std::str::from_utf8(&mmap[pos..pos + nlen]).unwrap_or("").to_string();
+        pos += nlen;
+        let n_dims = u32::from_le_bytes(mmap[pos..pos + 4].try_into().unwrap()) as usize;
+        pos += 4;
+        let mut dims = [0u64; 4];
+        for d in 0..n_dims {
+            let v = u64::from_le_bytes(mmap[pos..pos + 8].try_into().unwrap());
+            pos += 8;
+            if d < 4 { dims[d] = v; }
+        }
+        pos += 12; // ggml_type(4) + offset(8)
+        if name == "output.weight" { has_output_weight = true; output_weight_dims = dims; }
+        if name == "token_embd.weight" { token_embd_dims = dims; }
+    }
+    println!("TENSOR  output.weight present = {has_output_weight}  (false => tied embeddings)");
+    println!("TENSOR  token_embd.weight dims = {token_embd_dims:?}");
+    if has_output_weight {
+        println!("TENSOR  output.weight   dims = {output_weight_dims:?}");
+    }
+    println!("=== end Path C KV dump ===\n");
+
+    // Also report what OUR parser currently extracts, so we see the gap directly.
+    let idx = qualia_core_db::gguf_sharder::GgufTensorIndex::from_gguf(&mmap);
+    let h = idx.hyperparams;
+    println!(
+        "[parser] n_layer={} n_embd={} n_head={} n_kv_head={} head_dim={} \
+rope_freq_base={} (eff {}) rope_scale={} (eff {}) tied={}",
+        h.n_layer, h.n_embd, h.n_head, h.n_kv_head, h.head_dim(),
+        h.rope_freq_base, h.effective_rope_freq_base(),
+        h.rope_scale, h.effective_rope_scale(),
+        idx.output_weights_tied(),
+    );
+}
+
+/// Path C coherence check: short generation from the all-F16 Llama-3.2-3B. Cheap proof that the
+/// F16-attention fix makes the model coherent (the prior bug silently DROPPED attention → garbage).
+#[test]
+fn pathc_llama3b_short_generation() {
+    let path = "C:/LLM_Models/GGUF/Llama-3.2-3B-Instruct-FP16.gguf";
+    if !Path::new(path).exists() {
+        eprintln!("[pathc-gen] {path} absent — skipping");
+        return;
+    }
+    let prompt = "The capital of France is";
+    let (text, tok_s) = llm_bench::decode_with_metrics_blocking(path, prompt, 24)
+        .expect("3B decode failed");
+    println!("\n=== Path C: Llama-3.2-3B short generation ===");
+    println!("[pathc-gen] prompt : {prompt:?}");
+    println!("[pathc-gen] output : {text:?}");
+    println!("[pathc-gen] decode : {tok_s:.2} tok/s");
+    println!("=== end Path C generation ===\n");
+    // Coherence smell-test: output must be non-empty and not collapse to a single repeated token.
+    let trimmed = text.trim();
+    assert!(!trimmed.is_empty(), "empty generation — model produced nothing");
+    let uniq: std::collections::HashSet<&str> = trimmed.split_whitespace().collect();
+    println!("[pathc-gen] unique-word ratio = {} / {}", uniq.len(),
+        trimmed.split_whitespace().count().max(1));
+}

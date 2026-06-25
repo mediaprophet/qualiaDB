@@ -426,11 +426,16 @@ fn ggml_gpu_quant_supported(ggml_type: u32) -> bool {
 }
 
 /// Weight types implemented in `fused_attention.wgsl` / `fused_transformer.wgsl` dequant.
+/// F16 added for the all-F16 Llama-3.2 family: without it `dispatch_attention_layer` returned
+/// `None` and (because attn_q/k/v are present, skipping the `attn_output`-only fallback) attention
+/// was silently dropped from every block — coherent-looking run, garbage logits. Mirrors the #49
+/// Q8_0 widening. `fused_attention.wgsl::dequant_f16_weight` is the matching shader-side path.
 #[inline]
 fn ggml_gpu_attention_shader_supported(ggml_type: u32) -> bool {
     matches!(
         ggml_type,
-        crate::ggml_quants::GGML_TYPE_Q4_0
+        crate::ggml_quants::GGML_TYPE_F16
+            | crate::ggml_quants::GGML_TYPE_Q4_0
             | crate::ggml_quants::GGML_TYPE_Q5_0
             | crate::ggml_quants::GGML_TYPE_Q8_0
             | crate::ggml_quants::GGML_TYPE_Q4_K
