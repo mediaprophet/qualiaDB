@@ -7,7 +7,10 @@ use std::collections::HashMap;
 // Canonical bit positions live in the FrameLayout ABI (single source of truth).
 pub use crate::frame_layout::{CONTROL_BIT, FEEDBACK_BIT, STABILIZATION_BIT};
 
-use super::epistemic_boundaries::{identify_degradation_vector, degrade_claim_to_socratic, SocraticDegradation, DegradationVector};
+use super::epistemic_boundaries::{
+    identify_degradation_vector, degrade_claim_to_socratic, detect_referral_trigger,
+    detect_referral_by_severity, SocraticDegradation, DegradationVector, ReferralTrigger,
+};
 
 /// Filters definitive claims through the Linguistic Degradation Matrix
 pub fn enforce_linguistic_degradation(claim_quin: &NQuin) -> Option<SocraticDegradation> {
@@ -16,6 +19,20 @@ pub fn enforce_linguistic_degradation(claim_quin: &NQuin) -> Option<SocraticDegr
         return degrade_claim_to_socratic(vector);
     }
     None
+}
+
+/// Guided Referral Trigger: the **overriding** gate that runs *before* the Linguistic
+/// Degradation Matrix. If a claim crosses a high-liability threshold — either an explicit
+/// acute-harm / imminent-jeopardy predicate, or an analytical vector whose `metadata`
+/// severity meets the referral floor — it returns an overriding referral that must be
+/// surfaced ahead of any analysis. `None` means "no override; degrade as normal".
+pub fn enforce_guided_referral(claim_quin: &NQuin) -> Option<ReferralTrigger> {
+    // 1. Explicit high-liability predicate.
+    if let Some(t) = detect_referral_trigger(claim_quin) {
+        return Some(t);
+    }
+    // 2. Severity escalation of an otherwise-analytical claim.
+    detect_referral_by_severity(identify_degradation_vector(claim_quin), claim_quin.metadata)
 }
 
 /// Control system state for feedback loops

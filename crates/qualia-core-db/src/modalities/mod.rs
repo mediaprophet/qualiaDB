@@ -31,7 +31,10 @@ pub use epistemic::{
 };
 pub mod epistemic_boundaries;
 pub use epistemic_boundaries::{
-    DegradationVector, SocraticDegradation, identify_degradation_vector, degrade_claim_to_socratic
+    DegradationVector, SocraticDegradation, identify_degradation_vector, degrade_claim_to_socratic,
+    ReferralDomain, ReferralTrigger, detect_referral_trigger, detect_referral_by_severity,
+    forbids_definitive_classification, requires_physiological_quarantine,
+    BIO_DISCLAIMER, LEGAL_DISCLAIMER, EMERGENCY_PROMPT, LEGAL_JEOPARDY_PROMPT,
 };
 pub mod graph_theory;
 pub use graph_theory::{
