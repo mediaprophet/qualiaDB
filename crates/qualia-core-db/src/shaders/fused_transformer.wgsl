@@ -32,6 +32,7 @@ const GGML_TYPE_Q5_0: u32 = 6u;
 const GGML_TYPE_Q8_0: u32 = 8u;
 const GGML_TYPE_Q4_K: u32 = 12u;
 const GGML_TYPE_Q6_K: u32 = 14u;
+const GGML_TYPE_F16: u32 = 1u;
 
 fn read_u8_weight(abs_byte: u32) -> u32 {
     let word = abs_byte >> 2u;
@@ -73,6 +74,9 @@ fn weight_row_bytes() -> u32 {
     }
     if params.weight_ggml_type == GGML_TYPE_Q4_K {
         return (params.weight_row_elems / BLOCK_Q4K_ELEMS) * BLOCK_Q4K_BYTES;
+    }
+    if params.weight_ggml_type == GGML_TYPE_F16 {
+        return params.weight_row_elems * 2u;
     }
     return (params.weight_row_elems / BLOCK_Q6K_ELEMS) * BLOCK_Q6K_BYTES;
 }
@@ -220,7 +224,18 @@ fn dequant_q8_0_weight(row: u32, col: u32) -> f32 {
     return d * f32(q);
 }
 
+// f16 weights: row-major IEEE half-floats, 2 bytes each. `unpack2x16float` is the core-WGSL
+// hardware half->f32 path (one u32 read yields two weights); no SHADER_F16 device feature required.
+fn dequant_f16_weight(row: u32, col: u32) -> f32 {
+    let elem = row * params.weight_row_elems + col; // linear half index
+    let pair = unpack2x16float(weight_words[elem >> 1u]);
+    return select(pair.x, pair.y, (elem & 1u) == 1u);
+}
+
 fn dequant_weight(row: u32, col: u32) -> f32 {
+    if params.weight_ggml_type == GGML_TYPE_F16 {
+        return dequant_f16_weight(row, col);
+    }
     if params.weight_ggml_type == GGML_TYPE_Q4_0 {
         return dequant_q4_0_weight(row, col);
     }

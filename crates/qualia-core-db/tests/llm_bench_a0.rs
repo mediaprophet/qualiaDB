@@ -642,6 +642,31 @@ fn w3_gemm_parity_gpu_vs_cpu() {
     }
 }
 
+/// W3/F16 — verify the NEW F16 GPU GEMM path (`unpack2x16float`) matches the CPU `dequant_f16`
+/// reference on identical synthetic F16 weights. Proves FP16 models can run on-GPU correctly (the
+/// fix for the slow F16-on-CPU fallback). W2 profiler witnesses the GPU actually ran. Needs a GPU.
+/// Run: `cargo test -p qualia-core-db --release --test llm_bench_a0 w3_gemm_parity_f16 -- --nocapture`.
+#[test]
+fn w3_gemm_parity_f16_gpu_vs_cpu() {
+    use qualia_core_db::llm_bench::gemm_parity_probe_f16_blocking;
+    match gemm_parity_probe_f16_blocking(256, 64, 0x00F16F16) {
+        Ok((max_abs, mean_abs, max_ulp, gpu_calls)) => {
+            println!("\n=== W3/F16 GEMM parity (F16, 256x64, A2000) ===");
+            println!("[w3-f16] gpu gemm passes profiled = {gpu_calls} (>0 ⇒ real GPU F16 path)");
+            println!("[w3-f16] max_abs_err = {max_abs:.3e}   mean_abs_err = {mean_abs:.3e}   max_ulp = {max_ulp}");
+            assert!(gpu_calls > 0, "GPU F16 GEMM did not execute (fell back to CPU)");
+            assert!(
+                max_abs.is_finite() && max_abs < 1e-2,
+                "GPU↔CPU F16 GEMM divergence too large: max_abs_err={max_abs:e}"
+            );
+            println!("[w3-f16] PASS — GPU F16 GEMM matches CPU dequant_f16 within {max_abs:.3e}");
+        }
+        Err(e) => {
+            eprintln!("[w3-f16] skipped (engine/GPU init failed): {e}");
+        }
+    }
+}
+
 /// W1 — teacher-forced perplexity oracle, validated on a real model. PPL of the Q8_0 reference vs the
 /// Q4_K_M candidate over the eval corpus → a real ΔPPL. Proves the oracle produces sane numbers (fast,
 /// SmolLM2-360M, GPU). Skips if models absent. Run: `cargo test -p qualia-core-db --release --test

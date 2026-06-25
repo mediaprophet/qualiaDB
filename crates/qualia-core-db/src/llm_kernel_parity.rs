@@ -103,6 +103,25 @@ pub fn quantize_q8_0_from_f32(weights: &[f32], out: &mut [u8]) -> bool {
     true
 }
 
+/// Bytes needed to hold `n_elems` weights as little-endian IEEE F16 (2 bytes each).
+pub fn f16_bytes(n_elems: usize) -> usize {
+    n_elems * 2
+}
+
+/// Encode `weights` (f32) as little-endian IEEE F16 into `out` (>= `f16_bytes(weights.len())`).
+/// The exact byte layout `dequant_f16` / the GPU `unpack2x16float` path consume.
+pub fn quantize_f16_from_f32(weights: &[f32], out: &mut [u8]) -> bool {
+    if out.len() < f16_bytes(weights.len()) {
+        return false;
+    }
+    for (i, &w) in weights.iter().enumerate() {
+        let h = half::f16::from_f32(w).to_le_bytes();
+        out[i * 2] = h[0];
+        out[i * 2 + 1] = h[1];
+    }
+    true
+}
+
 #[cfg(test)]
 mod tests {
     use super::*;
