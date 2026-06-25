@@ -12,10 +12,10 @@ to extensions. The bar is **correctness + real implementation + tests**, not zer
 
 | Module | LOC | State found | Plan |
 |--------|-----|-------------|------|
-| `lib.rs` | 252 | `todo!("Implement FFI bridge")` (core↔ext FFI unimplemented) | Implement the FFI marshalling. |
-| `snn_extension.rs` | 955 | mock synaptic input / mock weights / mock spike extraction / mock CRDT sync | Real LIF neuron dynamics + STDP + real sync semantics. |
-| `pinn_extension.rs` | 1135 | `mock_neural_forward` (fake Navier-Stokes/heat/Lorenz), "placeholder" | Real numerical physics forward + honest PINN residual; honest scope on training. |
-| `webgpu_extension.rs` | 710 | "Mock WebGPU execution"; mock velocity fields | Real CPU physics (and/or real wgpu where verifiable); honest GPU boundary. |
+| `lib.rs` | 252 | `todo!("Implement FFI bridge")` (core↔ext FFI unimplemented) | ✅ **DONE** — real C-ABI marshalling + free fn + tests. |
+| `snn_extension.rs` | 955 | mock synaptic input / mock weights / mock spike extraction / mock CRDT sync | ✅ **DONE** — real LIF + STDP + CRDT merge. |
+| `pinn_extension.rs` | 1135 | `mock_neural_forward` (fake Navier-Stokes/heat/Lorenz), "placeholder" | ✅ **DONE** — real ternary-MLP forward + real PDE residual. |
+| `webgpu_extension.rs` | 710 | "Mock WebGPU execution"; mock velocity fields | ✅ **DONE** — 6 real solvers (split into a module dir), analytic-validated. |
 | `qpu_extension.rs` | 472 | mock IBM/Google/Braket calls | **DEFERRED-TO-LAST** per §0.11 + boundary §H (QPU design directive). NOT touched in this pass. |
 
 ## Progress
@@ -55,5 +55,49 @@ Replaced with real event-driven dynamics + real CRDT merge:
   honestly falls back to the analytic reference (not a mock) until it is wired.
 - Tests: real MLP forward (W·x), heat reference is unit at origin, Lorenz advances by RK4, and the headline —
   the heat fundamental solution yields a **near-zero PDE residual** (proving the residual is real PDE math).
+
+### `webgpu_extension.rs` — DE-MOCKED + LIBRARY-IZED (2026-06-25)
+
+The extension was a mock: `execute_webgpu_computation` returned analytic fake fields that ignored the inputs
+and the time-stepping; the perf metrics were invented constants (`tflops 1.5`, `gpu_utilization 85%`); the
+3D Maxwell shader's `compute_curl_e` returned `vec3(0)`; and four of the six advertised operations
+(`compute_heat_transfer`, `propagate_waves`, `simulate_particles`, `tensor_operations`) were unwired
+(`OperationNotSupported`). Replaced with **six real solvers**, each validated against an exact analytic
+solution, and split into a module directory (`webgpu_extension/{mod,shaders,fluid,electromagnetics,heat,wave,particles,tensor}.rs`)
+per the big-file rule (CLAUDE.md §10):
+
+- **fluid** — incompressible 2D Navier–Stokes by **Chorin projection** (advect+diffuse → pressure-Poisson
+  Jacobi → project). Reproduces the **Taylor–Green vortex** `exp(-2νt)` decay to ~0.1%; the projected field is
+  divergence-free; the inviscid vortex is conserved.
+- **electromagnetics** — **1D Yee FDTD** (`Ey`/`Hz` staggered leapfrog, fixed Maxwell sign convention). An
+  impedance-matched pulse propagates at exactly `c`; lossless energy stays bounded; a conductive medium
+  dissipates energy.
+- **heat** — 2D explicit diffusion. The `sin·sin` Laplacian eigenmode decays at `exp(-2αt)`.
+- **wave** — 2D leapfrog wave equation. The standing wave inverts at `T/2` (strong anti-correlation with IC)
+  and is CFL-stable over long runs.
+- **particles** — gravitational **N-body, velocity-Verlet** (symplectic). Total energy conserved <1%; a
+  two-body orbit stays bounded.
+- **tensor** — exact dense GEMM. Verified products incl. rectangular shapes.
+
+Perf metrics are now **measured** (time / FLOP-rate / bandwidth); `gpu_utilization` is honestly `0` on the CPU
+reference path. The WGSL is kept as the **GPU kernel spec** (corrected: true `dx`/`h²`, completed `curl`); the
+CPU solvers are the verifiable reference (matching the core engine's CPU-reference pattern), and GPU dispatch
+routes through the core's shared `wgpu` device rather than a second device here. 18 solver tests + the full
+suite green.
+
+### `lib.rs` FFI bridge — IMPLEMENTED (2026-06-25)
+
+`extension_manager_execute_job` was `todo!("Implement FFI bridge")`. Implemented the full C-ABI marshalling:
+UTF-8 job fields + JSON `parameters` → `ExtensionJob`, run on a process-wide Tokio runtime, return the
+JSON-serialised `ExtensionResult` (success) or an error message. Added `extension_result_free` to release the
+heap buffers and made the `CExtensionJob`/`CExtensionResult` fields `pub`. Null pointers, bad UTF-8, unknown
+extensions and malformed JSON all **fail closed** with an error message instead of panicking. 4 FFI tests
+(real round-trip via webgpu, unknown extension, null manager, bad JSON).
+
+## Status
+
+**qualia-extensions de-mock COMPLETE** except `qpu_extension.rs` (deferred-to-last per §0.11 + QPU design
+directive, boundary §H). Whole-crate suite: **39/39 lib tests green**; bins build. Commits: snn `575046aa9`,
+pinn `f839a7ba9`, webgpu `5558e5dd3`, FFI `3851c163b`.
 
 
