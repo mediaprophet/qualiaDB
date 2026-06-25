@@ -52,8 +52,13 @@ pub fn decode_budget_override() -> u32 {
 }
 
 // ── A1a GPU top-k toggle (D18) ────────────────────────────────────────────────
-// Additive, default-OFF: routes the output projection through the GPU top-k path
-// (keep logits on-GPU, read back K pairs) instead of the full-logit-readback argmax.
+// Default-OFF — and the A/B (perf_topk_ab_smollm2) proves WHY flipping it on is NOT the win the
+// Codex review implied: (1) dispatch_output_topk_chunked gates on the NARROW ggml_gpu_quant_supported
+// (Q4_K/Q6_K only), so for Q8_0/F16/Q4_0 models top-k returns None and silently falls to argmax
+// (topk_hits=0 measured); and (2) even fully engaged, the output projection is only ~6 of ~120
+// submit→wait round-trips/token — the per-LAYER attention+FFN ops are the real ~110. So top-k is at
+// best a ~5% lever; the win is layer-forward residency/fusion (cut waits/token), not this flag.
+// Kept toggleable for when the gate+shader support the wider quant set. `QUALIA_LLM_GPU_TOPK=1/0`.
 static GPU_TOPK: AtomicBool = AtomicBool::new(false);
 
 /// Enable/disable the GPU top-k decode path (`QUALIA_LLM_GPU_TOPK`).
@@ -62,14 +67,44 @@ pub fn set_gpu_topk(on: bool) {
     GPU_TOPK.store(on, Ordering::Relaxed);
 }
 
-/// Whether the GPU top-k decode path is active (atomic flag OR the env var).
+/// Whether the GPU top-k decode path is active. The env var overrides the flag in BOTH directions
+/// (`0`/`false` → off, `1`/`true` → on); otherwise the process default (ON) applies.
 #[inline]
 pub fn gpu_topk_enabled() -> bool {
-    GPU_TOPK.load(Ordering::Relaxed)
-        || matches!(
-            std::env::var("QUALIA_LLM_GPU_TOPK").ok().as_deref(),
-            Some("1") | Some("true")
-        )
+    match std::env::var("QUALIA_LLM_GPU_TOPK").ok().as_deref() {
+        Some("0") | Some("false") => false,
+        Some("1") | Some("true") => true,
+        _ => GPU_TOPK.load(Ordering::Relaxed),
+    }
+}
+
+// ── Output-projection path counters (Codex P0: make the chosen path visible) ───────────────────
+static TOPK_HITS: AtomicU64 = AtomicU64::new(0);
+static ARGMAX_FALLBACKS: AtomicU64 = AtomicU64::new(0);
+
+/// Decode loop: the GPU top-k path produced the next token.
+#[inline]
+pub fn record_topk_hit() {
+    TOPK_HITS.fetch_add(1, Ordering::Relaxed);
+}
+/// Decode loop: fell back to the full-logit-readback argmax path.
+#[inline]
+pub fn record_argmax_fallback() {
+    ARGMAX_FALLBACKS.fetch_add(1, Ordering::Relaxed);
+}
+/// (top-k hits, argmax fallbacks) since the last reset.
+#[inline]
+pub fn output_path_counts() -> (u64, u64) {
+    (
+        TOPK_HITS.load(Ordering::Relaxed),
+        ARGMAX_FALLBACKS.load(Ordering::Relaxed),
+    )
+}
+/// Reset the output-projection path counters.
+#[inline]
+pub fn reset_output_path_counts() {
+    TOPK_HITS.store(0, Ordering::Relaxed);
+    ARGMAX_FALLBACKS.store(0, Ordering::Relaxed);
 }
 
 // ── A1b ternary-FFN toggle (D3/D7) ────────────────────────────────────────────
@@ -94,6 +129,57 @@ pub fn ternary_ffn_enabled() -> bool {
             std::env::var("QUALIA_LLM_TERNARY_FFN").ok().as_deref(),
             Some("1") | Some("true")
         )
+}
+
+// ── Phase 2: resident weights toggle ──────────────────────────────────────────
+// Default ON (native). Each layer's q/k/v/o/gate/up/down weight is uploaded to its own resident
+// VRAM buffer once (keyed by the GGUF tensor byte_offset) and reused every token, instead of
+// re-`write_buffer`ing the (up to ~50 MB for a 3B FFN tensor) weight into the shared GEMM buffer
+// on every GEMM, every token. For a 3B F16 model that re-upload is ~5 GB/token of PCIe traffic —
+// the decode bottleneck. Set `QUALIA_LLM_RESIDENT_WEIGHTS=0` to force the per-token re-upload (the
+// A/B OFF baseline) — useful for measuring the win or on VRAM-constrained GPUs.
+static RESIDENT_WEIGHTS: AtomicBool = AtomicBool::new(true);
+
+/// Enable/disable the resident per-tensor weight buffers (`QUALIA_LLM_RESIDENT_WEIGHTS`).
+#[inline]
+pub fn set_resident_weights(on: bool) {
+    RESIDENT_WEIGHTS.store(on, Ordering::Relaxed);
+}
+
+/// Whether native GEMM should bind resident per-tensor weight buffers (upload-once) rather than
+/// re-uploading the weight every token. Env forces either direction; otherwise the atomic flag.
+#[inline]
+pub fn resident_weights_enabled() -> bool {
+    match std::env::var("QUALIA_LLM_RESIDENT_WEIGHTS").ok().as_deref() {
+        Some("0") | Some("false") => false,
+        Some("1") | Some("true") => true,
+        _ => RESIDENT_WEIGHTS.load(Ordering::Relaxed),
+    }
+}
+
+// ── Phase 3: FFN fusion toggle ────────────────────────────────────────────────
+// Default ON (native). Runs the whole pre-norm FFN — gate GEMM, up GEMM, GPU SiLU·mul,
+// down GEMM — in ONE command submit with intermediates kept in VRAM, so a layer costs ONE
+// submit→wait round-trip instead of three (the gate/up/down readbacks + CPU SiLU·mul between
+// them). Requires resident weights (it binds resident weight buffers); falls back to the
+// per-GEMM path when resident is off or a tensor is GPU-ineligible. `QUALIA_LLM_FFN_FUSION=0`
+// forces the per-GEMM path (the A/B OFF baseline).
+static FFN_FUSION: AtomicBool = AtomicBool::new(true);
+
+/// Enable/disable the fused single-submit FFN path (`QUALIA_LLM_FFN_FUSION`).
+#[inline]
+pub fn set_ffn_fusion(on: bool) {
+    FFN_FUSION.store(on, Ordering::Relaxed);
+}
+
+/// Whether the native FFN should run fused (one submit/layer) rather than three GEMM round-trips.
+#[inline]
+pub fn ffn_fusion_enabled() -> bool {
+    match std::env::var("QUALIA_LLM_FFN_FUSION").ok().as_deref() {
+        Some("0") | Some("false") => false,
+        Some("1") | Some("true") => true,
+        _ => FFN_FUSION.load(Ordering::Relaxed),
+    }
 }
 
 // ── #48 correctness path: CPU attention reference ─────────────────────────────

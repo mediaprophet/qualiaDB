@@ -998,3 +998,136 @@ fn pathc_llama3b_short_generation() {
     println!("[pathc-gen] unique-word ratio = {} / {}", uniq.len(),
         trimmed.split_whitespace().count().max(1));
 }
+
+/// Path C lever check: decode the SAME 3B model quantized to Q4_K (~0.5 B/weight vs F16's 2 B) —
+/// the bandwidth-bound decode should be markedly faster than the F16 baseline, isolating "less
+/// memory to read" as the real throughput lever (resident weights + FFN fusion both apply to Q4_K).
+#[test]
+fn pathc_llama3b_q4k_generation() {
+    let path = "C:/LLM_Models/GGUF/hugging-quants/Llama-3.2-3B-Instruct-Q4_K_M-GGUF/llama-3.2-3b-instruct-q4_k_m.gguf";
+    if !Path::new(path).exists() {
+        eprintln!("[pathc-q4k] {path} absent — skipping");
+        return;
+    }
+    let prompt = "The capital of France is";
+    let (text, tok_s) = llm_bench::decode_with_metrics_blocking(path, prompt, 24)
+        .expect("3B Q4_K decode failed");
+    println!("\n=== Path C: Llama-3.2-3B Q4_K_M generation ===");
+    println!("[pathc-q4k] prompt : {prompt:?}");
+    println!("[pathc-q4k] output : {text:?}");
+    println!("[pathc-q4k] decode : {tok_s:.2} tok/s");
+    println!("=== end Path C Q4_K generation ===\n");
+    assert!(!text.trim().is_empty(), "empty generation");
+}
+
+/// Path C bottleneck attribution: profile the 3B decode to settle (a) vs (b). Reports the per-kernel
+/// GPU split (Gemm vs Attention — does the F16 projection dominate?) AND the per-token submit→wait
+/// round-trip count (is decode sync-bound rather than kernel-bound?). Data, not assumption.
+#[test]
+fn pathc_3b_gpu_bottleneck_profile() {
+    use qualia_core_db::gguf_bridge::{gpu_wait_count, reset_gpu_wait_count};
+    use qualia_core_db::llm_bench::decode_with_metrics_blocking;
+    use qualia_core_db::llm_gpu_profiler as gprof;
+
+    let path_owned = std::env::var("QUALIA_LLM_PROFILE_MODEL")
+        .unwrap_or_else(|_| "C:/LLM_Models/GGUF/Llama-3.2-3B-Instruct-FP16.gguf".to_string());
+    let path = path_owned.as_str();
+    if !Path::new(path).exists() {
+        eprintln!("[pathc-prof] {path} absent — skipping");
+        return;
+    }
+    let ctx = qualia_core_db::gpu_context::shared_gpu();
+    if !ctx.timestamps_supported {
+        eprintln!("[pathc-prof] adapter lacks TIMESTAMP_QUERY — skipping");
+        return;
+    }
+
+    const DECODE_TOK: u32 = 12;
+    gprof::set_enabled(true);
+    gprof::reset();
+    reset_gpu_wait_count();
+
+    let t0 = std::time::Instant::now();
+    let (_text, tok) = decode_with_metrics_blocking(path, "The capital of France is", DECODE_TOK)
+        .expect("3B decode failed");
+    let wall = t0.elapsed();
+
+    let snap = gprof::snapshot();
+    let waits = gpu_wait_count();
+    gprof::set_enabled(false);
+
+    let total_ns: u64 = snap.iter().map(|t| t.total_ns).sum();
+    println!("\n=== Path C: Llama-3.2-3B decode bottleneck profile (A2000) ===");
+    println!("[pathc-prof] decode = {tok:.2} tok/s (PROFILING-PERTURBED) · wall = {:.1}s · {DECODE_TOK} tok", wall.as_secs_f64());
+    println!("[pathc-prof] --- GPU kernel split (timestamp-attributed) ---");
+    for t in &snap {
+        let pct = if total_ns > 0 { 100.0 * t.total_ns as f64 / total_ns as f64 } else { 0.0 };
+        println!("[pathc-prof]   {:<12} {:>12.1} us  {:>7} calls  ({:>4.1}% of instrumented GPU)",
+            t.phase.label(), t.micros(), t.calls, pct);
+    }
+    println!("[pathc-prof]   {:<12} {:>12.1} us  (sum of instrumented GPU passes)", "TOTAL_GPU", total_ns as f64 / 1000.0);
+    println!("[pathc-prof] --- sync attribution ---");
+    println!("[pathc-prof]   submit->wait round-trips = {waits}  (~{:.1} per decode token)", waits as f64 / DECODE_TOK as f64);
+    let kernel_ms = total_ns as f64 / 1_000_000.0;
+    let wall_ms = wall.as_secs_f64() * 1000.0;
+    println!("[pathc-prof]   instrumented GPU kernel = {kernel_ms:.0} ms  vs  wall = {wall_ms:.0} ms  -> non-kernel (sync+CPU+mount) = {:.0} ms", (wall_ms - kernel_ms).max(0.0));
+    println!("=== end Path C profile ===\n");
+    assert!(gprof::any_recorded(), "no GPU timestamps recorded");
+}
+
+/// Codex P0 #2: A/B the GPU top-k output projection vs the argmax full-logit-readback fallback, on
+/// the fast benchmark model (SmolLM2-360M Q8). Reports decode tok/s + GPU submit→wait round-trips +
+/// path counters for each, so the win is measured, not assumed. Run:
+/// `cargo test -p qualia-core-db --release --test llm_bench_a0 perf_topk_ab_smollm2 -- --nocapture`.
+#[test]
+fn perf_topk_ab_smollm2() {
+    use qualia_core_db::gguf_bridge::{gpu_wait_count, reset_gpu_wait_count};
+    use qualia_core_db::llm_bench::{
+        self, decode_with_metrics_blocking, output_path_counts, reset_output_path_counts,
+        set_gpu_topk,
+    };
+
+    let Some(path) = find_model("smollm2-360m-instruct-q8_0.gguf")
+        .or_else(|| find_model("SmolLM2-360M-Instruct-Q4_K_M.gguf"))
+    else {
+        eprintln!("[topk-ab] SmolLM2 absent — skipping");
+        return;
+    };
+    let model = path.to_string_lossy().to_string();
+    let prompt = "The capital of France is";
+    const DECODE_TOK: u32 = 32;
+
+    // Env override would mask set_gpu_topk; require it unset for a clean A/B.
+    if std::env::var("QUALIA_LLM_GPU_TOPK").is_ok() {
+        eprintln!("[topk-ab] QUALIA_LLM_GPU_TOPK is set — unset it for the A/B; skipping");
+        return;
+    }
+
+    let run = |label: &str, topk: bool| -> (f64, u64, (u64, u64)) {
+        set_gpu_topk(topk);
+        reset_gpu_wait_count();
+        reset_output_path_counts();
+        let (_t, tok) = decode_with_metrics_blocking(&model, prompt, DECODE_TOK)
+            .unwrap_or_else(|e| panic!("[topk-ab] {label} decode failed: {e}"));
+        let waits = gpu_wait_count();
+        let counts = output_path_counts();
+        println!(
+            "[topk-ab] {label:<10} decode = {tok:5.2} tok/s · waits = {waits:>5} ({:.1}/tok) · topk_hits={} argmax_fallbacks={}",
+            waits as f64 / DECODE_TOK as f64, counts.0, counts.1
+        );
+        (tok, waits, counts)
+    };
+
+    println!("\n=== Codex P0 #2: GPU top-k A/B (SmolLM2-360M, {DECODE_TOK} decode tok) ===");
+    let (off_tps, off_waits, _off_c) = run("argmax-OFF", false);
+    let (on_tps, on_waits, _on_c) = run("topk-ON", true);
+    let speedup = if off_tps > 0.0 { on_tps / off_tps } else { 0.0 };
+    let wait_drop = off_waits as i64 - on_waits as i64;
+    println!(
+        "[topk-ab] RESULT: {off_tps:.2} -> {on_tps:.2} tok/s ({speedup:.2}x) · round-trips {off_waits} -> {on_waits} ({wait_drop:+} )"
+    );
+    // restore the process default (ON)
+    set_gpu_topk(true);
+    let _ = llm_bench::gpu_topk_enabled();
+    assert!(on_tps.is_finite() && on_tps > 0.0, "top-k decode produced no rate");
+}
