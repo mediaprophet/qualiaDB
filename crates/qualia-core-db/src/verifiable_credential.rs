@@ -18,6 +18,7 @@ use ed25519_dalek::{Signature, Signer, SigningKey, Verifier, VerifyingKey};
 use sha2::{Digest, Sha256};
 
 /// A credential: who attests, about whom, what, and for how long.
+#[derive(Debug, Clone)]
 pub struct Credential {
     /// The issuing agent's identifier.
     pub issuer: u64,
