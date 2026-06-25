@@ -107,7 +107,7 @@ pub fn generate_deontic_crs() -> Result<(ProvingKey<Bls12_381>, VerifyingKey<Bls
         policy_root: None,
         temporal_constraint: None,
     };
-    let mut rng = ark_std::rand::rngs::OsRng;
+    let mut rng = crate::zk_proofs::zk_secure_rng();
     Groth16::<Bls12_381>::circuit_specific_setup(circuit, &mut rng)
         .map_err(|e| format!("Failed to generate parameters: {e}"))
 }
@@ -125,7 +125,7 @@ mod tests {
     #[test]
     fn test_deontic_proof_roundtrip_and_soundness() {
         use ark_ff::UniformRand;
-        let mut rng = ark_std::rand::rngs::OsRng;
+        let mut rng = crate::zk_proofs::zk_secure_rng();
         let (pk, vk) = generate_deontic_crs().unwrap();
 
         // A satisfying credential: did + role + action == policy_root.

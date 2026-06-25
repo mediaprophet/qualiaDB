@@ -316,7 +316,7 @@ impl ZkProofSystem {
         {
             use ark_snark::SNARK;
             let circuit = self.circuit_builder.get_circuit(circuit_id)?;
-            let mut rng = ark_std::rand::thread_rng();
+            let mut rng = zk_secure_rng();
             
             let dynamic_circuit = arkworks_groth16::DynamicCircuit {
                 circuit: circuit.clone(),
@@ -376,7 +376,7 @@ impl ZkProofSystem {
         {
             use ark_snark::SNARK;
             let circuit = self.circuit_builder.get_circuit(circuit_id)?;
-            let mut rng = ark_std::rand::thread_rng();
+            let mut rng = zk_secure_rng();
             
             let dynamic_circuit = arkworks_groth16::DynamicCircuit {
                 circuit: circuit.clone(),
@@ -1194,6 +1194,18 @@ mod tests {
     }
 }
 
+/// Cross-platform secure RNG for Groth16 setup/proving. Replaces host-only `thread_rng()` / `OsRng`
+/// (absent on `wasm32-unknown-unknown`) with a getrandom-seeded `StdRng` — real OS entropy on native
+/// AND wasm (browser crypto via the `getrandom`/js backend), so the WASM-FULL portal/playground build
+/// (LLM-showcase pages) compiles. Same security posture as `OsRng` (CSPRNG seeded from OS entropy).
+#[cfg(feature = "zk-culling")]
+pub(crate) fn zk_secure_rng() -> ark_std::rand::rngs::StdRng {
+    use ark_std::rand::SeedableRng;
+    let mut seed = [0u8; 32];
+    getrandom_02::getrandom(&mut seed).expect("OS entropy for zk RNG seed");
+    ark_std::rand::rngs::StdRng::from_seed(seed)
+}
+
 #[cfg(feature = "zk-culling")]
 pub mod arkworks_groth16 {
     use ark_ff::Field;
@@ -1201,7 +1213,6 @@ pub mod arkworks_groth16 {
     use ark_bls12_381::{Bls12_381, Fr};
     use ark_groth16::{Groth16, ProvingKey, VerifyingKey, Proof};
     use ark_snark::SNARK;
-    use ark_std::rand::thread_rng;
 
     /// A real zero-knowledge circuit that proves knowledge of a pre-image
     /// for a simple equation: a * b = c
@@ -1351,14 +1362,14 @@ pub mod arkworks_groth16 {
 
     impl TrueZkSystem {
         pub fn setup() -> Result<Self, SynthesisError> {
-            let mut rng = thread_rng();
+            let mut rng = super::zk_secure_rng();
             let circuit = MultiplierCircuit::<Fr> { a: None, b: None };
             let (pk, vk) = Groth16::<Bls12_381>::circuit_specific_setup(circuit, &mut rng).unwrap();
             Ok(Self { pk, vk })
         }
 
         pub fn generate_proof(&self, a: Fr, b: Fr) -> Result<Proof<Bls12_381>, SynthesisError> {
-            let mut rng = thread_rng();
+            let mut rng = super::zk_secure_rng();
             let circuit = MultiplierCircuit { a: Some(a), b: Some(b) };
             Groth16::<Bls12_381>::prove(&self.pk, circuit, &mut rng)
         }
