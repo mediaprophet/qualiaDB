@@ -415,3 +415,25 @@ history); `ode_advanced.rs` and `tensor_integrity.rs` are new sibling modules so
 either (a) the GPU files pending your Q2 answer, or (b) move to DOMAINS — starting with `bioinformatics.rs`
 (real Smith-Waterman/k-mer; verify SIMD + genomic-privacy gating + phylogenetic-tree), triaging the
 boilerplate-mismatched bullets per §0.
+
+## 11 — DOMAINS start: bioinformatics.rs (2026-06-25)
+
+**Step / phase:** DOMAINS section, first file — `done`.
+
+**What was built (`d4afe4265`):** `domains/biological/bioinformatics.rs` — added `build_upgma_tree`, a
+bounded-memory UPGMA phylogenetic-tree builder (fixed `MAX_PHYLO_TAXA` stack arrays, no heap/recursion;
+n−1 `PhyloMerge` events, last = root). 2 tests (known 4-taxon nested tree + degenerate-input rejection);
+17/17 module tests green.
+
+**Verified (no code needed):** the other two bio items were already real — Smith-Waterman + Needleman-Wunsch
+(BLOSUM62/affine-gap, slice-based, no central dataset) + feature-gated SIMD fast-paths
+(`simd_align_x86_64`/`aarch64`); and the genomic-privacy boundary lives correctly in the governance layer
+(`epistemic_boundaries::requires_physiological_quarantine` flags genomic/physiological/health nquins for
+private-subgraph isolation; consent gating = `capacity.rs` signed delegation + deontic FORBID).
+
+**⚑ Where I need the human:** unchanged from §10 (GPU/SIMD test decision; FHE-over-ODE boundary confirmation;
+guardianship vocabulary). DOMAINS is large and mostly verify-and-triage (the boilerplate-mismatch pattern) —
+flagging that this section benefits from your steer on which domain files actually matter vs. mis-pasted bullets.
+
+**Next step:** continue DOMAINS triage (next files in `domains/`), or pivot to the GPU/SIMD MODALITIES tail
+if you answer the GPU question — your call.
