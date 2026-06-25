@@ -131,7 +131,7 @@
 //! Cache-line pressure is bounded: the `[u64; MAX_DEFEATER_SLOTS]` buffer fits in
 //! 8 × 64-byte cache lines; each `DeonticVerdict` is 64 bytes (one cache line).
 
-use crate::modalities::logic::n3_parser::{Rule, RuleType, Term};
+use crate::modalities::logic::n3_parser::{RuleType, Term};
 use crate::q_hash;
 use crate::NQuin;
 
@@ -487,39 +487,48 @@ fn term_uri_hash(term: &Term) -> Option<u64> {
     }
 }
 
-fn opcode_from_predicate_uri(uri: &str, rule_type: RuleType) -> (u8, bool) {
+// Canonical `values:` deontic operators. The registry stores a compiled rule
+// (hashes only - the predicate IRI string is gone), so the deontic opcode is
+// recovered by matching the premise predicate hash against these. Both the full
+// IRI and the CURIE token are listed, because `@prefix` is not expanded on the
+// parsed-from-file path (matching is by raw token via `q_hash`).
+const FORBID_HASHES: [u64; 2] = [
+    q_hash("https://ns.webcivics.net/values/forbids"),
+    q_hash("values:forbids"),
+];
+const PERMIT_HASHES: [u64; 2] = [
+    q_hash("https://ns.webcivics.net/values/permits"),
+    q_hash("values:permits"),
+];
+const OBLIGATE_HASHES: [u64; 4] = [
+    q_hash("https://ns.webcivics.net/values/requires"),
+    q_hash("values:requires"),
+    q_hash("https://ns.webcivics.net/values/obligates"),
+    q_hash("values:obligates"),
+];
+
+/// Classify a premise-predicate hash into a deontic opcode (+ defeater flag).
+///
+/// A `Defeater` (`^>`) rule is always a `q42:unless` permit-defeater. Otherwise a
+/// recognised `values:` operator picks the opcode; an unrecognised predicate
+/// falls back to the rule-type default (Strict/Linear => obligation, Defeasible =>
+/// permission), preserving behaviour for non-`values` contract predicates.
+fn opcode_from_predicate_hash(pred_hash: u64, rule_type: RuleType) -> (u8, bool) {
     if matches!(rule_type, RuleType::Defeater) {
         return (OP_PERMIT, true);
     }
-    let lower = uri.to_lowercase();
-    let is_obligate =
-        lower.contains("obligate") || lower.contains("must") || lower.contains("shall");
-    let is_permit = lower.contains("permit") || lower.contains("may") || lower.contains("can");
-    let is_forbid = lower.contains("forbid") || lower.contains("prohibit") || lower.contains("not");
-
+    if FORBID_HASHES.contains(&pred_hash) {
+        return (OP_FORBID, false);
+    }
+    if PERMIT_HASHES.contains(&pred_hash) {
+        return (OP_PERMIT, false);
+    }
+    if OBLIGATE_HASHES.contains(&pred_hash) {
+        return (OP_OBLIGATE, false);
+    }
     match rule_type {
-        RuleType::Strict | RuleType::Linear => {
-            if is_obligate {
-                (OP_OBLIGATE, false)
-            } else if is_forbid {
-                (OP_FORBID, false)
-            } else if is_permit {
-                (OP_PERMIT, false)
-            } else {
-                (OP_OBLIGATE, false)
-            }
-        }
-        RuleType::Defeasible => {
-            if is_permit {
-                (OP_PERMIT, false)
-            } else if is_forbid {
-                (OP_FORBID, false)
-            } else if is_obligate {
-                (OP_OBLIGATE, false)
-            } else {
-                (OP_PERMIT, false)
-            }
-        }
+        RuleType::Strict | RuleType::Linear => (OP_OBLIGATE, false),
+        RuleType::Defeasible => (OP_PERMIT, false),
         RuleType::Defeater => (OP_PERMIT, true),
     }
 }
@@ -541,12 +550,11 @@ pub fn compile_n3_rule_to_norm(
     let party = premise.subject.as_u64();
     let property_path = premise.predicate.as_u64();
     let action_object = premise.object.as_u64();
-    
-    // We cannot get predicate_uri from CompiledTerm because it's hashed.
-    // However, `opcode` can be matched based on `rule.rule_type` and we can default to OP_OBLIGATE.
-    // Or we can just use a dummy OP_OBLIGATE for now to fix the compiler error.
-    let (opcode, is_defeater) = opcode_from_predicate_uri("dummy", rule.rule_type);
-    
+
+    // Recover the deontic opcode from the premise predicate hash (the compiled
+    // rule no longer carries the IRI string).
+    let (opcode, is_defeater) = opcode_from_predicate_hash(property_path, rule.rule_type);
+
     Some(compile_norm_quin(
         party,
         opcode,

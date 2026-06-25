@@ -265,10 +265,16 @@ impl SlgArena {
         let rules = self.rule_registry.clone();
         let mut fired = 0usize;
         for rule in &rules {
-            if let Some(norm) =
-                crate::modalities::logic::deontic::compile_n3_rule_to_norm(rule, contract_hash, 0)
-            {
-                self.write_table(norm);
+            // Only ground rules compile to a single deontic norm; variable rules
+            // are grounded by forward-chaining (`fire_guard_rules`) below, so
+            // compiling them here would write a spurious norm keyed on a
+            // variable-name hash.
+            if !rule_has_variables(rule) {
+                if let Some(norm) =
+                    crate::modalities::logic::deontic::compile_n3_rule_to_norm(rule, contract_hash, 0)
+                {
+                    self.write_table(norm);
+                }
             }
             let mut opcodes = [SlgOpcode::Halt; 64];
             if let Ok(count) = crate::modalities::logic::n3_compiler::compile_rule_to_opcodes(rule, &mut opcodes) {
@@ -333,13 +339,20 @@ impl SlgArena {
                 if !rule_has_variables(rule) {
                     continue; // ground rules go through the deontic-norm path
                 }
-                if rule.premise.triples.is_empty() || rule.conclusion.triples.is_empty() {
+                // `triples` is a fixed `[_; 8]` array, so `.is_empty()` is always
+                // false - gate on the populated `len` instead.
+                if rule.premise.len == 0 || rule.conclusion.len == 0 {
                     continue;
                 }
                 let mut bindings = [(0u64, 0u64); MAX_RULE_VARS];
                 join_premise(
                     &rule.premise.triples[..rule.premise.len],
-                    &rule.conclusion.triples,
+                    // Slice the conclusion by `len` too: passing the full array
+                    // would stage (8 - len) junk (0,0,0) triples per match, which
+                    // - being skipped by `has_quin` (subject==0) - get re-asserted
+                    // every round, never reaching the fixpoint and flooding the
+                    // recent-write ring until real conclusions are evicted.
+                    &rule.conclusion.triples[..rule.conclusion.len],
                     &facts[..fact_count],
                     0,
                     &mut bindings,

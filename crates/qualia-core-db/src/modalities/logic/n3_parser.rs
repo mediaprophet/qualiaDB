@@ -214,8 +214,20 @@ impl<'a> Iterator for TripleTokenizer<'a> {
 
     fn next(&mut self) -> Option<&'a str> {
         let len = self.b.len();
-        while self.i < len && self.b[self.i].is_ascii_whitespace() {
-            self.i += 1;
+        // Skip whitespace and `#...\n` comments (a comment is only a comment when
+        // it starts a token - a `#` inside a `<...>` URI or string literal is
+        // consumed as part of that token below).
+        loop {
+            while self.i < len && self.b[self.i].is_ascii_whitespace() {
+                self.i += 1;
+            }
+            if self.i < len && self.b[self.i] == b'#' {
+                while self.i < len && self.b[self.i] != b'\n' {
+                    self.i += 1;
+                }
+                continue;
+            }
+            break;
         }
         if self.i >= len {
             return None;
@@ -595,6 +607,19 @@ fn split_rule(line: &str) -> Option<(Option<&str>, Option<f32>, RuleType, &str, 
     Some((id, weight, rule_type, premise, conclusion))
 }
 
+fn trim_leading_comment_lines(mut s: &str) -> &str {
+    loop {
+        let trimmed = s.trim_start();
+        let Some(rest) = trimmed.strip_prefix('#') else {
+            return trimmed;
+        };
+        let Some(newline) = rest.find('\n') else {
+            return "";
+        };
+        s = &rest[newline + 1..];
+    }
+}
+
 // ── Statement dispatchers (one per front-end) ───────────────────────────────
 
 enum BlockKind {
@@ -626,7 +651,7 @@ fn dispatch_statement_heap<'a, F>(stmt: &'a str, callback: &mut F) -> Result<(),
 where
     F: FnMut(N3Event<'a>) -> Result<(), N3ParserError>,
 {
-    let s = stmt.trim();
+    let s = trim_leading_comment_lines(stmt);
     if s.is_empty() {
         return Ok(());
     }
@@ -646,7 +671,7 @@ fn dispatch_statement_stack<'a, F>(stmt: &'a str, callback: &mut F) -> Result<()
 where
     F: FnMut(StackEvent<'a>) -> Result<(), N3ParserError>,
 {
-    let s = stmt.trim();
+    let s = trim_leading_comment_lines(stmt);
     if s.is_empty() {
         return Ok(());
     }
@@ -697,6 +722,36 @@ mod tests {
         assert_eq!(buf[0], Triple { subject: Term::Uri(":x"), predicate: Term::Uri(":p"), object: Term::Uri(":a") });
         assert_eq!(buf[1], Triple { subject: Term::Uri(":x"), predicate: Term::Uri(":p"), object: Term::Uri(":b") });
         assert_eq!(buf[2], Triple { subject: Term::Uri(":x"), predicate: Term::Uri(":q"), object: Term::Uri(":c") });
+    }
+
+    #[test]
+    fn leading_comment_before_rule_preserves_premise() {
+        let text = r#"
+# (G1) Corporate-capture guard.
+{ ?c a values:CorporatePerson ; values:claims ?r .
+  ?r a values:Right ; values:heldBy values:NaturalPerson
+} => { ?c values:flag values:PersonhoodCategoryError } .
+"#;
+        let mut rules = Vec::new();
+        let mut parser = N3Parser::new(text);
+        parser
+            .parse_all(|ev| {
+                if let N3Event::LogicRule(rule) = ev {
+                    rules.push(rule);
+                }
+                Ok(())
+            })
+            .unwrap();
+
+        assert_eq!(rules.len(), 1);
+        assert_eq!(rules[0].premise.triples.len(), 4);
+        assert_eq!(rules[0].conclusion.triples.len(), 1);
+        assert_eq!(rules[0].premise.triples[0].subject, Term::Variable("?c"));
+        assert_eq!(rules[0].premise.triples[0].predicate, Term::Uri("a"));
+        assert_eq!(
+            rules[0].premise.triples[0].object,
+            Term::Uri("values:CorporatePerson")
+        );
     }
 
     #[test]
