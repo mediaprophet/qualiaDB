@@ -25,9 +25,11 @@ are reached.
 
 ## B. Hard-invariant conflicts — cannot be done without changing a core invariant
 
-| Item | Conflict | Substitute / needed decision |
-|------|----------|------------------------------|
-| **`spatio_temporal.rs` — "exact floating-point geometric intersections for RCC-8"** | A 48-byte `NQuin` **cannot carry region-boundary geometry** (AGENTS.md / CLAUDE.md §8; memory `project-logic-modalities-activation` records RCC-8 as *unwireable*). | The jurisdiction-hierarchy subsumption (`deontic_compose::obligation_applies_in`) is the encodable spatial substitute. ⚑ **Decision:** change the NQuin layout to carry geometry, or accept the substitute? (NOT YET REACHED — will flag at `spatio_temporal`.) |
+**RESOLVED (2026-06-25): RCC-8 is NOT a boundary.** On reaching `spatio_temporal.rs`, verification showed
+`evaluate_rcc8_points` already does **exact floating-point RCC-8** (ray-cast point-in-polygon + boundary
+collinearity tests, all 8 relations) over a **bounded vertex *slice*** — the geometry rides in a caller-supplied
+slice, NOT inside one 48-byte NQuin, so the "unwireable" memory was stale. No invariant change needed. (No
+items currently in this section.)
 
 ## C. Human-input boundaries — need Timothy's decision/datum (the CLAUDE.md §11 exception)
 
@@ -64,5 +66,6 @@ primitive `grounded_contains` is already zero-heap) — see progress log §8.
 
 1. **Guardianship vocabulary** — (A) your canonical domain list, or (B) approve a standard renamable placeholder?
 2. **GPU tests** — may I verify GPU `calculus/` items on the A2000, or CPU-side-only + mark GPU paths unverified?
-3. **`spatio_temporal` RCC-8** — change the NQuin layout to carry region geometry, or accept the jurisdiction-hierarchy substitute?
-4. **asp CDNL solver engine** — prioritize as its own project, or leave the capability-complete `[~]`?
+3. **asp CDNL solver engine** — prioritize as its own project, or leave the capability-complete `[~]`?
+
+   _(Resolved 2026-06-25: the spatio_temporal RCC-8 question is moot — `evaluate_rcc8_points` already does exact float RCC-8 over a bounded vertex slice. No NQuin-layout change needed.)_
