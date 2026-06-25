@@ -139,6 +139,111 @@ pub fn validates(system: ModalSystem, graph: &[NQuin], accesses: u64, worlds: &[
     }
 }
 
+// ─── Multi-agent epistemic modality (K_i) ───────────────────────────────────────────
+//
+// Each agent `i` carries its OWN accessibility relation, supplied as a distinct `accesses_i`
+// predicate (e.g. `q_hash("agent:alice:accesses")`). "Agent i knows φ at w" (K_i φ) is then just
+// □ over i's relation — so the frame-agnostic `necessary` specialises per agent at no extra cost.
+
+/// `K_i φ` — agent `i` (via its `accesses_i` relation) **knows** `prop` at `world`: every
+/// world i-accessible from `world` satisfies it.
+#[inline]
+pub fn knows(graph: &[NQuin], accesses_i: u64, world: u64, prop: u64, holds: u64) -> bool {
+    necessary(graph, world, prop, accesses_i, holds)
+}
+
+/// "Everybody knows" `prop` at `world`: K_i φ holds for **every** agent in `agent_accesses`.
+pub fn everyone_knows(graph: &[NQuin], agent_accesses: &[u64], world: u64, prop: u64, holds: u64) -> bool {
+    agent_accesses.iter().all(|&acc| knows(graph, acc, world, prop, holds))
+}
+
+// ─── AGM belief revision ────────────────────────────────────────────────────────────
+//
+// A finite belief base over signed literals, with the three AGM operations. Revision uses the
+// Levi identity (`K*φ = (K−¬φ)+φ`), so a revised set is always consistent in `φ`: you can never
+// believe an atom both ways. Zero-heap (caller-supplied `out`, sized ≥ the result).
+
+/// A signed belief: `atom` held positively (`positive == true`) or negatively.
+#[derive(Debug, Clone, Copy, PartialEq, Eq)]
+pub struct Belief {
+    pub atom: u64,
+    pub positive: bool,
+}
+
+impl Belief {
+    /// The contrary belief (same atom, flipped polarity).
+    #[inline]
+    pub fn negate(self) -> Belief {
+        Belief { atom: self.atom, positive: !self.positive }
+    }
+}
+
+/// A belief base is **consistent** iff no atom is held both positively and negatively.
+pub fn is_consistent(set: &[Belief]) -> bool {
+    for (i, a) in set.iter().enumerate() {
+        for b in &set[i + 1..] {
+            if a.atom == b.atom && a.positive != b.positive {
+                return false;
+            }
+        }
+    }
+    true
+}
+
+/// **AGM expansion** `K + φ`: add `belief` if absent. Writes the result into `out`, returns its
+/// length (no deductive closure beyond the explicit literals — a finite base model).
+pub fn expand(set: &[Belief], belief: Belief, out: &mut [Belief]) -> usize {
+    let mut n = 0usize;
+    for &x in set {
+        if n < out.len() {
+            out[n] = x;
+            n += 1;
+        }
+    }
+    if !set.contains(&belief) && n < out.len() {
+        out[n] = belief;
+        n += 1;
+    }
+    n
+}
+
+/// **AGM contraction** `K − φ`: remove `belief` if present (vacuous if absent). Writes the
+/// result into `out`, returns its length.
+pub fn contract(set: &[Belief], belief: Belief, out: &mut [Belief]) -> usize {
+    let mut n = 0usize;
+    for &x in set {
+        if x == belief {
+            continue;
+        }
+        if n < out.len() {
+            out[n] = x;
+            n += 1;
+        }
+    }
+    n
+}
+
+/// **AGM revision** `K * φ` via the Levi identity: drop any belief about `belief.atom` (so the
+/// contrary `¬φ` is contracted), then add `φ`. The result satisfies *success* (`φ ∈ K*φ`) and
+/// *consistency* (never both `φ` and `¬φ`). Writes into `out`, returns its length.
+pub fn revise(set: &[Belief], belief: Belief, out: &mut [Belief]) -> usize {
+    let mut n = 0usize;
+    for &x in set {
+        if x.atom == belief.atom {
+            continue; // contracts both the old φ and ¬φ on this atom
+        }
+        if n < out.len() {
+            out[n] = x;
+            n += 1;
+        }
+    }
+    if n < out.len() {
+        out[n] = belief;
+        n += 1;
+    }
+    n
+}
+
 #[cfg(test)]
 mod tests {
     use super::*;
@@ -213,5 +318,58 @@ mod tests {
         assert!(!validates(ModalSystem::S5, &s4, accesses, &worlds));
         assert!(validates(ModalSystem::T, &s4, accesses, &worlds));
         assert!(validates(ModalSystem::D, &s4, accesses, &worlds)); // reflexive ⇒ serial
+    }
+
+    #[test]
+    fn multi_agent_knowledge_is_per_relation() {
+        let holds = crate::q_hash("modal:holds");
+        let alice = crate::q_hash("agent:alice:accesses");
+        let bob = crate::q_hash("agent:bob:accesses");
+        let p = 100u64;
+        let mk = |from: u64, to: u64, acc: u64| {
+            let mut q = NQuin { subject: from, predicate: acc, object: to, context: 0, metadata: 0, parity: 0 };
+            q.parity = q.subject ^ q.predicate ^ q.object ^ q.context;
+            q
+        };
+        // From w0: Alice accesses only w1 (where p holds); Bob accesses w1 and w2 (p fails at w2).
+        let g = [
+            mk(0, 1, alice),
+            mk(0, 1, bob), mk(0, 2, bob),
+            label(1, p),
+        ];
+        assert!(knows(&g, alice, 0, p, holds), "Alice knows p (all her worlds satisfy it)");
+        assert!(!knows(&g, bob, 0, p, holds), "Bob does not know p (w2 fails)");
+        assert!(!everyone_knows(&g, &[alice, bob], 0, p, holds));
+    }
+
+    #[test]
+    fn agm_revision_is_consistent_and_satisfies_success() {
+        let p = 1u64;
+        let bel_p = Belief { atom: p, positive: true };
+        let bel_not_p = Belief { atom: p, positive: false };
+        let q = Belief { atom: 2, positive: true };
+        let mut out = [Belief { atom: 0, positive: true }; 8];
+
+        // Start believing ¬p and q. Revise by p.
+        let base = [bel_not_p, q];
+        let n = revise(&base, bel_p, &mut out);
+        let result = &out[..n];
+        // Success: p ∈ K*p. Consistency: ¬p ∉ K*p. Minimal change: q retained.
+        assert!(result.contains(&bel_p), "success postulate: φ ∈ K*φ");
+        assert!(!result.contains(&bel_not_p), "consistency: ¬φ removed");
+        assert!(result.contains(&q), "minimal change: unrelated beliefs kept");
+        assert!(is_consistent(result));
+
+        // Expansion adds; idempotent if already present.
+        let n2 = expand(&base, q, &mut out);
+        assert_eq!(n2, 2, "q already present → no growth");
+        let n3 = expand(&base, bel_p, &mut out);
+        assert_eq!(n3, 3, "p added by expansion (may be inconsistent — that's expansion, not revision)");
+        assert!(!is_consistent(&out[..n3]), "expansion does NOT guarantee consistency");
+
+        // Contraction removes; vacuous when absent.
+        let n4 = contract(&base, bel_not_p, &mut out);
+        assert!(!out[..n4].contains(&bel_not_p));
+        assert_eq!(contract(&base, bel_p, &mut out), 2, "contracting an absent belief is vacuous");
     }
 }
