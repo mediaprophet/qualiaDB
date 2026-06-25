@@ -13,6 +13,30 @@ impl QTensorEngine {
         self.gpu_queue().write_buffer(weight_buf, 0, upload);
     }
 
+    /// Phase 2: get-or-create the resident VRAM buffer for a weight byte-region, keyed by `key`
+    /// (the region's absolute mmap address — unique per distinct weight, stable across tokens). The
+    /// bytes (from the immutable mmap) are uploaded **once** on first use, then this returns a clone
+    /// of the resident buffer handle (wgpu buffers are Arc-backed) to bind in place of the shared
+    /// per-token `gemm_weight_buf` — eliminating the per-token weight re-upload. Buffer size is
+    /// 256-aligned ≥ `raw.len()`; the shader only reads `weight_byte_len`.
+    #[cfg(not(target_arch = "wasm32"))]
+    fn resident_weight_buffer(&self, key: u64, raw: &[u8]) -> Option<wgpu::Buffer> {
+        let mut map = self.gemm_resident_weights.lock().ok()?;
+        if let Some(b) = map.get(&key) {
+            return Some(b.clone());
+        }
+        let size = (((raw.len() + 255) & !255).max(4)) as wgpu::BufferAddress;
+        let buf = self.gpu_device().create_buffer(&wgpu::BufferDescriptor {
+            label: Some("ResidentWeight"),
+            size,
+            usage: wgpu::BufferUsages::STORAGE | wgpu::BufferUsages::COPY_DST,
+            mapped_at_creation: false,
+        });
+        self.gpu_queue().write_buffer(&buf, 0, raw);
+        map.insert(key, buf.clone());
+        Some(buf)
+    }
+
     /// Quantized GEMM from a pre-sliced weight byte range (chunk-local row indices).
     pub(crate) fn dispatch_gemm_raw_into(
         &self,
@@ -55,7 +79,29 @@ impl QTensorEngine {
 
             self.gpu_queue()
                 .write_buffer(input_buf, 0, bytemuck::cast_slice(&input[..n_in]));
-            self.write_weight_words(raw, self.max_tensor_bytes);
+            // Phase 2 (native): bind this tensor's resident VRAM buffer (uploaded once, keyed by
+            // byte_offset) instead of re-uploading the weight into the shared gemm_weight_buf every
+            // token. On wasm the resident path is the MC8 arena, so this stays the per-token upload.
+            #[cfg(not(target_arch = "wasm32"))]
+            let resident = if crate::llm_bench::resident_weights_enabled() {
+                // Key on the chunk's absolute mmap address, NOT `info.byte_offset`: the output
+                // projection passes the SAME whole-tensor `info` (byte_offset == header size) for
+                // every vocab chunk, so byte_offset aliases all chunks to one buffer (wrong logits).
+                // `raw` is a slice of the immutable, lifetime-stable mmap → its start address is
+                // unique per distinct weight region and identical across tokens.
+                self.resident_weight_buffer(raw.as_ptr() as u64, raw)
+            } else {
+                None
+            };
+            #[cfg(target_arch = "wasm32")]
+            let resident: Option<wgpu::Buffer> = None;
+            let weight_binding: &wgpu::Buffer = match resident.as_ref() {
+                Some(r) => r,
+                None => {
+                    self.write_weight_words(raw, self.max_tensor_bytes);
+                    weight_buf
+                }
+            };
             self.gpu_queue()
                 .write_buffer(params_buf, 0, bytemuck::bytes_of(&params));
 
@@ -70,7 +116,7 @@ impl QTensorEngine {
                     },
                     wgpu::BindGroupEntry {
                         binding: 1,
-                        resource: weight_buf.as_entire_binding(),
+                        resource: weight_binding.as_entire_binding(),
                     },
                     wgpu::BindGroupEntry {
                         binding: 2,

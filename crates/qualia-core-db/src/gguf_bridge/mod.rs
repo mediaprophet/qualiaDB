@@ -993,6 +993,15 @@ pub struct QTensorEngine {
     /// the toggle is on, else the CPU oracle. Native-only; the wasm ternary path is a later step.
     #[cfg(not(target_arch = "wasm32"))]
     ternary_ffn: Option<crate::ternary_gpu::TernaryFfnResident>,
+    /// Phase 2 (resident weights): resident VRAM weight buffers, keyed by each weight byte-region's
+    /// absolute mmap address (unique per distinct weight — incl. each output-projection vocab chunk,
+    /// which all share one tensor `byte_offset` — and stable across tokens). Populated lazily on the
+    /// first GEMM that touches a region and reused every token, so a weight is uploaded to VRAM ONCE
+    /// instead of re-`write_buffer`ed (up to ~50 MB for a 3B FFN tensor) on every GEMM, every token —
+    /// the decode-bandwidth lever for large models. Mmap bytes are immutable, so the cache is always
+    /// coherent. Native-only (wasm uses the MC8 arena); active when `resident_weights_enabled()`.
+    #[cfg(not(target_arch = "wasm32"))]
+    gemm_resident_weights: std::sync::Mutex<std::collections::HashMap<u64, wgpu::Buffer>>,
     /// Phase 5.4: all layers' attn_norm + ffn_norm weights resident (slot 2L = attn, 2L+1 = ffn),
     /// so RMSNorm binds a per-layer sub-range instead of re-`write_buffer`ing a shared single-layer
     /// `norm_weight_buf` every layer (the second per-layer write_buffer race blocking single-submit).

@@ -596,6 +596,8 @@ impl QTensorEngine {
             mc8_logits_row_bytes: 0,
             #[cfg(not(target_arch = "wasm32"))]
             ternary_ffn: None,
+            #[cfg(not(target_arch = "wasm32"))]
+            gemm_resident_weights: std::sync::Mutex::new(std::collections::HashMap::new()),
             #[cfg(target_arch = "wasm32")]
             mc8_norm_resident_buf: None,
             #[cfg(target_arch = "wasm32")]

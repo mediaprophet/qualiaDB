@@ -131,6 +131,32 @@ pub fn ternary_ffn_enabled() -> bool {
         )
 }
 
+// ── Phase 2: resident weights toggle ──────────────────────────────────────────
+// Default ON (native). Each layer's q/k/v/o/gate/up/down weight is uploaded to its own resident
+// VRAM buffer once (keyed by the GGUF tensor byte_offset) and reused every token, instead of
+// re-`write_buffer`ing the (up to ~50 MB for a 3B FFN tensor) weight into the shared GEMM buffer
+// on every GEMM, every token. For a 3B F16 model that re-upload is ~5 GB/token of PCIe traffic —
+// the decode bottleneck. Set `QUALIA_LLM_RESIDENT_WEIGHTS=0` to force the per-token re-upload (the
+// A/B OFF baseline) — useful for measuring the win or on VRAM-constrained GPUs.
+static RESIDENT_WEIGHTS: AtomicBool = AtomicBool::new(true);
+
+/// Enable/disable the resident per-tensor weight buffers (`QUALIA_LLM_RESIDENT_WEIGHTS`).
+#[inline]
+pub fn set_resident_weights(on: bool) {
+    RESIDENT_WEIGHTS.store(on, Ordering::Relaxed);
+}
+
+/// Whether native GEMM should bind resident per-tensor weight buffers (upload-once) rather than
+/// re-uploading the weight every token. Env forces either direction; otherwise the atomic flag.
+#[inline]
+pub fn resident_weights_enabled() -> bool {
+    match std::env::var("QUALIA_LLM_RESIDENT_WEIGHTS").ok().as_deref() {
+        Some("0") | Some("false") => false,
+        Some("1") | Some("true") => true,
+        _ => RESIDENT_WEIGHTS.load(Ordering::Relaxed),
+    }
+}
+
 // ── #48 correctness path: CPU attention reference ─────────────────────────────
 // Route native attention through the wasm-proven CPU SDPA (`cpu_attention_pass`) instead of the
 // GPU attention shader (whose output is currently unbounded). Correct-but-slower; opt-in.
