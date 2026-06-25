@@ -170,3 +170,35 @@ not forgotten — each carries a one-line "what it would take" note in the audit
 temporary-impairment decay) batched with another tractable logic module.
 
 ---
+
+## 4 — Capacity / Linear logic / Defeasible logic (2026-06-25)
+
+**Status: done.** Commit `9b1e52437`. Three modules; **16 tests passed, 0 failed** (build 59s).
+
+**Built:**
+- `capacity.rs` (mission-aligned): `capacity_from_age`/`meets_age_of_majority` (jurisdiction-parametric — the
+  threshold is the caller's, never baked in); `detect_duress`/`capacity_under_pressure` (relational imbalance or
+  explicit threat → `UnderDuress` = voidable, never auto-void); `decayed_impairment`/`transient_capacity`
+  (linear-decay transient impairment that self-clears); `guardianship_authorized`/`effective_principal_scoped`
+  (selective delegation over OPAQUE caller-supplied domain ids). **Vocabulary boundary respected:** the module
+  does not invent guardianship-domain terms — that taxonomy is reserved to Timothy's CopyOfGuardianShipRelations.
+- `linear.rs`: Girard `Connective` set (⊗ ⅋ ⊕ & units ! ?) + involutive linear-negation `dual()`; multiplicative/
+  additive/exponential classification; reuse-aware `can_consume`/`tensor_consume` (!A reusable, linear consume-once).
+- `defeasible.rs`: `RuleKind` {Strict/Defeasible/Defeater}, `is_superior` superiority relation, and
+  `resolve_conflict` with `AmbiguityMode::{Blocking, Propagating}`. Corrected a semantic bug mid-build: a
+  *superior defeater* must only block (→ `Undecided`), never assert its own polarity (standard Nute/Governatori).
+
+**Audit items closed:** capacity 3/4 (full guardianship *taxonomy vocabulary* left as a ⚑ human item — mechanism
+done), linear 2/4 (proof-nets + VM/zk integration left honest), defeasible 3/4 (argumentation integration left honest).
+
+**⚑ Where the human is needed:** the guardianship-domain taxonomy vocabulary (the 17+ domains of agency) is yours
+to coin — the engine has the selective-delegation mechanism ready to wire to it.
+
+**Running total:** ~37 audit items closed across 5 commits; ~10 deliberately left honest with "what it would take"
+notes. (The remaining ~200 formal checkboxes are largely boilerplate-mismatched, already-implemented-without-
+checkboxes, or genuine PhD-scale research — see §0 triage.)
+
+**Next step:** continue tractable clusters (candidates: `abductive.rs` Peirce minimal-explanation,
+`consensus.rs` Lamport/vector clocks, `carrier.rs` Merkle-DAG content addressing) and keep the honest split.
+
+---
