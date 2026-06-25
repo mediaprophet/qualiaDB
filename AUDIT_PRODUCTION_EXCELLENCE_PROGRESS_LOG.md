@@ -595,3 +595,51 @@ their real homes (`financial/` and `bioinformatics.rs`).
 complete."
 
 **Next step:** awaiting your direction — qualia-extensions, or wrap. The core-db audit is done bar n3_parser.
+
+---
+
+## 2026-06-25 — qualia-extensions de-mock + n3_parser: AUDIT FULLY CLOSED
+
+**Step / phase:** qualia-extensions production-excellence pass + the final `n3_parser.rs` audit section.
+Status: **DONE** (audit doc now has **0 unchecked items**), with 2 PRE-EXISTING governance failures flagged.
+
+**What was built**
+- **qualia-extensions de-mock (4 modules):** `snn_extension` (real LIF+STDP+CRDT, 575046aa9),
+  `pinn_extension` (real ternary-MLP forward + finite-difference PDE residual, f839a7ba9),
+  `webgpu_extension` (5558e5dd3 — six real analytic-validated solvers split into a module dir:
+  Chrohin-projection Navier–Stokes→Taylor–Green decay, 1D Yee FDTD→propagates at c, 2D heat
+  eigenmode, 2D leapfrog wave, velocity-Verlet N-body energy<1%, exact GEMM; measured perf
+  metrics, not invented), `lib.rs` FFI bridge (3851c163b — real C-ABI marshalling + free fn,
+  fail-closed). `qpu_extension` DEFERRED-to-last per §0.11. Crate suite 39/39 green.
+- **n3_parser.rs — the 4 "Phenomenal Scope" items (3ca933745):** zero-allocation AST
+  (StackFormula/StackRule + parse_all_zero_heap, dhat-proven); a brace-aware tokenizer giving
+  faithful `;`/`,` lists + decimals + balanced `{ }`; `Term::Formula` quoting/reification
+  (q_hash_formula, whitespace-canonical) wired through 5 consumer sites; parser resource caps
+  (brace-depth + statement count). The `=>`→bytecode path + recursion caps already existed in
+  n3_compiler + webizen; proven end-to-end (parse→compile→SlgOpcode). 11 new tests.
+
+**Measured results**
+- qualia-extensions: 39/39 lib tests; bins build.
+- qualia-core-db lib suite: **1424 passed / 2 failed**. Baseline (my work stashed) was 1408/6 with the
+  *same* 6 failures — so my work added **16 passing tests and ZERO regressions**, and additionally
+  **fixed 4** of the 6 pre-existing failures.
+
+**⚑ Where I need the human (a serious finding + 2 remaining pre-existing stubs)**
+1. **The G1 anti-capture guard was SILENTLY STUBBED OUT in committed code.** Commit `b8f65e488`
+   ("…n3 refactor compiles…") replaced the real `values:` IRIs in `check_personhood_category_error`
+   (the PRODUCTION helper behind the MCP `values_check` tool) and its tests with `"dynamic_test_str"`
+   placeholders to make it compile — the corporate-personhood-capture invariant was dead in production.
+   **I restored it** (058d8f9f4) as zero-heap full-IRI literals (no Box::leak). This is the
+   "made-it-compile-by-stubbing" pattern the audit exists to catch; worth a sweep for others.
+2. **Remaining pre-existing failure #2 — `values_credential_deontic_smoke`:** `deontic::compile_n3_rule_to_norm`
+   passes a literal `"dummy"` predicate to `opcode_from_predicate_uri`, so it can't tell forbid/permit/
+   obligate (the `CompiledRule` only carries the predicate *hash*). A correct fix threads the predicate
+   URI through `compile_rule_to_quin`, but several currently-passing tests rely on the `"dummy"`→OBLIGATE
+   default — needs your call before I risk that change.
+3. **Remaining pre-existing failure #3 — `agency_n3_file_parses_and_g1_fires_end_to_end`:** the parsed G1
+   is correct and fires in isolation, but not when all ~12 agency.n3 rules are registered together — a
+   forward-chaining-path interaction (NOT the parser). Pre-existing on baseline. Needs a focused look at
+   `fire_guard_rules`/`has_quin` under many rules.
+
+**Next step:** the production-excellence audit (my allocation) is COMPLETE. Awaiting direction on the deontic
+opcode bridge (#2), the agency multi-rule fire path (#3), the `qpu_extension` design pass, or wrap.
