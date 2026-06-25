@@ -1096,11 +1096,37 @@ mod tests {
                 },
             ],
             quantization_config: TernaryQuantizationConfig {
-                sparsity_target: 0.5,
-                activation_bits: 2,
-                weight_bits: 2,
-                use_stochastic_rounding: false,
+                quantization_bits: 1.58,
+                scaling_factor: 1.0,
+                zero_point: 0,
+                ternary_levels: [-1, 0, 1],
+                compression_ratio: 10.0,
             },
+            smx_metadata: SmxMetadataSchema {
+                model_type: "ternary_pinn".to_string(),
+                quantization: TernaryQuantizationConfig {
+                    quantization_bits: 1.58,
+                    scaling_factor: 1.0,
+                    zero_point: 0,
+                    ternary_levels: [-1, 0, 1],
+                    compression_ratio: 10.0,
+                },
+                input_shape: vec![3],
+                output_shape: vec![3],
+                physics_constraints: vec![],
+                training_metadata: TrainingMetadata {
+                    epochs: 0,
+                    final_loss: 0.0,
+                    convergence_metrics: ConvergenceMetrics {
+                        final_loss: 0.0,
+                        convergence_rate: 0.0,
+                        iterations: 0,
+                        converged: false,
+                    },
+                    validation_accuracy: 0.0,
+                },
+            },
+            ternary_weights: vec![],
         };
 
         extension.model_manager.write().unwrap().load_model(mock_model).unwrap();
