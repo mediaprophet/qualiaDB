@@ -128,6 +128,157 @@ pub fn compute_answer_sets(atoms: &[u64], rules: &[AspRule], out: &mut [u64]) ->
     found
 }
 
+// ─── Index helper ───────────────────────────────────────────────────────────────────
+
+/// Index of atom `a` in `atoms` (bit position), if present.
+#[inline]
+pub fn atom_index(atoms: &[u64], a: u64) -> Option<usize> {
+    atoms.iter().take(ASP_MAX_ATOMS).position(|&x| x == a)
+}
+
+#[inline]
+fn body_holds(atoms: &[u64], model: u64, pos: &[u64], neg: &[u64]) -> bool {
+    for &p in pos {
+        match atom_index(atoms, p) {
+            Some(i) if model & (1u64 << i) != 0 => {}
+            _ => return false,
+        }
+    }
+    for &nn in neg {
+        if let Some(i) = atom_index(atoms, nn) {
+            if model & (1u64 << i) != 0 {
+                return false;
+            }
+        }
+    }
+    true
+}
+
+// ─── Grounding: zero-heap instantiation of a non-ground rule template ───────────────
+
+/// Ground a rule TEMPLATE by substituting variable `var` with each element of `domain`, writing
+/// the ground instances into `out`. Returns the count. Apply repeatedly (over the partially-ground
+/// output) for multiple variables. Zero-heap — bounded by `out.len()` (the "millions of
+/// constraints" ceiling is the caller's buffer, not a heap allocation here).
+pub fn ground_rule(template: &AspRule, var: u64, domain: &[u64], out: &mut [AspRule]) -> usize {
+    let subst = |a: u64, d: u64| if a == var { d } else { a };
+    let mut n = 0usize;
+    for &d in domain {
+        if n >= out.len() {
+            break;
+        }
+        let mut g = *template;
+        g.head = subst(g.head, d);
+        for i in 0..g.pos_len {
+            g.pos[i] = subst(g.pos[i], d);
+        }
+        for i in 0..g.neg_len {
+            g.neg[i] = subst(g.neg[i], d);
+        }
+        out[n] = g;
+        n += 1;
+    }
+    n
+}
+
+// ─── Weak constraints & optimization (the "best" stable model) ──────────────────────
+
+/// A weak constraint `:~ pos.., not neg.. [weight]` — incurs `weight` when its body holds in a
+/// model. Optimal answer sets MINIMISE total incurred weight.
+#[derive(Clone, Copy)]
+pub struct WeakConstraint {
+    pub pos: [u64; ASP_MAX_BODY],
+    pub pos_len: usize,
+    pub neg: [u64; ASP_MAX_BODY],
+    pub neg_len: usize,
+    pub weight: i64,
+}
+
+impl WeakConstraint {
+    pub fn new(pos: &[u64], neg: &[u64], weight: i64) -> Self {
+        let mut w = WeakConstraint { pos: [0; ASP_MAX_BODY], pos_len: 0, neg: [0; ASP_MAX_BODY], neg_len: 0, weight };
+        for &a in pos.iter().take(ASP_MAX_BODY) { w.pos[w.pos_len] = a; w.pos_len += 1; }
+        for &a in neg.iter().take(ASP_MAX_BODY) { w.neg[w.neg_len] = a; w.neg_len += 1; }
+        w
+    }
+}
+
+/// Total penalty of `model` under `weak`: the sum of weights of the weak constraints whose body
+/// holds in the model.
+pub fn model_penalty(atoms: &[u64], model: u64, weak: &[WeakConstraint]) -> i64 {
+    let mut total = 0i64;
+    for w in weak {
+        if body_holds(atoms, model, &w.pos[..w.pos_len], &w.neg[..w.neg_len]) {
+            total += w.weight;
+        }
+    }
+    total
+}
+
+/// The **optimal** answer set: the stable model minimising total weak-constraint penalty. Returns
+/// `(model_bitmask, penalty)`, or `None` if the program has no stable model. `buf` is scratch for
+/// the enumerated answer sets.
+pub fn optimal_answer_set(
+    atoms: &[u64],
+    rules: &[AspRule],
+    weak: &[WeakConstraint],
+    buf: &mut [u64],
+) -> Option<(u64, i64)> {
+    let k = compute_answer_sets(atoms, rules, buf);
+    if k == 0 {
+        return None;
+    }
+    let mut best = (buf[0], model_penalty(atoms, buf[0], weak));
+    for &m in &buf[1..k] {
+        let p = model_penalty(atoms, m, weak);
+        if p < best.1 {
+            best = (m, p);
+        }
+    }
+    Some(best)
+}
+
+// ─── Cautious / brave reasoning ─────────────────────────────────────────────────────
+
+/// **Cautious** (skeptical) consequences: the atoms in EVERY answer set (bit-AND of all models).
+/// `0` if there are no models.
+pub fn cautious_consequences(models: &[u64]) -> u64 {
+    match models.split_first() {
+        Some((&first, rest)) => rest.iter().fold(first, |acc, &m| acc & m),
+        None => 0,
+    }
+}
+
+/// **Brave** (credulous) consequences: the atoms in SOME answer set (bit-OR of all models).
+pub fn brave_consequences(models: &[u64]) -> u64 {
+    models.iter().fold(0u64, |acc, &m| acc | m)
+}
+
+// ─── Paraconsistent routing: no-stable-model handling ───────────────────────────────
+
+/// Outcome of an answer-set computation — distinguishes "no model" (an over-constrained /
+/// inconsistent program) from genuine results, so the caller can route the former to
+/// paraconsistent reasoning instead of treating absence-of-model as plain falsity.
+#[derive(Debug, Clone, Copy, PartialEq, Eq)]
+pub enum AspOutcome {
+    /// `n` stable models were written to the output buffer.
+    Stable(usize),
+    /// No stable model exists — the program is inconsistent; route to `paraconsistent`.
+    NoStableModel,
+}
+
+/// Compute answer sets; if NONE exist, return [`AspOutcome::NoStableModel`] so the caller routes
+/// the (inconsistent) program to `modalities::paraconsistent::route_paraconsistent` rather than
+/// silently concluding falsity. This is the tight integration with paraconsistent routing.
+pub fn answer_sets_or_paraconsistent(atoms: &[u64], rules: &[AspRule], out: &mut [u64]) -> AspOutcome {
+    let k = compute_answer_sets(atoms, rules, out);
+    if k == 0 {
+        AspOutcome::NoStableModel
+    } else {
+        AspOutcome::Stable(k)
+    }
+}
+
 #[cfg(test)]
 mod tests {
     use super::*;
@@ -184,5 +335,61 @@ mod tests {
         assert_eq!(count2, 2);
         assert_eq!(out_worlds[0], 42);
         assert_eq!(out_worlds[1], 42 ^ 10 ^ 20);
+    }
+
+    #[test]
+    fn grounder_instantiates_a_template_over_a_domain() {
+        // Template:  node(X).   with X a variable, domain {a,b,c} → three ground facts.
+        let var = crate::q_hash("var:X");
+        let node = |x: u64| x; // identity: the head IS the (variable) atom node(X)≡X here
+        let template = AspRule::fact(var);
+        let (a, b, c) = (node(11), node(22), node(33));
+        let mut out = [AspRule::fact(0); 8];
+        let n = ground_rule(&template, var, &[a, b, c], &mut out);
+        assert_eq!(n, 3);
+        assert_eq!(out[0].head, a);
+        assert_eq!(out[1].head, b);
+        assert_eq!(out[2].head, c);
+    }
+
+    #[test]
+    fn weak_constraints_select_the_optimal_model() {
+        let (p, q) = (101u64, 202u64);
+        let atoms = [p, q];
+        // Even loop → {p} and {q}. Weak constraint `:~ q [1]` penalises q.
+        let prog = [AspRule::new(p, &[], &[q]), AspRule::new(q, &[], &[p])];
+        let weak = [WeakConstraint::new(&[q], &[], 1)];
+        let mut buf = [0u64; 8];
+        let (best, penalty) = optimal_answer_set(&atoms, &prog, &weak, &mut buf).unwrap();
+        assert_eq!(best, 1u64 << 0, "optimal model is {{p}} (no penalty)");
+        assert_eq!(penalty, 0);
+        // {q} would have incurred penalty 1.
+        assert_eq!(model_penalty(&atoms, 1u64 << 1, &weak), 1);
+    }
+
+    #[test]
+    fn cautious_and_brave_consequences() {
+        let (p, q) = (101u64, 202u64);
+        let atoms = [p, q];
+        let prog = [AspRule::new(p, &[], &[q]), AspRule::new(q, &[], &[p])];
+        let mut buf = [0u64; 8];
+        let k = compute_answer_sets(&atoms, &prog, &mut buf);
+        assert_eq!(k, 2);
+        // Cautious: in BOTH {p} and {q} → neither p nor q → 0. Brave: in SOME → both bits set.
+        assert_eq!(cautious_consequences(&buf[..k]), 0);
+        assert_eq!(brave_consequences(&buf[..k]), (1u64 << 0) | (1u64 << 1));
+    }
+
+    #[test]
+    fn no_stable_model_routes_to_paraconsistent() {
+        let p = 101u64;
+        let atoms = [p];
+        // `p :- not p` has NO stable model — an inconsistent program.
+        let prog = [AspRule::new(p, &[], &[p])];
+        let mut out = [0u64; 8];
+        assert_eq!(answer_sets_or_paraconsistent(&atoms, &prog, &mut out), AspOutcome::NoStableModel);
+        // A consistent program reports its model count.
+        let prog2 = [AspRule::fact(p)];
+        assert_eq!(answer_sets_or_paraconsistent(&atoms, &prog2, &mut out), AspOutcome::Stable(1));
     }
 }
