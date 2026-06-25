@@ -156,6 +156,41 @@ pub fn effective_principal_scoped(
     }
 }
 
+// ─── Delegation chains: attenuation + cascading revocation (ZCAP/Macaroon-style) ────
+//
+// Still mechanism-only over opaque domain ids — no guardianship vocabulary coined here. A
+// delegatee can never gain MORE authority than the delegator (attenuation), and revoking a
+// domain withdraws it immediately wherever it appears (cascading revocation).
+
+/// **Attenuation:** a sub-delegation's `child_domains` are valid only if a SUBSET of the
+/// delegator's `parent_domains` — a delegatee never receives more authority than the delegator
+/// holds. (Empty child set trivially attenuates.)
+pub fn delegation_attenuates(parent_domains: &[u64], child_domains: &[u64]) -> bool {
+    child_domains.iter().all(|d| parent_domains.contains(d))
+}
+
+/// Authority after **cascading revocation**: a guardian may act in `requested_domain` iff it is
+/// authorized AND not present in the `revoked_domains` set (revocation withdraws it immediately).
+pub fn authorized_after_revocation(authorized: &[u64], revoked: &[u64], requested: u64) -> bool {
+    guardianship_authorized(authorized, requested) && !revoked.contains(&requested)
+}
+
+/// A multi-link delegation **chain** authorizes `requested_domain` iff: the root holds it, every
+/// link attenuates its predecessor (subset), and the domain survives at every level (no link
+/// silently re-broadens authority). `chain[0]` is the root delegation; each later link is a
+/// sub-delegation. Zero-heap (slice of slices).
+pub fn chain_authorizes(chain: &[&[u64]], requested_domain: u64) -> bool {
+    if chain.is_empty() || !chain[0].contains(&requested_domain) {
+        return false;
+    }
+    for w in chain.windows(2) {
+        if !delegation_attenuates(w[0], w[1]) || !w[1].contains(&requested_domain) {
+            return false;
+        }
+    }
+    true
+}
+
 #[cfg(test)]
 mod tests {
     use super::*;
@@ -243,5 +278,36 @@ mod tests {
         assert_eq!(effective_principal_scoped(guardian, dependent, &delegated, financial), dependent);
         // …but outside the delegated set they cannot bind the dependent.
         assert_eq!(effective_principal_scoped(guardian, dependent, &delegated, legal), guardian);
+    }
+
+    #[test]
+    fn delegation_attenuates_revokes_and_chains() {
+        let medical = crate::q_hash("domain:medical");
+        let financial = crate::q_hash("domain:financial");
+        let legal = crate::q_hash("domain:legal");
+
+        // Attenuation: a sub-delegation must be a subset of the parent's authority.
+        assert!(delegation_attenuates(&[medical, financial, legal], &[medical, financial]));
+        assert!(!delegation_attenuates(&[medical], &[medical, legal]), "cannot broaden authority");
+        assert!(delegation_attenuates(&[medical], &[]));
+
+        // Cascading revocation withdraws a domain immediately.
+        let authorized = [medical, financial];
+        assert!(authorized_after_revocation(&authorized, &[], medical));
+        assert!(!authorized_after_revocation(&authorized, &[medical], medical), "revoked → withdrawn");
+        assert!(authorized_after_revocation(&authorized, &[medical], financial));
+
+        // A delegation chain: root{med,fin,legal} → sub{med,fin} → subsub{med}.
+        let root: &[u64] = &[medical, financial, legal];
+        let sub: &[u64] = &[medical, financial];
+        let subsub: &[u64] = &[medical];
+        let chain = [root, sub, subsub];
+        assert!(chain_authorizes(&chain, medical), "medical survives the whole chain");
+        assert!(!chain_authorizes(&chain, financial), "financial dropped at the last link");
+        assert!(!chain_authorizes(&chain, legal), "legal dropped after the root");
+        // A chain that tries to RE-BROADEN (sub adds legal the parent lacks) fails attenuation.
+        let bad_sub: &[u64] = &[medical, legal];
+        assert!(!chain_authorizes(&[sub, bad_sub], legal));
+        assert!(!chain_authorizes(&[], medical));
     }
 }
