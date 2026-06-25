@@ -372,6 +372,8 @@ impl QTensorEngine {
         let tensors = index.get_layer_tensors(layer);
         let mut attn_ok = false;
         // Decode-profiler: intra-layer split — attention (this block) vs FFN (below).
+        // Native-only: `llm_bench` is `#[cfg(not(wasm32))]`; the wasm-full LLM bundle skips profiling.
+        #[cfg(not(target_arch = "wasm32"))]
         let t_attn = std::time::Instant::now();
 
         if tensors.attn_q.is_some() && tensors.attn_k.is_some() && tensors.attn_v.is_some() {
@@ -402,6 +404,7 @@ impl QTensorEngine {
             }
         }
 
+        #[cfg(not(target_arch = "wasm32"))]
         crate::llm_bench::add_decode_attn_ns(t_attn.elapsed().as_nanos() as u64);
 
         if !attn_ok && tensors.attn_output.is_none() && tensors.ffn_gate.is_none() {
@@ -423,6 +426,7 @@ impl QTensorEngine {
             );
         }
 
+        #[cfg(not(target_arch = "wasm32"))]
         let t_ffn = std::time::Instant::now();
         let ffn_ok = self.dispatch_ffn_block_pre_norm(
             index,
@@ -432,6 +436,7 @@ impl QTensorEngine {
             scratch_a,
             scratch_b,
         );
+        #[cfg(not(target_arch = "wasm32"))]
         crate::llm_bench::add_decode_ffn_ns(t_ffn.elapsed().as_nanos() as u64);
         ffn_ok
     }
