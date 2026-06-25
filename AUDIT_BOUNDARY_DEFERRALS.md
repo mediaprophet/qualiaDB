@@ -89,3 +89,41 @@ primitive `grounded_contains` is already zero-heap) — see progress log §8.
    gate remains in the prod-excellence lane. See §E.)_
 
    _(Resolved 2026-06-25: the spatio_temporal RCC-8 question is moot — `evaluate_rcc8_points` already does exact float RCC-8 over a bounded vertex slice. No NQuin-layout change needed.)_
+
+---
+
+## G. Audit scope — what the production-excellence audit does and does NOT cover
+
+The `audit_production_excellence_tasks.md` checklist is generated for the **`qualia-core-db`** crate only.
+
+- **`crates/qualia-core-db/src/geometric_algebra/`** — IN scope (GEOMETRIC_ALGEBRA section). `mod.rs` (274) +
+  `simd_kernel.rs` (596), both marked PRODUCTION READY with **0 implementation bullets**; verified genuinely
+  real (AVX2 `geometric_product_avx2`, Cl(3) multivector products, zero-alloc). Nothing to implement.
+- **`crates/qualia-extensions/`** — **OUT of the current audit scope** (separate workspace crate, ~4,023 LOC).
+  Flagged by Timothy 2026-06-25. Modules: `pinn_extension.rs` (Physics-Informed NNs, 7 fns), `snn_extension.rs`
+  (Spiking NNs, 13 fns), `webgpu_extension.rs`, `qpu_extension.rs` (QPU — **deprioritized** per WAP §0.11).
+  Purpose: the heap/heavy-compute counterpart to the zero-alloc core. No `todo!`/`unimplemented!` markers, but
+  it has NOT been through the production-excellence pass. **⚑ Decision for Timothy:** fold qualia-extensions
+  (pinn/snn/webgpu — NOT qpu) into the audit as its own section, or keep it a separate later workstream?
+
+---
+
+## H. QPU work — deferred to LAST, and the design directive when it IS built (Timothy, 2026-06-25)
+
+QPU/quantum items (SOLVERS `solvers/qpu/**` + `quantum_optimizers/**`, `qualia-extensions/src/qpu_extension.rs`,
+any "QPU"/"quantum" audit bullets) are **deprioritized — done LAST**, after all classical/non-QPU work. Not a
+capability gap; a sequencing + design directive (WAP §0.11). When it is eventually built, build to these
+principles — NOT as a generic low-latency accelerator:
+
+1. **Rare + never the default.** The vast majority of users never use a QPU. It must not be an expected
+   solution path in the vast majority of circumstances — an edge lane, not a tier in the normal dispatch
+   ladder (affordability rail: ordinary users must not depend on it).
+2. **Async, not real-time.** A QPU result may return in a **day / week / month**. Model it as a deferred,
+   queued submit-now / collect-much-later lane — never a blocking call. The `hetero_dispatch` CPU/GPU/NPU
+   ladder is the immediate path; QPU sits outside it.
+3. **Minimize the question.** The core objective is reducing **what is asked of the QPU to the absolute
+   minimum** — classical pre-solve distils the problem to the smallest irreducible quantum kernel before any
+   dispatch.
+4. **QPU Permissive Commons.** Existing "solves" are stored in a good, reusable format (`qpu_permissive_commons`)
+   so a need is met from the **commons (a pre-computed solve)** rather than a fresh QPU query whenever possible —
+   reuse-over-recompute, commons-first (the QPU instance of the broader Permissive Commons).
