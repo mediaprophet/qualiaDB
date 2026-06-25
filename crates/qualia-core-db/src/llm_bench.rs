@@ -620,6 +620,86 @@ pub fn decode_with_metrics(
     Ok((text, decode_tok_s))
 }
 
+/// W3 — GPU↔CPU GEMM parity probe (test/diagnostic). Builds a fresh engine, synthesizes a random
+/// Q8_0 weight matrix (`n_out` rows × `n_in`; `n_in` must be a multiple of 32) + input from `seed`,
+/// runs the GPU kernel and the CPU reference on **identical** bytes, and returns
+/// `(max_abs_err, mean_abs_err, max_ulp, gpu_gemm_passes_profiled)`. A non-zero pass count proves the
+/// GPU path actually executed — the engine readback falls back to CPU when no tokio handle is present,
+/// so the `rt.enter()` below installs one to force the real GPU path.
+#[cfg(not(target_arch = "wasm32"))]
+pub fn gemm_parity_probe_blocking(
+    n_in: usize,
+    n_out: usize,
+    seed: u64,
+) -> Result<(f32, f64, u64, u64), String> {
+    use crate::gguf_sharder::GgufTensorInfo;
+    if n_in == 0 || n_out == 0 || n_in % 32 != 0 {
+        return Err("n_in must be a non-zero multiple of 32 (Q8_0 block size); n_out > 0".into());
+    }
+    let rt = tokio::runtime::Builder::new_multi_thread()
+        .worker_threads(2)
+        .enable_all()
+        .build()
+        .map_err(|e| e.to_string())?;
+    let mut engine = rt
+        .block_on(crate::gguf_bridge::QTensorEngine::try_new())
+        .map_err(|e| format!("engine init: {e}"))?;
+    let _guard = rt.enter(); // install a tokio handle on this thread so the GPU readback path runs
+
+    // Deterministic LCG → values in [-1, 1).
+    let mut s = seed | 1;
+    let mut rng = move || -> f32 {
+        s = s
+            .wrapping_mul(6364136223846793005)
+            .wrapping_add(1442695040888963407);
+        ((s >> 40) as f32 / (1u64 << 24) as f32) * 2.0 - 1.0
+    };
+
+    let row_bytes = crate::llm_kernel_parity::q8_0_bytes(n_in);
+    let mut raw = vec![0u8; row_bytes * n_out];
+    let mut row_f32 = vec![0f32; n_in];
+    for r in 0..n_out {
+        for x in row_f32.iter_mut() {
+            *x = rng();
+        }
+        if !crate::llm_kernel_parity::quantize_q8_0_from_f32(
+            &row_f32,
+            &mut raw[r * row_bytes..(r + 1) * row_bytes],
+        ) {
+            return Err("q8_0 quantize failed".into());
+        }
+    }
+    let input: Vec<f32> = (0..n_in).map(|_| rng()).collect();
+
+    let info = GgufTensorInfo {
+        dims: [n_in as u64, n_out as u64, 1, 1],
+        n_dims: 2,
+        ggml_type: crate::ggml_quants::GGML_TYPE_Q8_0,
+        byte_offset: 0,
+    };
+
+    crate::llm_gpu_profiler::set_enabled(true);
+    crate::llm_gpu_profiler::reset();
+    let mut gpu_out = vec![0f32; n_out];
+    let mut cpu_out = vec![0f32; n_out];
+    let ok = engine.gemm_parity_probe(&info, &raw, &input, &mut gpu_out, &mut cpu_out, n_in, n_out);
+    let calls = crate::llm_gpu_profiler::snapshot()
+        .iter()
+        .find(|t| matches!(t.phase, crate::llm_gpu_profiler::Phase::Gemm))
+        .map(|t| t.calls)
+        .unwrap_or(0);
+    crate::llm_gpu_profiler::set_enabled(false);
+    if !ok {
+        return Err("gemm_parity_probe: GPU or CPU path returned false".into());
+    }
+    Ok((
+        crate::llm_kernel_parity::max_abs_err(&gpu_out, &cpu_out),
+        crate::llm_kernel_parity::mean_abs_err(&gpu_out, &cpu_out),
+        crate::llm_kernel_parity::max_ulp_diff(&gpu_out, &cpu_out),
+        calls,
+    ))
+}
+
 /// `decode_with_metrics` inside a fresh multi-thread runtime (residency mount needs `block_in_place`).
 #[cfg(not(target_arch = "wasm32"))]
 pub fn decode_with_metrics_blocking(

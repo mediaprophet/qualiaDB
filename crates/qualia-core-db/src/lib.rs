@@ -804,6 +804,8 @@ pub mod hardware_passport;
 pub mod llm_bench;
 /// STELLAR §A W2 (D17): per-kernel GPU timestamp profiler for the LLM forward/decode path.
 pub mod llm_gpu_profiler;
+/// STELLAR §A W3: in-project GPU↔CPU kernel-parity oracle (error metrics + synthetic quant weights).
+pub mod llm_kernel_parity;
 pub mod identifier;
 #[cfg(not(target_arch = "wasm32"))]
 pub mod mcp_server;

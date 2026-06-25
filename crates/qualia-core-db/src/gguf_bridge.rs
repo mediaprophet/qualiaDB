@@ -8982,3 +8982,28 @@ pub async fn initialize_webgpu_engine(gguf_data: std::sync::Arc<[u8]>) -> Result
     WASM_ENGINE_INSTANCE.with(|g| *g.borrow_mut() = Some(engine));
     Ok(())
 }
+
+#[cfg(not(target_arch = "wasm32"))]
+impl QTensorEngine {
+    /// W3 kernel-parity probe (test/diagnostic): run the GPU GEMM (`dispatch_gemm_raw_into`) and the
+    /// CPU reference (`stack_gemm_quant`) on the SAME quantized weights + input, writing each into a
+    /// caller-provided buffer. Ensures the GEMM buffers exist first, so a fresh engine (no model
+    /// loaded) can be probed directly. Returns `true` only if both ran; the caller compares the two
+    /// outputs with [`crate::llm_kernel_parity`]. Enable [`crate::llm_gpu_profiler`] around the call
+    /// to witness that the GPU path actually executed rather than silently falling back to the CPU.
+    pub fn gemm_parity_probe(
+        &mut self,
+        info: &GgufTensorInfo,
+        raw: &[u8],
+        input: &[f32],
+        gpu_out: &mut [f32],
+        cpu_out: &mut [f32],
+        n_in: usize,
+        n_out: usize,
+    ) -> bool {
+        self.ensure_gemm_buffers(raw.len().max(1), n_out as u32);
+        let gpu_ok = self.dispatch_gemm_raw_into(info, raw, input, gpu_out, n_in, n_out);
+        let cpu_ok = stack_gemm_quant(raw, info, input, cpu_out, n_in, n_out);
+        gpu_ok && cpu_ok
+    }
+}

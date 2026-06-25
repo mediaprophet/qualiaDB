@@ -612,3 +612,32 @@ fn w2_gpu_phase_profile() {
     );
     println!("[w2] PASS — live decode path produced real per-kernel GPU timings.");
 }
+
+/// W3 — GPU↔CPU GEMM kernel parity. Runs the real GPU GEMM (`dispatch_gemm_raw_into`) and the CPU
+/// reference (`stack_gemm_quant`) on identical synthetic Q8_0 weights + random input, and asserts the
+/// outputs agree within a tight tolerance. The W2 profiler witnesses that the GPU kernel actually ran
+/// (non-zero gemm passes) so a silent CPU fallback can't fake a pass. No model needed; needs a GPU.
+/// Run: `cargo test -p qualia-core-db --release --test llm_bench_a0 w3_gemm_parity -- --nocapture`.
+#[test]
+fn w3_gemm_parity_gpu_vs_cpu() {
+    use qualia_core_db::llm_bench::gemm_parity_probe_blocking;
+    match gemm_parity_probe_blocking(256, 64, 0x00C0FFEE) {
+        Ok((max_abs, mean_abs, max_ulp, gpu_calls)) => {
+            println!("\n=== W3 GEMM parity (Q8_0, 256x64, A2000) ===");
+            println!("[w3] gpu gemm passes profiled = {gpu_calls} (>0 ⇒ real GPU path, not CPU fallback)");
+            println!("[w3] max_abs_err = {max_abs:.3e}   mean_abs_err = {mean_abs:.3e}   max_ulp = {max_ulp}");
+            assert!(
+                gpu_calls > 0,
+                "GPU GEMM did not execute (fell back to CPU) — parity would be meaningless"
+            );
+            assert!(
+                max_abs.is_finite() && max_abs < 1e-2,
+                "GPU↔CPU GEMM divergence too large: max_abs_err={max_abs:e}"
+            );
+            println!("[w3] PASS — GPU GEMM matches CPU reference within {max_abs:.3e}");
+        }
+        Err(e) => {
+            eprintln!("[w3] skipped (engine/GPU init failed): {e}");
+        }
+    }
+}
