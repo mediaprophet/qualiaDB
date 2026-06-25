@@ -773,7 +773,6 @@ fn unify_frame(arena: &SlgArena, frame: &mut VmFrame) -> bool {
 }
 
 /// The Bytecode Evaluator for the Prolog Webizen
-#[allow(non_exhaustive_omitted_patterns)]
 pub fn execute_vm_frame(
     arena: &mut SlgArena,
     bytecode: &[SlgOpcode],

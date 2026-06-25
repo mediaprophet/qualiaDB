@@ -9,8 +9,10 @@
 //!
 //! Disabled (build errors to fix — broken ExecutionError/SolverState refs):
 //! - calculus, linear_algebra, optimization, quantum_optimizers, symbolic_logic
-
-#![no_std]
+//!
+//! (Note: this module is **not** actually `#![no_std]` — the `qpu` submodule pulls in
+//! std + tokio. The individual solver kernels are written to be no-std-compatible, but the
+//! attribute only has effect at the crate root, so it is not applied here.)
 
 // QPU integration — uses std + tokio; gated to non-WASM targets.
 #[cfg(not(target_arch = "wasm32"))]
