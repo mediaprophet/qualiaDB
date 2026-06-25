@@ -914,6 +914,59 @@ pub fn perplexity_eval_blocking(model_path: &str, max_tok: usize) -> Result<(f64
     .map_err(|_| "perplexity eval thread panicked".to_string())?
 }
 
+/// AWQ α-sweep on the ternary FFN (AWQ steps 1–3 end to end): capture activation salience from the Q8
+/// reference at `gguf_path`, then for each α compile an AWQ-scaled ternary `.q42`
+/// (`compile_gguf_to_q42_ternary_ffn_awq`), evaluate its perplexity + unique-word coherence, and return
+/// `(reference_ppl, [(alpha, ppl, uniq)])`. α=0.0 is plain ternary (the baseline). `max_tok` caps
+/// tokens/passage to bound the sweep. Honest: this measures whether AWQ rescues ternary — it does not
+/// assume it does. Needs a GPU.
+#[cfg(not(target_arch = "wasm32"))]
+pub fn awq_sweep_blocking(
+    gguf_path: &str,
+    alphas: &[f32],
+    max_tok: usize,
+) -> Result<(f64, Vec<(f32, f64, f64)>), String> {
+    use crate::q42_weight::compile_gguf_to_q42_ternary_ffn_awq;
+
+    let bytes = std::fs::read(gguf_path).map_err(|e| format!("read gguf: {e}"))?;
+    let idx = crate::gguf_sharder::GgufTensorIndex::from_gguf(&bytes);
+    let n_layer = idx.hyperparams.n_layer;
+    let n_embd = idx.hyperparams.n_embd;
+    if n_layer == 0 || n_embd == 0 {
+        return Err("gguf parse failed (n_layer/n_embd = 0)".into());
+    }
+
+    // 1. Capture per-channel salience + the Q8 reference PPL in one calibration forward.
+    set_ternary_ffn(false);
+    crate::llm_awq::enable(n_layer, n_embd)?;
+    let (ref_ppl, _) = perplexity_eval_blocking(gguf_path, max_tok)?;
+    let stats = crate::llm_awq::snapshot();
+    crate::llm_awq::disable();
+    if stats.is_empty() {
+        return Err("AWQ: no activation stats captured".into());
+    }
+
+    // 2. Sweep: AWQ-scaled ternary .q42 per α → eval PPL + coherence (ternary FFN path on).
+    set_ternary_ffn(true);
+    let tmp = std::env::temp_dir();
+    let mut results = Vec::with_capacity(alphas.len());
+    for &alpha in alphas {
+        let scales = if alpha == 0.0 { None } else { Some(stats.as_slice()) };
+        let q42 = compile_gguf_to_q42_ternary_ffn_awq(&bytes, 14, scales, alpha)
+            .map_err(|e| format!("AWQ compile (alpha={alpha}): {e}"))?;
+        let path = tmp.join(format!("awq_sweep_a{:.2}.q42", alpha));
+        std::fs::write(&path, &q42).map_err(|e| format!("write q42: {e}"))?;
+        let ps = path.to_string_lossy().to_string();
+        let (ppl, _) = perplexity_eval_blocking(&ps, max_tok)?;
+        let (text, _) = decode_with_metrics_blocking(&ps, "Once upon a time, there was a", 24)?;
+        let uniq = crate::llm_eval::unique_word_ratio(&text);
+        let _ = std::fs::remove_file(&path);
+        results.push((alpha, ppl, uniq));
+    }
+    set_ternary_ffn(false);
+    Ok((ref_ppl, results))
+}
+
 /// `decode_with_metrics` inside a fresh multi-thread runtime (residency mount needs `block_in_place`).
 #[cfg(not(target_arch = "wasm32"))]
 pub fn decode_with_metrics_blocking(

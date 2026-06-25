@@ -764,3 +764,49 @@ fn w1_awq_activation_capture_smollm2() {
     assert!(any_salient, "no salient channels (>3x median) — AWQ would have no signal; check the hook");
     println!("[awq] PASS — activation salience captured; salient channels present → AWQ has signal.");
 }
+
+/// AWQ α-sweep (steps 1–3 end to end) on SmolLM2-360M ternary FFN. Coarse 3-point sweep to verify the
+/// pipeline runs and to measure — honestly — whether AWQ scaling rescues the degenerate ternary FFN
+/// (A1b was ~0.1 unique-word). Prints PPL + ΔPPL-vs-Q8 + unique-word per α; asserts only that the
+/// pipeline produced finite numbers (NOT that AWQ wins — that's the empirical question). Needs a GPU.
+/// Run: `cargo test -p qualia-core-db --release --test llm_bench_a0 w1_awq_sweep -- --nocapture`.
+#[test]
+fn w1_awq_sweep_smollm2() {
+    use qualia_core_db::llm_bench::awq_sweep_blocking;
+    let Some(gguf) = find_model("smollm2-360m-instruct-q8_0.gguf") else {
+        eprintln!("[awq-sweep] SmolLM2 Q8 absent — skipping");
+        return;
+    };
+    let alphas = [0.0f32, 0.5, 1.0];
+    let (ref_ppl, results) =
+        awq_sweep_blocking(&gguf.to_string_lossy(), &alphas, 64).expect("awq sweep");
+
+    println!("\n=== AWQ alpha-sweep (SmolLM2-360M ternary FFN; Q8 ref PPL {ref_ppl:.2}) ===");
+    for (a, ppl, uniq) in &results {
+        let dppl = (ppl - ref_ppl) / ref_ppl * 100.0;
+        println!("[awq-sweep] alpha={a:.2}  ternary PPL {ppl:9.2}  dPPL {dppl:+8.1}%  uniq {uniq:.3}");
+    }
+    let base = results
+        .iter()
+        .find(|(a, _, _)| *a == 0.0)
+        .map(|(_, p, _)| *p)
+        .unwrap_or(f64::INFINITY);
+    let best = results
+        .iter()
+        .min_by(|x, y| x.1.partial_cmp(&y.1).unwrap_or(std::cmp::Ordering::Equal))
+        .copied()
+        .unwrap();
+    println!(
+        "[awq-sweep] baseline(alpha=0) PPL {base:.2} -> best alpha={:.2} PPL {:.2} ({:+.1}% vs baseline; uniq {:.3})",
+        best.0,
+        best.1,
+        (best.1 - base) / base * 100.0,
+        best.2
+    );
+
+    assert!(
+        results.iter().all(|(_, p, _)| p.is_finite() && *p > 1.0),
+        "AWQ sweep produced non-finite/implausible PPL — pipeline broken"
+    );
+    println!("[awq-sweep] PASS — AWQ pipeline ran end-to-end; result reported honestly above.");
+}

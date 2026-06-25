@@ -380,6 +380,22 @@ pub fn compile_gguf_to_q42(input: &[u8], page_log2: u16) -> Result<Vec<u8>, Stri
 /// Attention / norms / embeddings stay verbatim at their source precision. This is the loadable
 /// container the live FFN-ternary dispatch path will run + measure against.
 pub fn compile_gguf_to_q42_ternary_ffn(input: &[u8], page_log2: u16) -> Result<Vec<u8>, String> {
+    compile_gguf_to_q42_ternary_ffn_awq(input, page_log2, None, 0.0)
+}
+
+/// AWQ-aware ternary FFN compile. When `awq_scales` is `Some` — per-layer per-input-channel salience
+/// `s[layer][chan]` from [`crate::llm_awq::snapshot`] — the gate/up weights' input channel `i` is
+/// scaled by `s_i^alpha` before ternary-packing, and `ffn_norm` is divided by `s_i^alpha`. The fold is
+/// **mathematically exact** in f32 (`(X·norm/s^a)·(W·s^a) = (X·norm)·W`), but it moves the salient
+/// channels into a range the ternary grid represents better, so aggressive quantization survives.
+/// `awq_scales = None` or `alpha == 0.0` reproduces the plain ternary compile byte-for-byte. The down
+/// projection is left plain ternary (its AWQ fold has no clean norm site — a v2 item).
+pub fn compile_gguf_to_q42_ternary_ffn_awq(
+    input: &[u8],
+    page_log2: u16,
+    awq_scales: Option<&[Vec<f32>]>,
+    alpha: f32,
+) -> Result<Vec<u8>, String> {
     use crate::ternary::{ternary_blob, ternary_blob_len, GGML_TYPE_TERNARY_158};
 
     let idx = GgufTensorIndex::from_gguf(input);
@@ -500,8 +516,24 @@ pub fn compile_gguf_to_q42_ternary_ffn(input: &[u8], page_log2: u16) -> Result<V
     out[72..76].copy_from_slice(&(!hc).to_le_bytes());
 
     // 4. Blobs: FFN → dequant source → ternary-pack; everything else → verbatim copy.
+    // AWQ per-input-channel scale `s_i^alpha` (dead channels floored to avoid div-by-zero in the fold).
+    let awq_on = awq_scales.is_some() && alpha != 0.0;
+    let awq_scale = |layer: u16, chan: usize| -> f32 {
+        match awq_scales {
+            Some(per_layer) => {
+                let l = layer as usize;
+                if l < per_layer.len() && chan < per_layer[l].len() {
+                    per_layer[l][chan].max(1e-6).powf(alpha)
+                } else {
+                    1.0
+                }
+            }
+            None => 1.0,
+        }
+    };
+
     let mut scratch: Vec<f32> = Vec::new();
-    for (k, (role, _, info)) in planned.iter().enumerate() {
+    for (k, (role, layer, info)) in planned.iter().enumerate() {
         let src = tds + info.byte_offset as usize;
         let src_len = crate::ggml_quants::tensor_byte_len(info).unwrap();
         let dst = entries[k].blob_offset as usize;
@@ -513,8 +545,46 @@ pub fn compile_gguf_to_q42_ternary_ffn(input: &[u8], page_log2: u16) -> Result<V
             }
             crate::ggml_quants::dequantize_row_into(&input[src..src + src_len], info.ggml_type, n, &mut scratch)
                 .map_err(|e| format!("dequant role {role}: {e:?}"))?;
+            // AWQ: scale gate/up input channel i by s_i^alpha (row-major [n_out][n_in]). The down
+            // projection's input is the FFN hidden (no captured stats) → left plain in v1.
+            if awq_on && matches!(*role, Q42_ROLE_FFN_GATE | Q42_ROLE_FFN_UP) {
+                let n_in = info.dims[0] as usize;
+                let n_out = info.dims[1] as usize;
+                if n_in.saturating_mul(n_out) == n && n_in > 0 {
+                    for o in 0..n_out {
+                        let row = o * n_in;
+                        for i in 0..n_in {
+                            scratch[row + i] *= awq_scale(*layer, i);
+                        }
+                    }
+                }
+            }
             let blob = ternary_blob(&scratch[..n]);
             out[dst..dst + blob.len()].copy_from_slice(&blob);
+        } else if awq_on && *role == Q42_ROLE_FFN_NORM {
+            // Fold 1/s_i^alpha into ffn_norm so the scaled gate/up stays exact. Norm is a per-channel
+            // f32 (or f16) vector of the same length/type — read, divide, write in place.
+            let n = n_elems_of(info);
+            if info.ggml_type == crate::ggml_quants::GGML_TYPE_F32 && blen >= n * 4 {
+                for i in 0..n {
+                    let b = src + i * 4;
+                    let w = f32::from_le_bytes([input[b], input[b + 1], input[b + 2], input[b + 3]]);
+                    let folded = w / awq_scale(*layer, i);
+                    out[dst + i * 4..dst + i * 4 + 4].copy_from_slice(&folded.to_le_bytes());
+                }
+            } else if info.ggml_type == crate::ggml_quants::GGML_TYPE_F16 && blen >= n * 2 {
+                for i in 0..n {
+                    let b = src + i * 2;
+                    let w = half::f16::from_le_bytes([input[b], input[b + 1]]).to_f32();
+                    let folded = half::f16::from_f32(w / awq_scale(*layer, i)).to_le_bytes();
+                    out[dst + i * 2..dst + i * 2 + 2].copy_from_slice(&folded);
+                }
+            } else {
+                return Err(format!(
+                    "AWQ: ffn_norm (layer {layer}) has un-foldable type {} — cannot keep the fold exact",
+                    info.ggml_type
+                ));
+            }
         } else {
             out[dst..dst + blen].copy_from_slice(&input[src..src + blen]);
         }
