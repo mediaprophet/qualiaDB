@@ -195,6 +195,43 @@ pub fn diagnose_breach(rules: &[NQuin], violation: u64, explains: u64) -> Option
     crate::modalities::abductive::abductive_explanation(rules, violation, explains)
 }
 
+// ─── deontic × verification / zk / remedy ─────────────────────────────────────────
+
+/// **Formal verification of a composed norm:** a temporal constraint must not *void a
+/// non-derogable right*. A composition that places a temporal limit (expiry / window) on a
+/// `non_derogable` obligation is INVALID — non-derogable protections do not expire. Any other
+/// composition is valid. Returns `true` iff the composition preserves the right.
+pub fn composition_preserves_right(non_derogable: bool, has_temporal_limit: bool) -> bool {
+    !(non_derogable && has_temporal_limit)
+}
+
+/// **Zero-knowledge–wrapped composition:** a complex composition's verdict is applied only if a
+/// zk proof of its premises verifies (the private witnesses — the underlying facts — stay hidden).
+/// Returns the `verdict` gated on `proof_verified`; an unverified proof yields `None` (the
+/// composition is withheld). Mirrors `legal_compose::zk_eligibility`.
+pub fn zk_wrapped_composition(proof_verified: bool, verdict: DeonticStatus) -> Option<DeonticStatus> {
+    if proof_verified {
+        Some(verdict)
+    } else {
+        None
+    }
+}
+
+/// **Automated remedy generation:** when a composed norm is breached, generate the secondary
+/// obligation `O(reparation)` on the breaching `party` (the contrary-to-duty remedy). Composes
+/// `deontic::compile_norm_quin`; the caller records/enforces it like any obligation.
+pub fn generate_remedy_obligation(party: u64, reparation_path: u64, reparation_action: u64, frame: u64) -> NQuin {
+    crate::modalities::logic::deontic::compile_norm_quin(
+        party,
+        OP_OBLIGATE,
+        reparation_path,
+        reparation_action,
+        frame,
+        0,
+        false,
+    )
+}
+
 #[cfg(test)]
 mod tests {
     use super::*;
@@ -350,5 +387,32 @@ mod tests {
         let nofunding = q_hash("cause:missingFunding");
         let rules = [edge(nofunding, nostaff), edge(nostaff, breach)];
         assert_eq!(diagnose_breach(&rules, breach, explains), Some(nofunding), "root cause surfaced");
+    }
+
+    #[test]
+    fn composed_norm_verification_protects_non_derogable_rights() {
+        // A temporal limit on a non-derogable right is INVALID (the right cannot expire).
+        assert!(!composition_preserves_right(true, true));
+        // A temporal limit on a derogable obligation is fine.
+        assert!(composition_preserves_right(false, true));
+        // A non-derogable right with NO temporal limit is fine.
+        assert!(composition_preserves_right(true, false));
+    }
+
+    #[test]
+    fn zk_wrapping_withholds_unproven_compositions() {
+        assert_eq!(zk_wrapped_composition(true, DeonticStatus::Discharged), Some(DeonticStatus::Discharged));
+        assert_eq!(zk_wrapped_composition(false, DeonticStatus::Violated), None);
+    }
+
+    #[test]
+    fn remedy_generation_emits_a_secondary_obligation() {
+        let party = q_hash("did:breacher");
+        let reparation = q_hash("q42:compensate");
+        let frame = q_hash("frame:remedy");
+        let remedy = generate_remedy_obligation(party, q_hash("q42:remedyDuty"), reparation, frame);
+        assert_eq!(remedy.subject, party);
+        assert_eq!(remedy.object, reparation);
+        assert_eq!(extract_deontic_opcode(remedy.predicate), OP_OBLIGATE, "the remedy is an obligation");
     }
 }

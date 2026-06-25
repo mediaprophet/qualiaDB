@@ -113,9 +113,10 @@ Geospatial domain operations compiled.
 |-----------|--------|-------|
 | `ode_solver.rs` — `Rk4Solver`, `ShootingMethod` (BVP) | ✅ Compiled | Kahan accumulation; GPU-accelerated via `PlatformGpuIntegrator`; WAL persistence per step |
 | `host.rs` — `MmapGridManager`, ZeroCopyStreamer, io_uring / IOCP | ✅ Compiled (non-WASM) | |
-| `gpu.rs` — `GpuIntegrator`, `PlatformGpuIntegrator` | ✅ Compiled (non-WASM) | DirectStorage / GPUDirect / WebGPU |
-| `tensor_provenance.rs` | ✅ Compiled | |
-| `cuda_bridge.rs` — FFI to NVIDIA `libcufile` | ✅ Code present | GPUDirect Storage: DMA direct from NVMe → GPU VRAM, zero CPU RAM. Gated: `target_os = "linux"` + `cuda_gds` feature flag |
+| `gpu.rs` — `GpuIntegrator`, `PlatformGpuIntegrator` | ✅ Compiled (non-WASM) | Portable `wgpu` (Vulkan / DX12 / Metal / WebGPU) — vendor-neutral, no CUDA |
+| `hetero_dispatch.rs` — `HeterogeneousDispatcher`, `ZeroCopyStrategy`, `plan_fusion`, `select_precision` | ✅ Compiled + tested (non-WASM) | Replaced the removed CUDA/cuFile `cuda_bridge.rs`. Vendor-neutral GPU/NPU/CPU fallback + VRAM tiling, unified-memory zero-copy strategy, stream-fusion planning, mixed-precision policy |
+| `tensor_provenance.rs` / `tensor_integrity.rs` | ✅ Compiled | Append-only BLAKE3 tamper-evident lineage |
+| ~~`cuda_bridge.rs` — FFI to NVIDIA `libcufile`~~ | ❌ REMOVED | The engine's one vendor-locked appendage (NVIDIA + Linux only). Removed for vendor neutrality; capabilities folded into `hetero_dispatch.rs` on the portable `wgpu` stack. GDS true NVMe→VRAM DMA deliberately declined (off the affordability critical path) |
 | Opcodes: `OP_SIMPSONS_INTEGRATION` (0x50) … `OP_GPU_INTEGRATION` (0x54) | ✅ Active | |
 
 ### `crates/qualia-core-db/src/solvers/` (`#![no_std]`, zero-allocation)

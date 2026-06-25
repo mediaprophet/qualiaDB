@@ -324,6 +324,57 @@ pub fn is_necessary_cause(graph: &[NQuin], root: u64, candidate: u64, effect: u6
         && !reachable_avoiding(graph, root, effect, candidate)
 }
 
+// ─── Paraconsistent conflict isolation ────────────────────────────────────────────
+
+/// A **dialectical contradiction**: thesis and antithesis assert the same `(subject, predicate)`
+/// with different objects — the conflict that is either SYNTHESIZED ([`synthesize_dialectical`])
+/// or, when no synthesis is wanted, ISOLATED into a paraconsistent sub-context
+/// (`paraconsistent::route_paraconsistent`) so it does not explode the rest of the graph.
+pub fn is_dialectical_contradiction(thesis: &NQuin, antithesis: &NQuin) -> bool {
+    thesis.subject == antithesis.subject
+        && thesis.predicate == antithesis.predicate
+        && thesis.object != antithesis.object
+}
+
+// ─── IBIS discourse model (Issue-Based Information System) ─────────────────────────
+
+/// An IBIS discourse node — the multi-agent argumentation structure: an `Issue` raises a question,
+/// `Position`s answer it, and `Argument`s support or object to positions.
+#[derive(Debug, Clone, Copy, PartialEq, Eq)]
+pub enum IbisNode {
+    Issue,
+    Position,
+    /// An argument that supports (`true`) or objects to (`false`) a position.
+    Argument(bool),
+}
+
+/// A position in an IBIS discourse is **favoured** iff its net support (supporting − objecting
+/// arguments) is positive. The multi-agent dialectical resolution of an issue.
+#[inline]
+pub fn ibis_position_favoured(supporting: u32, objecting: u32) -> bool {
+    supporting > objecting
+}
+
+// ─── Synthesis-coherence scoring ──────────────────────────────────────────────────
+
+/// **Synthesis-quality / coherence** score in `[0,1]`: a good Hegelian synthesis PRESERVES the
+/// shared ground (same subject + predicate as both thesis and antithesis) and genuinely INTEGRATES
+/// the two objects (rather than echoing one side). `1.0` for a well-formed synthesis; lower when it
+/// drifts from the common ground or fails to combine both sides.
+pub fn synthesis_coherence(thesis: &NQuin, antithesis: &NQuin, synthesis: &NQuin) -> f32 {
+    let mut score = 0.0f32;
+    if synthesis.subject == thesis.subject && synthesis.subject == antithesis.subject {
+        score += 0.4;
+    }
+    if synthesis.predicate == thesis.predicate && synthesis.predicate == antithesis.predicate {
+        score += 0.3;
+    }
+    if synthesis.object != thesis.object && synthesis.object != antithesis.object {
+        score += 0.3;
+    }
+    score
+}
+
 #[cfg(test)]
 mod tests {
     use super::*;
@@ -343,6 +394,33 @@ mod tests {
         let diamond = [edge(1, 2), edge(2, 4), edge(1, 3), edge(3, 4)];
         assert!(!is_necessary_cause(&diamond, 1, 2, 4), "C is not necessary when an alternative path exists");
         assert!(reachable_avoiding(&diamond, 1, 4, u64::MAX), "effect is reachable normally");
+    }
+
+    #[test]
+    fn dialectical_contradiction_ibis_and_coherence() {
+        let mk = |s: u64, p: u64, o: u64| {
+            let mut q = NQuin { subject: s, predicate: p, object: o, context: 0, metadata: 0, parity: 0 };
+            q.parity = q.subject ^ q.predicate ^ q.object ^ q.context;
+            q
+        };
+        let (subj, pred) = (crate::q_hash("policy:borders"), crate::q_hash("stance"));
+        let thesis = mk(subj, pred, crate::q_hash("open"));
+        let antithesis = mk(subj, pred, crate::q_hash("closed"));
+        // Same subject+predicate, different object → a dialectical contradiction.
+        assert!(is_dialectical_contradiction(&thesis, &antithesis));
+        let agree = mk(subj, pred, crate::q_hash("open"));
+        assert!(!is_dialectical_contradiction(&thesis, &agree));
+
+        // The synthesis (XOR-combined object) is highly coherent (preserves ground, integrates both).
+        let synthesis = synthesize_dialectical(&thesis, &antithesis).unwrap();
+        assert!((synthesis_coherence(&thesis, &antithesis, &synthesis) - 1.0).abs() < 1e-6);
+        // A degenerate "synthesis" that just echoes the thesis scores lower (no integration).
+        assert!(synthesis_coherence(&thesis, &antithesis, &thesis) < 1.0);
+
+        // IBIS: a position with more support than objection is favoured.
+        assert!(ibis_position_favoured(3, 1));
+        assert!(!ibis_position_favoured(1, 1));
+        assert_eq!(IbisNode::Argument(true), IbisNode::Argument(true));
     }
 
     #[test]

@@ -130,6 +130,126 @@ pub fn is_overdetermined(edges: &[NQuin], roots: &[u64], causes: &[u64], effect:
         .all(|&c| caused_internal(edges, roots, effect, c))
 }
 
+// ─── Pearl's do-operator (formal intervention) ────────────────────────────────────
+
+/// **Intervention** `do(...)`: force the variables in `set_present` to occur and `set_absent` to
+/// NOT occur — severing the absent nodes from the graph and treating the present ones as
+/// exogenous roots — then compute whether `effect` results (`P(effect | do(X))` as boolean
+/// reachability). Zero-heap.
+pub fn do_intervene(
+    edges: &[NQuin],
+    roots: &[u64],
+    set_present: &[u64],
+    set_absent: &[u64],
+    effect: u64,
+) -> bool {
+    if set_absent.contains(&effect) {
+        return false;
+    }
+    let p = cause_predicate();
+    let mut frontier = [0u64; MAX_CAUSAL_NODES];
+    let mut visited = [0u64; MAX_CAUSAL_NODES];
+    let mut fl = 0usize;
+    let mut vl = 0usize;
+    let push = |n: u64, frontier: &mut [u64; MAX_CAUSAL_NODES], fl: &mut usize| {
+        if !set_absent.contains(&n) && *fl < MAX_CAUSAL_NODES {
+            frontier[*fl] = n;
+            *fl += 1;
+        }
+    };
+    for &r in roots {
+        if r == effect {
+            return true;
+        }
+        push(r, &mut frontier, &mut fl);
+    }
+    for &x in set_present {
+        if x == effect {
+            return true;
+        }
+        push(x, &mut frontier, &mut fl);
+    }
+    while fl > 0 {
+        fl -= 1;
+        let cur = frontier[fl];
+        if visited[..vl].contains(&cur) {
+            continue;
+        }
+        if vl < MAX_CAUSAL_NODES {
+            visited[vl] = cur;
+            vl += 1;
+        } else {
+            break;
+        }
+        for e in edges {
+            if e.predicate == p
+                && e.subject == cur
+                && !set_absent.contains(&e.subject)
+                && !set_absent.contains(&e.object)
+            {
+                let nxt = e.object;
+                if nxt == effect {
+                    return true;
+                }
+                if fl < MAX_CAUSAL_NODES && !visited[..vl].contains(&nxt) {
+                    frontier[fl] = nxt;
+                    fl += 1;
+                }
+            }
+        }
+    }
+    false
+}
+
+// ─── Structural Causal Model: exogenous vs endogenous ─────────────────────────────
+
+/// **Exogenous** variable (SCM): a node with NO incoming causal edge — its value enters from
+/// outside the model (a root cause / external factor).
+pub fn is_exogenous(edges: &[NQuin], node: u64) -> bool {
+    let p = cause_predicate();
+    !edges.iter().any(|e| e.predicate == p && e.object == node)
+}
+
+/// **Endogenous** variable: determined within the model (≥1 incoming causal edge).
+#[inline]
+pub fn is_endogenous(edges: &[NQuin], node: u64) -> bool {
+    !is_exogenous(edges, node)
+}
+
+// ─── Counterfactual (twin-network) query ──────────────────────────────────────────
+
+/// **Counterfactual** "had `intervene` been absent, would `effect` still have occurred?" — the
+/// twin-network comparison of the factual world against the counterfactual `do(intervene absent)`
+/// world. Returns `(factual, counterfactual)`; if they differ, `intervene` was counterfactually
+/// necessary for `effect`.
+pub fn counterfactual_absent(edges: &[NQuin], roots: &[u64], intervene: u64, effect: u64) -> (bool, bool) {
+    let factual = caused(edges, roots, effect);
+    let counterfactual = do_intervene(edges, roots, &[], &[intervene], effect);
+    (factual, counterfactual)
+}
+
+// ─── Backdoor criterion (confounder adjustment) ───────────────────────────────────
+
+/// **Backdoor criterion**: a set `z` is admissible for estimating the effect of `x` on `y` iff
+/// (a) no node in `z` is a descendant of `x`, and (b) `z` blocks every backdoor (confounding)
+/// path — here, every common ancestor (confounder) of `x` and `y` is in `z`. `nodes` enumerates
+/// the model's variables. Bounded, zero-heap (composes `caused` reachability).
+pub fn backdoor_satisfied(edges: &[NQuin], x: u64, y: u64, z: &[u64], nodes: &[u64]) -> bool {
+    // (a) no z node may be a descendant of x.
+    for &zn in z {
+        if zn != x && caused(edges, &[x], zn) {
+            return false;
+        }
+    }
+    // (b) every confounder (common ancestor of x and y) must be in z.
+    for &c in nodes {
+        if c != x && c != y && caused(edges, &[c], x) && caused(edges, &[c], y) && !z.contains(&c) {
+            return false;
+        }
+    }
+    true
+}
+
 #[cfg(test)]
 mod tests {
     use super::*;
@@ -199,5 +319,38 @@ mod tests {
         let n = dependents_voided(&edges2, &roots2, edu, &[lit], &mut out);
         assert_eq!(n, 1);
         assert_eq!(out[0], lit);
+    }
+
+    #[test]
+    fn do_operator_and_scm_classification() {
+        // smoking → tar → cancer.
+        let (smoke, tar, cancer) = (q_hash("v:smoke"), q_hash("v:tar"), q_hash("v:cancer"));
+        let edges = [edge(smoke, tar), edge(tar, cancer)];
+        // do(smoke present): cancer results.
+        assert!(do_intervene(&edges, &[], &[smoke], &[], cancer));
+        // do(tar absent): severs the chain → no cancer even if smoke present.
+        assert!(!do_intervene(&edges, &[], &[smoke], &[tar], cancer));
+        // SCM: smoke is exogenous (no incoming edge); tar/cancer are endogenous.
+        assert!(is_exogenous(&edges, smoke));
+        assert!(is_endogenous(&edges, tar) && is_endogenous(&edges, cancer));
+    }
+
+    #[test]
+    fn counterfactual_and_backdoor() {
+        let (smoke, tar, cancer) = (q_hash("v:smoke"), q_hash("v:tar"), q_hash("v:cancer"));
+        let edges = [edge(smoke, tar), edge(tar, cancer)];
+        // Counterfactual: had tar been absent, cancer would NOT have occurred (tar was necessary).
+        let (factual, cf) = counterfactual_absent(&edges, &[smoke], tar, cancer);
+        assert!(factual && !cf, "tar is counterfactually necessary for cancer");
+
+        // Backdoor: confounder genes → smoke and genes → cancer (a common cause).
+        let genes = q_hash("v:genes");
+        let confounded = [edge(genes, smoke), edge(smoke, cancer), edge(genes, cancer)];
+        let nodes = [genes, smoke, cancer];
+        // {} does NOT block the genes confounder; {genes} does.
+        assert!(!backdoor_satisfied(&confounded, smoke, cancer, &[], &nodes));
+        assert!(backdoor_satisfied(&confounded, smoke, cancer, &[genes], &nodes));
+        // Conditioning on a descendant of x (cancer) is NOT admissible.
+        assert!(!backdoor_satisfied(&confounded, smoke, cancer, &[genes, cancer], &nodes));
     }
 }

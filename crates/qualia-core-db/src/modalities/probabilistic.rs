@@ -160,6 +160,136 @@ impl BayesianNetwork {
             None
         }
     }
+
+    /// The **Markov blanket** of `node_id`: its parents, its children, and its children's OTHER
+    /// parents (co-parents). Conditioned on its blanket a node is independent of all others —
+    /// the locality used for rapid conditional-independence testing and Gibbs sampling. Writes the
+    /// member ids into `out`, returns the count. Zero-heap.
+    pub fn markov_blanket(&self, node_id: u64, out: &mut [u64]) -> usize {
+        let mut n = 0usize;
+        let add = |id: u64, out: &mut [u64], n: &mut usize| {
+            if id != node_id && id != 0 && !out[..*n].contains(&id) && *n < out.len() {
+                out[*n] = id;
+                *n += 1;
+            }
+        };
+        for i in 0..self.num_nodes {
+            if self.nodes[i].id == node_id {
+                for p in 0..self.nodes[i].num_parents {
+                    add(self.nodes[i].parent_ids[p], out, &mut n);
+                }
+            }
+        }
+        for i in 0..self.num_nodes {
+            let child = self.nodes[i];
+            if child.parent_ids[..child.num_parents].contains(&node_id) {
+                add(child.id, out, &mut n); // a child
+                for p in 0..child.num_parents {
+                    add(child.parent_ids[p], out, &mut n); // its co-parents
+                }
+            }
+        }
+        n
+    }
+
+    /// `P(node = state | parents)` from the node's CPT, reading parents' states out of `assign`
+    /// (indexed by node order).
+    fn node_cpt(&self, node_idx: usize, state: bool, assign: &[bool]) -> f32 {
+        let node = &self.nodes[node_idx];
+        let mut parent_idx = 0usize;
+        for p in 0..node.num_parents {
+            let pid = node.parent_ids[p];
+            for j in 0..self.num_nodes {
+                if self.nodes[j].id == pid {
+                    if assign[j] {
+                        parent_idx |= 1 << p;
+                    }
+                    break;
+                }
+            }
+        }
+        let pt = node.probabilities[parent_idx];
+        if state { pt } else { 1.0 - pt }
+    }
+
+    /// Unnormalised `P(node_idx = state | rest)` ∝ `P(node|parents) · Π_children P(child|parents)`
+    /// — the Gibbs full-conditional over the Markov blanket.
+    fn gibbs_conditional(&self, node_idx: usize, state: bool, assign: &[bool]) -> f32 {
+        let mut a = [false; MAX_BAYESIAN_NODES];
+        a[..self.num_nodes].copy_from_slice(&assign[..self.num_nodes]);
+        a[node_idx] = state;
+        let mut prob = self.node_cpt(node_idx, state, &a);
+        let this_id = self.nodes[node_idx].id;
+        for c in 0..self.num_nodes {
+            let child = self.nodes[c];
+            if child.parent_ids[..child.num_parents].contains(&this_id) {
+                prob *= self.node_cpt(c, a[c], &a);
+            }
+        }
+        prob
+    }
+
+    /// **Gibbs sampling** (MCMC) estimate of `P(target = true | evidence)` — approximate inference
+    /// for networks too large for exact enumeration. `samples` sweeps, `seed` for the PRNG. Each
+    /// non-evidence variable is resampled from its Markov-blanket conditional. Zero-heap (bounded
+    /// stack arrays). `None` if `target_id` is not in the network.
+    pub fn gibbs_estimate(&self, target_id: u64, samples: u32, seed: u64) -> Option<f32> {
+        let mut target_idx = None;
+        for i in 0..self.num_nodes {
+            if self.nodes[i].id == target_id {
+                target_idx = Some(i);
+            }
+        }
+        let target_idx = target_idx?;
+        let mut rng = seed | 1;
+        let mut assign = [false; MAX_BAYESIAN_NODES];
+        for i in 0..self.num_nodes {
+            assign[i] = match self.nodes[i].evidence {
+                Some(e) => e,
+                None => next_unit(&mut rng) < 0.5,
+            };
+        }
+        let mut count_true = 0u32;
+        for _ in 0..samples {
+            for i in 0..self.num_nodes {
+                if self.nodes[i].evidence.is_some() {
+                    continue;
+                }
+                let pt = self.gibbs_conditional(i, true, &assign);
+                let pf = self.gibbs_conditional(i, false, &assign);
+                let denom = pt + pf;
+                let prob = if denom > 0.0 { pt / denom } else { 0.5 };
+                assign[i] = next_unit(&mut rng) < prob;
+            }
+            if assign[target_idx] {
+                count_true += 1;
+            }
+        }
+        if samples == 0 {
+            None
+        } else {
+            Some(count_true as f32 / samples as f32)
+        }
+    }
+}
+
+/// Deterministic xorshift PRNG → a uniform `f32` in `[0,1)`. Zero-heap.
+fn next_unit(state: &mut u64) -> f32 {
+    let mut x = *state;
+    x ^= x << 13;
+    x ^= x >> 7;
+    x ^= x << 17;
+    *state = x;
+    ((x >> 40) as f32) / ((1u32 << 24) as f32)
+}
+
+/// **PC-algorithm skeleton** (constraint-based structure learning): two variables are adjacent
+/// (share an edge) iff their `correlation` is at/above `threshold` in absolute value — i.e. they
+/// are NOT marginally independent. This is the order-0 skeleton; the full PC additionally removes
+/// edges via conditional-independence tests over separating sets.
+#[inline]
+pub fn pc_adjacent(correlation: f32, threshold: f32) -> bool {
+    correlation.abs() >= threshold
 }
 
 #[cfg(test)]
@@ -212,5 +342,56 @@ mod tests {
         
         // Approximate expected result: P(Rain|Wet) ≈ 0.3577
         assert!((p_rain - 0.3577).abs() < 0.001);
+    }
+
+    fn sprinkler(with_wet_evidence: bool) -> BayesianNetwork {
+        let mut net = BayesianNetwork::new();
+        let mut n0 = BayesianNode::default();
+        n0.id = 100;
+        n0.probabilities[0] = 0.2;
+        net.add_node(n0).unwrap();
+        let mut n1 = BayesianNode::default();
+        n1.id = 200;
+        n1.parent_ids[0] = 100;
+        n1.num_parents = 1;
+        n1.probabilities[1] = 0.01;
+        n1.probabilities[0] = 0.40;
+        net.add_node(n1).unwrap();
+        let mut n2 = BayesianNode::default();
+        n2.id = 300;
+        n2.parent_ids[0] = 100;
+        n2.parent_ids[1] = 200;
+        n2.num_parents = 2;
+        n2.probabilities = [0.0, 0.8, 0.9, 0.99, 0.0, 0.0, 0.0, 0.0, 0.0, 0.0, 0.0, 0.0, 0.0, 0.0, 0.0, 0.0];
+        if with_wet_evidence {
+            n2.evidence = Some(true);
+        }
+        net.add_node(n2).unwrap();
+        net
+    }
+
+    #[test]
+    fn markov_blanket_of_a_node() {
+        let net = sprinkler(false);
+        // Blanket(Rain) = children {Sprinkler, GrassWet} + co-parents (Sprinkler already in).
+        let mut out = [0u64; 8];
+        let n = net.markov_blanket(100, &mut out);
+        assert_eq!(n, 2);
+        assert!(out[..n].contains(&200) && out[..n].contains(&300));
+    }
+
+    #[test]
+    fn gibbs_approximates_the_exact_posterior() {
+        let net = sprinkler(true);
+        let exact = net.update_beliefs(100).unwrap(); // ≈ 0.3577
+        let approx = net.gibbs_estimate(100, 40_000, 0x9E3779B97F4A7C15).unwrap();
+        assert!((approx - exact).abs() < 0.08, "Gibbs {approx} should approximate exact {exact}");
+    }
+
+    #[test]
+    fn pc_skeleton_uses_absolute_correlation() {
+        assert!(pc_adjacent(0.6, 0.3));
+        assert!(!pc_adjacent(0.1, 0.3));
+        assert!(pc_adjacent(-0.5, 0.3), "structure depends on |correlation|");
     }
 }

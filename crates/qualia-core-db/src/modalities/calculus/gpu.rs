@@ -1,33 +1,28 @@
 //! GPU integration for calculus modality.
 //!
 //! Provides cross-platform GPU compute shader execution for numerical integration
-//! and differential equation solving. Integrates with DirectStorage (Windows),
-//! GPUDirect (Linux, optional feature), and WebGPU fallback.
+//! and differential equation solving via portable `wgpu` (Vulkan / DX12 / Metal /
+//! WebGPU). The engine is **vendor-neutral**: there is no CUDA/cuFile path. The
+//! former NVIDIA GPUDirect-Storage bridge was removed; heterogeneous dispatch,
+//! mixed-precision policy, and the vendor-neutral storage path (mmap + staging
+//! upload) live in [`super::hetero_dispatch`].
 //!
 //! ## Architecture
 //!
-//! - **DirectStorage**: NVMe → GPU VRAM DMA bypass (Windows)
-//! - **GPUDirect**: NVMe → GPU VRAM DMA bypass (Linux, optional feature `cuda_gds`)
-//! - **WebGPU**: CPU RAM → GPU VRAM fallback (cross-platform)
-//! - **State Tracking**: GPU results packed into Quin metadata field
-//!
-//! ## Feature Flags
-//!
-//! - `cuda_gds`: Enable CUDA GPUDirect Storage support (Linux only, requires NVIDIA drivers)
+//! - **WebGPU (`wgpu`)**: portable compute on every backend; the single GPU path.
+//! - **Storage**: NVMe → OS page cache (`mmap`, `super::host`) → GPU staging upload.
+//!   (NVIDIA GDS's true NVMe→VRAM DMA was deliberately declined — vendor-lock off
+//!   the affordability critical path; see `hetero_dispatch.rs`.)
+//! - **State Tracking**: GPU results packed into Quin metadata field.
 
 use crate::NQuin;
 use std::path::Path;
 use std::io::Seek;
 use wgpu::util::DeviceExt;
 
-// Conditionally compile CUDA bridge
-#[cfg(all(target_os = "linux", feature = "cuda_gds"))]
-mod cuda_bridge;
-
-#[cfg(all(target_os = "linux", feature = "cuda_gds"))]
-pub use cuda_bridge::CudaIntegrator as PlatformGpuIntegrator;
-
-#[cfg(not(all(target_os = "linux", feature = "cuda_gds")))]
+/// The platform GPU integrator — uniformly the portable `wgpu` integrator on every
+/// backend. (The former CUDA/cuFile `CudaIntegrator` alias was removed for vendor
+/// neutrality; heterogeneous routing/fallback now lives in `super::hetero_dispatch`.)
 pub use WebGpuIntegrator as PlatformGpuIntegrator;
 
 // ─── Errors ─────────────────────────────────────────────────────────────────────
@@ -35,7 +30,6 @@ pub use WebGpuIntegrator as PlatformGpuIntegrator;
 #[derive(Debug)]
 pub enum GpuError {
     DirectStorageUnavailable(String),
-    GpuDirectUnavailable(String),
     WebGPUUnavailable(String),
     ShaderCompilationFailed(String),
     BufferAllocationFailed(String),

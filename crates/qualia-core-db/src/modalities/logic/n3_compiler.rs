@@ -73,6 +73,11 @@ pub fn compile_term(term: &Term<'_>) -> CompiledTerm {
         Term::Uri(s) => CompiledTerm::Uri(q_hash(s)),
         Term::Variable(s) => CompiledTerm::Variable(q_hash(s)),
         Term::Literal(s) => CompiledTerm::Literal(q_hash(s)),
+        // A quoted formula is a ground node identified by the canonical hash of
+        // its statement text — the handle other nquins use to reason about it.
+        Term::Formula(s) => CompiledTerm::Uri(
+            crate::modalities::logic::n3_parser::q_hash_formula(s),
+        ),
     }
 }
 
@@ -167,6 +172,7 @@ fn term_hash(term: &Term<'_>) -> Result<u64, N3CompileError> {
     match term {
         Term::Uri(uri) => Ok(q_hash(uri)),
         Term::Literal(lit) => Ok(q_hash(lit)),
+        Term::Formula(s) => Ok(crate::modalities::logic::n3_parser::q_hash_formula(s)),
         Term::Variable(_) => Err(N3CompileError::MalformedTriple),
     }
 }

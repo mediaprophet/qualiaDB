@@ -437,10 +437,81 @@ pub fn quin_to_region(quin: &NQuin) -> Option<SpatialRegion> {
     })
 }
 
+// ─── Spatial indexing: BVH / R-tree broad-phase ──────────────────────────────────
+//
+// NOTE: spatio_temporal.rs is now >450 lines and pre-existing — flagged for the deferred
+// library-ization pass (CLAUDE.md §10), not split mid-feature.
+
+/// An axis-aligned bounding box `(min_x, min_y, max_x, max_y)` — a BVH/R-tree node volume.
+pub type Aabb = (f64, f64, f64, f64);
+
+/// The AABB of a polygon's boundary vertices.
+pub fn polygon_aabb(poly: &[(f64, f64)]) -> Aabb {
+    let (mnx, mxx, mny, mxy) = bbox(poly);
+    (mnx, mny, mxx, mxy)
+}
+
+/// Do two AABBs overlap? (the BVH/R-tree broad-phase intersection test)
+#[inline]
+pub fn aabb_overlap(a: Aabb, b: Aabb) -> bool {
+    !(a.0 > b.2 || a.2 < b.0 || a.1 > b.3 || a.3 < b.1)
+}
+
+/// **Spatial-index broad-phase** (BVH / R-tree): from the AABBs of many regions, return the
+/// indices whose box overlaps `query` — pruning the candidates a precise RCC-8 test must then
+/// check. Makes spatial queries scale to massive global entity maps. Zero-heap (caller `out`).
+pub fn spatial_index_query(query: Aabb, region_boxes: &[Aabb], out: &mut [usize]) -> usize {
+    let mut n = 0usize;
+    for (i, &b) in region_boxes.iter().enumerate() {
+        if aabb_overlap(query, b) {
+            if n >= out.len() {
+                break;
+            }
+            out[n] = i;
+            n += 1;
+        }
+    }
+    n
+}
+
+// ─── Minkowski 4-D space-time (relativity-adjusted causal structure) ──────────────
+
+/// The **Minkowski interval** `s² = −c²·Δt² + Δx² + Δy² + Δz²` (signature −+++) between two events.
+/// `s² < 0` timelike, `= 0` lightlike (on the light cone), `> 0` spacelike.
+pub fn minkowski_interval(dt: f64, dx: f64, dy: f64, dz: f64, c: f64) -> f64 {
+    -(c * c) * dt * dt + dx * dx + dy * dy + dz * dz
+}
+
+/// Are two events **causally connectable** — within or on each other's light cone (timelike or
+/// lightlike, `s² ≤ 0`)? The relativity-adjusted "could one have influenced the other?" that bounds
+/// temporal logic in 4-D space-time. Spacelike-separated events have no frame-invariant ordering.
+pub fn causally_connectable(dt: f64, dx: f64, dy: f64, dz: f64, c: f64) -> bool {
+    minkowski_interval(dt, dx, dy, dz, c) <= GEO_EPS
+}
+
+// ─── PDE solver: 1-D heat / diffusion equation (finite differences) ───────────────
+
+/// One explicit finite-difference (FTCS) step of the heat/diffusion PDE `∂u/∂t = α·∂²u/∂x²` over a
+/// 1-D grid: `u_new[i] = u[i] + r·(u[i−1] − 2u[i] + u[i+1])`, `r = α·dt/dx²`. Dirichlet boundaries
+/// (endpoints fixed). Writes into `out`. Numerically stable for `r ≤ 0.5`. Zero-heap.
+pub fn heat_equation_step(u: &[f64], alpha: f64, dt: f64, dx: f64, out: &mut [f64]) -> bool {
+    let n = u.len();
+    if n < 2 || out.len() < n || dx == 0.0 {
+        return false;
+    }
+    let r = alpha * dt / (dx * dx);
+    out[0] = u[0];
+    out[n - 1] = u[n - 1];
+    for i in 1..n - 1 {
+        out[i] = u[i] + r * (u[i - 1] - 2.0 * u[i] + u[i + 1]);
+    }
+    true
+}
+
 #[cfg(test)]
 mod tests {
     use super::*;
-    
+
     #[test]
     fn test_rcc8_basic_relations() {
         let region_a = SpatialRegion::new(1, vec![(0.0, 0.0), (2.0, 0.0), (2.0, 2.0), (0.0, 2.0)]);
@@ -493,5 +564,49 @@ mod tests {
         assert_eq!(extracted.region_id, region.region_id);
         assert_eq!(extracted.centroid, region.centroid);
         assert_eq!(extracted.area, region.area);
+    }
+
+    #[test]
+    fn spatial_index_broad_phase() {
+        // Three region boxes; a query box that overlaps two of them.
+        let boxes = [(0.0, 0.0, 1.0, 1.0), (2.0, 2.0, 3.0, 3.0), (0.5, 0.5, 2.5, 2.5)];
+        let query = (0.8, 0.8, 1.2, 1.2);
+        let mut out = [0usize; 8];
+        let n = spatial_index_query(query, &boxes, &mut out);
+        assert_eq!(n, 2, "query overlaps box 0 and box 2, not box 1");
+        assert!(out[..n].contains(&0) && out[..n].contains(&2) && !out[..n].contains(&1));
+        // A polygon's AABB.
+        assert_eq!(polygon_aabb(&[(0.0, 0.0), (2.0, 0.0), (2.0, 1.0)]), (0.0, 0.0, 2.0, 1.0));
+    }
+
+    #[test]
+    fn minkowski_light_cone_classification() {
+        let c = 1.0;
+        // Timelike (dt dominates) → causally connectable.
+        assert!(minkowski_interval(2.0, 1.0, 0.0, 0.0, c) < 0.0);
+        assert!(causally_connectable(2.0, 1.0, 0.0, 0.0, c));
+        // Lightlike (on the cone) → connectable.
+        assert!(minkowski_interval(1.0, 1.0, 0.0, 0.0, c).abs() < 1e-9);
+        assert!(causally_connectable(1.0, 1.0, 0.0, 0.0, c));
+        // Spacelike (space dominates) → NOT causally orderable.
+        assert!(minkowski_interval(1.0, 3.0, 0.0, 0.0, c) > 0.0);
+        assert!(!causally_connectable(1.0, 3.0, 0.0, 0.0, c));
+    }
+
+    #[test]
+    fn heat_pde_step_diffuses_and_conserves() {
+        // A spike on a 5-cell grid; r = α·dt/dx² = 0.25.
+        let u = [0.0, 0.0, 1.0, 0.0, 0.0];
+        let mut out = [0.0f64; 5];
+        assert!(heat_equation_step(&u, 0.25, 1.0, 1.0, &mut out));
+        // The spike spreads: centre 0.5, neighbours 0.25, fixed boundaries.
+        assert!((out[2] - 0.5).abs() < 1e-9);
+        assert!((out[1] - 0.25).abs() < 1e-9 && (out[3] - 0.25).abs() < 1e-9);
+        assert_eq!(out[0], 0.0);
+        // Interior mass conserved (Dirichlet-0 boundaries).
+        let sum: f64 = out.iter().sum();
+        assert!((sum - 1.0).abs() < 1e-9);
+        // Degenerate input refuses.
+        assert!(!heat_equation_step(&u, 0.25, 1.0, 0.0, &mut out));
     }
 }

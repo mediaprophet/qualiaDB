@@ -1,11 +1,27 @@
 // Argumentation Frameworks - Dung-style Abstract Argumentation
 // Provides formal debate resolution mechanisms for Peace Infrastructure
+//
+// ⚠ ZERO-HEAP STATUS: this library (and its `vaf`/`bipolar`/`generation` submodules) is
+// HEAP-based by design — `ArgumentationFramework` uses `HashMap`/`HashSet`/`Vec` for dynamic
+// argument/extension sets, and `stable_extensions`/`complete_extensions` return `Vec<HashSet>`.
+// This is the COLD reasoning layer, off the hot path (consistent with AGENTS.md §0 "no
+// Vec/String/Box in HOT PATHS"). The HOT-PATH grounded-extension primitive is the bounded,
+// zero-heap `grounded_contains` (below). A full zero-heap rewrite (bounded bitmask sets, ≤64
+// arguments) is a candidate for the deferred "library-ization" pass.
 
 use crate::NQuin;
 use std::collections::{HashMap, HashSet};
 
 // Canonical bit positions live in the FrameLayout ABI (single source of truth).
 pub use crate::frame_layout::{ARGUMENT_BIT, ATTACK_BIT, DEFENSE_BIT};
+
+// Extensions of the core Dung framework (split per CLAUDE.md §10).
+pub mod vaf;
+pub mod bipolar;
+pub mod generation;
+pub use vaf::ValueArgumentationFramework;
+pub use bipolar::BipolarFramework;
+pub use generation::framework_from_trace;
 
 /// Argument in an abstract argumentation framework
 #[derive(Debug, Clone)]
@@ -275,12 +291,96 @@ impl ArgumentationFramework {
     pub fn resolve_credulously(&self) -> HashSet<u64> {
         let preferred = self.preferred_extensions();
         let mut result = HashSet::new();
-        
+
         for extension in preferred {
             result.extend(extension);
         }
-        
+
         result
+    }
+
+    /// The set of all argument ids in the framework.
+    fn all_ids(&self) -> HashSet<u64> {
+        self.arguments.keys().copied().collect()
+    }
+
+    /// Does `args` attack `target` (some member of `args` attacks it)?
+    fn set_attacks(&self, args: &HashSet<u64>, target: u64) -> bool {
+        self.attacks.iter().any(|atk| atk.target == target && args.contains(&atk.attacker))
+    }
+
+    /// **Stable extensions** (Dung): a conflict-free set that attacks *every* argument outside it.
+    /// Computed by testing each conflict-free subset (exponential — bounded by frame size, as
+    /// abstract frameworks here are small). Every stable extension is also preferred.
+    pub fn stable_extensions(&self) -> Vec<HashSet<u64>> {
+        let ids: Vec<u64> = self.arguments.keys().copied().collect();
+        let n = ids.len();
+        let mut out = Vec::new();
+        if n > 20 {
+            // Guard against blow-up; fall back to preferred extensions that are also stable.
+            for ext in self.preferred_extensions() {
+                if self.is_stable(&ext) {
+                    out.push(ext);
+                }
+            }
+            return out;
+        }
+        for mask in 0u32..(1u32 << n) {
+            let set: HashSet<u64> = (0..n).filter(|&i| (mask >> i) & 1 == 1).map(|i| ids[i]).collect();
+            if self.is_conflict_free(&set) && self.is_stable(&set) {
+                out.push(set);
+            }
+        }
+        out
+    }
+
+    /// Is `args` a **stable** extension: conflict-free and attacks every argument not in it?
+    pub fn is_stable(&self, args: &HashSet<u64>) -> bool {
+        if !self.is_conflict_free(args) {
+            return false;
+        }
+        self.all_ids()
+            .iter()
+            .filter(|id| !args.contains(id))
+            .all(|&outside| self.set_attacks(args, outside))
+    }
+
+    /// **Complete extensions** (Dung): an admissible set that contains *every* argument it
+    /// defends (its own fixed point under the characteristic function). The grounded extension is
+    /// the least complete extension; each preferred extension is a maximal complete one.
+    pub fn complete_extensions(&self) -> Vec<HashSet<u64>> {
+        let ids: Vec<u64> = self.arguments.keys().copied().collect();
+        let n = ids.len();
+        let mut out = Vec::new();
+        if n > 20 {
+            return out; // bounded; abstract frameworks here are small
+        }
+        for mask in 0u32..(1u32 << n) {
+            let set: HashSet<u64> = (0..n).filter(|&i| (mask >> i) & 1 == 1).map(|i| ids[i]).collect();
+            if self.is_complete(&set) {
+                out.push(set);
+            }
+        }
+        out
+    }
+
+    /// Does `args` **defend** `arg` (every attacker of `arg` is attacked by `args`)?
+    pub fn defends(&self, args: &HashSet<u64>, arg: u64) -> bool {
+        self.attacks
+            .iter()
+            .filter(|atk| atk.target == arg)
+            .all(|atk| self.set_attacks(args, atk.attacker))
+    }
+
+    /// Is `args` a **complete** extension: admissible and contains every argument it defends?
+    pub fn is_complete(&self, args: &HashSet<u64>) -> bool {
+        if !self.is_admissible(args) {
+            return false;
+        }
+        // Every argument the set defends must already be in the set.
+        self.all_ids()
+            .iter()
+            .all(|&id| !self.defends(args, id) || args.contains(&id))
     }
 }
 
@@ -452,7 +552,47 @@ mod tests {
         assert!(grounded_contains(&args, &attacks, 3), "C is reinstated (its attacker B is defeated)");
         assert!(!grounded_contains(&args, &attacks, 99), "unknown argument is not justified");
     }
-    
+
+    #[test]
+    fn stable_and_complete_extensions() {
+        let mk_arg = |id| Argument::new(id, String::new(), Vec::new(), NQuin::default());
+        let mk_atk = |a, b| Attack { attacker: a, target: b, attack_type: AttackType::Rebuttal, strength: 1.0 };
+
+        // 2-cycle 1 ↔ 2.
+        let mut af = ArgumentationFramework::new();
+        af.add_argument(mk_arg(1));
+        af.add_argument(mk_arg(2));
+        af.add_attack(mk_atk(1, 2));
+        af.add_attack(mk_atk(2, 1));
+
+        // Stable extensions: {1} and {2}.
+        let stable = af.stable_extensions();
+        assert_eq!(stable.len(), 2);
+        assert!(stable.iter().any(|e| *e == HashSet::from([1u64])));
+        assert!(stable.iter().any(|e| *e == HashSet::from([2u64])));
+        assert!(af.is_stable(&HashSet::from([1u64])));
+        assert!(!af.is_stable(&HashSet::new()), "{{}} attacks nothing outside → not stable");
+
+        // Complete extensions: {}, {1}, {2} (grounded {} is the least complete).
+        let complete = af.complete_extensions();
+        assert_eq!(complete.len(), 3);
+        assert!(complete.iter().any(|e| e.is_empty()));
+        assert!(af.is_complete(&HashSet::new()));
+        assert!(af.is_complete(&HashSet::from([1u64])));
+
+        // Reinstatement chain 1→2→3: {1,3} is the unique stable extension and is complete.
+        let mut chain = ArgumentationFramework::new();
+        for i in 1u64..=3 {
+            chain.add_argument(mk_arg(i));
+        }
+        chain.add_attack(mk_atk(1, 2));
+        chain.add_attack(mk_atk(2, 3));
+        assert!(chain.is_stable(&HashSet::from([1u64, 3])));
+        assert!(chain.is_complete(&HashSet::from([1u64, 3])));
+        assert!(chain.defends(&HashSet::from([1u64]), 3), "1 defends 3 by attacking 2");
+        assert_eq!(chain.stable_extensions(), vec![HashSet::from([1u64, 3])]);
+    }
+
     #[test]
     fn test_grounded_extension() {
         let framework = create_sanctuary_debate();

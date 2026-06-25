@@ -104,10 +104,74 @@ pub fn translation_status(machine_proposed: bool, human_attested: bool, translat
     }
 }
 
+// ─── §1 Human-rights-instrument binding of compositions ────────────────────────────
+
+/// A composition (and its proportionality test) is **valid** only when it is anchored to an
+/// established human-rights `instrument` (a non-zero instrument hash) AND is proportionate. This
+/// is the structural bind: legal reasoning may not float free of a cited instrument, and a
+/// restriction must pass proportionality. (`proportionate` is the `proportionality_met` verdict.)
+pub fn composition_valid(instrument: u64, proportionate: bool) -> bool {
+    instrument != 0 && proportionate
+}
+
+/// Is a legal composition anchored to a cited instrument at all? (A composition citing `0` is
+/// ungrounded and must be routed to human review rather than asserted.)
+#[inline]
+pub fn anchored_to_instrument(instrument: u64) -> bool {
+    instrument != 0
+}
+
+// ─── §2 Translation matrix: natural language → machine logic ───────────────────────
+
+/// The result of translating a natural-language term to a machine-logic construct.
+#[derive(Debug, Clone, Copy, PartialEq, Eq)]
+pub enum Translation {
+    /// A human-attested mapping yielded the machine construct (its hash).
+    Mapped(u64),
+    /// No attested mapping exists — routed to human review (never machine-flattened).
+    RequiresHumanReview,
+}
+
+/// Translate a natural-language term to its machine-logic construct via a `matrix` of
+/// `(nl_term_hash, machine_construct_hash)` rows, **gated by the Curation Directive**: a mapping
+/// is only used if `human_attested` (the machine may propose, but only a human ratifies a
+/// definitive NL→logic equivalence). An unmapped or unattested term routes to human review.
+pub fn translate_via_matrix(nl_term: u64, matrix: &[(u64, u64)], human_attested: bool) -> Translation {
+    if !human_attested {
+        return Translation::RequiresHumanReview;
+    }
+    match matrix.iter().find(|(nl, _)| *nl == nl_term) {
+        Some(&(_, construct)) => Translation::Mapped(construct),
+        None => Translation::RequiresHumanReview,
+    }
+}
+
 #[cfg(test)]
 mod tests {
     use super::*;
     use crate::q_hash;
+
+    #[test]
+    fn composition_binds_to_instrument_and_proportionality() {
+        let iccpr = q_hash("instrument:iccpr");
+        assert!(composition_valid(iccpr, true));
+        assert!(!composition_valid(iccpr, false), "must be proportionate");
+        assert!(!composition_valid(0, true), "must cite an instrument");
+        assert!(anchored_to_instrument(iccpr) && !anchored_to_instrument(0));
+    }
+
+    #[test]
+    fn translation_matrix_honours_the_curation_directive() {
+        let nl = q_hash("nl:unconscionable");
+        let logic = q_hash("logic:UnconscionabilityTest");
+        let matrix = [(nl, logic)];
+        // Human-attested + present → mapped.
+        assert_eq!(translate_via_matrix(nl, &matrix, true), Translation::Mapped(logic));
+        // Not attested → human review (machine doesn't get to flatten meaning).
+        assert_eq!(translate_via_matrix(nl, &matrix, false), Translation::RequiresHumanReview);
+        // Unmapped term → human review.
+        assert_eq!(translate_via_matrix(q_hash("nl:unknown"), &matrix, true), Translation::RequiresHumanReview);
+    }
 
     #[test]
     fn zk_gate_and_selective_disclosure() {

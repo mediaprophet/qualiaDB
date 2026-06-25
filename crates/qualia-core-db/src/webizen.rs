@@ -265,10 +265,16 @@ impl SlgArena {
         let rules = self.rule_registry.clone();
         let mut fired = 0usize;
         for rule in &rules {
-            if let Some(norm) =
-                crate::modalities::logic::deontic::compile_n3_rule_to_norm(rule, contract_hash, 0)
-            {
-                self.write_table(norm);
+            // Only ground rules compile to a single deontic norm; variable rules
+            // are grounded by forward-chaining (`fire_guard_rules`) below, so
+            // compiling them here would write a spurious norm keyed on a
+            // variable-name hash.
+            if !rule_has_variables(rule) {
+                if let Some(norm) =
+                    crate::modalities::logic::deontic::compile_n3_rule_to_norm(rule, contract_hash, 0)
+                {
+                    self.write_table(norm);
+                }
             }
             let mut opcodes = [SlgOpcode::Halt; 64];
             if let Ok(count) = crate::modalities::logic::n3_compiler::compile_rule_to_opcodes(rule, &mut opcodes) {
@@ -333,13 +339,20 @@ impl SlgArena {
                 if !rule_has_variables(rule) {
                     continue; // ground rules go through the deontic-norm path
                 }
-                if rule.premise.triples.is_empty() || rule.conclusion.triples.is_empty() {
+                // `triples` is a fixed `[_; 8]` array, so `.is_empty()` is always
+                // false - gate on the populated `len` instead.
+                if rule.premise.len == 0 || rule.conclusion.len == 0 {
                     continue;
                 }
                 let mut bindings = [(0u64, 0u64); MAX_RULE_VARS];
                 join_premise(
                     &rule.premise.triples[..rule.premise.len],
-                    &rule.conclusion.triples,
+                    // Slice the conclusion by `len` too: passing the full array
+                    // would stage (8 - len) junk (0,0,0) triples per match, which
+                    // - being skipped by `has_quin` (subject==0) - get re-asserted
+                    // every round, never reaching the fixpoint and flooding the
+                    // recent-write ring until real conclusions are evicted.
+                    &rule.conclusion.triples[..rule.conclusion.len],
                     &facts[..fact_count],
                     0,
                     &mut bindings,
@@ -435,6 +448,12 @@ pub enum SlgOpcode {
     /// Deprecated — use `CheckMinInclusive`.
     CheckThreshold,
     ConsumeFact,
+    /// Linear-logic **zero-knowledge–gated** resource exhaustion: like `ConsumeFact`, but the
+    /// cryptographic-token resource `(subject_reg, predicate_reg, object_reg)` is spent **only**
+    /// if a verified zk-entitlement marker `(subject_reg, q42:zkVerified, q42:true)` is live in
+    /// the arena. Absent the proof, or if the token is already spent, the frame fails (`None`).
+    /// Delegates to `modalities::linear::zk_gated_consume`.
+    ZkConsumeFact,
     Unify,
     Call,
     Return,
@@ -799,6 +818,28 @@ pub fn execute_vm_frame(
                     frame.object_reg,
                 ) {
                     linear::consume_quin(q);
+                } else {
+                    return None;
+                }
+            }
+            SlgOpcode::ZkConsumeFact => {
+                // Gate exhaustion on a verified zk-entitlement marker for the resource's subject.
+                let proof_verified = arena
+                    .find_mutable_quin(
+                        frame.subject_reg,
+                        crate::q_hash("q42:zkVerified"),
+                        crate::q_hash("q42:true"),
+                    )
+                    .is_some();
+                if let Some(q) = arena.find_mutable_quin(
+                    frame.subject_reg,
+                    frame.predicate_reg,
+                    frame.object_reg,
+                ) {
+                    // Linear (consume-once) cryptographic token, gated on the zk proof.
+                    if !linear::zk_gated_consume(q, false, proof_verified) {
+                        return None;
+                    }
                 } else {
                     return None;
                 }
@@ -2080,30 +2121,33 @@ pub fn check_personhood_category_error(agent_type: u64, claims_dignity_right: bo
     let var = |n: &'static str| Term::Variable(n);
 
     // G-guard for a given non-natural-person class: claiming a NaturalPerson-held Right → flag.
-    let guard = |id: &'static str, class: &'static str| Rule {
+    // `class_uri` is the FULL values: IRI of the guarded class, so its `q_hash`
+    // matches the `agent_type` fact below. Full-IRI `&'static str` literals keep
+    // this zero-heap (the predecessor leaked `format!` Strings via `Box::leak`).
+    let guard = |id: &'static str, class_uri: &'static str| Rule {
         id: Some(id),
         rule_type: RuleType::Strict,
         weight: None,
         premise: Formula {
             triples: vec![
-                Triple { subject: var("c"), predicate: u("a"), object: u("dynamic_test_str") },
-                Triple { subject: var("c"), predicate: Term::Uri("q42:dynamic_test_str"), object: var("r") },
-                Triple { subject: var("r"), predicate: u("a"), object: u("dynamic_test_str") },
-                Triple { subject: var("r"), predicate: Term::Uri("q42:dynamic_test_str"), object: Term::Uri("q42:dynamic_test_str") },
+                Triple { subject: var("c"), predicate: u("a"), object: u(class_uri) },
+                Triple { subject: var("c"), predicate: u("https://ns.webcivics.net/values/claims"), object: var("r") },
+                Triple { subject: var("r"), predicate: u("a"), object: u("https://ns.webcivics.net/values/Right") },
+                Triple { subject: var("r"), predicate: u("https://ns.webcivics.net/values/heldBy"), object: u("https://ns.webcivics.net/values/NaturalPerson") },
             ],
         },
         conclusion: Formula {
             triples: vec![Triple {
                 subject: var("c"),
-                predicate: Term::Uri("q42:dynamic_test_str"),
-                object: Term::Uri("q42:dynamic_test_str"),
+                predicate: u("https://ns.webcivics.net/values/flag"),
+                object: u("https://ns.webcivics.net/values/PersonhoodCategoryError"),
             }],
         },
     };
 
     let mut arena = SlgArena::new();
-    let r1 = guard("agency-G1", "CorporatePerson"); arena.register_rule(&r1);
-    let r2 = guard("agency-G1-prime", "ArtificialAgent"); arena.register_rule(&r2);
+    let r1 = guard("agency-G1", "https://ns.webcivics.net/values/CorporatePerson"); arena.register_rule(&r1);
+    let r2 = guard("agency-G1-prime", "https://ns.webcivics.net/values/ArtificialAgent"); arena.register_rule(&r2);
 
     let fact = |a: &mut SlgArena, s: u64, p: u64, o: u64| {
         a.write_table(NQuin { subject: s, predicate: p, object: o, context: 0, metadata: 0, parity: s ^ p ^ o });
@@ -2124,6 +2168,42 @@ pub fn check_personhood_category_error(agent_type: u64, claims_dignity_right: bo
 mod tests {
     use super::*;
     use crate::crdt::{SuspendedTransaction, SuspendedTransactionQueue};
+
+    #[test]
+    fn zk_consume_fact_gates_resource_exhaustion_on_verified_proof() {
+        use crate::modalities::linear::is_consumed;
+        let token = crate::q_hash("token:apiCall");
+        let spend = crate::q_hash("q42:spend");
+        let svc = crate::q_hash("svc:inference");
+        let mk = |s, p, o| {
+            let mut q = NQuin { subject: s, predicate: p, object: o, context: 0, metadata: 0, parity: 0 };
+            q.parity = q.subject ^ q.predicate ^ q.object ^ q.context;
+            q
+        };
+        let ops = [SlgOpcode::ZkConsumeFact];
+        let frame_for = || VmFrame { subject_reg: token, predicate_reg: spend, object_reg: svc, context_reg: 0 };
+        // The token's spent state (the real semantics; the VM's end-of-program return value is a
+        // separate convention we don't rely on here).
+        let spent = |a: &mut SlgArena| a.find_mutable_quin(token, spend, svc).map(|q| is_consumed(q)).unwrap_or(false);
+
+        // 1. Resource present, NO zk-verified marker → gate REFUSES (frame None); token NOT spent.
+        let mut arena = SlgArena::new();
+        arena.write_table(mk(token, spend, svc));
+        let mut frame = frame_for();
+        assert!(execute_vm_frame(&mut arena, &ops, &mut frame).is_none(), "no proof → gate refuses");
+        assert!(!spent(&mut arena), "token must NOT be spent without a verified proof");
+
+        // 2. Add the verified zk marker → the token is now spent.
+        arena.write_table(mk(token, crate::q_hash("q42:zkVerified"), crate::q_hash("q42:true")));
+        let mut frame2 = frame_for();
+        let _ = execute_vm_frame(&mut arena, &ops, &mut frame2);
+        assert!(spent(&mut arena), "verified proof → token spent exactly once");
+
+        // 3. Re-spend attempt → gate refuses (already exhausted); token stays spent (no double-spend).
+        let mut frame3 = frame_for();
+        assert!(execute_vm_frame(&mut arena, &ops, &mut frame3).is_none(), "exhausted linear token cannot be re-spent");
+        assert!(spent(&mut arena), "token remains spent");
+    }
 
     #[test]
     fn test_multi_agent_ratification_flow() {
@@ -2308,17 +2388,17 @@ mod tests {
             weight: None,
             premise: Formula {
                 triples: vec![
-                    Triple { subject: var("c"), predicate: u("a"), object: Term::Uri("q42:dynamic_test_str") },
-                    Triple { subject: var("c"), predicate: Term::Uri("q42:dynamic_test_str"), object: var("r") },
-                    Triple { subject: var("r"), predicate: u("a"), object: u("dynamic_test_str") },
-                    Triple { subject: var("r"), predicate: Term::Uri("q42:dynamic_test_str"), object: Term::Uri("q42:dynamic_test_str") },
+                    Triple { subject: var("c"), predicate: u("a"), object: u("https://ns.webcivics.net/values/CorporatePerson") },
+                    Triple { subject: var("c"), predicate: u("https://ns.webcivics.net/values/claims"), object: var("r") },
+                    Triple { subject: var("r"), predicate: u("a"), object: u("https://ns.webcivics.net/values/Right") },
+                    Triple { subject: var("r"), predicate: u("https://ns.webcivics.net/values/heldBy"), object: u("https://ns.webcivics.net/values/NaturalPerson") },
                 ],
             },
             conclusion: Formula {
                 triples: vec![Triple {
                     subject: var("c"),
-                    predicate: Term::Uri("q42:dynamic_test_str"),
-                    object: Term::Uri("q42:dynamic_test_str"),
+                    predicate: u("https://ns.webcivics.net/values/flag"),
+                    object: u("https://ns.webcivics.net/values/PersonhoodCategoryError"),
                 }],
             },
         };

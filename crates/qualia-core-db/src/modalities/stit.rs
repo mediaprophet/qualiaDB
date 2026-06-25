@@ -95,6 +95,42 @@ pub fn joint_liable_members(
     n
 }
 
+// ─── Branching time + choice partitioning (cstit / dstit) ─────────────────────────
+//
+// On a branching-time tree of histories, φ is "settled true" at a moment if it holds on EVERY
+// history through it (the agent had no choice about it). STIT distinguishes:
+//   * **cstit** (Chellas):    α saw to it that φ — φ holds because of α's choice.
+//   * **dstit** (deliberative): cstit AND φ was NOT settled — α had a genuine alternative (could
+//     have done otherwise). Deliberative agency is what grounds blame/praise.
+
+/// Is φ **settled** — true on all histories (the agent had no real choice)? `could_do_otherwise`
+/// is whether an alternative history avoided φ.
+#[inline]
+pub fn is_settled(could_do_otherwise: bool) -> bool {
+    !could_do_otherwise
+}
+
+/// **Chellas STIT** `[α cstit φ]`: α saw to it that φ — here, α brought φ about.
+#[inline]
+pub fn chellas_stit(brought_about: bool) -> bool {
+    brought_about
+}
+
+/// **Deliberative STIT** `[α dstit φ]`: α brought φ about AND φ was not settled (α could have
+/// done otherwise) — the genuine-choice reading that grounds moral responsibility.
+#[inline]
+pub fn deliberative_stit(brought_about: bool, could_do_otherwise: bool) -> bool {
+    brought_about && could_do_otherwise
+}
+
+/// **Counterfactual omission** ("could have prevented X but did not"): the agent had the
+/// `ability` and the `opportunity` to bring about the prevention, yet did not act. The
+/// counterfactual that turns a bare omission into a culpable one.
+#[inline]
+pub fn could_have_prevented(had_ability: bool, had_opportunity: bool, did_act: bool) -> bool {
+    had_ability && had_opportunity && !did_act
+}
+
 #[cfg(test)]
 mod tests {
     use super::*;
@@ -157,5 +193,23 @@ mod tests {
         let done = [fact(platform, q_hash("q42:broughtAbout"), content)];
         assert!(joint_discharged(&members, content, &done));
         assert_eq!(joint_liable_members(&members, content, &done, &mut out), 0);
+    }
+
+    #[test]
+    fn cstit_dstit_and_counterfactual_prevention() {
+        // cstit: brought about → saw to it.
+        assert!(chellas_stit(true));
+        assert!(!chellas_stit(false));
+        // Settled-ness: no alternative history ⇒ settled.
+        assert!(is_settled(false));
+        assert!(!is_settled(true));
+        // dstit: brought about AND could have done otherwise (genuine choice).
+        assert!(deliberative_stit(true, true));
+        assert!(!deliberative_stit(true, false), "settled outcome → no deliberative agency");
+        assert!(!deliberative_stit(false, true));
+        // Counterfactual omission: could have prevented (ability + opportunity, did not act).
+        assert!(could_have_prevented(true, true, false));
+        assert!(!could_have_prevented(true, true, true), "acted → no culpable omission");
+        assert!(!could_have_prevented(false, true, false), "no ability → not culpable");
     }
 }

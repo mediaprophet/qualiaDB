@@ -46,6 +46,9 @@ pub mod host;
 #[cfg(not(target_arch = "wasm32"))]
 pub mod gpu;
 
+#[cfg(not(target_arch = "wasm32"))]
+pub mod hetero_dispatch;
+
 pub mod ode_solver;
 pub use ode_solver::{
     ShootingMethod, BvpSystem, Rk4Solver, ExponentialDecay, OdeSystem,
@@ -53,14 +56,34 @@ pub use ode_solver::{
     QuantizationMapper, StandardModelMasses, HarmonicOscillator,
     create_ode_step_quin, extract_ode_state, pack_ode_state
 };
+
+pub mod ode_advanced;
+pub use ode_advanced::{
+    integrate_symplectic, verlet_step, ruth3_step, yoshida4_step, SymplecticMethod,
+    SymplecticResult, bdf1_step, bdf2_step, integrate_bdf, hermite_dense_output,
+    integrate_with_sensitivity, SensitivityResult,
+};
 pub mod tensor_provenance;
 pub use tensor_provenance::{TensorState, TensorProvenance};
+
+pub mod tensor_integrity;
+pub use tensor_integrity::{
+    commit_state, integrity_root, lineage_commitment, transformation_commitment,
+    verify_lineage, LineageCommitment,
+};
 
 #[cfg(not(target_arch = "wasm32"))]
 pub use host::{PAGE_SIZE, DEFAULT_BUFFER_SIZE, IoError, DmaBuffer};
 
 #[cfg(not(target_arch = "wasm32"))]
 pub use gpu::{GpuError, GpuIntegrator, PlatformGpuIntegrator, WebGpuIntegrator};
+
+#[cfg(not(target_arch = "wasm32"))]
+pub use hetero_dispatch::{
+    plan_fusion, select_precision, ComputeBackend, HeterogeneousDispatcher,
+    HostCapabilities, PowerThermalBudget, Precision, TensorOp, TensorOpKind,
+    ZeroCopyStrategy,
+};
 
 // ─── Opcodes ─────────────────────────────────────────────────────────────────────
 //

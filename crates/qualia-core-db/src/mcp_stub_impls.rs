@@ -566,6 +566,225 @@ pub fn validate_shacl(args: &[u8]) -> Result<String, McpSystemError> {
     serde_json::to_string(&payload).map_err(|_| McpSystemError::ParseError)
 }
 
+// ── SHACL identity / data-sovereignty extension tools ───────────────────────────
+//
+// Expose the `shacl_extensions::identity` capabilities (enumerated identity, VC-gated
+// targets, severity degradation, decentralized routing) through the MCP tool surface,
+// so an agent can invoke the runtime governance checks — not merely declare the shapes.
+// The validators themselves are zero-heap; the JSON marshalling here is the cold MCP edge.
+
+use crate::modalities::logic::shacl_extensions::{
+    credential_gates_target, degrade_violations, loci_for_shape, shapes_for_locus,
+    validate_enumerated_identity, CredentialGate, CryptoScheme, IdentifierBinding,
+    IdentityValidation, OperationMode, ShaclSeverity, ShapeRoute, ShapeViolation,
+    MAX_IDENTITY_BINDINGS, MAX_SHAPE_ROUTES,
+};
+use crate::verifiable_credential::Credential;
+
+fn parse_crypto_scheme(s: &str) -> CryptoScheme {
+    match s.to_ascii_lowercase().as_str() {
+        "ed25519" => CryptoScheme::Ed25519,
+        "mldsa65" | "ml-dsa-65" | "mldsa" => CryptoScheme::MlDsa65,
+        "blake3" | "blake3commitment" => CryptoScheme::Blake3Commitment,
+        "x25519" => CryptoScheme::X25519,
+        _ => CryptoScheme::Unknown,
+    }
+}
+
+fn parse_shacl_severity(s: &str) -> ShaclSeverity {
+    match s.to_ascii_lowercase().as_str() {
+        "critical" => ShaclSeverity::Critical,
+        "violation" => ShaclSeverity::Violation,
+        "warning" => ShaclSeverity::Warning,
+        _ => ShaclSeverity::Info,
+    }
+}
+
+/// `validate_enumerated_identity` — identity as an enumerated multi-identifier state.
+pub fn validate_enumerated_identity_tool(args: &[u8]) -> Result<String, McpSystemError> {
+    let v = parse_tool_args(args)?;
+    let arr = v
+        .get("bindings")
+        .and_then(Value::as_array)
+        .ok_or(McpSystemError::InvalidParameters)?;
+    let n = arr.len().min(MAX_IDENTITY_BINDINGS);
+    let mut buf = [IdentifierBinding {
+        identifier: 0,
+        scheme: CryptoScheme::Unknown,
+        attested: false,
+        confidence: 0.0,
+    }; MAX_IDENTITY_BINDINGS];
+    for (i, b) in arr.iter().take(n).enumerate() {
+        buf[i] = IdentifierBinding {
+            identifier: json_u64(b, "identifier", 0),
+            scheme: parse_crypto_scheme(json_str(b, "scheme", "unknown")),
+            attested: b.get("attested").and_then(Value::as_bool).unwrap_or(false),
+            confidence: b.get("confidence").and_then(Value::as_f64).unwrap_or(0.0) as f32,
+        };
+    }
+    let min_distinct = json_u64(&v, "min_distinct", 2) as u16;
+    let min_attested = json_u64(&v, "min_attested", 1) as u16;
+    let payload = match validate_enumerated_identity(&buf[..n], min_distinct, min_attested) {
+        IdentityValidation::Valid {
+            distinct,
+            attested,
+            aggregate_confidence,
+        } => json!({
+            "verdict": "valid", "distinct": distinct, "attested": attested,
+            "aggregateConfidence": aggregate_confidence,
+        }),
+        IdentityValidation::Underdetermined { distinct, attested } => json!({
+            "verdict": "underdetermined", "distinct": distinct, "attested": attested,
+        }),
+        IdentityValidation::DefinitiveCollapse => json!({
+            "verdict": "definitive_collapse",
+            "reason": "a binding asserts certainty (confidence>=1.0); identity must stay a confidence-relation (out-of-band remainder)",
+        }),
+    };
+    serde_json::to_string(&payload).map_err(|_| McpSystemError::ParseError)
+}
+
+/// `shacl_credential_gate` — does a verified VC gate this SHACL target node?
+pub fn shacl_credential_gate(args: &[u8]) -> Result<String, McpSystemError> {
+    let v = parse_tool_args(args)?;
+    let focus_node = json_u64(&v, "focus_node", 0);
+    let g = v.get("gate").ok_or(McpSystemError::InvalidParameters)?;
+    let gate = CredentialGate {
+        shape: json_u64(g, "shape", 0),
+        required_claim_predicate: json_u64(g, "required_claim_predicate", 0),
+        required_claim_object: json_u64(g, "required_claim_object", 0),
+        accepted_issuer: json_u64(g, "accepted_issuer", 0),
+    };
+    let c = v.get("credential").ok_or(McpSystemError::InvalidParameters)?;
+    let mut claims = Vec::new();
+    if let Some(items) = c.get("claims").and_then(Value::as_array) {
+        for q in items {
+            claims.push(NQuin {
+                subject: json_u64(q, "s", 0),
+                predicate: json_u64(q, "p", 0),
+                object: json_u64(q, "o", 0),
+                context: 0,
+                metadata: 0,
+                parity: 0,
+            });
+        }
+    }
+    let vc = Credential {
+        issuer: json_u64(c, "issuer", 0),
+        subject: json_u64(c, "subject", 0),
+        issued_at: json_u64(c, "issued_at", 0) as u32,
+        valid_until: json_u64(c, "valid_until", 0) as u32,
+        claims,
+    };
+    let applies = credential_gates_target(&gate, focus_node, &vc);
+    let payload = json!({ "applies": applies, "focusNode": focus_node, "shape": gate.shape });
+    serde_json::to_string(&payload).map_err(|_| McpSystemError::ParseError)
+}
+
+/// `shacl_degrade_violations` — off-grid SHACL severity degradation (Critical fails closed).
+pub fn shacl_degrade_violations(args: &[u8]) -> Result<String, McpSystemError> {
+    const MAX_V: usize = 256;
+    let v = parse_tool_args(args)?;
+    let arr = v
+        .get("violations")
+        .and_then(Value::as_array)
+        .ok_or(McpSystemError::InvalidParameters)?;
+    let n = arr.len().min(MAX_V);
+    let mut buf = [ShapeViolation {
+        shape: 0,
+        focus_node: 0,
+        severity: ShaclSeverity::Info,
+    }; MAX_V];
+    for (i, x) in arr.iter().take(n).enumerate() {
+        buf[i] = ShapeViolation {
+            shape: json_u64(x, "shape", 0),
+            focus_node: json_u64(x, "focus_node", 0),
+            severity: parse_shacl_severity(json_str(x, "severity", "info")),
+        };
+    }
+    let mode = if json_str(&v, "mode", "online").eq_ignore_ascii_case("offgrid") {
+        OperationMode::OffGrid
+    } else {
+        OperationMode::Online
+    };
+    let mut out = buf;
+    let outcome = degrade_violations(&buf[..n], mode, &mut out[..n]);
+    let payload = json!({
+        "blocking": outcome.blocking,
+        "degraded": outcome.degraded,
+        "subgraphUsable": outcome.subgraph_usable,
+    });
+    serde_json::to_string(&payload).map_err(|_| McpSystemError::ParseError)
+}
+
+/// `shacl_route` — decentralized shape-target routing (shapes at a locus / loci of a shape).
+pub fn shacl_route(args: &[u8]) -> Result<String, McpSystemError> {
+    let v = parse_tool_args(args)?;
+    let arr = v
+        .get("routes")
+        .and_then(Value::as_array)
+        .ok_or(McpSystemError::InvalidParameters)?;
+    let n = arr.len().min(MAX_SHAPE_ROUTES);
+    let mut routes = [ShapeRoute { shape: 0, locus: 0 }; MAX_SHAPE_ROUTES];
+    for (i, r) in arr.iter().take(n).enumerate() {
+        routes[i] = ShapeRoute {
+            shape: json_u64(r, "shape", 0),
+            locus: json_u64(r, "locus", 0),
+        };
+    }
+    let mut out = [0u64; MAX_SHAPE_ROUTES];
+    let payload = if let Some(locus) = v.get("query_locus").and_then(Value::as_u64) {
+        let k = shapes_for_locus(&routes[..n], locus, &mut out);
+        json!({ "queryLocus": locus, "shapes": out[..k].to_vec() })
+    } else if let Some(shape) = v.get("query_shape").and_then(Value::as_u64) {
+        let k = loci_for_shape(&routes[..n], shape, &mut out);
+        json!({ "queryShape": shape, "loci": out[..k].to_vec() })
+    } else {
+        return Err(McpSystemError::InvalidParameters);
+    };
+    serde_json::to_string(&payload).map_err(|_| McpSystemError::ParseError)
+}
+
+#[cfg(test)]
+mod identity_tool_tests {
+    use super::*;
+
+    #[test]
+    fn enumerated_identity_tool_valid_then_collapse() {
+        let valid = br#"{"bindings":[{"identifier":1,"scheme":"ed25519","attested":true,"confidence":0.6},{"identifier":2,"scheme":"mldsa65","attested":true,"confidence":0.7}],"min_distinct":2,"min_attested":2}"#;
+        let out = validate_enumerated_identity_tool(valid).unwrap();
+        assert!(out.contains("\"verdict\":\"valid\""), "got {out}");
+
+        let collapse = br#"{"bindings":[{"identifier":1,"scheme":"ed25519","attested":true,"confidence":1.0}],"min_distinct":1,"min_attested":1}"#;
+        let out2 = validate_enumerated_identity_tool(collapse).unwrap();
+        assert!(out2.contains("definitive_collapse"), "got {out2}");
+    }
+
+    #[test]
+    fn credential_gate_tool_applies_and_rejects() {
+        let ok = br#"{"focus_node":100,"gate":{"shape":1,"required_claim_predicate":50,"required_claim_object":60,"accepted_issuer":9},"credential":{"issuer":9,"subject":100,"claims":[{"s":100,"p":50,"o":60}]}}"#;
+        assert!(shacl_credential_gate(ok).unwrap().contains("\"applies\":true"));
+        // wrong issuer → rejected
+        let bad = br#"{"focus_node":100,"gate":{"shape":1,"required_claim_predicate":50,"required_claim_object":60,"accepted_issuer":7},"credential":{"issuer":9,"subject":100,"claims":[{"s":100,"p":50,"o":60}]}}"#;
+        assert!(shacl_credential_gate(bad).unwrap().contains("\"applies\":false"));
+    }
+
+    #[test]
+    fn degrade_violations_tool_offgrid_vs_critical() {
+        let viol = br#"{"violations":[{"shape":1,"focus_node":10,"severity":"violation"}],"mode":"offgrid"}"#;
+        assert!(shacl_degrade_violations(viol).unwrap().contains("\"subgraphUsable\":true"));
+        let crit = br#"{"violations":[{"shape":1,"focus_node":10,"severity":"critical"}],"mode":"offgrid"}"#;
+        assert!(shacl_degrade_violations(crit).unwrap().contains("\"subgraphUsable\":false"));
+    }
+
+    #[test]
+    fn route_tool_shapes_for_locus() {
+        let args = br#"{"routes":[{"shape":1,"locus":100},{"shape":2,"locus":100}],"query_locus":100}"#;
+        let out = shacl_route(args).unwrap();
+        assert!(out.contains("\"shapes\""), "got {out}");
+    }
+}
+
 // ── Qapps ────────────────────────────────────────────────────────────────────
 
 pub fn list_qapps(_args: &[u8]) -> Result<String, McpSystemError> {

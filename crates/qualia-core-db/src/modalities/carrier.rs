@@ -32,6 +32,70 @@ pub fn extract_payload(payload: &[NQuin], out: &mut [NQuin]) -> usize {
     n
 }
 
+// ─── Merkle-DAG content addressing (IPLD-equivalent) ──────────────────────────────
+
+/// Hash an internal Merkle-DAG node from its ordered `children` tags: BLAKE3 over the
+/// little-endian concatenation. Order-sensitive (a node commits to its ordered children).
+/// Zero-heap (fixed-size BLAKE3 state on the stack).
+pub fn merkle_node(children: &[u64]) -> u64 {
+    let mut hasher = blake3::Hasher::new();
+    for &c in children {
+        hasher.update(&c.to_le_bytes());
+    }
+    u64::from_le_bytes(hasher.finalize().as_bytes()[..8].try_into().unwrap())
+}
+
+/// Verify a Merkle-DAG node tag against its children (recompute + compare). Tamper-evident.
+#[inline]
+pub fn verify_merkle_node(node_tag: u64, children: &[u64]) -> bool {
+    merkle_node(children) == node_tag
+}
+
+// ─── Streaming hash (massive blobs, bypassing RAM) ────────────────────────────────
+
+/// A streaming content-hash accumulator — feed chunks of a massive blob (e.g. via DirectStorage)
+/// without ever holding it whole in RAM, then finalize to the 64-bit media tag. Zero-heap (the
+/// BLAKE3 state is fixed-size on the stack; chunks are borrowed, not retained).
+#[derive(Default)]
+pub struct StreamHasher {
+    inner: blake3::Hasher,
+}
+
+impl StreamHasher {
+    pub fn new() -> Self {
+        Self { inner: blake3::Hasher::new() }
+    }
+    /// Feed the next chunk.
+    pub fn update(&mut self, chunk: &[u8]) {
+        self.inner.update(chunk);
+    }
+    /// Finalize to the media tag. Equals [`media_tag`] over the concatenated chunks.
+    pub fn finalize(&self) -> u64 {
+        u64::from_le_bytes(self.inner.finalize().as_bytes()[..8].try_into().unwrap())
+    }
+}
+
+// ─── Cryptographic multi-signature over the payload ───────────────────────────────
+
+/// A **k-of-n multi-signature** over the payload is satisfied iff at least `k` distinct valid
+/// signer attestations are present. The individual signatures are verified by the crypto layer
+/// (Ed25519 / post-quantum ML-DSA via `fiduciary_crypto`); this is the threshold gate.
+/// `valid_signers` = the count of distinct verified signers.
+#[inline]
+pub fn multisig_satisfied(valid_signers: usize, k: usize) -> bool {
+    k > 0 && valid_signers >= k
+}
+
+// ─── Verifiable redaction ─────────────────────────────────────────────────────────
+
+/// **Verifiable redaction**: a redacted blob hides content while preserving the signature/binding.
+/// Each leaf is committed by its hash in a Merkle root; redacting a leaf replaces its *content*
+/// with its *hash tag* — the leaf tags (redacted or not) still recompute the original `root`.
+/// Returns true iff the (possibly-redacted) `leaf_tags` still hash to `original_root`.
+pub fn redaction_preserves_root(leaf_tags: &[u64], original_root: u64) -> bool {
+    merkle_node(leaf_tags) == original_root
+}
+
 #[cfg(test)]
 mod tests {
     use super::*;
@@ -66,5 +130,43 @@ mod tests {
         assert_eq!(n, 2);
         assert_eq!(out[0].subject, 1);
         assert_eq!(out[1].object, 4);
+    }
+
+    #[test]
+    fn merkle_dag_node_is_order_sensitive_and_tamper_evident() {
+        let a = media_tag(b"leaf-a");
+        let b = media_tag(b"leaf-b");
+        let root = merkle_node(&[a, b]);
+        assert!(verify_merkle_node(root, &[a, b]));
+        assert_ne!(merkle_node(&[a, b]), merkle_node(&[b, a]), "order matters in a DAG");
+        assert!(!verify_merkle_node(root, &[a, media_tag(b"tampered")]), "any child change breaks it");
+    }
+
+    #[test]
+    fn streaming_hash_equals_one_shot() {
+        let blob = b"a very large evidentiary recording streamed in chunks";
+        let mut sh = StreamHasher::new();
+        sh.update(&blob[..10]);
+        sh.update(&blob[10..30]);
+        sh.update(&blob[30..]);
+        assert_eq!(sh.finalize(), media_tag(blob), "streaming == one-shot media_tag");
+    }
+
+    #[test]
+    fn multisig_threshold_and_verifiable_redaction() {
+        // 2-of-3 multisig.
+        assert!(multisig_satisfied(2, 2));
+        assert!(multisig_satisfied(3, 2));
+        assert!(!multisig_satisfied(1, 2));
+        assert!(!multisig_satisfied(3, 0), "a zero threshold is invalid");
+
+        // Redaction: replacing a leaf's content with its hash tag preserves the root.
+        let l0 = media_tag(b"public clause");
+        let l1 = media_tag(b"private medical detail");
+        let root = merkle_node(&[l0, l1]);
+        // The "redacted" view carries l1's TAG (not its content) → same tags → same root verifies.
+        assert!(redaction_preserves_root(&[l0, l1], root));
+        // Substituting a different tag (forging the redaction) fails.
+        assert!(!redaction_preserves_root(&[l0, media_tag(b"forged")], root));
     }
 }
