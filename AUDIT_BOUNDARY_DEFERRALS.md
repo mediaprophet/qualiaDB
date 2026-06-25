@@ -22,6 +22,8 @@ are reached.
 | **`dl.rs` — full ALC/SROIQ model-construction *tableau*** | The STRUCTURAL constructs are done & checked (concept disjointness + clash detection, role hierarchy + transitivity, qualified cardinality, nominals; plus subsumption). The full ALC/SROIQ TABLEAU (∃/∀ expansion with individual generation + blocking — what HermiT/Pellet do) is research-grade AND conflicts with the zero-heap invariant (a tableau builds a *dynamic* model tree, not bounded fixed arrays). | (dl batch) | `[~]` ×2 |
 | **`probabilistic.rs` — junction-tree/clique-tree** | Exact inference is done via variable *enumeration* (`update_beliefs`, zero-heap, bounded). Junction-tree/clique-tree is the large-network *efficiency* variant of the same exact inference — a perf optimization, not a missing capability. | `a0f13296e` | `[x]` + note |
 | **`ctl.rs` — CTL\***  | The full CTL operator set (EX/AX/EF/AF/EG/AG/EU/AU) + Emerson-Clarke labelling + fairness is done & checked. CTL\* (arbitrary nesting of path quantifiers and temporal operators) is a strictly more expressive logic — a separate, harder model-checking problem. | `7e9715b90` | `[x]` + note |
+| **`tensor_provenance.rs` — FHE over ODEs** | The append-only tamper-evident lineage DAG (`tensor_integrity.rs`, BLAKE3 content-addressed) and the zk binding for linear transformations (real Groth16 `private_matrix_multiply`) are DONE. **Homomorphic-encryption evaluation of a differential-equation integrator over ciphertexts** has no in-tree backend (no `tfhe`/`concrete`/`seal`), and FHE across the multiplicative depth of an RK4 loop is a multi-year crypto-systems effort. Adding a heavyweight FHE dep also conflicts with the affordability/honest-scope rule. | `6e53ed467` | `[~]` |
+| **`tensor_provenance.rs` — general per-op zk-SNARK** | zk for the stated goal (linear `y=W·x`, hide `W`) is the REAL Groth16 `private_matrix_multiply`, bound via `transformation_commitment`. A zk-SNARK over *arbitrary non-linear* tensor ops needs a bespoke R1CS circuit per operation — research-scale generalization beyond the soundness-tested linear case. | `6e53ed467` | `[x]` (linear) + boundary (general) |
 
 ## B. Hard-invariant conflicts — cannot be done without changing a core invariant
 
@@ -46,11 +48,17 @@ items currently in this section.)
 ## E. GPU verification boundary — pending Timothy's GPU-test decision
 
 The A2000 is reserved for the LLM lane and the standing rule (WAP §0.10) is **never run GPU tests**. I can
-write CPU-side logic but cannot verify GPU paths *green* like everything else. Affected (mostly NOT YET
-REACHED): `calculus/cuda_bridge.rs`, `calculus/host.rs` (SIMD alignment), `calculus/tensor_provenance.rs`
-(zk-SNARKs over tensors), `calculus/ode_solver.rs` (GPU paths), and the `diffusion` GPU pass (CPU side done).
-⚑ **Decision:** may I use the A2000 to verify GPU items, or do them **CPU-side-only + mark the GPU path
-unverified**? (Note: QPU/quantum is separately **deprioritized** by you — WAP §0.11 — and is out of scope.)
+write CPU-side logic but cannot verify GPU paths *green* like everything else. Affected, STILL BLOCKED:
+`calculus/cuda_bridge.rs` (GPUDirect/DirectStorage bridge) and `calculus/host.rs` (SIMD alignment /
+Smith-Waterman SIMD). The `diffusion` GPU pass has its CPU side done.
+
+**Resolved CPU-side (no longer GPU-blocked):** `calculus/ode_solver.rs` advanced integrators are done in
+`ode_advanced.rs` (pure-scalar, no GPU) — `6e53ed467`; `calculus/tensor_provenance.rs` zk + lineage are done
+in `tensor_integrity.rs` (BLAKE3 + CPU Groth16, no GPU) — `6e53ed467`.
+
+⚑ **Decision still needed:** may I use the A2000 to verify the remaining `cuda_bridge.rs` / `host.rs` GPU/SIMD
+items, or do them **CPU-side-only + mark the GPU path unverified**? (Note: QPU/quantum is separately
+**deprioritized** by you — WAP §0.11 — and is out of scope.)
 
 ## F. Deferred structural work — the "library-ization" pass (you directed this)
 

@@ -348,3 +348,70 @@ markers in `deontic.rs` (lines 931–1311), `meta_deontic.rs` (`vec![record]`), 
 `⚠ heap — off-hot-path` note.
 
 ---
+
+## 10 — MODALITIES finish: graph_theory, OWL reasoner, identity SHACL, advanced ODE, tensor integrity (2026-06-25)
+
+**Step / phase:** continuing the MODALITIES section after the context refresh — `done`.
+
+**What was built (all tested green, all on branch `0.0.20-production-excellence`):**
+
+1. **`graph_theory.rs`** (`c7428fe32`) — zero-heap **PageRank** (power iteration, damping, dangling
+   redistribution, L1 convergence) + exact/approximate **subgraph isomorphism** (bounded backtracking
+   directed monomorphism + `max_missing_edges` approximate mode). Betweenness (Brandes) + Louvain ΔQ +
+   bounded-memory path were already present (verified). 3 new tests.
+2. **`logic/owl.rs` → `owl/` library** (`b274692a8`) — split (git mv) into `owl/shacl_convert.rs` (existing
+   OWL→SHACL converter, verbatim) + NEW **`owl/materialize.rs`** = an **OWL 2 RL forward-chaining reasoner**:
+   cax-sco/prp-spo1/prp-dom/prp-rng/prp-symp/prp-trp/prp-inv/prp-fp/prp-ifp/eq-sym/eq-trans/scm-sco/scm-spo +
+   equivalence expansion, datalog-style zero-heap fixpoint; **disjointness contradiction isolation** (cax-dw
+   quarantine, closure keeps going); **property-chain unrolling** (sparse boolean product). 7 tests (12 total
+   in the module).
+3. **`logic/shacl_extensions.rs` → library** (`811e1a75f`) — split into `config.rs` (existing) + NEW
+   **`identity.rs`** = human-centric identity & sovereignty SHACL, 4 audit capabilities, all zero-heap:
+   enumerated-identity validation (multi-identifier, crypto-attested, **DefinitiveCollapse** rejection of
+   certainty = out-of-band-remainder invariant); decentralized shape-target routing; real-time severity
+   degradation (Critical fails closed off-grid); Verifiable-Credential-gated targets (wired to
+   `verifiable_credential::Credential`). 7 tests.
+4. **`logic/logic_modalities_shacl.rs` + `logic/specialized_libs_shacl.rs`** — VERIFIED complete as the SHACL
+   constraint registries they actually are (42-modality completeness test; specialized-libs constraint set).
+   The auto-audit's **bio bullets are MISASSIGNED**; checked off against their real home
+   (`bioinformatics.rs` Smith-Waterman/Needleman-Wunsch/kmer + `webizen.rs::requires_physiological_quarantine`).
+   No code change — honest disposition, not a dodge.
+5. **`calculus/ode_solver.rs` → NEW sibling `ode_advanced.rs`** (`6e53ed467`) — symplectic (Verlet/Ruth3/
+   Yoshida4, energy-conservation + convergence-order tested), stiff **BDF1/BDF2** (L-stable, Newton),
+   cubic-Hermite **dense output**, **forward sensitivity** (∂y/∂y₀ via the variational equation). Pure-scalar
+   zero-heap. 6 tests.
+6. **`calculus/tensor_provenance.rs` → NEW sibling `tensor_integrity.rs`** (`6e53ed467`) — **append-only
+   tamper-evident lineage DAG** (BLAKE3 content-addressed commitments, `verify_lineage` detects ancestor
+   tampering, `integrity_root` Merkle frontier) + **zk-transformation binding** (`transformation_commitment`;
+   the ZK proof for linear maps is the existing real Groth16 `private_matrix_multiply`). 5 tests.
+
+**Measured results:** every module's targeted test run is green (graph_theory 10/10, owl 12/12,
+shacl_extensions 7/7, calculus ode_advanced+tensor_integrity 11/11). These are unit-level correctness proofs
+(e.g. PageRank sums to 1 + ranks the hub; OWL disjointness isolates without halting; symplectic energy drift
+< 5e-3 over 200 periods; BDF stays bounded on y'=−1000y; lineage tamper is detected). Not an end-to-end or
+perf measurement.
+
+**Zero-heap:** all new numerical/runtime predicates are zero-heap (graph_theory bounded path, owl materialize
+fixpoint over caller buffers, identity validators, ode_advanced pure-scalar). `tensor_integrity` is the COLD
+host-side provenance layer (walks a HashMap graph, small scratch Vecs for sorting) — off the hot path, noted
+in its header, consistent with the pre-existing `tensor_provenance.rs`.
+
+**Splits done as-you-go (not deferred):** `owl/`, `shacl_extensions/` became libraries (git mv preserved
+history); `ode_advanced.rs` and `tensor_integrity.rs` are new sibling modules so the pre-existing
+`ode_solver.rs`/`tensor_provenance.rs` monoliths did NOT grow.
+
+**⚑ Where I need the human:**
+1. **GPU/SIMD tests (open Q2, now the gating item for the last 2 MODALITIES files).** `calculus/cuda_bridge.rs`
+   (GPUDirect) and `calculus/host.rs` (Smith-Waterman SIMD) are the only un-reached MODALITIES files. WAP §0.10
+   says never run GPU tests on the A2000 (LLM lane). **May I verify these on the A2000, or implement CPU-side
+   only + mark the GPU path unverified?**
+2. **FHE-over-ODE is a genuine boundary** (`tensor_provenance` item 3): no FHE backend in-tree, FHE across an
+   RK4 loop is multi-year + a heavyweight dep (affordability rule). Recorded `[~]` in the boundary doc — flagging
+   so you can confirm that's acceptable rather than a must-build.
+3. **Guardianship vocabulary (open Q1, unchanged)** — `capacity.rs` mechanism is complete; still need either
+   your canonical 17-domain list or approval to bind a standard taxonomy as a renamable placeholder.
+
+**Next step:** with MODALITIES all but done (only the GPU/SIMD pair + the other-worktree `n3_parser` remain),
+either (a) the GPU files pending your Q2 answer, or (b) move to DOMAINS — starting with `bioinformatics.rs`
+(real Smith-Waterman/k-mer; verify SIMD + genomic-privacy gating + phylogenetic-tree), triaging the
+boilerplate-mismatched bullets per §0.
