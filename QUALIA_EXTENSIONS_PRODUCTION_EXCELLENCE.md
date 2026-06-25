@@ -38,3 +38,22 @@ Replaced with real event-driven dynamics + real CRDT merge:
 - Removed the two dead mock methods (`calculate_synaptic_input`, `extract_output_spikes`).
 - Tests: real LIF fires on synaptic drive + STDP potentiates; leak/grouping helpers. (+ existing tests.)
 
+### `pinn_extension.rs` — DE-MOCKED (2026-06-25)
+
+`mock_neural_forward` was hardcoded formulas that **never touched the model's real `ternary_weights`**, and
+`calculate_residual` computed arbitrary algebra unrelated to any PDE. Replaced with a genuine PINN:
+
+- **Real ternary-MLP forward** (`ternary_forward`): each `TernaryTensor` is a layer (W = ternary_data ×
+  scaling_factor over `shape=[out,in]`), `tanh` hidden + linear final. `pinn_forward` runs it when the model
+  has trained weights.
+- **Real analytic references** (`physics_reference`) for untrained models — exact/standard solutions, NOT
+  mocks: heat → fundamental (Gaussian) solution of `u_t=u_xx`; chaos → Lorenz state by RK4 (`lorenz_state_at`);
+  fluid → Taylor–Green vortex (an exact incompressible Navier–Stokes solution).
+- **Real physics-informed residual** (`pde_residual`): the actual PDE operator (heat `u_t−αu_xx`, Lorenz
+  `‖dX/dt−f(X)‖`, NS continuity `u_x+v_y`) applied to `pinn_forward` by central finite differences.
+- Rewired both the default and the native (cfg `pinn`) paths; removed the dead mocks. The native LLM/GGUF path
+  honestly falls back to the analytic reference (not a mock) until it is wired.
+- Tests: real MLP forward (W·x), heat reference is unit at origin, Lorenz advances by RK4, and the headline —
+  the heat fundamental solution yields a **near-zero PDE residual** (proving the residual is real PDE math).
+
+
