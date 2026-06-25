@@ -303,6 +303,7 @@ fn term_uri(term: &crate::modalities::logic::n3_parser::Term) -> String {
         crate::modalities::logic::n3_parser::Term::Uri(s) => s.to_string(),
         crate::modalities::logic::n3_parser::Term::Variable(s) => s.to_string(),
         crate::modalities::logic::n3_parser::Term::Literal(s) => s.to_string(),
+        crate::modalities::logic::n3_parser::Term::Formula(s) => s.to_string(),
     }
 }
 
