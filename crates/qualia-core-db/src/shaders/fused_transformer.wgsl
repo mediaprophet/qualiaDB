@@ -275,3 +275,81 @@ fn main(@builtin(global_invocation_id) global_id: vec3<u32>) {
     }
     output[out_base + i] = sum;
 }
+
+// ─────────────────────────────────────────────────────────────────────────────
+// Cooperative GEMV (0.0.21) — the perf lever. One workgroup per output row; 256
+// threads cooperatively reduce that row's dot-product, replacing `main`'s
+// 1-thread/row serial loop (the measured decode bottleneck: see
+// .dev-docs/SPARSE_FFN_ARCHITECTURE.md §6 and the kernel-bound diagnosis).
+//
+//   • Coalesced weight reads. At step s, threads t=0..255 read columns s*256+t of
+//     the SAME row → consecutive elements → one coalesced memory transaction. The
+//     naive kernel put adjacent threads on adjacent ROWS (n_in apart) → ~rows-wide
+//     wasted bandwidth per transaction.
+//   • Parallel dequant. Each thread dequantizes only its own columns, so the quant
+//     ALU — the cost that made Q4_K *slower* than F16 on the naive kernel — is spread
+//     across 256 threads instead of serialized on one.
+//   • Portable reduction. Workgroup shared-memory tree reduction — no subgroup
+//     feature required, so it runs on browser/WebGPU backends without subgroups. A
+//     subgroup fast-path is a follow-up refinement, not a correctness dependency.
+//
+// `dequant_weight()` / `input` / `output` / `params` are shared verbatim with `main`,
+// so the only numerical difference vs the proven kernel is FP reassociation of the
+// sum (parity-gated by max_abs_err vs the CPU reference, not bit-equality).
+//
+// Dispatched as (n_out, 1, 1) workgroups; decode batch = 1 (m = 0). n_out ≤ 10240
+// (MAX_STACK_GEMM_OUT) < 65535 → one workgroup per row is within dispatch limits.
+const COOP_WG: u32 = 256u;
+var<workgroup> coop_partial: array<f32, 256>;
+
+@compute @workgroup_size(256)
+fn coop_gemv(
+    @builtin(workgroup_id) wg_id: vec3<u32>,
+    @builtin(local_invocation_id) lid: vec3<u32>,
+) {
+    // row / m are uniform across the workgroup (from workgroup_id) → these early
+    // returns and all barriers below are in uniform control flow.
+    let m = wg_id.y;
+    let batch = max(params.n_batch, 1u);
+    if m >= batch {
+        return;
+    }
+    let row = wg_id.x;
+    if row >= params.n_out {
+        return;
+    }
+    let t = lid.x;
+    let in_stride = select(params.n_in, params.in_row_stride, params.in_row_stride > 0u);
+    let out_stride = select(params.n_out, params.out_row_stride, params.out_row_stride > 0u);
+    let in_base = m * in_stride;
+    let out_base = m * out_stride;
+
+    // Each thread accumulates a strided slice of the contraction dimension.
+    var acc = 0.0;
+    var j = t;
+    loop {
+        if j >= params.n_in {
+            break;
+        }
+        acc = acc + dequant_weight(row, j) * input[in_base + j];
+        j = j + COOP_WG;
+    }
+    coop_partial[t] = acc;
+    workgroupBarrier();
+
+    // Shared-memory tree reduction over the 256 partials.
+    var stride = COOP_WG >> 1u;
+    loop {
+        if stride == 0u {
+            break;
+        }
+        if t < stride {
+            coop_partial[t] = coop_partial[t] + coop_partial[t + stride];
+        }
+        workgroupBarrier();
+        stride = stride >> 1u;
+    }
+    if t == 0u {
+        output[out_base + row] = coop_partial[0];
+    }
+}

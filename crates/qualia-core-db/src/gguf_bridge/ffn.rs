@@ -15,8 +15,15 @@ impl QTensorEngine {
     ) -> bool {
         // Phase 3: try the single-submit fused FFN first (one round-trip/layer). Requires resident
         // weights; on any ineligibility it returns false and we fall through to the per-GEMM path.
+        // 0.0.21: when the cooperative GEMV kernel is on, BYPASS fusion so the FFN gate/up/down GEMMs
+        // flow through the per-GEMM path → `dispatch_gemm_raw_into` → `coop_gemv` (fusion's own GEMMs
+        // still run the naive `main`; fusion was throughput-neutral, so routing the FFN through the
+        // accelerated kernel wins). The two are recombined in a later step.
         #[cfg(not(target_arch = "wasm32"))]
-        if crate::llm_bench::resident_weights_enabled() && crate::llm_bench::ffn_fusion_enabled() {
+        if crate::llm_bench::resident_weights_enabled()
+            && crate::llm_bench::ffn_fusion_enabled()
+            && !crate::llm_bench::coop_gemv_enabled()
+        {
             if self.dispatch_ffn_fused_resident(index, hidden, emb_dim, tensors, scratch_a) {
                 return true;
             }

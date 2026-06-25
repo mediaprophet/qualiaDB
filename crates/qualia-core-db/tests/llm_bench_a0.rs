@@ -667,6 +667,41 @@ fn w3_gemm_parity_f16_gpu_vs_cpu() {
     }
 }
 
+/// 0.0.21 — cooperative-GEMV parity. Same GPU↔CPU parity probe as W3, but with the cooperative
+/// `coop_gemv` kernel (one workgroup/row, coalesced reads + shared-memory tree reduction) selected
+/// via `set_coop_gemv(true)`. Larger dims than W3 (n_in=512 ⇒ the 256-thread strided loop runs ≥2
+/// steps; n_out=128 ⇒ many workgroups) exercise the reduction + coalescing. The kernel reorders the
+/// summation vs the naive `main`, so the gate is numeric closeness to the CPU reference (the W3
+/// tolerance), NOT bit-equality. Witnessed by the W2 GEMM pass counter (>0 ⇒ real GPU path). Needs a
+/// GPU. Run ISOLATED (the toggle is process-global): `cargo test -p qualia-core-db --release --test
+/// llm_bench_a0 coop_gemv_parity -- --nocapture --test-threads=1`.
+#[test]
+fn coop_gemv_parity_gpu_vs_cpu() {
+    use qualia_core_db::llm_bench::{
+        gemm_parity_probe_blocking, gemm_parity_probe_f16_blocking, set_coop_gemv,
+    };
+    set_coop_gemv(true);
+    let q8 = gemm_parity_probe_blocking(512, 128, 0x0C00_7EE5);
+    let f16 = gemm_parity_probe_f16_blocking(512, 128, 0x0C00_F16F);
+    set_coop_gemv(true); // coop is the verified default-ON; leave it on for subsequent tests
+
+    println!("\n=== 0.0.21 cooperative-GEMV parity (512x128, A2000) ===");
+    for (tag, r) in [("Q8_0", q8), ("F16", f16)] {
+        match r {
+            Ok((max_abs, mean_abs, max_ulp, gpu_calls)) => {
+                println!("[coop:{tag}] gpu passes = {gpu_calls}  max_abs_err = {max_abs:.3e}  mean_abs_err = {mean_abs:.3e}  max_ulp = {max_ulp}");
+                assert!(gpu_calls > 0, "[coop:{tag}] GPU GEMM did not execute (CPU fallback)");
+                assert!(
+                    max_abs.is_finite() && max_abs < 1e-2,
+                    "[coop:{tag}] coop-GEMV↔CPU divergence too large: max_abs_err={max_abs:e}"
+                );
+                println!("[coop:{tag}] PASS — cooperative kernel matches CPU within {max_abs:.3e}");
+            }
+            Err(e) => eprintln!("[coop:{tag}] skipped (engine/GPU init failed): {e}"),
+        }
+    }
+}
+
 /// W1 — teacher-forced perplexity oracle, validated on a real model. PPL of the Q8_0 reference vs the
 /// Q4_K_M candidate over the eval corpus → a real ΔPPL. Proves the oracle produces sane numbers (fast,
 /// SmolLM2-360M, GPU). Skips if models absent. Run: `cargo test -p qualia-core-db --release --test

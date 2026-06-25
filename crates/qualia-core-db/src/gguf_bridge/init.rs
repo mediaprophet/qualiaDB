@@ -146,6 +146,17 @@ impl QTensorEngine {
             compilation_options: Default::default(),
             cache: None,
         });
+        // 0.0.21: second pipeline over the SAME shader module — the cooperative one-workgroup-per-row
+        // GEMV (entry `coop_gemv`). Auto-layout; same group-0 bindings as `main`. Native only.
+        #[cfg(not(target_arch = "wasm32"))]
+        let coop_gemv_pipeline = device.create_compute_pipeline(&wgpu::ComputePipelineDescriptor {
+            label: Some("Coop GEMV Pipeline"),
+            layout: None,
+            module: &shader,
+            entry_point: Some("coop_gemv"),
+            compilation_options: Default::default(),
+            cache: None,
+        });
 
         let mock_shader = device.create_shader_module(wgpu::ShaderModuleDescriptor {
             label: Some("Mock Fused Contraction Shader"),
@@ -526,6 +537,8 @@ impl QTensorEngine {
             #[cfg(target_arch = "wasm32")]
             queue: wasm_queue,
             pipeline,
+            #[cfg(not(target_arch = "wasm32"))]
+            coop_gemv_pipeline,
             mock_pipeline,
             embedding_pipeline,
             attention_pipeline,

@@ -182,6 +182,35 @@ pub fn ffn_fusion_enabled() -> bool {
     }
 }
 
+// ── 0.0.21: cooperative GEMV kernel toggle ────────────────────────────────────
+// Default ON (native), verified. Routes the native GEMM (`dispatch_gemm_raw_into`) through the
+// cooperative one-workgroup-per-row kernel (`coop_gemv`: coalesced reads + per-thread dequant +
+// shared-memory reduction) instead of the naive 1-thread/row `main`. The naive GEMV is the *measured*
+// decode bottleneck (compute/ALU-bound: uncoalesced strided reads + serial accumulate; it also makes
+// Q4_K slower than F16). When ON, the fused FFN path is bypassed so the FFN GEMMs also flow through
+// this kernel (fusion was ~neutral, so nothing is lost and all GEMMs share one accelerated path).
+// Verified on A2000 / Llama-3.2-3B-F16: 2.39→3.22 tok/s (+35% over naive per-GEMM; +31% over the
+// naive+fusion prev-best), output token-identical; synthetic F16/Q8 parity vs CPU max_abs_err ~1e-5.
+// `QUALIA_LLM_COOP_GEMV=0` forces the naive kernel (the A/B OFF baseline).
+static COOP_GEMV: AtomicBool = AtomicBool::new(true);
+
+/// Enable/disable the cooperative GEMV decode path (`QUALIA_LLM_COOP_GEMV`).
+#[inline]
+pub fn set_coop_gemv(on: bool) {
+    COOP_GEMV.store(on, Ordering::Relaxed);
+}
+
+/// Whether native GEMM should run the cooperative `coop_gemv` kernel rather than the naive
+/// 1-thread/row `main`. Env forces either direction; otherwise the atomic flag (default OFF).
+#[inline]
+pub fn coop_gemv_enabled() -> bool {
+    match std::env::var("QUALIA_LLM_COOP_GEMV").ok().as_deref() {
+        Some("0") | Some("false") => false,
+        Some("1") | Some("true") => true,
+        _ => COOP_GEMV.load(Ordering::Relaxed),
+    }
+}
+
 // ── #48 correctness path: CPU attention reference ─────────────────────────────
 // Route native attention through the wasm-proven CPU SDPA (`cpu_attention_pass`) instead of the
 // GPU attention shader (whose output is currently unbounded). Correct-but-slower; opt-in.

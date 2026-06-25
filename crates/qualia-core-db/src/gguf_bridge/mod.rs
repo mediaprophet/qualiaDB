@@ -886,6 +886,11 @@ pub struct QTensorEngine {
     #[cfg(target_arch = "wasm32")]
     queue: wgpu::Queue,
     pub pipeline: wgpu::ComputePipeline,
+    /// 0.0.21: cooperative GEMV (one workgroup per output row, shared-memory reduction). Same shader
+    /// MODULE as `pipeline`, entry point `coop_gemv`. Selected per-call when
+    /// `llm_bench::coop_gemv_enabled()`. Native only (the wasm decode path is the MC8 arena).
+    #[cfg(not(target_arch = "wasm32"))]
+    pub(crate) coop_gemv_pipeline: wgpu::ComputePipeline,
     /// Legacy f32×f32 mock block for offset-0 `QTensor` fallback (no mmap).
     mock_pipeline: wgpu::ComputePipeline,
     /// GPU-side Q6_K embedding dequant + matmul (zero CPU dequant).
