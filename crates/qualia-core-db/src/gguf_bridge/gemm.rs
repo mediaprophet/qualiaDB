@@ -20,7 +20,7 @@ impl QTensorEngine {
     /// per-token `gemm_weight_buf` — eliminating the per-token weight re-upload. Buffer size is
     /// 256-aligned ≥ `raw.len()`; the shader only reads `weight_byte_len`.
     #[cfg(not(target_arch = "wasm32"))]
-    fn resident_weight_buffer(&self, key: u64, raw: &[u8]) -> Option<wgpu::Buffer> {
+    pub(crate) fn resident_weight_buffer(&self, key: u64, raw: &[u8]) -> Option<wgpu::Buffer> {
         let mut map = self.gemm_resident_weights.lock().ok()?;
         if let Some(b) = map.get(&key) {
             return Some(b.clone());

@@ -999,6 +999,27 @@ fn pathc_llama3b_short_generation() {
         trimmed.split_whitespace().count().max(1));
 }
 
+/// Path C lever check: decode the SAME 3B model quantized to Q4_K (~0.5 B/weight vs F16's 2 B) —
+/// the bandwidth-bound decode should be markedly faster than the F16 baseline, isolating "less
+/// memory to read" as the real throughput lever (resident weights + FFN fusion both apply to Q4_K).
+#[test]
+fn pathc_llama3b_q4k_generation() {
+    let path = "C:/LLM_Models/GGUF/hugging-quants/Llama-3.2-3B-Instruct-Q4_K_M-GGUF/llama-3.2-3b-instruct-q4_k_m.gguf";
+    if !Path::new(path).exists() {
+        eprintln!("[pathc-q4k] {path} absent — skipping");
+        return;
+    }
+    let prompt = "The capital of France is";
+    let (text, tok_s) = llm_bench::decode_with_metrics_blocking(path, prompt, 24)
+        .expect("3B Q4_K decode failed");
+    println!("\n=== Path C: Llama-3.2-3B Q4_K_M generation ===");
+    println!("[pathc-q4k] prompt : {prompt:?}");
+    println!("[pathc-q4k] output : {text:?}");
+    println!("[pathc-q4k] decode : {tok_s:.2} tok/s");
+    println!("=== end Path C Q4_K generation ===\n");
+    assert!(!text.trim().is_empty(), "empty generation");
+}
+
 /// Path C bottleneck attribution: profile the 3B decode to settle (a) vs (b). Reports the per-kernel
 /// GPU split (Gemm vs Attention — does the F16 projection dominate?) AND the per-token submit→wait
 /// round-trip count (is decode sync-bound rather than kernel-bound?). Data, not assumption.
@@ -1008,7 +1029,9 @@ fn pathc_3b_gpu_bottleneck_profile() {
     use qualia_core_db::llm_bench::decode_with_metrics_blocking;
     use qualia_core_db::llm_gpu_profiler as gprof;
 
-    let path = "C:/LLM_Models/GGUF/Llama-3.2-3B-Instruct-FP16.gguf";
+    let path_owned = std::env::var("QUALIA_LLM_PROFILE_MODEL")
+        .unwrap_or_else(|_| "C:/LLM_Models/GGUF/Llama-3.2-3B-Instruct-FP16.gguf".to_string());
+    let path = path_owned.as_str();
     if !Path::new(path).exists() {
         eprintln!("[pathc-prof] {path} absent — skipping");
         return;

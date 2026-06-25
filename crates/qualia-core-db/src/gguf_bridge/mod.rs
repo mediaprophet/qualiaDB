@@ -1002,6 +1002,11 @@ pub struct QTensorEngine {
     /// coherent. Native-only (wasm uses the MC8 arena); active when `resident_weights_enabled()`.
     #[cfg(not(target_arch = "wasm32"))]
     gemm_resident_weights: std::sync::Mutex<std::collections::HashMap<u64, wgpu::Buffer>>,
+    /// Phase 3 (FFN fusion): a small uniform buffer holding the gate/up/down GEMM `GemmGpuParams`
+    /// at 256-aligned sub-ranges (3 slots), so all three GEMMs of one fused FFN submit can bind
+    /// distinct params simultaneously. Lazily created native-only on the first fused FFN.
+    #[cfg(not(target_arch = "wasm32"))]
+    ffn_fused_params: Option<wgpu::Buffer>,
     /// Phase 5.4: all layers' attn_norm + ffn_norm weights resident (slot 2L = attn, 2L+1 = ffn),
     /// so RMSNorm binds a per-layer sub-range instead of re-`write_buffer`ing a shared single-layer
     /// `norm_weight_buf` every layer (the second per-layer write_buffer race blocking single-submit).

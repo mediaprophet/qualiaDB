@@ -157,6 +157,31 @@ pub fn resident_weights_enabled() -> bool {
     }
 }
 
+// ── Phase 3: FFN fusion toggle ────────────────────────────────────────────────
+// Default ON (native). Runs the whole pre-norm FFN — gate GEMM, up GEMM, GPU SiLU·mul,
+// down GEMM — in ONE command submit with intermediates kept in VRAM, so a layer costs ONE
+// submit→wait round-trip instead of three (the gate/up/down readbacks + CPU SiLU·mul between
+// them). Requires resident weights (it binds resident weight buffers); falls back to the
+// per-GEMM path when resident is off or a tensor is GPU-ineligible. `QUALIA_LLM_FFN_FUSION=0`
+// forces the per-GEMM path (the A/B OFF baseline).
+static FFN_FUSION: AtomicBool = AtomicBool::new(true);
+
+/// Enable/disable the fused single-submit FFN path (`QUALIA_LLM_FFN_FUSION`).
+#[inline]
+pub fn set_ffn_fusion(on: bool) {
+    FFN_FUSION.store(on, Ordering::Relaxed);
+}
+
+/// Whether the native FFN should run fused (one submit/layer) rather than three GEMM round-trips.
+#[inline]
+pub fn ffn_fusion_enabled() -> bool {
+    match std::env::var("QUALIA_LLM_FFN_FUSION").ok().as_deref() {
+        Some("0") | Some("false") => false,
+        Some("1") | Some("true") => true,
+        _ => FFN_FUSION.load(Ordering::Relaxed),
+    }
+}
+
 // ── #48 correctness path: CPU attention reference ─────────────────────────────
 // Route native attention through the wasm-proven CPU SDPA (`cpu_attention_pass`) instead of the
 // GPU attention shader (whose output is currently unbounded). Correct-but-slower; opt-in.
