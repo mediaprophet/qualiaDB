@@ -165,6 +165,92 @@ pub fn quantize_q4_0_from_f32(weights: &[f32], out: &mut [u8]) -> bool {
     true
 }
 
+/// Bytes for `n_elems` weights as ggml Q4_K (144-byte super-blocks of 256).
+pub fn q4_k_bytes(n_elems: usize) -> usize {
+    n_elems.div_ceil(256) * 144
+}
+
+/// Quantize `weights` (f32) to ggml **Q4_K** into `out` (>= `q4_k_bytes`). Matches
+/// `ggml_quants::dequant_q4_k`: super-block of 256 = 8 sub-blocks of 32, each with an asymmetric
+/// scale+min — 6-bit sub-scales (`d*sc`) and mins (`dmin*m`) packed via `get_scale_min_k4`, 4-bit
+/// quants (even sub-block = low nibble, odd = high nibble of the same `qs` byte). Dequant:
+/// `x = d*sc[s]*q - dmin*m[s]`. Simplified vs ggml's iterative search (per-sub-block min clamped ≤ 0,
+/// which holds for zero-centred weights); round-trip tested. Q4_K's 6-bit sub-scales make it markedly
+/// more accurate per bit than Q4_0 — AWQ's intended 4-bit partner.
+pub fn quantize_q4_k_from_f32(weights: &[f32], out: &mut [u8]) -> bool {
+    if out.len() < q4_k_bytes(weights.len()) {
+        return false;
+    }
+    let n_super = weights.len().div_ceil(256);
+    for sb in 0..n_super {
+        let base = sb * 256;
+        let bb = sb * 144;
+        let mut scale_s = [0f32; 8];
+        let mut mt_s = [0f32; 8];
+        for s in 0..8 {
+            let s0 = base + s * 32;
+            if s0 >= weights.len() {
+                continue;
+            }
+            let s1 = (s0 + 32).min(weights.len());
+            let mut mn = f32::INFINITY;
+            let mut mx = f32::NEG_INFINITY;
+            for &x in &weights[s0..s1] {
+                mn = mn.min(x);
+                mx = mx.max(x);
+            }
+            let eff_min = mn.min(0.0); // ≤ 0 so the shared dmin stays non-negative
+            scale_s[s] = ((mx - eff_min) / 15.0).max(0.0);
+            mt_s[s] = -eff_min; // ≥ 0
+        }
+        let d = scale_s.iter().cloned().fold(0.0f32, f32::max) / 63.0;
+        let dmin = mt_s.iter().cloned().fold(0.0f32, f32::max) / 63.0;
+        let idd = if d > 0.0 { 1.0 / d } else { 0.0 };
+        let idm = if dmin > 0.0 { 1.0 / dmin } else { 0.0 };
+        let mut sc = [0u8; 8];
+        let mut m = [0u8; 8];
+        for s in 0..8 {
+            sc[s] = (scale_s[s] * idd).round().clamp(0.0, 63.0) as u8;
+            m[s] = (mt_s[s] * idm).round().clamp(0.0, 63.0) as u8;
+        }
+        out[bb..bb + 2].copy_from_slice(&half::f16::from_f32(d).to_le_bytes());
+        out[bb + 2..bb + 4].copy_from_slice(&half::f16::from_f32(dmin).to_le_bytes());
+        // Pack sc/m into scales[12] — inverse of get_scale_min_k4.
+        let mut scales = [0u8; 12];
+        for j in 0..4 {
+            scales[j] = sc[j] & 63;
+            scales[j + 4] = m[j] & 63;
+        }
+        for j in 4..8 {
+            scales[j + 4] = (sc[j] & 0xF) | ((m[j] & 0xF) << 4);
+            scales[j - 4] |= (sc[j] >> 4) << 6;
+            scales[j] |= (m[j] >> 4) << 6;
+        }
+        out[bb + 4..bb + 16].copy_from_slice(&scales);
+        // Quantize + pack nibbles using the reconstructed grid (x = dq*q - mq).
+        for s in 0..8 {
+            let dq = d * sc[s] as f32;
+            let mq = dmin * m[s] as f32;
+            let idq = if dq > 0.0 { 1.0 / dq } else { 0.0 };
+            for l in 0..32 {
+                let gi = base + s * 32 + l;
+                let q = if gi < weights.len() {
+                    ((weights[gi] + mq) * idq).round().clamp(0.0, 15.0) as u8
+                } else {
+                    0
+                };
+                let byte = bb + 16 + (s / 2) * 32 + l;
+                if s % 2 == 0 {
+                    out[byte] = (out[byte] & 0xF0) | (q & 0x0F);
+                } else {
+                    out[byte] = (out[byte] & 0x0F) | ((q & 0x0F) << 4);
+                }
+            }
+        }
+    }
+    true
+}
+
 #[cfg(test)]
 mod tests {
     use super::*;
@@ -225,5 +311,41 @@ mod tests {
             "q4_0 roundtrip err {} > step {step}",
             max_abs_err(&w, &back)
         );
+    }
+
+    #[test]
+    fn q4_k_roundtrip_and_beats_q4_0() {
+        // 256-element super-block, zero-centred spread.
+        let w: Vec<f32> = (0..256).map(|i| (i as f32 - 128.0) / 64.0).collect(); // ~[-2.0, 1.98]
+        let info_k = crate::gguf_sharder::GgufTensorInfo {
+            dims: [256, 1, 1, 1],
+            n_dims: 1,
+            ggml_type: crate::ggml_quants::GGML_TYPE_Q4_K,
+            byte_offset: 0,
+        };
+        let mut kbytes = vec![0u8; q4_k_bytes(w.len())];
+        assert!(quantize_q4_k_from_f32(&w, &mut kbytes));
+        let mut back_k = vec![0f32; 256];
+        let nk = crate::ggml_quants::dequant_matrix_row_into(&kbytes, &info_k, 0, &mut back_k).unwrap();
+        assert_eq!(nk, 256);
+        let err_k = max_abs_err(&w, &back_k);
+
+        // Same data through Q4_0 — Q4_K's 6-bit sub-scales should be at least as accurate.
+        let info_0 = crate::gguf_sharder::GgufTensorInfo {
+            dims: [256, 1, 1, 1],
+            n_dims: 1,
+            ggml_type: crate::ggml_quants::GGML_TYPE_Q4_0,
+            byte_offset: 0,
+        };
+        let mut zbytes = vec![0u8; q4_0_bytes(w.len())];
+        assert!(quantize_q4_0_from_f32(&w, &mut zbytes));
+        let mut back_0 = vec![0f32; 256];
+        crate::ggml_quants::dequant_matrix_row_into(&zbytes, &info_0, 0, &mut back_0).unwrap();
+        let err_0 = max_abs_err(&w, &back_0);
+
+        let range = 2.0 + 1.98; // ~3.98
+        eprintln!("q4_k err {err_k:.4} vs q4_0 err {err_0:.4} (range {range:.2})");
+        assert!(err_k.is_finite() && err_k <= range / 15.0 * 1.3, "q4_k roundtrip err {err_k} too high");
+        assert!(err_k <= err_0 + 1e-4, "q4_k ({err_k}) should not be worse than q4_0 ({err_0})");
     }
 }
