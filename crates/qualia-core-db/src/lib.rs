@@ -806,6 +806,8 @@ pub mod llm_bench;
 pub mod llm_gpu_profiler;
 /// STELLAR §A W3: in-project GPU↔CPU kernel-parity oracle (error metrics + synthetic quant weights).
 pub mod llm_kernel_parity;
+/// STELLAR §A W1: in-project quality oracle (perplexity / KL / coherence + the quant quality gate).
+pub mod llm_eval;
 pub mod identifier;
 #[cfg(not(target_arch = "wasm32"))]
 pub mod mcp_server;
