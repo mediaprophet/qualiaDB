@@ -538,12 +538,15 @@ function's doc comment which convention you're following.
 needs `PBKDF2-HMAC-SHA256` with 310,000 iterations. Until fixed, Sanctuary Mode PINs
 are trivially brutable offline. Do not ship this for real user data.
 
-### 4-F `DelegatedAccess` in `crdt.rs` uses `String` (alloc violation)
+### 4-F `DelegatedAccess` in `crdt.rs` — RESOLVED (2026-06-25)
 
-`principal_did`, `delegate_did`, and `cryptographic_proof` are `String` fields. For
-hot-path Bilateral validation, these should be replaced with `[u8; 32]` hashes (for DIDs)
-and `[u8; 64]` (for Ed25519 signatures). Existing call sites are not in hot paths so this
-is low urgency, but any new code that creates `DelegatedAccess` in a loop is wrong.
+`principal_did`, `delegate_did`, and `cryptographic_proof` are now `[u8; 32]` DID hashes
+and a `[u8; 64]` Ed25519 signature (serde via `serde_bytes`) — no `String` allocation, so
+a grant can be built/validated on a hot path (e.g. Bilateral Micro-Commons). Callers hash
+the DID before constructing. Fixed alongside the other zero-heap-audit items: caller-owned
+buffers in `deontic_logic.rs::evaluate_accessible_layers` and
+`epistemic.rs::{objective_knowledge_of, all_beliefs_of}`, and `core::mem::take` (no
+per-call clone) in `webizen.rs` SLG rule firing.
 
 ### 4-C `execute_differential_diagnostics` in `logic.rs` returns `Vec`
 Violates zero-heap mandate. Caller should pass `out: &mut [NQuin]`.
