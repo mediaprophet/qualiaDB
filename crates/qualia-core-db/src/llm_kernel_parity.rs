@@ -122,6 +122,49 @@ pub fn quantize_f16_from_f32(weights: &[f32], out: &mut [u8]) -> bool {
     true
 }
 
+/// Bytes for `n_elems` weights as ggml Q4_0 (18-byte blocks of 32: f16 scale + 16 nibble bytes).
+pub fn q4_0_bytes(n_elems: usize) -> usize {
+    n_elems.div_ceil(32) * 18
+}
+
+/// Quantize `weights` (f32) to ggml **Q4_0** into `out` (>= `q4_0_bytes`). Matches
+/// `ggml_quants::dequant_q4_0` exactly: per 32-block `d = max_abs_signed / -8`, nibble
+/// `q = clamp(round(x/d)+8, 0..15)`, dequant `x = (q-8)*d`; **interleaved** layout — block index
+/// `k < 16` is the low nibble of byte `k`, `k >= 16` the high nibble of byte `k-16`.
+pub fn quantize_q4_0_from_f32(weights: &[f32], out: &mut [u8]) -> bool {
+    if out.len() < q4_0_bytes(weights.len()) {
+        return false;
+    }
+    let n_blocks = weights.len().div_ceil(32);
+    for b in 0..n_blocks {
+        let start = b * 32;
+        let end = (start + 32).min(weights.len());
+        let mut amax = 0.0f32;
+        let mut max_signed = 0.0f32;
+        for &x in &weights[start..end] {
+            if x.abs() > amax {
+                amax = x.abs();
+                max_signed = x;
+            }
+        }
+        let d = max_signed / -8.0;
+        let id = if d != 0.0 { 1.0 / d } else { 0.0 };
+        let bs = b * 18;
+        out[bs..bs + 2].copy_from_slice(&half::f16::from_f32(d).to_le_bytes());
+        let q = |k: usize| -> u8 {
+            let gk = start + k;
+            if gk >= end {
+                return 8; // (8-8)*d = 0 padding
+            }
+            (weights[gk] * id + 8.5).floor().clamp(0.0, 15.0) as u8
+        };
+        for j in 0..16 {
+            out[bs + 2 + j] = (q(j) & 0x0F) | ((q(j + 16) & 0x0F) << 4);
+        }
+    }
+    true
+}
+
 #[cfg(test)]
 mod tests {
     use super::*;
@@ -159,5 +202,28 @@ mod tests {
         // absmax = 15/16 → scale ≈ (15/16)/127; round-trip error ≤ one quant step.
         let step = (15.0f32 / 16.0) / 127.0;
         assert!(max_abs_err(&w, &back) <= step + 1e-5);
+    }
+
+    #[test]
+    fn q4_0_roundtrip_within_one_step() {
+        let w: Vec<f32> = (0..32).map(|i| (i as f32 - 16.0) / 8.0).collect(); // ~[-2.0, 1.875]
+        let mut bytes = vec![0u8; q4_0_bytes(w.len())];
+        assert!(quantize_q4_0_from_f32(&w, &mut bytes));
+        let info = crate::gguf_sharder::GgufTensorInfo {
+            dims: [32, 1, 1, 1],
+            n_dims: 1,
+            ggml_type: crate::ggml_quants::GGML_TYPE_Q4_0,
+            byte_offset: 0,
+        };
+        let mut back = vec![0f32; 32];
+        let n = crate::ggml_quants::dequant_matrix_row_into(&bytes, &info, 0, &mut back).unwrap();
+        assert_eq!(n, 32);
+        let absmax = w.iter().cloned().fold(0f32, |m, x| m.max(x.abs())); // 2.0
+        let step = absmax / 8.0; // ~0.25 (one Q4_0 level)
+        assert!(
+            max_abs_err(&w, &back) <= step * 1.1,
+            "q4_0 roundtrip err {} > step {step}",
+            max_abs_err(&w, &back)
+        );
     }
 }

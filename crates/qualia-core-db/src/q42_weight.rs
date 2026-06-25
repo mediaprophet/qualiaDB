@@ -380,22 +380,55 @@ pub fn compile_gguf_to_q42(input: &[u8], page_log2: u16) -> Result<Vec<u8>, Stri
 /// Attention / norms / embeddings stay verbatim at their source precision. This is the loadable
 /// container the live FFN-ternary dispatch path will run + measure against.
 pub fn compile_gguf_to_q42_ternary_ffn(input: &[u8], page_log2: u16) -> Result<Vec<u8>, String> {
-    compile_gguf_to_q42_ternary_ffn_awq(input, page_log2, None, 0.0)
+    compile_gguf_to_q42_ffn_quant_awq(input, page_log2, None, 0.0, FfnQuant::Ternary)
 }
 
-/// AWQ-aware ternary FFN compile. When `awq_scales` is `Some` — per-layer per-input-channel salience
-/// `s[layer][chan]` from [`crate::llm_awq::snapshot`] — the gate/up weights' input channel `i` is
-/// scaled by `s_i^alpha` before ternary-packing, and `ffn_norm` is divided by `s_i^alpha`. The fold is
-/// **mathematically exact** in f32 (`(X·norm/s^a)·(W·s^a) = (X·norm)·W`), but it moves the salient
-/// channels into a range the ternary grid represents better, so aggressive quantization survives.
-/// `awq_scales = None` or `alpha == 0.0` reproduces the plain ternary compile byte-for-byte. The down
-/// projection is left plain ternary (its AWQ fold has no clean norm site — a v2 item).
+/// Target quantization for the FFN tensors in an AWQ `.q42` compile.
+#[derive(Clone, Copy, PartialEq, Eq, Debug)]
+pub enum FfnQuant {
+    /// BitNet 1.58b ternary (`GGML_TYPE_TERNARY_158`, resident 2-bit GPU path).
+    Ternary,
+    /// ggml Q4_0 4-bit (`GGML_TYPE_Q4_0`, the standard quantized GPU GEMM path) — AWQ's design regime.
+    Q4_0,
+}
+
+/// AWQ-aware ternary FFN compile (back-compat wrapper for [`compile_gguf_to_q42_ffn_quant_awq`]).
 pub fn compile_gguf_to_q42_ternary_ffn_awq(
     input: &[u8],
     page_log2: u16,
     awq_scales: Option<&[Vec<f32>]>,
     alpha: f32,
 ) -> Result<Vec<u8>, String> {
+    compile_gguf_to_q42_ffn_quant_awq(input, page_log2, awq_scales, alpha, FfnQuant::Ternary)
+}
+
+/// AWQ-aware **Q4_0** FFN compile (Path A) — FFN packed to 4-bit Q4_0 (AWQ's design regime); all else
+/// verbatim from the source GGUF.
+pub fn compile_gguf_to_q42_q4_ffn_awq(
+    input: &[u8],
+    page_log2: u16,
+    awq_scales: Option<&[Vec<f32>]>,
+    alpha: f32,
+) -> Result<Vec<u8>, String> {
+    compile_gguf_to_q42_ffn_quant_awq(input, page_log2, awq_scales, alpha, FfnQuant::Q4_0)
+}
+
+/// AWQ-aware FFN-quantized `.q42` compile. `quant` selects the FFN target (ternary or Q4_0). When
+/// `awq_scales` is `Some` (per-layer per-input-channel salience from [`crate::llm_awq::snapshot`]) the
+/// gate/up input channel `i` is scaled by `s_i^alpha` before packing and `ffn_norm` is divided by
+/// `s_i^alpha` — mathematically exact in f32 (`(X·norm/s^a)·(W·s^a)=(X·norm)·W`) — moving salient
+/// channels into a range the quant grid represents better. `awq_scales = None` / `alpha == 0.0`
+/// reproduces the plain (un-calibrated) compile. The down projection is left un-scaled (no clean fold
+/// site — a v2 item). Everything outside the FFN passes through verbatim from the source GGUF.
+pub fn compile_gguf_to_q42_ffn_quant_awq(
+    input: &[u8],
+    page_log2: u16,
+    awq_scales: Option<&[Vec<f32>]>,
+    alpha: f32,
+    quant: FfnQuant,
+) -> Result<Vec<u8>, String> {
+    use crate::ggml_quants::GGML_TYPE_Q4_0;
+    use crate::llm_kernel_parity::{q4_0_bytes, quantize_q4_0_from_f32};
     use crate::ternary::{ternary_blob, ternary_blob_len, GGML_TYPE_TERNARY_158};
 
     let idx = GgufTensorIndex::from_gguf(input);
@@ -456,7 +489,10 @@ pub fn compile_gguf_to_q42_ternary_ffn_awq(
             return Err(format!("tensor (role {role}, layer {layer}) out of GGUF bounds"));
         }
         let (out_ggml, byte_len) = if is_ffn(*role) {
-            (GGML_TYPE_TERNARY_158, ternary_blob_len(n_elems_of(info)))
+            match quant {
+                FfnQuant::Ternary => (GGML_TYPE_TERNARY_158, ternary_blob_len(n_elems_of(info))),
+                FfnQuant::Q4_0 => (GGML_TYPE_Q4_0, q4_0_bytes(n_elems_of(info))),
+            }
         } else {
             (info.ggml_type, src_len)
         };
@@ -498,7 +534,10 @@ pub fn compile_gguf_to_q42_ternary_ffn_awq(
         cold_offset: 0,
         cold_len: 0,
         header_crc: 0,
-        format_flags: FORMAT_FLAG_TERNARY,
+        format_flags: match quant {
+            FfnQuant::Ternary => FORMAT_FLAG_TERNARY,
+            FfnQuant::Q4_0 => 0,
+        },
         arch_quin: NQuin::zeroed(),
         tokenizer_offset: tokenizer_offset as u64,
         tokenizer_len: tok_section.len() as u64,
@@ -559,8 +598,17 @@ pub fn compile_gguf_to_q42_ternary_ffn_awq(
                     }
                 }
             }
-            let blob = ternary_blob(&scratch[..n]);
-            out[dst..dst + blob.len()].copy_from_slice(&blob);
+            match quant {
+                FfnQuant::Ternary => {
+                    let blob = ternary_blob(&scratch[..n]);
+                    out[dst..dst + blob.len()].copy_from_slice(&blob);
+                }
+                FfnQuant::Q4_0 => {
+                    if !quantize_q4_0_from_f32(&scratch[..n], &mut out[dst..dst + blen]) {
+                        return Err(format!("Q4_0 quantize failed (role {role}, layer {layer})"));
+                    }
+                }
+            }
         } else if awq_on && *role == Q42_ROLE_FFN_NORM {
             // Fold 1/s_i^alpha into ffn_norm so the scaled gate/up stays exact. Norm is a per-channel
             // f32 (or f16) vector of the same length/type — read, divide, write in place.

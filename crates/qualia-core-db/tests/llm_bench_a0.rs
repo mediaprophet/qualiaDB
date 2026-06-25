@@ -779,7 +779,8 @@ fn w1_awq_sweep_smollm2() {
     };
     let alphas = [0.0f32, 0.5, 1.0];
     let (ref_ppl, results) =
-        awq_sweep_blocking(&gguf.to_string_lossy(), &alphas, 64).expect("awq sweep");
+        awq_sweep_blocking(&gguf.to_string_lossy(), &alphas, 64, qualia_core_db::q42_weight::FfnQuant::Ternary)
+            .expect("awq sweep");
 
     println!("\n=== AWQ alpha-sweep (SmolLM2-360M ternary FFN; Q8 ref PPL {ref_ppl:.2}) ===");
     for (a, ppl, uniq) in &results {
@@ -809,4 +810,49 @@ fn w1_awq_sweep_smollm2() {
         "AWQ sweep produced non-finite/implausible PPL — pipeline broken"
     );
     println!("[awq-sweep] PASS — AWQ pipeline ran end-to-end; result reported honestly above.");
+}
+
+/// Path A — AWQ on a **Q4_0 FFN** (AWQ's design regime). FFN→Q4_0 with the same activation-aware fold,
+/// swept over α and scored against the Q8 reference + the 5% ΔPPL gate. This is the candidate for a
+/// shippable, compressed inference path. Prints PPL/ΔPPL/coherence per α; asserts the pipeline ran
+/// (NOT that it passes — that's the measurement). Needs a GPU. Run: `cargo test -p qualia-core-db
+/// --release --test llm_bench_a0 w1_awq_q4_sweep -- --nocapture`.
+#[test]
+fn w1_awq_q4_sweep_smollm2() {
+    use qualia_core_db::llm_bench::awq_sweep_blocking;
+    use qualia_core_db::q42_weight::FfnQuant;
+    let Some(gguf) = find_model("smollm2-360m-instruct-q8_0.gguf") else {
+        eprintln!("[awq-q4] SmolLM2 Q8 absent — skipping");
+        return;
+    };
+    let alphas = [0.0f32, 0.5, 1.0];
+    let (ref_ppl, results) =
+        awq_sweep_blocking(&gguf.to_string_lossy(), &alphas, 64, FfnQuant::Q4_0).expect("awq q4 sweep");
+
+    println!("\n=== AWQ Q4 alpha-sweep (SmolLM2-360M FFN->Q4_0; Q8 ref PPL {ref_ppl:.2}) ===");
+    for (a, ppl, uniq) in &results {
+        let dppl = (ppl - ref_ppl) / ref_ppl * 100.0;
+        let gate = if dppl <= 5.0 { "<= 5% GATE" } else { "" };
+        println!("[awq-q4] alpha={a:.2}  PPL {ppl:8.2}  dPPL {dppl:+7.2}%  uniq {uniq:.3}  {gate}");
+    }
+    let best = results
+        .iter()
+        .min_by(|x, y| x.1.partial_cmp(&y.1).unwrap_or(std::cmp::Ordering::Equal))
+        .copied()
+        .unwrap();
+    let best_dppl = (best.1 - ref_ppl) / ref_ppl * 100.0;
+    let verdict = if best_dppl <= 5.0 && best.2 >= 0.9 {
+        "PASSES the 5% gate — shippable compressed FFN"
+    } else {
+        "outside the gate (report honestly)"
+    };
+    println!(
+        "[awq-q4] best alpha={:.2}  PPL {:.2}  dPPL {best_dppl:+.2}%  uniq {:.3} -> {verdict}",
+        best.0, best.1, best.2
+    );
+    assert!(
+        results.iter().all(|(_, p, _)| p.is_finite() && *p > 1.0),
+        "Q4 AWQ sweep produced implausible PPL — pipeline broken"
+    );
+    println!("[awq-q4] PASS — Q4 AWQ pipeline ran end-to-end; result reported honestly above.");
 }

@@ -925,8 +925,9 @@ pub fn awq_sweep_blocking(
     gguf_path: &str,
     alphas: &[f32],
     max_tok: usize,
+    quant: crate::q42_weight::FfnQuant,
 ) -> Result<(f64, Vec<(f32, f64, f64)>), String> {
-    use crate::q42_weight::compile_gguf_to_q42_ternary_ffn_awq;
+    use crate::q42_weight::compile_gguf_to_q42_ffn_quant_awq;
 
     let bytes = std::fs::read(gguf_path).map_err(|e| format!("read gguf: {e}"))?;
     let idx = crate::gguf_sharder::GgufTensorIndex::from_gguf(&bytes);
@@ -946,13 +947,14 @@ pub fn awq_sweep_blocking(
         return Err("AWQ: no activation stats captured".into());
     }
 
-    // 2. Sweep: AWQ-scaled ternary .q42 per α → eval PPL + coherence (ternary FFN path on).
-    set_ternary_ffn(true);
+    // 2. Sweep: AWQ-scaled .q42 per α → eval PPL + coherence. Ternary needs the resident 2-bit path;
+    //    Q4_0 runs through the standard quantized GEMM (no ternary toggle).
+    set_ternary_ffn(matches!(quant, crate::q42_weight::FfnQuant::Ternary));
     let tmp = std::env::temp_dir();
     let mut results = Vec::with_capacity(alphas.len());
     for &alpha in alphas {
         let scales = if alpha == 0.0 { None } else { Some(stats.as_slice()) };
-        let q42 = compile_gguf_to_q42_ternary_ffn_awq(&bytes, 14, scales, alpha)
+        let q42 = compile_gguf_to_q42_ffn_quant_awq(&bytes, 14, scales, alpha, quant)
             .map_err(|e| format!("AWQ compile (alpha={alpha}): {e}"))?;
         let path = tmp.join(format!("awq_sweep_a{:.2}.q42", alpha));
         std::fs::write(&path, &q42).map_err(|e| format!("write q42: {e}"))?;
