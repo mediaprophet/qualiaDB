@@ -7,6 +7,10 @@ use std::collections::HashMap;
 // Canonical bit positions live in the FrameLayout ABI (single source of truth).
 pub use crate::frame_layout::{CONTROL_BIT, FEEDBACK_BIT, STABILIZATION_BIT};
 
+// Advanced control algorithms (split per CLAUDE.md §10): adaptive tuning, MPC, MIMO state-space.
+pub mod advanced;
+pub use advanced::{adaptive_gains, mit_rule_adapt, scheduled_gain, mpc_control, mimo_step, mimo_output};
+
 use super::epistemic_boundaries::{
     identify_degradation_vector, degrade_claim_to_socratic, detect_referral_trigger,
     detect_referral_by_severity, SocraticDegradation, DegradationVector, ReferralTrigger,
