@@ -4,12 +4,14 @@
 //!   - All platforms: wgpu / WGSL fallback (Vulkan / Metal / WebGPU)
 //! GGUF tensor bytes are memory-mapped via `memmap2` — zero heap copy.
 
-use crate::gguf_sharder::GgufTensorInfo;
-use crate::NQuin;
+// pub(crate) so the concern submodules (gemm / ffn / attention / output / embedding / mc8_wasm …)
+// inherit these via `use super::*` — keeps the impl split a pure structural move.
+pub(crate) use crate::gguf_sharder::GgufTensorInfo;
+pub(crate) use crate::NQuin;
 use log;
 #[cfg(not(target_arch = "wasm32"))]
-use memmap2::MmapOptions;
-use std::sync::Arc;
+pub(crate) use memmap2::MmapOptions;
+pub(crate) use std::sync::Arc;
 
 pub use crate::ggml_quants::{fetch_token_embedding, ExecutionError};
 
@@ -136,7 +138,7 @@ pub(crate) enum Mc8WeightRole {
 impl Mc8WeightRole {
     /// Stable index into the per-role resident stride table (`mc8_weight_role_stride`).
     #[inline]
-    fn idx(self) -> usize {
+    pub(crate) fn idx(self) -> usize {
         match self {
             Mc8WeightRole::AttnK => 0,
             Mc8WeightRole::AttnV => 1,
@@ -225,7 +227,7 @@ pub(crate) struct Mc8AttnUniformArena {
 
 #[cfg(target_arch = "wasm32")]
 impl Mc8ElemUniformArena {
-    fn push<T: bytemuck::Pod>(&mut self, value: &T) -> u32 {
+    pub(crate) fn push<T: bytemuck::Pod>(&mut self, value: &T) -> u32 {
         debug_assert!(std::mem::size_of::<T>() <= MC8_UNIFORM_ALIGN);
         debug_assert!(self.slots < MC8_MAX_ELEM_UNIFORM_LAYER_SLOTS);
         let byte_off = self.slots * MC8_UNIFORM_ALIGN;
@@ -235,14 +237,14 @@ impl Mc8ElemUniformArena {
         byte_off as u32
     }
 
-    fn upload(&self, queue: &wgpu::Queue, buf: &wgpu::Buffer) {
+    pub(crate) fn upload(&self, queue: &wgpu::Queue, buf: &wgpu::Buffer) {
         if self.slots == 0 {
             return;
         }
         queue.write_buffer(buf, 0, &self.bytes[..self.slots * MC8_UNIFORM_ALIGN]);
     }
 
-    fn upload_at(&self, queue: &wgpu::Queue, buf: &wgpu::Buffer, base_slot: usize) {
+    pub(crate) fn upload_at(&self, queue: &wgpu::Queue, buf: &wgpu::Buffer, base_slot: usize) {
         if self.slots == 0 {
             return;
         }
@@ -253,7 +255,7 @@ impl Mc8ElemUniformArena {
 
 #[cfg(target_arch = "wasm32")]
 impl Mc8AttnUniformArena {
-    fn push<T: bytemuck::Pod>(&mut self, value: &T) -> u32 {
+    pub(crate) fn push<T: bytemuck::Pod>(&mut self, value: &T) -> u32 {
         debug_assert!(std::mem::size_of::<T>() <= MC8_UNIFORM_ALIGN);
         debug_assert!(self.slots < MC8_MAX_ATTN_UNIFORM_SLOTS);
         let byte_off = self.slots * MC8_UNIFORM_ALIGN;
@@ -263,14 +265,14 @@ impl Mc8AttnUniformArena {
         byte_off as u32
     }
 
-    fn upload(&self, queue: &wgpu::Queue, buf: &wgpu::Buffer) {
+    pub(crate) fn upload(&self, queue: &wgpu::Queue, buf: &wgpu::Buffer) {
         if self.slots == 0 {
             return;
         }
         queue.write_buffer(buf, 0, &self.bytes[..self.slots * MC8_UNIFORM_ALIGN]);
     }
 
-    fn upload_at(&self, queue: &wgpu::Queue, buf: &wgpu::Buffer, base_slot: usize) {
+    pub(crate) fn upload_at(&self, queue: &wgpu::Queue, buf: &wgpu::Buffer, base_slot: usize) {
         if self.slots == 0 {
             return;
         }
@@ -281,7 +283,7 @@ impl Mc8AttnUniformArena {
 
 #[cfg(target_arch = "wasm32")]
 impl Mc8UniformArena {
-    fn push<T: bytemuck::Pod>(&mut self, value: &T) -> u32 {
+    pub(crate) fn push<T: bytemuck::Pod>(&mut self, value: &T) -> u32 {
         debug_assert!(std::mem::size_of::<T>() <= MC8_UNIFORM_ALIGN);
         debug_assert!(self.slots < MC8_MAX_GEMM_UNIFORM_SLOTS);
         let byte_off = self.slots * MC8_UNIFORM_ALIGN;
@@ -291,14 +293,14 @@ impl Mc8UniformArena {
         byte_off as u32
     }
 
-    fn upload(&self, queue: &wgpu::Queue, buf: &wgpu::Buffer) {
+    pub(crate) fn upload(&self, queue: &wgpu::Queue, buf: &wgpu::Buffer) {
         if self.slots == 0 {
             return;
         }
         queue.write_buffer(buf, 0, &self.bytes[..self.slots * MC8_UNIFORM_ALIGN]);
     }
 
-    fn upload_at(&self, queue: &wgpu::Queue, buf: &wgpu::Buffer, base_slot: usize) {
+    pub(crate) fn upload_at(&self, queue: &wgpu::Queue, buf: &wgpu::Buffer, base_slot: usize) {
         if self.slots == 0 {
             return;
         }
@@ -309,21 +311,21 @@ impl Mc8UniformArena {
 
 #[cfg(target_arch = "wasm32")]
 impl Mc8ChunkUniformCursors {
-    fn reset(&mut self) {
+    pub(crate) fn reset(&mut self) {
         self.attn = 0;
         self.elem = 0;
         self.gemm = 0;
     }
 
-    fn attn_base_byte(&self) -> u32 {
+    pub(crate) fn attn_base_byte(&self) -> u32 {
         (self.attn * MC8_UNIFORM_ALIGN) as u32
     }
 
-    fn elem_base_byte(&self) -> u32 {
+    pub(crate) fn elem_base_byte(&self) -> u32 {
         (self.elem * MC8_UNIFORM_ALIGN) as u32
     }
 
-    fn gemm_base_byte(&self) -> u32 {
+    pub(crate) fn gemm_base_byte(&self) -> u32 {
         (self.gemm * MC8_UNIFORM_ALIGN) as u32
     }
 }
@@ -349,7 +351,7 @@ pub(crate) async fn await_wgpu_map(slice: wgpu::BufferSlice<'_>) -> bool {
 
 #[cfg(target_arch = "wasm32")]
 impl WasmGpuPipeline {
-    fn begin(engine: &QTensorEngine) -> Self {
+    pub(crate) fn begin(engine: &QTensorEngine) -> Self {
         Self {
             encoder: engine.device().create_command_encoder(&wgpu::CommandEncoderDescriptor {
                 label: Some("MC8FusedEncoder"),
@@ -357,7 +359,7 @@ impl WasmGpuPipeline {
         }
     }
 
-    fn finish(self) -> wgpu::CommandBuffer {
+    pub(crate) fn finish(self) -> wgpu::CommandBuffer {
         self.encoder.finish()
     }
 }
@@ -477,6 +479,14 @@ pub struct GgufLoadReport {
 // moved to the `cpu_ops` submodule (declared below; re-exported via `pub(crate) use cpu_ops::*`).
 mod cpu_ops;
 pub(crate) use cpu_ops::*;
+
+// Concern submodules — each holds an `impl QTensorEngine` block for one hot-path area. Methods are
+// pub(crate) so they call across modules freely; types/imports arrive via each file's `use super::*`.
+mod attention;
+mod embedding;
+mod ffn;
+mod gemm;
+mod output;
 
 /// MC8 pt3e: max abs error over the first `n` elements.
 #[cfg(target_arch = "wasm32")]
@@ -989,7 +999,7 @@ pub struct QTensorEngine {
 
 impl QTensorEngine {
     #[inline]
-    fn gpu_device(&self) -> &wgpu::Device {
+    pub(crate) fn gpu_device(&self) -> &wgpu::Device {
         #[cfg(target_arch = "wasm32")]
         {
             return &self.device;
@@ -1001,7 +1011,7 @@ impl QTensorEngine {
     }
 
     #[inline]
-    fn gpu_queue(&self) -> &wgpu::Queue {
+    pub(crate) fn gpu_queue(&self) -> &wgpu::Queue {
         #[cfg(target_arch = "wasm32")]
         {
             return &self.queue;
@@ -1598,7 +1608,7 @@ impl QTensorEngine {
         })
     }
 
-    fn ensure_kv_cache(&mut self, h: &crate::gguf_sharder::GgufHyperparams) {
+    pub(crate) fn ensure_kv_cache(&mut self, h: &crate::gguf_sharder::GgufHyperparams) {
         let layout = match KvCacheLayout::from_hyperparams(h) {
             Some(l) => l,
             None => {
@@ -1701,7 +1711,7 @@ impl QTensorEngine {
         }
     }
 
-    fn ensure_gemm_buffers(&mut self, max_weight_bytes: usize, max_out_dim: u32) {
+    pub(crate) fn ensure_gemm_buffers(&mut self, max_weight_bytes: usize, max_out_dim: u32) {
         // A1a: build the persistent GPU top-k pipeline + candidate buffers once (additive; the
         // existing argmax path is unaffected whether or not this succeeds).
         #[cfg(not(target_arch = "wasm32"))]
@@ -2000,7 +2010,7 @@ impl QTensorEngine {
     /// blobs (rebaked to 2-bit + uploaded once). Returns false if there are no ternary FFN tensors
     /// or the GPU build fails — the FFN then runs the CPU oracle (`dispatch_ternary_ffn` fallback).
     #[cfg(not(target_arch = "wasm32"))]
-    fn build_ternary_ffn_resident(&mut self, q: &crate::q42_weight::Q42TensorIndex) -> bool {
+    pub(crate) fn build_ternary_ffn_resident(&mut self, q: &crate::q42_weight::Q42TensorIndex) -> bool {
         let mmap_arc = match self.gguf_mmap.clone() {
             Some(a) => a,
             None => return false,
@@ -2172,7 +2182,7 @@ impl QTensorEngine {
     /// token (the decode throughput killer). Idempotent. Returns false (→ per-token upload
     /// fallback) if the projection is missing or its bytes don't divide evenly into rows.
     #[cfg(not(target_arch = "wasm32"))]
-    fn mc8_upload_resident_logits(&mut self, index: &crate::gguf_sharder::GgufTensorIndex) -> bool {
+    pub(crate) fn mc8_upload_resident_logits(&mut self, index: &crate::gguf_sharder::GgufTensorIndex) -> bool {
         if self.mc8_logits_resident_buf.is_some() {
             return true;
         }
@@ -2224,7 +2234,7 @@ impl QTensorEngine {
     /// so the bench can count submit→wait round-trips per token and separate synchronization stall
     /// from real kernel time. Behaviourally identical to a bare blocking poll.
     #[inline]
-    fn poll_wait(&self) {
+    pub(crate) fn poll_wait(&self) {
         let _ = self.gpu_device().poll(wgpu::PollType::wait_indefinitely());
         GPU_WAIT_COUNT.fetch_add(1, std::sync::atomic::Ordering::Relaxed);
     }
@@ -2312,1855 +2322,8 @@ impl QTensorEngine {
         })
     }
 
-    /// Upload raw quantized embedding bytes to the GPU and matmul without CPU dequant.
-    /// Returns `None` when the GGML type has no WGSL kernel (caller uses CPU fallback).
-    pub fn dispatch_quantized_token_embedding(
-        &self,
-        raw_embd: &[u8],
-        ggml_type: u32,
-        n_embd: u32,
-        weight_tensor: &QTensor,
-    ) -> Option<Vec<f32>> {
-        if ggml_type != crate::ggml_quants::GGML_TYPE_Q6_K || raw_embd.is_empty() || n_embd == 0 {
-            return None;
-        }
-
-        let n_output = weight_tensor
-            .shape
-            .first()
-            .copied()
-            .unwrap_or(n_embd as usize) as u32;
-        let n_embd_u = n_embd;
-        let weights_elems = (n_output as usize).saturating_mul(n_embd as usize);
-
-        let params = EmbeddingGpuParams {
-            n_embd: n_embd_u,
-            ggml_type,
-            n_output,
-            raw_byte_len: raw_embd.len() as u32,
-        };
-
-        // WGSL storage uses u32 words; pad mmap slice to 4-byte alignment.
-        let word_bytes = raw_embd.len().div_ceil(4) * 4;
-        let embd_buf = self.gpu_device().create_buffer(&wgpu::BufferDescriptor {
-            label: Some("QuantizedEmbeddingBytes"),
-            size: word_bytes.max(4) as wgpu::BufferAddress,
-            usage: wgpu::BufferUsages::STORAGE | wgpu::BufferUsages::COPY_DST,
-            mapped_at_creation: false,
-        });
-        if raw_embd.len() == word_bytes {
-            self.gpu_queue().write_buffer(&embd_buf, 0, raw_embd);
-        } else {
-            const MAX_EMB_ROW_PAD: usize = 8192;
-            if word_bytes > MAX_EMB_ROW_PAD {
-                return None;
-            }
-            let mut padded = [0u8; MAX_EMB_ROW_PAD];
-            padded[..raw_embd.len()].copy_from_slice(raw_embd);
-            self.gpu_queue().write_buffer(&embd_buf, 0, &padded[..word_bytes]);
-        }
-
-        let params_buf = self.gpu_device().create_buffer(&wgpu::BufferDescriptor {
-            label: Some("EmbeddingParams"),
-            size: std::mem::size_of::<EmbeddingGpuParams>() as wgpu::BufferAddress,
-            usage: wgpu::BufferUsages::UNIFORM | wgpu::BufferUsages::COPY_DST,
-            mapped_at_creation: false,
-        });
-        self.gpu_queue()
-            .write_buffer(&params_buf, 0, bytemuck::bytes_of(&params));
-
-        let weights_size = (weights_elems * 4).max(4) as wgpu::BufferAddress;
-        let weights_buf = self.gpu_device().create_buffer(&wgpu::BufferDescriptor {
-            label: Some("EmbeddingWeights"),
-            size: weights_size,
-            usage: wgpu::BufferUsages::STORAGE | wgpu::BufferUsages::COPY_DST,
-            mapped_at_creation: false,
-        });
-        if let Some(mmap) = &self.gguf_mmap {
-            let offset = (self.tensor_data_offset + weight_tensor.byte_offset) as usize;
-            let end = (offset + weights_elems * 4).min(mmap.len());
-            if end > offset {
-                self.gpu_queue().write_buffer(&weights_buf, 0, &mmap[offset..end]);
-            }
-        }
-
-        let output_size = (n_output as usize * 4).max(4) as wgpu::BufferAddress;
-        let output_buf = self.gpu_device().create_buffer(&wgpu::BufferDescriptor {
-            label: Some("EmbeddingOutput"),
-            size: output_size,
-            usage: wgpu::BufferUsages::STORAGE | wgpu::BufferUsages::COPY_SRC,
-            mapped_at_creation: false,
-        });
-
-        let bind_layout = self.embedding_pipeline.get_bind_group_layout(0);
-        let bind_group = self.gpu_device().create_bind_group(&wgpu::BindGroupDescriptor {
-            label: Some("QuantizedEmbeddingBindGroup"),
-            layout: &bind_layout,
-            entries: &[
-                wgpu::BindGroupEntry {
-                    binding: 0,
-                    resource: embd_buf.as_entire_binding(),
-                },
-                wgpu::BindGroupEntry {
-                    binding: 1,
-                    resource: params_buf.as_entire_binding(),
-                },
-                wgpu::BindGroupEntry {
-                    binding: 2,
-                    resource: weights_buf.as_entire_binding(),
-                },
-                wgpu::BindGroupEntry {
-                    binding: 3,
-                    resource: output_buf.as_entire_binding(),
-                },
-            ],
-        });
-
-        let mut encoder = self
-            .device()
-            .create_command_encoder(&wgpu::CommandEncoderDescriptor {
-                label: Some("QuantizedEmbeddingEncoder"),
-            });
-        {
-            let mut cpass = encoder.begin_compute_pass(&wgpu::ComputePassDescriptor {
-                label: Some("QuantizedEmbeddingPass"),
-                timestamp_writes: crate::llm_gpu_profiler::pass_writes_both(),
-            });
-            cpass.set_pipeline(&self.embedding_pipeline);
-            cpass.set_bind_group(0, &bind_group, &[]);
-            cpass.dispatch_workgroups((n_output + 63) / 64, 1, 1);
-        }
-
-        let staging_buf = self.gpu_device().create_buffer(&wgpu::BufferDescriptor {
-            label: Some("EmbeddingStaging"),
-            size: output_size,
-            usage: wgpu::BufferUsages::MAP_READ | wgpu::BufferUsages::COPY_DST,
-            mapped_at_creation: false,
-        });
-        encoder.copy_buffer_to_buffer(&output_buf, 0, &staging_buf, 0, output_size);
-        crate::llm_gpu_profiler::resolve(&mut encoder);
-        self.gpu_queue().submit(Some(encoder.finish()));
-        crate::llm_gpu_profiler::accumulate(crate::llm_gpu_profiler::Phase::Embedding);
-
-        let buffer_slice = staging_buf.slice(..);
-        let (sender, receiver) = futures_channel::oneshot::channel();
-        buffer_slice.map_async(wgpu::MapMode::Read, move |v| {
-            let _ = sender.send(v);
-        });
-        self.poll_wait();
-
-        #[cfg(not(target_arch = "wasm32"))]
-        {
-            let handle = tokio::runtime::Handle::try_current().unwrap_or_else(|_| { let rt = Box::leak(Box::new(tokio::runtime::Runtime::new().unwrap())); rt.handle().clone() });
-            if handle.block_on(receiver).ok()?.is_err() {
-                return None;
-            }
-        }
-        #[cfg(target_arch = "wasm32")]
-        { return None; }
-
-        let data = buffer_slice.get_mapped_range();
-        let result: Vec<f32> = bytemuck::cast_slice(&data).to_vec();
-        drop(data);
-        staging_buf.unmap();
-
-        crate::telemetry::SIEVE_OPS_COUNT
-            .fetch_add(weights_elems, std::sync::atomic::Ordering::Relaxed);
-        Some(result)
-    }
-
-    pub fn dispatch_fused_transformer_block(
-        &self,
-        tensor: &QTensor,
-        input_activations: &[f32],
-    ) -> Vec<f32> {
-        let rows = tensor.shape.get(0).copied().unwrap_or(4096);
-        let cols = tensor.shape.get(1).copied().unwrap_or(4096);
-
-        // ── DirectML path (Windows) ───────────────────────────────────────────
-        #[cfg(target_os = "windows")]
-        if let Some(dml) = &self.dml {
-            if let Some(mmap) = &self.gguf_mmap {
-                let offset = self.tensor_data_offset + tensor.byte_offset;
-                let q4_bytes_needed = (rows * cols / crate::directml_bridge::Q4_K_BLOCK_SIZE)
-                    * crate::directml_bridge::Q4_K_BLOCK_BYTES;
-                if (offset as usize + q4_bytes_needed) <= mmap.len() {
-                    let q4_slice = &mmap[offset as usize..offset as usize + q4_bytes_needed];
-                    let weights_f32 =
-                        crate::directml_bridge::dequantize_q4_k_tensor(q4_slice, rows * cols);
-                    let op = crate::directml_bridge::DmlGemmOp {
-                        m: input_activations.len() as u32 / cols as u32,
-                        k: cols as u32,
-                        n: rows as u32,
-                    };
-                    if let Ok(result) = op.execute(dml, input_activations, &weights_f32) {
-                        crate::telemetry::SIEVE_OPS_COUNT
-                            .fetch_add(rows * cols, std::sync::atomic::Ordering::Relaxed);
-                        return result;
-                    }
-                }
-            }
-        }
-
-        // ── Accelerate BLAS path (macOS / Apple Silicon AMX) ─────────────────────
-        #[cfg(any(target_os = "macos", target_os = "ios"))]
-        if let Some(mmap) = &self.gguf_mmap {
-            let offset = (self.tensor_data_offset + tensor.byte_offset) as usize;
-            let q4_bytes_needed = (rows * cols / crate::metal_bridge::Q4_K_BLOCK_SIZE)
-                * crate::metal_bridge::Q4_K_BLOCK_BYTES;
-            if offset + q4_bytes_needed <= mmap.len() {
-                let q4_slice = &mmap[offset..offset + q4_bytes_needed];
-                let weights_f32 =
-                    crate::metal_bridge::dequantize_q4_k_tensor(q4_slice, rows * cols);
-                let input_rows = (input_activations.len() / cols).max(1);
-                let result = crate::metal_bridge::accelerate_sgemm(
-                    input_rows,
-                    cols,
-                    rows,
-                    input_activations,
-                    &weights_f32,
-                );
-                crate::telemetry::SIEVE_OPS_COUNT
-                    .fetch_add(rows * cols, std::sync::atomic::Ordering::Relaxed);
-                return result;
-            }
-        }
-
-        // ── wgpu / WGSL fallback (all platforms — Vulkan on Linux/NVIDIA,
-        //    Metal on macOS when mmap not loaded, D3D12 on Windows fallback) ──
-        let input_bytes = bytemuck::cast_slice(input_activations);
-        let input_buf = self.gpu_device().create_buffer(&wgpu::BufferDescriptor {
-            label: Some("Input"),
-            size: input_bytes.len().max(4) as wgpu::BufferAddress,
-            usage: wgpu::BufferUsages::STORAGE | wgpu::BufferUsages::COPY_DST,
-            mapped_at_creation: false,
-        });
-        self.gpu_queue().write_buffer(&input_buf, 0, input_bytes);
-
-        // Upload real weights from mmap when available, else use a zero buffer.
-        let weights_size = (rows * cols * 4) as wgpu::BufferAddress;
-        let weights_buf = self.gpu_device().create_buffer(&wgpu::BufferDescriptor {
-            label: Some("Weights"),
-            size: weights_size.max(4),
-            usage: wgpu::BufferUsages::STORAGE | wgpu::BufferUsages::COPY_DST,
-            mapped_at_creation: false,
-        });
-        if let Some(mmap) = &self.gguf_mmap {
-            let offset = (self.tensor_data_offset + tensor.byte_offset) as usize;
-            let end = (offset + rows * cols * 4).min(mmap.len());
-            if end > offset {
-                let f32_bytes = &mmap[offset..end];
-                self.gpu_queue().write_buffer(&weights_buf, 0, f32_bytes);
-            }
-        }
-
-        let output_size = (rows * 4).max(4) as wgpu::BufferAddress;
-        let output_buf = self.gpu_device().create_buffer(&wgpu::BufferDescriptor {
-            label: Some("Output"),
-            size: output_size,
-            usage: wgpu::BufferUsages::STORAGE | wgpu::BufferUsages::COPY_SRC,
-            mapped_at_creation: false,
-        });
-
-        // Upload GemmGpuParams for fused_transformer.wgsl (binding 2).
-        let gemm_params = GemmGpuParams {
-            n_in: cols as u32,
-            n_out: rows as u32,
-            weight_ggml_type: if tensor.is_quantized_q4_k { 12 } else { 14 },
-            weight_row_elems: cols as u32,
-            weight_byte_len: (rows * cols * 4) as u32,
-            n_batch: 1,
-            in_row_stride: 0,
-            out_row_stride: 0,
-        };
-        let params_buf = self.gpu_device().create_buffer(&wgpu::BufferDescriptor {
-            label: Some("TransformerParams"),
-            size: std::mem::size_of::<GemmGpuParams>() as wgpu::BufferAddress,
-            usage: wgpu::BufferUsages::UNIFORM | wgpu::BufferUsages::COPY_DST,
-            mapped_at_creation: false,
-        });
-        self.gpu_queue().write_buffer(&params_buf, 0, bytemuck::bytes_of(&gemm_params));
-
-        let bind_group_layout = self.pipeline.get_bind_group_layout(0);
-        let bind_group = self.gpu_device().create_bind_group(&wgpu::BindGroupDescriptor {
-            label: None,
-            layout: &bind_group_layout,
-            entries: &[
-                wgpu::BindGroupEntry {
-                    binding: 0,
-                    resource: input_buf.as_entire_binding(),
-                },
-                wgpu::BindGroupEntry {
-                    binding: 1,
-                    resource: weights_buf.as_entire_binding(),
-                },
-                wgpu::BindGroupEntry {
-                    binding: 2,
-                    resource: params_buf.as_entire_binding(),
-                },
-                wgpu::BindGroupEntry {
-                    binding: 3,
-                    resource: output_buf.as_entire_binding(),
-                },
-            ],
-        });
-
-        let mut encoder = self
-            .device()
-            .create_command_encoder(&wgpu::CommandEncoderDescriptor { label: None });
-        {
-            let mut cpass = encoder.begin_compute_pass(&wgpu::ComputePassDescriptor {
-                label: None,
-                timestamp_writes: crate::llm_gpu_profiler::pass_writes_both(),
-            });
-            cpass.set_pipeline(&self.pipeline);
-            cpass.set_bind_group(0, &bind_group, &[]);
-            cpass.dispatch_workgroups((rows as u32 + 63) / 64, 1, 1);
-        }
-
-        let staging_buf = self.gpu_device().create_buffer(&wgpu::BufferDescriptor {
-            label: Some("Staging"),
-            size: output_size,
-            usage: wgpu::BufferUsages::MAP_READ | wgpu::BufferUsages::COPY_DST,
-            mapped_at_creation: false,
-        });
-        encoder.copy_buffer_to_buffer(&output_buf, 0, &staging_buf, 0, output_size);
-        crate::llm_gpu_profiler::resolve(&mut encoder);
-        self.gpu_queue().submit(Some(encoder.finish()));
-        crate::llm_gpu_profiler::accumulate(crate::llm_gpu_profiler::Phase::FusedBlock);
-
-        let buffer_slice = staging_buf.slice(..);
-        let (sender, receiver) = futures_channel::oneshot::channel();
-        buffer_slice.map_async(wgpu::MapMode::Read, move |v| sender.send(v).unwrap());
-        self.poll_wait();
-
-        #[cfg(not(target_arch = "wasm32"))]
-        {
-            let handle = tokio::runtime::Handle::try_current().unwrap_or_else(|_| { let rt = Box::leak(Box::new(tokio::runtime::Runtime::new().unwrap())); rt.handle().clone() });
-            handle.block_on(receiver).unwrap().unwrap();
-        }
-
-        let data = buffer_slice.get_mapped_range();
-        let result: Vec<f32> = bytemuck::cast_slice(&data).to_vec();
-        drop(data);
-        staging_buf.unmap();
-
-        crate::telemetry::SIEVE_OPS_COUNT
-            .fetch_add(rows * cols, std::sync::atomic::Ordering::Relaxed);
-        result
-    }
-
-    fn write_weight_words(&self, raw: &[u8], max_bytes: usize) {
-        let weight_buf = self.gemm_weight_buf.as_ref().expect("gemm weight buf");
-        let upload = if raw.len() <= max_bytes {
-            raw
-        } else {
-            &raw[..max_bytes]
-        };
-        self.gpu_queue().write_buffer(weight_buf, 0, upload);
-    }
-
-    /// Quantized GEMM from a pre-sliced weight byte range (chunk-local row indices).
-    fn dispatch_gemm_raw_into(
-        &self,
-        info: &GgufTensorInfo,
-        raw: &[u8],
-        input: &[f32],
-        out: &mut [f32],
-        n_in: usize,
-        n_out: usize,
-    ) -> bool {
-        if n_in > input.len() || n_out > out.len() {
-            return false;
-        }
-
-        let weight_bytes = raw.len();
-        // GEMM shader supports a wider quant set than the legacy `ggml_gpu_quant_supported` (Q4_K/Q6_K)
-        // — notably Q8_0, which was silently falling back to the CPU `stack_gemm_quant` below (the FFN
-        // bottleneck for Q8_0 models). The guards (size/buffer caps) still fail closed → CPU fallback.
-        if ggml_gpu_gemm_supported(info.ggml_type)
-            && n_in <= MAX_STACK_GEMM_IN
-            && n_out <= self.gemm_max_out_dim as usize
-            && weight_bytes <= self.max_tensor_bytes
-            && self.gemm_input_buf.is_some()
-        {
-            let params = GemmGpuParams {
-                n_in: n_in as u32,
-                n_out: n_out as u32,
-                weight_ggml_type: info.ggml_type,
-                weight_row_elems: info.dims[0] as u32,
-                weight_byte_len: raw.len() as u32,
-                n_batch: 1,
-                in_row_stride: 0,
-                out_row_stride: 0,
-            };
-            let input_buf = self.gemm_input_buf.as_ref().unwrap();
-            let weight_buf = self.gemm_weight_buf.as_ref().unwrap();
-            let output_buf = self.gemm_output_buf.as_ref().unwrap();
-            let params_buf = self.gemm_params_buf.as_ref().unwrap();
-            let staging = self.gemm_output_staging.as_ref().unwrap();
-
-            self.gpu_queue()
-                .write_buffer(input_buf, 0, bytemuck::cast_slice(&input[..n_in]));
-            self.write_weight_words(raw, self.max_tensor_bytes);
-            self.gpu_queue()
-                .write_buffer(params_buf, 0, bytemuck::bytes_of(&params));
-
-            let bind_layout = self.pipeline.get_bind_group_layout(0);
-            let bind_group = self.gpu_device().create_bind_group(&wgpu::BindGroupDescriptor {
-                label: Some("LayerGemmBindGroup"),
-                layout: &bind_layout,
-                entries: &[
-                    wgpu::BindGroupEntry {
-                        binding: 0,
-                        resource: input_buf.as_entire_binding(),
-                    },
-                    wgpu::BindGroupEntry {
-                        binding: 1,
-                        resource: weight_buf.as_entire_binding(),
-                    },
-                    wgpu::BindGroupEntry {
-                        binding: 2,
-                        resource: params_buf.as_entire_binding(),
-                    },
-                    wgpu::BindGroupEntry {
-                        binding: 3,
-                        resource: output_buf.as_entire_binding(),
-                    },
-                ],
-            });
-
-            let mut encoder = self
-                .device()
-                .create_command_encoder(&wgpu::CommandEncoderDescriptor {
-                    label: Some("LayerGemmEncoder"),
-                });
-            {
-                let mut cpass = encoder.begin_compute_pass(&wgpu::ComputePassDescriptor {
-                    label: None,
-                    timestamp_writes: crate::llm_gpu_profiler::pass_writes_both(),
-                });
-                cpass.set_pipeline(&self.pipeline);
-                cpass.set_bind_group(0, &bind_group, &[]);
-                cpass.dispatch_workgroups((n_out as u32 + 63) / 64, 1, 1);
-            }
-            let out_bytes = (n_out * 4) as wgpu::BufferAddress;
-            encoder.copy_buffer_to_buffer(output_buf, 0, staging, 0, out_bytes);
-            crate::llm_gpu_profiler::resolve(&mut encoder);
-            self.gpu_queue().submit(Some(encoder.finish()));
-            crate::llm_gpu_profiler::accumulate(crate::llm_gpu_profiler::Phase::Gemm);
-
-            let slice = staging.slice(..out_bytes);
-            let (tx, rx) = futures_channel::oneshot::channel();
-            slice.map_async(wgpu::MapMode::Read, move |r| {
-                let _ = tx.send(r);
-            });
-            self.poll_wait();
-            #[cfg(not(target_arch = "wasm32"))]
-            if let Ok(handle) = tokio::runtime::Handle::try_current() {
-                if handle.block_on(rx).ok().map(|m| m.is_ok()).unwrap_or(false) {
-                    let data = slice.get_mapped_range();
-                    let floats: &[f32] = bytemuck::cast_slice(&data);
-                    out[..n_out].copy_from_slice(&floats[..n_out]);
-                    drop(data);
-                    staging.unmap();
-                    return true;
-                }
-            }
-            let _ = staging.unmap();
-        }
-
-        stack_gemm_quant(raw, info, input, out, n_in, n_out)
-    }
-
-    /// A1b: dispatch one **ternary** FFN GEMM (`GGML_TYPE_TERNARY_158`). The resident 2-bit GPU
-    /// kernel when the toggle is on AND the tensor is resident; otherwise the CPU base-3 oracle on
-    /// the blob fetched from the mmap. Fail-closed (returns false, never garbage) on any mismatch.
-    fn dispatch_ternary_ffn(
-        &self,
-        info: &GgufTensorInfo,
-        input: &[f32],
-        out: &mut [f32],
-        n_in: usize,
-        n_out: usize,
-    ) -> bool {
-        if n_in > input.len() || n_out > out.len() {
-            return false;
-        }
-        // GPU resident path (toggle on): keyed by the `.q42` blob offset (== info.byte_offset).
-        #[cfg(not(target_arch = "wasm32"))]
-        if crate::llm_bench::ternary_ffn_enabled() {
-            if let Some(res) = self.ternary_ffn.as_ref() {
-                if res.gemv(
-                    self.gpu_device(),
-                    self.gpu_queue(),
-                    info.byte_offset,
-                    input,
-                    out,
-                    n_in,
-                    n_out,
-                ) {
-                    return true;
-                }
-            }
-        }
-        // CPU oracle fallback (toggle off, or GPU unavailable): the SAME ternary weights via the
-        // base-3 CPU GEMM — correct, slower; this is the toggle's OFF baseline.
-        let mmap = match self.gguf_mmap.as_deref() {
-            Some(m) => m,
-            None => return false,
-        };
-        let raw = match crate::ggml_quants::fetch_tensor_bytes(mmap, self.tensor_data_offset, info) {
-            Ok(s) => s,
-            Err(_) => return false,
-        };
-        if raw.len() < 4 {
-            return false;
-        }
-        let scale = f32::from_le_bytes([raw[0], raw[1], raw[2], raw[3]]);
-        crate::ternary::ternary_gemm_cpu(
-            &input[..n_in],
-            &raw[4..],
-            scale,
-            n_in,
-            n_out,
-            1,
-            0,
-            0,
-            &mut out[..n_out],
-        );
-        true
-    }
-
-    /// Quantized GEMM into caller `out` using reused GPU buffers (Q6_K) or CPU dequant fallback.
-    pub fn dispatch_gemm_into(
-        &self,
-        index: &crate::gguf_sharder::GgufTensorIndex,
-        info: &GgufTensorInfo,
-        input: &[f32],
-        out: &mut [f32],
-        n_in: usize,
-        n_out: usize,
-    ) -> bool {
-        if n_in > input.len() || n_out > out.len() {
-            wlog(&format!("[gemm_into] GUARD n_in={n_in} n_out={n_out} input={} out={}", input.len(), out.len()));
-            return false;
-        }
-        // A1b: ternary FFN tensors are not row-block quantized — route them to the dedicated ternary
-        // dispatch (resident 2-bit GPU kernel / CPU oracle) before the standard fetch+GEMM path.
-        if info.ggml_type == crate::ternary::GGML_TYPE_TERNARY_158 {
-            return self.dispatch_ternary_ffn(info, input, out, n_in, n_out);
-        }
-        let mmap = match self.gguf_mmap.as_deref() {
-            Some(m) => m,
-            None => return false,
-        };
-        let raw = match crate::ggml_quants::fetch_tensor_bytes(mmap, index.tensor_data_start, info)
-        {
-            Ok(s) => s,
-            Err(_) => return false,
-        };
-        self.dispatch_gemm_raw_into(info, raw, input, out, n_in, n_out)
-    }
-
-    /// Chunked vocabulary projection with streaming argmax (zero heap, stack chunk buffer only).
-    /// `max_chunks`: `0` sweeps the full vocabulary; otherwise caps chunk iterations (tests).
-    pub fn dispatch_output_argmax_chunked(
-        &self,
-        index: &crate::gguf_sharder::GgufTensorIndex,
-        hidden: &[f32],
-        emb_dim: usize,
-        chunk_logits: &mut [f32],
-        max_chunks: u32,
-        sieve_mask: Option<&crate::neuro_symbolic_sieve::SieveStateMask>,
-    ) -> Option<StreamingArgmaxResult> {
-        let info = index.logits_projection_info()?;
-        let (n_in, vocab_size) = Self::matmul_dims(info);
-        if n_in == 0 || vocab_size == 0 || n_in > emb_dim || n_in > hidden.len() {
-            return None;
-        }
-        if chunk_logits.len() < VOCAB_CHUNK_ROWS {
-            return None;
-        }
-        let mmap = self.gguf_mmap.as_deref()?;
-        let full_chunks = vocab_size.div_ceil(VOCAB_CHUNK_ROWS);
-        let n_chunks = if max_chunks == 0 {
-            full_chunks
-        } else {
-            (max_chunks as usize).min(full_chunks)
-        };
-        let mut best_token_id = 0u32;
-        let mut max_logit = f32::NEG_INFINITY;
-
-        for chunk_idx in 0..n_chunks {
-            let row_start = chunk_idx * VOCAB_CHUNK_ROWS;
-            let chunk_rows = VOCAB_CHUNK_ROWS.min(vocab_size - row_start);
-            let raw = crate::ggml_quants::fetch_tensor_row_range_bytes(
-                mmap,
-                index.tensor_data_start,
-                info,
-                row_start,
-                chunk_rows,
-            )
-            .ok()?;
-            if !self.dispatch_gemm_raw_into(
-                info,
-                raw,
-                &hidden[..n_in],
-                &mut chunk_logits[..chunk_rows],
-                n_in,
-                chunk_rows,
-            ) {
-                return None;
-            }
-            #[cfg(target_arch = "wasm32")]
-            if chunk_idx == 0 {
-            }
-            update_streaming_argmax_sieved(
-                &chunk_logits[..chunk_rows],
-                chunk_rows,
-                chunk_idx,
-                sieve_mask,
-                &mut best_token_id,
-                &mut max_logit,
-            );
-            scrub_f32_volatile(&mut chunk_logits[..chunk_rows], chunk_rows);
-        }
-
-        if max_logit == f32::NEG_INFINITY {
-            return None;
-        }
-        Some(StreamingArgmaxResult {
-            best_token_id,
-            max_logit,
-        })
-    }
-
-    /// A1a: create the persistent GPU top-k pipeline + small candidate/staging buffers (once).
-    #[cfg(not(target_arch = "wasm32"))]
-    fn init_output_topk(&mut self) {
-        let shader = self
-            .gpu_device()
-            .create_shader_module(wgpu::ShaderModuleDescriptor {
-                label: Some("output_topk"),
-                source: wgpu::ShaderSource::Wgsl(crate::topk::TOPK_REDUCTION_WGSL.into()),
-            });
-        let pipeline = self
-            .gpu_device()
-            .create_compute_pipeline(&wgpu::ComputePipelineDescriptor {
-                label: Some("output_topk_pipeline"),
-                layout: None,
-                module: &shader,
-                entry_point: Some("topk_block"),
-                compilation_options: Default::default(),
-                cache: None,
-            });
-        // Worst case: a full vocab chunk's blocks × max K candidates.
-        let max_blocks = (VOCAB_CHUNK_ROWS / crate::topk::TOPK_BLOCK_SIZE).max(1);
-        let cand_bytes = ((max_blocks * crate::topk::TOPK_MAX_K).max(1) * 4) as wgpu::BufferAddress;
-        self.topk_cand_val_buf = Some(self.gpu_device().create_buffer(&wgpu::BufferDescriptor {
-            label: Some("TopkCandVal"),
-            size: cand_bytes,
-            usage: wgpu::BufferUsages::STORAGE | wgpu::BufferUsages::COPY_SRC,
-            mapped_at_creation: false,
-        }));
-        self.topk_cand_idx_buf = Some(self.gpu_device().create_buffer(&wgpu::BufferDescriptor {
-            label: Some("TopkCandIdx"),
-            size: cand_bytes,
-            usage: wgpu::BufferUsages::STORAGE | wgpu::BufferUsages::COPY_SRC,
-            mapped_at_creation: false,
-        }));
-        self.topk_cand_staging = Some(self.gpu_device().create_buffer(&wgpu::BufferDescriptor {
-            label: Some("TopkCandStaging"),
-            size: cand_bytes * 2, // packed: [val .. | idx ..]
-            usage: wgpu::BufferUsages::MAP_READ | wgpu::BufferUsages::COPY_DST,
-            mapped_at_creation: false,
-        }));
-        self.topk_params_buf = Some(self.gpu_device().create_buffer(&wgpu::BufferDescriptor {
-            label: Some("TopkParams"),
-            size: 16,
-            usage: wgpu::BufferUsages::UNIFORM | wgpu::BufferUsages::COPY_DST,
-            mapped_at_creation: false,
-        }));
-        self.output_topk_pipeline = Some(pipeline);
-    }
-
-    /// A1a: GPU top-k over the output projection — the logits stay on-GPU (`gemm_output_buf`), the
-    /// top-k kernel reduces them per chunk, and only K `(id, logit)` candidates are read back (vs the
-    /// 196 KB/token full-logit readback + CPU argmax in `dispatch_output_argmax_chunked`). Returns the
-    /// merged global top-K, or `None` to signal the caller to fall back to the argmax path. v1: no
-    /// sieve coupling (caller routes here only when no sieve mask is active).
-    #[cfg(not(target_arch = "wasm32"))]
-    pub fn dispatch_output_topk_chunked(
-        &self,
-        index: &crate::gguf_sharder::GgufTensorIndex,
-        hidden: &[f32],
-        emb_dim: usize,
-        k: usize,
-    ) -> Option<Vec<crate::topk::TopKItem>> {
-        let info = index.logits_projection_info()?;
-        let (n_in, vocab_size) = Self::matmul_dims(info);
-        if n_in == 0 || vocab_size == 0 || n_in > emb_dim || n_in > hidden.len() {
-            return None;
-        }
-        let pipeline = self.output_topk_pipeline.as_ref()?;
-        let input_buf = self.gemm_input_buf.as_ref()?;
-        let weight_buf = self.gemm_weight_buf.as_ref()?;
-        let output_buf = self.gemm_output_buf.as_ref()?;
-        let params_buf = self.gemm_params_buf.as_ref()?;
-        let topk_params_buf = self.topk_params_buf.as_ref()?;
-        let cand_val = self.topk_cand_val_buf.as_ref()?;
-        let cand_idx = self.topk_cand_idx_buf.as_ref()?;
-        let staging = self.topk_cand_staging.as_ref()?;
-        let mmap = self.gguf_mmap.as_deref()?;
-
-        let k = k.clamp(1, crate::topk::TOPK_MAX_K);
-        let block_size = crate::topk::TOPK_BLOCK_SIZE;
-        let full_chunks = vocab_size.div_ceil(VOCAB_CHUNK_ROWS);
-
-        let mut all_val: Vec<f32> = Vec::new();
-        let mut all_idx: Vec<u32> = Vec::new();
-
-        // A1a step-2: when the output projection is resident (uploaded once at init), bind the
-        // per-chunk sub-range — zero per-token upload. Each chunk's byte offset is 256-aligned
-        // because VOCAB_CHUNK_ROWS (8192) is a multiple of 256. The bound bytes, quant, shader and
-        // params are identical to the per-chunk-upload fallback, so logits are byte-for-byte equal.
-        let resident_logits = self.mc8_logits_resident_buf.as_ref();
-        let resident_row_bytes = self.mc8_logits_row_bytes as u64;
-
-        for chunk_idx in 0..full_chunks {
-            let row_start = chunk_idx * VOCAB_CHUNK_ROWS;
-            let chunk_rows = VOCAB_CHUNK_ROWS.min(vocab_size - row_start);
-
-            let (weight_resource, weight_byte_len) = if let Some(buf) = resident_logits {
-                // Only the GPU-quant fast path is supported; otherwise signal fallback to argmax.
-                if !(ggml_gpu_quant_supported(info.ggml_type)
-                    && n_in <= MAX_STACK_GEMM_IN
-                    && chunk_rows <= self.gemm_max_out_dim as usize)
-                {
-                    return None;
-                }
-                let byte_len = chunk_rows as u64 * resident_row_bytes;
-                let res = wgpu::BindingResource::Buffer(wgpu::BufferBinding {
-                    buffer: buf,
-                    offset: row_start as u64 * resident_row_bytes,
-                    size: std::num::NonZeroU64::new(byte_len),
-                });
-                (res, byte_len as u32)
-            } else {
-                let raw = crate::ggml_quants::fetch_tensor_row_range_bytes(
-                    mmap,
-                    index.tensor_data_start,
-                    info,
-                    row_start,
-                    chunk_rows,
-                )
-                .ok()?;
-                if !(ggml_gpu_quant_supported(info.ggml_type)
-                    && n_in <= MAX_STACK_GEMM_IN
-                    && chunk_rows <= self.gemm_max_out_dim as usize
-                    && raw.len() <= self.max_tensor_bytes)
-                {
-                    return None;
-                }
-                let byte_len = raw.len() as u32;
-                self.write_weight_words(raw, self.max_tensor_bytes);
-                (weight_buf.as_entire_binding(), byte_len)
-            };
-
-            let gparams = GemmGpuParams {
-                n_in: n_in as u32,
-                n_out: chunk_rows as u32,
-                weight_ggml_type: info.ggml_type,
-                weight_row_elems: info.dims[0] as u32,
-                weight_byte_len,
-                n_batch: 1,
-                in_row_stride: 0,
-                out_row_stride: 0,
-            };
-            self.gpu_queue()
-                .write_buffer(input_buf, 0, bytemuck::cast_slice(&hidden[..n_in]));
-            self.gpu_queue()
-                .write_buffer(params_buf, 0, bytemuck::bytes_of(&gparams));
-            let tparams = crate::topk::topk_params_bytes(chunk_rows as u32, k as u32, block_size as u32);
-            self.gpu_queue().write_buffer(topk_params_buf, 0, &tparams);
-
-            let num_blocks = chunk_rows.div_ceil(block_size);
-            let cand_count = num_blocks * k;
-
-            let gemm_bind = self.gpu_device().create_bind_group(&wgpu::BindGroupDescriptor {
-                label: Some("TopkGemmBind"),
-                layout: &self.pipeline.get_bind_group_layout(0),
-                entries: &[
-                    wgpu::BindGroupEntry { binding: 0, resource: input_buf.as_entire_binding() },
-                    wgpu::BindGroupEntry { binding: 1, resource: weight_resource },
-                    wgpu::BindGroupEntry { binding: 2, resource: params_buf.as_entire_binding() },
-                    wgpu::BindGroupEntry { binding: 3, resource: output_buf.as_entire_binding() },
-                ],
-            });
-            let topk_bind = self.gpu_device().create_bind_group(&wgpu::BindGroupDescriptor {
-                label: Some("TopkBind"),
-                layout: &pipeline.get_bind_group_layout(0),
-                entries: &[
-                    wgpu::BindGroupEntry { binding: 0, resource: output_buf.as_entire_binding() },
-                    wgpu::BindGroupEntry { binding: 1, resource: topk_params_buf.as_entire_binding() },
-                    wgpu::BindGroupEntry { binding: 2, resource: cand_val.as_entire_binding() },
-                    wgpu::BindGroupEntry { binding: 3, resource: cand_idx.as_entire_binding() },
-                ],
-            });
-
-            let mut encoder = self
-                .device()
-                .create_command_encoder(&wgpu::CommandEncoderDescriptor { label: Some("TopkEncoder") });
-            {
-                let mut cpass = encoder.begin_compute_pass(&wgpu::ComputePassDescriptor {
-                    label: Some("TopkGemmPass"),
-                    timestamp_writes: crate::llm_gpu_profiler::pass_writes_begin(),
-                });
-                cpass.set_pipeline(&self.pipeline);
-                cpass.set_bind_group(0, &gemm_bind, &[]);
-                cpass.dispatch_workgroups((chunk_rows as u32 + 63) / 64, 1, 1);
-            }
-            {
-                let mut tpass = encoder.begin_compute_pass(&wgpu::ComputePassDescriptor {
-                    label: Some("TopkReducePass"),
-                    timestamp_writes: crate::llm_gpu_profiler::pass_writes_end(),
-                });
-                tpass.set_pipeline(pipeline);
-                tpass.set_bind_group(0, &topk_bind, &[]);
-                tpass.dispatch_workgroups(num_blocks as u32, 1, 1);
-            }
-            let cand_bytes = (cand_count * 4) as wgpu::BufferAddress;
-            encoder.copy_buffer_to_buffer(cand_val, 0, staging, 0, cand_bytes);
-            encoder.copy_buffer_to_buffer(cand_idx, 0, staging, cand_bytes, cand_bytes);
-            crate::llm_gpu_profiler::resolve(&mut encoder);
-            self.gpu_queue().submit(Some(encoder.finish()));
-            crate::llm_gpu_profiler::accumulate(crate::llm_gpu_profiler::Phase::OutputTopk);
-
-            let map_bytes = cand_bytes * 2;
-            let slice = staging.slice(..map_bytes);
-            let (tx, rx) = futures_channel::oneshot::channel();
-            slice.map_async(wgpu::MapMode::Read, move |r| {
-                let _ = tx.send(r);
-            });
-            self.poll_wait();
-            let mapped_ok = if let Ok(handle) = tokio::runtime::Handle::try_current() {
-                handle.block_on(rx).ok().map(|m| m.is_ok()).unwrap_or(false)
-            } else {
-                false
-            };
-            if !mapped_ok {
-                let _ = staging.unmap();
-                return None;
-            }
-            {
-                let data = slice.get_mapped_range();
-                let vals: &[f32] = bytemuck::cast_slice(&data[..cand_count * 4]);
-                let idxs: &[u32] = bytemuck::cast_slice(&data[cand_count * 4..cand_count * 8]);
-                for i in 0..cand_count {
-                    let v = vals[i];
-                    if v > f32::NEG_INFINITY {
-                        all_val.push(v);
-                        all_idx.push(row_start as u32 + idxs[i]);
-                    }
-                }
-            }
-            staging.unmap();
-        }
-
-        let top = crate::topk::merge_block_candidates(&all_val, &all_idx, k, None);
-        if top.is_empty() {
-            None
-        } else {
-            Some(top)
-        }
-    }
-
-    /// Final `output_norm` RMSNorm in-place before vocabulary projection (Pre-Norm LLM tail).
-    /// REQUIRED on all targets — native previously skipped it → logits from an un-normed hidden.
-    pub fn apply_output_norm_inplace(
-        &self,
-        index: &crate::gguf_sharder::GgufTensorIndex,
-        hidden: &mut [f32],
-        emb_dim: usize,
-    ) -> bool {
-        let info = match index.output_norm_info() {
-            Some(i) => i,
-            None => return true,
-        };
-        let mmap = match self.gguf_mmap.as_deref() {
-            Some(m) => m,
-            None => return false,
-        };
-        let n_embd = index.hyperparams.n_embd as usize;
-        let n = emb_dim.min(n_embd).min(hidden.len());
-        let mut norm_w = [0f32; MAX_HIDDEN_DIM];
-        if dequant_norm_row_into(mmap, index.tensor_data_start, info, &mut norm_w) < n {
-            return false;
-        }
-        rms_norm_inplace(&mut hidden[..n], &norm_w[..n], RMS_NORM_EPS);
-        true
-    }
-
-    /// Pre-norm FFN: RMSNorm(hidden) → SwiGLU (wasm) or ReLU-gated (native) → residual add.
-    fn dispatch_ffn_block_pre_norm(
-        &mut self,
-        index: &crate::gguf_sharder::GgufTensorIndex,
-        hidden: &mut [f32],
-        emb_dim: usize,
-        tensors: &crate::gguf_sharder::LayerTensors,
-        scratch_a: &mut [f32],
-        scratch_b: &mut [f32],
-    ) -> bool {
-        // SwiGLU FFN with ffn_norm pre-norm — REQUIRED on all targets (native previously ran a
-        // norm-less ReLU chain on the raw residual → exponential blow-up to inf).
-        {
-            let mut norm_w_ffn = [0f32; MAX_HIDDEN_DIM];
-            let mut h_norm_ffn = [0f32; MAX_HIDDEN_DIM];
-            let ffn_input = prepare_pre_norm_input(
-                &hidden[..emb_dim],
-                emb_dim,
-                tensors.ffn_norm.as_ref(),
-                self.gguf_mmap.as_deref().map(|m| &m[..]),
-                index.tensor_data_start,
-                &mut h_norm_ffn,
-                &mut norm_w_ffn,
-            );
-            let gate_info = match tensors.ffn_gate.as_ref() {
-                Some(i) => i,
-                None => return false,
-            };
-            let up_info = match tensors.ffn_up.as_ref() {
-                Some(i) => i,
-                None => return false,
-            };
-            let down_info = match tensors.ffn_down.as_ref() {
-                Some(i) => i,
-                None => return false,
-            };
-            let (gate_in, n_ffn) = Self::matmul_dims(gate_info);
-            let (up_in, up_out) = Self::matmul_dims(up_info);
-            let (dn_in, dn_out) = Self::matmul_dims(down_info);
-            if gate_in > emb_dim
-                || up_in != gate_in
-                || up_out != n_ffn
-                || dn_in != n_ffn
-                || n_ffn > MAX_STACK_GEMM_DIM
-                || dn_out > scratch_a.len()
-            {
-                return false;
-            }
-            // AWQ step 1 (calibration only; no-op in production): record per-input-channel salience
-            // at the post-ffn_norm FFN input — the activation that scales the gate/up projections.
-            crate::llm_awq::record_ffn_input(&ffn_input[..gate_in]);
-            let mut gate_buf = [0f32; MAX_STACK_GEMM_DIM];
-            let mut up_buf = [0f32; MAX_STACK_GEMM_DIM];
-            if !self.dispatch_gemm_into(
-                index,
-                gate_info,
-                &ffn_input[..gate_in],
-                &mut gate_buf[..n_ffn],
-                gate_in,
-                n_ffn,
-            ) {
-                return false;
-            }
-            if !self.dispatch_gemm_into(
-                index,
-                up_info,
-                &ffn_input[..up_in],
-                &mut up_buf[..n_ffn],
-                up_in,
-                n_ffn,
-            ) {
-                return false;
-            }
-            silu_inplace(&mut gate_buf[..n_ffn], n_ffn);
-            for i in 0..n_ffn {
-                gate_buf[i] *= up_buf[i];
-            }
-            if !self.dispatch_gemm_into(
-                index,
-                down_info,
-                &gate_buf[..dn_in],
-                scratch_a,
-                dn_in,
-                dn_out,
-            ) {
-                return false;
-            }
-            add_residual_inplace(
-                &mut hidden[..emb_dim],
-                &scratch_a[..dn_out],
-                emb_dim.min(dn_out),
-            );
-            return true;
-        }
-    }
-
-    /// Phase 2B: SwiGLU FFN block with async GEMM readback (`map_async` + `await`).
-    #[cfg(target_arch = "wasm32")]
-    async fn dispatch_ffn_block_pre_norm_async(
-        &mut self,
-        index: &crate::gguf_sharder::GgufTensorIndex,
-        hidden: &mut [f32],
-        emb_dim: usize,
-        tensors: &crate::gguf_sharder::LayerTensors,
-        scratch_a: &mut [f32],
-        scratch_b: &mut [f32],
-    ) -> bool {
-        let mut norm_w_ffn = [0f32; MAX_HIDDEN_DIM];
-        let mut h_norm_ffn = [0f32; MAX_HIDDEN_DIM];
-        let ffn_input = prepare_pre_norm_input(
-            &hidden[..emb_dim],
-            emb_dim,
-            tensors.ffn_norm.as_ref(),
-            self.gguf_mmap.as_deref(),
-            index.tensor_data_start,
-            &mut h_norm_ffn,
-            &mut norm_w_ffn,
-        );
-        let gate_info = match tensors.ffn_gate.as_ref() {
-            Some(i) => i,
-            None => return false,
-        };
-        let up_info = match tensors.ffn_up.as_ref() {
-            Some(i) => i,
-            None => return false,
-        };
-        let down_info = match tensors.ffn_down.as_ref() {
-            Some(i) => i,
-            None => return false,
-        };
-        let (gate_in, n_ffn) = Self::matmul_dims(gate_info);
-        let (up_in, up_out) = Self::matmul_dims(up_info);
-        let (dn_in, dn_out) = Self::matmul_dims(down_info);
-        if gate_in > emb_dim
-            || up_in != gate_in
-            || up_out != n_ffn
-            || dn_in != n_ffn
-            || n_ffn > MAX_STACK_GEMM_DIM
-            || dn_out > scratch_a.len()
-        {
-            return false;
-        }
-        let mut gate_buf = [0f32; MAX_STACK_GEMM_DIM];
-        let mut up_buf = [0f32; MAX_STACK_GEMM_DIM];
-        if !self
-            .dispatch_gemm_into_async(
-                index,
-                gate_info,
-                &ffn_input[..gate_in],
-                &mut gate_buf[..n_ffn],
-                gate_in,
-                n_ffn,
-            )
-            .await
-        {
-            return false;
-        }
-        if !self
-            .dispatch_gemm_into_async(
-                index,
-                up_info,
-                &ffn_input[..up_in],
-                &mut up_buf[..n_ffn],
-                up_in,
-                n_ffn,
-            )
-            .await
-        {
-            return false;
-        }
-        silu_inplace(&mut gate_buf[..n_ffn], n_ffn);
-        for i in 0..n_ffn {
-            gate_buf[i] *= up_buf[i];
-        }
-        if !self
-            .dispatch_gemm_into_async(
-                index,
-                down_info,
-                &gate_buf[..dn_in],
-                scratch_a,
-                dn_in,
-                dn_out,
-            )
-            .await
-        {
-            return false;
-        }
-        add_residual_inplace(
-            &mut hidden[..emb_dim],
-            &scratch_a[..dn_out],
-            emb_dim.min(dn_out),
-        );
-        true
-    }
-
-    fn matmul_dims(info: &GgufTensorInfo) -> (usize, usize) {
-        let n_in = info.dims[0] as usize;
-        let n_out = if info.n_dims > 1 && info.dims[1] > 0 {
-            info.dims[1] as usize
-        } else {
-            1
-        };
-        (n_in, n_out)
-    }
-
-    fn attention_gpu_params(
-        h: &crate::gguf_sharder::GgufHyperparams,
-        layout: &KvCacheLayout,
-        layer: u32,
-        token_idx: u32,
-        info: &GgufTensorInfo,
-        raw_len: usize,
-        proj_kind: u32,
-        num_tokens_in_batch: u32,
-        batch_start_token_idx: u32,
-        mask_active: u32,
-        mask_word_count: u32,
-        out_stride_elems: u32,
-    ) -> AttentionGpuParams {
-        AttentionGpuParams {
-            n_embd: h.n_embd,
-            n_head: h.n_head,
-            n_kv_head: h.effective_n_kv_head(),
-            head_dim: h.head_dim(),
-            q_heads_per_kv: h.q_heads_per_kv(),
-            token_idx,
-            max_context: layout.max_context,
-            layer_idx: layer,
-            layer_stride: layout.layer_stride,
-            slot_kv_elems: layout.slot_kv_elems,
-            weight_ggml_type: info.ggml_type,
-            weight_row_elems: info.dims[0] as u32,
-            weight_byte_len: raw_len as u32,
-            proj_kind,
-            rope_theta_base: h.effective_rope_freq_base(),
-            rope_scale: h.effective_rope_scale(),
-            num_tokens_in_batch,
-            batch_start_token_idx,
-            mask_active,
-            mask_word_count,
-            out_stride_elems,
-            proj_row_stride: 0, // default = legacy in-shader projection; mc8_stage overrides for B
-            _pad: [0; 2],
-        }
-    }
-
-    #[inline]
-    fn attention_kv_mask_for_dispatch(
-        layout: &KvCacheLayout,
-        token_idx: u32,
-        proj_kind: u32,
-    ) -> ([u32; KV_ATTENTION_MASK_WORDS], u32, u32) {
-        if proj_kind != 0 {
-            return ([0u32; KV_ATTENTION_MASK_WORDS], 0, 0);
-        }
-        let (words, active) =
-            crate::compute_universe::attention_kv_mask_u32(token_idx, layout.max_context);
-        (words, active, KV_ATTENTION_MASK_WORDS as u32)
-    }
-
-    /// Single fused-attention dispatch: K write, V write, or Q+online-softmax.
-    fn dispatch_attention_pass(
-        &self,
-        hidden: &[f32],
-        n_embd: usize,
-        num_tokens_in_batch: u32,
-        batch_start_token_idx: u32,
-        layout: &KvCacheLayout,
-        layer: u32,
-        token_idx: u32,
-        h: &crate::gguf_sharder::GgufHyperparams,
-        info: &GgufTensorInfo,
-        raw_weights: &[u8],
-        proj_kind: u32,
-        n_workgroups: u32,
-        norm_weight: Option<&[f32]>,
-        mut readback_out: Option<&mut [f32]>,
-    ) -> bool {
-        // #48 correctness path: route native attention through the CPU reference (the wasm-proven
-        // SDPA) when enabled — bypasses the GPU attention shader whose output is currently unbounded.
-        #[cfg(not(target_arch = "wasm32"))]
-        if crate::llm_bench::cpu_attention_enabled() {
-            return self.cpu_attention_pass(
-                hidden,
-                n_embd,
-                num_tokens_in_batch,
-                batch_start_token_idx,
-                layout,
-                layer,
-                h,
-                info,
-                raw_weights,
-                proj_kind,
-                norm_weight,
-                readback_out,
-            );
-        }
-        if !ggml_gpu_attention_shader_supported(info.ggml_type) {
-            wlog(&format!("[attn_pass] GUARD unsupported quant kind={proj_kind}"));
-            return false;
-        }
-        let batch = num_tokens_in_batch.max(1) as usize;
-        let hidden_elems = n_embd.checked_mul(batch).unwrap_or(0);
-        if hidden_elems > hidden.len()
-            || hidden_elems > self.gemm_max_input_floats
-            || raw_weights.len() > self.max_tensor_bytes
-            || self.gemm_input_buf.is_none()
-            || self.kv_cache_gpu.is_none()
-            || self.attention_params_buf.is_none()
-            || self.attention_mask_buf.is_none()
-        {
-            wlog(&format!(
-                "[attn_pass] GUARD buffers kind={proj_kind} hidden_elems={hidden_elems} hidden={} gemm_in={} raw_w={} max_w={} gemm_in_buf={} kv_gpu={} params={} mask={}",
-                hidden.len(),
-                self.gemm_max_input_floats,
-                raw_weights.len(),
-                self.max_tensor_bytes,
-                self.gemm_input_buf.is_some(),
-                self.kv_cache_gpu.is_some(),
-                self.attention_params_buf.is_some(),
-                self.attention_mask_buf.is_some(),
-            ));
-            if std::env::var("QUALIA_LLM_DEBUG_DECODE").is_ok() {
-                eprintln!(
-                    "[attn_pass] GUARD kind={proj_kind} gemm_in_buf={} kv_gpu={} params={} mask={} hidden_elems={} gemm_max_in={} raw_w={} max_w={}",
-                    self.gemm_input_buf.is_some(),
-                    self.kv_cache_gpu.is_some(),
-                    self.attention_params_buf.is_some(),
-                    self.attention_mask_buf.is_some(),
-                    hidden_elems,
-                    self.gemm_max_input_floats,
-                    raw_weights.len(),
-                    self.max_tensor_bytes,
-                );
-            }
-            return false;
-        }
-
-        // WASM: the browser cannot read GPU results synchronously, so run the CPU
-        // attention kernel (Phase 2A) instead of the dead GPU dispatch + map_async path.
-        #[cfg(target_arch = "wasm32")]
-        return self.cpu_attention_pass(
-            hidden,
-            n_embd,
-            num_tokens_in_batch,
-            batch_start_token_idx,
-            layout,
-            layer,
-            h,
-            info,
-            raw_weights,
-            proj_kind,
-            norm_weight,
-            readback_out,
-        );
-
-        #[cfg(not(target_arch = "wasm32"))]
-        {
-        let (mask_words, mask_active, mask_word_count) =
-            Self::attention_kv_mask_for_dispatch(layout, token_idx, proj_kind);
-        let params = Self::attention_gpu_params(
-            h,
-            layout,
-            layer,
-            token_idx,
-            info,
-            raw_weights.len(),
-            proj_kind,
-            num_tokens_in_batch.max(1),
-            batch_start_token_idx,
-            mask_active,
-            mask_word_count,
-            0,
-        );
-        let input_buf = self.gemm_input_buf.as_ref().unwrap();
-        let weight_buf = self.gemm_weight_buf.as_ref().unwrap();
-        let output_buf = self.gemm_output_buf.as_ref().unwrap();
-        let params_buf = self.attention_params_buf.as_ref().unwrap();
-        let mask_buf = self.attention_mask_buf.as_ref().unwrap();
-        let kv_buf = self.kv_cache_gpu.as_ref().unwrap();
-        let staging = self.gemm_output_staging.as_ref().unwrap();
-
-        // #49: honor norm_weight on the GPU path. Prefill passes RAW hidden + attn_norm here (the
-        // CPU-reference convention); without per-token RMSNorm the prefill K/V are projected from the
-        // un-normed residual and the KV cache explodes. Decode passes norm_weight=None → single upload.
-        let norm_ok = n_embd <= MAX_HIDDEN_DIM && norm_weight.map_or(false, |w| w.len() >= n_embd);
-        match norm_weight {
-            Some(w) if norm_ok => {
-                let mut norm_tok = [0f32; MAX_HIDDEN_DIM];
-                for t in 0..batch {
-                    let s = t * n_embd;
-                    norm_tok[..n_embd].copy_from_slice(&hidden[s..s + n_embd]);
-                    rms_norm_inplace(&mut norm_tok[..n_embd], &w[..n_embd], RMS_NORM_EPS);
-                    self.gpu_queue().write_buffer(
-                        input_buf,
-                        (s * 4) as wgpu::BufferAddress,
-                        bytemuck::cast_slice(&norm_tok[..n_embd]),
-                    );
-                }
-            }
-            _ => {
-                self.gpu_queue()
-                    .write_buffer(input_buf, 0, bytemuck::cast_slice(&hidden[..hidden_elems]));
-            }
-        }
-        self.write_weight_words(raw_weights, self.max_tensor_bytes);
-        self.gpu_queue()
-            .write_buffer(params_buf, 0, bytemuck::bytes_of(&params));
-        self.gpu_queue()
-            .write_buffer(mask_buf, 0, bytemuck::cast_slice(&mask_words));
-
-        // Bind one layer slice of the KV arena (full arena exceeds 128 MiB wgpu binding cap).
-        let layer_f32s = layout.layer_stride as usize;
-        let layer_bytes = (layer_f32s * std::mem::size_of::<f32>()) as wgpu::BufferAddress;
-        let layer_offset =
-            (layer as usize * layer_f32s * std::mem::size_of::<f32>()) as wgpu::BufferAddress;
-        let kv_binding = wgpu::BufferBinding {
-            buffer: kv_buf,
-            offset: layer_offset,
-            size: std::num::NonZeroU64::new(layer_bytes.max(4)),
-        };
-        let (wg_x, wg_y) = if proj_kind == 0 && num_tokens_in_batch > 1 {
-            (h.n_head, num_tokens_in_batch)
-        } else {
-            (n_workgroups.max(1), 1)
-        };
-
-        let bind_layout = self.attention_pipeline.get_bind_group_layout(0);
-        let bind_group = self.gpu_device().create_bind_group(&wgpu::BindGroupDescriptor {
-            label: Some("FusedAttentionBindGroup"),
-            layout: &bind_layout,
-            entries: &[
-                wgpu::BindGroupEntry {
-                    binding: 0,
-                    resource: input_buf.as_entire_binding(),
-                },
-                wgpu::BindGroupEntry {
-                    binding: 1,
-                    resource: weight_buf.as_entire_binding(),
-                },
-                wgpu::BindGroupEntry {
-                    binding: 2,
-                    resource: params_buf.as_entire_binding(),
-                },
-                wgpu::BindGroupEntry {
-                    binding: 3,
-                    resource: wgpu::BindingResource::Buffer(kv_binding),
-                },
-                wgpu::BindGroupEntry {
-                    binding: 4,
-                    resource: output_buf.as_entire_binding(),
-                },
-                wgpu::BindGroupEntry {
-                    binding: 5,
-                    resource: mask_buf.as_entire_binding(),
-                },
-            ],
-        });
-
-        let mut encoder = self
-            .device()
-            .create_command_encoder(&wgpu::CommandEncoderDescriptor {
-                label: Some("FusedAttentionEncoder"),
-            });
-        {
-            let mut cpass = encoder.begin_compute_pass(&wgpu::ComputePassDescriptor {
-                label: Some("FusedAttentionPass"),
-                timestamp_writes: crate::llm_gpu_profiler::pass_writes_both(),
-            });
-            cpass.set_pipeline(&self.attention_pipeline);
-            cpass.set_bind_group(0, &bind_group, &[]);
-            cpass.dispatch_workgroups(wg_x, wg_y, 1);
-        }
-
-        let readback_elems = readback_out.as_ref().map(|o| o.len()).unwrap_or(0);
-        if readback_elems > 0 {
-            let out_bytes = (readback_elems * 4) as wgpu::BufferAddress;
-            encoder.copy_buffer_to_buffer(output_buf, 0, staging, 0, out_bytes);
-        }
-        crate::llm_gpu_profiler::resolve(&mut encoder);
-        self.gpu_queue().submit(Some(encoder.finish()));
-        crate::llm_gpu_profiler::accumulate(crate::llm_gpu_profiler::Phase::Attention);
-
-        if readback_elems == 0 {
-            return true;
-        }
-
-        let out_bytes = (readback_elems * 4) as wgpu::BufferAddress;
-        let slice = staging.slice(..out_bytes);
-        let (tx, rx) = futures_channel::oneshot::channel();
-        slice.map_async(wgpu::MapMode::Read, move |r| {
-            let _ = tx.send(r);
-        });
-        self.poll_wait();
-        #[cfg(not(target_arch = "wasm32"))]
-            if let Ok(handle) = tokio::runtime::Handle::try_current() {
-            if handle.block_on(rx).ok().map(|m| m.is_ok()).unwrap_or(false) {
-                let data = slice.get_mapped_range();
-                let floats: &[f32] = bytemuck::cast_slice(&data);
-                if let Some(out) = readback_out {
-                    out[..readback_elems].copy_from_slice(&floats[..readback_elems]);
-                }
-                drop(data);
-                staging.unmap();
-                return true;
-            }
-        }
-        let _ = staging.unmap();
-        false
-        }
-    }
-
-    /// WASM CPU attention fallback (Phase 2A). Projects one Q/K/V tensor for a batch of
-    /// tokens, applies RoPE (Q/K), writes K/V into `kv_cache_cpu`, and runs SDPA for Q.
-    /// `proj_kind`: 0=Q, 1=K, 2=V. Available on native too as the #48 correctness reference.
-    fn cpu_attention_pass(
-        &self,
-        hidden: &[f32],
-        n_embd: usize,
-        num_tokens_in_batch: u32,
-        batch_start_token_idx: u32,
-        layout: &KvCacheLayout,
-        layer: u32,
-        h: &crate::gguf_sharder::GgufHyperparams,
-        info: &GgufTensorInfo,
-        raw_weights: &[u8],
-        proj_kind: u32,
-        norm_weight: Option<&[f32]>,
-        mut readback_out: Option<&mut [f32]>,
-    ) -> bool {
-        let head_dim = h.head_dim() as usize;
-        let n_head = h.n_head as usize;
-        let n_kv = h.effective_n_kv_head() as usize;
-        if head_dim == 0 || n_head == 0 || n_kv == 0 {
-            return false;
-        }
-        let (n_in, out_dim) = Self::matmul_dims(info);
-        if out_dim == 0 || out_dim > MAX_STACK_GEMM_OUT || head_dim > out_dim {
-            wlog(&format!("[cpu_attn] bad dims out_dim={out_dim} head_dim={head_dim}"));
-            return false;
-        }
-        let proj_heads = out_dim / head_dim;
-        let q_dim = n_head * head_dim;
-        let q_heads_per_kv = h.q_heads_per_kv() as usize;
-        let scale = 1.0f32 / (head_dim as f32).sqrt();
-        let base_freq = h.effective_rope_freq_base();
-        let rope_scale = h.effective_rope_scale();
-
-        // SAFETY: single-threaded wasm; `kv_cache_cpu` is disjoint from `hidden`,
-        // `raw_weights`, the local `proj` scratch, and `readback_out`.
-        let (kv_ptr, kv_len) = match self.kv_cache_cpu.as_ref() {
-            Some(b) => (b.as_ptr() as *mut f32, b.len()),
-            None => return false,
-        };
-
-        let mut proj = [0f32; MAX_STACK_GEMM_OUT];
-        let mut norm_tok = [0f32; MAX_HIDDEN_DIM];
-        for t in 0..num_tokens_in_batch as usize {
-            let pos = batch_start_token_idx + t as u32;
-            let slot = layout.ring_slot(pos);
-            let tok_start = t * n_embd;
-            if tok_start + n_embd > hidden.len() {
-                wlog(&format!("[cpu_attn] hidden OOB t={t} need={}", tok_start + n_embd));
-                return false;
-            }
-            let htok = &hidden[tok_start..tok_start + n_embd];
-            let gemm_in: &[f32] = if let Some(w) = norm_weight {
-                if w.len() < n_embd {
-                    return false;
-                }
-                norm_tok[..n_embd].copy_from_slice(htok);
-                rms_norm_inplace(&mut norm_tok[..n_embd], &w[..n_embd], RMS_NORM_EPS);
-                &norm_tok[..n_embd]
-            } else {
-                htok
-            };
-            if !stack_gemm_quant(raw_weights, info, gemm_in, &mut proj[..out_dim], n_in, out_dim) {
-                wlog(&format!("[cpu_attn] proj failed kind={proj_kind} n_in={n_in} out_dim={out_dim} hidden={n_embd}"));
-                return false;
-            }
-
-            match proj_kind {
-                1 => {
-                    rope_inplace(
-                        &mut proj[..out_dim],
-                        proj_heads,
-                        head_dim,
-                        pos,
-                        base_freq,
-                        rope_scale,
-                    );
-                    let kv = unsafe { core::slice::from_raw_parts_mut(kv_ptr, kv_len) };
-                    for kvh in 0..n_kv {
-                        for d in 0..head_dim {
-                            let idx = layout.k_index(layer, slot, kvh as u32, d as u32);
-                            if idx >= kv.len() {
-                                wlog(&format!("[cpu_attn] K idx OOB idx={idx} len={}", kv.len()));
-                                return false;
-                            }
-                            kv[idx] = proj[kvh * head_dim + d];
-                        }
-                    }
-                }
-                2 => {
-                    let kv = unsafe { core::slice::from_raw_parts_mut(kv_ptr, kv_len) };
-                    for kvh in 0..n_kv {
-                        for d in 0..head_dim {
-                            let idx = layout.v_index(layer, slot, kvh as u32, d as u32);
-                            if idx >= kv.len() {
-                                wlog(&format!("[cpu_attn] V idx OOB idx={idx} len={}", kv.len()));
-                                return false;
-                            }
-                            kv[idx] = proj[kvh * head_dim + d];
-                        }
-                    }
-                }
-                0 => {
-                    let mut att_scores = [0f32; MAX_CONTEXT_WINDOW as usize];
-                    rope_inplace(
-                        &mut proj[..out_dim],
-                        proj_heads,
-                        head_dim,
-                        pos,
-                        base_freq,
-                        rope_scale,
-                    );
-                    let out_buf = match readback_out.as_mut() {
-                        Some(out) => {
-                            let out_off = t * q_dim;
-                            if out_off + q_dim > out.len() {
-                                wlog(&format!(
-                                    "[cpu_attn] Q out OOB off={out_off} q_dim={q_dim} len={}",
-                                    out.len()
-                                ));
-                                return false;
-                            }
-                            &mut out[out_off..out_off + q_dim]
-                        }
-                        None => return false,
-                    };
-                    out_buf.fill(0.0);
-                    let pos_usize = pos as usize;
-                    if pos_usize >= MAX_CONTEXT_WINDOW as usize {
-                        wlog(&format!("[cpu_attn] pos OOB pos={pos}"));
-                        return false;
-                    }
-                    let kv = unsafe { core::slice::from_raw_parts(kv_ptr, kv_len) };
-                    for q_h in 0..n_head {
-                        let kv_h = q_h / q_heads_per_kv;
-                        let q_head_slice = &proj[q_h * head_dim..(q_h + 1) * head_dim];
-                        let out_head_slice = &mut out_buf[q_h * head_dim..(q_h + 1) * head_dim];
-                        let mut max_score = f32::NEG_INFINITY;
-                        for past_pos in 0..=pos {
-                            let past_slot = layout.ring_slot(past_pos);
-                            let mut dot = 0.0f32;
-                            for d in 0..head_dim {
-                                let k_idx =
-                                    layout.k_index(layer, past_slot, kv_h as u32, d as u32);
-                                if k_idx >= kv.len() {
-                                    wlog(&format!(
-                                        "[cpu_attn] SDPA K idx OOB idx={k_idx} len={}",
-                                        kv.len()
-                                    ));
-                                    return false;
-                                }
-                                dot += q_head_slice[d] * kv[k_idx];
-                            }
-                            let score = dot * scale;
-                            att_scores[past_pos as usize] = score;
-                            if score > max_score {
-                                max_score = score;
-                            }
-                        }
-                        let mut sum_exp = 0.0f32;
-                        for past_pos in 0..=pos {
-                            let exp_val = (att_scores[past_pos as usize] - max_score).exp();
-                            att_scores[past_pos as usize] = exp_val;
-                            sum_exp += exp_val;
-                        }
-                        if sum_exp == 0.0 {
-                            wlog(&format!(
-                                "[MC3] softmax sum_exp=0 layer={layer} pos={pos} q_h={q_h} max_score={max_score}"
-                            ));
-                            return false;
-                        }
-                        for past_pos in 0..=pos {
-                            let prob = att_scores[past_pos as usize] / sum_exp;
-                            let past_slot = layout.ring_slot(past_pos);
-                            for d in 0..head_dim {
-                                let v_idx =
-                                    layout.v_index(layer, past_slot, kv_h as u32, d as u32);
-                                if v_idx >= kv.len() {
-                                    wlog(&format!(
-                                        "[cpu_attn] SDPA V idx OOB idx={v_idx} len={}",
-                                        kv.len()
-                                    ));
-                                    return false;
-                                }
-                                out_head_slice[d] += kv[v_idx] * prob;
-                            }
-                        }
-                    }
-                }
-                _ => return false,
-            }
-        }
-        true
-    }
-
-    /// GPU-fused Q/K/V projections, RoPE, ring-buffer KV write, and GQA online-softmax.
-    fn dispatch_attention_layer(
-        &mut self,
-        index: &crate::gguf_sharder::GgufTensorIndex,
-        layer: u32,
-        token_idx: u32,
-        hidden: &[f32],
-        emb_dim: usize,
-        tensors: &crate::gguf_sharder::LayerTensors,
-        scratch_a: &mut [f32],
-        scratch_b: &mut [f32],
-    ) -> Option<usize> {
-        let layout = self.kv_layout?;
-        let q_info = tensors.attn_q.as_ref()?;
-        let k_info = tensors.attn_k.as_ref()?;
-        let v_info = tensors.attn_v.as_ref()?;
-        let h = index.hyperparams;
-        let n_head = h.n_head as usize;
-        let n_kv = h.effective_n_kv_head() as usize;
-        let head_dim = h.head_dim() as usize;
-        {
-            use std::sync::atomic::{AtomicBool, Ordering as AO};
-            static A_DBG: AtomicBool = AtomicBool::new(false);
-            if layer == 0
-                && std::env::var("QUALIA_LLM_DEBUG_DECODE").is_ok()
-                && !A_DBG.swap(true, AO::Relaxed)
-            {
-                eprintln!(
-                    "[attn-dbg] n_head={} n_kv={} head_dim={} q_dim={} qty={} kty={} vty={} ashader_q={}",
-                    n_head, n_kv, head_dim, n_head * head_dim,
-                    q_info.ggml_type, k_info.ggml_type, v_info.ggml_type,
-                    ggml_gpu_attention_shader_supported(q_info.ggml_type),
-                );
-            }
-        }
-        if head_dim == 0 || n_head == 0 || n_kv == 0 {
-            return None;
-        }
-        let q_dim = n_head * head_dim;
-        if q_dim > scratch_a.len() || q_dim > scratch_b.len() || emb_dim < h.n_embd as usize {
-            return None;
-        }
-        // Use the attention-shader support set (fused_attention.wgsl handles Q4_0/Q5_0/Q8_0/Q4_K/Q6_K)
-        // — NOT the narrower GEMM `ggml_gpu_quant_supported`, which wrongly rejected Q8_0 → no attention.
-        if !ggml_gpu_attention_shader_supported(q_info.ggml_type)
-            || !ggml_gpu_attention_shader_supported(k_info.ggml_type)
-            || !ggml_gpu_attention_shader_supported(v_info.ggml_type)
-        {
-            return None;
-        }
-
-        let mmap = self.gguf_mmap.as_deref()?;
-        let k_raw =
-            crate::ggml_quants::fetch_tensor_bytes(mmap, index.tensor_data_start, &k_info).ok()?;
-        let v_raw =
-            crate::ggml_quants::fetch_tensor_bytes(mmap, index.tensor_data_start, &v_info).ok()?;
-        let q_raw =
-            crate::ggml_quants::fetch_tensor_bytes(mmap, index.tensor_data_start, &q_info).ok()?;
-        let n_embd = h.n_embd as usize;
-
-        // Pre-norm (attn_norm) on the residual stream before Q/K/V — REQUIRED on all targets.
-        // (Native previously skipped this → the residual stream exploded layer-over-layer to inf.)
-        let mut norm_w_attn = [0f32; MAX_HIDDEN_DIM];
-        let mut h_norm_attn = [0f32; MAX_HIDDEN_DIM];
-        let hidden_input = prepare_pre_norm_input(
-            &hidden[..emb_dim],
-            emb_dim,
-            tensors.attn_norm.as_ref(),
-            Some(&mmap[..]),
-            index.tensor_data_start,
-            &mut h_norm_attn,
-            &mut norm_w_attn,
-        );
-
-        if !self.dispatch_attention_pass(
-            hidden_input,
-            n_embd,
-            1,
-            token_idx,
-            &layout,
-            layer,
-            token_idx,
-            &h,
-            k_info,
-            k_raw,
-            1,
-            n_kv as u32,
-            None,
-            None,
-        ) {
-            return None;
-        }
-        if !self.dispatch_attention_pass(
-            hidden_input,
-            n_embd,
-            1,
-            token_idx,
-            &layout,
-            layer,
-            token_idx,
-            &h,
-            v_info,
-            v_raw,
-            2,
-            n_kv as u32,
-            None,
-            None,
-        ) {
-            return None;
-        }
-        if !self.dispatch_attention_pass(
-            hidden_input,
-            n_embd,
-            1,
-            token_idx,
-            &layout,
-            layer,
-            token_idx,
-            &h,
-            q_info,
-            q_raw,
-            0,
-            n_head as u32,
-            None,
-            Some(&mut scratch_b[..q_dim]),
-        ) {
-            return None;
-        }
-
-        if let Some(out_info) = tensors.attn_output {
-            let (o_in, o_out) = Self::matmul_dims(&out_info);
-            if o_in <= q_dim
-                && self.dispatch_gemm_into(
-                    index,
-                    &out_info,
-                    &scratch_b[..o_in],
-                    &mut scratch_a[..o_out],
-                    o_in,
-                    o_out,
-                )
-            {
-                return Some(o_out.min(emb_dim));
-            }
-        }
-        let n = q_dim.min(emb_dim);
-        scratch_a[..n].copy_from_slice(&scratch_b[..n]);
-        Some(n)
-    }
-
-    /// Q+attn, output projection, and FFN for one token (K/V already in arena).
-    fn dispatch_attention_q_ffn_token(
-        &mut self,
-        index: &crate::gguf_sharder::GgufTensorIndex,
-        layer: u32,
-        token_idx: u32,
-        hidden: &mut [f32],
-        emb_dim: usize,
-        tensors: &crate::gguf_sharder::LayerTensors,
-        scratch_a: &mut [f32],
-        scratch_b: &mut [f32],
-    ) -> bool {
-        let layout = match self.kv_layout {
-            Some(l) => l,
-            None => return false,
-        };
-        let q_info = match tensors.attn_q.as_ref() {
-            Some(i) => i,
-            None => return false,
-        };
-        let h = index.hyperparams;
-        let n_head = h.n_head as usize;
-        let head_dim = h.head_dim() as usize;
-        let q_dim = n_head * head_dim;
-        if q_dim > scratch_a.len() || q_dim > scratch_b.len() || emb_dim < h.n_embd as usize {
-            return false;
-        }
-        let mmap = match self.gguf_mmap.as_deref() {
-            Some(m) => m,
-            None => return false,
-        };
-        let q_raw =
-            match crate::ggml_quants::fetch_tensor_bytes(mmap, index.tensor_data_start, q_info) {
-                Ok(s) => s,
-                Err(_) => return false,
-            };
-        let n_embd = h.n_embd as usize;
-        // Pre-norm (attn_norm) on the residual stream before Q/K/V — REQUIRED on all targets.
-        // (Native previously skipped this → the residual stream exploded layer-over-layer to inf.)
-        let mut norm_w_attn = [0f32; MAX_HIDDEN_DIM];
-        let mut h_norm_attn = [0f32; MAX_HIDDEN_DIM];
-        let hidden_input = prepare_pre_norm_input(
-            &hidden[..emb_dim],
-            emb_dim,
-            tensors.attn_norm.as_ref(),
-            Some(&mmap[..]),
-            index.tensor_data_start,
-            &mut h_norm_attn,
-            &mut norm_w_attn,
-        );
-        if !self.dispatch_attention_pass(
-            hidden_input,
-            n_embd,
-            1,
-            token_idx,
-            &layout,
-            layer,
-            token_idx,
-            &h,
-            q_info,
-            q_raw,
-            0,
-            n_head as u32,
-            None,
-            Some(&mut scratch_b[..q_dim]),
-        ) {
-            return false;
-        }
-        let mut attn_ok = false;
-        if let Some(out_info) = tensors.attn_output.as_ref() {
-            let (o_in, o_out) = Self::matmul_dims(out_info);
-            if o_in <= q_dim
-                && self.dispatch_gemm_into(
-                    index,
-                    out_info,
-                    &scratch_b[..o_in],
-                    &mut scratch_a[..o_out],
-                    o_in,
-                    o_out,
-                )
-            {
-                add_residual_inplace(
-                    &mut hidden[..emb_dim],
-                    &scratch_a[..o_out],
-                    emb_dim.min(o_out),
-                );
-                attn_ok = true;
-            }
-        } else {
-            let n = q_dim.min(emb_dim);
-            add_residual_inplace(&mut hidden[..emb_dim], &scratch_b[..n], n);
-            attn_ok = true;
-        }
-        if !attn_ok {
-            return false;
-        }
-        self.dispatch_ffn_block_pre_norm(index, hidden, emb_dim, &tensors, scratch_a, scratch_b)
-    }
-
     /// One transformer layer for a batched prefill chunk: batched K/V then per-token Q+FFN.
-    fn dispatch_prefill_layer_batch(
+    pub(crate) fn dispatch_prefill_layer_batch(
         &mut self,
         index: &crate::gguf_sharder::GgufTensorIndex,
         layer: u32,
@@ -4308,7 +2471,7 @@ impl QTensorEngine {
 
     /// Phase 2B: batched prefill layer via async GPU attention (K/V GPU; Q+FFN per token).
     #[cfg(target_arch = "wasm32")]
-    async fn dispatch_prefill_layer_batch_async(
+    pub(crate) async fn dispatch_prefill_layer_batch_async(
         &mut self,
         index: &crate::gguf_sharder::GgufTensorIndex,
         layer: u32,
@@ -4723,7 +2886,7 @@ impl QTensorEngine {
 
     /// MC8: Q + o_proj + FFN tail (K/V already written for this token).
     #[cfg(target_arch = "wasm32")]
-    fn encode_attn_ffn_tail_gpu(
+    pub(crate) fn encode_attn_ffn_tail_gpu(
         &self,
         pipeline: &mut WasmGpuPipeline,
         index: &crate::gguf_sharder::GgufTensorIndex,
@@ -4968,7 +3131,7 @@ impl QTensorEngine {
     /// Superseded by the Part 3w super-arena decode forward (kept for reference/fallback).
     #[cfg(target_arch = "wasm32")]
     #[allow(dead_code)]
-    fn encode_transformer_layer_gpu(
+    pub(crate) fn encode_transformer_layer_gpu(
         &self,
         pipeline: &mut WasmGpuPipeline,
         index: &crate::gguf_sharder::GgufTensorIndex,
@@ -5506,7 +3669,7 @@ impl QTensorEngine {
     }
 
 #[cfg(target_arch = "wasm32")]
-    async fn dispatch_gemm_raw_into_async(
+    pub(crate) async fn dispatch_gemm_raw_into_async(
         &self,
         info: &GgufTensorInfo,
         raw: &[u8],
@@ -5612,7 +3775,7 @@ impl QTensorEngine {
     /// `weight` BindingResource (a slice of the resident output-projection buffer) instead of
     /// `write_buffer`-ing the chunk. Used by the decode argmax once the logits projection is resident.
     #[cfg(target_arch = "wasm32")]
-    async fn dispatch_gemm_resident_chunk_async(
+    pub(crate) async fn dispatch_gemm_resident_chunk_async(
         &self,
         weight_ggml_type: u32,
         weight_row_elems: u32,
@@ -5748,7 +3911,7 @@ impl QTensorEngine {
         self.dispatch_gemm_raw_into_async(info, raw, input, out, n_in, n_out).await
     }
 #[cfg(target_arch = "wasm32")]
-    async fn dispatch_attention_layer_async(
+    pub(crate) async fn dispatch_attention_layer_async(
         &mut self,
         index: &crate::gguf_sharder::GgufTensorIndex,
         layer: u32,
@@ -5886,7 +4049,7 @@ impl QTensorEngine {
     }
 
 #[cfg(target_arch = "wasm32")]
-    async fn dispatch_attention_pass_async(
+    pub(crate) async fn dispatch_attention_pass_async(
         &self,
         hidden: &[f32],
         n_embd: usize,
@@ -6066,7 +4229,7 @@ impl QTensorEngine {
         false
     }
 #[cfg(target_arch = "wasm32")]
-    async fn dispatch_attention_q_ffn_token_async(
+    pub(crate) async fn dispatch_attention_q_ffn_token_async(
         &mut self,
         index: &crate::gguf_sharder::GgufTensorIndex,
         layer: u32,
@@ -6208,7 +4371,7 @@ impl QTensorEngine {
 
     /// Part 3u: stage K/V/Q + tail uniforms in three single `write_buffer` calls (pre-encoder).
     #[cfg(target_arch = "wasm32")]
-    fn mc8_stage_prefill_layer_super_arena(
+    pub(crate) fn mc8_stage_prefill_layer_super_arena(
         &self,
         index: &crate::gguf_sharder::GgufTensorIndex,
         layer: u32,
@@ -6478,7 +4641,7 @@ impl QTensorEngine {
 
     /// MC8 Part 3m/3u: batched Q+FFN tail — uniforms pre-staged in super-arena.
     #[cfg(target_arch = "wasm32")]
-    fn encode_prefill_q_ffn_tail_fused(
+    pub(crate) fn encode_prefill_q_ffn_tail_fused(
         &self,
         pipeline: &mut WasmGpuPipeline,
         index: &crate::gguf_sharder::GgufTensorIndex,
@@ -6895,7 +5058,7 @@ impl QTensorEngine {
     }
 
     #[cfg(target_arch = "wasm32")]
-    async fn dispatch_prefill_chunk_async_mc8_gpu(
+    pub(crate) async fn dispatch_prefill_chunk_async_mc8_gpu(
         &mut self,
         index: &crate::gguf_sharder::GgufTensorIndex,
         batch_hidden: &mut [f32],
@@ -7372,7 +5535,7 @@ impl QTensorEngine {
     /// (`encode_gemm_bufs` loop + single staging readback) produced garbled tokens because
     /// `queue.write_buffer` weight uploads race across chunks in one submit scope (pt3c
     /// analogue). Per-chunk submit/readback matches the proven sync path semantics.
-    async fn dispatch_output_argmax_chunked_async_mc8_fused(
+    pub(crate) async fn dispatch_output_argmax_chunked_async_mc8_fused(
         &self,
         index: &crate::gguf_sharder::GgufTensorIndex,
         hidden: &[f32],
