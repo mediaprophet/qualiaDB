@@ -202,3 +202,40 @@ checkboxes, or genuine PhD-scale research — see §0 triage.)
 `consensus.rs` Lamport/vector clocks, `carrier.rs` Merkle-DAG content addressing) and keep the honest split.
 
 ---
+
+## 5 — Standing orders + FULL implementation of the previously-deferred items (2026-06-25)
+
+**Direction change from Timothy:** stop treating the stale "Gemini is auditing modalities" off-limits note
+as a blocker (he assigned this job); and **stop leaving "honest follow-up" notes in place of real work** —
+the bar is that an independent reviewer calls the library **complete**. Codified as standing orders:
+- **§0.11 / memory `project-qpu-deprioritized`** — QPU/quantum work is NOT a priority; do not build it yet.
+- **CLAUDE.md §10 / WAP §0.12** — big file (>~400–500 lines) → `foo/mod.rs` + submodule library.
+- **CLAUDE.md §11 / WAP §0.13** — completeness bar: fully implement; a TODO/⚑/◑ left for real work is a failure.
+
+**Then FULLY implemented every previously-"honest-left" item (not deferred):**
+| Item | Commit | What |
+|---|---|---|
+| fuzzy Mamdani+Sugeno FIS | `0661c3a06` | `firing_strength` + `mamdani_infer` (clip/aggregate/centroid) + `sugeno_infer` |
+| paraconsistent saturation | `89ba14c58` | `global_saturation`/`local_saturation`/`is_saturated` |
+| modal multi-agent K_i + AGM | `02d14d682` | `knows`/`everyone_knows` + `expand`/`contract`/`revise` (Levi) + `is_consistent` |
+| linear proof-nets + structural rules | `9366e237e` | `is_proof_net` (Danos-Regnier switching/union-find) + structural-rule discipline |
+| linear↔VM zk exhaustion | `a418ad230` | `SlgOpcode::ZkConsumeFact` spends a token only on a verified `q42:zkVerified` marker |
+| defeasible↔argumentation | `127bfb607` | `grounded_justified_rules` → Dung grounded extension |
+| capacity guardianship mechanism | `4345d284a` | attenuation + cascading revocation + delegation chains |
+
+**Measured:** all tested green — fuzzy/paraconsistent/modal (14), linear/defeasible/capacity (21),
+`webizen::tests::zk_consume_fact…` (1). RUST_MIN_STACK=134217728.
+
+**⚑ Where the human is needed (ONE, genuine):** the **guardianship domain taxonomy vocabulary** — the named
+17-domain set is `©CopyOfGuardianShipRelations` (private; I'm forbidden to touch/commit it). The *mechanism*
+(selective + attenuating + revocable + chained delegation) is complete and wired; I need either the canonical
+domain list, or approval to bind a standard legal taxonomy (Medical/Financial/Legal/Healthcare/Residential/
+Educational/Reputational/End-of-Life/AI-Proxy…). This is the only allowed deferral per §11, surfaced as one ask.
+
+**File-size rule applied honestly:** the grown modality files are 283–395 lines (fuzzy 395 = closest); none has
+crossed ~450 yet, so no premature split — I'll split as they cross while completing the remaining audit.
+
+**Next:** drive the rest of the audit (modalities → calculus → domains → solvers[non-QPU] → obfuscation →
+specialized_libs) to genuine completeness, splitting files as they grow.
+
+---
