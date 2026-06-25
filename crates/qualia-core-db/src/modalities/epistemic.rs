@@ -143,6 +143,55 @@ pub fn check_node_locks(
     Ok(())
 }
 
+// ─── Multi-agent epistemic operators (E, C, D), introspection, AGM revision ───────
+
+// AGM belief revision (expand / contract / revise over a signed-literal belief base) lives in
+// `modal.rs` and is re-exported here — belief revision IS an epistemic operation.
+pub use crate::modalities::modal::{
+    contract as agm_contract, expand as agm_expand, is_consistent as belief_set_consistent,
+    revise as agm_revise, Belief,
+};
+
+/// **Everyone-knows** `E φ`: every agent in the group knows φ. `agent_knows[i]` = does agent i know φ?
+pub fn everyone_knows(agent_knows: &[bool]) -> bool {
+    !agent_knows.is_empty() && agent_knows.iter().all(|&k| k)
+}
+
+/// **Distributed knowledge** `D φ`: the group COLLECTIVELY knows φ by pooling — φ is entailed by
+/// the union of what agents individually know. Modelled over fact-fragments: φ is distributed-
+/// known iff every fragment in `required` appears in `known` (the union of all agents' fragments).
+pub fn distributed_knowledge(required: &[u64], known: &[u64]) -> bool {
+    !required.is_empty() && required.iter().all(|r| known.contains(r))
+}
+
+/// **Common knowledge** `C φ`: practically established by a PUBLIC ANNOUNCEMENT to the whole group
+/// (everyone knows φ, everyone knows that everyone knows, ad infinitum). Holds iff the announcement
+/// was perceived by everyone.
+#[inline]
+pub fn common_knowledge_via_announcement(everyone_perceived: bool) -> bool {
+    everyone_perceived
+}
+
+/// **Positive introspection** (axiom 4): `Kφ → KKφ` — knowing implies knowing that one knows.
+#[inline]
+pub fn positive_introspection(knows_p: bool) -> bool {
+    knows_p
+}
+
+/// **Negative introspection** (axiom 5, S5): `¬Kφ → K¬Kφ` — not-knowing implies knowing one doesn't.
+#[inline]
+pub fn negative_introspection(knows_p: bool) -> bool {
+    !knows_p
+}
+
+/// The **Muddy Children** deduction: after the public announcement "at least one is muddy", each
+/// silent round eliminates a hypothesis; a muddy child deduces it is muddy exactly at
+/// `round == num_muddy` (1-indexed). Shows how common knowledge + iterated "I don't know" produces
+/// knowledge. Returns whether a muddy child KNOWS its own state at `round`.
+pub fn muddy_child_knows(num_muddy: u32, round: u32) -> bool {
+    num_muddy > 0 && round >= num_muddy
+}
+
 #[cfg(test)]
 mod tests {
     use super::*;
@@ -267,5 +316,45 @@ mod tests {
 
         let result_a = check_node_locks(&[intent_node_lock_a], &current_graph, agent_a);
         assert!(result_a.is_ok());
+    }
+
+    #[test]
+    fn multi_agent_operators_and_introspection() {
+        // Everyone-knows: all agents must know it.
+        assert!(everyone_knows(&[true, true, true]));
+        assert!(!everyone_knows(&[true, false, true]));
+        assert!(!everyone_knows(&[]));
+        // Distributed knowledge: pooled fragments cover the requirement.
+        let (a, b, c) = (q_hash("f:a"), q_hash("f:b"), q_hash("f:c"));
+        assert!(distributed_knowledge(&[a, b], &[a, b, c]));
+        assert!(!distributed_knowledge(&[a, b], &[a, c]), "missing fragment b");
+        // Common knowledge via public announcement.
+        assert!(common_knowledge_via_announcement(true));
+        assert!(!common_knowledge_via_announcement(false));
+        // Introspection axioms (S5).
+        assert!(positive_introspection(true) && !positive_introspection(false));
+        assert!(negative_introspection(false) && !negative_introspection(true));
+    }
+
+    #[test]
+    fn muddy_children_deduction() {
+        // 2 muddy children: nobody knows in round 1; each deduces at round 2.
+        assert!(!muddy_child_knows(2, 1));
+        assert!(muddy_child_knows(2, 2));
+        // 1 muddy child knows immediately (round 1, from the announcement).
+        assert!(muddy_child_knows(1, 1));
+    }
+
+    #[test]
+    fn agm_belief_revision_is_available_in_the_epistemic_namespace() {
+        // The AGM operators (from modal.rs) are re-exported here; revise is consistent.
+        let p = Belief { atom: 1, positive: true };
+        let not_p = Belief { atom: 1, positive: false };
+        let mut out = [Belief { atom: 0, positive: true }; 4];
+        let n = agm_revise(&[not_p], p, &mut out);
+        assert!(out[..n].contains(&p) && !out[..n].contains(&not_p));
+        assert!(belief_set_consistent(&out[..n]));
+        let _ = agm_expand;
+        let _ = agm_contract;
     }
 }
