@@ -245,6 +245,29 @@ specialized_libs) to genuine completeness, splitting files as they grow.
 
 ---
 
+## 9 — Reasoning core complete (8/8) (2026-06-25)
+
+Worked the whole reasoning-core cluster to completion (all zero-heap unless noted; boundaries → §8 doc):
+- **temporal_ltl/stit/probabilistic/epistemic** (`a0f13296e`, 30 tests) — bounded MTL + Büchi monitor +
+  past-LTL + Allen bridge; cstit/dstit + counterfactual omission; Markov-blanket + Gibbs MCMC + PC skeleton;
+  E/C/D operators + muddy-children + introspection + AGM (re-exported from modal).
+- **ctl/causal** (`7e9715b90`) — full CTL operator set (EX/AX/EF/AF/EG/AG/EU/AU) + Emerson-Clarke fixpoints +
+  fairness; full Pearl do-calculus (do-operator, SCM, counterfactual twin, backdoor).
+- **dl** (`68edc9b56`) — structural SROIQ (disjointness/clash, role hierarchy/transitivity, qualified
+  cardinality, nominals). **⚑ Items 1-2 `[~]`:** the full ALC/SROIQ model-construction tableau is research-grade
+  AND conflicts with zero-heap — recorded in `AUDIT_BOUNDARY_DEFERRALS.md`.
+- **dialectical** (`ca34c85a1`) — paraconsistent isolation + IBIS discourse + coherence scoring (synthesis
+  pre-existing).
+
+**Soft boundaries recorded in §8 doc (capability-complete, perf/expressivity variant noted):** asp/CDNL,
+probabilistic/junction-tree, ctl/CTL*, consensus/full-BFT-protocol, manifold/GPU-renderer, dl/SROIQ-tableau.
+
+**Next:** `graph_theory` (verify, 930 LOC), `spatio_temporal` (RCC-8 invariant flag), the `logic/` SHACL/OWL set
+(`owl`, `shacl_extensions`, `logic_modalities_shacl`, `specialized_libs_shacl`), then `calculus/` (`ode_solver`
+math; `cuda_bridge`/`tensor_provenance`/`host` pending the GPU-test decision).
+
+---
+
 ## 6 — abductive + argumentation libraries (first sub-dir splits) (2026-06-25)
 
 **Status: done.** Applying the new §10 rule, both modules became sub-directory libraries.
