@@ -7,6 +7,11 @@ off `0.0.20` @ `836fcf0a4`).
 This log is the honest engineering record (per CLAUDE.md §9). Each entry: what was checked, what
 was built, real results, where the human is needed, next step.
 
+**▶ Everything intentionally NOT fully done (and why) is in
+[`AUDIT_BOUNDARY_DEFERRALS.md`](AUDIT_BOUNDARY_DEFERRALS.md)** — hard-invariant conflicts, multi-year
+engineering scope, human-decision items, another instrument's allocation, and the deferred library-ization
+pass. Nothing is silently incomplete; each boundary is recorded there with its reason and open question.
+
 ---
 
 ## 0 — Triage of the audit itself (2026-06-25)
