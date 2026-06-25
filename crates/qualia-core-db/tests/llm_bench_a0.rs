@@ -541,3 +541,74 @@ fn a0_decode_profile() {
 
     std::env::remove_var("QUALIA_LLM_PROFILE_DECODE");
 }
+
+/// W2 (D17) — GPU per-kernel timestamp profile of the LIVE decode path. Enables the GPU profiler,
+/// decodes a few tokens, and prints the GPU-internal µs attributed to each kernel phase
+/// (embedding / gemm / attention / output-topk). Proves the `TIMESTAMP_QUERY` wiring end-to-end on
+/// real hardware. The profiled tok/s is PERTURBED (per-op readback serialises) — the per-phase
+/// split is the signal, not the throughput. Skips if the model is absent or the adapter lacks
+/// `TIMESTAMP_QUERY`. Run: `cargo test -p qualia-core-db --release --test llm_bench_a0
+/// w2_gpu_phase_profile -- --nocapture`.
+#[test]
+fn w2_gpu_phase_profile() {
+    use qualia_core_db::llm_bench::decode_with_metrics_blocking;
+    use qualia_core_db::llm_gpu_profiler as gprof;
+
+    let Some(path) = find_model("smollm2-360m-instruct-q8_0.gguf")
+        .or_else(|| find_model("SmolLM2-360M-Instruct-Q4_K_M.gguf"))
+    else {
+        eprintln!("[w2] model absent — skipping GPU phase profile");
+        return;
+    };
+    let ctx = qualia_core_db::gpu_context::shared_gpu();
+    if !ctx.timestamps_supported {
+        eprintln!("[w2] adapter lacks TIMESTAMP_QUERY — skipping (gpu_timestamp_supported=false)");
+        return;
+    }
+
+    gprof::set_enabled(true);
+    gprof::reset();
+
+    let model = path.to_string_lossy().to_string();
+    let (text, tok) = decode_with_metrics_blocking(&model, "Once upon a time, there was a", 16)
+        .expect("decode_with_metrics");
+
+    let snap = gprof::snapshot();
+    gprof::set_enabled(false);
+
+    let total_ns: u64 = snap.iter().map(|t| t.total_ns).sum();
+    println!("\n=== W2 GPU per-kernel profile (SmolLM2-360M Q8, A2000) ===");
+    println!("[w2] decode = {tok:.2} tok/s (PROFILING-PERTURBED; per-phase split is the signal)");
+    println!("[w2] text   = {text:?}");
+    for t in &snap {
+        let pct = if total_ns > 0 {
+            100.0 * t.total_ns as f64 / total_ns as f64
+        } else {
+            0.0
+        };
+        println!(
+            "[w2]   {:<12} {:>11.1} us  {:>6} calls  ({:>4.1}% of instrumented GPU)",
+            t.phase.label(),
+            t.micros(),
+            t.calls,
+            pct
+        );
+    }
+    println!(
+        "[w2]   {:<12} {:>11.1} us  (sum of instrumented passes)",
+        "TOTAL",
+        total_ns as f64 / 1000.0
+    );
+
+    let calls = |p: gprof::Phase| snap.iter().find(|t| t.phase == p).map(|t| t.calls).unwrap_or(0);
+    assert!(gprof::any_recorded(), "no GPU timestamps recorded on the decode path");
+    assert!(
+        calls(gprof::Phase::Attention) > 0,
+        "attention kernel was not profiled on decode"
+    );
+    assert!(
+        calls(gprof::Phase::Gemm) > 0,
+        "gemm kernel was not profiled on decode"
+    );
+    println!("[w2] PASS — live decode path produced real per-kernel GPU timings.");
+}

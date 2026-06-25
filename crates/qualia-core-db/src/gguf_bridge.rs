@@ -3916,7 +3916,7 @@ impl QTensorEngine {
         {
             let mut cpass = encoder.begin_compute_pass(&wgpu::ComputePassDescriptor {
                 label: Some("QuantizedEmbeddingPass"),
-                timestamp_writes: None,
+                timestamp_writes: crate::llm_gpu_profiler::pass_writes_both(),
             });
             cpass.set_pipeline(&self.embedding_pipeline);
             cpass.set_bind_group(0, &bind_group, &[]);
@@ -3930,7 +3930,9 @@ impl QTensorEngine {
             mapped_at_creation: false,
         });
         encoder.copy_buffer_to_buffer(&output_buf, 0, &staging_buf, 0, output_size);
+        crate::llm_gpu_profiler::resolve(&mut encoder);
         self.gpu_queue().submit(Some(encoder.finish()));
+        crate::llm_gpu_profiler::accumulate(crate::llm_gpu_profiler::Phase::Embedding);
 
         let buffer_slice = staging_buf.slice(..);
         let (sender, receiver) = futures_channel::oneshot::channel();
@@ -4101,7 +4103,7 @@ impl QTensorEngine {
         {
             let mut cpass = encoder.begin_compute_pass(&wgpu::ComputePassDescriptor {
                 label: None,
-                timestamp_writes: None,
+                timestamp_writes: crate::llm_gpu_profiler::pass_writes_both(),
             });
             cpass.set_pipeline(&self.pipeline);
             cpass.set_bind_group(0, &bind_group, &[]);
@@ -4115,7 +4117,9 @@ impl QTensorEngine {
             mapped_at_creation: false,
         });
         encoder.copy_buffer_to_buffer(&output_buf, 0, &staging_buf, 0, output_size);
+        crate::llm_gpu_profiler::resolve(&mut encoder);
         self.gpu_queue().submit(Some(encoder.finish()));
+        crate::llm_gpu_profiler::accumulate(crate::llm_gpu_profiler::Phase::FusedBlock);
 
         let buffer_slice = staging_buf.slice(..);
         let (sender, receiver) = futures_channel::oneshot::channel();
@@ -4226,7 +4230,7 @@ impl QTensorEngine {
             {
                 let mut cpass = encoder.begin_compute_pass(&wgpu::ComputePassDescriptor {
                     label: None,
-                    timestamp_writes: None,
+                    timestamp_writes: crate::llm_gpu_profiler::pass_writes_both(),
                 });
                 cpass.set_pipeline(&self.pipeline);
                 cpass.set_bind_group(0, &bind_group, &[]);
@@ -4234,7 +4238,9 @@ impl QTensorEngine {
             }
             let out_bytes = (n_out * 4) as wgpu::BufferAddress;
             encoder.copy_buffer_to_buffer(output_buf, 0, staging, 0, out_bytes);
+            crate::llm_gpu_profiler::resolve(&mut encoder);
             self.gpu_queue().submit(Some(encoder.finish()));
+            crate::llm_gpu_profiler::accumulate(crate::llm_gpu_profiler::Phase::Gemm);
 
             let slice = staging.slice(..out_bytes);
             let (tx, rx) = futures_channel::oneshot::channel();
@@ -4601,7 +4607,7 @@ impl QTensorEngine {
             {
                 let mut cpass = encoder.begin_compute_pass(&wgpu::ComputePassDescriptor {
                     label: Some("TopkGemmPass"),
-                    timestamp_writes: None,
+                    timestamp_writes: crate::llm_gpu_profiler::pass_writes_begin(),
                 });
                 cpass.set_pipeline(&self.pipeline);
                 cpass.set_bind_group(0, &gemm_bind, &[]);
@@ -4610,7 +4616,7 @@ impl QTensorEngine {
             {
                 let mut tpass = encoder.begin_compute_pass(&wgpu::ComputePassDescriptor {
                     label: Some("TopkReducePass"),
-                    timestamp_writes: None,
+                    timestamp_writes: crate::llm_gpu_profiler::pass_writes_end(),
                 });
                 tpass.set_pipeline(pipeline);
                 tpass.set_bind_group(0, &topk_bind, &[]);
@@ -4619,7 +4625,9 @@ impl QTensorEngine {
             let cand_bytes = (cand_count * 4) as wgpu::BufferAddress;
             encoder.copy_buffer_to_buffer(cand_val, 0, staging, 0, cand_bytes);
             encoder.copy_buffer_to_buffer(cand_idx, 0, staging, cand_bytes, cand_bytes);
+            crate::llm_gpu_profiler::resolve(&mut encoder);
             self.gpu_queue().submit(Some(encoder.finish()));
+            crate::llm_gpu_profiler::accumulate(crate::llm_gpu_profiler::Phase::OutputTopk);
 
             let map_bytes = cand_bytes * 2;
             let slice = staging.slice(..map_bytes);
@@ -5150,7 +5158,7 @@ impl QTensorEngine {
         {
             let mut cpass = encoder.begin_compute_pass(&wgpu::ComputePassDescriptor {
                 label: Some("FusedAttentionPass"),
-                timestamp_writes: None,
+                timestamp_writes: crate::llm_gpu_profiler::pass_writes_both(),
             });
             cpass.set_pipeline(&self.attention_pipeline);
             cpass.set_bind_group(0, &bind_group, &[]);
@@ -5162,7 +5170,9 @@ impl QTensorEngine {
             let out_bytes = (readback_elems * 4) as wgpu::BufferAddress;
             encoder.copy_buffer_to_buffer(output_buf, 0, staging, 0, out_bytes);
         }
+        crate::llm_gpu_profiler::resolve(&mut encoder);
         self.gpu_queue().submit(Some(encoder.finish()));
+        crate::llm_gpu_profiler::accumulate(crate::llm_gpu_profiler::Phase::Attention);
 
         if readback_elems == 0 {
             return true;
@@ -7059,7 +7069,7 @@ impl QTensorEngine {
             {
                 let mut cpass = encoder.begin_compute_pass(&wgpu::ComputePassDescriptor {
                     label: None,
-                    timestamp_writes: None,
+                    timestamp_writes: crate::llm_gpu_profiler::pass_writes_both(),
                 });
                 cpass.set_pipeline(&self.pipeline);
                 cpass.set_bind_group(0, &bind_group, &[]);
@@ -7067,7 +7077,9 @@ impl QTensorEngine {
             }
             let out_bytes = (n_out * 4) as wgpu::BufferAddress;
             encoder.copy_buffer_to_buffer(output_buf, 0, staging, 0, out_bytes);
+            crate::llm_gpu_profiler::resolve(&mut encoder);
             self.gpu_queue().submit(Some(encoder.finish()));
+            crate::llm_gpu_profiler::accumulate(crate::llm_gpu_profiler::Phase::Gemm);
 
             let slice = staging.slice(..out_bytes);
             if await_wgpu_map(slice).await {
@@ -7171,7 +7183,7 @@ impl QTensorEngine {
         {
             let mut cpass = encoder.begin_compute_pass(&wgpu::ComputePassDescriptor {
                 label: None,
-                timestamp_writes: None,
+                timestamp_writes: crate::llm_gpu_profiler::pass_writes_both(),
             });
             cpass.set_pipeline(&self.pipeline);
             cpass.set_bind_group(0, &bind_group, &[0]);
@@ -7179,7 +7191,9 @@ impl QTensorEngine {
         }
         let out_bytes = (n_out * 4) as wgpu::BufferAddress;
         encoder.copy_buffer_to_buffer(output_buf, 0, staging, 0, out_bytes);
+        crate::llm_gpu_profiler::resolve(&mut encoder);
         self.gpu_queue().submit(Some(encoder.finish()));
+        crate::llm_gpu_profiler::accumulate(crate::llm_gpu_profiler::Phase::Gemm);
 
         let slice = staging.slice(..out_bytes);
         if await_wgpu_map(slice).await {
@@ -7505,7 +7519,7 @@ impl QTensorEngine {
         {
             let mut cpass = encoder.begin_compute_pass(&wgpu::ComputePassDescriptor {
                 label: Some("FusedAttentionPass"),
-                timestamp_writes: None,
+                timestamp_writes: crate::llm_gpu_profiler::pass_writes_both(),
             });
             cpass.set_pipeline(&self.attention_pipeline);
             cpass.set_bind_group(0, &bind_group, &[]);
@@ -7517,7 +7531,9 @@ impl QTensorEngine {
             let out_bytes = (readback_elems * 4) as wgpu::BufferAddress;
             encoder.copy_buffer_to_buffer(output_buf, 0, staging, 0, out_bytes);
         }
+        crate::llm_gpu_profiler::resolve(&mut encoder);
         self.gpu_queue().submit(Some(encoder.finish()));
+        crate::llm_gpu_profiler::accumulate(crate::llm_gpu_profiler::Phase::Attention);
 
         if readback_elems == 0 {
             return true;
@@ -8782,7 +8798,7 @@ impl QTensorEngine {
         {
             let mut cpass = encoder.begin_compute_pass(&wgpu::ComputePassDescriptor {
                 label: None,
-                timestamp_writes: None,
+                timestamp_writes: crate::llm_gpu_profiler::pass_writes_both(),
             });
             cpass.set_pipeline(&self.pipeline);
             cpass.set_bind_group(0, &bind_group, &[]);
@@ -8796,7 +8812,9 @@ impl QTensorEngine {
             mapped_at_creation: false,
         });
         encoder.copy_buffer_to_buffer(&output_buf, 0, &staging_buf, 0, output_size);
+        crate::llm_gpu_profiler::resolve(&mut encoder);
         self.gpu_queue().submit(Some(encoder.finish()));
+        crate::llm_gpu_profiler::accumulate(crate::llm_gpu_profiler::Phase::FusedBlock);
 
         let buffer_slice = staging_buf.slice(..);
         let (sender, receiver) = futures_channel::oneshot::channel();

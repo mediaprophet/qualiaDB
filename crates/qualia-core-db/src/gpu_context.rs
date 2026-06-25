@@ -626,6 +626,11 @@ pub fn sample_ambient_telemetry() -> [f32; 11] {
 pub struct SharedGpuContext {
     pub device: wgpu::Device,
     pub queue: wgpu::Queue,
+    /// Whether `TIMESTAMP_QUERY` was negotiated on this device (adapter-dependent).
+    /// When false, the LLM GPU profiler degrades to a no-op (CPU wall-clock only).
+    pub timestamps_supported: bool,
+    /// Nanoseconds per timestamp tick (`Queue::get_timestamp_period`); 0.0 when unsupported.
+    pub timestamp_period_ns: f32,
 }
 
 #[cfg(not(target_arch = "wasm32"))]
@@ -669,12 +674,37 @@ async fn init_shared_gpu_async() -> Result<SharedGpuContext, String> {
         }
     }
 
+    // TIMESTAMP_QUERY is additive: enabling it does not affect render/tensor passes
+    // (they keep `timestamp_writes: None`); only the LLM profiler opts in. Request it
+    // only when the adapter advertises it, so `request_device` never fails on weaker GPUs.
+    let ts_supported = adapter
+        .features()
+        .contains(wgpu::Features::TIMESTAMP_QUERY);
+    let required_features = if ts_supported {
+        wgpu::Features::TIMESTAMP_QUERY
+    } else {
+        wgpu::Features::empty()
+    };
     let (device, queue) = adapter
-        .request_device(&wgpu::DeviceDescriptor::default())
+        .request_device(&wgpu::DeviceDescriptor {
+            required_features,
+            ..Default::default()
+        })
         .await
         .map_err(|e| e.to_string())?;
 
-    Ok(SharedGpuContext { device, queue })
+    let timestamp_period_ns = if ts_supported {
+        queue.get_timestamp_period()
+    } else {
+        0.0
+    };
+
+    Ok(SharedGpuContext {
+        device,
+        queue,
+        timestamps_supported: ts_supported,
+        timestamp_period_ns,
+    })
 }
 
 /// Process-wide wgpu device + queue (lazy init, reused by QTensorEngine + render).

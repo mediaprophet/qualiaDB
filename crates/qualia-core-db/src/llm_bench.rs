@@ -487,7 +487,10 @@ pub fn run_bench(cfg: &BenchConfig) -> Result<BenchResult, String> {
         prefill_tok_s: tok_per_s(acc_prefill_tok, acc_prefill_ns),
         decode_ms: ns_to_ms(acc_decode_ns) / n as f64,
         decode_tok_s: tok_per_s(acc_decode_tok, acc_decode_ns),
-        gpu_timestamp_supported: false,
+        // W2/D17: report the real device capability (TIMESTAMP_QUERY negotiation), not a hardcoded
+        // false. Per-kernel µs come from the dedicated `w2_gpu_phase_profile` test (a profiled run
+        // perturbs the headline tok/s, so the baseline run is left unprofiled).
+        gpu_timestamp_supported: crate::gpu_context::shared_gpu().timestamps_supported,
         note: String::new(),
     })
 }

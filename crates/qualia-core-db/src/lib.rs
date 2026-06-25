@@ -802,6 +802,8 @@ pub mod hardware_passport;
 /// surface for the existing F16/Q8 path and the future ternary/top-k paths.
 #[cfg(not(target_arch = "wasm32"))]
 pub mod llm_bench;
+/// STELLAR §A W2 (D17): per-kernel GPU timestamp profiler for the LLM forward/decode path.
+pub mod llm_gpu_profiler;
 pub mod identifier;
 #[cfg(not(target_arch = "wasm32"))]
 pub mod mcp_server;
