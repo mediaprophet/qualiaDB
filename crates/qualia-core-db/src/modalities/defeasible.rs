@@ -179,6 +179,66 @@ pub fn resolve_conflict(
     }
 }
 
+// ─── Integration with the Dung argumentation framework (grounded extension) ─────────
+//
+// Defeasible rules map naturally onto Dung's abstract argumentation: each rule is an argument,
+// conflicting rules attack each other, and the superiority relation orients the attack (the
+// superior rule defeats the inferior; a strict rule is never attacked back). The skeptical
+// GROUNDED extension then resolves which conclusions are justified — and is exactly the
+// ambiguity-BLOCKING reading (an un-oriented conflict leaves both out). Defeaters block but never
+// conclude, so they are excluded from the returned conclusions.
+//
+// NOTE: this bridge intentionally uses the heap-based `argumentation` module; the defeasible
+// *core* above stays zero-heap. It is an additive convenience over `grounded_extension`.
+
+/// Resolve a defeasible rule set against the Dung **grounded extension**: returns the set of rule
+/// ids whose conclusion is justified (skeptically), excluding defeaters. Conflicting rules attack
+/// mutually unless the superiority relation (or strictness) orients the attack one way.
+pub fn grounded_justified_rules(
+    rules: &[DefeasibleRule],
+    sup: &[(u64, u64)],
+) -> std::collections::HashSet<u64> {
+    use crate::modalities::argumentation::{Argument, Attack, AttackType, ArgumentationFramework};
+
+    let mut af = ArgumentationFramework::new();
+    for r in rules {
+        // Encode the conclusion literal+polarity into a NQuin (polarity in the predicate).
+        let concl = NQuin {
+            subject: r.literal,
+            predicate: r.positive as u64,
+            object: 0,
+            context: 0,
+            metadata: 0,
+            parity: 0,
+        };
+        af.add_argument(Argument::new(r.id, String::new(), Vec::new(), concl));
+    }
+    for (i, a) in rules.iter().enumerate() {
+        for b in &rules[i + 1..] {
+            if !rules_conflict(a, b) {
+                continue;
+            }
+            let a_strict = a.kind == RuleKind::Strict;
+            let b_strict = b.kind == RuleKind::Strict;
+            let a_sup = is_superior(sup, a.id, b.id);
+            let b_sup = is_superior(sup, b.id, a.id);
+            // `a` attacks `b` unless `b` is a strict rule `a` is not, or `b` is strictly superior.
+            let a_attacks_b = !(b_strict && !a_strict) && !b_sup;
+            let b_attacks_a = !(a_strict && !b_strict) && !a_sup;
+            if a_attacks_b {
+                af.add_attack(Attack { attacker: a.id, target: b.id, attack_type: AttackType::Rebuttal, strength: 1.0 });
+            }
+            if b_attacks_a {
+                af.add_attack(Attack { attacker: b.id, target: a.id, attack_type: AttackType::Rebuttal, strength: 1.0 });
+            }
+        }
+    }
+    af.grounded_extension()
+        .into_iter()
+        .filter(|id| !rules.iter().any(|r| r.id == *id && r.kind == RuleKind::Defeater))
+        .collect()
+}
+
 #[cfg(test)]
 mod tests {
     use super::*;
@@ -228,6 +288,33 @@ mod tests {
         let r2 = rule(2, RuleKind::Defeasible, q_hash("b"), false);
         assert!(!rules_conflict(&r1, &r2));
         assert_eq!(resolve_conflict(&r1, &r2, &[], AmbiguityMode::Blocking), Conclusion::Positive);
+    }
+
+    #[test]
+    fn grounded_extension_resolves_defeasible_conflict() {
+        let flies = q_hash("penguin:flies");
+        let r_bird = rule(1, RuleKind::Defeasible, flies, true); // birds fly
+        let r_peng = rule(2, RuleKind::Defeasible, flies, false); // penguins don't
+
+        // No superiority → mutual attack → grounded extension is skeptical → neither justified.
+        let none = grounded_justified_rules(&[r_bird, r_peng], &[]);
+        assert!(!none.contains(&1) && !none.contains(&2), "un-oriented conflict: neither justified");
+
+        // "penguins don't fly" superior → only r2 attacks r1 → r2 justified, r1 defeated.
+        let sup = [(2u64, 1u64)];
+        let g = grounded_justified_rules(&[r_bird, r_peng], &sup);
+        assert!(g.contains(&2) && !g.contains(&1));
+
+        // A non-conflicting rule is always justified (no attackers).
+        let r_other = rule(3, RuleKind::Defeasible, q_hash("swims"), true);
+        let g2 = grounded_justified_rules(&[r_bird, r_peng, r_other], &sup);
+        assert!(g2.contains(&3));
+
+        // A defeater blocks but is never itself a justified conclusion.
+        let d = rule(4, RuleKind::Defeater, q_hash("claim"), false);
+        let r_c = rule(5, RuleKind::Defeasible, q_hash("claim"), true);
+        let gd = grounded_justified_rules(&[r_c, d], &[]);
+        assert!(!gd.contains(&4), "defeater never concludes");
     }
 
     #[test]
