@@ -52,6 +52,31 @@ pub fn mount_resident_gguf(_model_id: u64, _path: &str) -> Result<(), String> {
     Ok(())
 }
 
+/// A1b: memory-map a `.q42` weight container and retain it as the resident model (native). Mirrors
+/// [`mount_resident_gguf`] but boots via the native q42 path (`adopt_resident_q42_mmap`), which
+/// builds the resident 2-bit ternary-FFN dispatcher.
+#[cfg(not(target_arch = "wasm32"))]
+pub fn mount_resident_q42(model_id: u64, path: &str) -> Result<GgufLoadReport, String> {
+    clear_resident_model();
+    let file = std::fs::File::open(path).map_err(|e| format!("open {path}: {e}"))?;
+    let mmap = Arc::new(unsafe { memmap2::Mmap::map(&file) }.map_err(|e| e.to_string())?);
+    let mut engine = tokio::task::block_in_place(|| {
+        tokio::runtime::Handle::current().block_on(QTensorEngine::try_new())
+    })?;
+    let report = engine.adopt_resident_q42_mmap(Arc::clone(&mmap))?;
+    let normalized = Path::new(path)
+        .canonicalize()
+        .map(|p| p.to_string_lossy().into_owned())
+        .unwrap_or_else(|_| path.to_string());
+    *slot().lock().map_err(|e| e.to_string())? = Some(ResidentModelSlot {
+        model_id,
+        gguf_path: normalized,
+        mmap,
+        report,
+    });
+    Ok(report)
+}
+
 /// Drop resident mmap (called from orchestrator eviction scrub).
 #[cfg(not(target_arch = "wasm32"))]
 pub fn clear_resident_model() {

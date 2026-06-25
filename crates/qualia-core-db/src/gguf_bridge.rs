@@ -2464,6 +2464,12 @@ pub struct QTensorEngine {
     /// native top-k decode path, so these two fields are available on both targets.
     mc8_logits_resident_buf: Option<wgpu::Buffer>,
     mc8_logits_row_bytes: u32,
+    /// A1b (STELLAR §A): resident 2-bit ternary-FFN GEMM dispatcher, built once at `.q42` boot from
+    /// the container's base-3 FFN blobs (rebaked to 2-bit, uploaded once). `None` until a ternary
+    /// `.q42` is adopted; the FFN dispatch branch (`dispatch_ternary_ffn`) uses it when present +
+    /// the toggle is on, else the CPU oracle. Native-only; the wasm ternary path is a later step.
+    #[cfg(not(target_arch = "wasm32"))]
+    ternary_ffn: Option<crate::ternary_gpu::TernaryFfnResident>,
     /// Phase 5.4: all layers' attn_norm + ffn_norm weights resident (slot 2L = attn, 2L+1 = ffn),
     /// so RMSNorm binds a per-layer sub-range instead of re-`write_buffer`ing a shared single-layer
     /// `norm_weight_buf` every layer (the second per-layer write_buffer race blocking single-submit).
@@ -3066,6 +3072,8 @@ impl QTensorEngine {
             mc8_ffn_fused_pipeline,
             mc8_logits_resident_buf: None,
             mc8_logits_row_bytes: 0,
+            #[cfg(not(target_arch = "wasm32"))]
+            ternary_ffn: None,
             #[cfg(target_arch = "wasm32")]
             mc8_norm_resident_buf: None,
             #[cfg(target_arch = "wasm32")]
@@ -3478,6 +3486,120 @@ impl QTensorEngine {
         if let Err(e) = self.load_gguf_checked(path) {
             eprintln!("[gguf_bridge] Could not load {path}: {e}");
         }
+    }
+
+    /// A1b: build the resident 2-bit ternary-FFN dispatcher from a `.q42` container's base-3 FFN
+    /// blobs (rebaked to 2-bit + uploaded once). Returns false if there are no ternary FFN tensors
+    /// or the GPU build fails — the FFN then runs the CPU oracle (`dispatch_ternary_ffn` fallback).
+    #[cfg(not(target_arch = "wasm32"))]
+    fn build_ternary_ffn_resident(&mut self, q: &crate::q42_weight::Q42TensorIndex) -> bool {
+        let mmap_arc = match self.gguf_mmap.clone() {
+            Some(a) => a,
+            None => return false,
+        };
+        let data: &[u8] = &mmap_arc;
+        let mut tensors: Vec<(u64, usize, usize, &[u8])> = Vec::new();
+        for e in &q.entries {
+            if e.ggml_type != crate::ternary::GGML_TYPE_TERNARY_158 {
+                continue;
+            }
+            let (n_in, n_out) = (e.dim0 as usize, e.dim1 as usize);
+            let (off, len) = (e.blob_offset as usize, e.byte_len as usize);
+            if n_in == 0 || n_out == 0 || off + len > data.len() {
+                continue;
+            }
+            // key = the .q42 blob offset == the synthetic index's GgufTensorInfo::byte_offset.
+            tensors.push((e.blob_offset, n_in, n_out, &data[off..off + len]));
+        }
+        if tensors.is_empty() {
+            return false;
+        }
+        match crate::ternary_gpu::TernaryFfnResident::build(
+            self.gpu_device(),
+            self.gpu_queue(),
+            &tensors,
+        ) {
+            Some(r) => {
+                log::info!(
+                    "LLM_LOAD|ternary-ffn|0.71|resident 2-bit FFN: {} tensors, {:.1} MB",
+                    r.len(),
+                    r.resident_bytes() as f64 / (1024.0 * 1024.0)
+                );
+                self.ternary_ffn = Some(r);
+                true
+            }
+            None => false,
+        }
+    }
+
+    /// A1b: boot from an already-mapped `.q42` weight container (native). Mirrors the GGUF
+    /// `adopt_resident_mmap` but for the `Q42W` format: validates + builds a synthetic GGUF index
+    /// from the manifest, points the byte source at the `.q42` bytes (`tensor_data_start = 0`,
+    /// absolute blob offsets), reserves the GEMM/KV arenas, makes the (verbatim) output projection
+    /// resident, and builds the resident 2-bit ternary-FFN dispatcher from the FFN blobs. The
+    /// attention/norm/embed tensors stay at source precision and run the standard GGUF hot path.
+    #[cfg(not(target_arch = "wasm32"))]
+    pub fn adopt_resident_q42_mmap(
+        &mut self,
+        mmap: Arc<memmap2::Mmap>,
+    ) -> Result<GgufLoadReport, String> {
+        let file_size = mmap.len();
+        if file_size == 0 {
+            return Err("Empty Q42 mmap".to_string());
+        }
+        let q = crate::q42_weight::Q42TensorIndex::from_q42(&mmap[..])?;
+        let index = q.to_gguf_index();
+        let hp = index.hyperparams;
+        if hp.n_layer == 0 || hp.n_embd == 0 {
+            return Err("Q42: missing hyperparameters in header".to_string());
+        }
+        self.hyperparams = hp;
+        self.tensor_data_offset = 0; // q42 blob offsets are absolute
+        let staging = index
+            .max_layer_tensor_bytes
+            .max(4096)
+            .min(MAX_WGPU_WEIGHT_STAGING);
+        self.ensure_gemm_buffers(staging, MAX_STACK_GEMM_OUT as u32);
+        self.ensure_kv_cache(&hp);
+        if self.kv_layout.is_none() || self.kv_cache_cpu.is_none() {
+            return Err("Q42: KV cache allocation failed".to_string());
+        }
+        self.gguf_mmap = Some(mmap);
+        if !self.mc8_upload_resident_logits(&index) {
+            log::info!("LLM_LOAD|q42-logits|0.70|skipped — per-token upload fallback");
+        }
+        if !self.build_ternary_ffn_resident(&q) {
+            log::info!(
+                "LLM_LOAD|ternary-ffn|0.71|no resident set (no ternary FFN or build failed) — CPU oracle path"
+            );
+        }
+        let kv_cache_bytes = self.kv_cache_bytes();
+        Ok(GgufLoadReport {
+            mapped_bytes: file_size as u64,
+            tensor_data_offset: 0,
+            n_layer: hp.n_layer,
+            n_head: hp.n_head,
+            n_kv_head: hp.effective_n_kv_head(),
+            max_tensor_bytes: index.max_tensor_bytes,
+            kv_cache_bytes,
+            directml_enabled: {
+                #[cfg(target_os = "windows")]
+                {
+                    self.dml.is_some()
+                }
+                #[cfg(not(target_os = "windows"))]
+                {
+                    false
+                }
+            },
+        })
+    }
+
+    /// A1b: number of resident ternary FFN tensors (0 unless a ternary `.q42` was adopted). Lets a
+    /// test confirm the GPU resident path is actually populated (not a silent CPU-only fallback).
+    #[cfg(not(target_arch = "wasm32"))]
+    pub fn ternary_ffn_resident_len(&self) -> usize {
+        self.ternary_ffn.as_ref().map_or(0, |r| r.len())
     }
 
     /// Attach an already-mapped resident GGUF (shared with orchestrator slot).
@@ -4137,6 +4259,65 @@ impl QTensorEngine {
         stack_gemm_quant(raw, info, input, out, n_in, n_out)
     }
 
+    /// A1b: dispatch one **ternary** FFN GEMM (`GGML_TYPE_TERNARY_158`). The resident 2-bit GPU
+    /// kernel when the toggle is on AND the tensor is resident; otherwise the CPU base-3 oracle on
+    /// the blob fetched from the mmap. Fail-closed (returns false, never garbage) on any mismatch.
+    fn dispatch_ternary_ffn(
+        &self,
+        info: &GgufTensorInfo,
+        input: &[f32],
+        out: &mut [f32],
+        n_in: usize,
+        n_out: usize,
+    ) -> bool {
+        if n_in > input.len() || n_out > out.len() {
+            return false;
+        }
+        // GPU resident path (toggle on): keyed by the `.q42` blob offset (== info.byte_offset).
+        #[cfg(not(target_arch = "wasm32"))]
+        if crate::llm_bench::ternary_ffn_enabled() {
+            if let Some(res) = self.ternary_ffn.as_ref() {
+                if res.gemv(
+                    self.gpu_device(),
+                    self.gpu_queue(),
+                    info.byte_offset,
+                    input,
+                    out,
+                    n_in,
+                    n_out,
+                ) {
+                    return true;
+                }
+            }
+        }
+        // CPU oracle fallback (toggle off, or GPU unavailable): the SAME ternary weights via the
+        // base-3 CPU GEMM — correct, slower; this is the toggle's OFF baseline.
+        let mmap = match self.gguf_mmap.as_deref() {
+            Some(m) => m,
+            None => return false,
+        };
+        let raw = match crate::ggml_quants::fetch_tensor_bytes(mmap, self.tensor_data_offset, info) {
+            Ok(s) => s,
+            Err(_) => return false,
+        };
+        if raw.len() < 4 {
+            return false;
+        }
+        let scale = f32::from_le_bytes([raw[0], raw[1], raw[2], raw[3]]);
+        crate::ternary::ternary_gemm_cpu(
+            &input[..n_in],
+            &raw[4..],
+            scale,
+            n_in,
+            n_out,
+            1,
+            0,
+            0,
+            &mut out[..n_out],
+        );
+        true
+    }
+
     /// Quantized GEMM into caller `out` using reused GPU buffers (Q6_K) or CPU dequant fallback.
     pub fn dispatch_gemm_into(
         &self,
@@ -4150,6 +4331,11 @@ impl QTensorEngine {
         if n_in > input.len() || n_out > out.len() {
             wlog(&format!("[gemm_into] GUARD n_in={n_in} n_out={n_out} input={} out={}", input.len(), out.len()));
             return false;
+        }
+        // A1b: ternary FFN tensors are not row-block quantized — route them to the dedicated ternary
+        // dispatch (resident 2-bit GPU kernel / CPU oracle) before the standard fetch+GEMM path.
+        if info.ggml_type == crate::ternary::GGML_TYPE_TERNARY_158 {
+            return self.dispatch_ternary_ffn(info, input, out, n_in, n_out);
         }
         let mmap = match self.gguf_mmap.as_deref() {
             Some(m) => m,

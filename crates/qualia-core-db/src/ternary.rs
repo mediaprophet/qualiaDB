@@ -264,6 +264,25 @@ pub fn dequantize_blob(blob: &[u8], out: &mut [f32]) {
     dequantize_ternary(scale, &blob[4..], out);
 }
 
+/// Rebake an on-disk base-3 [`ternary_blob`] (`[scale f32 LE][5-trits/byte]`) into the runtime
+/// **2-bit branchless** VRAM layout consumed by [`ternary_gemm_2bit.wgsl`] / [`ternary_gemm_cpu_2bit`].
+///
+/// D1 (STELLAR §A, measured on A2000): base-3 is the *archive/distribution* layout (1.6 bit, densest)
+/// but on the GPU its `/3`,`%3` unpack makes it **0.85× — slower than F16**; the 2-bit branchless layout
+/// (2.0 bit, shift/mask, divergence-free) is the **1.77×** win. So the live FFN-ternary path rebakes each
+/// base-3 FFN blob to 2-bit **once at resident load** (heap is the sanctioned load-time path; the hot
+/// loop stays zero-heap). `count` = the tensor's element count (from the manifest shape). Returns
+/// `(scale, packed_2bit)`; the dequantized values are bit-identical to the base-3 source.
+pub fn rebake_ternary_blob_to_2bit(blob: &[u8], count: usize) -> (f32, Vec<u8>) {
+    if blob.len() < 4 || count == 0 {
+        return (0.0, Vec::new());
+    }
+    let scale = f32::from_le_bytes([blob[0], blob[1], blob[2], blob[3]]);
+    let mut trits = vec![0i8; count];
+    unpack_trits_into(&blob[4..], &mut trits);
+    (scale, pack_trits_2bit(&trits))
+}
+
 #[cfg(test)]
 mod tests {
     use super::*;
@@ -291,6 +310,39 @@ mod tests {
         assert_eq!(back, trits);
         // the known base-3 byte for [1,-1,0,0,0] = digits [2,0,1,1,1] = 2+9+27+81 = 119
         assert_eq!(packed[0], 119);
+    }
+
+    #[test]
+    fn rebake_base3_to_2bit_preserves_gemm() {
+        // The on-disk base-3 blob rebaked to the 2-bit runtime layout must yield bit-identical trits,
+        // the same scale, and a byte-identical GEMM (A1b: this conversion is the make-or-break design
+        // fact — base-3 on GPU is slower than F16; 2-bit is the win, and it must be lossless).
+        let (n_out, n_in) = (3usize, 8usize);
+        let weights: Vec<f32> = (0..n_out * n_in).map(|i| (i as f32 * 0.37).sin()).collect();
+        let act: Vec<f32> = (0..n_in).map(|i| i as f32 * 0.5 - 1.0).collect();
+
+        let base3 = ternary_blob(&weights);
+        let base3_scale = f32::from_le_bytes([base3[0], base3[1], base3[2], base3[3]]);
+        let base3_packed = &base3[4..];
+
+        let (scale2, packed2) = rebake_ternary_blob_to_2bit(&base3, weights.len());
+        assert_eq!(scale2, base3_scale, "scale must be preserved");
+        for k in 0..weights.len() {
+            assert_eq!(trit_at(base3_packed, k), trit_at_2bit(&packed2, k), "trit {k} mismatch");
+        }
+
+        let mut out_base3 = vec![0f32; n_out];
+        let mut out_2bit = vec![0f32; n_out];
+        ternary_gemm_cpu(&act, base3_packed, base3_scale, n_in, n_out, 1, 0, 0, &mut out_base3);
+        ternary_gemm_cpu_2bit(&act, &packed2, scale2, n_in, n_out, 1, 0, 0, &mut out_2bit);
+        for i in 0..n_out {
+            assert!(
+                (out_base3[i] - out_2bit[i]).abs() < 1e-6,
+                "row {i}: base3 {} vs 2bit {}",
+                out_base3[i],
+                out_2bit[i]
+            );
+        }
     }
 
     #[test]

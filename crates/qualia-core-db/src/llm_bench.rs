@@ -72,6 +72,30 @@ pub fn gpu_topk_enabled() -> bool {
         )
 }
 
+// ── A1b ternary-FFN toggle (D3/D7) ────────────────────────────────────────────
+// Additive, default-OFF: when a `.q42` ternary container is booted, routes its FFN
+// GEMMs through the resident 2-bit GPU kernel (`TernaryFfnResident`). OFF runs the
+// SAME ternary weights via the CPU oracle — so ON-vs-OFF isolates the GPU-kernel win
+// on identical weights, and ternary-container-vs-Q8 (a0) is the headline FFN number.
+static TERNARY_FFN: AtomicBool = AtomicBool::new(false);
+
+/// Enable/disable the resident 2-bit GPU ternary-FFN path (`QUALIA_LLM_TERNARY_FFN`).
+#[inline]
+pub fn set_ternary_ffn(on: bool) {
+    TERNARY_FFN.store(on, Ordering::Relaxed);
+}
+
+/// Whether the GPU ternary-FFN path is active (atomic flag OR the env var). When false, ternary
+/// FFN GEMMs fall back to the CPU oracle (correct, slower) — the toggle's OFF baseline.
+#[inline]
+pub fn ternary_ffn_enabled() -> bool {
+    TERNARY_FFN.load(Ordering::Relaxed)
+        || matches!(
+            std::env::var("QUALIA_LLM_TERNARY_FFN").ok().as_deref(),
+            Some("1") | Some("true")
+        )
+}
+
 // ── #48 correctness path: CPU attention reference ─────────────────────────────
 // Route native attention through the wasm-proven CPU SDPA (`cpu_attention_pass`) instead of the
 // GPU attention shader (whose output is currently unbounded). Correct-but-slower; opt-in.
@@ -543,6 +567,69 @@ pub fn compare_topk_decode_blocking(
         .build()
         .map_err(|e| e.to_string())?;
     rt.block_on(async { compare_topk_decode(model_path, prompt, decode_tokens) })
+}
+
+/// A1b: mount a model (auto-detecting `Q42W` vs GGUF by magic) and run ONE decode of `prompt` for
+/// `decode_tokens`, returning `(text, decode_tok_s)`. For a ternary `.q42` the FFN routing follows
+/// the global `set_ternary_ffn` toggle, so a caller can measure GPU-ON vs CPU-OFF on identical
+/// weights. Caller sets the toggle before invoking. (Use the `_blocking` wrapper from sync code.)
+#[cfg(not(target_arch = "wasm32"))]
+pub fn decode_with_metrics(
+    model_path: &str,
+    prompt: &str,
+    decode_tokens: u32,
+) -> Result<(String, f64), String> {
+    if !std::path::Path::new(model_path).exists() {
+        return Err(format!("model not found: {model_path}"));
+    }
+    let is_q42 = {
+        use std::io::Read;
+        let mut buf = [0u8; 4];
+        std::fs::File::open(model_path)
+            .and_then(|mut f| f.read_exact(&mut buf))
+            .map(|_| &buf == b"Q42W")
+            .unwrap_or(false)
+    };
+    let agent = LocalLlmAgent::with_local_backend(
+        "did:qualia:bench",
+        AgentBackend::Local {
+            model_path: model_path.to_string(),
+            context_window: 4096,
+            quantization: "auto".into(),
+            vision_projector_path: None,
+            modality: "text".into(),
+            architecture: None,
+        },
+    );
+    set_decode_budget_override(decode_tokens);
+    let model_id = crate::q_hash(model_path);
+    if is_q42 {
+        crate::resident_model::mount_resident_q42(model_id, model_path)?;
+    } else {
+        let _ = crate::resident_model::mount_resident_gguf(model_id, model_path);
+    }
+    reset_phase_metrics();
+    let (text, _, _, _) = agent.infer_local_model_streaming::<fn(String)>(prompt, "", None);
+    let snap = phase_snapshot();
+    let decode_tok_s = tok_per_s(snap.decode_tokens, snap.decode_ns);
+    set_decode_budget_override(0);
+    crate::resident_model::clear_resident_model();
+    Ok((text, decode_tok_s))
+}
+
+/// `decode_with_metrics` inside a fresh multi-thread runtime (residency mount needs `block_in_place`).
+#[cfg(not(target_arch = "wasm32"))]
+pub fn decode_with_metrics_blocking(
+    model_path: &str,
+    prompt: &str,
+    decode_tokens: u32,
+) -> Result<(String, f64), String> {
+    let rt = tokio::runtime::Builder::new_multi_thread()
+        .worker_threads(2)
+        .enable_all()
+        .build()
+        .map_err(|e| e.to_string())?;
+    rt.block_on(async { decode_with_metrics(model_path, prompt, decode_tokens) })
 }
 
 // ── Reporting ─────────────────────────────────────────────────────────────────

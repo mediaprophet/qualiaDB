@@ -55,6 +55,104 @@ fn compile_smollm2_q8_gguf_to_runnable_ternary_ffn() {
     }
 }
 
+/// A1b inc 3 ON-DEVICE GATE: native `.q42` boot + the FFN dispatch branch on the REAL SmolLM2 FFN
+/// weights. Compiles the q8 GGUF → ternary `.q42`, mmaps it, boots it natively
+/// (`adopt_resident_q42_mmap` → builds the resident 2-bit set), then for FFN gate/up/down on the
+/// first + last layer asserts the GPU 2-bit path (toggle ON) == the CPU base-3 oracle (toggle OFF).
+/// This isolates ternary-FFN correctness on real weights from the full decode loop. Skips if the q8
+/// GGUF is absent. Run: `cargo test -p qualia-core-db --test transcode_real_model
+/// ternary_ffn_native_boot_and_dispatch_matches_cpu -- --nocapture`.
+#[cfg(not(target_arch = "wasm32"))]
+#[test]
+fn ternary_ffn_native_boot_and_dispatch_matches_cpu() {
+    use qualia_core_db::gguf_bridge::QTensorEngine;
+    use qualia_core_db::llm_bench::set_ternary_ffn;
+    use qualia_core_db::q42_weight::Q42TensorIndex;
+
+    let candidates = [
+        "../../docs/models/smollm2-360m-instruct-q8_0.gguf",
+        "docs/models/smollm2-360m-instruct-q8_0.gguf",
+    ];
+    let Some(path) = candidates.iter().map(Path::new).find(|p| p.exists()) else {
+        eprintln!("[a1b dispatch] q8 GGUF absent — skipping");
+        return;
+    };
+    let src = std::fs::File::open(path).expect("open gguf");
+    let src_mmap = unsafe { memmap2::Mmap::map(&src) }.expect("mmap gguf");
+    let q42 = qualia_core_db::q42_weight::compile_gguf_to_q42_ternary_ffn(&src_mmap, 14)
+        .expect("ternary-FFN compile");
+    let tmp = std::env::temp_dir().join("a1b_smollm2_ternary_ffn.q42");
+    std::fs::write(&tmp, &q42).expect("write temp .q42");
+    let f = std::fs::File::open(&tmp).expect("open temp .q42");
+    let mmap = std::sync::Arc::new(unsafe { memmap2::Mmap::map(&f) }.expect("mmap .q42"));
+
+    let rt = tokio::runtime::Builder::new_multi_thread()
+        .worker_threads(2)
+        .enable_all()
+        .build()
+        .expect("tokio runtime");
+    let mut engine = rt
+        .block_on(async { QTensorEngine::try_new().await })
+        .expect("native engine");
+    let report = engine
+        .adopt_resident_q42_mmap(mmap.clone())
+        .expect("native .q42 boot");
+    eprintln!(
+        "[a1b] booted ternary .q42 natively: {} layers, {:.1} MB mapped, {} resident ternary FFN tensors",
+        report.n_layer,
+        report.mapped_bytes as f64 / 1e6,
+        engine.ternary_ffn_resident_len()
+    );
+    // the resident GPU path must actually be populated (3 FFN projections × n_layer).
+    assert_eq!(
+        engine.ternary_ffn_resident_len(),
+        3 * report.n_layer as usize,
+        "all FFN projections must be resident (else the GPU path silently fell back to CPU)"
+    );
+
+    let q = Q42TensorIndex::from_q42(&mmap[..]).expect("from_q42");
+    let index = q.to_gguf_index();
+
+    let mut max_diff = 0f32;
+    let mut checked = 0usize;
+    for layer in [0u32, report.n_layer.saturating_sub(1)] {
+        let t = index.get_layer_tensors(layer);
+        for info in [t.ffn_gate, t.ffn_up, t.ffn_down].into_iter().flatten() {
+            let n_in = info.dims[0] as usize;
+            let n_out = info.dims[1] as usize;
+            let act: Vec<f32> = (0..n_in).map(|j| ((j % 23) as f32) * 0.07 - 0.8).collect();
+            let mut out_on = vec![0f32; n_out];
+            let mut out_off = vec![0f32; n_out];
+            set_ternary_ffn(true);
+            assert!(
+                engine.dispatch_gemm_into(&index, &info, &act, &mut out_on, n_in, n_out),
+                "GPU ternary dispatch (layer {layer})"
+            );
+            set_ternary_ffn(false);
+            assert!(
+                engine.dispatch_gemm_into(&index, &info, &act, &mut out_off, n_in, n_out),
+                "CPU ternary dispatch (layer {layer})"
+            );
+            for i in 0..n_out {
+                max_diff = max_diff.max((out_on[i] - out_off[i]).abs());
+            }
+            checked += 1;
+        }
+    }
+    set_ternary_ffn(false);
+    eprintln!(
+        "[a1b] FFN dispatch parity: {checked} real tensors, max |GPU 2-bit − CPU base-3| = {max_diff:.3e}"
+    );
+    // GPU 2-bit and CPU base-3 compute scale·Σ trit·act in the same order (multiply by ±1.0 is
+    // exact), so they agree to float noise — a generous bound still catches any real divergence.
+    assert!(
+        max_diff < 1e-2,
+        "GPU 2-bit ternary FFN must match the CPU base-3 oracle on real weights (max_diff {max_diff})"
+    );
+    let _ = std::fs::remove_file(&tmp);
+    eprintln!("[a1b] native .q42 boot + ternary FFN dispatch verified on the real model.");
+}
+
 #[test]
 fn transcode_smollm2_360m_ffn_ternary() {
     // resolve the model path relative to the workspace (tests run with CWD = crate dir).

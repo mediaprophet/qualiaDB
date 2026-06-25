@@ -788,24 +788,54 @@ impl LocalLlmAgent {
                 if let Some(mmap) =
                     crate::resident_model::resident_mmap_for_path(model_path.as_str())
                 {
-                    if engine.adopt_resident_mmap(mmap).is_err() {
+                    // A1b: a `.q42` weight container (magic `Q42W`) boots through the native q42
+                    // path (synthetic index + resident 2-bit ternary FFN); else the GGUF path.
+                    let is_q42 = mmap.len() >= 4 && mmap[0..4] == *b"Q42W";
+                    let adopted = if is_q42 {
+                        engine.adopt_resident_q42_mmap(mmap).is_ok()
+                    } else {
+                        engine.adopt_resident_mmap(mmap).is_ok()
+                    };
+                    if !adopted {
                         engine.load_gguf(&model_path);
                     }
                 } else {
                     engine.load_gguf(&model_path);
                 }
 
+                // A1b: tokenizer + tensor index come from the matching on-disk format. The q42
+                // container carries the tokenizer in a Q42 section and its tensor metadata in the
+                // manifest (→ `to_gguf_index`); the GGUF path parses both from the GGUF header.
+                let is_q42_mmap = engine
+                    .gguf_mmap
+                    .as_ref()
+                    .map(|m| m.len() >= 4 && m[0..4] == *b"Q42W")
+                    .unwrap_or(false);
                 let tok = engine
                     .gguf_mmap
                     .as_ref()
-                    .map(|m| GgufTokenizer::from_gguf(m))
+                    .map(|m| {
+                        if is_q42_mmap {
+                            crate::q42_weight::Q42TensorIndex::from_q42(m)
+                                .ok()
+                                .and_then(|qi| GgufTokenizer::from_q42_section(qi.tokenizer_bytes(m)))
+                                .unwrap_or_default()
+                        } else {
+                            GgufTokenizer::from_gguf(m)
+                        }
+                    })
                     .unwrap_or_default();
 
                 // Parse tensor-info section → real embedding lookup.
-                let tensor_idx = engine
-                    .gguf_mmap
-                    .as_ref()
-                    .map(|m| crate::gguf_sharder::GgufTensorIndex::from_gguf(m));
+                let tensor_idx = engine.gguf_mmap.as_ref().map(|m| {
+                    if is_q42_mmap {
+                        crate::q42_weight::Q42TensorIndex::from_q42(m)
+                            .map(|qi| qi.to_gguf_index())
+                            .unwrap_or_else(|_| crate::gguf_sharder::GgufTensorIndex::from_gguf(m))
+                    } else {
+                        crate::gguf_sharder::GgufTensorIndex::from_gguf(m)
+                    }
+                });
 
                 let mut ctx = tok.encode_prompt(&prompt_owned);
                 let eos = tok.eos_token_id;

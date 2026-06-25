@@ -125,6 +125,17 @@ pub fn tensor_byte_len(tensor: &GgufTensorInfo) -> Option<usize> {
     if n0 == 0 {
         return None;
     }
+    // BitNet-1.58b ternary blob (STELLAR §A, `.q42` FFN): a SINGLE per-tensor `[scale f32][packed
+    // trits]` payload over ALL elements — NOT a per-row block format, so `ggml_row_bytes * dims[1]`
+    // does not apply. Compute the whole-tensor packed length directly from the element count.
+    if tensor.ggml_type == crate::ternary::GGML_TYPE_TERNARY_158 {
+        let n_elems = if tensor.n_dims > 1 && tensor.dims[1] > 0 {
+            n0.checked_mul(tensor.dims[1] as usize)?
+        } else {
+            n0
+        };
+        return Some(crate::ternary::ternary_blob_len(n_elems));
+    }
     let row = ggml_row_bytes(tensor.ggml_type, n0)?;
     if tensor.n_dims <= 1 || tensor.dims[1] == 0 {
         Some(row)
@@ -463,6 +474,29 @@ mod tests {
     fn q5_0_row_bytes_stride() {
         // SmolLM2 attn_k row: hidden_dim=960 → (960/32)*22 = 660
         assert_eq!(ggml_row_bytes(GGML_TYPE_Q5_0, 960), Some(660));
+    }
+
+    #[test]
+    fn ternary_tensor_byte_len_is_whole_blob_not_row_strided() {
+        // A1b inc 2a: a ternary FFN tensor is ONE `[scale f32][5-trits/byte]` blob over all
+        // dims[0]*dims[1] elements (per-tensor scale), so `tensor_byte_len`/`fetch_tensor_bytes`
+        // must return the whole-blob length — NOT the (None) row-based path that choked before.
+        let info = GgufTensorInfo {
+            dims: [960, 2560, 0, 0], // SmolLM2 ffn_gate-shape
+            n_dims: 2,
+            ggml_type: crate::ternary::GGML_TYPE_TERNARY_158,
+            byte_offset: 0,
+        };
+        let n = 960 * 2560;
+        assert_eq!(tensor_byte_len(&info), Some(crate::ternary::ternary_blob_len(n)));
+
+        // and fetch returns exactly that slice from a buffer holding a real ternary blob.
+        let weights: Vec<f32> = (0..n).map(|i| (i as f32 * 0.001).sin()).collect();
+        let blob = crate::ternary::ternary_blob(&weights);
+        assert_eq!(blob.len(), crate::ternary::ternary_blob_len(n));
+        let got = fetch_tensor_bytes(&blob, 0, &info).expect("ternary fetch must slice");
+        assert_eq!(got.len(), blob.len());
+        assert_eq!(&got[..4], &blob[..4]); // scale preserved at the front
     }
 
     #[test]
