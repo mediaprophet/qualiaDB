@@ -45,6 +45,47 @@ pub struct MotifRecord {
     pub frequency: f32,
 }
 
+/// Maximum number of nodes in a subgraph-isomorphism query pattern. Bounding the
+/// pattern keeps the backtracking search depth (and therefore the stack) fixed.
+pub const MAX_SUBGRAPH_PATTERN_NODES: usize = 8;
+
+/// A directed query pattern for subgraph isomorphism. `adjacency[i][j] != 0`
+/// requires a data-graph edge from the node mapped to pattern node `i` to the
+/// node mapped to pattern node `j`. Only the first `node_count` rows/cols are read.
+#[derive(Debug, Clone, Copy)]
+pub struct SubgraphPattern {
+    pub adjacency: [[u8; MAX_SUBGRAPH_PATTERN_NODES]; MAX_SUBGRAPH_PATTERN_NODES],
+    pub node_count: usize,
+}
+
+impl SubgraphPattern {
+    /// Build an empty (edgeless) pattern of `node_count` nodes.
+    pub fn new(node_count: usize) -> Self {
+        Self {
+            adjacency: [[0; MAX_SUBGRAPH_PATTERN_NODES]; MAX_SUBGRAPH_PATTERN_NODES],
+            node_count: node_count.min(MAX_SUBGRAPH_PATTERN_NODES),
+        }
+    }
+
+    /// Add a required directed edge `from -> to` to the pattern.
+    pub fn with_edge(mut self, from: usize, to: usize) -> Self {
+        if from < self.node_count && to < self.node_count {
+            self.adjacency[from][to] = 1;
+        }
+        self
+    }
+}
+
+/// One subgraph-isomorphism match: the data-graph node ids assigned to pattern
+/// nodes `0..len`. `missing_edges` is 0 for an exact (induced-monomorphism)
+/// match and counts unsatisfied pattern edges for an approximate match.
+#[derive(Debug, Clone, Copy, PartialEq)]
+pub struct SubgraphMatch {
+    pub mapping: [u64; MAX_SUBGRAPH_PATTERN_NODES],
+    pub len: u16,
+    pub missing_edges: u8,
+}
+
 #[derive(Debug, Clone, Copy, PartialEq)]
 pub struct BoundedGraphAnalysisSummary {
     pub density: f32,
@@ -330,6 +371,173 @@ impl BoundedQualiaGraph {
 
         Ok(self.node_count)
     }
+
+    /// Zero-heap PageRank via power iteration over the bounded adjacency matrix.
+    ///
+    /// Google PageRank: `PR(v) = (1-d)/N + d·Σ_{u→v} PR(u)/outdeg(u)`, with the
+    /// mass held by dangling (out-degree-0) nodes redistributed uniformly so the
+    /// vector stays a probability distribution. Iterates until the L1 delta drops
+    /// below `tolerance` or `max_iters` is reached. Writes `min(out.len(), n)`
+    /// scores aligned to `self.node_ids` order and returns that count.
+    fn calculate_pagerank(
+        &self,
+        damping: f32,
+        max_iters: u32,
+        tolerance: f32,
+        out: &mut [f32],
+    ) -> usize {
+        let n = self.node_count;
+        if n == 0 {
+            return 0;
+        }
+        let count = out.len().min(n);
+
+        let mut rank = [0f32; MAX_BOUNDED_GRAPH_ANALYSIS_NODES];
+        let mut next = [0f32; MAX_BOUNDED_GRAPH_ANALYSIS_NODES];
+        let mut outdeg = [0u16; MAX_BOUNDED_GRAPH_ANALYSIS_NODES];
+
+        let init = 1.0 / n as f32;
+        rank[..n].fill(init);
+        for v in 0..n {
+            let mut d = 0u16;
+            for w in 0..n {
+                if self.adjacency[v][w] != 0 {
+                    d += 1;
+                }
+            }
+            outdeg[v] = d;
+        }
+
+        let base = (1.0 - damping) / n as f32;
+        for _ in 0..max_iters {
+            let mut dangling = 0f32;
+            for v in 0..n {
+                if outdeg[v] == 0 {
+                    dangling += rank[v];
+                }
+            }
+            let dangling_share = damping * dangling / n as f32;
+            next[..n].fill(base + dangling_share);
+
+            for v in 0..n {
+                if outdeg[v] == 0 {
+                    continue;
+                }
+                let share = damping * rank[v] / outdeg[v] as f32;
+                for w in 0..n {
+                    if self.adjacency[v][w] != 0 {
+                        next[w] += share;
+                    }
+                }
+            }
+
+            let mut delta = 0f32;
+            for v in 0..n {
+                delta += (next[v] - rank[v]).abs();
+                rank[v] = next[v];
+            }
+            if delta < tolerance {
+                break;
+            }
+        }
+
+        out[..count].copy_from_slice(&rank[..count]);
+        count
+    }
+
+    /// Exact / approximate subgraph isomorphism by bounded backtracking search.
+    ///
+    /// Finds injective mappings of the query `pattern` onto the data graph such
+    /// that every required pattern edge maps to a data edge (a directed
+    /// monomorphism). With `max_missing_edges > 0` the search also reports
+    /// approximate matches that miss up to that many required edges (recorded in
+    /// `SubgraphMatch::missing_edges`). Recursion depth is bounded by the pattern
+    /// size, so the call uses only fixed-size stack frames — no heap.
+    fn find_subgraph_isomorphisms(
+        &self,
+        pattern: &SubgraphPattern,
+        max_missing_edges: u8,
+        out: &mut [SubgraphMatch],
+    ) -> usize {
+        if pattern.node_count == 0
+            || pattern.node_count > MAX_SUBGRAPH_PATTERN_NODES
+            || pattern.node_count > self.node_count
+            || out.is_empty()
+        {
+            return 0;
+        }
+        let mut assign = [0usize; MAX_SUBGRAPH_PATTERN_NODES];
+        let mut used = [false; MAX_BOUNDED_GRAPH_ANALYSIS_NODES];
+        let mut written = 0usize;
+        self.match_subgraph(pattern, 0, 0, max_missing_edges, &mut assign, &mut used, out, &mut written);
+        written
+    }
+
+    #[allow(clippy::too_many_arguments)]
+    fn match_subgraph(
+        &self,
+        pattern: &SubgraphPattern,
+        depth: usize,
+        missing: u8,
+        max_missing_edges: u8,
+        assign: &mut [usize; MAX_SUBGRAPH_PATTERN_NODES],
+        used: &mut [bool; MAX_BOUNDED_GRAPH_ANALYSIS_NODES],
+        out: &mut [SubgraphMatch],
+        written: &mut usize,
+    ) {
+        if *written >= out.len() {
+            return;
+        }
+        if depth == pattern.node_count {
+            let mut m = SubgraphMatch {
+                mapping: [0; MAX_SUBGRAPH_PATTERN_NODES],
+                len: pattern.node_count as u16,
+                missing_edges: missing,
+            };
+            for (p, slot) in m.mapping.iter_mut().take(pattern.node_count).enumerate() {
+                *slot = self.node_ids[assign[p]];
+            }
+            out[*written] = m;
+            *written += 1;
+            return;
+        }
+
+        for candidate in 0..self.node_count {
+            if used[candidate] {
+                continue;
+            }
+            // Edge-consistency against already-assigned pattern nodes.
+            let mut local_missing = 0u8;
+            for prev in 0..depth {
+                let pd = assign[prev];
+                if pattern.adjacency[prev][depth] != 0 && self.adjacency[pd][candidate] == 0 {
+                    local_missing += 1;
+                }
+                if pattern.adjacency[depth][prev] != 0 && self.adjacency[candidate][pd] == 0 {
+                    local_missing += 1;
+                }
+            }
+            if missing + local_missing > max_missing_edges {
+                continue;
+            }
+            assign[depth] = candidate;
+            used[candidate] = true;
+            self.match_subgraph(
+                pattern,
+                depth + 1,
+                missing + local_missing,
+                max_missing_edges,
+                assign,
+                used,
+                out,
+                written,
+            );
+            used[candidate] = false;
+            if *written >= out.len() {
+                return;
+            }
+        }
+    }
 }
 
 /// Zero-heap topology analysis aligned with the 10D tensor hot-path constraints.
@@ -363,6 +571,51 @@ pub fn analyze_graph_topology_bounded(
         top_node_count: top_node_count as u16,
         graph_quin_count: graph_quin_count as u16,
     })
+}
+
+/// Zero-heap PageRank over an NQuin relation set (bounded path).
+///
+/// Builds the bounded adjacency from `quins`, runs power iteration with the given
+/// `damping` (typically 0.85), and writes node scores into `scores_out` aligned
+/// with first-seen subject/object order. Returns the number of scores written.
+/// `max_iters`/`tolerance` bound the iteration (e.g. 100 / 1e-6).
+pub fn pagerank_bounded(
+    quins: &[NQuin],
+    damping: f32,
+    max_iters: u32,
+    tolerance: f32,
+    node_ids_out: &mut [u64],
+    scores_out: &mut [f32],
+) -> Result<usize, GraphAnalysisError> {
+    if quins.len() > MAX_HEAP_GRAPH_ANALYSIS_QUINS {
+        return Err(GraphAnalysisError::InputTooLarge);
+    }
+    let graph = BoundedQualiaGraph::from_quins(quins)?;
+    let count = graph.calculate_pagerank(damping, max_iters, tolerance, scores_out);
+    if node_ids_out.len() < count {
+        return Err(GraphAnalysisError::OutputBufferFull);
+    }
+    node_ids_out[..count].copy_from_slice(&graph.node_ids[..count]);
+    Ok(count)
+}
+
+/// Zero-heap exact/approximate subgraph isomorphism over an NQuin relation set.
+///
+/// `max_missing_edges == 0` requires an exact directed monomorphism; a positive
+/// value also returns approximate matches missing up to that many pattern edges.
+/// Matches are written into `matches_out` (search stops when it fills). Returns
+/// the number of matches found.
+pub fn find_subgraph_isomorphisms_bounded(
+    quins: &[NQuin],
+    pattern: &SubgraphPattern,
+    max_missing_edges: u8,
+    matches_out: &mut [SubgraphMatch],
+) -> Result<usize, GraphAnalysisError> {
+    if quins.len() > MAX_HEAP_GRAPH_ANALYSIS_QUINS {
+        return Err(GraphAnalysisError::InputTooLarge);
+    }
+    let graph = BoundedQualiaGraph::from_quins(quins)?;
+    Ok(graph.find_subgraph_isomorphisms(pattern, max_missing_edges, matches_out))
 }
 
 /// Graph structure built from NQuin relations
@@ -925,5 +1178,82 @@ mod tests {
         assert_eq!(summary.motif_count, 1);
         assert!(summary.top_node_count >= 1);
         assert!(summary.density > 0.0);
+    }
+
+    #[test]
+    fn test_pagerank_sums_to_one_and_ranks_hub() {
+        // Star: 1→3, 2→3, 4→3 (node 3 is the sink hub) plus 3→1 to avoid a pure dangling.
+        let quins = vec![
+            NQuin { subject: 1, predicate: 1, object: 3, context: 0, metadata: 0, parity: 0 },
+            NQuin { subject: 2, predicate: 1, object: 3, context: 0, metadata: 0, parity: 0 },
+            NQuin { subject: 4, predicate: 1, object: 3, context: 0, metadata: 0, parity: 0 },
+            NQuin { subject: 3, predicate: 1, object: 1, context: 0, metadata: 0, parity: 0 },
+        ];
+        let mut ids = [0u64; 16];
+        let mut scores = [0f32; 16];
+        let count = pagerank_bounded(&quins, 0.85, 100, 1e-6, &mut ids, &mut scores).unwrap();
+        assert_eq!(count, 4);
+
+        // Probability distribution: scores sum to ~1.
+        let total: f32 = scores[..count].iter().sum();
+        assert!((total - 1.0).abs() < 1e-3, "pagerank should sum to 1, got {total}");
+
+        // Node 3 (the hub everyone points at) must rank highest.
+        let hub_pos = ids[..count].iter().position(|&id| id == 3).unwrap();
+        let hub_score = scores[hub_pos];
+        for i in 0..count {
+            if i != hub_pos {
+                assert!(hub_score > scores[i], "hub node 3 should outrank node {}", ids[i]);
+            }
+        }
+    }
+
+    #[test]
+    fn test_subgraph_isomorphism_exact_triangle() {
+        // Data graph contains a directed triangle 1→2→3→1 plus an extra edge.
+        let quins = vec![
+            NQuin { subject: 1, predicate: 1, object: 2, context: 0, metadata: 0, parity: 0 },
+            NQuin { subject: 2, predicate: 1, object: 3, context: 0, metadata: 0, parity: 0 },
+            NQuin { subject: 3, predicate: 1, object: 1, context: 0, metadata: 0, parity: 0 },
+            NQuin { subject: 3, predicate: 1, object: 4, context: 0, metadata: 0, parity: 0 },
+        ];
+        // Pattern: directed 3-cycle a→b→c→a.
+        let pattern = SubgraphPattern::new(3).with_edge(0, 1).with_edge(1, 2).with_edge(2, 0);
+        let mut matches = [SubgraphMatch { mapping: [0; MAX_SUBGRAPH_PATTERN_NODES], len: 0, missing_edges: 0 }; 16];
+        let n = find_subgraph_isomorphisms_bounded(&quins, &pattern, 0, &mut matches).unwrap();
+
+        // The directed 3-cycle has exactly 3 rotations of the same triangle.
+        assert_eq!(n, 3, "expected 3 rotations of the directed triangle");
+        for m in &matches[..n] {
+            assert_eq!(m.missing_edges, 0);
+            assert_eq!(m.len, 3);
+            // every matched node id is one of {1,2,3}, never the extra node 4
+            for &id in &m.mapping[..3] {
+                assert!(id == 1 || id == 2 || id == 3, "match included non-triangle node {id}");
+            }
+        }
+    }
+
+    #[test]
+    fn test_subgraph_isomorphism_approximate_allows_missing_edge() {
+        // Data graph has a path 1→2→3 but NOT the closing edge 3→1.
+        let quins = vec![
+            NQuin { subject: 1, predicate: 1, object: 2, context: 0, metadata: 0, parity: 0 },
+            NQuin { subject: 2, predicate: 1, object: 3, context: 0, metadata: 0, parity: 0 },
+        ];
+        let triangle = SubgraphPattern::new(3).with_edge(0, 1).with_edge(1, 2).with_edge(2, 0);
+        let mut matches = [SubgraphMatch { mapping: [0; MAX_SUBGRAPH_PATTERN_NODES], len: 0, missing_edges: 0 }; 16];
+
+        // Exact: no triangle exists.
+        let exact = find_subgraph_isomorphisms_bounded(&quins, &triangle, 0, &mut matches).unwrap();
+        assert_eq!(exact, 0);
+
+        // Approximate (allow 1 missing edge): the open path 1→2→3 matches with the
+        // 3→1 edge absent.
+        let approx = find_subgraph_isomorphisms_bounded(&quins, &triangle, 1, &mut matches).unwrap();
+        assert!(approx >= 1, "approximate match should find the open path");
+        assert!(matches[..approx].iter().any(|m| {
+            m.missing_edges == 1 && m.mapping[0] == 1 && m.mapping[1] == 2 && m.mapping[2] == 3
+        }));
     }
 }

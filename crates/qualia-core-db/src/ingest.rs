@@ -345,17 +345,20 @@ pub fn streaming_import_rdf(in_path: &str, out_path: &str) -> std::io::Result<u6
                     let subject = match triple.subject {
                         crate::modalities::logic::n3_parser::Term::Uri(s)
                         | crate::modalities::logic::n3_parser::Term::Variable(s)
-                        | crate::modalities::logic::n3_parser::Term::Literal(s) => s.to_string(),
+                        | crate::modalities::logic::n3_parser::Term::Literal(s)
+                        | crate::modalities::logic::n3_parser::Term::Formula(s) => s.to_string(),
                     };
                     let predicate = match triple.predicate {
                         crate::modalities::logic::n3_parser::Term::Uri(s)
                         | crate::modalities::logic::n3_parser::Term::Variable(s)
-                        | crate::modalities::logic::n3_parser::Term::Literal(s) => s.to_string(),
+                        | crate::modalities::logic::n3_parser::Term::Literal(s)
+                        | crate::modalities::logic::n3_parser::Term::Formula(s) => s.to_string(),
                     };
                     let object = match triple.object {
                         crate::modalities::logic::n3_parser::Term::Uri(s)
                         | crate::modalities::logic::n3_parser::Term::Variable(s)
-                        | crate::modalities::logic::n3_parser::Term::Literal(s) => s.to_string(),
+                        | crate::modalities::logic::n3_parser::Term::Literal(s)
+                        | crate::modalities::logic::n3_parser::Term::Formula(s) => s.to_string(),
                     };
                     let raw = RawTriple {
                         subject,

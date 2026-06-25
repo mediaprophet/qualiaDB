@@ -407,6 +407,101 @@ pub fn jaccard_similarity(a: &[u64], b: &[u64]) -> f32 {
     }
 }
 
+// ─── Phylogenetic tree construction (UPGMA, bounded memory) ────────────────────
+
+/// Maximum number of taxa (leaves) a single bounded UPGMA build admits. Bounding
+/// the taxon count keeps the working distance matrix on the stack — zero heap.
+pub const MAX_PHYLO_TAXA: usize = 64;
+
+/// One agglomeration event in a UPGMA tree: the two child cluster ids merged, the
+/// node height, and the id assigned to the new (parent) cluster. Leaves are
+/// `0..n`; internal nodes are numbered `n..2n-1` in merge order, so the last
+/// record's `merged_id` is the root.
+#[derive(Debug, Clone, Copy, PartialEq)]
+pub struct PhyloMerge {
+    pub cluster_a: u16,
+    pub cluster_b: u16,
+    pub height: f32,
+    pub merged_id: u16,
+}
+
+/// Build a UPGMA (Unweighted Pair Group Method with Arithmetic Mean) phylogenetic
+/// tree from a flattened `n×n` symmetric distance matrix (`distances[i*n + j]`).
+///
+/// Writes the `n-1` merge events into `out` (a rooted binary tree) and returns the
+/// count. UPGMA repeatedly joins the closest pair of clusters at height `d/2` and
+/// updates distances to the merged cluster as the size-weighted arithmetic mean.
+/// **Strictly bounded memory:** fixed `MAX_PHYLO_TAXA`-sized stack arrays, no heap,
+/// no recursion. Returns 0 if `n` is < 2 or exceeds `MAX_PHYLO_TAXA`, or if `out`
+/// is too small.
+pub fn build_upgma_tree(distances: &[f32], n: usize, out: &mut [PhyloMerge]) -> usize {
+    if n < 2 || n > MAX_PHYLO_TAXA || distances.len() < n * n || out.len() < n - 1 {
+        return 0;
+    }
+
+    // Working distance matrix between *clusters* (initialised from the leaf matrix).
+    let mut d = [[0f32; MAX_PHYLO_TAXA]; MAX_PHYLO_TAXA];
+    for i in 0..n {
+        for j in 0..n {
+            d[i][j] = distances[i * n + j];
+        }
+    }
+    let mut active = [true; MAX_PHYLO_TAXA];
+    let mut size = [1u32; MAX_PHYLO_TAXA];
+    let mut id = [0u16; MAX_PHYLO_TAXA]; // current cluster id occupying each slot
+    for (i, slot) in id.iter_mut().enumerate().take(n) {
+        *slot = i as u16;
+    }
+
+    let mut written = 0usize;
+    let mut next_id = n as u16;
+
+    for _ in 0..n - 1 {
+        // Closest active pair.
+        let mut best = f32::INFINITY;
+        let mut bi = 0usize;
+        let mut bj = 0usize;
+        for i in 0..n {
+            if !active[i] {
+                continue;
+            }
+            for j in (i + 1)..n {
+                if active[j] && d[i][j] < best {
+                    best = d[i][j];
+                    bi = i;
+                    bj = j;
+                }
+            }
+        }
+
+        out[written] = PhyloMerge {
+            cluster_a: id[bi],
+            cluster_b: id[bj],
+            height: best / 2.0, // UPGMA node height
+            merged_id: next_id,
+        };
+        written += 1;
+
+        // Merge bj into bi: size-weighted arithmetic mean of distances to every other
+        // active cluster, then retire bj.
+        let (si, sj) = (size[bi] as f32, size[bj] as f32);
+        for k in 0..n {
+            if k == bi || k == bj || !active[k] {
+                continue;
+            }
+            let merged = (si * d[bi][k] + sj * d[bj][k]) / (si + sj);
+            d[bi][k] = merged;
+            d[k][bi] = merged;
+        }
+        size[bi] += size[bj];
+        id[bi] = next_id;
+        active[bj] = false;
+        next_id += 1;
+    }
+
+    written
+}
+
 // ─── FASTA validation ─────────────────────────────────────────────────────────
 
 #[derive(Debug, Clone, PartialEq, Eq)]
@@ -845,5 +940,51 @@ mod tests {
         let a = vec![0x00000000FFFFFFFFu64];
         let b = vec![0xFFFFFFFF00000000u64];
         assert!((tanimoto_similarity(&a, &b)).abs() < 1e-6);
+    }
+
+    #[test]
+    fn upgma_builds_the_expected_nested_tree() {
+        // Two tight pairs (0,1) and (2,3) that are far from each other.
+        //       0  1  2  3
+        //   0 [ 0  2  6  6 ]
+        //   1 [ 2  0  6  6 ]
+        //   2 [ 6  6  0  4 ]
+        //   3 [ 6  6  4  0 ]
+        // UPGMA: join (0,1)@1, then (2,3)@2, then the two clusters @3.
+        #[rustfmt::skip]
+        let d = [
+            0.0, 2.0, 6.0, 6.0,
+            2.0, 0.0, 6.0, 6.0,
+            6.0, 6.0, 0.0, 4.0,
+            6.0, 6.0, 4.0, 0.0,
+        ];
+        let mut out = [PhyloMerge { cluster_a: 0, cluster_b: 0, height: 0.0, merged_id: 0 }; 8];
+        let n = build_upgma_tree(&d, 4, &mut out);
+        assert_eq!(n, 3, "n-1 merges for 4 taxa");
+
+        // First merge: leaves 0 and 1 at height 1, new cluster id 4.
+        assert_eq!((out[0].cluster_a, out[0].cluster_b), (0, 1));
+        assert!((out[0].height - 1.0).abs() < 1e-6);
+        assert_eq!(out[0].merged_id, 4);
+
+        // Second merge: leaves 2 and 3 at height 2, new cluster id 5.
+        assert_eq!((out[1].cluster_a, out[1].cluster_b), (2, 3));
+        assert!((out[1].height - 2.0).abs() < 1e-6);
+        assert_eq!(out[1].merged_id, 5);
+
+        // Root merge: clusters 4 and 5 at height 3 (avg cross distance 6 / 2).
+        assert_eq!((out[2].cluster_a, out[2].cluster_b), (4, 5));
+        assert!((out[2].height - 3.0).abs() < 1e-6);
+        assert_eq!(out[2].merged_id, 6, "last merged_id is the root");
+    }
+
+    #[test]
+    fn upgma_rejects_degenerate_input() {
+        let mut out = [PhyloMerge { cluster_a: 0, cluster_b: 0, height: 0.0, merged_id: 0 }; 8];
+        assert_eq!(build_upgma_tree(&[0.0], 1, &mut out), 0, "n<2 rejected");
+        // out too small for n-1 merges
+        let d = [0.0, 1.0, 1.0, 0.0];
+        let mut tiny = [PhyloMerge { cluster_a: 0, cluster_b: 0, height: 0.0, merged_id: 0 }; 0];
+        assert_eq!(build_upgma_tree(&d, 2, &mut tiny), 0, "undersized out rejected");
     }
 }

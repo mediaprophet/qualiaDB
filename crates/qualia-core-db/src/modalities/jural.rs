@@ -205,6 +205,89 @@ pub fn personhood_category_error(
     !crate::modalities::dl::check_subsumption_quin(holder_class, A_NATURAL_PERSON, tbox)
 }
 
+// ─── Multi-party jural chains (A's Power over B's Duty to C) ─────────────────────────
+
+/// Second-order **control** positions (Power/Liability/Immunity/Disability) are the only ones
+/// that can govern — alter, or be immune to alteration of — another agent's relations.
+#[inline]
+pub const fn is_second_order(pos: u8) -> bool {
+    matches!(pos, JURAL_POWER | JURAL_LIABILITY | JURAL_IMMUNITY | JURAL_DISABILITY)
+}
+
+/// A multi-party chain link: a second-order control relation `upstream` (held by A toward B)
+/// governs `downstream` (a relation held by B toward C). Valid iff `upstream` is a
+/// second-order position AND the pivot matches — A's counterparty (`upstream.object`) is the
+/// holder of the downstream relation (`downstream.subject`). Models "A has Power over B's
+/// Duty to C".
+pub fn jural_chain_links(upstream: &NQuin, downstream: &NQuin) -> bool {
+    is_second_order(jural_position(upstream.predicate))
+        && is_jural_position(jural_position(downstream.predicate))
+        && upstream.object == downstream.subject
+}
+
+/// The pivot party B of a valid chain link (`upstream.object == downstream.subject`), else `None`.
+pub fn jural_chain_pivot(upstream: &NQuin, downstream: &NQuin) -> Option<u64> {
+    if jural_chain_links(upstream, downstream) {
+        Some(upstream.object)
+    } else {
+        None
+    }
+}
+
+/// Confirm an ordered chain A→B→C→… is fully connected: every adjacent pair links. A single
+/// relation (or empty) is trivially valid. Zero-heap (slice windows, no allocation).
+pub fn jural_chain_valid(rels: &[NQuin]) -> bool {
+    rels.windows(2).all(|w| jural_chain_links(&w[0], &w[1]))
+}
+
+// ─── Rights-collision conflict resolution ───────────────────────────────────────────
+
+/// The outcome of resolving a collision between two jural relations.
+#[derive(Debug, Clone, Copy, PartialEq, Eq)]
+pub enum CollisionResolution {
+    /// `a` prevails — it is grounded in a non-derogable human right and `b` is not.
+    FirstPrevails,
+    /// `b` prevails — it is grounded in a non-derogable human right and `a` is not.
+    SecondPrevails,
+    /// A genuine proportionality conflict (both, or neither, non-derogable). Never
+    /// auto-flattened — routed to human review per the Curation Directive.
+    RequiresHumanReview,
+    /// The inputs do not actually collide.
+    NoCollision,
+}
+
+/// Two jural relations **collide** iff the same holder is assigned a position and its jural
+/// *opposite* over the same content within the same frame (e.g. a Duty to φ and a Privilege
+/// not to do φ) — a direct contradiction in that holder's normative position.
+pub fn jural_collision(a: &NQuin, b: &NQuin) -> bool {
+    a.subject == b.subject
+        && a.context == b.context
+        && is_jural_position(jural_position(a.predicate))
+        && jural_content(a.predicate) == jural_content(b.predicate)
+        && jural_opposite(jural_position(a.predicate)) == jural_position(b.predicate)
+}
+
+/// Resolve a rights collision. `a_nonderogable` / `b_nonderogable` mark whether each relation
+/// is grounded in a **non-derogable** human-rights instrument (the ingest non-derogable-set).
+/// A non-derogable right defeats a derogable counterpart; two non-derogable (or two derogable)
+/// positions in genuine conflict are **never auto-flattened** — they route to human review.
+/// The engine proposes; the human disposes.
+pub fn resolve_collision(
+    a: &NQuin,
+    b: &NQuin,
+    a_nonderogable: bool,
+    b_nonderogable: bool,
+) -> CollisionResolution {
+    if !jural_collision(a, b) {
+        return CollisionResolution::NoCollision;
+    }
+    match (a_nonderogable, b_nonderogable) {
+        (true, false) => CollisionResolution::FirstPrevails,
+        (false, true) => CollisionResolution::SecondPrevails,
+        _ => CollisionResolution::RequiresHumanReview,
+    }
+}
+
 #[cfg(test)]
 mod tests {
     use super::*;
@@ -295,5 +378,47 @@ mod tests {
         assert!(!personhood_category_error(corp, false, JURAL_CLAIM, &tbox));
         // A Duty (burden, not benefit) borne by a CorporatePerson → never a category error.
         assert!(!personhood_category_error(corp, true, JURAL_DUTY, &tbox));
+    }
+
+    #[test]
+    fn multi_party_chain_a_power_over_b_duty_to_c() {
+        let (a, b, c, frame) = (q_hash("A"), q_hash("B"), q_hash("C"), q_hash("frame"));
+        let content = q_hash("q42:performService");
+        // A holds a Power toward B; B holds a Duty toward C.
+        let a_power = compile_jural_quin(a, JURAL_POWER, content, b, frame);
+        let b_duty = compile_jural_quin(b, JURAL_DUTY, content, c, frame);
+        assert!(jural_chain_links(&a_power, &b_duty), "A's power over B governs B's duty to C");
+        assert_eq!(jural_chain_pivot(&a_power, &b_duty), Some(b), "the pivot is B");
+        assert!(jural_chain_valid(&[a_power, b_duty]));
+
+        // A first-order Claim cannot be the governing upstream (not a control position).
+        let a_claim = compile_jural_quin(a, JURAL_CLAIM, content, b, frame);
+        assert!(!jural_chain_links(&a_claim, &b_duty));
+        // Broken pivot: B's duty is toward C, but the downstream is held by someone else.
+        let x_duty = compile_jural_quin(q_hash("X"), JURAL_DUTY, content, c, frame);
+        assert!(!jural_chain_links(&a_power, &x_duty));
+        assert_eq!(jural_chain_pivot(&a_power, &x_duty), None);
+    }
+
+    #[test]
+    fn colliding_rights_resolve_by_non_derogability_else_human_review() {
+        let (holder, cp, frame) = (q_hash("holder"), q_hash("counter"), q_hash("frame"));
+        let content = q_hash("q42:speak");
+        // Holder has a Duty to φ AND (from another source) a Privilege not to do φ — opposites.
+        let duty = compile_jural_quin(holder, JURAL_DUTY, content, cp, frame);
+        let privilege = compile_jural_quin(holder, JURAL_PRIVILEGE, content, cp, frame);
+        assert!(jural_collision(&duty, &privilege), "Duty vs Privilege over same content = collision");
+
+        // The non-derogable right prevails over the derogable one.
+        assert_eq!(resolve_collision(&duty, &privilege, true, false), CollisionResolution::FirstPrevails);
+        assert_eq!(resolve_collision(&duty, &privilege, false, true), CollisionResolution::SecondPrevails);
+        // Both (or neither) non-derogable → genuine proportionality conflict → human review, never flattened.
+        assert_eq!(resolve_collision(&duty, &privilege, true, true), CollisionResolution::RequiresHumanReview);
+        assert_eq!(resolve_collision(&duty, &privilege, false, false), CollisionResolution::RequiresHumanReview);
+
+        // No collision when positions are not opposites (Duty vs Duty).
+        let duty2 = compile_jural_quin(holder, JURAL_DUTY, content, cp, frame);
+        assert!(!jural_collision(&duty, &duty2));
+        assert_eq!(resolve_collision(&duty, &duty2, true, false), CollisionResolution::NoCollision);
     }
 }

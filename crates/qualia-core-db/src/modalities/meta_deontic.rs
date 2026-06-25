@@ -88,6 +88,58 @@ pub fn endorsement_credential(
     }
 }
 
+// ─── Court-admissible evidence package compilation ────────────────────────────────
+
+/// A compiled, court-admissible evidence package: the breach `record`, the `provenance`
+/// instrument it is anchored to, and the human `endorsement` (the Curation-Directive attestation).
+/// Bundles the three artefacts a tribunal needs into one structure.
+#[derive(Debug, Clone)]
+pub struct EvidencePackage {
+    pub record: NQuin,
+    pub provenance: u64,
+    pub endorsement: Credential,
+}
+
+/// Compile a court-admissible evidence package from a `Violated` verdict: build the breach record,
+/// anchor it to its `instrument` (provenance), and wrap it as an endorsement credential by
+/// `endorser` (the human attestor). `None` if the verdict is not a violation (nothing to compile).
+/// The package is then SIGNED by the identity layer (`verifiable_credential::issue`) — the engine
+/// never holds keys.
+pub fn compile_evidence_package(
+    verdict: &DeonticVerdict,
+    instrument: u64,
+    endorser: u64,
+    subject: u64,
+    now: u32,
+    valid_until: u32,
+) -> Option<EvidencePackage> {
+    let record = build_breach_record(verdict, instrument, now)?;
+    let endorsement = endorsement_credential(record, endorser, subject, now, valid_until);
+    Some(EvidencePackage { record, provenance: instrument, endorsement })
+}
+
+// ─── Cross-jurisdictional meta-norm translation ───────────────────────────────────
+
+/// Translate a norm's content across jurisdictions via a `mapping` of `(source, target)` content
+/// rows — e.g. mapping an ICCPR Article-7 prohibition to the equivalent domestic-statute
+/// provision. Gated by the Curation Directive: a mapping is applied only if `attested` (a human
+/// ratifies the cross-jurisdictional equivalence). Returns the translated norm (content remapped),
+/// or `None` if unmapped/unattested.
+pub fn translate_norm_across_jurisdictions(
+    norm: &NQuin,
+    mapping: &[(u64, u64)],
+    attested: bool,
+) -> Option<NQuin> {
+    if !attested {
+        return None;
+    }
+    let target = mapping.iter().find(|(src, _)| *src == norm.object).map(|(_, t)| *t)?;
+    let mut out = *norm;
+    out.object = target;
+    out.parity = out.subject ^ out.predicate ^ out.object ^ out.context;
+    Some(out)
+}
+
 #[cfg(test)]
 mod tests {
     use super::*;
@@ -172,5 +224,46 @@ mod tests {
         );
         tampered.claims[0].object ^= 0x1;
         assert!(verify(&tampered, &sk.verifying_key(), &sig, 1500).is_err(), "tampered endorsement fails");
+    }
+
+    #[test]
+    fn evidence_package_compiles_only_for_violations() {
+        let party = q_hash("did:state");
+        let content = q_hash("q42:provideRemedy");
+        let instrument = q_hash("instrument:iccpr");
+        let endorser = q_hash("did:human:adjudicator");
+
+        let pkg = compile_evidence_package(&violated_verdict(party, content), instrument, endorser, party, 1000, 2000)
+            .expect("a violation compiles a package");
+        assert_eq!(pkg.provenance, instrument);
+        assert_eq!(pkg.record.subject, party);
+        assert_eq!(pkg.endorsement.issuer, endorser);
+        assert_eq!(pkg.endorsement.claims.len(), 1, "the breach record is the endorsed claim");
+
+        // A non-violation compiles nothing.
+        let mut active = violated_verdict(party, content);
+        active.status = DeonticStatus::Active;
+        assert!(compile_evidence_package(&active, instrument, endorser, party, 1000, 2000).is_none());
+    }
+
+    #[test]
+    fn cross_jurisdictional_translation_honours_attestation() {
+        let party = q_hash("did:state");
+        let iccpr_art7 = q_hash("iccpr:art7");
+        let domestic = q_hash("au:crimes-act:s274");
+        let mut norm = NQuin { subject: party, predicate: q_hash("q42:forbids"), object: iccpr_art7, context: 0, metadata: 0, parity: 0 };
+        norm.parity = norm.subject ^ norm.predicate ^ norm.object ^ norm.context;
+        let mapping = [(iccpr_art7, domestic)];
+
+        // Attested + mapped → content remapped to the domestic provision.
+        let t = translate_norm_across_jurisdictions(&norm, &mapping, true).expect("attested mapping applies");
+        assert_eq!(t.object, domestic);
+        assert_eq!(t.parity, t.subject ^ t.predicate ^ t.object ^ t.context);
+        // Unattested → None (no machine-flattening across jurisdictions).
+        assert!(translate_norm_across_jurisdictions(&norm, &mapping, false).is_none());
+        // Unmapped content → None.
+        let mut other = norm;
+        other.object = q_hash("iccpr:art9");
+        assert!(translate_norm_across_jurisdictions(&other, &mapping, true).is_none());
     }
 }

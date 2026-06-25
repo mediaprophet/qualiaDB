@@ -715,15 +715,16 @@ Dung-style Abstract Argumentation Framework. `ARGUMENT_BIT` (bit 55), `ATTACK_BI
 
 ### Calculus (`modalities/calculus/`)
 
-Zero-heap numerical computation split across a host/GPU/CUDA triad:
+Zero-heap numerical computation split across a host/GPU split — **vendor-neutral** (portable `wgpu`, no CUDA):
 
 | File | Contents |
 |---|---|
 | `host.rs` | `MmapGridManager` — memory-mapped grid data; feeds chunked slices to GPU kernel |
-| `gpu.rs` | WGSL compute dispatch for numerical integration |
-| `cuda_bridge.rs` | CUDA GPUDirect Storage bridge (Linux + NVIDIA only; feature `cuda_gds`) |
+| `gpu.rs` | WGSL compute dispatch for numerical integration (portable `wgpu`: Vulkan / DX12 / Metal / WebGPU) |
+| `hetero_dispatch.rs` | Vendor-neutral heterogeneous dispatch + storage/precision policy (replaced the removed CUDA/cuFile `cuda_bridge.rs`): zero-copy strategy, GPU/NPU/CPU fallback + VRAM tiling, stream-fusion planning, mixed-precision selection |
 | `ode_solver.rs` | RK4 step function operating on mmap'd grid slices |
-| `tensor_provenance.rs` | Provenance NQuin annotation for tensor computation results |
+| `ode_advanced.rs` | Symplectic (Verlet/Ruth3/Yoshida4), stiff BDF, dense output, forward sensitivity |
+| `tensor_provenance.rs` / `tensor_integrity.rs` | Provenance NQuin annotation + append-only tamper-evident BLAKE3 lineage |
 
 ### Control Feedback (`modalities/control_feedback.rs`)
 

@@ -482,6 +482,7 @@ fn term_uri_hash(term: &Term) -> Option<u64> {
     match term {
         Term::Uri(uri) => Some(q_hash(uri)),
         Term::Literal(lit) => Some(q_hash(lit)),
+        Term::Formula(s) => Some(crate::modalities::logic::n3_parser::q_hash_formula(s)),
         Term::Variable(_) => None,
     }
 }
@@ -531,6 +532,11 @@ pub fn compile_n3_rule_to_norm(
     contract_hash: u64,
     expiry_unix32: u32,
 ) -> Option<NQuin> {
+    // `triples` is a fixed `[_; 8]` array, so `.first()` is always `Some`; an
+    // empty rule must be rejected on `len`, not on `.first()`.
+    if rule.premise.len == 0 {
+        return None;
+    }
     let premise = rule.premise.triples.first()?;
     let party = premise.subject.as_u64();
     let property_path = premise.predicate.as_u64();
@@ -730,11 +736,161 @@ fn has_active_norm(norms: &[NQuin], party: u64, action: u64, opcode: u8) -> bool
     })
 }
 
+// ─── Norm-conflict resolution (proportionality + human-rights priority) ──────────
+
+/// Do two deontic OPCODES conflict — an obligation/permission to do φ vs a prohibition of φ?
+pub fn opcodes_conflict(a: u8, b: u8) -> bool {
+    let permits = |op: u8| op == OP_OBLIGATE || op == OP_PERMIT;
+    (permits(a) && b == OP_FORBID) || (permits(b) && a == OP_FORBID)
+}
+
+/// Do two norms CONFLICT — same party (`subject`) over the same action (`object`), with
+/// deontically opposed opcodes? Active (non-defeater) norms only.
+pub fn norms_conflict(a: &NQuin, b: &NQuin) -> bool {
+    a.predicate & DEFEATER_BIT == 0
+        && b.predicate & DEFEATER_BIT == 0
+        && a.subject == b.subject
+        && a.object == b.object
+        && opcodes_conflict(extract_deontic_opcode(a.predicate), extract_deontic_opcode(b.predicate))
+}
+
+/// The outcome of resolving a norm conflict.
+#[derive(Debug, Clone, Copy, PartialEq, Eq)]
+pub enum NormResolution {
+    /// The first norm prevails.
+    FirstPrevails,
+    /// The second norm prevails.
+    SecondPrevails,
+    /// A genuine conflict — routed to human review (never auto-flattened).
+    RequiresHumanReview,
+}
+
+/// Resolve a norm conflict by, in strict order:
+///  1. **Non-derogable human-rights priority** — a norm grounded in a non-derogable instrument
+///     defeats a derogable one (never weaken a non-derogable principle).
+///  2. **Proportionality** — if neither/both are non-derogable, the norm whose action is
+///     *proportionate* (`legal_compose::proportionality_met`: marginal harm < advantage) prevails
+///     over a disproportionate one.
+///  3. Otherwise **human review** — a contested norm is never auto-flattened.
+///
+/// `a_proportionate`/`b_proportionate` are the proportionality verdicts (`None` = unmodelled).
+pub fn resolve_norm_conflict(
+    a_nonderogable: bool,
+    b_nonderogable: bool,
+    a_proportionate: Option<bool>,
+    b_proportionate: Option<bool>,
+) -> NormResolution {
+    match (a_nonderogable, b_nonderogable) {
+        (true, false) => return NormResolution::FirstPrevails,
+        (false, true) => return NormResolution::SecondPrevails,
+        _ => {}
+    }
+    match (a_proportionate, b_proportionate) {
+        (Some(true), Some(false)) => NormResolution::FirstPrevails,
+        (Some(false), Some(true)) => NormResolution::SecondPrevails,
+        _ => NormResolution::RequiresHumanReview,
+    }
+}
+
+// ─── Permissions as non-fungible cryptographic constraints ──────────────────────
+
+/// A collision-resistant (BLAKE3) fingerprint over a Quin's six fields — the cryptographic
+/// binding anchor. Changing any field changes the fingerprint.
+pub fn nquin_binding_hash(q: &NQuin) -> u64 {
+    let mut bytes = [0u8; 48];
+    bytes[0..8].copy_from_slice(&q.subject.to_le_bytes());
+    bytes[8..16].copy_from_slice(&q.predicate.to_le_bytes());
+    bytes[16..24].copy_from_slice(&q.object.to_le_bytes());
+    bytes[24..32].copy_from_slice(&q.context.to_le_bytes());
+    bytes[32..40].copy_from_slice(&q.metadata.to_le_bytes());
+    bytes[40..48].copy_from_slice(&q.parity.to_le_bytes());
+    let h = blake3::hash(&bytes);
+    u64::from_le_bytes(h.as_bytes()[..8].try_into().unwrap())
+}
+
+/// Compile a permission into a **non-fungible cryptographic constraint** bound to a *specific*
+/// target nquin: the constraint carries, in `context`, a BLAKE3 binding to `target`, so the
+/// permission cannot be detached and reused for a different nquin — it travels persistently with
+/// that exact one. The identity layer SIGNS this envelope (the engine never holds keys — see
+/// `meta_deontic::endorsement_credential`); this constructs the bound, verifiable constraint.
+pub fn compile_permission_constraint(action: u64, principal: u64, target: &NQuin) -> NQuin {
+    let binding = nquin_binding_hash(target);
+    let mut c = NQuin {
+        subject: principal,
+        predicate: OP_PERMIT as u64,
+        object: action,
+        context: binding,
+        metadata: 0,
+        parity: 0,
+    };
+    c.parity = c.subject ^ c.predicate ^ c.object ^ c.context;
+    c
+}
+
+/// Verify that a permission `constraint` is bound to `target` (the non-fungibility check): its
+/// `context` binding must match `target`'s current fingerprint. Tampering with `target`, or moving
+/// the constraint to a different nquin, breaks the binding.
+pub fn permission_binds_to(constraint: &NQuin, target: &NQuin) -> bool {
+    constraint.context == nquin_binding_hash(target)
+}
+
 // ─── Tests ────────────────────────────────────────────────────────────────────
 
 #[cfg(test)]
 mod tests {
     use super::*;
+
+    #[test]
+    fn norm_conflict_detection_and_proportional_resolution() {
+        let party = q_hash("did:party");
+        let action = q_hash("act:disclose");
+        let mk = |op: u8| {
+            let mut q = NQuin { subject: party, predicate: op as u64, object: action, context: 0, metadata: 0, parity: 0 };
+            q.parity = q.subject ^ q.predicate ^ q.object ^ q.context;
+            q
+        };
+        // Obligate-disclose vs Forbid-disclose for the same party/action → conflict.
+        assert!(norms_conflict(&mk(OP_OBLIGATE), &mk(OP_FORBID)));
+        assert!(opcodes_conflict(OP_PERMIT, OP_FORBID));
+        // Two obligations don't conflict; different actions don't.
+        assert!(!norms_conflict(&mk(OP_OBLIGATE), &mk(OP_OBLIGATE)));
+        let mut other = mk(OP_FORBID);
+        other.object = q_hash("act:other");
+        assert!(!norms_conflict(&mk(OP_OBLIGATE), &other));
+
+        // Resolution: non-derogable beats derogable.
+        assert_eq!(resolve_norm_conflict(true, false, None, None), NormResolution::FirstPrevails);
+        assert_eq!(resolve_norm_conflict(false, true, None, None), NormResolution::SecondPrevails);
+        // Neither non-derogable → proportionality decides.
+        assert_eq!(resolve_norm_conflict(false, false, Some(true), Some(false)), NormResolution::FirstPrevails);
+        assert_eq!(resolve_norm_conflict(false, false, Some(false), Some(true)), NormResolution::SecondPrevails);
+        // Both non-derogable, or proportionality unmodelled → human review.
+        assert_eq!(resolve_norm_conflict(true, true, None, None), NormResolution::RequiresHumanReview);
+        assert_eq!(resolve_norm_conflict(false, false, None, None), NormResolution::RequiresHumanReview);
+    }
+
+    #[test]
+    fn permission_is_non_fungibly_bound_to_its_nquin() {
+        let principal = q_hash("did:principal");
+        let action = q_hash("act:read");
+        let mut target = NQuin { subject: q_hash("doc:42"), predicate: q_hash("q42:hasContent"), object: q_hash("blob:abc"), context: 7, metadata: 0, parity: 0 };
+        target.parity = target.subject ^ target.predicate ^ target.object ^ target.context;
+
+        let c = compile_permission_constraint(action, principal, &target);
+        assert!(permission_binds_to(&c, &target), "the permission binds to its target nquin");
+        assert_eq!(extract_deontic_opcode(c.predicate), OP_PERMIT);
+
+        // Tampering with the target breaks the binding (non-fungible / tamper-evident).
+        let mut tampered = target;
+        tampered.object ^= 0x1;
+        assert!(!permission_binds_to(&c, &tampered), "any edit to the target breaks the binding");
+
+        // The constraint cannot be reused for a DIFFERENT nquin.
+        let mut other = target;
+        other.subject = q_hash("doc:99");
+        other.parity = other.subject ^ other.predicate ^ other.object ^ other.context;
+        assert!(!permission_binds_to(&c, &other), "permission is not fungible across nquins");
+    }
     use crate::q_hash;
 
     #[test]

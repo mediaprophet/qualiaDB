@@ -66,9 +66,133 @@ pub fn accountability_vacuum(harm_occurred: bool, has_accountable_natural_person
     harm_occurred && !has_accountable_natural_person
 }
 
+// ─── Moral responsibility: blameworthiness / praiseworthiness ─────────────────────
+
+/// The moral appraisal of an agent's act.
+#[derive(Debug, Clone, Copy, PartialEq, Eq)]
+pub enum MoralAppraisal {
+    /// Culpable for a bad outcome — degree scales with causal share.
+    Blameworthy(u8),
+    /// Creditable for a good outcome.
+    Praiseworthy(u8),
+    /// No moral weight (no causal contribution).
+    Neutral,
+    /// Caused the outcome but EXCUSED (lacked capacity, involuntary, or no culpable mind).
+    Excused,
+}
+
+/// Appraise moral responsibility. Blame/praise require a non-zero `causal_degree`, a `voluntary`
+/// act, and `has_capacity` (the §18 capacity gate carries into moral responsibility — an agent
+/// who lacked capacity or acted involuntarily is EXCUSED). `good_outcome` sets the valence;
+/// blame additionally requires a `culpable_mind` (intent or recklessness — a mere accident with a
+/// bad outcome is excused). Degree scales with the agent's causal share.
+pub fn appraise(
+    causal_degree: u8,
+    good_outcome: bool,
+    voluntary: bool,
+    has_capacity: bool,
+    culpable_mind: bool,
+) -> MoralAppraisal {
+    if causal_degree == 0 {
+        return MoralAppraisal::Neutral;
+    }
+    if !voluntary || !has_capacity {
+        return MoralAppraisal::Excused;
+    }
+    if good_outcome {
+        MoralAppraisal::Praiseworthy(causal_degree)
+    } else if culpable_mind {
+        MoralAppraisal::Blameworthy(causal_degree)
+    } else {
+        MoralAppraisal::Excused // bad outcome but no culpable mind → a mere accident
+    }
+}
+
+// ─── Causal contribution vectors (degree of responsibility) ───────────────────────
+
+/// Degree of responsibility = an agent's causal `contribution` as a share of the `total` causal
+/// weight of all contributors, in `[0,1]`. `0.0` if `total` is 0.
+pub fn degree_of_responsibility(contribution: u32, total: u32) -> f32 {
+    if total == 0 {
+        0.0
+    } else {
+        contribution as f32 / total as f32
+    }
+}
+
+/// Normalise a vector of causal `contributions` into responsibility shares, written into `out`
+/// (parallel; sums to 1.0). Returns `false` if all-zero or `out` is too small. Zero-heap.
+pub fn responsibility_shares(contributions: &[u32], out: &mut [f32]) -> bool {
+    let total: u32 = contributions.iter().sum();
+    if total == 0 || out.len() < contributions.len() {
+        return false;
+    }
+    for (i, &c) in contributions.iter().enumerate() {
+        out[i] = c as f32 / total as f32;
+    }
+    true
+}
+
+// ─── Doctrine of double effect (intention vs foresight) ───────────────────────────
+
+/// **Doctrine of Double Effect**: an act with a foreseen-but-unintended bad side effect is
+/// permissible iff ALL four conditions hold:
+///  1. the act itself is not wrong (`act_permissible`);
+///  2. the bad effect is NOT intended, only foreseen (`!bad_intended`);
+///  3. the bad effect is NOT the means to the good (`!bad_is_means`);
+///  4. proportionality — the good is not outweighed by the bad (`proportionate`).
+pub fn double_effect_permissible(
+    act_permissible: bool,
+    bad_intended: bool,
+    bad_is_means: bool,
+    proportionate: bool,
+) -> bool {
+    act_permissible && !bad_intended && !bad_is_means && proportionate
+}
+
 #[cfg(test)]
 mod tests {
     use super::*;
+
+    #[test]
+    fn moral_appraisal_blame_praise_excuse() {
+        // Good outcome, voluntary, capable → praiseworthy (degree = causal share).
+        assert_eq!(appraise(200, true, true, true, false), MoralAppraisal::Praiseworthy(200));
+        // Bad outcome + culpable mind, voluntary, capable → blameworthy.
+        assert_eq!(appraise(150, false, true, true, true), MoralAppraisal::Blameworthy(150));
+        // Bad outcome but NO culpable mind → mere accident → excused.
+        assert_eq!(appraise(150, false, true, true, false), MoralAppraisal::Excused);
+        // No capacity, or involuntary → excused regardless of outcome.
+        assert_eq!(appraise(150, false, true, false, true), MoralAppraisal::Excused);
+        assert_eq!(appraise(150, false, false, true, true), MoralAppraisal::Excused);
+        // No causal contribution → neutral.
+        assert_eq!(appraise(0, false, true, true, true), MoralAppraisal::Neutral);
+    }
+
+    #[test]
+    fn causal_contribution_vectors() {
+        assert!((degree_of_responsibility(3, 12) - 0.25).abs() < 1e-6);
+        assert_eq!(degree_of_responsibility(1, 0), 0.0);
+        let mut out = [0.0f32; 3];
+        assert!(responsibility_shares(&[1, 2, 1], &mut out));
+        assert!((out[0] - 0.25).abs() < 1e-6 && (out[1] - 0.5).abs() < 1e-6);
+        assert!((out[0] + out[1] + out[2] - 1.0).abs() < 1e-6);
+        assert!(!responsibility_shares(&[0, 0], &mut out)); // all-zero refuses
+    }
+
+    #[test]
+    fn double_effect_requires_all_four_conditions() {
+        // Permissible act, bad foreseen-not-intended, not a means, proportionate → permissible.
+        assert!(double_effect_permissible(true, false, false, true));
+        // Bad effect intended → impermissible.
+        assert!(!double_effect_permissible(true, true, false, true));
+        // Bad effect is the means to the good → impermissible.
+        assert!(!double_effect_permissible(true, false, true, true));
+        // Disproportionate → impermissible.
+        assert!(!double_effect_permissible(true, false, false, false));
+        // The act itself wrong → impermissible.
+        assert!(!double_effect_permissible(false, false, false, true));
+    }
 
     #[test]
     fn allegation_is_not_a_fact_until_adjudicated() {

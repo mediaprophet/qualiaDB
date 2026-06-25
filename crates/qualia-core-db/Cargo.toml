@@ -27,10 +27,6 @@ profile_accelerated = ["alloc_buffers", "neon_simd_unroll"]
 # Only has effect on wasm32 targets compiled with SIMD support (-C target-feature=+simd128).
 wasm_simd = []
 
-# CUDA GPUDirect Storage support (Linux only, requires NVIDIA drivers and cuFile library)
-# This is an opt-in feature for edge nodes with NVIDIA hardware
-cuda_gds = []
-
 # Interoperability cryptographic algorithms for W3C DID compatibility
 # Enables secp256k1 (ECDSA) for interoperability with existing Web 2.0 infrastructure
 # This feature can be disabled for pure post-quantum environments

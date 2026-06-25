@@ -182,3 +182,33 @@ Timothy**. Before writing ANY code, every instrument — *including the LLM-lane
 
 The full protocol (notice format, anti-competition rules, who arbitrates) is
 [`WORK_ALLOCATION_PLAN.md`](WORK_ALLOCATION_PLAN.md) §6.
+
+## 11. Big file → library with a sub-directory (PROJECT RULE — Timothy, 2026-06-25)
+
+**When a source file is going to become big, make it a library with a sub-directory** — do not let a
+single `.rs` keep growing. Convert `foo.rs` into `foo/mod.rs` plus focused submodules
+(`foo/<concern>.rs`), each a cohesive unit with its own tests. The public module path
+(`crate::…::foo::*`) is preserved by `mod.rs`, so this is a safe, non-breaking refactor.
+
+- **Threshold:** if a file is heading past ~400–500 lines, or already mixes several distinct concerns,
+  split it. Prefer doing this *as* you add the code, not after it sprawls.
+- **Each submodule owns its `#[cfg(test)]`.** `mod.rs` re-exports the public surface and wires submodules.
+- Applies to every crate. This keeps modules reviewable and keeps "is this library complete?" answerable
+  per-concern instead of by scrolling one 1500-line file.
+- **Refinement (Timothy, 2026-06-25):** the PRIORITY is full implementation **without creating new
+  monolithic files** — split *as you go* for the modality libraries you are actively building out (e.g.
+  `abductive/`, `argumentation/`). **Pre-existing monoliths** (e.g. `deontic.rs`, `graph_theory.rs`) and any
+  split that would be a risky refactor mid-feature are **deferred to a dedicated "library-ization" pass run
+  once everything is working** — that pass also resolves items that couldn't be done otherwise. Do not
+  block a full implementation on a split; flag the file and move on.
+
+## 12. Completeness bar (PROJECT RULE — Timothy, 2026-06-25)
+
+**Fully implement. Do not skip "hard" progress and dress the gap up as an honest follow-up.** The
+acceptance test for any library/module is: *an independent reviewer asked "is this complete?" answers
+**yes***. A `// TODO`, an `⚑ honest follow-up`, or a `◑ partial` left in place of real work is a
+**failure of the task**, not a virtue. If something genuinely cannot be done by the agent (it needs an
+out-of-band decision or datum only Timothy can supply — e.g. sensitive vocabulary he reserves the right
+to coin), that is the *only* allowed reason to defer, and it must be surfaced as a single crisp ask, not
+buried. Measurement honesty (don't claim done when it isn't) and this completeness bar are the same
+coin: say what's true, and make what's true be "done."
