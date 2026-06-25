@@ -475,3 +475,30 @@ asks unchanged: guardianship vocabulary (capacity.rs); asp CDNL (leave `[~]` or 
 
 **Next step:** DOMAINS section (next files in `domains/`), triaging the boilerplate-mismatch per §0 — unless
 you redirect.
+
+## 13 — SHACL identity extensions wired to the MCP tool surface (2026-06-25)
+
+**Step / phase:** correcting an incompleteness in the §10 shacl_extensions work — `done`.
+
+**What prompted it:** Timothy asked "did you fully update the shacl extensions surface to support the use of
+the tools?" Honest answer was **no** — `identity.rs` had the validators + tests + TTL and was re-exported, but
+**nothing could invoke them through a tool**. The config shapes reach the VM via `shacl_extension_bridge.rs`;
+the identity capabilities reached nothing. A capability no tool can call isn't complete.
+
+**What was built (`d5166cc9b`):** 4 MCP tools (descriptor + dispatch + execute + stub-impl, the established
+pattern) marshalling JSON args into the zero-heap validators: `validate_enumerated_identity`,
+`shacl_credential_gate`, `shacl_degrade_violations`, `shacl_route`. 4 round-trip tool tests + the 7 identity
+validator tests green; `mcp_server` `tools/list` registry-consistency tests still pass (53→57 tools).
+
+**Deliberate non-wiring (honest):** NOT added to `shacl_extension_bridge.rs` (the VM opcode stream) — the rich
+identity validation (collapse rejection, noisy-OR confidence, VC gating) can't be faithfully reduced to the
+bridge's `CheckMinCount` opcodes; a 2-opcode shadow would misrepresent it. The MCP tools + the
+directly-callable validators are the honest tool surface. VM-firewall enforcement via new `Native*` opcodes is
+a separate, optional build if you want the Sentinel to enforce identity shapes inline.
+
+**⚑ Where I need the human:** one direction call — do you want identity shapes **also** enforced by the VM
+firewall (new `Native*` opcodes + `webizen.rs` handlers), or are the MCP tools + validators the right surface?
+(My read: MCP tools are what "support the use of the tools" means; firewall enforcement is a heavier, separate
+concern.) Other open asks unchanged (guardianship vocab; asp CDNL).
+
+**Next step:** back to the DOMAINS section unless you redirect.
