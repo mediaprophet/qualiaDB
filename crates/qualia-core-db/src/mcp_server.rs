@@ -162,6 +162,26 @@ fn stable_mcp_tools() -> &'static [McpToolDescriptor] {
             input_schema: r#"{"type":"object","required":["quins","target_subject","target_property","constraints"],"properties":{"quins":{"type":"array"},"target_subject":{"type":"integer"},"target_property":{"type":"integer"},"constraints":{"type":"array"}}}"#,
         },
         McpToolDescriptor {
+            name: "validate_enumerated_identity",
+            description: "SHACL identity extension: validate an identity as an enumerated state over multiple cryptographically-attested identifiers. A binding asserting certainty (confidence>=1.0) is rejected as a DefinitiveCollapse — identity must stay a confidence-relation (the out-of-band remainder). Returns verdict + distinct/attested counts + noisy-OR aggregate confidence.",
+            input_schema: r#"{"type":"object","required":["bindings"],"properties":{"bindings":{"type":"array","items":{"type":"object","properties":{"identifier":{"type":"integer"},"scheme":{"type":"string"},"attested":{"type":"boolean"},"confidence":{"type":"number"}}}},"min_distinct":{"type":"integer"},"min_attested":{"type":"integer"}}}"#,
+        },
+        McpToolDescriptor {
+            name: "shacl_credential_gate",
+            description: "SHACL identity extension: decide whether a verified W3C Verifiable Credential gates a SHACL target node — applies only if the credential's subject is the focus node, the issuer is accepted, and it carries the required claim. (Verify the VC signature/expiry via the identity layer first.)",
+            input_schema: r#"{"type":"object","required":["focus_node","gate","credential"],"properties":{"focus_node":{"type":"integer"},"gate":{"type":"object"},"credential":{"type":"object"}}}"#,
+        },
+        McpToolDescriptor {
+            name: "shacl_degrade_violations",
+            description: "SHACL identity extension: real-time severity degradation — off-grid, non-Critical violations degrade to non-blocking so a partial subgraph stays usable; Critical fails closed. Returns blocking/degraded counts and whether the subgraph is usable.",
+            input_schema: r#"{"type":"object","required":["violations"],"properties":{"violations":{"type":"array"},"mode":{"type":"string"}}}"#,
+        },
+        McpToolDescriptor {
+            name: "shacl_route",
+            description: "SHACL identity extension: decentralized shape-target routing — given shape->locus routes, enumerate the shapes that apply at a query_locus, or the loci a query_shape must be dispatched to (validation goes to the data, no central aggregation).",
+            input_schema: r#"{"type":"object","required":["routes"],"properties":{"routes":{"type":"array"},"query_locus":{"type":"integer"},"query_shape":{"type":"integer"}}}"#,
+        },
+        McpToolDescriptor {
             name: "list_qapps",
             description: "List installed qapps from storage Qapps directory.",
             input_schema: r#"{"type":"object","properties":{}}"#,
@@ -454,6 +474,18 @@ pub unsafe fn enforce_fiduciary_tool_dispatch(
 
         b"validate_shacl" => execute_shacl_validation(payload.arguments_raw, intent_frame),
 
+        // ── SHACL identity / data-sovereignty extension tools ──────────────────
+        b"validate_enumerated_identity" => {
+            execute_validate_enumerated_identity(payload.arguments_raw, intent_frame)
+        }
+        b"shacl_credential_gate" => {
+            execute_shacl_credential_gate(payload.arguments_raw, intent_frame)
+        }
+        b"shacl_degrade_violations" => {
+            execute_shacl_degrade_violations(payload.arguments_raw, intent_frame)
+        }
+        b"shacl_route" => execute_shacl_route(payload.arguments_raw, intent_frame),
+
         // ── Testing & Debugging Tools ───────────────────────────────────────
         b"inject_test_quin" => {
             execute_paraconsistent_injection(payload.arguments_raw, intent_frame)
@@ -703,6 +735,34 @@ unsafe fn execute_shacl_validation(
     _intent: &McpIntentFrame,
 ) -> Result<String, McpSystemError> {
     mcp_stub_impls::validate_shacl(args)
+}
+
+unsafe fn execute_validate_enumerated_identity(
+    args: &[u8],
+    _intent: &McpIntentFrame,
+) -> Result<String, McpSystemError> {
+    mcp_stub_impls::validate_enumerated_identity_tool(args)
+}
+
+unsafe fn execute_shacl_credential_gate(
+    args: &[u8],
+    _intent: &McpIntentFrame,
+) -> Result<String, McpSystemError> {
+    mcp_stub_impls::shacl_credential_gate(args)
+}
+
+unsafe fn execute_shacl_degrade_violations(
+    args: &[u8],
+    _intent: &McpIntentFrame,
+) -> Result<String, McpSystemError> {
+    mcp_stub_impls::shacl_degrade_violations(args)
+}
+
+unsafe fn execute_shacl_route(
+    args: &[u8],
+    _intent: &McpIntentFrame,
+) -> Result<String, McpSystemError> {
+    mcp_stub_impls::shacl_route(args)
 }
 
 // ── Testing & Debugging Implementations ─────────────────────────────────────
