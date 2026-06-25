@@ -52,8 +52,13 @@ pub fn decode_budget_override() -> u32 {
 }
 
 // ── A1a GPU top-k toggle (D18) ────────────────────────────────────────────────
-// Additive, default-OFF: routes the output projection through the GPU top-k path
-// (keep logits on-GPU, read back K pairs) instead of the full-logit-readback argmax.
+// Default-OFF — and the A/B (perf_topk_ab_smollm2) proves WHY flipping it on is NOT the win the
+// Codex review implied: (1) dispatch_output_topk_chunked gates on the NARROW ggml_gpu_quant_supported
+// (Q4_K/Q6_K only), so for Q8_0/F16/Q4_0 models top-k returns None and silently falls to argmax
+// (topk_hits=0 measured); and (2) even fully engaged, the output projection is only ~6 of ~120
+// submit→wait round-trips/token — the per-LAYER attention+FFN ops are the real ~110. So top-k is at
+// best a ~5% lever; the win is layer-forward residency/fusion (cut waits/token), not this flag.
+// Kept toggleable for when the gate+shader support the wider quant set. `QUALIA_LLM_GPU_TOPK=1/0`.
 static GPU_TOPK: AtomicBool = AtomicBool::new(false);
 
 /// Enable/disable the GPU top-k decode path (`QUALIA_LLM_GPU_TOPK`).
@@ -62,14 +67,44 @@ pub fn set_gpu_topk(on: bool) {
     GPU_TOPK.store(on, Ordering::Relaxed);
 }
 
-/// Whether the GPU top-k decode path is active (atomic flag OR the env var).
+/// Whether the GPU top-k decode path is active. The env var overrides the flag in BOTH directions
+/// (`0`/`false` → off, `1`/`true` → on); otherwise the process default (ON) applies.
 #[inline]
 pub fn gpu_topk_enabled() -> bool {
-    GPU_TOPK.load(Ordering::Relaxed)
-        || matches!(
-            std::env::var("QUALIA_LLM_GPU_TOPK").ok().as_deref(),
-            Some("1") | Some("true")
-        )
+    match std::env::var("QUALIA_LLM_GPU_TOPK").ok().as_deref() {
+        Some("0") | Some("false") => false,
+        Some("1") | Some("true") => true,
+        _ => GPU_TOPK.load(Ordering::Relaxed),
+    }
+}
+
+// ── Output-projection path counters (Codex P0: make the chosen path visible) ───────────────────
+static TOPK_HITS: AtomicU64 = AtomicU64::new(0);
+static ARGMAX_FALLBACKS: AtomicU64 = AtomicU64::new(0);
+
+/// Decode loop: the GPU top-k path produced the next token.
+#[inline]
+pub fn record_topk_hit() {
+    TOPK_HITS.fetch_add(1, Ordering::Relaxed);
+}
+/// Decode loop: fell back to the full-logit-readback argmax path.
+#[inline]
+pub fn record_argmax_fallback() {
+    ARGMAX_FALLBACKS.fetch_add(1, Ordering::Relaxed);
+}
+/// (top-k hits, argmax fallbacks) since the last reset.
+#[inline]
+pub fn output_path_counts() -> (u64, u64) {
+    (
+        TOPK_HITS.load(Ordering::Relaxed),
+        ARGMAX_FALLBACKS.load(Ordering::Relaxed),
+    )
+}
+/// Reset the output-projection path counters.
+#[inline]
+pub fn reset_output_path_counts() {
+    TOPK_HITS.store(0, Ordering::Relaxed);
+    ARGMAX_FALLBACKS.store(0, Ordering::Relaxed);
 }
 
 // ── A1b ternary-FFN toggle (D3/D7) ────────────────────────────────────────────

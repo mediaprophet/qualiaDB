@@ -36,8 +36,12 @@ const DECODE_TOKEN_BUDGET: u32 = 16;
 /// MC2b harness iteration: CPU SDPA decode is very slow in wasm; trim budget until Option B.
 #[cfg(all(not(test), target_arch = "wasm32"))]
 const DECODE_TOKEN_BUDGET: u32 = 32;
+// Codex P0: default per-turn decode cap. Was MAX_OUTPUT_TOKENS (2048) → at ~3 tok/s a no-EOS reply
+// ran ~11 min and the app looked frozen. 256 keeps a turn bounded; MAX_OUTPUT_TOKENS stays the
+// absolute ceiling and the cooperative deadline (INFERENCE_TIMEOUT_MS, checked INSIDE the decode
+// loop) bounds wall-clock time independently.
 #[cfg(all(not(test), not(target_arch = "wasm32")))]
-const DECODE_TOKEN_BUDGET: u32 = MAX_OUTPUT_TOKENS;
+const DECODE_TOKEN_BUDGET: u32 = 256;
 
 /// Layer cap for transformer forward during unit tests (full depth in release).
 #[cfg(test)]
@@ -963,6 +967,14 @@ impl LocalLlmAgent {
                 for step in 0..gen_budget {
                     crate::gpu_context::record_llm_decode_step();
 
+                    // Codex P0 — cooperative deadline: break BEFORE the wall-clock timeout instead of
+                    // the old post-hoc check in infer() that let a no-EOS run continue for minutes.
+                    // t_decode starts at decode entry (post-prefill); INFERENCE_TIMEOUT_MS bounds the
+                    // generation phase so the call never appears frozen.
+                    if t_decode.elapsed().as_millis() as u64 >= INFERENCE_TIMEOUT_MS {
+                        break;
+                    }
+
                     let draft_step = try_accept_topology_draft(
                         &mut engine,
                         tensor_idx.as_ref(),
@@ -1059,6 +1071,7 @@ impl LocalLlmAgent {
                                 None
                             };
                             let out_sel = if let Some(item) = topk_hit {
+                                crate::llm_bench::record_topk_hit();
                                 (item.token_id as usize, item.logit)
                             } else if let Some(argmax) = engine.dispatch_output_argmax_chunked(
                                 idx,
@@ -1068,6 +1081,7 @@ impl LocalLlmAgent {
                                 TEST_VOCAB_CHUNK_CAP,
                                 sieve_mask,
                             ) {
+                                crate::llm_bench::record_argmax_fallback();
                                 if argmax.max_logit > f32::NEG_INFINITY {
                                     (argmax.best_token_id as usize, argmax.max_logit)
                                 } else {
