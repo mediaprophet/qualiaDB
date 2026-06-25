@@ -143,6 +143,58 @@ impl Belnap {
     }
 }
 
+// ─── Inconsistency saturation metrics (local vs global) ─────────────────────────────
+//
+// "How contradictory is the graph?" — distinct measures so a localised contradiction (one bad
+// context) is not mistaken for a graph-wide collapse of consistency.
+
+/// **Global** inconsistency saturation: the fraction of routed quins that were isolated as
+/// contradictory (from [`route_paraconsistent`]'s counts). `total == 0 → 0.0`.
+pub fn global_saturation(consistent: usize, isolated: usize) -> f32 {
+    let total = consistent + isolated;
+    if total == 0 {
+        0.0
+    } else {
+        isolated as f32 / total as f32
+    }
+}
+
+/// **Local** (per-context) inconsistency saturation: among the quins in `context`, the fraction
+/// that contradict an earlier same-context quin (same subject+predicate, different object — the
+/// same contradiction rule [`route_paraconsistent`] uses). `0.0` if the context is empty.
+/// Zero-heap (nested linear scans, no allocation).
+pub fn local_saturation(quins: &[NQuin], context: u64) -> f32 {
+    let mut in_ctx = 0usize;
+    let mut contradictory = 0usize;
+    for (i, q) in quins.iter().enumerate() {
+        if q.context != context {
+            continue;
+        }
+        in_ctx += 1;
+        let conflicts = quins[..i].iter().any(|p| {
+            p.context == context
+                && p.subject == q.subject
+                && p.predicate == q.predicate
+                && p.object != q.object
+        });
+        if conflicts {
+            contradictory += 1;
+        }
+    }
+    if in_ctx == 0 {
+        0.0
+    } else {
+        contradictory as f32 / in_ctx as f32
+    }
+}
+
+/// Is inconsistency **saturated** at or above `threshold`? Lets a caller draw the line between a
+/// tolerable localised contradiction and a context whose consistency has broken down.
+#[inline]
+pub fn is_saturated(saturation: f32, threshold: f32) -> bool {
+    saturation >= threshold
+}
+
 #[cfg(test)]
 mod tests {
     use super::*;
@@ -203,5 +255,29 @@ mod tests {
         let (c, i) = route_paraconsistent(&[q_iso], &mut out_c, &mut out_i).unwrap();
         assert_eq!(c, 1);
         assert_eq!(i, 0);
+    }
+
+    #[test]
+    fn saturation_metrics_local_and_global() {
+        // Global: 1 isolated out of 4 routed → 0.25.
+        assert!((global_saturation(3, 1) - 0.25).abs() < 1e-6);
+        assert_eq!(global_saturation(0, 0), 0.0);
+        assert_eq!(global_saturation(0, 5), 1.0);
+
+        // Local: context 42 has 3 quins, the 2nd contradicts the 1st → 1/3 contradictory.
+        let ctx = 42;
+        let q1 = NQuin { subject: 1, predicate: 2, object: 3, context: ctx, ..Default::default() };
+        let q2 = NQuin { subject: 1, predicate: 2, object: 99, context: ctx, ..Default::default() }; // contradicts q1
+        let q3 = NQuin { subject: 5, predicate: 6, object: 7, context: ctx, ..Default::default() };
+        let other = NQuin { subject: 1, predicate: 2, object: 8, context: 7, ..Default::default() }; // diff ctx
+        let s = local_saturation(&[q1, q2, q3, other], ctx);
+        assert!((s - (1.0 / 3.0)).abs() < 1e-6, "1 of 3 in-context quins is contradictory");
+
+        // A clean context saturates at 0; threshold classification works.
+        assert_eq!(local_saturation(&[q1, q3], ctx), 0.0);
+        assert!(is_saturated(0.6, 0.5));
+        assert!(!is_saturated(0.4, 0.5));
+        // An empty context is not "saturated".
+        assert_eq!(local_saturation(&[], ctx), 0.0);
     }
 }
