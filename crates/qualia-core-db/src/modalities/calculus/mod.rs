@@ -53,8 +53,21 @@ pub use ode_solver::{
     QuantizationMapper, StandardModelMasses, HarmonicOscillator,
     create_ode_step_quin, extract_ode_state, pack_ode_state
 };
+
+pub mod ode_advanced;
+pub use ode_advanced::{
+    integrate_symplectic, verlet_step, ruth3_step, yoshida4_step, SymplecticMethod,
+    SymplecticResult, bdf1_step, bdf2_step, integrate_bdf, hermite_dense_output,
+    integrate_with_sensitivity, SensitivityResult,
+};
 pub mod tensor_provenance;
 pub use tensor_provenance::{TensorState, TensorProvenance};
+
+pub mod tensor_integrity;
+pub use tensor_integrity::{
+    commit_state, integrity_root, lineage_commitment, transformation_commitment,
+    verify_lineage, LineageCommitment,
+};
 
 #[cfg(not(target_arch = "wasm32"))]
 pub use host::{PAGE_SIZE, DEFAULT_BUFFER_SIZE, IoError, DmaBuffer};
