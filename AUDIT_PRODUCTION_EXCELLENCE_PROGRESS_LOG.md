@@ -533,3 +533,33 @@ know SOLVERS will come back mostly-deferred-by-your-rule rather than mostly-done
 (guardianship vocab; asp CDNL; the optional VM-firewall identity enforcement).
 
 **Next step:** SOLVERS triage (classical items only), then OBFUSCATION + SPECIALIZED_LIBS.
+
+## 15 — SPECIALIZED_LIBS complete; geometric_algebra verified; qualia-extensions scope flagged (2026-06-25)
+
+**Step / phase:** SPECIALIZED_LIBS — `done` (0 unchecked). Whole-audit unchecked now **13**.
+
+**What was built / verified:**
+- `engineering_analysis.rs` (`7cf138616`) — the 3176-line FEA scaffold had 133 structs of type machinery but
+  no actual physics. Added the real survival-engineering computations: `cauchy_stress_analysis` (von Mises +
+  Smith-1961 principal stresses + Tresca shear), `drag_force`/`reynolds_number` (wind-loads), `fatigue_cycles_basquin`
+  + `miner_cumulative_damage` (fatigue life → probabilistic failure). 4 tests green. Mission-aligned (camper /
+  pop-up structural survival).
+- The **economics-block mis-paste was cleared repo-wide** (8 occurrences across SPECIALIZED_LIBS QPU/quantum
+  files + SOLVERS + OBFUSCATION) → all pointed to the real home `financial/economics.rs` + `tax_schema.rs`.
+  These QPU/quantum-named files were never actually asking for QPU work — it was the economics block pasted on.
+- Every other SPECIALIZED_LIBS file (chemistry_modeling, cryptographic_library, financial_modeling,
+  linear_algebra/*, machine_learning, medical_computing, physics_simulation, statistical_computing,
+  symbolic_algebra, shared/*) had 0 unchecked — already complete.
+
+**Scope findings (Timothy asked):**
+- `geometric_algebra/` (in qualia-core-db) — IS audited (GEOMETRIC_ALGEBRA section), 0 implementation bullets,
+  verified genuinely real (AVX2 `geometric_product_avx2`, Cl(3) multivectors). Nothing to do.
+- `crates/qualia-extensions/` — **OUT of audit scope** (~4023 LOC: pinn/snn/webgpu/qpu extensions). Recorded in
+  boundary doc §G. ⚑ Decision: fold pinn/snn/webgpu into the audit (qpu stays §0.11-deprioritized), or keep it a
+  separate workstream?
+
+**⚑ Where I need the human:** (1) qualia-extensions scope decision above. (2) SOLVERS (6) is QPU-heavy — same
+triage-classical-only plan as flagged. (3) unchanged: guardianship vocab; optional VM-firewall identity enforcement.
+
+**Next step:** OBFUSCATION (3 items, small) then SOLVERS classical-only — unless you redirect (e.g. to
+qualia-extensions).
