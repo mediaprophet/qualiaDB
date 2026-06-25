@@ -641,3 +641,60 @@ fn w3_gemm_parity_gpu_vs_cpu() {
         }
     }
 }
+
+/// W1 — teacher-forced perplexity oracle, validated on a real model. PPL of the Q8_0 reference vs the
+/// Q4_K_M candidate over the eval corpus → a real ΔPPL. Proves the oracle produces sane numbers (fast,
+/// SmolLM2-360M, GPU). Skips if models absent. Run: `cargo test -p qualia-core-db --release --test
+/// llm_bench_a0 w1_perplexity_smollm2 -- --nocapture`.
+#[test]
+fn w1_perplexity_smollm2_q8_vs_q4() {
+    use qualia_core_db::llm_bench::perplexity_eval_blocking;
+    use qualia_core_db::llm_eval::{delta_ppl, MAX_DELTA_PPL};
+    let (Some(q8), Some(q4)) = (
+        find_model("smollm2-360m-instruct-q8_0.gguf"),
+        find_model("SmolLM2-360M-Instruct-Q4_K_M.gguf"),
+    ) else {
+        eprintln!("[w1] SmolLM2 Q8/Q4 model(s) absent — skipping PPL oracle validation");
+        return;
+    };
+    let (ppl_ref, n) = perplexity_eval_blocking(&q8.to_string_lossy(), 0).expect("q8 ppl");
+    let (ppl_cand, _) = perplexity_eval_blocking(&q4.to_string_lossy(), 0).expect("q4 ppl");
+    let d = delta_ppl(ppl_ref, ppl_cand);
+    println!("\n=== W1 perplexity oracle (SmolLM2-360M, {n} tokens, eval corpus) ===");
+    println!("[w1] Q8_0 reference  PPL = {ppl_ref:.4}");
+    println!("[w1] Q4_K_M candidate PPL = {ppl_cand:.4}");
+    println!(
+        "[w1] ΔPPL = {:+.2}%  (gate ≤ {:.0}%)",
+        d * 100.0,
+        MAX_DELTA_PPL * 100.0
+    );
+    assert!(ppl_ref.is_finite() && ppl_ref > 1.0 && ppl_ref < 1.0e4, "Q8 PPL implausible: {ppl_ref}");
+    assert!(ppl_cand.is_finite() && ppl_cand > 1.0 && ppl_cand < 1.0e4, "Q4 PPL implausible: {ppl_cand}");
+    assert!(d > -0.05, "candidate beating reference by >5% is suspicious: ΔPPL={d}");
+    println!("[w1] PASS — teacher-forced PPL oracle produces sane numbers on a real model.");
+}
+
+/// W1 — real-model gate on Llama-3.2-3B: FP16 reference (loaded as a file through Qualia's native
+/// engine; the F16 matmuls run CPU-side since the GPU GEMM is quant-only) vs the Q4_K_M candidate.
+/// Token-capped per passage to bound the F16-CPU reference pass. Skips if the FP16 file is absent.
+/// Run: `cargo test -p qualia-core-db --release --test llm_bench_a0 w1_perplexity_llama3b -- --nocapture`.
+#[test]
+fn w1_perplexity_llama3b_fp16_vs_q4() {
+    use qualia_core_db::llm_bench::perplexity_eval_blocking;
+    let fp16 = "C:/LLM_Models/GGUF/Llama-3.2-3B-Instruct-FP16.gguf";
+    let q4 = "C:/LLM_Models/GGUF/hugging-quants/Llama-3.2-3B-Instruct-Q4_K_M-GGUF/llama-3.2-3b-instruct-q4_k_m.gguf";
+    if !std::path::Path::new(fp16).exists() {
+        eprintln!("[w1-3b] Llama-3.2-3B FP16 absent — skipping");
+        return;
+    }
+    let (ppl_ref, n) = perplexity_eval_blocking(fp16, 48).expect("fp16 3b ppl");
+    println!("\n=== W1 perplexity (Llama-3.2-3B, {n} tokens, eval corpus) ===");
+    println!("[w1-3b] FP16 reference PPL = {ppl_ref:.4}  (F16 CPU path)");
+    if std::path::Path::new(q4).exists() {
+        let (ppl_cand, _) = perplexity_eval_blocking(q4, 48).expect("q4 3b ppl");
+        let d = qualia_core_db::llm_eval::delta_ppl(ppl_ref, ppl_cand);
+        println!("[w1-3b] Q4_K_M candidate PPL = {ppl_cand:.4}   ΔPPL = {:+.2}%", d * 100.0);
+    }
+    assert!(ppl_ref.is_finite() && ppl_ref > 1.0, "FP16 3B PPL implausible: {ppl_ref}");
+    println!("[w1-3b] PASS — FP16 reference runs through the native engine.");
+}

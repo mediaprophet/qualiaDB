@@ -700,6 +700,140 @@ pub fn gemm_parity_probe_blocking(
     ))
 }
 
+/// W1 — teacher-forced perplexity of `model_path` over the eval corpus, run through Qualia's **native**
+/// engine (never an external runtime). For each corpus passage: `reset_kv_cache`, then per position
+/// embed → `dispatch_transformer_forward` → `apply_output_norm_inplace` → `dispatch_output_logits_into`
+/// → NLL of the true next token; PPL = `exp(ΣNLL / Σtokens)`. `max_tok` = 0 scores the whole passage,
+/// >0 caps it (to bound the slow F16-on-CPU path for big models). Returns `(perplexity, tokens_scored)`.
+/// Runs on a dedicated thread with a current-thread tokio runtime (mirrors the decode path) so the
+/// engine's GPU readback works. Handles both GGUF and `.q42` containers.
+#[cfg(not(target_arch = "wasm32"))]
+pub fn perplexity_eval_blocking(model_path: &str, max_tok: usize) -> Result<(f64, usize), String> {
+    use crate::gguf_bridge::QTensorEngine;
+    use crate::gguf_sharder::{GgufTensorIndex, GgufTokenizer};
+
+    let corpus = crate::llm_eval::load_corpus().map_err(|e| format!("corpus load: {e}"))?;
+    if corpus.is_empty() {
+        return Err("eval corpus is empty".into());
+    }
+    let model_path = model_path.to_string();
+
+    std::thread::spawn(move || -> Result<(f64, usize), String> {
+        let rt = tokio::runtime::Builder::new_current_thread()
+            .enable_all()
+            .build()
+            .map_err(|e| e.to_string())?;
+        let _g = rt.enter();
+
+        let mut engine = QTensorEngine::new();
+        let mut magic = [0u8; 4];
+        let is_q42 = {
+            use std::io::Read;
+            std::fs::File::open(&model_path)
+                .and_then(|mut f| f.read_exact(&mut magic))
+                .map(|_| &magic == b"Q42W")
+                .unwrap_or(false)
+        };
+        if is_q42 {
+            let f = std::fs::File::open(&model_path).map_err(|e| e.to_string())?;
+            let mmap = unsafe { memmap2::Mmap::map(&f) }.map_err(|e| e.to_string())?;
+            engine
+                .adopt_resident_q42_mmap(std::sync::Arc::new(mmap))
+                .map_err(|e| format!("q42 adopt: {e}"))?;
+        } else {
+            engine.load_gguf(&model_path);
+        }
+
+        let mmap = engine
+            .gguf_mmap
+            .clone()
+            .ok_or_else(|| "model did not memory-map (load failed)".to_string())?;
+        let is_q42_mmap = mmap.len() >= 4 && mmap[0..4] == *b"Q42W";
+        let tok = if is_q42_mmap {
+            crate::q42_weight::Q42TensorIndex::from_q42(&mmap)
+                .ok()
+                .and_then(|qi| GgufTokenizer::from_q42_section(qi.tokenizer_bytes(&mmap)))
+                .unwrap_or_default()
+        } else {
+            GgufTokenizer::from_gguf(&mmap)
+        };
+        let tensor_idx = if is_q42_mmap {
+            crate::q42_weight::Q42TensorIndex::from_q42(&mmap)
+                .map(|qi| qi.to_gguf_index())
+                .map_err(|e| format!("q42 index: {e}"))?
+        } else {
+            GgufTensorIndex::from_gguf(&mmap)
+        };
+
+        let emb_dim = tensor_idx.emb_dim();
+        if emb_dim == 0 {
+            return Err("embedding dimension is 0 (tensor index parse failed)".into());
+        }
+        let vocab = tok.vocab_len().max(1) as usize;
+
+        let mut emb_buf = vec![0f32; emb_dim.max(8192)];
+        let mut scratch_a = vec![0f32; 16384];
+        let mut scratch_b = vec![0f32; 16384];
+        let mut logits = vec![0f32; vocab];
+        let mmap_bytes: &[u8] = &mmap;
+
+        let mut total_nll = 0.0f64;
+        let mut total_tok = 0usize;
+        for passage in &corpus {
+            let toks = tok.encode(passage);
+            if toks.len() < 2 {
+                continue;
+            }
+            let limit = if max_tok > 0 {
+                (max_tok + 1).min(toks.len())
+            } else {
+                toks.len()
+            };
+            engine.reset_kv_cache();
+            for i in 0..limit - 1 {
+                let n_emb = tensor_idx.dequantize_token_embedding_into(
+                    mmap_bytes,
+                    toks[i],
+                    &mut emb_buf[..emb_dim],
+                );
+                if n_emb == 0 {
+                    return Err(format!("embedding lookup failed for token {}", toks[i]));
+                }
+                let _ = engine.dispatch_transformer_forward(
+                    &tensor_idx,
+                    &mut emb_buf[..emb_dim],
+                    emb_dim,
+                    &mut scratch_a,
+                    &mut scratch_b,
+                    i as u32,
+                    0, // 0 = all layers (full model depth)
+                );
+                let _ = engine.apply_output_norm_inplace(&tensor_idx, &mut emb_buf[..emb_dim], emb_dim);
+                let n = engine.dispatch_output_logits_into(
+                    &tensor_idx,
+                    &emb_buf[..emb_dim],
+                    emb_dim,
+                    &mut logits,
+                );
+                if n == 0 {
+                    return Err("output projection produced no logits".into());
+                }
+                let nll = crate::llm_eval::token_nll(&logits[..n], toks[i + 1] as usize);
+                if nll.is_finite() {
+                    total_nll += nll;
+                    total_tok += 1;
+                }
+            }
+        }
+        if total_tok == 0 {
+            return Err("no tokens scored".into());
+        }
+        Ok((crate::llm_eval::perplexity(total_nll, total_tok), total_tok))
+    })
+    .join()
+    .map_err(|_| "perplexity eval thread panicked".to_string())?
+}
+
 /// `decode_with_metrics` inside a fresh multi-thread runtime (residency mount needs `block_in_place`).
 #[cfg(not(target_arch = "wasm32"))]
 pub fn decode_with_metrics_blocking(
