@@ -155,5 +155,8 @@ provenance/
 /agent-intents/
 fix_quotes.py
 
+# Agent coordination live feed — shared local scratch, gitignored so it doesn't fork per worktree
+coordination/NOTICES.md
+
 
 # Private Development Documents, not for GitHub (do not publish)

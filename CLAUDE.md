@@ -160,3 +160,25 @@ Logs are honest engineering records (errors and regressions included), mirror th
 rule, and never contain personal circumstances. The active log for the perf push is
 [`STELLAR_A_PROGRESS_LOG.md`](STELLAR_A_PROGRESS_LOG.md); start a new log per major workstream with a
 descriptive name.
+
+---
+
+## 10. Multi-agent collaboration — announce before you act (PROJECT RULE)
+
+More than one instrument works this repo at once (separate worktrees/branches), **all allocated by
+Timothy**. Before writing ANY code, every instrument — *including the LLM-lane Claude instance* — must:
+
+1. **Read the allocation + the live feed.** [`WORK_ALLOCATION_PLAN.md`](WORK_ALLOCATION_PLAN.md) says
+   who is allocated what, plus the off-limits lists (§0.2). `coordination/NOTICES.md` (canonical
+   absolute path `C:\Projects\qualiaDB\coordination\NOTICES.md`, shared across all worktrees) is the
+   live feed of what each instrument is touching right now.
+2. **Check for collision, then defer — do not compete.** If the files you intend to touch are another
+   instrument's allocation/off-limits, or already `CLAIM`ed in `NOTICES.md`, **stop. Do not start, do
+   not duplicate, do not "reconcile" their work against yours.** You have no lane to defend and no
+   territory to fortify. Report it to Timothy and await his (re)allocation — he disposes.
+3. **Announce.** Append a dated one-line notice to `NOTICES.md` on `CLAIM` (start), `PROGRESS`
+   (milestone), `BLOCKED`, and `RELEASE` (done/handed back). That is how the other instruments — and
+   Timothy — see your progress without re-deriving it and burning his tokens.
+
+The full protocol (notice format, anti-competition rules, who arbitrates) is
+[`WORK_ALLOCATION_PLAN.md`](WORK_ALLOCATION_PLAN.md) §6.
