@@ -73,9 +73,162 @@ pub fn holds_by_default(facts: &[NQuin], goal: &NQuin) -> bool {
     })
 }
 
+// ─── Defeasible Logic: strict / defeasible / defeater rules + superiority ───────────
+//
+// Defeasible Logic (Nute / Governatori) layers three rule kinds and a superiority relation:
+//   * STRICT rules — indefeasible (their conclusion always holds when fired).
+//   * DEFEASIBLE rules — hold unless defeated by a superior opposing rule.
+//   * DEFEATERS — cannot conclude on their own; they only BLOCK an opposing defeasible rule.
+// When two rules conclude complementary literals, the superiority relation decides; if neither
+// is superior the outcome is ambiguous, handled either by blocking or propagating ambiguity.
+
+#[derive(Debug, Clone, Copy, PartialEq, Eq)]
+pub enum RuleKind {
+    Strict,
+    Defeasible,
+    Defeater,
+}
+
+/// A minimal defeasible rule: an id, its kind, the literal it concludes, and the polarity
+/// (`positive`: concludes `literal`; else concludes `¬literal`).
+#[derive(Debug, Clone, Copy)]
+pub struct DefeasibleRule {
+    pub id: u64,
+    pub kind: RuleKind,
+    pub literal: u64,
+    pub positive: bool,
+}
+
+/// How unresolved ambiguity (neither conflicting rule superior) is treated.
+#[derive(Debug, Clone, Copy, PartialEq, Eq)]
+pub enum AmbiguityMode {
+    /// Ambiguity is **blocked**: neither conclusion is drawn (`Undecided`).
+    Blocking,
+    /// Ambiguity is **propagated**: the literal is marked `Ambiguous` downstream.
+    Propagating,
+}
+
+/// The conclusion drawn for a literal after conflict resolution.
+#[derive(Debug, Clone, Copy, PartialEq, Eq)]
+pub enum Conclusion {
+    Positive,
+    Negative,
+    Ambiguous,
+    Undecided,
+}
+
+/// Two rules **conflict** iff they conclude the same literal with opposite polarity.
+pub fn rules_conflict(a: &DefeasibleRule, b: &DefeasibleRule) -> bool {
+    a.literal == b.literal && a.positive != b.positive
+}
+
+/// Superiority lookup: is `a` superior to `b` in the supplied relation `sup` (pairs
+/// `(higher, lower)`)?
+pub fn is_superior(sup: &[(u64, u64)], a: u64, b: u64) -> bool {
+    sup.iter().any(|&(hi, lo)| hi == a && lo == b)
+}
+
+#[inline]
+fn polarity(r: &DefeasibleRule) -> Conclusion {
+    if r.positive {
+        Conclusion::Positive
+    } else {
+        Conclusion::Negative
+    }
+}
+
+/// A `Defeater` can only block an opponent — it never supports a conclusion. Strict and
+/// defeasible rules can conclude.
+#[inline]
+fn can_conclude(kind: RuleKind) -> bool {
+    matches!(kind, RuleKind::Strict | RuleKind::Defeasible)
+}
+
+/// Resolve a conflict between two opposing rules, given the superiority relation and ambiguity
+/// mode. Non-conflicting inputs yield `a`'s polarity. Semantics (Nute / Governatori):
+///  - A `Strict` rule dominates a non-strict opponent.
+///  - Otherwise a side concludes only if its rule is **superior** to the opponent AND can
+///    conclude (a superior `Defeater` merely blocks → `Undecided`, never its own polarity).
+///  - With neither superior, the stand-off is `Undecided` (blocking) or `Ambiguous` (propagating).
+pub fn resolve_conflict(
+    a: &DefeasibleRule,
+    b: &DefeasibleRule,
+    sup: &[(u64, u64)],
+    mode: AmbiguityMode,
+) -> Conclusion {
+    if !rules_conflict(a, b) {
+        return polarity(a);
+    }
+    // Strict indefeasibility.
+    match (a.kind, b.kind) {
+        (RuleKind::Strict, k) if k != RuleKind::Strict => return polarity(a),
+        (k, RuleKind::Strict) if k != RuleKind::Strict => return polarity(b),
+        _ => {}
+    }
+    // Explicit superiority — but a superior Defeater only blocks; it cannot conclude.
+    if is_superior(sup, a.id, b.id) {
+        return if can_conclude(a.kind) { polarity(a) } else { Conclusion::Undecided };
+    }
+    if is_superior(sup, b.id, a.id) {
+        return if can_conclude(b.kind) { polarity(b) } else { Conclusion::Undecided };
+    }
+    // Neither superior → genuine stand-off (an applicable opponent, even a defeater, blocks).
+    match mode {
+        AmbiguityMode::Blocking => Conclusion::Undecided,
+        AmbiguityMode::Propagating => Conclusion::Ambiguous,
+    }
+}
+
 #[cfg(test)]
 mod tests {
     use super::*;
+
+    fn rule(id: u64, kind: RuleKind, lit: u64, positive: bool) -> DefeasibleRule {
+        DefeasibleRule { id, kind, literal: lit, positive }
+    }
+
+    #[test]
+    fn strict_dominates_and_superiority_decides() {
+        let lit = q_hash("penguin:flies");
+        let r_pos = rule(1, RuleKind::Defeasible, lit, true); // birds fly
+        let r_neg = rule(2, RuleKind::Defeasible, lit, false); // penguins don't
+        assert!(rules_conflict(&r_pos, &r_neg));
+
+        // No superiority, both defeasible → ambiguity (mode-dependent).
+        assert_eq!(resolve_conflict(&r_pos, &r_neg, &[], AmbiguityMode::Blocking), Conclusion::Undecided);
+        assert_eq!(resolve_conflict(&r_pos, &r_neg, &[], AmbiguityMode::Propagating), Conclusion::Ambiguous);
+
+        // "penguins don't fly" is superior → Negative concluded.
+        let sup = [(2u64, 1u64)];
+        assert_eq!(resolve_conflict(&r_pos, &r_neg, &sup, AmbiguityMode::Blocking), Conclusion::Negative);
+
+        // A strict opposing rule dominates regardless of superiority.
+        let r_strict = rule(3, RuleKind::Strict, lit, false);
+        assert_eq!(resolve_conflict(&r_pos, &r_strict, &[], AmbiguityMode::Blocking), Conclusion::Negative);
+    }
+
+    #[test]
+    fn defeater_only_blocks_it_cannot_conclude() {
+        let lit = q_hash("claim:x");
+        let r = rule(1, RuleKind::Defeasible, lit, true);
+        let d = rule(2, RuleKind::Defeater, lit, false);
+        // No superiority: the applicable defeater blocks r; nothing is concluded.
+        assert_eq!(resolve_conflict(&r, &d, &[], AmbiguityMode::Blocking), Conclusion::Undecided);
+        // A SUPERIOR defeater still cannot conclude its own polarity — r is defeated → Undecided.
+        let sup_d = [(2u64, 1u64)];
+        assert_eq!(resolve_conflict(&r, &d, &sup_d, AmbiguityMode::Blocking), Conclusion::Undecided);
+        // When the defeasible rule is superior to the defeater, it concludes.
+        let sup_r = [(1u64, 2u64)];
+        assert_eq!(resolve_conflict(&r, &d, &sup_r, AmbiguityMode::Blocking), Conclusion::Positive);
+    }
+
+    #[test]
+    fn non_conflicting_rules_just_conclude() {
+        let r1 = rule(1, RuleKind::Defeasible, q_hash("a"), true);
+        let r2 = rule(2, RuleKind::Defeasible, q_hash("b"), false);
+        assert!(!rules_conflict(&r1, &r2));
+        assert_eq!(resolve_conflict(&r1, &r2, &[], AmbiguityMode::Blocking), Conclusion::Positive);
+    }
 
     #[test]
     fn test_defeasible_evaluation() {
