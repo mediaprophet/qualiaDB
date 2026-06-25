@@ -1,5 +1,13 @@
 // Argumentation Frameworks - Dung-style Abstract Argumentation
 // Provides formal debate resolution mechanisms for Peace Infrastructure
+//
+// ⚠ ZERO-HEAP STATUS: this library (and its `vaf`/`bipolar`/`generation` submodules) is
+// HEAP-based by design — `ArgumentationFramework` uses `HashMap`/`HashSet`/`Vec` for dynamic
+// argument/extension sets, and `stable_extensions`/`complete_extensions` return `Vec<HashSet>`.
+// This is the COLD reasoning layer, off the hot path (consistent with AGENTS.md §0 "no
+// Vec/String/Box in HOT PATHS"). The HOT-PATH grounded-extension primitive is the bounded,
+// zero-heap `grounded_contains` (below). A full zero-heap rewrite (bounded bitmask sets, ≤64
+// arguments) is a candidate for the deferred "library-ization" pass.
 
 use crate::NQuin;
 use std::collections::{HashMap, HashSet};

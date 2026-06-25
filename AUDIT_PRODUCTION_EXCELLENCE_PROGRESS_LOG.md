@@ -291,3 +291,32 @@ full implementation, no new monoliths.
 `control_feedback`).
 
 ---
+
+## 8 — Zero-heap audit (Timothy asked: all zero-heap, or note where not) (2026-06-25)
+
+**Rule (AGENTS.md §0 / CLAUDE.md §6):** no `Vec`/`String`/`Box` in HOT PATHS. Heap is permitted on the
+COLD reasoning/composition/evidence layers. Audit of everything implemented this workstream:
+
+**ZERO-HEAP ✅ (all new code — slices in, scalars / caller-supplied `out` buffers / `u64` bitsets out):**
+`epistemic_boundaries`, `jural`, `fuzzy`, `paraconsistent`, `modal`, `capacity`, `linear`, `defeasible` (core
+`resolve_conflict`), `asp`, `responsibility`, `delegation`, `contract`, `interaction_governance`, `abductive/*`
+(incl. the ATMS bitset environments), the new `legal_compose`/`deontic`/`deontic_compose`/`meta_deontic`
+functions, `control_feedback::enforce_*`, and the `webizen::ZkConsumeFact` opcode handler. Verified the heap
+markers in `deontic.rs` (lines 931–1311), `meta_deontic.rs` (`vec![record]`), `legal_compose.rs` (CAS
+`HashMap`) are **pre-existing** code, NOT my additions.
+
+**HEAP — noted, all OFF the hot path:**
+1. **`argumentation/` library** (`vaf`, `bipolar`, `generation`, and `stable_extensions`/`complete_extensions`
+   returning `Vec<HashSet>`) — composes the pre-existing heap `ArgumentationFramework` (HashMap/HashSet/Vec).
+   The HOT-PATH grounded primitive is the bounded zero-heap **`grounded_contains`**. A full zero-heap rewrite
+   (≤64-arg bitmask sets) is queued for the library-ization pass. (Header note added in `argumentation/mod.rs`.)
+2. **`defeasible::grounded_justified_rules`** — the heap bridge INTO (1); the defeasible core is zero-heap.
+3. **`meta_deontic` Credential path** (`vec![record]`, `EvidencePackage`) — the pre-existing `Credential`
+   carries `Vec<NQuin>` claims; off-hot-path evidence compilation.
+4. **`legal_compose::marginal_harm`** — pre-existing CAS `HashMap` (native-only, cfg-gated); off-hot-path
+   symbolic eval. **`control_feedback` PID** — pre-existing control code (`String`/`Vec`).
+
+**Going forward:** new modality code stays zero-heap (caller buffers + bitmasks); any heap use gets an inline
+`⚠ heap — off-hot-path` note.
+
+---
