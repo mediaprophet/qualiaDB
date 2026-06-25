@@ -190,6 +190,75 @@ pub fn defuzz_bisector(u: &[f32], mu: &[f32]) -> Option<f32> {
     Some(u[u.len() - 1])
 }
 
+// ─── Fuzzy Inference Systems (Mamdani & Sugeno) ─────────────────────────────────────
+//
+// A FIS maps crisp/fuzzy inputs to a crisp output through a rule base. Antecedent membership
+// degrees (read from nquins via `degree()`) combine by a t-norm into a rule's FIRING STRENGTH;
+// the consequent is then either a fuzzy set (Mamdani) defuzzified by centroid, or a crisp
+// value combined by firing-weighted average (Sugeno/TSK). Zero-heap (caller-supplied scratch).
+
+/// Rule firing strength = Gödel t-norm (min) of the antecedent membership degrees. Empty
+/// antecedent → 1.0 (the t-norm identity). Use `degree()` to source each membership from a Quin.
+pub fn firing_strength(antecedent_mu: &[f32]) -> f32 {
+    let mut acc = 1.0f32;
+    for &m in antecedent_mu {
+        acc = t_norm_godel(acc, m);
+    }
+    acc
+}
+
+/// One Mamdani rule's contribution: its `firing` strength and its consequent membership function
+/// `consequent_mu` sampled over the shared output universe.
+#[derive(Debug, Clone, Copy)]
+pub struct MamdaniRule<'a> {
+    pub firing: f32,
+    pub consequent_mu: &'a [f32],
+}
+
+/// Mamdani inference: clip each rule's consequent at its firing strength (min-implication),
+/// aggregate across rules by `max` into `scratch`, then defuzzify by centroid over `universe`.
+/// `None` if the aggregate set carries no mass. Zero-heap (caller owns `scratch`, sized to the
+/// universe).
+pub fn mamdani_infer(universe: &[f32], rules: &[MamdaniRule], scratch: &mut [f32]) -> Option<f32> {
+    if scratch.len() != universe.len() {
+        return None;
+    }
+    for s in scratch.iter_mut() {
+        *s = 0.0;
+    }
+    for r in rules {
+        let n = scratch.len().min(r.consequent_mu.len());
+        for i in 0..n {
+            // min-implication (clip) then max-aggregation across rules.
+            let clipped = r.firing.min(r.consequent_mu[i]);
+            if clipped > scratch[i] {
+                scratch[i] = clipped;
+            }
+        }
+    }
+    defuzz_centroid(universe, scratch)
+}
+
+/// One Sugeno (TSK) rule: its `firing` strength and a crisp `consequent` value (a 0th-order
+/// constant, or a pre-evaluated 1st-order linear function of the inputs).
+#[derive(Debug, Clone, Copy)]
+pub struct SugenoRule {
+    pub firing: f32,
+    pub consequent: f32,
+}
+
+/// Sugeno (TSK) inference: the firing-strength-weighted average of rule consequents,
+/// `Σ(wᵢ·zᵢ) / Σ wᵢ`. `None` if total firing is ~0 (refuse rather than divide by zero).
+pub fn sugeno_infer(rules: &[SugenoRule]) -> Option<f32> {
+    let mut num = 0.0f32;
+    let mut den = 0.0f32;
+    for r in rules {
+        num += r.firing * r.consequent;
+        den += r.firing;
+    }
+    if den.abs() < 1e-9 { None } else { Some(num / den) }
+}
+
 #[cfg(test)]
 mod tests {
     use super::*;
@@ -265,5 +334,62 @@ mod tests {
         assert!(defuzz_centroid(&u, &[0.0; 5]).is_none());
         assert!(defuzz_centroid(&[1.0, 2.0], &[0.1]).is_none());
         assert!(defuzz_centroid(&[], &[]).is_none());
+    }
+
+    #[test]
+    fn firing_strength_is_godel_t_norm() {
+        assert!(close(firing_strength(&[0.8, 0.5, 0.9]), 0.5));
+        assert!(close(firing_strength(&[]), 1.0));
+    }
+
+    #[test]
+    fn mamdani_fis_clips_aggregates_and_defuzzifies() {
+        // Universe 0..4. Two consequent sets: "low" peaked near 1, "high" peaked near 3.
+        let u = [0.0, 1.0, 2.0, 3.0, 4.0];
+        let low = [1.0, 1.0, 0.5, 0.0, 0.0];
+        let high = [0.0, 0.0, 0.5, 1.0, 1.0];
+        let mut scratch = [0.0f32; 5];
+
+        // Only "low" fires (strength 1.0) → output pulled toward the low end.
+        let r_low_only = [MamdaniRule { firing: 1.0, consequent_mu: &low }];
+        let y_low = mamdani_infer(&u, &r_low_only, &mut scratch).unwrap();
+        // Only "high" fires → output pulled toward the high end.
+        let r_high_only = [MamdaniRule { firing: 1.0, consequent_mu: &high }];
+        let y_high = mamdani_infer(&u, &r_high_only, &mut scratch).unwrap();
+        assert!(y_low < y_high, "low-only ({y_low}) must sit below high-only ({y_high})");
+        assert!(y_low < 2.0 && y_high > 2.0);
+
+        // Both fire equally → symmetric → centroid at the universe centre (2.0).
+        let both = [
+            MamdaniRule { firing: 1.0, consequent_mu: &low },
+            MamdaniRule { firing: 1.0, consequent_mu: &high },
+        ];
+        let y_both = mamdani_infer(&u, &both, &mut scratch).unwrap();
+        assert!(close(y_both, 2.0));
+
+        // Clipping: a weak firing strength on "high" lowers its contribution.
+        let weak_high = [MamdaniRule { firing: 0.2, consequent_mu: &high }];
+        assert!(mamdani_infer(&u, &weak_high, &mut scratch).unwrap() > 2.0);
+        // Mismatched scratch size refuses.
+        let mut bad = [0.0f32; 3];
+        assert!(mamdani_infer(&u, &both, &mut bad).is_none());
+    }
+
+    #[test]
+    fn sugeno_fis_is_firing_weighted_average() {
+        // Two rules: z=0 (firing 0.25) and z=10 (firing 0.75) → weighted avg 7.5.
+        let rules = [
+            SugenoRule { firing: 0.25, consequent: 0.0 },
+            SugenoRule { firing: 0.75, consequent: 10.0 },
+        ];
+        assert!(close(sugeno_infer(&rules).unwrap(), 7.5));
+        // Equal firing → plain average.
+        let eq = [
+            SugenoRule { firing: 0.5, consequent: 2.0 },
+            SugenoRule { firing: 0.5, consequent: 6.0 },
+        ];
+        assert!(close(sugeno_infer(&eq).unwrap(), 4.0));
+        // No firing → None.
+        assert!(sugeno_infer(&[SugenoRule { firing: 0.0, consequent: 9.0 }]).is_none());
     }
 }
