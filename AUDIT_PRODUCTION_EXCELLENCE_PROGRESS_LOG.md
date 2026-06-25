@@ -563,3 +563,35 @@ triage-classical-only plan as flagged. (3) unchanged: guardianship vocab; option
 
 **Next step:** OBFUSCATION (3 items, small) then SOLVERS classical-only — unless you redirect (e.g. to
 qualia-extensions).
+
+## 16 — qualia-core-db audit COMPLETE for this allocation (2026-06-25)
+
+**Step / phase:** OBFUSCATION + SOLVERS — `done`. **Whole-audit unchecked: 4**, and all 4 are `n3_parser.rs`
+(the `qualia-n3-parser` worktree's lane — not mine). Every other section is 0 unchecked.
+
+**What closed OBFUSCATION + SOLVERS:** both sections' only unchecked items were **mis-paste blocks**, not real
+work:
+- OBFUSCATION (3) = the **bio block** on `hybrid_state_manager.rs` (an obfuscation state-manager, not bio) →
+  marked MISASSIGNED → `bioinformatics.rs`.
+- SOLVERS (6) = the **bio block** on 2 solver files (6 bullets) → same. The actual QPU/`quantum_optimizers`
+  solver files carried **0 implementation bullets** — there was no real unchecked QPU work in the audit (which
+  is just as well, since QPU is deferred-to-last per §0.11 + boundary §H).
+
+The economics block (8 files) and bio block (now all files) mis-pastes are cleared repo-wide → pointed to
+their real homes (`financial/` and `bioinformatics.rs`).
+
+**FINAL STATE of the qualia-core-db production-excellence audit (my allocation):**
+- **Done + tested:** MODALITIES (graph_theory, OWL 2 RL, identity SHACL + MCP tools, advanced ODE, tensor
+  integrity, …), GEOMETRIC_ALGEBRA (verified), DOMAINS (economics/tax/chem/energy/bio), SPECIALIZED_LIBS
+  (engineering kernels + the rest already complete), OBFUSCATION, SOLVERS. CUDA removed → vendor-neutral wgpu.
+- **Genuine `[~]` boundaries (recorded, not faked):** asp/CDNL perf, dl/SROIQ tableau ×2, manifold-GPU renderer,
+  FHE-over-ODE, general per-op zk. All in this doc §A.
+- **Not mine:** `n3_parser.rs` (4 items, `qualia-n3-parser` lane).
+- **Out of audit scope / forward work:** `qualia-extensions` (~4023 LOC pinn/snn/webgpu/qpu — §G, your
+  include/defer call); QPU work deferred-to-last with the design directive (§H).
+
+**⚑ Where I need the human:** (1) qualia-extensions — fold pinn/snn/webgpu into scope, or separate workstream?
+(2) guardianship vocabulary (capacity.rs); (3) optional VM-firewall identity enforcement. None block "audit
+complete."
+
+**Next step:** awaiting your direction — qualia-extensions, or wrap. The core-db audit is done bar n3_parser.
