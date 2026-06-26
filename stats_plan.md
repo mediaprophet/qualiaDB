@@ -72,7 +72,7 @@ Scalar fit-loops (IRLS, tree splits) are CPU — flagged where GPU does not help
 | 9 | SVM (margin, kernel, multiclass) | classification/svm | ☐ |
 | 10 | deep learning | — (defer to LLM stack) | ⊘ |
 | 11 | Kaplan-Meier, Cox PH | survival | ☐ |
-| 12 | PCA, K-means, hierarchical clustering | dimensionality + clustering | ☐ |
+| 12 | PCA, K-means, hierarchical clustering | dimensionality + clustering | ◑ PCA done; clustering pending |
 | 13 | Bonferroni, Holm, BH-FDR | multiple_testing | ✅ done |
 
 ## Build order (highest leverage / most-reused first)
