@@ -613,7 +613,7 @@ pub fn load_default() -> Result<ResourceCatalog, CatalogError> {
 
 #[cfg(test)]
 mod load_tests {
-    use super::*;
+    use crate::*;
 
     fn resources_fixture_dir() -> PathBuf {
         PathBuf::from(env!("CARGO_MANIFEST_DIR")).join("../../resources")

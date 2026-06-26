@@ -4,31 +4,86 @@ use std::pin::Pin;
 use std::task::{Context, Poll};
 use zeroize::Zeroize;
 
+// --- services/ category (moved from crate root; paths preserved) ---
+pub mod services;
 #[cfg(not(target_arch = "wasm32"))]
-pub mod chat_relay_daemon;
+pub use services::daemon;
 #[cfg(not(target_arch = "wasm32"))]
-pub mod comorbidity_eval;
+pub use services::daemon_graph;
 #[cfg(not(target_arch = "wasm32"))]
-pub mod dicom;
+pub use services::daemon_query;
 #[cfg(not(target_arch = "wasm32"))]
-pub mod dicom_ingest;
+pub use services::daemon_swarm;
+#[cfg(not(target_arch = "wasm32"))]
+pub use services::daemon_tensor;
+#[cfg(not(target_arch = "wasm32"))]
+pub use services::chat_relay_daemon;
+#[cfg(not(target_arch = "wasm32"))]
+pub use services::webizen_server;
+#[cfg(not(target_arch = "wasm32"))]
+pub use services::rpc;
+#[cfg(not(target_arch = "wasm32"))]
+pub use services::webtorrent_routes;
+#[cfg(not(target_arch = "wasm32"))]
+pub use services::webtorrent_seeder;
+pub use services::solid_ldp;
+#[cfg(not(target_arch = "wasm32"))]
+pub use services::ilp_dispatcher;
+// --- medical/ category (moved from crate root; paths preserved) ---
+pub mod medical;
+#[cfg(not(target_arch = "wasm32"))]
+pub use medical::comorbidity_eval;
+#[cfg(not(target_arch = "wasm32"))]
+pub use medical::dicom;
+#[cfg(not(target_arch = "wasm32"))]
+pub use medical::dicom_ingest;
 #[cfg(not(target_arch = "wasm32"))]
 pub mod ingest;
+// --- platform/ category (moved from crate root; paths preserved) ---
+pub mod platform;
+#[cfg(target_os = "android")]
+pub use platform::jni_bridge;
 #[cfg(not(target_arch = "wasm32"))]
-pub mod local_scheduler;
+pub use platform::npu_ffi;
+pub use platform::tee_ffi;
+pub use platform::git_bridge;
+pub use platform::kml_bridge;
+#[cfg(not(target_arch = "wasm32"))]
+pub use platform::hardware_passport;
+#[cfg(not(target_arch = "wasm32"))]
+pub use platform::device_benchmark;
+#[cfg(not(target_arch = "wasm32"))]
+pub use platform::platform_scheduler;
+#[cfg(not(target_arch = "wasm32"))]
+pub use platform::local_scheduler;
 #[cfg(any(not(target_arch = "wasm32"), feature = "wasm-llm"))]
 pub mod llm_agent;
 #[cfg(any(not(target_arch = "wasm32"), feature = "wasm-llm"))]
 pub mod lora;
-pub mod yaml_ld_q42;
-pub mod extension_manifest;
+// --- q42/ category (moved from crate root; paths preserved) ---
+pub mod q42;
+#[cfg(any(not(target_arch = "wasm32"), feature = "wasm-llm"))]
+pub use q42::q42_weight;
+#[cfg(not(target_arch = "wasm32"))]
+pub use q42::q42_volume;
+#[cfg(not(target_arch = "wasm32"))]
+pub use q42::q42_reader;
+#[cfg(not(target_arch = "wasm32"))]
+pub use q42::q42_lexicon;
+pub use q42::yaml_ld_q42;
+pub use q42::design_encode;
+// --- extensions/ category (moved from crate root; paths preserved) ---
+pub mod extensions;
+pub use extensions::extension_bus;
+pub use extensions::extension_manifest;
+#[cfg(any(not(target_arch = "wasm32"), feature = "wasm-llm"))]
+pub use extensions::resource_catalog;
 #[cfg(any(
     not(target_arch = "wasm32"),
     feature = "wasm-logic",
     feature = "wasm-scientific",
     feature = "wasm-full"
 ))]
-pub mod extension_bus;
 #[cfg(any(
     not(target_arch = "wasm32"),
     feature = "wasm-logic",
@@ -52,10 +107,21 @@ pub mod shaders;
 pub mod compute_universe;
 #[cfg(any(not(target_arch = "wasm32"), feature = "wasm-llm"))]
 pub mod topology_draft;
-pub mod sonic_token;
+// --- net/ category (moved from crate root; paths preserved) ---
+pub mod net;
+#[cfg(not(target_arch = "wasm32"))]
+pub use net::nym_adapter;
+#[cfg(not(target_arch = "wasm32"))]
+pub use net::ebpf_filter;
+#[cfg(not(target_arch = "wasm32"))]
+pub use net::ebpf_firewall;
+#[cfg(not(target_arch = "wasm32"))]
+pub use net::acoustic_ble_mesh;
+pub use net::sonic_token;
+#[cfg(not(target_arch = "wasm32"))]
+pub use net::host_topology;
 pub mod audio;
 pub mod tensor;
-pub mod design_encode;
 pub mod geometric_algebra;
 pub mod rdf_star;
 pub mod webizen_validator;
@@ -96,15 +162,8 @@ pub mod clinical_engine {
         GeneExpressionResult { fold_change: 0.0, log2_fold_change: 0.0, is_significant: false }
     }
 }
-#[cfg(not(target_arch = "wasm32"))]
-pub mod q42_lexicon;
-#[cfg(not(target_arch = "wasm32"))]
-pub mod q42_reader;
-#[cfg(not(target_arch = "wasm32"))]
-pub mod q42_volume;
 pub mod query_engine;
 pub mod qubo_compiler;
-pub mod solid_ldp;
 pub mod vault_manifest;
 #[cfg(all(
     target_arch = "wasm32",
@@ -163,10 +222,6 @@ pub mod wasm_playground;
 #[cfg(not(target_arch = "wasm32"))]
 pub mod zns_storage;
 pub mod storage_driver;
-#[cfg(not(target_arch = "wasm32"))]
-pub mod platform_scheduler;
-#[cfg(not(target_arch = "wasm32"))]
-pub mod ebpf_filter;
 // --- crypto/ category (moved from crate root; paths preserved) ---
 pub mod crypto;
 pub use crypto::zk_proofs;
@@ -180,13 +235,9 @@ pub use crypto::pq_kem_shim;
 pub use crypto::deontic_circuit;
 pub use crypto::verifiable_credential;
 #[cfg(not(target_arch = "wasm32"))]
-pub mod ebpf_firewall;
-#[cfg(not(target_arch = "wasm32"))]
 pub mod csd_storage;
 #[cfg(not(target_arch = "wasm32"))]
 pub mod ambient_orchestration;
-#[cfg(not(target_arch = "wasm32"))]
-pub mod acoustic_ble_mesh;
 #[cfg(not(target_arch = "wasm32"))]
 // pub mod clinical_engine; // Temporarily disabled
 #[cfg(not(target_arch = "wasm32"))]
@@ -210,10 +261,6 @@ pub mod specialized_libs;
 #[cfg(not(target_arch = "wasm32"))]
 // pub use specialized_libs::engineering_analysis;
 
-#[cfg(not(target_arch = "wasm32"))]
-pub mod webtorrent_routes;
-#[cfg(not(target_arch = "wasm32"))]
-pub mod webtorrent_seeder;
 
 /// The Global Capability Registry exposes which features are compiled into the
 /// current qualia-core-db binary. This allows the CLI to dynamically self-document
@@ -665,17 +712,7 @@ pub mod cbor_compiler;
     feature = "wasm-full"
 ))]
 pub mod crdt;
-#[cfg(not(target_arch = "wasm32"))]
-pub mod daemon;
-#[cfg(not(target_arch = "wasm32"))]
-pub mod daemon_graph;
-#[cfg(not(target_arch = "wasm32"))]
-pub mod daemon_tensor;
-#[cfg(not(target_arch = "wasm32"))]
-pub mod daemon_query;
 pub mod fuzz_testing;
-pub mod git_bridge;
-pub mod kml_bridge;
 // (asset_bridge moved to render::assets in Phase 0.2a)
 pub mod temporal_graph;
 pub mod provenance;
@@ -695,8 +732,6 @@ pub mod epistemic;
 pub mod deontic_logic;
 #[cfg(not(target_arch = "wasm32"))]
 pub mod ontology_loader;
-#[cfg(not(target_arch = "wasm32"))]
-pub mod ilp_dispatcher;
 pub mod graph_index;
 pub mod illocution;
 pub mod indexing;
@@ -711,10 +746,6 @@ pub mod resolve;
 pub mod ingestion;
 pub mod lexicon;
 pub mod frame_layout;
-#[cfg(not(target_arch = "wasm32"))]
-pub mod npu_ffi;
-#[cfg(not(target_arch = "wasm32"))]
-pub mod nym_adapter;
 #[cfg(any(not(target_arch = "wasm32"), feature = "wasm-llm"))]
 pub mod orchestrator;
 #[cfg(any(
@@ -727,13 +758,10 @@ pub mod query_compiler;
 pub mod resolver;
 #[cfg(any(not(target_arch = "wasm32"), feature = "wasm-llm"))]
 pub mod resident_model;
-#[cfg(not(target_arch = "wasm32"))]
-pub mod rpc;
 pub mod spatial_sieve;
 pub mod storage;
 #[cfg(not(target_arch = "wasm32"))]
 pub mod sync;
-pub mod tee_ffi;
 pub mod telemetry;
 #[cfg(any(
     not(target_arch = "wasm32"),
@@ -744,12 +772,8 @@ pub mod telemetry;
 pub mod wal;
 #[cfg(any(not(target_arch = "wasm32"), feature = "wasm-scientific"))]
 pub mod webizen;
-#[cfg(not(target_arch = "wasm32"))]
-pub mod webizen_server;
 
 
-#[cfg(not(target_arch = "wasm32"))]
-pub mod daemon_swarm;
 #[cfg(target_os = "windows")]
 pub mod directml_bridge;
 #[cfg(any(not(target_arch = "wasm32"), feature = "wasm-llm"))]
@@ -759,8 +783,6 @@ pub mod gguf_bridge;
 #[cfg(any(not(target_arch = "wasm32"), feature = "wasm-llm"))]
 pub mod gguf_sharder;
 /// Phase 4: AOT GGUF → `.q42` LLM-weight container compiler.
-#[cfg(any(not(target_arch = "wasm32"), feature = "wasm-llm"))]
-pub mod q42_weight;
 /// Phase 6 / task #12: safetensor (+ MLX) source parsing + dtype gate for the streaming transcoder.
 #[cfg(any(not(target_arch = "wasm32"), feature = "wasm-llm"))]
 pub mod safetensor;
@@ -780,17 +802,11 @@ pub mod topk;
 #[cfg(not(target_arch = "wasm32"))]
 pub mod topk_gpu;
 /// STELLAR §A AH-track H0: host topology + capability sensor (enumerate all adapters; discrete vs unified).
-#[cfg(not(target_arch = "wasm32"))]
-pub mod host_topology;
 /// STELLAR §A AH-track H1(a): cross-circuit GEMV benchmark → measured capability matrix (CPU/iGPU/GPU).
-#[cfg(not(target_arch = "wasm32"))]
-pub mod device_benchmark;
 /// STELLAR §A AH-track H2: residency + device-priority planner (discovery → employment plan, D31).
 #[cfg(not(target_arch = "wasm32"))]
 pub mod residency_planner;
 /// STELLAR §A AH-track H1(a) cache: CBOR hardware passport (cache discovery, fast-boot skip, D26).
-#[cfg(not(target_arch = "wasm32"))]
-pub mod hardware_passport;
 /// STELLAR §A A0 (D17/D22): shared native LLM benchmark harness — the one measurement
 /// surface for the existing F16/Q8 path and the future ternary/top-k paths.
 #[cfg(not(target_arch = "wasm32"))]
@@ -825,13 +841,9 @@ pub mod ode_solver;
 pub mod qpu_ingress;
 #[cfg(any(not(target_arch = "wasm32"), feature = "wasm-scientific"))]
 pub mod quantum_dft;
-#[cfg(any(not(target_arch = "wasm32"), feature = "wasm-llm"))]
-pub mod resource_catalog;
 #[cfg(any(not(target_arch = "wasm32"), any(feature = "wasm-scientific", feature = "wasm-logic")))]
 pub mod webizen_bytecode;
 
-#[cfg(target_os = "android")]
-pub mod jni_bridge;
 
 #[cfg(target_arch = "wasm32")]
 pub mod wasm_edge;
