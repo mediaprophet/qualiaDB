@@ -1004,6 +1004,14 @@ pub fn financial_model(args: &[u8]) -> Result<String, McpSystemError> {
                             .unwrap_or("NASDAQ")
                             .to_string(),
                         last_updated: 0,
+                        // Optional real price history (oldest first) so risk
+                        // metrics can be computed from genuine returns; empty when
+                        // not supplied (risk computation then refuses, never fakes).
+                        price_history: a
+                            .get("price_history")
+                            .and_then(Value::as_array)
+                            .map(|arr| arr.iter().filter_map(Value::as_f64).collect())
+                            .unwrap_or_default(),
                     })
                 })
                 .collect();

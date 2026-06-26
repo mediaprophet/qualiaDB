@@ -14,6 +14,12 @@ use crate::zk_proofs::ZkProofSystem;
 use crate::zns_storage::ZnsZoneManager;
 use super::statistical_computing::StatisticalComputingLibrary;
 
+/// Real return-based portfolio risk metrics (volatility, historical VaR/CVaR,
+/// Sharpe, Sortino, max-drawdown) computed from each asset's price history.
+/// Split into its own library submodule (PROJECT RULE §11) with its own tests
+/// against hand-computed statistics.
+pub mod portfolio_risk;
+
 /// Financial Modeling Library Manager
 pub struct FinancialModelingLibrary {
     portfolio_manager: PortfolioManager,
@@ -67,6 +73,14 @@ pub struct Asset {
     pub currency: String,
     pub exchange: String,
     pub last_updated: u64,
+    /// Historical close prices for this asset, oldest first, in `currency`. This
+    /// is the real time series from which return-based risk metrics (volatility,
+    /// VaR, CVaR, Sharpe, Sortino, drawdown) are computed. Empty when no history
+    /// is loaded — in which case risk computation refuses (`InsufficientData`)
+    /// rather than fabricating numbers. `#[serde(default)]` keeps older
+    /// serialized portfolios (without this field) loadable.
+    #[serde(default)]
+    pub price_history: Vec<f64>,
 }
 
 /// Asset types
@@ -2134,9 +2148,12 @@ impl FinancialModelingLibrary {
         let risk_score = risk_metrics.overall_risk_score;
         Ok(FinancialOperationResult {
             result: risk_metrics,
+            // This is a RISK computation, not a compliance evaluation. Reporting
+            // `Compliant` here would fabricate a regulatory pass that was never
+            // checked — `Pending` honestly says compliance was not evaluated.
+            compliance_status: ComplianceStatus::Pending,
             execution_time,
             risk_score,
-            compliance_status: ComplianceStatus::Compliant,
             audit_trail: Vec::new(),
         })
     }
@@ -2667,18 +2684,16 @@ impl RiskAnalyzer {
         Ok(())
     }
 
-    pub fn calculate_risk_metrics(&self, _portfolio: &Portfolio) -> Result<RiskMetrics, FinancialError> {
-        // NOT computable from the available data — it must say so, never fabricate. The previous
-        // body returned a default `RiskMetrics` (Sharpe 0.75, VaR/volatility/drawdown all hardcoded).
-        // Every field of RiskMetrics (VaR, CVaR, volatility, beta, alpha, Sharpe, Sortino,
-        // max-drawdown) is derived from a RETURN TIME SERIES / covariance. The `Asset` data model
-        // carries only current positions (quantity, price, market value) — no return history — so
-        // these metrics cannot be computed. Refusing rather than returning fabricated risk numbers.
-        Err(FinancialError::InsufficientData(
-            "portfolio risk metrics (calculate_portfolio_risk): require an asset return time series \
-             / covariance; the portfolio model carries only current positions, not returns."
-                .to_string(),
-        ))
+    pub fn calculate_risk_metrics(&self, portfolio: &Portfolio) -> Result<RiskMetrics, FinancialError> {
+        // REAL: computed from the portfolio's asset return time series (derived
+        // from each Asset's price_history, value-weighted into a portfolio return
+        // series), in the `portfolio_risk` library submodule. Volatility, 95% VaR
+        // and CVaR (historical), Sharpe, Sortino and max-drawdown are genuine
+        // sample statistics — never the old fabricated defaults (Sharpe 0.75 etc).
+        // When no return history is present, it still REFUSES with InsufficientData
+        // (the metrics are undefined without returns); beta/alpha are reported NaN
+        // because they require a benchmark series the model does not carry.
+        portfolio_risk::compute_risk_metrics(portfolio)
     }
 }
 
@@ -3066,6 +3081,7 @@ impl Asset {
             currency: "USD".to_string(),
             exchange: "NASDAQ".to_string(),
             last_updated: 0,
+            price_history: Vec::new(),
         }
     }
 }
@@ -4070,9 +4086,10 @@ mod tests {
         let mut library = FinancialModelingLibrary::new();
         library.initialize().unwrap();
         
-        // HONEST: portfolio risk metrics need a return time series the data model doesn't carry,
-        // so this reports an error (InsufficientData / portfolio-not-found) rather than fabricating
-        // a Sharpe ratio / VaR. It must not return a confident risk number it never computed.
+        // Risk metrics ARE now genuinely computed from each asset's price_history
+        // (see portfolio_risk.rs for the math + proofs). With no such portfolio
+        // stored, this honestly errors (portfolio-not-found) rather than returning
+        // a confident risk number it never computed.
         let result = library.calculate_portfolio_risk("portfolio_1");
         assert!(result.is_err());
     }
