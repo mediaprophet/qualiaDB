@@ -19,6 +19,7 @@
 pub mod qpu;
 
 pub mod calculus;
+pub mod geometric_algebra;
 pub mod linear_algebra;
 pub mod optimization;
 pub mod quantum_optimizers;

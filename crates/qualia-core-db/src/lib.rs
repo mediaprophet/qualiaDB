@@ -209,7 +209,9 @@ pub use net::sonic_token;
 pub use net::host_topology;
 pub mod audio;
 pub mod tensor;
-pub mod geometric_algebra;
+// geometric_algebra moved into solvers/ (it is a math solver, not a logic modality);
+// re-exported here so `crate::geometric_algebra::*` paths keep resolving.
+pub use crate::solvers::geometric_algebra;
 // --- governance/ category (reorg) ---
 pub mod governance;
 #[cfg(any(not(target_arch = "wasm32"), feature = "wasm-scientific"))]
