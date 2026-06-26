@@ -119,6 +119,9 @@ impl QTensorEngine {
             #[cfg(target_arch = "wasm32")]
             let active_pipeline: &wgpu::ComputePipeline = &self.pipeline;
 
+            #[cfg(not(target_arch = "wasm32"))]
+            let bind_layout = self.native_gemm_bind_layout(use_coop).clone();
+            #[cfg(target_arch = "wasm32")]
             let bind_layout = active_pipeline.get_bind_group_layout(0);
             let bind_group = self.gpu_device().create_bind_group(&wgpu::BindGroupDescriptor {
                 label: Some("LayerGemmBindGroup"),

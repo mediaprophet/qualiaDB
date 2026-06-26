@@ -83,6 +83,9 @@ impl QTensorEngine {
             mapped_at_creation: false,
         });
 
+        #[cfg(not(target_arch = "wasm32"))]
+        let bind_layout = self.embedding_bind_layout.clone();
+        #[cfg(target_arch = "wasm32")]
         let bind_layout = self.embedding_pipeline.get_bind_group_layout(0);
         let bind_group = self.gpu_device().create_bind_group(&wgpu::BindGroupDescriptor {
             label: Some("QuantizedEmbeddingBindGroup"),
@@ -272,6 +275,9 @@ impl QTensorEngine {
         });
         self.gpu_queue().write_buffer(&params_buf, 0, bytemuck::bytes_of(&gemm_params));
 
+        #[cfg(not(target_arch = "wasm32"))]
+        let bind_group_layout = self.pipeline_bind_layout.clone();
+        #[cfg(target_arch = "wasm32")]
         let bind_group_layout = self.pipeline.get_bind_group_layout(0);
         let bind_group = self.gpu_device().create_bind_group(&wgpu::BindGroupDescriptor {
             label: None,

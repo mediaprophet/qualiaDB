@@ -452,8 +452,11 @@ pub const MAX_PREFILL_BATCH_FLOATS: usize = MAX_STACK_GEMM_IN * PREFILL_CHUNK_SI
 pub const PREFILL_CHUNK_STACK_FLOATS: usize = 2560 * PREFILL_CHUNK_SIZE;
 /// wgpu default max buffer size on many drivers (256 MiB).
 const MAX_WGPU_WEIGHT_STAGING: usize = 64 * 1024 * 1024;
-/// Vocabulary projection rows per chunked logits sweep (L2-friendly).
-pub const VOCAB_CHUNK_ROWS: usize = 8192;
+/// Vocabulary projection rows per chunked logits sweep.
+/// 10240 is the native GEMM output-buffer ceiling and a 256-row multiple, so
+/// resident logits chunk offsets stay storage-binding aligned while the current
+/// 49k-vocab model drops from six output chunks/token to five.
+pub const VOCAB_CHUNK_ROWS: usize = MAX_STACK_GEMM_OUT;
 
 /// Streaming argmax result across chunked vocabulary projection.
 #[derive(Debug, Clone, Copy, PartialEq)]
@@ -479,6 +482,10 @@ pub struct GgufLoadReport {
 // moved to the `cpu_ops` submodule (declared below; re-exported via `pub(crate) use cpu_ops::*`).
 mod cpu_ops;
 pub(crate) use cpu_ops::*;
+#[cfg(not(target_arch = "wasm32"))]
+mod pipeline_cache;
+#[cfg(not(target_arch = "wasm32"))]
+pub(crate) use pipeline_cache::*;
 
 // Concern submodules — each holds an `impl QTensorEngine` block for one hot-path area. Methods are
 // pub(crate) so they call across modules freely; types/imports arrive via each file's `use super::*`.
@@ -886,15 +893,23 @@ pub struct QTensorEngine {
     #[cfg(target_arch = "wasm32")]
     queue: wgpu::Queue,
     pub pipeline: wgpu::ComputePipeline,
+    #[cfg(not(target_arch = "wasm32"))]
+    native_pipeline_cache: Option<wgpu::PipelineCache>,
+    #[cfg(not(target_arch = "wasm32"))]
+    pipeline_bind_layout: wgpu::BindGroupLayout,
     /// 0.0.21: cooperative GEMV (one workgroup per output row, shared-memory reduction). Same shader
     /// MODULE as `pipeline`, entry point `coop_gemv`. Selected per-call when
     /// `llm_bench::coop_gemv_enabled()`. Native only (the wasm decode path is the MC8 arena).
     #[cfg(not(target_arch = "wasm32"))]
     pub(crate) coop_gemv_pipeline: wgpu::ComputePipeline,
+    #[cfg(not(target_arch = "wasm32"))]
+    coop_gemv_bind_layout: wgpu::BindGroupLayout,
     /// Legacy f32×f32 mock block for offset-0 `QTensor` fallback (no mmap).
     mock_pipeline: wgpu::ComputePipeline,
     /// GPU-side Q6_K embedding dequant + matmul (zero CPU dequant).
     pub embedding_pipeline: wgpu::ComputePipeline,
+    #[cfg(not(target_arch = "wasm32"))]
+    embedding_bind_layout: wgpu::BindGroupLayout,
     pub is_initialized: bool,
     /// DirectML device — Some on Windows when DirectML 1.15 is linked.
     #[cfg(target_os = "windows")]
@@ -935,6 +950,8 @@ pub struct QTensorEngine {
     // Lets the output logits stay on-GPU (top-k over them, read back only K pairs) instead of the
     // 196 KB/token full-logit readback. Created once in `ensure_gemm_buffers`.
     output_topk_pipeline: Option<wgpu::ComputePipeline>,
+    #[cfg(not(target_arch = "wasm32"))]
+    output_topk_bind_layout: Option<wgpu::BindGroupLayout>,
     topk_cand_val_buf: Option<wgpu::Buffer>,
     topk_cand_idx_buf: Option<wgpu::Buffer>,
     topk_cand_staging: Option<wgpu::Buffer>,
@@ -966,11 +983,15 @@ pub struct QTensorEngine {
     /// CPU mirror for quantized-attention fallback (no growth during decode).
     kv_cache_cpu: Option<Box<[f32]>>,
     attention_pipeline: wgpu::ComputePipeline,
+    #[cfg(not(target_arch = "wasm32"))]
+    attention_bind_layout: wgpu::BindGroupLayout,
     attention_params_buf: Option<wgpu::Buffer>,
     attention_mask_buf: Option<wgpu::Buffer>,
     /// MC8 elementwise GPU ops (RMSNorm / SiLU×mul / residual).
     elem_rms_norm_pipeline: wgpu::ComputePipeline,
     elem_silu_mul_pipeline: wgpu::ComputePipeline,
+    #[cfg(not(target_arch = "wasm32"))]
+    elem_silu_mul_bind_layout: wgpu::BindGroupLayout,
     elem_add_residual_pipeline: wgpu::ComputePipeline,
     elem_params_buf: Option<wgpu::Buffer>,
     norm_weight_buf: Option<wgpu::Buffer>,
@@ -1012,6 +1033,13 @@ pub struct QTensorEngine {
     /// distinct params simultaneously. Lazily created native-only on the first fused FFN.
     #[cfg(not(target_arch = "wasm32"))]
     ffn_fused_params: Option<wgpu::Buffer>,
+    /// Native attention preproject fusion: two 256-byte-aligned GEMM uniform slots
+    /// (K,V) and two attention uniform slots (K-write,V-write), allowing K/V
+    /// projection + KV-cache writes to share one submit without uniform races.
+    #[cfg(not(target_arch = "wasm32"))]
+    attention_kv_gemm_params: Option<wgpu::Buffer>,
+    #[cfg(not(target_arch = "wasm32"))]
+    attention_kv_params: Option<wgpu::Buffer>,
     /// Phase 5.4: all layers' attn_norm + ffn_norm weights resident (slot 2L = attn, 2L+1 = ffn),
     /// so RMSNorm binds a per-layer sub-range instead of re-`write_buffer`ing a shared single-layer
     /// `norm_weight_buf` every layer (the second per-layer write_buffer race blocking single-submit).

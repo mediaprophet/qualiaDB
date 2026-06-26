@@ -93,8 +93,9 @@ impl QTensorEngine {
                 module: &shader,
                 entry_point: Some("topk_block"),
                 compilation_options: Default::default(),
-                cache: None,
+                cache: self.native_pipeline_cache_ref(),
             });
+        let pipeline_layout = pipeline.get_bind_group_layout(0);
         // Worst case: a full vocab chunk's blocks × max K candidates.
         let max_blocks = (VOCAB_CHUNK_ROWS / crate::topk::TOPK_BLOCK_SIZE).max(1);
         let cand_bytes = ((max_blocks * crate::topk::TOPK_MAX_K).max(1) * 4) as wgpu::BufferAddress;
@@ -122,6 +123,7 @@ impl QTensorEngine {
             usage: wgpu::BufferUsages::UNIFORM | wgpu::BufferUsages::COPY_DST,
             mapped_at_creation: false,
         }));
+        self.output_topk_bind_layout = Some(pipeline_layout);
         self.output_topk_pipeline = Some(pipeline);
     }
 
@@ -155,6 +157,18 @@ impl QTensorEngine {
         let use_coop = crate::llm_bench::coop_gemv_enabled();
         let gemm_pipeline: &wgpu::ComputePipeline =
             if use_coop { &self.coop_gemv_pipeline } else { &self.pipeline };
+        let gemm_layout = self.native_gemm_bind_layout(use_coop).clone();
+        let topk_layout = self.output_topk_bind_layout.as_ref()?;
+        let topk_bind = self.gpu_device().create_bind_group(&wgpu::BindGroupDescriptor {
+            label: Some("Top1Bind"),
+            layout: topk_layout,
+            entries: &[
+                wgpu::BindGroupEntry { binding: 0, resource: output_buf.as_entire_binding() },
+                wgpu::BindGroupEntry { binding: 1, resource: topk_params_buf.as_entire_binding() },
+                wgpu::BindGroupEntry { binding: 2, resource: cand_val.as_entire_binding() },
+                wgpu::BindGroupEntry { binding: 3, resource: cand_idx.as_entire_binding() },
+            ],
+        });
         let block_size = crate::topk::TOPK_BLOCK_SIZE;
         let full_chunks = vocab_size.div_ceil(VOCAB_CHUNK_ROWS);
         let total_cands = vocab_size.div_ceil(block_size);
@@ -232,7 +246,7 @@ impl QTensorEngine {
 
             let gemm_bind = self.gpu_device().create_bind_group(&wgpu::BindGroupDescriptor {
                 label: Some("Top1GemmBind"),
-                layout: &gemm_pipeline.get_bind_group_layout(0),
+                layout: &gemm_layout,
                 entries: &[
                     wgpu::BindGroupEntry { binding: 0, resource: input_buf.as_entire_binding() },
                     wgpu::BindGroupEntry { binding: 1, resource: weight_resource },
@@ -240,17 +254,6 @@ impl QTensorEngine {
                     wgpu::BindGroupEntry { binding: 3, resource: output_buf.as_entire_binding() },
                 ],
             });
-            let topk_bind = self.gpu_device().create_bind_group(&wgpu::BindGroupDescriptor {
-                label: Some("Top1Bind"),
-                layout: &topk_pipeline.get_bind_group_layout(0),
-                entries: &[
-                    wgpu::BindGroupEntry { binding: 0, resource: output_buf.as_entire_binding() },
-                    wgpu::BindGroupEntry { binding: 1, resource: topk_params_buf.as_entire_binding() },
-                    wgpu::BindGroupEntry { binding: 2, resource: cand_val.as_entire_binding() },
-                    wgpu::BindGroupEntry { binding: 3, resource: cand_idx.as_entire_binding() },
-                ],
-            });
-
             let mut encoder = self
                 .device()
                 .create_command_encoder(&wgpu::CommandEncoderDescriptor { label: Some("Top1Encoder") });
@@ -361,6 +364,7 @@ impl QTensorEngine {
             return None;
         }
         let pipeline = self.output_topk_pipeline.as_ref()?;
+        let topk_layout = self.output_topk_bind_layout.as_ref()?;
         let input_buf = self.gemm_input_buf.as_ref()?;
         let weight_buf = self.gemm_weight_buf.as_ref()?;
         let output_buf = self.gemm_output_buf.as_ref()?;
@@ -377,14 +381,25 @@ impl QTensorEngine {
         let use_coop = crate::llm_bench::coop_gemv_enabled();
         let gemm_pipeline: &wgpu::ComputePipeline =
             if use_coop { &self.coop_gemv_pipeline } else { &self.pipeline };
+        let gemm_layout = self.native_gemm_bind_layout(use_coop).clone();
+        let topk_bind = self.gpu_device().create_bind_group(&wgpu::BindGroupDescriptor {
+            label: Some("TopkBind"),
+            layout: topk_layout,
+            entries: &[
+                wgpu::BindGroupEntry { binding: 0, resource: output_buf.as_entire_binding() },
+                wgpu::BindGroupEntry { binding: 1, resource: topk_params_buf.as_entire_binding() },
+                wgpu::BindGroupEntry { binding: 2, resource: cand_val.as_entire_binding() },
+                wgpu::BindGroupEntry { binding: 3, resource: cand_idx.as_entire_binding() },
+            ],
+        });
 
         let mut all_val: Vec<f32> = Vec::new();
         let mut all_idx: Vec<u32> = Vec::new();
 
         // A1a step-2: when the output projection is resident (uploaded once at init), bind the
-        // per-chunk sub-range — zero per-token upload. Each chunk's byte offset is 256-aligned
-        // because VOCAB_CHUNK_ROWS (8192) is a multiple of 256. The bound bytes, quant, shader and
-        // params are identical to the per-chunk-upload fallback, so logits are byte-for-byte equal.
+        // per-chunk sub-range - zero per-token upload. `VOCAB_CHUNK_ROWS` is a multiple of 256, so
+        // every chunk offset is storage-binding aligned. The bound bytes, quant, shader and params
+        // are identical to the per-chunk-upload fallback, so logits are byte-for-byte equal.
         let resident_logits = self.mc8_logits_resident_buf.as_ref();
         let resident_row_bytes = self.mc8_logits_row_bytes as u64;
 
@@ -450,7 +465,7 @@ impl QTensorEngine {
 
             let gemm_bind = self.gpu_device().create_bind_group(&wgpu::BindGroupDescriptor {
                 label: Some("TopkGemmBind"),
-                layout: &gemm_pipeline.get_bind_group_layout(0),
+                layout: &gemm_layout,
                 entries: &[
                     wgpu::BindGroupEntry { binding: 0, resource: input_buf.as_entire_binding() },
                     wgpu::BindGroupEntry { binding: 1, resource: weight_resource },
@@ -458,17 +473,6 @@ impl QTensorEngine {
                     wgpu::BindGroupEntry { binding: 3, resource: output_buf.as_entire_binding() },
                 ],
             });
-            let topk_bind = self.gpu_device().create_bind_group(&wgpu::BindGroupDescriptor {
-                label: Some("TopkBind"),
-                layout: &pipeline.get_bind_group_layout(0),
-                entries: &[
-                    wgpu::BindGroupEntry { binding: 0, resource: output_buf.as_entire_binding() },
-                    wgpu::BindGroupEntry { binding: 1, resource: topk_params_buf.as_entire_binding() },
-                    wgpu::BindGroupEntry { binding: 2, resource: cand_val.as_entire_binding() },
-                    wgpu::BindGroupEntry { binding: 3, resource: cand_idx.as_entire_binding() },
-                ],
-            });
-
             let mut encoder = self
                 .device()
                 .create_command_encoder(&wgpu::CommandEncoderDescriptor { label: Some("TopkEncoder") });

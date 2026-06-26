@@ -295,7 +295,7 @@ impl QTensorEngine {
             return false;
         }
         let row_bytes = total / vocab;
-        // VOCAB_CHUNK_ROWS (8192) is a multiple of 256, so every chunk's byte offset
+        // VOCAB_CHUNK_ROWS is a multiple of 256, so every chunk's byte offset
         // (chunk_idx * VOCAB_CHUNK_ROWS * row_bytes) is 256-aligned for the storage binding.
         let buf = self.gpu_device().create_buffer(&wgpu::BufferDescriptor {
             label: Some("ResidentLogits"),

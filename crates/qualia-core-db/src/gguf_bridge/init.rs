@@ -70,6 +70,11 @@ impl QTensorEngine {
         #[cfg(target_arch = "wasm32")]
         let queue = &wasm_queue;
 
+        #[cfg(not(target_arch = "wasm32"))]
+        let native_pipeline_cache = create_native_pipeline_cache(device);
+        #[cfg(target_arch = "wasm32")]
+        let native_pipeline_cache: Option<wgpu::PipelineCache> = None;
+
         let shader = device.create_shader_module(wgpu::ShaderModuleDescriptor {
             label: Some("Fused Transformer Shader"),
             source: wgpu::ShaderSource::Wgsl(include_str!("../shaders/fused_transformer.wgsl").into()),
@@ -135,7 +140,7 @@ impl QTensorEngine {
             module: &shader,
             entry_point: Some("main"),
             compilation_options: Default::default(),
-            cache: None,
+            cache: native_pipeline_cache.as_ref(),
         });
         #[cfg(not(target_arch = "wasm32"))]
         let pipeline = device.create_compute_pipeline(&wgpu::ComputePipelineDescriptor {
@@ -144,7 +149,7 @@ impl QTensorEngine {
             module: &shader,
             entry_point: Some("main"),
             compilation_options: Default::default(),
-            cache: None,
+            cache: native_pipeline_cache.as_ref(),
         });
         // 0.0.21: second pipeline over the SAME shader module — the cooperative one-workgroup-per-row
         // GEMV (entry `coop_gemv`). Auto-layout; same group-0 bindings as `main`. Native only.
@@ -155,7 +160,7 @@ impl QTensorEngine {
             module: &shader,
             entry_point: Some("coop_gemv"),
             compilation_options: Default::default(),
-            cache: None,
+            cache: native_pipeline_cache.as_ref(),
         });
 
         let mock_shader = device.create_shader_module(wgpu::ShaderModuleDescriptor {
@@ -170,7 +175,7 @@ impl QTensorEngine {
             module: &mock_shader,
             entry_point: Some("main"),
             compilation_options: Default::default(),
-            cache: None,
+            cache: native_pipeline_cache.as_ref(),
         });
 
         let emb_shader = device.create_shader_module(wgpu::ShaderModuleDescriptor {
@@ -185,7 +190,7 @@ impl QTensorEngine {
             module: &emb_shader,
             entry_point: Some("main"),
             compilation_options: Default::default(),
-            cache: None,
+            cache: native_pipeline_cache.as_ref(),
         });
 
         let attn_shader = device.create_shader_module(wgpu::ShaderModuleDescriptor {
@@ -271,7 +276,7 @@ impl QTensorEngine {
             module: &attn_shader,
             entry_point: Some("main"),
             compilation_options: Default::default(),
-            cache: None,
+            cache: native_pipeline_cache.as_ref(),
         });
         #[cfg(not(target_arch = "wasm32"))]
         let attention_pipeline = device.create_compute_pipeline(&wgpu::ComputePipelineDescriptor {
@@ -280,7 +285,7 @@ impl QTensorEngine {
             module: &attn_shader,
             entry_point: Some("main"),
             compilation_options: Default::default(),
-            cache: None,
+            cache: native_pipeline_cache.as_ref(),
         });
 
         let elem_shader = device.create_shader_module(wgpu::ShaderModuleDescriptor {
@@ -347,7 +352,7 @@ impl QTensorEngine {
                 module: &elem_shader,
                 entry_point: Some("rms_norm_batch"),
                 compilation_options: Default::default(),
-                cache: None,
+                cache: native_pipeline_cache.as_ref(),
             });
         #[cfg(target_arch = "wasm32")]
         let elem_silu_mul_pipeline =
@@ -357,7 +362,7 @@ impl QTensorEngine {
                 module: &elem_shader,
                 entry_point: Some("silu_mul_main"),
                 compilation_options: Default::default(),
-                cache: None,
+                cache: native_pipeline_cache.as_ref(),
             });
         #[cfg(target_arch = "wasm32")]
         let elem_add_residual_pipeline =
@@ -367,7 +372,7 @@ impl QTensorEngine {
                 module: &elem_shader,
                 entry_point: Some("add_residual_main"),
                 compilation_options: Default::default(),
-                cache: None,
+                cache: native_pipeline_cache.as_ref(),
             });
         #[cfg(not(target_arch = "wasm32"))]
         let elem_rms_norm_pipeline =
@@ -377,7 +382,7 @@ impl QTensorEngine {
                 module: &elem_shader,
                 entry_point: Some("rms_norm_batch"),
                 compilation_options: Default::default(),
-                cache: None,
+                cache: native_pipeline_cache.as_ref(),
             });
         #[cfg(not(target_arch = "wasm32"))]
         let elem_silu_mul_pipeline =
@@ -387,7 +392,7 @@ impl QTensorEngine {
                 module: &elem_shader,
                 entry_point: Some("silu_mul_main"),
                 compilation_options: Default::default(),
-                cache: None,
+                cache: native_pipeline_cache.as_ref(),
             });
         #[cfg(not(target_arch = "wasm32"))]
         let elem_add_residual_pipeline =
@@ -397,7 +402,7 @@ impl QTensorEngine {
                 module: &elem_shader,
                 entry_point: Some("add_residual_main"),
                 compilation_options: Default::default(),
-                cache: None,
+                cache: native_pipeline_cache.as_ref(),
             });
 
         // Phase 5 — Fused FFN expansion pipeline (gate · SiLU · up in one dispatch).
@@ -494,7 +499,7 @@ impl QTensorEngine {
                 module: &module,
                 entry_point: Some("fused_ffn_expansion"),
                 compilation_options: Default::default(),
-                cache: None,
+                cache: native_pipeline_cache.as_ref(),
             })
         };
 
@@ -531,6 +536,31 @@ impl QTensorEngine {
             log::info!("LLM_LOAD|gpu-backend|0.45|Using wgpu fallback backend for native compute");
         }
 
+        #[cfg(not(target_arch = "wasm32"))]
+        let pipeline_bind_layout = pipeline.get_bind_group_layout(0);
+        #[cfg(not(target_arch = "wasm32"))]
+        let coop_gemv_bind_layout = coop_gemv_pipeline.get_bind_group_layout(0);
+        #[cfg(not(target_arch = "wasm32"))]
+        let embedding_bind_layout = embedding_pipeline.get_bind_group_layout(0);
+        #[cfg(not(target_arch = "wasm32"))]
+        let attention_bind_layout = attention_pipeline.get_bind_group_layout(0);
+        #[cfg(not(target_arch = "wasm32"))]
+        let elem_silu_mul_bind_layout = elem_silu_mul_pipeline.get_bind_group_layout(0);
+        #[cfg(not(target_arch = "wasm32"))]
+        let attention_kv_gemm_params = device.create_buffer(&wgpu::BufferDescriptor {
+            label: Some("AttentionKvGemmParams"),
+            size: 256 * 2,
+            usage: wgpu::BufferUsages::UNIFORM | wgpu::BufferUsages::COPY_DST,
+            mapped_at_creation: false,
+        });
+        #[cfg(not(target_arch = "wasm32"))]
+        let attention_kv_params = device.create_buffer(&wgpu::BufferDescriptor {
+            label: Some("AttentionKvWriteParams"),
+            size: 256 * 2,
+            usage: wgpu::BufferUsages::UNIFORM | wgpu::BufferUsages::COPY_DST,
+            mapped_at_creation: false,
+        });
+
         Ok(Self {
             #[cfg(target_arch = "wasm32")]
             device: wasm_device,
@@ -538,10 +568,20 @@ impl QTensorEngine {
             queue: wasm_queue,
             pipeline,
             #[cfg(not(target_arch = "wasm32"))]
+            native_pipeline_cache,
+            #[cfg(not(target_arch = "wasm32"))]
+            pipeline_bind_layout,
+            #[cfg(not(target_arch = "wasm32"))]
             coop_gemv_pipeline,
+            #[cfg(not(target_arch = "wasm32"))]
+            coop_gemv_bind_layout,
             mock_pipeline,
             embedding_pipeline,
+            #[cfg(not(target_arch = "wasm32"))]
+            embedding_bind_layout,
             attention_pipeline,
+            #[cfg(not(target_arch = "wasm32"))]
+            attention_bind_layout,
             is_initialized: true,
             #[cfg(target_os = "windows")]
             dml: dml_status,
@@ -565,6 +605,8 @@ impl QTensorEngine {
             gemm_params_buf: None,
             gemm_output_staging: None,
             output_topk_pipeline: None,
+            #[cfg(not(target_arch = "wasm32"))]
+            output_topk_bind_layout: None,
             topk_cand_val_buf: None,
             topk_cand_idx_buf: None,
             topk_cand_staging: None,
@@ -592,6 +634,8 @@ impl QTensorEngine {
             attention_mask_buf: None,
             elem_rms_norm_pipeline,
             elem_silu_mul_pipeline,
+            #[cfg(not(target_arch = "wasm32"))]
+            elem_silu_mul_bind_layout,
             elem_add_residual_pipeline,
             elem_params_buf: None,
             norm_weight_buf: None,
@@ -613,6 +657,10 @@ impl QTensorEngine {
             gemm_resident_weights: std::sync::Mutex::new(std::collections::HashMap::new()),
             #[cfg(not(target_arch = "wasm32"))]
             ffn_fused_params: None,
+            #[cfg(not(target_arch = "wasm32"))]
+            attention_kv_gemm_params: Some(attention_kv_gemm_params),
+            #[cfg(not(target_arch = "wasm32"))]
+            attention_kv_params: Some(attention_kv_params),
             #[cfg(target_arch = "wasm32")]
             mc8_norm_resident_buf: None,
             #[cfg(target_arch = "wasm32")]

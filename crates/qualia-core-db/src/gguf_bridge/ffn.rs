@@ -237,8 +237,8 @@ impl QTensorEngine {
         let use_coop = crate::llm_bench::coop_gemv_enabled();
         let gemm_pipeline: &wgpu::ComputePipeline =
             if use_coop { &self.coop_gemv_pipeline } else { &self.pipeline };
-        let gemm_layout = gemm_pipeline.get_bind_group_layout(0);
-        let elem_layout = self.elem_silu_mul_pipeline.get_bind_group_layout(0);
+        let gemm_layout = self.native_gemm_bind_layout(use_coop).clone();
+        let elem_layout = self.elem_silu_mul_bind_layout.clone();
         let gp_sz = std::num::NonZeroU64::new(std::mem::size_of::<GemmGpuParams>() as u64);
         let ep_sz = std::num::NonZeroU64::new(std::mem::size_of::<ElemGpuParams>() as u64);
         let gemm_params_at = |slot: wgpu::BufferAddress| wgpu::BindingResource::Buffer(wgpu::BufferBinding { buffer: params_buf, offset: slot, size: gp_sz });
@@ -284,20 +284,33 @@ impl QTensorEngine {
         let gate_groups = if use_coop { n_ffn as u32 } else { (n_ffn as u32 + 63) / 64 };
         let up_groups = gate_groups;
         let down_groups = if use_coop { dn_out as u32 } else { (dn_out as u32 + 63) / 64 };
-        for (label, pipe, bg, groups) in [
+        for (idx, (label, pipe, bg, groups)) in [
             ("FfnGate", gemm_pipeline, &gate_bg, gate_groups),
             ("FfnUp", gemm_pipeline, &up_bg, up_groups),
             ("FfnSilu", &self.elem_silu_mul_pipeline, &silu_bg, (n_ffn as u32 + 63) / 64),
             ("FfnDown", gemm_pipeline, &down_bg, down_groups),
-        ] {
-            let mut cp = encoder.begin_compute_pass(&wgpu::ComputePassDescriptor { label: Some(label), timestamp_writes: None });
+        ]
+        .into_iter()
+        .enumerate()
+        {
+            let timestamp_writes = match idx {
+                0 => crate::llm_gpu_profiler::pass_writes_begin(),
+                3 => crate::llm_gpu_profiler::pass_writes_end(),
+                _ => None,
+            };
+            let mut cp = encoder.begin_compute_pass(&wgpu::ComputePassDescriptor {
+                label: Some(label),
+                timestamp_writes,
+            });
             cp.set_pipeline(pipe);
             cp.set_bind_group(0, bg, &[]);
             cp.dispatch_workgroups(groups, 1, 1);
         }
         let out_bytes = (dn_out * 4) as wgpu::BufferAddress;
         encoder.copy_buffer_to_buffer(d_buf, 0, staging, 0, out_bytes);
+        crate::llm_gpu_profiler::resolve(&mut encoder);
         self.gpu_queue().submit(Some(encoder.finish()));
+        crate::llm_gpu_profiler::accumulate(crate::llm_gpu_profiler::Phase::Gemm);
 
         let slice = staging.slice(..out_bytes);
         let (tx, rx) = futures_channel::oneshot::channel();

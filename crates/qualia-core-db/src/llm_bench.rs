@@ -128,11 +128,11 @@ pub fn ternary_ffn_enabled() -> bool {
         )
 }
 
-// Native attention projection split: Q/K/V matmuls run through the cooperative GEMV path, then the
-// attention shader consumes the projected rows via `proj_row_stride`. Default OFF: profiling showed
-// the added readback fences outweighed the projection-kernel win on SmolLM2/A2000. Use
-// `QUALIA_LLM_PREPROJECT_ATTN=1` as a diagnostic/experimental switch.
-static ATTN_PREPROJECT: AtomicBool = AtomicBool::new(false);
+// Native attention projection split: K/V matmuls run through cooperative GEMV, then the attention
+// shader consumes the projected rows via `proj_row_stride` only for RoPE + KV-cache writes. Default
+// ON after the no-readback fused K/V path replaced the old diagnostic readback implementation.
+// Set `QUALIA_LLM_PREPROJECT_ATTN=0` to force the legacy in-attention projection path.
+static ATTN_PREPROJECT: AtomicBool = AtomicBool::new(true);
 
 #[inline]
 pub fn set_attention_preproject(on: bool) {
@@ -458,6 +458,34 @@ pub struct ModelMeta {
     pub directml_enabled: bool,
 }
 
+#[derive(Debug, Clone, Serialize)]
+pub struct BenchGpuMeta {
+    pub adapter: String,
+    pub backend: String,
+    pub device_type: String,
+    pub adapter_feature_flags: String,
+    pub enabled_feature_flags: String,
+    pub subgroup_min_size: u32,
+    pub subgroup_max_size: u32,
+    pub cooperative_matrix_tiles: usize,
+}
+
+impl BenchGpuMeta {
+    fn from_shared_context(ctx: &crate::gpu_context::SharedGpuContext) -> Self {
+        let caps = &ctx.adapter_caps;
+        Self {
+            adapter: caps.name.clone(),
+            backend: caps.backend_label().to_string(),
+            device_type: caps.device_type_label().to_string(),
+            adapter_feature_flags: caps.features.compact_flags(),
+            enabled_feature_flags: ctx.enabled_features.compact_flags(),
+            subgroup_min_size: caps.subgroup_min_size,
+            subgroup_max_size: caps.subgroup_max_size,
+            cooperative_matrix_tiles: caps.cooperative_matrix_tile_count,
+        }
+    }
+}
+
 /// A single benchmark row — JSON/CSV serializable.
 #[derive(Debug, Clone, Serialize)]
 pub struct BenchResult {
@@ -465,6 +493,7 @@ pub struct BenchResult {
     pub model_path: String,
     pub quantization: String,
     pub model: ModelMeta,
+    pub gpu: BenchGpuMeta,
 
     pub prompt_tokens: u64,
     pub output_tokens: u64,
@@ -622,11 +651,14 @@ pub fn run_bench(cfg: &BenchConfig) -> Result<BenchResult, String> {
         0
     };
 
+    let shared_gpu = crate::gpu_context::shared_gpu();
+
     Ok(BenchResult {
         label: cfg.label.clone(),
         model_path: cfg.model_path.clone(),
         quantization: cfg.quantization.clone(),
         model: meta,
+        gpu: BenchGpuMeta::from_shared_context(shared_gpu),
         prompt_tokens,
         output_tokens: last_warm.output_tokens,
         cold_ttft_ms: ms(cold.ttft),
@@ -641,7 +673,7 @@ pub fn run_bench(cfg: &BenchConfig) -> Result<BenchResult, String> {
         // W2/D17: report the real device capability (TIMESTAMP_QUERY negotiation), not a hardcoded
         // false. Per-kernel µs come from the dedicated `w2_gpu_phase_profile` test (a profiled run
         // perturbs the headline tok/s, so the baseline run is left unprofiled).
-        gpu_timestamp_supported: crate::gpu_context::shared_gpu().timestamps_supported,
+        gpu_timestamp_supported: shared_gpu.timestamps_supported,
         note: String::new(),
     })
 }
@@ -1148,11 +1180,12 @@ pub fn results_to_csv(results: &[BenchResult]) -> String {
     s.push_str(
         "label,quantization,n_layer,mapped_bytes,prompt_tokens,output_tokens,\
 cold_ttft_ms,cold_total_ms,warm_ttft_ms,warm_total_ms,\
-load_ms,prefill_ms,prefill_tok_s,decode_ms,decode_tok_s,directml,gpu_ts\n",
+load_ms,prefill_ms,prefill_tok_s,decode_ms,decode_tok_s,directml,gpu_ts,\
+gpu_adapter,gpu_backend,gpu_device_type,gpu_adapter_features,gpu_enabled_features\n",
     );
     for r in results {
         s.push_str(&format!(
-            "{},{},{},{},{},{},{:.3},{:.3},{:.3},{:.3},{:.3},{:.3},{:.2},{:.3},{:.2},{},{}\n",
+            "{},{},{},{},{},{},{:.3},{:.3},{:.3},{:.3},{:.3},{:.3},{:.2},{:.3},{:.2},{},{},{},{},{},{},{}\n",
             r.label.replace(',', " "),
             r.quantization,
             r.model.n_layer,
@@ -1170,6 +1203,11 @@ load_ms,prefill_ms,prefill_tok_s,decode_ms,decode_tok_s,directml,gpu_ts\n",
             r.decode_tok_s,
             r.model.directml_enabled,
             r.gpu_timestamp_supported,
+            r.gpu.adapter.replace(',', " "),
+            r.gpu.backend,
+            r.gpu.device_type,
+            r.gpu.adapter_feature_flags.replace(',', " "),
+            r.gpu.enabled_feature_flags.replace(',', " "),
         ));
     }
     s

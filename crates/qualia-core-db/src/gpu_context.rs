@@ -13,6 +13,11 @@ use std::sync::atomic::{AtomicU32, AtomicU64, Ordering};
 #[cfg(not(target_arch = "wasm32"))]
 use std::sync::OnceLock;
 
+#[cfg(not(target_arch = "wasm32"))]
+mod caps;
+#[cfg(not(target_arch = "wasm32"))]
+pub use caps::{requested_native_llm_features, GpuAdapterCaps, GpuFeatureCaps, GpuLimitCaps};
+
 /// Desktop / portal operational mode (thermal + VRAM driven).
 #[repr(u8)]
 #[derive(Debug, Clone, Copy, PartialEq, Eq, Default)]
@@ -626,6 +631,10 @@ pub fn sample_ambient_telemetry() -> [f32; 11] {
 pub struct SharedGpuContext {
     pub device: wgpu::Device,
     pub queue: wgpu::Queue,
+    /// Immutable adapter capability snapshot for diagnostics and feature negotiation.
+    pub adapter_caps: GpuAdapterCaps,
+    /// Feature subset actually requested on the process-wide device.
+    pub enabled_features: GpuFeatureCaps,
     /// Whether `TIMESTAMP_QUERY` was negotiated on this device (adapter-dependent).
     /// When false, the LLM GPU profiler degrades to a no-op (CPU wall-clock only).
     pub timestamps_supported: bool,
@@ -662,6 +671,17 @@ async fn init_shared_gpu_async() -> Result<SharedGpuContext, String> {
         })
         .await
         .map_err(|e| format!("Failed to find wgpu adapter: {e}"))?;
+    let adapter_caps = GpuAdapterCaps::from_adapter(&adapter);
+    log::info!(
+        "shared_gpu|adapter|{}|{}",
+        adapter_caps.summary_line(),
+        adapter_caps.llm_feature_line()
+    );
+    if adapter_caps.is_integrated_gpu() && std::env::var("QUALIA_LLM_ALLOW_IGPU").ok().as_deref() != Some("1") {
+        log::warn!(
+            "shared_gpu|adapter|integrated_gpu_selected|set QUALIA_LLM_ALLOW_IGPU=1 to acknowledge this for native LLM runs"
+        );
+    }
 
     #[cfg(target_os = "windows")]
     if let Ok(memory) = crate::directml_bridge::probe_best_adapter_memory() {
@@ -674,17 +694,22 @@ async fn init_shared_gpu_async() -> Result<SharedGpuContext, String> {
         }
     }
 
-    // TIMESTAMP_QUERY is additive: enabling it does not affect render/tensor passes
-    // (they keep `timestamp_writes: None`); only the LLM profiler opts in. Request it
-    // only when the adapter advertises it, so `request_device` never fails on weaker GPUs.
-    let ts_supported = adapter
-        .features()
-        .contains(wgpu::Features::TIMESTAMP_QUERY);
-    let required_features = if ts_supported {
-        wgpu::Features::TIMESTAMP_QUERY
-    } else {
-        wgpu::Features::empty()
-    };
+    // Request only features the adapter advertises, and keep the selector in the caps module so
+    // native feature policy stays visible. Today only timestamps are used by default; f16,
+    // subgroup, pipeline-cache/statistics, and cooperative matrix are enabled for the optimized
+    // native shader variants that follow.
+    let required_features = requested_native_llm_features(adapter.features());
+    let enabled_features = GpuFeatureCaps::from_features(required_features);
+    log::info!(
+        "shared_gpu|enabled_features|{}",
+        enabled_features.compact_flags()
+    );
+    if adapter_caps.features.cooperative_matrix && !enabled_features.cooperative_matrix {
+        log::info!(
+            "shared_gpu|cooperative_matrix_supported_but_disabled|set QUALIA_WGPU_EXPERIMENTAL_FEATURES=1 to request it"
+        );
+    }
+    let ts_supported = enabled_features.timestamp_query;
     // Modern weight tensors blow past the wgpu DEFAULTS (max_buffer_size = 256 MiB,
     // max_storage_buffer_binding_size = 128 MiB): the all-F16 Llama-3.2-3B tied lm_head
     // (token_embd, 3072×128256×2 = 751 MiB) is a single resident buffer that the defaults reject
@@ -716,6 +741,8 @@ async fn init_shared_gpu_async() -> Result<SharedGpuContext, String> {
     Ok(SharedGpuContext {
         device,
         queue,
+        adapter_caps,
+        enabled_features,
         timestamps_supported: ts_supported,
         timestamp_period_ns,
     })
