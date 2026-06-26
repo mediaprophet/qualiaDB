@@ -20,6 +20,8 @@ pub mod multiple_testing;
 pub mod preprocessing;
 pub mod regression;
 pub mod resampling;
+pub mod splines;
+pub mod survival;
 pub mod trees;
 
 /// Errors common to the learning estimators. Estimators **fail closed** (return an
