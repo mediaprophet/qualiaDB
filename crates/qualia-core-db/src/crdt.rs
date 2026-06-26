@@ -3,13 +3,24 @@ use serde::{Deserialize, Serialize};
 
 /// Represents a cryptographic grant of authority from a Principal to a Delegate.
 /// Essential for Guardianship (e.g., homeless individual granting read access to a social worker).
+///
+/// Zero-heap (AGENTS.md §4-F): the DIDs are carried as their 32-byte identifier hashes
+/// (q_hash-style handles, not the textual DID) and the proof is the raw 64-byte Ed25519
+/// signature — no `String` allocation, so a grant can be created/validated on a hot path
+/// (e.g. per-quin Bilateral Micro-Commons checks). Callers hash the DID before constructing.
 #[derive(Serialize, Deserialize, Debug, Clone)]
 pub struct DelegatedAccess {
-    pub principal_did: String,
-    pub delegate_did: String,
+    /// 32-byte hash of the principal's (grantor's) DID.
+    #[serde(with = "serde_bytes")]
+    pub principal_did: [u8; 32],
+    /// 32-byte hash of the delegate's (grantee's) DID.
+    #[serde(with = "serde_bytes")]
+    pub delegate_did: [u8; 32],
     pub context_bound: u64, // The specific semantic context they are allowed to access (0 = global)
     pub expiration_timestamp: u64,
-    pub cryptographic_proof: String, // Ed25519 signature
+    /// Raw 64-byte Ed25519 signature over the grant.
+    #[serde(with = "serde_bytes")]
+    pub cryptographic_proof: [u8; 64],
 }
 
 /// Last-Write-Wins (LWW) CRDT Resolver

@@ -278,6 +278,9 @@ impl RdfStarParser for TurtleStarParser {
             }
         };
         
+        // The object is the final token; this parser returns the triple, not the cursor,
+        // so `pos`'s final position is intentionally not propagated past here.
+        let _ = pos;
         Ok((subject, predicate, object))
     }
 

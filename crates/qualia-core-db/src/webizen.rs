@@ -262,7 +262,12 @@ impl SlgArena {
 
     /// Compile registered N3 rules to norms + bytecode and execute on Core 1 (cold path).
     pub fn fire_registered_rules(&mut self, contract_hash: u64) -> usize {
-        let rules = self.rule_registry.clone();
+        // Zero-heap: move the registry out (pointer swap, not a clone of the rules) so
+        // the loop can call `&mut self` methods (`write_table` / `execute_vm_frame`)
+        // while reading the rules; restored below before `fire_guard_rules` needs it.
+        // Safe: nothing in the loop reads or mutates `rule_registry` (only
+        // `register_rule` does, and it is never called during firing).
+        let rules = core::mem::take(&mut self.rule_registry);
         let mut fired = 0usize;
         for rule in &rules {
             // Only ground rules compile to a single deontic norm; variable rules
@@ -284,6 +289,8 @@ impl SlgArena {
                 }
             }
         }
+        // Restore the registry before `fire_guard_rules` forward-chains over it.
+        self.rule_registry = rules;
         // Variable (non-ground) rules — e.g. the agency.n3 G1 corporate-capture
         // guard — cannot compile to a single ground norm; they are grounded by
         // forward-chaining their premise over the facts live in the arena.
@@ -321,7 +328,10 @@ impl SlgArena {
     /// defeater path (`evaluate_deontic_contract`), not here — the agency.n3 guards
     /// (G1/G1') are strict `=>` rules.
     pub fn fire_guard_rules(&mut self) -> usize {
-        let rules = self.rule_registry.clone();
+        // Zero-heap: see `fire_registered_rules` — move the registry out (no clone),
+        // iterate across the fixpoint rounds, restore at the end. Safe: the loop only
+        // reads facts and calls `write_table` / `has_quin`, never touching the registry.
+        let rules = core::mem::take(&mut self.rule_registry);
         let mut total = 0usize;
 
         // Forward-chain to a bounded fixpoint: a conclusion asserted in one round
@@ -375,6 +385,7 @@ impl SlgArena {
                 break; // fixpoint reached
             }
         }
+        self.rule_registry = rules;
         total
     }
 
@@ -762,7 +773,6 @@ fn unify_frame(arena: &SlgArena, frame: &mut VmFrame) -> bool {
 }
 
 /// The Bytecode Evaluator for the Prolog Webizen
-#[allow(non_exhaustive_omitted_patterns)]
 pub fn execute_vm_frame(
     arena: &mut SlgArena,
     bytecode: &[SlgOpcode],

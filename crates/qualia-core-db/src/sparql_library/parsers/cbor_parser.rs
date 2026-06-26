@@ -262,7 +262,11 @@ fn parse_cbor_object_star<S: crate::sparql_library::quin_sink::QuinSink>(
     count: &mut u64,
 ) -> Result<(), Box<dyn std::error::Error>> {
     let map_len = decoder.map()?;
-    let mut subject_hash = 0;
+    // Default the subject to a stable blank-node id (overridden below if an `@id` key is
+    // present). Without this, objects with no `@id` would all push triples with subject 0,
+    // conflating distinct blank subjects. NB: assumes `@id`, when present, precedes the
+    // object's data keys (CBOR-LD / JSON-LD convention).
+    let mut subject_hash = hash_str(&format!("blank_{}", *count));
     let mut embedded_triples: Vec<(u64, u64)> = Vec::new();
 
     let iter_count = map_len.unwrap_or(u64::MAX);
@@ -326,10 +330,6 @@ fn parse_cbor_object_star<S: crate::sparql_library::quin_sink::QuinSink>(
         }
 
         i += 1;
-    }
-
-    if subject_hash == 0 {
-        subject_hash = hash_str(&format!("blank_{}", *count));
     }
 
     Ok(())
