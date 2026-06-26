@@ -8,6 +8,9 @@ use crate::solvers::{SolverConfig, SolverState, SolverResult};
 use crate::solvers::SolversError as ExecutionError;
 use core::f64::consts;
 
+/// Dynamic-size, caller-owned-buffer decompositions (nalgebra-parity, zero-heap).
+pub mod cholesky;
+
 /// Fixed-size 4x4 matrix for stack-based operations
 #[repr(C)]
 #[derive(Clone, Copy)]
