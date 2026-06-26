@@ -93,14 +93,23 @@ pub use platform::platform_scheduler;
 pub use platform::local_scheduler;
 // --- inference/ category (reorg) ---
 pub mod inference;
+// Inference-runtime components (honest names); `llm_*` retained as transitional aliases.
 #[cfg(any(not(target_arch = "wasm32"), feature = "wasm-llm"))]
-pub use inference::llm_agent;
-pub use inference::llm_awq;
+pub use inference::inference_agent;
+#[cfg(any(not(target_arch = "wasm32"), feature = "wasm-llm"))]
+pub use inference::inference_agent as llm_agent;
+pub use inference::inference_awq;
+pub use inference::inference_awq as llm_awq;
 #[cfg(not(target_arch = "wasm32"))]
-pub use inference::llm_bench;
-pub use inference::llm_eval;
-pub use inference::llm_gpu_profiler;
-pub use inference::llm_kernel_parity;
+pub use inference::inference_bench;
+#[cfg(not(target_arch = "wasm32"))]
+pub use inference::inference_bench as llm_bench;
+pub use inference::inference_eval;
+pub use inference::inference_eval as llm_eval;
+pub use inference::inference_gpu_profiler;
+pub use inference::inference_gpu_profiler as llm_gpu_profiler;
+pub use inference::inference_kernel_parity;
+pub use inference::inference_kernel_parity as llm_kernel_parity;
 #[cfg(any(not(target_arch = "wasm32"), feature = "wasm-llm"))]
 pub use inference::gguf_sharder;
 #[cfg(any(not(target_arch = "wasm32"), feature = "wasm-llm"))]
@@ -824,8 +833,15 @@ pub mod sync;
 pub mod wal;
 
 
+// The model-inference runtime: reads GGUF weight files and runs the tensor program on the GPU.
+// It is a *runtime*, not an "engine" — the mathematics it executes lives in `crate::solvers`
+// (GEMM, activations/softmax/normalization, attention, RoPE, FFN), each proven equal to the
+// kernels here. `inference_runtime` is the honest name; `gguf_bridge` is retained (the directory
+// rename is deferred — it is a shared performance lane — but the honest name is available).
 #[cfg(any(not(target_arch = "wasm32"), feature = "wasm-llm"))]
 pub mod gguf_bridge;
+#[cfg(any(not(target_arch = "wasm32"), feature = "wasm-llm"))]
+pub use gguf_bridge as inference_runtime;
 /// Phase 4: AOT GGUF → `.q42` LLM-weight container compiler.
 /// Phase 6 / task #12: safetensor (+ MLX) source parsing + dtype gate for the streaming transcoder.
 /// Task #12 / STELLAR §A: BitNet b1.58 ternary quantization codec (compression during transcode).

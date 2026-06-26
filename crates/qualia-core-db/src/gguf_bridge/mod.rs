@@ -1,8 +1,16 @@
-//! Neuro-Symbolic GGUF Bridge
-//! Dispatches transformer block computation to the best available GPU backend:
-//!   - Windows x64: DirectML 1.15 (D3D12, hardware-vendor-optimised kernels)
-//!   - All platforms: wgpu / WGSL fallback (Vulkan / Metal / WebGPU)
-//! GGUF tensor bytes are memory-mapped via `memmap2` — zero heap copy.
+//! Model-inference runtime (honest module name: `crate::inference_runtime`).
+//!
+//! This is the **runtime** that runs model inference — not an "AI engine". It does two ordinary
+//! systems jobs: (1) **reads the GGUF weight file format** (tensors memory-mapped via `memmap2`,
+//! zero heap copy) and (2) **dispatches the tensor program to a GPU backend** (DirectML 1.15 on
+//! Windows x64; wgpu/WGSL — Vulkan/Metal/WebGPU — elsewhere).
+//!
+//! The *mathematics* of inference is not here and is not proprietary: it lives in `crate::solvers`
+//! as named STEM — GEMM (`linear_algebra::gemm`), activations/softmax/normalization
+//! (`activation`), attention (`attention`), RoPE (`rope`), the SwiGLU FFN (`feed_forward`) — and
+//! each kernel in this crate is proven equal to that library definition (the `*_stem_parity_tests`
+//! and `substrate_parity_tests`). What remains here is plumbing: GPU command encoding, the KV
+//! cache, weight loading, the autoregressive loop, and the GGUF/dequant codec.
 
 // pub(crate) so the concern submodules (gemm / ffn / attention / output / embedding / mc8_wasm …)
 // inherit these via `use super::*` — keeps the impl split a pure structural move.
