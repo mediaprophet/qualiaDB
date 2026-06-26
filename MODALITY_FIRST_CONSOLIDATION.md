@@ -168,3 +168,23 @@ So `statistical_computing` + financial's Gaussian were the real statistics dupli
   the first LA silo); then Householder/Givens → QR (+ least-squares via the `Transpose::Yes` normal
   equations already proven here).
 - **⚑ Needs Timothy:** none this step.
+
+### 2026-06-26 — LA phase 3: hollow the first LA silo (matmul reroute) · **done (green)** · worktree `0.0.21-la`
+- **Rerouted** `specialized_libs/linear_algebra/computation.rs::execute_multiplication` (the public
+  `LinearAlgebraLibrary::matrix_multiply` GEMM) to call the engine `solvers::linear_algebra::gemm`.
+  The inline triple-loop is deleted; the wrapper now only marshals its heap `Matrix` operands into
+  the caller-owned buffer (the legitimate composition boundary) and calls the engine.
+- **⚑ Correctness fix (flagged not hidden):** the old inline loop did
+  `result[i] += beta * result[i]` *after* computing the product into the freshly-zeroed `result`,
+  i.e. it returned `α·AB·(1+β)` instead of BLAS `α·AB + β·C`. Since this entry point always
+  allocates a fresh zeroed output (there is no prior C), the engine path now returns the correct
+  `α·AB` (β·0 = 0). Any caller that passed `beta != 0` and memorised the old inflated value will see
+  a corrected number; no test asserted the old wrong value.
+- **Measured:** `cargo test -p qualia-core-db --lib linear_algebra` → **42 passed** (engine 22 +
+  specialized 20, incl. the rerouted `test_matrix_multiplication`).
+- **Not yet routable:** the dynamic determinant / inverse / solve / eigen / SVD in
+  `specialized_libs/linear_algebra.rs` need engine homes that don't exist yet (QR/eigen/SVD are the
+  nalgebra-parity gaps) — they reroute after those are built. Sequencing is correct: build the
+  engine home, then hollow.
+- **Next:** Householder + Givens → QR (+ least-squares) in `solvers/linear_algebra`.
+- **⚑ Needs Timothy:** none this step.

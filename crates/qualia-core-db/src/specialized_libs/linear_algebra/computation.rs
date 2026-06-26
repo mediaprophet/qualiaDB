@@ -287,23 +287,32 @@ impl ComputationEngine {
     }
 
     pub fn execute_multiplication(&mut self, operation: &OptimizedMultiplication, alpha: f64, beta: f64) -> Result<Vec<f64>, LinearAlgebraError> {
-        // Execute optimized matrix multiplication
+        // Composition boundary: marshal the domain matrices into a caller-owned
+        // buffer and call the engine's canonical dynamic GEMM. No inline math here.
         let m = operation.left.rows;
         let n = operation.right.cols;
         let k = operation.left.cols;
-        
+
+        // C := alpha·A·B + beta·C, row-major. `result` is freshly zeroed, so it is
+        // the accumulator C; beta·0 = 0 (this entry point always produces a fresh
+        // product — there is no prior C to accumulate into). Routing here also fixes
+        // the old inline loop, which applied beta to the just-computed product
+        // (yielding alpha·AB·(1+beta) instead of the BLAS alpha·AB + beta·C).
         let mut result = vec![0.0; m * n];
-        
-        // Simple matrix multiplication (would use CSD in real implementation)
-        for i in 0..m {
-            for j in 0..n {
-                for l in 0..k {
-                    result[i * n + j] += alpha * operation.left.data[i * k + l] * operation.right.data[l * n + j];
-                }
-                result[i * n + j] += beta * result[i * n + j];
-            }
-        }
-        
+        crate::solvers::linear_algebra::gemm::gemm(
+            crate::solvers::linear_algebra::gemm::Transpose::No,
+            crate::solvers::linear_algebra::gemm::Transpose::No,
+            m, n, k,
+            alpha,
+            &operation.left.data,
+            &operation.right.data,
+            beta,
+            &mut result,
+        )
+        .map_err(|_| LinearAlgebraError::InvalidDimensions(
+            "matrix dimensions incompatible for multiplication".to_string(),
+        ))?;
+
         Ok(result)
     }
 }
