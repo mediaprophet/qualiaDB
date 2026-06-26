@@ -13,6 +13,7 @@
 // Declared as each method-family lands (build order in `stats_plan.md`).
 pub mod glm;
 pub mod metrics;
+pub mod multiple_testing;
 pub mod preprocessing;
 pub mod regression;
 
