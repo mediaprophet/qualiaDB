@@ -62,7 +62,7 @@ Scalar fit-loops (IRLS, tree splits) are CPU — flagged where GPU does not help
 | 2 | MSE, bias-variance, error rate | metrics | ✅ done |
 | 3 | multiple linear regression (+inference) | regression/linear | ✅ done |
 | 3 | KNN regression | classification/knn | ☐ |
-| 4 | logistic, multinomial, Poisson (GLM) | glm | ☐ |
+| 4 | logistic, Poisson (GLM, IRLS) | glm | ✅ done (multinomial pending) |
 | 4 | LDA, QDA, naive Bayes | classification | ☐ |
 | 4 | ROC/AUC, confusion matrix | metrics | ☐ |
 | 5 | validation set, LOOCV, k-fold CV, bootstrap | resampling | ☐ |
