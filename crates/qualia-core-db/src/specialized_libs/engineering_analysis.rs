@@ -3096,29 +3096,16 @@ pub struct StressState {
 
 /// Principal stresses of a symmetric 3×3 stress tensor by the closed-form
 /// (Smith 1961) eigenvalue solution, returned σ1 ≥ σ2 ≥ σ3.
+/// Principal stresses = eigenvalues of the symmetric Cauchy stress tensor, sorted
+/// descending. The closed-form symmetric-3×3 eigensolver lives once in the engine
+/// (`solvers::linear_algebra::eigen`); this marshals the tensor and calls it.
 fn principal_stresses(t: &[[f64; 3]; 3]) -> [f64; 3] {
-    let (sxx, syy, szz) = (t[0][0], t[1][1], t[2][2]);
-    let (sxy, syz, szx) = (t[0][1], t[1][2], t[2][0]);
-    let p1 = sxy * sxy + syz * syz + szx * szx;
-    let q = (sxx + syy + szz) / 3.0;
-    if p1 <= 1e-18 {
-        let mut e = [sxx, syy, szz];
-        e.sort_by(|a, b| b.partial_cmp(a).unwrap_or(std::cmp::Ordering::Equal));
-        return e;
-    }
-    let p2 = (sxx - q).powi(2) + (syy - q).powi(2) + (szz - q).powi(2) + 2.0 * p1;
-    let p = (p2 / 6.0).sqrt();
-    // B = (1/p)·(A − qI); r = det(B)/2.
-    let (b00, b11, b22) = ((sxx - q) / p, (syy - q) / p, (szz - q) / p);
-    let (b01, b12, b02) = (sxy / p, syz / p, szx / p);
-    let det_b = b00 * (b11 * b22 - b12 * b12) - b01 * (b01 * b22 - b12 * b02)
-        + b02 * (b01 * b12 - b11 * b02);
-    let r = (det_b / 2.0).clamp(-1.0, 1.0);
-    let phi = r.acos() / 3.0;
-    let e1 = q + 2.0 * p * phi.cos();
-    let e3 = q + 2.0 * p * (phi + 2.0 * std::f64::consts::PI / 3.0).cos();
-    let e2 = 3.0 * q - e1 - e3; // trace is invariant
-    [e1, e2, e3]
+    let a = [
+        t[0][0], t[0][1], t[0][2],
+        t[1][0], t[1][1], t[1][2],
+        t[2][0], t[2][1], t[2][2],
+    ];
+    crate::solvers::linear_algebra::eigen::symmetric_eigen_3x3(&a)
 }
 
 /// Analyse a 3×3 Cauchy stress tensor (e.g. chassis shear on an off-road camper):

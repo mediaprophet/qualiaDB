@@ -1072,74 +1072,19 @@ pub fn eigen_symmetric(n: usize, data: &[f64]) -> Result<(Vec<f64>, Vec<f64>), L
             "eigen_symmetric expects a non-empty square n×n matrix".to_string(),
         ));
     }
-    // Symmetry check.
-    let scale = data.iter().fold(0.0_f64, |m, &v| m.max(v.abs())).max(1.0);
-    for i in 0..n {
-        for j in (i + 1)..n {
-            if (data[i * n + j] - data[j * n + i]).abs() > 1e-9 * scale {
-                return Err(LinearAlgebraError::ComputationError(
-                    "eigen_symmetric requires a symmetric matrix".to_string(),
-                ));
-            }
-        }
-    }
-
+    // Composition boundary: marshal into caller-owned buffers and call the engine's
+    // canonical symmetric eigensolver (replaces an inline cyclic-Jacobi duplicate).
     let mut a = data.to_vec();
     let mut v = vec![0.0_f64; n * n];
-    for i in 0..n {
-        v[i * n + i] = 1.0;
-    }
-
-    const MAX_SWEEPS: usize = 100;
-    for _ in 0..MAX_SWEEPS {
-        // Off-diagonal Frobenius norm; stop when negligible.
-        let mut off = 0.0_f64;
-        for p in 0..n {
-            for q in (p + 1)..n {
-                off += a[p * n + q] * a[p * n + q];
-            }
-        }
-        if off.sqrt() <= 1e-15 * scale {
-            break;
-        }
-        for p in 0..n {
-            for q in (p + 1)..n {
-                let apq = a[p * n + q];
-                if apq == 0.0 {
-                    continue;
-                }
-                let app = a[p * n + p];
-                let aqq = a[q * n + q];
-                let theta = (aqq - app) / (2.0 * apq);
-                let sign = if theta >= 0.0 { 1.0 } else { -1.0 };
-                let t = sign / (theta.abs() + (theta * theta + 1.0).sqrt());
-                let c = 1.0 / (t * t + 1.0).sqrt();
-                let s = t * c;
-                // Rotate columns p,q of A.
-                for k in 0..n {
-                    let akp = a[k * n + p];
-                    let akq = a[k * n + q];
-                    a[k * n + p] = c * akp - s * akq;
-                    a[k * n + q] = s * akp + c * akq;
-                }
-                // Rotate rows p,q of A.
-                for k in 0..n {
-                    let apk = a[p * n + k];
-                    let aqk = a[q * n + k];
-                    a[p * n + k] = c * apk - s * aqk;
-                    a[q * n + k] = s * apk + c * aqk;
-                }
-                // Accumulate the rotation into the eigenvector matrix.
-                for k in 0..n {
-                    let vkp = v[k * n + p];
-                    let vkq = v[k * n + q];
-                    v[k * n + p] = c * vkp - s * vkq;
-                    v[k * n + q] = s * vkp + c * vkq;
-                }
-            }
-        }
-    }
-
+    crate::solvers::linear_algebra::eigen::symmetric_eigen(n, &mut a, &mut v).map_err(|e| match e {
+        crate::solvers::SolversError::InvalidParameters => LinearAlgebraError::ComputationError(
+            "eigen_symmetric requires a symmetric matrix".to_string(),
+        ),
+        _ => LinearAlgebraError::InvalidDimensions(
+            "eigen_symmetric expects a non-empty square n×n matrix".to_string(),
+        ),
+    })?;
+    // Eigenvalues are the diagonal of the rotated matrix; v's column j is its eigenvector.
     let eigenvalues: Vec<f64> = (0..n).map(|i| a[i * n + i]).collect();
     Ok((eigenvalues, v))
 }

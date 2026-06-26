@@ -209,3 +209,29 @@ So `statistical_computing` + financial's Gaussian were the real statistics dupli
   `solvers/linear_algebra` as their canonical home, then hollow the silo's `determinant`/
   `matrix_inverse` methods to call them. Then Givens rotations (for selective zeroing / RQ).
 - **⚑ Needs Timothy:** none this step.
+
+### 2026-06-26 — LA phase 5: eigendecomposition unified (a REAL cross-silo duplicate killed) · **done (green)** · worktree `0.0.21-la`
+- **The duplication:** symmetric-eigenvalue math existed in **two** silos —
+  `specialized_libs/linear_algebra::eigen_symmetric` (cyclic Jacobi) and
+  `specialized_libs/engineering_analysis::principal_stresses` (closed-form 3×3 Smith's algorithm).
+  One operation, two implementations. This is exactly the pathology the consolidation targets.
+- **Built** `solvers/linear_algebra/eigen.rs` — the engine's single home: `symmetric_eigen_3x3`
+  (closed-form, zero-heap, descending) and `symmetric_eigen` (general Jacobi, in-place caller-owned
+  buffers, yields eigenvectors). Symmetric-only, fail-closed (`InvalidParameters` on asymmetry).
+- **Rerouted BOTH consumers** to the engine: `eigen_symmetric` now marshals into caller-owned buffers
+  and calls `symmetric_eigen` (inline Jacobi deleted; exact error messages + eigenvector/eigenvalue
+  semantics preserved); `principal_stresses` now flattens the stress tensor and calls
+  `symmetric_eigen_3x3` (inline closed-form deleted). The closed-form is the *same* math, now owned
+  once by the engine.
+- **Measured:** `eigen` filter → **9 passed** (6 engine: closed-form diagonal/known/≡Jacobi,
+  Jacobi eigenvector-reconstruction A·v=λv, asymmetry + bad-dims fail-closed; 3 silo rerouted).
+  `engineering_analysis` → **13 passed** (uniaxial + pure-shear stress states exercise the rerouted
+  `principal_stresses`). Behaviour-preserving.
+- **⚠ Process note (honest):** the shell cwd silently drifted to the **main tree** mid-step, so the
+  first eigen test run built main-tree code (no `eigen.rs`) and reported 0 tests — a false pass-shaped
+  result. Caught it, re-ran inside the worktree → real 9/13 green. Earlier gemm/qr/solve runs were
+  unaffected (their worktree-only `qr` tests had passed, which is only possible in the worktree).
+  Going forward: `cd` into the worktree explicitly each run.
+- **Next:** relocate the remaining dynamic `lu_decompose`/`determinant`/`svd` to the engine (same
+  pattern), then route `chemistry`/`physics` ODE math to `solvers/calculus`.
+- **⚑ Needs Timothy:** none this step.

@@ -15,6 +15,8 @@ pub mod gemm;
 pub mod cholesky;
 /// Householder QR factorisation + least-squares solve (caller-owned, zero-heap).
 pub mod qr;
+/// Symmetric eigendecomposition — closed-form 3×3 + general Jacobi (caller-owned).
+pub mod eigen;
 
 /// Fixed-size 4x4 matrix for stack-based operations
 #[repr(C)]
