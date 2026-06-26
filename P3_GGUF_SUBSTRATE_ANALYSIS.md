@@ -80,6 +80,28 @@ converted once into native optimised `.q42`, which is the only thing the runtime
 regression** (re-run the A2000 decode coherence + the coop_gemv parity test), default-off behind a
 toggle until proven — exactly the discipline the LLM lane already used for `coop_gemv`.
 
+## 5b. Step 0 LANDED — the equivalence is now proven in code (CPU, no GPU)
+
+Before building any trait, the *thesis* is now executable and regression-guarded:
+`gguf_bridge/gemm.rs::substrate_parity_tests::llm_quant_gemv_is_the_substrate_gemm`
+- dequantizes Q8 weights to a dense matrix, runs the engine `solvers::linear_algebra::gemm::matvec`
+  on them, and shows the **actual** LLM CPU kernel (`stack_gemm_quant`) agrees to `exact_err < 1e-4`
+  (f32 rounding only) across several shapes/seeds;
+- separately characterises the Q8 quantization cost (`quant_err`, bounded).
+
+This calls the real kernel — not a copy — so it is a live contract: any future change to the LLM GEMV
+that breaks GEMM semantics fails here. Combined with the existing GPU↔CPU probe (`gemm_parity_probe`,
+`coop_gemv_parity`), the full chain is established and testable:
+
+```
+substrate dense GEMM  ≡  LLM CPU GEMV (stack_gemm_quant)  ≡  LLM GPU GEMV (coop_gemv)
+      (this test, CPU)            (existing GPU↔CPU probe, A2000)
+```
+
+The "AI inference" weight×activation step **is** the science modalities' matrix multiply, quantized.
+That is the de-mystification, made executable. Steps 1–4 (the contract type + `.q42` ingest) build on
+this proven floor.
+
 ## 6. Lane status (read at analysis time)
 
 No open `CLAIM` on `gguf_bridge` in `NOTICES.md` — the last entries are `RELEASE`s (coop_gemv

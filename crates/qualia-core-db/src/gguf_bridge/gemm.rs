@@ -286,3 +286,108 @@ impl QTensorEngine {
     }
 
 }
+
+/// Substrate-parity proof (CPU, no GPU): the LLM's quantized GEMV is *the same linear
+/// operation* as the engine's dense `solvers::linear_algebra::gemm`.
+///
+/// The LLM forward path is not a bespoke "AI inference" kernel — its weight×activation
+/// step is matrix–vector multiplication `out[i] = Σ_j W[i][j]·x[j]`, with `W` dequantized
+/// on the fly. This proves it: dequantize the quantized weights to a dense matrix, run the
+/// engine's `matvec` on them, and show the LLM kernel (`stack_gemm_quant`) agrees to f32
+/// rounding. Together with the existing GPU↔CPU probe (`gemm_parity_probe`), this closes
+/// the chain  substrate GEMM ≡ LLM CPU GEMV ≡ LLM GPU GEMV.
+#[cfg(test)]
+mod substrate_parity_tests {
+    use crate::gguf_sharder::GgufTensorInfo;
+    use crate::solvers::linear_algebra::gemm::{matvec, Transpose};
+
+    /// Returns `(exact_err, quant_err)`:
+    /// - `exact_err` = max|LLM_kernel(Q8(W)) − substrate(dequant(Q8(W)))| — should be ~f32 ε,
+    ///   proving the two compute the *same* operation;
+    /// - `quant_err` = max|LLM_kernel(Q8(W)) − substrate(W_original)| — the Q8 quantization cost.
+    fn run(n_in: usize, n_out: usize, seed: u64) -> (f32, f32) {
+        // Deterministic LCG → values in [-1, 1) (mirrors gemm_parity_probe_blocking).
+        let mut s = seed | 1;
+        let mut rng = move || -> f32 {
+            s = s
+                .wrapping_mul(6364136223846793005)
+                .wrapping_add(1442695040888963407);
+            ((s >> 40) as f32 / (1u64 << 24) as f32) * 2.0 - 1.0
+        };
+
+        let row_bytes = crate::llm_kernel_parity::q8_0_bytes(n_in);
+        let mut raw = vec![0u8; row_bytes * n_out];
+        let mut w_orig = vec![0f32; n_in * n_out]; // dense, pre-quantization (row-major n_out×n_in)
+        let mut row_f32 = vec![0f32; n_in];
+        for r in 0..n_out {
+            for x in row_f32.iter_mut() {
+                *x = rng();
+            }
+            w_orig[r * n_in..(r + 1) * n_in].copy_from_slice(&row_f32);
+            assert!(crate::llm_kernel_parity::quantize_q8_0_from_f32(
+                &row_f32,
+                &mut raw[r * row_bytes..(r + 1) * row_bytes],
+            ));
+        }
+        let input: Vec<f32> = (0..n_in).map(|_| rng()).collect();
+
+        let info = GgufTensorInfo {
+            dims: [n_in as u64, n_out as u64, 1, 1],
+            n_dims: 2,
+            ggml_type: crate::ggml_quants::GGML_TYPE_Q8_0,
+            byte_offset: 0,
+        };
+
+        // (1) The actual LLM CPU kernel.
+        let mut out_llm = vec![0f32; n_out];
+        assert!(crate::gguf_bridge::stack_gemm_quant(&raw, &info, &input, &mut out_llm, n_in, n_out));
+
+        // (2) Dequantize the same quantized weights to a dense matrix, then run the
+        //     engine's GEMM (matvec) on it. Same operands ⇒ must match the LLM kernel.
+        let mut w_deq = vec![0f64; n_in * n_out];
+        let mut deq_row = vec![0f32; n_in];
+        for i in 0..n_out {
+            let got = crate::ggml_quants::dequant_matrix_row_into(&raw, &info, i, &mut deq_row)
+                .unwrap_or(0);
+            assert_eq!(got, n_in, "dequant row {i}");
+            for j in 0..n_in {
+                w_deq[i * n_in + j] = deq_row[j] as f64;
+            }
+        }
+        let x_f64: Vec<f64> = input.iter().map(|&v| v as f64).collect();
+        let mut out_sub_deq = vec![0f64; n_out];
+        matvec(Transpose::No, n_out, n_in, &w_deq, &x_f64, &mut out_sub_deq).unwrap();
+
+        // (3) The engine GEMM on the ORIGINAL (pre-quant) weights — the Q8 cost reference.
+        let w_orig_f64: Vec<f64> = w_orig.iter().map(|&v| v as f64).collect();
+        let mut out_sub_orig = vec![0f64; n_out];
+        matvec(Transpose::No, n_out, n_in, &w_orig_f64, &x_f64, &mut out_sub_orig).unwrap();
+
+        let exact_err = (0..n_out)
+            .map(|i| (out_llm[i] as f64 - out_sub_deq[i]).abs() as f32)
+            .fold(0.0f32, f32::max);
+        let quant_err = (0..n_out)
+            .map(|i| (out_llm[i] as f64 - out_sub_orig[i]).abs() as f32)
+            .fold(0.0f32, f32::max);
+        (exact_err, quant_err)
+    }
+
+    #[test]
+    fn llm_quant_gemv_is_the_substrate_gemm() {
+        // Several shapes/seeds; n_in a multiple of 32 (Q8_0 block size).
+        for &(n_in, n_out, seed) in &[(64usize, 32usize, 0xC0FFEEu64), (128, 96, 7), (256, 64, 0xBEEF)] {
+            let (exact_err, quant_err) = run(n_in, n_out, seed);
+            // Same operation: LLM kernel == engine GEMM on identical (dequantized) weights,
+            // to f32 accumulation rounding only.
+            assert!(
+                exact_err < 1e-4,
+                "LLM GEMV diverges from substrate GEMM on identical weights: exact_err={exact_err} (n_in={n_in}, n_out={n_out})"
+            );
+            // Quantization is the *only* extra divergence from exact math, and it is bounded.
+            assert!(
+                quant_err < 0.5,
+                "Q8 quantization error unexpectedly large: quant_err={quant_err}"
+            );
+        }
+    }
+}
