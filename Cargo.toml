@@ -8,6 +8,7 @@ members = [
     "crates/webizen-component-harvester",
     "crates/qualia-mobile-harness",
     "crates/wellfare-core",
+    "crates/qualia-semantic-library",
 ]
 resolver = "2"
 
