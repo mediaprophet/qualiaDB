@@ -2776,7 +2776,10 @@ pub struct ComplianceMetric {
 pub struct MedicalOperationResult<T> {
     pub result: T,
     pub execution_time: u64,
-    pub privacy_score: f64,
+    /// Privacy score for this operation. `None` = not computed (no privacy guarantee is
+    /// asserted). This scaffold does not measure privacy, so it must not fabricate a value —
+    /// previously every operation stamped a hardcoded 0.80–0.95 here.
+    pub privacy_score: Option<f64>,
     pub compliance_status: ComplianceStatus,
     pub audit_trail: Vec<AuditEntry>,
 }
@@ -2841,7 +2844,7 @@ impl MedicalComputingLibrary {
         Ok(MedicalOperationResult {
             result: created_patient,
             execution_time,
-            privacy_score: 0.95,
+            privacy_score: None,
             compliance_status: ComplianceStatus::Compliant,
             audit_trail: Vec::new(),
         })
@@ -2862,7 +2865,7 @@ impl MedicalComputingLibrary {
         Ok(MedicalOperationResult {
             result: analysis,
             execution_time,
-            privacy_score: 0.90,
+            privacy_score: None,
             compliance_status: ComplianceStatus::Compliant,
             audit_trail: Vec::new(),
         })
@@ -2883,7 +2886,7 @@ impl MedicalComputingLibrary {
         Ok(MedicalOperationResult {
             result: processed_image,
             execution_time,
-            privacy_score: 0.85,
+            privacy_score: None,
             compliance_status: ComplianceStatus::Compliant,
             audit_trail: Vec::new(),
         })
@@ -2904,7 +2907,7 @@ impl MedicalComputingLibrary {
         Ok(MedicalOperationResult {
             result: results,
             execution_time,
-            privacy_score: 0.80,
+            privacy_score: None,
             compliance_status: ComplianceStatus::Compliant,
             audit_trail: Vec::new(),
         })
@@ -2922,7 +2925,7 @@ impl MedicalComputingLibrary {
         Ok(MedicalOperationResult {
             result: report,
             execution_time,
-            privacy_score: 0.95,
+            privacy_score: None,
             compliance_status: ComplianceStatus::Compliant,
             audit_trail: Vec::new(),
         })
@@ -4241,9 +4244,9 @@ impl MedicalPerformanceMetrics {
         Self {
             total_patients: 0,
             average_processing_time: 0.0,
-            privacy_score: 0.95,
-            compliance_score: 0.98,
-            data_quality: 0.92,
+            privacy_score: None,
+            compliance_score: None,
+            data_quality: None,
         }
     }
 }
@@ -4341,9 +4344,12 @@ pub struct ComplianceReport {
 pub struct MedicalPerformanceMetrics {
     pub total_patients: u64,
     pub average_processing_time: f64,
-    pub privacy_score: f64,
-    pub compliance_score: f64,
-    pub data_quality: f64,
+    /// Privacy / compliance / data-quality scores. `None` = not measured. This scaffold does
+    /// not compute these, so it must not fabricate them — previously `new()` claimed a hardcoded
+    /// 95% private / 98% compliant / 92% quality for a library that measures none of it.
+    pub privacy_score: Option<f64>,
+    pub compliance_score: Option<f64>,
+    pub data_quality: Option<f64>,
 }
 
 /// Medical error types
@@ -4396,7 +4402,8 @@ mod tests {
         
         assert_eq!(result.result.patient_id, "patient_1");
         assert_eq!(result.result.medical_record_number, "MRN001");
-        assert!(result.privacy_score > 0.9);
+        // Honest: privacy is not measured by this scaffold, so no score is fabricated.
+        assert!(result.privacy_score.is_none());
         assert!(result.compliance_status == ComplianceStatus::Compliant);
     }
 
@@ -4425,7 +4432,7 @@ mod tests {
         
         assert_eq!(result.result.processed_image_id, "processed_1");
         assert_eq!(result.result.processing_type, ImageProcessingType::Enhancement);
-        assert!(result.privacy_score > 0.8);
+        assert!(result.privacy_score.is_none());
     }
 
     #[test]
@@ -4440,7 +4447,7 @@ mod tests {
         
         assert_eq!(result.result.results_id, "screening_1");
         assert!(result.result.hit_rate > 0.0);
-        assert!(result.privacy_score > 0.7);
+        assert!(result.privacy_score.is_none());
     }
 
     #[test]
@@ -4462,8 +4469,10 @@ mod tests {
         
         assert_eq!(metrics.total_patients, 0);
         assert_eq!(metrics.average_processing_time, 0.0);
-        assert!(metrics.privacy_score > 0.9);
-        assert!(metrics.compliance_score > 0.9);
+        // Honest: this scaffold measures none of these, so they are not fabricated.
+        assert!(metrics.privacy_score.is_none());
+        assert!(metrics.compliance_score.is_none());
+        assert!(metrics.data_quality.is_none());
     }
 
     #[test]
