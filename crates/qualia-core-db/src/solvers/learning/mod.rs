@@ -11,6 +11,7 @@
 //! [`survival`], [`multiple_testing`].
 
 // Declared as each method-family lands (build order in `stats_plan.md`).
+pub mod clustering;
 pub mod dimensionality;
 pub mod glm;
 pub mod metrics;
