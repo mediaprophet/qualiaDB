@@ -19,10 +19,16 @@ pub mod descriptive;
 pub mod distributions;
 pub mod histogram;
 pub mod hypothesis;
+pub mod regression;
 
-pub use correlation::{kendall, pearson, rank_into};
+pub use correlation::{correlation_p_value, kendall, pearson, rank_into, spearman};
 pub use descriptive::{
-    max, mean, median_in_place, median_sorted, min, std_dev, sum, variance,
+    covariance, kurtosis, max, mean, median_in_place, median_sorted, min, quantile_in_place,
+    quantile_sorted, skewness, std_dev, sum, variance,
 };
 pub use histogram::{histogram_into, HistRange};
-pub use hypothesis::{one_sample_t, TTest};
+pub use hypothesis::{
+    chi_square_gof, chi_square_independence, one_sample_t, one_way_anova, paired_t, two_sample_t,
+    AnovaResult, ChiSquareResult, TTest, TwoSampleTTest,
+};
+pub use regression::{simple_linear_regression, LinearRegression};

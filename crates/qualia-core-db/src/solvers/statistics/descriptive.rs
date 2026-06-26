@@ -120,6 +120,85 @@ pub fn argmax(values: &[f64]) -> Option<usize> {
     Some(best)
 }
 
+/// Covariance of two equal-length series. `sample == true` divides by `n-1`
+/// (Bessel), else by `n`. `None` if the lengths differ or are empty.
+pub fn covariance(x: &[f64], y: &[f64], sample: bool) -> Option<f64> {
+    let n = x.len();
+    if n != y.len() || n == 0 {
+        return None;
+    }
+    let mx = mean(x)?;
+    let my = mean(y)?;
+    let mut acc = 0.0;
+    let mut i = 0;
+    while i < n {
+        acc += (x[i] - mx) * (y[i] - my);
+        i += 1;
+    }
+    let denom = if sample { (n - 1) as f64 } else { n as f64 };
+    Some(acc / denom)
+}
+
+/// The `k`-th central moment about the mean, `Σ(xᵢ−m)^k / n`. `None` if empty.
+#[inline]
+fn central_moment(values: &[f64], k: i32) -> Option<f64> {
+    let m = mean(values)?;
+    let mut acc = 0.0;
+    for &v in values {
+        acc += (v - m).powi(k);
+    }
+    Some(acc / values.len() as f64)
+}
+
+/// Sample skewness (Fisher–Pearson, `g1 = m₃ / m₂^{3/2}`), the standardised third
+/// moment. `None` if empty; `Some(0.0)` for a constant series (zero spread).
+pub fn skewness(values: &[f64]) -> Option<f64> {
+    let m2 = central_moment(values, 2)?;
+    let m3 = central_moment(values, 3)?;
+    if m2 <= 0.0 {
+        return Some(0.0);
+    }
+    Some(m3 / m2.powf(1.5))
+}
+
+/// Excess kurtosis (`g2 = m₄ / m₂² − 3`); 0 for a normal distribution. `None` if
+/// empty; `Some(0.0)` for a constant series.
+pub fn kurtosis(values: &[f64]) -> Option<f64> {
+    let m2 = central_moment(values, 2)?;
+    let m4 = central_moment(values, 4)?;
+    if m2 <= 0.0 {
+        return Some(0.0);
+    }
+    Some(m4 / (m2 * m2) - 3.0)
+}
+
+/// Linear-interpolated quantile of an **already-sorted-ascending** slice (the
+/// numpy "linear" / R type-7 convention). `q` is clamped to `[0,1]`. `None` if empty.
+pub fn quantile_sorted(sorted: &[f64], q: f64) -> Option<f64> {
+    let n = sorted.len();
+    if n == 0 {
+        return None;
+    }
+    if n == 1 {
+        return Some(sorted[0]);
+    }
+    let q = q.clamp(0.0, 1.0);
+    let pos = q * (n - 1) as f64;
+    let lo = pos.floor() as usize;
+    let hi = pos.ceil() as usize;
+    let frac = pos - lo as f64;
+    Some(sorted[lo] + (sorted[hi] - sorted[lo]) * frac)
+}
+
+/// Quantile, sorting the caller's buffer in place (no allocation). `None` if empty.
+pub fn quantile_in_place(values: &mut [f64], q: f64) -> Option<f64> {
+    if values.is_empty() {
+        return None;
+    }
+    values.sort_unstable_by(|a, b| a.partial_cmp(b).unwrap_or(core::cmp::Ordering::Equal));
+    quantile_sorted(values, q)
+}
+
 #[cfg(test)]
 mod tests {
     use super::*;
@@ -182,5 +261,47 @@ mod tests {
         let v = [3.0, 1.0, 4.0, 1.0, 5.0, 9.0, 2.0];
         assert!((min(&v).unwrap() - 1.0).abs() < EPS);
         assert!((max(&v).unwrap() - 9.0).abs() < EPS);
+    }
+
+    #[test]
+    fn covariance_matches_definition() {
+        let x = [1.0, 2.0, 3.0, 4.0];
+        let y = [2.0, 4.0, 6.0, 8.0]; // y = 2x → cov(sample) = 2·var(x,sample)
+        let cov = covariance(&x, &y, true).unwrap();
+        let vx = variance(&x, true).unwrap();
+        assert!((cov - 2.0 * vx).abs() < 1e-9);
+        // cov(x,x) == var(x).
+        assert!((covariance(&x, &x, true).unwrap() - vx).abs() < 1e-9);
+        assert_eq!(covariance(&x, &[1.0], true), None);
+    }
+
+    #[test]
+    fn skewness_sign_and_symmetry() {
+        // Symmetric data → ~0 skew.
+        assert!(skewness(&[1.0, 2.0, 3.0, 4.0, 5.0]).unwrap().abs() < 1e-9);
+        // Right-tailed data → positive skew.
+        assert!(skewness(&[1.0, 1.0, 1.0, 2.0, 10.0]).unwrap() > 0.0);
+        // Constant → 0 (no spread), not NaN.
+        assert_eq!(skewness(&[7.0, 7.0, 7.0]), Some(0.0));
+    }
+
+    #[test]
+    fn kurtosis_excess() {
+        // A near-uniform set has negative excess kurtosis (platykurtic).
+        assert!(kurtosis(&[1.0, 2.0, 3.0, 4.0, 5.0]).unwrap() < 0.0);
+        assert_eq!(kurtosis(&[3.0, 3.0]), Some(0.0));
+    }
+
+    #[test]
+    fn quantile_interpolates() {
+        let sorted = [1.0, 2.0, 3.0, 4.0]; // n=4
+        assert!((quantile_sorted(&sorted, 0.0).unwrap() - 1.0).abs() < EPS);
+        assert!((quantile_sorted(&sorted, 1.0).unwrap() - 4.0).abs() < EPS);
+        // Median (q=0.5) of even count interpolates the two centre values.
+        assert!((quantile_sorted(&sorted, 0.5).unwrap() - 2.5).abs() < EPS);
+        // q=0.25 → pos=0.75 → 1 + 0.75·(2-1) = 1.75.
+        assert!((quantile_sorted(&sorted, 0.25).unwrap() - 1.75).abs() < EPS);
+        let mut unsorted = [4.0, 1.0, 3.0, 2.0];
+        assert!((quantile_in_place(&mut unsorted, 0.5).unwrap() - 2.5).abs() < EPS);
     }
 }
