@@ -8,8 +8,10 @@
 //! (dispatch-ready); the IRLS loop itself is scalar CPU.
 
 pub mod family;
+pub mod multinomial;
 
 pub use family::Family;
+pub use multinomial::MultinomialLogistic;
 
 use crate::solvers::learning::LearningError;
 use crate::solvers::linear_algebra::cholesky::{cholesky_factor, cholesky_solve};

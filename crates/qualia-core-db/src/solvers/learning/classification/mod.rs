@@ -10,8 +10,10 @@ pub mod discriminant;
 pub mod knn;
 pub mod naive_bayes;
 pub mod svm;
+pub mod svm_multiclass;
 
 pub use discriminant::{LdaModel, QdaModel};
 pub use knn::KnnClassifier;
 pub use naive_bayes::GaussianNb;
 pub use svm::{Kernel, Svm};
+pub use svm_multiclass::MulticlassSvm;

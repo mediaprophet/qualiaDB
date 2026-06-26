@@ -8,10 +8,12 @@ pub mod bayesian;
 pub mod lasso;
 pub mod linear;
 pub mod pcr;
+pub mod pls;
 pub mod ridge;
 
 pub use bayesian::BayesianLinear;
 pub use lasso::{fit as fit_lasso, LassoModel};
 pub use linear::{fit as fit_linear, LinearModel};
 pub use pcr::PcrModel;
+pub use pls::{fit as fit_pls, PlsModel};
 pub use ridge::{fit as fit_ridge, RidgeModel};

@@ -16,6 +16,7 @@ pub mod clustering;
 pub mod dimensionality;
 pub mod gaussian_process;
 pub mod glm;
+pub mod graphical_models;
 pub mod metrics;
 pub mod multiple_testing;
 pub mod preprocessing;
