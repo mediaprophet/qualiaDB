@@ -18,6 +18,7 @@
 #[cfg(not(target_arch = "wasm32"))]
 pub mod qpu;
 
+pub mod activation;
 pub mod calculus;
 pub mod geometric_algebra;
 pub mod linear_algebra;

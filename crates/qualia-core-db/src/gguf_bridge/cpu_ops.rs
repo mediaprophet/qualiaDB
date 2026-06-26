@@ -139,3 +139,64 @@ pub(crate) fn prepare_pre_norm_input<'a>(
     }
     &hidden[..n_embd]
 }
+
+/// STEM-grounding proof: the LLM's inline forward-pass element-wise / normalization kernels are
+/// the standard mathematics defined in `solvers::activation` — not a proprietary "AI engine".
+/// (`gguf` is only a weight *file format*; this shows the math lives in the math library.) Each
+/// inline `f32` kernel is checked against the `f64` STEM definition, the same way the LLM GEMM is
+/// shown to be `solvers::linear_algebra::gemm`.
+#[cfg(test)]
+mod stem_parity_tests {
+    use crate::solvers::activation;
+
+    #[test]
+    fn silu_kernel_is_the_stem_silu() {
+        let xs: Vec<f32> = (0..32).map(|i| (i as f32 - 16.0) * 0.4).collect();
+        let mut got = xs.clone();
+        let n = got.len();
+        super::silu_inplace(&mut got, n);
+        let mut want: Vec<f64> = xs.iter().map(|&v| v as f64).collect();
+        activation::silu(&mut want);
+        for i in 0..xs.len() {
+            assert!(
+                (got[i] as f64 - want[i]).abs() < 1e-5,
+                "SiLU kernel diverges from solvers::activation::silu at {i}: {} vs {}",
+                got[i],
+                want[i]
+            );
+        }
+    }
+
+    #[test]
+    fn rms_norm_kernel_is_the_stem_rms_norm() {
+        let xs: Vec<f32> = (0..32).map(|i| (i as f32 - 16.0) * 0.3 + 0.1).collect();
+        let w: Vec<f32> = (0..32).map(|i| 1.0 + 0.01 * i as f32).collect();
+        let eps = 1e-5f32;
+        let mut got = xs.clone();
+        super::rms_norm_inplace(&mut got, &w, eps);
+        let mut want: Vec<f64> = xs.iter().map(|&v| v as f64).collect();
+        let w64: Vec<f64> = w.iter().map(|&v| v as f64).collect();
+        activation::rms_norm(&mut want, &w64, eps as f64);
+        for i in 0..xs.len() {
+            assert!(
+                (got[i] as f64 - want[i]).abs() < 1e-4,
+                "RMSNorm kernel diverges from solvers::activation::rms_norm at {i}: {} vs {}",
+                got[i],
+                want[i]
+            );
+        }
+    }
+
+    #[test]
+    fn relu_kernel_is_the_stem_relu() {
+        let xs: Vec<f32> = (0..16).map(|i| (i as f32 - 8.0) * 0.5).collect();
+        let mut got = xs.clone();
+        let n = got.len();
+        super::relu_inplace(&mut got, n);
+        let mut want: Vec<f64> = xs.iter().map(|&v| v as f64).collect();
+        activation::relu(&mut want);
+        for i in 0..xs.len() {
+            assert!((got[i] as f64 - want[i]).abs() < 1e-6, "ReLU mismatch at {i}");
+        }
+    }
+}
