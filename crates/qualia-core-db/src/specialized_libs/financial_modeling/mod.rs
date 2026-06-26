@@ -2667,10 +2667,18 @@ impl RiskAnalyzer {
         Ok(())
     }
 
-    pub fn calculate_risk_metrics(&self, portfolio: &Portfolio) -> Result<RiskMetrics, FinancialError> {
-        // Calculate risk metrics
-        let risk_metrics = RiskMetrics::new();
-        Ok(risk_metrics)
+    pub fn calculate_risk_metrics(&self, _portfolio: &Portfolio) -> Result<RiskMetrics, FinancialError> {
+        // NOT computable from the available data — it must say so, never fabricate. The previous
+        // body returned a default `RiskMetrics` (Sharpe 0.75, VaR/volatility/drawdown all hardcoded).
+        // Every field of RiskMetrics (VaR, CVaR, volatility, beta, alpha, Sharpe, Sortino,
+        // max-drawdown) is derived from a RETURN TIME SERIES / covariance. The `Asset` data model
+        // carries only current positions (quantity, price, market value) — no return history — so
+        // these metrics cannot be computed. Refusing rather than returning fabricated risk numbers.
+        Err(FinancialError::InsufficientData(
+            "portfolio risk metrics (calculate_portfolio_risk): require an asset return time series \
+             / covariance; the portfolio model carries only current positions, not returns."
+                .to_string(),
+        ))
     }
 }
 
@@ -2815,18 +2823,18 @@ impl TradingEngine {
         Ok(())
     }
 
-    pub fn execute_trade(&mut self, order: &Order) -> Result<TradeResult, FinancialError> {
-        // Execute trade
-        let trade_result = TradeResult {
-            trade_id: format!("trade_{}", std::time::SystemTime::now().duration_since(std::time::UNIX_EPOCH).unwrap().as_secs()),
-            order_id: order.order_id.clone(),
-            executed_quantity: order.quantity,
-            executed_price: order.price.unwrap_or(100.0), // Default price
-            execution_time: std::time::SystemTime::now().duration_since(std::time::UNIX_EPOCH).unwrap().as_secs(),
-            status: TradeStatus::Filled,
-        };
-
-        Ok(trade_result)
+    pub fn execute_trade(&mut self, _order: &Order) -> Result<TradeResult, FinancialError> {
+        // NOT IMPLEMENTED — and this one must never fabricate. The previous body returned a
+        // `TradeResult { status: Filled, executed_price: order.price.unwrap_or(100.0) }` — a
+        // *fake fill* at a fabricated default price for a trade that never executed. Reporting a
+        // filled trade that did not happen is dangerous. Real execution requires a broker/exchange
+        // connection and order-management — and as a matter of policy this system must not place
+        // real orders or move money. It therefore refuses, explicitly.
+        Err(FinancialError::NotImplemented(
+            "trade execution (execute_trade): no broker/exchange connection; this system does not \
+             place orders or move money. Refusing to report a fabricated fill."
+                .to_string(),
+        ))
     }
 }
 
@@ -2864,19 +2872,17 @@ impl ComplianceMonitor {
         Ok(())
     }
 
-    pub fn check_compliance(&mut self, portfolio: &Portfolio) -> Result<ComplianceResult, FinancialError> {
-        // Check compliance
-        let compliance_result = ComplianceResult {
-            result_id: format!("compliance_{}", std::time::SystemTime::now().duration_since(std::time::UNIX_EPOCH).unwrap().as_secs()),
-            portfolio_id: portfolio.portfolio_id.clone(),
-            status: ComplianceStatus::Compliant,
-            risk_score: 0.5,
-            violations: Vec::new(),
-            recommendations: Vec::new(),
-            audit_entries: Vec::new(),
-        };
-
-        Ok(compliance_result)
+    pub fn check_compliance(&mut self, _portfolio: &Portfolio) -> Result<ComplianceResult, FinancialError> {
+        // NOT IMPLEMENTED — it must say so, never fabricate. The previous body returned
+        // `status: Compliant, risk_score: 0.5` while the compliance-rules registry is EMPTY: it
+        // declared a portfolio compliant without checking a single rule. Asserting regulatory
+        // compliance that was never evaluated is dangerous. Real implementation needs a defined
+        // rule set / mandate limits to check positions against.
+        Err(FinancialError::NotImplemented(
+            "compliance check (check_compliance): the compliance-rules registry is empty; refusing \
+             to declare a portfolio compliant without evaluating any rule. Requires a defined rule set."
+                .to_string(),
+        ))
     }
 }
 
@@ -3832,17 +3838,19 @@ impl FinancialPerformanceMetrics {
 
 impl RiskMetrics {
     pub fn new() -> Self {
+        // Default value — nothing computed. All zero, never fabricated VaR/Sharpe/etc.
+        // (calculate_portfolio_risk returns InsufficientData rather than this default.)
         Self {
             portfolio_id: "portfolio_1".to_string(),
-            var_95: 1000.0,
-            cvar_95: 1500.0,
-            volatility: 0.2,
-            beta: 1.1,
-            alpha: 0.02,
-            sharpe_ratio: 0.75,
-            sortino_ratio: 1.0,
-            max_drawdown: -0.1,
-            overall_risk_score: 0.5,
+            var_95: 0.0,
+            cvar_95: 0.0,
+            volatility: 0.0,
+            beta: 0.0,
+            alpha: 0.0,
+            sharpe_ratio: 0.0,
+            sortino_ratio: 0.0,
+            max_drawdown: 0.0,
+            overall_risk_score: 0.0,
         }
     }
 }
@@ -3926,8 +3934,9 @@ impl ComplianceResult {
         Self {
             result_id: "compliance_1".to_string(),
             portfolio_id: "portfolio_1".to_string(),
-            status: ComplianceStatus::Compliant,
-            risk_score: 0.5,
+            // Default value — nothing evaluated (Pending), not a fabricated "Compliant / 0.5".
+            status: ComplianceStatus::Pending,
+            risk_score: 0.0,
             violations: Vec::new(),
             recommendations: Vec::new(),
             audit_entries: Vec::new(),
@@ -4005,6 +4014,10 @@ pub enum FinancialError {
     TradingError(String),
     ComplianceError(String),
     DataError(String),
+    /// The capability is not implemented yet — returned instead of a fabricated result.
+    NotImplemented(String),
+    /// The required input (return history, market data, defined limits) is not present.
+    InsufficientData(String),
 }
 
 impl std::fmt::Display for FinancialError {
@@ -4018,6 +4031,10 @@ impl std::fmt::Display for FinancialError {
             FinancialError::TradingError(msg) => write!(f, "Trading error: {}", msg),
             FinancialError::ComplianceError(msg) => write!(f, "Compliance error: {}", msg),
             FinancialError::DataError(msg) => write!(f, "Data error: {}", msg),
+            FinancialError::NotImplemented(msg) => write!(f, "Not implemented yet: {}", msg),
+            FinancialError::InsufficientData(msg) => {
+                write!(f, "Required information not available: {}", msg)
+            }
         }
     }
 }
@@ -4053,11 +4070,11 @@ mod tests {
         let mut library = FinancialModelingLibrary::new();
         library.initialize().unwrap();
         
-        let result = library.calculate_portfolio_risk("portfolio_1").unwrap();
-        
-        assert_eq!(result.result.portfolio_id, "portfolio_1");
-        assert!(result.result.overall_risk_score > 0.0);
-        assert!(result.risk_score > 0.0);
+        // HONEST: portfolio risk metrics need a return time series the data model doesn't carry,
+        // so this reports an error (InsufficientData / portfolio-not-found) rather than fabricating
+        // a Sharpe ratio / VaR. It must not return a confident risk number it never computed.
+        let result = library.calculate_portfolio_risk("portfolio_1");
+        assert!(result.is_err());
     }
 
     #[test]
@@ -4080,11 +4097,10 @@ mod tests {
         library.initialize().unwrap();
         
         let order = Order::new();
-        let result = library.execute_trade(order).unwrap();
-        
-        assert_eq!(result.result.order_id, "order_1");
-        assert_eq!(result.result.executed_quantity, 100.0);
-        assert_eq!(result.result.status, TradeStatus::Filled);
+        // HONEST + SAFE: this system places no real orders and must never report a fabricated
+        // fill. Execution reports NotImplemented rather than a fake "Filled" trade.
+        let result = library.execute_trade(order);
+        assert!(matches!(result, Err(FinancialError::NotImplemented(_))));
     }
 
     #[test]
@@ -4092,11 +4108,10 @@ mod tests {
         let mut library = FinancialModelingLibrary::new();
         library.initialize().unwrap();
         
-        let result = library.check_compliance("portfolio_1").unwrap();
-        
-        assert_eq!(result.result.portfolio_id, "portfolio_1");
-        assert_eq!(result.result.status, ComplianceStatus::Compliant);
-        assert!(result.result.risk_score >= 0.0 && result.result.risk_score <= 1.0);
+        // HONEST: the compliance-rules registry is empty, so this reports an error rather than
+        // declaring a portfolio "Compliant" without evaluating a single rule.
+        let result = library.check_compliance("portfolio_1");
+        assert!(result.is_err());
     }
 
     #[test]
