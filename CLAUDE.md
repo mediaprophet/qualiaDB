@@ -212,3 +212,20 @@ out-of-band decision or datum only Timothy can supply — e.g. sensitive vocabul
 to coin), that is the *only* allowed reason to defer, and it must be surfaced as a single crisp ask, not
 buried. Measurement honesty (don't claim done when it isn't) and this completeness bar are the same
 coin: say what's true, and make what's true be "done."
+
+## 13. Modernize to current dependency APIs + fix problems along the way (PROJECT RULE — Timothy, 2026-06-26)
+
+When you touch code that uses a **stale or deprecated dependency API**, bring it up to the **current
+version's API and capabilities** — do not add a workaround, keep an old pattern, or step over the
+breakage. Dependencies are bumped deliberately; the methods that call them must be updated to the new
+surface, and should **adopt the better capabilities the new version offers**, not merely be made to compile.
+
+- **Concrete live example:** `wgpu` is pinned to **29** (`crates/qualia-core-db/Cargo.toml`), but some
+  GPU code still calls the old ~0.20 surface (e.g. `wgpu::Maintain`, replaced by `PollType`) — that
+  mismatch is currently breaking the build. Update such call sites to wgpu 29's API + capabilities. **The
+  rule is not wgpu-specific; it applies to every dependency** (the example is just the one in front of us).
+- **Fix problems you hit along the way**, within your allocated scope, tested and behaviour-checked —
+  don't leave adjacent breakage silently, and don't dress a real fix up as out-of-scope.
+- **This never overrides the lane rules (§10).** If the stale-API code is in another instrument's live or
+  off-limits lane, **flag it** (a `NOTICES.md` line + report to Timothy) rather than reaching in.
+  Fix-along-the-way is not a licence to barge.

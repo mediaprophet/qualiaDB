@@ -215,4 +215,11 @@ API whose **GPU backend is the existing `gpu_context`/`gguf_bridge` kernels**, s
 **Method every step:** zero-heap caller-owned; one concern per commit; green build + targeted tests
 pasted; per-step log to `MODALITY_FIRST_CONSOLIDATION.md`; one `NOTICES.md` line; **parity before perf**
 for anything in the LLM lane. Steps 1–4 do not touch the LLM lane and can proceed immediately.
+
+**Modernize dependencies as you go (CLAUDE.md §13).** Fix stale-dependency breakage and update methods
+to the current dep's API + capabilities — don't work around it or step over it. Concretely: `wgpu` is
+pinned to **29** but GPU code still calls the old ~0.20 surface (`wgpu::Maintain` → `PollType`), which is
+breaking the build; the GPU-backend step (4) must bring the GPU paths up to wgpu 29 (and adopt its newer
+capabilities), not just compile against it. Same for any other dep encountered. If the stale code is in
+another instrument's live/off-limits lane, flag it via `NOTICES.md` — don't reach in.
 ```
