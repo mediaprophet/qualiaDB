@@ -653,17 +653,8 @@ impl Drop for QualiaSuperBlock {
 pub mod agency;
 pub mod agent;
 pub mod verifiable_credential;
-// Track M cooperation gate composes `modalities::interaction_governance`, so it can only
-// compile where `modalities` does (native, or the logic-enabled wasm profiles). Its only
-// consumers — mcp_server / mcp_tool_impls — are themselves native-only, so the slim `portal`
-// wasm bundle never needs it.
-#[cfg(any(
-    not(target_arch = "wasm32"),
-    feature = "wasm-logic",
-    feature = "wasm-scientific",
-    feature = "wasm-full"
-))]
-pub mod mcp_cooperation;
+// mcp_* modules now live in mcp/ (see MODULE_REORG_PLAN.md). The `pub mod mcp;`
+// declaration + path-preserving re-exports are below, near the old mcp_server line.
 pub mod cbor_compiler;
 #[cfg(any(
     not(target_arch = "wasm32"),
@@ -811,8 +802,18 @@ pub mod llm_eval;
 /// STELLAR §A AWQ: activation-statistics capture (the AWQ forward hook) for calibrated quantization.
 pub mod llm_awq;
 pub mod identifier;
+// mcp/ category (moved from crate root). Re-exports keep crate::mcp_server and
+// crate::mcp_cooperation paths stable for qualia-cli and intra-crate callers.
+pub mod mcp;
 #[cfg(not(target_arch = "wasm32"))]
-pub mod mcp_server;
+pub use mcp::mcp_server;
+#[cfg(any(
+    not(target_arch = "wasm32"),
+    feature = "wasm-logic",
+    feature = "wasm-scientific",
+    feature = "wasm-full"
+))]
+pub use mcp::mcp_cooperation;
 #[cfg(any(target_os = "macos", target_os = "ios"))]
 pub mod metal_bridge;
 pub mod mini_parser;
