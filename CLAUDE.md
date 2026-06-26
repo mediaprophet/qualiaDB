@@ -229,3 +229,23 @@ surface, and should **adopt the better capabilities the new version offers**, no
 - **This never overrides the lane rules (§10).** If the stale-API code is in another instrument's live or
   off-limits lane, **flag it** (a `NOTICES.md` line + report to Timothy) rather than reaching in.
   Fix-along-the-way is not a licence to barge.
+
+The concrete modernization items (wgpu 29, naga 29, arkworks 0.6, reqwest 0.13, …) are tracked in
+[`DEPENDENCY_MODERNIZATION.md`](DEPENDENCY_MODERNIZATION.md).
+
+## 14. Spawn sub-agents for appropriate work (PROJECT RULE — Timothy, 2026-06-26)
+
+When work is **well-scoped, independent, and parallelizable**, spawn sub-agents to do it rather than
+serialising everything in one thread. The per-dependency modernization sweeps in
+`DEPENDENCY_MODERNIZATION.md` are the model case — each dependency's call sites are an isolated unit, and
+several can run at once.
+
+- **Good candidates:** bounded tasks with a clear acceptance test — a dependency sweep, a module's test
+  coverage, a contained refactor — especially several that parallelise.
+- **Isolation:** give each sub-agent its **own worktree** (the Agent `isolation: "worktree"` option) so
+  concurrent edits cannot collide — the same discipline §10 requires of every instrument.
+- **Respect lane allocation (§10).** Never spawn a sub-agent into another instrument's live or
+  off-limits lane (e.g. **reqwest async I/O is Gemini's lane** in `qualia-client-core` — coordinate, do
+  not duplicate). Announce sub-agent work in `NOTICES.md` like any other.
+- **You orchestrate and integrate.** Sub-agents report to you; verify (green build + tests) before
+  integrating. No fire-and-forget, no unverified landings.
