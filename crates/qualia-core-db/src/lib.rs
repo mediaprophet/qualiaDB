@@ -192,7 +192,20 @@ pub use net::host_topology;
 pub mod audio;
 pub mod tensor;
 pub mod geometric_algebra;
-pub mod webizen_validator;
+// --- governance/ category (moved from crate root; paths preserved) ---
+pub mod governance;
+#[cfg(any(not(target_arch = "wasm32"), feature = "wasm-scientific"))]
+pub use governance::webizen;
+#[cfg(any(not(target_arch = "wasm32"), any(feature = "wasm-scientific", feature = "wasm-logic")))]
+pub use governance::webizen_bytecode;
+#[cfg(not(target_arch = "wasm32"))]
+pub use governance::webizen_sync;
+pub use governance::webizen_validator;
+#[cfg(not(target_arch = "wasm32"))]
+pub use governance::web_civics;
+pub use governance::illocution;
+pub use governance::modal_kind;
+pub use governance::provenance;
 pub mod sparql_library;
 pub use sparql_library::*;
 
@@ -771,7 +784,6 @@ impl Drop for QualiaSuperBlock {
     feature = "wasm-full"
 ))]
 // (asset_bridge moved to render::assets in Phase 0.2a)
-pub mod provenance;
 #[cfg(any(
     not(target_arch = "wasm32"),
     feature = "wasm-logic",
@@ -786,8 +798,6 @@ pub mod epistemic;
     feature = "wasm-full"
 ))]
 pub mod deontic_logic;
-pub mod illocution;
-pub mod modal_kind;
 #[cfg(any(
     not(target_arch = "wasm32"),
     feature = "wasm-logic",
@@ -810,8 +820,6 @@ pub mod sync;
     feature = "wasm-full"
 ))]
 pub mod wal;
-#[cfg(any(not(target_arch = "wasm32"), feature = "wasm-scientific"))]
-pub mod webizen;
 
 
 #[cfg(any(not(target_arch = "wasm32"), feature = "wasm-llm"))]
@@ -851,8 +859,6 @@ pub mod ode_solver;
 pub mod qpu_ingress;
 #[cfg(any(not(target_arch = "wasm32"), feature = "wasm-scientific"))]
 pub mod quantum_dft;
-#[cfg(any(not(target_arch = "wasm32"), any(feature = "wasm-scientific", feature = "wasm-logic")))]
-pub mod webizen_bytecode;
 
 
 #[cfg(target_arch = "wasm32")]
@@ -1152,11 +1158,7 @@ mod tests {
 #[cfg(not(target_arch = "wasm32"))]
 pub mod p2p;
 
-#[cfg(not(target_arch = "wasm32"))]
-pub mod webizen_sync;
 
-#[cfg(not(target_arch = "wasm32"))]
-pub mod web_civics;
 
 #[cfg(any(not(target_arch = "wasm32"), feature = "wasm-scientific"))]
 pub mod domains;
