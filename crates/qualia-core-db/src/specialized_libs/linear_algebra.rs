@@ -979,87 +979,29 @@ pub fn polynomial_roots(coeffs: &[f64]) -> Result<Vec<Complex>, LinearAlgebraErr
 //  cyclic Jacobi rotations. Inputs are row-major n×n `f64` slices.
 // ════════════════════════════════════════════════════════════════════════════════
 
-/// An in-place LU decomposition with partial pivoting (Doolittle), `P·A = L·U`.
-#[derive(Debug, Clone)]
-pub struct Lu {
-    /// Combined factors, row-major `n×n`: `U` on/above the diagonal, the strictly-lower
-    /// part of `L` below it (L's unit diagonal is implicit).
-    pub lu: Vec<f64>,
-    /// Row permutation: `pivots[i]` is the original row now in position `i`.
-    pub pivots: Vec<usize>,
-    /// Sign of the permutation (`+1`/`-1`), i.e. `det(P)`.
-    pub sign: f64,
-    /// `true` if a zero pivot was encountered (matrix is singular).
-    pub singular: bool,
-    pub n: usize,
-}
+/// LU decomposition with partial pivoting (`P·A = L·U`). The canonical dynamic LU now
+/// lives in the engine (`solvers::linear_algebra::lu`); re-exported here so the silo's
+/// existing API surface (and `Lu::determinant`) is unchanged.
+pub use crate::solvers::linear_algebra::lu::Lu;
 
-impl Lu {
-    /// `det(A) = sign · Π U[i][i]`.
-    pub fn determinant(&self) -> f64 {
-        if self.singular {
-            return 0.0;
-        }
-        let mut det = self.sign;
-        for i in 0..self.n {
-            det *= self.lu[i * self.n + i];
-        }
-        det
-    }
-}
-
-/// LU-decompose a row-major `n×n` matrix with partial pivoting. The reusable primitive
-/// behind `determinant` (and a building block for solves / condition estimates). O(n³).
+/// LU-decompose a row-major `n×n` matrix with partial pivoting — thin facade over the
+/// engine `lu_decompose` (maps the engine error to this lib's error type).
 pub fn lu_decompose(n: usize, data: &[f64]) -> Result<Lu, LinearAlgebraError> {
-    if n == 0 || data.len() != n * n {
-        return Err(LinearAlgebraError::InvalidDimensions(
+    crate::solvers::linear_algebra::lu::lu_decompose(n, data).map_err(|_| {
+        LinearAlgebraError::InvalidDimensions(
             "lu_decompose expects a non-empty square n×n matrix".to_string(),
-        ));
-    }
-    let mut a = data.to_vec();
-    let mut pivots: Vec<usize> = (0..n).collect();
-    let mut sign = 1.0_f64;
-    let mut singular = false;
-
-    for col in 0..n {
-        // Partial pivot: largest magnitude in this column at/below the diagonal.
-        let mut pivot = col;
-        let mut maxv = a[col * n + col].abs();
-        for r in (col + 1)..n {
-            let v = a[r * n + col].abs();
-            if v > maxv {
-                maxv = v;
-                pivot = r;
-            }
-        }
-        if maxv == 0.0 {
-            singular = true;
-            continue; // leave a zero on the diagonal; det → 0
-        }
-        if pivot != col {
-            for k in 0..n {
-                a.swap(col * n + k, pivot * n + k);
-            }
-            pivots.swap(col, pivot);
-            sign = -sign;
-        }
-        let diag = a[col * n + col];
-        for r in (col + 1)..n {
-            let factor = a[r * n + col] / diag;
-            a[r * n + col] = factor; // store L's multiplier in the lower triangle
-            for k in (col + 1)..n {
-                a[r * n + k] -= factor * a[col * n + k];
-            }
-        }
-    }
-
-    Ok(Lu { lu: a, pivots, sign, singular, n })
+        )
+    })
 }
 
-/// Determinant of a row-major `n×n` matrix via LU decomposition with partial pivoting.
-/// O(n³), numerically robust; returns 0.0 for a singular matrix.
+/// Determinant of a row-major `n×n` matrix via LU decomposition — thin facade over the
+/// engine `determinant`. O(n³), numerically robust; returns 0.0 for a singular matrix.
 pub fn determinant(n: usize, data: &[f64]) -> Result<f64, LinearAlgebraError> {
-    Ok(lu_decompose(n, data)?.determinant())
+    crate::solvers::linear_algebra::lu::determinant(n, data).map_err(|_| {
+        LinearAlgebraError::InvalidDimensions(
+            "determinant expects a non-empty square n×n matrix".to_string(),
+        )
+    })
 }
 
 /// Eigen-decomposition of a SYMMETRIC row-major `n×n` matrix via cyclic Jacobi

@@ -20,6 +20,7 @@ crates/qualia-core-db/src/solvers/linear_algebra/
   qr.rs         Householder QR + least-squares + square solve
   cholesky.rs   SPD factor / solve / determinant
   eigen.rs      symmetric eigendecomposition (closed-form 3×3 + general Jacobi)
+  lu.rs         dynamic LU (partial pivoting) + determinant  ← canonical n×n LU
 ```
 
 All of it is **zero-allocation**: every routine operates on **caller-owned, row-major `&[f64]` /
@@ -58,6 +59,15 @@ Timothy's directive).
 | `symmetric_eigen_3x3(a) -> [f64;3]` | Closed-form (Smith's), eigenvalues **descending**. For principal stresses/strains. |
 | `symmetric_eigen(n, a, eigvecs)` | Cyclic Jacobi, in-place: `a`'s diagonal ← eigenvalues, `eigvecs` columns ← eigenvectors. |
 
+### `lu.rs` — dynamic LU + determinant
+| Fn / type | Contract |
+|----|----------|
+| `lu_decompose(n, data) -> Lu` | Partial-pivoting Doolittle, `P·A = L·U`. `Lu { lu, pivots, sign, singular, n }`. A zero pivot sets `singular` (not an error). |
+| `Lu::determinant()` | `sign · Π U[i][i]` (0 if singular). |
+| `determinant(n, data) -> f64` | Convenience over `lu_decompose`. |
+
+*(`specialized_libs/linear_algebra` keeps a thin error-mapping facade re-exporting these — the math lives here.)*
+
 ---
 
 ## 3. The GPU parity contract (for the LLM / gguf lane)
@@ -89,11 +99,11 @@ libs is **thinner than the heap-counts imply**.
 - `machine_learning.rs` — stub scaffold (`output_data: vec![1u8;100]`), no real GEMM/gradient.
 - `chemistry`/`physics`/`engineering` — **no generic ODE integrators** (no RK4/Euler loops); the real
   kinetics/thermo work is closed-form analytic.
-- `lu_decompose` / `determinant` / `svd` / `characteristic_polynomial` / `eigenvalues_general` /
-  `polynomial_roots` (+ `Complex`/`Lu`/`Svd`) in `specialized_libs/linear_algebra.rs` are **single-copy
-  and correct** — just *located* in the silo. Relocating them to the engine carries
-  `LinearAlgebraError`→`SolversError` churn that touches `mcp/mcp_tool_impls.rs`, so per CLAUDE.md §11
-  it is **deferred to the dedicated library-ization pass**, not done mid-feature.
+- `svd` / `characteristic_polynomial` / `eigenvalues_general` / `polynomial_roots` (+ `Complex`/`Svd`)
+  in `specialized_libs/linear_algebra.rs` are **single-copy and correct** — just *located* in the silo.
+  Relocating them is being done **non-breakingly** (engine owns the impl; the silo keeps a thin
+  error-mapping facade so `mcp`/tests/callers are untouched). **`lu_decompose`/`determinant`/`Lu` are
+  now relocated** (engine `lu.rs`, silo facade). `svd`/polynomial cluster: next, same pattern.
 
 ## 5. Status — in progress / planned (this lane)
 

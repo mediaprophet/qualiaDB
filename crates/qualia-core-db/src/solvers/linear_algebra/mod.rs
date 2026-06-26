@@ -17,6 +17,8 @@ pub mod cholesky;
 pub mod qr;
 /// Symmetric eigendecomposition — closed-form 3×3 + general Jacobi (caller-owned).
 pub mod eigen;
+/// Dynamic LU decomposition (partial pivoting) + determinant — canonical `n×n` LU.
+pub mod lu;
 
 /// Fixed-size 4x4 matrix for stack-based operations
 #[repr(C)]

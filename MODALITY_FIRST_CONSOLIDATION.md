@@ -235,3 +235,28 @@ So `statistical_computing` + financial's Gaussian were the real statistics dupli
 - **Next:** relocate the remaining dynamic `lu_decompose`/`determinant`/`svd` to the engine (same
   pattern), then route `chemistry`/`physics` ODE math to `solvers/calculus`.
 - **⚑ Needs Timothy:** none this step.
+
+### 2026-06-26 — Honest scope finding + LA phase 6: LU relocated (non-breaking facade) · **done (green)** · worktree `0.0.21-la`
+- **Finding (reported):** drained the rest of the specialized-lib math. The genuine *duplication*
+  (competing re-implementations) was concentrated in the LA-numeric space and is now **closed**
+  (matmul, solve, eigen). The remainder is **single-copy, correct, just misplaced**:
+  `machine_learning` is stub-scaffold (no real GEMM); `chemistry`/`physics`/`engineering` have **no
+  generic ODE integrators** (closed-form analytic); `symbolic_algebra.rs` is a real CAS that does
+  **not** overlap `solvers/symbolic_logic` (which is SAT/defeasible). So further consolidation is
+  *relocation*, not *de-duplication*.
+- **Method decision:** relocation done **non-breakingly** — engine owns the implementation; the silo
+  keeps a thin error-mapping facade (`pub use` the type + wrapper fns mapping `SolversError` →
+  `LinearAlgebraError`). This keeps `mcp`/tests/callers untouched, so §11's "risky mid-feature
+  refactor" caveat doesn't bite.
+- **Built** `solvers/linear_algebra/lu.rs` — canonical **dynamic** LU (the engine had only fixed 4×4):
+  `lu_decompose`/`determinant`/`Lu` moved verbatim (error type → `SolversError`). The silo's
+  `lu_decompose`/`determinant`/`Lu` are now a facade over it.
+- **Measured:** `linear_algebra::lu` → **4 passed** (det 2×2/3×3, singular→0, P·A=L·U reconstruct,
+  bad-dims); full `linear_algebra` filter → **60 passed**, 0 failed (silo facade + its existing LU
+  tests all green; whole lib incl. `mcp` compiles).
+- **Next:** `svd` (+ `Complex`/`characteristic_polynomial`/`eigenvalues_general`/`polynomial_roots`)
+  relocate, same facade pattern. The polynomial/`Complex` cluster may belong in a `solvers/polynomial`
+  rather than `linear_algebra` — flagging the home choice.
+- **⚑ Needs Timothy:** (low-stakes) the `Complex` + polynomial-roots cluster — engine home
+  `solvers/linear_algebra` vs a new `solvers/polynomial`? Will proceed with `linear_algebra` unless you
+  say otherwise (it's where `eigenvalues_general` consumes it).
