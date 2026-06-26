@@ -14,8 +14,14 @@
 //! is a separate concern and lives in `modalities::probabilistic`; it may call
 //! into here for numeric work, but the two are not merged.
 
+pub mod correlation;
 pub mod descriptive;
+pub mod histogram;
+pub mod hypothesis;
 
+pub use correlation::{kendall, pearson, rank_into};
 pub use descriptive::{
     max, mean, median_in_place, median_sorted, min, std_dev, sum, variance,
 };
+pub use histogram::{histogram_into, HistRange};
+pub use hypothesis::{one_sample_t, TTest};

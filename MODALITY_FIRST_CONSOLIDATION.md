@@ -49,7 +49,7 @@ Status: ☐ not started · ◑ partial · ☑ done. Heap-count = `Vec/HashMap/Ar
 
 | Lib | heap | Re-implements | Route to | Status |
 |---|---|---|---|---|
-| `statistical_computing.rs` | 231 | mean, median, variance, correlation, t-test, histogram, Laplace noise | `solvers/statistics/` | ◑ mean+median+variance rerouted; remaining: correlation, t_test, histogram |
+| `statistical_computing.rs` | 231 | mean, median, variance, correlation, t-test, histogram, Laplace noise | `solvers/statistics/` | ☑ all numeric kernels rerouted (Laplace DP noise stays — it's domain privacy policy, not a math kernel) |
 | `linear_algebra/` + `.rs` | 22 (+dir) | matmul, transpose, decompositions (dynamic, heap) | `solvers/linear_algebra/` (needs a dynamic, caller-owned GEMM entry added — engine currently only has fixed-size `Matrix4x4`/Lanczos) | ☐ |
 | `symbolic_algebra.rs` | 32 | polynomial/CAS/simplify | `solvers/symbolic_logic/` | ☐ |
 | `machine_learning.rs` | 268 | GEMM, gradient descent, stats | `solvers/linear_algebra` + `optimization` + `statistics` | ☐ |
@@ -96,3 +96,21 @@ Status: ☐ not started · ◑ partial · ☑ done. Heap-count = `Vec/HashMap/Ar
   `.cursorrules`/`AI_INSTRUCTIONS.md` now, or after more migrations land?
 - **Next:** finish `statistical_computing` (correlation, t_test, histogram → `solvers/statistics`),
   then `machine_learning`/`medical`/`financial` stats consumers (they all want the same home).
+
+### 2026-06-26 — Step 2: finish statistical_computing · **done (green)**
+- **Built** three more engine homes in `solvers/statistics/`: `correlation.rs`
+  (`pearson`, `kendall`, `rank_into` — ranking writes into caller-owned scratch),
+  `hypothesis.rs` (`one_sample_t` + `TTest`, reusing the descriptive mean/variance),
+  `histogram.rs` (`histogram_into` filling a caller-owned counts buffer + `HistRange`).
+- **Rerouted** the wrapper's `pearson_correlation`, `kendall_correlation`, `rank_values`,
+  `one_sample_t_test`, `compute_histogram` to call the engine. All inline math removed
+  from `statistical_computing.rs`; the wrapper now only marshals its heap `Dataset` and
+  owns scratch/output buffers (the legitimate composition boundary).
+- **⚑ Behaviour change (correctness, flagged not hidden):** the old `rank_values`
+  tie-averaging was *buggy* (gave `[1,2,2,…]` for tied data instead of `[1,2.5,2.5,4]`).
+  The engine's `rank_into` does proper average ranks, so **Spearman correlation on tied
+  data now returns the correct value**. No existing test asserted the old wrong value, so
+  nothing broke — but downstream consumers that memorised old Spearman numbers should know.
+- **Measured:** `solvers::statistics::` → **18 passed**; `statistical_computing::` → **8 passed**.
+- **Next:** `machine_learning` / `medical_computing` / `financial_modeling` stats consumers
+  → same `solvers/statistics` home; then the LA dynamic-GEMM home (coverage gap above).

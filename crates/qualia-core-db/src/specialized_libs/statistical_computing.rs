@@ -1779,32 +1779,9 @@ impl StatisticalComputingLibrary {
 
     /// Compute Pearson correlation
     fn pearson_correlation(&self, x: &[f64], y: &[f64]) -> Result<f64, StatisticalError> {
-        let n = x.len();
-        if n != y.len() || n < 2 {
-            return Err(StatisticalError::InvalidData("Invalid data for correlation".to_string()));
-        }
-
-        let mean_x = x.iter().sum::<f64>() / n as f64;
-        let mean_y = y.iter().sum::<f64>() / n as f64;
-
-        let mut numerator = 0.0;
-        let mut denominator_x = 0.0;
-        let mut denominator_y = 0.0;
-
-        for i in 0..n {
-            let dx = x[i] - mean_x;
-            let dy = y[i] - mean_y;
-            numerator += dx * dy;
-            denominator_x += dx * dx;
-            denominator_y += dy * dy;
-        }
-
-        let denominator = (denominator_x * denominator_y).sqrt();
-        if denominator == 0.0 {
-            return Ok(0.0);
-        }
-
-        Ok(numerator / denominator)
+        // Modality-First: the math lives in the engine's statistics solver.
+        crate::solvers::statistics::pearson(x, y)
+            .ok_or_else(|| StatisticalError::InvalidData("Invalid data for correlation".to_string()))
     }
 
     /// Compute Spearman correlation
@@ -1819,66 +1796,19 @@ impl StatisticalComputingLibrary {
 
     /// Compute Kendall correlation
     fn kendall_correlation(&self, x: &[f64], y: &[f64]) -> Result<f64, StatisticalError> {
-        // Simplified Kendall correlation implementation
-        let n = x.len();
-        if n != y.len() || n < 2 {
-            return Err(StatisticalError::InvalidData("Invalid data for correlation".to_string()));
-        }
-
-        let mut concordant = 0;
-        let mut discordant = 0;
-
-        for i in 0..n {
-            for j in (i + 1)..n {
-                let x_diff = x[i] - x[j];
-                let y_diff = y[i] - y[j];
-
-                if x_diff * y_diff > 0.0 {
-                    concordant += 1;
-                } else if x_diff * y_diff < 0.0 {
-                    discordant += 1;
-                }
-            }
-        }
-
-        let total = concordant + discordant;
-        if total == 0 {
-            return Ok(0.0);
-        }
-
-        Ok((concordant - discordant) as f64 / total as f64)
+        // Modality-First: the math lives in the engine's statistics solver.
+        crate::solvers::statistics::kendall(x, y)
+            .ok_or_else(|| StatisticalError::InvalidData("Invalid data for correlation".to_string()))
     }
 
     /// Rank values
     fn rank_values(&self, values: &[f64]) -> Vec<f64> {
+        // Modality-First: ranking lives in the engine. The wrapper owns the
+        // scratch/output buffers (heap is fine at this composition boundary).
         let n = values.len();
-        let mut indexed_values: Vec<(usize, f64)> = values.iter().enumerate().map(|(i, &v)| (i, v)).collect();
-        indexed_values.sort_by(|a, b| a.1.partial_cmp(&b.1).unwrap());
-
+        let mut idx = vec![0usize; n];
         let mut ranks = vec![0.0; n];
-        let mut current_rank = 1.0;
-        let mut i = 0;
-
-        while i < n {
-            if i > 0 && indexed_values[i].1 == indexed_values[i - 1].1 {
-                // Handle ties - average rank
-                let tie_start = i;
-                while i + 1 < n && indexed_values[i + 1].1 == indexed_values[i].1 {
-                    i += 1;
-                }
-                let tie_end = i;
-                let avg_rank = (current_rank + (tie_end - tie_start + 1) as f64) / 2.0;
-                for j in tie_start..=tie_end {
-                    ranks[indexed_values[j].0] = avg_rank;
-                }
-                current_rank += (tie_end - tie_start + 2) as f64;
-            } else {
-                ranks[indexed_values[i].0] = current_rank;
-                current_rank += 1.0;
-            }
-            i += 1;
-        }
-
+        let _ = crate::solvers::statistics::rank_into(values, &mut idx, &mut ranks);
         ranks
     }
 
@@ -1889,29 +1819,13 @@ impl StatisticalComputingLibrary {
             return Err(StatisticalError::InvalidData("Insufficient data for t-test".to_string()));
         }
 
-        let mean = values.iter().sum::<f64>() / n as f64;
-        let variance = values.iter().map(|x| (x - mean).powi(2)).sum::<f64>() / (n - 1) as f64;
-        let std_error = (variance / n as f64).sqrt();
-
-        let t_statistic = (mean - mu) / std_error;
-        let degrees_of_freedom = n - 1;
-
-        // Simplified p-value calculation (would use proper t-distribution in real implementation)
-        let p_value = if t_statistic.abs() > 1.96 {
-            0.05
-        } else {
-            0.1
-        };
-
-        // Confidence interval
-        let margin = 1.96 * std_error;
-        let confidence_interval = (mean - margin, mean + margin);
-
+        let t = crate::solvers::statistics::one_sample_t(values, mu)
+            .ok_or_else(|| StatisticalError::InvalidData("Insufficient data for t-test".to_string()))?;
         Ok(TTestResult {
-            t_statistic,
-            p_value,
-            degrees_of_freedom: degrees_of_freedom as u32,
-            confidence_interval,
+            t_statistic: t.t_statistic,
+            p_value: t.p_value,
+            degrees_of_freedom: t.degrees_of_freedom,
+            confidence_interval: t.confidence_interval,
         })
     }
 
@@ -1921,30 +1835,17 @@ impl StatisticalComputingLibrary {
             return Err(StatisticalError::InvalidData("No data for histogram".to_string()));
         }
 
-        let min_value = values.iter().fold(f64::INFINITY, |a, &b| a.min(b));
-        let max_value = values.iter().fold(f64::NEG_INFINITY, |a, &b| a.max(b));
-        let bin_width = (max_value - min_value) / bins as f64;
-
-        let mut counts = vec![0; bins];
-
-        for &value in values {
-            if value < min_value || value > max_value {
-                continue;
-            }
-            let bin_index = ((value - min_value) / bin_width) as usize;
-            if bin_index >= bins {
-                counts[bins - 1] += 1;
-            } else {
-                counts[bin_index] += 1;
-            }
-        }
-
+        // Modality-First: binning lives in the engine; the wrapper owns the
+        // counts buffer and builds the domain result.
+        let mut counts = vec![0u32; bins];
+        let range = crate::solvers::statistics::histogram_into(values, &mut counts)
+            .ok_or_else(|| StatisticalError::InvalidData("No data for histogram".to_string()))?;
         Ok(HistogramResult {
             bins,
             counts,
-            min_value,
-            max_value,
-            bin_width,
+            min_value: range.min,
+            max_value: range.max,
+            bin_width: range.bin_width,
         })
     }
 }
