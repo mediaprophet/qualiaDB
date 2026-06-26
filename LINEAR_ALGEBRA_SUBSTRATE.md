@@ -21,6 +21,7 @@ crates/qualia-core-db/src/solvers/linear_algebra/
   cholesky.rs   SPD factor / solve / determinant
   eigen.rs      symmetric eigendecomposition (closed-form 3×3 + general Jacobi)
   lu.rs         dynamic LU (partial pivoting) + determinant  ← canonical n×n LU
+  svd.rs        thin SVD A = U·Σ·Vᵀ (via AᵀA eigendecomposition)
 ```
 
 All of it is **zero-allocation**: every routine operates on **caller-owned, row-major `&[f64]` /
@@ -99,11 +100,14 @@ libs is **thinner than the heap-counts imply**.
 - `machine_learning.rs` — stub scaffold (`output_data: vec![1u8;100]`), no real GEMM/gradient.
 - `chemistry`/`physics`/`engineering` — **no generic ODE integrators** (no RK4/Euler loops); the real
   kinetics/thermo work is closed-form analytic.
-- `svd` / `characteristic_polynomial` / `eigenvalues_general` / `polynomial_roots` (+ `Complex`/`Svd`)
-  in `specialized_libs/linear_algebra.rs` are **single-copy and correct** — just *located* in the silo.
-  Relocating them is being done **non-breakingly** (engine owns the impl; the silo keeps a thin
-  error-mapping facade so `mcp`/tests/callers are untouched). **`lu_decompose`/`determinant`/`Lu` are
-  now relocated** (engine `lu.rs`, silo facade). `svd`/polynomial cluster: next, same pattern.
+- Relocation is being done **non-breakingly** (engine owns the impl; the silo keeps a thin
+  error-mapping facade so `mcp`/tests/callers are untouched). **Done:** `lu`/`determinant`/`Lu`
+  (engine `lu.rs`), `svd`/`Svd` (engine `svd.rs`).
+- **Still in the silo (flagged for a home decision):** the polynomial/`Complex` cluster —
+  `polynomial_roots`, `characteristic_polynomial`, `eigenvalues_general`, `solve_quadratic`,
+  `Complex`. These interdepend and are arguably **not** linear algebra (polynomial/computer-algebra).
+  Awaiting Timothy's call: engine home `solvers/linear_algebra` vs a new `solvers/polynomial`. They
+  are single-copy and working in the meantime.
 
 ## 5. Status — in progress / planned (this lane)
 

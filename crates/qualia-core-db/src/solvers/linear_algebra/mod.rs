@@ -19,6 +19,8 @@ pub mod qr;
 pub mod eigen;
 /// Dynamic LU decomposition (partial pivoting) + determinant — canonical `n×n` LU.
 pub mod lu;
+/// Thin singular value decomposition `A = U·Σ·Vᵀ` (via `AᵀA` eigendecomposition).
+pub mod svd;
 
 /// Fixed-size 4x4 matrix for stack-based operations
 #[repr(C)]

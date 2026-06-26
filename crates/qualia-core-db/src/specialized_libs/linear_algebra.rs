@@ -1088,71 +1088,16 @@ pub fn eigenvalues_general(n: usize, data: &[f64]) -> Result<Vec<Complex>, Linea
     polynomial_roots(&charpoly)
 }
 
-/// Result of a (thin) singular value decomposition `A = U·Σ·Vᵀ` of a row-major `m×n`
-/// matrix. `singular_values` (length `n`, descending) is the diagonal of Σ; `u` is
-/// row-major `m×n` with left singular vectors as columns; `v` is row-major `n×n` with
-/// right singular vectors as columns. Reconstruction: `A[i][j] = Σ_k u[i][k]·σ_k·v[j][k]`.
-#[derive(Debug, Clone)]
-pub struct Svd {
-    pub singular_values: Vec<f64>,
-    pub u: Vec<f64>,
-    pub v: Vec<f64>,
-}
+/// SVD `A = U·Σ·Vᵀ` — the canonical implementation now lives in the engine
+/// (`solvers::linear_algebra::svd`); re-exported here so the silo's API is unchanged.
+pub use crate::solvers::linear_algebra::svd::Svd;
 
-/// Singular value decomposition of a row-major `m×n` matrix via the symmetric
-/// eigendecomposition of `AᵀA` (right singular vectors + squared singular values),
-/// then `U = A·V·Σ⁻¹`. Singular values are returned in descending order.
+/// Singular value decomposition of a row-major `m×n` matrix — thin facade over the
+/// engine `svd` (maps the engine error to this lib's error type). Singular values are
+/// returned in descending order.
 pub fn svd(m: usize, n: usize, data: &[f64]) -> Result<Svd, LinearAlgebraError> {
-    if m == 0 || n == 0 || data.len() != m * n {
-        return Err(LinearAlgebraError::InvalidDimensions(
-            "svd expects a non-empty m×n matrix".to_string(),
-        ));
-    }
-
-    // M = AᵀA  (n×n, symmetric positive semi-definite).
-    let mut ata = vec![0.0_f64; n * n];
-    for p in 0..n {
-        for q in 0..n {
-            let mut acc = 0.0;
-            for i in 0..m {
-                acc += data[i * n + p] * data[i * n + q];
-            }
-            ata[p * n + q] = acc;
-        }
-    }
-
-    let (eigvals, eigvecs) = eigen_symmetric(n, &ata)?;
-
-    // Sort columns by descending eigenvalue (= descending σ²).
-    let mut order: Vec<usize> = (0..n).collect();
-    order.sort_by(|&i, &j| eigvals[j].partial_cmp(&eigvals[i]).unwrap());
-
-    let mut singular_values = vec![0.0_f64; n];
-    let mut v = vec![0.0_f64; n * n];
-    for (new_col, &old_col) in order.iter().enumerate() {
-        singular_values[new_col] = eigvals[old_col].max(0.0).sqrt();
-        for row in 0..n {
-            v[row * n + new_col] = eigvecs[row * n + old_col];
-        }
-    }
-
-    // U[:,k] = A·V[:,k] / σ_k  (zero column when σ_k ≈ 0).
-    let mut u = vec![0.0_f64; m * n];
-    let smax = singular_values.first().copied().unwrap_or(0.0).max(1.0);
-    for k in 0..n {
-        let sigma = singular_values[k];
-        if sigma <= 1e-12 * smax {
-            continue;
-        }
-        for i in 0..m {
-            let mut acc = 0.0;
-            for p in 0..n {
-                acc += data[i * n + p] * v[p * n + k];
-            }
-            u[i * n + k] = acc / sigma;
-        }
-    }
-
-    Ok(Svd { singular_values, u, v })
+    crate::solvers::linear_algebra::svd::svd(m, n, data).map_err(|_| {
+        LinearAlgebraError::InvalidDimensions("svd expects a non-empty m×n matrix".to_string())
+    })
 }
 

@@ -260,3 +260,17 @@ So `statistical_computing` + financial's Gaussian were the real statistics dupli
 - **⚑ Needs Timothy:** (low-stakes) the `Complex` + polynomial-roots cluster — engine home
   `solvers/linear_algebra` vs a new `solvers/polynomial`? Will proceed with `linear_algebra` unless you
   say otherwise (it's where `eigenvalues_general` consumes it).
+
+### 2026-06-26 — LA phase 7: SVD relocated (non-breaking facade) · **done (green)** · worktree `0.0.21-la`
+- **Built** `solvers/linear_algebra/svd.rs` — thin SVD `A = U·Σ·Vᵀ` via the symmetric
+  eigendecomposition of `AᵀA`, calling the engine's `eigen::symmetric_eigen` directly (no second
+  Jacobi). Silo `svd`/`Svd` → thin facade over it.
+- **Measured:** `linear_algebra::svd` → **3 passed** (square + tall reconstruct, bad-dims); full
+  `linear_algebra` filter → **63 passed**, 0 failed (silo `test_svd_reconstruction` green via facade).
+- **LA substrate state:** matmul, linear-solve, eigen **de-duplicated**; lu, svd, determinant
+  **relocated to the engine** (silo = facade). Engine now owns the dynamic dense-LA core end to end.
+- **Remaining (flagged, not a gap):** the polynomial/`Complex` cluster awaits Timothy's home decision
+  (`solvers/linear_algebra` vs new `solvers/polynomial`) — single-copy and working in the silo
+  meanwhile. This is an out-of-band taxonomy call, the one allowed defer.
+- **⚑ Needs Timothy:** the polynomial-cluster home (above). Otherwise the LA-numeric consolidation is
+  complete — the genuine duplication is gone and the engine is the single source.
