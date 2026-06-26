@@ -127,7 +127,7 @@ mod tests {
             y[i] = 2.0 * x0 - 3.0 * x1 + 1.0;
         }
         let knots = vec![vec![], vec![]]; // no knots → linear terms
-        let gam = Gam::fit(&x, &y, n, 1, &knots, 20).unwrap();
+        let gam = Gam::fit(&x, &y, n, 2, 1, &knots, 20).unwrap();
         let preds = gam.predict(&x, n);
         assert!(r2_score(&y, &preds).unwrap() > 0.999);
     }

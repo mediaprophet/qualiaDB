@@ -7,6 +7,9 @@
 //! special case with no knots. The basis columns form the design matrix; the fit is
 //! ordinary least squares over them (kernel-class `DenseLinear`).
 
+pub mod gam;
+pub use gam::Gam;
+
 use crate::solvers::learning::regression::linear;
 use crate::solvers::learning::LearningError;
 
