@@ -1482,7 +1482,9 @@ pub struct EngineeringOperationResult<T> {
     pub result: T,
     pub execution_time: u64,
     pub computational_cost: f64,
-    pub accuracy: f64,
+    /// Solver accuracy for this analysis. `None` = not computed (no error estimate is
+    /// produced), rather than a fabricated per-analysis 0.85–0.95.
+    pub accuracy: Option<f64>,
     pub convergence_info: ConvergenceInfo,
 }
 
@@ -1665,7 +1667,7 @@ impl EngineeringAnalysisLibrary {
             result: results,
             execution_time,
             computational_cost: 0.0,
-            accuracy: 0.95,
+            accuracy: None,
             convergence_info: ConvergenceInfo {
                 converged: true,
                 iterations: 100,
@@ -1691,7 +1693,7 @@ impl EngineeringAnalysisLibrary {
             result: results,
             execution_time,
             computational_cost: 0.0,
-            accuracy: 0.92,
+            accuracy: None,
             convergence_info: ConvergenceInfo {
                 converged: true,
                 iterations: 150,
@@ -1717,7 +1719,7 @@ impl EngineeringAnalysisLibrary {
             result: results,
             execution_time,
             computational_cost: 0.0,
-            accuracy: 0.90,
+            accuracy: None,
             convergence_info: ConvergenceInfo {
                 converged: true,
                 iterations: 200,
@@ -1743,7 +1745,7 @@ impl EngineeringAnalysisLibrary {
             result: results,
             execution_time,
             computational_cost: 0.0,
-            accuracy: 0.88,
+            accuracy: None,
             convergence_info: ConvergenceInfo {
                 converged: true,
                 iterations: 300,
@@ -1769,7 +1771,7 @@ impl EngineeringAnalysisLibrary {
             result: results,
             execution_time,
             computational_cost: 0.0,
-            accuracy: 0.85,
+            accuracy: None,
             convergence_info: ConvergenceInfo {
                 converged: true,
                 iterations: 500,

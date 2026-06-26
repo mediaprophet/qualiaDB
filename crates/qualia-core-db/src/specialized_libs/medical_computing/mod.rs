@@ -4231,7 +4231,7 @@ impl ComplianceReport {
         Self {
             report_id: "report_1".to_string(),
             report_type: ComplianceType::HIPAA,
-            compliance_score: 0.95,
+            compliance_score: None,
             violations: Vec::new(),
             recommendations: Vec::new(),
             generated_at: 0,
@@ -4333,7 +4333,10 @@ pub struct ScreeningMetrics {
 pub struct ComplianceReport {
     pub report_id: String,
     pub report_type: ComplianceType,
-    pub compliance_score: f64,
+    /// Compliance score (e.g. HIPAA). `None` = not assessed. No compliance evaluation is
+    /// performed here, so it must not fabricate a score — previously `new()` claimed a
+    /// hardcoded 0.95 ("95% HIPAA-compliant") from no assessment at all.
+    pub compliance_score: Option<f64>,
     pub violations: Vec<String>,
     pub recommendations: Vec<String>,
     pub generated_at: u64,
@@ -4458,7 +4461,8 @@ mod tests {
         let result = library.check_compliance(ComplianceType::HIPAA).unwrap();
         
         assert_eq!(result.result.report_type, ComplianceType::HIPAA);
-        assert!(result.result.compliance_score > 0.9);
+        // Honest: no compliance assessment is performed, so no score is fabricated.
+        assert!(result.result.compliance_score.is_none());
         assert!(result.compliance_status == ComplianceStatus::Compliant);
     }
 

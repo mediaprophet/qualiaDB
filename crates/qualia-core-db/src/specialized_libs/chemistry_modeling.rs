@@ -1388,7 +1388,7 @@ impl ChemistryModelingLibrary {
             result: trajectory,
             execution_time,
             computational_cost: 0.0,
-            accuracy: 0.95,
+            accuracy: 0.0, // not measured (scaffold default; no validation performed)
             convergence_info: ConvergenceInfo {
                 converged: true,
                 iterations: 1000,
@@ -1414,7 +1414,7 @@ impl ChemistryModelingLibrary {
             result: properties,
             execution_time,
             computational_cost: 0.0,
-            accuracy: 0.98,
+            accuracy: 0.0, // not measured (scaffold default; no validation performed)
             convergence_info: ConvergenceInfo {
                 converged: true,
                 iterations: 50,
@@ -1440,7 +1440,7 @@ impl ChemistryModelingLibrary {
             result: results,
             execution_time,
             computational_cost: 0.0,
-            accuracy: 0.90,
+            accuracy: 0.0, // not measured (scaffold default; no validation performed)
             convergence_info: ConvergenceInfo {
                 converged: true,
                 iterations: 100,
@@ -1466,7 +1466,7 @@ impl ChemistryModelingLibrary {
             result: predicted,
             execution_time,
             computational_cost: 0.0,
-            accuracy: 0.85,
+            accuracy: 0.0, // not measured (scaffold default; no validation performed)
             convergence_info: ConvergenceInfo {
                 converged: true,
                 iterations: 10,
@@ -2792,7 +2792,7 @@ impl ModelPerformance {
             r_squared: 0.95,
             rmse: 0.1,
             mae: 0.08,
-            cross_validation_score: 0.93,
+            cross_validation_score: 0.0, // not measured (scaffold default; no validation performed)
         }
     }
 }
@@ -2849,8 +2849,9 @@ impl QuantumMetrics {
         Self {
             total_calculations: 0,
             average_convergence_time: 0.0,
-            scf_convergence_rate: 0.95,
-            basis_set_efficiency: 0.90,
+            // not measured (scaffold defaults; no SCF/basis-set statistics are tracked)
+            scf_convergence_rate: 0.0,
+            basis_set_efficiency: 0.0,
         }
     }
 }
@@ -2860,8 +2861,8 @@ impl ReactionMetrics {
         Self {
             total_reactions: 0,
             average_calculation_time: 0.0,
-            rate_constant_accuracy: 0.85,
-            thermodynamic_accuracy: 0.80,
+            rate_constant_accuracy: 0.0, // not measured (scaffold default; no validation performed)
+            thermodynamic_accuracy: 0.0,
         }
     }
 }
@@ -2871,7 +2872,7 @@ impl PropertyMetrics {
         Self {
             total_predictions: 0,
             average_prediction_time: 0.0,
-            prediction_accuracy: 0.80,
+            prediction_accuracy: 0.0, // not measured (scaffold default; no validation performed)
             model_coverage: 0.75,
         }
     }

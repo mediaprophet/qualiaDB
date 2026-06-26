@@ -3181,10 +3181,11 @@ impl PriceFeed {
 impl DataQuality {
     pub fn new() -> Self {
         Self {
-            accuracy: 0.99,
-            completeness: 0.95,
-            timeliness: 0.98,
-            consistency: 0.97,
+            // not measured (scaffold defaults; no data-quality assessment is performed)
+            accuracy: 0.0,
+            completeness: 0.0,
+            timeliness: 0.0,
+            consistency: 0.0,
         }
     }
 }
@@ -3334,8 +3335,9 @@ impl ValidationResults {
     pub fn new() -> Self {
         Self {
             backtest_results: BacktestResults::new(),
-            model_accuracy: 0.95,
-            calibration_quality: 0.9,
+            // not measured (scaffold defaults; no model validation is performed)
+            model_accuracy: 0.0,
+            calibration_quality: 0.0,
         }
     }
 }

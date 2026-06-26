@@ -2446,7 +2446,7 @@ impl TestResult {
 impl TestMetrics {
     pub fn new() -> Self {
         Self {
-            accuracy: 0.95,
+            accuracy: 0.0, // not measured (scaffold default; no evaluation performed)
             latency: 10.0,
             throughput: 100.0,
             memory_usage: 1024 * 1024, // 1MB
@@ -2731,7 +2731,7 @@ impl PerformanceMetrics {
         Self {
             latency: 10.0,
             throughput: 100.0,
-            accuracy: 0.95,
+            accuracy: 0.0, // not measured (scaffold default; no evaluation performed)
             memory_usage: 1024 * 1024, // 1MB
         }
     }
@@ -3334,7 +3334,7 @@ impl ModelPerformance {
         Self {
             inference_latency: 10.0,
             throughput: 100.0,
-            accuracy: 0.95,
+            accuracy: 0.0, // not measured (scaffold default; no evaluation performed)
             memory_usage: 1024 * 1024, // 1MB
             energy_efficiency: 0.8,
         }
@@ -3372,10 +3372,10 @@ impl TrainingMetrics {
     pub fn new() -> Self {
         Self {
             total_training_jobs: 0,
-            accuracy: 0.95,
-            precision: 0.95,
-            recall: 0.95,
-            f1_score: 0.95,
+            accuracy: 0.0, // not measured (scaffold default; no evaluation performed)
+            precision: 0.0, // not measured (scaffold default; no evaluation performed)
+            recall: 0.0,
+            f1_score: 0.0,
             learning_rate: 0.001,
         }
     }
