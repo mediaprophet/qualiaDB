@@ -1469,8 +1469,11 @@ pub struct ReliabilityResults {
 pub struct EngineeringPerformanceMetrics {
     pub total_analyses: u64,
     pub average_computation_time: f64,
-    pub average_accuracy: f64,
-    pub convergence_rate: f64,
+    /// Average solver accuracy / convergence rate across analyses. `None` = not measured —
+    /// this summary does not track per-analysis error, so it must not fabricate a value
+    /// (previously `new()` claimed a hardcoded 95% accuracy / 98% convergence from nothing).
+    pub average_accuracy: Option<f64>,
+    pub convergence_rate: Option<f64>,
 }
 
 /// Engineering operation result
@@ -3042,8 +3045,8 @@ impl EngineeringPerformanceMetrics {
         Self {
             total_analyses: 0,
             average_computation_time: 0.0,
-            average_accuracy: 0.95,
-            convergence_rate: 0.98,
+            average_accuracy: None,
+            convergence_rate: None,
         }
     }
 }
@@ -3294,7 +3297,8 @@ mod tests {
         
         assert_eq!(metrics.total_analyses, 0);
         assert_eq!(metrics.average_computation_time, 0.0);
-        assert!(metrics.average_accuracy > 0.9);
+        // Honest: per-analysis accuracy is not tracked by this summary, so it is not fabricated.
+        assert!(metrics.average_accuracy.is_none());
     }
 
     #[test]
