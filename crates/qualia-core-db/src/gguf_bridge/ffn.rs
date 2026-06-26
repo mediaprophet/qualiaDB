@@ -15,14 +15,12 @@ impl QTensorEngine {
     ) -> bool {
         // Phase 3: try the single-submit fused FFN first (one round-trip/layer). Requires resident
         // weights; on any ineligibility it returns false and we fall through to the per-GEMM path.
-        // 0.0.21: when the cooperative GEMV kernel is on, BYPASS fusion so the FFN gate/up/down GEMMs
-        // flow through the per-GEMM path → `dispatch_gemm_raw_into` → `coop_gemv` (fusion's own GEMMs
-        // still run the naive `main`; fusion was throughput-neutral, so routing the FFN through the
-        // accelerated kernel wins). The two are recombined in a later step.
+        // 0.0.22: fused FFN now selects the cooperative GEMV entry point for its gate/up/down GEMMs
+        // when enabled, so the FFN gets both wins: one readback per layer and the parallel row
+        // reduction kernel.
         #[cfg(not(target_arch = "wasm32"))]
         if crate::llm_bench::resident_weights_enabled()
             && crate::llm_bench::ffn_fusion_enabled()
-            && !crate::llm_bench::coop_gemv_enabled()
         {
             if self.dispatch_ffn_fused_resident(index, hidden, emb_dim, tensors, scratch_a) {
                 return true;
@@ -236,7 +234,10 @@ impl QTensorEngine {
         self.gpu_queue().write_buffer(elem_params, 0, bytemuck::bytes_of(&p_silu));
         self.gpu_queue().write_buffer(in_buf, 0, bytemuck::cast_slice(&ffn_input[..gate_in]));
 
-        let gemm_layout = self.pipeline.get_bind_group_layout(0);
+        let use_coop = crate::llm_bench::coop_gemv_enabled();
+        let gemm_pipeline: &wgpu::ComputePipeline =
+            if use_coop { &self.coop_gemv_pipeline } else { &self.pipeline };
+        let gemm_layout = gemm_pipeline.get_bind_group_layout(0);
         let elem_layout = self.elem_silu_mul_pipeline.get_bind_group_layout(0);
         let gp_sz = std::num::NonZeroU64::new(std::mem::size_of::<GemmGpuParams>() as u64);
         let ep_sz = std::num::NonZeroU64::new(std::mem::size_of::<ElemGpuParams>() as u64);
@@ -280,11 +281,14 @@ impl QTensorEngine {
         });
 
         let mut encoder = self.device().create_command_encoder(&wgpu::CommandEncoderDescriptor { label: Some("FfnFusedEncoder") });
+        let gate_groups = if use_coop { n_ffn as u32 } else { (n_ffn as u32 + 63) / 64 };
+        let up_groups = gate_groups;
+        let down_groups = if use_coop { dn_out as u32 } else { (dn_out as u32 + 63) / 64 };
         for (label, pipe, bg, groups) in [
-            ("FfnGate", &self.pipeline, &gate_bg, (n_ffn as u32 + 63) / 64),
-            ("FfnUp", &self.pipeline, &up_bg, (n_ffn as u32 + 63) / 64),
+            ("FfnGate", gemm_pipeline, &gate_bg, gate_groups),
+            ("FfnUp", gemm_pipeline, &up_bg, up_groups),
             ("FfnSilu", &self.elem_silu_mul_pipeline, &silu_bg, (n_ffn as u32 + 63) / 64),
-            ("FfnDown", &self.pipeline, &down_bg, (dn_out as u32 + 63) / 64),
+            ("FfnDown", gemm_pipeline, &down_bg, down_groups),
         ] {
             let mut cp = encoder.begin_compute_pass(&wgpu::ComputePassDescriptor { label: Some(label), timestamp_writes: None });
             cp.set_pipeline(pipe);

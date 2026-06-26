@@ -52,14 +52,11 @@ pub fn decode_budget_override() -> u32 {
 }
 
 // ── A1a GPU top-k toggle (D18) ────────────────────────────────────────────────
-// Default-OFF — and the A/B (perf_topk_ab_smollm2) proves WHY flipping it on is NOT the win the
-// Codex review implied: (1) dispatch_output_topk_chunked gates on the NARROW ggml_gpu_quant_supported
-// (Q4_K/Q6_K only), so for Q8_0/F16/Q4_0 models top-k returns None and silently falls to argmax
-// (topk_hits=0 measured); and (2) even fully engaged, the output projection is only ~6 of ~120
-// submit→wait round-trips/token — the per-LAYER attention+FFN ops are the real ~110. So top-k is at
-// best a ~5% lever; the win is layer-forward residency/fusion (cut waits/token), not this flag.
-// Kept toggleable for when the gate+shader support the wider quant set. `QUALIA_LLM_GPU_TOPK=1/0`.
-static GPU_TOPK: AtomicBool = AtomicBool::new(false);
+// Default ON after widening the output gate and adding the allocation-free top-1 path. The decode
+// loop reads only block winners from the GPU instead of full vocabulary chunks when no sieve mask is
+// active.
+// Set `QUALIA_LLM_GPU_TOPK=0` to force the full-logit argmax fallback.
+static GPU_TOPK: AtomicBool = AtomicBool::new(true);
 
 /// Enable/disable the GPU top-k decode path (`QUALIA_LLM_GPU_TOPK`).
 #[inline]
@@ -131,6 +128,46 @@ pub fn ternary_ffn_enabled() -> bool {
         )
 }
 
+// Native attention projection split: Q/K/V matmuls run through the cooperative GEMV path, then the
+// attention shader consumes the projected rows via `proj_row_stride`. Default OFF: profiling showed
+// the added readback fences outweighed the projection-kernel win on SmolLM2/A2000. Use
+// `QUALIA_LLM_PREPROJECT_ATTN=1` as a diagnostic/experimental switch.
+static ATTN_PREPROJECT: AtomicBool = AtomicBool::new(false);
+
+#[inline]
+pub fn set_attention_preproject(on: bool) {
+    ATTN_PREPROJECT.store(on, Ordering::Relaxed);
+}
+
+#[inline]
+pub fn attention_preproject_enabled() -> bool {
+    match std::env::var("QUALIA_LLM_PREPROJECT_ATTN").ok().as_deref() {
+        Some("0") | Some("false") => false,
+        Some("1") | Some("true") => true,
+        _ => ATTN_PREPROJECT.load(Ordering::Relaxed),
+    }
+}
+
+// Native attention tail fusion: Q-attention writes its output to a GPU buffer, and o_proj consumes
+// that buffer directly after K and V are both present in the KV cache. Default ON (native): removes
+// one submit->wait round-trip per layer while preserving token identity against the proven readback
+// path. Set `QUALIA_LLM_FUSE_ATTN_O=0` to force the older Q-readback + o_proj path.
+static ATTN_O_FUSE: AtomicBool = AtomicBool::new(true);
+
+#[inline]
+pub fn set_attention_o_fuse(on: bool) {
+    ATTN_O_FUSE.store(on, Ordering::Relaxed);
+}
+
+#[inline]
+pub fn attention_o_fuse_enabled() -> bool {
+    match std::env::var("QUALIA_LLM_FUSE_ATTN_O").ok().as_deref() {
+        Some("0") | Some("false") => false,
+        Some("1") | Some("true") => true,
+        _ => ATTN_O_FUSE.load(Ordering::Relaxed),
+    }
+}
+
 // ── Phase 2: resident weights toggle ──────────────────────────────────────────
 // Default ON (native). Each layer's q/k/v/o/gate/up/down weight is uploaded to its own resident
 // VRAM buffer once (keyed by the GGUF tensor byte_offset) and reused every token, instead of
@@ -183,15 +220,14 @@ pub fn ffn_fusion_enabled() -> bool {
 }
 
 // ── 0.0.21: cooperative GEMV kernel toggle ────────────────────────────────────
-// Default ON (native), verified. Routes the native GEMM (`dispatch_gemm_raw_into`) through the
-// cooperative one-workgroup-per-row kernel (`coop_gemv`: coalesced reads + per-thread dequant +
-// shared-memory reduction) instead of the naive 1-thread/row `main`. The naive GEMV is the *measured*
-// decode bottleneck (compute/ALU-bound: uncoalesced strided reads + serial accumulate; it also makes
-// Q4_K slower than F16). When ON, the fused FFN path is bypassed so the FFN GEMMs also flow through
-// this kernel (fusion was ~neutral, so nothing is lost and all GEMMs share one accelerated path).
-// Verified on A2000 / Llama-3.2-3B-F16: 2.39→3.22 tok/s (+35% over naive per-GEMM; +31% over the
-// naive+fusion prev-best), output token-identical; synthetic F16/Q8 parity vs CPU max_abs_err ~1e-5.
-// `QUALIA_LLM_COOP_GEMV=0` forces the naive kernel (the A/B OFF baseline).
+// Default ON (native), verified. Routes native GEMV work through the cooperative
+// one-workgroup-per-row kernel (`coop_gemv`: coalesced reads + per-thread dequant +
+// shared-memory reduction) instead of the naive 1-thread/row `main`. The fused FFN path also selects
+// this cooperative entry point for gate/up/down GEMMs, so decode keeps one FFN readback per layer
+// while using the faster row reducer. The naive GEMV is the measured decode bottleneck
+// (compute/ALU-bound: uncoalesced strided reads + serial accumulate; it also makes Q4_K slower than
+// F16). `QUALIA_LLM_COOP_GEMV=0` forces the naive kernel (the A/B OFF baseline).
+// Earlier A2000 / Llama-3.2-3B-F16 per-GEMM verification: 2.39→3.22 tok/s (+35% over naive).
 static COOP_GEMV: AtomicBool = AtomicBool::new(true);
 
 /// Enable/disable the cooperative GEMV decode path (`QUALIA_LLM_COOP_GEMV`).

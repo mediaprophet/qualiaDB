@@ -952,7 +952,7 @@ impl LocalLlmAgent {
                 );
 
                 let t_decode = std::time::Instant::now();
-                // A1a: GPU top-k decode path toggle (default-off; QUALIA_LLM_GPU_TOPK / set_gpu_topk).
+                // A1a: GPU top-1 decode path toggle (default-on; QUALIA_LLM_GPU_TOPK / set_gpu_topk).
                 let gpu_topk_enabled = crate::llm_bench::gpu_topk_enabled();
                 // Decode-profiler (gated): one-shot empty submit→wait baseline on the SAME device, so
                 // the bench can separate per-token fence latency from real kernel compute time.
@@ -1059,20 +1059,18 @@ impl LocalLlmAgent {
                             let sieve_mask = sieve.as_ref().map(|s| s.current_mask());
                             // Decode-profiler: time the output projection (argmax / top-k).
                             let t_out = std::time::Instant::now();
-                            // A1a: GPU top-k path (additive, default-off; non-sieve only in v1).
-                            // Returns the argmax token (k=1) via the on-GPU top-k reduction; falls
+                            // A1a: GPU top-1 path (additive, default-on; non-sieve only in v1).
+                            // Returns the argmax token via the on-GPU block reduction; falls
                             // through to the existing argmax path if disabled or on any failure — the
                             // working path is never bypassed.
                             let topk_hit = if gpu_topk_enabled && sieve_mask.is_none() {
-                                engine
-                                    .dispatch_output_topk_chunked(idx, &emb_buf[..emb_dim], emb_dim, 1)
-                                    .and_then(|t| t.into_iter().next())
+                                engine.dispatch_output_top1_chunked(idx, &emb_buf[..emb_dim], emb_dim)
                             } else {
                                 None
                             };
                             let out_sel = if let Some(item) = topk_hit {
                                 crate::llm_bench::record_topk_hit();
-                                (item.token_id as usize, item.logit)
+                                (item.best_token_id as usize, item.max_logit)
                             } else if let Some(argmax) = engine.dispatch_output_argmax_chunked(
                                 idx,
                                 &emb_buf[..emb_dim],

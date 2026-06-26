@@ -5,6 +5,7 @@
 /// the resident-logits / top-k output-projection gate (a known limitation: it makes top-k fall back
 /// to argmax for Q8_0/F16 models). The GEMM hot path uses the wider [`ggml_gpu_gemm_supported`].
 #[inline]
+#[allow(dead_code)]
 pub(crate) fn ggml_gpu_quant_supported(ggml_type: u32) -> bool {
     #[cfg(target_arch = "wasm32")]
     {
