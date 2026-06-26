@@ -14,6 +14,12 @@ use super::linear_algebra::LinearAlgebraLibrary;
 use super::physics_simulation::PhysicsSimulationLibrary;
 use super::statistical_computing::StatisticalComputingLibrary;
 
+/// Real 1-D steady-state heat-conduction solver (Fourier's law, finite-difference
+/// + tridiagonal Thomas algorithm) backing `perform_thermal_analysis`. Split into
+/// its own library submodule (PROJECT RULE §11); carries its own correctness tests
+/// against the analytic conduction solutions.
+pub mod thermal_conduction;
+
 /// Engineering Analysis Library Manager
 pub struct EngineeringAnalysisLibrary {
     structural_analyzer: StructuralAnalyzer,
@@ -1614,6 +1620,12 @@ pub struct AnalysisResults {
     pub strain_field: Vec<f64>,
     pub reaction_forces: Vec<f64>,
     pub safety_factor: f64,
+    /// Steady-state temperature field (K) at the mesh nodes. Populated by thermal
+    /// conduction analysis (`thermal_conduction`); empty for mechanical analyses.
+    pub temperature_field: Vec<f64>,
+    /// Heat-flux field (W/m²) at the mesh nodes, `q = −k·dT/dx`. Populated by
+    /// thermal conduction analysis; empty for mechanical analyses.
+    pub heat_flux_field: Vec<f64>,
 }
 
 impl EngineeringAnalysisLibrary {
@@ -1721,11 +1733,15 @@ impl EngineeringAnalysisLibrary {
             execution_time,
             computational_cost: 0.0,
             accuracy: None,
+            // The steady-state conduction system is solved DIRECTLY (tridiagonal
+            // Thomas algorithm), not iterated — so it "converges" in a single pass
+            // and is exact to floating-point round-off. Report that honestly rather
+            // than a fabricated 200-iteration residual.
             convergence_info: ConvergenceInfo {
                 converged: true,
-                iterations: 200,
-                convergence_criterion: 1e-6,
-                final_error: 1e-8,
+                iterations: 1,
+                convergence_criterion: 0.0,
+                final_error: 0.0,
             },
         })
     }
@@ -1880,6 +1896,8 @@ impl StructuralAnalyzer {
             strain_field: vec![strain],
             reaction_forces: vec![-force], // static equilibrium reaction
             safety_factor,
+            temperature_field: Vec::new(), // mechanical analysis — no thermal output
+            heat_flux_field: Vec::new(),
         })
     }
 
@@ -2555,17 +2573,16 @@ impl ThermalAnalyzer {
         Ok(())
     }
 
-    pub fn analyze(&mut self, _model: &EngineeringModel, _analysis_type: AnalysisType) -> Result<AnalysisResults, EngineeringError> {
-        // NOT IMPLEMENTED — it must say so, never fabricate. The previous body returned a default
-        // AnalysisResults (empty fields + a hardcoded safety_factor) while ignoring the model.
-        // Real mechanical / thermal / fluid analysis over an arbitrary model needs a finite-element
-        // / finite-volume solver (mesh assembly + solve), not yet built. (Axial structural analysis
-        // IS implemented — see StructuralAnalyzer::analyze.)
-        Err(EngineeringError::NotImplemented(
-            "this analysis requires a finite-element/finite-volume solver over the model \
-             (mesh assembly + solve), which is not implemented"
-                .to_string(),
-        ))
+    pub fn analyze(&mut self, model: &EngineeringModel, analysis_type: AnalysisType) -> Result<AnalysisResults, EngineeringError> {
+        // REAL: 1-D steady-state heat conduction (Fourier's law), solved on a
+        // finite-difference mesh with the tridiagonal Thomas algorithm, from the
+        // model's thermal conductivity, geometry length, boundary conditions
+        // (Temperature ⇒ Dirichlet, HeatFlux ⇒ Neumann) and any volumetric heat
+        // generation expressed in the geometry features. Returns a real
+        // temperature field + heat-flux field; missing/ill-posed inputs return
+        // InsufficientData rather than a fabricated default. (Full 2-D/3-D FE
+        // thermal is a larger subsystem and is flagged, not faked.)
+        thermal_conduction::analyze_conduction(model, analysis_type)
     }
 }
 
@@ -3094,6 +3111,8 @@ impl AnalysisResults {
             reaction_forces: Vec::new(),
             // No analysis on a default-constructed value — 0, never a fabricated 2.5 safety factor.
             safety_factor: 0.0,
+            temperature_field: Vec::new(),
+            heat_flux_field: Vec::new(),
         }
     }
 }
@@ -3367,11 +3386,56 @@ mod tests {
     fn test_thermal_analysis() {
         let mut library = EngineeringAnalysisLibrary::new();
         library.initialize().unwrap();
-        
-        let model = EngineeringModel::new();
-        // HONEST: thermal FE analysis isn't implemented → NotImplemented, not a fake result.
-        let result = library.perform_thermal_analysis(model, AnalysisType::Thermal);
-        assert!(matches!(result, Err(EngineeringError::NotImplemented(_))));
+
+        // REAL: 1-D steady conduction. A bar with k=50, length 2, ends held at
+        // 100 K and 300 K — the facade returns a genuine linear temperature field
+        // (proofs live in thermal_conduction.rs).
+        let mut materials = std::collections::HashMap::new();
+        materials.insert(
+            "steel".to_string(),
+            Material {
+                material_id: "steel".to_string(),
+                material_name: "steel".to_string(),
+                material_properties: MaterialProperties {
+                    youngs_modulus: 200000.0,
+                    poissons_ratio: 0.3,
+                    density: 7850.0,
+                    thermal_expansion: 1.2e-5,
+                    thermal_conductivity: 50.0,
+                    specific_heat: 500.0,
+                    yield_strength: 250.0,
+                    ultimate_strength: 400.0,
+                },
+            },
+        );
+        let model = EngineeringModel {
+            model_id: "bar".to_string(),
+            model_name: "bar".to_string(),
+            model_type: ModelType::Thermal,
+            geometry: Geometry {
+                geometry_type: GeometryType::Beam,
+                dimensions: vec![0.1, 0.1, 2.0],
+                features: Vec::new(),
+            },
+            materials,
+            boundary_conditions: vec![
+                BoundaryCondition { condition_id: "l".to_string(), condition_type: BoundaryConditionType::Temperature, condition_value: 100.0 },
+                BoundaryCondition { condition_id: "r".to_string(), condition_type: BoundaryConditionType::Temperature, condition_value: 300.0 },
+            ],
+            loads: Vec::new(),
+        };
+        let result = library.perform_thermal_analysis(model, AnalysisType::Thermal).unwrap();
+        let t = &result.result.temperature_field;
+        assert!(t.len() >= 2);
+        assert!((t[0] - 100.0).abs() < 1e-6 && (t[t.len() - 1] - 300.0).abs() < 1e-6);
+        assert!(result.convergence_info.converged);
+
+        // A model with no thermal boundary conditions must be refused, not faked.
+        let bare = EngineeringModel::new();
+        assert!(matches!(
+            library.perform_thermal_analysis(bare, AnalysisType::Thermal),
+            Err(EngineeringError::InsufficientData(_))
+        ));
     }
 
     #[test]
