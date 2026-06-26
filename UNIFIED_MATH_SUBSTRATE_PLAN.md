@@ -154,4 +154,65 @@ instead of a private kernel zoo.
   and the `.q42` ingest layer; the boundary needs care so dequant isn't re-duplicated.
 - P4 (`.q42` ingest) is where "optimised" must be defined concretely (layout, quant choice, residency)
   — that's a design sub-plan of its own.
+
+---
+
+## 11. P0 inventory — concrete entry points (verified 2026-06-26)
+
+**The duplicate math (mostly *methods* on the `gguf_bridge` engine struct, so it's encapsulated):**
+- **GPU GEMM** — `gguf_bridge/gemm.rs::dispatch_gemm_into(...)` + `coop_gemv` (in `shaders/fused_transformer.wgsl`) + resident-weight binding. *The* canonical GPU GEMM.
+- **CPU GEMM + norms + RoPE** — `gguf_bridge/cpu_ops.rs` (`stack_gemm_quant`, RMSNorm, rope_inplace) — `pub(crate)` methods, not free fns.
+- **Attention** — `gguf_bridge/attention.rs` (QKᵀ, softmax, ·V; resident KV; `dispatch_attention_*`).
+- **FFN** — `gguf_bridge/ffn.rs` (`dispatch_ffn_fused_resident`: gate/up/SiLU·mul/down).
+- **Dequant (math+format)** — `inference/ggml_quants.rs::{dequant_matrix_row_into, dequantize_row_into}`; `inference/ternary.rs` (ternary matmul).
+- **Embedding / output** — `gguf_bridge/{embedding.rs, output.rs}` (embed lookup, lm_head + GPU top-k).
+- **Forward orchestration** — `gguf_bridge/forward.rs` (per-layer loop) → becomes a sequence of substrate calls.
+
+**Existing infra to BUILD ON — do NOT add a fourth tensor layer:**
+- `tensor/hardware_tier.rs` — `HardwareTierDispatcher`, `TensorOperation`, `ExecutionStrategy`, `dispatch_tensor_operation`, `supports_operation`, `should_throttle`. **← the execution/dispatch layer skeleton.**
+- `tensor::Tensor10D` + `tensor/bake_pipeline.rs` — the manifold tensor type (NQuin ↔ tensor).
+- `tensor/buffer_export.rs` — `TensorBufferHeader`, GPU buffer layout/export.
+- `gpu_context.rs` / `compute_universe.rs` — the wgpu device, per-kernel profiler, and GPU dispatch the LLM lane already uses (incl. `gemm_parity_probe`, `w2_gpu_phase_profile`).
+- `shaders/*.wgsl` — `coop_gemv`, `fused_attention`, `fused_transformer`.
+
+So the substrate = `solvers/linear_algebra` (+ a `solvers/tensor` facet) presenting a clean GEMM/tensor
+API whose **GPU backend is the existing `gpu_context`/`gguf_bridge` kernels**, selected via
+`tensor/hardware_tier`'s `HardwareTierDispatcher`. Promotion, not reinvention.
+
+## 12. Execution playbook — START HERE after a context refresh
+
+**State (2026-06-26):**
+- Branch **`0.0.21-la`**, worktree **`C:\Projects\qualiaDB\.worktrees\qualia-la`**, own target dir
+  **`.worktrees/qualia-la-target`**. Shell cwd is the worktree.
+- Committed on this branch: `solvers/statistics` (statistical_computing consolidated),
+  `solvers/geometric_algebra` (moved from `src/` + `simd_kernel` split), `solvers/linear_algebra/cholesky.rs`,
+  this plan, `MODALITY_FIRST_CONSOLIDATION.md`.
+- Build/test (from worktree cwd):
+  `RUST_MIN_STACK=134217728 cargo test -p qualia-core-db --lib <filter> --target-dir /c/Projects/qualiaDB/.worktrees/qualia-la-target -- --skip gpu --skip wgpu`
+- The **main tree** has uncommitted churn (`uuid` / `wgpu::Maintain` in `services`/`lora`) — NOT on this
+  branch; the worktree builds clean. **Stay in the worktree.**
+- **Before any `gguf_bridge`/LLM-lane edit:** read `coordination/NOTICES.md` for live work there. If live → STOP, report to Timothy, do not compete.
+
+**Order of work (safe → sensitive):**
+1. **(safe, do first) Dynamic GEMM, CPU, caller-owned** — new `solvers/linear_algebra/gemm.rs`:
+   `gemm(m,n,k, a,b,c, alpha,beta)` over row-major slices, zero-heap. This is simultaneously the
+   nalgebra-parity dynamic GEMM **and** the substrate's core op. Tests: identity, known products,
+   transpose variants.
+2. **(safe) Finish LA phase 1** — Householder + Givens → QR (+ least-squares); built on the GEMM.
+   (Cholesky already done.)
+3. **(safe) Route classical duplicates** — `specialized_libs/linear_algebra` dynamic matmul → substrate
+   GEMM. Parity-gated, behaviour preserved (the statistical_computing method).
+4. **(P1 GPU backend) Wire substrate GEMM to the existing GPU dispatch** (`gpu_context` /
+   `gguf_bridge::dispatch_gemm_into` / `coop_gemv`) via `tensor/hardware_tier::HardwareTierDispatcher`.
+   Parity-prove GPU == CPU (reuse `gemm_parity_probe`).
+5. **(P3 — LLM lane; needs Timothy's GO + NOTICES clear)** Route `gguf_bridge/forward.rs` op-by-op
+   through the substrate: GEMM → attention → FFN → dequant. Each behind a `QUALIA_LLM_*` toggle,
+   **byte-identical output, no tok/s regression**. `coop_gemv`/resident-weights are PROMOTED as the GPU
+   backend, never rewritten.
+6. **(P4) `.q42` ingest** — gguf/safetensors → native optimised `.q42` (extend `q42_weight.rs`); runtime loads `.q42`.
+7. **(P5) Collapse** the gguf-specific runtime once `.q42` is the native path.
+
+**Method every step:** zero-heap caller-owned; one concern per commit; green build + targeted tests
+pasted; per-step log to `MODALITY_FIRST_CONSOLIDATION.md`; one `NOTICES.md` line; **parity before perf**
+for anything in the LLM lane. Steps 1–4 do not touch the LLM lane and can proceed immediately.
 ```
