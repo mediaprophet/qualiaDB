@@ -12,6 +12,8 @@ pub mod hardware_passport;
 #[cfg(not(target_arch = "wasm32"))]
 pub mod device_benchmark;
 #[cfg(not(target_arch = "wasm32"))]
+pub mod compute_bridge;
+#[cfg(not(target_arch = "wasm32"))]
 pub mod platform_scheduler;
 #[cfg(not(target_arch = "wasm32"))]
 pub mod local_scheduler;
