@@ -167,19 +167,22 @@ pub mod storage_driver;
 pub mod platform_scheduler;
 #[cfg(not(target_arch = "wasm32"))]
 pub mod ebpf_filter;
+// --- crypto/ category (moved from crate root; paths preserved) ---
+pub mod crypto;
+pub use crypto::zk_proofs;
+pub use crypto::fiduciary_crypto;
 #[cfg(not(target_arch = "wasm32"))]
 #[cfg(feature = "sanctuary-crypto")]
-pub mod sanctuary_crypto;
-pub mod fiduciary_crypto;
+pub use crypto::sanctuary_crypto;
 #[cfg(feature = "pq-kem")]
-pub mod pq_kem_shim;
+pub use crypto::pq_kem_shim;
 #[cfg(feature = "zk-culling")]
-pub mod deontic_circuit;
+pub use crypto::deontic_circuit;
+pub use crypto::verifiable_credential;
 #[cfg(not(target_arch = "wasm32"))]
 pub mod ebpf_firewall;
 #[cfg(not(target_arch = "wasm32"))]
 pub mod csd_storage;
-pub mod zk_proofs;
 #[cfg(not(target_arch = "wasm32"))]
 pub mod ambient_orchestration;
 #[cfg(not(target_arch = "wasm32"))]
@@ -652,7 +655,6 @@ impl Drop for QualiaSuperBlock {
 
 pub mod agency;
 pub mod agent;
-pub mod verifiable_credential;
 // mcp_* modules now live in mcp/ (see MODULE_REORG_PLAN.md). The `pub mod mcp;`
 // declaration + path-preserving re-exports are below, near the old mcp_server line.
 pub mod cbor_compiler;
