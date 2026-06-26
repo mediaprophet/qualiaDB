@@ -8,6 +8,9 @@ use crate::solvers::{SolverConfig, SolverState, SolverResult};
 use crate::solvers::SolversError as ExecutionError;
 use core::f64::consts;
 
+/// Dynamic-size general matrix multiply (caller-owned, zero-heap) — the canonical
+/// dense-GEMM core the specialized libs and the GPU `coop_gemv` backend share.
+pub mod gemm;
 /// Dynamic-size, caller-owned-buffer decompositions (nalgebra-parity, zero-heap).
 pub mod cholesky;
 

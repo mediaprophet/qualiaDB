@@ -149,3 +149,22 @@ So `statistical_computing` + financial's Gaussian were the real statistics dupli
   geometry types beside `geometric_algebra` (extend its rotors/quaternions, don't duplicate).
 - **⚑ Needs Timothy:** the geometry types will *extend* `geometric_algebra`'s existing
   rotor/quaternion — confirm that's the intended home (vs a separate `solvers/geometry/`).
+
+### 2026-06-26 — LA phase 2: dynamic GEMM core · **done (green)** · worktree `0.0.21-la`
+- **Built** `solvers/linear_algebra/gemm.rs` — the **one** dynamic dense GEMM the engine was
+  missing (the coverage gap the consolidation flagged: prior LA was fixed-size `Matrix4x4`/Lanczos
+  only). BLAS-3 shape `C := α·op(A)·op(B) + β·C` with a `Transpose` enum (transpose by index
+  arithmetic, no operand materialised), plus `matmul`, `matvec`, `transpose`. **Zero allocation,
+  caller-owned row-major slices, fail-closed** on dimension mismatch (`InvalidDimension`); `β==0`
+  honoured as a hard zero (fresh output need not be pre-zeroed, BLAS rule).
+- **Why this shape:** it is simultaneously (a) the nalgebra-parity dynamic matmul, (b) the home the
+  `specialized_libs` heap GEMMs route to, and (c) the **CPU parity reference** the GPU `coop_gemv`
+  decode kernel is checked against (`gemm_parity_probe`) — one contract, three consumers, one
+  implementation.
+- **Measured:** `solvers::linear_algebra::` → **22 passed** (11 new GEMM: rectangular, identity,
+  α/β accumulate, β=0-ignores-garbage, AᵀA normal-equations, Bᵀ, matvec ±transpose, transpose
+  round-trip, gemm≡matvec, bad-dims reject). Lib builds clean.
+- **Next:** route `specialized_libs/linear_algebra` dynamic matmul → this `gemm`/`matmul` (hollow
+  the first LA silo); then Householder/Givens → QR (+ least-squares via the `Transpose::Yes` normal
+  equations already proven here).
+- **⚑ Needs Timothy:** none this step.
