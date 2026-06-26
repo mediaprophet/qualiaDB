@@ -23,6 +23,7 @@ pub mod attention;
 pub mod calculus;
 pub mod feed_forward;
 pub mod geometric_algebra;
+pub mod learning;
 pub mod linear_algebra;
 pub mod optimization;
 pub mod polynomial;
