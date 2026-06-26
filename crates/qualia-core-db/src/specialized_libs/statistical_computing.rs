@@ -1390,8 +1390,10 @@ impl StatisticalComputingLibrary {
             return Err(StatisticalError::InvalidData("No valid data in column".to_string()));
         }
 
-        // Compute mean
-        let mean = values.iter().sum::<f64>() / values.len() as f64;
+        // Compute mean via the engine's canonical statistics solver (Modality-First:
+        // no inline re-implementation). `values` is the caller-owned slice.
+        let mean = crate::solvers::statistics::mean(&values)
+            .ok_or_else(|| StatisticalError::InvalidData("No valid data in column".to_string()))?;
 
         let execution_time = start_time.elapsed().as_millis() as u64;
 
@@ -1449,15 +1451,10 @@ impl StatisticalComputingLibrary {
             return Err(StatisticalError::InvalidData("No valid data in column".to_string()));
         }
 
-        // Sort values
-        values.sort_by(|a, b| a.partial_cmp(b).unwrap());
-
-        // Compute median
-        let median = if values.len() % 2 == 0 {
-            (values[values.len() / 2 - 1] + values[values.len() / 2]) / 2.0
-        } else {
-            values[values.len() / 2]
-        };
+        // Compute median via the engine's canonical statistics solver (sorts the
+        // caller-owned buffer in place; no inline re-implementation).
+        let median = crate::solvers::statistics::median_in_place(&mut values)
+            .ok_or_else(|| StatisticalError::InvalidData("No valid data in column".to_string()))?;
 
         let execution_time = start_time.elapsed().as_millis() as u64;
 
@@ -1515,15 +1512,10 @@ impl StatisticalComputingLibrary {
             return Err(StatisticalError::InvalidData("No valid data in column".to_string()));
         }
 
-        // Compute mean
-        let mean = values.iter().sum::<f64>() / values.len() as f64;
-
-        // Compute variance
-        let variance = if sample {
-            values.iter().map(|x| (x - mean).powi(2)).sum::<f64>() / (values.len() - 1) as f64
-        } else {
-            values.iter().map(|x| (x - mean).powi(2)).sum::<f64>() / values.len() as f64
-        };
+        // Compute variance via the engine's canonical statistics solver
+        // (Modality-First: no inline re-implementation).
+        let variance = crate::solvers::statistics::variance(&values, sample)
+            .ok_or_else(|| StatisticalError::InvalidData("No valid data in column".to_string()))?;
 
         let execution_time = start_time.elapsed().as_millis() as u64;
 

@@ -22,6 +22,7 @@ pub mod calculus;
 pub mod linear_algebra;
 pub mod optimization;
 pub mod quantum_optimizers;
+pub mod statistics;
 pub mod symbolic_logic;
 
 pub use calculus::{RungeKutta4Static, ShootingMethodBVP, SimpsonsIntegratorChunked, ODEState, BVPState, IntegralChunk};
