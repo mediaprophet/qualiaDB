@@ -8,7 +8,9 @@
 //! ordinary least squares over them (kernel-class `DenseLinear`).
 
 pub mod gam;
+pub mod smoothing;
 pub use gam::Gam;
+pub use smoothing::SmoothingSpline;
 
 use crate::solvers::learning::regression::linear;
 use crate::solvers::learning::LearningError;
@@ -22,13 +24,13 @@ pub struct RegressionSpline {
 }
 
 /// Number of basis columns for `degree` and `n_knots` interior knots.
-fn basis_len(degree: usize, n_knots: usize) -> usize {
+pub(crate) fn basis_len(degree: usize, n_knots: usize) -> usize {
     (degree + 1) + n_knots
 }
 
 /// Evaluate the truncated-power basis row for a scalar `x` into `out`
 /// (length `basis_len`).
-fn basis_row(x: f64, degree: usize, knots: &[f64], out: &mut [f64]) {
+pub(crate) fn basis_row(x: f64, degree: usize, knots: &[f64], out: &mut [f64]) {
     // Polynomial part 1, x, …, xᵈ.
     let mut pw = 1.0;
     for c in out.iter_mut().take(degree + 1) {

@@ -27,6 +27,7 @@ pub mod sequential;
 pub mod splines;
 pub mod survival;
 pub mod trees;
+pub mod variational;
 
 /// Errors common to the learning estimators. Estimators **fail closed** (return an
 /// error) rather than emit a fabricated fit — consistent with the engine-wide

@@ -67,8 +67,8 @@ Scalar fit-loops (IRLS, tree splits) are CPU — flagged where GPU does not help
 | 4 | ROC/AUC, confusion matrix | metrics | ✅ done |
 | 5 | validation set, LOOCV, k-fold CV, bootstrap | resampling | ✅ done |
 | 6 | ridge, lasso, PCR, PLS | regression + dimensionality | ✅ done |
-| 7 | polynomial, cubic splines, GAM | splines | ✅ done (smoothing-spline penalty pending) |
-| 8 | CART, random forest, gradient boosting | trees | ✅ done (BART pending) |
+| 7 | polynomial, cubic splines, smoothing spline, GAM | splines | ✅ done |
+| 8 | CART, random forest, boosting, BART | trees | ✅ done |
 | 9 | SVM (linear+RBF, SMO, one-vs-rest multiclass) | classification/svm | ✅ done |
 | 10 | deep learning | — (defer to LLM stack) | ⊘ |
 | 11 | Kaplan-Meier, Cox PH | survival | ✅ done |
