@@ -21,6 +21,7 @@ pub mod multiple_testing;
 pub mod preprocessing;
 pub mod regression;
 pub mod resampling;
+pub mod sequential;
 pub mod splines;
 pub mod survival;
 pub mod trees;
