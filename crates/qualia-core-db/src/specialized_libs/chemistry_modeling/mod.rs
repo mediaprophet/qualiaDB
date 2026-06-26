@@ -14,6 +14,12 @@ use crate::zns_storage::ZnsZoneManager;
 use super::linear_algebra::LinearAlgebraLibrary;
 use super::statistical_computing::StatisticalComputingLibrary;
 
+/// Real molecular-dynamics engine (Lennard-Jones force field + velocity-Verlet
+/// integrator) backing `run_molecular_dynamics`. Split into its own library
+/// submodule (PROJECT RULE §11) so the genuine numerical core is reviewable on
+/// its own and carries its own correctness tests.
+pub mod molecular_dynamics;
+
 /// Chemistry Modeling Library Manager
 pub struct ChemistryModelingLibrary {
     molecular_simulator: MolecularSimulator,
@@ -1384,16 +1390,24 @@ impl ChemistryModelingLibrary {
 
         let execution_time = start_time.elapsed().as_millis() as u64;
 
+        // Real convergence info derived from the trajectory: an MD run does not
+        // "converge" iteratively, so we report the integrator's energy-drift as
+        // the quality metric (a good symplectic run keeps it small) rather than a
+        // fabricated constant.
+        let drift = trajectory.properties.energy_drift;
+        let iterations = trajectory.properties.total_frames as u32;
         Ok(ChemistryOperationResult {
             result: trajectory,
             execution_time,
             computational_cost: 0.0,
-            accuracy: 0.0, // not measured (scaffold default; no validation performed)
+            accuracy: 0.0, // not measured against experiment (no validation corpus)
             convergence_info: ConvergenceInfo {
-                converged: true,
-                iterations: 1000,
-                convergence_criterion: 1e-6,
-                final_error: 1e-8,
+                // Energy is "conserved" (the meaningful MD criterion) when the
+                // peak-to-peak drift stays under 1e-3 of the mean total energy.
+                converged: drift < 1e-3,
+                iterations,
+                convergence_criterion: 1e-3,
+                final_error: drift,
             },
         })
     }
@@ -1530,19 +1544,13 @@ impl MolecularSimulator {
         Ok(())
     }
 
-    pub fn run_simulation(&mut self, _config: &SimulationConfig, _molecule: &Molecule) -> Result<SimulationTrajectory, ChemistryError> {
-        // NOT IMPLEMENTED — it must say so, never fabricate. The previous body emitted a
-        // "trajectory" in which the atoms never moved: every frame cloned the same coordinates
-        // with zero velocities, zero forces, and zero energy — a simulation that simulated
-        // nothing. Real molecular dynamics requires a force field (e.g. Lennard-Jones + bonded
-        // terms) and a symplectic integrator (velocity-Verlet); that is a genuine numerical
-        // implementation, tracked as a real-impl TODO. Until then it refuses rather than fake it.
-        Err(ChemistryError::NotImplemented(
-            "molecular dynamics (run_molecular_dynamics): requires a force field and a \
-             velocity-Verlet integrator; not yet implemented. Refusing to emit a static, \
-             zero-force trajectory as if simulated."
-                .to_string(),
-        ))
+    pub fn run_simulation(&mut self, config: &SimulationConfig, molecule: &Molecule) -> Result<SimulationTrajectory, ChemistryError> {
+        // REAL: Lennard-Jones force field + velocity-Verlet integrator, in
+        // `molecular_dynamics::run_md`. The atoms actually move under computed
+        // forces, total energy is conserved (asserted in that module's tests),
+        // and invalid inputs (no atoms / unparameterized element / bad mass)
+        // return `InsufficientData` rather than a fabricated static trajectory.
+        molecular_dynamics::run_md(config, molecule)
     }
 
     pub fn list_force_fields(&self) -> Vec<String> {
@@ -3155,14 +3163,40 @@ mod tests {
     fn test_molecular_dynamics() {
         let mut library = ChemistryModelingLibrary::new();
         library.initialize().unwrap();
-        
-        let config = SimulationConfig::new();
-        let molecule = Molecule::new();
 
-        // HONEST: no force field / integrator, so MD reports NotImplemented rather than
-        // emitting a static zero-force "trajectory".
-        let result = library.run_molecular_dynamics(config, molecule);
-        assert!(matches!(result, Err(ChemistryError::NotImplemented(_))));
+        // REAL: a small argon cluster, integrated with velocity-Verlet under a
+        // Lennard-Jones force field. The atoms actually move and energy is
+        // conserved — see molecular_dynamics.rs for the gradient/conservation
+        // proofs. Here we check the facade returns a real, converged trajectory.
+        let mut config = SimulationConfig::new();
+        config.time_step = 0.001;
+        config.total_time = 2.0;
+        config.temperature = 120.0;
+        let m = 39.948;
+        let molecule = Molecule {
+            molecule_id: "ar4".to_string(),
+            formula: "Ar4".to_string(),
+            atoms: vec![
+                Atom { atom_id: "a".into(), element: "Ar".into(), atomic_number: 18, mass: m, charge: 0.0, coordinates: vec![0.0, 0.0, 0.0] },
+                Atom { atom_id: "b".into(), element: "Ar".into(), atomic_number: 18, mass: m, charge: 0.0, coordinates: vec![3.9, 0.0, 0.0] },
+                Atom { atom_id: "c".into(), element: "Ar".into(), atomic_number: 18, mass: m, charge: 0.0, coordinates: vec![0.0, 3.9, 0.0] },
+                Atom { atom_id: "d".into(), element: "Ar".into(), atomic_number: 18, mass: m, charge: 0.0, coordinates: vec![3.9, 3.9, 0.3] },
+            ],
+            bonds: Vec::new(),
+            coordinates: Vec::new(),
+            properties: MolecularProperties::new(),
+        };
+
+        let result = library.run_molecular_dynamics(config, molecule).unwrap();
+        assert!(result.convergence_info.converged, "energy not conserved: drift {}", result.convergence_info.final_error);
+        assert!(result.result.frames.len() >= 2);
+
+        // An empty molecule must be refused, never faked.
+        let empty = Molecule { atoms: Vec::new(), ..Molecule::new() };
+        assert!(matches!(
+            library.run_molecular_dynamics(SimulationConfig::new(), empty),
+            Err(ChemistryError::InsufficientData(_))
+        ));
     }
 
     #[test]
