@@ -295,3 +295,30 @@ So `statistical_computing` + financial's Gaussian were the real statistics dupli
   read-only analysis of the gguf math entry points (no edits) so the eventual routing is
   parity-gated.
 - **⚑ Needs Timothy:** none in this lane. P3 needs his go + lane-clear before any edit to `gguf_bridge`.
+
+### 2026-06-26 — LLM/gpu "marketing bs → science" (Timothy GO) · **done (green)** · worktree `0.0.21-la`
+Two concrete conversions of marketing-framing into verifiable science (the buzzword grep was empty —
+the "tech-bro bs" here is *architectural*, not wording):
+
+1. **The LLM is the substrate's GEMM — proven, not asserted.** New CPU parity test
+   `gguf_bridge/gemm.rs::substrate_parity_tests::llm_quant_gemv_is_the_substrate_gemm`: dequantizes Q8
+   weights, runs the engine `solvers::linear_algebra::gemm::matvec` on them, and shows the **real**
+   `stack_gemm_quant` kernel agrees to `exact_err < 1e-4`. Calls the actual kernel (regression guard),
+   test-only (no perf-path edit). With the existing GPU↔CPU probe this closes
+   *substrate GEMM ≡ LLM CPU GEMV ≡ LLM GPU GEMV*. The "AI inference" weight×activation step **is** the
+   science modalities' matrix multiply, quantized. Commit `40d152e00`.
+
+2. **Killed a live fabricated metric.** `specialized_libs/machine_learning::execute_inference` returned
+   a hardcoded `confidence: 0.95` over `vec![1u8;100]` **from a model that never ran** — and that fake
+   confidence was surfaced verbatim through the `ml_inference` **MCP tool** (`mcp_tool_impls.rs:944`).
+   This is itself the pathology: a *parallel fake inference engine* competing with the real
+   gguf_bridge LLM. Converted to **honest fail-closed** (`MLError::InferenceError`, pointing real
+   inference at the native engine); updated `test_inference` to assert the fail-closed behaviour. No
+   real capability removed (there was none); a fabrication removed. Full crate **1481 passed**.
+
+**Honest scope note:** `machine_learning.rs` still contains non-MCP-exposed fabricated metrics
+(training/eval `accuracy: 0.95`, etc.). They are dormant (not on a live tool surface). Fully
+de-faking or removing that 3400-line scaffold is a **library-disposition call for Timothy** (implement
+for real vs delete) — flagged, not silently half-patched.
+- **⚑ Needs Timothy:** disposition of the `machine_learning.rs` scaffold (real impl vs removal) — its
+  remaining fabricated training/eval metrics are dormant but should not live indefinitely.

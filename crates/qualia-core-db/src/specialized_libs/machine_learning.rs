@@ -2543,20 +2543,19 @@ impl InferenceEngine {
         Ok(())
     }
 
-    pub fn execute_inference(&mut self, request: &InferenceRequest) -> Result<InferenceResult, MLError> {
-        // Schedule request
-        let backend_id = self.request_scheduler.schedule_request(request)?;
-
-        // Execute inference
-        let result = InferenceResult {
-            result_id: request.request_id.clone(),
-            output_data: vec![1u8; 100],
-            inference_time: 10,
-            confidence: 0.95,
-            metadata: ResultMetadata::new(),
-        };
-
-        Ok(result)
+    pub fn execute_inference(&mut self, _request: &InferenceRequest) -> Result<InferenceResult, MLError> {
+        // HONEST FAIL-CLOSED. This specialized-lib "inference engine" has no model runtime: it
+        // holds no weights and executes no network. It must NOT fabricate a result. Previously it
+        // returned a hardcoded `confidence: 0.95` over `vec![1u8; 100]` from a model that never ran
+        // — a fabricated metric surfaced verbatim through the `ml_inference` MCP tool. Real
+        // inference is the native gguf_bridge LLM engine (whose weight×activation step is the
+        // substrate GEMM — see gguf_bridge::gemm::substrate_parity_tests); route real inference
+        // there. Failing closed is the truthful behaviour until a real backend is wired.
+        Err(MLError::InferenceError(
+            "no inference backend implemented in specialized_libs::machine_learning; \
+             use the native gguf_bridge LLM engine for real inference"
+                .to_string(),
+        ))
     }
 }
 
@@ -3460,11 +3459,13 @@ mod tests {
             precision: Precision::FP32,
         };
         
-        let result = library.run_inference("test_model", &input_data, parameters).unwrap();
-        
-        assert_eq!(result.result.result_id, "req_0");
-        assert!(result.result.confidence > 0.0);
-        assert!(result.execution_time > 0);
+        // HONEST: the scaffold has no model runtime, so inference fails closed rather than
+        // fabricating a confident result (it previously returned a hardcoded confidence 0.95).
+        let result = library.run_inference("test_model", &input_data, parameters);
+        assert!(
+            result.is_err(),
+            "scaffold inference must fail closed, not fabricate a result"
+        );
     }
 
     #[test]
