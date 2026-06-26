@@ -16,6 +16,7 @@
 
 pub mod correlation;
 pub mod descriptive;
+pub mod distributions;
 pub mod histogram;
 pub mod hypothesis;
 
