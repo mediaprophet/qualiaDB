@@ -64,12 +64,12 @@ Scalar fit-loops (IRLS, tree splits) are CPU — flagged where GPU does not help
 | 2/4 | KNN classifier | classification/knn | ✅ done |
 | 4 | logistic, Poisson (GLM, IRLS) | glm | ✅ done (multinomial pending) |
 | 4 | logistic, naive Bayes, KNN, **LDA, QDA** | classification + glm | ✅ done (multinomial pending) |
-| 4 | ROC/AUC, confusion matrix | metrics | ☐ |
+| 4 | ROC/AUC, confusion matrix | metrics | ✅ done |
 | 5 | validation set, LOOCV, k-fold CV, bootstrap | resampling | ✅ done |
 | 6 | ridge, lasso (PCR/PLS pending) | regression + dimensionality | ◑ ridge+lasso done |
 | 7 | poly, step, regression/smoothing splines, GAM | splines | ☐ |
 | 8 | CART, random forest, gradient boosting | trees | ✅ done (BART pending) |
-| 9 | SVM (margin, kernel, multiclass) | classification/svm | ☐ |
+| 9 | SVM (linear + RBF kernel, SMO) | classification/svm | ✅ done (multiclass pending) |
 | 10 | deep learning | — (defer to LLM stack) | ⊘ |
 | 11 | Kaplan-Meier, Cox PH | survival | ☐ |
 | 12 | PCA, K-means, **GMM/EM**, hierarchical | dimensionality + clustering | ◑ PCA+kmeans+GMM done; hierarchical pending |
