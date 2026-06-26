@@ -274,3 +274,24 @@ So `statistical_computing` + financial's Gaussian were the real statistics dupli
   meanwhile. This is an out-of-band taxonomy call, the one allowed defer.
 - **⚑ Needs Timothy:** the polynomial-cluster home (above). Otherwise the LA-numeric consolidation is
   complete — the genuine duplication is gone and the engine is the single source.
+
+### 2026-06-26 — LA phase 8: polynomial cluster relocated — consolidation COMPLETE · **done (green)** · worktree `0.0.21-la`
+- **Decision made + owned (not punted):** the `Complex`/`solve_quadratic`/`polynomial_roots`/
+  `QuadraticRoots` cluster is **computer algebra, not linear algebra**, so it gets its own engine home
+  `solvers/polynomial.rs`. The matrix-spectral functions (`characteristic_polynomial`,
+  `eigenvalues_general`) — which *are* linear algebra and consume the polynomial roots — went to a
+  focused `solvers/linear_algebra/spectral.rs`.
+- **Relocated** all of it to the engine (error type → `SolversError`); the silo keeps thin facades
+  (`pub use` + error-mapping wrappers), so `mcp` (which imports `polynomial_roots`) and every test are
+  untouched.
+- **Measured:** new engine tests — `solvers::polynomial` 6, `spectral` 4 — plus the whole crate suite
+  **1480 passed, 0 failed** (silo quadratic/roots/eigenvalues tests green via facade).
+- **STATE: the LA-numeric / spectral / polynomial consolidation is COMPLETE.** `specialized_libs/
+  linear_algebra.rs` is now a domain-marshalling + facade layer with no foundational math of its own.
+  Engine `solvers/` owns: `gemm`, `qr`, `cholesky`, `eigen`, `lu`, `svd`, `spectral`, `polynomial`.
+  **No flagged-for-Timothy items remain in this lane.**
+- **Next:** P3 (route the LLM/gguf math through the substrate) — the deepest duplication, **gated on
+  Timothy's explicit GO + a NOTICES check** that the `gguf_bridge` perf lane is clear. Staging a
+  read-only analysis of the gguf math entry points (no edits) so the eventual routing is
+  parity-gated.
+- **⚑ Needs Timothy:** none in this lane. P3 needs his go + lane-clear before any edit to `gguf_bridge`.

@@ -807,170 +807,22 @@ impl LinearAlgebraLibrary {
 //  dependency-free Durand–Kerner (Weierstrass) iteration. f64, dynamic degree.
 // ════════════════════════════════════════════════════════════════════════════════
 
-/// A complex number `re + im·i`. Minimal arithmetic for polynomial root finding.
-#[derive(Debug, Clone, Copy, PartialEq)]
-pub struct Complex {
-    pub re: f64,
-    pub im: f64,
-}
+/// Complex / quadratic / polynomial-root algebra now lives in the engine
+/// (`solvers::polynomial`); re-exported here so the silo's API is unchanged.
+pub use crate::solvers::polynomial::{Complex, QuadraticRoots};
 
-impl Complex {
-    pub const fn new(re: f64, im: f64) -> Self { Self { re, im } }
-    pub const fn real(re: f64) -> Self { Self { re, im: 0.0 } }
-
-    #[inline]
-    pub fn add(self, o: Complex) -> Complex { Complex::new(self.re + o.re, self.im + o.im) }
-    #[inline]
-    pub fn sub(self, o: Complex) -> Complex { Complex::new(self.re - o.re, self.im - o.im) }
-    #[inline]
-    pub fn mul(self, o: Complex) -> Complex {
-        Complex::new(self.re * o.re - self.im * o.im, self.re * o.im + self.im * o.re)
-    }
-    #[inline]
-    pub fn div(self, o: Complex) -> Complex {
-        let d = o.re * o.re + o.im * o.im;
-        Complex::new(
-            (self.re * o.re + self.im * o.im) / d,
-            (self.im * o.re - self.re * o.im) / d,
-        )
-    }
-    /// Modulus |z|.
-    #[inline]
-    pub fn abs(self) -> f64 { self.re.hypot(self.im) }
-    /// True if within `tol` of the real axis.
-    #[inline]
-    pub fn is_real(self, tol: f64) -> bool { self.im.abs() <= tol }
-}
-
-/// The roots of a real quadratic `a·x² + b·x + c = 0`.
-#[derive(Debug, Clone, Copy, PartialEq)]
-pub enum QuadraticRoots {
-    /// Two distinct real roots, ascending.
-    TwoReal(f64, f64),
-    /// One repeated real root (discriminant ≈ 0).
-    DoubleReal(f64),
-    /// A complex conjugate pair `re ± im·i` (im > 0).
-    ComplexPair { re: f64, im: f64 },
-    /// Degenerate leading coefficient (a ≈ 0): the single linear root of `b·x + c = 0`.
-    Linear(f64),
-}
-
-/// Solve `a·x² + b·x + c = 0` over the reals, numerically stably.
-///
-/// Uses the cancellation-avoiding form `q = -(b + sign(b)·√Δ)/2`, roots `q/a` and `c/q`,
-/// for `Δ > 0`; classifies `Δ ≈ 0` as a double root and `Δ < 0` as a complex pair. Falls
-/// back to the linear root when `a ≈ 0`.
+/// Solve `a·x² + b·x + c = 0` over the reals — thin facade over the engine
+/// `solvers::polynomial::solve_quadratic` (maps the engine error to this lib's type).
 pub fn solve_quadratic(a: f64, b: f64, c: f64) -> Result<QuadraticRoots, LinearAlgebraError> {
-    if !(a.is_finite() && b.is_finite() && c.is_finite()) {
-        return Err(LinearAlgebraError::ComputationError("non-finite coefficient".to_string()));
-    }
-    let scale = a.abs().max(b.abs()).max(c.abs()).max(1.0);
-
-    // Degenerate leading coefficient → linear (or no/everywhere solution).
-    if a.abs() <= f64::EPSILON * scale {
-        if b.abs() <= f64::EPSILON * scale {
-            return Err(LinearAlgebraError::ComputationError(
-                "degenerate quadratic: a and b are both ~0".to_string(),
-            ));
-        }
-        return Ok(QuadraticRoots::Linear(-c / b));
-    }
-
-    let disc = b * b - 4.0 * a * c;
-    let disc_scale = (b * b).max((4.0 * a * c).abs()).max(1.0);
-    if disc.abs() <= 1e-12 * disc_scale {
-        return Ok(QuadraticRoots::DoubleReal(-b / (2.0 * a)));
-    }
-
-    if disc > 0.0 {
-        let sqrt_d = disc.sqrt();
-        let sign_b = if b >= 0.0 { 1.0 } else { -1.0 };
-        let q = -0.5 * (b + sign_b * sqrt_d);
-        let r1 = q / a;
-        let r2 = c / q;
-        let (lo, hi) = if r1 <= r2 { (r1, r2) } else { (r2, r1) };
-        Ok(QuadraticRoots::TwoReal(lo, hi))
-    } else {
-        let re = -b / (2.0 * a);
-        let im = (-disc).sqrt() / (2.0 * a.abs());
-        Ok(QuadraticRoots::ComplexPair { re, im })
-    }
+    crate::solvers::polynomial::solve_quadratic(a, b, c)
+        .map_err(|_| LinearAlgebraError::ComputationError("invalid quadratic coefficients".to_string()))
 }
 
-/// Evaluate a polynomial at a complex point via Horner's method.
-/// `coeffs` are in DESCENDING order: `coeffs[0]·x^n + … + coeffs[n]`.
-fn poly_eval_complex(coeffs: &[f64], x: Complex) -> Complex {
-    let mut acc = Complex::real(0.0);
-    for &c in coeffs {
-        acc = acc.mul(x).add(Complex::real(c));
-    }
-    acc
-}
-
-/// Find all complex roots of a real polynomial (DESCENDING coefficients,
-/// `coeffs[0]·x^n + … + coeffs[n]`) via the Durand–Kerner iteration.
-///
-/// Dependency-free and finds all `n` roots simultaneously; suitable for moderate degree.
-/// Leading/trailing zeros are trimmed. Returns `n` roots (real roots have `im ≈ 0`).
+/// Find all complex roots of a real polynomial — thin facade over the engine
+/// `solvers::polynomial::polynomial_roots` (Durand–Kerner).
 pub fn polynomial_roots(coeffs: &[f64]) -> Result<Vec<Complex>, LinearAlgebraError> {
-    // Trim leading zeros (they do not change the polynomial's degree meaningfully).
-    let start = coeffs.iter().position(|c| c.abs() > 0.0)
-        .ok_or_else(|| LinearAlgebraError::ComputationError("zero polynomial".to_string()))?;
-    let coeffs = &coeffs[start..];
-    if coeffs.len() == 1 {
-        return Ok(Vec::new()); // a nonzero constant: no roots
-    }
-    if coeffs.iter().any(|c| !c.is_finite()) {
-        return Err(LinearAlgebraError::ComputationError("non-finite coefficient".to_string()));
-    }
-
-    // Normalise to monic.
-    let lead = coeffs[0];
-    let monic: Vec<f64> = coeffs.iter().map(|c| c / lead).collect();
-    let degree = monic.len() - 1;
-
-    // Distinct complex initial guesses on a spiral (the classic 0.4 + 0.9i seed).
-    let seed = Complex::new(0.4, 0.9);
-    let mut roots: Vec<Complex> = (0..degree)
-        .map(|k| {
-            let mut z = Complex::real(1.0);
-            for _ in 0..k { z = z.mul(seed); }
-            z
-        })
-        .collect();
-
-    const MAX_ITERS: usize = 500;
-    const TOL: f64 = 1e-14;
-    for _ in 0..MAX_ITERS {
-        let mut max_delta = 0.0_f64;
-        for i in 0..degree {
-            let zi = roots[i];
-            // denominator = Π_{j≠i} (zi - zj)
-            let mut denom = Complex::real(1.0);
-            for j in 0..degree {
-                if j != i {
-                    denom = denom.mul(zi.sub(roots[j]));
-                }
-            }
-            if denom.abs() == 0.0 {
-                continue; // coincident guesses; perturb on the next sweep
-            }
-            let delta = poly_eval_complex(&monic, zi).div(denom);
-            roots[i] = zi.sub(delta);
-            max_delta = max_delta.max(delta.abs());
-        }
-        if max_delta < TOL {
-            break;
-        }
-    }
-
-    // Snap near-real roots to the real axis for clean output.
-    for r in roots.iter_mut() {
-        if r.im.abs() < 1e-9 * (1.0 + r.re.abs()) {
-            r.im = 0.0;
-        }
-    }
-    Ok(roots)
+    crate::solvers::polynomial::polynomial_roots(coeffs)
+        .map_err(|_| LinearAlgebraError::ComputationError("invalid polynomial".to_string()))
 }
 
 // ════════════════════════════════════════════════════════════════════════════════
@@ -1031,61 +883,21 @@ pub fn eigen_symmetric(n: usize, data: &[f64]) -> Result<(Vec<f64>, Vec<f64>), L
     Ok((eigenvalues, v))
 }
 
-/// Characteristic polynomial of a row-major `n×n` matrix via the Faddeev–LeVerrier
-/// algorithm. Returns DESCENDING coefficients `[1, c₁, …, cₙ]` of
-/// `p(λ) = λⁿ + c₁λⁿ⁻¹ + … + cₙ` (so `det(A) = (-1)ⁿ·cₙ`). Exact for integer matrices;
-/// for large/ill-conditioned matrices prefer an iterative eigensolver (documented).
+/// Characteristic polynomial — thin facade over the engine
+/// `solvers::linear_algebra::spectral::characteristic_polynomial` (Faddeev–LeVerrier).
 pub fn characteristic_polynomial(n: usize, data: &[f64]) -> Result<Vec<f64>, LinearAlgebraError> {
-    if n == 0 || data.len() != n * n {
-        return Err(LinearAlgebraError::InvalidDimensions(
+    crate::solvers::linear_algebra::spectral::characteristic_polynomial(n, data).map_err(|_| {
+        LinearAlgebraError::InvalidDimensions(
             "characteristic_polynomial expects a non-empty square n×n matrix".to_string(),
-        ));
-    }
-    let mul = |x: &[f64], y: &[f64]| -> Vec<f64> {
-        let mut out = vec![0.0_f64; n * n];
-        for i in 0..n {
-            for k in 0..n {
-                let xik = x[i * n + k];
-                if xik == 0.0 {
-                    continue;
-                }
-                for j in 0..n {
-                    out[i * n + j] += xik * y[k * n + j];
-                }
-            }
-        }
-        out
-    };
-    let trace = |x: &[f64]| -> f64 { (0..n).map(|i| x[i * n + i]).sum() };
-
-    let mut coeffs = vec![0.0_f64; n + 1];
-    coeffs[0] = 1.0;
-    // M starts as the identity.
-    let mut m = vec![0.0_f64; n * n];
-    for i in 0..n {
-        m[i * n + i] = 1.0;
-    }
-    for k in 1..=n {
-        let am = mul(data, &m);
-        let ck = -trace(&am) / (k as f64);
-        coeffs[k] = ck;
-        // M ← A·M + ck·I  (not needed after the final iteration).
-        m = am;
-        for i in 0..n {
-            m[i * n + i] += ck;
-        }
-    }
-    Ok(coeffs)
+        )
+    })
 }
 
-/// Eigenvalues of a GENERAL (not necessarily symmetric) row-major `n×n` matrix, as
-/// complex numbers. Computes the characteristic polynomial (Faddeev–LeVerrier) and
-/// finds its roots (`polynomial_roots`). Returns all `n` eigenvalues; real ones have
-/// `im ≈ 0`. For symmetric matrices prefer `eigen_symmetric` (also yields eigenvectors
-/// and is more stable at scale).
+/// General (non-symmetric) eigenvalues — thin facade over the engine
+/// `solvers::linear_algebra::spectral::eigenvalues_general`.
 pub fn eigenvalues_general(n: usize, data: &[f64]) -> Result<Vec<Complex>, LinearAlgebraError> {
-    let charpoly = characteristic_polynomial(n, data)?;
-    polynomial_roots(&charpoly)
+    crate::solvers::linear_algebra::spectral::eigenvalues_general(n, data)
+        .map_err(|_| LinearAlgebraError::ComputationError("eigenvalues_general failed".to_string()))
 }
 
 /// SVD `A = U·Σ·Vᵀ` — the canonical implementation now lives in the engine

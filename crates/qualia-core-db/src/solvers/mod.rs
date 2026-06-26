@@ -22,6 +22,7 @@ pub mod calculus;
 pub mod geometric_algebra;
 pub mod linear_algebra;
 pub mod optimization;
+pub mod polynomial;
 pub mod quantum_optimizers;
 pub mod statistics;
 pub mod symbolic_logic;

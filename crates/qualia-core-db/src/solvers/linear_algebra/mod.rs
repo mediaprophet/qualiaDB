@@ -21,6 +21,8 @@ pub mod eigen;
 pub mod lu;
 /// Thin singular value decomposition `A = U·Σ·Vᵀ` (via `AᵀA` eigendecomposition).
 pub mod svd;
+/// Matrix-spectral bridge: characteristic polynomial + general (non-symmetric) eigenvalues.
+pub mod spectral;
 
 /// Fixed-size 4x4 matrix for stack-based operations
 #[repr(C)]

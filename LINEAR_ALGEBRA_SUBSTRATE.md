@@ -22,6 +22,10 @@ crates/qualia-core-db/src/solvers/linear_algebra/
   eigen.rs      symmetric eigendecomposition (closed-form 3×3 + general Jacobi)
   lu.rs         dynamic LU (partial pivoting) + determinant  ← canonical n×n LU
   svd.rs        thin SVD A = U·Σ·Vᵀ (via AᵀA eigendecomposition)
+  spectral.rs   characteristic polynomial + general (non-symmetric) eigenvalues
+
+crates/qualia-core-db/src/solvers/
+  polynomial.rs Complex / quadratic solve / polynomial_roots (Durand–Kerner)  ← computer algebra
 ```
 
 All of it is **zero-allocation**: every routine operates on **caller-owned, row-major `&[f64]` /
@@ -100,14 +104,14 @@ libs is **thinner than the heap-counts imply**.
 - `machine_learning.rs` — stub scaffold (`output_data: vec![1u8;100]`), no real GEMM/gradient.
 - `chemistry`/`physics`/`engineering` — **no generic ODE integrators** (no RK4/Euler loops); the real
   kinetics/thermo work is closed-form analytic.
-- Relocation is being done **non-breakingly** (engine owns the impl; the silo keeps a thin
-  error-mapping facade so `mcp`/tests/callers are untouched). **Done:** `lu`/`determinant`/`Lu`
-  (engine `lu.rs`), `svd`/`Svd` (engine `svd.rs`).
-- **Still in the silo (flagged for a home decision):** the polynomial/`Complex` cluster —
-  `polynomial_roots`, `characteristic_polynomial`, `eigenvalues_general`, `solve_quadratic`,
-  `Complex`. These interdepend and are arguably **not** linear algebra (polynomial/computer-algebra).
-  Awaiting Timothy's call: engine home `solvers/linear_algebra` vs a new `solvers/polynomial`. They
-  are single-copy and working in the meantime.
+- Relocation done **non-breakingly** (engine owns the impl; the silo keeps a thin error-mapping
+  facade so `mcp`/tests/callers are untouched). **All relocated:** `lu`/`determinant`/`Lu`
+  (`lu.rs`), `svd`/`Svd` (`svd.rs`), `characteristic_polynomial`/`eigenvalues_general`
+  (`spectral.rs`), and the `Complex`/`solve_quadratic`/`polynomial_roots`/`QuadraticRoots` cluster
+  (new `solvers/polynomial.rs` — it is computer algebra, not linear algebra, so it got its own home).
+- **The LA-numeric consolidation is complete.** Engine owns the dense/spectral/polynomial math; the
+  `specialized_libs/linear_algebra` file is now essentially a domain-marshalling + facade layer.
+  Full crate test suite: **1480 passed, 0 failed.**
 
 ## 5. Status — in progress / planned (this lane)
 
