@@ -340,3 +340,24 @@ fabricated quality metrics surfaced to clients as if computed. **Exactly two wer
 - **⚑ Needs Timothy:** systemic disposition — these dormant fabricated wrapper metrics should be made
   `Option`/computed/removed across the specialized libs in a dedicated honesty pass. Flagged, not
   half-patched.
+
+### 2026-06-26 — Fabricated-metric honesty pass COMPLETED across specialized libs · **done (green)** · worktree `0.0.21-la`
+Did the dedicated pass (no longer just flagged). Every fabricated achieved-quality metric in the five
+specialized libs is neutralized:
+- **`Option<f64>` = `None`** for sensitive / per-result metrics (where `0.0` would misread as
+  "zero quality/privacy"): medical `MedicalOperationResult.privacy_score`, `MedicalPerformanceMetrics`
+  {privacy/compliance/data_quality}, **`ComplianceReport.compliance_score`** (a fabricated 0.95 HIPAA
+  compliance score from no assessment — the most dangerous), engineering `EngineeringPerformanceMetrics`
+  {accuracy,convergence} and `EngineeringOperationResult.accuracy`. Tests assert `is_none()`.
+- **Zeroed to an honest "not measured" baseline** for dormant scaffold-default metrics (never read,
+  never MCP-surfaced): ML accuracy/precision/recall/f1, chemistry accuracy×4/cross_validation/
+  rate_constant/thermodynamic/prediction/SCF, financial `DataQuality`/`ValidationResults`.
+- Commits `9030bc7c9` (medical), `f87d3f76c` (engineering metrics), `c58150e38` (HIPAA + eng op-result
+  + ML/chem/fin). Full crate **1481 passed** throughout.
+- **⚑ Remaining (deeper, flagged honestly — NOT silently left):** two fabrications live inside
+  *result-producing* methods, not dormant defaults, so honest fixes require the method to compute the
+  value or fail closed (a behaviour change, not a default swap): (1) `physics_simulation`
+  `run_simulation_on_node` stamps a constant `ConvergenceInfo { converged:true, residual_norm:1e-8,
+  convergence_rate:0.95, final_error:1e-8 }` regardless of the actual run; (2) financial `risk_score:
+  0.5` neutral-default fallbacks. These need a decision on whether the simulation/risk paths compute
+  real values or fail — flagged for the next pass, not guessed at.
