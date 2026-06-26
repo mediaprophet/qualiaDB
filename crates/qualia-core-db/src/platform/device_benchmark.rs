@@ -18,7 +18,7 @@
 use serde::{Deserialize, Serialize};
 use std::time::Instant;
 
-const GEMV_BENCH_WGSL: &str = include_str!("shaders/gemv_bench.wgsl");
+const GEMV_BENCH_WGSL: &str = include_str!("../shaders/gemv_bench.wgsl");
 
 /// A compute circuit's class in the capability matrix.
 #[derive(Debug, Clone, Copy, PartialEq, Eq, Serialize, Deserialize)]

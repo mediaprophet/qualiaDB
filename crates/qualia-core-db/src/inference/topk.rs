@@ -18,7 +18,7 @@ pub struct TopKItem {
 }
 
 /// The block-reduction kernel (auto bind-group layout; entry `topk_block`).
-pub const TOPK_REDUCTION_WGSL: &str = include_str!("shaders/topk_reduction.wgsl");
+pub const TOPK_REDUCTION_WGSL: &str = include_str!("../shaders/topk_reduction.wgsl");
 
 /// Block size each workgroup reduces — must equal `MAX_BLOCK` in the WGSL (`var<workgroup>` cap).
 pub const TOPK_BLOCK_SIZE: usize = 1024;

@@ -4,7 +4,7 @@
 
 #[cfg(target_os = "android")]
 pub mod android_keystore {
-    use super::*;
+    use crate::*;
     use std::os::raw::c_int;
 
     extern "C" {

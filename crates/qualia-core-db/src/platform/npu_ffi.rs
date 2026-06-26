@@ -39,7 +39,7 @@ pub mod gpu_sieve {
                 .await
                 .ok()?;
 
-            let shader_src = include_str!("shaders/sieve.wgsl");
+            let shader_src = include_str!("../shaders/sieve.wgsl");
             let shader = device.create_shader_module(wgpu::ShaderModuleDescriptor {
                 label: Some("Sieve Shader"),
                 source: wgpu::ShaderSource::Wgsl(shader_src.into()),
