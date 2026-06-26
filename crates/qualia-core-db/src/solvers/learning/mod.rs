@@ -20,6 +20,7 @@ pub mod multiple_testing;
 pub mod preprocessing;
 pub mod regression;
 pub mod resampling;
+pub mod trees;
 
 /// Errors common to the learning estimators. Estimators **fail closed** (return an
 /// error) rather than emit a fabricated fit — consistent with the engine-wide
