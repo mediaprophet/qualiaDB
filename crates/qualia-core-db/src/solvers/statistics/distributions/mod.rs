@@ -16,6 +16,7 @@
 
 pub mod chi_squared;
 pub mod fisher_f;
+pub mod multivariate_normal;
 pub mod normal;
 pub mod special;
 pub mod students_t;
