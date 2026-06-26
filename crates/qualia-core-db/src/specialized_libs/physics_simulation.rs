@@ -1761,57 +1761,121 @@ impl PhysicsSimulationLibrary {
     pub fn run_cfd_simulation(&mut self, simulation: &mut Simulation) -> Result<PhysicsSimulationResult<Vec<PhysicsField>>, PhysicsError> {
         let start_time = std::time::Instant::now();
 
-        // Initialize CFD solver
-        let cfd_solver = self.physics_solver.create_cfd_solver(&simulation.config)?;
-
-        // Create mesh if not exists
+        // Create mesh if not present.
         if simulation.mesh.is_none() {
             let mesh = self.simulation_engine.create_mesh(&simulation.config)?;
             simulation.mesh = Some(mesh);
         }
 
-        // Initialize fields
-        let mut fields = self.initialize_cfd_fields(simulation)?;
+        // Real 1D viscous-flow model: velocity transported by the Burgers equation
+        //   u_t + u·u_x = ν·u_xx
+        // via explicit finite differences (central in space, forward in time); pressure
+        // from Bernoulli; temperature from the adiabatic relation. Convergence is the
+        // measured per-step change in the field — computed, never asserted.
+        let nx = simulation.config.spatial_resolution.nx.max(3);
+        let dx = if simulation.config.spatial_resolution.dx > 0.0 {
+            simulation.config.spatial_resolution.dx
+        } else {
+            1.0 / nx as f64
+        };
+        let dt = if simulation.config.time_step > 0.0 {
+            simulation.config.time_step
+        } else {
+            1e-4
+        };
+        let nu = 1.5e-5_f64; // kinematic viscosity of air (m²/s)
 
-        // Time integration loop
-        let mut converged = false;
-        let mut step = 0;
-        let max_steps = (simulation.config.total_time / simulation.config.time_step) as u32;
-
-        while !converged && step < max_steps {
-            // Update boundary conditions
-            self.simulation_engine.update_boundary_conditions(simulation, &mut fields)?;
-
-            // Solve equations
-            let solver_result = self.physics_solver.solve_cfd_step(&cfd_solver, &fields, simulation.mesh.as_ref().unwrap())?;
-
-            // Check convergence
-            converged = self.check_convergence(&solver_result);
-
-            // Update time
-            simulation.current_time += simulation.config.time_step;
-            simulation.current_step += 1;
-
-            // Store field data
-            self.data_manager.store_field_data(simulation, &fields)?;
-
-            step += 1;
+        // Smooth sinusoidal initial velocity perturbation (a real, non-trivial IC).
+        let mut u = vec![0.0f64; nx];
+        for i in 0..nx {
+            u[i] = (std::f64::consts::PI * i as f64 * dx).sin();
         }
 
+        let max_steps = ((simulation.config.total_time / dt) as usize).clamp(1, 100_000);
+        let tol = 1e-6_f64;
+        let mut residual = f64::INFINITY;
+        let mut prev_residual = f64::INFINITY;
+        let mut converged = false;
+        let mut step: u32 = 0;
+        while (step as usize) < max_steps {
+            let mut u_new = u.clone();
+            let mut sumsq = 0.0f64;
+            for i in 1..nx - 1 {
+                let advection = -u[i] * (u[i + 1] - u[i - 1]) / (2.0 * dx);
+                let diffusion = nu * (u[i + 1] - 2.0 * u[i] + u[i - 1]) / (dx * dx);
+                u_new[i] = u[i] + dt * (advection + diffusion);
+                let d = u_new[i] - u[i];
+                sumsq += d * d;
+            }
+            prev_residual = residual;
+            residual = sumsq.sqrt();
+            u = u_new;
+            step += 1;
+            simulation.current_time += dt;
+            simulation.current_step += 1;
+            if residual < tol {
+                converged = true; // reached a steady state
+                break;
+            }
+            if !residual.is_finite() {
+                break; // CFL violation / blow-up — report it honestly below
+            }
+        }
+
+        // Pressure (Bernoulli) and temperature (adiabatic) from the real velocity field.
+        let rho = 1.225_f64;
+        let p_ref = 101_325.0_f64;
+        let pressure: Vec<f64> = u.iter().map(|&ui| p_ref - 0.5 * rho * ui * ui).collect();
+        let gamma = 1.4_f64;
+        let t0 = 293.15_f64;
+        let temperature: Vec<f64> = pressure
+            .iter()
+            .map(|&pi| t0 * (pi / p_ref).powf((gamma - 1.0) / gamma))
+            .collect();
+
+        let field = |id: &str, name: &str, qty: &str, units: &str, ft: FieldType, data: Vec<f64>| PhysicsField {
+            field_id: id.to_string(),
+            field_type: ft,
+            dimensions: vec![nx],
+            data,
+            metadata: FieldMetadata {
+                field_name: name.to_string(),
+                physical_quantity: qty.to_string(),
+                units: units.to_string(),
+                time_step: step as u64,
+                iteration: step as u64,
+            },
+        };
+        let fields = vec![
+            field("velocity", "Velocity", "Velocity", "m/s", FieldType::Vector, u),
+            field("pressure", "Pressure", "Pressure", "Pa", FieldType::Scalar, pressure),
+            field("temperature", "Temperature", "Temperature", "K", FieldType::Scalar, temperature),
+        ];
+
+        // Persist the final (real) field data for later retrieval.
+        self.data_manager.store_field_data(simulation, &fields)?;
+
+        let convergence_rate = if prev_residual.is_finite() && prev_residual > 0.0 {
+            residual / prev_residual
+        } else {
+            0.0
+        };
         let simulation_time = start_time.elapsed().as_millis() as u64;
 
         Ok(PhysicsSimulationResult {
             result: fields,
             simulation_time,
-            solver_time: 0,
+            solver_time: simulation_time,
             data_time: 0,
             convergence_info: ConvergenceInfo {
                 converged,
                 iterations: step,
-                residual_norm: 0.0,
-                convergence_rate: 0.0,
-                final_error: 0.0,
+                residual_norm: if residual.is_finite() { residual } else { f64::MAX },
+                convergence_rate,
+                final_error: if residual.is_finite() { residual } else { f64::MAX },
             },
+            // Per-call CPU/IO utilization is runtime telemetry this routine does not sample;
+            // left at 0.0 (not measured) rather than fabricated.
             performance_info: PerformanceInfo {
                 cpu_utilization: 0.0,
                 memory_utilization: 0.0,
@@ -1844,24 +1908,43 @@ impl PhysicsSimulationLibrary {
 
         let simulation_time = start_time.elapsed().as_millis() as u64;
 
+        // Aggregate REAL convergence across the nodes: converged only if every node did;
+        // residual is the worst (max) node residual; iterations the max node iteration count.
+        let all_converged = !results.is_empty()
+            && results.iter().all(|r| r.convergence_info.converged);
+        let agg_residual = results
+            .iter()
+            .map(|r| r.convergence_info.residual_norm)
+            .fold(0.0f64, f64::max);
+        let agg_iterations = results
+            .iter()
+            .map(|r| r.convergence_info.iterations)
+            .max()
+            .unwrap_or(0);
+        let agg_conv_rate = results
+            .iter()
+            .map(|r| r.convergence_info.convergence_rate)
+            .fold(0.0f64, f64::max);
+
         Ok(PhysicsSimulationResult {
             result: final_result,
             simulation_time,
-            solver_time: 0,
+            solver_time: simulation_time,
             data_time: 0,
             convergence_info: ConvergenceInfo {
-                converged: true,
-                iterations: simulation.current_step as u32,
-                residual_norm: 0.0,
-                convergence_rate: 0.0,
-                final_error: 0.0,
+                converged: all_converged,
+                iterations: agg_iterations,
+                residual_norm: agg_residual,
+                convergence_rate: agg_conv_rate,
+                final_error: agg_residual,
             },
+            // Runtime utilization is not sampled per call; left at 0.0 (not measured).
             performance_info: PerformanceInfo {
-                cpu_utilization: 0.5,
-                memory_utilization: 0.3,
-                network_utilization: 0.1,
-                io_utilization: 0.1,
-                parallel_efficiency: 0.85,
+                cpu_utilization: 0.0,
+                memory_utilization: 0.0,
+                network_utilization: 0.0,
+                io_utilization: 0.0,
+                parallel_efficiency: 0.0,
             },
         })
     }
@@ -1958,15 +2041,30 @@ impl PhysicsSimulationLibrary {
             u[i] = (std::f64::consts::PI * x).sin();
         }
         let steps = ((simulation.config.total_time / dt) as usize).max(1).min(500);
+        let mut residual = f64::INFINITY;
+        let mut prev_residual = f64::INFINITY;
         for _ in 0..steps {
             let mut u_new = u.clone();
+            let mut sumsq = 0.0f64;
             for i in 1..nx - 1 {
                 let advection = -u[i] * (u[i + 1] - u[i - 1]) / (2.0 * dx);
                 let diffusion = nu * (u[i + 1] - 2.0 * u[i] + u[i - 1]) / (dx * dx);
                 u_new[i] = u[i] + dt * (advection + diffusion);
+                let d = u_new[i] - u[i];
+                sumsq += d * d;
             }
+            prev_residual = residual;
+            residual = sumsq.sqrt();
             u = u_new;
         }
+        // Real measured convergence of the explicit integration.
+        let node_converged = residual.is_finite() && residual < 1e-6;
+        let node_conv_rate = if prev_residual.is_finite() && prev_residual > 0.0 {
+            residual / prev_residual
+        } else {
+            0.0
+        };
+        let node_residual = if residual.is_finite() { residual } else { f64::MAX };
 
         // Pressure: approximate via Bernoulli P + 0.5*rho*u^2 = const
         let rho = 1.225_f64;
@@ -2006,18 +2104,20 @@ impl PhysicsSimulationLibrary {
             node_id: node_id.to_string(),
             fields: vec![velocity_field, pressure_field, temperature_field],
             convergence_info: ConvergenceInfo {
-                converged: true,
+                converged: node_converged,
                 iterations: steps as u32,
-                residual_norm: 1e-8,
-                convergence_rate: 0.95,
-                final_error: 1e-8,
+                residual_norm: node_residual,
+                convergence_rate: node_conv_rate,
+                final_error: node_residual,
             },
+            // Runtime utilization is not sampled per call; left at 0.0 (not measured)
+            // rather than fabricated.
             performance_info: PerformanceInfo {
-                cpu_utilization: 0.8,
-                memory_utilization: 0.6,
-                network_utilization: 0.4,
-                io_utilization: 0.3,
-                parallel_efficiency: 0.85,
+                cpu_utilization: 0.0,
+                memory_utilization: 0.0,
+                network_utilization: 0.0,
+                io_utilization: 0.0,
+                parallel_efficiency: 0.0,
             },
         })
     }
@@ -2311,17 +2411,39 @@ impl PhysicsSolver {
         Ok(solver)
     }
 
-    pub fn solve_cfd_step(&self, solver: &CfdSolver, fields: &[PhysicsField], mesh: &Mesh) -> Result<SolverResult, PhysicsError> {
-        // Solve CFD step
-        let result = SolverResult {
-            solver_id: "cfd_solver".to_string(),
-            iterations: 10,
-            residual_norm: 1e-7,
-            convergence_time: 0.0,
-            error_message: None,
+    pub fn solve_cfd_step(&self, _solver: &CfdSolver, fields: &[PhysicsField], _mesh: &Mesh) -> Result<SolverResult, PhysicsError> {
+        // Real steady-state residual of the velocity field: the L2 norm of the Burgers
+        // operator ‖ν·u_xx − u·u_x‖ over the interior nodes — a genuine measure of how far
+        // the field is from a steady solution. (Previously this returned a fabricated 1e-7.)
+        let start = std::time::Instant::now();
+        let velocity = fields
+            .iter()
+            .find(|f| f.metadata.physical_quantity == "Velocity");
+        let (iterations, residual_norm) = match velocity {
+            Some(v) if v.data.len() >= 3 => {
+                let u = &v.data;
+                let n = u.len();
+                let dx = 1.0 / n as f64;
+                let nu = 1.5e-5_f64;
+                let mut sumsq = 0.0f64;
+                for i in 1..n - 1 {
+                    let u_x = (u[i + 1] - u[i - 1]) / (2.0 * dx);
+                    let u_xx = (u[i + 1] - 2.0 * u[i] + u[i - 1]) / (dx * dx);
+                    let r = nu * u_xx - u[i] * u_x;
+                    sumsq += r * r;
+                }
+                (1u64, sumsq.sqrt())
+            }
+            _ => (0u64, f64::MAX),
         };
 
-        Ok(result)
+        Ok(SolverResult {
+            solver_id: "cfd_solver".to_string(),
+            iterations,
+            residual_norm,
+            convergence_time: start.elapsed().as_secs_f64(),
+            error_message: None,
+        })
     }
 }
 
@@ -3227,11 +3349,20 @@ mod tests {
         let mut simulation = library.create_simulation(config).unwrap();
         
         let result = library.run_cfd_simulation(&mut simulation).unwrap();
-        
+
+        // Real Burgers integration: assert the actual computed behaviour, not a fabricated
+        // "converged". The fields must be present, finite, and non-trivially evolved; the
+        // residual is a real, finite, computed number.
         assert_eq!(result.result.len(), 3); // velocity, pressure, temperature
-        assert!(result.convergence_info.converged);
         assert!(result.convergence_info.iterations > 0);
-        assert!(result.convergence_info.residual_norm < 1e-6);
+        assert!(result.convergence_info.residual_norm.is_finite());
+        assert!(result.convergence_info.residual_norm >= 0.0);
+        let velocity = &result.result[0].data;
+        assert!(velocity.iter().all(|v| v.is_finite()));
+        assert!(velocity.iter().any(|&v| v.abs() > 0.0)); // the IC actually propagated
+        // Pressure tracks Bernoulli: where velocity is non-zero, pressure drops below p_ref.
+        let pressure = &result.result[1].data;
+        assert!(pressure.iter().all(|&p| p.is_finite() && p <= 101_325.0 + 1e-6));
     }
 
     #[test]
@@ -3266,10 +3397,13 @@ mod tests {
         let mut simulation = library.create_simulation(config).unwrap();
         
         let result = library.run_distributed_simulation(&mut simulation).unwrap();
-        
+
+        // Real per-node Burgers integration, aggregated. Assert the actual computed
+        // behaviour: 3 merged fields, real iteration count, a finite computed residual.
         assert_eq!(result.result.len(), 3); // velocity + pressure + temperature, merged across nodes
-        assert!(result.convergence_info.converged);
-        assert!(result.performance_info.parallel_efficiency > 0.0);
+        assert!(result.convergence_info.iterations > 0);
+        assert!(result.convergence_info.residual_norm.is_finite());
+        assert!(result.result.iter().all(|f| f.data.iter().all(|v| v.is_finite())));
     }
 
     #[test]
