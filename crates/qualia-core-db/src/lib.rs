@@ -37,8 +37,25 @@ pub use medical::comorbidity_eval;
 pub use medical::dicom;
 #[cfg(not(target_arch = "wasm32"))]
 pub use medical::dicom_ingest;
+// --- query/ category (moved from crate root; paths preserved) ---
+pub mod query;
+pub use query::query_compiler;
+pub use query::query_engine;
+pub use query::rdf_star;
+pub use query::shacl_compiler;
+pub use query::cbor_compiler;
+pub use query::resolve;
+pub use query::resolver;
+pub use query::lexicon;
 #[cfg(not(target_arch = "wasm32"))]
-pub mod ingest;
+pub use query::ontology_loader;
+pub use query::mini_parser;
+#[cfg(not(target_arch = "wasm32"))]
+pub use query::ingest;
+pub use query::ingestion;
+pub use query::graph_index;
+pub use query::indexing;
+pub use query::temporal_graph;
 // --- platform/ category (moved from crate root; paths preserved) ---
 pub mod platform;
 #[cfg(target_os = "android")]
@@ -56,8 +73,50 @@ pub use platform::device_benchmark;
 pub use platform::platform_scheduler;
 #[cfg(not(target_arch = "wasm32"))]
 pub use platform::local_scheduler;
+// --- inference/ category (moved from crate root; paths preserved) ---
+pub mod inference;
 #[cfg(any(not(target_arch = "wasm32"), feature = "wasm-llm"))]
-pub mod llm_agent;
+pub use inference::llm_agent;
+pub use inference::llm_awq;
+#[cfg(not(target_arch = "wasm32"))]
+pub use inference::llm_bench;
+pub use inference::llm_eval;
+pub use inference::llm_gpu_profiler;
+pub use inference::llm_kernel_parity;
+#[cfg(any(not(target_arch = "wasm32"), feature = "wasm-llm"))]
+pub use inference::gguf_sharder;
+#[cfg(any(not(target_arch = "wasm32"), feature = "wasm-llm"))]
+pub use inference::ggml_quants;
+#[cfg(any(not(target_arch = "wasm32"), feature = "wasm-llm"))]
+pub use inference::safetensor;
+#[cfg(any(not(target_arch = "wasm32"), feature = "wasm-llm"))]
+pub use inference::tensor_roles;
+#[cfg(any(not(target_arch = "wasm32"), feature = "wasm-llm"))]
+pub use inference::ternary;
+#[cfg(not(target_arch = "wasm32"))]
+pub use inference::ternary_gpu;
+#[cfg(any(not(target_arch = "wasm32"), feature = "wasm-llm"))]
+pub use inference::topk;
+#[cfg(not(target_arch = "wasm32"))]
+pub use inference::topk_gpu;
+#[cfg(target_os = "windows")]
+pub use inference::directml_bridge;
+#[cfg(any(target_os = "macos", target_os = "ios"))]
+pub use inference::metal_bridge;
+#[cfg(any(not(target_arch = "wasm32"), feature = "wasm-llm"))]
+pub use inference::resident_model;
+#[cfg(not(target_arch = "wasm32"))]
+pub use inference::residency_planner;
+pub use inference::semantic_culler;
+#[cfg(any(not(target_arch = "wasm32"), feature = "wasm-llm"))]
+pub use inference::neuro_symbolic_sieve;
+pub use inference::spatial_sieve;
+pub use inference::compute_universe;
+pub use inference::agent;
+#[cfg(any(not(target_arch = "wasm32"), feature = "wasm-llm"))]
+pub use inference::orchestrator;
+#[cfg(not(target_arch = "wasm32"))]
+pub use inference::ambient_orchestration;
 #[cfg(any(not(target_arch = "wasm32"), feature = "wasm-llm"))]
 pub mod lora;
 // --- q42/ category (moved from crate root; paths preserved) ---
@@ -90,7 +149,6 @@ pub use extensions::resource_catalog;
     feature = "wasm-scientific",
     feature = "wasm-full"
 ))]
-pub mod shacl_compiler;
 #[cfg(any(
     not(target_arch = "wasm32"),
     feature = "wasm-logic",
@@ -98,15 +156,26 @@ pub mod shacl_compiler;
     feature = "wasm-full"
 ))]
 pub mod modalities;
+// --- identity/ category (moved from crate root; paths preserved) ---
+pub mod identity;
+pub use identity::agency;
+pub use identity::identifier;
 #[cfg(any(not(target_arch = "wasm32"), feature = "wasm-llm"))]
-pub mod neuro_symbolic_sieve;
-#[cfg(any(not(target_arch = "wasm32"), feature = "wasm-llm"))]
-pub mod profiles;
+pub use identity::profiles;
+#[cfg(not(target_arch = "wasm32"))]
+pub use identity::key_vault;
+pub use identity::webizen_identifiers;
+pub use identity::vault_manifest;
 pub mod gpu_context;
 pub mod shaders;
-pub mod compute_universe;
+// --- foundation/ category (moved from crate root; paths preserved) ---
+pub mod foundation;
+pub use foundation::frame_layout;
+pub use foundation::crdt;
+pub use foundation::telemetry;
+pub use foundation::fuzz_testing;
 #[cfg(any(not(target_arch = "wasm32"), feature = "wasm-llm"))]
-pub mod topology_draft;
+pub use foundation::topology_draft;
 // --- net/ category (moved from crate root; paths preserved) ---
 pub mod net;
 #[cfg(not(target_arch = "wasm32"))]
@@ -123,12 +192,9 @@ pub use net::host_topology;
 pub mod audio;
 pub mod tensor;
 pub mod geometric_algebra;
-pub mod rdf_star;
 pub mod webizen_validator;
-pub mod webizen_identifiers;
 pub mod sparql_library;
 pub use sparql_library::*;
-pub mod semantic_culler;
 
 
 #[cfg(not(target_arch = "wasm32"))]
@@ -162,9 +228,7 @@ pub mod clinical_engine {
         GeneExpressionResult { fold_change: 0.0, log2_fold_change: 0.0, is_significant: false }
     }
 }
-pub mod query_engine;
 pub mod qubo_compiler;
-pub mod vault_manifest;
 #[cfg(all(
     target_arch = "wasm32",
     any(
@@ -236,8 +300,6 @@ pub use crypto::deontic_circuit;
 pub use crypto::verifiable_credential;
 #[cfg(not(target_arch = "wasm32"))]
 pub mod csd_storage;
-#[cfg(not(target_arch = "wasm32"))]
-pub mod ambient_orchestration;
 #[cfg(not(target_arch = "wasm32"))]
 // pub mod clinical_engine; // Temporarily disabled
 #[cfg(not(target_arch = "wasm32"))]
@@ -700,21 +762,15 @@ impl Drop for QualiaSuperBlock {
     }
 }
 
-pub mod agency;
-pub mod agent;
 // mcp_* modules now live in mcp/ (see MODULE_REORG_PLAN.md). The `pub mod mcp;`
 // declaration + path-preserving re-exports are below, near the old mcp_server line.
-pub mod cbor_compiler;
 #[cfg(any(
     not(target_arch = "wasm32"),
     feature = "wasm-logic",
     feature = "wasm-scientific",
     feature = "wasm-full"
 ))]
-pub mod crdt;
-pub mod fuzz_testing;
 // (asset_bridge moved to render::assets in Phase 0.2a)
-pub mod temporal_graph;
 pub mod provenance;
 #[cfg(any(
     not(target_arch = "wasm32"),
@@ -730,39 +786,23 @@ pub mod epistemic;
     feature = "wasm-full"
 ))]
 pub mod deontic_logic;
-#[cfg(not(target_arch = "wasm32"))]
-pub mod ontology_loader;
-pub mod graph_index;
 pub mod illocution;
-pub mod indexing;
 pub mod modal_kind;
-pub mod resolve;
 #[cfg(any(
     not(target_arch = "wasm32"),
     feature = "wasm-logic",
     feature = "wasm-scientific",
     feature = "wasm-full"
 ))]
-pub mod ingestion;
-pub mod lexicon;
-pub mod frame_layout;
-#[cfg(any(not(target_arch = "wasm32"), feature = "wasm-llm"))]
-pub mod orchestrator;
 #[cfg(any(
     not(target_arch = "wasm32"),
     feature = "wasm-logic",
     feature = "wasm-scientific",
     feature = "wasm-full"
 ))]
-pub mod query_compiler;
-pub mod resolver;
-#[cfg(any(not(target_arch = "wasm32"), feature = "wasm-llm"))]
-pub mod resident_model;
-pub mod spatial_sieve;
 pub mod storage;
 #[cfg(not(target_arch = "wasm32"))]
 pub mod sync;
-pub mod telemetry;
 #[cfg(any(
     not(target_arch = "wasm32"),
     feature = "wasm-logic",
@@ -774,52 +814,25 @@ pub mod wal;
 pub mod webizen;
 
 
-#[cfg(target_os = "windows")]
-pub mod directml_bridge;
-#[cfg(any(not(target_arch = "wasm32"), feature = "wasm-llm"))]
-pub mod ggml_quants;
 #[cfg(any(not(target_arch = "wasm32"), feature = "wasm-llm"))]
 pub mod gguf_bridge;
-#[cfg(any(not(target_arch = "wasm32"), feature = "wasm-llm"))]
-pub mod gguf_sharder;
 /// Phase 4: AOT GGUF → `.q42` LLM-weight container compiler.
 /// Phase 6 / task #12: safetensor (+ MLX) source parsing + dtype gate for the streaming transcoder.
-#[cfg(any(not(target_arch = "wasm32"), feature = "wasm-llm"))]
-pub mod safetensor;
 /// Task #12 / STELLAR §A: BitNet b1.58 ternary quantization codec (compression during transcode).
-#[cfg(any(not(target_arch = "wasm32"), feature = "wasm-llm"))]
-pub mod ternary;
 /// Task #12 / STELLAR §A: tensor-name → engine GEMM-role mapping + the ternary (FFN-only) policy.
-#[cfg(any(not(target_arch = "wasm32"), feature = "wasm-llm"))]
-pub mod tensor_roles;
 /// Task #12 / STELLAR §A: native GPU dispatch of the ternary GEMM kernel + on-device parity test.
-#[cfg(not(target_arch = "wasm32"))]
-pub mod ternary_gpu;
 /// STELLAR §A A1a: GPU top-K reduction — CPU oracle + host merge + the WGSL kernel.
-#[cfg(any(not(target_arch = "wasm32"), feature = "wasm-llm"))]
-pub mod topk;
 /// STELLAR §A A1a: native GPU dispatch of the top-K reduction + on-device parity test.
-#[cfg(not(target_arch = "wasm32"))]
-pub mod topk_gpu;
 /// STELLAR §A AH-track H0: host topology + capability sensor (enumerate all adapters; discrete vs unified).
 /// STELLAR §A AH-track H1(a): cross-circuit GEMV benchmark → measured capability matrix (CPU/iGPU/GPU).
 /// STELLAR §A AH-track H2: residency + device-priority planner (discovery → employment plan, D31).
-#[cfg(not(target_arch = "wasm32"))]
-pub mod residency_planner;
 /// STELLAR §A AH-track H1(a) cache: CBOR hardware passport (cache discovery, fast-boot skip, D26).
 /// STELLAR §A A0 (D17/D22): shared native LLM benchmark harness — the one measurement
 /// surface for the existing F16/Q8 path and the future ternary/top-k paths.
-#[cfg(not(target_arch = "wasm32"))]
-pub mod llm_bench;
 /// STELLAR §A W2 (D17): per-kernel GPU timestamp profiler for the LLM forward/decode path.
-pub mod llm_gpu_profiler;
 /// STELLAR §A W3: in-project GPU↔CPU kernel-parity oracle (error metrics + synthetic quant weights).
-pub mod llm_kernel_parity;
 /// STELLAR §A W1: in-project quality oracle (perplexity / KL / coherence + the quant quality gate).
-pub mod llm_eval;
 /// STELLAR §A AWQ: activation-statistics capture (the AWQ forward hook) for calibrated quantization.
-pub mod llm_awq;
-pub mod identifier;
 // mcp/ category (moved from crate root). Re-exports keep crate::mcp_server and
 // crate::mcp_cooperation paths stable for qualia-cli and intra-crate callers.
 pub mod mcp;
@@ -832,9 +845,6 @@ pub use mcp::mcp_server;
     feature = "wasm-full"
 ))]
 pub use mcp::mcp_cooperation;
-#[cfg(any(target_os = "macos", target_os = "ios"))]
-pub mod metal_bridge;
-pub mod mini_parser;
 #[cfg(any(not(target_arch = "wasm32"), feature = "wasm-scientific"))]
 pub mod ode_solver;
 #[cfg(not(target_arch = "wasm32"))]
@@ -1138,8 +1148,6 @@ mod tests {
     }
 }
 
-#[cfg(not(target_arch = "wasm32"))]
-pub mod key_vault;
 
 #[cfg(not(target_arch = "wasm32"))]
 pub mod p2p;

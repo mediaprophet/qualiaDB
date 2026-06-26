@@ -170,7 +170,7 @@ pub fn filter_by_context_and_object(quins: &[NQuin], context_hash: u64, object: 
 
 #[cfg(test)]
 mod context_tests {
-    use super::*;
+    use crate::*;
 
     #[test]
     fn test_filter_by_context() {

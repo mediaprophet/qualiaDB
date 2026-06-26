@@ -121,7 +121,7 @@ pub fn ternary_blob(weights: &[f32]) -> Vec<u8> {
 /// [`ternary_gemm_cpu`], which mirrors it byte-for-byte (same trit extraction, add/subtract,
 /// end-scale). The GPU pipeline binds: `0` activations (`f32`), `1` packed trits (`u32` words),
 /// `2` `TernaryParams` uniform, `3` output (`f32`).
-pub const TERNARY_GEMM_WGSL: &str = include_str!("shaders/ternary_gemm.wgsl");
+pub const TERNARY_GEMM_WGSL: &str = include_str!("../shaders/ternary_gemm.wgsl");
 
 /// Extract the ternary value `{-1,0,+1}` at linear weight index `k` from packed trits — the exact
 /// operation `ternary_gemm.wgsl::trit_at` performs (5 trits/byte, base-3).
@@ -220,7 +220,7 @@ pub fn trit_at_2bit(packed: &[u8], k: usize) -> i32 {
 }
 
 /// The branchless 2-bit WGSL ternary-GEMM kernel; CPU oracle is [`ternary_gemm_cpu_2bit`].
-pub const TERNARY_GEMM_2BIT_WGSL: &str = include_str!("shaders/ternary_gemm_2bit.wgsl");
+pub const TERNARY_GEMM_2BIT_WGSL: &str = include_str!("../shaders/ternary_gemm_2bit.wgsl");
 
 /// CPU oracle for `ternary_gemm_2bit.wgsl` — same math as [`ternary_gemm_cpu`], 2-bit packing +
 /// branchless accumulation.

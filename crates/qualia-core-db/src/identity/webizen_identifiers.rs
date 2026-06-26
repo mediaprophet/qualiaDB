@@ -258,7 +258,7 @@ impl WebizenSignatureStorage {
 
 #[cfg(test)]
 mod webizen_tests {
-    use super::*;
+    use crate::*;
 
     #[test]
     fn test_webizen_id_range() {

@@ -600,7 +600,7 @@ mod tests {
     }
 
     /// F16 GEMV baseline shader (same bindings/params as the ternary kernels).
-    const F16_GEMV_WGSL: &str = include_str!("shaders/f16_gemv.wgsl");
+    const F16_GEMV_WGSL: &str = include_str!("../shaders/f16_gemv.wgsl");
 
     /// Persistent-pipeline, batched-dispatch GEMV timing — fixes the per-call rebuild flaw of the
     /// indicative test. Pipeline + buffers are created ONCE; `K` dispatches are encoded per submit

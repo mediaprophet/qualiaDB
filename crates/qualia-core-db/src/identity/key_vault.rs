@@ -429,7 +429,7 @@ impl KeyVault {
 
 #[cfg(test)]
 mod subgraph_key_tests {
-    use super::*;
+    use crate::*;
 
     fn test_vault() -> KeyVault {
         let tmp = tempfile::tempdir().expect("tmpdir");
