@@ -322,3 +322,21 @@ de-faking or removing that 3400-line scaffold is a **library-disposition call fo
 for real vs delete) — flagged, not silently half-patched.
 - **⚑ Needs Timothy:** disposition of the `machine_learning.rs` scaffold (real impl vs removal) — its
   remaining fabricated training/eval metrics are dormant but should not live indefinitely.
+
+### 2026-06-26 — MCP fabricated-metric honesty sweep · **done (green)** · worktree `0.0.21-la`
+Swept all five MCP-exposed specialized libs (chemistry/engineering/financial/medical/ML) for
+fabricated quality metrics surfaced to clients as if computed. **Exactly two were live; both fixed:**
+- **ML** `execute_inference` confidence 0.95 → fail-closed (`02e0cfbf2`, above).
+- **Medical** — the dangerous one: `medical_compute` MCP tool surfaced `ClinicalAnalysis::new()`'s
+  hardcoded `confidence_score: 0.95` (with empty findings) as **the confidence on a clinical
+  diagnosis/treatment/prognosis** — a fabricated 95% confidence on a medical diagnosis where no
+  analysis ran. `clinical_analyzer.analyze_data` now **fails closed** (`MedicalError::ClinicalError`);
+  `test_clinical_analysis` asserts it. Real clinical math (Framingham / CHA2DS2-VASc / SOFA / eGFR
+  calculators, Smith-Waterman alignment) is genuinely computed and untouched.
+- **Audited clean:** the other surfaced scores are real computed domain values, not fabrications.
+- **Honest scope:** the remaining hardcoded `accuracy`/`privacy_score` literals across the 5 libs sit
+  on internal `*OperationResult` wrapper fields that MCP does **not** surface — dormant, not leaking,
+  but a systemic scaffolding smell. Full crate **1481 passed**.
+- **⚑ Needs Timothy:** systemic disposition — these dormant fabricated wrapper metrics should be made
+  `Option`/computed/removed across the specialized libs in a dedicated honesty pass. Flagged, not
+  half-patched.

@@ -3432,11 +3432,20 @@ impl ClinicalAnalyzer {
         Ok(())
     }
 
-    pub fn analyze_data(&mut self, patient: &Patient, data_type: ClinicalDataType) -> Result<ClinicalAnalysis, MedicalError> {
-        // Analyze clinical data
-        let analysis = ClinicalAnalysis::new();
-
-        Ok(analysis)
+    pub fn analyze_data(&mut self, _patient: &Patient, _data_type: ClinicalDataType) -> Result<ClinicalAnalysis, MedicalError> {
+        // HONEST FAIL-CLOSED. No diagnostic computation is implemented here (the
+        // `diagnostic_algorithms` registry is empty): this analyzer performs no clinical
+        // reasoning. It must NOT emit a diagnosis. Previously it returned
+        // `ClinicalAnalysis::new()` — confidence_score: 0.95 with empty findings and
+        // recommendations — and that fabricated 95% confidence was surfaced verbatim through
+        // the `medical_compute` MCP tool as the confidence on a clinical diagnosis. A false
+        // confidence on a medical diagnosis is unacceptable; fail closed until a real,
+        // validated diagnostic backend exists.
+        Err(MedicalError::ClinicalError(
+            "clinical analysis not implemented: no diagnostic computation is performed; \
+             refusing to emit a fabricated diagnosis or confidence"
+                .to_string(),
+        ))
     }
 }
 
@@ -4396,11 +4405,14 @@ mod tests {
         let mut library = MedicalComputingLibrary::new();
         library.initialize().unwrap();
         
-        let result = library.analyze_clinical_data("patient_1", ClinicalDataType::Diagnosis).unwrap();
-        
-        assert_eq!(result.result.analysis_id, "analysis_1");
-        assert_eq!(result.result.analysis_type, ClinicalDataType::Diagnosis);
-        assert!(result.privacy_score > 0.8);
+        // HONEST: no diagnostic backend is implemented, so clinical analysis fails closed
+        // rather than emitting a fabricated diagnosis/confidence (it previously returned a
+        // hardcoded confidence_score 0.95 with empty findings).
+        let result = library.analyze_clinical_data("patient_1", ClinicalDataType::Diagnosis);
+        assert!(
+            result.is_err(),
+            "clinical analysis must fail closed, not fabricate a diagnosis/confidence"
+        );
     }
 
     #[test]
