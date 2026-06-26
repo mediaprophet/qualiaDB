@@ -82,6 +82,48 @@ cml:recognitionBasis a rdf:Property ; rdfs:range cml:RecognitionBasis .
 # ===========================================================================
 # 4. LOGIC layer — putting the math (logic libraries) against the concept
 # ===========================================================================
+cml:AcquiredMethod a rdfs:Class ; rdfs:subClassOf cml:Concept ;
+    rdfs:label "CML acquired method" ;
+    rdfs:comment "A provisional CML concept acquired from literature, source documents, or local analysis. It stores a method, evidence, and its proposed implementation surface without claiming that the method is already implemented or attested." .
+
+cml:SurfaceRelation a rdfs:Class .
+cml:NewUpdate a cml:SurfaceRelation ;
+    rdfs:comment "No close local source match was found; add vocabulary first." .
+cml:ApproximateUpdate a cml:SurfaceRelation ;
+    rdfs:comment "Related vocabulary or code exists; review as a nearby ontology or implementation extension." .
+cml:Improvement a cml:SurfaceRelation ;
+    rdfs:comment "The method appears to refine an existing implementation surface." .
+cml:AlreadyCovered a cml:SurfaceRelation ;
+    rdfs:comment "A strong local source match exists; avoid duplicate implementation unless the evidence describes a missing variant." .
+
+cml:methodDescription a rdf:Property ;
+    rdfs:domain cml:AcquiredMethod ; rdfs:range xsd:string ;
+    rdfs:comment "Plain-language description of the acquired formal/computational method." .
+cml:whyRelevant a rdf:Property ;
+    rdfs:domain cml:AcquiredMethod ; rdfs:range xsd:string ;
+    rdfs:comment "Why this method might improve QualiaDB results." .
+cml:targetSurface a rdf:Property ;
+    rdfs:domain cml:AcquiredMethod ; rdfs:range xsd:string ;
+    rdfs:comment "Likely first landing surface: SHACL/ShEx vocabulary, modality evaluator, solver, kernel, engine, or review surface." .
+cml:surfaceRelation a rdf:Property ;
+    rdfs:domain cml:AcquiredMethod ; rdfs:range cml:SurfaceRelation ;
+    rdfs:comment "Conservative relation to the current local source surface." .
+cml:surfaceConfidence a rdf:Property ;
+    rdfs:domain cml:AcquiredMethod ; rdfs:range xsd:decimal ;
+    rdfs:comment "Heuristic source-surface match confidence in [0,1]. This is review evidence, not implementation proof." .
+cml:evidenceSource a rdf:Property ;
+    rdfs:domain cml:AcquiredMethod ; rdfs:range xsd:string ;
+    rdfs:comment "Source file/page or media fragment from which the acquired method was extracted." .
+cml:sourceHash a rdf:Property ;
+    rdfs:domain cml:AcquiredMethod ; rdfs:range xsd:string ;
+    rdfs:comment "Content hash of the source document used for resumable/provenance-safe acquisition." .
+cml:nearestSourceSurface a rdf:Property ;
+    rdfs:domain cml:AcquiredMethod ; rdfs:range xsd:string ;
+    rdfs:comment "Nearest local source file from the source-surface mapper, when any meaningful match exists." .
+cml:implementationBrief a rdf:Property ;
+    rdfs:domain cml:AcquiredMethod ; rdfs:range xsd:string ;
+    rdfs:comment "Short reviewer guidance describing how the method should be handled additively." .
+
 cml:Modality a rdfs:Class .
 cml:Deontic a cml:Modality .       cml:Temporal a cml:Modality .
 cml:Defeasible a cml:Modality .    cml:Argumentation a cml:Modality .
@@ -112,3 +154,14 @@ cml:AttestedExactMatchShape a sh:NodeShape ;
     sh:property [ sh:path cml:curationStatus ; sh:hasValue cml:Attested ;
                   sh:minCount 1 ;
                   sh:message "skos:exactMatch requires cml:Attested (a signed authoritative human action); machine agents may assert only skos:closeMatch / skos:related." ] .
+
+cml:AcquiredMethodShape a sh:NodeShape ;
+    sh:targetClass cml:AcquiredMethod ;
+    sh:property [ sh:path cml:curationStatus ; sh:minCount 1 ;
+                  sh:message "cml:AcquiredMethod must carry cml:curationStatus; machine-generated acquisitions are cml:Proposed." ] ;
+    sh:property [ sh:path cml:methodDescription ; sh:minCount 1 ;
+                  sh:message "cml:AcquiredMethod must describe the acquired method." ] ;
+    sh:property [ sh:path cml:evidenceSource ; sh:minCount 1 ;
+                  sh:message "cml:AcquiredMethod must retain file/page or media-fragment evidence." ] ;
+    sh:property [ sh:path cml:surfaceRelation ; sh:minCount 1 ;
+                  sh:message "cml:AcquiredMethod must state its additive relation to the current source surface." ] .

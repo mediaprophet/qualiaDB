@@ -64,6 +64,22 @@ Instruments **propose; Timothy disposes** (he decides every merge). Each reports
     **Never run the full suite** (it pulls in the in-flight LLM/GPU tests + known pre-existing
     `wgpu`/concurrency failures that are NOT yours). A failure outside your *In scope* is not yours to
     fix — report it and continue.
+11. **QPU / quantum work is DEPRIORITIZED — do not do it yet (Timothy, 2026-06-25).** The quantum lane is
+    **intentionally not a priority**. Do **not** start work on the QPU / quantum subsystems or their audit
+    items, including: `solvers/qpu/**` (`dispatcher.rs`, `mod.rs`, `pre_solver.rs`),
+    `solvers/quantum_optimizers/**`, and any "QPU" / "quantum" bullets in
+    `audit_production_excellence_tasks.md`. Verifying existing state is fine; **building new QPU capability
+    is off the table until Timothy lifts this.** If a task seems to require QPU work, **stop and ask him.**
+12. **Big file → library with a sub-directory (Timothy, 2026-06-25).** When a source file is going to
+    become big (heading past ~400–500 lines, or mixing several concerns), make it a **library with a
+    sub-directory**: `foo.rs` → `foo/mod.rs` + focused `foo/<concern>.rs` submodules (each with its own
+    `#[cfg(test)]`). The `crate::…::foo::*` path is preserved by `mod.rs` — a safe, non-breaking split.
+    Do it *as* you add code, not after it sprawls. (Project rule, CLAUDE.md §10.)
+13. **Completeness bar — fully implement, do not skip (Timothy, 2026-06-25).** The acceptance test for any
+    library/module is: an independent reviewer asked "is this complete?" answers **yes**. A `// TODO`, an
+    `⚑ honest follow-up`, or a `◑ partial` left in place of real work is a **failure**, not honesty. The
+    *only* allowed deferral is a datum/decision only Timothy can supply (e.g. sensitive vocabulary he
+    reserves) — surfaced as one crisp ask. (Project rule, CLAUDE.md §11.)
 
 ---
 
