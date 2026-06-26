@@ -114,3 +114,38 @@ Status: ☐ not started · ◑ partial · ☑ done. Heap-count = `Vec/HashMap/Ar
 - **Measured:** `solvers::statistics::` → **18 passed**; `statistical_computing::` → **8 passed**.
 - **Next:** `machine_learning` / `medical_computing` / `financial_modeling` stats consumers
   → same `solvers/statistics` home; then the LA dynamic-GEMM home (coverage gap above).
+
+### 2026-06-26 — Stats column triage (honest finding)
+Drained the rest of the stats duplication and found it's **thin**, not a big seam:
+- `machine_learning.rs` — orchestration **scaffold over stubs** (`execute_inference` returns
+  hardcoded `output_data: vec![1u8;100], confidence: 0.95`). No real math kernels to migrate.
+- `financial_modeling` — has `normal_cdf`/`normal_pdf` (a genuine stats primitive) → routed
+  to a new `solvers/statistics/distributions.rs`; the rest is domain Black-Scholes.
+- `medical_computing` — no descriptive-stats math to migrate.
+So `statistical_computing` + financial's Gaussian were the real statistics duplication.
+
+### 2026-06-26 — geometric_algebra → solvers/ + simd_kernel split · **done (green)** · worktree `0.0.21-la`
+- **Moved** `geometric_algebra` (numeric GA: rotors/multivectors/geometric product — a
+  *solver*, not a logic modality) into `solvers/geometric_algebra/`; path-preserved via a
+  `crate::geometric_algebra` re-export in `lib.rs` (mcp/n3logic/wasm_playground untouched).
+- **Split** the 595-line `simd_kernel.rs` monolith into a library (§11): `simd_backend.rs`
+  (AVX2/FMA + `[f32;8]` kernels), `types.rs` (Multivector/Rotor/Translator), `operations.rs`
+  (grade-aware products, rotor/translator apply), `mod.rs` re-exporting verbatim.
+- **Measured:** `solvers::geometric_algebra::` → **14 passed**; lib builds clean.
+
+### 2026-06-26 — nalgebra review + LA phase 1 (Cholesky) · **done (green)** · worktree `0.0.21-la`
+- **Reviewed** nalgebra @5f927f6c vs qualia. Gaps: QR (Householder+col-pivot), **Cholesky**,
+  Givens/Householder primitives, Hessenberg→Schur, sym-tridiagonal, bidiagonal→SVD, exp/pow,
+  fast 2×2/3×3 SVD; geometry types (Rotation3, unit-quaternion+slerp, Isometry/Similarity,
+  perspective/orthographic projection, dual-quaternion). Plan: native, zero-heap, caller-owned,
+  **no dependency** — this is also the dynamic-LA home the consolidation needs.
+- **Built** `solvers/linear_algebra/cholesky.rs` — SPD factor + solve + determinant over
+  caller-owned row-major slices, fails closed on non-SPD. **6 tests pass.**
+- **Isolation:** all of this is on worktree `.worktrees/qualia-la` (branch `0.0.21-la`) off the
+  committed stats work, on its own target dir — clean of the main tree's uncommitted churn (the
+  `uuid`/`wgpu::Maintain` breakage in `services`/`lora` is *not* committed; confirmed by a clean
+  build here).
+- **Next (LA phase 1 cont.):** Householder + Givens primitives → QR (+ least-squares). Then
+  geometry types beside `geometric_algebra` (extend its rotors/quaternions, don't duplicate).
+- **⚑ Needs Timothy:** the geometry types will *extend* `geometric_algebra`'s existing
+  rotor/quaternion — confirm that's the intended home (vs a separate `solvers/geometry/`).
