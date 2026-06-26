@@ -1668,11 +1668,12 @@ impl EngineeringAnalysisLibrary {
             execution_time,
             computational_cost: 0.0,
             accuracy: None,
+            // Closed-form axial analysis: exact, no iteration — reported honestly.
             convergence_info: ConvergenceInfo {
                 converged: true,
-                iterations: 100,
-                convergence_criterion: 1e-6,
-                final_error: 1e-8,
+                iterations: 1,
+                convergence_criterion: 0.0,
+                final_error: 0.0,
             },
         })
     }
@@ -1828,10 +1829,58 @@ impl StructuralAnalyzer {
     }
 
     pub fn analyze(&mut self, model: &EngineeringModel, analysis_type: AnalysisType) -> Result<AnalysisResults, EngineeringError> {
-        // Perform analysis
-        let results = AnalysisResults::new();
+        // REAL first-principles axial strength-of-materials (a real member analysis, not full FEA):
+        //   stress σ = F / A,  strain ε = σ / E,  axial deflection δ = F·L / (A·E),
+        //   factor of safety FoS = σ_yield / |σ|.
+        // The safety_factor is GENUINELY COMPUTED from the material yield strength and the applied
+        // stress — never a fabricated constant (previously a hardcoded 2.5). Missing inputs are
+        // reported as InsufficientData, not silently defaulted.
+        let material = model.materials.values().next().ok_or_else(|| {
+            EngineeringError::InsufficientData(
+                "model has no material; cannot compute stress / factor of safety".to_string(),
+            )
+        })?;
+        let mp = &material.material_properties;
+        let e = mp.youngs_modulus;
+        let sy = mp.yield_strength;
 
-        Ok(results)
+        let dims = &model.geometry.dimensions;
+        if dims.len() < 2 || dims.iter().take(2).any(|&d| !(d > 0.0)) {
+            return Err(EngineeringError::InsufficientData(
+                "geometry needs at least two positive cross-section dimensions to form an area"
+                    .to_string(),
+            ));
+        }
+        let area = dims[0] * dims[1]; // cross-sectional area (m²)
+        let length = dims.get(2).copied().filter(|&l| l > 0.0).unwrap_or(dims[0]); // member length (m)
+
+        if model.loads.is_empty() {
+            return Err(EngineeringError::InsufficientData(
+                "model has no loads; cannot compute stress".to_string(),
+            ));
+        }
+        let force: f64 = model.loads.iter().map(|l| l.load_magnitude).sum(); // total axial load (N)
+
+        let stress = force / area; // Pa
+        let strain = if e > 0.0 { stress / e } else { 0.0 };
+        let displacement = if e > 0.0 { force * length / (area * e) } else { f64::INFINITY };
+        let safety_factor = if stress.abs() > 0.0 && sy > 0.0 {
+            sy / stress.abs()
+        } else if stress.abs() == 0.0 {
+            f64::INFINITY // no load ⇒ unbounded margin
+        } else {
+            0.0 // no yield strength supplied ⇒ no defined margin
+        };
+
+        Ok(AnalysisResults {
+            results_id: "structural_axial".to_string(),
+            analysis_type,
+            displacement_field: vec![displacement],
+            stress_field: vec![stress],
+            strain_field: vec![strain],
+            reaction_forces: vec![-force], // static equilibrium reaction
+            safety_factor,
+        })
     }
 
     pub fn list_analysis_types(&self) -> Vec<String> {
@@ -2220,11 +2269,17 @@ impl MechanicalAnalyzer {
         Ok(())
     }
 
-    pub fn analyze(&mut self, model: &EngineeringModel, analysis_type: AnalysisType) -> Result<AnalysisResults, EngineeringError> {
-        // Perform analysis
-        let results = AnalysisResults::new();
-
-        Ok(results)
+    pub fn analyze(&mut self, _model: &EngineeringModel, _analysis_type: AnalysisType) -> Result<AnalysisResults, EngineeringError> {
+        // NOT IMPLEMENTED — it must say so, never fabricate. The previous body returned a default
+        // AnalysisResults (empty fields + a hardcoded safety_factor) while ignoring the model.
+        // Real mechanical / thermal / fluid analysis over an arbitrary model needs a finite-element
+        // / finite-volume solver (mesh assembly + solve), not yet built. (Axial structural analysis
+        // IS implemented — see StructuralAnalyzer::analyze.)
+        Err(EngineeringError::NotImplemented(
+            "this analysis requires a finite-element/finite-volume solver over the model \
+             (mesh assembly + solve), which is not implemented"
+                .to_string(),
+        ))
     }
 }
 
@@ -2500,11 +2555,17 @@ impl ThermalAnalyzer {
         Ok(())
     }
 
-    pub fn analyze(&mut self, model: &EngineeringModel, analysis_type: AnalysisType) -> Result<AnalysisResults, EngineeringError> {
-        // Perform analysis
-        let results = AnalysisResults::new();
-
-        Ok(results)
+    pub fn analyze(&mut self, _model: &EngineeringModel, _analysis_type: AnalysisType) -> Result<AnalysisResults, EngineeringError> {
+        // NOT IMPLEMENTED — it must say so, never fabricate. The previous body returned a default
+        // AnalysisResults (empty fields + a hardcoded safety_factor) while ignoring the model.
+        // Real mechanical / thermal / fluid analysis over an arbitrary model needs a finite-element
+        // / finite-volume solver (mesh assembly + solve), not yet built. (Axial structural analysis
+        // IS implemented — see StructuralAnalyzer::analyze.)
+        Err(EngineeringError::NotImplemented(
+            "this analysis requires a finite-element/finite-volume solver over the model \
+             (mesh assembly + solve), which is not implemented"
+                .to_string(),
+        ))
     }
 }
 
@@ -2606,11 +2667,17 @@ impl FluidAnalyzer {
         Ok(())
     }
 
-    pub fn analyze(&mut self, model: &EngineeringModel, analysis_type: AnalysisType) -> Result<AnalysisResults, EngineeringError> {
-        // Perform analysis
-        let results = AnalysisResults::new();
-
-        Ok(results)
+    pub fn analyze(&mut self, _model: &EngineeringModel, _analysis_type: AnalysisType) -> Result<AnalysisResults, EngineeringError> {
+        // NOT IMPLEMENTED — it must say so, never fabricate. The previous body returned a default
+        // AnalysisResults (empty fields + a hardcoded safety_factor) while ignoring the model.
+        // Real mechanical / thermal / fluid analysis over an arbitrary model needs a finite-element
+        // / finite-volume solver (mesh assembly + solve), not yet built. (Axial structural analysis
+        // IS implemented — see StructuralAnalyzer::analyze.)
+        Err(EngineeringError::NotImplemented(
+            "this analysis requires a finite-element/finite-volume solver over the model \
+             (mesh assembly + solve), which is not implemented"
+                .to_string(),
+        ))
     }
 }
 
@@ -3025,7 +3092,8 @@ impl AnalysisResults {
             stress_field: Vec::new(),
             strain_field: Vec::new(),
             reaction_forces: Vec::new(),
-            safety_factor: 2.5,
+            // No analysis on a default-constructed value — 0, never a fabricated 2.5 safety factor.
+            safety_factor: 0.0,
         }
     }
 }
@@ -3062,6 +3130,10 @@ pub enum EngineeringError {
     ConvergenceError(String),
     DataError(String),
     AnalysisError(String),
+    /// The capability is not implemented yet — returned instead of a fabricated result.
+    NotImplemented(String),
+    /// The required input (material, geometry, loads, BCs, reference data) is not present.
+    InsufficientData(String),
 }
 
 impl std::fmt::Display for EngineeringError {
@@ -3073,6 +3145,10 @@ impl std::fmt::Display for EngineeringError {
             EngineeringError::ConvergenceError(msg) => write!(f, "Convergence error: {}", msg),
             EngineeringError::DataError(msg) => write!(f, "Data error: {}", msg),
             EngineeringError::AnalysisError(msg) => write!(f, "Analysis error: {}", msg),
+            EngineeringError::NotImplemented(msg) => write!(f, "Not implemented yet: {}", msg),
+            EngineeringError::InsufficientData(msg) => {
+                write!(f, "Required information not available: {}", msg)
+            }
         }
     }
 }
@@ -3235,12 +3311,45 @@ mod tests {
         let mut library = EngineeringAnalysisLibrary::new();
         library.initialize().unwrap();
         
-        let model = EngineeringModel::new();
-        let result = library.perform_structural_analysis(model, AnalysisType::LinearStatic).unwrap();
-        
-        assert_eq!(result.result.results_id, "results_1");
-        assert_eq!(result.result.analysis_type, AnalysisType::LinearStatic);
-        assert!(result.convergence_info.converged);
+        // Real axial member: steel (E=200000, σ_yield=250), area = 1×1, length = 2, axial load 50.
+        // ⇒ σ = F/A = 50,  FoS = σ_yield/σ = 5,  ε = σ/E,  δ = F·L/(A·E).
+        let mut model = EngineeringModel::new();
+        model.geometry.dimensions = vec![1.0, 1.0, 2.0];
+        model.materials.insert("steel".to_string(), Material::new()); // yield 250, E 200000
+        model.loads.push(Load {
+            load_id: "F".to_string(),
+            load_type: LoadType::Point,
+            load_magnitude: 50.0,
+            load_direction: vec![1.0, 0.0, 0.0],
+            application_point: vec![0.0, 0.0, 0.0],
+        });
+
+        let result = library
+            .perform_structural_analysis(model, AnalysisType::LinearStatic)
+            .unwrap();
+        let r = &result.result;
+        // REAL computed values, not a fabricated 2.5 safety factor.
+        assert!((r.stress_field[0] - 50.0).abs() < 1e-9, "stress = {}", r.stress_field[0]);
+        assert!((r.safety_factor - 5.0).abs() < 1e-9, "FoS = {}", r.safety_factor);
+        assert!((r.strain_field[0] - 50.0 / 200000.0).abs() < 1e-12);
+        assert!((r.displacement_field[0] - 50.0 * 2.0 / (1.0 * 200000.0)).abs() < 1e-12);
+        // A bigger load ⇒ smaller safety factor (monotonic, real physics).
+        let mut m2 = EngineeringModel::new();
+        m2.geometry.dimensions = vec![1.0, 1.0, 2.0];
+        m2.materials.insert("steel".to_string(), Material::new());
+        m2.loads.push(Load {
+            load_id: "F2".to_string(),
+            load_type: LoadType::Point,
+            load_magnitude: 100.0,
+            load_direction: vec![1.0, 0.0, 0.0],
+            application_point: vec![0.0, 0.0, 0.0],
+        });
+        let fos2 = library
+            .perform_structural_analysis(m2, AnalysisType::LinearStatic)
+            .unwrap()
+            .result
+            .safety_factor;
+        assert!(fos2 < r.safety_factor);
     }
 
     #[test]
@@ -3249,10 +3358,9 @@ mod tests {
         library.initialize().unwrap();
         
         let model = EngineeringModel::new();
-        let result = library.perform_mechanical_analysis(model, AnalysisType::LinearDynamic).unwrap();
-        
-        assert_eq!(result.result.results_id, "results_1");
-        assert!(result.convergence_info.converged);
+        // HONEST: mechanical FE analysis isn't implemented → NotImplemented, not a fake result.
+        let result = library.perform_mechanical_analysis(model, AnalysisType::LinearDynamic);
+        assert!(matches!(result, Err(EngineeringError::NotImplemented(_))));
     }
 
     #[test]
@@ -3261,10 +3369,9 @@ mod tests {
         library.initialize().unwrap();
         
         let model = EngineeringModel::new();
-        let result = library.perform_thermal_analysis(model, AnalysisType::Thermal).unwrap();
-        
-        assert_eq!(result.result.results_id, "results_1");
-        assert!(result.convergence_info.converged);
+        // HONEST: thermal FE analysis isn't implemented → NotImplemented, not a fake result.
+        let result = library.perform_thermal_analysis(model, AnalysisType::Thermal);
+        assert!(matches!(result, Err(EngineeringError::NotImplemented(_))));
     }
 
     #[test]
@@ -3273,10 +3380,9 @@ mod tests {
         library.initialize().unwrap();
         
         let model = EngineeringModel::new();
-        let result = library.perform_fluid_analysis(model, AnalysisType::LinearStatic).unwrap();
-        
-        assert_eq!(result.result.results_id, "results_1");
-        assert!(result.convergence_info.converged);
+        // HONEST: fluid (CFD) analysis isn't implemented → NotImplemented, not a fake result.
+        let result = library.perform_fluid_analysis(model, AnalysisType::LinearStatic);
+        assert!(matches!(result, Err(EngineeringError::NotImplemented(_))));
     }
 
     #[test]
