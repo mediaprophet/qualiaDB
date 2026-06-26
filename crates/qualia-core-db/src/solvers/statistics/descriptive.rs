@@ -104,6 +104,22 @@ pub fn max(values: &[f64]) -> Option<f64> {
         .reduce(|a, b| if b > a { b } else { a })
 }
 
+/// Index of the maximum value (the first on a tie) — the **argmax** selection used for greedy
+/// token decoding (choose the highest-scoring logit). `None` for an empty slice. Non-finite
+/// values compare by the usual `>` (a `NaN` never wins).
+pub fn argmax(values: &[f64]) -> Option<usize> {
+    if values.is_empty() {
+        return None;
+    }
+    let mut best = 0;
+    for i in 1..values.len() {
+        if values[i] > values[best] {
+            best = i;
+        }
+    }
+    Some(best)
+}
+
 #[cfg(test)]
 mod tests {
     use super::*;
@@ -119,6 +135,15 @@ mod tests {
         assert_eq!(median_sorted(&empty), None);
         assert_eq!(min(&empty), None);
         assert_eq!(max(&empty), None);
+        assert_eq!(argmax(&empty), None);
+    }
+
+    #[test]
+    fn argmax_selects_highest_index() {
+        assert_eq!(argmax(&[0.1, 0.7, 0.2]), Some(1));
+        assert_eq!(argmax(&[3.0, 3.0, 1.0]), Some(0)); // first on a tie
+        assert_eq!(argmax(&[-5.0, -2.0, -9.0]), Some(1));
+        let _ = EPS;
     }
 
     #[test]

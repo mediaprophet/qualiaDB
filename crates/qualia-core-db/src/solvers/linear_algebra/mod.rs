@@ -23,6 +23,8 @@ pub mod lu;
 pub mod svd;
 /// Matrix-spectral bridge: characteristic polynomial + general (non-symmetric) eigenvalues.
 pub mod spectral;
+/// Element-wise vector ops (add / Hadamard / scale / axpy) — residual stream + gated activations.
+pub mod vector;
 
 /// Fixed-size 4x4 matrix for stack-based operations
 #[repr(C)]

@@ -21,6 +21,7 @@ pub mod qpu;
 pub mod activation;
 pub mod attention;
 pub mod calculus;
+pub mod feed_forward;
 pub mod geometric_algebra;
 pub mod linear_algebra;
 pub mod optimization;
