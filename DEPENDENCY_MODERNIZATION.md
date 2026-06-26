@@ -1,25 +1,44 @@
-# Dependency Modernization — backlog
+# Dependency Modernization — execution wrapper
 
-**Standing rules:** [`CLAUDE.md`](CLAUDE.md) **§13** (modernize to the current dependency's API *and
-capabilities*, fix problems along the way — don't work around or step over) + **§14** (spawn sub-agents
-for appropriate, parallelizable work). Each item below is an independent, **worktree-isolatable** unit —
-the model case for a sub-agent; several can run in parallel.
+**Canonical inventory (the "what"):** `20260626_dependencyLeverageAudit.md` (repo root, Timothy's draft —
+items **A–K**; A–J are work, **K = already-modernized/verified-good**). **Version-bump tracker:**
+`20260626-eval-to-do-list.md` (12 categories — the *crates* are bumped/evaluated, but the *code* still
+needs the A–J modernizations). Both are **drafts, possibly incomplete** (Timothy maintains them).
 
-**This list is not exhaustive.** Timothy maintains the fuller `A…` set; the items here are the ones
-surfaced so far (F/G/H were named explicitly; wgpu is the one already breaking the build). Versions below
-are the actual pins (verified 2026-06-26).
+This file is the **execution wrapper (the "how")**: working the audit's items under
+[`CLAUDE.md`](CLAUDE.md) **§13** (modernize to the new API **and capabilities**, fix problems along the
+way) and **§14** (spawn sub-agents, each in its own worktree) — plus **lane cautions** and one correction.
 
-| Id | Dependency (pinned) | Modernize to | Likely call sites | Lane / caution |
-|----|----|----|----|----|
-| — | **wgpu 29** in `qualia-core-db` + `qualia-extensions`; **still 0.19** in `webizen-runtime` (0.19.4) + `webizen-render` (0.19) | drop the old ~0.20 surface (`wgpu::Maintain` → `PollType`) + adopt 29 capabilities; **unify the 0.19 crates up to 29** | `services/`, `lora/webgpu_lora.rs`, `gpu_context.rs`, gguf_bridge GPU dispatch; `webizen-runtime`/`render` | **breaking the build now**; gguf_bridge/shader bits = LLM lane → coordinate |
-| **F** | **naga 29** (`wgsl-in`, `qualia-core-db`) | shader reflection / validation / capabilities → naga 29 API | shader pipeline, `gpu_context.rs` | pairs with the wgpu 29 work |
-| **G** | **arkworks 0.6** (`ark-groth16`/`-relations`/`-snark`/`-ff`/`-serialize`/`-ec`/`-std`) | `CanonicalSerialize`/`Deserialize` + trait bounds → ark 0.6 surface & traits | `zk_proofs.rs`, `deontic_circuit.rs`, zk/fiduciary | zk-culling feature-gated |
-| **H** | **reqwest 0.13** (legacy `blocking` feature) | blocking I/O → async `Client` (hyper 1.0 streaming) | `qualia-client-core`; also `qualia-cli`, `webizen-component-harvester`; `qualia-semantic-library` still on **0.12** | ⚠ **`qualia-client-core` = Gemini's live lane — DO NOT spawn here; coordinate, don't duplicate.** The other crates' blocking users + the 0.12 bump are separate units. |
-| … | (others) | — | Timothy's fuller `A…` list | enumerate as surfaced |
+> ⚑ These two source drafts are currently **untracked at repo root** — Timothy may want them committed so
+> the worktrees/sub-agents see them; until then, read them by repo-root path.
 
-**Method per item (CLAUDE.md §13/§14):**
-- Own worktree (`isolation: "worktree"`); scoped strictly to that dependency's call sites.
-- Update call sites to the new API **and adopt its new capabilities** — not just "make it compile".
-- Green build + targeted tests pasted; behaviour preserved (or the change is the fix, stated plainly).
-- Per-step log + one `NOTICES.md` line.
-- **Never reach into another instrument's lane** — flag it (NOTICES + report) instead.
+## ⚠ Correction to verify (don't trust the draft blindly — the compiler is the authority)
+Audit **item E** states "`wgpu::PollType` is entirely removed … replaced by `wgpu::Maintain::Wait`."
+**That is backwards for wgpu 29.** The observed build error is `cannot find Maintain in wgpu` at
+`lora/webgpu_lora.rs:187` → in wgpu 29 **`Maintain` is the *removed* symbol; the current poll API is
+`PollType`**. Confirm against the wgpu 29.0.3 docs at execution time. (Flagged to Timothy to fix the draft;
+do not propagate either claim without checking the actual 29.0 API.)
+
+## Items × disposition (full detail + locations in the audit)
+| Id | Modernization (location) | Lane disposition |
+|----|----|----|
+| A | stream HTTP body → `tokio::fs` (kill `Vec<u8>` + blocking `std::fs::write`) — `daemon/webizen_server.rs` | services/daemon — also the `uuid` build-break site; own worktree |
+| B | warp → axum harmonize — `qualia-solid-bridge` (`solid_proxy.rs`, `oidc_micro_idp.rs`) | solid-bridge (ex-OIDC area) |
+| C | tiny_http → axum + `tower-http::ServeDir` — `qualia-client-core/qapps_protocol.rs` | ⚠ **qualia-client-core = Gemini's live lane — coordinate, DO NOT spawn** |
+| D | raw TCP websocket → axum `WebSocketUpgrade` — `qualia-cli/telemetry_server.rs` | qualia-cli |
+| E | wgpu instance/poll → wgpu 29 (**see correction above**) — `lora/webgpu_lora.rs` | ⚠ **LLM/lora lane — coordinate** |
+| F | WGSL → naga 29 caps (`f16`, matrix) for LoRA matmul — `lora/webgpu_lora.rs` | ⚠ **LLM/lora lane — coordinate**; perf-relevant |
+| G | arkworks 0.6 serialization (compressed / length-checked) — `specialized_libs/cryptographic_library` | crypto |
+| H | reqwest blocking → async `bytes_stream()` — `qualia-client-core` + `qualia-semantic-library` | ⚠ **client-core = Gemini's lane — coordinate**; semantic-library is separate |
+| I | `#[wasm_bindgen]` → `.wit` component model — `wellfare-core`, `webizen-web` | wasm |
+| J | `windows::core::Result` → `windows-result 0.4` — `inference/directml_bridge.rs` | inference (DirectML) |
+| K | already-modernized — base64/secp256k1/chrono/ash/clap/thiserror/dioxus/sysinfo/oxigraph | none (verified good) |
+
+**Method (§13/§14):** own worktree per item; update to the new API **and adopt its new capabilities**
+(not just "make it compile"); green build + targeted tests pasted; per-step log + one `NOTICES.md` line;
+behaviour preserved (or the change *is* the fix, stated plainly).
+
+**Parallelization (sub-agents):** good independent, non-lane-conflicting units → **A, B, D, G, J**.
+**Coordinate, never spawn into:** **C, H** (Gemini's `qualia-client-core`), **E, F** (LLM/lora lane —
+and they pair with the substrate GPU-backend work, so sequence them with that). Announce every sub-agent
+in `NOTICES.md`.
