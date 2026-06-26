@@ -677,58 +677,27 @@ impl LinearAlgebraLibrary {
             return Err(LinearAlgebraError::InvalidDimensions("Matrix and RHS dimensions incompatible".to_string()));
         }
 
-        // Solve using LU decomposition (simplified)
+        // Composition boundary: marshal into caller-owned buffers and solve via
+        // the engine's Householder QR (replaces an inline Gauss-Jordan duplicate).
+        // QR is numerically stable for the square nonsingular case and fails
+        // closed on a (near-)singular system.
+        use crate::solvers::linear_algebra::qr;
+        use crate::solvers::SolversError;
         let n = matrix.rows;
-        let mut solution_data = Vec::with_capacity(n);
-
-        // For demonstration, use simple Gaussian elimination
-        let mut augmented = Vec::with_capacity(n * (n + 1));
-        for i in 0..n {
-            for j in 0..n {
-                augmented.push(matrix.data[i * n + j]);
+        let mut a = matrix.data.clone(); // QR overwrites with R + reflectors
+        let mut tau = vec![0.0; n];
+        let mut b = rhs.data.clone(); // overwritten with Qᵀ·b
+        let mut solution_data = vec![0.0; n];
+        let map_err = |e: SolversError| match e {
+            SolversError::SingularMatrix => {
+                LinearAlgebraError::SingularMatrix("System is singular".to_string())
             }
-            augmented.push(rhs.data[i]);
-        }
-
-        // Gaussian elimination
-        for i in 0..n {
-            // Find pivot
-            let mut pivot_row = i;
-            for k in (i + 1)..n {
-                if (augmented[k * (n + 1) + i]).abs() > (augmented[pivot_row * (n + 1) + i]).abs() {
-                    pivot_row = k;
-                }
-            }
-
-            // Swap rows
-            for j in 0..(n + 1) {
-                augmented.swap(i * (n + 1) + j, pivot_row * (n + 1) + j);
-            }
-
-            // Eliminate column
-            let pivot = augmented[i * (n + 1) + i];
-            if pivot.abs() < 1e-10 {
-                return Err(LinearAlgebraError::SingularMatrix("System is singular".to_string()));
-            }
-
-            for j in i..(n + 1) {
-                augmented[i * (n + 1) + j] /= pivot;
-            }
-
-            for k in 0..n {
-                if k != i {
-                    let factor = augmented[k * (n + 1) + i];
-                    for j in i..(n + 1) {
-                        augmented[k * (n + 1) + j] -= factor * augmented[i * (n + 1) + j];
-                    }
-                }
-            }
-        }
-
-        // Extract solution
-        for i in 0..n {
-            solution_data.push(augmented[i * (n + 1) + n]);
-        }
+            _ => LinearAlgebraError::InvalidDimensions(
+                "matrix/RHS dimensions incompatible".to_string(),
+            ),
+        };
+        qr::qr_factor(n, n, &mut a, &mut tau).map_err(map_err)?;
+        qr::qr_solve_least_squares(n, n, &a, &tau, &mut b, &mut solution_data).map_err(map_err)?;
 
         // Create result matrix
         let result = self.create_matrix(

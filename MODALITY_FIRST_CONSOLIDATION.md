@@ -188,3 +188,24 @@ So `statistical_computing` + financial's Gaussian were the real statistics dupli
   engine home, then hollow.
 - **Next:** Householder + Givens → QR (+ least-squares) in `solvers/linear_algebra`.
 - **⚑ Needs Timothy:** none this step.
+
+### 2026-06-26 — LA phase 4: Householder QR + least-squares, reroute square solve · **done (green)** · worktree `0.0.21-la`
+- **Built** `solvers/linear_algebra/qr.rs` — the engine's missing stable factorisation (prior LA had
+  only fixed `Matrix4x4` LU + the silo's heap routines). Householder `qr_factor` (in-place LAPACK
+  `geqrf` layout: R in the upper triangle, reflectors below, scalings in `tau`), `qr_form_q` (thin
+  `Q`), and `qr_solve_least_squares` (applies `Qᵀ`, back-substitutes `R`). **Zero allocation,
+  caller-owned, fail-closed** with a **scale-relative** rank check (a pivot small vs the largest `R`
+  diagonal → `SingularMatrix`, not a divide-by-~0). Solves square systems *and* overdetermined
+  least-squares — numerically stable, no `AᵀA` conditioning blow-up.
+- **Rerouted** `specialized_libs/linear_algebra.rs::solve_linear_system` (was an inline Gauss-Jordan
+  duplicate) → engine QR. Inline elimination deleted; the wrapper marshals into caller-owned buffers
+  and calls the engine. Same solution for nonsingular systems; both fail closed on singular (QR uses
+  the relative tol, old used an absolute `1e-10` pivot).
+- **Measured:** `solvers::linear_algebra::qr::` → **8 passed** (square + tall reconstruct `Q·R==A`,
+  `QᵀQ==I`, exact + noisy line-fit least-squares with hand-checked normal-equations values, rank-
+  deficient fail-closed, bad-dims). Full `linear_algebra` filter → **50 passed**, no regressions.
+- **Next:** relocate the dynamic `lu_decompose`/`determinant`/`eigen_symmetric`/`svd` free functions
+  (currently misplaced in `specialized_libs/linear_algebra.rs`, Vec-based) into the engine
+  `solvers/linear_algebra` as their canonical home, then hollow the silo's `determinant`/
+  `matrix_inverse` methods to call them. Then Givens rotations (for selective zeroing / RQ).
+- **⚑ Needs Timothy:** none this step.

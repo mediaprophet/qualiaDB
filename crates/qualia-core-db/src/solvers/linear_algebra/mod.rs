@@ -13,6 +13,8 @@ use core::f64::consts;
 pub mod gemm;
 /// Dynamic-size, caller-owned-buffer decompositions (nalgebra-parity, zero-heap).
 pub mod cholesky;
+/// Householder QR factorisation + least-squares solve (caller-owned, zero-heap).
+pub mod qr;
 
 /// Fixed-size 4x4 matrix for stack-based operations
 #[repr(C)]
