@@ -854,6 +854,42 @@ fn rope_inplace(
     }
 }
 
+/// STEM-grounding proof: the LLM's `rope_inplace` is the 2-D rotation defined in
+/// `solvers::rope` — RoPE is trigonometry (a rotation per dimension pair), not a proprietary
+/// operation. The inline `f32` kernel is checked against the `f64` STEM definition.
+#[cfg(test)]
+mod rope_stem_parity_tests {
+    #[test]
+    fn rope_kernel_is_the_stem_rotation() {
+        let n_heads = 2usize;
+        let head_dim = 8usize;
+        let (pos, base, scale) = (7u32, 10000.0f32, 1.0f32);
+        let xs: Vec<f32> = (0..n_heads * head_dim).map(|i| (i as f32 - 8.0) * 0.25).collect();
+
+        let mut got = xs.clone();
+        super::rope_inplace(&mut got, n_heads, head_dim, pos, base, scale);
+
+        let mut want: Vec<f64> = xs.iter().map(|&v| v as f64).collect();
+        crate::solvers::rope::rope_interleaved(
+            &mut want,
+            n_heads,
+            head_dim,
+            pos as f64,
+            base as f64,
+            scale as f64,
+        );
+
+        for i in 0..xs.len() {
+            assert!(
+                (got[i] as f64 - want[i]).abs() < 1e-4,
+                "RoPE kernel diverges from solvers::rope at {i}: {} vs {}",
+                got[i],
+                want[i]
+            );
+        }
+    }
+}
+
 /// Zero-heap CPU GEMM: `out[i] = dot(weight_row(i), input)` with per-row dequant.
 fn stack_gemm_quant(
     raw: &[u8],

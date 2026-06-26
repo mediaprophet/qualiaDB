@@ -19,11 +19,13 @@
 pub mod qpu;
 
 pub mod activation;
+pub mod attention;
 pub mod calculus;
 pub mod geometric_algebra;
 pub mod linear_algebra;
 pub mod optimization;
 pub mod polynomial;
+pub mod rope;
 pub mod quantum_optimizers;
 pub mod statistics;
 pub mod symbolic_logic;
