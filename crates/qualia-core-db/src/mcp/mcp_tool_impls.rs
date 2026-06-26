@@ -1058,7 +1058,7 @@ pub fn financial_model(args: &[u8]) -> Result<String, McpSystemError> {
 
 pub fn medical_score(args: &[u8]) -> Result<String, McpSystemError> {
     use crate::specialized_libs::medical_computing::{
-        ClinicalDataType, MedicalComputingLibrary, Patient,
+        ClinicalDataType, MedicalComputingLibrary, MedicalError, Patient,
     };
 
     let v = parse_tool_args(args)?;
@@ -1091,7 +1091,14 @@ pub fn medical_score(args: &[u8]) -> Result<String, McpSystemError> {
     };
     let r = lib
         .analyze_clinical_data(&patient_id, data_type)
-        .map_err(|_| McpSystemError::InvalidParameters)?;
+        // Honesty propagates to the tool surface: a not-implemented / data-missing capability
+        // reports "not implemented", never a fabricated diagnosis dressed as a valid result.
+        .map_err(|e| match e {
+            MedicalError::NotImplemented(_) | MedicalError::InsufficientData(_) => {
+                McpSystemError::ToolNotReady
+            }
+            _ => McpSystemError::InvalidParameters,
+        })?;
 
     Ok(json!({
         "patient_id": patient_id,

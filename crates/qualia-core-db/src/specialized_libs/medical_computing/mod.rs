@@ -3436,17 +3436,17 @@ impl ClinicalAnalyzer {
     }
 
     pub fn analyze_data(&mut self, _patient: &Patient, _data_type: ClinicalDataType) -> Result<ClinicalAnalysis, MedicalError> {
-        // HONEST FAIL-CLOSED. No diagnostic computation is implemented here (the
-        // `diagnostic_algorithms` registry is empty): this analyzer performs no clinical
-        // reasoning. It must NOT emit a diagnosis. Previously it returned
-        // `ClinicalAnalysis::new()` — confidence_score: 0.95 with empty findings and
-        // recommendations — and that fabricated 95% confidence was surfaced verbatim through
-        // the `medical_compute` MCP tool as the confidence on a clinical diagnosis. A false
-        // confidence on a medical diagnosis is unacceptable; fail closed until a real,
-        // validated diagnostic backend exists.
-        Err(MedicalError::ClinicalError(
-            "clinical analysis not implemented: no diagnostic computation is performed; \
-             refusing to emit a fabricated diagnosis or confidence"
+        // NOT IMPLEMENTED — and it must say so, never fabricate. No diagnostic reasoning is
+        // wired here (the `diagnostic_algorithms` registry is empty). Previously this returned
+        // `ClinicalAnalysis::new()` (confidence_score 0.95, empty findings), and that fake 95%
+        // confidence was surfaced through the `medical_compute` MCP tool as the confidence on a
+        // clinical diagnosis — a dangerous, deceptive output. Real implementation requires a
+        // VALIDATED diagnostic model plus a curated clinical ontology / knowledge base; until
+        // those are supplied this capability cannot produce a result. See the to-do register.
+        Err(MedicalError::NotImplemented(
+            "clinical diagnostic analysis (analyze_clinical_data): requires a validated \
+             diagnostic model and a curated clinical ontology/knowledge base, which are not \
+             present. Refusing to emit a fabricated diagnosis or confidence."
                 .to_string(),
         ))
     }
@@ -3585,11 +3585,17 @@ impl MedicalImaging {
         Ok(())
     }
 
-    pub fn process_image(&mut self, image: &MedicalImage, processing_type: ImageProcessingType) -> Result<ProcessedImage, MedicalError> {
-        // Process image
-        let processed_image = ProcessedImage::new();
-
-        Ok(processed_image)
+    pub fn process_image(&mut self, _image: &MedicalImage, _processing_type: ImageProcessingType) -> Result<ProcessedImage, MedicalError> {
+        // NOT IMPLEMENTED — it must say so, never fabricate. Previously this returned a default
+        // `ProcessedImage::new()` without touching the input image: a medical-image "analysis"
+        // that analysed nothing. Real implementation requires an actual imaging pipeline
+        // (reconstruction / enhancement / segmentation) and, for any diagnostic readout, a
+        // validated model. See the to-do register.
+        Err(MedicalError::NotImplemented(
+            "medical image processing (process_medical_image): no imaging pipeline is \
+             implemented; refusing to return an unprocessed image as if analysed."
+                .to_string(),
+        ))
     }
 }
 
@@ -3679,11 +3685,16 @@ impl DrugDiscovery {
         Ok(())
     }
 
-    pub fn screen_compounds(&mut self, compounds: &[Compound], target: &DrugTarget) -> Result<ScreeningResults, MedicalError> {
-        // Screen compounds
-        let results = ScreeningResults::new();
-
-        Ok(results)
+    pub fn screen_compounds(&mut self, _compounds: &[Compound], _target: &DrugTarget) -> Result<ScreeningResults, MedicalError> {
+        // NOT IMPLEMENTED — it must say so, never fabricate. Previously this returned a default
+        // `ScreeningResults::new()` (hit_rate 0.05, no compounds actually screened) regardless
+        // of the inputs — a fabricated drug-screening result. Real implementation requires
+        // structure/affinity models and compound/target reference data. See the to-do register.
+        Err(MedicalError::NotImplemented(
+            "virtual compound screening (screen_compounds): requires binding-affinity / \
+             structure models and compound/target reference data, which are not present."
+                .to_string(),
+        ))
     }
 }
 
@@ -4185,7 +4196,9 @@ impl ClinicalAnalysis {
             analysis_type: ClinicalDataType::Diagnosis,
             findings: Vec::new(),
             recommendations: Vec::new(),
-            confidence_score: 0.95,
+            // No analysis has run on a default-constructed value — confidence is 0, never a
+            // fabricated 0.95. (The diagnostic path returns NotImplemented rather than this.)
+            confidence_score: 0.0,
         }
     }
 }
@@ -4209,7 +4222,8 @@ impl ScreeningResults {
             target_id: "target_1".to_string(),
             screened_compounds: Vec::new(),
             hit_compounds: Vec::new(),
-            hit_rate: 0.05,
+            // Nothing screened on a default value — hit_rate is 0, never a fabricated 0.05.
+            hit_rate: 0.0,
             screening_metrics: ScreeningMetrics::new(),
         }
     }
@@ -4366,6 +4380,13 @@ pub enum MedicalError {
     ComplianceError(String),
     PrivacyError(String),
     DataError(String),
+    /// The capability is not implemented yet. Returned INSTEAD of fabricating a clinical
+    /// result. A medical routine that cannot validly compute a result must say so — never
+    /// emit a confident fake. The string names the capability + what real implementation needs.
+    NotImplemented(String),
+    /// The capability exists but the required input — a validated model, a medical ontology,
+    /// a knowledge base, reference data — is not available, so no result can be produced.
+    InsufficientData(String),
 }
 
 impl std::fmt::Display for MedicalError {
@@ -4379,6 +4400,10 @@ impl std::fmt::Display for MedicalError {
             MedicalError::ComplianceError(msg) => write!(f, "Compliance error: {}", msg),
             MedicalError::PrivacyError(msg) => write!(f, "Privacy error: {}", msg),
             MedicalError::DataError(msg) => write!(f, "Data error: {}", msg),
+            MedicalError::NotImplemented(msg) => write!(f, "Not implemented yet: {}", msg),
+            MedicalError::InsufficientData(msg) => {
+                write!(f, "Required information not available: {}", msg)
+            }
         }
     }
 }
@@ -4431,11 +4456,10 @@ mod tests {
         library.initialize().unwrap();
         
         let image = MedicalImage::new();
-        let result = library.process_medical_image(image, ImageProcessingType::Enhancement).unwrap();
-        
-        assert_eq!(result.result.processed_image_id, "processed_1");
-        assert_eq!(result.result.processing_type, ImageProcessingType::Enhancement);
-        assert!(result.privacy_score.is_none());
+        // HONEST: no imaging pipeline is implemented, so this reports NotImplemented rather
+        // than returning an unprocessed image as if it had been analysed.
+        let result = library.process_medical_image(image, ImageProcessingType::Enhancement);
+        assert!(matches!(result, Err(MedicalError::NotImplemented(_))));
     }
 
     #[test]
@@ -4445,12 +4469,11 @@ mod tests {
         
         let compounds = vec![Compound::new()];
         let target = DrugTarget::new();
-        
-        let result = library.screen_compounds(compounds, target).unwrap();
-        
-        assert_eq!(result.result.results_id, "screening_1");
-        assert!(result.result.hit_rate > 0.0);
-        assert!(result.privacy_score.is_none());
+
+        // HONEST: no screening models / reference data, so this reports NotImplemented rather
+        // than fabricating a hit_rate from compounds it never actually screened.
+        let result = library.screen_compounds(compounds, target);
+        assert!(matches!(result, Err(MedicalError::NotImplemented(_))));
     }
 
     #[test]
