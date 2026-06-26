@@ -6,5 +6,7 @@
 //! `stats_plan.md`).
 
 pub mod hmm;
+pub mod kalman;
 
 pub use hmm::{baum_welch, Hmm};
+pub use kalman::KalmanFilter;

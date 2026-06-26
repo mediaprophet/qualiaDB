@@ -7,7 +7,9 @@
 //! `stats_plan.md`).
 
 pub mod gmm;
+pub mod hierarchical;
 pub mod kmeans;
 
 pub use gmm::{fit as fit_gmm, GmmModel};
+pub use hierarchical::{Hierarchical, Linkage};
 pub use kmeans::{fit as fit_kmeans, KMeansModel};
