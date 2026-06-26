@@ -1440,12 +1440,13 @@ impl ChemistryModelingLibrary {
             result: results,
             execution_time,
             computational_cost: 0.0,
-            accuracy: 0.0, // not measured (scaffold default; no validation performed)
+            accuracy: 0.0, // not measured against experiment (the Arrhenius model itself is exact)
+            // Closed-form Arrhenius evaluation: exact, no iteration — report that honestly.
             convergence_info: ConvergenceInfo {
                 converged: true,
-                iterations: 100,
-                convergence_criterion: 1e-6,
-                final_error: 1e-8,
+                iterations: 1,
+                convergence_criterion: 0.0,
+                final_error: 0.0,
             },
         })
     }
@@ -1529,34 +1530,19 @@ impl MolecularSimulator {
         Ok(())
     }
 
-    pub fn run_simulation(&mut self, config: &SimulationConfig, molecule: &Molecule) -> Result<SimulationTrajectory, ChemistryError> {
-        // Initialize simulation
-        let mut trajectory = SimulationTrajectory::new();
-
-        // Run simulation steps
-        let num_steps = (config.total_time / config.time_step) as usize;
-        for step in 0..num_steps {
-            let time = step as f64 * config.time_step;
-            
-            // Create frame
-            let frame = SimulationFrame {
-                frame_id: format!("frame_{}", step),
-                time,
-                coordinates: molecule.coordinates.clone(),
-                velocities: vec![vec![0.0; 3]; molecule.atoms.len()],
-                forces: vec![vec![0.0; 3]; molecule.atoms.len()],
-                energy: FrameEnergy {
-                    kinetic: 0.0,
-                    potential: 0.0,
-                    total: 0.0,
-                },
-            };
-
-            trajectory.frames.push(frame);
-            trajectory.time_steps.push(time);
-        }
-
-        Ok(trajectory)
+    pub fn run_simulation(&mut self, _config: &SimulationConfig, _molecule: &Molecule) -> Result<SimulationTrajectory, ChemistryError> {
+        // NOT IMPLEMENTED — it must say so, never fabricate. The previous body emitted a
+        // "trajectory" in which the atoms never moved: every frame cloned the same coordinates
+        // with zero velocities, zero forces, and zero energy — a simulation that simulated
+        // nothing. Real molecular dynamics requires a force field (e.g. Lennard-Jones + bonded
+        // terms) and a symplectic integrator (velocity-Verlet); that is a genuine numerical
+        // implementation, tracked as a real-impl TODO. Until then it refuses rather than fake it.
+        Err(ChemistryError::NotImplemented(
+            "molecular dynamics (run_molecular_dynamics): requires a force field and a \
+             velocity-Verlet integrator; not yet implemented. Refusing to emit a static, \
+             zero-force trajectory as if simulated."
+                .to_string(),
+        ))
     }
 
     pub fn list_force_fields(&self) -> Vec<String> {
@@ -2139,11 +2125,18 @@ impl QuantumCalculator {
         Ok(())
     }
 
-    pub fn calculate_properties(&mut self, molecule: &Molecule, method: QuantumMethodType) -> Result<QuantumProperties, ChemistryError> {
-        // Calculate quantum properties
-        let properties = QuantumProperties::new();
-
-        Ok(properties)
+    pub fn calculate_properties(&mut self, _molecule: &Molecule, _method: QuantumMethodType) -> Result<QuantumProperties, ChemistryError> {
+        // NOT IMPLEMENTED — it must say so, never fabricate. The previous body returned a default
+        // `QuantumProperties` (hardcoded energies / HOMO-LUMO) without solving anything. Real
+        // quantum-chemistry properties require an actual electronic-structure method (Hartree-Fock
+        // or DFT: integral evaluation + SCF) and a basis set — a major numerical subsystem with
+        // reference data. Refusing rather than emitting fabricated molecular energies.
+        Err(ChemistryError::NotImplemented(
+            "quantum property calculation (calculate_quantum_properties): requires a real \
+             electronic-structure method (Hartree-Fock/DFT, SCF) and a basis set, which are \
+             not implemented."
+                .to_string(),
+        ))
     }
 }
 
@@ -2307,10 +2300,73 @@ impl ReactionAnalyzer {
     }
 
     pub fn analyze_kinetics(&mut self, reaction: &Reaction, conditions: &ReactionConditions) -> Result<KineticsResults, ChemistryError> {
-        // Analyze kinetics
-        let results = KineticsResults::new();
+        // REAL chemical kinetics via the Arrhenius equation:  k = A·exp(−Ea / (R·T)).
+        // The mechanism's rate-determining step (highest activation energy) governs the overall
+        // rate. `ReactionStep.rate_constant` is taken as the pre-exponential / frequency factor A
+        // and `activation_energy` as Ea in kJ/mol. Half-life follows from the reaction order.
+        const R: f64 = 8.314_462_618; // universal gas constant, J/(mol·K)
 
-        Ok(results)
+        let t = conditions.temperature; // Kelvin
+        if !(t.is_finite() && t > 0.0) {
+            return Err(ChemistryError::ValidationError(
+                "temperature must be a positive value in Kelvin".to_string(),
+            ));
+        }
+
+        // Rate-determining elementary step = the one with the highest activation barrier.
+        let rds = reaction
+            .mechanism
+            .steps
+            .iter()
+            .max_by(|a, b| {
+                a.activation_energy
+                    .partial_cmp(&b.activation_energy)
+                    .unwrap_or(std::cmp::Ordering::Equal)
+            })
+            .ok_or_else(|| {
+                ChemistryError::InsufficientData(
+                    "reaction has no mechanism steps; cannot determine rate-determining step"
+                        .to_string(),
+                )
+            })?;
+
+        let a_factor = rds.rate_constant; // pre-exponential (frequency) factor A
+        let ea_kj = rds.activation_energy; // kJ/mol
+        if !(a_factor.is_finite() && ea_kj.is_finite()) {
+            return Err(ChemistryError::ValidationError(
+                "rate-determining step has non-finite A or Ea".to_string(),
+            ));
+        }
+        let ea_j = ea_kj * 1000.0; // kJ/mol → J/mol
+        let rate_constant = a_factor * (-ea_j / (R * t)).exp(); // k(T)
+
+        // Overall order ≈ number of distinct reactant species (elementary-rate approximation).
+        let reaction_order = reaction.reactants.len().max(1) as u32;
+
+        // Initial concentration of the first reactant (for order-dependent half-life).
+        let c0 = reaction
+            .reactants
+            .first()
+            .and_then(|name| conditions.concentration.get(name).copied())
+            .unwrap_or(1.0);
+
+        // Half-life by integrated rate law.
+        let half_life = if rate_constant <= 0.0 {
+            f64::INFINITY
+        } else {
+            match reaction_order {
+                0 => c0 / (2.0 * rate_constant),                       // t½ = [A]₀ / 2k
+                2 => if c0 > 0.0 { 1.0 / (rate_constant * c0) } else { f64::INFINITY }, // 1 / (k[A]₀)
+                _ => std::f64::consts::LN_2 / rate_constant,           // first order: ln2 / k
+            }
+        };
+
+        Ok(KineticsResults {
+            rate_constant,
+            activation_energy: ea_kj,
+            reaction_order,
+            half_life,
+        })
     }
 }
 
@@ -2665,13 +2721,16 @@ impl PropertyPredictor {
         Ok(())
     }
 
-    pub fn predict(&mut self, molecule: &Molecule, properties: &[PropertyType]) -> Result<PredictedProperties, ChemistryError> {
-        let mut predicted = PredictedProperties::new();
-        for prop in properties {
-            let key = format!("{:?}", prop);
-            predicted.properties.insert(key, 0.0);
-        }
-        Ok(predicted)
+    pub fn predict(&mut self, _molecule: &Molecule, _properties: &[PropertyType]) -> Result<PredictedProperties, ChemistryError> {
+        // NOT IMPLEMENTED — it must say so, never fabricate. The previous body inserted 0.0 for
+        // every requested property: a "prediction" that predicts nothing. Real property
+        // prediction needs validated QSPR / group-contribution models and reference data per
+        // property. Refusing rather than returning placeholder zeros dressed as predictions.
+        Err(ChemistryError::NotImplemented(
+            "molecular property prediction (predict_properties): requires validated QSPR / \
+             group-contribution models and reference data, which are not present."
+                .to_string(),
+        ))
     }
 }
 
@@ -3056,6 +3115,10 @@ pub enum ChemistryError {
     PropertyError(String),
     DataError(String),
     ConvergenceError(String),
+    /// The capability is not implemented yet — returned instead of a fabricated result.
+    NotImplemented(String),
+    /// The required input (parameters, reference data, a model) is not present.
+    InsufficientData(String),
 }
 
 impl std::fmt::Display for ChemistryError {
@@ -3068,6 +3131,10 @@ impl std::fmt::Display for ChemistryError {
             ChemistryError::PropertyError(msg) => write!(f, "Property error: {}", msg),
             ChemistryError::DataError(msg) => write!(f, "Data error: {}", msg),
             ChemistryError::ConvergenceError(msg) => write!(f, "Convergence error: {}", msg),
+            ChemistryError::NotImplemented(msg) => write!(f, "Not implemented yet: {}", msg),
+            ChemistryError::InsufficientData(msg) => {
+                write!(f, "Required information not available: {}", msg)
+            }
         }
     }
 }
@@ -3091,12 +3158,11 @@ mod tests {
         
         let config = SimulationConfig::new();
         let molecule = Molecule::new();
-        
-        let result = library.run_molecular_dynamics(config, molecule).unwrap();
-        
-        assert_eq!(result.result.trajectory_id, "traj_1");
-        assert!(result.result.frames.len() > 0);
-        assert!(result.convergence_info.converged);
+
+        // HONEST: no force field / integrator, so MD reports NotImplemented rather than
+        // emitting a static zero-force "trajectory".
+        let result = library.run_molecular_dynamics(config, molecule);
+        assert!(matches!(result, Err(ChemistryError::NotImplemented(_))));
     }
 
     #[test]
@@ -3106,12 +3172,11 @@ mod tests {
         
         let molecule = Molecule::new();
         let method = QuantumMethodType::HartreeFock;
-        
-        let result = library.calculate_quantum_properties(molecule, method).unwrap();
-        
-        assert!(result.result.total_energy < 0.0);
-        assert!(result.result.gap > 0.0);
-        assert!(result.convergence_info.converged);
+
+        // HONEST: no real electronic-structure method, so it reports NotImplemented rather than
+        // returning fabricated molecular energies.
+        let result = library.calculate_quantum_properties(molecule, method);
+        assert!(matches!(result, Err(ChemistryError::NotImplemented(_))));
     }
 
     #[test]
@@ -3119,14 +3184,32 @@ mod tests {
         let mut library = ChemistryModelingLibrary::new();
         library.initialize().unwrap();
         
-        let reaction = Reaction::new();
-        let conditions = ReactionConditions::new();
-        
+        let reaction = Reaction::new(); // 1 step: A=1.0, Ea=10.0 kJ/mol; reactant "A"
+        let conditions = ReactionConditions::new(); // T = 298.15 K
+
         let result = library.analyze_reaction_kinetics(reaction, conditions).unwrap();
-        
-        assert!(result.result.rate_constant > 0.0);
-        assert!(result.result.activation_energy > 0.0);
-        assert!(result.convergence_info.converged);
+
+        // Verify the REAL Arrhenius value, not just ">0": k = A·exp(−Ea/(R·T)).
+        const R: f64 = 8.314_462_618;
+        let expected_k = 1.0 * (-10_000.0 / (R * 298.15)).exp();
+        assert!(
+            (result.result.rate_constant - expected_k).abs() < 1e-12,
+            "k = {} != Arrhenius {}",
+            result.result.rate_constant,
+            expected_k
+        );
+        assert_eq!(result.result.reaction_order, 1);
+        // First-order half-life t½ = ln2 / k.
+        assert!((result.result.half_life - std::f64::consts::LN_2 / expected_k).abs() < 1e-9);
+        // Higher temperature ⇒ larger rate constant (Arrhenius monotonicity).
+        let mut hot = ReactionConditions::new();
+        hot.temperature = 400.0;
+        let k_hot = library
+            .analyze_reaction_kinetics(Reaction::new(), hot)
+            .unwrap()
+            .result
+            .rate_constant;
+        assert!(k_hot > result.result.rate_constant);
     }
 
     #[test]
@@ -3136,11 +3219,11 @@ mod tests {
         
         let molecule = Molecule::new();
         let properties = vec![PropertyType::BoilingPoint];
-        
-        let result = library.predict_properties(molecule, properties).unwrap();
-        
-        assert!(result.result.properties.contains_key("BoilingPoint"));
-        assert!(result.convergence_info.converged);
+
+        // HONEST: no QSPR/group-contribution models, so it reports NotImplemented rather than
+        // returning placeholder zeros dressed as predictions.
+        let result = library.predict_properties(molecule, properties);
+        assert!(matches!(result, Err(ChemistryError::NotImplemented(_))));
     }
 
     #[test]
