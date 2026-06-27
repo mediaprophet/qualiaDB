@@ -14,7 +14,10 @@ core_affinity = "0.8"
 
 [dev-dependencies]
 dhat = "0.3"
+# warp's in-process test harness (warp::test) for the bridge-route gating tests.
+warp = { version = "0.4", features = ["test"] }
 
 [features]
+demo = []
 dhat-heap = []
 

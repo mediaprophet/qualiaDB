@@ -1,5 +1,25 @@
 use warp::Filter;
 
+/// Routes exposed by the Solid bridge in production/default builds.
+///
+/// The mock OIDC provider is intentionally excluded unless the non-default
+/// `demo` feature is enabled. Qualia acts as a Solid resource bridge by default;
+/// production WebID-OIDC provider support must be a separate audited identity
+/// subsystem (see `NON_GOALS.md`).
+pub fn bridge_routes() -> impl Filter<Extract = impl warp::Reply, Error = warp::Rejection> + Clone {
+    let ldp_routes = crate::ldp_translator::ldp_routes();
+
+    #[cfg(feature = "demo")]
+    {
+        crate::oidc_micro_idp::oidc_routes().or(ldp_routes)
+    }
+
+    #[cfg(not(feature = "demo"))]
+    {
+        ldp_routes
+    }
+}
+
 /// Starts the Solid Bridge Proxy Daemon
 ///
 /// Implements the "Tokio Perimeter Firewall" as mandated by the Qualia Core.
@@ -21,18 +41,59 @@ pub fn start_proxy_daemon() {
     }
 
     rt.block_on(async {
-        // Define the WARP routes
-        let oidc_routes = crate::oidc_micro_idp::oidc_routes();
-        let ldp_routes = crate::ldp_translator::ldp_routes();
-
         let cors = warp::cors()
             .allow_any_origin()
             .allow_headers(vec!["Authorization", "Content-Type", "Accept"])
             .allow_methods(vec!["GET", "POST", "PUT", "DELETE", "OPTIONS"]);
 
-        let api = oidc_routes.or(ldp_routes).with(cors);
+        let api = bridge_routes().with(cors);
 
         println!("🟢 WebID-Webizen Bridge listening at http://127.0.0.1:4243");
         warp::serve(api).run(([127, 0, 0, 1], 4243)).await;
     });
+}
+
+#[cfg(test)]
+mod tests {
+    use super::*;
+    use warp::http::StatusCode;
+
+    #[tokio::test]
+    async fn ldp_routes_remain_available_without_provider() {
+        let response = warp::test::request()
+            .method("GET")
+            .path("/public/card")
+            .reply(&bridge_routes())
+            .await;
+
+        assert_eq!(response.status(), StatusCode::OK);
+        assert_eq!(
+            response.headers().get("content-type").unwrap(),
+            "text/turtle"
+        );
+    }
+
+    #[cfg(not(feature = "demo"))]
+    #[tokio::test]
+    async fn oidc_provider_routes_are_unreachable_without_demo() {
+        let response = warp::test::request()
+            .method("GET")
+            .path("/.well-known/openid-configuration")
+            .reply(&bridge_routes())
+            .await;
+
+        assert_eq!(response.status(), StatusCode::NOT_FOUND);
+    }
+
+    #[cfg(feature = "demo")]
+    #[tokio::test]
+    async fn oidc_provider_routes_are_demo_only() {
+        let response = warp::test::request()
+            .method("GET")
+            .path("/.well-known/openid-configuration")
+            .reply(&bridge_routes())
+            .await;
+
+        assert_eq!(response.status(), StatusCode::OK);
+    }
 }

@@ -1,6 +1,10 @@
 use serde_json::json;
 use warp::Filter;
 
+/// Demo-only mock WebID-OIDC provider routes.
+///
+/// Compiled only with `--features demo`. This is NOT a production Solid-OIDC
+/// provider and must not be mounted in default builds (see `NON_GOALS.md`).
 pub fn oidc_routes() -> impl Filter<Extract = impl warp::Reply, Error = warp::Rejection> + Clone {
     let config = warp::path!(".well-known" / "openid-configuration")
         .and(warp::get())
