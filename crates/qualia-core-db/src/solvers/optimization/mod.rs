@@ -1,16 +1,16 @@
 //! Optimization & Root Finding - Zero-Allocation Implementation
-//! 
+//!
 //! This module provides fixed-size stack-based optimization algorithms and
 //! root finding methods suitable for the #![no_std] environment of Qualia-DB.
 
-use crate::solvers::{SolverConfig, SolverState, SolverResult};
 use crate::solvers::SolversError as ExecutionError;
+use crate::solvers::{SolverConfig, SolverResult, SolverState};
 use core::f64::consts;
 
 /// General-dimension metaheuristic optimizers (hill-climbing / simulated annealing /
 /// Artificial Bee Colony) — global search beyond the fixed-`[f64;4]` solvers below.
 /// Heap-using batch-analytics layer; the engine ontology alignment consumes it.
-#[cfg(not(target_arch = "wasm32"))]
+#[cfg(any(not(target_arch = "wasm32"), feature = "wasm-scientific"))]
 pub mod metaheuristics;
 
 /// Nelder-Mead simplex optimizer for unconstrained optimization
@@ -118,7 +118,7 @@ pub struct CurveFitState {
 pub trait ObjectiveFunction {
     /// Evaluate objective function
     fn evaluate(&self, params: &[f64; 4]) -> f64;
-    
+
     /// Check if parameters are within bounds
     fn in_bounds(&self, params: &[f64; 4]) -> bool {
         true // Default: no bounds
@@ -129,7 +129,7 @@ pub trait ObjectiveFunction {
 pub trait RootFunction {
     /// Evaluate function f(x)
     fn evaluate(&self, x: f64) -> f64;
-    
+
     /// Evaluate derivative f'(x)
     fn derivative(&self, x: f64) -> f64;
 }
@@ -138,7 +138,7 @@ pub trait RootFunction {
 pub trait CurveFitFunction {
     /// Evaluate model at given x with parameters
     fn evaluate(&self, x: f64, params: &[f64; 4]) -> f64;
-    
+
     /// Evaluate Jacobian at given x with parameters
     fn jacobian(&self, x: f64, params: &[f64; 4]) -> [f64; 4];
 }
@@ -160,10 +160,10 @@ impl NelderMeadSimplex {
     /// Initialize simplex around initial point
     const fn initialize_simplex(initial_point: [f64; 4]) -> [[f64; 4]; 5] {
         let mut simplex = [[0.0; 4]; 5];
-        
+
         // First vertex is the initial point
         simplex[0] = initial_point;
-        
+
         // Other vertices are perturbed
         let mut i = 1;
         while i < 5 {
@@ -172,7 +172,7 @@ impl NelderMeadSimplex {
             simplex[i] = vertex;
             i += 1;
         }
-        
+
         simplex
     }
 
@@ -185,27 +185,27 @@ impl NelderMeadSimplex {
         for i in 0..5 {
             self.values[i] = f.evaluate(&self.vertices[i]);
         }
-        
+
         self.iteration = 0;
         self.solver_state.converged = false;
 
         while self.iteration < self.config.max_iterations {
             // Sort vertices by function value
             self.sort_vertices();
-            
+
             // Update best point
             self.best_point = self.vertices[0];
             self.best_value = self.values[0];
-            
+
             // Check convergence
             if self.check_convergence() {
                 self.solver_state.converged = true;
                 break;
             }
-            
+
             // Perform Nelder-Mead operations
             self.nelder_mead_step(f)?;
-            
+
             self.iteration += 1;
         }
 
@@ -227,7 +227,7 @@ impl NelderMeadSimplex {
                     let temp_vertex = self.vertices[j];
                     self.vertices[j] = self.vertices[j + 1];
                     self.vertices[j + 1] = temp_vertex;
-                    
+
                     // Swap values
                     let temp_value = self.values[j];
                     self.values[j] = self.values[j + 1];
@@ -246,7 +246,7 @@ impl NelderMeadSimplex {
     /// Calculate simplex size
     fn calculate_simplex_size(&self) -> f64 {
         let mut size: f64 = 0.0;
-        
+
         for i in 1..5 {
             let mut distance = 0.0;
             for j in 0..4 {
@@ -254,7 +254,7 @@ impl NelderMeadSimplex {
             }
             size = size.max(distance.sqrt());
         }
-        
+
         size
     }
 
@@ -265,16 +265,16 @@ impl NelderMeadSimplex {
     {
         // Calculate centroid of best n vertices
         let centroid = self.calculate_centroid();
-        
+
         // Reflection
         let reflected = self.reflect(&centroid);
         let reflected_value = f.evaluate(&reflected);
-        
+
         if reflected_value < self.values[0] {
             // Expansion
             let expanded = self.expand(&centroid, &reflected);
             let expanded_value = f.evaluate(&expanded);
-            
+
             if expanded_value < reflected_value {
                 self.vertices[4] = expanded;
                 self.values[4] = expanded_value;
@@ -291,7 +291,7 @@ impl NelderMeadSimplex {
             if reflected_value < self.values[4] {
                 let contracted = self.contract(&centroid, &reflected);
                 let contracted_value = f.evaluate(&contracted);
-                
+
                 if contracted_value < reflected_value {
                     self.vertices[4] = contracted;
                     self.values[4] = contracted_value;
@@ -301,7 +301,7 @@ impl NelderMeadSimplex {
             } else {
                 let contracted = self.contract(&centroid, &self.vertices[4]);
                 let contracted_value = f.evaluate(&contracted);
-                
+
                 if contracted_value < self.values[4] {
                     self.vertices[4] = contracted;
                     self.values[4] = contracted_value;
@@ -310,24 +310,24 @@ impl NelderMeadSimplex {
                 }
             }
         }
-        
+
         Ok(())
     }
 
     /// Calculate centroid of best n vertices
     fn calculate_centroid(&self) -> [f64; 4] {
         let mut centroid = [0.0; 4];
-        
+
         for i in 0..4 {
             for j in 0..4 {
                 centroid[j] += self.vertices[i][j];
             }
         }
-        
+
         for j in 0..4 {
             centroid[j] /= 4.0;
         }
-        
+
         centroid
     }
 
@@ -335,11 +335,11 @@ impl NelderMeadSimplex {
     fn reflect(&self, centroid: &[f64; 4]) -> [f64; 4] {
         let mut reflected = [0.0; 4];
         let alpha = 1.0; // Reflection coefficient
-        
+
         for i in 0..4 {
             reflected[i] = centroid[i] + alpha * (centroid[i] - self.vertices[4][i]);
         }
-        
+
         reflected
     }
 
@@ -347,11 +347,11 @@ impl NelderMeadSimplex {
     fn expand(&self, centroid: &[f64; 4], reflected: &[f64; 4]) -> [f64; 4] {
         let mut expanded = [0.0; 4];
         let gamma = 2.0; // Expansion coefficient
-        
+
         for i in 0..4 {
             expanded[i] = centroid[i] + gamma * (reflected[i] - centroid[i]);
         }
-        
+
         expanded
     }
 
@@ -359,11 +359,11 @@ impl NelderMeadSimplex {
     fn contract(&self, centroid: &[f64; 4], worst: &[f64; 4]) -> [f64; 4] {
         let mut contracted = [0.0; 4];
         let rho = 0.5; // Contraction coefficient
-        
+
         for i in 0..4 {
             contracted[i] = centroid[i] + rho * (worst[i] - centroid[i]);
         }
-        
+
         contracted
     }
 
@@ -373,14 +373,15 @@ impl NelderMeadSimplex {
         F: ObjectiveFunction,
     {
         let sigma = 0.5; // Shrink coefficient
-        
+
         for i in 1..5 {
             for j in 0..4 {
-                self.vertices[i][j] = self.vertices[0][j] + sigma * (self.vertices[i][j] - self.vertices[0][j]);
+                self.vertices[i][j] =
+                    self.vertices[0][j] + sigma * (self.vertices[i][j] - self.vertices[0][j]);
             }
             self.values[i] = f.evaluate(&self.vertices[i]);
         }
-        
+
         Ok(())
     }
 
@@ -392,7 +393,12 @@ impl NelderMeadSimplex {
 
 impl BoundedNewtonRaphson {
     /// Create new bounded Newton-Raphson solver
-    pub fn new(initial_guess: f64, lower_bound: f64, upper_bound: f64, config: SolverConfig) -> Self {
+    pub fn new(
+        initial_guess: f64,
+        lower_bound: f64,
+        upper_bound: f64,
+        config: SolverConfig,
+    ) -> Self {
         Self {
             current_guess: initial_guess,
             previous_guess: initial_guess,
@@ -417,30 +423,30 @@ impl BoundedNewtonRaphson {
             // Evaluate function and derivative
             self.current_value = f.evaluate(self.current_guess);
             self.current_derivative = f.derivative(self.current_guess);
-            
+
             // Check convergence
             if self.current_value.abs() < self.config.tolerance {
                 self.solver_state.converged = true;
                 break;
             }
-            
+
             // Check for zero derivative
             if self.current_derivative.abs() < 1e-10 {
                 return Err(ExecutionError::ConvergenceFailed);
             }
-            
+
             // Newton step
             let new_guess = self.current_guess - self.current_value / self.current_derivative;
-            
+
             // Apply bounds
             let bounded_guess = new_guess.clamp(self.lower_bound, self.upper_bound);
-            
+
             // Check for convergence in x
             if (bounded_guess - self.current_guess).abs() < self.config.tolerance {
                 self.solver_state.converged = true;
                 break;
             }
-            
+
             self.previous_guess = self.current_guess;
             self.current_guess = bounded_guess;
             self.solver_state.iteration += 1;
@@ -476,7 +482,12 @@ impl LevenbergMarquardtStack {
     }
 
     /// Fit curve to data points
-    pub fn fit_curve<F>(&mut self, f: &F, x_data: &[f64; 10], y_data: &[f64; 10]) -> SolverResult<CurveFitState>
+    pub fn fit_curve<F>(
+        &mut self,
+        f: &F,
+        x_data: &[f64; 10],
+        y_data: &[f64; 10],
+    ) -> SolverResult<CurveFitState>
     where
         F: CurveFitFunction,
     {
@@ -490,23 +501,23 @@ impl LevenbergMarquardtStack {
         while self.solver_state.iteration < self.config.max_iterations {
             // Calculate Jacobian
             self.calculate_jacobian(f, x_data)?;
-            
+
             // Solve for parameter update
             self.solve_parameter_update()?;
-            
+
             // Try new parameters
             let old_chi_squared = self.chi_squared;
             let old_parameters = self.parameters;
-            
+
             // Update parameters
             for i in 0..4 {
                 self.parameters[i] += self.delta_parameters[i];
             }
-            
+
             // Evaluate new chi-squared
             self.evaluate_residuals(f, x_data, y_data)?;
             self.chi_squared = self.calculate_chi_squared();
-            
+
             // Check if improvement
             if self.chi_squared < old_chi_squared {
                 // Accept update, decrease lambda
@@ -517,13 +528,13 @@ impl LevenbergMarquardtStack {
                 self.parameters = old_parameters;
                 self.chi_squared = old_chi_squared;
             }
-            
+
             // Check convergence
             if self.check_convergence(old_chi_squared) {
                 self.solver_state.converged = true;
                 break;
             }
-            
+
             self.solver_state.iteration += 1;
         }
 
@@ -536,7 +547,12 @@ impl LevenbergMarquardtStack {
     }
 
     /// Evaluate residuals
-    fn evaluate_residuals<F>(&mut self, f: &F, x_data: &[f64; 10], y_data: &[f64; 10]) -> SolverResult<()>
+    fn evaluate_residuals<F>(
+        &mut self,
+        f: &F,
+        x_data: &[f64; 10],
+        y_data: &[f64; 10],
+    ) -> SolverResult<()>
     where
         F: CurveFitFunction,
     {
@@ -544,18 +560,18 @@ impl LevenbergMarquardtStack {
             let model_value = f.evaluate(x_data[i], &self.parameters);
             self.residuals[i] = y_data[i] - model_value;
         }
-        
+
         Ok(())
     }
 
     /// Calculate chi-squared
     fn calculate_chi_squared(&self) -> f64 {
         let mut chi_sq = 0.0;
-        
+
         for i in 0..10 {
             chi_sq += self.residuals[i] * self.residuals[i];
         }
-        
+
         chi_sq
     }
 
@@ -570,7 +586,7 @@ impl LevenbergMarquardtStack {
                 self.jacobian[j][i] = jacobian_row[j];
             }
         }
-        
+
         Ok(())
     }
 
@@ -589,7 +605,7 @@ impl LevenbergMarquardtStack {
             // Add damping term
             jtj[i][i] += self.lambda;
         }
-        
+
         // Calculate J^T r
         let mut jtr = [0.0; 4];
         for i in 0..4 {
@@ -599,7 +615,7 @@ impl LevenbergMarquardtStack {
             }
             jtr[i] = sum;
         }
-        
+
         // Solve linear system (simplified 4x4 solver)
         self.solve_4x4_system(&jtj, &jtr)
     }
@@ -610,24 +626,24 @@ impl LevenbergMarquardtStack {
         let mut a = *matrix;
         let mut b = *rhs;
         let mut pivot = [0; 4];
-        
+
         // Forward elimination
         for i in 0..4 {
             // Find pivot
             let mut max_row = i;
             let mut max_val = a[i][i].abs();
-            
+
             for j in i + 1..4 {
                 if a[j][i].abs() > max_val {
                     max_val = a[j][i].abs();
                     max_row = j;
                 }
             }
-            
+
             if max_val < 1e-10 {
                 return Err(ExecutionError::SingularMatrix);
             }
-            
+
             // Swap rows
             if max_row != i {
                 for k in 0..4 {
@@ -639,21 +655,21 @@ impl LevenbergMarquardtStack {
                 b[i] = b[max_row];
                 b[max_row] = temp;
             }
-            
+
             pivot[i] = max_row;
-            
+
             // Eliminate column
             for j in i + 1..4 {
                 let factor = a[j][i] / a[i][i];
                 a[j][i] = factor;
-                
+
                 for k in i + 1..4 {
                     a[j][k] -= factor * a[i][k];
                 }
                 b[j] -= factor * b[i];
             }
         }
-        
+
         // Back substitution
         for i in (0..4).rev() {
             let mut sum = b[i];
@@ -662,7 +678,7 @@ impl LevenbergMarquardtStack {
             }
             self.delta_parameters[i] = sum / a[i][i];
         }
-        
+
         Ok(())
     }
 
@@ -738,10 +754,10 @@ mod tests {
 
     impl ObjectiveFunction for QuadraticFunction {
         fn evaluate(&self, params: &[f64; 4]) -> f64 {
-            (params[0] - 1.0).powi(2) + 
-            (params[1] - 2.0).powi(2) + 
-            (params[2] - 3.0).powi(2) + 
-            (params[3] - 4.0).powi(2)
+            (params[0] - 1.0).powi(2)
+                + (params[1] - 2.0).powi(2)
+                + (params[2] - 3.0).powi(2)
+                + (params[3] - 4.0).powi(2)
         }
     }
 
@@ -749,13 +765,13 @@ mod tests {
     fn test_nelder_mead_simplex() {
         let mut optimizer = NelderMeadSimplex::new([0.0; 4], SolverConfig::default());
         let func = QuadraticFunction;
-        
+
         let result = optimizer.optimize(&func);
         assert!(result.is_ok());
-        
+
         let state = result.unwrap();
         assert!(state.converged);
-        
+
         let (params, value) = optimizer.get_best_solution();
         assert!((params[0] - 1.0).abs() < 0.1);
         assert!((params[1] - 2.0).abs() < 0.1);
@@ -771,7 +787,7 @@ mod tests {
         fn evaluate(&self, x: f64) -> f64 {
             x.powi(3) - 2.0 * x - 5.0
         }
-        
+
         fn derivative(&self, x: f64) -> f64 {
             3.0 * x * x - 2.0
         }
@@ -781,13 +797,13 @@ mod tests {
     fn test_bounded_newton_raphson() {
         let mut solver = BoundedNewtonRaphson::new(2.0, -10.0, 10.0, SolverConfig::default());
         let func = CubicFunction;
-        
+
         let result = solver.find_root(&func);
         assert!(result.is_ok());
-        
+
         let state = result.unwrap();
         assert!(state.converged);
-        
+
         let root = solver.get_root();
         assert!((root - 2.094).abs() < 0.01); // Known root
     }
@@ -799,7 +815,7 @@ mod tests {
         fn evaluate(&self, x: f64, params: &[f64; 4]) -> f64 {
             params[0] + params[1] * x + params[2] * x * x + params[3] * x * x * x
         }
-        
+
         fn jacobian(&self, x: f64, _params: &[f64; 4]) -> [f64; 4] {
             [1.0, x, x * x, x * x * x]
         }
@@ -807,24 +823,28 @@ mod tests {
 
     #[test]
     fn test_levenberg_marquardt_stack() {
-        let mut optimizer = LevenbergMarquardtStack::new([1.0, 1.0, 1.0, 1.0], SolverConfig::default());
-        
+        let mut optimizer =
+            LevenbergMarquardtStack::new([1.0, 1.0, 1.0, 1.0], SolverConfig::default());
+
         // Generate test data
         let mut x_data = [0.0; 10];
         let mut y_data = [0.0; 10];
-        
+
         for i in 0..10 {
             x_data[i] = i as f64;
-            y_data[i] = 2.0 + 3.0 * x_data[i] + 0.5 * x_data[i] * x_data[i] + 0.1 * x_data[i] * x_data[i] * x_data[i];
+            y_data[i] = 2.0
+                + 3.0 * x_data[i]
+                + 0.5 * x_data[i] * x_data[i]
+                + 0.1 * x_data[i] * x_data[i] * x_data[i];
         }
-        
+
         let func = PolynomialFit;
         let result = optimizer.fit_curve(&func, &x_data, &y_data);
         assert!(result.is_ok());
-        
+
         let state = result.unwrap();
         assert!(state.converged);
-        
+
         let params = optimizer.get_parameters();
         assert!((params[0] - 2.0).abs() < 0.1);
         assert!((params[1] - 3.0).abs() < 0.1);

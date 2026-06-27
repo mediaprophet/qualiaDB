@@ -65,13 +65,13 @@ pub struct PidStepParams {
 #[cfg(target_arch = "wasm32")]
 #[wasm_bindgen]
 pub fn resolve_lww_wasm(local_val: JsValue, remote_val: JsValue) -> Result<JsValue, JsValue> {
-    let local: QuinJson  = serde_wasm_bindgen::from_value(local_val)
-        .map_err(|e| JsValue::from_str(&e.to_string()))?;
+    let local: QuinJson =
+        serde_wasm_bindgen::from_value(local_val).map_err(|e| JsValue::from_str(&e.to_string()))?;
     let remote: QuinJson = serde_wasm_bindgen::from_value(remote_val)
         .map_err(|e| JsValue::from_str(&e.to_string()))?;
 
     // Lamport clock in metadata upper 32 bits
-    let local_clock  = local.metadata >> 32;
+    let local_clock = local.metadata >> 32;
     let remote_clock = remote.metadata >> 32;
 
     let winner = if remote_clock > local_clock {
@@ -102,7 +102,13 @@ pub struct BlackScholesParams {
 /// Cumulative standard normal distribution (Horner rational approximation).
 #[cfg(target_arch = "wasm32")]
 pub(crate) fn phi_norm(x: f64) -> f64 {
-    const A: [f64; 5] = [0.254829592, -0.284496736, 1.421413741, -1.453152027, 1.061405429];
+    const A: [f64; 5] = [
+        0.254829592,
+        -0.284496736,
+        1.421413741,
+        -1.453152027,
+        1.061405429,
+    ];
     const P: f64 = 0.3275911;
     let sign = if x < 0.0 { -1.0_f64 } else { 1.0_f64 };
     let ax = x.abs();
@@ -118,6 +124,7 @@ struct EngineInfo {
     version: &'static str,
     engine: &'static str,
     target: &'static str,
+    profile: &'static str,
     capabilities: Vec<&'static str>,
 }
 
@@ -138,7 +145,8 @@ pub fn get_engine_info() -> Result<JsValue, JsValue> {
         version: crate::ENGINE_VERSION,
         engine: "qualia-core-db",
         target: "wasm32",
-        capabilities: WASM_CAPABILITY_REGISTRY.to_vec(),
+        profile: crate::wasm_capabilities::compiled_profile(),
+        capabilities: crate::wasm_capabilities::compiled_capabilities().to_vec(),
     };
     serde_wasm_bindgen::to_value(&info).map_err(|e| JsValue::from_str(&e.to_string()))
 }
@@ -147,6 +155,6 @@ pub fn get_engine_info() -> Result<JsValue, JsValue> {
 #[cfg(target_arch = "wasm32")]
 #[wasm_bindgen]
 pub fn list_capabilities_wasm() -> Result<JsValue, JsValue> {
-    serde_wasm_bindgen::to_value(WASM_CAPABILITY_REGISTRY)
+    serde_wasm_bindgen::to_value(crate::wasm_capabilities::compiled_capabilities())
         .map_err(|e| JsValue::from_str(&e.to_string()))
 }

@@ -20,6 +20,18 @@ The `qualia-core-db` crate compiles to `wasm32-unknown-unknown` with two feature
 
 ## 1. Building WASM targets
 
+### 1.0 Ontology MCP (smallest)
+
+For ontology sites and browser-local agent interactivity:
+
+```powershell
+wasm-pack build crates/webizen-lite-wasm --target web --out-dir pkg --release
+```
+
+This is a separate crate backed by the `wasm-ontology` kernel. It excludes the
+portal, WebGPU, scientific and LLM profiles. See
+[`wasm-capability-profiles.md`](wasm-capability-profiles.md).
+
 ### 1.1 Portal slim (recommended for demos)
 
 ```powershell

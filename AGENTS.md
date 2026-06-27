@@ -794,3 +794,38 @@ cargo test
 1. Draft denial sets `rollback = true` inline on WASM; native path ORs with `ControlStream` `DenyRollback` from the bifurcated Sentinel thread.
 2. α tuning for speculative acceptance ratio is still empirical — see migration plan Appendix F.
 3. `HANDOVER.md` still absent; capability inventory update deferred.
+
+---
+
+### 2026-06-27 — Codex (WASM capability profiles + ontology MCP)
+
+**Completed:**
+- Added an explicit compile-time WASM capability registry and separated the
+  ontology, portal, logic, scientific, LLM, playground, and full profiles.
+- Added the isolated `wasm-ontology` kernel and registered
+  `crates/webizen-lite-wasm` as the browser-local ontology MCP product.
+- Wired 11 bounded MCP tools for N3 inspection, Quin query, SHACL validation,
+  modal evaluation, subsumption, hashing, and governance.
+- Fixed standalone `wasm-logic`, `wasm-scientific`, and `wasm-full` builds by
+  separating semantic/scientific JS exports and gating unsupported modules.
+- Made WebGPU an explicit profile dependency instead of an implicit dependency
+  of the ontology build.
+- Added Pages/release profile checks, ontology package generation, and a
+  512 KiB raw / 200 KiB gzip size gate.
+
+**Verification:**
+- `cargo test -p webizen-lite-wasm --lib` — 4 passed
+- wasm32 checks for `webizen-lite-wasm`, `portal`, `wasm-logic`,
+  `wasm-scientific`, `wasm-llm`, and `wasm-full`
+- `wasm-pack build crates/webizen-lite-wasm --target web --out-dir pkg --release`
+  → 267,993 bytes raw / 94,971 bytes gzip
+- `cargo test -p qualia-core-db --lib` compiled and began 2,113 tests, but
+  exceeded the 15-minute session limit before producing a final result.
+
+**Notes for future agents:**
+1. Add a module to `modalities_lite/mod.rs` only after it passes the ontology
+   wasm32 build and introduces no renderer, daemon, network, or filesystem dependency.
+2. Keep `wasm_capabilities.rs`, the MCP tool catalog, and
+   `docs/manuals/wasm-capability-profiles.md` synchronized.
+3. `HANDOVER.md` is deleted in the existing worktree, so this session did not
+   recreate or modify it.

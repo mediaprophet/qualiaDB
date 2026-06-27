@@ -9,6 +9,7 @@ members = [
     "crates/qualia-mobile-harness",
     "crates/wellfare-core",
     "crates/qualia-semantic-library",
+    "crates/webizen-lite-wasm",
 ]
 resolver = "2"
 

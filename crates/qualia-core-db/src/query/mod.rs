@@ -11,6 +11,7 @@ pub mod query_engine;
 pub mod rdf_star;
 #[cfg(any(
     not(target_arch = "wasm32"),
+    feature = "wasm-ontology",
     feature = "wasm-logic",
     feature = "wasm-scientific",
     feature = "wasm-full"

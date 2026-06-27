@@ -5,17 +5,21 @@ edition = "2021"
 authors = ["Timothy Charles Holborn <timothy.holborn@gmail.com>"]
 
 [features]
-default = ["profile_target_1024", "zk-culling"]
+default = ["profile_target_1024", "zk-culling", "gpu-runtime"]
 
 # ── Qualia WASM portal build profiles (use with --no-default-features on wasm32) ──
+# Ontology MCP kernel:              --features wasm-ontology (exclusive)
 # Slim GitHub Pages / QApp export:  --features portal
-# Logic demos (N3/SHACL):           --features portal,wasm-logic
-# Science playground:               --features portal,wasm-scientific
+# Logic demos (N3/SHACL):           --features wasm-logic
+# Science playground:               --features wasm-scientific
+# Browser model runtime:            --features wasm-llm
 # Full API explorer / playground:   --features wasm-full
-portal = ["wasm_simd"]
+gpu-runtime = ["dep:wgpu"]
+portal = ["wasm_simd", "gpu-runtime"]
+wasm-ontology = []
 wasm-logic = []
-wasm-scientific = []
-wasm-llm = []
+wasm-scientific = ["gpu-runtime"]
+wasm-llm = ["gpu-runtime", "wasm-logic", "wasm-scientific"]
 wasm-playground = ["wasm-logic", "wasm-scientific"]
 wasm-full = ["portal", "wasm-logic", "wasm-scientific", "wasm-llm", "wasm-playground"]
 
@@ -125,7 +129,7 @@ async-trait = "0.1.89"
 dashmap = "6.2.1"
 rand_distr = "0.6.0"
 fast_qr = { version = "0.13.1", features = ["svg"] }
-wgpu = { version = "29", features = ["webgpu"] }
+wgpu = { version = "29", features = ["webgpu"], optional = true }
 
 
 [lib]

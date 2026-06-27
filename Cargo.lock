@@ -8926,6 +8926,7 @@ source = "registry+https://github.com/rust-lang/crates.io-index"
 checksum = "c0a808122a8a77eecdabaefd88ddb1913c4be5ea1465399f63ba64c7aa705fea"
 dependencies = [
  "bytes",
+ "futures-channel",
  "futures-util",
  "headers",
  "http",
@@ -9181,6 +9182,15 @@ dependencies = [
  "reqwest 0.13.4",
  "serde",
  "serde_json",
+]
+
+[[package]]
+name = "webizen-lite-wasm"
+version = "0.0.21"
+dependencies = [
+ "qualia-core-db",
+ "serde_json",
+ "wasm-bindgen",
 ]
 
 [[package]]

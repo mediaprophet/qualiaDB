@@ -131,6 +131,11 @@
 //! Cache-line pressure is bounded: the `[u64; MAX_DEFEATER_SLOTS]` buffer fits in
 //! 8 × 64-byte cache lines; each `DeonticVerdict` is 64 bytes (one cache line).
 
+#[cfg(any(
+    not(target_arch = "wasm32"),
+    feature = "wasm-scientific",
+    feature = "wasm-full"
+))]
 use crate::modalities::logic::n3_parser::{RuleType, Term};
 use crate::q_hash;
 use crate::NQuin;
@@ -397,7 +402,8 @@ pub fn evaluate_deontic_contract(
                 if defeater_count < MAX_DEFEATER_SLOTS {
                     defeater_buf[defeater_count] = defeater_fingerprint(&q);
                     // OP_UNDERCUT severs the rule link; any other opcode rebuts.
-                    kind_buf[defeater_count] = if extract_deontic_opcode(q.predicate) == OP_UNDERCUT {
+                    kind_buf[defeater_count] = if extract_deontic_opcode(q.predicate) == OP_UNDERCUT
+                    {
                         DefeatKind::Undercutting
                     } else {
                         DefeatKind::Rebutting
@@ -478,6 +484,11 @@ pub fn evaluate_deontic_contract(
 
 // ─── N3 → deontic norm bridge ───────────────────────────────────────────────
 
+#[cfg(any(
+    not(target_arch = "wasm32"),
+    feature = "wasm-scientific",
+    feature = "wasm-full"
+))]
 fn term_uri_hash(term: &Term) -> Option<u64> {
     match term {
         Term::Uri(uri) => Some(q_hash(uri)),
@@ -492,14 +503,29 @@ fn term_uri_hash(term: &Term) -> Option<u64> {
 // recovered by matching the premise predicate hash against these. Both the full
 // IRI and the CURIE token are listed, because `@prefix` is not expanded on the
 // parsed-from-file path (matching is by raw token via `q_hash`).
+#[cfg(any(
+    not(target_arch = "wasm32"),
+    feature = "wasm-scientific",
+    feature = "wasm-full"
+))]
 const FORBID_HASHES: [u64; 2] = [
     q_hash("https://ns.webcivics.net/values/forbids"),
     q_hash("values:forbids"),
 ];
+#[cfg(any(
+    not(target_arch = "wasm32"),
+    feature = "wasm-scientific",
+    feature = "wasm-full"
+))]
 const PERMIT_HASHES: [u64; 2] = [
     q_hash("https://ns.webcivics.net/values/permits"),
     q_hash("values:permits"),
 ];
+#[cfg(any(
+    not(target_arch = "wasm32"),
+    feature = "wasm-scientific",
+    feature = "wasm-full"
+))]
 const OBLIGATE_HASHES: [u64; 4] = [
     q_hash("https://ns.webcivics.net/values/requires"),
     q_hash("values:requires"),
@@ -513,6 +539,11 @@ const OBLIGATE_HASHES: [u64; 4] = [
 /// recognised `values:` operator picks the opcode; an unrecognised predicate
 /// falls back to the rule-type default (Strict/Linear => obligation, Defeasible =>
 /// permission), preserving behaviour for non-`values` contract predicates.
+#[cfg(any(
+    not(target_arch = "wasm32"),
+    feature = "wasm-scientific",
+    feature = "wasm-full"
+))]
 fn opcode_from_predicate_hash(pred_hash: u64, rule_type: RuleType) -> (u8, bool) {
     if matches!(rule_type, RuleType::Defeater) {
         return (OP_PERMIT, true);
@@ -536,6 +567,11 @@ fn opcode_from_predicate_hash(pred_hash: u64, rule_type: RuleType) -> (u8, bool)
 /// Compile an N3 [`Rule`] into a norm Quin (or defeater Quin for `^>` rules).
 ///
 /// Maps premise triple → party / property / action; `rule_type` → opcode + defeater flag.
+#[cfg(any(
+    not(target_arch = "wasm32"),
+    feature = "wasm-scientific",
+    feature = "wasm-full"
+))]
 pub fn compile_n3_rule_to_norm(
     rule: &crate::modalities::logic::n3_compiler::CompiledRule,
     contract_hash: u64,
@@ -644,16 +680,16 @@ pub fn evaluate_conditional_obligation(
     condition_obj: u64,
     obligation_obj: u64,
 ) -> bool {
-    let triggered = facts.iter().any(|q| {
-        q.subject == party && q.predicate == condition_pred && q.object == condition_obj
-    });
+    let triggered = facts
+        .iter()
+        .any(|q| q.subject == party && q.predicate == condition_pred && q.object == condition_obj);
     if !triggered {
         return true; // condition absent → conditional obligation not triggered
     }
     let fulfilled = q_hash("q42:fulfilled");
-    facts.iter().any(|q| {
-        q.subject == party && q.predicate == fulfilled && q.object == obligation_obj
-    })
+    facts
+        .iter()
+        .any(|q| q.subject == party && q.predicate == fulfilled && q.object == obligation_obj)
 }
 
 // ─── Deontic lifecycle (Pending → Active → {Violated, Discharged, Defeated, Expired}) ─
@@ -694,7 +730,9 @@ pub fn norm_lifecycle_status(
     let action = norm.object;
     let opcode = extract_deontic_opcode(norm.predicate);
     let fact_present = |pred: u64| {
-        facts.iter().any(|q| q.subject == party && q.predicate == pred && q.object == action)
+        facts
+            .iter()
+            .any(|q| q.subject == party && q.predicate == pred && q.object == action)
     };
     match opcode {
         OP_OBLIGATE => {
@@ -759,7 +797,10 @@ pub fn norms_conflict(a: &NQuin, b: &NQuin) -> bool {
         && b.predicate & DEFEATER_BIT == 0
         && a.subject == b.subject
         && a.object == b.object
-        && opcodes_conflict(extract_deontic_opcode(a.predicate), extract_deontic_opcode(b.predicate))
+        && opcodes_conflict(
+            extract_deontic_opcode(a.predicate),
+            extract_deontic_opcode(b.predicate),
+        )
 }
 
 /// The outcome of resolving a norm conflict.
@@ -853,7 +894,14 @@ mod tests {
         let party = q_hash("did:party");
         let action = q_hash("act:disclose");
         let mk = |op: u8| {
-            let mut q = NQuin { subject: party, predicate: op as u64, object: action, context: 0, metadata: 0, parity: 0 };
+            let mut q = NQuin {
+                subject: party,
+                predicate: op as u64,
+                object: action,
+                context: 0,
+                metadata: 0,
+                parity: 0,
+            };
             q.parity = q.subject ^ q.predicate ^ q.object ^ q.context;
             q
         };
@@ -867,37 +915,71 @@ mod tests {
         assert!(!norms_conflict(&mk(OP_OBLIGATE), &other));
 
         // Resolution: non-derogable beats derogable.
-        assert_eq!(resolve_norm_conflict(true, false, None, None), NormResolution::FirstPrevails);
-        assert_eq!(resolve_norm_conflict(false, true, None, None), NormResolution::SecondPrevails);
+        assert_eq!(
+            resolve_norm_conflict(true, false, None, None),
+            NormResolution::FirstPrevails
+        );
+        assert_eq!(
+            resolve_norm_conflict(false, true, None, None),
+            NormResolution::SecondPrevails
+        );
         // Neither non-derogable → proportionality decides.
-        assert_eq!(resolve_norm_conflict(false, false, Some(true), Some(false)), NormResolution::FirstPrevails);
-        assert_eq!(resolve_norm_conflict(false, false, Some(false), Some(true)), NormResolution::SecondPrevails);
+        assert_eq!(
+            resolve_norm_conflict(false, false, Some(true), Some(false)),
+            NormResolution::FirstPrevails
+        );
+        assert_eq!(
+            resolve_norm_conflict(false, false, Some(false), Some(true)),
+            NormResolution::SecondPrevails
+        );
         // Both non-derogable, or proportionality unmodelled → human review.
-        assert_eq!(resolve_norm_conflict(true, true, None, None), NormResolution::RequiresHumanReview);
-        assert_eq!(resolve_norm_conflict(false, false, None, None), NormResolution::RequiresHumanReview);
+        assert_eq!(
+            resolve_norm_conflict(true, true, None, None),
+            NormResolution::RequiresHumanReview
+        );
+        assert_eq!(
+            resolve_norm_conflict(false, false, None, None),
+            NormResolution::RequiresHumanReview
+        );
     }
 
     #[test]
     fn permission_is_non_fungibly_bound_to_its_nquin() {
         let principal = q_hash("did:principal");
         let action = q_hash("act:read");
-        let mut target = NQuin { subject: q_hash("doc:42"), predicate: q_hash("q42:hasContent"), object: q_hash("blob:abc"), context: 7, metadata: 0, parity: 0 };
+        let mut target = NQuin {
+            subject: q_hash("doc:42"),
+            predicate: q_hash("q42:hasContent"),
+            object: q_hash("blob:abc"),
+            context: 7,
+            metadata: 0,
+            parity: 0,
+        };
         target.parity = target.subject ^ target.predicate ^ target.object ^ target.context;
 
         let c = compile_permission_constraint(action, principal, &target);
-        assert!(permission_binds_to(&c, &target), "the permission binds to its target nquin");
+        assert!(
+            permission_binds_to(&c, &target),
+            "the permission binds to its target nquin"
+        );
         assert_eq!(extract_deontic_opcode(c.predicate), OP_PERMIT);
 
         // Tampering with the target breaks the binding (non-fungible / tamper-evident).
         let mut tampered = target;
         tampered.object ^= 0x1;
-        assert!(!permission_binds_to(&c, &tampered), "any edit to the target breaks the binding");
+        assert!(
+            !permission_binds_to(&c, &tampered),
+            "any edit to the target breaks the binding"
+        );
 
         // The constraint cannot be reused for a DIFFERENT nquin.
         let mut other = target;
         other.subject = q_hash("doc:99");
         other.parity = other.subject ^ other.predicate ^ other.object ^ other.context;
-        assert!(!permission_binds_to(&c, &other), "permission is not fungible across nquins");
+        assert!(
+            !permission_binds_to(&c, &other),
+            "permission is not fungible across nquins"
+        );
     }
     use crate::q_hash;
 
@@ -907,7 +989,14 @@ mod tests {
         let primary = q_hash("q42:protectData");
         let reparation = q_hash("q42:notifyAndRemedy");
         let mk = |s: u64, p: u64, o: u64| {
-            let mut q = NQuin { subject: s, predicate: p, object: o, context: 0, metadata: 0, parity: 0 };
+            let mut q = NQuin {
+                subject: s,
+                predicate: p,
+                object: o,
+                context: 0,
+                metadata: 0,
+                parity: 0,
+            };
             q.parity = q.subject ^ q.predicate ^ q.object ^ q.context;
             q
         };
@@ -915,13 +1004,17 @@ mod tests {
         assert!(evaluate_contrary_to_duty(&[], party, primary, reparation));
         // Breach without reparation → NOT satisfied.
         let breach = [mk(party, q_hash("q42:breached"), primary)];
-        assert!(!evaluate_contrary_to_duty(&breach, party, primary, reparation));
+        assert!(!evaluate_contrary_to_duty(
+            &breach, party, primary, reparation
+        ));
         // Breach WITH reparation → satisfied.
         let repaired = [
             mk(party, q_hash("q42:breached"), primary),
             mk(party, q_hash("q42:fulfilled"), reparation),
         ];
-        assert!(evaluate_contrary_to_duty(&repaired, party, primary, reparation));
+        assert!(evaluate_contrary_to_duty(
+            &repaired, party, primary, reparation
+        ));
     }
 
     /// Webizen values-credential smoke test (PLAN §11.3 / §17.1) — THE KEYSTONE.
@@ -945,9 +1038,7 @@ mod tests {
                 triples: vec![Triple {
                     subject: Term::Uri("https://ns.webcivics.net/values/Agent"),
                     predicate: Term::Uri("https://ns.webcivics.net/values/forbids"),
-                    object: Term::Uri(
-                        "https://ns.webcivics.net/values/DestructionOfRights",
-                    ),
+                    object: Term::Uri("https://ns.webcivics.net/values/DestructionOfRights"),
                 }],
             },
             conclusion: Formula { triples: vec![] },
@@ -955,8 +1046,12 @@ mod tests {
         let contract = q_hash("contract:udhr-smoke");
 
         // ── values rule → norm Quin (the values→deontic bridge) ──
-        let norm = compile_n3_rule_to_norm(&crate::modalities::logic::n3_compiler::compile_rule_to_zero_heap(&prohibition), contract, 0)
-            .expect("a values prohibition must compile to a norm Quin");
+        let norm = compile_n3_rule_to_norm(
+            &crate::modalities::logic::n3_compiler::compile_rule_to_zero_heap(&prohibition),
+            contract,
+            0,
+        )
+        .expect("a values prohibition must compile to a norm Quin");
         assert_eq!(
             extract_deontic_opcode(norm.predicate),
             OP_FORBID,
@@ -991,7 +1086,10 @@ mod tests {
         let mut out2 = [DeonticVerdict::default(); 4];
         let n2 = evaluate_deontic_contract(&[norm, defeater], NOW, &mut out2)
             .expect("deontic evaluation with defeater must succeed");
-        assert_eq!(n2, 1, "the defeater is not a primary norm; one verdict expected");
+        assert_eq!(
+            n2, 1,
+            "the defeater is not a primary norm; one verdict expected"
+        );
         assert_eq!(
             out2[0].status,
             DeonticStatus::Defeated,
@@ -1289,7 +1387,12 @@ mod tests {
                 }],
             },
         };
-        let q = compile_n3_rule_to_norm(&crate::modalities::logic::n3_compiler::compile_rule_to_zero_heap(&rule), nda(), EXPIRY_NDA).unwrap();
+        let q = compile_n3_rule_to_norm(
+            &crate::modalities::logic::n3_compiler::compile_rule_to_zero_heap(&rule),
+            nda(),
+            EXPIRY_NDA,
+        )
+        .unwrap();
         assert_ne!(q.predicate & DEFEATER_BIT, 0);
     }
 
@@ -1309,7 +1412,12 @@ mod tests {
             },
             conclusion: Formula { triples: vec![] },
         };
-        let q = compile_n3_rule_to_norm(&crate::modalities::logic::n3_compiler::compile_rule_to_zero_heap(&rule), nda(), 0).unwrap();
+        let q = compile_n3_rule_to_norm(
+            &crate::modalities::logic::n3_compiler::compile_rule_to_zero_heap(&rule),
+            nda(),
+            0,
+        )
+        .unwrap();
         assert_eq!(extract_deontic_opcode(q.predicate), OP_PERMIT);
         assert_eq!(q.predicate & DEFEATER_BIT, 0);
     }
@@ -1324,13 +1432,25 @@ mod tests {
             premise: Formula { triples: vec![] },
             conclusion: Formula { triples: vec![] },
         };
-        assert!(compile_n3_rule_to_norm(&crate::modalities::logic::n3_compiler::compile_rule_to_zero_heap(&rule), nda(), 0).is_none());
+        assert!(compile_n3_rule_to_norm(
+            &crate::modalities::logic::n3_compiler::compile_rule_to_zero_heap(&rule),
+            nda(),
+            0
+        )
+        .is_none());
     }
 
     // ─── Phase 1: SDL⁺ extensions (DEONTIC_LOGIC_PLAN §4) ───────────────────────
 
     fn mkfact(s: u64, p: u64, o: u64) -> NQuin {
-        let mut q = NQuin { subject: s, predicate: p, object: o, context: 0, metadata: 0, parity: 0 };
+        let mut q = NQuin {
+            subject: s,
+            predicate: p,
+            object: o,
+            context: 0,
+            metadata: 0,
+            parity: 0,
+        };
         q.parity = q.subject ^ q.predicate ^ q.object ^ q.context;
         q
     }
@@ -1342,38 +1462,71 @@ mod tests {
         let duty = compile_norm_quin(party, OP_OBLIGATE, disclose_path(), action, nda(), 0, false);
 
         // effective_from in the future → Pending.
-        assert_eq!(norm_lifecycle_status(&duty, NOW, NOW + 1000, &[], &[]), DeonticStatus::Pending);
+        assert_eq!(
+            norm_lifecycle_status(&duty, NOW, NOW + 1000, &[], &[]),
+            DeonticStatus::Pending
+        );
         // in force, no facts → Active.
-        assert_eq!(norm_lifecycle_status(&duty, NOW, 0, &[], &[]), DeonticStatus::Active);
+        assert_eq!(
+            norm_lifecycle_status(&duty, NOW, 0, &[], &[]),
+            DeonticStatus::Active
+        );
         // fulfilled fact → Discharged.
         let fulfilled = [mkfact(party, q_hash("q42:fulfilled"), action)];
-        assert_eq!(norm_lifecycle_status(&duty, NOW, 0, &[], &fulfilled), DeonticStatus::Discharged);
+        assert_eq!(
+            norm_lifecycle_status(&duty, NOW, 0, &[], &fulfilled),
+            DeonticStatus::Discharged
+        );
         // breached fact → Violated.
         let breached = [mkfact(party, q_hash("q42:breached"), action)];
-        assert_eq!(norm_lifecycle_status(&duty, NOW, 0, &[], &breached), DeonticStatus::Violated);
+        assert_eq!(
+            norm_lifecycle_status(&duty, NOW, 0, &[], &breached),
+            DeonticStatus::Violated
+        );
     }
 
     #[test]
     fn lifecycle_forbid_violated_by_performance() {
         let party = bob();
         let action = conf_data();
-        let prohibition = compile_norm_quin(party, OP_FORBID, disclose_path(), action, nda(), 0, false);
+        let prohibition =
+            compile_norm_quin(party, OP_FORBID, disclose_path(), action, nda(), 0, false);
         let performed = [mkfact(party, q_hash("q42:performed"), action)];
-        assert_eq!(norm_lifecycle_status(&prohibition, NOW, 0, &[], &performed), DeonticStatus::Violated);
-        assert_eq!(norm_lifecycle_status(&prohibition, NOW, 0, &[], &[]), DeonticStatus::Active);
+        assert_eq!(
+            norm_lifecycle_status(&prohibition, NOW, 0, &[], &performed),
+            DeonticStatus::Violated
+        );
+        assert_eq!(
+            norm_lifecycle_status(&prohibition, NOW, 0, &[], &[]),
+            DeonticStatus::Active
+        );
     }
 
     #[test]
     fn lifecycle_expiry_and_defeater_precedence() {
         let party = alice();
         let action = conf_data();
-        let duty = compile_norm_quin(party, OP_OBLIGATE, disclose_path(), action, nda(), EXPIRY_NDA, false);
+        let duty = compile_norm_quin(
+            party,
+            OP_OBLIGATE,
+            disclose_path(),
+            action,
+            nda(),
+            EXPIRY_NDA,
+            false,
+        );
         let fulfilled = [mkfact(party, q_hash("q42:fulfilled"), action)];
         // past expiry → Expired (temporal precedes facts).
-        assert_eq!(norm_lifecycle_status(&duty, EXPIRY_NDA + 1, 0, &[], &fulfilled), DeonticStatus::Expired);
+        assert_eq!(
+            norm_lifecycle_status(&duty, EXPIRY_NDA + 1, 0, &[], &fulfilled),
+            DeonticStatus::Expired
+        );
         // matching defeater → Defeated (precedes facts).
         let df = defeater_fingerprint(&duty);
-        assert_eq!(norm_lifecycle_status(&duty, NOW, 0, &[df], &fulfilled), DeonticStatus::Defeated);
+        assert_eq!(
+            norm_lifecycle_status(&duty, NOW, 0, &[df], &fulfilled),
+            DeonticStatus::Defeated
+        );
     }
 
     #[test]
@@ -1405,14 +1558,30 @@ mod tests {
         let mut out = [DeonticVerdict::default(); 4];
 
         // Rebutting: DEFEATER_BIT + a contrary opcode (PERMIT) on the same path.
-        let rebut = compile_norm_quin(party, OP_PERMIT, disclose_path(), q_hash("q42:exc"), nda(), 0, true);
+        let rebut = compile_norm_quin(
+            party,
+            OP_PERMIT,
+            disclose_path(),
+            q_hash("q42:exc"),
+            nda(),
+            0,
+            true,
+        );
         let n = evaluate_deontic_contract(&[duty, rebut], NOW, &mut out).unwrap();
         assert_eq!(n, 1);
         assert_eq!(out[0].status, DeonticStatus::Defeated);
         assert_eq!(out[0].defeat_kind, DefeatKind::Rebutting);
 
         // Undercutting: DEFEATER_BIT + OP_UNDERCUT on the same path → link-invalidation.
-        let undercut = compile_norm_quin(party, OP_UNDERCUT, disclose_path(), q_hash("q42:exc"), nda(), 0, true);
+        let undercut = compile_norm_quin(
+            party,
+            OP_UNDERCUT,
+            disclose_path(),
+            q_hash("q42:exc"),
+            nda(),
+            0,
+            true,
+        );
         let n = evaluate_deontic_contract(&[duty, undercut], NOW, &mut out).unwrap();
         assert_eq!(n, 1);
         assert_eq!(out[0].status, DeonticStatus::Defeated);
@@ -1426,15 +1595,25 @@ mod tests {
         let obligation = q_hash("q42:obtainConsent");
         let cond_pred = q_hash("q42:holds");
         // condition absent → vacuously satisfied.
-        assert!(evaluate_conditional_obligation(&[], party, cond_pred, condition, obligation));
+        assert!(evaluate_conditional_obligation(
+            &[],
+            party,
+            cond_pred,
+            condition,
+            obligation
+        ));
         // condition present, unfulfilled → not satisfied.
         let triggered = [mkfact(party, cond_pred, condition)];
-        assert!(!evaluate_conditional_obligation(&triggered, party, cond_pred, condition, obligation));
+        assert!(!evaluate_conditional_obligation(
+            &triggered, party, cond_pred, condition, obligation
+        ));
         // condition present, fulfilled → satisfied.
         let done = [
             mkfact(party, cond_pred, condition),
             mkfact(party, q_hash("q42:fulfilled"), obligation),
         ];
-        assert!(evaluate_conditional_obligation(&done, party, cond_pred, condition, obligation));
+        assert!(evaluate_conditional_obligation(
+            &done, party, cond_pred, condition, obligation
+        ));
     }
 }

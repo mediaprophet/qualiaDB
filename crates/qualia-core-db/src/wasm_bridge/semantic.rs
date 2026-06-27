@@ -13,7 +13,6 @@ use wasm_bindgen::prelude::*;
 #[cfg(target_arch = "wasm32")]
 use super::*;
 
-
 // ─── SHACL: inline constraint validation ─────────────────────────────────────
 
 #[cfg(target_arch = "wasm32")]
@@ -28,14 +27,19 @@ pub struct ShaclValidateParams {
 #[wasm_bindgen]
 pub fn validate_shacl_constraint_wasm(val: JsValue) -> Result<JsValue, JsValue> {
     let p: ShaclValidateParams = serde_wasm_bindgen::from_value(val)?;
-    let compiler = crate::modalities::logic::shacl::ShaclCompiler::new();
-    let shape = compiler.compile(
-        crate::modalities::logic::shacl::ShaclTarget::TargetNode("wasm:target".to_string()),
-        "wasm:property",
-        match p.constraint_type.as_str() { "minInclusive" => crate::modalities::logic::shacl::ShaclConstraint::MinInclusive(p.value), "maxInclusive" => crate::modalities::logic::shacl::ShaclConstraint::MaxInclusive(p.value), "minExclusive" => crate::modalities::logic::shacl::ShaclConstraint::MinExclusive(p.value), "maxExclusive" => crate::modalities::logic::shacl::ShaclConstraint::MaxExclusive(p.value), "minCount" => crate::modalities::logic::shacl::ShaclConstraint::MinCount(p.value as u32), "maxCount" => crate::modalities::logic::shacl::ShaclConstraint::MaxCount(p.value as u32), "minLength" => crate::modalities::logic::shacl::ShaclConstraint::MinLength(p.value as u32), "maxLength" => crate::modalities::logic::shacl::ShaclConstraint::MaxLength(p.value as u32), _ => crate::modalities::logic::shacl::ShaclConstraint::MinInclusive(p.value), },
-        crate::modalities::logic::shacl::ShaclSeverity::Violation,
-    );
-    let passes = shape.evaluate_numeric(p.target_value);
+    let passes = match p.constraint_type.as_str() {
+        "minInclusive" => p.target_value >= p.value,
+        "maxInclusive" => p.target_value <= p.value,
+        "minExclusive" => p.target_value > p.value,
+        "maxExclusive" => p.target_value < p.value,
+        "minCount" | "minLength" => p.target_value >= p.value,
+        "maxCount" | "maxLength" => p.target_value <= p.value,
+        other => {
+            return Err(JsValue::from_str(&format!(
+                "unsupported numeric SHACL constraint: {other}"
+            )))
+        }
+    };
     #[derive(Serialize)]
     struct ValidationOut {
         passes: bool,
@@ -210,26 +214,28 @@ pub fn parse_n3logic_wasm(payload: &str) -> JsValue {
         object: String,
     }
 
-    let cursor = std::io::Cursor::new(payload.as_bytes());
-    let mut parser = crate::modalities::logic::n3_parser::N3Parser::new(cursor);
+    let mut parser = crate::modalities::logic::n3_parser::N3Parser::new(payload);
     let mut triples = Vec::new();
 
-    let on_n3_event = |event: crate::modalities::logic::n3_parser::N3Event| -> Result<(), std::io::Error> {
+    let on_n3_event = |event: crate::modalities::logic::n3_parser::N3Event| -> Result<(), crate::modalities::logic::n3_parser::N3ParserError> {
         if let crate::modalities::logic::n3_parser::N3Event::StaticTriple(triple) = event {
             let s = match triple.subject {
                 crate::modalities::logic::n3_parser::Term::Uri(s)
                 | crate::modalities::logic::n3_parser::Term::Variable(s)
-                | crate::modalities::logic::n3_parser::Term::Literal(s) => s,
+                | crate::modalities::logic::n3_parser::Term::Literal(s)
+                | crate::modalities::logic::n3_parser::Term::Formula(s) => s.to_string(),
             };
             let p = match triple.predicate {
                 crate::modalities::logic::n3_parser::Term::Uri(s)
                 | crate::modalities::logic::n3_parser::Term::Variable(s)
-                | crate::modalities::logic::n3_parser::Term::Literal(s) => s,
+                | crate::modalities::logic::n3_parser::Term::Literal(s)
+                | crate::modalities::logic::n3_parser::Term::Formula(s) => s.to_string(),
             };
             let o = match triple.object {
                 crate::modalities::logic::n3_parser::Term::Uri(s)
                 | crate::modalities::logic::n3_parser::Term::Variable(s)
-                | crate::modalities::logic::n3_parser::Term::Literal(s) => s,
+                | crate::modalities::logic::n3_parser::Term::Literal(s)
+                | crate::modalities::logic::n3_parser::Term::Formula(s) => s.to_string(),
             };
             triples.push(QOut {
                 subject: s,
@@ -277,37 +283,53 @@ pub fn parse_cbor_ld_wasm(payload: &[u8]) -> JsValue {
 /// Input: `{ facts: ["bird", "penguin"], rules: [{ head: "flies", body: ["bird"], defeaters: ["penguin"] }, ...] }`
 /// Output: `{ inferred: ["swims"] }`
 #[cfg(target_arch = "wasm32")]
+#[cfg(feature = "wasm-scientific")]
 #[wasm_bindgen]
 pub fn forward_chain_wasm(val: JsValue) -> Result<JsValue, JsValue> {
     use crate::solvers::symbolic_logic::{
-        ForwardChainingDefeasible, DefeasibleRule, Fact, Literal, RuleType,
+        DefeasibleRule, Fact, ForwardChainingDefeasible, Literal, RuleType,
     };
     use crate::solvers::SolverConfig;
     use std::collections::HashMap;
 
     #[derive(Deserialize)]
-    struct RuleInput { head: String, body: Vec<String>, defeaters: Vec<String> }
+    struct RuleInput {
+        head: String,
+        body: Vec<String>,
+        defeaters: Vec<String>,
+    }
     #[derive(Deserialize)]
-    struct FcInput { facts: Vec<String>, rules: Vec<RuleInput> }
-    let input: FcInput = serde_wasm_bindgen::from_value(val)
-        .map_err(|e| JsValue::from_str(&e.to_string()))?;
+    struct FcInput {
+        facts: Vec<String>,
+        rules: Vec<RuleInput>,
+    }
+    let input: FcInput =
+        serde_wasm_bindgen::from_value(val).map_err(|e| JsValue::from_str(&e.to_string()))?;
 
     // Build atom → u8 index map
     // Variable index 0 is reserved as antecedent terminator in ForwardChainingDefeasible.
     let mut atom_map: HashMap<String, u8> = HashMap::new();
     let mut next_idx: u8 = 1;
     let mut get_idx = |s: &str, map: &mut HashMap<String, u8>, nxt: &mut u8| -> u8 {
-        if let Some(&i) = map.get(s) { return i; }
+        if let Some(&i) = map.get(s) {
+            return i;
+        }
         let i = *nxt;
         map.insert(s.to_string(), i);
         *nxt = nxt.saturating_add(1);
         i
     };
-    for f in &input.facts { get_idx(f, &mut atom_map, &mut next_idx); }
+    for f in &input.facts {
+        get_idx(f, &mut atom_map, &mut next_idx);
+    }
     for r in &input.rules {
         get_idx(&r.head, &mut atom_map, &mut next_idx);
-        for b in &r.body     { get_idx(b, &mut atom_map, &mut next_idx); }
-        for d in &r.defeaters{ get_idx(d, &mut atom_map, &mut next_idx); }
+        for b in &r.body {
+            get_idx(b, &mut atom_map, &mut next_idx);
+        }
+        for d in &r.defeaters {
+            get_idx(d, &mut atom_map, &mut next_idx);
+        }
     }
 
     let mut solver = ForwardChainingDefeasible::new(SolverConfig::default());
@@ -315,13 +337,18 @@ pub fn forward_chain_wasm(val: JsValue) -> Result<JsValue, JsValue> {
     // Add initial facts
     for (fact_id, atom) in input.facts.iter().enumerate() {
         let var = *atom_map.get(atom.as_str()).unwrap_or(&0);
-        solver.add_fact(Fact {
-            id: (fact_id as u32) + 1,
-            literal: Literal { variable: var, negated: false },
-            supporting_rules: [0; 3],
-            defeated: false,
-            confidence: 1.0,
-        }).map_err(|e| JsValue::from_str(&format!("{:?}", e)))?;
+        solver
+            .add_fact(Fact {
+                id: (fact_id as u32) + 1,
+                literal: Literal {
+                    variable: var,
+                    negated: false,
+                },
+                supporting_rules: [0; 3],
+                defeated: false,
+                confidence: 1.0,
+            })
+            .map_err(|e| JsValue::from_str(&format!("{:?}", e)))?;
     }
 
     // Add rules and defeaters
@@ -330,49 +357,72 @@ pub fn forward_chain_wasm(val: JsValue) -> Result<JsValue, JsValue> {
         let head_var = *atom_map.get(r.head.as_str()).unwrap_or(&0);
         let mut antecedents = [Literal::default(); 5];
         for (i, b) in r.body.iter().take(5).enumerate() {
-            antecedents[i] = Literal { variable: *atom_map.get(b.as_str()).unwrap_or(&0), negated: false };
+            antecedents[i] = Literal {
+                variable: *atom_map.get(b.as_str()).unwrap_or(&0),
+                negated: false,
+            };
         }
 
         // Main defeasible rule: head fires when all body atoms hold
         let main_rule = DefeasibleRule {
             id: base_id + (rule_id as u32) * 2,
-            rule_type: if r.defeaters.is_empty() { RuleType::Strict } else { RuleType::Defeasible },
+            rule_type: if r.defeaters.is_empty() {
+                RuleType::Strict
+            } else {
+                RuleType::Defeasible
+            },
             antecedents,
-            consequent: Literal { variable: head_var, negated: false },
+            consequent: Literal {
+                variable: head_var,
+                negated: false,
+            },
             priority: 500,
             active: true,
             fire_count: 0,
         };
-        solver.add_rule(main_rule).map_err(|e| JsValue::from_str(&format!("{:?}", e)))?;
+        solver
+            .add_rule(main_rule)
+            .map_err(|e| JsValue::from_str(&format!("{:?}", e)))?;
 
         // Defeater rules: for each defeater atom, add a Defeater rule that cancels the head
         for (d_i, d) in r.defeaters.iter().enumerate() {
             let d_var = *atom_map.get(d.as_str()).unwrap_or(&0);
             let mut d_antecedents = [Literal::default(); 5];
-            d_antecedents[0] = Literal { variable: d_var, negated: false };
+            d_antecedents[0] = Literal {
+                variable: d_var,
+                negated: false,
+            };
             let defeater_rule = DefeasibleRule {
                 id: base_id + (rule_id as u32) * 2 + 1 + d_i as u32,
                 rule_type: RuleType::Defeater,
                 antecedents: d_antecedents,
-                consequent: Literal { variable: head_var, negated: true },
+                consequent: Literal {
+                    variable: head_var,
+                    negated: true,
+                },
                 priority: 600,
                 active: true,
                 fire_count: 0,
             };
-            solver.add_rule(defeater_rule).map_err(|e| JsValue::from_str(&format!("{:?}", e)))?;
+            solver
+                .add_rule(defeater_rule)
+                .map_err(|e| JsValue::from_str(&format!("{:?}", e)))?;
         }
     }
 
-    solver.infer().map_err(|e| JsValue::from_str(&format!("{:?}", e)))?;
+    solver
+        .infer()
+        .map_err(|e| JsValue::from_str(&format!("{:?}", e)))?;
 
     // Build reverse map to recover atom names from variable indices
     let rev_map: HashMap<u8, &str> = atom_map.iter().map(|(k, &v)| (v, k.as_str())).collect();
-    let initial_fact_set: std::collections::HashSet<String> =
-        input.facts.iter().cloned().collect();
+    let initial_fact_set: std::collections::HashSet<String> = input.facts.iter().cloned().collect();
 
     let mut inferred = Vec::new();
     for fact in &solver.facts {
-        if fact.id == 0 || fact.defeated { continue; }
+        if fact.id == 0 || fact.defeated {
+            continue;
+        }
         if let Some(&name) = rev_map.get(&fact.literal.variable) {
             if !fact.literal.negated && !initial_fact_set.contains(name) {
                 inferred.push(name.to_string());
@@ -381,41 +431,13 @@ pub fn forward_chain_wasm(val: JsValue) -> Result<JsValue, JsValue> {
     }
 
     #[derive(Serialize)]
-    struct FcOut { inferred: Vec<String> }
+    struct FcOut {
+        inferred: Vec<String>,
+    }
     Ok(serde_wasm_bindgen::to_value(&FcOut { inferred })?)
 }
 
 // ─── Engine metadata ─────────────────────────────────────────────────────────
-
-/// Capabilities compiled into the browser WASM build (native-only modules omitted).
-#[cfg(target_arch = "wasm32")]
-pub(crate) const WASM_CAPABILITY_REGISTRY: &[&str] = &[
-    "SHACL",
-    "QueryEngine",
-    "N3Parser",
-    "N3Compiler",
-    "DeonticLogic",
-    "EpistemicLogic",
-    "ParaconsistentLogic",
-    "DialecticalLogic",
-    "TemporalLTL",
-    "Bioinformatics",
-    "OrganicChemistry",
-    "Economics",
-    "CogAI",
-    "Profiles",
-    "ResourceCatalog",
-    "WasmIngest",
-    "ControlTheory",
-    "LwwCrdt",
-    "GbmPath",
-    "BlackScholes",
-    "SatSolver",
-    "ForwardChaining",
-    "OdeDecay",
-    "SciencePlayground",
-    "LlmInference",
-];
 
 // --- Data Format: RDF Serializer ------------------------------------------------
 
@@ -429,22 +451,29 @@ pub struct RdfSerializeParams {
 #[cfg(target_arch = "wasm32")]
 #[wasm_bindgen]
 pub fn serialize_rdf_wasm(val: JsValue) -> Result<JsValue, JsValue> {
-    use crate::sparql_library::serialisers::rdf_serializers::{serialize_to_ntriples, serialize_to_turtle, serialize_to_nquads, serialize_to_trig, serialize_to_n3, serialize_to_jsonld};
+    use crate::sparql_library::serialisers::rdf_serializers::{
+        serialize_to_jsonld, serialize_to_n3, serialize_to_nquads, serialize_to_ntriples,
+        serialize_to_trig, serialize_to_turtle,
+    };
     use crate::NQuin;
-    
+
     let p: RdfSerializeParams = serde_wasm_bindgen::from_value(val)?;
-    
-    let quins: Vec<NQuin> = p.quins.iter().map(|arr| NQuin {
-        subject: arr[0],
-        predicate: arr[1],
-        object: arr[2],
-        context: arr[3],
-        metadata: arr[4],
-        parity: arr[5],
-    }).collect();
-    
+
+    let quins: Vec<NQuin> = p
+        .quins
+        .iter()
+        .map(|arr| NQuin {
+            subject: arr[0],
+            predicate: arr[1],
+            object: arr[2],
+            context: arr[3],
+            metadata: arr[4],
+            parity: arr[5],
+        })
+        .collect();
+
     let mut rdf_output = Vec::new();
-    
+
     match p.format.as_str() {
         "nt" => serialize_to_ntriples(&mut rdf_output, &quins),
         "turtle" => serialize_to_turtle(&mut rdf_output, &quins),
@@ -453,19 +482,15 @@ pub fn serialize_rdf_wasm(val: JsValue) -> Result<JsValue, JsValue> {
         "n3" => serialize_to_n3(&mut rdf_output, &quins),
         "jsonld" => serialize_to_jsonld(&mut rdf_output, &quins),
         _ => return Err(JsValue::from_str("Invalid RDF format")),
-    }.map_err(|e| JsValue::from_str(&e))?;
-    
+    }
+    .map_err(|e| JsValue::from_str(&e))?;
+
     #[derive(Serialize)]
     struct SerializeResult {
         rdf_data: String,
     }
-    
+
     Ok(serde_wasm_bindgen::to_value(&SerializeResult {
         rdf_data: String::from_utf8(rdf_output).map_err(|e| JsValue::from_str(&e.to_string()))?,
     })?)
 }
-
-
-
-
-
