@@ -395,6 +395,7 @@ impl<'a> N3Parser<'a> {
         let mut stmt_start = 0;
         let mut brace_depth: i32 = 0;
         let mut in_comment = false;
+        let mut in_string = false;
         let mut statements = 0usize;
 
         while i < len {
@@ -404,6 +405,23 @@ impl<'a> N3Parser<'a> {
                 if c == '\n' {
                     in_comment = false;
                 }
+                i += 1;
+                continue;
+            }
+
+            // Inside a `"…"` string literal, structural characters (`.`, `#`, `{`,
+            // `}`) are data, not delimiters — e.g. `"alice@example.org"` must not
+            // be split at the dot. (Comments are handled above; a `"` in a comment
+            // never reaches here.)
+            if in_string {
+                if c == '"' {
+                    in_string = false;
+                }
+                i += 1;
+                continue;
+            }
+            if c == '"' {
+                in_string = true;
                 i += 1;
                 continue;
             }

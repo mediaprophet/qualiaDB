@@ -6,7 +6,7 @@
 // ─── Severity ─────────────────────────────────────────────────────────────────
 
 /// Maps to `sh:severity` in SHACL shapes.
-#[derive(Debug, Clone, Copy, PartialEq, Eq)]
+#[derive(Debug, Clone, Copy, PartialEq, Eq, serde::Serialize)]
 pub enum ShaclSeverity {
     /// `sh:Violation` — halt ingestion, write rejection audit Quin.
     Violation,
@@ -94,13 +94,13 @@ pub enum ShaclTarget {
 
 // ─── Validation Report ───────────────────────────────────────────────────────
 
-#[derive(Debug, Clone)]
+#[derive(Debug, Clone, serde::Serialize)]
 pub struct ValidationReport {
     pub conforms: bool,
     pub results: Vec<ValidationResult>,
 }
 
-#[derive(Debug, Clone)]
+#[derive(Debug, Clone, serde::Serialize)]
 pub struct ValidationResult {
     pub severity: ShaclSeverity,
     pub focus_node: String,
