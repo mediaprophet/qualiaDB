@@ -35,6 +35,7 @@ pub mod ontology_align;
 pub mod optimization;
 pub mod polynomial;
 pub mod rope;
+pub mod special_functions;
 pub mod units;
 pub mod quantum_optimizers;
 pub mod statistics;
