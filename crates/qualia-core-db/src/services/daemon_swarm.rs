@@ -749,18 +749,15 @@ pub mod swarm {
             thread::spawn(move || {
                 println!("[Isolate B] Neural Bridge online. Awaiting prompt constraints...");
                 while let Ok(prompt_quin) = rx_ab.recv() {
-                    // Extract 60-bit pointer, map GGUF, run Q-Tensor execution
-                    // For now, mock return of a deterministic consequence
                     crate::telemetry::SIEVE_OPS_COUNT
                         .fetch_add(1, std::sync::atomic::Ordering::Relaxed);
 
-                    let result_quin = NQuin {
-                        subject: prompt_quin.subject,
-                        predicate: 999, // 'Calculated' mock predicate
-                        object: prompt_quin.object,
-                        context: prompt_quin.context,
-                        metadata: prompt_quin.metadata,
-                        parity: 0,
+                    // Real deterministic computation via the swarm executor (replaces
+                    // the former constant-`999` fabrication). The consequence quin
+                    // carries an actually-computed result, parity included.
+                    let result_quin = match crate::services::swarm::isolate_b_compute(prompt_quin) {
+                        Some(q) => q,
+                        None => continue, // malformed input: skip, do not fabricate
                     };
 
                     if tx_ba.send(result_quin).is_err() {

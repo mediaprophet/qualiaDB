@@ -17,7 +17,7 @@ use super::{EmbeddingTable, KgEmbeddingError};
 use crate::solvers::optimization::metaheuristics::Rng;
 
 /// Training hyper-parameters.
-#[derive(Debug, Clone, Copy)]
+#[derive(Debug, Clone, Copy, PartialEq)]
 pub struct TrainConfig {
     pub model: ScoreModel,
     pub rank: usize,

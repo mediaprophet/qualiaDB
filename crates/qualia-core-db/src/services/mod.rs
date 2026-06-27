@@ -23,3 +23,5 @@ pub mod webtorrent_seeder;
 pub mod solid_ldp;
 #[cfg(not(target_arch = "wasm32"))]
 pub mod ilp_dispatcher;
+#[cfg(not(target_arch = "wasm32"))]
+pub mod swarm;
