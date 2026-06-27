@@ -458,9 +458,13 @@ fn chatml_decode_demo() {
 /// Run: `cargo test -p qualia-core-db --release --test llm_bench_a0 a0_decode_profile -- --nocapture`.
 #[test]
 fn a0_decode_profile() {
-    let Some(path) = find_model("smollm2-360m-instruct-q8_0.gguf")
-        .or_else(|| find_model("SmolLM2-360M-Instruct-Q4_K_M.gguf"))
-    else {
+    let path = match std::env::var("QUALIA_LLM_PROFILE_MODEL").ok() {
+        Some(p) if std::path::Path::new(&p).exists() => Some(PathBuf::from(p)),
+        Some(name) => find_model(&name),
+        None => find_model("smollm2-360m-instruct-q8_0.gguf")
+            .or_else(|| find_model("SmolLM2-360M-Instruct-Q4_K_M.gguf")),
+    };
+    let Some(path) = path else {
         eprintln!("[prof] model absent — skipping decode profile");
         return;
     };

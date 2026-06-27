@@ -301,6 +301,15 @@ fn main(@builtin(global_invocation_id) global_id: vec3<u32>) {
 // (MAX_STACK_GEMM_OUT) < 65535 → one workgroup per row is within dispatch limits.
 const COOP_WG: u32 = 256u;
 var<workgroup> coop_partial: array<f32, 256>;
+// Q4_K cooperative block-header cache (0.0.21 dequant optimization). A Q4_K superblock is 256
+// elements == COOP_WG, so one workgroup step processes exactly one superblock. The block header
+// (super-scale `d`, super-min `dmin`, and the 8 6-bit sub-block scale/min pairs) is CONSTANT across
+// all 256 elements — yet the generic `dequant_weight` path re-decodes it once *per element*, i.e.
+// 256× per block per thread. Here 8 threads decode it once into shared memory and all 256 threads
+// reuse it, collapsing the per-block header ALU ~32× (256→8 decodes) — the measured Q4_K GEMM
+// bottleneck (F16 1264µs → Q4_K 2727µs/call; dequant ≈54% of the kernel).
+var<workgroup> coop_q4k_dsub: array<f32, 8>; // d * sub_scale   per 32-element sub-block
+var<workgroup> coop_q4k_msub: array<f32, 8>; // dmin * sub_min  per 32-element sub-block
 
 @compute @workgroup_size(256)
 fn coop_gemv(
@@ -324,15 +333,52 @@ fn coop_gemv(
     let in_base = m * in_stride;
     let out_base = m * out_stride;
 
-    // Each thread accumulates a strided slice of the contraction dimension.
+    // Each thread accumulates a slice of the contraction dimension.
     var acc = 0.0;
-    var j = t;
-    loop {
-        if j >= params.n_in {
-            break;
+    if params.weight_ggml_type == GGML_TYPE_Q4_K && (params.n_in % BLOCK_Q4K_ELEMS) == 0u {
+        // Block-cooperative Q4_K path: workgroup step b == superblock b; thread t == element t.
+        // Header decoded once (8 threads) into shared memory; reused by all 256 threads.
+        let row_base = row * weight_row_bytes();
+        let n_blocks = params.n_in / BLOCK_Q4K_ELEMS;
+        let sub = t / 32u;     // which 32-element sub-block this thread's element belongs to
+        let group = t / 64u;   // Q4_K nibble layout: 4 groups of 64, low/high nibble at ±32
+        let local = t % 64u;
+        for (var b = 0u; b < n_blocks; b = b + 1u) {
+            let block_base = row_base + b * BLOCK_Q4K_BYTES;
+            // Cooperative header decode (8 threads) — d/dmin re-read per sub-thread is trivial vs
+            // the 256× redundancy it replaces. Writes the 8 (d·scale, dmin·min) sub-block pairs.
+            if t < 8u {
+                let d = f16_to_f32(read_u8_weight(block_base) | (read_u8_weight(block_base + 1u) << 8u));
+                let dmin = f16_to_f32(read_u8_weight(block_base + 2u) | (read_u8_weight(block_base + 3u) << 8u));
+                let sm = get_scale_min_k4(t, block_base + 4u);
+                coop_q4k_dsub[t] = d * f32(sm.x);
+                coop_q4k_msub[t] = dmin * f32(sm.y);
+            }
+            workgroupBarrier();
+            // Each thread dequantizes its own element t of this superblock from its nibble.
+            let qs_base = block_base + 16u;
+            let q_off = group * 32u;
+            var nib: u32;
+            if local < 32u {
+                nib = read_u8_weight(qs_base + q_off + local) & 0xFu;
+            } else {
+                nib = read_u8_weight(qs_base + q_off + (local - 32u)) >> 4u;
+            }
+            let w = coop_q4k_dsub[sub] * f32(nib) - coop_q4k_msub[sub];
+            acc = acc + w * input[in_base + b * BLOCK_Q4K_ELEMS + t];
+            // Barrier before the next iteration's 8 threads overwrite the shared header.
+            workgroupBarrier();
         }
-        acc = acc + dequant_weight(row, j) * input[in_base + j];
-        j = j + COOP_WG;
+    } else {
+        // Generic strided path (other quant types / non-256-aligned K).
+        var j = t;
+        loop {
+            if j >= params.n_in {
+                break;
+            }
+            acc = acc + dequant_weight(row, j) * input[in_base + j];
+            j = j + COOP_WG;
+        }
     }
     coop_partial[t] = acc;
     workgroupBarrier();
