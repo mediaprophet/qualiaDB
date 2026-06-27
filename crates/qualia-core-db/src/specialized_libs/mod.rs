@@ -6,6 +6,7 @@
 pub mod qpu_bridge;
 pub mod linear_algebra;
 pub mod symbolic_algebra;
+pub mod constructibility;
 pub mod statistical_computing;
 pub mod cryptographic_library;
 pub mod physics_simulation;

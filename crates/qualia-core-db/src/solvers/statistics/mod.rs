@@ -14,6 +14,7 @@
 //! is a separate concern and lives in `modalities::probabilistic`; it may call
 //! into here for numeric work, but the two are not merged.
 
+pub mod anomaly;
 pub mod correlation;
 pub mod descriptive;
 pub mod distributions;
