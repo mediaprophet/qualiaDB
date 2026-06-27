@@ -113,7 +113,7 @@ impl WebGpuIntegrator {
             .map_err(|e| GpuError::WebGPUUnavailable(format!("Device request failed: {e}")))?;
         
         // Load pre-compiled compute shader (AOT compilation)
-        let shader_src = include_str!("../../shaders/calculus.wgsl");
+        let shader_src = include_str!("../shaders/calculus.wgsl");
         let shader = device.create_shader_module(wgpu::ShaderModuleDescriptor {
             label: Some("Calculus Shader"),
             source: wgpu::ShaderSource::Wgsl(shader_src.into()),

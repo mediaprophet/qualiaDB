@@ -21,7 +21,7 @@
 //! ```
 
 #[cfg(not(target_arch = "wasm32"))]
-use crate::modalities::calculus::gpu::{GpuIntegrator, GpuError, PlatformGpuIntegrator};
+use crate::platform::gpu::{GpuIntegrator, GpuError, PlatformGpuIntegrator};
 use crate::NQuin;
 
 // ─── BVP Convergence (Shooting Method) ──────────────────────────────────────────
@@ -992,7 +992,7 @@ mod tests {
 
     #[test]
     fn test_step_quin_gpu() {
-        use crate::modalities::calculus::gpu::WebGpuIntegrator;
+        use crate::platform::gpu::WebGpuIntegrator;
         
         let decay = ExponentialDecay::new(0.5);
         let mut solver = Rk4Solver::new(decay, 0.01);

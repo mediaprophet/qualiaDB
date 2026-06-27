@@ -8,6 +8,15 @@ use crate::solvers::{SolverConfig, SolverState, SolverResult};
 use crate::solvers::SolversError as ExecutionError;
 use core::f64::consts;
 
+// Numerical ODE / sensitivity / provenance solvers — relocated here from
+// `modalities::calculus` (they are STEM math, not logic modalities). The canonical
+// `solvers::calculus::*` surface now carries them.
+pub mod ode_solver;
+pub mod ode_advanced;
+pub mod tensor_provenance;
+pub mod tensor_integrity;
+pub mod grid;
+
 /// Runge-Kutta 4th order ODE solver with fixed memory footprint
 #[repr(C)]
 pub struct RungeKutta4Static {

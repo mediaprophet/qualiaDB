@@ -13,6 +13,14 @@ pub mod hardware_passport;
 pub mod device_benchmark;
 #[cfg(not(target_arch = "wasm32"))]
 pub mod compute_bridge;
+// Hardware dispatch / I/O — relocated here from `modalities::calculus` (they are
+// platform concerns the compute layers depend on, not logic modalities).
+#[cfg(not(target_arch = "wasm32"))]
+pub mod hetero_dispatch;
+#[cfg(not(target_arch = "wasm32"))]
+pub mod gpu;
+#[cfg(not(target_arch = "wasm32"))]
+pub mod host;
 #[cfg(not(target_arch = "wasm32"))]
 pub mod platform_scheduler;
 #[cfg(not(target_arch = "wasm32"))]

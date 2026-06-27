@@ -12,7 +12,7 @@
 //! alone: the measured per-class backend/circuit choice from the matrix.
 
 use crate::device_benchmark::CircuitKind;
-use crate::modalities::calculus::hetero_dispatch::{
+use crate::platform::hetero_dispatch::{
     select_precision, HeterogeneousDispatcher, HostCapabilities, PowerThermalBudget, Precision,
     ZeroCopyStrategy,
 };

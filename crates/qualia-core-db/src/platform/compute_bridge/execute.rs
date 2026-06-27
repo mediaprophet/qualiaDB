@@ -16,7 +16,7 @@ use std::sync::OnceLock;
 use super::gpu_gemm;
 use super::kernel_class::KernelClass;
 use super::policy::ComputePolicy;
-use crate::modalities::calculus::hetero_dispatch::{HostCapabilities, PowerThermalBudget};
+use crate::platform::hetero_dispatch::{HostCapabilities, PowerThermalBudget};
 
 /// Below this FLOP count a GEMM stays on the CPU regardless of the matrix — GPU upload
 /// + dispatch + readback overhead dominates a small job. (`m·k·n` multiply-adds.)
