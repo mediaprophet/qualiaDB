@@ -7,5 +7,7 @@
 //! (build order in `stats_plan.md`).
 
 pub mod pca;
+pub mod som;
 
 pub use pca::{fit as fit_pca, Pca};
+pub use som::Som;

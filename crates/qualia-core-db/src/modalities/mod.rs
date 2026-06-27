@@ -4,6 +4,9 @@ pub use argumentation::{Argument, Attack, AttackType, ArgumentationFramework, AR
 pub mod asp;
 pub mod ctl;
 pub mod fuzzy;
+pub mod fuzzy_quantifiers;
+pub mod fuzzy_rdf_schema;
+pub mod fuzzy_type2;
 pub mod modal;
 pub use asp::{MAX_STABLE_MODELS, enumerate_stable_models, compute_answer_sets, AspRule};
 pub mod calculus;

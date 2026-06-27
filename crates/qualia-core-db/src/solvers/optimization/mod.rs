@@ -7,6 +7,12 @@ use crate::solvers::{SolverConfig, SolverState, SolverResult};
 use crate::solvers::SolversError as ExecutionError;
 use core::f64::consts;
 
+/// General-dimension metaheuristic optimizers (hill-climbing / simulated annealing /
+/// Artificial Bee Colony) — global search beyond the fixed-`[f64;4]` solvers below.
+/// Heap-using batch-analytics layer; the engine ontology alignment consumes it.
+#[cfg(not(target_arch = "wasm32"))]
+pub mod metaheuristics;
+
 /// Nelder-Mead simplex optimizer for unconstrained optimization
 #[repr(C)]
 pub struct NelderMeadSimplex {
