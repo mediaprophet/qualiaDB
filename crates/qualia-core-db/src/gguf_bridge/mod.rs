@@ -503,6 +503,8 @@ mod ffn;
 mod gemm;
 mod output;
 mod forward;
+#[cfg(not(target_arch = "wasm32"))]
+mod resident_decode;
 mod async_dispatch;
 mod prefill_async;
 mod init;
@@ -1004,6 +1006,11 @@ pub struct QTensorEngine {
     gemm_aux_buf: Option<wgpu::Buffer>,
     /// MC8 SwiGLU up-projection scratch (cannot alias gemm_output/work — in-place GEMM invalid).
     gemm_ffn_buf: Option<wgpu::Buffer>,
+    /// 0.0.21 resident-decode: the residual stream kept in VRAM across the whole transformer stack
+    /// (one `emb_dim` row). Lazily allocated by the resident decode driver; never read back until
+    /// after the final layer. Native-only (the wasm decode uses the super-arena path).
+    #[cfg(not(target_arch = "wasm32"))]
+    resident_hidden_buf: Option<wgpu::Buffer>,
     /// Batched prefill RMS output (same span as `gemm_input_buf`; avoids in-place on batch_buf).
     #[cfg(target_arch = "wasm32")]
     prefill_scratch_buf: Option<wgpu::Buffer>,
