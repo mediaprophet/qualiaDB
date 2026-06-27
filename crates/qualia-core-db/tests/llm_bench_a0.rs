@@ -554,9 +554,16 @@ fn w2_gpu_phase_profile() {
     use qualia_core_db::llm_bench::decode_with_metrics_blocking;
     use qualia_core_db::llm_gpu_profiler as gprof;
 
-    let Some(path) = find_model("smollm2-360m-instruct-q8_0.gguf")
-        .or_else(|| find_model("SmolLM2-360M-Instruct-Q4_K_M.gguf"))
-    else {
+    // `QUALIA_LLM_PROFILE_MODEL=<filename>` forces a specific model (e.g. to compare the same
+    // architecture across quantizations — Q8 vs Q4_K — so the GEMM-phase delta isolates dequant ALU
+    // cost). Otherwise the default Q8-first chain.
+    let path = match std::env::var("QUALIA_LLM_PROFILE_MODEL").ok() {
+        Some(p) if std::path::Path::new(&p).exists() => Some(PathBuf::from(p)),
+        Some(name) => find_model(&name),
+        None => find_model("smollm2-360m-instruct-q8_0.gguf")
+            .or_else(|| find_model("SmolLM2-360M-Instruct-Q4_K_M.gguf")),
+    };
+    let Some(path) = path else {
         eprintln!("[w2] model absent — skipping GPU phase profile");
         return;
     };
