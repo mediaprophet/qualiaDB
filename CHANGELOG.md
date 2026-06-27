@@ -64,6 +64,16 @@ throughout, **1905 tests** by series end (authoritative build: `--manifest-path`
   (`specialized_libs/constructibility.rs` — Wantzel degree criterion, Gauss-Wantzel polygons, the
   classical impossibilities).
 
+### Added — Likeliness modality (`modalities/likeliness/`) — a third uncertainty calculus
+- A **qualitative, ordinal** calculus of expectation (Vector Semantics §4.2; Kornai's "naive"
+  inference), built as its **own modality** rather than folded into `defeasible`/`fuzzy` (Timothy's
+  call: indecision about the fold is itself the signal it is distinct). A 7-level scale
+  (`Impossible … Even … Certain`) with a **Kleene / De Morgan** lattice (`not` involution, `and`
+  meet, `or` join) — no excluded middle and no contradiction collapse, which is exactly what makes
+  it *not* probability (no normalisation, non-additive) and *not* fuzzy membership. Naive inference
+  on top: weakest-link modus ponens, chain attenuation (longer defeasible chains weaken), rebuttal,
+  and defeasible revision. Kernel-class `ElementwiseMap`.
+
 ### Added — KG↔LLM live-system integrations
 - **f-SPARQL** (`solvers/fuzzy_query/`): a degree algebra over the engine's own `BindingRow`
   solutions (join=t-norm, union=t-conorm, projection, negation, α-cut, top-k) + FILTER membership

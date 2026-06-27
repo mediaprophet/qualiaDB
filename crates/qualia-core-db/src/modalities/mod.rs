@@ -53,6 +53,8 @@ pub use jural::{
     correlative, jural_opposite, compile_jural_quin, correlative_quin,
     jural_correlativity_holds, find_unmet_correlatives, personhood_category_error,
 };
+pub mod likeliness;
+pub use likeliness::Likeliness;
 pub mod linear;
 pub use linear::{CONSUMED_BIT, consume_quin, is_consumed};
 pub mod logic;
