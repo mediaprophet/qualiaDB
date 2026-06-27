@@ -105,9 +105,11 @@ theory. All fold into the existing foundation as new submodules (no new silo):
 | Permutation test (two-sample, any statistic) | `learning/resampling/permutation` | ✅ done |
 | Robust/EDA: trimmed mean, winsorized mean, MAD, IQR | `statistics/robust` | ✅ done |
 | Information theory: entropy, KL, cross-entropy, **mutual information** | `statistics/information` | ✅ done |
+| Experiment design: power/sample-size, A/B (two-proportion), bandits (ε-greedy/UCB1/Thompson) | `learning/experiment` | ✅ done |
 These are the empirical twin of the Bayesian calibrated-uncertainty spine: a CI you *earned*
 by resampling, not one assumed from a Gaussian. MI is the assumption-free relevance signal for
-the 10D→5D NQuin router.
+the 10D→5D NQuin router. §3.4 experiment design (initially deferred) was pulled in to complete the
+STATS_PROBABILITY_CORPUS plan — A/B reports lift **with** a CI, not a bare "B wins".
 
 ## Progress log
 - 2026-06-27: plan written. Foundation (distributions/descriptive/correlation/regression/
