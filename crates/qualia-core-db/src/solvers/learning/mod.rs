@@ -18,6 +18,7 @@ pub mod experiment;
 pub mod gaussian_process;
 pub mod glm;
 pub mod graphical_models;
+pub mod kg_embedding;
 pub mod metrics;
 pub mod multiple_testing;
 pub mod preprocessing;

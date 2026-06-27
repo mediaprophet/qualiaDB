@@ -12,6 +12,9 @@ use crate::modalities::logic::n3_parser::{N3Event, N3Parser};
 use crate::modalities::logic::shacl::{CompiledShape, ShaclCompiler, ShaclConstraint, ShaclSeverity};
 #[cfg(not(target_arch = "wasm32"))]
 use crate::wal::{commit_semantic_mutation, WalHandoffResult, WriteAheadLog};
+use crate::solvers::grounding::{
+    evaluate_output_grounding, GroundingResolver, GroundingThresholds, GroundingVerdict,
+};
 use crate::webizen::{SlgArena, SlgOpcode, VmFrame};
 use crate::{q_hash, NQuin};
 use std::sync::atomic::{AtomicBool, AtomicU64, Ordering};
@@ -326,6 +329,10 @@ impl TaskOrchestrator {
     }
 
     /// Runs a full, Webizen-gated inference cycle for a registered LLM sub-agent.
+    ///
+    /// This is the citation-presence gate (no grounding resolver). For the deeper
+    /// gate that verifies the claim is *supported* by its cited facts, use
+    /// [`Self::orchestrate_inference_grounded`].
     pub fn orchestrate_inference(
         &self,
         agent: &dyn AgentRuntime,
@@ -333,6 +340,43 @@ impl TaskOrchestrator {
         graph_context: &str,
         intent: AgentIntent,
         suspended: Option<&mut crate::crdt::SuspendedTransactionQueue>,
+    ) -> OrchestrationResult {
+        self.orchestrate_inference_inner(agent, prompt, graph_context, intent, suspended, None)
+    }
+
+    /// Like [`Self::orchestrate_inference`], but adds the KG↔LLM **grounding gate** to
+    /// the post-flight: the model's structured claim is graded against its *resolved*
+    /// cited facts. A weakly-grounded claim is routed to human review (blocked, not
+    /// committed); an ungrounded one is blocked outright. Both happen **before** the
+    /// WAL commit, so an unsupported claim never reaches the graph.
+    pub fn orchestrate_inference_grounded(
+        &self,
+        agent: &dyn AgentRuntime,
+        prompt: &str,
+        graph_context: &str,
+        intent: AgentIntent,
+        suspended: Option<&mut crate::crdt::SuspendedTransactionQueue>,
+        resolver: &dyn GroundingResolver,
+        thresholds: GroundingThresholds,
+    ) -> OrchestrationResult {
+        self.orchestrate_inference_inner(
+            agent,
+            prompt,
+            graph_context,
+            intent,
+            suspended,
+            Some((resolver, thresholds)),
+        )
+    }
+
+    fn orchestrate_inference_inner(
+        &self,
+        agent: &dyn AgentRuntime,
+        prompt: &str,
+        graph_context: &str,
+        intent: AgentIntent,
+        suspended: Option<&mut crate::crdt::SuspendedTransactionQueue>,
+        grounding: Option<(&dyn GroundingResolver, GroundingThresholds)>,
     ) -> OrchestrationResult {
         let thermal_state = self.thermal_governor.get_thermal_state();
 
@@ -483,6 +527,31 @@ impl TaskOrchestrator {
             _ => {}
         }
 
+        // 3b. Grounding gate (optional): when a fact resolver is supplied and the
+        // output carries a structured claim, verify the claim is actually *supported*
+        // by its cited facts — not merely that a citation exists. Fail closed: an
+        // ungrounded claim is blocked; a partially-grounded one is routed to human
+        // review. Runs before any WAL commit, so unsupported claims never persist.
+        if let (Some((resolver, thresholds)), Some(claim)) =
+            (grounding, output.semantic_quin.as_ref())
+        {
+            match evaluate_output_grounding(claim, &output.provenance_quins, resolver, thresholds) {
+                GroundingVerdict::Grounded { .. } => {}
+                GroundingVerdict::Weak { .. } => {
+                    return OrchestrationResult::Blocked {
+                        rule_violated: q_hash("q42:GroundingRequiresReview"),
+                        reason: "Claim only partially grounded in its cited facts — requires human review before commit.",
+                    };
+                }
+                GroundingVerdict::Ungrounded { .. } => {
+                    return OrchestrationResult::Blocked {
+                        rule_violated: q_hash("q42:GroundingRequired"),
+                        reason: "Claim does not trace to its cited facts (ungrounded). Cannot commit.",
+                    };
+                }
+            }
+        }
+
         let mut semantic_quin = output.semantic_quin;
         let mut wal_written = false;
         let mut wal_suspended = false;
@@ -584,6 +653,160 @@ pub mod tests {
         let result =
             orch.orchestrate_inference(&agent, "Show me sanctuary data.", "ctx", intent, None);
         assert!(matches!(result, OrchestrationResult::Blocked { .. }));
+    }
+
+    // ─── Grounding gate ──────────────────────────────────────────────────────
+    use crate::llm_agent::{AgentBackend, AgentError, AgentOutput};
+    use crate::solvers::grounding::{GroundingResolver, GroundingThresholds};
+    use std::collections::HashMap;
+
+    fn claim_quin(s: u64, p: u64, o: u64) -> NQuin {
+        NQuin { subject: s, predicate: p, object: o, context: 0, metadata: 0, parity: 0 }
+    }
+
+    /// A mock agent that emits a fixed structured claim + citations, delegating the
+    /// rest of the runtime to a real local agent. `validate_output` permits so the
+    /// test isolates the *grounding* gate from the citation-presence gate.
+    struct ClaimAgent {
+        inner: LocalLlmAgent,
+        output: AgentOutput,
+    }
+    impl AgentRuntime for ClaimAgent {
+        fn backend(&self) -> &AgentBackend {
+            self.inner.backend()
+        }
+        fn agent_did(&self) -> &str {
+            self.inner.agent_did()
+        }
+        fn validate_intent(&self, intent: &AgentIntent) -> WebizenVerdict {
+            self.inner.validate_intent(intent)
+        }
+        fn infer(&self, _p: &str, _g: &str) -> Result<AgentOutput, AgentError> {
+            Ok(self.output.clone())
+        }
+        fn validate_output(&self, _o: &AgentOutput) -> WebizenVerdict {
+            WebizenVerdict::Permit
+        }
+        fn memory_budget_remaining(&self) -> u64 {
+            self.inner.memory_budget_remaining()
+        }
+    }
+
+    struct MapResolver(HashMap<u64, NQuin>);
+    impl GroundingResolver for MapResolver {
+        fn resolve(&self, h: u64) -> Option<NQuin> {
+            self.0.get(&h).copied()
+        }
+    }
+
+    fn grounding_intent() -> AgentIntent {
+        AgentIntent {
+            intent_predicate: 0x1234,
+            requested_graph_scope: vec![0xABCD],
+            context_namespaces: vec![],
+            requires_network: false,
+            ilp_offer_micro_cents: 0,
+            principal_did_hash: 0,
+            mcp_intent_frame_hash: 0x1234,
+            output_mode: N3OutputMode::FreeText,
+            clearance_ceiling: 0,
+            max_sentinel_depth: 32,
+            active_profile: None,
+        }
+    }
+
+    fn claim_agent(claim: NQuin, citations: Vec<u64>) -> ClaimAgent {
+        ClaimAgent {
+            inner: LocalLlmAgent::new("did:git:claim-agent", "model.gguf"),
+            output: AgentOutput {
+                text: "asserted".into(),
+                semantic_quin: Some(claim),
+                provenance_quins: citations,
+                tokens_generated: 1,
+                inference_duration_ms: 0,
+                peak_memory_bytes: 0,
+            },
+        }
+    }
+
+    #[test]
+    fn grounding_gate_commits_a_supported_claim() {
+        let claim = claim_quin(1, 2, 3);
+        let agent = claim_agent(claim, vec![0xAA]);
+        let mut m = HashMap::new();
+        m.insert(0xAA, claim_quin(1, 2, 3)); // citation resolves to the exact fact
+        let resolver = MapResolver(m);
+        let orch = TaskOrchestrator::new(Box::new(NullThermalGovernor));
+        let result = orch.orchestrate_inference_grounded(
+            &agent,
+            "assert",
+            "ctx",
+            grounding_intent(),
+            None,
+            &resolver,
+            GroundingThresholds::default(),
+        );
+        assert!(matches!(result, OrchestrationResult::Committed { .. }), "got {result:?}");
+    }
+
+    #[test]
+    fn grounding_gate_blocks_an_ungrounded_claim() {
+        let claim = claim_quin(1, 2, 3);
+        let agent = claim_agent(claim, vec![0xBB]);
+        let mut m = HashMap::new();
+        m.insert(0xBB, claim_quin(7, 8, 9)); // cited fact is unrelated to the claim
+        let resolver = MapResolver(m);
+        let orch = TaskOrchestrator::new(Box::new(NullThermalGovernor));
+        let result = orch.orchestrate_inference_grounded(
+            &agent,
+            "assert",
+            "ctx",
+            grounding_intent(),
+            None,
+            &resolver,
+            GroundingThresholds::default(),
+        );
+        assert!(
+            matches!(result, OrchestrationResult::Blocked { reason, .. } if reason.contains("ungrounded")),
+            "ungrounded claim must be blocked, got {result:?}"
+        );
+    }
+
+    #[test]
+    fn grounding_gate_routes_partial_support_to_review() {
+        // Endpoints 1 and 3 are each cited somewhere, but no single fact matches a
+        // role of the claim → review band → blocked pending human review.
+        let claim = claim_quin(1, 2, 3);
+        let agent = claim_agent(claim, vec![0xC1, 0xC2]);
+        let mut m = HashMap::new();
+        m.insert(0xC1, claim_quin(1, 50, 60));
+        m.insert(0xC2, claim_quin(60, 70, 3));
+        let resolver = MapResolver(m);
+        let orch = TaskOrchestrator::new(Box::new(NullThermalGovernor));
+        let result = orch.orchestrate_inference_grounded(
+            &agent,
+            "assert",
+            "ctx",
+            grounding_intent(),
+            None,
+            &resolver,
+            GroundingThresholds::default(),
+        );
+        assert!(
+            matches!(result, OrchestrationResult::Blocked { reason, .. } if reason.contains("human review")),
+            "partial grounding must require review, got {result:?}"
+        );
+    }
+
+    #[test]
+    fn ungrounded_claim_still_commits_without_a_resolver() {
+        // The plain (non-grounded) entrypoint must be unchanged: no resolver → the
+        // grounding gate is skipped entirely, preserving existing behaviour.
+        let claim = claim_quin(1, 2, 3);
+        let agent = claim_agent(claim, vec![0xBB]);
+        let orch = TaskOrchestrator::new(Box::new(NullThermalGovernor));
+        let result = orch.orchestrate_inference(&agent, "assert", "ctx", grounding_intent(), None);
+        assert!(matches!(result, OrchestrationResult::Committed { .. }), "got {result:?}");
     }
 
     #[test]
