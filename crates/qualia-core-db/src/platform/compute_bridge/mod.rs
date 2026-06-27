@@ -22,12 +22,16 @@
 #![cfg(not(target_arch = "wasm32"))]
 
 pub mod backend;
+pub mod execute;
+pub mod gpu_gemm;
 pub mod kernel_class;
 pub mod matrix;
 pub mod policy;
 pub mod reference;
 
 pub use backend::{BackendId, BackendRegistry, DispatchError, KernelPanel, ProbeableBackend};
+pub use execute::{accelerated_gemm_f32, shared_policy, RanOn};
+pub use gpu_gemm::WgpuGemm;
 pub use kernel_class::KernelClass;
 pub use matrix::{probe_class_matrix, ClassMatrix, CpuBackend, WgpuBackend};
 pub use policy::{ComputePolicy, Plan};
