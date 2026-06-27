@@ -39,6 +39,7 @@ pub mod rope;
 pub mod special_functions;
 pub mod transforms;
 pub mod units;
+pub mod vector_calculus;
 pub mod quantum_optimizers;
 pub mod statistics;
 pub mod symbolic_logic;
