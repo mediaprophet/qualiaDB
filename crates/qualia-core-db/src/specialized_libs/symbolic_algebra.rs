@@ -26,6 +26,14 @@ pub enum Expr {
     Neg(Box<Expr>),
     /// Principal square root.
     Sqrt(Box<Expr>),
+    /// Natural exponential `e^u`.
+    Exp(Box<Expr>),
+    /// Natural logarithm `ln(u)` (domain `u > 0`).
+    Ln(Box<Expr>),
+    Sin(Box<Expr>),
+    Cos(Box<Expr>),
+    /// Tangent `tan(u)` (undefined where `cos(u) = 0`).
+    Tan(Box<Expr>),
 }
 
 // ── ergonomic constructors ──────────────────────────────────────────────────────
@@ -38,6 +46,11 @@ pub fn div(a: Expr, b: Expr) -> Expr { Expr::Div(Box::new(a), Box::new(b)) }
 pub fn pow(a: Expr, e: i32) -> Expr { Expr::Pow(Box::new(a), e) }
 pub fn neg(a: Expr) -> Expr { Expr::Neg(Box::new(a)) }
 pub fn sqrt(a: Expr) -> Expr { Expr::Sqrt(Box::new(a)) }
+pub fn exp(a: Expr) -> Expr { Expr::Exp(Box::new(a)) }
+pub fn ln(a: Expr) -> Expr { Expr::Ln(Box::new(a)) }
+pub fn sin(a: Expr) -> Expr { Expr::Sin(Box::new(a)) }
+pub fn cos(a: Expr) -> Expr { Expr::Cos(Box::new(a)) }
+pub fn tan(a: Expr) -> Expr { Expr::Tan(Box::new(a)) }
 
 impl Expr {
     /// Numerically evaluate, given variable bindings. Returns `None` if a variable is
@@ -61,6 +74,15 @@ impl Expr {
                 if x < 0.0 { return None; }
                 x.sqrt()
             }
+            Expr::Exp(a) => a.eval(env)?.exp(),
+            Expr::Ln(a) => {
+                let x = a.eval(env)?;
+                if x <= 0.0 { return None; }
+                x.ln()
+            }
+            Expr::Sin(a) => a.eval(env)?.sin(),
+            Expr::Cos(a) => a.eval(env)?.cos(),
+            Expr::Tan(a) => a.eval(env)?.tan(),
         };
         if v.is_finite() { Some(v) } else { None }
     }
@@ -98,6 +120,16 @@ pub fn differentiate(expr: &Expr, wrt: &str) -> Expr {
             differentiate(a, wrt),
             mul(c(2.0), sqrt((**a).clone())),
         ),
+        // (e^f)' = e^f · f'
+        Expr::Exp(a) => mul(exp((**a).clone()), differentiate(a, wrt)),
+        // (ln f)' = f' / f
+        Expr::Ln(a) => div(differentiate(a, wrt), (**a).clone()),
+        // (sin f)' = cos(f) · f'
+        Expr::Sin(a) => mul(cos((**a).clone()), differentiate(a, wrt)),
+        // (cos f)' = −sin(f) · f'
+        Expr::Cos(a) => mul(neg(sin((**a).clone())), differentiate(a, wrt)),
+        // (tan f)' = f' / cos²(f)   (sec²)
+        Expr::Tan(a) => div(differentiate(a, wrt), pow(cos((**a).clone()), 2)),
     }
 }
 
@@ -186,6 +218,43 @@ fn simplify_once(expr: &Expr) -> Expr {
                 _ => sqrt(a),
             }
         }
+        Expr::Exp(a) => {
+            let a = simplify_once(a);
+            match &a {
+                Expr::Const(z) if *z == 0.0 => c(1.0), // e⁰ = 1
+                Expr::Ln(inner) => (**inner).clone(),  // e^{ln u} = u
+                _ => exp(a),
+            }
+        }
+        Expr::Ln(a) => {
+            let a = simplify_once(a);
+            match &a {
+                Expr::Const(o) if *o == 1.0 => c(0.0), // ln 1 = 0
+                Expr::Exp(inner) => (**inner).clone(), // ln(e^u) = u
+                _ => ln(a),
+            }
+        }
+        Expr::Sin(a) => {
+            let a = simplify_once(a);
+            match &a {
+                Expr::Const(z) if *z == 0.0 => c(0.0), // sin 0 = 0
+                _ => sin(a),
+            }
+        }
+        Expr::Cos(a) => {
+            let a = simplify_once(a);
+            match &a {
+                Expr::Const(z) if *z == 0.0 => c(1.0), // cos 0 = 1
+                _ => cos(a),
+            }
+        }
+        Expr::Tan(a) => {
+            let a = simplify_once(a);
+            match &a {
+                Expr::Const(z) if *z == 0.0 => c(0.0), // tan 0 = 0
+                _ => tan(a),
+            }
+        }
     }
 }
 
@@ -215,6 +284,11 @@ pub fn expand(expr: &Expr) -> Expr {
         Expr::Sub(a, b) => sub(expand(a), expand(b)),
         Expr::Neg(a) => neg(expand(a)),
         Expr::Sqrt(a) => sqrt(expand(a)),
+        Expr::Exp(a) => exp(expand(a)),
+        Expr::Ln(a) => ln(expand(a)),
+        Expr::Sin(a) => sin(expand(a)),
+        Expr::Cos(a) => cos(expand(a)),
+        Expr::Tan(a) => tan(expand(a)),
         Expr::Div(a, b) => div(expand(a), expand(b)),
         Expr::Mul(a, b) => expand_mul(&expand(a), &expand(b)),
         Expr::Pow(a, e) => expand_pow(&expand(a), *e),
@@ -327,6 +401,11 @@ fn encode(e: &Expr, out: &mut Vec<NQuin>) -> usize {
         Expr::Pow(a, exp) => { let l = encode(a, out); push_node(out, name_tag("cas:pow"), l as u64, 0, (*exp as i64) as u64) }
         Expr::Neg(a) => { let l = encode(a, out); push_node(out, name_tag("cas:neg"), l as u64, 0, 0) }
         Expr::Sqrt(a) => { let l = encode(a, out); push_node(out, name_tag("cas:sqrt"), l as u64, 0, 0) }
+        Expr::Exp(a) => { let l = encode(a, out); push_node(out, name_tag("cas:exp"), l as u64, 0, 0) }
+        Expr::Ln(a) => { let l = encode(a, out); push_node(out, name_tag("cas:ln"), l as u64, 0, 0) }
+        Expr::Sin(a) => { let l = encode(a, out); push_node(out, name_tag("cas:sin"), l as u64, 0, 0) }
+        Expr::Cos(a) => { let l = encode(a, out); push_node(out, name_tag("cas:cos"), l as u64, 0, 0) }
+        Expr::Tan(a) => { let l = encode(a, out); push_node(out, name_tag("cas:tan"), l as u64, 0, 0) }
     }
 }
 
@@ -359,6 +438,16 @@ fn decode(quins: &[NQuin], idx: usize) -> Result<Expr, String> {
         Ok(neg(child(node.object)?))
     } else if p == name_tag("cas:sqrt") {
         Ok(sqrt(child(node.object)?))
+    } else if p == name_tag("cas:exp") {
+        Ok(exp(child(node.object)?))
+    } else if p == name_tag("cas:ln") {
+        Ok(ln(child(node.object)?))
+    } else if p == name_tag("cas:sin") {
+        Ok(sin(child(node.object)?))
+    } else if p == name_tag("cas:cos") {
+        Ok(cos(child(node.object)?))
+    } else if p == name_tag("cas:tan") {
+        Ok(tan(child(node.object)?))
     } else {
         Err(format!("unknown CAS node tag in quin {idx}"))
     }
@@ -508,11 +597,21 @@ impl Parser {
         match self.next() {
             Some(Tok::Num(n)) => Ok(c(n)),
             Some(Tok::Ident(name)) => {
-                if name == "sqrt" {
+                // Unary functions: name '(' expr ')'.
+                let unary: Option<fn(Expr) -> Expr> = match name.as_str() {
+                    "sqrt" => Some(sqrt),
+                    "exp" => Some(exp),
+                    "ln" => Some(ln),
+                    "sin" => Some(sin),
+                    "cos" => Some(cos),
+                    "tan" => Some(tan),
+                    _ => None,
+                };
+                if let Some(ctor) = unary {
                     self.expect(Tok::LParen)?;
                     let inner = self.parse_expr()?;
                     self.expect(Tok::RParen)?;
-                    Ok(sqrt(inner))
+                    Ok(ctor(inner))
                 } else {
                     Ok(var(&name))
                 }
@@ -547,6 +646,11 @@ impl std::fmt::Display for Expr {
             Expr::Pow(a, e) => write!(f, "({a}^{e})"),
             Expr::Neg(a) => write!(f, "(-{a})"),
             Expr::Sqrt(a) => write!(f, "sqrt({a})"),
+            Expr::Exp(a) => write!(f, "exp({a})"),
+            Expr::Ln(a) => write!(f, "ln({a})"),
+            Expr::Sin(a) => write!(f, "sin({a})"),
+            Expr::Cos(a) => write!(f, "cos({a})"),
+            Expr::Tan(a) => write!(f, "tan({a})"),
         }
     }
 }
@@ -657,6 +761,34 @@ mod tests {
         // Multi-char variable names (≤ 8 bytes) and sqrt/neg survive the round-trip.
         let e2 = sqrt(neg(sub(var("price"), c(4.0))));
         assert_eq!(from_quins(&to_quins(&e2)).unwrap(), e2);
+    }
+
+    #[test]
+    fn transcendental_diff_eval_parse_and_quins() {
+        // d/dx[sin x] = cos x, d/dx[e^x] = e^x, d/dx[ln x] = 1/x, d/dx[tan x] = 1/cos²x —
+        // checked against a central finite difference of the original (strong test).
+        for f in [sin(var("x")), cos(var("x")), exp(var("x")), ln(var("x")), tan(var("x"))] {
+            let df = simplify(&differentiate(&f, "x"));
+            for &x in &[0.4, 1.1, 2.3] {
+                let h = 1e-6;
+                let fd = (f.eval(&env1("x", x + h)).unwrap() - f.eval(&env1("x", x - h)).unwrap())
+                    / (2.0 * h);
+                let sym = df.eval(&env1("x", x)).unwrap();
+                assert!((sym - fd).abs() < 1e-4, "{f}: symbolic {sym} vs fd {fd} at x={x}");
+            }
+        }
+        // Inverse-pair simplifications.
+        assert_eq!(simplify(&ln(exp(var("x")))), var("x"));
+        assert_eq!(simplify(&exp(ln(var("x")))), var("x"));
+        assert_eq!(simplify(&sin(c(0.0))), c(0.0));
+        assert_eq!(simplify(&cos(c(0.0))), c(1.0));
+        // Parser + Display + quin round-trip on a transcendental expression.
+        let e = parse("sin(x) + exp(2*x) - ln(x)").unwrap();
+        assert!((e.eval(&env1("x", 1.0)).unwrap()
+            - (1.0_f64.sin() + 2.0_f64.exp() - 1.0_f64.ln()))
+        .abs()
+            < 1e-9);
+        assert_eq!(from_quins(&to_quins(&e)).unwrap(), e);
     }
 
     #[test]

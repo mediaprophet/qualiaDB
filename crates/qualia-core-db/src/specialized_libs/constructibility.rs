@@ -139,6 +139,10 @@ pub enum ConstructibilityVerdict {
     NotRealNumber,
     /// Division by zero — undefined.
     Undefined,
+    /// A transcendental function (`exp`/`ln`/`sin`/`cos`/`tan`) appears: by
+    /// Lindemann–Weierstrass its value at a nonzero algebraic argument is transcendental,
+    /// hence not constructible (no finite-degree minimal polynomial).
+    Transcendental,
 }
 
 /// Count `Sqrt` nodes (the field-extension tower height bound).
@@ -150,6 +154,8 @@ fn sqrt_count(expr: &Expr) -> u32 {
             sqrt_count(a) + sqrt_count(b)
         }
         Expr::Sqrt(a) => 1 + sqrt_count(a),
+        // Transcendental nodes contribute no square-root tower; count any sqrts in the arg.
+        Expr::Exp(a) | Expr::Ln(a) | Expr::Sin(a) | Expr::Cos(a) | Expr::Tan(a) => sqrt_count(a),
     }
 }
 
@@ -176,6 +182,16 @@ fn invalidity(expr: &Expr) -> Option<ConstructibilityVerdict> {
                 }
             }
             invalidity(a)
+        }
+        // exp/ln/sin/cos/tan: transcendental unless the argument is the trivial 0
+        // (e.g. sin 0 = 0, cos 0 = 1, exp 0 = 1 are constructible). Otherwise non-constructible.
+        Expr::Exp(a) | Expr::Ln(a) | Expr::Sin(a) | Expr::Cos(a) | Expr::Tan(a) => {
+            if let Some(v) = a.eval(&empty) {
+                if v == 0.0 {
+                    return invalidity(a);
+                }
+            }
+            Some(ConstructibilityVerdict::Transcendental)
         }
     }
 }
@@ -260,6 +276,20 @@ mod tests {
             ConstructibilityVerdict::Constructible { degree_bound } => assert_eq!(degree_bound, 4),
             v => panic!("nested root should be constructible, got {v:?}"),
         }
+    }
+
+    #[test]
+    fn transcendental_subexpression_is_not_constructible() {
+        use crate::specialized_libs::symbolic_algebra::{cos, sin, var};
+        // sin(1) is transcendental → not constructible.
+        assert_eq!(is_constructible_number(&sin(c(1.0))), ConstructibilityVerdict::Transcendental);
+        // A symbolic cos(x) (unknown argument) is treated transcendental, not fabricated constructible.
+        assert_eq!(is_constructible_number(&cos(var("x"))), ConstructibilityVerdict::Transcendental);
+        // But cos(0) = 1 (trivial argument) remains constructible.
+        assert!(matches!(
+            is_constructible_number(&cos(c(0.0))),
+            ConstructibilityVerdict::Constructible { .. }
+        ));
     }
 
     #[test]

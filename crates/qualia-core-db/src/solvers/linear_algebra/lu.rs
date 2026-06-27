@@ -26,6 +26,41 @@ pub struct Lu {
 }
 
 impl Lu {
+    /// Solve `A x = b` using this factorization (apply `P`, forward-substitute `L`,
+    /// back-substitute `U`). `None` if the matrix is singular or `b` has the wrong length.
+    /// `O(n²)` given the existing `O(n³)` factorization — the reusable solve behind any
+    /// dense linear system (BVP Newton steps, implicit ODE stages, least-squares normal
+    /// equations).
+    pub fn solve(&self, b: &[f64]) -> Option<Vec<f64>> {
+        if self.singular || b.len() != self.n {
+            return None;
+        }
+        let n = self.n;
+        // Pb — apply the row permutation.
+        let mut y: Vec<f64> = (0..n).map(|i| b[self.pivots[i]]).collect();
+        // Forward substitution: L has an implicit unit diagonal.
+        for i in 0..n {
+            let mut s = y[i];
+            for j in 0..i {
+                s -= self.lu[i * n + j] * y[j];
+            }
+            y[i] = s;
+        }
+        // Back substitution against U.
+        for i in (0..n).rev() {
+            let mut s = y[i];
+            for j in (i + 1)..n {
+                s -= self.lu[i * n + j] * y[j];
+            }
+            let diag = self.lu[i * n + i];
+            if diag == 0.0 {
+                return None;
+            }
+            y[i] = s / diag;
+        }
+        Some(y)
+    }
+
     /// `det(A) = sign · Π U[i][i]`.
     pub fn determinant(&self) -> f64 {
         if self.singular {
@@ -92,6 +127,12 @@ pub fn determinant(n: usize, data: &[f64]) -> Result<f64, SolversError> {
     Ok(lu_decompose(n, data)?.determinant())
 }
 
+/// Solve a general row-major `n×n` system `A x = b` via LU with partial pivoting. `None`
+/// on a shape mismatch or a singular matrix. The canonical dense solve for the engine.
+pub fn lu_solve(n: usize, a: &[f64], b: &[f64]) -> Option<Vec<f64>> {
+    lu_decompose(n, a).ok()?.solve(b)
+}
+
 #[cfg(test)]
 mod tests {
     use super::*;
@@ -152,5 +193,23 @@ mod tests {
     #[test]
     fn rejects_bad_dims() {
         assert_eq!(determinant(2, &[1.0, 2.0, 3.0]), Err(SolversError::InvalidDimension));
+    }
+
+    #[test]
+    fn lu_solve_recovers_known_solution() {
+        // [[2,1,1],[1,3,2],[1,0,0]] x = [4,6,1] → x = [1,1,1].
+        let a = [2.0, 1.0, 1.0, 1.0, 3.0, 2.0, 1.0, 0.0, 0.0];
+        let x = lu_solve(3, &a, &[4.0, 6.0, 1.0]).unwrap();
+        for xi in &x {
+            assert!((xi - 1.0).abs() < 1e-9, "x = {x:?}");
+        }
+        // Residual A·x − b ≈ 0 on a second system.
+        let a2 = [4.0, 3.0, 6.0, 3.0];
+        let b2 = [10.0, 12.0];
+        let x2 = lu_solve(2, &a2, &b2).unwrap();
+        assert!((4.0 * x2[0] + 3.0 * x2[1] - 10.0).abs() < 1e-9);
+        assert!((6.0 * x2[0] + 3.0 * x2[1] - 12.0).abs() < 1e-9);
+        // Singular → None.
+        assert!(lu_solve(2, &[1.0, 2.0, 2.0, 4.0], &[1.0, 2.0]).is_none());
     }
 }

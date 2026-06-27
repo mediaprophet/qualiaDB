@@ -8,7 +8,9 @@
 //! handled case. Definite integrals use the Fundamental Theorem, with a numerical
 //! Simpson fallback when the symbolic form is unavailable.
 
-use super::symbolic_algebra::{add, c, div, differentiate, mul, neg, pow, simplify, sub, var, Expr};
+use super::symbolic_algebra::{
+    add, c, cos, div, differentiate, exp, ln, mul, neg, pow, simplify, sin, sub, var, Expr,
+};
 
 #[derive(Debug, Clone, PartialEq, Eq)]
 pub enum IntegrationError {
@@ -30,13 +32,19 @@ pub fn integrate(expr: &Expr, x: &str) -> Result<Expr, IntegrationError> {
         Expr::Var(name) if name == x => div(pow(var(x), 2), c(2.0)),
         // ∫ y dx = y·x   (y independent of x)
         Expr::Var(_) => mul(expr.clone(), var(x)),
-        // ∫ xⁿ dx = x^{n+1}/(n+1), n ≠ −1
+        // ∫ xⁿ dx = x^{n+1}/(n+1), n ≠ −1 ; ∫ x⁻¹ dx = ln(x)
         Expr::Pow(base, n) if is_var(base, x) => {
             if *n == -1 {
-                return Err(IntegrationError::NotIntegrable); // needs ln|x|
+                ln(var(x)) // principal branch (domain x > 0)
+            } else {
+                div(pow(var(x), n + 1), c((*n + 1) as f64))
             }
-            div(pow(var(x), n + 1), c((*n + 1) as f64))
         }
+        // ∫ eˣ dx = eˣ
+        Expr::Exp(inner) if is_var(inner, x) => exp(var(x)),
+        // ∫ sin x dx = −cos x ; ∫ cos x dx = sin x
+        Expr::Sin(inner) if is_var(inner, x) => neg(cos(var(x))),
+        Expr::Cos(inner) if is_var(inner, x) => sin(var(x)),
         Expr::Add(a, b) => add(integrate(a, x)?, integrate(b, x)?),
         Expr::Sub(a, b) => sub(integrate(a, x)?, integrate(b, x)?),
         Expr::Neg(a) => neg(integrate(a, x)?),
@@ -44,6 +52,20 @@ pub fn integrate(expr: &Expr, x: &str) -> Result<Expr, IntegrationError> {
         Expr::Mul(a, b) => match (&**a, &**b) {
             (Expr::Const(_), _) => mul((**a).clone(), integrate(b, x)?),
             (_, Expr::Const(_)) => mul((**b).clone(), integrate(a, x)?),
+            _ => return Err(IntegrationError::NotIntegrable),
+        },
+        // quotients: f/const, k/x → k·ln(x), k/xⁿ → power rule with negative exponent.
+        Expr::Div(a, b) => match (&**a, &**b) {
+            (_, Expr::Const(d)) if *d != 0.0 => mul(c(1.0 / d), integrate(a, x)?),
+            (Expr::Const(k), Expr::Var(name)) if name == x => mul(c(*k), ln(var(x))),
+            (Expr::Const(k), Expr::Pow(base, n)) if is_var(base, x) => {
+                let m = -*n; // ∫ k·x^m dx
+                if m == -1 {
+                    mul(c(*k), ln(var(x)))
+                } else {
+                    mul(c(*k), div(pow(var(x), m + 1), c((m + 1) as f64)))
+                }
+            }
             _ => return Err(IntegrationError::NotIntegrable),
         },
         _ => return Err(IntegrationError::NotIntegrable),
@@ -125,8 +147,28 @@ mod tests {
     }
 
     #[test]
-    fn fails_closed_on_inverse() {
-        // ∫ x⁻¹ dx needs ln — refuse rather than fabricate.
-        assert_eq!(integrate(&pow(var("x"), -1), "x").unwrap_err(), IntegrationError::NotIntegrable);
+    fn transcendental_antiderivatives_roundtrip() {
+        // ∫x⁻¹ = ln x, ∫eˣ = eˣ, ∫sin = −cos, ∫cos = sin — round-trip on the positive
+        // domain (ln is only defined for x > 0).
+        let pos = |expr: &Expr| {
+            let anti = integrate(expr, "x").unwrap();
+            let back = simplify(&differentiate(&anti, "x"));
+            for &q in &[0.3, 1.7, 2.5] {
+                assert!(
+                    (eval_at(&back, "x", q).unwrap() - eval_at(expr, "x", q).unwrap()).abs() < 1e-7
+                );
+            }
+        };
+        pos(&pow(var("x"), -1));
+        pos(&super::super::symbolic_algebra::exp(var("x")));
+        pos(&super::super::symbolic_algebra::sin(var("x")));
+        pos(&super::super::symbolic_algebra::cos(var("x")));
+    }
+
+    #[test]
+    fn fails_closed_on_nonlinear_inner() {
+        // ∫ sin(x²) dx has no elementary form this engine represents — refuse, don't fabricate.
+        let f = super::super::symbolic_algebra::sin(pow(var("x"), 2));
+        assert_eq!(integrate(&f, "x").unwrap_err(), IntegrationError::NotIntegrable);
     }
 }

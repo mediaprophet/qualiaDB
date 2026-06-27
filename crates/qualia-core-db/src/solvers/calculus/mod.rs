@@ -16,6 +16,7 @@ pub mod ode_advanced;
 pub mod tensor_provenance;
 pub mod tensor_integrity;
 pub mod grid;
+pub mod dense;
 
 /// Runge-Kutta 4th order ODE solver with fixed memory footprint
 #[repr(C)]
