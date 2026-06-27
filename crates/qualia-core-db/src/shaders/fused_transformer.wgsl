@@ -311,29 +311,12 @@ var<workgroup> coop_partial: array<f32, 256>;
 var<workgroup> coop_q4k_dsub: array<f32, 8>; // d * sub_scale   per 32-element sub-block
 var<workgroup> coop_q4k_msub: array<f32, 8>; // dmin * sub_min  per 32-element sub-block
 
-@compute @workgroup_size(256)
-fn coop_gemv(
-    @builtin(workgroup_id) wg_id: vec3<u32>,
-    @builtin(local_invocation_id) lid: vec3<u32>,
-) {
-    // row / m are uniform across the workgroup (from workgroup_id) → these early
-    // returns and all barriers below are in uniform control flow.
-    let m = wg_id.y;
-    let batch = max(params.n_batch, 1u);
-    if m >= batch {
-        return;
-    }
-    let row = wg_id.x;
-    if row >= params.n_out {
-        return;
-    }
-    let t = lid.x;
-    let in_stride = select(params.n_in, params.in_row_stride, params.in_row_stride > 0u);
-    let out_stride = select(params.n_out, params.out_row_stride, params.out_row_stride > 0u);
-    let in_base = m * in_stride;
-    let out_base = m * out_stride;
-
-    // Each thread accumulates a slice of the contraction dimension.
+// Shared accumulation: thread `t`'s partial dot-product of weight row `row` with the activation at
+// `in_base`. Owns the block-cooperative Q4_K dequant (header decoded once per superblock into shared
+// memory, reused by all 256 threads). Called from both the shared-memory `coop_gemv` and the
+// subgroup `coop_gemv_sg` (coop_gemv_subgroup.wgsl) so the dequant logic lives in exactly one place.
+// Contains `workgroupBarrier()` — must be called from uniform workgroup control flow (both callers do).
+fn coop_row_dot(row: u32, t: u32, in_base: u32) -> f32 {
     var acc = 0.0;
     if params.weight_ggml_type == GGML_TYPE_Q4_K && (params.n_in % BLOCK_Q4K_ELEMS) == 0u {
         // Block-cooperative Q4_K path: workgroup step b == superblock b; thread t == element t.
@@ -380,7 +363,32 @@ fn coop_gemv(
             j = j + COOP_WG;
         }
     }
-    coop_partial[t] = acc;
+    return acc;
+}
+
+@compute @workgroup_size(256)
+fn coop_gemv(
+    @builtin(workgroup_id) wg_id: vec3<u32>,
+    @builtin(local_invocation_id) lid: vec3<u32>,
+) {
+    // row / m are uniform across the workgroup (from workgroup_id) → these early
+    // returns and all barriers below are in uniform control flow.
+    let m = wg_id.y;
+    let batch = max(params.n_batch, 1u);
+    if m >= batch {
+        return;
+    }
+    let row = wg_id.x;
+    if row >= params.n_out {
+        return;
+    }
+    let t = lid.x;
+    let in_stride = select(params.n_in, params.in_row_stride, params.in_row_stride > 0u);
+    let out_stride = select(params.n_out, params.out_row_stride, params.out_row_stride > 0u);
+    let in_base = m * in_stride;
+    let out_base = m * out_stride;
+
+    coop_partial[t] = coop_row_dot(row, t, in_base);
     workgroupBarrier();
 
     // Shared-memory tree reduction over the 256 partials.

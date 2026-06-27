@@ -152,16 +152,46 @@ impl QTensorEngine {
             cache: native_pipeline_cache.as_ref(),
         });
         // 0.0.21: second pipeline over the SAME shader module — the cooperative one-workgroup-per-row
-        // GEMV (entry `coop_gemv`). Auto-layout; same group-0 bindings as `main`. Native only.
+        // GEMV. Auto-layout; same group-0 bindings as `main`. Native only.
+        //
+        // When the adapter advertises SUBGROUP, build the wave-reduction variant (`coop_gemv_sg` in
+        // coop_gemv_subgroup.wgsl, concatenated after the base with `enable subgroups;`) which
+        // replaces the 8-step barrier-synced shared-memory tree reduction with one `subgroupAdd` per
+        // subgroup. Identical group-0 bindings + (n_out,1,1) dispatch → a drop-in for this field, so
+        // every call site and the derived `coop_gemv_bind_layout` pick it up transparently. Adapters
+        // without subgroups (and wasm) keep the universal shared-memory `coop_gemv`.
         #[cfg(not(target_arch = "wasm32"))]
-        let coop_gemv_pipeline = device.create_compute_pipeline(&wgpu::ComputePipelineDescriptor {
-            label: Some("Coop GEMV Pipeline"),
-            layout: None,
-            module: &shader,
-            entry_point: Some("coop_gemv"),
-            compilation_options: Default::default(),
-            cache: native_pipeline_cache.as_ref(),
-        });
+        let coop_gemv_pipeline = if device.features().contains(wgpu::Features::SUBGROUP) {
+            // NB: naga (wgpu 29.0.3) does not accept the WGSL `enable subgroups;` directive ("not yet
+            // supported"), but it DOES accept subgroup builtins/operations gated on the device's
+            // SUBGROUP capability — so we concatenate without the directive.
+            let sg_src = format!(
+                "{}\n{}",
+                include_str!("../shaders/fused_transformer.wgsl"),
+                include_str!("../shaders/coop_gemv_subgroup.wgsl"),
+            );
+            let sg_module = device.create_shader_module(wgpu::ShaderModuleDescriptor {
+                label: Some("Coop GEMV Subgroup Shader"),
+                source: wgpu::ShaderSource::Wgsl(sg_src.into()),
+            });
+            device.create_compute_pipeline(&wgpu::ComputePipelineDescriptor {
+                label: Some("Coop GEMV SG Pipeline"),
+                layout: None,
+                module: &sg_module,
+                entry_point: Some("coop_gemv_sg"),
+                compilation_options: Default::default(),
+                cache: native_pipeline_cache.as_ref(),
+            })
+        } else {
+            device.create_compute_pipeline(&wgpu::ComputePipelineDescriptor {
+                label: Some("Coop GEMV Pipeline"),
+                layout: None,
+                module: &shader,
+                entry_point: Some("coop_gemv"),
+                compilation_options: Default::default(),
+                cache: native_pipeline_cache.as_ref(),
+            })
+        };
 
         let mock_shader = device.create_shader_module(wgpu::ShaderModuleDescriptor {
             label: Some("Mock Fused Contraction Shader"),
