@@ -105,9 +105,28 @@ fn datatype_tag(dt: &str) -> Option<u64> {
     }
 }
 
-/// A readable label for a node (resolved lexical value, else a hash tag).
+/// A readable label for a node: the resolved lexical value, else the decoded
+/// inline numeric/boolean value, else a hash tag.
 fn label(node: u64, resolve: Resolver) -> String {
-    resolve(node).unwrap_or_else(|| format!("node:{node:016x}"))
+    if let Some(s) = resolve(node) {
+        return s;
+    }
+    if node & MSB_FLAG == 0 {
+        match object_tag(node) {
+            INLINE_TAG_BOOLEAN => return (node & 1 != 0).to_string(),
+            INLINE_TAG_FLOAT | INLINE_TAG_INTEGER | INLINE_TAG_DECIMAL => {
+                if let Some(n) = object_as_f64(node) {
+                    return if n.fract() == 0.0 && n.abs() < 1e15 {
+                        (n as i64).to_string()
+                    } else {
+                        n.to_string()
+                    };
+                }
+            }
+            _ => {}
+        }
+    }
+    format!("node:{node:016x}")
 }
 
 const RDF_TYPE_KEYS: [&str; 2] = ["rdf:type", "a"];
