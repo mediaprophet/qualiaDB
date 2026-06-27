@@ -82,6 +82,16 @@ pub use specialized_libs_shacl::{
     BiomolecularConfiguration, QuantumBiologyCalculation,
 };
 
+// ─── SHACL Extensions for the Computational-Mathematics Engine ──────────────────
+
+pub mod computational_maths_shacl;
+pub use computational_maths_shacl::{
+    get_computational_maths_shacl_ttl, AssumptionConfiguration, ExactArithmeticConfiguration,
+    IntegralTransformConfiguration, InterpolationConfiguration, NumberTheoryConfiguration,
+    NumericalMethodConfiguration, SpecialFunctionConfiguration, SymbolicCalculusConfiguration,
+    UnitsConfiguration, VectorCalculusConfiguration, COMPUTATIONAL_MATHS_SHAPES,
+};
+
 // ─── SHACL Extensions for Core Modalities ───────────────────────────────────────
 
 pub mod logic_modalities_shacl;
