@@ -1,7 +1,8 @@
 //! SHACL constraint surface for the **computational-mathematics engine**.
 //!
-//! Mirrors, in the SHACL/`SlgOpcode` validation layer, the capability libraries built out
-//! under the CALCULUS / Wolfram-gap plans: units & dimensional analysis, number theory &
+//! Mirrors, in the SHACL/`SlgOpcode` validation layer, the STEM capability libraries built
+//! out under the CALCULUS plan + the computational-engine gap analysis: units & dimensional
+//! analysis, number theory &
 //! combinatorics, special functions, interpolation, integral transforms, vector calculus,
 //! exact/arbitrary-precision arithmetic, the CAS calculus extensions (symbolic integration /
 //! series / limits / equation-solving / assumptions / trig / ODE-PDE / multivariable diff),

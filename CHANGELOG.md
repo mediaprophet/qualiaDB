@@ -13,7 +13,7 @@ source of truth, specialized libraries become composition callers, and every new
 categorised library that reuses the foundation (no duplicated math), fails closed (real result /
 `NotImplemented` / `InsufficientData` — never a fabricated number), and is dispatch-ready (§13:
 clear kernel-class boundary + an always-present CPU reference). Engine `--lib` suite green
-throughout, **1905 tests** by series end (authoritative build: `--manifest-path` the worktree).
+throughout, **2091 tests** by series end (authoritative build: `--manifest-path` the worktree).
 
 ### Added — Hardware-backend bridge (P1–P3)
 - `platform/compute_bridge/`: an **open `ProbeableBackend` registry** + 8-class `KernelClass`
@@ -95,6 +95,39 @@ throughout, **1905 tests** by series end (authoritative build: `--manifest-path`
   never moves funds itself.**
 - Isolate B in `daemon_swarm.rs` **de-mocked** — the former constant-`999` fabrication replaced by a
   real deterministic computation through the swarm executor.
+
+### Added — Computational-mathematics engine (`CALCULUS_CAPABILITIES_PLAN.md` + `COMPUTATIONAL_ENGINE_GAP_ANALYSIS.md`)
+A sovereign, provenance-bearing STEM computational-mathematics engine — every result is a real
+computation or a fail-closed refusal, never a fabricated number, and (for symbolic results) is
+citable via the CAS's `to_quins`/`expr_citation_hash`.
+- **New solver libraries:** `solvers/units/` (7-vector SI dimensional analysis, checked-arithmetic
+  quantities, affine conversions, CODATA constants), `solvers/number_theory/` (Miller-Rabin,
+  Pollard-rho, totient/Möbius, factorial/binomial/Stirling/Catalan), `solvers/special_functions/`
+  (Bessel J/Y/I/K, Airy, ζ via Euler-Maclaurin, Legendre/Chebyshev/Hermite/Laguerre),
+  `solvers/interpolation/` (Lagrange/Newton, natural cubic spline, least-squares),
+  `solvers/transforms/` (DFT/IDFT, Laplace numeric + symbolic table, Z-transform),
+  `solvers/vector_calculus/` (symbolic grad/div/curl/Laplacian + line/surface integrals with
+  Green's & divergence theorems), and `solvers/exact/` (arbitrary-precision `BigInt`/`BigRational`).
+- **CAS calculus extensions** (`specialized_libs/symbolic_*`): multivariable differentiation
+  (gradient/Jacobian/Hessian), symbolic integration (round-trip-gated), Taylor series, l'Hôpital
+  limits, and equation solving — each reusing the real root finder / dense LA / Γ, no re-derivation.
+- **CAS made analytic:** the `Expr` algebra gained transcendental nodes (`exp`/`ln`/`sin`/`cos`/`tan`)
+  across eval, differentiation (chain rule), simplification (exact special values + inverse pairs),
+  expansion, parser, display, and the NQuin tree encoding. On top of it:
+  **simplification under assumptions** (sign inference + `√(x²)→x`, log laws under positivity — no
+  rewrite unless the side condition is *proven*), **trigonometric simplification** (Pythagorean
+  collapse, parity, `sin/cos→tan`), and **symbolic differential equations** (separable, linear
+  first-order, linear second-order constant-coefficient via the characteristic equation; first-order
+  linear PDE by the method of characteristics; second-order PDE elliptic/parabolic/hyperbolic
+  classification — all residual-verified, fail-closed outside the supported classes).
+- **General-dimension numerical methods** (`solvers/calculus/dense.rs`): RK4, composite Simpson
+  (scalar + vector), and a shooting BVP with a real Newton step — generalising the toy `[f64; 4]`
+  solvers, reusing a new canonical dense `lu_solve` (forward/back substitution) added to
+  `solvers/linear_algebra/lu`.
+- **SHACL surface** (`modalities/logic/computational_maths_shacl.rs`): typed `*Configuration`
+  shapes (+ `to_opcodes` + TTL `NodeShape`s) for every capability above, wired into the
+  `shacl_extension_bridge` (10 new `q42:*` extension ids → bounded, `Halt`-terminated opcode
+  sequences).
 
 ### Changed — Honesty pass across specialized libraries
 - Neutralised fabricated achieved-quality metrics surfaced to clients (medical diagnosis confidence,

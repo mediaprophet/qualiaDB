@@ -4,7 +4,7 @@
 //! (Euler totient, Möbius, divisor sums) and combinatorics (factorials, binomials,
 //! partitions, Stirling, Catalan). Underpins the CAS, crypto, and **constructibility**
 //! (the regular-polygon decision needs Fermat-prime factorization and `φ(n)`), and is
-//! one of the bounded, high-demand gaps the Wolfram cross-check surfaced.
+//! one of the bounded, high-demand gaps the computational-engine gap analysis surfaced.
 //!
 //! Exact integer arithmetic over `u64`/`i64` (with `u128` intermediates to avoid
 //! overflow in modular multiply); fail-closed via `Option`/[`NumberTheoryError`] on
