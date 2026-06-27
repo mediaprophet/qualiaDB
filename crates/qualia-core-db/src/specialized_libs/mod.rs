@@ -8,6 +8,7 @@ pub mod linear_algebra;
 pub mod symbolic_algebra;
 pub mod constructibility;
 pub mod multivar_calculus;
+pub mod polynomial_algebra;
 pub mod statistical_computing;
 pub mod cryptographic_library;
 pub mod physics_simulation;
