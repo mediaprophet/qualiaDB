@@ -94,6 +94,21 @@ Each step: a real, tested implementation validated against a known result; a com
 update to this table; the full crate stays green. Progress is logged here and in
 `coordination/NOTICES.md`.
 
+## Resampling-inference + EDA + information theory (pulled forward, 2026-06-27)
+Routed to the 0.0.21-la lane (a stats/probability-corpus analysis flagged these). Honesty
+note: **bootstrap was NOT absent** — `resampling/bootstrap.rs` already had SE/bias; the real
+gaps were bootstrap *confidence intervals*, *permutation tests*, robust EDA, and information
+theory. All fold into the existing foundation as new submodules (no new silo):
+| Capability | Home | Status |
+|---|---|---|
+| Bootstrap CI (percentile + **BCa**, jackknife acceleration) | `learning/resampling/bootstrap` | ✅ done |
+| Permutation test (two-sample, any statistic) | `learning/resampling/permutation` | ✅ done |
+| Robust/EDA: trimmed mean, winsorized mean, MAD, IQR | `statistics/robust` | ✅ done |
+| Information theory: entropy, KL, cross-entropy, **mutual information** | `statistics/information` | ✅ done |
+These are the empirical twin of the Bayesian calibrated-uncertainty spine: a CI you *earned*
+by resampling, not one assumed from a Gaussian. MI is the assumption-free relevance signal for
+the 10D→5D NQuin router.
+
 ## Progress log
 - 2026-06-27: plan written. Foundation (distributions/descriptive/correlation/regression/
   linear_algebra/compute_bridge) in place. Starting build order step 1.

@@ -9,9 +9,13 @@
 
 pub mod bootstrap;
 pub mod folds;
+pub mod permutation;
 
-pub use bootstrap::{bootstrap_estimate, bootstrap_indices, BootstrapResult};
+pub use bootstrap::{
+    bootstrap_ci, bootstrap_estimate, bootstrap_indices, BootstrapCi, BootstrapResult, CiMethod,
+};
 pub use folds::{k_fold, loocv, train_test_split, Fold};
+pub use permutation::{two_sample_test, PermutationResult};
 
 /// Gather the rows named by `idx` from a row-major `_ × p` matrix into a fresh
 /// contiguous `idx.len() × p` matrix.

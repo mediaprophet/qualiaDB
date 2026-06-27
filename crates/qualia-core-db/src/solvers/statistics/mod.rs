@@ -19,7 +19,9 @@ pub mod descriptive;
 pub mod distributions;
 pub mod histogram;
 pub mod hypothesis;
+pub mod information;
 pub mod regression;
+pub mod robust;
 
 pub use correlation::{correlation_p_value, kendall, pearson, rank_into, spearman};
 pub use descriptive::{
@@ -32,3 +34,5 @@ pub use hypothesis::{
     AnovaResult, ChiSquareResult, TTest, TwoSampleTTest,
 };
 pub use regression::{simple_linear_regression, LinearRegression};
+pub use information::{cross_entropy, entropy, kl_divergence, mutual_information_discrete};
+pub use robust::{iqr, median_abs_deviation, trimmed_mean, winsorized_mean};
