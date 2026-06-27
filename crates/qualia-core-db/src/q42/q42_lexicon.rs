@@ -68,6 +68,34 @@ impl Q42Context {
     pub fn resolve_semantic_term(&self, term: &str) -> Option<String> {
         self.vocabulary.get(term).cloned()
     }
+
+    /// Collapse the whole `@context` (base IRI + sorted vocabulary) into one deterministic
+    /// 64-bit hash — the compact-context identity behind CBOR-LD-style compression.
+    pub fn context_hash(&self) -> u64 {
+        let mut entries: Vec<(&String, &String)> = self.vocabulary.iter().collect();
+        entries.sort_by_key(|(k, _)| *k);
+        let mut combined = self.base_iri.clone();
+        for (k, v) in entries {
+            combined.push_str(k);
+            combined.push_str(v);
+        }
+        crate::q_hash(&combined)
+    }
+
+    /// Expand a compact IRI (`prefix:suffix`) against the vocabulary, then hash it into the
+    /// same 64-bit space. Unknown prefixes hash the term verbatim.
+    pub fn expand_to_hash(&self, compact_iri: &str) -> u64 {
+        let expanded = if let Some(colon) = compact_iri.find(':') {
+            let (prefix, suffix) = (&compact_iri[..colon], &compact_iri[colon + 1..]);
+            match self.vocabulary.get(prefix) {
+                Some(base) => format!("{base}{suffix}"),
+                None => compact_iri.to_string(),
+            }
+        } else {
+            compact_iri.to_string()
+        };
+        crate::q_hash(&expanded)
+    }
 }
 
 impl Default for Q42Context {

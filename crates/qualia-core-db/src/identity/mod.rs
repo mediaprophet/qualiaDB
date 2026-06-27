@@ -8,3 +8,5 @@ pub mod profiles;
 pub mod key_vault;
 pub mod webizen_identifiers;
 pub mod vault_manifest;
+pub mod credentials;
+pub mod access_modality;
