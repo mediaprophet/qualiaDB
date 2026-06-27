@@ -6,6 +6,97 @@ The format follows [Keep a Changelog](https://keepachangelog.com/en/1.0.0/).
 
 ---
 
+## [0.0.21-la] — 2026-06-27
+
+The **mathematical / statistical substrate** push on branch `0.0.21-la`: one engine is the
+source of truth, specialized libraries become composition callers, and every new capability is a
+categorised library that reuses the foundation (no duplicated math), fails closed (real result /
+`NotImplemented` / `InsufficientData` — never a fabricated number), and is dispatch-ready (§13:
+clear kernel-class boundary + an always-present CPU reference). Engine `--lib` suite green
+throughout, **1905 tests** by series end (authoritative build: `--manifest-path` the worktree).
+
+### Added — Hardware-backend bridge (P1–P3)
+- `platform/compute_bridge/`: an **open `ProbeableBackend` registry** + 8-class `KernelClass`
+  taxonomy + per-class `ComputePolicy::select → Plan`, built on the existing
+  `device_benchmark`/`hetero_dispatch`/`HardwarePassport`. CPU path always present and never
+  hard-fails; GPU/NPU/vendor paths are correctness-gated against the CPU reference before they may
+  be the default. Headless-testable (synthetic matrices).
+
+### Added — Statistics & probability (real, honest)
+- Root-caused the prior statistics weakness as **fabricated p-values** (the `|t|>1.96 ⇒ p=0.05`
+  hack) and replaced it: `solvers/statistics/distributions/` (special functions — `ln_gamma`,
+  regularized incomplete gamma/beta, `erf`; Normal/Student-t/χ²/F/MVN pdf/cdf/quantile,
+  table-validated). Real p-values end-to-end across hypothesis tests (one/paired/two-sample t,
+  one-way ANOVA, χ² GoF/independence, McNemar/Friedman/Iman-Davenport).
+- Descriptive completeness (covariance/skewness/kurtosis/quantiles), Spearman + significance, OLS
+  regression with inference; resampling (cross-validation, bootstrap SE + percentile/BCa CIs,
+  permutation tests); robust/EDA (trimmed mean, MAD, IQR/winsorisation); information theory
+  (entropy/KL/cross-entropy/mutual information); experiment design (power/sample-size, A/B
+  two-proportion, bandits ε-greedy/UCB1/Thompson); and **anomaly detection** (z-score, robust
+  modified-z, Tukey fences, Grubbs' test, multivariate Mahalanobis χ² gate).
+
+### Added — Statistical learning (ISL + PRML) — `solvers/learning/`
+- The full *Introduction to Statistical Learning* surface (ch 2–13; ch 10 deep learning
+  deliberately deferred to the native LLM stack) and the *PRML* Bayesian/temporal/graphical spine:
+  OLS/ridge/lasso/PCR/PLS, logistic/Poisson/multinomial GLM (IRLS), LDA/QDA/NB/KNN/SVM(+RBF,
+  +multiclass), CART/random-forest/boosting/BART, PCA/k-means/GMM-EM/hierarchical/SOM,
+  splines/GAM/smoothing-splines, survival (Kaplan-Meier/Cox), multiple-testing corrections, metrics;
+  plus MVN, Bayesian linear regression, Gaussian process, HMM, MCMC, Kalman, belief-propagation
+  (sum-product), mean-field variational inference. ~50 estimators, all reusing
+  `linear_algebra` (cholesky/gemm/eigen/qr/svd) and the distributions library.
+- **Active learning** (`learning/active/`): frugal human-attestation ranking — uncertainty
+  sampling, query-by-committee (vote/consensus entropy, average-KL disagreement), information
+  density. Pure ranking over existing estimators' predictions; surfaces the *few* items most worth
+  a human's judgement instead of demanding mass labelling.
+- **KG embedding** (`learning/kg_embedding/`, affordability-gated): TransE/DistMult/ComplEx/RotatE
+  scoring + link-prediction (MRR/Hits@k) as the always-on cheap path; an SGD trainer (margin +
+  logistic, negative sampling, deterministic) as the **heavy run-once artifact producer** — never
+  on a user's critical path.
+
+### Added — Cross-plan capabilities (the book-capability plans)
+- Metaheuristic optimizers (hill-climbing/simulated-annealing/ABC, generic over state);
+  **ontology alignment as optimization** (`solvers/ontology_align/`) that structurally can only
+  emit `closeMatch → RequiresHumanReview` — never an asserted `exactMatch`; type-2 / interval
+  type-2 fuzzy (`modalities/fuzzy_type2`); fuzzy graph-match (similarity + approximate);
+  Zadeh fuzzy quantifiers; graded fuzzy-RDF-schema entailment; spreading activation
+  (`solvers/graph_opt/`) for the relevance router; fractal/hierarchical shortest-path
+  decomposition (cell-distributable); **constructibility** decision in the CAS
+  (`specialized_libs/constructibility.rs` — Wantzel degree criterion, Gauss-Wantzel polygons, the
+  classical impossibilities).
+
+### Added — KG↔LLM live-system integrations
+- **f-SPARQL** (`solvers/fuzzy_query/`): a degree algebra over the engine's own `BindingRow`
+  solutions (join=t-norm, union=t-conorm, projection, negation, α-cut, top-k) + FILTER membership
+  functions + an annotate/collect hook over the crisp executor stream. No fork of the SPARQL parser.
+- **KG↔LLM grounding gate** (`solvers/grounding/` + `inference/orchestrator.rs`): deepens the
+  post-flight from "a citation exists" to "the claim is *supported* by its cited facts." A resolver
+  turns provenance hashes into facts; weak grounding routes to human review, ungrounded is blocked —
+  both **before** WAL commit. The plain entrypoint is unchanged (no resolver → no-op; zero
+  regression).
+
+### Added — The Swarm: verify-before-pay distributed jobs (`services/swarm/`)
+- A paid swarm is dual-use, so **payment is impossible without independent result verification**:
+  content-addressed `JobSpec` (Personal/Collaborative/Paid), a `JobExecutor` trait + real local
+  executor, **Freivalds' O(n²) probabilistic matrix-product verification** + embedding-artifact
+  ranking reproduction, and a dispatch path where no `Rejected` verdict can reach a payment.
+- Settlement is an **escrow state machine over `value_flow`** (ROI-capped pricing via `commons_cost`;
+  `eroi_viable` = the solar-excess thermodynamic gate). On `Verified` it emits a
+  `MicropaymentInstruction` for the existing `ilp_dispatcher` rail; on `Rejected`, a refund. **It
+  never moves funds itself.**
+- Isolate B in `daemon_swarm.rs` **de-mocked** — the former constant-`999` fabrication replaced by a
+  real deterministic computation through the swarm executor.
+
+### Changed — Honesty pass across specialized libraries
+- Neutralised fabricated achieved-quality metrics surfaced to clients (medical diagnosis confidence,
+  structural safety factor, trade fills, compliance passes, ML/physics/chemistry placeholder
+  outputs) — now real computation or a fail-closed `NotImplemented`/`InsufficientData`, with tests
+  asserting the honest behaviour. Numeric duplication consolidated: the dense-LA core (gemm/qr/
+  cholesky/eigen/lu/svd/spectral/polynomial) lives once in `solvers/linear_algebra`; the LLM forward
+  pass is grounded as named STEM math (GEMM/activations/softmax/norm/attention/RoPE/FFN), each proven
+  equal to the real kernel.
+
+---
+
 ## [0.0.19] — 2026-06-22
 
 A large release centred on the **human-rights / values-credentials subsystem** and a complete
