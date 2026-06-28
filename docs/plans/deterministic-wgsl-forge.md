@@ -307,6 +307,26 @@ see evidence below). Remaining, in priority order:
   phase" error; `certify`/`tune` remain affine-only (non-affine oracle path is a
   named follow-up). cudarc was modernised 0.11→0.19 (official, `cuda-13030`).
 
+### 2026-06-28 GPU execution fixed + top-k certified on hardware
+
+- Running the opt-in GPU oracle tests on the RTX A2000 surfaced two real bugs in
+  the wgpu execute layer that broke **all** slab dispatches (so the earlier
+  "affine passed on A2000" note did not reproduce under the wgpu-29 slab path):
+  1. `QualiaSlabAllocator` handed out unaligned bind offsets (e.g. 16396); wgpu
+     requires `min_{storage,uniform}_buffer_offset_alignment` (256 here). The
+     allocator now aligns every `BufferView` to 256 and floors capacity to a
+     multiple of the alignment.
+  2. A single slab was bound as both read-only and read-write storage in one
+     dispatch, which wgpu forbids (read-write is an exclusive usage). Split into a
+     read/uniform slab and a read-write output slab; `BufferView` carries a
+     `BindingUsage` that selects the backing buffer.
+- Result: `generated_affine_certifies_on_real_gpu` and
+  `generated_topk_matches_oracle_on_real_gpu` both pass on the A2000 — top-k is
+  now GPU OracleVerified against the CPU reference, not just Naga-validated.
+- MSL and HLSL top-k emitters implemented (threadgroup / groupshared + barriers),
+  removing the WGSL-only restriction; PTX still defers generic emission.
+- Forge suite (non-GPU): 21 passed / 0 failed / 2 ignored.
+
 ### 2026-06-28 RT-core awareness evidence
 
 - IR: added `Intrinsic::RayQuery { acceleration_structure, origin, direction,

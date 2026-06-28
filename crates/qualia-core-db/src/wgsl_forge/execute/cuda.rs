@@ -27,7 +27,7 @@ use cudarc::nvrtc::Ptx;
 #[cfg(feature = "cuda")]
 use super::compute::QualiaCompute;
 #[cfg(feature = "cuda")]
-use super::memory::{BufferView, MemoryTopology, QualiaSlabAllocator};
+use super::memory::{BindingUsage, BufferView, MemoryTopology, QualiaSlabAllocator};
 #[cfg(feature = "cuda")]
 use crate::wgsl_forge::{AdapterConstraints, AdapterIdentity, ForgeError, Schedule};
 
@@ -114,7 +114,9 @@ impl CudaComputeContext {
         binding: u32,
         group: u32,
     ) -> Result<BufferView, ForgeError> {
-        let view = self.allocator.allocate_transient(data.len(), binding, group)?;
+        // CUDA addresses everything through one slab via raw pointers, so the
+        // wgpu usage class is not load-bearing here.
+        let view = self.allocator.allocate_transient(data.len(), binding, group, BindingUsage::StorageReadWrite)?;
         if !data.is_empty() {
             let mut dst = self.slab.slice_mut(view.offset..view.offset + view.length_bytes);
             self.stream
@@ -130,7 +132,7 @@ impl CudaComputeContext {
         binding: u32,
         group: u32,
     ) -> Result<BufferView, ForgeError> {
-        self.allocator.allocate_transient(size_bytes, binding, group)
+        self.allocator.allocate_transient(size_bytes, binding, group, BindingUsage::StorageReadWrite)
     }
 
     pub fn advance_read_head(&mut self, offset: usize) {

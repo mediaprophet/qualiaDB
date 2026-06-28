@@ -1,7 +1,7 @@
 use bytemuck::{Pod, Zeroable};
 use serde::{Deserialize, Serialize};
 
-use crate::wgsl_forge::execute::{QualiaCompute, WgpuComputeContext, WgpuPipeline};
+use crate::wgsl_forge::execute::{BindingUsage, QualiaCompute, WgpuComputeContext, WgpuPipeline};
 use crate::wgsl_forge::{
     AdapterConstraints, AdapterIdentity, BuiltinKernel, CandidateEvaluation, CertificationManifest,
     ForgeError, GeneratedShader, Schedule, TargetBackend, TimingSource, TimingSummary, ValidationLevel,
@@ -229,13 +229,13 @@ pub fn evaluate_builtin(
     let case = OracleCase::affine(length, 0x5141_4C49_4157_4753, 1.618_034, -0.125);
 
     let input_bytes = bytemuck::cast_slice(case.input.as_slice());
-    let view_input = context.allocate_and_write(input_bytes, 0, 0)?;
+    let view_input = context.allocate_and_write(input_bytes, 0, 0, BindingUsage::StorageRead)?;
 
     let output_bytes_len = (case.input.len() * size_of::<f32>()).max(4);
-    let view_output = context.allocate_transient(output_bytes_len, 1, 0)?;
+    let view_output = context.allocate_transient(output_bytes_len, 1, 0, BindingUsage::StorageReadWrite)?;
 
     let params_bytes = bytemuck::bytes_of(&case.params);
-    let view_params = context.allocate_and_write(params_bytes, 2, 0)?;
+    let view_params = context.allocate_and_write(params_bytes, 2, 0, BindingUsage::Uniform)?;
 
     let buffers = vec![view_input, view_output, view_params];
 
@@ -379,11 +379,11 @@ pub fn evaluate_topk(
     let expected = topk_cpu(&input, length, k, block_size);
 
     let input_bytes = bytemuck::cast_slice(input.as_slice());
-    let view_input = context.allocate_and_write(input_bytes, 0, 0)?;
+    let view_input = context.allocate_and_write(input_bytes, 0, 0, BindingUsage::StorageRead)?;
 
     let output_len = expected.len();
     let output_bytes_len = (output_len * size_of::<f32>()).max(4);
-    let view_output = context.allocate_transient(output_bytes_len, 1, 0)?;
+    let view_output = context.allocate_transient(output_bytes_len, 1, 0, BindingUsage::StorageReadWrite)?;
 
     let params = TopKParams {
         length: length as u32,
@@ -391,7 +391,7 @@ pub fn evaluate_topk(
         block_size: block_size as u32,
         _pad: 0,
     };
-    let view_params = context.allocate_and_write(bytemuck::bytes_of(&params), 2, 0)?;
+    let view_params = context.allocate_and_write(bytemuck::bytes_of(&params), 2, 0, BindingUsage::Uniform)?;
 
     let buffers = vec![view_input, view_output, view_params];
     let pipeline = WgpuPipeline::compile(context, &generated.source, &kernel.entry_point)?;

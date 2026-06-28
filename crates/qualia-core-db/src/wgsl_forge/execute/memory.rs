@@ -10,6 +10,17 @@ pub enum MemoryTopology {
     Discrete { staging_required: bool },
 }
 
+/// How a [`BufferView`] is bound in a dispatch. Determines which physical slab
+/// backs it: wgpu forbids a single buffer being bound as both read-only and
+/// read-write storage in one dispatch, so read-write outputs live in a separate
+/// buffer from read-only/uniform inputs.
+#[derive(Debug, Clone, Copy, PartialEq, Eq)]
+pub enum BindingUsage {
+    StorageRead,
+    StorageReadWrite,
+    Uniform,
+}
+
 /// A lightweight, heap-free pointer representing a contiguous memory slice on the device.
 #[derive(Debug, Clone, Copy, PartialEq, Eq)]
 pub struct BufferView {
@@ -21,24 +32,50 @@ pub struct BufferView {
     pub binding: u32,
     /// Pipeline bind group.
     pub group: u32,
+    /// How this view is bound (selects the backing slab on the wgpu backend).
+    pub usage: BindingUsage,
 }
 
-/// A topology-aware ring buffer designed to eliminate heap allocations 
+/// WebGPU's maximum `min_{storage,uniform}_buffer_offset_alignment`. Aligning
+/// every view to this value satisfies any conforming adapter's bind-group offset
+/// requirement (the A2000 reports 256), so slab sub-ranges can be bound directly.
+pub const DEFAULT_BINDING_ALIGNMENT: usize = 256;
+
+/// A topology-aware ring buffer designed to eliminate heap allocations
 /// during hot-path kernel dispatch. Maintains strict bounds invariant
 /// so the write_head never laps the read_head.
+///
+/// Every allocation's start offset is rounded up to `alignment` bytes so the
+/// resulting [`BufferView`] can be used directly as a wgpu bind-group entry
+/// without violating `min_{storage,uniform}_buffer_offset_alignment`.
 #[derive(Debug)]
 pub struct QualiaSlabAllocator {
     pub topology: MemoryTopology,
     capacity_bytes: u64,
+    alignment: u64,
     read_count: u64,
     write_count: u64,
 }
 
 impl QualiaSlabAllocator {
     pub fn new(topology: MemoryTopology, capacity_bytes: usize) -> Self {
+        Self::new_with_alignment(topology, capacity_bytes, DEFAULT_BINDING_ALIGNMENT)
+    }
+
+    /// Constructs an allocator with an explicit binding alignment. The usable
+    /// capacity is floored to a multiple of `alignment` so that wrapped offsets
+    /// (computed modulo the capacity) remain aligned.
+    pub fn new_with_alignment(
+        topology: MemoryTopology,
+        capacity_bytes: usize,
+        alignment: usize,
+    ) -> Self {
+        let alignment = (alignment as u64).max(1);
+        let capacity = (capacity_bytes as u64) / alignment * alignment;
         Self {
             topology,
-            capacity_bytes: capacity_bytes as u64,
+            capacity_bytes: capacity,
+            alignment,
             read_count: 0,
             write_count: 0,
         }
@@ -51,21 +88,26 @@ impl QualiaSlabAllocator {
 
     /// Allocates a transient memory slice within the slab.
     ///
-    /// The allocator bumps the write_count. If the end of the slab is reached, 
-    /// it wraps around to 0. If the new allocation would lap the read_count, 
-    /// it returns an OutOfMemory error.
-    pub fn allocate_transient(&mut self, size_bytes: usize, binding: u32, group: u32) -> Result<BufferView, ForgeError> {
+    /// The start offset is aligned up to the binding alignment. The allocator
+    /// bumps the write_count past any alignment/wrap padding plus the size. If
+    /// the end of the slab is reached, it wraps around to 0 (itself aligned). If
+    /// the new allocation would lap the read_count, it returns an error.
+    pub fn allocate_transient(&mut self, size_bytes: usize, binding: u32, group: u32, usage: BindingUsage) -> Result<BufferView, ForgeError> {
         let size_u64 = size_bytes as u64;
         if size_u64 > self.capacity_bytes {
             return Err(ForgeError::GpuValidation("Allocation exceeds total slab capacity".to_string()));
         }
 
-        let mut offset = self.write_count % self.capacity_bytes;
-        let mut padding = 0;
-        
-        // Handle wrap-around padding
+        // Align the write head up to the binding alignment, accounting for the
+        // padding bytes consumed.
+        let aligned_write = align_up(self.write_count, self.alignment);
+        let mut padding = aligned_write - self.write_count;
+        let mut offset = aligned_write % self.capacity_bytes;
+
+        // Handle wrap-around: pad out the slab tail and restart at 0 (aligned,
+        // since the capacity is a multiple of the alignment).
         if offset + size_u64 > self.capacity_bytes {
-            padding = self.capacity_bytes - offset;
+            padding += self.capacity_bytes - offset;
             offset = 0;
         }
 
@@ -81,6 +123,7 @@ impl QualiaSlabAllocator {
             length_bytes: size_bytes,
             binding,
             group,
+            usage,
         })
     }
 
@@ -104,21 +147,30 @@ impl QualiaSlabAllocator {
     }
 }
 
+fn align_up(value: u64, alignment: u64) -> u64 {
+    if alignment <= 1 {
+        return value;
+    }
+    value.div_ceil(alignment) * alignment
+}
+
 #[cfg(test)]
 mod tests {
     use super::*;
 
     #[test]
     fn ring_buffer_allocates_and_wraps() {
-        let mut allocator = QualiaSlabAllocator::new(MemoryTopology::Unified { zero_copy: true }, 100);
-        
+        // Alignment 1 exercises the pure ring-buffer bookkeeping.
+        let mut allocator =
+            QualiaSlabAllocator::new_with_alignment(MemoryTopology::Unified { zero_copy: true }, 100, 1);
+
         // Allocate 60 bytes
-        let view1 = allocator.allocate_transient(60, 0, 0).unwrap();
+        let view1 = allocator.allocate_transient(60, 0, 0, BindingUsage::StorageReadWrite).unwrap();
         assert_eq!(view1.offset, 0);
         assert_eq!(allocator.write_count, 60);
 
         // Attempting to allocate 50 bytes should wrap, but it would lap the read_count (0), so it fails
-        let err = allocator.allocate_transient(50, 1, 0);
+        let err = allocator.allocate_transient(50, 1, 0, BindingUsage::StorageReadWrite);
         assert!(err.is_err());
 
         // Advance the read head to 60 (meaning view1 is freed)
@@ -126,17 +178,41 @@ mod tests {
 
         // Now the 50 byte allocation should wrap to 0 and succeed.
         // It will add 40 bytes of padding to wrap around, plus the 50 bytes.
-        let view2 = allocator.allocate_transient(50, 1, 0).unwrap();
+        let view2 = allocator.allocate_transient(50, 1, 0, BindingUsage::StorageReadWrite).unwrap();
         assert_eq!(view2.offset, 0);
         assert_eq!(allocator.write_count, 150);
 
         // Another 10 byte allocation should succeed
-        let view3 = allocator.allocate_transient(10, 2, 0).unwrap();
+        let view3 = allocator.allocate_transient(10, 2, 0, BindingUsage::StorageReadWrite).unwrap();
         assert_eq!(view3.offset, 50);
         assert_eq!(allocator.write_count, 160);
         
         // Another 1 byte allocation should fail since write_count (160) - read_count (60) == 100
-        let err2 = allocator.allocate_transient(1, 3, 0);
+        let err2 = allocator.allocate_transient(1, 3, 0, BindingUsage::StorageReadWrite);
         assert!(err2.is_err());
+    }
+
+    #[test]
+    fn every_view_offset_is_binding_aligned() {
+        // Mirrors the affine case (4099 f32 = 16396 bytes) that wgpu rejected at
+        // offset 16396 for not respecting min_storage_buffer_offset_alignment.
+        let mut allocator = QualiaSlabAllocator::new(
+            MemoryTopology::Discrete { staging_required: true },
+            1 << 20,
+        );
+        let sizes = [16_396usize, 16_396, 16, 4, 65_537];
+        let mut last_end = 0usize;
+        for (binding, size) in sizes.into_iter().enumerate() {
+            let view = allocator.allocate_transient(size, binding as u32, 0, BindingUsage::StorageReadWrite).unwrap();
+            assert_eq!(
+                view.offset % DEFAULT_BINDING_ALIGNMENT,
+                0,
+                "offset {} not {}-aligned",
+                view.offset,
+                DEFAULT_BINDING_ALIGNMENT
+            );
+            assert!(view.offset >= last_end, "allocations must not overlap");
+            last_end = view.offset + view.length_bytes;
+        }
     }
 }

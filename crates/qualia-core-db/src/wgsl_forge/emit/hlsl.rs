@@ -37,9 +37,7 @@ fn emit_kernel_body(
     schedule: Schedule,
 ) -> Result<(), ForgeError> {
     if kernel.id == "topk" {
-        return Err(ForgeError::Emission(
-            "topk reduction is only emitted for the WGSL/Naga target in this phase".to_string(),
-        ));
+        return emit_topk_hlsl(source, kernel, schedule);
     }
     if kernel.id == "affine-f32" {
         writeln!(
@@ -134,6 +132,93 @@ fn emit_kernel_body(
     }
 
     Ok(())
+}
+
+/// Top-k reduction in HLSL (compute shader 6.0): one thread group per block,
+/// `k` largest values per block in descending order, using `groupshared` arrays
+/// (driven by the IR) and `GroupMemoryBarrierWithGroupSync`.
+fn emit_topk_hlsl(
+    source: &mut String,
+    kernel: &KernelSpec,
+    schedule: Schedule,
+) -> Result<(), ForgeError> {
+    let wg = schedule.workgroup_size;
+    writeln!(
+        source,
+        "struct TopKParams {{\n    uint length;\n    uint k;\n    uint block_size;\n    uint _pad;\n}};\n"
+    )
+    .map_err(|error| ForgeError::Emission(error.to_string()))?;
+
+    writeln!(source, "StructuredBuffer<float> input : register(t0, space0);")
+        .map_err(|error| ForgeError::Emission(error.to_string()))?;
+    writeln!(source, "RWStructuredBuffer<float> output : register(u1, space0);")
+        .map_err(|error| ForgeError::Emission(error.to_string()))?;
+    writeln!(source, "ConstantBuffer<TopKParams> params : register(b2, space0);\n")
+        .map_err(|error| ForgeError::Emission(error.to_string()))?;
+
+    for shared in &kernel.shared_memory {
+        let ty = hlsl_scalar(shared.element);
+        writeln!(
+            source,
+            "groupshared {} {}[{}];",
+            ty,
+            shared.name,
+            shared.length.resolve(wg)
+        )
+        .map_err(|error| ForgeError::Emission(error.to_string()))?;
+    }
+
+    writeln!(
+        source,
+        r#"
+[numthreads({wg}, 1, 1)]
+void {entry}(uint tid : SV_GroupIndex, uint3 group_id : SV_GroupID) {{
+    uint block = group_id.x;
+    uint base = block * {wg}u;
+    uint gidx = base + tid;
+    float sentinel = asfloat(0xff7fffffu);
+    float v = sentinel;
+    if (gidx < params.length) {{ v = input[gidx]; }}
+    s_val[tid] = v;
+    s_idx[tid] = tid;
+    GroupMemoryBarrierWithGroupSync();
+
+    for (uint i = 0u; i < params.k; i++) {{
+        r_val[tid] = s_val[tid];
+        r_idx[tid] = s_idx[tid];
+        GroupMemoryBarrierWithGroupSync();
+        for (uint stride = {wg}u / 2u; stride > 0u; stride /= 2u) {{
+            if (tid < stride) {{
+                if (r_val[tid + stride] > r_val[tid]) {{
+                    r_val[tid] = r_val[tid + stride];
+                    r_idx[tid] = r_idx[tid + stride];
+                }}
+            }}
+            GroupMemoryBarrierWithGroupSync();
+        }}
+        if (tid == 0u) {{
+            output[block * params.k + i] = r_val[0];
+            s_val[r_idx[0]] = sentinel;
+        }}
+        GroupMemoryBarrierWithGroupSync();
+    }}
+}}"#,
+        wg = wg,
+        entry = kernel.entry_point
+    )
+    .map_err(|error| ForgeError::Emission(error.to_string()))?;
+
+    Ok(())
+}
+
+fn hlsl_scalar(element: crate::wgsl_forge::ir::ScalarType) -> &'static str {
+    use crate::wgsl_forge::ir::ScalarType;
+    match element {
+        ScalarType::F32 => "float",
+        ScalarType::U32 => "uint",
+        ScalarType::I32 => "int",
+        ScalarType::U64Words => "uint2",
+    }
 }
 
 fn emit_ops(source: &mut String, ops: &[Op], indent: &str) -> Result<(), ForgeError> {

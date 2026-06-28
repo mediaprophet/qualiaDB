@@ -2,7 +2,7 @@ use std::sync::mpsc;
 use std::time::Instant;
 
 use super::compute::QualiaCompute;
-use super::memory::{BufferView, MemoryTopology, QualiaSlabAllocator};
+use super::memory::{BindingUsage, BufferView, MemoryTopology, QualiaSlabAllocator};
 use crate::wgsl_forge::{AdapterConstraints, AdapterIdentity, ForgeError, Schedule};
 
 pub struct WgpuComputeContext {
@@ -11,7 +11,13 @@ pub struct WgpuComputeContext {
     pub adapter: AdapterIdentity,
     pub constraints: AdapterConstraints,
     pub allocator: QualiaSlabAllocator,
+    /// Backs read-only storage and uniform views (both non-exclusive usages,
+    /// so they may share one buffer).
     pub slab: wgpu::Buffer,
+    /// Backs read-write storage outputs. wgpu treats read-write storage as an
+    /// exclusive usage, so it cannot share a buffer with the read-only inputs in
+    /// the same dispatch.
+    pub out_slab: wgpu::Buffer,
     pub timestamp_supported: bool,
     pub timestamp_period_ns: f32,
     timestamp_resources: Option<TimestampResources>,
@@ -62,9 +68,18 @@ impl WgpuComputeContext {
         let slab = device.create_buffer(&wgpu::BufferDescriptor {
             label: Some("forge-slab"),
             size: capacity_bytes as u64,
-            usage: wgpu::BufferUsages::STORAGE 
-                | wgpu::BufferUsages::UNIFORM 
-                | wgpu::BufferUsages::COPY_DST 
+            usage: wgpu::BufferUsages::STORAGE
+                | wgpu::BufferUsages::UNIFORM
+                | wgpu::BufferUsages::COPY_DST
+                | wgpu::BufferUsages::COPY_SRC,
+            mapped_at_creation: false,
+        });
+
+        let out_slab = device.create_buffer(&wgpu::BufferDescriptor {
+            label: Some("forge-out-slab"),
+            size: capacity_bytes as u64,
+            usage: wgpu::BufferUsages::STORAGE
+                | wgpu::BufferUsages::COPY_DST
                 | wgpu::BufferUsages::COPY_SRC,
             mapped_at_creation: false,
         });
@@ -86,22 +101,35 @@ impl WgpuComputeContext {
             constraints,
             allocator,
             slab,
+            out_slab,
             timestamp_supported,
             timestamp_period_ns,
             timestamp_resources,
         })
     }
 
-    pub fn allocate_and_write(&mut self, data: &[u8], binding: u32, group: u32) -> Result<BufferView, ForgeError> {
-        let view = self.allocator.allocate_transient(data.len(), binding, group)?;
+    /// The physical buffer backing a view, chosen by its binding usage.
+    fn slab_for(&self, usage: BindingUsage) -> &wgpu::Buffer {
+        match usage {
+            BindingUsage::StorageReadWrite => &self.out_slab,
+            BindingUsage::StorageRead | BindingUsage::Uniform => &self.slab,
+        }
+    }
+
+    pub fn allocate_and_write(&mut self, data: &[u8], binding: u32, group: u32, usage: BindingUsage) -> Result<BufferView, ForgeError> {
+        let view = self.allocator.allocate_transient(data.len(), binding, group, usage)?;
         if !data.is_empty() {
-            self.queue.write_buffer(&self.slab, view.offset as wgpu::BufferAddress, data);
+            let slab = match usage {
+                BindingUsage::StorageReadWrite => &self.out_slab,
+                BindingUsage::StorageRead | BindingUsage::Uniform => &self.slab,
+            };
+            self.queue.write_buffer(slab, view.offset as wgpu::BufferAddress, data);
         }
         Ok(view)
     }
 
-    pub fn allocate_transient(&mut self, size_bytes: usize, binding: u32, group: u32) -> Result<BufferView, ForgeError> {
-        self.allocator.allocate_transient(size_bytes, binding, group)
+    pub fn allocate_transient(&mut self, size_bytes: usize, binding: u32, group: u32, usage: BindingUsage) -> Result<BufferView, ForgeError> {
+        self.allocator.allocate_transient(size_bytes, binding, group, usage)
     }
 
     pub fn advance_read_head(&mut self, offset: usize) {
@@ -123,7 +151,7 @@ impl WgpuComputeContext {
         let mut encoder = self.device.create_command_encoder(&wgpu::CommandEncoderDescriptor {
             label: Some("forge-output-copy"),
         });
-        encoder.copy_buffer_to_buffer(&self.slab, view.offset as u64, &staging, 0, size);
+        encoder.copy_buffer_to_buffer(self.slab_for(view.usage), view.offset as u64, &staging, 0, size);
         self.queue.submit(Some(encoder.finish()));
         let bytes = map_read(&self.device, &staging)?;
         
@@ -175,15 +203,15 @@ impl<'a> QualiaCompute for WgpuPipeline<'a> {
             entries.push(wgpu::BindGroupEntry {
                 binding: view.binding,
                 resource: wgpu::BindingResource::Buffer(wgpu::BufferBinding {
-                    buffer: &self.context.slab,
+                    buffer: self.context.slab_for(view.usage),
                     offset: view.offset as wgpu::BufferAddress,
                     size,
                 }),
             });
         }
-        
+
         let bind_group = self.context.device.create_bind_group(&wgpu::BindGroupDescriptor {
-            label: Some("forge-affine-bind-group"),
+            label: Some("forge-bind-group"),
             layout: &self.pipeline.get_bind_group_layout(0),
             entries: &entries,
         });
