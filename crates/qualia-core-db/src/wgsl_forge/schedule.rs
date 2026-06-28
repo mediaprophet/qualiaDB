@@ -96,6 +96,9 @@ pub struct AdapterConstraints {
     pub supports_coopmat: bool,
     /// Ray-query / RT-core support (hardware ray-triangle intersection).
     pub supports_rt_cores: bool,
+    /// SIMD/warp width (32 NVIDIA, 64 AMD/Apple-ish). Workgroup sizes that are
+    /// not a multiple of this are pruned from the tuning search (plan §6).
+    pub warp_size: u32,
 }
 
 impl AdapterConstraints {
@@ -107,6 +110,7 @@ impl AdapterConstraints {
             supports_subgroups: false,
             supports_coopmat: false,
             supports_rt_cores: false,
+            warp_size: 32,
         }
     }
 
@@ -146,6 +150,7 @@ impl AdapterConstraints {
             supports_subgroups: false,
             supports_coopmat: false,
             supports_rt_cores: false,
+            warp_size: 32,
         }
     }
 }
@@ -183,7 +188,12 @@ impl ScheduleSpace {
                         vector_width,
                         ..Default::default()
                     };
-                    if schedule.validate(kernel, constraints).is_ok() {
+                    // Prune non-warp-aligned workgroups (plan §6): a partial warp
+                    // wastes lanes. Generation is unaffected — this only narrows
+                    // the tuning search.
+                    let warp_aligned = constraints.warp_size <= 1
+                        || workgroup_size % constraints.warp_size == 0;
+                    if warp_aligned && schedule.validate(kernel, constraints).is_ok() {
                         candidates.push(schedule);
                     }
                 }

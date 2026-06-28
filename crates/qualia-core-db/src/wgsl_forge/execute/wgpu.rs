@@ -46,6 +46,8 @@ impl WgpuComputeContext {
             available_features.contains(wgpu::Features::EXPERIMENTAL_COOPERATIVE_MATRIX);
         constraints.supports_rt_cores =
             available_features.contains(wgpu::Features::EXPERIMENTAL_RAY_QUERY);
+        // Warp/wavefront width by vendor: AMD wavefronts are 64, others 32.
+        constraints.warp_size = if info.vendor == 0x1002 { 64 } else { 32 };
         let (device, queue) = pollster::block_on(adapter.request_device(&wgpu::DeviceDescriptor {
             required_features,
             required_limits: wgpu::Limits::default(),

@@ -87,6 +87,7 @@ impl CudaComputeContext {
             // false until a real compute-capability probe is wired.
             supports_coopmat: false,
             supports_rt_cores: false,
+            warp_size: 32, // NVIDIA
         };
 
         let topology = MemoryTopology::Discrete { staging_required: true };

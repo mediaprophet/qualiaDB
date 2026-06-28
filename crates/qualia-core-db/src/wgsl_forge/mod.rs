@@ -10,6 +10,7 @@ pub mod execute;
 pub mod ir;
 pub mod manifest;
 pub mod oracle;
+pub mod roofline;
 pub mod schedule;
 pub mod tune;
 pub mod validate;
@@ -30,6 +31,7 @@ pub use oracle::{
     topk_inputs, AffineParams, ComparisonReport, FfnParams, GpuEvaluation, OracleCase,
     OracleTolerance, TopKParams,
 };
+pub use roofline::{roofline_for, RooflineBound, RooflineEstimate};
 pub use schedule::{AdapterConstraints, Schedule, ScheduleSpace};
 pub use tune::{
     tune_with, CandidateEvaluation, CandidateFailure, CandidateResult, TuningConfig, TuningResult,

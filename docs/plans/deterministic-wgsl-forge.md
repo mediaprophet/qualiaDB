@@ -307,6 +307,22 @@ top-k, and ray-query WGSL emits + Naga-validates (see evidence below). Remaining
   phase" error; `certify`/`tune` remain affine-only (non-affine oracle path is a
   named follow-up). cudarc was modernised 0.11→0.19 (official, `cuda-13030`).
 
+### 2026-06-28 §6 search pruning: warp alignment + roofline
+
+- Warp/wavefront alignment: `AdapterConstraints.warp_size` (32 NVIDIA, 64 AMD by
+  vendor); `ScheduleSpace::candidates` prunes workgroup sizes that aren't a
+  multiple of it. Generation is unaffected — only the tuning search narrows.
+- Roofline (`roofline.rs`): per-kernel FLOP/byte estimate + memory-vs-compute
+  classification. `shader roofline <kernel> [--n]` dumps it; `tune --dry-run` now
+  prints the roofline plus a per-workgroup search-tree breakdown (plan §10
+  "roofline visualizer / search tree dump"). Verified: affine 0.25 FLOP/byte
+  (memory-bound), fused-ffn 33.7 (compute-bound).
+- Honest limits (genuine, not stubs): a *device-relative* roofline reject needs
+  peak FLOPS/bandwidth, and compute-unit-saturation needs CU count, neither of
+  which wgpu exposes — these would require a calibration micro-benchmark. Thermal
+  throttling needs a temp sensor (e.g. nvidia-smi) not yet wired. Memory-arch tile
+  biasing applies once a tiled matrix kernel exists.
+
 ### 2026-06-28 real p64-project + doctor (§12)
 
 - `p64-project` is real: out[r] = sum_w weights[w] * f32(p64[r].word[w]), one

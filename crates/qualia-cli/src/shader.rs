@@ -40,6 +40,16 @@ pub enum ShaderAction {
     /// Check that the native backend toolchains (wgpu adapter, DXC, CUDA) are
     /// present and report how the Forge will degrade if any are missing.
     Doctor,
+    /// Print the roofline estimate (FLOP/byte, memory- vs compute-bound) for a kernel.
+    Roofline {
+        #[arg(default_value = "affine-f32")]
+        kernel: String,
+        /// Representative problem size (output elements / records).
+        #[arg(long, default_value_t = 65_536)]
+        n: u64,
+        #[arg(long)]
+        json: bool,
+    },
     /// Probe the local adapter and print a rich hardware/topology profile.
     ProfileHardware {
         /// Write the profile JSON to this path (also prints the topology hash).
@@ -160,6 +170,23 @@ pub fn run(action: &ShaderAction) -> Result<(), Box<dyn std::error::Error>> {
                     builtin.name(),
                     spec.semantic_version,
                     spec.description
+                );
+            }
+        }
+        ShaderAction::Roofline { kernel, n, json } => {
+            let builtin = parse_kernel(kernel)?;
+            let estimate = qualia_core_db::wgsl_forge::roofline_for(builtin, *n);
+            if *json {
+                println!("{}", serde_json::to_string_pretty(&estimate)?);
+            } else {
+                println!(
+                    "{} @ n={}: {} FLOP / {} bytes -> {:.3} FLOP/byte ({:?}-bound)",
+                    builtin.name(),
+                    n,
+                    estimate.flops,
+                    estimate.bytes,
+                    estimate.arithmetic_intensity,
+                    estimate.bound
                 );
             }
         }
@@ -405,15 +432,29 @@ pub fn run(action: &ShaderAction) -> Result<(), Box<dyn std::error::Error>> {
                     Ok(runner) => runner.constraints,
                     Err(_) => AdapterConstraints::portable(),
                 };
-                let candidates = ScheduleSpace::default().candidates(&spec, &constraints);
+                let space = ScheduleSpace::default();
+                let total = space.workgroup_sizes.len() * space.items_per_invocation.len() * space.vector_widths.len();
+                let candidates = space.candidates(&spec, &constraints);
                 let adapter_ok = constraints.supports_kernel(&spec);
+                let roofline = qualia_core_db::wgsl_forge::roofline_for(builtin, *length as u64);
                 println!(
-                    "DRY-RUN tune {}: {} candidate schedule(s) survive pruning; adapter_supported={}; gpu_oracle={}",
+                    "DRY-RUN tune {}: {}/{} schedule(s) survive pruning; adapter_supported={}; gpu_oracle={}",
                     builtin.name(),
                     candidates.len(),
+                    total,
                     adapter_ok.is_ok(),
                     builtin.has_gpu_oracle()
                 );
+                println!(
+                    "  roofline @ n={}: {:.3} FLOP/byte ({:?}-bound)",
+                    length, roofline.arithmetic_intensity, roofline.bound
+                );
+                println!("  warp size: {} (non-multiples pruned)", constraints.warp_size);
+                for &wg in &space.workgroup_sizes {
+                    let kept = candidates.iter().filter(|c| c.workgroup_size == wg).count();
+                    let note = if wg % constraints.warp_size == 0 { "" } else { " [warp-pruned]" };
+                    println!("    workgroup {wg:>4}: {kept} kept{note}");
+                }
                 if let Err(error) = adapter_ok {
                     println!("  pruned: {error}");
                 }
