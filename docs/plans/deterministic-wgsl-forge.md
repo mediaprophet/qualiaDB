@@ -15,7 +15,13 @@ The Forge is designed for decentralized, heterogeneous deployment. It acknowledg
 The system must preserve these project constraints:
 
 - P64 remains the canonical on-disk format; GPU execution layouts are derived views.
-- The IR understands native 64-bit types (e.g., `f64`, `u64`). Representing 64-bit values as paired `u32` words is an emission-level lowering handled strictly by the WGSL/SPIR-V fallback pipelines.
+- 64-bit values are represented in the IR as portable paired-`u32` words
+  (`ScalarType::U64Words`), which is what the P64 path uses today; emitters lay them
+  out as `vec*<u32>` for the WGSL/SPIR-V fallback pipelines. A *native* `f64`/`u64` IR
+  scalar plus its lowering policy is **scaffolded but reserved** (the
+  `LoweringContext::policy_64bit` / `supports_f64` items in `ir/capabilities.rs`) and is
+  not yet exercised by any emitter — it will be wired only when a kernel needs native
+  64-bit arithmetic. No current kernel does.
 - Generated runtime kernels do not allocate from the heap.
 - Search is bounded, reproducible, and safe under device loss or unsupported features.
 - A shader is never called “certified” merely because it parses.
@@ -153,6 +159,26 @@ Candidates are pruned before compilation using:
 - hardware capability manifest: the local topology checker must query the adapter for advanced intrinsic support (e.g., Subgroup sizes, MMA/Tensor Core availability, async memory copy support, and RT core presence) before search begins;
 - semantic lowering: if a kernel requires an intrinsic (like a warp reduction) that the local hardware lacks, the Forge must decide whether to gracefully lower that operation into a standard shared-memory equivalent, or exclude the schedule entirely;
 - a simple roofline lower bound: estimating arithmetic intensity of the kernel vs device peak to reject clearly memory- or compute-bound bad schedules.
+
+**Known limitations (implementation status of the list above — see the §11 audit
+entry of 2026-06-29).** Several pruning criteria above are design intent that the
+portable wgpu surface cannot supply, and are therefore NOT implemented as written:
+
+- The **roofline** is an *estimate only* and does **not reject** schedules: wgpu exposes
+  no device peak FLOPS or memory bandwidth, so there is no device-relative ceiling to
+  reject against (a calibration micro-benchmark would be required). It classifies a
+  kernel memory- vs compute-bound to explain/visualise pruning, nothing more.
+- **Compute-unit saturation thresholds** are not implemented: wgpu exposes no
+  compute-unit (SM/CU) count.
+- **Thermal/power pruning** is not a cross-vendor schedule-pruning step: there is no
+  portable temperature sensor. Thermal pacing exists only as an NVIDIA-only,
+  *between-kernels* pause in the `auto-tune-all` CLI (`--thermal-limit` via
+  `nvidia-smi`), not as a per-candidate prune. Memory-architecture tile biasing is
+  likewise deferred (it applies once a tiled matrix kernel exists).
+
+Implemented today: adapter workgroup/invocation/storage limits, divisibility/alignment,
+warp-size alignment, intrinsic-availability + capability-manifest gating, and semantic
+lowering of subgroup ops to a shared-memory equivalent.
 
 The first tuner uses deterministic grid search. The second stage uses successive
 halving: all valid candidates receive a small sample budget, then only the strongest

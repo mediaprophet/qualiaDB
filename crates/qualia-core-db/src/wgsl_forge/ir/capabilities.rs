@@ -4,6 +4,12 @@ use super::intrinsics::{Intrinsic, IntrinsicClass};
 
 #[derive(Debug, Clone, PartialEq, Eq, Hash, Serialize, Deserialize, Default)]
 pub struct HardwareCapabilityMatrix {
+    /// **Reserved scaffolding (plan §1): not yet exercised by any emitter.** No IR
+    /// `ScalarType` variant emits native `f64`/`u64`; 64-bit values are carried as
+    /// portable paired-`u32` words (`ScalarType::U64Words`). This flag and the
+    /// [`LoweringContext::policy_64bit`] policy it drives exist so the native-64-bit
+    /// lowering can be wired the moment a kernel needs native 64-bit arithmetic — do
+    /// not assume any generated shader consults it today.
     pub supports_f64: bool,
     pub subgroup_size: Option<u32>,
     /// Cooperative-matrix / Tensor-core matrix-multiply-accumulate support.
@@ -55,6 +61,12 @@ impl HardwareCapabilityMatrix {
     }
 }
 
+/// How a 64-bit value would be lowered for a given adapter.
+///
+/// **Reserved scaffolding (plan §1): not yet exercised by any emitter.** Today every
+/// emitter takes the `PairedU32Emulation` shape implicitly via `ScalarType::U64Words`;
+/// the `Native` arm has no code path because no IR scalar requests native `f64`/`u64`.
+/// Kept so the native-64-bit policy can be selected once such a kernel exists.
 #[derive(Debug, Clone, PartialEq, Eq, Hash)]
 pub enum LoweringPolicy64Bit {
     Native,
@@ -74,6 +86,12 @@ impl LoweringContext {
         Self { capabilities, schedule }
     }
 
+    /// Selects the 64-bit lowering policy for the current adapter.
+    ///
+    /// **Reserved scaffolding (plan §1): not yet exercised by any emitter.** No emitter
+    /// calls this — 64-bit data flows through `ScalarType::U64Words` (paired-`u32`)
+    /// unconditionally. It is retained so a future native-64-bit kernel can branch on
+    /// the adapter's `supports_f64` flag without re-introducing the policy from scratch.
     pub fn policy_64bit(&self) -> LoweringPolicy64Bit {
         if self.capabilities.supports_f64 {
             LoweringPolicy64Bit::Native

@@ -2,11 +2,16 @@
 //!
 //! For each kernel we estimate the FLOPs performed and the bytes moved over a
 //! representative problem size, giving an arithmetic intensity (FLOP/byte) and a
-//! memory-vs-compute classification. wgpu does not expose device peak FLOPS or
-//! bandwidth, so this cannot do a true device-relative roofline reject; it is an
-//! honest *estimate* used to explain why a schedule is (or isn't) worth pursuing
-//! and to drive the search-tree dump. A real device-relative bound would require
-//! a calibration micro-benchmark.
+//! memory-vs-compute classification.
+//!
+//! **Known limitations (honest, not stubs).** This is an *estimate only*; it never
+//! rejects a schedule. wgpu does not expose device peak FLOPS or memory bandwidth, so
+//! there is no device-relative roofline ceiling to reject against — a real
+//! device-relative bound would require a calibration micro-benchmark. Likewise,
+//! compute-unit-saturation pruning is not implemented because wgpu does not expose a
+//! compute-unit (SM/CU) count. The classification here is therefore used to *explain*
+//! why a schedule is (or isn't) worth pursuing and to drive the search-tree dump, not
+//! to gate the search.
 
 use serde::{Deserialize, Serialize};
 

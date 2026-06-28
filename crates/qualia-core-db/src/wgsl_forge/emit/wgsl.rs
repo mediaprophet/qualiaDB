@@ -463,4 +463,35 @@ mod tests {
         let second = emit_wgsl(&kernel, Schedule::default()).unwrap();
         assert_eq!(first.source, second.source);
     }
+
+    #[test]
+    fn p64_kernel_lays_64bit_fields_as_paired_u32_words() {
+        // The p64 kernel carries 64-bit P64 fields. WGSL has no portable native u64,
+        // so the generated module must lay them out as packed `u32` words. Assert the
+        // exact packed layout the emitter produces (plan §1 / §10): a `P64Words64`
+        // struct of `array<vec4<u32>, 4>` lanes, bound as `array<P64Words64>`, and the
+        // per-word `f32(...)` projection over those `u32` lanes.
+        let kernel = BuiltinKernel::P64Project.spec();
+        let generated = emit_wgsl(&kernel, Schedule::default()).unwrap();
+        let source = &generated.source;
+
+        assert!(
+            source.contains("lanes: array<vec4<u32>, 4>"),
+            "expected paired/packed vec4<u32> word layout, got:\n{source}"
+        );
+        assert!(
+            source.contains("var<storage, read> input: array<P64Words64>"),
+            "expected the P64 record buffer bound as packed u32 words, got:\n{source}"
+        );
+        // The 64-bit data is read as u32 words and projected via f32(word) — i.e. no
+        // native 64-bit scalar appears in the kernel body.
+        assert!(
+            source.contains("f32(word)"),
+            "expected per-u32-word projection, got:\n{source}"
+        );
+        assert!(
+            !source.contains("u64") && !source.contains("f64"),
+            "the portable p64 kernel must not emit any native 64-bit scalar, got:\n{source}"
+        );
+    }
 }

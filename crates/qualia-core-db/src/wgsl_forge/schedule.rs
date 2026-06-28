@@ -162,6 +162,18 @@ impl Default for ScheduleSpace {
 }
 
 impl ScheduleSpace {
+    /// Generate the pruned candidate schedules for `kernel` on this adapter.
+    ///
+    /// Pruning here is limited to what is portably knowable: adapter workgroup/
+    /// invocation limits and `Schedule::validate`, plus warp-size alignment.
+    ///
+    /// **Known limitations (plan §6, honest — not implemented):** candidates are NOT
+    /// pruned by a device-relative roofline (wgpu exposes no peak FLOPS/bandwidth — see
+    /// [`crate::wgsl_forge::roofline`]), by compute-unit saturation (no CU/SM count is
+    /// exposed by wgpu), or by a cross-vendor thermal/power model (no portable
+    /// temperature sensor; thermal pacing is handled NVIDIA-only via `nvidia-smi` in the
+    /// `auto-tune-all` CLI loop, not here). Any of these would need a calibration
+    /// micro-benchmark or a platform-specific probe.
     pub fn candidates(
         &self,
         kernel: &KernelSpec,
@@ -219,6 +231,35 @@ mod tests {
             ..Default::default()
         };
         assert_eq!(schedule.dispatch_workgroups(513), 2);
+    }
+
+    #[test]
+    fn invalid_schedule_is_rejected_before_emission() {
+        use crate::wgsl_forge::{generate_builtin, ForgeError, TargetBackend};
+
+        // workgroup_size = 100 is not a power of two, so `Schedule::validate`
+        // (invoked by `generate_builtin` *before* `emit_shader`) must reject it.
+        let invalid = Schedule {
+            workgroup_size: 100,
+            items_per_invocation: 1,
+            vector_width: 1,
+        };
+        // Guard the precondition: the schedule itself is invalid.
+        let kernel = BuiltinKernel::AffineF32.spec();
+        assert!(invalid.validate(&kernel, &AdapterConstraints::portable()).is_err());
+
+        let result = generate_builtin(BuiltinKernel::AffineF32, invalid, TargetBackend::Wgsl);
+        // It must be the schedule-validation error, not an emission error — proving
+        // generation never ran for an invalid schedule.
+        match result {
+            Err(ForgeError::InvalidSchedule(message)) => {
+                assert!(
+                    message.contains("power of two"),
+                    "expected a power-of-two schedule error, got: {message}"
+                );
+            }
+            other => panic!("expected InvalidSchedule before emission, got {other:?}"),
+        }
     }
 
     #[test]
