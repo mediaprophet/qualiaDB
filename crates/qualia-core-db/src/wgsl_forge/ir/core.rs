@@ -311,6 +311,7 @@ fn validate_fused_ffn_buffers(buffers: &[BufferSpec]) -> Result<(), ForgeError> 
         ("w1", 1, BufferElement::Scalar(ScalarType::F32), BufferAccess::StorageRead),
         ("w2", 2, BufferElement::Scalar(ScalarType::F32), BufferAccess::StorageRead),
         ("output", 3, BufferElement::Scalar(ScalarType::F32), BufferAccess::StorageReadWrite),
+        ("params", 4, BufferElement::AffineParams, BufferAccess::Uniform),
     ];
     for (name, binding, element, access) in expected {
         let Some(buffer) = buffers
@@ -388,7 +389,7 @@ impl BuiltinKernel {
     /// CPU reference + GPU dispatch wired for this kernel, so it can be certified
     /// and tuned on hardware. Others generate/validate but are not yet GPU-graded.
     pub const fn has_gpu_oracle(self) -> bool {
-        matches!(self, Self::AffineF32 | Self::TopK)
+        matches!(self, Self::AffineF32 | Self::TopK | Self::FusedFfn)
     }
 
     pub fn spec(self) -> KernelSpec {
@@ -432,22 +433,21 @@ impl BuiltinKernel {
             },
             Self::FusedFfn => KernelSpec {
                 id: self.name().to_string(),
-                semantic_version: 1,
+                semantic_version: 2,
                 entry_point: "fused_ffn".to_string(),
-                description: "out = w2 * gelu(w1 * in)".to_string(),
+                description: "out[o] = sum_h w2[o,h] * gelu(sum_i w1[h,i] * in[i])".to_string(),
                 buffers: vec![
                     BufferSpec { group: 0, binding: 0, name: "input".to_string(), element: BufferElement::Scalar(ScalarType::F32), access: BufferAccess::StorageRead },
                     BufferSpec { group: 0, binding: 1, name: "w1".to_string(), element: BufferElement::Scalar(ScalarType::F32), access: BufferAccess::StorageRead },
                     BufferSpec { group: 0, binding: 2, name: "w2".to_string(), element: BufferElement::Scalar(ScalarType::F32), access: BufferAccess::StorageRead },
                     BufferSpec { group: 0, binding: 3, name: "output".to_string(), element: BufferElement::Scalar(ScalarType::F32), access: BufferAccess::StorageReadWrite },
+                    // A generic 16-byte uniform block (input_size, hidden_size, output_size, _pad).
+                    BufferSpec { group: 0, binding: 4, name: "params".to_string(), element: BufferElement::AffineParams, access: BufferAccess::Uniform },
                 ],
-                ops: vec![
-                    // For now, this is a placeholder using DotProduct high-level nodes to represent the matrix-vector multiplies
-                    Op::DotProduct { left_buffer: "w1".to_string(), left_base: "row_idx * hidden_size".to_string(), right_buffer: "input".to_string(), right_base: "0".to_string(), len: "input_size".to_string(), destination: "hidden_val".to_string() },
-                    Op::Gelu { operand: "hidden_val".to_string(), destination: "act_val".to_string() },
-                    Op::DotProduct { left_buffer: "w2".to_string(), left_base: "global_id * hidden_size".to_string(), right_buffer: "act_val".to_string(), right_base: "0".to_string(), len: "hidden_size".to_string(), destination: "out_val".to_string() },
-                    Op::Store { buffer: "output".to_string(), index: "global_id".to_string(), value: "out_val".to_string() },
-                ],
+                // The FFN body (nested matvec + GELU + accumulate over the hidden
+                // dimension) is target-specialised in the emitters; Gelu is the
+                // reusable IR primitive it relies on.
+                ops: vec![Op::Gelu { operand: "hv".to_string(), destination: "g".to_string() }],
                 shared_memory: Vec::new(),
             },
             Self::P64Project => KernelSpec {

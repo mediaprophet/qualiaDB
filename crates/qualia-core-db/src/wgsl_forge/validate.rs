@@ -168,6 +168,26 @@ mod tests {
     }
 
     #[test]
+    fn generated_ffn_passes_naga_validation() {
+        let generated = generate_builtin(
+            BuiltinKernel::FusedFfn,
+            Schedule {
+                workgroup_size: 64,
+                items_per_invocation: 1,
+                vector_width: 1,
+                ..Schedule::default()
+            },
+            TargetBackend::Wgsl,
+        )
+        .unwrap();
+        assert!(generated.source.contains("struct FfnParams"));
+        assert!(generated.source.contains("tanh("));
+        let report = validate_wgsl(&generated.source).expect("Naga validation of fused-ffn");
+        assert_eq!(report.entry_points, vec!["fused_ffn"]);
+        assert_eq!(report.binding_count, 5);
+    }
+
+    #[test]
     fn generated_ray_probe_passes_naga_validation() {
         // Exercises the acceleration_structure binding and the ray_query lowering.
         let generated = generate_builtin(

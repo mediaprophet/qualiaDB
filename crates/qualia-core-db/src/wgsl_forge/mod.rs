@@ -25,9 +25,9 @@ pub use manifest::{
     TuningManifest, ValidationLevel,
 };
 pub use oracle::{
-    candidate_evaluation, certify_builtin, compare_f32, evaluate_builtin, evaluate_topk,
-    topk_cpu, topk_inputs, AffineParams, ComparisonReport, GpuEvaluation, OracleCase,
-    OracleTolerance, TopKParams,
+    candidate_evaluation, certify_builtin, compare_f32, evaluate_builtin, evaluate_ffn,
+    evaluate_topk, ffn_cpu, ffn_tensors, topk_cpu, topk_inputs, AffineParams, ComparisonReport,
+    FfnParams, GpuEvaluation, OracleCase, OracleTolerance, TopKParams,
 };
 pub use schedule::{AdapterConstraints, Schedule, ScheduleSpace};
 pub use tune::{

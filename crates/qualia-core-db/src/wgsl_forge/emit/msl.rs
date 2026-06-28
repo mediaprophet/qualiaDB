@@ -39,6 +39,9 @@ fn emit_kernel_body(
     if kernel.id == "topk" {
         return emit_topk_msl(source, kernel, schedule);
     }
+    if kernel.id == "fused-ffn" {
+        return emit_ffn_msl(source, kernel, schedule);
+    }
     if kernel.id == "ray-probe" {
         return Err(ForgeError::Emission(
             "ray-query is only emitted for the WGSL target (Metal RT uses a distinct API)".to_string(),
@@ -221,6 +224,52 @@ fn emit_topk_msl(
     )
     .map_err(|error| ForgeError::Emission(error.to_string()))?;
 
+    Ok(())
+}
+
+/// Fused FFN in Metal: one thread per output element (see the WGSL emitter for
+/// the math). Self-contained nested matvec + GELU + accumulate.
+fn emit_ffn_msl(
+    source: &mut String,
+    kernel: &KernelSpec,
+    schedule: Schedule,
+) -> Result<(), ForgeError> {
+    let _ = schedule;
+    writeln!(
+        source,
+        r#"#include <metal_stdlib>
+using namespace metal;
+
+struct FfnParams {{
+    uint input_size;
+    uint hidden_size;
+    uint output_size;
+    uint _pad;
+}};
+
+kernel void {entry}(
+    device const float* input [[buffer(0)]],
+    device const float* w1 [[buffer(1)]],
+    device const float* w2 [[buffer(2)]],
+    device float* output [[buffer(3)]],
+    constant FfnParams& params [[buffer(4)]],
+    uint3 gid [[thread_position_in_grid]]
+) {{
+    uint o = gid.x;
+    if (o >= params.output_size) {{ return; }}
+    float acc = 0.0f;
+    for (uint h = 0; h < params.hidden_size; h++) {{
+        float hv = 0.0f;
+        uint w1_row = h * params.input_size;
+        for (uint i = 0; i < params.input_size; i++) {{ hv += w1[w1_row + i] * input[i]; }}
+        float g = 0.5f * hv * (1.0f + tanh(0.7978845608f * (hv + 0.044715f * hv * hv * hv)));
+        acc += w2[o * params.hidden_size + h] * g;
+    }}
+    output[o] = acc;
+}}"#,
+        entry = kernel.entry_point
+    )
+    .map_err(|error| ForgeError::Emission(error.to_string()))?;
     Ok(())
 }
 

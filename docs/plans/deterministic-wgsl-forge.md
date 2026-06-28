@@ -307,6 +307,20 @@ top-k, and ray-query WGSL emits + Naga-validates (see evidence below). Remaining
   phase" error; `certify`/`tune` remain affine-only (non-affine oracle path is a
   named follow-up). cudarc was modernised 0.11→0.19 (official, `cuda-13030`).
 
+### 2026-06-28 real fused-FFN (was placeholder)
+
+- `fused-ffn` now emits real math instead of placeholder `DotProduct` nodes:
+  `out[o] = sum_h w2[o,h] * gelu(sum_i w1[h,i] * input[i])`, one invocation per
+  output element, dimensions from a uniform params block (semantic_version bumped
+  to 2). Emitted for WGSL, MSL, and HLSL.
+- CPU oracle `ffn_cpu` matches the kernel's op order; `ffn_tensors` scales weights
+  by 1/sqrt(fan_in) to keep pre-activations O(1). FFN added to
+  `BuiltinKernel::has_gpu_oracle` and the `evaluate_builtin` dispatch.
+- Verified: Naga validation + CPU oracle unit tests pass; HLSL FFN compiles to
+  DXIL via DXC; `qualia-cli shader certify fused-ffn` → CERTIFIED on NVIDIA RTX
+  A2000 12GB, median ~810 µs (tolerance 2e-3 for tanh/accumulation differences).
+  Forge suite: 27 passed / 0 failed / 3 ignored.
+
 ### 2026-06-28 ray-query emission + non-affine certify/tune
 
 - Ray-query WGSL now emits and Naga-validates: `BuiltinKernel::RayProbe` +

@@ -28,6 +28,16 @@ pub struct TopKParams {
     pub _pad: u32,
 }
 
+/// 16-byte uniform block for the fused-FFN kernel.
+#[repr(C)]
+#[derive(Debug, Clone, Copy, PartialEq, Pod, Zeroable, Serialize, Deserialize)]
+pub struct FfnParams {
+    pub input_size: u32,
+    pub hidden_size: u32,
+    pub output_size: u32,
+    pub _pad: u32,
+}
+
 #[derive(Debug, Clone, Copy, PartialEq, Serialize, Deserialize)]
 pub struct OracleTolerance {
     pub absolute: f32,
@@ -138,6 +148,59 @@ pub fn topk_cpu(input: &[f32], length: usize, k: usize, block_size: usize) -> Ve
     out
 }
 
+fn gelu(x: f32) -> f32 {
+    0.5 * x * (1.0 + (0.797_884_56 * (x + 0.044_715 * x * x * x)).tanh())
+}
+
+/// CPU reference for the fused FFN, matching the emitted kernel's op order
+/// exactly (hidden outer, input inner) so GPU/CPU agree within tolerance:
+/// `out[o] = sum_h w2[o,h] * gelu(sum_i w1[h,i] * input[i])`.
+pub fn ffn_cpu(
+    input: &[f32],
+    w1: &[f32],
+    w2: &[f32],
+    input_size: usize,
+    hidden_size: usize,
+    output_size: usize,
+) -> Vec<f32> {
+    let mut out = Vec::with_capacity(output_size);
+    for o in 0..output_size {
+        let mut acc = 0.0f32;
+        for h in 0..hidden_size {
+            let mut hv = 0.0f32;
+            let w1_row = h * input_size;
+            for i in 0..input_size {
+                hv += w1[w1_row + i] * input[i];
+            }
+            acc += w2[o * hidden_size + h] * gelu(hv);
+        }
+        out.push(acc);
+    }
+    out
+}
+
+/// Deterministic FFN test tensors. Weights are scaled by 1/sqrt(fan_in) so the
+/// pre-activations stay O(1) and GPU/CPU agree within a modest tolerance.
+pub fn ffn_tensors(
+    input_size: usize,
+    hidden_size: usize,
+    output_size: usize,
+    seed: u64,
+) -> (Vec<f32>, Vec<f32>, Vec<f32>) {
+    let input = topk_inputs(input_size, seed);
+    let w1_scale = 1.0 / (input_size as f32).sqrt();
+    let w2_scale = 1.0 / (hidden_size as f32).sqrt();
+    let w1: Vec<f32> = topk_inputs(hidden_size * input_size, seed ^ 0x1111)
+        .into_iter()
+        .map(|v| v * w1_scale)
+        .collect();
+    let w2: Vec<f32> = topk_inputs(output_size * hidden_size, seed ^ 0x2222)
+        .into_iter()
+        .map(|v| v * w2_scale)
+        .collect();
+    (input, w1, w2)
+}
+
 pub fn compare_f32(
     expected: &[f32],
     actual: &[f32],
@@ -226,6 +289,11 @@ pub fn evaluate_builtin(
     if builtin == BuiltinKernel::TopK {
         let k = (schedule.workgroup_size as usize).clamp(1, 8);
         return evaluate_topk(context, schedule, length, k, warmups, samples);
+    }
+    if builtin == BuiltinKernel::FusedFfn {
+        // Representative FFN dims; output_size tracks the requested length.
+        let output_size = length.clamp(1, 4096);
+        return evaluate_ffn(context, schedule, 64, 128, output_size, warmups, samples);
     }
     let kernel = builtin.spec();
     schedule.validate(&kernel, &context.constraints)?;
@@ -350,6 +418,92 @@ pub fn candidate_evaluation(
         timing_source,
         samples_ns: evaluation.samples_ns,
     })
+}
+
+/// Differential-oracle evaluation for the fused FFN against [`ffn_cpu`].
+/// One workgroup-thread per output element; the output buffer is `output_size`.
+pub fn evaluate_ffn(
+    context: &mut WgpuComputeContext,
+    schedule: Schedule,
+    input_size: usize,
+    hidden_size: usize,
+    output_size: usize,
+    warmups: usize,
+    samples: usize,
+) -> Result<(GeneratedShader, GpuEvaluation), ForgeError> {
+    if samples == 0 {
+        return Err(ForgeError::GpuValidation("sample count must be non-zero".to_string()));
+    }
+    let kernel = BuiltinKernel::FusedFfn.spec();
+    schedule.validate(&kernel, &context.constraints)?;
+    context.constraints.supports_kernel(&kernel)?;
+    let generated = emit_shader(&kernel, schedule, TargetBackend::Wgsl)?;
+    validate_wgsl(&generated.source)?;
+
+    let (input, w1, w2) = ffn_tensors(input_size, hidden_size, output_size, 0x4646_4E5F_5345_4544);
+    let expected = ffn_cpu(&input, &w1, &w2, input_size, hidden_size, output_size);
+
+    let view_input = context.allocate_and_write(bytemuck::cast_slice(&input), 0, 0, BindingUsage::StorageRead)?;
+    let view_w1 = context.allocate_and_write(bytemuck::cast_slice(&w1), 1, 0, BindingUsage::StorageRead)?;
+    let view_w2 = context.allocate_and_write(bytemuck::cast_slice(&w2), 2, 0, BindingUsage::StorageRead)?;
+    let output_bytes_len = (output_size * size_of::<f32>()).max(4);
+    let view_output = context.allocate_transient(output_bytes_len, 3, 0, BindingUsage::StorageReadWrite)?;
+    let params = FfnParams {
+        input_size: input_size as u32,
+        hidden_size: hidden_size as u32,
+        output_size: output_size as u32,
+        _pad: 0,
+    };
+    let view_params = context.allocate_and_write(bytemuck::bytes_of(&params), 4, 0, BindingUsage::Uniform)?;
+
+    let buffers = vec![view_input, view_w1, view_w2, view_output, view_params];
+    let pipeline = WgpuPipeline::compile(context, &generated.source, &kernel.entry_point)?;
+
+    for _ in 0..warmups {
+        pipeline.dispatch(&buffers, &schedule, output_size)?;
+    }
+    let mut timing_samples = Vec::with_capacity(samples);
+    for _ in 0..samples {
+        timing_samples.push(pipeline.dispatch(&buffers, &schedule, output_size)?);
+    }
+    if timing_samples.iter().any(|s| *s == 0) {
+        return Err(ForgeError::GpuValidation("GPU produced a zero-duration timing sample".to_string()));
+    }
+
+    let actual = context.read_buffer_f32(&view_output)?;
+    // FFN accumulates over the hidden dim and uses tanh, so allow a modest
+    // tolerance for GPU/CPU transcendental + accumulation differences.
+    let tolerance = OracleTolerance { absolute: 2.0e-3, relative: 2.0e-3 };
+    let oracle = compare_f32(&expected, &actual, tolerance);
+
+    drop(pipeline);
+    context.clear_transient_allocations();
+
+    if !oracle.passed() {
+        return Err(ForgeError::OracleMismatch(format!(
+            "fused-ffn: {} mismatches; first={:?}, max_abs={}, max_rel={}",
+            oracle.mismatch_count, oracle.first_mismatch, oracle.max_absolute_error, oracle.max_relative_error
+        )));
+    }
+
+    let timing_source = if context.timestamp_supported {
+        TimingSource::GpuTimestamp
+    } else {
+        TimingSource::CompletionClock
+    };
+    let timing = TimingSummary::from_samples(timing_source, &timing_samples)
+        .ok_or_else(|| ForgeError::GpuValidation("GPU produced no timing samples".to_string()))?;
+
+    Ok((
+        generated,
+        GpuEvaluation {
+            adapter: context.adapter.clone(),
+            constraints: context.constraints,
+            oracle,
+            timing,
+            samples_ns: timing_samples,
+        },
+    ))
 }
 
 /// Differential-oracle evaluation for the top-k kernel against [`topk_cpu`].
@@ -513,6 +667,40 @@ mod tests {
         tail.sort_by(|a, c| c.partial_cmp(a).unwrap());
         assert_eq!(got[2 * k], tail[0]);
         assert_eq!(got[2 * k + 1], tail[1]);
+    }
+
+    #[test]
+    fn ffn_cpu_zero_weights_yield_zero() {
+        // gelu(0) = 0, so all-zero w1 forces every output to 0 regardless of w2.
+        let out = ffn_cpu(&[1.0, 2.0, 3.0], &vec![0.0; 4 * 3], &vec![0.5; 2 * 4], 3, 4, 2);
+        assert_eq!(out, vec![0.0, 0.0]);
+    }
+
+    #[test]
+    fn ffn_cpu_matches_single_neuron() {
+        // input=[2], w1=[3], w2=[4]: out = 4 * gelu(3*2).
+        let out = ffn_cpu(&[2.0], &[3.0], &[4.0], 1, 1, 1);
+        assert!((out[0] - 4.0 * gelu(6.0)).abs() < 1e-6);
+    }
+
+    #[test]
+    fn ffn_tensors_are_deterministic() {
+        assert_eq!(ffn_tensors(8, 16, 4, 7), ffn_tensors(8, 16, 4, 7));
+    }
+
+    #[test]
+    #[ignore = "requires a native wgpu adapter"]
+    fn generated_ffn_matches_oracle_on_real_gpu() {
+        let mut context = WgpuComputeContext::new(4 * 1024 * 1024).expect("adapter");
+        let schedule = Schedule {
+            workgroup_size: 64,
+            items_per_invocation: 1,
+            vector_width: 1,
+            ..Default::default()
+        };
+        let (_, evaluation) =
+            evaluate_ffn(&mut context, schedule, 64, 128, 256, 2, 5).expect("ffn evaluation");
+        assert!(evaluation.oracle.passed(), "fused-ffn GPU/oracle mismatch: {:?}", evaluation.oracle);
     }
 
     #[test]

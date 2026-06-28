@@ -39,6 +39,9 @@ fn emit_kernel_body(
     if kernel.id == "topk" {
         return emit_topk_hlsl(source, kernel, schedule);
     }
+    if kernel.id == "fused-ffn" {
+        return emit_ffn_hlsl(source, kernel, schedule);
+    }
     if kernel.id == "ray-probe" {
         return Err(ForgeError::Emission(
             "ray-query is only emitted for the WGSL target (HLSL RT uses a distinct API)".to_string(),
@@ -213,6 +216,50 @@ void {entry}(uint tid : SV_GroupIndex, uint3 group_id : SV_GroupID) {{
     )
     .map_err(|error| ForgeError::Emission(error.to_string()))?;
 
+    Ok(())
+}
+
+/// Fused FFN in HLSL (cs_6_0): one thread per output element (see the WGSL
+/// emitter for the math).
+fn emit_ffn_hlsl(
+    source: &mut String,
+    kernel: &KernelSpec,
+    schedule: Schedule,
+) -> Result<(), ForgeError> {
+    let wg = schedule.workgroup_size;
+    writeln!(
+        source,
+        r#"struct FfnParams {{
+    uint input_size;
+    uint hidden_size;
+    uint output_size;
+    uint _pad;
+}};
+
+StructuredBuffer<float> input : register(t0, space0);
+StructuredBuffer<float> w1 : register(t1, space0);
+StructuredBuffer<float> w2 : register(t2, space0);
+RWStructuredBuffer<float> output : register(u3, space0);
+ConstantBuffer<FfnParams> params : register(b4, space0);
+
+[numthreads({wg}, 1, 1)]
+void {entry}(uint3 gid : SV_DispatchThreadID) {{
+    uint o = gid.x;
+    if (o >= params.output_size) {{ return; }}
+    float acc = 0.0;
+    for (uint h = 0; h < params.hidden_size; h++) {{
+        float hv = 0.0;
+        uint w1_row = h * params.input_size;
+        for (uint i = 0; i < params.input_size; i++) {{ hv += w1[w1_row + i] * input[i]; }}
+        float g = 0.5f * hv * (1.0f + tanh(0.7978845608f * (hv + 0.044715f * hv * hv * hv)));
+        acc += w2[o * params.hidden_size + h] * g;
+    }}
+    output[o] = acc;
+}}"#,
+        wg = wg,
+        entry = kernel.entry_point
+    )
+    .map_err(|error| ForgeError::Emission(error.to_string()))?;
     Ok(())
 }
 

@@ -41,6 +41,10 @@ fn emit_kernel_body(
         return emit_topk_wgsl(source, kernel, schedule);
     }
 
+    if kernel.id == "fused-ffn" {
+        return emit_ffn_wgsl(source, kernel, schedule);
+    }
+
     if kernel.id == "ray-probe" {
         // The ray-query enable extension must precede any other item.
         writeln!(source, "enable wgpu_ray_query;").map_err(|error| ForgeError::Emission(error.to_string()))?;
@@ -287,6 +291,55 @@ fn {entry}(
     )
     .map_err(|error| ForgeError::Emission(error.to_string()))?;
 
+    Ok(())
+}
+
+/// Fused feed-forward network: one invocation per output element computes
+/// `out[o] = sum_h w2[o,h] * gelu(sum_i w1[h,i] * input[i])`. Self-contained
+/// (no shared memory); dimensions come from the uniform params block.
+fn emit_ffn_wgsl(
+    source: &mut String,
+    kernel: &KernelSpec,
+    schedule: Schedule,
+) -> Result<(), ForgeError> {
+    let wg = schedule.workgroup_size;
+    writeln!(
+        source,
+        r#"
+struct FfnParams {{
+    input_size: u32,
+    hidden_size: u32,
+    output_size: u32,
+    _pad: u32,
+}}
+
+@group(0) @binding(0) var<storage, read> input: array<f32>;
+@group(0) @binding(1) var<storage, read> w1: array<f32>;
+@group(0) @binding(2) var<storage, read> w2: array<f32>;
+@group(0) @binding(3) var<storage, read_write> output: array<f32>;
+@group(0) @binding(4) var<uniform> params: FfnParams;
+
+@compute @workgroup_size({wg})
+fn {entry}(@builtin(global_invocation_id) gid: vec3<u32>) {{
+    let o = gid.x;
+    if (o >= params.output_size) {{ return; }}
+    var acc = 0.0;
+    for (var h: u32 = 0u; h < params.hidden_size; h = h + 1u) {{
+        var hv = 0.0;
+        let w1_row = h * params.input_size;
+        for (var i: u32 = 0u; i < params.input_size; i = i + 1u) {{
+            hv = hv + w1[w1_row + i] * input[i];
+        }}
+        // GELU(hv)
+        let g = 0.5 * hv * (1.0 + tanh(0.7978845608 * (hv + 0.044715 * hv * hv * hv)));
+        acc = acc + w2[o * params.hidden_size + h] * g;
+    }}
+    output[o] = acc;
+}}"#,
+        wg = wg,
+        entry = kernel.entry_point
+    )
+    .map_err(|error| ForgeError::Emission(error.to_string()))?;
     Ok(())
 }
 
