@@ -4,9 +4,8 @@ use serde::{Deserialize, Serialize};
 use crate::wgsl_forge::execute::{BindingUsage, QualiaCompute, WgpuComputeContext, WgpuPipeline};
 use crate::wgsl_forge::{
     AdapterConstraints, AdapterIdentity, BuiltinKernel, CandidateEvaluation, CertificationManifest,
-    ForgeError, GeneratedShader, Schedule, TargetBackend, TimingSource, TimingSummary, ValidationLevel,
-    emit_shader,
-    validate_wgsl,
+    ForgeError, GeneratedShader, P64GpuWords64, Schedule, TargetBackend, TimingSource, TimingSummary,
+    ValidationLevel, emit_shader, validate_wgsl,
 };
 
 #[repr(C)]
@@ -295,6 +294,9 @@ pub fn evaluate_builtin(
         let output_size = length.clamp(1, 4096);
         return evaluate_ffn(context, schedule, 64, 128, output_size, warmups, samples);
     }
+    if builtin == BuiltinKernel::P64Project {
+        return evaluate_p64(context, schedule, length.clamp(1, 65_536), warmups, samples);
+    }
     let kernel = builtin.spec();
     schedule.validate(&kernel, &context.constraints)?;
     context.constraints.supports_kernel(&kernel)?;
@@ -418,6 +420,120 @@ pub fn candidate_evaluation(
         timing_source,
         samples_ns: evaluation.samples_ns,
     })
+}
+
+/// Deterministic P64 descriptors with small (f32-exact) u32 words.
+pub fn p64_records(count: usize, seed: u64) -> Vec<P64GpuWords64> {
+    let mut state = seed.max(1);
+    let mut records = Vec::with_capacity(count);
+    for _ in 0..count {
+        let mut words = [0u32; 16];
+        for word in words.iter_mut() {
+            state ^= state << 13;
+            state ^= state >> 7;
+            state ^= state << 17;
+            *word = (state as u32) % 1000;
+        }
+        records.push(P64GpuWords64 {
+            lanes: [
+                [words[0], words[1], words[2], words[3]],
+                [words[4], words[5], words[6], words[7]],
+                [words[8], words[9], words[10], words[11]],
+                [words[12], words[13], words[14], words[15]],
+            ],
+        });
+    }
+    records
+}
+
+/// CPU reference for the P64 projection: `out[r] = sum_w weights[w] * f32(word_w)`,
+/// reading the 16 packed u32 words in the same lane order as the kernel.
+pub fn p64_project_cpu(records: &[P64GpuWords64], weights: &[f32]) -> Vec<f32> {
+    records
+        .iter()
+        .map(|record| {
+            let words: &[u32; 16] = bytemuck::cast_ref(record);
+            let mut acc = 0.0f32;
+            for w in 0..16 {
+                acc += weights[w] * words[w] as f32;
+            }
+            acc
+        })
+        .collect()
+}
+
+/// Differential-oracle evaluation for the P64 projection against [`p64_project_cpu`].
+pub fn evaluate_p64(
+    context: &mut WgpuComputeContext,
+    schedule: Schedule,
+    count: usize,
+    warmups: usize,
+    samples: usize,
+) -> Result<(GeneratedShader, GpuEvaluation), ForgeError> {
+    if samples == 0 {
+        return Err(ForgeError::GpuValidation("sample count must be non-zero".to_string()));
+    }
+    let kernel = BuiltinKernel::P64Project.spec();
+    schedule.validate(&kernel, &context.constraints)?;
+    context.constraints.supports_kernel(&kernel)?;
+    let generated = emit_shader(&kernel, schedule, TargetBackend::Wgsl)?;
+    validate_wgsl(&generated.source)?;
+
+    let records = p64_records(count, 0x5036_345F_5345_4544);
+    let weights = topk_inputs(16, 0x5036_345F_5742_5453);
+    let expected = p64_project_cpu(&records, &weights);
+
+    let view_input = context.allocate_and_write(bytemuck::cast_slice(&records), 0, 0, BindingUsage::StorageRead)?;
+    let view_weights = context.allocate_and_write(bytemuck::cast_slice(&weights), 1, 0, BindingUsage::StorageRead)?;
+    let output_bytes_len = (count * size_of::<f32>()).max(4);
+    let view_output = context.allocate_transient(output_bytes_len, 2, 0, BindingUsage::StorageReadWrite)?;
+
+    let buffers = vec![view_input, view_weights, view_output];
+    let pipeline = WgpuPipeline::compile(context, &generated.source, &kernel.entry_point)?;
+
+    for _ in 0..warmups {
+        pipeline.dispatch(&buffers, &schedule, count)?;
+    }
+    let mut timing_samples = Vec::with_capacity(samples);
+    for _ in 0..samples {
+        timing_samples.push(pipeline.dispatch(&buffers, &schedule, count)?);
+    }
+    if timing_samples.iter().any(|s| *s == 0) {
+        return Err(ForgeError::GpuValidation("GPU produced a zero-duration timing sample".to_string()));
+    }
+
+    let actual = context.read_buffer_f32(&view_output)?;
+    let tolerance = OracleTolerance { absolute: 1.0e-1, relative: 1.0e-4 };
+    let oracle = compare_f32(&expected, &actual, tolerance);
+
+    drop(pipeline);
+    context.clear_transient_allocations();
+
+    if !oracle.passed() {
+        return Err(ForgeError::OracleMismatch(format!(
+            "p64-project: {} mismatches; first={:?}, max_abs={}, max_rel={}",
+            oracle.mismatch_count, oracle.first_mismatch, oracle.max_absolute_error, oracle.max_relative_error
+        )));
+    }
+
+    let timing_source = if context.timestamp_supported {
+        TimingSource::GpuTimestamp
+    } else {
+        TimingSource::CompletionClock
+    };
+    let timing = TimingSummary::from_samples(timing_source, &timing_samples)
+        .ok_or_else(|| ForgeError::GpuValidation("GPU produced no timing samples".to_string()))?;
+
+    Ok((
+        generated,
+        GpuEvaluation {
+            adapter: context.adapter.clone(),
+            constraints: context.constraints,
+            oracle,
+            timing,
+            samples_ns: timing_samples,
+        },
+    ))
 }
 
 /// Differential-oracle evaluation for the fused FFN against [`ffn_cpu`].
@@ -686,6 +802,31 @@ mod tests {
     #[test]
     fn ffn_tensors_are_deterministic() {
         assert_eq!(ffn_tensors(8, 16, 4, 7), ffn_tensors(8, 16, 4, 7));
+    }
+
+    #[test]
+    fn p64_project_cpu_matches_manual() {
+        let record = p64_records(1, 5)[0];
+        let words: &[u32; 16] = bytemuck::cast_ref(&record);
+        let mut weights = vec![0.0f32; 16];
+        weights[0] = 2.0;
+        weights[5] = -1.0;
+        let out = p64_project_cpu(&[record], &weights);
+        assert_eq!(out, vec![2.0 * words[0] as f32 - words[5] as f32]);
+    }
+
+    #[test]
+    #[ignore = "requires a native wgpu adapter"]
+    fn generated_p64_matches_oracle_on_real_gpu() {
+        let mut context = WgpuComputeContext::new(4 * 1024 * 1024).expect("adapter");
+        let schedule = Schedule {
+            workgroup_size: 64,
+            items_per_invocation: 1,
+            vector_width: 1,
+            ..Default::default()
+        };
+        let (_, evaluation) = evaluate_p64(&mut context, schedule, 1000, 2, 5).expect("p64 evaluation");
+        assert!(evaluation.oracle.passed(), "p64 GPU/oracle mismatch: {:?}", evaluation.oracle);
     }
 
     #[test]

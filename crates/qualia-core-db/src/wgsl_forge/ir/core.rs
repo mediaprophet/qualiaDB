@@ -389,7 +389,7 @@ impl BuiltinKernel {
     /// CPU reference + GPU dispatch wired for this kernel, so it can be certified
     /// and tuned on hardware. Others generate/validate but are not yet GPU-graded.
     pub const fn has_gpu_oracle(self) -> bool {
-        matches!(self, Self::AffineF32 | Self::TopK | Self::FusedFfn)
+        matches!(self, Self::AffineF32 | Self::TopK | Self::FusedFfn | Self::P64Project)
     }
 
     pub fn spec(self) -> KernelSpec {
@@ -452,19 +452,19 @@ impl BuiltinKernel {
             },
             Self::P64Project => KernelSpec {
                 id: self.name().to_string(),
-                semantic_version: 1,
+                semantic_version: 2,
                 entry_point: "p64_project".to_string(),
-                description: "Projects a P64 descriptor vector using a weight matrix".to_string(),
+                // Project each 64-byte P64 record (16 u32 words) onto a 16-element
+                // weight vector: out[r] = sum_w weights[w] * f32(record[r].word[w]).
+                description: "out[r] = sum_w weights[w] * f32(p64[r].word[w])".to_string(),
                 buffers: vec![
                     BufferSpec { group: 0, binding: 0, name: "input".to_string(), element: BufferElement::P64Words64, access: BufferAccess::StorageRead },
                     BufferSpec { group: 0, binding: 1, name: "weights".to_string(), element: BufferElement::Scalar(ScalarType::F32), access: BufferAccess::StorageRead },
                     BufferSpec { group: 0, binding: 2, name: "output".to_string(), element: BufferElement::Scalar(ScalarType::F32), access: BufferAccess::StorageReadWrite },
                 ],
-                ops: vec![
-                    // Placeholder math for P64 descriptor extraction
-                    Op::StructLoad { buffer: "input".to_string(), field: "global_id".to_string(), destination: "p64_record".to_string() },
-                    Op::Store { buffer: "output".to_string(), index: "global_id".to_string(), value: "0.0".to_string() }
-                ],
+                // Body is target-specialised (it indexes the packed P64 lanes);
+                // the bound length is read via arrayLength(&output), no params buffer.
+                ops: Vec::new(),
                 shared_memory: Vec::new(),
             },
             Self::TopK => KernelSpec {

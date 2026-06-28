@@ -42,6 +42,13 @@ fn emit_kernel_body(
     if kernel.id == "fused-ffn" {
         return emit_ffn_msl(source, kernel, schedule);
     }
+    if kernel.id == "p64-project" {
+        // Metal device buffers carry no length, so the bound would need an extra
+        // count uniform that the kernel spec does not provide; emitted for WGSL/HLSL.
+        return Err(ForgeError::Emission(
+            "p64-project needs a length uniform for Metal; emitted for WGSL/HLSL this phase".to_string(),
+        ));
+    }
     if kernel.id == "ray-probe" {
         return Err(ForgeError::Emission(
             "ray-query is only emitted for the WGSL target (Metal RT uses a distinct API)".to_string(),
@@ -60,17 +67,8 @@ fn emit_kernel_body(
 }};"#
         ).map_err(|error| ForgeError::Emission(error.to_string()))?;
     }
-    if kernel.id == "p64-project" {
-        writeln!(
-            source,
-            r#"struct P64Words64 {{
-    uint4 lanes[4];
-}};"#
-        ).map_err(|error| ForgeError::Emission(error.to_string()))?;
-    }
-
     writeln!(source, "").map_err(|error| ForgeError::Emission(error.to_string()))?;
-    
+
     writeln!(source, "kernel void {}(", kernel.entry_point).map_err(|error| ForgeError::Emission(error.to_string()))?;
     
     for (i, buffer) in kernel.buffers.iter().enumerate() {

@@ -26,8 +26,9 @@ pub use manifest::{
 };
 pub use oracle::{
     candidate_evaluation, certify_builtin, compare_f32, evaluate_builtin, evaluate_ffn,
-    evaluate_topk, ffn_cpu, ffn_tensors, topk_cpu, topk_inputs, AffineParams, ComparisonReport,
-    FfnParams, GpuEvaluation, OracleCase, OracleTolerance, TopKParams,
+    evaluate_p64, evaluate_topk, ffn_cpu, ffn_tensors, p64_project_cpu, p64_records, topk_cpu,
+    topk_inputs, AffineParams, ComparisonReport, FfnParams, GpuEvaluation, OracleCase,
+    OracleTolerance, TopKParams,
 };
 pub use schedule::{AdapterConstraints, Schedule, ScheduleSpace};
 pub use tune::{

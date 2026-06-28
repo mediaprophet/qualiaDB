@@ -45,6 +45,10 @@ fn emit_kernel_body(
         return emit_ffn_wgsl(source, kernel, schedule);
     }
 
+    if kernel.id == "p64-project" {
+        return emit_p64_wgsl(source, kernel, schedule);
+    }
+
     if kernel.id == "ray-probe" {
         // The ray-query enable extension must precede any other item.
         writeln!(source, "enable wgpu_ray_query;").map_err(|error| ForgeError::Emission(error.to_string()))?;
@@ -59,16 +63,6 @@ struct AffineParams {{
     scale: f32,
     bias: f32,
     _pad: u32,
-}}"#
-        ).map_err(|error| ForgeError::Emission(error.to_string()))?;
-    }
-
-    if kernel.id == "p64-project" {
-        writeln!(
-            source,
-            r#"
-struct P64Words64 {{
-    lanes: array<vec4<u32>, 4>,
 }}"#
         ).map_err(|error| ForgeError::Emission(error.to_string()))?;
     }
@@ -335,6 +329,44 @@ fn {entry}(@builtin(global_invocation_id) gid: vec3<u32>) {{
         acc = acc + w2[o * params.hidden_size + h] * g;
     }}
     output[o] = acc;
+}}"#,
+        wg = wg,
+        entry = kernel.entry_point
+    )
+    .map_err(|error| ForgeError::Emission(error.to_string()))?;
+    Ok(())
+}
+
+/// P64 descriptor projection: one invocation per record projects its 16 packed
+/// u32 words onto the 16-element weight vector.
+fn emit_p64_wgsl(
+    source: &mut String,
+    kernel: &KernelSpec,
+    schedule: Schedule,
+) -> Result<(), ForgeError> {
+    let wg = schedule.workgroup_size;
+    writeln!(
+        source,
+        r#"
+struct P64Words64 {{
+    lanes: array<vec4<u32>, 4>,
+}}
+
+@group(0) @binding(0) var<storage, read> input: array<P64Words64>;
+@group(0) @binding(1) var<storage, read> weights: array<f32>;
+@group(0) @binding(2) var<storage, read_write> output: array<f32>;
+
+@compute @workgroup_size({wg})
+fn {entry}(@builtin(global_invocation_id) gid: vec3<u32>) {{
+    let r = gid.x;
+    if (r >= arrayLength(&output)) {{ return; }}
+    let rec = input[r];
+    var acc = 0.0;
+    for (var w: u32 = 0u; w < 16u; w = w + 1u) {{
+        let word = rec.lanes[w / 4u][w % 4u];
+        acc = acc + weights[w] * f32(word);
+    }}
+    output[r] = acc;
 }}"#,
         wg = wg,
         entry = kernel.entry_point

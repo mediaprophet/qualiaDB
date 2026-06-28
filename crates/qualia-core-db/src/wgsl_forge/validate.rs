@@ -168,6 +168,26 @@ mod tests {
     }
 
     #[test]
+    fn generated_p64_passes_naga_validation() {
+        let generated = generate_builtin(
+            BuiltinKernel::P64Project,
+            Schedule {
+                workgroup_size: 64,
+                items_per_invocation: 1,
+                vector_width: 1,
+                ..Schedule::default()
+            },
+            TargetBackend::Wgsl,
+        )
+        .unwrap();
+        assert!(generated.source.contains("struct P64Words64"));
+        assert!(generated.source.contains("arrayLength(&output)"));
+        let report = validate_wgsl(&generated.source).expect("Naga validation of p64-project");
+        assert_eq!(report.entry_points, vec!["p64_project"]);
+        assert_eq!(report.binding_count, 3);
+    }
+
+    #[test]
     fn generated_ffn_passes_naga_validation() {
         let generated = generate_builtin(
             BuiltinKernel::FusedFfn,

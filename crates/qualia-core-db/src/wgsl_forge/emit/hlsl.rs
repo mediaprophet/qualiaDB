@@ -42,6 +42,9 @@ fn emit_kernel_body(
     if kernel.id == "fused-ffn" {
         return emit_ffn_hlsl(source, kernel, schedule);
     }
+    if kernel.id == "p64-project" {
+        return emit_p64_hlsl(source, kernel, schedule);
+    }
     if kernel.id == "ray-probe" {
         return Err(ForgeError::Emission(
             "ray-query is only emitted for the WGSL target (HLSL RT uses a distinct API)".to_string(),
@@ -255,6 +258,45 @@ void {entry}(uint3 gid : SV_DispatchThreadID) {{
         acc += w2[o * params.hidden_size + h] * g;
     }}
     output[o] = acc;
+}}"#,
+        wg = wg,
+        entry = kernel.entry_point
+    )
+    .map_err(|error| ForgeError::Emission(error.to_string()))?;
+    Ok(())
+}
+
+/// P64 descriptor projection in HLSL: one thread per record, bound via the
+/// structured buffer's GetDimensions (no length uniform needed).
+fn emit_p64_hlsl(
+    source: &mut String,
+    kernel: &KernelSpec,
+    schedule: Schedule,
+) -> Result<(), ForgeError> {
+    let wg = schedule.workgroup_size;
+    writeln!(
+        source,
+        r#"struct P64Words64 {{
+    uint4 lanes[4];
+}};
+
+StructuredBuffer<P64Words64> input : register(t0, space0);
+StructuredBuffer<float> weights : register(t1, space0);
+RWStructuredBuffer<float> output : register(u2, space0);
+
+[numthreads({wg}, 1, 1)]
+void {entry}(uint3 gid : SV_DispatchThreadID) {{
+    uint r = gid.x;
+    uint count, stride;
+    output.GetDimensions(count, stride);
+    if (r >= count) {{ return; }}
+    P64Words64 rec = input[r];
+    float acc = 0.0;
+    for (uint w = 0; w < 16; w++) {{
+        uint word = rec.lanes[w / 4][w % 4];
+        acc += weights[w] * (float)word;
+    }}
+    output[r] = acc;
 }}"#,
         wg = wg,
         entry = kernel.entry_point
