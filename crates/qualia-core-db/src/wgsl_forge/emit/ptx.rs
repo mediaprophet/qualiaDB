@@ -32,15 +32,18 @@ fn emit_kernel_body(
 ) -> Result<(), ForgeError> {
     writeln!(source, ".version 7.5\n.target sm_75\n.address_size 64\n").map_err(|error| ForgeError::Emission(error.to_string()))?;
     
-    writeln!(source, ".entry {}(", kernel.entry_point).map_err(|error| ForgeError::Emission(error.to_string()))?;
+    writeln!(source, ".visible .entry {}(", kernel.entry_point).map_err(|error| ForgeError::Emission(error.to_string()))?;
     for (i, buffer) in kernel.buffers.iter().enumerate() {
-        let param_type = match buffer.access {
-            crate::wgsl_forge::ir::BufferAccess::Uniform => ".align 4 .b8 params[16]",
-            _ => ".u64",
+        // A uniform block is a by-value byte array `<name>[16]`; storage buffers
+        // are pointers passed as `<name>_ptr`.
+        let param_decl = match buffer.access {
+            crate::wgsl_forge::ir::BufferAccess::Uniform => {
+                format!(".param .align 4 .b8 {}[16]", buffer.name)
+            }
+            _ => format!(".param .u64 {}_ptr", buffer.name),
         };
-        let param_name = if param_type == ".u64" { format!("{}_ptr", buffer.name) } else { buffer.name.clone() };
         let separator = if i < kernel.buffers.len() - 1 { "," } else { "" };
-        writeln!(source, "    .param {} {}{}", param_type, param_name, separator).map_err(|error| ForgeError::Emission(error.to_string()))?;
+        writeln!(source, "    {param_decl}{separator}").map_err(|error| ForgeError::Emission(error.to_string()))?;
     }
     writeln!(source, ")\n{{").map_err(|error| ForgeError::Emission(error.to_string()))?;
 

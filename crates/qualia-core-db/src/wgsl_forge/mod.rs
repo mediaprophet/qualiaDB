@@ -31,6 +31,8 @@ pub use oracle::{
     topk_inputs, AffineParams, ComparisonReport, FfnParams, GpuEvaluation, OracleCase,
     OracleTolerance, TopKParams,
 };
+#[cfg(feature = "cuda")]
+pub use oracle::evaluate_affine_cuda;
 pub use roofline::{roofline_for, RooflineBound, RooflineEstimate};
 pub use schedule::{AdapterConstraints, Schedule, ScheduleSpace};
 pub use tune::{

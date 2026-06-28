@@ -307,6 +307,22 @@ top-k, and ray-query WGSL emits + Naga-validates (see evidence below). Remaining
   phase" error; `certify`/`tune` remain affine-only (non-affine oracle path is a
   named follow-up). cudarc was modernised 0.11→0.19 (official, `cuda-13030`).
 
+### 2026-06-28 CUDA backend works; cross-backend oracle (§7/§10)
+
+- First real execution of the native CUDA/PTX backend surfaced two bugs in the
+  previously compile-only path:
+  1. The affine PTX emitted a duplicated parameter name
+     (`.param .align 4 .b8 params[16] params`) — ptxas rejected it with a syntax
+     error. Fixed the emitter to build the whole declaration once; also marked the
+     entry `.visible` so it loads by name. PTX now assembles to a CUBIN via ptxas.
+  2. `cuda.rs` dispatch resolved buffers positionally as [params, input, output]
+     but the emitter/oracle layout is input@0/output@1/params@2 — now resolved by
+     binding number.
+- `evaluate_affine_cuda` runs the affine kernel through cuda.rs against the same
+  CPU reference vectors used for wgpu. Verified: `affine_oracle_matches_across_cuda_backend`
+  passes on the A2000 with CUDA 13.3 — the differential oracle is now genuinely
+  backend-agnostic (wgpu + CUDA), per plan §7. Generic-kernel PTX is the next step.
+
 ### 2026-06-28 §6 search pruning: warp alignment + roofline
 
 - Warp/wavefront alignment: `AdapterConstraints.warp_size` (32 NVIDIA, 64 AMD by

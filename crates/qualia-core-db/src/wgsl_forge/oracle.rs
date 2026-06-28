@@ -372,6 +372,37 @@ pub fn evaluate_builtin(
     ))
 }
 
+/// Cross-backend oracle (plan §7/§10): runs the affine kernel through the native
+/// CUDA backend (PTX) and checks it against the *same* CPU reference vectors used
+/// for the wgpu backend. Requires a CUDA device + the `cuda` feature.
+#[cfg(feature = "cuda")]
+pub fn evaluate_affine_cuda(length: usize) -> Result<ComparisonReport, ForgeError> {
+    use crate::wgsl_forge::execute::{CudaComputeContext, CudaPipeline, QualiaCompute};
+
+    let mut context = CudaComputeContext::new(16 * 1024 * 1024)?;
+    let schedule = Schedule {
+        workgroup_size: 64,
+        items_per_invocation: 1,
+        vector_width: 1,
+        ..Default::default()
+    };
+    let kernel = BuiltinKernel::AffineF32.spec();
+    let generated = emit_shader(&kernel, schedule, TargetBackend::Ptx)?;
+
+    let case = OracleCase::affine(length, 0x5141_4C49_4157_4753, 1.618_034, -0.125);
+    let view_input = context.allocate_and_write(bytemuck::cast_slice(&case.input), 0, 0)?;
+    let view_output =
+        context.allocate_transient((case.input.len() * size_of::<f32>()).max(4), 1, 0)?;
+    let view_params = context.allocate_and_write(bytemuck::bytes_of(&case.params), 2, 0)?;
+    let buffers = vec![view_input, view_output, view_params];
+
+    let pipeline = CudaPipeline::compile(&context, &generated.source, &kernel.entry_point)?;
+    pipeline.dispatch(&buffers, &schedule, case.input.len())?;
+
+    let actual = context.read_buffer_f32(&view_output)?;
+    Ok(compare_f32(&case.expected, &actual, OracleTolerance::default()))
+}
+
 pub fn certify_builtin(
     context: &mut WgpuComputeContext,
     builtin: BuiltinKernel,
@@ -857,6 +888,14 @@ mod tests {
         let (_, evaluation) =
             evaluate_topk(&mut context, schedule, 64 * 10, 4, 2, 5).expect("topk evaluation");
         assert!(evaluation.oracle.passed(), "top-k GPU/oracle mismatch: {:?}", evaluation.oracle);
+    }
+
+    #[cfg(feature = "cuda")]
+    #[test]
+    #[ignore = "requires a CUDA device"]
+    fn affine_oracle_matches_across_cuda_backend() {
+        let report = evaluate_affine_cuda(4099).expect("cuda affine evaluation");
+        assert!(report.passed(), "CUDA affine GPU/oracle mismatch: {report:?}");
     }
 
     #[test]

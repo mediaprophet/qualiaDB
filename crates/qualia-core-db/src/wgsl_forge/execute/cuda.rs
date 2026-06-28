@@ -211,9 +211,19 @@ impl<'a> QualiaCompute for CudaPipeline<'a> {
             ));
         }
 
+        // Resolve views by binding, not position, to match the emitter's layout
+        // (input@0, output@1, params@2) regardless of the order they were passed.
+        let view_for = |binding: u32| -> Result<&BufferView, ForgeError> {
+            buffers.iter().find(|b| b.binding == binding).ok_or_else(|| {
+                ForgeError::GpuValidation(format!("CUDA affine-f32 missing binding {binding}"))
+            })
+        };
+        let input_view = view_for(0)?;
+        let output_view = view_for(1)?;
+        let params_view = view_for(2)?;
+
         // The uniform block lives in the slab; the PTX takes it by value, so we
         // copy the 16 bytes back to the host and forward them as a kernel arg.
-        let params_view = &buffers[0];
         let params_host = {
             let pslice = self.context.slab.slice(params_view.offset..params_view.offset + 16);
             self.context
@@ -228,8 +238,8 @@ impl<'a> QualiaCompute for CudaPipeline<'a> {
         // SyncOnDrop guard keeps the slab pointer valid across the launch.
         let (base, _guard) = self.context.slab.device_ptr(&self.context.stream);
         let base = base as u64;
-        let input_ptr = base + buffers[1].offset as u64;
-        let output_ptr = base + buffers[2].offset as u64;
+        let input_ptr = base + input_view.offset as u64;
+        let output_ptr = base + output_view.offset as u64;
 
         let start = std::time::Instant::now();
 
