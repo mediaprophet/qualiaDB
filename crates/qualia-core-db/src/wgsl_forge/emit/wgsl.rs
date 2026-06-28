@@ -1,17 +1,7 @@
 use std::fmt::Write;
 
-use serde::{Deserialize, Serialize};
-
-use super::{ForgeError, KernelOperation, KernelSpec, Schedule, FORGE_SCHEMA_VERSION};
-
-#[derive(Debug, Clone, PartialEq, Eq, Serialize, Deserialize)]
-pub struct GeneratedShader {
-    pub kernel_id: String,
-    pub semantic_hash: String,
-    pub source_hash: String,
-    pub schedule: Schedule,
-    pub source: String,
-}
+use super::{GeneratedShader, TargetBackend};
+use crate::wgsl_forge::{ForgeError, KernelSpec, Op, Schedule, FORGE_SCHEMA_VERSION};
 
 pub fn emit_wgsl(kernel: &KernelSpec, schedule: Schedule) -> Result<GeneratedShader, ForgeError> {
     kernel.validate()?;
@@ -37,8 +27,9 @@ pub fn emit_wgsl(kernel: &KernelSpec, schedule: Schedule) -> Result<GeneratedSha
     )
     .map_err(|error| ForgeError::Emission(error.to_string()))?;
 
-    match kernel.operation {
-        KernelOperation::AffineF32 => emit_affine(&mut source, kernel, schedule)?,
+    match kernel.ops.first() {
+        Some(Op::AffineF32) => emit_affine(&mut source, kernel, schedule)?,
+        _ => return Err(ForgeError::Emission("unsupported operation sequence".to_string())),
     }
 
     let source_hash = blake3::hash(source.as_bytes()).to_hex().to_string();
@@ -182,6 +173,7 @@ mod tests {
                 workgroup_size: 128,
                 items_per_invocation: 4,
                 vector_width: 4,
+                ..Default::default()
             },
         )
         .unwrap();

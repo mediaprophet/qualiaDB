@@ -1,12 +1,16 @@
 use serde::{Deserialize, Serialize};
 
-use super::{ForgeError, KernelOperation, KernelSpec};
+use super::{ForgeError, KernelSpec, Op};
 
 #[derive(Debug, Clone, Copy, PartialEq, Eq, Hash, Serialize, Deserialize)]
 pub struct Schedule {
     pub workgroup_size: u32,
     pub items_per_invocation: u32,
     pub vector_width: u32,
+    pub tile_mnk: Option<[u32; 3]>,
+    pub use_subgroup: bool,
+    pub prefetch: bool,
+    pub unroll_factor: u32,
 }
 
 impl Default for Schedule {
@@ -15,6 +19,10 @@ impl Default for Schedule {
             workgroup_size: 64,
             items_per_invocation: 1,
             vector_width: 1,
+            tile_mnk: None,
+            use_subgroup: false,
+            prefetch: false,
+            unroll_factor: 1,
         }
     }
 }
@@ -52,8 +60,13 @@ impl Schedule {
                 "vector width must be one of 1, 2, 4".to_string(),
             ));
         }
-        match kernel.operation {
-            KernelOperation::AffineF32 => {}
+        if self.use_subgroup && !constraints.supports_subgroups {
+            return Err(ForgeError::InvalidSchedule("adapter does not support subgroups".to_string()));
+        }
+        
+        match kernel.ops.first() {
+            Some(Op::AffineF32) => {}
+            _ => {}
         }
         Ok(())
     }
@@ -81,6 +94,8 @@ pub struct AdapterConstraints {
     pub max_workgroup_size_x: u32,
     pub max_invocations_per_workgroup: u32,
     pub max_workgroups_per_dimension: u32,
+    pub supports_subgroups: bool,
+    pub supports_coopmat: bool,
 }
 
 impl AdapterConstraints {
@@ -89,6 +104,8 @@ impl AdapterConstraints {
             max_workgroup_size_x: 256,
             max_invocations_per_workgroup: 256,
             max_workgroups_per_dimension: 65_535,
+            supports_subgroups: false,
+            supports_coopmat: false,
         }
     }
 
@@ -98,6 +115,8 @@ impl AdapterConstraints {
             max_workgroup_size_x: limits.max_compute_workgroup_size_x,
             max_invocations_per_workgroup: limits.max_compute_invocations_per_workgroup,
             max_workgroups_per_dimension: limits.max_compute_workgroups_per_dimension,
+            supports_subgroups: false, // Discovered at device creation
+            supports_coopmat: false,
         }
     }
 }
@@ -133,6 +152,7 @@ impl ScheduleSpace {
                         workgroup_size,
                         items_per_invocation,
                         vector_width,
+                        ..Default::default()
                     };
                     if schedule.validate(kernel, constraints).is_ok() {
                         candidates.push(schedule);
@@ -168,6 +188,7 @@ mod tests {
             workgroup_size: 64,
             items_per_invocation: 2,
             vector_width: 4,
+            ..Default::default()
         };
         assert_eq!(schedule.dispatch_workgroups(513), 2);
     }

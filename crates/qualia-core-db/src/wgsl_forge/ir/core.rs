@@ -2,7 +2,8 @@ use serde::{Deserialize, Serialize};
 use std::collections::BTreeSet;
 use std::str::FromStr;
 
-use super::ForgeError;
+use crate::wgsl_forge::ForgeError;
+use super::intrinsics::Intrinsic;
 
 /// Portable GPU view of one 64-byte P64 record.
 ///
@@ -118,10 +119,17 @@ pub struct BufferSpec {
     pub access: BufferAccess,
 }
 
-#[derive(Debug, Clone, Copy, PartialEq, Eq, Hash, Serialize, Deserialize)]
+#[derive(Debug, Clone, PartialEq, Eq, Hash, Serialize, Deserialize)]
 #[serde(rename_all = "snake_case")]
-pub enum KernelOperation {
-    AffineF32,
+pub enum Op {
+    Load { buffer: String, index: String, destination: String },
+    Store { buffer: String, index: String, value: String },
+    Mul { left: String, right: String, destination: String },
+    Add { left: String, right: String, destination: String },
+    Fma { a: String, b: String, c: String, destination: String },
+    Intrinsic(Intrinsic),
+    // A temporary fallback for the affine-f32 kernel to ease transition during refactor
+    AffineF32, 
 }
 
 #[derive(Debug, Clone, PartialEq, Eq, Serialize, Deserialize)]
@@ -131,7 +139,7 @@ pub struct KernelSpec {
     pub entry_point: String,
     pub description: String,
     pub buffers: Vec<BufferSpec>,
-    pub operation: KernelOperation,
+    pub ops: Vec<Op>,
 }
 
 impl KernelSpec {
@@ -171,9 +179,11 @@ impl KernelSpec {
             }
         }
 
-        match self.operation {
-            KernelOperation::AffineF32 => validate_affine_buffers(&self.buffers),
+        if let Some(Op::AffineF32) = self.ops.first() {
+            validate_affine_buffers(&self.buffers)?;
         }
+        
+        Ok(())
     }
 
     pub fn semantic_hash(&self) -> Result<String, ForgeError> {
@@ -273,7 +283,7 @@ impl BuiltinKernel {
                         access: BufferAccess::Uniform,
                     },
                 ],
-                operation: KernelOperation::AffineF32,
+                ops: vec![Op::AffineF32],
             },
         }
     }

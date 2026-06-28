@@ -2,10 +2,11 @@ use std::path::{Path, PathBuf};
 use std::str::FromStr;
 
 use clap::{Args, Subcommand};
+use qualia_core_db::wgsl_forge::execute::WgpuComputeContext;
 use qualia_core_db::wgsl_forge::{
     candidate_evaluation, generate_builtin, tune_with, validate_wgsl, BuiltinKernel,
-    CertificationManifest, GpuForgeRunner, ManifestCache, Schedule, ScheduleSpace, TuningConfig,
-    TuningManifest,
+    CertificationManifest, ForgeError, ManifestCache, Schedule, ScheduleSpace, TargetBackend,
+    TuningConfig, TuningManifest,
 };
 
 #[derive(Debug, Clone, Args)]
@@ -27,6 +28,7 @@ impl ScheduleArgs {
             workgroup_size: self.workgroup,
             items_per_invocation: self.items,
             vector_width: self.vector_width,
+            ..Default::default()
         }
     }
 }
@@ -39,6 +41,9 @@ pub enum ShaderAction {
     Generate {
         #[arg(default_value = "affine-f32")]
         kernel: String,
+        /// Target backend (wgsl, msl, hlsl, ptx)
+        #[arg(long, default_value = "wgsl")]
+        target: String,
         #[command(flatten)]
         schedule: ScheduleArgs,
         /// Write WGSL to this path instead of stdout.
@@ -53,8 +58,11 @@ pub enum ShaderAction {
         /// Validate an existing WGSL file; otherwise generate the selected kernel.
         #[arg(long)]
         input: Option<PathBuf>,
-        #[arg(long, default_value = "affine-f32")]
+        #[arg(default_value = "affine-f32")]
         kernel: String,
+        /// Target backend (wgsl, msl, hlsl, ptx)
+        #[arg(long, default_value = "wgsl")]
+        target: String,
         #[command(flatten)]
         schedule: ScheduleArgs,
         /// Write a Naga-level certification manifest.
@@ -121,12 +129,14 @@ pub fn run(action: &ShaderAction) -> Result<(), Box<dyn std::error::Error>> {
         }
         ShaderAction::Generate {
             kernel,
+            target,
             schedule,
             out,
             json,
         } => {
             let builtin = parse_kernel(kernel)?;
-            let generated = generate_builtin(builtin, schedule.schedule())?;
+            let target_backend = target.parse().map_err(|e: String| ForgeError::Emission(e))?;
+            let generated = generate_builtin(builtin, schedule.schedule(), target_backend)?;
             if let Some(path) = out {
                 std::fs::write(path, generated.source.as_bytes())?;
                 eprintln!(
@@ -144,17 +154,24 @@ pub fn run(action: &ShaderAction) -> Result<(), Box<dyn std::error::Error>> {
         ShaderAction::Validate {
             input,
             kernel,
+            target,
             schedule,
             manifest,
             json,
         } => {
+            let target_backend = target.parse().map_err(|e: String| ForgeError::Emission(e))?;
             let (source, generated) = if let Some(path) = input {
                 (std::fs::read_to_string(path)?, None)
             } else {
-                let generated = generate_builtin(parse_kernel(kernel)?, schedule.schedule())?;
+                let builtin = parse_kernel(kernel)?;
+                let generated = generate_builtin(builtin, schedule.schedule(), target_backend)?;
                 (generated.source.clone(), Some(generated))
             };
-            let report = validate_wgsl(&source)?;
+            let report = if target_backend == TargetBackend::Wgsl {
+                Some(validate_wgsl(&source)?)
+            } else {
+                None
+            };
             if let Some(path) = manifest {
                 let generated = generated.ok_or_else(|| {
                     std::io::Error::new(
@@ -162,18 +179,26 @@ pub fn run(action: &ShaderAction) -> Result<(), Box<dyn std::error::Error>> {
                         "--manifest requires a generated kernel (omit --input)",
                     )
                 })?;
-                let record = CertificationManifest::naga_only(&generated, report.clone());
-                write_json(path, &record)?;
+                if let Some(report) = report.clone() {
+                    let record = CertificationManifest::naga_only(&generated, report);
+                    write_json(path, &record)?;
+                } else {
+                    eprintln!("Warning: Validation manifest generation is currently only supported for WGSL targets.");
+                }
             }
-            if *json {
-                println!("{}", serde_json::to_string_pretty(&report)?);
+            if let Some(report) = report {
+                if *json {
+                    println!("{}", serde_json::to_string_pretty(&report)?);
+                } else {
+                    println!(
+                        "Naga validated {} binding(s), entry point(s): {}",
+                        report.binding_count,
+                        report.entry_points.join(", ")
+                    );
+                    println!("Validation success: entry points = {:?}", report.entry_points);
+                }
             } else {
-                println!(
-                    "Naga validated {} binding(s), entry point(s): {}",
-                    report.binding_count,
-                    report.entry_points.join(", ")
-                );
-                println!("source hash: {}", report.source_hash);
+                println!("Validation skipped for non-WGSL target.");
             }
         }
         ShaderAction::Certify {
@@ -186,9 +211,9 @@ pub fn run(action: &ShaderAction) -> Result<(), Box<dyn std::error::Error>> {
             cache_dir,
         } => {
             let builtin = parse_kernel(kernel)?;
-            let runner = GpuForgeRunner::new()?;
+            let mut runner = WgpuComputeContext::new(4 * 1024 * 1024)?;
             let record = qualia_core_db::wgsl_forge::certify_builtin(
-                &runner,
+                &mut runner,
                 builtin,
                 schedule.schedule(),
                 *length,
@@ -239,8 +264,8 @@ pub fn run(action: &ShaderAction) -> Result<(), Box<dyn std::error::Error>> {
         } => {
             let builtin = parse_kernel(kernel)?;
             let spec = builtin.spec();
-            let runner = GpuForgeRunner::new()?;
-            let constraints = runner.constraints();
+            let mut runner = WgpuComputeContext::new(4 * 1024 * 1024)?;
+            let constraints = runner.constraints;
             let result = tune_with(
                 &spec,
                 &constraints,
@@ -253,7 +278,7 @@ pub fn run(action: &ShaderAction) -> Result<(), Box<dyn std::error::Error>> {
                 },
                 |schedule, sample_count| {
                     candidate_evaluation(
-                        &runner,
+                        &mut runner,
                         builtin,
                         schedule,
                         *length,
@@ -262,8 +287,10 @@ pub fn run(action: &ShaderAction) -> Result<(), Box<dyn std::error::Error>> {
                     )
                 },
             )?;
-            let generated = generate_builtin(builtin, result.winner.schedule)?;
-            let record = TuningManifest::new(&generated, runner.adapter().clone(), result)?;
+            println!("\nBest configuration:");
+            let generated = generate_builtin(builtin, result.winner.schedule, TargetBackend::Wgsl)?;
+            println!("{}", generated.source);
+            let record = TuningManifest::new(&generated, runner.adapter.clone(), result)?;
             if let Some(path) = manifest {
                 write_json(path, &record)?;
             }

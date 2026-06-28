@@ -27,7 +27,7 @@ The implementation is a reusable core module plus a thin CLI. A procedural macro
 not the source of truth: derive macros cannot reliably observe final Rust layout.
 Build integration may be added later as a thin caller of the same deterministic API.
 
-The compiler separates semantics from scheduling, and introduces diverging execution paths:
+The compiler separates semantics from scheduling, using a `LoweringContext` pass that takes the `KernelSpec`, `HardwareTopology`, and `Schedule` to produce either a canonical `naga::Module` (for wgpu backends) or target-ready IR (for native backends like PTX). This keeps semantics pristine while schedules diverge, introducing these diverging execution paths:
 
 ```text
 KernelSpec (typed buffers, operations, Hardware Intrinsics [MMA, RayQuery], CPU oracle)
@@ -49,7 +49,7 @@ kernel’s mathematical meaning.
 
 If a target-specific native backend (e.g., PTX or MSL) fails to initialize on the host, the Forge must automatically fall back to the next available compilation target (e.g., SPIR-V or WGSL) to ensure the compute pipeline remains operational, albeit at a potentially reduced performance tier.
 
-Stateless Execution & Persistent Memory: The execution layer is strictly stateless. Dynamic allocation in the hot loop is forbidden. The orchestrator manages a persistent, topology-aware ring buffer (pinned memory for discrete PCIe devices, zero-copy for unified memory) and passes lightweight offsets to the target-specific `QualiaCompute` implementation.
+Stateless Execution & Persistent Memory: The execution layer is strictly stateless. Dynamic allocation in the hot loop is forbidden. The orchestrator manages a persistent, topology-aware ring buffer (larger persistent slabs with zero-copy for unified memory, pinned staging rings with async `copy_buffer` for discrete PCIe devices) and passes lightweight offsets to the target-specific `QualiaCompute` implementation. Every backend must enforce the invariant that "read/write heads never lap" using proper memory fences.
 
 ## 3. Repository layout
 
@@ -116,7 +116,7 @@ generated equivalents have oracle-backed parity evidence.
 Every result declares its achieved validation level:
 
 1. `Generated` — deterministic source emitted.
-2. `NagaValidated` — parsed and passed `naga::valid::Validator`.
+2. `NagaValidated` — canonical `naga::Module` constructed, validated against `Capabilities` / subgroup settings, and passed `naga::valid::Validator`.
 3. `PipelineCreated` — target adapter accepted shader and pipeline.
 4. `OracleVerified` — GPU output matched CPU reference within declared tolerances.
 5. `Profiled` — warm-up and robust timing samples completed.
@@ -131,7 +131,10 @@ Initial schedule space:
 - workgroup size: `32, 64, 128, 256`;
 - items per invocation: `1, 2, 4, 8`;
 - vector width: initially `1`, then `2, 4` once vector emission is certified;
-- optional tile dimensions for matrix kernels.
+- optional tile dimensions for matrix kernels (`tile_mnk`);
+- intrinsic flags (e.g., `use_subgroup`);
+- memory access hints (e.g., `prefetch`);
+- loop `unroll_factor`.
 
 Candidates are pruned before compilation using:
 
@@ -146,12 +149,12 @@ Candidates are pruned before compilation using:
 - intrinsic availability checks: the checker must verify if the local adapter supports `SPV_KHR_cooperative_matrix` (Vulkan) or native Tensor/RT cores before exploring schedules that rely on them;
 - hardware capability manifest: the local topology checker must query the adapter for advanced intrinsic support (e.g., Subgroup sizes, MMA/Tensor Core availability, async memory copy support, and RT core presence) before search begins;
 - semantic lowering: if a kernel requires an intrinsic (like a warp reduction) that the local hardware lacks, the Forge must decide whether to gracefully lower that operation into a standard shared-memory equivalent, or exclude the schedule entirely;
-- a simple roofline lower bound where applicable.
+- a simple roofline lower bound: estimating arithmetic intensity of the kernel vs device peak to reject clearly memory- or compute-bound bad schedules.
 
 The first tuner uses deterministic grid search. The second stage uses successive
 halving: all valid candidates receive a small sample budget, then only the strongest
 receive additional samples. Ranking uses median latency with correctness as a hard
-gate. Optional scoring can include p95 latency, throughput, memory, and thermal cost.
+gate. Optional scoring includes p95 latency, throughput, memory, and estimated energy/thermal cost.
 
 ## 7. Measurement rules
 
@@ -170,13 +173,15 @@ gate. Optional scoring can include p95 latency, throughput, memory, and thermal 
 
 Tuning records are reusable only when all signature fields match:
 
-- adapter name, vendor, device, device type, backend, driver and driver info;
+- `adapter_info` (name, vendor, device, device type, backend, driver and driver info);
+- selected `limits` fields hash and `features` bits;
 - WGSL Forge schema version;
-- kernel semantic hash;
-- generated WGSL hash;
+- kernel semantic hash (canonical IR or op sequence);
+- generated shader hash;
 - P64 schema version where relevant;
 - wgpu/Naga/cudarc version;
-- correctness tolerance profile.
+- correctness tolerance profile;
+- tuning timestamp, source spec version/commit, and lightweight provenance note.
 
 The `CertificationManifest` acts as a hardware-specific fingerprint. If a node boots up, it should first poll the cluster's manifest registry (or a local cache directory) for an identical topology manifest. Only if a match is absent does it drop into the `auto-tune-all` phase to generate and cache a new optimal manifest for that specific hardware profile.
 
@@ -215,6 +220,9 @@ Required tests:
 - search order and winner selection are deterministic for fixed measurements;
 - manifest hashes and tuning signatures change when source/schema/schedule changes;
 - headless GPU oracle test runs when an adapter is available and skips honestly otherwise;
+- `profile-hardware` dumps rich, queryable JSON including limits, features, subgroup sizes, and memory architecture class;
+- `tune` and `certify` support `--dry-run` for pruning analysis only;
+- a small roofline visualizer or schedule search tree dump can be generated for debugging why a candidate was pruned;
 - CLI smoke tests cover generation and validation without requiring a GPU;
 - oracle tests must execute the exact same CPU reference vectors across all available `QualiaCompute` backend implementations on the host machine to ensure tolerance checks hold true across different compiler toolchains and hardware precision limits;
 - oracle tests must explicitly verify that the read/write heads of the ring buffer do not lap each other during sustained, high-throughput asynchronous dispatches to guarantee memory safety across the `QualiaSlabAllocator`.

@@ -6,29 +6,27 @@
 
 pub mod cache;
 pub mod emit;
+pub mod execute;
 pub mod ir;
 pub mod manifest;
 pub mod oracle;
-#[cfg(all(not(target_arch = "wasm32"), feature = "gpu-runtime"))]
-pub mod runner;
 pub mod schedule;
 pub mod tune;
 pub mod validate;
 
 pub use cache::ManifestCache;
-pub use emit::{emit_wgsl, GeneratedShader};
+pub use emit::{emit_shader, GeneratedShader, TargetBackend};
 pub use ir::{
-    BufferAccess, BufferElement, BufferSpec, BuiltinKernel, KernelOperation, KernelSpec,
+    BufferAccess, BufferElement, BufferSpec, BuiltinKernel, KernelSpec, Op,
     P64GpuWords64, ScalarType,
 };
 pub use manifest::{
     AdapterIdentity, CertificationManifest, TimingSource, TimingSummary, TuningManifest,
     ValidationLevel,
 };
-pub use oracle::{compare_f32, AffineParams, ComparisonReport, OracleCase, OracleTolerance};
-#[cfg(all(not(target_arch = "wasm32"), feature = "gpu-runtime"))]
-pub use runner::{
-    candidate_evaluation, certify_builtin, evaluate_builtin, GpuEvaluation, GpuForgeRunner,
+pub use oracle::{
+    candidate_evaluation, certify_builtin, compare_f32, evaluate_builtin, AffineParams,
+    ComparisonReport, GpuEvaluation, OracleCase, OracleTolerance,
 };
 pub use schedule::{AdapterConstraints, Schedule, ScheduleSpace};
 pub use tune::{
@@ -91,8 +89,9 @@ impl From<serde_json::Error> for ForgeError {
 pub fn generate_builtin(
     builtin: BuiltinKernel,
     schedule: Schedule,
+    target: TargetBackend,
 ) -> Result<GeneratedShader, ForgeError> {
     let kernel = builtin.spec();
     schedule.validate(&kernel, &AdapterConstraints::portable())?;
-    emit_wgsl(&kernel, schedule)
+    emit_shader(&kernel, schedule, target)
 }

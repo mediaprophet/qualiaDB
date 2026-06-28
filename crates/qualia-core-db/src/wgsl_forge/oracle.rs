@@ -1,6 +1,14 @@
 use bytemuck::{Pod, Zeroable};
 use serde::{Deserialize, Serialize};
 
+use crate::wgsl_forge::execute::{QualiaCompute, WgpuComputeContext, WgpuPipeline};
+use crate::wgsl_forge::{
+    AdapterConstraints, AdapterIdentity, BuiltinKernel, CandidateEvaluation, CertificationManifest,
+    ForgeError, GeneratedShader, Schedule, TargetBackend, TimingSource, TimingSummary, ValidationLevel,
+    emit_shader,
+    validate_wgsl,
+};
+
 #[repr(C)]
 #[derive(Debug, Clone, Copy, PartialEq, Pod, Zeroable, Serialize, Deserialize)]
 pub struct AffineParams {
@@ -145,6 +153,152 @@ fn compare_value(expected: f32, actual: f32, tolerance: OracleTolerance) -> (boo
     )
 }
 
+#[derive(Debug, Clone)]
+pub struct GpuEvaluation {
+    pub adapter: AdapterIdentity,
+    pub constraints: AdapterConstraints,
+    pub oracle: ComparisonReport,
+    pub timing: TimingSummary,
+    pub samples_ns: Vec<u64>,
+}
+
+pub fn evaluate_builtin(
+    context: &mut WgpuComputeContext,
+    builtin: BuiltinKernel,
+    schedule: Schedule,
+    length: usize,
+    warmups: usize,
+    samples: usize,
+) -> Result<(GeneratedShader, GpuEvaluation), ForgeError> {
+    if samples == 0 {
+        return Err(ForgeError::GpuValidation(
+            "sample count must be non-zero".to_string(),
+        ));
+    }
+    let kernel = builtin.spec();
+    schedule.validate(&kernel, &context.constraints)?;
+    let generated = emit_shader(&kernel, schedule, TargetBackend::Wgsl)?;
+    validate_wgsl(&generated.source)?;
+
+    let case = OracleCase::affine(length, 0x5141_4C49_4157_4753, 1.618_034, -0.125);
+
+    let input_bytes = bytemuck::cast_slice(case.input.as_slice());
+    let view_input = context.allocate_and_write(input_bytes, 0, 0)?;
+
+    let output_bytes_len = (case.input.len() * size_of::<f32>()).max(4);
+    let view_output = context.allocate_transient(output_bytes_len, 1, 0)?;
+
+    let params_bytes = bytemuck::bytes_of(&case.params);
+    let view_params = context.allocate_and_write(params_bytes, 2, 0)?;
+
+    let buffers = vec![view_input, view_output, view_params];
+
+    let pipeline = WgpuPipeline::compile(context, &generated.source, &kernel.entry_point)?;
+
+    for _ in 0..warmups {
+        pipeline.dispatch(&buffers, &schedule, case.input.len())?;
+    }
+
+    let mut timing_samples = Vec::with_capacity(samples);
+    for _ in 0..samples {
+        timing_samples.push(pipeline.dispatch(&buffers, &schedule, case.input.len())?);
+    }
+    if timing_samples.iter().any(|s| *s == 0) {
+        return Err(ForgeError::GpuValidation(
+            "GPU produced a zero-duration timing sample".to_string(),
+        ));
+    }
+
+    let actual = context.read_buffer_f32(&view_output)?;
+    let oracle = compare_f32(&case.expected, &actual, OracleTolerance::default());
+
+    drop(pipeline); // drop immutable borrow before mutating context
+
+    // Free transient allocations
+    context.clear_transient_allocations();
+
+    if !oracle.passed() {
+        return Err(ForgeError::OracleMismatch(format!(
+            "{} mismatches; first={:?}, max_abs={}, max_rel={}",
+            oracle.mismatch_count,
+            oracle.first_mismatch,
+            oracle.max_absolute_error,
+            oracle.max_relative_error
+        )));
+    }
+
+    let source = if context.timestamp_supported {
+        TimingSource::GpuTimestamp
+    } else {
+        TimingSource::CompletionClock
+    };
+
+    let timing = TimingSummary::from_samples(source, &timing_samples).ok_or_else(|| {
+        ForgeError::GpuValidation("GPU produced no timing samples".to_string())
+    })?;
+
+    Ok((
+        generated,
+        GpuEvaluation {
+            adapter: context.adapter.clone(),
+            constraints: context.constraints,
+            oracle,
+            timing,
+            samples_ns: timing_samples,
+        },
+    ))
+}
+
+pub fn certify_builtin(
+    context: &mut WgpuComputeContext,
+    builtin: BuiltinKernel,
+    schedule: Schedule,
+    length: usize,
+    warmups: usize,
+    samples: usize,
+) -> Result<CertificationManifest, ForgeError> {
+    let (generated, evaluation) =
+        evaluate_builtin(context, builtin, schedule, length, warmups, samples)?;
+    let validation = validate_wgsl(&generated.source)?;
+    let cache_key =
+        evaluation
+            .adapter
+            .cache_key(&generated.semantic_hash, &generated.source_hash, schedule)?;
+    Ok(CertificationManifest {
+        forge_schema_version: crate::wgsl_forge::FORGE_SCHEMA_VERSION,
+        crate_version: env!("CARGO_PKG_VERSION").to_string(),
+        wgpu_api_version: crate::wgsl_forge::WGPU_API_VERSION.to_string(),
+        naga_api_version: crate::wgsl_forge::NAGA_API_VERSION.to_string(),
+        kernel_id: generated.kernel_id,
+        semantic_hash: generated.semantic_hash,
+        source_hash: generated.source_hash,
+        schedule,
+        validation_level: ValidationLevel::Certified,
+        validation,
+        adapter: Some(evaluation.adapter),
+        oracle: Some(evaluation.oracle),
+        timing: Some(evaluation.timing),
+        cache_key: Some(cache_key),
+    })
+}
+
+pub fn candidate_evaluation(
+    context: &mut WgpuComputeContext,
+    builtin: BuiltinKernel,
+    schedule: Schedule,
+    length: usize,
+    warmups: usize,
+    samples: usize,
+) -> Result<CandidateEvaluation, ForgeError> {
+    let (_, evaluation) = evaluate_builtin(context, builtin, schedule, length, warmups, samples)?;
+    let timing_source = evaluation.timing.source;
+    Ok(CandidateEvaluation {
+        oracle: evaluation.oracle,
+        timing_source,
+        samples_ns: evaluation.samples_ns,
+    })
+}
+
 #[cfg(test)]
 mod tests {
     use super::*;
@@ -172,5 +326,27 @@ mod tests {
     #[test]
     fn nan_never_certifies() {
         assert!(!compare_f32(&[f32::NAN], &[f32::NAN], OracleTolerance::default()).passed());
+    }
+
+    #[test]
+    #[ignore = "requires a native wgpu adapter"]
+    fn generated_affine_certifies_on_real_gpu() {
+        let mut context = WgpuComputeContext::new(1024 * 1024).expect("adapter");
+        let manifest = certify_builtin(
+            &mut context,
+            BuiltinKernel::AffineF32,
+            Schedule {
+                workgroup_size: 64,
+                items_per_invocation: 2,
+                vector_width: 4,
+                ..Default::default()
+            },
+            4_099,
+            2,
+            5,
+        )
+        .expect("certification");
+        assert_eq!(manifest.validation_level, ValidationLevel::Certified);
+        assert!(manifest.oracle.unwrap().passed());
     }
 }
