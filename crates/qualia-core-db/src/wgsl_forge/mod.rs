@@ -16,7 +16,7 @@ pub mod tune;
 pub mod validate;
 
 pub use cache::ManifestCache;
-pub use emit::{emit_shader, matmul_tc_wgsl, GeneratedShader, TargetBackend};
+pub use emit::{decode_spirv_words, emit_shader, matmul_tc_wgsl, GeneratedShader, TargetBackend};
 pub use ir::{
     BufferAccess, BufferElement, BufferSpec, BuiltinKernel, KernelSpec, Op,
     P64GpuWords64, ScalarType, SharedLen, SharedMemorySpec,

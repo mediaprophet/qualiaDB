@@ -5,6 +5,7 @@ pub mod ptx;
 pub mod cuda_c;
 pub mod coopmat;
 pub mod dxc;
+pub mod spirv;
 
 use serde::{Deserialize, Serialize};
 
@@ -16,6 +17,7 @@ pub use ptx::emit_ptx;
 pub use cuda_c::emit_cuda_c;
 pub use coopmat::matmul_tc_wgsl;
 pub use dxc::compile_hlsl_to_spirv;
+pub use spirv::{decode_spirv_words, emit_spirv};
 
 #[derive(Debug, Clone, Copy, PartialEq, Eq, Serialize, Deserialize)]
 #[serde(rename_all = "snake_case")]
@@ -26,6 +28,10 @@ pub enum TargetBackend {
     Ptx,
     /// CUDA-C compiled to PTX by NVRTC at runtime (mirrors HLSL -> DXC).
     CudaC,
+    /// Binary SPIR-V, produced from the generated WGSL via naga's `spv-out`
+    /// backend. The words are stored in `GeneratedShader::source` as a
+    /// `;`-joined decimal string (see [`spirv`]).
+    Spirv,
 }
 
 impl Default for TargetBackend {
@@ -44,6 +50,7 @@ impl std::str::FromStr for TargetBackend {
             "hlsl" => Ok(Self::Hlsl),
             "ptx" => Ok(Self::Ptx),
             "cuda" | "cuda-c" | "cuda_c" => Ok(Self::CudaC),
+            "spirv" | "spir-v" | "spv" => Ok(Self::Spirv),
             _ => Err(format!("unknown target backend: {}", s)),
         }
     }
@@ -69,5 +76,6 @@ pub fn emit_shader(
         TargetBackend::Hlsl => emit_hlsl(kernel, schedule),
         TargetBackend::Ptx => emit_ptx(kernel, schedule),
         TargetBackend::CudaC => emit_cuda_c(kernel, schedule),
+        TargetBackend::Spirv => emit_spirv(kernel, schedule),
     }
 }

@@ -62,7 +62,7 @@ pub enum ShaderAction {
     Generate {
         #[arg(default_value = "affine-f32")]
         kernel: String,
-        /// Target backend (wgsl, msl, hlsl, ptx)
+        /// Target backend (wgsl, msl, hlsl, ptx, cuda, spirv)
         #[arg(long, default_value = "wgsl")]
         target: String,
         #[command(flatten)]
@@ -81,7 +81,7 @@ pub enum ShaderAction {
         input: Option<PathBuf>,
         #[arg(default_value = "affine-f32")]
         kernel: String,
-        /// Target backend (wgsl, msl, hlsl, ptx)
+        /// Target backend (wgsl, msl, hlsl, ptx, cuda, spirv)
         #[arg(long, default_value = "wgsl")]
         target: String,
         #[command(flatten)]
@@ -156,6 +156,18 @@ pub enum ShaderAction {
         /// List what would be tuned vs. served from cache; do not dispatch.
         #[arg(long)]
         dry_run: bool,
+        /// Wall-clock tuning budget in milliseconds. Tuning stops *before*
+        /// starting a kernel once this elapses (kernel-granular; a true
+        /// mid-dispatch interrupt is not possible with the synchronous wgpu
+        /// poll). Remaining kernels are reported as skipped-due-to-budget.
+        #[arg(long)]
+        budget_ms: Option<u64>,
+        /// GPU thermal ceiling in degrees Celsius. Between kernels, if the GPU
+        /// temperature (read via `nvidia-smi`) is at/above this, tuning waits
+        /// and re-polls before continuing. Without an nvidia-smi sensor this
+        /// flag has no effect and a single warning is printed.
+        #[arg(long)]
+        thermal_limit: Option<f32>,
     },
 }
 
@@ -304,6 +316,19 @@ pub fn run(action: &ShaderAction) -> Result<(), Box<dyn std::error::Error>> {
             };
             let report = if target_backend == TargetBackend::Wgsl {
                 Some(validate_wgsl(&source)?)
+            } else if target_backend == TargetBackend::Spirv {
+                // SPIR-V is emitted by parsing+validating the generated WGSL
+                // through naga, so the artifact is already naga-validated. To
+                // surface a real entry-point/binding report we validate the WGSL
+                // form (the canonical IR naga checks) rather than the opaque
+                // decimal-word blob in `source`.
+                if let Some(builtin) = parse_kernel(kernel).ok() {
+                    let wgsl = generate_builtin(builtin, schedule.schedule(), TargetBackend::Wgsl)?;
+                    Some(validate_wgsl(&wgsl.source)?)
+                } else {
+                    eprintln!("SPIR-V validation of an opaque --input blob is not supported; provide a kernel.");
+                    None
+                }
             } else {
                 match validate_native(&source, target_backend, spec.as_ref()) {
                     Ok(r) => Some(r),
@@ -519,13 +544,44 @@ pub fn run(action: &ShaderAction) -> Result<(), Box<dyn std::error::Error>> {
             cache_dir,
             update_local_manifest,
             dry_run,
+            budget_ms,
+            thermal_limit,
         } => {
+            // §12 setup gate: auto-tune-all certifies on the GPU through the
+            // wgpu/WGSL path, which needs no native compiler. We still pre-flight
+            // so an obviously-broken environment fails fast with an actionable
+            // message rather than deep inside a dispatch.
+            if let Err(why) = check_native_toolchain(TargetBackend::Wgsl) {
+                return Err(why.into());
+            }
+
             let mut runner = WgpuComputeContext::new(4 * 1024 * 1024)?;
             let topology_hash = runner.profile.topology_hash()?;
             let constraints = runner.constraints;
             let adapter_name = runner.adapter.name.clone();
             let cache = cache_dir.as_ref().map(|p| ManifestCache::new(p.clone()));
             println!("auto-tune-all on {adapter_name} (topology {topology_hash})");
+
+            // §7 tuning budget: kernel-granular wall-clock abort. A true
+            // mid-dispatch interrupt is not possible with the synchronous wgpu
+            // poll, so we check between kernels only.
+            let start = std::time::Instant::now();
+
+            // §3 thermal limiting: probe once up front so we can warn exactly
+            // once if the flag was given but no sensor is available.
+            let thermal_active = match (thermal_limit, read_gpu_temperature_celsius()) {
+                (Some(limit), Some(_)) => Some(*limit),
+                (Some(limit), None) => {
+                    eprintln!(
+                        "warning: --thermal-limit {limit} requested but no GPU temperature sensor is available on this host (nvidia-smi missing or non-NVIDIA GPU); proceeding WITHOUT thermal limiting."
+                    );
+                    None
+                }
+                (None, _) => None,
+            };
+
+            let mut tuned = 0usize;
+            let mut skipped_budget = 0usize;
             for builtin in BuiltinKernel::ALL {
                 let spec = builtin.spec();
                 let name = builtin.name();
@@ -553,6 +609,36 @@ pub fn run(action: &ShaderAction) -> Result<(), Box<dyn std::error::Error>> {
                     println!("  {name:<12} WOULD TUNE");
                     continue;
                 }
+                // §7 budget: stop BEFORE starting this kernel if we are out of
+                // wall-clock time (kernel-granular; see flag docs).
+                if let Some(budget) = budget_ms {
+                    let elapsed = start.elapsed().as_millis() as u64;
+                    if elapsed >= *budget {
+                        println!(
+                            "  {name:<12} SKIP (budget: {elapsed} ms elapsed >= {budget} ms)"
+                        );
+                        skipped_budget += 1;
+                        continue;
+                    }
+                }
+                // §3 thermal: between kernels, if the GPU is at/above the
+                // ceiling, wait and re-poll a few times before proceeding.
+                if let Some(limit) = thermal_active {
+                    const MAX_WAITS: u32 = 5;
+                    for attempt in 0..MAX_WAITS {
+                        match read_gpu_temperature_celsius() {
+                            Some(temp) if temp >= limit => {
+                                println!(
+                                    "  {name:<12} THERMAL HOLD ({temp:.0} C >= {limit:.0} C), waiting ~2s [{}/{}]",
+                                    attempt + 1,
+                                    MAX_WAITS
+                                );
+                                std::thread::sleep(std::time::Duration::from_secs(2));
+                            }
+                            _ => break,
+                        }
+                    }
+                }
                 let result = tune_with(
                     &spec,
                     &constraints,
@@ -569,6 +655,7 @@ pub fn run(action: &ShaderAction) -> Result<(), Box<dyn std::error::Error>> {
                 );
                 match result {
                     Ok(result) => {
+                        tuned += 1;
                         let generated =
                             generate_builtin(builtin, result.winner.schedule, TargetBackend::Wgsl)?;
                         let record = TuningManifest::new(&generated, runner.adapter.clone(), result)?;
@@ -592,6 +679,12 @@ pub fn run(action: &ShaderAction) -> Result<(), Box<dyn std::error::Error>> {
                     Err(error) => println!("  {name:<12} FAILED: {error}"),
                 }
             }
+            if budget_ms.is_some() {
+                println!(
+                    "auto-tune-all done in {} ms: {tuned} kernel(s) tuned, {skipped_budget} skipped due to budget",
+                    start.elapsed().as_millis()
+                );
+            }
         }
     }
     Ok(())
@@ -599,6 +692,71 @@ pub fn run(action: &ShaderAction) -> Result<(), Box<dyn std::error::Error>> {
 
 fn parse_kernel(value: &str) -> Result<BuiltinKernel, Box<dyn std::error::Error>> {
     Ok(BuiltinKernel::from_str(value)?)
+}
+
+/// Best-effort GPU temperature in degrees Celsius via `nvidia-smi`.
+///
+/// Returns `None` if nvidia-smi is absent or its output cannot be parsed (e.g.
+/// non-NVIDIA host, no driver). This is intentionally NVIDIA-only and honest:
+/// callers must treat `None` as "no thermal sensor available", not "cool".
+fn read_gpu_temperature_celsius() -> Option<f32> {
+    use std::process::Command;
+    let output = Command::new("nvidia-smi")
+        .arg("--query-gpu=temperature.gpu")
+        .arg("--format=csv,noheader,nounits")
+        .output()
+        .ok()?;
+    if !output.status.success() {
+        return None;
+    }
+    let text = String::from_utf8_lossy(&output.stdout);
+    // First line, first integer (multi-GPU hosts emit one line per GPU).
+    text.lines()
+        .next()?
+        .trim()
+        .split(|c: char| !c.is_ascii_digit())
+        .find(|s| !s.is_empty())
+        .and_then(|s| s.parse::<f32>().ok())
+}
+
+/// §12 pre-flight: confirm the native toolchain a non-WGSL/native target needs
+/// is present, reusing the same probes as `shader doctor`. Pure-WGSL/SPIR-V
+/// paths need no native compiler and return `Ok(())` immediately. The error is
+/// actionable and points at `shader doctor`.
+fn check_native_toolchain(target: TargetBackend) -> Result<(), String> {
+    use std::process::Command;
+    match target {
+        // Naga handles these in-process; no external compiler required.
+        TargetBackend::Wgsl | TargetBackend::Spirv => Ok(()),
+        TargetBackend::Hlsl => {
+            let dxc = std::env::var("QUALIA_DXC_PATH").unwrap_or_else(|_| "dxc".to_string());
+            match Command::new(&dxc).arg("--version").output() {
+                Ok(out) if out.status.success() => Ok(()),
+                _ => Err(format!(
+                    "DXC (HLSL compiler) not found as `{dxc}`; set QUALIA_DXC_PATH or add dxc to PATH. Run `shader doctor` for details."
+                )),
+            }
+        }
+        TargetBackend::Ptx | TargetBackend::CudaC => {
+            let nvcc = std::env::var("CUDA_PATH")
+                .map(|p| format!("{p}/bin/nvcc"))
+                .unwrap_or_else(|_| "nvcc".to_string());
+            match Command::new(&nvcc).arg("--version").output() {
+                Ok(out) if out.status.success() => Ok(()),
+                _ => Err(
+                    "CUDA toolkit (nvcc) not found at CUDA_PATH; set CUDA_PATH or add nvcc to PATH. Run `shader doctor` for details.".to_string(),
+                ),
+            }
+        }
+        TargetBackend::Msl => {
+            match Command::new("xcrun").arg("--version").output() {
+                Ok(out) if out.status.success() => Ok(()),
+                _ => Err(
+                    "Metal toolchain (xcrun) not found; install Xcode command-line tools. Run `shader doctor` for details.".to_string(),
+                ),
+            }
+        }
+    }
 }
 
 fn write_json<T: serde::Serialize>(
