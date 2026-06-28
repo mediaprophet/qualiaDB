@@ -41,6 +41,36 @@ impl ManifestCache {
         Ok(Some(serde_json::from_slice(&std::fs::read(path)?)?))
     }
 
+    /// Key a tuning record by (topology, kernel) rather than the winning schedule,
+    /// so `auto-tune-all` can ask "has this kernel been tuned on this hardware?"
+    /// before paying for a fresh search (plan §8).
+    pub fn topology_key(topology_hash: &str, kernel_id: &str) -> String {
+        blake3::hash(format!("{topology_hash}\0{kernel_id}").as_bytes())
+            .to_hex()
+            .to_string()
+    }
+
+    pub fn load_tuning_for_topology(
+        &self,
+        topology_hash: &str,
+        kernel_id: &str,
+    ) -> Result<Option<TuningManifest>, ForgeError> {
+        self.load_tuning(&Self::topology_key(topology_hash, kernel_id))
+    }
+
+    pub fn store_tuning_for_topology(
+        &self,
+        topology_hash: &str,
+        kernel_id: &str,
+        manifest: &TuningManifest,
+    ) -> Result<PathBuf, ForgeError> {
+        self.store_json(
+            &Self::topology_key(topology_hash, kernel_id),
+            "tuning",
+            manifest,
+        )
+    }
+
     fn store_json<T: serde::Serialize>(
         &self,
         key: &str,

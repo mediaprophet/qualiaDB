@@ -1,9 +1,47 @@
 use serde::{Deserialize, Serialize};
 
 use super::{
-    ComparisonReport, ForgeError, GeneratedShader, Schedule, TuningResult, ValidationReport,
-    FORGE_SCHEMA_VERSION, NAGA_API_VERSION, WGPU_API_VERSION,
+    AdapterConstraints, ComparisonReport, ForgeError, GeneratedShader, Schedule, TuningResult,
+    ValidationReport, FORGE_SCHEMA_VERSION, NAGA_API_VERSION, WGPU_API_VERSION,
 };
+
+/// Rich, queryable description of the local compute hardware (plan §9
+/// `profile-hardware`). Acts as the topology fingerprint that keys the manifest
+/// cache (plan §8): tuning records are only reused when the topology hash matches.
+#[derive(Debug, Clone, PartialEq, Serialize, Deserialize)]
+pub struct HardwareProfile {
+    pub adapter: AdapterIdentity,
+    pub constraints: AdapterConstraints,
+    /// "unified" (zero-copy host/device) or "discrete" (PCIe, staged copies).
+    pub memory_class: String,
+    pub supports_timestamp_query: bool,
+    pub max_compute_workgroup_storage_size: u32,
+    pub max_storage_buffer_binding_size: u64,
+    pub min_storage_buffer_offset_alignment: u32,
+    pub min_uniform_buffer_offset_alignment: u32,
+}
+
+impl HardwareProfile {
+    /// Stable fingerprint over the topology-defining fields (omits volatile
+    /// driver strings' influence by hashing the structured fields directly).
+    pub fn topology_hash(&self) -> Result<String, ForgeError> {
+        let bytes = serde_json::to_vec(&(
+            FORGE_SCHEMA_VERSION,
+            &self.adapter,
+            &self.constraints,
+            &self.memory_class,
+            self.max_compute_workgroup_storage_size,
+            self.min_storage_buffer_offset_alignment,
+            self.min_uniform_buffer_offset_alignment,
+            WGPU_API_VERSION,
+        ))?;
+        Ok(blake3::hash(&bytes).to_hex().to_string())
+    }
+
+    pub fn to_pretty_json(&self) -> Result<String, ForgeError> {
+        Ok(serde_json::to_string_pretty(self)?)
+    }
+}
 
 #[derive(Debug, Clone, Copy, PartialEq, Eq, PartialOrd, Ord, Serialize, Deserialize)]
 #[serde(rename_all = "snake_case")]
@@ -174,6 +212,36 @@ impl TuningManifest {
 #[cfg(test)]
 mod tests {
     use super::*;
+
+    fn sample_profile() -> HardwareProfile {
+        HardwareProfile {
+            adapter: AdapterIdentity {
+                name: "Test GPU".to_string(),
+                vendor: 4318,
+                device: 1,
+                device_type: "DiscreteGpu".to_string(),
+                backend: "Vulkan".to_string(),
+                driver: "test".to_string(),
+                driver_info: "1.0".to_string(),
+            },
+            constraints: AdapterConstraints::portable(),
+            memory_class: "discrete".to_string(),
+            supports_timestamp_query: true,
+            max_compute_workgroup_storage_size: 32768,
+            max_storage_buffer_binding_size: 1 << 30,
+            min_storage_buffer_offset_alignment: 256,
+            min_uniform_buffer_offset_alignment: 256,
+        }
+    }
+
+    #[test]
+    fn topology_hash_is_stable_and_sensitive() {
+        let profile = sample_profile();
+        assert_eq!(profile.topology_hash().unwrap(), profile.topology_hash().unwrap());
+        let mut other = sample_profile();
+        other.memory_class = "unified".to_string();
+        assert_ne!(profile.topology_hash().unwrap(), other.topology_hash().unwrap());
+    }
 
     #[test]
     fn timing_summary_is_robust_and_deterministic() {

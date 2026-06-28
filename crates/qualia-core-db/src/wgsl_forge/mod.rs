@@ -21,8 +21,8 @@ pub use ir::{
     P64GpuWords64, ScalarType, SharedLen, SharedMemorySpec,
 };
 pub use manifest::{
-    AdapterIdentity, CertificationManifest, TimingSource, TimingSummary, TuningManifest,
-    ValidationLevel,
+    AdapterIdentity, CertificationManifest, HardwareProfile, TimingSource, TimingSummary,
+    TuningManifest, ValidationLevel,
 };
 pub use oracle::{
     candidate_evaluation, certify_builtin, compare_f32, evaluate_builtin, evaluate_topk,

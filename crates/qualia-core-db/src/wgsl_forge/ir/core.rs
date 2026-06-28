@@ -384,6 +384,13 @@ impl BuiltinKernel {
         }
     }
 
+    /// Whether the differential oracle (`evaluate_builtin`) currently has a
+    /// CPU reference + GPU dispatch wired for this kernel, so it can be certified
+    /// and tuned on hardware. Others generate/validate but are not yet GPU-graded.
+    pub const fn has_gpu_oracle(self) -> bool {
+        matches!(self, Self::AffineF32 | Self::TopK)
+    }
+
     pub fn spec(self) -> KernelSpec {
         match self {
             Self::AffineF32 => KernelSpec {

@@ -3,13 +3,15 @@ use std::time::Instant;
 
 use super::compute::QualiaCompute;
 use super::memory::{BindingUsage, BufferView, MemoryTopology, QualiaSlabAllocator};
-use crate::wgsl_forge::{AdapterConstraints, AdapterIdentity, ForgeError, Schedule};
+use crate::wgsl_forge::{AdapterConstraints, AdapterIdentity, ForgeError, HardwareProfile, Schedule};
 
 pub struct WgpuComputeContext {
     pub device: wgpu::Device,
     pub queue: wgpu::Queue,
     pub adapter: AdapterIdentity,
     pub constraints: AdapterConstraints,
+    /// Rich topology description for `profile-hardware` and cache keying.
+    pub profile: HardwareProfile,
     pub allocator: QualiaSlabAllocator,
     /// Backs read-only storage and uniform views (both non-exclusive usages,
     /// so they may share one buffer).
@@ -62,6 +64,31 @@ impl WgpuComputeContext {
         } else {
             MemoryTopology::Discrete { staging_required: true }
         };
+        let memory_class = match topology {
+            MemoryTopology::Unified { .. } => "unified",
+            MemoryTopology::Discrete { .. } => "discrete",
+        }
+        .to_string();
+
+        let adapter = AdapterIdentity {
+            name: info.name,
+            vendor: info.vendor,
+            device: info.device,
+            device_type: format!("{:?}", info.device_type),
+            backend: format!("{:?}", info.backend),
+            driver: info.driver,
+            driver_info: info.driver_info,
+        };
+        let profile = HardwareProfile {
+            adapter: adapter.clone(),
+            constraints,
+            memory_class,
+            supports_timestamp_query: timestamp_supported,
+            max_compute_workgroup_storage_size: limits.max_compute_workgroup_storage_size,
+            max_storage_buffer_binding_size: limits.max_storage_buffer_binding_size,
+            min_storage_buffer_offset_alignment: limits.min_storage_buffer_offset_alignment,
+            min_uniform_buffer_offset_alignment: limits.min_uniform_buffer_offset_alignment,
+        };
 
         let allocator = QualiaSlabAllocator::new(topology, capacity_bytes);
         
@@ -89,16 +116,9 @@ impl WgpuComputeContext {
         Ok(Self {
             device,
             queue,
-            adapter: AdapterIdentity {
-                name: info.name,
-                vendor: info.vendor,
-                device: info.device,
-                device_type: format!("{:?}", info.device_type),
-                backend: format!("{:?}", info.backend),
-                driver: info.driver,
-                driver_info: info.driver_info,
-            },
+            adapter,
             constraints,
+            profile,
             allocator,
             slab,
             out_slab,

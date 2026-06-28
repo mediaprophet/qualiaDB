@@ -235,14 +235,16 @@ Update this section before ending any implementation session.
 
 - [x] Architecture and continuation plan created.
 - [x] Repository inventory completed.
-- [ ] Typed kernel and schedule IR implemented (extended for multi-backend and intrinsics).
-- [ ] Deterministic emitters implemented (WGSL, MSL, HLSL, PTX).
-- [ ] `QualiaCompute` unified execution trait and `QualiaSlabAllocator` implemented.
+- [x] Typed kernel and schedule IR implemented (extended for multi-backend and intrinsics).
+- [x] Deterministic emitters implemented (WGSL, MSL, HLSL; PTX affine-only, generic deferred).
+- [x] `QualiaCompute` unified execution trait and `QualiaSlabAllocator` implemented
+      (wgpu backend GPU-correct: 256-aligned, split read/read-write slabs).
 - [x] CPU oracle and tolerance contract implemented.
-- [x] Certification manifest implemented (needs topology extension).
+- [x] Certification manifest implemented (topology fingerprint via `HardwareProfile`).
 - [x] Deterministic tuner implemented.
-- [x] Adapter cache identity and atomic manifest cache implemented.
-- [x] CLI commands implemented (needs target flags and auto-tune/profile modes).
+- [x] Adapter cache identity and atomic manifest cache implemented (topology-keyed lookup).
+- [x] CLI commands implemented: list-kernels, generate, validate, certify, tune,
+      profile-hardware, auto-tune-all, plus `--target` flags and `--dry-run`.
 
 ### Next exact action
 

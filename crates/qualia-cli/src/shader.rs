@@ -4,9 +4,9 @@ use std::str::FromStr;
 use clap::{Args, Subcommand};
 use qualia_core_db::wgsl_forge::execute::WgpuComputeContext;
 use qualia_core_db::wgsl_forge::{
-    candidate_evaluation, generate_builtin, tune_with, validate_wgsl, validate_native, BuiltinKernel,
-    CertificationManifest, ForgeError, ManifestCache, Schedule, ScheduleSpace, TargetBackend,
-    TuningConfig, TuningManifest,
+    candidate_evaluation, generate_builtin, tune_with, validate_wgsl, validate_native,
+    AdapterConstraints, BuiltinKernel, CertificationManifest, ForgeError, ManifestCache, Schedule,
+    ScheduleSpace, TargetBackend, TuningConfig, TuningManifest,
 };
 
 #[derive(Debug, Clone, Args)]
@@ -37,6 +37,14 @@ impl ScheduleArgs {
 pub enum ShaderAction {
     /// List deterministic kernels currently known to WGSL Forge.
     ListKernels,
+    /// Probe the local adapter and print a rich hardware/topology profile.
+    ProfileHardware {
+        /// Write the profile JSON to this path (also prints the topology hash).
+        #[arg(long)]
+        export: Option<PathBuf>,
+        #[arg(long)]
+        json: bool,
+    },
     /// Generate one deterministic WGSL module.
     Generate {
         #[arg(default_value = "affine-f32")]
@@ -88,6 +96,9 @@ pub enum ShaderAction {
         /// Also store the adapter-keyed certification in this cache directory.
         #[arg(long)]
         cache_dir: Option<PathBuf>,
+        /// Prune/emit/validate only; do not dispatch on the GPU.
+        #[arg(long)]
+        dry_run: bool,
     },
     /// Search the bounded schedule space and certify the fastest correct variant.
     Tune {
@@ -110,6 +121,28 @@ pub enum ShaderAction {
         /// Also store the adapter-keyed tuning record in this cache directory.
         #[arg(long)]
         cache_dir: Option<PathBuf>,
+        /// Report adapter-pruned candidate counts only; do not dispatch on the GPU.
+        #[arg(long)]
+        dry_run: bool,
+    },
+    /// Tune every GPU-certifiable kernel, reusing the topology-keyed cache.
+    AutoTuneAll {
+        #[arg(long, default_value_t = 65_537)]
+        length: usize,
+        #[arg(long, default_value_t = 2)]
+        warmups: usize,
+        #[arg(long, default_value_t = 24)]
+        max_candidates: usize,
+        /// Cache directory to read existing manifests from and (with
+        /// --update-local-manifest) write new ones to.
+        #[arg(long)]
+        cache_dir: Option<PathBuf>,
+        /// Persist freshly tuned manifests to the cache, keyed by topology.
+        #[arg(long)]
+        update_local_manifest: bool,
+        /// List what would be tuned vs. served from cache; do not dispatch.
+        #[arg(long)]
+        dry_run: bool,
     },
 }
 
@@ -125,6 +158,36 @@ pub fn run(action: &ShaderAction) -> Result<(), Box<dyn std::error::Error>> {
                     spec.semantic_version,
                     spec.description
                 );
+            }
+        }
+        ShaderAction::ProfileHardware { export, json } => {
+            let runner = WgpuComputeContext::new(1024 * 1024)?;
+            let profile = &runner.profile;
+            let topology_hash = profile.topology_hash()?;
+            if let Some(path) = export {
+                std::fs::write(path, profile.to_pretty_json()?.as_bytes())?;
+                eprintln!("wrote {} (topology {})", path.display(), topology_hash);
+            }
+            if *json {
+                println!("{}", profile.to_pretty_json()?);
+            } else {
+                println!("Adapter:        {} ({})", profile.adapter.name, profile.adapter.backend);
+                println!("Device type:    {}", profile.adapter.device_type);
+                println!("Driver:         {} {}", profile.adapter.driver, profile.adapter.driver_info);
+                println!("Memory class:   {}", profile.memory_class);
+                println!("Subgroups:      {}", profile.constraints.supports_subgroups);
+                println!("Tensor (coopmat): {}", profile.constraints.supports_coopmat);
+                println!("RT cores:       {}", profile.constraints.supports_rt_cores);
+                println!("Timestamp query: {}", profile.supports_timestamp_query);
+                println!(
+                    "Max workgroup:  {} invocations, {} bytes shared",
+                    profile.constraints.max_invocations_per_workgroup, profile.max_compute_workgroup_storage_size
+                );
+                println!(
+                    "Bind alignment: storage {} / uniform {}",
+                    profile.min_storage_buffer_offset_alignment, profile.min_uniform_buffer_offset_alignment
+                );
+                println!("Topology hash:  {topology_hash}");
             }
         }
         ShaderAction::Generate {
@@ -220,9 +283,25 @@ pub fn run(action: &ShaderAction) -> Result<(), Box<dyn std::error::Error>> {
             samples,
             manifest,
             cache_dir,
+            dry_run,
         } => {
             let builtin = parse_kernel(kernel)?;
+            if *dry_run {
+                let sched = schedule.schedule();
+                let spec = builtin.spec();
+                let generated = generate_builtin(builtin, sched, TargetBackend::Wgsl)?;
+                let report = validate_wgsl(&generated.source)?;
+                let constraints = AdapterConstraints::portable();
+                let schedule_ok = sched.validate(&spec, &constraints).is_ok();
+                let adapter_ok = constraints.supports_kernel(&spec).is_ok();
+                println!(
+                    "DRY-RUN certify {}: naga={} ({} bindings), schedule_valid={}, adapter_supported(portable)={}, gpu_oracle={}",
+                    builtin.name(), report.naga_validated, report.binding_count, schedule_ok, adapter_ok, builtin.has_gpu_oracle()
+                );
+                return Ok(());
+            }
             let mut runner = WgpuComputeContext::new(4 * 1024 * 1024)?;
+            runner.constraints.supports_kernel(&builtin.spec())?;
             let record = qualia_core_db::wgsl_forge::certify_builtin(
                 &mut runner,
                 builtin,
@@ -272,9 +351,29 @@ pub fn run(action: &ShaderAction) -> Result<(), Box<dyn std::error::Error>> {
             max_candidates,
             manifest,
             cache_dir,
+            dry_run,
         } => {
             let builtin = parse_kernel(kernel)?;
             let spec = builtin.spec();
+            if *dry_run {
+                let constraints = match WgpuComputeContext::new(4 * 1024 * 1024) {
+                    Ok(runner) => runner.constraints,
+                    Err(_) => AdapterConstraints::portable(),
+                };
+                let candidates = ScheduleSpace::default().candidates(&spec, &constraints);
+                let adapter_ok = constraints.supports_kernel(&spec);
+                println!(
+                    "DRY-RUN tune {}: {} candidate schedule(s) survive pruning; adapter_supported={}; gpu_oracle={}",
+                    builtin.name(),
+                    candidates.len(),
+                    adapter_ok.is_ok(),
+                    builtin.has_gpu_oracle()
+                );
+                if let Err(error) = adapter_ok {
+                    println!("  pruned: {error}");
+                }
+                return Ok(());
+            }
             let mut runner = WgpuComputeContext::new(4 * 1024 * 1024)?;
             let constraints = runner.constraints;
             let result = tune_with(
@@ -326,6 +425,87 @@ pub fn run(action: &ShaderAction) -> Result<(), Box<dyn std::error::Error>> {
                 record.result.rejected_candidates,
                 record.cache_key
             );
+        }
+        ShaderAction::AutoTuneAll {
+            length,
+            warmups,
+            max_candidates,
+            cache_dir,
+            update_local_manifest,
+            dry_run,
+        } => {
+            let mut runner = WgpuComputeContext::new(4 * 1024 * 1024)?;
+            let topology_hash = runner.profile.topology_hash()?;
+            let constraints = runner.constraints;
+            let adapter_name = runner.adapter.name.clone();
+            let cache = cache_dir.as_ref().map(|p| ManifestCache::new(p.clone()));
+            println!("auto-tune-all on {adapter_name} (topology {topology_hash})");
+            for builtin in BuiltinKernel::ALL {
+                let spec = builtin.spec();
+                let name = builtin.name();
+                if constraints.supports_kernel(&spec).is_err() {
+                    println!("  {name:<12} SKIP (adapter lacks required intrinsics)");
+                    continue;
+                }
+                if !builtin.has_gpu_oracle() {
+                    println!("  {name:<12} SKIP (no GPU oracle wired yet)");
+                    continue;
+                }
+                if let Some(cache) = &cache {
+                    if let Some(existing) = cache.load_tuning_for_topology(&topology_hash, name)? {
+                        let winner = &existing.result.winner;
+                        println!(
+                            "  {name:<12} CACHED wg={} items={} -> median {} ns",
+                            winner.schedule.workgroup_size,
+                            winner.schedule.items_per_invocation,
+                            winner.timing.median_ns
+                        );
+                        continue;
+                    }
+                }
+                if *dry_run {
+                    println!("  {name:<12} WOULD TUNE");
+                    continue;
+                }
+                let result = tune_with(
+                    &spec,
+                    &constraints,
+                    &ScheduleSpace::default(),
+                    TuningConfig {
+                        initial_samples: 3,
+                        finalist_samples: 11,
+                        finalist_count: 6,
+                        max_candidates: *max_candidates,
+                    },
+                    |schedule, sample_count| {
+                        candidate_evaluation(&mut runner, builtin, schedule, *length, *warmups, sample_count)
+                    },
+                );
+                match result {
+                    Ok(result) => {
+                        let generated =
+                            generate_builtin(builtin, result.winner.schedule, TargetBackend::Wgsl)?;
+                        let record = TuningManifest::new(&generated, runner.adapter.clone(), result)?;
+                        let winner = &record.result.winner;
+                        println!(
+                            "  {name:<12} TUNED wg={} items={} vec={} -> median {} ns, p95 {} ns",
+                            winner.schedule.workgroup_size,
+                            winner.schedule.items_per_invocation,
+                            winner.schedule.vector_width,
+                            winner.timing.median_ns,
+                            winner.timing.p95_ns
+                        );
+                        if *update_local_manifest {
+                            if let Some(cache) = &cache {
+                                let path =
+                                    cache.store_tuning_for_topology(&topology_hash, name, &record)?;
+                                eprintln!("    cached {}", path.display());
+                            }
+                        }
+                    }
+                    Err(error) => println!("  {name:<12} FAILED: {error}"),
+                }
+            }
         }
     }
     Ok(())
