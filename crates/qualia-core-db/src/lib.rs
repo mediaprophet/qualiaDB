@@ -168,14 +168,17 @@ pub mod lora;
 // --- q42/ category (reorg) ---
 pub mod q42;
 pub use q42::design_encode;
+#[cfg(any(not(target_arch = "wasm32"), feature = "wasm-llm"))]
+pub use q42::p64_weight;
+/// Backward-compatible module name retained for existing inference and
+/// transcode harnesses while the on-disk magic/API is P64.
+pub use q42::p64_weight as q42_weight;
 #[cfg(not(target_arch = "wasm32"))]
 pub use q42::q42_lexicon;
 #[cfg(not(target_arch = "wasm32"))]
 pub use q42::q42_reader;
 #[cfg(not(target_arch = "wasm32"))]
 pub use q42::q42_volume;
-#[cfg(any(not(target_arch = "wasm32"), feature = "wasm-llm"))]
-pub use q42::p64_weight;
 pub use q42::yaml_ld_q42;
 // --- extensions/ category (reorg) ---
 pub mod extensions;

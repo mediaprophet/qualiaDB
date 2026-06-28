@@ -71,6 +71,8 @@ parity     [0..63]   XOR fold: subject ^ predicate ^ object ^ context (ECC stub)
 | **WebizenVM (logic.rs)** | `logic.rs` | ✅ but LTL opcodes wrong | See §4-B |
 | **SHACL → SlgOpcode compiler** | `shacl_compiler.rs` | ✅ full vocabulary | See §3 for extension points |
 | **SLG Arena** | `webizen.rs` | ✅ 42MB ring buffer | 917,504 Quin slots |
+| **P64 GGUF weight container** | `q42/p64_weight.rs` | ✅ byte-exact disk round-trip verified | 64B headers/entries/manifold records, metadata + per-tensor CRC-32C |
+| **10D Manifold → WebizenVM bridge** | `modalities/manifold.rs`, `governance/webizen.rs` | ✅ LTL + stable-model ASP wired | Two parity-valid Quins per state; bounded zero-heap VM evaluation |
 
 ## 2-B. Other Real Implementations (do NOT stub-replace without reading first)
 
@@ -617,6 +619,37 @@ At the end of your session:
 ---
 
 ## 7. Session Notes
+
+### 2026-06-28 — Codex (P64 parity + 10D Webizen reasoning)
+
+**Completed:**
+- Rebuilt the P64 reader/compiler around the 64-byte DOD layout: 64-byte tensor entries,
+  64-byte `ManifoldCoordinate10D` records, page-aligned tensor blobs, complete preservation of
+  known and unknown GGUF tensors, embedded tokenizer/hyperparameters, metadata CRC-32C, and
+  per-tensor CRC-32C.
+- Added `P64TensorIndex::validate_against_gguf` for full shape/type/name/source-offset/byte parity,
+  plus reconstruction of the synthetic `GgufTensorIndex` used by the existing inference path.
+- Completed the GGUF conversion policies for raw, ternary FFN, Q4 FFN, and AWQ-folded FFN
+  containers while preserving every non-FFN tensor byte-for-byte.
+- Completed Safetensors raw, all-ternary, and policy-driven FFN conversion, and wired
+  `render::model_substrate::build_model_substrate` to the validated P64 writer.
+- Verified a real on-disk round trip using
+  `C:\LLM_Models\GGUF\lmstudio-community\smollm2-360m-instruct-q8_0.gguf`:
+  **290 tensors / 384,618,240 tensor bytes / 33 manifold coordinates**, all byte-identical after
+  persisting and reopening the P64. The temporary P64 was removed after verification.
+- Added a two-Quin, parity-valid encoding for chronological `ManifoldCoordinate10D` states.
+- Added zero-heap manifold trace decoding, chronological ordering, LTL threshold projection, and
+  topology fact derivation through the real Gelfond-Lifschitz ASP evaluator.
+- Added `SlgOpcode::NativeManifoldLtl` and `SlgOpcode::NativeManifoldAsp`; the WebizenVM integration
+  test proves both execute against arena-resident geometric states.
+
+**Verification:**
+- `cargo check -p qualia-core-db --lib`
+- P64 synthetic GGUF/Safetensors parity, quantisation-policy, corruption rejection, and
+  filesystem round-trip tests: 5 passed
+- Real SmolLM2 ignored disk gate: 1 passed
+- Manifold encoding/LTL/ASP tests: 3 passed
+- WebizenVM manifold LTL/ASP integration test: 1 passed
 
 ### 2026-06-09 — Flutter 0.0.12 LLM lifecycle + telemetry
 

@@ -8,7 +8,7 @@ use crate::modalities::spatio_temporal;
 use crate::modalities::temporal_ltl::{self, LtlFormula};
 use crate::modalities::{
     abductive, argumentation, asp, ctl, defeasible, dialectical, dl, epistemic, fuzzy, linear,
-    modal, paraconsistent, probabilistic,
+    manifold, modal, paraconsistent, probabilistic,
 };
 use crate::NQuin;
 
@@ -687,6 +687,22 @@ pub enum SlgOpcode {
     NativeLtlNext,
     NativeLtlUntil,
     NativeLtlRelease,
+    /// Evaluate a threshold proposition projected from chronological 10D
+    /// manifold states through the existing LTL evaluator.
+    ///
+    /// `mode`: 0=Globally, 1=Finally, 2=Next.
+    /// `dimension`: [`manifold::ManifoldDimension`] discriminant.
+    /// `threshold_bits`: IEEE-754 f32 threshold.
+    /// `at_least`: true for >=, false for <=.
+    NativeManifoldLtl {
+        mode: u8,
+        dimension: u8,
+        threshold_bits: u32,
+        at_least: bool,
+    },
+    /// Derive topology facts from 10D states and execute the bounded real ASP
+    /// stable-model evaluator. The selected model bitset is bound to object_reg.
+    NativeManifoldAsp,
 
     // ── Native: spatio-temporal (Allen Interval) ──────────────────────────────
     NativeAllenInterval(u8),
@@ -783,6 +799,305 @@ fn unify_frame(arena: &SlgArena, frame: &mut VmFrame) -> bool {
     frame.subject_reg != 0 && frame.predicate_reg != 0
 }
 
+#[inline(never)]
+fn execute_manifold_ltl(
+    arena: &SlgArena,
+    mode: u8,
+    dimension: u8,
+    threshold_bits: u32,
+    at_least: bool,
+) -> bool {
+    let Some(dimension) = manifold::ManifoldDimension::from_u8(dimension) else {
+        return false;
+    };
+    let threshold = f32::from_bits(threshold_bits);
+    if !threshold.is_finite() {
+        return false;
+    }
+    let mut snapshot = [NQuin::default(); 512];
+    let snapshot_count = arena.collect_active_quins(&mut snapshot);
+    let mut states = [manifold::ManifoldState10D::default(); 128];
+    let state_count = manifold::collect_manifold_states(&snapshot[..snapshot_count], &mut states);
+    let mut trace = [NQuin::default(); 128];
+    let trace_count = manifold::project_manifold_ltl_trace(
+        &states[..state_count],
+        dimension,
+        threshold,
+        at_least,
+        &mut trace,
+    );
+    let formula = match mode {
+        0 => LtlFormula::Globally(manifold::MANIFOLD_THRESHOLD_HOLDS),
+        1 => LtlFormula::Finally(manifold::MANIFOLD_THRESHOLD_HOLDS),
+        2 => LtlFormula::Next(manifold::MANIFOLD_THRESHOLD_HOLDS),
+        _ => return false,
+    };
+    temporal_ltl::evaluate_ltl_trace(&trace[..trace_count], &formula)
+}
+
+#[inline(never)]
+fn execute_manifold_asp(arena: &SlgArena) -> Option<u64> {
+    let mut snapshot = [NQuin::default(); 512];
+    let snapshot_count = arena.collect_active_quins(&mut snapshot);
+    let mut states = [manifold::ManifoldState10D::default(); 128];
+    let state_count = manifold::collect_manifold_states(&snapshot[..snapshot_count], &mut states);
+    if state_count == 0 {
+        return None;
+    }
+    let mut models = [0u64; asp::MAX_STABLE_MODELS];
+    let model_count = manifold::evaluate_manifold_answer_sets(&states[..state_count], &mut models);
+    (model_count > 0).then(|| models[model_count - 1])
+}
+
+#[inline(never)]
+fn execute_paraconsistent_isolation(arena: &mut SlgArena) -> bool {
+    let mut scratch = [NQuin::default(); 64];
+    let count = arena.collect_active_quins(&mut scratch);
+    if count == 0 {
+        return false;
+    }
+    let mut consistent = [NQuin::default(); 64];
+    let mut isolated = [NQuin::default(); 64];
+    let Ok((_, isolated_count)) =
+        paraconsistent::route_paraconsistent(&scratch[..count], &mut consistent, &mut isolated)
+    else {
+        return false;
+    };
+    for quin in &isolated[..isolated_count] {
+        arena.write_table(*quin);
+    }
+    true
+}
+
+#[inline(never)]
+fn execute_dialectical_synthesis(arena: &mut SlgArena, frame: &mut VmFrame) -> bool {
+    let mut scratch = [NQuin::default(); 64];
+    let count = arena.collect_active_quins(&mut scratch);
+    if count < 2 {
+        return false;
+    }
+    let Some(synthesis) = dialectical::synthesize_dialectical(&scratch[0], &scratch[1]) else {
+        return false;
+    };
+    arena.write_table(synthesis);
+    frame.subject_reg = synthesis.subject;
+    frame.predicate_reg = synthesis.predicate;
+    frame.object_reg = synthesis.object;
+    frame.context_reg = synthesis.context;
+    true
+}
+
+#[inline(never)]
+fn execute_standard_ltl(arena: &SlgArena, opcode: SlgOpcode, frame: &VmFrame) -> bool {
+    let mut scratch = [NQuin::default(); 512];
+    let count = arena.collect_active_quins(&mut scratch);
+    let trace = &mut scratch[..count];
+    trace.reverse();
+    let formula = match opcode {
+        SlgOpcode::NativeLtlGlobally => LtlFormula::Globally(frame.predicate_reg),
+        SlgOpcode::NativeLtlFinally => LtlFormula::Finally(frame.predicate_reg),
+        SlgOpcode::NativeLtlNext => LtlFormula::Next(frame.predicate_reg),
+        SlgOpcode::NativeLtlUntil => LtlFormula::Until {
+            ante: frame.predicate_reg,
+            consequent: frame.object_reg,
+        },
+        SlgOpcode::NativeLtlRelease => LtlFormula::Release {
+            trigger: frame.predicate_reg,
+            invariant: frame.object_reg,
+        },
+        _ => return false,
+    };
+    temporal_ltl::evaluate_ltl_trace(trace, &formula)
+}
+
+#[inline(never)]
+fn execute_snapshot_logic(arena: &SlgArena, opcode: SlgOpcode, frame: &mut VmFrame) -> bool {
+    let mut scratch = [NQuin::default(); 512];
+    let count = arena.collect_active_quins(&mut scratch);
+    let quins = &scratch[..count];
+
+    match opcode {
+        SlgOpcode::CheckDefeaters => {
+            let mut fingerprints = [0u64; MAX_DEFEATER_SLOTS];
+            let fingerprint_count = harvest_defeater_fingerprints(quins, &mut fingerprints);
+            !norm_has_active_defeater(&frame_to_quin(frame), &fingerprints[..fingerprint_count])
+        }
+        SlgOpcode::NativeDeonticEval => {
+            let mut verdicts = [DeonticVerdict::default(); 64];
+            let verdict_count =
+                evaluate_deontic_contract(quins, current_unix32(), &mut verdicts).unwrap_or(0);
+            let goal = frame_to_quin(frame);
+            let valid = verdicts[..verdict_count].iter().all(|verdict| {
+                verdict.norm.subject != goal.subject
+                    || verdict.norm.predicate != goal.predicate
+                    || verdict.norm.object != goal.object
+                    || matches!(verdict.status, DeonticStatus::Active)
+            });
+            vm_log!(
+                "[Webizen] NativeDeonticEval: {} norms evaluated",
+                verdict_count
+            );
+            valid
+        }
+        SlgOpcode::NativeEpistemicEval(min_certainty) => {
+            let mut verdicts = [epistemic::EpistemicVerdict {
+                claim: NQuin::default(),
+                status: epistemic::EpistemicStatus::Skipped,
+                certainty: 0,
+            }; 64];
+            let verdict_count = epistemic::evaluate_epistemic_frame(
+                quins,
+                frame.subject_reg,
+                frame.context_reg,
+                &mut verdicts,
+            )
+            .unwrap_or(0);
+            verdicts[..verdict_count].iter().any(|verdict| {
+                verdict.certainty >= min_certainty
+                    && verdict.status == epistemic::EpistemicStatus::Active
+            })
+        }
+        SlgOpcode::NativeProbabilisticThreshold(threshold_bits) => {
+            let threshold = f32::from_bits(threshold_bits);
+            let weight = quins
+                .iter()
+                .find(|quin| {
+                    quin.subject == frame.subject_reg
+                        && quin.predicate == frame.predicate_reg
+                        && quin.object == frame.object_reg
+                })
+                .map(probabilistic::BayesianNetwork::extract_weight)
+                .unwrap_or(0.0);
+            probabilistic::evaluate_threshold(weight, threshold)
+        }
+        SlgOpcode::NativeDlSubsumption => {
+            dl::check_subsumption_quin(frame.subject_reg, frame.object_reg, quins)
+        }
+        SlgOpcode::NativeArgumentationGrounded => {
+            let asserts = crate::q_hash("arg:asserts");
+            let attacks_predicate = crate::q_hash("arg:attacks");
+            let mut arguments = [0u64; argumentation::MAX_GROUNDED_ARGS];
+            let mut argument_count = 0usize;
+            let mut attacks = [(0u64, 0u64); 256];
+            let mut attack_count = 0usize;
+            for quin in quins {
+                if quin.predicate == asserts && argument_count < arguments.len() {
+                    arguments[argument_count] = quin.subject;
+                    argument_count += 1;
+                } else if quin.predicate == attacks_predicate && attack_count < attacks.len() {
+                    attacks[attack_count] = (quin.subject, quin.object);
+                    attack_count += 1;
+                }
+            }
+            argumentation::grounded_contains(
+                &arguments[..argument_count],
+                &attacks[..attack_count],
+                frame.subject_reg,
+            )
+        }
+        SlgOpcode::NativeMtlWithin(window) => {
+            temporal_ltl::holds_within(quins, frame.predicate_reg, frame.object_reg, window as u64)
+        }
+        SlgOpcode::NativeContraryToDuty => {
+            crate::modalities::logic::deontic::evaluate_contrary_to_duty(
+                quins,
+                frame.subject_reg,
+                frame.predicate_reg,
+                frame.object_reg,
+            )
+        }
+        SlgOpcode::NativeCausalNecessary => dialectical::is_necessary_cause(
+            quins,
+            frame.context_reg,
+            frame.subject_reg,
+            frame.object_reg,
+        ),
+        SlgOpcode::NativeAbduce => {
+            let explains = crate::q_hash("abduces:explains");
+            if let Some(hypothesis) =
+                abductive::abductive_explanation(quins, frame.object_reg, explains)
+            {
+                frame.subject_reg = hypothesis;
+                true
+            } else {
+                false
+            }
+        }
+        SlgOpcode::NativeClosedWorld => defeasible::holds_by_default(quins, &frame_to_quin(frame)),
+        SlgOpcode::NativeFuzzyConjunction(threshold_bits) => {
+            let threshold = f32::from_bits(threshold_bits);
+            let mut accumulated = 1.0f32;
+            let mut found = false;
+            for quin in quins {
+                if quin.predicate == frame.predicate_reg {
+                    accumulated = fuzzy::t_norm_godel(accumulated, fuzzy::degree(quin));
+                    found = true;
+                }
+            }
+            found && accumulated >= threshold
+        }
+        SlgOpcode::NativeCtlExistsFinally => ctl::exists_finally(
+            quins,
+            frame.subject_reg,
+            frame.object_reg,
+            crate::q_hash("ctl:next"),
+            crate::q_hash("ctl:holds"),
+        ),
+        SlgOpcode::NativeCtlAlwaysGlobally => ctl::always_globally(
+            quins,
+            frame.subject_reg,
+            frame.object_reg,
+            crate::q_hash("ctl:next"),
+            crate::q_hash("ctl:holds"),
+        ),
+        SlgOpcode::NativeModalNecessary => modal::necessary(
+            quins,
+            frame.subject_reg,
+            frame.object_reg,
+            crate::q_hash("modal:accesses"),
+            crate::q_hash("modal:holds"),
+        ),
+        SlgOpcode::NativeModalPossible => modal::possible(
+            quins,
+            frame.subject_reg,
+            frame.object_reg,
+            crate::q_hash("modal:accesses"),
+            crate::q_hash("modal:holds"),
+        ),
+        SlgOpcode::NativeRcc8(expected) => {
+            let boundary = crate::q_hash("spatial:boundary");
+            let mut region_a = [(0.0f64, 0.0f64); spatio_temporal::MAX_BOUNDARY_POINTS];
+            let mut region_a_count = 0usize;
+            let mut region_b = [(0.0f64, 0.0f64); spatio_temporal::MAX_BOUNDARY_POINTS];
+            let mut region_b_count = 0usize;
+            for quin in quins {
+                if quin.predicate != boundary {
+                    continue;
+                }
+                let index = quin.metadata as usize;
+                if index >= spatio_temporal::MAX_BOUNDARY_POINTS {
+                    continue;
+                }
+                if quin.subject == frame.subject_reg {
+                    region_a[index] = spatio_temporal::unpack_point(quin.object);
+                    region_a_count = region_a_count.max(index + 1);
+                } else if quin.subject == frame.object_reg {
+                    region_b[index] = spatio_temporal::unpack_point(quin.object);
+                    region_b_count = region_b_count.max(index + 1);
+                }
+            }
+            spatio_temporal::evaluate_rcc8_points(
+                frame.subject_reg,
+                &region_a[..region_a_count],
+                frame.object_reg,
+                &region_b[..region_b_count],
+            ) as u8
+                == expected
+        }
+        _ => false,
+    }
+}
+
 /// The Bytecode Evaluator for the Prolog Webizen
 pub fn execute_vm_frame(
     arena: &mut SlgArena,
@@ -805,12 +1120,7 @@ pub fn execute_vm_frame(
                 }
             }
             SlgOpcode::CheckDefeaters => {
-                let mut scratch = [NQuin::default(); 512];
-                let count = arena.collect_active_quins(&mut scratch);
-                let mut fp_buf = [0u64; MAX_DEFEATER_SLOTS];
-                let fp_count = harvest_defeater_fingerprints(&scratch[..count], &mut fp_buf);
-                let goal = frame_to_quin(frame);
-                if norm_has_active_defeater(&goal, &fp_buf[..fp_count]) {
+                if !execute_snapshot_logic(arena, opcode, frame) {
                     return None;
                 }
             }
@@ -1522,49 +1832,12 @@ pub fn execute_vm_frame(
                 vm_log!("[Webizen] NativeIsotopeDistribution evaluated");
             }
             SlgOpcode::NativeDeonticEval => {
-                let mut scratch = [NQuin::default(); 512];
-                let count = arena.collect_active_quins(&mut scratch);
-                let mut verdicts = [DeonticVerdict::default(); 64];
-                let vcount =
-                    evaluate_deontic_contract(&scratch[..count], current_unix32(), &mut verdicts)
-                        .unwrap_or(0);
-                let goal = frame_to_quin(frame);
-                for verdict in &verdicts[..vcount] {
-                    if verdict.norm.subject == goal.subject
-                        && verdict.norm.predicate == goal.predicate
-                        && verdict.norm.object == goal.object
-                        && !matches!(verdict.status, DeonticStatus::Active)
-                    {
-                        return None;
-                    }
+                if !execute_snapshot_logic(arena, opcode, frame) {
+                    return None;
                 }
-                vm_log!("[Webizen] NativeDeonticEval: {} norms evaluated", vcount);
             }
-            SlgOpcode::NativeEpistemicEval(min_certainty) => {
-                let mut scratch = [NQuin::default(); 512];
-                let count = arena.collect_active_quins(&mut scratch);
-                let mut verdicts = [epistemic::EpistemicVerdict {
-                    claim: NQuin::default(),
-                    status: epistemic::EpistemicStatus::Skipped,
-                    certainty: 0,
-                }; 64];
-                let vcount = epistemic::evaluate_epistemic_frame(
-                    &scratch[..count],
-                    frame.subject_reg,
-                    frame.context_reg,
-                    &mut verdicts,
-                )
-                .unwrap_or(0);
-                let mut ok = false;
-                for verdict in &verdicts[..vcount] {
-                    if verdict.certainty >= min_certainty
-                        && verdict.status == epistemic::EpistemicStatus::Active
-                    {
-                        ok = true;
-                        break;
-                    }
-                }
-                if !ok {
+            SlgOpcode::NativeEpistemicEval(_) => {
+                if !execute_snapshot_logic(arena, opcode, frame) {
                     return None;
                 }
             }
@@ -1596,269 +1869,31 @@ pub fn execute_vm_frame(
                 frame.context_reg = out_worlds[world_count - 1];
             }
             SlgOpcode::NativeParaconsistentIsolate => {
-                let mut scratch = [NQuin::default(); 64];
-                let count = arena.collect_active_quins(&mut scratch);
-                if count == 0 {
+                if !execute_paraconsistent_isolation(arena) {
                     return None;
-                }
-                let mut consistent = [NQuin::default(); 64];
-                let mut isolated = [NQuin::default(); 64];
-                let routed = paraconsistent::route_paraconsistent(
-                    &scratch[..count],
-                    &mut consistent,
-                    &mut isolated,
-                );
-                if routed.is_err() {
-                    return None;
-                }
-                let (_, iso_count) = routed.unwrap_or((0, 0));
-                for q in &isolated[..iso_count] {
-                    arena.write_table(*q);
                 }
             }
             SlgOpcode::NativeDialecticalSynthesis => {
-                let mut scratch = [NQuin::default(); 64];
-                let count = arena.collect_active_quins(&mut scratch);
-                if count < 2 {
-                    return None;
-                }
-                if let Some(syn) = dialectical::synthesize_dialectical(&scratch[0], &scratch[1]) {
-                    arena.write_table(syn);
-                    frame.subject_reg = syn.subject;
-                    frame.predicate_reg = syn.predicate;
-                    frame.object_reg = syn.object;
-                    frame.context_reg = syn.context;
-                } else {
+                if !execute_dialectical_synthesis(arena, frame) {
                     return None;
                 }
             }
-            SlgOpcode::NativeProbabilisticThreshold(threshold_bits) => {
-                let threshold = f32::from_bits(threshold_bits);
-                // The belief weight lives in the matching arena quin's `metadata`
-                // field (f32 bits); the frame goal selects which belief to test.
-                let mut scratch = [NQuin::default(); 512];
-                let n = arena.collect_active_quins(&mut scratch);
-                let weight = scratch[..n]
-                    .iter()
-                    .find(|q| {
-                        q.subject == frame.subject_reg
-                            && q.predicate == frame.predicate_reg
-                            && q.object == frame.object_reg
-                    })
-                    .map(probabilistic::BayesianNetwork::extract_weight)
-                    .unwrap_or(0.0);
-                if !probabilistic::evaluate_threshold(weight, threshold) {
-                    return None; // belief below threshold → rule frame fails
-                }
-            }
-            SlgOpcode::NativeDlSubsumption => {
-                // TBox = the active arena quins (subClassOf edges subject→object).
-                let mut scratch = [NQuin::default(); 512];
-                let n = arena.collect_active_quins(&mut scratch);
-                if !dl::check_subsumption_quin(frame.subject_reg, frame.object_reg, &scratch[..n]) {
-                    return None; // frame.subject is NOT subsumed by frame.object → fails
-                }
-            }
-            SlgOpcode::NativeArgumentationGrounded => {
-                // Build a Dung framework from the arena: `arg:asserts` quins are
-                // argument nodes (subject = argument id); `arg:attacks` quins are
-                // attack edges (subject attacks object).
-                let mut scratch = [NQuin::default(); 512];
-                let n = arena.collect_active_quins(&mut scratch);
-                let asserts = crate::q_hash("arg:asserts");
-                let attacks_pred = crate::q_hash("arg:attacks");
-                // Collect argument ids + attack edges into fixed stack buffers (zero
-                // heap), then run the bounded zero-heap grounded-extension test.
-                let mut args = [0u64; argumentation::MAX_GROUNDED_ARGS];
-                let mut nargs = 0usize;
-                let mut atks = [(0u64, 0u64); 256];
-                let mut natks = 0usize;
-                for q in &scratch[..n] {
-                    if q.predicate == asserts && nargs < args.len() {
-                        args[nargs] = q.subject;
-                        nargs += 1;
-                    } else if q.predicate == attacks_pred && natks < atks.len() {
-                        atks[natks] = (q.subject, q.object);
-                        natks += 1;
-                    }
-                }
-                if !argumentation::grounded_contains(
-                    &args[..nargs],
-                    &atks[..natks],
-                    frame.subject_reg,
-                ) {
-                    return None; // the goal argument is not justified (defeated) → fails
-                }
-            }
-            SlgOpcode::NativeMtlWithin(window) => {
-                let mut scratch = [NQuin::default(); 512];
-                let n = arena.collect_active_quins(&mut scratch);
-                if !temporal_ltl::holds_within(
-                    &scratch[..n],
-                    frame.predicate_reg,
-                    frame.object_reg,
-                    window as u64,
-                ) {
-                    return None; // target did not occur within the deadline → fails
-                }
-            }
-            SlgOpcode::NativeContraryToDuty => {
-                let mut scratch = [NQuin::default(); 512];
-                let n = arena.collect_active_quins(&mut scratch);
-                if !crate::modalities::logic::deontic::evaluate_contrary_to_duty(
-                    &scratch[..n],
-                    frame.subject_reg,
-                    frame.predicate_reg,
-                    frame.object_reg,
-                ) {
-                    return None; // breach without reparation → secondary obligation unmet
-                }
-            }
-            SlgOpcode::NativeCausalNecessary => {
-                let mut scratch = [NQuin::default(); 512];
-                let n = arena.collect_active_quins(&mut scratch);
-                if !dialectical::is_necessary_cause(
-                    &scratch[..n],
-                    frame.context_reg,
-                    frame.subject_reg,
-                    frame.object_reg,
-                ) {
-                    return None; // candidate is not a but-for cause of the effect → fails
-                }
-            }
-            SlgOpcode::NativeAbduce => {
-                let mut scratch = [NQuin::default(); 512];
-                let n = arena.collect_active_quins(&mut scratch);
-                let explains = crate::q_hash("abduces:explains");
-                match abductive::abductive_explanation(&scratch[..n], frame.object_reg, explains) {
-                    Some(hypothesis) => {
-                        frame.subject_reg = hypothesis; // bind the explaining hypothesis
-                    }
-                    None => return None, // the observation has no explanation → fails
-                }
-            }
-            SlgOpcode::NativeClosedWorld => {
-                let mut scratch = [NQuin::default(); 512];
-                let n = arena.collect_active_quins(&mut scratch);
-                let goal = frame_to_quin(frame);
-                if !defeasible::holds_by_default(&scratch[..n], &goal) {
-                    return None; // the proposition IS provable → the default does not hold
-                }
-            }
-            SlgOpcode::NativeFuzzyConjunction(threshold_bits) => {
-                let threshold = f32::from_bits(threshold_bits);
-                let mut scratch = [NQuin::default(); 512];
-                let n = arena.collect_active_quins(&mut scratch);
-                let mut acc = 1.0f32;
-                let mut any = false;
-                for q in &scratch[..n] {
-                    if q.predicate == frame.predicate_reg {
-                        acc = fuzzy::t_norm_godel(acc, fuzzy::degree(q));
-                        any = true;
-                    }
-                }
-                if !any || acc < threshold {
-                    return None; // aggregate fuzzy truth below threshold → fails
-                }
-            }
-            SlgOpcode::NativeCtlExistsFinally => {
-                let mut scratch = [NQuin::default(); 512];
-                let n = arena.collect_active_quins(&mut scratch);
-                let next = crate::q_hash("ctl:next");
-                let holds = crate::q_hash("ctl:holds");
-                if !ctl::exists_finally(
-                    &scratch[..n],
-                    frame.subject_reg,
-                    frame.object_reg,
-                    next,
-                    holds,
-                ) {
-                    return None; // no path reaches the target state → fails
-                }
-            }
-            SlgOpcode::NativeCtlAlwaysGlobally => {
-                let mut scratch = [NQuin::default(); 512];
-                let n = arena.collect_active_quins(&mut scratch);
-                let next = crate::q_hash("ctl:next");
-                let holds = crate::q_hash("ctl:holds");
-                if !ctl::always_globally(
-                    &scratch[..n],
-                    frame.subject_reg,
-                    frame.object_reg,
-                    next,
-                    holds,
-                ) {
-                    return None; // a reachable state violates the invariant → fails
-                }
-            }
-            SlgOpcode::NativeModalNecessary => {
-                let mut scratch = [NQuin::default(); 512];
-                let n = arena.collect_active_quins(&mut scratch);
-                let accesses = crate::q_hash("modal:accesses");
-                let holds = crate::q_hash("modal:holds");
-                if !modal::necessary(
-                    &scratch[..n],
-                    frame.subject_reg,
-                    frame.object_reg,
-                    accesses,
-                    holds,
-                ) {
-                    return None; // an accessible world fails the proposition → fails
-                }
-            }
-            SlgOpcode::NativeModalPossible => {
-                let mut scratch = [NQuin::default(); 512];
-                let n = arena.collect_active_quins(&mut scratch);
-                let accesses = crate::q_hash("modal:accesses");
-                let holds = crate::q_hash("modal:holds");
-                if !modal::possible(
-                    &scratch[..n],
-                    frame.subject_reg,
-                    frame.object_reg,
-                    accesses,
-                    holds,
-                ) {
-                    return None; // no accessible world satisfies the proposition → fails
-                }
-            }
-            SlgOpcode::NativeRcc8(expected) => {
-                let mut scratch = [NQuin::default(); 512];
-                let n = arena.collect_active_quins(&mut scratch);
-                let boundary = crate::q_hash("spatial:boundary");
-                // Read region A (subject) and B (object) vertices into fixed stack
-                // arrays, indexed by vertex sequence (metadata). Zero-heap.
-                let mut pa = [(0.0f64, 0.0f64); spatio_temporal::MAX_BOUNDARY_POINTS];
-                let mut na = 0usize;
-                let mut pb = [(0.0f64, 0.0f64); spatio_temporal::MAX_BOUNDARY_POINTS];
-                let mut nb = 0usize;
-                for q in &scratch[..n] {
-                    if q.predicate != boundary {
-                        continue;
-                    }
-                    let idx = q.metadata as usize;
-                    if idx >= spatio_temporal::MAX_BOUNDARY_POINTS {
-                        continue;
-                    }
-                    if q.subject == frame.subject_reg {
-                        pa[idx] = spatio_temporal::unpack_point(q.object);
-                        if idx + 1 > na {
-                            na = idx + 1;
-                        }
-                    } else if q.subject == frame.object_reg {
-                        pb[idx] = spatio_temporal::unpack_point(q.object);
-                        if idx + 1 > nb {
-                            nb = idx + 1;
-                        }
-                    }
-                }
-                let rel = spatio_temporal::evaluate_rcc8_points(
-                    frame.subject_reg,
-                    &pa[..na],
-                    frame.object_reg,
-                    &pb[..nb],
-                );
-                if rel as u8 != expected {
-                    return None; // not the expected spatial relation → fails
+            SlgOpcode::NativeProbabilisticThreshold(_)
+            | SlgOpcode::NativeDlSubsumption
+            | SlgOpcode::NativeArgumentationGrounded
+            | SlgOpcode::NativeMtlWithin(_)
+            | SlgOpcode::NativeContraryToDuty
+            | SlgOpcode::NativeCausalNecessary
+            | SlgOpcode::NativeAbduce
+            | SlgOpcode::NativeClosedWorld
+            | SlgOpcode::NativeFuzzyConjunction(_)
+            | SlgOpcode::NativeCtlExistsFinally
+            | SlgOpcode::NativeCtlAlwaysGlobally
+            | SlgOpcode::NativeModalNecessary
+            | SlgOpcode::NativeModalPossible
+            | SlgOpcode::NativeRcc8(_) => {
+                if !execute_snapshot_logic(arena, opcode, frame) {
+                    return None;
                 }
             }
             SlgOpcode::NativeUnless => {
@@ -1882,41 +1917,28 @@ pub fn execute_vm_frame(
                 vm_log!("[Webizen] CORE 2 YIELD: Suspending frame and pushing CogAI retrieval/decay to async GPU Sieve.");
                 return None;
             }
+            SlgOpcode::NativeManifoldLtl {
+                mode,
+                dimension,
+                threshold_bits,
+                at_least,
+            } => {
+                if !execute_manifold_ltl(arena, mode, dimension, threshold_bits, at_least) {
+                    return None;
+                }
+            }
+            SlgOpcode::NativeManifoldAsp => {
+                frame.object_reg = execute_manifold_asp(arena)?;
+            }
             SlgOpcode::NativeLtlGlobally
             | SlgOpcode::NativeLtlFinally
             | SlgOpcode::NativeLtlNext
             | SlgOpcode::NativeLtlUntil
             | SlgOpcode::NativeLtlRelease => {
-                // Build a chronological trace from the arena (collect_active_quins
-                // returns most-recent-first; reverse to oldest-first event order).
-                let mut scratch = [NQuin::default(); 512];
-                let n = arena.collect_active_quins(&mut scratch);
-                let trace = &mut scratch[..n];
-                trace.reverse();
-                // The frame registers carry the propositions to check temporally
-                // (full predicate hashes — see PLAN §9.2: evaluate_ltl_trace compares
-                // the whole NQuin.predicate, so traces must use unpacked predicates).
-                let formula = match opcode {
-                    SlgOpcode::NativeLtlGlobally => LtlFormula::Globally(frame.predicate_reg),
-                    SlgOpcode::NativeLtlFinally => LtlFormula::Finally(frame.predicate_reg),
-                    SlgOpcode::NativeLtlNext => LtlFormula::Next(frame.predicate_reg),
-                    SlgOpcode::NativeLtlUntil => LtlFormula::Until {
-                        ante: frame.predicate_reg,
-                        consequent: frame.object_reg,
-                    },
-                    SlgOpcode::NativeLtlRelease => LtlFormula::Release {
-                        trigger: frame.predicate_reg,
-                        invariant: frame.object_reg,
-                    },
-                    _ => unreachable!(),
-                };
-                if !temporal_ltl::evaluate_ltl_trace(trace, &formula) {
-                    return None; // temporal property violated → rule frame fails
+                if !execute_standard_ltl(arena, opcode, frame) {
+                    return None;
                 }
-                vm_log!(
-                    "[Webizen] NativeLtl: temporal property held over {} states",
-                    n
-                );
+                vm_log!("[Webizen] NativeLtl: temporal property held");
             }
             SlgOpcode::NativeAllenInterval(mode) => {
                 // The frame registers carry the two intervals' bounds:
@@ -3602,5 +3624,49 @@ mod tests {
             1u64 << 0,
             "the surviving scenario is {{permitted}}"
         );
+    }
+
+    #[test]
+    fn webizen_vm_reasons_over_manifold_ltl_and_asp() {
+        use crate::modalities::asp::atom_index;
+        use crate::modalities::manifold::{
+            encode_manifold_state, ManifoldCoordinate10D, ManifoldDimension, ManifoldState10D,
+            MANIFOLD_ASP_ATOMS, MANIFOLD_ATOM_STABLE,
+        };
+
+        let mut arena = SlgArena::new();
+        for (state_id, timestamp, scale) in [(101, 1, 0.7), (102, 2, 0.8)] {
+            let mut coordinate = ManifoldCoordinate10D::from_sequential_layer(timestamp, 10);
+            coordinate.scale = scale;
+            coordinate.density_threshold = 0.5;
+            coordinate.manifold_curvature = 0.0;
+            let state = ManifoldState10D {
+                state_id,
+                timestamp: timestamp as u64,
+                coordinate,
+            };
+            let mut pair = [NQuin::default(); 2];
+            encode_manifold_state(&state, &mut pair);
+            arena.write_table(pair[0]);
+            arena.write_table(pair[1]);
+        }
+
+        let mut ltl_frame = VmFrame::default();
+        let ltl = [
+            SlgOpcode::NativeManifoldLtl {
+                mode: 0,
+                dimension: ManifoldDimension::Scale as u8,
+                threshold_bits: 0.5f32.to_bits(),
+                at_least: true,
+            },
+            SlgOpcode::Return,
+        ];
+        assert!(execute_vm_frame(&mut arena, &ltl, &mut ltl_frame).is_some());
+
+        let mut asp_frame = VmFrame::default();
+        let asp = [SlgOpcode::NativeManifoldAsp, SlgOpcode::Return];
+        assert!(execute_vm_frame(&mut arena, &asp, &mut asp_frame).is_some());
+        let stable = atom_index(&MANIFOLD_ASP_ATOMS, MANIFOLD_ATOM_STABLE).unwrap();
+        assert_ne!(asp_frame.object_reg & (1u64 << stable), 0);
     }
 }

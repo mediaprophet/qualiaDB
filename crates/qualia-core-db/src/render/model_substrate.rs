@@ -104,7 +104,7 @@ pub fn build_model_substrate(
     let mut manifold = vec![0u8; TensorBufferHeader::total_bytes(geometry.len())];
     write_tensor_buffer(geometry, &mut manifold).map_err(|e| e.to_string())?;
     let mut weights = Vec::new();
-    let report = unimplemented!();
+    let report = transcode_safetensor_to_p64(safetensor_src, 0, &mut weights)?;
     Ok((compose_substrate(&manifold, &weights), report))
 }
 
@@ -157,7 +157,7 @@ mod tests {
 
         // 2) The transcoded weights are co-resident in the SAME buffer and load in place.
         let widx = load_weights(&sections).unwrap();
-        assert_eq!(widx.header.n_tensors, 1);
+        assert_eq!(widx.header.tensor_count, 1);
         let blob = widx.blob(sections.weights, &widx.entries[0]);
         assert_eq!(blob.len(), 128);
         assert!(
