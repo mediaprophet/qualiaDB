@@ -1,6 +1,7 @@
 use serde::{Deserialize, Serialize};
 
 use crate::wgsl_forge::ForgeError;
+use crate::wgsl_forge::KernelSpec;
 use crate::wgsl_forge::TargetBackend;
 
 #[derive(Debug, Clone, PartialEq, Eq, Serialize, Deserialize)]
@@ -47,7 +48,15 @@ pub fn validate_wgsl(source: &str) -> Result<ValidationReport, ForgeError> {
     })
 }
 
-pub fn validate_native(source: &str, target: TargetBackend) -> Result<ValidationReport, ForgeError> {
+/// Validate a non-WGSL shader by spawning the target's offline compiler. When the
+/// source was generated from a known [`KernelSpec`], pass it so the report carries
+/// that kernel's real entry point and binding count; for an opaque external source
+/// (`kernel = None`) those fields are left empty/zero rather than guessed.
+pub fn validate_native(
+    source: &str,
+    target: TargetBackend,
+    kernel: Option<&KernelSpec>,
+) -> Result<ValidationReport, ForgeError> {
     use std::io::Write;
     use std::process::Command;
 
@@ -105,10 +114,16 @@ pub fn validate_native(source: &str, target: TargetBackend) -> Result<Validation
         return Err(ForgeError::WgslValidation(format!("{} validation failed: {}", tool_name, stderr)));
     }
 
+    // The native compiler validated the source; report the kernel's real entry
+    // point + binding count when known, else leave them empty for an opaque file.
+    let (entry_points, binding_count) = match kernel {
+        Some(k) => (vec![k.entry_point.clone()], k.buffers.len()),
+        None => (Vec::new(), 0),
+    };
     Ok(ValidationReport {
         source_hash: blake3::hash(source.as_bytes()).to_hex().to_string(),
-        entry_points: vec!["affine_f32".to_string()], // We can parse this out if needed, but we hardcode for affine-f32 for now
-        binding_count: 3,
+        entry_points,
+        binding_count,
         naga_validated: false,
         native_tool_validated: Some(tool_name.to_string()),
     })

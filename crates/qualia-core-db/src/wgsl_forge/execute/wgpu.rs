@@ -275,7 +275,9 @@ impl WgpuComputeContext {
             });
         encoder.build_acceleration_structures(std::iter::once(&entry), std::iter::once(&tlas));
         self.queue.submit(Some(encoder.finish()));
-        let _ = self.device.poll(wgpu::PollType::wait_indefinitely());
+        self.device
+            .poll(wgpu::PollType::wait_indefinitely())
+            .map_err(|e| ForgeError::DeviceLost(format!("device poll failed building accel: {e:?}")))?;
 
         Ok((blas, tlas))
     }
@@ -454,7 +456,10 @@ impl<'a> QualiaCompute for WgpuPipeline<'a> {
             resources.staging.unmap();
             Ok((elapsed as f64 * self.context.timestamp_period_ns as f64) as u64)
         } else {
-            let _ = self.context.device.poll(wgpu::PollType::wait_indefinitely());
+            self.context
+                .device
+                .poll(wgpu::PollType::wait_indefinitely())
+                .map_err(|e| ForgeError::DeviceLost(format!("device poll failed: {e:?}")))?;
             Ok(started.elapsed().as_nanos().min(u64::MAX as u128) as u64)
         }
     }
@@ -496,7 +501,9 @@ fn map_read(device: &wgpu::Device, buffer: &wgpu::Buffer) -> Result<wgpu::Buffer
     slice.map_async(wgpu::MapMode::Read, move |result| {
         let _ = sender.send(result);
     });
-    let _ = device.poll(wgpu::PollType::wait_indefinitely());
+    device
+        .poll(wgpu::PollType::wait_indefinitely())
+        .map_err(|e| ForgeError::DeviceLost(format!("device poll failed during map: {e:?}")))?;
     receiver
         .recv()
         .map_err(|error| ForgeError::GpuValidation(error.to_string()))?

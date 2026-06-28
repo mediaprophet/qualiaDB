@@ -295,17 +295,17 @@ pub fn run(action: &ShaderAction) -> Result<(), Box<dyn std::error::Error>> {
             json,
         } => {
             let target_backend = target.parse().map_err(|e: String| ForgeError::Emission(e))?;
-            let (source, generated) = if let Some(path) = input {
-                (std::fs::read_to_string(path)?, None)
+            let (source, generated, spec) = if let Some(path) = input {
+                (std::fs::read_to_string(path)?, None, None)
             } else {
                 let builtin = parse_kernel(kernel)?;
                 let generated = generate_builtin(builtin, schedule.schedule(), target_backend)?;
-                (generated.source.clone(), Some(generated))
+                (generated.source.clone(), Some(generated), Some(builtin.spec()))
             };
             let report = if target_backend == TargetBackend::Wgsl {
                 Some(validate_wgsl(&source)?)
             } else {
-                match validate_native(&source, target_backend) {
+                match validate_native(&source, target_backend, spec.as_ref()) {
                     Ok(r) => Some(r),
                     Err(ForgeError::WgslValidation(msg)) => {
                         eprintln!("Native validation skipped or failed: {}", msg);

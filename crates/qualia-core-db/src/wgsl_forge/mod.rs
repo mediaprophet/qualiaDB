@@ -55,6 +55,10 @@ pub enum ForgeError {
     WgslValidation(String),
     GpuUnavailable(String),
     GpuValidation(String),
+    /// The compute device was lost (driver reset, removal, or a fatal poll
+    /// failure). Unified across backends so callers handle one variant rather
+    /// than backend-specific panics (plan §7).
+    DeviceLost(String),
     OracleMismatch(String),
     Serialization(String),
     Io(String),
@@ -71,6 +75,7 @@ impl core::fmt::Display for ForgeError {
             Self::WgslValidation(message) => ("WGSL validation", message),
             Self::GpuUnavailable(message) => ("GPU unavailable", message),
             Self::GpuValidation(message) => ("GPU validation", message),
+            Self::DeviceLost(message) => ("device lost", message),
             Self::OracleMismatch(message) => ("oracle mismatch", message),
             Self::Serialization(message) => ("serialization", message),
             Self::Io(message) => ("I/O", message),

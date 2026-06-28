@@ -371,10 +371,12 @@ impl<'a> QualiaCompute for CudaPipeline<'a> {
                 .map_err(|e| ForgeError::GpuValidation(format!("CUDA launch failed: {:?}", e)))?;
         }
 
+        // A post-launch synchronize failure is a device-level fault; surface it as
+        // the unified DeviceLost rather than a generic validation error (plan §7).
         self.context
             .stream
             .synchronize()
-            .map_err(|e| ForgeError::GpuValidation(format!("CUDA sync failed: {:?}", e)))?;
+            .map_err(|e| ForgeError::DeviceLost(format!("CUDA sync failed: {:?}", e)))?;
 
         Ok(start.elapsed().as_nanos().min(u64::MAX as u128) as u64)
     }
