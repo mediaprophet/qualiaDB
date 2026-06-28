@@ -319,8 +319,12 @@ fn emit_ops(source: &mut String, ops: &[Op], indent: &str) -> Result<(), ForgeEr
             Op::Gelu { operand, destination } => {
                 writeln!(source, "{indent}float {destination} = 0.5f * {operand} * (1.0f + tanh(0.7978845608f * ({operand} + 0.044715f * {operand} * {operand} * {operand})));").map_err(|error| ForgeError::Emission(error.to_string()))?;
             }
-            Op::MatrixMultiply { left_buffer, right_buffer, destination, m, n, k } => {
-                writeln!(source, "{indent}// MatrixMultiply intrinsic placeholder").map_err(|error| ForgeError::Emission(error.to_string()))?;
+            Op::MatrixMultiply { .. } => {
+                // No scalar MSL lowering for a dense GEMM op; fail loudly rather
+                // than silently emit nothing (tensor-core GEMM is delivered elsewhere).
+                return Err(ForgeError::Emission(
+                    "Op::MatrixMultiply has no scalar MSL lowering; use the cooperative-matrix / CUDA WMMA path".to_string(),
+                ));
             }
             Op::Barrier => {
                 writeln!(source, "{indent}threadgroup_barrier(mem_flags::mem_threadgroup);").map_err(|error| ForgeError::Emission(error.to_string()))?;

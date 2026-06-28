@@ -405,6 +405,59 @@ experimental execution paths can be silently broken.
 - **Net:** ray-query GPU execution via BVH is real and hardware-verified — task done.
   Both frontier items (tensor cores #18, ray-BVH #19) are now delivered on real hardware.
 
+### 2026-06-29 completeness audit — the plan is NOT fully implemented (honest correction)
+
+An independent two-angle audit (plan→code requirement-by-requirement, and code→plan
+stub sweep) was run against this plan. **Correction to earlier "fully implemented"
+claims in this ledger / the task list: that was overstated.** The findings:
+
+- **Code→plan: clean.** No `todo!()`/`unimplemented!()`/reachable `unreachable!()` on any
+  runtime path. All 5 built-ins (affine/ffn/p64/topk/ray-probe) are fully emitted on WGSL,
+  naga-validated, and GPU-graded by real differential oracles; native backends (MSL/HLSL/
+  PTX/CUDA-C) cover documented subsets with explicit `Err` returns, not silent stubs. The
+  one silent footgun found — `Op::MatrixMultiply` emitting a no-op comment in WGSL/MSL/HLSL
+  — was changed to return `Err` (it is unused by every built-in spec; tensor-core GEMM is
+  delivered via coopmat/CUDA WMMA). One stale doc comment on `has_gpu_oracle` was fixed.
+- **Plan→code: a real unfinished tail beyond the two frontier items.** Genuinely DONE:
+  deterministic multi-backend emission, validation levels, the successive-halving
+  correctness-gated tuner, topology-keyed manifest cache, the ring-buffer slab + lap test,
+  real ffn/topk/p64 math with wgpu+CUDA cross-backend oracles, and both frontier items.
+  Still **partial or missing** (normative requirements, not the two accepted items):
+  - §2 **automatic native→fallback backend selection** — missing (no PTX/MSL→WGSL drop on
+    init failure).
+  - §2 **topology-aware memory paths** — tags only; no zero-copy-unified / pinned-staging+
+    async-copy-discrete differentiation (`wgpu.rs` treats both identically).
+  - §4 **ternary dequant/GEMV kernel** — absent (no built-in, emitter, or oracle).
+  - §6 **four dead schedule knobs** (`tile_mnk`, `use_subgroup`, `prefetch`, `unroll_factor`)
+    — `Schedule` fields never varied in the search and never consumed by an emitter.
+  - §6 **device-relative roofline reject, memory-arch tile biasing, CU-saturation, thermal/
+    power pruning** — unimplemented. These were honestly flagged here earlier but **task #14
+    was marked "completed"** — that task is reconciled to reflect reality (warp-alignment +
+    roofline *estimate* done; biasing/CU/thermal not). Peak-FLOPS/bandwidth and CU count are
+    not exposed by wgpu (need a calibration micro-benchmark); thermal needs `nvidia-smi`.
+  - §7 **unified `DeviceLost` error + per-candidate timeout** — missing.
+  - §7 the **oracle is not written generically over `QualiaCompute`** (concrete
+    `&mut WgpuComputeContext`; parallel `evaluate_*_cuda`; ray-probe bypasses the trait).
+  - §7/§8 **test-vector seed/hash and the full tuning signature** (limits hash, feature bits,
+    cudarc version, tolerance profile, P64 schema, timestamp/commit/provenance) are not
+    recorded in the manifest/cache key — the fingerprint is coarser than specified.
+  - §9 CLI **`--budget-ms`, `--thermal-limit`, and a `spirv` target** — missing.
+  - §12 no enforced pre-tuning **setup gate** / no auto-fallback (degradation is "WGSL is
+    default", not "fall back on native failure").
+  - §1 **native f64/u64 IR type** — `ScalarType` has only `U64Words` (paired-u32); the
+    `LoweringContext::policy_64bit`/`supports_f64` scaffolding is never exercised.
+  - §10 targeted test gaps (CLI-binary smoke test; "invalid schedule rejected *before*
+    emission"; cache-key sensitivity; general paired-u32 64-bit-field WGSL layout).
+  - `validate.rs::validate_native` returns hardcoded report metadata
+    (`entry_points=["affine_f32"]`, `binding_count=3`) for any kernel — the compile is real,
+    the metadata is wrong for non-affine (disclosed in code + CLI).
+
+**Honest status:** the core + both frontier items are real and hardware-verified; the plan
+is **~80% implemented**, with the tail above outstanding. The remaining work is tracked as
+explicit tasks (see the task list) and is the subject of a scope/priority decision with
+Timothy — several items are implementable by the agent; a few (peak-FLOPS/CU/thermal
+pruning) need platform probes or are honest documented limitations.
+
 ### 2026-06-28 generic CUDA via NVRTC CUDA-C (affine/ffn/top-k)
 
 - Generic CUDA execution now mirrors the HLSL->DXC path: a CUDA-C emitter

@@ -385,9 +385,10 @@ impl BuiltinKernel {
         }
     }
 
-    /// Whether the differential oracle (`evaluate_builtin`) currently has a
-    /// CPU reference + GPU dispatch wired for this kernel, so it can be certified
-    /// and tuned on hardware. Others generate/validate but are not yet GPU-graded.
+    /// Whether the differential oracle (`evaluate_builtin`) has a CPU reference +
+    /// GPU dispatch wired for this kernel, so it can be certified and tuned on
+    /// hardware. All current built-ins are GPU-graded; the predicate remains so a
+    /// newly-added built-in defaults to skip-on-hardware until its oracle is wired.
     pub const fn has_gpu_oracle(self) -> bool {
         matches!(
             self,

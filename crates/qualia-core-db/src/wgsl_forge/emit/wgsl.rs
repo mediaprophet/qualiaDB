@@ -414,8 +414,13 @@ fn emit_ops(source: &mut String, ops: &[Op], indent: &str) -> Result<(), ForgeEr
                 // GELU approximation: 0.5 * x * (1.0 + tanh(sqrt(2/pi) * (x + 0.044715 * x^3)))
                 writeln!(source, "{indent}let {destination} = 0.5 * {operand} * (1.0 + tanh(0.7978845608 * ({operand} + 0.044715 * {operand} * {operand} * {operand})));").map_err(|error| ForgeError::Emission(error.to_string()))?;
             }
-            Op::MatrixMultiply { left_buffer, right_buffer, destination, m, n, k } => {
-                writeln!(source, "{indent}// MatrixMultiply intrinsic placeholder").map_err(|error| ForgeError::Emission(error.to_string()))?;
+            Op::MatrixMultiply { .. } => {
+                // No scalar WGSL lowering exists for a dense GEMM op; fail loudly
+                // rather than silently emit nothing. Tensor-core GEMM is delivered
+                // via the cooperative-matrix tile or the CUDA WMMA path.
+                return Err(ForgeError::Emission(
+                    "Op::MatrixMultiply has no scalar WGSL lowering; use coopmat::matmul_tc_wgsl (cooperative-matrix) or the CUDA WMMA path".to_string(),
+                ));
             }
             Op::Barrier => {
                 writeln!(source, "{indent}workgroupBarrier();").map_err(|error| ForgeError::Emission(error.to_string()))?;
