@@ -32,7 +32,7 @@ The compiler separates semantics from scheduling, using a `LoweringContext` pass
 ```text
 KernelSpec (typed buffers, operations, Hardware Intrinsics [MMA, RayQuery], CPU oracle)
     + Local Hardware Topology (Compute units, VRAM limits, Tensor/RT presence)
-    + Schedule (workgroup, tile, vector width, warp sizing)
+    + Schedule (workgroup size, items per invocation, vector width)
     -> constraint validation & schedule pruning
     -> Backend Emission Branch:
          ├─> MSL (Metal)       -> wgpu pipeline
@@ -126,15 +126,18 @@ No level implies a later level.
 
 ## 6. Search and optimisation
 
-Initial schedule space:
+The schedule space is searched over exactly three dimensions (their Cartesian
+product, after pruning, is what the grid tuner explores):
 
 - workgroup size: `32, 64, 128, 256`;
 - items per invocation: `1, 2, 4, 8`;
-- vector width: initially `1`, then `2, 4` once vector emission is certified;
-- optional tile dimensions for matrix kernels (`tile_mnk`);
-- intrinsic flags (e.g., `use_subgroup`);
-- memory access hints (e.g., `prefetch`);
-- loop `unroll_factor`.
+- vector width: `1, 2, 4`.
+
+Tile dimensions, subgroup/cooperative-matrix/ray-query intrinsic selection, and
+memory/unroll lowering are **not** grid-searched. They are determined per-kernel
+by the kernel's required intrinsics and the local adapter's capability manifest
+(see the intrinsic-availability and semantic-lowering pruning rules below), not by
+varying a `Schedule` knob.
 
 Candidates are pruned before compilation using:
 
@@ -429,7 +432,10 @@ claims in this ledger / the task list: that was overstated.** The findings:
     async-copy-discrete differentiation (`wgpu.rs` treats both identically).
   - §4 **ternary dequant/GEMV kernel** — absent (no built-in, emitter, or oracle).
   - §6 **four dead schedule knobs** (`tile_mnk`, `use_subgroup`, `prefetch`, `unroll_factor`)
-    — `Schedule` fields never varied in the search and never consumed by an emitter.
+    — **resolved (removed)**: these `Schedule` fields were never varied in the search and
+    never consumed by an emitter, so they were deleted rather than wired. `Schedule` now
+    carries only the three real dimensions (workgroup × items × vector); `FORGE_SCHEMA_VERSION`
+    bumped 1→2 because the serialized `Schedule` shape (cache key + manifest) changed.
   - §6 **device-relative roofline reject, memory-arch tile biasing, CU-saturation, thermal/
     power pruning** — unimplemented. These were honestly flagged here earlier but **task #14
     was marked "completed"** — that task is reconciled to reflect reality (warp-alignment +

@@ -41,7 +41,7 @@ pub use tune::{
 };
 pub use validate::{validate_wgsl, validate_native, ValidationReport};
 
-pub const FORGE_SCHEMA_VERSION: u32 = 1;
+pub const FORGE_SCHEMA_VERSION: u32 = 2;
 pub const WGPU_API_VERSION: &str = "29.0.3";
 pub const NAGA_API_VERSION: &str = "29.0.3";
 

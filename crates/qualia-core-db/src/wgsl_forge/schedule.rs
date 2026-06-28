@@ -8,10 +8,6 @@ pub struct Schedule {
     pub workgroup_size: u32,
     pub items_per_invocation: u32,
     pub vector_width: u32,
-    pub tile_mnk: Option<[u32; 3]>,
-    pub use_subgroup: bool,
-    pub prefetch: bool,
-    pub unroll_factor: u32,
 }
 
 impl Default for Schedule {
@@ -20,10 +16,6 @@ impl Default for Schedule {
             workgroup_size: 64,
             items_per_invocation: 1,
             vector_width: 1,
-            tile_mnk: None,
-            use_subgroup: false,
-            prefetch: false,
-            unroll_factor: 1,
         }
     }
 }
@@ -60,9 +52,6 @@ impl Schedule {
             return Err(ForgeError::InvalidSchedule(
                 "vector width must be one of 1, 2, 4".to_string(),
             ));
-        }
-        if self.use_subgroup && !constraints.supports_subgroups {
-            return Err(ForgeError::InvalidSchedule("adapter does not support subgroups".to_string()));
         }
 
         Ok(())
