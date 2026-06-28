@@ -27,8 +27,8 @@ use super::compute::QualiaCompute;
 use super::memory::{BindingUsage, BufferView, MemoryTopology, QualiaSlabAllocator};
 #[cfg(feature = "cuda")]
 use crate::wgsl_forge::{
-    emit_shader, AdapterConstraints, AdapterIdentity, BufferAccess, ForgeError, KernelSpec,
-    Schedule, TargetBackend,
+    emit_shader, AdapterConstraints, AdapterIdentity, BufferAccess, BufferElement, BufferSpec,
+    ForgeError, KernelSpec, ScalarType, Schedule, TargetBackend,
 };
 
 /// 16-byte affine uniform block passed to the kernel by value.
@@ -176,27 +176,114 @@ impl<'a> CudaPipeline<'a> {
         schedule: Schedule,
     ) -> Result<Self, ForgeError> {
         let generated = emit_shader(kernel, schedule, TargetBackend::CudaC)?;
-        let compiled = cudarc::nvrtc::compile_ptx(&generated.source)
-            .map_err(|e| ForgeError::GpuValidation(format!("NVRTC compile failed: {:?}", e)))?;
-        // The installed toolkit (nvrtc) can be newer than the driver, in which case
-        // the driver rejects the PTX ISA version. Our kernels only use long-stable
-        // instructions, so we rewrite the `.version` directive down to one the
-        // driver supports.
-        let ptx = cudarc::nvrtc::Ptx::from_src(downgrade_ptx_isa(&compiled.to_src()));
+        Self::from_source(context, &generated.source, &kernel.entry_point, kernel.clone())
+    }
+
+    /// Compile a *raw* CUDA-C source string (entry point + storage-buffer bindings
+    /// supplied directly) to PTX via NVRTC and load it. This is for kernels that
+    /// have no portable-IR analogue — notably the `nvcuda::wmma` tensor-core GEMM,
+    /// whose f16/f32 fragment API and fixed 16x16x16 shape cannot be expressed in
+    /// WGSL/IR. `storage_buffer_bindings` lists the kernel's pointer parameters in
+    /// binding order (all treated as storage pointers; no by-value uniform).
+    pub fn compile_cuda_c_source(
+        context: &'a CudaComputeContext,
+        source: &str,
+        entry_point: &str,
+        storage_buffer_bindings: &[u32],
+    ) -> Result<Self, ForgeError> {
+        let buffers: Vec<BufferSpec> = storage_buffer_bindings
+            .iter()
+            .map(|&binding| BufferSpec {
+                group: 0,
+                binding,
+                name: format!("buf{binding}"),
+                element: BufferElement::Scalar(ScalarType::F32),
+                access: BufferAccess::StorageReadWrite,
+            })
+            .collect();
+        let spec = KernelSpec {
+            id: entry_point.to_string(),
+            semantic_version: 1,
+            entry_point: entry_point.to_string(),
+            description: "raw CUDA-C kernel".to_string(),
+            buffers,
+            ops: Vec::new(),
+            shared_memory: Vec::new(),
+        };
+        Self::from_source(context, source, entry_point, spec)
+    }
+
+    fn from_source(
+        context: &'a CudaComputeContext,
+        source: &str,
+        entry_point: &str,
+        spec: KernelSpec,
+    ) -> Result<Self, ForgeError> {
+        let ptx = nvrtc_compile_to_ptx(context, source)?;
         let module = context
             .ctx
             .load_module(ptx)
             .map_err(|e| ForgeError::GpuValidation(format!("Failed to load module: {:?}", e)))?;
         let func = module
-            .load_function(&kernel.entry_point)
+            .load_function(entry_point)
             .map_err(|e| ForgeError::GpuValidation(format!("Entry point not found: {:?}", e)))?;
 
         Ok(Self {
             context,
             func,
-            spec: kernel.clone(),
+            spec,
             _module: module,
         })
+    }
+}
+
+/// Compiles a CUDA-C source string to a driver-loadable PTX module via NVRTC,
+/// targeting the device's *actual* compute capability and making the CUDA toolkit
+/// headers resolvable. NVRTC's default `--include-path` search list is empty, so
+/// tensor-core kernels (`#include <mma.h>`) need the toolkit include dir passed
+/// explicitly — without it NVRTC fails with "could not open source file mma.h".
+#[cfg(feature = "cuda")]
+fn nvrtc_compile_to_ptx(
+    context: &CudaComputeContext,
+    source: &str,
+) -> Result<cudarc::nvrtc::Ptx, ForgeError> {
+    use cudarc::nvrtc::{compile_ptx_with_opts, CompileOptions};
+    let (major, minor) = context.ctx.compute_capability().map_err(|e| {
+        ForgeError::GpuUnavailable(format!("compute-capability query failed: {:?}", e))
+    })?;
+    let mut include_paths = Vec::new();
+    if let Ok(cuda_path) = std::env::var("CUDA_PATH") {
+        include_paths.push(format!("{cuda_path}/include"));
+    }
+    let opts = CompileOptions {
+        arch: Some(arch_for_capability(major, minor)),
+        include_paths,
+        ..Default::default()
+    };
+    let compiled = compile_ptx_with_opts(source, opts)
+        .map_err(|e| ForgeError::GpuValidation(format!("NVRTC compile failed: {:?}", e)))?;
+    // The installed nvrtc can be newer than the driver, which then rejects the PTX
+    // ISA version. Our kernels use only long-stable instructions (incl. the stable
+    // WMMA `mma.sync`), so rewrite `.version` down to one the driver supports.
+    Ok(cudarc::nvrtc::Ptx::from_src(downgrade_ptx_isa(&compiled.to_src())))
+}
+
+/// Maps a CUDA compute capability to the `--gpu-architecture=compute_XX` virtual
+/// arch NVRTC should target. Floors unknown/older parts to `compute_70` — the
+/// minimum for WMMA tensor-core ops; the driver JIT-upgrades the emitted PTX to the
+/// real arch, so this stays correct (if not arch-optimal) on newer cards.
+#[cfg(feature = "cuda")]
+fn arch_for_capability(major: i32, minor: i32) -> &'static str {
+    match (major, minor) {
+        (9, 0) => "compute_90",
+        (8, 9) => "compute_89",
+        (8, 7) => "compute_87",
+        (8, 6) => "compute_86",
+        (8, 0) => "compute_80",
+        (7, 5) => "compute_75",
+        (7, 2) => "compute_72",
+        (7, 0) => "compute_70",
+        _ => "compute_70",
     }
 }
 

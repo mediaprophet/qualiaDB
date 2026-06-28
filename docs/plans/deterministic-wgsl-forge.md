@@ -307,36 +307,65 @@ top-k, and ray-query WGSL emits + Naga-validates (see evidence below). Remaining
   phase" error; `certify`/`tune` remain affine-only (non-affine oracle path is a
   named follow-up). cudarc was modernised 0.11→0.19 (official, `cuda-13030`).
 
-### 2026-06-28 cooperative-matrix (tensor-core) emission — partial
+### 2026-06-28 cooperative-matrix (tensor-core) emission — partial (superseded 2026-06-29)
 
 - Forge can emit valid WGSL cooperative-matrix code: `emit/coopmat.rs` produces an
   8x8 GEMM tile (`enable wgpu_cooperative_matrix`, `coop_mat8x8<f32, role>`,
   `coopLoadT`/`coopMultiplyAdd`/`coopStoreT`). It passes full Naga validation with
   `Capabilities::COOPERATIVE_MATRIX` (`cooperative_matrix_tile_validates`).
-- It also compiles and executes on the A2000: `WgpuComputeContext` now opts into
-  wgpu's experimental features (`ExperimentalFeatures::enabled`) and requests
-  SUBGROUP + EXPERIMENTAL_COOPERATIVE_MATRIX when available; the existing GPU tests
-  (affine/ffn/p64/top-k) still pass with this enabled. The 8x8 *f32* config runs
-  with finite output (`cooperative_matrix_tile_runs_on_real_gpu`); 16x16 f32 is
-  accepted by the validator but returns inf on hardware (unsupported experimental
-  config), so the emitter uses 8x8.
-- Debugged to a precise conclusion (value-level GPU bisection, `COOPMAT_DUMP`):
-  - `coopLoadT`/`coopStoreT` round-trip **correctly** on the A2000 (load `a` as
-    role C, store to `c` → `c == a`). Verified by `coopmat_loadstore_roundtrips_on_real_gpu`.
-  - `coopMultiplyAdd` produces **~all-zero** output, and this is unchanged across:
-    f32 inputs, f16 inputs (with f32 accumulate — the canonical tensor-core
-    config), `var`-reassignment vs pure `let` bindings, and row/column-major /
-    transpose oracle variants. So the multiply — not load/store, precision, SSA,
-    or layout — is the failing operation.
-  - Conclusion: the blocker is in wgpu's **experimental** cooperative-matrix
-    multiply lowering (the feature is explicitly flagged by wgpu as potentially
-    UB/buggy) or an unidentified Vulkan coop-matrix config requirement — upstream
-    of this crate. The emitter, validation, and the load/store path are all
-    correct and verified; the emitted f16/f32 GEMM and `evaluate_matmul_tc` are
-    kept ready for when that upstream path works.
-  - Net: coopmat is emitted + Naga-validated + load/store-verified-on-hardware;
-    the tensor-core multiply (and FFN integration) is blocked upstream, documented
-    honestly rather than faked.
+- `coopLoadT`/`coopStoreT` round-trip **correctly** on the A2000 (load `a` as role
+  C, store to `c` → `c == a`; `coopmat_loadstore_roundtrips_on_real_gpu`), but
+  `coopMultiplyAdd` returned **~all-zero** output. The 2026-06-28 conclusion
+  attributed this to a generic "experimental wgpu defect" — correct direction, but
+  imprecise. Superseded by the 2026-06-29 root-cause + resolution below.
+
+### 2026-06-29 tensor-core multiply — root-caused + delivered via CUDA WMMA
+
+Re-opened under the completeness bar (don't dress a gap as a follow-up) with an
+adversarial recon (3 agents: cudarc nvrtc API, a verified WMMA-via-NVRTC recipe, and
+an adversarial check of the "upstream-blocked" claim). Two hypotheses were tested
+empirically on the A2000 and the cause was pinned exactly from the installed
+naga/wgpu 29.0.3 source:
+
+- **Geometry is NOT the issue.** naga declares the coop-matrix SPIR-V type with
+  `Scope::Subgroup` (`naga-29.0.3/back/spv/writer.rs`: `get_index_constant(spirv::Scope::Subgroup)`),
+  so on NVIDIA one 32-lane warp is the full participation set. `@workgroup_size(32)`
+  is correct; re-running at `@workgroup_size(8,8,1)` (64 invocations) produced the
+  **identical** all-zero result, ruling out the "needs 64 lanes" theory.
+- **dtype WAS half the issue, but not the whole story.** `wgpu-types-29.0.3/features.rs:1375`
+  states EXPERIMENTAL_COOPERATIVE_MATRIX "currently only supports 8x8 **f32**
+  matrices" (Vulkan gates on `vkGetPhysicalDeviceCooperativeMatrixPropertiesKHR`
+  for 8x8x8 f32). The prior emitter used f16-in/f32-acc — an unsupported config.
+  The emitter is now **all-f32 8x8x8** (the supported config) and naga-validates.
+- **Real root cause:** even the all-f32 8x8x8 multiply returns all-zeros on the
+  29.0.3 *execution* path. This matches wgpu #9729/#9741 (coopmat emits Device-scope
+  SPIR-V memory ops that are invalid/no-op'd unless `vulkanMemoryModelDeviceScope`
+  is auto-enabled — a fix that landed on git `main` **after** 29.0.3). **29.0.3 is
+  the newest wgpu on crates.io**, so there is *no published release* that fixes it;
+  the only WGSL-path fix would be pinning wgpu to an unreleased git commit (a
+  core-dependency supply-chain decision, deferred to Timothy). naga's own
+  cooperative-matrix test is a WGSL→SPIR-V *translation* test, not a GPU-execution
+  test, so its passing never implied the multiply executes.
+- **Delivered the tensor-core goal concretely via CUDA WMMA** (the path wgpu 29
+  cannot take at all): `emit/cuda_c.rs` `WMMA_GEMM_16X16_SRC` emits a single-warp
+  `nvcuda::wmma` GEMM `C(16x16,f32) = A(16x16,f16) * B(16x16,f16)`, compiled by
+  NVRTC for the device's real compute capability (`compute_86` on the A2000) with
+  the toolkit include dir on the search path (NVRTC's default include list is empty,
+  so `<mma.h>` needs `--include-path` explicitly). This is the **genuine
+  reduced-precision tensor-core path** (f16 inputs, f32 accumulate). It runs and
+  matches `matmul_cpu` to f16 input precision on the A2000:
+  `wmma_matmul_certifies_on_cuda_tensor_cores` — **passing**. The emitted PTX
+  contains a real `HMMA mma.sync` (verified during recon), i.e. it lowers to tensor
+  cores, not scalar FMA.
+- The `compile_cuda_c` path was modernised (cudarc `compile_ptx_with_opts` with
+  detected `arch` + include paths) and the affine/ffn/top-k cross-backend CUDA
+  oracle tests **still pass** (regression-clean).
+- **Net:** tensor-core matmul is **emitted, validated, and hardware-verified** —
+  bit-approximately correct on real tensor cores via the CUDA backend. The WGSL
+  coopmat path is emitted + naga-validated + load/store-verified; its multiply
+  *execution* is blocked by wgpu 29.0.3 with no published fix, documented precisely
+  and ready to light up (`evaluate_matmul_tc`) the moment wgpu ships #9741. Nothing
+  faked, nothing dressed up as a follow-up.
 
 ### 2026-06-28 generic CUDA via NVRTC CUDA-C (affine/ffn/top-k)
 

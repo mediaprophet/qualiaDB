@@ -388,10 +388,11 @@ pub fn matmul_cpu(a: &[f32], b: &[f32], n: usize) -> Vec<f32> {
 }
 
 /// Differential-oracle evaluation of the cooperative-matrix (tensor-core) 8x8
-/// GEMM tile against [`matmul_cpu`]. Inputs are f16 (rounded from f32), the
-/// accumulator is f32 — the canonical tensor-core configuration. The CPU
-/// reference uses the same f16-rounded inputs, and the tolerance reflects f16
-/// input precision.
+/// GEMM tile `C = A * B` against [`matmul_cpu`]. All-f32 — the only coopmat
+/// configuration wgpu/naga 29 implements (see [`crate::wgsl_forge::emit::coopmat`]).
+/// One subgroup (32-lane NVIDIA warp) cooperatively computes the tile; the
+/// row-major loads/store reproduce the row-major CPU reference, so agreement is
+/// to f32 precision (a tiny tolerance covers tensor-core accumulation order).
 pub fn evaluate_matmul_tc(context: &mut WgpuComputeContext) -> Result<ComparisonReport, ForgeError> {
     if !context.constraints.supports_coopmat {
         return Err(ForgeError::GpuUnavailable(
@@ -402,17 +403,12 @@ pub fn evaluate_matmul_tc(context: &mut WgpuComputeContext) -> Result<Comparison
     let source = crate::wgsl_forge::matmul_tc_wgsl();
     validate_wgsl(&source)?;
 
-    // f16 inputs, packed as u16 bit patterns; the CPU oracle uses the same
-    // f16-rounded values so GPU/CPU agree within f16 input precision.
-    let to_f16_bits = |v: &[f32]| -> Vec<u16> { v.iter().map(|&x| half::f16::from_f32(x).to_bits()).collect() };
-    let rounded = |bits: &[u16]| -> Vec<f32> { bits.iter().map(|&b| half::f16::from_bits(b).to_f32()).collect() };
+    let a = topk_inputs(n * n, 0x4D41_545F_4141_4141);
+    let b = topk_inputs(n * n, 0x4D41_545F_4242_4242);
+    let expected = matmul_cpu(&a, &b, n);
 
-    let a_bits = to_f16_bits(&topk_inputs(n * n, 0x4D41_545F_4141_4141));
-    let b_bits = to_f16_bits(&topk_inputs(n * n, 0x4D41_545F_4242_4242));
-    let expected = matmul_cpu(&rounded(&a_bits), &rounded(&b_bits), n);
-
-    let view_a = context.allocate_and_write(bytemuck::cast_slice(&a_bits), 0, 0, BindingUsage::StorageRead)?;
-    let view_b = context.allocate_and_write(bytemuck::cast_slice(&b_bits), 1, 0, BindingUsage::StorageRead)?;
+    let view_a = context.allocate_and_write(bytemuck::cast_slice(&a), 0, 0, BindingUsage::StorageRead)?;
+    let view_b = context.allocate_and_write(bytemuck::cast_slice(&b), 1, 0, BindingUsage::StorageRead)?;
     let zeros = vec![0.0f32; n * n];
     let view_c = context.allocate_and_write(bytemuck::cast_slice(&zeros), 2, 0, BindingUsage::StorageReadWrite)?;
     let buffers = vec![view_a, view_b, view_c];
@@ -424,7 +420,7 @@ pub fn evaluate_matmul_tc(context: &mut WgpuComputeContext) -> Result<Comparison
 
     drop(pipeline);
     context.clear_transient_allocations();
-    Ok(compare_f32(&expected, &actual, OracleTolerance { absolute: 2.0e-2, relative: 2.0e-2 }))
+    Ok(compare_f32(&expected, &actual, OracleTolerance { absolute: 1.0e-3, relative: 1.0e-3 }))
 }
 
 /// Diagnostic: cooperative-matrix load→store round-trip (no multiply). Loads `a`
@@ -538,6 +534,51 @@ pub fn evaluate_topk_cuda(length: usize, k: usize) -> Result<ComparisonReport, F
     pipeline.dispatch(&buffers, &schedule, length)?;
     let actual = context.read_buffer_f32(&view_output)?;
     Ok(compare_f32(&expected, &actual, OracleTolerance::default()))
+}
+
+/// Tensor-core oracle: runs the genuine f16-input WMMA GEMM (`C = A * B`,
+/// 16x16x16) on the CUDA backend via the `nvcuda::wmma` fragment API, compiled by
+/// NVRTC for the device's compute capability, and checks it against the row-major
+/// CPU reference. This is the *reduced-precision* tensor-core path (f16 A/B inputs,
+/// f32 accumulator) that wgpu/naga 29's cooperative-matrix backend cannot express
+/// — 29 implements only all-f32 8x8x8, and even that multiply is non-functional on
+/// the 29.0.3 execution path (no published fix; see [`crate::wgsl_forge::emit::coopmat`]).
+/// Requires a CUDA device with compute capability >= 7.0 (Volta+).
+#[cfg(feature = "cuda")]
+pub fn evaluate_matmul_tc_cuda() -> Result<ComparisonReport, ForgeError> {
+    use crate::wgsl_forge::emit::cuda_c::{WMMA_GEMM_16X16_ENTRY, WMMA_GEMM_16X16_SRC};
+    use crate::wgsl_forge::execute::{CudaComputeContext, CudaPipeline, QualiaCompute};
+    let mut context = CudaComputeContext::new(16 * 1024 * 1024)?;
+    let n = 16usize; // WMMA m16n16k16 tile.
+
+    // f16 A/B inputs, packed as raw u16 bit patterns; f32 output. The CPU
+    // reference rounds the same inputs through f16 first, so GPU/CPU agree to f16
+    // input precision (the f32 accumulator keeps the K=16 sum tight).
+    let a_f32 = topk_inputs(n * n, 0x574D_4D41_5F41_4141);
+    let b_f32 = topk_inputs(n * n, 0x574D_4D41_5F42_4242);
+    let a_bits: Vec<u16> = a_f32.iter().map(|&x| half::f16::from_f32(x).to_bits()).collect();
+    let b_bits: Vec<u16> = b_f32.iter().map(|&x| half::f16::from_f32(x).to_bits()).collect();
+    let a_round: Vec<f32> = a_bits.iter().map(|&b| half::f16::from_bits(b).to_f32()).collect();
+    let b_round: Vec<f32> = b_bits.iter().map(|&b| half::f16::from_bits(b).to_f32()).collect();
+    let expected = matmul_cpu(&a_round, &b_round, n);
+
+    let view_a = context.allocate_and_write(bytemuck::cast_slice(&a_bits), 0, 0)?;
+    let view_b = context.allocate_and_write(bytemuck::cast_slice(&b_bits), 1, 0)?;
+    let zeros = vec![0.0f32; n * n];
+    let view_c = context.allocate_and_write(bytemuck::cast_slice(&zeros), 2, 0)?;
+    let buffers = vec![view_a, view_b, view_c];
+
+    // One warp computes the whole tile: workgroup_size 32, element_count 1 -> grid (1,1,1).
+    let schedule = Schedule { workgroup_size: 32, ..Default::default() };
+    let pipeline = CudaPipeline::compile_cuda_c_source(
+        &context,
+        WMMA_GEMM_16X16_SRC,
+        WMMA_GEMM_16X16_ENTRY,
+        &[0, 1, 2],
+    )?;
+    pipeline.dispatch(&buffers, &schedule, 1)?;
+    let actual = context.read_buffer_f32(&view_c)?;
+    Ok(compare_f32(&expected, &actual, OracleTolerance { absolute: 5.0e-2, relative: 1.0e-2 }))
 }
 
 pub fn certify_builtin(
@@ -1051,17 +1092,35 @@ mod tests {
         assert!(report.passed(), "CUDA top-k mismatch: {report:?}");
     }
 
+    #[cfg(feature = "cuda")]
+    #[test]
+    #[ignore = "requires a CUDA device with tensor cores (compute capability >= 7.0)"]
+    fn wmma_matmul_certifies_on_cuda_tensor_cores() {
+        // The genuine tensor-core path: f16-input WMMA GEMM through NVRTC, the
+        // reduced-precision config wgpu 29's coopmat cannot run.
+        let report = evaluate_matmul_tc_cuda().expect("cuda wmma evaluation");
+        assert!(report.passed(), "CUDA WMMA C=A*B mismatch: {report:?}");
+    }
+
     #[test]
     #[ignore = "requires a cooperative-matrix capable adapter"]
     fn coopmat_loadstore_roundtrips_on_real_gpu() {
-        // Verifies coopLoadT/coopStoreT round-trip correctly on the adapter (c == a).
-        // The coopMultiplyAdd path produces ~zero output on the current experimental
-        // wgpu cooperative-matrix backend; evaluate_matmul_tc and the emitted GEMM
-        // are kept for when that upstream path works (see the plan ledger).
+        // Diagnostic: coopLoadT/coopStoreT round-trip correctly on the adapter (c == a).
         let mut context = WgpuComputeContext::new(1024 * 1024).expect("adapter");
         let report = evaluate_coopmat_loadstore(&mut context).expect("coopmat round-trip");
         assert!(report.passed(), "coopmat load/store round-trip mismatch: {report:?}");
     }
+
+    // NOTE: there is intentionally no GPU test asserting the *WGSL* coopmat
+    // `coopMultiplyAdd` (`evaluate_matmul_tc`) computes C = A * B. The emitter
+    // produces the correct, naga-validated all-f32 8x8x8 kernel
+    // (`cooperative_matrix_tile_validates`, above), but wgpu/naga 29.0.3's
+    // experimental cooperative-matrix *execution* path returns all-zeros from the
+    // multiply (the load/store round-trip works — see below), and no published
+    // wgpu release fixes it (29.0.3 is the newest on crates.io; the fix is on
+    // unreleased git main). The genuine tensor-core multiply is proven instead via
+    // CUDA WMMA (`wmma_matmul_certifies_on_cuda_tensor_cores`). When wgpu ships the
+    // coopmat execution fix, add the `evaluate_matmul_tc` assertion back here.
 
     #[test]
     #[ignore = "requires a native wgpu adapter"]

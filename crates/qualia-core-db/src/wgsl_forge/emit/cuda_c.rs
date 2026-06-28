@@ -37,6 +37,43 @@ pub fn emit_cuda_c(kernel: &KernelSpec, schedule: Schedule) -> Result<GeneratedS
     })
 }
 
+/// CUDA-C WMMA (tensor-core) GEMM: `C(16x16,f32) = A(16x16,f16) * B(16x16,f16)`,
+/// one warp (32 threads) per tile via the `nvcuda::wmma` fragment API. This is the
+/// genuine reduced-precision tensor-core path — f16 A/B inputs with an f32
+/// accumulator — which the wgpu/naga 29 cooperative-matrix backend cannot express
+/// (29 only implements all-f32 8x8x8; mixed-precision MulAdd landed upstream after
+/// 29). It is compiled by NVRTC with `--gpu-architecture=compute_XX` and
+/// `--include-path=<toolkit>/include` (NVRTC's default header search list is empty,
+/// so `<mma.h>` must be located explicitly — see `execute::cuda`).
+///
+/// Row-major fragment layouts + `ldm = 16` + a `mem_row_major` store reproduce a
+/// standard host row-major reference `C[i][j] = sum_k A[i][k]*B[k][j]`, so it
+/// verifies bit-approximately (f16 input precision) against
+/// [`crate::wgsl_forge::oracle::matmul_cpu`].
+pub const WMMA_GEMM_16X16_ENTRY: &str = "wmma_gemm_16x16";
+
+/// Source for [`WMMA_GEMM_16X16_ENTRY`]. NVRTC-safe: the single `#include <mma.h>`
+/// pulls in `cuda_fp16.h` transitively and adds no host-only headers.
+pub const WMMA_GEMM_16X16_SRC: &str = r#"#include <mma.h>
+using namespace nvcuda;
+
+// Single-warp WMMA GEMM: C(16x16,f32) = A(16x16,f16) * B(16x16,f16).
+// Launch with gridDim=(1,1,1), blockDim=(32,1,1). All 32 lanes must execute the
+// fragment ops uniformly (no divergence) — WMMA is a warp-collective operation.
+extern "C" __global__ void wmma_gemm_16x16(const __half *A,
+                                           const __half *B,
+                                           float *C) {
+    wmma::fragment<wmma::matrix_a, 16, 16, 16, __half, wmma::row_major> a_frag;
+    wmma::fragment<wmma::matrix_b, 16, 16, 16, __half, wmma::row_major> b_frag;
+    wmma::fragment<wmma::accumulator, 16, 16, 16, float> c_frag;
+
+    wmma::fill_fragment(c_frag, 0.0f);          // C starts at zero (D = A*B)
+    wmma::load_matrix_sync(a_frag, A, 16);      // ldm = row stride = 16
+    wmma::load_matrix_sync(b_frag, B, 16);
+    wmma::mma_sync(c_frag, a_frag, b_frag, c_frag);
+    wmma::store_matrix_sync(C, c_frag, 16, wmma::mem_row_major);
+}"#;
+
 fn emit_affine(source: &mut String) -> Result<(), ForgeError> {
     writeln!(
         source,

@@ -233,7 +233,7 @@ mod tests {
 
     #[test]
     fn cooperative_matrix_tile_validates() {
-        // Single 16x16x16 tensor-core tile: C = A * B (one subgroup cooperative).
+        // Single 8x8x8 tensor-core tile: C = A * B (one subgroup cooperative).
         let source = crate::wgsl_forge::matmul_tc_wgsl();
         let report = validate_wgsl(&source).expect("coopmat tile should validate");
         assert_eq!(report.entry_points, vec!["matmul_tc"]);
