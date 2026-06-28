@@ -135,6 +135,37 @@ mod tests {
     }
 
     #[test]
+    fn generated_topk_passes_full_naga_validation() {
+        // Exercises workgroup-shared memory + barrier uniformity in the IR path.
+        for workgroup_size in [32u32, 64, 128, 256] {
+            let generated = generate_builtin(
+                BuiltinKernel::TopK,
+                Schedule {
+                    workgroup_size,
+                    items_per_invocation: 1,
+                    vector_width: 1,
+                    ..Schedule::default()
+                },
+                TargetBackend::Wgsl,
+            )
+            .unwrap();
+            assert!(
+                generated.source.contains("workgroupBarrier()"),
+                "top-k must emit barriers"
+            );
+            assert!(
+                generated
+                    .source
+                    .contains(&format!("array<f32, {workgroup_size}>")),
+                "shared arrays sized to workgroup size"
+            );
+            let report = validate_wgsl(&generated.source).expect("Naga validation of top-k");
+            assert_eq!(report.entry_points, vec!["topk"]);
+            assert_eq!(report.binding_count, 3);
+        }
+    }
+
+    #[test]
     fn semantic_errors_are_rejected() {
         let source = "@compute @workgroup_size(64) fn broken() { let x: u32 = 1.0; }";
         assert!(validate_wgsl(source).is_err());

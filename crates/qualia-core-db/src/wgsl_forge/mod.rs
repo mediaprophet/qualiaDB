@@ -18,15 +18,16 @@ pub use cache::ManifestCache;
 pub use emit::{emit_shader, GeneratedShader, TargetBackend};
 pub use ir::{
     BufferAccess, BufferElement, BufferSpec, BuiltinKernel, KernelSpec, Op,
-    P64GpuWords64, ScalarType,
+    P64GpuWords64, ScalarType, SharedLen, SharedMemorySpec,
 };
 pub use manifest::{
     AdapterIdentity, CertificationManifest, TimingSource, TimingSummary, TuningManifest,
     ValidationLevel,
 };
 pub use oracle::{
-    candidate_evaluation, certify_builtin, compare_f32, evaluate_builtin, AffineParams,
-    ComparisonReport, GpuEvaluation, OracleCase, OracleTolerance,
+    candidate_evaluation, certify_builtin, compare_f32, evaluate_builtin, evaluate_topk,
+    topk_cpu, topk_inputs, AffineParams, ComparisonReport, GpuEvaluation, OracleCase,
+    OracleTolerance, TopKParams,
 };
 pub use schedule::{AdapterConstraints, Schedule, ScheduleSpace};
 pub use tune::{

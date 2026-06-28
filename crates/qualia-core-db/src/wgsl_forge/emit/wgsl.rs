@@ -37,6 +37,10 @@ fn emit_kernel_body(
     kernel: &KernelSpec,
     schedule: Schedule,
 ) -> Result<(), ForgeError> {
+    if kernel.id == "topk" {
+        return emit_topk_wgsl(source, kernel, schedule);
+    }
+
     if kernel.id == "affine-f32" {
         writeln!(
             source,
@@ -150,6 +154,115 @@ fn {}(@builtin(global_invocation_id) gid: vec3<u32>) {{"#,
     Ok(())
 }
 
+/// Emits the top-k reduction kernel: one workgroup per block, the `k` largest
+/// values of each block written to `output` in descending order.
+///
+/// This is the first kernel to exercise workgroup-shared memory and barrier
+/// synchronisation. The shared arrays come from the IR (`kernel.shared_memory`)
+/// and `Op::Barrier` lowers to `workgroupBarrier()`; the reduction control flow
+/// is specialised here because it is not expressible in the scalar op set.
+fn emit_topk_wgsl(
+    source: &mut String,
+    kernel: &KernelSpec,
+    schedule: Schedule,
+) -> Result<(), ForgeError> {
+    let wg = schedule.workgroup_size;
+
+    writeln!(
+        source,
+        r#"
+struct TopKParams {{
+    length: u32,
+    k: u32,
+    block_size: u32,
+    _pad: u32,
+}}
+"#
+    )
+    .map_err(|error| ForgeError::Emission(error.to_string()))?;
+
+    for buffer in &kernel.buffers {
+        let access = match buffer.access {
+            crate::wgsl_forge::ir::BufferAccess::StorageRead => "storage, read",
+            crate::wgsl_forge::ir::BufferAccess::StorageReadWrite => "storage, read_write",
+            crate::wgsl_forge::ir::BufferAccess::Uniform => "uniform",
+        };
+        let type_decl = match buffer.access {
+            crate::wgsl_forge::ir::BufferAccess::Uniform => "TopKParams",
+            _ => "array<f32>",
+        };
+        writeln!(
+            source,
+            "@group({}) @binding({}) var<{}> {}: {};",
+            buffer.group, buffer.binding, access, buffer.name, type_decl
+        )
+        .map_err(|error| ForgeError::Emission(error.to_string()))?;
+    }
+
+    writeln!(source, "").map_err(|error| ForgeError::Emission(error.to_string()))?;
+    for shared in &kernel.shared_memory {
+        writeln!(
+            source,
+            "var<workgroup> {}: array<{}, {}>;",
+            shared.name,
+            shared.element.wgsl_name(),
+            shared.length.resolve(wg)
+        )
+        .map_err(|error| ForgeError::Emission(error.to_string()))?;
+    }
+
+    writeln!(
+        source,
+        r#"
+@compute @workgroup_size({wg})
+fn {entry}(
+    @builtin(local_invocation_id) lid: vec3<u32>,
+    @builtin(workgroup_id) wid: vec3<u32>,
+) {{
+    let tid = lid.x;
+    let block = wid.x;
+    let base = block * {wg}u;
+    let gidx = base + tid;
+    // Sentinel = f32::MIN (0xff7fffff); threads past the input load it so they
+    // never win, and selected slots are reset to it between extractions.
+    let sentinel = bitcast<f32>(0xff7fffffu);
+    var v = sentinel;
+    if (gidx < params.length) {{
+        v = input[gidx];
+    }}
+    s_val[tid] = v;
+    s_idx[tid] = tid;
+    workgroupBarrier();
+
+    for (var i: u32 = 0u; i < params.k; i = i + 1u) {{
+        r_val[tid] = s_val[tid];
+        r_idx[tid] = s_idx[tid];
+        workgroupBarrier();
+        // Tree arg-max reduction over the working copy.
+        for (var stride: u32 = {wg}u / 2u; stride > 0u; stride = stride / 2u) {{
+            if (tid < stride) {{
+                if (r_val[tid + stride] > r_val[tid]) {{
+                    r_val[tid] = r_val[tid + stride];
+                    r_idx[tid] = r_idx[tid + stride];
+                }}
+            }}
+            workgroupBarrier();
+        }}
+        if (tid == 0u) {{
+            output[block * params.k + i] = r_val[0];
+            s_val[r_idx[0]] = sentinel;
+        }}
+        workgroupBarrier();
+    }}
+}}"#,
+        wg = wg,
+        entry = kernel.entry_point
+    )
+    .map_err(|error| ForgeError::Emission(error.to_string()))?;
+
+    Ok(())
+}
+
 fn emit_ops(source: &mut String, ops: &[Op], indent: &str) -> Result<(), ForgeError> {
     for op in ops {
         match op {
@@ -191,6 +304,9 @@ fn emit_ops(source: &mut String, ops: &[Op], indent: &str) -> Result<(), ForgeEr
             }
             Op::MatrixMultiply { left_buffer, right_buffer, destination, m, n, k } => {
                 writeln!(source, "{indent}// MatrixMultiply intrinsic placeholder").map_err(|error| ForgeError::Emission(error.to_string()))?;
+            }
+            Op::Barrier => {
+                writeln!(source, "{indent}workgroupBarrier();").map_err(|error| ForgeError::Emission(error.to_string()))?;
             }
             Op::Intrinsic(_) => {
                 return Err(ForgeError::Emission("Intrinsics not implemented for WGSL yet".to_string()));

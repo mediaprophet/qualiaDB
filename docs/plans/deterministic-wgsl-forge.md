@@ -246,7 +246,14 @@ Update this section before ending any implementation session.
 
 ### Next exact action
 
-Draft the core structures for `qualia-core-db::wgsl_forge::ir.rs` to abstract away backend-specific syntax. Define the IR to support standard scalar/vector operations as well as "Hardware Intrinsic" nodes for future RT/Tensor core mappings. Following the IR definition, design the `QualiaSlabAllocator` in `execute/memory.rs` to handle persistent ring buffers, ensuring the allocator dynamically scales its requested slab size based on the VRAM/Unified Memory limits detected by the local hardware topology checker. Then, define the `QualiaCompute` trait in `execute/compute.rs` to accept slices of this memory, ensuring the execution bridges remain stateless.
+RT-core awareness (the piece previously missed): add `RayQuery` intrinsic node(s)
+to `ir/intrinsics.rs`, a `supports_rt_cores` flag to the
+`HardwareCapabilityMatrix`, RT/tensor-core detection in the topology probe, and
+schedule pruning that excludes RT/MMA-dependent schedules when the local adapter
+lacks them (plan §6, intrinsic-availability checks). Then continue native-backend
+parity for the fused-FFN and top-k kernels (MSL/HLSL/PTX emission of shared
+memory + barriers), and wire a non-affine differential-oracle path so `certify`
+and `tune` can certify top-k on hardware.
 
 ### Decisions still open
 
@@ -272,6 +279,27 @@ Draft the core structures for `qualia-core-db::wgsl_forge::ir.rs` to abstract aw
   observed run.
 - These timings are hardware/run evidence, not universal constants; the adapter-keyed
   cache prevents applying them to a different device or shader/schema hash.
+
+### 2026-06-28 Phase 2 evidence (shared memory + barriers + top-k)
+
+- IR gained reusable workgroup primitives: `Op::Barrier`
+  (`workgroupBarrier()` / `threadgroup_barrier` / `GroupMemoryBarrierWithGroupSync`
+  across WGSL/MSL/HLSL) and `SharedMemorySpec` + `SharedLen::{Fixed,WorkgroupSize}`
+  on `KernelSpec.shared_memory`. The new fields are `serde(default,
+  skip_serializing_if)` so existing kernels' semantic hashes are unchanged.
+- New `BuiltinKernel::TopK`: one workgroup per `block_size`(= workgroup-size) block,
+  emitting the `k` largest values per block in descending order via a barrier-
+  synchronised tree arg-max reduction over `var<workgroup>` arrays. Shared-array
+  decls are driven by the IR; the reduction control flow is WGSL-specialised.
+- Verified offline (no GPU): generated top-k WGSL passes full Naga validation —
+  including barrier **uniformity** analysis — for workgroup sizes 32/64/128/256;
+  CPU oracle (`topk_cpu`) matches a brute-force reference for full and partial
+  tail blocks. Forge suite: 17 passed / 0 failed / 2 ignored.
+- Not yet done (honest): GPU OracleVerified for top-k is an opt-in `#[ignore]`
+  test (`generated_topk_matches_oracle_on_real_gpu`) pending a hardware run on this
+  machine's adapter; MSL/HLSL/PTX top-k emission returns a clear "WGSL-only this
+  phase" error; `certify`/`tune` remain affine-only (non-affine oracle path is a
+  named follow-up). cudarc was modernised 0.11→0.19 (official, `cuda-13030`).
 
 ## 12. Deployment & Setup Process
 

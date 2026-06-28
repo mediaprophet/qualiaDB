@@ -110,6 +110,35 @@ pub enum BufferAccess {
     Uniform,
 }
 
+/// Length of a workgroup-shared array.
+///
+/// `WorkgroupSize` binds the array length to the scheduled workgroup size at
+/// emission time, which is the natural sizing for one-element-per-thread
+/// reductions (e.g. top-k). `Fixed` pins an explicit length.
+#[derive(Debug, Clone, Copy, PartialEq, Eq, Hash, Serialize, Deserialize)]
+#[serde(rename_all = "snake_case")]
+pub enum SharedLen {
+    Fixed(u32),
+    WorkgroupSize,
+}
+
+impl SharedLen {
+    pub const fn resolve(self, workgroup_size: u32) -> u32 {
+        match self {
+            Self::Fixed(value) => value,
+            Self::WorkgroupSize => workgroup_size,
+        }
+    }
+}
+
+/// One workgroup-shared (`var<workgroup>`) array declaration.
+#[derive(Debug, Clone, PartialEq, Eq, Hash, Serialize, Deserialize)]
+pub struct SharedMemorySpec {
+    pub name: String,
+    pub element: ScalarType,
+    pub length: SharedLen,
+}
+
 #[derive(Debug, Clone, PartialEq, Eq, Hash, Serialize, Deserialize)]
 pub struct BufferSpec {
     pub group: u32,
@@ -134,6 +163,8 @@ pub enum Op {
     Relu { operand: String, destination: String },
     Gelu { operand: String, destination: String },
     MatrixMultiply { left_buffer: String, right_buffer: String, destination: String, m: String, n: String, k: String },
+    /// Workgroup execution + shared-memory barrier (WGSL `workgroupBarrier()`).
+    Barrier,
 }
 
 #[derive(Debug, Clone, PartialEq, Eq, Serialize, Deserialize)]
@@ -144,6 +175,10 @@ pub struct KernelSpec {
     pub description: String,
     pub buffers: Vec<BufferSpec>,
     pub ops: Vec<Op>,
+    /// Workgroup-shared arrays the kernel uses. Skipped during serialization
+    /// when empty so existing kernels' semantic hashes are unchanged.
+    #[serde(default, skip_serializing_if = "Vec::is_empty")]
+    pub shared_memory: Vec<SharedMemorySpec>,
 }
 
 impl KernelSpec {
@@ -191,7 +226,11 @@ impl KernelSpec {
         if self.id == BuiltinKernel::FusedFfn.name() {
             validate_fused_ffn_buffers(&self.buffers)?;
         }
-        
+
+        if self.id == BuiltinKernel::TopK.name() {
+            validate_topk_buffers(&self.buffers)?;
+        }
+
         Ok(())
     }
 
@@ -266,6 +305,30 @@ fn validate_fused_ffn_buffers(buffers: &[BufferSpec]) -> Result<(), ForgeError> 
     Ok(())
 }
 
+fn validate_topk_buffers(buffers: &[BufferSpec]) -> Result<(), ForgeError> {
+    let expected = [
+        ("input", 0, BufferElement::Scalar(ScalarType::F32), BufferAccess::StorageRead),
+        ("output", 1, BufferElement::Scalar(ScalarType::F32), BufferAccess::StorageReadWrite),
+        ("params", 2, BufferElement::AffineParams, BufferAccess::Uniform),
+    ];
+    for (name, binding, element, access) in expected {
+        let Some(buffer) = buffers
+            .iter()
+            .find(|candidate| candidate.group == 0 && candidate.binding == binding)
+        else {
+            return Err(ForgeError::InvalidKernel(format!(
+                "topk requires group 0 binding {binding}"
+            )));
+        };
+        if buffer.name != name || buffer.element != element || buffer.access != access {
+            return Err(ForgeError::InvalidKernel(format!(
+                "topk binding {binding} must be {name:?} / {element:?} / {access:?}"
+            )));
+        }
+    }
+    Ok(())
+}
+
 fn is_identifier(value: &str) -> bool {
     let mut chars = value.chars();
     matches!(chars.next(), Some(first) if first == '_' || first.is_ascii_alphabetic())
@@ -278,16 +341,18 @@ pub enum BuiltinKernel {
     AffineF32,
     FusedFfn,
     P64Project,
+    TopK,
 }
 
 impl BuiltinKernel {
-    pub const ALL: [Self; 3] = [Self::AffineF32, Self::FusedFfn, Self::P64Project];
+    pub const ALL: [Self; 4] = [Self::AffineF32, Self::FusedFfn, Self::P64Project, Self::TopK];
 
     pub const fn name(self) -> &'static str {
         match self {
             Self::AffineF32 => "affine-f32",
             Self::FusedFfn => "fused-ffn",
             Self::P64Project => "p64-project",
+            Self::TopK => "topk",
         }
     }
 
@@ -328,6 +393,7 @@ impl BuiltinKernel {
                     Op::Fma { a: "in_val".to_string(), b: "scale".to_string(), c: "bias".to_string(), destination: "out_val".to_string() },
                     Op::Store { buffer: "output".to_string(), index: "global_id".to_string(), value: "out_val".to_string() },
                 ],
+                shared_memory: Vec::new(),
             },
             Self::FusedFfn => KernelSpec {
                 id: self.name().to_string(),
@@ -347,6 +413,7 @@ impl BuiltinKernel {
                     Op::DotProduct { left_buffer: "w2".to_string(), left_base: "global_id * hidden_size".to_string(), right_buffer: "act_val".to_string(), right_base: "0".to_string(), len: "hidden_size".to_string(), destination: "out_val".to_string() },
                     Op::Store { buffer: "output".to_string(), index: "global_id".to_string(), value: "out_val".to_string() },
                 ],
+                shared_memory: Vec::new(),
             },
             Self::P64Project => KernelSpec {
                 id: self.name().to_string(),
@@ -363,6 +430,31 @@ impl BuiltinKernel {
                     Op::StructLoad { buffer: "input".to_string(), field: "global_id".to_string(), destination: "p64_record".to_string() },
                     Op::Store { buffer: "output".to_string(), index: "global_id".to_string(), value: "0.0".to_string() }
                 ],
+                shared_memory: Vec::new(),
+            },
+            Self::TopK => KernelSpec {
+                id: self.name().to_string(),
+                semantic_version: 1,
+                entry_point: "topk".to_string(),
+                // Per workgroup (one block of `block_size` = workgroup-size elements),
+                // emit the `k` largest values in descending order into `output`.
+                description: "out[block*k + i] = i-th largest of input[block]".to_string(),
+                buffers: vec![
+                    BufferSpec { group: 0, binding: 0, name: "input".to_string(), element: BufferElement::Scalar(ScalarType::F32), access: BufferAccess::StorageRead },
+                    BufferSpec { group: 0, binding: 1, name: "output".to_string(), element: BufferElement::Scalar(ScalarType::F32), access: BufferAccess::StorageReadWrite },
+                    // A generic 16-byte uniform block (length, k, block_size, _pad);
+                    // reuses the AffineParams element purely as a 16-byte uniform.
+                    BufferSpec { group: 0, binding: 2, name: "params".to_string(), element: BufferElement::AffineParams, access: BufferAccess::Uniform },
+                ],
+                // The reduction body is target-specialised in the WGSL emitter; the
+                // Barrier op and these shared arrays are the reusable IR primitives.
+                ops: vec![Op::Barrier],
+                shared_memory: vec![
+                    SharedMemorySpec { name: "s_val".to_string(), element: ScalarType::F32, length: SharedLen::WorkgroupSize },
+                    SharedMemorySpec { name: "s_idx".to_string(), element: ScalarType::U32, length: SharedLen::WorkgroupSize },
+                    SharedMemorySpec { name: "r_val".to_string(), element: ScalarType::F32, length: SharedLen::WorkgroupSize },
+                    SharedMemorySpec { name: "r_idx".to_string(), element: ScalarType::U32, length: SharedLen::WorkgroupSize },
+                ],
             },
         }
     }
@@ -376,6 +468,7 @@ impl FromStr for BuiltinKernel {
             "affine-f32" | "affine_f32" | "affine" => Ok(Self::AffineF32),
             "fused-ffn" | "fused_ffn" | "ffn" => Ok(Self::FusedFfn),
             "p64-project" | "p64_project" | "p64" => Ok(Self::P64Project),
+            "topk" | "top-k" | "top_k" => Ok(Self::TopK),
             other => Err(ForgeError::UnknownKernel(other.to_string())),
         }
     }

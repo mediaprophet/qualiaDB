@@ -36,6 +36,11 @@ fn emit_kernel_body(
     kernel: &KernelSpec,
     schedule: Schedule,
 ) -> Result<(), ForgeError> {
+    if kernel.id == "topk" {
+        return Err(ForgeError::Emission(
+            "topk reduction is only emitted for the WGSL/Naga target in this phase".to_string(),
+        ));
+    }
     if kernel.id == "affine-f32" {
         writeln!(
             source,
@@ -171,6 +176,9 @@ fn emit_ops(source: &mut String, ops: &[Op], indent: &str) -> Result<(), ForgeEr
             }
             Op::MatrixMultiply { left_buffer, right_buffer, destination, m, n, k } => {
                 writeln!(source, "{indent}// MatrixMultiply intrinsic placeholder").map_err(|error| ForgeError::Emission(error.to_string()))?;
+            }
+            Op::Barrier => {
+                writeln!(source, "{indent}GroupMemoryBarrierWithGroupSync();").map_err(|error| ForgeError::Emission(error.to_string()))?;
             }
             Op::Intrinsic(_) => {
                 return Err(ForgeError::Emission("Intrinsics not implemented for HLSL yet".to_string()));
