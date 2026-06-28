@@ -272,3 +272,12 @@ Draft the core structures for `qualia-core-db::wgsl_forge::ir.rs` to abstract aw
   observed run.
 - These timings are hardware/run evidence, not universal constants; the adapter-keyed
   cache prevents applying them to a different device or shader/schema hash.
+
+## 12. Deployment & Setup Process
+
+To support the native execution backends (PTX, HLSL), the node requires external toolchains (e.g., NVIDIA CUDA Toolkit, DirectXShaderCompiler) that cannot be bundled directly in the Rust binary. 
+
+We will need:
+1. **An Installer / Human Helper**: A CLI wizard (e.g., `qualia-cli setup` or `qualia-cli doctor`) to tell the user exactly where to go get the correct packages (CUDA, DXC), and how to install them for their OS.
+2. **Setup Checker**: A validation process that verifies the toolchains exist in the expected paths (`CUDA_PATH`, `dxc.exe`) and are correctly wired before the Forge attempts native tuning.
+3. **Graceful Degradation**: If the user has not run the setup or lacks the dependencies, the system must gracefully skip native compilation and use the `wgpu` WGSL fallbacks.

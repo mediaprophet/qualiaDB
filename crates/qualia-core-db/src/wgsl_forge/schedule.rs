@@ -64,10 +64,7 @@ impl Schedule {
             return Err(ForgeError::InvalidSchedule("adapter does not support subgroups".to_string()));
         }
         
-        match kernel.ops.first() {
-            Some(Op::AffineF32) => {}
-            _ => {}
-        }
+
         Ok(())
     }
 

@@ -32,7 +32,7 @@ pub use schedule::{AdapterConstraints, Schedule, ScheduleSpace};
 pub use tune::{
     tune_with, CandidateEvaluation, CandidateFailure, CandidateResult, TuningConfig, TuningResult,
 };
-pub use validate::{validate_wgsl, ValidationReport};
+pub use validate::{validate_wgsl, validate_native, ValidationReport};
 
 pub const FORGE_SCHEMA_VERSION: u32 = 1;
 pub const WGPU_API_VERSION: &str = "29.0.3";

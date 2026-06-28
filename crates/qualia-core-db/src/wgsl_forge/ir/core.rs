@@ -128,8 +128,12 @@ pub enum Op {
     Add { left: String, right: String, destination: String },
     Fma { a: String, b: String, c: String, destination: String },
     Intrinsic(Intrinsic),
-    // A temporary fallback for the affine-f32 kernel to ease transition during refactor
-    AffineF32, 
+    StructLoad { buffer: String, field: String, destination: String },
+    Loop { induction_var: String, start: String, end: String, step: String, body: Vec<Op> },
+    DotProduct { left_buffer: String, left_base: String, right_buffer: String, right_base: String, len: String, destination: String },
+    Relu { operand: String, destination: String },
+    Gelu { operand: String, destination: String },
+    MatrixMultiply { left_buffer: String, right_buffer: String, destination: String, m: String, n: String, k: String },
 }
 
 #[derive(Debug, Clone, PartialEq, Eq, Serialize, Deserialize)]
@@ -179,8 +183,13 @@ impl KernelSpec {
             }
         }
 
-        if let Some(Op::AffineF32) = self.ops.first() {
+        // Validate specific kernel shapes based on their name for backwards compatibility or hardcoded constraints
+        if self.id == BuiltinKernel::AffineF32.name() {
             validate_affine_buffers(&self.buffers)?;
+        }
+        
+        if self.id == BuiltinKernel::FusedFfn.name() {
+            validate_fused_ffn_buffers(&self.buffers)?;
         }
         
         Ok(())
@@ -232,6 +241,31 @@ fn validate_affine_buffers(buffers: &[BufferSpec]) -> Result<(), ForgeError> {
     Ok(())
 }
 
+fn validate_fused_ffn_buffers(buffers: &[BufferSpec]) -> Result<(), ForgeError> {
+    let expected = [
+        ("input", 0, BufferElement::Scalar(ScalarType::F32), BufferAccess::StorageRead),
+        ("w1", 1, BufferElement::Scalar(ScalarType::F32), BufferAccess::StorageRead),
+        ("w2", 2, BufferElement::Scalar(ScalarType::F32), BufferAccess::StorageRead),
+        ("output", 3, BufferElement::Scalar(ScalarType::F32), BufferAccess::StorageReadWrite),
+    ];
+    for (name, binding, element, access) in expected {
+        let Some(buffer) = buffers
+            .iter()
+            .find(|candidate| candidate.group == 0 && candidate.binding == binding)
+        else {
+            return Err(ForgeError::InvalidKernel(format!(
+                "fused_ffn requires group 0 binding {binding}"
+            )));
+        };
+        if buffer.name != name || buffer.element != element || buffer.access != access {
+            return Err(ForgeError::InvalidKernel(format!(
+                "fused_ffn binding {binding} must be {name:?} / {element:?} / {access:?}"
+            )));
+        }
+    }
+    Ok(())
+}
+
 fn is_identifier(value: &str) -> bool {
     let mut chars = value.chars();
     matches!(chars.next(), Some(first) if first == '_' || first.is_ascii_alphabetic())
@@ -242,14 +276,18 @@ fn is_identifier(value: &str) -> bool {
 #[serde(rename_all = "kebab-case")]
 pub enum BuiltinKernel {
     AffineF32,
+    FusedFfn,
+    P64Project,
 }
 
 impl BuiltinKernel {
-    pub const ALL: [Self; 1] = [Self::AffineF32];
+    pub const ALL: [Self; 3] = [Self::AffineF32, Self::FusedFfn, Self::P64Project];
 
     pub const fn name(self) -> &'static str {
         match self {
             Self::AffineF32 => "affine-f32",
+            Self::FusedFfn => "fused-ffn",
+            Self::P64Project => "p64-project",
         }
     }
 
@@ -283,7 +321,48 @@ impl BuiltinKernel {
                         access: BufferAccess::Uniform,
                     },
                 ],
-                ops: vec![Op::AffineF32],
+                ops: vec![
+                    Op::StructLoad { buffer: "params".to_string(), field: "scale".to_string(), destination: "scale".to_string() },
+                    Op::StructLoad { buffer: "params".to_string(), field: "bias".to_string(), destination: "bias".to_string() },
+                    Op::Load { buffer: "input".to_string(), index: "global_id".to_string(), destination: "in_val".to_string() },
+                    Op::Fma { a: "in_val".to_string(), b: "scale".to_string(), c: "bias".to_string(), destination: "out_val".to_string() },
+                    Op::Store { buffer: "output".to_string(), index: "global_id".to_string(), value: "out_val".to_string() },
+                ],
+            },
+            Self::FusedFfn => KernelSpec {
+                id: self.name().to_string(),
+                semantic_version: 1,
+                entry_point: "fused_ffn".to_string(),
+                description: "out = w2 * gelu(w1 * in)".to_string(),
+                buffers: vec![
+                    BufferSpec { group: 0, binding: 0, name: "input".to_string(), element: BufferElement::Scalar(ScalarType::F32), access: BufferAccess::StorageRead },
+                    BufferSpec { group: 0, binding: 1, name: "w1".to_string(), element: BufferElement::Scalar(ScalarType::F32), access: BufferAccess::StorageRead },
+                    BufferSpec { group: 0, binding: 2, name: "w2".to_string(), element: BufferElement::Scalar(ScalarType::F32), access: BufferAccess::StorageRead },
+                    BufferSpec { group: 0, binding: 3, name: "output".to_string(), element: BufferElement::Scalar(ScalarType::F32), access: BufferAccess::StorageReadWrite },
+                ],
+                ops: vec![
+                    // For now, this is a placeholder using DotProduct high-level nodes to represent the matrix-vector multiplies
+                    Op::DotProduct { left_buffer: "w1".to_string(), left_base: "row_idx * hidden_size".to_string(), right_buffer: "input".to_string(), right_base: "0".to_string(), len: "input_size".to_string(), destination: "hidden_val".to_string() },
+                    Op::Gelu { operand: "hidden_val".to_string(), destination: "act_val".to_string() },
+                    Op::DotProduct { left_buffer: "w2".to_string(), left_base: "global_id * hidden_size".to_string(), right_buffer: "act_val".to_string(), right_base: "0".to_string(), len: "hidden_size".to_string(), destination: "out_val".to_string() },
+                    Op::Store { buffer: "output".to_string(), index: "global_id".to_string(), value: "out_val".to_string() },
+                ],
+            },
+            Self::P64Project => KernelSpec {
+                id: self.name().to_string(),
+                semantic_version: 1,
+                entry_point: "p64_project".to_string(),
+                description: "Projects a P64 descriptor vector using a weight matrix".to_string(),
+                buffers: vec![
+                    BufferSpec { group: 0, binding: 0, name: "input".to_string(), element: BufferElement::P64Words64, access: BufferAccess::StorageRead },
+                    BufferSpec { group: 0, binding: 1, name: "weights".to_string(), element: BufferElement::Scalar(ScalarType::F32), access: BufferAccess::StorageRead },
+                    BufferSpec { group: 0, binding: 2, name: "output".to_string(), element: BufferElement::Scalar(ScalarType::F32), access: BufferAccess::StorageReadWrite },
+                ],
+                ops: vec![
+                    // Placeholder math for P64 descriptor extraction
+                    Op::StructLoad { buffer: "input".to_string(), field: "global_id".to_string(), destination: "p64_record".to_string() },
+                    Op::Store { buffer: "output".to_string(), index: "global_id".to_string(), value: "0.0".to_string() }
+                ],
             },
         }
     }
@@ -295,6 +374,8 @@ impl FromStr for BuiltinKernel {
     fn from_str(value: &str) -> Result<Self, Self::Err> {
         match value.trim().to_ascii_lowercase().as_str() {
             "affine-f32" | "affine_f32" | "affine" => Ok(Self::AffineF32),
+            "fused-ffn" | "fused_ffn" | "ffn" => Ok(Self::FusedFfn),
+            "p64-project" | "p64_project" | "p64" => Ok(Self::P64Project),
             other => Err(ForgeError::UnknownKernel(other.to_string())),
         }
     }

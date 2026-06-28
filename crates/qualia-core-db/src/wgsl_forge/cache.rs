@@ -107,7 +107,7 @@ mod tests {
             std::env::temp_dir().join(format!("qualia-wgsl-forge-cache-{}", std::process::id()));
         let _ = std::fs::remove_dir_all(&root);
         let generated =
-            crate::wgsl_forge::generate_builtin(BuiltinKernel::AffineF32, Schedule::default())
+            crate::wgsl_forge::generate_builtin(BuiltinKernel::AffineF32, Schedule::default(), crate::wgsl_forge::TargetBackend::Wgsl)
                 .unwrap();
         let adapter = AdapterIdentity {
             name: "test".to_string(),

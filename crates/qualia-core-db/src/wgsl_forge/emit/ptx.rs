@@ -1,7 +1,7 @@
 use std::fmt::Write;
 
 use super::{GeneratedShader, TargetBackend};
-use crate::wgsl_forge::{ForgeError, KernelSpec, Op, Schedule};
+use crate::wgsl_forge::{ForgeError, KernelSpec, Schedule};
 
 pub fn emit_ptx(kernel: &KernelSpec, schedule: Schedule) -> Result<GeneratedShader, ForgeError> {
     kernel.validate()?;
@@ -13,21 +13,41 @@ pub fn emit_ptx(kernel: &KernelSpec, schedule: Schedule) -> Result<GeneratedShad
     writeln!(source, "// Semantic hash: {}", semantic_hash)
         .map_err(|e| ForgeError::Emission(e.to_string()))?;
 
-    match kernel.ops.first() {
-        Some(Op::AffineF32) => {
-            writeln!(
-                source,
-                r#".version 7.5
-.target sm_75
-.address_size 64
+    emit_kernel_body(&mut source, kernel, schedule)?;
 
-.entry {}(
-    .param .u64 input_ptr,
-    .param .u64 output_ptr,
-    .param .align 4 .b8 params[16]
-)
-{{
-    .reg .pred %p<2>;
+    let source_hash = blake3::hash(source.as_bytes()).to_hex().to_string();
+    Ok(GeneratedShader {
+        kernel_id: kernel.id.clone(),
+        semantic_hash,
+        source_hash,
+        schedule,
+        source,
+    })
+}
+
+fn emit_kernel_body(
+    source: &mut String,
+    kernel: &KernelSpec,
+    schedule: Schedule,
+) -> Result<(), ForgeError> {
+    writeln!(source, ".version 7.5\n.target sm_75\n.address_size 64\n").map_err(|error| ForgeError::Emission(error.to_string()))?;
+    
+    writeln!(source, ".entry {}(", kernel.entry_point).map_err(|error| ForgeError::Emission(error.to_string()))?;
+    for (i, buffer) in kernel.buffers.iter().enumerate() {
+        let param_type = match buffer.access {
+            crate::wgsl_forge::ir::BufferAccess::Uniform => ".align 4 .b8 params[16]",
+            _ => ".u64",
+        };
+        let param_name = if param_type == ".u64" { format!("{}_ptr", buffer.name) } else { buffer.name.clone() };
+        let separator = if i < kernel.buffers.len() - 1 { "," } else { "" };
+        writeln!(source, "    .param {} {}{}", param_type, param_name, separator).map_err(|error| ForgeError::Emission(error.to_string()))?;
+    }
+    writeln!(source, ")\n{{").map_err(|error| ForgeError::Emission(error.to_string()))?;
+
+    if kernel.id == "affine-f32" {
+        writeln!(
+            source,
+            r#"    .reg .pred %p<2>;
     .reg .b32 %r<5>;
     .reg .b64 %rd<5>;
     .reg .f32 %f<5>;
@@ -62,21 +82,13 @@ pub fn emit_ptx(kernel: &KernelSpec, schedule: Schedule) -> Result<GeneratedShad
     st.global.f32 [%rd2], %f4;
 
 EXIT:
-    ret;
-}}"#,
-                kernel.entry_point
-            )
-            .map_err(|e| ForgeError::Emission(e.to_string()))?;
-        }
-        _ => return Err(ForgeError::Emission("unsupported operation sequence".to_string())),
+    ret;"#
+        ).map_err(|error| ForgeError::Emission(error.to_string()))?;
+    } else {
+        writeln!(source, "    // General PTX emit_ops requires register allocation, returning error.").map_err(|error| ForgeError::Emission(error.to_string()))?;
+        return Err(ForgeError::Emission("unsupported operation sequence for PTX".to_string()));
     }
+    writeln!(source, "}}").map_err(|error| ForgeError::Emission(error.to_string()))?;
 
-    let source_hash = blake3::hash(source.as_bytes()).to_hex().to_string();
-    Ok(GeneratedShader {
-        kernel_id: kernel.id.clone(),
-        semantic_hash,
-        source_hash,
-        schedule,
-        source,
-    })
+    Ok(())
 }

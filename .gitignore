@@ -121,8 +121,12 @@ scratch/
 *_errors.txt
 compile_errors.txt
 cargo_err.txt
+error.log
 clippy.json
 clippy_report.md
+
+# Machine-specific Cargo config (local CUDA/DXC toolchain paths — not portable)
+/.cargo/config.toml
 
 # QPU internal functionality (undocumented, private)
 

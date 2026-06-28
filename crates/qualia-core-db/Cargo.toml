@@ -15,7 +15,9 @@ default = ["profile_target_1024", "zk-culling", "gpu-runtime", "wgsl-forge"]
 # Browser model runtime:            --features wasm-llm
 # Full API explorer / playground:   --features wasm-full
 gpu-runtime = ["dep:wgpu"]
-wgsl-forge = ["dep:naga"]
+wgsl-forge = ["dep:naga", "dxc", "cuda"]
+cuda = ["dep:cudarc"]
+dxc = []
 portal = ["wasm_simd", "gpu-runtime"]
 wasm-ontology = []
 wasm-logic = []
@@ -72,6 +74,7 @@ vm_tracing = []
 minicbor = { version = "0.20", features = ["std"] }
 futures-core = { version = "0.3", default-features = false }
 futures-channel = "0.3"
+tempfile = "3.10"
 futures-intrusive = { version = "0.5", default-features = false, features = ["alloc"] }
 zeroize = { version = "1.8.2", features = ["zeroize_derive"] }
 serde = { version = "1.0", features = ["derive"] }
@@ -132,6 +135,7 @@ rand_distr = "0.6.0"
 fast_qr = { version = "0.13.1", features = ["svg"] }
 wgpu = { version = "29", features = ["webgpu"], optional = true }
 naga = { version = "29", features = ["wgsl-in"], optional = true }
+cudarc = { version = "0.19", optional = true, features = ["cuda-13030"] }
 
 
 [lib]
@@ -230,7 +234,6 @@ naga = { version = "29", features = ["wgsl-in"] }
 criterion = "0.8.2"
 dhat = "0.3.3"
 proptest = "1.11.0"
-tempfile = "3.10"
 serial_test = "3"
 pollster = "0.4.0"
 

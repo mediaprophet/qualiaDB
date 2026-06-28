@@ -1,15 +1,17 @@
 pub mod wgsl;
-pub mod msl;
 pub mod hlsl;
+pub mod msl;
 pub mod ptx;
+pub mod dxc;
 
 use serde::{Deserialize, Serialize};
 
 use super::{ForgeError, KernelSpec, Schedule};
-use wgsl::emit_wgsl;
-use msl::emit_msl;
-use hlsl::emit_hlsl;
-use ptx::emit_ptx;
+pub use wgsl::emit_wgsl;
+pub use msl::emit_msl;
+pub use hlsl::emit_hlsl;
+pub use ptx::emit_ptx;
+pub use dxc::compile_hlsl_to_spirv;
 
 #[derive(Debug, Clone, Copy, PartialEq, Eq, Serialize, Deserialize)]
 #[serde(rename_all = "snake_case")]

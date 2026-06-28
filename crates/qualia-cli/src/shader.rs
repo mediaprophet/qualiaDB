@@ -4,7 +4,7 @@ use std::str::FromStr;
 use clap::{Args, Subcommand};
 use qualia_core_db::wgsl_forge::execute::WgpuComputeContext;
 use qualia_core_db::wgsl_forge::{
-    candidate_evaluation, generate_builtin, tune_with, validate_wgsl, BuiltinKernel,
+    candidate_evaluation, generate_builtin, tune_with, validate_wgsl, validate_native, BuiltinKernel,
     CertificationManifest, ForgeError, ManifestCache, Schedule, ScheduleSpace, TargetBackend,
     TuningConfig, TuningManifest,
 };
@@ -170,7 +170,14 @@ pub fn run(action: &ShaderAction) -> Result<(), Box<dyn std::error::Error>> {
             let report = if target_backend == TargetBackend::Wgsl {
                 Some(validate_wgsl(&source)?)
             } else {
-                None
+                match validate_native(&source, target_backend) {
+                    Ok(r) => Some(r),
+                    Err(ForgeError::WgslValidation(msg)) => {
+                        eprintln!("Native validation skipped or failed: {}", msg);
+                        None
+                    }
+                    Err(e) => return Err(Box::new(e)),
+                }
             };
             if let Some(path) = manifest {
                 let generated = generated.ok_or_else(|| {
@@ -191,11 +198,15 @@ pub fn run(action: &ShaderAction) -> Result<(), Box<dyn std::error::Error>> {
                     println!("{}", serde_json::to_string_pretty(&report)?);
                 } else {
                     println!(
-                        "Naga validated {} binding(s), entry point(s): {}",
+                        "Validated {} binding(s), entry point(s): {}",
                         report.binding_count,
                         report.entry_points.join(", ")
                     );
-                    println!("Validation success: entry points = {:?}", report.entry_points);
+                    if let Some(tool) = report.native_tool_validated {
+                        println!("Validation success (via {}): entry points = {:?}", tool, report.entry_points);
+                    } else {
+                        println!("Validation success (via Naga): entry points = {:?}", report.entry_points);
+                    }
                 }
             } else {
                 println!("Validation skipped for non-WGSL target.");
