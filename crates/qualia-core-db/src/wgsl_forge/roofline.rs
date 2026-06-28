@@ -80,6 +80,17 @@ pub fn roofline_for(kernel: BuiltinKernel, n: u64) -> RooflineEstimate {
             let bytes = (input + hidden * input + n * hidden + n) * 4;
             RooflineEstimate::new(flops, bytes)
         }
+        // ternary GEMV (K=256): per output row, K MACs (2 FLOP) over the activation
+        // vector plus one scale multiply. Bytes: 2-bit-packed weights (K/16 u32 =
+        // K/4 bytes per row), the shared K-length f32 x once, plus scale + output.
+        // n is the output-row count M; x is amortised (read once) so for large M
+        // this is memory-bound on the packed weights, the desired roofline answer.
+        BuiltinKernel::TernaryGemv => {
+            let k = 256u64;
+            let flops = n * (2 * k + 1);
+            let bytes = (n * (k / 16) + k + n + n) * 4;
+            RooflineEstimate::new(flops, bytes)
+        }
     }
 }
 

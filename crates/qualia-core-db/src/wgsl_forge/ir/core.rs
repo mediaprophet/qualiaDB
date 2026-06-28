@@ -369,11 +369,12 @@ pub enum BuiltinKernel {
     P64Project,
     TopK,
     RayProbe,
+    TernaryGemv,
 }
 
 impl BuiltinKernel {
-    pub const ALL: [Self; 5] =
-        [Self::AffineF32, Self::FusedFfn, Self::P64Project, Self::TopK, Self::RayProbe];
+    pub const ALL: [Self; 6] =
+        [Self::AffineF32, Self::FusedFfn, Self::P64Project, Self::TopK, Self::RayProbe, Self::TernaryGemv];
 
     pub const fn name(self) -> &'static str {
         match self {
@@ -382,6 +383,7 @@ impl BuiltinKernel {
             Self::P64Project => "p64-project",
             Self::TopK => "topk",
             Self::RayProbe => "ray-probe",
+            Self::TernaryGemv => "ternary-gemv",
         }
     }
 
@@ -392,7 +394,12 @@ impl BuiltinKernel {
     pub const fn has_gpu_oracle(self) -> bool {
         matches!(
             self,
-            Self::AffineF32 | Self::TopK | Self::FusedFfn | Self::P64Project | Self::RayProbe
+            Self::AffineF32
+                | Self::TopK
+                | Self::FusedFfn
+                | Self::P64Project
+                | Self::RayProbe
+                | Self::TernaryGemv
         )
     }
 
@@ -518,6 +525,30 @@ impl BuiltinKernel {
                 })],
                 shared_memory: Vec::new(),
             },
+            Self::TernaryGemv => KernelSpec {
+                id: self.name().to_string(),
+                semantic_version: 1,
+                entry_point: "ternary_gemv".to_string(),
+                // BitNet-style ternary GEMV with on-the-fly dequant: one invocation
+                // per output row o computes out[o] = scale[o] * sum_i ternary(w[o,i]) * x[i],
+                // where the weights are 2-bit-packed ternary codes (16 codes / u32,
+                // 0->0.0, 1->+1.0, 2->-1.0, 3->0.0), ceil(K/16) words per row.
+                description: "out[o] = scale[o] * sum_i ternary(w[o,i]) * x[i]".to_string(),
+                buffers: vec![
+                    BufferSpec { group: 0, binding: 0, name: "x".to_string(), element: BufferElement::Scalar(ScalarType::F32), access: BufferAccess::StorageRead },
+                    BufferSpec { group: 0, binding: 1, name: "w_packed".to_string(), element: BufferElement::Scalar(ScalarType::U32), access: BufferAccess::StorageRead },
+                    BufferSpec { group: 0, binding: 2, name: "scale".to_string(), element: BufferElement::Scalar(ScalarType::F32), access: BufferAccess::StorageRead },
+                    BufferSpec { group: 0, binding: 3, name: "output".to_string(), element: BufferElement::Scalar(ScalarType::F32), access: BufferAccess::StorageReadWrite },
+                    // A generic 16-byte uniform block (m, k, k_words, _pad), reusing
+                    // the AffineParams element purely as a 16-byte uniform.
+                    BufferSpec { group: 0, binding: 4, name: "params".to_string(), element: BufferElement::AffineParams, access: BufferAccess::Uniform },
+                ],
+                // The unpack + dequant + GEMV body is target-specialised in the WGSL
+                // emitter (it indexes the 2-bit-packed ternary codes); dimensions come
+                // from the uniform params block.
+                ops: Vec::new(),
+                shared_memory: Vec::new(),
+            },
         }
     }
 }
@@ -532,6 +563,7 @@ impl FromStr for BuiltinKernel {
             "p64-project" | "p64_project" | "p64" => Ok(Self::P64Project),
             "topk" | "top-k" | "top_k" => Ok(Self::TopK),
             "ray-probe" | "ray_probe" | "rayquery" | "ray_query" | "rt" => Ok(Self::RayProbe),
+            "ternary-gemv" | "ternary_gemv" | "ternary" | "bitnet" => Ok(Self::TernaryGemv),
             other => Err(ForgeError::UnknownKernel(other.to_string())),
         }
     }

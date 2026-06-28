@@ -247,6 +247,27 @@ mod tests {
     }
 
     #[test]
+    fn generated_ternary_gemv_passes_naga_validation() {
+        let generated = generate_builtin(
+            BuiltinKernel::TernaryGemv,
+            Schedule {
+                workgroup_size: 64,
+                items_per_invocation: 1,
+                vector_width: 1,
+                ..Schedule::default()
+            },
+            TargetBackend::Wgsl,
+        )
+        .unwrap();
+        assert!(generated.source.contains("struct TernaryGemvParams"));
+        // The dequant unpacks 2-bit lanes and maps the codes to {0, +1, -1}.
+        assert!(generated.source.contains("& 3u"));
+        let report = validate_wgsl(&generated.source).expect("Naga validation of ternary-gemv");
+        assert_eq!(report.entry_points, vec!["ternary_gemv"]);
+        assert_eq!(report.binding_count, 5);
+    }
+
+    #[test]
     fn cooperative_matrix_tile_validates() {
         // Single 8x8x8 tensor-core tile: C = A * B (one subgroup cooperative).
         let source = crate::wgsl_forge::matmul_tc_wgsl();

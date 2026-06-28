@@ -37,6 +37,16 @@ pub struct FfnParams {
     pub _pad: u32,
 }
 
+/// 16-byte uniform block for the ternary-GEMV kernel (`k_words` == ceil(k/16)).
+#[repr(C)]
+#[derive(Debug, Clone, Copy, PartialEq, Pod, Zeroable, Serialize, Deserialize)]
+pub struct TernaryGemvParams {
+    pub m: u32,
+    pub k: u32,
+    pub k_words: u32,
+    pub _pad: u32,
+}
+
 #[derive(Debug, Clone, Copy, PartialEq, Serialize, Deserialize)]
 pub struct OracleTolerance {
     pub absolute: f32,
@@ -200,6 +210,88 @@ pub fn ffn_tensors(
     (input, w1, w2)
 }
 
+/// Number of 2-bit ternary codes packed into one `u32` word.
+pub const TERNARY_CODES_PER_WORD: usize = 16;
+
+/// Map a 2-bit ternary code to its value, exactly as the GPU kernel does:
+/// `0 -> 0.0, 1 -> +1.0, 2 -> -1.0, 3 -> 0.0` (3 unused).
+#[inline]
+fn ternary_code_value(code: u32) -> f32 {
+    match code & 3 {
+        1 => 1.0,
+        2 => -1.0,
+        _ => 0.0,
+    }
+}
+
+/// CPU reference for the BitNet-style ternary GEMV, the bit-for-bit mirror of the
+/// emitted kernel: `out[o] = scale[o] * sum_{i<K} ternary(w[o,i]) * x[i]`.
+///
+/// `w_packed` holds, per output row `o`, `ceil(K/16)` `u32` words laid out
+/// contiguously; each word carries 16 ternary codes in low-to-high 2-bit lanes.
+/// Lanes beyond `K` (in the final word of a row) are skipped, matching the
+/// kernel's `i >= k` guard.
+pub fn ternary_gemv_cpu(
+    x: &[f32],
+    w_packed: &[u32],
+    scale: &[f32],
+    m: usize,
+    k: usize,
+) -> Vec<f32> {
+    let k_words = k.div_ceil(TERNARY_CODES_PER_WORD);
+    let mut out = Vec::with_capacity(m);
+    for o in 0..m {
+        let row_base = o * k_words;
+        let mut acc = 0.0f32;
+        for word_idx in 0..k_words {
+            let word = w_packed[row_base + word_idx];
+            let lane_base = word_idx * TERNARY_CODES_PER_WORD;
+            for lane in 0..TERNARY_CODES_PER_WORD {
+                let i = lane_base + lane;
+                if i >= k {
+                    break;
+                }
+                let code = (word >> (lane * 2)) & 3;
+                acc += ternary_code_value(code) * x[i];
+            }
+        }
+        out.push(scale[o] * acc);
+    }
+    out
+}
+
+/// Deterministic ternary-GEMV test tensors: the activation vector `x` (length K),
+/// the 2-bit-packed ternary weights (`M * ceil(K/16)` words), and the per-row
+/// scales (length M). Codes are drawn from the xorshift stream and reduced into
+/// `{0,1,2}` so the weights only ever decode to `{0, +1, -1}` (never the unused
+/// `3`), keeping the GPU and CPU paths bit-identical.
+pub fn ternary_gemv_tensors(
+    m: usize,
+    k: usize,
+    seed: u64,
+) -> (Vec<f32>, Vec<u32>, Vec<f32>) {
+    let k_words = k.div_ceil(TERNARY_CODES_PER_WORD);
+    let x = topk_inputs(k, seed);
+    // Scales in [-1, 1] — same generator/contract as every other oracle vector.
+    let scale = topk_inputs(m, seed ^ 0x3333);
+    let mut w_packed = vec![0u32; m * k_words];
+    let mut state = (seed ^ 0x7465_726E_6172_7900).max(1); // "ternary\0"
+    for o in 0..m {
+        let row_base = o * k_words;
+        for i in 0..k {
+            state ^= state << 13;
+            state ^= state >> 7;
+            state ^= state << 17;
+            // Reduce to {0,1,2}: 0->0.0, 1->+1.0, 2->-1.0 (never the unused 3).
+            let code = (state % 3) as u32;
+            let word_idx = i / TERNARY_CODES_PER_WORD;
+            let lane = (i % TERNARY_CODES_PER_WORD) as u32;
+            w_packed[row_base + word_idx] |= code << (lane * 2);
+        }
+    }
+    (x, w_packed, scale)
+}
+
 pub fn compare_f32(
     expected: &[f32],
     actual: &[f32],
@@ -316,6 +408,12 @@ pub fn evaluate_builtin(
         // Ray-probe uses a fixed BLAS/TLAS scene and ray set (length is not a knob),
         // and an acceleration-structure binding the generic buffer path can't carry.
         return evaluate_rayprobe(context, schedule, warmups, samples);
+    }
+    if builtin == BuiltinKernel::TernaryGemv {
+        // M output rows (tracks the requested length) over a representative K
+        // activation vector; one invocation per output row.
+        let m = length.clamp(1, 4096);
+        return evaluate_ternary_gemv(context, schedule, m, 256, warmups, samples);
     }
     let kernel = builtin.spec();
     schedule.validate(&kernel, &context.constraints)?;
@@ -877,6 +975,96 @@ pub fn evaluate_ffn(
     ))
 }
 
+/// Differential-oracle evaluation for the ternary GEMV against [`ternary_gemv_cpu`].
+/// One workgroup-thread per output row; the output buffer is `m` elements.
+pub fn evaluate_ternary_gemv(
+    context: &mut WgpuComputeContext,
+    schedule: Schedule,
+    m: usize,
+    k: usize,
+    warmups: usize,
+    samples: usize,
+) -> Result<(GeneratedShader, GpuEvaluation), ForgeError> {
+    if samples == 0 {
+        return Err(ForgeError::GpuValidation("sample count must be non-zero".to_string()));
+    }
+    let kernel = BuiltinKernel::TernaryGemv.spec();
+    schedule.validate(&kernel, &context.constraints)?;
+    context.constraints.supports_kernel(&kernel)?;
+    let generated = emit_shader(&kernel, schedule, TargetBackend::Wgsl)?;
+    validate_wgsl(&generated.source)?;
+
+    let vector_seed = 0x5445_524E_5345_4544u64; // "TERNSED" tag
+    let (x, w_packed, scale) = ternary_gemv_tensors(m, k, vector_seed);
+    let expected = ternary_gemv_cpu(&x, &w_packed, &scale, m, k);
+    let k_words = k.div_ceil(TERNARY_CODES_PER_WORD);
+
+    let view_x = context.allocate_and_write(bytemuck::cast_slice(&x), 0, 0, BindingUsage::StorageRead)?;
+    let view_w = context.allocate_and_write(bytemuck::cast_slice(&w_packed), 1, 0, BindingUsage::StorageRead)?;
+    let view_scale = context.allocate_and_write(bytemuck::cast_slice(&scale), 2, 0, BindingUsage::StorageRead)?;
+    let output_bytes_len = (m * size_of::<f32>()).max(4);
+    let view_output = context.allocate_transient(output_bytes_len, 3, 0, BindingUsage::StorageReadWrite)?;
+    let params = TernaryGemvParams {
+        m: m as u32,
+        k: k as u32,
+        k_words: k_words as u32,
+        _pad: 0,
+    };
+    let view_params = context.allocate_and_write(bytemuck::bytes_of(&params), 4, 0, BindingUsage::Uniform)?;
+
+    let buffers = vec![view_x, view_w, view_scale, view_output, view_params];
+    let pipeline = WgpuPipeline::compile(context, &generated.source, &kernel.entry_point)?;
+
+    for _ in 0..warmups {
+        pipeline.dispatch(&buffers, &schedule, m)?;
+    }
+    let mut timing_samples = Vec::with_capacity(samples);
+    for _ in 0..samples {
+        timing_samples.push(pipeline.dispatch(&buffers, &schedule, m)?);
+    }
+    if timing_samples.iter().any(|s| *s == 0) {
+        return Err(ForgeError::GpuValidation("GPU produced a zero-duration timing sample".to_string()));
+    }
+
+    let actual = context.read_buffer_f32(&view_output)?;
+    // The ternary path is exact arithmetic (±1/0 weights, no transcendentals); a
+    // tight tolerance covers only f32 summation-order differences across the K sum.
+    let tolerance = OracleTolerance { absolute: 1.0e-3, relative: 1.0e-3 };
+    let oracle = compare_f32(&expected, &actual, tolerance);
+
+    drop(pipeline);
+    context.clear_transient_allocations();
+
+    if !oracle.passed() {
+        return Err(ForgeError::OracleMismatch(format!(
+            "ternary-gemv: {} mismatches; first={:?}, max_abs={}, max_rel={}",
+            oracle.mismatch_count, oracle.first_mismatch, oracle.max_absolute_error, oracle.max_relative_error
+        )));
+    }
+
+    let timing_source = if context.timestamp_supported {
+        TimingSource::GpuTimestamp
+    } else {
+        TimingSource::CompletionClock
+    };
+    let timing = TimingSummary::from_samples(timing_source, &timing_samples)
+        .ok_or_else(|| ForgeError::GpuValidation("GPU produced no timing samples".to_string()))?;
+
+    Ok((
+        generated,
+        GpuEvaluation {
+            adapter: context.adapter.clone(),
+            constraints: context.constraints,
+            oracle,
+            timing,
+            samples_ns: timing_samples,
+            tolerance: (tolerance.absolute, tolerance.relative),
+            vector_seed: Some(vector_seed),
+            vector_hash: vector_hash_f32(&expected),
+        },
+    ))
+}
+
 /// Differential-oracle evaluation for the top-k kernel against [`topk_cpu`].
 ///
 /// `block_size` is fixed to `schedule.workgroup_size`; the dispatch launches one
@@ -1321,6 +1509,71 @@ mod tests {
         weights[5] = -1.0;
         let out = p64_project_cpu(&[record], &weights);
         assert_eq!(out, vec![2.0 * words[0] as f32 - words[5] as f32]);
+    }
+
+    #[test]
+    fn ternary_gemv_cpu_matches_hand_checked_2x4() {
+        // A 2x4 case computed by hand. K=4 => 1 u32 word per row.
+        // Row 0 codes [1,2,0,1] -> ternary [+1,-1,0,+1]:
+        //   1<<0 | 2<<2 | 0<<4 | 1<<6 = 1 + 8 + 0 + 64 = 73.
+        // Row 1 codes [2,1,1,3] -> ternary [-1,+1,+1,0] (3 -> 0.0):
+        //   2<<0 | 1<<2 | 1<<4 | 3<<6 = 2 + 4 + 16 + 192 = 214.
+        // x = [1,2,3,4], scale = [2.0, 10.0].
+        //   out[0] = 2.0  * ( +1*1 -1*2 +0*3 +1*4 ) = 2.0  * 3 = 6.0
+        //   out[1] = 10.0 * ( -1*1 +1*2 +1*3 +0*4 ) = 10.0 * 4 = 40.0
+        let x = [1.0f32, 2.0, 3.0, 4.0];
+        let w_packed = [73u32, 214u32];
+        let scale = [2.0f32, 10.0];
+        let out = ternary_gemv_cpu(&x, &w_packed, &scale, 2, 4);
+        assert_eq!(out, vec![6.0, 40.0]);
+    }
+
+    #[test]
+    fn ternary_gemv_tensors_are_deterministic_and_decode_in_range() {
+        // The generated tensors must be reproducible and the packed codes must only
+        // ever decode to {0, +1, -1} (never the unused code 3), so GPU == CPU.
+        let (x0, w0, s0) = ternary_gemv_tensors(7, 40, 123);
+        let (x1, w1, s1) = ternary_gemv_tensors(7, 40, 123);
+        assert_eq!((x0.clone(), w0.clone(), s0.clone()), (x1, w1, s1));
+        assert_eq!(x0.len(), 40);
+        assert_eq!(s0.len(), 7);
+        assert_eq!(w0.len(), 7 * 40usize.div_ceil(TERNARY_CODES_PER_WORD));
+        for word in &w0 {
+            for lane in 0..TERNARY_CODES_PER_WORD {
+                let code = (word >> (lane * 2)) & 3;
+                assert_ne!(code, 3, "generator must never emit the unused ternary code 3");
+            }
+        }
+    }
+
+    #[test]
+    fn ternary_gemv_cpu_zero_codes_yield_zero() {
+        // All-zero packed words => every ternary weight is 0.0 => output all zero
+        // regardless of x and scale.
+        let x = topk_inputs(20, 9);
+        let scale = [3.0f32, -2.0, 7.0];
+        let w_packed = vec![0u32; 3 * 20usize.div_ceil(TERNARY_CODES_PER_WORD)];
+        let out = ternary_gemv_cpu(&x, &w_packed, &scale, 3, 20);
+        assert_eq!(out, vec![0.0, 0.0, 0.0]);
+    }
+
+    #[test]
+    #[ignore = "requires a native wgpu adapter"]
+    fn generated_ternary_gemv_matches_oracle_on_real_gpu() {
+        let mut context = WgpuComputeContext::new(4 * 1024 * 1024).expect("adapter");
+        let schedule = Schedule {
+            workgroup_size: 64,
+            items_per_invocation: 1,
+            vector_width: 1,
+            ..Default::default()
+        };
+        let (_, evaluation) =
+            evaluate_ternary_gemv(&mut context, schedule, 256, 256, 2, 5).expect("ternary-gemv evaluation");
+        assert!(
+            evaluation.oracle.passed(),
+            "ternary-gemv GPU/oracle mismatch: {:?}",
+            evaluation.oracle
+        );
     }
 
     #[test]

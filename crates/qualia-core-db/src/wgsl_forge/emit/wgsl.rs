@@ -49,6 +49,10 @@ fn emit_kernel_body(
         return emit_p64_wgsl(source, kernel, schedule);
     }
 
+    if kernel.id == "ternary-gemv" {
+        return emit_ternary_gemv_wgsl(source, kernel, schedule);
+    }
+
     if kernel.id == "ray-probe" {
         // The ray-query enable extension must precede any other item.
         writeln!(source, "enable wgpu_ray_query;").map_err(|error| ForgeError::Emission(error.to_string()))?;
@@ -367,6 +371,67 @@ fn {entry}(@builtin(global_invocation_id) gid: vec3<u32>) {{
         acc = acc + weights[w] * f32(word);
     }}
     output[r] = acc;
+}}"#,
+        wg = wg,
+        entry = kernel.entry_point
+    )
+    .map_err(|error| ForgeError::Emission(error.to_string()))?;
+    Ok(())
+}
+
+/// BitNet-style ternary GEMV with on-the-fly dequant: one invocation per output
+/// row `o` computes `out[o] = scale[o] * sum_i ternary(w[o,i]) * x[i]`. Weights
+/// are 2-bit-packed ternary codes (16 codes per u32, low-to-high lanes; code
+/// `0->0.0, 1->+1.0, 2->-1.0, 3->0.0`), `ceil(K/16)` words per row laid out
+/// contiguously. Self-contained (no shared memory); dimensions come from the
+/// uniform params block (m, k, k_words, _pad).
+fn emit_ternary_gemv_wgsl(
+    source: &mut String,
+    kernel: &KernelSpec,
+    schedule: Schedule,
+) -> Result<(), ForgeError> {
+    let wg = schedule.workgroup_size;
+    writeln!(
+        source,
+        r#"
+struct TernaryGemvParams {{
+    m: u32,
+    k: u32,
+    k_words: u32,
+    _pad: u32,
+}}
+
+@group(0) @binding(0) var<storage, read> x: array<f32>;
+@group(0) @binding(1) var<storage, read> w_packed: array<u32>;
+@group(0) @binding(2) var<storage, read> scale: array<f32>;
+@group(0) @binding(3) var<storage, read_write> output: array<f32>;
+@group(0) @binding(4) var<uniform> params: TernaryGemvParams;
+
+@compute @workgroup_size({wg})
+fn {entry}(@builtin(global_invocation_id) gid: vec3<u32>) {{
+    let o = gid.x;
+    if (o >= params.m) {{ return; }}
+    var acc = 0.0;
+    let row_base = o * params.k_words;
+    for (var word_idx: u32 = 0u; word_idx < params.k_words; word_idx = word_idx + 1u) {{
+        let word = w_packed[row_base + word_idx];
+        let lane_base = word_idx * 16u;
+        for (var lane: u32 = 0u; lane < 16u; lane = lane + 1u) {{
+            let i = lane_base + lane;
+            if (i >= params.k) {{ break; }}
+            // Extract the 2-bit ternary code for this lane (low-to-high).
+            let code = (word >> (lane * 2u)) & 3u;
+            // Map code -> value: 0->0.0, 1->+1.0, 2->-1.0, 3->0.0 (unused).
+            var tern = 0.0;
+            if (code == 1u) {{
+                tern = 1.0;
+            }} else if (code == 2u) {{
+                tern = -1.0;
+            }}
+            acc = acc + tern * x[i];
+        }}
+    }}
+    output[o] = scale[o] * acc;
 }}"#,
         wg = wg,
         entry = kernel.entry_point
