@@ -307,6 +307,17 @@ top-k, and ray-query WGSL emits + Naga-validates (see evidence below). Remaining
   phase" error; `certify`/`tune` remain affine-only (non-affine oracle path is a
   named follow-up). cudarc was modernised 0.11→0.19 (official, `cuda-13030`).
 
+### 2026-06-28 real p64-project + doctor (§12)
+
+- `p64-project` is real: out[r] = sum_w weights[w] * f32(p64[r].word[w]), one
+  invocation per record, bound via arrayLength(&output). WGSL + HLSL (GetDimensions);
+  MSL guarded honestly (device buffers carry no length). Oracle `p64_project_cpu`
+  + `evaluate_p64`. Certified on the A2000 (median ~6.6 µs); HLSL→DXIL via DXC.
+- `qualia-cli shader doctor` (plan §12): checks the wgpu adapter, DXC
+  (QUALIA_DXC_PATH/PATH), and the CUDA toolkit (CUDA_PATH/nvcc), printing install
+  guidance and the graceful-degradation path. On this box: adapter ok, CUDA 13.3
+  ok, DXC reported missing-from-PATH (it is — invoked by absolute path elsewhere).
+
 ### 2026-06-28 real fused-FFN (was placeholder)
 
 - `fused-ffn` now emits real math instead of placeholder `DotProduct` nodes:

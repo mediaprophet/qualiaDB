@@ -37,6 +37,9 @@ impl ScheduleArgs {
 pub enum ShaderAction {
     /// List deterministic kernels currently known to WGSL Forge.
     ListKernels,
+    /// Check that the native backend toolchains (wgpu adapter, DXC, CUDA) are
+    /// present and report how the Forge will degrade if any are missing.
+    Doctor,
     /// Probe the local adapter and print a rich hardware/topology profile.
     ProfileHardware {
         /// Write the profile JSON to this path (also prints the topology hash).
@@ -159,6 +162,48 @@ pub fn run(action: &ShaderAction) -> Result<(), Box<dyn std::error::Error>> {
                     spec.description
                 );
             }
+        }
+        ShaderAction::Doctor => {
+            use std::process::Command;
+            println!("Qualia WGSL Forge — environment doctor\n");
+
+            match WgpuComputeContext::new(1024 * 1024) {
+                Ok(runner) => println!(
+                    "[ok]   wgpu adapter: {} ({})",
+                    runner.adapter.name, runner.adapter.backend
+                ),
+                Err(error) => println!(
+                    "[warn] wgpu adapter: none ({error}); generation/validation still work headless"
+                ),
+            }
+
+            let dxc = std::env::var("QUALIA_DXC_PATH").unwrap_or_else(|_| "dxc".to_string());
+            match Command::new(&dxc).arg("--version").output() {
+                Ok(out) if out.status.success() => {
+                    println!("[ok]   DXC (HLSL->SPIR-V/DXIL): {dxc}");
+                }
+                _ => println!(
+                    "[warn] DXC not found — set QUALIA_DXC_PATH or add dxc to PATH.\n         HLSL native path disabled; get DXC: https://github.com/microsoft/DirectXShaderCompiler/releases"
+                ),
+            }
+
+            let nvcc = std::env::var("CUDA_PATH")
+                .map(|p| format!("{p}/bin/nvcc"))
+                .unwrap_or_else(|_| "nvcc".to_string());
+            match Command::new(&nvcc).arg("--version").output() {
+                Ok(out) if out.status.success() => {
+                    let text = String::from_utf8_lossy(&out.stdout);
+                    let release = text.lines().find(|l| l.contains("release")).unwrap_or("present");
+                    println!("[ok]   CUDA toolkit (nvcc): {}", release.trim());
+                }
+                _ => println!(
+                    "[warn] CUDA toolkit not found — set CUDA_PATH.\n         PTX/CUDA backend disabled; get CUDA: https://developer.nvidia.com/cuda-downloads"
+                ),
+            }
+
+            println!(
+                "\nMissing native toolchains degrade gracefully to the wgpu/WGSL path (plan §12)."
+            );
         }
         ShaderAction::ProfileHardware { export, json } => {
             let runner = WgpuComputeContext::new(1024 * 1024)?;
