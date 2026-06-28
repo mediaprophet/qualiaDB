@@ -2,7 +2,7 @@ use serde::{Deserialize, Serialize};
 
 use super::{
     AdapterConstraints, ComparisonReport, ForgeError, GeneratedShader, Schedule, TuningResult,
-    ValidationReport, FORGE_SCHEMA_VERSION, NAGA_API_VERSION, WGPU_API_VERSION,
+    ValidationReport, CUDARC_API_VERSION, FORGE_SCHEMA_VERSION, NAGA_API_VERSION, WGPU_API_VERSION,
 };
 
 /// Rich, queryable description of the local compute hardware (plan §9
@@ -102,11 +102,21 @@ pub struct AdapterIdentity {
 }
 
 impl AdapterIdentity {
+    /// Reuse fingerprint (plan §8): tuning/certification evidence is only reused
+    /// when this key matches. Folds in everything that must invalidate reuse:
+    /// the forge schema version, the full adapter identity, the kernel's semantic
+    /// and source hashes, the schedule, the crate version, the wgpu / naga / cudarc
+    /// API versions, and the correctness tolerance the certification used (absolute,
+    /// relative). A coarser tolerance or a different CUDA toolchain surface yields a
+    /// different key, so cached evidence certified under looser tolerances is not
+    /// silently reused. `tolerance` is the (absolute, relative) f32 pair from the
+    /// `OracleTolerance` the run was verified against.
     pub fn cache_key(
         &self,
         semantic_hash: &str,
         source_hash: &str,
         schedule: Schedule,
+        tolerance: (f32, f32),
     ) -> Result<String, ForgeError> {
         let bytes = serde_json::to_vec(&(
             FORGE_SCHEMA_VERSION,
@@ -117,6 +127,9 @@ impl AdapterIdentity {
             env!("CARGO_PKG_VERSION"),
             WGPU_API_VERSION,
             NAGA_API_VERSION,
+            CUDARC_API_VERSION,
+            tolerance.0.to_bits(),
+            tolerance.1.to_bits(),
         ))?;
         Ok(blake3::hash(&bytes).to_hex().to_string())
     }
@@ -138,6 +151,21 @@ pub struct CertificationManifest {
     pub oracle: Option<ComparisonReport>,
     pub timing: Option<TimingSummary>,
     pub cache_key: Option<String>,
+    /// Deterministic test-vector seed actually used for this kernel's oracle run
+    /// (plan §8 evidence). `None` for kernels whose vectors are not seed-derived
+    /// (e.g. the ray-probe fixed scene) or for non-certified manifests.
+    #[serde(default, skip_serializing_if = "Option::is_none")]
+    pub vector_seed: Option<u64>,
+    /// blake3 hex of the expected CPU-reference output bytes the GPU result was
+    /// checked against — pins exactly which vector certified this manifest.
+    #[serde(default, skip_serializing_if = "Option::is_none")]
+    pub vector_hash: Option<String>,
+    /// Wall-clock certification time (Unix seconds). Provenance only; not folded
+    /// into the cache key. Source-commit provenance would also belong here, but
+    /// capturing the git commit needs build-time plumbing we don't have, so it is
+    /// out of scope for now.
+    #[serde(default, skip_serializing_if = "Option::is_none")]
+    pub certified_at_unix: Option<u64>,
 }
 
 impl CertificationManifest {
@@ -157,6 +185,9 @@ impl CertificationManifest {
             oracle: None,
             timing: None,
             cache_key: None,
+            vector_seed: None,
+            vector_hash: None,
+            certified_at_unix: None,
         }
     }
 
@@ -185,10 +216,14 @@ impl TuningManifest {
         adapter: AdapterIdentity,
         result: TuningResult,
     ) -> Result<Self, ForgeError> {
+        // Tuning selects the winner via the per-kernel evaluate path; the manifest
+        // itself records no scalar tolerance, so the key folds in the default
+        // OracleTolerance (1e-6 absolute / 1e-5 relative — see oracle::OracleTolerance).
         let cache_key = adapter.cache_key(
             &generated_winner.semantic_hash,
             &generated_winner.source_hash,
             generated_winner.schedule,
+            (1.0e-6, 1.0e-5),
         )?;
         Ok(Self {
             forge_schema_version: FORGE_SCHEMA_VERSION,
@@ -241,6 +276,27 @@ mod tests {
         let mut other = sample_profile();
         other.memory_class = "unified".to_string();
         assert_ne!(profile.topology_hash().unwrap(), other.topology_hash().unwrap());
+    }
+
+    #[test]
+    fn cache_key_changes_when_tolerance_changes() {
+        // Plan §10: the reuse signature must change when a reuse-invalidating input
+        // changes. Same adapter/kernel/schedule, different correctness tolerance ->
+        // different key, so evidence certified under a looser tolerance is not
+        // silently reused. (The cudarc API version is also folded in; it is a compile
+        // -time const so it can't vary at runtime to be asserted here.)
+        let adapter = sample_profile().adapter;
+        let strict = adapter
+            .cache_key("sem", "src", Schedule::default(), (1.0e-6, 1.0e-5))
+            .unwrap();
+        let strict_again = adapter
+            .cache_key("sem", "src", Schedule::default(), (1.0e-6, 1.0e-5))
+            .unwrap();
+        let loose = adapter
+            .cache_key("sem", "src", Schedule::default(), (1.0e-2, 1.0e-2))
+            .unwrap();
+        assert_eq!(strict, strict_again, "same inputs must yield the same key");
+        assert_ne!(strict, loose, "a coarser tolerance must change the key");
     }
 
     #[test]

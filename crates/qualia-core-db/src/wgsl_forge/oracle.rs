@@ -268,6 +268,21 @@ pub struct GpuEvaluation {
     pub oracle: ComparisonReport,
     pub timing: TimingSummary,
     pub samples_ns: Vec<u64>,
+    /// The exact correctness tolerance (absolute, relative) this kernel's GPU
+    /// result was verified against, recorded so it can be folded into the reuse
+    /// cache key (plan §8) — a coarser tolerance must not silently reuse evidence.
+    pub tolerance: (f32, f32),
+    /// Deterministic seed of the test vector this run was checked against, when the
+    /// vector is seed-derived (`None` for fixed-scene kernels like ray-probe).
+    pub vector_seed: Option<u64>,
+    /// blake3 hex of the expected CPU-reference output bytes — pins the vector.
+    pub vector_hash: String,
+}
+
+/// blake3 hex of a `&[f32]` expected vector's little-endian bytes. Used to record
+/// exactly which CPU-reference output a certified manifest was checked against.
+fn vector_hash_f32(expected: &[f32]) -> String {
+    blake3::hash(bytemuck::cast_slice(expected)).to_hex().to_string()
 }
 
 pub fn evaluate_builtin(
@@ -338,7 +353,8 @@ pub fn evaluate_builtin(
     }
 
     let actual = context.read_buffer_f32(&view_output)?;
-    let oracle = compare_f32(&case.expected, &actual, OracleTolerance::default());
+    let tolerance = OracleTolerance::default();
+    let oracle = compare_f32(&case.expected, &actual, tolerance);
 
     drop(pipeline); // drop immutable borrow before mutating context
 
@@ -373,6 +389,9 @@ pub fn evaluate_builtin(
             oracle,
             timing,
             samples_ns: timing_samples,
+            tolerance: (tolerance.absolute, tolerance.relative),
+            vector_seed: Some(case.seed),
+            vector_hash: vector_hash_f32(&case.expected),
         },
     ))
 }
@@ -597,10 +616,21 @@ pub fn certify_builtin(
     let (generated, evaluation) =
         evaluate_builtin(context, builtin, schedule, length, warmups, samples)?;
     let validation = validate_wgsl(&generated.source)?;
-    let cache_key =
-        evaluation
-            .adapter
-            .cache_key(&generated.semantic_hash, &generated.source_hash, schedule)?;
+    // Fold the exact tolerance this run was verified against into the reuse key
+    // (plan §8) so evidence is not reused under a coarser correctness bar.
+    let cache_key = evaluation.adapter.cache_key(
+        &generated.semantic_hash,
+        &generated.source_hash,
+        schedule,
+        evaluation.tolerance,
+    )?;
+    // Provenance timestamp (plan §8). SystemTime is fine here — this is runtime
+    // certification, not a deterministic build artifact. Source-commit provenance
+    // would need build-time plumbing we don't have, so it is out of scope for now.
+    let certified_at_unix = std::time::SystemTime::now()
+        .duration_since(std::time::UNIX_EPOCH)
+        .ok()
+        .map(|d| d.as_secs());
     Ok(CertificationManifest {
         forge_schema_version: crate::wgsl_forge::FORGE_SCHEMA_VERSION,
         crate_version: env!("CARGO_PKG_VERSION").to_string(),
@@ -616,6 +646,9 @@ pub fn certify_builtin(
         oracle: Some(evaluation.oracle),
         timing: Some(evaluation.timing),
         cache_key: Some(cache_key),
+        vector_seed: evaluation.vector_seed,
+        vector_hash: Some(evaluation.vector_hash),
+        certified_at_unix,
     })
 }
 
@@ -693,7 +726,8 @@ pub fn evaluate_p64(
     let generated = emit_shader(&kernel, schedule, TargetBackend::Wgsl)?;
     validate_wgsl(&generated.source)?;
 
-    let records = p64_records(count, 0x5036_345F_5345_4544);
+    let vector_seed = 0x5036_345F_5345_4544u64;
+    let records = p64_records(count, vector_seed);
     let weights = topk_inputs(16, 0x5036_345F_5742_5453);
     let expected = p64_project_cpu(&records, &weights);
 
@@ -746,6 +780,9 @@ pub fn evaluate_p64(
             oracle,
             timing,
             samples_ns: timing_samples,
+            tolerance: (tolerance.absolute, tolerance.relative),
+            vector_seed: Some(vector_seed),
+            vector_hash: vector_hash_f32(&expected),
         },
     ))
 }
@@ -770,7 +807,8 @@ pub fn evaluate_ffn(
     let generated = emit_shader(&kernel, schedule, TargetBackend::Wgsl)?;
     validate_wgsl(&generated.source)?;
 
-    let (input, w1, w2) = ffn_tensors(input_size, hidden_size, output_size, 0x4646_4E5F_5345_4544);
+    let vector_seed = 0x4646_4E5F_5345_4544u64;
+    let (input, w1, w2) = ffn_tensors(input_size, hidden_size, output_size, vector_seed);
     let expected = ffn_cpu(&input, &w1, &w2, input_size, hidden_size, output_size);
 
     let view_input = context.allocate_and_write(bytemuck::cast_slice(&input), 0, 0, BindingUsage::StorageRead)?;
@@ -832,6 +870,9 @@ pub fn evaluate_ffn(
             oracle,
             timing,
             samples_ns: timing_samples,
+            tolerance: (tolerance.absolute, tolerance.relative),
+            vector_seed: Some(vector_seed),
+            vector_hash: vector_hash_f32(&expected),
         },
     ))
 }
@@ -867,7 +908,8 @@ pub fn evaluate_topk(
     let generated = emit_shader(&kernel, schedule, TargetBackend::Wgsl)?;
     validate_wgsl(&generated.source)?;
 
-    let input = topk_inputs(length, 0x5031_4B5F_5345_4544);
+    let vector_seed = 0x5031_4B5F_5345_4544u64;
+    let input = topk_inputs(length, vector_seed);
     let expected = topk_cpu(&input, length, k, block_size);
 
     let input_bytes = bytemuck::cast_slice(input.as_slice());
@@ -902,7 +944,8 @@ pub fn evaluate_topk(
     }
 
     let actual = context.read_buffer_f32(&view_output)?;
-    let oracle = compare_f32(&expected, &actual, OracleTolerance::default());
+    let tolerance = OracleTolerance::default();
+    let oracle = compare_f32(&expected, &actual, tolerance);
 
     drop(pipeline);
     context.clear_transient_allocations();
@@ -931,6 +974,9 @@ pub fn evaluate_topk(
             oracle,
             timing,
             samples_ns: timing_samples,
+            tolerance: (tolerance.absolute, tolerance.relative),
+            vector_seed: Some(vector_seed),
+            vector_hash: vector_hash_f32(&expected),
         },
     ))
 }
@@ -1102,7 +1148,8 @@ pub fn evaluate_rayprobe(
     }
 
     let actual = context.read_buffer_f32(&view_hits)?;
-    let oracle = compare_f32(&expected, &actual, OracleTolerance { absolute: 1.0e-2, relative: 1.0e-2 });
+    let tolerance = OracleTolerance { absolute: 1.0e-2, relative: 1.0e-2 };
+    let oracle = compare_f32(&expected, &actual, tolerance);
 
     drop(pipeline);
     context.clear_transient_allocations();
@@ -1126,6 +1173,11 @@ pub fn evaluate_rayprobe(
             oracle,
             timing,
             samples_ns: timing_samples,
+            tolerance: (tolerance.absolute, tolerance.relative),
+            // The ray-probe vectors are a fixed scene/ray set, not seed-derived; the
+            // hash still pins the exact expected committed-hit vector.
+            vector_seed: None,
+            vector_hash: vector_hash_f32(&expected),
         },
     ))
 }

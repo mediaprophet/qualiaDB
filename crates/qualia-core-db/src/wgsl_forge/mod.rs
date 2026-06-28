@@ -44,6 +44,10 @@ pub use validate::{validate_wgsl, validate_native, ValidationReport};
 pub const FORGE_SCHEMA_VERSION: u32 = 2;
 pub const WGPU_API_VERSION: &str = "29.0.3";
 pub const NAGA_API_VERSION: &str = "29.0.3";
+/// `cudarc` crate API version the cross-backend (CUDA) oracle is built against.
+/// Folded into the tuning/certification cache key (plan §8) so reuse is
+/// invalidated when the CUDA toolchain surface changes.
+pub const CUDARC_API_VERSION: &str = "0.19";
 
 #[derive(Debug, Clone, PartialEq, Eq)]
 pub enum ForgeError {
