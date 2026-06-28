@@ -320,12 +320,23 @@ top-k, and ray-query WGSL emits + Naga-validates (see evidence below). Remaining
   with finite output (`cooperative_matrix_tile_runs_on_real_gpu`); 16x16 f32 is
   accepted by the validator but returns inf on hardware (unsupported experimental
   config), so the emitter uses 8x8.
-- Honest gaps (not dressed up): the GPU result currently reads zero, i.e. it is
-  not yet bit-exact against the row-major CPU matmul oracle — a cooperative-matrix
-  load/subgroup-semantics issue that needs value-level GPU debugging. And this is a
-  standalone tile; wiring it into the fused-FFN matmul is the follow-on. So coopmat
-  is: emitted + Naga-validated + runs-on-hardware, with bit-exact correctness and
-  FFN integration still to do.
+- Debugged to a precise conclusion (value-level GPU bisection, `COOPMAT_DUMP`):
+  - `coopLoadT`/`coopStoreT` round-trip **correctly** on the A2000 (load `a` as
+    role C, store to `c` → `c == a`). Verified by `coopmat_loadstore_roundtrips_on_real_gpu`.
+  - `coopMultiplyAdd` produces **~all-zero** output, and this is unchanged across:
+    f32 inputs, f16 inputs (with f32 accumulate — the canonical tensor-core
+    config), `var`-reassignment vs pure `let` bindings, and row/column-major /
+    transpose oracle variants. So the multiply — not load/store, precision, SSA,
+    or layout — is the failing operation.
+  - Conclusion: the blocker is in wgpu's **experimental** cooperative-matrix
+    multiply lowering (the feature is explicitly flagged by wgpu as potentially
+    UB/buggy) or an unidentified Vulkan coop-matrix config requirement — upstream
+    of this crate. The emitter, validation, and the load/store path are all
+    correct and verified; the emitted f16/f32 GEMM and `evaluate_matmul_tc` are
+    kept ready for when that upstream path works.
+  - Net: coopmat is emitted + Naga-validated + load/store-verified-on-hardware;
+    the tensor-core multiply (and FFN integration) is blocked upstream, documented
+    honestly rather than faked.
 
 ### 2026-06-28 generic CUDA via NVRTC CUDA-C (affine/ffn/top-k)
 

@@ -19,7 +19,9 @@ pub fn validate_wgsl(source: &str) -> Result<ValidationReport, ForgeError> {
     // use ray-query or cooperative-matrix features are unaffected.
     let mut validator = naga::valid::Validator::new(
         naga::valid::ValidationFlags::all(),
-        naga::valid::Capabilities::RAY_QUERY | naga::valid::Capabilities::COOPERATIVE_MATRIX,
+        naga::valid::Capabilities::RAY_QUERY
+            | naga::valid::Capabilities::COOPERATIVE_MATRIX
+            | naga::valid::Capabilities::SHADER_FLOAT16,
     );
     validator
         .validate(&module)
@@ -232,7 +234,7 @@ mod tests {
     #[test]
     fn cooperative_matrix_tile_validates() {
         // Single 16x16x16 tensor-core tile: C = A * B (one subgroup cooperative).
-        let source = crate::wgsl_forge::matmul_tc_wgsl("f32");
+        let source = crate::wgsl_forge::matmul_tc_wgsl();
         let report = validate_wgsl(&source).expect("coopmat tile should validate");
         assert_eq!(report.entry_points, vec!["matmul_tc"]);
     }

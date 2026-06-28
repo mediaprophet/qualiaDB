@@ -39,6 +39,7 @@ impl WgpuComputeContext {
         // when the adapter offers them (cooperative-matrix kernels need both).
         let wanted = wgpu::Features::TIMESTAMP_QUERY
             | wgpu::Features::SUBGROUP
+            | wgpu::Features::SHADER_F16
             | wgpu::Features::EXPERIMENTAL_COOPERATIVE_MATRIX;
         let required_features = available_features & wanted;
         let timestamp_supported = required_features.contains(wgpu::Features::TIMESTAMP_QUERY);

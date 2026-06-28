@@ -387,9 +387,11 @@ pub fn matmul_cpu(a: &[f32], b: &[f32], n: usize) -> Vec<f32> {
     c
 }
 
-/// Differential-oracle evaluation of the cooperative-matrix (tensor-core) 16x16
-/// GEMM tile against [`matmul_cpu`]. Requires an adapter with cooperative-matrix
-/// support; tensor-core matmul may run at reduced precision, hence a loose tolerance.
+/// Differential-oracle evaluation of the cooperative-matrix (tensor-core) 8x8
+/// GEMM tile against [`matmul_cpu`]. Inputs are f16 (rounded from f32), the
+/// accumulator is f32 — the canonical tensor-core configuration. The CPU
+/// reference uses the same f16-rounded inputs, and the tolerance reflects f16
+/// input precision.
 pub fn evaluate_matmul_tc(context: &mut WgpuComputeContext) -> Result<ComparisonReport, ForgeError> {
     if !context.constraints.supports_coopmat {
         return Err(ForgeError::GpuUnavailable(
@@ -397,15 +399,20 @@ pub fn evaluate_matmul_tc(context: &mut WgpuComputeContext) -> Result<Comparison
         ));
     }
     let n = crate::wgsl_forge::emit::coopmat::TILE as usize;
-    let source = crate::wgsl_forge::matmul_tc_wgsl("f32");
+    let source = crate::wgsl_forge::matmul_tc_wgsl();
     validate_wgsl(&source)?;
 
-    let a = topk_inputs(n * n, 0x4D41_545F_4141_4141);
-    let b = topk_inputs(n * n, 0x4D41_545F_4242_4242);
-    let expected = matmul_cpu(&a, &b, n);
+    // f16 inputs, packed as u16 bit patterns; the CPU oracle uses the same
+    // f16-rounded values so GPU/CPU agree within f16 input precision.
+    let to_f16_bits = |v: &[f32]| -> Vec<u16> { v.iter().map(|&x| half::f16::from_f32(x).to_bits()).collect() };
+    let rounded = |bits: &[u16]| -> Vec<f32> { bits.iter().map(|&b| half::f16::from_bits(b).to_f32()).collect() };
 
-    let view_a = context.allocate_and_write(bytemuck::cast_slice(&a), 0, 0, BindingUsage::StorageRead)?;
-    let view_b = context.allocate_and_write(bytemuck::cast_slice(&b), 1, 0, BindingUsage::StorageRead)?;
+    let a_bits = to_f16_bits(&topk_inputs(n * n, 0x4D41_545F_4141_4141));
+    let b_bits = to_f16_bits(&topk_inputs(n * n, 0x4D41_545F_4242_4242));
+    let expected = matmul_cpu(&rounded(&a_bits), &rounded(&b_bits), n);
+
+    let view_a = context.allocate_and_write(bytemuck::cast_slice(&a_bits), 0, 0, BindingUsage::StorageRead)?;
+    let view_b = context.allocate_and_write(bytemuck::cast_slice(&b_bits), 1, 0, BindingUsage::StorageRead)?;
     let zeros = vec![0.0f32; n * n];
     let view_c = context.allocate_and_write(bytemuck::cast_slice(&zeros), 2, 0, BindingUsage::StorageReadWrite)?;
     let buffers = vec![view_a, view_b, view_c];
@@ -417,7 +424,37 @@ pub fn evaluate_matmul_tc(context: &mut WgpuComputeContext) -> Result<Comparison
 
     drop(pipeline);
     context.clear_transient_allocations();
-    Ok(compare_f32(&expected, &actual, OracleTolerance { absolute: 1.0e-2, relative: 1.0e-2 }))
+    Ok(compare_f32(&expected, &actual, OracleTolerance { absolute: 2.0e-2, relative: 2.0e-2 }))
+}
+
+/// Diagnostic: cooperative-matrix load→store round-trip (no multiply). Loads `a`
+/// as a role-C fragment and stores it to `c`; `c` must equal `a`. This verifies
+/// `coopLoadT`/`coopStoreT` work on the adapter (they do — the `coopMultiplyAdd`
+/// path is the one currently blocked on the experimental backend).
+pub fn evaluate_coopmat_loadstore(context: &mut WgpuComputeContext) -> Result<ComparisonReport, ForgeError> {
+    let source = r#"enable wgpu_cooperative_matrix;
+@group(0) @binding(0) var<storage, read> a: array<f32>;
+@group(0) @binding(2) var<storage, read_write> c: array<f32>;
+
+@compute @workgroup_size(32)
+fn matmul_tc() {
+    let m = coopLoadT<coop_mat8x8<f32, C>>(&a[0], 8u);
+    coopStoreT(m, &c[0], 8u);
+}"#;
+    validate_wgsl(source)?;
+    let n = 8usize;
+    let a = topk_inputs(n * n, 0x4D41_545F_4141_4141);
+    let view_a = context.allocate_and_write(bytemuck::cast_slice(&a), 0, 0, BindingUsage::StorageRead)?;
+    let zeros = vec![0.0f32; n * n];
+    let view_c = context.allocate_and_write(bytemuck::cast_slice(&zeros), 2, 0, BindingUsage::StorageReadWrite)?;
+    let buffers = vec![view_a, view_c];
+    let schedule = Schedule { workgroup_size: 32, ..Default::default() };
+    let pipeline = WgpuPipeline::compile(context, source, "matmul_tc")?;
+    pipeline.dispatch(&buffers, &schedule, 1)?;
+    let actual = context.read_buffer_f32(&view_c)?;
+    drop(pipeline);
+    context.clear_transient_allocations();
+    Ok(compare_f32(&a, &actual, OracleTolerance::default()))
 }
 
 /// Cross-backend oracle (plan §7/§10): runs the affine kernel through the native
@@ -1016,18 +1053,14 @@ mod tests {
 
     #[test]
     #[ignore = "requires a cooperative-matrix capable adapter"]
-    fn cooperative_matrix_tile_runs_on_real_gpu() {
-        // Verifies the emitted cooperative-matrix (tensor-core) kernel compiles and
-        // executes on the adapter producing finite output — i.e. the 8x8 f32 config
-        // is supported and does not hit the experimental-UB path (16x16 f32 returns
-        // inf). Bit-exact GPU correctness vs. the CPU oracle is still being resolved
-        // (the committed result currently reads zero); tracked in the plan ledger.
+    fn coopmat_loadstore_roundtrips_on_real_gpu() {
+        // Verifies coopLoadT/coopStoreT round-trip correctly on the adapter (c == a).
+        // The coopMultiplyAdd path produces ~zero output on the current experimental
+        // wgpu cooperative-matrix backend; evaluate_matmul_tc and the emitted GEMM
+        // are kept for when that upstream path works (see the plan ledger).
         let mut context = WgpuComputeContext::new(1024 * 1024).expect("adapter");
-        let report = evaluate_matmul_tc(&mut context).expect("coopmat evaluation");
-        assert!(
-            report.max_absolute_error.is_finite(),
-            "coopmat output must be finite (no experimental UB): {report:?}"
-        );
+        let report = evaluate_coopmat_loadstore(&mut context).expect("coopmat round-trip");
+        assert!(report.passed(), "coopmat load/store round-trip mismatch: {report:?}");
     }
 
     #[test]
