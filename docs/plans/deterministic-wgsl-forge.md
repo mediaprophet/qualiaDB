@@ -246,20 +246,18 @@ Update this section before ending any implementation session.
 
 ### Next exact action
 
-RT-core awareness is now wired (intrinsic IR + capability detection + pruning;
-see evidence below). Remaining, in priority order:
+Top-k is GPU-certified, MSL/HLSL top-k emit + DXC-validate, certify/tune handle
+top-k, and ray-query WGSL emits + Naga-validates (see evidence below). Remaining:
 
-1. A non-affine differential-oracle path so `certify`/`tune` can certify the
-   top-k (and fused-FFN) kernels on hardware, then run the opt-in GPU parity
-   tests on this machine's adapter and record the numbers.
-2. Native-backend parity for shared memory + barriers (MSL/HLSL/PTX emission of
-   the top-k reduction), removing the WGSL-only restriction.
-3. Real `RayQuery` WGSL emission (acceleration-structure binding type +
-   `rayQueryInitialize/Proceed/getCommittedIntersection`) once an RT-capable
-   adapter and a test BVH are available; today RT kernels are represented,
-   capability-gated, and pruned, but not yet emitted.
-4. Tensor-core (cooperative-matrix) MMA emission for the fused-FFN matmul,
-   gated on the newly-detected `supports_coopmat`.
+1. GPU execution of ray-query: build BLAS/TLAS via wgpu's acceleration-structure
+   API and request `EXPERIMENTAL_RAY_QUERY` at device creation so `ray-probe`
+   can be oracle-verified on the A2000 (today it is emitted + Naga-validated but
+   not yet executed — this is the one genuinely separate subsystem left).
+2. Tensor-core (cooperative-matrix) MMA emission for the fused-FFN matmul, gated
+   on the detected `supports_coopmat` (the A2000 reports 6 coopmat configs).
+3. Real fused-FFN math (it still uses placeholder high-level `DotProduct` nodes)
+   with an oracle, then certify it on hardware.
+4. MSL/HLSL ray-query bodies (Metal/DirectX RT use distinct APIs).
 
 ### Decisions still open
 
@@ -306,6 +304,27 @@ see evidence below). Remaining, in priority order:
   machine's adapter; MSL/HLSL/PTX top-k emission returns a clear "WGSL-only this
   phase" error; `certify`/`tune` remain affine-only (non-affine oracle path is a
   named follow-up). cudarc was modernised 0.11→0.19 (official, `cuda-13030`).
+
+### 2026-06-28 ray-query emission + non-affine certify/tune
+
+- Ray-query WGSL now emits and Naga-validates: `BuiltinKernel::RayProbe` +
+  `BufferElement::AccelerationStructure`; `Op::Intrinsic(RayQuery)` lowers to
+  `enable wgpu_ray_query;` + `rayQueryInitialize/Proceed/getCommittedIntersection`
+  over a `RayDesc`. Validator runs with `Capabilities::RAY_QUERY`. Test:
+  `generated_ray_probe_passes_naga_validation`. GPU execution still needs a BVH
+  (acceleration structure) — named as the next step, not emitted-as-stub.
+- Intrinsic pruning was correctly separated from emission: schedule emission is
+  hardware-agnostic, so the RT/coopmat availability check moved out of
+  `Schedule::validate` into `AdapterConstraints::supports_kernel`, invoked by the
+  execution/certify/tune paths. (Generation of a ray kernel on a non-RT host now
+  succeeds; only running it is pruned.)
+- `certify`/`tune` generalised beyond affine: `evaluate_builtin` dispatches top-k
+  to `evaluate_topk` (which now returns full timing), so the existing CLI
+  `certify`/`tune` work for top-k unchanged. Verified on hardware:
+  `qualia-cli shader certify topk` → CERTIFIED on NVIDIA RTX A2000 12GB, median
+  14,080 ns / p95 14,144 ns (run evidence, not a universal constant).
+- Forge suite (non-GPU): 22 passed / 0 failed / 2 ignored. HLSL top-k compiles to
+  DXIL via DXC (`dxc -T cs_6_0`).
 
 ### 2026-06-28 GPU execution fixed + top-k certified on hardware
 

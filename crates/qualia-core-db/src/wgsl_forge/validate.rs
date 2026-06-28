@@ -15,9 +15,11 @@ pub struct ValidationReport {
 pub fn validate_wgsl(source: &str) -> Result<ValidationReport, ForgeError> {
     let module = naga::front::wgsl::parse_str(source)
         .map_err(|error| ForgeError::WgslParse(error.emit_to_string(source)))?;
+    // RAY_QUERY permits ray-query kernels to validate; it only widens what is
+    // accepted, so non-ray kernels are unaffected.
     let mut validator = naga::valid::Validator::new(
         naga::valid::ValidationFlags::all(),
-        naga::valid::Capabilities::empty(),
+        naga::valid::Capabilities::RAY_QUERY,
     );
     validator
         .validate(&module)
@@ -163,6 +165,28 @@ mod tests {
             assert_eq!(report.entry_points, vec!["topk"]);
             assert_eq!(report.binding_count, 3);
         }
+    }
+
+    #[test]
+    fn generated_ray_probe_passes_naga_validation() {
+        // Exercises the acceleration_structure binding and the ray_query lowering.
+        let generated = generate_builtin(
+            BuiltinKernel::RayProbe,
+            Schedule {
+                workgroup_size: 64,
+                items_per_invocation: 1,
+                vector_width: 1,
+                ..Schedule::default()
+            },
+            TargetBackend::Wgsl,
+        )
+        .unwrap();
+        assert!(generated.source.contains("var scene: acceleration_structure;"));
+        assert!(generated.source.contains("rayQueryInitialize"));
+        assert!(generated.source.contains("rayQueryGetCommittedIntersection"));
+        let report = validate_wgsl(&generated.source).expect("Naga validation of ray-probe");
+        assert_eq!(report.entry_points, vec!["ray_probe"]);
+        assert_eq!(report.binding_count, 3);
     }
 
     #[test]

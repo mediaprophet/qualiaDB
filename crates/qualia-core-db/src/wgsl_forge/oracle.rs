@@ -221,8 +221,15 @@ pub fn evaluate_builtin(
             "sample count must be non-zero".to_string(),
         ));
     }
+    // Top-k uses a different oracle (per-block selection) and output sizing, so
+    // dispatch to its dedicated evaluator. k defaults to min(8, block_size).
+    if builtin == BuiltinKernel::TopK {
+        let k = (schedule.workgroup_size as usize).clamp(1, 8);
+        return evaluate_topk(context, schedule, length, k, warmups, samples);
+    }
     let kernel = builtin.spec();
     schedule.validate(&kernel, &context.constraints)?;
+    context.constraints.supports_kernel(&kernel)?;
     let generated = emit_shader(&kernel, schedule, TargetBackend::Wgsl)?;
     validate_wgsl(&generated.source)?;
 
@@ -357,7 +364,7 @@ pub fn evaluate_topk(
     k: usize,
     warmups: usize,
     samples: usize,
-) -> Result<(GeneratedShader, ComparisonReport), ForgeError> {
+) -> Result<(GeneratedShader, GpuEvaluation), ForgeError> {
     if samples == 0 {
         return Err(ForgeError::GpuValidation(
             "sample count must be non-zero".to_string(),
@@ -372,6 +379,7 @@ pub fn evaluate_topk(
 
     let kernel = BuiltinKernel::TopK.spec();
     schedule.validate(&kernel, &context.constraints)?;
+    context.constraints.supports_kernel(&kernel)?;
     let generated = emit_shader(&kernel, schedule, TargetBackend::Wgsl)?;
     validate_wgsl(&generated.source)?;
 
@@ -399,17 +407,48 @@ pub fn evaluate_topk(
     for _ in 0..warmups {
         pipeline.dispatch(&buffers, &schedule, length)?;
     }
+    let mut timing_samples = Vec::with_capacity(samples);
     for _ in 0..samples {
-        pipeline.dispatch(&buffers, &schedule, length)?;
+        timing_samples.push(pipeline.dispatch(&buffers, &schedule, length)?);
+    }
+    if timing_samples.iter().any(|s| *s == 0) {
+        return Err(ForgeError::GpuValidation(
+            "GPU produced a zero-duration timing sample".to_string(),
+        ));
     }
 
     let actual = context.read_buffer_f32(&view_output)?;
-    let report = compare_f32(&expected, &actual, OracleTolerance::default());
+    let oracle = compare_f32(&expected, &actual, OracleTolerance::default());
 
     drop(pipeline);
     context.clear_transient_allocations();
 
-    Ok((generated, report))
+    if !oracle.passed() {
+        return Err(ForgeError::OracleMismatch(format!(
+            "top-k: {} mismatches; first={:?}, max_abs={}",
+            oracle.mismatch_count, oracle.first_mismatch, oracle.max_absolute_error
+        )));
+    }
+
+    let timing_source = if context.timestamp_supported {
+        TimingSource::GpuTimestamp
+    } else {
+        TimingSource::CompletionClock
+    };
+    let timing = TimingSummary::from_samples(timing_source, &timing_samples).ok_or_else(|| {
+        ForgeError::GpuValidation("GPU produced no timing samples".to_string())
+    })?;
+
+    Ok((
+        generated,
+        GpuEvaluation {
+            adapter: context.adapter.clone(),
+            constraints: context.constraints,
+            oracle,
+            timing,
+            samples_ns: timing_samples,
+        },
+    ))
 }
 
 #[cfg(test)]
@@ -486,9 +525,9 @@ mod tests {
             vector_width: 1,
             ..Default::default()
         };
-        let (_, report) =
+        let (_, evaluation) =
             evaluate_topk(&mut context, schedule, 64 * 10, 4, 2, 5).expect("topk evaluation");
-        assert!(report.passed(), "top-k GPU/oracle mismatch: {report:?}");
+        assert!(evaluation.oracle.passed(), "top-k GPU/oracle mismatch: {:?}", evaluation.oracle);
     }
 
     #[test]

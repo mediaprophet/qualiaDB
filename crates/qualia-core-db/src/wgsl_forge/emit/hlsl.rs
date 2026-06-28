@@ -39,6 +39,11 @@ fn emit_kernel_body(
     if kernel.id == "topk" {
         return emit_topk_hlsl(source, kernel, schedule);
     }
+    if kernel.id == "ray-probe" {
+        return Err(ForgeError::Emission(
+            "ray-query is only emitted for the WGSL target (HLSL RT uses a distinct API)".to_string(),
+        ));
+    }
     if kernel.id == "affine-f32" {
         writeln!(
             source,

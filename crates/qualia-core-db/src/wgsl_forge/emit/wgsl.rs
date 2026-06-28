@@ -41,6 +41,11 @@ fn emit_kernel_body(
         return emit_topk_wgsl(source, kernel, schedule);
     }
 
+    if kernel.id == "ray-probe" {
+        // The ray-query enable extension must precede any other item.
+        writeln!(source, "enable wgpu_ray_query;").map_err(|error| ForgeError::Emission(error.to_string()))?;
+    }
+
     if kernel.id == "affine-f32" {
         writeln!(
             source,
@@ -66,6 +71,15 @@ struct P64Words64 {{
 
     writeln!(source, "").map_err(|error| ForgeError::Emission(error.to_string()))?;
     for buffer in &kernel.buffers {
+        // Acceleration structures bind without an address space.
+        if buffer.element == crate::wgsl_forge::ir::BufferElement::AccelerationStructure {
+            writeln!(
+                source,
+                "@group({}) @binding({}) var {}: acceleration_structure;",
+                buffer.group, buffer.binding, buffer.name
+            ).map_err(|error| ForgeError::Emission(error.to_string()))?;
+            continue;
+        }
         let access = match buffer.access {
             crate::wgsl_forge::ir::BufferAccess::StorageRead => "storage, read",
             crate::wgsl_forge::ir::BufferAccess::StorageReadWrite => "storage, read_write",
@@ -78,6 +92,7 @@ struct P64Words64 {{
             crate::wgsl_forge::ir::BufferElement::Scalar(crate::wgsl_forge::ir::ScalarType::U64Words) => "array<vec2<u32>>",
             crate::wgsl_forge::ir::BufferElement::AffineParams => "AffineParams",
             crate::wgsl_forge::ir::BufferElement::P64Words64 => "array<P64Words64>",
+            crate::wgsl_forge::ir::BufferElement::AccelerationStructure => unreachable!("handled above"),
         };
         writeln!(
             source,
@@ -100,7 +115,19 @@ fn {}(@builtin(global_invocation_id) gid: vec3<u32>) {{"#,
         kernel.entry_point
     ).map_err(|error| ForgeError::Emission(error.to_string()))?;
 
-    if kernel.id == "affine-f32" {
+    if kernel.id == "ray-probe" {
+        // One ray per invocation: load the 8-float ray, intersect, store the hit.
+        writeln!(source, "    let i = gid.x;").map_err(|error| ForgeError::Emission(error.to_string()))?;
+        writeln!(source, "    if (i >= arrayLength(&hits)) {{ return; }}").map_err(|error| ForgeError::Emission(error.to_string()))?;
+        writeln!(source, "    let base = i * 8u;").map_err(|error| ForgeError::Emission(error.to_string()))?;
+        writeln!(source, "    let origin = vec3<f32>(rays[base], rays[base + 1u], rays[base + 2u]);").map_err(|error| ForgeError::Emission(error.to_string()))?;
+        writeln!(source, "    let direction = vec3<f32>(rays[base + 3u], rays[base + 4u], rays[base + 5u]);").map_err(|error| ForgeError::Emission(error.to_string()))?;
+        writeln!(source, "    let t_min = rays[base + 6u];").map_err(|error| ForgeError::Emission(error.to_string()))?;
+        writeln!(source, "    let t_max = rays[base + 7u];").map_err(|error| ForgeError::Emission(error.to_string()))?;
+        emit_ops(source, &kernel.ops, "    ")?;
+        writeln!(source, "    hits[i] = hit_t;").map_err(|error| ForgeError::Emission(error.to_string()))?;
+        writeln!(source, "}}").map_err(|error| ForgeError::Emission(error.to_string()))?;
+    } else if kernel.id == "affine-f32" {
         // Keeping the optimized vectorized wrapper for affine-f32 specifically
         writeln!(
             source,
@@ -307,6 +334,22 @@ fn emit_ops(source: &mut String, ops: &[Op], indent: &str) -> Result<(), ForgeEr
             }
             Op::Barrier => {
                 writeln!(source, "{indent}workgroupBarrier();").map_err(|error| ForgeError::Emission(error.to_string()))?;
+            }
+            Op::Intrinsic(crate::wgsl_forge::ir::Intrinsic::RayQuery {
+                acceleration_structure,
+                origin,
+                direction,
+                t_min,
+                t_max,
+                destination,
+            }) => {
+                // Hardware ray-query: initialise, proceed, read the committed hit.
+                writeln!(source, "{indent}var rq: ray_query;").map_err(|error| ForgeError::Emission(error.to_string()))?;
+                writeln!(source, "{indent}rayQueryInitialize(&rq, {acceleration_structure}, RayDesc(0u, 0xFFu, {t_min}, {t_max}, {origin}, {direction}));").map_err(|error| ForgeError::Emission(error.to_string()))?;
+                writeln!(source, "{indent}rayQueryProceed(&rq);").map_err(|error| ForgeError::Emission(error.to_string()))?;
+                writeln!(source, "{indent}let committed = rayQueryGetCommittedIntersection(&rq);").map_err(|error| ForgeError::Emission(error.to_string()))?;
+                writeln!(source, "{indent}var {destination} = -1.0;").map_err(|error| ForgeError::Emission(error.to_string()))?;
+                writeln!(source, "{indent}if (committed.kind != RAY_QUERY_INTERSECTION_NONE) {{ {destination} = committed.t; }}").map_err(|error| ForgeError::Emission(error.to_string()))?;
             }
             Op::Intrinsic(_) => {
                 return Err(ForgeError::Emission("Intrinsics not implemented for WGSL yet".to_string()));

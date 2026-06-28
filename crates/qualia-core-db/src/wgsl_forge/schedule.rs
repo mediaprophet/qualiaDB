@@ -65,26 +65,6 @@ impl Schedule {
             return Err(ForgeError::InvalidSchedule("adapter does not support subgroups".to_string()));
         }
 
-        // Intrinsic-availability check (plan §6): a kernel that requires RT or
-        // cooperative-matrix hardware cannot run on an adapter that lacks it, so
-        // such candidates are pruned before emission. Subgroup intrinsics are not
-        // pruned here because they can be lowered to a shared-memory equivalent.
-        for intrinsic in kernel.required_intrinsics() {
-            match intrinsic.class() {
-                IntrinsicClass::CooperativeMatrix if !constraints.supports_coopmat => {
-                    return Err(ForgeError::InvalidSchedule(
-                        "kernel requires cooperative-matrix (tensor cores) unavailable on this adapter".to_string(),
-                    ));
-                }
-                IntrinsicClass::RayTracing if !constraints.supports_rt_cores => {
-                    return Err(ForgeError::InvalidSchedule(
-                        "kernel requires ray-query (RT cores) unavailable on this adapter".to_string(),
-                    ));
-                }
-                _ => {}
-            }
-        }
-
         Ok(())
     }
 
@@ -128,6 +108,31 @@ impl AdapterConstraints {
             supports_coopmat: false,
             supports_rt_cores: false,
         }
+    }
+
+    /// Intrinsic-availability check (plan §6): a kernel that requires RT or
+    /// cooperative-matrix hardware cannot run on an adapter that lacks it, so such
+    /// kernels are pruned before tuning/certification on the local adapter.
+    /// Subgroup intrinsics are not pruned because they can be lowered to a
+    /// shared-memory equivalent. This is a hardware-vs-kernel check and is
+    /// deliberately separate from schedule emission (which is hardware-agnostic).
+    pub fn supports_kernel(&self, kernel: &KernelSpec) -> Result<(), ForgeError> {
+        for intrinsic in kernel.required_intrinsics() {
+            match intrinsic.class() {
+                IntrinsicClass::CooperativeMatrix if !self.supports_coopmat => {
+                    return Err(ForgeError::InvalidSchedule(
+                        "kernel requires cooperative-matrix (tensor cores) unavailable on this adapter".to_string(),
+                    ));
+                }
+                IntrinsicClass::RayTracing if !self.supports_rt_cores => {
+                    return Err(ForgeError::InvalidSchedule(
+                        "kernel requires ray-query (RT cores) unavailable on this adapter".to_string(),
+                    ));
+                }
+                _ => {}
+            }
+        }
+        Ok(())
     }
 
     #[cfg(feature = "gpu-runtime")]
@@ -246,16 +251,18 @@ mod tests {
             shared_memory: Vec::new(),
         };
 
-        let schedule = Schedule::default();
-        // No RT cores → the schedule is pruned.
-        let without = AdapterConstraints::portable();
-        assert!(schedule.validate(&kernel, &without).is_err());
+        // Generation/schedule validity is hardware-agnostic and must succeed.
+        assert!(Schedule::default().validate(&kernel, &AdapterConstraints::portable()).is_ok());
 
-        // RT cores present → the same schedule is accepted.
+        // The hardware-vs-kernel check prunes it when RT cores are absent...
+        let without = AdapterConstraints::portable();
+        assert!(without.supports_kernel(&kernel).is_err());
+
+        // ...and accepts it when present.
         let with = AdapterConstraints {
             supports_rt_cores: true,
             ..AdapterConstraints::portable()
         };
-        assert!(schedule.validate(&kernel, &with).is_ok());
+        assert!(with.supports_kernel(&kernel).is_ok());
     }
 }

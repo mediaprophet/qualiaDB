@@ -83,6 +83,10 @@ pub enum BufferElement {
     AffineParams,
     /// One cache-line-sized P64 GPU descriptor: sixteen portable `u32` words.
     P64Words64,
+    /// An opaque ray-tracing acceleration structure handle (`acceleration_structure`).
+    /// It is bound without an address space and is not host-allocated, so it has
+    /// no meaningful byte size.
+    AccelerationStructure,
 }
 
 impl BufferElement {
@@ -91,6 +95,7 @@ impl BufferElement {
             Self::Scalar(value) => value.size_bytes(),
             Self::AffineParams => 16,
             Self::P64Words64 => 64,
+            Self::AccelerationStructure => 0,
         }
     }
 
@@ -98,6 +103,7 @@ impl BufferElement {
         match self {
             Self::Scalar(value) => value.alignment_bytes(),
             Self::AffineParams | Self::P64Words64 => 16,
+            Self::AccelerationStructure => 1,
         }
     }
 }
@@ -361,10 +367,12 @@ pub enum BuiltinKernel {
     FusedFfn,
     P64Project,
     TopK,
+    RayProbe,
 }
 
 impl BuiltinKernel {
-    pub const ALL: [Self; 4] = [Self::AffineF32, Self::FusedFfn, Self::P64Project, Self::TopK];
+    pub const ALL: [Self; 5] =
+        [Self::AffineF32, Self::FusedFfn, Self::P64Project, Self::TopK, Self::RayProbe];
 
     pub const fn name(self) -> &'static str {
         match self {
@@ -372,6 +380,7 @@ impl BuiltinKernel {
             Self::FusedFfn => "fused-ffn",
             Self::P64Project => "p64-project",
             Self::TopK => "topk",
+            Self::RayProbe => "ray-probe",
         }
     }
 
@@ -475,6 +484,29 @@ impl BuiltinKernel {
                     SharedMemorySpec { name: "r_idx".to_string(), element: ScalarType::U32, length: SharedLen::WorkgroupSize },
                 ],
             },
+            Self::RayProbe => KernelSpec {
+                id: self.name().to_string(),
+                semantic_version: 1,
+                entry_point: "ray_probe".to_string(),
+                // For each ray (8 floats: origin.xyz, dir.xyz, t_min, t_max) test
+                // it against the bound acceleration structure; write the committed
+                // hit distance (or -1 on miss).
+                description: "hits[i] = ray_query(scene, rays[i]) committed t or -1".to_string(),
+                buffers: vec![
+                    BufferSpec { group: 0, binding: 0, name: "scene".to_string(), element: BufferElement::AccelerationStructure, access: BufferAccess::StorageRead },
+                    BufferSpec { group: 0, binding: 1, name: "rays".to_string(), element: BufferElement::Scalar(ScalarType::F32), access: BufferAccess::StorageRead },
+                    BufferSpec { group: 0, binding: 2, name: "hits".to_string(), element: BufferElement::Scalar(ScalarType::F32), access: BufferAccess::StorageReadWrite },
+                ],
+                ops: vec![Op::Intrinsic(Intrinsic::RayQuery {
+                    acceleration_structure: "scene".to_string(),
+                    origin: "origin".to_string(),
+                    direction: "direction".to_string(),
+                    t_min: "t_min".to_string(),
+                    t_max: "t_max".to_string(),
+                    destination: "hit_t".to_string(),
+                })],
+                shared_memory: Vec::new(),
+            },
         }
     }
 }
@@ -488,6 +520,7 @@ impl FromStr for BuiltinKernel {
             "fused-ffn" | "fused_ffn" | "ffn" => Ok(Self::FusedFfn),
             "p64-project" | "p64_project" | "p64" => Ok(Self::P64Project),
             "topk" | "top-k" | "top_k" => Ok(Self::TopK),
+            "ray-probe" | "ray_probe" | "rayquery" | "ray_query" | "rt" => Ok(Self::RayProbe),
             other => Err(ForgeError::UnknownKernel(other.to_string())),
         }
     }

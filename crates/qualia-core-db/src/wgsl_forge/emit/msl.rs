@@ -39,6 +39,11 @@ fn emit_kernel_body(
     if kernel.id == "topk" {
         return emit_topk_msl(source, kernel, schedule);
     }
+    if kernel.id == "ray-probe" {
+        return Err(ForgeError::Emission(
+            "ray-query is only emitted for the WGSL target (Metal RT uses a distinct API)".to_string(),
+        ));
+    }
     writeln!(source, "#include <metal_stdlib>\nusing namespace metal;\n").map_err(|error| ForgeError::Emission(error.to_string()))?;
 
     if kernel.id == "affine-f32" {
