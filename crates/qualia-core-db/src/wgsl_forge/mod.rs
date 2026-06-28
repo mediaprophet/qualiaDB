@@ -32,7 +32,7 @@ pub use oracle::{
     OracleTolerance, TopKParams,
 };
 #[cfg(feature = "cuda")]
-pub use oracle::evaluate_affine_cuda;
+pub use oracle::{evaluate_affine_cuda, evaluate_ffn_cuda, evaluate_topk_cuda};
 pub use roofline::{roofline_for, RooflineBound, RooflineEstimate};
 pub use schedule::{AdapterConstraints, Schedule, ScheduleSpace};
 pub use tune::{

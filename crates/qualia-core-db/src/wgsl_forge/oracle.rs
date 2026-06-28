@@ -373,34 +373,86 @@ pub fn evaluate_builtin(
 }
 
 /// Cross-backend oracle (plan §7/§10): runs the affine kernel through the native
-/// CUDA backend (PTX) and checks it against the *same* CPU reference vectors used
-/// for the wgpu backend. Requires a CUDA device + the `cuda` feature.
+/// CUDA backend (CUDA-C compiled to PTX by NVRTC) and checks it against the *same*
+/// CPU reference vectors used for the wgpu backend. Requires a CUDA device.
 #[cfg(feature = "cuda")]
 pub fn evaluate_affine_cuda(length: usize) -> Result<ComparisonReport, ForgeError> {
     use crate::wgsl_forge::execute::{CudaComputeContext, CudaPipeline, QualiaCompute};
-
     let mut context = CudaComputeContext::new(16 * 1024 * 1024)?;
-    let schedule = Schedule {
-        workgroup_size: 64,
-        items_per_invocation: 1,
-        vector_width: 1,
-        ..Default::default()
-    };
+    let schedule = Schedule { workgroup_size: 64, ..Default::default() };
     let kernel = BuiltinKernel::AffineF32.spec();
-    let generated = emit_shader(&kernel, schedule, TargetBackend::Ptx)?;
 
     let case = OracleCase::affine(length, 0x5141_4C49_4157_4753, 1.618_034, -0.125);
     let view_input = context.allocate_and_write(bytemuck::cast_slice(&case.input), 0, 0)?;
-    let view_output =
-        context.allocate_transient((case.input.len() * size_of::<f32>()).max(4), 1, 0)?;
+    let view_output = context.allocate_transient((case.input.len() * size_of::<f32>()).max(4), 1, 0)?;
     let view_params = context.allocate_and_write(bytemuck::bytes_of(&case.params), 2, 0)?;
     let buffers = vec![view_input, view_output, view_params];
 
-    let pipeline = CudaPipeline::compile(&context, &generated.source, &kernel.entry_point)?;
+    let pipeline = CudaPipeline::compile_cuda_c(&context, &kernel, schedule)?;
     pipeline.dispatch(&buffers, &schedule, case.input.len())?;
-
     let actual = context.read_buffer_f32(&view_output)?;
     Ok(compare_f32(&case.expected, &actual, OracleTolerance::default()))
+}
+
+/// Cross-backend oracle for the fused FFN via the CUDA backend.
+#[cfg(feature = "cuda")]
+pub fn evaluate_ffn_cuda(
+    input_size: usize,
+    hidden_size: usize,
+    output_size: usize,
+) -> Result<ComparisonReport, ForgeError> {
+    use crate::wgsl_forge::execute::{CudaComputeContext, CudaPipeline, QualiaCompute};
+    let mut context = CudaComputeContext::new(64 * 1024 * 1024)?;
+    let schedule = Schedule { workgroup_size: 64, ..Default::default() };
+    let kernel = BuiltinKernel::FusedFfn.spec();
+
+    let (input, w1, w2) = ffn_tensors(input_size, hidden_size, output_size, 0x4646_4E5F_5345_4544);
+    let expected = ffn_cpu(&input, &w1, &w2, input_size, hidden_size, output_size);
+    let view_input = context.allocate_and_write(bytemuck::cast_slice(&input), 0, 0)?;
+    let view_w1 = context.allocate_and_write(bytemuck::cast_slice(&w1), 1, 0)?;
+    let view_w2 = context.allocate_and_write(bytemuck::cast_slice(&w2), 2, 0)?;
+    let view_output = context.allocate_transient((output_size * size_of::<f32>()).max(4), 3, 0)?;
+    let params = FfnParams {
+        input_size: input_size as u32,
+        hidden_size: hidden_size as u32,
+        output_size: output_size as u32,
+        _pad: 0,
+    };
+    let view_params = context.allocate_and_write(bytemuck::bytes_of(&params), 4, 0)?;
+    let buffers = vec![view_input, view_w1, view_w2, view_output, view_params];
+
+    let pipeline = CudaPipeline::compile_cuda_c(&context, &kernel, schedule)?;
+    pipeline.dispatch(&buffers, &schedule, output_size)?;
+    let actual = context.read_buffer_f32(&view_output)?;
+    Ok(compare_f32(&expected, &actual, OracleTolerance { absolute: 2.0e-3, relative: 2.0e-3 }))
+}
+
+/// Cross-backend oracle for top-k via the CUDA backend (CUDA-C `__shared__`).
+#[cfg(feature = "cuda")]
+pub fn evaluate_topk_cuda(length: usize, k: usize) -> Result<ComparisonReport, ForgeError> {
+    use crate::wgsl_forge::execute::{CudaComputeContext, CudaPipeline, QualiaCompute};
+    let mut context = CudaComputeContext::new(64 * 1024 * 1024)?;
+    let schedule = Schedule { workgroup_size: 64, ..Default::default() };
+    let block_size = schedule.workgroup_size as usize;
+    let kernel = BuiltinKernel::TopK.spec();
+
+    let input = topk_inputs(length, 0x5031_4B5F_5345_4544);
+    let expected = topk_cpu(&input, length, k, block_size);
+    let view_input = context.allocate_and_write(bytemuck::cast_slice(&input), 0, 0)?;
+    let view_output = context.allocate_transient((expected.len() * size_of::<f32>()).max(4), 1, 0)?;
+    let params = TopKParams {
+        length: length as u32,
+        k: k as u32,
+        block_size: block_size as u32,
+        _pad: 0,
+    };
+    let view_params = context.allocate_and_write(bytemuck::bytes_of(&params), 2, 0)?;
+    let buffers = vec![view_input, view_output, view_params];
+
+    let pipeline = CudaPipeline::compile_cuda_c(&context, &kernel, schedule)?;
+    pipeline.dispatch(&buffers, &schedule, length)?;
+    let actual = context.read_buffer_f32(&view_output)?;
+    Ok(compare_f32(&expected, &actual, OracleTolerance::default()))
 }
 
 pub fn certify_builtin(
@@ -896,6 +948,22 @@ mod tests {
     fn affine_oracle_matches_across_cuda_backend() {
         let report = evaluate_affine_cuda(4099).expect("cuda affine evaluation");
         assert!(report.passed(), "CUDA affine GPU/oracle mismatch: {report:?}");
+    }
+
+    #[cfg(feature = "cuda")]
+    #[test]
+    #[ignore = "requires a CUDA device"]
+    fn ffn_oracle_matches_across_cuda_backend() {
+        let report = evaluate_ffn_cuda(64, 128, 256).expect("cuda ffn evaluation");
+        assert!(report.passed(), "CUDA fused-ffn mismatch: {report:?}");
+    }
+
+    #[cfg(feature = "cuda")]
+    #[test]
+    #[ignore = "requires a CUDA device"]
+    fn topk_oracle_matches_across_cuda_backend() {
+        let report = evaluate_topk_cuda(64 * 10, 4).expect("cuda topk evaluation");
+        assert!(report.passed(), "CUDA top-k mismatch: {report:?}");
     }
 
     #[test]

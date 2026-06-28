@@ -22,14 +22,14 @@ use cudarc::driver::{
     LaunchConfig, PushKernelArg,
 };
 #[cfg(feature = "cuda")]
-use cudarc::nvrtc::Ptx;
-
-#[cfg(feature = "cuda")]
 use super::compute::QualiaCompute;
 #[cfg(feature = "cuda")]
 use super::memory::{BindingUsage, BufferView, MemoryTopology, QualiaSlabAllocator};
 #[cfg(feature = "cuda")]
-use crate::wgsl_forge::{AdapterConstraints, AdapterIdentity, ForgeError, Schedule};
+use crate::wgsl_forge::{
+    emit_shader, AdapterConstraints, AdapterIdentity, BufferAccess, ForgeError, KernelSpec,
+    Schedule, TargetBackend,
+};
 
 /// 16-byte affine uniform block passed to the kernel by value.
 ///
@@ -161,32 +161,64 @@ impl CudaComputeContext {
 pub struct CudaPipeline<'a> {
     context: &'a CudaComputeContext,
     func: CudaFunction,
+    spec: KernelSpec,
     // Kept alive so the loaded function's backing module is not unloaded.
     _module: Arc<CudaModule>,
 }
 
 #[cfg(feature = "cuda")]
 impl<'a> CudaPipeline<'a> {
-    pub fn compile(
+    /// Emit CUDA-C for the kernel and compile it to PTX via NVRTC (mirrors the
+    /// HLSL -> DXC path), then load the resulting module.
+    pub fn compile_cuda_c(
         context: &'a CudaComputeContext,
-        source: &str,
-        entry_point: &str,
+        kernel: &KernelSpec,
+        schedule: Schedule,
     ) -> Result<Self, ForgeError> {
-        let ptx = Ptx::from_src(source);
+        let generated = emit_shader(kernel, schedule, TargetBackend::CudaC)?;
+        let compiled = cudarc::nvrtc::compile_ptx(&generated.source)
+            .map_err(|e| ForgeError::GpuValidation(format!("NVRTC compile failed: {:?}", e)))?;
+        // The installed toolkit (nvrtc) can be newer than the driver, in which case
+        // the driver rejects the PTX ISA version. Our kernels only use long-stable
+        // instructions, so we rewrite the `.version` directive down to one the
+        // driver supports.
+        let ptx = cudarc::nvrtc::Ptx::from_src(downgrade_ptx_isa(&compiled.to_src()));
         let module = context
             .ctx
             .load_module(ptx)
-            .map_err(|e| ForgeError::GpuValidation(format!("Failed to load PTX: {:?}", e)))?;
+            .map_err(|e| ForgeError::GpuValidation(format!("Failed to load module: {:?}", e)))?;
         let func = module
-            .load_function(entry_point)
-            .map_err(|e| ForgeError::GpuValidation(format!("Entry point not found in PTX module: {:?}", e)))?;
+            .load_function(&kernel.entry_point)
+            .map_err(|e| ForgeError::GpuValidation(format!("Entry point not found: {:?}", e)))?;
 
         Ok(Self {
             context,
             func,
+            spec: kernel.clone(),
             _module: module,
         })
     }
+}
+
+/// Rewrites the PTX `.version M.m` directive to a broadly-supported ISA so an
+/// older driver can JIT NVRTC output from a newer toolkit. Our emitted kernels
+/// use only long-stable instructions (fma, tanh.approx, shared memory, bar.sync),
+/// which are valid at ISA 8.0.
+#[cfg(feature = "cuda")]
+fn downgrade_ptx_isa(ptx: &str) -> String {
+    const TARGET_VERSION: &str = ".version 8.0";
+    let mut out = String::with_capacity(ptx.len());
+    let mut replaced = false;
+    for line in ptx.lines() {
+        if !replaced && line.trim_start().starts_with(".version") {
+            out.push_str(TARGET_VERSION);
+            replaced = true;
+        } else {
+            out.push_str(line);
+        }
+        out.push('\n');
+    }
+    out
 }
 
 #[cfg(feature = "cuda")]
@@ -198,61 +230,54 @@ impl<'a> QualiaCompute for CudaPipeline<'a> {
         element_count: usize,
     ) -> Result<u64, ForgeError> {
         let dispatch_x = schedule.dispatch_workgroups(element_count);
-
         let cfg = LaunchConfig {
             grid_dim: (dispatch_x, 1, 1),
             block_dim: (schedule.workgroup_size, 1, 1),
             shared_mem_bytes: 0,
         };
 
-        if buffers.len() != 3 {
-            return Err(ForgeError::GpuValidation(
-                "CUDA affine-f32 expects exactly 3 buffers".to_string(),
-            ));
-        }
-
-        // Resolve views by binding, not position, to match the emitter's layout
-        // (input@0, output@1, params@2) regardless of the order they were passed.
-        let view_for = |binding: u32| -> Result<&BufferView, ForgeError> {
-            buffers.iter().find(|b| b.binding == binding).ok_or_else(|| {
-                ForgeError::GpuValidation(format!("CUDA affine-f32 missing binding {binding}"))
-            })
-        };
-        let input_view = view_for(0)?;
-        let output_view = view_for(1)?;
-        let params_view = view_for(2)?;
-
-        // The uniform block lives in the slab; the PTX takes it by value, so we
-        // copy the 16 bytes back to the host and forward them as a kernel arg.
-        let params_host = {
-            let pslice = self.context.slab.slice(params_view.offset..params_view.offset + 16);
-            self.context
-                .stream
-                .clone_dtoh(&pslice)
-                .map_err(|e| ForgeError::GpuValidation(format!("Failed to read params: {:?}", e)))?
-        };
-        let mut params = AffineParamsRaw { bytes: [0u8; 16] };
-        params.bytes.copy_from_slice(&params_host[..16]);
-
-        // Input/output are passed as raw device pointers (base + offset). The
-        // SyncOnDrop guard keeps the slab pointer valid across the launch.
+        // Build launch args from the kernel spec, in binding order: each storage
+        // buffer becomes a device pointer, and the single uniform block is passed
+        // by value last — matching the CUDA-C signature emitted by emit_cuda_c.
         let (base, _guard) = self.context.slab.device_ptr(&self.context.stream);
         let base = base as u64;
-        let input_ptr = base + input_view.offset as u64;
-        let output_ptr = base + output_view.offset as u64;
+
+        let mut sorted = self.spec.buffers.clone();
+        sorted.sort_by_key(|b| b.binding);
+
+        let mut ptr_args: Vec<u64> = Vec::with_capacity(sorted.len());
+        let mut params: Option<AffineParamsRaw> = None;
+        for bspec in &sorted {
+            let view = buffers
+                .iter()
+                .find(|b| b.binding == bspec.binding)
+                .ok_or_else(|| {
+                    ForgeError::GpuValidation(format!("CUDA dispatch missing binding {}", bspec.binding))
+                })?;
+            if bspec.access == BufferAccess::Uniform {
+                let host = self
+                    .context
+                    .stream
+                    .clone_dtoh(&self.context.slab.slice(view.offset..view.offset + 16))
+                    .map_err(|e| ForgeError::GpuValidation(format!("Failed to read params: {:?}", e)))?;
+                let mut blob = AffineParamsRaw { bytes: [0u8; 16] };
+                blob.bytes.copy_from_slice(&host[..16]);
+                params = Some(blob);
+            } else {
+                ptr_args.push(base + view.offset as u64);
+            }
+        }
 
         let start = std::time::Instant::now();
-
-        // Argument order MUST match the PTX `.entry` parameter declaration order,
-        // which the emitter writes in buffer order: (input_ptr, output_ptr, params).
-        // CUDA binds launch args to kernel params positionally, so the uniform
-        // block is passed last — not first.
         let mut builder = self.context.stream.launch_builder(&self.func);
-        builder.arg(&input_ptr);
-        builder.arg(&output_ptr);
-        builder.arg(&params);
-        // Safety: argument count/types match the affine-f32 PTX signature
-        // (input ptr, output ptr, params[16] by value); buffers are bounds-checked above.
+        for ptr in &ptr_args {
+            builder.arg(ptr);
+        }
+        if let Some(params) = &params {
+            builder.arg(params);
+        }
+        // Safety: argument count/types match the CUDA-C signature emitted for
+        // this kernel (storage pointers in binding order, then the uniform block).
         unsafe {
             builder
                 .launch(cfg)

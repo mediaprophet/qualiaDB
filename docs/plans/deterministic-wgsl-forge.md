@@ -307,6 +307,24 @@ top-k, and ray-query WGSL emits + Naga-validates (see evidence below). Remaining
   phase" error; `certify`/`tune` remain affine-only (non-affine oracle path is a
   named follow-up). cudarc was modernised 0.11→0.19 (official, `cuda-13030`).
 
+### 2026-06-28 generic CUDA via NVRTC CUDA-C (affine/ffn/top-k)
+
+- Generic CUDA execution now mirrors the HLSL->DXC path: a CUDA-C emitter
+  (`emit/cuda_c.rs`, `TargetBackend::CudaC`) is compiled to PTX by NVRTC at
+  runtime and run via cudarc. Covers affine, fused-ffn, and top-k (CUDA-C
+  `__shared__` + `__syncthreads__`). `cuda.rs` dispatch is now generic: storage
+  buffers become pointer args in binding order, the uniform block is passed by
+  value last (derived from the kernel spec).
+- Another real environment bug, found by running: the installed toolkit (NVRTC
+  13.3) is newer than the driver (CUDA 13.2), so the driver rejected NVRTC's PTX
+  with CUDA_ERROR_UNSUPPORTED_PTX_VERSION. Fixed by rewriting the PTX `.version`
+  directive down to a driver-supported ISA (8.0; our kernels use only long-stable
+  instructions). The hand-written affine PTX worked earlier precisely because it
+  was already ISA 7.5.
+- Verified on the A2000: affine/ffn/topk `*_oracle_matches_across_cuda_backend`
+  all pass — the differential oracle now cross-checks three kernels across wgpu
+  and CUDA. p64 still needs a count uniform for CUDA/MSL (no arrayLength).
+
 ### 2026-06-28 CUDA backend works; cross-backend oracle (§7/§10)
 
 - First real execution of the native CUDA/PTX backend surfaced two bugs in the
