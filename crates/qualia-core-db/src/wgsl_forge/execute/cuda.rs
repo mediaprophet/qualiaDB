@@ -26,6 +26,8 @@ use super::compute::QualiaCompute;
 #[cfg(feature = "cuda")]
 use super::memory::{BindingUsage, BufferView, MemoryTopology, QualiaSlabAllocator};
 #[cfg(feature = "cuda")]
+use super::oracle_ctx::OracleContext;
+#[cfg(feature = "cuda")]
 use crate::wgsl_forge::{
     emit_shader, AdapterConstraints, AdapterIdentity, BufferAccess, BufferElement, BufferSpec,
     ForgeError, KernelSpec, ScalarType, Schedule, TargetBackend,
@@ -379,5 +381,78 @@ impl<'a> QualiaCompute for CudaPipeline<'a> {
             .map_err(|e| ForgeError::DeviceLost(format!("CUDA sync failed: {:?}", e)))?;
 
         Ok(start.elapsed().as_nanos().min(u64::MAX as u128) as u64)
+    }
+}
+
+#[cfg(feature = "cuda")]
+impl OracleContext for CudaComputeContext {
+    fn allocate_and_write(
+        &mut self,
+        data: &[u8],
+        binding: u32,
+        group: u32,
+        _usage: BindingUsage,
+    ) -> Result<BufferView, ForgeError> {
+        // CUDA addresses one slab through raw pointers, so the binding usage is not
+        // load-bearing; defer to the existing 3-arg inherent method verbatim.
+        CudaComputeContext::allocate_and_write(self, data, binding, group)
+    }
+
+    fn allocate_transient(
+        &mut self,
+        size_bytes: usize,
+        binding: u32,
+        group: u32,
+        _usage: BindingUsage,
+    ) -> Result<BufferView, ForgeError> {
+        CudaComputeContext::allocate_transient(self, size_bytes, binding, group)
+    }
+
+    fn read_buffer_f32(&self, view: &BufferView) -> Result<Vec<f32>, ForgeError> {
+        CudaComputeContext::read_buffer_f32(self, view)
+    }
+
+    fn clear_transient_allocations(&mut self) {
+        CudaComputeContext::clear_transient_allocations(self);
+    }
+
+    fn adapter(&self) -> &AdapterIdentity {
+        &self.adapter
+    }
+
+    fn constraints(&self) -> &AdapterConstraints {
+        &self.constraints
+    }
+
+    fn timestamp_supported(&self) -> bool {
+        // The CUDA backend times on the host wall clock (see [`CudaPipeline::dispatch`]);
+        // there is no GPU-timestamp query path here.
+        false
+    }
+
+    /// Compile the kernel's CUDA-C (NVRTC → PTX, emitted internally by
+    /// [`CudaPipeline::compile_cuda_c`]) and run the warmup + timed-sample dispatch
+    /// loop. Mirrors the wgpu loop shape so the generic oracle is backend-agnostic;
+    /// the cross-backend CUDA oracle uses `warmups = 0, samples = 1`, reproducing the
+    /// single dispatch the previous `evaluate_*_cuda` functions performed.
+    fn run_kernel(
+        &mut self,
+        kernel: &KernelSpec,
+        schedule: &Schedule,
+        buffers: &[BufferView],
+        element_count: usize,
+        warmups: usize,
+        samples: usize,
+    ) -> Result<Vec<u64>, ForgeError> {
+        let pipeline = CudaPipeline::compile_cuda_c(self, kernel, *schedule)?;
+
+        for _ in 0..warmups {
+            pipeline.dispatch(buffers, schedule, element_count)?;
+        }
+        let mut timing_samples = Vec::with_capacity(samples);
+        for _ in 0..samples {
+            timing_samples.push(pipeline.dispatch(buffers, schedule, element_count)?);
+        }
+        Ok(timing_samples)
     }
 }

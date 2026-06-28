@@ -1,7 +1,9 @@
 use bytemuck::{Pod, Zeroable};
 use serde::{Deserialize, Serialize};
 
-use crate::wgsl_forge::execute::{BindingUsage, QualiaCompute, WgpuComputeContext, WgpuPipeline};
+use crate::wgsl_forge::execute::{
+    BindingUsage, OracleContext, QualiaCompute, WgpuComputeContext, WgpuPipeline,
+};
 use crate::wgsl_forge::{
     AdapterConstraints, AdapterIdentity, BuiltinKernel, CandidateEvaluation, CertificationManifest,
     ForgeError, GeneratedShader, P64GpuWords64, Schedule, TargetBackend, TimingSource, TimingSummary,
@@ -415,9 +417,32 @@ pub fn evaluate_builtin(
         let m = length.clamp(1, 4096);
         return evaluate_ternary_gemv(context, schedule, m, 256, warmups, samples);
     }
-    let kernel = builtin.spec();
-    schedule.validate(&kernel, &context.constraints)?;
-    context.constraints.supports_kernel(&kernel)?;
+    // The only remaining builtin is the affine kernel — evaluated by the generic
+    // cross-backend path (plan §7), here on the wgpu context.
+    evaluate_affine(context, schedule, length, warmups, samples)
+}
+
+/// Cross-backend differential-oracle evaluation of the affine kernel against
+/// [`affine_cpu`] (plan §7). Generic over [`OracleContext`], so the *same* code runs
+/// on wgpu (via [`WgpuComputeContext`]) and CUDA (via `CudaComputeContext`); the
+/// backend only differs inside [`OracleContext::run_kernel`]. The CPU-reference
+/// vectors, bindings, dispatch sizing and tolerance are identical to what the
+/// wgpu-inline and `evaluate_affine_cuda` paths used before unification.
+pub fn evaluate_affine<C: OracleContext>(
+    context: &mut C,
+    schedule: Schedule,
+    length: usize,
+    warmups: usize,
+    samples: usize,
+) -> Result<(GeneratedShader, GpuEvaluation), ForgeError> {
+    if samples == 0 {
+        return Err(ForgeError::GpuValidation(
+            "sample count must be non-zero".to_string(),
+        ));
+    }
+    let kernel = BuiltinKernel::AffineF32.spec();
+    schedule.validate(&kernel, context.constraints())?;
+    context.constraints().supports_kernel(&kernel)?;
     let generated = emit_shader(&kernel, schedule, TargetBackend::Wgsl)?;
     validate_wgsl(&generated.source)?;
 
@@ -434,16 +459,8 @@ pub fn evaluate_builtin(
 
     let buffers = vec![view_input, view_output, view_params];
 
-    let pipeline = WgpuPipeline::compile(context, &generated.source, &kernel.entry_point)?;
-
-    for _ in 0..warmups {
-        pipeline.dispatch(&buffers, &schedule, case.input.len())?;
-    }
-
-    let mut timing_samples = Vec::with_capacity(samples);
-    for _ in 0..samples {
-        timing_samples.push(pipeline.dispatch(&buffers, &schedule, case.input.len())?);
-    }
+    let timing_samples =
+        context.run_kernel(&kernel, &schedule, &buffers, case.input.len(), warmups, samples)?;
     if timing_samples.iter().any(|s| *s == 0) {
         return Err(ForgeError::GpuValidation(
             "GPU produced a zero-duration timing sample".to_string(),
@@ -453,8 +470,6 @@ pub fn evaluate_builtin(
     let actual = context.read_buffer_f32(&view_output)?;
     let tolerance = OracleTolerance::default();
     let oracle = compare_f32(&case.expected, &actual, tolerance);
-
-    drop(pipeline); // drop immutable borrow before mutating context
 
     // Free transient allocations
     context.clear_transient_allocations();
@@ -469,7 +484,7 @@ pub fn evaluate_builtin(
         )));
     }
 
-    let source = if context.timestamp_supported {
+    let source = if context.timestamp_supported() {
         TimingSource::GpuTimestamp
     } else {
         TimingSource::CompletionClock
@@ -482,8 +497,8 @@ pub fn evaluate_builtin(
     Ok((
         generated,
         GpuEvaluation {
-            adapter: context.adapter.clone(),
-            constraints: context.constraints,
+            adapter: context.adapter().clone(),
+            constraints: *context.constraints(),
             oracle,
             timing,
             samples_ns: timing_samples,
@@ -578,84 +593,45 @@ fn matmul_tc() {
 /// Cross-backend oracle (plan §7/§10): runs the affine kernel through the native
 /// CUDA backend (CUDA-C compiled to PTX by NVRTC) and checks it against the *same*
 /// CPU reference vectors used for the wgpu backend. Requires a CUDA device.
+///
+/// Thin wrapper over the generic [`evaluate_affine`]: builds a CUDA context and runs
+/// the unified path with `warmups = 0, samples = 1` (one dispatch, as before),
+/// returning just the [`ComparisonReport`].
 #[cfg(feature = "cuda")]
 pub fn evaluate_affine_cuda(length: usize) -> Result<ComparisonReport, ForgeError> {
-    use crate::wgsl_forge::execute::{CudaComputeContext, CudaPipeline, QualiaCompute};
+    use crate::wgsl_forge::execute::CudaComputeContext;
     let mut context = CudaComputeContext::new(16 * 1024 * 1024)?;
     let schedule = Schedule { workgroup_size: 64, ..Default::default() };
-    let kernel = BuiltinKernel::AffineF32.spec();
-
-    let case = OracleCase::affine(length, 0x5141_4C49_4157_4753, 1.618_034, -0.125);
-    let view_input = context.allocate_and_write(bytemuck::cast_slice(&case.input), 0, 0)?;
-    let view_output = context.allocate_transient((case.input.len() * size_of::<f32>()).max(4), 1, 0)?;
-    let view_params = context.allocate_and_write(bytemuck::bytes_of(&case.params), 2, 0)?;
-    let buffers = vec![view_input, view_output, view_params];
-
-    let pipeline = CudaPipeline::compile_cuda_c(&context, &kernel, schedule)?;
-    pipeline.dispatch(&buffers, &schedule, case.input.len())?;
-    let actual = context.read_buffer_f32(&view_output)?;
-    Ok(compare_f32(&case.expected, &actual, OracleTolerance::default()))
+    let (_, evaluation) = evaluate_affine(&mut context, schedule, length, 0, 1)?;
+    Ok(evaluation.oracle)
 }
 
-/// Cross-backend oracle for the fused FFN via the CUDA backend.
+/// Cross-backend oracle for the fused FFN via the CUDA backend. Thin wrapper over
+/// the generic [`evaluate_ffn`] (`warmups = 0, samples = 1`, one dispatch as before).
 #[cfg(feature = "cuda")]
 pub fn evaluate_ffn_cuda(
     input_size: usize,
     hidden_size: usize,
     output_size: usize,
 ) -> Result<ComparisonReport, ForgeError> {
-    use crate::wgsl_forge::execute::{CudaComputeContext, CudaPipeline, QualiaCompute};
+    use crate::wgsl_forge::execute::CudaComputeContext;
     let mut context = CudaComputeContext::new(64 * 1024 * 1024)?;
     let schedule = Schedule { workgroup_size: 64, ..Default::default() };
-    let kernel = BuiltinKernel::FusedFfn.spec();
-
-    let (input, w1, w2) = ffn_tensors(input_size, hidden_size, output_size, 0x4646_4E5F_5345_4544);
-    let expected = ffn_cpu(&input, &w1, &w2, input_size, hidden_size, output_size);
-    let view_input = context.allocate_and_write(bytemuck::cast_slice(&input), 0, 0)?;
-    let view_w1 = context.allocate_and_write(bytemuck::cast_slice(&w1), 1, 0)?;
-    let view_w2 = context.allocate_and_write(bytemuck::cast_slice(&w2), 2, 0)?;
-    let view_output = context.allocate_transient((output_size * size_of::<f32>()).max(4), 3, 0)?;
-    let params = FfnParams {
-        input_size: input_size as u32,
-        hidden_size: hidden_size as u32,
-        output_size: output_size as u32,
-        _pad: 0,
-    };
-    let view_params = context.allocate_and_write(bytemuck::bytes_of(&params), 4, 0)?;
-    let buffers = vec![view_input, view_w1, view_w2, view_output, view_params];
-
-    let pipeline = CudaPipeline::compile_cuda_c(&context, &kernel, schedule)?;
-    pipeline.dispatch(&buffers, &schedule, output_size)?;
-    let actual = context.read_buffer_f32(&view_output)?;
-    Ok(compare_f32(&expected, &actual, OracleTolerance { absolute: 2.0e-3, relative: 2.0e-3 }))
+    let (_, evaluation) =
+        evaluate_ffn(&mut context, schedule, input_size, hidden_size, output_size, 0, 1)?;
+    Ok(evaluation.oracle)
 }
 
-/// Cross-backend oracle for top-k via the CUDA backend (CUDA-C `__shared__`).
+/// Cross-backend oracle for top-k via the CUDA backend (CUDA-C `__shared__`). Thin
+/// wrapper over the generic [`evaluate_topk`] (`warmups = 0, samples = 1`, one
+/// dispatch as before; `block_size` is `schedule.workgroup_size`, i.e. 64).
 #[cfg(feature = "cuda")]
 pub fn evaluate_topk_cuda(length: usize, k: usize) -> Result<ComparisonReport, ForgeError> {
-    use crate::wgsl_forge::execute::{CudaComputeContext, CudaPipeline, QualiaCompute};
+    use crate::wgsl_forge::execute::CudaComputeContext;
     let mut context = CudaComputeContext::new(64 * 1024 * 1024)?;
     let schedule = Schedule { workgroup_size: 64, ..Default::default() };
-    let block_size = schedule.workgroup_size as usize;
-    let kernel = BuiltinKernel::TopK.spec();
-
-    let input = topk_inputs(length, 0x5031_4B5F_5345_4544);
-    let expected = topk_cpu(&input, length, k, block_size);
-    let view_input = context.allocate_and_write(bytemuck::cast_slice(&input), 0, 0)?;
-    let view_output = context.allocate_transient((expected.len() * size_of::<f32>()).max(4), 1, 0)?;
-    let params = TopKParams {
-        length: length as u32,
-        k: k as u32,
-        block_size: block_size as u32,
-        _pad: 0,
-    };
-    let view_params = context.allocate_and_write(bytemuck::bytes_of(&params), 2, 0)?;
-    let buffers = vec![view_input, view_output, view_params];
-
-    let pipeline = CudaPipeline::compile_cuda_c(&context, &kernel, schedule)?;
-    pipeline.dispatch(&buffers, &schedule, length)?;
-    let actual = context.read_buffer_f32(&view_output)?;
-    Ok(compare_f32(&expected, &actual, OracleTolerance::default()))
+    let (_, evaluation) = evaluate_topk(&mut context, schedule, length, k, 0, 1)?;
+    Ok(evaluation.oracle)
 }
 
 /// Tensor-core oracle: runs the genuine f16-input WMMA GEMM (`C = A * B`,
@@ -885,10 +861,14 @@ pub fn evaluate_p64(
     ))
 }
 
-/// Differential-oracle evaluation for the fused FFN against [`ffn_cpu`].
-/// One workgroup-thread per output element; the output buffer is `output_size`.
-pub fn evaluate_ffn(
-    context: &mut WgpuComputeContext,
+/// Cross-backend differential-oracle evaluation for the fused FFN against
+/// [`ffn_cpu`] (plan §7). Generic over [`OracleContext`] — the same code runs on
+/// wgpu and CUDA; only [`OracleContext::run_kernel`] differs. One workgroup-thread
+/// per output element; the output buffer is `output_size`. Tensors, bindings,
+/// dispatch sizing and tolerance are identical to the prior wgpu/`evaluate_ffn_cuda`
+/// paths.
+pub fn evaluate_ffn<C: OracleContext>(
+    context: &mut C,
     schedule: Schedule,
     input_size: usize,
     hidden_size: usize,
@@ -900,8 +880,8 @@ pub fn evaluate_ffn(
         return Err(ForgeError::GpuValidation("sample count must be non-zero".to_string()));
     }
     let kernel = BuiltinKernel::FusedFfn.spec();
-    schedule.validate(&kernel, &context.constraints)?;
-    context.constraints.supports_kernel(&kernel)?;
+    schedule.validate(&kernel, context.constraints())?;
+    context.constraints().supports_kernel(&kernel)?;
     let generated = emit_shader(&kernel, schedule, TargetBackend::Wgsl)?;
     validate_wgsl(&generated.source)?;
 
@@ -923,15 +903,8 @@ pub fn evaluate_ffn(
     let view_params = context.allocate_and_write(bytemuck::bytes_of(&params), 4, 0, BindingUsage::Uniform)?;
 
     let buffers = vec![view_input, view_w1, view_w2, view_output, view_params];
-    let pipeline = WgpuPipeline::compile(context, &generated.source, &kernel.entry_point)?;
-
-    for _ in 0..warmups {
-        pipeline.dispatch(&buffers, &schedule, output_size)?;
-    }
-    let mut timing_samples = Vec::with_capacity(samples);
-    for _ in 0..samples {
-        timing_samples.push(pipeline.dispatch(&buffers, &schedule, output_size)?);
-    }
+    let timing_samples =
+        context.run_kernel(&kernel, &schedule, &buffers, output_size, warmups, samples)?;
     if timing_samples.iter().any(|s| *s == 0) {
         return Err(ForgeError::GpuValidation("GPU produced a zero-duration timing sample".to_string()));
     }
@@ -942,7 +915,6 @@ pub fn evaluate_ffn(
     let tolerance = OracleTolerance { absolute: 2.0e-3, relative: 2.0e-3 };
     let oracle = compare_f32(&expected, &actual, tolerance);
 
-    drop(pipeline);
     context.clear_transient_allocations();
 
     if !oracle.passed() {
@@ -952,7 +924,7 @@ pub fn evaluate_ffn(
         )));
     }
 
-    let timing_source = if context.timestamp_supported {
+    let timing_source = if context.timestamp_supported() {
         TimingSource::GpuTimestamp
     } else {
         TimingSource::CompletionClock
@@ -963,8 +935,8 @@ pub fn evaluate_ffn(
     Ok((
         generated,
         GpuEvaluation {
-            adapter: context.adapter.clone(),
-            constraints: context.constraints,
+            adapter: context.adapter().clone(),
+            constraints: *context.constraints(),
             oracle,
             timing,
             samples_ns: timing_samples,
@@ -1065,13 +1037,16 @@ pub fn evaluate_ternary_gemv(
     ))
 }
 
-/// Differential-oracle evaluation for the top-k kernel against [`topk_cpu`].
+/// Cross-backend differential-oracle evaluation for the top-k kernel against
+/// [`topk_cpu`] (plan §7). Generic over [`OracleContext`] — the same code runs on
+/// wgpu and CUDA; only [`OracleContext::run_kernel`] differs.
 ///
 /// `block_size` is fixed to `schedule.workgroup_size`; the dispatch launches one
-/// workgroup per block. Requires a native adapter. The output buffer is sized to
-/// `num_blocks * k`, not the input length.
-pub fn evaluate_topk(
-    context: &mut WgpuComputeContext,
+/// workgroup per block. The output buffer is sized to `num_blocks * k`, not the
+/// input length. Seeds, bindings, dispatch sizing and tolerance match the prior
+/// wgpu/`evaluate_topk_cuda` paths.
+pub fn evaluate_topk<C: OracleContext>(
+    context: &mut C,
     schedule: Schedule,
     length: usize,
     k: usize,
@@ -1091,8 +1066,8 @@ pub fn evaluate_topk(
     }
 
     let kernel = BuiltinKernel::TopK.spec();
-    schedule.validate(&kernel, &context.constraints)?;
-    context.constraints.supports_kernel(&kernel)?;
+    schedule.validate(&kernel, context.constraints())?;
+    context.constraints().supports_kernel(&kernel)?;
     let generated = emit_shader(&kernel, schedule, TargetBackend::Wgsl)?;
     validate_wgsl(&generated.source)?;
 
@@ -1116,15 +1091,8 @@ pub fn evaluate_topk(
     let view_params = context.allocate_and_write(bytemuck::bytes_of(&params), 2, 0, BindingUsage::Uniform)?;
 
     let buffers = vec![view_input, view_output, view_params];
-    let pipeline = WgpuPipeline::compile(context, &generated.source, &kernel.entry_point)?;
-
-    for _ in 0..warmups {
-        pipeline.dispatch(&buffers, &schedule, length)?;
-    }
-    let mut timing_samples = Vec::with_capacity(samples);
-    for _ in 0..samples {
-        timing_samples.push(pipeline.dispatch(&buffers, &schedule, length)?);
-    }
+    let timing_samples =
+        context.run_kernel(&kernel, &schedule, &buffers, length, warmups, samples)?;
     if timing_samples.iter().any(|s| *s == 0) {
         return Err(ForgeError::GpuValidation(
             "GPU produced a zero-duration timing sample".to_string(),
@@ -1135,7 +1103,6 @@ pub fn evaluate_topk(
     let tolerance = OracleTolerance::default();
     let oracle = compare_f32(&expected, &actual, tolerance);
 
-    drop(pipeline);
     context.clear_transient_allocations();
 
     if !oracle.passed() {
@@ -1145,7 +1112,7 @@ pub fn evaluate_topk(
         )));
     }
 
-    let timing_source = if context.timestamp_supported {
+    let timing_source = if context.timestamp_supported() {
         TimingSource::GpuTimestamp
     } else {
         TimingSource::CompletionClock
@@ -1157,8 +1124,8 @@ pub fn evaluate_topk(
     Ok((
         generated,
         GpuEvaluation {
-            adapter: context.adapter.clone(),
-            constraints: context.constraints,
+            adapter: context.adapter().clone(),
+            constraints: *context.constraints(),
             oracle,
             timing,
             samples_ns: timing_samples,
@@ -1296,6 +1263,12 @@ pub fn rayprobe_cpu(rays: &[f32], scene: &[f32]) -> Vec<f32> {
 /// BLAS+TLAS for [`rayprobe_scene`], dispatches the emitted `ray_probe` WGSL over
 /// [`rayprobe_rays`] on the GPU, and checks the committed hit distances against
 /// [`rayprobe_cpu`]. Requires a ray-query-capable adapter (RT cores).
+///
+/// Intentionally concrete on [`WgpuComputeContext`] (not generic over
+/// [`OracleContext`]): it needs the wgpu-only acceleration-structure build
+/// ([`WgpuComputeContext::build_triangle_scene`]) and the dedicated
+/// [`WgpuPipeline::dispatch_rayprobe`] binding path, which have no CUDA analogue —
+/// it is not a §7 cross-backend kernel.
 pub fn evaluate_rayprobe(
     context: &mut WgpuComputeContext,
     schedule: Schedule,

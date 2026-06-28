@@ -3,7 +3,11 @@ use std::time::Instant;
 
 use super::compute::QualiaCompute;
 use super::memory::{BindingUsage, BufferView, MemoryTopology, QualiaSlabAllocator};
-use crate::wgsl_forge::{AdapterConstraints, AdapterIdentity, ForgeError, HardwareProfile, Schedule};
+use super::oracle_ctx::OracleContext;
+use crate::wgsl_forge::{
+    emit_shader, AdapterConstraints, AdapterIdentity, ForgeError, HardwareProfile, KernelSpec,
+    Schedule, TargetBackend,
+};
 
 pub struct WgpuComputeContext {
     pub device: wgpu::Device,
@@ -317,6 +321,73 @@ impl WgpuComputeContext {
         drop(bytes);
         staging.unmap();
         Ok(output)
+    }
+}
+
+impl OracleContext for WgpuComputeContext {
+    fn allocate_and_write(
+        &mut self,
+        data: &[u8],
+        binding: u32,
+        group: u32,
+        usage: BindingUsage,
+    ) -> Result<BufferView, ForgeError> {
+        WgpuComputeContext::allocate_and_write(self, data, binding, group, usage)
+    }
+
+    fn allocate_transient(
+        &mut self,
+        size_bytes: usize,
+        binding: u32,
+        group: u32,
+        usage: BindingUsage,
+    ) -> Result<BufferView, ForgeError> {
+        WgpuComputeContext::allocate_transient(self, size_bytes, binding, group, usage)
+    }
+
+    fn read_buffer_f32(&self, view: &BufferView) -> Result<Vec<f32>, ForgeError> {
+        WgpuComputeContext::read_buffer_f32(self, view)
+    }
+
+    fn clear_transient_allocations(&mut self) {
+        WgpuComputeContext::clear_transient_allocations(self);
+    }
+
+    fn adapter(&self) -> &AdapterIdentity {
+        &self.adapter
+    }
+
+    fn constraints(&self) -> &AdapterConstraints {
+        &self.constraints
+    }
+
+    fn timestamp_supported(&self) -> bool {
+        self.timestamp_supported
+    }
+
+    /// Emit the kernel's WGSL, compile it, then run the warmup + timed-sample
+    /// dispatch loop — byte-for-byte the loop the wgpu oracle evaluators ran inline
+    /// (warmups untimed, then `samples` timed dispatches via [`QualiaCompute::dispatch`]).
+    fn run_kernel(
+        &mut self,
+        kernel: &KernelSpec,
+        schedule: &Schedule,
+        buffers: &[BufferView],
+        element_count: usize,
+        warmups: usize,
+        samples: usize,
+    ) -> Result<Vec<u64>, ForgeError> {
+        let generated = emit_shader(kernel, *schedule, TargetBackend::Wgsl)?;
+        let pipeline = WgpuPipeline::compile(self, &generated.source, &kernel.entry_point)?;
+
+        for _ in 0..warmups {
+            pipeline.dispatch(buffers, schedule, element_count)?;
+        }
+        let mut timing_samples = Vec::with_capacity(samples);
+        for _ in 0..samples {
+            timing_samples.push(pipeline.dispatch(buffers, schedule, element_count)?);
+        }
+        Ok(timing_samples)
     }
 }
 
