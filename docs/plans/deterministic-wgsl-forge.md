@@ -55,7 +55,31 @@ kernel’s mathematical meaning.
 
 If a target-specific native backend (e.g., PTX or MSL) fails to initialize on the host, the Forge must automatically fall back to the next available compilation target (e.g., SPIR-V or WGSL) to ensure the compute pipeline remains operational, albeit at a potentially reduced performance tier.
 
+**Implemented (2026-06-29):** `wgsl_forge::backend::resolve_execution_backend` is a pure,
+deterministic policy function realising this fallback. The ordered chains are
+`Ptx`/`CudaC` → `Wgsl` (no SPIR-V tier on the CUDA driver path) and `Msl`/`Hlsl` →
+`Spirv` → `Wgsl`; `Wgsl` is always available (naga compiles it in-process). The CLI
+`shader validate` path uses it with `check_native_toolchain` as the availability
+predicate: when a requested native target's toolchain (DXC/nvcc/xcrun) is absent, the
+*validation pipeline* drops to WGSL and prints a `note:` explaining the downgrade, rather
+than erroring. Source emission (`shader generate --target ptx`) is deliberately NOT routed
+through the resolver — an explicit emission target still emits that target's source.
+
 Stateless Execution & Persistent Memory: The execution layer is strictly stateless. Dynamic allocation in the hot loop is forbidden. The orchestrator manages a persistent, topology-aware ring buffer (larger persistent slabs with zero-copy for unified memory, pinned staging rings with async `copy_buffer` for discrete PCIe devices) and passes lightweight offsets to the target-specific `QualiaCompute` implementation. Every backend must enforce the invariant that "read/write heads never lap" using proper memory fences.
+
+**Implementation status of the differentiated memory paths (honest scope, 2026-06-29).**
+What is **done**: the topology is classified (`MemoryTopology::{Unified, Discrete}`) and the
+ring/slab allocator (`QualiaSlabAllocator`) is lap-safe, proven not to lap its read head under
+sustained high-throughput dispatch (`sustained_dispatch_never_laps_read_head`). What is **NOT
+yet implemented**: the *differentiation* of the physical copy path by topology. The wgpu backend
+(`execute/wgpu.rs`) uses a single **uniform** path on both topologies — `queue.write_buffer` for
+host→device uploads and `copy_buffer_to_buffer` for readback — which is correct on both unified
+and discrete hardware but unoptimised. The plan-§2 differentiated paths (zero-copy
+persistent-mapped slabs for unified memory; a pinned staging ring + async `copy_buffer` for
+discrete) are **documented future work**. This is a measurement-honesty decision: the development
+host is a discrete-only RTX A2000 (no unified memory), so a unified zero-copy path cannot be
+exercised or benefit-measured here, and shipping unverified memory-mapping code would over-claim.
+The differentiated paths should be built and benchmarked on unified-memory hardware.
 
 ## 3. Repository layout
 
@@ -452,10 +476,19 @@ claims in this ledger / the task list: that was overstated.** The findings:
   correctness-gated tuner, topology-keyed manifest cache, the ring-buffer slab + lap test,
   real ffn/topk/p64 math with wgpu+CUDA cross-backend oracles, and both frontier items.
   Still **partial or missing** (normative requirements, not the two accepted items):
-  - §2 **automatic native→fallback backend selection** — missing (no PTX/MSL→WGSL drop on
-    init failure).
-  - §2 **topology-aware memory paths** — tags only; no zero-copy-unified / pinned-staging+
-    async-copy-discrete differentiation (`wgpu.rs` treats both identically).
+  - §2 **automatic native→fallback backend selection** — **DONE (2026-06-29).**
+    `backend::resolve_execution_backend` (pure, unit-tested with a mock predicate) walks the
+    ordered chains `Ptx`/`CudaC`→`Wgsl` and `Msl`/`Hlsl`→`Spirv`→`Wgsl`; the CLI `shader
+    validate` path drops to WGSL with a printed `note:` when the requested native toolchain is
+    absent, instead of erroring. Source emission is intentionally left unaffected.
+  - §2 **topology-aware memory paths** — **classification + lap-safe ring DONE; differentiated
+    copy paths documented as future work (2026-06-29).** The topology is tagged
+    (`MemoryTopology::{Unified, Discrete}`) and the ring/slab is lap-safe, but `wgpu.rs` still
+    uses a single uniform `write_buffer` + `copy_buffer_to_buffer` path on both topologies. The
+    zero-copy-unified / pinned-staging+async-copy-discrete differentiation is **not implemented**:
+    it cannot be exercised or benefit-measured on this discrete-only host (RTX A2000), so it is
+    documented (in `execute/memory.rs`, `execute/wgpu.rs`, and §2 above) rather than shipped
+    unverified. To be built on unified-memory hardware.
   - §4 **ternary dequant/GEMV kernel** — absent (no built-in, emitter, or oracle).
   - §6 **four dead schedule knobs** (`tile_mnk`, `use_subgroup`, `prefetch`, `unroll_factor`)
     — **resolved (removed)**: these `Schedule` fields were never varied in the search and

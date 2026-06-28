@@ -4,6 +4,7 @@
 //! inputs. Tuning is therefore allowed to change work distribution without
 //! changing the mathematical operation being certified.
 
+pub mod backend;
 pub mod cache;
 pub mod emit;
 pub mod execute;
@@ -15,6 +16,7 @@ pub mod schedule;
 pub mod tune;
 pub mod validate;
 
+pub use backend::resolve_execution_backend;
 pub use cache::ManifestCache;
 pub use emit::{decode_spirv_words, emit_shader, matmul_tc_wgsl, GeneratedShader, TargetBackend};
 pub use ir::{

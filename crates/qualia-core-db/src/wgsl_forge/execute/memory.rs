@@ -1,12 +1,40 @@
 use super::super::ForgeError;
 
 /// Defines the topology of the underlying memory allocator.
+///
+/// # Implementation status (honest scope, plan §2)
+///
+/// Plan §2 calls for *differentiated* memory paths: *"larger persistent slabs with
+/// zero-copy for unified memory, pinned staging rings with async `copy_buffer` for
+/// discrete PCIe devices."* What is **implemented and verified** today is the
+/// classification plus the topology-aware, lap-safe ring/slab allocator
+/// ([`QualiaSlabAllocator`], proven not to lap its read head under sustained
+/// dispatch — see `sustained_dispatch_never_laps_read_head`).
+///
+/// What is **NOT yet implemented** is the *differentiation* of the physical copy
+/// path by topology. The `zero_copy` / `staging_required` flags are descriptive
+/// tags only: the wgpu backend ([`super::wgpu`]) uses the **same** uniform path on
+/// both topologies — `queue.write_buffer` for host→device uploads and
+/// `copy_buffer_to_buffer` for readback — regardless of the variant here. That
+/// path is correct on both unified and discrete hardware; it is simply not yet
+/// *optimised* per topology.
+///
+/// This is a deliberate measurement-honesty decision: the development host is a
+/// discrete-only NVIDIA RTX A2000 (no unified memory), so a unified zero-copy
+/// persistent-mapped path cannot be exercised or verified here, and shipping
+/// unverified memory-mapping code would over-claim. The differentiated paths
+/// (zero-copy persistent-mapped slabs for unified; pinned staging ring + async
+/// copy for discrete) are documented future work, to be built and benchmarked on
+/// unified-memory hardware where the benefit is actually measurable.
 #[derive(Debug, Clone, Copy, PartialEq, Eq)]
 pub enum MemoryTopology {
     /// Memory is shared between host and device (e.g., Apple Silicon, APUs).
-    /// Zero-copy mapping is preferred.
+    /// Zero-copy mapping is *preferred in principle* but not yet implemented — see
+    /// the type-level note above. Currently classified, not yet exploited.
     Unified { zero_copy: bool },
-    /// Memory requires a staging buffer (PCIe transfer to discrete VRAM).
+    /// Memory requires a staging buffer (PCIe transfer to discrete VRAM). A pinned
+    /// staging ring with async `copy_buffer` is *intended* but not yet implemented
+    /// — see the type-level note above. Currently classified, not yet exploited.
     Discrete { staging_required: bool },
 }
 

@@ -4,9 +4,9 @@ use std::str::FromStr;
 use clap::{Args, Subcommand};
 use qualia_core_db::wgsl_forge::execute::WgpuComputeContext;
 use qualia_core_db::wgsl_forge::{
-    candidate_evaluation, generate_builtin, tune_with, validate_wgsl, validate_native,
-    AdapterConstraints, BuiltinKernel, CertificationManifest, ForgeError, ManifestCache, Schedule,
-    ScheduleSpace, TargetBackend, TuningConfig, TuningManifest,
+    candidate_evaluation, generate_builtin, resolve_execution_backend, tune_with, validate_wgsl,
+    validate_native, AdapterConstraints, BuiltinKernel, CertificationManifest, ForgeError,
+    ManifestCache, Schedule, ScheduleSpace, TargetBackend, TuningConfig, TuningManifest,
 };
 
 #[derive(Debug, Clone, Args)]
@@ -306,7 +306,20 @@ pub fn run(action: &ShaderAction) -> Result<(), Box<dyn std::error::Error>> {
             manifest,
             json,
         } => {
-            let target_backend = target.parse().map_err(|e: String| ForgeError::Emission(e))?;
+            let requested_backend: TargetBackend =
+                target.parse().map_err(|e: String| ForgeError::Emission(e))?;
+            // §2 automatic fallback: validation runs a real native compile (DXC for
+            // HLSL, NVRTC/nvcc for PTX/CUDA-C, xcrun for MSL). If that toolchain is
+            // absent on this host, drop the *validation pipeline* to WGSL (always
+            // available, naga-validated in-process) instead of erroring. WGSL/SPIR-V
+            // need no native toolchain, so they never downgrade. This affects only
+            // the execution/validation pipeline — `shader generate --target ptx`
+            // still emits PTX source unchanged.
+            let (target_backend, fallback_note) =
+                resolve_execution_backend(requested_backend, |t| check_native_toolchain(t).is_ok());
+            if let Some(note) = fallback_note {
+                println!("note: {note}");
+            }
             let (source, generated, spec) = if let Some(path) = input {
                 (std::fs::read_to_string(path)?, None, None)
             } else {

@@ -161,6 +161,21 @@ impl WgpuComputeContext {
         }
     }
 
+    /// Allocate a transient slab sub-range and upload `data` into it.
+    ///
+    /// # Topology note (honest scope, plan §2)
+    ///
+    /// This upload uses `queue.write_buffer` **uniformly on every topology**
+    /// (unified and discrete alike); readback in [`Self::read_buffer_f32`]
+    /// likewise uses `copy_buffer_to_buffer` uniformly. The
+    /// `MemoryTopology::{Unified, Discrete}` classification on the allocator is
+    /// *recorded but not yet acted upon here*: the plan-§2 differentiated paths
+    /// (zero-copy persistent-mapped slabs for unified memory; a pinned staging ring
+    /// with async `copy_buffer` for discrete PCIe) are NOT implemented. The current
+    /// uniform path is correct on both topologies but unoptimised; the unified
+    /// zero-copy benefit cannot be measured on this discrete-only host (RTX A2000),
+    /// so it is left as documented future work rather than shipped unverified. See
+    /// [`MemoryTopology`] for the full rationale.
     pub fn allocate_and_write(&mut self, data: &[u8], binding: u32, group: u32, usage: BindingUsage) -> Result<BufferView, ForgeError> {
         let view = self.allocator.allocate_transient(data.len(), binding, group, usage)?;
         if !data.is_empty() {
