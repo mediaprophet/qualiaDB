@@ -58,7 +58,9 @@ pub fn streaming_import_rdf(in_path: &str, out_path: &str) -> std::io::Result<u6
             for triple in rx {
                 let s_hash = q_hash(&triple.subject);
                 let p_hash = q_hash(&triple.predicate);
-                let o_hash = triple.packed_object.unwrap_or_else(|| q_hash(&triple.object) & OBJECT_HASH_MASK);
+                let o_hash = triple
+                    .packed_object
+                    .unwrap_or_else(|| q_hash(&triple.object) & OBJECT_HASH_MASK);
                 let context = 0u64;
                 let metadata = 0u64;
                 let parity = s_hash ^ p_hash ^ o_hash ^ context ^ metadata;
@@ -94,13 +96,21 @@ pub fn streaming_import_rdf(in_path: &str, out_path: &str) -> std::io::Result<u6
     // 4. Spawn Writer Thread
     let out_path_copy = out_path.to_string();
     let writer_handle = thread::spawn(move || {
-        use std::io::{Seek, SeekFrom};
-        use crate::q42_volume::{Q42VolumeHeader, BlockDirectoryEntry, HEADER_SIZE, header_to_bytes};
         use crate::git_bridge::DagStore;
+        use crate::q42_volume::{
+            header_to_bytes, BlockDirectoryEntry, Q42VolumeHeader, HEADER_SIZE,
+        };
+        use std::io::{Seek, SeekFrom};
 
-        let mut out_file = std::fs::OpenOptions::new().read(true).write(true).create(true).truncate(true).open(out_path_copy).expect("Failed to create output .q42 file");
+        let mut out_file = std::fs::OpenOptions::new()
+            .read(true)
+            .write(true)
+            .create(true)
+            .truncate(true)
+            .open(out_path_copy)
+            .expect("Failed to create output .q42 file");
         out_file.seek(SeekFrom::Start(HEADER_SIZE as u64)).unwrap();
-        
+
         let mut written_count = 0;
         let mut block_id: u64 = 0;
         let mut buffer = Vec::with_capacity(393_216);
@@ -108,7 +118,7 @@ pub fn streaming_import_rdf(in_path: &str, out_path: &str) -> std::io::Result<u6
         let mut block_directory: Vec<BlockDirectoryEntry> = Vec::new();
         let mut dag_store = DagStore::new();
         let mut last_dag_hash = [0u8; 32];
-        
+
         let data_offset = HEADER_SIZE as u64;
         let mut current_offset = data_offset;
 
@@ -119,7 +129,7 @@ pub fn streaming_import_rdf(in_path: &str, out_path: &str) -> std::io::Result<u6
 
             if buffer.len() >= 393_216 {
                 let compressed = lz4_flex::compress_prepend_size(&buffer);
-                
+
                 out_file.write_all(&compressed).unwrap();
 
                 let block_size = compressed.len() as u32;
@@ -236,7 +246,9 @@ pub fn streaming_import_rdf(in_path: &str, out_path: &str) -> std::io::Result<u6
             assertion_timestamp,
             dag_root_offset,
             dag_root_length,
-            _reserved: [0u8; 96],
+            natural_person_did_offset: 0,
+            software_agent_did_offset: 0,
+            _reserved: [0u8; 80],
         };
 
         out_file.seek(SeekFrom::Start(0)).unwrap();
@@ -266,7 +278,9 @@ pub fn streaming_import_rdf(in_path: &str, out_path: &str) -> std::io::Result<u6
         let object = t.object.to_string();
         let mut packed_object = None;
 
-        if let rio_api::model::Term::Literal(rio_api::model::Literal::Typed { value, datatype }) = t.object {
+        if let rio_api::model::Term::Literal(rio_api::model::Literal::Typed { value, datatype }) =
+            t.object
+        {
             let dt = datatype.iri;
             if dt == "http://www.w3.org/2001/XMLSchema#integer" {
                 if let Ok(num) = value.parse::<i64>() {
@@ -432,19 +446,22 @@ pub fn streaming_import_rdf(in_path: &str, out_path: &str) -> std::io::Result<u6
     Ok(total_written)
 }
 
-pub fn verify_integrity(input_path: std::path::PathBuf, dataset_path: std::path::PathBuf) -> std::io::Result<bool> {
-    use std::io::Read;
+pub fn verify_integrity(
+    input_path: std::path::PathBuf,
+    dataset_path: std::path::PathBuf,
+) -> std::io::Result<bool> {
+    use crate::rdf_star::RdfStarParser;
+    use crate::sparql_library::parsers::turtle_star::TurtleStarParser;
     use std::fs::File;
     use std::io::BufReader;
-    use crate::sparql_library::parsers::turtle_star::TurtleStarParser;
-    use crate::rdf_star::RdfStarParser;
-    
+    use std::io::Read;
+
     // Calculate source checksum
     let mut source_checksum: u64 = 0;
     let file = File::open(&input_path)?;
     let mut reader = BufReader::new(file);
     let mut parser = TurtleStarParser::new(0);
-    
+
     let mut buffer = Vec::new();
     while {
         buffer.clear();
@@ -456,42 +473,47 @@ pub fn verify_integrity(input_path: std::path::PathBuf, dataset_path: std::path:
         } else if slice.ends_with(b"\n") {
             slice = &slice[..slice.len() - 1];
         }
-        
+
         if slice.is_empty() || slice[0] == b'#' || slice.iter().all(|b| b.is_ascii_whitespace()) {
             continue;
         }
-        
+
         if let Ok((s, p, o)) = parser.parse_triple(slice) {
             let parity = s ^ p ^ o ^ 0;
             source_checksum ^= parity;
         }
     }
-    
+
     println!("Source Checksum: 0x{:016X}", source_checksum);
-    
+
     // Dataset calculation
     let mut dataset_checksum: u64 = 0;
-    
+
     let volume = match crate::q42_volume::Q42Volume::open(&dataset_path) {
         Ok(v) => v,
-        Err(e) => return Err(std::io::Error::new(std::io::ErrorKind::InvalidData, format!("Failed to open Q42 volume: {}", e))),
+        Err(e) => {
+            return Err(std::io::Error::new(
+                std::io::ErrorKind::InvalidData,
+                format!("Failed to open Q42 volume: {}", e),
+            ))
+        }
     };
-    
+
     let mut sb_buf = vec![0u8; crate::q42_volume::SUPERBLOCK_SIZE];
     for i in 0..volume.block_count() as usize {
         let _ = volume.read_superblock_into(i, &mut sb_buf)?;
         let quin_count = u64::from_le_bytes(sb_buf[16..24].try_into().unwrap()) as usize;
         let mut off = crate::q42_volume::SUPERBLOCK_HEADER;
         for _ in 0..quin_count {
-            let parity = u64::from_le_bytes(sb_buf[off+40..off+48].try_into().unwrap());
+            let parity = u64::from_le_bytes(sb_buf[off + 40..off + 48].try_into().unwrap());
             if parity != 0 {
                 dataset_checksum ^= parity;
             }
             off += crate::q42_volume::QUIN_SIZE;
         }
     }
-    
+
     println!("Dataset Checksum: 0x{:016X}", dataset_checksum);
-    
+
     Ok(source_checksum == dataset_checksum && source_checksum != 0)
 }

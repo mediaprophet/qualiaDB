@@ -82,7 +82,10 @@ mod tests {
         let mut gate = [0.0; 2];
         let mut up = [0.0; 2];
         let mut out = [0.0; 2];
-        swiglu_ffn(2, 2, &x, &w_gate, &w_up, &w_down, &mut gate, &mut up, &mut out).unwrap();
+        swiglu_ffn(
+            2, 2, &x, &w_gate, &w_up, &w_down, &mut gate, &mut up, &mut out,
+        )
+        .unwrap();
 
         // Expected: h = silu([1,2]) ⊙ [3,-1]; out = h.
         let h0 = silu_scalar(1.0) * 3.0;
@@ -101,7 +104,10 @@ mod tests {
         let mut gate = [0.0; 3];
         let mut up = [0.0; 3];
         let mut out = [0.0; 3];
-        swiglu_ffn(3, 3, &x, &w_gate, &w_up, &w_down, &mut gate, &mut up, &mut out).unwrap();
+        swiglu_ffn(
+            3, 3, &x, &w_gate, &w_up, &w_down, &mut gate, &mut up, &mut out,
+        )
+        .unwrap();
         for &v in &out {
             assert!(v.abs() < 1e-12);
         }

@@ -55,7 +55,9 @@ impl std::error::Error for KmlError {}
 /// - One `dcterms:title` quin if `<name>` is present
 ///
 /// The lexicon map (hash → string) for any literal values is returned alongside.
-pub fn import_kml(bytes: &[u8]) -> Result<(Vec<NQuin>, std::collections::HashMap<u64, String>), KmlError> {
+pub fn import_kml(
+    bytes: &[u8],
+) -> Result<(Vec<NQuin>, std::collections::HashMap<u64, String>), KmlError> {
     let mut reader = Reader::from_reader(bytes);
     reader.config_mut().trim_text(true);
 
@@ -104,7 +106,8 @@ pub fn import_kml(bytes: &[u8]) -> Result<(Vec<NQuin>, std::collections::HashMap
                 match local.as_ref() {
                     b"Placemark" => {
                         placemark_idx += 1;
-                        placemark_subject = fnv_hash(format!("kml:placemark:{placemark_idx}").as_bytes());
+                        placemark_subject =
+                            fnv_hash(format!("kml:placemark:{placemark_idx}").as_bytes());
                         in_placemark = true;
                         in_polygon = false;
                         coordinates_text.clear();
@@ -174,7 +177,12 @@ pub fn import_kml(bytes: &[u8]) -> Result<(Vec<NQuin>, std::collections::HashMap
                     b"Point" => in_point = false,
                     b"TimeStamp" => in_timestamp = false,
                     b"TimeSpan" => in_timespan = false,
-                    b"name" => { in_name = false; if in_network_link { network_link_name = name_text.clone(); } }
+                    b"name" => {
+                        in_name = false;
+                        if in_network_link {
+                            network_link_name = name_text.clone();
+                        }
+                    }
                     b"coordinates" if !in_poly_coordinates => in_coordinates = false,
                     b"when" => in_when = false,
                     b"begin" => in_begin = false,
@@ -208,13 +216,21 @@ pub fn import_kml(bytes: &[u8]) -> Result<(Vec<NQuin>, std::collections::HashMap
                 let text = quick_xml::escape::unescape(&decoded)
                     .map_err(|e| KmlError::Xml(e.to_string()))?
                     .into_owned();
-                if in_poly_coordinates          { polygon_coordinates_text = text; }
-                else if in_coordinates          { coordinates_text = text; }
-                else if in_name                 { name_text = text; }
-                else if in_when                 { when_text = text; }
-                else if in_begin                { begin_text = text; }
-                else if in_end                  { end_text = text; }
-                else if in_href                 { href_text = text; }
+                if in_poly_coordinates {
+                    polygon_coordinates_text = text;
+                } else if in_coordinates {
+                    coordinates_text = text;
+                } else if in_name {
+                    name_text = text;
+                } else if in_when {
+                    when_text = text;
+                } else if in_begin {
+                    begin_text = text;
+                } else if in_end {
+                    end_text = text;
+                } else if in_href {
+                    href_text = text;
+                }
             }
             Ok(Event::Eof) => break,
             Err(e) => return Err(KmlError::Xml(e.to_string())),
@@ -324,7 +340,10 @@ fn flush_polygon(
 
     // WKT POLYGON((lon1 lat1, lon2 lat2, ...))
     // KML convention: first and last coordinates must match to close the ring.
-    let ring: Vec<String> = points.iter().map(|(lon, lat)| format!("{lon} {lat}")).collect();
+    let ring: Vec<String> = points
+        .iter()
+        .map(|(lon, lat)| format!("{lon} {lat}"))
+        .collect();
     let wkt = format!("POLYGON(({})", ring.join(", "));
     let wkt = wkt + ")";
     let wkt_hash = fnv_hash(wkt.as_bytes());
@@ -336,11 +355,36 @@ fn flush_polygon(
 
     // Bounding box quins — encode as f64 bits in the object field.
     let bb_subject = fnv_hash(format!("kml:bbox:{subject}").as_bytes());
-    quins.push(make_quin(subject, P_BOUNDING_BOX, bb_subject, SPATIAL_CONTEXT));
-    quins.push(make_quin(bb_subject, P_BB_MIN_LON, min_lon.to_bits(), SPATIAL_CONTEXT));
-    quins.push(make_quin(bb_subject, P_BB_MAX_LON, max_lon.to_bits(), SPATIAL_CONTEXT));
-    quins.push(make_quin(bb_subject, P_BB_MIN_LAT, min_lat.to_bits(), SPATIAL_CONTEXT));
-    quins.push(make_quin(bb_subject, P_BB_MAX_LAT, max_lat.to_bits(), SPATIAL_CONTEXT));
+    quins.push(make_quin(
+        subject,
+        P_BOUNDING_BOX,
+        bb_subject,
+        SPATIAL_CONTEXT,
+    ));
+    quins.push(make_quin(
+        bb_subject,
+        P_BB_MIN_LON,
+        min_lon.to_bits(),
+        SPATIAL_CONTEXT,
+    ));
+    quins.push(make_quin(
+        bb_subject,
+        P_BB_MAX_LON,
+        max_lon.to_bits(),
+        SPATIAL_CONTEXT,
+    ));
+    quins.push(make_quin(
+        bb_subject,
+        P_BB_MIN_LAT,
+        min_lat.to_bits(),
+        SPATIAL_CONTEXT,
+    ));
+    quins.push(make_quin(
+        bb_subject,
+        P_BB_MAX_LAT,
+        max_lat.to_bits(),
+        SPATIAL_CONTEXT,
+    ));
 
     if !name.is_empty() {
         let name_hash = fnv_hash(name.as_bytes());
@@ -383,7 +427,12 @@ fn flush_network_link(
     let href_hash = fnv_hash(href.as_bytes());
     lexicon.insert(href_hash, href.to_owned());
 
-    quins.push(make_quin(link_subject, P_SEE_ALSO, href_hash, SPATIAL_CONTEXT));
+    quins.push(make_quin(
+        link_subject,
+        P_SEE_ALSO,
+        href_hash,
+        SPATIAL_CONTEXT,
+    ));
 
     if !name.is_empty() {
         let name_hash = fnv_hash(name.as_bytes());
@@ -396,10 +445,7 @@ fn flush_network_link(
 ///
 /// NQuins outside the two spatial/temporal contexts are ignored.
 /// Geometry is reconstructed from the `geo:asWKT` object hash by lookup in `lexicon`.
-pub fn export_kml(
-    quins: &[NQuin],
-    lexicon: &std::collections::HashMap<u64, String>,
-) -> String {
+pub fn export_kml(quins: &[NQuin], lexicon: &std::collections::HashMap<u64, String>) -> String {
     use std::collections::BTreeMap;
 
     // Group quins by subject
@@ -479,12 +525,26 @@ struct PlacemarkData {
 
 #[inline]
 fn make_quin(subject: u64, predicate: u64, object: u64, context: u64) -> NQuin {
-    NQuin { subject, predicate, object, context, metadata: 0, parity: 0 }
+    NQuin {
+        subject,
+        predicate,
+        object,
+        context,
+        metadata: 0,
+        parity: 0,
+    }
 }
 
 #[inline]
 fn make_temporal_quin(subject: u64, predicate: u64, timestamp_ms: u64) -> NQuin {
-    NQuin { subject, predicate, object: timestamp_ms, context: T_CONTEXT, metadata: 0, parity: 0 }
+    NQuin {
+        subject,
+        predicate,
+        object: timestamp_ms,
+        context: T_CONTEXT,
+        metadata: 0,
+        parity: 0,
+    }
 }
 
 /// FNV-1a — matches `crate::q_hash` (60-bit identity) but operates on `&[u8]` for
@@ -579,7 +639,9 @@ fn parse_time(s: &str) -> Option<(u8, u8, u8)> {
 
 /// Days from 1970-01-01 to `year-month-day` (Gregorian). Returns None if date is invalid.
 fn days_since_epoch(y: i32, m: u8, d: u8) -> Option<i64> {
-    if m < 1 || m > 12 || d < 1 || d > 31 { return None; }
+    if m < 1 || m > 12 || d < 1 || d > 31 {
+        return None;
+    }
     // Civil calendar algorithm (from Howard Hinnant's civil_from_days inverse)
     let y = y as i64 - if m <= 2 { 1 } else { 0 };
     let era = y.div_euclid(400);
@@ -641,13 +703,19 @@ mod tests {
         let (quins, lex) = import_kml(kml).unwrap();
         assert!(!quins.is_empty(), "should produce quins");
 
-        let spatial: Vec<_> = quins.iter().filter(|q| q.context == SPATIAL_CONTEXT).collect();
+        let spatial: Vec<_> = quins
+            .iter()
+            .filter(|q| q.context == SPATIAL_CONTEXT)
+            .collect();
         let temporal: Vec<_> = quins.iter().filter(|q| q.context == T_CONTEXT).collect();
         assert!(!spatial.is_empty(), "spatial quins expected");
         assert!(!temporal.is_empty(), "temporal quins expected");
 
         let exported = export_kml(&quins, &lex);
-        assert!(exported.contains("POINT") || exported.contains("-122"), "WKT or coords in export");
+        assert!(
+            exported.contains("POINT") || exported.contains("-122"),
+            "WKT or coords in export"
+        );
     }
 
     #[test]

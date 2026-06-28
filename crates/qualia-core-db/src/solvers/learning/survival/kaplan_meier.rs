@@ -31,7 +31,11 @@ impl KaplanMeier {
         // Order by time; ties resolved with events before censorings is not needed
         // for the standard estimator (we group by exact time).
         let mut order: Vec<usize> = (0..n).collect();
-        order.sort_by(|&a, &b| times[a].partial_cmp(&times[b]).unwrap_or(core::cmp::Ordering::Equal));
+        order.sort_by(|&a, &b| {
+            times[a]
+                .partial_cmp(&times[b])
+                .unwrap_or(core::cmp::Ordering::Equal)
+        });
 
         let mut event_times = Vec::new();
         let mut survival = Vec::new();
@@ -65,7 +69,12 @@ impl KaplanMeier {
             i = j;
         }
 
-        Ok(Self { event_times, survival, at_risk: at_risk_v, events: events_v })
+        Ok(Self {
+            event_times,
+            survival,
+            at_risk: at_risk_v,
+            events: events_v,
+        })
     }
 
     /// Estimated survival `S(t)` (right-continuous step). `1.0` before the first
@@ -134,7 +143,13 @@ mod tests {
 
     #[test]
     fn guards() {
-        assert_eq!(KaplanMeier::fit(&[], &[]).unwrap_err(), LearningError::InvalidDimension);
-        assert_eq!(KaplanMeier::fit(&[1.0], &[true, false]).unwrap_err(), LearningError::InvalidDimension);
+        assert_eq!(
+            KaplanMeier::fit(&[], &[]).unwrap_err(),
+            LearningError::InvalidDimension
+        );
+        assert_eq!(
+            KaplanMeier::fit(&[1.0], &[true, false]).unwrap_err(),
+            LearningError::InvalidDimension
+        );
     }
 }

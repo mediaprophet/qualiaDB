@@ -55,7 +55,13 @@ impl GaussianNb {
             }
         }
 
-        Ok(Self { classes, log_priors, means, variances, p })
+        Ok(Self {
+            classes,
+            log_priors,
+            means,
+            variances,
+            p,
+        })
     }
 
     /// Log-posterior (up to the shared evidence constant) of `q` for class index `ci`.
@@ -84,7 +90,9 @@ impl GaussianNb {
     }
 
     pub fn predict(&self, x: &[f64], m: usize) -> Vec<usize> {
-        (0..m).map(|i| self.predict_row(&x[i * self.p..(i + 1) * self.p])).collect()
+        (0..m)
+            .map(|i| self.predict_row(&x[i * self.p..(i + 1) * self.p]))
+            .collect()
     }
 }
 
@@ -95,9 +103,7 @@ mod tests {
     #[test]
     fn separates_two_gaussian_classes() {
         // Class 0 around (0,0), class 1 around (5,5).
-        let x = [
-            0.0, 0.1, 0.2, -0.1, -0.1, 0.0, 5.0, 5.1, 4.9, 5.0, 5.2, 4.8,
-        ];
+        let x = [0.0, 0.1, 0.2, -0.1, -0.1, 0.0, 5.0, 5.1, 4.9, 5.0, 5.2, 4.8];
         let y = [0, 0, 0, 1, 1, 1];
         let nb = GaussianNb::fit(&x, &y, 6, 2).unwrap();
         assert_eq!(nb.classes, vec![0, 1]);
@@ -118,6 +124,9 @@ mod tests {
 
     #[test]
     fn guards() {
-        assert_eq!(GaussianNb::fit(&[1.0, 2.0, 3.0], &[0, 1], 2, 2).unwrap_err(), LearningError::InvalidDimension);
+        assert_eq!(
+            GaussianNb::fit(&[1.0, 2.0, 3.0], &[0, 1], 2, 2).unwrap_err(),
+            LearningError::InvalidDimension
+        );
     }
 }

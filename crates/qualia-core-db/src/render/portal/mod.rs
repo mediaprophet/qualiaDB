@@ -12,32 +12,34 @@ use crate::audio::acoustic_plane::{
 use crate::audio::acoustic_sab::{
     init_acoustic_sab, push_token_to_sab, write_uniform_to_sab_with_mirror, ACOUSTIC_SAB_BYTES,
 };
-use crate::audio::audio_spectral_sheet::preview_bins_from_tensor;
 use crate::audio::audio_sidecar_link::enrich_preview_from_sidecar;
 use crate::audio::audio_spectral_sheet::parse_sidecar_header;
+use crate::audio::audio_spectral_sheet::preview_bins_from_tensor;
+use crate::audio::audio_spectral_sheet::SPECTRAL_PREVIEW_BINS;
 use crate::audio::cqt_bake::bake_cqt_sidecar_from_preview;
 use crate::audio::stft_bake::bake_tensor_stft_sidecar;
-use crate::audio::audio_spectral_sheet::SPECTRAL_PREVIEW_BINS;
 use crate::render::acoustic::ACOUSTIC_UNIFORM_FLOAT_COUNT;
 use crate::render::control::{
-    control_pending, pop_control_command, push_control_raw, PortalControlCommand,
-    MENU_ACTION_HOME, MENU_ACTION_SONIFY_TOGGLE, OP_BUTTON_ACTION, OP_COLLAPSE_Q,
-    OP_MENU_ACTION, OP_NAVIGATE_INDEX, OP_SET_CAMERA_DELTA, OP_SET_STANDPOINT_SCALAR,
-    OP_SONIC_TOKEN_FORWARD, OP_SWIPE_GESTURE, OP_TILT_FRAME, STANDPOINT_SCALAR_EPISTEMIC_Q,
-    STANDPOINT_SCALAR_T_SLICE, STANDPOINT_SCALAR_T_WINDOW,
+    control_pending, pop_control_command, push_control_raw, PortalControlCommand, MENU_ACTION_HOME,
+    MENU_ACTION_SONIFY_TOGGLE, OP_BUTTON_ACTION, OP_COLLAPSE_Q, OP_MENU_ACTION, OP_NAVIGATE_INDEX,
+    OP_SET_CAMERA_DELTA, OP_SET_STANDPOINT_SCALAR, OP_SONIC_TOKEN_FORWARD, OP_SWIPE_GESTURE,
+    OP_TILT_FRAME, STANDPOINT_SCALAR_EPISTEMIC_Q, STANDPOINT_SCALAR_T_SLICE,
+    STANDPOINT_SCALAR_T_WINDOW,
 };
 
 use crate::gpu_context::{ambient_draw_instances, global_vram_ledger, OperationalMode};
-use crate::sonic_token::SonicToken;
-use crate::render::spectral::sigma_to_display_rgb;
 use crate::render::camera::CameraState;
-use crate::render::navigation::{camera_frame_node, cpu_pick_node_at, CameraFlyTo, Q_COLLAPSED_EPS};
+use crate::render::navigation::{
+    camera_frame_node, cpu_pick_node_at, CameraFlyTo, Q_COLLAPSED_EPS,
+};
+use crate::render::spectral::sigma_to_display_rgb;
 use crate::render::standpoint::{resolve_standpoint_hash, spectator_default};
 use crate::render::telemetry::{
-    ObserverStandpoint, DEONTIC_LANE_COMMONS, FABRIC_SHARED, FABRIC_VIEWPORT_LOCAL,
-    STANDPOINT_DID, STANDPOINT_EPHEMERAL, STANDPOINT_SPECTATOR, STANDPOINT_VAULT,
-    SystemTelemetry,
+    ObserverStandpoint, SystemTelemetry, DEONTIC_LANE_COMMONS, FABRIC_SHARED,
+    FABRIC_VIEWPORT_LOCAL, STANDPOINT_DID, STANDPOINT_EPHEMERAL, STANDPOINT_SPECTATOR,
+    STANDPOINT_VAULT,
 };
+use crate::sonic_token::SonicToken;
 use crate::tensor::buffer_export::{read_tensor_at, tensor_node_count, write_tensor_q_at};
 use crate::{
     export_tensor_buffer_wasm, geosparql_operation_wasm, parse_cbor_ld_wasm, parse_json_wasm,
@@ -121,7 +123,9 @@ impl QualiaPortal {
             tier,
             time: 0.0,
             last_tensor: None,
-            telemetry: SystemTelemetry::from_samples(&crate::gpu_context::sample_ambient_telemetry()),
+            telemetry: SystemTelemetry::from_samples(
+                &crate::gpu_context::sample_ambient_telemetry(),
+            ),
             display_mode: DisplayMode::Hybrid,
             camera: CameraState::default(),
             camera_fly: CameraFlyTo::default(),
@@ -184,8 +188,7 @@ impl QualiaPortal {
     }
 
     pub fn acoustic_enabled(&self) -> bool {
-        self.acoustic_enabled
-            && acoustic_enabled_for_mode(global_vram_ledger().mode())
+        self.acoustic_enabled && acoustic_enabled_for_mode(global_vram_ledger().mode())
     }
 
     /// Drain pending sonic tokens into a JS `BigUint64Array` or `Array` of token raw values.
@@ -215,7 +218,9 @@ impl QualiaPortal {
     /// Flat `f32` uniform for AudioWorklet message port (18 scalars + 64 preview bins).
     pub fn acoustic_uniform_floats(&mut self) -> Result<js_sys::Float32Array, JsValue> {
         let u = self.build_acoustic_uniform();
-        Ok(js_sys::Float32Array::from(&acoustic_uniform_to_floats(&u)[..]))
+        Ok(js_sys::Float32Array::from(
+            &acoustic_uniform_to_floats(&u)[..],
+        ))
     }
 
     pub fn push_sonic_token_raw(&self, raw: u64) -> bool {
@@ -284,8 +289,9 @@ impl QualiaPortal {
         let t = read_tensor_at(tensor, node as usize).map_err(|e| JsValue::from_str(e))?;
         let preview = preview_bins_from_tensor(&t);
         let frame_count = frames.clamp(1, 128);
-        let need = std::mem::size_of::<crate::audio::audio_spectral_sheet::AudioSpectralSidecarHeader>()
-            + SPECTRAL_PREVIEW_BINS * frame_count as usize * 4;
+        let need = std::mem::size_of::<
+            crate::audio::audio_spectral_sheet::AudioSpectralSidecarHeader,
+        >() + SPECTRAL_PREVIEW_BINS * frame_count as usize * 4;
         let mut buf = vec![0u8; need];
         if use_cqt {
             bake_cqt_sidecar_from_preview(&preview, frame_count, 48_000, &mut buf)
@@ -304,7 +310,12 @@ impl QualiaPortal {
         self.acoustic_sidecar.is_some()
     }
 
-    pub fn resize(&mut self, canvas: HtmlCanvasElement, width: u32, height: u32) -> Result<(), JsValue> {
+    pub fn resize(
+        &mut self,
+        canvas: HtmlCanvasElement,
+        width: u32,
+        height: u32,
+    ) -> Result<(), JsValue> {
         canvas.set_width(width);
         canvas.set_height(height);
         #[cfg(target_arch = "wasm32")]
@@ -376,8 +387,7 @@ impl QualiaPortal {
             .last_tensor
             .as_ref()
             .ok_or_else(|| JsValue::from_str("no tensor buffer"))?;
-        let t = read_tensor_at(tensor, index as usize)
-            .map_err(|e| JsValue::from_str(e))?;
+        let t = read_tensor_at(tensor, index as usize).map_err(|e| JsValue::from_str(e))?;
         self.selected_node = Some(index);
         let target = camera_frame_node([t.x, t.y, t.z]);
         self.camera_fly = CameraFlyTo::start_toward(target);
@@ -389,8 +399,8 @@ impl QualiaPortal {
         let Some(ref mut tensor) = self.last_tensor else {
             return Err(JsValue::from_str("no tensor buffer"));
         };
-        let prev = write_tensor_q_at(tensor, index as usize, 0.0)
-            .map_err(|e| JsValue::from_str(e))?;
+        let prev =
+            write_tensor_q_at(tensor, index as usize, 0.0).map_err(|e| JsValue::from_str(e))?;
         if prev <= Q_COLLAPSED_EPS {
             return Ok(());
         }
@@ -562,9 +572,15 @@ impl QualiaPortal {
             [0.0, 1.0, 0.0]
         };
         let joint = if kind == "prismatic" {
-            Joint { kind: JointKind::Prismatic { axis }, rate }
+            Joint {
+                kind: JointKind::Prismatic { axis },
+                rate,
+            }
         } else {
-            Joint { kind: JointKind::Revolute { axis }, rate }
+            Joint {
+                kind: JointKind::Revolute { axis },
+                rate,
+            }
         };
         if let Some(ref mut gpu) = self.gpu {
             gpu.set_artefact_joint(Some(joint));
@@ -577,7 +593,12 @@ impl QualiaPortal {
     /// artefact deterministically halts at the wall instead of passing through.
     pub fn demo_artefact_refusal(&mut self) {
         use crate::render::physics::{Aabb, Joint, JointKind};
-        let joint = Joint { kind: JointKind::Prismatic { axis: [1.0, 0.0, 0.0] }, rate: 0.4 };
+        let joint = Joint {
+            kind: JointKind::Prismatic {
+                axis: [1.0, 0.0, 0.0],
+            },
+            rate: 0.4,
+        };
         let world = Aabb::new([-1.5, -3.0, -3.0], [1.5, 3.0, 3.0]);
         if let Some(ref mut gpu) = self.gpu {
             gpu.set_artefact_joint(Some(joint));
@@ -587,7 +608,10 @@ impl QualiaPortal {
 
     /// Phase 2 — whether the artefact's proposed motion is currently being refused (clamped).
     pub fn artefact_refused(&self) -> bool {
-        self.gpu.as_ref().map(|g| g.artefact_refused()).unwrap_or(false)
+        self.gpu
+            .as_ref()
+            .map(|g| g.artefact_refused())
+            .unwrap_or(false)
     }
 
     /// Phase 2 — freeze the artefact (joint → identity, no world clamp).
@@ -639,8 +663,7 @@ impl QualiaPortal {
             match gpu.upload_tensor_buffer(bytes) {
                 Ok(gpu_count) if gpu_count > 0 => {
                     self.tier = 2;
-                    self.description =
-                        format!("{gpu_count} tensor nodes · T2 phenomenal viewport");
+                    self.description = format!("{gpu_count} tensor nodes · T2 phenomenal viewport");
                 }
                 _ => {}
             }
@@ -680,7 +703,9 @@ impl QualiaPortal {
 
     pub fn mount_qapp(&self, root_id: &str) -> Result<(), JsValue> {
         let window = web_sys::window().ok_or_else(|| JsValue::from_str("no window"))?;
-        let document = window.document().ok_or_else(|| JsValue::from_str("no document"))?;
+        let document = window
+            .document()
+            .ok_or_else(|| JsValue::from_str("no document"))?;
         let root = document
             .get_element_by_id(root_id)
             .ok_or_else(|| JsValue::from_str(&format!("element #{root_id} not found")))?;
@@ -765,9 +790,7 @@ impl QualiaPortal {
                 let mut epistemic_q = self.standpoint.epistemic_q;
                 match cmd.channel() {
                     STANDPOINT_SCALAR_T_SLICE => t_slice = (t_slice + delta).clamp(0.0, 1.0),
-                    STANDPOINT_SCALAR_T_WINDOW => {
-                        t_window = (t_window + delta).clamp(0.01, 1.0)
-                    }
+                    STANDPOINT_SCALAR_T_WINDOW => t_window = (t_window + delta).clamp(0.01, 1.0),
                     STANDPOINT_SCALAR_EPISTEMIC_Q => {
                         epistemic_q = (epistemic_q + delta).clamp(0.0, 1.0)
                     }
@@ -822,8 +845,11 @@ impl QualiaPortal {
         let node = self.selected_node.unwrap_or(0);
         if let Some(ref tensor) = self.last_tensor {
             if let Ok(t) = read_tensor_at(tensor, node as usize) {
-                let mut u = acoustic_params_from_tensor(&t)
-                    .to_phenomenal_uniform(enabled, &t, self.camera.yaw);
+                let mut u = acoustic_params_from_tensor(&t).to_phenomenal_uniform(
+                    enabled,
+                    &t,
+                    self.camera.yaw,
+                );
                 if let Some(ref sidecar) = self.acoustic_sidecar {
                     let frame = self.acoustic_sidecar_frame;
                     if enrich_preview_from_sidecar(sidecar, frame, &mut u.preview_bins) {
@@ -904,10 +930,7 @@ impl QualiaPortal {
                     gpu.resize(cw, ch);
                 }
                 gpu.sync_bloom_targets();
-                if gpu
-                    .render(self.time as f32, &self.telemetry)
-                    .is_ok()
-                {
+                if gpu.render(self.time as f32, &self.telemetry).is_ok() {
                     if self.pending_gpu_pick {
                         if let Some(idx) = gpu.poll_pick_readback() {
                             self.selected_node = Some(idx);
@@ -984,7 +1007,11 @@ pub async fn portal_init_webgpu(canvas: HtmlCanvasElement) -> Result<bool, JsVal
 }
 
 fn detect_tier() -> u8 {
-    if has_webgpu() { 1 } else { 0 }
+    if has_webgpu() {
+        1
+    } else {
+        0
+    }
 }
 
 fn has_webgpu() -> bool {

@@ -1,12 +1,17 @@
 //! High-level geometric-algebra operations over the value types: products that
 //! track grades, and rotor/translator construction and application.
 
-use super::simd_backend::{multivector_geometric_product, multivector_outer_product, GaKernel, GA_SIMD_KERNEL};
+use super::simd_backend::{
+    multivector_geometric_product, multivector_outer_product, GaKernel, GA_SIMD_KERNEL,
+};
 use super::types::{Grade, Multivector, Rotor, Translator};
 
 pub fn geometric_product(a: &Multivector, b: &Multivector) -> Multivector {
     let coeffs = multivector_geometric_product(&a.coeffs, &b.coeffs);
-    Multivector { coeffs, grade_mask: a.grade_mask | b.grade_mask }
+    Multivector {
+        coeffs,
+        grade_mask: a.grade_mask | b.grade_mask,
+    }
 }
 
 pub fn outer_product(a: &Multivector, b: &Multivector) -> Multivector {
@@ -16,14 +21,24 @@ pub fn outer_product(a: &Multivector, b: &Multivector) -> Multivector {
     // 0b0010 ^ 0b0010 = 0b0000 (no grade bits set), whereas the correct result
     // is a bivector so bit 0b0100 must be set.
     let mut grade_mask: u8 = 0;
-    if coeffs[0].abs() > f32::EPSILON { grade_mask |= Grade::Scalar as u8; }
-    if coeffs[1].abs() > f32::EPSILON || coeffs[2].abs() > f32::EPSILON || coeffs[3].abs() > f32::EPSILON {
+    if coeffs[0].abs() > f32::EPSILON {
+        grade_mask |= Grade::Scalar as u8;
+    }
+    if coeffs[1].abs() > f32::EPSILON
+        || coeffs[2].abs() > f32::EPSILON
+        || coeffs[3].abs() > f32::EPSILON
+    {
         grade_mask |= Grade::Vector as u8;
     }
-    if coeffs[4].abs() > f32::EPSILON || coeffs[5].abs() > f32::EPSILON || coeffs[6].abs() > f32::EPSILON {
+    if coeffs[4].abs() > f32::EPSILON
+        || coeffs[5].abs() > f32::EPSILON
+        || coeffs[6].abs() > f32::EPSILON
+    {
         grade_mask |= Grade::Bivector as u8;
     }
-    if coeffs[7].abs() > f32::EPSILON { grade_mask |= Grade::Trivector as u8; }
+    if coeffs[7].abs() > f32::EPSILON {
+        grade_mask |= Grade::Trivector as u8;
+    }
     Multivector { coeffs, grade_mask }
 }
 
@@ -43,9 +58,9 @@ pub fn rotor_from_angle_axis(angle: f32, axis: [f32; 3]) -> Rotor {
     Rotor {
         components: [
             cos_half,
-            -axis[2] * sin_half,  // e12 coeff: -sin · nz
-             axis[1] * sin_half,  // e13 coeff: +sin · ny
-            -axis[0] * sin_half,  // e23 coeff: -sin · nx
+            -axis[2] * sin_half, // e12 coeff: -sin · nz
+            axis[1] * sin_half,  // e13 coeff: +sin · ny
+            -axis[0] * sin_half, // e23 coeff: -sin · nx
         ],
     }
 }

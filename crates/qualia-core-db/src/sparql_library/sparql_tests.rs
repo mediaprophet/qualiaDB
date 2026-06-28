@@ -5,13 +5,13 @@
 #[cfg(test)]
 mod sparql_tests {
     use crate::sparql_ast::*;
+    use crate::sparql_did::*;
+    use crate::sparql_executor::*;
+    use crate::sparql_extensions::*;
+    use crate::sparql_filter::*;
+    use crate::sparql_mm::*;
     use crate::sparql_parser::*;
     use crate::sparql_planner::*;
-    use crate::sparql_executor::*;
-    use crate::sparql_filter::*;
-    use crate::sparql_extensions::*;
-    use crate::sparql_mm::*;
-    use crate::sparql_did::*;
     use crate::NQuin;
 
     // Helper to create test quins
@@ -58,7 +58,8 @@ mod sparql_tests {
                 subject: i as u64,
                 predicate: i as u64 + 1,
                 object: i as u64 + 2,
-            }).unwrap();
+            })
+            .unwrap();
         }
         assert_eq!(ctx.pattern_count, 128);
     }
@@ -71,7 +72,8 @@ mod sparql_tests {
                 subject: 0x1,
                 predicate: 0x2,
                 object: 0x3,
-            }).unwrap();
+            })
+            .unwrap();
         }
         let result = ctx.alloc_pattern(Pattern::Triple {
             subject: 0x1,
@@ -95,7 +97,7 @@ mod sparql_tests {
     fn test_ast_subquery() {
         let mut ctx = SparqlQueryContext::new();
         let query = SparqlQuery::Select(SelectQuery::default());
-        
+
         assert!(matches!(query, SparqlQuery::Select(_)));
     }
 
@@ -164,12 +166,14 @@ mod sparql_tests {
     #[test]
     fn test_planner_triple_scan() {
         let mut ctx = SparqlQueryContext::new();
-        let pattern_id = ctx.alloc_pattern(Pattern::Triple {
-            subject: 0x1,
-            predicate: 0x2,
-            object: 0x3,
-        }).unwrap();
-        
+        let pattern_id = ctx
+            .alloc_pattern(Pattern::Triple {
+                subject: 0x1,
+                predicate: 0x2,
+                object: 0x3,
+            })
+            .unwrap();
+
         let mut plan = ExecutionPlan::new();
         let result = QueryPlanner::plan_pattern(pattern_id, &ctx, &mut plan);
         assert!(result.is_ok());
@@ -179,17 +183,21 @@ mod sparql_tests {
     #[test]
     fn test_planner_filter() {
         let mut ctx = SparqlQueryContext::new();
-        let pattern_id = ctx.alloc_pattern(Pattern::Triple {
-            subject: 0x1,
-            predicate: 0x2,
-            object: 0x3,
-        }).unwrap();
+        let pattern_id = ctx
+            .alloc_pattern(Pattern::Triple {
+                subject: 0x1,
+                predicate: 0x2,
+                object: 0x3,
+            })
+            .unwrap();
         let expr_id = ctx.alloc_expression(Expression::Literal(1)).unwrap();
-        let filter_id = ctx.alloc_pattern(Pattern::Filter {
-            pattern: pattern_id,
-            expression: expr_id,
-        }).unwrap();
-        
+        let filter_id = ctx
+            .alloc_pattern(Pattern::Filter {
+                pattern: pattern_id,
+                expression: expr_id,
+            })
+            .unwrap();
+
         let mut plan = ExecutionPlan::new();
         let result = QueryPlanner::plan_pattern(filter_id, &ctx, &mut plan);
         assert!(result.is_ok());
@@ -201,10 +209,10 @@ mod sparql_tests {
     fn test_executor_triple_scan() {
         let quins = create_test_quins();
         let _executor = QueryExecutor { quins: &quins };
-        
+
         let mut _row = BindingRow::new();
         let mut _results: Vec<BindingRow> = Vec::new();
-        
+
         // Simplified test - actual executor needs plan
         assert_eq!(quins.len(), 2);
     }
@@ -219,37 +227,42 @@ mod sparql_tests {
         // Allocate two Variable leaf expressions first so the BinaryOp indices are correct.
         let var0 = ctx.register_variable("?a").unwrap();
         let var1 = ctx.register_variable("?b").unwrap();
-        let left_id  = ctx.alloc_expression(Expression::Variable(var0)).unwrap(); // id 0
+        let left_id = ctx.alloc_expression(Expression::Variable(var0)).unwrap(); // id 0
         let right_id = ctx.alloc_expression(Expression::Variable(var1)).unwrap(); // id 1
 
         // Bind both variables to the same value so equality holds.
         row.set(var0, 42);
         row.set(var1, 42);
 
-        let eq_id = ctx.alloc_expression(Expression::BinaryOp {
-            op: BinaryOp::Equal,
-            left: left_id,
-            right: right_id,
-        }).unwrap();
+        let eq_id = ctx
+            .alloc_expression(Expression::BinaryOp {
+                op: BinaryOp::Equal,
+                left: left_id,
+                right: right_id,
+            })
+            .unwrap();
 
         let result = ExpressionEvaluator::evaluate(eq_id, &ctx, &row).unwrap();
-        assert_eq!(result, crate::sparql_library::sparql_filter::EvalResult::Boolean(true));
+        assert_eq!(
+            result,
+            crate::sparql_library::sparql_filter::EvalResult::Boolean(true)
+        );
     }
 
     #[test]
     fn test_filter_bound() {
         let mut row = BindingRow::new();
         row.slots[0] = Some(1);
-        
+
         let mut ctx = SparqlQueryContext::new();
         ctx.function_args[0] = 0;
-        
+
         let expr = Expression::Function {
             func: Function::Bound,
             args_start: 0,
             args_len: 1,
         };
-        
+
         let mut ctx = SparqlQueryContext::new();
         let expr_id = ctx.alloc_expression(expr).unwrap();
         let result = ExpressionEvaluator::evaluate(expr_id, &ctx, &row);
@@ -388,11 +401,11 @@ mod sparql_tests {
     fn test_did_cache() {
         let quins = vec![];
         let mut handler = SparqlDidHandler::new(&quins);
-        
+
         // First call should cache
         let _ = handler.resolve_did(0x8000000000000001);
         assert_eq!(handler.cache_count, 1);
-        
+
         // Second call should use cache
         let _ = handler.resolve_did(0x8000000000000001);
         assert_eq!(handler.cache_count, 1);
@@ -402,10 +415,10 @@ mod sparql_tests {
     fn test_did_invalidate_cache() {
         let quins = vec![];
         let mut handler = SparqlDidHandler::new(&quins);
-        
+
         let _ = handler.resolve_did(0x8000000000000001);
         assert_eq!(handler.cache_count, 1);
-        
+
         handler.invalidate_cache(0x8000000000000001);
         assert_eq!(handler.cache_count, 0);
     }
@@ -415,19 +428,21 @@ mod sparql_tests {
     #[test]
     fn test_full_query_pipeline() {
         let query = "SELECT ?s WHERE { ?s ?p ?o }";
-        
+
         let parsed = parse_sparql(query);
         assert!(parsed.is_ok());
-        
+
         let _ast = parsed.unwrap();
         let mut ctx = SparqlQueryContext::new();
         // Add pattern from AST
-        let pattern_id = ctx.alloc_pattern(Pattern::Triple {
-            subject: 0x1,
-            predicate: 0x2,
-            object: 0x3,
-        }).unwrap();
-        
+        let pattern_id = ctx
+            .alloc_pattern(Pattern::Triple {
+                subject: 0x1,
+                predicate: 0x2,
+                object: 0x3,
+            })
+            .unwrap();
+
         let mut plan = ExecutionPlan::new();
         let planned = QueryPlanner::plan_pattern(pattern_id, &ctx, &mut plan);
         assert!(planned.is_ok());
@@ -437,7 +452,7 @@ mod sparql_tests {
     fn test_zero_allocation_compliance() {
         // Verify no heap allocations in hot paths
         let mut ctx = SparqlQueryContext::new();
-        
+
         // Should use fixed-size arrays, not Vec
         for i in 0..128 {
             let _ = ctx.alloc_pattern(Pattern::Triple {
@@ -446,7 +461,7 @@ mod sparql_tests {
                 object: i as u64 + 2,
             });
         }
-        
+
         assert_eq!(ctx.pattern_count, 128);
     }
 
@@ -455,7 +470,7 @@ mod sparql_tests {
         // Verify 0x8 prefix for DID recognition
         let did_with_prefix = 0x8000000000000001_u64;
         let did_without_prefix = 0x0000000000000001_u64;
-        
+
         assert_ne!(did_with_prefix & 0x8000000000000000_u64, 0);
         assert_eq!(did_without_prefix & 0x8000000000000000_u64, 0);
     }
@@ -464,7 +479,7 @@ mod sparql_tests {
     fn test_virtual_id_hash_strategy() {
         // Verify 0x1 prefix for Virtual ID Hash
         let virtual_id = 0x1000000000000001_u64;
-        
+
         assert_ne!(virtual_id & 0x1000000000000000_u64, 0);
     }
 }

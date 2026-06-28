@@ -34,7 +34,11 @@ impl FactorGraph {
             return Err(LearningError::InvalidDimension);
         }
         for f in &factors {
-            let expect: usize = f.vars.iter().map(|&v| *cardinalities.get(v).unwrap_or(&0)).product();
+            let expect: usize = f
+                .vars
+                .iter()
+                .map(|&v| *cardinalities.get(v).unwrap_or(&0))
+                .product();
             if f.vars.is_empty() || f.table.len() != expect || expect == 0 {
                 return Err(LearningError::InvalidDimension);
             }
@@ -48,7 +52,11 @@ impl FactorGraph {
                 var_factors[v].push((fi, pos));
             }
         }
-        Ok(Self { cardinalities, factors, var_factors })
+        Ok(Self {
+            cardinalities,
+            factors,
+            var_factors,
+        })
     }
 
     fn strides(&self, f: &Factor) -> Vec<usize> {
@@ -168,7 +176,10 @@ fn normalize(v: &mut [f64]) {
 }
 
 fn max_abs_diff(a: &[f64], b: &[f64]) -> f64 {
-    a.iter().zip(b).map(|(x, y)| (x - y).abs()).fold(0.0, f64::max)
+    a.iter()
+        .zip(b)
+        .map(|(x, y)| (x - y).abs())
+        .fold(0.0, f64::max)
 }
 
 #[cfg(test)]
@@ -184,7 +195,9 @@ mod tests {
             strides_global[j] = strides_global[j - 1] * cards[j - 1];
         }
         for idx in 0..total {
-            let x: Vec<usize> = (0..cards.len()).map(|j| (idx / strides_global[j]) % cards[j]).collect();
+            let x: Vec<usize> = (0..cards.len())
+                .map(|j| (idx / strides_global[j]) % cards[j])
+                .collect();
             let mut p = 1.0;
             for f in factors {
                 // local index in the factor
@@ -198,17 +211,21 @@ mod tests {
             joint[idx] = p;
         }
         let z: f64 = joint.iter().sum();
-        cards.iter().enumerate().map(|(v, &c)| {
-            let mut m = vec![0.0; c];
-            for idx in 0..total {
-                let xv = (idx / strides_global[v]) % c;
-                m[xv] += joint[idx];
-            }
-            for x in m.iter_mut() {
-                *x /= z;
-            }
-            m
-        }).collect()
+        cards
+            .iter()
+            .enumerate()
+            .map(|(v, &c)| {
+                let mut m = vec![0.0; c];
+                for idx in 0..total {
+                    let xv = (idx / strides_global[v]) % c;
+                    m[xv] += joint[idx];
+                }
+                for x in m.iter_mut() {
+                    *x /= z;
+                }
+                m
+            })
+            .collect()
     }
 
     #[test]
@@ -216,16 +233,30 @@ mod tests {
         // X0 — X1 — X2 chain (a tree): a prior on X0 and two pairwise factors.
         let cards = vec![2usize, 2, 2];
         let factors = vec![
-            Factor { vars: vec![0], table: vec![0.7, 0.3] },
-            Factor { vars: vec![0, 1], table: vec![0.8, 0.2, 0.3, 0.7] }, // [x0=0..,x1]
-            Factor { vars: vec![1, 2], table: vec![0.6, 0.4, 0.1, 0.9] },
+            Factor {
+                vars: vec![0],
+                table: vec![0.7, 0.3],
+            },
+            Factor {
+                vars: vec![0, 1],
+                table: vec![0.8, 0.2, 0.3, 0.7],
+            }, // [x0=0..,x1]
+            Factor {
+                vars: vec![1, 2],
+                table: vec![0.6, 0.4, 0.1, 0.9],
+            },
         ];
         let fg = FactorGraph::new(cards.clone(), factors.clone()).unwrap();
         let bp = fg.marginals(50, 1e-12);
         let bf = brute_force(&cards, &factors);
         for v in 0..3 {
             for x in 0..2 {
-                assert!((bp[v][x] - bf[v][x]).abs() < 1e-9, "var {v} val {x}: {} vs {}", bp[v][x], bf[v][x]);
+                assert!(
+                    (bp[v][x] - bf[v][x]).abs() < 1e-9,
+                    "var {v} val {x}: {} vs {}",
+                    bp[v][x],
+                    bf[v][x]
+                );
             }
         }
     }
@@ -235,9 +266,18 @@ mod tests {
         // Center X0 connected to X1 and X2 (a tree).
         let cards = vec![3usize, 2, 2];
         let factors = vec![
-            Factor { vars: vec![0], table: vec![0.2, 0.5, 0.3] },
-            Factor { vars: vec![0, 1], table: vec![0.9, 0.1, 0.5, 0.5, 0.2, 0.8] },
-            Factor { vars: vec![0, 2], table: vec![0.3, 0.7, 0.6, 0.4, 0.5, 0.5] },
+            Factor {
+                vars: vec![0],
+                table: vec![0.2, 0.5, 0.3],
+            },
+            Factor {
+                vars: vec![0, 1],
+                table: vec![0.9, 0.1, 0.5, 0.5, 0.2, 0.8],
+            },
+            Factor {
+                vars: vec![0, 2],
+                table: vec![0.3, 0.7, 0.6, 0.4, 0.5, 0.5],
+            },
         ];
         let fg = FactorGraph::new(cards.clone(), factors.clone()).unwrap();
         let bp = fg.marginals(50, 1e-12);
@@ -252,7 +292,13 @@ mod tests {
     #[test]
     fn guards() {
         // Factor table of the wrong length is rejected.
-        let bad = FactorGraph::new(vec![2, 2], vec![Factor { vars: vec![0, 1], table: vec![1.0, 2.0] }]);
+        let bad = FactorGraph::new(
+            vec![2, 2],
+            vec![Factor {
+                vars: vec![0, 1],
+                table: vec![1.0, 2.0],
+            }],
+        );
         assert_eq!(bad.unwrap_err(), LearningError::InvalidDimension);
     }
 }

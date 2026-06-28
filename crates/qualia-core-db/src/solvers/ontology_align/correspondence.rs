@@ -53,6 +53,8 @@ pub struct Alignment {
 impl Alignment {
     /// Every correspondence is a review-required close-match proposal (the invariant).
     pub fn all_require_review(&self) -> bool {
-        self.correspondences.iter().all(|c| c.requires_human_review && c.status == ProposedStatus::CloseMatch)
+        self.correspondences
+            .iter()
+            .all(|c| c.requires_human_review && c.status == ProposedStatus::CloseMatch)
     }
 }

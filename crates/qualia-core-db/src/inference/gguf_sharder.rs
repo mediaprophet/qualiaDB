@@ -166,15 +166,15 @@ pub struct LayerTensors {
 /// Lookup table from tensor-name hash → `GgufTensorInfo`, built by walking the
 /// GGUF tensor-info section that immediately follows the KV metadata section.
 pub struct GgufTensorIndex {
-    entries: Vec<(u64, GgufTensorInfo)>, // (name_hash, info)
+    pub(crate) entries: Vec<(u64, GgufTensorInfo)>, // (name_hash, info)
     /// Absolute byte offset in the mmap where tensor payload data begins.
     pub tensor_data_start: u64,
     /// Cached metadata for `token_embd.weight` (embedding lookup target).
-    token_embd: Option<GgufTensorInfo>,
+    pub(crate) token_embd: Option<GgufTensorInfo>,
     /// Cached `output.weight` for final vocabulary projection.
-    output_weight: Option<GgufTensorInfo>,
+    pub(crate) output_weight: Option<GgufTensorInfo>,
     /// Cached `output_norm.weight` — final RMSNorm before vocab projection (Llama/SmolLM).
-    output_norm: Option<GgufTensorInfo>,
+    pub(crate) output_norm: Option<GgufTensorInfo>,
     pub hyperparams: GgufHyperparams,
     /// Largest tensor payload in the file (informational).
     pub max_tensor_bytes: usize,
@@ -951,7 +951,7 @@ impl GgufTokenizer {
 
     /// Phase 4 v3: serialize the tokenizer into a compact, contiguous `.q42` section (no page
     /// alignment needed). Only the source fields are written (vocab / merges / bos / eos / add_bos /
-    /// pre); the derived maps are rebuilt by [`from_q42_section`]. Heap use here is load-time only.
+    /// pre); the derived maps are rebuilt by [`from_p64_section`]. Heap use here is load-time only.
     pub fn to_q42_section(&self) -> Vec<u8> {
         let mut out = Vec::with_capacity(1 << 20);
         out.extend_from_slice(b"Q42T");
@@ -981,7 +981,7 @@ impl GgufTokenizer {
     /// Phase 4 v3: rebuild a tokenizer from a `.q42` tokenizer section — bypasses GGUF KV string-key
     /// parsing entirely. Fully bounds-checked (the section is untrusted input). Returns `None` on any
     /// malformed field.
-    pub fn from_q42_section(data: &[u8]) -> Option<Self> {
+    pub fn from_p64_section(data: &[u8]) -> Option<Self> {
         let mut p = 0usize;
         let take = |p: &mut usize, n: usize| -> Option<&[u8]> {
             let end = p.checked_add(n)?;
@@ -1163,14 +1163,10 @@ impl GgufTokenizer {
     fn pretokenize(&self, text: &str) -> Vec<String> {
         static SMOLLM_RE: OnceLock<regex::Regex> = OnceLock::new();
         let re = SMOLLM_RE.get_or_init(|| {
-            regex::Regex::new(
-                r"'s|'t|'re|'ve|'m|'ll|'d| ?\p{L}+| ?\p{N}+| ?[^\s\p{L}\p{N}]+|\s+",
-            )
-            .expect("smollm pretoken regex")
+            regex::Regex::new(r"'s|'t|'re|'ve|'m|'ll|'d| ?\p{L}+| ?\p{N}+| ?[^\s\p{L}\p{N}]+|\s+")
+                .expect("smollm pretoken regex")
         });
-        re.find_iter(text)
-            .map(|m| m.as_str().to_string())
-            .collect()
+        re.find_iter(text).map(|m| m.as_str().to_string()).collect()
     }
 
     fn bpe_piece(&self, piece: &str) -> Vec<u32> {
@@ -1494,11 +1490,7 @@ mod tests {
     #[test]
     fn decode_maps_bpe_space_marker_to_ascii_space() {
         let mut tok = GgufTokenizer::default();
-        tok.vocab = vec![
-            "The".into(),
-            "\u{0120}capital".into(),
-            "\u{2581}of".into(),
-        ];
+        tok.vocab = vec!["The".into(), "\u{0120}capital".into(), "\u{2581}of".into()];
         assert_eq!(tok.decode(&[0, 1, 2]), "The capital of");
     }
 
@@ -1530,8 +1522,14 @@ mod tests {
             let mmap = unsafe { MmapOptions::new().map(&f).unwrap() };
             let idx = GgufTensorIndex::from_gguf(&mmap);
             let (tied, emb_off, out_off, emb_dims, out_dims) = idx.weight_tie_probe();
-            assert!(idx.token_embd_info().is_some(), "{label}: missing token_embd");
-            assert!(idx.logits_projection_info().is_some(), "{label}: no logits projection");
+            assert!(
+                idx.token_embd_info().is_some(),
+                "{label}: missing token_embd"
+            );
+            assert!(
+                idx.logits_projection_info().is_some(),
+                "{label}: no logits projection"
+            );
             println!(
                 "[{label}] tied={tied} emb_off={emb_off:#x} dims={emb_dims:?} out_off={out_off:#x} out_dims={out_dims:?}"
             );
@@ -1564,12 +1562,18 @@ mod tests {
         println!("[audit] chatml len={} ids={:?}", chat_ids.len(), chat_ids);
         println!("[audit] naked len={} ids={:?}", naked_ids.len(), naked_ids);
         const HF_CHATML: &[u32] = &[
-            1, 4093, 198, 1780, 314, 260, 3575, 282, 4649, 47, 19842, 281, 582, 1890, 6330, 30,
-            2, 198, 1, 520, 9531, 198,
+            1, 4093, 198, 1780, 314, 260, 3575, 282, 4649, 47, 19842, 281, 582, 1890, 6330, 30, 2,
+            198, 1, 520, 9531, 198,
         ];
         const HF_NAKED: &[u32] = &[504, 3575, 282, 4649, 314];
-        assert_eq!(chat_ids, HF_CHATML, "ChatML must not shred <|im_start|> specials");
-        assert_eq!(naked_ids, HF_NAKED, "naked English prompt must match HF BPE");
+        assert_eq!(
+            chat_ids, HF_CHATML,
+            "ChatML must not shred <|im_start|> specials"
+        );
+        assert_eq!(
+            naked_ids, HF_NAKED,
+            "naked English prompt must match HF BPE"
+        );
     }
 
     #[test]

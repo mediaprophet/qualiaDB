@@ -111,7 +111,10 @@ unsafe fn directstorage_read_impl(
     // For now, this is a stub that validates the FFI boundary
     log::trace!(
         "DirectStorage FFI: device={:?}, handle={:?}, offset={}, size={}",
-        device, handle, offset, size
+        device,
+        handle,
+        offset,
+        size
     );
 
     Ok(())
@@ -193,10 +196,7 @@ pub unsafe extern "C" fn iocp_destroy_ffi(_handle: *mut IocpHandle) {
 
 /// FFI-safe wrapper for async read chunk.
 #[no_mangle]
-pub unsafe extern "C" fn iocp_async_read_ffi(
-    _handle: *mut IocpHandle,
-    _offset: u64,
-) -> DmlStatus {
+pub unsafe extern "C" fn iocp_async_read_ffi(_handle: *mut IocpHandle, _offset: u64) -> DmlStatus {
     match iocp_async_read_impl() {
         Ok(()) => DmlStatus::Success,
         Err(err) => err.into(),
@@ -309,11 +309,13 @@ pub struct AdapterMemoryInfo {
 
 impl AdapterMemoryInfo {
     pub fn available_local_bytes(&self) -> u64 {
-        self.local_budget_bytes.saturating_sub(self.local_usage_bytes)
+        self.local_budget_bytes
+            .saturating_sub(self.local_usage_bytes)
     }
 
     pub fn available_shared_bytes(&self) -> u64 {
-        self.shared_budget_bytes.saturating_sub(self.shared_usage_bytes)
+        self.shared_budget_bytes
+            .saturating_sub(self.shared_usage_bytes)
     }
 }
 
@@ -794,11 +796,12 @@ impl DirectStorageManager {
     pub fn new() -> Result<Self, DirectStorageError> {
         unsafe {
             // Reuse existing DmlDevice initialization to get D3D12 device
-            let dml_device = DmlDevice::new()
-                .map_err(|e| DirectStorageError::FactoryCreateFailed(format!("DML init failed: {e}")))?;
-            
+            let dml_device = DmlDevice::new().map_err(|e| {
+                DirectStorageError::FactoryCreateFailed(format!("DML init failed: {e}"))
+            })?;
+
             let device = dml_device.d3d12;
-            
+
             // Create compute queue for calculus shaders
             let queue_desc = D3D12_COMMAND_QUEUE_DESC {
                 Type: D3D12_COMMAND_LIST_TYPE_COMPUTE,
@@ -806,16 +809,17 @@ impl DirectStorageManager {
                 Flags: D3D12_COMMAND_QUEUE_FLAG_NONE,
                 NodeMask: 0,
             };
-            let queue = device.CreateCommandQueue(&queue_desc)
-                .map_err(|e| DirectStorageError::FactoryCreateFailed(format!("Queue creation failed: {e}")))?;
-            
+            let queue = device.CreateCommandQueue(&queue_desc).map_err(|e| {
+                DirectStorageError::FactoryCreateFailed(format!("Queue creation failed: {e}"))
+            })?;
+
             Ok(Self {
                 _device: device,
                 _queue: queue,
             })
         }
     }
-    
+
     /// Asynchronously reads from NVMe directly to GPU VRAM.
     ///
     /// NOTE: This is a stub. Actual implementation requires Microsoft.DirectStorage SDK.
@@ -840,17 +844,17 @@ impl DirectStorageManager {
                 required: PAGE_SIZE,
             });
         }
-        
+
         Err(DirectStorageError::NotImplemented(
-            "DirectStorage requires Microsoft.DirectStorage SDK (not in windows crate)".to_string()
+            "DirectStorage requires Microsoft.DirectStorage SDK (not in windows crate)".to_string(),
         ))
     }
-    
+
     /// Returns the D3D12 device for creating compute pipelines.
     pub fn device(&self) -> &ID3D12Device {
         &self._device
     }
-    
+
     /// Returns the compute command queue.
     pub fn queue(&self) -> &ID3D12CommandQueue {
         &self._queue

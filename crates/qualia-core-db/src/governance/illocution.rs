@@ -85,15 +85,27 @@ pub struct Norm {
 impl Norm {
     /// An ordinary norm of the given binding weight.
     pub fn new(weight: u8) -> Self {
-        Self { weight, exemptive: false, immune: false }
+        Self {
+            weight,
+            exemptive: false,
+            immune: false,
+        }
     }
     /// An Exemptive (derogation / waiver → the q42:unless defeater).
     pub fn exemptive(weight: u8) -> Self {
-        Self { weight, exemptive: true, immune: false }
+        Self {
+            weight,
+            exemptive: true,
+            immune: false,
+        }
     }
     /// A non-derogable norm (Hohfeldian immunity) — cannot be defeated by an Exemptive.
     pub fn immune(weight: u8) -> Self {
-        Self { weight, exemptive: false, immune: true }
+        Self {
+            weight,
+            exemptive: false,
+            immune: true,
+        }
     }
 }
 
@@ -105,10 +117,18 @@ pub fn resolve_conflict(a: Norm, b: Norm) -> Resolution {
     // STANDS (ICCPR Art. 4(2): the right to life etc. cannot be derogated).
     match (a.exemptive, b.exemptive) {
         (true, false) => {
-            return if b.immune { Resolution::BGoverns } else { Resolution::AGoverns };
+            return if b.immune {
+                Resolution::BGoverns
+            } else {
+                Resolution::AGoverns
+            };
         }
         (false, true) => {
-            return if a.immune { Resolution::AGoverns } else { Resolution::BGoverns };
+            return if a.immune {
+                Resolution::AGoverns
+            } else {
+                Resolution::BGoverns
+            };
         }
         _ => {}
     }
@@ -138,8 +158,14 @@ mod tests {
         // A derogation/waiver (Exemptive → q42:unless) defeats a DEROGABLE obligation.
         let derogation = Norm::exemptive(W_EXEMPT);
         let obligation = Norm::new(W_OBLIGATE);
-        assert_eq!(resolve_conflict(derogation, obligation), Resolution::AGoverns);
-        assert_eq!(resolve_conflict(obligation, derogation), Resolution::BGoverns);
+        assert_eq!(
+            resolve_conflict(derogation, obligation),
+            Resolution::AGoverns
+        );
+        assert_eq!(
+            resolve_conflict(obligation, derogation),
+            Resolution::BGoverns
+        );
     }
 
     #[test]
@@ -148,8 +174,14 @@ mod tests {
         // Art. 4(2). The immune norm STANDS; the derogation is invalid against it.
         let derogation = Norm::exemptive(W_EXEMPT);
         let right_to_life = Norm::immune(W_OBLIGATE);
-        assert_eq!(resolve_conflict(derogation, right_to_life), Resolution::BGoverns);
-        assert_eq!(resolve_conflict(right_to_life, derogation), Resolution::AGoverns);
+        assert_eq!(
+            resolve_conflict(derogation, right_to_life),
+            Resolution::BGoverns
+        );
+        assert_eq!(
+            resolve_conflict(right_to_life, derogation),
+            Resolution::AGoverns
+        );
     }
 
     #[test]
@@ -168,7 +200,10 @@ mod tests {
         let treaty_body = effective_weight(W_DIRECTIVE_HARD, true, 255); // high authority
         assert!(ngo < treaty_body);
         // An NGO's demand loses to a hard commitment; the treaty body's competes/wins.
-        assert_eq!(resolve_conflict(Norm::new(ngo), Norm::new(W_OBLIGATE)), Resolution::BGoverns);
+        assert_eq!(
+            resolve_conflict(Norm::new(ngo), Norm::new(W_OBLIGATE)),
+            Resolution::BGoverns
+        );
         assert_eq!(
             resolve_conflict(Norm::new(treaty_body), Norm::new(W_RECOMMEND)),
             Resolution::AGoverns

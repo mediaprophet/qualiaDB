@@ -207,6 +207,11 @@ fn stable_mcp_tools() -> &'static [McpToolDescriptor] {
             input_schema: r#"{"type":"object","properties":{}}"#,
         },
         McpToolDescriptor {
+            name: "list_capabilities",
+            description: "List the canonical Qualia capability catalogue with concrete operations, maturity, runtime surfaces, and executable MCP routes.",
+            input_schema: r#"{"type":"object","properties":{"domain":{"type":"string"},"maturity":{"type":"string","enum":["stable","partial","experimental","fail-closed"]},"surface":{"type":"string"}}}"#,
+        },
+        McpToolDescriptor {
             name: "describe_qapp_surface_schema",
             description: "Describe the current Qapp host surface schema exposed by Qualia.",
             input_schema: r#"{"type":"object","properties":{}}"#,
@@ -508,6 +513,7 @@ pub unsafe fn enforce_fiduciary_tool_dispatch(
         }
 
         b"get_system_status" => execute_system_status(payload.arguments_raw, intent_frame),
+        b"list_capabilities" => mcp_tool_impls::list_capabilities(payload.arguments_raw),
 
         // ── Extended Logic & Science Tools ───────────────────────────────────
         b"evaluate_modality" => execute_evaluate_modality(payload.arguments_raw, intent_frame),
@@ -1475,6 +1481,7 @@ mod tests {
         assert!(tools.iter().any(|tool| tool["name"] == "query_sparql"));
         assert!(tools.iter().any(|tool| tool["name"] == "parse_rdf"));
         assert!(tools.iter().any(|tool| tool["name"] == "list_qapps"));
+        assert!(tools.iter().any(|tool| tool["name"] == "list_capabilities"));
         assert_eq!(tools.len(), stable_mcp_tools().len());
     }
 
@@ -1490,6 +1497,61 @@ mod tests {
                     tool
                 );
             }
+        }
+    }
+
+    #[test]
+    fn capability_catalog_is_complete_filterable_and_honest() {
+        let all = mcp_tool_impls::list_capabilities(br#"{}"#).expect("catalogue");
+        let all: Value = serde_json::from_str(&all).expect("catalogue json");
+        assert_eq!(
+            all["capability_count"].as_u64().unwrap() as usize,
+            crate::CAPABILITY_DESCRIPTORS.len()
+        );
+        assert!(all["operation_group_count"].as_u64().unwrap() > 50);
+
+        let filtered =
+            mcp_tool_impls::list_capabilities(br#"{"domain":"statistics"}"#).expect("filtered");
+        let filtered: Value = serde_json::from_str(&filtered).expect("filtered json");
+        assert_eq!(filtered["capability_count"], 1);
+        assert_eq!(filtered["capabilities"][0]["name"], "Statistics");
+
+        let ml = all["capabilities"]
+            .as_array()
+            .unwrap()
+            .iter()
+            .find(|capability| capability["name"] == "MachineLearning")
+            .expect("machine learning capability");
+        assert_eq!(ml["maturity"], "fail-closed");
+        assert_eq!(ml["operational"], false);
+    }
+
+    #[test]
+    fn capability_catalogue_metadata_has_no_silent_gaps() {
+        let allowed_maturity = ["stable", "partial", "experimental", "fail-closed"];
+        let mut names = std::collections::BTreeSet::new();
+        for capability in crate::CAPABILITY_DESCRIPTORS {
+            assert!(
+                names.insert(capability.name),
+                "duplicate {}",
+                capability.name
+            );
+            assert!(
+                !capability.operations.is_empty(),
+                "{} has no operations",
+                capability.name
+            );
+            assert!(
+                allowed_maturity.contains(&capability.maturity),
+                "{} has unknown maturity {}",
+                capability.name,
+                capability.maturity
+            );
+            assert!(
+                !capability.surfaces.is_empty(),
+                "{} has no runtime surface",
+                capability.name
+            );
         }
     }
 

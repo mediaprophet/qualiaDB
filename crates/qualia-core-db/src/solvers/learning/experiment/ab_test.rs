@@ -23,7 +23,13 @@ pub struct AbResult {
 /// Two-proportion z-test. `conv_*` are conversions (successes), `n_*` the totals.
 /// `alpha` sets the CI/p-value (two-sided). `None` on invalid counts.
 pub fn ab_test(conv_a: u64, n_a: u64, conv_b: u64, n_b: u64, alpha: f64) -> Option<AbResult> {
-    if n_a == 0 || n_b == 0 || conv_a > n_a || conv_b > n_b || !(0.0..1.0).contains(&alpha) || alpha <= 0.0 {
+    if n_a == 0
+        || n_b == 0
+        || conv_a > n_a
+        || conv_b > n_b
+        || !(0.0..1.0).contains(&alpha)
+        || alpha <= 0.0
+    {
         return None;
     }
     let (na, nb) = (n_a as f64, n_b as f64);
@@ -34,7 +40,11 @@ pub fn ab_test(conv_a: u64, n_a: u64, conv_b: u64, n_b: u64, alpha: f64) -> Opti
     // Pooled proportion for the test statistic (under H0: pa == pb).
     let pooled = (conv_a + conv_b) as f64 / (na + nb);
     let se_pooled = (pooled * (1.0 - pooled) * (1.0 / na + 1.0 / nb)).sqrt();
-    let z = if se_pooled > 0.0 { diff / se_pooled } else { 0.0 };
+    let z = if se_pooled > 0.0 {
+        diff / se_pooled
+    } else {
+        0.0
+    };
     let p_value = 2.0 * (1.0 - normal::standard_cdf(z.abs()));
 
     // Unpooled SE for the confidence interval on the difference.

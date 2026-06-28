@@ -10,7 +10,8 @@ use crate::tensor::Tensor10D;
 
 /// Flat uniform scalar count pushed to AudioWorklet (`acoustic_uniform_floats`).
 pub const ACOUSTIC_UNIFORM_SCALAR_COUNT: usize = 18;
-pub const ACOUSTIC_UNIFORM_FLOAT_COUNT: usize = ACOUSTIC_UNIFORM_SCALAR_COUNT + SPECTRAL_PREVIEW_BINS;
+pub const ACOUSTIC_UNIFORM_FLOAT_COUNT: usize =
+    ACOUSTIC_UNIFORM_SCALAR_COUNT + SPECTRAL_PREVIEW_BINS;
 
 #[inline]
 fn fract_sigma(sigma: f32) -> f32 {
@@ -56,10 +57,8 @@ pub fn phenomenal_acoustic_params(t: &Tensor10D) -> AcousticParams {
 #[inline]
 pub fn phenomenal_voice_frequency_hz(t: &Tensor10D) -> f32 {
     let sigma_hz = sigma_to_center_frequency_hz(t.sigma);
-    let bin_hz = crate::audio::dsp_kernel::sigma_dominant_frequency(
-        &preview_bins_from_tensor(t),
-        220.0,
-    );
+    let bin_hz =
+        crate::audio::dsp_kernel::sigma_dominant_frequency(&preview_bins_from_tensor(t), 220.0);
     sigma_hz * 0.72 + bin_hz * 0.28
 }
 

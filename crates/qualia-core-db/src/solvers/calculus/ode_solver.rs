@@ -21,7 +21,7 @@
 //! ```
 
 #[cfg(not(target_arch = "wasm32"))]
-use crate::platform::gpu::{GpuIntegrator, GpuError, PlatformGpuIntegrator};
+use crate::platform::gpu::{GpuError, GpuIntegrator, PlatformGpuIntegrator};
 use crate::NQuin;
 
 // ─── BVP Convergence (Shooting Method) ──────────────────────────────────────────
@@ -52,10 +52,10 @@ pub struct ShootingMethod<S: BvpSystem> {
 pub trait BvpSystem: Send + Sync {
     /// Computes the derivative dy/dt at state (t, y)
     fn derivative(&self, t: f64, y: f64) -> f64;
-    
+
     /// Boundary condition at t = a
     fn boundary_left(&self, a: f64) -> f64;
-    
+
     /// Boundary condition at t = b
     fn boundary_right(&self, b: f64) -> f64;
 }
@@ -74,13 +74,13 @@ impl<S: BvpSystem> ShootingMethod<S> {
             max_iterations: 1000,
         }
     }
-    
+
     /// Sets the maximum number of iterations
     pub fn with_max_iterations(mut self, max: usize) -> Self {
         self.max_iterations = max;
         self
     }
-    
+
     /// Solves the BVP using the shooting method
     ///
     /// # Arguments
@@ -93,21 +93,28 @@ impl<S: BvpSystem> ShootingMethod<S> {
     /// # Returns
     ///
     /// The converged initial condition that satisfies the BVP
-    pub fn solve(&mut self, t_start: f64, t_end: f64, y_left: f64, y_right_target: f64) -> Result<(f64, f64), String> {
+    pub fn solve(
+        &mut self,
+        t_start: f64,
+        t_end: f64,
+        y_left: f64,
+        y_right_target: f64,
+    ) -> Result<(f64, f64), String> {
         let mut y_guess = y_left;
         let mut residual = f64::INFINITY;
         let mut iteration = 0;
-        
+
         // Secant method for root finding
         let mut y_prev = y_left;
         let mut residual_prev = self.compute_residual(t_start, t_end, y_prev, y_right_target);
-        
+
         while residual.abs() > self.residual_threshold && iteration < self.max_iterations {
             let residual_current = self.compute_residual(t_start, t_end, y_guess, y_right_target);
-            
+
             // Secant update
             if residual_prev != residual_current {
-                let y_next = y_guess - residual_current * (y_guess - y_prev) / (residual_current - residual_prev);
+                let y_next = y_guess
+                    - residual_current * (y_guess - y_prev) / (residual_current - residual_prev);
                 y_prev = y_guess;
                 residual_prev = residual_current;
                 y_guess = y_next;
@@ -115,36 +122,39 @@ impl<S: BvpSystem> ShootingMethod<S> {
                 // Fallback to bisection if secant fails
                 y_guess = (y_guess + y_prev) / 2.0;
             }
-            
+
             residual = residual_current;
             iteration += 1;
         }
-        
+
         if residual.abs() <= self.residual_threshold {
             Ok((y_guess, residual))
         } else {
-            Err(format!("Failed to converge after {} iterations. Final residual: {}", self.max_iterations, residual))
+            Err(format!(
+                "Failed to converge after {} iterations. Final residual: {}",
+                self.max_iterations, residual
+            ))
         }
     }
-    
+
     /// Computes the residual at the right boundary
     fn compute_residual(&self, t_start: f64, t_end: f64, y_left: f64, y_right_target: f64) -> f64 {
         // Integrate from left boundary with guessed initial condition
         let mut t = t_start;
         let mut y = y_left;
         let step_size = (t_end - t_start) / 1000.0;
-        
+
         while t < t_end {
             let h = step_size.min(t_end - t);
             let k1 = self.system.derivative(t, y);
             let k2 = self.system.derivative(t + h / 2.0, y + h * k1 / 2.0);
             let k3 = self.system.derivative(t + h / 2.0, y + h * k2 / 2.0);
             let k4 = self.system.derivative(t + h, y + h * k3);
-            
+
             y = y + (h / 6.0) * (k1 + 2.0 * k2 + 2.0 * k3 + k4);
             t += h;
         }
-        
+
         // Residual is the difference between computed and target right boundary
         y - y_right_target
     }
@@ -166,7 +176,7 @@ impl ChaoitonProfile {
             central_density: 1.0,
         }
     }
-    
+
     pub fn with_params(scale_radius: f64, central_density: f64) -> Self {
         Self {
             scale_radius,
@@ -186,11 +196,11 @@ impl BvpSystem for ChaoitonProfile {
             -beta / r * (1.0 + beta / self.central_density)
         }
     }
-    
+
     fn boundary_left(&self, _a: f64) -> f64 {
         self.central_density
     }
-    
+
     fn boundary_right(&self, _b: f64) -> f64 {
         0.01 // Target: decay to 1% of central density at outer boundary
     }
@@ -206,11 +216,11 @@ impl BvpSystem for LinearDecayBvp {
     fn derivative(&self, _t: f64, y: f64) -> f64 {
         -y
     }
-    
+
     fn boundary_left(&self, _a: f64) -> f64 {
         1.0
     }
-    
+
     fn boundary_right(&self, _b: f64) -> f64 {
         0.3679 // e^(-1)
     }
@@ -232,7 +242,7 @@ impl<S: OdeSystem> StepSizeAnalyzer<S> {
     pub fn new(system: S) -> Self {
         Self { system }
     }
-    
+
     /// Performs step-size sensitivity analysis
     ///
     /// Tests multiple step sizes and computes the error relative to a reference solution.
@@ -247,7 +257,13 @@ impl<S: OdeSystem> StepSizeAnalyzer<S> {
     /// # Returns
     ///
     /// A vector of (step_size, error) pairs
-    pub fn analyze(&self, t_start: f64, t_end: f64, y0: f64, step_sizes: Vec<f64>) -> Vec<(f64, f64)>
+    pub fn analyze(
+        &self,
+        t_start: f64,
+        t_end: f64,
+        y0: f64,
+        step_sizes: Vec<f64>,
+    ) -> Vec<(f64, f64)>
     where
         S: Clone,
     {
@@ -255,7 +271,7 @@ impl<S: OdeSystem> StepSizeAnalyzer<S> {
         let reference_step = (t_end - t_start) / 10000.0;
         let mut ref_solver = Rk4Solver::new(self.system.clone(), reference_step);
         let y_reference = ref_solver.solve(t_start, t_end, y0);
-        
+
         // Test each step size
         step_sizes
             .into_iter()
@@ -267,20 +283,24 @@ impl<S: OdeSystem> StepSizeAnalyzer<S> {
             })
             .collect()
     }
-    
+
     /// Finds the optimal step size for a given error tolerance
     ///
     /// Returns the largest step size that achieves the target error tolerance.
-    pub fn find_optimal_step_size(&self, t_start: f64, t_end: f64, y0: f64, tolerance: f64) -> Option<f64>
+    pub fn find_optimal_step_size(
+        &self,
+        t_start: f64,
+        t_end: f64,
+        y0: f64,
+        tolerance: f64,
+    ) -> Option<f64>
     where
         S: Clone,
     {
-        let step_sizes = vec![
-            0.1, 0.05, 0.025, 0.0125, 0.00625, 0.003125, 0.0015625,
-        ];
-        
+        let step_sizes = vec![0.1, 0.05, 0.025, 0.0125, 0.00625, 0.003125, 0.0015625];
+
         let results = self.analyze(t_start, t_end, y0, step_sizes);
-        
+
         // Find the largest step size that meets tolerance
         results
             .into_iter()
@@ -337,7 +357,7 @@ impl QuantizationMapper {
             coupling_constant,
         }
     }
-    
+
     /// Maps a quantum number to a mass value
     ///
     /// Uses the canonical quantization relation:
@@ -348,7 +368,7 @@ impl QuantizationMapper {
         // In natural units (ħ = c = 1): m = n * ω
         quantum_number as f64 * frequency * self.coupling_constant
     }
-    
+
     /// Maps a mass value to a quantum number
     ///
     /// Inverse of quantum_number_to_mass
@@ -359,32 +379,51 @@ impl QuantizationMapper {
             1
         }
     }
-    
+
     /// Computes the mass spectrum for a range of quantum numbers
     ///
     /// Returns a vector of (quantum_number, mass) pairs
-    pub fn compute_mass_spectrum(&self, max_quantum_number: u64, frequency: f64) -> Vec<(u64, f64)> {
+    pub fn compute_mass_spectrum(
+        &self,
+        max_quantum_number: u64,
+        frequency: f64,
+    ) -> Vec<(u64, f64)> {
         (1..=max_quantum_number)
             .map(|n| (n, self.quantum_number_to_mass(n, frequency)))
             .collect()
     }
-    
+
     /// Finds the quantum number corresponding to a given mass
     ///
     /// Searches the mass spectrum for the closest match
-    pub fn find_quantum_number_for_mass(&self, target_mass: f64, frequency: f64, max_n: u64) -> Option<u64> {
+    pub fn find_quantum_number_for_mass(
+        &self,
+        target_mass: f64,
+        frequency: f64,
+        max_n: u64,
+    ) -> Option<u64> {
         let spectrum = self.compute_mass_spectrum(max_n, frequency);
-        
+
         spectrum
             .into_iter()
-            .min_by(|a, b| (a.1 - target_mass).abs().partial_cmp(&(b.1 - target_mass).abs()).unwrap())
+            .min_by(|a, b| {
+                (a.1 - target_mass)
+                    .abs()
+                    .partial_cmp(&(b.1 - target_mass).abs())
+                    .unwrap()
+            })
             .map(|(n, _)| n)
     }
-    
+
     /// Validates the quantization equivalence
     ///
     /// Checks if the computed masses match expected values within tolerance
-    pub fn validate_equivalence(&self, computed_mass: f64, expected_mass: f64, tolerance: f64) -> bool {
+    pub fn validate_equivalence(
+        &self,
+        computed_mass: f64,
+        expected_mass: f64,
+        tolerance: f64,
+    ) -> bool {
         (computed_mass - expected_mass).abs() <= tolerance
     }
 }
@@ -395,22 +434,22 @@ pub struct StandardModelMasses;
 impl StandardModelMasses {
     /// Electron mass in GeV
     pub const ELECTRON_MASS: f64 = 0.000511;
-    
+
     /// Muon mass in GeV
     pub const MUON_MASS: f64 = 0.10566;
-    
+
     /// Tau mass in GeV
     pub const TAU_MASS: f64 = 1.77686;
-    
+
     /// Proton mass in GeV
     pub const PROTON_MASS: f64 = 0.93827;
-    
+
     /// W boson mass in GeV
     pub const W_BOSON_MASS: f64 = 80.379;
-    
+
     /// Z boson mass in GeV
     pub const Z_BOSON_MASS: f64 = 91.1876;
-    
+
     /// Higgs boson mass in GeV
     pub const HIGGS_MASS: f64 = 125.1;
 }
@@ -511,13 +550,13 @@ impl<S: OdeSystem> Rk4Solver<S> {
     pub fn solve(&mut self, t_start: f64, t_end: f64, y0: f64) -> f64 {
         let mut t = t_start;
         let mut y = y0;
-        
+
         while t < t_end {
             let step = self.step_size.min(t_end - t);
             y = self.step(t, y, step);
             t += step;
         }
-        
+
         y
     }
 
@@ -534,15 +573,15 @@ impl<S: OdeSystem> Rk4Solver<S> {
         let k2 = self.system.derivative(t + h / 2.0, y + h * k1 / 2.0);
         let k3 = self.system.derivative(t + h / 2.0, y + h * k2 / 2.0);
         let k4 = self.system.derivative(t + h, y + h * k3);
-        
+
         // Kahan summation for precision
         let sum = k1 + 2.0 * k2 + 2.0 * k3 + k4;
         let y_increment = (h / 6.0) * sum;
-        
+
         let y_compensated = y_increment - self.kahan_compensation;
         let t = y + y_compensated;
         self.kahan_compensation = (t - y) - y_compensated;
-        
+
         t
     }
 
@@ -561,22 +600,22 @@ impl<S: OdeSystem> Rk4Solver<S> {
         // 1. Pack (t, y, h) into GPU buffer
         // 2. Dispatch RK4 compute shader
         // 3. Read back result with Kahan accumulation
-        
+
         // For now, fall back to CPU implementation
         // Future: Use integrator.rk4_step_gpu() when shader is implemented
         let k1 = self.system.derivative(t, y);
         let k2 = self.system.derivative(t + h / 2.0, y + h * k1 / 2.0);
         let k3 = self.system.derivative(t + h / 2.0, y + h * k2 / 2.0);
         let k4 = self.system.derivative(t + h, y + h * k3);
-        
+
         // Kahan summation for precision
         let sum = k1 + 2.0 * k2 + 2.0 * k3 + k4;
         let y_increment = (h / 6.0) * sum;
-        
+
         let y_compensated = y_increment - self.kahan_compensation;
         let t_result = y + y_compensated;
         self.kahan_compensation = (t_result - y) - y_compensated;
-        
+
         Ok(t_result)
     }
 
@@ -598,10 +637,10 @@ impl<S: OdeSystem> Rk4Solver<S> {
         let (t, y) = extract_ode_state(&quin);
         let y_new = self.step(t, y, h);
         let t_new = t + h;
-        
+
         let mut result_quin = quin;
         pack_ode_state(&mut result_quin, t_new, y_new);
-        
+
         result_quin
     }
 
@@ -618,10 +657,10 @@ impl<S: OdeSystem> Rk4Solver<S> {
         let (t, y) = extract_ode_state(&quin);
         let y_new = self.step_gpu(integrator, t, y, h)?;
         let t_new = t + h;
-        
+
         let mut result_quin = quin;
         pack_ode_state(&mut result_quin, t_new, y_new);
-        
+
         Ok(result_quin)
     }
 
@@ -639,20 +678,15 @@ impl<S: OdeSystem> Rk4Solver<S> {
 // ─── Quin Integration ─────────────────────────────────────────────────────────
 
 /// Creates a Quin for an ODE solver step
-pub fn create_ode_step_quin(
-    job_id: u64,
-    t: f64,
-    y: f64,
-    step_size: f32,
-) -> NQuin {
+pub fn create_ode_step_quin(job_id: u64, t: f64, y: f64, step_size: f32) -> NQuin {
     let mut quin = NQuin::default();
     quin.subject = job_id;
     quin.object = y.to_bits() as u64; // Pack state into object field
     quin.metadata = t.to_bits(); // Pack time into metadata field
-    
+
     // Pack step_size into context field (lower 32 bits)
     quin.context = step_size.to_bits() as u64;
-    
+
     quin
 }
 
@@ -679,11 +713,11 @@ mod tests {
     #[test]
     fn test_harmonic_oscillator_derivative() {
         let oscillator = HarmonicOscillator::new(2.0 * PI); // ω = 2π (1 Hz)
-        
+
         // At t=0, x=1 (maximum displacement)
         let y = 1.0;
         let dy_dt = oscillator.derivative(0.0, y);
-        
+
         // dy/dt = -ω²x = -(2π)² * 1 = -4π²
         let expected = -(2.0 * PI) * (2.0 * PI);
         assert!((dy_dt - expected).abs() < 1e-6);
@@ -692,10 +726,10 @@ mod tests {
     #[test]
     fn test_exponential_decay_derivative() {
         let decay = ExponentialDecay::new(0.5); // λ = 0.5
-        
+
         let y = 1.0;
         let dy_dt = decay.derivative(0.0, y);
-        
+
         // dy/dt = -λy = -0.5 * 1 = -0.5
         assert!((dy_dt - (-0.5)).abs() < 1e-10);
     }
@@ -704,13 +738,13 @@ mod tests {
     fn test_rk4_solver_harmonic_oscillator() {
         let oscillator = HarmonicOscillator::new(2.0 * PI);
         let mut solver = Rk4Solver::new(oscillator, 0.01);
-        
+
         // Initial state: x=1
         let y0 = 1.0;
-        
+
         // Solve for a short time (not full period due to simplified model)
         let y_final = solver.solve(0.0, 0.1, y0);
-        
+
         // Should have evolved from initial state
         assert!((y_final - y0).abs() > 0.01);
     }
@@ -719,10 +753,10 @@ mod tests {
     fn test_rk4_solver_exponential_decay() {
         let decay = ExponentialDecay::new(0.5);
         let mut solver = Rk4Solver::new(decay, 0.01);
-        
+
         let y0 = 1.0;
         let y_final = solver.solve(0.0, 1.0, y0);
-        
+
         // Analytical solution: y(t) = y0 * e^(-λt) = 1 * e^(-0.5*1) ≈ 0.6065
         let expected: f64 = 1.0 * (-0.5_f64 * 1.0_f64).exp();
         assert!((y_final - expected).abs() < 1e-3);
@@ -732,17 +766,21 @@ mod tests {
     fn test_shooting_method_convergence() {
         let system = LinearDecayBvp;
         let mut solver = ShootingMethod::new(system, 1e-3);
-        
+
         // Solve BVP from t=0 to t=1
         // For dy/dt = -y, the solution is y(t) = y0 * e^(-t)
         // If y(0) = 1, then y(1) = e^(-1) ≈ 0.3679
         let result = solver.solve(0.0, 1.0, 1.0, 0.3679);
-        
+
         // The shooting method should converge for this simple linear case
         // If it fails, it indicates a numerical issue in the implementation
         match result {
             Ok((y_converged, residual)) => {
-                assert!(residual.abs() < 1e-2, "Residual should be below threshold: {}", residual);
+                assert!(
+                    residual.abs() < 1e-2,
+                    "Residual should be below threshold: {}",
+                    residual
+                );
                 assert!(y_converged > 0.0, "Converged value should be positive");
             }
             Err(_) => {
@@ -756,11 +794,11 @@ mod tests {
     #[test]
     fn test_chaoiton_profile_derivative() {
         let profile = ChaoitonProfile::with_params(1.0, 1.0);
-        
+
         // At r=1, β=0.5
         let beta = 0.5;
         let d_beta_dr = profile.derivative(1.0, beta);
-        
+
         // dβ/dr = -β/r * (1 + β/ρ) = -0.5/1 * (1 + 0.5/1) = -0.5 * 1.5 = -0.75
         let expected = -0.75;
         assert!((d_beta_dr - expected).abs() < 1e-10);
@@ -770,10 +808,10 @@ mod tests {
     fn test_shooting_method_max_iterations() {
         let system = ChaoitonProfile::new();
         let mut solver = ShootingMethod::new(system, 1e-15).with_max_iterations(10);
-        
+
         // Very tight threshold with few iterations should fail
         let result = solver.solve(0.0, 10.0, 1.0, 0.01);
-        
+
         assert!(result.is_err());
     }
 
@@ -781,23 +819,26 @@ mod tests {
     fn test_step_size_sensitivity_analysis() {
         let system = ExponentialDecay::new(0.5);
         let analyzer = StepSizeAnalyzer::new(system);
-        
+
         let step_sizes = vec![0.1, 0.05, 0.025, 0.0125];
         let results = analyzer.analyze(0.0, 1.0, 1.0, step_sizes);
-        
+
         // Smaller step sizes should generally produce smaller errors
         assert_eq!(results.len(), 4);
-        
+
         // Verify that step sizes are in descending order
         for i in 1..results.len() {
-            assert!(results[i].0 < results[i-1].0, "Step sizes should be descending");
+            assert!(
+                results[i].0 < results[i - 1].0,
+                "Step sizes should be descending"
+            );
         }
     }
 
     #[test]
     fn test_coupled_boltzmann_derivative() {
         let boltzmann = CoupledBoltzmann::new(0.8, 0.3);
-        
+
         // At y=0.5, derivative should be:
         // dy/dt = -0.3 * 0.5 + 0.8 * (1 - 0.5) = -0.15 + 0.4 = 0.25
         let dy_dt = boltzmann.derivative(0.0, 0.5);
@@ -809,10 +850,10 @@ mod tests {
     fn test_find_optimal_step_size() {
         let system = ExponentialDecay::new(0.5);
         let analyzer = StepSizeAnalyzer::new(system);
-        
+
         // Find optimal step size for 1% tolerance
         let optimal = analyzer.find_optimal_step_size(0.0, 1.0, 1.0, 0.01);
-        
+
         // Should find some step size that meets the tolerance
         assert!(optimal.is_some());
         let h = optimal.unwrap();
@@ -831,7 +872,7 @@ mod tests {
     fn test_quantum_number_to_mass() {
         let mapper = QuantizationMapper::new(1.0, 1.0);
         let mass = mapper.quantum_number_to_mass(5, 10.0);
-        
+
         // m = n * ω * coupling = 5 * 10.0 * 1.0 = 50.0
         assert!((mass - 50.0).abs() < 1e-10);
     }
@@ -840,7 +881,7 @@ mod tests {
     fn test_mass_to_quantum_number() {
         let mapper = QuantizationMapper::new(1.0, 1.0);
         let n = mapper.mass_to_quantum_number(50.0, 10.0);
-        
+
         // n = m / (ω * coupling) = 50.0 / (10.0 * 1.0) = 5
         assert_eq!(n, 5);
     }
@@ -849,7 +890,7 @@ mod tests {
     fn test_compute_mass_spectrum() {
         let mapper = QuantizationMapper::new(1.0, 1.0);
         let spectrum = mapper.compute_mass_spectrum(5, 10.0);
-        
+
         assert_eq!(spectrum.len(), 5);
         assert_eq!(spectrum[0], (1, 10.0));
         assert_eq!(spectrum[4], (5, 50.0));
@@ -859,7 +900,7 @@ mod tests {
     fn test_find_quantum_number_for_mass() {
         let mapper = QuantizationMapper::new(1.0, 1.0);
         let n = mapper.find_quantum_number_for_mass(35.0, 10.0, 10);
-        
+
         // Should find n=3 (mass=30.0) or n=4 (mass=40.0) closest to 35.0
         assert!(n.is_some());
         let found_n = n.unwrap();
@@ -869,13 +910,13 @@ mod tests {
     #[test]
     fn test_validate_equivalence() {
         let mapper = QuantizationMapper::new(1.0, 1.0);
-        
+
         // Exact match
         assert!(mapper.validate_equivalence(50.0, 50.0, 0.01));
-        
+
         // Within tolerance
         assert!(mapper.validate_equivalence(50.0, 50.005, 0.01));
-        
+
         // Outside tolerance
         assert!(!mapper.validate_equivalence(50.0, 51.0, 0.01));
     }
@@ -896,10 +937,10 @@ mod tests {
     fn test_kahan_compensation() {
         let decay = ExponentialDecay::new(0.5);
         let mut solver = Rk4Solver::new(decay, 0.001); // Small step size
-        
+
         let y0 = 1.0;
         solver.solve(0.0, 10.0, y0);
-        
+
         // Kahan compensation should accumulate some value
         let comp = solver.compensation();
         assert!(comp.abs() > 0.0);
@@ -909,16 +950,16 @@ mod tests {
     fn test_kahan_vs_standard_summation() {
         // Test that Kahan summation provides better precision than standard summation
         // by summing many small numbers that would lose precision with standard addition
-        
+
         let n = 10000;
         let small_value = 1e-10;
-        
+
         // Standard summation (will lose precision)
         let mut standard_sum = 0.0_f64;
         for _ in 0..n {
             standard_sum += small_value;
         }
-        
+
         // Kahan summation (maintains precision)
         let mut kahan_sum = 0.0_f64;
         let mut compensation = 0.0_f64;
@@ -928,14 +969,17 @@ mod tests {
             compensation = (t - kahan_sum) - y;
             kahan_sum = t;
         }
-        
+
         let expected = (n as f64) * small_value;
-        
+
         // Kahan should be closer to expected value
         let kahan_error = (kahan_sum - expected).abs();
         let standard_error = (standard_sum - expected).abs();
-        
-        assert!(kahan_error < standard_error, "Kahan summation should be more precise");
+
+        assert!(
+            kahan_error < standard_error,
+            "Kahan summation should be more precise"
+        );
         assert!(kahan_error < 1e-12, "Kahan error should be very small");
     }
 
@@ -944,22 +988,25 @@ mod tests {
         // Test that RK4 solver maintains precision over many steps
         let decay = ExponentialDecay::new(0.1); // Slow decay for more steps
         let mut solver = Rk4Solver::new(decay, 0.001);
-        
+
         let y0 = 1.0;
         let y_final = solver.solve(0.0, 100.0, y0);
-        
+
         // Analytical solution: y(t) = y0 * e^(-λt) = 1 * e^(-0.1*100) = e^(-10) ≈ 4.54e-5
         let expected = f64::exp(-0.1 * 100.0);
-        
+
         // Should be within reasonable tolerance for RK4
         let relative_error = (y_final - expected).abs() / expected.abs();
-        assert!(relative_error < 0.01, "Relative error should be less than 1%");
+        assert!(
+            relative_error < 0.01,
+            "Relative error should be less than 1%"
+        );
     }
 
     #[test]
     fn test_ode_quin_packing() {
         let quin = create_ode_step_quin(123, 1.5, 2.5, 0.01);
-        
+
         let (t, y) = extract_ode_state(&quin);
         assert!((t - 1.5).abs() < 1e-10);
         assert!((y - 2.5).abs() < 1e-10);
@@ -969,7 +1016,7 @@ mod tests {
     fn test_ode_quin_roundtrip() {
         let mut quin = NQuin::default();
         pack_ode_state(&mut quin, 3.14, 2.718);
-        
+
         let (t, y) = extract_ode_state(&quin);
         assert!((t - 3.14).abs() < 1e-10);
         assert!((y - 2.718).abs() < 1e-10);
@@ -979,12 +1026,12 @@ mod tests {
     fn test_step_quin() {
         let decay = ExponentialDecay::new(0.5);
         let mut solver = Rk4Solver::new(decay, 0.01);
-        
+
         let mut quin = NQuin::default();
         pack_ode_state(&mut quin, 0.0, 1.0);
-        
+
         let result_quin = solver.step_quin(quin, 0.01);
-        
+
         let (t_new, y_new) = extract_ode_state(&result_quin);
         assert!((t_new - 0.01).abs() < 1e-10);
         assert!((y_new - 1.0).abs() < 0.01); // Should have decayed slightly
@@ -993,21 +1040,21 @@ mod tests {
     #[test]
     fn test_step_quin_gpu() {
         use crate::platform::gpu::WebGpuIntegrator;
-        
+
         let decay = ExponentialDecay::new(0.5);
         let mut solver = Rk4Solver::new(decay, 0.01);
-        
+
         // Note: WebGpuIntegrator requires async runtime, so this test
         // validates the API structure but falls back to CPU
         // In production, this would use actual GPU integration
-        
+
         let mut quin = NQuin::default();
         pack_ode_state(&mut quin, 0.0, 1.0);
-        
+
         // For now, we'll test the CPU fallback path
         // GPU integration would require actual WebGPU setup
         let y_expected = solver.step(0.0, 1.0, 0.01);
-        
+
         // Verify the step produces expected result
         assert!((y_expected - 0.995).abs() < 0.01);
     }
@@ -1017,18 +1064,18 @@ mod tests {
         // Test chaining multiple RK4 steps through Quins
         let decay = ExponentialDecay::new(0.5);
         let mut solver = Rk4Solver::new(decay, 0.01);
-        
+
         let mut quin = NQuin::default();
         pack_ode_state(&mut quin, 0.0, 1.0);
-        
+
         // Chain 10 steps
         for _ in 0..10 {
             quin = solver.step_quin(quin, 0.01);
         }
-        
+
         let (t_final, y_final) = extract_ode_state(&quin);
         assert!((t_final - 0.1).abs() < 1e-10);
-        
+
         // Analytical solution: y(0.1) = e^(-0.5*0.1) ≈ 0.9512
         let expected = f64::exp(-0.5 * 0.1);
         assert!((y_final - expected).abs() < 0.01);

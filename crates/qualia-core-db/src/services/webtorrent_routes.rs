@@ -2,7 +2,8 @@
 
 #![cfg(not(target_arch = "wasm32"))]
 
-use std::path::Path;
+use axum::body::Body;
+use axum::http::HeaderMap;
 use axum::{
     extract::{Path as AxumPath, State},
     http::{header, StatusCode},
@@ -10,10 +11,9 @@ use axum::{
     routing::{get, post},
     Json, Router,
 };
-use axum::http::HeaderMap;
-use axum::body::Body;
 use serde::Serialize;
 use serde_json::json;
+use std::path::Path;
 
 use crate::webtorrent_seeder::{
     self, RegisterSeedRequest, SeederBandwidthPolicy, UnregisterSeedRequest,
@@ -112,7 +112,8 @@ async fn webseed_handler(
         return (
             StatusCode::NOT_FOUND,
             Json(json!({ "error": "seed not found" })),
-        ).into_response();
+        )
+            .into_response();
     };
 
     let path = Path::new(&seed.file_path);
@@ -120,12 +121,13 @@ async fn webseed_handler(
         return (
             StatusCode::INTERNAL_SERVER_ERROR,
             Json(json!({ "error": "file read failed" })),
-        ).into_response();
+        )
+            .into_response();
     };
 
     let file_size = data.len() as u64;
     let range_hdr_val = headers.get("range").and_then(|v| v.to_str().ok());
-    
+
     let (body_bytes, status, content_range) = if let Some(range_hdr) = range_hdr_val {
         if let Some((start, end)) = parse_range(range_hdr, file_size) {
             let slice = data[start as usize..=end as usize].to_vec();
@@ -164,7 +166,8 @@ async fn webseed_handler(
         }
     }
 
-    let r: axum::response::Response = (status, response_headers, body_bytes).into_response(); r
+    let r: axum::response::Response = (status, response_headers, body_bytes).into_response();
+    r
 }
 
 pub fn webtorrent_routes(daemon_port: u16) -> Router {

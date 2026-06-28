@@ -92,7 +92,11 @@ pub enum MatchStatus {
 /// Enforce the Curation Directive on a sense mapping: a human attestation yields `ExactMatch`;
 /// absent that, a machine proposal yields `CloseMatch`; an untranslatable concept (or nothing
 /// proposed) yields `RequiresHumanReview`.
-pub fn translation_status(machine_proposed: bool, human_attested: bool, translatable: bool) -> MatchStatus {
+pub fn translation_status(
+    machine_proposed: bool,
+    human_attested: bool,
+    translatable: bool,
+) -> MatchStatus {
     if human_attested && translatable {
         MatchStatus::ExactMatch
     } else if !translatable {
@@ -136,7 +140,11 @@ pub enum Translation {
 /// `(nl_term_hash, machine_construct_hash)` rows, **gated by the Curation Directive**: a mapping
 /// is only used if `human_attested` (the machine may propose, but only a human ratifies a
 /// definitive NL→logic equivalence). An unmapped or unattested term routes to human review.
-pub fn translate_via_matrix(nl_term: u64, matrix: &[(u64, u64)], human_attested: bool) -> Translation {
+pub fn translate_via_matrix(
+    nl_term: u64,
+    matrix: &[(u64, u64)],
+    human_attested: bool,
+) -> Translation {
     if !human_attested {
         return Translation::RequiresHumanReview;
     }
@@ -166,11 +174,20 @@ mod tests {
         let logic = q_hash("logic:UnconscionabilityTest");
         let matrix = [(nl, logic)];
         // Human-attested + present → mapped.
-        assert_eq!(translate_via_matrix(nl, &matrix, true), Translation::Mapped(logic));
+        assert_eq!(
+            translate_via_matrix(nl, &matrix, true),
+            Translation::Mapped(logic)
+        );
         // Not attested → human review (machine doesn't get to flatten meaning).
-        assert_eq!(translate_via_matrix(nl, &matrix, false), Translation::RequiresHumanReview);
+        assert_eq!(
+            translate_via_matrix(nl, &matrix, false),
+            Translation::RequiresHumanReview
+        );
         // Unmapped term → human review.
-        assert_eq!(translate_via_matrix(q_hash("nl:unknown"), &matrix, true), Translation::RequiresHumanReview);
+        assert_eq!(
+            translate_via_matrix(q_hash("nl:unknown"), &matrix, true),
+            Translation::RequiresHumanReview
+        );
     }
 
     #[test]
@@ -199,12 +216,24 @@ mod tests {
     #[test]
     fn sense_translation_honours_the_curation_directive() {
         // Machine may propose closeMatch.
-        assert_eq!(translation_status(true, false, true), MatchStatus::CloseMatch);
+        assert_eq!(
+            translation_status(true, false, true),
+            MatchStatus::CloseMatch
+        );
         // Only a human attests exactMatch.
-        assert_eq!(translation_status(true, true, true), MatchStatus::ExactMatch);
+        assert_eq!(
+            translation_status(true, true, true),
+            MatchStatus::ExactMatch
+        );
         // Untranslatable concept → preserved for review, never flattened.
-        assert_eq!(translation_status(true, true, false), MatchStatus::RequiresHumanReview);
+        assert_eq!(
+            translation_status(true, true, false),
+            MatchStatus::RequiresHumanReview
+        );
         // Nothing proposed → review.
-        assert_eq!(translation_status(false, false, true), MatchStatus::RequiresHumanReview);
+        assert_eq!(
+            translation_status(false, false, true),
+            MatchStatus::RequiresHumanReview
+        );
     }
 }

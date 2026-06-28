@@ -52,7 +52,11 @@ pub fn one_way_anova(groups: &[&[f64]]) -> Option<AnovaResult> {
     } else {
         // Zero within-group variance: F is +∞ unless between-group variance is also
         // 0 (all values identical), in which case there is no effect.
-        if ms_between > 0.0 { f64::INFINITY } else { 0.0 }
+        if ms_between > 0.0 {
+            f64::INFINITY
+        } else {
+            0.0
+        }
     };
     let p = if f.is_finite() {
         fisher_f::upper_p(f, df_between, df_within)
@@ -95,7 +99,11 @@ mod tests {
         let g2 = [5.0, 6.0, 4.0, 5.0];
         let g3 = [6.0, 4.0, 5.0, 5.0];
         let r = one_way_anova(&[&g1, &g2, &g3]).unwrap();
-        assert!(r.p_value > 0.2, "similar groups should not be significant: p={}", r.p_value);
+        assert!(
+            r.p_value > 0.2,
+            "similar groups should not be significant: p={}",
+            r.p_value
+        );
     }
 
     #[test]

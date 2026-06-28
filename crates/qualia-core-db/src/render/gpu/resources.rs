@@ -94,7 +94,10 @@ pub(super) fn color_target_state(format: wgpu::TextureFormat) -> wgpu::ColorTarg
     }
 }
 
-pub(super) fn uniform_128_bind_entry(binding: u32, stages: wgpu::ShaderStages) -> wgpu::BindGroupLayoutEntry {
+pub(super) fn uniform_128_bind_entry(
+    binding: u32,
+    stages: wgpu::ShaderStages,
+) -> wgpu::BindGroupLayoutEntry {
     wgpu::BindGroupLayoutEntry {
         binding,
         visibility: stages,
@@ -203,8 +206,8 @@ pub(super) fn make_projector_tensor_bind_group(
     let body_bytes = (node_count as u64)
         .checked_mul(TENSOR_STRIDE as u64)
         .ok_or_else(|| "tensor body size overflow".to_string())?;
-    let size = std::num::NonZeroU64::new(body_bytes)
-        .ok_or_else(|| "empty tensor body".to_string())?;
+    let size =
+        std::num::NonZeroU64::new(body_bytes).ok_or_else(|| "empty tensor body".to_string())?;
     Ok(device.create_bind_group(&wgpu::BindGroupDescriptor {
         label: Some("portal-projector-tensor-bind"),
         layout,
@@ -220,4 +223,3 @@ pub(super) fn make_projector_tensor_bind_group(
         }],
     }))
 }
-

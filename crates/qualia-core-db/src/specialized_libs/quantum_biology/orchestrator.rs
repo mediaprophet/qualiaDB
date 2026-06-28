@@ -4,14 +4,14 @@
 //! It manages the mapping of biological entities to quantum computations
 //! without allocating on the heap, using only stack-based operations and fixed-size buffers.
 
-use crate::NQuin;
-use super::entities::{BiologicalEntity, BiologicalEntityType, QuantumComputationType};
-use super::quantum_state::QuantumState;
-use super::gpu_pipeline::{QuantumGPUPipeline, GPUComputationState};
-use super::qpu_bridge::QPUBridge;
 use super::context::QuantumBiologyContext;
+use super::entities::{BiologicalEntity, BiologicalEntityType, QuantumComputationType};
+use super::gpu_pipeline::{GPUComputationState, QuantumGPUPipeline};
+use super::qpu_bridge::QPUBridge;
+use super::quantum_state::QuantumState;
 use super::results::QuantumBiologyResult;
 use crate::csd_storage::CsdManager;
+use crate::NQuin;
 
 /// Quantum Biology Orchestrator - Semantic Router for Biological Entities
 ///
@@ -83,10 +83,17 @@ impl QuantumBiologyOrchestrator {
     }
 
     /// Register biological entity for quantum computation (zero allocation)
-    pub fn register_entity(&mut self, quin: NQuin, entity_type: BiologicalEntityType, computation_type: QuantumComputationType) -> Result<usize, QuantumBiologyError> {
+    pub fn register_entity(
+        &mut self,
+        quin: NQuin,
+        entity_type: BiologicalEntityType,
+        computation_type: QuantumComputationType,
+    ) -> Result<usize, QuantumBiologyError> {
         // Find empty slot in entity mappings
         for i in 0..256 {
-            if self.entity_mappings[i].quin.subject == 0 && self.entity_mappings[i].quin.predicate == 0 {
+            if self.entity_mappings[i].quin.subject == 0
+                && self.entity_mappings[i].quin.predicate == 0
+            {
                 self.entity_mappings[i] = BiologicalEntity {
                     quin,
                     entity_type,

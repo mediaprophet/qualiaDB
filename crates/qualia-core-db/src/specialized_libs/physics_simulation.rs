@@ -1,19 +1,19 @@
 //! Physics Simulation Library - High-Performance Physics Computing
-//! 
+//!
 //! This module provides high-performance physics simulation operations leveraging Phase 2 enhancements:
 //! - NVMe Computational Storage (CSD) for hardware-accelerated physics computations
 //! - Zero-Infrastructure Acoustic & BLE Mesh for distributed physics simulations
 //! - Hardware-Sympathetic Storage (ZNS) for zero-copy physics data
 //! - Ambient Sub-Threshold Orchestration for mobile physics optimization
 
+use super::linear_algebra::AccessPattern;
+use crate::acoustic_ble_mesh::MeshNetworkManager;
+use crate::ambient_orchestration::AmbientOrchestrationManager;
+use crate::csd_storage::CsdManager;
+use crate::zns_storage::ZnsZoneManager;
+use serde::{Deserialize, Serialize};
 use std::collections::HashMap;
 use std::sync::{Arc, Mutex};
-use serde::{Deserialize, Serialize};
-use crate::csd_storage::CsdManager;
-use crate::acoustic_ble_mesh::MeshNetworkManager;
-use crate::zns_storage::ZnsZoneManager;
-use crate::ambient_orchestration::AmbientOrchestrationManager;
-use super::linear_algebra::AccessPattern;
 
 /// Physics Simulation Library Manager
 pub struct PhysicsSimulationLibrary {
@@ -1740,7 +1740,10 @@ impl PhysicsSimulationLibrary {
     }
 
     /// Create a new simulation
-    pub fn create_simulation(&mut self, config: SimulationConfig) -> Result<Simulation, PhysicsError> {
+    pub fn create_simulation(
+        &mut self,
+        config: SimulationConfig,
+    ) -> Result<Simulation, PhysicsError> {
         // Validate configuration
         self.validate_config(&config)?;
 
@@ -1758,7 +1761,10 @@ impl PhysicsSimulationLibrary {
     }
 
     /// Run CFD simulation
-    pub fn run_cfd_simulation(&mut self, simulation: &mut Simulation) -> Result<PhysicsSimulationResult<Vec<PhysicsField>>, PhysicsError> {
+    pub fn run_cfd_simulation(
+        &mut self,
+        simulation: &mut Simulation,
+    ) -> Result<PhysicsSimulationResult<Vec<PhysicsField>>, PhysicsError> {
         let start_time = std::time::Instant::now();
 
         // Create mesh if not present.
@@ -1833,23 +1839,47 @@ impl PhysicsSimulationLibrary {
             .map(|&pi| t0 * (pi / p_ref).powf((gamma - 1.0) / gamma))
             .collect();
 
-        let field = |id: &str, name: &str, qty: &str, units: &str, ft: FieldType, data: Vec<f64>| PhysicsField {
-            field_id: id.to_string(),
-            field_type: ft,
-            dimensions: vec![nx],
-            data,
-            metadata: FieldMetadata {
-                field_name: name.to_string(),
-                physical_quantity: qty.to_string(),
-                units: units.to_string(),
-                time_step: step as u64,
-                iteration: step as u64,
-            },
-        };
+        let field =
+            |id: &str, name: &str, qty: &str, units: &str, ft: FieldType, data: Vec<f64>| {
+                PhysicsField {
+                    field_id: id.to_string(),
+                    field_type: ft,
+                    dimensions: vec![nx],
+                    data,
+                    metadata: FieldMetadata {
+                        field_name: name.to_string(),
+                        physical_quantity: qty.to_string(),
+                        units: units.to_string(),
+                        time_step: step as u64,
+                        iteration: step as u64,
+                    },
+                }
+            };
         let fields = vec![
-            field("velocity", "Velocity", "Velocity", "m/s", FieldType::Vector, u),
-            field("pressure", "Pressure", "Pressure", "Pa", FieldType::Scalar, pressure),
-            field("temperature", "Temperature", "Temperature", "K", FieldType::Scalar, temperature),
+            field(
+                "velocity",
+                "Velocity",
+                "Velocity",
+                "m/s",
+                FieldType::Vector,
+                u,
+            ),
+            field(
+                "pressure",
+                "Pressure",
+                "Pressure",
+                "Pa",
+                FieldType::Scalar,
+                pressure,
+            ),
+            field(
+                "temperature",
+                "Temperature",
+                "Temperature",
+                "K",
+                FieldType::Scalar,
+                temperature,
+            ),
         ];
 
         // Persist the final (real) field data for later retrieval.
@@ -1870,9 +1900,17 @@ impl PhysicsSimulationLibrary {
             convergence_info: ConvergenceInfo {
                 converged,
                 iterations: step,
-                residual_norm: if residual.is_finite() { residual } else { f64::MAX },
+                residual_norm: if residual.is_finite() {
+                    residual
+                } else {
+                    f64::MAX
+                },
                 convergence_rate,
-                final_error: if residual.is_finite() { residual } else { f64::MAX },
+                final_error: if residual.is_finite() {
+                    residual
+                } else {
+                    f64::MAX
+                },
             },
             // Per-call CPU/IO utilization is runtime telemetry this routine does not sample;
             // left at 0.0 (not measured) rather than fabricated.
@@ -1887,7 +1925,10 @@ impl PhysicsSimulationLibrary {
     }
 
     /// Run distributed simulation
-    pub fn run_distributed_simulation(&mut self, simulation: &mut Simulation) -> Result<PhysicsSimulationResult<Vec<PhysicsField>>, PhysicsError> {
+    pub fn run_distributed_simulation(
+        &mut self,
+        simulation: &mut Simulation,
+    ) -> Result<PhysicsSimulationResult<Vec<PhysicsField>>, PhysicsError> {
         let start_time = std::time::Instant::now();
 
         // Initialize mesh coordinator
@@ -1910,8 +1951,8 @@ impl PhysicsSimulationLibrary {
 
         // Aggregate REAL convergence across the nodes: converged only if every node did;
         // residual is the worst (max) node residual; iterations the max node iteration count.
-        let all_converged = !results.is_empty()
-            && results.iter().all(|r| r.convergence_info.converged);
+        let all_converged =
+            !results.is_empty() && results.iter().all(|r| r.convergence_info.converged);
         let agg_residual = results
             .iter()
             .map(|r| r.convergence_info.residual_norm)
@@ -1958,18 +1999,27 @@ impl PhysicsSimulationLibrary {
 
     fn validate_config(&self, config: &SimulationConfig) -> Result<(), PhysicsError> {
         if config.time_step <= 0.0 {
-            return Err(PhysicsError::InvalidConfiguration("Time step must be positive".to_string()));
+            return Err(PhysicsError::InvalidConfiguration(
+                "Time step must be positive".to_string(),
+            ));
         }
         if config.total_time <= 0.0 {
-            return Err(PhysicsError::InvalidConfiguration("Total time must be positive".to_string()));
+            return Err(PhysicsError::InvalidConfiguration(
+                "Total time must be positive".to_string(),
+            ));
         }
         if config.spatial_resolution.nx == 0 {
-            return Err(PhysicsError::InvalidConfiguration("Spatial resolution must be positive".to_string()));
+            return Err(PhysicsError::InvalidConfiguration(
+                "Spatial resolution must be positive".to_string(),
+            ));
         }
         Ok(())
     }
 
-    fn initialize_cfd_fields(&self, simulation: &Simulation) -> Result<Vec<PhysicsField>, PhysicsError> {
+    fn initialize_cfd_fields(
+        &self,
+        simulation: &Simulation,
+    ) -> Result<Vec<PhysicsField>, PhysicsError> {
         let mut fields = Vec::new();
 
         // Initialize velocity field
@@ -2028,7 +2078,11 @@ impl PhysicsSimulationLibrary {
         solver_result.residual_norm < 1e-6
     }
 
-    fn run_simulation_on_node(&self, simulation: &Simulation, node_id: &str) -> Result<SimulationResult, PhysicsError> {
+    fn run_simulation_on_node(
+        &self,
+        simulation: &Simulation,
+        node_id: &str,
+    ) -> Result<SimulationResult, PhysicsError> {
         let nx = simulation.config.spatial_resolution.nx;
         let dx = simulation.config.spatial_resolution.dx;
         let dt = simulation.config.time_step;
@@ -2040,7 +2094,9 @@ impl PhysicsSimulationLibrary {
             let x = i as f64 * dx;
             u[i] = (std::f64::consts::PI * x).sin();
         }
-        let steps = ((simulation.config.total_time / dt) as usize).max(1).min(500);
+        let steps = ((simulation.config.total_time / dt) as usize)
+            .max(1)
+            .min(500);
         let mut residual = f64::INFINITY;
         let mut prev_residual = f64::INFINITY;
         for _ in 0..steps {
@@ -2064,7 +2120,11 @@ impl PhysicsSimulationLibrary {
         } else {
             0.0
         };
-        let node_residual = if residual.is_finite() { residual } else { f64::MAX };
+        let node_residual = if residual.is_finite() {
+            residual
+        } else {
+            f64::MAX
+        };
 
         // Pressure: approximate via Bernoulli P + 0.5*rho*u^2 = const
         let rho = 1.225_f64;
@@ -2074,30 +2134,49 @@ impl PhysicsSimulationLibrary {
         // Temperature: adiabatic relation T = T0*(P/P0)^((gamma-1)/gamma)
         let gamma = 1.4_f64;
         let t0 = 293.15_f64;
-        let temperature: Vec<f64> = pressure.iter().map(|&pi| {
-            t0 * (pi / p_ref).powf((gamma - 1.0) / gamma)
-        }).collect();
+        let temperature: Vec<f64> = pressure
+            .iter()
+            .map(|&pi| t0 * (pi / p_ref).powf((gamma - 1.0) / gamma))
+            .collect();
 
         let velocity_field = PhysicsField {
             field_id: format!("velocity_{}", node_id),
             field_type: FieldType::Vector,
             dimensions: vec![nx],
             data: u,
-            metadata: FieldMetadata { field_name: "Velocity".to_string(), physical_quantity: "Velocity".to_string(), units: "m/s".to_string(), time_step: steps as u64, iteration: steps as u64 },
+            metadata: FieldMetadata {
+                field_name: "Velocity".to_string(),
+                physical_quantity: "Velocity".to_string(),
+                units: "m/s".to_string(),
+                time_step: steps as u64,
+                iteration: steps as u64,
+            },
         };
         let pressure_field = PhysicsField {
             field_id: format!("pressure_{}", node_id),
             field_type: FieldType::Scalar,
             dimensions: vec![nx],
             data: pressure,
-            metadata: FieldMetadata { field_name: "Pressure".to_string(), physical_quantity: "Pressure".to_string(), units: "Pa".to_string(), time_step: steps as u64, iteration: steps as u64 },
+            metadata: FieldMetadata {
+                field_name: "Pressure".to_string(),
+                physical_quantity: "Pressure".to_string(),
+                units: "Pa".to_string(),
+                time_step: steps as u64,
+                iteration: steps as u64,
+            },
         };
         let temperature_field = PhysicsField {
             field_id: format!("temperature_{}", node_id),
             field_type: FieldType::Scalar,
             dimensions: vec![nx],
             data: temperature,
-            metadata: FieldMetadata { field_name: "Temperature".to_string(), physical_quantity: "Temperature".to_string(), units: "K".to_string(), time_step: steps as u64, iteration: steps as u64 },
+            metadata: FieldMetadata {
+                field_name: "Temperature".to_string(),
+                physical_quantity: "Temperature".to_string(),
+                units: "K".to_string(),
+                time_step: steps as u64,
+                iteration: steps as u64,
+            },
         };
 
         Ok(SimulationResult {
@@ -2155,7 +2234,11 @@ impl SimulationEngine {
         Ok(mesh)
     }
 
-    pub fn update_boundary_conditions(&self, simulation: &mut Simulation, fields: &mut Vec<PhysicsField>) -> Result<(), PhysicsError> {
+    pub fn update_boundary_conditions(
+        &self,
+        simulation: &mut Simulation,
+        fields: &mut Vec<PhysicsField>,
+    ) -> Result<(), PhysicsError> {
         // Update boundary conditions
         Ok(())
     }
@@ -2411,7 +2494,12 @@ impl PhysicsSolver {
         Ok(solver)
     }
 
-    pub fn solve_cfd_step(&self, _solver: &CfdSolver, fields: &[PhysicsField], _mesh: &Mesh) -> Result<SolverResult, PhysicsError> {
+    pub fn solve_cfd_step(
+        &self,
+        _solver: &CfdSolver,
+        fields: &[PhysicsField],
+        _mesh: &Mesh,
+    ) -> Result<SolverResult, PhysicsError> {
         // Real steady-state residual of the velocity field: the L2 norm of the Burgers
         // operator ‖ν·u_xx − u·u_x‖ over the interior nodes — a genuine measure of how far
         // the field is from a steady solution. (Previously this returned a fabricated 1e-7.)
@@ -2637,10 +2725,17 @@ impl MeshCoordinator {
         Ok(())
     }
 
-    pub fn distribute_simulation(&self, simulation: &Simulation) -> Result<NodeDistribution, PhysicsError> {
+    pub fn distribute_simulation(
+        &self,
+        simulation: &Simulation,
+    ) -> Result<NodeDistribution, PhysicsError> {
         // Distribute simulation across available nodes
         let distribution = NodeDistribution {
-            node_ids: vec!["node1".to_string(), "node2".to_string(), "node3".to_string()],
+            node_ids: vec![
+                "node1".to_string(),
+                "node2".to_string(),
+                "node3".to_string(),
+            ],
             node_loads: vec![0.33, 0.33, 0.34],
             communication_pattern: CommunicationPattern::Hybrid,
         };
@@ -2648,7 +2743,10 @@ impl MeshCoordinator {
         Ok(distribution)
     }
 
-    pub fn collect_results(&self, results: &[SimulationResult]) -> Result<Vec<PhysicsField>, PhysicsError> {
+    pub fn collect_results(
+        &self,
+        results: &[SimulationResult],
+    ) -> Result<Vec<PhysicsField>, PhysicsError> {
         if results.is_empty() {
             return Ok(Vec::new());
         }
@@ -2657,7 +2755,8 @@ impl MeshCoordinator {
         for result in results {
             for field in &result.fields {
                 // Strip node-specific suffix (e.g. "velocity_node1" -> "velocity")
-                let base_name = field.field_id
+                let base_name = field
+                    .field_id
                     .split('_')
                     .next()
                     .unwrap_or(&field.field_id)
@@ -2667,7 +2766,9 @@ impl MeshCoordinator {
         }
         let mut combined_fields = Vec::new();
         for (base_name, fields) in field_groups {
-            if fields.is_empty() { continue; }
+            if fields.is_empty() {
+                continue;
+            }
             let dim = fields[0].dimensions.clone();
             let data_len = fields[0].data.len();
             let mut combined_data = vec![0.0f64; data_len];
@@ -2679,7 +2780,9 @@ impl MeshCoordinator {
                 }
             }
             let count = fields.len() as f64;
-            for v in &mut combined_data { *v /= count; }
+            for v in &mut combined_data {
+                *v /= count;
+            }
             combined_fields.push(PhysicsField {
                 field_id: base_name.clone(),
                 field_type: fields[0].field_type.clone(),
@@ -2715,7 +2818,10 @@ impl NodeManager {
             capabilities: NodeCapabilities::new(),
             current_load: 0.0,
             network_address: "192.168.1.1".to_string(),
-            last_heartbeat: std::time::SystemTime::now().duration_since(std::time::UNIX_EPOCH).unwrap().as_secs(),
+            last_heartbeat: std::time::SystemTime::now()
+                .duration_since(std::time::UNIX_EPOCH)
+                .unwrap()
+                .as_secs(),
         };
 
         self.nodes.insert("node1".to_string(), node1);
@@ -2730,7 +2836,7 @@ impl NodeCapabilities {
             memory_size: 16 * 1024 * 1024 * 1024, // 16GB
             gpu_count: 1,
             storage_capacity: 1 * 1024 * 1024 * 1024 * 1024, // 1TB
-            network_bandwidth: 1000.0, // 1 Gbps
+            network_bandwidth: 1000.0,                       // 1 Gbps
             supported_algorithms: vec!["CFD".to_string(), "FEM".to_string()],
         }
     }
@@ -2765,7 +2871,7 @@ impl RedistributionPolicy {
     pub fn new() -> Self {
         Self {
             redistribution_threshold: 0.8,
-            redistribution_interval: 60, // 1 minute
+            redistribution_interval: 60,  // 1 minute
             max_redistribution_time: 300, // 5 minutes
         }
     }
@@ -2837,7 +2943,11 @@ impl PhysicsDataManager {
         Ok(())
     }
 
-    pub fn store_field_data(&mut self, simulation: &Simulation, fields: &[PhysicsField]) -> Result<(), PhysicsError> {
+    pub fn store_field_data(
+        &mut self,
+        simulation: &Simulation,
+        fields: &[PhysicsField],
+    ) -> Result<(), PhysicsError> {
         // Store field data
         Ok(())
     }
@@ -3283,7 +3393,7 @@ mod tests {
     fn test_simulation_creation() {
         let mut library = PhysicsSimulationLibrary::new();
         library.initialize().unwrap();
-        
+
         let config = SimulationConfig {
             simulation_id: "test_simulation".to_string(),
             simulation_type: SimulationType::CFD,
@@ -3307,9 +3417,9 @@ mod tests {
                 communication_pattern: CommunicationPattern::Hybrid,
             },
         };
-        
+
         let simulation = library.create_simulation(config).unwrap();
-        
+
         assert_eq!(simulation.config.simulation_id, "test_simulation");
         assert_eq!(simulation.config.simulation_type, SimulationType::CFD);
         assert_eq!(simulation.config.domain_type, DomainType::ThreeDimensional);
@@ -3321,7 +3431,7 @@ mod tests {
     fn test_cfd_simulation() {
         let mut library = PhysicsSimulationLibrary::new();
         library.initialize().unwrap();
-        
+
         let config = SimulationConfig {
             simulation_id: "cfd_test".to_string(),
             simulation_type: SimulationType::CFD,
@@ -3345,9 +3455,9 @@ mod tests {
                 communication_pattern: CommunicationPattern::Hybrid,
             },
         };
-        
+
         let mut simulation = library.create_simulation(config).unwrap();
-        
+
         let result = library.run_cfd_simulation(&mut simulation).unwrap();
 
         // Real Burgers integration: assert the actual computed behaviour, not a fabricated
@@ -3360,16 +3470,18 @@ mod tests {
         let velocity = &result.result[0].data;
         assert!(velocity.iter().all(|v| v.is_finite()));
         assert!(velocity.iter().any(|&v| v.abs() > 0.0)); // the IC actually propagated
-        // Pressure tracks Bernoulli: where velocity is non-zero, pressure drops below p_ref.
+                                                          // Pressure tracks Bernoulli: where velocity is non-zero, pressure drops below p_ref.
         let pressure = &result.result[1].data;
-        assert!(pressure.iter().all(|&p| p.is_finite() && p <= 101_325.0 + 1e-6));
+        assert!(pressure
+            .iter()
+            .all(|&p| p.is_finite() && p <= 101_325.0 + 1e-6));
     }
 
     #[test]
     fn test_distributed_simulation() {
         let mut library = PhysicsSimulationLibrary::new();
         library.initialize().unwrap();
-        
+
         let config = SimulationConfig {
             simulation_id: "distributed_test".to_string(),
             simulation_type: SimulationType::CFD,
@@ -3393,9 +3505,9 @@ mod tests {
                 communication_pattern: CommunicationPattern::Hybrid,
             },
         };
-        
+
         let mut simulation = library.create_simulation(config).unwrap();
-        
+
         let result = library.run_distributed_simulation(&mut simulation).unwrap();
 
         // Real per-node Burgers integration, aggregated. Assert the actual computed
@@ -3403,16 +3515,25 @@ mod tests {
         assert_eq!(result.result.len(), 3); // velocity + pressure + temperature, merged across nodes
         assert!(result.convergence_info.iterations > 0);
         assert!(result.convergence_info.residual_norm.is_finite());
-        assert!(result.result.iter().all(|f| f.data.iter().all(|v| v.is_finite())));
+        assert!(result
+            .result
+            .iter()
+            .all(|f| f.data.iter().all(|v| v.is_finite())));
     }
 
     #[test]
     fn test_performance_metrics() {
         let library = PhysicsSimulationLibrary::new();
         let metrics = library.get_performance_stats();
-        
+
         assert_eq!(metrics.simulation_metrics.total_simulations, 0);
-        assert_eq!(metrics.solver_metrics.linear_solver_metrics.average_iterations, 0.0);
+        assert_eq!(
+            metrics
+                .solver_metrics
+                .linear_solver_metrics
+                .average_iterations,
+            0.0
+        );
         assert_eq!(metrics.mesh_metrics.total_nodes, 0);
         assert_eq!(metrics.data_metrics.total_data_size, 0);
     }

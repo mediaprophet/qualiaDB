@@ -250,8 +250,11 @@ impl<'a> ShaclEngine<'a> {
                 for &v in values {
                     match object_as_f64(v) {
                         Some(x) if x >= *m => {}
-                        _ => violate("sh:MinInclusiveConstraintComponent", Some(v),
-                            format!("value < minInclusive {m} (or not numeric)")),
+                        _ => violate(
+                            "sh:MinInclusiveConstraintComponent",
+                            Some(v),
+                            format!("value < minInclusive {m} (or not numeric)"),
+                        ),
                     }
                 }
             }
@@ -259,8 +262,11 @@ impl<'a> ShaclEngine<'a> {
                 for &v in values {
                     match object_as_f64(v) {
                         Some(x) if x <= *m => {}
-                        _ => violate("sh:MaxInclusiveConstraintComponent", Some(v),
-                            format!("value > maxInclusive {m} (or not numeric)")),
+                        _ => violate(
+                            "sh:MaxInclusiveConstraintComponent",
+                            Some(v),
+                            format!("value > maxInclusive {m} (or not numeric)"),
+                        ),
                     }
                 }
             }
@@ -268,8 +274,11 @@ impl<'a> ShaclEngine<'a> {
                 for &v in values {
                     match object_as_f64(v) {
                         Some(x) if x > *m => {}
-                        _ => violate("sh:MinExclusiveConstraintComponent", Some(v),
-                            format!("value <= minExclusive {m} (or not numeric)")),
+                        _ => violate(
+                            "sh:MinExclusiveConstraintComponent",
+                            Some(v),
+                            format!("value <= minExclusive {m} (or not numeric)"),
+                        ),
                     }
                 }
             }
@@ -277,12 +286,20 @@ impl<'a> ShaclEngine<'a> {
                 for &v in values {
                     match object_as_f64(v) {
                         Some(x) if x < *m => {}
-                        _ => violate("sh:MaxExclusiveConstraintComponent", Some(v),
-                            format!("value >= maxExclusive {m} (or not numeric)")),
+                        _ => violate(
+                            "sh:MaxExclusiveConstraintComponent",
+                            Some(v),
+                            format!("value >= maxExclusive {m} (or not numeric)"),
+                        ),
                     }
                 }
             }
-            ShaclConstraint::DatatypeRange { min_inclusive, max_inclusive, min_exclusive, max_exclusive } => {
+            ShaclConstraint::DatatypeRange {
+                min_inclusive,
+                max_inclusive,
+                min_exclusive,
+                max_exclusive,
+            } => {
                 for &v in values {
                     let x = object_as_f64(v);
                     let ok = match x {
@@ -295,7 +312,11 @@ impl<'a> ShaclEngine<'a> {
                         None => false,
                     };
                     if !ok {
-                        violate("sh:DatatypeRange", Some(v), "value outside datatype range".into());
+                        violate(
+                            "sh:DatatypeRange",
+                            Some(v),
+                            "value outside datatype range".into(),
+                        );
                     }
                 }
             }
@@ -303,14 +324,20 @@ impl<'a> ShaclEngine<'a> {
             // ── cardinality ────────────────────────────────────────────────────
             ShaclConstraint::MinCount(n) => {
                 if (values.len() as u32) < *n {
-                    violate("sh:MinCountConstraintComponent", None,
-                        format!("{} value(s) < minCount {n}", values.len()));
+                    violate(
+                        "sh:MinCountConstraintComponent",
+                        None,
+                        format!("{} value(s) < minCount {n}", values.len()),
+                    );
                 }
             }
             ShaclConstraint::MaxCount(n) => {
                 if (values.len() as u32) > *n {
-                    violate("sh:MaxCountConstraintComponent", None,
-                        format!("{} value(s) > maxCount {n}", values.len()));
+                    violate(
+                        "sh:MaxCountConstraintComponent",
+                        None,
+                        format!("{} value(s) > maxCount {n}", values.len()),
+                    );
                 }
             }
 
@@ -319,8 +346,11 @@ impl<'a> ShaclEngine<'a> {
                 let ch = q_hash(class);
                 for &v in values {
                     if !self.is_a(v, ch) {
-                        violate("sh:ClassConstraintComponent", Some(v),
-                            format!("value is not an instance of {class}"));
+                        violate(
+                            "sh:ClassConstraintComponent",
+                            Some(v),
+                            format!("value is not an instance of {class}"),
+                        );
                     }
                 }
             }
@@ -335,8 +365,11 @@ impl<'a> ShaclEngine<'a> {
                             object_tag(v) == tag
                         };
                         if !ok {
-                            violate("sh:DatatypeConstraintComponent", Some(v),
-                                format!("value is not a {dt}"));
+                            violate(
+                                "sh:DatatypeConstraintComponent",
+                                Some(v),
+                                format!("value is not a {dt}"),
+                            );
                         }
                     }
                 }
@@ -346,8 +379,11 @@ impl<'a> ShaclEngine<'a> {
                 if let Some(want) = want {
                     for &v in values {
                         if !node_kind_matches(v, want) {
-                            violate("sh:NodeKindConstraintComponent", Some(v),
-                                format!("value is not nodeKind {kind_str}"));
+                            violate(
+                                "sh:NodeKindConstraintComponent",
+                                Some(v),
+                                format!("value is not nodeKind {kind_str}"),
+                            );
                         }
                     }
                 }
@@ -355,8 +391,11 @@ impl<'a> ShaclEngine<'a> {
             ShaclConstraint::NodeKindStrict(kind) => {
                 for &v in values {
                     if !node_kind_matches(v, *kind) {
-                        violate("sh:NodeKindConstraintComponent", Some(v),
-                            format!("value is not nodeKind {kind:?}"));
+                        violate(
+                            "sh:NodeKindConstraintComponent",
+                            Some(v),
+                            format!("value is not nodeKind {kind:?}"),
+                        );
                     }
                 }
             }
@@ -366,16 +405,22 @@ impl<'a> ShaclEngine<'a> {
                 let set: Vec<u64> = allowed.iter().map(|s| q_hash(s)).collect();
                 for &v in values {
                     if !set.contains(&v) {
-                        violate("sh:InConstraintComponent", Some(v),
-                            "value not in the allowed set".into());
+                        violate(
+                            "sh:InConstraintComponent",
+                            Some(v),
+                            "value not in the allowed set".into(),
+                        );
                     }
                 }
             }
             ShaclConstraint::HasValue(expected) => {
                 let e = q_hash(expected);
                 if !values.contains(&e) {
-                    violate("sh:HasValueConstraintComponent", None,
-                        format!("required value {expected} absent"));
+                    violate(
+                        "sh:HasValueConstraintComponent",
+                        None,
+                        format!("required value {expected} absent"),
+                    );
                 }
             }
 
@@ -384,8 +429,11 @@ impl<'a> ShaclEngine<'a> {
                 for &v in values {
                     match resolve(v) {
                         Some(s) if s.chars().count() as u32 >= *n => {}
-                        _ => violate("sh:MinLengthConstraintComponent", Some(v),
-                            format!("length < minLength {n} (or unresolvable)")),
+                        _ => violate(
+                            "sh:MinLengthConstraintComponent",
+                            Some(v),
+                            format!("length < minLength {n} (or unresolvable)"),
+                        ),
                     }
                 }
             }
@@ -393,8 +441,11 @@ impl<'a> ShaclEngine<'a> {
                 for &v in values {
                     match resolve(v) {
                         Some(s) if s.chars().count() as u32 <= *n => {}
-                        _ => violate("sh:MaxLengthConstraintComponent", Some(v),
-                            format!("length > maxLength {n} (or unresolvable)")),
+                        _ => violate(
+                            "sh:MaxLengthConstraintComponent",
+                            Some(v),
+                            format!("length > maxLength {n} (or unresolvable)"),
+                        ),
                     }
                 }
             }
@@ -403,13 +454,19 @@ impl<'a> ShaclEngine<'a> {
                     for &v in values {
                         match resolve(v) {
                             Some(s) if re.is_match(&s) => {}
-                            _ => violate("sh:PatternConstraintComponent", Some(v),
-                                format!("value does not match /{pat}/ (or unresolvable)")),
+                            _ => violate(
+                                "sh:PatternConstraintComponent",
+                                Some(v),
+                                format!("value does not match /{pat}/ (or unresolvable)"),
+                            ),
                         }
                     }
                 }
-                Err(_) => violate("sh:PatternConstraintComponent", None,
-                    format!("invalid regex pattern /{pat}/")),
+                Err(_) => violate(
+                    "sh:PatternConstraintComponent",
+                    None,
+                    format!("invalid regex pattern /{pat}/"),
+                ),
             },
             ShaclConstraint::LanguageIn(langs) => {
                 for &v in values {
@@ -417,8 +474,11 @@ impl<'a> ShaclEngine<'a> {
                         .map(|s| langs.iter().any(|l| lang_tag_matches(&s, l)))
                         .unwrap_or(false);
                     if !ok {
-                        violate("sh:LanguageInConstraintComponent", Some(v),
-                            "value language tag not in languageIn (or unresolvable)".into());
+                        violate(
+                            "sh:LanguageInConstraintComponent",
+                            Some(v),
+                            "value language tag not in languageIn (or unresolvable)".into(),
+                        );
                     }
                 }
             }
@@ -427,8 +487,11 @@ impl<'a> ShaclEngine<'a> {
                 for &v in values {
                     if let Some(tag) = resolve(v).and_then(|s| lang_tag_of(&s)) {
                         if seen.contains(&tag) {
-                            violate("sh:UniqueLangConstraintComponent", Some(v),
-                                format!("duplicate language tag @{tag}"));
+                            violate(
+                                "sh:UniqueLangConstraintComponent",
+                                Some(v),
+                                format!("duplicate language tag @{tag}"),
+                            );
                         } else {
                             seen.push(tag);
                         }
@@ -440,66 +503,123 @@ impl<'a> ShaclEngine<'a> {
             ShaclConstraint::Equals(other) => {
                 let theirs = self.values_at(focus, other);
                 if !same_set(values, &theirs) {
-                    violate("sh:EqualsConstraintComponent", None,
-                        format!("value set != values of {other}"));
+                    violate(
+                        "sh:EqualsConstraintComponent",
+                        None,
+                        format!("value set != values of {other}"),
+                    );
                 }
             }
             ShaclConstraint::LessThan(other) => {
-                self.compare_pair(focus, values, other, severity, path, resolve, out,
-                    "sh:LessThanConstraintComponent", |a, b| a < b);
+                self.compare_pair(
+                    focus,
+                    values,
+                    other,
+                    severity,
+                    path,
+                    resolve,
+                    out,
+                    "sh:LessThanConstraintComponent",
+                    |a, b| a < b,
+                );
             }
             ShaclConstraint::LessThanOrEquals(other) => {
-                self.compare_pair(focus, values, other, severity, path, resolve, out,
-                    "sh:LessThanOrEqualsConstraintComponent", |a, b| a <= b);
+                self.compare_pair(
+                    focus,
+                    values,
+                    other,
+                    severity,
+                    path,
+                    resolve,
+                    out,
+                    "sh:LessThanOrEqualsConstraintComponent",
+                    |a, b| a <= b,
+                );
             }
             ShaclConstraint::GreaterThan(other) => {
-                self.compare_pair(focus, values, other, severity, path, resolve, out,
-                    "sh:GreaterThanConstraintComponent", |a, b| a > b);
+                self.compare_pair(
+                    focus,
+                    values,
+                    other,
+                    severity,
+                    path,
+                    resolve,
+                    out,
+                    "sh:GreaterThanConstraintComponent",
+                    |a, b| a > b,
+                );
             }
             ShaclConstraint::GreaterThanOrEquals(other) => {
-                self.compare_pair(focus, values, other, severity, path, resolve, out,
-                    "sh:GreaterThanOrEqualsConstraintComponent", |a, b| a >= b);
+                self.compare_pair(
+                    focus,
+                    values,
+                    other,
+                    severity,
+                    path,
+                    resolve,
+                    out,
+                    "sh:GreaterThanOrEqualsConstraintComponent",
+                    |a, b| a >= b,
+                );
             }
 
             // ── shape-based / logical ────────────────────────────────────────────
             ShaclConstraint::Node(shape) => {
                 for &v in values {
                     if !self.focus_conforms(v, shape, resolve) {
-                        violate("sh:NodeConstraintComponent", Some(v),
-                            format!("value does not conform to shape {shape}"));
+                        violate(
+                            "sh:NodeConstraintComponent",
+                            Some(v),
+                            format!("value does not conform to shape {shape}"),
+                        );
                     }
                 }
             }
             ShaclConstraint::And(shapes) => {
                 for &v in values {
                     if !shapes.iter().all(|s| self.focus_conforms(v, s, resolve)) {
-                        violate("sh:AndConstraintComponent", Some(v),
-                            "value fails one or more sh:and shapes".into());
+                        violate(
+                            "sh:AndConstraintComponent",
+                            Some(v),
+                            "value fails one or more sh:and shapes".into(),
+                        );
                     }
                 }
             }
             ShaclConstraint::Or(shapes) => {
                 for &v in values {
                     if !shapes.iter().any(|s| self.focus_conforms(v, s, resolve)) {
-                        violate("sh:OrConstraintComponent", Some(v),
-                            "value conforms to none of the sh:or shapes".into());
+                        violate(
+                            "sh:OrConstraintComponent",
+                            Some(v),
+                            "value conforms to none of the sh:or shapes".into(),
+                        );
                     }
                 }
             }
             ShaclConstraint::Not(shape) => {
                 for &v in values {
                     if self.focus_conforms(v, shape, resolve) {
-                        violate("sh:NotConstraintComponent", Some(v),
-                            format!("value conforms to negated shape {shape}"));
+                        violate(
+                            "sh:NotConstraintComponent",
+                            Some(v),
+                            format!("value conforms to negated shape {shape}"),
+                        );
                     }
                 }
             }
             ShaclConstraint::Xone(shapes) => {
                 for &v in values {
-                    let n = shapes.iter().filter(|s| self.focus_conforms(v, s, resolve)).count();
+                    let n = shapes
+                        .iter()
+                        .filter(|s| self.focus_conforms(v, s, resolve))
+                        .count();
                     if n != 1 {
-                        violate("sh:XoneConstraintComponent", Some(v),
-                            format!("value conforms to {n} sh:xone shapes (need exactly 1)"));
+                        violate(
+                            "sh:XoneConstraintComponent",
+                            Some(v),
+                            format!("value conforms to {n} sh:xone shapes (need exactly 1)"),
+                        );
                     }
                 }
             }
@@ -511,36 +631,71 @@ impl<'a> ShaclEngine<'a> {
                 let type_keys = RDF_TYPE_KEYS.map(q_hash);
                 for q in self.quins.iter().filter(|q| q.subject == focus) {
                     if !allowed.contains(&q.predicate) && !type_keys.contains(&q.predicate) {
-                        violate("sh:ClosedConstraintComponent", Some(q.object),
-                            format!("closed shape: unexpected predicate {:016x}", q.predicate));
+                        violate(
+                            "sh:ClosedConstraintComponent",
+                            Some(q.object),
+                            format!("closed shape: unexpected predicate {:016x}", q.predicate),
+                        );
                     }
                 }
             }
 
             // ── property-path wrapper / qualifier ────────────────────────────────
-            ShaclConstraint::PropertyPath { path: pp, constraint } => {
+            ShaclConstraint::PropertyPath {
+                path: pp,
+                constraint,
+            } => {
                 let pvals = self.values_for_path(focus, pp);
                 let pstr = property_path_label(pp);
-                self.check(focus, &Some(pstr), &pvals, constraint, severity, resolve, out);
+                self.check(
+                    focus,
+                    &Some(pstr),
+                    &pvals,
+                    constraint,
+                    severity,
+                    resolve,
+                    out,
+                );
             }
             ShaclConstraint::QualifierValue { path: pp, value } => {
                 let pvals = self.values_for_path(focus, pp);
                 if !pvals.contains(&q_hash(value)) {
-                    violate("sh:QualifiedValueShapeConstraintComponent", None,
-                        format!("qualified value {value} absent at path"));
+                    violate(
+                        "sh:QualifiedValueShapeConstraintComponent",
+                        None,
+                        format!("qualified value {value} absent at path"),
+                    );
                 }
             }
 
             // ── Qualia-native modality constraints ───────────────────────────────
             // These two have a direct data semantics over the value quins'
             // confidence/truth degree (frame_layout::truth_degree in metadata).
-            ShaclConstraint::EpistemicConstraint { certainty_threshold } => {
-                self.check_truth_degree(focus, path, *certainty_threshold, severity, resolve, out,
-                    "q42:EpistemicConstraintComponent");
+            ShaclConstraint::EpistemicConstraint {
+                certainty_threshold,
+            } => {
+                self.check_truth_degree(
+                    focus,
+                    path,
+                    *certainty_threshold,
+                    severity,
+                    resolve,
+                    out,
+                    "q42:EpistemicConstraintComponent",
+                );
             }
-            ShaclConstraint::ProbabilisticConstraint { confidence_threshold } => {
-                self.check_truth_degree(focus, path, *confidence_threshold, severity, resolve, out,
-                    "q42:ProbabilisticConstraintComponent");
+            ShaclConstraint::ProbabilisticConstraint {
+                confidence_threshold,
+            } => {
+                self.check_truth_degree(
+                    focus,
+                    path,
+                    *confidence_threshold,
+                    severity,
+                    resolve,
+                    out,
+                    "q42:ProbabilisticConstraintComponent",
+                );
             }
             // The remaining native constraints are modality *computations* (deontic
             // evaluation, LTL traces, ASP stable models, calculus, graph, diffusion,
@@ -571,7 +726,8 @@ impl<'a> ShaclEngine<'a> {
             PropertyPath::Inverse(inner) => {
                 if let PropertyPath::Predicate(p) = inner.as_ref() {
                     let ph = q_hash(p);
-                    self.quins.iter()
+                    self.quins
+                        .iter()
                         .filter(|q| q.object == focus && q.predicate == ph)
                         .map(|q| q.subject)
                         .collect()
@@ -730,8 +886,16 @@ fn property_path_label(p: &PropertyPath) -> String {
     match p {
         PropertyPath::Predicate(s) => s.clone(),
         PropertyPath::Inverse(i) => format!("^{}", property_path_label(i)),
-        PropertyPath::Sequence(s) => s.iter().map(property_path_label).collect::<Vec<_>>().join("/"),
-        PropertyPath::Alternative(s) => s.iter().map(property_path_label).collect::<Vec<_>>().join("|"),
+        PropertyPath::Sequence(s) => s
+            .iter()
+            .map(property_path_label)
+            .collect::<Vec<_>>()
+            .join("/"),
+        PropertyPath::Alternative(s) => s
+            .iter()
+            .map(property_path_label)
+            .collect::<Vec<_>>()
+            .join("|"),
         PropertyPath::ZeroOrMore(i) => format!("{}*", property_path_label(i)),
         PropertyPath::OneOrMore(i) => format!("{}+", property_path_label(i)),
         PropertyPath::ZeroOrOne(i) => format!("{}?", property_path_label(i)),
@@ -744,7 +908,8 @@ fn same_set(a: &[u64], b: &[u64]) -> bool {
 
 /// Extract the `@lang` tag of a lexical value (e.g. `"hello"@en` → `en`).
 fn lang_tag_of(s: &str) -> Option<String> {
-    s.rsplit_once('@').map(|(_, tag)| tag.trim_matches('"').to_ascii_lowercase())
+    s.rsplit_once('@')
+        .map(|(_, tag)| tag.trim_matches('"').to_ascii_lowercase())
 }
 
 /// Whether a value's language tag matches `want` (BCP-47 prefix match, e.g.
@@ -771,7 +936,14 @@ mod tests {
         INLINE_TAG_INTEGER | ((n as u64) & INLINE_VALUE_MASK)
     }
     fn quin(s: u64, p: u64, o: u64) -> NQuin {
-        NQuin { subject: s, predicate: p, object: o, context: 0, metadata: 0, parity: 0 }
+        NQuin {
+            subject: s,
+            predicate: p,
+            object: o,
+            context: 0,
+            metadata: 0,
+            parity: 0,
+        }
     }
     fn type_quin(node: u64, class: &str) -> NQuin {
         quin(node, q_hash("rdf:type"), q_hash(class))
@@ -796,13 +968,19 @@ mod tests {
             type_quin(bob, "ex:Adult"),
             quin(bob, q_hash("ex:age"), int_obj(12)),
         ];
-        let shapes = vec![shape("ex:Adult", "ex:age", vec![ShaclConstraint::MinInclusive(18.0)])];
+        let shapes = vec![shape(
+            "ex:Adult",
+            "ex:age",
+            vec![ShaclConstraint::MinInclusive(18.0)],
+        )];
         let eng = ShaclEngine::new(&quins, &shapes);
         let rep = eng.validate(&no_resolve());
         assert!(!rep.conforms, "bob (age 12) must violate minInclusive 18");
         assert_eq!(rep.results.len(), 1);
-        assert_eq!(rep.results[0].source_constraint_component.as_deref(),
-                   Some("sh:MinInclusiveConstraintComponent"));
+        assert_eq!(
+            rep.results[0].source_constraint_component.as_deref(),
+            Some("sh:MinInclusiveConstraintComponent")
+        );
     }
 
     #[test]
@@ -813,12 +991,36 @@ mod tests {
             quin(n, q_hash("ex:p"), iri("ex:v1")),
             quin(n, q_hash("ex:p"), iri("ex:v2")),
         ];
-        let too_few = vec![shape("ex:Thing", "ex:p", vec![ShaclConstraint::MinCount(3)])];
-        assert!(!ShaclEngine::new(&quins, &too_few).validate(&no_resolve()).conforms);
-        let too_many = vec![shape("ex:Thing", "ex:p", vec![ShaclConstraint::MaxCount(1)])];
-        assert!(!ShaclEngine::new(&quins, &too_many).validate(&no_resolve()).conforms);
-        let ok = vec![shape("ex:Thing", "ex:p", vec![ShaclConstraint::MinCount(2), ShaclConstraint::MaxCount(2)])];
-        assert!(ShaclEngine::new(&quins, &ok).validate(&no_resolve()).conforms);
+        let too_few = vec![shape(
+            "ex:Thing",
+            "ex:p",
+            vec![ShaclConstraint::MinCount(3)],
+        )];
+        assert!(
+            !ShaclEngine::new(&quins, &too_few)
+                .validate(&no_resolve())
+                .conforms
+        );
+        let too_many = vec![shape(
+            "ex:Thing",
+            "ex:p",
+            vec![ShaclConstraint::MaxCount(1)],
+        )];
+        assert!(
+            !ShaclEngine::new(&quins, &too_many)
+                .validate(&no_resolve())
+                .conforms
+        );
+        let ok = vec![shape(
+            "ex:Thing",
+            "ex:p",
+            vec![ShaclConstraint::MinCount(2), ShaclConstraint::MaxCount(2)],
+        )];
+        assert!(
+            ShaclEngine::new(&quins, &ok)
+                .validate(&no_resolve())
+                .conforms
+        );
     }
 
     #[test]
@@ -830,8 +1032,16 @@ mod tests {
             quin(n, q_hash("ex:pet"), dog),
             type_quin(dog, "ex:Cat"),
         ];
-        let shapes = vec![shape("ex:Owner", "ex:pet", vec![ShaclConstraint::Class("ex:Dog".into())])];
-        assert!(!ShaclEngine::new(&quins, &shapes).validate(&no_resolve()).conforms);
+        let shapes = vec![shape(
+            "ex:Owner",
+            "ex:pet",
+            vec![ShaclConstraint::Class("ex:Dog".into())],
+        )];
+        assert!(
+            !ShaclEngine::new(&quins, &shapes)
+                .validate(&no_resolve())
+                .conforms
+        );
     }
 
     #[test]
@@ -841,14 +1051,39 @@ mod tests {
             type_quin(n, "ex:T"),
             quin(n, q_hash("ex:status"), iri("ex:active")),
         ];
-        let in_ok = vec![shape("ex:T", "ex:status",
-            vec![ShaclConstraint::In(vec!["ex:active".into(), "ex:inactive".into()])])];
-        assert!(ShaclEngine::new(&quins, &in_ok).validate(&no_resolve()).conforms);
-        let in_bad = vec![shape("ex:T", "ex:status",
-            vec![ShaclConstraint::In(vec!["ex:archived".into()])])];
-        assert!(!ShaclEngine::new(&quins, &in_bad).validate(&no_resolve()).conforms);
-        let hv = vec![shape("ex:T", "ex:status", vec![ShaclConstraint::HasValue("ex:active".into())])];
-        assert!(ShaclEngine::new(&quins, &hv).validate(&no_resolve()).conforms);
+        let in_ok = vec![shape(
+            "ex:T",
+            "ex:status",
+            vec![ShaclConstraint::In(vec![
+                "ex:active".into(),
+                "ex:inactive".into(),
+            ])],
+        )];
+        assert!(
+            ShaclEngine::new(&quins, &in_ok)
+                .validate(&no_resolve())
+                .conforms
+        );
+        let in_bad = vec![shape(
+            "ex:T",
+            "ex:status",
+            vec![ShaclConstraint::In(vec!["ex:archived".into()])],
+        )];
+        assert!(
+            !ShaclEngine::new(&quins, &in_bad)
+                .validate(&no_resolve())
+                .conforms
+        );
+        let hv = vec![shape(
+            "ex:T",
+            "ex:status",
+            vec![ShaclConstraint::HasValue("ex:active".into())],
+        )];
+        assert!(
+            ShaclEngine::new(&quins, &hv)
+                .validate(&no_resolve())
+                .conforms
+        );
     }
 
     #[test]
@@ -856,15 +1091,42 @@ mod tests {
         let n = iri("ex:N");
         let email = iri("alice@example.org"); // value hash; resolver supplies the string
         let quins = vec![type_quin(n, "ex:User"), quin(n, q_hash("ex:email"), email)];
-        let shapes = vec![shape("ex:User", "ex:email",
-            vec![ShaclConstraint::Pattern(r"^[^@]+@[^@]+\.[a-z]+$".into())])];
-        let resolve = |h: u64| if h == email { Some("alice@example.org".to_string()) } else { None };
-        assert!(ShaclEngine::new(&quins, &shapes).validate(&resolve).conforms);
+        let shapes = vec![shape(
+            "ex:User",
+            "ex:email",
+            vec![ShaclConstraint::Pattern(r"^[^@]+@[^@]+\.[a-z]+$".into())],
+        )];
+        let resolve = |h: u64| {
+            if h == email {
+                Some("alice@example.org".to_string())
+            } else {
+                None
+            }
+        };
+        assert!(
+            ShaclEngine::new(&quins, &shapes)
+                .validate(&resolve)
+                .conforms
+        );
         // A non-matching string fails.
-        let resolve_bad = |h: u64| if h == email { Some("not-an-email".to_string()) } else { None };
-        assert!(!ShaclEngine::new(&quins, &shapes).validate(&resolve_bad).conforms);
+        let resolve_bad = |h: u64| {
+            if h == email {
+                Some("not-an-email".to_string())
+            } else {
+                None
+            }
+        };
+        assert!(
+            !ShaclEngine::new(&quins, &shapes)
+                .validate(&resolve_bad)
+                .conforms
+        );
         // Unresolvable → fail closed.
-        assert!(!ShaclEngine::new(&quins, &shapes).validate(&no_resolve()).conforms);
+        assert!(
+            !ShaclEngine::new(&quins, &shapes)
+                .validate(&no_resolve())
+                .conforms
+        );
     }
 
     #[test]
@@ -872,10 +1134,26 @@ mod tests {
         let n = iri("ex:N");
         let v = iri("ex:val");
         let quins = vec![type_quin(n, "ex:T"), quin(n, q_hash("ex:name"), v)];
-        let shapes = vec![shape("ex:T", "ex:name", vec![ShaclConstraint::MinLength(5)])];
-        let ok = |h: u64| if h == v { Some("Timothy".to_string()) } else { None };
+        let shapes = vec![shape(
+            "ex:T",
+            "ex:name",
+            vec![ShaclConstraint::MinLength(5)],
+        )];
+        let ok = |h: u64| {
+            if h == v {
+                Some("Timothy".to_string())
+            } else {
+                None
+            }
+        };
         assert!(ShaclEngine::new(&quins, &shapes).validate(&ok).conforms);
-        let bad = |h: u64| if h == v { Some("Tim".to_string()) } else { None };
+        let bad = |h: u64| {
+            if h == v {
+                Some("Tim".to_string())
+            } else {
+                None
+            }
+        };
         assert!(!ShaclEngine::new(&quins, &shapes).validate(&bad).conforms);
     }
 
@@ -887,28 +1165,59 @@ mod tests {
             quin(n, q_hash("ex:title"), iri("t")),
         ];
         // Sub-shape: requires ex:title present (minCount 1).
-        let has_title = shape("ex:HasTitle", "ex:title", vec![ShaclConstraint::MinCount(1)]);
-        let has_author = shape("ex:HasAuthor", "ex:author", vec![ShaclConstraint::MinCount(1)]);
+        let has_title = shape(
+            "ex:HasTitle",
+            "ex:title",
+            vec![ShaclConstraint::MinCount(1)],
+        );
+        let has_author = shape(
+            "ex:HasAuthor",
+            "ex:author",
+            vec![ShaclConstraint::MinCount(1)],
+        );
         // Node shape on the focus: Or(HasTitle, HasAuthor) → passes (has title).
-        let mut or_shape = CompiledShape::new("ex:Doc".into(),
-            vec![ShaclConstraint::Or(vec!["ex:HasTitle".into(), "ex:HasAuthor".into()])],
-            ShaclSeverity::Violation);
+        let mut or_shape = CompiledShape::new(
+            "ex:Doc".into(),
+            vec![ShaclConstraint::Or(vec![
+                "ex:HasTitle".into(),
+                "ex:HasAuthor".into(),
+            ])],
+            ShaclSeverity::Violation,
+        );
         or_shape.property_path = String::new(); // node shape (focus itself)
         let shapes = vec![or_shape, has_title.clone(), has_author.clone()];
-        assert!(ShaclEngine::new(&quins, &shapes).validate(&no_resolve()).conforms);
+        assert!(
+            ShaclEngine::new(&quins, &shapes)
+                .validate(&no_resolve())
+                .conforms
+        );
 
         // Not(HasAuthor) → passes (no author). Not(HasTitle) → fails.
-        let mut not_author = CompiledShape::new("ex:Doc".into(),
-            vec![ShaclConstraint::Not("ex:HasAuthor".into())], ShaclSeverity::Violation);
+        let mut not_author = CompiledShape::new(
+            "ex:Doc".into(),
+            vec![ShaclConstraint::Not("ex:HasAuthor".into())],
+            ShaclSeverity::Violation,
+        );
         not_author.property_path = String::new();
         let shapes2 = vec![not_author, has_title.clone(), has_author.clone()];
-        assert!(ShaclEngine::new(&quins, &shapes2).validate(&no_resolve()).conforms);
+        assert!(
+            ShaclEngine::new(&quins, &shapes2)
+                .validate(&no_resolve())
+                .conforms
+        );
 
-        let mut not_title = CompiledShape::new("ex:Doc".into(),
-            vec![ShaclConstraint::Not("ex:HasTitle".into())], ShaclSeverity::Violation);
+        let mut not_title = CompiledShape::new(
+            "ex:Doc".into(),
+            vec![ShaclConstraint::Not("ex:HasTitle".into())],
+            ShaclSeverity::Violation,
+        );
         not_title.property_path = String::new();
         let shapes3 = vec![not_title, has_title, has_author];
-        assert!(!ShaclEngine::new(&quins, &shapes3).validate(&no_resolve()).conforms);
+        assert!(
+            !ShaclEngine::new(&quins, &shapes3)
+                .validate(&no_resolve())
+                .conforms
+        );
     }
 
     #[test]
@@ -919,9 +1228,13 @@ mod tests {
             quin(n, q_hash("ex:allowed"), iri("v1")),
             quin(n, q_hash("ex:sneaky"), iri("v2")),
         ];
-        let mut s = CompiledShape::new("ex:Strict".into(),
-            vec![ShaclConstraint::Closed { ignored_properties: vec!["ex:allowed".into()] }],
-            ShaclSeverity::Violation);
+        let mut s = CompiledShape::new(
+            "ex:Strict".into(),
+            vec![ShaclConstraint::Closed {
+                ignored_properties: vec!["ex:allowed".into()],
+            }],
+            ShaclSeverity::Violation,
+        );
         s.property_path = String::new();
         let shapes = vec![s];
         let rep = ShaclEngine::new(&quins, &shapes).validate(&no_resolve());
@@ -936,11 +1249,27 @@ mod tests {
             quin(n, q_hash("ex:start"), int_obj(5)),
             quin(n, q_hash("ex:end"), int_obj(10)),
         ];
-        let ok = vec![shape("ex:Event", "ex:start", vec![ShaclConstraint::LessThan("ex:end".into())])];
-        assert!(ShaclEngine::new(&quins, &ok).validate(&no_resolve()).conforms);
+        let ok = vec![shape(
+            "ex:Event",
+            "ex:start",
+            vec![ShaclConstraint::LessThan("ex:end".into())],
+        )];
+        assert!(
+            ShaclEngine::new(&quins, &ok)
+                .validate(&no_resolve())
+                .conforms
+        );
         // Reverse: end < start should fail.
-        let bad = vec![shape("ex:Event", "ex:end", vec![ShaclConstraint::LessThan("ex:start".into())])];
-        assert!(!ShaclEngine::new(&quins, &bad).validate(&no_resolve()).conforms);
+        let bad = vec![shape(
+            "ex:Event",
+            "ex:end",
+            vec![ShaclConstraint::LessThan("ex:start".into())],
+        )];
+        assert!(
+            !ShaclEngine::new(&quins, &bad)
+                .validate(&no_resolve())
+                .conforms
+        );
     }
 
     #[test]

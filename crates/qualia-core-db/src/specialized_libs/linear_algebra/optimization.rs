@@ -1,15 +1,14 @@
-use std::collections::HashMap;
-use std::sync::{Arc, Mutex};
-use std::ops::{Add, Mul, Sub};
-use serde::{Deserialize, Serialize};
 use crate::solvers::SolversError;
+use serde::{Deserialize, Serialize};
+use std::collections::HashMap;
+use std::ops::{Add, Mul, Sub};
+use std::sync::{Arc, Mutex};
 
-use super::core_types::*;
-use super::storage::*;
 use super::computation::*;
-use super::privacy::*;
+use super::core_types::*;
 use super::performance::*;
-
+use super::privacy::*;
+use super::storage::*;
 
 /// Optimization engine for matrix operations
 pub struct OptimizationEngine {
@@ -18,13 +17,11 @@ pub struct OptimizationEngine {
     pub transformer: MatrixTransformer,
 }
 
-
 /// Matrix optimizer
 pub struct MatrixOptimizer {
     pub optimization_strategies: Vec<OptimizationStrategy>,
     pub optimization_history: Vec<OptimizationRecord>,
 }
-
 
 /// Optimization strategies
 #[derive(Debug, Clone, PartialEq)]
@@ -37,7 +34,6 @@ pub enum OptimizationStrategy {
     Fusion,
 }
 
-
 /// Optimization record
 #[derive(Debug, Clone)]
 pub struct OptimizationRecord {
@@ -48,13 +44,11 @@ pub struct OptimizationRecord {
     pub memory_reduction: f64,
 }
 
-
 /// Matrix analyzer
 pub struct MatrixAnalyzer {
     pub analysis_algorithms: Vec<AnalysisAlgorithm>,
     pub pattern_recognition: PatternRecognition,
 }
-
 
 /// Analysis algorithms
 #[derive(Debug, Clone, PartialEq)]
@@ -65,13 +59,11 @@ pub enum AnalysisAlgorithm {
     PerformanceAnalysis,
 }
 
-
 /// Pattern recognition
 pub struct PatternRecognition {
     pub recognized_patterns: Vec<MatrixPattern>,
     pub pattern_library: PatternLibrary,
 }
-
 
 /// Matrix patterns
 #[derive(Debug, Clone, PartialEq)]
@@ -90,13 +82,11 @@ pub enum MatrixPattern {
     Circulant,
 }
 
-
 /// Pattern library
 pub struct PatternLibrary {
     pub patterns: HashMap<String, MatrixPattern>,
     pub optimization_hints: HashMap<MatrixPattern, OptimizationHint>,
 }
-
 
 /// Optimization hints
 #[derive(Debug, Clone)]
@@ -107,13 +97,11 @@ pub struct OptimizationHint {
     pub vectorization_hints: Vec<String>,
 }
 
-
 /// Matrix transformer
 pub struct MatrixTransformer {
     pub transformation_rules: Vec<TransformationRule>,
     pub transformation_history: Vec<TransformationRecord>,
 }
-
 
 /// Transformation rules
 #[derive(Debug, Clone, PartialEq)]
@@ -125,7 +113,6 @@ pub enum TransformationRule {
     LayoutConversion,
 }
 
-
 /// Transformation record
 #[derive(Debug, Clone)]
 pub struct TransformationRecord {
@@ -134,7 +121,6 @@ pub struct TransformationRecord {
     pub transformation: TransformationRule,
     pub performance_impact: f64,
 }
-
 
 impl OptimizationEngine {
     pub fn new() -> Self {
@@ -152,7 +138,11 @@ impl OptimizationEngine {
         Ok(())
     }
 
-    pub fn optimize_multiplication(&mut self, left: &Matrix, right: &Matrix) -> Result<OptimizedMultiplication, LinearAlgebraError> {
+    pub fn optimize_multiplication(
+        &mut self,
+        left: &Matrix,
+        right: &Matrix,
+    ) -> Result<OptimizedMultiplication, LinearAlgebraError> {
         // Analyze matrices
         let left_analysis = self.analyzer.analyze_matrix(left)?;
         let right_analysis = self.analyzer.analyze_matrix(right)?;
@@ -168,7 +158,6 @@ impl OptimizationEngine {
         Ok(optimized)
     }
 }
-
 
 impl MatrixOptimizer {
     pub fn new() -> Self {
@@ -187,7 +176,6 @@ impl MatrixOptimizer {
     }
 }
 
-
 impl MatrixAnalyzer {
     pub fn new() -> Self {
         Self {
@@ -204,7 +192,10 @@ impl MatrixAnalyzer {
         Ok(())
     }
 
-    pub fn analyze_matrix(&mut self, matrix: &Matrix) -> Result<MatrixAnalysis, LinearAlgebraError> {
+    pub fn analyze_matrix(
+        &mut self,
+        matrix: &Matrix,
+    ) -> Result<MatrixAnalysis, LinearAlgebraError> {
         // Analyze matrix structure
         let analysis = MatrixAnalysis {
             matrix_id: matrix.matrix_id.clone(),
@@ -246,7 +237,6 @@ impl MatrixAnalyzer {
     }
 }
 
-
 impl PatternRecognition {
     pub fn new() -> Self {
         Self {
@@ -261,7 +251,6 @@ impl PatternRecognition {
     }
 }
 
-
 impl PatternLibrary {
     pub fn new() -> Self {
         Self {
@@ -274,7 +263,6 @@ impl PatternLibrary {
         Ok(())
     }
 }
-
 
 impl MatrixTransformer {
     pub fn new() -> Self {
@@ -292,7 +280,6 @@ impl MatrixTransformer {
     }
 }
 
-
 #[derive(Debug, Clone)]
 pub struct MatrixAnalysis {
     pub matrix_id: String,
@@ -301,4 +288,3 @@ pub struct MatrixAnalysis {
     pub access_pattern: AccessPattern,
     pub optimization_hints: Vec<String>,
 }
-

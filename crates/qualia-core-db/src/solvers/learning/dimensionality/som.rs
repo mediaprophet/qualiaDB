@@ -18,7 +18,10 @@ pub struct Som {
 struct Lcg(u64);
 impl Lcg {
     fn unit(&mut self) -> f64 {
-        self.0 = self.0.wrapping_mul(6364136223846793005).wrapping_add(1442695040888963407);
+        self.0 = self
+            .0
+            .wrapping_mul(6364136223846793005)
+            .wrapping_add(1442695040888963407);
         ((self.0 >> 11) as f64) / ((1u64 << 53) as f64)
     }
 }
@@ -79,7 +82,12 @@ impl Som {
                 weights[cell * dim + d] = lo[d] + rng.unit() * (hi[d] - lo[d]).max(1e-9);
             }
         }
-        let mut som = Som { grid_w, grid_h, dim, weights };
+        let mut som = Som {
+            grid_w,
+            grid_h,
+            dim,
+            weights,
+        };
 
         let total = epochs.max(1) as f64;
         for epoch in 0..epochs.max(1) {
@@ -92,7 +100,8 @@ impl Som {
                 let (bx, by) = som.bmu(input);
                 for y in 0..grid_h {
                     for x in 0..grid_w {
-                        let gd2 = ((x as f64 - bx as f64).powi(2)) + ((y as f64 - by as f64).powi(2));
+                        let gd2 =
+                            ((x as f64 - bx as f64).powi(2)) + ((y as f64 - by as f64).powi(2));
                         let h = (-gd2 / two_sigma2).exp();
                         if h < 1e-4 {
                             continue;
@@ -129,8 +138,12 @@ mod tests {
         let som = Som::train(&data, 20, 2, 4, 4, 200, 0.5, 2.0, 1).unwrap();
         let a = som.bmu(&[0.0, 0.0]);
         let b = som.bmu(&[10.0, 10.0]);
-        let grid_dist = ((a.0 as f64 - b.0 as f64).powi(2) + (a.1 as f64 - b.1 as f64).powi(2)).sqrt();
-        assert!(grid_dist > 1.0, "clusters should map apart: a={a:?} b={b:?}");
+        let grid_dist =
+            ((a.0 as f64 - b.0 as f64).powi(2) + (a.1 as f64 - b.1 as f64).powi(2)).sqrt();
+        assert!(
+            grid_dist > 1.0,
+            "clusters should map apart: a={a:?} b={b:?}"
+        );
         // A point near cluster A maps to A's BMU (or adjacent).
         let a2 = som.bmu(&[0.2, 0.2]);
         let near = ((a.0 as f64 - a2.0 as f64).powi(2) + (a.1 as f64 - a2.1 as f64).powi(2)).sqrt();
@@ -149,6 +162,9 @@ mod tests {
 
     #[test]
     fn guards() {
-        assert_eq!(Som::train(&[1.0], 1, 2, 3, 3, 10, 0.5, 1.0, 0).unwrap_err(), LearningError::InvalidDimension);
+        assert_eq!(
+            Som::train(&[1.0], 1, 2, 3, 3, 10, 0.5, 1.0, 0).unwrap_err(),
+            LearningError::InvalidDimension
+        );
     }
 }

@@ -18,7 +18,9 @@ pub mod modular;
 pub mod primes;
 
 pub use arithmetic_functions::{divisor_count, divisor_sum, euler_totient, mobius};
-pub use combinatorics::{binomial, catalan, factorial, partitions, stirling_first, stirling_second};
+pub use combinatorics::{
+    binomial, catalan, factorial, partitions, stirling_first, stirling_second,
+};
 pub use modular::{extended_gcd, gcd, lcm, mod_inverse, mod_pow};
 pub use primes::{divisors, is_prime, next_prime, prime_factors};
 

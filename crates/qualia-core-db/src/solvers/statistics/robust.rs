@@ -58,7 +58,11 @@ pub fn median_abs_deviation(values: &[f64], scaled: bool) -> Option<f64> {
     let med = median_in_place(&mut v)?;
     let mut dev: Vec<f64> = values.iter().map(|&x| (x - med).abs()).collect();
     let mad = median_in_place(&mut dev)?;
-    Some(if scaled { 1.482_602_218_505_602 * mad } else { mad })
+    Some(if scaled {
+        1.482_602_218_505_602 * mad
+    } else {
+        mad
+    })
 }
 
 /// Interquartile range `Q3 − Q1` (the 0.75 and 0.25 quantiles). `None` if empty.
@@ -84,7 +88,7 @@ mod tests {
         assert!(mean(&data).unwrap() > 100.0);
         let tm = trimmed_mean(&data, 0.2).unwrap();
         assert!((tm - 5.5).abs() < 1.0, "trimmed mean {tm}"); // ~ middle of 3..8
-        // proportion 0 == ordinary mean.
+                                                              // proportion 0 == ordinary mean.
         assert!((trimmed_mean(&[1.0, 2.0, 3.0], 0.0).unwrap() - 2.0).abs() < EPS);
     }
 

@@ -32,7 +32,13 @@ impl JobExecutor for LocalKernelExecutor {
                 matmul(*m, *k, *n, a, b, &mut c).map_err(|_| SwarmError::KernelFailed)?;
                 Ok(JobResult::DenseLinearProduct { c })
             }
-            JobInput::EmbeddingArtifact { triples, n_entities, n_relations, cfg, .. } => {
+            JobInput::EmbeddingArtifact {
+                triples,
+                n_entities,
+                n_relations,
+                cfg,
+                ..
+            } => {
                 let table: EmbeddingTable = train(triples, *n_entities, *n_relations, *cfg)
                     .map_err(|_| SwarmError::KernelFailed)?;
                 Ok(JobResult::EmbeddingArtifact { table })
@@ -95,7 +101,16 @@ mod tests {
 
     #[test]
     fn malformed_job_fails_closed() {
-        let bad = JobInput::DenseLinearProduct { m: 2, k: 2, n: 2, a: vec![1.0], b: vec![1.0; 4] };
-        assert_eq!(LocalKernelExecutor.execute(&bad).unwrap_err(), SwarmError::InvalidJob);
+        let bad = JobInput::DenseLinearProduct {
+            m: 2,
+            k: 2,
+            n: 2,
+            a: vec![1.0],
+            b: vec![1.0; 4],
+        };
+        assert_eq!(
+            LocalKernelExecutor.execute(&bad).unwrap_err(),
+            SwarmError::InvalidJob
+        );
     }
 }

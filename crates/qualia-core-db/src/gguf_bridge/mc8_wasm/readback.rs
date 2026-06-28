@@ -2,14 +2,15 @@
 use super::super::*;
 
 impl QTensorEngine {
-
     pub(crate) async fn pipeline_read_hidden(&self, emb_dim: usize, hidden: &mut [f32]) -> bool {
         let staging = self.gemm_output_staging.as_ref().unwrap();
         let hidden_buf = self.gemm_input_buf.as_ref().unwrap();
         let out_bytes = (emb_dim * 4) as wgpu::BufferAddress;
-        let mut encoder = self.device().create_command_encoder(&wgpu::CommandEncoderDescriptor {
-            label: Some("MC8Readback"),
-        });
+        let mut encoder = self
+            .device()
+            .create_command_encoder(&wgpu::CommandEncoderDescriptor {
+                label: Some("MC8Readback"),
+            });
         encoder.copy_buffer_to_buffer(hidden_buf, 0, staging, 0, out_bytes);
         self.gpu_queue().submit(Some(encoder.finish()));
         let slice = staging.slice(..out_bytes);
@@ -35,9 +36,11 @@ impl QTensorEngine {
         if out_bytes > staging.size() {
             return false;
         }
-        let mut encoder = self.device().create_command_encoder(&wgpu::CommandEncoderDescriptor {
-            label: Some("MC8BatchReadback"),
-        });
+        let mut encoder = self
+            .device()
+            .create_command_encoder(&wgpu::CommandEncoderDescriptor {
+                label: Some("MC8BatchReadback"),
+            });
         encoder.copy_buffer_to_buffer(batch_buf, 0, staging, 0, out_bytes);
         self.gpu_queue().submit(Some(encoder.finish()));
         let slice = staging.slice(..out_bytes);
@@ -67,9 +70,11 @@ impl QTensorEngine {
         if nbytes > staging.size() {
             return false;
         }
-        let mut encoder = self.device().create_command_encoder(&wgpu::CommandEncoderDescriptor {
-            label: Some("MC8ProbeReadback"),
-        });
+        let mut encoder = self
+            .device()
+            .create_command_encoder(&wgpu::CommandEncoderDescriptor {
+                label: Some("MC8ProbeReadback"),
+            });
         encoder.copy_buffer_to_buffer(src, byte_offset, staging, 0, nbytes);
         self.gpu_queue().submit(Some(encoder.finish()));
         let slice = staging.slice(..nbytes);

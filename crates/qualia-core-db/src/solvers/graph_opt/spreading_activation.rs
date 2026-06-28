@@ -74,7 +74,11 @@ pub fn spreading_activation(
 /// Indices of the top-`k` most-activated nodes (relevance ranking), highest first.
 pub fn top_k(activation: &[f64], k: usize) -> Vec<usize> {
     let mut idx: Vec<usize> = (0..activation.len()).collect();
-    idx.sort_by(|&a, &b| activation[b].partial_cmp(&activation[a]).unwrap_or(core::cmp::Ordering::Equal));
+    idx.sort_by(|&a, &b| {
+        activation[b]
+            .partial_cmp(&activation[a])
+            .unwrap_or(core::cmp::Ordering::Equal)
+    });
     idx.truncate(k.min(activation.len()));
     idx
 }
@@ -84,7 +88,11 @@ mod tests {
     use super::*;
 
     fn e(from: usize, to: usize, w: f64) -> Edge {
-        Edge { from, to, weight: w }
+        Edge {
+            from,
+            to,
+            weight: w,
+        }
     }
 
     #[test]

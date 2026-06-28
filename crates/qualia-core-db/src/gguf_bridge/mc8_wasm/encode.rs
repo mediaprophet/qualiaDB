@@ -2,7 +2,6 @@
 use super::super::*;
 
 impl QTensorEngine {
-
     pub(crate) fn encode_elem_offset(
         &self,
         pipeline: &mut WasmGpuPipeline,
@@ -34,32 +33,36 @@ impl QTensorEngine {
             _ => return,
         };
         let params_buf = self.elem_params_buf.as_ref().unwrap();
-        let bind = self.gpu_device().create_bind_group(&wgpu::BindGroupDescriptor {
-            label: Some("ElemBindOff"),
-            layout: &self.mc8_elem_bind_layout,
-            entries: &[
-                wgpu::BindGroupEntry {
-                    binding: 0,
-                    resource: Self::mc8_buf_slice(a, a_off, a_bytes),
-                },
-                wgpu::BindGroupEntry {
-                    binding: 1,
-                    resource: Self::mc8_buf_slice(b, b_off, b_bytes),
-                },
-                wgpu::BindGroupEntry {
-                    binding: 2,
-                    resource: Self::mc8_buf_slice(out, out_off, out_bytes),
-                },
-                wgpu::BindGroupEntry {
-                    binding: 3,
-                    resource: Self::mc8_dynamic_uniform_binding(params_buf),
-                },
-            ],
-        });
-        let mut cpass = pipeline.encoder.begin_compute_pass(&wgpu::ComputePassDescriptor {
-            label: None,
-            timestamp_writes: None,
-        });
+        let bind = self
+            .gpu_device()
+            .create_bind_group(&wgpu::BindGroupDescriptor {
+                label: Some("ElemBindOff"),
+                layout: &self.mc8_elem_bind_layout,
+                entries: &[
+                    wgpu::BindGroupEntry {
+                        binding: 0,
+                        resource: Self::mc8_buf_slice(a, a_off, a_bytes),
+                    },
+                    wgpu::BindGroupEntry {
+                        binding: 1,
+                        resource: Self::mc8_buf_slice(b, b_off, b_bytes),
+                    },
+                    wgpu::BindGroupEntry {
+                        binding: 2,
+                        resource: Self::mc8_buf_slice(out, out_off, out_bytes),
+                    },
+                    wgpu::BindGroupEntry {
+                        binding: 3,
+                        resource: Self::mc8_dynamic_uniform_binding(params_buf),
+                    },
+                ],
+            });
+        let mut cpass = pipeline
+            .encoder
+            .begin_compute_pass(&wgpu::ComputePassDescriptor {
+                label: None,
+                timestamp_writes: None,
+            });
         cpass.set_pipeline(pipe);
         cpass.set_bind_group(0, &bind, &[elem_dyn_offset]);
         cpass.dispatch_workgroups(wg_x, wg_y, 1);
@@ -97,32 +100,36 @@ impl QTensorEngine {
             self.write_weight_role(weight_role, raw, self.max_tensor_bytes);
         }
         let params_buf = self.gemm_params_buf.as_ref().unwrap();
-        let bind = self.gpu_device().create_bind_group(&wgpu::BindGroupDescriptor {
-            label: Some("MC8GemmBindOff"),
-            layout: &self.mc8_gemm_bind_layout,
-            entries: &[
-                wgpu::BindGroupEntry {
-                    binding: 0,
-                    resource: Self::mc8_buf_slice(input, in_off, in_bytes),
-                },
-                wgpu::BindGroupEntry {
-                    binding: 1,
-                    resource: self.mc8_weight_binding(weight_role, layer),
-                },
-                wgpu::BindGroupEntry {
-                    binding: 2,
-                    resource: Self::mc8_dynamic_uniform_binding(params_buf),
-                },
-                wgpu::BindGroupEntry {
-                    binding: 3,
-                    resource: Self::mc8_buf_slice(output, out_off, out_bytes),
-                },
-            ],
-        });
-        let mut cpass = pipeline.encoder.begin_compute_pass(&wgpu::ComputePassDescriptor {
-            label: None,
-            timestamp_writes: None,
-        });
+        let bind = self
+            .gpu_device()
+            .create_bind_group(&wgpu::BindGroupDescriptor {
+                label: Some("MC8GemmBindOff"),
+                layout: &self.mc8_gemm_bind_layout,
+                entries: &[
+                    wgpu::BindGroupEntry {
+                        binding: 0,
+                        resource: Self::mc8_buf_slice(input, in_off, in_bytes),
+                    },
+                    wgpu::BindGroupEntry {
+                        binding: 1,
+                        resource: self.mc8_weight_binding(weight_role, layer),
+                    },
+                    wgpu::BindGroupEntry {
+                        binding: 2,
+                        resource: Self::mc8_dynamic_uniform_binding(params_buf),
+                    },
+                    wgpu::BindGroupEntry {
+                        binding: 3,
+                        resource: Self::mc8_buf_slice(output, out_off, out_bytes),
+                    },
+                ],
+            });
+        let mut cpass = pipeline
+            .encoder
+            .begin_compute_pass(&wgpu::ComputePassDescriptor {
+                label: None,
+                timestamp_writes: None,
+            });
         cpass.set_pipeline(&self.pipeline);
         cpass.set_bind_group(0, &bind, &[gemm_dyn_offset]);
         cpass.dispatch_workgroups((n_out as u32 + 63) / 64, batch, 1);
@@ -151,36 +158,40 @@ impl QTensorEngine {
         gemm_dyn_offset: u32,
     ) -> bool {
         let params_buf = self.gemm_params_buf.as_ref().unwrap();
-        let bind = self.gpu_device().create_bind_group(&wgpu::BindGroupDescriptor {
-            label: Some("MC8FfnFusedBind"),
-            layout: &self.mc8_ffn_fused_bind_layout,
-            entries: &[
-                wgpu::BindGroupEntry {
-                    binding: 0,
-                    resource: Self::mc8_buf_slice(input, in_off, in_bytes),
-                },
-                wgpu::BindGroupEntry {
-                    binding: 1,
-                    resource: self.mc8_weight_binding(Mc8WeightRole::Gate, layer),
-                },
-                wgpu::BindGroupEntry {
-                    binding: 2,
-                    resource: self.mc8_weight_binding(Mc8WeightRole::Up, layer),
-                },
-                wgpu::BindGroupEntry {
-                    binding: 3,
-                    resource: Self::mc8_dynamic_uniform_binding(params_buf),
-                },
-                wgpu::BindGroupEntry {
-                    binding: 4,
-                    resource: Self::mc8_buf_slice(output, out_off, out_bytes),
-                },
-            ],
-        });
-        let mut cpass = pipeline.encoder.begin_compute_pass(&wgpu::ComputePassDescriptor {
-            label: None,
-            timestamp_writes: None,
-        });
+        let bind = self
+            .gpu_device()
+            .create_bind_group(&wgpu::BindGroupDescriptor {
+                label: Some("MC8FfnFusedBind"),
+                layout: &self.mc8_ffn_fused_bind_layout,
+                entries: &[
+                    wgpu::BindGroupEntry {
+                        binding: 0,
+                        resource: Self::mc8_buf_slice(input, in_off, in_bytes),
+                    },
+                    wgpu::BindGroupEntry {
+                        binding: 1,
+                        resource: self.mc8_weight_binding(Mc8WeightRole::Gate, layer),
+                    },
+                    wgpu::BindGroupEntry {
+                        binding: 2,
+                        resource: self.mc8_weight_binding(Mc8WeightRole::Up, layer),
+                    },
+                    wgpu::BindGroupEntry {
+                        binding: 3,
+                        resource: Self::mc8_dynamic_uniform_binding(params_buf),
+                    },
+                    wgpu::BindGroupEntry {
+                        binding: 4,
+                        resource: Self::mc8_buf_slice(output, out_off, out_bytes),
+                    },
+                ],
+            });
+        let mut cpass = pipeline
+            .encoder
+            .begin_compute_pass(&wgpu::ComputePassDescriptor {
+                label: None,
+                timestamp_writes: None,
+            });
         cpass.set_pipeline(&self.mc8_ffn_fused_pipeline);
         cpass.set_bind_group(0, &bind, &[gemm_dyn_offset]);
         cpass.dispatch_workgroups((n_out + 63) / 64, n_batch.max(1), 1);
@@ -223,7 +234,9 @@ impl QTensorEngine {
             0,
             0, // elem_dyn_offset — caller must pre-upload arena
         );
-        pipeline.encoder.copy_buffer_to_buffer(scratch, scratch_off, dst, dst_off, bytes);
+        pipeline
+            .encoder
+            .copy_buffer_to_buffer(scratch, scratch_off, dst, dst_off, bytes);
     }
 
     pub(crate) fn encode_attention_pass_gpu_offset(
@@ -270,8 +283,11 @@ impl QTensorEngine {
             0,
         );
         self.write_weight_words(raw_weights, self.max_tensor_bytes);
-        self.gpu_queue()
-            .write_buffer(self.attention_params_buf.as_ref().unwrap(), 0, bytemuck::bytes_of(&params));
+        self.gpu_queue().write_buffer(
+            self.attention_params_buf.as_ref().unwrap(),
+            0,
+            bytemuck::bytes_of(&params),
+        );
         self.gpu_queue().write_buffer(
             self.attention_mask_buf.as_ref().unwrap(),
             0,
@@ -287,45 +303,57 @@ impl QTensorEngine {
             size: std::num::NonZeroU64::new(layer_bytes.max(4)),
         };
         let bind_layout = self.attention_pipeline.get_bind_group_layout(0);
-        let bind = self.gpu_device().create_bind_group(&wgpu::BindGroupDescriptor {
-            label: Some("MC8AttnBindOff"),
-            layout: &bind_layout,
-            entries: &[
-                wgpu::BindGroupEntry {
-                    binding: 0,
-                    resource: Self::mc8_buf_slice(input, in_off, in_bytes),
-                },
-                wgpu::BindGroupEntry {
-                    binding: 1,
-                    resource: self.gemm_weight_buf.as_ref().unwrap().as_entire_binding(),
-                },
-                wgpu::BindGroupEntry {
-                    binding: 2,
-                    resource: self.attention_params_buf.as_ref().unwrap().as_entire_binding(),
-                },
-                wgpu::BindGroupEntry {
-                    binding: 3,
-                    resource: wgpu::BindingResource::Buffer(kv_binding),
-                },
-                wgpu::BindGroupEntry {
-                    binding: 4,
-                    resource: Self::mc8_buf_slice(output, out_off, out_bytes),
-                },
-                wgpu::BindGroupEntry {
-                    binding: 5,
-                    resource: self.attention_mask_buf.as_ref().unwrap().as_entire_binding(),
-                },
-            ],
-        });
+        let bind = self
+            .gpu_device()
+            .create_bind_group(&wgpu::BindGroupDescriptor {
+                label: Some("MC8AttnBindOff"),
+                layout: &bind_layout,
+                entries: &[
+                    wgpu::BindGroupEntry {
+                        binding: 0,
+                        resource: Self::mc8_buf_slice(input, in_off, in_bytes),
+                    },
+                    wgpu::BindGroupEntry {
+                        binding: 1,
+                        resource: self.gemm_weight_buf.as_ref().unwrap().as_entire_binding(),
+                    },
+                    wgpu::BindGroupEntry {
+                        binding: 2,
+                        resource: self
+                            .attention_params_buf
+                            .as_ref()
+                            .unwrap()
+                            .as_entire_binding(),
+                    },
+                    wgpu::BindGroupEntry {
+                        binding: 3,
+                        resource: wgpu::BindingResource::Buffer(kv_binding),
+                    },
+                    wgpu::BindGroupEntry {
+                        binding: 4,
+                        resource: Self::mc8_buf_slice(output, out_off, out_bytes),
+                    },
+                    wgpu::BindGroupEntry {
+                        binding: 5,
+                        resource: self
+                            .attention_mask_buf
+                            .as_ref()
+                            .unwrap()
+                            .as_entire_binding(),
+                    },
+                ],
+            });
         let (wg_x, wg_y) = if proj_kind == 0 && num_tokens_in_batch > 1 {
             (h.n_head, num_tokens_in_batch)
         } else {
             (n_workgroups.max(1), 1)
         };
-        let mut cpass = pipeline.encoder.begin_compute_pass(&wgpu::ComputePassDescriptor {
-            label: None,
-            timestamp_writes: None,
-        });
+        let mut cpass = pipeline
+            .encoder
+            .begin_compute_pass(&wgpu::ComputePassDescriptor {
+                label: None,
+                timestamp_writes: None,
+            });
         cpass.set_pipeline(&self.attention_pipeline);
         cpass.set_bind_group(0, &bind, &[]);
         cpass.dispatch_workgroups(wg_x, wg_y, 1);
@@ -369,32 +397,36 @@ impl QTensorEngine {
             ELEM_OP_ADD_RESIDUAL => (&self.elem_add_residual_pipeline, (n + 63) / 64, b_dispatch),
             _ => return,
         };
-        let bind = self.gpu_device().create_bind_group(&wgpu::BindGroupDescriptor {
-            label: Some("ElemBind"),
-            layout: &self.mc8_elem_bind_layout,
-            entries: &[
-                wgpu::BindGroupEntry {
-                    binding: 0,
-                    resource: a.as_entire_binding(),
-                },
-                wgpu::BindGroupEntry {
-                    binding: 1,
-                    resource: b.as_entire_binding(),
-                },
-                wgpu::BindGroupEntry {
-                    binding: 2,
-                    resource: out.as_entire_binding(),
-                },
-                wgpu::BindGroupEntry {
-                    binding: 3,
-                    resource: Self::mc8_dynamic_uniform_binding(params_buf),
-                },
-            ],
-        });
-        let mut cpass = pipeline.encoder.begin_compute_pass(&wgpu::ComputePassDescriptor {
-            label: None,
-            timestamp_writes: None,
-        });
+        let bind = self
+            .gpu_device()
+            .create_bind_group(&wgpu::BindGroupDescriptor {
+                label: Some("ElemBind"),
+                layout: &self.mc8_elem_bind_layout,
+                entries: &[
+                    wgpu::BindGroupEntry {
+                        binding: 0,
+                        resource: a.as_entire_binding(),
+                    },
+                    wgpu::BindGroupEntry {
+                        binding: 1,
+                        resource: b.as_entire_binding(),
+                    },
+                    wgpu::BindGroupEntry {
+                        binding: 2,
+                        resource: out.as_entire_binding(),
+                    },
+                    wgpu::BindGroupEntry {
+                        binding: 3,
+                        resource: Self::mc8_dynamic_uniform_binding(params_buf),
+                    },
+                ],
+            });
+        let mut cpass = pipeline
+            .encoder
+            .begin_compute_pass(&wgpu::ComputePassDescriptor {
+                label: None,
+                timestamp_writes: None,
+            });
         cpass.set_pipeline(pipe);
         cpass.set_bind_group(0, &bind, &[elem_dyn_offset]);
         cpass.dispatch_workgroups(wg_x, wg_y, 1);
@@ -412,15 +444,7 @@ impl QTensorEngine {
         scratch: &wgpu::Buffer,
         dim: u32,
     ) {
-        self.encode_elem(
-            pipeline,
-            ELEM_OP_ADD_RESIDUAL,
-            dim,
-            1,
-            base,
-            delta,
-            scratch,
-        );
+        self.encode_elem(pipeline, ELEM_OP_ADD_RESIDUAL, dim, 1, base, delta, scratch);
         let bytes = (dim as usize * 4) as wgpu::BufferAddress;
         pipeline
             .encoder
@@ -453,32 +477,36 @@ impl QTensorEngine {
         let params_buf = self.gemm_params_buf.as_ref().unwrap();
         arena.upload(self.gpu_queue(), params_buf);
         self.write_weight_words(raw, self.max_tensor_bytes);
-        let bind = self.gpu_device().create_bind_group(&wgpu::BindGroupDescriptor {
-            label: Some("MC8GemmBind"),
-            layout: &self.mc8_gemm_bind_layout,
-            entries: &[
-                wgpu::BindGroupEntry {
-                    binding: 0,
-                    resource: input.as_entire_binding(),
-                },
-                wgpu::BindGroupEntry {
-                    binding: 1,
-                    resource: self.gemm_weight_buf.as_ref().unwrap().as_entire_binding(),
-                },
-                wgpu::BindGroupEntry {
-                    binding: 2,
-                    resource: Self::mc8_dynamic_uniform_binding(params_buf),
-                },
-                wgpu::BindGroupEntry {
-                    binding: 3,
-                    resource: output.as_entire_binding(),
-                },
-            ],
-        });
-        let mut cpass = pipeline.encoder.begin_compute_pass(&wgpu::ComputePassDescriptor {
-            label: None,
-            timestamp_writes: None,
-        });
+        let bind = self
+            .gpu_device()
+            .create_bind_group(&wgpu::BindGroupDescriptor {
+                label: Some("MC8GemmBind"),
+                layout: &self.mc8_gemm_bind_layout,
+                entries: &[
+                    wgpu::BindGroupEntry {
+                        binding: 0,
+                        resource: input.as_entire_binding(),
+                    },
+                    wgpu::BindGroupEntry {
+                        binding: 1,
+                        resource: self.gemm_weight_buf.as_ref().unwrap().as_entire_binding(),
+                    },
+                    wgpu::BindGroupEntry {
+                        binding: 2,
+                        resource: Self::mc8_dynamic_uniform_binding(params_buf),
+                    },
+                    wgpu::BindGroupEntry {
+                        binding: 3,
+                        resource: output.as_entire_binding(),
+                    },
+                ],
+            });
+        let mut cpass = pipeline
+            .encoder
+            .begin_compute_pass(&wgpu::ComputePassDescriptor {
+                label: None,
+                timestamp_writes: None,
+            });
         cpass.set_pipeline(&self.pipeline);
         cpass.set_bind_group(0, &bind, &[gemm_dyn_offset]);
         cpass.dispatch_workgroups((n_out as u32 + 63) / 64, 1, 1);
@@ -532,45 +560,53 @@ impl QTensorEngine {
             size: std::num::NonZeroU64::new(layer_bytes.max(4)),
         };
         let params_buf = self.attention_params_buf.as_ref().unwrap();
-        let bind = self.gpu_device().create_bind_group(&wgpu::BindGroupDescriptor {
-            label: Some("MC8AttnBind"),
-            layout: &self.mc8_attn_bind_layout,
-            entries: &[
-                wgpu::BindGroupEntry {
-                    binding: 0,
-                    resource: input.as_entire_binding(),
-                },
-                wgpu::BindGroupEntry {
-                    binding: 1,
-                    resource: self.mc8_weight_binding(weight_role, layer),
-                },
-                wgpu::BindGroupEntry {
-                    binding: 2,
-                    resource: Self::mc8_dynamic_uniform_binding(params_buf),
-                },
-                wgpu::BindGroupEntry {
-                    binding: 3,
-                    resource: wgpu::BindingResource::Buffer(kv_binding),
-                },
-                wgpu::BindGroupEntry {
-                    binding: 4,
-                    resource: output.as_entire_binding(),
-                },
-                wgpu::BindGroupEntry {
-                    binding: 5,
-                    resource: self.attention_mask_buf.as_ref().unwrap().as_entire_binding(),
-                },
-            ],
-        });
+        let bind = self
+            .gpu_device()
+            .create_bind_group(&wgpu::BindGroupDescriptor {
+                label: Some("MC8AttnBind"),
+                layout: &self.mc8_attn_bind_layout,
+                entries: &[
+                    wgpu::BindGroupEntry {
+                        binding: 0,
+                        resource: input.as_entire_binding(),
+                    },
+                    wgpu::BindGroupEntry {
+                        binding: 1,
+                        resource: self.mc8_weight_binding(weight_role, layer),
+                    },
+                    wgpu::BindGroupEntry {
+                        binding: 2,
+                        resource: Self::mc8_dynamic_uniform_binding(params_buf),
+                    },
+                    wgpu::BindGroupEntry {
+                        binding: 3,
+                        resource: wgpu::BindingResource::Buffer(kv_binding),
+                    },
+                    wgpu::BindGroupEntry {
+                        binding: 4,
+                        resource: output.as_entire_binding(),
+                    },
+                    wgpu::BindGroupEntry {
+                        binding: 5,
+                        resource: self
+                            .attention_mask_buf
+                            .as_ref()
+                            .unwrap()
+                            .as_entire_binding(),
+                    },
+                ],
+            });
         let (wg_x, wg_y) = if proj_kind == 0 && num_tokens_in_batch > 1 {
             (h.n_head, num_tokens_in_batch)
         } else {
             (n_workgroups.max(1), 1)
         };
-        let mut cpass = pipeline.encoder.begin_compute_pass(&wgpu::ComputePassDescriptor {
-            label: None,
-            timestamp_writes: None,
-        });
+        let mut cpass = pipeline
+            .encoder
+            .begin_compute_pass(&wgpu::ComputePassDescriptor {
+                label: None,
+                timestamp_writes: None,
+            });
         cpass.set_pipeline(&self.attention_pipeline);
         cpass.set_bind_group(0, &bind, &[attn_dyn_offset]);
         cpass.dispatch_workgroups(wg_x, wg_y, 1);
@@ -616,40 +652,48 @@ impl QTensorEngine {
             offset: layer_offset,
             size: std::num::NonZeroU64::new(layer_bytes.max(4)),
         };
-        let bind = self.gpu_device().create_bind_group(&wgpu::BindGroupDescriptor {
-            label: Some("MC8AttnBatchedQ"),
-            layout: &self.mc8_attn_bind_layout,
-            entries: &[
-                wgpu::BindGroupEntry {
-                    binding: 0,
-                    resource: Self::mc8_buf_slice(input, in_off, in_bytes),
-                },
-                wgpu::BindGroupEntry {
-                    binding: 1,
-                    resource: self.mc8_weight_binding(Mc8WeightRole::AttnQ, layer),
-                },
-                wgpu::BindGroupEntry {
-                    binding: 2,
-                    resource: Self::mc8_dynamic_uniform_binding(params_buf),
-                },
-                wgpu::BindGroupEntry {
-                    binding: 3,
-                    resource: wgpu::BindingResource::Buffer(kv_binding),
-                },
-                wgpu::BindGroupEntry {
-                    binding: 4,
-                    resource: Self::mc8_buf_slice(output, out_off, out_bytes),
-                },
-                wgpu::BindGroupEntry {
-                    binding: 5,
-                    resource: self.attention_mask_buf.as_ref().unwrap().as_entire_binding(),
-                },
-            ],
-        });
-        let mut cpass = pipeline.encoder.begin_compute_pass(&wgpu::ComputePassDescriptor {
-            label: None,
-            timestamp_writes: None,
-        });
+        let bind = self
+            .gpu_device()
+            .create_bind_group(&wgpu::BindGroupDescriptor {
+                label: Some("MC8AttnBatchedQ"),
+                layout: &self.mc8_attn_bind_layout,
+                entries: &[
+                    wgpu::BindGroupEntry {
+                        binding: 0,
+                        resource: Self::mc8_buf_slice(input, in_off, in_bytes),
+                    },
+                    wgpu::BindGroupEntry {
+                        binding: 1,
+                        resource: self.mc8_weight_binding(Mc8WeightRole::AttnQ, layer),
+                    },
+                    wgpu::BindGroupEntry {
+                        binding: 2,
+                        resource: Self::mc8_dynamic_uniform_binding(params_buf),
+                    },
+                    wgpu::BindGroupEntry {
+                        binding: 3,
+                        resource: wgpu::BindingResource::Buffer(kv_binding),
+                    },
+                    wgpu::BindGroupEntry {
+                        binding: 4,
+                        resource: Self::mc8_buf_slice(output, out_off, out_bytes),
+                    },
+                    wgpu::BindGroupEntry {
+                        binding: 5,
+                        resource: self
+                            .attention_mask_buf
+                            .as_ref()
+                            .unwrap()
+                            .as_entire_binding(),
+                    },
+                ],
+            });
+        let mut cpass = pipeline
+            .encoder
+            .begin_compute_pass(&wgpu::ComputePassDescriptor {
+                label: None,
+                timestamp_writes: None,
+            });
         cpass.set_pipeline(&self.attention_pipeline);
         cpass.set_bind_group(0, &bind, &[attn_dyn_offset]);
         cpass.dispatch_workgroups(h.n_head, n_tokens, 1);

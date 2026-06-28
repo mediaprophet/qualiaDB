@@ -26,10 +26,24 @@ pub struct KalmanFilter {
     nz: usize,
 }
 
-fn no(m: usize, n: usize, k: usize, a: &[f64], b: &[f64], out: &mut [f64]) -> Result<(), LearningError> {
+fn no(
+    m: usize,
+    n: usize,
+    k: usize,
+    a: &[f64],
+    b: &[f64],
+    out: &mut [f64],
+) -> Result<(), LearningError> {
     gemm(Transpose::No, Transpose::No, m, n, k, 1.0, a, b, 0.0, out).map_err(Into::into)
 }
-fn no_t(m: usize, n: usize, k: usize, a: &[f64], b: &[f64], out: &mut [f64]) -> Result<(), LearningError> {
+fn no_t(
+    m: usize,
+    n: usize,
+    k: usize,
+    a: &[f64],
+    b: &[f64],
+    out: &mut [f64],
+) -> Result<(), LearningError> {
     // out(m×n) = a(m×k) · b(n×k)ᵀ
     gemm(Transpose::No, Transpose::Yes, m, n, k, 1.0, a, b, 0.0, out).map_err(Into::into)
 }
@@ -46,13 +60,27 @@ impl KalmanFilter {
         nx: usize,
         nz: usize,
     ) -> Result<Self, LearningError> {
-        if nx == 0 || nz == 0
-            || f.len() != nx * nx || h.len() != nz * nx || q.len() != nx * nx
-            || r.len() != nz * nz || x0.len() != nx || p0.len() != nx * nx
+        if nx == 0
+            || nz == 0
+            || f.len() != nx * nx
+            || h.len() != nz * nx
+            || q.len() != nx * nx
+            || r.len() != nz * nz
+            || x0.len() != nx
+            || p0.len() != nx * nx
         {
             return Err(LearningError::InvalidDimension);
         }
-        Ok(Self { f, h, q, r, x: x0, p: p0, nx, nz })
+        Ok(Self {
+            f,
+            h,
+            q,
+            r,
+            x: x0,
+            p: p0,
+            nx,
+            nz,
+        })
     }
 
     pub fn state(&self) -> &[f64] {
@@ -179,7 +207,14 @@ mod tests {
     fn smooths_better_than_raw_measurements() {
         // The filtered estimate has lower variance than the raw noisy obs.
         let mut kf = KalmanFilter::new(
-            vec![1.0], vec![1.0], vec![1e-3], vec![1.0], vec![10.0], vec![1.0], 1, 1,
+            vec![1.0],
+            vec![1.0],
+            vec![1e-3],
+            vec![1.0],
+            vec![10.0],
+            vec![1.0],
+            1,
+            1,
         )
         .unwrap();
         let obs = [10.5, 9.4, 10.6, 9.5, 10.4, 9.6, 10.5, 9.5];
@@ -190,13 +225,26 @@ mod tests {
         };
         let obs_var = var(&obs);
         let est_var = var(&est[2..]); // skip the warm-up
-        assert!(est_var < obs_var, "filter should smooth: {est_var} !< {obs_var}");
+        assert!(
+            est_var < obs_var,
+            "filter should smooth: {est_var} !< {obs_var}"
+        );
     }
 
     #[test]
     fn guards() {
         assert_eq!(
-            KalmanFilter::new(vec![1.0], vec![1.0], vec![1.0], vec![1.0], vec![0.0], vec![1.0, 0.0], 1, 1).unwrap_err(),
+            KalmanFilter::new(
+                vec![1.0],
+                vec![1.0],
+                vec![1.0],
+                vec![1.0],
+                vec![0.0],
+                vec![1.0, 0.0],
+                1,
+                1
+            )
+            .unwrap_err(),
             LearningError::InvalidDimension
         );
     }

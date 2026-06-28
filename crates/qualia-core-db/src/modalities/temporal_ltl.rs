@@ -150,7 +150,11 @@ pub fn holds_globally_within(trace: &[NQuin], trigger: u64, invariant: u64, wind
     let deadline = t0.saturating_add(window);
     // Every event in the window must satisfy the invariant.
     for q in trace {
-        if q.metadata >= t0 && q.metadata <= deadline && q.predicate != invariant && q.predicate != trigger {
+        if q.metadata >= t0
+            && q.metadata <= deadline
+            && q.predicate != invariant
+            && q.predicate != trigger
+        {
             return false;
         }
     }
@@ -201,7 +205,10 @@ pub struct SafetyMonitor {
 impl SafetyMonitor {
     /// Start monitoring `G(invariant)`.
     pub fn new(invariant: u64) -> Self {
-        Self { invariant, violated: false }
+        Self {
+            invariant,
+            violated: false,
+        }
     }
     /// Feed the next streamed event predicate; returns `true` while still safe.
     pub fn step(&mut self, event_predicate: u64) -> bool {
@@ -240,7 +247,14 @@ mod tests {
     use crate::NQuin;
 
     fn timed(predicate: u64, t: u64) -> NQuin {
-        NQuin { subject: 0, predicate, object: 0, context: 0, metadata: t, parity: 0 }
+        NQuin {
+            subject: 0,
+            predicate,
+            object: 0,
+            context: 0,
+            metadata: t,
+            parity: 0,
+        }
     }
 
     #[test]
@@ -249,11 +263,20 @@ mod tests {
         let remedy = 2u64;
         // breach at t=10, remedy at t=25 → within window 30.
         let trace = [timed(breach, 10), timed(remedy, 25)];
-        assert!(holds_within(&trace, breach, remedy, 30), "remedy 15 after breach ≤ 30 window");
-        assert!(!holds_within(&trace, breach, remedy, 10), "remedy 15 after breach > 10 window");
+        assert!(
+            holds_within(&trace, breach, remedy, 30),
+            "remedy 15 after breach ≤ 30 window"
+        );
+        assert!(
+            !holds_within(&trace, breach, remedy, 10),
+            "remedy 15 after breach > 10 window"
+        );
         // remedy before the breach does not count.
         let late = [timed(remedy, 5), timed(breach, 10)];
-        assert!(!holds_within(&late, breach, remedy, 30), "a remedy before the breach is not within");
+        assert!(
+            !holds_within(&late, breach, remedy, 30),
+            "a remedy before the breach is not within"
+        );
         // no trigger → false.
         assert!(!holds_within(&[timed(remedy, 25)], breach, remedy, 30));
     }
@@ -395,7 +418,10 @@ mod tests {
         assert!(!evaluate_once(&trace, repaired));
         // Historically: duty did NOT hold at every point (breach was first).
         assert!(!evaluate_historically(&trace, duty));
-        assert!(evaluate_historically(&[make_quin(duty), make_quin(duty)], duty));
+        assert!(evaluate_historically(
+            &[make_quin(duty), make_quin(duty)],
+            duty
+        ));
         // Since: the duty has held since the breach (every point after breach is duty).
         assert!(evaluate_since(&trace, duty, breach));
         // Not "since" if the consequent never held.

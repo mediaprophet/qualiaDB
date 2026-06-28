@@ -10,23 +10,23 @@ pub mod hrtf;
 pub mod stft_bake;
 
 pub use acoustic_plane::{
-    acoustic_enabled_for_mode, acoustic_params_from_tensor, drain_sonic_tokens,
-    pop_sonic_token, push_sonic_token, sonify_tensor_node, AcousticParams,
-    AcousticUniform, SonicTokenRing, SONIC_RING_CAP,
-};
-pub use audio_spectral_sheet::{
-    parse_sidecar_header, AudioSpectralSidecarHeader, AudioSpectralSheetView,
-    SPECTRAL_PREVIEW_BINS, SPECTRAL_SIDECAR_MAGIC,
+    acoustic_enabled_for_mode, acoustic_params_from_tensor, drain_sonic_tokens, pop_sonic_token,
+    push_sonic_token, sonify_tensor_node, AcousticParams, AcousticUniform, SonicTokenRing,
+    SONIC_RING_CAP,
 };
 pub use acoustic_sab::{
     init_acoustic_sab, push_token_to_sab, read_uniform_from_sab, write_uniform_to_sab,
     write_uniform_to_sab_with_mirror, AcousticSabHeader, ACOUSTIC_SAB_BYTES, ACOUSTIC_SAB_MAGIC,
 };
-pub use dsp_kernel::{epistemic_fm_index, epistemic_temperature_from_q, ParametricVoiceState};
 pub use audio_sidecar_link::{
     bake_audio_sidecar_into, compile_spectral_sheet_quin, enrich_preview_from_sidecar,
     format_sidecar_relpath, link_tensor_audio_sidecar, sidecar_content_hash, SidecarBakeKind,
 };
+pub use audio_spectral_sheet::{
+    parse_sidecar_header, AudioSpectralSheetView, AudioSpectralSidecarHeader,
+    SPECTRAL_PREVIEW_BINS, SPECTRAL_SIDECAR_MAGIC,
+};
 pub use cqt_bake::bake_cqt_sidecar_from_preview;
+pub use dsp_kernel::{epistemic_fm_index, epistemic_temperature_from_q, ParametricVoiceState};
 pub use hrtf::{binaural_from_position, set_hrtf_profile, BinauralGains, HrtfProfile};
 pub use stft_bake::{bake_stft_sidecar_from_preview, bake_tensor_stft_sidecar, StftBakeError};

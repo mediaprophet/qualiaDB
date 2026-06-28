@@ -1,4 +1,4 @@
-use crate::{NQuin, q_hash};
+use crate::{q_hash, NQuin};
 
 pub const OP_DEFEASIBLE_OVERRIDE: u8 = 0x50;
 // Shared with deontic logic; canonical bit position lives in the FrameLayout ABI.
@@ -6,10 +6,10 @@ pub use crate::frame_layout::DEFEATER_BIT;
 
 #[derive(Debug, PartialEq, Clone, Copy)]
 pub enum DefeasibleStatus {
-    Strict,      // No exceptions allowed
-    Overridden,  // Defeater proved true
-    Defeated,    // Normal rule defeated
-    Active,      // Normal rule stands
+    Strict,     // No exceptions allowed
+    Overridden, // Defeater proved true
+    Defeated,   // Normal rule defeated
+    Active,     // Normal rule stands
 }
 
 #[derive(Debug)]
@@ -51,10 +51,7 @@ pub fn evaluate_defeasible_frame(
             return Err(DefeasibleError::BufferOverflow);
         }
 
-        out[count] = DefeasibleVerdict {
-            claim: *q,
-            status,
-        };
+        out[count] = DefeasibleVerdict { claim: *q, status };
         count += 1;
     }
 
@@ -167,10 +164,18 @@ pub fn resolve_conflict(
     }
     // Explicit superiority — but a superior Defeater only blocks; it cannot conclude.
     if is_superior(sup, a.id, b.id) {
-        return if can_conclude(a.kind) { polarity(a) } else { Conclusion::Undecided };
+        return if can_conclude(a.kind) {
+            polarity(a)
+        } else {
+            Conclusion::Undecided
+        };
     }
     if is_superior(sup, b.id, a.id) {
-        return if can_conclude(b.kind) { polarity(b) } else { Conclusion::Undecided };
+        return if can_conclude(b.kind) {
+            polarity(b)
+        } else {
+            Conclusion::Undecided
+        };
     }
     // Neither superior → genuine stand-off (an applicable opponent, even a defeater, blocks).
     match mode {
@@ -198,7 +203,7 @@ pub fn grounded_justified_rules(
     rules: &[DefeasibleRule],
     sup: &[(u64, u64)],
 ) -> std::collections::HashSet<u64> {
-    use crate::modalities::argumentation::{Argument, Attack, AttackType, ArgumentationFramework};
+    use crate::modalities::argumentation::{Argument, ArgumentationFramework, Attack, AttackType};
 
     let mut af = ArgumentationFramework::new();
     for r in rules {
@@ -226,16 +231,30 @@ pub fn grounded_justified_rules(
             let a_attacks_b = !(b_strict && !a_strict) && !b_sup;
             let b_attacks_a = !(a_strict && !b_strict) && !a_sup;
             if a_attacks_b {
-                af.add_attack(Attack { attacker: a.id, target: b.id, attack_type: AttackType::Rebuttal, strength: 1.0 });
+                af.add_attack(Attack {
+                    attacker: a.id,
+                    target: b.id,
+                    attack_type: AttackType::Rebuttal,
+                    strength: 1.0,
+                });
             }
             if b_attacks_a {
-                af.add_attack(Attack { attacker: b.id, target: a.id, attack_type: AttackType::Rebuttal, strength: 1.0 });
+                af.add_attack(Attack {
+                    attacker: b.id,
+                    target: a.id,
+                    attack_type: AttackType::Rebuttal,
+                    strength: 1.0,
+                });
             }
         }
     }
     af.grounded_extension()
         .into_iter()
-        .filter(|id| !rules.iter().any(|r| r.id == *id && r.kind == RuleKind::Defeater))
+        .filter(|id| {
+            !rules
+                .iter()
+                .any(|r| r.id == *id && r.kind == RuleKind::Defeater)
+        })
         .collect()
 }
 
@@ -244,7 +263,12 @@ mod tests {
     use super::*;
 
     fn rule(id: u64, kind: RuleKind, lit: u64, positive: bool) -> DefeasibleRule {
-        DefeasibleRule { id, kind, literal: lit, positive }
+        DefeasibleRule {
+            id,
+            kind,
+            literal: lit,
+            positive,
+        }
     }
 
     #[test]
@@ -255,16 +279,28 @@ mod tests {
         assert!(rules_conflict(&r_pos, &r_neg));
 
         // No superiority, both defeasible → ambiguity (mode-dependent).
-        assert_eq!(resolve_conflict(&r_pos, &r_neg, &[], AmbiguityMode::Blocking), Conclusion::Undecided);
-        assert_eq!(resolve_conflict(&r_pos, &r_neg, &[], AmbiguityMode::Propagating), Conclusion::Ambiguous);
+        assert_eq!(
+            resolve_conflict(&r_pos, &r_neg, &[], AmbiguityMode::Blocking),
+            Conclusion::Undecided
+        );
+        assert_eq!(
+            resolve_conflict(&r_pos, &r_neg, &[], AmbiguityMode::Propagating),
+            Conclusion::Ambiguous
+        );
 
         // "penguins don't fly" is superior → Negative concluded.
         let sup = [(2u64, 1u64)];
-        assert_eq!(resolve_conflict(&r_pos, &r_neg, &sup, AmbiguityMode::Blocking), Conclusion::Negative);
+        assert_eq!(
+            resolve_conflict(&r_pos, &r_neg, &sup, AmbiguityMode::Blocking),
+            Conclusion::Negative
+        );
 
         // A strict opposing rule dominates regardless of superiority.
         let r_strict = rule(3, RuleKind::Strict, lit, false);
-        assert_eq!(resolve_conflict(&r_pos, &r_strict, &[], AmbiguityMode::Blocking), Conclusion::Negative);
+        assert_eq!(
+            resolve_conflict(&r_pos, &r_strict, &[], AmbiguityMode::Blocking),
+            Conclusion::Negative
+        );
     }
 
     #[test]
@@ -273,13 +309,22 @@ mod tests {
         let r = rule(1, RuleKind::Defeasible, lit, true);
         let d = rule(2, RuleKind::Defeater, lit, false);
         // No superiority: the applicable defeater blocks r; nothing is concluded.
-        assert_eq!(resolve_conflict(&r, &d, &[], AmbiguityMode::Blocking), Conclusion::Undecided);
+        assert_eq!(
+            resolve_conflict(&r, &d, &[], AmbiguityMode::Blocking),
+            Conclusion::Undecided
+        );
         // A SUPERIOR defeater still cannot conclude its own polarity — r is defeated → Undecided.
         let sup_d = [(2u64, 1u64)];
-        assert_eq!(resolve_conflict(&r, &d, &sup_d, AmbiguityMode::Blocking), Conclusion::Undecided);
+        assert_eq!(
+            resolve_conflict(&r, &d, &sup_d, AmbiguityMode::Blocking),
+            Conclusion::Undecided
+        );
         // When the defeasible rule is superior to the defeater, it concludes.
         let sup_r = [(1u64, 2u64)];
-        assert_eq!(resolve_conflict(&r, &d, &sup_r, AmbiguityMode::Blocking), Conclusion::Positive);
+        assert_eq!(
+            resolve_conflict(&r, &d, &sup_r, AmbiguityMode::Blocking),
+            Conclusion::Positive
+        );
     }
 
     #[test]
@@ -287,7 +332,10 @@ mod tests {
         let r1 = rule(1, RuleKind::Defeasible, q_hash("a"), true);
         let r2 = rule(2, RuleKind::Defeasible, q_hash("b"), false);
         assert!(!rules_conflict(&r1, &r2));
-        assert_eq!(resolve_conflict(&r1, &r2, &[], AmbiguityMode::Blocking), Conclusion::Positive);
+        assert_eq!(
+            resolve_conflict(&r1, &r2, &[], AmbiguityMode::Blocking),
+            Conclusion::Positive
+        );
     }
 
     #[test]
@@ -298,7 +346,10 @@ mod tests {
 
         // No superiority → mutual attack → grounded extension is skeptical → neither justified.
         let none = grounded_justified_rules(&[r_bird, r_peng], &[]);
-        assert!(!none.contains(&1) && !none.contains(&2), "un-oriented conflict: neither justified");
+        assert!(
+            !none.contains(&1) && !none.contains(&2),
+            "un-oriented conflict: neither justified"
+        );
 
         // "penguins don't fly" superior → only r2 attacks r1 → r2 justified, r1 defeated.
         let sup = [(2u64, 1u64)];
@@ -326,9 +377,9 @@ mod tests {
                 status: DefeasibleStatus::Strict,
             });
         }
-        
+
         let ctx = q_hash("test_context");
-        
+
         let mut q_normal = NQuin::default();
         q_normal.context = ctx;
         q_normal.predicate = OP_DEFEASIBLE_OVERRIDE as u64;

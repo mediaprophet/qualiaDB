@@ -217,8 +217,18 @@ mod tests {
         // System: y₀' = y₁, y₁' = -y₀. Unknown = y₁(0) (index 1). Residual = y₀(π/2) − 1.
         let f = |_t: f64, y: &[f64]| vec![y[1], -y[0]];
         let residual = |yf: &[f64]| vec![yf[0] - 1.0];
-        let y0 = shooting_bvp(&f, 0.0, PI / 2.0, 400, &[0.0, 0.0], &[1], &residual, 1e-10, 50)
-            .expect("BVP should converge");
+        let y0 = shooting_bvp(
+            &f,
+            0.0,
+            PI / 2.0,
+            400,
+            &[0.0, 0.0],
+            &[1],
+            &residual,
+            1e-10,
+            50,
+        )
+        .expect("BVP should converge");
         assert!((y0[1] - 1.0).abs() < 1e-6, "initial slope = {}", y0[1]);
         // The recovered trajectory hits the right boundary.
         let yf = rk4_integrate(&f, 0.0, &y0, PI / 2.0, 400);

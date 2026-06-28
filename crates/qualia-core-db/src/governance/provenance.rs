@@ -7,7 +7,9 @@
 //!   `PROVENANCE_CONTEXT = q_hash("urn:qualia:context:provenance")`
 //!   `CONTEST_CONTEXT    = q_hash("urn:qualia:context:contest")`
 
-use crate::temporal_graph::{P_DC_CREATOR, P_WAS_ATTRIBUTED_TO, P_WAS_GENERATED_BY, P_WAS_INVALIDATED_BY};
+use crate::temporal_graph::{
+    P_DC_CREATOR, P_WAS_ATTRIBUTED_TO, P_WAS_GENERATED_BY, P_WAS_INVALIDATED_BY,
+};
 use crate::{q_hash, NQuin};
 
 // ── Named-graph contexts ──────────────────────────────────────────────────────
@@ -73,9 +75,9 @@ pub fn full_attribution(
     ts: u64,
 ) -> [NQuin; 3] {
     [
-        make_prov(data_hash, P_DC_CREATOR,        worker_did,    ts),
-        make_prov(data_hash, P_WAS_ATTRIBUTED_TO, worker_did,    ts),
-        make_prov(data_hash, P_WAS_GENERATED_BY,  activity_hash, ts),
+        make_prov(data_hash, P_DC_CREATOR, worker_did, ts),
+        make_prov(data_hash, P_WAS_ATTRIBUTED_TO, worker_did, ts),
+        make_prov(data_hash, P_WAS_GENERATED_BY, activity_hash, ts),
     ]
 }
 
@@ -99,9 +101,9 @@ pub fn contest_assertion(
 ) -> [NQuin; 4] {
     [
         // Contest record in CONTEST_CONTEXT
-        make_contest(disputed_hash, P_CONTESTED_BY,    agent_did,   ts),
-        make_contest(disputed_hash, P_CONTEST_REASON,  reason_hash, ts),
-        make_contest(disputed_hash, P_CONTEST_AT,      ts,          ts),
+        make_contest(disputed_hash, P_CONTESTED_BY, agent_did, ts),
+        make_contest(disputed_hash, P_CONTEST_REASON, reason_hash, ts),
+        make_contest(disputed_hash, P_CONTEST_AT, ts, ts),
         // Invalidation in PROVENANCE_CONTEXT (SPARQL can check this)
         make_prov(disputed_hash, P_WAS_INVALIDATED_BY, agent_did, ts),
     ]
@@ -115,7 +117,7 @@ pub fn contest_assertion(
 pub fn resolve_contest(disputed_hash: u64, resolver_did: u64, ts: u64) -> [NQuin; 2] {
     [
         make_contest(disputed_hash, P_RESOLVED_BY, resolver_did, ts),
-        make_contest(disputed_hash, P_RESOLVED_AT, ts,           ts),
+        make_contest(disputed_hash, P_RESOLVED_AT, ts, ts),
     ]
 }
 
@@ -135,8 +137,8 @@ pub fn write_activity(
 ) -> [NQuin; 3] {
     [
         make_prov(activity_hash, P_ACTIVITY_LABEL, label_hash, start_ms),
-        make_prov(activity_hash, P_ACTIVITY_START, start_ms,   start_ms),
-        make_prov(activity_hash, P_ACTIVITY_END,   end_ms,     end_ms),
+        make_prov(activity_hash, P_ACTIVITY_START, start_ms, start_ms),
+        make_prov(activity_hash, P_ACTIVITY_END, end_ms, end_ms),
     ]
 }
 
@@ -148,9 +150,7 @@ pub fn write_activity(
 /// This is an O(n) linear scan — use a proper index in production queries.
 pub fn is_contested(quins: &[NQuin], data_hash: u64) -> bool {
     quins.iter().any(|q| {
-        q.context == CONTEST_CONTEXT
-            && q.subject == data_hash
-            && q.predicate == P_CONTESTED_BY
+        q.context == CONTEST_CONTEXT && q.subject == data_hash && q.predicate == P_CONTESTED_BY
     })
 }
 
@@ -158,7 +158,11 @@ pub fn is_contested(quins: &[NQuin], data_hash: u64) -> bool {
 pub fn labellers(quins: &[NQuin], data_hash: u64) -> Vec<u64> {
     quins
         .iter()
-        .filter(|q| q.context == PROVENANCE_CONTEXT && q.subject == data_hash && q.predicate == P_LABELLED_BY)
+        .filter(|q| {
+            q.context == PROVENANCE_CONTEXT
+                && q.subject == data_hash
+                && q.predicate == P_LABELLED_BY
+        })
         .map(|q| q.object)
         .collect()
 }
@@ -171,9 +175,9 @@ fn make_prov(subject: u64, predicate: u64, object: u64, lamport: u64) -> NQuin {
         subject,
         predicate,
         object,
-        context:  PROVENANCE_CONTEXT,
+        context: PROVENANCE_CONTEXT,
         metadata: lamport & 0xFFFF_FFFF,
-        parity:   0,
+        parity: 0,
     }
 }
 
@@ -183,9 +187,9 @@ fn make_contest(subject: u64, predicate: u64, object: u64, lamport: u64) -> NQui
         subject,
         predicate,
         object,
-        context:  CONTEST_CONTEXT,
+        context: CONTEST_CONTEXT,
         metadata: lamport & 0xFFFF_FFFF,
-        parity:   0,
+        parity: 0,
     }
 }
 

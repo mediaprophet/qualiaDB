@@ -1,4 +1,6 @@
-use crate::modalities::epistemic::{self, EpistemicStatus, OP_KNOWS, OP_BELIEVES, OP_COMMON_KNOWLEDGE};
+use crate::modalities::epistemic::{
+    self, EpistemicStatus, OP_BELIEVES, OP_COMMON_KNOWLEDGE, OP_KNOWS,
+};
 use crate::modalities::logic::deontic::{
     evaluate_deontic_contract, DeonticStatus, DeonticVerdict, OP_FORBID, OP_OBLIGATE, OP_PERMIT,
 };
@@ -39,15 +41,24 @@ pub enum ShaclConstraint {
     MaxCount(u32),
     /// For sh:in, we store up to 8 permitted hashes inline to avoid allocation.
     /// If more are needed, it would overflow to a separate memory-mapped buffer.
-    In { count: u8, values: [u64; 8] },
-    
+    In {
+        count: u8,
+        values: [u64; 8],
+    },
+
     // Deontic & Epistemic Extensions (from AGENTS.md Task E)
     DeonticObligate,
     DeonticPermit,
     DeonticForbid,
-    DeonticNotExpired { now_unix: u32 },
-    EpistemicKnowledge { min_certainty: u8 },
-    EpistemicBelief { min_certainty: u8 },
+    DeonticNotExpired {
+        now_unix: u32,
+    },
+    EpistemicKnowledge {
+        min_certainty: u8,
+    },
+    EpistemicBelief {
+        min_certainty: u8,
+    },
     CommonKnowledge,
 }
 
@@ -60,11 +71,11 @@ pub fn validate_shacl_property(
     constraints: &[ShaclConstraint],
 ) -> bool {
     let mut matching_count = 0;
-    
+
     for quin in quins {
         if quin.subject == target_subject && quin.predicate == target_property {
             matching_count += 1;
-            
+
             for constraint in constraints {
                 match constraint {
                     ShaclConstraint::Datatype(expected_dt) => {
@@ -81,7 +92,9 @@ pub fn validate_shacl_property(
                             ShaclDatatype::Boolean => type_tag == 0b011,
                             ShaclDatatype::DateTime => type_tag == 0b001, // Often stored as Unix epoch int
                         };
-                        if !valid { return false; }
+                        if !valid {
+                            return false;
+                        }
                     }
                     ShaclConstraint::MinLength(_) | ShaclConstraint::MaxLength(_) => {
                         // In a real system, we'd need to resolve the string length from the object buffer.
@@ -234,8 +247,9 @@ fn epistemic_quin_matches(
         status: EpistemicStatus::Skipped,
         certainty: 0,
     }; 32];
-    let count = epistemic::evaluate_epistemic_frame(quins, focus.subject, focus.context, &mut verdicts)
-        .unwrap_or(0);
+    let count =
+        epistemic::evaluate_epistemic_frame(quins, focus.subject, focus.context, &mut verdicts)
+            .unwrap_or(0);
     for verdict in &verdicts[..count] {
         if verdict.claim.object == focus.object
             && (verdict.claim.predicate & 0xFF) as u8 == expected_opcode
@@ -256,26 +270,40 @@ mod tests {
     fn test_shacl_datatype_integer() {
         let subj = q_hash("did:q42:patient1");
         let prop = q_hash("q42:age");
-        
+
         let quin_int = NQuin {
             subject: subj,
             predicate: prop,
             object: (0b001 << 60) | 42, // Integer tag + value 42
-            context: 0, metadata: 0, parity: 0
+            context: 0,
+            metadata: 0,
+            parity: 0,
         };
-        
+
         let constraints = [ShaclConstraint::Datatype(ShaclDatatype::Integer)];
-        
-        assert!(validate_shacl_property(&[quin_int], subj, prop, &constraints));
-        
+
+        assert!(validate_shacl_property(
+            &[quin_int],
+            subj,
+            prop,
+            &constraints
+        ));
+
         // Test failure on incorrect datatype (e.g. String tag 0b000)
         let quin_str = NQuin {
             subject: subj,
             predicate: prop,
             object: (0b000 << 60) | q_hash("forty-two"),
-            context: 0, metadata: 0, parity: 0
+            context: 0,
+            metadata: 0,
+            parity: 0,
         };
-        assert!(!validate_shacl_property(&[quin_str], subj, prop, &constraints));
+        assert!(!validate_shacl_property(
+            &[quin_str],
+            subj,
+            prop,
+            &constraints
+        ));
     }
 
     #[test]
@@ -296,7 +324,12 @@ mod tests {
         norm.parity = norm.subject ^ norm.predicate ^ norm.object ^ norm.context;
 
         let constraints = [ShaclConstraint::DeonticObligate];
-        assert!(validate_shacl_property(&[norm], subj, norm.predicate, &constraints));
+        assert!(validate_shacl_property(
+            &[norm],
+            subj,
+            norm.predicate,
+            &constraints
+        ));
     }
 
     #[test]
@@ -321,16 +354,30 @@ mod tests {
     fn test_shacl_cardinality() {
         let subj = q_hash("did:q42:user1");
         let prop = q_hash("schema:email");
-        
+
         let quin = NQuin {
-            subject: subj, predicate: prop, object: (0b000 << 60) | q_hash("test@example.com"),
-            context: 0, metadata: 0, parity: 0
+            subject: subj,
+            predicate: prop,
+            object: (0b000 << 60) | q_hash("test@example.com"),
+            context: 0,
+            metadata: 0,
+            parity: 0,
         };
-        
+
         // MinCount 1 -> passes
-        assert!(validate_shacl_property(&[quin.clone()], subj, prop, &[ShaclConstraint::MinCount(1)]));
-        
+        assert!(validate_shacl_property(
+            &[quin.clone()],
+            subj,
+            prop,
+            &[ShaclConstraint::MinCount(1)]
+        ));
+
         // MinCount 2 -> fails
-        assert!(!validate_shacl_property(&[quin.clone()], subj, prop, &[ShaclConstraint::MinCount(2)]));
+        assert!(!validate_shacl_property(
+            &[quin.clone()],
+            subj,
+            prop,
+            &[ShaclConstraint::MinCount(2)]
+        ));
     }
 }

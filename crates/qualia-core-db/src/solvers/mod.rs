@@ -30,25 +30,36 @@ pub mod graph_opt;
 pub mod grounding;
 pub mod interpolation;
 pub mod learning;
-pub mod number_theory;
 pub mod linear_algebra;
+pub mod number_theory;
 pub mod ontology_align;
 pub mod optimization;
 pub mod polynomial;
+pub mod quantum_optimizers;
 pub mod rope;
 pub mod special_functions;
+pub mod statistics;
+pub mod symbolic_logic;
 pub mod transforms;
 pub mod units;
 pub mod vector_calculus;
-pub mod quantum_optimizers;
-pub mod statistics;
-pub mod symbolic_logic;
 
-pub use calculus::{RungeKutta4Static, ShootingMethodBVP, SimpsonsIntegratorChunked, ODEState, BVPState, IntegralChunk};
-pub use linear_algebra::{FixedLanczosEigensolver, StaticLuDecomposition, ConstTensorContractor, Matrix4x4, Vector4, Tensor3x3x3};
-pub use optimization::{NelderMeadSimplex, BoundedNewtonRaphson, LevenbergMarquardtStack, OptimizationState, RootFindingState, CurveFitState};
-pub use quantum_optimizers::{QAOAAngleOptimizer, SpsaOptimizer, QuantumOptimizerState, QAOAAngles, SpsaGradient};
-pub use symbolic_logic::{ForwardChainingDefeasible, BoundedSatSolver, DefeasibleState, SatState};
+pub use calculus::{
+    BVPState, IntegralChunk, ODEState, RungeKutta4Static, ShootingMethodBVP,
+    SimpsonsIntegratorChunked,
+};
+pub use linear_algebra::{
+    ConstTensorContractor, FixedLanczosEigensolver, Matrix4x4, StaticLuDecomposition, Tensor3x3x3,
+    Vector4,
+};
+pub use optimization::{
+    BoundedNewtonRaphson, CurveFitState, LevenbergMarquardtStack, NelderMeadSimplex,
+    OptimizationState, RootFindingState,
+};
+pub use quantum_optimizers::{
+    QAOAAngleOptimizer, QAOAAngles, QuantumOptimizerState, SpsaGradient, SpsaOptimizer,
+};
+pub use symbolic_logic::{BoundedSatSolver, DefeasibleState, ForwardChainingDefeasible, SatState};
 
 /// Unified error type for solver operations.
 #[derive(Debug, Clone, PartialEq)]
@@ -105,8 +116,12 @@ pub struct SolverState {
 }
 
 impl SolverState {
-    pub fn cost_value(&self) -> f64 { f64::from_bits(self.solver_data[0]) }
-    pub fn set_cost_value(&mut self, val: f64) { self.solver_data[0] = val.to_bits(); }
+    pub fn cost_value(&self) -> f64 {
+        f64::from_bits(self.solver_data[0])
+    }
+    pub fn set_cost_value(&mut self, val: f64) {
+        self.solver_data[0] = val.to_bits();
+    }
     pub fn satisfiable(&self) -> Option<bool> {
         match self.solver_data[1] {
             0 => None,
@@ -121,9 +136,15 @@ impl SolverState {
             Some(true) => 2,
         };
     }
-    pub fn quantum_calls(&self) -> u32 { self.solver_data[2] as u32 }
-    pub fn set_quantum_calls(&mut self, val: u32) { self.solver_data[2] = val as u64; }
-    pub fn add_quantum_calls(&mut self, val: u32) { self.solver_data[2] += val as u64; }
+    pub fn quantum_calls(&self) -> u32 {
+        self.solver_data[2] as u32
+    }
+    pub fn set_quantum_calls(&mut self, val: u32) {
+        self.solver_data[2] = val as u64;
+    }
+    pub fn add_quantum_calls(&mut self, val: u32) {
+        self.solver_data[2] += val as u64;
+    }
 }
 
 impl Default for SolverState {

@@ -1,18 +1,18 @@
-﻿//! Cryptographic Library - Quantum-Resistant Cryptographic Operations
-//! 
+//! Cryptographic Library - Quantum-Resistant Cryptographic Operations
+//!
 //! This module provides high-performance cryptographic operations leveraging Phase 2 enhancements:
 //! - Fiduciary Cryptography (ML-DSA) for post-quantum digital signatures
 //! - Zero-Knowledge Semantic Proofs for privacy-preserving cryptography
 //! - Hardware-Sympathetic Storage (ZNS) for secure key storage
 //! - Allocation Firewall (eBPF) for kernel-level cryptographic operations
 
-use std::collections::HashMap;
-use std::sync::{Arc, Mutex};
-use serde::{Deserialize, Serialize};
-use crate::fiduciary_crypto::{MlDsaSigner, MlDsaSignature, CryptoContext, MlDsaVcProof};
+use crate::ebpf_firewall::EbpfFirewall;
+use crate::fiduciary_crypto::{CryptoContext, MlDsaSignature, MlDsaSigner, MlDsaVcProof};
 use crate::zk_proofs::ZkProofSystem;
 use crate::zns_storage::ZnsZoneManager;
-use crate::ebpf_firewall::EbpfFirewall;
+use serde::{Deserialize, Serialize};
+use std::collections::HashMap;
+use std::sync::{Arc, Mutex};
 
 /// Cryptographic Library Manager
 pub struct CryptographicLibrary {
@@ -1904,13 +1904,18 @@ impl CryptographicLibrary {
     }
 
     /// Generate ML-DSA key pair
-    pub fn generate_mldsa_key_pair(&mut self, key_id: String, security_level: SecurityLevel) -> Result<CryptographicResult<(Key, Key)>, CryptographicError> {
+    pub fn generate_mldsa_key_pair(
+        &mut self,
+        key_id: String,
+        security_level: SecurityLevel,
+    ) -> Result<CryptographicResult<(Key, Key)>, CryptographicError> {
         let start_time = std::time::Instant::now();
 
         // Generate a real FIPS-204 ML-DSA-65 key pair (public key is produced alongside
         // the secret key ΓÇö it is NOT derivable from a 32-byte seed like Ed25519).
-        let (priv_k, pub_k) = MlDsaSigner::generate_keypair()
-            .map_err(|e| CryptographicError::SignatureError(format!("ML-DSA keygen failed: {e}")))?;
+        let (priv_k, pub_k) = MlDsaSigner::generate_keypair().map_err(|e| {
+            CryptographicError::SignatureError(format!("ML-DSA keygen failed: {e}"))
+        })?;
 
         let now = std::time::SystemTime::now()
             .duration_since(std::time::UNIX_EPOCH)
@@ -1973,7 +1978,11 @@ impl CryptographicLibrary {
     }
 
     /// Sign data with ML-DSA
-    pub fn sign_data(&mut self, key_id: &str, data: &[u8]) -> Result<CryptographicResult<Signature>, CryptographicError> {
+    pub fn sign_data(
+        &mut self,
+        key_id: &str,
+        data: &[u8],
+    ) -> Result<CryptographicResult<Signature>, CryptographicError> {
         let start_time = std::time::Instant::now();
 
         // Get private key
@@ -1981,7 +1990,9 @@ impl CryptographicLibrary {
 
         // Validate key type
         if private_key.key_type != KeyType::Private {
-            return Err(CryptographicError::InvalidKey("Key must be private for signing".to_string()));
+            return Err(CryptographicError::InvalidKey(
+                "Key must be private for signing".to_string(),
+            ));
         }
 
         // Sign data
@@ -1999,7 +2010,12 @@ impl CryptographicLibrary {
     }
 
     /// Verify signature with ML-DSA
-    pub fn verify_signature(&mut self, key_id: &str, signature: &Signature, data: &[u8]) -> Result<CryptographicResult<bool>, CryptographicError> {
+    pub fn verify_signature(
+        &mut self,
+        key_id: &str,
+        signature: &Signature,
+        data: &[u8],
+    ) -> Result<CryptographicResult<bool>, CryptographicError> {
         let start_time = std::time::Instant::now();
 
         // Get public key
@@ -2007,11 +2023,15 @@ impl CryptographicLibrary {
 
         // Validate key type
         if public_key.key_type != KeyType::Public {
-            return Err(CryptographicError::InvalidKey("Key must be public for verification".to_string()));
+            return Err(CryptographicError::InvalidKey(
+                "Key must be public for verification".to_string(),
+            ));
         }
 
         // Verify signature
-        let is_valid = self.signature_engine.verify_signature(&public_key, signature, data)?;
+        let is_valid = self
+            .signature_engine
+            .verify_signature(&public_key, signature, data)?;
 
         let execution_time = start_time.elapsed().as_millis() as u64;
 
@@ -2025,7 +2045,12 @@ impl CryptographicLibrary {
     }
 
     /// Encrypt data with AES-256-GCM
-    pub fn encrypt_data(&mut self, key_id: &str, data: &[u8], additional_data: Option<&[u8]>) -> Result<CryptographicResult<EncryptedData>, CryptographicError> {
+    pub fn encrypt_data(
+        &mut self,
+        key_id: &str,
+        data: &[u8],
+        additional_data: Option<&[u8]>,
+    ) -> Result<CryptographicResult<EncryptedData>, CryptographicError> {
         let start_time = std::time::Instant::now();
 
         // Get symmetric key
@@ -2033,11 +2058,15 @@ impl CryptographicLibrary {
 
         // Validate key type
         if key.key_type != KeyType::Symmetric {
-            return Err(CryptographicError::InvalidKey("Key must be symmetric for encryption".to_string()));
+            return Err(CryptographicError::InvalidKey(
+                "Key must be symmetric for encryption".to_string(),
+            ));
         }
 
         // Encrypt data
-        let encrypted_data = self.encryption_engine.encrypt_data(&key, data, additional_data)?;
+        let encrypted_data = self
+            .encryption_engine
+            .encrypt_data(&key, data, additional_data)?;
 
         let execution_time = start_time.elapsed().as_millis() as u64;
 
@@ -2052,15 +2081,25 @@ impl CryptographicLibrary {
 
     /// Encrypt data with an explicitly chosen AEAD algorithm
     /// (AES-256-GCM, ChaCha20-Poly1305, or XChaCha20-Poly1305).
-    pub fn encrypt_data_with_algorithm(&mut self, key_id: &str, data: &[u8], additional_data: Option<&[u8]>, algorithm: EncryptionAlgorithm) -> Result<CryptographicResult<EncryptedData>, CryptographicError> {
+    pub fn encrypt_data_with_algorithm(
+        &mut self,
+        key_id: &str,
+        data: &[u8],
+        additional_data: Option<&[u8]>,
+        algorithm: EncryptionAlgorithm,
+    ) -> Result<CryptographicResult<EncryptedData>, CryptographicError> {
         let start_time = std::time::Instant::now();
 
         let key = self.key_manager.get_key(key_id)?;
         if key.key_type != KeyType::Symmetric {
-            return Err(CryptographicError::InvalidKey("Key must be symmetric for encryption".to_string()));
+            return Err(CryptographicError::InvalidKey(
+                "Key must be symmetric for encryption".to_string(),
+            ));
         }
 
-        let encrypted_data = self.encryption_engine.encrypt_data_with(&key, data, additional_data, algorithm)?;
+        let encrypted_data =
+            self.encryption_engine
+                .encrypt_data_with(&key, data, additional_data, algorithm)?;
 
         let execution_time = start_time.elapsed().as_millis() as u64;
 
@@ -2074,7 +2113,11 @@ impl CryptographicLibrary {
     }
 
     /// Decrypt data with AES-256-GCM
-    pub fn decrypt_data(&mut self, key_id: &str, encrypted_data: &EncryptedData) -> Result<CryptographicResult<Vec<u8>>, CryptographicError> {
+    pub fn decrypt_data(
+        &mut self,
+        key_id: &str,
+        encrypted_data: &EncryptedData,
+    ) -> Result<CryptographicResult<Vec<u8>>, CryptographicError> {
         let start_time = std::time::Instant::now();
 
         // Get symmetric key
@@ -2082,7 +2125,9 @@ impl CryptographicLibrary {
 
         // Validate key type
         if key.key_type != KeyType::Symmetric {
-            return Err(CryptographicError::InvalidKey("Key must be symmetric for decryption".to_string()));
+            return Err(CryptographicError::InvalidKey(
+                "Key must be symmetric for decryption".to_string(),
+            ));
         }
 
         // Decrypt data
@@ -2100,7 +2145,10 @@ impl CryptographicLibrary {
     }
 
     /// Compute hash with SHA-256
-    pub fn compute_hash(&mut self, data: &[u8]) -> Result<CryptographicResult<HashResult>, CryptographicError> {
+    pub fn compute_hash(
+        &mut self,
+        data: &[u8],
+    ) -> Result<CryptographicResult<HashResult>, CryptographicError> {
         let start_time = std::time::Instant::now();
 
         // Compute hash
@@ -2118,7 +2166,10 @@ impl CryptographicLibrary {
     }
 
     /// Compute hash with BLAKE3 (32-byte digest)
-    pub fn compute_hash_blake3(&mut self, data: &[u8]) -> Result<CryptographicResult<HashResult>, CryptographicError> {
+    pub fn compute_hash_blake3(
+        &mut self,
+        data: &[u8],
+    ) -> Result<CryptographicResult<HashResult>, CryptographicError> {
         let start_time = std::time::Instant::now();
 
         let hash_result = self.hash_engine.compute_hash("BLAKE3", data)?;
@@ -2188,7 +2239,9 @@ impl CryptographicLibrary {
         }
         let is_valid = proof
             .verify_vc_mldsa(claim_quins, &pk_key.key_data, context)
-            .map_err(|e| CryptographicError::SignatureError(format!("VC verification failed: {e}")))?;
+            .map_err(|e| {
+                CryptographicError::SignatureError(format!("VC verification failed: {e}"))
+            })?;
         let execution_time = start_time.elapsed().as_millis() as u64;
         Ok(CryptographicResult {
             result: is_valid,
@@ -2200,11 +2253,18 @@ impl CryptographicLibrary {
     }
 
     /// Generate zero-knowledge proof
-    pub fn generate_zk_proof(&mut self, circuit_id: &str, witness: &[Vec<u8>], public_inputs: &[Vec<u8>]) -> Result<CryptographicResult<Proof>, CryptographicError> {
+    pub fn generate_zk_proof(
+        &mut self,
+        circuit_id: &str,
+        witness: &[Vec<u8>],
+        public_inputs: &[Vec<u8>],
+    ) -> Result<CryptographicResult<Proof>, CryptographicError> {
         let start_time = std::time::Instant::now();
 
         // Generate proof
-        let proof = self.proof_engine.generate_proof(circuit_id, witness, public_inputs)?;
+        let proof = self
+            .proof_engine
+            .generate_proof(circuit_id, witness, public_inputs)?;
 
         let execution_time = start_time.elapsed().as_millis() as u64;
 
@@ -2218,7 +2278,11 @@ impl CryptographicLibrary {
     }
 
     /// Verify zero-knowledge proof
-    pub fn verify_zk_proof(&mut self, proof: &Proof, public_inputs: &[Vec<u8>]) -> Result<CryptographicResult<bool>, CryptographicError> {
+    pub fn verify_zk_proof(
+        &mut self,
+        proof: &Proof,
+        public_inputs: &[Vec<u8>],
+    ) -> Result<CryptographicResult<bool>, CryptographicError> {
         let start_time = std::time::Instant::now();
 
         // Verify proof
@@ -2251,7 +2315,10 @@ impl CryptographicLibrary {
     }
 
     /// Rotate key
-    pub fn rotate_key(&mut self, key_id: &str) -> Result<CryptographicResult<Key>, CryptographicError> {
+    pub fn rotate_key(
+        &mut self,
+        key_id: &str,
+    ) -> Result<CryptographicResult<Key>, CryptographicError> {
         let start_time = std::time::Instant::now();
 
         // Get old key
@@ -2292,7 +2359,13 @@ impl KeyManager {
         Ok(())
     }
 
-    pub fn generate_key_pair(&mut self, key_id: String, key_type: KeyType, algorithm: KeyAlgorithm, security_level: SecurityLevel) -> Result<(Key, Key), CryptographicError> {
+    pub fn generate_key_pair(
+        &mut self,
+        key_id: String,
+        key_type: KeyType,
+        algorithm: KeyAlgorithm,
+        security_level: SecurityLevel,
+    ) -> Result<(Key, Key), CryptographicError> {
         // Generate private key
         let private_key = self.key_generator.generate_key(
             format!("{}_private", key_id),
@@ -2302,7 +2375,9 @@ impl KeyManager {
         )?;
 
         // Generate public key from private key
-        let public_key = self.key_generator.derive_public_key(&private_key, format!("{}_public", key_id))?;
+        let public_key = self
+            .key_generator
+            .derive_public_key(&private_key, format!("{}_public", key_id))?;
 
         Ok((private_key, public_key))
     }
@@ -2377,7 +2452,9 @@ impl KeyStorage {
         let zone_id = self.select_best_zone(&key)?;
 
         // Store in zone
-        let zone = self.zones.get_mut(&zone_id)
+        let zone = self
+            .zones
+            .get_mut(&zone_id)
             .ok_or_else(|| CryptographicError::StorageError("Zone not found".to_string()))?;
 
         zone.keys.insert(key.key_id.clone(), key.metadata.clone());
@@ -2389,7 +2466,8 @@ impl KeyStorage {
     }
 
     pub fn get_key(&self, key_id: &str) -> Result<Key, CryptographicError> {
-        self.key_data.get(key_id)
+        self.key_data
+            .get(key_id)
             .cloned()
             .ok_or_else(|| CryptographicError::StorageError(format!("Key not found: {}", key_id)))
     }
@@ -2419,7 +2497,6 @@ impl KeyStorage {
             _ => Ok("traditional".to_string()),
         }
     }
-
 }
 
 impl KeyCatalog {
@@ -2533,9 +2610,16 @@ impl KeyGenerator {
         Ok(())
     }
 
-    pub fn generate_key(&mut self, key_id: String, key_type: KeyType, algorithm: KeyAlgorithm, security_level: SecurityLevel) -> Result<Key, CryptographicError> {
-        let generation_algorithm = self.generation_algorithms.get(&algorithm)
-            .ok_or_else(|| CryptographicError::UnsupportedAlgorithm("Algorithm not supported".to_string()))?;
+    pub fn generate_key(
+        &mut self,
+        key_id: String,
+        key_type: KeyType,
+        algorithm: KeyAlgorithm,
+        security_level: SecurityLevel,
+    ) -> Result<Key, CryptographicError> {
+        let generation_algorithm = self.generation_algorithms.get(&algorithm).ok_or_else(|| {
+            CryptographicError::UnsupportedAlgorithm("Algorithm not supported".to_string())
+        })?;
 
         // Generate key data
         let key_data = self.generate_key_data(&generation_algorithm, security_level.clone())?;
@@ -2566,7 +2650,11 @@ impl KeyGenerator {
         })
     }
 
-    pub fn derive_public_key(&mut self, private_key: &Key, public_key_id: String) -> Result<Key, CryptographicError> {
+    pub fn derive_public_key(
+        &mut self,
+        private_key: &Key,
+        public_key_id: String,
+    ) -> Result<Key, CryptographicError> {
         // Derive public key from private key
         let public_key_data = self.derive_public_key_data(&private_key)?;
 
@@ -2595,11 +2683,16 @@ impl KeyGenerator {
         })
     }
 
-    fn generate_key_data(&self, algorithm: &GenerationAlgorithm, _security_level: SecurityLevel) -> Result<Vec<u8>, CryptographicError> {
+    fn generate_key_data(
+        &self,
+        algorithm: &GenerationAlgorithm,
+        _security_level: SecurityLevel,
+    ) -> Result<Vec<u8>, CryptographicError> {
         match &algorithm.algorithm {
             KeyAlgorithm::MLDSA => {
-                let (priv_k, _pub_k) = MlDsaSigner::generate_keypair()
-                    .map_err(|e| CryptographicError::SignatureError(format!("ML-DSA keygen failed: {e}")))?;
+                let (priv_k, _pub_k) = MlDsaSigner::generate_keypair().map_err(|e| {
+                    CryptographicError::SignatureError(format!("ML-DSA keygen failed: {e}"))
+                })?;
                 Ok(priv_k.sk_bytes)
             }
             KeyAlgorithm::Kyber => {
@@ -2626,8 +2719,8 @@ impl KeyGenerator {
             KeyAlgorithm::RSA => {
                 #[cfg(feature = "interop-crypto")]
                 {
-                    use rsa::{RsaPrivateKey, pkcs8::EncodePrivateKey};
                     use rand_core::OsRng;
+                    use rsa::{pkcs8::EncodePrivateKey, RsaPrivateKey};
                     let mut rng = OsRng;
                     let priv_key = RsaPrivateKey::new(&mut rng, 2048)
                         .map_err(|e| CryptographicError::SignatureError(e.to_string()))?;
@@ -2650,9 +2743,9 @@ impl KeyGenerator {
                     use crate::fiduciary_crypto::InteropEcdsaSigner;
                     let signer = InteropEcdsaSigner::generate()
                         .map_err(|e| CryptographicError::SignatureError(e.to_string()))?;
-                    signer.export_secret_key().map_err(|e| {
-                        CryptographicError::SignatureError(e.to_string())
-                    })
+                    signer
+                        .export_secret_key()
+                        .map_err(|e| CryptographicError::SignatureError(e.to_string()))
                 }
                 #[cfg(not(feature = "interop-crypto"))]
                 {
@@ -2675,12 +2768,13 @@ impl KeyGenerator {
             KeyAlgorithm::MLDSA => {
                 use fips204::ml_dsa_65;
                 use fips204::traits::{SerDes, Signer};
-                let sk_arr: [u8; ml_dsa_65::SK_LEN] = private_key.key_data.as_slice().try_into().map_err(|_| {
-                    CryptographicError::InvalidKey(format!(
-                        "ML-DSA secret key must be {} bytes",
-                        ml_dsa_65::SK_LEN
-                    ))
-                })?;
+                let sk_arr: [u8; ml_dsa_65::SK_LEN] =
+                    private_key.key_data.as_slice().try_into().map_err(|_| {
+                        CryptographicError::InvalidKey(format!(
+                            "ML-DSA secret key must be {} bytes",
+                            ml_dsa_65::SK_LEN
+                        ))
+                    })?;
                 let sk = ml_dsa_65::PrivateKey::try_from_bytes(sk_arr)
                     .map_err(|e| CryptographicError::InvalidKey(e.to_string()))?;
                 Ok(sk.get_public_key().into_bytes().to_vec())
@@ -2689,24 +2783,26 @@ impl KeyGenerator {
                 use fips203::ml_kem_768;
                 const K: usize = 3;
                 let len_dk_pke = 384 * K;
-                let dk_arr: [u8; ml_kem_768::DK_LEN] = private_key.key_data.as_slice().try_into().map_err(|_| {
-                    CryptographicError::InvalidKey(format!(
-                        "Kyber decaps key must be {} bytes",
-                        ml_kem_768::DK_LEN
-                    ))
-                })?;
+                let dk_arr: [u8; ml_kem_768::DK_LEN] =
+                    private_key.key_data.as_slice().try_into().map_err(|_| {
+                        CryptographicError::InvalidKey(format!(
+                            "Kyber decaps key must be {} bytes",
+                            ml_kem_768::DK_LEN
+                        ))
+                    })?;
                 Ok(dk_arr[len_dk_pke..len_dk_pke + ml_kem_768::EK_LEN].to_vec())
             }
             KeyAlgorithm::NTRU => {
                 use fips203::ml_kem_512;
                 const K: usize = 2;
                 let len_dk_pke = 384 * K;
-                let dk_arr: [u8; ml_kem_512::DK_LEN] = private_key.key_data.as_slice().try_into().map_err(|_| {
-                    CryptographicError::InvalidKey(format!(
-                        "NTRU decaps key must be {} bytes",
-                        ml_kem_512::DK_LEN
-                    ))
-                })?;
+                let dk_arr: [u8; ml_kem_512::DK_LEN] =
+                    private_key.key_data.as_slice().try_into().map_err(|_| {
+                        CryptographicError::InvalidKey(format!(
+                            "NTRU decaps key must be {} bytes",
+                            ml_kem_512::DK_LEN
+                        ))
+                    })?;
                 Ok(dk_arr[len_dk_pke..len_dk_pke + ml_kem_512::EK_LEN].to_vec())
             }
             KeyAlgorithm::SPHINCS => {
@@ -2726,7 +2822,10 @@ impl KeyGenerator {
             KeyAlgorithm::RSA => {
                 #[cfg(feature = "interop-crypto")]
                 {
-                    use rsa::{RsaPrivateKey, RsaPublicKey, pkcs8::{DecodePrivateKey, EncodePublicKey}};
+                    use rsa::{
+                        pkcs8::{DecodePrivateKey, EncodePublicKey},
+                        RsaPrivateKey, RsaPublicKey,
+                    };
                     let priv_key = RsaPrivateKey::from_pkcs8_der(&private_key.key_data)
                         .map_err(|e| CryptographicError::InvalidKey(e.to_string()))?;
                     let pub_key = RsaPublicKey::from(&priv_key);
@@ -2750,7 +2849,9 @@ impl KeyGenerator {
                         .map_err(|e| CryptographicError::InvalidKey(e.to_string()))?;
                     Ok(signer
                         .public_key()
-                        .ok_or_else(|| CryptographicError::InvalidKey("ECDSA public key missing".to_string()))?
+                        .ok_or_else(|| {
+                            CryptographicError::InvalidKey("ECDSA public key missing".to_string())
+                        })?
                         .to_vec())
                 }
                 #[cfg(not(feature = "interop-crypto"))]
@@ -2763,7 +2864,9 @@ impl KeyGenerator {
             KeyAlgorithm::EdDSA => {
                 use ed25519_dalek::SigningKey;
                 if private_key.key_data.len() < 32 {
-                    return Err(CryptographicError::InvalidKey("Private key too short".to_string()));
+                    return Err(CryptographicError::InvalidKey(
+                        "Private key too short".to_string(),
+                    ));
                 }
                 let mut seed = [0u8; 32];
                 seed.copy_from_slice(&private_key.key_data[..32]);
@@ -2828,13 +2931,24 @@ impl KeyRotator {
 
     pub fn initialize(&mut self) -> Result<(), CryptographicError> {
         // Initialize rotation policies
-        self.rotation_policies.insert(KeyAlgorithm::MLDSA, RotationPolicy::new(KeyAlgorithm::MLDSA));
-        self.rotation_policies.insert(KeyAlgorithm::AES, RotationPolicy::new(KeyAlgorithm::AES));
+        self.rotation_policies.insert(
+            KeyAlgorithm::MLDSA,
+            RotationPolicy::new(KeyAlgorithm::MLDSA),
+        );
+        self.rotation_policies
+            .insert(KeyAlgorithm::AES, RotationPolicy::new(KeyAlgorithm::AES));
         Ok(())
     }
 
     pub fn rotate_key(&mut self, old_key: &Key) -> Result<Key, CryptographicError> {
-        let new_key_id = format!("{}_rotated_{}", old_key.key_id, std::time::SystemTime::now().duration_since(std::time::UNIX_EPOCH).unwrap().as_secs());
+        let new_key_id = format!(
+            "{}_rotated_{}",
+            old_key.key_id,
+            std::time::SystemTime::now()
+                .duration_since(std::time::UNIX_EPOCH)
+                .unwrap()
+                .as_secs()
+        );
         let mut new_key_data = rand::random::<[u8; 32]>().to_vec();
         new_key_data.resize(old_key.key_data.len(), 0);
         let new_key = Key {
@@ -2847,7 +2961,10 @@ impl KeyRotator {
                 key_type: old_key.key_type.clone(),
                 key_algorithm: old_key.key_algorithm.clone(),
                 key_size: old_key.metadata.key_size,
-                created_at: std::time::SystemTime::now().duration_since(std::time::UNIX_EPOCH).unwrap().as_secs(),
+                created_at: std::time::SystemTime::now()
+                    .duration_since(std::time::UNIX_EPOCH)
+                    .unwrap()
+                    .as_secs(),
                 expires_at: 0,
                 last_used: 0,
                 usage_count: 0,
@@ -2865,7 +2982,7 @@ impl RotationPolicy {
             policy_id: format!("rotation_policy_{:?}", algorithm),
             algorithm,
             rotation_interval: 86400 * 90, // 90 days
-            grace_period: 86400 * 7, // 7 days
+            grace_period: 86400 * 7,       // 7 days
             automatic_rotation: true,
             notification_settings: NotificationSettings {
                 notify_before_rotation: true,
@@ -2912,7 +3029,10 @@ impl RotationHistory {
 impl KeyRecovery {
     pub fn new() -> Self {
         Self {
-            recovery_methods: vec![RecoveryMethod::ShamirSecretSharing, RecoveryMethod::EncryptedBackup],
+            recovery_methods: vec![
+                RecoveryMethod::ShamirSecretSharing,
+                RecoveryMethod::EncryptedBackup,
+            ],
             recovery_policies: RecoveryPolicies {
                 minimum_shares: 3,
                 total_shares: 5,
@@ -2986,7 +3106,11 @@ impl SignatureEngine {
         }
     }
 
-    pub fn sign_data(&mut self, private_key: &Key, data: &[u8]) -> Result<Signature, CryptographicError> {
+    pub fn sign_data(
+        &mut self,
+        private_key: &Key,
+        data: &[u8],
+    ) -> Result<Signature, CryptographicError> {
         let start_time = std::time::Instant::now();
 
         let signature_data = match private_key.key_algorithm {
@@ -2995,7 +3119,9 @@ impl SignatureEngine {
                 // SHA-256 prehash, and the key material is the full FIPS-204 secret key.
                 let ctx = Self::fiduciary_context();
                 let sig = MlDsaSigner::sign_with_secret(&private_key.key_data, data, &ctx)
-                    .map_err(|e| CryptographicError::SignatureError(format!("ML-DSA sign failed: {e}")))?;
+                    .map_err(|e| {
+                        CryptographicError::SignatureError(format!("ML-DSA sign failed: {e}"))
+                    })?;
                 sig.sig_bytes
             }
             KeyAlgorithm::SPHINCS => {
@@ -3036,10 +3162,10 @@ impl SignatureEngine {
             KeyAlgorithm::RSA => {
                 #[cfg(feature = "interop-crypto")]
                 {
-                    use rsa::{RsaPrivateKey, pkcs8::DecodePrivateKey};
                     use rsa::pkcs1v15::SigningKey;
-                    use rsa::signature::{SignatureEncoding, Signer};
                     use rsa::sha2::Sha256;
+                    use rsa::signature::{SignatureEncoding, Signer};
+                    use rsa::{pkcs8::DecodePrivateKey, RsaPrivateKey};
                     let priv_key = RsaPrivateKey::from_pkcs8_der(&private_key.key_data)
                         .map_err(|e| CryptographicError::SignatureError(e.to_string()))?;
                     let signing_key = SigningKey::<Sha256>::new(priv_key);
@@ -3060,7 +3186,13 @@ impl SignatureEngine {
         };
 
         let signature = Signature {
-            signature_id: format!("sig_{}", std::time::SystemTime::now().duration_since(std::time::UNIX_EPOCH).unwrap().as_secs()),
+            signature_id: format!(
+                "sig_{}",
+                std::time::SystemTime::now()
+                    .duration_since(std::time::UNIX_EPOCH)
+                    .unwrap()
+                    .as_secs()
+            ),
             key_id: private_key.key_id.clone(),
             algorithm: private_key.key_algorithm.clone(),
             data: data.to_vec(),
@@ -3074,15 +3206,23 @@ impl SignatureEngine {
         Ok(signature)
     }
 
-    pub fn verify_signature(&mut self, public_key: &Key, signature: &Signature, data: &[u8]) -> Result<bool, CryptographicError> {
+    pub fn verify_signature(
+        &mut self,
+        public_key: &Key,
+        signature: &Signature,
+        data: &[u8],
+    ) -> Result<bool, CryptographicError> {
         let start_time = std::time::Instant::now();
 
         let is_valid = match public_key.key_algorithm {
             KeyAlgorithm::MLDSA => {
                 let ctx = Self::fiduciary_context();
-                let sig = MlDsaSignature { sig_bytes: signature.signature.clone() };
-                MlDsaSigner::verify_with_public(&public_key.key_data, data, &sig, &ctx)
-                    .map_err(|e| CryptographicError::SignatureError(format!("ML-DSA verify failed: {e}")))?
+                let sig = MlDsaSignature {
+                    sig_bytes: signature.signature.clone(),
+                };
+                MlDsaSigner::verify_with_public(&public_key.key_data, data, &sig, &ctx).map_err(
+                    |e| CryptographicError::SignatureError(format!("ML-DSA verify failed: {e}")),
+                )?
             }
             KeyAlgorithm::SPHINCS => {
                 use fips205::slh_dsa_sha2_256s;
@@ -3106,7 +3246,7 @@ impl SignatureEngine {
             KeyAlgorithm::ECDSA => {
                 #[cfg(feature = "interop-crypto")]
                 {
-                    use crate::fiduciary_crypto::{InteropEcdsaSigner, InteropEcdsaSignature};
+                    use crate::fiduciary_crypto::{InteropEcdsaSignature, InteropEcdsaSigner};
                     let signer = InteropEcdsaSigner::from_public_key(&public_key.key_data)
                         .map_err(|e| CryptographicError::SignatureError(e.to_string()))?;
                     let sig = InteropEcdsaSignature {
@@ -3126,10 +3266,10 @@ impl SignatureEngine {
             KeyAlgorithm::RSA => {
                 #[cfg(feature = "interop-crypto")]
                 {
-                    use rsa::{RsaPublicKey, pkcs8::DecodePublicKey};
                     use rsa::pkcs1v15::{Signature as RsaSignature, VerifyingKey};
-                    use rsa::signature::Verifier;
                     use rsa::sha2::Sha256;
+                    use rsa::signature::Verifier;
+                    use rsa::{pkcs8::DecodePublicKey, RsaPublicKey};
                     let pub_key = RsaPublicKey::from_public_key_der(&public_key.key_data)
                         .map_err(|e| CryptographicError::SignatureError(e.to_string()))?;
                     let verifying_key = VerifyingKey::<Sha256>::new(pub_key);
@@ -3152,7 +3292,13 @@ impl SignatureEngine {
 
         // Store verification record
         let verification_record = VerificationRecord {
-            verification_id: format!("verif_{}", std::time::SystemTime::now().duration_since(std::time::UNIX_EPOCH).unwrap().as_secs()),
+            verification_id: format!(
+                "verif_{}",
+                std::time::SystemTime::now()
+                    .duration_since(std::time::UNIX_EPOCH)
+                    .unwrap()
+                    .as_secs()
+            ),
             signature_id: signature.signature_id.clone(),
             verifier_id: "system".to_string(),
             result: VerificationResult {
@@ -3164,14 +3310,15 @@ impl SignatureEngine {
             timestamp: start_time.elapsed().as_millis() as u64,
         };
 
-        self.signature_storage.store_verification_record(verification_record)?;
+        self.signature_storage
+            .store_verification_record(verification_record)?;
 
         Ok(is_valid)
     }
 
     fn compute_data_hash(&self, data: &[u8]) -> Result<Vec<u8>, CryptographicError> {
         // Compute SHA-256 hash
-        use sha2::{Sha256, Digest};
+        use sha2::{Digest, Sha256};
         let mut hasher = Sha256::new();
         hasher.update(data);
         Ok(hasher.finalize().to_vec())
@@ -3180,7 +3327,9 @@ impl SignatureEngine {
     fn sign_hash(&self, private_key: &Key, hash: &[u8]) -> Result<Vec<u8>, CryptographicError> {
         use ed25519_dalek::{Signer, SigningKey};
         if private_key.key_data.len() < 32 {
-            return Err(CryptographicError::InvalidKey("Private key too short for signing".to_string()));
+            return Err(CryptographicError::InvalidKey(
+                "Private key too short for signing".to_string(),
+            ));
         }
         let mut seed = [0u8; 32];
         seed.copy_from_slice(&private_key.key_data[..32]);
@@ -3189,10 +3338,17 @@ impl SignatureEngine {
         Ok(sig.to_bytes().to_vec())
     }
 
-    fn verify_hash_signature(&self, public_key: &Key, signature: &[u8], hash: &[u8]) -> Result<bool, CryptographicError> {
-        use ed25519_dalek::{Verifier, VerifyingKey, Signature};
+    fn verify_hash_signature(
+        &self,
+        public_key: &Key,
+        signature: &[u8],
+        hash: &[u8],
+    ) -> Result<bool, CryptographicError> {
+        use ed25519_dalek::{Signature, Verifier, VerifyingKey};
         if public_key.key_data.len() < 32 {
-            return Err(CryptographicError::InvalidKey("Public key too short for verification".to_string()));
+            return Err(CryptographicError::InvalidKey(
+                "Public key too short for verification".to_string(),
+            ));
         }
         let mut key_bytes = [0u8; 32];
         key_bytes.copy_from_slice(&public_key.key_data[..32]);
@@ -3222,12 +3378,17 @@ impl SignatureStorage {
     }
 
     pub fn store_signature(&mut self, signature: Signature) -> Result<(), CryptographicError> {
-        self.signatures.insert(signature.signature_id.clone(), signature);
+        self.signatures
+            .insert(signature.signature_id.clone(), signature);
         Ok(())
     }
 
-    pub fn store_verification_record(&mut self, record: VerificationRecord) -> Result<(), CryptographicError> {
-        self.verification_records.insert(record.verification_id.clone(), record);
+    pub fn store_verification_record(
+        &mut self,
+        record: VerificationRecord,
+    ) -> Result<(), CryptographicError> {
+        self.verification_records
+            .insert(record.verification_id.clone(), record);
         Ok(())
     }
 }
@@ -3300,20 +3461,32 @@ impl EncryptionEngine {
         self.key_derivation.derive_hkdf(ikm, info)
     }
 
-    pub fn encrypt_data(&mut self, key: &Key, data: &[u8], additional_data: Option<&[u8]>) -> Result<EncryptedData, CryptographicError> {
+    pub fn encrypt_data(
+        &mut self,
+        key: &Key,
+        data: &[u8],
+        additional_data: Option<&[u8]>,
+    ) -> Result<EncryptedData, CryptographicError> {
         self.encrypt_data_with(key, data, additional_data, EncryptionAlgorithm::AES256GCM)
     }
 
     /// Encrypt with an explicitly chosen AEAD algorithm
     /// (AES-256-GCM, ChaCha20-Poly1305, or XChaCha20-Poly1305).
-    pub fn encrypt_data_with(&mut self, key: &Key, data: &[u8], additional_data: Option<&[u8]>, algorithm: EncryptionAlgorithm) -> Result<EncryptedData, CryptographicError> {
+    pub fn encrypt_data_with(
+        &mut self,
+        key: &Key,
+        data: &[u8],
+        additional_data: Option<&[u8]>,
+        algorithm: EncryptionAlgorithm,
+    ) -> Result<EncryptedData, CryptographicError> {
         let start_time = std::time::Instant::now();
 
         // Generate a nonce sized for the chosen algorithm
         let iv = self.generate_iv(&algorithm)?;
 
         // Encrypt data
-        let (ciphertext, tag) = self.encrypt_with_key(&key, data, &iv, additional_data, &algorithm)?;
+        let (ciphertext, tag) =
+            self.encrypt_with_key(&key, data, &iv, additional_data, &algorithm)?;
 
         let mode = match algorithm {
             EncryptionAlgorithm::AES256GCM => EncryptionMode::GCM,
@@ -3323,7 +3496,13 @@ impl EncryptionEngine {
         };
 
         let encrypted_data = EncryptedData {
-            data_id: format!("enc_{}", std::time::SystemTime::now().duration_since(std::time::UNIX_EPOCH).unwrap().as_secs()),
+            data_id: format!(
+                "enc_{}",
+                std::time::SystemTime::now()
+                    .duration_since(std::time::UNIX_EPOCH)
+                    .unwrap()
+                    .as_secs()
+            ),
             algorithm: algorithm.clone(),
             ciphertext,
             iv,
@@ -3341,9 +3520,17 @@ impl EncryptionEngine {
         Ok(encrypted_data)
     }
 
-    pub fn decrypt_data(&mut self, key: &Key, encrypted_data: &EncryptedData) -> Result<Vec<u8>, CryptographicError> {
+    pub fn decrypt_data(
+        &mut self,
+        key: &Key,
+        encrypted_data: &EncryptedData,
+    ) -> Result<Vec<u8>, CryptographicError> {
         // Dispatch on the algorithm the ciphertext was produced with.
-        let aad_ref = if encrypted_data.aad.is_empty() { None } else { Some(encrypted_data.aad.as_slice()) };
+        let aad_ref = if encrypted_data.aad.is_empty() {
+            None
+        } else {
+            Some(encrypted_data.aad.as_slice())
+        };
         let plaintext = self.decrypt_with_key(
             &key,
             &encrypted_data.ciphertext,
@@ -3373,82 +3560,132 @@ impl EncryptionEngine {
         Ok(iv)
     }
 
-    fn encrypt_with_key(&self, key: &Key, data: &[u8], iv: &[u8], additional_data: Option<&[u8]>, algorithm: &EncryptionAlgorithm) -> Result<(Vec<u8>, Vec<u8>), CryptographicError> {
+    fn encrypt_with_key(
+        &self,
+        key: &Key,
+        data: &[u8],
+        iv: &[u8],
+        additional_data: Option<&[u8]>,
+        algorithm: &EncryptionAlgorithm,
+    ) -> Result<(Vec<u8>, Vec<u8>), CryptographicError> {
         use aes_gcm::aead::generic_array::GenericArray;
         if key.key_data.len() < 32 {
-            return Err(CryptographicError::EncryptionError("AEAD key must be 32 bytes".to_string()));
+            return Err(CryptographicError::EncryptionError(
+                "AEAD key must be 32 bytes".to_string(),
+            ));
         }
         let expected_nonce = Self::nonce_len(algorithm);
         if iv.len() != expected_nonce {
-            return Err(CryptographicError::EncryptionError(format!("IV must be {expected_nonce} bytes for this algorithm")));
+            return Err(CryptographicError::EncryptionError(format!(
+                "IV must be {expected_nonce} bytes for this algorithm"
+            )));
         }
         let aad = additional_data.unwrap_or(b"");
         let mut buffer = data.to_vec();
         let tag = match algorithm {
             EncryptionAlgorithm::AES256GCM => {
-                use aes_gcm::{Aes256Gcm, KeyInit, AeadInPlace};
+                use aes_gcm::{AeadInPlace, Aes256Gcm, KeyInit};
                 let cipher = Aes256Gcm::new(GenericArray::from_slice(&key.key_data[..32]));
-                cipher.encrypt_in_place_detached(GenericArray::from_slice(iv), aad, &mut buffer)
+                cipher
+                    .encrypt_in_place_detached(GenericArray::from_slice(iv), aad, &mut buffer)
                     .map_err(|e| CryptographicError::EncryptionError(e.to_string()))?
                     .to_vec()
             }
             EncryptionAlgorithm::ChaCha20Poly1305 => {
-                use chacha20poly1305::{ChaCha20Poly1305, KeyInit, AeadInPlace};
+                use chacha20poly1305::{AeadInPlace, ChaCha20Poly1305, KeyInit};
                 let cipher = ChaCha20Poly1305::new(GenericArray::from_slice(&key.key_data[..32]));
-                cipher.encrypt_in_place_detached(GenericArray::from_slice(iv), aad, &mut buffer)
+                cipher
+                    .encrypt_in_place_detached(GenericArray::from_slice(iv), aad, &mut buffer)
                     .map_err(|e| CryptographicError::EncryptionError(e.to_string()))?
                     .to_vec()
             }
             EncryptionAlgorithm::XChaCha20Poly1305 => {
-                use chacha20poly1305::{XChaCha20Poly1305, KeyInit, AeadInPlace};
+                use chacha20poly1305::{AeadInPlace, KeyInit, XChaCha20Poly1305};
                 let cipher = XChaCha20Poly1305::new(GenericArray::from_slice(&key.key_data[..32]));
-                cipher.encrypt_in_place_detached(GenericArray::from_slice(iv), aad, &mut buffer)
+                cipher
+                    .encrypt_in_place_detached(GenericArray::from_slice(iv), aad, &mut buffer)
                     .map_err(|e| CryptographicError::EncryptionError(e.to_string()))?
                     .to_vec()
             }
             EncryptionAlgorithm::Custom(name) => {
-                return Err(CryptographicError::UnsupportedAlgorithm(format!("Custom cipher '{name}' not implemented")));
+                return Err(CryptographicError::UnsupportedAlgorithm(format!(
+                    "Custom cipher '{name}' not implemented"
+                )));
             }
         };
         Ok((buffer, tag))
     }
 
-    fn decrypt_with_key(&self, key: &Key, ciphertext: &[u8], iv: &[u8], tag: &[u8], additional_data: Option<&[u8]>, algorithm: &EncryptionAlgorithm) -> Result<Vec<u8>, CryptographicError> {
+    fn decrypt_with_key(
+        &self,
+        key: &Key,
+        ciphertext: &[u8],
+        iv: &[u8],
+        tag: &[u8],
+        additional_data: Option<&[u8]>,
+        algorithm: &EncryptionAlgorithm,
+    ) -> Result<Vec<u8>, CryptographicError> {
         use aes_gcm::aead::generic_array::GenericArray;
         if key.key_data.len() < 32 {
-            return Err(CryptographicError::DecryptionError("AEAD key must be 32 bytes".to_string()));
+            return Err(CryptographicError::DecryptionError(
+                "AEAD key must be 32 bytes".to_string(),
+            ));
         }
         let expected_nonce = Self::nonce_len(algorithm);
         if iv.len() != expected_nonce {
-            return Err(CryptographicError::DecryptionError(format!("IV must be {expected_nonce} bytes for this algorithm")));
+            return Err(CryptographicError::DecryptionError(format!(
+                "IV must be {expected_nonce} bytes for this algorithm"
+            )));
         }
         if tag.len() != 16 {
-            return Err(CryptographicError::DecryptionError("AEAD tag must be 16 bytes".to_string()));
+            return Err(CryptographicError::DecryptionError(
+                "AEAD tag must be 16 bytes".to_string(),
+            ));
         }
         let aad = additional_data.unwrap_or(b"");
         let tag_arr = GenericArray::from_slice(tag);
         let mut buffer = ciphertext.to_vec();
         match algorithm {
             EncryptionAlgorithm::AES256GCM => {
-                use aes_gcm::{Aes256Gcm, KeyInit, AeadInPlace};
+                use aes_gcm::{AeadInPlace, Aes256Gcm, KeyInit};
                 let cipher = Aes256Gcm::new(GenericArray::from_slice(&key.key_data[..32]));
-                cipher.decrypt_in_place_detached(GenericArray::from_slice(iv), aad, &mut buffer, tag_arr)
+                cipher
+                    .decrypt_in_place_detached(
+                        GenericArray::from_slice(iv),
+                        aad,
+                        &mut buffer,
+                        tag_arr,
+                    )
                     .map_err(|e| CryptographicError::DecryptionError(e.to_string()))?;
             }
             EncryptionAlgorithm::ChaCha20Poly1305 => {
-                use chacha20poly1305::{ChaCha20Poly1305, KeyInit, AeadInPlace};
+                use chacha20poly1305::{AeadInPlace, ChaCha20Poly1305, KeyInit};
                 let cipher = ChaCha20Poly1305::new(GenericArray::from_slice(&key.key_data[..32]));
-                cipher.decrypt_in_place_detached(GenericArray::from_slice(iv), aad, &mut buffer, tag_arr)
+                cipher
+                    .decrypt_in_place_detached(
+                        GenericArray::from_slice(iv),
+                        aad,
+                        &mut buffer,
+                        tag_arr,
+                    )
                     .map_err(|e| CryptographicError::DecryptionError(e.to_string()))?;
             }
             EncryptionAlgorithm::XChaCha20Poly1305 => {
-                use chacha20poly1305::{XChaCha20Poly1305, KeyInit, AeadInPlace};
+                use chacha20poly1305::{AeadInPlace, KeyInit, XChaCha20Poly1305};
                 let cipher = XChaCha20Poly1305::new(GenericArray::from_slice(&key.key_data[..32]));
-                cipher.decrypt_in_place_detached(GenericArray::from_slice(iv), aad, &mut buffer, tag_arr)
+                cipher
+                    .decrypt_in_place_detached(
+                        GenericArray::from_slice(iv),
+                        aad,
+                        &mut buffer,
+                        tag_arr,
+                    )
                     .map_err(|e| CryptographicError::DecryptionError(e.to_string()))?;
             }
             EncryptionAlgorithm::Custom(name) => {
-                return Err(CryptographicError::UnsupportedAlgorithm(format!("Custom cipher '{name}' not implemented")));
+                return Err(CryptographicError::UnsupportedAlgorithm(format!(
+                    "Custom cipher '{name}' not implemented"
+                )));
             }
         }
         Ok(buffer)
@@ -3537,31 +3774,43 @@ impl HashEngine {
         Ok(())
     }
 
-    pub fn compute_hash(&mut self, algorithm: &str, data: &[u8]) -> Result<HashResult, CryptographicError> {
+    pub fn compute_hash(
+        &mut self,
+        algorithm: &str,
+        data: &[u8],
+    ) -> Result<HashResult, CryptographicError> {
         let start_time = std::time::Instant::now();
 
         // Compute hash
         let hash_value = match algorithm {
             "SHA256" => {
-                use sha2::{Sha256, Digest};
+                use sha2::{Digest, Sha256};
                 let mut hasher = Sha256::new();
                 hasher.update(data);
                 hasher.finalize().to_vec()
             }
             "SHA512" => {
-                use sha2::{Sha512, Digest};
+                use sha2::{Digest, Sha512};
                 let mut hasher = Sha512::new();
                 hasher.update(data);
                 hasher.finalize().to_vec()
             }
-            "BLAKE3" => {
-                blake3::hash(data).as_bytes().to_vec()
+            "BLAKE3" => blake3::hash(data).as_bytes().to_vec(),
+            _ => {
+                return Err(CryptographicError::UnsupportedAlgorithm(
+                    "Hash algorithm not supported".to_string(),
+                ))
             }
-            _ => return Err(CryptographicError::UnsupportedAlgorithm("Hash algorithm not supported".to_string())),
         };
 
         let hash_result = HashResult {
-            hash_id: format!("hash_{}", std::time::SystemTime::now().duration_since(std::time::UNIX_EPOCH).unwrap().as_secs()),
+            hash_id: format!(
+                "hash_{}",
+                std::time::SystemTime::now()
+                    .duration_since(std::time::UNIX_EPOCH)
+                    .unwrap()
+                    .as_secs()
+            ),
             algorithm: algorithm.to_string(),
             input_data: data.to_vec(),
             hash_value,
@@ -3656,14 +3905,25 @@ impl ProofEngine {
         Ok(())
     }
 
-    pub fn generate_proof(&mut self, circuit_id: &str, witness: &[Vec<u8>], public_inputs: &[Vec<u8>]) -> Result<Proof, CryptographicError> {
+    pub fn generate_proof(
+        &mut self,
+        circuit_id: &str,
+        witness: &[Vec<u8>],
+        public_inputs: &[Vec<u8>],
+    ) -> Result<Proof, CryptographicError> {
         let start_time = std::time::Instant::now();
 
         // Generate proof
         let proof_data = self.generate_proof_data(circuit_id, witness, public_inputs)?;
 
         let proof = Proof {
-            proof_id: format!("proof_{}", std::time::SystemTime::now().duration_since(std::time::UNIX_EPOCH).unwrap().as_secs()),
+            proof_id: format!(
+                "proof_{}",
+                std::time::SystemTime::now()
+                    .duration_since(std::time::UNIX_EPOCH)
+                    .unwrap()
+                    .as_secs()
+            ),
             system_id: "zk_snarks".to_string(),
             circuit_id: circuit_id.to_string(),
             public_inputs: public_inputs.to_vec(),
@@ -3677,7 +3937,11 @@ impl ProofEngine {
         Ok(proof)
     }
 
-    pub fn verify_proof(&mut self, proof: &Proof, public_inputs: &[Vec<u8>]) -> Result<bool, CryptographicError> {
+    pub fn verify_proof(
+        &mut self,
+        proof: &Proof,
+        public_inputs: &[Vec<u8>],
+    ) -> Result<bool, CryptographicError> {
         let start_time = std::time::Instant::now();
 
         // Verify proof
@@ -3685,7 +3949,13 @@ impl ProofEngine {
 
         // Store verification record
         let verification_record = ProofVerificationRecord {
-            verification_id: format!("proof_verif_{}", std::time::SystemTime::now().duration_since(std::time::UNIX_EPOCH).unwrap().as_secs()),
+            verification_id: format!(
+                "proof_verif_{}",
+                std::time::SystemTime::now()
+                    .duration_since(std::time::UNIX_EPOCH)
+                    .unwrap()
+                    .as_secs()
+            ),
             proof_id: proof.proof_id.clone(),
             verifier_id: "system".to_string(),
             result: ProofVerificationResult {
@@ -3697,12 +3967,18 @@ impl ProofEngine {
             timestamp: start_time.elapsed().as_millis() as u64,
         };
 
-        self.proof_storage.store_verification_record(verification_record)?;
+        self.proof_storage
+            .store_verification_record(verification_record)?;
 
         Ok(is_valid)
     }
 
-    fn generate_proof_data(&self, circuit_id: &str, witness: &[Vec<u8>], public_inputs: &[Vec<u8>]) -> Result<Vec<u8>, CryptographicError> {
+    fn generate_proof_data(
+        &self,
+        circuit_id: &str,
+        witness: &[Vec<u8>],
+        public_inputs: &[Vec<u8>],
+    ) -> Result<Vec<u8>, CryptographicError> {
         #[cfg(feature = "zk-culling")]
         if circuit_id == "deontic_access" {
             return Self::generate_deontic_groth16_proof(witness, public_inputs);
@@ -3711,7 +3987,11 @@ impl ProofEngine {
         Self::generate_commitment_proof_data(circuit_id, witness, public_inputs)
     }
 
-    fn verify_proof_data(&self, proof_data: &[u8], public_inputs: &[Vec<u8>]) -> Result<bool, CryptographicError> {
+    fn verify_proof_data(
+        &self,
+        proof_data: &[u8],
+        public_inputs: &[Vec<u8>],
+    ) -> Result<bool, CryptographicError> {
         if proof_data.len() < 65 {
             return Ok(false);
         }
@@ -3733,7 +4013,7 @@ impl ProofEngine {
         witness: &[Vec<u8>],
         public_inputs: &[Vec<u8>],
     ) -> Result<Vec<u8>, CryptographicError> {
-        use sha2::{Sha256, Digest};
+        use sha2::{Digest, Sha256};
         // Commitment: H(circuit_id || witness_bytes) stored in proof_data[0..32]
         // Public input binding: H(public_inputs) stored in proof_data[32..64]
         // Proof version tag in proof_data[64..128]
@@ -3763,7 +4043,7 @@ impl ProofEngine {
         proof_data: &[u8],
         public_inputs: &[Vec<u8>],
     ) -> Result<bool, CryptographicError> {
-        use sha2::{Sha256, Digest};
+        use sha2::{Digest, Sha256};
         if proof_data.len() < 128 {
             return Ok(false);
         }
@@ -3783,7 +4063,7 @@ impl ProofEngine {
     #[cfg(feature = "zk-culling")]
     fn bytes_to_fr(data: &[u8]) -> ark_bls12_381::Fr {
         use ark_ff::PrimeField;
-        use sha2::{Sha256, Digest};
+        use sha2::{Digest, Sha256};
         let hash = Sha256::digest(data);
         ark_bls12_381::Fr::from_be_bytes_mod_order(hash.as_slice())
     }
@@ -3800,12 +4080,18 @@ impl ProofEngine {
     }
 
     #[cfg(feature = "zk-culling")]
-    fn deontic_crs(
-    ) -> Result<&'static (ark_groth16::ProvingKey<ark_bls12_381::Bls12_381>, ark_groth16::VerifyingKey<ark_bls12_381::Bls12_381>), CryptographicError>
-    {
+    fn deontic_crs() -> Result<
+        &'static (
+            ark_groth16::ProvingKey<ark_bls12_381::Bls12_381>,
+            ark_groth16::VerifyingKey<ark_bls12_381::Bls12_381>,
+        ),
+        CryptographicError,
+    > {
         use std::sync::OnceLock;
-        static CRS: OnceLock<(ark_groth16::ProvingKey<ark_bls12_381::Bls12_381>, ark_groth16::VerifyingKey<ark_bls12_381::Bls12_381>)> =
-            OnceLock::new();
+        static CRS: OnceLock<(
+            ark_groth16::ProvingKey<ark_bls12_381::Bls12_381>,
+            ark_groth16::VerifyingKey<ark_bls12_381::Bls12_381>,
+        )> = OnceLock::new();
         CRS.get_or_init(|| {
             crate::deontic_circuit::generate_deontic_crs()
                 .map_err(|e| CryptographicError::ProofError(e))
@@ -3824,12 +4110,14 @@ impl ProofEngine {
         use ark_relations::gr1cs::ConstraintSynthesizer;
         use ark_serialize::CanonicalSerialize;
         use ark_snark::SNARK;
-        use sha2::{Sha256, Digest};
+        use sha2::{Digest, Sha256};
 
         let user_did = Self::bytes_to_fr(witness.first().map(|v| v.as_slice()).unwrap_or(b""));
         let role_id = Self::bytes_to_fr(witness.get(1).map(|v| v.as_slice()).unwrap_or(b""));
-        let action_permission = Self::bytes_to_fr(witness.get(2).map(|v| v.as_slice()).unwrap_or(b""));
-        let policy_root = Self::public_input_to_fr(public_inputs.first().map(|v| v.as_slice()).unwrap_or(b""));
+        let action_permission =
+            Self::bytes_to_fr(witness.get(2).map(|v| v.as_slice()).unwrap_or(b""));
+        let policy_root =
+            Self::public_input_to_fr(public_inputs.first().map(|v| v.as_slice()).unwrap_or(b""));
         let temporal_constraint =
             Self::public_input_to_fr(public_inputs.get(1).map(|v| v.as_slice()).unwrap_or(b""));
 
@@ -3914,8 +4202,12 @@ impl ProofStorage {
         Ok(())
     }
 
-    pub fn store_verification_record(&mut self, record: ProofVerificationRecord) -> Result<(), CryptographicError> {
-        self.verification_records.insert(record.verification_id.clone(), record);
+    pub fn store_verification_record(
+        &mut self,
+        record: ProofVerificationRecord,
+    ) -> Result<(), CryptographicError> {
+        self.verification_records
+            .insert(record.verification_id.clone(), record);
         Ok(())
     }
 }
@@ -4284,7 +4576,9 @@ impl std::fmt::Display for CryptographicError {
     fn fmt(&self, f: &mut std::fmt::Formatter<'_>) -> std::fmt::Result {
         match self {
             CryptographicError::InvalidKey(msg) => write!(f, "Invalid key: {}", msg),
-            CryptographicError::UnsupportedAlgorithm(msg) => write!(f, "Unsupported algorithm: {}", msg),
+            CryptographicError::UnsupportedAlgorithm(msg) => {
+                write!(f, "Unsupported algorithm: {}", msg)
+            }
             CryptographicError::StorageError(msg) => write!(f, "Storage error: {}", msg),
             CryptographicError::EncryptionError(msg) => write!(f, "Encryption error: {}", msg),
             CryptographicError::DecryptionError(msg) => write!(f, "Decryption error: {}", msg),
@@ -4313,9 +4607,11 @@ mod tests {
     fn test_mldsa_key_generation() {
         let mut library = CryptographicLibrary::new();
         library.initialize().unwrap();
-        
-        let result = library.generate_mldsa_key_pair("test_key".to_string(), SecurityLevel::High).unwrap();
-        
+
+        let result = library
+            .generate_mldsa_key_pair("test_key".to_string(), SecurityLevel::High)
+            .unwrap();
+
         assert_eq!(result.result.0.key_id, "test_key_private");
         assert_eq!(result.result.1.key_id, "test_key_public");
         assert_eq!(result.result.0.key_algorithm, KeyAlgorithm::MLDSA);
@@ -4329,14 +4625,16 @@ mod tests {
     fn test_data_signing() {
         let mut library = CryptographicLibrary::new();
         library.initialize().unwrap();
-        
+
         // Generate key pair
-        let key_pair = library.generate_mldsa_key_pair("test_key".to_string(), SecurityLevel::High).unwrap();
-        
+        let key_pair = library
+            .generate_mldsa_key_pair("test_key".to_string(), SecurityLevel::High)
+            .unwrap();
+
         // Sign data
         let data = b"Hello, World!";
         let signature = library.sign_data("test_key_private", data).unwrap();
-        
+
         assert_eq!(signature.result.key_id, "test_key_private");
         assert_eq!(signature.result.algorithm, KeyAlgorithm::MLDSA);
         assert_eq!(signature.result.data, data);
@@ -4347,16 +4645,20 @@ mod tests {
     fn test_signature_verification() {
         let mut library = CryptographicLibrary::new();
         library.initialize().unwrap();
-        
+
         // Generate key pair
-        let key_pair = library.generate_mldsa_key_pair("test_key".to_string(), SecurityLevel::High).unwrap();
-        
+        let key_pair = library
+            .generate_mldsa_key_pair("test_key".to_string(), SecurityLevel::High)
+            .unwrap();
+
         // Sign data
         let data = b"Hello, World!";
         let signature = library.sign_data("test_key_private", data).unwrap();
-        
+
         // Verify signature
-        let is_valid = library.verify_signature("test_key_public", &signature.result, data).unwrap();
+        let is_valid = library
+            .verify_signature("test_key_public", &signature.result, data)
+            .unwrap();
 
         assert!(is_valid.result);
         assert!(is_valid.result);
@@ -4366,7 +4668,7 @@ mod tests {
     fn test_data_encryption() {
         let mut library = CryptographicLibrary::new();
         library.initialize().unwrap();
-        
+
         // Generate symmetric key
         let key = Key {
             key_id: "test_key".to_string(),
@@ -4386,14 +4688,17 @@ mod tests {
                 access_level: AccessLevel::Secret,
             },
         };
-        
+
         library.key_manager.store_key(key).unwrap();
-        
+
         // Encrypt data
         let data = b"Hello, World!";
         let encrypted_data = library.encrypt_data("test_key", data, None).unwrap();
-        
-        assert_eq!(encrypted_data.result.algorithm, EncryptionAlgorithm::AES256GCM);
+
+        assert_eq!(
+            encrypted_data.result.algorithm,
+            EncryptionAlgorithm::AES256GCM
+        );
         assert_eq!(encrypted_data.result.metadata.mode, EncryptionMode::GCM);
         assert!(encrypted_data.compliance_status == ComplianceStatus::Compliant);
     }
@@ -4402,7 +4707,7 @@ mod tests {
     fn test_data_decryption() {
         let mut library = CryptographicLibrary::new();
         library.initialize().unwrap();
-        
+
         // Generate symmetric key
         let key = Key {
             key_id: "test_key".to_string(),
@@ -4422,15 +4727,17 @@ mod tests {
                 access_level: AccessLevel::Secret,
             },
         };
-        
+
         library.key_manager.store_key(key).unwrap();
-        
+
         // Encrypt data
         let data = b"Hello, World!";
         let encrypted_data = library.encrypt_data("test_key", data, None).unwrap();
-        
+
         // Decrypt data
-        let decrypted_data = library.decrypt_data("test_key", &encrypted_data.result).unwrap();
+        let decrypted_data = library
+            .decrypt_data("test_key", &encrypted_data.result)
+            .unwrap();
 
         assert_eq!(decrypted_data.result, data);
     }
@@ -4467,7 +4774,12 @@ mod tests {
         let data = b"The quick brown fox jumps over the lazy dog";
         let aad = b"authenticated additional data";
         let enc = library
-            .encrypt_data_with_algorithm("cc_key", data, Some(aad), EncryptionAlgorithm::ChaCha20Poly1305)
+            .encrypt_data_with_algorithm(
+                "cc_key",
+                data,
+                Some(aad),
+                EncryptionAlgorithm::ChaCha20Poly1305,
+            )
             .unwrap();
         assert_eq!(enc.result.algorithm, EncryptionAlgorithm::ChaCha20Poly1305);
         assert_eq!(enc.result.iv.len(), 12);
@@ -4489,7 +4801,12 @@ mod tests {
         let data = b"authenticated data";
         let aad = b"correct aad";
         let mut enc = library
-            .encrypt_data_with_algorithm("cc_key_wrong_aad", data, Some(aad), EncryptionAlgorithm::ChaCha20Poly1305)
+            .encrypt_data_with_algorithm(
+                "cc_key_wrong_aad",
+                data,
+                Some(aad),
+                EncryptionAlgorithm::ChaCha20Poly1305,
+            )
             .unwrap()
             .result;
 
@@ -4506,7 +4823,12 @@ mod tests {
 
         let data = b"extended-nonce payload";
         let enc = library
-            .encrypt_data_with_algorithm("xcc_key", data, None, EncryptionAlgorithm::XChaCha20Poly1305)
+            .encrypt_data_with_algorithm(
+                "xcc_key",
+                data,
+                None,
+                EncryptionAlgorithm::XChaCha20Poly1305,
+            )
             .unwrap();
         assert_eq!(enc.result.iv.len(), 24);
         let dec = library.decrypt_data("xcc_key", &enc.result).unwrap();
@@ -4521,7 +4843,12 @@ mod tests {
 
         let data = b"authenticated";
         let mut enc = library
-            .encrypt_data_with_algorithm("cc_key2", data, None, EncryptionAlgorithm::ChaCha20Poly1305)
+            .encrypt_data_with_algorithm(
+                "cc_key2",
+                data,
+                None,
+                EncryptionAlgorithm::ChaCha20Poly1305,
+            )
             .unwrap()
             .result;
         // Flip a ciphertext bit; AEAD verification must reject it.
@@ -4548,10 +4875,10 @@ mod tests {
     fn test_hash_computation() {
         let mut library = CryptographicLibrary::new();
         library.initialize().unwrap();
-        
+
         let data = b"Hello, World!";
         let hash_result = library.compute_hash(data).unwrap();
-        
+
         assert_eq!(hash_result.result.algorithm, "SHA256");
         assert_eq!(hash_result.result.input_data, data);
         assert_eq!(hash_result.result.hash_value.len(), 32); // SHA256 output size
@@ -4586,12 +4913,14 @@ mod tests {
     fn test_zk_proof_generation() {
         let mut library = CryptographicLibrary::new();
         library.initialize().unwrap();
-        
+
         let witness = vec![vec![1u8, 2u8, 3u8]];
         let public_inputs = vec![vec![4u8, 5u8, 6u8]];
-        
-        let proof = library.generate_zk_proof("test_circuit", &witness, &public_inputs).unwrap();
-        
+
+        let proof = library
+            .generate_zk_proof("test_circuit", &witness, &public_inputs)
+            .unwrap();
+
         assert_eq!(proof.result.system_id, "zk_snarks");
         assert_eq!(proof.result.circuit_id, "test_circuit");
         assert_eq!(proof.result.public_inputs, public_inputs);
@@ -4606,10 +4935,14 @@ mod tests {
         let witness = vec![vec![1u8, 2u8, 3u8]];
         let public_inputs = vec![vec![4u8, 5u8, 6u8]];
 
-        let proof = library.generate_zk_proof("test_circuit", &witness, &public_inputs).unwrap();
+        let proof = library
+            .generate_zk_proof("test_circuit", &witness, &public_inputs)
+            .unwrap();
 
         // Verify proof
-        let is_valid = library.verify_zk_proof(&proof.result, &public_inputs).unwrap();
+        let is_valid = library
+            .verify_zk_proof(&proof.result, &public_inputs)
+            .unwrap();
 
         assert!(is_valid.result);
         assert!(is_valid.result);
@@ -4673,13 +5006,15 @@ mod tests {
     fn test_key_rotation() {
         let mut library = CryptographicLibrary::new();
         library.initialize().unwrap();
-        
+
         // Generate initial key
-        let key_pair = library.generate_mldsa_key_pair("test_key".to_string(), SecurityLevel::High).unwrap();
-        
+        let key_pair = library
+            .generate_mldsa_key_pair("test_key".to_string(), SecurityLevel::High)
+            .unwrap();
+
         // Rotate key
         let new_key = library.rotate_key("test_key_private").unwrap();
-        
+
         assert!(new_key.result.key_id != "test_key_private");
         assert_eq!(new_key.result.key_algorithm, KeyAlgorithm::MLDSA);
         assert_eq!(new_key.result.key_type, KeyType::Private);
@@ -4690,7 +5025,7 @@ mod tests {
     fn test_security_metrics() {
         let library = CryptographicLibrary::new();
         let metrics = library.get_security_metrics();
-        
+
         assert_eq!(metrics.threat_metrics.threats_detected, 0);
         assert_eq!(metrics.threat_metrics.threats_blocked, 0);
         assert_eq!(metrics.anomaly_metrics.anomalies_detected, 0);
@@ -4758,5 +5093,3 @@ mod tests {
         assert!(!proof.result.fragment_quins.is_empty());
     }
 }
-
-

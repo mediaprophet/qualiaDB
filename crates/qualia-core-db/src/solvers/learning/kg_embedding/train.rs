@@ -120,8 +120,10 @@ pub fn train(
                     // L = max(0, margin - score_pos + score_neg). score = -distance.
                     let loss = cfg.margin - score_pos + score_neg;
                     if loss > 0.0 {
-                        cfg.model.gradient(&hv, &rv, &tv, cfg.rank, &mut ghp, &mut grp, &mut gtp)?;
-                        cfg.model.gradient(&nhv, &rv, &ntv, cfg.rank, &mut ghn, &mut grn, &mut gtn)?;
+                        cfg.model
+                            .gradient(&hv, &rv, &tv, cfg.rank, &mut ghp, &mut grp, &mut gtp)?;
+                        cfg.model
+                            .gradient(&nhv, &rv, &ntv, cfg.rank, &mut ghn, &mut grn, &mut gtn)?;
                         // Ascend score_pos, descend score_neg.
                         apply(table.entity_mut(h), &ghp, cfg.lr);
                         apply(table.entity_mut(t), &gtp, cfg.lr);
@@ -133,13 +135,15 @@ pub fn train(
                 } else {
                     // Logistic: param -= lr*(∂L/∂s * grad + reg*param), ∂L/∂s = -y·σ(-y·s).
                     // Positive (y=+1).
-                    cfg.model.gradient(&hv, &rv, &tv, cfg.rank, &mut ghp, &mut grp, &mut gtp)?;
+                    cfg.model
+                        .gradient(&hv, &rv, &tv, cfg.rank, &mut ghp, &mut grp, &mut gtp)?;
                     let cp = -sigmoid(-score_pos);
                     apply_reg(table.entity_mut(h), &ghp, cfg.lr, cp, cfg.reg);
                     apply_reg(table.entity_mut(t), &gtp, cfg.lr, cp, cfg.reg);
                     apply_reg(table.relation_mut(r), &grp, cfg.lr, cp, cfg.reg);
                     // Negative (y=-1).
-                    cfg.model.gradient(&nhv, &rv, &ntv, cfg.rank, &mut ghn, &mut grn, &mut gtn)?;
+                    cfg.model
+                        .gradient(&nhv, &rv, &ntv, cfg.rank, &mut ghn, &mut grn, &mut gtn)?;
                     let cn = sigmoid(score_neg);
                     apply_reg(table.entity_mut(nh), &ghn, cfg.lr, cn, cfg.reg);
                     apply_reg(table.entity_mut(nt), &gtn, cfg.lr, cn, cfg.reg);
@@ -197,8 +201,16 @@ mod tests {
         pos: &[(usize, usize, usize)],
         neg: &[(usize, usize, usize)],
     ) -> f64 {
-        let mp: f64 = pos.iter().map(|&(h, r, t)| table.score(h, r, t).unwrap()).sum::<f64>() / pos.len() as f64;
-        let mn: f64 = neg.iter().map(|&(h, r, t)| table.score(h, r, t).unwrap()).sum::<f64>() / neg.len() as f64;
+        let mp: f64 = pos
+            .iter()
+            .map(|&(h, r, t)| table.score(h, r, t).unwrap())
+            .sum::<f64>()
+            / pos.len() as f64;
+        let mn: f64 = neg
+            .iter()
+            .map(|&(h, r, t)| table.score(h, r, t).unwrap())
+            .sum::<f64>()
+            / neg.len() as f64;
         mp - mn
     }
 
@@ -221,8 +233,14 @@ mod tests {
         };
         let table = train(&triples, 4, 1, cfg).unwrap();
         // Each edge's true tail should rank first among all entities.
-        assert_eq!(rank_tail(&table, 0, 0, 1, &[0, 1, 2, 3], RankFilter::Raw).unwrap(), 1);
-        assert_eq!(rank_tail(&table, 2, 0, 3, &[0, 1, 2, 3], RankFilter::Raw).unwrap(), 1);
+        assert_eq!(
+            rank_tail(&table, 0, 0, 1, &[0, 1, 2, 3], RankFilter::Raw).unwrap(),
+            1
+        );
+        assert_eq!(
+            rank_tail(&table, 2, 0, 3, &[0, 1, 2, 3], RankFilter::Raw).unwrap(),
+            1
+        );
     }
 
     #[test]
@@ -242,7 +260,10 @@ mod tests {
         };
         let table = train(&pos, 4, 1, cfg).unwrap();
         let gap = mean_pos_minus_neg(&table, &pos, &neg);
-        assert!(gap > 0.5, "DistMult positives not separated from negatives (gap {gap})");
+        assert!(
+            gap > 0.5,
+            "DistMult positives not separated from negatives (gap {gap})"
+        );
     }
 
     #[test]
@@ -284,12 +305,18 @@ mod tests {
 
     #[test]
     fn empty_corpus_fails_closed() {
-        assert_eq!(train(&[], 4, 1, TrainConfig::default()).unwrap_err(), KgEmbeddingError::InsufficientData);
+        assert_eq!(
+            train(&[], 4, 1, TrainConfig::default()).unwrap_err(),
+            KgEmbeddingError::InsufficientData
+        );
     }
 
     #[test]
     fn out_of_range_index_fails_closed() {
         let bad = vec![(0, 0, 9)];
-        assert_eq!(train(&bad, 4, 1, TrainConfig::default()).unwrap_err(), KgEmbeddingError::IndexOutOfRange);
+        assert_eq!(
+            train(&bad, 4, 1, TrainConfig::default()).unwrap_err(),
+            KgEmbeddingError::IndexOutOfRange
+        );
     }
 }

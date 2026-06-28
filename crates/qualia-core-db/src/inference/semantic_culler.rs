@@ -5,10 +5,12 @@
 //! reach the WebGPU staging buffers. It integrates with zk_proofs and
 //! fiduciary_crypto for cryptographic verification of agency permissions.
 
-use std::collections::HashMap;
+use crate::fiduciary_crypto::{CryptoContext, FiduciaryCrypto, MlDsaSignature};
+use crate::zk_proofs::{
+    FieldElement, MathematicalStatement, SemanticProof, StatementType, ZkProofSystem,
+};
 use serde::{Deserialize, Serialize};
-use crate::zk_proofs::{ZkProofSystem, SemanticProof, MathematicalStatement, StatementType, FieldElement};
-use crate::fiduciary_crypto::{FiduciaryCrypto, MlDsaSignature, CryptoContext};
+use std::collections::HashMap;
 
 /// Semantic culler for agency-driven data filtering
 pub struct SemanticCuller {
@@ -174,7 +176,8 @@ impl SemanticCuller {
 
     /// Add agency policy
     pub fn add_policy(&mut self, policy: AgencyPolicy) {
-        self.agency_policies.insert(policy.agency_id.clone(), policy);
+        self.agency_policies
+            .insert(policy.agency_id.clone(), policy);
     }
 
     /// Cull a batch of Quins based on agency policies
@@ -183,7 +186,7 @@ impl SemanticCuller {
             .agency_policies
             .get(agency_id)
             .map(|policy| policy as *const AgencyPolicy);
-        
+
         let results: Vec<CullingResult> = quins
             .iter()
             .map(|quin| {
@@ -243,15 +246,22 @@ impl SemanticCuller {
     }
 
     /// Cull a single Quin
-    fn cull_single_quin(&mut self, agency_id: &str, quin: &Quin, policy: Option<&AgencyPolicy>) -> CullingResult {
+    fn cull_single_quin(
+        &mut self,
+        agency_id: &str,
+        quin: &Quin,
+        policy: Option<&AgencyPolicy>,
+    ) -> CullingResult {
         // If no policy exists, deny by default
         let policy = match policy {
             Some(p) => p,
-            None => return CullingResult {
-                quin_id: quin.quin_id.clone(),
-                allowed: false,
-                reason: CullingReason::MissingPermission,
-                verification_data: None,
+            None => {
+                return CullingResult {
+                    quin_id: quin.quin_id.clone(),
+                    allowed: false,
+                    reason: CullingReason::MissingPermission,
+                    verification_data: None,
+                }
             }
         };
 
@@ -350,7 +360,11 @@ impl SemanticCuller {
     }
 
     /// Check temporal constraints
-    fn check_temporal_constraints(&self, quin: &Quin, policy: &AgencyPolicy) -> Option<CullingReason> {
+    fn check_temporal_constraints(
+        &self,
+        quin: &Quin,
+        policy: &AgencyPolicy,
+    ) -> Option<CullingReason> {
         let now = std::time::SystemTime::now()
             .duration_since(std::time::UNIX_EPOCH)
             .unwrap()
@@ -381,7 +395,9 @@ impl SemanticCuller {
         for rule in &policy.deontic_rules {
             match rule.rule_type {
                 DeonticType::Prohibition => {
-                    if rule.action == DeonticAction::Deny && self.evaluate_condition(&rule.condition, quin) {
+                    if rule.action == DeonticAction::Deny
+                        && self.evaluate_condition(&rule.condition, quin)
+                    {
                         return Some(CullingReason::DeonticRuleViolation);
                     }
                 }
@@ -410,18 +426,22 @@ impl SemanticCuller {
     }
 
     /// Check cryptographic verification
-    fn check_cryptographic_verification(&mut self, quin: &Quin, policy: &AgencyPolicy) -> Option<VerificationData> {
+    fn check_cryptographic_verification(
+        &mut self,
+        quin: &Quin,
+        policy: &AgencyPolicy,
+    ) -> Option<VerificationData> {
         let mut proof_valid = None;
         let mut signature_valid = None;
         let start_time = std::time::Instant::now();
 
         // Check if any deontic rules require cryptographic verification
-        let requires_proof = policy.deontic_rules.iter().any(|r| 
+        let requires_proof = policy.deontic_rules.iter().any(|r| {
             r.rule_type == DeonticType::Obligation && r.action == DeonticAction::RequireProof
-        );
-        let requires_signature = policy.deontic_rules.iter().any(|r| 
+        });
+        let requires_signature = policy.deontic_rules.iter().any(|r| {
             r.rule_type == DeonticType::Obligation && r.action == DeonticAction::RequireSignature
-        );
+        });
 
         if requires_proof {
             if let Some(ref proof) = quin.proof {
@@ -444,9 +464,15 @@ impl SemanticCuller {
                     timestamp: 0,
                     nonce: [0u8; 32],
                 };
-                
+
                 // Use default key for verification
-                match self.fiduciary_crypto.verify(message.as_bytes(), signature, None, context.domain, context.purpose) {
+                match self.fiduciary_crypto.verify(
+                    message.as_bytes(),
+                    signature,
+                    None,
+                    context.domain,
+                    context.purpose,
+                ) {
                     Ok(valid) => signature_valid = Some(valid),
                     Err(_) => signature_valid = Some(false),
                 }
@@ -477,7 +503,7 @@ impl SemanticCuller {
                 self.culling_stats.total_allowed += 1;
             } else {
                 self.culling_stats.total_denied += 1;
-                
+
                 match result.reason {
                     CullingReason::SemanticFilterMatch => {
                         self.culling_stats.semantic_filtered += 1;
@@ -488,8 +514,8 @@ impl SemanticCuller {
                     CullingReason::DeonticRuleViolation => {
                         self.culling_stats.deontic_filtered += 1;
                     }
-                    CullingReason::ProofVerificationFailed | 
-                    CullingReason::SignatureVerificationFailed => {
+                    CullingReason::ProofVerificationFailed
+                    | CullingReason::SignatureVerificationFailed => {
                         self.culling_stats.crypto_filtered += 1;
                     }
                     _ => {}
@@ -509,9 +535,12 @@ impl SemanticCuller {
 
                 match result.reason {
                     CullingReason::SemanticFilterMatch => self.culling_stats.semantic_filtered += 1,
-                    CullingReason::TemporalConstraintViolation => self.culling_stats.temporal_filtered += 1,
+                    CullingReason::TemporalConstraintViolation => {
+                        self.culling_stats.temporal_filtered += 1
+                    }
                     CullingReason::DeonticRuleViolation => self.culling_stats.deontic_filtered += 1,
-                    CullingReason::ProofVerificationFailed | CullingReason::SignatureVerificationFailed => {
+                    CullingReason::ProofVerificationFailed
+                    | CullingReason::SignatureVerificationFailed => {
                         self.culling_stats.crypto_filtered += 1;
                     }
                     _ => {}
@@ -543,20 +572,27 @@ impl SemanticCuller {
         let mut witness = HashMap::new();
         witness.insert("intensity".to_string(), FieldElement { value: [0u8; 32] });
 
-        self.zk_system.generate_semantic_proof(statement, witness)
+        self.zk_system
+            .generate_semantic_proof(statement, witness)
             .map_err(|e| format!("Proof generation failed: {:?}", e))
     }
 
     /// Sign a Quin with fiduciary crypto
-    pub fn sign_quin(&mut self, quin: &Quin, key_id: Option<&str>) -> Result<MlDsaSignature, String> {
+    pub fn sign_quin(
+        &mut self,
+        quin: &Quin,
+        key_id: Option<&str>,
+    ) -> Result<MlDsaSignature, String> {
         let message = format!("{}:{}:{}", quin.quin_id, quin.semantic_id, quin.timestamp);
-        
-        self.fiduciary_crypto.sign(
-            message.as_bytes(),
-            key_id,
-            "webizen_quin".to_string(),
-            "agency_signature".to_string()
-        ).map_err(|e| format!("Signing failed: {:?}", e))
+
+        self.fiduciary_crypto
+            .sign(
+                message.as_bytes(),
+                key_id,
+                "webizen_quin".to_string(),
+                "agency_signature".to_string(),
+            )
+            .map_err(|e| format!("Signing failed: {:?}", e))
     }
 }
 
@@ -575,7 +611,11 @@ impl VerificationData {
 }
 
 fn bool_to_flag(value: bool) -> u8 {
-    if value { 1 } else { 0 }
+    if value {
+        1
+    } else {
+        0
+    }
 }
 
 impl Default for CullingStats {
@@ -618,14 +658,14 @@ mod tests {
 
         let mut culler = SemanticCuller::new();
         culler.add_policy(policy);
-        
+
         assert_eq!(culler.agency_policies.len(), 1);
     }
 
     #[test]
     fn test_quin_culling() {
         let mut culler = SemanticCuller::new();
-        
+
         let policy = AgencyPolicy {
             agency_id: "test_agency".to_string(),
             access_level: AccessLevel::Read,

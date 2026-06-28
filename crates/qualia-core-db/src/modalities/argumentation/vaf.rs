@@ -19,7 +19,11 @@ pub struct ValueArgumentationFramework {
 
 impl ValueArgumentationFramework {
     pub fn new(af: ArgumentationFramework) -> Self {
-        Self { af, value_of: HashMap::new(), value_rank: HashMap::new() }
+        Self {
+            af,
+            value_of: HashMap::new(),
+            value_rank: HashMap::new(),
+        }
     }
 
     /// Assign argument `arg` the value `value`.
@@ -74,15 +78,20 @@ impl ValueArgumentationFramework {
 
 #[cfg(test)]
 mod tests {
-    use super::*;
     use super::super::{Argument, Attack, AttackType};
+    use super::*;
     use crate::NQuin;
 
     fn arg(id: u64) -> Argument {
         Argument::new(id, String::new(), Vec::new(), NQuin::default())
     }
     fn atk(a: u64, b: u64) -> Attack {
-        Attack { attacker: a, target: b, attack_type: AttackType::Rebuttal, strength: 1.0 }
+        Attack {
+            attacker: a,
+            target: b,
+            attack_type: AttackType::Rebuttal,
+            strength: 1.0,
+        }
     }
 
     #[test]
@@ -93,7 +102,10 @@ mod tests {
         af.add_argument(arg(2));
         af.add_attack(atk(1, 2));
         af.add_attack(atk(2, 1));
-        assert!(af.grounded_extension().is_empty(), "plain AF: mutual attack → no acceptance");
+        assert!(
+            af.grounded_extension().is_empty(),
+            "plain AF: mutual attack → no acceptance"
+        );
 
         // Now value(1)=rights (rank 10), value(2)=convenience (rank 1).
         let mut vaf = ValueArgumentationFramework::new(af);
@@ -108,6 +120,9 @@ mod tests {
         assert!(vaf.defeats(1, 2));
         assert!(!vaf.defeats(2, 1));
         let g = vaf.grounded_extension();
-        assert!(g.contains(&1) && !g.contains(&2), "the rights-grounded argument prevails");
+        assert!(
+            g.contains(&1) && !g.contains(&2),
+            "the rights-grounded argument prevails"
+        );
     }
 }

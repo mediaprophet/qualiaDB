@@ -1,18 +1,18 @@
 //! Statistical Computing Library - Privacy-Preserving Statistical Analysis
-//! 
+//!
 //! This module provides high-performance statistical computing operations leveraging Phase 2 enhancements:
 //! - Fiduciary Cryptography (ML-DSA) for secure statistical computations
 //! - Hardware-Sympathetic Storage (ZNS) for zero-copy statistical data
 //! - Zero-Knowledge Semantic Proofs for privacy-preserving statistics
 //! - NVMe Computational Storage (CSD) for accelerated statistical operations
 
-use std::collections::HashMap;
-use std::sync::{Arc, Mutex};
-use serde::{Deserialize, Serialize};
+use crate::csd_storage::CsdManager;
 use crate::fiduciary_crypto::FiduciaryCrypto;
 use crate::zk_proofs::ZkProofSystem;
 use crate::zns_storage::ZnsZoneManager;
-use crate::csd_storage::CsdManager;
+use serde::{Deserialize, Serialize};
+use std::collections::HashMap;
+use std::sync::{Arc, Mutex};
 
 /// Statistical Computing Library Manager
 pub struct StatisticalComputingLibrary {
@@ -1310,16 +1310,29 @@ impl StatisticalComputingLibrary {
     }
 
     /// Create a new dataset
-    pub fn create_dataset(&mut self, dataset_id: String, data: Vec<Vec<DataValue>>, column_names: Vec<String>, column_types: Vec<DataType>, privacy_level: PrivacyLevel) -> Result<Dataset, StatisticalError> {
+    pub fn create_dataset(
+        &mut self,
+        dataset_id: String,
+        data: Vec<Vec<DataValue>>,
+        column_names: Vec<String>,
+        column_types: Vec<DataType>,
+        privacy_level: PrivacyLevel,
+    ) -> Result<Dataset, StatisticalError> {
         // Validate input
         if data.is_empty() {
-            return Err(StatisticalError::InvalidData("Dataset cannot be empty".to_string()));
+            return Err(StatisticalError::InvalidData(
+                "Dataset cannot be empty".to_string(),
+            ));
         }
         if column_names.len() != column_types.len() {
-            return Err(StatisticalError::InvalidData("Column names and types must match".to_string()));
+            return Err(StatisticalError::InvalidData(
+                "Column names and types must match".to_string(),
+            ));
         }
         if data.iter().any(|row| row.len() != column_names.len()) {
-            return Err(StatisticalError::InvalidData("All rows must have same number of columns".to_string()));
+            return Err(StatisticalError::InvalidData(
+                "All rows must have same number of columns".to_string(),
+            ));
         }
 
         // Create metadata
@@ -1359,20 +1372,32 @@ impl StatisticalComputingLibrary {
     }
 
     /// Compute mean of a column
-    pub fn mean(&mut self, dataset_id: &str, column: &str, privacy_preserved: bool) -> Result<StatisticalAnalysisResult<f64>, StatisticalError> {
+    pub fn mean(
+        &mut self,
+        dataset_id: &str,
+        column: &str,
+        privacy_preserved: bool,
+    ) -> Result<StatisticalAnalysisResult<f64>, StatisticalError> {
         let start_time = std::time::Instant::now();
 
         // Get dataset
         let dataset = self.data_storage.get_dataset(dataset_id)?;
 
         // Find column index
-        let column_index = dataset.column_names.iter()
+        let column_index = dataset
+            .column_names
+            .iter()
             .position(|name| name == column)
             .ok_or_else(|| StatisticalError::InvalidColumn(column.to_string()))?;
 
         // Validate column type
-        if !matches!(dataset.column_types[column_index], DataType::Float32 | DataType::Float64) {
-            return Err(StatisticalError::InvalidOperation("Mean can only be computed on numeric columns".to_string()));
+        if !matches!(
+            dataset.column_types[column_index],
+            DataType::Float32 | DataType::Float64
+        ) {
+            return Err(StatisticalError::InvalidOperation(
+                "Mean can only be computed on numeric columns".to_string(),
+            ));
         }
 
         // Extract column data
@@ -1382,12 +1407,18 @@ impl StatisticalComputingLibrary {
                 DataValue::Float(value) => values.push(*value),
                 DataValue::Integer(value) => values.push(*value as f64),
                 DataValue::Null => continue,
-                _ => return Err(StatisticalError::InvalidOperation("Non-numeric data in column".to_string())),
+                _ => {
+                    return Err(StatisticalError::InvalidOperation(
+                        "Non-numeric data in column".to_string(),
+                    ))
+                }
             }
         }
 
         if values.is_empty() {
-            return Err(StatisticalError::InvalidData("No valid data in column".to_string()));
+            return Err(StatisticalError::InvalidData(
+                "No valid data in column".to_string(),
+            ));
         }
 
         // Compute mean via the engine's canonical statistics solver (Modality-First:
@@ -1406,7 +1437,8 @@ impl StatisticalComputingLibrary {
         };
 
         // Update performance metrics
-        self.performance_monitor.record_operation("mean", execution_time, 0, privacy_cost);
+        self.performance_monitor
+            .record_operation("mean", execution_time, 0, privacy_cost);
 
         Ok(StatisticalAnalysisResult {
             result: final_mean,
@@ -1420,20 +1452,32 @@ impl StatisticalComputingLibrary {
     }
 
     /// Compute median of a column
-    pub fn median(&mut self, dataset_id: &str, column: &str, privacy_preserved: bool) -> Result<StatisticalAnalysisResult<f64>, StatisticalError> {
+    pub fn median(
+        &mut self,
+        dataset_id: &str,
+        column: &str,
+        privacy_preserved: bool,
+    ) -> Result<StatisticalAnalysisResult<f64>, StatisticalError> {
         let start_time = std::time::Instant::now();
 
         // Get dataset
         let dataset = self.data_storage.get_dataset(dataset_id)?;
 
         // Find column index
-        let column_index = dataset.column_names.iter()
+        let column_index = dataset
+            .column_names
+            .iter()
             .position(|name| name == column)
             .ok_or_else(|| StatisticalError::InvalidColumn(column.to_string()))?;
 
         // Validate column type
-        if !matches!(dataset.column_types[column_index], DataType::Float32 | DataType::Float64) {
-            return Err(StatisticalError::InvalidOperation("Median can only be computed on numeric columns".to_string()));
+        if !matches!(
+            dataset.column_types[column_index],
+            DataType::Float32 | DataType::Float64
+        ) {
+            return Err(StatisticalError::InvalidOperation(
+                "Median can only be computed on numeric columns".to_string(),
+            ));
         }
 
         // Extract column data
@@ -1443,12 +1487,18 @@ impl StatisticalComputingLibrary {
                 DataValue::Float(value) => values.push(*value),
                 DataValue::Integer(value) => values.push(*value as f64),
                 DataValue::Null => continue,
-                _ => return Err(StatisticalError::InvalidOperation("Non-numeric data in column".to_string())),
+                _ => {
+                    return Err(StatisticalError::InvalidOperation(
+                        "Non-numeric data in column".to_string(),
+                    ))
+                }
             }
         }
 
         if values.is_empty() {
-            return Err(StatisticalError::InvalidData("No valid data in column".to_string()));
+            return Err(StatisticalError::InvalidData(
+                "No valid data in column".to_string(),
+            ));
         }
 
         // Compute median via the engine's canonical statistics solver (sorts the
@@ -1467,7 +1517,8 @@ impl StatisticalComputingLibrary {
         };
 
         // Update performance metrics
-        self.performance_monitor.record_operation("median", execution_time, 0, privacy_cost);
+        self.performance_monitor
+            .record_operation("median", execution_time, 0, privacy_cost);
 
         Ok(StatisticalAnalysisResult {
             result: final_median,
@@ -1481,20 +1532,33 @@ impl StatisticalComputingLibrary {
     }
 
     /// Compute variance of a column
-    pub fn variance(&mut self, dataset_id: &str, column: &str, sample: bool, privacy_preserved: bool) -> Result<StatisticalAnalysisResult<f64>, StatisticalError> {
+    pub fn variance(
+        &mut self,
+        dataset_id: &str,
+        column: &str,
+        sample: bool,
+        privacy_preserved: bool,
+    ) -> Result<StatisticalAnalysisResult<f64>, StatisticalError> {
         let start_time = std::time::Instant::now();
 
         // Get dataset
         let dataset = self.data_storage.get_dataset(dataset_id)?;
 
         // Find column index
-        let column_index = dataset.column_names.iter()
+        let column_index = dataset
+            .column_names
+            .iter()
             .position(|name| name == column)
             .ok_or_else(|| StatisticalError::InvalidColumn(column.to_string()))?;
 
         // Validate column type
-        if !matches!(dataset.column_types[column_index], DataType::Float32 | DataType::Float64) {
-            return Err(StatisticalError::InvalidOperation("Variance can only be computed on numeric columns".to_string()));
+        if !matches!(
+            dataset.column_types[column_index],
+            DataType::Float32 | DataType::Float64
+        ) {
+            return Err(StatisticalError::InvalidOperation(
+                "Variance can only be computed on numeric columns".to_string(),
+            ));
         }
 
         // Extract column data
@@ -1504,12 +1568,18 @@ impl StatisticalComputingLibrary {
                 DataValue::Float(value) => values.push(*value),
                 DataValue::Integer(value) => values.push(*value as f64),
                 DataValue::Null => continue,
-                _ => return Err(StatisticalError::InvalidOperation("Non-numeric data in column".to_string())),
+                _ => {
+                    return Err(StatisticalError::InvalidOperation(
+                        "Non-numeric data in column".to_string(),
+                    ))
+                }
             }
         }
 
         if values.is_empty() {
-            return Err(StatisticalError::InvalidData("No valid data in column".to_string()));
+            return Err(StatisticalError::InvalidData(
+                "No valid data in column".to_string(),
+            ));
         }
 
         // Compute variance via the engine's canonical statistics solver
@@ -1528,7 +1598,8 @@ impl StatisticalComputingLibrary {
         };
 
         // Update performance metrics
-        self.performance_monitor.record_operation("variance", execution_time, 0, privacy_cost);
+        self.performance_monitor
+            .record_operation("variance", execution_time, 0, privacy_cost);
 
         Ok(StatisticalAnalysisResult {
             result: final_variance,
@@ -1542,27 +1613,48 @@ impl StatisticalComputingLibrary {
     }
 
     /// Compute correlation between two columns
-    pub fn correlation(&mut self, dataset_id: &str, column1: &str, column2: &str, method: CorrelationMethod, privacy_preserved: bool) -> Result<StatisticalAnalysisResult<f64>, StatisticalError> {
+    pub fn correlation(
+        &mut self,
+        dataset_id: &str,
+        column1: &str,
+        column2: &str,
+        method: CorrelationMethod,
+        privacy_preserved: bool,
+    ) -> Result<StatisticalAnalysisResult<f64>, StatisticalError> {
         let start_time = std::time::Instant::now();
 
         // Get dataset
         let dataset = self.data_storage.get_dataset(dataset_id)?;
 
         // Find column indices
-        let column1_index = dataset.column_names.iter()
+        let column1_index = dataset
+            .column_names
+            .iter()
             .position(|name| name == column1)
             .ok_or_else(|| StatisticalError::InvalidColumn(column1.to_string()))?;
 
-        let column2_index = dataset.column_names.iter()
+        let column2_index = dataset
+            .column_names
+            .iter()
             .position(|name| name == column2)
             .ok_or_else(|| StatisticalError::InvalidColumn(column2.to_string()))?;
 
         // Validate column types
-        if !matches!(dataset.column_types[column1_index], DataType::Float32 | DataType::Float64) {
-            return Err(StatisticalError::InvalidOperation("Correlation can only be computed on numeric columns".to_string()));
+        if !matches!(
+            dataset.column_types[column1_index],
+            DataType::Float32 | DataType::Float64
+        ) {
+            return Err(StatisticalError::InvalidOperation(
+                "Correlation can only be computed on numeric columns".to_string(),
+            ));
         }
-        if !matches!(dataset.column_types[column2_index], DataType::Float32 | DataType::Float64) {
-            return Err(StatisticalError::InvalidOperation("Correlation can only be computed on numeric columns".to_string()));
+        if !matches!(
+            dataset.column_types[column2_index],
+            DataType::Float32 | DataType::Float64
+        ) {
+            return Err(StatisticalError::InvalidOperation(
+                "Correlation can only be computed on numeric columns".to_string(),
+            ));
         }
 
         // Extract column data
@@ -1574,14 +1666,22 @@ impl StatisticalComputingLibrary {
                 DataValue::Float(value) => *value,
                 DataValue::Integer(value) => *value as f64,
                 DataValue::Null => continue,
-                _ => return Err(StatisticalError::InvalidOperation("Non-numeric data in column".to_string())),
+                _ => {
+                    return Err(StatisticalError::InvalidOperation(
+                        "Non-numeric data in column".to_string(),
+                    ))
+                }
             };
 
             let y_val = match &row[column2_index] {
                 DataValue::Float(value) => *value,
                 DataValue::Integer(value) => *value as f64,
                 DataValue::Null => continue,
-                _ => return Err(StatisticalError::InvalidOperation("Non-numeric data in column".to_string())),
+                _ => {
+                    return Err(StatisticalError::InvalidOperation(
+                        "Non-numeric data in column".to_string(),
+                    ))
+                }
             };
 
             x_values.push(x_val);
@@ -1589,7 +1689,9 @@ impl StatisticalComputingLibrary {
         }
 
         if x_values.len() < 2 {
-            return Err(StatisticalError::InvalidData("Insufficient data for correlation".to_string()));
+            return Err(StatisticalError::InvalidData(
+                "Insufficient data for correlation".to_string(),
+            ));
         }
 
         // Compute correlation based on method
@@ -1597,21 +1699,27 @@ impl StatisticalComputingLibrary {
             CorrelationMethod::Pearson => self.pearson_correlation(&x_values, &y_values)?,
             CorrelationMethod::Spearman => self.spearman_correlation(&x_values, &y_values)?,
             CorrelationMethod::Kendall => self.kendall_correlation(&x_values, &y_values)?,
-            _ => return Err(StatisticalError::InvalidOperation("Correlation method not supported".to_string())),
+            _ => {
+                return Err(StatisticalError::InvalidOperation(
+                    "Correlation method not supported".to_string(),
+                ))
+            }
         };
 
         let execution_time = start_time.elapsed().as_millis() as u64;
 
         // Apply privacy if requested
         let (final_correlation, privacy_cost) = if privacy_preserved {
-            let (noisy_correlation, cost) = self.privacy_engine.add_laplace_noise(correlation, 0.1)?;
+            let (noisy_correlation, cost) =
+                self.privacy_engine.add_laplace_noise(correlation, 0.1)?;
             (noisy_correlation.clamp(-1.0, 1.0), cost)
         } else {
             (correlation, 0.0)
         };
 
         // Update performance metrics
-        self.performance_monitor.record_operation("correlation", execution_time, 0, privacy_cost);
+        self.performance_monitor
+            .record_operation("correlation", execution_time, 0, privacy_cost);
 
         Ok(StatisticalAnalysisResult {
             result: final_correlation,
@@ -1625,20 +1733,33 @@ impl StatisticalComputingLibrary {
     }
 
     /// Perform t-test
-    pub fn t_test(&mut self, dataset_id: &str, column: &str, hypothesis_type: HypothesisType, privacy_preserved: bool) -> Result<StatisticalAnalysisResult<TTestResult>, StatisticalError> {
+    pub fn t_test(
+        &mut self,
+        dataset_id: &str,
+        column: &str,
+        hypothesis_type: HypothesisType,
+        privacy_preserved: bool,
+    ) -> Result<StatisticalAnalysisResult<TTestResult>, StatisticalError> {
         let start_time = std::time::Instant::now();
 
         // Get dataset
         let dataset = self.data_storage.get_dataset(dataset_id)?;
 
         // Find column index
-        let column_index = dataset.column_names.iter()
+        let column_index = dataset
+            .column_names
+            .iter()
             .position(|name| name == column)
             .ok_or_else(|| StatisticalError::InvalidColumn(column.to_string()))?;
 
         // Validate column type
-        if !matches!(dataset.column_types[column_index], DataType::Float32 | DataType::Float64) {
-            return Err(StatisticalError::InvalidOperation("T-test can only be computed on numeric columns".to_string()));
+        if !matches!(
+            dataset.column_types[column_index],
+            DataType::Float32 | DataType::Float64
+        ) {
+            return Err(StatisticalError::InvalidOperation(
+                "T-test can only be computed on numeric columns".to_string(),
+            ));
         }
 
         // Extract column data
@@ -1648,27 +1769,47 @@ impl StatisticalComputingLibrary {
                 DataValue::Float(value) => values.push(*value),
                 DataValue::Integer(value) => values.push(*value as f64),
                 DataValue::Null => continue,
-                _ => return Err(StatisticalError::InvalidOperation("Non-numeric data in column".to_string())),
+                _ => {
+                    return Err(StatisticalError::InvalidOperation(
+                        "Non-numeric data in column".to_string(),
+                    ))
+                }
             }
         }
 
         if values.len() < 2 {
-            return Err(StatisticalError::InvalidData("Insufficient data for t-test".to_string()));
+            return Err(StatisticalError::InvalidData(
+                "Insufficient data for t-test".to_string(),
+            ));
         }
 
         // Compute t-test based on hypothesis type
         let t_test_result = match hypothesis_type {
             HypothesisType::OneSample => self.one_sample_t_test(&values, 0.0)?,
-            HypothesisType::TwoSample => return Err(StatisticalError::InvalidOperation("Two-sample t-test requires two datasets".to_string())),
-            HypothesisType::Paired => return Err(StatisticalError::InvalidOperation("Paired t-test requires paired data".to_string())),
-            HypothesisType::Independent => return Err(StatisticalError::InvalidOperation("Independent t-test requires two samples".to_string())),
+            HypothesisType::TwoSample => {
+                return Err(StatisticalError::InvalidOperation(
+                    "Two-sample t-test requires two datasets".to_string(),
+                ))
+            }
+            HypothesisType::Paired => {
+                return Err(StatisticalError::InvalidOperation(
+                    "Paired t-test requires paired data".to_string(),
+                ))
+            }
+            HypothesisType::Independent => {
+                return Err(StatisticalError::InvalidOperation(
+                    "Independent t-test requires two samples".to_string(),
+                ))
+            }
         };
 
         let execution_time = start_time.elapsed().as_millis() as u64;
 
         // Apply privacy if requested
         let (final_result, privacy_cost) = if privacy_preserved {
-            let (noisy_t_statistic, cost) = self.privacy_engine.add_laplace_noise(t_test_result.t_statistic, 1.0)?;
+            let (noisy_t_statistic, cost) = self
+                .privacy_engine
+                .add_laplace_noise(t_test_result.t_statistic, 1.0)?;
             let noisy_result = TTestResult {
                 t_statistic: noisy_t_statistic,
                 p_value: t_test_result.p_value,
@@ -1681,7 +1822,8 @@ impl StatisticalComputingLibrary {
         };
 
         // Update performance metrics
-        self.performance_monitor.record_operation("t_test", execution_time, 0, privacy_cost);
+        self.performance_monitor
+            .record_operation("t_test", execution_time, 0, privacy_cost);
 
         Ok(StatisticalAnalysisResult {
             result: final_result,
@@ -1695,20 +1837,33 @@ impl StatisticalComputingLibrary {
     }
 
     /// Generate histogram
-    pub fn histogram(&mut self, dataset_id: &str, column: &str, bins: usize, privacy_preserved: bool) -> Result<StatisticalAnalysisResult<HistogramResult>, StatisticalError> {
+    pub fn histogram(
+        &mut self,
+        dataset_id: &str,
+        column: &str,
+        bins: usize,
+        privacy_preserved: bool,
+    ) -> Result<StatisticalAnalysisResult<HistogramResult>, StatisticalError> {
         let start_time = std::time::Instant::now();
 
         // Get dataset
         let dataset = self.data_storage.get_dataset(dataset_id)?;
 
         // Find column index
-        let column_index = dataset.column_names.iter()
+        let column_index = dataset
+            .column_names
+            .iter()
             .position(|name| name == column)
             .ok_or_else(|| StatisticalError::InvalidColumn(column.to_string()))?;
 
         // Validate column type
-        if !matches!(dataset.column_types[column_index], DataType::Float32 | DataType::Float64) {
-            return Err(StatisticalError::InvalidOperation("Histogram can only be computed on numeric columns".to_string()));
+        if !matches!(
+            dataset.column_types[column_index],
+            DataType::Float32 | DataType::Float64
+        ) {
+            return Err(StatisticalError::InvalidOperation(
+                "Histogram can only be computed on numeric columns".to_string(),
+            ));
         }
 
         // Extract column data
@@ -1718,12 +1873,18 @@ impl StatisticalComputingLibrary {
                 DataValue::Float(value) => values.push(*value),
                 DataValue::Integer(value) => values.push(*value as f64),
                 DataValue::Null => continue,
-                _ => return Err(StatisticalError::InvalidOperation("Non-numeric data in column".to_string())),
+                _ => {
+                    return Err(StatisticalError::InvalidOperation(
+                        "Non-numeric data in column".to_string(),
+                    ))
+                }
             }
         }
 
         if values.is_empty() {
-            return Err(StatisticalError::InvalidData("No valid data in column".to_string()));
+            return Err(StatisticalError::InvalidData(
+                "No valid data in column".to_string(),
+            ));
         }
 
         // Compute histogram
@@ -1733,7 +1894,9 @@ impl StatisticalComputingLibrary {
 
         // Apply privacy if requested
         let (final_result, privacy_cost) = if privacy_preserved {
-            let (noisy_counts, cost) = self.privacy_engine.add_histogram_noise(&histogram_result.counts)?;
+            let (noisy_counts, cost) = self
+                .privacy_engine
+                .add_histogram_noise(&histogram_result.counts)?;
             let noisy_result = HistogramResult {
                 bins: histogram_result.bins,
                 counts: noisy_counts,
@@ -1747,7 +1910,8 @@ impl StatisticalComputingLibrary {
         };
 
         // Update performance metrics
-        self.performance_monitor.record_operation("histogram", execution_time, 0, privacy_cost);
+        self.performance_monitor
+            .record_operation("histogram", execution_time, 0, privacy_cost);
 
         Ok(StatisticalAnalysisResult {
             result: final_result,
@@ -1780,8 +1944,9 @@ impl StatisticalComputingLibrary {
     /// Compute Pearson correlation
     fn pearson_correlation(&self, x: &[f64], y: &[f64]) -> Result<f64, StatisticalError> {
         // Modality-First: the math lives in the engine's statistics solver.
-        crate::solvers::statistics::pearson(x, y)
-            .ok_or_else(|| StatisticalError::InvalidData("Invalid data for correlation".to_string()))
+        crate::solvers::statistics::pearson(x, y).ok_or_else(|| {
+            StatisticalError::InvalidData("Invalid data for correlation".to_string())
+        })
     }
 
     /// Compute Spearman correlation
@@ -1797,8 +1962,9 @@ impl StatisticalComputingLibrary {
     /// Compute Kendall correlation
     fn kendall_correlation(&self, x: &[f64], y: &[f64]) -> Result<f64, StatisticalError> {
         // Modality-First: the math lives in the engine's statistics solver.
-        crate::solvers::statistics::kendall(x, y)
-            .ok_or_else(|| StatisticalError::InvalidData("Invalid data for correlation".to_string()))
+        crate::solvers::statistics::kendall(x, y).ok_or_else(|| {
+            StatisticalError::InvalidData("Invalid data for correlation".to_string())
+        })
     }
 
     /// Rank values
@@ -1816,11 +1982,14 @@ impl StatisticalComputingLibrary {
     fn one_sample_t_test(&self, values: &[f64], mu: f64) -> Result<TTestResult, StatisticalError> {
         let n = values.len();
         if n < 2 {
-            return Err(StatisticalError::InvalidData("Insufficient data for t-test".to_string()));
+            return Err(StatisticalError::InvalidData(
+                "Insufficient data for t-test".to_string(),
+            ));
         }
 
-        let t = crate::solvers::statistics::one_sample_t(values, mu)
-            .ok_or_else(|| StatisticalError::InvalidData("Insufficient data for t-test".to_string()))?;
+        let t = crate::solvers::statistics::one_sample_t(values, mu).ok_or_else(|| {
+            StatisticalError::InvalidData("Insufficient data for t-test".to_string())
+        })?;
         Ok(TTestResult {
             t_statistic: t.t_statistic,
             p_value: t.p_value,
@@ -1830,9 +1999,15 @@ impl StatisticalComputingLibrary {
     }
 
     /// Compute histogram
-    fn compute_histogram(&self, values: &[f64], bins: usize) -> Result<HistogramResult, StatisticalError> {
+    fn compute_histogram(
+        &self,
+        values: &[f64],
+        bins: usize,
+    ) -> Result<HistogramResult, StatisticalError> {
         if values.is_empty() {
-            return Err(StatisticalError::InvalidData("No data for histogram".to_string()));
+            return Err(StatisticalError::InvalidData(
+                "No data for histogram".to_string(),
+            ));
         }
 
         // Modality-First: binning lives in the engine; the wrapper owns the
@@ -1866,16 +2041,16 @@ impl StatisticalDataStorage {
     pub fn initialize(&mut self) -> Result<(), StatisticalError> {
         // Initialize zones
         self.create_zones()?;
-        
+
         // Initialize catalog
         self.data_catalog.initialize()?;
-        
+
         // Initialize compression engine
         self.compression_engine.initialize()?;
-        
+
         // Initialize indexing engine
         self.indexing_engine.initialize()?;
-        
+
         Ok(())
     }
 
@@ -1909,13 +2084,17 @@ impl StatisticalDataStorage {
         let zone_id = self.select_best_zone(&dataset)?;
 
         // Store in zone
-        let zone = self.zones.get_mut(&zone_id)
+        let zone = self
+            .zones
+            .get_mut(&zone_id)
             .ok_or_else(|| StatisticalError::StorageError("Zone not found".to_string()))?;
 
-        zone.datasets.insert(dataset.dataset_id.clone(), dataset.metadata.clone());
+        zone.datasets
+            .insert(dataset.dataset_id.clone(), dataset.metadata.clone());
 
         // Cache the actual dataset data
-        self.dataset_cache.insert(dataset.dataset_id.clone(), dataset.clone());
+        self.dataset_cache
+            .insert(dataset.dataset_id.clone(), dataset.clone());
 
         // Store actual data
         self.store_dataset_data(&dataset)?;
@@ -1979,7 +2158,13 @@ impl StatisticalDataStorage {
                     time_steps: None,
                     features: Some(5),
                 },
-                data_types: vec![DataType::Float64, DataType::Float64, DataType::Float64, DataType::Float64, DataType::Float64],
+                data_types: vec![
+                    DataType::Float64,
+                    DataType::Float64,
+                    DataType::Float64,
+                    DataType::Float64,
+                    DataType::Float64,
+                ],
                 sample_size: 100,
                 created_at: 0,
                 last_updated: 0,
@@ -1987,12 +2172,42 @@ impl StatisticalDataStorage {
                 privacy_level: PrivacyLevel::Public,
             },
             data: vec![
-                vec![DataValue::Float(1.0), DataValue::Float(2.0), DataValue::Float(3.0), DataValue::Float(4.0), DataValue::Float(5.0)],
-                vec![DataValue::Float(2.0), DataValue::Float(3.0), DataValue::Float(4.0), DataValue::Float(5.0), DataValue::Float(6.0)],
-                vec![DataValue::Float(3.0), DataValue::Float(4.0), DataValue::Float(5.0), DataValue::Float(6.0), DataValue::Float(7.0)],
+                vec![
+                    DataValue::Float(1.0),
+                    DataValue::Float(2.0),
+                    DataValue::Float(3.0),
+                    DataValue::Float(4.0),
+                    DataValue::Float(5.0),
+                ],
+                vec![
+                    DataValue::Float(2.0),
+                    DataValue::Float(3.0),
+                    DataValue::Float(4.0),
+                    DataValue::Float(5.0),
+                    DataValue::Float(6.0),
+                ],
+                vec![
+                    DataValue::Float(3.0),
+                    DataValue::Float(4.0),
+                    DataValue::Float(5.0),
+                    DataValue::Float(6.0),
+                    DataValue::Float(7.0),
+                ],
             ],
-            column_names: vec!["col1".to_string(), "col2".to_string(), "col3".to_string(), "col4".to_string(), "col5".to_string()],
-            column_types: vec![DataType::Float64, DataType::Float64, DataType::Float64, DataType::Float64, DataType::Float64],
+            column_names: vec![
+                "col1".to_string(),
+                "col2".to_string(),
+                "col3".to_string(),
+                "col4".to_string(),
+                "col5".to_string(),
+            ],
+            column_types: vec![
+                DataType::Float64,
+                DataType::Float64,
+                DataType::Float64,
+                DataType::Float64,
+                DataType::Float64,
+            ],
         })
     }
 }
@@ -2198,35 +2413,42 @@ impl StatisticalPrivacyEngine {
         Ok(())
     }
 
-    pub fn add_laplace_noise(&mut self, value: f64, sensitivity: f64) -> Result<(f64, f64), StatisticalError> {
+    pub fn add_laplace_noise(
+        &mut self,
+        value: f64,
+        sensitivity: f64,
+    ) -> Result<(f64, f64), StatisticalError> {
         let epsilon = 1.0;
         let scale = sensitivity / epsilon;
-        
+
         // Generate Laplace noise (simplified)
         let noise = self.generate_laplace_noise(scale);
         let noisy_value = value + noise;
-        
+
         // Update privacy budget
         self.privacy_budget.remaining_epsilon -= epsilon;
-        
+
         Ok((noisy_value, epsilon))
     }
 
-    pub fn add_histogram_noise(&mut self, counts: &[u32]) -> Result<(Vec<u32>, f64), StatisticalError> {
+    pub fn add_histogram_noise(
+        &mut self,
+        counts: &[u32],
+    ) -> Result<(Vec<u32>, f64), StatisticalError> {
         let epsilon = 1.0;
         let sensitivity = 1.0;
         let scale = sensitivity / epsilon;
-        
+
         let mut noisy_counts = Vec::with_capacity(counts.len());
         for &count in counts {
             let noise = self.generate_laplace_noise(scale);
             let noisy_count = (count as f64 + noise).max(0.0) as u32;
             noisy_counts.push(noisy_count);
         }
-        
+
         // Update privacy budget
         self.privacy_budget.remaining_epsilon -= epsilon;
-        
+
         Ok((noisy_counts, epsilon))
     }
 
@@ -2235,7 +2457,7 @@ impl StatisticalPrivacyEngine {
         use std::sync::atomic::{AtomicU64, Ordering};
         static COUNTER: AtomicU64 = AtomicU64::new(1);
         let random = COUNTER.fetch_add(1, Ordering::SeqCst) as f64;
-        
+
         // Generate Laplace noise using exponential distribution
         let u = (random as u64 % 1000) as f64 / 1000.0;
         if u < 0.5 {
@@ -2289,8 +2511,14 @@ impl SensitivityAnalyzer {
 impl SecureAggregation {
     pub fn new() -> Self {
         Self {
-            aggregation_protocols: vec![AggregationProtocol::SecureSum, AggregationProtocol::SecureMean],
-            encryption_schemes: vec![EncryptionScheme::Homomorphic, EncryptionScheme::SecretSharing],
+            aggregation_protocols: vec![
+                AggregationProtocol::SecureSum,
+                AggregationProtocol::SecureMean,
+            ],
+            encryption_schemes: vec![
+                EncryptionScheme::Homomorphic,
+                EncryptionScheme::SecretSharing,
+            ],
             integrity_checks: Vec::new(),
         }
     }
@@ -2385,7 +2613,10 @@ impl AlertSystem {
 impl ForecastingEngine {
     pub fn new() -> Self {
         Self {
-            forecasting_models: vec![ForecastingModel::ARIMA, ForecastingModel::ExponentialSmoothing],
+            forecasting_models: vec![
+                ForecastingModel::ARIMA,
+                ForecastingModel::ExponentialSmoothing,
+            ],
             accuracy_metrics: AccuracyMetrics {
                 mae: 0.0,
                 mse: 0.0,
@@ -2472,11 +2703,19 @@ impl StatisticalPerformanceMonitor {
         }
     }
 
-    pub fn record_operation(&mut self, operation_type: &str, execution_time: u64, memory_usage: u64, privacy_cost: f64) {
+    pub fn record_operation(
+        &mut self,
+        operation_type: &str,
+        execution_time: u64,
+        memory_usage: u64,
+        privacy_cost: f64,
+    ) {
         self.system_metrics.total_operations += 1;
-        self.system_metrics.average_execution_time = 
-            (self.system_metrics.average_execution_time * (self.system_metrics.total_operations - 1) as f64 + execution_time as f64) / self.system_metrics.total_operations as f64;
-        
+        self.system_metrics.average_execution_time = (self.system_metrics.average_execution_time
+            * (self.system_metrics.total_operations - 1) as f64
+            + execution_time as f64)
+            / self.system_metrics.total_operations as f64;
+
         self.privacy_metrics.total_operations += 1;
         self.privacy_metrics.epsilon_spent += privacy_cost;
         if privacy_cost > 0.0 {
@@ -2552,21 +2791,23 @@ mod tests {
     fn test_dataset_creation() {
         let mut library = StatisticalComputingLibrary::new();
         library.initialize().unwrap();
-        
+
         let data = vec![
             vec![DataValue::Float(1.0), DataValue::Float(2.0)],
             vec![DataValue::Float(3.0), DataValue::Float(4.0)],
             vec![DataValue::Float(5.0), DataValue::Float(6.0)],
         ];
-        
-        let dataset = library.create_dataset(
-            "test_dataset".to_string(),
-            data,
-            vec!["col1".to_string(), "col2".to_string()],
-            vec![DataType::Float64, DataType::Float64],
-            PrivacyLevel::Public,
-        ).unwrap();
-        
+
+        let dataset = library
+            .create_dataset(
+                "test_dataset".to_string(),
+                data,
+                vec!["col1".to_string(), "col2".to_string()],
+                vec![DataType::Float64, DataType::Float64],
+                PrivacyLevel::Public,
+            )
+            .unwrap();
+
         assert_eq!(dataset.dataset_id, "test_dataset");
         assert_eq!(dataset.data.len(), 3);
         assert_eq!(dataset.column_names.len(), 2);
@@ -2576,23 +2817,25 @@ mod tests {
     fn test_mean_computation() {
         let mut library = StatisticalComputingLibrary::new();
         library.initialize().unwrap();
-        
+
         let data = vec![
             vec![DataValue::Float(1.0), DataValue::Float(2.0)],
             vec![DataValue::Float(3.0), DataValue::Float(4.0)],
             vec![DataValue::Float(5.0), DataValue::Float(6.0)],
         ];
-        
-        library.create_dataset(
-            "test_dataset".to_string(),
-            data,
-            vec!["col1".to_string(), "col2".to_string()],
-            vec![DataType::Float64, DataType::Float64],
-            PrivacyLevel::Public,
-        ).unwrap();
-        
+
+        library
+            .create_dataset(
+                "test_dataset".to_string(),
+                data,
+                vec!["col1".to_string(), "col2".to_string()],
+                vec![DataType::Float64, DataType::Float64],
+                PrivacyLevel::Public,
+            )
+            .unwrap();
+
         let result = library.mean("test_dataset", "col1", false).unwrap();
-        
+
         assert_eq!(result.result, 3.0); // (1 + 3 + 5) / 3
         assert_eq!(result.sample_size, 3);
         assert!(!result.privacy_preserved);
@@ -2602,24 +2845,26 @@ mod tests {
     fn test_median_computation() {
         let mut library = StatisticalComputingLibrary::new();
         library.initialize().unwrap();
-        
+
         let data = vec![
             vec![DataValue::Float(1.0), DataValue::Float(2.0)],
             vec![DataValue::Float(3.0), DataValue::Float(4.0)],
             vec![DataValue::Float(5.0), DataValue::Float(6.0)],
             vec![DataValue::Float(7.0), DataValue::Float(8.0)],
         ];
-        
-        library.create_dataset(
-            "test_dataset".to_string(),
-            data,
-            vec!["col1".to_string(), "col2".to_string()],
-            vec![DataType::Float64, DataType::Float64],
-            PrivacyLevel::Public,
-        ).unwrap();
-        
+
+        library
+            .create_dataset(
+                "test_dataset".to_string(),
+                data,
+                vec!["col1".to_string(), "col2".to_string()],
+                vec![DataType::Float64, DataType::Float64],
+                PrivacyLevel::Public,
+            )
+            .unwrap();
+
         let result = library.median("test_dataset", "col1", false).unwrap();
-        
+
         assert_eq!(result.result, 4.0); // median of [1, 3, 5, 7]
         assert_eq!(result.sample_size, 4);
         assert!(!result.privacy_preserved);
@@ -2629,23 +2874,27 @@ mod tests {
     fn test_variance_computation() {
         let mut library = StatisticalComputingLibrary::new();
         library.initialize().unwrap();
-        
+
         let data = vec![
             vec![DataValue::Float(1.0), DataValue::Float(2.0)],
             vec![DataValue::Float(3.0), DataValue::Float(4.0)],
             vec![DataValue::Float(5.0), DataValue::Float(6.0)],
         ];
-        
-        library.create_dataset(
-            "test_dataset".to_string(),
-            data,
-            vec!["col1".to_string(), "col2".to_string()],
-            vec![DataType::Float64, DataType::Float64],
-            PrivacyLevel::Public,
-        ).unwrap();
-        
-        let result = library.variance("test_dataset", "col1", true, false).unwrap();
-        
+
+        library
+            .create_dataset(
+                "test_dataset".to_string(),
+                data,
+                vec!["col1".to_string(), "col2".to_string()],
+                vec![DataType::Float64, DataType::Float64],
+                PrivacyLevel::Public,
+            )
+            .unwrap();
+
+        let result = library
+            .variance("test_dataset", "col1", true, false)
+            .unwrap();
+
         // Variance of [1, 3, 5] = ((1-3)^2 + (3-3)^2 + (5-3)^2) / (3-1) = (4 + 0 + 4) / 2 = 4
         assert!((result.result - 4.0).abs() < 1e-10);
         assert_eq!(result.sample_size, 3);
@@ -2656,24 +2905,34 @@ mod tests {
     fn test_correlation_computation() {
         let mut library = StatisticalComputingLibrary::new();
         library.initialize().unwrap();
-        
+
         let data = vec![
             vec![DataValue::Float(1.0), DataValue::Float(2.0)],
             vec![DataValue::Float(2.0), DataValue::Float(4.0)],
             vec![DataValue::Float(3.0), DataValue::Float(6.0)],
             vec![DataValue::Float(4.0), DataValue::Float(8.0)],
         ];
-        
-        library.create_dataset(
-            "test_dataset".to_string(),
-            data,
-            vec!["col1".to_string(), "col2".to_string()],
-            vec![DataType::Float64, DataType::Float64],
-            PrivacyLevel::Public,
-        ).unwrap();
-        
-        let result = library.correlation("test_dataset", "col1", "col2", CorrelationMethod::Pearson, false).unwrap();
-        
+
+        library
+            .create_dataset(
+                "test_dataset".to_string(),
+                data,
+                vec!["col1".to_string(), "col2".to_string()],
+                vec![DataType::Float64, DataType::Float64],
+                PrivacyLevel::Public,
+            )
+            .unwrap();
+
+        let result = library
+            .correlation(
+                "test_dataset",
+                "col1",
+                "col2",
+                CorrelationMethod::Pearson,
+                false,
+            )
+            .unwrap();
+
         // Perfect correlation for [1,2,3,4] and [2,4,6,8]
         assert!((result.result - 1.0).abs() < 1e-10);
         assert_eq!(result.sample_size, 4);
@@ -2684,23 +2943,25 @@ mod tests {
     fn test_privacy_preserved_mean() {
         let mut library = StatisticalComputingLibrary::new();
         library.initialize().unwrap();
-        
+
         let data = vec![
             vec![DataValue::Float(1.0), DataValue::Float(2.0)],
             vec![DataValue::Float(3.0), DataValue::Float(4.0)],
             vec![DataValue::Float(5.0), DataValue::Float(6.0)],
         ];
-        
-        library.create_dataset(
-            "test_dataset".to_string(),
-            data,
-            vec!["col1".to_string(), "col2".to_string()],
-            vec![DataType::Float64, DataType::Float64],
-            PrivacyLevel::Confidential,
-        ).unwrap();
-        
+
+        library
+            .create_dataset(
+                "test_dataset".to_string(),
+                data,
+                vec!["col1".to_string(), "col2".to_string()],
+                vec![DataType::Float64, DataType::Float64],
+                PrivacyLevel::Confidential,
+            )
+            .unwrap();
+
         let result = library.mean("test_dataset", "col1", true).unwrap();
-        
+
         assert!(result.privacy_preserved);
         assert!(result.privacy_cost > 0.0);
         // The mean should be noisy (not exactly 3.0)
@@ -2711,7 +2972,7 @@ mod tests {
     fn test_histogram_generation() {
         let mut library = StatisticalComputingLibrary::new();
         library.initialize().unwrap();
-        
+
         let data = vec![
             vec![DataValue::Float(1.0), DataValue::Float(2.0)],
             vec![DataValue::Float(3.0), DataValue::Float(4.0)],
@@ -2719,17 +2980,19 @@ mod tests {
             vec![DataValue::Float(7.0), DataValue::Float(8.0)],
             vec![DataValue::Float(9.0), DataValue::Float(10.0)],
         ];
-        
-        library.create_dataset(
-            "test_dataset".to_string(),
-            data,
-            vec!["col1".to_string(), "col2".to_string()],
-            vec![DataType::Float64, DataType::Float64],
-            PrivacyLevel::Public,
-        ).unwrap();
-        
+
+        library
+            .create_dataset(
+                "test_dataset".to_string(),
+                data,
+                vec!["col1".to_string(), "col2".to_string()],
+                vec![DataType::Float64, DataType::Float64],
+                PrivacyLevel::Public,
+            )
+            .unwrap();
+
         let result = library.histogram("test_dataset", "col1", 5, false).unwrap();
-        
+
         assert_eq!(result.result.bins, 5);
         assert_eq!(result.result.counts.len(), 5);
         assert_eq!(result.result.min_value, 1.0);

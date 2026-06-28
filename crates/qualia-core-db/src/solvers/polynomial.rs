@@ -16,16 +16,27 @@ pub struct Complex {
 }
 
 impl Complex {
-    pub const fn new(re: f64, im: f64) -> Self { Self { re, im } }
-    pub const fn real(re: f64) -> Self { Self { re, im: 0.0 } }
+    pub const fn new(re: f64, im: f64) -> Self {
+        Self { re, im }
+    }
+    pub const fn real(re: f64) -> Self {
+        Self { re, im: 0.0 }
+    }
 
     #[inline]
-    pub fn add(self, o: Complex) -> Complex { Complex::new(self.re + o.re, self.im + o.im) }
+    pub fn add(self, o: Complex) -> Complex {
+        Complex::new(self.re + o.re, self.im + o.im)
+    }
     #[inline]
-    pub fn sub(self, o: Complex) -> Complex { Complex::new(self.re - o.re, self.im - o.im) }
+    pub fn sub(self, o: Complex) -> Complex {
+        Complex::new(self.re - o.re, self.im - o.im)
+    }
     #[inline]
     pub fn mul(self, o: Complex) -> Complex {
-        Complex::new(self.re * o.re - self.im * o.im, self.re * o.im + self.im * o.re)
+        Complex::new(
+            self.re * o.re - self.im * o.im,
+            self.re * o.im + self.im * o.re,
+        )
     }
     #[inline]
     pub fn div(self, o: Complex) -> Complex {
@@ -37,10 +48,14 @@ impl Complex {
     }
     /// Modulus |z|.
     #[inline]
-    pub fn abs(self) -> f64 { self.re.hypot(self.im) }
+    pub fn abs(self) -> f64 {
+        self.re.hypot(self.im)
+    }
     /// True if within `tol` of the real axis.
     #[inline]
-    pub fn is_real(self, tol: f64) -> bool { self.im.abs() <= tol }
+    pub fn is_real(self, tol: f64) -> bool {
+        self.im.abs() <= tol
+    }
 }
 
 /// The roots of a real quadratic `a·x² + b·x + c = 0`.
@@ -115,7 +130,9 @@ fn poly_eval_complex(coeffs: &[f64], x: Complex) -> Complex {
 /// Returns [`SolversError::ComputationError`] for a zero or non-finite polynomial.
 pub fn polynomial_roots(coeffs: &[f64]) -> Result<Vec<Complex>, SolversError> {
     // Trim leading zeros (they do not change the polynomial's degree meaningfully).
-    let start = coeffs.iter().position(|c| c.abs() > 0.0)
+    let start = coeffs
+        .iter()
+        .position(|c| c.abs() > 0.0)
         .ok_or(SolversError::ComputationError)?;
     let coeffs = &coeffs[start..];
     if coeffs.len() == 1 {
@@ -135,7 +152,9 @@ pub fn polynomial_roots(coeffs: &[f64]) -> Result<Vec<Complex>, SolversError> {
     let mut roots: Vec<Complex> = (0..degree)
         .map(|k| {
             let mut z = Complex::real(1.0);
-            for _ in 0..k { z = z.mul(seed); }
+            for _ in 0..k {
+                z = z.mul(seed);
+            }
             z
         })
         .collect();
@@ -181,13 +200,19 @@ mod tests {
     #[test]
     fn quadratic_two_real() {
         // x² − 3x + 2 = 0 → 1, 2
-        assert_eq!(solve_quadratic(1.0, -3.0, 2.0).unwrap(), QuadraticRoots::TwoReal(1.0, 2.0));
+        assert_eq!(
+            solve_quadratic(1.0, -3.0, 2.0).unwrap(),
+            QuadraticRoots::TwoReal(1.0, 2.0)
+        );
     }
 
     #[test]
     fn quadratic_double_and_complex_and_linear() {
         // x² − 2x + 1 → double 1
-        assert_eq!(solve_quadratic(1.0, -2.0, 1.0).unwrap(), QuadraticRoots::DoubleReal(1.0));
+        assert_eq!(
+            solve_quadratic(1.0, -2.0, 1.0).unwrap(),
+            QuadraticRoots::DoubleReal(1.0)
+        );
         // x² + 1 → ±i
         match solve_quadratic(1.0, 0.0, 1.0).unwrap() {
             QuadraticRoots::ComplexPair { re, im } => {
@@ -196,13 +221,22 @@ mod tests {
             other => panic!("expected complex pair, got {other:?}"),
         }
         // 0·x² + 2x + 4 → linear root −2
-        assert_eq!(solve_quadratic(0.0, 2.0, 4.0).unwrap(), QuadraticRoots::Linear(-2.0));
+        assert_eq!(
+            solve_quadratic(0.0, 2.0, 4.0).unwrap(),
+            QuadraticRoots::Linear(-2.0)
+        );
     }
 
     #[test]
     fn quadratic_rejects_degenerate() {
-        assert!(matches!(solve_quadratic(0.0, 0.0, 1.0), Err(SolversError::ComputationError)));
-        assert!(matches!(solve_quadratic(f64::NAN, 1.0, 1.0), Err(SolversError::ComputationError)));
+        assert!(matches!(
+            solve_quadratic(0.0, 0.0, 1.0),
+            Err(SolversError::ComputationError)
+        ));
+        assert!(matches!(
+            solve_quadratic(f64::NAN, 1.0, 1.0),
+            Err(SolversError::ComputationError)
+        ));
     }
 
     #[test]
@@ -228,6 +262,9 @@ mod tests {
 
     #[test]
     fn roots_reject_zero_polynomial() {
-        assert!(matches!(polynomial_roots(&[0.0, 0.0]), Err(SolversError::ComputationError)));
+        assert!(matches!(
+            polynomial_roots(&[0.0, 0.0]),
+            Err(SolversError::ComputationError)
+        ));
     }
 }

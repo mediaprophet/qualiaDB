@@ -82,9 +82,21 @@ impl Aabb {
         let mut max = [f32::NEG_INFINITY; 3];
         for ix in 0..8u8 {
             let corner = [
-                if ix & 1 == 0 { self.min[0] } else { self.max[0] },
-                if ix & 2 == 0 { self.min[1] } else { self.max[1] },
-                if ix & 4 == 0 { self.min[2] } else { self.max[2] },
+                if ix & 1 == 0 {
+                    self.min[0]
+                } else {
+                    self.max[0]
+                },
+                if ix & 2 == 0 {
+                    self.min[1]
+                } else {
+                    self.max[1]
+                },
+                if ix & 4 == 0 {
+                    self.min[2]
+                } else {
+                    self.max[2]
+                },
             ];
             let scaled = [
                 c[0] + (corner[0] - c[0]) * scale[0],

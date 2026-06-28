@@ -55,7 +55,9 @@ impl GlmModel {
 
     /// Predicted means for a row-major `n × p` matrix.
     pub fn predict(&self, x: &[f64], n: usize, p: usize) -> Vec<f64> {
-        (0..n).map(|i| self.predict_row(&x[i * p..(i + 1) * p])).collect()
+        (0..n)
+            .map(|i| self.predict_row(&x[i * p..(i + 1) * p]))
+            .collect()
     }
 }
 
@@ -96,14 +98,17 @@ pub fn fit(
 
     let mut beta = vec![0.0; k];
     // Initialise η from a safe starting mean.
-    let mut eta: Vec<f64> = y.iter().map(|&yi| {
-        let mu = family.start_mu(yi);
-        // η₀ = link(μ₀); use a tiny IRLS-friendly init via inverse of inv_link.
-        match family {
-            Family::Binomial => (mu / (1.0 - mu)).ln(),
-            Family::Poisson => mu.ln(),
-        }
-    }).collect();
+    let mut eta: Vec<f64> = y
+        .iter()
+        .map(|&yi| {
+            let mu = family.start_mu(yi);
+            // η₀ = link(μ₀); use a tiny IRLS-friendly init via inverse of inv_link.
+            match family {
+                Family::Binomial => (mu / (1.0 - mu)).ln(),
+                Family::Poisson => mu.ln(),
+            }
+        })
+        .collect();
 
     let mut a = vec![0.0; k * k];
     let mut b = vec![0.0; k];
@@ -202,12 +207,24 @@ pub fn fit(
 }
 
 /// Convenience: logistic regression (Bernoulli `y ∈ {0,1}`).
-pub fn fit_logistic(x: &[f64], y: &[f64], n: usize, p: usize, fit_intercept: bool) -> Result<GlmModel, LearningError> {
+pub fn fit_logistic(
+    x: &[f64],
+    y: &[f64],
+    n: usize,
+    p: usize,
+    fit_intercept: bool,
+) -> Result<GlmModel, LearningError> {
     fit(Family::Binomial, x, y, n, p, fit_intercept)
 }
 
 /// Convenience: Poisson regression (count `y ≥ 0`).
-pub fn fit_poisson(x: &[f64], y: &[f64], n: usize, p: usize, fit_intercept: bool) -> Result<GlmModel, LearningError> {
+pub fn fit_poisson(
+    x: &[f64],
+    y: &[f64],
+    n: usize,
+    p: usize,
+    fit_intercept: bool,
+) -> Result<GlmModel, LearningError> {
     fit(Family::Poisson, x, y, n, p, fit_intercept)
 }
 
@@ -223,7 +240,11 @@ mod tests {
         let y = [0.0, 0.0, 0.0, 1.0, 0.0, 1.0, 0.0, 1.0, 1.0, 1.0];
         let m = fit_logistic(&x, &y, 10, 1, true).unwrap();
         assert!(m.converged);
-        assert!(m.coefficients[1] > 0.0, "slope should be positive: {}", m.coefficients[1]);
+        assert!(
+            m.coefficients[1] > 0.0,
+            "slope should be positive: {}",
+            m.coefficients[1]
+        );
         // Predicted probability is higher for a large x than a small one.
         assert!(m.predict_row(&[10.0]) > m.predict_row(&[1.0]));
         assert!(m.predict_row(&[10.0]) > 0.5 && m.predict_row(&[1.0]) < 0.5);
@@ -233,11 +254,17 @@ mod tests {
     #[test]
     fn logistic_significance_and_inference() {
         // A stronger, larger non-separable signal → significant positive slope.
-        let x = [1.0, 2.0, 3.0, 4.0, 5.0, 6.0, 7.0, 8.0, 9.0, 10.0, 11.0, 12.0];
+        let x = [
+            1.0, 2.0, 3.0, 4.0, 5.0, 6.0, 7.0, 8.0, 9.0, 10.0, 11.0, 12.0,
+        ];
         let y = [0.0, 0.0, 0.0, 0.0, 1.0, 0.0, 1.0, 1.0, 0.0, 1.0, 1.0, 1.0];
         let m = fit_logistic(&x, &y, 12, 1, true).unwrap();
         assert!(m.coefficients[1] > 0.0);
-        assert!(m.p_values[1] < 0.1, "trend should be significant: p={}", m.p_values[1]);
+        assert!(
+            m.p_values[1] < 0.1,
+            "trend should be significant: p={}",
+            m.p_values[1]
+        );
         assert!(m.std_errors[1] > 0.0 && m.std_errors[1].is_finite());
     }
 
@@ -248,13 +275,27 @@ mod tests {
         let y: Vec<f64> = x.iter().map(|&xi| (0.5 + 0.3 * xi).exp().round()).collect();
         let m = fit_poisson(&x, &y, 8, 1, true).unwrap();
         assert!(m.converged);
-        assert!((m.coefficients[1] - 0.3).abs() < 0.1, "slope {}", m.coefficients[1]);
-        assert!((m.coefficients[0] - 0.5).abs() < 0.2, "intercept {}", m.coefficients[0]);
+        assert!(
+            (m.coefficients[1] - 0.3).abs() < 0.1,
+            "slope {}",
+            m.coefficients[1]
+        );
+        assert!(
+            (m.coefficients[0] - 0.5).abs() < 0.2,
+            "intercept {}",
+            m.coefficients[0]
+        );
     }
 
     #[test]
     fn guards() {
-        assert_eq!(fit_logistic(&[1.0, 2.0], &[1.0], 2, 1, true).unwrap_err(), LearningError::InvalidDimension);
-        assert_eq!(fit_logistic(&[1.0, 2.0], &[1.0, 0.0], 2, 1, true).unwrap_err(), LearningError::InsufficientData);
+        assert_eq!(
+            fit_logistic(&[1.0, 2.0], &[1.0], 2, 1, true).unwrap_err(),
+            LearningError::InvalidDimension
+        );
+        assert_eq!(
+            fit_logistic(&[1.0, 2.0], &[1.0, 0.0], 2, 1, true).unwrap_err(),
+            LearningError::InsufficientData
+        );
     }
 }

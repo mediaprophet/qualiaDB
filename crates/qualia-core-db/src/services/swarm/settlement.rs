@@ -39,7 +39,10 @@ pub enum SettlementOutcome {
     /// Provider is owed payment — hand this to [`crate::ilp_dispatcher`] to execute.
     Pay(MicropaymentInstruction),
     /// No provider payment; the held amount returns to the requester.
-    Refund { amount_micro_units: u64, reason: &'static str },
+    Refund {
+        amount_micro_units: u64,
+        reason: &'static str,
+    },
 }
 
 /// An escrow for one paid job.
@@ -148,7 +151,9 @@ mod tests {
     #[test]
     fn verified_releases_a_payment_instruction() {
         let mut e = held_escrow();
-        let out = e.settle(VerificationVerdict::Verified { confidence: 0.999 }).unwrap();
+        let out = e
+            .settle(VerificationVerdict::Verified { confidence: 0.999 })
+            .unwrap();
         assert_eq!(e.state, EscrowState::ReleasedToProvider);
         match out {
             SettlementOutcome::Pay(instr) => {
@@ -162,16 +167,27 @@ mod tests {
     #[test]
     fn rejected_refunds_and_pays_no_provider() {
         let mut e = held_escrow();
-        let out = e.settle(VerificationVerdict::Rejected { reason: "A·B ≠ C (Freivalds)" }).unwrap();
+        let out = e
+            .settle(VerificationVerdict::Rejected {
+                reason: "A·B ≠ C (Freivalds)",
+            })
+            .unwrap();
         assert_eq!(e.state, EscrowState::RefundedToRequester);
-        assert!(matches!(out, SettlementOutcome::Refund { amount_micro_units: 500, .. }));
+        assert!(matches!(
+            out,
+            SettlementOutcome::Refund {
+                amount_micro_units: 500,
+                ..
+            }
+        ));
     }
 
     #[test]
     fn cannot_settle_before_holding() {
         let mut e = Escrow::offer(1, 1, 2, 500, "$ilp/x", false); // still Offered
         assert_eq!(
-            e.settle(VerificationVerdict::Verified { confidence: 1.0 }).unwrap_err(),
+            e.settle(VerificationVerdict::Verified { confidence: 1.0 })
+                .unwrap_err(),
             SwarmError::InvalidEscrowState
         );
     }
@@ -179,9 +195,12 @@ mod tests {
     #[test]
     fn cannot_double_settle() {
         let mut e = held_escrow();
-        e.settle(VerificationVerdict::Verified { confidence: 1.0 }).unwrap();
+        e.settle(VerificationVerdict::Verified { confidence: 1.0 })
+            .unwrap();
         // A second settle is now an invalid transition (already released).
-        assert!(e.settle(VerificationVerdict::Verified { confidence: 1.0 }).is_err());
+        assert!(e
+            .settle(VerificationVerdict::Verified { confidence: 1.0 })
+            .is_err());
     }
 
     #[test]

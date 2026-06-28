@@ -1,5 +1,6 @@
 //! Unified zero-heap RDF / RDF-Star serialization dispatch.
 
+use crate::rdf_star::RdfStarSerializer;
 use crate::resolver;
 use crate::sparql_library::parsers::turtle_star::{
     JsonLdStarSerializer, N3StarSerializer, NQuadsStarSerializer, TrigStarSerializer,
@@ -7,7 +8,6 @@ use crate::sparql_library::parsers::turtle_star::{
 };
 use crate::sparql_library::rdf_formats::{RdfFormat, RdfStarMode};
 use crate::NQuin;
-use crate::rdf_star::RdfStarSerializer;
 use std::io::Write;
 
 #[derive(Debug, Clone, PartialEq, Eq)]
@@ -60,7 +60,8 @@ fn serialize_star<W: Write>(
                     ser.serialize_triple(q.subject, q.predicate, q.object)
                 }
                 .map_err(|e| RdfDispatchError::Io(format!("{e:?}")))?;
-                out.write_all(&bytes).map_err(|e| RdfDispatchError::Io(e.to_string()))?;
+                out.write_all(&bytes)
+                    .map_err(|e| RdfDispatchError::Io(e.to_string()))?;
                 out.write_all(b"\n")
                     .map_err(|e| RdfDispatchError::Io(e.to_string()))?;
             }

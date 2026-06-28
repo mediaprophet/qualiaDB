@@ -105,9 +105,7 @@ pub fn canonical_tensor_slice_payload(
 #[inline]
 fn format_canonical_f32(v: f32) -> String {
     let s = format!("{:.6}", v);
-    s.trim_end_matches('0')
-        .trim_end_matches('.')
-        .to_string()
+    s.trim_end_matches('0').trim_end_matches('.').to_string()
 }
 
 /// Verify Ed25519 signature for identifier/vault tensor slice requests (fail closed).
@@ -154,7 +152,10 @@ pub fn quin_matches_lane(quin: &NQuin, lane: TensorSliceLane) -> bool {
 }
 
 /// Bake filtered graph quins into a tensor buffer blob (cold path; heap OK).
-pub fn build_tensor_slice_bytes(quins: &[NQuin], req: &TensorSliceRequest) -> Result<Vec<u8>, TensorSliceError> {
+pub fn build_tensor_slice_bytes(
+    quins: &[NQuin],
+    req: &TensorSliceRequest,
+) -> Result<Vec<u8>, TensorSliceError> {
     if quins.is_empty() {
         return Err(TensorSliceError::EmptyGraph);
     }
@@ -248,7 +249,15 @@ mod tests {
         let payload = canonical_tensor_slice_payload("nonce-a", STANDPOINT_DID, 0.5, 0.1);
         let sig_hex = hex::encode(sk.sign(payload.as_bytes()).to_bytes());
         assert_eq!(
-            verify_tensor_slice_signature(&vault, did, "nonce-b", STANDPOINT_DID, 0.5, 0.1, &sig_hex),
+            verify_tensor_slice_signature(
+                &vault,
+                did,
+                "nonce-b",
+                STANDPOINT_DID,
+                0.5,
+                0.1,
+                &sig_hex
+            ),
             Err(TensorSliceAuthError::InvalidSignature)
         );
     }

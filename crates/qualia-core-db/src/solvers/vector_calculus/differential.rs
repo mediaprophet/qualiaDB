@@ -105,6 +105,9 @@ mod tests {
 
     #[test]
     fn curl_dimension_guard() {
-        assert_eq!(curl(&[var("x"), var("y")], &["x", "y"]).unwrap_err(), VecCalcError::DimensionMismatch);
+        assert_eq!(
+            curl(&[var("x"), var("y")], &["x", "y"]).unwrap_err(),
+            VecCalcError::DimensionMismatch
+        );
     }
 }

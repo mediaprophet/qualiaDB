@@ -339,8 +339,16 @@ mod tests {
             );
         }
         // The new modalities specifically must be present.
-        for s in ["MetricTemporal", "ContraryToDuty", "CausalNecessity", "Abductive",
-                  "ClosedWorld", "Fuzzy", "Ctl", "Modal"] {
+        for s in [
+            "MetricTemporal",
+            "ContraryToDuty",
+            "CausalNecessity",
+            "Abductive",
+            "ClosedWorld",
+            "Fuzzy",
+            "Ctl",
+            "Modal",
+        ] {
             assert!(ttl.contains(s), "new modality {s} missing its SHACL shape");
         }
         // Namespace migrated (no residual qualia.* namespace).
@@ -353,27 +361,45 @@ mod tests {
         let ttl = get_logic_modalities_shacl_ttl();
         // Every SDL⁺ phase carries a configuration shape.
         for s in [
-            "DeonticLifecycleConfigurationShape", "DeonticExtConfigurationShape",
-            "JuralConfigurationShape", "StitConfigurationShape", "MensReaConfigurationShape",
-            "InteractionGovernanceConfigurationShape", "MetaDeonticConfigurationShape",
+            "DeonticLifecycleConfigurationShape",
+            "DeonticExtConfigurationShape",
+            "JuralConfigurationShape",
+            "StitConfigurationShape",
+            "MensReaConfigurationShape",
+            "InteractionGovernanceConfigurationShape",
+            "MetaDeonticConfigurationShape",
         ] {
             assert!(ttl.contains(s), "SDL⁺ shape {s} missing");
         }
         // The key opcode-range constraints are stated (engine ↔ SHACL parity).
         assert!(ttl.contains("OPTIONAL 0x13"), "SDL⁺ ext opcodes documented");
         assert!(ttl.contains("0x30–0x37"), "jural opcode block documented");
-        assert!(ttl.contains("Pending 4, Violated 5, Discharged 6"), "lifecycle states documented");
+        assert!(
+            ttl.contains("Pending 4, Violated 5, Discharged 6"),
+            "lifecycle states documented"
+        );
     }
 
     #[test]
     fn epistemic_shape_covers_the_full_engine() {
         let ttl = get_logic_modalities_shacl_ttl();
         // Not just `certainty` anymore — opcodes, bands, nesting, world/agent scoping.
-        assert!(ttl.contains("q42:epistemicOpcode"), "epistemic opcode range");
-        assert!(ttl.contains("OP_COMMON_KNOWLEDGE 0x22"), "all three epistemic operators");
-        assert!(ttl.contains("q42:nestingDepth"), "nested-attitude depth (RDF-Star)");
-        assert!(ttl.contains("q42:worldContext") && ttl.contains("q42:agentDid"),
-            "possible-world + agent scoping");
+        assert!(
+            ttl.contains("q42:epistemicOpcode"),
+            "epistemic opcode range"
+        );
+        assert!(
+            ttl.contains("OP_COMMON_KNOWLEDGE 0x22"),
+            "all three epistemic operators"
+        );
+        assert!(
+            ttl.contains("q42:nestingDepth"),
+            "nested-attitude depth (RDF-Star)"
+        );
+        assert!(
+            ttl.contains("q42:worldContext") && ttl.contains("q42:agentDid"),
+            "possible-world + agent scoping"
+        );
         // The named doxastic bands are documented.
         for band in ["affirms 230", "considers 128", "doubts 20"] {
             assert!(ttl.contains(band), "certainty band '{band}' documented");
@@ -384,19 +410,35 @@ mod tests {
     fn extended_legal_logic_16_30_has_full_shacl_coverage() {
         let ttl = get_logic_modalities_shacl_ttl();
         for s in [
-            "ResponsibilityStatusConfigurationShape", "SystemicMetaGuardConfigurationShape",
-            "JuridicalCapacityConfigurationShape", "DelegationChainConfigurationShape",
-            "ContractFormationConfigurationShape", "ValueFlowConfigurationShape",
-            "CapabilityGapConfigurationShape", "ResilientIdentityConfigurationShape",
-            "ZkGatedConfigurationShape", "ProportionalityConfigurationShape",
-            "SenseTranslationConfigurationShape", "ConsensusConfigurationShape",
-            "ManifoldLogicConfigurationShape", "CarrierBindingConfigurationShape",
+            "ResponsibilityStatusConfigurationShape",
+            "SystemicMetaGuardConfigurationShape",
+            "JuridicalCapacityConfigurationShape",
+            "DelegationChainConfigurationShape",
+            "ContractFormationConfigurationShape",
+            "ValueFlowConfigurationShape",
+            "CapabilityGapConfigurationShape",
+            "ResilientIdentityConfigurationShape",
+            "ZkGatedConfigurationShape",
+            "ProportionalityConfigurationShape",
+            "SenseTranslationConfigurationShape",
+            "ConsensusConfigurationShape",
+            "ManifoldLogicConfigurationShape",
+            "CarrierBindingConfigurationShape",
         ] {
             assert!(ttl.contains(s), "§16–§30 shape {s} missing");
         }
         // A few load-bearing semantics are stated (engine ↔ SHACL parity).
-        assert!(ttl.contains("VOIDABLE at the victim's election"), "§18 duress reading documented");
-        assert!(ttl.contains("only Adjudicated is an enforceable fact"), "§25 due-process gate");
-        assert!(ttl.contains("∂Harm/∂x < Advantage"), "§26 proportionality test");
+        assert!(
+            ttl.contains("VOIDABLE at the victim's election"),
+            "§18 duress reading documented"
+        );
+        assert!(
+            ttl.contains("only Adjudicated is an enforceable fact"),
+            "§25 due-process gate"
+        );
+        assert!(
+            ttl.contains("∂Harm/∂x < Advantage"),
+            "§26 proportionality test"
+        );
     }
 }

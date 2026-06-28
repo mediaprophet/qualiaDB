@@ -20,7 +20,10 @@ pub fn holm(p: &[f64]) -> Vec<f64> {
     }
     // Sort indices by ascending p.
     let mut order: Vec<usize> = (0..m).collect();
-    order.sort_by(|&a, &b| p[a].partial_cmp(&p[b]).unwrap_or(core::cmp::Ordering::Equal));
+    order.sort_by(|&a, &b| {
+        p[a].partial_cmp(&p[b])
+            .unwrap_or(core::cmp::Ordering::Equal)
+    });
     let mut adj = vec![0.0; m];
     let mut running = 0.0_f64;
     for (rank, &idx) in order.iter().enumerate() {
@@ -40,7 +43,10 @@ pub fn benjamini_hochberg(p: &[f64]) -> Vec<f64> {
         return Vec::new();
     }
     let mut order: Vec<usize> = (0..m).collect();
-    order.sort_by(|&a, &b| p[a].partial_cmp(&p[b]).unwrap_or(core::cmp::Ordering::Equal));
+    order.sort_by(|&a, &b| {
+        p[a].partial_cmp(&p[b])
+            .unwrap_or(core::cmp::Ordering::Equal)
+    });
     let mf = m as f64;
     let mut adj = vec![0.0; m];
     // Walk from the largest p downward, carrying the running minimum.
@@ -70,7 +76,7 @@ mod tests {
         let adj = bonferroni(&p);
         assert!((adj[0] - 0.04).abs() < 1e-12); // 4 * 0.01
         assert!((adj[3] - 0.02).abs() < 1e-12); // 4 * 0.005
-        // Capped at 1.
+                                                // Capped at 1.
         assert_eq!(bonferroni(&[0.5, 0.9])[1], 1.0);
     }
 

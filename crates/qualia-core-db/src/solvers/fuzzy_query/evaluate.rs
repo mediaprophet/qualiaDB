@@ -15,7 +15,9 @@ where
     F: Fn(&BindingRow) -> f64,
 {
     FuzzyResultSet::from_solutions(
-        rows.iter().map(|r| FuzzySolution::new(*r, degree_of(r))).collect(),
+        rows.iter()
+            .map(|r| FuzzySolution::new(*r, degree_of(r)))
+            .collect(),
     )
 }
 
@@ -77,8 +79,14 @@ mod tests {
     #[test]
     fn annotate_with_a_fuzzy_filter() {
         // Slot 1 holds an age; "≈ 30 ± 10" is the fuzzy FILTER.
-        let rows = [row(&[(0, 100), (1, 30)]), row(&[(0, 101), (1, 25)]), row(&[(0, 102), (1, 50)])];
-        let set = annotate(&rows, |r| approximately(r.get(1).unwrap() as f64, 30.0, 10.0));
+        let rows = [
+            row(&[(0, 100), (1, 30)]),
+            row(&[(0, 101), (1, 25)]),
+            row(&[(0, 102), (1, 50)]),
+        ];
+        let set = annotate(&rows, |r| {
+            approximately(r.get(1).unwrap() as f64, 30.0, 10.0)
+        });
         let ranked = set.order_by_degree_desc();
         assert_eq!(ranked.solutions[0].row.get(0), Some(100)); // exactly 30 → degree 1
         assert!(ranked.solutions.last().unwrap().degree.abs() < 1e-9); // 50 → 0
@@ -98,7 +106,11 @@ mod tests {
                 false
             }
         };
-        let set = collect_from(pull, |r| approximately(r.get(1).unwrap() as f64, 30.0, 5.0), 1000);
+        let set = collect_from(
+            pull,
+            |r| approximately(r.get(1).unwrap() as f64, 30.0, 5.0),
+            1000,
+        );
         assert_eq!(set.len(), 2);
     }
 
@@ -116,10 +128,9 @@ mod tests {
     #[test]
     fn conjunctive_bgp_join_and_threshold() {
         // Pattern A: ?x age≈30 ; Pattern B: ?x linked to ?y. Join on ?x, threshold.
-        let a = annotate(
-            &[row(&[(0, 1), (1, 30)]), row(&[(0, 2), (1, 20)])],
-            |r| approximately(r.get(1).unwrap() as f64, 30.0, 10.0),
-        );
+        let a = annotate(&[row(&[(0, 1), (1, 30)]), row(&[(0, 2), (1, 20)])], |r| {
+            approximately(r.get(1).unwrap() as f64, 30.0, 10.0)
+        });
         let b = annotate(&[row(&[(0, 1), (2, 99)])], |_| 1.0);
         let q = conjunctive_query(&[a, b], DegreeNorm::Godel, 0.5);
         assert_eq!(q.len(), 1);

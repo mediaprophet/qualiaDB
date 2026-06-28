@@ -2,8 +2,8 @@
 
 use bytemuck::{Pod, Zeroable};
 
-use super::Tensor10D;
 use super::resident_substrate::{global_resident_substrate, MAX_KNN_HITS, MAX_RESIDENT_NODES};
+use super::Tensor10D;
 
 pub const TENSOR_VOLUME_STRIDE_FLOATS: u32 = 10;
 
@@ -120,8 +120,13 @@ impl TensorVolumeGpu {
                 flat[base + 9] = t.sigma;
             }
         }
-        let bytes = (count as usize * TENSOR_VOLUME_STRIDE_FLOATS as usize * 4) as wgpu::BufferAddress;
-        queue.write_buffer(&self.nodes_buf, 0, bytemuck::cast_slice(&flat[..count as usize * 10]));
+        let bytes =
+            (count as usize * TENSOR_VOLUME_STRIDE_FLOATS as usize * 4) as wgpu::BufferAddress;
+        queue.write_buffer(
+            &self.nodes_buf,
+            0,
+            bytemuck::cast_slice(&flat[..count as usize * 10]),
+        );
         let _ = bytes;
         true
     }
@@ -190,7 +195,13 @@ impl TensorVolumeGpu {
             pass.set_bind_group(0, &bind, &[]);
             pass.dispatch_workgroups(wg, 1, 1);
         }
-        encoder.copy_buffer_to_buffer(&self.hits_buf, 0, &self.staging_hits, 0, (MAX_KNN_HITS * 4) as u64);
+        encoder.copy_buffer_to_buffer(
+            &self.hits_buf,
+            0,
+            &self.staging_hits,
+            0,
+            (MAX_KNN_HITS * 4) as u64,
+        );
         encoder.copy_buffer_to_buffer(&self.count_buf, 0, &self.staging_count, 0, 4);
         queue.submit(Some(encoder.finish()));
 

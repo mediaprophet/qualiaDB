@@ -11,7 +11,10 @@
 pub struct Rng(pub u64);
 impl Rng {
     pub fn unit(&mut self) -> f64 {
-        self.0 = self.0.wrapping_mul(6364136223846793005).wrapping_add(1442695040888963407);
+        self.0 = self
+            .0
+            .wrapping_mul(6364136223846793005)
+            .wrapping_add(1442695040888963407);
         ((self.0 >> 11) as f64) / ((1u64 << 53) as f64)
     }
     pub fn below(&mut self, b: usize) -> usize {
@@ -113,7 +116,9 @@ where
     }
     let mut rng = Rng(seed ^ 0xD1B54A32D192ED03);
     let sample = |rng: &mut Rng| -> Vec<f64> {
-        (0..d).map(|j| lower[j] + rng.unit() * (upper[j] - lower[j])).collect()
+        (0..d)
+            .map(|j| lower[j] + rng.unit() * (upper[j] - lower[j]))
+            .collect()
     };
     let mut foods: Vec<Vec<f64>> = (0..n_bees).map(|_| sample(&mut rng)).collect();
     let mut vals: Vec<f64> = foods.iter().map(|f| objective(f)).collect();
@@ -180,7 +185,8 @@ mod tests {
     fn abc_minimizes_the_sphere() {
         // f(x) = Σ x² has its global minimum 0 at the origin.
         let f = |x: &[f64]| x.iter().map(|v| v * v).sum::<f64>();
-        let (x, val) = artificial_bee_colony(f, &[-5.0, -5.0, -5.0], &[5.0, 5.0, 5.0], 30, 300, 1).unwrap();
+        let (x, val) =
+            artificial_bee_colony(f, &[-5.0, -5.0, -5.0], &[5.0, 5.0, 5.0], 30, 300, 1).unwrap();
         assert!(val < 1e-2, "ABC sphere min {val}");
         assert!(x.iter().all(|&xi| xi.abs() < 0.2));
     }
@@ -195,7 +201,11 @@ mod tests {
         };
         let neighbor = |s: &Vec<f64>, rng: &mut Rng| vec![s[0] + 0.5 * rng.gaussian()];
         let (best, _) = simulated_annealing(vec![-2.0], neighbor, f, 5.0, 0.997, 8000, 3);
-        assert!(best[0] > 0.0, "SA should find the right well, got {}", best[0]);
+        assert!(
+            best[0] > 0.0,
+            "SA should find the right well, got {}",
+            best[0]
+        );
     }
 
     #[test]
@@ -204,11 +214,13 @@ mod tests {
         // negative) by single-bit flips — proves the generic combinatorial path.
         let objective = |s: &Vec<bool>| -(s.iter().filter(|&&b| b).count() as f64);
         let neighbors = |s: &Vec<bool>| {
-            (0..s.len()).map(|i| {
-                let mut c = s.clone();
-                c[i] = !c[i];
-                c
-            }).collect()
+            (0..s.len())
+                .map(|i| {
+                    let mut c = s.clone();
+                    c[i] = !c[i];
+                    c
+                })
+                .collect()
         };
         let (best, val) = hill_climbing(vec![false; 8], neighbors, objective, 100);
         assert!(best.iter().all(|&b| b), "should turn on all bits");

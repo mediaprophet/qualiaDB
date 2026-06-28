@@ -88,17 +88,53 @@ mod tests {
         let builds = AtomicUsize::new(0);
 
         // First touch at rev 1 builds.
-        let v = cache.with(1, || { builds.fetch_add(1, Ordering::SeqCst); 42 }, |v| *v);
+        let v = cache.with(
+            1,
+            || {
+                builds.fetch_add(1, Ordering::SeqCst);
+                42
+            },
+            |v| *v,
+        );
         assert_eq!(v, 42);
         // Same rev: served from cache, no rebuild.
-        cache.with(1, || { builds.fetch_add(1, Ordering::SeqCst); 0 }, |_| ());
-        assert_eq!(builds.load(Ordering::SeqCst), 1, "same revision must not rebuild");
+        cache.with(
+            1,
+            || {
+                builds.fetch_add(1, Ordering::SeqCst);
+                0
+            },
+            |_| (),
+        );
+        assert_eq!(
+            builds.load(Ordering::SeqCst),
+            1,
+            "same revision must not rebuild"
+        );
 
         // New rev: rebuild.
-        cache.with(2, || { builds.fetch_add(1, Ordering::SeqCst); 99 }, |_| ());
-        assert_eq!(builds.load(Ordering::SeqCst), 2, "changed revision must rebuild");
+        cache.with(
+            2,
+            || {
+                builds.fetch_add(1, Ordering::SeqCst);
+                99
+            },
+            |_| (),
+        );
+        assert_eq!(
+            builds.load(Ordering::SeqCst),
+            2,
+            "changed revision must rebuild"
+        );
         // And stays cached at the new rev.
-        cache.with(2, || { builds.fetch_add(1, Ordering::SeqCst); 0 }, |_| ());
+        cache.with(
+            2,
+            || {
+                builds.fetch_add(1, Ordering::SeqCst);
+                0
+            },
+            |_| (),
+        );
         assert_eq!(builds.load(Ordering::SeqCst), 2);
     }
 }

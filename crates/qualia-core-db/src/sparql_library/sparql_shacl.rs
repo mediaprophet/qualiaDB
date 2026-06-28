@@ -3,9 +3,9 @@
 //! Validates SHACL shapes with SPARQL constraints using zero-allocation patterns.
 
 use crate::sparql_ast::*;
+use crate::sparql_executor::*;
 use crate::sparql_parser;
 use crate::sparql_planner::*;
-use crate::sparql_executor::*;
 use crate::NQuin;
 
 /// SHACL constraint types
@@ -17,29 +17,19 @@ pub enum ShaclConstraint {
         node_kind: u8, // 0=BlankNode, 1=IRI, 2=Literal
     },
     /// sh:class
-    Class {
-        class_iri: u64,
-    },
+    Class { class_iri: u64 },
     /// sh:minCount
-    MinCount {
-        min_count: u64,
-    },
+    MinCount { min_count: u64 },
     /// sh:maxCount
-    MaxCount {
-        max_count: u64,
-    },
+    MaxCount { max_count: u64 },
     /// sh:datatype
-    Datatype {
-        datatype_iri: u64,
-    },
+    Datatype { datatype_iri: u64 },
     /// sh:pattern
     Pattern {
         pattern_regex: u64, // Hash of regex pattern
     },
     /// sh:sparql - SPARQL constraint
-    Sparql {
-        query: SparqlQuery,
-    },
+    Sparql { query: SparqlQuery },
     /// sh:property constraint
     Property {
         predicate: u64,
@@ -119,17 +109,15 @@ impl<'a> ShaclValidator<'a> {
     }
 
     /// Validate a node against a shape
-    pub fn validate_node(
-        &self,
-        node: u64,
-        shape: &ShaclShape,
-    ) -> Result<ValidationResult, String> {
+    pub fn validate_node(&self, node: u64, shape: &ShaclShape) -> Result<ValidationResult, String> {
         let mut violation_count = 0;
 
         // Validate each constraint
         for i in 0..shape.constraint_count as usize {
             let constraint_id = shape.constraints[i];
-            let constraint = self.constraints.get(constraint_id as usize)
+            let constraint = self
+                .constraints
+                .get(constraint_id as usize)
                 .ok_or("Constraint ID out of bounds")?;
 
             if !self.validate_constraint(node, constraint)? {
@@ -196,14 +184,16 @@ impl<'a> ShaclValidator<'a> {
 
     fn check_class_membership(&self, node: u64, class_iri: u64) -> Result<bool, String> {
         // Check if there's a triple: node rdf:type class_iri
-        let rdf_type = crate::lexicon::generate_60bit_token(b"http://www.w3.org/1999/02/22-rdf-syntax-ns#type");
-        
+        let rdf_type = crate::lexicon::generate_60bit_token(
+            b"http://www.w3.org/1999/02/22-rdf-syntax-ns#type",
+        );
+
         for quin in self.quins {
             if quin.subject == node && quin.predicate == rdf_type && quin.object == class_iri {
                 return Ok(true);
             }
         }
-        
+
         Ok(false)
     }
 
@@ -278,39 +268,41 @@ impl<'a> ShaclValidator<'a> {
     /// Validate all shapes against the graph
     pub fn validate_graph(&self) -> Result<Vec<ValidationResult>, String> {
         let mut results = Vec::new();
-        
+
         // For each shape, validate nodes
         for shape_idx in 0..self.shape_count as usize {
             let shape = self.shapes[shape_idx];
-            
+
             // Find target nodes
             let target_nodes = self.find_target_nodes(&shape)?;
-            
+
             for node in target_nodes {
                 let result = self.validate_node(node, &shape)?;
                 results.push(result);
             }
         }
-        
+
         Ok(results)
     }
 
     fn find_target_nodes(&self, shape: &ShaclShape) -> Result<Vec<u64>, String> {
         let mut nodes = Vec::new();
-        
+
         if let Some(target_node) = shape.target_node {
             nodes.push(target_node);
         } else if let Some(target_class) = shape.target_class {
             // Find all nodes with rdf:type target_class
-            let rdf_type = crate::lexicon::generate_60bit_token(b"http://www.w3.org/1999/02/22-rdf-syntax-ns#type");
-            
+            let rdf_type = crate::lexicon::generate_60bit_token(
+                b"http://www.w3.org/1999/02/22-rdf-syntax-ns#type",
+            );
+
             for quin in self.quins {
                 if quin.predicate == rdf_type && quin.object == target_class {
                     nodes.push(quin.subject);
                 }
             }
         }
-        
+
         Ok(nodes)
     }
 }
@@ -326,7 +318,8 @@ fn datatype_iri_to_tag(datatype_iri: u64) -> u8 {
         0
     } else if datatype_iri == crate::q_hash("xsd:integer") {
         1
-    } else if datatype_iri == crate::q_hash("xsd:decimal") || datatype_iri == crate::q_hash("xsd:double")
+    } else if datatype_iri == crate::q_hash("xsd:decimal")
+        || datatype_iri == crate::q_hash("xsd:double")
     {
         2
     } else if datatype_iri == crate::q_hash("xsd:boolean") {
@@ -351,7 +344,7 @@ mod tests {
     fn test_add_shape() {
         let quins = vec![];
         let mut validator = ShaclValidator::new(&quins);
-        
+
         let shape = ShaclShape {
             shape_iri: 1,
             target_class: None,
@@ -359,7 +352,7 @@ mod tests {
             constraints: [0; 32],
             constraint_count: 0,
         };
-        
+
         let result = validator.add_shape(shape);
         assert!(result.is_ok());
         assert_eq!(validator.shape_count, 1);
@@ -369,7 +362,7 @@ mod tests {
     fn test_add_constraint() {
         let quins = vec![];
         let mut validator = ShaclValidator::new(&quins);
-        
+
         let constraint = ShaclConstraint::NodeKind { node_kind: 1 };
         let result = validator.add_constraint(constraint);
         assert!(result.is_ok());

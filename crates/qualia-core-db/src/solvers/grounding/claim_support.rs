@@ -51,7 +51,9 @@ fn role_overlap(claim: &NQuin, fact: &NQuin) -> f64 {
 /// Strongest same-role support for `claim` across `facts` (max role overlap). `0.0`
 /// for empty evidence.
 pub fn component_support(claim: &NQuin, facts: &[NQuin]) -> f64 {
-    facts.iter().fold(0.0_f64, |best, f| best.max(role_overlap(claim, f)))
+    facts
+        .iter()
+        .fold(0.0_f64, |best, f| best.max(role_overlap(claim, f)))
 }
 
 /// Fraction of the claim's endpoints `{subject, object}` that occur in *any* role
@@ -82,8 +84,17 @@ pub fn report(claim: &NQuin, facts: &[NQuin]) -> GroundingReport {
     });
     // Exact attestation dominates; otherwise the stronger of role support and a capped
     // half-weight of endpoint grounding.
-    let score = if exact { 1.0 } else { role_support.max(0.5 * eg) };
-    GroundingReport { role_support, entity_grounding: eg, exact, score }
+    let score = if exact {
+        1.0
+    } else {
+        role_support.max(0.5 * eg)
+    };
+    GroundingReport {
+        role_support,
+        entity_grounding: eg,
+        exact,
+        score,
+    }
 }
 
 #[cfg(test)]
@@ -91,7 +102,14 @@ mod tests {
     use super::*;
 
     fn quin(s: u64, p: u64, o: u64) -> NQuin {
-        NQuin { subject: s, predicate: p, object: o, context: 0, metadata: 0, parity: 0 }
+        NQuin {
+            subject: s,
+            predicate: p,
+            object: o,
+            context: 0,
+            metadata: 0,
+            parity: 0,
+        }
     }
 
     #[test]

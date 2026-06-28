@@ -297,12 +297,7 @@ fn dequant_q5_0(raw: &[u8], n_elems: usize, out: &mut [f32]) -> Result<usize, Gg
     for b in 0..n_blocks {
         let bs = b * BLOCK_BYTES;
         let d = half::f16::from_le_bytes([raw[bs], raw[bs + 1]]).to_f32();
-        let qh = u32::from_le_bytes([
-            raw[bs + 2],
-            raw[bs + 3],
-            raw[bs + 4],
-            raw[bs + 5],
-        ]);
+        let qh = u32::from_le_bytes([raw[bs + 2], raw[bs + 3], raw[bs + 4], raw[bs + 5]]);
         let qs = &raw[bs + 6..bs + 22];
         let half = BLOCK_ELEMS / 2;
         for j in 0..half {
@@ -417,13 +412,15 @@ fn dequant_q6_k_block(block: &[u8; 210], out: &mut [f32]) {
     for _ in 0..2 {
         for l in 0..32 {
             let is = l / 16;
-            let q1 = ((blk.ql[ql_off + l] & 0xF) | (((blk.qh[qh_off + l] >> 0) & 3) << 4)) as i8 - 32;
-            let q2 = ((blk.ql[ql_off + l + 32] & 0xF)
-                | (((blk.qh[qh_off + l] >> 2) & 3) << 4)) as i8
+            let q1 =
+                ((blk.ql[ql_off + l] & 0xF) | (((blk.qh[qh_off + l] >> 0) & 3) << 4)) as i8 - 32;
+            let q2 = ((blk.ql[ql_off + l + 32] & 0xF) | (((blk.qh[qh_off + l] >> 2) & 3) << 4))
+                as i8
                 - 32;
-            let q3 = ((blk.ql[ql_off + l] >> 4) | (((blk.qh[qh_off + l] >> 4) & 3) << 4)) as i8 - 32;
-            let q4 = ((blk.ql[ql_off + l + 32] >> 4)
-                | (((blk.qh[qh_off + l] >> 6) & 3) << 4)) as i8
+            let q3 =
+                ((blk.ql[ql_off + l] >> 4) | (((blk.qh[qh_off + l] >> 4) & 3) << 4)) as i8 - 32;
+            let q4 = ((blk.ql[ql_off + l + 32] >> 4) | (((blk.qh[qh_off + l] >> 6) & 3) << 4))
+                as i8
                 - 32;
             let sc = &blk.scales[sc_off..sc_off + 8];
             out[y_off + l] = d * sc[is] as f32 * q1 as f32;
@@ -488,7 +485,10 @@ mod tests {
             byte_offset: 0,
         };
         let n = 960 * 2560;
-        assert_eq!(tensor_byte_len(&info), Some(crate::ternary::ternary_blob_len(n)));
+        assert_eq!(
+            tensor_byte_len(&info),
+            Some(crate::ternary::ternary_blob_len(n))
+        );
 
         // and fetch returns exactly that slice from a buffer holding a real ternary blob.
         let weights: Vec<f32> = (0..n).map(|i| (i as f32 * 0.001).sin()).collect();
@@ -508,20 +508,24 @@ mod tests {
         }
         let mmap = std::fs::read(&path).expect("read gguf");
         let index = crate::gguf_sharder::GgufTensorIndex::from_gguf(&mmap);
-        let info = index
-            .get_layer_tensors(0)
-            .attn_k
-            .expect("blk.0.attn_k");
-        let raw =
-            fetch_tensor_bytes(&mmap, index.tensor_data_start, &info).expect("fetch attn_k");
+        let info = index.get_layer_tensors(0).attn_k.expect("blk.0.attn_k");
+        let raw = fetch_tensor_bytes(&mmap, index.tensor_data_start, &info).expect("fetch attn_k");
         let row_bytes = ggml_row_bytes(GGML_TYPE_Q5_0, info.dims[0] as usize).unwrap();
         assert_eq!(row_bytes, 660);
         let mut out = [0f32; 960];
         dequantize_row_into(&raw[..row_bytes], GGML_TYPE_Q5_0, 960, &mut out).unwrap();
         // Reference: gguf-py dequantize_row_q5_0 on blk.0.attn_k.weight row 0
         let expected = [
-            -0.0f32, -0.02502441, -0.10009766, -0.07507324, -0.05004883, -0.3503418, -0.0,
-            0.05004883, -0.07507324, 0.1751709,
+            -0.0f32,
+            -0.02502441,
+            -0.10009766,
+            -0.07507324,
+            -0.05004883,
+            -0.3503418,
+            -0.0,
+            0.05004883,
+            -0.07507324,
+            0.1751709,
         ];
         for (i, &exp) in expected.iter().enumerate() {
             assert!(
@@ -591,12 +595,10 @@ mod tests {
         }
         let mmap = std::fs::read(&path).expect("read gguf");
         let index = crate::gguf_sharder::GgufTensorIndex::from_gguf(&mmap);
-        let info = index
-            .get_layer_tensors(0)
-            .ffn_down
-            .expect("blk.0.ffn_down");
+        let info = index.get_layer_tensors(0).ffn_down.expect("blk.0.ffn_down");
         assert_eq!(info.ggml_type, GGML_TYPE_Q6_K);
-        let raw = fetch_tensor_bytes(&mmap, index.tensor_data_start, &info).expect("fetch ffn_down");
+        let raw =
+            fetch_tensor_bytes(&mmap, index.tensor_data_start, &info).expect("fetch ffn_down");
         let row_bytes = ggml_row_bytes(GGML_TYPE_Q6_K, info.dims[0] as usize).unwrap();
         assert_eq!(row_bytes, 2100);
         let mut out = [0f32; 2560];

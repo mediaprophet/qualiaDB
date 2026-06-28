@@ -127,7 +127,8 @@ pub fn load_corpus() -> std::io::Result<Vec<String>> {
         "../../benchmarks/data/eval_corpus.txt",
         "../benchmarks/data/eval_corpus.txt",
     ];
-    let mut last_err = std::io::Error::new(std::io::ErrorKind::NotFound, "eval_corpus.txt not found");
+    let mut last_err =
+        std::io::Error::new(std::io::ErrorKind::NotFound, "eval_corpus.txt not found");
     for p in CANDIDATES {
         match std::fs::read_to_string(p) {
             Ok(s) => {
@@ -194,9 +195,21 @@ mod tests {
     #[test]
     fn delta_ppl_and_gate() {
         assert!((delta_ppl(10.0, 10.5) - 0.05).abs() < 1e-9);
-        let pass = QualityVerdict { delta_ppl: 0.03, avg_kl: 0.04, uniq_word: 0.95 };
-        let fail_hard = QualityVerdict { delta_ppl: 0.0, avg_kl: 0.0, uniq_word: 0.10 };
-        let fail_soft = QualityVerdict { delta_ppl: 0.20, avg_kl: 0.04, uniq_word: 0.95 };
+        let pass = QualityVerdict {
+            delta_ppl: 0.03,
+            avg_kl: 0.04,
+            uniq_word: 0.95,
+        };
+        let fail_hard = QualityVerdict {
+            delta_ppl: 0.0,
+            avg_kl: 0.0,
+            uniq_word: 0.10,
+        };
+        let fail_soft = QualityVerdict {
+            delta_ppl: 0.20,
+            avg_kl: 0.04,
+            uniq_word: 0.95,
+        };
         assert!(pass.accept());
         assert!(!fail_hard.accept() && !fail_hard.hard_pass());
         assert!(!fail_soft.accept() && fail_soft.hard_pass() && !fail_soft.soft_pass());

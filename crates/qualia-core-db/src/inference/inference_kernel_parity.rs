@@ -326,7 +326,8 @@ mod tests {
         let mut kbytes = vec![0u8; q4_k_bytes(w.len())];
         assert!(quantize_q4_k_from_f32(&w, &mut kbytes));
         let mut back_k = vec![0f32; 256];
-        let nk = crate::ggml_quants::dequant_matrix_row_into(&kbytes, &info_k, 0, &mut back_k).unwrap();
+        let nk =
+            crate::ggml_quants::dequant_matrix_row_into(&kbytes, &info_k, 0, &mut back_k).unwrap();
         assert_eq!(nk, 256);
         let err_k = max_abs_err(&w, &back_k);
 
@@ -345,7 +346,13 @@ mod tests {
 
         let range = 2.0 + 1.98; // ~3.98
         eprintln!("q4_k err {err_k:.4} vs q4_0 err {err_0:.4} (range {range:.2})");
-        assert!(err_k.is_finite() && err_k <= range / 15.0 * 1.3, "q4_k roundtrip err {err_k} too high");
-        assert!(err_k <= err_0 + 1e-4, "q4_k ({err_k}) should not be worse than q4_0 ({err_0})");
+        assert!(
+            err_k.is_finite() && err_k <= range / 15.0 * 1.3,
+            "q4_k roundtrip err {err_k} too high"
+        );
+        assert!(
+            err_k <= err_0 + 1e-4,
+            "q4_k ({err_k}) should not be worse than q4_0 ({err_0})"
+        );
     }
 }

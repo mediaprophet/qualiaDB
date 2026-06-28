@@ -1,14 +1,14 @@
 //! Zero-Infrastructure Acoustic & BLE Mesh Implementation
-//! 
+//!
 //! This module provides zero-infrastructure acoustic and BLE mesh networking for distributed
 //! scientific computing in crisis scenarios. Designed for delay-tolerant networking and
 //! emergency response operations.
 
 use crate::q_hash;
+use serde::{Deserialize, Serialize};
 use std::collections::HashMap;
 use std::thread;
 use std::time::{Duration, Instant};
-use serde::{Deserialize, Serialize};
 
 /// Acoustic & BLE Mesh Network Manager
 pub struct MeshNetworkManager {
@@ -53,9 +53,9 @@ pub enum NodeType {
 #[derive(Debug, Clone, Serialize, Deserialize)]
 pub struct AcousticCapabilities {
     pub frequency_range: (f64, f64), // Hz
-    pub bandwidth: f64,             // Hz
-    pub max_range: f64,             // meters
-    pub data_rate: f64,             // bps
+    pub bandwidth: f64,              // Hz
+    pub max_range: f64,              // meters
+    pub data_rate: f64,              // bps
     pub modulation: ModulationType,
     pub error_correction: ErrorCorrectionType,
 }
@@ -1206,13 +1206,18 @@ impl MeshNetworkManager {
     }
 
     /// Discover nearby nodes into a caller-owned zero-heap buffer.
-    pub fn discover_nodes_into(&mut self, out: &mut [DiscoveredNodeHandle]) -> Result<usize, MeshError> {
+    pub fn discover_nodes_into(
+        &mut self,
+        out: &mut [DiscoveredNodeHandle],
+    ) -> Result<usize, MeshError> {
         let mut written = 0usize;
 
         let acoustic_nodes = self.acoustic_network.discover_nodes()?;
         for node in acoustic_nodes {
             if written >= out.len() {
-                return Err(MeshError::BufferTooSmall("discovered node output buffer exhausted".to_string()));
+                return Err(MeshError::BufferTooSmall(
+                    "discovered node output buffer exhausted".to_string(),
+                ));
             }
             out[written] = Self::discovered_node_handle(
                 &node.node_id,
@@ -1228,7 +1233,9 @@ impl MeshNetworkManager {
         let ble_nodes = self.ble_network.discover_nodes()?;
         for node in ble_nodes {
             if written >= out.len() {
-                return Err(MeshError::BufferTooSmall("discovered node output buffer exhausted".to_string()));
+                return Err(MeshError::BufferTooSmall(
+                    "discovered node output buffer exhausted".to_string(),
+                ));
             }
             out[written] = Self::discovered_node_handle(
                 &node.node_id,
@@ -1245,7 +1252,12 @@ impl MeshNetworkManager {
     }
 
     /// Send message through mesh network
-    pub fn send_message(&mut self, destination: String, payload: Vec<u8>, priority: MessagePriority) -> Result<String, MeshError> {
+    pub fn send_message(
+        &mut self,
+        destination: String,
+        payload: Vec<u8>,
+        priority: MessagePriority,
+    ) -> Result<String, MeshError> {
         // Create message
         let message_id = self.generate_message_id();
         let message = StoredMessage {
@@ -1329,7 +1341,8 @@ impl MeshNetworkManager {
     /// Route message through network
     fn route_message(&mut self, message: &StoredMessage) -> Result<(), MeshError> {
         // Determine best interface for routing
-        let interface = self.select_best_interface_for_payload(message.payload.len(), message.priority)?;
+        let interface =
+            self.select_best_interface_for_payload(message.payload.len(), message.priority)?;
 
         match interface {
             NetworkInterface::Acoustic => {
@@ -1349,15 +1362,28 @@ impl MeshNetworkManager {
     }
 
     /// Route a transient payload without constructing a heap-backed message envelope.
-    fn route_payload(&mut self, destination: &str, payload: &[u8], priority: MessagePriority) -> Result<(), MeshError> {
+    fn route_payload(
+        &mut self,
+        destination: &str,
+        payload: &[u8],
+        priority: MessagePriority,
+    ) -> Result<(), MeshError> {
         let interface = self.select_best_interface_for_payload(payload.len(), priority)?;
 
         match interface {
-            NetworkInterface::Acoustic => self.acoustic_network.send_payload(destination, payload, priority)?,
-            NetworkInterface::Ble => self.ble_network.send_payload(destination, payload, priority)?,
+            NetworkInterface::Acoustic => {
+                self.acoustic_network
+                    .send_payload(destination, payload, priority)?
+            }
+            NetworkInterface::Ble => {
+                self.ble_network
+                    .send_payload(destination, payload, priority)?
+            }
             NetworkInterface::Hybrid => {
-                self.acoustic_network.send_payload(destination, payload, priority)?;
-                self.ble_network.send_payload(destination, payload, priority)?;
+                self.acoustic_network
+                    .send_payload(destination, payload, priority)?;
+                self.ble_network
+                    .send_payload(destination, payload, priority)?;
             }
         }
 
@@ -1365,7 +1391,11 @@ impl MeshNetworkManager {
     }
 
     /// Select best interface for message routing
-    fn select_best_interface_for_payload(&self, payload_len: usize, priority: MessagePriority) -> Result<NetworkInterface, MeshError> {
+    fn select_best_interface_for_payload(
+        &self,
+        payload_len: usize,
+        priority: MessagePriority,
+    ) -> Result<NetworkInterface, MeshError> {
         // Simple selection logic - in real implementation would be more sophisticated
         if payload_len > 1000 {
             // Large payload - use acoustic
@@ -1386,7 +1416,12 @@ impl MeshNetworkManager {
         format!("msg_{}", COUNTER.fetch_add(1, Ordering::SeqCst))
     }
 
-    fn generate_message_hash(&self, destination: &str, payload: &[u8], priority: MessagePriority) -> u64 {
+    fn generate_message_hash(
+        &self,
+        destination: &str,
+        payload: &[u8],
+        priority: MessagePriority,
+    ) -> u64 {
         let mut payload_hash = 0xcbf2_9ce4_8422_2325u64;
         for byte in payload {
             payload_hash ^= *byte as u64;
@@ -1425,16 +1460,32 @@ impl MeshNetworkManager {
 
     fn ble_capability_tag(capabilities: &BleCapabilities) -> u8 {
         let mut tag = 0u8;
-        if capabilities.features.iter().any(|feature| *feature == BleFeature::ExtendedAdvertising) {
+        if capabilities
+            .features
+            .iter()
+            .any(|feature| *feature == BleFeature::ExtendedAdvertising)
+        {
             tag |= 0x01;
         }
-        if capabilities.features.iter().any(|feature| *feature == BleFeature::LE2MPHY) {
+        if capabilities
+            .features
+            .iter()
+            .any(|feature| *feature == BleFeature::LE2MPHY)
+        {
             tag |= 0x02;
         }
-        if capabilities.features.iter().any(|feature| *feature == BleFeature::LEDataPacketLengthExtension) {
+        if capabilities
+            .features
+            .iter()
+            .any(|feature| *feature == BleFeature::LEDataPacketLengthExtension)
+        {
             tag |= 0x04;
         }
-        if tag == 0 { 0x10 } else { tag }
+        if tag == 0 {
+            0x10
+        } else {
+            tag
+        }
     }
 }
 
@@ -1468,9 +1519,9 @@ impl AcousticNetwork {
                 node_type: NodeType::Sensor,
                 capabilities: AcousticCapabilities {
                     frequency_range: (20000.0, 50000.0), // 20-50 kHz
-                    bandwidth: 1000.0, // 1 kHz
-                    max_range: 1000.0, // 1 km
-                    data_rate: 1000.0, // 1 kbps
+                    bandwidth: 1000.0,                   // 1 kHz
+                    max_range: 1000.0,                   // 1 km
+                    data_rate: 1000.0,                   // 1 kbps
                     modulation: ModulationType::FSK,
                     error_correction: ErrorCorrectionType::ReedSolomon,
                 },
@@ -1498,7 +1549,12 @@ impl AcousticNetwork {
         Ok(())
     }
 
-    pub fn send_payload(&mut self, _destination: &str, _payload: &[u8], _priority: MessagePriority) -> Result<(), MeshError> {
+    pub fn send_payload(
+        &mut self,
+        _destination: &str,
+        _payload: &[u8],
+        _priority: MessagePriority,
+    ) -> Result<(), MeshError> {
         thread::sleep(Duration::from_millis(500));
         Ok(())
     }
@@ -1569,7 +1625,12 @@ impl BleNetwork {
         Ok(())
     }
 
-    pub fn send_payload(&mut self, _destination: &str, _payload: &[u8], _priority: MessagePriority) -> Result<(), MeshError> {
+    pub fn send_payload(
+        &mut self,
+        _destination: &str,
+        _payload: &[u8],
+        _priority: MessagePriority,
+    ) -> Result<(), MeshError> {
         thread::sleep(Duration::from_millis(100));
         Ok(())
     }
@@ -1683,7 +1744,7 @@ impl AcousticModemController {
     pub fn new() -> Self {
         Self {
             modem_type: ModemType::SoftwareDefined,
-            transmission_power: 100.0, // 100W
+            transmission_power: 100.0,    // 100W
             receiver_sensitivity: -120.0, // -120dBm
             signal_processing: SignalProcessingConfig {
                 sampling_rate: 192000.0, // 192 kHz
@@ -2052,12 +2113,14 @@ impl MessageStore {
     }
 
     pub fn store_message(&mut self, message: StoredMessage) -> Result<(), MeshError> {
-        self.stored_messages.insert(message.message_id.clone(), message);
+        self.stored_messages
+            .insert(message.message_id.clone(), message);
         Ok(())
     }
 
     pub fn get_pending_count(&self) -> u32 {
-        self.stored_messages.values()
+        self.stored_messages
+            .values()
             .filter(|m| m.status == MessageStatus::Pending)
             .count() as u32
     }
@@ -2267,10 +2330,10 @@ mod tests {
     fn test_node_discovery() {
         let mut manager = MeshNetworkManager::new();
         manager.initialize().unwrap();
-        
+
         let discovered_nodes = manager.discover_nodes().unwrap();
         assert!(discovered_nodes.len() > 0);
-        
+
         let status = manager.get_network_status();
         assert!(status.total_nodes > 0);
     }
@@ -2279,13 +2342,15 @@ mod tests {
     fn test_message_sending() {
         let mut manager = MeshNetworkManager::new();
         manager.initialize().unwrap();
-        
-        let message_id = manager.send_message(
-            "test_destination".to_string(),
-            vec![1, 2, 3, 4],
-            MessagePriority::Normal,
-        ).unwrap();
-        
+
+        let message_id = manager
+            .send_message(
+                "test_destination".to_string(),
+                vec![1, 2, 3, 4],
+                MessagePriority::Normal,
+            )
+            .unwrap();
+
         assert!(!message_id.is_empty());
     }
 

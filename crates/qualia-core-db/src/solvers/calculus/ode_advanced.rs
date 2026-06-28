@@ -332,9 +332,18 @@ mod tests {
         let o2 = order(SymplecticMethod::Verlet);
         let o3 = order(SymplecticMethod::Ruth3);
         let o4 = order(SymplecticMethod::Yoshida4);
-        assert!((o2 - 2.0).abs() < 0.5, "Verlet should be ~2nd order, got {o2:.2}");
-        assert!((o3 - 3.0).abs() < 0.6, "Ruth3 should be ~3rd order, got {o3:.2}");
-        assert!((o4 - 4.0).abs() < 0.8, "Yoshida4 should be ~4th order, got {o4:.2}");
+        assert!(
+            (o2 - 2.0).abs() < 0.5,
+            "Verlet should be ~2nd order, got {o2:.2}"
+        );
+        assert!(
+            (o3 - 3.0).abs() < 0.6,
+            "Ruth3 should be ~3rd order, got {o3:.2}"
+        );
+        assert!(
+            (o4 - 4.0).abs() < 0.8,
+            "Yoshida4 should be ~4th order, got {o4:.2}"
+        );
     }
 
     #[test]
@@ -343,15 +352,24 @@ mod tests {
         // are L-stable: with a big step h=0.1 they decay monotonically to ~0; explicit
         // Euler with the same h would explode (|1 - 1000·0.1| = 99 per step).
         let f = |_t: f64, y: f64| -10.0 * y; // moderately stiff for a quick, exact check
-        // Backward Euler one step, h=0.5: y1 = y0/(1+5) = 1/6.
+                                             // Backward Euler one step, h=0.5: y1 = y0/(1+5) = 1/6.
         let y1 = bdf1_step(0.0, 1.0, 0.5, f);
-        assert!((y1 - 1.0 / 6.0).abs() < 1e-9, "BDF1 implicit-Euler value, got {y1}");
+        assert!(
+            (y1 - 1.0 / 6.0).abs() < 1e-9,
+            "BDF1 implicit-Euler value, got {y1}"
+        );
 
         // Strongly stiff, large step: must stay bounded in [0,1] and shrink, never blow up.
         let stiff = |_t: f64, y: f64| -1000.0 * y;
         let yf = integrate_bdf(0.0, 1.0, 0.1, 5, stiff);
-        assert!(yf.abs() < 1e-2 && yf.is_finite(), "BDF2 stiff result blew up: {yf}");
-        assert!(yf >= 0.0, "L-stable decay should not overshoot below 0: {yf}");
+        assert!(
+            yf.abs() < 1e-2 && yf.is_finite(),
+            "BDF2 stiff result blew up: {yf}"
+        );
+        assert!(
+            yf >= 0.0,
+            "L-stable decay should not overshoot below 0: {yf}"
+        );
     }
 
     #[test]
@@ -373,7 +391,10 @@ mod tests {
         for &theta in &[0.0, 0.25, 0.5, 0.75, 1.0] {
             let interp = hermite_dense_output(y(t0), f(t0), y(t1), f(t1), h, theta);
             let exact = y(t0 + theta * h);
-            assert!((interp - exact).abs() < 1e-12, "θ={theta}: {interp} vs {exact}");
+            assert!(
+                (interp - exact).abs() < 1e-12,
+                "θ={theta}: {interp} vs {exact}"
+            );
         }
     }
 
@@ -385,7 +406,16 @@ mod tests {
         let f = move |_t: f64, y: f64| -lambda * y;
         let r = integrate_with_sensitivity(0.0, 0.5, 1e-3, 1000, f);
         let exp_m2 = (-2.0f64).exp();
-        assert!((r.sensitivity - exp_m2).abs() < 1e-5, "∂y/∂y0 got {}, want {exp_m2}", r.sensitivity);
-        assert!((r.y - 0.5 * exp_m2).abs() < 1e-6, "y got {}, want {}", r.y, 0.5 * exp_m2);
+        assert!(
+            (r.sensitivity - exp_m2).abs() < 1e-5,
+            "∂y/∂y0 got {}, want {exp_m2}",
+            r.sensitivity
+        );
+        assert!(
+            (r.y - 0.5 * exp_m2).abs() < 1e-6,
+            "y got {}, want {}",
+            r.y,
+            0.5 * exp_m2
+        );
     }
 }

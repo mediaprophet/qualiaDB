@@ -25,7 +25,8 @@
 
 use crate::gpu_context::OperationalMode;
 use crate::modalities::logic::deontic::{
-    compile_norm_quin, evaluate_deontic_contract, DeonticStatus, DeonticVerdict, OP_FORBID, OP_PERMIT,
+    compile_norm_quin, evaluate_deontic_contract, DeonticStatus, DeonticVerdict, OP_FORBID,
+    OP_PERMIT,
 };
 use crate::{q_hash, NQuin};
 
@@ -71,7 +72,12 @@ pub struct QappView {
 impl QappView {
     /// A public, ungated view.
     pub fn public(manifold: u64, kind: ViewKind) -> Self {
-        QappView { manifold, kind, sensitivity: Sensitivity::Public, requires_attestation: false }
+        QappView {
+            manifold,
+            kind,
+            sensitivity: Sensitivity::Public,
+            requires_attestation: false,
+        }
     }
 }
 
@@ -141,7 +147,15 @@ pub fn view_render_norm(
     frame: u64,
     expiry_unix32: u32,
 ) -> NQuin {
-    compile_norm_quin(standpoint, opcode, P_VIEW_RENDER, manifold, frame, expiry_unix32, false)
+    compile_norm_quin(
+        standpoint,
+        opcode,
+        P_VIEW_RENDER,
+        manifold,
+        frame,
+        expiry_unix32,
+        false,
+    )
 }
 
 /// Whether sensitive content for `manifold` may render into `standpoint`.
@@ -168,7 +182,9 @@ pub fn rights_render_permitted(
     };
     let mut permitted = false;
     for v in &out[..n] {
-        if v.status != DeonticStatus::Active || v.norm.subject != standpoint.id || v.norm.object != manifold
+        if v.status != DeonticStatus::Active
+            || v.norm.subject != standpoint.id
+            || v.norm.object != manifold
         {
             continue;
         }
@@ -225,7 +241,14 @@ pub fn plan_qapp(
 ) -> usize {
     let n = views.len().min(out.len());
     for i in 0..n {
-        out[i] = plan_view(&views[i], standpoint, mode, attestations, gov_norms, now_unix);
+        out[i] = plan_view(
+            &views[i],
+            standpoint,
+            mode,
+            attestations,
+            gov_norms,
+            now_unix,
+        );
     }
     n
 }
@@ -249,10 +272,16 @@ mod tests {
         q_hash("urn:qualia:standpoint:owner")
     }
     fn civic() -> RenderStandpoint {
-        RenderStandpoint { id: q_hash("urn:qualia:standpoint:civic"), shared_civic: true }
+        RenderStandpoint {
+            id: q_hash("urn:qualia:standpoint:civic"),
+            shared_civic: true,
+        }
     }
     fn private() -> RenderStandpoint {
-        RenderStandpoint { id: owner(), shared_civic: false }
+        RenderStandpoint {
+            id: owner(),
+            shared_civic: false,
+        }
     }
     fn frame() -> u64 {
         q_hash("urn:qualia:frame:app")
@@ -268,7 +297,15 @@ mod tests {
         assert_eq!(views[1].manifold, m);
 
         let mut out = [ViewDisposition::Collapsed2D; MAX_QAPP_VIEWS];
-        let n = plan_qapp(&views, &private(), OperationalMode::Full, &[], &[], 100, &mut out);
+        let n = plan_qapp(
+            &views,
+            &private(),
+            OperationalMode::Full,
+            &[],
+            &[],
+            100,
+            &mut out,
+        );
         assert_eq!(n, 2);
         assert_eq!(out[0], ViewDisposition::Render(ViewKind::Scene3D));
         assert_eq!(out[1], ViewDisposition::Render(ViewKind::Pane2D));
@@ -282,12 +319,24 @@ mod tests {
         for mode in [OperationalMode::Eco, OperationalMode::Reserve] {
             let mut out = [ViewDisposition::Collapsed2D; MAX_QAPP_VIEWS];
             plan_qapp(&views, &private(), mode, &[], &[], 100, &mut out);
-            assert_eq!(out[0], ViewDisposition::Collapsed2D, "Scene3D should degrade under {mode:?}");
+            assert_eq!(
+                out[0],
+                ViewDisposition::Collapsed2D,
+                "Scene3D should degrade under {mode:?}"
+            );
             assert_eq!(out[1], ViewDisposition::Render(ViewKind::Pane2D));
         }
         // Full tier keeps the 3D scene.
         let mut out = [ViewDisposition::Collapsed2D; MAX_QAPP_VIEWS];
-        plan_qapp(&views, &private(), OperationalMode::Full, &[], &[], 100, &mut out);
+        plan_qapp(
+            &views,
+            &private(),
+            OperationalMode::Full,
+            &[],
+            &[],
+            100,
+            &mut out,
+        );
         assert_eq!(out[0], ViewDisposition::Render(ViewKind::Scene3D));
     }
 
@@ -320,7 +369,14 @@ mod tests {
         // Civic, with an Active FORBID → refused even if a permit is also present.
         let forbid = view_render_norm(civ.id, OP_FORBID, m, frame(), 0);
         assert_eq!(
-            plan_view(&sensitive, &civ, OperationalMode::Full, &[], &[permit, forbid], 100),
+            plan_view(
+                &sensitive,
+                &civ,
+                OperationalMode::Full,
+                &[],
+                &[permit, forbid],
+                100
+            ),
             ViewDisposition::RefusedRightsBounded
         );
 
@@ -360,7 +416,14 @@ mod tests {
         // An attestation for a DIFFERENT manifold does not satisfy the gate.
         let other = attestation_quin(attester, q_hash("urn:qualia:manifold:other"), frame());
         assert_eq!(
-            plan_view(&gated, &private(), OperationalMode::Full, &[other], &[], 100),
+            plan_view(
+                &gated,
+                &private(),
+                OperationalMode::Full,
+                &[other],
+                &[],
+                100
+            ),
             ViewDisposition::WithheldUnattested
         );
     }

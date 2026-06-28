@@ -100,7 +100,15 @@ impl SonicToken {
     /// Build NoteOn from a tensor node index and pitch/velocity.
     #[inline]
     pub fn note_on(tensor_index: u32, note: u8, velocity: u8, channel: u8) -> Self {
-        Self::pack(0, SonicEventType::NoteOn, channel, note, velocity, tensor_index, SONIC_MAGIC as u16)
+        Self::pack(
+            0,
+            SonicEventType::NoteOn,
+            channel,
+            note,
+            velocity,
+            tensor_index,
+            SONIC_MAGIC as u16,
+        )
     }
 
     #[inline]

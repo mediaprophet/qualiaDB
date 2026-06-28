@@ -17,10 +17,10 @@
 
 #![cfg(not(target_arch = "wasm32"))]
 
-use crate::NQuin;
 use crate::wal::WriteAheadLog;
-use crossbeam_channel::{bounded, Receiver, Sender};
+use crate::NQuin;
 use core_affinity::CoreId;
+use crossbeam_channel::{bounded, Receiver, Sender};
 use std::sync::atomic::{AtomicBool, AtomicU64, Ordering};
 use std::sync::{Arc, Mutex};
 use std::thread;
@@ -137,7 +137,11 @@ impl WorkerCell {
         // Pin this thread to the assigned core
         let pinned = core_affinity::set_for_current(self.core_id);
         if !pinned {
-            log::error!("Failed to pin worker {} to core {:?}", self.cell_id, self.core_id);
+            log::error!(
+                "Failed to pin worker {} to core {:?}",
+                self.cell_id,
+                self.core_id
+            );
         } else {
             log::info!("Worker {} pinned to core {:?}", self.cell_id, self.core_id);
         }
@@ -155,8 +159,12 @@ impl WorkerCell {
             // Poll for new job with timeout to allow shutdown check
             match self.job_receiver.recv_timeout(Duration::from_millis(100)) {
                 Ok(mut job) => {
-                    log::debug!("Worker {} received job at offset {}", self.cell_id, job.quin.object);
-                    
+                    log::debug!(
+                        "Worker {} received job at offset {}",
+                        self.cell_id,
+                        job.quin.object
+                    );
+
                     job.status = JobStatus::InProgress;
                     job.dispatched_at = Some(Instant::now());
 
@@ -176,7 +184,10 @@ impl WorkerCell {
                     continue;
                 }
                 Err(crossbeam_channel::RecvTimeoutError::Disconnected) => {
-                    log::info!("Worker {} job channel disconnected, shutting down", self.cell_id);
+                    log::info!(
+                        "Worker {} job channel disconnected, shutting down",
+                        self.cell_id
+                    );
                     break;
                 }
             }
@@ -191,11 +202,15 @@ impl WorkerCell {
         // In production, this would execute the actual calculus operation
         let chunk_size = 4096; // 4KB chunk
         job.quin.object = job.quin.object.saturating_add(chunk_size);
-        
+
         // Simulate some work
         std::thread::sleep(Duration::from_millis(10));
-        
-        log::trace!("Worker {} processed chunk to offset {}", self.cell_id, job.quin.object);
+
+        log::trace!(
+            "Worker {} processed chunk to offset {}",
+            self.cell_id,
+            job.quin.object
+        );
     }
 }
 
@@ -223,7 +238,10 @@ impl ProductionQueue {
     /// Create a new production queue with a specific WAL path
     pub fn with_wal_path(wal_path: &str) -> Self {
         let num_logical_cores = num_cpus::get();
-        log::info!("Initializing production queue with {} workers", num_logical_cores);
+        log::info!(
+            "Initializing production queue with {} workers",
+            num_logical_cores
+        );
 
         let (_job_sender, job_receiver) = bounded(JOB_QUEUE_CAPACITY);
         let (result_sender, result_receiver) = bounded(JOB_QUEUE_CAPACITY);
@@ -237,7 +255,10 @@ impl ProductionQueue {
         if wal.lock().unwrap().is_some() {
             log::info!("Production queue WAL initialized at {}", wal_path);
         } else {
-            log::warn!("Failed to initialize WAL at {}, job persistence disabled", wal_path);
+            log::warn!(
+                "Failed to initialize WAL at {}, job persistence disabled",
+                wal_path
+            );
         }
 
         // Initialize job estimator
@@ -248,7 +269,9 @@ impl ProductionQueue {
 
         // Spawn worker threads
         for worker_id in 0..num_logical_cores {
-            let core_id = CoreId { id: worker_id % num_logical_cores };
+            let core_id = CoreId {
+                id: worker_id % num_logical_cores,
+            };
             let (worker_job_sender, worker_job_receiver) = bounded(16);
             let worker_result_sender = result_sender.clone();
             let worker_shutdown = shutdown_signal.clone();
@@ -297,11 +320,15 @@ impl ProductionQueue {
         }
 
         // Round-robin job distribution
-        let worker_id = self.active_jobs.fetch_add(1, Ordering::Relaxed) as usize % self.num_workers;
-        
+        let worker_id =
+            self.active_jobs.fetch_add(1, Ordering::Relaxed) as usize % self.num_workers;
+
         if let Err(e) = self.job_senders[worker_id].send(job) {
             self.active_jobs.fetch_sub(1, Ordering::Relaxed);
-            return Err(format!("Failed to submit job to worker {}: {}", worker_id, e));
+            return Err(format!(
+                "Failed to submit job to worker {}: {}",
+                worker_id, e
+            ));
         }
 
         log::debug!("Job submitted to worker {}", worker_id);
@@ -343,16 +370,16 @@ impl ProductionQueue {
     /// Collect completed jobs from workers
     pub fn collect_results(&self) -> Vec<Job> {
         let mut results = Vec::new();
-        
+
         while let Ok(job) = self.result_receiver.try_recv() {
             self.completed_jobs.fetch_add(1, Ordering::Relaxed);
             self.active_jobs.fetch_sub(1, Ordering::Relaxed);
-            
+
             // Persist completed job state to WAL
             if let Err(e) = self.persist_job_completion(&job) {
                 log::warn!("Failed to persist job completion: {}", e);
             }
-            
+
             results.push(job);
         }
 
@@ -372,10 +399,10 @@ impl ProductionQueue {
     pub fn shutdown(&self) {
         log::info!("Shutting down production queue");
         self.shutdown_signal.store(true, Ordering::Relaxed);
-        
+
         // Give workers time to finish current jobs
         std::thread::sleep(Duration::from_secs(2));
-        
+
         log::info!("Production queue shutdown complete");
     }
 
@@ -412,7 +439,12 @@ impl ProductionQueue {
     }
 
     /// Record job performance for velocity learning
-    pub fn record_performance(&self, target: ComputeTarget, bytes_processed: u64, duration: Duration) {
+    pub fn record_performance(
+        &self,
+        target: ComputeTarget,
+        bytes_processed: u64,
+        duration: Duration,
+    ) {
         if let Ok(mut estimator) = self.estimator.lock() {
             estimator.record_performance(target, bytes_processed, duration);
         }
@@ -459,10 +491,11 @@ impl ProductionQueue {
 
         // Estimate time remaining based on velocity
         let estimated_time_remaining = if avg_velocity > 0.0 && total_job_bytes > 0 {
-            let remaining_bytes = total_job_bytes.saturating_sub(
-                results.iter().map(|j| j.quin.object).sum::<u64>()
-            );
-            Some(Duration::from_secs_f64(remaining_bytes as f64 / avg_velocity))
+            let remaining_bytes =
+                total_job_bytes.saturating_sub(results.iter().map(|j| j.quin.object).sum::<u64>());
+            Some(Duration::from_secs_f64(
+                remaining_bytes as f64 / avg_velocity,
+            ))
         } else {
             None
         };
@@ -535,15 +568,16 @@ impl HardwareVelocity {
         let duration_secs = duration.as_secs_f64();
         if duration_secs > 0.0 {
             let new_velocity = bytes_processed as f64 / duration_secs;
-            
+
             // Exponential moving average with alpha=0.2 (weights recent samples more)
             let alpha = 0.2;
             if self.sample_count == 0 {
                 self.bytes_per_second = new_velocity;
             } else {
-                self.bytes_per_second = alpha * new_velocity + (1.0 - alpha) * self.bytes_per_second;
+                self.bytes_per_second =
+                    alpha * new_velocity + (1.0 - alpha) * self.bytes_per_second;
             }
-            
+
             self.sample_count += 1;
             self.last_updated = Some(Instant::now());
         }
@@ -554,9 +588,9 @@ impl HardwareVelocity {
         if self.sample_count == 0 {
             // Default velocities based on target (conservative estimates)
             match self.target {
-                ComputeTarget::Cpu => 10_000_000.0,      // 10 MB/s CPU
+                ComputeTarget::Cpu => 10_000_000.0,       // 10 MB/s CPU
                 ComputeTarget::WebGpu => 100_000_000.0,   // 100 MB/s WebGPU
-                ComputeTarget::DirectMl => 500_000_000.0,  // 500 MB/s DirectML
+                ComputeTarget::DirectMl => 500_000_000.0, // 500 MB/s DirectML
             }
         } else {
             self.bytes_per_second
@@ -652,7 +686,12 @@ impl JobEstimator {
     }
 
     /// Update velocity metrics after job completion
-    pub fn record_performance(&mut self, target: ComputeTarget, bytes_processed: u64, duration: Duration) {
+    pub fn record_performance(
+        &mut self,
+        target: ComputeTarget,
+        bytes_processed: u64,
+        duration: Duration,
+    ) {
         match target {
             ComputeTarget::Cpu => self.cpu_velocity.update(bytes_processed, duration),
             ComputeTarget::WebGpu => self.webgpu_velocity.update(bytes_processed, duration),
@@ -694,9 +733,9 @@ mod tests {
     fn test_job_progress_calculation() {
         let mut quin = NQuin::default();
         quin.object = 5000; // 5000 bytes processed
-        
+
         let job = Job::new(quin, 10000); // Total 10000 bytes
-        
+
         assert_eq!(job.progress(), 50.0);
         assert_eq!(job.compute_target, ComputeTarget::Cpu);
     }
@@ -705,11 +744,11 @@ mod tests {
     fn test_job_velocity_calculation() {
         let mut quin = NQuin::default();
         quin.object = 1000;
-        
+
         let mut job = Job::new(quin, 10000);
         job.dispatched_at = Some(Instant::now() - Duration::from_secs(1));
         job.completed_at = Some(Instant::now());
-        
+
         // 1000 bytes in 1 second ≈ 1000 bytes/sec (allow for timing precision)
         assert!((job.velocity() - 1000.0).abs() < 10.0);
     }
@@ -718,11 +757,11 @@ mod tests {
     fn test_production_queue_creation() {
         let queue = ProductionQueue::new();
         let stats = queue.stats();
-        
+
         assert!(stats.num_workers > 0);
         assert_eq!(stats.active_jobs, 0);
         assert_eq!(stats.completed_jobs, 0);
-        
+
         queue.shutdown();
     }
 
@@ -730,7 +769,7 @@ mod tests {
     fn test_worker_thread_job_processing() {
         let queue = ProductionQueue::new();
         let num_jobs = 10;
-        
+
         // Submit dummy jobs
         for i in 0..num_jobs {
             let mut quin = NQuin::default();
@@ -738,50 +777,50 @@ mod tests {
             let job = Job::new(quin, 10000);
             queue.submit_job(job).unwrap();
         }
-        
+
         // Wait for jobs to complete
         std::thread::sleep(Duration::from_secs(2));
-        
+
         // Collect results
         let results = queue.collect_results();
         assert!(results.len() > 0, "At least one job should be completed");
-        
+
         // Verify progress was made
         for result in &results {
             assert!(result.quin.object > 0, "Job should have progressed");
             assert_eq!(result.status, JobStatus::Completed);
         }
-        
+
         queue.shutdown();
     }
 
     #[test]
     fn test_environmental_yielding() {
         let queue = ProductionQueue::new();
-        
+
         // Submit a job
         let mut quin = NQuin::default();
         quin.object = 1000;
         let job = Job::new(quin, 10000);
         queue.submit_job(job).unwrap();
-        
+
         // Wait a bit for job to start
         std::thread::sleep(Duration::from_millis(100));
-        
+
         // Pause the queue (environmental yielding)
         queue.pause();
         assert!(queue.is_paused(), "Queue should be paused");
-        
+
         // Wait to ensure workers are paused
         std::thread::sleep(Duration::from_millis(200));
-        
+
         // Resume the queue
         queue.resume();
         assert!(!queue.is_paused(), "Queue should not be paused");
-        
+
         // Wait for job to complete
         std::thread::sleep(Duration::from_secs(1));
-        
+
         queue.shutdown();
     }
 
@@ -789,7 +828,7 @@ mod tests {
     fn test_telemetry_calculation() {
         let queue = ProductionQueue::new();
         let total_bytes = 100000;
-        
+
         // Submit jobs
         for i in 0..5 {
             let mut quin = NQuin::default();
@@ -797,27 +836,27 @@ mod tests {
             let job = Job::new(quin, 20000);
             queue.submit_job(job).unwrap();
         }
-        
+
         // Wait for some jobs to complete
         std::thread::sleep(Duration::from_secs(1));
-        
+
         // Calculate telemetry
         let telemetry = queue.calculate_telemetry(total_bytes);
-        
+
         assert!(telemetry.total_jobs >= 0);
         assert!(telemetry.overall_progress >= 0.0 && telemetry.overall_progress <= 100.0);
-        
+
         queue.shutdown();
     }
 
     #[test]
     fn test_hardware_velocity_tracking() {
         let mut velocity = HardwareVelocity::new(ComputeTarget::Cpu);
-        
+
         // Update with some samples
         velocity.update(1_000_000, Duration::from_millis(100)); // 10 MB/s
         velocity.update(2_000_000, Duration::from_millis(200)); // 10 MB/s
-        
+
         assert_eq!(velocity.sample_count, 2);
         assert!(velocity.get_velocity() > 0.0);
     }
@@ -825,16 +864,16 @@ mod tests {
     #[test]
     fn test_job_estimator() {
         let estimator = JobEstimator::new();
-        
+
         let params = JobEstimateParams {
             workload_bytes: 100_000_000, // 100 MB
             step_size: 0.01,
             compute_target: ComputeTarget::Cpu,
             contention_factor: 1.0,
         };
-        
+
         let estimate = estimator.estimate_job_duration(&params);
-        
+
         assert!(estimate.estimated_duration.as_secs() > 0);
         assert!(estimate.confidence >= 0.0 && estimate.confidence <= 1.0);
         assert_eq!(estimate.compute_target, ComputeTarget::Cpu);
@@ -843,19 +882,19 @@ mod tests {
     #[test]
     fn test_job_estimator_with_throttling() {
         let mut estimator = JobEstimator::new();
-        
+
         // Set power throttling factor
         estimator.set_power_throttle_factor(1.5); // 1.5x slower due to power constraints
-        
+
         let params = JobEstimateParams {
             workload_bytes: 100_000_000,
             step_size: 0.01,
             compute_target: ComputeTarget::Cpu,
             contention_factor: 1.0,
         };
-        
+
         let estimate = estimator.estimate_job_duration(&params);
-        
+
         // Verify throttling is applied
         assert_eq!(estimator.get_power_throttle_factor(), 1.5);
     }
@@ -863,11 +902,11 @@ mod tests {
     #[test]
     fn test_job_estimator_velocity_learning() {
         let mut estimator = JobEstimator::new();
-        
+
         // Record some performance data
         estimator.record_performance(ComputeTarget::Cpu, 10_000_000, Duration::from_secs(1));
         estimator.record_performance(ComputeTarget::Cpu, 20_000_000, Duration::from_secs(2));
-        
+
         // Now estimates should be more confident
         let params = JobEstimateParams {
             workload_bytes: 100_000_000,
@@ -875,9 +914,9 @@ mod tests {
             compute_target: ComputeTarget::Cpu,
             contention_factor: 1.0,
         };
-        
+
         let estimate = estimator.estimate_job_duration(&params);
-        
+
         // Confidence should be higher after recording performance
         assert!(estimate.confidence > 0.0);
     }
@@ -885,7 +924,7 @@ mod tests {
     #[test]
     fn test_production_queue_estimator_integration() {
         let queue = ProductionQueue::new();
-        
+
         // Estimate a job before submission
         let params = JobEstimateParams {
             workload_bytes: 50_000_000,
@@ -893,66 +932,66 @@ mod tests {
             compute_target: ComputeTarget::Cpu,
             contention_factor: 1.0,
         };
-        
+
         let estimate = queue.estimate_job(&params);
         assert!(estimate.estimated_duration.as_secs() > 0);
-        
+
         // Test power throttling
         queue.set_power_throttle_factor(1.5);
         assert_eq!(queue.get_power_throttle_factor(), 1.5);
-        
+
         // Estimate with throttling should be longer
         let throttled_estimate = queue.estimate_job(&params);
         assert!(throttled_estimate.estimated_duration >= estimate.estimated_duration);
-        
+
         // Record performance
         queue.record_performance(ComputeTarget::Cpu, 10_000_000, Duration::from_secs(1));
-        
+
         queue.shutdown();
     }
 
     #[test]
     fn test_iterative_ode_workload() {
         use crate::modalities::calculus::ode_solver::{ExponentialDecay, Rk4Solver};
-        
+
         let queue = ProductionQueue::new();
-        
+
         // Create ODE solver
         let decay = ExponentialDecay::new(0.5);
         let mut solver = Rk4Solver::new(decay, 0.01);
-        
+
         // Simulate iterative workload by submitting multiple jobs
         let num_steps = 10;
         let mut y: f64 = 1.0;
         let mut t: f64 = 0.0;
-        
+
         for step in 0..num_steps {
             let mut quin = NQuin::default();
             quin.object = y.to_bits() as u64;
             quin.metadata = t.to_bits();
-            
+
             let job = Job::with_target(quin, 1000, ComputeTarget::Cpu);
             queue.submit_job(job).unwrap();
-            
+
             // Advance solver state
             y = solver.step(t, y, 0.01);
             t += 0.01;
-            
+
             log::debug!("Step {}: t={}, y={}", step, t, y);
         }
-        
+
         // Wait for jobs to complete
         std::thread::sleep(Duration::from_secs(2));
-        
+
         // Collect results
         let results = queue.collect_results();
         assert!(results.len() > 0, "At least one job should complete");
-        
+
         // Verify results were processed
         for result in &results {
             assert_eq!(result.status, JobStatus::Completed);
         }
-        
+
         queue.shutdown();
     }
 }

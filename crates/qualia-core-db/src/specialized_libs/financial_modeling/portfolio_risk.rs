@@ -251,7 +251,11 @@ mod tests {
         let m = compute_risk_metrics(&p).unwrap();
 
         // mean = 0.1/3; sample stddev computed by hand below.
-        assert!((m.volatility - 0.11547005).abs() < 1e-6, "vol {}", m.volatility);
+        assert!(
+            (m.volatility - 0.11547005).abs() < 1e-6,
+            "vol {}",
+            m.volatility
+        );
         // Sharpe = mean/vol with rf=0.
         let mean = 0.1 / 3.0;
         assert!((m.sharpe_ratio - mean / 0.11547005).abs() < 1e-5);
@@ -272,8 +276,15 @@ mod tests {
         let blended = compute_risk_metrics(&portfolio(vec![a.clone(), b.clone()])).unwrap();
         let only_a = compute_risk_metrics(&portfolio(vec![a])).unwrap();
         let only_b = compute_risk_metrics(&portfolio(vec![b])).unwrap();
-        assert!(only_a.max_drawdown < 1e-12, "rising asset should have no drawdown: {}", only_a.max_drawdown);
-        assert!(only_b.max_drawdown > 0.0, "falling asset must have drawdown");
+        assert!(
+            only_a.max_drawdown < 1e-12,
+            "rising asset should have no drawdown: {}",
+            only_a.max_drawdown
+        );
+        assert!(
+            only_b.max_drawdown > 0.0,
+            "falling asset must have drawdown"
+        );
         assert!(
             blended.max_drawdown > 0.0 && blended.max_drawdown < only_b.max_drawdown,
             "blend {} should sit between {} and {}",

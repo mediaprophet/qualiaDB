@@ -254,8 +254,8 @@ impl PostQuantumSerialize for KemSecretKey {
 #[cfg(feature = "pq-kem")]
 pub fn generate_kyber768_keypair() -> Result<(KemPublicKey, KemSecretKey), KemError> {
     use fips203::ml_kem_768;
-    let (ek, dk) = ml_kem_768::KG::try_keygen()
-        .map_err(|e| KemError::OperationFailed(e.to_string()))?;
+    let (ek, dk) =
+        ml_kem_768::KG::try_keygen().map_err(|e| KemError::OperationFailed(e.to_string()))?;
     let ek_bytes = ek.into_bytes();
     let dk_bytes = dk.into_bytes();
     Ok((

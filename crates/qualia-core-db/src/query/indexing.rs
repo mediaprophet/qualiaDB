@@ -88,7 +88,11 @@ impl QuinIndex {
         rows.iter()
             .filter_map(|&i| {
                 let q = &self.quins[i];
-                if q.predicate == p { Some(*q) } else { None }
+                if q.predicate == p {
+                    Some(*q)
+                } else {
+                    None
+                }
             })
             .collect()
     }

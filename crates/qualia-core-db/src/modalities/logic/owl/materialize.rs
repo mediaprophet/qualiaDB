@@ -174,13 +174,27 @@ pub fn materialize_owl_rl(
 
             // scm-eqc / scm-eqp: equivalence expands to both-way sub-axioms.
             if t.p == OWL_EQUIVALENT_CLASS {
-                changed |= try_push(triples, &mut len, RdfTriple::new(t.s, RDFS_SUBCLASS_OF, t.o))?;
-                changed |= try_push(triples, &mut len, RdfTriple::new(t.o, RDFS_SUBCLASS_OF, t.s))?;
+                changed |= try_push(
+                    triples,
+                    &mut len,
+                    RdfTriple::new(t.s, RDFS_SUBCLASS_OF, t.o),
+                )?;
+                changed |= try_push(
+                    triples,
+                    &mut len,
+                    RdfTriple::new(t.o, RDFS_SUBCLASS_OF, t.s),
+                )?;
             } else if t.p == OWL_EQUIVALENT_PROPERTY {
-                changed |=
-                    try_push(triples, &mut len, RdfTriple::new(t.s, RDFS_SUBPROPERTY_OF, t.o))?;
-                changed |=
-                    try_push(triples, &mut len, RdfTriple::new(t.o, RDFS_SUBPROPERTY_OF, t.s))?;
+                changed |= try_push(
+                    triples,
+                    &mut len,
+                    RdfTriple::new(t.s, RDFS_SUBPROPERTY_OF, t.o),
+                )?;
+                changed |= try_push(
+                    triples,
+                    &mut len,
+                    RdfTriple::new(t.o, RDFS_SUBPROPERTY_OF, t.s),
+                )?;
             }
             // eq-sym: sameAs is symmetric.
             else if t.p == OWL_SAME_AS && t.s != t.o {
@@ -226,11 +240,9 @@ pub fn materialize_owl_rl(
                     && inst.o == ax.s
                     && inst.o != ax.o
                 {
-                    changed |=
-                        try_push(triples, &mut len, RdfTriple::new(inst.s, RDF_TYPE, ax.o))?;
+                    changed |= try_push(triples, &mut len, RdfTriple::new(inst.s, RDF_TYPE, ax.o))?;
                 } else if ax.p == RDFS_SUBPROPERTY_OF && inst.p == ax.s && ax.s != ax.o {
-                    changed |=
-                        try_push(triples, &mut len, RdfTriple::new(inst.s, ax.o, inst.o))?;
+                    changed |= try_push(triples, &mut len, RdfTriple::new(inst.s, ax.o, inst.o))?;
                 }
             }
         }
@@ -263,8 +275,7 @@ pub fn materialize_owl_rl(
                 RdfTriple::new(inst.p, RDF_TYPE, OWL_SYMMETRIC_PROPERTY),
             );
             if is_symmetric && inst.s != inst.o {
-                changed |=
-                    try_push(triples, &mut len, RdfTriple::new(inst.o, inst.p, inst.s))?;
+                changed |= try_push(triples, &mut len, RdfTriple::new(inst.o, inst.p, inst.s))?;
             }
             let is_transitive = contains(
                 triples,
@@ -289,8 +300,11 @@ pub fn materialize_owl_rl(
             if a.p == RDF_TYPE {
                 continue;
             }
-            let functional =
-                contains(triples, len, RdfTriple::new(a.p, RDF_TYPE, OWL_FUNCTIONAL_PROPERTY));
+            let functional = contains(
+                triples,
+                len,
+                RdfTriple::new(a.p, RDF_TYPE, OWL_FUNCTIONAL_PROPERTY),
+            );
             let inv_functional = contains(
                 triples,
                 len,
@@ -305,12 +319,10 @@ pub fn materialize_owl_rl(
                     continue;
                 }
                 if functional && b.s == a.s && a.o != b.o {
-                    changed |=
-                        try_push(triples, &mut len, RdfTriple::new(a.o, OWL_SAME_AS, b.o))?;
+                    changed |= try_push(triples, &mut len, RdfTriple::new(a.o, OWL_SAME_AS, b.o))?;
                 }
                 if inv_functional && b.o == a.o && a.s != b.s {
-                    changed |=
-                        try_push(triples, &mut len, RdfTriple::new(a.s, OWL_SAME_AS, b.s))?;
+                    changed |= try_push(triples, &mut len, RdfTriple::new(a.s, OWL_SAME_AS, b.s))?;
                 }
             }
         }
@@ -412,8 +424,7 @@ mod tests {
 
     #[test]
     fn subclass_transitivity_and_type_propagation() {
-        let (alice, student, person, agent) =
-            (h("alice"), h("Student"), h("Person"), h("Agent"));
+        let (alice, student, person, agent) = (h("alice"), h("Student"), h("Person"), h("Agent"));
         let mut triples = [RdfTriple::new(0, 0, 0); 64];
         triples[0] = RdfTriple::new(alice, RDF_TYPE, student);
         triples[1] = RdfTriple::new(student, RDFS_SUBCLASS_OF, person);
@@ -456,8 +467,7 @@ mod tests {
 
     #[test]
     fn transitive_and_inverse_properties() {
-        let (anc, has_child, a, b, c) =
-            (h("ancestorOf"), h("hasChild"), h("a"), h("b"), h("c"));
+        let (anc, has_child, a, b, c) = (h("ancestorOf"), h("hasChild"), h("a"), h("b"), h("c"));
         let mut triples = [RdfTriple::new(0, 0, 0); 32];
         triples[0] = RdfTriple::new(anc, RDF_TYPE, OWL_TRANSITIVE_PROPERTY);
         triples[1] = RdfTriple::new(a, anc, b);

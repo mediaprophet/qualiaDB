@@ -23,17 +23,26 @@ pub struct BigRational {
 impl BigRational {
     /// The rational zero (`0/1`).
     pub fn zero() -> Self {
-        BigRational { num: BigInt::zero(), den: BigInt::one() }
+        BigRational {
+            num: BigInt::zero(),
+            den: BigInt::one(),
+        }
     }
 
     /// The rational one (`1/1`).
     pub fn one() -> Self {
-        BigRational { num: BigInt::one(), den: BigInt::one() }
+        BigRational {
+            num: BigInt::one(),
+            den: BigInt::one(),
+        }
     }
 
     /// Construct from a `BigInt` (`n/1`).
     pub fn from_bigint(n: BigInt) -> Self {
-        BigRational { num: n, den: BigInt::one() }
+        BigRational {
+            num: n,
+            den: BigInt::one(),
+        }
     }
 
     /// Construct from an `i64` (`n/1`).
@@ -61,7 +70,10 @@ impl BigRational {
             den = den.neg();
         }
         if num.is_zero() {
-            return Some(BigRational { num: BigInt::zero(), den: BigInt::one() });
+            return Some(BigRational {
+                num: BigInt::zero(),
+                den: BigInt::one(),
+            });
         }
         let g = num.gcd(&den); // non-negative
         let num = num.div(&g).expect("g non-zero");
@@ -91,12 +103,18 @@ impl BigRational {
 
     /// Absolute value.
     pub fn abs(&self) -> Self {
-        BigRational { num: self.num.abs(), den: self.den.clone() }
+        BigRational {
+            num: self.num.abs(),
+            den: self.den.clone(),
+        }
     }
 
     /// Arithmetic negation.
     pub fn neg(&self) -> Self {
-        BigRational { num: self.num.neg(), den: self.den.clone() }
+        BigRational {
+            num: self.num.neg(),
+            den: self.den.clone(),
+        }
     }
 
     /// Multiplicative inverse `den/num`. Fails closed if `self` is zero.
@@ -109,10 +127,7 @@ impl BigRational {
 
     /// Sum `self + other`. Computes `(a*d + c*b) / (b*d)` then reduces.
     pub fn add(&self, other: &BigRational) -> BigRational {
-        let num = self
-            .num
-            .mul(&other.den)
-            .add(&other.num.mul(&self.den));
+        let num = self.num.mul(&other.den).add(&other.num.mul(&self.den));
         let den = self.den.mul(&other.den);
         BigRational::new(num, den).expect("product of positive denominators is non-zero")
     }
@@ -259,7 +274,10 @@ mod tests {
         let half = BigRational::from_i64s(1, 2).unwrap();
         assert!(third < half);
         assert!(half.neg() < third);
-        assert_eq!(third.cmp(&BigRational::from_i64s(2, 6).unwrap()), Ordering::Equal);
+        assert_eq!(
+            third.cmp(&BigRational::from_i64s(2, 6).unwrap()),
+            Ordering::Equal
+        );
     }
 
     #[test]

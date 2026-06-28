@@ -1,5 +1,11 @@
 //! Bridges typed SHACL extension configs (`*_shacl.rs`) into `SlgOpcode` sequences.
 
+use crate::modalities::logic::computational_maths_shacl::{
+    AssumptionConfiguration, ExactArithmeticConfiguration, IntegralTransformConfiguration,
+    InterpolationConfiguration, NumberTheoryConfiguration, NumericalMethodConfiguration,
+    SpecialFunctionConfiguration, SymbolicCalculusConfiguration, UnitsConfiguration,
+    VectorCalculusConfiguration,
+};
 use crate::modalities::logic::core_modalities_shacl::{
     ASPConfiguration, CalculusConfiguration, DialecticalConfiguration, EpistemicConfiguration,
     GraphConfiguration, LTLConfiguration, ParaconsistentConfiguration,
@@ -7,12 +13,6 @@ use crate::modalities::logic::core_modalities_shacl::{
 use crate::modalities::logic::infrastructure_shacl::SolverConfiguration;
 use crate::modalities::logic::specialized_libs_shacl::{
     CryptographicConfiguration, EngineeringSimulationConfiguration, MedicalDataConfiguration,
-};
-use crate::modalities::logic::computational_maths_shacl::{
-    AssumptionConfiguration, ExactArithmeticConfiguration, IntegralTransformConfiguration,
-    InterpolationConfiguration, NumberTheoryConfiguration, NumericalMethodConfiguration,
-    SpecialFunctionConfiguration, SymbolicCalculusConfiguration, UnitsConfiguration,
-    VectorCalculusConfiguration,
 };
 use crate::webizen::SlgOpcode;
 
@@ -246,7 +246,11 @@ mod tests {
             let mut ops = Vec::new();
             append_extension_opcodes(&mut ops, id);
             assert!(ops.len() >= 2, "{id} produced too few opcodes");
-            assert_eq!(ops.last(), Some(&SlgOpcode::Halt), "{id} not Halt-terminated");
+            assert_eq!(
+                ops.last(),
+                Some(&SlgOpcode::Halt),
+                "{id} not Halt-terminated"
+            );
         }
     }
 }

@@ -3,7 +3,7 @@
 use super::*;
 
 impl QTensorEngine {
-#[cfg(target_arch = "wasm32")]
+    #[cfg(target_arch = "wasm32")]
     pub async fn dispatch_prefill_chunk_async(
         &mut self,
         index: &crate::gguf_sharder::GgufTensorIndex,
@@ -61,7 +61,8 @@ impl QTensorEngine {
         let gate_info = tensors.ffn_gate.as_ref()?;
         let up_info = tensors.ffn_up.as_ref()?;
         let down_info = tensors.ffn_down.as_ref()?;
-        let q_raw = crate::ggml_quants::fetch_tensor_bytes(mmap, index.tensor_data_start, q_info).ok()?;
+        let q_raw =
+            crate::ggml_quants::fetch_tensor_bytes(mmap, index.tensor_data_start, q_info).ok()?;
         let n_ffn_est = Self::matmul_dims(gate_info).1;
         let row_stride = Self::mc8_prefill_row_stride(n_embd, n_ffn_est, self.gemm_max_out_dim);
         let emb_bytes = (emb_dim * 4) as wgpu::BufferAddress;
@@ -99,7 +100,12 @@ impl QTensorEngine {
         let (gate_in, _) = Self::matmul_dims(gate_info);
         let (up_in, up_out) = Self::matmul_dims(up_info);
         let (dn_in, dn_out) = Self::matmul_dims(down_info);
-        if gate_in > n_embd || up_in != gate_in || up_out != n_ffn || dn_in != n_ffn || dn_out < n_embd {
+        if gate_in > n_embd
+            || up_in != gate_in
+            || up_out != n_ffn
+            || dn_in != n_ffn
+            || dn_out < n_embd
+        {
             return None;
         }
         let out_info = tensors.attn_output.as_ref();
@@ -107,11 +113,17 @@ impl QTensorEngine {
         if out_info.is_some() && o_in > q_dim {
             return None;
         }
-        let o_raw = out_info
-            .and_then(|i| crate::ggml_quants::fetch_tensor_bytes(mmap, index.tensor_data_start, i).ok());
-        let gate_raw = crate::ggml_quants::fetch_tensor_bytes(mmap, index.tensor_data_start, gate_info).ok()?;
-        let up_raw = crate::ggml_quants::fetch_tensor_bytes(mmap, index.tensor_data_start, up_info).ok()?;
-        let down_raw = crate::ggml_quants::fetch_tensor_bytes(mmap, index.tensor_data_start, down_info).ok()?;
+        let o_raw = out_info.and_then(|i| {
+            crate::ggml_quants::fetch_tensor_bytes(mmap, index.tensor_data_start, i).ok()
+        });
+        let gate_raw =
+            crate::ggml_quants::fetch_tensor_bytes(mmap, index.tensor_data_start, gate_info)
+                .ok()?;
+        let up_raw =
+            crate::ggml_quants::fetch_tensor_bytes(mmap, index.tensor_data_start, up_info).ok()?;
+        let down_raw =
+            crate::ggml_quants::fetch_tensor_bytes(mmap, index.tensor_data_start, down_info)
+                .ok()?;
 
         let attn_base_byte = cursors.attn_base_byte();
         let elem_base_byte = cursors.elem_base_byte();
@@ -125,20 +137,50 @@ impl QTensorEngine {
         let kv_dim = (h.effective_n_kv_head() * h.head_dim()) as u32;
         let q_dim_u32 = (h.n_head * h.head_dim()) as u32;
         let mut k_params = Self::attention_gpu_params(
-            &h, &layout, layer, batch_start_token_idx, k_info, k_raw.len(), 1, n_tokens,
-            batch_start_token_idx, 0, 0, 0,
+            &h,
+            &layout,
+            layer,
+            batch_start_token_idx,
+            k_info,
+            k_raw.len(),
+            1,
+            n_tokens,
+            batch_start_token_idx,
+            0,
+            0,
+            0,
         );
         k_params.proj_row_stride = kv_dim;
         let k_off = attn_base_byte + attn_arena.push(&k_params);
         let mut v_params = Self::attention_gpu_params(
-            &h, &layout, layer, batch_start_token_idx, v_info, v_raw.len(), 2, n_tokens,
-            batch_start_token_idx, 0, 0, 0,
+            &h,
+            &layout,
+            layer,
+            batch_start_token_idx,
+            v_info,
+            v_raw.len(),
+            2,
+            n_tokens,
+            batch_start_token_idx,
+            0,
+            0,
+            0,
         );
         v_params.proj_row_stride = kv_dim;
         let v_off = attn_base_byte + attn_arena.push(&v_params);
         let mut q_params = Self::attention_gpu_params(
-            &h, &layout, layer, batch_start_token_idx, q_info, q_raw.len(), 0, n_tokens,
-            batch_start_token_idx, 0, KV_ATTENTION_MASK_WORDS as u32, row_stride_u32,
+            &h,
+            &layout,
+            layer,
+            batch_start_token_idx,
+            q_info,
+            q_raw.len(),
+            0,
+            n_tokens,
+            batch_start_token_idx,
+            0,
+            KV_ATTENTION_MASK_WORDS as u32,
+            row_stride_u32,
         );
         q_params.proj_row_stride = q_dim_u32;
         let q_off = attn_base_byte + attn_arena.push(&q_params);
@@ -148,69 +190,73 @@ impl QTensorEngine {
             slots: 0,
         };
         let attn_norm_elem_off = if used_attn_norm {
-            Some(elem_base_byte + elem_arena.push(&Self::mc8_elem_params(
-                ELEM_OP_RMS_NORM,
-                n_embd as u32,
-                n_tokens,
-                0,
-                0,
-                0,
-                0,
-                0,
-                0,
-            )))
+            Some(
+                elem_base_byte
+                    + elem_arena.push(&Self::mc8_elem_params(
+                        ELEM_OP_RMS_NORM,
+                        n_embd as u32,
+                        n_tokens,
+                        0,
+                        0,
+                        0,
+                        0,
+                        0,
+                        0,
+                    )),
+            )
         } else {
             None
         };
         let off_attn_res = elem_base_byte
             + elem_arena.push(&Self::mc8_elem_params(
-            ELEM_OP_ADD_RESIDUAL,
-            emb_dim as u32,
-            n_tokens,
-            row_stride_u32,
-            row_stride_u32,
-            0,
-            geom.slot_save_f,
-            if out_info.is_some() { geom.slot_o_f } else { 0 },
-            0,
-        ));
-        let off_ffn_norm = tensors.ffn_norm.as_ref().map(|_| {
-            elem_base_byte + elem_arena.push(&Self::mc8_elem_params(
-                ELEM_OP_RMS_NORM,
-                n_embd as u32,
+                ELEM_OP_ADD_RESIDUAL,
+                emb_dim as u32,
                 n_tokens,
-                0,
-                0,
+                row_stride_u32,
                 row_stride_u32,
                 0,
+                geom.slot_save_f,
+                if out_info.is_some() { geom.slot_o_f } else { 0 },
                 0,
-                0,
-            ))
+            ));
+        let off_ffn_norm = tensors.ffn_norm.as_ref().map(|_| {
+            elem_base_byte
+                + elem_arena.push(&Self::mc8_elem_params(
+                    ELEM_OP_RMS_NORM,
+                    n_embd as u32,
+                    n_tokens,
+                    0,
+                    0,
+                    row_stride_u32,
+                    0,
+                    0,
+                    0,
+                ))
         });
         let off_silu = elem_base_byte
             + elem_arena.push(&Self::mc8_elem_params(
-            ELEM_OP_SILU_MUL,
-            n_ffn as u32,
-            n_tokens,
-            row_stride_u32,
-            row_stride_u32,
-            row_stride_u32,
-            geom.slot_gate_f,
-            geom.slot_up_f,
-            geom.slot_scratch_half_f,
-        ));
+                ELEM_OP_SILU_MUL,
+                n_ffn as u32,
+                n_tokens,
+                row_stride_u32,
+                row_stride_u32,
+                row_stride_u32,
+                geom.slot_gate_f,
+                geom.slot_up_f,
+                geom.slot_scratch_half_f,
+            ));
         let off_ffn_res = elem_base_byte
             + elem_arena.push(&Self::mc8_elem_params(
-            ELEM_OP_ADD_RESIDUAL,
-            emb_dim as u32,
-            n_tokens,
-            row_stride_u32,
-            row_stride_u32,
-            0,
-            geom.slot_save_f,
-            0,
-            0,
-        ));
+                ELEM_OP_ADD_RESIDUAL,
+                emb_dim as u32,
+                n_tokens,
+                row_stride_u32,
+                row_stride_u32,
+                0,
+                geom.slot_save_f,
+                0,
+                0,
+            ));
 
         let mut gemm_arena = Mc8UniformArena {
             bytes: [0u8; MC8_MAX_GEMM_UNIFORM_SLOTS * MC8_UNIFORM_ALIGN],
@@ -262,15 +308,33 @@ impl QTensorEngine {
         // output contiguous q_dim|kv_dim/token) — output feeds the now-lightweight attention shader.
         let off_q_gemm = gemm_base_byte
             + gemm_arena.push(&Self::mc8_gemm_params(
-                q_info, q_raw.len(), n_embd, q_dim, n_tokens, n_embd as u32, q_dim_u32,
+                q_info,
+                q_raw.len(),
+                n_embd,
+                q_dim,
+                n_tokens,
+                n_embd as u32,
+                q_dim_u32,
             ));
         let off_k_gemm = gemm_base_byte
             + gemm_arena.push(&Self::mc8_gemm_params(
-                k_info, k_raw.len(), n_embd, kv_dim as usize, n_tokens, n_embd as u32, kv_dim,
+                k_info,
+                k_raw.len(),
+                n_embd,
+                kv_dim as usize,
+                n_tokens,
+                n_embd as u32,
+                kv_dim,
             ));
         let off_v_gemm = gemm_base_byte
             + gemm_arena.push(&Self::mc8_gemm_params(
-                v_info, v_raw.len(), n_embd, kv_dim as usize, n_tokens, n_embd as u32, kv_dim,
+                v_info,
+                v_raw.len(),
+                n_embd,
+                kv_dim as usize,
+                n_tokens,
+                n_embd as u32,
+                kv_dim,
             ));
 
         let attn_buf = self.attention_params_buf.as_ref()?;
@@ -340,10 +404,11 @@ impl QTensorEngine {
             Some(i) => i,
             None => return false,
         };
-        let q_raw = match crate::ggml_quants::fetch_tensor_bytes(mmap, index.tensor_data_start, q_info) {
-            Ok(s) => s,
-            Err(_) => return false,
-        };
+        let q_raw =
+            match crate::ggml_quants::fetch_tensor_bytes(mmap, index.tensor_data_start, q_info) {
+                Ok(s) => s,
+                Err(_) => return false,
+            };
         let row_stride = geom.row_stride;
         let row_stride_u32 = geom.row_stride_u32;
         let emb_bytes = geom.emb_bytes;
@@ -386,7 +451,12 @@ impl QTensorEngine {
         let (gate_in, _) = Self::matmul_dims(gate_info);
         let (up_in, up_out) = Self::matmul_dims(up_info);
         let (dn_in, dn_out) = Self::matmul_dims(down_info);
-        if gate_in > n_embd || up_in != gate_in || up_out != n_ffn || dn_in != n_ffn || dn_out < n_embd {
+        if gate_in > n_embd
+            || up_in != gate_in
+            || up_out != n_ffn
+            || dn_in != n_ffn
+            || dn_out < n_embd
+        {
             return false;
         }
         let out_info = tensors.attn_output.as_ref();
@@ -397,19 +467,27 @@ impl QTensorEngine {
         let o_raw = out_info.and_then(|out_info| {
             crate::ggml_quants::fetch_tensor_bytes(mmap, index.tensor_data_start, out_info).ok()
         });
-        let gate_raw = match crate::ggml_quants::fetch_tensor_bytes(mmap, index.tensor_data_start, gate_info) {
+        let gate_raw = match crate::ggml_quants::fetch_tensor_bytes(
+            mmap,
+            index.tensor_data_start,
+            gate_info,
+        ) {
             Ok(s) => s,
             Err(_) => return false,
         };
-        let up_raw = match crate::ggml_quants::fetch_tensor_bytes(mmap, index.tensor_data_start, up_info) {
-            Ok(s) => s,
-            Err(_) => return false,
-        };
-        let down_raw =
-            match crate::ggml_quants::fetch_tensor_bytes(mmap, index.tensor_data_start, down_info) {
+        let up_raw =
+            match crate::ggml_quants::fetch_tensor_bytes(mmap, index.tensor_data_start, up_info) {
                 Ok(s) => s,
                 Err(_) => return false,
             };
+        let down_raw = match crate::ggml_quants::fetch_tensor_bytes(
+            mmap,
+            index.tensor_data_start,
+            down_info,
+        ) {
+            Ok(s) => s,
+            Err(_) => return false,
+        };
 
         // Phase 5.5: Q projection on the parallel GEMM → q_proj; the (now SDPA-only) attention
         // shader reads it. Moves the heavy 64×960 matmul off the @workgroup_size(1) attention kernel.
@@ -417,9 +495,23 @@ impl QTensorEngine {
         let q_proj = self.mc8_q_proj_buf.as_ref().unwrap();
         let q_proj_bytes = (q_dim * n_tokens as usize * 4) as wgpu::BufferAddress;
         if !self.encode_gemm_bufs_offset(
-            pipeline, q_info, q_raw, n_embd, q_dim, q_in, 0, batch_in_bytes,
-            q_proj, 0, q_proj_bytes, n_tokens, n_embd as u32, q_dim as u32,
-            uniforms.off_q_gemm, layer, Mc8WeightRole::AttnQ,
+            pipeline,
+            q_info,
+            q_raw,
+            n_embd,
+            q_dim,
+            q_in,
+            0,
+            batch_in_bytes,
+            q_proj,
+            0,
+            q_proj_bytes,
+            n_tokens,
+            n_embd as u32,
+            q_dim as u32,
+            uniforms.off_q_gemm,
+            layer,
+            Mc8WeightRole::AttnQ,
         ) {
             return false;
         }
@@ -541,9 +633,14 @@ impl QTensorEngine {
 
         // Part 3s — FFN block: norm + gate/up (one submit via dynamic offsets + weight ping-pong).
         if let Some(norm) = tensors.ffn_norm.as_ref() {
-            let (norm_b, norm_b_off) = match self
-                .mc8_norm_source(mmap, index.tensor_data_start, norm, n_embd, layer, true)
-            {
+            let (norm_b, norm_b_off) = match self.mc8_norm_source(
+                mmap,
+                index.tensor_data_start,
+                norm,
+                n_embd,
+                layer,
+                true,
+            ) {
                 Some(v) => v,
                 None => return false,
             };
@@ -573,7 +670,9 @@ impl QTensorEngine {
             for t in 0..n_tokens {
                 let emb_off = Self::mc8_emb_off(t, n_embd);
                 let row_off = Self::mc8_prefill_row_off(t, row_stride);
-                pipeline.encoder.copy_buffer_to_buffer(batch_buf, emb_off, work_b, row_off, emb_bytes);
+                pipeline
+                    .encoder
+                    .copy_buffer_to_buffer(batch_buf, emb_off, work_b, row_off, emb_bytes);
             }
         }
         // Phase 5 — FFN expansion fusion: collapse gate GEMM + up GEMM + SiLU×mul into a
@@ -594,7 +693,9 @@ impl QTensorEngine {
             // work_b@slot_scratch_half exactly as the separate-SiLU path did — `down` unchanged.
             for t in 0..n_tokens {
                 let row_off = Self::mc8_prefill_row_off(t, row_stride);
-                pipeline.encoder.copy_buffer_to_buffer(work_b, row_off, work_a, row_off, emb_bytes);
+                pipeline
+                    .encoder
+                    .copy_buffer_to_buffer(work_b, row_off, work_a, row_off, emb_bytes);
             }
             if !self.encode_fused_ffn_expansion(
                 pipeline,
@@ -788,16 +889,18 @@ impl QTensorEngine {
                 Some(i) => i,
                 None => return false,
             };
-            let k_raw = match crate::ggml_quants::fetch_tensor_bytes(mmap, index.tensor_data_start, k_info)
-            {
-                Ok(s) => s,
-                Err(_) => return false,
-            };
-            let v_raw = match crate::ggml_quants::fetch_tensor_bytes(mmap, index.tensor_data_start, v_info)
-            {
-                Ok(s) => s,
-                Err(_) => return false,
-            };
+            let k_raw =
+                match crate::ggml_quants::fetch_tensor_bytes(mmap, index.tensor_data_start, k_info)
+                {
+                    Ok(s) => s,
+                    Err(_) => return false,
+                };
+            let v_raw =
+                match crate::ggml_quants::fetch_tensor_bytes(mmap, index.tensor_data_start, v_info)
+                {
+                    Ok(s) => s,
+                    Err(_) => return false,
+                };
             let h = index.hyperparams;
             let n_kv = h.effective_n_kv_head();
             let used_attn_norm = tensors.attn_norm.is_some();
@@ -828,9 +931,14 @@ impl QTensorEngine {
                 if let (Some(norm), Some(off)) =
                     (tensors.attn_norm.as_ref(), uniforms.attn_norm_elem_off)
                 {
-                    let (norm_b, norm_b_off) = match self
-                        .mc8_norm_source(mmap, index.tensor_data_start, norm, n_embd, layer, false)
-                    {
+                    let (norm_b, norm_b_off) = match self.mc8_norm_source(
+                        mmap,
+                        index.tensor_data_start,
+                        norm,
+                        n_embd,
+                        layer,
+                        false,
+                    ) {
                         Some(v) => v,
                         None => return false,
                     };
@@ -868,16 +976,44 @@ impl QTensorEngine {
             let k_proj = self.mc8_k_proj_buf.as_ref().unwrap();
             let v_proj = self.mc8_v_proj_buf.as_ref().unwrap();
             if !self.encode_gemm_bufs_offset(
-                &mut enc, k_info, k_raw, n_embd, kv_dim, attn_src, 0, geom.batch_in_bytes,
-                k_proj, 0, kv_proj_bytes, n_tokens, n_embd as u32, kv_dim as u32,
-                uniforms.off_k_gemm, layer, Mc8WeightRole::AttnK,
+                &mut enc,
+                k_info,
+                k_raw,
+                n_embd,
+                kv_dim,
+                attn_src,
+                0,
+                geom.batch_in_bytes,
+                k_proj,
+                0,
+                kv_proj_bytes,
+                n_tokens,
+                n_embd as u32,
+                kv_dim as u32,
+                uniforms.off_k_gemm,
+                layer,
+                Mc8WeightRole::AttnK,
             ) {
                 return false;
             }
             if !self.encode_gemm_bufs_offset(
-                &mut enc, v_info, v_raw, n_embd, kv_dim, attn_src, 0, geom.batch_in_bytes,
-                v_proj, 0, kv_proj_bytes, n_tokens, n_embd as u32, kv_dim as u32,
-                uniforms.off_v_gemm, layer, Mc8WeightRole::AttnV,
+                &mut enc,
+                v_info,
+                v_raw,
+                n_embd,
+                kv_dim,
+                attn_src,
+                0,
+                geom.batch_in_bytes,
+                v_proj,
+                0,
+                kv_proj_bytes,
+                n_tokens,
+                n_embd as u32,
+                kv_dim as u32,
+                uniforms.off_v_gemm,
+                layer,
+                Mc8WeightRole::AttnV,
             ) {
                 return false;
             }
@@ -955,7 +1091,8 @@ impl QTensorEngine {
                 for t in 0..n_tokens {
                     let abs = batch_start_token_idx + t;
                     let off = Self::mc8_emb_off(t, n_embd);
-                    enc.encoder.copy_buffer_to_buffer(batch_buf, off, token_buf, 0, token_bytes);
+                    enc.encoder
+                        .copy_buffer_to_buffer(batch_buf, off, token_buf, 0, token_bytes);
                     let attn_in = if used_attn_norm {
                         enc.encoder.copy_buffer_to_buffer(
                             prefill_scratch,
@@ -970,20 +1107,13 @@ impl QTensorEngine {
                         None
                     };
                     if !self.encode_attn_ffn_tail_gpu(
-                        &mut enc,
-                        index,
-                        layer,
-                        abs,
-                        emb_dim,
-                        &tensors,
-                        token_buf,
-                        attn_in,
-                        true,
+                        &mut enc, index, layer, abs, emb_dim, &tensors, token_buf, attn_in, true,
                     ) {
                         return false;
                     }
                     self.mc8_flush(&mut enc);
-                    enc.encoder.copy_buffer_to_buffer(token_buf, 0, batch_buf, off, token_bytes);
+                    enc.encoder
+                        .copy_buffer_to_buffer(token_buf, 0, batch_buf, off, token_bytes);
                     self.mc8_flush(&mut enc);
                 }
             }
@@ -996,7 +1126,7 @@ impl QTensorEngine {
         ));
         true
     }
-#[cfg(target_arch = "wasm32")]
+    #[cfg(target_arch = "wasm32")]
     pub async fn dispatch_fused_transformer_block_async(
         &self,
         tensor: &QTensor,
@@ -1107,31 +1237,34 @@ impl QTensorEngine {
             usage: wgpu::BufferUsages::UNIFORM | wgpu::BufferUsages::COPY_DST,
             mapped_at_creation: false,
         });
-        self.gpu_queue().write_buffer(&params_buf, 0, bytemuck::bytes_of(&gemm_params));
+        self.gpu_queue()
+            .write_buffer(&params_buf, 0, bytemuck::bytes_of(&gemm_params));
 
         let bind_group_layout = self.pipeline.get_bind_group_layout(0);
-        let bind_group = self.gpu_device().create_bind_group(&wgpu::BindGroupDescriptor {
-            label: None,
-            layout: &bind_group_layout,
-            entries: &[
-                wgpu::BindGroupEntry {
-                    binding: 0,
-                    resource: input_buf.as_entire_binding(),
-                },
-                wgpu::BindGroupEntry {
-                    binding: 1,
-                    resource: weights_buf.as_entire_binding(),
-                },
-                wgpu::BindGroupEntry {
-                    binding: 2,
-                    resource: params_buf.as_entire_binding(),
-                },
-                wgpu::BindGroupEntry {
-                    binding: 3,
-                    resource: output_buf.as_entire_binding(),
-                },
-            ],
-        });
+        let bind_group = self
+            .gpu_device()
+            .create_bind_group(&wgpu::BindGroupDescriptor {
+                label: None,
+                layout: &bind_group_layout,
+                entries: &[
+                    wgpu::BindGroupEntry {
+                        binding: 0,
+                        resource: input_buf.as_entire_binding(),
+                    },
+                    wgpu::BindGroupEntry {
+                        binding: 1,
+                        resource: weights_buf.as_entire_binding(),
+                    },
+                    wgpu::BindGroupEntry {
+                        binding: 2,
+                        resource: params_buf.as_entire_binding(),
+                    },
+                    wgpu::BindGroupEntry {
+                        binding: 3,
+                        resource: output_buf.as_entire_binding(),
+                    },
+                ],
+            });
 
         let mut encoder = self
             .device()
@@ -1160,7 +1293,6 @@ impl QTensorEngine {
         let buffer_slice = staging_buf.slice(..);
         let (sender, receiver) = futures_channel::oneshot::channel();
         buffer_slice.map_async(wgpu::MapMode::Read, move |v| sender.send(v).unwrap());
-        
 
         receiver.await.unwrap().unwrap();
 
@@ -1173,7 +1305,7 @@ impl QTensorEngine {
             .fetch_add(rows * cols, std::sync::atomic::Ordering::Relaxed);
         result
     }
-#[cfg(target_arch = "wasm32")]
+    #[cfg(target_arch = "wasm32")]
     pub async fn dispatch_output_argmax_chunked_async(
         &self,
         index: &crate::gguf_sharder::GgufTensorIndex,
@@ -1293,9 +1425,10 @@ impl QTensorEngine {
         })
     }
 
-
-#[cfg(target_arch = "wasm32")]
+    #[cfg(target_arch = "wasm32")]
     pub async fn new_async() -> Self {
-        Self::try_new().await.expect("Failed to initialize native GGUF engine")
+        Self::try_new()
+            .await
+            .expect("Failed to initialize native GGUF engine")
     }
 }

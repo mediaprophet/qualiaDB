@@ -13,7 +13,8 @@ pub const GRAVITATIONAL: Quantity =
     Quantity::new(6.674_30e-11, Dimension::new([3, -1, -2, 0, 0, 0, 0]));
 
 /// Planck constant, `h` (exact, SI-2019). J·s = m²·kg·s⁻¹.
-pub const PLANCK: Quantity = Quantity::new(6.626_070_15e-34, Dimension::new([2, 1, -1, 0, 0, 0, 0]));
+pub const PLANCK: Quantity =
+    Quantity::new(6.626_070_15e-34, Dimension::new([2, 1, -1, 0, 0, 0, 0]));
 
 /// Reduced Planck constant, `ħ = h/2π`. Same dimension as `h`.
 pub const REDUCED_PLANCK: Quantity = Quantity::new(
@@ -22,18 +23,21 @@ pub const REDUCED_PLANCK: Quantity = Quantity::new(
 );
 
 /// Boltzmann constant, `k_B` (exact, SI-2019). J/K = m²·kg·s⁻²·K⁻¹.
-pub const BOLTZMANN: Quantity = Quantity::new(1.380_649e-23, Dimension::new([2, 1, -2, 0, -1, 0, 0]));
+pub const BOLTZMANN: Quantity =
+    Quantity::new(1.380_649e-23, Dimension::new([2, 1, -2, 0, -1, 0, 0]));
 
 /// Avogadro constant, `N_A` (exact, SI-2019). mol⁻¹.
-pub const AVOGADRO: Quantity = Quantity::new(6.022_140_76e23, Dimension::new([0, 0, 0, 0, 0, -1, 0]));
+pub const AVOGADRO: Quantity =
+    Quantity::new(6.022_140_76e23, Dimension::new([0, 0, 0, 0, 0, -1, 0]));
 
 /// Elementary charge, `e` (exact, SI-2019). Coulomb = A·s.
-pub const ELEMENTARY_CHARGE: Quantity =
-    Quantity::new(1.602_176_634e-19, Dimension::CHARGE);
+pub const ELEMENTARY_CHARGE: Quantity = Quantity::new(1.602_176_634e-19, Dimension::CHARGE);
 
 /// Molar gas constant, `R = N_A·k_B` (exact). J·mol⁻¹·K⁻¹.
-pub const GAS_CONSTANT: Quantity =
-    Quantity::new(8.314_462_618_153_24, Dimension::new([2, 1, -2, 0, -1, -1, 0]));
+pub const GAS_CONSTANT: Quantity = Quantity::new(
+    8.314_462_618_153_24,
+    Dimension::new([2, 1, -2, 0, -1, -1, 0]),
+);
 
 /// Stefan–Boltzmann constant, `σ`. W·m⁻²·K⁻⁴ = kg·s⁻³·K⁻⁴.
 pub const STEFAN_BOLTZMANN: Quantity =

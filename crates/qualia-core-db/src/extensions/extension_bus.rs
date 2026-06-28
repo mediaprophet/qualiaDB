@@ -1,9 +1,9 @@
+use crate::extension_manifest::{ExtensionCapability, ExtensionManifest};
+use crate::{q_hash, NQuin};
 use std::collections::HashMap;
 use std::fs;
 use std::path::{Path, PathBuf};
 use std::sync::{Arc, RwLock};
-use crate::extension_manifest::{ExtensionManifest, ExtensionCapability};
-use crate::{q_hash, NQuin};
 
 /// Global registry of discovered and provisioned capability extensions.
 pub struct ExtensionBus {
@@ -44,14 +44,20 @@ impl ExtensionBus {
                     if manifest_path.exists() {
                         if let Ok(json_bytes) = fs::read(&manifest_path) {
                             if let Ok(manifest) = ExtensionManifest::from_json(&json_bytes) {
-                                println!("Loaded extension: {} (v{})", manifest.display_name, manifest.version);
-                                
+                                println!(
+                                    "Loaded extension: {} (v{})",
+                                    manifest.display_name, manifest.version
+                                );
+
                                 // Index capabilities
                                 for cap in &manifest.capabilities {
                                     let cap_hash = q_hash(&cap.interface);
-                                    idx_lock.entry(cap_hash).or_default().push(manifest.extension_id.clone());
+                                    idx_lock
+                                        .entry(cap_hash)
+                                        .or_default()
+                                        .push(manifest.extension_id.clone());
                                 }
-                                
+
                                 reg_lock.insert(manifest.extension_id.clone(), manifest);
                             } else {
                                 eprintln!("Failed to parse manifest at {:?}", manifest_path);
@@ -65,22 +71,29 @@ impl ExtensionBus {
 
     /// Register a new extension from an absolute path (CLI workflow)
     pub fn register_extension_from_path(&self, manifest_path: &Path) -> Result<(), String> {
-        let json_bytes = fs::read(manifest_path).map_err(|e| format!("Failed to read manifest: {}", e))?;
-        let manifest = ExtensionManifest::from_json(&json_bytes).map_err(|e| format!("Invalid manifest JSON: {}", e))?;
-        
+        let json_bytes =
+            fs::read(manifest_path).map_err(|e| format!("Failed to read manifest: {}", e))?;
+        let manifest = ExtensionManifest::from_json(&json_bytes)
+            .map_err(|e| format!("Invalid manifest JSON: {}", e))?;
+
         // Copy to local extensions dir
         let target_dir = self.extensions_dir.join(&manifest.extension_id);
-        fs::create_dir_all(&target_dir).map_err(|e| format!("Failed to create extension dir: {}", e))?;
-        fs::write(target_dir.join("manifest.json"), &json_bytes).map_err(|e| format!("Failed to write manifest: {}", e))?;
+        fs::create_dir_all(&target_dir)
+            .map_err(|e| format!("Failed to create extension dir: {}", e))?;
+        fs::write(target_dir.join("manifest.json"), &json_bytes)
+            .map_err(|e| format!("Failed to write manifest: {}", e))?;
 
         let mut reg_lock = self.registered_extensions.write().unwrap();
         let mut idx_lock = self.capability_index.write().unwrap();
 
         for cap in &manifest.capabilities {
             let cap_hash = q_hash(&cap.interface);
-            idx_lock.entry(cap_hash).or_default().push(manifest.extension_id.clone());
+            idx_lock
+                .entry(cap_hash)
+                .or_default()
+                .push(manifest.extension_id.clone());
         }
-        
+
         reg_lock.insert(manifest.extension_id.clone(), manifest);
         Ok(())
     }
@@ -95,7 +108,7 @@ impl ExtensionBus {
     pub fn query_capability(&self, interface_hash: u64) -> Vec<ExtensionManifest> {
         let idx_lock = self.capability_index.read().unwrap();
         let reg_lock = self.registered_extensions.read().unwrap();
-        
+
         let mut results = Vec::new();
         if let Some(ext_ids) = idx_lock.get(&interface_hash) {
             for id in ext_ids {
@@ -130,7 +143,7 @@ impl ExtensionBus {
                 parity: 0, // XOR fold omitted for brevity
             };
             let _ = crate::wal::append_mutation(&violation_quin);
-            
+
             return Err("GATEKEEPER_BLOCK: Cannot send Classified (0x02) data to an extension without Guardianship override.".to_string());
         }
 
@@ -145,7 +158,10 @@ impl ExtensionBus {
         });
 
         // Simulate Dispatch
-        println!("Dispatching task to {} via {:?}: {}", manifest.display_name, manifest.transport, payload);
+        println!(
+            "Dispatching task to {} via {:?}: {}",
+            manifest.display_name, manifest.transport, payload
+        );
 
         // In a real system, we would open a Reqwest client (LocalHttp) or NamedPipe connection here
         Ok(format!("Task dispatched successfully to {}", extension_id))
@@ -166,28 +182,35 @@ impl ExtensionBus {
         }
 
         let target_dir = self.extensions_dir.join(extension_id).join("assets");
-        std::fs::create_dir_all(&target_dir).map_err(|e| format!("Failed to create asset dir: {}", e))?;
+        std::fs::create_dir_all(&target_dir)
+            .map_err(|e| format!("Failed to create asset dir: {}", e))?;
 
         let target_file = target_dir.join(filename);
-        
-        println!("Provisioning asset from {} into {:?}", asset_url, target_file);
-        
+
+        println!(
+            "Provisioning asset from {} into {:?}",
+            asset_url, target_file
+        );
+
         // In production, this would use Reqwest to stream the download with a progress bar.
         // For the Phase B architecture proof, we create a placeholder file.
         std::fs::write(&target_file, b"MOCK_ASSET_DATA")
             .map_err(|e| format!("Failed to write asset: {}", e))?;
 
-        Ok(format!("Asset provisioned successfully at {:?}", target_file))
+        Ok(format!(
+            "Asset provisioned successfully at {:?}",
+            target_file
+        ))
     }
 }
 
 #[cfg(target_arch = "wasm32")]
 pub mod wasm_bus {
+    use serde::{Deserialize, Serialize};
     use std::cell::RefCell;
     use wasm_bindgen::prelude::*;
     use wasm_bindgen::JsCast;
     use web_sys::{ErrorEvent, Event, MessageEvent, WebSocket};
-    use serde::{Serialize, Deserialize};
 
     thread_local! {
         pub static EXTENSION_BUS: RefCell<Option<ExtensionBusState>> = RefCell::new(None);
@@ -219,10 +242,10 @@ pub mod wasm_bus {
 
     pub fn init_extension_bus(did: String) -> Result<(), JsValue> {
         let ws = WebSocket::new("ws://127.0.0.1:4242")?;
-        
+
         let ws_clone = ws.clone();
         let did_clone = did.clone();
-        
+
         let on_open = Closure::wrap(Box::new(move |_e: Event| {
             let payload = ChallengePayload {
                 challenge: "did:q42".into(),
@@ -265,7 +288,7 @@ pub mod wasm_bus {
             // Placeholder for error telemetry
         }) as Box<dyn FnMut(ErrorEvent)>);
         ws.set_onerror(Some(on_error.as_ref().unchecked_ref()));
-        
+
         let on_close = Closure::wrap(Box::new(move |_e: Event| {
             EXTENSION_BUS.with(|bus| {
                 *bus.borrow_mut() = None;
@@ -290,24 +313,34 @@ pub mod wasm_bus {
 
     pub fn is_connected() -> bool {
         EXTENSION_BUS.with(|bus| {
-            bus.borrow().as_ref().map(|s| s.is_authenticated).unwrap_or(false)
+            bus.borrow()
+                .as_ref()
+                .map(|s| s.is_authenticated)
+                .unwrap_or(false)
         })
     }
 
-    pub fn send_intent<F: FnMut(String) + 'static>(prompt: &str, graph_context: &str, on_token: F) -> Result<(), String> {
+    pub fn send_intent<F: FnMut(String) + 'static>(
+        prompt: &str,
+        graph_context: &str,
+        on_token: F,
+    ) -> Result<(), String> {
         let payload = IntentPayload {
             rpc: "infer_local_model".into(),
             prompt: prompt.to_string(),
             graph_context: graph_context.to_string(),
-            signature: "did:q42:active".into(), 
+            signature: "did:q42:active".into(),
         };
         let intent_json = serde_json::to_string(&payload).unwrap_or_default();
-        
+
         EXTENSION_BUS.with(|bus| {
             if let Some(state) = bus.borrow_mut().as_mut() {
                 if state.is_authenticated {
                     state.active_token_callback = Some(Box::new(on_token));
-                    state.ws.send_with_str(&intent_json).map_err(|e| format!("{:?}", e))?;
+                    state
+                        .ws
+                        .send_with_str(&intent_json)
+                        .map_err(|e| format!("{:?}", e))?;
                     return Ok(());
                 }
             }

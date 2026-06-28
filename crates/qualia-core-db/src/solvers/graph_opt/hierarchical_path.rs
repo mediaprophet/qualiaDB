@@ -131,7 +131,11 @@ fn portal_distance(
     if !nodes.contains(&t) {
         nodes.push(t);
     }
-    let index: HashMap<usize, usize> = nodes.iter().enumerate().map(|(i, &orig)| (orig, i)).collect();
+    let index: HashMap<usize, usize> = nodes
+        .iter()
+        .enumerate()
+        .map(|(i, &orig)| (orig, i))
+        .collect();
     let m = nodes.len();
     let mut portal_edges: Vec<Vec<(usize, f64)>> = vec![Vec::new(); m];
 
@@ -188,9 +192,13 @@ mod tests {
     fn hierarchical_equals_exact_across_clusters() {
         // Two clusters {0,1,2} and {3,4,5}, joined by 2-3.
         let edges = [
-            (0, 1, 1.0), (1, 2, 1.0), (0, 2, 3.0), // cluster A
-            (3, 4, 1.0), (4, 5, 1.0), (3, 5, 3.0), // cluster B
-            (2, 3, 2.0),                            // bridge
+            (0, 1, 1.0),
+            (1, 2, 1.0),
+            (0, 2, 3.0), // cluster A
+            (3, 4, 1.0),
+            (4, 5, 1.0),
+            (3, 5, 3.0), // cluster B
+            (2, 3, 2.0), // bridge
         ];
         let adj = graph(6, &edges);
         let cluster = [0, 0, 0, 1, 1, 1];
@@ -199,7 +207,11 @@ mod tests {
             let exact = dijkstra(6, &adj, s);
             for t in 0..6 {
                 let h = hierarchical_shortest_path(6, &adj, &cluster, s, t);
-                assert!((h - exact[t]).abs() < 1e-9, "s={s} t={t}: hier {h} vs exact {}", exact[t]);
+                assert!(
+                    (h - exact[t]).abs() < 1e-9,
+                    "s={s} t={t}: hier {h} vs exact {}",
+                    exact[t]
+                );
             }
         }
     }
@@ -209,13 +221,19 @@ mod tests {
         // Within-cluster nodes whose best path goes through the other cluster.
         let edges = [
             (0, 1, 10.0), // expensive intra link
-            (0, 2, 1.0), (2, 3, 1.0), (3, 1, 1.0), // cheap detour via cluster B
+            (0, 2, 1.0),
+            (2, 3, 1.0),
+            (3, 1, 1.0), // cheap detour via cluster B
         ];
         let adj = graph(4, &edges);
         let cluster = [0, 0, 1, 1];
         let exact = dijkstra(4, &adj, 0);
         let h = hierarchical_shortest_path(4, &adj, &cluster, 0, 1);
-        assert!((h - exact[1]).abs() < 1e-9, "leave-and-return: {h} vs {}", exact[1]);
+        assert!(
+            (h - exact[1]).abs() < 1e-9,
+            "leave-and-return: {h} vs {}",
+            exact[1]
+        );
         assert!(h < 10.0, "should take the cheap detour");
     }
 }

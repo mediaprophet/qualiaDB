@@ -42,7 +42,11 @@ pub fn divisor_count(n: u64) -> u64 {
     if n == 0 {
         return 0;
     }
-    prime_factors(n).iter().map(|&(_, e)| (e + 1) as u64).product::<u64>().max(1)
+    prime_factors(n)
+        .iter()
+        .map(|&(_, e)| (e + 1) as u64)
+        .product::<u64>()
+        .max(1)
 }
 
 /// Sum of positive divisors `σ(n) = ∏ (p^{e+1} − 1)/(p − 1)`. `σ(1) = 1`, `σ(0) = 0`.

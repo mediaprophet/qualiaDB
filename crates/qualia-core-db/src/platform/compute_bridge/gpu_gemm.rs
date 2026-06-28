@@ -108,7 +108,10 @@ impl WgpuGemm {
         dims[0..4].copy_from_slice(&(m as u32).to_le_bytes());
         dims[4..8].copy_from_slice(&(k as u32).to_le_bytes());
         dims[8..12].copy_from_slice(&(n as u32).to_le_bytes());
-        let dims_buf = buf(&dims, wgpu::BufferUsages::UNIFORM | wgpu::BufferUsages::COPY_DST);
+        let dims_buf = buf(
+            &dims,
+            wgpu::BufferUsages::UNIFORM | wgpu::BufferUsages::COPY_DST,
+        );
 
         let out_bytes = (m * n * 4).max(4) as u64;
         let out = dev.create_buffer(&wgpu::BufferDescriptor {
@@ -127,10 +130,22 @@ impl WgpuGemm {
             label: None,
             layout: &self.pipeline.get_bind_group_layout(0),
             entries: &[
-                wgpu::BindGroupEntry { binding: 0, resource: a_buf.as_entire_binding() },
-                wgpu::BindGroupEntry { binding: 1, resource: b_buf.as_entire_binding() },
-                wgpu::BindGroupEntry { binding: 2, resource: dims_buf.as_entire_binding() },
-                wgpu::BindGroupEntry { binding: 3, resource: out.as_entire_binding() },
+                wgpu::BindGroupEntry {
+                    binding: 0,
+                    resource: a_buf.as_entire_binding(),
+                },
+                wgpu::BindGroupEntry {
+                    binding: 1,
+                    resource: b_buf.as_entire_binding(),
+                },
+                wgpu::BindGroupEntry {
+                    binding: 2,
+                    resource: dims_buf.as_entire_binding(),
+                },
+                wgpu::BindGroupEntry {
+                    binding: 3,
+                    resource: out.as_entire_binding(),
+                },
             ],
         });
 

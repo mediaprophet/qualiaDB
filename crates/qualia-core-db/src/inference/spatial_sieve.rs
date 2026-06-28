@@ -57,24 +57,24 @@ pub fn compute_spatial_overlap_gpu_mock(
 /// by `kml_bridge::encode_geohash_64`.  Callers write the returned quins to
 /// storage; this function never allocates a graph writer itself.
 pub fn log_spatial_coordinate(lat: f64, lng: f64, ts: u64) -> [crate::NQuin; 2] {
-    use crate::kml_bridge::{encode_geohash_64, SPATIAL_CONTEXT, P_HAS_GEOMETRY, P_GENERATED_AT};
+    use crate::kml_bridge::{encode_geohash_64, P_GENERATED_AT, P_HAS_GEOMETRY, SPATIAL_CONTEXT};
     let geohash = encode_geohash_64(lng, lat);
     [
         crate::NQuin {
-            subject:   geohash,
+            subject: geohash,
             predicate: P_HAS_GEOMETRY,
-            object:    geohash,
-            context:   SPATIAL_CONTEXT,
-            metadata:  ts & 0xFFFF_FFFF,
-            parity:    0,
+            object: geohash,
+            context: SPATIAL_CONTEXT,
+            metadata: ts & 0xFFFF_FFFF,
+            parity: 0,
         },
         crate::NQuin {
-            subject:   geohash,
+            subject: geohash,
             predicate: P_GENERATED_AT,
-            object:    ts,
-            context:   SPATIAL_CONTEXT,
-            metadata:  ts & 0xFFFF_FFFF,
-            parity:    0,
+            object: ts,
+            context: SPATIAL_CONTEXT,
+            metadata: ts & 0xFFFF_FFFF,
+            parity: 0,
         },
     ]
 }

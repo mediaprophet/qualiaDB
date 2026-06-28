@@ -113,12 +113,7 @@ pub fn bilateral_pull_active(tensor_mu: f32, standpoint_class: u32) -> bool {
 
 /// Pull vector toward camera eye: `direction · (0.12 · α · epistemic_q)`.
 #[inline]
-pub fn pull_vector(
-    node: [f32; 3],
-    camera_eye: [f32; 3],
-    alpha: f32,
-    epistemic_q: f32,
-) -> [f32; 3] {
+pub fn pull_vector(node: [f32; 3], camera_eye: [f32; 3], alpha: f32, epistemic_q: f32) -> [f32; 3] {
     let dx = camera_eye[0] - node[0];
     let dy = camera_eye[1] - node[1];
     let dz = camera_eye[2] - node[2];
@@ -160,12 +155,7 @@ pub fn rotor_from_axis_angle(axis: [f32; 3], angle: f32) -> [f32; 4] {
     let half = angle * 0.5;
     let c = half.cos();
     let s = half.sin();
-    [
-        c,
-        s * (-axis[2]),
-        s * axis[1],
-        s * (-axis[0]),
-    ]
+    [c, s * (-axis[2]), s * axis[1], s * (-axis[0])]
 }
 
 #[inline]
@@ -285,7 +275,17 @@ pub fn motor_rq_gated(
 
 #[inline]
 pub fn semantic_motor(w: f32, q: f32, sigma: f32, time: f32, alpha: f32) -> Motor {
-    semantic_motor_intrinsic(0.0, w, q, sigma, time, alpha, [0.0; 3], STANDPOINT_SPECTATOR, 1.0)
+    semantic_motor_intrinsic(
+        0.0,
+        w,
+        q,
+        sigma,
+        time,
+        alpha,
+        [0.0; 3],
+        STANDPOINT_SPECTATOR,
+        1.0,
+    )
 }
 
 #[inline]
@@ -325,8 +325,17 @@ pub fn semantic_motor_phase2c(
     standpoint_class: u32,
     epistemic_q: f32,
 ) -> Motor {
-    let r_intrinsic =
-        semantic_motor_intrinsic(tensor_v, w, q, sigma, time, alpha, node, standpoint_class, epistemic_q);
+    let r_intrinsic = semantic_motor_intrinsic(
+        tensor_v,
+        w,
+        q,
+        sigma,
+        time,
+        alpha,
+        node,
+        standpoint_class,
+        epistemic_q,
+    );
     let t_motor = if bilateral_pull_active(tensor_mu, standpoint_class) {
         motor_translate(pull_vector(node, camera_eye, alpha, epistemic_q))
     } else {
@@ -354,9 +363,7 @@ pub fn motor_to_mat4_col(m: Motor) -> [[f32; 4]; 4] {
 
 #[inline]
 fn approx_eq3(a: [f32; 3], b: [f32; 3], eps: f32) -> bool {
-    (a[0] - b[0]).abs() <= eps
-        && (a[1] - b[1]).abs() <= eps
-        && (a[2] - b[2]).abs() <= eps
+    (a[0] - b[0]).abs() <= eps && (a[1] - b[1]).abs() <= eps && (a[2] - b[2]).abs() <= eps
 }
 
 #[cfg(test)]
@@ -394,13 +401,16 @@ mod tests {
         let fixtures: [([f32; 4], [f32; 3]); 6] = [
             (rotor_from_axis_angle([0.0, 1.0, 0.0], 0.8), [1.0, 0.0, 0.0]),
             (rotor_from_axis_angle([1.0, 0.0, 0.0], 1.2), [0.0, 1.0, 0.2]),
-            (rotor_mul(
-                motor_rw(2.0, 1.0),
-                motor_rq(0.35, 0.25, 1.7, 0.9),
-            ), [-0.4, 0.6, 0.1]),
+            (
+                rotor_mul(motor_rw(2.0, 1.0), motor_rq(0.35, 0.25, 1.7, 0.9)),
+                [-0.4, 0.6, 0.1],
+            ),
             (semantic_motor(3.0, 0.2, 0.5, 2.3, 1.0).r, [0.2, -0.3, 0.8]),
             ([0.70710677, 0.0, 0.70710677, 0.0], [1.0, 0.0, 0.0]),
-            (rotor_from_axis_angle([0.0, 0.0, 1.0], -0.5), [-0.2, 0.5, 0.0]),
+            (
+                rotor_from_axis_angle([0.0, 0.0, 1.0], -0.5),
+                [-0.2, 0.5, 0.0],
+            ),
         ];
         for (r, p) in fixtures {
             let m = Motor::from_rotor(r);
@@ -462,7 +472,11 @@ mod tests {
         let v = [0.08, -0.03, 0.02];
         let p = [0.2, 0.1, -0.4];
         let out = sandwich_point(motor_translate(v), p);
-        assert!(approx_eq3(out, [p[0] + v[0], p[1] + v[1], p[2] + v[2]], EPS));
+        assert!(approx_eq3(
+            out,
+            [p[0] + v[0], p[1] + v[1], p[2] + v[2]],
+            EPS
+        ));
     }
 
     #[test]
@@ -470,10 +484,29 @@ mod tests {
         let node = [0.3, 0.1, -0.2];
         let eye = [3.0, 1.0, 2.0];
         let m_pull = semantic_motor_phase2c(
-            0.0, 2.0, 0.3, 0.5, 1.0, 0.9, 0.0, node, eye, STANDPOINT_SPECTATOR, 1.0,
+            0.0,
+            2.0,
+            0.3,
+            0.5,
+            1.0,
+            0.9,
+            0.0,
+            node,
+            eye,
+            STANDPOINT_SPECTATOR,
+            1.0,
         );
-        let m_base =
-            semantic_motor_intrinsic(0.0, 2.0, 0.3, 0.5, 1.0, 0.9, node, STANDPOINT_SPECTATOR, 1.0);
+        let m_base = semantic_motor_intrinsic(
+            0.0,
+            2.0,
+            0.3,
+            0.5,
+            1.0,
+            0.9,
+            node,
+            STANDPOINT_SPECTATOR,
+            1.0,
+        );
         for i in 0..4 {
             assert!((m_pull.r[i] - m_base.r[i]).abs() < EPS);
             assert!((m_pull.d[i] - m_base.d[i]).abs() < EPS);
@@ -491,7 +524,17 @@ mod tests {
         );
         let with = sandwich_point(
             semantic_motor_phase2c(
-                0.0, 0.0, 0.0, 0.0, 1.0, 2.0, 2.0, node, eye, STANDPOINT_DID, 0.8,
+                0.0,
+                0.0,
+                0.0,
+                0.0,
+                1.0,
+                2.0,
+                2.0,
+                node,
+                eye,
+                STANDPOINT_DID,
+                0.8,
             ),
             p,
         );
@@ -503,7 +546,17 @@ mod tests {
     #[test]
     fn v_zero_regresses_to_pre_phase3_intrinsic() {
         let node = [0.2, -0.1, 0.3];
-        let m_v0 = semantic_motor_intrinsic(0.0, 1.0, 0.2, 0.4, 1.5, 0.9, node, STANDPOINT_SPECTATOR, 1.0);
+        let m_v0 = semantic_motor_intrinsic(
+            0.0,
+            1.0,
+            0.2,
+            0.4,
+            1.5,
+            0.9,
+            node,
+            STANDPOINT_SPECTATOR,
+            1.0,
+        );
         let r_w = motor_rw(1.0, 0.9);
         let r_q = motor_rq(0.2, 0.4, 1.5, 0.9);
         let m_legacy = motor_mul(Motor::from_rotor(r_w), Motor::from_rotor(r_q));

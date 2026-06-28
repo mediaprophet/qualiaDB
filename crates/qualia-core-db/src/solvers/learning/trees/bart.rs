@@ -29,7 +29,17 @@ struct Tree {
 
 impl Tree {
     fn root() -> Self {
-        Self { nodes: vec![Node { leaf: true, feature: 0, threshold: 0.0, left: 0, right: 0, depth: 0, mu: 0.0 }] }
+        Self {
+            nodes: vec![Node {
+                leaf: true,
+                feature: 0,
+                threshold: 0.0,
+                left: 0,
+                right: 0,
+                depth: 0,
+                mu: 0.0,
+            }],
+        }
     }
     /// Index of the leaf a point falls into.
     fn leaf_of(&self, x_row: &[f64]) -> usize {
@@ -39,19 +49,29 @@ impl Tree {
             if nd.leaf {
                 return n;
             }
-            n = if x_row[nd.feature] <= nd.threshold { nd.left } else { nd.right };
+            n = if x_row[nd.feature] <= nd.threshold {
+                nd.left
+            } else {
+                nd.right
+            };
         }
     }
     fn predict(&self, x_row: &[f64]) -> f64 {
         self.nodes[self.leaf_of(x_row)].mu
     }
     fn leaves(&self) -> Vec<usize> {
-        (0..self.nodes.len()).filter(|&i| self.nodes[i].leaf).collect()
+        (0..self.nodes.len())
+            .filter(|&i| self.nodes[i].leaf)
+            .collect()
     }
     /// "nog" nodes: internal nodes whose both children are leaves (prunable).
     fn nog_nodes(&self) -> Vec<usize> {
         (0..self.nodes.len())
-            .filter(|&i| !self.nodes[i].leaf && self.nodes[self.nodes[i].left].leaf && self.nodes[self.nodes[i].right].leaf)
+            .filter(|&i| {
+                !self.nodes[i].leaf
+                    && self.nodes[self.nodes[i].left].leaf
+                    && self.nodes[self.nodes[i].right].leaf
+            })
             .collect()
     }
 }
@@ -59,7 +79,10 @@ impl Tree {
 struct Rng(u64);
 impl Rng {
     fn unit(&mut self) -> f64 {
-        self.0 = self.0.wrapping_mul(6364136223846793005).wrapping_add(1442695040888963407);
+        self.0 = self
+            .0
+            .wrapping_mul(6364136223846793005)
+            .wrapping_add(1442695040888963407);
         ((self.0 >> 11) as f64) / ((1u64 << 53) as f64)
     }
     fn below(&mut self, b: usize) -> usize {
@@ -164,7 +187,17 @@ impl Bart {
                     }
                 }
                 // One MH step (grow or prune) on tree j against R.
-                mh_step(&mut trees[j], x, &r, n, p, sigma2, sigma_mu2, &p_split, &mut rng);
+                mh_step(
+                    &mut trees[j],
+                    x,
+                    &r,
+                    n,
+                    p,
+                    sigma2,
+                    sigma_mu2,
+                    &p_split,
+                    &mut rng,
+                );
                 // Sample leaf μ's (conjugate normal) and recompute this tree's fit.
                 sample_leaves(&mut trees[j], x, &r, n, sigma2, sigma_mu2, &mut rng);
                 for i in 0..n {
@@ -186,7 +219,12 @@ impl Bart {
             }
         }
 
-        Ok(Self { draws, y_center, y_scale, p })
+        Ok(Self {
+            draws,
+            y_center,
+            y_scale,
+            p,
+        })
     }
 
     /// Posterior-mean prediction for one row (in the original y units).
@@ -201,7 +239,9 @@ impl Bart {
     }
 
     pub fn predict(&self, x: &[f64], n: usize) -> Vec<f64> {
-        (0..n).map(|i| self.predict_row(&x[i * self.p..(i + 1) * self.p])).collect()
+        (0..n)
+            .map(|i| self.predict_row(&x[i * self.p..(i + 1) * self.p]))
+            .collect()
     }
 
     pub fn n_draws(&self) -> usize {
@@ -210,7 +250,13 @@ impl Bart {
 }
 
 /// Residual sum + count of points falling into each leaf of `tree`.
-fn leaf_stats(tree: &Tree, x: &[f64], r: &[f64], n: usize, p: usize) -> std::collections::HashMap<usize, (f64, f64)> {
+fn leaf_stats(
+    tree: &Tree,
+    x: &[f64],
+    r: &[f64],
+    n: usize,
+    p: usize,
+) -> std::collections::HashMap<usize, (f64, f64)> {
     let mut m: std::collections::HashMap<usize, (f64, f64)> = std::collections::HashMap::new();
     for i in 0..n {
         let l = tree.leaf_of(&x[i * p..(i + 1) * p]);
@@ -243,7 +289,9 @@ fn mh_step(
         }
         let leaf = leaves[rng.below(leaves.len())];
         // Gather this leaf's point indices.
-        let idx: Vec<usize> = (0..n).filter(|&i| tree.leaf_of(&x[i * p..(i + 1) * p]) == leaf).collect();
+        let idx: Vec<usize> = (0..n)
+            .filter(|&i| tree.leaf_of(&x[i * p..(i + 1) * p]) == leaf)
+            .collect();
         if idx.len() < 2 {
             return;
         }
@@ -275,7 +323,8 @@ fn mh_step(
             return;
         }
         let d = tree.nodes[leaf].depth;
-        let loglik_ratio = leaf_loglik(sl, nl, sigma2, sigma_mu2) + leaf_loglik(sr, nr, sigma2, sigma_mu2)
+        let loglik_ratio = leaf_loglik(sl, nl, sigma2, sigma_mu2)
+            + leaf_loglik(sr, nr, sigma2, sigma_mu2)
             - leaf_loglik(s, nl + nr, sigma2, sigma_mu2);
         let ps = p_split(d);
         let prior_ratio = (ps * (1.0 - p_split(d + 1)).powi(2) / (1.0 - ps)).max(1e-300);
@@ -288,8 +337,24 @@ fn mh_step(
             let li = tree.nodes.len();
             let ri = li + 1;
             let depth = d + 1;
-            tree.nodes.push(Node { leaf: true, feature: 0, threshold: 0.0, left: 0, right: 0, depth, mu: 0.0 });
-            tree.nodes.push(Node { leaf: true, feature: 0, threshold: 0.0, left: 0, right: 0, depth, mu: 0.0 });
+            tree.nodes.push(Node {
+                leaf: true,
+                feature: 0,
+                threshold: 0.0,
+                left: 0,
+                right: 0,
+                depth,
+                mu: 0.0,
+            });
+            tree.nodes.push(Node {
+                leaf: true,
+                feature: 0,
+                threshold: 0.0,
+                left: 0,
+                right: 0,
+                depth,
+                mu: 0.0,
+            });
             let nd = &mut tree.nodes[leaf];
             nd.leaf = false;
             nd.feature = feature;
@@ -301,11 +366,13 @@ fn mh_step(
         // Prune a random nog node.
         let nog = nogs[rng.below(nogs.len())];
         let (lc, rc) = (tree.nodes[nog].left, tree.nodes[nog].right);
-        let idx: Vec<usize> = (0..n).filter(|&i| {
-            // points reaching `nog` then either child
-            let leaf = tree.leaf_of(&x[i * p..(i + 1) * p]);
-            leaf == lc || leaf == rc
-        }).collect();
+        let idx: Vec<usize> = (0..n)
+            .filter(|&i| {
+                // points reaching `nog` then either child
+                let leaf = tree.leaf_of(&x[i * p..(i + 1) * p]);
+                leaf == lc || leaf == rc
+            })
+            .collect();
         let (mut sl, mut nl, mut sr, mut nr) = (0.0, 0.0, 0.0, 0.0);
         for &i in &idx {
             let leaf = tree.leaf_of(&x[i * p..(i + 1) * p]);
@@ -323,7 +390,8 @@ fn mh_step(
         let d = tree.nodes[nog].depth;
         // Reverse of grow: ratio is the reciprocal.
         let loglik_ratio = leaf_loglik(sl + sr, nl + nr, sigma2, sigma_mu2)
-            - leaf_loglik(sl, nl, sigma2, sigma_mu2) - leaf_loglik(sr, nr, sigma2, sigma_mu2);
+            - leaf_loglik(sl, nl, sigma2, sigma_mu2)
+            - leaf_loglik(sr, nr, sigma2, sigma_mu2);
         let ps = p_split(d);
         let prior_ratio = ((1.0 - ps) / (ps * (1.0 - p_split(d + 1)).powi(2))).max(1e-300);
         let n_nog = nogs.len() as f64;
@@ -344,7 +412,12 @@ fn mh_step(
 fn compact(tree: &mut Tree) {
     let mut new_nodes = Vec::new();
     let mut map = std::collections::HashMap::new();
-    fn visit(old: usize, src: &[Node], new_nodes: &mut Vec<Node>, map: &mut std::collections::HashMap<usize, usize>) -> usize {
+    fn visit(
+        old: usize,
+        src: &[Node],
+        new_nodes: &mut Vec<Node>,
+        map: &mut std::collections::HashMap<usize, usize>,
+    ) -> usize {
         let id = new_nodes.len();
         map.insert(old, id);
         let mut nd = src[old].clone();
@@ -362,7 +435,15 @@ fn compact(tree: &mut Tree) {
     tree.nodes = new_nodes;
 }
 
-fn sample_leaves(tree: &mut Tree, x: &[f64], r: &[f64], n: usize, sigma2: f64, sigma_mu2: f64, rng: &mut Rng) {
+fn sample_leaves(
+    tree: &mut Tree,
+    x: &[f64],
+    r: &[f64],
+    n: usize,
+    sigma2: f64,
+    sigma_mu2: f64,
+    rng: &mut Rng,
+) {
     let p = x.len() / n;
     let stats = leaf_stats(tree, x, r, n, p);
     for (leaf, (s, cnt)) in stats {
@@ -412,6 +493,9 @@ mod tests {
 
     #[test]
     fn guards() {
-        assert_eq!(Bart::fit(&[1.0], &[1.0], 1, 1, 10, 20, 10, 2.0, 0).unwrap_err(), LearningError::InvalidDimension);
+        assert_eq!(
+            Bart::fit(&[1.0], &[1.0], 1, 1, 10, 20, 10, 2.0, 0).unwrap_err(),
+            LearningError::InvalidDimension
+        );
     }
 }

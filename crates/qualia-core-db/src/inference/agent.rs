@@ -81,7 +81,10 @@ mod tests {
         let alice = q_hash("https://example.org/alice");
         let idx = QuinIndex::from_slice(&[t(alice, P_RDF_TYPE, A_NATURAL_PERSON)]);
         assert_eq!(agent_type(&idx, alice), Some(A_NATURAL_PERSON));
-        assert_eq!(agent_type_name(agent_type(&idx, alice).unwrap()), Some("NaturalPerson"));
+        assert_eq!(
+            agent_type_name(agent_type(&idx, alice).unwrap()),
+            Some("NaturalPerson")
+        );
     }
 
     #[test]

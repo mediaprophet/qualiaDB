@@ -62,7 +62,11 @@ impl ComputePolicy {
         budget: PowerThermalBudget,
         host: HostCapabilities,
     ) -> Self {
-        Self { matrix, budget, host }
+        Self {
+            matrix,
+            budget,
+            host,
+        }
     }
 
     /// Probe the registry once (heavy) and build the policy. Call at startup; cache
@@ -101,7 +105,7 @@ impl ComputePolicy {
             .map(|r| r.ms_per_gemv);
 
         let choose_gpu = match best {
-            None => false, // class not probed at all → CPU
+            None => false,                                  // class not probed at all → CPU
             Some(b) if b.kind == CircuitKind::Cpu => false, // CPU already won
             Some(b) => {
                 // A GPU/other circuit measured fastest. Honour it unless the class is
@@ -184,7 +188,11 @@ mod tests {
             backend: backend.to_string(),
             ms_per_gemv: ms,
             gflops: 0.0,
-            upload_gbps: if kind == CircuitKind::Cpu { f64::INFINITY } else { 5.0 },
+            upload_gbps: if kind == CircuitKind::Cpu {
+                f64::INFINITY
+            } else {
+                5.0
+            },
             rel_score: 1.0,
         }
     }

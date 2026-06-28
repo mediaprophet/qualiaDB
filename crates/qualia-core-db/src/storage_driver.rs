@@ -11,27 +11,27 @@
 
 #![cfg(not(target_arch = "wasm32"))]
 
+use memmap2::MmapOptions;
+use std::collections::HashMap;
 use std::path::{Path, PathBuf};
 use std::sync::{Arc, RwLock};
-use std::collections::HashMap;
-use memmap2::MmapOptions;
 
 // ──────────────────────────────────────────────────────────────────────────────
 // Darwin-specific FFI (madvise, clonefile, F_NOCACHE, QoS)
 // ──────────────────────────────────────────────────────────────────────────────
 #[cfg(target_os = "macos")]
 mod darwin {
-    pub const F_NOCACHE:     libc::c_int = 48;
+    pub const F_NOCACHE: libc::c_int = 48;
     pub const MADV_WILLNEED: libc::c_int = 3;
-    pub const MADV_FREE:     libc::c_int = 5;
+    pub const MADV_FREE: libc::c_int = 5;
 
     pub use std::path::Path;
 
     extern "C" {
         /// APFS copy-on-write clone — O(1) and zero extra disk space.
         pub fn clonefile(
-            src:   *const libc::c_char,
-            dst:   *const libc::c_char,
+            src: *const libc::c_char,
+            dst: *const libc::c_char,
             flags: libc::c_uint,
         ) -> libc::c_int;
     }
@@ -100,12 +100,12 @@ pub enum StorageError {
 impl std::fmt::Display for StorageError {
     fn fmt(&self, f: &mut std::fmt::Formatter<'_>) -> std::fmt::Result {
         match self {
-            StorageError::Io(m)                  => write!(f, "I/O: {m}"),
-            StorageError::NotFound(m)            => write!(f, "not found: {m}"),
-            StorageError::OutOfSpace(m)          => write!(f, "out of space: {m}"),
+            StorageError::Io(m) => write!(f, "I/O: {m}"),
+            StorageError::NotFound(m) => write!(f, "not found: {m}"),
+            StorageError::OutOfSpace(m) => write!(f, "out of space: {m}"),
             StorageError::HardwareUnavailable(m) => write!(f, "hardware unavailable: {m}"),
-            StorageError::PermissionDenied(m)    => write!(f, "permission denied: {m}"),
-            StorageError::Unsupported(m)         => write!(f, "unsupported on platform: {m}"),
+            StorageError::PermissionDenied(m) => write!(f, "permission denied: {m}"),
+            StorageError::Unsupported(m) => write!(f, "unsupported on platform: {m}"),
         }
     }
 }
@@ -125,11 +125,11 @@ pub enum DriverKind {
 
 #[derive(Debug, Clone)]
 pub struct DriverCapabilities {
-    pub kind:          DriverKind,
-    pub zone_append:   bool,
+    pub kind: DriverKind,
+    pub zone_append: bool,
     pub free_snapshots: bool,
-    pub csd_dispatch:  bool,
-    pub max_writers:   u32,
+    pub csd_dispatch: bool,
+    pub max_writers: u32,
 }
 
 // ──────────────────────────────────────────────────────────────────────────────
@@ -158,7 +158,13 @@ pub trait StorageDriver: Send + Sync {
 
 fn key_to_filename(key: &str) -> String {
     key.chars()
-        .map(|c| if c.is_alphanumeric() || c == '-' || c == '.' { c } else { '_' })
+        .map(|c| {
+            if c.is_alphanumeric() || c == '-' || c == '.' {
+                c
+            } else {
+                '_'
+            }
+        })
         .collect()
 }
 
@@ -178,7 +184,7 @@ fn snap_dir(root: &Path, snapshot_id: &str) -> PathBuf {
 /// Reads are served via `memmap2` so the OS page cache provides zero-copy
 /// semantics for large values.  Works on every platform without privileges.
 pub struct MmapDriver {
-    root:  PathBuf,
+    root: PathBuf,
     /// Lock guards concurrent create-dir races; IO itself is OS-atomic.
     _guard: Arc<RwLock<()>>,
 }
@@ -187,7 +193,10 @@ impl MmapDriver {
     pub fn new<P: AsRef<Path>>(root: P) -> Self {
         let root = root.as_ref().to_path_buf();
         let _ = std::fs::create_dir_all(&root);
-        Self { root, _guard: Arc::new(RwLock::new(())) }
+        Self {
+            root,
+            _guard: Arc::new(RwLock::new(())),
+        }
     }
 }
 
@@ -195,37 +204,37 @@ impl StorageDriver for MmapDriver {
     fn capabilities(&self) -> DriverCapabilities {
         DriverCapabilities {
             kind: DriverKind::Mmap,
-            zone_append:    false,
+            zone_append: false,
             free_snapshots: false,
-            csd_dispatch:   false,
-            max_writers:    1,
+            csd_dispatch: false,
+            max_writers: 1,
         }
     }
 
     fn write(&self, key: &str, data: &[u8]) -> Result<(), StorageError> {
-        std::fs::write(key_path(&self.root, key), data)
-            .map_err(|e| StorageError::Io(e.to_string()))
+        std::fs::write(key_path(&self.root, key), data).map_err(|e| StorageError::Io(e.to_string()))
     }
 
     fn append(&self, key: &str, data: &[u8]) -> Result<(), StorageError> {
         use std::io::Write;
         let mut f = std::fs::OpenOptions::new()
-            .create(true).append(true)
+            .create(true)
+            .append(true)
             .open(key_path(&self.root, key))
             .map_err(|e| StorageError::Io(e.to_string()))?;
-        f.write_all(data).map_err(|e| StorageError::Io(e.to_string()))
+        f.write_all(data)
+            .map_err(|e| StorageError::Io(e.to_string()))
     }
 
     fn read(&self, key: &str) -> Result<Vec<u8>, StorageError> {
         let path = key_path(&self.root, key);
-        let f = std::fs::File::open(&path)
-            .map_err(|_| StorageError::NotFound(key.to_string()))?;
+        let f = std::fs::File::open(&path).map_err(|_| StorageError::NotFound(key.to_string()))?;
         if f.metadata().map(|m| m.len()).unwrap_or(0) == 0 {
             return Ok(Vec::new());
         }
         // SAFETY: file is opened read-only; no other thread writes it during the map.
-        let mmap = unsafe { MmapOptions::new().map(&f) }
-            .map_err(|e| StorageError::Io(e.to_string()))?;
+        let mmap =
+            unsafe { MmapOptions::new().map(&f) }.map_err(|e| StorageError::Io(e.to_string()))?;
         Ok(mmap.to_vec())
     }
 
@@ -233,7 +242,10 @@ impl StorageDriver for MmapDriver {
         let data = self.read(key)?;
         let end = (offset + len).min(data.len());
         if offset > data.len() {
-            return Err(StorageError::Io(format!("offset {offset} past end {}", data.len())));
+            return Err(StorageError::Io(format!(
+                "offset {offset} past end {}",
+                data.len()
+            )));
         }
         Ok(data[offset..end].to_vec())
     }
@@ -249,24 +261,25 @@ impl StorageDriver for MmapDriver {
     fn snapshot(&self, snapshot_id: &str) -> Result<(), StorageError> {
         let dst = snap_dir(&self.root, snapshot_id);
         std::fs::create_dir_all(&dst).map_err(|e| StorageError::Io(e.to_string()))?;
-        for entry in std::fs::read_dir(&self.root)
-            .map_err(|e| StorageError::Io(e.to_string()))?
-        {
+        for entry in std::fs::read_dir(&self.root).map_err(|e| StorageError::Io(e.to_string()))? {
             let entry = entry.map_err(|e| StorageError::Io(e.to_string()))?;
             let p = entry.path();
             if p.is_file() {
                 let name = p.file_name().unwrap_or_default();
-                std::fs::copy(&p, dst.join(name))
-                    .map_err(|e| StorageError::Io(e.to_string()))?;
+                std::fs::copy(&p, dst.join(name)).map_err(|e| StorageError::Io(e.to_string()))?;
             }
         }
         Ok(())
     }
 
-    fn flush(&self) -> Result<(), StorageError> { Ok(()) }
+    fn flush(&self) -> Result<(), StorageError> {
+        Ok(())
+    }
     fn prefetch_hint(&self, _key: &str) {}
     fn eviction_hint(&self, _key: &str) {}
-    fn describe(&self) -> &str { "MmapDriver (file-backed memmap2, portable)" }
+    fn describe(&self) -> &str {
+        "MmapDriver (file-backed memmap2, portable)"
+    }
 }
 
 // ──────────────────────────────────────────────────────────────────────────────
@@ -285,7 +298,9 @@ pub struct MmapApfsDriver {
 
 impl MmapApfsDriver {
     pub fn new<P: AsRef<Path>>(root: P) -> Self {
-        Self { inner: MmapDriver::new(root) }
+        Self {
+            inner: MmapDriver::new(root),
+        }
     }
 }
 
@@ -293,10 +308,10 @@ impl StorageDriver for MmapApfsDriver {
     fn capabilities(&self) -> DriverCapabilities {
         DriverCapabilities {
             kind: DriverKind::MmapApfs,
-            zone_append:    false,
+            zone_append: false,
             free_snapshots: cfg!(any(target_os = "macos", target_os = "ios")),
-            csd_dispatch:   false,
-            max_writers:    4,
+            csd_dispatch: false,
+            max_writers: 4,
         }
     }
 
@@ -309,17 +324,21 @@ impl StorageDriver for MmapApfsDriver {
         // buffer cache and do not evict hot inference data.
         #[cfg(target_os = "macos")]
         {
-            use std::os::unix::io::AsRawFd;
             use std::io::Write;
+            use std::os::unix::io::AsRawFd;
             let path = key_path(&self.inner.root, key);
             let f = std::fs::OpenOptions::new()
-                .create(true).append(true)
+                .create(true)
+                .append(true)
                 .open(&path)
                 .map_err(|e| StorageError::Io(e.to_string()))?;
             // SAFETY: fd is valid for the lifetime of `f`.
-            unsafe { darwin::set_nocache(f.as_raw_fd()); }
+            unsafe {
+                darwin::set_nocache(f.as_raw_fd());
+            }
             let mut f = f;
-            f.write_all(data).map_err(|e| StorageError::Io(e.to_string()))?;
+            f.write_all(data)
+                .map_err(|e| StorageError::Io(e.to_string()))?;
             return Ok(());
         }
         #[cfg(not(target_os = "macos"))]
@@ -361,8 +380,7 @@ impl StorageDriver for MmapApfsDriver {
             // clonefile(2): creates an instantaneous APFS CoW clone.
             // If dst already exists, clonefile fails with EEXIST — remove first.
             if dst.exists() {
-                std::fs::remove_dir_all(&dst)
-                    .map_err(|e| StorageError::Io(e.to_string()))?;
+                std::fs::remove_dir_all(&dst).map_err(|e| StorageError::Io(e.to_string()))?;
             }
             return darwin::clonefile_paths(src, &dst)
                 .map_err(|e| StorageError::Io(format!("clonefile: {e}")));
@@ -380,12 +398,15 @@ impl StorageDriver for MmapApfsDriver {
             // We open a sentinel file in the root directory and issue the sync.
             let sentinel = self.inner.root.join(".flush");
             let _ = std::fs::OpenOptions::new()
-                .create(true).write(true)
+                .create(true)
+                .write(true)
                 .open(&sentinel)
                 .map(|f| {
                     use std::os::unix::io::AsRawFd;
                     // SAFETY: fd is valid for the lifetime of `f`.
-                    unsafe { libc::fcntl(f.as_raw_fd(), libc::F_FULLFSYNC); }
+                    unsafe {
+                        libc::fcntl(f.as_raw_fd(), libc::F_FULLFSYNC);
+                    }
                 });
         }
         Ok(())
@@ -444,8 +465,8 @@ impl StorageDriver for MmapApfsDriver {
 /// zone-append path; a `MmapDriver` overlay holds small metadata values that
 /// don't need zone-append semantics.
 pub struct ZnsDriver {
-    manager:  Arc<std::sync::Mutex<crate::zns_storage::ZnsZoneManager>>,
-    overlay:  MmapDriver,
+    manager: Arc<std::sync::Mutex<crate::zns_storage::ZnsZoneManager>>,
+    overlay: MmapDriver,
 }
 
 impl ZnsDriver {
@@ -455,7 +476,7 @@ impl ZnsDriver {
     ) -> Self {
         Self {
             manager: Arc::new(std::sync::Mutex::new(manager)),
-            overlay:  MmapDriver::new(overlay_dir),
+            overlay: MmapDriver::new(overlay_dir),
         }
     }
 }
@@ -464,10 +485,10 @@ impl StorageDriver for ZnsDriver {
     fn capabilities(&self) -> DriverCapabilities {
         DriverCapabilities {
             kind: DriverKind::Zns,
-            zone_append:    true,
+            zone_append: true,
             free_snapshots: false,
-            csd_dispatch:   false,
-            max_writers:    8,
+            csd_dispatch: false,
+            max_writers: 8,
         }
     }
 
@@ -482,13 +503,19 @@ impl StorageDriver for ZnsDriver {
         let zone_type = crate::zns_storage::ZoneType::Sequential;
         let size = data.len() as u64;
         let result = {
-            let mut mgr = self.manager.lock()
+            let mut mgr = self
+                .manager
+                .lock()
                 .map_err(|_| StorageError::Io("ZNS lock poisoned".into()))?;
             mgr.allocate_zone(zone_type, size)
                 .and_then(|handle| mgr.write_zone(&handle, data))
                 .map_err(|e| StorageError::Io(e.to_string()))
         };
-        if result.is_ok() { result } else { self.overlay.append(key, data) }
+        if result.is_ok() {
+            result
+        } else {
+            self.overlay.append(key, data)
+        }
     }
     fn read(&self, key: &str) -> Result<Vec<u8>, StorageError> {
         self.overlay.read(key)
@@ -502,10 +529,14 @@ impl StorageDriver for ZnsDriver {
     fn snapshot(&self, snapshot_id: &str) -> Result<(), StorageError> {
         self.overlay.snapshot(snapshot_id)
     }
-    fn flush(&self) -> Result<(), StorageError> { Ok(()) }
+    fn flush(&self) -> Result<(), StorageError> {
+        Ok(())
+    }
     fn prefetch_hint(&self, _key: &str) {}
     fn eviction_hint(&self, _key: &str) {}
-    fn describe(&self) -> &str { "ZnsDriver (Linux ZNS NVMe zone-append + overlay)" }
+    fn describe(&self) -> &str {
+        "ZnsDriver (Linux ZNS NVMe zone-append + overlay)"
+    }
 }
 
 // ──────────────────────────────────────────────────────────────────────────────
@@ -521,9 +552,9 @@ impl StorageDriver for ZnsDriver {
 ///   - Running on a virtual disk (WSL2 .vhdx, Hyper-V)
 ///   - Physical drive has no NVMe ZNS capability
 pub struct WinNvmeDriver {
-    overlay:          MmapDriver,
+    overlay: MmapDriver,
     pub hardware_present: bool,
-    device_path:      String,
+    device_path: String,
 }
 
 impl WinNvmeDriver {
@@ -556,12 +587,15 @@ impl WinNvmeDriver {
             use windows::core::PCWSTR;
             use windows::Win32::Foundation::{GENERIC_READ, INVALID_HANDLE_VALUE};
             use windows::Win32::Storage::FileSystem::{
-                CreateFileW, FILE_SHARE_READ, FILE_SHARE_WRITE, OPEN_EXISTING,
-                FILE_ATTRIBUTE_NORMAL,
+                CreateFileW, FILE_ATTRIBUTE_NORMAL, FILE_SHARE_READ, FILE_SHARE_WRITE,
+                OPEN_EXISTING,
             };
             use windows::Win32::System::IO::DeviceIoControl;
 
-            let wide: Vec<u16> = device_path.encode_utf16().chain(std::iter::once(0)).collect();
+            let wide: Vec<u16> = device_path
+                .encode_utf16()
+                .chain(std::iter::once(0))
+                .collect();
             let handle = unsafe {
                 CreateFileW(
                     PCWSTR(wide.as_ptr()),
@@ -580,8 +614,16 @@ impl WinNvmeDriver {
 
             // StorageDeviceProperty query to check if this is an NVMe device
             #[repr(C)]
-            struct StoragePropertyQuery { property_id: u32, query_type: u32, additional: [u8; 1] }
-            let query = StoragePropertyQuery { property_id: 0, query_type: 0, additional: [0] };
+            struct StoragePropertyQuery {
+                property_id: u32,
+                query_type: u32,
+                additional: [u8; 1],
+            }
+            let query = StoragePropertyQuery {
+                property_id: 0,
+                query_type: 0,
+                additional: [0],
+            };
             let mut buf = [0u8; 512];
             let mut returned = 0u32;
 
@@ -609,11 +651,11 @@ impl WinNvmeDriver {
 impl StorageDriver for WinNvmeDriver {
     fn capabilities(&self) -> DriverCapabilities {
         DriverCapabilities {
-            kind:           DriverKind::WinNvme,
-            zone_append:    self.hardware_present,
+            kind: DriverKind::WinNvme,
+            zone_append: self.hardware_present,
             free_snapshots: false,
-            csd_dispatch:   self.hardware_present,
-            max_writers:    if self.hardware_present { 4 } else { 1 },
+            csd_dispatch: self.hardware_present,
+            max_writers: if self.hardware_present { 4 } else { 1 },
         }
     }
 
@@ -635,7 +677,9 @@ impl StorageDriver for WinNvmeDriver {
     fn snapshot(&self, snapshot_id: &str) -> Result<(), StorageError> {
         self.overlay.snapshot(snapshot_id)
     }
-    fn flush(&self) -> Result<(), StorageError> { self.overlay.flush() }
+    fn flush(&self) -> Result<(), StorageError> {
+        self.overlay.flush()
+    }
     fn prefetch_hint(&self, _key: &str) {}
     fn eviction_hint(&self, _key: &str) {}
 
@@ -782,11 +826,21 @@ pub trait NetworkFilter: Send + Sync {
 
 pub struct NoopFilter;
 impl NetworkFilter for NoopFilter {
-    fn kind(&self) -> NetworkFilterKind { NetworkFilterKind::Noop }
-    fn allow(&self, _: &str) -> Result<(), StorageError> { Ok(()) }
-    fn deny(&self, _: &str) -> Result<(), StorageError> { Ok(()) }
-    fn remove(&self, _: &str) -> Result<(), StorageError> { Ok(()) }
-    fn describe(&self) -> &str { "NoopFilter (no kernel packet filtering on this platform)" }
+    fn kind(&self) -> NetworkFilterKind {
+        NetworkFilterKind::Noop
+    }
+    fn allow(&self, _: &str) -> Result<(), StorageError> {
+        Ok(())
+    }
+    fn deny(&self, _: &str) -> Result<(), StorageError> {
+        Ok(())
+    }
+    fn remove(&self, _: &str) -> Result<(), StorageError> {
+        Ok(())
+    }
+    fn describe(&self) -> &str {
+        "NoopFilter (no kernel packet filtering on this platform)"
+    }
 }
 
 /// Open the most capable network filter for this platform.

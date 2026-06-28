@@ -60,7 +60,18 @@ pub fn scaled_dot_product_attention(
     }
 
     // 1) scores = (Q · Kᵀ) · scale   — op(K)=Kᵀ since K is stored n_k×d.
-    gemm(Transpose::No, Transpose::Yes, n_q, n_k, d, scale, q, k, 0.0, scores)?;
+    gemm(
+        Transpose::No,
+        Transpose::Yes,
+        n_q,
+        n_k,
+        d,
+        scale,
+        q,
+        k,
+        0.0,
+        scores,
+    )?;
 
     // 2) optional causal mask, then row-wise softmax (each query's weights over the keys).
     for i in 0..n_q {
@@ -75,7 +86,18 @@ pub fn scaled_dot_product_attention(
     }
 
     // 3) out = scores · V   — the value-weighted context.
-    gemm(Transpose::No, Transpose::No, n_q, d_v, n_k, 1.0, scores, v, 0.0, out)?;
+    gemm(
+        Transpose::No,
+        Transpose::No,
+        n_q,
+        d_v,
+        n_k,
+        1.0,
+        scores,
+        v,
+        0.0,
+        out,
+    )?;
     Ok(())
 }
 
@@ -86,7 +108,12 @@ mod tests {
     fn approx(a: &[f64], b: &[f64], tol: f64) {
         assert_eq!(a.len(), b.len());
         for i in 0..a.len() {
-            assert!((a[i] - b[i]).abs() < tol, "idx {i}: {} != {} (tol {tol})", a[i], b[i]);
+            assert!(
+                (a[i] - b[i]).abs() < tol,
+                "idx {i}: {} != {} (tol {tol})",
+                a[i],
+                b[i]
+            );
         }
     }
 
@@ -98,7 +125,8 @@ mod tests {
         let v = [7.0, -3.0, 9.0]; // 1×3
         let mut scores = [0.0; 1];
         let mut out = [0.0; 3];
-        scaled_dot_product_attention(1, 1, 2, 3, &q, &k, &v, 1.0, false, &mut scores, &mut out).unwrap();
+        scaled_dot_product_attention(1, 1, 2, 3, &q, &k, &v, 1.0, false, &mut scores, &mut out)
+            .unwrap();
         approx(&scores, &[1.0], 1e-12);
         approx(&out, &v, 1e-12);
     }
@@ -111,7 +139,8 @@ mod tests {
         let v = [2.0, 4.0, 6.0, 8.0]; // 2×2  (rows [2,4],[6,8])
         let mut scores = [0.0; 2];
         let mut out = [0.0; 2];
-        scaled_dot_product_attention(1, 2, 2, 2, &q, &k, &v, 1.0, false, &mut scores, &mut out).unwrap();
+        scaled_dot_product_attention(1, 2, 2, 2, &q, &k, &v, 1.0, false, &mut scores, &mut out)
+            .unwrap();
         approx(&scores, &[0.5, 0.5], 1e-12);
         approx(&out, &[4.0, 6.0], 1e-12); // ([2,4]+[6,8])/2
     }
@@ -125,7 +154,8 @@ mod tests {
         let scale = 1.0;
         let mut scores = [0.0; 2];
         let mut out = [0.0; 1];
-        scaled_dot_product_attention(1, 2, 2, 1, &q, &k, &v, scale, false, &mut scores, &mut out).unwrap();
+        scaled_dot_product_attention(1, 2, 2, 1, &q, &k, &v, scale, false, &mut scores, &mut out)
+            .unwrap();
         // s0 = q·k0 = 1, s1 = q·k1 = 0. softmax([1,0]) = [e/(e+1), 1/(e+1)].
         let e = std::f64::consts::E;
         let w0 = e / (e + 1.0);
@@ -142,7 +172,8 @@ mod tests {
         let v = [5.0, 9.0]; // 2×1 values
         let mut scores = [0.0; 4];
         let mut out = [0.0; 2];
-        scaled_dot_product_attention(2, 2, 1, 1, &q, &k, &v, 1.0, true, &mut scores, &mut out).unwrap();
+        scaled_dot_product_attention(2, 2, 1, 1, &q, &k, &v, 1.0, true, &mut scores, &mut out)
+            .unwrap();
         // Row 0 (query 0): only key 0 allowed ⇒ weight [1, 0] ⇒ out = v0 = 5.
         approx(&scores[0..2], &[1.0, 0.0], 1e-12);
         approx(&out[0..1], &[5.0], 1e-12);

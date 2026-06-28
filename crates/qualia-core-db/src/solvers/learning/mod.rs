@@ -53,7 +53,10 @@ impl core::fmt::Display for LearningError {
         match self {
             LearningError::InvalidDimension => write!(f, "inconsistent input dimensions"),
             LearningError::InsufficientData => write!(f, "insufficient data for the requested fit"),
-            LearningError::Singular => write!(f, "singular / rank-deficient system (e.g. collinear predictors)"),
+            LearningError::Singular => write!(
+                f,
+                "singular / rank-deficient system (e.g. collinear predictors)"
+            ),
             LearningError::NotConverged => write!(f, "iterative fit did not converge"),
         }
     }

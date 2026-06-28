@@ -28,7 +28,11 @@ pub fn one_sample_t(values: &[f64], mu: f64) -> Option<TTest> {
     let std_error = (var / n as f64).sqrt();
     if std_error == 0.0 {
         // Degenerate (zero variance): t is ±∞ unless the mean equals mu exactly.
-        let t = if m == mu { 0.0 } else { f64::INFINITY.copysign(m - mu) };
+        let t = if m == mu {
+            0.0
+        } else {
+            f64::INFINITY.copysign(m - mu)
+        };
         return Some(TTest {
             t_statistic: t,
             p_value: if m == mu { 1.0 } else { 0.0 },
@@ -94,14 +98,18 @@ pub fn two_sample_t(a: &[f64], b: &[f64], equal_var: bool) -> Option<TwoSampleTT
         // Welch–Satterthwaite.
         let se2 = va / na_f + vb / nb_f;
         let se = se2.sqrt();
-        let df = se2 * se2
-            / ((va / na_f).powi(2) / (na_f - 1.0) + (vb / nb_f).powi(2) / (nb_f - 1.0));
+        let df =
+            se2 * se2 / ((va / na_f).powi(2) / (na_f - 1.0) + (vb / nb_f).powi(2) / (nb_f - 1.0));
         (se, df)
     };
 
     if se == 0.0 {
         return Some(TwoSampleTTest {
-            t_statistic: if diff == 0.0 { 0.0 } else { f64::INFINITY.copysign(diff) },
+            t_statistic: if diff == 0.0 {
+                0.0
+            } else {
+                f64::INFINITY.copysign(diff)
+            },
             p_value: if diff == 0.0 { 1.0 } else { 0.0 },
             degrees_of_freedom: df,
             mean_difference: diff,

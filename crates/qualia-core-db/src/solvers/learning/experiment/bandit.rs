@@ -31,7 +31,10 @@ pub struct Bandit {
 struct Lcg(u64);
 impl Lcg {
     fn unit(&mut self) -> f64 {
-        self.0 = self.0.wrapping_mul(6364136223846793005).wrapping_add(1442695040888963407);
+        self.0 = self
+            .0
+            .wrapping_mul(6364136223846793005)
+            .wrapping_add(1442695040888963407);
         ((self.0 >> 11) as f64) / ((1u64 << 53) as f64)
     }
     fn below(&mut self, b: usize) -> usize {
@@ -193,7 +196,10 @@ mod tests {
 
     fn run(policy: Policy) -> (Bandit, usize) {
         let mut bandit = Bandit::new(3, policy, 1);
-        let mut arms = Arms { p: vec![0.2, 0.5, 0.8], rng: Lcg(42) };
+        let mut arms = Arms {
+            p: vec![0.2, 0.5, 0.8],
+            rng: Lcg(42),
+        };
         for _ in 0..3000 {
             let a = bandit.select();
             let r = arms.pull(a);
@@ -206,8 +212,16 @@ mod tests {
     #[test]
     fn thompson_converges_to_the_best_arm() {
         let (b, best) = run(Policy::ThompsonBernoulli);
-        assert_eq!(best, 2, "should mostly pull the 0.8 arm; counts {:?}", b.counts());
-        assert!(b.counts()[2] > b.counts()[0], "best arm pulled more than the worst");
+        assert_eq!(
+            best,
+            2,
+            "should mostly pull the 0.8 arm; counts {:?}",
+            b.counts()
+        );
+        assert!(
+            b.counts()[2] > b.counts()[0],
+            "best arm pulled more than the worst"
+        );
     }
 
     #[test]
@@ -220,7 +234,11 @@ mod tests {
     fn epsilon_greedy_favours_the_best_arm() {
         let (b, _) = run(Policy::EpsilonGreedy(0.1));
         // The best arm gets the lion's share of the non-exploration pulls.
-        assert!(b.counts()[2] > b.counts()[0] + b.counts()[1], "counts {:?}", b.counts());
+        assert!(
+            b.counts()[2] > b.counts()[0] + b.counts()[1],
+            "counts {:?}",
+            b.counts()
+        );
         // Its estimated value is near the true 0.8.
         assert!((b.values()[2] - 0.8).abs() < 0.1, "value {}", b.values()[2]);
     }

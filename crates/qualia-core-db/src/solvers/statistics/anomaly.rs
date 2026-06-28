@@ -116,7 +116,13 @@ pub fn grubbs_test(values: &[f64], alpha: f64) -> Option<GrubbsResult> {
         .iter()
         .enumerate()
         .map(|(i, &x)| (i, (x - mu).abs() / sd))
-        .fold((0usize, f64::NEG_INFINITY), |best, cur| if cur.1 > best.1 { cur } else { best });
+        .fold((0usize, f64::NEG_INFINITY), |best, cur| {
+            if cur.1 > best.1 {
+                cur
+            } else {
+                best
+            }
+        });
 
     // Two-sided critical value: G_crit = ((n-1)/√n)·√( t² / (n-2 + t²) ),
     // t = t-quantile(1 − alpha/(2n)) with n-2 d.f.
@@ -125,7 +131,12 @@ pub fn grubbs_test(values: &[f64], alpha: f64) -> Option<GrubbsResult> {
     let t2 = t * t;
     let critical = ((nf - 1.0) / nf.sqrt()) * (t2 / (nf - 2.0 + t2)).sqrt();
 
-    Some(GrubbsResult { index, statistic, critical, is_outlier: statistic > critical })
+    Some(GrubbsResult {
+        index,
+        statistic,
+        critical,
+        is_outlier: statistic > critical,
+    })
 }
 
 /// Squared **Mahalanobis distance** `(x − μ)ᵀ Σ⁻¹ (x − μ)`. The caller supplies the
@@ -180,7 +191,10 @@ mod tests {
         // the MAD-based rule still catches them.
         let data = [1.0, 2.0, 1.5, 1.8, 2.2, 50.0, 52.0];
         let out = modified_z_score_outliers(&data, 3.5).unwrap();
-        assert!(out.contains(&5) && out.contains(&6), "both spikes flagged: {out:?}");
+        assert!(
+            out.contains(&5) && out.contains(&6),
+            "both spikes flagged: {out:?}"
+        );
     }
 
     #[test]
@@ -217,8 +231,14 @@ mod tests {
         // Unit covariance; a point 5σ out in 2-D is well past the χ²(2) 0.99 quantile.
         let inv_cov = [1.0, 0.0, 0.0, 1.0];
         let mu = [0.0, 0.0];
-        assert_eq!(is_multivariate_outlier(&[5.0, 5.0], &mu, &inv_cov, 0.01), Some(true));
-        assert_eq!(is_multivariate_outlier(&[0.1, -0.1], &mu, &inv_cov, 0.01), Some(false));
+        assert_eq!(
+            is_multivariate_outlier(&[5.0, 5.0], &mu, &inv_cov, 0.01),
+            Some(true)
+        );
+        assert_eq!(
+            is_multivariate_outlier(&[0.1, -0.1], &mu, &inv_cov, 0.01),
+            Some(false)
+        );
     }
 
     #[test]

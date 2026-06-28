@@ -2,7 +2,6 @@
 use super::super::*;
 
 impl QTensorEngine {
-
     pub(crate) fn mc8_dynamic_uniform_binding(buf: &wgpu::Buffer) -> wgpu::BindingResource<'_> {
         wgpu::BindingResource::Buffer(wgpu::BufferBinding {
             buffer: buf,
@@ -92,7 +91,11 @@ impl QTensorEngine {
     }
 
     #[cfg(target_arch = "wasm32")]
-    pub(crate) fn mc8_prefill_row_stride(n_embd: usize, n_ffn_est: usize, gemm_max_out_dim: u32) -> usize {
+    pub(crate) fn mc8_prefill_row_stride(
+        n_embd: usize,
+        n_ffn_est: usize,
+        gemm_max_out_dim: u32,
+    ) -> usize {
         (n_embd + 2 * n_ffn_est + n_embd)
             .max(gemm_max_out_dim as usize * 2)
             .max(n_embd)

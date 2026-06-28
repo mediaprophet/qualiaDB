@@ -5,8 +5,8 @@
 
 use core::ops::ControlFlow;
 
-use crate::NQuin;
 use super::Tensor10D;
+use crate::NQuin;
 use serde::{Deserialize, Serialize};
 
 #[derive(Debug, Clone, Copy, PartialEq, Eq)]
@@ -216,8 +216,7 @@ impl<'a> Q42TensorVolume<'a> {
         }
 
         self.nquins[self.len] = nquin;
-        self.tensor_metadata[self.len] =
-            TensorMetadata::from_nquin_only(&self.nquins[self.len]);
+        self.tensor_metadata[self.len] = TensorMetadata::from_nquin_only(&self.nquins[self.len]);
         self.len += 1;
         Ok(self.len)
     }
@@ -292,7 +291,8 @@ impl<'a> Q42TensorVolume<'a> {
     where
         F: FnMut(usize) -> ControlFlow<()>,
     {
-        self.as_view().visit_tensor_search(query, max_distance, on_match)
+        self.as_view()
+            .visit_tensor_search(query, max_distance, on_match)
     }
 
     pub fn temporal_query_into(
@@ -313,7 +313,8 @@ impl<'a> Q42TensorVolume<'a> {
     where
         F: FnMut(usize) -> ControlFlow<()>,
     {
-        self.as_view().visit_temporal_query(target_t, tolerance, on_match)
+        self.as_view()
+            .visit_temporal_query(target_t, tolerance, on_match)
     }
 
     pub fn manifold_query_into(
@@ -322,7 +323,8 @@ impl<'a> Q42TensorVolume<'a> {
         max_distance: f32,
         out: &mut [usize],
     ) -> Result<usize, TensorVolumeError> {
-        self.as_view().manifold_query_into(target_w, max_distance, out)
+        self.as_view()
+            .manifold_query_into(target_w, max_distance, out)
     }
 
     pub fn visit_manifold_query<F>(
@@ -334,7 +336,8 @@ impl<'a> Q42TensorVolume<'a> {
     where
         F: FnMut(usize) -> ControlFlow<()>,
     {
-        self.as_view().visit_manifold_query(target_w, max_distance, on_match)
+        self.as_view()
+            .visit_manifold_query(target_w, max_distance, on_match)
     }
 }
 
@@ -634,7 +637,9 @@ mod tests {
 
         for i in 0..3 {
             let tensor = Tensor10D::new(0.0, 0.0, 0.0, i as f32, 0.0, 0.0, 0.0, 1.0, 0.0, 0.0);
-            volume.add_nquin_with_tensor(create_test_nquin(i), tensor).unwrap();
+            volume
+                .add_nquin_with_tensor(create_test_nquin(i), tensor)
+                .unwrap();
         }
 
         let query = Tensor10D::new(0.0, 0.0, 0.0, 1.0, 0.0, 0.0, 0.0, 1.0, 0.0, 0.0);
@@ -652,7 +657,9 @@ mod tests {
 
         for i in 0..5 {
             let tensor = Tensor10D::new(0.0, 0.0, 0.0, 0.0, 0.0, 0.0, i as f32, 1.0, 0.0, 0.0);
-            volume.add_nquin_with_tensor(create_test_nquin(i), tensor).unwrap();
+            volume
+                .add_nquin_with_tensor(create_test_nquin(i), tensor)
+                .unwrap();
         }
 
         let mut out = [usize::MAX; 1];
@@ -671,7 +678,9 @@ mod tests {
         for i in 0..5 {
             let w = (i % 3) as f32;
             let tensor = Tensor10D::new(0.0, 0.0, w, i as f32, i as f32, 0.0, 0.0, 1.0, 0.0, 0.0);
-            volume.add_nquin_with_tensor(create_test_nquin(i), tensor).unwrap();
+            volume
+                .add_nquin_with_tensor(create_test_nquin(i), tensor)
+                .unwrap();
         }
 
         let mut out = [usize::MAX; 1];
@@ -715,7 +724,9 @@ mod tests {
 
         for i in 0..4 {
             let tensor = Tensor10D::new(0.0, 0.0, 0.0, i as f32, 0.0, 0.0, 0.0, 1.0, 0.0, 0.0);
-            volume.add_nquin_with_tensor(create_test_nquin(i), tensor).unwrap();
+            volume
+                .add_nquin_with_tensor(create_test_nquin(i), tensor)
+                .unwrap();
         }
 
         let query = Tensor10D::new(0.0, 0.0, 0.0, 1.0, 0.0, 0.0, 0.0, 1.0, 0.0, 0.0);
@@ -766,18 +777,11 @@ mod tests {
     fn seed_linear_tensor_points(volume: &mut Q42TensorVolume<'_>) {
         for i in 0..5 {
             let tensor = Tensor10D::new(
-                0.0,
-                0.0,
-                0.0,
-                i as f32,
-                i as f32,
-                0.0,
-                i as f32,
-                1.0,
-                0.0,
-                0.0,
+                0.0, 0.0, 0.0, i as f32, i as f32, 0.0, i as f32, 1.0, 0.0, 0.0,
             );
-            volume.add_nquin_with_tensor(create_test_nquin(i), tensor).unwrap();
+            volume
+                .add_nquin_with_tensor(create_test_nquin(i), tensor)
+                .unwrap();
         }
     }
 

@@ -20,7 +20,10 @@ impl Quantity {
 
     /// A dimensionless number.
     pub const fn scalar(value: f64) -> Self {
-        Self { value, dimension: Dimension::DIMENSIONLESS }
+        Self {
+            value,
+            dimension: Dimension::DIMENSIONLESS,
+        }
     }
 
     /// Sum of two quantities — requires matching dimensions (fail closed otherwise).
@@ -28,7 +31,10 @@ impl Quantity {
         if self.dimension != other.dimension {
             return Err(UnitsError::IncompatibleDimensions);
         }
-        Ok(Quantity { value: self.value + other.value, dimension: self.dimension })
+        Ok(Quantity {
+            value: self.value + other.value,
+            dimension: self.dimension,
+        })
     }
 
     /// Difference — requires matching dimensions.
@@ -36,7 +42,10 @@ impl Quantity {
         if self.dimension != other.dimension {
             return Err(UnitsError::IncompatibleDimensions);
         }
-        Ok(Quantity { value: self.value - other.value, dimension: self.dimension })
+        Ok(Quantity {
+            value: self.value - other.value,
+            dimension: self.dimension,
+        })
     }
 
     /// Product — values multiply, dimensions compose.
@@ -60,12 +69,18 @@ impl Quantity {
 
     /// Scale by a dimensionless factor.
     pub fn scale(&self, factor: f64) -> Quantity {
-        Quantity { value: self.value * factor, dimension: self.dimension }
+        Quantity {
+            value: self.value * factor,
+            dimension: self.dimension,
+        }
     }
 
     /// Integer power — value and dimension both raised to `n`.
     pub fn powi(&self, n: i32) -> Quantity {
-        Quantity { value: self.value.powi(n), dimension: self.dimension.powi(n) }
+        Quantity {
+            value: self.value.powi(n),
+            dimension: self.dimension.powi(n),
+        }
     }
 
     /// `true` iff dimensionally compatible with `other` (can be added/compared).
@@ -92,7 +107,10 @@ mod tests {
         assert!((total.value - 7.0).abs() < EPS);
         assert_eq!(total.dimension, Dimension::LENGTH);
         // length + time is a dimensional error.
-        assert_eq!(metres(1.0).add(&seconds(1.0)).unwrap_err(), UnitsError::IncompatibleDimensions);
+        assert_eq!(
+            metres(1.0).add(&seconds(1.0)).unwrap_err(),
+            UnitsError::IncompatibleDimensions
+        );
     }
 
     #[test]

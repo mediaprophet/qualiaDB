@@ -51,7 +51,9 @@ impl LinearModel {
 
     /// Predict for a row-major `n × p` feature matrix.
     pub fn predict(&self, x: &[f64], n: usize, p: usize) -> Vec<f64> {
-        (0..n).map(|i| self.predict_row(&x[i * p..(i + 1) * p])).collect()
+        (0..n)
+            .map(|i| self.predict_row(&x[i * p..(i + 1) * p]))
+            .collect()
     }
 }
 
@@ -89,7 +91,18 @@ pub fn fit(
 
     // Normal equations: A = DᵀD (k×k), b = Dᵀy (k).
     let mut a = vec![0.0; k * k];
-    gemm(Transpose::Yes, Transpose::No, k, k, n, 1.0, &d, &d, 0.0, &mut a)?;
+    gemm(
+        Transpose::Yes,
+        Transpose::No,
+        k,
+        k,
+        n,
+        1.0,
+        &d,
+        &d,
+        0.0,
+        &mut a,
+    )?;
     let mut b = vec![0.0; k];
     matvec(Transpose::Yes, k, n, &d, y, &mut b)?;
 
@@ -136,7 +149,11 @@ pub fn fit(
             t_values[j] = t;
             p_values[j] = students_t::two_sided_p(t, df);
         } else {
-            t_values[j] = if coefficients[j] == 0.0 { 0.0 } else { f64::INFINITY };
+            t_values[j] = if coefficients[j] == 0.0 {
+                0.0
+            } else {
+                f64::INFINITY
+            };
             p_values[j] = if coefficients[j] == 0.0 { 1.0 } else { 0.0 };
         }
     }
@@ -180,14 +197,24 @@ mod tests {
     #[test]
     fn recovers_exact_plane() {
         // y = 1 + 2·x1 + 3·x2 exactly, 5 points.
-        let x = [
-            0.0, 0.0, 1.0, 0.0, 0.0, 1.0, 1.0, 1.0, 2.0, 1.0,
-        ];
+        let x = [0.0, 0.0, 1.0, 0.0, 0.0, 1.0, 1.0, 1.0, 2.0, 1.0];
         let y = [1.0, 3.0, 4.0, 6.0, 8.0]; // 1+2x1+3x2
         let m = fit(&x, &y, 5, 2, true).unwrap();
-        assert!((m.coefficients[0] - 1.0).abs() < 1e-9, "intercept {}", m.coefficients[0]);
-        assert!((m.coefficients[1] - 2.0).abs() < 1e-9, "b1 {}", m.coefficients[1]);
-        assert!((m.coefficients[2] - 3.0).abs() < 1e-9, "b2 {}", m.coefficients[2]);
+        assert!(
+            (m.coefficients[0] - 1.0).abs() < 1e-9,
+            "intercept {}",
+            m.coefficients[0]
+        );
+        assert!(
+            (m.coefficients[1] - 2.0).abs() < 1e-9,
+            "b1 {}",
+            m.coefficients[1]
+        );
+        assert!(
+            (m.coefficients[2] - 3.0).abs() < 1e-9,
+            "b2 {}",
+            m.coefficients[2]
+        );
         assert!((m.r_squared - 1.0).abs() < 1e-12);
         // Prediction matches.
         assert!((m.predict_row(&[3.0, 2.0]) - (1.0 + 6.0 + 6.0)).abs() < 1e-9);
@@ -199,7 +226,8 @@ mod tests {
         let x = [1.0, 2.0, 3.0, 4.0, 5.0];
         let y = [2.1, 3.9, 6.1, 7.9, 10.2];
         let m = fit(&x, &y, 5, 1, true).unwrap();
-        let simple = crate::solvers::statistics::regression::simple_linear_regression(&x, &y).unwrap();
+        let simple =
+            crate::solvers::statistics::regression::simple_linear_regression(&x, &y).unwrap();
         assert!((m.coefficients[0] - simple.intercept).abs() < 1e-9);
         assert!((m.coefficients[1] - simple.slope).abs() < 1e-9);
         // Slope p-value agrees with the simple-regression module.
@@ -211,7 +239,10 @@ mod tests {
         // x2 = 2·x1 → singular normal equations → fail closed (no bogus fit).
         let x = [1.0, 2.0, 2.0, 4.0, 3.0, 6.0, 4.0, 8.0, 5.0, 10.0];
         let y = [1.0, 2.0, 3.0, 4.0, 5.0];
-        assert_eq!(fit(&x, &y, 5, 2, true).unwrap_err(), LearningError::Singular);
+        assert_eq!(
+            fit(&x, &y, 5, 2, true).unwrap_err(),
+            LearningError::Singular
+        );
     }
 
     #[test]
@@ -219,7 +250,10 @@ mod tests {
         // 2 samples, 2 predictors + intercept = 3 params → n ≤ k.
         let x = [1.0, 2.0, 3.0, 4.0];
         let y = [1.0, 2.0];
-        assert_eq!(fit(&x, &y, 2, 2, true).unwrap_err(), LearningError::InsufficientData);
+        assert_eq!(
+            fit(&x, &y, 2, 2, true).unwrap_err(),
+            LearningError::InsufficientData
+        );
     }
 
     #[test]

@@ -106,7 +106,9 @@ fn pool_for(kind: CircuitKind, topo: &HostTopology) -> u64 {
             .filter(|&v| v > 0)
             .unwrap_or(topo.usable_model_budget_bytes),
         // iGPU and CPU read the shared system-RAM pool.
-        CircuitKind::IntegratedGpu | CircuitKind::Cpu => topo.host_ram_bytes.saturating_sub(HOST_RAM_FLOOR),
+        CircuitKind::IntegratedGpu | CircuitKind::Cpu => {
+            topo.host_ram_bytes.saturating_sub(HOST_RAM_FLOOR)
+        }
         CircuitKind::Npu | CircuitKind::Other => 0,
     }
 }
@@ -161,11 +163,10 @@ pub fn plan_employment(
     let overflow = model_bytes - best_usable;
 
     // 2) Prefer an in-place large-pool secondary (iGPU before CPU — matrix is score-sorted).
-    let secondary = matrix
-        .circuits
-        .iter()
-        .skip(1)
-        .find(|c| matches!(c.kind, CircuitKind::IntegratedGpu | CircuitKind::Cpu) && pool_for(c.kind, topo) >= overflow);
+    let secondary = matrix.circuits.iter().skip(1).find(|c| {
+        matches!(c.kind, CircuitKind::IntegratedGpu | CircuitKind::Cpu)
+            && pool_for(c.kind, topo) >= overflow
+    });
 
     if let Some(sec) = secondary {
         let sec_pool = pool_for(sec.kind, topo);
@@ -334,7 +335,10 @@ mod tests {
         // We assert the planner does NOT silently pick CPU compute for a 20 GB transformer overflow.
         let plan = plan_employment(&topo, &matrix, 20 * GB, DEFAULT_KV_RESERVE);
         assert!(
-            matches!(plan.protocol, ResidencyProtocol::HeterogeneousOverflow | ResidencyProtocol::Streaming),
+            matches!(
+                plan.protocol,
+                ResidencyProtocol::HeterogeneousOverflow | ResidencyProtocol::Streaming
+            ),
             "must be an overflow strategy, got {:?}",
             plan.protocol
         );

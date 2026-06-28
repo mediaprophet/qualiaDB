@@ -22,10 +22,18 @@ pub struct LassoModel {
 
 impl LassoModel {
     pub fn predict_row(&self, x_row: &[f64]) -> f64 {
-        self.intercept + self.coefficients.iter().zip(x_row).map(|(b, x)| b * x).sum::<f64>()
+        self.intercept
+            + self
+                .coefficients
+                .iter()
+                .zip(x_row)
+                .map(|(b, x)| b * x)
+                .sum::<f64>()
     }
     pub fn predict(&self, x: &[f64], n: usize, p: usize) -> Vec<f64> {
-        (0..n).map(|i| self.predict_row(&x[i * p..(i + 1) * p])).collect()
+        (0..n)
+            .map(|i| self.predict_row(&x[i * p..(i + 1) * p]))
+            .collect()
     }
     /// Number of non-zero coefficients (the selected variables).
     pub fn n_selected(&self) -> usize {
@@ -123,8 +131,19 @@ pub fn fit(
         }
     }
 
-    let intercept = ybar - beta.iter().zip(xbar.iter()).map(|(b, m)| b * m).sum::<f64>();
-    Ok(LassoModel { coefficients: beta, intercept, lambda, n_iter: iters, converged })
+    let intercept = ybar
+        - beta
+            .iter()
+            .zip(xbar.iter())
+            .map(|(b, m)| b * m)
+            .sum::<f64>();
+    Ok(LassoModel {
+        coefficients: beta,
+        intercept,
+        lambda,
+        n_iter: iters,
+        converged,
+    })
 }
 
 #[cfg(test)]
@@ -156,13 +175,15 @@ mod tests {
     #[test]
     fn selects_the_relevant_predictor() {
         // x1 drives y; x2 is pure noise → lasso should keep x1, zero x2.
-        let x = [
-            1.0, 0.3, 2.0, -0.1, 3.0, 0.2, 4.0, -0.3, 5.0, 0.1, 6.0, 0.0,
-        ];
+        let x = [1.0, 0.3, 2.0, -0.1, 3.0, 0.2, 4.0, -0.3, 5.0, 0.1, 6.0, 0.0];
         let y = [2.0, 4.1, 5.9, 8.0, 10.1, 12.0]; // ≈ 2·x1
         let m = fit(&x, &y, 6, 2, 1.0, 5000, 1e-10).unwrap();
         assert!(m.converged);
-        assert!(m.coefficients[0].abs() > 0.5, "x1 should be selected: {}", m.coefficients[0]);
+        assert!(
+            m.coefficients[0].abs() > 0.5,
+            "x1 should be selected: {}",
+            m.coefficients[0]
+        );
         assert_eq!(m.coefficients[1], 0.0, "x2 (noise) should be zeroed");
     }
 }

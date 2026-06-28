@@ -17,7 +17,9 @@ impl KeyVault {
         let result = hasher.finalize();
         let mut secret = [0u8; 32];
         secret.copy_from_slice(&result);
-        Self { master_key: SigningKey::from_bytes(&secret) }
+        Self {
+            master_key: SigningKey::from_bytes(&secret),
+        }
     }
 
     /// Initializes the KeyVault from disk. Generates a new master key if none exists.
@@ -195,22 +197,22 @@ pub struct QappTokenPayload {
 #[derive(Debug, Clone, Copy, PartialEq, Eq, PartialOrd, Ord)]
 #[repr(u8)]
 pub enum SubgraphLayer {
-    Public      = 0,
+    Public = 0,
     Professional = 1,
-    Legal       = 2,
-    Medical     = 3,
-    Fiduciary   = 4,
+    Legal = 2,
+    Medical = 3,
+    Fiduciary = 4,
 }
 
 impl SubgraphLayer {
     /// HKDF info label used for key derivation — must stay stable across versions.
     pub fn label(self) -> &'static str {
         match self {
-            Self::Public       => "qualia:subgraph:layer:public",
+            Self::Public => "qualia:subgraph:layer:public",
             Self::Professional => "qualia:subgraph:layer:professional",
-            Self::Legal        => "qualia:subgraph:layer:legal",
-            Self::Medical      => "qualia:subgraph:layer:medical",
-            Self::Fiduciary    => "qualia:subgraph:layer:fiduciary",
+            Self::Legal => "qualia:subgraph:layer:legal",
+            Self::Medical => "qualia:subgraph:layer:medical",
+            Self::Fiduciary => "qualia:subgraph:layer:fiduciary",
         }
     }
 
@@ -269,12 +271,12 @@ impl SubgraphKey {
 /// then `layer_key = ciphertext XOR shared`, then verifies with `mac`.
 #[derive(Debug, Clone)]
 pub struct EncapsulatedKey {
-    pub layer:            SubgraphLayer,
+    pub layer: SubgraphLayer,
     pub ephemeral_public: [u8; 32],
     /// `AES-256-GCM ciphertext` of the 32-byte layer key (32 + 16-byte tag = 48 bytes).
-    pub ciphertext:       [u8; 48],
+    pub ciphertext: [u8; 48],
     /// Nonce used for the AES-GCM wrap (12 bytes).
-    pub nonce:            [u8; 12],
+    pub nonce: [u8; 12],
 }
 
 impl KeyVault {
@@ -311,7 +313,7 @@ impl KeyVault {
         recipient_x25519_pub: &[u8; 32],
         nonce_entropy: &[u8; 32],
     ) -> Result<EncapsulatedKey, String> {
-        use aes_gcm::{Aes256Gcm, KeyInit, aead::Aead};
+        use aes_gcm::{aead::Aead, Aes256Gcm, KeyInit};
         use x25519_dalek::PublicKey;
 
         // Derive ephemeral X25519 keypair from nonce_entropy (deterministic for tests).
@@ -354,8 +356,8 @@ impl KeyVault {
             n
         };
 
-        let cipher = Aes256Gcm::new_from_slice(&wrap_key_bytes)
-            .map_err(|_| "AES-GCM key init failed")?;
+        let cipher =
+            Aes256Gcm::new_from_slice(&wrap_key_bytes).map_err(|_| "AES-GCM key init failed")?;
         let aes_nonce = aes_gcm::Nonce::from_slice(&nonce_bytes);
 
         let ct_vec = cipher
@@ -384,8 +386,8 @@ impl KeyVault {
         encapsulated: &EncapsulatedKey,
         recipient_x25519_secret: &[u8; 32],
     ) -> Result<SubgraphKey, String> {
-        use aes_gcm::{Aes256Gcm, KeyInit, aead::Aead};
-        use x25519_dalek::{StaticSecret, PublicKey};
+        use aes_gcm::{aead::Aead, Aes256Gcm, KeyInit};
+        use x25519_dalek::{PublicKey, StaticSecret};
 
         let secret = StaticSecret::from(*recipient_x25519_secret);
         let ephemeral_pub = PublicKey::from(encapsulated.ephemeral_public);
@@ -399,8 +401,8 @@ impl KeyVault {
             h.finalize()
         };
 
-        let cipher = Aes256Gcm::new_from_slice(&wrap_key_bytes)
-            .map_err(|_| "AES-GCM key init failed")?;
+        let cipher =
+            Aes256Gcm::new_from_slice(&wrap_key_bytes).map_err(|_| "AES-GCM key init failed")?;
         let nonce = aes_gcm::Nonce::from_slice(&encapsulated.nonce);
 
         let plaintext = cipher
@@ -413,7 +415,10 @@ impl KeyVault {
         let mut key_bytes = [0u8; 32];
         key_bytes.copy_from_slice(&plaintext);
 
-        Ok(SubgraphKey { layer: encapsulated.layer, key_bytes })
+        Ok(SubgraphKey {
+            layer: encapsulated.layer,
+            key_bytes,
+        })
     }
 
     /// Derive the X25519 static secret for this node from the master Ed25519 key.
@@ -447,9 +452,9 @@ mod subgraph_key_tests {
     #[test]
     fn different_layers_produce_different_keys() {
         let vault = test_vault();
-        let med  = vault.generate_layer_key(SubgraphLayer::Medical);
-        let leg  = vault.generate_layer_key(SubgraphLayer::Legal);
-        let fid  = vault.generate_layer_key(SubgraphLayer::Fiduciary);
+        let med = vault.generate_layer_key(SubgraphLayer::Medical);
+        let leg = vault.generate_layer_key(SubgraphLayer::Legal);
+        let fid = vault.generate_layer_key(SubgraphLayer::Fiduciary);
         assert_ne!(med.raw(), leg.raw());
         assert_ne!(leg.raw(), fid.raw());
         assert_ne!(med.raw(), fid.raw());
@@ -463,7 +468,7 @@ mod subgraph_key_tests {
         // Recipient's X25519 keys.
         let recipient_secret = vault.derive_x25519_secret();
         let recipient_pub = {
-            use x25519_dalek::{StaticSecret, PublicKey};
+            use x25519_dalek::{PublicKey, StaticSecret};
             let s = StaticSecret::from(recipient_secret);
             *PublicKey::from(&s).as_bytes()
         };
@@ -488,7 +493,7 @@ mod subgraph_key_tests {
 
         let recipient_secret = vault.derive_x25519_secret();
         let recipient_pub = {
-            use x25519_dalek::{StaticSecret, PublicKey};
+            use x25519_dalek::{PublicKey, StaticSecret};
             let s = StaticSecret::from(recipient_secret);
             *PublicKey::from(&s).as_bytes()
         };

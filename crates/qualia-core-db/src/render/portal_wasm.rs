@@ -14,7 +14,9 @@ pub fn init_panic_hook() {
 #[wasm_bindgen]
 pub fn create_canvas(width: u32, height: u32) -> Result<HtmlCanvasElement, JsValue> {
     let window = web_sys::window().ok_or_else(|| JsValue::from_str("no window"))?;
-    let document = window.document().ok_or_else(|| JsValue::from_str("no document"))?;
+    let document = window
+        .document()
+        .ok_or_else(|| JsValue::from_str("no document"))?;
     let canvas = document
         .create_element("canvas")?
         .dyn_into::<HtmlCanvasElement>()?;

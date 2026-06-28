@@ -13,15 +13,20 @@ use wasm_bindgen::prelude::*;
 #[cfg(target_arch = "wasm32")]
 use super::*;
 
-
 #[cfg(target_arch = "wasm32")]
 #[wasm_bindgen]
 pub fn align_sequences_wasm(val: JsValue) -> Result<JsValue, JsValue> {
     let params: AlignmentParams = serde_wasm_bindgen::from_value(val)?;
     let result = if params.mode == "protein" {
-        crate::domains::biological::bioinformatics::align_protein(params.query.as_bytes(), params.target.as_bytes())
+        crate::domains::biological::bioinformatics::align_protein(
+            params.query.as_bytes(),
+            params.target.as_bytes(),
+        )
     } else {
-        crate::domains::biological::bioinformatics::align_nucleotide(params.query.as_bytes(), params.target.as_bytes())
+        crate::domains::biological::bioinformatics::align_nucleotide(
+            params.query.as_bytes(),
+            params.target.as_bytes(),
+        )
     };
     #[derive(Serialize)]
     struct AlignResult {
@@ -55,8 +60,10 @@ pub struct FastaParams {
 #[wasm_bindgen]
 pub fn validate_fasta_wasm(val: JsValue) -> Result<JsValue, JsValue> {
     let params: FastaParams = serde_wasm_bindgen::from_value(val)?;
-    let record =
-        crate::domains::biological::bioinformatics::validate_fasta_record(&params.header, params.sequence.as_bytes());
+    let record = crate::domains::biological::bioinformatics::validate_fasta_record(
+        &params.header,
+        params.sequence.as_bytes(),
+    );
     #[derive(Serialize)]
     struct FastaResult {
         is_valid: bool,

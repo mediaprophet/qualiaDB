@@ -63,7 +63,9 @@ pub fn check_subsumption_quin(
 
 /// Are concepts `a` and `b` declared DISJOINT in `disjoint` (symmetric pairs)?
 pub fn concepts_disjoint(a: u64, b: u64, disjoint: &[(u64, u64)]) -> bool {
-    disjoint.iter().any(|&(c1, c2)| (c1 == a && c2 == b) || (c1 == b && c2 == a))
+    disjoint
+        .iter()
+        .any(|&(c1, c2)| (c1 == a && c2 == b) || (c1 == b && c2 == a))
 }
 
 /// **Clash detection** (ABox consistency core): does an individual asserted to have all of
@@ -77,7 +79,8 @@ pub fn abox_clash(types: &[u64], disjoint: &[(u64, u64)], tbox: &[NQuin]) -> boo
             }
             for &(d1, d2) in disjoint {
                 if (check_subsumption_quin(t1, d1, tbox) && check_subsumption_quin(t2, d2, tbox))
-                    || (check_subsumption_quin(t1, d2, tbox) && check_subsumption_quin(t2, d1, tbox))
+                    || (check_subsumption_quin(t1, d2, tbox)
+                        && check_subsumption_quin(t2, d1, tbox))
                 {
                     return true;
                 }
@@ -180,7 +183,14 @@ mod tests {
     /// Comprehensive: MULTIPLE INHERITANCE + diamond (the old single-edge impl failed these).
     #[test]
     fn multiple_inheritance_dag() {
-        let e = |s: u64, o: u64| NQuin { subject: s, predicate: 1, object: o, context: 0, metadata: 0, parity: 0 };
+        let e = |s: u64, o: u64| NQuin {
+            subject: s,
+            predicate: 1,
+            object: o,
+            context: 0,
+            metadata: 0,
+            parity: 0,
+        };
         let (np, agent, human, moral) = (1u64, 2u64, 3u64, 4u64);
         let tbox = [
             e(np, agent),    // NaturalPerson ⊑ Agent       (first parent)
@@ -189,19 +199,35 @@ mod tests {
             e(agent, moral), // Agent ⊑ MoralFrame          (diamond)
         ];
         assert!(check_subsumption_quin(np, agent, &tbox), "via first parent");
-        assert!(check_subsumption_quin(np, human, &tbox), "via SECOND parent (multiple inheritance)");
-        assert!(check_subsumption_quin(np, moral, &tbox), "transitively via either diamond path");
-        assert!(!check_subsumption_quin(agent, human, &tbox), "Agent is not a HumanBeing");
+        assert!(
+            check_subsumption_quin(np, human, &tbox),
+            "via SECOND parent (multiple inheritance)"
+        );
+        assert!(
+            check_subsumption_quin(np, moral, &tbox),
+            "transitively via either diamond path"
+        );
+        assert!(
+            !check_subsumption_quin(agent, human, &tbox),
+            "Agent is not a HumanBeing"
+        );
     }
 
     #[test]
     fn disjointness_clash_detection() {
         let sub = 1u64; // pretend predicate
-        let e = |s: u64, o: u64| NQuin { subject: s, predicate: sub, object: o, context: 0, metadata: 0, parity: 0 };
+        let e = |s: u64, o: u64| NQuin {
+            subject: s,
+            predicate: sub,
+            object: o,
+            context: 0,
+            metadata: 0,
+            parity: 0,
+        };
         let (human, robot, agent, machine) = (10u64, 20u64, 30u64, 40u64);
         let tbox = [e(human, agent), e(robot, machine)]; // Human⊑Agent, Robot⊑Machine
         let disjoint = [(agent, machine)]; // Agent disjoint Machine
-        // Direct disjointness.
+                                           // Direct disjointness.
         assert!(concepts_disjoint(agent, machine, &disjoint));
         // An individual that is both Human and Robot clashes (Human⊑Agent, Robot⊑Machine, Agent⊥Machine).
         assert!(abox_clash(&[human, robot], &disjoint, &tbox));
@@ -212,18 +238,39 @@ mod tests {
     #[test]
     fn roles_cardinality_nominals() {
         let sp = 7u64;
-        let e = |s: u64, o: u64| NQuin { subject: s, predicate: sp, object: o, context: 0, metadata: 0, parity: 0 };
+        let e = |s: u64, o: u64| NQuin {
+            subject: s,
+            predicate: sp,
+            object: o,
+            context: 0,
+            metadata: 0,
+            parity: 0,
+        };
         let (has_mother, has_parent) = (100u64, 200u64);
         let rbox = [e(has_mother, has_parent)]; // hasMother ⊑ hasParent
         assert!(role_subsumes(has_mother, has_parent, &rbox));
         assert!(!role_subsumes(has_parent, has_mother, &rbox));
-        assert!(is_transitive_role(crate::q_hash("role:ancestorOf"), &[crate::q_hash("role:ancestorOf")]));
+        assert!(is_transitive_role(
+            crate::q_hash("role:ancestorOf"),
+            &[crate::q_hash("role:ancestorOf")]
+        ));
 
         // Qualified cardinality: alice has 2 children who are Students.
         let role = crate::q_hash("role:hasChild");
         let student = crate::q_hash("class:Student");
-        let (alice, bob, cara) = (crate::q_hash("ind:alice"), crate::q_hash("ind:bob"), crate::q_hash("ind:cara"));
-        let mut a1 = NQuin { subject: alice, predicate: role, object: bob, context: 0, metadata: 0, parity: 0 };
+        let (alice, bob, cara) = (
+            crate::q_hash("ind:alice"),
+            crate::q_hash("ind:bob"),
+            crate::q_hash("ind:cara"),
+        );
+        let mut a1 = NQuin {
+            subject: alice,
+            predicate: role,
+            object: bob,
+            context: 0,
+            metadata: 0,
+            parity: 0,
+        };
         a1.parity = a1.subject ^ a1.predicate ^ a1.object;
         let mut a2 = a1;
         a2.object = cara;

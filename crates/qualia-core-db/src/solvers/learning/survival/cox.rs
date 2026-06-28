@@ -175,7 +175,13 @@ mod tests {
 
     #[test]
     fn guards() {
-        assert_eq!(fit(&[1.0, 2.0], &[1.0, 2.0], &[false, false], 2, 1).unwrap_err(), LearningError::InsufficientData);
-        assert_eq!(fit(&[1.0], &[1.0], &[true], 1, 2).unwrap_err(), LearningError::InvalidDimension);
+        assert_eq!(
+            fit(&[1.0, 2.0], &[1.0, 2.0], &[false, false], 2, 1).unwrap_err(),
+            LearningError::InsufficientData
+        );
+        assert_eq!(
+            fit(&[1.0], &[1.0], &[true], 1, 2).unwrap_err(),
+            LearningError::InvalidDimension
+        );
     }
 }

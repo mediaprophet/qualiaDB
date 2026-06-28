@@ -73,7 +73,7 @@ mod tests {
         // negation neither exhaust certainty nor collapse to impossibility.
         assert_eq!(or(Likely, not(Likely)), Likely); // ≠ Certain
         assert_eq!(and(Likely, not(Likely)), Unlikely); // ≠ Impossible
-        // Only at the extremes do they behave classically.
+                                                        // Only at the extremes do they behave classically.
         assert_eq!(or(Certain, not(Certain)), Certain);
         assert_eq!(and(Certain, not(Certain)), Impossible);
     }

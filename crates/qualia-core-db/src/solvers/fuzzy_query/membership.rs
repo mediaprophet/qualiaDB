@@ -58,7 +58,11 @@ pub fn trapezoidal(x: f64, a: f64, b: f64, c: f64, d: f64) -> f64 {
 /// reaching `0` at `target ± tol`. `tol <= 0` is a crisp equality.
 pub fn approximately(x: f64, target: f64, tol: f64) -> f64 {
     if tol <= 0.0 {
-        return if (x - target).abs() < f64::EPSILON { 1.0 } else { 0.0 };
+        return if (x - target).abs() < f64::EPSILON {
+            1.0
+        } else {
+            0.0
+        };
     }
     triangular(x, target - tol, target, target + tol)
 }

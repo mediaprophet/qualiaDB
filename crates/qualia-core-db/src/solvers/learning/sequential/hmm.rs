@@ -23,7 +23,13 @@ pub struct Hmm {
 impl Hmm {
     /// Construct from parameters, validating shapes (rows need not be exactly
     /// normalized but must be non-empty).
-    pub fn new(pi: Vec<f64>, a: Vec<f64>, b: Vec<f64>, k: usize, m: usize) -> Result<Self, LearningError> {
+    pub fn new(
+        pi: Vec<f64>,
+        a: Vec<f64>,
+        b: Vec<f64>,
+        k: usize,
+        m: usize,
+    ) -> Result<Self, LearningError> {
         if k == 0 || m == 0 || pi.len() != k || a.len() != k * k || b.len() != k * m {
             return Err(LearningError::InvalidDimension);
         }
@@ -66,7 +72,10 @@ impl Hmm {
             }
         }
         // log P(obs) = −Σ log c_t.
-        let ll: f64 = scale.iter().map(|&c| if c > 0.0 { -c.ln() } else { f64::NEG_INFINITY }).sum();
+        let ll: f64 = scale
+            .iter()
+            .map(|&c| if c > 0.0 { -c.ln() } else { f64::NEG_INFINITY })
+            .sum();
         (ll, alpha, scale)
     }
 
@@ -128,7 +137,10 @@ impl Hmm {
 struct Lcg(u64);
 impl Lcg {
     fn unit(&mut self) -> f64 {
-        self.0 = self.0.wrapping_mul(6364136223846793005).wrapping_add(1442695040888963407);
+        self.0 = self
+            .0
+            .wrapping_mul(6364136223846793005)
+            .wrapping_add(1442695040888963407);
         ((self.0 >> 11) as f64) / ((1u64 << 53) as f64)
     }
 }
@@ -330,6 +342,9 @@ mod tests {
     #[test]
     fn guards() {
         assert!(Hmm::new(vec![1.0], vec![1.0], vec![1.0, 0.0], 1, 2).is_ok());
-        assert_eq!(baum_welch(&[0], 2, 2, 10, 1e-6, 0).unwrap_err(), LearningError::InvalidDimension);
+        assert_eq!(
+            baum_welch(&[0], 2, 2, 10, 1e-6, 0).unwrap_err(),
+            LearningError::InvalidDimension
+        );
     }
 }

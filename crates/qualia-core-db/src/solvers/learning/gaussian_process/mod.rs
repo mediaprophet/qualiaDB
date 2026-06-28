@@ -56,7 +56,12 @@ impl GpRegressor {
         let mut k = vec![0.0; n * n];
         for i in 0..n {
             for j in i..n {
-                let v = rbf(&x[i * p..(i + 1) * p], &x[j * p..(j + 1) * p], length_scale, signal_var);
+                let v = rbf(
+                    &x[i * p..(i + 1) * p],
+                    &x[j * p..(j + 1) * p],
+                    length_scale,
+                    signal_var,
+                );
                 k[i * n + j] = v;
                 k[j * n + i] = v;
             }
@@ -68,7 +73,16 @@ impl GpRegressor {
         let mut alpha = vec![0.0; n];
         cholesky_solve(n, &l, y, &mut alpha)?;
 
-        Ok(Self { x_train: x.to_vec(), alpha, l, length_scale, signal_var, noise_var, n, p })
+        Ok(Self {
+            x_train: x.to_vec(),
+            alpha,
+            l,
+            length_scale,
+            signal_var,
+            noise_var,
+            n,
+            p,
+        })
     }
 
     /// Predictive distribution at one input: `(mean, variance)`. The variance
@@ -95,7 +109,9 @@ impl GpRegressor {
 
     /// Predictive `(mean, variance)` for each row of a row-major `m × p` matrix.
     pub fn predict(&self, x: &[f64], m: usize) -> Vec<(f64, f64)> {
-        (0..m).map(|i| self.predict_row(&x[i * self.p..(i + 1) * self.p])).collect()
+        (0..m)
+            .map(|i| self.predict_row(&x[i * self.p..(i + 1) * self.p]))
+            .collect()
     }
 }
 
@@ -112,7 +128,11 @@ mod tests {
         let gp = GpRegressor::fit(&x, &y, 8, 1, 1.0, 1.0, 1e-6).unwrap();
         for i in 0..8 {
             let (m, v) = gp.predict_row(&[x[i]]);
-            assert!((m - y[i]).abs() < 1e-2, "mean at train point {i}: {m} vs {}", y[i]);
+            assert!(
+                (m - y[i]).abs() < 1e-2,
+                "mean at train point {i}: {m} vs {}",
+                y[i]
+            );
             assert!(v < 1e-2, "variance at train point should be small: {v}");
         }
     }
@@ -124,7 +144,10 @@ mod tests {
         let gp = GpRegressor::fit(&x, &y, 6, 1, 1.0, 1.0, 1e-4).unwrap();
         let (_, v_near) = gp.predict_row(&[2.5]); // within the data
         let (_, v_far) = gp.predict_row(&[50.0]); // far away
-        assert!(v_far > v_near, "var_far {v_far} should exceed var_near {v_near}");
+        assert!(
+            v_far > v_near,
+            "var_far {v_far} should exceed var_near {v_near}"
+        );
         // Far from all data the predictive variance tends to the prior signal var.
         assert!((v_far - 1.0).abs() < 1e-3);
     }
@@ -136,12 +159,22 @@ mod tests {
         let y: Vec<f64> = x.iter().map(|&xi| xi.sin()).collect();
         let gp = GpRegressor::fit(&x, &y, 13, 1, 1.0, 1.0, 1e-6).unwrap();
         let (m, _) = gp.predict_row(&[1.25]); // between 1.0 and 1.5
-        assert!((m - (1.25f64).sin()).abs() < 0.1, "interp {m} vs {}", (1.25f64).sin());
+        assert!(
+            (m - (1.25f64).sin()).abs() < 0.1,
+            "interp {m} vs {}",
+            (1.25f64).sin()
+        );
     }
 
     #[test]
     fn guards() {
-        assert_eq!(GpRegressor::fit(&[1.0, 2.0], &[1.0], 2, 1, 1.0, 1.0, 1e-3).unwrap_err(), LearningError::InvalidDimension);
-        assert_eq!(GpRegressor::fit(&[1.0, 2.0], &[1.0, 2.0], 2, 1, 0.0, 1.0, 1e-3).unwrap_err(), LearningError::InsufficientData);
+        assert_eq!(
+            GpRegressor::fit(&[1.0, 2.0], &[1.0], 2, 1, 1.0, 1.0, 1e-3).unwrap_err(),
+            LearningError::InvalidDimension
+        );
+        assert_eq!(
+            GpRegressor::fit(&[1.0, 2.0], &[1.0, 2.0], 2, 1, 0.0, 1.0, 1e-3).unwrap_err(),
+            LearningError::InsufficientData
+        );
     }
 }

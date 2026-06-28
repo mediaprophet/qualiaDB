@@ -55,3 +55,5 @@ pub mod ternary_gpu;
 pub mod topk;
 #[cfg(not(target_arch = "wasm32"))]
 pub mod topk_gpu;
+pub mod sparse_cache;
+pub mod thermal_wal;

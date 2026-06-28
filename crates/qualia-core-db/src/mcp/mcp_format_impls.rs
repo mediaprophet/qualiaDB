@@ -12,9 +12,7 @@ use serde_json::{json, Value};
 pub const MAX_MCP_FORMAT_QUINS: usize = 8_192;
 
 fn json_str<'a>(v: &'a Value, key: &str, default: &'a str) -> &'a str {
-    v.get(key)
-        .and_then(Value::as_str)
-        .unwrap_or(default)
+    v.get(key).and_then(Value::as_str).unwrap_or(default)
 }
 
 fn json_u64(v: &Value, key: &str, default: u64) -> u64 {
@@ -79,7 +77,9 @@ fn parse_json_datatype(s: &str) -> crate::sparql_library::parsers::json_parser::
     }
 }
 
-fn parse_csv_profile(v: &Value) -> Result<crate::sparql_library::parsers::csv_parser::CsvMappingProfile, McpSystemError> {
+fn parse_csv_profile(
+    v: &Value,
+) -> Result<crate::sparql_library::parsers::csv_parser::CsvMappingProfile, McpSystemError> {
     use crate::sparql_library::parsers::csv_parser::{CsvColumnMapping, CsvMappingProfile};
     let mappings = v
         .get("field_mappings")
@@ -100,7 +100,9 @@ fn parse_csv_profile(v: &Value) -> Result<crate::sparql_library::parsers::csv_pa
             column_index: None,
             predicate_hash: resolve_predicate_hash(m)?,
             datatype: parse_csv_datatype(
-                m.get("datatype").and_then(Value::as_str).unwrap_or("string"),
+                m.get("datatype")
+                    .and_then(Value::as_str)
+                    .unwrap_or("string"),
             ),
         });
     }
@@ -110,7 +112,9 @@ fn parse_csv_profile(v: &Value) -> Result<crate::sparql_library::parsers::csv_pa
     })
 }
 
-fn parse_json_profile(v: &Value) -> Result<crate::sparql_library::parsers::json_parser::JsonMappingProfile, McpSystemError> {
+fn parse_json_profile(
+    v: &Value,
+) -> Result<crate::sparql_library::parsers::json_parser::JsonMappingProfile, McpSystemError> {
     use crate::sparql_library::parsers::json_parser::{JsonFieldMapping, JsonMappingProfile};
     let mappings = v
         .get("field_mappings")
@@ -130,7 +134,9 @@ fn parse_json_profile(v: &Value) -> Result<crate::sparql_library::parsers::json_
             source_key,
             predicate_hash: resolve_predicate_hash(m)?,
             datatype: parse_json_datatype(
-                m.get("datatype").and_then(Value::as_str).unwrap_or("string"),
+                m.get("datatype")
+                    .and_then(Value::as_str)
+                    .unwrap_or("string"),
             ),
         });
     }
@@ -207,8 +213,15 @@ fn resolve_input_quins(v: &Value) -> Result<Vec<NQuin>, McpSystemError> {
     parse_quin_slice(v, "quins")
 }
 
-fn csv_serialize_profile(v: &Value) -> Result<crate::sparql_library::serialisers::csv_serializer::CsvSerializationProfile, McpSystemError> {
-    use crate::sparql_library::serialisers::csv_serializer::{CsvDatatype, CsvSerializationProfile};
+fn csv_serialize_profile(
+    v: &Value,
+) -> Result<
+    crate::sparql_library::serialisers::csv_serializer::CsvSerializationProfile,
+    McpSystemError,
+> {
+    use crate::sparql_library::serialisers::csv_serializer::{
+        CsvDatatype, CsvSerializationProfile,
+    };
     let headers = v
         .get("headers")
         .or_else(|| v.get("field_names"))
@@ -254,8 +267,15 @@ fn csv_serialize_profile(v: &Value) -> Result<crate::sparql_library::serialisers
     })
 }
 
-fn json_serialize_profile(v: &Value) -> Result<crate::sparql_library::serialisers::json_serializer::JsonSerializationProfile, McpSystemError> {
-    use crate::sparql_library::serialisers::json_serializer::{JsonDatatype, JsonSerializationProfile};
+fn json_serialize_profile(
+    v: &Value,
+) -> Result<
+    crate::sparql_library::serialisers::json_serializer::JsonSerializationProfile,
+    McpSystemError,
+> {
+    use crate::sparql_library::serialisers::json_serializer::{
+        JsonDatatype, JsonSerializationProfile,
+    };
     let field_names = v
         .get("field_names")
         .and_then(Value::as_array)
@@ -441,7 +461,9 @@ pub fn serialize_json(args: &[u8]) -> Result<String, McpSystemError> {
 }
 
 pub fn parse_rdf(args: &[u8]) -> Result<String, McpSystemError> {
-    use crate::sparql_library::rdf_formats::{parse_rdf as dispatch_parse, QuinCollector, RdfFormat};
+    use crate::sparql_library::rdf_formats::{
+        parse_rdf as dispatch_parse, QuinCollector, RdfFormat,
+    };
     use std::io::Cursor;
 
     let v = parse_tool_args(args)?;
@@ -451,13 +473,14 @@ pub fn parse_rdf(args: &[u8]) -> Result<String, McpSystemError> {
     let data = read_input_bytes(&v, "rdf_data")?;
 
     let mut collector = QuinCollector::new();
-    let count = dispatch_parse(format, Cursor::new(data), context_hash, &mut collector)
-        .map_err(|e| match e {
+    let count = dispatch_parse(format, Cursor::new(data), context_hash, &mut collector).map_err(
+        |e| match e {
             crate::sparql_library::rdf_formats::RdfParseError::BufferFull => {
                 McpSystemError::ParseError
             }
             _ => McpSystemError::InvalidParameters,
-        })?;
+        },
+    )?;
 
     let ingested = if json_bool(&v, "ingest_to_graph", false) {
         let n = collector.count;
@@ -479,7 +502,9 @@ pub fn parse_rdf(args: &[u8]) -> Result<String, McpSystemError> {
 }
 
 pub fn serialize_rdf(args: &[u8]) -> Result<String, McpSystemError> {
-    use crate::sparql_library::rdf_formats::{serialize_rdf as dispatch_serialize, RdfFormat, RdfStarMode};
+    use crate::sparql_library::rdf_formats::{
+        serialize_rdf as dispatch_serialize, RdfFormat, RdfStarMode,
+    };
 
     let v = parse_tool_args(args)?;
     let quins = resolve_input_quins(&v)?;

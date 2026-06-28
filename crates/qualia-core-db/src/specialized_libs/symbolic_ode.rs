@@ -52,10 +52,18 @@ pub enum OdeSolution {
 /// Solve the **separable** ODE `y' = g(x)·h(y)` as `∫ dy/h(y) = ∫ g(x) dx + C`. The two
 /// antiderivatives are computed by the CAS integrator; either being non-integrable yields
 /// [`OdeError::NotIntegrable`].
-pub fn solve_separable(g_x: &Expr, h_y: &Expr, xvar: &str, yvar: &str) -> Result<OdeSolution, OdeError> {
+pub fn solve_separable(
+    g_x: &Expr,
+    h_y: &Expr,
+    xvar: &str,
+    yvar: &str,
+) -> Result<OdeSolution, OdeError> {
     let f_y = integrate(&div(c(1.0), h_y.clone()), yvar)?; // ∫ dy / h(y)
     let g_int = integrate(g_x, xvar)?; // ∫ g(x) dx
-    Ok(OdeSolution::Implicit { f_y, g_x: add(g_int, var("C")) })
+    Ok(OdeSolution::Implicit {
+        f_y,
+        g_x: add(g_int, var("C")),
+    })
 }
 
 /// Solve the **linear first-order constant-coefficient** ODE `y' + a·y = b`.
@@ -73,7 +81,12 @@ pub fn solve_linear_first_order(a: f64, b: f64, xvar: &str) -> OdeSolution {
 /// Solve the **linear second-order homogeneous constant-coefficient** ODE
 /// `a·y'' + b·y' + c·y = 0` via its characteristic equation `a·r² + b·r + c = 0`. `a = 0`
 /// is not second-order → [`OdeError::NotSupported`].
-pub fn solve_linear_second_order(a: f64, b: f64, cc: f64, xvar: &str) -> Result<OdeSolution, OdeError> {
+pub fn solve_linear_second_order(
+    a: f64,
+    b: f64,
+    cc: f64,
+    xvar: &str,
+) -> Result<OdeSolution, OdeError> {
     if a == 0.0 {
         return Err(OdeError::NotSupported);
     }
@@ -159,8 +172,8 @@ pub fn classify_second_order_pde(a_xx: f64, b_xy: f64, c_yy: f64) -> PdeClass {
 
 #[cfg(test)]
 mod tests {
-    use super::*;
     use super::super::symbolic_algebra::{differentiate, pow, simplify, var};
+    use super::*;
     use std::collections::HashMap;
 
     fn env(pairs: &[(&str, f64)]) -> HashMap<String, f64> {
@@ -174,7 +187,9 @@ mod tests {
         match sol {
             OdeSolution::Implicit { f_y, g_x } => {
                 // f_y = ln(y) ; evaluate F(y=e) = 1.
-                assert!((f_y.eval(&env(&[("y", std::f64::consts::E)])).unwrap() - 1.0).abs() < 1e-9);
+                assert!(
+                    (f_y.eval(&env(&[("y", std::f64::consts::E)])).unwrap() - 1.0).abs() < 1e-9
+                );
                 // g_x = x + C ; at x=2, C=3 → 5.
                 assert!((g_x.eval(&env(&[("x", 2.0), ("C", 3.0)])).unwrap() - 5.0).abs() < 1e-9);
             }
@@ -186,7 +201,10 @@ mod tests {
     fn separable_fails_closed() {
         // h(y) = sin(y²) → ∫dy/sin(y²) is not in the table → NotIntegrable, not fabricated.
         let h = super::super::symbolic_algebra::sin(pow(var("y"), 2));
-        assert_eq!(solve_separable(&c(1.0), &h, "x", "y").unwrap_err(), OdeError::NotIntegrable);
+        assert_eq!(
+            solve_separable(&c(1.0), &h, "x", "y").unwrap_err(),
+            OdeError::NotIntegrable
+        );
     }
 
     #[test]
@@ -199,7 +217,10 @@ mod tests {
         for &(x, cval) in &[(0.0, 1.0), (0.7, -2.0), (1.5, 4.0)] {
             let e = env(&[("x", x), ("C", cval)]);
             let residual = yp.eval(&e).unwrap() + 2.0 * y.eval(&e).unwrap();
-            assert!((residual - 6.0).abs() < 1e-7, "residual {residual} at x={x}");
+            assert!(
+                (residual - 6.0).abs() < 1e-7,
+                "residual {residual} at x={x}"
+            );
         }
     }
 
@@ -217,7 +238,8 @@ mod tests {
     #[test]
     fn second_order_distinct_real_roots() {
         // y'' − 3y' + 2y = 0 → roots 1, 2 → C1 e^x + C2 e^{2x}.
-        let OdeSolution::Explicit(y) = solve_linear_second_order(1.0, -3.0, 2.0, "x").unwrap() else {
+        let OdeSolution::Explicit(y) = solve_linear_second_order(1.0, -3.0, 2.0, "x").unwrap()
+        else {
             panic!()
         };
         verify_second_order(&y, 1.0, -3.0, 2.0);
@@ -226,7 +248,8 @@ mod tests {
     #[test]
     fn second_order_repeated_root() {
         // y'' − 2y' + y = 0 → repeated root 1 → (C1 + C2 x) e^x.
-        let OdeSolution::Explicit(y) = solve_linear_second_order(1.0, -2.0, 1.0, "x").unwrap() else {
+        let OdeSolution::Explicit(y) = solve_linear_second_order(1.0, -2.0, 1.0, "x").unwrap()
+        else {
             panic!()
         };
         verify_second_order(&y, 1.0, -2.0, 1.0);
@@ -235,7 +258,8 @@ mod tests {
     #[test]
     fn second_order_complex_roots() {
         // y'' + y = 0 → roots ±i → C1 cos x + C2 sin x.
-        let OdeSolution::Explicit(y) = solve_linear_second_order(1.0, 0.0, 1.0, "x").unwrap() else {
+        let OdeSolution::Explicit(y) = solve_linear_second_order(1.0, 0.0, 1.0, "x").unwrap()
+        else {
             panic!()
         };
         verify_second_order(&y, 1.0, 0.0, 1.0);
@@ -243,7 +267,10 @@ mod tests {
 
     #[test]
     fn second_order_rejects_non_second_order() {
-        assert_eq!(solve_linear_second_order(0.0, 1.0, 1.0, "x").unwrap_err(), OdeError::NotSupported);
+        assert_eq!(
+            solve_linear_second_order(0.0, 1.0, 1.0, "x").unwrap_err(),
+            OdeError::NotSupported
+        );
     }
 
     #[test]
@@ -266,8 +293,14 @@ mod tests {
         // Laplace uₓₓ + u_yy: A=1,B=0,C=1 → elliptic.
         assert_eq!(classify_second_order_pde(1.0, 0.0, 1.0), PdeClass::Elliptic);
         // Wave uₓₓ − u_yy: A=1,B=0,C=−1 → hyperbolic.
-        assert_eq!(classify_second_order_pde(1.0, 0.0, -1.0), PdeClass::Hyperbolic);
+        assert_eq!(
+            classify_second_order_pde(1.0, 0.0, -1.0),
+            PdeClass::Hyperbolic
+        );
         // Heat-like uₓₓ (no u_yy): A=1,B=0,C=0 → parabolic.
-        assert_eq!(classify_second_order_pde(1.0, 0.0, 0.0), PdeClass::Parabolic);
+        assert_eq!(
+            classify_second_order_pde(1.0, 0.0, 0.0),
+            PdeClass::Parabolic
+        );
     }
 }

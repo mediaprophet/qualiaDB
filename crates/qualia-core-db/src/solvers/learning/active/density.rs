@@ -72,7 +72,11 @@ pub fn rank_by_density(
     features: &[Vec<f64>],
     beta: f64,
 ) -> Result<Vec<usize>, ActiveError> {
-    Ok(argsort_desc(&information_density(uncertainty, features, beta)?))
+    Ok(argsort_desc(&information_density(
+        uncertainty,
+        features,
+        beta,
+    )?))
 }
 
 #[cfg(test)]
@@ -85,7 +89,8 @@ mod tests {
         assert!((cosine_similarity(&[1.0, 0.0], &[1.0, 0.0]).unwrap() - 1.0).abs() < EPS);
         assert!(cosine_similarity(&[1.0, 0.0], &[0.0, 1.0]).unwrap().abs() < EPS);
         assert!((cosine_similarity(&[1.0, 0.0], &[-1.0, 0.0]).unwrap() + 1.0).abs() < EPS);
-        assert!(cosine_similarity(&[0.0, 0.0], &[1.0, 1.0]).unwrap().abs() < EPS); // zero vector
+        assert!(cosine_similarity(&[0.0, 0.0], &[1.0, 1.0]).unwrap().abs() < EPS);
+        // zero vector
     }
 
     #[test]
@@ -96,7 +101,10 @@ mod tests {
         let uncertainty = vec![0.5, 0.5, 0.5];
         let ranked = rank_by_density(&uncertainty, &features, 1.0).unwrap();
         assert_ne!(ranked[0], 2, "the outlier must not be the top query");
-        assert_eq!(ranked[2], 2, "the outlier ranks last under density weighting");
+        assert_eq!(
+            ranked[2], 2,
+            "the outlier ranks last under density weighting"
+        );
     }
 
     #[test]

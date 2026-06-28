@@ -142,8 +142,16 @@ mod tests {
         let a = TensorState::new(vec![1.0, 2.0, 3.0], vec![3]);
         let b = TensorState::new(vec![1.0, 2.0, 3.0], vec![3]);
         let c = TensorState::new(vec![1.0, 2.0, 3.5], vec![3]); // one bit different
-        assert_eq!(commit_state(&a, None), commit_state(&b, None), "same data ⇒ same commitment");
-        assert_ne!(commit_state(&a, None), commit_state(&c, None), "different data ⇒ different commitment");
+        assert_eq!(
+            commit_state(&a, None),
+            commit_state(&b, None),
+            "same data ⇒ same commitment"
+        );
+        assert_ne!(
+            commit_state(&a, None),
+            commit_state(&c, None),
+            "different data ⇒ different commitment"
+        );
     }
 
     #[test]
@@ -212,6 +220,9 @@ mod tests {
         let added = input.apply_operation("add", &add_params);
         let t_scale = transformation_commitment(&input, &scaled);
         let t_add = transformation_commitment(&input, &added);
-        assert_ne!(t_scale, t_add, "different operations ⇒ different transformation commitments");
+        assert_ne!(
+            t_scale, t_add,
+            "different operations ⇒ different transformation commitments"
+        );
     }
 }

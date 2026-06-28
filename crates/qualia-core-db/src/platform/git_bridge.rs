@@ -50,17 +50,17 @@ pub const MERGE_SECONDARY: u32 = 0x0008;
 #[derive(Clone, Copy, Debug, PartialEq, Eq)]
 pub struct DagNode {
     /// SHA-256 of the parent node's bytes; `[0u8; 32]` for genesis.
-    pub parent_hash:  [u8; 32],
+    pub parent_hash: [u8; 32],
     /// SHA-256 of the quins slice this commit adds/removes.
     pub quins_merkle: [u8; 32],
     /// `q_hash` of the author's DID string.
-    pub author_did:   u64,
+    pub author_did: u64,
     /// Milliseconds since Unix epoch.
-    pub timestamp:    u64,
+    pub timestamp: u64,
     /// Low 32 bits of `q_hash(message)` — enough for dedup/indexing.
     pub message_hash: u32,
     /// Node flags (`GENESIS`, `FORK_DISPUTED`, …).
-    pub flags:        u32,
+    pub flags: u32,
 }
 
 const _: () = assert!(
@@ -96,12 +96,12 @@ impl DagNode {
     /// Deserialize from 88 bytes.
     pub fn from_bytes(b: &[u8; 88]) -> Self {
         DagNode {
-            parent_hash:  b[0..32].try_into().unwrap(),
+            parent_hash: b[0..32].try_into().unwrap(),
             quins_merkle: b[32..64].try_into().unwrap(),
-            author_did:   u64::from_le_bytes(b[64..72].try_into().unwrap()),
-            timestamp:    u64::from_le_bytes(b[72..80].try_into().unwrap()),
+            author_did: u64::from_le_bytes(b[64..72].try_into().unwrap()),
+            timestamp: u64::from_le_bytes(b[72..80].try_into().unwrap()),
             message_hash: u32::from_le_bytes(b[80..84].try_into().unwrap()),
-            flags:        u32::from_le_bytes(b[84..88].try_into().unwrap()),
+            flags: u32::from_le_bytes(b[84..88].try_into().unwrap()),
         }
     }
 }
@@ -125,13 +125,16 @@ pub fn quins_merkle(quins: &[NQuin]) -> [u8; 32] {
 /// In-memory DAG node store.  Persisted to `dag_root_offset`/`dag_root_length`
 /// in the Q42 v3 volume header.
 pub struct DagStore {
-    nodes: Vec<(DagNode, [u8; 32])>, // (node, hash)
+    nodes: Vec<(DagNode, [u8; 32])>,                    // (node, hash)
     branches: std::collections::HashMap<u64, [u8; 32]>, // branch_name_hash → tip_hash
 }
 
 impl DagStore {
     pub fn new() -> Self {
-        Self { nodes: Vec::new(), branches: std::collections::HashMap::new() }
+        Self {
+            nodes: Vec::new(),
+            branches: std::collections::HashMap::new(),
+        }
     }
 
     /// Create the genesis node (no parent).
@@ -301,9 +304,13 @@ impl DagStore {
 
     /// Deserialize from bytes previously written by `serialize`.
     pub fn deserialize(bytes: &[u8]) -> Option<Self> {
-        if bytes.len() < 8 { return None; }
+        if bytes.len() < 8 {
+            return None;
+        }
         let count = u64::from_le_bytes(bytes[0..8].try_into().ok()?) as usize;
-        if bytes.len() < 8 + count * 88 { return None; }
+        if bytes.len() < 8 + count * 88 {
+            return None;
+        }
         let mut nodes = Vec::with_capacity(count);
         for i in 0..count {
             let off = 8 + i * 88;
@@ -312,12 +319,17 @@ impl DagStore {
             let hash = node.digest();
             nodes.push((node, hash));
         }
-        Some(Self { nodes, branches: std::collections::HashMap::new() })
+        Some(Self {
+            nodes,
+            branches: std::collections::HashMap::new(),
+        })
     }
 }
 
 impl Default for DagStore {
-    fn default() -> Self { Self::new() }
+    fn default() -> Self {
+        Self::new()
+    }
 }
 
 // ── git fast-export compatibility ─────────────────────────────────────────────
@@ -439,7 +451,12 @@ mod tests {
         assert_eq!(primary_node.flags, 0);
 
         // Secondary node must have branch_b as parent and encode primary_hash in quins_merkle.
-        let secondary_node = store.nodes().iter().find(|(_, h)| *h == secondary).unwrap().0;
+        let secondary_node = store
+            .nodes()
+            .iter()
+            .find(|(_, h)| *h == secondary)
+            .unwrap()
+            .0;
         assert_eq!(secondary_node.parent_hash, branch_b);
         assert_eq!(secondary_node.flags, MERGE_SECONDARY);
         assert_eq!(secondary_node.quins_merkle, primary);

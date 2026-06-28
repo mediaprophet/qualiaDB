@@ -43,17 +43,25 @@ pub fn parse_csv_to_quins<R: Read>(
     mut on_quin: impl FnMut(NQuin),
 ) -> Result<(), String> {
     let mut rdr = ReaderBuilder::new().has_headers(true).from_reader(reader);
-    
+
     // Resolve header indices
-    let headers = rdr.byte_headers().map_err(|e| format!("Failed to read headers: {}", e))?.clone();
+    let headers = rdr
+        .byte_headers()
+        .map_err(|e| format!("Failed to read headers: {}", e))?
+        .clone();
     for field in profile.fields.iter_mut() {
-        field.column_index = headers.iter().position(|h| h == field.source_key.as_bytes());
+        field.column_index = headers
+            .iter()
+            .position(|h| h == field.source_key.as_bytes());
     }
 
     let mut record = csv::ByteRecord::new();
-    
+
     // Zero-allocation stream loop
-    while rdr.read_byte_record(&mut record).map_err(|e| format!("CSV read error: {}", e))? {
+    while rdr
+        .read_byte_record(&mut record)
+        .map_err(|e| format!("CSV read error: {}", e))?
+    {
         let subject_hash: u64 = rand::random(); // Ephemeral Subject ID for the row
 
         for field in &profile.fields {
@@ -69,10 +77,16 @@ pub fn parse_csv_to_quins<R: Read>(
                                 object: val | (0b001 << 60), // INLINE_TAG_INTEGER
                                 context: 0,
                                 metadata: 0,
-                                parity: NQuin::calculate_parity(subject_hash, field.predicate_hash, val | (0b001 << 60), 0, 0),
+                                parity: NQuin::calculate_parity(
+                                    subject_hash,
+                                    field.predicate_hash,
+                                    val | (0b001 << 60),
+                                    0,
+                                    0,
+                                ),
                             };
                             on_quin(quin);
-                        },
+                        }
                         CsvDatatype::Float => {
                             let str_slice = std::str::from_utf8(raw_bytes).unwrap_or("0.0");
                             let float_val: f32 = str_slice.parse::<f32>().unwrap_or(0.0);
@@ -86,10 +100,16 @@ pub fn parse_csv_to_quins<R: Read>(
                                 object: packed_object,
                                 context: 0,
                                 metadata: 0,
-                                parity: NQuin::calculate_parity(subject_hash, field.predicate_hash, packed_object, 0, 0),
+                                parity: NQuin::calculate_parity(
+                                    subject_hash,
+                                    field.predicate_hash,
+                                    packed_object,
+                                    0,
+                                    0,
+                                ),
                             };
                             on_quin(quin);
-                        },
+                        }
                         CsvDatatype::StringRef => {
                             let s = std::str::from_utf8(raw_bytes).unwrap_or("");
                             let quin = NQuin {
@@ -98,7 +118,13 @@ pub fn parse_csv_to_quins<R: Read>(
                                 object: hash_token(s),
                                 context: 0,
                                 metadata: 0,
-                                parity: NQuin::calculate_parity(subject_hash, field.predicate_hash, hash_token(s), 0, 0),
+                                parity: NQuin::calculate_parity(
+                                    subject_hash,
+                                    field.predicate_hash,
+                                    hash_token(s),
+                                    0,
+                                    0,
+                                ),
                             };
                             on_quin(quin);
                         }
@@ -111,7 +137,13 @@ pub fn parse_csv_to_quins<R: Read>(
                                 object: (0b011u64 << 60) | millis,
                                 context: 0,
                                 metadata: 0,
-                                parity: NQuin::calculate_parity(subject_hash, field.predicate_hash, (0b011u64 << 60) | millis, 0, 0),
+                                parity: NQuin::calculate_parity(
+                                    subject_hash,
+                                    field.predicate_hash,
+                                    (0b011u64 << 60) | millis,
+                                    0,
+                                    0,
+                                ),
                             };
                             on_quin(quin);
                         }
@@ -120,7 +152,7 @@ pub fn parse_csv_to_quins<R: Read>(
             }
         }
     }
-    
+
     Ok(())
 }
 
@@ -129,7 +161,11 @@ fn parse_datetime_millis(s: &str) -> Option<u64> {
     if let Ok(dt) = DateTime::parse_from_rfc3339(s) {
         return Some(dt.timestamp_millis() as u64);
     }
-    for fmt in &["%Y-%m-%dT%H:%M:%S", "%Y-%m-%d %H:%M:%S", "%Y-%m-%dT%H:%M:%SZ"] {
+    for fmt in &[
+        "%Y-%m-%dT%H:%M:%S",
+        "%Y-%m-%d %H:%M:%S",
+        "%Y-%m-%dT%H:%M:%SZ",
+    ] {
         if let Ok(nd) = NaiveDateTime::parse_from_str(s, fmt) {
             return Some(Utc.from_utc_datetime(&nd).timestamp_millis() as u64);
         }

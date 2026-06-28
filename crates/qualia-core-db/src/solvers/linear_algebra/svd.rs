@@ -49,7 +49,11 @@ pub fn svd(m: usize, n: usize, data: &[f64]) -> Result<Svd, SolversError> {
 
     // Sort columns by descending eigenvalue (= descending σ²).
     let mut order: Vec<usize> = (0..n).collect();
-    order.sort_by(|&i, &j| eigvals[j].partial_cmp(&eigvals[i]).unwrap_or(core::cmp::Ordering::Equal));
+    order.sort_by(|&i, &j| {
+        eigvals[j]
+            .partial_cmp(&eigvals[i])
+            .unwrap_or(core::cmp::Ordering::Equal)
+    });
 
     let mut singular_values = vec![0.0_f64; n];
     let mut v = vec![0.0_f64; n * n];
@@ -77,7 +81,11 @@ pub fn svd(m: usize, n: usize, data: &[f64]) -> Result<Svd, SolversError> {
         }
     }
 
-    Ok(Svd { singular_values, u, v })
+    Ok(Svd {
+        singular_values,
+        u,
+        v,
+    })
 }
 
 #[cfg(test)]
@@ -101,7 +109,11 @@ mod tests {
                 for k in 0..n {
                     acc += s.u[i * n + k] * s.singular_values[k] * s.v[j * n + k];
                 }
-                assert!((acc - a[i * n + j]).abs() < 1e-6, "({i},{j}) {acc} != {}", a[i * n + j]);
+                assert!(
+                    (acc - a[i * n + j]).abs() < 1e-6,
+                    "({i},{j}) {acc} != {}",
+                    a[i * n + j]
+                );
             }
         }
     }
@@ -118,7 +130,11 @@ mod tests {
                 for k in 0..n {
                     acc += s.u[i * n + k] * s.singular_values[k] * s.v[j * n + k];
                 }
-                assert!((acc - a[i * n + j]).abs() < 1e-6, "({i},{j}) {acc} != {}", a[i * n + j]);
+                assert!(
+                    (acc - a[i * n + j]).abs() < 1e-6,
+                    "({i},{j}) {acc} != {}",
+                    a[i * n + j]
+                );
             }
         }
         // Descending order.
@@ -127,6 +143,9 @@ mod tests {
 
     #[test]
     fn rejects_bad_dims() {
-        assert!(matches!(svd(2, 2, &[1.0, 2.0, 3.0]), Err(SolversError::InvalidDimension)));
+        assert!(matches!(
+            svd(2, 2, &[1.0, 2.0, 3.0]),
+            Err(SolversError::InvalidDimension)
+        ));
     }
 }

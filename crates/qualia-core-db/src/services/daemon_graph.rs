@@ -82,10 +82,15 @@ impl DaemonGraphStore {
     }
 
     #[inline]
-    fn contains_subject_predicate_context(&self, subject: u64, predicate: u64, context: u64) -> bool {
-        self.as_slice().iter().any(|q| {
-            q.subject == subject && q.predicate == predicate && q.context == context
-        })
+    fn contains_subject_predicate_context(
+        &self,
+        subject: u64,
+        predicate: u64,
+        context: u64,
+    ) -> bool {
+        self.as_slice()
+            .iter()
+            .any(|q| q.subject == subject && q.predicate == predicate && q.context == context)
     }
 
     fn push_unique(&mut self, quin: NQuin) -> bool {

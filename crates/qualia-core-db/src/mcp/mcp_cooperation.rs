@@ -21,7 +21,9 @@
 //! silently change every existing caller's behaviour.
 
 use crate::indexing::QuinIndex;
-use crate::modalities::interaction_governance::{map_policy, permits_execution, Governance, PolicyMode};
+use crate::modalities::interaction_governance::{
+    map_policy, permits_execution, Governance, PolicyMode,
+};
 use crate::modalities::logic::deontic::DeonticStatus;
 
 /// Who is calling, in what typed role, and whether their identity was *verified* (vs merely
@@ -87,7 +89,12 @@ pub fn authorize_call(
     request_status: DeonticStatus,
     governance: Governance,
 ) -> CooperationVerdict {
-    authorize(standpoint, caller_grounded(index, standpoint.agent), request_status, governance)
+    authorize(
+        standpoint,
+        caller_grounded(index, standpoint.agent),
+        request_status,
+        governance,
+    )
 }
 
 /// Is mandatory per-call MCP enforcement turned ON? Default **OFF** (opt-in via the env flag
@@ -119,37 +126,75 @@ mod tests {
     use crate::NQuin;
 
     fn sp(agent: u64, verified: bool) -> CallerStandpoint {
-        CallerStandpoint { agent, role: q_hash("role:requester"), verified }
+        CallerStandpoint {
+            agent,
+            role: q_hash("role:requester"),
+            verified,
+        }
     }
     fn t(s: u64, p: u64, o: u64) -> NQuin {
-        let mut q = NQuin { subject: s, predicate: p, object: o, context: 0, metadata: 0, parity: 0 };
+        let mut q = NQuin {
+            subject: s,
+            predicate: p,
+            object: o,
+            context: 0,
+            metadata: 0,
+            parity: 0,
+        };
         q.parity = q.subject ^ q.predicate ^ q.object ^ q.context;
         q
     }
 
     #[test]
     fn unverified_caller_is_denied() {
-        let v = authorize(&sp(q_hash("did:x"), false), true, DeonticStatus::Active, Governance::default());
+        let v = authorize(
+            &sp(q_hash("did:x"), false),
+            true,
+            DeonticStatus::Active,
+            Governance::default(),
+        );
         assert_eq!(v, CooperationVerdict::DeniedUnverified);
     }
 
     #[test]
     fn ungrounded_caller_is_denied() {
-        let v = authorize(&sp(q_hash("did:bot"), true), false, DeonticStatus::Active, Governance::default());
+        let v = authorize(
+            &sp(q_hash("did:bot"), true),
+            false,
+            DeonticStatus::Active,
+            Governance::default(),
+        );
         assert_eq!(v, CooperationVerdict::DeniedUngrounded);
     }
 
     #[test]
     fn verified_grounded_ordinary_call_is_authorized() {
-        let v = authorize(&sp(q_hash("did:alice"), true), true, DeonticStatus::Active, Governance::default());
+        let v = authorize(
+            &sp(q_hash("did:alice"), true),
+            true,
+            DeonticStatus::Active,
+            Governance::default(),
+        );
         assert_eq!(v, CooperationVerdict::Authorized(PolicyMode::Allow));
     }
 
     #[test]
     fn non_derogable_violation_request_is_blocked_by_policy() {
-        let g = Governance { non_derogable: true, humanitarian: false, ambiguous: false };
-        let v = authorize(&sp(q_hash("did:alice"), true), true, DeonticStatus::Violated, g);
-        assert_eq!(v, CooperationVerdict::DeniedByPolicy(PolicyMode::PreventiveBlock));
+        let g = Governance {
+            non_derogable: true,
+            humanitarian: false,
+            ambiguous: false,
+        };
+        let v = authorize(
+            &sp(q_hash("did:alice"), true),
+            true,
+            DeonticStatus::Violated,
+            g,
+        );
+        assert_eq!(
+            v,
+            CooperationVerdict::DeniedByPolicy(PolicyMode::PreventiveBlock)
+        );
     }
 
     #[test]
@@ -158,7 +203,12 @@ mod tests {
         let bot = q_hash("did:bot");
         let idx = QuinIndex::from_slice(&[t(bot, P_RDF_TYPE, A_ARTIFICIAL_AGENT)]);
         assert_eq!(
-            authorize_call(&idx, &sp(bot, true), DeonticStatus::Active, Governance::default()),
+            authorize_call(
+                &idx,
+                &sp(bot, true),
+                DeonticStatus::Active,
+                Governance::default()
+            ),
             CooperationVerdict::DeniedUngrounded
         );
         // The same agent WITH a human Principal → grounded → authorized.
@@ -168,14 +218,24 @@ mod tests {
             t(bot, P_OPERATED_BY, human),
         ]);
         assert_eq!(
-            authorize_call(&idx2, &sp(bot, true), DeonticStatus::Active, Governance::default()),
+            authorize_call(
+                &idx2,
+                &sp(bot, true),
+                DeonticStatus::Active,
+                Governance::default()
+            ),
             CooperationVerdict::Authorized(PolicyMode::Allow)
         );
         // A natural person is never ungrounded.
         let alice = q_hash("did:alice");
         let idx3 = QuinIndex::from_slice(&[t(alice, P_RDF_TYPE, A_NATURAL_PERSON)]);
         assert!(matches!(
-            authorize_call(&idx3, &sp(alice, true), DeonticStatus::Active, Governance::default()),
+            authorize_call(
+                &idx3,
+                &sp(alice, true),
+                DeonticStatus::Active,
+                Governance::default()
+            ),
             CooperationVerdict::Authorized(_)
         ));
     }

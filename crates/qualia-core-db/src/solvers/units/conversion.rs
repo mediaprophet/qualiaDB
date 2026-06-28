@@ -19,10 +19,25 @@ pub struct Unit {
 
 impl Unit {
     pub const fn linear(name: &'static str, dimension: Dimension, factor: f64) -> Self {
-        Self { name, dimension, to_si_factor: factor, to_si_offset: 0.0 }
+        Self {
+            name,
+            dimension,
+            to_si_factor: factor,
+            to_si_offset: 0.0,
+        }
     }
-    pub const fn affine(name: &'static str, dimension: Dimension, factor: f64, offset: f64) -> Self {
-        Self { name, dimension, to_si_factor: factor, to_si_offset: offset }
+    pub const fn affine(
+        name: &'static str,
+        dimension: Dimension,
+        factor: f64,
+        offset: f64,
+    ) -> Self {
+        Self {
+            name,
+            dimension,
+            to_si_factor: factor,
+            to_si_offset: offset,
+        }
     }
 
     /// Convert a magnitude in this unit to coherent SI.
@@ -64,7 +79,12 @@ impl Unit {
     // ── Temperature (affine) ──
     pub const KELVIN: Unit = Unit::linear("K", Dimension::TEMPERATURE, 1.0);
     pub const CELSIUS: Unit = Unit::affine("°C", Dimension::TEMPERATURE, 1.0, 273.15);
-    pub const FAHRENHEIT: Unit = Unit::affine("°F", Dimension::TEMPERATURE, 5.0 / 9.0, 255.372_222_222_222_2);
+    pub const FAHRENHEIT: Unit = Unit::affine(
+        "°F",
+        Dimension::TEMPERATURE,
+        5.0 / 9.0,
+        255.372_222_222_222_2,
+    );
 }
 
 /// Convert `value` from one unit to another. Fails closed if the units have different

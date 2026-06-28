@@ -17,7 +17,10 @@ pub struct RandomForest {
 struct Lcg(u64);
 impl Lcg {
     fn below(&mut self, bound: usize) -> usize {
-        self.0 = self.0.wrapping_mul(6364136223846793005).wrapping_add(1442695040888963407);
+        self.0 = self
+            .0
+            .wrapping_mul(6364136223846793005)
+            .wrapping_add(1442695040888963407);
         ((self.0 >> 33) as usize) % bound.max(1)
     }
 }
@@ -68,7 +71,10 @@ fn fit_inner(
             by[i] = y[s];
         }
         // Each tree gets its own feature-subsample seed.
-        let tree_params = TreeParams { seed: seed.wrapping_add(0xABCD ^ t as u64), ..params };
+        let tree_params = TreeParams {
+            seed: seed.wrapping_add(0xABCD ^ t as u64),
+            ..params
+        };
         let tree = match criterion {
             Criterion::Mse => DecisionTree::fit_regressor(&bx, &by, n, p, tree_params)?,
             Criterion::Gini => {
@@ -78,17 +84,37 @@ fn fit_inner(
         };
         trees.push(tree);
     }
-    Ok(RandomForest { trees, criterion, p })
+    Ok(RandomForest {
+        trees,
+        criterion,
+        p,
+    })
 }
 
 impl RandomForest {
     /// Fit a regression forest (averaged trees).
-    pub fn fit_regressor(x: &[f64], y: &[f64], n: usize, p: usize, n_trees: usize, params: TreeParams, seed: u64) -> Result<Self, LearningError> {
+    pub fn fit_regressor(
+        x: &[f64],
+        y: &[f64],
+        n: usize,
+        p: usize,
+        n_trees: usize,
+        params: TreeParams,
+        seed: u64,
+    ) -> Result<Self, LearningError> {
         fit_inner(x, y, n, p, Criterion::Mse, n_trees, params, seed, false)
     }
 
     /// Fit a classification forest (majority vote); labels are small integers.
-    pub fn fit_classifier(x: &[f64], y: &[usize], n: usize, p: usize, n_trees: usize, params: TreeParams, seed: u64) -> Result<Self, LearningError> {
+    pub fn fit_classifier(
+        x: &[f64],
+        y: &[usize],
+        n: usize,
+        p: usize,
+        n_trees: usize,
+        params: TreeParams,
+        seed: u64,
+    ) -> Result<Self, LearningError> {
         let yf: Vec<f64> = y.iter().map(|&v| v as f64).collect();
         fit_inner(x, &yf, n, p, Criterion::Gini, n_trees, params, seed, true)
     }
@@ -111,11 +137,18 @@ impl RandomForest {
         for &l in &labels {
             votes[l] += 1;
         }
-        votes.iter().enumerate().max_by_key(|(_, &v)| v).map(|(l, _)| l).unwrap_or(0)
+        votes
+            .iter()
+            .enumerate()
+            .max_by_key(|(_, &v)| v)
+            .map(|(l, _)| l)
+            .unwrap_or(0)
     }
 
     pub fn predict(&self, x: &[f64], m: usize) -> Vec<f64> {
-        (0..m).map(|i| self.predict_row(&x[i * self.p..(i + 1) * self.p])).collect()
+        (0..m)
+            .map(|i| self.predict_row(&x[i * self.p..(i + 1) * self.p]))
+            .collect()
     }
 
     pub fn n_trees(&self) -> usize {
@@ -134,7 +167,10 @@ mod tests {
         let n = 40;
         let x: Vec<f64> = (0..n).map(|i| i as f64 / 4.0).collect();
         let y: Vec<f64> = x.iter().map(|&xi| xi * xi).collect();
-        let params = TreeParams { max_depth: 6, ..TreeParams::default() };
+        let params = TreeParams {
+            max_depth: 6,
+            ..TreeParams::default()
+        };
         let rf = RandomForest::fit_regressor(&x, &y, n, 1, 50, params, 7).unwrap();
         let preds = rf.predict(&x, n);
         // Forest explains most of the variance on the training data.
@@ -164,6 +200,10 @@ mod tests {
 
     #[test]
     fn guards() {
-        assert_eq!(RandomForest::fit_regressor(&[1.0], &[1.0], 1, 1, 0, TreeParams::default(), 0).unwrap_err(), LearningError::InsufficientData);
+        assert_eq!(
+            RandomForest::fit_regressor(&[1.0], &[1.0], 1, 1, 0, TreeParams::default(), 0)
+                .unwrap_err(),
+            LearningError::InsufficientData
+        );
     }
 }

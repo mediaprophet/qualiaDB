@@ -118,7 +118,13 @@ pub fn lu_decompose(n: usize, data: &[f64]) -> Result<Lu, SolversError> {
         }
     }
 
-    Ok(Lu { lu: a, pivots, sign, singular, n })
+    Ok(Lu {
+        lu: a,
+        pivots,
+        sign,
+        singular,
+        n,
+    })
 }
 
 /// Determinant of a row-major `n×n` matrix via LU decomposition with partial pivoting.
@@ -192,7 +198,10 @@ mod tests {
 
     #[test]
     fn rejects_bad_dims() {
-        assert_eq!(determinant(2, &[1.0, 2.0, 3.0]), Err(SolversError::InvalidDimension));
+        assert_eq!(
+            determinant(2, &[1.0, 2.0, 3.0]),
+            Err(SolversError::InvalidDimension)
+        );
     }
 
     #[test]

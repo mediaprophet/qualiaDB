@@ -44,7 +44,8 @@ impl Gam {
         // Placeholder splines (degree-`degree`, replaced during the first sweep).
         let mut terms: Vec<(RegressionSpline, f64)> = Vec::with_capacity(p);
         for j in 0..p {
-            let spline = RegressionSpline::fit(&cols[j], &vec![0.0; n], n, degree, &knots_per_feature[j])?;
+            let spline =
+                RegressionSpline::fit(&cols[j], &vec![0.0; n], n, degree, &knots_per_feature[j])?;
             terms.push((spline, 0.0));
         }
 
@@ -62,7 +63,8 @@ impl Gam {
                     resid[i] = s;
                 }
                 // Fit f_j to the residual, then center it (mean 0 over the data).
-                let spline = RegressionSpline::fit(&cols[j], &resid, n, degree, &knots_per_feature[j])?;
+                let spline =
+                    RegressionSpline::fit(&cols[j], &resid, n, degree, &knots_per_feature[j])?;
                 let raw: Vec<f64> = cols[j].iter().map(|&xi| spline.predict_one(xi)).collect();
                 let offset = mean(&raw).unwrap_or(0.0);
                 for i in 0..n {
@@ -72,7 +74,11 @@ impl Gam {
             }
         }
 
-        Ok(Self { intercept, terms, p })
+        Ok(Self {
+            intercept,
+            terms,
+            p,
+        })
     }
 
     /// Predict for one feature row.
@@ -85,7 +91,9 @@ impl Gam {
     }
 
     pub fn predict(&self, x: &[f64], n: usize) -> Vec<f64> {
-        (0..n).map(|i| self.predict_row(&x[i * self.p..(i + 1) * self.p])).collect()
+        (0..n)
+            .map(|i| self.predict_row(&x[i * self.p..(i + 1) * self.p]))
+            .collect()
     }
 }
 
@@ -110,7 +118,10 @@ mod tests {
         let knots = vec![vec![1.5, 3.0, 4.5], vec![1.0, 2.0, 3.0]];
         let gam = Gam::fit(&x, &y, n, 2, 3, &knots, 10).unwrap();
         let preds = gam.predict(&x, n);
-        assert!(r2_score(&y, &preds).unwrap() > 0.95, "GAM should fit the additive surface");
+        assert!(
+            r2_score(&y, &preds).unwrap() > 0.95,
+            "GAM should fit the additive surface"
+        );
     }
 
     #[test]
@@ -134,6 +145,9 @@ mod tests {
 
     #[test]
     fn guards() {
-        assert_eq!(Gam::fit(&[1.0, 2.0], &[1.0], 2, 1, 3, &[vec![]], 5).unwrap_err(), LearningError::InvalidDimension);
+        assert_eq!(
+            Gam::fit(&[1.0, 2.0], &[1.0], 2, 1, 3, &[vec![]], 5).unwrap_err(),
+            LearningError::InvalidDimension
+        );
     }
 }

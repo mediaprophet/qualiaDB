@@ -62,8 +62,14 @@ mod tests {
         assert_eq!(m.can_access(DataTier::NonPermissive, false), Ok(()));
         assert_eq!(m.can_access(DataTier::NonPermissive, true), Ok(()));
         // Permissive is failed closed for the traditional web, verified or not.
-        assert_eq!(m.can_access(DataTier::Permissive, false), Err(AccessError::InsufficientTier));
-        assert_eq!(m.can_access(DataTier::Permissive, true), Err(AccessError::InsufficientTier));
+        assert_eq!(
+            m.can_access(DataTier::Permissive, false),
+            Err(AccessError::InsufficientTier)
+        );
+        assert_eq!(
+            m.can_access(DataTier::Permissive, true),
+            Err(AccessError::InsufficientTier)
+        );
     }
 
     #[test]
@@ -72,6 +78,9 @@ mod tests {
         assert_eq!(m.can_access(DataTier::NonPermissive, false), Ok(()));
         // Permissive requires verification; fails closed when unverified.
         assert_eq!(m.can_access(DataTier::Permissive, true), Ok(()));
-        assert_eq!(m.can_access(DataTier::Permissive, false), Err(AccessError::UnverifiedHumanCentric));
+        assert_eq!(
+            m.can_access(DataTier::Permissive, false),
+            Err(AccessError::UnverifiedHumanCentric)
+        );
     }
 }

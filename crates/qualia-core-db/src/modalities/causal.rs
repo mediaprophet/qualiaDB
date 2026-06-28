@@ -222,7 +222,12 @@ pub fn is_endogenous(edges: &[NQuin], node: u64) -> bool {
 /// twin-network comparison of the factual world against the counterfactual `do(intervene absent)`
 /// world. Returns `(factual, counterfactual)`; if they differ, `intervene` was counterfactually
 /// necessary for `effect`.
-pub fn counterfactual_absent(edges: &[NQuin], roots: &[u64], intervene: u64, effect: u64) -> (bool, bool) {
+pub fn counterfactual_absent(
+    edges: &[NQuin],
+    roots: &[u64],
+    intervene: u64,
+    effect: u64,
+) -> (bool, bool) {
     let factual = caused(edges, roots, effect);
     let counterfactual = do_intervene(edges, roots, &[], &[intervene], effect);
     (factual, counterfactual)
@@ -280,7 +285,12 @@ mod tests {
         assert!(but_for_cause(&edges, &roots, fund, harm));
         assert!(but_for_cause(&edges, &roots, staff, harm));
         // An unrelated node is not a but-for cause.
-        assert!(!but_for_cause(&edges, &roots, q_hash("cause:weather"), harm));
+        assert!(!but_for_cause(
+            &edges,
+            &roots,
+            q_hash("cause:weather"),
+            harm
+        ));
     }
 
     #[test]
@@ -306,7 +316,11 @@ mod tests {
         let shelter = q_hash("support:shelter");
         let health = q_hash("capacity:health");
         let work = q_hash("capacity:work");
-        let edges = [edge(food, health), edge(shelter, health), edge(health, work)];
+        let edges = [
+            edge(food, health),
+            edge(shelter, health),
+            edge(health, work),
+        ];
         let roots = [food, shelter];
         // Removing food alone does NOT void health/work (shelter still supports health).
         assert!(!is_voided_by(&edges, &roots, food, work));
@@ -341,7 +355,10 @@ mod tests {
         let edges = [edge(smoke, tar), edge(tar, cancer)];
         // Counterfactual: had tar been absent, cancer would NOT have occurred (tar was necessary).
         let (factual, cf) = counterfactual_absent(&edges, &[smoke], tar, cancer);
-        assert!(factual && !cf, "tar is counterfactually necessary for cancer");
+        assert!(
+            factual && !cf,
+            "tar is counterfactually necessary for cancer"
+        );
 
         // Backdoor: confounder genes → smoke and genes → cancer (a common cause).
         let genes = q_hash("v:genes");
@@ -349,8 +366,20 @@ mod tests {
         let nodes = [genes, smoke, cancer];
         // {} does NOT block the genes confounder; {genes} does.
         assert!(!backdoor_satisfied(&confounded, smoke, cancer, &[], &nodes));
-        assert!(backdoor_satisfied(&confounded, smoke, cancer, &[genes], &nodes));
+        assert!(backdoor_satisfied(
+            &confounded,
+            smoke,
+            cancer,
+            &[genes],
+            &nodes
+        ));
         // Conditioning on a descendant of x (cancer) is NOT admissible.
-        assert!(!backdoor_satisfied(&confounded, smoke, cancer, &[genes, cancer], &nodes));
+        assert!(!backdoor_satisfied(
+            &confounded,
+            smoke,
+            cancer,
+            &[genes, cancer],
+            &nodes
+        ));
     }
 }

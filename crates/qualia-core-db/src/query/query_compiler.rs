@@ -81,36 +81,48 @@ impl QueryCompiler {
 
                         // Parse Subject
                         if s.starts_with('?') {
-                            ops.push(crate::modalities::logic::core::WebizenOpcode::BindRegister {
-                                vector_id: 0,
-                                register_index: 0,
-                            });
+                            ops.push(
+                                crate::modalities::logic::core::WebizenOpcode::BindRegister {
+                                    vector_id: 0,
+                                    register_index: 0,
+                                },
+                            );
                         } else {
-                            ops.push(crate::modalities::logic::core::WebizenOpcode::MatchSubject(crate::q_hash(s)));
+                            ops.push(crate::modalities::logic::core::WebizenOpcode::MatchSubject(
+                                crate::q_hash(s),
+                            ));
                             ops.push(crate::modalities::logic::core::WebizenOpcode::HaltIfFalse);
                         }
 
                         // Parse Predicate
                         if p.starts_with('?') {
-                            ops.push(crate::modalities::logic::core::WebizenOpcode::BindRegister {
-                                vector_id: 1,
-                                register_index: 1,
-                            });
+                            ops.push(
+                                crate::modalities::logic::core::WebizenOpcode::BindRegister {
+                                    vector_id: 1,
+                                    register_index: 1,
+                                },
+                            );
                         } else {
-                            ops.push(crate::modalities::logic::core::WebizenOpcode::MatchPredicate(crate::q_hash(
-                                p,
-                            )));
+                            ops.push(
+                                crate::modalities::logic::core::WebizenOpcode::MatchPredicate(
+                                    crate::q_hash(p),
+                                ),
+                            );
                             ops.push(crate::modalities::logic::core::WebizenOpcode::HaltIfFalse);
                         }
 
                         // Parse Object
                         if o.starts_with('?') {
-                            ops.push(crate::modalities::logic::core::WebizenOpcode::BindRegister {
-                                vector_id: 2,
-                                register_index: 2,
-                            });
+                            ops.push(
+                                crate::modalities::logic::core::WebizenOpcode::BindRegister {
+                                    vector_id: 2,
+                                    register_index: 2,
+                                },
+                            );
                         } else {
-                            ops.push(crate::modalities::logic::core::WebizenOpcode::MatchObject(crate::q_hash(o)));
+                            ops.push(crate::modalities::logic::core::WebizenOpcode::MatchObject(
+                                crate::q_hash(o),
+                            ));
                             ops.push(crate::modalities::logic::core::WebizenOpcode::HaltIfFalse);
                         }
                     }

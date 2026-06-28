@@ -114,7 +114,12 @@ pub fn fit(
             let xi = &x[i * p..(i + 1) * p];
             for c in 0..k {
                 log_comp[c] = weights[c].max(1e-300).ln()
-                    + log_gauss_diag(xi, &means[c * p..(c + 1) * p], &variances[c * p..(c + 1) * p], p);
+                    + log_gauss_diag(
+                        xi,
+                        &means[c * p..(c + 1) * p],
+                        &variances[c * p..(c + 1) * p],
+                        p,
+                    );
             }
             let lse = log_sum_exp(&log_comp);
             ll += lse;
@@ -168,7 +173,12 @@ pub fn fit(
         let xi = &x[i * p..(i + 1) * p];
         for c in 0..k {
             log_comp[c] = weights[c].max(1e-300).ln()
-                + log_gauss_diag(xi, &means[c * p..(c + 1) * p], &variances[c * p..(c + 1) * p], p);
+                + log_gauss_diag(
+                    xi,
+                    &means[c * p..(c + 1) * p],
+                    &variances[c * p..(c + 1) * p],
+                    p,
+                );
         }
         let mut best = 0;
         for c in 1..k {
@@ -229,7 +239,9 @@ mod tests {
         let near = |c: usize, tx: f64, ty: f64| {
             (m.means[c * 2] - tx).abs() < 0.5 && (m.means[c * 2 + 1] - ty).abs() < 0.5
         };
-        assert!((near(0, 0.0, 0.0) && near(1, 8.0, 8.0)) || (near(1, 0.0, 0.0) && near(0, 8.0, 8.0)));
+        assert!(
+            (near(0, 0.0, 0.0) && near(1, 8.0, 8.0)) || (near(1, 0.0, 0.0) && near(0, 8.0, 8.0))
+        );
     }
 
     #[test]
@@ -242,6 +254,9 @@ mod tests {
 
     #[test]
     fn guards() {
-        assert_eq!(fit(&[1.0, 2.0], 1, 2, 2, 10, 1e-6, 0).unwrap_err(), LearningError::InsufficientData);
+        assert_eq!(
+            fit(&[1.0, 2.0], 1, 2, 2, 10, 1e-6, 0).unwrap_err(),
+            LearningError::InsufficientData
+        );
     }
 }

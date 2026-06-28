@@ -14,7 +14,10 @@ pub struct Material {
 
 impl Material {
     pub const fn new(density: f32, incompressible: bool) -> Self {
-        Material { density, incompressible }
+        Material {
+            density,
+            incompressible,
+        }
     }
 }
 
@@ -28,7 +31,11 @@ pub struct Body {
 
 impl Body {
     pub fn new(material: Material, aabb: Aabb, velocity: [f32; 3]) -> Self {
-        Body { material, aabb, velocity }
+        Body {
+            material,
+            aabb,
+            velocity,
+        }
     }
 
     /// Mass = density × enclosed volume.
@@ -41,7 +48,11 @@ impl Body {
     #[inline]
     pub fn momentum(&self) -> [f32; 3] {
         let m = self.mass();
-        [self.velocity[0] * m, self.velocity[1] * m, self.velocity[2] * m]
+        [
+            self.velocity[0] * m,
+            self.velocity[1] * m,
+            self.velocity[2] * m,
+        ]
     }
 
     /// Kinetic energy `½·m·|v|²`.

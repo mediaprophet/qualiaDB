@@ -53,7 +53,12 @@ pub fn ln_gamma(x: f64) -> f64 {
 
 /// Γ(x) for convenience (small/moderate `x`).
 pub fn gamma(x: f64) -> f64 {
-    ln_gamma(x).exp() * if x < 0.5 && (x.floor() == x) { f64::NAN } else { 1.0 }
+    ln_gamma(x).exp()
+        * if x < 0.5 && (x.floor() == x) {
+            f64::NAN
+        } else {
+            1.0
+        }
 }
 
 /// Regularized lower incomplete gamma `P(a, x) = γ(a,x)/Γ(a)`, `a > 0`, `x ≥ 0`.
@@ -209,7 +214,7 @@ mod tests {
         assert!((ln_gamma(1.0)).abs() < TOL); // Γ(1)=1
         assert!((ln_gamma(2.0)).abs() < TOL); // Γ(2)=1
         assert!((ln_gamma(5.0) - 24.0_f64.ln()).abs() < 1e-9); // Γ(5)=4!=24
-        // Γ(1/2)=√π
+                                                               // Γ(1/2)=√π
         assert!((ln_gamma(0.5) - std::f64::consts::PI.sqrt().ln()).abs() < 1e-9);
     }
 
@@ -246,7 +251,10 @@ mod tests {
         }
         // Symmetry: I_x(a,b) = 1 - I_{1-x}(b,a).
         for &(a, b, x) in &[(2.0, 3.0, 0.4), (0.5, 2.5, 0.7), (5.0, 1.5, 0.2)] {
-            assert!((betai(a, b, x) - (1.0 - betai(b, a, 1.0 - x))).abs() < 1e-10, "{a},{b},{x}");
+            assert!(
+                (betai(a, b, x) - (1.0 - betai(b, a, 1.0 - x))).abs() < 1e-10,
+                "{a},{b},{x}"
+            );
         }
     }
 }

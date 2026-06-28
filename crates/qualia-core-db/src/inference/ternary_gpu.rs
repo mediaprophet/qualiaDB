@@ -34,7 +34,17 @@ pub fn ternary_gemm_gpu(
     n_out: usize,
     n_batch: usize,
 ) -> Vec<f32> {
-    run_gemm(device, queue, TERNARY_GEMM_WGSL, activations, packed, scale, n_in, n_out, n_batch)
+    run_gemm(
+        device,
+        queue,
+        TERNARY_GEMM_WGSL,
+        activations,
+        packed,
+        scale,
+        n_in,
+        n_out,
+        n_batch,
+    )
 }
 
 /// Execute the **2-bit branchless** ternary GEMM on the GPU (`ternary_gemm_2bit.wgsl`). `packed`
@@ -49,7 +59,17 @@ pub fn ternary_gemm_gpu_2bit(
     n_out: usize,
     n_batch: usize,
 ) -> Vec<f32> {
-    run_gemm(device, queue, TERNARY_GEMM_2BIT_WGSL, activations, packed, scale, n_in, n_out, n_batch)
+    run_gemm(
+        device,
+        queue,
+        TERNARY_GEMM_2BIT_WGSL,
+        activations,
+        packed,
+        scale,
+        n_in,
+        n_out,
+        n_batch,
+    )
 }
 
 /// Shared dispatch for both ternary GEMM kernels (identical bindings/params; only the WGSL differs).
@@ -105,9 +125,17 @@ fn run_gemm(
     while trits.len() % 4 != 0 || trits.is_empty() {
         trits.push(0);
     }
-    let trit_buf = mk_buf("ternary_trits", &trits, wgpu::BufferUsages::STORAGE | wgpu::BufferUsages::COPY_DST);
+    let trit_buf = mk_buf(
+        "ternary_trits",
+        &trits,
+        wgpu::BufferUsages::STORAGE | wgpu::BufferUsages::COPY_DST,
+    );
     let params = ternary_params_bytes(n_in as u32, n_out as u32, n_batch as u32, scale);
-    let param_buf = mk_buf("ternary_params", &params, wgpu::BufferUsages::UNIFORM | wgpu::BufferUsages::COPY_DST);
+    let param_buf = mk_buf(
+        "ternary_params",
+        &params,
+        wgpu::BufferUsages::UNIFORM | wgpu::BufferUsages::COPY_DST,
+    );
     let out_buf = device.create_buffer(&wgpu::BufferDescriptor {
         label: Some("ternary_out"),
         size: (out_elems * 4).max(4) as u64,
@@ -125,14 +153,28 @@ fn run_gemm(
         label: Some("ternary_bind"),
         layout: &pipeline.get_bind_group_layout(0),
         entries: &[
-            wgpu::BindGroupEntry { binding: 0, resource: act_buf.as_entire_binding() },
-            wgpu::BindGroupEntry { binding: 1, resource: trit_buf.as_entire_binding() },
-            wgpu::BindGroupEntry { binding: 2, resource: param_buf.as_entire_binding() },
-            wgpu::BindGroupEntry { binding: 3, resource: out_buf.as_entire_binding() },
+            wgpu::BindGroupEntry {
+                binding: 0,
+                resource: act_buf.as_entire_binding(),
+            },
+            wgpu::BindGroupEntry {
+                binding: 1,
+                resource: trit_buf.as_entire_binding(),
+            },
+            wgpu::BindGroupEntry {
+                binding: 2,
+                resource: param_buf.as_entire_binding(),
+            },
+            wgpu::BindGroupEntry {
+                binding: 3,
+                resource: out_buf.as_entire_binding(),
+            },
         ],
     });
 
-    let mut encoder = device.create_command_encoder(&wgpu::CommandEncoderDescriptor { label: Some("ternary_enc") });
+    let mut encoder = device.create_command_encoder(&wgpu::CommandEncoderDescriptor {
+        label: Some("ternary_enc"),
+    });
     {
         let mut pass = encoder.begin_compute_pass(&wgpu::ComputePassDescriptor {
             label: Some("ternary_pass"),
@@ -152,7 +194,9 @@ fn run_gemm(
         let _ = tx.send(r);
     });
     let _ = device.poll(wgpu::PollType::wait_indefinitely());
-    rx.recv().expect("map channel").expect("map ternary staging");
+    rx.recv()
+        .expect("map channel")
+        .expect("map ternary staging");
     let data = slice.get_mapped_range();
     let out: Vec<f32> = bytemuck::cast_slice(&data)[..out_elems].to_vec();
     drop(data);
@@ -382,15 +426,28 @@ impl TernaryFfnResident {
             label: Some("ternary_ffn_resident_bind"),
             layout: &self.pipeline.get_bind_group_layout(0),
             entries: &[
-                wgpu::BindGroupEntry { binding: 0, resource: self.act_buf.as_entire_binding() },
-                wgpu::BindGroupEntry { binding: 1, resource: weight_binding },
-                wgpu::BindGroupEntry { binding: 2, resource: self.params_buf.as_entire_binding() },
-                wgpu::BindGroupEntry { binding: 3, resource: self.out_buf.as_entire_binding() },
+                wgpu::BindGroupEntry {
+                    binding: 0,
+                    resource: self.act_buf.as_entire_binding(),
+                },
+                wgpu::BindGroupEntry {
+                    binding: 1,
+                    resource: weight_binding,
+                },
+                wgpu::BindGroupEntry {
+                    binding: 2,
+                    resource: self.params_buf.as_entire_binding(),
+                },
+                wgpu::BindGroupEntry {
+                    binding: 3,
+                    resource: self.out_buf.as_entire_binding(),
+                },
             ],
         });
 
-        let mut encoder =
-            device.create_command_encoder(&wgpu::CommandEncoderDescriptor { label: Some("ternary_ffn_enc") });
+        let mut encoder = device.create_command_encoder(&wgpu::CommandEncoderDescriptor {
+            label: Some("ternary_ffn_enc"),
+        });
         {
             let mut pass = encoder.begin_compute_pass(&wgpu::ComputePassDescriptor {
                 label: Some("ternary_ffn_pass"),
@@ -432,7 +489,8 @@ mod tests {
         let adapter = pollster::block_on(instance.request_adapter(&wgpu::RequestAdapterOptions {
             power_preference: wgpu::PowerPreference::HighPerformance,
             ..Default::default()
-        })).ok()?;
+        }))
+        .ok()?;
         pollster::block_on(adapter.request_device(&wgpu::DeviceDescriptor::default())).ok()
     }
 
@@ -450,7 +508,9 @@ mod tests {
         let scale = 0.37_f32;
         let trits: Vec<i8> = (0..n_in * n_out).map(|k| (k % 3) as i8 - 1).collect();
         let packed = pack_trits(&trits);
-        let act: Vec<f32> = (0..n_in * n_batch).map(|j| (j as f32) * 0.25 - 1.5).collect();
+        let act: Vec<f32> = (0..n_in * n_batch)
+            .map(|j| (j as f32) * 0.25 - 1.5)
+            .collect();
 
         let gpu = ternary_gemm_gpu(&device, &queue, &act, &packed, scale, n_in, n_out, n_batch);
 
@@ -459,9 +519,17 @@ mod tests {
 
         assert_eq!(gpu.len(), cpu.len());
         for i in 0..cpu.len() {
-            assert!((gpu[i] - cpu[i]).abs() < 1e-4, "elem {i}: gpu {} vs cpu {}", gpu[i], cpu[i]);
+            assert!(
+                (gpu[i] - cpu[i]).abs() < 1e-4,
+                "elem {i}: gpu {} vs cpu {}",
+                gpu[i],
+                cpu[i]
+            );
         }
-        eprintln!("ternary_gemm_gpu: on-device parity OK ({} elems)", cpu.len());
+        eprintln!(
+            "ternary_gemm_gpu: on-device parity OK ({} elems)",
+            cpu.len()
+        );
     }
 
     /// ON-DEVICE PARITY (2-bit branchless): `ternary_gemm_2bit.wgsl` == `ternary_gemm_cpu_2bit`.
@@ -476,15 +544,26 @@ mod tests {
         let scale = 0.37_f32;
         let trits: Vec<i8> = (0..n_in * n_out).map(|k| (k % 3) as i8 - 1).collect();
         let packed = pack_trits_2bit(&trits);
-        let act: Vec<f32> = (0..n_in * n_batch).map(|j| (j as f32) * 0.25 - 1.5).collect();
+        let act: Vec<f32> = (0..n_in * n_batch)
+            .map(|j| (j as f32) * 0.25 - 1.5)
+            .collect();
 
-        let gpu = ternary_gemm_gpu_2bit(&device, &queue, &act, &packed, scale, n_in, n_out, n_batch);
+        let gpu =
+            ternary_gemm_gpu_2bit(&device, &queue, &act, &packed, scale, n_in, n_out, n_batch);
         let mut cpu = vec![0.0f32; n_batch * n_out];
         ternary_gemm_cpu_2bit(&act, &packed, scale, n_in, n_out, n_batch, 0, 0, &mut cpu);
         for i in 0..cpu.len() {
-            assert!((gpu[i] - cpu[i]).abs() < 1e-4, "elem {i}: gpu {} vs cpu {}", gpu[i], cpu[i]);
+            assert!(
+                (gpu[i] - cpu[i]).abs() < 1e-4,
+                "elem {i}: gpu {} vs cpu {}",
+                gpu[i],
+                cpu[i]
+            );
         }
-        eprintln!("ternary_gemm_gpu_2bit: on-device parity OK ({} elems)", cpu.len());
+        eprintln!(
+            "ternary_gemm_gpu_2bit: on-device parity OK ({} elems)",
+            cpu.len()
+        );
     }
 
     /// Build a base-3 ternary blob (`[scale f32][5-trits/byte]`) from explicit trits + scale.
@@ -508,7 +587,9 @@ mod tests {
         let a = (0x1000u64, 64usize, 40usize, 0.30f32);
         let b = (0x2000u64, 96usize, 24usize, 0.11f32);
         let trits_a: Vec<i8> = (0..a.1 * a.2).map(|k| (k % 3) as i8 - 1).collect();
-        let trits_b: Vec<i8> = (0..b.1 * b.2).map(|k| ((k * 7 + 2) % 3) as i8 - 1).collect();
+        let trits_b: Vec<i8> = (0..b.1 * b.2)
+            .map(|k| ((k * 7 + 2) % 3) as i8 - 1)
+            .collect();
         let blob_a = base3_blob(a.3, &trits_a);
         let blob_b = base3_blob(b.3, &trits_b);
 
@@ -521,10 +602,9 @@ mod tests {
         assert_eq!(resident.len(), 2);
         assert!(resident.contains(a.0) && resident.contains(b.0));
 
-        for (key, n_in, n_out, scale, blob) in [
-            (a.0, a.1, a.2, a.3, &blob_a),
-            (b.0, b.1, b.2, b.3, &blob_b),
-        ] {
+        for (key, n_in, n_out, scale, blob) in
+            [(a.0, a.1, a.2, a.3, &blob_a), (b.0, b.1, b.2, b.3, &blob_b)]
+        {
             let act: Vec<f32> = (0..n_in).map(|j| (j as f32) * 0.25 - 1.0).collect();
             let mut gpu = vec![0f32; n_out];
             assert!(
@@ -571,7 +651,9 @@ mod tests {
         };
         let (n_in, n_out, n_batch) = (4096usize, 4096usize, 1usize); // decode-shape GEMV
         let scale = 0.05_f32;
-        let trits: Vec<i8> = (0..n_in * n_out).map(|k| ((k * 7 + 1) % 3) as i8 - 1).collect();
+        let trits: Vec<i8> = (0..n_in * n_out)
+            .map(|k| ((k * 7 + 1) % 3) as i8 - 1)
+            .collect();
         let p3 = pack_trits(&trits);
         let p2 = pack_trits_2bit(&trits);
         let act: Vec<f32> = (0..n_in).map(|j| (j as f32 % 13.0) * 0.1 - 0.6).collect();
@@ -648,9 +730,15 @@ mod tests {
         while w.len() % 4 != 0 || w.is_empty() {
             w.push(0);
         }
-        let wbuf = mk(&w, wgpu::BufferUsages::STORAGE | wgpu::BufferUsages::COPY_DST);
+        let wbuf = mk(
+            &w,
+            wgpu::BufferUsages::STORAGE | wgpu::BufferUsages::COPY_DST,
+        );
         let params = super::ternary_params_bytes(n_in as u32, n_out as u32, 1, 1.0);
-        let pbuf = mk(&params, wgpu::BufferUsages::UNIFORM | wgpu::BufferUsages::COPY_DST);
+        let pbuf = mk(
+            &params,
+            wgpu::BufferUsages::UNIFORM | wgpu::BufferUsages::COPY_DST,
+        );
         let obuf = device.create_buffer(&wgpu::BufferDescriptor {
             label: None,
             size: (n_out * 4).max(4) as u64,
@@ -661,18 +749,34 @@ mod tests {
             label: None,
             layout: &pipeline.get_bind_group_layout(0),
             entries: &[
-                wgpu::BindGroupEntry { binding: 0, resource: act.as_entire_binding() },
-                wgpu::BindGroupEntry { binding: 1, resource: wbuf.as_entire_binding() },
-                wgpu::BindGroupEntry { binding: 2, resource: pbuf.as_entire_binding() },
-                wgpu::BindGroupEntry { binding: 3, resource: obuf.as_entire_binding() },
+                wgpu::BindGroupEntry {
+                    binding: 0,
+                    resource: act.as_entire_binding(),
+                },
+                wgpu::BindGroupEntry {
+                    binding: 1,
+                    resource: wbuf.as_entire_binding(),
+                },
+                wgpu::BindGroupEntry {
+                    binding: 2,
+                    resource: pbuf.as_entire_binding(),
+                },
+                wgpu::BindGroupEntry {
+                    binding: 3,
+                    resource: obuf.as_entire_binding(),
+                },
             ],
         });
         let wg_x = (n_out as u32).div_ceil(64).max(1);
         let (k, s) = (32u32, 8u32);
         let submit_batch = || {
-            let mut enc = device.create_command_encoder(&wgpu::CommandEncoderDescriptor { label: None });
+            let mut enc =
+                device.create_command_encoder(&wgpu::CommandEncoderDescriptor { label: None });
             {
-                let mut pass = enc.begin_compute_pass(&wgpu::ComputePassDescriptor { label: None, timestamp_writes: None });
+                let mut pass = enc.begin_compute_pass(&wgpu::ComputePassDescriptor {
+                    label: None,
+                    timestamp_writes: None,
+                });
                 pass.set_pipeline(&pipeline);
                 pass.set_bind_group(0, &bind, &[]);
                 for _ in 0..k {
@@ -700,20 +804,60 @@ mod tests {
             return;
         };
         let (n_in, n_out) = (4096usize, 4096usize); // decode GEMV (batch 1)
-        let trits: Vec<i8> = (0..n_in * n_out).map(|k| ((k * 7 + 1) % 3) as i8 - 1).collect();
+        let trits: Vec<i8> = (0..n_in * n_out)
+            .map(|k| ((k * 7 + 1) % 3) as i8 - 1)
+            .collect();
         let p3 = pack_trits(&trits);
         let p2 = pack_trits_2bit(&trits);
         let f16 = vec![0u8; n_in * n_out * 2]; // f16 weights (size = bandwidth; values irrelevant to timing)
 
-        let f16ms = bench_kernel(&device, &queue, F16_GEMV_WGSL, "f16_gemv", &f16, n_in, n_out);
-        let base3 = bench_kernel(&device, &queue, TERNARY_GEMM_WGSL, "ternary_gemm", &p3, n_in, n_out);
-        let bit2 = bench_kernel(&device, &queue, TERNARY_GEMM_2BIT_WGSL, "ternary_gemm", &p2, n_in, n_out);
+        let f16ms = bench_kernel(
+            &device,
+            &queue,
+            F16_GEMV_WGSL,
+            "f16_gemv",
+            &f16,
+            n_in,
+            n_out,
+        );
+        let base3 = bench_kernel(
+            &device,
+            &queue,
+            TERNARY_GEMM_WGSL,
+            "ternary_gemm",
+            &p3,
+            n_in,
+            n_out,
+        );
+        let bit2 = bench_kernel(
+            &device,
+            &queue,
+            TERNARY_GEMM_2BIT_WGSL,
+            "ternary_gemm",
+            &p2,
+            n_in,
+            n_out,
+        );
 
-        eprintln!("── A2000 GEMV {}x{} batch=1 (persistent pipeline, {}MB/{}KB/{}KB weights) ──",
-            n_out, n_in, f16.len() / (1 << 20), p3.len() >> 10, p2.len() >> 10);
+        eprintln!(
+            "── A2000 GEMV {}x{} batch=1 (persistent pipeline, {}MB/{}KB/{}KB weights) ──",
+            n_out,
+            n_in,
+            f16.len() / (1 << 20),
+            p3.len() >> 10,
+            p2.len() >> 10
+        );
         eprintln!("  F16 baseline        : {:.4} ms/dispatch", f16ms);
-        eprintln!("  ternary base-3      : {:.4} ms/dispatch  ({:.2}x vs F16)", base3, f16ms / base3.max(1e-12));
-        eprintln!("  ternary 2-bit branchless: {:.4} ms/dispatch  ({:.2}x vs F16, {:.2}x vs base-3)",
-            bit2, f16ms / bit2.max(1e-12), base3 / bit2.max(1e-12));
+        eprintln!(
+            "  ternary base-3      : {:.4} ms/dispatch  ({:.2}x vs F16)",
+            base3,
+            f16ms / base3.max(1e-12)
+        );
+        eprintln!(
+            "  ternary 2-bit branchless: {:.4} ms/dispatch  ({:.2}x vs F16, {:.2}x vs base-3)",
+            bit2,
+            f16ms / bit2.max(1e-12),
+            base3 / bit2.max(1e-12)
+        );
     }
 }

@@ -19,7 +19,8 @@ pub fn enumerate_stable_models(
 
     // For each rule, we bifurcate the context simulating applying vs not applying the rule,
     // up to the maximum number of supported stable models.
-    for rule in rules.iter().take(3) { // 2^3 = 8
+    for rule in rules.iter().take(3) {
+        // 2^3 = 8
         let current_worlds = num_worlds;
         for w in 0..current_worlds {
             if num_worlds < MAX_STABLE_MODELS {
@@ -29,7 +30,7 @@ pub fn enumerate_stable_models(
             }
         }
     }
-    
+
     num_worlds
 }
 
@@ -60,13 +61,29 @@ pub struct AspRule {
 
 impl AspRule {
     pub fn new(head: u64, pos: &[u64], neg: &[u64]) -> Self {
-        let mut r = AspRule { head, pos: [0; ASP_MAX_BODY], pos_len: 0, neg: [0; ASP_MAX_BODY], neg_len: 0 };
-        for &a in pos.iter().take(ASP_MAX_BODY) { r.pos[r.pos_len] = a; r.pos_len += 1; }
-        for &a in neg.iter().take(ASP_MAX_BODY) { r.neg[r.neg_len] = a; r.neg_len += 1; }
+        let mut r = AspRule {
+            head,
+            pos: [0; ASP_MAX_BODY],
+            pos_len: 0,
+            neg: [0; ASP_MAX_BODY],
+            neg_len: 0,
+        };
+        for &a in pos.iter().take(ASP_MAX_BODY) {
+            r.pos[r.pos_len] = a;
+            r.pos_len += 1;
+        }
+        for &a in neg.iter().take(ASP_MAX_BODY) {
+            r.neg[r.neg_len] = a;
+            r.neg_len += 1;
+        }
         r
     }
-    pub fn fact(head: u64) -> Self { Self::new(head, &[], &[]) }
-    pub fn constraint(pos: &[u64], neg: &[u64]) -> Self { Self::new(0, pos, neg) }
+    pub fn fact(head: u64) -> Self {
+        Self::new(head, &[], &[])
+    }
+    pub fn constraint(pos: &[u64], neg: &[u64]) -> Self {
+        Self::new(0, pos, neg)
+    }
 }
 
 /// Compute the stable models (answer sets) of `rules` over `atoms`. Each answer set is
@@ -79,7 +96,9 @@ pub fn compute_answer_sets(atoms: &[u64], rules: &[AspRule], out: &mut [u64]) ->
         // GL reduct: a rule is removed iff some negative-body atom is IN the candidate.
         for &na in &r.neg[..r.neg_len] {
             if let Some(ni) = idx(na) {
-                if cand & (1u64 << ni) != 0 { return true; }
+                if cand & (1u64 << ni) != 0 {
+                    return true;
+                }
             }
         }
         false
@@ -102,25 +121,41 @@ pub fn compute_answer_sets(atoms: &[u64], rules: &[AspRule], out: &mut [u64]) ->
         loop {
             let mut changed = false;
             for r in rules {
-                if r.head == 0 || removed_by_reduct(r, cand) { continue; }
+                if r.head == 0 || removed_by_reduct(r, cand) {
+                    continue;
+                }
                 if body_pos_in(r, m) {
                     if let Some(hi) = idx(r.head) {
-                        if m & (1u64 << hi) == 0 { m |= 1u64 << hi; changed = true; }
+                        if m & (1u64 << hi) == 0 {
+                            m |= 1u64 << hi;
+                            changed = true;
+                        }
                     }
                 }
             }
-            if !changed { break; }
+            if !changed {
+                break;
+            }
         }
         // Stability: the least model of the reduct must equal the candidate …
-        if m != cand { continue; }
+        if m != cand {
+            continue;
+        }
         // … and no integrity constraint may be violated by it.
         let mut ok = true;
         for r in rules {
-            if r.head != 0 || removed_by_reduct(r, cand) { continue; }
-            if body_pos_in(r, m) { ok = false; break; }
+            if r.head != 0 || removed_by_reduct(r, cand) {
+                continue;
+            }
+            if body_pos_in(r, m) {
+                ok = false;
+                break;
+            }
         }
         if ok {
-            if found >= out.len() { break; }
+            if found >= out.len() {
+                break;
+            }
             out[found] = m;
             found += 1;
         }
@@ -196,9 +231,21 @@ pub struct WeakConstraint {
 
 impl WeakConstraint {
     pub fn new(pos: &[u64], neg: &[u64], weight: i64) -> Self {
-        let mut w = WeakConstraint { pos: [0; ASP_MAX_BODY], pos_len: 0, neg: [0; ASP_MAX_BODY], neg_len: 0, weight };
-        for &a in pos.iter().take(ASP_MAX_BODY) { w.pos[w.pos_len] = a; w.pos_len += 1; }
-        for &a in neg.iter().take(ASP_MAX_BODY) { w.neg[w.neg_len] = a; w.neg_len += 1; }
+        let mut w = WeakConstraint {
+            pos: [0; ASP_MAX_BODY],
+            pos_len: 0,
+            neg: [0; ASP_MAX_BODY],
+            neg_len: 0,
+            weight,
+        };
+        for &a in pos.iter().take(ASP_MAX_BODY) {
+            w.pos[w.pos_len] = a;
+            w.pos_len += 1;
+        }
+        for &a in neg.iter().take(ASP_MAX_BODY) {
+            w.neg[w.neg_len] = a;
+            w.neg_len += 1;
+        }
         w
     }
 }
@@ -270,7 +317,11 @@ pub enum AspOutcome {
 /// Compute answer sets; if NONE exist, return [`AspOutcome::NoStableModel`] so the caller routes
 /// the (inconsistent) program to `modalities::paraconsistent::route_paraconsistent` rather than
 /// silently concluding falsity. This is the tight integration with paraconsistent routing.
-pub fn answer_sets_or_paraconsistent(atoms: &[u64], rules: &[AspRule], out: &mut [u64]) -> AspOutcome {
+pub fn answer_sets_or_paraconsistent(
+    atoms: &[u64],
+    rules: &[AspRule],
+    out: &mut [u64],
+) -> AspOutcome {
     let k = compute_answer_sets(atoms, rules, out);
     if k == 0 {
         AspOutcome::NoStableModel
@@ -295,10 +346,17 @@ mod tests {
         assert_eq!(k, 2, "even loop has exactly two stable models");
         let bp = 1u64 << 0; // p is atoms[0]
         let bq = 1u64 << 1; // q is atoms[1]
-        assert!(out[..k].contains(&bp) && out[..k].contains(&bq), "the two answer sets are {{p}} and {{q}}");
+        assert!(
+            out[..k].contains(&bp) && out[..k].contains(&bq),
+            "the two answer sets are {{p}} and {{q}}"
+        );
 
         // Add `:- q` (forbid q) → only {p} survives.
-        let prog2 = [AspRule::new(p, &[], &[q]), AspRule::new(q, &[], &[p]), AspRule::constraint(&[q], &[])];
+        let prog2 = [
+            AspRule::new(p, &[], &[q]),
+            AspRule::new(q, &[], &[p]),
+            AspRule::constraint(&[q], &[]),
+        ];
         let mut out2 = [0u64; 8];
         let k2 = compute_answer_sets(&atoms, &prog2, &mut out2);
         assert_eq!(k2, 1, "the constraint prunes {{q}}");
@@ -316,7 +374,7 @@ mod tests {
             parity: 0,
         };
         let mut out_worlds = [0; MAX_STABLE_MODELS];
-        
+
         // Empty rules -> 1 world
         let count = enumerate_stable_models(&base, &[], &mut out_worlds);
         assert_eq!(count, 1);
@@ -387,9 +445,15 @@ mod tests {
         // `p :- not p` has NO stable model — an inconsistent program.
         let prog = [AspRule::new(p, &[], &[p])];
         let mut out = [0u64; 8];
-        assert_eq!(answer_sets_or_paraconsistent(&atoms, &prog, &mut out), AspOutcome::NoStableModel);
+        assert_eq!(
+            answer_sets_or_paraconsistent(&atoms, &prog, &mut out),
+            AspOutcome::NoStableModel
+        );
         // A consistent program reports its model count.
         let prog2 = [AspRule::fact(p)];
-        assert_eq!(answer_sets_or_paraconsistent(&atoms, &prog2, &mut out), AspOutcome::Stable(1));
+        assert_eq!(
+            answer_sets_or_paraconsistent(&atoms, &prog2, &mut out),
+            AspOutcome::Stable(1)
+        );
     }
 }

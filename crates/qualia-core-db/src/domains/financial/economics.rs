@@ -179,7 +179,11 @@ pub fn propagate_supply_shock(
     tolerance: f64,
     impact_out: &mut [f64],
 ) -> usize {
-    if n == 0 || n > MAX_SECTORS || coupling.len() < n * n || shock.len() < n || impact_out.len() < n
+    if n == 0
+        || n > MAX_SECTORS
+        || coupling.len() < n * n
+        || shock.len() < n
+        || impact_out.len() < n
     {
         return 0;
     }
@@ -277,17 +281,31 @@ mod resilience_tests {
         let mut impact = [0.0f64; 2];
         let rounds = propagate_supply_shock(&a, &shock, 2, 100, 1e-9, &mut impact);
         assert!(rounds > 1);
-        assert!((impact[0] - 4.0 / 3.0).abs() < 1e-6, "sector 0 total impact, got {}", impact[0]);
+        assert!(
+            (impact[0] - 4.0 / 3.0).abs() < 1e-6,
+            "sector 0 total impact, got {}",
+            impact[0]
+        );
         // Sector 1 was NOT directly shocked but is impacted via the supply coupling.
-        assert!(impact[1] > 0.6 && impact[1] < 0.7, "propagated impact on sector 1, got {}", impact[1]);
+        assert!(
+            impact[1] > 0.6 && impact[1] < 0.7,
+            "propagated impact on sector 1, got {}",
+            impact[1]
+        );
     }
 
     #[test]
     fn supply_shock_rejects_bad_dimensions() {
         let mut out = [0.0f64; 2];
-        assert_eq!(propagate_supply_shock(&[0.0], &[1.0], 0, 10, 1e-9, &mut out), 0);
+        assert_eq!(
+            propagate_supply_shock(&[0.0], &[1.0], 0, 10, 1e-9, &mut out),
+            0
+        );
         // n exceeds the matrix size
-        assert_eq!(propagate_supply_shock(&[0.0; 4], &[1.0, 0.0], 3, 10, 1e-9, &mut out), 0);
+        assert_eq!(
+            propagate_supply_shock(&[0.0; 4], &[1.0, 0.0], 3, 10, 1e-9, &mut out),
+            0
+        );
     }
 
     #[test]
@@ -300,11 +318,26 @@ mod resilience_tests {
         let cost = [2.0, 2.0];
         let mut price = [0.0f64; 2];
         let mut surplus = [0.0f64; 2];
-        let n = resilience_resource_pricing(&stock, &demand, &cost, 3.0, 2, &mut price, &mut surplus);
+        let n =
+            resilience_resource_pricing(&stock, &demand, &cost, 3.0, 2, &mut price, &mut surplus);
         assert_eq!(n, 2);
-        assert!((price[0] - 4.0).abs() < 1e-9, "deficit survival-premium price, got {}", price[0]);
-        assert_eq!(surplus[0], 0.0, "a deficit resource exposes no tradeable surplus");
-        assert!((price[1] - 2.0).abs() < 1e-9, "surplus priced at marginal cost, got {}", price[1]);
-        assert!((surplus[1] - 10.0).abs() < 1e-9, "tradeable surplus = stock − survival demand");
+        assert!(
+            (price[0] - 4.0).abs() < 1e-9,
+            "deficit survival-premium price, got {}",
+            price[0]
+        );
+        assert_eq!(
+            surplus[0], 0.0,
+            "a deficit resource exposes no tradeable surplus"
+        );
+        assert!(
+            (price[1] - 2.0).abs() < 1e-9,
+            "surplus priced at marginal cost, got {}",
+            price[1]
+        );
+        assert!(
+            (surplus[1] - 10.0).abs() < 1e-9,
+            "tradeable surplus = stock − survival demand"
+        );
     }
 }

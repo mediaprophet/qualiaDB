@@ -81,12 +81,15 @@ pub fn execute_ntriples_pattern_on_graph(
     }
 
     let mut out_buffer = vec![NQuin::default(); QUERY_OUT_SLOTS];
-    let stats = crate::webizen_bytecode::execute_program_with_stats(&program, graph, &mut out_buffer, None)
-        .map_err(|e| match e {
-            crate::webizen_bytecode::VmError::OutputBufferFull => QueryExecError::OutputBufferFull,
-            crate::webizen_bytecode::VmError::InvalidProgram => QueryExecError::InvalidProgram,
-            crate::webizen_bytecode::VmError::HaltViolation => QueryExecError::InvalidProgram,
-        })?;
+    let stats =
+        crate::webizen_bytecode::execute_program_with_stats(&program, graph, &mut out_buffer, None)
+            .map_err(|e| match e {
+                crate::webizen_bytecode::VmError::OutputBufferFull => {
+                    QueryExecError::OutputBufferFull
+                }
+                crate::webizen_bytecode::VmError::InvalidProgram => QueryExecError::InvalidProgram,
+                crate::webizen_bytecode::VmError::HaltViolation => QueryExecError::InvalidProgram,
+            })?;
 
     let results = out_buffer[..stats.match_count].to_vec();
     filter_classified(results, stats)
@@ -104,8 +107,8 @@ pub fn execute_sparql_on_graph(
 
     let (sparql_query, ctx) =
         sparql_parser::parse_sparql(trimmed).map_err(|e| QueryExecError::ParseError(e))?;
-    let plan = QueryPlanner::plan(&sparql_query, &ctx)
-        .map_err(|e| QueryExecError::ParseError(e))?;
+    let plan =
+        QueryPlanner::plan(&sparql_query, &ctx).map_err(|e| QueryExecError::ParseError(e))?;
     let executor = QueryExecutor::new(graph);
 
     let stats = ExecutionStats {
@@ -152,11 +155,13 @@ pub fn execute_ntriples_metrics(
 fn bindings_to_quins(bindings: &[BindingRow]) -> Vec<NQuin> {
     bindings
         .iter()
-        .map(|row| synthetic_binding_quin(
-            row.slots[0].unwrap_or(0),
-            row.slots[1].unwrap_or(0),
-            row.slots[2].unwrap_or(0),
-        ))
+        .map(|row| {
+            synthetic_binding_quin(
+                row.slots[0].unwrap_or(0),
+                row.slots[1].unwrap_or(0),
+                row.slots[2].unwrap_or(0),
+            )
+        })
         .collect()
 }
 

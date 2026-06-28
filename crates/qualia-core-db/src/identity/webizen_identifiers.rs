@@ -47,13 +47,13 @@ impl WebizenIdentity {
             updated_at: 0,
         }
     }
-    
+
     /// Set the DID hash
     pub fn with_did(mut self, did_hash: u64) -> Self {
         self.did_hash = did_hash;
         self
     }
-    
+
     /// Check if an ID is a Webizen ID
     pub fn is_webizen_id(id: u64) -> bool {
         (id & 0xF000_0000_0000_0000) == (TAG_WEBIZEN << 60)
@@ -79,33 +79,34 @@ impl WebizenRegistry {
             signature_cache: HashMap::new(),
         }
     }
-    
+
     /// Register a Webizen identity
     pub fn register_webizen(&mut self, identity: WebizenIdentity) -> Result<(), String> {
         let webizen_id = identity.webizen_id;
-        
+
         // Verify it's in the Webizen ID range
         if !WebizenIdentity::is_webizen_id(webizen_id) {
             return Err("ID not in Webizen range".to_string());
         }
-        
+
         // Register in both maps
         self.webizen_slots.insert(webizen_id, identity.clone());
-        self.webid_to_webizen.insert(identity.webid_hash, webizen_id);
-        
+        self.webid_to_webizen
+            .insert(identity.webid_hash, webizen_id);
+
         Ok(())
     }
-    
+
     /// Get Webizen identity by ID
     pub fn get_webizen(&self, webizen_id: WebizenId) -> Option<&WebizenIdentity> {
         self.webizen_slots.get(&webizen_id)
     }
-    
+
     /// Get Webizen ID by WebID hash
     pub fn get_webizen_by_webid(&self, webid_hash: u64) -> Option<WebizenId> {
         self.webid_to_webizen.get(&webid_hash).copied()
     }
-    
+
     /// Verify an Ed25519 signature over `message` using the Webizen's stored public key.
     ///
     /// Uses `ed25519-dalek` `verify_strict`. Results are memoised in `signature_cache`.
@@ -115,9 +116,11 @@ impl WebizenRegistry {
         message: &[u8],
         signature: &[u8],
     ) -> Result<bool, String> {
-        let identity = self.webizen_slots.get(&webizen_id)
+        let identity = self
+            .webizen_slots
+            .get(&webizen_id)
             .ok_or_else(|| "Webizen not found".to_string())?;
-        
+
         // Check cache. The signature is part of the key: a different signature
         // over the same message must not reuse a prior verdict.
         let mut cache_input = message.to_vec();
@@ -135,11 +138,12 @@ impl WebizenRegistry {
 
         // Parse the verifying key
         use ed25519_dalek::{Signature, Verifier, VerifyingKey};
-        let vk = VerifyingKey::from_bytes(&key_bytes)
-            .map_err(|e| format!("Invalid public key: {e}"))?;
+        let vk =
+            VerifyingKey::from_bytes(&key_bytes).map_err(|e| format!("Invalid public key: {e}"))?;
 
         // Signature must be exactly 64 bytes
-        let sig_arr: [u8; 64] = signature.try_into()
+        let sig_arr: [u8; 64] = signature
+            .try_into()
             .map_err(|_| format!("Signature must be 64 bytes, got {}", signature.len()))?;
         let sig = Signature::from_bytes(&sig_arr);
 
@@ -150,7 +154,7 @@ impl WebizenRegistry {
 
         Ok(verified)
     }
-    
+
     /// Verify a Webizen signature on a NQuin
     pub fn verify_quin_signature(
         &mut self,
@@ -161,13 +165,13 @@ impl WebizenRegistry {
         if !WebizenIdentity::is_webizen_id(quin.subject) {
             return Err("Subject is not a Webizen".to_string());
         }
-        
+
         // Serialize the Quin for signing (excluding parity and signature metadata)
         let message = self.serialize_quin_for_signature(quin);
-        
+
         self.verify_signature(quin.subject, &message, signature)
     }
-    
+
     /// Serialize a NQuin for signature verification
     fn serialize_quin_for_signature(&self, quin: &NQuin) -> Vec<u8> {
         // Serialize subject, predicate, object, context, and metadata
@@ -209,10 +213,10 @@ impl WebizenSignatureStorage {
         signature: &[u8; 64],
     ) -> Vec<NQuin> {
         const WEBIZEN_METADATA_FLAG: u64 = 0x1 << 63; // Use bit 63 as Webizen signature flag
-        
+
         // Split 64-byte signature into 8 u64 values
         let sig_parts: [u64; 8] = unsafe { std::mem::transmute(*signature) };
-        
+
         // Create Quins for each part
         let mut quins = Vec::with_capacity(8);
         for (i, part) in sig_parts.iter().enumerate() {
@@ -225,33 +229,34 @@ impl WebizenSignatureStorage {
                 parity: 0,
             });
         }
-        
+
         quins
     }
-    
+
     /// Deserialize Quins to signature
     pub fn quins_to_signature(quins: &[NQuin]) -> Option<[u8; 64]> {
         const WEBIZEN_METADATA_FLAG: u64 = 0x1 << 63;
-        
+
         // Filter Webizen signature Quins
-        let sig_quins: Vec<_> = quins.iter()
+        let sig_quins: Vec<_> = quins
+            .iter()
             .filter(|quin| quin.metadata & WEBIZEN_METADATA_FLAG != 0)
             .collect();
-        
+
         if sig_quins.len() != 8 {
             return None;
         }
-        
+
         // Sort by context (index)
         let mut sorted_quins = sig_quins.clone();
         sorted_quins.sort_by_key(|q| q.context);
-        
+
         // Reassemble signature
         let mut sig_parts: [u64; 8] = [0; 8];
         for (i, quin) in sorted_quins.iter().enumerate() {
             sig_parts[i] = quin.object;
         }
-        
+
         Some(unsafe { std::mem::transmute(sig_parts) })
     }
 }
@@ -271,7 +276,7 @@ mod webizen_tests {
     fn test_webizen_identity_creation() {
         let public_key = [1u64, 2, 3, 4];
         let identity = WebizenIdentity::new(0x123456789ABCDEF0, public_key);
-        
+
         assert!(WebizenIdentity::is_webizen_id(identity.webizen_id));
         assert_eq!(identity.webid_hash, 0x123456789ABCDEF0);
     }
@@ -282,7 +287,7 @@ mod webizen_tests {
         let public_key = [1u64, 2, 3, 4];
         let identity = WebizenIdentity::new(0x123456789ABCDEF0, public_key);
         let id = identity.webizen_id;
-        
+
         assert!(registry.register_webizen(identity).is_ok());
         assert!(registry.get_webizen(id).is_some());
     }
@@ -293,7 +298,7 @@ mod webizen_tests {
         let public_key = [1u64, 2, 3, 4];
         let identity = WebizenIdentity::new(0x123456789ABCDEF0, public_key);
         let webizen_id = identity.webizen_id;
-        
+
         registry.register_webizen(identity).unwrap();
         assert_eq!(
             registry.get_webizen_by_webid(0x123456789ABCDEF0),
@@ -306,10 +311,10 @@ mod webizen_tests {
         let webizen_id = TAG_WEBIZEN | 0x123456789ABCDEF0;
         let quin_hash = 0x9876543210FEDCBA;
         let signature = [1u8; 64];
-        
+
         let quins = WebizenSignatureStorage::signature_to_quins(webizen_id, quin_hash, &signature);
         assert_eq!(quins.len(), 8);
-        
+
         let signature_back = WebizenSignatureStorage::quins_to_signature(&quins);
         assert!(signature_back.is_some());
         assert_eq!(signature_back.unwrap(), signature);
@@ -346,9 +351,14 @@ mod webizen_tests {
 
         // A signature over a different message must not verify.
         let other_sig = signing_key.sign(b"other message").to_bytes();
-        assert_eq!(registry.verify_signature(id, message, &other_sig), Ok(false));
+        assert_eq!(
+            registry.verify_signature(id, message, &other_sig),
+            Ok(false)
+        );
 
         // A malformed (wrong-length) signature is a hard error.
-        assert!(registry.verify_signature(id, message, b"too short").is_err());
+        assert!(registry
+            .verify_signature(id, message, b"too short")
+            .is_err());
     }
 }

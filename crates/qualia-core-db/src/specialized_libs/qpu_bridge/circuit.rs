@@ -1,28 +1,27 @@
 //! QPU Bridge - Quantum Processing Unit Bridge for Exact Quantum Computing
-//! 
+//!
 //! This module provides a bridge to remote quantum computing resources (IBM Quantum API)
 //! via the NativeQuantumDft module, enabling exact Hamiltonian mapping and quantum
 //! calculations that cannot be approximated on classical hardware.
-//! 
+//!
 //! Architecture:
 //! - Time-metered proxy for IBM Quantum API
 //! - Job submission and result retrieval
 //! - Authentication and rate limiting
 //! - Error handling and fallback mechanisms
 
-use crate::NQuin;
-use crate::lexicon::generate_60bit_token;
 use crate::fiduciary_crypto::FiduciaryCrypto;
+use crate::lexicon::generate_60bit_token;
 use crate::zk_proofs::ZkProofSystem;
-use core::ptr;
+use crate::NQuin;
 use core::mem;
+use core::ptr;
 use core::sync::atomic::{AtomicU32, AtomicU64, Ordering};
 
 /// QPU Bridge Manager - Main interface for quantum computing operations
-/// 
+///
 /// This struct manages connections to remote quantum computing resources while
 /// maintaining strict zero-allocation invariants and security requirements.
-
 use super::*;
 
 #[repr(C)]
@@ -75,7 +74,6 @@ pub enum QuantumGateType {
     CZ = 8,
 }
 
-
 impl QuantumCircuit {
     pub fn from_params(params: &QuantumCircuitParams) -> Result<Self, QPUBridgeError> {
         Ok(Self {
@@ -86,7 +84,6 @@ impl QuantumCircuit {
         })
     }
 }
-
 
 impl QuantumGate {
     #[inline(always)]
@@ -99,4 +96,3 @@ impl QuantumGate {
         }
     }
 }
-

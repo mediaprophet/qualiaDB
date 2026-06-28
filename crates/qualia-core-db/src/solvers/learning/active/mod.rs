@@ -53,7 +53,11 @@ impl std::error::Error for ActiveError {}
 /// Argsort `scores` descending (highest first), returning indices. Stable on ties.
 pub(crate) fn argsort_desc(scores: &[f64]) -> Vec<usize> {
     let mut idx: Vec<usize> = (0..scores.len()).collect();
-    idx.sort_by(|&a, &b| scores[b].partial_cmp(&scores[a]).unwrap_or(core::cmp::Ordering::Equal));
+    idx.sort_by(|&a, &b| {
+        scores[b]
+            .partial_cmp(&scores[a])
+            .unwrap_or(core::cmp::Ordering::Equal)
+    });
     idx
 }
 

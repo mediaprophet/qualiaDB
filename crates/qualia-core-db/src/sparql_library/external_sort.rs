@@ -201,9 +201,11 @@ impl ExternalSorter {
     /// Mock for WASM
     #[cfg(target_arch = "wasm32")]
     pub fn merge(mut self, _final_q42: &Path) -> std::io::Result<u64> {
-        Err(std::io::Error::new(std::io::ErrorKind::Unsupported, "Not supported on WASM"))
+        Err(std::io::Error::new(
+            std::io::ErrorKind::Unsupported,
+            "Not supported on WASM",
+        ))
     }
-
 
     fn read_quin(reader: &mut BufReader<File>) -> std::io::Result<Option<NQuin>> {
         let mut bytes = [0u8; 48];

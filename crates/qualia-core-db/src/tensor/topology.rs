@@ -31,25 +31,29 @@ impl TopologyClass {
                 let dy = p1.1 - p2.1;
                 let dz = p1.2 - p2.2;
                 (dx * dx + dy * dy + dz * dz).sqrt()
-            },
+            }
             TopologyClass::Cyclic => {
                 // Modulo-based distance for cyclic topology
                 let dx = (p1.0 - p2.0).abs().min(1.0 - (p1.0 - p2.0).abs());
                 let dy = (p1.1 - p2.1).abs().min(1.0 - (p1.1 - p2.1).abs());
                 let dz = (p1.2 - p2.2).abs().min(1.0 - (p1.2 - p2.2).abs());
                 (dx * dx + dy * dy + dz * dz).sqrt()
-            },
+            }
             TopologyClass::Hyperbolic => {
                 // Exponential distance for tree/hierarchy topology
                 let dx = (p1.0 - p2.0).abs();
                 let dy = (p1.1 - p2.1).abs();
                 let dz = (p1.2 - p2.2).abs();
                 (dx.exp() + dy.exp() + dz.exp()).ln()
-            },
+            }
             TopologyClass::BoundaryCliques => {
                 // Byte comparison for clique membership
-                if p1 == p2 { 0.0 } else { 1.0 }
-            },
+                if p1 == p2 {
+                    0.0
+                } else {
+                    1.0
+                }
+            }
         }
     }
 }

@@ -1,13 +1,13 @@
 //! Allocation Firewall (eBPF) Implementation
-//! 
+//!
 //! This module provides kernel-level socket bypassing and packet filtering using eBPF programs.
 //! Designed for high-performance networking with zero-copy operations and advanced security.
 
+use serde::{Deserialize, Serialize};
 use std::collections::HashMap;
-use std::sync::{Arc, Mutex};
 use std::fs::{File, OpenOptions};
 use std::path::Path;
-use serde::{Deserialize, Serialize};
+use std::sync::{Arc, Mutex};
 
 /// eBPF Firewall Manager
 pub struct EbpfFirewall {
@@ -59,10 +59,10 @@ pub struct SocketInfo {
 /// Socket types
 #[derive(Debug, Clone, PartialEq, Serialize, Deserialize)]
 pub enum SocketType {
-    Stream,     // TCP
-    Datagram,   // UDP
-    Raw,        // Raw socket
-    SeqPacket,  // SCTP
+    Stream,    // TCP
+    Datagram,  // UDP
+    Raw,       // Raw socket
+    SeqPacket, // SCTP
 }
 
 /// Network protocols
@@ -236,7 +236,12 @@ impl EbpfFirewall {
     }
 
     /// Load eBPF program
-    pub fn load_program(&mut self, name: String, program_type: ProgramType, bytecode: Vec<u8>) -> Result<u32, EbpfError> {
+    pub fn load_program(
+        &mut self,
+        name: String,
+        program_type: ProgramType,
+        bytecode: Vec<u8>,
+    ) -> Result<u32, EbpfError> {
         // Validate program bytecode
         Self::validate_bytecode(&bytecode)?;
 
@@ -277,7 +282,9 @@ impl EbpfFirewall {
 
         // Extract program fields via immutable borrow (dropped before mutable ops)
         let (program_id, program_type) = {
-            let program = self.programs.get(program_name)
+            let program = self
+                .programs
+                .get(program_name)
                 .ok_or_else(|| EbpfError::ProgramNotFound(program_name.to_string()))?;
             (program.program_id, program.program_type.clone())
         };
@@ -286,9 +293,11 @@ impl EbpfFirewall {
         self.attach_program_to_socket(fd, program_id, program_type)?;
 
         // Update program attached sockets
-        self.programs.get_mut(program_name)
+        self.programs
+            .get_mut(program_name)
             .ok_or_else(|| EbpfError::ProgramNotFound(program_name.to_string()))?
-            .attached_sockets.push(fd);
+            .attached_sockets
+            .push(fd);
 
         // Create and store socket info
         let socket_info = SocketInfo {
@@ -319,7 +328,9 @@ impl EbpfFirewall {
 
     /// Enable socket bypassing
     pub fn bypass_socket(&mut self, fd: i32) -> Result<(), EbpfError> {
-        let socket_info = self.sockets.get_mut(&fd)
+        let socket_info = self
+            .sockets
+            .get_mut(&fd)
             .ok_or_else(|| EbpfError::SocketNotFound(fd))?;
 
         // Enable bypass
@@ -333,7 +344,9 @@ impl EbpfFirewall {
 
     /// Disable socket bypassing
     pub fn unbypass_socket(&mut self, fd: i32) -> Result<(), EbpfError> {
-        let socket_info = self.sockets.get_mut(&fd)
+        let socket_info = self
+            .sockets
+            .get_mut(&fd)
             .ok_or_else(|| EbpfError::SocketNotFound(fd))?;
 
         // Disable bypass
@@ -372,7 +385,9 @@ impl EbpfFirewall {
 
     /// Get zero-copy buffer for socket
     pub fn get_zero_copy_buffer(&self, fd: i32, size: usize) -> Result<ZeroCopyBuffer, EbpfError> {
-        let socket_info = self.sockets.get(&fd)
+        let socket_info = self
+            .sockets
+            .get(&fd)
             .ok_or_else(|| EbpfError::SocketNotFound(fd))?;
 
         if !socket_info.bypass_enabled {
@@ -391,18 +406,28 @@ impl EbpfFirewall {
     }
 
     /// Process packet through firewall
-    pub fn process_packet(&mut self, packet: &[u8], socket_fd: i32) -> Result<PacketAction, EbpfError> {
+    pub fn process_packet(
+        &mut self,
+        packet: &[u8],
+        socket_fd: i32,
+    ) -> Result<PacketAction, EbpfError> {
         let start_time = std::time::Instant::now();
 
         // Get socket info
-        let socket_info = self.sockets.get(&socket_fd)
+        let socket_info = self
+            .sockets
+            .get(&socket_fd)
             .ok_or_else(|| EbpfError::SocketNotFound(socket_fd))?;
 
         // Check attached program
-        let program_name = socket_info.attached_program.as_ref()
+        let program_name = socket_info
+            .attached_program
+            .as_ref()
             .ok_or_else(|| EbpfError::NoProgramAttached(socket_fd))?;
 
-        let program = self.programs.get(program_name)
+        let program = self
+            .programs
+            .get(program_name)
             .ok_or_else(|| EbpfError::ProgramNotFound(program_name.clone()))?;
 
         // Execute eBPF program
@@ -410,8 +435,13 @@ impl EbpfFirewall {
 
         // Update performance metrics
         let execution_time = start_time.elapsed().as_nanos() as u64;
-        self.performance_monitor.update_program_metrics(program.program_id, execution_time, packet.len());
-        self.performance_monitor.update_socket_metrics(socket_fd, packet.len());
+        self.performance_monitor.update_program_metrics(
+            program.program_id,
+            execution_time,
+            packet.len(),
+        );
+        self.performance_monitor
+            .update_socket_metrics(socket_fd, packet.len());
 
         Ok(action)
     }
@@ -423,12 +453,15 @@ impl EbpfFirewall {
 
     /// Get socket statistics
     pub fn get_socket_stats(&self, fd: i32) -> Option<SocketStats> {
-        self.sockets.get(&fd).map(|info| info.performance_stats.clone())
+        self.sockets
+            .get(&fd)
+            .map(|info| info.performance_stats.clone())
     }
 
     /// Get program statistics
     pub fn get_program_stats(&self, program_id: u32) -> Option<ProgramStats> {
-        self.programs.values()
+        self.programs
+            .values()
             .find(|p| p.program_id == program_id)
             .map(|p| p.performance_stats.clone())
     }
@@ -459,7 +492,9 @@ impl EbpfFirewall {
 
         // Check bytecode alignment
         if bytecode.len() % 8 != 0 {
-            return Err(EbpfError::InvalidBytecode("Bytecode not aligned".to_string()));
+            return Err(EbpfError::InvalidBytecode(
+                "Bytecode not aligned".to_string(),
+            ));
         }
 
         // Validate eBPF instructions
@@ -473,7 +508,9 @@ impl EbpfFirewall {
         // Simple validation - in real implementation would parse eBPF instructions
         for chunk in bytecode.chunks(8) {
             if chunk.len() != 8 {
-                return Err(EbpfError::InvalidBytecode("Invalid instruction size".to_string()));
+                return Err(EbpfError::InvalidBytecode(
+                    "Invalid instruction size".to_string(),
+                ));
             }
         }
 
@@ -488,23 +525,19 @@ impl EbpfFirewall {
     fn load_program_into_kernel(&self, program: &EbpfProgram) -> Result<(), EbpfError> {
         #[cfg(target_os = "linux")]
         {
-            return Err(EbpfError::LoadError(
-                format!(
-                    "eBPF program '{}' cannot be loaded: aya feature not enabled in this build. \
+            return Err(EbpfError::LoadError(format!(
+                "eBPF program '{}' cannot be loaded: aya feature not enabled in this build. \
                      Recompile with `--features aya` on Linux to enable kernel eBPF loading.",
-                    program.name
-                )
-            ));
+                program.name
+            )));
         }
         #[cfg(not(target_os = "linux"))]
         {
-            return Err(EbpfError::LoadError(
-                format!(
-                    "eBPF program '{}' cannot be loaded: eBPF is Linux-only \
+            return Err(EbpfError::LoadError(format!(
+                "eBPF program '{}' cannot be loaded: eBPF is Linux-only \
                      (current OS does not support BPF syscalls).",
-                    program.name
-                )
-            ));
+                program.name
+            )));
         }
     }
 
@@ -512,25 +545,26 @@ impl EbpfFirewall {
     ///
     /// Requires a loaded eBPF program file descriptor from the kernel.  Returns
     /// `AttachError` instead of silently succeeding when the runtime is absent.
-    fn attach_program_to_socket(&self, fd: i32, program_id: u32, program_type: ProgramType) -> Result<(), EbpfError> {
+    fn attach_program_to_socket(
+        &self,
+        fd: i32,
+        program_id: u32,
+        program_type: ProgramType,
+    ) -> Result<(), EbpfError> {
         #[cfg(target_os = "linux")]
         {
-            return Err(EbpfError::AttachError(
-                format!(
-                    "Cannot attach program {} (type {:?}) to socket fd {}: \
+            return Err(EbpfError::AttachError(format!(
+                "Cannot attach program {} (type {:?}) to socket fd {}: \
                      eBPF runtime not available — compile with `--features aya`.",
-                    program_id, program_type, fd
-                )
-            ));
+                program_id, program_type, fd
+            )));
         }
         #[cfg(not(target_os = "linux"))]
         {
-            return Err(EbpfError::AttachError(
-                format!(
-                    "Cannot attach program {} to socket fd {}: eBPF is Linux-only.",
-                    program_id, fd
-                )
-            ));
+            return Err(EbpfError::AttachError(format!(
+                "Cannot attach program {} to socket fd {}: eBPF is Linux-only.",
+                program_id, fd
+            )));
         }
     }
 
@@ -541,22 +575,18 @@ impl EbpfFirewall {
     fn configure_socket_bypass(&self, fd: i32) -> Result<(), EbpfError> {
         #[cfg(target_os = "linux")]
         {
-            return Err(EbpfError::ConfigurationError(
-                format!(
-                    "Cannot enable zero-copy bypass for socket fd {}: \
+            return Err(EbpfError::ConfigurationError(format!(
+                "Cannot enable zero-copy bypass for socket fd {}: \
                      eBPF runtime not available — compile with `--features aya`.",
-                    fd
-                )
-            ));
+                fd
+            )));
         }
         #[cfg(not(target_os = "linux"))]
         {
-            return Err(EbpfError::ConfigurationError(
-                format!(
-                    "Cannot enable zero-copy bypass for socket fd {}: eBPF is Linux-only.",
-                    fd
-                )
-            ));
+            return Err(EbpfError::ConfigurationError(format!(
+                "Cannot enable zero-copy bypass for socket fd {}: eBPF is Linux-only.",
+                fd
+            )));
         }
     }
 
@@ -567,22 +597,18 @@ impl EbpfFirewall {
     fn configure_socket_normal(&self, fd: i32) -> Result<(), EbpfError> {
         #[cfg(target_os = "linux")]
         {
-            return Err(EbpfError::ConfigurationError(
-                format!(
-                    "Cannot restore normal processing for socket fd {}: \
+            return Err(EbpfError::ConfigurationError(format!(
+                "Cannot restore normal processing for socket fd {}: \
                      eBPF runtime not available — compile with `--features aya`.",
-                    fd
-                )
-            ));
+                fd
+            )));
         }
         #[cfg(not(target_os = "linux"))]
         {
-            return Err(EbpfError::ConfigurationError(
-                format!(
-                    "Cannot restore normal processing for socket fd {}: eBPF is Linux-only.",
-                    fd
-                )
-            ));
+            return Err(EbpfError::ConfigurationError(format!(
+                "Cannot restore normal processing for socket fd {}: eBPF is Linux-only.",
+                fd
+            )));
         }
     }
 
@@ -622,13 +648,17 @@ impl EbpfFirewall {
     fn validate_rule(&self, rule: &FirewallRule) -> Result<(), EbpfError> {
         // Check rule conditions
         if rule.conditions.is_empty() {
-            return Err(EbpfError::InvalidRule("Rule must have at least one condition".to_string()));
+            return Err(EbpfError::InvalidRule(
+                "Rule must have at least one condition".to_string(),
+            ));
         }
 
         // Validate condition fields
         for condition in &rule.conditions {
             if condition.field.is_empty() {
-                return Err(EbpfError::InvalidRule("Condition field cannot be empty".to_string()));
+                return Err(EbpfError::InvalidRule(
+                    "Condition field cannot be empty".to_string(),
+                ));
             }
         }
 
@@ -644,13 +674,14 @@ impl EbpfFirewall {
         {
             return Err(EbpfError::LoadError(
                 "Cannot update eBPF firewall programs: aya feature not enabled in this build. \
-                 Recompile with `--features aya` on Linux.".to_string()
+                 Recompile with `--features aya` on Linux."
+                    .to_string(),
             ));
         }
         #[cfg(not(target_os = "linux"))]
         {
             return Err(EbpfError::LoadError(
-                "Cannot update eBPF firewall programs: eBPF is Linux-only.".to_string()
+                "Cannot update eBPF firewall programs: eBPF is Linux-only.".to_string(),
             ));
         }
     }
@@ -660,25 +691,25 @@ impl EbpfFirewall {
     /// In-kernel eBPF execution requires the `aya` loader.  Returns
     /// `AttachError` (program was never actually loaded) rather than silently
     /// allowing all packets.
-    fn execute_ebpf_program(&self, program: &EbpfProgram, _packet: &[u8]) -> Result<PacketAction, EbpfError> {
+    fn execute_ebpf_program(
+        &self,
+        program: &EbpfProgram,
+        _packet: &[u8],
+    ) -> Result<PacketAction, EbpfError> {
         #[cfg(target_os = "linux")]
         {
-            return Err(EbpfError::AttachError(
-                format!(
-                    "eBPF program '{}' (id {}) is not loaded into the kernel: \
+            return Err(EbpfError::AttachError(format!(
+                "eBPF program '{}' (id {}) is not loaded into the kernel: \
                      compile with `--features aya` to enable in-kernel execution.",
-                    program.name, program.program_id
-                )
-            ));
+                program.name, program.program_id
+            )));
         }
         #[cfg(not(target_os = "linux"))]
         {
-            return Err(EbpfError::AttachError(
-                format!(
-                    "eBPF program '{}' cannot be executed: eBPF is Linux-only.",
-                    program.name
-                )
-            ));
+            return Err(EbpfError::AttachError(format!(
+                "eBPF program '{}' cannot be executed: eBPF is Linux-only.",
+                program.name
+            )));
         }
     }
 
@@ -709,22 +740,31 @@ impl PerformanceMonitor {
     }
 
     /// Update program metrics
-    pub fn update_program_metrics(&mut self, program_id: u32, execution_time: u64, packet_size: usize) {
-        let metrics = self.program_metrics.entry(program_id).or_insert(ProgramMetrics {
-            program_id,
-            execution_count: 0,
-            total_execution_time: 0,
-            average_execution_time: 0.0,
-            max_execution_time: 0,
-            min_execution_time: u64::MAX,
-            memory_usage: 0,
-            packet_count: 0,
-            byte_count: 0,
-        });
+    pub fn update_program_metrics(
+        &mut self,
+        program_id: u32,
+        execution_time: u64,
+        packet_size: usize,
+    ) {
+        let metrics = self
+            .program_metrics
+            .entry(program_id)
+            .or_insert(ProgramMetrics {
+                program_id,
+                execution_count: 0,
+                total_execution_time: 0,
+                average_execution_time: 0.0,
+                max_execution_time: 0,
+                min_execution_time: u64::MAX,
+                memory_usage: 0,
+                packet_count: 0,
+                byte_count: 0,
+            });
 
         metrics.execution_count += 1;
         metrics.total_execution_time += execution_time;
-        metrics.average_execution_time = metrics.total_execution_time as f64 / metrics.execution_count as f64;
+        metrics.average_execution_time =
+            metrics.total_execution_time as f64 / metrics.execution_count as f64;
         metrics.max_execution_time = metrics.max_execution_time.max(execution_time);
         metrics.min_execution_time = metrics.min_execution_time.min(execution_time);
         metrics.packet_count += 1;
@@ -867,7 +907,8 @@ mod tests {
             // Even on Linux, the aya feature is not enabled — expect LoadError.
             assert!(
                 matches!(result, Err(EbpfError::LoadError(_))),
-                "Expected LoadError when aya feature is absent: {:?}", result
+                "Expected LoadError when aya feature is absent: {:?}",
+                result
             );
         }
         #[cfg(not(target_os = "linux"))]
@@ -875,7 +916,8 @@ mod tests {
             // On non-Linux hosts, expect LoadError with a "Linux-only" message.
             assert!(
                 matches!(result, Err(EbpfError::LoadError(_))),
-                "Expected LoadError on non-Linux: {:?}", result
+                "Expected LoadError on non-Linux: {:?}",
+                result
             );
         }
     }
@@ -888,13 +930,11 @@ mod tests {
             rule_id: 1,
             name: "test_rule".to_string(),
             action: RuleAction::Allow,
-            conditions: vec![
-                RuleCondition {
-                    field: "source_ip".to_string(),
-                    operator: ConditionOperator::Equals,
-                    value: vec![192, 168, 1, 1],
-                }
-            ],
+            conditions: vec![RuleCondition {
+                field: "source_ip".to_string(),
+                operator: ConditionOperator::Equals,
+                value: vec![192, 168, 1, 1],
+            }],
             priority: 1,
             enabled: true,
             hit_count: 0,
@@ -904,24 +944,26 @@ mod tests {
         let add_result = firewall.add_rule(rule);
         assert!(
             matches!(add_result, Err(EbpfError::LoadError(_))),
-            "Expected LoadError when aya feature is absent: {:?}", add_result
+            "Expected LoadError when aya feature is absent: {:?}",
+            add_result
         );
 
         // remove_rule also calls update_firewall_programs — same expectation.
         let remove_result = firewall.remove_rule(1);
         assert!(
             matches!(remove_result, Err(EbpfError::LoadError(_))),
-            "Expected LoadError when aya feature is absent: {:?}", remove_result
+            "Expected LoadError when aya feature is absent: {:?}",
+            remove_result
         );
     }
 
     #[test]
     fn test_performance_monitor() {
         let mut monitor = PerformanceMonitor::new();
-        
+
         monitor.update_program_metrics(1, 1000, 1024);
         monitor.update_socket_metrics(1, 1024);
-        
+
         let stats = monitor.get_global_stats();
         assert_eq!(stats.total_packets_processed, 1);
         assert_eq!(stats.total_bytes_processed, 1024);

@@ -196,7 +196,10 @@ mod stem_parity_tests {
         let mut want: Vec<f64> = xs.iter().map(|&v| v as f64).collect();
         activation::relu(&mut want);
         for i in 0..xs.len() {
-            assert!((got[i] as f64 - want[i]).abs() < 1e-6, "ReLU mismatch at {i}");
+            assert!(
+                (got[i] as f64 - want[i]).abs() < 1e-6,
+                "ReLU mismatch at {i}"
+            );
         }
     }
 }

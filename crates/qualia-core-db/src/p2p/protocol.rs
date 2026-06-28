@@ -7,7 +7,7 @@ use std::io;
 use std::sync::Arc;
 
 #[cfg(not(target_arch = "wasm32"))]
-use crate::q42_lexicon::{Q42Context, Q42CborLdParser, SemanticPayload, CborLdError};
+use crate::q42_lexicon::{CborLdError, Q42CborLdParser, Q42Context, SemanticPayload};
 #[cfg(not(target_arch = "wasm32"))]
 use crate::q42_volume::Q42Volume;
 
@@ -62,13 +62,14 @@ impl QualiaRequest {
             Some(d) => crate::q_hash(&d),
             None => 0,
         };
-        
+
         // Extract semantic context hash from HashMap
-        let semantic_context = payload.semantic_context
+        let semantic_context = payload
+            .semantic_context
             .get("context")
             .map(|s| crate::q_hash(s))
             .unwrap_or(0);
-        
+
         Self::Handshake {
             context: "https://webizen.org/ld/context/v1".to_string(),
             request_type: "Handshake".to_string(),
@@ -117,12 +118,13 @@ impl QualiaResponse {
             Some(d) => crate::q_hash(&d),
             None => 0,
         };
-        
-        let semantic_context = payload.semantic_context
+
+        let semantic_context = payload
+            .semantic_context
             .get("context")
             .map(|s| crate::q_hash(s))
             .unwrap_or(0);
-        
+
         Self::HandshakeAck {
             context: "https://webizen.org/ld/context/v1".to_string(),
             response_type: "HandshakeAck".to_string(),
@@ -156,20 +158,22 @@ impl Default for QualiaSyncCodec {
 impl QualiaSyncCodec {
     /// Initialize codec with Q42 volume for CBOR-LD support
     pub fn with_q42_volume(volume: &Q42Volume) -> Result<Self, CborLdError> {
-        let context = Arc::new(Q42Context::from_volume(volume).map_err(|_| CborLdError::InvalidOffset)?);
-        let parser = Arc::new(Q42CborLdParser::from_volume(volume).map_err(|_| CborLdError::InvalidOffset)?);
-        
+        let context =
+            Arc::new(Q42Context::from_volume(volume).map_err(|_| CborLdError::InvalidOffset)?);
+        let parser =
+            Arc::new(Q42CborLdParser::from_volume(volume).map_err(|_| CborLdError::InvalidOffset)?);
+
         Ok(Self {
             q42_context: Some(context),
             cbor_ld_parser: Some(parser),
         })
     }
-    
+
     /// Get Q42 context reference
     pub fn q42_context(&self) -> Option<&Arc<Q42Context>> {
         self.q42_context.as_ref()
     }
-    
+
     /// Get CBOR-LD parser reference
     pub fn cbor_ld_parser(&self) -> Option<&Arc<Q42CborLdParser>> {
         self.cbor_ld_parser.as_ref()
@@ -201,7 +205,7 @@ impl Codec for QualiaSyncCodec {
                 return Ok(Self::Request::from_semantic_payload(semantic_payload));
             }
         }
-        
+
         // Fallback to regular CBOR parsing
         ciborium::from_reader(&buf[..])
             .map_err(|e| io::Error::new(io::ErrorKind::InvalidData, e.to_string()))
@@ -230,7 +234,7 @@ impl Codec for QualiaSyncCodec {
                 return Ok(Self::Response::from_semantic_payload(semantic_payload));
             }
         }
-        
+
         // Fallback to regular CBOR parsing
         ciborium::from_reader(&buf[..])
             .map_err(|e| io::Error::new(io::ErrorKind::InvalidData, e.to_string()))

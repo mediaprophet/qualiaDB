@@ -110,8 +110,13 @@ mod tests {
     fn kinds_are_distinct_and_tag_free() {
         // Distinct kinds, and every kind is itself a pure 60-bit identifier (no tag spill).
         let kinds = [
-            KIND_DICTIONARY, KIND_WEBIZEN, KIND_DID_Q42, KIND_DID, KIND_CONTENT_HASH,
-            KIND_CLUSTER_NODE, HAS_MODALITY_KIND,
+            KIND_DICTIONARY,
+            KIND_WEBIZEN,
+            KIND_DID_Q42,
+            KIND_DID,
+            KIND_CONTENT_HASH,
+            KIND_CLUSTER_NODE,
+            HAS_MODALITY_KIND,
         ];
         for (i, a) in kinds.iter().enumerate() {
             assert_eq!(a >> 60, 0, "kind term must be a pure 60-bit identifier");

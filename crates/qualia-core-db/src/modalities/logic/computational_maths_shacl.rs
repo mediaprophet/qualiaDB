@@ -66,8 +66,8 @@ pub struct VectorCalculusConfiguration {
 /// `q42:ExactArithmeticConfiguration` — arbitrary-precision integer / rational parameters.
 #[derive(Debug, Clone)]
 pub struct ExactArithmeticConfiguration {
-    pub max_digits: u32, // precision ceiling
-    pub require_exact: bool, // no silent float fallback
+    pub max_digits: u32,            // precision ceiling
+    pub require_exact: bool,        // no silent float fallback
     pub allowed_types: Vec<String>, // ["bigint","bigrational"]
 }
 
@@ -75,7 +75,7 @@ pub struct ExactArithmeticConfiguration {
 /// limits, equation-solving, ODE/PDE, multivariable differentiation).
 #[derive(Debug, Clone)]
 pub struct SymbolicCalculusConfiguration {
-    pub max_order: u32, // Taylor / derivative order ceiling
+    pub max_order: u32,                       // Taylor / derivative order ceiling
     pub require_roundtrip_verification: bool, // the honesty gate (d/dx ∘ ∫, residual checks)
     pub allowed_operations: Vec<String>, // ["integrate","series","limit","solve","ode_solve","pde_classify","gradient","jacobian","hessian"]
 }
@@ -100,7 +100,9 @@ pub struct NumericalMethodConfiguration {
 
 impl UnitsConfiguration {
     pub fn to_opcodes(&self) -> Vec<SlgOpcode> {
-        vec![SlgOpcode::CheckMaxInclusive(self.dimension_components as f64)]
+        vec![SlgOpcode::CheckMaxInclusive(
+            self.dimension_components as f64,
+        )]
     }
 }
 impl NumberTheoryConfiguration {
@@ -131,7 +133,9 @@ impl IntegralTransformConfiguration {
 }
 impl VectorCalculusConfiguration {
     pub fn to_opcodes(&self) -> Vec<SlgOpcode> {
-        vec![SlgOpcode::CheckMaxInclusive(self.max_spatial_dimension as f64)]
+        vec![SlgOpcode::CheckMaxInclusive(
+            self.max_spatial_dimension as f64,
+        )]
     }
 }
 impl ExactArithmeticConfiguration {

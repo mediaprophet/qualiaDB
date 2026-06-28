@@ -148,16 +148,19 @@ pub fn serialize_matrix(matrix: &QuboMatrix) -> Vec<u8> {
 
 /// Publish a solved matrix to the WebTorrent Commons
 #[cfg(not(target_arch = "wasm32"))]
-pub fn publish_to_commons(matrix: &mut QuboMatrix, storage_path: &std::path::Path) -> Result<String, String> {
+pub fn publish_to_commons(
+    matrix: &mut QuboMatrix,
+    storage_path: &std::path::Path,
+) -> Result<String, String> {
     scrub_metadata(matrix);
     let bytes = serialize_matrix(matrix);
-    
+
     let commons_dir = storage_path.join("commons");
     std::fs::create_dir_all(&commons_dir).map_err(|e| e.to_string())?;
-    
+
     let file_path = commons_dir.join("quantum_cache.q42");
     std::fs::write(&file_path, bytes).map_err(|e| e.to_string())?;
-    
+
     let info_hash = crate::webtorrent_seeder::sha1_file(&file_path)?;
     let req = crate::webtorrent_seeder::RegisterSeedRequest {
         info_hash: info_hash.clone(),
@@ -166,14 +169,18 @@ pub fn publish_to_commons(matrix: &mut QuboMatrix, storage_path: &std::path::Pat
         ontology_id: "quantum_commons".to_string(),
         bandwidth_limit_kbps: 1024,
     };
-    
+
     // Check if there is an existing seed and deprecate it
     if let Some(_existing) = crate::webtorrent_seeder::lookup_seed(&info_hash) {
         crate::webtorrent_seeder::deprecate_seed(&info_hash);
     }
-    
+
     crate::webtorrent_seeder::register_seed(req)?;
-    Ok(crate::webtorrent_seeder::build_magnet_uri(&info_hash, "quantum_cache.q42", 4242))
+    Ok(crate::webtorrent_seeder::build_magnet_uri(
+        &info_hash,
+        "quantum_cache.q42",
+        4242,
+    ))
 }
 
 #[cfg(test)]
@@ -187,12 +194,15 @@ mod tests {
         // Inject mock personal URI data
         matrix.index_map.push((12345, 67890));
         matrix.index_count = 1;
-        
+
         // Scrub
         scrub_metadata(&mut matrix);
-        
+
         // Assert no traces of personal URIs
         assert_eq!(matrix.index_count, 0);
-        assert!(matrix.index_map.is_empty(), "Index map was not fully scrubbed!");
+        assert!(
+            matrix.index_map.is_empty(),
+            "Index map was not fully scrubbed!"
+        );
     }
 }

@@ -41,23 +41,36 @@ pub enum LoRAError {
     InvalidHeader,
     InvalidMagic,
     ChecksumMismatch,
-    DimensionMismatch { expected: (usize, usize), got: (usize, usize) },
+    DimensionMismatch {
+        expected: (usize, usize),
+        got: (usize, usize),
+    },
     AdapterNotFound(ContextType),
-    InferenceDimMismatch { input_len: usize, lora_n_in: usize },
+    InferenceDimMismatch {
+        input_len: usize,
+        lora_n_in: usize,
+    },
 }
 
 impl std::fmt::Display for LoRAError {
     fn fmt(&self, f: &mut std::fmt::Formatter<'_>) -> std::fmt::Result {
         match self {
-            LoRAError::Io(e)                  => write!(f, "LoRA I/O error: {e}"),
-            LoRAError::InvalidHeader          => write!(f, "LoRA header too short"),
-            LoRAError::InvalidMagic           => write!(f, "LoRA bad magic (expected LORA)"),
-            LoRAError::ChecksumMismatch       => write!(f, "LoRA checksum mismatch"),
-            LoRAError::DimensionMismatch { expected, got } =>
-                write!(f, "LoRA dimension mismatch: expected {expected:?}, got {got:?}"),
-            LoRAError::AdapterNotFound(ctx)   => write!(f, "LoRA adapter not found for {ctx}"),
-            LoRAError::InferenceDimMismatch { input_len, lora_n_in } =>
-                write!(f, "LoRA inference: input len {input_len} ≠ lora n_in {lora_n_in}"),
+            LoRAError::Io(e) => write!(f, "LoRA I/O error: {e}"),
+            LoRAError::InvalidHeader => write!(f, "LoRA header too short"),
+            LoRAError::InvalidMagic => write!(f, "LoRA bad magic (expected LORA)"),
+            LoRAError::ChecksumMismatch => write!(f, "LoRA checksum mismatch"),
+            LoRAError::DimensionMismatch { expected, got } => write!(
+                f,
+                "LoRA dimension mismatch: expected {expected:?}, got {got:?}"
+            ),
+            LoRAError::AdapterNotFound(ctx) => write!(f, "LoRA adapter not found for {ctx}"),
+            LoRAError::InferenceDimMismatch {
+                input_len,
+                lora_n_in,
+            } => write!(
+                f,
+                "LoRA inference: input len {input_len} ≠ lora n_in {lora_n_in}"
+            ),
         }
     }
 }
@@ -109,15 +122,15 @@ impl std::fmt::Debug for LoRATensor {
 
 #[derive(Debug, Clone)]
 pub struct LoRAMetadata {
-    pub name:       String,
-    pub version:    String,
+    pub name: String,
+    pub version: String,
     pub adapter_id: u8,
-    pub rank:       u32,
-    pub alpha:      f32,
-    pub n_in:       usize,
-    pub n_out:      usize,
-    pub checksum:   [u8; 32],
-    pub file_size:  usize,
+    pub rank: u32,
+    pub alpha: f32,
+    pub n_in: usize,
+    pub n_out: usize,
+    pub checksum: [u8; 32],
+    pub file_size: usize,
 }
 
 impl LoRAMetadata {
@@ -134,7 +147,7 @@ impl LoRAMetadata {
 #[derive(Debug, Clone)]
 pub struct LoRAAdapter {
     pub context_type: ContextType,
-    pub meta:         LoRAMetadata,
+    pub meta: LoRAMetadata,
     /// Down-projection: `[rank × n_in]`
     pub lora_a: LoRATensor,
     /// Up-projection: `[n_out × rank]`
@@ -149,12 +162,15 @@ impl LoRAAdapter {
     /// - `input`  must have length `meta.n_in`
     /// - `output` must have length `meta.n_out` (values are preserved and incremented)
     pub fn apply_cpu(&self, input: &[f32], output: &mut [f32]) -> Result<(), LoRAError> {
-        let n_in  = self.meta.n_in;
+        let n_in = self.meta.n_in;
         let n_out = self.meta.n_out;
-        let rank  = self.meta.rank as usize;
+        let rank = self.meta.rank as usize;
 
         if input.len() != n_in {
-            return Err(LoRAError::InferenceDimMismatch { input_len: input.len(), lora_n_in: n_in });
+            return Err(LoRAError::InferenceDimMismatch {
+                input_len: input.len(),
+                lora_n_in: n_in,
+            });
         }
 
         // Phase 1 — down-projection: z[rank] = A @ input
@@ -193,16 +209,16 @@ const MAGIC: [u8; 4] = *b"LORA";
 
 #[repr(C, packed)]
 struct RawHeader {
-    magic:      [u8; 4],
-    version:    u32,
+    magic: [u8; 4],
+    version: u32,
     adapter_id: u8,
-    _pad0:      [u8; 3],
-    rank:       u32,
+    _pad0: [u8; 3],
+    rank: u32,
     alpha_bits: u32, // f32 as raw bits (avoids packed f32 UB)
-    n_in:       u32,
-    n_out:      u32,
-    _pad1:      u32,
-    checksum:   [u8; 32],
+    n_in: u32,
+    n_out: u32,
+    _pad1: u32,
+    checksum: [u8; 32],
 }
 
 const _: () = assert!(std::mem::size_of::<RawHeader>() == HEADER_SIZE);
@@ -215,17 +231,15 @@ fn parse_adapter(data: &[u8], context_type: ContextType) -> Result<LoRAAdapter, 
     }
 
     // Safety: data is at least HEADER_SIZE bytes; RawHeader is repr(C, packed).
-    let hdr: RawHeader = unsafe {
-        std::ptr::read_unaligned(data.as_ptr() as *const RawHeader)
-    };
+    let hdr: RawHeader = unsafe { std::ptr::read_unaligned(data.as_ptr() as *const RawHeader) };
 
     if hdr.magic != MAGIC {
         return Err(LoRAError::InvalidMagic);
     }
 
-    let rank  = u32::from_le(hdr.rank)  as usize;
+    let rank = u32::from_le(hdr.rank) as usize;
     let alpha = f32::from_bits(u32::from_le(hdr.alpha_bits));
-    let n_in  = u32::from_le(hdr.n_in)  as usize;
+    let n_in = u32::from_le(hdr.n_in) as usize;
     let n_out = u32::from_le(hdr.n_out) as usize;
 
     let a_elems = rank * n_in;
@@ -235,7 +249,7 @@ fn parse_adapter(data: &[u8], context_type: ContextType) -> Result<LoRAAdapter, 
     if data.len() < HEADER_SIZE + payload_bytes {
         return Err(LoRAError::DimensionMismatch {
             expected: (a_elems + b_elems, 4),
-            got:      (data.len().saturating_sub(HEADER_SIZE), 4),
+            got: (data.len().saturating_sub(HEADER_SIZE), 4),
         });
     }
 
@@ -243,7 +257,7 @@ fn parse_adapter(data: &[u8], context_type: ContextType) -> Result<LoRAAdapter, 
 
     // Verify SHA-256 checksum over payload
     let expected = hdr.checksum;
-    let actual   = sha256(payload);
+    let actual = sha256(payload);
     if actual != expected {
         return Err(LoRAError::ChecksumMismatch);
     }
@@ -257,15 +271,15 @@ fn parse_adapter(data: &[u8], context_type: ContextType) -> Result<LoRAAdapter, 
     Ok(LoRAAdapter {
         context_type,
         meta: LoRAMetadata {
-            name:       format!("{}", context_type),
-            version:    format!("{}", u32::from_le(hdr.version)),
+            name: format!("{}", context_type),
+            version: format!("{}", u32::from_le(hdr.version)),
             adapter_id: hdr.adapter_id,
-            rank:       rank as u32,
+            rank: rank as u32,
             alpha,
             n_in,
             n_out,
-            checksum:   expected,
-            file_size:  data.len(),
+            checksum: expected,
+            file_size: data.len(),
         },
         lora_a,
         lora_b,
@@ -298,10 +312,10 @@ pub fn encode_adapter(
     adapter_id: u8,
     rank: u32,
     alpha: f32,
-    lora_a: &LoRATensor,   // [rank × n_in]
-    lora_b: &LoRATensor,   // [n_out × rank]
+    lora_a: &LoRATensor, // [rank × n_in]
+    lora_b: &LoRATensor, // [n_out × rank]
 ) -> Vec<u8> {
-    let n_in  = lora_a.cols;
+    let n_in = lora_a.cols;
     let n_out = lora_b.rows;
 
     let a_bytes: Vec<u8> = lora_a.data.iter().flat_map(|&f| f.to_le_bytes()).collect();
@@ -313,11 +327,11 @@ pub fn encode_adapter(
     let _ = context_type; // used for naming, not encoded in header
     let mut hdr = [0u8; HEADER_SIZE];
     hdr[0..4].copy_from_slice(&MAGIC);
-    hdr[4..8].copy_from_slice(&1u32.to_le_bytes());       // version
-    hdr[8]    = adapter_id;
+    hdr[4..8].copy_from_slice(&1u32.to_le_bytes()); // version
+    hdr[8] = adapter_id;
     hdr[12..16].copy_from_slice(&(rank as u32).to_le_bytes());
     hdr[16..20].copy_from_slice(&alpha.to_bits().to_le_bytes());
-    hdr[20..24].copy_from_slice(&(n_in  as u32).to_le_bytes());
+    hdr[20..24].copy_from_slice(&(n_in as u32).to_le_bytes());
     hdr[24..28].copy_from_slice(&(n_out as u32).to_le_bytes());
     hdr[32..64].copy_from_slice(&checksum);
 
@@ -329,14 +343,18 @@ pub fn encode_adapter(
 // ─── LruCache (no external crate) ────────────────────────────────────────────
 
 struct LruCache<K, V> {
-    cap:   usize,
+    cap: usize,
     store: HashMap<K, (V, u64)>,
     clock: u64,
 }
 
 impl<K: Eq + std::hash::Hash + Clone, V: Clone> LruCache<K, V> {
     fn new(cap: usize) -> Self {
-        Self { cap: cap.max(1), store: HashMap::new(), clock: 0 }
+        Self {
+            cap: cap.max(1),
+            store: HashMap::new(),
+            clock: 0,
+        }
     }
 
     fn get(&mut self, key: &K) -> Option<&V> {
@@ -354,7 +372,9 @@ impl<K: Eq + std::hash::Hash + Clone, V: Clone> LruCache<K, V> {
         self.clock += 1;
         if self.store.len() >= self.cap && !self.store.contains_key(&key) {
             // Evict LRU entry
-            let lru_key = self.store.iter()
+            let lru_key = self
+                .store
+                .iter()
                 .min_by_key(|(_, (_, ts))| ts)
                 .map(|(k, _)| k.clone());
             if let Some(k) = lru_key {
@@ -378,12 +398,12 @@ impl<K: Eq + std::hash::Hash + Clone, V: Clone> LruCache<K, V> {
 /// - An LRU cache of up to 10 loaded adapters (≈150 MB at 15 MB each)
 /// - The currently active adapter (fast path for repeated calls)
 pub struct LoRAAdapterManager {
-    adapter_dir:    PathBuf,
-    cache:          LruCache<ContextType, LoRAAdapter>,
+    adapter_dir: PathBuf,
+    cache: LruCache<ContextType, LoRAAdapter>,
     active_adapter: Option<LoRAAdapter>,
-    pub detector:   super::context_detector::ContextDetector,
+    pub detector: super::context_detector::ContextDetector,
     /// Expected embedding dimension — used for dim-check at apply time.
-    pub expected_n_in:  Option<usize>,
+    pub expected_n_in: Option<usize>,
     /// Expected hidden/output dimension — used for dim-check at apply time.
     pub expected_n_out: Option<usize>,
     /// Side-table: NQuin content-hash → active adapter ID.
@@ -402,7 +422,7 @@ impl LoRAAdapterManager {
             cache: LruCache::new(10),
             active_adapter: None,
             detector: super::context_detector::ContextDetector::new(),
-            expected_n_in:  None,
+            expected_n_in: None,
             expected_n_out: None,
             active_adapter_by_hash: std::collections::HashMap::new(),
         }
@@ -419,7 +439,7 @@ impl LoRAAdapterManager {
     /// Hint the expected input/output dimensions so that mis-shaped adapters
     /// are rejected early rather than causing panic in `apply_cpu`.
     pub fn set_expected_dims(&mut self, n_in: usize, n_out: usize) {
-        self.expected_n_in  = Some(n_in);
+        self.expected_n_in = Some(n_in);
         self.expected_n_out = Some(n_out);
     }
 
@@ -476,7 +496,7 @@ impl LoRAAdapterManager {
             if adapter.meta.n_in != n_in {
                 return Err(LoRAError::DimensionMismatch {
                     expected: (n_in, adapter.meta.n_out),
-                    got:      (adapter.meta.n_in, adapter.meta.n_out),
+                    got: (adapter.meta.n_in, adapter.meta.n_out),
                 });
             }
         }
@@ -489,11 +509,7 @@ impl LoRAAdapterManager {
     /// Detect context from `prompt` and switch adapter if confidence exceeds `threshold`.
     ///
     /// Returns `(context_type, confidence, switched)`.
-    pub fn auto_switch(
-        &mut self,
-        prompt:    &str,
-        threshold: f32,
-    ) -> (ContextType, f32, bool) {
+    pub fn auto_switch(&mut self, prompt: &str, threshold: f32) -> (ContextType, f32, bool) {
         let (ctx, conf) = self.detect_context(prompt);
 
         if conf < threshold {
@@ -513,7 +529,7 @@ impl LoRAAdapterManager {
     pub fn apply_active(&self, input: &[f32], output: &mut [f32]) -> Result<(), LoRAError> {
         match &self.active_adapter {
             Some(a) => a.apply_cpu(input, output),
-            None    => Ok(()),
+            None => Ok(()),
         }
     }
 
@@ -540,8 +556,8 @@ impl LoRAAdapterManager {
         #[cfg(not(target_arch = "wasm32"))]
         {
             use std::fs::File;
-            let file = File::open(&path)
-                .map_err(|e| LoRAError::Io(format!("{}: {e}", path.display())))?;
+            let file =
+                File::open(&path).map_err(|e| LoRAError::Io(format!("{}: {e}", path.display())))?;
             let mmap = unsafe { memmap2::MmapOptions::new().map(&file) }
                 .map_err(|e| LoRAError::Io(format!("mmap {}: {e}", path.display())))?;
             parse_adapter(&mmap, ctx)
@@ -567,30 +583,33 @@ impl LoRAAdapterManager {
     /// Persist an adapter to disk in the `.lora` binary format.
     pub fn save_adapter(
         &self,
-        ctx:     ContextType,
+        ctx: ContextType,
         adapter: &LoRAAdapter,
     ) -> Result<PathBuf, LoRAError> {
         let path = self.adapter_path(ctx);
         if let Some(parent) = path.parent() {
-            std::fs::create_dir_all(parent)
-                .map_err(|e| LoRAError::Io(e.to_string()))?;
+            std::fs::create_dir_all(parent).map_err(|e| LoRAError::Io(e.to_string()))?;
         }
-        let bytes = encode_adapter(ctx, adapter.meta.adapter_id,
-                                   adapter.meta.rank, adapter.meta.alpha,
-                                   &adapter.lora_a, &adapter.lora_b);
-        std::fs::write(&path, &bytes)
-            .map_err(|e| LoRAError::Io(e.to_string()))?;
+        let bytes = encode_adapter(
+            ctx,
+            adapter.meta.adapter_id,
+            adapter.meta.rank,
+            adapter.meta.alpha,
+            &adapter.lora_a,
+            &adapter.lora_b,
+        );
+        std::fs::write(&path, &bytes).map_err(|e| LoRAError::Io(e.to_string()))?;
         Ok(path)
     }
 
     /// Build a synthetic adapter populated with Kaiming-uniform A / zero B weights.
     /// Used for fine-tuning initialisation and test harness.
     pub fn build_synthetic(
-        ctx:       ContextType,
-        rank:      u32,
-        alpha:     f32,
-        n_in:      usize,
-        n_out:     usize,
+        ctx: ContextType,
+        rank: u32,
+        alpha: f32,
+        n_in: usize,
+        n_out: usize,
         adapter_id: u8,
     ) -> LoRAAdapter {
         let scale = (2.0 / n_in as f32).sqrt();
@@ -598,7 +617,8 @@ impl LoRAAdapterManager {
         let seed_a: Box<[f32]> = (0..rank as usize * n_in)
             .map(|i| {
                 // Deterministic pseudo-random without rand dep: LCG
-                let x = (i as u64).wrapping_mul(6364136223846793005)
+                let x = (i as u64)
+                    .wrapping_mul(6364136223846793005)
                     .wrapping_add(1442695040888963407);
                 let frac = (x >> 32) as f32 / u32::MAX as f32; // [0, 1)
                 (frac * 2.0 - 1.0) * scale
@@ -614,15 +634,15 @@ impl LoRAAdapterManager {
         LoRAAdapter {
             context_type: ctx,
             meta: LoRAMetadata {
-                name:       ctx.to_string(),
-                version:    "synthetic".to_string(),
+                name: ctx.to_string(),
+                version: "synthetic".to_string(),
                 adapter_id,
                 rank,
                 alpha,
                 n_in,
                 n_out,
-                checksum:   [0u8; 32],
-                file_size:  0,
+                checksum: [0u8; 32],
+                file_size: 0,
             },
             lora_a,
             lora_b,
@@ -638,14 +658,19 @@ mod tests {
 
     fn make_adapter(rank: u32, n_in: usize, n_out: usize) -> LoRAAdapter {
         LoRAAdapterManager::build_synthetic(
-            ContextType::Technical, rank, rank as f32, n_in, n_out, 5,
+            ContextType::Technical,
+            rank,
+            rank as f32,
+            n_in,
+            n_out,
+            5,
         )
     }
 
     #[test]
     fn test_apply_cpu_shape() {
         let adapter = make_adapter(4, 16, 32);
-        let input  = vec![1.0f32; 16];
+        let input = vec![1.0f32; 16];
         let mut out = vec![0.0f32; 32];
         adapter.apply_cpu(&input, &mut out).unwrap();
         // lora_b is zeroed → delta = 0; output stays all-zero
@@ -655,17 +680,23 @@ mod tests {
     #[test]
     fn test_apply_cpu_nonzero() {
         // Build adapter with non-zero lora_b so we can check the delta path
-        let rank  = 2usize;
-        let n_in  = 4;
+        let rank = 2usize;
+        let n_in = 4;
         let n_out = 4;
         let lora_a = LoRATensor::new(vec![1.0; rank * n_in].into_boxed_slice(), rank, n_in);
         let lora_b = LoRATensor::new(vec![1.0; n_out * rank].into_boxed_slice(), n_out, rank);
         let adapter = LoRAAdapter {
             context_type: ContextType::Technical,
             meta: LoRAMetadata {
-                name: "test".into(), version: "0".into(), adapter_id: 0,
-                rank: rank as u32, alpha: rank as f32,
-                n_in, n_out, checksum: [0; 32], file_size: 0,
+                name: "test".into(),
+                version: "0".into(),
+                adapter_id: 0,
+                rank: rank as u32,
+                alpha: rank as f32,
+                n_in,
+                n_out,
+                checksum: [0; 32],
+                file_size: 0,
             },
             lora_a,
             lora_b,
@@ -686,7 +717,7 @@ mod tests {
     #[test]
     fn test_roundtrip_encode_parse() {
         let adapter = make_adapter(4, 8, 16);
-        let bytes   = encode_adapter(
+        let bytes = encode_adapter(
             ContextType::Technical,
             adapter.meta.adapter_id,
             adapter.meta.rank,
@@ -695,24 +726,33 @@ mod tests {
             &adapter.lora_b,
         );
         let parsed = parse_adapter(&bytes, ContextType::Technical).unwrap();
-        assert_eq!(parsed.meta.rank,  adapter.meta.rank);
-        assert_eq!(parsed.meta.n_in,  adapter.meta.n_in);
+        assert_eq!(parsed.meta.rank, adapter.meta.rank);
+        assert_eq!(parsed.meta.n_in, adapter.meta.n_in);
         assert_eq!(parsed.meta.n_out, adapter.meta.n_out);
         assert_eq!(parsed.lora_a.data.len(), adapter.lora_a.data.len());
         for (a, b) in parsed.lora_a.data.iter().zip(adapter.lora_a.data.iter()) {
-            assert!((a - b).abs() < 1e-6, "A matrix roundtrip mismatch: {a} vs {b}");
+            assert!(
+                (a - b).abs() < 1e-6,
+                "A matrix roundtrip mismatch: {a} vs {b}"
+            );
         }
     }
 
     #[test]
     fn test_bad_magic_rejected() {
         let mut bytes = encode_adapter(
-            ContextType::Medical, 0, 4, 1.0,
+            ContextType::Medical,
+            0,
+            4,
+            1.0,
             &LoRATensor::new(vec![0.0f32; 4].into_boxed_slice(), 1, 4),
             &LoRATensor::new(vec![0.0f32; 4].into_boxed_slice(), 4, 1),
         );
         bytes[0] = b'X'; // corrupt magic
-        assert!(matches!(parse_adapter(&bytes, ContextType::Medical), Err(LoRAError::InvalidMagic)));
+        assert!(matches!(
+            parse_adapter(&bytes, ContextType::Medical),
+            Err(LoRAError::InvalidMagic)
+        ));
     }
 
     #[test]
@@ -726,20 +766,25 @@ mod tests {
         // ever reaches the checksum.  rank=1 makes header and payload agree so the
         // checksum is actually verified, and the byte flip produces ChecksumMismatch.
         let mut bytes = encode_adapter(
-            ContextType::Medical, 0, 1, 1.0,
+            ContextType::Medical,
+            0,
+            1,
+            1.0,
             &LoRATensor::new(vec![0.0f32; 4].into_boxed_slice(), 1, 4),
             &LoRATensor::new(vec![0.0f32; 4].into_boxed_slice(), 4, 1),
         );
         // Flip a payload byte to corrupt the data without touching the stored checksum
         *bytes.last_mut().unwrap() ^= 0xFF;
-        assert!(matches!(parse_adapter(&bytes, ContextType::Medical), Err(LoRAError::ChecksumMismatch)));
+        assert!(matches!(
+            parse_adapter(&bytes, ContextType::Medical),
+            Err(LoRAError::ChecksumMismatch)
+        ));
     }
 
     #[test]
     fn test_synthetic_output_zeroed_initially() {
-        let adapter = LoRAAdapterManager::build_synthetic(
-            ContextType::Biological, 8, 8.0, 32, 64, 4,
-        );
+        let adapter =
+            LoRAAdapterManager::build_synthetic(ContextType::Biological, 8, 8.0, 32, 64, 4);
         // lora_b is all-zero → delta is always zero regardless of input
         let input = vec![1.0f32; 32];
         let mut out = vec![0.0f32; 64];
@@ -754,7 +799,7 @@ mod tests {
         cache.put(2, 20);
         cache.put(3, 30);
         let _ = cache.get(&1); // touch 1 so 2 is now LRU
-        cache.put(4, 40);      // evicts 2 (LRU)
+        cache.put(4, 40); // evicts 2 (LRU)
         assert!(!cache.contains(&2));
         assert!(cache.contains(&1));
         assert!(cache.contains(&3));

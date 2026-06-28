@@ -63,7 +63,9 @@ pub struct StreamHasher {
 
 impl StreamHasher {
     pub fn new() -> Self {
-        Self { inner: blake3::Hasher::new() }
+        Self {
+            inner: blake3::Hasher::new(),
+        }
     }
     /// Feed the next chunk.
     pub fn update(&mut self, chunk: &[u8]) {
@@ -101,7 +103,14 @@ mod tests {
     use super::*;
 
     fn quin(s: u64, o: u64) -> NQuin {
-        let mut q = NQuin { subject: s, predicate: 7, object: o, context: 0, metadata: 0, parity: 0 };
+        let mut q = NQuin {
+            subject: s,
+            predicate: 7,
+            object: o,
+            context: 0,
+            metadata: 0,
+            parity: 0,
+        };
         q.parity = q.subject ^ q.predicate ^ q.object ^ q.context;
         q
     }
@@ -119,7 +128,10 @@ mod tests {
         let blob = b"original media";
         let tag = media_tag(blob);
         assert!(verify_binding(blob, tag), "intact media verifies");
-        assert!(!verify_binding(b"tampered media", tag), "any edit breaks the binding");
+        assert!(
+            !verify_binding(b"tampered media", tag),
+            "any edit breaks the binding"
+        );
     }
 
     #[test]
@@ -138,8 +150,15 @@ mod tests {
         let b = media_tag(b"leaf-b");
         let root = merkle_node(&[a, b]);
         assert!(verify_merkle_node(root, &[a, b]));
-        assert_ne!(merkle_node(&[a, b]), merkle_node(&[b, a]), "order matters in a DAG");
-        assert!(!verify_merkle_node(root, &[a, media_tag(b"tampered")]), "any child change breaks it");
+        assert_ne!(
+            merkle_node(&[a, b]),
+            merkle_node(&[b, a]),
+            "order matters in a DAG"
+        );
+        assert!(
+            !verify_merkle_node(root, &[a, media_tag(b"tampered")]),
+            "any child change breaks it"
+        );
     }
 
     #[test]
@@ -149,7 +168,11 @@ mod tests {
         sh.update(&blob[..10]);
         sh.update(&blob[10..30]);
         sh.update(&blob[30..]);
-        assert_eq!(sh.finalize(), media_tag(blob), "streaming == one-shot media_tag");
+        assert_eq!(
+            sh.finalize(),
+            media_tag(blob),
+            "streaming == one-shot media_tag"
+        );
     }
 
     #[test]

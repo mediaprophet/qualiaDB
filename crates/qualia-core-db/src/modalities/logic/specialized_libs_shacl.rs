@@ -11,19 +11,19 @@ use crate::webizen::SlgOpcode;
 /// `q42:MatrixConfiguration` — validates matrix storage and computation configuration
 #[derive(Debug, Clone)]
 pub struct MatrixConfiguration {
-    pub max_matrix_size: u64,        // Maximum matrix dimension
-    pub max_zone_capacity: u64,      // Maximum zone capacity in bytes
+    pub max_matrix_size: u64,            // Maximum matrix dimension
+    pub max_zone_capacity: u64,          // Maximum zone capacity in bytes
     pub allowed_zone_types: Vec<String>, // ["Dense", "Sparse", "Structured", "Temporary"]
-    pub require_zero_copy: bool,     // Require zero-copy operations
+    pub require_zero_copy: bool,         // Require zero-copy operations
 }
 
 /// `q42:MatrixOperation` — validates matrix operation parameters
 #[derive(Debug, Clone)]
 pub struct MatrixOperation {
-    pub operation_type: String,     // "multiply", "add", "subtract", "invert", etc.
-    pub max_condition_number: f64,  // Maximum allowed condition number
+    pub operation_type: String, // "multiply", "add", "subtract", "invert", etc.
+    pub max_condition_number: f64, // Maximum allowed condition number
     pub require_numerical_stability: bool,
-    pub precision_mode: String,     // "f32", "f64", "f128"
+    pub precision_mode: String, // "f32", "f64", "f128"
 }
 
 /// `q42:EigenDecomposition` — validates eigenvalue decomposition parameters
@@ -31,46 +31,46 @@ pub struct MatrixOperation {
 pub struct EigenDecomposition {
     pub max_iterations: u32,
     pub convergence_tolerance: f64,
-    pub require_hermitian: bool,    // For real eigenvalues
-    pub algorithm_type: String,     // "qr", "power", "jacobi"
+    pub require_hermitian: bool, // For real eigenvalues
+    pub algorithm_type: String,  // "qr", "power", "jacobi"
 }
 
 /// `q42:PolynomialSolve` — validates polynomial root-finding parameters
 #[derive(Debug, Clone)]
 pub struct PolynomialSolveConfiguration {
-    pub max_degree: u32,            // Maximum polynomial degree
-    pub method: String,            // "quadratic_closed_form", "durand_kerner", "companion"
-    pub max_iterations: u32,        // Iteration cap for iterative methods
+    pub max_degree: u32,     // Maximum polynomial degree
+    pub method: String,      // "quadratic_closed_form", "durand_kerner", "companion"
+    pub max_iterations: u32, // Iteration cap for iterative methods
 }
 
 /// `q42:SingularValueDecomposition` — validates SVD parameters
 #[derive(Debug, Clone)]
 pub struct SvdConfiguration {
-    pub max_dimension: u32,         // Maximum of m, n
-    pub compute_vectors: bool,      // Whether U/V are returned
-    pub method: String,            // "ata_eigen", "golub_reinsch"
+    pub max_dimension: u32,    // Maximum of m, n
+    pub compute_vectors: bool, // Whether U/V are returned
+    pub method: String,        // "ata_eigen", "golub_reinsch"
 }
 
 /// `q42:Determinant` — validates determinant computation parameters
 #[derive(Debug, Clone)]
 pub struct DeterminantConfiguration {
-    pub max_dimension: u32,         // Maximum n for an n×n matrix
-    pub method: String,            // "lu", "cofactor"
+    pub max_dimension: u32, // Maximum n for an n×n matrix
+    pub method: String,     // "lu", "cofactor"
 }
 
 /// `q42:SymbolicExpression` — validates symbolic (CAS) expression structure
 #[derive(Debug, Clone)]
 pub struct SymbolicExpressionConfiguration {
-    pub max_depth: u32,            // Maximum expression-tree depth
-    pub max_variables: u32,        // Maximum distinct variables
+    pub max_depth: u32,                 // Maximum expression-tree depth
+    pub max_variables: u32,             // Maximum distinct variables
     pub allowed_operators: Vec<String>, // ["add","sub","mul","div","pow","neg","sqrt"]
 }
 
 /// `q42:SymbolicOperation` — validates a symbolic algebra operation request
 #[derive(Debug, Clone)]
 pub struct SymbolicOperationConfiguration {
-    pub operation_type: String,     // "differentiate","simplify","expand","evaluate","solve","factor"
-    pub max_iterations: u32,        // Simplification fixpoint bound
+    pub operation_type: String, // "differentiate","simplify","expand","evaluate","solve","factor"
+    pub max_iterations: u32,    // Simplification fixpoint bound
 }
 
 // ── Machine Learning Constraints ─────────────────────────────────────────────
@@ -78,10 +78,10 @@ pub struct SymbolicOperationConfiguration {
 /// `q42:ModelConfiguration` — validates ML model configuration
 #[derive(Debug, Clone)]
 pub struct ModelConfiguration {
-    pub max_model_size_mb: u64,     // Maximum model size in MB
-    pub max_parameters: u64,        // Maximum number of parameters
+    pub max_model_size_mb: u64,           // Maximum model size in MB
+    pub max_parameters: u64,              // Maximum number of parameters
     pub allowed_model_types: Vec<String>, // ["neural_network", "decision_tree", "svm", etc.]
-    pub require_quantization: bool, // Require model quantization
+    pub require_quantization: bool,       // Require model quantization
 }
 
 /// `q42:TrainingConfiguration` — validates training hyperparameters
@@ -112,7 +112,7 @@ pub struct SimulationConfiguration {
     pub max_spatial_resolution: u32,
     pub allowed_time_integrators: Vec<String>, // ["euler", "runge_kutta", "verlet"]
     pub require_energy_conservation: bool,
-    pub max_cfl_number: f64,       // Courant-Friedrichs-Lewy condition
+    pub max_cfl_number: f64, // Courant-Friedrichs-Lewy condition
 }
 
 /// `q42:BoundaryConditions` — validates boundary condition parameters
@@ -127,7 +127,7 @@ pub struct BoundaryConditions {
 #[derive(Debug, Clone)]
 pub struct MeshConfiguration {
     pub max_elements: u64,
-    pub min_element_quality: f64,  // Aspect ratio, skewness, etc.
+    pub min_element_quality: f64, // Aspect ratio, skewness, etc.
     pub allowed_element_types: Vec<String>, // ["triangle", "quad", "tetrahedron", "hexahedron"]
     pub require_manifold: bool,
 }
@@ -186,7 +186,7 @@ pub struct ClinicalDecisionConfiguration {
 #[derive(Debug, Clone)]
 pub struct MedicalImagingConfiguration {
     pub allowed_modalities: Vec<String>, // ["mri", "ct", "xray", "ultrasound"]
-    pub max_resolution: (u32, u32),    // (width, height)
+    pub max_resolution: (u32, u32),      // (width, height)
     pub require_dicom_compliance: bool,
     pub max_file_size_mb: u64,
 }
@@ -235,7 +235,7 @@ pub struct EngineeringSimulationConfiguration {
 #[derive(Debug, Clone)]
 pub struct MaterialProperties {
     pub allowed_material_types: Vec<String>, // ["metal", "polymer", "ceramic", "composite"]
-    pub require_standard_compliance: bool, // ASTM, ISO, etc.
+    pub require_standard_compliance: bool,   // ASTM, ISO, etc.
     pub max_temperature_kelvin: f64,
     pub min_safety_factor: f64,
 }
@@ -290,7 +290,7 @@ pub struct CryptographicConfiguration {
 /// `q42:KeyManagementConfiguration` — validates key management parameters
 #[derive(Debug, Clone)]
 pub struct KeyManagementConfiguration {
-    pub require_hsm: bool,                // Hardware Security Module
+    pub require_hsm: bool,              // Hardware Security Module
     pub allowed_key_types: Vec<String>, // ["symmetric", "asymmetric", "hash"]
     pub max_key_lifetime_days: u32,
     pub require_key_rotation: bool,

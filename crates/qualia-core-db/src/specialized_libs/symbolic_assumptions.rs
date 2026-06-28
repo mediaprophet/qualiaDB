@@ -9,9 +9,7 @@
 //! needed sign from the assumptions (see [`Assumptions::is_positive`] etc.); when the sign
 //! cannot be established the node is left untouched (fail-closed: never an unsound rewrite).
 
-use super::symbolic_algebra::{
-    add, c, ln, mul, neg, pow, simplify, sqrt, Expr,
-};
+use super::symbolic_algebra::{add, c, ln, mul, neg, pow, simplify, sqrt, Expr};
 use std::collections::HashMap;
 
 /// A sign / domain assumption about a single variable.
@@ -37,7 +35,9 @@ pub struct Assumptions {
 
 impl Assumptions {
     pub fn new() -> Self {
-        Self { signs: HashMap::new() }
+        Self {
+            signs: HashMap::new(),
+        }
     }
 
     /// Assert a sign for `var`. Builder-style (chainable).
@@ -84,8 +84,10 @@ impl Assumptions {
                 (self.is_positive(a) && self.is_positive(b))
                     || (self.is_negative(a) && self.is_negative(b))
             }
-            Expr::Add(a, b) => self.is_positive(a) && self.is_nonnegative(b)
-                || self.is_nonnegative(a) && self.is_positive(b),
+            Expr::Add(a, b) => {
+                self.is_positive(a) && self.is_nonnegative(b)
+                    || self.is_nonnegative(a) && self.is_positive(b)
+            }
             Expr::Neg(a) => self.is_negative(a),
             _ => false,
         }
@@ -206,17 +208,23 @@ fn rewrite(e: &Expr, asm: &Assumptions) -> Expr {
 
 #[cfg(test)]
 mod tests {
-    use super::*;
     use super::super::symbolic_algebra::{c, exp, mul, pow, sqrt, var};
+    use super::*;
 
     #[test]
     fn sqrt_of_square_uses_sign() {
         // √(x²) → x when x ≥ 0.
         let pos = Assumptions::new().assume("x", Sign::Positive);
-        assert_eq!(simplify_with_assumptions(&sqrt(pow(var("x"), 2)), &pos), var("x"));
+        assert_eq!(
+            simplify_with_assumptions(&sqrt(pow(var("x"), 2)), &pos),
+            var("x")
+        );
         // → −x when x ≤ 0.
         let neg_x = Assumptions::new().assume("x", Sign::Negative);
-        assert_eq!(simplify_with_assumptions(&sqrt(pow(var("x"), 2)), &neg_x), neg(var("x")));
+        assert_eq!(
+            simplify_with_assumptions(&sqrt(pow(var("x"), 2)), &neg_x),
+            neg(var("x"))
+        );
         // Unknown sign → left as √(x²) (no unsound rewrite).
         let unknown = Assumptions::new();
         let s = simplify_with_assumptions(&sqrt(pow(var("x"), 2)), &unknown);
@@ -227,7 +235,10 @@ mod tests {
     fn sqrt_square_inverse() {
         // (√x)² → x when x ≥ 0.
         let asm = Assumptions::new().assume("x", Sign::NonNegative);
-        assert_eq!(simplify_with_assumptions(&pow(sqrt(var("x")), 2), &asm), var("x"));
+        assert_eq!(
+            simplify_with_assumptions(&pow(sqrt(var("x")), 2), &asm),
+            var("x")
+        );
     }
 
     #[test]

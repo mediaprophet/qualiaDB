@@ -8,11 +8,11 @@ pub const MAX_BAYESIAN_NODES: usize = 32;
 
 #[derive(Debug, Clone, Copy, PartialEq)]
 pub struct BayesianNode {
-    pub id: u64, // Variable hash
+    pub id: u64,              // Variable hash
     pub parent_ids: [u64; 4], // Max 4 parents to keep it fixed size
     pub num_parents: usize,
     pub probabilities: [f32; 16], // 2^4 = 16 conditional probabilities
-    pub evidence: Option<bool>, // Observed state if any
+    pub evidence: Option<bool>,   // Observed state if any
 }
 
 impl Default for BayesianNode {
@@ -82,17 +82,17 @@ impl BayesianNetwork {
         }
 
         let num_assignments = 1 << num_unobserved;
-        
+
         let mut prob_target_true = 0.0;
         let mut prob_target_false = 0.0;
 
         for assignment in 0..num_assignments {
             for target_state in [true, false] {
                 let mut joint_prob = 1.0;
-                
+
                 for i in 0..self.num_nodes {
                     let node = &self.nodes[i];
-                    
+
                     let state = if i == target_idx {
                         target_state
                     } else if let Some(e) = node.evidence {
@@ -135,16 +135,16 @@ impl BayesianNetwork {
                             parent_idx |= 1 << p;
                         }
                     }
-                    
+
                     let p_node = if state {
                         node.probabilities[parent_idx]
                     } else {
                         1.0 - node.probabilities[parent_idx]
                     };
-                    
+
                     joint_prob *= p_node;
                 }
-                
+
                 if target_state {
                     prob_target_true += joint_prob;
                 } else {
@@ -209,7 +209,11 @@ impl BayesianNetwork {
             }
         }
         let pt = node.probabilities[parent_idx];
-        if state { pt } else { 1.0 - pt }
+        if state {
+            pt
+        } else {
+            1.0 - pt
+        }
     }
 
     /// Unnormalised `P(node_idx = state | rest)` ∝ `P(node|parents) · Π_children P(child|parents)`
@@ -299,7 +303,7 @@ mod tests {
     #[test]
     fn test_bayesian_network() {
         let mut network = BayesianNetwork::new();
-        
+
         // Node 0: Rain (no parents, P(Rain)=0.2)
         let mut node0 = BayesianNode::default();
         node0.id = 100;
@@ -332,14 +336,14 @@ mod tests {
         node2.probabilities[1] = 0.8;
         node2.probabilities[2] = 0.9;
         node2.probabilities[3] = 0.99;
-        
+
         // Let's observe the grass is wet
         node2.evidence = Some(true);
         network.add_node(node2).unwrap();
 
         // Query: What is probability it rained, given grass is wet?
         let p_rain = network.update_beliefs(100).unwrap();
-        
+
         // Approximate expected result: P(Rain|Wet) ≈ 0.3577
         assert!((p_rain - 0.3577).abs() < 0.001);
     }
@@ -362,7 +366,9 @@ mod tests {
         n2.parent_ids[0] = 100;
         n2.parent_ids[1] = 200;
         n2.num_parents = 2;
-        n2.probabilities = [0.0, 0.8, 0.9, 0.99, 0.0, 0.0, 0.0, 0.0, 0.0, 0.0, 0.0, 0.0, 0.0, 0.0, 0.0, 0.0];
+        n2.probabilities = [
+            0.0, 0.8, 0.9, 0.99, 0.0, 0.0, 0.0, 0.0, 0.0, 0.0, 0.0, 0.0, 0.0, 0.0, 0.0, 0.0,
+        ];
         if with_wet_evidence {
             n2.evidence = Some(true);
         }
@@ -385,7 +391,10 @@ mod tests {
         let net = sprinkler(true);
         let exact = net.update_beliefs(100).unwrap(); // ≈ 0.3577
         let approx = net.gibbs_estimate(100, 40_000, 0x9E3779B97F4A7C15).unwrap();
-        assert!((approx - exact).abs() < 0.08, "Gibbs {approx} should approximate exact {exact}");
+        assert!(
+            (approx - exact).abs() < 0.08,
+            "Gibbs {approx} should approximate exact {exact}"
+        );
     }
 
     #[test]

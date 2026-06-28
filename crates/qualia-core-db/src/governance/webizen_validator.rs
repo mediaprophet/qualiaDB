@@ -13,14 +13,14 @@ use std::collections::HashSet;
 
 const OP_MATCH_SUBJ: u8 = 0x01;
 const OP_MATCH_PRED: u8 = 0x02;
-const OP_MATCH_OBJ:  u8 = 0x03;
+const OP_MATCH_OBJ: u8 = 0x03;
 
-const OP_BIND_VAR: u8   = 0x10;
+const OP_BIND_VAR: u8 = 0x10;
 const SLOT_SUBJ: u8 = 0x00;
 const SLOT_PRED: u8 = 0x01;
-const SLOT_OBJ: u8  = 0x02;
+const SLOT_OBJ: u8 = 0x02;
 
-const OP_HALT: u8       = 0xFF;
+const OP_HALT: u8 = 0xFF;
 
 /// Stack-allocated register file for bound variable hashes (max 16 variables).
 #[derive(Debug, Default)]
@@ -55,33 +55,41 @@ pub fn execute_query_program(program: &[u8], dataset: &[NQuin]) -> Result<Vec<u6
 
         match opcode {
             OP_MATCH_SUBJ => {
-                if pc + 8 > program.len() { return Err("Unexpected EOF in OP_MATCH_SUBJ"); }
-                let target_hash = u64::from_le_bytes(program[pc..pc+8].try_into().unwrap());
+                if pc + 8 > program.len() {
+                    return Err("Unexpected EOF in OP_MATCH_SUBJ");
+                }
+                let target_hash = u64::from_le_bytes(program[pc..pc + 8].try_into().unwrap());
                 pc += 8;
                 candidate_set.retain(|quin| quin.subject == target_hash);
             }
             OP_MATCH_PRED => {
-                if pc + 8 > program.len() { return Err("Unexpected EOF in OP_MATCH_PRED"); }
-                let target_hash = u64::from_le_bytes(program[pc..pc+8].try_into().unwrap());
+                if pc + 8 > program.len() {
+                    return Err("Unexpected EOF in OP_MATCH_PRED");
+                }
+                let target_hash = u64::from_le_bytes(program[pc..pc + 8].try_into().unwrap());
                 pc += 8;
                 candidate_set.retain(|quin| quin.predicate == target_hash);
             }
             OP_MATCH_OBJ => {
-                if pc + 8 > program.len() { return Err("Unexpected EOF in OP_MATCH_OBJ"); }
-                let target_hash = u64::from_le_bytes(program[pc..pc+8].try_into().unwrap());
+                if pc + 8 > program.len() {
+                    return Err("Unexpected EOF in OP_MATCH_OBJ");
+                }
+                let target_hash = u64::from_le_bytes(program[pc..pc + 8].try_into().unwrap());
                 pc += 8;
                 candidate_set.retain(|quin| quin.object == target_hash);
             }
             OP_BIND_VAR => {
-                if pc + 2 > program.len() { return Err("Unexpected EOF in OP_BIND_VAR"); }
-                let slot   = program[pc];
+                if pc + 2 > program.len() {
+                    return Err("Unexpected EOF in OP_BIND_VAR");
+                }
+                let slot = program[pc];
                 let reg_id = program[pc + 1];
                 pc += 2;
                 if let Some(q) = candidate_set.first() {
                     let value = match slot {
                         SLOT_SUBJ => q.subject,
                         SLOT_PRED => q.predicate,
-                        SLOT_OBJ  => q.object,
+                        SLOT_OBJ => q.object,
                         _ => return Err("Invalid slot identifier"),
                     };
                     registers.bind(reg_id, value);
@@ -267,9 +275,7 @@ impl WebValidator {
             if rule.context_id == 0 || rule.context_id == context_id {
                 if let WebRuleType::Structural = rule.rule_type {
                     if components[0] == 0 || components[1] == 0 || components[2] == 0 {
-                        return WebVerdict::Fail(
-                            "Embedded triple has zero component".to_string(),
-                        );
+                        return WebVerdict::Fail("Embedded triple has zero component".to_string());
                     }
                 }
             }
@@ -300,7 +306,8 @@ impl WebRuleStorage {
     const RULE_FLAG: u64 = 0x1 << 62;
 
     pub fn rules_to_quins(rules: &[WebRule]) -> Vec<NQuin> {
-        rules.iter()
+        rules
+            .iter()
             .map(|rule| NQuin {
                 subject: rule.rule_id,
                 predicate: (rule.rule_type as u64) << 8 | (rule.context_id & 0xFF),
@@ -315,7 +322,8 @@ impl WebRuleStorage {
     }
 
     pub fn quins_to_rules(quins: &[NQuin]) -> Vec<WebRule> {
-        quins.iter()
+        quins
+            .iter()
             .filter(|q| q.metadata & Self::RULE_FLAG != 0)
             .map(|q| {
                 let rule_type = match (q.predicate >> 8) % 4 {
@@ -352,7 +360,12 @@ mod tests {
     fn validator_no_rules_needs_no_validation() {
         let validator = WebValidator::new();
         assert!(!validator.needs_validation(&NQuin {
-            subject: 1, predicate: 2, object: 3, context: 0, metadata: 0, parity: 0
+            subject: 1,
+            predicate: 2,
+            object: 3,
+            context: 0,
+            metadata: 0,
+            parity: 0
         }));
     }
 
@@ -364,7 +377,12 @@ mod tests {
             .with_context(789);
         validator.add_rule(rule);
         let quin = NQuin {
-            subject: 1, predicate: 456, object: 3, context: 789, metadata: 0, parity: 0
+            subject: 1,
+            predicate: 456,
+            object: 3,
+            context: 789,
+            metadata: 0,
+            parity: 0,
         };
         assert!(validator.needs_validation(&quin));
     }
@@ -374,7 +392,10 @@ mod tests {
         let mut validator = WebValidator::new();
         validator.set_confidence_threshold(0.5);
         let quin = NQuin {
-            subject: 1, predicate: 2, object: 3, context: 0,
+            subject: 1,
+            predicate: 2,
+            object: 3,
+            context: 0,
             metadata: u32::MAX as u64,
             parity: 0,
         };
@@ -386,7 +407,12 @@ mod tests {
         let mut validator = WebValidator::new();
         validator.set_confidence_threshold(0.5);
         let quin = NQuin {
-            subject: 1, predicate: 2, object: 3, context: 0, metadata: 0, parity: 0
+            subject: 1,
+            predicate: 2,
+            object: 3,
+            context: 0,
+            metadata: 0,
+            parity: 0,
         };
         assert!(matches!(validator.validate(&quin), WebVerdict::Fail(_)));
     }
@@ -417,8 +443,12 @@ mod tests {
     #[test]
     fn execute_query_program_bind_var() {
         let quin = NQuin {
-            subject: 0xAABB, predicate: 0xCCDD, object: 0xEEFF,
-            context: 0, metadata: 0, parity: 0,
+            subject: 0xAABB,
+            predicate: 0xCCDD,
+            object: 0xEEFF,
+            context: 0,
+            metadata: 0,
+            parity: 0,
         };
         // MATCH_SUBJ 0xAABB, then BIND_VAR slot=OBJ reg=0, HALT
         let mut program = vec![OP_MATCH_SUBJ];

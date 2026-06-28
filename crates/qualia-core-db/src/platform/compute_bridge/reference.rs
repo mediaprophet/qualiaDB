@@ -26,7 +26,9 @@ pub fn gemv(w: &[f32], x: &[f32], y: &mut [f32]) {
 /// `ElementwiseMap`: fused `y = a·x + b` over a large vector.
 pub fn axpb(a: f32, x: &[f32], b: f32, y: &mut [f32]) {
     debug_assert_eq!(x.len(), y.len());
-    y.par_iter_mut().zip(x.par_iter()).for_each(|(o, &xi)| *o = a * xi + b);
+    y.par_iter_mut()
+        .zip(x.par_iter())
+        .for_each(|(o, &xi)| *o = a * xi + b);
 }
 
 /// `Reduction`: sum of a large vector (pairwise/parallel; deterministic enough for
@@ -61,7 +63,11 @@ pub fn allpairs_potential(pts: &[f32]) -> f64 {
     (0..n)
         .into_par_iter()
         .map(|i| {
-            let (xi, yi, zi) = (pts[3 * i] as f64, pts[3 * i + 1] as f64, pts[3 * i + 2] as f64);
+            let (xi, yi, zi) = (
+                pts[3 * i] as f64,
+                pts[3 * i + 1] as f64,
+                pts[3 * i + 2] as f64,
+            );
             let mut acc = 0.0;
             for j in (i + 1)..n {
                 let dx = xi - pts[3 * j] as f64;
@@ -87,7 +93,10 @@ pub fn fft_radix2(re: &mut [f32], im: &mut [f32], inverse: bool) {
     if n <= 1 {
         return;
     }
-    debug_assert!(n.is_power_of_two(), "fft_radix2 requires a power-of-two length");
+    debug_assert!(
+        n.is_power_of_two(),
+        "fft_radix2 requires a power-of-two length"
+    );
 
     // Bit-reversal permutation.
     let mut j = 0usize;
@@ -149,7 +158,9 @@ pub fn prefix_sum(x: &[f32], y: &mut [f32]) {
 pub fn monte_carlo_pi(steps: usize) -> f64 {
     let mut state = 0x2545F4914F6CDD1Du64;
     let mut next = || {
-        state = state.wrapping_mul(6364136223846793005).wrapping_add(1442695040888963407);
+        state = state
+            .wrapping_mul(6364136223846793005)
+            .wrapping_add(1442695040888963407);
         ((state >> 11) as f64) / ((1u64 << 53) as f64)
     };
     let mut inside = 0usize;
@@ -207,7 +218,10 @@ mod tests {
         let mut y = vec![0.0f32; x.len()];
         stencil3(&x, &mut y);
         for v in &y[1..x.len() - 1] {
-            assert!(v.abs() < 1e-4, "interior second difference of a ramp must be ~0, got {v}");
+            assert!(
+                v.abs() < 1e-4,
+                "interior second difference of a ramp must be ~0, got {v}"
+            );
         }
     }
 
@@ -227,8 +241,16 @@ mod tests {
                 dr += s as f64 * ang.cos();
                 di += s as f64 * ang.sin();
             }
-            assert!((re[k] as f64 - dr).abs() < 1e-3, "re[{k}] {} vs {dr}", re[k]);
-            assert!((im[k] as f64 - di).abs() < 1e-3, "im[{k}] {} vs {di}", im[k]);
+            assert!(
+                (re[k] as f64 - dr).abs() < 1e-3,
+                "re[{k}] {} vs {dr}",
+                re[k]
+            );
+            assert!(
+                (im[k] as f64 - di).abs() < 1e-3,
+                "im[{k}] {} vs {di}",
+                im[k]
+            );
         }
     }
 
@@ -241,7 +263,11 @@ mod tests {
         fft_radix2(&mut re, &mut im, false);
         fft_radix2(&mut re, &mut im, true);
         for (i, &s) in signal.iter().enumerate() {
-            assert!((re[i] / n as f32 - s).abs() < 1e-3, "ifft[{i}] {} vs {s}", re[i] / n as f32);
+            assert!(
+                (re[i] / n as f32 - s).abs() < 1e-3,
+                "ifft[{i}] {} vs {s}",
+                re[i] / n as f32
+            );
         }
     }
 
@@ -250,7 +276,10 @@ mod tests {
         let a = monte_carlo_pi(1 << 16);
         let b = monte_carlo_pi(1 << 16);
         assert_eq!(a, b, "must be deterministic to serve as a reference");
-        assert!((a - std::f64::consts::PI).abs() < 0.1, "π estimate {a} too far off");
+        assert!(
+            (a - std::f64::consts::PI).abs() < 0.1,
+            "π estimate {a} too far off"
+        );
     }
 
     #[test]

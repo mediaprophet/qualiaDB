@@ -40,7 +40,9 @@ impl QTensorEngine {
 
     pub async fn try_new() -> Result<Self, String> {
         #[cfg(not(target_arch = "wasm32"))]
-        log::info!("LLM_LOAD|engine-init|0.10|Initializing native GGUF runtime (shared GpuContext)");
+        log::info!(
+            "LLM_LOAD|engine-init|0.10|Initializing native GGUF runtime (shared GpuContext)"
+        );
         #[cfg(target_arch = "wasm32")]
         log::info!("LLM_LOAD|engine-init|0.10|Initializing WASM GGUF runtime");
 
@@ -77,61 +79,65 @@ impl QTensorEngine {
 
         let shader = device.create_shader_module(wgpu::ShaderModuleDescriptor {
             label: Some("Fused Transformer Shader"),
-            source: wgpu::ShaderSource::Wgsl(include_str!("../shaders/fused_transformer.wgsl").into()),
+            source: wgpu::ShaderSource::Wgsl(
+                include_str!("../shaders/fused_transformer.wgsl").into(),
+            ),
         });
 
         #[cfg(target_arch = "wasm32")]
-        let mc8_gemm_bind_layout = device.create_bind_group_layout(&wgpu::BindGroupLayoutDescriptor {
-            label: Some("MC8GemmBGL"),
-            entries: &[
-                wgpu::BindGroupLayoutEntry {
-                    binding: 0,
-                    visibility: wgpu::ShaderStages::COMPUTE,
-                    ty: wgpu::BindingType::Buffer {
-                        ty: wgpu::BufferBindingType::Storage { read_only: true },
-                        has_dynamic_offset: false,
-                        min_binding_size: None,
+        let mc8_gemm_bind_layout =
+            device.create_bind_group_layout(&wgpu::BindGroupLayoutDescriptor {
+                label: Some("MC8GemmBGL"),
+                entries: &[
+                    wgpu::BindGroupLayoutEntry {
+                        binding: 0,
+                        visibility: wgpu::ShaderStages::COMPUTE,
+                        ty: wgpu::BindingType::Buffer {
+                            ty: wgpu::BufferBindingType::Storage { read_only: true },
+                            has_dynamic_offset: false,
+                            min_binding_size: None,
+                        },
+                        count: None,
                     },
-                    count: None,
-                },
-                wgpu::BindGroupLayoutEntry {
-                    binding: 1,
-                    visibility: wgpu::ShaderStages::COMPUTE,
-                    ty: wgpu::BindingType::Buffer {
-                        ty: wgpu::BufferBindingType::Storage { read_only: true },
-                        has_dynamic_offset: false,
-                        min_binding_size: None,
+                    wgpu::BindGroupLayoutEntry {
+                        binding: 1,
+                        visibility: wgpu::ShaderStages::COMPUTE,
+                        ty: wgpu::BindingType::Buffer {
+                            ty: wgpu::BufferBindingType::Storage { read_only: true },
+                            has_dynamic_offset: false,
+                            min_binding_size: None,
+                        },
+                        count: None,
                     },
-                    count: None,
-                },
-                wgpu::BindGroupLayoutEntry {
-                    binding: 2,
-                    visibility: wgpu::ShaderStages::COMPUTE,
-                    ty: wgpu::BindingType::Buffer {
-                        ty: wgpu::BufferBindingType::Uniform,
-                        has_dynamic_offset: true,
-                        min_binding_size: std::num::NonZeroU64::new(MC8_UNIFORM_ALIGN as u64),
+                    wgpu::BindGroupLayoutEntry {
+                        binding: 2,
+                        visibility: wgpu::ShaderStages::COMPUTE,
+                        ty: wgpu::BindingType::Buffer {
+                            ty: wgpu::BufferBindingType::Uniform,
+                            has_dynamic_offset: true,
+                            min_binding_size: std::num::NonZeroU64::new(MC8_UNIFORM_ALIGN as u64),
+                        },
+                        count: None,
                     },
-                    count: None,
-                },
-                wgpu::BindGroupLayoutEntry {
-                    binding: 3,
-                    visibility: wgpu::ShaderStages::COMPUTE,
-                    ty: wgpu::BindingType::Buffer {
-                        ty: wgpu::BufferBindingType::Storage { read_only: false },
-                        has_dynamic_offset: false,
-                        min_binding_size: None,
+                    wgpu::BindGroupLayoutEntry {
+                        binding: 3,
+                        visibility: wgpu::ShaderStages::COMPUTE,
+                        ty: wgpu::BindingType::Buffer {
+                            ty: wgpu::BufferBindingType::Storage { read_only: false },
+                            has_dynamic_offset: false,
+                            min_binding_size: None,
+                        },
+                        count: None,
                     },
-                    count: None,
-                },
-            ],
-        });
+                ],
+            });
         #[cfg(target_arch = "wasm32")]
-        let mc8_gemm_pipeline_layout = device.create_pipeline_layout(&wgpu::PipelineLayoutDescriptor {
-            label: Some("MC8GemmPL"),
-            bind_group_layouts: &[Some(&mc8_gemm_bind_layout)],
-            immediate_size: 0,
-        });
+        let mc8_gemm_pipeline_layout =
+            device.create_pipeline_layout(&wgpu::PipelineLayoutDescriptor {
+                label: Some("MC8GemmPL"),
+                bind_group_layouts: &[Some(&mc8_gemm_bind_layout)],
+                immediate_size: 0,
+            });
 
         #[cfg(target_arch = "wasm32")]
         let pipeline = device.create_compute_pipeline(&wgpu::ComputePipelineDescriptor {
@@ -225,80 +231,84 @@ impl QTensorEngine {
 
         let attn_shader = device.create_shader_module(wgpu::ShaderModuleDescriptor {
             label: Some("Fused Attention Shader"),
-            source: wgpu::ShaderSource::Wgsl(include_str!("../shaders/fused_attention.wgsl").into()),
+            source: wgpu::ShaderSource::Wgsl(
+                include_str!("../shaders/fused_attention.wgsl").into(),
+            ),
         });
         #[cfg(target_arch = "wasm32")]
-        let mc8_attn_bind_layout = device.create_bind_group_layout(&wgpu::BindGroupLayoutDescriptor {
-            label: Some("MC8AttnBGL"),
-            entries: &[
-                wgpu::BindGroupLayoutEntry {
-                    binding: 0,
-                    visibility: wgpu::ShaderStages::COMPUTE,
-                    ty: wgpu::BindingType::Buffer {
-                        ty: wgpu::BufferBindingType::Storage { read_only: true },
-                        has_dynamic_offset: false,
-                        min_binding_size: None,
+        let mc8_attn_bind_layout =
+            device.create_bind_group_layout(&wgpu::BindGroupLayoutDescriptor {
+                label: Some("MC8AttnBGL"),
+                entries: &[
+                    wgpu::BindGroupLayoutEntry {
+                        binding: 0,
+                        visibility: wgpu::ShaderStages::COMPUTE,
+                        ty: wgpu::BindingType::Buffer {
+                            ty: wgpu::BufferBindingType::Storage { read_only: true },
+                            has_dynamic_offset: false,
+                            min_binding_size: None,
+                        },
+                        count: None,
                     },
-                    count: None,
-                },
-                wgpu::BindGroupLayoutEntry {
-                    binding: 1,
-                    visibility: wgpu::ShaderStages::COMPUTE,
-                    ty: wgpu::BindingType::Buffer {
-                        ty: wgpu::BufferBindingType::Storage { read_only: true },
-                        has_dynamic_offset: false,
-                        min_binding_size: None,
+                    wgpu::BindGroupLayoutEntry {
+                        binding: 1,
+                        visibility: wgpu::ShaderStages::COMPUTE,
+                        ty: wgpu::BindingType::Buffer {
+                            ty: wgpu::BufferBindingType::Storage { read_only: true },
+                            has_dynamic_offset: false,
+                            min_binding_size: None,
+                        },
+                        count: None,
                     },
-                    count: None,
-                },
-                wgpu::BindGroupLayoutEntry {
-                    binding: 2,
-                    visibility: wgpu::ShaderStages::COMPUTE,
-                    ty: wgpu::BindingType::Buffer {
-                        ty: wgpu::BufferBindingType::Uniform,
-                        has_dynamic_offset: true,
-                        min_binding_size: std::num::NonZeroU64::new(MC8_UNIFORM_ALIGN as u64),
+                    wgpu::BindGroupLayoutEntry {
+                        binding: 2,
+                        visibility: wgpu::ShaderStages::COMPUTE,
+                        ty: wgpu::BindingType::Buffer {
+                            ty: wgpu::BufferBindingType::Uniform,
+                            has_dynamic_offset: true,
+                            min_binding_size: std::num::NonZeroU64::new(MC8_UNIFORM_ALIGN as u64),
+                        },
+                        count: None,
                     },
-                    count: None,
-                },
-                wgpu::BindGroupLayoutEntry {
-                    binding: 3,
-                    visibility: wgpu::ShaderStages::COMPUTE,
-                    ty: wgpu::BindingType::Buffer {
-                        ty: wgpu::BufferBindingType::Storage { read_only: false },
-                        has_dynamic_offset: false,
-                        min_binding_size: None,
+                    wgpu::BindGroupLayoutEntry {
+                        binding: 3,
+                        visibility: wgpu::ShaderStages::COMPUTE,
+                        ty: wgpu::BindingType::Buffer {
+                            ty: wgpu::BufferBindingType::Storage { read_only: false },
+                            has_dynamic_offset: false,
+                            min_binding_size: None,
+                        },
+                        count: None,
                     },
-                    count: None,
-                },
-                wgpu::BindGroupLayoutEntry {
-                    binding: 4,
-                    visibility: wgpu::ShaderStages::COMPUTE,
-                    ty: wgpu::BindingType::Buffer {
-                        ty: wgpu::BufferBindingType::Storage { read_only: false },
-                        has_dynamic_offset: false,
-                        min_binding_size: None,
+                    wgpu::BindGroupLayoutEntry {
+                        binding: 4,
+                        visibility: wgpu::ShaderStages::COMPUTE,
+                        ty: wgpu::BindingType::Buffer {
+                            ty: wgpu::BufferBindingType::Storage { read_only: false },
+                            has_dynamic_offset: false,
+                            min_binding_size: None,
+                        },
+                        count: None,
                     },
-                    count: None,
-                },
-                wgpu::BindGroupLayoutEntry {
-                    binding: 5,
-                    visibility: wgpu::ShaderStages::COMPUTE,
-                    ty: wgpu::BindingType::Buffer {
-                        ty: wgpu::BufferBindingType::Storage { read_only: true },
-                        has_dynamic_offset: false,
-                        min_binding_size: None,
+                    wgpu::BindGroupLayoutEntry {
+                        binding: 5,
+                        visibility: wgpu::ShaderStages::COMPUTE,
+                        ty: wgpu::BindingType::Buffer {
+                            ty: wgpu::BufferBindingType::Storage { read_only: true },
+                            has_dynamic_offset: false,
+                            min_binding_size: None,
+                        },
+                        count: None,
                     },
-                    count: None,
-                },
-            ],
-        });
+                ],
+            });
         #[cfg(target_arch = "wasm32")]
-        let mc8_attn_pipeline_layout = device.create_pipeline_layout(&wgpu::PipelineLayoutDescriptor {
-            label: Some("MC8AttnPL"),
-            bind_group_layouts: &[Some(&mc8_attn_bind_layout)],
-            immediate_size: 0,
-        });
+        let mc8_attn_pipeline_layout =
+            device.create_pipeline_layout(&wgpu::PipelineLayoutDescriptor {
+                label: Some("MC8AttnPL"),
+                bind_group_layouts: &[Some(&mc8_attn_bind_layout)],
+                immediate_size: 0,
+            });
         #[cfg(target_arch = "wasm32")]
         let attention_pipeline = device.create_compute_pipeline(&wgpu::ComputePipelineDescriptor {
             label: Some("Fused Attention Pipeline"),
@@ -320,60 +330,64 @@ impl QTensorEngine {
 
         let elem_shader = device.create_shader_module(wgpu::ShaderModuleDescriptor {
             label: Some("Wasm Elementwise Shader"),
-            source: wgpu::ShaderSource::Wgsl(include_str!("../shaders/wasm_elementwise.wgsl").into()),
+            source: wgpu::ShaderSource::Wgsl(
+                include_str!("../shaders/wasm_elementwise.wgsl").into(),
+            ),
         });
         #[cfg(target_arch = "wasm32")]
-        let mc8_elem_bind_layout = device.create_bind_group_layout(&wgpu::BindGroupLayoutDescriptor {
-            label: Some("MC8ElemBGL"),
-            entries: &[
-                wgpu::BindGroupLayoutEntry {
-                    binding: 0,
-                    visibility: wgpu::ShaderStages::COMPUTE,
-                    ty: wgpu::BindingType::Buffer {
-                        ty: wgpu::BufferBindingType::Storage { read_only: true },
-                        has_dynamic_offset: false,
-                        min_binding_size: None,
+        let mc8_elem_bind_layout =
+            device.create_bind_group_layout(&wgpu::BindGroupLayoutDescriptor {
+                label: Some("MC8ElemBGL"),
+                entries: &[
+                    wgpu::BindGroupLayoutEntry {
+                        binding: 0,
+                        visibility: wgpu::ShaderStages::COMPUTE,
+                        ty: wgpu::BindingType::Buffer {
+                            ty: wgpu::BufferBindingType::Storage { read_only: true },
+                            has_dynamic_offset: false,
+                            min_binding_size: None,
+                        },
+                        count: None,
                     },
-                    count: None,
-                },
-                wgpu::BindGroupLayoutEntry {
-                    binding: 1,
-                    visibility: wgpu::ShaderStages::COMPUTE,
-                    ty: wgpu::BindingType::Buffer {
-                        ty: wgpu::BufferBindingType::Storage { read_only: true },
-                        has_dynamic_offset: false,
-                        min_binding_size: None,
+                    wgpu::BindGroupLayoutEntry {
+                        binding: 1,
+                        visibility: wgpu::ShaderStages::COMPUTE,
+                        ty: wgpu::BindingType::Buffer {
+                            ty: wgpu::BufferBindingType::Storage { read_only: true },
+                            has_dynamic_offset: false,
+                            min_binding_size: None,
+                        },
+                        count: None,
                     },
-                    count: None,
-                },
-                wgpu::BindGroupLayoutEntry {
-                    binding: 2,
-                    visibility: wgpu::ShaderStages::COMPUTE,
-                    ty: wgpu::BindingType::Buffer {
-                        ty: wgpu::BufferBindingType::Storage { read_only: false },
-                        has_dynamic_offset: false,
-                        min_binding_size: None,
+                    wgpu::BindGroupLayoutEntry {
+                        binding: 2,
+                        visibility: wgpu::ShaderStages::COMPUTE,
+                        ty: wgpu::BindingType::Buffer {
+                            ty: wgpu::BufferBindingType::Storage { read_only: false },
+                            has_dynamic_offset: false,
+                            min_binding_size: None,
+                        },
+                        count: None,
                     },
-                    count: None,
-                },
-                wgpu::BindGroupLayoutEntry {
-                    binding: 3,
-                    visibility: wgpu::ShaderStages::COMPUTE,
-                    ty: wgpu::BindingType::Buffer {
-                        ty: wgpu::BufferBindingType::Uniform,
-                        has_dynamic_offset: true,
-                        min_binding_size: std::num::NonZeroU64::new(MC8_UNIFORM_ALIGN as u64),
+                    wgpu::BindGroupLayoutEntry {
+                        binding: 3,
+                        visibility: wgpu::ShaderStages::COMPUTE,
+                        ty: wgpu::BindingType::Buffer {
+                            ty: wgpu::BufferBindingType::Uniform,
+                            has_dynamic_offset: true,
+                            min_binding_size: std::num::NonZeroU64::new(MC8_UNIFORM_ALIGN as u64),
+                        },
+                        count: None,
                     },
-                    count: None,
-                },
-            ],
-        });
+                ],
+            });
         #[cfg(target_arch = "wasm32")]
-        let mc8_elem_pipeline_layout = device.create_pipeline_layout(&wgpu::PipelineLayoutDescriptor {
-            label: Some("MC8ElemPL"),
-            bind_group_layouts: &[Some(&mc8_elem_bind_layout)],
-            immediate_size: 0,
-        });
+        let mc8_elem_pipeline_layout =
+            device.create_pipeline_layout(&wgpu::PipelineLayoutDescriptor {
+                label: Some("MC8ElemPL"),
+                bind_group_layouts: &[Some(&mc8_elem_bind_layout)],
+                immediate_size: 0,
+            });
         #[cfg(target_arch = "wasm32")]
         let elem_rms_norm_pipeline =
             device.create_compute_pipeline(&wgpu::ComputePipelineDescriptor {
@@ -510,10 +524,7 @@ impl QTensorEngine {
             let base = include_str!("../shaders/fused_ffn.wgsl");
             // Inject the per-role dequant math at the marker (between shared helpers and
             // the entry point) so declarations precede their uses.
-            let src = base.replace(
-                "// @@DEQUANT_FUNCTIONS@@",
-                &format!("{gate_fns}\n{up_fns}"),
-            );
+            let src = base.replace("// @@DEQUANT_FUNCTIONS@@", &format!("{gate_fns}\n{up_fns}"));
             let module = device.create_shader_module(wgpu::ShaderModuleDescriptor {
                 label: Some("FusedFFNExpansion"),
                 source: wgpu::ShaderSource::Wgsl(src.into()),
@@ -701,9 +712,13 @@ impl QTensorEngine {
 
     #[cfg(not(target_arch = "wasm32"))]
     pub fn new() -> Self {
-        let handle = tokio::runtime::Handle::try_current().unwrap_or_else(|_| { let rt = Box::leak(Box::new(tokio::runtime::Runtime::new().unwrap())); rt.handle().clone() });
+        let handle = tokio::runtime::Handle::try_current().unwrap_or_else(|_| {
+            let rt = Box::leak(Box::new(tokio::runtime::Runtime::new().unwrap()));
+            rt.handle().clone()
+        });
         tokio::task::block_in_place(|| {
-            handle.block_on(Self::try_new())
+            handle
+                .block_on(Self::try_new())
                 .expect("Failed to initialize native GGUF engine")
         })
     }
@@ -713,7 +728,9 @@ impl QTensorEngine {
             Some(l) => l,
             None => {
                 #[cfg(target_arch = "wasm32")]
-                wlog("[kv_cache] FAILED from_hyperparams (zero dims or exceeds KV_CACHE_MAX_BYTES)");
+                wlog(
+                    "[kv_cache] FAILED from_hyperparams (zero dims or exceeds KV_CACHE_MAX_BYTES)",
+                );
                 return;
             }
         };
@@ -731,7 +748,8 @@ impl QTensorEngine {
             ) {
                 log::warn!(
                     "LLM_LOAD|kv-cache|denied|U0 budget {:.1} MiB used, need {:.1} MiB (mode {:?})",
-                    ledger.universe_used_bytes(crate::gpu_context::ComputeUniverse::LlmInference) as f64
+                    ledger.universe_used_bytes(crate::gpu_context::ComputeUniverse::LlmInference)
+                        as f64
                         / (1024.0 * 1024.0),
                     bytes as f64 / (1024.0 * 1024.0),
                     orch.active_mode,
@@ -759,12 +777,13 @@ impl QTensorEngine {
                 std::mem::size_of::<AttentionGpuParams>() as wgpu::BufferAddress
             }
         };
-        self.attention_params_buf = Some(self.gpu_device().create_buffer(&wgpu::BufferDescriptor {
-            label: Some("AttentionParams"),
-            size: attn_params_bytes.max(4),
-            usage: wgpu::BufferUsages::UNIFORM | wgpu::BufferUsages::COPY_DST,
-            mapped_at_creation: false,
-        }));
+        self.attention_params_buf =
+            Some(self.gpu_device().create_buffer(&wgpu::BufferDescriptor {
+                label: Some("AttentionParams"),
+                size: attn_params_bytes.max(4),
+                usage: wgpu::BufferUsages::UNIFORM | wgpu::BufferUsages::COPY_DST,
+                mapped_at_creation: false,
+            }));
         let mask_bytes = (MAX_ATTN_MASK_UPLOAD_WORDS * std::mem::size_of::<u32>()).max(4);
         self.attention_mask_buf = Some(self.gpu_device().create_buffer(&wgpu::BufferDescriptor {
             label: Some("AttentionKvMaskBatch"),
@@ -942,33 +961,37 @@ impl QTensorEngine {
         }));
         #[cfg(target_arch = "wasm32")]
         {
-            self.prefill_scratch_buf = Some(self.gpu_device().create_buffer(&wgpu::BufferDescriptor {
-                label: Some("PrefillBatchScratch"),
-                size: in_bytes,
-                usage: wgpu::BufferUsages::STORAGE
-                    | wgpu::BufferUsages::COPY_DST
-                    | wgpu::BufferUsages::COPY_SRC,
-                mapped_at_creation: false,
-            }));
+            self.prefill_scratch_buf =
+                Some(self.gpu_device().create_buffer(&wgpu::BufferDescriptor {
+                    label: Some("PrefillBatchScratch"),
+                    size: in_bytes,
+                    usage: wgpu::BufferUsages::STORAGE
+                        | wgpu::BufferUsages::COPY_DST
+                        | wgpu::BufferUsages::COPY_SRC,
+                    mapped_at_creation: false,
+                }));
             // Per-token row: norm + gate + up + save (see encode_prefill_q_ffn_tail_fused).
-            let work_row_floats = (MAX_HIDDEN_DIM + 2 * max_out_dim as usize + MAX_HIDDEN_DIM).max(4);
+            let work_row_floats =
+                (MAX_HIDDEN_DIM + 2 * max_out_dim as usize + MAX_HIDDEN_DIM).max(4);
             let work_bytes =
                 (PREFILL_CHUNK_SIZE * work_row_floats * 4).max(4) as wgpu::BufferAddress;
             let work_usage = wgpu::BufferUsages::STORAGE
                 | wgpu::BufferUsages::COPY_DST
                 | wgpu::BufferUsages::COPY_SRC;
-            self.prefill_work_buf_a = Some(self.gpu_device().create_buffer(&wgpu::BufferDescriptor {
-                label: Some("PrefillBatchWorkA"),
-                size: work_bytes,
-                usage: work_usage,
-                mapped_at_creation: false,
-            }));
-            self.prefill_work_buf_b = Some(self.gpu_device().create_buffer(&wgpu::BufferDescriptor {
-                label: Some("PrefillBatchWorkB"),
-                size: work_bytes,
-                usage: work_usage,
-                mapped_at_creation: false,
-            }));
+            self.prefill_work_buf_a =
+                Some(self.gpu_device().create_buffer(&wgpu::BufferDescriptor {
+                    label: Some("PrefillBatchWorkA"),
+                    size: work_bytes,
+                    usage: work_usage,
+                    mapped_at_creation: false,
+                }));
+            self.prefill_work_buf_b =
+                Some(self.gpu_device().create_buffer(&wgpu::BufferDescriptor {
+                    label: Some("PrefillBatchWorkB"),
+                    size: work_bytes,
+                    usage: work_usage,
+                    mapped_at_creation: false,
+                }));
             // Phase 5.5: Q/K/V projection scratch (parallel-GEMM output). work_bytes ≥ q_dim×tokens.
             self.mc8_q_proj_buf = Some(self.gpu_device().create_buffer(&wgpu::BufferDescriptor {
                 label: Some("MC8QProj"),
@@ -1016,5 +1039,4 @@ impl QTensorEngine {
         self.gemm_max_input_floats = need_input;
         self.max_tensor_bytes = max_weight_bytes;
     }
-
 }

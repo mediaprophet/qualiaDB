@@ -3,8 +3,8 @@
 use js_sys::Function;
 use wasm_bindgen::prelude::*;
 
-use crate::gguf_sharder::GgufTokenizer;
 use crate::gguf_bridge::{PREFILL_CHUNK_SIZE, PREFILL_CHUNK_STACK_FLOATS, VOCAB_CHUNK_ROWS};
+use crate::gguf_sharder::GgufTokenizer;
 
 const BROWSER_AGENT_DID: &str = "did:q42:browser-llm-demo";
 const BROWSER_MODEL_TAG: &str = "wasm-resident.gguf";
@@ -33,19 +33,12 @@ fn restore_engine(engine: crate::gguf_bridge::QTensorEngine) {
 fn take_engine() -> Result<crate::gguf_bridge::QTensorEngine, String> {
     crate::gguf_bridge::WASM_ENGINE_INSTANCE
         .with(|g| g.borrow_mut().take())
-        .ok_or_else(|| {
-            "WebGPU engine not initialized. Call initialize_webgpu_engine first.".into()
-        })
+        .ok_or_else(|| "WebGPU engine not initialized. Call initialize_webgpu_engine first.".into())
 }
 
-fn run_inference(
-    prompt: &str,
-    graph_context: &str,
-) -> Result<String, String> {
+fn run_inference(prompt: &str, graph_context: &str) -> Result<String, String> {
     if !engine_ready() {
-        return Err(
-            "WebGPU engine not initialized. Call initialize_webgpu_engine first.".into(),
-        );
+        return Err("WebGPU engine not initialized. Call initialize_webgpu_engine first.".into());
     }
     let agent = crate::llm_agent::LocalLlmAgent::new(BROWSER_AGENT_DID, BROWSER_MODEL_TAG);
     let (text, _, _, _) =
@@ -59,16 +52,13 @@ fn run_inference_streaming(
     on_token: Function,
 ) -> Result<String, String> {
     if !engine_ready() {
-        return Err(
-            "WebGPU engine not initialized. Call initialize_webgpu_engine first.".into(),
-        );
+        return Err("WebGPU engine not initialized. Call initialize_webgpu_engine first.".into());
     }
     let agent = crate::llm_agent::LocalLlmAgent::new(BROWSER_AGENT_DID, BROWSER_MODEL_TAG);
     let on_token = move |piece: String| {
         let _ = on_token.call1(&JsValue::UNDEFINED, &JsValue::from_str(&piece));
     };
-    let (text, _, _, _) =
-        agent.infer_local_model_streaming(prompt, graph_context, Some(on_token));
+    let (text, _, _, _) = agent.infer_local_model_streaming(prompt, graph_context, Some(on_token));
     Ok(text)
 }
 
@@ -83,9 +73,9 @@ async fn run_inference_async(prompt: &str, on_token: Function) -> Result<String,
         // uses tensor_data_start=0 + absolute offsets, so the rest of the path is unchanged.)
         let (tok, tensor_idx) = if engine.q42_resident.is_some() {
             let data = engine.q42_resident.clone().unwrap();
-            match crate::q42_weight::Q42TensorIndex::from_q42(&data) {
+            match crate::p64_weight::P64TensorIndex::from_p64(&data) {
                 Ok(qi) => {
-                    let tok = GgufTokenizer::from_q42_section(qi.tokenizer_bytes(&data))
+                    let tok = GgufTokenizer::from_p64_section(qi.tokenizer_bytes(&data))
                         .unwrap_or_default();
                     (tok, Some(qi.to_gguf_index()))
                 }
@@ -332,9 +322,12 @@ pub async fn infer_wasm_async(prompt: String, on_token: Function) -> Result<Stri
 /// (page-aligned tensor blobs + zero-parse NQuin manifest). Run once at ingest; stream the
 /// result to OPFS. `page_log2 == 0` selects the 16 KB default.
 #[wasm_bindgen(js_name = compileGgufToQ42)]
-pub fn compile_gguf_to_q42(gguf: js_sys::Uint8Array, page_log2: u16) -> Result<js_sys::Uint8Array, JsValue> {
+pub fn compile_gguf_to_q42(
+    gguf: js_sys::Uint8Array,
+    page_log2: u16,
+) -> Result<js_sys::Uint8Array, JsValue> {
     let bytes = gguf.to_vec();
-    let out = crate::q42_weight::compile_gguf_to_q42(&bytes, page_log2)
+    let out = crate::p64_weight::compile_gguf_to_q42(&bytes, page_log2)
         .map_err(|e| JsValue::from_str(&e))?;
     Ok(js_sys::Uint8Array::from(out.as_slice()))
 }
@@ -343,5 +336,5 @@ pub fn compile_gguf_to_q42(gguf: js_sys::Uint8Array, page_log2: u16) -> Result<j
 /// so a format bump auto-invalidates any stale `.q42` cached in OPFS).
 #[wasm_bindgen(js_name = q42FormatVersion)]
 pub fn q42_format_version() -> u16 {
-    crate::q42_weight::Q42W_VERSION
+    crate::p64_weight::P64_VERSION
 }

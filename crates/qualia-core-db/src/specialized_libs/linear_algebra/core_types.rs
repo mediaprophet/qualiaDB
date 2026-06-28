@@ -1,15 +1,14 @@
-use std::collections::HashMap;
-use std::sync::{Arc, Mutex};
-use std::ops::{Add, Mul, Sub};
-use serde::{Deserialize, Serialize};
 use crate::solvers::SolversError;
+use serde::{Deserialize, Serialize};
+use std::collections::HashMap;
+use std::ops::{Add, Mul, Sub};
+use std::sync::{Arc, Mutex};
 
-use super::storage::*;
 use super::computation::*;
 use super::optimization::*;
-use super::privacy::*;
 use super::performance::*;
-
+use super::privacy::*;
+use super::storage::*;
 
 /// Matrix metadata
 #[derive(Debug, Clone, Serialize, Deserialize)]
@@ -25,7 +24,6 @@ pub struct MatrixMetadata {
     pub access_count: u64,
 }
 
-
 /// Data types for matrices
 #[derive(Debug, Clone, PartialEq, Serialize, Deserialize)]
 pub enum DataType {
@@ -37,7 +35,6 @@ pub enum DataType {
     Integer64,
 }
 
-
 /// Storage formats for matrices
 #[derive(Debug, Clone, PartialEq, Serialize, Deserialize)]
 pub enum StorageFormat {
@@ -48,7 +45,6 @@ pub enum StorageFormat {
     CompressedSparseColumn,
 }
 
-
 /// Compression types
 #[derive(Debug, Clone, PartialEq, Serialize, Deserialize)]
 pub enum CompressionType {
@@ -57,7 +53,6 @@ pub enum CompressionType {
     ZSTD,
     Custom(String),
 }
-
 
 /// Matrix representation
 #[derive(Debug, Clone)]
@@ -71,7 +66,6 @@ pub struct Matrix {
     pub metadata: MatrixMetadata,
 }
 
-
 /// Linear algebra result
 #[derive(Debug, Clone)]
 pub struct LinearAlgebraResult<T> {
@@ -81,7 +75,6 @@ pub struct LinearAlgebraResult<T> {
     pub operations_used: Vec<String>,
     pub privacy_preserved: bool,
 }
-
 
 /// Linear algebra error types
 #[derive(Debug, Clone)]
@@ -93,7 +86,6 @@ pub enum LinearAlgebraError {
     PrivacyError(String),
     OptimizationError(String),
 }
-
 
 impl std::fmt::Display for LinearAlgebraError {
     fn fmt(&self, f: &mut std::fmt::Formatter<'_>) -> std::fmt::Result {
@@ -108,6 +100,4 @@ impl std::fmt::Display for LinearAlgebraError {
     }
 }
 
-
 impl std::error::Error for LinearAlgebraError {}
-

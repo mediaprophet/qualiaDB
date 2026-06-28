@@ -1,12 +1,15 @@
+use crate::domains::financial::tax_schema::TaxRuleSchema;
 use crate::modalities::logic::deontic::{
     compile_norm_quin, evaluate_deontic_contract, harvest_defeater_fingerprints,
     norm_has_active_defeater, DeonticStatus, DeonticVerdict, DEFEATER_BIT, MAX_DEFEATER_SLOTS,
     OP_PERMIT,
 };
-use crate::modalities::{abductive, argumentation, asp, ctl, defeasible, dialectical, dl, epistemic, fuzzy, linear, modal, paraconsistent, probabilistic};
-use crate::modalities::temporal_ltl::{self, LtlFormula};
 use crate::modalities::spatio_temporal;
-use crate::domains::financial::tax_schema::TaxRuleSchema;
+use crate::modalities::temporal_ltl::{self, LtlFormula};
+use crate::modalities::{
+    abductive, argumentation, asp, ctl, defeasible, dialectical, dl, epistemic, fuzzy, linear,
+    modal, paraconsistent, probabilistic,
+};
 use crate::NQuin;
 
 macro_rules! vm_log {
@@ -33,8 +36,10 @@ const SLG_ARENA_SIZE: usize = 42 * 1024 * 1024;
 const QUIN_SIZE: usize = 48;
 const MAX_SLOTS: usize = SLG_ARENA_SIZE / QUIN_SIZE; // 917,504 slots
 
+use crate::modalities::logic::n3_compiler::{
+    compile_rule_to_zero_heap, CompiledRule, CompiledTerm, CompiledTriple,
+};
 use crate::modalities::logic::n3_parser::{Rule, Term, Triple};
-use crate::modalities::logic::n3_compiler::{compile_rule_to_zero_heap, CompiledRule, CompiledTerm, CompiledTriple};
 
 /// The 42MB Static Tabling Arena for SLG Resolution
 /// Implemented as a Zero-Allocation Static Ring-Buffer Arena
@@ -71,7 +76,11 @@ fn rule_has_variables(rule: &CompiledRule) -> bool {
 /// Hashing uses the same `q_hash` as `n3_compiler::triple_to_quin`, so a premise
 /// term and an ingested fact agree.
 fn unify_field(
-    t: &CompiledTerm, field: u64, bindings: &mut [(u64, u64)], nbound: &mut usize) -> bool {
+    t: &CompiledTerm,
+    field: u64,
+    bindings: &mut [(u64, u64)],
+    nbound: &mut usize,
+) -> bool {
     match t {
         CompiledTerm::Uri(s) | CompiledTerm::Literal(s) => *s == field,
         CompiledTerm::Variable(key) => {
@@ -98,9 +107,7 @@ fn unify_field(
 fn resolve_term(term: &CompiledTerm, bindings: &[(u64, u64)]) -> Option<u64> {
     match term {
         CompiledTerm::Uri(s) | CompiledTerm::Literal(s) => Some(*s),
-        CompiledTerm::Variable(key) => {
-            bindings.iter().find(|(k, _)| *k == *key).map(|(_, v)| *v)
-        }
+        CompiledTerm::Variable(key) => bindings.iter().find(|(k, _)| *k == *key).map(|(_, v)| *v),
     }
 }
 
@@ -200,7 +207,7 @@ impl SlgArena {
         let mut buffer = alloc::vec::Vec::with_capacity(MAX_SLOTS);
         #[cfg(not(feature = "alloc_buffers"))]
         let mut buffer = std::vec::Vec::with_capacity(MAX_SLOTS);
-        
+
         // Pre-fill the ring buffer with empty Quins
         for _ in 0..MAX_SLOTS {
             buffer.push(NQuin {
@@ -275,14 +282,18 @@ impl SlgArena {
             // compiling them here would write a spurious norm keyed on a
             // variable-name hash.
             if !rule_has_variables(rule) {
-                if let Some(norm) =
-                    crate::modalities::logic::deontic::compile_n3_rule_to_norm(rule, contract_hash, 0)
-                {
+                if let Some(norm) = crate::modalities::logic::deontic::compile_n3_rule_to_norm(
+                    rule,
+                    contract_hash,
+                    0,
+                ) {
                     self.write_table(norm);
                 }
             }
             let mut opcodes = [SlgOpcode::Halt; 64];
-            if let Ok(count) = crate::modalities::logic::n3_compiler::compile_rule_to_opcodes(rule, &mut opcodes) {
+            if let Ok(count) =
+                crate::modalities::logic::n3_compiler::compile_rule_to_opcodes(rule, &mut opcodes)
+            {
                 let mut frame = VmFrame::default();
                 if execute_vm_frame(self, &opcodes[..count], &mut frame).is_some() {
                     fired += 1;
@@ -883,7 +894,8 @@ pub fn execute_vm_frame(
             }
             SlgOpcode::NativeThermodynamics => {
                 // Mock execution of a thermodynamic state MCMC sampler
-                let mut sampler = crate::domains::physical::thermodynamics::ThermodynamicSampler::new(298.0, 100);
+                let mut sampler =
+                    crate::domains::physical::thermodynamics::ThermodynamicSampler::new(298.0, 100);
                 sampler.metropolis_step(50.0, 0.5);
                 vm_log!(
                     "🧪 Webizen executed NativeThermodynamics step. Current Energy: {}",
@@ -913,30 +925,31 @@ pub fn execute_vm_frame(
                 let step_size_bits = (packed_params & 0xFFFFFFFF) as u32;
                 let num_steps = (packed_params >> 32) as u32;
                 let step_size = f32::from_bits(step_size_bits) as f64;
-                
+
                 vm_log!(
                     "🔄 Webizen executing NativeRk4Step: step_size={}, num_steps={}",
-                    step_size, num_steps
+                    step_size,
+                    num_steps
                 );
-                
+
                 // Calculus is a core capability in this crate, so RK4 dispatch stays wired.
                 {
                     use crate::modalities::calculus::ode_solver::{ExponentialDecay, Rk4Solver};
-                    
+
                     let system = ExponentialDecay::new(0.5);
                     let mut solver = Rk4Solver::new(system, step_size);
-                    
+
                     // Execute chained RK4 steps
                     let mut quin = frame_to_quin(frame);
                     for _ in 0..num_steps {
                         quin = solver.step_quin(quin, step_size);
                     }
-                    
+
                     frame.subject_reg = quin.subject;
                     frame.predicate_reg = quin.predicate;
                     frame.object_reg = quin.object;
                     frame.context_reg = quin.context;
-                    
+
                     vm_log!(
                         "✅ Webizen completed {} RK4 steps. Final state: t={}, y={}",
                         num_steps,
@@ -944,7 +957,7 @@ pub fn execute_vm_frame(
                         f64::from_bits(quin.object)
                     );
                 }
-                
+
                 /* Legacy fallback removed: calculus is always available in this crate.
                     vm_log!("⚠️  Calculus feature not enabled, RK4 step skipped");
                 */
@@ -960,15 +973,17 @@ pub fn execute_vm_frame(
             }
             // ── Legacy / compat ───────────────────────────────────────────
             SlgOpcode::NativeBioinformatics => {
-                let score = crate::domains::biological::bioinformatics::align_sequences(b"ATCG", b"ATCC");
+                let score =
+                    crate::domains::biological::bioinformatics::align_sequences(b"ATCG", b"ATCC");
                 vm_log!(
                     "[Webizen] NativeBioinformatics (legacy). SW score: {}",
                     score.score
                 );
             }
             SlgOpcode::NativeEconomics => {
-                let (mean, var) =
-                    crate::domains::financial::economics::run_monte_carlo_var(100.0, 0.05, 0.2, 1.0, 1000, 252);
+                let (mean, var) = crate::domains::financial::economics::run_monte_carlo_var(
+                    100.0, 0.05, 0.2, 1.0, 1000, 252,
+                );
                 vm_log!(
                     "[Webizen] NativeEconomics. Mean: {:.2}, VaR95: {:.2}",
                     mean,
@@ -1064,7 +1079,10 @@ pub fn execute_vm_frame(
             }
             // ── Biosciences ───────────────────────────────────────────────
             SlgOpcode::NativeNucleotideAlign => {
-                let demo_result = crate::domains::biological::bioinformatics::align_nucleotide(b"ACGTACGT", b"ACGTCCGT");
+                let demo_result = crate::domains::biological::bioinformatics::align_nucleotide(
+                    b"ACGTACGT",
+                    b"ACGTCCGT",
+                );
                 vm_log!(
                     "[Webizen] NativeNucleotideAlign. SW score: {}, identity: {:.1}%",
                     demo_result.score,
@@ -1075,7 +1093,10 @@ pub fn execute_vm_frame(
                 }
             }
             SlgOpcode::NativeProteinAlign(matrix_id) => {
-                let result = crate::domains::biological::bioinformatics::align_protein(b"ACDEFGHIK", b"ACDEFGHIK");
+                let result = crate::domains::biological::bioinformatics::align_protein(
+                    b"ACDEFGHIK",
+                    b"ACDEFGHIK",
+                );
                 vm_log!(
                     "[Webizen] NativeProteinAlign(matrix={}) score: {}, id: {:.1}%",
                     matrix_id,
@@ -1087,7 +1108,10 @@ pub fn execute_vm_frame(
                 }
             }
             SlgOpcode::NativeKmerFrequency(k) => {
-                let freqs = crate::domains::biological::bioinformatics::kmer_frequencies(b"ACGTACGTACGT", k as usize);
+                let freqs = crate::domains::biological::bioinformatics::kmer_frequencies(
+                    b"ACGTACGTACGT",
+                    k as usize,
+                );
                 vm_log!(
                     "[Webizen] NativeKmerFrequency(k={}) distinct k-mers: {}",
                     k,
@@ -1096,7 +1120,10 @@ pub fn execute_vm_frame(
             }
 
             SlgOpcode::NativeFastaValidation => {
-                let record = crate::domains::biological::bioinformatics::validate_fasta_record(">test", b"ATCGATCG");
+                let record = crate::domains::biological::bioinformatics::validate_fasta_record(
+                    ">test",
+                    b"ATCGATCG",
+                );
                 if !record.is_valid {
                     return None;
                 }
@@ -1122,7 +1149,8 @@ pub fn execute_vm_frame(
             SlgOpcode::NativeMetaboliteSimilarity => {
                 let fp_a = vec![frame.subject_reg];
                 let fp_b = vec![frame.object_reg];
-                let sim = crate::domains::biological::bioinformatics::tanimoto_similarity(&fp_a, &fp_b);
+                let sim =
+                    crate::domains::biological::bioinformatics::tanimoto_similarity(&fp_a, &fp_b);
                 vm_log!("[Webizen] NativeMetaboliteSimilarity: Tanimoto={:.3}", sim);
                 if sim < 0.4 {
                     return None;
@@ -1196,7 +1224,7 @@ pub fn execute_vm_frame(
             SlgOpcode::NativeLongitudinalTrend(window_days) => {
                 vm_log!("[Webizen] NativeLongitudinalTrend: window={}d — awaiting time-series Quin stream", window_days);
             }
-            
+
             #[cfg(not(target_arch = "wasm32"))]
             SlgOpcode::NativeDrugInteraction => {
                 let meds = vec![frame.subject_reg, frame.object_reg];
@@ -1218,7 +1246,8 @@ pub fn execute_vm_frame(
             #[cfg(not(target_arch = "wasm32"))]
             SlgOpcode::NativeContraindication => {
                 let conds = vec![frame.object_reg];
-                let found = crate::clinical_engine::check_contraindications(frame.subject_reg, &conds);
+                let found =
+                    crate::clinical_engine::check_contraindications(frame.subject_reg, &conds);
                 if !found.is_empty() {
                     vm_log!(
                         "[Webizen] NativeContraindication: {} contraindication(s) found.",
@@ -1280,7 +1309,9 @@ pub fn execute_vm_frame(
             }
             SlgOpcode::NativeMolecularWeight(max_mw_bits) => {
                 let max_mw = f64::from_bits(max_mw_bits);
-                let mol = crate::domains::chemical::organic_chemistry::parse_smiles("CC(=O)Oc1ccccc1C(=O)O");
+                let mol = crate::domains::chemical::organic_chemistry::parse_smiles(
+                    "CC(=O)Oc1ccccc1C(=O)O",
+                );
                 let mw = crate::domains::chemical::organic_chemistry::exact_molecular_weight(&mol);
                 vm_log!(
                     "[Webizen] NativeMolecularWeight: {:.2} Da (max allowed {:.1})",
@@ -1293,7 +1324,9 @@ pub fn execute_vm_frame(
             }
             SlgOpcode::NativeLogP(max_bits) => {
                 let max_logp = max_bits as f64 / 100.0;
-                let mol = crate::domains::chemical::organic_chemistry::parse_smiles("CC(=O)Oc1ccccc1C(=O)O");
+                let mol = crate::domains::chemical::organic_chemistry::parse_smiles(
+                    "CC(=O)Oc1ccccc1C(=O)O",
+                );
                 let logp = crate::domains::chemical::organic_chemistry::compute_logp(&mol);
                 vm_log!("[Webizen] NativeLogP: {:.2} (max {:.2})", logp, max_logp);
                 if max_logp > 0.0 && logp > max_logp {
@@ -1301,7 +1334,9 @@ pub fn execute_vm_frame(
                 }
             }
             SlgOpcode::NativeTPSA(max_tpsa) => {
-                let mol = crate::domains::chemical::organic_chemistry::parse_smiles("CC(=O)Oc1ccccc1C(=O)O");
+                let mol = crate::domains::chemical::organic_chemistry::parse_smiles(
+                    "CC(=O)Oc1ccccc1C(=O)O",
+                );
                 let tpsa = crate::domains::chemical::organic_chemistry::compute_tpsa(&mol);
                 vm_log!("[Webizen] NativeTPSA: {:.1} Å² (max {})", tpsa, max_tpsa);
                 if max_tpsa > 0 && tpsa > max_tpsa as f64 {
@@ -1309,7 +1344,9 @@ pub fn execute_vm_frame(
                 }
             }
             SlgOpcode::NativeLipinskiFilter => {
-                let mol = crate::domains::chemical::organic_chemistry::parse_smiles("CC(=O)Oc1ccccc1C(=O)O");
+                let mol = crate::domains::chemical::organic_chemistry::parse_smiles(
+                    "CC(=O)Oc1ccccc1C(=O)O",
+                );
                 let desc = crate::domains::chemical::organic_chemistry::compute_descriptors(&mol);
                 let r = crate::domains::chemical::organic_chemistry::evaluate_lipinski(&desc);
                 vm_log!(
@@ -1322,7 +1359,9 @@ pub fn execute_vm_frame(
                 }
             }
             SlgOpcode::NativeVeberFilter => {
-                let mol = crate::domains::chemical::organic_chemistry::parse_smiles("CC(=O)Oc1ccccc1C(=O)O");
+                let mol = crate::domains::chemical::organic_chemistry::parse_smiles(
+                    "CC(=O)Oc1ccccc1C(=O)O",
+                );
                 let desc = crate::domains::chemical::organic_chemistry::compute_descriptors(&mol);
                 let r = crate::domains::chemical::organic_chemistry::evaluate_veber(&desc);
                 vm_log!("[Webizen] NativeVeberFilter: passes={}", r.passes);
@@ -1331,20 +1370,27 @@ pub fn execute_vm_frame(
                 }
             }
             SlgOpcode::NativeGhoseFilter => {
-                let mol = crate::domains::chemical::organic_chemistry::parse_smiles("CC(=O)Oc1ccccc1C(=O)O");
+                let mol = crate::domains::chemical::organic_chemistry::parse_smiles(
+                    "CC(=O)Oc1ccccc1C(=O)O",
+                );
                 let desc = crate::domains::chemical::organic_chemistry::compute_descriptors(&mol);
                 let r = crate::domains::chemical::organic_chemistry::evaluate_ghose(&desc);
                 vm_log!("[Webizen] NativeGhoseFilter: passes={}", r.passes);
             }
             SlgOpcode::NativeEganFilter => {
-                let mol = crate::domains::chemical::organic_chemistry::parse_smiles("CC(=O)Oc1ccccc1C(=O)O");
+                let mol = crate::domains::chemical::organic_chemistry::parse_smiles(
+                    "CC(=O)Oc1ccccc1C(=O)O",
+                );
                 let desc = crate::domains::chemical::organic_chemistry::compute_descriptors(&mol);
                 let r = crate::domains::chemical::organic_chemistry::evaluate_egan(&desc);
                 vm_log!("[Webizen] NativeEganFilter: passes={}", r.passes);
             }
             SlgOpcode::NativeFunctionalGroups => {
-                let mol = crate::domains::chemical::organic_chemistry::parse_smiles("CC(=O)Oc1ccccc1C(=O)O");
-                let groups = crate::domains::chemical::organic_chemistry::detect_functional_groups(&mol);
+                let mol = crate::domains::chemical::organic_chemistry::parse_smiles(
+                    "CC(=O)Oc1ccccc1C(=O)O",
+                );
+                let groups =
+                    crate::domains::chemical::organic_chemistry::detect_functional_groups(&mol);
                 vm_log!("[Webizen] NativeFunctionalGroups: {:?}", groups);
             }
             SlgOpcode::NativePkaEstimate => {
@@ -1360,13 +1406,20 @@ pub fn execute_vm_frame(
                 }
             }
             SlgOpcode::NativeChiralCenters => {
-                let mol = crate::domains::chemical::organic_chemistry::parse_smiles("CC(=O)Oc1ccccc1C(=O)O");
+                let mol = crate::domains::chemical::organic_chemistry::parse_smiles(
+                    "CC(=O)Oc1ccccc1C(=O)O",
+                );
                 let n = crate::domains::chemical::organic_chemistry::count_chiral_centers(&mol);
                 vm_log!("[Webizen] NativeChiralCenters: {}", n);
             }
             SlgOpcode::NativeCircularFingerprint(radius) => {
-                let mol = crate::domains::chemical::organic_chemistry::parse_smiles("CC(=O)Oc1ccccc1C(=O)O");
-                let fp = crate::domains::chemical::organic_chemistry::circular_fingerprint(&mol, radius as usize);
+                let mol = crate::domains::chemical::organic_chemistry::parse_smiles(
+                    "CC(=O)Oc1ccccc1C(=O)O",
+                );
+                let fp = crate::domains::chemical::organic_chemistry::circular_fingerprint(
+                    &mol,
+                    radius as usize,
+                );
                 vm_log!(
                     "[Webizen] NativeCircularFingerprint(r={}): {} features",
                     radius,
@@ -1374,7 +1427,11 @@ pub fn execute_vm_frame(
                 );
             }
             SlgOpcode::NativeArrhenius(temp_k) => {
-                let k = crate::domains::chemical::organic_chemistry::arrhenius_rate(1e13, 80_000.0, temp_k as f64);
+                let k = crate::domains::chemical::organic_chemistry::arrhenius_rate(
+                    1e13,
+                    80_000.0,
+                    temp_k as f64,
+                );
                 vm_log!("[Webizen] NativeArrhenius(T={}K): k={:.3e}", temp_k, k);
             }
             SlgOpcode::NativeGibbsEnergy => {
@@ -1402,7 +1459,8 @@ pub fn execute_vm_frame(
             }
             SlgOpcode::NativeAtomEconomy => {
                 let reactants = vec![180.0, 60.0]; // demo
-                let ae = crate::domains::chemical::organic_chemistry::atom_economy(&reactants, 180.0);
+                let ae =
+                    crate::domains::chemical::organic_chemistry::atom_economy(&reactants, 180.0);
                 vm_log!("[Webizen] NativeAtomEconomy: {:.1}%", ae);
             }
             SlgOpcode::NativeEFactor => {
@@ -1624,7 +1682,11 @@ pub fn execute_vm_frame(
                         natks += 1;
                     }
                 }
-                if !argumentation::grounded_contains(&args[..nargs], &atks[..natks], frame.subject_reg) {
+                if !argumentation::grounded_contains(
+                    &args[..nargs],
+                    &atks[..natks],
+                    frame.subject_reg,
+                ) {
                     return None; // the goal argument is not justified (defeated) → fails
                 }
             }
@@ -1704,7 +1766,13 @@ pub fn execute_vm_frame(
                 let n = arena.collect_active_quins(&mut scratch);
                 let next = crate::q_hash("ctl:next");
                 let holds = crate::q_hash("ctl:holds");
-                if !ctl::exists_finally(&scratch[..n], frame.subject_reg, frame.object_reg, next, holds) {
+                if !ctl::exists_finally(
+                    &scratch[..n],
+                    frame.subject_reg,
+                    frame.object_reg,
+                    next,
+                    holds,
+                ) {
                     return None; // no path reaches the target state → fails
                 }
             }
@@ -1713,7 +1781,13 @@ pub fn execute_vm_frame(
                 let n = arena.collect_active_quins(&mut scratch);
                 let next = crate::q_hash("ctl:next");
                 let holds = crate::q_hash("ctl:holds");
-                if !ctl::always_globally(&scratch[..n], frame.subject_reg, frame.object_reg, next, holds) {
+                if !ctl::always_globally(
+                    &scratch[..n],
+                    frame.subject_reg,
+                    frame.object_reg,
+                    next,
+                    holds,
+                ) {
                     return None; // a reachable state violates the invariant → fails
                 }
             }
@@ -1722,7 +1796,13 @@ pub fn execute_vm_frame(
                 let n = arena.collect_active_quins(&mut scratch);
                 let accesses = crate::q_hash("modal:accesses");
                 let holds = crate::q_hash("modal:holds");
-                if !modal::necessary(&scratch[..n], frame.subject_reg, frame.object_reg, accesses, holds) {
+                if !modal::necessary(
+                    &scratch[..n],
+                    frame.subject_reg,
+                    frame.object_reg,
+                    accesses,
+                    holds,
+                ) {
                     return None; // an accessible world fails the proposition → fails
                 }
             }
@@ -1731,7 +1811,13 @@ pub fn execute_vm_frame(
                 let n = arena.collect_active_quins(&mut scratch);
                 let accesses = crate::q_hash("modal:accesses");
                 let holds = crate::q_hash("modal:holds");
-                if !modal::possible(&scratch[..n], frame.subject_reg, frame.object_reg, accesses, holds) {
+                if !modal::possible(
+                    &scratch[..n],
+                    frame.subject_reg,
+                    frame.object_reg,
+                    accesses,
+                    holds,
+                ) {
                     return None; // no accessible world satisfies the proposition → fails
                 }
             }
@@ -1827,7 +1913,10 @@ pub fn execute_vm_frame(
                 if !temporal_ltl::evaluate_ltl_trace(trace, &formula) {
                     return None; // temporal property violated → rule frame fails
                 }
-                vm_log!("[Webizen] NativeLtl: temporal property held over {} states", n);
+                vm_log!(
+                    "[Webizen] NativeLtl: temporal property held over {} states",
+                    n
+                );
             }
             SlgOpcode::NativeAllenInterval(mode) => {
                 // The frame registers carry the two intervals' bounds:
@@ -1852,7 +1941,10 @@ pub fn execute_vm_frame(
                 if !holds {
                     return None; // the interval relation does not hold → frame fails
                 }
-                vm_log!("[Webizen] NativeAllenInterval: relation mode {} holds", mode);
+                vm_log!(
+                    "[Webizen] NativeAllenInterval: relation mode {} holds",
+                    mode
+                );
             }
             SlgOpcode::NativeLorentzDistance
             | SlgOpcode::NativeTropicalDistance
@@ -1866,15 +1958,20 @@ pub fn execute_vm_frame(
                 let end = f64::from_bits(end_bits);
                 let step_size = f64::from_bits(step_size_bits as u64);
                 let kahan_compensation = f32::from_bits(kahan_bits);
-                
+
                 // Create a mock continuous grid for demonstration (as bytes)
                 let grid_data: Vec<u8> = vec![0u8; 1000 * 8]; // 1000 f64 values
-                let grid = crate::modalities::calculus::ContinuousGrid::new(&grid_data, 1000).unwrap();
-                
-                let result = crate::modalities::calculus::integrate_simpsons_chunked(&grid, step_size);
+                let grid =
+                    crate::modalities::calculus::ContinuousGrid::new(&grid_data, 1000).unwrap();
+
+                let result =
+                    crate::modalities::calculus::integrate_simpsons_chunked(&grid, step_size);
                 vm_log!(
                     "[Webizen] NativeCalcSimpsons: [{}, {}] h={:.4} result={:.6}",
-                    start, end, step_size, result
+                    start,
+                    end,
+                    step_size,
+                    result
                 );
             }
             SlgOpcode::NativeCalcTrapezoidal(start_bits, end_bits, step_size_bits, kahan_bits) => {
@@ -1882,15 +1979,20 @@ pub fn execute_vm_frame(
                 let end = f64::from_bits(end_bits);
                 let step_size = f64::from_bits(step_size_bits as u64);
                 let kahan_compensation = f32::from_bits(kahan_bits);
-                
+
                 // Create a mock continuous grid for demonstration (as bytes)
                 let grid_data: Vec<u8> = vec![0u8; 1000 * 8]; // 1000 f64 values
-                let grid = crate::modalities::calculus::ContinuousGrid::new(&grid_data, 1000).unwrap();
-                
-                let result = crate::modalities::calculus::integrate_trapezoidal_chunked(&grid, step_size);
+                let grid =
+                    crate::modalities::calculus::ContinuousGrid::new(&grid_data, 1000).unwrap();
+
+                let result =
+                    crate::modalities::calculus::integrate_trapezoidal_chunked(&grid, step_size);
                 vm_log!(
                     "[Webizen] NativeCalcTrapezoidal: [{}, {}] h={:.4} result={:.6}",
-                    start, end, step_size, result
+                    start,
+                    end,
+                    step_size,
+                    result
                 );
             }
             SlgOpcode::NativeCalcGpu(start_bits, end_bits, step_size_bits, kahan_bits) => {
@@ -1898,37 +2000,44 @@ pub fn execute_vm_frame(
                 let end = f64::from_bits(end_bits);
                 let step_size = f32::from_bits(step_size_bits);
                 let _kahan_compensation = f32::from_bits(kahan_bits);
-                
+
                 vm_log!(
                     "[Webizen] NativeCalcGpu: GPU integration requested for [{}, {}] h={:.4}",
-                    start, end, step_size
+                    start,
+                    end,
+                    step_size
                 );
-                
+
                 // Create GPU integrator and attempt async execution
                 #[cfg(not(target_arch = "wasm32"))]
                 {
                     use crate::modalities::calculus::gpu::{GpuIntegrator, PlatformGpuIntegrator};
                     use std::path::Path;
-                    
+
                     // Use tokio runtime to block on async GPU initialization
                     if let Ok(handle) = tokio::runtime::Handle::try_current() {
-                        let gpu_result = handle.block_on(async {
-                            PlatformGpuIntegrator::new().await
-                        });
-                        
+                        let gpu_result =
+                            handle.block_on(async { PlatformGpuIntegrator::new().await });
+
                         match gpu_result {
                             Ok(mut gpu_integrator) => {
                                 // Calculate size from boundaries (assuming f64 grid)
                                 let num_points = ((end - start) / step_size as f64) as usize;
                                 let size = (num_points * 8) as u64; // bytes
-                                
+
                                 // Use alignment resolver to get DMA-safe offset
-                                let (aligned_offset, _remainder) = crate::modalities::calculus::resolve_aligned_byte_offset(0);
-                                
+                                let (aligned_offset, _remainder) =
+                                    crate::modalities::calculus::resolve_aligned_byte_offset(0);
+
                                 // For demo, use a temp file path - in production this would come from Quin context
                                 let temp_path = Path::new("calculus_grid.dat");
-                                
-                                match gpu_integrator.integrate_simpsons_gpu(temp_path, aligned_offset, size, step_size) {
+
+                                match gpu_integrator.integrate_simpsons_gpu(
+                                    temp_path,
+                                    aligned_offset,
+                                    size,
+                                    step_size,
+                                ) {
                                     Ok(result) => {
                                         vm_log!(
                                             "[Webizen] NativeCalcGpu: GPU integration complete result={:.6}",
@@ -1943,9 +2052,20 @@ pub fn execute_vm_frame(
                                         );
                                         // Fallback to CPU Simpson's
                                         let grid_data: Vec<u8> = vec![0u8; 1000 * 8];
-                                        let grid = crate::modalities::calculus::ContinuousGrid::new(&grid_data, 1000).unwrap();
-                                        let cpu_result = crate::modalities::calculus::integrate_simpsons_chunked(&grid, step_size as f64);
-                                        vm_log!("[Webizen] NativeCalcGpu: CPU fallback result={:.6}", cpu_result);
+                                        let grid =
+                                            crate::modalities::calculus::ContinuousGrid::new(
+                                                &grid_data, 1000,
+                                            )
+                                            .unwrap();
+                                        let cpu_result =
+                                            crate::modalities::calculus::integrate_simpsons_chunked(
+                                                &grid,
+                                                step_size as f64,
+                                            );
+                                        vm_log!(
+                                            "[Webizen] NativeCalcGpu: CPU fallback result={:.6}",
+                                            cpu_result
+                                        );
                                     }
                                 }
                             }
@@ -1956,27 +2076,56 @@ pub fn execute_vm_frame(
                                 );
                                 // Fallback to CPU Simpson's
                                 let grid_data: Vec<u8> = vec![0u8; 1000 * 8];
-                                let grid = crate::modalities::calculus::ContinuousGrid::new(&grid_data, 1000).unwrap();
-                                let cpu_result = crate::modalities::calculus::integrate_simpsons_chunked(&grid, step_size as f64);
-                                vm_log!("[Webizen] NativeCalcGpu: CPU fallback result={:.6}", cpu_result);
+                                let grid = crate::modalities::calculus::ContinuousGrid::new(
+                                    &grid_data, 1000,
+                                )
+                                .unwrap();
+                                let cpu_result =
+                                    crate::modalities::calculus::integrate_simpsons_chunked(
+                                        &grid,
+                                        step_size as f64,
+                                    );
+                                vm_log!(
+                                    "[Webizen] NativeCalcGpu: CPU fallback result={:.6}",
+                                    cpu_result
+                                );
                             }
                         }
                     } else {
-                        vm_log!("[Webizen] NativeCalcGpu: Tokio runtime failed, using CPU fallback");
+                        vm_log!(
+                            "[Webizen] NativeCalcGpu: Tokio runtime failed, using CPU fallback"
+                        );
                         let grid_data: Vec<u8> = vec![0u8; 1000 * 8];
-                        let grid = crate::modalities::calculus::ContinuousGrid::new(&grid_data, 1000).unwrap();
-                        let cpu_result = crate::modalities::calculus::integrate_simpsons_chunked(&grid, step_size as f64);
-                        vm_log!("[Webizen] NativeCalcGpu: CPU fallback result={:.6}", cpu_result);
+                        let grid =
+                            crate::modalities::calculus::ContinuousGrid::new(&grid_data, 1000)
+                                .unwrap();
+                        let cpu_result = crate::modalities::calculus::integrate_simpsons_chunked(
+                            &grid,
+                            step_size as f64,
+                        );
+                        vm_log!(
+                            "[Webizen] NativeCalcGpu: CPU fallback result={:.6}",
+                            cpu_result
+                        );
                     }
                 }
-                
+
                 #[cfg(target_arch = "wasm32")]
                 {
-                    vm_log!("[Webizen] NativeCalcGpu: GPU not available on WASM, using CPU fallback");
+                    vm_log!(
+                        "[Webizen] NativeCalcGpu: GPU not available on WASM, using CPU fallback"
+                    );
                     let grid_data: Vec<u8> = vec![0u8; 1000 * 8];
-                    let grid = crate::modalities::calculus::ContinuousGrid::new(&grid_data, 1000).unwrap();
-                    let cpu_result = crate::modalities::calculus::integrate_simpsons_chunked(&grid, step_size as f64);
-                    vm_log!("[Webizen] NativeCalcGpu: CPU fallback result={:.6}", cpu_result);
+                    let grid =
+                        crate::modalities::calculus::ContinuousGrid::new(&grid_data, 1000).unwrap();
+                    let cpu_result = crate::modalities::calculus::integrate_simpsons_chunked(
+                        &grid,
+                        step_size as f64,
+                    );
+                    vm_log!(
+                        "[Webizen] NativeCalcGpu: CPU fallback result={:.6}",
+                        cpu_result
+                    );
                 }
             }
             SlgOpcode::NativeQuboCompile => {
@@ -2140,10 +2289,26 @@ pub fn check_personhood_category_error(agent_type: u64, claims_dignity_right: bo
         weight: None,
         premise: Formula {
             triples: vec![
-                Triple { subject: var("c"), predicate: u("a"), object: u(class_uri) },
-                Triple { subject: var("c"), predicate: u("https://ns.webcivics.net/values/claims"), object: var("r") },
-                Triple { subject: var("r"), predicate: u("a"), object: u("https://ns.webcivics.net/values/Right") },
-                Triple { subject: var("r"), predicate: u("https://ns.webcivics.net/values/heldBy"), object: u("https://ns.webcivics.net/values/NaturalPerson") },
+                Triple {
+                    subject: var("c"),
+                    predicate: u("a"),
+                    object: u(class_uri),
+                },
+                Triple {
+                    subject: var("c"),
+                    predicate: u("https://ns.webcivics.net/values/claims"),
+                    object: var("r"),
+                },
+                Triple {
+                    subject: var("r"),
+                    predicate: u("a"),
+                    object: u("https://ns.webcivics.net/values/Right"),
+                },
+                Triple {
+                    subject: var("r"),
+                    predicate: u("https://ns.webcivics.net/values/heldBy"),
+                    object: u("https://ns.webcivics.net/values/NaturalPerson"),
+                },
             ],
         },
         conclusion: Formula {
@@ -2156,11 +2321,26 @@ pub fn check_personhood_category_error(agent_type: u64, claims_dignity_right: bo
     };
 
     let mut arena = SlgArena::new();
-    let r1 = guard("agency-G1", "https://ns.webcivics.net/values/CorporatePerson"); arena.register_rule(&r1);
-    let r2 = guard("agency-G1-prime", "https://ns.webcivics.net/values/ArtificialAgent"); arena.register_rule(&r2);
+    let r1 = guard(
+        "agency-G1",
+        "https://ns.webcivics.net/values/CorporatePerson",
+    );
+    arena.register_rule(&r1);
+    let r2 = guard(
+        "agency-G1-prime",
+        "https://ns.webcivics.net/values/ArtificialAgent",
+    );
+    arena.register_rule(&r2);
 
     let fact = |a: &mut SlgArena, s: u64, p: u64, o: u64| {
-        a.write_table(NQuin { subject: s, predicate: p, object: o, context: 0, metadata: 0, parity: s ^ p ^ o });
+        a.write_table(NQuin {
+            subject: s,
+            predicate: p,
+            object: o,
+            context: 0,
+            metadata: 0,
+            parity: s ^ p ^ o,
+        });
     };
     let agent = vh("urn:webcivics:values-check:agent");
     let right = vh("urn:webcivics:values-check:right");
@@ -2168,10 +2348,19 @@ pub fn check_personhood_category_error(agent_type: u64, claims_dignity_right: bo
     if claims_dignity_right {
         fact(&mut arena, agent, vh(&format!("{B}claims")), right);
         fact(&mut arena, right, vh("a"), vh(&format!("{B}Right")));
-        fact(&mut arena, right, vh(&format!("{B}heldBy")), vh(&format!("{B}NaturalPerson")));
+        fact(
+            &mut arena,
+            right,
+            vh(&format!("{B}heldBy")),
+            vh(&format!("{B}NaturalPerson")),
+        );
     }
     let _ = arena.fire_registered_rules(crate::q_hash("contract:values-check"));
-    arena.has_quin(agent, vh(&format!("{B}flag")), vh(&format!("{B}PersonhoodCategoryError")))
+    arena.has_quin(
+        agent,
+        vh(&format!("{B}flag")),
+        vh(&format!("{B}PersonhoodCategoryError")),
+    )
 }
 
 #[cfg(test)]
@@ -2186,32 +2375,64 @@ mod tests {
         let spend = crate::q_hash("q42:spend");
         let svc = crate::q_hash("svc:inference");
         let mk = |s, p, o| {
-            let mut q = NQuin { subject: s, predicate: p, object: o, context: 0, metadata: 0, parity: 0 };
+            let mut q = NQuin {
+                subject: s,
+                predicate: p,
+                object: o,
+                context: 0,
+                metadata: 0,
+                parity: 0,
+            };
             q.parity = q.subject ^ q.predicate ^ q.object ^ q.context;
             q
         };
         let ops = [SlgOpcode::ZkConsumeFact];
-        let frame_for = || VmFrame { subject_reg: token, predicate_reg: spend, object_reg: svc, context_reg: 0 };
+        let frame_for = || VmFrame {
+            subject_reg: token,
+            predicate_reg: spend,
+            object_reg: svc,
+            context_reg: 0,
+        };
         // The token's spent state (the real semantics; the VM's end-of-program return value is a
         // separate convention we don't rely on here).
-        let spent = |a: &mut SlgArena| a.find_mutable_quin(token, spend, svc).map(|q| is_consumed(q)).unwrap_or(false);
+        let spent = |a: &mut SlgArena| {
+            a.find_mutable_quin(token, spend, svc)
+                .map(|q| is_consumed(q))
+                .unwrap_or(false)
+        };
 
         // 1. Resource present, NO zk-verified marker → gate REFUSES (frame None); token NOT spent.
         let mut arena = SlgArena::new();
         arena.write_table(mk(token, spend, svc));
         let mut frame = frame_for();
-        assert!(execute_vm_frame(&mut arena, &ops, &mut frame).is_none(), "no proof → gate refuses");
-        assert!(!spent(&mut arena), "token must NOT be spent without a verified proof");
+        assert!(
+            execute_vm_frame(&mut arena, &ops, &mut frame).is_none(),
+            "no proof → gate refuses"
+        );
+        assert!(
+            !spent(&mut arena),
+            "token must NOT be spent without a verified proof"
+        );
 
         // 2. Add the verified zk marker → the token is now spent.
-        arena.write_table(mk(token, crate::q_hash("q42:zkVerified"), crate::q_hash("q42:true")));
+        arena.write_table(mk(
+            token,
+            crate::q_hash("q42:zkVerified"),
+            crate::q_hash("q42:true"),
+        ));
         let mut frame2 = frame_for();
         let _ = execute_vm_frame(&mut arena, &ops, &mut frame2);
-        assert!(spent(&mut arena), "verified proof → token spent exactly once");
+        assert!(
+            spent(&mut arena),
+            "verified proof → token spent exactly once"
+        );
 
         // 3. Re-spend attempt → gate refuses (already exhausted); token stays spent (no double-spend).
         let mut frame3 = frame_for();
-        assert!(execute_vm_frame(&mut arena, &ops, &mut frame3).is_none(), "exhausted linear token cannot be re-spent");
+        assert!(
+            execute_vm_frame(&mut arena, &ops, &mut frame3).is_none(),
+            "exhausted linear token cannot be re-spent"
+        );
         assert!(spent(&mut arena), "token remains spent");
     }
 
@@ -2398,10 +2619,26 @@ mod tests {
             weight: None,
             premise: Formula {
                 triples: vec![
-                    Triple { subject: var("c"), predicate: u("a"), object: u("https://ns.webcivics.net/values/CorporatePerson") },
-                    Triple { subject: var("c"), predicate: u("https://ns.webcivics.net/values/claims"), object: var("r") },
-                    Triple { subject: var("r"), predicate: u("a"), object: u("https://ns.webcivics.net/values/Right") },
-                    Triple { subject: var("r"), predicate: u("https://ns.webcivics.net/values/heldBy"), object: u("https://ns.webcivics.net/values/NaturalPerson") },
+                    Triple {
+                        subject: var("c"),
+                        predicate: u("a"),
+                        object: u("https://ns.webcivics.net/values/CorporatePerson"),
+                    },
+                    Triple {
+                        subject: var("c"),
+                        predicate: u("https://ns.webcivics.net/values/claims"),
+                        object: var("r"),
+                    },
+                    Triple {
+                        subject: var("r"),
+                        predicate: u("a"),
+                        object: u("https://ns.webcivics.net/values/Right"),
+                    },
+                    Triple {
+                        subject: var("r"),
+                        predicate: u("https://ns.webcivics.net/values/heldBy"),
+                        object: u("https://ns.webcivics.net/values/NaturalPerson"),
+                    },
                 ],
             },
             conclusion: Formula {
@@ -2414,7 +2651,14 @@ mod tests {
         };
 
         let fact = |a: &mut SlgArena, s: u64, p: u64, o: u64| {
-            a.write_table(NQuin { subject: s, predicate: p, object: o, context: 0, metadata: 0, parity: s ^ p ^ o });
+            a.write_table(NQuin {
+                subject: s,
+                predicate: p,
+                object: o,
+                context: 0,
+                metadata: 0,
+                parity: s ^ p ^ o,
+            });
         };
         let flag = vh(&format!("{B}flag"));
         let pce = vh(&format!("{B}PersonhoodCategoryError"));
@@ -2423,10 +2667,20 @@ mod tests {
         // ── Positive: AcmeCorp (CorporatePerson) claims a NaturalPerson-held right → FLAGGED ──
         let mut arena = SlgArena::new();
         let acme = vh("https://ns.webcivics.net/example/AcmeCorp");
-        fact(&mut arena, acme, vh("a"), vh(&format!("{B}CorporatePerson")));
+        fact(
+            &mut arena,
+            acme,
+            vh("a"),
+            vh(&format!("{B}CorporatePerson")),
+        );
         fact(&mut arena, acme, vh(&format!("{B}claims")), right);
         fact(&mut arena, right, vh("a"), vh(&format!("{B}Right")));
-        fact(&mut arena, right, vh(&format!("{B}heldBy")), vh(&format!("{B}NaturalPerson")));
+        fact(
+            &mut arena,
+            right,
+            vh(&format!("{B}heldBy")),
+            vh(&format!("{B}NaturalPerson")),
+        );
         arena.register_rule(&g1);
         let _ = arena.fire_registered_rules(crate::q_hash("contract:g1-smoke"));
         assert!(
@@ -2437,10 +2691,20 @@ mod tests {
         // ── Negative control: a NaturalPerson claiming the SAME right is NOT flagged ──
         let mut arena2 = SlgArena::new();
         let alice = vh("https://ns.webcivics.net/example/Alice");
-        fact(&mut arena2, alice, vh("a"), vh(&format!("{B}NaturalPerson")));
+        fact(
+            &mut arena2,
+            alice,
+            vh("a"),
+            vh(&format!("{B}NaturalPerson")),
+        );
         fact(&mut arena2, alice, vh(&format!("{B}claims")), right);
         fact(&mut arena2, right, vh("a"), vh(&format!("{B}Right")));
-        fact(&mut arena2, right, vh(&format!("{B}heldBy")), vh(&format!("{B}NaturalPerson")));
+        fact(
+            &mut arena2,
+            right,
+            vh(&format!("{B}heldBy")),
+            vh(&format!("{B}NaturalPerson")),
+        );
         arena2.register_rule(&g1);
         let _ = arena2.fire_registered_rules(crate::q_hash("contract:g1-smoke"));
         assert!(
@@ -2456,13 +2720,25 @@ mod tests {
         const B: &str = "https://ns.webcivics.net/values/";
         let ct = |c: &str| crate::q_hash(&format!("{B}{c}"));
         // A corporation claiming a human dignity right → category error.
-        assert!(super::check_personhood_category_error(ct("CorporatePerson"), true));
+        assert!(super::check_personhood_category_error(
+            ct("CorporatePerson"),
+            true
+        ));
         // A software agent doing the same → also caught (G1').
-        assert!(super::check_personhood_category_error(ct("ArtificialAgent"), true));
+        assert!(super::check_personhood_category_error(
+            ct("ArtificialAgent"),
+            true
+        ));
         // A natural person holding their own right → fine.
-        assert!(!super::check_personhood_category_error(ct("NaturalPerson"), true));
+        assert!(!super::check_personhood_category_error(
+            ct("NaturalPerson"),
+            true
+        ));
         // A corporation that makes no such claim → nothing to flag.
-        assert!(!super::check_personhood_category_error(ct("CorporatePerson"), false));
+        assert!(!super::check_personhood_category_error(
+            ct("CorporatePerson"),
+            false
+        ));
     }
 
     /// CML concept-graph pilot (PLAN §-CML §6): put the deontic logic library *against a concept*.
@@ -2473,8 +2749,8 @@ mod tests {
     #[test]
     fn cml_concept_deontic_pilot() {
         use crate::modalities::logic::deontic::{
-            compile_norm_quin, evaluate_deontic_contract, DeonticStatus, DeonticVerdict, OP_OBLIGATE,
-            OP_PERMIT,
+            compile_norm_quin, evaluate_deontic_contract, DeonticStatus, DeonticVerdict,
+            OP_OBLIGATE, OP_PERMIT,
         };
         // Use the CORPUS hash (generate_60bit_token) — the space the ingested concept-graph lives in
         // — NOT q_hash (the legacy deontic/SlgArena space; they differ in the top 4 bits). This makes
@@ -2489,12 +2765,19 @@ mod tests {
 
         // The concept's deontic sub-graph: a State obligation to suppress forced labour.
         let norm = compile_norm_quin(party, OP_OBLIGATE, path, action, concept, 0, false);
-        assert_eq!(norm.context, concept, "the norm lives in the concept's context sub-graph");
+        assert_eq!(
+            norm.context, concept,
+            "the norm lives in the concept's context sub-graph"
+        );
 
         let mut out = [DeonticVerdict::default(); 4];
         let n = evaluate_deontic_contract(&[norm], now, &mut out).expect("deontic eval");
         assert_eq!(n, 1);
-        assert_eq!(out[0].status, DeonticStatus::Active, "the concept's obligation is in force");
+        assert_eq!(
+            out[0].status,
+            DeonticStatus::Active,
+            "the concept's obligation is in force"
+        );
         assert_eq!(out[0].opcode, OP_OBLIGATE);
 
         // Lifecycle within the concept's sub-graph: an `unless lawfully authorised` defeater
@@ -2509,7 +2792,8 @@ mod tests {
             true,
         );
         let mut out2 = [DeonticVerdict::default(); 4];
-        let n2 = evaluate_deontic_contract(&[norm, defeater], now, &mut out2).expect("deontic eval 2");
+        let n2 =
+            evaluate_deontic_contract(&[norm, defeater], now, &mut out2).expect("deontic eval 2");
         assert_eq!(n2, 1, "the defeater is not a primary norm");
         assert_eq!(
             out2[0].status,
@@ -2525,7 +2809,8 @@ mod tests {
     fn cml_concept_temporal_and_shacl_firewall() {
         use crate::modalities::interval_reasoning::TemporalInterval;
         use crate::modalities::logic::deontic::{
-            compile_norm_quin, evaluate_deontic_contract, DeonticStatus, DeonticVerdict, OP_OBLIGATE,
+            compile_norm_quin, evaluate_deontic_contract, DeonticStatus, DeonticVerdict,
+            OP_OBLIGATE,
         };
         use crate::sparql_library::sparql_shacl::{ShaclConstraint, ShaclShape, ShaclValidator};
         // Corpus hash (generate_60bit_token) — the SHACL validator hashes rdf:type this way, and it is
@@ -2538,8 +2823,14 @@ mod tests {
         let before_eif = -500_000_000i64; // ~1954, before Convention 105 entry-into-force
         let far_future = 4_102_444_800i64;
         let in_force = TemporalInterval::new(concept, -347_000_000, far_future); // EIF 1959-01-17 → open
-        assert!(in_force.contains(now), "the obligation is within its in-force window in 2024");
-        assert!(!in_force.contains(before_eif), "not binding before entry into force");
+        assert!(
+            in_force.contains(now),
+            "the obligation is within its in-force window in 2024"
+        );
+        assert!(
+            !in_force.contains(before_eif),
+            "not binding before entry into force"
+        );
 
         let norm = compile_norm_quin(
             h("https://ns.webcivics.net/values/State"),
@@ -2553,7 +2844,10 @@ mod tests {
         let mut out = [DeonticVerdict::default(); 2];
         evaluate_deontic_contract(&[norm], now as u32, &mut out).unwrap();
         let binding_now = out[0].status == DeonticStatus::Active && in_force.contains(now);
-        assert!(binding_now, "Active AND in-window ⇒ the norm is binding now");
+        assert!(
+            binding_now,
+            "Active AND in-window ⇒ the norm is binding now"
+        );
 
         // ── COMPLIANCE FIREWALL (SHACL) — gated on the norm being binding (§5a) ──
         // ForcedLabourComplianceShape: an AgentState MUST be a values:CompliantState.
@@ -2571,12 +2865,17 @@ mod tests {
         };
 
         // A compliant entity conforms; an exploitative one violates — but only because the norm binds now.
-        assert!(binding_now, "the firewall applies only while the norm is binding");
+        assert!(
+            binding_now,
+            "the firewall applies only while the norm is binding"
+        );
 
         let good = [q(agent_state, rdf_type, compliant)];
         let mut vg = ShaclValidator::new(&good);
         let cg = vg
-            .add_constraint(ShaclConstraint::Class { class_iri: compliant })
+            .add_constraint(ShaclConstraint::Class {
+                class_iri: compliant,
+            })
             .unwrap();
         let mut shape = ShaclShape {
             shape_iri: h("https://ns.webcivics.net/values/ForcedLabourComplianceShape"),
@@ -2594,7 +2893,9 @@ mod tests {
         let bad = [q(agent_state, rdf_type, exploitative)];
         let mut vb = ShaclValidator::new(&bad);
         let cb = vb
-            .add_constraint(ShaclConstraint::Class { class_iri: compliant })
+            .add_constraint(ShaclConstraint::Class {
+                class_iri: compliant,
+            })
             .unwrap();
         let mut shape_b = shape;
         shape_b.constraints[0] = cb;
@@ -2646,14 +2947,26 @@ mod tests {
         // NaturalPerson-held right.
         let h = |s: &str| crate::q_hash(s);
         let fact = |a: &mut SlgArena, s: u64, p: u64, o: u64| {
-            a.write_table(NQuin { subject: s, predicate: p, object: o, context: 0, metadata: 0, parity: s ^ p ^ o });
+            a.write_table(NQuin {
+                subject: s,
+                predicate: p,
+                object: o,
+                context: 0,
+                metadata: 0,
+                parity: s ^ p ^ o,
+            });
         };
         let acme = h("ex:AcmeCorp");
         let right = h("ex:Right1");
         fact(&mut arena, acme, h("a"), h("values:CorporatePerson"));
         fact(&mut arena, acme, h("values:claims"), right);
         fact(&mut arena, right, h("a"), h("values:Right"));
-        fact(&mut arena, right, h("values:heldBy"), h("values:NaturalPerson"));
+        fact(
+            &mut arena,
+            right,
+            h("values:heldBy"),
+            h("values:NaturalPerson"),
+        );
 
         let _ = arena.fire_registered_rules(crate::q_hash("contract:agency-file"));
         assert!(
@@ -2675,7 +2988,10 @@ mod tests {
         let far_future = 4_102_444_800i64; // ~2100 (avoid end-start overflow; "open-ended")
         let udhr = TemporalInterval::new(1, -662_688_000, far_future); // in force since 1948
         let bhr_treaty = TemporalInterval::new(2, 1_790_000_000, far_future); // not before ~2026/27
-        assert!(udhr.contains(now), "UDHR is in force in 2024 — its norms are temporally active");
+        assert!(
+            udhr.contains(now),
+            "UDHR is in force in 2024 — its norms are temporally active"
+        );
         assert!(
             !bhr_treaty.contains(now),
             "the BHR watchlist treaty is NOT yet in force — its norms are temporally inactive (notBeforeDate)"
@@ -2691,8 +3007,18 @@ mod tests {
         let party = crate::q_hash("https://ns.webcivics.net/example/OpenLikeCorp");
         let primary = crate::q_hash("https://ns.webcivics.net/values/responsibilityToRespect");
         let remedy = crate::q_hash("https://ns.webcivics.net/values/provideRemedy");
-        let mk = |s: u64, p: u64, o: u64| NQuin { subject: s, predicate: p, object: o, context: 0, metadata: 0, parity: s ^ p ^ o };
-        assert!(evaluate_contrary_to_duty(&[], party, primary, remedy), "no breach → no remedy owed");
+        let mk = |s: u64, p: u64, o: u64| NQuin {
+            subject: s,
+            predicate: p,
+            object: o,
+            context: 0,
+            metadata: 0,
+            parity: s ^ p ^ o,
+        };
+        assert!(
+            evaluate_contrary_to_duty(&[], party, primary, remedy),
+            "no breach → no remedy owed"
+        );
         let breach = [mk(party, crate::q_hash("q42:breached"), primary)];
         assert!(
             !evaluate_contrary_to_duty(&breach, party, primary, remedy),
@@ -2702,7 +3028,10 @@ mod tests {
             mk(party, crate::q_hash("q42:breached"), primary),
             mk(party, crate::q_hash("q42:fulfilled"), remedy),
         ];
-        assert!(evaluate_contrary_to_duty(&repaired, party, primary, remedy), "breach + remedy → satisfied");
+        assert!(
+            evaluate_contrary_to_duty(&repaired, party, primary, remedy),
+            "breach + remedy → satisfied"
+        );
     }
 
     /// ARGUMENTATION (Dung grounded extension): a rights-conflict is resolved by defeat,
@@ -2710,15 +3039,45 @@ mod tests {
     /// grounded extension the guard stands and the corporate claim is rejected.
     #[test]
     fn values_rights_conflict_argumentation_guard_wins() {
-        use crate::modalities::argumentation::{Argument, ArgumentationFramework, Attack, AttackType};
-        let concl = |s: &str| NQuin { subject: crate::q_hash(s), predicate: 0, object: 0, context: 0, metadata: 0, parity: 0 };
+        use crate::modalities::argumentation::{
+            Argument, ArgumentationFramework, Attack, AttackType,
+        };
+        let concl = |s: &str| NQuin {
+            subject: crate::q_hash(s),
+            predicate: 0,
+            object: 0,
+            context: 0,
+            metadata: 0,
+            parity: 0,
+        };
         let mut af = ArgumentationFramework::new();
-        af.add_argument(Argument::new(1, "CorporatePerson claims a dignity right".to_string(), vec![], concl("ex:AcmeCorp-claims-dignity")));
-        af.add_argument(Argument::new(2, "Dignity rights held only by NaturalPerson (inverse guard)".to_string(), vec![], concl("values:NaturalPerson-only-dignity")));
-        af.add_attack(Attack { attacker: 2, target: 1, attack_type: AttackType::Rebuttal, strength: 1.0 });
+        af.add_argument(Argument::new(
+            1,
+            "CorporatePerson claims a dignity right".to_string(),
+            vec![],
+            concl("ex:AcmeCorp-claims-dignity"),
+        ));
+        af.add_argument(Argument::new(
+            2,
+            "Dignity rights held only by NaturalPerson (inverse guard)".to_string(),
+            vec![],
+            concl("values:NaturalPerson-only-dignity"),
+        ));
+        af.add_attack(Attack {
+            attacker: 2,
+            target: 1,
+            attack_type: AttackType::Rebuttal,
+            strength: 1.0,
+        });
         let grounded = af.grounded_extension();
-        assert!(grounded.contains(&2), "the inverse guard stands (unattacked) in the grounded extension");
-        assert!(!grounded.contains(&1), "the corporate dignity-claim is DEFEATED — rejected from the grounded extension");
+        assert!(
+            grounded.contains(&2),
+            "the inverse guard stands (unattacked) in the grounded extension"
+        );
+        assert!(
+            !grounded.contains(&1),
+            "the corporate dignity-claim is DEFEATED — rejected from the grounded extension"
+        );
     }
 
     /// ALGEBRA (CAS): legal PROPORTIONALITY (IHL AP I Art 51(5)(b); HR limitation tests) computed
@@ -2760,11 +3119,17 @@ mod tests {
         let mut met = HashMap::new();
         met.insert("cost".to_string(), 100.0);
         met.insert("income".to_string(), 120.0);
-        assert!(shortfall.eval(&met).expect("eval") < 0.0, "income ≥ cost → ICESCR Art 11 standard met");
+        assert!(
+            shortfall.eval(&met).expect("eval") < 0.0,
+            "income ≥ cost → ICESCR Art 11 standard met"
+        );
         let mut unmet = HashMap::new();
         unmet.insert("cost".to_string(), 100.0);
         unmet.insert("income".to_string(), 60.0);
-        assert!(shortfall.eval(&unmet).expect("eval") > 0.0, "cost > income → unmet economic right (shortfall)");
+        assert!(
+            shortfall.eval(&unmet).expect("eval") > 0.0,
+            "cost > income → unmet economic right (shortfall)"
+        );
     }
 
     /// SPATIAL (RCC-8): jurisdiction FOLLOWS THE PERSON (§10.5). The affected person's region is a
@@ -2774,9 +3139,23 @@ mod tests {
     fn values_jurisdiction_follows_the_person_rcc8() {
         use crate::modalities::spatio_temporal::{evaluate_rcc8, Rcc8Relation, SpatialRegion};
         let h = crate::q_hash;
-        let au = SpatialRegion::new(h("region:AU"), vec![(0.0, 0.0), (10.0, 0.0), (10.0, 10.0), (0.0, 10.0)]);
-        let person = SpatialRegion::new(h("region:user-in-AU"), vec![(2.0, 2.0), (4.0, 2.0), (4.0, 4.0), (2.0, 4.0)]);
-        let us = SpatialRegion::new(h("region:US-choiceOfLaw"), vec![(100.0, 100.0), (110.0, 100.0), (110.0, 110.0), (100.0, 110.0)]);
+        let au = SpatialRegion::new(
+            h("region:AU"),
+            vec![(0.0, 0.0), (10.0, 0.0), (10.0, 10.0), (0.0, 10.0)],
+        );
+        let person = SpatialRegion::new(
+            h("region:user-in-AU"),
+            vec![(2.0, 2.0), (4.0, 2.0), (4.0, 4.0), (2.0, 4.0)],
+        );
+        let us = SpatialRegion::new(
+            h("region:US-choiceOfLaw"),
+            vec![
+                (100.0, 100.0),
+                (110.0, 100.0),
+                (110.0, 110.0),
+                (100.0, 110.0),
+            ],
+        );
 
         let r = evaluate_rcc8(&person, &au);
         assert!(
@@ -2798,19 +3177,32 @@ mod tests {
         use crate::modalities::paraconsistent::route_paraconsistent;
         let h = crate::q_hash;
         let ctx = h("contract:multi-jurisdiction");
-        let mk = |s: u64, p: u64, o: u64| NQuin { subject: s, predicate: p, object: o, context: ctx, metadata: 0, parity: s ^ p ^ o ^ ctx };
+        let mk = |s: u64, p: u64, o: u64| NQuin {
+            subject: s,
+            predicate: p,
+            object: o,
+            context: ctx,
+            metadata: 0,
+            parity: s ^ p ^ o ^ ctx,
+        };
         let act = h("ex:someAct");
         let status = h("q42:normativeStatus");
         let quins = [
-            mk(act, status, h("values:Permitted")),          // instrument A
-            mk(act, status, h("values:Forbidden")),          // instrument B — contradicts A
+            mk(act, status, h("values:Permitted")), // instrument A
+            mk(act, status, h("values:Forbidden")), // instrument B — contradicts A
             mk(h("ex:otherAct"), status, h("values:Permitted")), // unrelated, consistent
         ];
         let mut consistent = [NQuin::default(); 8];
         let mut isolated = [NQuin::default(); 8];
         let (nc, ni) = route_paraconsistent(&quins, &mut consistent, &mut isolated).expect("route");
-        assert_eq!(ni, 1, "exactly the contradicting claim is isolated (quarantined)");
-        assert_eq!(nc, 2, "the rest of the corpus stays consistent — no ex-falso explosion");
+        assert_eq!(
+            ni, 1,
+            "exactly the contradicting claim is isolated (quarantined)"
+        );
+        assert_eq!(
+            nc, 2,
+            "the rest of the corpus stays consistent — no ex-falso explosion"
+        );
     }
 
     // ─── Identity / personhood spine: identifier ≠ identity (§13) ────────────────
@@ -2828,7 +3220,14 @@ mod tests {
         let sub = h("rdfs:subClassOf");
         let edge = |s: &str, o: &str| {
             let (s, o) = (h(s), h(o));
-            NQuin { subject: s, predicate: sub, object: o, context: 0, metadata: 0, parity: s ^ sub ^ o }
+            NQuin {
+                subject: s,
+                predicate: sub,
+                object: o,
+                context: 0,
+                metadata: 0,
+                parity: s ^ sub ^ o,
+            }
         };
         let tbox = [
             edge("values:NaturalPerson", "values:Agent"),
@@ -2837,11 +3236,27 @@ mod tests {
             edge("values:State", "values:PublicAuthority"),
             edge("values:PublicAuthority", "values:LegalPerson"),
         ];
-        let (np, cp, agent) = (h("values:NaturalPerson"), h("values:CorporatePerson"), h("values:Agent"));
-        assert!(check_subsumption_quin(np, agent, &tbox), "NaturalPerson IS-A Agent");
-        assert!(check_subsumption_quin(cp, agent, &tbox), "CorporatePerson IS-A Agent (transitively)");
-        assert!(check_subsumption_quin(h("values:State"), agent, &tbox), "State IS-A Agent (via PublicAuthority→LegalPerson)");
-        assert!(!check_subsumption_quin(cp, np, &tbox), "a CorporatePerson is NOT a NaturalPerson — the personhood firewall");
+        let (np, cp, agent) = (
+            h("values:NaturalPerson"),
+            h("values:CorporatePerson"),
+            h("values:Agent"),
+        );
+        assert!(
+            check_subsumption_quin(np, agent, &tbox),
+            "NaturalPerson IS-A Agent"
+        );
+        assert!(
+            check_subsumption_quin(cp, agent, &tbox),
+            "CorporatePerson IS-A Agent (transitively)"
+        );
+        assert!(
+            check_subsumption_quin(h("values:State"), agent, &tbox),
+            "State IS-A Agent (via PublicAuthority→LegalPerson)"
+        );
+        assert!(
+            !check_subsumption_quin(cp, np, &tbox),
+            "a CorporatePerson is NOT a NaturalPerson — the personhood firewall"
+        );
     }
 
     /// MODAL (Kripke ◇/□): identity holds RELATIVE to context ("worlds"). A natural person's
@@ -2853,14 +3268,34 @@ mod tests {
         let h = crate::q_hash;
         let accesses = h("modal:accesses");
         let holds = h("modal:holds");
-        let acc = |f: u64, t: u64| NQuin { subject: f, predicate: accesses, object: t, context: 0, metadata: 0, parity: f ^ accesses ^ t };
-        let lab = |w: u64, p: u64| NQuin { subject: w, predicate: holds, object: p, context: 0, metadata: 0, parity: w ^ holds ^ p };
+        let acc = |f: u64, t: u64| NQuin {
+            subject: f,
+            predicate: accesses,
+            object: t,
+            context: 0,
+            metadata: 0,
+            parity: f ^ accesses ^ t,
+        };
+        let lab = |w: u64, p: u64| NQuin {
+            subject: w,
+            predicate: holds,
+            object: p,
+            context: 0,
+            metadata: 0,
+            parity: w ^ holds ^ p,
+        };
         let (here, w1, w2) = (0u64, 1u64, 2u64);
         let pbl = h("values:personBeforeLaw");
         let corp_dignity = h("values:corporateDignity");
         let g = [acc(here, w1), acc(here, w2), lab(w1, pbl), lab(w2, pbl)];
-        assert!(necessary(&g, here, pbl, accesses, holds), "person-before-law recognition is NECESSARY (□) across contexts");
-        assert!(!possible(&g, here, corp_dignity, accesses, holds), "a corporate dignity-claim is NOT POSSIBLE (¬◇) in any context");
+        assert!(
+            necessary(&g, here, pbl, accesses, holds),
+            "person-before-law recognition is NECESSARY (□) across contexts"
+        );
+        assert!(
+            !possible(&g, here, corp_dignity, accesses, holds),
+            "a corporate dignity-claim is NOT POSSIBLE (¬◇) in any context"
+        );
     }
 
     /// EPISTEMIC (knows vs believes): identity VERIFICATION = is the claimed identity KNOWN over
@@ -2869,18 +3304,39 @@ mod tests {
     #[test]
     fn values_identity_as_known_epistemic() {
         use crate::modalities::epistemic::{
-            evaluate_epistemic_frame, EpistemicStatus, EpistemicVerdict, CERTAINTY_BIT_SHIFT, OP_BELIEVES, OP_KNOWS,
+            evaluate_epistemic_frame, EpistemicStatus, EpistemicVerdict, CERTAINTY_BIT_SHIFT,
+            OP_BELIEVES, OP_KNOWS,
         };
         let h = crate::q_hash;
         let pred = |op: u8, cert: u8| (op as u64) | ((cert as u64) << CERTAINTY_BIT_SHIFT);
-        let mk = |s: u64, p: u64, o: u64| NQuin { subject: s, predicate: p, object: o, context: 0, metadata: 0, parity: s ^ p ^ o };
+        let mk = |s: u64, p: u64, o: u64| NQuin {
+            subject: s,
+            predicate: p,
+            object: o,
+            context: 0,
+            metadata: 0,
+            parity: s ^ p ^ o,
+        };
         let verifier = h("did:webizen:verifier");
-        let known = mk(verifier, pred(OP_KNOWS, 255), h("did:web:alice=NaturalPerson"));
+        let known = mk(
+            verifier,
+            pred(OP_KNOWS, 255),
+            h("did:web:alice=NaturalPerson"),
+        );
         let believed = mk(verifier, pred(OP_BELIEVES, 10), h("ex:phisher=YourBank"));
-        let mut out = [EpistemicVerdict { claim: NQuin::default(), status: EpistemicStatus::Skipped, certainty: 0 }; 4];
-        let n = evaluate_epistemic_frame(&[known, believed], 0, 0, &mut out).expect("epistemic eval");
+        let mut out = [EpistemicVerdict {
+            claim: NQuin::default(),
+            status: EpistemicStatus::Skipped,
+            certainty: 0,
+        }; 4];
+        let n =
+            evaluate_epistemic_frame(&[known, believed], 0, 0, &mut out).expect("epistemic eval");
         assert_eq!(n, 2);
-        assert_eq!(out[0].status, EpistemicStatus::Active, "a KNOWN identity binding is verified (Active)");
+        assert_eq!(
+            out[0].status,
+            EpistemicStatus::Active,
+            "a KNOWN identity binding is verified (Active)"
+        );
         assert_eq!(
             out[1].status,
             EpistemicStatus::Uncertain,
@@ -2895,8 +3351,14 @@ mod tests {
     fn values_partial_right_fulfilment_fuzzy() {
         use crate::modalities::fuzzy::{t_conorm_godel, t_norm_godel};
         let fulfilment = t_norm_godel(t_norm_godel(0.9, 0.4), 0.8); // food .9, housing .4, health .8
-        assert!((fulfilment - 0.4).abs() < 1e-6, "partial fulfilment = the weakest component (housing 0.4)");
-        assert!((t_conorm_godel(0.3, 0.7) - 0.7).abs() < 1e-6, "best available remedy degree (max)");
+        assert!(
+            (fulfilment - 0.4).abs() < 1e-6,
+            "partial fulfilment = the weakest component (housing 0.4)"
+        );
+        assert!(
+            (t_conorm_godel(0.3, 0.7) - 0.7).abs() < 1e-6,
+            "best available remedy degree (max)"
+        );
     }
 
     /// ABDUCTIVE (inference to the best explanation): "WHY was this flagged?" — trace
@@ -2907,7 +3369,14 @@ mod tests {
         use crate::modalities::abductive::abductive_explanation;
         let h = crate::q_hash;
         let explains = h("q42:explains");
-        let e = |hyp: u64, eff: u64| NQuin { subject: hyp, predicate: explains, object: eff, context: 0, metadata: 0, parity: 0 };
+        let e = |hyp: u64, eff: u64| NQuin {
+            subject: hyp,
+            predicate: explains,
+            object: eff,
+            context: 0,
+            metadata: 0,
+            parity: 0,
+        };
         let flag = h("values:PersonhoodCategoryError");
         let guard_trip = h("values:inverseGuardTripped");
         let root = h("values:corporateCaptureAttempt");
@@ -2924,8 +3393,14 @@ mod tests {
     #[test]
     fn values_behavioural_trust_threshold() {
         use crate::modalities::probabilistic::evaluate_threshold;
-        assert!(evaluate_threshold(0.85, 0.7), "reputation 0.85 ≥ threshold 0.7 → trusted");
-        assert!(!evaluate_threshold(0.40, 0.7), "reputation 0.40 < threshold 0.7 → not trusted");
+        assert!(
+            evaluate_threshold(0.85, 0.7),
+            "reputation 0.85 ≥ threshold 0.7 → trusted"
+        );
+        assert!(
+            !evaluate_threshold(0.40, 0.7),
+            "reputation 0.40 < threshold 0.7 → not trusted"
+        );
     }
 
     /// DIALECTICAL (but-for causation): legal causation/liability — was the breach a NECESSARY
@@ -2935,14 +3410,33 @@ mod tests {
         use crate::modalities::dialectical::is_necessary_cause;
         let h = crate::q_hash;
         let causes = h("causal:causes");
-        let e = |c: u64, ef: u64| NQuin { subject: c, predicate: causes, object: ef, context: 0, metadata: 0, parity: c ^ causes ^ ef };
-        let (operator, breach, harm) = (h("ex:operator"), h("ex:breachOfDuty"), h("ex:harmToPerson"));
+        let e = |c: u64, ef: u64| NQuin {
+            subject: c,
+            predicate: causes,
+            object: ef,
+            context: 0,
+            metadata: 0,
+            parity: c ^ causes ^ ef,
+        };
+        let (operator, breach, harm) =
+            (h("ex:operator"), h("ex:breachOfDuty"), h("ex:harmToPerson"));
         let chain = [e(operator, breach), e(breach, harm)];
-        assert!(is_necessary_cause(&chain, operator, breach, harm), "the breach is a but-for (necessary) cause of the harm");
+        assert!(
+            is_necessary_cause(&chain, operator, breach, harm),
+            "the breach is a but-for (necessary) cause of the harm"
+        );
         // With an independent alternative cause, the breach is NOT necessary (no sole liability).
         let alt = h("ex:independentCause");
-        let diamond = [e(operator, breach), e(breach, harm), e(operator, alt), e(alt, harm)];
-        assert!(!is_necessary_cause(&diamond, operator, breach, harm), "not necessary when an alternative cause exists");
+        let diamond = [
+            e(operator, breach),
+            e(breach, harm),
+            e(operator, alt),
+            e(alt, harm),
+        ];
+        assert!(
+            !is_necessary_cause(&diamond, operator, breach, harm),
+            "not necessary when an alternative cause exists"
+        );
     }
 
     /// CTL (branching-time): obligations over possible futures — a remedy must EVENTUALLY be
@@ -2952,14 +3446,40 @@ mod tests {
         use crate::modalities::ctl::{always_globally, exists_finally};
         let h = crate::q_hash;
         let (next, holds) = (h("ctl:next"), h("ctl:holds"));
-        let nx = |f: u64, t: u64| NQuin { subject: f, predicate: next, object: t, context: 0, metadata: 0, parity: f ^ next ^ t };
-        let lab = |s: u64, p: u64| NQuin { subject: s, predicate: holds, object: p, context: 0, metadata: 0, parity: s ^ holds ^ p };
+        let nx = |f: u64, t: u64| NQuin {
+            subject: f,
+            predicate: next,
+            object: t,
+            context: 0,
+            metadata: 0,
+            parity: f ^ next ^ t,
+        };
+        let lab = |s: u64, p: u64| NQuin {
+            subject: s,
+            predicate: holds,
+            object: p,
+            context: 0,
+            metadata: 0,
+            parity: s ^ holds ^ p,
+        };
         let remedy = h("values:remedyProvided");
         let g = [nx(0, 1), nx(1, 2), lab(2, remedy)];
-        assert!(exists_finally(&g, 0, remedy, next, holds), "a remedy is EVENTUALLY provided (AF) along the path");
+        assert!(
+            exists_finally(&g, 0, remedy, next, holds),
+            "a remedy is EVENTUALLY provided (AF) along the path"
+        );
         let right = h("values:rightHeld");
-        let g2 = [nx(0, 1), nx(1, 2), lab(0, right), lab(1, right), lab(2, right)];
-        assert!(always_globally(&g2, 0, right, next, holds), "the right ALWAYS holds (AG) across reachable states");
+        let g2 = [
+            nx(0, 1),
+            nx(1, 2),
+            lab(0, right),
+            lab(1, right),
+            lab(2, right),
+        ];
+        assert!(
+            always_globally(&g2, 0, right, next, holds),
+            "the right ALWAYS holds (AG) across reachable states"
+        );
     }
 
     /// TEMPORAL-LTL / metric (deadlines): a triggered duty must be met within a window — "remedy
@@ -2969,9 +3489,32 @@ mod tests {
         use crate::modalities::temporal_ltl::holds_within;
         let h = crate::q_hash;
         let (breach, remedy) = (h("q42:breach"), h("q42:remedy"));
-        let timed = |p: u64, t: u64| NQuin { subject: 0, predicate: p, object: 0, context: 0, metadata: t, parity: 0 };
-        assert!(holds_within(&[timed(breach, 100), timed(remedy, 120)], breach, remedy, 30), "remedy within the deadline");
-        assert!(!holds_within(&[timed(breach, 100), timed(remedy, 200)], breach, remedy, 30), "remedy past deadline → continuing violation");
+        let timed = |p: u64, t: u64| NQuin {
+            subject: 0,
+            predicate: p,
+            object: 0,
+            context: 0,
+            metadata: t,
+            parity: 0,
+        };
+        assert!(
+            holds_within(
+                &[timed(breach, 100), timed(remedy, 120)],
+                breach,
+                remedy,
+                30
+            ),
+            "remedy within the deadline"
+        );
+        assert!(
+            !holds_within(
+                &[timed(breach, 100), timed(remedy, 200)],
+                breach,
+                remedy,
+                30
+            ),
+            "remedy past deadline → continuing violation"
+        );
     }
 
     /// LINEAR LOGIC (consumable resources): one-shot consent — a consent token is CONSUMED when
@@ -2980,10 +3523,23 @@ mod tests {
     fn values_one_shot_consent_linear() {
         use crate::modalities::linear::{consume_quin, is_consumed};
         let h = crate::q_hash;
-        let mut consent = NQuin { subject: h("did:web:alice"), predicate: h("values:consentsTo"), object: h("ex:oneDataUse"), context: 0, metadata: 0, parity: 0 };
-        assert!(!is_consumed(&consent), "a fresh consent token is unconsumed");
+        let mut consent = NQuin {
+            subject: h("did:web:alice"),
+            predicate: h("values:consentsTo"),
+            object: h("ex:oneDataUse"),
+            context: 0,
+            metadata: 0,
+            parity: 0,
+        };
+        assert!(
+            !is_consumed(&consent),
+            "a fresh consent token is unconsumed"
+        );
         consume_quin(&mut consent);
-        assert!(is_consumed(&consent), "consent is one-shot: consumed on use, cannot be silently re-spent");
+        assert!(
+            is_consumed(&consent),
+            "consent is one-shot: consumed on use, cannot be silently re-spent"
+        );
     }
 
     /// GRAPH THEORY: structural analysis of a relationship / standing network (degrees, density,
@@ -2993,10 +3549,20 @@ mod tests {
         use crate::modalities::graph_theory::QualiaGraph;
         let h = crate::q_hash;
         let rel = h("values:relatesTo");
-        let e = |s: u64, o: u64| NQuin { subject: s, predicate: rel, object: o, context: 0, metadata: 0, parity: s ^ rel ^ o };
+        let e = |s: u64, o: u64| NQuin {
+            subject: s,
+            predicate: rel,
+            object: o,
+            context: 0,
+            metadata: 0,
+            parity: s ^ rel ^ o,
+        };
         let g = QualiaGraph::from_quins(&[e(1, 2), e(2, 3)]); // alice—bob—carol
         let d = g.density();
-        assert!(d > 0.0 && d <= 1.0, "the relationship network has measurable structure (density={d})");
+        assert!(
+            d > 0.0 && d <= 1.0,
+            "the relationship network has measurable structure (density={d})"
+        );
     }
 
     /// ASP (true stable-model semantics): an UNDER-DETERMINED instrument has multiple consistent
@@ -3013,7 +3579,11 @@ mod tests {
             AspRule::new(forbidden, &[], &[permitted]),
         ];
         let mut out = [0u64; 8];
-        assert_eq!(compute_answer_sets(&atoms, &prog, &mut out), 2, "under-determined norm → two consistent scenarios");
+        assert_eq!(
+            compute_answer_sets(&atoms, &prog, &mut out),
+            2,
+            "under-determined norm → two consistent scenarios"
+        );
 
         // A binding higher norm `:- forbidden` collapses it to the single lawful reading.
         let prog2 = [
@@ -3022,7 +3592,15 @@ mod tests {
             AspRule::constraint(&[forbidden], &[]),
         ];
         let mut out2 = [0u64; 8];
-        assert_eq!(compute_answer_sets(&atoms, &prog2, &mut out2), 1, "the higher norm prunes to one scenario");
-        assert_eq!(out2[0], 1u64 << 0, "the surviving scenario is {{permitted}}");
+        assert_eq!(
+            compute_answer_sets(&atoms, &prog2, &mut out2),
+            1,
+            "the higher norm prunes to one scenario"
+        );
+        assert_eq!(
+            out2[0],
+            1u64 << 0,
+            "the surviving scenario is {{permitted}}"
+        );
     }
 }

@@ -148,6 +148,9 @@ mod tests {
     #[test]
     fn empty_test_set_fails_closed() {
         let t = hand_table();
-        assert_eq!(mean_rank(&t, &[], &[0, 1, 2]).unwrap_err(), KgEmbeddingError::InsufficientData);
+        assert_eq!(
+            mean_rank(&t, &[], &[0, 1, 2]).unwrap_err(),
+            KgEmbeddingError::InsufficientData
+        );
     }
 }

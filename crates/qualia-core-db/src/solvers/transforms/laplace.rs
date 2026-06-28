@@ -64,9 +64,15 @@ fn transform(expr: &Expr, t: &str) -> Result<Expr, LaplaceError> {
         Expr::Mul(a, b) => {
             // Scalar · f(t): L is the scalar times L{f}.
             if let Expr::Const(_) = **a {
-                Ok(crate::specialized_libs::symbolic_algebra::mul((**a).clone(), transform(b, t)?))
+                Ok(crate::specialized_libs::symbolic_algebra::mul(
+                    (**a).clone(),
+                    transform(b, t)?,
+                ))
             } else if let Expr::Const(_) = **b {
-                Ok(crate::specialized_libs::symbolic_algebra::mul((**b).clone(), transform(a, t)?))
+                Ok(crate::specialized_libs::symbolic_algebra::mul(
+                    (**b).clone(),
+                    transform(a, t)?,
+                ))
             } else {
                 Err(LaplaceError::NotTransformable)
             }
@@ -117,7 +123,13 @@ mod tests {
     fn fails_closed_on_unrepresentable() {
         // sqrt(t) is not in the polynomial table.
         let e = crate::specialized_libs::symbolic_algebra::sqrt(var("t"));
-        assert_eq!(laplace_table(&e).unwrap_err(), LaplaceError::NotTransformable);
-        assert_eq!(laplace_numeric(|_| 1.0, -1.0, 10.0, 100).unwrap_err(), LaplaceError::OutOfDomain);
+        assert_eq!(
+            laplace_table(&e).unwrap_err(),
+            LaplaceError::NotTransformable
+        );
+        assert_eq!(
+            laplace_numeric(|_| 1.0, -1.0, 10.0, 100).unwrap_err(),
+            LaplaceError::OutOfDomain
+        );
     }
 }

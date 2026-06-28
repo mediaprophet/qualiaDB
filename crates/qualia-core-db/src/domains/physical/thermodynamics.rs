@@ -231,7 +231,10 @@ mod offgrid_energy_tests {
         // Same delivered heat, thicker vs thinner envelope (lower vs higher U).
         let good = thermal_efficiency(1000.0, 0.5, 10.0, 20.0); // U=0.5 → loss 100 W
         let bad = thermal_efficiency(1000.0, 3.0, 10.0, 20.0); // U=3.0 → loss 600 W
-        assert!(good > bad, "lower U (better insulation) ⇒ higher efficiency");
+        assert!(
+            good > bad,
+            "lower U (better insulation) ⇒ higher efficiency"
+        );
         assert!(good > 0.0 && good < 1.0 && bad > 0.0 && bad < 1.0);
         // Multi-phase latent term is additive and sane.
         assert!((phase_change_energy(2.0, 334_000.0) - 668_000.0).abs() < 1.0); // ice→water

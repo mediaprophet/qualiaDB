@@ -64,13 +64,25 @@ pub fn t_conorm_product(a: f32, b: f32) -> f32 {
 /// Drastic t-norm — the smallest t-norm: `b` if `a==1`, `a` if `b==1`, else `0`.
 #[inline]
 pub fn t_norm_drastic(a: f32, b: f32) -> f32 {
-    if a >= 1.0 { b } else if b >= 1.0 { a } else { 0.0 }
+    if a >= 1.0 {
+        b
+    } else if b >= 1.0 {
+        a
+    } else {
+        0.0
+    }
 }
 
 /// Drastic t-conorm — the largest t-conorm: `b` if `a==0`, `a` if `b==0`, else `1`.
 #[inline]
 pub fn t_conorm_drastic(a: f32, b: f32) -> f32 {
-    if a <= 0.0 { b } else if b <= 0.0 { a } else { 1.0 }
+    if a <= 0.0 {
+        b
+    } else if b <= 0.0 {
+        a
+    } else {
+        1.0
+    }
 }
 
 /// Standard fuzzy negation (complement) — `1 - a`, clamped to [0,1].
@@ -126,7 +138,11 @@ pub fn defuzz_centroid(u: &[f32], mu: &[f32]) -> Option<f32> {
         num += u[i] * mu[i];
         den += mu[i];
     }
-    if den.abs() < 1e-9 { None } else { Some(num / den) }
+    if den.abs() < 1e-9 {
+        None
+    } else {
+        Some(num / den)
+    }
 }
 
 /// Mean-of-Maximum (MOM): the mean of the universe points attaining maximum membership.
@@ -148,7 +164,11 @@ pub fn defuzz_mean_of_max(u: &[f32], mu: &[f32]) -> Option<f32> {
             n += 1;
         }
     }
-    if n == 0 { None } else { Some(sum / n as f32) }
+    if n == 0 {
+        None
+    } else {
+        Some(sum / n as f32)
+    }
 }
 
 /// Smallest-of-Maximum (SOM): the smallest universe point attaining maximum membership.
@@ -256,7 +276,11 @@ pub fn sugeno_infer(rules: &[SugenoRule]) -> Option<f32> {
         num += r.firing * r.consequent;
         den += r.firing;
     }
-    if den.abs() < 1e-9 { None } else { Some(num / den) }
+    if den.abs() < 1e-9 {
+        None
+    } else {
+        Some(num / den)
+    }
 }
 
 #[cfg(test)]
@@ -289,7 +313,7 @@ mod tests {
         // Product family.
         assert!(close(t_norm_product(0.5, 0.4), 0.2));
         assert!(close(t_conorm_product(0.5, 0.4), 0.7)); // 0.5+0.4-0.2
-        // Łukasiewicz t-conorm.
+                                                         // Łukasiewicz t-conorm.
         assert!(close(t_conorm_lukasiewicz(0.7, 0.4), 1.0)); // min(1, 1.1)
         assert!(close(t_conorm_lukasiewicz(0.3, 0.4), 0.7));
         // Drastic: identity only when one operand is the unit/zero, else collapses.
@@ -351,24 +375,42 @@ mod tests {
         let mut scratch = [0.0f32; 5];
 
         // Only "low" fires (strength 1.0) → output pulled toward the low end.
-        let r_low_only = [MamdaniRule { firing: 1.0, consequent_mu: &low }];
+        let r_low_only = [MamdaniRule {
+            firing: 1.0,
+            consequent_mu: &low,
+        }];
         let y_low = mamdani_infer(&u, &r_low_only, &mut scratch).unwrap();
         // Only "high" fires → output pulled toward the high end.
-        let r_high_only = [MamdaniRule { firing: 1.0, consequent_mu: &high }];
+        let r_high_only = [MamdaniRule {
+            firing: 1.0,
+            consequent_mu: &high,
+        }];
         let y_high = mamdani_infer(&u, &r_high_only, &mut scratch).unwrap();
-        assert!(y_low < y_high, "low-only ({y_low}) must sit below high-only ({y_high})");
+        assert!(
+            y_low < y_high,
+            "low-only ({y_low}) must sit below high-only ({y_high})"
+        );
         assert!(y_low < 2.0 && y_high > 2.0);
 
         // Both fire equally → symmetric → centroid at the universe centre (2.0).
         let both = [
-            MamdaniRule { firing: 1.0, consequent_mu: &low },
-            MamdaniRule { firing: 1.0, consequent_mu: &high },
+            MamdaniRule {
+                firing: 1.0,
+                consequent_mu: &low,
+            },
+            MamdaniRule {
+                firing: 1.0,
+                consequent_mu: &high,
+            },
         ];
         let y_both = mamdani_infer(&u, &both, &mut scratch).unwrap();
         assert!(close(y_both, 2.0));
 
         // Clipping: a weak firing strength on "high" lowers its contribution.
-        let weak_high = [MamdaniRule { firing: 0.2, consequent_mu: &high }];
+        let weak_high = [MamdaniRule {
+            firing: 0.2,
+            consequent_mu: &high,
+        }];
         assert!(mamdani_infer(&u, &weak_high, &mut scratch).unwrap() > 2.0);
         // Mismatched scratch size refuses.
         let mut bad = [0.0f32; 3];
@@ -379,17 +421,33 @@ mod tests {
     fn sugeno_fis_is_firing_weighted_average() {
         // Two rules: z=0 (firing 0.25) and z=10 (firing 0.75) → weighted avg 7.5.
         let rules = [
-            SugenoRule { firing: 0.25, consequent: 0.0 },
-            SugenoRule { firing: 0.75, consequent: 10.0 },
+            SugenoRule {
+                firing: 0.25,
+                consequent: 0.0,
+            },
+            SugenoRule {
+                firing: 0.75,
+                consequent: 10.0,
+            },
         ];
         assert!(close(sugeno_infer(&rules).unwrap(), 7.5));
         // Equal firing → plain average.
         let eq = [
-            SugenoRule { firing: 0.5, consequent: 2.0 },
-            SugenoRule { firing: 0.5, consequent: 6.0 },
+            SugenoRule {
+                firing: 0.5,
+                consequent: 2.0,
+            },
+            SugenoRule {
+                firing: 0.5,
+                consequent: 6.0,
+            },
         ];
         assert!(close(sugeno_infer(&eq).unwrap(), 4.0));
         // No firing → None.
-        assert!(sugeno_infer(&[SugenoRule { firing: 0.0, consequent: 9.0 }]).is_none());
+        assert!(sugeno_infer(&[SugenoRule {
+            firing: 0.0,
+            consequent: 9.0
+        }])
+        .is_none());
     }
 }

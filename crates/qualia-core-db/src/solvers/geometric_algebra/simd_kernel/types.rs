@@ -36,7 +36,10 @@ impl Default for Multivector {
 
 impl Multivector {
     pub fn zero() -> Self {
-        Self { coeffs: [0.0; 8], grade_mask: 0 }
+        Self {
+            coeffs: [0.0; 8],
+            grade_mask: 0,
+        }
     }
 
     pub fn scalar(value: f32) -> Self {
@@ -153,12 +156,16 @@ impl Multivector {
 
 impl Add for Multivector {
     type Output = Self;
-    fn add(self, other: Self) -> Self { Multivector::add(&self, &other) }
+    fn add(self, other: Self) -> Self {
+        Multivector::add(&self, &other)
+    }
 }
 
 impl Sub for Multivector {
     type Output = Self;
-    fn sub(self, other: Self) -> Self { Multivector::sub(&self, &other) }
+    fn sub(self, other: Self) -> Self {
+        Multivector::sub(&self, &other)
+    }
 }
 
 impl Neg for Multivector {
@@ -174,10 +181,14 @@ impl Neg for Multivector {
 
 impl Rotor {
     pub fn identity() -> Self {
-        Self { components: [1.0, 0.0, 0.0, 0.0] }
+        Self {
+            components: [1.0, 0.0, 0.0, 0.0],
+        }
     }
     pub fn from_quaternion(w: f32, x: f32, y: f32, z: f32) -> Self {
-        Self { components: [w, x, y, z] }
+        Self {
+            components: [w, x, y, z],
+        }
     }
     pub fn as_quaternion(&self) -> [f32; 4] {
         self.components
@@ -189,7 +200,9 @@ impl Rotor {
             + self.components[3] * self.components[3])
             .sqrt();
         if mag > 0.0 {
-            for comp in &mut self.components { *comp /= mag; }
+            for comp in &mut self.components {
+                *comp /= mag;
+            }
         }
     }
     pub fn inverse(&self) -> Self {
@@ -203,10 +216,16 @@ impl Rotor {
 
 impl Translator {
     pub fn identity() -> Self {
-        Self { components: [1.0, 0.0, 0.0, 0.0] }
+        Self {
+            components: [1.0, 0.0, 0.0, 0.0],
+        }
     }
     pub fn displacement(&self) -> [f32; 3] {
-        [self.components[1] * 2.0, self.components[2] * 2.0, self.components[3] * 2.0]
+        [
+            self.components[1] * 2.0,
+            self.components[2] * 2.0,
+            self.components[3] * 2.0,
+        ]
     }
     pub fn inverse(&self) -> Self {
         Self {

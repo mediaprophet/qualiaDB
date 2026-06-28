@@ -114,8 +114,11 @@ impl QTensorEngine {
             #[cfg(target_arch = "wasm32")]
             let use_coop = false;
             #[cfg(not(target_arch = "wasm32"))]
-            let active_pipeline: &wgpu::ComputePipeline =
-                if use_coop { &self.coop_gemv_pipeline } else { &self.pipeline };
+            let active_pipeline: &wgpu::ComputePipeline = if use_coop {
+                &self.coop_gemv_pipeline
+            } else {
+                &self.pipeline
+            };
             #[cfg(target_arch = "wasm32")]
             let active_pipeline: &wgpu::ComputePipeline = &self.pipeline;
 
@@ -123,34 +126,36 @@ impl QTensorEngine {
             let bind_layout = self.native_gemm_bind_layout(use_coop).clone();
             #[cfg(target_arch = "wasm32")]
             let bind_layout = active_pipeline.get_bind_group_layout(0);
-            let bind_group = self.gpu_device().create_bind_group(&wgpu::BindGroupDescriptor {
-                label: Some("LayerGemmBindGroup"),
-                layout: &bind_layout,
-                entries: &[
-                    wgpu::BindGroupEntry {
-                        binding: 0,
-                        resource: input_buf.as_entire_binding(),
-                    },
-                    wgpu::BindGroupEntry {
-                        binding: 1,
-                        resource: weight_binding.as_entire_binding(),
-                    },
-                    wgpu::BindGroupEntry {
-                        binding: 2,
-                        resource: params_buf.as_entire_binding(),
-                    },
-                    wgpu::BindGroupEntry {
-                        binding: 3,
-                        resource: output_buf.as_entire_binding(),
-                    },
-                ],
-            });
-
-            let mut encoder = self
-                .device()
-                .create_command_encoder(&wgpu::CommandEncoderDescriptor {
-                    label: Some("LayerGemmEncoder"),
+            let bind_group = self
+                .gpu_device()
+                .create_bind_group(&wgpu::BindGroupDescriptor {
+                    label: Some("LayerGemmBindGroup"),
+                    layout: &bind_layout,
+                    entries: &[
+                        wgpu::BindGroupEntry {
+                            binding: 0,
+                            resource: input_buf.as_entire_binding(),
+                        },
+                        wgpu::BindGroupEntry {
+                            binding: 1,
+                            resource: weight_binding.as_entire_binding(),
+                        },
+                        wgpu::BindGroupEntry {
+                            binding: 2,
+                            resource: params_buf.as_entire_binding(),
+                        },
+                        wgpu::BindGroupEntry {
+                            binding: 3,
+                            resource: output_buf.as_entire_binding(),
+                        },
+                    ],
                 });
+
+            let mut encoder =
+                self.device()
+                    .create_command_encoder(&wgpu::CommandEncoderDescriptor {
+                        label: Some("LayerGemmEncoder"),
+                    });
             {
                 let mut cpass = encoder.begin_compute_pass(&wgpu::ComputePassDescriptor {
                     label: None,
@@ -232,7 +237,8 @@ impl QTensorEngine {
             Some(m) => m,
             None => return false,
         };
-        let raw = match crate::ggml_quants::fetch_tensor_bytes(mmap, self.tensor_data_offset, info) {
+        let raw = match crate::ggml_quants::fetch_tensor_bytes(mmap, self.tensor_data_offset, info)
+        {
             Ok(s) => s,
             Err(_) => return false,
         };
@@ -265,7 +271,11 @@ impl QTensorEngine {
         n_out: usize,
     ) -> bool {
         if n_in > input.len() || n_out > out.len() {
-            wlog(&format!("[gemm_into] GUARD n_in={n_in} n_out={n_out} input={} out={}", input.len(), out.len()));
+            wlog(&format!(
+                "[gemm_into] GUARD n_in={n_in} n_out={n_out} input={} out={}",
+                input.len(),
+                out.len()
+            ));
             return false;
         }
         // A1b: ternary FFN tensors are not row-block quantized — route them to the dedicated ternary
@@ -284,7 +294,6 @@ impl QTensorEngine {
         };
         self.dispatch_gemm_raw_into(info, raw, input, out, n_in, n_out)
     }
-
 }
 
 /// Substrate-parity proof (CPU, no GPU): the LLM's quantized GEMV is *the same linear
@@ -340,7 +349,14 @@ mod substrate_parity_tests {
 
         // (1) The actual LLM CPU kernel.
         let mut out_llm = vec![0f32; n_out];
-        assert!(crate::gguf_bridge::stack_gemm_quant(&raw, &info, &input, &mut out_llm, n_in, n_out));
+        assert!(crate::gguf_bridge::stack_gemm_quant(
+            &raw,
+            &info,
+            &input,
+            &mut out_llm,
+            n_in,
+            n_out
+        ));
 
         // (2) Dequantize the same quantized weights to a dense matrix, then run the
         //     engine's GEMM (matvec) on it. Same operands ⇒ must match the LLM kernel.
@@ -361,7 +377,15 @@ mod substrate_parity_tests {
         // (3) The engine GEMM on the ORIGINAL (pre-quant) weights — the Q8 cost reference.
         let w_orig_f64: Vec<f64> = w_orig.iter().map(|&v| v as f64).collect();
         let mut out_sub_orig = vec![0f64; n_out];
-        matvec(Transpose::No, n_out, n_in, &w_orig_f64, &x_f64, &mut out_sub_orig).unwrap();
+        matvec(
+            Transpose::No,
+            n_out,
+            n_in,
+            &w_orig_f64,
+            &x_f64,
+            &mut out_sub_orig,
+        )
+        .unwrap();
 
         let exact_err = (0..n_out)
             .map(|i| (out_llm[i] as f64 - out_sub_deq[i]).abs() as f32)
@@ -375,7 +399,11 @@ mod substrate_parity_tests {
     #[test]
     fn llm_quant_gemv_is_the_substrate_gemm() {
         // Several shapes/seeds; n_in a multiple of 32 (Q8_0 block size).
-        for &(n_in, n_out, seed) in &[(64usize, 32usize, 0xC0FFEEu64), (128, 96, 7), (256, 64, 0xBEEF)] {
+        for &(n_in, n_out, seed) in &[
+            (64usize, 32usize, 0xC0FFEEu64),
+            (128, 96, 7),
+            (256, 64, 0xBEEF),
+        ] {
             let (exact_err, quant_err) = run(n_in, n_out, seed);
             // Same operation: LLM kernel == engine GEMM on identical (dequantized) weights,
             // to f32 accumulation rounding only.

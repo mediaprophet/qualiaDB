@@ -166,7 +166,7 @@ mod tests {
         let mut x = [0.0];
         gelu(&mut x);
         approx(x[0], 0.0, 1e-12); // GELU(0) = 0
-        // Large positive ≈ identity, large negative ≈ 0.
+                                  // Large positive ≈ identity, large negative ≈ 0.
         let mut big = [10.0, -10.0];
         gelu(&mut big);
         approx(big[0], 10.0, 1e-3);
@@ -179,7 +179,7 @@ mod tests {
         softmax(&mut x);
         approx(x.iter().sum::<f64>(), 1.0, 1e-12);
         assert!(x[2] > x[1] && x[1] > x[0]); // monotone in the inputs
-        // Uniform inputs ⇒ uniform distribution.
+                                             // Uniform inputs ⇒ uniform distribution.
         let mut u = [5.0, 5.0, 5.0, 5.0];
         softmax(&mut u);
         for &v in &u {

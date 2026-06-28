@@ -48,7 +48,10 @@ pub fn subclass_closure(n: usize, edges: &[(usize, usize, f64)]) -> Vec<f64> {
 /// Degree to which an instance is of class `c`, given it is of class `a` with degree
 /// `type_degree` and `a ⊑ c` with `subclass_degree`: `t-norm(type, subclass)`.
 pub fn type_entailment(type_degree: f64, subclass_degree: f64) -> f64 {
-    t_norm_product(type_degree.clamp(0.0, 1.0) as f32, subclass_degree.clamp(0.0, 1.0) as f32) as f64
+    t_norm_product(
+        type_degree.clamp(0.0, 1.0) as f32,
+        subclass_degree.clamp(0.0, 1.0) as f32,
+    ) as f64
 }
 
 /// Convenience: given the closure matrix and an instance's direct `type` degrees per
@@ -92,7 +95,11 @@ mod tests {
         // Two paths A→C: A→B→C (0.9·0.5=0.45) and A→D→C (0.6·0.9=0.54). Max = 0.54.
         let edges = [(0, 1, 0.9), (1, 2, 0.5), (0, 3, 0.6), (3, 2, 0.9)];
         let m = subclass_closure(4, &edges);
-        assert!((m[0 * 4 + 2] - 0.54).abs() < EPS, "best path {}", m[0 * 4 + 2]);
+        assert!(
+            (m[0 * 4 + 2] - 0.54).abs() < EPS,
+            "best path {}",
+            m[0 * 4 + 2]
+        );
     }
 
     #[test]

@@ -29,7 +29,9 @@
 //! (never a fabricated field). Full 2-D/3-D finite-element thermal analysis is a
 //! larger subsystem and is flagged in the register, not faked here.
 
-use super::{AnalysisResults, AnalysisType, BoundaryConditionType, EngineeringError, EngineeringModel};
+use super::{
+    AnalysisResults, AnalysisType, BoundaryConditionType, EngineeringError, EngineeringModel,
+};
 
 /// Number of mesh nodes used for the 1-D discretisation. 41 nodes (40 intervals)
 /// is ample for the smooth steady-state profiles this solves and keeps the direct
@@ -48,7 +50,12 @@ enum EndBc {
 /// Solve a tridiagonal system `A·x = d` with the Thomas algorithm. `a` is the
 /// sub-diagonal (a[0] unused), `b` the diagonal, `c` the super-diagonal
 /// (c[n-1] unused). Buffers are consumed (modified in place). Returns the solution.
-fn thomas(mut a: Vec<f64>, mut b: Vec<f64>, mut c: Vec<f64>, mut d: Vec<f64>) -> Result<Vec<f64>, EngineeringError> {
+fn thomas(
+    mut a: Vec<f64>,
+    mut b: Vec<f64>,
+    mut c: Vec<f64>,
+    mut d: Vec<f64>,
+) -> Result<Vec<f64>, EngineeringError> {
     let n = b.len();
     for i in 1..n {
         if b[i - 1] == 0.0 {
@@ -77,7 +84,13 @@ fn thomas(mut a: Vec<f64>, mut b: Vec<f64>, mut c: Vec<f64>, mut d: Vec<f64>) ->
 /// Build and solve the steady 1-D conduction system, returning the node
 /// temperatures. `k` conductivity, `length` L, `g` uniform generation,
 /// `left`/`right` the end boundary conditions.
-fn solve_field(k: f64, length: f64, g: f64, left: EndBc, right: EndBc) -> Result<Vec<f64>, EngineeringError> {
+fn solve_field(
+    k: f64,
+    length: f64,
+    g: f64,
+    left: EndBc,
+    right: EndBc,
+) -> Result<Vec<f64>, EngineeringError> {
     let n = N_NODES;
     let h = length / (n - 1) as f64;
     // Scale every interior equation by h²/k so the interior stencil is the clean
@@ -155,7 +168,8 @@ pub fn analyze_conduction(
     // Thermal conductivity from the (first) material.
     let material = model.materials.values().next().ok_or_else(|| {
         EngineeringError::InsufficientData(
-            "thermal conduction: model has no material; thermal conductivity k is required".to_string(),
+            "thermal conduction: model has no material; thermal conductivity k is required"
+                .to_string(),
         )
     })?;
     let k = material.material_properties.thermal_conductivity;
@@ -242,7 +256,7 @@ pub fn analyze_conduction(
 mod tests {
     use super::*;
     use crate::specialized_libs::engineering_analysis::{
-        BoundaryCondition, GeometricFeature, Geometry, GeometryType, FeatureType, Material,
+        BoundaryCondition, FeatureType, GeometricFeature, Geometry, GeometryType, Material,
         MaterialProperties, ModelType,
     };
     use std::collections::HashMap;

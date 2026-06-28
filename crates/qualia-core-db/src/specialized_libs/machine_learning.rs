@@ -1,17 +1,17 @@
 //! Machine Learning Library - Edge AI and Neural Network Computing
-//! 
+//!
 //! This module provides high-performance machine learning operations leveraging Phase 2 enhancements:
 //! - NVMe Computational Storage (CSD) for hardware-accelerated neural computations
 //! - Ambient Sub-Threshold Orchestration for mobile edge AI optimization
 //! - Hardware-Sympathetic Storage (ZNS) for zero-copy model storage
 //! - Zero-Copy LoRA Multiplexing for efficient model serving
 
+use crate::ambient_orchestration::AmbientOrchestrationManager;
+use crate::csd_storage::CsdManager;
+use crate::zns_storage::ZnsZoneManager;
+use serde::{Deserialize, Serialize};
 use std::collections::HashMap;
 use std::sync::{Arc, Mutex};
-use serde::{Deserialize, Serialize};
-use crate::csd_storage::CsdManager;
-use crate::ambient_orchestration::AmbientOrchestrationManager;
-use crate::zns_storage::ZnsZoneManager;
 
 /// Machine Learning Library Manager
 pub struct MachineLearningLibrary {
@@ -1760,11 +1760,17 @@ impl MachineLearningLibrary {
     }
 
     /// Load a model
-    pub fn load_model(&mut self, model_id: String, model_path: &str) -> Result<MLOperationResult<Model>, MLError> {
+    pub fn load_model(
+        &mut self,
+        model_id: String,
+        model_path: &str,
+    ) -> Result<MLOperationResult<Model>, MLError> {
         let start_time = std::time::Instant::now();
 
         // Load model
-        let model = self.model_manager.load_model(model_id.clone(), model_path)?;
+        let model = self
+            .model_manager
+            .load_model(model_id.clone(), model_path)?;
 
         let execution_time = start_time.elapsed().as_millis() as u64;
 
@@ -1778,7 +1784,12 @@ impl MachineLearningLibrary {
     }
 
     /// Run inference
-    pub fn run_inference(&mut self, model_id: &str, input_data: &[u8], parameters: InferenceParameters) -> Result<MLOperationResult<InferenceResult>, MLError> {
+    pub fn run_inference(
+        &mut self,
+        model_id: &str,
+        input_data: &[u8],
+        parameters: InferenceParameters,
+    ) -> Result<MLOperationResult<InferenceResult>, MLError> {
         let start_time = std::time::Instant::now();
 
         // Create inference request
@@ -1788,7 +1799,10 @@ impl MachineLearningLibrary {
             input_data: input_data.to_vec(),
             parameters,
             priority: RequestPriority::Normal,
-            submitted_at: std::time::SystemTime::now().duration_since(std::time::UNIX_EPOCH).unwrap().as_secs(),
+            submitted_at: std::time::SystemTime::now()
+                .duration_since(std::time::UNIX_EPOCH)
+                .unwrap()
+                .as_secs(),
             deadline: None,
         };
 
@@ -1809,12 +1823,22 @@ impl MachineLearningLibrary {
     }
 
     /// Start training
-    pub fn start_training(&mut self, model_id: &str, training_config: TrainingConfig) -> Result<MLOperationResult<TrainingJob>, MLError> {
+    pub fn start_training(
+        &mut self,
+        model_id: &str,
+        training_config: TrainingConfig,
+    ) -> Result<MLOperationResult<TrainingJob>, MLError> {
         let start_time = std::time::Instant::now();
 
         // Create training job
         let job = TrainingJob {
-            job_id: format!("job_{}", std::time::SystemTime::now().duration_since(std::time::UNIX_EPOCH).unwrap().as_secs()),
+            job_id: format!(
+                "job_{}",
+                std::time::SystemTime::now()
+                    .duration_since(std::time::UNIX_EPOCH)
+                    .unwrap()
+                    .as_secs()
+            ),
             model_id: model_id.to_string(),
             training_config,
             status: TrainingStatus::Pending,
@@ -1837,11 +1861,17 @@ impl MachineLearningLibrary {
     }
 
     /// Optimize model
-    pub fn optimize_model(&mut self, model_id: &str, optimization_algorithm: MLOptimizationAlgorithm) -> Result<MLOperationResult<Model>, MLError> {
+    pub fn optimize_model(
+        &mut self,
+        model_id: &str,
+        optimization_algorithm: MLOptimizationAlgorithm,
+    ) -> Result<MLOperationResult<Model>, MLError> {
         let start_time = std::time::Instant::now();
 
         // Optimize model
-        let optimized_model = self.optimization_engine.optimize_model(model_id, optimization_algorithm)?;
+        let optimized_model = self
+            .optimization_engine
+            .optimize_model(model_id, optimization_algorithm)?;
 
         let execution_time = start_time.elapsed().as_millis() as u64;
 
@@ -2202,7 +2232,7 @@ impl CachePolicy {
         Self {
             eviction_policy: EvictionPolicy::LRU,
             max_size: 1024 * 1024 * 1024, // 1GB
-            ttl: 3600, // 1 hour
+            ttl: 3600,                    // 1 hour
         }
     }
 }
@@ -2396,7 +2426,7 @@ impl HardwareSpec {
             cpu_cores: 8,
             memory_size: 16 * 1024 * 1024 * 1024, // 16GB
             gpu_count: 1,
-            gpu_memory: 8 * 1024 * 1024 * 1024, // 8GB
+            gpu_memory: 8 * 1024 * 1024 * 1024,          // 8GB
             storage_size: 1 * 1024 * 1024 * 1024 * 1024, // 1TB
         }
     }
@@ -2495,8 +2525,13 @@ impl ModelCachePolicy {
         Self {
             eviction_policy: ModelEvictionPolicy::LRU,
             max_size: 10 * 1024 * 1024 * 1024, // 10GB
-            ttl: 3600, // 1 hour
-            priority_levels: vec![PriorityLevel::Critical, PriorityLevel::High, PriorityLevel::Medium, PriorityLevel::Low],
+            ttl: 3600,                         // 1 hour
+            priority_levels: vec![
+                PriorityLevel::Critical,
+                PriorityLevel::High,
+                PriorityLevel::Medium,
+                PriorityLevel::Low,
+            ],
         }
     }
 }
@@ -2543,7 +2578,10 @@ impl InferenceEngine {
         Ok(())
     }
 
-    pub fn execute_inference(&mut self, _request: &InferenceRequest) -> Result<InferenceResult, MLError> {
+    pub fn execute_inference(
+        &mut self,
+        _request: &InferenceRequest,
+    ) -> Result<InferenceResult, MLError> {
         // HONEST FAIL-CLOSED. This specialized-lib "inference engine" has no model runtime: it
         // holds no weights and executes no network. It must NOT fabricate a result. Previously it
         // returned a hardcoded `confidence: 0.95` over `vec![1u8; 100]` from a model that never ran
@@ -2627,7 +2665,7 @@ impl HealthChecker {
         Self {
             health_checks: HashMap::new(),
             check_interval: 30, // 30 seconds
-            timeout: 5, // 5 seconds
+            timeout: 5,         // 5 seconds
         }
     }
 }
@@ -3137,7 +3175,11 @@ impl MLOptimizationEngine {
         Ok(())
     }
 
-    pub fn optimize_model(&mut self, model_id: &str, algorithm: MLOptimizationAlgorithm) -> Result<Model, MLError> {
+    pub fn optimize_model(
+        &mut self,
+        model_id: &str,
+        algorithm: MLOptimizationAlgorithm,
+    ) -> Result<Model, MLError> {
         let mut model = Model::new();
         model.model_id = model_id.to_string();
         Ok(model)
@@ -3372,7 +3414,7 @@ impl TrainingMetrics {
     pub fn new() -> Self {
         Self {
             total_training_jobs: 0,
-            accuracy: 0.0, // not measured (scaffold default; no evaluation performed)
+            accuracy: 0.0,  // not measured (scaffold default; no evaluation performed)
             precision: 0.0, // not measured (scaffold default; no evaluation performed)
             recall: 0.0,
             f1_score: 0.0,
@@ -3435,9 +3477,11 @@ mod tests {
     fn test_model_loading() {
         let mut library = MachineLearningLibrary::new();
         library.initialize().unwrap();
-        
-        let result = library.load_model("test_model".to_string(), "/path/to/model").unwrap();
-        
+
+        let result = library
+            .load_model("test_model".to_string(), "/path/to/model")
+            .unwrap();
+
         assert_eq!(result.result.model_id, "test_model");
         assert_eq!(result.result.model_type, ModelType::LLM);
         assert_eq!(result.result.framework, MLFramework::PyTorch);
@@ -3447,7 +3491,7 @@ mod tests {
     fn test_inference() {
         let mut library = MachineLearningLibrary::new();
         library.initialize().unwrap();
-        
+
         let input_data = vec![1u8; 100];
         let parameters = InferenceParameters {
             batch_size: 1,
@@ -3458,7 +3502,7 @@ mod tests {
             max_tokens: Some(100),
             precision: Precision::FP32,
         };
-        
+
         // HONEST: the scaffold has no model runtime, so inference fails closed rather than
         // fabricating a confident result (it previously returned a hardcoded confidence 0.95).
         let result = library.run_inference("test_model", &input_data, parameters);
@@ -3472,7 +3516,7 @@ mod tests {
     fn test_training() {
         let mut library = MachineLearningLibrary::new();
         library.initialize().unwrap();
-        
+
         let training_config = TrainingConfig {
             epochs: 5,
             batch_size: 16,
@@ -3482,9 +3526,11 @@ mod tests {
             metrics: vec!["accuracy".to_string()],
             validation_split: 0.2,
         };
-        
-        let result = library.start_training("test_model", training_config).unwrap();
-        
+
+        let result = library
+            .start_training("test_model", training_config)
+            .unwrap();
+
         assert_eq!(result.result.model_id, "test_model");
         assert_eq!(result.result.status, TrainingStatus::Pending);
         assert_eq!(result.result.training_config.epochs, 5);
@@ -3494,9 +3540,11 @@ mod tests {
     fn test_model_optimization() {
         let mut library = MachineLearningLibrary::new();
         library.initialize().unwrap();
-        
-        let result = library.optimize_model("test_model", MLOptimizationAlgorithm::ModelQuantization).unwrap();
-        
+
+        let result = library
+            .optimize_model("test_model", MLOptimizationAlgorithm::ModelQuantization)
+            .unwrap();
+
         assert_eq!(result.result.model_id, "test_model");
         assert_eq!(result.result.model_type, ModelType::LLM);
     }
@@ -3505,7 +3553,7 @@ mod tests {
     fn test_performance_metrics() {
         let library = MachineLearningLibrary::new();
         let metrics = library.get_performance_stats();
-        
+
         assert_eq!(metrics.inference_metrics.total_requests, 0);
         assert_eq!(metrics.training_metrics.total_training_jobs, 0);
         assert_eq!(metrics.system_metrics.cpu_utilization, 0.0);

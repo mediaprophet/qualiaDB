@@ -63,8 +63,16 @@ mod tests {
     fn posteriors_normalise_and_rank() {
         // Two hypotheses: h1 prior .2 likelihood .9; h2 prior .8 likelihood .1.
         let hyps = [
-            Hypothesis { id: 1, prior: 0.2, likelihood: 0.9 }, // joint .18
-            Hypothesis { id: 2, prior: 0.8, likelihood: 0.1 }, // joint .08
+            Hypothesis {
+                id: 1,
+                prior: 0.2,
+                likelihood: 0.9,
+            }, // joint .18
+            Hypothesis {
+                id: 2,
+                prior: 0.8,
+                likelihood: 0.1,
+            }, // joint .08
         ];
         let mut out = [0.0f32; 2];
         let evidence = bayesian_posteriors(&hyps, &mut out);
@@ -78,7 +86,11 @@ mod tests {
 
     #[test]
     fn no_mass_yields_none_and_zero_evidence() {
-        let hyps = [Hypothesis { id: 1, prior: 0.0, likelihood: 0.9 }];
+        let hyps = [Hypothesis {
+            id: 1,
+            prior: 0.0,
+            likelihood: 0.9,
+        }];
         let mut out = [9.0f32; 1];
         assert_eq!(bayesian_posteriors(&hyps, &mut out), 0.0);
         assert_eq!(out[0], 0.0, "zeroed when no mass");

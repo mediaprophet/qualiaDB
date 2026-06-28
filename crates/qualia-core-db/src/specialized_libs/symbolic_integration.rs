@@ -9,7 +9,7 @@
 //! Simpson fallback when the symbolic form is unavailable.
 
 use super::symbolic_algebra::{
-    add, c, cos, div, differentiate, exp, ln, mul, neg, pow, simplify, sin, sub, var, Expr,
+    add, c, cos, differentiate, div, exp, ln, mul, neg, pow, simplify, sin, sub, var, Expr,
 };
 
 #[derive(Debug, Clone, PartialEq, Eq)]
@@ -75,20 +75,18 @@ pub fn integrate(expr: &Expr, x: &str) -> Result<Expr, IntegrationError> {
 
 /// Definite integral `∫_a^b expr dx` via the Fundamental Theorem when an antiderivative
 /// exists, else a numerical Simpson fallback over `steps` (even) panels.
-pub fn integrate_definite(
-    expr: &Expr,
-    x: &str,
-    a: f64,
-    b: f64,
-    steps: usize,
-) -> Option<f64> {
+pub fn integrate_definite(expr: &Expr, x: &str, a: f64, b: f64, steps: usize) -> Option<f64> {
     if let Ok(anti) = integrate(expr, x) {
         let fa = eval_at(&anti, x, a)?;
         let fb = eval_at(&anti, x, b)?;
         return Some(fb - fa);
     }
     // Numerical fallback (Simpson).
-    let n = if steps.max(2) % 2 == 0 { steps.max(2) } else { steps + 1 };
+    let n = if steps.max(2) % 2 == 0 {
+        steps.max(2)
+    } else {
+        steps + 1
+    };
     let h = (b - a) / n as f64;
     let mut sum = eval_at(expr, x, a)? + eval_at(expr, x, b)?;
     for i in 1..n {
@@ -131,7 +129,10 @@ mod tests {
     #[test]
     fn linearity_roundtrips() {
         // 3x² + 2x − 5
-        let f = sub(add(mul(c(3.0), pow(var("x"), 2)), mul(c(2.0), var("x"))), c(5.0));
+        let f = sub(
+            add(mul(c(3.0), pow(var("x"), 2)), mul(c(2.0), var("x"))),
+            c(5.0),
+        );
         roundtrip(&f, "x");
     }
 
@@ -142,7 +143,14 @@ mod tests {
         assert!((v - 1.0 / 3.0).abs() < 1e-9);
         // sqrt(x) is not symbolically integrable here, but the numeric fallback works:
         // ∫₀¹ √x dx = 2/3.
-        let v2 = integrate_definite(&super::super::symbolic_algebra::sqrt(var("x")), "x", 0.0, 1.0, 2000).unwrap();
+        let v2 = integrate_definite(
+            &super::super::symbolic_algebra::sqrt(var("x")),
+            "x",
+            0.0,
+            1.0,
+            2000,
+        )
+        .unwrap();
         assert!((v2 - 2.0 / 3.0).abs() < 1e-3);
     }
 
@@ -169,6 +177,9 @@ mod tests {
     fn fails_closed_on_nonlinear_inner() {
         // ∫ sin(x²) dx has no elementary form this engine represents — refuse, don't fabricate.
         let f = super::super::symbolic_algebra::sin(pow(var("x"), 2));
-        assert_eq!(integrate(&f, "x").unwrap_err(), IntegrationError::NotIntegrable);
+        assert_eq!(
+            integrate(&f, "x").unwrap_err(),
+            IntegrationError::NotIntegrable
+        );
     }
 }

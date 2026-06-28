@@ -13,8 +13,7 @@ use zeroize::{Zeroize, ZeroizeOnDrop};
 
 pub const SANCTUARY_CIPHER_KEY_BYTES: usize = 32;
 pub const SANCTUARY_TWEAK_BYTES: usize = 16;
-pub const SANCTUARY_KEY_MATERIAL_BYTES: usize =
-    SANCTUARY_CIPHER_KEY_BYTES + SANCTUARY_TWEAK_BYTES;
+pub const SANCTUARY_KEY_MATERIAL_BYTES: usize = SANCTUARY_CIPHER_KEY_BYTES + SANCTUARY_TWEAK_BYTES;
 pub const SANCTUARY_TAG_BYTES: usize = 16;
 pub const SANCTUARY_GCM_NONCE_BYTES: usize = 12;
 pub const SANCTUARY_XCHACHA_NONCE_BYTES: usize = 24;
@@ -53,7 +52,9 @@ pub struct SanctuaryKeyMaterial {
 
 impl fmt::Debug for SanctuaryKeyMaterial {
     fn fmt(&self, f: &mut fmt::Formatter<'_>) -> fmt::Result {
-        f.write_str("SanctuaryKeyMaterial { cipher_key: [REDACTED; 32], volume_tweak: [REDACTED; 16] }")
+        f.write_str(
+            "SanctuaryKeyMaterial { cipher_key: [REDACTED; 32], volume_tweak: [REDACTED; 16] }",
+        )
     }
 }
 
@@ -127,7 +128,11 @@ pub fn encrypt_sanctuary_chunk_in_place(
             let key = aes_gcm::Key::<aes_gcm::Aes256Gcm>::from_slice(&key_material.cipher_key);
             let cipher = aes_gcm::Aes256Gcm::new(key);
             let tag = cipher
-                .encrypt_in_place_detached(aes_gcm::Nonce::from_slice(&nonce), additional_data, buffer)
+                .encrypt_in_place_detached(
+                    aes_gcm::Nonce::from_slice(&nonce),
+                    additional_data,
+                    buffer,
+                )
                 .map_err(|_| SanctuaryCryptoError::EncryptionFailed)?;
             tag_out.copy_from_slice(tag.as_slice());
         }
@@ -136,7 +141,11 @@ pub fn encrypt_sanctuary_chunk_in_place(
             let key = chacha20poly1305::Key::from_slice(&key_material.cipher_key);
             let cipher = chacha20poly1305::ChaCha20Poly1305::new(key);
             let tag = cipher
-                .encrypt_in_place_detached(chacha20poly1305::Nonce::from_slice(&nonce), additional_data, buffer)
+                .encrypt_in_place_detached(
+                    chacha20poly1305::Nonce::from_slice(&nonce),
+                    additional_data,
+                    buffer,
+                )
                 .map_err(|_| SanctuaryCryptoError::EncryptionFailed)?;
             tag_out.copy_from_slice(tag.as_slice());
         }
@@ -145,7 +154,11 @@ pub fn encrypt_sanctuary_chunk_in_place(
             let key = chacha20poly1305::Key::from_slice(&key_material.cipher_key);
             let cipher = chacha20poly1305::XChaCha20Poly1305::new(key);
             let tag = cipher
-                .encrypt_in_place_detached(chacha20poly1305::XNonce::from_slice(&nonce), additional_data, buffer)
+                .encrypt_in_place_detached(
+                    chacha20poly1305::XNonce::from_slice(&nonce),
+                    additional_data,
+                    buffer,
+                )
                 .map_err(|_| SanctuaryCryptoError::EncryptionFailed)?;
             tag_out.copy_from_slice(tag.as_slice());
         }
@@ -286,8 +299,10 @@ mod tests {
 
     #[test]
     fn test_sanctuary_key_derivation() {
-        let result = derive_sanctuary_key_material(b"test_pin_123", b"test_salt_456", TEST_ITERATIONS);
-        let result2 = derive_sanctuary_key_material(b"test_pin_123", b"test_salt_456", TEST_ITERATIONS);
+        let result =
+            derive_sanctuary_key_material(b"test_pin_123", b"test_salt_456", TEST_ITERATIONS);
+        let result2 =
+            derive_sanctuary_key_material(b"test_pin_123", b"test_salt_456", TEST_ITERATIONS);
 
         assert_eq!(result.cipher_key.len(), SANCTUARY_CIPHER_KEY_BYTES);
         assert_eq!(result.volume_tweak.len(), SANCTUARY_TWEAK_BYTES);
@@ -331,7 +346,8 @@ mod tests {
 
     #[test]
     fn test_zero_heap_encrypt_decrypt_aes_gcm() {
-        let key_material = derive_sanctuary_key_material(b"test_pin", b"test_salt", TEST_ITERATIONS);
+        let key_material =
+            derive_sanctuary_key_material(b"test_pin", b"test_salt", TEST_ITERATIONS);
         let plaintext = b"Hello, zero-heap world!";
         let mut ciphertext = [0u8; 128];
         let mut tag = [0u8; SANCTUARY_TAG_BYTES];

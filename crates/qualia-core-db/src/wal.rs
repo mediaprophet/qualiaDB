@@ -9,8 +9,8 @@ use ed25519_dalek::{Signature, SigningKey};
 use crate::agency::{scrub_quin_volatile, sign_graph_mutation, stamp_fiduciary_metadata};
 use crate::crdt::SuspendedTransactionQueue;
 use crate::modalities::logic::core::WebizenOpcode;
-use crate::PermissiveRoutingLane;
 use crate::NQuin;
+use crate::PermissiveRoutingLane;
 
 // ── WAL file layout ──────────────────────────────────────────────────────────
 //
@@ -76,7 +76,10 @@ impl WriteAheadLog {
             [0u8; 32]
         };
 
-        Ok(Self { file, prev_dag_hash })
+        Ok(Self {
+            file,
+            prev_dag_hash,
+        })
     }
 
     /// Synchronously appends a NQuin to the log and flushes to disk.
@@ -108,8 +111,7 @@ impl WriteAheadLog {
 
         // Only read complete 48-byte chunks — partial chunks mean a mid-write crash; discard.
         for chunk in buffer.chunks_exact(quin_size) {
-            let quin: NQuin =
-                unsafe { std::ptr::read_unaligned(chunk.as_ptr() as *const NQuin) };
+            let quin: NQuin = unsafe { std::ptr::read_unaligned(chunk.as_ptr() as *const NQuin) };
             recovered.push(quin);
         }
 
@@ -181,22 +183,35 @@ impl WriteAheadLog {
 #[cfg(target_arch = "wasm32")]
 impl WriteAheadLog {
     pub fn open<P: AsRef<Path>>(_path: P) -> std::io::Result<Self> {
-        Ok(Self { file: Vec::new(), prev_dag_hash: [0; 32] })
+        Ok(Self {
+            file: Vec::new(),
+            prev_dag_hash: [0; 32],
+        })
     }
-    pub fn append_mutation(&mut self, _quin: &NQuin) -> std::io::Result<()> { Ok(()) }
+    pub fn append_mutation(&mut self, _quin: &NQuin) -> std::io::Result<()> {
+        Ok(())
+    }
     pub fn append_mutation_volatile(&mut self, quin: &mut NQuin) -> std::io::Result<()> {
         scrub_quin_volatile(quin);
         Ok(())
     }
-    pub fn recover(&mut self) -> std::io::Result<Vec<NQuin>> { Ok(Vec::new()) }
-    pub fn truncate(&mut self) -> std::io::Result<()> { Ok(()) }
+    pub fn recover(&mut self) -> std::io::Result<Vec<NQuin>> {
+        Ok(Vec::new())
+    }
+    pub fn truncate(&mut self) -> std::io::Result<()> {
+        Ok(())
+    }
     pub fn checkpoint_to_dag(
         &mut self,
         _dag_store: &mut crate::git_bridge::DagStore,
         _author_did: u64,
         _timestamp_ms: u64,
-    ) -> std::io::Result<[u8; 32]> { Ok(self.prev_dag_hash) }
-    pub fn buffered_count(&mut self) -> std::io::Result<usize> { Ok(0) }
+    ) -> std::io::Result<[u8; 32]> {
+        Ok(self.prev_dag_hash)
+    }
+    pub fn buffered_count(&mut self) -> std::io::Result<usize> {
+        Ok(0)
+    }
 }
 
 #[inline]
@@ -281,7 +296,14 @@ mod tests {
     use tempfile::NamedTempFile;
 
     fn make_quin(subject: u64, object: u64) -> NQuin {
-        NQuin { subject, predicate: 2, object, context: 4, metadata: 0, parity: 0 }
+        NQuin {
+            subject,
+            predicate: 2,
+            object,
+            context: 4,
+            metadata: 0,
+            parity: 0,
+        }
     }
 
     #[test]

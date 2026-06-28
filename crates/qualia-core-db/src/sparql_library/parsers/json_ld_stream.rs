@@ -165,7 +165,7 @@ pub fn parse_json_ld_into<R: Read, S: crate::sparql_library::quin_sink::QuinSink
 }
 
 /// Parse JSON-LD stream with RDF-Star support via @annotation
-/// 
+///
 /// NOTE: This function is currently rejected by the strict binary gatekeeper.
 /// Use the gatekeeper_bypass parameter only for testing or with explicit approval.
 pub fn parse_json_ld_star_stream<R: Read, S: crate::sparql_library::quin_sink::QuinSink>(
@@ -177,7 +177,7 @@ pub fn parse_json_ld_star_stream<R: Read, S: crate::sparql_library::quin_sink::Q
     if !gatekeeper_bypass {
         return Err("JSON-LD RDF-Star is rejected by strict binary gatekeeper. Set gatekeeper_bypass=true only with explicit approval.".into());
     }
-    
+
     let mut count = 0;
     let mut stack: Vec<(u64, u64)> = Vec::with_capacity(32);
     let mut buf = [0u8; 8192];
@@ -217,7 +217,7 @@ pub fn parse_json_ld_star_stream<R: Read, S: crate::sparql_library::quin_sink::Q
                             count += 1;
                         }
                         embedded_triples.clear();
-                        
+
                         if let Some((prev_subject, prev_key)) = stack.pop() {
                             current_subject = prev_subject;
                             current_key = prev_key;
@@ -288,7 +288,7 @@ pub fn parse_json_ld_star_stream<R: Read, S: crate::sparql_library::quin_sink::Q
                         let virtual_id = crate::lexicon::generate_embedded_triple_id(
                             current_subject,
                             current_key,
-                            hash_str(&current_string)
+                            hash_str(&current_string),
                         );
                         embedded_triples.push((virtual_id, current_key));
                         state = ParseStateStar::AfterString;

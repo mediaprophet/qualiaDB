@@ -30,40 +30,184 @@ impl GaKernel {
 
 const GEOMETRIC_PRODUCT_TABLE: [[(usize, f32); 8]; 8] = [
     // e_j = 1
-    [(0, 1.), (1, 1.), (2, 1.), (3, 1.), (4, 1.), (5, 1.), (6, 1.), (7, 1.)],
+    [
+        (0, 1.),
+        (1, 1.),
+        (2, 1.),
+        (3, 1.),
+        (4, 1.),
+        (5, 1.),
+        (6, 1.),
+        (7, 1.),
+    ],
     // e_j = e1
-    [(1, 1.), (0, 1.), (4, -1.), (5, -1.), (2, -1.), (3, -1.), (7, 1.), (6, 1.)],
+    [
+        (1, 1.),
+        (0, 1.),
+        (4, -1.),
+        (5, -1.),
+        (2, -1.),
+        (3, -1.),
+        (7, 1.),
+        (6, 1.),
+    ],
     // e_j = e2
-    [(2, 1.), (4, 1.), (0, 1.), (6, -1.), (1, 1.), (7, -1.), (3, -1.), (5, -1.)],
+    [
+        (2, 1.),
+        (4, 1.),
+        (0, 1.),
+        (6, -1.),
+        (1, 1.),
+        (7, -1.),
+        (3, -1.),
+        (5, -1.),
+    ],
     // e_j = e3
-    [(3, 1.), (5, 1.), (6, 1.), (0, 1.), (7, 1.), (1, 1.), (2, 1.), (4, 1.)],
+    [
+        (3, 1.),
+        (5, 1.),
+        (6, 1.),
+        (0, 1.),
+        (7, 1.),
+        (1, 1.),
+        (2, 1.),
+        (4, 1.),
+    ],
     // e_j = e12
-    [(4, 1.), (2, 1.), (1, -1.), (7, 1.), (0, -1.), (6, 1.), (5, -1.), (3, -1.)],
+    [
+        (4, 1.),
+        (2, 1.),
+        (1, -1.),
+        (7, 1.),
+        (0, -1.),
+        (6, 1.),
+        (5, -1.),
+        (3, -1.),
+    ],
     // e_j = e13
-    [(5, 1.), (3, 1.), (7, -1.), (1, -1.), (6, -1.), (0, -1.), (4, 1.), (2, 1.)],
+    [
+        (5, 1.),
+        (3, 1.),
+        (7, -1.),
+        (1, -1.),
+        (6, -1.),
+        (0, -1.),
+        (4, 1.),
+        (2, 1.),
+    ],
     // e_j = e23
-    [(6, 1.), (7, 1.), (3, 1.), (2, -1.), (5, 1.), (4, -1.), (0, -1.), (1, -1.)],
+    [
+        (6, 1.),
+        (7, 1.),
+        (3, 1.),
+        (2, -1.),
+        (5, 1.),
+        (4, -1.),
+        (0, -1.),
+        (1, -1.),
+    ],
     // e_j = e123
-    [(7, 1.), (6, 1.), (5, -1.), (4, 1.), (3, -1.), (2, 1.), (1, -1.), (0, -1.)],
+    [
+        (7, 1.),
+        (6, 1.),
+        (5, -1.),
+        (4, 1.),
+        (3, -1.),
+        (2, 1.),
+        (1, -1.),
+        (0, -1.),
+    ],
 ];
 
 const OUTER_PRODUCT_TABLE: [[(usize, f32); 8]; 8] = [
     // 1 wedge e_j = e_j
-    [(0, 1.), (1, 1.), (2, 1.), (3, 1.), (4, 1.), (5, 1.), (6, 1.), (7, 1.)],
+    [
+        (0, 1.),
+        (1, 1.),
+        (2, 1.),
+        (3, 1.),
+        (4, 1.),
+        (5, 1.),
+        (6, 1.),
+        (7, 1.),
+    ],
     // e1 wedge e_j
-    [(1, 1.), (0, 0.), (4, -1.), (5, -1.), (0, 0.), (0, 0.), (7, 1.), (0, 0.)],
+    [
+        (1, 1.),
+        (0, 0.),
+        (4, -1.),
+        (5, -1.),
+        (0, 0.),
+        (0, 0.),
+        (7, 1.),
+        (0, 0.),
+    ],
     // e2 wedge e_j
-    [(2, 1.), (4, 1.), (0, 0.), (6, -1.), (0, 0.), (7, -1.), (0, 0.), (0, 0.)],
+    [
+        (2, 1.),
+        (4, 1.),
+        (0, 0.),
+        (6, -1.),
+        (0, 0.),
+        (7, -1.),
+        (0, 0.),
+        (0, 0.),
+    ],
     // e3 wedge e_j
-    [(3, 1.), (5, 1.), (6, 1.), (0, 0.), (7, 1.), (0, 0.), (0, 0.), (0, 0.)],
+    [
+        (3, 1.),
+        (5, 1.),
+        (6, 1.),
+        (0, 0.),
+        (7, 1.),
+        (0, 0.),
+        (0, 0.),
+        (0, 0.),
+    ],
     // e12 wedge e_j
-    [(4, 1.), (0, 0.), (0, 0.), (7, 1.), (0, 0.), (0, 0.), (0, 0.), (0, 0.)],
+    [
+        (4, 1.),
+        (0, 0.),
+        (0, 0.),
+        (7, 1.),
+        (0, 0.),
+        (0, 0.),
+        (0, 0.),
+        (0, 0.),
+    ],
     // e13 wedge e_j
-    [(5, 1.), (0, 0.), (7, -1.), (0, 0.), (0, 0.), (0, 0.), (0, 0.), (0, 0.)],
+    [
+        (5, 1.),
+        (0, 0.),
+        (7, -1.),
+        (0, 0.),
+        (0, 0.),
+        (0, 0.),
+        (0, 0.),
+        (0, 0.),
+    ],
     // e23 wedge e_j
-    [(6, 1.), (7, 1.), (0, 0.), (0, 0.), (0, 0.), (0, 0.), (0, 0.), (0, 0.)],
+    [
+        (6, 1.),
+        (7, 1.),
+        (0, 0.),
+        (0, 0.),
+        (0, 0.),
+        (0, 0.),
+        (0, 0.),
+        (0, 0.),
+    ],
     // e123 wedge e_j
-    [(7, 1.), (0, 0.), (0, 0.), (0, 0.), (0, 0.), (0, 0.), (0, 0.), (0, 0.)],
+    [
+        (7, 1.),
+        (0, 0.),
+        (0, 0.),
+        (0, 0.),
+        (0, 0.),
+        (0, 0.),
+        (0, 0.),
+        (0, 0.),
+    ],
 ];
 
 /// # Safety
@@ -83,7 +227,16 @@ pub unsafe fn geometric_product_avx2(a: __m256, b: __m256) -> __m256 {
     let b1 = _mm256_permutevar8x32_ps(b, _mm256_set1_epi32(1));
     let perm1 = _mm256_set_epi32(6, 7, 3, 2, 5, 4, 0, 1);
     let a_shuf1 = _mm256_permutevar8x32_ps(a, perm1);
-    let sign1 = _mm256_castsi256_ps(_mm256_set_epi32(0, 0, 0x80000000_u32 as i32, 0x80000000_u32 as i32, 0x80000000_u32 as i32, 0x80000000_u32 as i32, 0, 0));
+    let sign1 = _mm256_castsi256_ps(_mm256_set_epi32(
+        0,
+        0,
+        0x80000000_u32 as i32,
+        0x80000000_u32 as i32,
+        0x80000000_u32 as i32,
+        0x80000000_u32 as i32,
+        0,
+        0,
+    ));
     let a_signed1 = _mm256_xor_ps(a_shuf1, sign1);
     result = _mm256_fmadd_ps(a_signed1, b1, result);
 
@@ -91,7 +244,16 @@ pub unsafe fn geometric_product_avx2(a: __m256, b: __m256) -> __m256 {
     let b2 = _mm256_permutevar8x32_ps(b, _mm256_set1_epi32(2));
     let perm2 = _mm256_set_epi32(5, 3, 7, 1, 6, 0, 4, 2);
     let a_shuf2 = _mm256_permutevar8x32_ps(a, perm2);
-    let sign2 = _mm256_castsi256_ps(_mm256_set_epi32(0x80000000_u32 as i32, 0x80000000_u32 as i32, 0x80000000_u32 as i32, 0, 0x80000000_u32 as i32, 0, 0, 0));
+    let sign2 = _mm256_castsi256_ps(_mm256_set_epi32(
+        0x80000000_u32 as i32,
+        0x80000000_u32 as i32,
+        0x80000000_u32 as i32,
+        0,
+        0x80000000_u32 as i32,
+        0,
+        0,
+        0,
+    ));
     let a_signed2 = _mm256_xor_ps(a_shuf2, sign2);
     result = _mm256_fmadd_ps(a_signed2, b2, result);
 
@@ -105,7 +267,16 @@ pub unsafe fn geometric_product_avx2(a: __m256, b: __m256) -> __m256 {
     let b4 = _mm256_permutevar8x32_ps(b, _mm256_set1_epi32(4));
     let perm4 = _mm256_set_epi32(3, 5, 6, 0, 7, 1, 2, 4);
     let a_shuf4 = _mm256_permutevar8x32_ps(a, perm4);
-    let sign4 = _mm256_castsi256_ps(_mm256_set_epi32(0, 0, 0x80000000_u32 as i32, 0, 0x80000000_u32 as i32, 0, 0x80000000_u32 as i32, 0x80000000_u32 as i32));
+    let sign4 = _mm256_castsi256_ps(_mm256_set_epi32(
+        0,
+        0,
+        0x80000000_u32 as i32,
+        0,
+        0x80000000_u32 as i32,
+        0,
+        0x80000000_u32 as i32,
+        0x80000000_u32 as i32,
+    ));
     let a_signed4 = _mm256_xor_ps(a_shuf4, sign4);
     result = _mm256_fmadd_ps(a_signed4, b4, result);
 
@@ -113,7 +284,16 @@ pub unsafe fn geometric_product_avx2(a: __m256, b: __m256) -> __m256 {
     let b5 = _mm256_permutevar8x32_ps(b, _mm256_set1_epi32(5));
     let perm5 = _mm256_set_epi32(2, 4, 0, 6, 1, 7, 3, 5);
     let a_shuf5 = _mm256_permutevar8x32_ps(a, perm5);
-    let sign5 = _mm256_castsi256_ps(_mm256_set_epi32(0x80000000_u32 as i32, 0x80000000_u32 as i32, 0, 0, 0, 0, 0x80000000_u32 as i32, 0x80000000_u32 as i32));
+    let sign5 = _mm256_castsi256_ps(_mm256_set_epi32(
+        0x80000000_u32 as i32,
+        0x80000000_u32 as i32,
+        0,
+        0,
+        0,
+        0,
+        0x80000000_u32 as i32,
+        0x80000000_u32 as i32,
+    ));
     let a_signed5 = _mm256_xor_ps(a_shuf5, sign5);
     result = _mm256_fmadd_ps(a_signed5, b5, result);
 
@@ -121,7 +301,16 @@ pub unsafe fn geometric_product_avx2(a: __m256, b: __m256) -> __m256 {
     let b6 = _mm256_permutevar8x32_ps(b, _mm256_set1_epi32(6));
     let perm6 = _mm256_set_epi32(1, 0, 4, 5, 2, 3, 7, 6);
     let a_shuf6 = _mm256_permutevar8x32_ps(a, perm6);
-    let sign6 = _mm256_castsi256_ps(_mm256_set_epi32(0, 0, 0, 0x80000000_u32 as i32, 0, 0x80000000_u32 as i32, 0x80000000_u32 as i32, 0x80000000_u32 as i32));
+    let sign6 = _mm256_castsi256_ps(_mm256_set_epi32(
+        0,
+        0,
+        0,
+        0x80000000_u32 as i32,
+        0,
+        0x80000000_u32 as i32,
+        0x80000000_u32 as i32,
+        0x80000000_u32 as i32,
+    ));
     let a_signed6 = _mm256_xor_ps(a_shuf6, sign6);
     result = _mm256_fmadd_ps(a_signed6, b6, result);
 
@@ -129,7 +318,16 @@ pub unsafe fn geometric_product_avx2(a: __m256, b: __m256) -> __m256 {
     let b7 = _mm256_permutevar8x32_ps(b, _mm256_set1_epi32(7));
     let perm7 = _mm256_set_epi32(0, 1, 2, 3, 4, 5, 6, 7);
     let a_shuf7 = _mm256_permutevar8x32_ps(a, perm7);
-    let sign7 = _mm256_castsi256_ps(_mm256_set_epi32(0, 0, 0x80000000_u32 as i32, 0, 0x80000000_u32 as i32, 0, 0x80000000_u32 as i32, 0x80000000_u32 as i32));
+    let sign7 = _mm256_castsi256_ps(_mm256_set_epi32(
+        0,
+        0,
+        0x80000000_u32 as i32,
+        0,
+        0x80000000_u32 as i32,
+        0,
+        0x80000000_u32 as i32,
+        0x80000000_u32 as i32,
+    ));
     let a_signed7 = _mm256_xor_ps(a_shuf7, sign7);
     result = _mm256_fmadd_ps(a_signed7, b7, result);
 
@@ -154,10 +352,14 @@ pub fn multivector_geometric_product(a: &[f32; 8], b: &[f32; 8]) -> [f32; 8] {
     let mut out = [0.0; 8];
     for j in 0..8 {
         let b_j = b[j];
-        if b_j == 0.0 { continue; }
+        if b_j == 0.0 {
+            continue;
+        }
         for i in 0..8 {
             let a_i = a[i];
-            if a_i == 0.0 { continue; }
+            if a_i == 0.0 {
+                continue;
+            }
             let (res_idx, sign) = GEOMETRIC_PRODUCT_TABLE[j][i];
             out[res_idx] += a_i * b_j * sign;
         }
@@ -170,10 +372,14 @@ pub fn multivector_outer_product(a: &[f32; 8], b: &[f32; 8]) -> [f32; 8] {
     let mut out = [0.0; 8];
     for j in 0..8 {
         let b_j = b[j];
-        if b_j == 0.0 { continue; }
+        if b_j == 0.0 {
+            continue;
+        }
         for i in 0..8 {
             let a_i = a[i];
-            if a_i == 0.0 { continue; }
+            if a_i == 0.0 {
+                continue;
+            }
             let (res_idx, sign) = OUTER_PRODUCT_TABLE[j][i];
             if sign != 0.0 {
                 out[res_idx] += a_i * b_j * sign;

@@ -113,15 +113,24 @@ impl VcRuntime {
     }
 
     /// Issue a Verifiable Credential: sign the proof-less credential and attach the proof.
-    pub fn issue(&self, mut credential: Credential, key_id: Option<&str>) -> Result<Credential, VcError> {
+    pub fn issue(
+        &self,
+        mut credential: Credential,
+        key_id: Option<&str>,
+    ) -> Result<Credential, VcError> {
         credential.proof = None;
 
-        let serialized =
-            serde_json::to_vec(&credential).map_err(|e| VcError::SerializationError(e.to_string()))?;
+        let serialized = serde_json::to_vec(&credential)
+            .map_err(|e| VcError::SerializationError(e.to_string()))?;
 
         let signature = self
             .crypto
-            .sign(&serialized, key_id, "vc-dm".to_string(), "assertionMethod".to_string())
+            .sign(
+                &serialized,
+                key_id,
+                "vc-dm".to_string(),
+                "assertionMethod".to_string(),
+            )
             .map_err(|e| VcError::CryptoError(format!("{:?}", e)))?;
 
         credential.proof = Some(Proof {
@@ -140,7 +149,11 @@ impl VcRuntime {
     }
 
     /// Present one or more credentials inside a signed Verifiable Presentation.
-    pub fn present(&self, credentials: Vec<Credential>, key_id: Option<&str>) -> Result<Presentation, VcError> {
+    pub fn present(
+        &self,
+        credentials: Vec<Credential>,
+        key_id: Option<&str>,
+    ) -> Result<Presentation, VcError> {
         let mut presentation = Presentation {
             context: vec!["https://www.w3.org/2018/credentials/v1".to_string()],
             types: vec!["VerifiablePresentation".to_string()],
@@ -153,7 +166,12 @@ impl VcRuntime {
 
         let signature = self
             .crypto
-            .sign(&serialized, key_id, "vc-dm".to_string(), "authentication".to_string())
+            .sign(
+                &serialized,
+                key_id,
+                "vc-dm".to_string(),
+                "authentication".to_string(),
+            )
             .map_err(|e| VcError::CryptoError(format!("{:?}", e)))?;
 
         presentation.proof = Some(Proof {
@@ -231,12 +249,21 @@ mod tests {
 
     fn test_credential() -> Credential {
         let mut subject = HashMap::new();
-        subject.insert("id".to_string(), "did:example:ebfeb1f712ebc6f1c276e12ec21".to_string());
-        subject.insert("degree".to_string(), "Bachelor of Science and Arts".to_string());
+        subject.insert(
+            "id".to_string(),
+            "did:example:ebfeb1f712ebc6f1c276e12ec21".to_string(),
+        );
+        subject.insert(
+            "degree".to_string(),
+            "Bachelor of Science and Arts".to_string(),
+        );
         Credential {
             context: vec!["https://www.w3.org/2018/credentials/v1".to_string()],
             id: "http://example.edu/credentials/3732".to_string(),
-            types: vec!["VerifiableCredential".to_string(), "UniversityDegreeCredential".to_string()],
+            types: vec![
+                "VerifiableCredential".to_string(),
+                "UniversityDegreeCredential".to_string(),
+            ],
             issuer: "https://example.edu/issuers/565049".to_string(),
             issuance_date: "2010-01-01T19:23:24Z".to_string(),
             credential_subject: subject,
@@ -250,7 +277,9 @@ mod tests {
         crypto.generate_key("default".to_string()).unwrap();
         let runtime = VcRuntime::new(crypto);
 
-        let issued = runtime.issue(test_credential(), Some("default")).expect("issue");
+        let issued = runtime
+            .issue(test_credential(), Some("default"))
+            .expect("issue");
         assert!(issued.proof.is_some());
         assert_eq!(runtime.verify_credential(&issued), Ok(true));
     }
@@ -272,7 +301,10 @@ mod tests {
     #[test]
     fn unsigned_credential_fails_closed() {
         let runtime = VcRuntime::new(FiduciaryCrypto::new());
-        assert_eq!(runtime.verify_credential(&test_credential()), Err(VcError::MissingProof));
+        assert_eq!(
+            runtime.verify_credential(&test_credential()),
+            Err(VcError::MissingProof)
+        );
     }
 
     #[test]

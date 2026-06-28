@@ -48,7 +48,13 @@ impl RegressionSpline {
     /// Fit a degree-`degree` regression spline of `y` on scalar `x` (length `n`)
     /// with the given interior `knots`. `degree = 3` is the usual cubic spline;
     /// `knots = []` gives polynomial regression. Fails closed via the OLS solver.
-    pub fn fit(x: &[f64], y: &[f64], n: usize, degree: usize, knots: &[f64]) -> Result<Self, LearningError> {
+    pub fn fit(
+        x: &[f64],
+        y: &[f64],
+        n: usize,
+        degree: usize,
+        knots: &[f64],
+    ) -> Result<Self, LearningError> {
         if n == 0 || x.len() != n || y.len() != n || degree == 0 {
             return Err(LearningError::InvalidDimension);
         }
@@ -60,7 +66,11 @@ impl RegressionSpline {
             basis_row(x[i], degree, knots, &mut design[i * m..(i + 1) * m]);
         }
         let model = linear::fit(&design, y, n, m, false)?;
-        Ok(Self { degree, knots: knots.to_vec(), coefficients: model.coefficients })
+        Ok(Self {
+            degree,
+            knots: knots.to_vec(),
+            coefficients: model.coefficients,
+        })
     }
 
     /// Predict at a scalar `x`.
@@ -78,7 +88,12 @@ impl RegressionSpline {
 }
 
 /// Convenience: degree-`degree` polynomial regression (a spline with no knots).
-pub fn polynomial_regression(x: &[f64], y: &[f64], n: usize, degree: usize) -> Result<RegressionSpline, LearningError> {
+pub fn polynomial_regression(
+    x: &[f64],
+    y: &[f64],
+    n: usize,
+    degree: usize,
+) -> Result<RegressionSpline, LearningError> {
     RegressionSpline::fit(x, y, n, degree, &[])
 }
 
@@ -105,15 +120,33 @@ mod tests {
         // there fits it far better than a single global cubic could.
         let n = 30;
         let x: Vec<f64> = (0..n).map(|i| i as f64 / 3.0).collect();
-        let y: Vec<f64> = x.iter().map(|&xi| if xi < 5.0 { (xi).sin() } else { 0.3 * (xi - 5.0) + (5.0f64).sin() }).collect();
+        let y: Vec<f64> = x
+            .iter()
+            .map(|&xi| {
+                if xi < 5.0 {
+                    (xi).sin()
+                } else {
+                    0.3 * (xi - 5.0) + (5.0f64).sin()
+                }
+            })
+            .collect();
         let m = RegressionSpline::fit(&x, &y, n, 3, &[3.0, 5.0, 7.0]).unwrap();
         let preds = m.predict(&x);
-        assert!(r2_score(&y, &preds).unwrap() > 0.97, "spline should fit well");
+        assert!(
+            r2_score(&y, &preds).unwrap() > 0.97,
+            "spline should fit well"
+        );
     }
 
     #[test]
     fn guards() {
-        assert_eq!(RegressionSpline::fit(&[1.0, 2.0], &[1.0], 2, 3, &[]).unwrap_err(), LearningError::InvalidDimension);
-        assert_eq!(RegressionSpline::fit(&[1.0], &[1.0], 1, 0, &[]).unwrap_err(), LearningError::InvalidDimension);
+        assert_eq!(
+            RegressionSpline::fit(&[1.0, 2.0], &[1.0], 2, 3, &[]).unwrap_err(),
+            LearningError::InvalidDimension
+        );
+        assert_eq!(
+            RegressionSpline::fit(&[1.0], &[1.0], 1, 0, &[]).unwrap_err(),
+            LearningError::InvalidDimension
+        );
     }
 }

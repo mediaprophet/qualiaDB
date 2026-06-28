@@ -48,7 +48,8 @@ impl QTensorEngine {
             }
             let mut padded = [0u8; MAX_EMB_ROW_PAD];
             padded[..raw_embd.len()].copy_from_slice(raw_embd);
-            self.gpu_queue().write_buffer(&embd_buf, 0, &padded[..word_bytes]);
+            self.gpu_queue()
+                .write_buffer(&embd_buf, 0, &padded[..word_bytes]);
         }
 
         let params_buf = self.gpu_device().create_buffer(&wgpu::BufferDescriptor {
@@ -71,7 +72,8 @@ impl QTensorEngine {
             let offset = (self.tensor_data_offset + weight_tensor.byte_offset) as usize;
             let end = (offset + weights_elems * 4).min(mmap.len());
             if end > offset {
-                self.gpu_queue().write_buffer(&weights_buf, 0, &mmap[offset..end]);
+                self.gpu_queue()
+                    .write_buffer(&weights_buf, 0, &mmap[offset..end]);
             }
         }
 
@@ -87,28 +89,30 @@ impl QTensorEngine {
         let bind_layout = self.embedding_bind_layout.clone();
         #[cfg(target_arch = "wasm32")]
         let bind_layout = self.embedding_pipeline.get_bind_group_layout(0);
-        let bind_group = self.gpu_device().create_bind_group(&wgpu::BindGroupDescriptor {
-            label: Some("QuantizedEmbeddingBindGroup"),
-            layout: &bind_layout,
-            entries: &[
-                wgpu::BindGroupEntry {
-                    binding: 0,
-                    resource: embd_buf.as_entire_binding(),
-                },
-                wgpu::BindGroupEntry {
-                    binding: 1,
-                    resource: params_buf.as_entire_binding(),
-                },
-                wgpu::BindGroupEntry {
-                    binding: 2,
-                    resource: weights_buf.as_entire_binding(),
-                },
-                wgpu::BindGroupEntry {
-                    binding: 3,
-                    resource: output_buf.as_entire_binding(),
-                },
-            ],
-        });
+        let bind_group = self
+            .gpu_device()
+            .create_bind_group(&wgpu::BindGroupDescriptor {
+                label: Some("QuantizedEmbeddingBindGroup"),
+                layout: &bind_layout,
+                entries: &[
+                    wgpu::BindGroupEntry {
+                        binding: 0,
+                        resource: embd_buf.as_entire_binding(),
+                    },
+                    wgpu::BindGroupEntry {
+                        binding: 1,
+                        resource: params_buf.as_entire_binding(),
+                    },
+                    wgpu::BindGroupEntry {
+                        binding: 2,
+                        resource: weights_buf.as_entire_binding(),
+                    },
+                    wgpu::BindGroupEntry {
+                        binding: 3,
+                        resource: output_buf.as_entire_binding(),
+                    },
+                ],
+            });
 
         let mut encoder = self
             .device()
@@ -145,13 +149,18 @@ impl QTensorEngine {
 
         #[cfg(not(target_arch = "wasm32"))]
         {
-            let handle = tokio::runtime::Handle::try_current().unwrap_or_else(|_| { let rt = Box::leak(Box::new(tokio::runtime::Runtime::new().unwrap())); rt.handle().clone() });
+            let handle = tokio::runtime::Handle::try_current().unwrap_or_else(|_| {
+                let rt = Box::leak(Box::new(tokio::runtime::Runtime::new().unwrap()));
+                rt.handle().clone()
+            });
             if handle.block_on(receiver).ok()?.is_err() {
                 return None;
             }
         }
         #[cfg(target_arch = "wasm32")]
-        { return None; }
+        {
+            return None;
+        }
 
         let data = buffer_slice.get_mapped_range();
         let result: Vec<f32> = bytemuck::cast_slice(&data).to_vec();
@@ -273,34 +282,37 @@ impl QTensorEngine {
             usage: wgpu::BufferUsages::UNIFORM | wgpu::BufferUsages::COPY_DST,
             mapped_at_creation: false,
         });
-        self.gpu_queue().write_buffer(&params_buf, 0, bytemuck::bytes_of(&gemm_params));
+        self.gpu_queue()
+            .write_buffer(&params_buf, 0, bytemuck::bytes_of(&gemm_params));
 
         #[cfg(not(target_arch = "wasm32"))]
         let bind_group_layout = self.pipeline_bind_layout.clone();
         #[cfg(target_arch = "wasm32")]
         let bind_group_layout = self.pipeline.get_bind_group_layout(0);
-        let bind_group = self.gpu_device().create_bind_group(&wgpu::BindGroupDescriptor {
-            label: None,
-            layout: &bind_group_layout,
-            entries: &[
-                wgpu::BindGroupEntry {
-                    binding: 0,
-                    resource: input_buf.as_entire_binding(),
-                },
-                wgpu::BindGroupEntry {
-                    binding: 1,
-                    resource: weights_buf.as_entire_binding(),
-                },
-                wgpu::BindGroupEntry {
-                    binding: 2,
-                    resource: params_buf.as_entire_binding(),
-                },
-                wgpu::BindGroupEntry {
-                    binding: 3,
-                    resource: output_buf.as_entire_binding(),
-                },
-            ],
-        });
+        let bind_group = self
+            .gpu_device()
+            .create_bind_group(&wgpu::BindGroupDescriptor {
+                label: None,
+                layout: &bind_group_layout,
+                entries: &[
+                    wgpu::BindGroupEntry {
+                        binding: 0,
+                        resource: input_buf.as_entire_binding(),
+                    },
+                    wgpu::BindGroupEntry {
+                        binding: 1,
+                        resource: weights_buf.as_entire_binding(),
+                    },
+                    wgpu::BindGroupEntry {
+                        binding: 2,
+                        resource: params_buf.as_entire_binding(),
+                    },
+                    wgpu::BindGroupEntry {
+                        binding: 3,
+                        resource: output_buf.as_entire_binding(),
+                    },
+                ],
+            });
 
         let mut encoder = self
             .device()
@@ -333,7 +345,10 @@ impl QTensorEngine {
 
         #[cfg(not(target_arch = "wasm32"))]
         {
-            let handle = tokio::runtime::Handle::try_current().unwrap_or_else(|_| { let rt = Box::leak(Box::new(tokio::runtime::Runtime::new().unwrap())); rt.handle().clone() });
+            let handle = tokio::runtime::Handle::try_current().unwrap_or_else(|_| {
+                let rt = Box::leak(Box::new(tokio::runtime::Runtime::new().unwrap()));
+                rt.handle().clone()
+            });
             handle.block_on(receiver).unwrap().unwrap();
         }
 
@@ -346,5 +361,4 @@ impl QTensorEngine {
             .fetch_add(rows * cols, std::sync::atomic::Ordering::Relaxed);
         result
     }
-
 }

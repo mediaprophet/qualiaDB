@@ -17,7 +17,10 @@ pub struct BipolarFramework {
 
 impl BipolarFramework {
     pub fn new(af: ArgumentationFramework) -> Self {
-        Self { af, supports: Vec::new() }
+        Self {
+            af,
+            supports: Vec::new(),
+        }
     }
 
     /// Add a support edge `supporter → supported`.
@@ -48,7 +51,12 @@ impl BipolarFramework {
     /// Project to a Dung framework whose attacks are the original attacks PLUS the derived
     /// supported and secondary attacks. Duplicate edges are harmless to the semantics.
     pub fn to_dung(&self) -> ArgumentationFramework {
-        let mk = |a: u64, b: u64| Attack { attacker: a, target: b, attack_type: AttackType::Rebuttal, strength: 1.0 };
+        let mk = |a: u64, b: u64| Attack {
+            attacker: a,
+            target: b,
+            attack_type: AttackType::Rebuttal,
+            strength: 1.0,
+        };
         let mut out = ArgumentationFramework::new();
         for arg in self.af.arguments.values() {
             out.add_argument(arg.clone());
@@ -85,8 +93,8 @@ impl BipolarFramework {
 
 #[cfg(test)]
 mod tests {
-    use super::*;
     use super::super::{Argument, Attack, AttackType};
+    use super::*;
     use crate::NQuin;
 
     fn arg(id: u64) -> Argument {
@@ -100,7 +108,12 @@ mod tests {
         af.add_argument(arg(1)); // a
         af.add_argument(arg(2)); // b
         af.add_argument(arg(3)); // c
-        af.add_attack(Attack { attacker: 2, target: 3, attack_type: AttackType::Rebuttal, strength: 1.0 });
+        af.add_attack(Attack {
+            attacker: 2,
+            target: 3,
+            attack_type: AttackType::Rebuttal,
+            strength: 1.0,
+        });
 
         let mut bf = BipolarFramework::new(af);
         bf.add_support(1, 2); // a supports b
@@ -109,12 +122,17 @@ mod tests {
         let dung = bf.to_dung();
         // The derived framework contains a→c (the supported attack).
         assert!(
-            dung.attacks.iter().any(|atk| atk.attacker == 1 && atk.target == 3),
+            dung.attacks
+                .iter()
+                .any(|atk| atk.attacker == 1 && atk.target == 3),
             "a supports b, b attacks c ⇒ a attacks c"
         );
         // c has attackers {2,3-side}; with a supporting b, c is not accepted.
         let g = bf.grounded_extension();
-        assert!(!g.contains(&3), "c is defeated through the support-backed attack");
+        assert!(
+            !g.contains(&3),
+            "c is defeated through the support-backed attack"
+        );
     }
 
     #[test]

@@ -126,7 +126,13 @@ mod tests {
 
     #[test]
     fn fails_closed() {
-        assert_eq!(poly_fit(&[1.0, 2.0], &[1.0, 2.0], 5).unwrap_err(), InterpolationError::InvalidDegree);
-        assert_eq!(poly_fit(&[], &[], 0).unwrap_err(), InterpolationError::InsufficientData);
+        assert_eq!(
+            poly_fit(&[1.0, 2.0], &[1.0, 2.0], 5).unwrap_err(),
+            InterpolationError::InvalidDegree
+        );
+        assert_eq!(
+            poly_fit(&[], &[], 0).unwrap_err(),
+            InterpolationError::InsufficientData
+        );
     }
 }

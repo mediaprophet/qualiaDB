@@ -429,7 +429,11 @@ impl<'a> N3Parser<'a> {
             if c == '#' {
                 if self.text[i..].starts_with("#asp {") {
                     let end = self.text[i..].find('}').unwrap_or(self.text[i..].len());
-                    emit_block(BlockKind::Asp, self.text[i + 6..i + end].trim(), &mut callback)?;
+                    emit_block(
+                        BlockKind::Asp,
+                        self.text[i + 6..i + end].trim(),
+                        &mut callback,
+                    )?;
                     i += end + 1;
                     stmt_start = i;
                     continue;
@@ -445,7 +449,11 @@ impl<'a> N3Parser<'a> {
             // in URIs/strings/comments must never reach a `str` slice).
             if c == 'q' && self.text[i..].starts_with("qualia:diffuse {") {
                 let end = self.text[i..].find('}').unwrap_or(self.text[i..].len());
-                emit_block(BlockKind::Diffuse, self.text[i + 16..i + end].trim(), &mut callback)?;
+                emit_block(
+                    BlockKind::Diffuse,
+                    self.text[i + 16..i + end].trim(),
+                    &mut callback,
+                )?;
                 i += end + 1;
                 stmt_start = i;
                 continue;
@@ -454,7 +462,9 @@ impl<'a> N3Parser<'a> {
             if c == '{' {
                 brace_depth += 1;
                 if brace_depth as usize > MAX_PARSE_BRACE_DEPTH {
-                    return Err(N3ParserError("N3 brace nesting exceeds MAX_PARSE_BRACE_DEPTH"));
+                    return Err(N3ParserError(
+                        "N3 brace nesting exceeds MAX_PARSE_BRACE_DEPTH",
+                    ));
                 }
             }
             if c == '}' {
@@ -468,7 +478,9 @@ impl<'a> N3Parser<'a> {
                 let stmt = self.text[stmt_start..=i].trim();
                 statements += 1;
                 if statements > MAX_PARSE_STATEMENTS {
-                    return Err(N3ParserError("N3 statement count exceeds MAX_PARSE_STATEMENTS"));
+                    return Err(N3ParserError(
+                        "N3 statement count exceeds MAX_PARSE_STATEMENTS",
+                    ));
                 }
                 dispatch(stmt, &mut callback)?;
                 stmt_start = i + 1;
@@ -645,7 +657,11 @@ enum BlockKind {
     Diffuse,
 }
 
-fn emit_block_heap<'a, F>(kind: BlockKind, body: &'a str, callback: &mut F) -> Result<(), N3ParserError>
+fn emit_block_heap<'a, F>(
+    kind: BlockKind,
+    body: &'a str,
+    callback: &mut F,
+) -> Result<(), N3ParserError>
 where
     F: FnMut(N3Event<'a>) -> Result<(), N3ParserError>,
 {
@@ -655,7 +671,11 @@ where
     }
 }
 
-fn emit_block_stack<'a, F>(kind: BlockKind, body: &'a str, callback: &mut F) -> Result<(), N3ParserError>
+fn emit_block_stack<'a, F>(
+    kind: BlockKind,
+    body: &'a str,
+    callback: &mut F,
+) -> Result<(), N3ParserError>
 where
     F: FnMut(StackEvent<'a>) -> Result<(), N3ParserError>,
 {
@@ -699,11 +719,13 @@ where
         }
     }
     let mut err: Option<N3ParserError> = None;
-    for_each_triple(s.trim_end_matches('.'), |t| match callback(StackEvent::StaticTriple(t)) {
-        Ok(()) => Ok(true),
-        Err(e) => {
-            err = Some(e);
-            Ok(false)
+    for_each_triple(s.trim_end_matches('.'), |t| {
+        match callback(StackEvent::StaticTriple(t)) {
+            Ok(()) => Ok(true),
+            Err(e) => {
+                err = Some(e);
+                Ok(false)
+            }
         }
     })?;
     if let Some(e) = err {
@@ -737,9 +759,30 @@ mod tests {
         // comma = object list, semicolon = predicate list
         let n = N3Parser::parse_triples_into(":x :p :a, :b ; :q :c .", &mut buf);
         assert_eq!(n, 3);
-        assert_eq!(buf[0], Triple { subject: Term::Uri(":x"), predicate: Term::Uri(":p"), object: Term::Uri(":a") });
-        assert_eq!(buf[1], Triple { subject: Term::Uri(":x"), predicate: Term::Uri(":p"), object: Term::Uri(":b") });
-        assert_eq!(buf[2], Triple { subject: Term::Uri(":x"), predicate: Term::Uri(":q"), object: Term::Uri(":c") });
+        assert_eq!(
+            buf[0],
+            Triple {
+                subject: Term::Uri(":x"),
+                predicate: Term::Uri(":p"),
+                object: Term::Uri(":a")
+            }
+        );
+        assert_eq!(
+            buf[1],
+            Triple {
+                subject: Term::Uri(":x"),
+                predicate: Term::Uri(":p"),
+                object: Term::Uri(":b")
+            }
+        );
+        assert_eq!(
+            buf[2],
+            Triple {
+                subject: Term::Uri(":x"),
+                predicate: Term::Uri(":q"),
+                object: Term::Uri(":c")
+            }
+        );
     }
 
     #[test]
@@ -884,7 +927,10 @@ mod tests {
             .unwrap();
 
         let stats = dhat::HeapStats::get();
-        assert_eq!(stats.curr_blocks, 0, "parse_all_zero_heap must not allocate");
+        assert_eq!(
+            stats.curr_blocks, 0,
+            "parse_all_zero_heap must not allocate"
+        );
         assert_eq!(stats.curr_bytes, 0);
         assert!(triples >= 4, "expected the static + object-list triples");
         assert_eq!(rules, 1);
@@ -894,7 +940,9 @@ mod tests {
 
     #[test]
     fn implication_compiles_to_sentinel_bytecode() {
-        use crate::modalities::logic::n3_compiler::{compile_rule_to_opcodes, compile_rule_to_zero_heap, MAX_COMPILED_OPCODES};
+        use crate::modalities::logic::n3_compiler::{
+            compile_rule_to_opcodes, compile_rule_to_zero_heap, MAX_COMPILED_OPCODES,
+        };
         use crate::webizen::SlgOpcode;
 
         // Parse via the heap front-end (the compiler consumes `Rule`).
@@ -913,6 +961,9 @@ mod tests {
                 Ok(())
             })
             .unwrap();
-        assert!(compiled_ok, "the implication rule did not reach the compiler");
+        assert!(
+            compiled_ok,
+            "the implication rule did not reach the compiler"
+        );
     }
 }

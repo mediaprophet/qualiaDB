@@ -1,12 +1,12 @@
 //! Ambient Sub-Threshold Orchestration Implementation
-//! 
+//!
 //! This module provides ambient sub-threshold orchestration for mobile scientific computing
 //! using NNAPI/CoreML integration. Designed for edge optimization and power-efficient processing.
 
+use serde::{Deserialize, Serialize};
 use std::collections::HashMap;
 use std::thread;
 use std::time::{Duration, Instant};
-use serde::{Deserialize, Serialize};
 
 /// Ambient Orchestration Manager
 pub struct AmbientOrchestrationManager {
@@ -569,7 +569,10 @@ impl AmbientOrchestrationManager {
     }
 
     /// Zero-heap device discovery snapshots for hot-path schedulers.
-    pub fn discover_devices_into(&mut self, out: &mut [AmbientDeviceHandle]) -> Result<usize, AmbientError> {
+    pub fn discover_devices_into(
+        &mut self,
+        out: &mut [AmbientDeviceHandle],
+    ) -> Result<usize, AmbientError> {
         use sysinfo::System;
 
         // sysinfo 0.39: explicitly refresh after construction before reading
@@ -582,7 +585,8 @@ impl AmbientOrchestrationManager {
 
         let cpus = sys.cpus();
         let cpu_count = cpus.len().max(1);
-        let cpu_brand = cpus.first()
+        let cpu_brand = cpus
+            .first()
             .map(|c| c.brand().to_string())
             .unwrap_or_else(|| "Unknown CPU".to_string());
         let base_freq_mhz = cpus.first().map(|c| c.frequency()).unwrap_or(1000);
@@ -599,10 +603,7 @@ impl AmbientOrchestrationManager {
                 memory_size: total_mem,
                 battery_capacity: 0,
                 thermal_limit: 95.0,
-                supported_frameworks: vec![
-                    Framework::ONNX,
-                    Framework::Custom(cpu_brand.clone()),
-                ],
+                supported_frameworks: vec![Framework::ONNX, Framework::Custom(cpu_brand.clone())],
             },
             current_state: DeviceState::Active,
             performance_profile: PerformanceProfile {
@@ -622,7 +623,9 @@ impl AmbientOrchestrationManager {
         };
         if self.register_device(host).is_ok() {
             if discovered >= out.len() {
-                return Err(AmbientError::InsufficientResources("device output buffer full".to_string()));
+                return Err(AmbientError::InsufficientResources(
+                    "device output buffer full".to_string(),
+                ));
             }
             out[discovered] = self.snapshot_device_handle("local_host").unwrap();
             discovered += 1;
@@ -661,7 +664,9 @@ impl AmbientOrchestrationManager {
             };
             if self.register_device(core).is_ok() {
                 if discovered >= out.len() {
-                    return Err(AmbientError::InsufficientResources("device output buffer full".to_string()));
+                    return Err(AmbientError::InsufficientResources(
+                        "device output buffer full".to_string(),
+                    ));
                 }
                 out[discovered] = self.snapshot_device_handle(&core_id).unwrap();
                 discovered += 1;
@@ -683,9 +688,15 @@ impl AmbientOrchestrationManager {
     }
 
     /// Execute neural inference task
-    pub fn execute_neural_inference(&mut self, device_id: &str, model_data: &[u8], input_data: &[u8]) -> Result<Vec<u8>, AmbientError> {
+    pub fn execute_neural_inference(
+        &mut self,
+        device_id: &str,
+        model_data: &[u8],
+        input_data: &[u8],
+    ) -> Result<Vec<u8>, AmbientError> {
         let mut out = vec![0u8; 1024];
-        let written = self.execute_neural_inference_into(device_id, model_data, input_data, &mut out)?;
+        let written =
+            self.execute_neural_inference_into(device_id, model_data, input_data, &mut out)?;
         out.truncate(written);
         Ok(out)
     }
@@ -699,16 +710,24 @@ impl AmbientOrchestrationManager {
         out: &mut [u8],
     ) -> Result<usize, AmbientError> {
         // Clone device to release the borrow on self.devices before calling the helper
-        let device = self.devices.get(device_id)
+        let device = self
+            .devices
+            .get(device_id)
             .ok_or_else(|| AmbientError::DeviceNotFound(device_id.to_string()))?
             .clone();
         self.execute_inference_on_device(&device, model_data, input_data, out)
     }
 
     /// Execute sub-threshold computation
-    pub fn execute_sub_threshold_computation(&mut self, device_id: &str, computation: SubThresholdComputation) -> Result<ComputationResult, AmbientError> {
+    pub fn execute_sub_threshold_computation(
+        &mut self,
+        device_id: &str,
+        computation: SubThresholdComputation,
+    ) -> Result<ComputationResult, AmbientError> {
         // Clone device to release the borrow on self.devices before calling the helper
-        let device = self.devices.get(device_id)
+        let device = self
+            .devices
+            .get(device_id)
             .ok_or_else(|| AmbientError::DeviceNotFound(device_id.to_string()))?
             .clone();
         self.execute_computation_on_device(&device, &computation)
@@ -737,9 +756,14 @@ impl AmbientOrchestrationManager {
         self.devices.keys().cloned().collect()
     }
 
-    pub fn list_devices_into(&self, out: &mut [AmbientDeviceHandle]) -> Result<usize, AmbientError> {
+    pub fn list_devices_into(
+        &self,
+        out: &mut [AmbientDeviceHandle],
+    ) -> Result<usize, AmbientError> {
         if out.len() < self.devices.len() {
-            return Err(AmbientError::InsufficientResources("device output buffer full".to_string()));
+            return Err(AmbientError::InsufficientResources(
+                "device output buffer full".to_string(),
+            ));
         }
 
         let mut written = 0usize;
@@ -765,7 +789,10 @@ impl AmbientOrchestrationManager {
         let workload_analysis = self.orchestrator.workload_analyzer.analyze_workload();
 
         // Adapt orchestration policy
-        let new_policy = self.orchestrator.adaptation_engine.adapt_policy(workload_analysis);
+        let new_policy = self
+            .orchestrator
+            .adaptation_engine
+            .adapt_policy(workload_analysis);
 
         // Update orchestration policy
         self.orchestrator.orchestration_policy = new_policy;
@@ -778,11 +805,15 @@ impl AmbientOrchestrationManager {
     /// Validate device
     fn validate_device(&self, device: &AmbientDevice) -> Result<(), AmbientError> {
         if device.device_id.is_empty() {
-            return Err(AmbientError::InvalidDevice("Device ID cannot be empty".to_string()));
+            return Err(AmbientError::InvalidDevice(
+                "Device ID cannot be empty".to_string(),
+            ));
         }
 
         if device.capabilities.neural_engines.is_empty() {
-            return Err(AmbientError::InvalidDevice("Device must have at least one neural engine".to_string()));
+            return Err(AmbientError::InvalidDevice(
+                "Device must have at least one neural engine".to_string(),
+            ));
         }
 
         Ok(())
@@ -791,36 +822,52 @@ impl AmbientOrchestrationManager {
     /// Validate task
     fn validate_task(&self, task: &Task) -> Result<(), AmbientError> {
         if task.task_id.is_empty() {
-            return Err(AmbientError::InvalidTask("Task ID cannot be empty".to_string()));
+            return Err(AmbientError::InvalidTask(
+                "Task ID cannot be empty".to_string(),
+            ));
         }
 
         if task.resource_requirements.compute_units == 0 {
-            return Err(AmbientError::InvalidTask("Task must require at least one compute unit".to_string()));
+            return Err(AmbientError::InvalidTask(
+                "Task must require at least one compute unit".to_string(),
+            ));
         }
 
         Ok(())
     }
 
     /// Execute inference on device
-    fn execute_inference_on_device(&self, device: &AmbientDevice, model_data: &[u8], input_data: &[u8], out: &mut [u8]) -> Result<usize, AmbientError> {
+    fn execute_inference_on_device(
+        &self,
+        device: &AmbientDevice,
+        model_data: &[u8],
+        input_data: &[u8],
+        out: &mut [u8],
+    ) -> Result<usize, AmbientError> {
         // In real implementation, would use NNAPI/CoreML for inference
         // For now, simulate inference
         let _ = (device, model_data, input_data);
         thread::sleep(Duration::from_millis(100)); // Simulate 100ms inference
 
         if out.len() < 1024 {
-            return Err(AmbientError::InsufficientResources("inference output buffer too small".to_string()));
+            return Err(AmbientError::InsufficientResources(
+                "inference output buffer too small".to_string(),
+            ));
         }
         out[..1024].fill(0);
         Ok(1024)
     }
 
     /// Execute computation on device
-    fn execute_computation_on_device(&self, device: &AmbientDevice, computation: &SubThresholdComputation) -> Result<ComputationResult, AmbientError> {
+    fn execute_computation_on_device(
+        &self,
+        device: &AmbientDevice,
+        computation: &SubThresholdComputation,
+    ) -> Result<ComputationResult, AmbientError> {
         // In real implementation, would execute sub-threshold computation
         // For now, simulate computation
         thread::sleep(Duration::from_millis(50)); // Simulate 50ms computation
-        
+
         Ok(ComputationResult {
             result_data: vec![0u8; 512],
             execution_time: Duration::from_millis(50),
@@ -830,13 +877,15 @@ impl AmbientOrchestrationManager {
     }
 
     fn snapshot_device_handle(&self, device_id: &str) -> Option<AmbientDeviceHandle> {
-        self.devices.get(device_id).map(|device| AmbientDeviceHandle {
-            device_id_hash: crate::q_hash(&device.device_id),
-            device_type: device.device_type.clone(),
-            compute_units: device.capabilities.compute_units,
-            memory_size: device.capabilities.memory_size,
-            state: device.current_state.clone(),
-        })
+        self.devices
+            .get(device_id)
+            .map(|device| AmbientDeviceHandle {
+                device_id_hash: crate::q_hash(&device.device_id),
+                device_type: device.device_type.clone(),
+                compute_units: device.capabilities.compute_units,
+                memory_size: device.capabilities.memory_size,
+                state: device.current_state.clone(),
+            })
     }
 }
 
@@ -852,17 +901,20 @@ impl SubThresholdOrchestrator {
     }
 
     /// Optimize computation for sub-threshold operation
-    pub fn optimize_for_sub_threshold(&self, computation: SubThresholdComputation) -> SubThresholdComputation {
+    pub fn optimize_for_sub_threshold(
+        &self,
+        computation: SubThresholdComputation,
+    ) -> SubThresholdComputation {
         // Optimize computation for sub-threshold operation
         // This is a simplified version
         let mut optimized = computation;
-        
+
         // Reduce resource requirements
-        optimized.resource_requirements.compute_units = 
+        optimized.resource_requirements.compute_units =
             (optimized.resource_requirements.compute_units as f64 * 0.7) as u32;
         optimized.resource_requirements.power_budget *= 0.5;
         optimized.resource_requirements.thermal_budget *= 0.6;
-        
+
         optimized
     }
 }
@@ -882,18 +934,22 @@ impl PowerManager {
     pub fn can_execute(&self, device: &AmbientDevice) -> bool {
         let battery_level = self.battery_monitor.current_level;
         let thermal_state = &self.thermal_monitor.thermal_state;
-        
+
         battery_level > 20.0 && *thermal_state != ThermalState::Critical
     }
 
     /// Update power consumption
-    pub fn update_power_consumption(&mut self, device: &mut AmbientDevice, execution_time: Duration) {
+    pub fn update_power_consumption(
+        &mut self,
+        device: &mut AmbientDevice,
+        execution_time: Duration,
+    ) {
         // Update power consumption based on execution time
         let power_consumed = device.power_profile.active_power * execution_time.as_secs_f64();
-        
+
         // Update battery level
         self.battery_monitor.current_level -= power_consumed * 0.001; // Simplified battery drain
-        
+
         // Update thermal state
         if execution_time > Duration::from_secs(1) {
             self.thermal_monitor.cpu_temperature += 5.0;
@@ -939,7 +995,9 @@ impl TaskScheduler {
 
     pub fn get_pending_tasks_into(&self, out: &mut [TaskHandle]) -> Result<usize, AmbientError> {
         if out.len() < self.task_queue.pending_tasks.len() {
-            return Err(AmbientError::InsufficientResources("task output buffer full".to_string()));
+            return Err(AmbientError::InsufficientResources(
+                "task output buffer full".to_string(),
+            ));
         }
 
         for (index, task) in self.task_queue.pending_tasks.iter().enumerate() {
@@ -974,15 +1032,23 @@ impl AmbientPerformanceMonitor {
     }
 
     /// Update device metrics
-    pub fn update_device_metrics(&mut self, device_id: &str, execution_time: Duration, data_size: usize) {
-        let metrics = self.device_metrics.entry(device_id.to_string()).or_insert(DeviceMetrics {
-            device_id: device_id.to_string(),
-            utilization: 0.0,
-            throughput: 0.0,
-            latency: execution_time.as_millis() as f64,
-            power_efficiency: 0.85,
-            thermal_efficiency: 0.90,
-        });
+    pub fn update_device_metrics(
+        &mut self,
+        device_id: &str,
+        execution_time: Duration,
+        data_size: usize,
+    ) {
+        let metrics = self
+            .device_metrics
+            .entry(device_id.to_string())
+            .or_insert(DeviceMetrics {
+                device_id: device_id.to_string(),
+                utilization: 0.0,
+                throughput: 0.0,
+                latency: execution_time.as_millis() as f64,
+                power_efficiency: 0.85,
+                thermal_efficiency: 0.90,
+            });
 
         metrics.latency = execution_time.as_millis() as f64;
         metrics.throughput = data_size as f64 / execution_time.as_secs_f64();
@@ -1196,7 +1262,9 @@ impl std::fmt::Display for AmbientError {
             AmbientError::InvalidDevice(msg) => write!(f, "Invalid device: {}", msg),
             AmbientError::InvalidTask(msg) => write!(f, "Invalid task: {}", msg),
             AmbientError::UnsupportedOperation(msg) => write!(f, "Unsupported operation: {}", msg),
-            AmbientError::InsufficientResources(msg) => write!(f, "Insufficient resources: {}", msg),
+            AmbientError::InsufficientResources(msg) => {
+                write!(f, "Insufficient resources: {}", msg)
+            }
             AmbientError::OrchestrationError(msg) => write!(f, "Orchestration error: {}", msg),
             AmbientError::PowerError(msg) => write!(f, "Power error: {}", msg),
             AmbientError::ThermalError(msg) => write!(f, "Thermal error: {}", msg),
@@ -1219,7 +1287,7 @@ mod tests {
     #[test]
     fn test_device_discovery() {
         let mut manager = AmbientOrchestrationManager::new();
-        
+
         let devices = manager.discover_devices().unwrap();
         assert!(!devices.is_empty());
         assert!(devices.len() <= 9);
@@ -1244,7 +1312,7 @@ mod tests {
     #[test]
     fn test_task_submission() {
         let mut manager = AmbientOrchestrationManager::new();
-        
+
         let task = Task {
             task_id: "test_task".to_string(),
             task_type: TaskType::NeuralInference,
@@ -1260,7 +1328,7 @@ mod tests {
             estimated_duration: Duration::from_millis(100),
             dependencies: vec![],
         };
-        
+
         let task_id = manager.submit_task(task).unwrap();
         assert_eq!(task_id, "test_task");
     }
@@ -1268,13 +1336,13 @@ mod tests {
     #[test]
     fn test_neural_inference() {
         let mut manager = AmbientOrchestrationManager::new();
-        
+
         let devices = manager.discover_devices().unwrap();
         let device_id = &devices[0];
-        
+
         let model_data = vec![1u8; 1024];
         let input_data = vec![2u8; 512];
-        
+
         let result = manager.execute_neural_inference(device_id, &model_data, &input_data);
         assert!(result.is_ok());
     }

@@ -19,8 +19,8 @@
 //! communicate with the Windows-specific code.
 
 use std::fs::File;
-use std::path::Path;
 use std::io;
+use std::path::Path;
 
 // ─── Constants ─────────────────────────────────────────────────────────────────
 
@@ -71,30 +71,30 @@ impl<const N: usize> DmaBuffer<N> {
             "DMA buffer size must be a multiple of PAGE_SIZE (4096), got {}",
             N
         );
-        
+
         Self { data: [0u8; N] }
     }
-    
+
     /// Returns the buffer as a byte slice.
     pub fn as_slice(&self) -> &[u8] {
         &self.data
     }
-    
+
     /// Returns the buffer as a mutable byte slice.
     pub fn as_mut_slice(&mut self) -> &mut [u8] {
         &mut self.data
     }
-    
+
     /// Returns the buffer length in bytes.
     pub fn len(&self) -> usize {
         N
     }
-    
+
     /// Returns true if the buffer is empty.
     pub fn is_empty(&self) -> bool {
         N == 0
     }
-    
+
     /// Returns the number of f64 values this buffer can hold.
     pub fn f64_capacity(&self) -> usize {
         N / 8
@@ -122,7 +122,7 @@ pub trait ZeroCopyStreamer: Send {
     /// Returns an error if the offset is not 4096-byte aligned. Both O_DIRECT
     /// and FILE_FLAG_NO_BUFFERING require strict sector alignment.
     fn async_read_chunk(&mut self, offset: u64) -> Result<(), IoError>;
-    
+
     /// Non-blocking poll for completion.
     ///
     /// Returns `Some(&[u8])` only if the hardware has completed the DMA transfer
@@ -131,12 +131,12 @@ pub trait ZeroCopyStreamer: Send {
     ///
     /// Returns `None` if the transfer is still in progress.
     fn poll_completion(&mut self) -> Option<&[u8]>;
-    
+
     /// Returns the currently active buffer for SIMD chunking.
     ///
     /// This buffer is guaranteed to be stable and readable by the core.
     fn get_active_buffer(&self) -> &[u8];
-    
+
     /// Returns the buffer size in bytes.
     fn buffer_size(&self) -> usize;
 }
@@ -170,9 +170,10 @@ unsafe impl Send for IocpGridManager {}
 impl IocpGridManager {
     /// Creates a new IOCP grid manager via FFI.
     pub fn new(file_path: &Path) -> Result<Self, IoError> {
-        let path_str = file_path.to_str()
+        let path_str = file_path
+            .to_str()
             .ok_or_else(|| IoError::InvalidState("Invalid UTF-8 path".to_string()))?;
-        
+
         unsafe {
             let mut handle = std::ptr::null_mut();
             let status = crate::directml_bridge::iocp_create_ffi(
@@ -197,21 +198,21 @@ impl IocpGridManager {
             })
         }
     }
-    
+
     fn get_inactive_buffer_mut(&mut self) -> &mut [u8] {
         match self.active_buffer {
             BufferId::A => self.buffer_b.as_mut_slice(),
             BufferId::B => self.buffer_a.as_mut_slice(),
         }
     }
-    
+
     fn get_inactive_buffer(&self) -> &[u8] {
         match self.active_buffer {
             BufferId::A => self.buffer_b.as_slice(),
             BufferId::B => self.buffer_a.as_slice(),
         }
     }
-    
+
     fn swap_buffers(&mut self) {
         self.active_buffer = match self.active_buffer {
             BufferId::A => BufferId::B,
@@ -230,13 +231,13 @@ impl ZeroCopyStreamer for IocpGridManager {
                 required: PAGE_SIZE as u64,
             });
         }
-        
+
         if self.pending_read {
             return Err(IoError::InvalidState(
-                "Read already in progress. Call poll_completion first.".to_string()
+                "Read already in progress. Call poll_completion first.".to_string(),
             ));
         }
-        
+
         unsafe {
             let status = crate::directml_bridge::iocp_async_read_ffi(self.handle, offset);
             if status != crate::directml_bridge::DmlStatus::Success {
@@ -246,20 +247,20 @@ impl ZeroCopyStreamer for IocpGridManager {
                 )));
             }
         }
-        
+
         self.pending_read = true;
         Ok(())
     }
-    
+
     fn poll_completion(&mut self) -> Option<&[u8]> {
         if !self.pending_read {
             return None;
         }
-        
+
         unsafe {
             let mut buffer_ptr = std::ptr::null();
             let mut size = 0usize;
-            
+
             if crate::directml_bridge::iocp_poll_completion_ffi(
                 self.handle,
                 &mut buffer_ptr,
@@ -273,14 +274,14 @@ impl ZeroCopyStreamer for IocpGridManager {
             }
         }
     }
-    
+
     fn get_active_buffer(&self) -> &[u8] {
         match self.active_buffer {
             BufferId::A => self.buffer_a.as_slice(),
             BufferId::B => self.buffer_b.as_slice(),
         }
     }
-    
+
     fn buffer_size(&self) -> usize {
         DEFAULT_BUFFER_SIZE
     }
@@ -337,10 +338,9 @@ impl IoUringGridManager {
             .custom_flags(O_DIRECT)
             .open(file_path)
             .map_err(IoError::FileOpenError)?;
-        
-        let ring = io_uring::IoUring::new(8)
-            .map_err(IoError::IoError)?;
-        
+
+        let ring = io_uring::IoUring::new(8).map_err(IoError::IoError)?;
+
         let mut manager = Self {
             ring,
             file,
@@ -349,13 +349,13 @@ impl IoUringGridManager {
             active_buffer: BufferId::A,
             pending_submission: false,
         };
-        
+
         // Pin buffers in physical RAM to prevent swap
         manager.pin_buffers()?;
-        
+
         Ok(manager)
     }
-    
+
     /// Pins both buffers in physical RAM using mlock.
     fn pin_buffers(&mut self) -> Result<(), IoError> {
         unsafe {
@@ -363,36 +363,36 @@ impl IoUringGridManager {
                 self.buffer_a.as_slice().as_ptr() as *const c_void,
                 self.buffer_a.len(),
             );
-            
+
             let result_b = mlock(
                 self.buffer_b.as_slice().as_ptr() as *const c_void,
                 self.buffer_b.len(),
             );
-            
+
             if result_a == 0 && result_b == 0 {
                 Ok(())
             } else {
                 Err(IoError::LockError(
-                    "Failed to pin DMA buffers in physical RAM".to_string()
+                    "Failed to pin DMA buffers in physical RAM".to_string(),
                 ))
             }
         }
     }
-    
+
     fn get_inactive_buffer_mut(&mut self) -> &mut [u8] {
         match self.active_buffer {
             BufferId::A => self.buffer_b.as_mut_slice(),
             BufferId::B => self.buffer_a.as_mut_slice(),
         }
     }
-    
+
     fn get_inactive_buffer(&self) -> &[u8] {
         match self.active_buffer {
             BufferId::A => self.buffer_b.as_slice(),
             BufferId::B => self.buffer_a.as_slice(),
         }
     }
-    
+
     fn swap_buffers(&mut self) {
         self.active_buffer = match self.active_buffer {
             BufferId::A => BufferId::B,
@@ -411,13 +411,13 @@ impl ZeroCopyStreamer for IoUringGridManager {
                 required: PAGE_SIZE as u64,
             });
         }
-        
+
         if self.pending_submission {
             return Err(IoError::InvalidState(
-                "Read already submitted. Call poll_completion first.".to_string()
+                "Read already submitted. Call poll_completion first.".to_string(),
             ));
         }
-        
+
         let read_op = io_uring::opcode::Read::new(
             io_uring::types::Fd(self.file.as_raw_fd()),
             self.get_inactive_buffer_mut().as_mut_ptr(),
@@ -425,28 +425,28 @@ impl ZeroCopyStreamer for IoUringGridManager {
         )
         .offset(offset)
         .build();
-        
+
         unsafe {
-            self.ring.submission()
-                .push(&read_op)
-                .map_err(|e| IoError::IoError(io::Error::new(io::ErrorKind::Other, e.to_string())))?;
+            self.ring.submission().push(&read_op).map_err(|e| {
+                IoError::IoError(io::Error::new(io::ErrorKind::Other, e.to_string()))
+            })?;
         }
-        
+
         self.pending_submission = true;
         Ok(())
     }
-    
+
     fn poll_completion(&mut self) -> Option<&[u8]> {
         if !self.pending_submission {
             return None;
         }
-        
+
         match self.ring.submit_and_wait(1) {
             Ok(_) => {
                 let cqe_result = self.ring.completion().next().map(|cqe| cqe.result());
                 if let Some(res) = cqe_result {
                     self.pending_submission = false;
-                    
+
                     if res >= 0 {
                         self.swap_buffers();
                         Some(self.get_active_buffer())
@@ -461,14 +461,14 @@ impl ZeroCopyStreamer for IoUringGridManager {
             Err(_) => None,
         }
     }
-    
+
     fn get_active_buffer(&self) -> &[u8] {
         match self.active_buffer {
             BufferId::A => self.buffer_a.as_slice(),
             BufferId::B => self.buffer_b.as_slice(),
         }
     }
-    
+
     fn buffer_size(&self) -> usize {
         DEFAULT_BUFFER_SIZE
     }
@@ -508,7 +508,7 @@ impl MmapGridManager {
     pub fn new(file_path: &Path) -> Result<Self, IoError> {
         let file = File::open(file_path).map_err(IoError::FileOpenError)?;
         let mmap = unsafe { memmap2::Mmap::map(&file) }.map_err(IoError::IoError)?;
-        
+
         // Issue madvise for aggressive read-ahead
         #[cfg(target_os = "linux")]
         unsafe {
@@ -518,10 +518,10 @@ impl MmapGridManager {
                 libc::MADV_SEQUENTIAL | libc::MADV_WILLNEED,
             );
         }
-        
+
         Ok(Self { mmap })
     }
-    
+
     /// Returns the entire memory-mapped slice.
     pub fn get_slice(&self) -> &[u8] {
         &self.mmap
@@ -534,79 +534,82 @@ impl MmapGridManager {
 mod tests {
     use super::*;
     use std::io::Write;
-    
+
     #[test]
     fn test_dma_buffer_alignment() {
         let buffer = DmaBuffer::<4096>::new();
-        
+
         // Verify pointer is 4096-byte aligned
         assert_eq!(buffer.as_slice().as_ptr() as usize % 4096, 0);
     }
-    
+
     #[test]
     #[should_panic(expected = "DMA buffer size must be a multiple of PAGE_SIZE")]
     fn test_dma_buffer_misaligned_size() {
         let _buffer = DmaBuffer::<4095>::new();
     }
-    
+
     #[test]
     fn test_dma_buffer_f64_capacity() {
         let buffer = DmaBuffer::<65536>::new();
-        assert_eq!(buffer.f64_capacity(), 8192);  // 65536 / 8
+        assert_eq!(buffer.f64_capacity(), 8192); // 65536 / 8
     }
-    
+
     #[cfg(target_os = "windows")]
     #[test]
     fn test_iocp_offset_validation() {
         // Create a temporary test file
         let temp_dir = std::env::temp_dir();
         let file_path = temp_dir.join("test_iocp.dat");
-        
+
         let mut file = File::create(&file_path).unwrap();
         // Write at least 2 pages of data
         file.write_all(&vec![0u8; 8192]).unwrap();
         file.sync_all().unwrap();
-        
+
         // IOCP is currently stubbed due to DirectX API version conflicts
         // Test that it returns the expected error
         let result = IocpGridManager::new(&file_path);
         assert!(result.is_err());
-        
+
         // Verify the error message mentions the stub
         match result {
             Err(IoError::IoError(e)) => {
                 let error_msg = e.to_string();
-                assert!(error_msg.contains("IOCP implementation stubbed") || 
-                        error_msg.contains("DirectStorageFailed"),
-                        "Expected stub error, got: {}", error_msg);
+                assert!(
+                    error_msg.contains("IOCP implementation stubbed")
+                        || error_msg.contains("DirectStorageFailed"),
+                    "Expected stub error, got: {}",
+                    error_msg
+                );
             }
             _ => panic!("Expected IoError::IoError with stub message"),
         }
-        
+
         // Cleanup
         std::fs::remove_file(&file_path).unwrap();
     }
-    
+
     #[cfg(target_os = "linux")]
     #[test]
     fn test_iouring_offset_validation() {
         // Create a temporary test file
         let temp_dir = std::env::temp_dir();
         let file_path = temp_dir.join("test_iouring.dat");
-        
+
         let mut file = File::create(&file_path).unwrap();
         file.write_all(&vec![0u8; 8192]).unwrap();
         file.sync_all().unwrap();
-        
+
         let mut manager = IoUringGridManager::new(&file_path).unwrap();
-        
+
         // Test valid offset (4096-byte aligned)
         assert!(manager.async_read_chunk(4096).is_ok());
-        
+
         // Test invalid offset (not aligned)
         let result = manager.async_read_chunk(4095);
         assert!(matches!(result, Err(IoError::MisalignedOffset { .. })));
-        
+
         // Cleanup
         std::fs::remove_file(&file_path).unwrap();
     }

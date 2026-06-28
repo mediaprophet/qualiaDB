@@ -96,7 +96,8 @@ pub fn probe_host_topology() -> HostTopology {
     // Enumerate every adapter across every backend, then dedup by physical (vendor, device).
     let instance = wgpu::Instance::default();
     let raw = pollster::block_on(instance.enumerate_adapters(wgpu::Backends::all()));
-    let mut best: std::collections::HashMap<(u32, u32), (u8, AdapterDesc)> = std::collections::HashMap::new();
+    let mut best: std::collections::HashMap<(u32, u32), (u8, AdapterDesc)> =
+        std::collections::HashMap::new();
     for adapter in raw {
         let info = adapter.get_info();
         let rank = backend_rank(info.backend);
@@ -122,8 +123,11 @@ pub fn probe_host_topology() -> HostTopology {
     // enumerated with a real id on another backend. (Limitation: two *identical-model* cards share
     // (vendor, device) and collapse to one — precise multi-GPU counting of identical cards needs a
     // per-OS PCI-bus / LUID probe that wgpu doesn't expose; deferred to H3/H5.)
-    let vendors_with_real_dev: std::collections::HashSet<u32> =
-        adapters.iter().filter(|a| a.device != 0).map(|a| a.vendor).collect();
+    let vendors_with_real_dev: std::collections::HashSet<u32> = adapters
+        .iter()
+        .filter(|a| a.device != 0)
+        .map(|a| a.vendor)
+        .collect();
     adapters.retain(|a| a.device != 0 || !vendors_with_real_dev.contains(&a.vendor));
     // Discrete first, then integrated, then the rest — deterministic order for the planner.
     adapters.sort_by_key(|a| (a.class as u8, a.vendor, a.device));
@@ -140,7 +144,10 @@ pub fn probe_host_topology() -> HostTopology {
     if has_discrete {
         if let Ok(mem) = crate::directml_bridge::probe_best_adapter_memory() {
             let vram = mem.dedicated_vram_bytes.max(mem.local_budget_bytes);
-            if let Some(disc) = adapters.iter_mut().find(|a| a.class == AdapterClass::Discrete) {
+            if let Some(disc) = adapters
+                .iter_mut()
+                .find(|a| a.class == AdapterClass::Discrete)
+            {
                 disc.dedicated_vram_bytes = vram;
             }
         }
@@ -180,7 +187,10 @@ impl HostTopology {
     /// the heterogeneous-overflow opportunity (H3): the iGPU can host overflow layers in system RAM.
     pub fn has_heterogeneous_overflow(&self) -> bool {
         self.topology == HostMemoryTopology::Discrete
-            && self.adapters.iter().any(|a| a.class == AdapterClass::Integrated)
+            && self
+                .adapters
+                .iter()
+                .any(|a| a.class == AdapterClass::Integrated)
     }
 
     /// One-line-per-field human summary for logs / the progress record.
@@ -233,15 +243,28 @@ mod tests {
         }
 
         // Topology classification is consistent with the enumerated adapters.
-        let any_discrete = topo.adapters.iter().any(|a| a.class == AdapterClass::Discrete);
+        let any_discrete = topo
+            .adapters
+            .iter()
+            .any(|a| a.class == AdapterClass::Discrete);
         assert_eq!(
             any_discrete,
             topo.topology == HostMemoryTopology::Discrete,
             "topology must match presence of a discrete adapter"
         );
         // The model budget never exceeds the relevant pool.
-        assert!(topo.usable_model_budget_bytes <= topo.host_ram_bytes.max(
-            topo.adapters.iter().map(|a| a.dedicated_vram_bytes).max().unwrap_or(0)
-        ).max(1));
+        assert!(
+            topo.usable_model_budget_bytes
+                <= topo
+                    .host_ram_bytes
+                    .max(
+                        topo.adapters
+                            .iter()
+                            .map(|a| a.dedicated_vram_bytes)
+                            .max()
+                            .unwrap_or(0)
+                    )
+                    .max(1)
+        );
     }
 }

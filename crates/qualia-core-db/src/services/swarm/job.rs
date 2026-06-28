@@ -38,7 +38,13 @@ pub enum JobMode {
 #[derive(Debug, Clone, PartialEq)]
 pub enum JobInput {
     /// `A` is `m×k`, `B` is `k×n`, both row-major.
-    DenseLinearProduct { m: usize, k: usize, n: usize, a: Vec<f64>, b: Vec<f64> },
+    DenseLinearProduct {
+        m: usize,
+        k: usize,
+        n: usize,
+        a: Vec<f64>,
+        b: Vec<f64>,
+    },
     /// Train an embedding over `triples`; `check` is the held-out set used to verify
     /// the returned table actually learned (not just terminated).
     EmbeddingArtifact {
@@ -64,7 +70,12 @@ impl JobInput {
             JobInput::DenseLinearProduct { m, k, n, a, b } => {
                 *m > 0 && *k > 0 && *n > 0 && a.len() == m * k && b.len() == k * n
             }
-            JobInput::EmbeddingArtifact { triples, n_entities, n_relations, .. } => {
+            JobInput::EmbeddingArtifact {
+                triples,
+                n_entities,
+                n_relations,
+                ..
+            } => {
                 !triples.is_empty()
                     && *n_entities > 0
                     && *n_relations > 0
@@ -135,7 +146,13 @@ pub fn content_id(input: &JobInput) -> u64 {
                 word(v.to_bits(), &mut h);
             }
         }
-        JobInput::EmbeddingArtifact { triples, n_entities, n_relations, cfg, check } => {
+        JobInput::EmbeddingArtifact {
+            triples,
+            n_entities,
+            n_relations,
+            cfg,
+            check,
+        } => {
             byte(0x02, &mut h);
             word(*n_entities as u64, &mut h);
             word(*n_relations as u64, &mut h);
@@ -181,7 +198,13 @@ mod tests {
     #[test]
     fn well_formedness_catches_bad_dims() {
         assert!(dense().is_well_formed());
-        let bad = JobInput::DenseLinearProduct { m: 2, k: 2, n: 2, a: vec![1.0], b: vec![1.0; 4] };
+        let bad = JobInput::DenseLinearProduct {
+            m: 2,
+            k: 2,
+            n: 2,
+            a: vec![1.0],
+            b: vec![1.0; 4],
+        };
         assert!(!bad.is_well_formed());
     }
 

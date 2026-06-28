@@ -3,7 +3,7 @@
 //! Ternary packing of weights `∈ {-1, 0, +1}` with a per-tensor **absmean** scale (BitNet 1.58b):
 //! it replaces fused multiply-adds with hardware adds/subtracts in the GEMM kernels and shrinks the
 //! weights to ≈ **1.6 bits each**. This module is the reusable codec; it is applied *during*
-//! transcode by [`crate::q42_weight::transcode_safetensor_to_q42_ternary`] so a `.q42` ships
+//! transcode by [`crate::p64_weight::transcode_safetensor_to_p64_ternary`] so a `.q42` ships
 //! compressed, not as a verbatim blob.
 //!
 //! ## Encoding
@@ -152,8 +152,16 @@ pub fn ternary_gemm_cpu(
     out_row_stride: usize,
     out: &mut [f32],
 ) {
-    let in_stride = if in_row_stride > 0 { in_row_stride } else { n_in };
-    let out_stride = if out_row_stride > 0 { out_row_stride } else { n_out };
+    let in_stride = if in_row_stride > 0 {
+        in_row_stride
+    } else {
+        n_in
+    };
+    let out_stride = if out_row_stride > 0 {
+        out_row_stride
+    } else {
+        n_out
+    };
     for m in 0..n_batch.max(1) {
         let in_base = m * in_stride;
         for i in 0..n_out {
@@ -236,8 +244,16 @@ pub fn ternary_gemm_cpu_2bit(
     out_row_stride: usize,
     out: &mut [f32],
 ) {
-    let in_stride = if in_row_stride > 0 { in_row_stride } else { n_in };
-    let out_stride = if out_row_stride > 0 { out_row_stride } else { n_out };
+    let in_stride = if in_row_stride > 0 {
+        in_row_stride
+    } else {
+        n_in
+    };
+    let out_stride = if out_row_stride > 0 {
+        out_row_stride
+    } else {
+        n_out
+    };
     for m in 0..n_batch.max(1) {
         let in_base = m * in_stride;
         for i in 0..n_out {
@@ -328,12 +344,26 @@ mod tests {
         let (scale2, packed2) = rebake_ternary_blob_to_2bit(&base3, weights.len());
         assert_eq!(scale2, base3_scale, "scale must be preserved");
         for k in 0..weights.len() {
-            assert_eq!(trit_at(base3_packed, k), trit_at_2bit(&packed2, k), "trit {k} mismatch");
+            assert_eq!(
+                trit_at(base3_packed, k),
+                trit_at_2bit(&packed2, k),
+                "trit {k} mismatch"
+            );
         }
 
         let mut out_base3 = vec![0f32; n_out];
         let mut out_2bit = vec![0f32; n_out];
-        ternary_gemm_cpu(&act, base3_packed, base3_scale, n_in, n_out, 1, 0, 0, &mut out_base3);
+        ternary_gemm_cpu(
+            &act,
+            base3_packed,
+            base3_scale,
+            n_in,
+            n_out,
+            1,
+            0,
+            0,
+            &mut out_base3,
+        );
         ternary_gemm_cpu_2bit(&act, &packed2, scale2, n_in, n_out, 1, 0, 0, &mut out_2bit);
         for i in 0..n_out {
             assert!(
@@ -364,7 +394,7 @@ mod tests {
         let count = 4096;
         let f32_bytes = count * 4;
         let ternary_bytes = ternary_blob_len(count); // 4 + ceil(4096/5) = 4 + 820 = 824
-        // ~1.6 bits/weight => ~20x smaller than f32, ~10x smaller than f16.
+                                                     // ~1.6 bits/weight => ~20x smaller than f32, ~10x smaller than f16.
         let ratio = f32_bytes as f64 / ternary_bytes as f64;
         assert!(ratio > 19.0 && ratio < 21.0, "ratio {ratio}");
         let bits_per_weight = (ternary_bytes as f64 * 8.0) / count as f64;
@@ -403,7 +433,12 @@ mod tests {
                 let w = scale * trits[i * n_in + j] as f32; // dequantized weight
                 dense += w * act[j];
             }
-            assert!((got[i] - dense).abs() < 1e-5, "row {i}: {} vs {}", got[i], dense);
+            assert!(
+                (got[i] - dense).abs() < 1e-5,
+                "row {i}: {} vs {}",
+                got[i],
+                dense
+            );
         }
     }
 

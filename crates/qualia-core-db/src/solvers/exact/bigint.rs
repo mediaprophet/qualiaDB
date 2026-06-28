@@ -33,12 +33,18 @@ pub struct BigInt {
 impl BigInt {
     /// The integer zero.
     pub fn zero() -> Self {
-        BigInt { sign: 0, mag: Vec::new() }
+        BigInt {
+            sign: 0,
+            mag: Vec::new(),
+        }
     }
 
     /// The integer one.
     pub fn one() -> Self {
-        BigInt { sign: 1, mag: vec![1] }
+        BigInt {
+            sign: 1,
+            mag: vec![1],
+        }
     }
 
     /// Construct from an `i64`.
@@ -165,12 +171,18 @@ impl BigInt {
 
     /// Absolute value.
     pub fn abs(&self) -> Self {
-        BigInt { sign: if self.sign == 0 { 0 } else { 1 }, mag: self.mag.clone() }
+        BigInt {
+            sign: if self.sign == 0 { 0 } else { 1 },
+            mag: self.mag.clone(),
+        }
     }
 
     /// Arithmetic negation.
     pub fn neg(&self) -> Self {
-        BigInt { sign: -self.sign, mag: self.mag.clone() }
+        BigInt {
+            sign: -self.sign,
+            mag: self.mag.clone(),
+        }
     }
 
     // ── normalisation ──────────────────────────────────────────────────────
@@ -284,7 +296,10 @@ impl BigInt {
         }
         if self.sign == other.sign {
             let mag = Self::add_mag(&self.mag, &other.mag);
-            let mut r = BigInt { sign: self.sign, mag };
+            let mut r = BigInt {
+                sign: self.sign,
+                mag,
+            };
             r.normalize();
             r
         } else {
@@ -293,13 +308,19 @@ impl BigInt {
                 Ordering::Equal => BigInt::zero(),
                 Ordering::Greater => {
                     let mag = Self::sub_mag(&self.mag, &other.mag);
-                    let mut r = BigInt { sign: self.sign, mag };
+                    let mut r = BigInt {
+                        sign: self.sign,
+                        mag,
+                    };
                     r.normalize();
                     r
                 }
                 Ordering::Less => {
                     let mag = Self::sub_mag(&other.mag, &self.mag);
-                    let mut r = BigInt { sign: other.sign, mag };
+                    let mut r = BigInt {
+                        sign: other.sign,
+                        mag,
+                    };
                     r.normalize();
                     r
                 }
@@ -318,7 +339,10 @@ impl BigInt {
             return BigInt::zero();
         }
         let mag = Self::mul_mag(&self.mag, &other.mag);
-        let mut r = BigInt { sign: self.sign * other.sign, mag };
+        let mut r = BigInt {
+            sign: self.sign * other.sign,
+            mag,
+        };
         r.normalize();
         r
     }
@@ -339,8 +363,14 @@ impl BigInt {
             return Some((BigInt::zero(), self.clone()));
         }
         let (q_mag, r_mag) = Self::divmod_mag(&self.mag, &divisor.mag);
-        let mut q = BigInt { sign: self.sign * divisor.sign, mag: q_mag };
-        let mut r = BigInt { sign: self.sign, mag: r_mag };
+        let mut q = BigInt {
+            sign: self.sign * divisor.sign,
+            mag: q_mag,
+        };
+        let mut r = BigInt {
+            sign: self.sign,
+            mag: r_mag,
+        };
         q.normalize();
         r.normalize();
         Some((q, r))
@@ -372,7 +402,11 @@ impl BigInt {
             while let Some(&0) = q.last() {
                 q.pop();
             }
-            let r = if rem == 0 { Vec::new() } else { vec![rem as u32] };
+            let r = if rem == 0 {
+                Vec::new()
+            } else {
+                vec![rem as u32]
+            };
             return (q, r);
         }
 
@@ -397,9 +431,7 @@ impl BigInt {
             let mut q_hat = top / b_high;
             let mut r_hat = top % b_high;
             // Refine q_hat (Knuth D3).
-            while q_hat >= BASE
-                || q_hat * b_second > (r_hat << BASE_BITS) | an[j + n - 2] as u64
-            {
+            while q_hat >= BASE || q_hat * b_second > (r_hat << BASE_BITS) | an[j + n - 2] as u64 {
                 q_hat -= 1;
                 r_hat += b_high;
                 if r_hat >= BASE {
@@ -558,7 +590,17 @@ mod tests {
 
     #[test]
     fn from_and_to_i64_roundtrip() {
-        for v in [0i64, 1, -1, 42, -42, 1_000_000, -1_000_000, i64::MAX, i64::MIN] {
+        for v in [
+            0i64,
+            1,
+            -1,
+            42,
+            -42,
+            1_000_000,
+            -1_000_000,
+            i64::MAX,
+            i64::MIN,
+        ] {
             let b = BigInt::from_i64(v);
             assert_eq!(b.to_string(), v.to_string(), "value {v}");
         }
@@ -566,10 +608,18 @@ mod tests {
 
     #[test]
     fn from_str_roundtrip_and_failclosed() {
-        assert_eq!(BigInt::from_str("12345678901234567890").unwrap().to_string(),
-                   "12345678901234567890");
-        assert_eq!(BigInt::from_str("-99999999999999999999").unwrap().to_string(),
-                   "-99999999999999999999");
+        assert_eq!(
+            BigInt::from_str("12345678901234567890")
+                .unwrap()
+                .to_string(),
+            "12345678901234567890"
+        );
+        assert_eq!(
+            BigInt::from_str("-99999999999999999999")
+                .unwrap()
+                .to_string(),
+            "-99999999999999999999"
+        );
         assert_eq!(BigInt::from_str("+7").unwrap().to_string(), "7");
         assert_eq!(BigInt::from_str("-0").unwrap().to_string(), "0");
         assert!(BigInt::from_str("").is_none());
@@ -657,15 +707,30 @@ mod tests {
         assert!(BigInt::from_i64(0) < BigInt::from_i64(3));
         assert!(BigInt::from_i64(3) < BigInt::from_i64(5));
         assert!(BigInt::from_i64(2).pow(100) > BigInt::from_i64(2).pow(99));
-        assert_eq!(BigInt::from_i64(7).cmp(&BigInt::from_i64(7)), Ordering::Equal);
+        assert_eq!(
+            BigInt::from_i64(7).cmp(&BigInt::from_i64(7)),
+            Ordering::Equal
+        );
     }
 
     #[test]
     fn gcd_known() {
-        assert_eq!(BigInt::from_i64(48).gcd(&BigInt::from_i64(36)).to_string(), "12");
-        assert_eq!(BigInt::from_i64(-48).gcd(&BigInt::from_i64(36)).to_string(), "12");
-        assert_eq!(BigInt::from_i64(17).gcd(&BigInt::from_i64(5)).to_string(), "1");
-        assert_eq!(BigInt::from_i64(0).gcd(&BigInt::from_i64(9)).to_string(), "9");
+        assert_eq!(
+            BigInt::from_i64(48).gcd(&BigInt::from_i64(36)).to_string(),
+            "12"
+        );
+        assert_eq!(
+            BigInt::from_i64(-48).gcd(&BigInt::from_i64(36)).to_string(),
+            "12"
+        );
+        assert_eq!(
+            BigInt::from_i64(17).gcd(&BigInt::from_i64(5)).to_string(),
+            "1"
+        );
+        assert_eq!(
+            BigInt::from_i64(0).gcd(&BigInt::from_i64(9)).to_string(),
+            "9"
+        );
     }
 
     #[test]

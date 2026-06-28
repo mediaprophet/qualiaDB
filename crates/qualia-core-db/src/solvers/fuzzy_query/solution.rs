@@ -18,7 +18,10 @@ pub struct FuzzySolution {
 
 impl FuzzySolution {
     pub fn new(row: BindingRow, degree: f64) -> Self {
-        Self { row, degree: degree.clamp(0.0, 1.0) }
+        Self {
+            row,
+            degree: degree.clamp(0.0, 1.0),
+        }
     }
 }
 
@@ -53,7 +56,9 @@ pub struct FuzzyResultSet {
 
 impl FuzzyResultSet {
     pub fn new() -> Self {
-        Self { solutions: Vec::new() }
+        Self {
+            solutions: Vec::new(),
+        }
     }
 
     pub fn from_solutions(solutions: Vec<FuzzySolution>) -> Self {
@@ -80,8 +85,11 @@ impl FuzzyResultSet {
 
     /// Sort by degree, highest confidence first (stable).
     pub fn order_by_degree_desc(mut self) -> Self {
-        self.solutions
-            .sort_by(|a, b| b.degree.partial_cmp(&a.degree).unwrap_or(core::cmp::Ordering::Equal));
+        self.solutions.sort_by(|a, b| {
+            b.degree
+                .partial_cmp(&a.degree)
+                .unwrap_or(core::cmp::Ordering::Equal)
+        });
         self
     }
 
@@ -109,7 +117,10 @@ impl FuzzyResultSet {
         for a in &self.solutions {
             for b in &other.solutions {
                 if compatible(&a.row, &b.row) {
-                    out.push(FuzzySolution::new(merge(&a.row, &b.row), norm.and(a.degree, b.degree)));
+                    out.push(FuzzySolution::new(
+                        merge(&a.row, &b.row),
+                        norm.and(a.degree, b.degree),
+                    ));
                 }
             }
         }
@@ -191,7 +202,11 @@ mod tests {
         let b = FuzzyResultSet::from_solutions(vec![sol(&[(0, 1)], 0.7), sol(&[(0, 2)], 0.5)]);
         let u = a.union(&b, DegreeNorm::Godel);
         assert_eq!(u.len(), 2);
-        let merged = u.solutions.iter().find(|s| s.row.get(0) == Some(1)).unwrap();
+        let merged = u
+            .solutions
+            .iter()
+            .find(|s| s.row.get(0) == Some(1))
+            .unwrap();
         assert!((merged.degree - 0.7).abs() < 1e-6); // max(0.4, 0.7)
     }
 

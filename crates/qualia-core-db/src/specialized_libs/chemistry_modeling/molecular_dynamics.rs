@@ -29,8 +29,8 @@
 //! exists to avoid.
 
 use super::{
-    ChemistryError, FrameEnergy, Molecule, SimulationConfig, SimulationFrame,
-    SimulationTrajectory, TrajectoryProperties,
+    ChemistryError, FrameEnergy, Molecule, SimulationConfig, SimulationFrame, SimulationTrajectory,
+    TrajectoryProperties,
 };
 
 /// Boltzmann constant in the LJ-consistent unit system, kcal/(mol·K).
@@ -138,7 +138,10 @@ struct Lcg(u64);
 impl Lcg {
     fn next_unit(&mut self) -> f64 {
         // 64-bit LCG; take the high 53 bits as a uniform in [0,1).
-        self.0 = self.0.wrapping_mul(6364136223846793005).wrapping_add(1442695040888963407);
+        self.0 = self
+            .0
+            .wrapping_mul(6364136223846793005)
+            .wrapping_add(1442695040888963407);
         ((self.0 >> 11) as f64) / ((1u64 << 53) as f64)
     }
     /// Standard-normal sample via Box-Muller.
@@ -220,7 +223,11 @@ pub fn run_md(
                 atom.coordinates.len()
             )));
         }
-        positions[i] = [atom.coordinates[0], atom.coordinates[1], atom.coordinates[2]];
+        positions[i] = [
+            atom.coordinates[0],
+            atom.coordinates[1],
+            atom.coordinates[2],
+        ];
         if !(atom.mass > 0.0) {
             return Err(ChemistryError::InsufficientData(format!(
                 "molecular dynamics: atom {} ('{}', element {}) has non-positive mass {}",
@@ -269,13 +276,25 @@ pub fn run_md(
             coordinates: positions.iter().map(|p| p.to_vec()).collect(),
             velocities: velocities.iter().map(|v| v.to_vec()).collect(),
             forces: forces.iter().map(|f| f.to_vec()).collect(),
-            energy: FrameEnergy { kinetic: ke, potential, total },
+            energy: FrameEnergy {
+                kinetic: ke,
+                potential,
+                total,
+            },
         });
         time_steps.push(t);
     };
 
     // Record the initial frame.
-    record(0, &positions, &velocities, &forces, potential, &mut frames, &mut time_steps);
+    record(
+        0,
+        &positions,
+        &velocities,
+        &forces,
+        potential,
+        &mut frames,
+        &mut time_steps,
+    );
     {
         let ke = kinetic_energy(&masses, &velocities);
         let total = ke + potential;
@@ -315,7 +334,15 @@ pub fn run_md(
         temp_count += 1;
 
         if step % stride == 0 || step == n_steps {
-            record(step, &positions, &velocities, &forces, potential, &mut frames, &mut time_steps);
+            record(
+                step,
+                &positions,
+                &velocities,
+                &forces,
+                potential,
+                &mut frames,
+                &mut time_steps,
+            );
         }
     }
 
@@ -350,7 +377,7 @@ pub fn run_md(
 mod tests {
     use super::*;
     use crate::specialized_libs::chemistry_modeling::{
-        Atom, Bond, Ensemble, BoundaryType, MolecularProperties, SimulationType,
+        Atom, Bond, BoundaryType, Ensemble, MolecularProperties, SimulationType,
     };
 
     fn atom(id: &str, element: &str, mass: f64, xyz: [f64; 3]) -> Atom {

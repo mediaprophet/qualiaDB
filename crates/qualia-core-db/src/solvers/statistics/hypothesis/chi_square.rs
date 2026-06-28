@@ -84,7 +84,11 @@ mod tests {
         let expected = [10.0; 6];
         let r = chi_square_gof(&observed, &expected).unwrap();
         assert_eq!(r.dof, 5.0);
-        assert!(r.p_value > 0.5, "fair die should not be rejected: p={}", r.p_value);
+        assert!(
+            r.p_value > 0.5,
+            "fair die should not be rejected: p={}",
+            r.p_value
+        );
     }
 
     #[test]

@@ -76,7 +76,10 @@ mod tests {
         for j in 0..2 {
             let col: Vec<f64> = (0..4).map(|i| z[i * 2 + j]).collect();
             assert!(mean(&col).unwrap().abs() < 1e-12, "col {j} mean");
-            assert!((std_dev(&col, true).unwrap() - 1.0).abs() < 1e-9, "col {j} std");
+            assert!(
+                (std_dev(&col, true).unwrap() - 1.0).abs() < 1e-9,
+                "col {j} std"
+            );
         }
     }
 

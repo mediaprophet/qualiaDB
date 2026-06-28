@@ -1,8 +1,8 @@
 //! Phase 6 / task #12 — **safetensor (+ MLX) source parsing + dtype gate** for the streaming
-//! transcoder (`q42_weight::transcode_safetensor_to_q42`).
+//! transcoder (`p64_weight::transcode_safetensor_to_p64`).
 //!
-//! This module only **parses + validates** a source; the streaming **emit** to the Q42W container
-//! lives in `q42_weight` (it owns the container's private serializers). The split keeps the format
+//! This module only **parses + validates** a source; the streaming **emit** to the P64 container
+//! lives in `p64_weight` (it owns the container's private serializers). The split keeps the format
 //! writer encapsulated.
 //!
 //! ## Scope (honest)
@@ -20,7 +20,7 @@
 pub enum SourceFormat {
     /// safetensor (incl. MLX-safetensor).
     Safetensor,
-    /// GGUF (the legacy path — `q42_weight::compile_gguf_to_q42`).
+    /// GGUF (the legacy path — `p64_weight::compile_gguf_to_q42`).
     Gguf,
     /// Unrecognised.
     Unknown,
@@ -85,7 +85,9 @@ pub fn parse_safetensor_header(src: &[u8]) -> Result<SafeTensorPlan, String> {
     }
     let json: serde_json::Value = serde_json::from_slice(&src[8..data_start])
         .map_err(|e| format!("safetensor: header JSON parse error: {e}"))?;
-    let obj = json.as_object().ok_or("safetensor: header is not a JSON object")?;
+    let obj = json
+        .as_object()
+        .ok_or("safetensor: header is not a JSON object")?;
 
     let is_mlx = obj
         .get("__metadata__")
@@ -117,18 +119,30 @@ pub fn parse_safetensor_header(src: &[u8]) -> Result<SafeTensorPlan, String> {
             .and_then(|o| o.as_array())
             .ok_or_else(|| format!("safetensor: tensor '{name}' missing data_offsets"))?;
         if offs.len() != 2 {
-            return Err(format!("safetensor: tensor '{name}' data_offsets must be [begin,end]"));
+            return Err(format!(
+                "safetensor: tensor '{name}' data_offsets must be [begin,end]"
+            ));
         }
         let begin = offs[0].as_u64().unwrap_or(0) as usize;
         let end = offs[1].as_u64().unwrap_or(0) as usize;
         if end < begin || end > data_len {
             return Err(format!("safetensor: tensor '{name}' offsets out of bounds"));
         }
-        tensors.push(SafeTensorEntry { name: name.clone(), dtype, shape, begin, end });
+        tensors.push(SafeTensorEntry {
+            name: name.clone(),
+            dtype,
+            shape,
+            begin,
+            end,
+        });
     }
     // Deterministic order (header JSON object order is not guaranteed).
     tensors.sort_by(|a, b| a.begin.cmp(&b.begin));
-    Ok(SafeTensorPlan { tensors, data_start, is_mlx })
+    Ok(SafeTensorPlan {
+        tensors,
+        data_start,
+        is_mlx,
+    })
 }
 
 // ── dtype gate (high-fidelity only) ──────────────────────────────────────────────────────────────
@@ -205,10 +219,7 @@ mod tests {
 
     #[test]
     fn parses_header_and_offsets() {
-        let st = synth_safetensor(&[
-            ("a", "F16", vec![4], 8),
-            ("b", "F32", vec![2, 2], 16),
-        ]);
+        let st = synth_safetensor(&[("a", "F16", vec![4], 8), ("b", "F32", vec![2, 2], 16)]);
         let plan = parse_safetensor_header(&st).unwrap();
         assert_eq!(plan.tensors.len(), 2);
         assert_eq!(plan.tensors[0].name, "a");

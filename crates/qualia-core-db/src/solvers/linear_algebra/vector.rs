@@ -111,6 +111,9 @@ mod tests {
         let a = [1.0, 2.0];
         let b = [1.0];
         let mut c = [0.0; 2];
-        assert!(matches!(add_into(&a, &b, &mut c), Err(SolversError::InvalidDimension)));
+        assert!(matches!(
+            add_into(&a, &b, &mut c),
+            Err(SolversError::InvalidDimension)
+        ));
     }
 }

@@ -9,7 +9,11 @@ pub fn mse(y_true: &[f64], y_pred: &[f64]) -> Option<f64> {
     if n == 0 || n != y_pred.len() {
         return None;
     }
-    let s: f64 = y_true.iter().zip(y_pred).map(|(y, p)| (y - p) * (y - p)).sum();
+    let s: f64 = y_true
+        .iter()
+        .zip(y_pred)
+        .map(|(y, p)| (y - p) * (y - p))
+        .sum();
     Some(s / n as f64)
 }
 

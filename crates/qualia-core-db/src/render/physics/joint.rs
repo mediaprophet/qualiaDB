@@ -26,12 +26,18 @@ pub struct Joint {
 impl Joint {
     #[inline]
     pub fn revolute(axis: [f32; 3], rate: f32) -> Self {
-        Joint { kind: JointKind::Revolute { axis }, rate }
+        Joint {
+            kind: JointKind::Revolute { axis },
+            rate,
+        }
     }
 
     #[inline]
     pub fn prismatic(axis: [f32; 3], rate: f32) -> Self {
-        Joint { kind: JointKind::Prismatic { axis }, rate }
+        Joint {
+            kind: JointKind::Prismatic { axis },
+            rate,
+        }
     }
 
     /// The joint's motor at time `t`. Pure function of `t` (deterministic); identity at `t = 0`.

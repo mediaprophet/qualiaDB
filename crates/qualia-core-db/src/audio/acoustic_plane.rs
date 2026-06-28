@@ -10,8 +10,10 @@ use bytemuck::{Pod, Zeroable};
 use crate::audio::audio_spectral_sheet::{preview_bins_from_tensor, SPECTRAL_PREVIEW_BINS};
 use crate::audio::dsp_kernel::{configure_voice_from_tensor, epistemic_fm_index};
 use crate::audio::hrtf::{binaural_from_position, room_damp_from_manifold};
-use crate::render::acoustic::{phenomenal_acoustic_params, phenomenal_fm_index, phenomenal_voice_frequency_hz};
 use crate::gpu_context::{ComputeUniverse, OperationalMode};
+use crate::render::acoustic::{
+    phenomenal_acoustic_params, phenomenal_fm_index, phenomenal_voice_frequency_hz,
+};
 use crate::sonic_token::SonicToken;
 use crate::tensor::Tensor10D;
 
@@ -130,7 +132,12 @@ impl AcousticParams {
 
     /// Phenomenal uniform — σ oracle frequency (P-F2) aligned with `portal_spectral`.
     #[inline]
-    pub fn to_phenomenal_uniform(self, enabled: bool, t: &Tensor10D, listener_yaw: f32) -> AcousticUniform {
+    pub fn to_phenomenal_uniform(
+        self,
+        enabled: bool,
+        t: &Tensor10D,
+        listener_yaw: f32,
+    ) -> AcousticUniform {
         let mut u = self.to_uniform(enabled);
         u.frequency_hz = phenomenal_voice_frequency_hz(t);
         u.fm_index = phenomenal_fm_index(t);

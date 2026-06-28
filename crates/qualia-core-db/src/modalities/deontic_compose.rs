@@ -70,9 +70,9 @@ pub enum MensRea {
 /// Did `agent` (per the epistemic frame) KNOW `claim`? An epistemic quin with
 /// `predicate[0..7] == OP_KNOWS`, `subject == agent`, `object == claim`.
 pub fn agent_knows(epistemic: &[NQuin], agent: u64, claim: u64) -> bool {
-    epistemic.iter().any(|q| {
-        q.subject == agent && (q.predicate & 0xFF) as u8 == OP_KNOWS && q.object == claim
-    })
+    epistemic
+        .iter()
+        .any(|q| q.subject == agent && (q.predicate & 0xFF) as u8 == OP_KNOWS && q.object == claim)
 }
 
 /// Classify the *mens rea* of a possible violation of `norm` by its bearer:
@@ -209,7 +209,10 @@ pub fn composition_preserves_right(non_derogable: bool, has_temporal_limit: bool
 /// zk proof of its premises verifies (the private witnesses — the underlying facts — stay hidden).
 /// Returns the `verdict` gated on `proof_verified`; an unverified proof yields `None` (the
 /// composition is withheld). Mirrors `legal_compose::zk_eligibility`.
-pub fn zk_wrapped_composition(proof_verified: bool, verdict: DeonticStatus) -> Option<DeonticStatus> {
+pub fn zk_wrapped_composition(
+    proof_verified: bool,
+    verdict: DeonticStatus,
+) -> Option<DeonticStatus> {
     if proof_verified {
         Some(verdict)
     } else {
@@ -220,7 +223,12 @@ pub fn zk_wrapped_composition(proof_verified: bool, verdict: DeonticStatus) -> O
 /// **Automated remedy generation:** when a composed norm is breached, generate the secondary
 /// obligation `O(reparation)` on the breaching `party` (the contrary-to-duty remedy). Composes
 /// `deontic::compile_norm_quin`; the caller records/enforces it like any obligation.
-pub fn generate_remedy_obligation(party: u64, reparation_path: u64, reparation_action: u64, frame: u64) -> NQuin {
+pub fn generate_remedy_obligation(
+    party: u64,
+    reparation_path: u64,
+    reparation_action: u64,
+    frame: u64,
+) -> NQuin {
     crate::modalities::logic::deontic::compile_norm_quin(
         party,
         OP_OBLIGATE,
@@ -240,12 +248,26 @@ mod tests {
     use crate::q_hash;
 
     fn state(pred: u64) -> NQuin {
-        let mut q = NQuin { subject: 0, predicate: pred, object: 0, context: 0, metadata: 0, parity: 0 };
+        let mut q = NQuin {
+            subject: 0,
+            predicate: pred,
+            object: 0,
+            context: 0,
+            metadata: 0,
+            parity: 0,
+        };
         q.parity = q.subject ^ q.predicate ^ q.object ^ q.context;
         q
     }
     fn fact(s: u64, p: u64, o: u64) -> NQuin {
-        let mut q = NQuin { subject: s, predicate: p, object: o, context: 0, metadata: 0, parity: 0 };
+        let mut q = NQuin {
+            subject: s,
+            predicate: p,
+            object: o,
+            context: 0,
+            metadata: 0,
+            parity: 0,
+        };
         q.parity = q.subject ^ q.predicate ^ q.object ^ q.context;
         q
     }
@@ -255,10 +277,20 @@ mod tests {
         let no_torture = q_hash("q42:freeFromTorture");
         // A trace where the protection holds in every state → Discharged.
         let good = [state(no_torture), state(no_torture), state(no_torture)];
-        assert_eq!(obligation_globally(no_torture, &good), DeonticStatus::Discharged);
+        assert_eq!(
+            obligation_globally(no_torture, &good),
+            DeonticStatus::Discharged
+        );
         // A trace with one breaching state → Violated.
-        let bad = [state(no_torture), state(q_hash("q42:torture")), state(no_torture)];
-        assert_eq!(obligation_globally(no_torture, &bad), DeonticStatus::Violated);
+        let bad = [
+            state(no_torture),
+            state(q_hash("q42:torture")),
+            state(no_torture),
+        ];
+        assert_eq!(
+            obligation_globally(no_torture, &bad),
+            DeonticStatus::Violated
+        );
     }
 
     #[test]
@@ -267,42 +299,83 @@ mod tests {
         let release = q_hash("q42:release");
         // standards hold until release → Discharged.
         let trace = [state(standards), state(standards), state(release)];
-        assert_eq!(obligation_until(standards, release, &trace), DeonticStatus::Discharged);
+        assert_eq!(
+            obligation_until(standards, release, &trace),
+            DeonticStatus::Discharged
+        );
         // standards lapse before release → Violated.
-        let bad = [state(standards), state(q_hash("q42:neglect")), state(release)];
-        assert_eq!(obligation_until(standards, release, &bad), DeonticStatus::Violated);
+        let bad = [
+            state(standards),
+            state(q_hash("q42:neglect")),
+            state(release),
+        ];
+        assert_eq!(
+            obligation_until(standards, release, &bad),
+            DeonticStatus::Violated
+        );
     }
 
     #[test]
     fn mens_rea_knowing_vs_ignorant() {
         let agent = q_hash("did:agent");
         let forbidden = q_hash("q42:launderMoney");
-        let norm = compile_norm_quin(agent, OP_FORBID, q_hash("q42:noLaunder"), forbidden, q_hash("frame"), 0, false);
+        let norm = compile_norm_quin(
+            agent,
+            OP_FORBID,
+            q_hash("q42:noLaunder"),
+            forbidden,
+            q_hash("frame"),
+            0,
+            false,
+        );
         let did_it = [fact(agent, q_hash("q42:broughtAbout"), forbidden)];
 
         // No violation if not done.
-        assert_eq!(classify_mens_rea(&norm, &[], &[], false), MensRea::NoViolation);
+        assert_eq!(
+            classify_mens_rea(&norm, &[], &[], false),
+            MensRea::NoViolation
+        );
         // Did it, knew it was forbidden → Knowing.
         let knows = [fact(agent, OP_KNOWS as u64, forbidden)];
-        assert_eq!(classify_mens_rea(&norm, &did_it, &knows, false), MensRea::Knowing);
+        assert_eq!(
+            classify_mens_rea(&norm, &did_it, &knows, false),
+            MensRea::Knowing
+        );
         // Did it, didn't know, no duty to know → Ignorant.
-        assert_eq!(classify_mens_rea(&norm, &did_it, &[], false), MensRea::Ignorant);
+        assert_eq!(
+            classify_mens_rea(&norm, &did_it, &[], false),
+            MensRea::Ignorant
+        );
         // Did it, didn't know, BUT had a duty to know → ignorance is no excuse.
-        assert_eq!(classify_mens_rea(&norm, &did_it, &[], true), MensRea::InexcusableIgnorance);
+        assert_eq!(
+            classify_mens_rea(&norm, &did_it, &[], true),
+            MensRea::InexcusableIgnorance
+        );
     }
 
     #[test]
     fn discharge_consumes_the_duty() {
         let debtor = q_hash("did:debtor");
         let payment = q_hash("q42:payDebt");
-        let mut norm = compile_norm_quin(debtor, OP_OBLIGATE, q_hash("q42:debtDuty"), payment, q_hash("loan"), 0, false);
+        let mut norm = compile_norm_quin(
+            debtor,
+            OP_OBLIGATE,
+            q_hash("q42:debtDuty"),
+            payment,
+            q_hash("loan"),
+            0,
+            false,
+        );
         assert!(!is_consumed(&norm));
         // Unpaid → Active, not consumed.
         assert_eq!(discharge_obligation(&mut norm, &[]), DeonticStatus::Active);
         assert!(!is_consumed(&norm));
         // Paid → Discharged AND consumed (a duty paid is spent once).
         let paid = [fact(debtor, q_hash("q42:broughtAbout"), payment)];
-        assert_eq!(discharge_obligation(&mut norm, &paid), DeonticStatus::Discharged);
+        assert_eq!(
+            discharge_obligation(&mut norm, &paid),
+            DeonticStatus::Discharged
+        );
         assert!(is_consumed(&norm));
     }
 
@@ -314,12 +387,19 @@ mod tests {
         let nz = q_hash("jur:New-Zealand");
         let within = q_hash("https://ns.webcivics.net/jurisdiction/within");
         let e = |s: u64, o: u64| {
-            let mut q = NQuin { subject: s, predicate: within, object: o, context: 0, metadata: 0, parity: 0 };
+            let mut q = NQuin {
+                subject: s,
+                predicate: within,
+                object: o,
+                context: 0,
+                metadata: 0,
+                parity: 0,
+            };
             q.parity = q.subject ^ q.predicate ^ q.object ^ q.context;
             q
         };
         let graph = [e(vic, au), e(melbourne, vic)]; // Melbourne within VIC within AU
-        // An ICCPR obligation in force for AU applies in VIC and (transitively) Melbourne.
+                                                     // An ICCPR obligation in force for AU applies in VIC and (transitively) Melbourne.
         assert!(obligation_applies_in(au, vic, &graph));
         assert!(obligation_applies_in(au, melbourne, &graph));
         // It does not reach a different State.
@@ -337,9 +417,18 @@ mod tests {
         let o = q_hash("norm:overrideEmergency");
         let ids = [a, e, o];
         let attacks = [(e, a), (o, e)];
-        assert!(norm_survives_conflict(&ids, &attacks, a), "A reinstated by O defeating E");
-        assert!(norm_survives_conflict(&ids, &attacks, o), "O is unattacked → survives");
-        assert!(!norm_survives_conflict(&ids, &attacks, e), "E is defeated by O");
+        assert!(
+            norm_survives_conflict(&ids, &attacks, a),
+            "A reinstated by O defeating E"
+        );
+        assert!(
+            norm_survives_conflict(&ids, &attacks, o),
+            "O is unattacked → survives"
+        );
+        assert!(
+            !norm_survives_conflict(&ids, &attacks, e),
+            "E is defeated by O"
+        );
     }
 
     fn deg(d: f32) -> NQuin {
@@ -378,7 +467,14 @@ mod tests {
         // missing-funding → no-staff → service-failure (the observed breach). Root = missing-funding.
         let explains = q_hash("q42:explains");
         let edge = |h: u64, eff: u64| {
-            let mut q = NQuin { subject: h, predicate: explains, object: eff, context: 0, metadata: 0, parity: 0 };
+            let mut q = NQuin {
+                subject: h,
+                predicate: explains,
+                object: eff,
+                context: 0,
+                metadata: 0,
+                parity: 0,
+            };
             q.parity = q.subject ^ q.predicate ^ q.object ^ q.context;
             q
         };
@@ -386,7 +482,11 @@ mod tests {
         let nostaff = q_hash("cause:noStaff");
         let nofunding = q_hash("cause:missingFunding");
         let rules = [edge(nofunding, nostaff), edge(nostaff, breach)];
-        assert_eq!(diagnose_breach(&rules, breach, explains), Some(nofunding), "root cause surfaced");
+        assert_eq!(
+            diagnose_breach(&rules, breach, explains),
+            Some(nofunding),
+            "root cause surfaced"
+        );
     }
 
     #[test]
@@ -401,7 +501,10 @@ mod tests {
 
     #[test]
     fn zk_wrapping_withholds_unproven_compositions() {
-        assert_eq!(zk_wrapped_composition(true, DeonticStatus::Discharged), Some(DeonticStatus::Discharged));
+        assert_eq!(
+            zk_wrapped_composition(true, DeonticStatus::Discharged),
+            Some(DeonticStatus::Discharged)
+        );
         assert_eq!(zk_wrapped_composition(false, DeonticStatus::Violated), None);
     }
 
@@ -413,6 +516,10 @@ mod tests {
         let remedy = generate_remedy_obligation(party, q_hash("q42:remedyDuty"), reparation, frame);
         assert_eq!(remedy.subject, party);
         assert_eq!(remedy.object, reparation);
-        assert_eq!(extract_deontic_opcode(remedy.predicate), OP_OBLIGATE, "the remedy is an obligation");
+        assert_eq!(
+            extract_deontic_opcode(remedy.predicate),
+            OP_OBLIGATE,
+            "the remedy is an obligation"
+        );
     }
 }

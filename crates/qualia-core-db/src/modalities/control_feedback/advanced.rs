@@ -21,7 +21,13 @@ pub fn mit_rule_adapt(gain: f64, adaptation_rate: f64, error: f64, signal: f64) 
 /// **Gain scheduling**: linearly interpolate the gain between `low_gain` (at `op_min`) and
 /// `high_gain` (at `op_max`) for the current `op_point` — adaptive tuning across the operating
 /// envelope. Clamps outside `[op_min, op_max]`.
-pub fn scheduled_gain(op_point: f64, op_min: f64, op_max: f64, low_gain: f64, high_gain: f64) -> f64 {
+pub fn scheduled_gain(
+    op_point: f64,
+    op_min: f64,
+    op_max: f64,
+    low_gain: f64,
+    high_gain: f64,
+) -> f64 {
     if op_max <= op_min {
         return low_gain;
     }
@@ -128,7 +134,7 @@ mod tests {
         assert!(close(kp, 2.0) && close(ki, 1.0) && close(kd, 0.2));
         // MIT rule nudges the gain to cut tracking error.
         assert!(close(mit_rule_adapt(1.0, 0.1, 2.0, 3.0), 1.6)); // 1 + 0.1*2*3
-        // Gain scheduling interpolates across the envelope and clamps.
+                                                                 // Gain scheduling interpolates across the envelope and clamps.
         assert!(close(scheduled_gain(5.0, 0.0, 10.0, 1.0, 3.0), 2.0)); // midpoint
         assert!(close(scheduled_gain(-5.0, 0.0, 10.0, 1.0, 3.0), 1.0)); // clamp low
         assert!(close(scheduled_gain(99.0, 0.0, 10.0, 1.0, 3.0), 3.0)); // clamp high
@@ -138,7 +144,10 @@ mod tests {
     fn mpc_drives_state_toward_setpoint() {
         // Integrator x' = x + u, from 0 to setpoint 10, no control penalty → u ≈ 10 over horizon 1.
         let u = mpc_control(1.0, 1.0, 0.0, 10.0, 1, 0.0, 20.0, 200, 0.0);
-        assert!((u - 10.0).abs() <= 0.1, "MPC picks u≈10 to reach the setpoint, got {u}");
+        assert!(
+            (u - 10.0).abs() <= 0.1,
+            "MPC picks u≈10 to reach the setpoint, got {u}"
+        );
         // A control penalty pulls the optimal move below the unpenalised value.
         let u_pen = mpc_control(1.0, 1.0, 0.0, 10.0, 1, 0.0, 20.0, 200, 1.0);
         assert!(u_pen < u, "control penalty reduces the aggressive move");
@@ -161,7 +170,7 @@ mod tests {
         let mut y = [0.0; 1];
         assert!(mimo_output(&c, &d, &nx, &u, 1, &mut y));
         assert!(close(y[0], 0.0)); // position still 0 after one step
-        // Dimension mismatch refuses.
+                                   // Dimension mismatch refuses.
         assert!(!mimo_step(&a, &b, &x, &u, &mut [0.0; 1]));
     }
 }

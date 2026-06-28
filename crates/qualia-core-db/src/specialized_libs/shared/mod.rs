@@ -7,6 +7,5 @@
 pub mod zero_heap;
 
 pub use zero_heap::{
-    FixedArray, FixedStack, RingBuffer, FixedQueue,
-    MAX_FIXED_ARRAY_SIZE, MAX_RING_BUFFER_SIZE
+    FixedArray, FixedQueue, FixedStack, RingBuffer, MAX_FIXED_ARRAY_SIZE, MAX_RING_BUFFER_SIZE,
 };

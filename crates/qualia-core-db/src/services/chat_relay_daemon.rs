@@ -179,7 +179,10 @@ async fn pull_handler(
     }
 
     match read_inbox(&state.storage_path, &session_id, since) {
-        Ok(resp) => (StatusCode::OK, Json(serde_json::json!(resp)).into_response()),
+        Ok(resp) => (
+            StatusCode::OK,
+            Json(serde_json::json!(resp)).into_response(),
+        ),
         Err(e) => (
             StatusCode::INTERNAL_SERVER_ERROR,
             Json(serde_json::json!({"error": e})).into_response(),
@@ -191,7 +194,10 @@ pub fn chat_relay_routes(
     storage_path: String,
     vault: Arc<Mutex<crate::key_vault::KeyVault>>,
 ) -> Router {
-    let state = ChatState { storage_path, vault };
+    let state = ChatState {
+        storage_path,
+        vault,
+    };
     let relay = Router::new()
         .route("/publish", post(publish_handler))
         .route("/pull", get(pull_handler))

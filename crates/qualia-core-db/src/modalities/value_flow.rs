@@ -139,7 +139,7 @@ mod tests {
         assert_eq!(ancestor_royalty(100, 0, 50), 50);
         assert_eq!(ancestor_royalty(100, 1, 50), 25);
         assert_eq!(ancestor_royalty(100, 2, 50), 12); // 100*.5*.5*.5 = 12.5 → 12 (integer)
-        // The chain total over 3 generations: 50 + 25 + 12 = 87.
+                                                      // The chain total over 3 generations: 50 + 25 + 12 = 87.
         assert_eq!(royalty_tree_total(100, 3, 50), 87);
     }
 
@@ -156,7 +156,10 @@ mod tests {
         let one = liquidity_step(0, 100, 10);
         assert_eq!(one, 100); // 0 drained + 100 inflow
         let settled = liquidity_after(0, 100, 10, 500);
-        assert!((settled as i64 - 1000).abs() <= 1, "converges to inflow/drain = 1000, got {settled}");
+        assert!(
+            (settled as i64 - 1000).abs() <= 1,
+            "converges to inflow/drain = 1000, got {settled}"
+        );
         // Draining a full pool with no inflow shrinks it.
         assert!(liquidity_after(1000, 0, 50, 5) < 1000);
     }
@@ -181,7 +184,10 @@ mod tests {
         let cost = commons_cost(1000, 20, 20); // 1200
         let mut pool = 0u64;
         pool = pool_after(pool, royalty(400, 300)); // corporate use: 1200
-        assert!(is_commons_discharged(pool, cost), "pool met cost → discharged + freed globally");
+        assert!(
+            is_commons_discharged(pool, cost),
+            "pool met cost → discharged + freed globally"
+        );
         assert_eq!(outstanding(pool, cost), 0);
         // Before that payment the obligation was outstanding.
         assert!(!is_commons_discharged(500, cost));

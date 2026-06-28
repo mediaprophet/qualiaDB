@@ -76,8 +76,15 @@ fn tokenize(s: &str) -> Vec<Tok> {
                 // Drop an optional language tag (@en) or datatype (^^xsd:string / ^^<iri>).
                 while i < b.len() {
                     let d = b[i];
-                    if d == b'@' || d == b'^' || d == b':' || d.is_ascii_alphanumeric()
-                        || d == b'-' || d == b'<' || d == b'>' || d == b'/' || d == b'.'
+                    if d == b'@'
+                        || d == b'^'
+                        || d == b':'
+                        || d.is_ascii_alphanumeric()
+                        || d == b'-'
+                        || d == b'<'
+                        || d == b'>'
+                        || d == b'/'
+                        || d == b'.'
                         || d == b'#'
                     {
                         i += 1;
@@ -363,15 +370,23 @@ doc:article-1 a values:Undertaking ;
         let part_of = h(b"https://ns.webcivics.net/values/partOf");
 
         // `a` expands to rdf:type; CURIEs expand via @prefix.
-        assert!(quins.iter().any(|q| q.subject == art1 && q.predicate == rdf_type && q.object == undertaking));
+        assert!(quins
+            .iter()
+            .any(|q| q.subject == art1 && q.predicate == rdf_type && q.object == undertaking));
         // dc:title is a PREDICATE on a continuation line, subject carried over — the bug we fixed.
-        assert!(quins.iter().any(|q| q.subject == art1 && q.predicate == dc_title));
+        assert!(quins
+            .iter()
+            .any(|q| q.subject == art1 && q.predicate == dc_title));
         // Multi-word literal hashes as ONE object (not shredded into words).
         let title = h(b"Article 1");
-        assert!(quins.iter().any(|q| q.predicate == dc_title && q.object == title));
+        assert!(quins
+            .iter()
+            .any(|q| q.predicate == dc_title && q.object == title));
         // partOf links to the doc:-expanded Instrument (now namespace-unique).
         let instrument = h(b"https://ns.webcivics.net/values/inst#Instrument");
-        assert!(quins.iter().any(|q| q.subject == art1 && q.predicate == part_of && q.object == instrument));
+        assert!(quins
+            .iter()
+            .any(|q| q.subject == art1 && q.predicate == part_of && q.object == instrument));
     }
 
     #[test]
@@ -381,10 +396,16 @@ doc:article-1 a values:Undertaking ;
 values:State values:bears values:DutyA , values:DutyB , values:DutyC .
 "#;
         let quins = parse(doc);
-        assert_eq!(quins.len(), 3, "`,` repeats subject+predicate → three triples");
+        assert_eq!(
+            quins.len(),
+            3,
+            "`,` repeats subject+predicate → three triples"
+        );
         let state = h(b"https://ns.webcivics.net/values/State");
         let bears = h(b"https://ns.webcivics.net/values/bears");
-        assert!(quins.iter().all(|q| q.subject == state && q.predicate == bears));
+        assert!(quins
+            .iter()
+            .all(|q| q.subject == state && q.predicate == bears));
     }
 
     /// Regression: non-ASCII literals (Arabic, CJK, em-dash, curly quotes) must survive intact.
@@ -398,13 +419,16 @@ values:State values:bears values:DutyA , values:DutyB , values:DutyC .
         let label = h(b"https://ns.webcivics.net/values/label");
         let note = h(b"https://ns.webcivics.net/values/note");
         assert!(
-            quins.iter().any(|q| q.predicate == label && q.object == h("صحة".as_bytes())),
+            quins
+                .iter()
+                .any(|q| q.predicate == label && q.object == h("صحة".as_bytes())),
             "Arabic literal must hash to its exact UTF-8 bytes"
         );
         assert!(
             quins
                 .iter()
-                .any(|q| q.predicate == note && q.object == h("健康 — wellbeing's “root”".as_bytes())),
+                .any(|q| q.predicate == note
+                    && q.object == h("健康 — wellbeing's “root”".as_bytes())),
             "CJK + em-dash + curly-quote literal must round-trip intact"
         );
     }

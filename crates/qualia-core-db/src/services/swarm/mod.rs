@@ -77,7 +77,9 @@ impl core::fmt::Display for SwarmError {
             SwarmError::InvalidJob => write!(f, "inconsistent job input"),
             SwarmError::KernelFailed => write!(f, "reused compute kernel failed"),
             SwarmError::InvalidEscrowState => write!(f, "invalid escrow state transition"),
-            SwarmError::NotEnergyViable => write!(f, "paid job is net-extractive (E-ROI below floor)"),
+            SwarmError::NotEnergyViable => {
+                write!(f, "paid job is net-extractive (E-ROI below floor)")
+            }
         }
     }
 }

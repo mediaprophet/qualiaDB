@@ -64,8 +64,8 @@ pub fn limit_at_infinity(f: &Expr, x: &str) -> Option<f64> {
 
 #[cfg(test)]
 mod tests {
-    use super::*;
     use super::super::symbolic_algebra::{add, c, div, mul, pow, sub, var};
+    use super::*;
 
     #[test]
     fn lhopital_on_zero_over_zero() {
@@ -94,7 +94,10 @@ mod tests {
     #[test]
     fn rational_limit_at_infinity() {
         // (2x²+3)/(x²−1) → 2 as x→∞
-        let f = div(add(mul(c(2.0), pow(var("x"), 2)), c(3.0)), sub(pow(var("x"), 2), c(1.0)));
+        let f = div(
+            add(mul(c(2.0), pow(var("x"), 2)), c(3.0)),
+            sub(pow(var("x"), 2), c(1.0)),
+        );
         assert!((limit_at_infinity(&f, "x").unwrap() - 2.0).abs() < 1e-3);
     }
 }

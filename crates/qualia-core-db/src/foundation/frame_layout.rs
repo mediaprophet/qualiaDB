@@ -90,8 +90,8 @@ pub const fn pack_predicate(opcode: u8, path_hash: u64, defeater: bool) -> u64 {
 //  object field — inline literal datatype tags (canonical in `resolver`)
 // ════════════════════════════════════════════════════════════════════════════════
 pub use crate::resolver::{
-    INLINE_TAG_BOOLEAN, INLINE_TAG_DECIMAL, INLINE_TAG_FLOAT, INLINE_TAG_INTEGER,
-    INLINE_TAG_MASK, INLINE_VALUE_MASK, MSB_FLAG,
+    INLINE_TAG_BOOLEAN, INLINE_TAG_DECIMAL, INLINE_TAG_FLOAT, INLINE_TAG_INTEGER, INLINE_TAG_MASK,
+    INLINE_VALUE_MASK, MSB_FLAG,
 };
 /// Blob/byte-offset pointer tag (canonical in `dicom`).
 pub const INLINE_TAG_BLOB: u64 = 0b100u64 << 60;
@@ -214,11 +214,18 @@ mod tests {
     #[test]
     fn object_datatype_tags_are_distinct() {
         let tags = [
-            INLINE_TAG_INTEGER, INLINE_TAG_DECIMAL, INLINE_TAG_BOOLEAN,
-            INLINE_TAG_BLOB, INLINE_TAG_FLOAT,
+            INLINE_TAG_INTEGER,
+            INLINE_TAG_DECIMAL,
+            INLINE_TAG_BOOLEAN,
+            INLINE_TAG_BLOB,
+            INLINE_TAG_FLOAT,
         ];
         for (i, &a) in tags.iter().enumerate() {
-            assert_eq!(a & !INLINE_TAG_MASK, 0, "tag {i} outside the [60..62] tag region");
+            assert_eq!(
+                a & !INLINE_TAG_MASK,
+                0,
+                "tag {i} outside the [60..62] tag region"
+            );
             for &b in &tags[i + 1..] {
                 assert_ne!(a, b, "two object datatype tags collide");
             }
@@ -234,17 +241,32 @@ mod tests {
         // payload (degree/expiry/timestamp/packed-moments) never overlaps any high
         // overlay, so it can't silently corrupt a type / flag / sensitivity / clock.
         let high = QUIN_TYPE_MASK | ROUTING_LANE_MASK | SENSITIVITY_MASK | BAKE_CLOCK_MASK;
-        assert_eq!(high & LOW32_MASK, 0, "a high overlay reaches into the low-32 payload");
+        assert_eq!(
+            high & LOW32_MASK,
+            0,
+            "a high overlay reaches into the low-32 payload"
+        );
         // Routing is a sub-lane of the quin-type nibble (documented role-exclusive overlap).
-        assert_eq!(ROUTING_LANE_MASK & QUIN_TYPE_MASK, ROUTING_LANE_MASK,
-            "routing lane must sit inside the quin-type nibble [60..63]");
+        assert_eq!(
+            ROUTING_LANE_MASK & QUIN_TYPE_MASK,
+            ROUTING_LANE_MASK,
+            "routing lane must sit inside the quin-type nibble [60..63]"
+        );
     }
 
     #[test]
     fn modality_flag_bits_are_pairwise_distinct() {
         let flags = [
-            COUNTERFACTUAL_BIT, DO_INTERVENTION_BIT, SYNTHESIZED_BIT, CONSUMED_BIT,
-            STABILIZATION_BIT, FEEDBACK_BIT, CONTROL_BIT, DEFENSE_BIT, ATTACK_BIT, ARGUMENT_BIT,
+            COUNTERFACTUAL_BIT,
+            DO_INTERVENTION_BIT,
+            SYNTHESIZED_BIT,
+            CONSUMED_BIT,
+            STABILIZATION_BIT,
+            FEEDBACK_BIT,
+            CONTROL_BIT,
+            DEFENSE_BIT,
+            ATTACK_BIT,
+            ARGUMENT_BIT,
         ];
         for (i, &a) in flags.iter().enumerate() {
             assert_eq!(a.count_ones(), 1, "flag {i} is not a single bit");
@@ -259,7 +281,11 @@ mod tests {
         let all_flags = flags.iter().fold(0u64, |acc, &f| acc | f);
         assert_eq!(all_flags & ROUTING_LANE_MASK, 0, "a flag overlaps routing");
         assert_eq!(all_flags & QUIN_TYPE_MASK, 0, "a flag overlaps quin_type");
-        assert_eq!(all_flags & LOW32_MASK, 0, "a flag overlaps the low-32 payload");
+        assert_eq!(
+            all_flags & LOW32_MASK,
+            0,
+            "a flag overlaps the low-32 payload"
+        );
     }
 
     #[test]
@@ -278,7 +304,11 @@ mod tests {
         // overlap is role-exclusive, not a bug, so we only check payload safety.
         let m = with_quin_type(12345, 0b1010);
         assert_eq!(quin_type(m), 0b1010);
-        assert_eq!(m & LOW32_MASK, 12345, "quin_type must not disturb the low-32 payload");
+        assert_eq!(
+            m & LOW32_MASK,
+            12345,
+            "quin_type must not disturb the low-32 payload"
+        );
     }
 
     #[test]
@@ -293,10 +323,20 @@ mod tests {
 
     #[test]
     fn parity_ignores_computational_metadata() {
-        let q = sealed(NQuin { subject: 7, predicate: 8, object: 9, context: 10, metadata: 0, parity: 0 });
+        let q = sealed(NQuin {
+            subject: 7,
+            predicate: 8,
+            object: 9,
+            context: 10,
+            metadata: 0,
+            parity: 0,
+        });
         assert!(parity_valid(&q));
         let mut q2 = q;
         q2.metadata = QUIN_TYPE_MASK | ROUTING_LANE_MASK | 999;
-        assert!(parity_valid(&q2), "parity must ignore the computational-support field");
+        assert!(
+            parity_valid(&q2),
+            "parity must ignore the computational-support field"
+        );
     }
 }

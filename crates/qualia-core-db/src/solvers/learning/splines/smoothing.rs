@@ -26,7 +26,14 @@ pub struct SmoothingSpline {
 impl SmoothingSpline {
     /// Fit with smoothing parameter `lambda ≥ 0`. Fails closed on shape mismatch /
     /// `degree == 0`.
-    pub fn fit(x: &[f64], y: &[f64], n: usize, degree: usize, knots: &[f64], lambda: f64) -> Result<Self, LearningError> {
+    pub fn fit(
+        x: &[f64],
+        y: &[f64],
+        n: usize,
+        degree: usize,
+        knots: &[f64],
+        lambda: f64,
+    ) -> Result<Self, LearningError> {
         if n == 0 || x.len() != n || y.len() != n || degree == 0 || lambda < 0.0 {
             return Err(LearningError::InvalidDimension);
         }
@@ -38,7 +45,18 @@ impl SmoothingSpline {
         }
         // A = BᵀB + λP, where P = diag(0,…,0,1,…,1) penalizes only the knot terms.
         let mut a = vec![0.0; m * m];
-        gemm(Transpose::Yes, Transpose::No, m, m, n, 1.0, &b, &b, 0.0, &mut a)?;
+        gemm(
+            Transpose::Yes,
+            Transpose::No,
+            m,
+            m,
+            n,
+            1.0,
+            &b,
+            &b,
+            0.0,
+            &mut a,
+        )?;
         for j in (degree + 1)..m {
             a[j * m + j] += lambda;
         }
@@ -50,7 +68,12 @@ impl SmoothingSpline {
         cholesky_factor(m, &a, &mut l).map_err(|_| LearningError::Singular)?;
         let mut coefficients = vec![0.0; m];
         cholesky_solve(m, &l, &rhs, &mut coefficients)?;
-        Ok(Self { degree, knots: knots.to_vec(), coefficients, lambda })
+        Ok(Self {
+            degree,
+            knots: knots.to_vec(),
+            coefficients,
+            lambda,
+        })
     }
 
     pub fn predict_one(&self, x: f64) -> f64 {
@@ -97,17 +120,27 @@ mod tests {
         // Noisy data; a larger penalty yields a smoother (less wiggly) fit.
         let n = 40;
         let x: Vec<f64> = (0..n).map(|i| i as f64 * 0.2).collect();
-        let y: Vec<f64> = x.iter().enumerate().map(|(i, &xi)| xi.sin() + ((i % 2) as f64 - 0.5) * 0.6).collect();
+        let y: Vec<f64> = x
+            .iter()
+            .enumerate()
+            .map(|(i, &xi)| xi.sin() + ((i % 2) as f64 - 0.5) * 0.6)
+            .collect();
         let knots: Vec<f64> = (1..8).map(|k| k as f64).collect();
         let light = SmoothingSpline::fit(&x, &y, n, 3, &knots, 0.01).unwrap();
         let heavy = SmoothingSpline::fit(&x, &y, n, 3, &knots, 100.0).unwrap();
         let r_light = roughness(&light.predict(&x));
         let r_heavy = roughness(&heavy.predict(&x));
-        assert!(r_heavy < r_light, "heavier penalty must be smoother: {r_heavy} !< {r_light}");
+        assert!(
+            r_heavy < r_light,
+            "heavier penalty must be smoother: {r_heavy} !< {r_light}"
+        );
     }
 
     #[test]
     fn guards() {
-        assert_eq!(SmoothingSpline::fit(&[1.0, 2.0], &[1.0], 2, 3, &[], 1.0).unwrap_err(), LearningError::InvalidDimension);
+        assert_eq!(
+            SmoothingSpline::fit(&[1.0, 2.0], &[1.0], 2, 3, &[], 1.0).unwrap_err(),
+            LearningError::InvalidDimension
+        );
     }
 }

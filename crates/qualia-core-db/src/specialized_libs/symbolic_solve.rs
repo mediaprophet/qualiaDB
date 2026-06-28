@@ -89,7 +89,9 @@ pub fn solve_polynomial_expr(
     degree: usize,
     tol: f64,
 ) -> Result<Vec<f64>, SolveError> {
-    let xs: Vec<f64> = (0..=degree + 1).map(|i| i as f64 - (degree as f64) / 2.0).collect();
+    let xs: Vec<f64> = (0..=degree + 1)
+        .map(|i| i as f64 - (degree as f64) / 2.0)
+        .collect();
     let ys: Vec<f64> = xs
         .iter()
         .map(|&x| {
@@ -116,9 +118,15 @@ mod tests {
     #[test]
     fn quadratic_and_cubic_real_roots() {
         // x² − 5x + 6 → {2, 3}
-        assert!(close(&real_roots(&[1.0, -5.0, 6.0], 1e-6).unwrap(), &[2.0, 3.0]));
+        assert!(close(
+            &real_roots(&[1.0, -5.0, 6.0], 1e-6).unwrap(),
+            &[2.0, 3.0]
+        ));
         // x³ − 6x² + 11x − 6 → {1, 2, 3}
-        assert!(close(&real_roots(&[1.0, -6.0, 11.0, -6.0], 1e-6).unwrap(), &[1.0, 2.0, 3.0]));
+        assert!(close(
+            &real_roots(&[1.0, -6.0, 11.0, -6.0], 1e-6).unwrap(),
+            &[1.0, 2.0, 3.0]
+        ));
     }
 
     #[test]

@@ -1,12 +1,11 @@
-/// Trig-Star Parser for QualiaDB
-use std::io::BufReader;
+use crate::lexicon::{generate_60bit_token, generate_embedded_triple_id};
+use crate::rdf_star::{RdfStarParseError, RdfStarParser};
 ///
 /// Implements RDF-Star (SPARQL 1.2) parsing for Trig syntax with embedded triples.
 /// Trig-Star extends Turtle-Star with named graph support via GRAPH {} blocks.
-
 use crate::NQuin;
-use crate::lexicon::{generate_embedded_triple_id, generate_60bit_token};
-use crate::rdf_star::{RdfStarParser, RdfStarParseError};
+/// Trig-Star Parser for QualiaDB
+use std::io::BufReader;
 
 /// Trig-Star parser implementation
 pub struct TrigStarParser {
@@ -84,8 +83,11 @@ impl TrigStarParser {
         // Strip angle brackets and quotes
         let subject = subject_str.trim_start_matches('<').trim_end_matches('>');
         let predicate = predicate_str.trim_start_matches('<').trim_end_matches('>');
-        let object = object_str.trim_start_matches('<').trim_end_matches('>')
-            .trim_start_matches('"').trim_end_matches('"');
+        let object = object_str
+            .trim_start_matches('<')
+            .trim_end_matches('>')
+            .trim_start_matches('"')
+            .trim_end_matches('"');
 
         let subject_hash = generate_60bit_token(subject.as_bytes());
         let predicate_hash = generate_60bit_token(predicate.as_bytes());
@@ -103,19 +105,30 @@ impl TrigStarParser {
     fn parse_embedded_triple_line(&self, line: &str) -> Result<ParseResult, RdfStarParseError> {
         // Similar to Turtle-Star but with graph context
         // Find the embedded triple
-        let start = line.find("<<").ok_or(RdfStarParseError::MalformedEmbeddedTriple)?;
-        let end = line.find(">>").ok_or(RdfStarParseError::MalformedEmbeddedTriple)?;
-        
+        let start = line
+            .find("<<")
+            .ok_or(RdfStarParseError::MalformedEmbeddedTriple)?;
+        let end = line
+            .find(">>")
+            .ok_or(RdfStarParseError::MalformedEmbeddedTriple)?;
+
         let embedded_part = &line[start + 2..end];
         let embedded_parts: Vec<&str> = embedded_part.split_whitespace().collect();
         if embedded_parts.len() < 3 {
             return Err(RdfStarParseError::MalformedEmbeddedTriple);
         }
 
-        let subject = embedded_parts[0].trim_start_matches('<').trim_end_matches('>');
-        let predicate = embedded_parts[1].trim_start_matches('<').trim_end_matches('>');
-        let object = embedded_parts[2].trim_start_matches('<').trim_end_matches('>')
-            .trim_start_matches('"').trim_end_matches('"');
+        let subject = embedded_parts[0]
+            .trim_start_matches('<')
+            .trim_end_matches('>');
+        let predicate = embedded_parts[1]
+            .trim_start_matches('<')
+            .trim_end_matches('>');
+        let object = embedded_parts[2]
+            .trim_start_matches('<')
+            .trim_end_matches('>')
+            .trim_start_matches('"')
+            .trim_end_matches('"');
 
         let subject_hash = generate_60bit_token(subject.as_bytes());
         let predicate_hash = generate_60bit_token(predicate.as_bytes());
@@ -131,8 +144,11 @@ impl TrigStarParser {
         }
 
         let outer_predicate = outer_parts[0].trim_start_matches('<').trim_end_matches('>');
-        let outer_object = outer_parts[1].trim_start_matches('<').trim_end_matches('>')
-            .trim_start_matches('"').trim_end_matches('"');
+        let outer_object = outer_parts[1]
+            .trim_start_matches('<')
+            .trim_end_matches('>')
+            .trim_start_matches('"')
+            .trim_end_matches('"');
 
         let outer_predicate_hash = generate_60bit_token(outer_predicate.as_bytes());
         let outer_object_hash = generate_60bit_token(outer_object.as_bytes());
@@ -148,38 +164,52 @@ impl TrigStarParser {
 }
 
 impl RdfStarParser for TrigStarParser {
-    fn parse_embedded_triple(&mut self, input: &[u8]) -> Result<(u64, [u64; 3]), RdfStarParseError> {
+    fn parse_embedded_triple(
+        &mut self,
+        input: &[u8],
+    ) -> Result<(u64, [u64; 3]), RdfStarParseError> {
         let line = std::str::from_utf8(input).map_err(|_| RdfStarParseError::InvalidUtf8)?;
-        
+
         match self.parse_line(line)? {
-            ParseResult::EmbeddedTriple { virtual_id, components, .. } => {
-                Ok((virtual_id, components))
-            }
+            ParseResult::EmbeddedTriple {
+                virtual_id,
+                components,
+                ..
+            } => Ok((virtual_id, components)),
             _ => Err(RdfStarParseError::MalformedEmbeddedTriple),
         }
     }
 
     fn parse_triple(&mut self, input: &[u8]) -> Result<(u64, u64, u64), RdfStarParseError> {
         let line = std::str::from_utf8(input).map_err(|_| RdfStarParseError::InvalidUtf8)?;
-        
+
         match self.parse_line(line)? {
-            ParseResult::RegularTriple { subject, predicate, object, .. } => {
-                Ok((subject, predicate, object))
-            }
+            ParseResult::RegularTriple {
+                subject,
+                predicate,
+                object,
+                ..
+            } => Ok((subject, predicate, object)),
             _ => Err(RdfStarParseError::InvalidSyntax),
         }
     }
 
     fn parse_quad(&mut self, input: &[u8]) -> Result<(u64, u64, u64, u64), RdfStarParseError> {
         let line = std::str::from_utf8(input).map_err(|_| RdfStarParseError::InvalidUtf8)?;
-        
+
         match self.parse_line(line)? {
-            ParseResult::RegularTriple { subject, predicate, object, graph_hash } => {
-                Ok((subject, predicate, object, graph_hash))
-            }
-            ParseResult::EmbeddedTriple { outer_predicate, outer_object, graph_hash, .. } => {
-                Ok((0, outer_predicate, outer_object, graph_hash))
-            }
+            ParseResult::RegularTriple {
+                subject,
+                predicate,
+                object,
+                graph_hash,
+            } => Ok((subject, predicate, object, graph_hash)),
+            ParseResult::EmbeddedTriple {
+                outer_predicate,
+                outer_object,
+                graph_hash,
+                ..
+            } => Ok((0, outer_predicate, outer_object, graph_hash)),
             _ => Err(RdfStarParseError::InvalidSyntax),
         }
     }
@@ -225,7 +255,7 @@ pub fn parse_trig_star_into<R: std::io::Read, S: crate::sparql_library::quin_sin
     sink: &mut S,
 ) -> Result<u64, Box<dyn std::error::Error>> {
     use std::io::BufRead;
-    
+
     let mut parser = TrigStarParser::new(context_hash);
     let mut count = 0;
     let buf_reader = BufReader::new(reader);
@@ -237,7 +267,12 @@ pub fn parse_trig_star_into<R: std::io::Read, S: crate::sparql_library::quin_sin
             ParseResult::GraphDeclaration { graph_hash } => {
                 parser.set_current_graph(graph_hash);
             }
-            ParseResult::RegularTriple { subject, predicate, object, graph_hash } => {
+            ParseResult::RegularTriple {
+                subject,
+                predicate,
+                object,
+                graph_hash,
+            } => {
                 sink.push(NQuin {
                     subject,
                     predicate,
@@ -248,7 +283,13 @@ pub fn parse_trig_star_into<R: std::io::Read, S: crate::sparql_library::quin_sin
                 })?;
                 count += 1;
             }
-            ParseResult::EmbeddedTriple { virtual_id, components, outer_predicate, outer_object, graph_hash } => {
+            ParseResult::EmbeddedTriple {
+                virtual_id,
+                components,
+                outer_predicate,
+                outer_object,
+                graph_hash,
+            } => {
                 sink.push(NQuin {
                     subject: virtual_id,
                     predicate: outer_predicate,
@@ -258,7 +299,7 @@ pub fn parse_trig_star_into<R: std::io::Read, S: crate::sparql_library::quin_sin
                     parity: 0,
                 })?;
                 count += 1;
-                
+
                 sink.push(NQuin {
                     subject: components[0],
                     predicate: components[1],
@@ -285,8 +326,8 @@ pub fn parse_trig_star_stream<R: std::io::Read>(
 
 #[cfg(test)]
 mod tests {
-    use crate::rdf_star::{RdfStarParser, RdfStarSerializer};
     use super::*;
+    use crate::rdf_star::{RdfStarParser, RdfStarSerializer};
 
     #[test]
     fn test_trig_star_parser_creation() {
@@ -306,7 +347,8 @@ mod tests {
     #[test]
     fn test_parse_regular_triple() {
         let mut parser = TrigStarParser::new(0);
-        let input = b"<http://example.org/Alice> <http://example.org/knows> <http://example.org/Bob> .";
+        let input =
+            b"<http://example.org/Alice> <http://example.org/knows> <http://example.org/Bob> .";
         let result = parser.parse_triple(input);
         assert!(result.is_ok());
     }

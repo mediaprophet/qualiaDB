@@ -60,6 +60,8 @@ mod tests {
         assert!(ids.contains(&BackendId::CPU));
         assert!(ids.contains(&BackendId::WGPU));
         // CPU is always available even when headless.
-        assert!(reg.iter().any(|b| b.id() == BackendId::CPU && b.available()));
+        assert!(reg
+            .iter()
+            .any(|b| b.id() == BackendId::CPU && b.available()));
     }
 }

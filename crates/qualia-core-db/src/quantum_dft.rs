@@ -22,10 +22,13 @@ impl ElectronDensity {
     /// Thomas-Fermi orbital-free DFT with LDA exchange on a 3D cubic grid.
     /// Runs a self-consistent field (SCF) loop until the total energy converges.
     pub fn calculate_ground_state_energy(&mut self, quins: &[NQuin]) -> f64 {
-        let n_electrons = quins.iter()
+        let n_electrons = quins
+            .iter()
             .filter(|q| q.predicate == crate::q_hash("HAS_ELECTRON"))
             .count();
-        if n_electrons == 0 { return 0.0; }
+        if n_electrons == 0 {
+            return 0.0;
+        }
 
         let n = n_electrons as f64;
         let z = n; // Neutral atom: nuclear charge Z = N
@@ -44,20 +47,23 @@ impl ElectronDensity {
 
         // Precompute |r| at every grid point (nucleus at box centre)
         let ctr = l / 2.0;
-        let r_grid: Vec<f64> = (0..grid_size).map(|idx| {
-            let iz = idx / (res * res);
-            let iy = (idx / res) % res;
-            let ix = idx % res;
-            let rx = (ix as f64 + 0.5) * h - ctr;
-            let ry = (iy as f64 + 0.5) * h - ctr;
-            let rz = (iz as f64 + 0.5) * h - ctr;
-            (rx*rx + ry*ry + rz*rz).sqrt().max(h * 0.5) // clamp to avoid r = 0
-        }).collect();
+        let r_grid: Vec<f64> = (0..grid_size)
+            .map(|idx| {
+                let iz = idx / (res * res);
+                let iy = (idx / res) % res;
+                let ix = idx % res;
+                let rx = (ix as f64 + 0.5) * h - ctr;
+                let ry = (iy as f64 + 0.5) * h - ctr;
+                let rz = (iz as f64 + 0.5) * h - ctr;
+                (rx * rx + ry * ry + rz * rz).sqrt().max(h * 0.5) // clamp to avoid r = 0
+            })
+            .collect();
 
         // Initialise with hydrogen-like exponential decay, normalised to N electrons
         let alpha = 2.0 * z;
         let raw_sum: f64 = r_grid.iter().map(|&r| (-alpha * r).exp()).sum::<f64>() * dv;
-        self.density_matrix = r_grid.iter()
+        self.density_matrix = r_grid
+            .iter()
             .map(|&r| (-alpha * r).exp() * n / raw_sum.max(1e-30))
             .collect();
 
@@ -75,12 +81,24 @@ impl ElectronDensity {
             }
 
             // ── Energy components ────────────────────────────────────────────
-            let t_tf: f64 = self.density_matrix.iter()
-                .map(|&rho| c_tf * rho.powf(5.0 / 3.0)).sum::<f64>() * dv;
-            let e_xc: f64 = self.density_matrix.iter()
-                .map(|&rho| c_x * rho.powf(4.0 / 3.0)).sum::<f64>() * dv;
-            let e_ne: f64 = r_grid.iter().zip(self.density_matrix.iter())
-                .map(|(&r, &rho)| (-z / r) * rho).sum::<f64>() * dv;
+            let t_tf: f64 = self
+                .density_matrix
+                .iter()
+                .map(|&rho| c_tf * rho.powf(5.0 / 3.0))
+                .sum::<f64>()
+                * dv;
+            let e_xc: f64 = self
+                .density_matrix
+                .iter()
+                .map(|&rho| c_x * rho.powf(4.0 / 3.0))
+                .sum::<f64>()
+                * dv;
+            let e_ne: f64 = r_grid
+                .iter()
+                .zip(self.density_matrix.iter())
+                .map(|(&r, &rho)| (-z / r) * rho)
+                .sum::<f64>()
+                * dv;
             // Mean-field Hartree: classical self-energy of uniform sphere of charge N
             let rho_avg = n / (l * l * l);
             let r_ws = (3.0 / (4.0 * std::f64::consts::PI * rho_avg)).powf(1.0 / 3.0);
@@ -89,23 +107,32 @@ impl ElectronDensity {
             let e_total_ha = t_tf + e_xc + e_ne + e_h;
             let e_total_ev = e_total_ha * 27.2114; // Hartree → eV
 
-            if (e_total_ev - prev_e).abs() < tol { return e_total_ev; }
+            if (e_total_ev - prev_e).abs() < tol {
+                return e_total_ev;
+            }
             prev_e = e_total_ev;
 
             // ── Density update via TF inversion ─────────────────────────────
             // Chemical potential μ: set from the average-density point
             let v_tf_avg = (5.0 / 3.0) * c_tf * rho_avg.powf(2.0 / 3.0);
-            let v_xc_avg = (4.0 / 3.0) * c_x  * rho_avg.powf(1.0 / 3.0);
+            let v_xc_avg = (4.0 / 3.0) * c_x * rho_avg.powf(1.0 / 3.0);
             let mu = v_tf_avg + v_xc_avg + n / r_ws - z / r_ws; // v_H + v_ne cancel for neutral atom
 
             // ρ_new(r) = [(μ − v_eff(r)) / ((5/3)C_TF)]^(3/2), clamped to ≥ 0
-            let new_rho: Vec<f64> = r_grid.iter().zip(self.density_matrix.iter())
+            let new_rho: Vec<f64> = r_grid
+                .iter()
+                .zip(self.density_matrix.iter())
                 .map(|(&r, &rho_i)| {
                     let v_xc_i = (4.0 / 3.0) * c_x * rho_i.powf(1.0 / 3.0);
                     let v_eff_i = (-z / r) + (n / r_ws) + v_xc_i;
                     let arg = (mu - v_eff_i) / ((5.0 / 3.0) * c_tf);
-                    if arg > 0.0 { arg.powf(1.5) } else { 0.0 }
-                }).collect();
+                    if arg > 0.0 {
+                        arg.powf(1.5)
+                    } else {
+                        0.0
+                    }
+                })
+                .collect();
 
             // Linear mixing to stabilise convergence
             for (rho, rho_new) in self.density_matrix.iter_mut().zip(new_rho.iter()) {
@@ -149,33 +176,39 @@ impl QuantumLattice {
             lattice_order: Vec::new(),
         }
     }
-    
+
     /// Add a quantum proposition to the lattice
     pub fn add_proposition(&mut self, prop: QuantumProposition) {
         self.lattice_order.push(prop.id);
         self.propositions.insert(prop.id, prop);
     }
-    
+
     /// Compute orthocomplement of a proposition (quantum NOT)
     pub fn orthocomplement(&self, prop_id: u64) -> Option<u64> {
         self.propositions.get(&prop_id)?.orthocomplement
     }
-    
+
     /// Check if two propositions are compatible (commuting observables)
     pub fn are_compatible(&self, prop1_id: u64, prop2_id: u64) -> bool {
-        if let (Some(prop1), Some(prop2)) = (self.propositions.get(&prop1_id), self.propositions.get(&prop2_id)) {
+        if let (Some(prop1), Some(prop2)) = (
+            self.propositions.get(&prop1_id),
+            self.propositions.get(&prop2_id),
+        ) {
             // propositions are compatible if they share the same measurement basis
             prop1.measurement_basis == prop2.measurement_basis
         } else {
             false
         }
     }
-    
+
     /// Quantum AND operation (meet in orthomodular lattice)
     pub fn quantum_and(&self, prop1_id: u64, prop2_id: u64) -> Option<u64> {
         // For compatible propositions, use classical AND
         if self.are_compatible(prop1_id, prop2_id) {
-            if let (Some(prop1), Some(prop2)) = (self.propositions.get(&prop1_id), self.propositions.get(&prop2_id)) {
+            if let (Some(prop1), Some(prop2)) = (
+                self.propositions.get(&prop1_id),
+                self.propositions.get(&prop2_id),
+            ) {
                 match (&prop1.truth_value, &prop2.truth_value) {
                     (QuantumTruthValue::True, QuantumTruthValue::True) => Some(prop1_id),
                     _ => self.orthocomplement(prop1_id), // Simplified quantum logic
@@ -188,11 +221,14 @@ impl QuantumLattice {
             None
         }
     }
-    
+
     /// Quantum OR operation (join in orthomodular lattice)
     pub fn quantum_or(&self, prop1_id: u64, prop2_id: u64) -> Option<u64> {
         if self.are_compatible(prop1_id, prop2_id) {
-            if let (Some(prop1), Some(prop2)) = (self.propositions.get(&prop1_id), self.propositions.get(&prop2_id)) {
+            if let (Some(prop1), Some(prop2)) = (
+                self.propositions.get(&prop1_id),
+                self.propositions.get(&prop2_id),
+            ) {
                 match (&prop1.truth_value, &prop2.truth_value) {
                     (QuantumTruthValue::True, _) | (_, QuantumTruthValue::True) => Some(prop1_id),
                     _ => self.orthocomplement(prop2_id),
@@ -204,17 +240,17 @@ impl QuantumLattice {
             None
         }
     }
-    
+
     /// Apply measurement to collapse superposition
     pub fn measure(&mut self, prop_id: u64) -> Option<QuantumTruthValue> {
         if let Some(prop) = self.propositions.get_mut(&prop_id) {
             match prop.truth_value {
                 QuantumTruthValue::Superposed => {
                     // Collapse to definite state with 50% probability
-                    prop.truth_value = if (prop.id % 2) == 0 { 
-                        QuantumTruthValue::True 
-                    } else { 
-                        QuantumTruthValue::False 
+                    prop.truth_value = if (prop.id % 2) == 0 {
+                        QuantumTruthValue::True
+                    } else {
+                        QuantumTruthValue::False
                     };
                     Some(prop.truth_value.clone())
                 }
@@ -229,7 +265,7 @@ impl QuantumLattice {
 /// Convert quantum lattice state to NQuin for storage
 pub fn quantum_lattice_to_quin(lattice: &QuantumLattice, context: u64) -> Vec<NQuin> {
     let mut quins = Vec::new();
-    
+
     for (id, prop) in &lattice.propositions {
         let mut quin = NQuin {
             subject: *id,
@@ -244,24 +280,21 @@ pub fn quantum_lattice_to_quin(lattice: &QuantumLattice, context: u64) -> Vec<NQ
             metadata: 0,
             parity: 0,
         };
-        
+
         // Set orthocomplement in metadata if present
         if let Some(ortho_id) = prop.orthocomplement {
             quin.metadata = ortho_id;
         }
-        
+
         quin.parity = quin.subject ^ quin.predicate ^ quin.object ^ quin.context;
         quins.push(quin);
     }
-    
+
     quins
 }
 
 /// Predicts physical states natively using a bounded Physics-Informed Neural Network (PINN) abstraction.
-pub fn pinn_predict_receptor_binding(
-    molecule_quins: &[NQuin],
-    receptor_quins: &[NQuin],
-) -> f64 {
+pub fn pinn_predict_receptor_binding(molecule_quins: &[NQuin], receptor_quins: &[NQuin]) -> f64 {
     // Pure Rust semantic graph evaluation simulating a trained localized model binding affinity
     if molecule_quins.is_empty() || receptor_quins.is_empty() {
         return 0.0;
@@ -286,122 +319,122 @@ mod tests {
     #[test]
     fn test_quantum_lattice_creation() {
         let mut lattice = QuantumLattice::new();
-        
+
         let prop_a = QuantumProposition {
             id: 1,
             truth_value: QuantumTruthValue::True,
             orthocomplement: Some(2),
             measurement_basis: "computational".to_string(),
         };
-        
+
         let prop_b = QuantumProposition {
             id: 2,
             truth_value: QuantumTruthValue::False,
             orthocomplement: Some(1),
             measurement_basis: "computational".to_string(),
         };
-        
+
         lattice.add_proposition(prop_a);
         lattice.add_proposition(prop_b);
-        
+
         assert_eq!(lattice.propositions.len(), 2);
         assert_eq!(lattice.orthocomplement(1), Some(2));
         assert_eq!(lattice.orthocomplement(2), Some(1));
     }
-    
+
     #[test]
     fn test_quantum_compatibility() {
         let mut lattice = QuantumLattice::new();
-        
+
         let prop_x = QuantumProposition {
             id: 10,
             truth_value: QuantumTruthValue::Superposed,
             orthocomplement: Some(11),
             measurement_basis: "pauli_x".to_string(),
         };
-        
+
         let prop_z = QuantumProposition {
             id: 20,
             truth_value: QuantumTruthValue::Superposed,
             orthocomplement: Some(21),
             measurement_basis: "pauli_z".to_string(),
         };
-        
+
         lattice.add_proposition(prop_x);
         lattice.add_proposition(prop_z);
-        
+
         // Same basis propositions should be compatible
         assert!(lattice.are_compatible(10, 10));
-        
+
         // Different basis propositions should be incompatible
         assert!(!lattice.are_compatible(10, 20));
     }
-    
+
     #[test]
     fn test_quantum_measurement() {
         let mut lattice = QuantumLattice::new();
-        
+
         let mut prop = QuantumProposition {
             id: 100,
             truth_value: QuantumTruthValue::Superposed,
             orthocomplement: None,
             measurement_basis: "test".to_string(),
         };
-        
+
         lattice.add_proposition(prop);
-        
+
         // Measurement should collapse superposition
         let result = lattice.measure(100);
         assert!(result.is_some());
         assert!(result.unwrap() != QuantumTruthValue::Superposed);
     }
-    
+
     #[test]
     fn test_quantum_operations() {
         let mut lattice = QuantumLattice::new();
-        
+
         let prop_true = QuantumProposition {
             id: 1,
             truth_value: QuantumTruthValue::True,
             orthocomplement: Some(2),
             measurement_basis: "test".to_string(),
         };
-        
+
         let prop_false = QuantumProposition {
             id: 2,
             truth_value: QuantumTruthValue::False,
             orthocomplement: Some(1),
             measurement_basis: "test".to_string(),
         };
-        
+
         lattice.add_proposition(prop_true);
         lattice.add_proposition(prop_false);
-        
+
         // Test quantum AND
         let and_result = lattice.quantum_and(1, 1);
         assert_eq!(and_result, Some(1)); // True AND True = True
-        
+
         // Test quantum OR
         let or_result = lattice.quantum_or(1, 2);
         assert_eq!(or_result, Some(1)); // True OR False = True
     }
-    
+
     #[test]
     fn test_quantum_lattice_to_quin() {
         let mut lattice = QuantumLattice::new();
-        
+
         let prop = QuantumProposition {
             id: 42,
             truth_value: QuantumTruthValue::Superposed,
             orthocomplement: Some(43),
             measurement_basis: "test".to_string(),
         };
-        
+
         lattice.add_proposition(prop);
-        
+
         let quins = quantum_lattice_to_quin(&lattice, 123);
         assert_eq!(quins.len(), 1);
-        
+
         let quin = &quins[0];
         assert_eq!(quin.subject, 42);
         assert_eq!(quin.object, 2); // Superposed = 2

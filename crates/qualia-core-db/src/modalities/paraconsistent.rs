@@ -1,4 +1,4 @@
-use crate::{NQuin, q_hash};
+use crate::{q_hash, NQuin};
 
 pub const OP_ISOLATE: u8 = 0x30;
 pub const OP_CONTRADICTION_SCORE: u8 = 0x31;
@@ -13,7 +13,10 @@ pub enum ParaconsistentError {
 
 pub enum ContradictionStatus {
     Consistent,
-    Isolated { severity: u8, isolation_context: u64 },
+    Isolated {
+        severity: u8,
+        isolation_context: u64,
+    },
 }
 
 /// Routes Quins into consistent and isolated (contradictory) sub-contexts
@@ -38,11 +41,15 @@ pub fn route_paraconsistent(
         }
 
         let mut is_contradiction = false;
-        
+
         // Contradiction rule: same subject + predicate, different object
         for i in 0..consistent_count {
             let prev = &out_consistent[i];
-            if prev.context == q.context && prev.subject == q.subject && prev.predicate == q.predicate && prev.object != q.object {
+            if prev.context == q.context
+                && prev.subject == q.subject
+                && prev.predicate == q.predicate
+                && prev.object != q.object
+            {
                 is_contradiction = true;
                 break;
             }
@@ -54,7 +61,8 @@ pub fn route_paraconsistent(
             }
             let mut isolated_q = *q;
             isolated_q.context = ISOLATED_CONTEXT_PREFIX ^ q.context;
-            isolated_q.parity = isolated_q.subject ^ isolated_q.predicate ^ isolated_q.object ^ isolated_q.context;
+            isolated_q.parity =
+                isolated_q.subject ^ isolated_q.predicate ^ isolated_q.object ^ isolated_q.context;
             out_isolated[isolated_count] = isolated_q;
             isolated_count += 1;
         } else {
@@ -230,21 +238,45 @@ mod tests {
         let mut out_i = [NQuin::default(); 10];
 
         // 1. No contradictions -> all in out_consistent
-        let q1 = NQuin { subject: 1, predicate: 2, object: 3, context: 42, ..Default::default() };
-        let q2 = NQuin { subject: 1, predicate: 3, object: 3, context: 42, ..Default::default() };
+        let q1 = NQuin {
+            subject: 1,
+            predicate: 2,
+            object: 3,
+            context: 42,
+            ..Default::default()
+        };
+        let q2 = NQuin {
+            subject: 1,
+            predicate: 3,
+            object: 3,
+            context: 42,
+            ..Default::default()
+        };
         let (c, i) = route_paraconsistent(&[q1, q2], &mut out_c, &mut out_i).unwrap();
         assert_eq!(c, 2);
         assert_eq!(i, 0);
 
         // 2. Two Quins, same sub+pred, diff obj -> second isolated
-        let q3 = NQuin { subject: 1, predicate: 2, object: 99, context: 42, ..Default::default() };
+        let q3 = NQuin {
+            subject: 1,
+            predicate: 2,
+            object: 99,
+            context: 42,
+            ..Default::default()
+        };
         let (c, i) = route_paraconsistent(&[q1, q3], &mut out_c, &mut out_i).unwrap();
         assert_eq!(c, 1);
         assert_eq!(i, 1);
         assert_eq!(out_i[0].context, ISOLATED_CONTEXT_PREFIX ^ 42);
 
         // 3. Three Quins: 1 normal, 2 contradicts 1, 3 normal
-        let q4 = NQuin { subject: 10, predicate: 20, object: 30, context: 42, ..Default::default() };
+        let q4 = NQuin {
+            subject: 10,
+            predicate: 20,
+            object: 30,
+            context: 42,
+            ..Default::default()
+        };
         let (c, i) = route_paraconsistent(&[q1, q3, q4], &mut out_c, &mut out_i).unwrap();
         assert_eq!(c, 2);
         assert_eq!(i, 1);
@@ -266,12 +298,39 @@ mod tests {
 
         // Local: context 42 has 3 quins, the 2nd contradicts the 1st → 1/3 contradictory.
         let ctx = 42;
-        let q1 = NQuin { subject: 1, predicate: 2, object: 3, context: ctx, ..Default::default() };
-        let q2 = NQuin { subject: 1, predicate: 2, object: 99, context: ctx, ..Default::default() }; // contradicts q1
-        let q3 = NQuin { subject: 5, predicate: 6, object: 7, context: ctx, ..Default::default() };
-        let other = NQuin { subject: 1, predicate: 2, object: 8, context: 7, ..Default::default() }; // diff ctx
+        let q1 = NQuin {
+            subject: 1,
+            predicate: 2,
+            object: 3,
+            context: ctx,
+            ..Default::default()
+        };
+        let q2 = NQuin {
+            subject: 1,
+            predicate: 2,
+            object: 99,
+            context: ctx,
+            ..Default::default()
+        }; // contradicts q1
+        let q3 = NQuin {
+            subject: 5,
+            predicate: 6,
+            object: 7,
+            context: ctx,
+            ..Default::default()
+        };
+        let other = NQuin {
+            subject: 1,
+            predicate: 2,
+            object: 8,
+            context: 7,
+            ..Default::default()
+        }; // diff ctx
         let s = local_saturation(&[q1, q2, q3, other], ctx);
-        assert!((s - (1.0 / 3.0)).abs() < 1e-6, "1 of 3 in-context quins is contradictory");
+        assert!(
+            (s - (1.0 / 3.0)).abs() < 1e-6,
+            "1 of 3 in-context quins is contradictory"
+        );
 
         // A clean context saturates at 0; threshold classification works.
         assert_eq!(local_saturation(&[q1, q3], ctx), 0.0);

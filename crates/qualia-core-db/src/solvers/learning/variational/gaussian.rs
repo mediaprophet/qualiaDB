@@ -83,7 +83,14 @@ pub fn fit(
         }
     }
 
-    Ok(VariationalGaussian { mu_n, lambda_n, a_n, b_n, n_iter: iters, converged })
+    Ok(VariationalGaussian {
+        mu_n,
+        lambda_n,
+        a_n,
+        b_n,
+        n_iter: iters,
+        converged,
+    })
 }
 
 #[cfg(test)]
@@ -93,22 +100,36 @@ mod tests {
     #[test]
     fn recovers_mean_and_precision() {
         // Data spread around 5 with variance ~1 → E[μ]≈5, E[τ]≈1.
-        let data: Vec<f64> = (0..200).map(|i| 5.0 + ((i * 37 % 100) as f64 - 50.0) / 29.0).collect();
+        let data: Vec<f64> = (0..200)
+            .map(|i| 5.0 + ((i * 37 % 100) as f64 - 50.0) / 29.0)
+            .collect();
         let q = fit(&data, 0.0, 1e-3, 1e-3, 1e-3, 100, 1e-10).unwrap();
         assert!(q.converged);
         let xbar = data.iter().sum::<f64>() / data.len() as f64;
         // mu_n is shrunk toward the prior mean (0) by lambda0 — very close to xbar
         // for a vague prior, but not exactly equal.
-        assert!((q.mean() - xbar).abs() < 1e-3, "mean {} vs xbar {xbar}", q.mean());
+        assert!(
+            (q.mean() - xbar).abs() < 1e-3,
+            "mean {} vs xbar {xbar}",
+            q.mean()
+        );
         // E[τ] ≈ 1/sample_variance.
         let s2 = data.iter().map(|&x| (x - xbar).powi(2)).sum::<f64>() / data.len() as f64;
-        assert!((q.precision_mean() - 1.0 / s2).abs() / (1.0 / s2) < 0.05, "prec {}", q.precision_mean());
+        assert!(
+            (q.precision_mean() - 1.0 / s2).abs() / (1.0 / s2) < 0.05,
+            "prec {}",
+            q.precision_mean()
+        );
     }
 
     #[test]
     fn tighter_data_gives_higher_precision() {
-        let tight: Vec<f64> = (0..100).map(|i| 2.0 + ((i % 5) as f64 - 2.0) * 0.05).collect();
-        let loose: Vec<f64> = (0..100).map(|i| 2.0 + ((i % 5) as f64 - 2.0) * 1.0).collect();
+        let tight: Vec<f64> = (0..100)
+            .map(|i| 2.0 + ((i % 5) as f64 - 2.0) * 0.05)
+            .collect();
+        let loose: Vec<f64> = (0..100)
+            .map(|i| 2.0 + ((i % 5) as f64 - 2.0) * 1.0)
+            .collect();
         let qt = fit(&tight, 0.0, 1e-3, 1e-3, 1e-3, 100, 1e-12).unwrap();
         let ql = fit(&loose, 0.0, 1e-3, 1e-3, 1e-3, 100, 1e-12).unwrap();
         assert!(qt.precision_mean() > ql.precision_mean());
@@ -116,6 +137,9 @@ mod tests {
 
     #[test]
     fn guards() {
-        assert_eq!(fit(&[1.0], 0.0, 1.0, 1.0, 1.0, 10, 1e-6).unwrap_err(), LearningError::InsufficientData);
+        assert_eq!(
+            fit(&[1.0], 0.0, 1.0, 1.0, 1.0, 10, 1e-6).unwrap_err(),
+            LearningError::InsufficientData
+        );
     }
 }

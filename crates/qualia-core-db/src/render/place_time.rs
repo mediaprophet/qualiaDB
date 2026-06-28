@@ -159,8 +159,22 @@ pub fn active_during(art: &NQuin, window_start: i64, window_end: i64) -> bool {
 /// a `frame`, optionally expiring at `expiry_unix32` (`0` = no expiry). The action target
 /// (`object`) is the artefact's id, so this norm and the artefact's situatedness fact share the
 /// artefact identity — the deontic and spatio-temporal queries are over the *same* artefact.
-pub fn render_norm(party: u64, opcode: u8, artefact_id: u64, frame: u64, expiry_unix32: u32) -> NQuin {
-    compile_norm_quin(party, opcode, P_RENDER_DISPLAY, artefact_id, frame, expiry_unix32, false)
+pub fn render_norm(
+    party: u64,
+    opcode: u8,
+    artefact_id: u64,
+    frame: u64,
+    expiry_unix32: u32,
+) -> NQuin {
+    compile_norm_quin(
+        party,
+        opcode,
+        P_RENDER_DISPLAY,
+        artefact_id,
+        frame,
+        expiry_unix32,
+        false,
+    )
 }
 
 /// **Deontic query.** Evaluate the render `norms` and return whether displaying this artefact is
@@ -277,7 +291,10 @@ mod tests {
 
         // Far outside → Disconnected / not within.
         let outside = situate_artefact(art_id(), 50.0, 50.0, 100, 200, JURIS_ID);
-        assert_eq!(place_relation(&outside, JURIS_ID, &poly, 0.5), Rcc8Relation::Disconnected);
+        assert_eq!(
+            place_relation(&outside, JURIS_ID, &poly, 0.5),
+            Rcc8Relation::Disconnected
+        );
         assert!(!situated_within(&outside, JURIS_ID, &poly, 0.5));
 
         // Straddling the boundary → PartiallyOverlapping / not within.

@@ -52,7 +52,10 @@ impl McmcResult {
 struct Rng(u64);
 impl Rng {
     fn unit(&mut self) -> f64 {
-        self.0 = self.0.wrapping_mul(6364136223846793005).wrapping_add(1442695040888963407);
+        self.0 = self
+            .0
+            .wrapping_mul(6364136223846793005)
+            .wrapping_add(1442695040888963407);
         ((self.0 >> 11) as f64) / ((1u64 << 53) as f64)
     }
     fn gaussian(&mut self) -> f64 {
@@ -110,7 +113,11 @@ where
         samples,
         n_samples,
         dim,
-        acceptance_rate: if n_samples > 0 { accepted as f64 / n_samples as f64 } else { 0.0 },
+        acceptance_rate: if n_samples > 0 {
+            accepted as f64 / n_samples as f64
+        } else {
+            0.0
+        },
     }
 }
 
@@ -133,12 +140,13 @@ mod tests {
     #[test]
     fn samples_a_2d_gaussian_mean() {
         // Independent N(1,1)×N(-2,1).
-        let target = |x: &[f64]| {
-            -(x[0] - 1.0).powi(2) / 2.0 - (x[1] + 2.0).powi(2) / 2.0
-        };
+        let target = |x: &[f64]| -(x[0] - 1.0).powi(2) / 2.0 - (x[1] + 2.0).powi(2) / 2.0;
         let r = metropolis_hastings(target, &[0.0, 0.0], 1.0, 40_000, 5_000, 7);
         let m = r.mean();
-        assert!((m[0] - 1.0).abs() < 0.15 && (m[1] + 2.0).abs() < 0.15, "mean {m:?}");
+        assert!(
+            (m[0] - 1.0).abs() < 0.15 && (m[1] + 2.0).abs() < 0.15,
+            "mean {m:?}"
+        );
     }
 
     #[test]

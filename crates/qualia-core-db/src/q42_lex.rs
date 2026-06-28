@@ -15,9 +15,9 @@ const HEADER_SIZE: usize = 32;
 const INDEX_ENTRY_SIZE: usize = 16;
 
 /// Type tags for lexicon entries (1-byte prefix in payload)
-const LEX_TAG_STRING: u8 = 0x01;      // UTF-8 string
-const LEX_TAG_EMBEDDED: u8 = 0x02;    // Embedded triple [u64; 3]
-const LEX_TAG_WEBIZEN: u8 = 0x03;     // Authoritative Webizen identity
+const LEX_TAG_STRING: u8 = 0x01; // UTF-8 string
+const LEX_TAG_EMBEDDED: u8 = 0x02; // Embedded triple [u64; 3]
+const LEX_TAG_WEBIZEN: u8 = 0x03; // Authoritative Webizen identity
 
 /// Zero-allocation lexicon key for in-memory lookups
 pub enum LexiconKey<'a> {
@@ -134,16 +134,13 @@ impl<'a> Q42LexMmap<'a> {
             let off = HEADER_SIZE + mid * INDEX_ENTRY_SIZE;
             let entry_hash = u64::from_le_bytes(self.data[off..off + 8].try_into().ok()?);
             match entry_hash.cmp(&hash) {
-                std::cmp::Ordering::Less    => lo = mid + 1,
+                std::cmp::Ordering::Less => lo = mid + 1,
                 std::cmp::Ordering::Greater => hi = mid,
-                std::cmp::Ordering::Equal   => {
-                    let str_off = u64::from_le_bytes(
-                        self.data[off + 8..off + 16].try_into().ok()?,
-                    ) as usize;
-                    return Self::read_embedded_triple_at(
-                        self.data, self.strings_offset, str_off,
-                    )
-                    .copied();
+                std::cmp::Ordering::Equal => {
+                    let str_off =
+                        u64::from_le_bytes(self.data[off + 8..off + 16].try_into().ok()?) as usize;
+                    return Self::read_embedded_triple_at(self.data, self.strings_offset, str_off)
+                        .copied();
                 }
             }
         }
@@ -209,15 +206,18 @@ impl Q42Lexicon {
         }
         Err(std::io::Error::new(
             std::io::ErrorKind::NotFound,
-            format!("no lexicon in {} or sidecar {}", q42_path.display(), sidecar.display()),
+            format!(
+                "no lexicon in {} or sidecar {}",
+                q42_path.display(),
+                sidecar.display()
+            ),
         ))
     }
 
     /// Build an in-memory lexicon from a Q42LEX byte slice (embedded or sidecar).
     pub fn load_from_lex_bytes(data: &[u8]) -> std::io::Result<Self> {
-        let view = Q42LexMmap::from_bytes(data).map_err(|e| {
-            std::io::Error::new(std::io::ErrorKind::InvalidData, format!("{e:?}"))
-        })?;
+        let view = Q42LexMmap::from_bytes(data)
+            .map_err(|e| std::io::Error::new(std::io::ErrorKind::InvalidData, format!("{e:?}")))?;
         let mut entries = HashMap::with_capacity(view.entry_count());
         for i in 0..view.entry_count() {
             let off = HEADER_SIZE + i * INDEX_ENTRY_SIZE;

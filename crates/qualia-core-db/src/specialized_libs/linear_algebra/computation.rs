@@ -1,15 +1,14 @@
-use std::collections::HashMap;
-use std::sync::{Arc, Mutex};
-use std::ops::{Add, Mul, Sub};
-use serde::{Deserialize, Serialize};
 use crate::solvers::SolversError;
+use serde::{Deserialize, Serialize};
+use std::collections::HashMap;
+use std::ops::{Add, Mul, Sub};
+use std::sync::{Arc, Mutex};
 
 use super::core_types::*;
-use super::storage::*;
 use super::optimization::*;
-use super::privacy::*;
 use super::performance::*;
-
+use super::privacy::*;
+use super::storage::*;
 
 /// Computation engine for matrix operations
 pub struct ComputationEngine {
@@ -18,7 +17,6 @@ pub struct ComputationEngine {
     pub parallel_executor: ParallelExecutor,
     pub simd_optimizer: SIMDOptimizer,
 }
-
 
 /// Matrix operations
 #[derive(Debug, Clone)]
@@ -66,7 +64,6 @@ pub enum MatrixOperation {
     },
 }
 
-
 /// Decomposition types
 #[derive(Debug, Clone, PartialEq, Serialize, Deserialize)]
 pub enum DecompositionType {
@@ -78,10 +75,8 @@ pub enum DecompositionType {
     Schur,
 }
 
-
 /// Operation scheduler
 pub struct OperationScheduler {}
-
 
 /// Execution engine
 pub struct ExecutionEngine {
@@ -89,7 +84,6 @@ pub struct ExecutionEngine {
     pub computation_units: Vec<ComputationUnit>,
     pub scheduler: OperationScheduler,
 }
-
 
 /// Execution engine types
 #[derive(Debug, Clone, PartialEq)]
@@ -99,7 +93,6 @@ pub enum ExecutionEngineType {
     CSD,
     Hybrid,
 }
-
 
 /// Computation unit
 #[derive(Debug, Clone)]
@@ -111,7 +104,6 @@ pub struct ComputationUnit {
     pub performance_metrics: PerformanceMetrics,
 }
 
-
 /// Computation unit types
 #[derive(Debug, Clone, PartialEq)]
 pub enum ComputationUnitType {
@@ -121,7 +113,6 @@ pub enum ComputationUnitType {
     NPU,
     TPU,
 }
-
 
 /// Computation capabilities
 #[derive(Debug, Clone)]
@@ -133,7 +124,6 @@ pub struct ComputationCapabilities {
     pub compute_throughput: f64,
 }
 
-
 /// Performance metrics
 #[derive(Debug, Clone)]
 pub struct PerformanceMetrics {
@@ -144,14 +134,12 @@ pub struct PerformanceMetrics {
     pub thermal_state: f64,
 }
 
-
 /// Parallel executor
 pub struct ParallelExecutor {
     pub thread_pool: Vec<WorkerThread>,
     pub task_queue: Vec<MatrixTask>,
     pub load_balancer: LoadBalancer,
 }
-
 
 /// Worker thread
 #[derive(Debug, Clone)]
@@ -160,7 +148,6 @@ pub struct WorkerThread {
     pub current_task: Option<MatrixTask>,
     pub performance: ThreadPerformance,
 }
-
 
 /// Matrix task
 #[derive(Debug, Clone)]
@@ -172,7 +159,6 @@ pub struct MatrixTask {
     pub estimated_time: u64,
 }
 
-
 /// Task priorities
 #[derive(Debug, Clone, PartialEq, Serialize, Deserialize)]
 pub enum TaskPriority {
@@ -181,7 +167,6 @@ pub enum TaskPriority {
     High,
     Critical,
 }
-
 
 /// Thread performance
 #[derive(Debug, Clone)]
@@ -192,13 +177,11 @@ pub struct ThreadPerformance {
     pub efficiency: f64,
 }
 
-
 /// Load balancer
 pub struct LoadBalancer {
     pub balancing_strategy: BalancingStrategy,
     pub worker_metrics: HashMap<String, WorkerMetrics>,
 }
-
 
 /// Balancing strategies
 #[derive(Debug, Clone, PartialEq)]
@@ -209,7 +192,6 @@ pub enum BalancingStrategy {
     Adaptive,
 }
 
-
 /// Worker metrics
 #[derive(Debug, Clone)]
 pub struct WorkerMetrics {
@@ -219,14 +201,12 @@ pub struct WorkerMetrics {
     pub success_rate: f64,
 }
 
-
 /// SIMD optimizer
 pub struct SIMDOptimizer {
     pub simd_capabilities: SIMDCapabilities,
     pub optimization_level: OptimizationLevel,
     pub vectorized_operations: HashMap<String, VectorizedOperation>,
 }
-
 
 /// SIMD capabilities
 #[derive(Debug, Clone)]
@@ -235,7 +215,6 @@ pub struct SIMDCapabilities {
     pub supported_instructions: Vec<SIMDInstruction>,
     pub alignment_requirements: usize,
 }
-
 
 /// SIMD instructions
 #[derive(Debug, Clone, PartialEq)]
@@ -248,7 +227,6 @@ pub enum SIMDInstruction {
     Custom(String),
 }
 
-
 /// Optimization levels
 #[derive(Debug, Clone, PartialEq)]
 pub enum OptimizationLevel {
@@ -258,7 +236,6 @@ pub enum OptimizationLevel {
     Maximum,
 }
 
-
 /// Vectorized operation
 #[derive(Debug, Clone)]
 pub struct VectorizedOperation {
@@ -267,7 +244,6 @@ pub struct VectorizedOperation {
     pub instruction_set: Vec<SIMDInstruction>,
     pub performance_gain: f64,
 }
-
 
 impl ComputationEngine {
     pub fn new() -> Self {
@@ -286,7 +262,12 @@ impl ComputationEngine {
         Ok(())
     }
 
-    pub fn execute_multiplication(&mut self, operation: &OptimizedMultiplication, alpha: f64, beta: f64) -> Result<Vec<f64>, LinearAlgebraError> {
+    pub fn execute_multiplication(
+        &mut self,
+        operation: &OptimizedMultiplication,
+        alpha: f64,
+        beta: f64,
+    ) -> Result<Vec<f64>, LinearAlgebraError> {
         // Composition boundary: marshal the domain matrices into a caller-owned
         // buffer and call the engine's canonical dynamic GEMM. No inline math here.
         let m = operation.left.rows;
@@ -302,21 +283,24 @@ impl ComputationEngine {
         crate::solvers::linear_algebra::gemm::gemm(
             crate::solvers::linear_algebra::gemm::Transpose::No,
             crate::solvers::linear_algebra::gemm::Transpose::No,
-            m, n, k,
+            m,
+            n,
+            k,
             alpha,
             &operation.left.data,
             &operation.right.data,
             beta,
             &mut result,
         )
-        .map_err(|_| LinearAlgebraError::InvalidDimensions(
-            "matrix dimensions incompatible for multiplication".to_string(),
-        ))?;
+        .map_err(|_| {
+            LinearAlgebraError::InvalidDimensions(
+                "matrix dimensions incompatible for multiplication".to_string(),
+            )
+        })?;
 
         Ok(result)
     }
 }
-
 
 impl ExecutionEngine {
     pub fn new() -> Self {
@@ -333,7 +317,6 @@ impl ExecutionEngine {
     }
 }
 
-
 impl ParallelExecutor {
     pub fn new() -> Self {
         Self {
@@ -348,7 +331,6 @@ impl ParallelExecutor {
     }
 }
 
-
 impl LoadBalancer {
     pub fn new() -> Self {
         Self {
@@ -357,7 +339,6 @@ impl LoadBalancer {
         }
     }
 }
-
 
 impl SIMDOptimizer {
     pub fn new() -> Self {
@@ -373,7 +354,6 @@ impl SIMDOptimizer {
     }
 }
 
-
 impl SIMDCapabilities {
     pub fn new() -> Self {
         Self {
@@ -384,13 +364,11 @@ impl SIMDCapabilities {
     }
 }
 
-
 impl OperationScheduler {
     pub fn new() -> Self {
         Self {}
     }
 }
-
 
 // Supporting types
 
@@ -401,4 +379,3 @@ pub struct OptimizedMultiplication {
     pub optimization_strategy: OptimizationStrategy,
     pub expected_performance_gain: f64,
 }
-

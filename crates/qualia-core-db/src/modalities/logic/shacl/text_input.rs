@@ -141,7 +141,9 @@ fn constraint_of(c: &ConstraintSpec) -> Option<ShaclConstraint> {
         "xone" => ShaclConstraint::Xone(list()),
         "languageIn" => ShaclConstraint::LanguageIn(list()),
         "uniqueLang" => ShaclConstraint::UniqueLang,
-        "closed" => ShaclConstraint::Closed { ignored_properties: list() },
+        "closed" => ShaclConstraint::Closed {
+            ignored_properties: list(),
+        },
         _ => return None,
     })
 }
@@ -150,8 +152,11 @@ fn constraint_of(c: &ConstraintSpec) -> Option<ShaclConstraint> {
 pub fn shape_from_spec(spec: &ShapeSpec) -> CompiledShape {
     let constraints: Vec<ShaclConstraint> =
         spec.constraints.iter().filter_map(constraint_of).collect();
-    let mut shape =
-        CompiledShape::new(spec.target_class.clone(), constraints, severity_of(&spec.severity));
+    let mut shape = CompiledShape::new(
+        spec.target_class.clone(),
+        constraints,
+        severity_of(&spec.severity),
+    );
     shape.property_path = spec.path.clone();
     shape
 }
@@ -185,10 +190,16 @@ mod tests {
         ]"#;
         let out = validate_json(data, shapes).unwrap();
         let v: serde_json::Value = serde_json::from_str(&out).unwrap();
-        assert_eq!(v["conforms"], false, "alice (15) must violate minInclusive 18");
+        assert_eq!(
+            v["conforms"], false,
+            "alice (15) must violate minInclusive 18"
+        );
         let results = v["results"].as_array().unwrap();
         assert_eq!(results.len(), 1);
-        assert_eq!(results[0]["source_constraint_component"], "sh:MinInclusiveConstraintComponent");
+        assert_eq!(
+            results[0]["source_constraint_component"],
+            "sh:MinInclusiveConstraintComponent"
+        );
     }
 
     #[test]
@@ -200,7 +211,10 @@ mod tests {
         ]"#;
         let out = validate_json(data, shapes).unwrap();
         let v: serde_json::Value = serde_json::from_str(&out).unwrap();
-        assert_eq!(v["conforms"], true, "a well-formed email matches the pattern");
+        assert_eq!(
+            v["conforms"], true,
+            "a well-formed email matches the pattern"
+        );
     }
 
     #[test]
@@ -211,7 +225,8 @@ mod tests {
             {"targetClass":":Owner","path":":pet",
              "constraints":[{"kind":"class","text":":Dog"}]}
         ]"#;
-        let v: serde_json::Value = serde_json::from_str(&validate_json(data, shapes).unwrap()).unwrap();
+        let v: serde_json::Value =
+            serde_json::from_str(&validate_json(data, shapes).unwrap()).unwrap();
         assert_eq!(v["conforms"], false);
     }
 

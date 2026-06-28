@@ -1,18 +1,18 @@
 //! Financial Modeling Library - Secure Financial Computing and Risk Analysis
-//! 
+//!
 //! This module provides high-performance financial modeling operations leveraging Phase 2 enhancements:
 //! - Fiduciary Cryptography (ML-DSA) for secure financial transactions
 //! - Zero-Knowledge Semantic Proofs for privacy-preserving financial analysis
 //! - Hardware-Sympathetic Storage (ZNS) for zero-copy financial data
 //! - Statistical Computing Library for advanced financial analytics
 
-use std::collections::HashMap;
-use std::sync::{Arc, Mutex};
-use serde::{Deserialize, Serialize};
+use super::statistical_computing::StatisticalComputingLibrary;
 use crate::fiduciary_crypto::FiduciaryCrypto;
 use crate::zk_proofs::ZkProofSystem;
 use crate::zns_storage::ZnsZoneManager;
-use super::statistical_computing::StatisticalComputingLibrary;
+use serde::{Deserialize, Serialize};
+use std::collections::HashMap;
+use std::sync::{Arc, Mutex};
 
 /// Real return-based portfolio risk metrics (volatility, historical VaR/CVaR,
 /// Sharpe, Sortino, max-drawdown) computed from each asset's price history.
@@ -125,18 +125,18 @@ pub enum RiskTolerance {
 /// Time horizons
 #[derive(Debug, Clone, PartialEq, Serialize, Deserialize)]
 pub enum TimeHorizon {
-    ShortTerm,   // < 1 year
-    MediumTerm,  // 1-5 years
-    LongTerm,    // 5-10 years
+    ShortTerm,    // < 1 year
+    MediumTerm,   // 1-5 years
+    LongTerm,     // 5-10 years
     VeryLongTerm, // > 10 years
 }
 
 /// Liquidity needs
 #[derive(Debug, Clone, PartialEq, Serialize, Deserialize)]
 pub enum LiquidityNeeds {
-    High,    // Need cash regularly
-    Medium,  // Moderate cash needs
-    Low,     // Infrequent cash needs
+    High,   // Need cash regularly
+    Medium, // Moderate cash needs
+    Low,    // Infrequent cash needs
 }
 
 /// Investment strategies
@@ -2113,7 +2113,10 @@ impl FinancialModelingLibrary {
     }
 
     /// Create a new portfolio
-    pub fn create_portfolio(&mut self, portfolio: Portfolio) -> Result<FinancialOperationResult<Portfolio>, FinancialError> {
+    pub fn create_portfolio(
+        &mut self,
+        portfolio: Portfolio,
+    ) -> Result<FinancialOperationResult<Portfolio>, FinancialError> {
         let start_time = std::time::Instant::now();
 
         // Validate portfolio
@@ -2134,7 +2137,10 @@ impl FinancialModelingLibrary {
     }
 
     /// Calculate portfolio risk
-    pub fn calculate_portfolio_risk(&mut self, portfolio_id: &str) -> Result<FinancialOperationResult<RiskMetrics>, FinancialError> {
+    pub fn calculate_portfolio_risk(
+        &mut self,
+        portfolio_id: &str,
+    ) -> Result<FinancialOperationResult<RiskMetrics>, FinancialError> {
         let start_time = std::time::Instant::now();
 
         // Get portfolio
@@ -2159,11 +2165,15 @@ impl FinancialModelingLibrary {
     }
 
     /// Price an option
-    pub fn price_option(&mut self, option_params: OptionParameters) -> Result<FinancialOperationResult<OptionPrice>, FinancialError> {
+    pub fn price_option(
+        &mut self,
+        option_params: OptionParameters,
+    ) -> Result<FinancialOperationResult<OptionPrice>, FinancialError> {
         let start_time = std::time::Instant::now();
 
         // Validate parameters
-        self.pricing_engine.validate_option_parameters(&option_params)?;
+        self.pricing_engine
+            .validate_option_parameters(&option_params)?;
 
         // Price option
         let option_price = self.pricing_engine.price_option(&option_params)?;
@@ -2180,7 +2190,10 @@ impl FinancialModelingLibrary {
     }
 
     /// Execute a trade
-    pub fn execute_trade(&mut self, order: Order) -> Result<FinancialOperationResult<TradeResult>, FinancialError> {
+    pub fn execute_trade(
+        &mut self,
+        order: Order,
+    ) -> Result<FinancialOperationResult<TradeResult>, FinancialError> {
         let start_time = std::time::Instant::now();
 
         // Validate order
@@ -2201,7 +2214,10 @@ impl FinancialModelingLibrary {
     }
 
     /// Check compliance
-    pub fn check_compliance(&mut self, portfolio_id: &str) -> Result<FinancialOperationResult<ComplianceResult>, FinancialError> {
+    pub fn check_compliance(
+        &mut self,
+        portfolio_id: &str,
+    ) -> Result<FinancialOperationResult<ComplianceResult>, FinancialError> {
         let start_time = std::time::Instant::now();
 
         // Get portfolio
@@ -2263,7 +2279,9 @@ impl PortfolioManager {
     pub fn validate_portfolio(&self, portfolio: &Portfolio) -> Result<(), FinancialError> {
         // Validate portfolio
         if portfolio.assets.is_empty() {
-            return Err(FinancialError::ValidationError("Portfolio must have at least one asset".to_string()));
+            return Err(FinancialError::ValidationError(
+                "Portfolio must have at least one asset".to_string(),
+            ));
         }
         Ok(())
     }
@@ -2302,12 +2320,14 @@ impl PortfolioStorage {
     }
 
     pub fn store_portfolio(&mut self, portfolio: Portfolio) -> Result<(), FinancialError> {
-        self.portfolios.insert(portfolio.portfolio_id.clone(), portfolio);
+        self.portfolios
+            .insert(portfolio.portfolio_id.clone(), portfolio);
         Ok(())
     }
 
     pub fn get_portfolio(&self, portfolio_id: &str) -> Result<Portfolio, FinancialError> {
-        self.portfolios.get(portfolio_id)
+        self.portfolios
+            .get(portfolio_id)
             .cloned()
             .ok_or_else(|| FinancialError::PortfolioError("Portfolio not found".to_string()))
     }
@@ -2684,7 +2704,10 @@ impl RiskAnalyzer {
         Ok(())
     }
 
-    pub fn calculate_risk_metrics(&self, portfolio: &Portfolio) -> Result<RiskMetrics, FinancialError> {
+    pub fn calculate_risk_metrics(
+        &self,
+        portfolio: &Portfolio,
+    ) -> Result<RiskMetrics, FinancialError> {
         // REAL: computed from the portfolio's asset return time series (derived
         // from each Asset's price_history, value-weighted into a portfolio return
         // series), in the `portfolio_risk` library submodule. Volatility, 95% VaR
@@ -2711,18 +2734,29 @@ impl PricingEngine {
         Ok(())
     }
 
-    pub fn validate_option_parameters(&self, params: &OptionParameters) -> Result<(), FinancialError> {
+    pub fn validate_option_parameters(
+        &self,
+        params: &OptionParameters,
+    ) -> Result<(), FinancialError> {
         if params.underlying_price <= 0.0 {
-            return Err(FinancialError::ValidationError("Underlying price must be positive".to_string()));
+            return Err(FinancialError::ValidationError(
+                "Underlying price must be positive".to_string(),
+            ));
         }
         if params.strike <= 0.0 {
-            return Err(FinancialError::ValidationError("Strike price must be positive".to_string()));
+            return Err(FinancialError::ValidationError(
+                "Strike price must be positive".to_string(),
+            ));
         }
         if params.time_to_maturity < 0.0 {
-            return Err(FinancialError::ValidationError("Time to maturity must be non-negative".to_string()));
+            return Err(FinancialError::ValidationError(
+                "Time to maturity must be non-negative".to_string(),
+            ));
         }
         if params.volatility < 0.0 {
-            return Err(FinancialError::ValidationError("Volatility must be non-negative".to_string()));
+            return Err(FinancialError::ValidationError(
+                "Volatility must be non-negative".to_string(),
+            ));
         }
         Ok(())
     }
@@ -2733,25 +2767,36 @@ impl PricingEngine {
         Ok(option_price)
     }
 
-    fn black_scholes_price(&self, params: &OptionParameters) -> Result<OptionPrice, FinancialError> {
+    fn black_scholes_price(
+        &self,
+        params: &OptionParameters,
+    ) -> Result<OptionPrice, FinancialError> {
         // Simplified Black-Scholes implementation
-        let d1 = ((params.underlying_price / params.strike).ln() + (params.risk_free_rate + 0.5 * params.volatility.powi(2)) * params.time_to_maturity)
-                / (params.volatility * params.time_to_maturity.sqrt());
+        let d1 = ((params.underlying_price / params.strike).ln()
+            + (params.risk_free_rate + 0.5 * params.volatility.powi(2)) * params.time_to_maturity)
+            / (params.volatility * params.time_to_maturity.sqrt());
         let d2 = d1 - params.volatility * params.time_to_maturity.sqrt();
-        
+
         let price = match params.option_type {
             OptionType::Call => {
-                params.underlying_price * self.normal_cdf(d1) - params.strike * (-params.risk_free_rate * params.time_to_maturity).exp() * self.normal_cdf(d2)
+                params.underlying_price * self.normal_cdf(d1)
+                    - params.strike
+                        * (-params.risk_free_rate * params.time_to_maturity).exp()
+                        * self.normal_cdf(d2)
             }
             OptionType::Put => {
-                params.strike * (-params.risk_free_rate * params.time_to_maturity).exp() * self.normal_cdf(-d2) - params.underlying_price * self.normal_cdf(-d1)
+                params.strike
+                    * (-params.risk_free_rate * params.time_to_maturity).exp()
+                    * self.normal_cdf(-d2)
+                    - params.underlying_price * self.normal_cdf(-d1)
             }
         };
 
         Ok(OptionPrice {
             price,
             delta: self.normal_cdf(d1),
-            gamma: self.normal_pdf(d1) / (params.underlying_price * params.volatility * params.time_to_maturity.sqrt()),
+            gamma: self.normal_pdf(d1)
+                / (params.underlying_price * params.volatility * params.time_to_maturity.sqrt()),
             theta: self.calculate_theta(params, d1, d2),
             vega: params.underlying_price * self.normal_pdf(d1) * params.time_to_maturity.sqrt(),
             rho: self.calculate_rho(params, d2),
@@ -2762,8 +2807,16 @@ impl PricingEngine {
         // Abramowitz and Stegun approximation for normal CDF (max error 7.5e-8)
         let t = 1.0 / (1.0 + 0.2316419 * x.abs());
         let d = 0.3989422819 * (-x * x / 2.0).exp();
-        let p = d * t * (0.3193815306 + t * (-0.3565637813 + t * (1.7814779372 + t * (-1.8212559978 + t * 1.3302744929))));
-        if x >= 0.0 { 1.0 - p } else { p }
+        let p = d
+            * t
+            * (0.3193815306
+                + t * (-0.3565637813
+                    + t * (1.7814779372 + t * (-1.8212559978 + t * 1.3302744929))));
+        if x >= 0.0 {
+            1.0 - p
+        } else {
+            p
+        }
     }
 
     fn normal_pdf(&self, x: f64) -> f64 {
@@ -2774,12 +2827,20 @@ impl PricingEngine {
         // Simplified theta calculation
         match params.option_type {
             OptionType::Call => {
-                -(params.underlying_price * self.normal_pdf(d1) * params.volatility) / (2.0 * params.time_to_maturity.sqrt())
-                    - params.risk_free_rate * params.strike * (-params.risk_free_rate * params.time_to_maturity).exp() * self.normal_cdf(d2)
+                -(params.underlying_price * self.normal_pdf(d1) * params.volatility)
+                    / (2.0 * params.time_to_maturity.sqrt())
+                    - params.risk_free_rate
+                        * params.strike
+                        * (-params.risk_free_rate * params.time_to_maturity).exp()
+                        * self.normal_cdf(d2)
             }
             OptionType::Put => {
-                -(params.underlying_price * self.normal_pdf(d1) * params.volatility) / (2.0 * params.time_to_maturity.sqrt())
-                    + params.risk_free_rate * params.strike * (-params.risk_free_rate * params.time_to_maturity).exp() * self.normal_cdf(-d2)
+                -(params.underlying_price * self.normal_pdf(d1) * params.volatility)
+                    / (2.0 * params.time_to_maturity.sqrt())
+                    + params.risk_free_rate
+                        * params.strike
+                        * (-params.risk_free_rate * params.time_to_maturity).exp()
+                        * self.normal_cdf(-d2)
             }
         }
     }
@@ -2788,10 +2849,16 @@ impl PricingEngine {
         // Simplified rho calculation
         match params.option_type {
             OptionType::Call => {
-                params.strike * params.time_to_maturity * (-params.risk_free_rate * params.time_to_maturity).exp() * self.normal_cdf(d2)
+                params.strike
+                    * params.time_to_maturity
+                    * (-params.risk_free_rate * params.time_to_maturity).exp()
+                    * self.normal_cdf(d2)
             }
             OptionType::Put => {
-                -params.strike * params.time_to_maturity * (-params.risk_free_rate * params.time_to_maturity).exp() * self.normal_cdf(-d2)
+                -params.strike
+                    * params.time_to_maturity
+                    * (-params.risk_free_rate * params.time_to_maturity).exp()
+                    * self.normal_cdf(-d2)
             }
         }
     }
@@ -2828,11 +2895,15 @@ impl TradingEngine {
 
     pub fn validate_order(&self, order: &Order) -> Result<(), FinancialError> {
         if order.quantity <= 0.0 {
-            return Err(FinancialError::ValidationError("Order quantity must be positive".to_string()));
+            return Err(FinancialError::ValidationError(
+                "Order quantity must be positive".to_string(),
+            ));
         }
         if let Some(price) = order.price {
             if price <= 0.0 {
-                return Err(FinancialError::ValidationError("Order price must be positive".to_string()));
+                return Err(FinancialError::ValidationError(
+                    "Order price must be positive".to_string(),
+                ));
             }
         }
         Ok(())
@@ -2887,7 +2958,10 @@ impl ComplianceMonitor {
         Ok(())
     }
 
-    pub fn check_compliance(&mut self, _portfolio: &Portfolio) -> Result<ComplianceResult, FinancialError> {
+    pub fn check_compliance(
+        &mut self,
+        _portfolio: &Portfolio,
+    ) -> Result<ComplianceResult, FinancialError> {
         // NOT IMPLEMENTED — it must say so, never fabricate. The previous body returned
         // `status: Compliant, risk_score: 0.5` while the compliance-rules registry is EMPTY: it
         // declared a portfolio compliant without checking a single rule. Asserting regulatory
@@ -3126,7 +3200,10 @@ impl AuthenticationRequirement {
     pub fn new() -> Self {
         Self {
             requirement_id: "auth_1".to_string(),
-            auth_methods: vec![AuthenticationMethod::Password, AuthenticationMethod::MultiFactor],
+            auth_methods: vec![
+                AuthenticationMethod::Password,
+                AuthenticationMethod::MultiFactor,
+            ],
             multi_factor_required: true,
         }
     }
@@ -3460,7 +3537,7 @@ impl RebalancingStrategy {
 impl RebalancingParameters {
     pub fn new() -> Self {
         Self {
-            rebalance_frequency: 30, // 30 days
+            rebalance_frequency: 30,   // 30 days
             deviation_threshold: 0.05, // 5%
             min_trade_size: 1000.0,
             max_trade_size: 100000.0,
@@ -3526,7 +3603,11 @@ impl OptimizationParameters {
         Self {
             risk_aversion: 1.0,
             expected_returns: vec![0.1, 0.08, 0.12],
-            covariance_matrix: vec![vec![0.04, 0.02, 0.01], vec![0.02, 0.09, 0.03], vec![0.01, 0.03, 0.16]],
+            covariance_matrix: vec![
+                vec![0.04, 0.02, 0.01],
+                vec![0.02, 0.09, 0.03],
+                vec![0.01, 0.03, 0.16],
+            ],
             constraints: vec![],
         }
     }
@@ -4071,10 +4152,10 @@ mod tests {
     fn test_portfolio_creation() {
         let mut library = FinancialModelingLibrary::new();
         library.initialize().unwrap();
-        
+
         let portfolio = Portfolio::new();
         let result = library.create_portfolio(portfolio).unwrap();
-        
+
         assert_eq!(result.result.portfolio_id, "portfolio_1");
         assert_eq!(result.result.portfolio_name, "Test Portfolio");
         assert_eq!(result.result.owner_id, "user_1");
@@ -4085,7 +4166,7 @@ mod tests {
     fn test_risk_calculation() {
         let mut library = FinancialModelingLibrary::new();
         library.initialize().unwrap();
-        
+
         // Risk metrics ARE now genuinely computed from each asset's price_history
         // (see portfolio_risk.rs for the math + proofs). With no such portfolio
         // stored, this honestly errors (portfolio-not-found) rather than returning
@@ -4098,10 +4179,10 @@ mod tests {
     fn test_option_pricing() {
         let mut library = FinancialModelingLibrary::new();
         library.initialize().unwrap();
-        
+
         let option_params = OptionParameters::new();
         let result = library.price_option(option_params).unwrap();
-        
+
         assert!(result.result.price > 0.0);
         assert!(result.result.delta >= 0.0 && result.result.delta <= 1.0);
         assert!(result.result.gamma > 0.0);
@@ -4112,7 +4193,7 @@ mod tests {
     fn test_trade_execution() {
         let mut library = FinancialModelingLibrary::new();
         library.initialize().unwrap();
-        
+
         let order = Order::new();
         // HONEST + SAFE: this system places no real orders and must never report a fabricated
         // fill. Execution reports NotImplemented rather than a fake "Filled" trade.
@@ -4124,7 +4205,7 @@ mod tests {
     fn test_compliance_check() {
         let mut library = FinancialModelingLibrary::new();
         library.initialize().unwrap();
-        
+
         // HONEST: the compliance-rules registry is empty, so this reports an error rather than
         // declaring a portfolio "Compliant" without evaluating a single rule.
         let result = library.check_compliance("portfolio_1");
@@ -4135,7 +4216,7 @@ mod tests {
     fn test_performance_metrics() {
         let library = FinancialModelingLibrary::new();
         let metrics = library.get_performance_stats();
-        
+
         assert_eq!(metrics.total_portfolios, 0);
         assert_eq!(metrics.average_return, 0.0);
         assert_eq!(metrics.total_assets, 0.0);

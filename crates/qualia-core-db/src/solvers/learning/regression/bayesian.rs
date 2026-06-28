@@ -56,12 +56,27 @@ impl BayesianLinear {
         // Design matrix Φ (n × k).
         let mut phi = vec![0.0; n * k];
         for i in 0..n {
-            design_row(&x[i * p..(i + 1) * p], fit_intercept, &mut phi[i * k..(i + 1) * k]);
+            design_row(
+                &x[i * p..(i + 1) * p],
+                fit_intercept,
+                &mut phi[i * k..(i + 1) * k],
+            );
         }
 
         // A = αI + β ΦᵀΦ.
         let mut a = vec![0.0; k * k];
-        gemm(Transpose::Yes, Transpose::No, k, k, n, beta, &phi, &phi, 0.0, &mut a)?;
+        gemm(
+            Transpose::Yes,
+            Transpose::No,
+            k,
+            k,
+            n,
+            beta,
+            &phi,
+            &phi,
+            0.0,
+            &mut a,
+        )?;
         for j in 0..k {
             a[j * k + j] += alpha;
         }
@@ -90,7 +105,13 @@ impl BayesianLinear {
             }
         }
 
-        Ok(Self { mean, cov, beta, fit_intercept, p })
+        Ok(Self {
+            mean,
+            cov,
+            beta,
+            fit_intercept,
+            p,
+        })
     }
 
     /// Predictive distribution at one row: `(mean, variance)`.
@@ -112,7 +133,9 @@ impl BayesianLinear {
 
     /// Predictive `(mean, variance)` for each row of a row-major `m × p` matrix.
     pub fn predict(&self, x: &[f64], m: usize) -> Vec<(f64, f64)> {
-        (0..m).map(|i| self.predict_row(&x[i * self.p..(i + 1) * self.p])).collect()
+        (0..m)
+            .map(|i| self.predict_row(&x[i * self.p..(i + 1) * self.p]))
+            .collect()
     }
 }
 
@@ -128,8 +151,16 @@ mod tests {
         let y: Vec<f64> = x.iter().map(|&xi| 1.0 + 2.0 * xi).collect();
         let bl = BayesianLinear::fit(&x, &y, 20, 1, 1e-6, 1e6, true).unwrap();
         let ols = linear::fit(&x, &y, 20, 1, true).unwrap();
-        assert!((bl.mean[0] - ols.coefficients[0]).abs() < 1e-2, "intercept {}", bl.mean[0]);
-        assert!((bl.mean[1] - ols.coefficients[1]).abs() < 1e-2, "slope {}", bl.mean[1]);
+        assert!(
+            (bl.mean[0] - ols.coefficients[0]).abs() < 1e-2,
+            "intercept {}",
+            bl.mean[0]
+        );
+        assert!(
+            (bl.mean[1] - ols.coefficients[1]).abs() < 1e-2,
+            "slope {}",
+            bl.mean[1]
+        );
     }
 
     #[test]
@@ -140,7 +171,10 @@ mod tests {
         let bl = BayesianLinear::fit(&x, &y, 11, 1, 1.0, 25.0, true).unwrap();
         let (_, var_center) = bl.predict_row(&[5.0]); // middle of the data
         let (_, var_far) = bl.predict_row(&[100.0]); // far extrapolation
-        assert!(var_far > var_center, "var_far {var_far} should exceed var_center {var_center}");
+        assert!(
+            var_far > var_center,
+            "var_far {var_far} should exceed var_center {var_center}"
+        );
         // Variance never drops below the noise floor 1/β.
         assert!(var_center >= 1.0 / 25.0 - 1e-12);
     }
@@ -157,7 +191,13 @@ mod tests {
 
     #[test]
     fn guards() {
-        assert_eq!(BayesianLinear::fit(&[1.0, 2.0], &[1.0], 2, 1, 1.0, 1.0, true).unwrap_err(), LearningError::InvalidDimension);
-        assert_eq!(BayesianLinear::fit(&[1.0, 2.0], &[1.0, 2.0], 2, 1, 0.0, 1.0, true).unwrap_err(), LearningError::InsufficientData);
+        assert_eq!(
+            BayesianLinear::fit(&[1.0, 2.0], &[1.0], 2, 1, 1.0, 1.0, true).unwrap_err(),
+            LearningError::InvalidDimension
+        );
+        assert_eq!(
+            BayesianLinear::fit(&[1.0, 2.0], &[1.0, 2.0], 2, 1, 0.0, 1.0, true).unwrap_err(),
+            LearningError::InsufficientData
+        );
     }
 }

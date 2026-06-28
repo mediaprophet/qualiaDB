@@ -80,7 +80,10 @@ mod tests {
         // y = 2 + 3x + small noise; CV MSE should be small for OLS.
         let n = 20;
         let x: Vec<f64> = (0..n).map(|i| i as f64).collect();
-        let y: Vec<f64> = x.iter().map(|&xi| 2.0 + 3.0 * xi + ((xi as i64 % 3) as f64 - 1.0) * 0.1).collect();
+        let y: Vec<f64> = x
+            .iter()
+            .map(|&xi| 2.0 + 3.0 * xi + ((xi as i64 % 3) as f64 - 1.0) * 0.1)
+            .collect();
         let folds = k_fold(n, 5, true, 1);
         let scores = cross_val_score(
             &x,
@@ -108,8 +111,16 @@ mod tests {
         let y: Vec<f64> = x.iter().map(|&xi| 1.0 + 0.5 * xi).collect();
         let folds = loocv(n);
         let scores = cross_val_score(
-            &x, &y, n, 1, &folds,
-            |tx, ty, ntr, tex, nte| linear::fit(tx, ty, ntr, 1, true).unwrap().predict(tex, nte, 1),
+            &x,
+            &y,
+            n,
+            1,
+            &folds,
+            |tx, ty, ntr, tex, nte| {
+                linear::fit(tx, ty, ntr, 1, true)
+                    .unwrap()
+                    .predict(tex, nte, 1)
+            },
             |yt, yp| mse(yt, yp),
         )
         .unwrap();

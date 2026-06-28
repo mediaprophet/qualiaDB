@@ -14,7 +14,10 @@ pub fn possible(graph: &[NQuin], world: u64, prop: u64, accesses: u64, holds: u6
     for q in graph {
         if q.subject == world && q.predicate == accesses {
             let w2 = q.object;
-            if graph.iter().any(|r| r.subject == w2 && r.predicate == holds && r.object == prop) {
+            if graph
+                .iter()
+                .any(|r| r.subject == w2 && r.predicate == holds && r.object == prop)
+            {
                 return true;
             }
         }
@@ -28,7 +31,10 @@ pub fn necessary(graph: &[NQuin], world: u64, prop: u64, accesses: u64, holds: u
     for q in graph {
         if q.subject == world && q.predicate == accesses {
             let w2 = q.object;
-            if !graph.iter().any(|r| r.subject == w2 && r.predicate == holds && r.object == prop) {
+            if !graph
+                .iter()
+                .any(|r| r.subject == w2 && r.predicate == holds && r.object == prop)
+            {
                 return false; // an accessible world fails the proposition
             }
         }
@@ -45,7 +51,9 @@ pub fn necessary(graph: &[NQuin], world: u64, prop: u64, accesses: u64, holds: u
 /// Is `(from → to)` an accessibility edge?
 #[inline]
 fn edge(graph: &[NQuin], from: u64, to: u64, accesses: u64) -> bool {
-    graph.iter().any(|q| q.subject == from && q.predicate == accesses && q.object == to)
+    graph
+        .iter()
+        .any(|q| q.subject == from && q.predicate == accesses && q.object == to)
 }
 
 /// **Reflexive** (axiom T: □φ→φ): every world accesses itself.
@@ -55,7 +63,9 @@ pub fn is_reflexive(graph: &[NQuin], accesses: u64, worlds: &[u64]) -> bool {
 
 /// **Serial** (axiom D: □φ→◇φ): every world accesses at least one world.
 pub fn is_serial(graph: &[NQuin], accesses: u64, worlds: &[u64]) -> bool {
-    worlds.iter().all(|&w| worlds.iter().any(|&v| edge(graph, w, v, accesses)))
+    worlds
+        .iter()
+        .all(|&w| worlds.iter().any(|&v| edge(graph, w, v, accesses)))
 }
 
 /// **Symmetric** (axiom B: φ→□◇φ): `wRv ⇒ vRw`.
@@ -153,8 +163,16 @@ pub fn knows(graph: &[NQuin], accesses_i: u64, world: u64, prop: u64, holds: u64
 }
 
 /// "Everybody knows" `prop` at `world`: K_i φ holds for **every** agent in `agent_accesses`.
-pub fn everyone_knows(graph: &[NQuin], agent_accesses: &[u64], world: u64, prop: u64, holds: u64) -> bool {
-    agent_accesses.iter().all(|&acc| knows(graph, acc, world, prop, holds))
+pub fn everyone_knows(
+    graph: &[NQuin],
+    agent_accesses: &[u64],
+    world: u64,
+    prop: u64,
+    holds: u64,
+) -> bool {
+    agent_accesses
+        .iter()
+        .all(|&acc| knows(graph, acc, world, prop, holds))
 }
 
 // ─── AGM belief revision ────────────────────────────────────────────────────────────
@@ -174,7 +192,10 @@ impl Belief {
     /// The contrary belief (same atom, flipped polarity).
     #[inline]
     pub fn negate(self) -> Belief {
-        Belief { atom: self.atom, positive: !self.positive }
+        Belief {
+            atom: self.atom,
+            positive: !self.positive,
+        }
     }
 }
 
@@ -249,12 +270,26 @@ mod tests {
     use super::*;
 
     fn acc(from: u64, to: u64) -> NQuin {
-        let mut q = NQuin { subject: from, predicate: crate::q_hash("modal:accesses"), object: to, context: 0, metadata: 0, parity: 0 };
+        let mut q = NQuin {
+            subject: from,
+            predicate: crate::q_hash("modal:accesses"),
+            object: to,
+            context: 0,
+            metadata: 0,
+            parity: 0,
+        };
         q.parity = q.subject ^ q.predicate ^ q.object ^ q.context;
         q
     }
     fn label(world: u64, prop: u64) -> NQuin {
-        let mut q = NQuin { subject: world, predicate: crate::q_hash("modal:holds"), object: prop, context: 0, metadata: 0, parity: 0 };
+        let mut q = NQuin {
+            subject: world,
+            predicate: crate::q_hash("modal:holds"),
+            object: prop,
+            context: 0,
+            metadata: 0,
+            parity: 0,
+        };
         q.parity = q.subject ^ q.predicate ^ q.object ^ q.context;
         q
     }
@@ -266,11 +301,20 @@ mod tests {
         let p = 100u64;
         // w0 accesses w1, w2. p holds at w1 only.
         let g = [acc(0, 1), acc(0, 2), label(1, p)];
-        assert!(possible(&g, 0, p, accesses, holds), "◇p: w1 (accessible) satisfies p");
-        assert!(!necessary(&g, 0, p, accesses, holds), "□p fails: w2 (accessible) does not satisfy p");
+        assert!(
+            possible(&g, 0, p, accesses, holds),
+            "◇p: w1 (accessible) satisfies p"
+        );
+        assert!(
+            !necessary(&g, 0, p, accesses, holds),
+            "□p fails: w2 (accessible) does not satisfy p"
+        );
         // Now p holds at both accessible worlds.
         let g2 = [acc(0, 1), acc(0, 2), label(1, p), label(2, p)];
-        assert!(necessary(&g2, 0, p, accesses, holds), "□p: all accessible worlds satisfy p");
+        assert!(
+            necessary(&g2, 0, p, accesses, holds),
+            "□p: all accessible worlds satisfy p"
+        );
     }
 
     #[test]
@@ -308,8 +352,12 @@ mod tests {
 
         // Add 0→2 and reflexive loops → reflexive + transitive (S4) but NOT symmetric.
         let s4 = [
-            acc(0, 0), acc(1, 1), acc(2, 2),
-            acc(0, 1), acc(1, 2), acc(0, 2),
+            acc(0, 0),
+            acc(1, 1),
+            acc(2, 2),
+            acc(0, 1),
+            acc(1, 2),
+            acc(0, 2),
         ];
         assert!(is_reflexive(&s4, accesses, &worlds));
         assert!(is_transitive(&s4, accesses, &worlds));
@@ -327,28 +375,49 @@ mod tests {
         let bob = crate::q_hash("agent:bob:accesses");
         let p = 100u64;
         let mk = |from: u64, to: u64, acc: u64| {
-            let mut q = NQuin { subject: from, predicate: acc, object: to, context: 0, metadata: 0, parity: 0 };
+            let mut q = NQuin {
+                subject: from,
+                predicate: acc,
+                object: to,
+                context: 0,
+                metadata: 0,
+                parity: 0,
+            };
             q.parity = q.subject ^ q.predicate ^ q.object ^ q.context;
             q
         };
         // From w0: Alice accesses only w1 (where p holds); Bob accesses w1 and w2 (p fails at w2).
-        let g = [
-            mk(0, 1, alice),
-            mk(0, 1, bob), mk(0, 2, bob),
-            label(1, p),
-        ];
-        assert!(knows(&g, alice, 0, p, holds), "Alice knows p (all her worlds satisfy it)");
-        assert!(!knows(&g, bob, 0, p, holds), "Bob does not know p (w2 fails)");
+        let g = [mk(0, 1, alice), mk(0, 1, bob), mk(0, 2, bob), label(1, p)];
+        assert!(
+            knows(&g, alice, 0, p, holds),
+            "Alice knows p (all her worlds satisfy it)"
+        );
+        assert!(
+            !knows(&g, bob, 0, p, holds),
+            "Bob does not know p (w2 fails)"
+        );
         assert!(!everyone_knows(&g, &[alice, bob], 0, p, holds));
     }
 
     #[test]
     fn agm_revision_is_consistent_and_satisfies_success() {
         let p = 1u64;
-        let bel_p = Belief { atom: p, positive: true };
-        let bel_not_p = Belief { atom: p, positive: false };
-        let q = Belief { atom: 2, positive: true };
-        let mut out = [Belief { atom: 0, positive: true }; 8];
+        let bel_p = Belief {
+            atom: p,
+            positive: true,
+        };
+        let bel_not_p = Belief {
+            atom: p,
+            positive: false,
+        };
+        let q = Belief {
+            atom: 2,
+            positive: true,
+        };
+        let mut out = [Belief {
+            atom: 0,
+            positive: true,
+        }; 8];
 
         // Start believing ¬p and q. Revise by p.
         let base = [bel_not_p, q];
@@ -357,19 +426,32 @@ mod tests {
         // Success: p ∈ K*p. Consistency: ¬p ∉ K*p. Minimal change: q retained.
         assert!(result.contains(&bel_p), "success postulate: φ ∈ K*φ");
         assert!(!result.contains(&bel_not_p), "consistency: ¬φ removed");
-        assert!(result.contains(&q), "minimal change: unrelated beliefs kept");
+        assert!(
+            result.contains(&q),
+            "minimal change: unrelated beliefs kept"
+        );
         assert!(is_consistent(result));
 
         // Expansion adds; idempotent if already present.
         let n2 = expand(&base, q, &mut out);
         assert_eq!(n2, 2, "q already present → no growth");
         let n3 = expand(&base, bel_p, &mut out);
-        assert_eq!(n3, 3, "p added by expansion (may be inconsistent — that's expansion, not revision)");
-        assert!(!is_consistent(&out[..n3]), "expansion does NOT guarantee consistency");
+        assert_eq!(
+            n3, 3,
+            "p added by expansion (may be inconsistent — that's expansion, not revision)"
+        );
+        assert!(
+            !is_consistent(&out[..n3]),
+            "expansion does NOT guarantee consistency"
+        );
 
         // Contraction removes; vacuous when absent.
         let n4 = contract(&base, bel_not_p, &mut out);
         assert!(!out[..n4].contains(&bel_not_p));
-        assert_eq!(contract(&base, bel_p, &mut out), 2, "contracting an absent belief is vacuous");
+        assert_eq!(
+            contract(&base, bel_p, &mut out),
+            2,
+            "contracting an absent belief is vacuous"
+        );
     }
 }

@@ -13,8 +13,8 @@
 //! build is still readable by an expansion build — the new backend is just absent
 //! and gets probed on next boot).
 
-use crate::device_benchmark::CircuitBench;
 use super::kernel_class::KernelClass;
+use crate::device_benchmark::CircuitBench;
 
 /// Stable, string-keyed backend identifier. `Copy`, zero-heap. Built-ins:
 /// `"cpu"`, `"wgpu"` (which itself reports per-adapter circuits via wgpu's
@@ -53,7 +53,9 @@ pub enum DispatchError {
 impl core::fmt::Display for DispatchError {
     fn fmt(&self, f: &mut core::fmt::Formatter<'_>) -> core::fmt::Result {
         match self {
-            DispatchError::UnsupportedClass(c) => write!(f, "backend cannot run kernel class {}", c.label()),
+            DispatchError::UnsupportedClass(c) => {
+                write!(f, "backend cannot run kernel class {}", c.label())
+            }
             DispatchError::Unavailable(b) => write!(f, "backend {b} is not available on this host"),
             DispatchError::BackendFailure(m) => write!(f, "backend failure: {m}"),
         }
@@ -134,7 +136,9 @@ pub struct BackendRegistry {
 
 impl BackendRegistry {
     pub fn new() -> Self {
-        Self { backends: Vec::new() }
+        Self {
+            backends: Vec::new(),
+        }
     }
 
     /// Register a backend. Adding one here is the *only* change needed to bring a
@@ -151,7 +155,10 @@ impl BackendRegistry {
 
     /// Backends actually usable on this host.
     pub fn available(&self) -> impl Iterator<Item = &dyn ProbeableBackend> {
-        self.backends.iter().map(|b| b.as_ref()).filter(|b| b.available())
+        self.backends
+            .iter()
+            .map(|b| b.as_ref())
+            .filter(|b| b.available())
     }
 
     pub fn len(&self) -> usize {
@@ -200,8 +207,14 @@ mod tests {
     #[test]
     fn registry_is_open_and_iterates_members() {
         let mut reg = BackendRegistry::new();
-        reg.register(Box::new(StubBackend { id: BackendId("alpha"), up: true }))
-            .register(Box::new(StubBackend { id: BackendId("beta"), up: false }));
+        reg.register(Box::new(StubBackend {
+            id: BackendId("alpha"),
+            up: true,
+        }))
+        .register(Box::new(StubBackend {
+            id: BackendId("beta"),
+            up: false,
+        }));
         assert_eq!(reg.len(), 2);
         // Only the available backend is offered for work.
         let avail: Vec<_> = reg.available().map(|b| b.id()).collect();

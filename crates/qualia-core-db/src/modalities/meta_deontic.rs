@@ -115,7 +115,11 @@ pub fn compile_evidence_package(
 ) -> Option<EvidencePackage> {
     let record = build_breach_record(verdict, instrument, now)?;
     let endorsement = endorsement_credential(record, endorser, subject, now, valid_until);
-    Some(EvidencePackage { record, provenance: instrument, endorsement })
+    Some(EvidencePackage {
+        record,
+        provenance: instrument,
+        endorsement,
+    })
 }
 
 // ─── Cross-jurisdictional meta-norm translation ───────────────────────────────────
@@ -133,7 +137,10 @@ pub fn translate_norm_across_jurisdictions(
     if !attested {
         return None;
     }
-    let target = mapping.iter().find(|(src, _)| *src == norm.object).map(|(_, t)| *t)?;
+    let target = mapping
+        .iter()
+        .find(|(src, _)| *src == norm.object)
+        .map(|(_, t)| *t)?;
     let mut out = *norm;
     out.object = target;
     out.parity = out.subject ^ out.predicate ^ out.object ^ out.context;
@@ -148,7 +155,14 @@ mod tests {
     use ed25519_dalek::SigningKey;
 
     fn violated_verdict(party: u64, content: u64) -> DeonticVerdict {
-        let mut norm = NQuin { subject: party, predicate: OP_OBLIGATE as u64, object: content, context: 0, metadata: 0, parity: 0 };
+        let mut norm = NQuin {
+            subject: party,
+            predicate: OP_OBLIGATE as u64,
+            object: content,
+            context: 0,
+            metadata: 0,
+            parity: 0,
+        };
         norm.parity = norm.subject ^ norm.predicate ^ norm.object ^ norm.context;
         // _pad is private to the deontic module — construct via Default, set public fields.
         let mut v = DeonticVerdict::default();
@@ -168,9 +182,16 @@ mod tests {
         let rec = build_breach_record(&v, instrument, 1_700_000_000).expect("violation → record");
         assert_eq!(rec.subject, party);
         assert_eq!(rec.object, content);
-        assert_eq!(breach_provenance(&rec), instrument, "record is anchored to its instrument");
+        assert_eq!(
+            breach_provenance(&rec),
+            instrument,
+            "record is anchored to its instrument"
+        );
         assert_eq!(rec.predicate, breach_predicate());
-        assert_eq!(rec.parity, rec.subject ^ rec.predicate ^ rec.object ^ rec.context);
+        assert_eq!(
+            rec.parity,
+            rec.subject ^ rec.predicate ^ rec.object ^ rec.context
+        );
 
         // A non-violation produces no record.
         let mut active = violated_verdict(party, content);
@@ -194,7 +215,10 @@ mod tests {
         let recovered = wal.recover().unwrap();
         assert_eq!(recovered.len(), 1, "the breach record is in the WAL");
         assert_eq!(recovered[0].subject, party);
-        assert_eq!(recovered[0].context, instrument, "provenance survives the round-trip");
+        assert_eq!(
+            recovered[0].context, instrument,
+            "provenance survives the round-trip"
+        );
 
         // An Active verdict writes nothing.
         let mut active = v;
@@ -216,14 +240,28 @@ mod tests {
         let sig = issue(&sk, &cred);
 
         // Anyone verifies the endorsement with the endorser's public key.
-        assert!(verify(&cred, &sk.verifying_key(), &sig, 1500).is_ok(), "valid endorsement verifies");
+        assert!(
+            verify(&cred, &sk.verifying_key(), &sig, 1500).is_ok(),
+            "valid endorsement verifies"
+        );
         // Tampering with the claim breaks verification.
         let mut tampered = endorsement_credential(
-            build_breach_record(&violated_verdict(party, q_hash("q42:somethingElse")), instrument, 1000).unwrap(),
-            endorser, party, 1000, 2000,
+            build_breach_record(
+                &violated_verdict(party, q_hash("q42:somethingElse")),
+                instrument,
+                1000,
+            )
+            .unwrap(),
+            endorser,
+            party,
+            1000,
+            2000,
         );
         tampered.claims[0].object ^= 0x1;
-        assert!(verify(&tampered, &sk.verifying_key(), &sig, 1500).is_err(), "tampered endorsement fails");
+        assert!(
+            verify(&tampered, &sk.verifying_key(), &sig, 1500).is_err(),
+            "tampered endorsement fails"
+        );
     }
 
     #[test]
@@ -233,17 +271,30 @@ mod tests {
         let instrument = q_hash("instrument:iccpr");
         let endorser = q_hash("did:human:adjudicator");
 
-        let pkg = compile_evidence_package(&violated_verdict(party, content), instrument, endorser, party, 1000, 2000)
-            .expect("a violation compiles a package");
+        let pkg = compile_evidence_package(
+            &violated_verdict(party, content),
+            instrument,
+            endorser,
+            party,
+            1000,
+            2000,
+        )
+        .expect("a violation compiles a package");
         assert_eq!(pkg.provenance, instrument);
         assert_eq!(pkg.record.subject, party);
         assert_eq!(pkg.endorsement.issuer, endorser);
-        assert_eq!(pkg.endorsement.claims.len(), 1, "the breach record is the endorsed claim");
+        assert_eq!(
+            pkg.endorsement.claims.len(),
+            1,
+            "the breach record is the endorsed claim"
+        );
 
         // A non-violation compiles nothing.
         let mut active = violated_verdict(party, content);
         active.status = DeonticStatus::Active;
-        assert!(compile_evidence_package(&active, instrument, endorser, party, 1000, 2000).is_none());
+        assert!(
+            compile_evidence_package(&active, instrument, endorser, party, 1000, 2000).is_none()
+        );
     }
 
     #[test]
@@ -251,12 +302,20 @@ mod tests {
         let party = q_hash("did:state");
         let iccpr_art7 = q_hash("iccpr:art7");
         let domestic = q_hash("au:crimes-act:s274");
-        let mut norm = NQuin { subject: party, predicate: q_hash("q42:forbids"), object: iccpr_art7, context: 0, metadata: 0, parity: 0 };
+        let mut norm = NQuin {
+            subject: party,
+            predicate: q_hash("q42:forbids"),
+            object: iccpr_art7,
+            context: 0,
+            metadata: 0,
+            parity: 0,
+        };
         norm.parity = norm.subject ^ norm.predicate ^ norm.object ^ norm.context;
         let mapping = [(iccpr_art7, domestic)];
 
         // Attested + mapped → content remapped to the domestic provision.
-        let t = translate_norm_across_jurisdictions(&norm, &mapping, true).expect("attested mapping applies");
+        let t = translate_norm_across_jurisdictions(&norm, &mapping, true)
+            .expect("attested mapping applies");
         assert_eq!(t.object, domestic);
         assert_eq!(t.parity, t.subject ^ t.predicate ^ t.object ^ t.context);
         // Unattested → None (no machine-flattening across jurisdictions).

@@ -190,10 +190,7 @@ pub fn plan_fusion(ops: &[TensorOp]) -> u32 {
         // Absorb the maximal run of same-shape element-wise ops into this pass.
         let shape = ops[i].shape;
         i += 1;
-        while i < ops.len()
-            && ops[i].kind == TensorOpKind::Elementwise
-            && ops[i].shape == shape
-        {
+        while i < ops.len() && ops[i].kind == TensorOpKind::Elementwise && ops[i].shape == shape {
             i += 1;
         }
     }
@@ -265,10 +262,16 @@ mod tests {
     #[test]
     fn zero_copy_strategy_follows_memory_architecture() {
         // Unified memory (Apple Silicon / integrated) → no host copy.
-        assert_eq!(ZeroCopyStrategy::for_device(true), ZeroCopyStrategy::MmapDirect);
+        assert_eq!(
+            ZeroCopyStrategy::for_device(true),
+            ZeroCopyStrategy::MmapDirect
+        );
         assert!(!ZeroCopyStrategy::for_device(true).requires_host_copy());
         // Discrete GPU → staging upload.
-        assert_eq!(ZeroCopyStrategy::for_device(false), ZeroCopyStrategy::StagingUpload);
+        assert_eq!(
+            ZeroCopyStrategy::for_device(false),
+            ZeroCopyStrategy::StagingUpload
+        );
         assert!(ZeroCopyStrategy::for_device(false).requires_host_copy());
         // wgpu device-type mapping.
         assert_eq!(
@@ -321,7 +324,11 @@ mod tests {
         });
         assert_eq!(d.gpu_tiles(1 << 30), 1, "fits in one tile");
         assert_eq!(d.gpu_tiles(2 << 30), 1, "exactly fits");
-        assert_eq!(d.gpu_tiles(5 << 30), 3, "5 GiB / 2 GiB → 3 tiles, no OOM hard-fail");
+        assert_eq!(
+            d.gpu_tiles(5 << 30),
+            3,
+            "5 GiB / 2 GiB → 3 tiles, no OOM hard-fail"
+        );
         // No GPU → single CPU pass.
         let cpu = HeterogeneousDispatcher::new(HostCapabilities {
             gpu_available: false,
@@ -334,8 +341,14 @@ mod tests {
 
     #[test]
     fn fusion_collapses_elementwise_runs() {
-        let ew = |s| TensorOp { kind: TensorOpKind::Elementwise, shape: s };
-        let barrier = |s| TensorOp { kind: TensorOpKind::Barrier, shape: s };
+        let ew = |s| TensorOp {
+            kind: TensorOpKind::Elementwise,
+            shape: s,
+        };
+        let barrier = |s| TensorOp {
+            kind: TensorOpKind::Barrier,
+            shape: s,
+        };
 
         // Three same-shape element-wise ops fuse into one pass.
         assert_eq!(plan_fusion(&[ew(1), ew(1), ew(1)]), 1);

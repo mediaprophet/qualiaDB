@@ -1,13 +1,13 @@
 //! Hardware-Sympathetic Storage (ZNS) Implementation
-//! 
+//!
 //! This module provides zero-allocation, hardware-sympathetic storage using NVMe Zoned Namespaces.
 //! Designed for maximum performance with scientific computing and mathematical libraries.
 
+use serde::{Deserialize, Serialize};
 use std::collections::HashMap;
-use std::sync::{Arc, Mutex};
 use std::fs::{File, OpenOptions};
 use std::path::Path;
-use serde::{Deserialize, Serialize};
+use std::sync::{Arc, Mutex};
 
 /// ZNS Zone Manager for hardware-sympathetic storage
 pub struct ZnsZoneManager {
@@ -175,7 +175,7 @@ impl ZnsZoneManager {
     /// Probe ZNS device and get information
     fn probe_device<P: AsRef<Path>>(device_path: P) -> Result<ZnsDeviceInfo, ZnsError> {
         let device_path = device_path.as_ref();
-        
+
         // Open device file
         let device_file = OpenOptions::new()
             .read(true)
@@ -185,7 +185,7 @@ impl ZnsZoneManager {
 
         // Get device information using ioctl
         let device_id = format!("zns-{}", device_path.display());
-        
+
         // For now, use reasonable defaults
         let device_info = ZnsDeviceInfo {
             device_id,
@@ -202,7 +202,7 @@ impl ZnsZoneManager {
     /// Initialize zones based on device information
     fn initialize_zones(device_info: &ZnsDeviceInfo) -> Result<Vec<ZnsZone>, ZnsError> {
         let mut zones = Vec::new();
-        
+
         for zone_id in 0..device_info.total_zones {
             let zone = ZnsZone {
                 zone_id,
@@ -216,7 +216,8 @@ impl ZnsZoneManager {
                 capacity: device_info.zone_size,
                 write_pointer: 0,
                 state: ZoneState::Empty,
-                zone_start_lba: zone_id as u64 * device_info.zone_size / device_info.sector_size as u64,
+                zone_start_lba: zone_id as u64 * device_info.zone_size
+                    / device_info.sector_size as u64,
                 zone_size: device_info.zone_size,
             };
             zones.push(zone);
@@ -226,10 +227,14 @@ impl ZnsZoneManager {
     }
 
     /// Allocate zone for specific workload
-    pub fn allocate_zone(&mut self, zone_type: ZoneType, size: u64) -> Result<ZoneHandle, ZnsError> {
+    pub fn allocate_zone(
+        &mut self,
+        zone_type: ZoneType,
+        size: u64,
+    ) -> Result<ZoneHandle, ZnsError> {
         let zone_id = self.allocator.allocate_zone(zone_type.clone())?;
         let zone = &mut self.zones[zone_id as usize];
-        
+
         // Open zone for writing
         zone.state = ZoneState::ExplicitlyOpened;
         zone.write_pointer = 0;
@@ -251,7 +256,8 @@ impl ZnsZoneManager {
         // Check zone state
         if zone.state != ZoneState::ExplicitlyOpened && zone.state != ZoneState::ImplicitlyOpened {
             return Err(ZnsError::InvalidZoneState(format!(
-                "Zone {} is not open for writing", handle.zone_id
+                "Zone {} is not open for writing",
+                handle.zone_id
             )));
         }
 
@@ -259,7 +265,8 @@ impl ZnsZoneManager {
         let write_position = zone.write_pointer;
         if write_position + data.len() as u64 > zone.capacity {
             return Err(ZnsError::ZoneFull(format!(
-                "Zone {} is full", handle.zone_id
+                "Zone {} is full",
+                handle.zone_id
             )));
         }
 
@@ -288,7 +295,12 @@ impl ZnsZoneManager {
     }
 
     /// Read data from zone
-    pub fn read_zone(&mut self, handle: &ZoneHandle, offset: u64, length: u64) -> Result<Vec<u8>, ZnsError> {
+    pub fn read_zone(
+        &mut self,
+        handle: &ZoneHandle,
+        offset: u64,
+        length: u64,
+    ) -> Result<Vec<u8>, ZnsError> {
         let op_id = self.generate_operation_id();
 
         let zone = &self.zones[handle.zone_id as usize];
@@ -296,7 +308,8 @@ impl ZnsZoneManager {
         // Check bounds
         if offset + length > zone.write_pointer {
             return Err(ZnsError::InvalidOffset(format!(
-                "Read beyond write pointer in zone {}", handle.zone_id
+                "Read beyond write pointer in zone {}",
+                handle.zone_id
             )));
         }
 
@@ -320,7 +333,7 @@ impl ZnsZoneManager {
     /// Get zero-copy access to zone data
     pub fn zero_copy_access(&self, handle: &ZoneHandle) -> Result<ZeroCopyBuffer, ZnsError> {
         let zone = &self.zones[handle.zone_id as usize];
-        
+
         // Create zero-copy buffer
         let buffer = ZeroCopyBuffer {
             ptr: std::ptr::null_mut(), // Would be actual memory mapping
@@ -380,7 +393,7 @@ impl ZnsZoneManager {
     /// Get zone statistics
     pub fn get_zone_stats(&self, zone_id: u32) -> Result<ZoneStats, ZnsError> {
         let zone = &self.zones[zone_id as usize];
-        
+
         Ok(ZoneStats {
             zone_id: zone.zone_id,
             zone_type: zone.zone_type.clone(),
@@ -401,7 +414,7 @@ impl ZnsZoneManager {
         for zone in &self.zones {
             total_used += zone.write_pointer;
             total_free += zone.capacity - zone.write_pointer;
-            
+
             match zone.state {
                 ZoneState::ExplicitlyOpened | ZoneState::ImplicitlyOpened => open_zones += 1,
                 ZoneState::Full => full_zones += 1,
@@ -444,7 +457,9 @@ impl ZoneAllocator {
     /// Allocate zone for specific type
     pub fn allocate_zone(&mut self, zone_type: ZoneType) -> Result<u32, ZnsError> {
         // Find suitable zone for the requested type
-        let zone_id = self.free_zones.pop()
+        let zone_id = self
+            .free_zones
+            .pop()
             .ok_or_else(|| ZnsError::NoZonesAvailable("No free zones available".to_string()))?;
 
         let handle = ZoneHandle {
@@ -491,7 +506,11 @@ impl ZnsIoScheduler {
                     status: CompletionStatus::Success,
                     bytes_transferred: 4096,
                 },
-                ZnsOperation::Read { operation_id, length, .. } => ZnsCompletion {
+                ZnsOperation::Read {
+                    operation_id,
+                    length,
+                    ..
+                } => ZnsCompletion {
                     operation_id,
                     status: CompletionStatus::Success,
                     bytes_transferred: length,
@@ -576,14 +595,14 @@ mod tests {
     #[test]
     fn test_zone_allocation() {
         let mut allocator = ZoneAllocator::new(1024);
-        
+
         // Allocate sequential zone
         let zone_id = allocator.allocate_zone(ZoneType::Sequential).unwrap();
         assert!(zone_id < 1024);
-        
+
         // Deallocate zone
         allocator.deallocate_zone(zone_id);
-        
+
         // Should be able to allocate again
         let zone_id2 = allocator.allocate_zone(ZoneType::Sequential).unwrap();
         assert!(zone_id2 < 1024);
@@ -619,7 +638,7 @@ mod tests {
     #[test]
     fn test_io_scheduler() {
         let mut scheduler = ZnsIoScheduler::new();
-        
+
         // Schedule write operation
         let write_op = ZnsOperation::Write {
             zone_id: 0,
@@ -627,9 +646,9 @@ mod tests {
             data: vec![1, 2, 3, 4],
             operation_id: 1,
         };
-        
+
         scheduler.schedule_operation(write_op);
-        
+
         // Process operations
         let completions = scheduler.process_operations();
         assert_eq!(completions.len(), 1);

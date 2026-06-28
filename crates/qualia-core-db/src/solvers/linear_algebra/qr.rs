@@ -75,7 +75,13 @@ pub fn qr_factor(m: usize, n: usize, a: &mut [f64], tau: &mut [f64]) -> Result<(
 /// factored `a`/`tau` (from [`qr_factor`]). `q` must be length `m*n`. The thin
 /// `Q` satisfies `Q·R_n = A` (with `R_n` the `n×n` upper triangle of `a`) and
 /// has orthonormal columns (`Qᵀ·Q = I_n`).
-pub fn qr_form_q(m: usize, n: usize, a: &[f64], tau: &[f64], q: &mut [f64]) -> Result<(), SolversError> {
+pub fn qr_form_q(
+    m: usize,
+    n: usize,
+    a: &[f64],
+    tau: &[f64],
+    q: &mut [f64],
+) -> Result<(), SolversError> {
     if m < n || a.len() != m * n || tau.len() != n || q.len() != m * n {
         return Err(SolversError::InvalidDimension);
     }
@@ -172,7 +178,12 @@ mod tests {
     fn approx(a: &[f64], b: &[f64], tol: f64) {
         assert_eq!(a.len(), b.len());
         for i in 0..a.len() {
-            assert!((a[i] - b[i]).abs() < tol, "idx {i}: {} != {} (tol {tol})", a[i], b[i]);
+            assert!(
+                (a[i] - b[i]).abs() < tol,
+                "idx {i}: {} != {} (tol {tol})",
+                a[i],
+                b[i]
+            );
         }
     }
 
@@ -220,7 +231,19 @@ mod tests {
         qr_form_q(3, 3, &a, &tau, &mut q).unwrap();
         // QᵀQ == I
         let mut qtq = [0.0; 9];
-        gemm(Transpose::Yes, Transpose::No, 3, 3, 3, 1.0, &q, &q, 0.0, &mut qtq).unwrap();
+        gemm(
+            Transpose::Yes,
+            Transpose::No,
+            3,
+            3,
+            3,
+            1.0,
+            &q,
+            &q,
+            0.0,
+            &mut qtq,
+        )
+        .unwrap();
         approx(&qtq, &[1.0, 0.0, 0.0, 0.0, 1.0, 0.0, 0.0, 0.0, 1.0], 1e-9);
     }
 
@@ -302,10 +325,16 @@ mod tests {
     fn rejects_bad_dims() {
         let mut a = [1.0, 2.0, 3.0, 4.0];
         let mut tau = [0.0; 3]; // wrong length
-        assert_eq!(qr_factor(2, 2, &mut a, &mut tau), Err(SolversError::InvalidDimension));
+        assert_eq!(
+            qr_factor(2, 2, &mut a, &mut tau),
+            Err(SolversError::InvalidDimension)
+        );
         // m < n rejected
         let mut a2 = [1.0, 2.0, 3.0, 4.0, 5.0, 6.0];
         let mut tau2 = [0.0; 3];
-        assert_eq!(qr_factor(2, 3, &mut a2, &mut tau2), Err(SolversError::InvalidDimension));
+        assert_eq!(
+            qr_factor(2, 3, &mut a2, &mut tau2),
+            Err(SolversError::InvalidDimension)
+        );
     }
 }

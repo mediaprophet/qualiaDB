@@ -127,6 +127,9 @@ mod tests {
     #[test]
     fn fails_closed() {
         assert_eq!(consensus(&[]).unwrap_err(), ActiveError::InsufficientData);
-        assert_eq!(vote_entropy(&[5], 2).unwrap_err(), ActiveError::InvalidDimension);
+        assert_eq!(
+            vote_entropy(&[5], 2).unwrap_err(),
+            ActiveError::InvalidDimension
+        );
     }
 }

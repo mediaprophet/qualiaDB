@@ -182,35 +182,74 @@ impl QTensorEngine {
             label: Some("AttentionKPreprojectGemmBG"),
             layout: &gemm_layout,
             entries: &[
-                wgpu::BindGroupEntry { binding: 0, resource: input_buf.as_entire_binding() },
-                wgpu::BindGroupEntry { binding: 1, resource: k_weight.as_entire_binding() },
-                wgpu::BindGroupEntry { binding: 2, resource: gemm_params_at(0) },
-                wgpu::BindGroupEntry { binding: 3, resource: proj_buf.as_entire_binding() },
+                wgpu::BindGroupEntry {
+                    binding: 0,
+                    resource: input_buf.as_entire_binding(),
+                },
+                wgpu::BindGroupEntry {
+                    binding: 1,
+                    resource: k_weight.as_entire_binding(),
+                },
+                wgpu::BindGroupEntry {
+                    binding: 2,
+                    resource: gemm_params_at(0),
+                },
+                wgpu::BindGroupEntry {
+                    binding: 3,
+                    resource: proj_buf.as_entire_binding(),
+                },
             ],
         });
         let v_gemm_bg = device.create_bind_group(&wgpu::BindGroupDescriptor {
             label: Some("AttentionVPreprojectGemmBG"),
             layout: &gemm_layout,
             entries: &[
-                wgpu::BindGroupEntry { binding: 0, resource: input_buf.as_entire_binding() },
-                wgpu::BindGroupEntry { binding: 1, resource: v_weight.as_entire_binding() },
-                wgpu::BindGroupEntry { binding: 2, resource: gemm_params_at(PARAM_SLOT) },
-                wgpu::BindGroupEntry { binding: 3, resource: proj_buf.as_entire_binding() },
+                wgpu::BindGroupEntry {
+                    binding: 0,
+                    resource: input_buf.as_entire_binding(),
+                },
+                wgpu::BindGroupEntry {
+                    binding: 1,
+                    resource: v_weight.as_entire_binding(),
+                },
+                wgpu::BindGroupEntry {
+                    binding: 2,
+                    resource: gemm_params_at(PARAM_SLOT),
+                },
+                wgpu::BindGroupEntry {
+                    binding: 3,
+                    resource: proj_buf.as_entire_binding(),
+                },
             ],
         });
         let k_attn_bg = device.create_bind_group(&wgpu::BindGroupDescriptor {
             label: Some("AttentionKPreprojectWriteBG"),
             layout: &attn_layout,
             entries: &[
-                wgpu::BindGroupEntry { binding: 0, resource: proj_buf.as_entire_binding() },
-                wgpu::BindGroupEntry { binding: 1, resource: k_weight.as_entire_binding() },
-                wgpu::BindGroupEntry { binding: 2, resource: attn_params_at(0) },
+                wgpu::BindGroupEntry {
+                    binding: 0,
+                    resource: proj_buf.as_entire_binding(),
+                },
+                wgpu::BindGroupEntry {
+                    binding: 1,
+                    resource: k_weight.as_entire_binding(),
+                },
+                wgpu::BindGroupEntry {
+                    binding: 2,
+                    resource: attn_params_at(0),
+                },
                 wgpu::BindGroupEntry {
                     binding: 3,
                     resource: wgpu::BindingResource::Buffer(kv_binding),
                 },
-                wgpu::BindGroupEntry { binding: 4, resource: attn_out_scratch.as_entire_binding() },
-                wgpu::BindGroupEntry { binding: 5, resource: mask_buf.as_entire_binding() },
+                wgpu::BindGroupEntry {
+                    binding: 4,
+                    resource: attn_out_scratch.as_entire_binding(),
+                },
+                wgpu::BindGroupEntry {
+                    binding: 5,
+                    resource: mask_buf.as_entire_binding(),
+                },
             ],
         });
         let kv_binding = wgpu::BufferBinding {
@@ -222,21 +261,38 @@ impl QTensorEngine {
             label: Some("AttentionVPreprojectWriteBG"),
             layout: &attn_layout,
             entries: &[
-                wgpu::BindGroupEntry { binding: 0, resource: proj_buf.as_entire_binding() },
-                wgpu::BindGroupEntry { binding: 1, resource: v_weight.as_entire_binding() },
-                wgpu::BindGroupEntry { binding: 2, resource: attn_params_at(PARAM_SLOT) },
+                wgpu::BindGroupEntry {
+                    binding: 0,
+                    resource: proj_buf.as_entire_binding(),
+                },
+                wgpu::BindGroupEntry {
+                    binding: 1,
+                    resource: v_weight.as_entire_binding(),
+                },
+                wgpu::BindGroupEntry {
+                    binding: 2,
+                    resource: attn_params_at(PARAM_SLOT),
+                },
                 wgpu::BindGroupEntry {
                     binding: 3,
                     resource: wgpu::BindingResource::Buffer(kv_binding),
                 },
-                wgpu::BindGroupEntry { binding: 4, resource: attn_out_scratch.as_entire_binding() },
-                wgpu::BindGroupEntry { binding: 5, resource: mask_buf.as_entire_binding() },
+                wgpu::BindGroupEntry {
+                    binding: 4,
+                    resource: attn_out_scratch.as_entire_binding(),
+                },
+                wgpu::BindGroupEntry {
+                    binding: 5,
+                    resource: mask_buf.as_entire_binding(),
+                },
             ],
         });
 
-        let mut encoder = self.device().create_command_encoder(&wgpu::CommandEncoderDescriptor {
-            label: Some("AttentionKvPreprojectEncoder"),
-        });
+        let mut encoder = self
+            .device()
+            .create_command_encoder(&wgpu::CommandEncoderDescriptor {
+                label: Some("AttentionKvPreprojectEncoder"),
+            });
         {
             let mut pass = encoder.begin_compute_pass(&wgpu::ComputePassDescriptor {
                 label: Some("AttentionKPreprojectGemm"),

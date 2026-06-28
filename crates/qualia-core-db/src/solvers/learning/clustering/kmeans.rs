@@ -34,7 +34,10 @@ impl KMeansModel {
 struct Lcg(u64);
 impl Lcg {
     fn unit(&mut self) -> f64 {
-        self.0 = self.0.wrapping_mul(6364136223846793005).wrapping_add(1442695040888963407);
+        self.0 = self
+            .0
+            .wrapping_mul(6364136223846793005)
+            .wrapping_add(1442695040888963407);
         ((self.0 >> 11) as f64) / ((1u64 << 53) as f64)
     }
 }
@@ -149,10 +152,21 @@ pub fn fit(
     // Final inertia.
     let mut inertia = 0.0;
     for i in 0..n {
-        inertia += sq_dist(&centroids[labels[i] * p..(labels[i] + 1) * p], &x[i * p..(i + 1) * p]);
+        inertia += sq_dist(
+            &centroids[labels[i] * p..(labels[i] + 1) * p],
+            &x[i * p..(i + 1) * p],
+        );
     }
 
-    Ok(KMeansModel { centroids, labels, inertia, k, p, n_iter: iters, converged })
+    Ok(KMeansModel {
+        centroids,
+        labels,
+        inertia,
+        k,
+        p,
+        n_iter: iters,
+        converged,
+    })
 }
 
 #[cfg(test)]
@@ -177,7 +191,10 @@ mod tests {
         for blob in 0..3 {
             let base = blob * 5;
             let l = m.labels[base];
-            assert!((base..base + 5).all(|i| m.labels[i] == l), "blob {blob} not pure");
+            assert!(
+                (base..base + 5).all(|i| m.labels[i] == l),
+                "blob {blob} not pure"
+            );
         }
         // Three distinct labels used.
         let mut used: Vec<usize> = m.labels.clone();
@@ -199,7 +216,13 @@ mod tests {
 
     #[test]
     fn guards() {
-        assert_eq!(fit(&[1.0, 2.0], 1, 2, 3, 10, 0).unwrap_err(), LearningError::InsufficientData);
-        assert_eq!(fit(&[1.0, 2.0, 3.0], 2, 2, 1, 10, 0).unwrap_err(), LearningError::InvalidDimension);
+        assert_eq!(
+            fit(&[1.0, 2.0], 1, 2, 3, 10, 0).unwrap_err(),
+            LearningError::InsufficientData
+        );
+        assert_eq!(
+            fit(&[1.0, 2.0, 3.0], 2, 2, 1, 10, 0).unwrap_err(),
+            LearningError::InvalidDimension
+        );
     }
 }

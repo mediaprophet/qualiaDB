@@ -9,9 +9,9 @@
 //! - Virtual IDs minted via generate_embedded_triple_id()
 //! - Context stored separately in NQuin field (not in Virtual ID hash)
 
+use crate::lexicon::{generate_60bit_token, generate_embedded_triple_id};
+use crate::rdf_star::{RdfStarParseError, RdfStarParser};
 use crate::NQuin;
-use crate::lexicon::{generate_embedded_triple_id, generate_60bit_token};
-use crate::rdf_star::{RdfStarParser, RdfStarParseError};
 use std::io::{BufRead, BufReader, Read};
 
 /// Maximum nesting depth for embedded triples
@@ -111,64 +111,68 @@ impl TurtleStarParser {
     }
 
     /// Parse a Turtle-Star token (IRI, literal, or delimiter)
-    /// 
+    ///
     /// Returns Ok(Some(hash)) for valid IRIs/literals, Ok(None) for delimiters
     fn parse_token(&self, input: &[u8], pos: &mut usize) -> Result<Option<u64>, RdfStarParseError> {
         let bytes = &input[*pos..];
-        
+
         // Skip whitespace
         let mut start = 0;
         while start < bytes.len() && bytes[start].is_ascii_whitespace() {
             start += 1;
         }
-        
+
         if start >= bytes.len() {
             return Ok(None);
         }
-        
+
         let ch = bytes[start];
-        
+
         // Check for embedded triple start
         if ch == b'<' && start + 1 < bytes.len() && bytes[start + 1] == b'<' {
             *pos += start + 2;
             return Ok(None); // Signal embedded triple start
         }
-        
+
         // Check for embedded triple end
         if ch == b'>' && start + 1 < bytes.len() && bytes[start + 1] == b'>' {
             *pos += start + 2;
             return Ok(None); // Signal embedded triple end
         }
-        
+
         // Check for statement terminator
         if ch == b'.' {
             *pos += start + 1;
             return Ok(None);
         }
-        
+
         // Check for semicolon (predicate separator in Turtle)
         if ch == b';' {
             *pos += start + 1;
             return Ok(None);
         }
-        
+
         // Parse IRI or literal (simplified - proper Turtle would have <> delimiters)
         let mut end = start;
-        while end < bytes.len() && !bytes[end].is_ascii_whitespace() && bytes[end] != b'.' && bytes[end] != b';' {
+        while end < bytes.len()
+            && !bytes[end].is_ascii_whitespace()
+            && bytes[end] != b'.'
+            && bytes[end] != b';'
+        {
             end += 1;
         }
-        
+
         if start == end {
             return Ok(None);
         }
-        
+
         *pos += end;
-        
+
         // Hash the token
-        let token = std::str::from_utf8(&bytes[start..end])
-            .map_err(|_| RdfStarParseError::InvalidUtf8)?;
+        let token =
+            std::str::from_utf8(&bytes[start..end]).map_err(|_| RdfStarParseError::InvalidUtf8)?;
         let hash = generate_60bit_token(token.as_bytes());
-        
+
         Ok(Some(hash))
     }
 
@@ -181,21 +185,21 @@ impl TurtleStarParser {
         // Push new frame for embedded triple
         let frame = StackFrame::new();
         self.stack.push(frame)?;
-        
+
         let start_depth = self.stack.depth();
-        
+
         // Parse subject
         match self.parse_token(input, pos)? {
             Some(hash) => self.stack.current().subject = Some(hash),
             None => return Err(RdfStarParseError::MalformedEmbeddedTriple),
         }
-        
+
         // Parse predicate
         match self.parse_token(input, pos)? {
             Some(hash) => self.stack.current().predicate = Some(hash),
             None => return Err(RdfStarParseError::MalformedEmbeddedTriple),
         }
-        
+
         // Parse object (could be another embedded triple)
         match self.parse_token(input, pos)? {
             Some(hash) => self.stack.current().object = Some(hash),
@@ -205,33 +209,45 @@ impl TurtleStarParser {
                 return Err(RdfStarParseError::MalformedEmbeddedTriple);
             }
         }
-        
+
         // Expect >> terminator
         // TODO: Proper termination check
-        
+
         // Pop frame and get components
-        let frame = self.stack.pop().ok_or(RdfStarParseError::MalformedEmbeddedTriple)?;
-        
-        let subject = frame.subject.ok_or(RdfStarParseError::MalformedEmbeddedTriple)?;
-        let predicate = frame.predicate.ok_or(RdfStarParseError::MalformedEmbeddedTriple)?;
-        let object = frame.object.ok_or(RdfStarParseError::MalformedEmbeddedTriple)?;
-        
+        let frame = self
+            .stack
+            .pop()
+            .ok_or(RdfStarParseError::MalformedEmbeddedTriple)?;
+
+        let subject = frame
+            .subject
+            .ok_or(RdfStarParseError::MalformedEmbeddedTriple)?;
+        let predicate = frame
+            .predicate
+            .ok_or(RdfStarParseError::MalformedEmbeddedTriple)?;
+        let object = frame
+            .object
+            .ok_or(RdfStarParseError::MalformedEmbeddedTriple)?;
+
         // Generate Virtual ID (context-independent per architectural decision)
         let virtual_id = generate_embedded_triple_id(subject, predicate, object);
-        
+
         Ok((virtual_id, [subject, predicate, object]))
     }
 }
 
 impl RdfStarParser for TurtleStarParser {
-    fn parse_embedded_triple(&mut self, input: &[u8]) -> Result<(u64, [u64; 3]), RdfStarParseError> {
+    fn parse_embedded_triple(
+        &mut self,
+        input: &[u8],
+    ) -> Result<(u64, [u64; 3]), RdfStarParseError> {
         let mut pos = 0;
         self.parse_embedded_triple_internal(input, &mut pos)
     }
 
     fn parse_triple(&mut self, input: &[u8]) -> Result<(u64, u64, u64), RdfStarParseError> {
         let mut pos = 0;
-        
+
         let skip_ws = |p: &mut usize| {
             while *p < input.len() && input[*p].is_ascii_whitespace() {
                 *p += 1;
@@ -255,13 +271,13 @@ impl RdfStarParser for TurtleStarParser {
                 None => return Err(RdfStarParseError::InvalidSyntax),
             }
         };
-        
+
         skip_ws(&mut pos);
         let predicate = match self.parse_token(input, &mut pos)? {
             Some(h) => h,
             None => return Err(RdfStarParseError::InvalidSyntax),
         };
-        
+
         skip_ws(&mut pos);
         let object = if pos + 1 < input.len() && input[pos] == b'<' && input[pos + 1] == b'<' {
             pos += 2; // skip <<
@@ -277,7 +293,7 @@ impl RdfStarParser for TurtleStarParser {
                 None => return Err(RdfStarParseError::InvalidSyntax),
             }
         };
-        
+
         // The object is the final token; this parser returns the triple, not the cursor,
         // so `pos`'s final position is intentionally not propagated past here.
         let _ = pos;
@@ -303,7 +319,7 @@ impl RdfStarParser for TurtleStarParser {
 }
 
 /// Legacy function for backward compatibility with existing ingest pipeline
-/// 
+///
 /// TODO: This should be refactored to use the RdfStarParser trait properly
 /// and integrate with the lexicon writing layer for 24-byte embedded triple storage.
 pub fn parse_turtle_star_into<R: Read, S: crate::sparql_library::quin_sink::QuinSink>(
@@ -324,7 +340,7 @@ pub fn parse_turtle_star_into<R: Read, S: crate::sparql_library::quin_sink::Quin
 
         // Convert to bytes for parser
         let bytes = l.as_bytes();
-        
+
         // Check if line contains embedded triple marker
         if l.contains("<<") {
             // Parse embedded triple using stack-based parser
@@ -339,7 +355,7 @@ pub fn parse_turtle_star_into<R: Read, S: crate::sparql_library::quin_sink::Quin
                     parity: 0,
                 })?;
                 count += 1;
-                
+
                 // TODO: Write embedded triple data to lexicon (24-byte [u64; 3])
                 // This requires integration with the lexicon writing layer
                 // The lexicon entry will be: virtual_id -> 24-byte [subject, predicate, object]
@@ -373,8 +389,8 @@ pub fn parse_turtle_star_stream<R: Read>(
 
 #[cfg(test)]
 mod tests {
-    use crate::rdf_star::{RdfStarParser, RdfStarSerializer};
     use super::*;
+    use crate::rdf_star::{RdfStarParser, RdfStarSerializer};
 
     #[test]
     fn test_turtle_star_parser_creation() {
@@ -389,12 +405,12 @@ mod tests {
     fn test_parser_stack_push_pop() {
         let mut stack = ParserStack::new();
         assert!(stack.is_empty());
-        
+
         let frame = StackFrame::new();
         stack.push(frame).unwrap();
         assert_eq!(stack.depth(), 1);
         assert!(!stack.is_empty());
-        
+
         let popped = stack.pop();
         assert!(popped.is_some());
         assert!(stack.is_empty());
@@ -404,12 +420,12 @@ mod tests {
     fn test_parser_stack_overflow() {
         let mut stack = ParserStack::new();
         let frame = StackFrame::new();
-        
+
         // Fill to capacity
         for _ in 0..MAX_NESTING_DEPTH {
             stack.push(frame).unwrap();
         }
-        
+
         // Should overflow
         assert!(stack.push(frame).is_err());
     }
@@ -437,7 +453,7 @@ mod tests {
         assert_ne!(components[0], 0);
         assert_ne!(components[1], 0);
         assert_ne!(components[2], 0);
-        
+
         // Verify stack was properly managed
         assert_eq!(parser.stack.depth(), 0);
     }
@@ -445,25 +461,25 @@ mod tests {
     #[test]
     fn test_virtual_id_context_independence() {
         use crate::lexicon::TAG_EMBEDDED;
-        
+
         // Same triple should generate same Virtual ID regardless of context
         let context1 = 12345u64;
         let context2 = 67890u64;
-        
+
         let mut parser1 = TurtleStarParser::new(context1);
         let mut parser2 = TurtleStarParser::new(context2);
-        
+
         let input = b"Alice knows Bob";
         let (vid1, _) = parser1.parse_embedded_triple(input).unwrap();
         let (vid2, _) = parser2.parse_embedded_triple(input).unwrap();
-        
+
         assert_eq!(vid1, vid2, "Virtual ID should be context-independent");
         assert_ne!(vid1 & TAG_EMBEDDED, 0, "TAG_EMBEDDED bit should be set");
     }
 }
 
 /// Turtle-Star Serializer
-/// 
+///
 /// Converts Virtual IDs and component hashes back to Turtle-Star syntax.
 pub struct TurtleStarSerializer;
 
@@ -485,7 +501,7 @@ impl crate::rdf_star::RdfStarSerializer for TurtleStarSerializer {
         let output = format!("<<{} {} {}>>", components[0], components[1], components[2]);
         Ok(output.into_bytes())
     }
-    
+
     fn serialize_triple(
         &self,
         subject: u64,
@@ -496,7 +512,7 @@ impl crate::rdf_star::RdfStarSerializer for TurtleStarSerializer {
         let output = format!("{} {} {} .", subject, predicate, object);
         Ok(output.into_bytes())
     }
-    
+
     fn serialize_quad(
         &self,
         _subject: u64,
@@ -507,18 +523,18 @@ impl crate::rdf_star::RdfStarSerializer for TurtleStarSerializer {
         // Turtle-Star doesn't support quads natively
         Err(crate::rdf_star::RdfStarSerializeError::UnsupportedFeature)
     }
-    
+
     fn supports_quads(&self) -> bool {
         false
     }
-    
+
     fn format_name(&self) -> &'static str {
         "Turtle-Star"
     }
 }
 
 /// CBOR-LD Serializer for SPARQL-Star
-/// 
+///
 /// Implements CBOR-LD tags 103-106 for embedded triples per the RDF-Star CBOR-LD spec:
 /// - Tag 103: Triple (<<s p o>>)
 /// - Tag 104: Subject (s of <<s p o>>)
@@ -541,14 +557,15 @@ impl crate::rdf_star::RdfStarSerializer for CborLdStarSerializer {
         // CBOR-LD Tag 103: Triple
         // Format: 103(3-array of [subject, predicate, object])
         use ciborium::ser;
-        
+
         let mut buffer = Vec::new();
         let tagged = ciborium::tag::Required::<[u64; 3], 103>(*components);
-        ser::into_writer(&tagged, &mut buffer).map_err(|_| crate::rdf_star::RdfStarSerializeError::BufferTooSmall)?;
-        
+        ser::into_writer(&tagged, &mut buffer)
+            .map_err(|_| crate::rdf_star::RdfStarSerializeError::BufferTooSmall)?;
+
         Ok(buffer)
     }
-    
+
     fn serialize_triple(
         &self,
         subject: u64,
@@ -557,10 +574,11 @@ impl crate::rdf_star::RdfStarSerializer for CborLdStarSerializer {
     ) -> Result<Vec<u8>, crate::rdf_star::RdfStarSerializeError> {
         use ciborium::ser;
         let mut buffer = Vec::new();
-        ser::into_writer(&[subject, predicate, object], &mut buffer).map_err(|_| crate::rdf_star::RdfStarSerializeError::BufferTooSmall)?;
+        ser::into_writer(&[subject, predicate, object], &mut buffer)
+            .map_err(|_| crate::rdf_star::RdfStarSerializeError::BufferTooSmall)?;
         Ok(buffer)
     }
-    
+
     fn serialize_quad(
         &self,
         subject: u64,
@@ -570,14 +588,15 @@ impl crate::rdf_star::RdfStarSerializer for CborLdStarSerializer {
     ) -> Result<Vec<u8>, crate::rdf_star::RdfStarSerializeError> {
         use ciborium::ser;
         let mut buffer = Vec::new();
-        ser::into_writer(&[subject, predicate, object, graph], &mut buffer).map_err(|_| crate::rdf_star::RdfStarSerializeError::BufferTooSmall)?;
+        ser::into_writer(&[subject, predicate, object, graph], &mut buffer)
+            .map_err(|_| crate::rdf_star::RdfStarSerializeError::BufferTooSmall)?;
         Ok(buffer)
     }
-    
+
     fn supports_quads(&self) -> bool {
         true
     }
-    
+
     fn format_name(&self) -> &'static str {
         "CBOR-LD-Star"
     }
@@ -585,8 +604,8 @@ impl crate::rdf_star::RdfStarSerializer for CborLdStarSerializer {
 
 #[cfg(test)]
 mod cbor_serializer_tests {
-    use crate::rdf_star::RdfStarSerializer;
     use super::*;
+    use crate::rdf_star::RdfStarSerializer;
 
     #[test]
     fn test_cbor_serializer_creation() {
@@ -629,7 +648,7 @@ mod cbor_serializer_tests {
 }
 
 /// N-Triples-Star Serializer
-/// 
+///
 /// Serializes to N-Triples-Star format: <<<s p o>>> p o .
 pub struct NTriplesStarSerializer;
 
@@ -647,10 +666,13 @@ impl crate::rdf_star::RdfStarSerializer for NTriplesStarSerializer {
     ) -> Result<Vec<u8>, crate::rdf_star::RdfStarSerializeError> {
         // Format: <<<subject predicate object>>>
         // TODO: Should output full IRIs, not just hashes
-        let output = format!("<<<{} {} {}>>>", components[0], components[1], components[2]);
+        let output = format!(
+            "<<<{} {} {}>>>",
+            components[0], components[1], components[2]
+        );
         Ok(output.into_bytes())
     }
-    
+
     fn serialize_triple(
         &self,
         subject: u64,
@@ -661,7 +683,7 @@ impl crate::rdf_star::RdfStarSerializer for NTriplesStarSerializer {
         let output = format!("<{}> <{}> <{}> .", subject, predicate, object);
         Ok(output.into_bytes())
     }
-    
+
     fn serialize_quad(
         &self,
         _subject: u64,
@@ -672,18 +694,18 @@ impl crate::rdf_star::RdfStarSerializer for NTriplesStarSerializer {
         // N-Triples-Star doesn't support quads natively
         Err(crate::rdf_star::RdfStarSerializeError::UnsupportedFeature)
     }
-    
+
     fn supports_quads(&self) -> bool {
         false
     }
-    
+
     fn format_name(&self) -> &'static str {
         "N-Triples-Star"
     }
 }
 
 /// N-Quads-Star Serializer
-/// 
+///
 /// Serializes to N-Quads-Star format: <<<s p o>>> p o <g> .
 pub struct NQuadsStarSerializer;
 
@@ -701,10 +723,13 @@ impl crate::rdf_star::RdfStarSerializer for NQuadsStarSerializer {
     ) -> Result<Vec<u8>, crate::rdf_star::RdfStarSerializeError> {
         // Format: <<<subject predicate object>>>
         // TODO: Should output full IRIs, not just hashes
-        let output = format!("<<<{} {} {}>>>", components[0], components[1], components[2]);
+        let output = format!(
+            "<<<{} {} {}>>>",
+            components[0], components[1], components[2]
+        );
         Ok(output.into_bytes())
     }
-    
+
     fn serialize_triple(
         &self,
         subject: u64,
@@ -716,7 +741,7 @@ impl crate::rdf_star::RdfStarSerializer for NQuadsStarSerializer {
         let output = format!("<{}> <{}> <{}> .", subject, predicate, object);
         Ok(output.into_bytes())
     }
-    
+
     fn serialize_quad(
         &self,
         subject: u64,
@@ -728,18 +753,18 @@ impl crate::rdf_star::RdfStarSerializer for NQuadsStarSerializer {
         let output = format!("<{}> <{}> <{}> <{}> .", subject, predicate, object, graph);
         Ok(output.into_bytes())
     }
-    
+
     fn supports_quads(&self) -> bool {
         true
     }
-    
+
     fn format_name(&self) -> &'static str {
         "N-Quads-Star"
     }
 }
 
 /// JSON-LD Serializer for SPARQL-Star
-/// 
+///
 /// Serializes to JSON-LD format with @annotation for embedded triples.
 pub struct JsonLdStarSerializer;
 
@@ -777,7 +802,7 @@ impl crate::rdf_star::RdfStarSerializer for JsonLdStarSerializer {
         );
         Ok(output.into_bytes())
     }
-    
+
     fn serialize_triple(
         &self,
         subject: u64,
@@ -795,7 +820,7 @@ impl crate::rdf_star::RdfStarSerializer for JsonLdStarSerializer {
         );
         Ok(output.into_bytes())
     }
-    
+
     fn serialize_quad(
         &self,
         subject: u64,
@@ -815,11 +840,11 @@ impl crate::rdf_star::RdfStarSerializer for JsonLdStarSerializer {
         );
         Ok(output.into_bytes())
     }
-    
+
     fn supports_quads(&self) -> bool {
         true
     }
-    
+
     fn format_name(&self) -> &'static str {
         "JSON-LD-Star"
     }
@@ -827,15 +852,15 @@ impl crate::rdf_star::RdfStarSerializer for JsonLdStarSerializer {
 
 #[cfg(test)]
 mod additional_serializer_tests {
-    use crate::rdf_star::RdfStarSerializer;
     use super::*;
+    use crate::rdf_star::RdfStarSerializer;
 
     #[test]
     fn test_ntriples_serializer() {
         let serializer = NTriplesStarSerializer::new();
         assert_eq!(serializer.format_name(), "N-Triples-Star");
         assert!(!serializer.supports_quads());
-        
+
         let components = [1u64, 2, 3];
         let result = serializer.serialize_embedded_triple(0, &components);
         assert!(result.is_ok());
@@ -848,7 +873,7 @@ mod additional_serializer_tests {
         let serializer = NQuadsStarSerializer::new();
         assert_eq!(serializer.format_name(), "N-Quads-Star");
         assert!(serializer.supports_quads());
-        
+
         let result = serializer.serialize_quad(1, 2, 3, 4);
         assert!(result.is_ok());
         let output = String::from_utf8(result.unwrap()).unwrap();
@@ -860,7 +885,7 @@ mod additional_serializer_tests {
         let serializer = JsonLdStarSerializer::new();
         assert_eq!(serializer.format_name(), "JSON-LD-Star");
         assert!(serializer.supports_quads());
-        
+
         let components = [1u64, 2, 3];
         let result = serializer.serialize_embedded_triple(0, &components);
         assert!(result.is_ok());
@@ -870,7 +895,7 @@ mod additional_serializer_tests {
 }
 
 /// Trig-Star Serializer
-/// 
+///
 /// Serializes to Trig-Star format with named graphs.
 pub struct TrigStarSerializer {
     current_graph: u64,
@@ -880,7 +905,7 @@ impl TrigStarSerializer {
     pub fn new() -> Self {
         Self { current_graph: 0 }
     }
-    
+
     pub fn set_current_graph(&mut self, graph_hash: u64) {
         self.current_graph = graph_hash;
     }
@@ -896,7 +921,7 @@ impl crate::rdf_star::RdfStarSerializer for TrigStarSerializer {
         let output = format!("<<{} {} {}>>", components[0], components[1], components[2]);
         Ok(output.into_bytes())
     }
-    
+
     fn serialize_triple(
         &self,
         subject: u64,
@@ -907,7 +932,7 @@ impl crate::rdf_star::RdfStarSerializer for TrigStarSerializer {
         let output = format!("{} {} {} .", subject, predicate, object);
         Ok(output.into_bytes())
     }
-    
+
     fn serialize_quad(
         &self,
         subject: u64,
@@ -921,14 +946,17 @@ impl crate::rdf_star::RdfStarSerializer for TrigStarSerializer {
             return Ok(output.into_bytes());
         }
         // Format in named graph (would need GRAPH {} wrapper)
-        let output = format!("GRAPH <{}> {{ {} {} {} . }}", graph, subject, predicate, object);
+        let output = format!(
+            "GRAPH <{}> {{ {} {} {} . }}",
+            graph, subject, predicate, object
+        );
         Ok(output.into_bytes())
     }
-    
+
     fn supports_quads(&self) -> bool {
         true
     }
-    
+
     fn format_name(&self) -> &'static str {
         "Trig-Star"
     }
@@ -936,22 +964,22 @@ impl crate::rdf_star::RdfStarSerializer for TrigStarSerializer {
 
 #[cfg(test)]
 mod trig_serializer_tests {
-    use crate::rdf_star::RdfStarSerializer;
     use super::*;
+    use crate::rdf_star::RdfStarSerializer;
 
     #[test]
     fn test_trig_serializer() {
         let serializer = TrigStarSerializer::new();
         assert_eq!(serializer.format_name(), "Trig-Star");
         assert!(serializer.supports_quads());
-        
+
         let result = serializer.serialize_quad(1, 2, 3, 0);
         assert!(result.is_ok());
     }
 }
 
 /// N3-Star Serializer
-/// 
+///
 /// Serializes to N3-Star format with formulae and rules support.
 pub struct N3StarSerializer {
     /// Current variable bindings
@@ -964,7 +992,7 @@ impl N3StarSerializer {
             variables: std::collections::HashMap::new(),
         }
     }
-    
+
     pub fn bind_variable(&mut self, hash: u64, name: String) {
         self.variables.insert(hash, name);
     }
@@ -980,21 +1008,33 @@ impl crate::rdf_star::RdfStarSerializer for N3StarSerializer {
         let output = format!("<<{} {} {}>>", components[0], components[1], components[2]);
         Ok(output.into_bytes())
     }
-    
+
     fn serialize_triple(
         &self,
         subject: u64,
         predicate: u64,
         object: u64,
     ) -> Result<Vec<u8>, crate::rdf_star::RdfStarSerializeError> {
-        let s = self.variables.get(&subject).cloned().unwrap_or_else(|| format!("_:{}", subject));
-        let p = self.variables.get(&predicate).cloned().unwrap_or_else(|| format!("_:{}", predicate));
-        let o = self.variables.get(&object).cloned().unwrap_or_else(|| format!("_:{}", object));
-        
+        let s = self
+            .variables
+            .get(&subject)
+            .cloned()
+            .unwrap_or_else(|| format!("_:{}", subject));
+        let p = self
+            .variables
+            .get(&predicate)
+            .cloned()
+            .unwrap_or_else(|| format!("_:{}", predicate));
+        let o = self
+            .variables
+            .get(&object)
+            .cloned()
+            .unwrap_or_else(|| format!("_:{}", object));
+
         let output = format!("{} {} {} .", s, p, o);
         Ok(output.into_bytes())
     }
-    
+
     fn serialize_quad(
         &self,
         subject: u64,
@@ -1005,11 +1045,11 @@ impl crate::rdf_star::RdfStarSerializer for N3StarSerializer {
         // N3 doesn't have named graphs, so serialize as triple
         self.serialize_triple(subject, predicate, object)
     }
-    
+
     fn supports_quads(&self) -> bool {
         false
     }
-    
+
     fn format_name(&self) -> &'static str {
         "N3-Star"
     }
@@ -1017,15 +1057,15 @@ impl crate::rdf_star::RdfStarSerializer for N3StarSerializer {
 
 #[cfg(test)]
 mod n3_serializer_tests {
-    use crate::rdf_star::RdfStarSerializer;
     use super::*;
+    use crate::rdf_star::RdfStarSerializer;
 
     #[test]
     fn test_n3_serializer() {
         let serializer = N3StarSerializer::new();
         assert_eq!(serializer.format_name(), "N3-Star");
         assert!(!serializer.supports_quads());
-        
+
         let result = serializer.serialize_triple(1, 2, 3);
         assert!(result.is_ok());
     }
@@ -1036,7 +1076,7 @@ mod n3_serializer_tests {
         serializer.bind_variable(1, "x".to_string());
         serializer.bind_variable(2, "knows".to_string());
         serializer.bind_variable(3, "y".to_string());
-        
+
         let result = serializer.serialize_triple(1, 2, 3);
         assert!(result.is_ok());
         let output = String::from_utf8(result.unwrap()).unwrap();

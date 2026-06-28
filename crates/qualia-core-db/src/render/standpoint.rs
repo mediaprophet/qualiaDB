@@ -1,11 +1,11 @@
 //! Human-Centric observer standpoint — the chosen context and right to perceive
 //! (decoupled from the camera lens; no hardware fingerprinting).
 
+use crate::q_hash;
 use crate::render::telemetry::{
     ObserverStandpoint, DEONTIC_LANE_BILATERAL, DEONTIC_LANE_COMMONS, FABRIC_VIEWPORT_LOCAL,
     STANDPOINT_DID, STANDPOINT_EPHEMERAL, STANDPOINT_SPECTATOR, STANDPOINT_VAULT,
 };
-use crate::q_hash;
 
 /// Cryptographic-quality session nonce for ephemeral standpoint hashing (no fingerprinting).
 #[inline]
@@ -55,7 +55,11 @@ pub fn ephemeral_session(session_nonce: u64) -> ObserverStandpoint {
 
 /// Verified identifier standpoint — fabric gate opens when caller supplies a non-zero DID hash.
 #[inline]
-pub fn identifier_standpoint(did_hash: u64, session_nonce: u64, epistemic_q: f32) -> ObserverStandpoint {
+pub fn identifier_standpoint(
+    did_hash: u64,
+    session_nonce: u64,
+    epistemic_q: f32,
+) -> ObserverStandpoint {
     ObserverStandpoint::new(
         did_hash,
         session_nonce,
@@ -85,7 +89,11 @@ pub fn vault_standpoint(vault_hash: u64, session_nonce: u64) -> ObserverStandpoi
 
 /// Resolve standpoint hash from optional identifier IRI (empty → ephemeral session hash).
 #[inline]
-pub fn resolve_standpoint_hash(standpoint_class: u32, session_nonce: u64, identifier_did: &str) -> u64 {
+pub fn resolve_standpoint_hash(
+    standpoint_class: u32,
+    session_nonce: u64,
+    identifier_did: &str,
+) -> u64 {
     if identifier_did.is_empty() {
         return match standpoint_class {
             STANDPOINT_EPHEMERAL => q_hash("q42:observer:session") ^ session_nonce,

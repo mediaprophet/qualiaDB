@@ -56,18 +56,18 @@ impl TensorState {
             state_id,
         }
     }
-    
+
     /// Creates a tensor state from a scalar value (1D tensor of size 1)
     pub fn from_scalar(value: f64) -> Self {
         Self::new(vec![value], vec![1])
     }
-    
+
     /// Applies an operation to create a new tensor state with provenance
     pub fn apply_operation(&self, operation: &str, params: &HashMap<String, f64>) -> Self {
         let new_data = self.compute_operation(operation, params);
         let new_shape = self.infer_shape(operation, &new_data);
         let state_id = Self::generate_state_id(&new_data, &new_shape);
-        
+
         Self {
             data: new_data,
             shape: new_shape,
@@ -80,7 +80,7 @@ impl TensorState {
             state_id,
         }
     }
-    
+
     /// Computes the result of an operation on the tensor data
     fn compute_operation(&self, operation: &str, params: &HashMap<String, f64>) -> Vec<f64> {
         match operation {
@@ -93,43 +93,44 @@ impl TensorState {
             _ => self.data.clone(), // Identity operation for unknown ops
         }
     }
-    
+
     /// RK4 ODE step operation
     fn rk4_step(&self, params: &HashMap<String, f64>) -> Vec<f64> {
         let step_size = params.get("step_size").copied().unwrap_or(0.01);
         let lambda = params.get("lambda").copied().unwrap_or(0.5);
-        
+
         // Apply exponential decay: y' = -λy
-        self.data.iter()
+        self.data
+            .iter()
             .map(|&y| y * (-lambda * step_size).exp())
             .collect()
     }
-    
+
     /// Scale operation
     fn scale(&self, params: &HashMap<String, f64>) -> Vec<f64> {
         let factor = params.get("factor").copied().unwrap_or(1.0);
         self.data.iter().map(|&x| x * factor).collect()
     }
-    
+
     /// Add operation
     fn add(&self, params: &HashMap<String, f64>) -> Vec<f64> {
         let value = params.get("value").copied().unwrap_or(0.0);
         self.data.iter().map(|&x| x + value).collect()
     }
-    
+
     /// Multiply operation
     fn multiply(&self, params: &HashMap<String, f64>) -> Vec<f64> {
         let value = params.get("value").copied().unwrap_or(1.0);
         self.data.iter().map(|&x| x * value).collect()
     }
-    
+
     /// Transpose operation (for 2D tensors)
     fn transpose(&self) -> Vec<f64> {
         if self.shape.len() == 2 {
             let rows = self.shape[0];
             let cols = self.shape[1];
             let mut transposed = vec![0.0; self.data.len()];
-            
+
             for i in 0..rows {
                 for j in 0..cols {
                     transposed[j * rows + i] = self.data[i * cols + j];
@@ -140,12 +141,12 @@ impl TensorState {
             self.data.clone()
         }
     }
-    
+
     /// Reduce sum operation
     fn reduce_sum(&self) -> Vec<f64> {
         vec![self.data.iter().sum()]
     }
-    
+
     /// Infers the shape of the result tensor
     fn infer_shape(&self, operation: &str, _data: &Vec<f64>) -> Vec<usize> {
         match operation {
@@ -160,34 +161,34 @@ impl TensorState {
             _ => self.shape.clone(),
         }
     }
-    
+
     /// Gets the provenance chain as a vector
     pub fn get_provenance_chain(&self) -> Vec<TensorProvenance> {
         let chain = vec![self.provenance.clone()];
         // In a full implementation, this would recursively traverse parent states
         chain
     }
-    
+
     /// Converts the tensor state to a Quin for graph storage
     pub fn to_quin(&self) -> NQuin {
         let mut quin = NQuin::default();
         quin.subject = self.state_id;
-        
+
         // Pack tensor metadata into object field
         // For simplicity, we store the first element and length
         if !self.data.is_empty() {
             quin.object = self.data[0].to_bits() as u64;
         }
-        
+
         // Store data length in metadata
         quin.metadata = self.data.len() as u64;
-        
+
         // Store provenance hash in context
         quin.context = self.provenance_hash();
-        
+
         quin
     }
-    
+
     /// Computes a hash of the provenance for graph linking
     fn provenance_hash(&self) -> u64 {
         match &self.provenance {
@@ -195,8 +196,14 @@ impl TensorState {
                 let combined = format!("{}:{}", source, timestamp);
                 crate::q_hash(&combined)
             }
-            TensorProvenance::Derived { parent_id, operation, params, timestamp } => {
-                let param_str: String = params.iter()
+            TensorProvenance::Derived {
+                parent_id,
+                operation,
+                params,
+                timestamp,
+            } => {
+                let param_str: String = params
+                    .iter()
                     .map(|(k, v)| format!("{}={}", k, v))
                     .collect::<Vec<_>>()
                     .join(",");
@@ -205,19 +212,21 @@ impl TensorState {
             }
         }
     }
-    
+
     /// Generates a unique state ID from data and shape
     fn generate_state_id(data: &Vec<f64>, shape: &Vec<usize>) -> u64 {
-        let data_hash: u64 = data.iter()
+        let data_hash: u64 = data
+            .iter()
             .map(|&x| x.to_bits())
             .fold(0u64, |acc, x| acc.wrapping_add(x));
-        
-        let shape_hash: u64 = shape.iter()
+
+        let shape_hash: u64 = shape
+            .iter()
             .fold(0u64, |acc, &x| acc.wrapping_add(x as u64));
-        
+
         data_hash.wrapping_mul(31).wrapping_add(shape_hash)
     }
-    
+
     /// Gets the current timestamp
     fn current_timestamp() -> u64 {
         std::time::SystemTime::now()
@@ -225,7 +234,7 @@ impl TensorState {
             .unwrap()
             .as_secs()
     }
-    
+
     /// Gets the provenance information
     pub fn get_provenance(&self) -> &TensorProvenance {
         &self.provenance
@@ -238,10 +247,7 @@ impl TensorState {
 #[derive(Debug, Clone)]
 pub enum TensorProvenance {
     /// Root state with no parent
-    Root {
-        source: String,
-        timestamp: u64,
-    },
+    Root { source: String, timestamp: u64 },
     /// Derived state from a parent operation
     Derived {
         parent_id: u64,
@@ -256,7 +262,7 @@ impl TensorProvenance {
     pub fn is_root(&self) -> bool {
         matches!(self, TensorProvenance::Root { .. })
     }
-    
+
     /// Gets the parent ID if this is a derived state
     pub fn parent_id(&self) -> Option<u64> {
         match self {
@@ -264,7 +270,7 @@ impl TensorProvenance {
             _ => None,
         }
     }
-    
+
     /// Gets the operation name if this is a derived state
     pub fn operation(&self) -> Option<&str> {
         match self {
@@ -292,50 +298,51 @@ impl ProvenanceGraph {
             edges: Vec::new(),
         }
     }
-    
+
     /// Adds a tensor state to the graph
     pub fn add_state(&mut self, state: TensorState) {
         let state_id = state.state_id;
-        
+
         // Add edge if this is a derived state
         if let Some(parent_id) = state.provenance.parent_id() {
             self.edges.push((parent_id, state_id));
         }
-        
+
         self.states.insert(state_id, state);
     }
-    
+
     /// Gets a tensor state by ID
     pub fn get_state(&self, state_id: u64) -> Option<&TensorState> {
         self.states.get(&state_id)
     }
-    
+
     /// Gets the lineage (chain of parent states) for a given state
     pub fn get_lineage(&self, state_id: u64) -> Vec<u64> {
         let mut lineage = Vec::new();
         let mut current_id = state_id;
-        
+
         while let Some(state) = self.states.get(&current_id) {
             lineage.push(current_id);
-            
+
             if let Some(parent_id) = state.provenance.parent_id() {
                 current_id = parent_id;
             } else {
                 break;
             }
         }
-        
+
         lineage
     }
-    
+
     /// Gets all children of a given state
     pub fn get_children(&self, state_id: u64) -> Vec<u64> {
-        self.edges.iter()
+        self.edges
+            .iter()
             .filter(|(parent, _)| *parent == state_id)
             .map(|(_, child)| *child)
             .collect()
     }
-    
+
     /// Validates the provenance graph for consistency
     pub fn validate(&self) -> Result<(), String> {
         // Check that all edges reference valid states
@@ -347,15 +354,20 @@ impl ProvenanceGraph {
                 return Err(format!("Child state {} not found in graph", child_id));
             }
         }
-        
+
         // Check for cycles (simple check: no state should be its own ancestor)
         for state_id in self.states.keys() {
             let lineage = self.get_lineage(*state_id);
-            if lineage.len() != lineage.iter().collect::<std::collections::HashSet<_>>().len() {
+            if lineage.len()
+                != lineage
+                    .iter()
+                    .collect::<std::collections::HashSet<_>>()
+                    .len()
+            {
                 return Err(format!("Cycle detected in lineage of state {}", state_id));
             }
         }
-        
+
         Ok(())
     }
 }
@@ -392,7 +404,7 @@ mod tests {
         let mut params = HashMap::new();
         params.insert("step_size".to_string(), 0.01);
         params.insert("lambda".to_string(), 0.5);
-        
+
         let transformed = state.apply_operation("rk4_step", &params);
         assert!(!transformed.provenance.is_root());
         assert_eq!(transformed.provenance.operation(), Some("rk4_step"));
@@ -403,7 +415,7 @@ mod tests {
         let state = TensorState::new(vec![1.0, 2.0, 3.0], vec![3]);
         let mut params = HashMap::new();
         params.insert("factor".to_string(), 2.0);
-        
+
         let transformed = state.apply_operation("scale", &params);
         assert_eq!(transformed.data, vec![2.0, 4.0, 6.0]);
     }
@@ -413,7 +425,7 @@ mod tests {
         let state = TensorState::new(vec![1.0, 2.0, 3.0], vec![3]);
         let mut params = HashMap::new();
         params.insert("value".to_string(), 10.0);
-        
+
         let transformed = state.apply_operation("add", &params);
         assert_eq!(transformed.data, vec![11.0, 12.0, 13.0]);
     }
@@ -424,7 +436,7 @@ mod tests {
         let mut params = HashMap::new();
         params.insert("factor".to_string(), 2.0);
         let state2 = state1.apply_operation("scale", &params);
-        
+
         let chain = state2.get_provenance_chain();
         // Current implementation only returns the current state's provenance
         // Full chain traversal would require graph access
@@ -436,17 +448,17 @@ mod tests {
     #[test]
     fn test_provenance_graph() {
         let mut graph = ProvenanceGraph::new();
-        
+
         let state1 = TensorState::new(vec![1.0], vec![1]);
         let state1_id = state1.state_id;
         graph.add_state(state1.clone());
-        
+
         let mut params = HashMap::new();
         params.insert("factor".to_string(), 2.0);
         let state2 = TensorState::from_scalar(1.0).apply_operation("scale", &params);
         let state2_id = state2.state_id;
         graph.add_state(state2);
-        
+
         assert!(graph.get_state(state1_id).is_some());
         assert!(graph.get_state(state2_id).is_some());
     }
@@ -454,17 +466,17 @@ mod tests {
     #[test]
     fn test_provenance_graph_lineage() {
         let mut graph = ProvenanceGraph::new();
-        
+
         let state1 = TensorState::new(vec![1.0], vec![1]);
         let state1_id = state1.state_id;
         graph.add_state(state1.clone());
-        
+
         let mut params = HashMap::new();
         params.insert("factor".to_string(), 2.0);
         let state2 = state1.apply_operation("scale", &params);
         let state2_id = state2.state_id;
         graph.add_state(state2);
-        
+
         let lineage = graph.get_lineage(state2_id);
         assert_eq!(lineage.len(), 2);
         assert!(lineage.contains(&state1_id));
@@ -474,15 +486,15 @@ mod tests {
     #[test]
     fn test_provenance_graph_validate() {
         let mut graph = ProvenanceGraph::new();
-        
+
         let state1 = TensorState::new(vec![1.0], vec![1]);
         graph.add_state(state1.clone());
-        
+
         let mut params = HashMap::new();
         params.insert("factor".to_string(), 2.0);
         let state2 = state1.apply_operation("scale", &params);
         graph.add_state(state2);
-        
+
         assert!(graph.validate().is_ok());
     }
 
@@ -490,7 +502,7 @@ mod tests {
     fn test_tensor_to_quin() {
         let state = TensorState::new(vec![1.0, 2.0, 3.0], vec![3]);
         let quin = state.to_quin();
-        
+
         assert_eq!(quin.subject, state.state_id);
         assert_eq!(quin.metadata, 3);
     }
@@ -499,7 +511,7 @@ mod tests {
     fn test_reduce_sum() {
         let state = TensorState::new(vec![1.0, 2.0, 3.0], vec![3]);
         let reduced = state.apply_operation("reduce_sum", &HashMap::new());
-        
+
         assert_eq!(reduced.data, vec![6.0]);
         assert_eq!(reduced.shape, vec![1]);
     }
@@ -508,7 +520,7 @@ mod tests {
     fn test_transpose_2d() {
         let state = TensorState::new(vec![1.0, 2.0, 3.0, 4.0], vec![2, 2]);
         let transposed = state.apply_operation("transpose", &HashMap::new());
-        
+
         assert_eq!(transposed.data, vec![1.0, 3.0, 2.0, 4.0]);
         assert_eq!(transposed.shape, vec![2, 2]);
     }

@@ -34,6 +34,6 @@ pub use hypothesis::{
     chi_square_gof, chi_square_independence, one_sample_t, one_way_anova, paired_t, two_sample_t,
     AnovaResult, ChiSquareResult, TTest, TwoSampleTTest,
 };
-pub use regression::{simple_linear_regression, LinearRegression};
 pub use information::{cross_entropy, entropy, kl_divergence, mutual_information_discrete};
+pub use regression::{simple_linear_regression, LinearRegression};
 pub use robust::{iqr, median_abs_deviation, trimmed_mean, winsorized_mean};

@@ -48,8 +48,10 @@ pub const P_COG_HAS_GOAL: u64 = q_hash("https://www.w3.org/community/cogai/ont#h
 pub const P_COG_HAS_PLAN: u64 = q_hash("https://www.w3.org/community/cogai/ont#hasPlan");
 
 // ── Q42 extension predicates ──────────────────────────────────────────────────
-pub const P_Q42_INFERENCE_AUTHORIZED_BY: u64 = q_hash("urn:qualia:ontology:rights:inferenceAuthorizedBy");
-pub const P_Q42_PROVENANCE_CITATIONS: u64 = q_hash("urn:qualia:ontology:rights:provenanceCitations");
+pub const P_Q42_INFERENCE_AUTHORIZED_BY: u64 =
+    q_hash("urn:qualia:ontology:rights:inferenceAuthorizedBy");
+pub const P_Q42_PROVENANCE_CITATIONS: u64 =
+    q_hash("urn:qualia:ontology:rights:provenanceCitations");
 
 // ── assert_temporal ───────────────────────────────────────────────────────────
 
@@ -94,37 +96,74 @@ pub fn invalidate_entity(entity: u64, agent_did: u64, t_invalidate: u64) -> [NQu
 /// Write `cog:Agent` type quin for a DID hash to `AGENT_CONTEXT`.
 pub fn register_agent(did_hash: u64, ts: u64) -> NQuin {
     NQuin {
-        subject:   did_hash,
+        subject: did_hash,
         predicate: P_RDF_TYPE,
-        object:    C_COG_AGENT,
-        context:   AGENT_CONTEXT,
-        metadata:  ts & 0xFFFF_FFFF, // Lamport clock = lower 32 bits of ts
-        parity:    0,
+        object: C_COG_AGENT,
+        context: AGENT_CONTEXT,
+        metadata: ts & 0xFFFF_FFFF, // Lamport clock = lower 32 bits of ts
+        parity: 0,
     }
 }
 
 /// Write `cog:Goal` for `(agent_did, goal_hash)` pair to `AGENT_CONTEXT`.
 pub fn write_goal(agent_did: u64, goal_hash: u64, ts: u64) -> [NQuin; 2] {
     [
-        NQuin { subject: goal_hash, predicate: P_RDF_TYPE,    object: C_COG_GOAL,  context: AGENT_CONTEXT, metadata: ts & 0xFFFF_FFFF, parity: 0 },
-        NQuin { subject: agent_did, predicate: P_COG_HAS_GOAL, object: goal_hash,  context: AGENT_CONTEXT, metadata: ts & 0xFFFF_FFFF, parity: 0 },
+        NQuin {
+            subject: goal_hash,
+            predicate: P_RDF_TYPE,
+            object: C_COG_GOAL,
+            context: AGENT_CONTEXT,
+            metadata: ts & 0xFFFF_FFFF,
+            parity: 0,
+        },
+        NQuin {
+            subject: agent_did,
+            predicate: P_COG_HAS_GOAL,
+            object: goal_hash,
+            context: AGENT_CONTEXT,
+            metadata: ts & 0xFFFF_FFFF,
+            parity: 0,
+        },
     ]
 }
 
 /// Write `cog:Belief` with PROV-O provenance for `(agent_did, belief_hash)` pair.
 ///
 /// Returns quins in `T_CONTEXT` (temporal) and `AGENT_CONTEXT` (belief link).
-pub fn write_belief(
-    agent_did: u64,
-    belief_hash: u64,
-    t_assert: u64,
-    t_valid: u64,
-) -> [NQuin; 4] {
+pub fn write_belief(agent_did: u64, belief_hash: u64, t_assert: u64, t_valid: u64) -> [NQuin; 4] {
     [
-        NQuin { subject: belief_hash, predicate: P_RDF_TYPE,         object: C_COG_BELIEF,  context: AGENT_CONTEXT, metadata: t_assert & 0xFFFF_FFFF, parity: 0 },
-        NQuin { subject: agent_did,  predicate: P_COG_HOLDS_BELIEF,  object: belief_hash,   context: AGENT_CONTEXT, metadata: t_assert & 0xFFFF_FFFF, parity: 0 },
-        NQuin { subject: belief_hash, predicate: P_GENERATED_AT,      object: t_assert,      context: T_CONTEXT,     metadata: 0,                       parity: 0 },
-        NQuin { subject: belief_hash, predicate: P_STARTED_AT,        object: t_valid,       context: T_CONTEXT,     metadata: 0,                       parity: 0 },
+        NQuin {
+            subject: belief_hash,
+            predicate: P_RDF_TYPE,
+            object: C_COG_BELIEF,
+            context: AGENT_CONTEXT,
+            metadata: t_assert & 0xFFFF_FFFF,
+            parity: 0,
+        },
+        NQuin {
+            subject: agent_did,
+            predicate: P_COG_HOLDS_BELIEF,
+            object: belief_hash,
+            context: AGENT_CONTEXT,
+            metadata: t_assert & 0xFFFF_FFFF,
+            parity: 0,
+        },
+        NQuin {
+            subject: belief_hash,
+            predicate: P_GENERATED_AT,
+            object: t_assert,
+            context: T_CONTEXT,
+            metadata: 0,
+            parity: 0,
+        },
+        NQuin {
+            subject: belief_hash,
+            predicate: P_STARTED_AT,
+            object: t_valid,
+            context: T_CONTEXT,
+            metadata: 0,
+            parity: 0,
+        },
     ]
 }
 
@@ -132,7 +171,14 @@ pub fn write_belief(
 
 #[inline]
 fn make_temporal(subject: u64, predicate: u64, object: u64) -> NQuin {
-    NQuin { subject, predicate, object, context: T_CONTEXT, metadata: 0, parity: 0 }
+    NQuin {
+        subject,
+        predicate,
+        object,
+        context: T_CONTEXT,
+        metadata: 0,
+        parity: 0,
+    }
 }
 
 // ── Fallback: no smallvec dependency ─────────────────────────────────────────
@@ -151,14 +197,16 @@ mod tests {
         let qs = assert_temporal(0x1111, 1_000, Some(2_000), 3_000, Some(0xDEAD));
         assert_eq!(qs.len(), 4);
         assert_eq!(qs[0].predicate, P_GENERATED_AT);
-        assert_eq!(qs[0].object,    3_000);
+        assert_eq!(qs[0].object, 3_000);
         assert_eq!(qs[1].predicate, P_STARTED_AT);
-        assert_eq!(qs[1].object,    1_000);
+        assert_eq!(qs[1].object, 1_000);
         assert_eq!(qs[2].predicate, P_ENDED_AT);
-        assert_eq!(qs[2].object,    2_000);
+        assert_eq!(qs[2].object, 2_000);
         assert_eq!(qs[3].predicate, P_WAS_ATTRIBUTED_TO);
-        assert_eq!(qs[3].object,    0xDEAD);
-        for q in &qs { assert_eq!(q.context, T_CONTEXT); }
+        assert_eq!(qs[3].object, 0xDEAD);
+        for q in &qs {
+            assert_eq!(q.context, T_CONTEXT);
+        }
     }
 
     #[test]
@@ -179,9 +227,15 @@ mod tests {
     #[test]
     fn all_predicate_hashes_distinct() {
         let predicates = [
-            P_GENERATED_AT, P_STARTED_AT, P_ENDED_AT, P_WAS_ATTRIBUTED_TO,
-            P_WAS_GENERATED_BY, P_WAS_INVALIDATED_BY, P_INVALIDATED_AT,
-            P_DC_VALID, P_DC_CREATOR,
+            P_GENERATED_AT,
+            P_STARTED_AT,
+            P_ENDED_AT,
+            P_WAS_ATTRIBUTED_TO,
+            P_WAS_GENERATED_BY,
+            P_WAS_INVALIDATED_BY,
+            P_INVALIDATED_AT,
+            P_DC_VALID,
+            P_DC_CREATOR,
         ];
         let mut seen = std::collections::HashSet::new();
         for p in &predicates {

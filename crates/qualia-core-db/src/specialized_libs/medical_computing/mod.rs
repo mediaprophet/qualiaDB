@@ -1,18 +1,18 @@
 //! Medical Computing Library - Healthcare Data Processing and Medical Analytics
-//! 
+//!
 //! This module provides high-performance medical computing operations leveraging Phase 2 enhancements:
 //! - Fiduciary Cryptography (ML-DSA) for secure medical data protection
 //! - Zero-Knowledge Semantic Proofs for privacy-preserving medical research
 //! - Hardware-Sympathetic Storage (ZNS) for zero-copy medical data
 //! - Statistical Computing Library for advanced medical analytics
 
-use std::collections::HashMap;
-use std::sync::{Arc, Mutex};
-use serde::{Deserialize, Serialize};
+use super::statistical_computing::StatisticalComputingLibrary;
 use crate::fiduciary_crypto::FiduciaryCrypto;
 use crate::zk_proofs::ZkProofSystem;
 use crate::zns_storage::ZnsZoneManager;
-use super::statistical_computing::StatisticalComputingLibrary;
+use serde::{Deserialize, Serialize};
+use std::collections::HashMap;
+use std::sync::{Arc, Mutex};
 
 /// Medical Computing Library Manager
 pub struct MedicalComputingLibrary {
@@ -2830,7 +2830,10 @@ impl MedicalComputingLibrary {
     }
 
     /// Create a new patient record
-    pub fn create_patient_record(&mut self, patient: Patient) -> Result<MedicalOperationResult<Patient>, MedicalError> {
+    pub fn create_patient_record(
+        &mut self,
+        patient: Patient,
+    ) -> Result<MedicalOperationResult<Patient>, MedicalError> {
         let start_time = std::time::Instant::now();
 
         // Validate patient data
@@ -2851,7 +2854,11 @@ impl MedicalComputingLibrary {
     }
 
     /// Analyze clinical data
-    pub fn analyze_clinical_data(&mut self, patient_id: &str, data_type: ClinicalDataType) -> Result<MedicalOperationResult<ClinicalAnalysis>, MedicalError> {
+    pub fn analyze_clinical_data(
+        &mut self,
+        patient_id: &str,
+        data_type: ClinicalDataType,
+    ) -> Result<MedicalOperationResult<ClinicalAnalysis>, MedicalError> {
         let start_time = std::time::Instant::now();
 
         // Get patient data
@@ -2872,14 +2879,20 @@ impl MedicalComputingLibrary {
     }
 
     /// Process medical image
-    pub fn process_medical_image(&mut self, image: MedicalImage, processing_type: ImageProcessingType) -> Result<MedicalOperationResult<ProcessedImage>, MedicalError> {
+    pub fn process_medical_image(
+        &mut self,
+        image: MedicalImage,
+        processing_type: ImageProcessingType,
+    ) -> Result<MedicalOperationResult<ProcessedImage>, MedicalError> {
         let start_time = std::time::Instant::now();
 
         // Validate image
         self.medical_imaging.validate_image(&image)?;
 
         // Process image
-        let processed_image = self.medical_imaging.process_image(&image, processing_type)?;
+        let processed_image = self
+            .medical_imaging
+            .process_image(&image, processing_type)?;
 
         let execution_time = start_time.elapsed().as_millis() as u64;
 
@@ -2893,7 +2906,11 @@ impl MedicalComputingLibrary {
     }
 
     /// Screen compounds
-    pub fn screen_compounds(&mut self, compounds: Vec<Compound>, target: DrugTarget) -> Result<MedicalOperationResult<ScreeningResults>, MedicalError> {
+    pub fn screen_compounds(
+        &mut self,
+        compounds: Vec<Compound>,
+        target: DrugTarget,
+    ) -> Result<MedicalOperationResult<ScreeningResults>, MedicalError> {
         let start_time = std::time::Instant::now();
 
         // Validate compounds
@@ -2914,7 +2931,10 @@ impl MedicalComputingLibrary {
     }
 
     /// Check compliance
-    pub fn check_compliance(&mut self, compliance_type: ComplianceType) -> Result<MedicalOperationResult<ComplianceReport>, MedicalError> {
+    pub fn check_compliance(
+        &mut self,
+        compliance_type: ComplianceType,
+    ) -> Result<MedicalOperationResult<ComplianceReport>, MedicalError> {
         let start_time = std::time::Instant::now();
 
         // Check compliance
@@ -2969,10 +2989,14 @@ impl PatientManager {
     pub fn validate_patient(&self, patient: &Patient) -> Result<(), MedicalError> {
         // Validate patient data
         if patient.patient_id.is_empty() {
-            return Err(MedicalError::ValidationError("Patient ID cannot be empty".to_string()));
+            return Err(MedicalError::ValidationError(
+                "Patient ID cannot be empty".to_string(),
+            ));
         }
         if patient.medical_record_number.is_empty() {
-            return Err(MedicalError::ValidationError("Medical record number cannot be empty".to_string()));
+            return Err(MedicalError::ValidationError(
+                "Medical record number cannot be empty".to_string(),
+            ));
         }
         Ok(())
     }
@@ -3015,7 +3039,8 @@ impl PatientRecords {
     }
 
     pub fn get_patient(&self, patient_id: &str) -> Result<Patient, MedicalError> {
-        self.patients.get(patient_id)
+        self.patients
+            .get(patient_id)
             .cloned()
             .ok_or_else(|| MedicalError::PatientError("Patient not found".to_string()))
     }
@@ -3307,7 +3332,7 @@ impl RetentionPolicy {
             policy_id: "policy_1".to_string(),
             policy_name: "Log Retention Policy".to_string(),
             retention_period: 2555, // 7 years
-            archival_period: 3650, // 10 years
+            archival_period: 3650,  // 10 years
             deletion_method: DeletionMethod::SecureDelete,
         }
     }
@@ -3435,7 +3460,11 @@ impl ClinicalAnalyzer {
         Ok(())
     }
 
-    pub fn analyze_data(&mut self, _patient: &Patient, _data_type: ClinicalDataType) -> Result<ClinicalAnalysis, MedicalError> {
+    pub fn analyze_data(
+        &mut self,
+        _patient: &Patient,
+        _data_type: ClinicalDataType,
+    ) -> Result<ClinicalAnalysis, MedicalError> {
         // NOT IMPLEMENTED — and it must say so, never fabricate. No diagnostic reasoning is
         // wired here (the `diagnostic_algorithms` registry is empty). Previously this returned
         // `ClinicalAnalysis::new()` (confidence_score 0.95, empty findings), and that fake 95%
@@ -3580,12 +3609,18 @@ impl MedicalImaging {
 
     pub fn validate_image(&self, image: &MedicalImage) -> Result<(), MedicalError> {
         if image.image_id.is_empty() {
-            return Err(MedicalError::ValidationError("Image ID cannot be empty".to_string()));
+            return Err(MedicalError::ValidationError(
+                "Image ID cannot be empty".to_string(),
+            ));
         }
         Ok(())
     }
 
-    pub fn process_image(&mut self, _image: &MedicalImage, _processing_type: ImageProcessingType) -> Result<ProcessedImage, MedicalError> {
+    pub fn process_image(
+        &mut self,
+        _image: &MedicalImage,
+        _processing_type: ImageProcessingType,
+    ) -> Result<ProcessedImage, MedicalError> {
         // NOT IMPLEMENTED — it must say so, never fabricate. Previously this returned a default
         // `ProcessedImage::new()` without touching the input image: a medical-image "analysis"
         // that analysed nothing. Real implementation requires an actual imaging pipeline
@@ -3680,12 +3715,18 @@ impl DrugDiscovery {
 
     pub fn validate_compounds(&self, compounds: &[Compound]) -> Result<(), MedicalError> {
         if compounds.is_empty() {
-            return Err(MedicalError::ValidationError("At least one compound must be provided".to_string()));
+            return Err(MedicalError::ValidationError(
+                "At least one compound must be provided".to_string(),
+            ));
         }
         Ok(())
     }
 
-    pub fn screen_compounds(&mut self, _compounds: &[Compound], _target: &DrugTarget) -> Result<ScreeningResults, MedicalError> {
+    pub fn screen_compounds(
+        &mut self,
+        _compounds: &[Compound],
+        _target: &DrugTarget,
+    ) -> Result<ScreeningResults, MedicalError> {
         // NOT IMPLEMENTED — it must say so, never fabricate. Previously this returned a default
         // `ScreeningResults::new()` (hit_rate 0.05, no compounds actually screened) regardless
         // of the inputs — a fabricated drug-screening result. Real implementation requires
@@ -3846,7 +3887,10 @@ impl MedicalComplianceMonitor {
         Ok(())
     }
 
-    pub fn check_compliance(&mut self, compliance_type: ComplianceType) -> Result<ComplianceReport, MedicalError> {
+    pub fn check_compliance(
+        &mut self,
+        compliance_type: ComplianceType,
+    ) -> Result<ComplianceReport, MedicalError> {
         // Check compliance
         let report = ComplianceReport::new();
 
@@ -4424,10 +4468,10 @@ mod tests {
     fn test_patient_record_creation() {
         let mut library = MedicalComputingLibrary::new();
         library.initialize().unwrap();
-        
+
         let patient = Patient::new();
         let result = library.create_patient_record(patient).unwrap();
-        
+
         assert_eq!(result.result.patient_id, "patient_1");
         assert_eq!(result.result.medical_record_number, "MRN001");
         // Honest: privacy is not measured by this scaffold, so no score is fabricated.
@@ -4439,7 +4483,7 @@ mod tests {
     fn test_clinical_analysis() {
         let mut library = MedicalComputingLibrary::new();
         library.initialize().unwrap();
-        
+
         // HONEST: no diagnostic backend is implemented, so clinical analysis fails closed
         // rather than emitting a fabricated diagnosis/confidence (it previously returned a
         // hardcoded confidence_score 0.95 with empty findings).
@@ -4454,7 +4498,7 @@ mod tests {
     fn test_medical_imaging() {
         let mut library = MedicalComputingLibrary::new();
         library.initialize().unwrap();
-        
+
         let image = MedicalImage::new();
         // HONEST: no imaging pipeline is implemented, so this reports NotImplemented rather
         // than returning an unprocessed image as if it had been analysed.
@@ -4466,7 +4510,7 @@ mod tests {
     fn test_compound_screening() {
         let mut library = MedicalComputingLibrary::new();
         library.initialize().unwrap();
-        
+
         let compounds = vec![Compound::new()];
         let target = DrugTarget::new();
 
@@ -4480,9 +4524,9 @@ mod tests {
     fn test_compliance_check() {
         let mut library = MedicalComputingLibrary::new();
         library.initialize().unwrap();
-        
+
         let result = library.check_compliance(ComplianceType::HIPAA).unwrap();
-        
+
         assert_eq!(result.result.report_type, ComplianceType::HIPAA);
         // Honest: no compliance assessment is performed, so no score is fabricated.
         assert!(result.result.compliance_score.is_none());
@@ -4493,7 +4537,7 @@ mod tests {
     fn test_performance_metrics() {
         let library = MedicalComputingLibrary::new();
         let metrics = library.get_performance_stats();
-        
+
         assert_eq!(metrics.total_patients, 0);
         assert_eq!(metrics.average_processing_time, 0.0);
         // Honest: this scaffold measures none of these, so they are not fabricated.

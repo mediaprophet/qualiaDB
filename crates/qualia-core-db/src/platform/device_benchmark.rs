@@ -160,16 +160,29 @@ fn bench_gpu_gemv(device: &wgpu::Device, queue: &wgpu::Queue, n: usize) -> f64 {
         label: None,
         layout: &pipeline.get_bind_group_layout(0),
         entries: &[
-            wgpu::BindGroupEntry { binding: 0, resource: input.as_entire_binding() },
-            wgpu::BindGroupEntry { binding: 1, resource: weight.as_entire_binding() },
-            wgpu::BindGroupEntry { binding: 2, resource: params.as_entire_binding() },
-            wgpu::BindGroupEntry { binding: 3, resource: out.as_entire_binding() },
+            wgpu::BindGroupEntry {
+                binding: 0,
+                resource: input.as_entire_binding(),
+            },
+            wgpu::BindGroupEntry {
+                binding: 1,
+                resource: weight.as_entire_binding(),
+            },
+            wgpu::BindGroupEntry {
+                binding: 2,
+                resource: params.as_entire_binding(),
+            },
+            wgpu::BindGroupEntry {
+                binding: 3,
+                resource: out.as_entire_binding(),
+            },
         ],
     });
     let wg_x = (n as u32).div_ceil(64).max(1);
     let (k, s) = (16u32, 5u32);
     let submit_batch = || {
-        let mut enc = device.create_command_encoder(&wgpu::CommandEncoderDescriptor { label: None });
+        let mut enc =
+            device.create_command_encoder(&wgpu::CommandEncoderDescriptor { label: None });
         {
             let mut pass = enc.begin_compute_pass(&wgpu::ComputePassDescriptor {
                 label: None,
@@ -326,10 +339,18 @@ pub fn benchmark_devices(n: usize) -> CapabilityMatrix {
     });
 
     // Rank fastest-first and fill relative scores.
-    circuits.sort_by(|a, b| a.ms_per_gemv.partial_cmp(&b.ms_per_gemv).unwrap_or(std::cmp::Ordering::Equal));
+    circuits.sort_by(|a, b| {
+        a.ms_per_gemv
+            .partial_cmp(&b.ms_per_gemv)
+            .unwrap_or(std::cmp::Ordering::Equal)
+    });
     if let Some(best_ms) = circuits.first().map(|c| c.ms_per_gemv) {
         for c in &mut circuits {
-            c.rel_score = if c.ms_per_gemv > 0.0 { best_ms / c.ms_per_gemv } else { 0.0 };
+            c.rel_score = if c.ms_per_gemv > 0.0 {
+                best_ms / c.ms_per_gemv
+            } else {
+                0.0
+            };
         }
     }
 
@@ -351,15 +372,24 @@ mod tests {
         let matrix = benchmark_devices(2048);
         eprintln!("{}", matrix.summary());
 
-        assert!(!matrix.circuits.is_empty(), "at least the CPU circuit must be benchmarked");
+        assert!(
+            !matrix.circuits.is_empty(),
+            "at least the CPU circuit must be benchmarked"
+        );
         assert!(
             matrix.circuits.iter().any(|c| c.kind == CircuitKind::Cpu),
             "native CPU circuit must always be present"
         );
         // Sorted fastest-first → non-decreasing ms, non-increasing rel_score.
         for w in matrix.circuits.windows(2) {
-            assert!(w[0].ms_per_gemv <= w[1].ms_per_gemv + 1e-9, "matrix must be sorted fastest-first");
+            assert!(
+                w[0].ms_per_gemv <= w[1].ms_per_gemv + 1e-9,
+                "matrix must be sorted fastest-first"
+            );
         }
-        assert!((matrix.best().unwrap().rel_score - 1.0).abs() < 1e-9, "best score must be 1.0");
+        assert!(
+            (matrix.best().unwrap().rel_score - 1.0).abs() < 1e-9,
+            "best score must be 1.0"
+        );
     }
 }

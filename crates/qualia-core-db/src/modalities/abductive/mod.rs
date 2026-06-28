@@ -16,8 +16,8 @@ use crate::NQuin;
 pub mod atms;
 pub mod probabilistic;
 
-pub use atms::{Environment, env_subset, label_add, label_holds, is_nogood, holds_in};
-pub use probabilistic::{Hypothesis, bayesian_posteriors, best_hypothesis};
+pub use atms::{env_subset, holds_in, is_nogood, label_add, label_holds, Environment};
+pub use probabilistic::{bayesian_posteriors, best_hypothesis, Hypothesis};
 
 /// Max backward-chaining depth for abductive explanation (bounded, zero-heap).
 pub const MAX_ABDUCTION_DEPTH: usize = 64;
@@ -105,7 +105,11 @@ mod tests {
         let explains = crate::q_hash("abduces:explains");
         // disease(1) → symptom-fever(2) → observed-temp(3). Root hypothesis = 1.
         let rules = [edge(1, 2), edge(2, 3)];
-        assert_eq!(abductive_explanation(&rules, 3, explains), Some(1), "root hypothesis explains the observation");
+        assert_eq!(
+            abductive_explanation(&rules, 3, explains),
+            Some(1),
+            "root hypothesis explains the observation"
+        );
         assert_eq!(abductive_explanation(&rules, 2, explains), Some(1));
         // An unexplained observation.
         assert_eq!(abductive_explanation(&rules, 99, explains), None);

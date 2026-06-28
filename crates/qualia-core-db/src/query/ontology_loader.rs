@@ -26,42 +26,74 @@ const ICCPR_ANNOTATED_GRAPH: u64 = q_hash("urn:qualia:ontology:iccpr_annotated")
 const ICESCR_ANNOTATED_GRAPH: u64 = q_hash("urn:qualia:ontology:icescr_annotated");
 const UDHR_ANNOTATED_GRAPH: u64 = q_hash("urn:qualia:ontology:udhr_annotated");
 const CAT_ANNOTATED_GRAPH: u64 = q_hash("urn:qualia:ontology:cat_annotated");
-const LAWYERS_PRINCIPLES_ANNOTATED_GRAPH: u64 = q_hash("urn:qualia:ontology:lawyers_principles_annotated");
-const REMEDY_REPARATION_ANNOTATED_GRAPH: u64 = q_hash("urn:qualia:ontology:remedy_reparation_annotated");
-const RIGHT_DEVELOPMENT_ANNOTATED_GRAPH: u64 = q_hash("urn:qualia:ontology:right_development_annotated");
-const TORTURE_DECLARATION_ANNOTATED_GRAPH: u64 = q_hash("urn:qualia:ontology:torture_declaration_annotated");
+const LAWYERS_PRINCIPLES_ANNOTATED_GRAPH: u64 =
+    q_hash("urn:qualia:ontology:lawyers_principles_annotated");
+const REMEDY_REPARATION_ANNOTATED_GRAPH: u64 =
+    q_hash("urn:qualia:ontology:remedy_reparation_annotated");
+const RIGHT_DEVELOPMENT_ANNOTATED_GRAPH: u64 =
+    q_hash("urn:qualia:ontology:right_development_annotated");
+const TORTURE_DECLARATION_ANNOTATED_GRAPH: u64 =
+    q_hash("urn:qualia:ontology:torture_declaration_annotated");
 const HR_DEFENDERS_ANNOTATED_GRAPH: u64 = q_hash("urn:qualia:ontology:hr_defenders_annotated");
 const PEOPLES_PEACE_ANNOTATED_GRAPH: u64 = q_hash("urn:qualia:ontology:peoples_peace_annotated");
-const MENTAL_ILLNESS_PRINCIPLES_ANNOTATED_GRAPH: u64 = q_hash("urn:qualia:ontology:mental_illness_principles_annotated");
-const ISTANBUL_PROTOCOL_ANNOTATED_GRAPH: u64 = q_hash("urn:qualia:ontology:istanbul_protocol_annotated");
-const PALERMO_PROTOCOL_ANNOTATED_GRAPH: u64 = q_hash("urn:qualia:ontology:palermo_protocol_annotated");
-const COMMONWEALTH_CHARTER_ANNOTATED_GRAPH: u64 = q_hash("urn:qualia:ontology:commonwealth_charter_annotated");
+const MENTAL_ILLNESS_PRINCIPLES_ANNOTATED_GRAPH: u64 =
+    q_hash("urn:qualia:ontology:mental_illness_principles_annotated");
+const ISTANBUL_PROTOCOL_ANNOTATED_GRAPH: u64 =
+    q_hash("urn:qualia:ontology:istanbul_protocol_annotated");
+const PALERMO_PROTOCOL_ANNOTATED_GRAPH: u64 =
+    q_hash("urn:qualia:ontology:palermo_protocol_annotated");
+const COMMONWEALTH_CHARTER_ANNOTATED_GRAPH: u64 =
+    q_hash("urn:qualia:ontology:commonwealth_charter_annotated");
 
 /// Files to load at startup, as `(filename, named_graph_context)` pairs.
 const STARTUP_ONTOLOGIES: &[(&str, u64)] = &[
-    ("rights_ontology.ttl",    RIGHTS_GRAPH),
-    ("cogai_shapes.ttl",       COGAI_GRAPH),
-    ("epistemic_shapes.ttl",   EPISTEMIC_GRAPH),
-    ("udhr.ttl",               UDHR_GRAPH),
-    ("crc.ttl",                CRC_GRAPH),
-    ("platforms.ttl",          PLATFORMS_GRAPH),
-    ("emoji.n3",               EMOJI_GRAPH),
-    ("udhr_annotated.ttl",     UDHR_ANNOTATED_GRAPH),
-    ("crc_annotated.ttl",      CRC_ANNOTATED_GRAPH),
-    ("crpd_annotated.ttl",     CRPD_ANNOTATED_GRAPH),
-    ("iccpr_annotated.ttl",    ICCPR_ANNOTATED_GRAPH),
-    ("icescr_annotated.ttl",   ICESCR_ANNOTATED_GRAPH),
-    ("cat_annotated.ttl",      CAT_ANNOTATED_GRAPH),
-    ("lawyers_principles_annotated.ttl",      LAWYERS_PRINCIPLES_ANNOTATED_GRAPH),
-    ("remedy_reparation_annotated.ttl",       REMEDY_REPARATION_ANNOTATED_GRAPH),
-    ("right_development_annotated.ttl",       RIGHT_DEVELOPMENT_ANNOTATED_GRAPH),
-    ("torture_declaration_annotated.ttl",     TORTURE_DECLARATION_ANNOTATED_GRAPH),
-    ("hr_defenders_annotated.ttl",            HR_DEFENDERS_ANNOTATED_GRAPH),
-    ("peoples_peace_annotated.ttl",           PEOPLES_PEACE_ANNOTATED_GRAPH),
-    ("mental_illness_principles_annotated.ttl", MENTAL_ILLNESS_PRINCIPLES_ANNOTATED_GRAPH),
-    ("istanbul_protocol_annotated.ttl",       ISTANBUL_PROTOCOL_ANNOTATED_GRAPH),
-    ("palermo_protocol_annotated.ttl",        PALERMO_PROTOCOL_ANNOTATED_GRAPH),
-    ("commonwealth_charter_annotated.ttl",    COMMONWEALTH_CHARTER_ANNOTATED_GRAPH),
+    ("rights_ontology.ttl", RIGHTS_GRAPH),
+    ("cogai_shapes.ttl", COGAI_GRAPH),
+    ("epistemic_shapes.ttl", EPISTEMIC_GRAPH),
+    ("udhr.ttl", UDHR_GRAPH),
+    ("crc.ttl", CRC_GRAPH),
+    ("platforms.ttl", PLATFORMS_GRAPH),
+    ("emoji.n3", EMOJI_GRAPH),
+    ("udhr_annotated.ttl", UDHR_ANNOTATED_GRAPH),
+    ("crc_annotated.ttl", CRC_ANNOTATED_GRAPH),
+    ("crpd_annotated.ttl", CRPD_ANNOTATED_GRAPH),
+    ("iccpr_annotated.ttl", ICCPR_ANNOTATED_GRAPH),
+    ("icescr_annotated.ttl", ICESCR_ANNOTATED_GRAPH),
+    ("cat_annotated.ttl", CAT_ANNOTATED_GRAPH),
+    (
+        "lawyers_principles_annotated.ttl",
+        LAWYERS_PRINCIPLES_ANNOTATED_GRAPH,
+    ),
+    (
+        "remedy_reparation_annotated.ttl",
+        REMEDY_REPARATION_ANNOTATED_GRAPH,
+    ),
+    (
+        "right_development_annotated.ttl",
+        RIGHT_DEVELOPMENT_ANNOTATED_GRAPH,
+    ),
+    (
+        "torture_declaration_annotated.ttl",
+        TORTURE_DECLARATION_ANNOTATED_GRAPH,
+    ),
+    ("hr_defenders_annotated.ttl", HR_DEFENDERS_ANNOTATED_GRAPH),
+    ("peoples_peace_annotated.ttl", PEOPLES_PEACE_ANNOTATED_GRAPH),
+    (
+        "mental_illness_principles_annotated.ttl",
+        MENTAL_ILLNESS_PRINCIPLES_ANNOTATED_GRAPH,
+    ),
+    (
+        "istanbul_protocol_annotated.ttl",
+        ISTANBUL_PROTOCOL_ANNOTATED_GRAPH,
+    ),
+    (
+        "palermo_protocol_annotated.ttl",
+        PALERMO_PROTOCOL_ANNOTATED_GRAPH,
+    ),
+    (
+        "commonwealth_charter_annotated.ttl",
+        COMMONWEALTH_CHARTER_ANNOTATED_GRAPH,
+    ),
 ];
 
 /// Startup ontology catalog: `(filename, named_graph_context_hash)`.
@@ -79,18 +111,24 @@ fn find_ontology_dir() -> Option<std::path::PathBuf> {
     // 1. Environment variable override.
     if let Ok(p) = std::env::var("QUALIA_ONTOLOGY_PATH") {
         let pb = std::path::PathBuf::from(p);
-        if pb.is_dir() { return Some(pb); }
+        if pb.is_dir() {
+            return Some(pb);
+        }
     }
 
     // 2. `./ontologies/` (workspace root when running via `cargo run`).
     let cwd = std::path::PathBuf::from("ontologies");
-    if cwd.is_dir() { return Some(cwd); }
+    if cwd.is_dir() {
+        return Some(cwd);
+    }
 
     // 3. Next to the binary.
     if let Ok(exe) = std::env::current_exe() {
         let sibling = exe.parent().map(|p| p.join("ontologies"));
         if let Some(ref s) = sibling {
-            if s.is_dir() { return Some(s.clone()); }
+            if s.is_dir() {
+                return Some(s.clone());
+            }
         }
     }
 
@@ -120,33 +158,39 @@ pub fn parse_ttl_to_quins(path: &std::path::Path, graph_context: u64) -> Vec<NQu
 
     let result = {
         use rio_api::parser::TriplesParser;
-        parser.parse_all(&mut |t: rio_api::model::Triple| -> Result<(), std::io::Error> {
-            let s = q_hash(&t.subject.to_string());
-            let p = q_hash(&t.predicate.to_string());
-            let o = q_hash(&t.object.to_string());
-            quins.push(NQuin {
-                subject:   s,
-                predicate: p,
-                object:    o,
-                context:   graph_context,
-                metadata:  0,
-                parity:    s ^ p ^ o ^ graph_context,
-            });
-            Ok(())
-        })
+        parser.parse_all(
+            &mut |t: rio_api::model::Triple| -> Result<(), std::io::Error> {
+                let s = q_hash(&t.subject.to_string());
+                let p = q_hash(&t.predicate.to_string());
+                let o = q_hash(&t.object.to_string());
+                quins.push(NQuin {
+                    subject: s,
+                    predicate: p,
+                    object: o,
+                    context: graph_context,
+                    metadata: 0,
+                    parity: s ^ p ^ o ^ graph_context,
+                });
+                Ok(())
+            },
+        )
     };
 
     if let Err(e) = result {
         log::warn!("[ontology_loader] parse error in {:?}: {e}", path);
     }
 
-    log::info!("[ontology_loader] loaded {} quins from {:?}", quins.len(), path);
+    log::info!(
+        "[ontology_loader] loaded {} quins from {:?}",
+        quins.len(),
+        path
+    );
     quins
 }
 
 /// Load a unified `.q42` volume ontology file.
 pub fn load_q42_file(path: &std::path::Path) -> Vec<NQuin> {
-    use crate::q42_volume::{Q42Volume, SUPERBLOCK_SIZE, SUPERBLOCK_HEADER};
+    use crate::q42_volume::{Q42Volume, SUPERBLOCK_HEADER, SUPERBLOCK_SIZE};
     let vol = match Q42Volume::open(path) {
         Ok(v) => v,
         Err(e) => {
@@ -158,11 +202,13 @@ pub fn load_q42_file(path: &std::path::Path) -> Vec<NQuin> {
     let mut buf = vec![0u8; SUPERBLOCK_SIZE];
     for i in 0..vol.block_count() as usize {
         if let Ok(n) = vol.read_superblock_into(i, &mut buf) {
-            if n <= SUPERBLOCK_HEADER { continue; }
+            if n <= SUPERBLOCK_HEADER {
+                continue;
+            }
             let quin_size = std::mem::size_of::<NQuin>();
             let data_len = n - SUPERBLOCK_HEADER;
             let quin_count = data_len / quin_size;
-            
+
             let chunk = &buf[SUPERBLOCK_HEADER..SUPERBLOCK_HEADER + quin_count * quin_size];
             let quins: &[NQuin] = bytemuck::cast_slice(chunk);
             for q in quins {
@@ -172,7 +218,11 @@ pub fn load_q42_file(path: &std::path::Path) -> Vec<NQuin> {
             }
         }
     }
-    log::info!("[ontology_loader] loaded {} quins from unified volume {:?}", all_quins.len(), path);
+    log::info!(
+        "[ontology_loader] loaded {} quins from unified volume {:?}",
+        all_quins.len(),
+        path
+    );
     all_quins
 }
 

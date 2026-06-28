@@ -6,13 +6,29 @@
 //! everywhere; the WebGPU surface (`gpu`, `portal`, `portal_wasm`) is gated to the wasm `portal`
 //! build, as before. Phase 0.2b will lift this tree into a standalone `qualia-render` crate.
 
-pub mod telemetry;
-pub mod standpoint;
+pub mod acoustic;
+/// Asset import: OBJ / STL / GLB → `Mesh` + semantic NQuins (Phase 1.3).
+pub mod assets;
+/// Authoring vocabulary + render planner (Phase 5): a qapp declares 3D + 2D views over one
+/// manifold; the planner enforces attestation gates, rights-bounded contexts, and budget-driven
+/// 3D→2D degradation before drawing. Gated like `place_time` (needs `crate::modalities`).
+#[cfg(any(
+    not(target_arch = "wasm32"),
+    feature = "wasm-logic",
+    feature = "wasm-scientific",
+    feature = "wasm-full"
+))]
+pub mod authoring;
 pub mod camera;
+pub mod contract;
+pub mod control;
+/// Model-as-substrate (Phase 6, §F): one buffer holds a renderable manifold AND the transcoded
+/// P64 weights; the renderer projects the manifold while the weights are co-resident. Gated to
+/// where `crate::p64_weight` (the transcoder) compiles.
+#[cfg(any(not(target_arch = "wasm32"), feature = "wasm-llm"))]
+pub mod model_substrate;
 pub mod navigation;
 pub mod pga;
-/// Unified manifold projection — one `project()`, many views (Phase 1.4).
-pub mod projection;
 /// Physics of artefacts — bbox admission, kinematic joints, material/mass/momentum (Phase 2).
 pub mod physics;
 /// Place / space / time binding — an artefact NQuin queried by the spatio-temporal AND deontic
@@ -27,6 +43,8 @@ pub mod physics;
     feature = "wasm-full"
 ))]
 pub mod place_time;
+/// Unified manifold projection — one `project()`, many views (Phase 1.4).
+pub mod projection;
 /// Sense path — the input twin (Phase 4): microphone PCM → forward DSP → the `∫Ψ > τ → Fact`
 /// bridge, every capture under the deontic/standpoint consent gate (surveillance-refusal default).
 /// Gated like `place_time` (needs `crate::modalities`).
@@ -37,27 +55,9 @@ pub mod place_time;
     feature = "wasm-full"
 ))]
 pub mod sense;
-/// Authoring vocabulary + render planner (Phase 5): a qapp declares 3D + 2D views over one
-/// manifold; the planner enforces attestation gates, rights-bounded contexts, and budget-driven
-/// 3D→2D degradation before drawing. Gated like `place_time` (needs `crate::modalities`).
-#[cfg(any(
-    not(target_arch = "wasm32"),
-    feature = "wasm-logic",
-    feature = "wasm-scientific",
-    feature = "wasm-full"
-))]
-pub mod authoring;
-/// Model-as-substrate (Phase 6, §F): one buffer holds a renderable manifold AND the transcoded
-/// Q42W weights; the renderer projects the manifold while the weights are co-resident. Gated to
-/// where `crate::q42_weight` (the transcoder) compiles.
-#[cfg(any(not(target_arch = "wasm32"), feature = "wasm-llm"))]
-pub mod model_substrate;
-pub mod contract;
 pub mod spectral;
-pub mod acoustic;
-pub mod control;
-/// Asset import: OBJ / STL / GLB → `Mesh` + semantic NQuins (Phase 1.3).
-pub mod assets;
+pub mod standpoint;
+pub mod telemetry;
 
 /// WebGPU renderer (`PortalGpu`) — depth, bloom, tensor-node projection, mesh surfaces.
 #[cfg(all(target_arch = "wasm32", feature = "portal"))]

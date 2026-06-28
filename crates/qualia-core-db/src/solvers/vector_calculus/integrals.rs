@@ -11,14 +11,21 @@ fn norm(a: &[f64]) -> f64 {
     dot(a, a).sqrt()
 }
 fn cross3(a: &[f64], b: &[f64]) -> [f64; 3] {
-    [a[1] * b[2] - a[2] * b[1], a[2] * b[0] - a[0] * b[2], a[0] * b[1] - a[1] * b[0]]
+    [
+        a[1] * b[2] - a[2] * b[1],
+        a[2] * b[0] - a[0] * b[2],
+        a[0] * b[1] - a[1] * b[0],
+    ]
 }
 
 /// Central-difference derivative of a curve `r(t)`.
 fn dcurve<C: Fn(f64) -> Vec<f64>>(curve: &C, t: f64) -> Vec<f64> {
     let p = curve(t + FD);
     let m = curve(t - FD);
-    p.iter().zip(&m).map(|(a, b)| (a - b) / (2.0 * FD)).collect()
+    p.iter()
+        .zip(&m)
+        .map(|(a, b)| (a - b) / (2.0 * FD))
+        .collect()
 }
 
 /// Scalar line integral `∫_C f ds = ∫ f(r(t)) |r'(t)| dt`.
@@ -72,12 +79,18 @@ where
         let ru: Vec<f64> = {
             let p = surf(u + FD, v);
             let m = surf(u - FD, v);
-            p.iter().zip(&m).map(|(a, b)| (a - b) / (2.0 * FD)).collect()
+            p.iter()
+                .zip(&m)
+                .map(|(a, b)| (a - b) / (2.0 * FD))
+                .collect()
         };
         let rv: Vec<f64> = {
             let p = surf(u, v + FD);
             let m = surf(u, v - FD);
-            p.iter().zip(&m).map(|(a, b)| (a - b) / (2.0 * FD)).collect()
+            p.iter()
+                .zip(&m)
+                .map(|(a, b)| (a - b) / (2.0 * FD))
+                .collect()
         };
         let n = cross3(&ru, &rv);
         dot(&field(&surf(u, v)), &n)
@@ -123,7 +136,13 @@ mod tests {
     #[test]
     fn arc_length_via_scalar_line_integral() {
         // ∫_C 1 ds over the unit circle = circumference = 2π.
-        let len = line_integral_scalar(|_| 1.0, |t: f64| vec![t.cos(), t.sin()], 0.0, 2.0 * PI, 2000);
+        let len = line_integral_scalar(
+            |_| 1.0,
+            |t: f64| vec![t.cos(), t.sin()],
+            0.0,
+            2.0 * PI,
+            2000,
+        );
         assert!((len - 2.0 * PI).abs() < 1e-4);
     }
 

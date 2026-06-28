@@ -71,7 +71,10 @@ pub fn rank_informative(probs: &[Vec<f64>], strategy: Strategy) -> Result<Vec<us
 
 /// The single most-informative pool index (the next item to ask a human about).
 pub fn most_informative(probs: &[Vec<f64>], strategy: Strategy) -> Result<usize, ActiveError> {
-    rank_informative(probs, strategy)?.first().copied().ok_or(ActiveError::InsufficientData)
+    rank_informative(probs, strategy)?
+        .first()
+        .copied()
+        .ok_or(ActiveError::InsufficientData)
 }
 
 #[cfg(test)]
@@ -86,7 +89,10 @@ mod tests {
         let s = score(&probs, Strategy::LeastConfidence).unwrap();
         assert!((s[0] - 0.1).abs() < EPS);
         assert!((s[1] - 0.5).abs() < EPS);
-        assert_eq!(most_informative(&probs, Strategy::LeastConfidence).unwrap(), 1);
+        assert_eq!(
+            most_informative(&probs, Strategy::LeastConfidence).unwrap(),
+            1
+        );
     }
 
     #[test]
@@ -110,8 +116,14 @@ mod tests {
 
     #[test]
     fn fails_closed_on_empty_and_ragged() {
-        assert_eq!(score(&[], Strategy::Entropy).unwrap_err(), ActiveError::InsufficientData);
+        assert_eq!(
+            score(&[], Strategy::Entropy).unwrap_err(),
+            ActiveError::InsufficientData
+        );
         let ragged = vec![vec![0.5, 0.5], vec![1.0]];
-        assert_eq!(score(&ragged, Strategy::Entropy).unwrap_err(), ActiveError::InvalidDimension);
+        assert_eq!(
+            score(&ragged, Strategy::Entropy).unwrap_err(),
+            ActiveError::InvalidDimension
+        );
     }
 }

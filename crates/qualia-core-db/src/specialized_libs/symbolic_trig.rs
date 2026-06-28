@@ -11,9 +11,7 @@
 //! Applied bottom-up to a bounded fixpoint and interleaved with the base `simplify`, so the
 //! Pythagorean collapse also fires on nested sums after the algebra normalises them.
 
-use super::symbolic_algebra::{
-    add, c, cos, div, mul, neg, pow, simplify, sin, sub, tan, Expr,
-};
+use super::symbolic_algebra::{add, c, cos, div, mul, neg, pow, simplify, sin, sub, tan, Expr};
 
 /// Simplify trigonometric structure in `expr`, layered on the always-sound base `simplify`.
 pub fn simplify_trig(expr: &Expr) -> Expr {
@@ -138,8 +136,8 @@ fn rewrite(e: &Expr) -> Expr {
 
 #[cfg(test)]
 mod tests {
-    use super::*;
     use super::super::symbolic_algebra::{var, Expr};
+    use super::*;
     use std::collections::HashMap;
 
     fn val(e: &Expr, x: f64) -> f64 {
@@ -157,7 +155,10 @@ mod tests {
         let e2 = add(pow(cos(var("x")), 2), pow(sin(var("x")), 2));
         assert_eq!(simplify_trig(&e2), c(1.0));
         // 3·sin²(x) + 3·cos²(x) → 3.
-        let e3 = add(mul(c(3.0), pow(sin(var("x")), 2)), mul(c(3.0), pow(cos(var("x")), 2)));
+        let e3 = add(
+            mul(c(3.0), pow(sin(var("x")), 2)),
+            mul(c(3.0), pow(cos(var("x")), 2)),
+        );
         assert_eq!(simplify_trig(&e3), c(3.0));
     }
 
@@ -186,6 +187,9 @@ mod tests {
         assert_eq!(simplify_trig(&cos(neg(var("x")))), cos(var("x")));
         assert_eq!(simplify_trig(&sin(neg(var("x")))), neg(sin(var("x"))));
         // sin(x)/cos(x) → tan(x).
-        assert_eq!(simplify_trig(&div(sin(var("x")), cos(var("x")))), tan(var("x")));
+        assert_eq!(
+            simplify_trig(&div(sin(var("x")), cos(var("x")))),
+            tan(var("x"))
+        );
     }
 }

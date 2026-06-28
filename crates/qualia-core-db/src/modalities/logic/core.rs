@@ -780,7 +780,13 @@ mod tests {
             metadata: 0,
             parity: 0,
         };
-        let inputs = [trigger, NQuin { subject: 456, ..trigger }];
+        let inputs = [
+            trigger,
+            NQuin {
+                subject: 456,
+                ..trigger
+            },
+        ];
         let mut out = [NQuin::default(); 1];
 
         let result = execute_differential_diagnostics(&inputs, &mut out);

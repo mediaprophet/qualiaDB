@@ -148,7 +148,11 @@ pub fn circuit_breaker(saturation: f32, threshold: f32) -> Option<PolicyMode> {
 /// its `marginal_harm` to the person is strictly less than the `advantage` it secures. Binds
 /// algorithmic governance to the proportionality test of the human-rights instruments. A
 /// non-restricting action is always permitted.
-pub fn restriction_proportionate(restricts_agency: bool, marginal_harm: f64, advantage: f64) -> bool {
+pub fn restriction_proportionate(
+    restricts_agency: bool,
+    marginal_harm: f64,
+    advantage: f64,
+) -> bool {
     !restricts_agency || marginal_harm < advantage
 }
 
@@ -157,14 +161,21 @@ mod tests {
     use super::*;
 
     fn g(non_derogable: bool, humanitarian: bool, ambiguous: bool) -> Governance {
-        Governance { non_derogable, humanitarian, ambiguous }
+        Governance {
+            non_derogable,
+            humanitarian,
+            ambiguous,
+        }
     }
 
     #[test]
     fn non_derogable_violation_is_preventive_block() {
         let m = map_policy(DeonticStatus::Violated, g(true, false, false));
         assert_eq!(m, PolicyMode::PreventiveBlock);
-        assert!(!permits_execution(m), "a non-derogable breach must NOT proceed");
+        assert!(
+            !permits_execution(m),
+            "a non-derogable breach must NOT proceed"
+        );
         assert_eq!(policy_action(m), "DenyRollback");
     }
 
@@ -172,32 +183,57 @@ mod tests {
     fn ordinary_violation_is_permissive_audit() {
         let m = map_policy(DeonticStatus::Violated, g(false, false, false));
         assert_eq!(m, PolicyMode::PermissiveAudit);
-        assert!(permits_execution(m), "a non-critical breach proceeds but is recorded");
+        assert!(
+            permits_execution(m),
+            "a non-critical breach proceeds but is recorded"
+        );
     }
 
     #[test]
     fn humanitarian_in_force_is_prioritized() {
-        assert_eq!(map_policy(DeonticStatus::Active, g(false, true, false)), PolicyMode::Prioritize);
+        assert_eq!(
+            map_policy(DeonticStatus::Active, g(false, true, false)),
+            PolicyMode::Prioritize
+        );
         // Non-humanitarian in force → just allow.
-        assert_eq!(map_policy(DeonticStatus::Active, g(false, false, false)), PolicyMode::Allow);
+        assert_eq!(
+            map_policy(DeonticStatus::Active, g(false, false, false)),
+            PolicyMode::Allow
+        );
     }
 
     #[test]
     fn ambiguity_always_defers_to_a_human() {
         // Ambiguity wins even over a non-derogable violation — the human decides the mapping.
-        assert_eq!(map_policy(DeonticStatus::Violated, g(true, false, true)), PolicyMode::Interactive);
-        assert_eq!(map_policy(DeonticStatus::Active, g(false, true, true)), PolicyMode::Interactive);
+        assert_eq!(
+            map_policy(DeonticStatus::Violated, g(true, false, true)),
+            PolicyMode::Interactive
+        );
+        assert_eq!(
+            map_policy(DeonticStatus::Active, g(false, true, true)),
+            PolicyMode::Interactive
+        );
         // Malformed verdicts also route to a human.
-        assert_eq!(map_policy(DeonticStatus::Malformed, g(false, false, false)), PolicyMode::Interactive);
+        assert_eq!(
+            map_policy(DeonticStatus::Malformed, g(false, false, false)),
+            PolicyMode::Interactive
+        );
     }
 
     #[test]
     fn non_binding_statuses_allow() {
-        for s in [DeonticStatus::Pending, DeonticStatus::Defeated, DeonticStatus::Expired] {
+        for s in [
+            DeonticStatus::Pending,
+            DeonticStatus::Defeated,
+            DeonticStatus::Expired,
+        ] {
             assert_eq!(map_policy(s, g(false, false, false)), PolicyMode::Allow);
         }
         // Discharged duty, humanitarian context → still prioritized.
-        assert_eq!(map_policy(DeonticStatus::Discharged, g(false, true, false)), PolicyMode::Prioritize);
+        assert_eq!(
+            map_policy(DeonticStatus::Discharged, g(false, true, false)),
+            PolicyMode::Prioritize
+        );
     }
 
     #[test]
@@ -213,8 +249,14 @@ mod tests {
             PolicyMode::PreventiveBlock
         );
         // No emergency → unchanged; non-block modes pass through.
-        assert_eq!(apply_emergency_override(PolicyMode::PreventiveBlock, false, false), PolicyMode::PreventiveBlock);
-        assert_eq!(apply_emergency_override(PolicyMode::Allow, true, false), PolicyMode::Allow);
+        assert_eq!(
+            apply_emergency_override(PolicyMode::PreventiveBlock, false, false),
+            PolicyMode::PreventiveBlock
+        );
+        assert_eq!(
+            apply_emergency_override(PolicyMode::Allow, true, false),
+            PolicyMode::Allow
+        );
     }
 
     #[test]
@@ -222,7 +264,10 @@ mod tests {
         assert!(threshold_authorized(3, 3));
         assert!(threshold_authorized(4, 3));
         assert!(!threshold_authorized(2, 3));
-        assert!(!threshold_authorized(0, 0), "a decision needs at least one approver");
+        assert!(
+            !threshold_authorized(0, 0),
+            "a decision needs at least one approver"
+        );
     }
 
     #[test]

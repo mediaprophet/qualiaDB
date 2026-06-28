@@ -70,15 +70,24 @@ pub const fn jural_opposite(pos: u8) -> u8 {
 pub const fn is_jural_position(pos: u8) -> bool {
     matches!(
         pos,
-        JURAL_CLAIM | JURAL_DUTY | JURAL_PRIVILEGE | JURAL_NO_RIGHT
-            | JURAL_POWER | JURAL_LIABILITY | JURAL_IMMUNITY | JURAL_DISABILITY
+        JURAL_CLAIM
+            | JURAL_DUTY
+            | JURAL_PRIVILEGE
+            | JURAL_NO_RIGHT
+            | JURAL_POWER
+            | JURAL_LIABILITY
+            | JURAL_IMMUNITY
+            | JURAL_DISABILITY
     )
 }
 
 /// First-order positions are rules of *conduct*; second-order are rules of *control*.
 #[inline]
 pub const fn is_first_order(pos: u8) -> bool {
-    matches!(pos, JURAL_CLAIM | JURAL_DUTY | JURAL_PRIVILEGE | JURAL_NO_RIGHT)
+    matches!(
+        pos,
+        JURAL_CLAIM | JURAL_DUTY | JURAL_PRIVILEGE | JURAL_NO_RIGHT
+    )
 }
 
 /// Readable name for a jural position.
@@ -211,7 +220,10 @@ pub fn personhood_category_error(
 /// that can govern — alter, or be immune to alteration of — another agent's relations.
 #[inline]
 pub const fn is_second_order(pos: u8) -> bool {
-    matches!(pos, JURAL_POWER | JURAL_LIABILITY | JURAL_IMMUNITY | JURAL_DISABILITY)
+    matches!(
+        pos,
+        JURAL_POWER | JURAL_LIABILITY | JURAL_IMMUNITY | JURAL_DISABILITY
+    )
 }
 
 /// A multi-party chain link: a second-order control relation `upstream` (held by A toward B)
@@ -296,8 +308,14 @@ mod tests {
     #[test]
     fn correlatives_are_involutive_and_paired() {
         for &p in &[
-            JURAL_CLAIM, JURAL_DUTY, JURAL_PRIVILEGE, JURAL_NO_RIGHT,
-            JURAL_POWER, JURAL_LIABILITY, JURAL_IMMUNITY, JURAL_DISABILITY,
+            JURAL_CLAIM,
+            JURAL_DUTY,
+            JURAL_PRIVILEGE,
+            JURAL_NO_RIGHT,
+            JURAL_POWER,
+            JURAL_LIABILITY,
+            JURAL_IMMUNITY,
+            JURAL_DISABILITY,
         ] {
             // correlative of correlative is the original (involution).
             assert_eq!(correlative(correlative(p)), p, "{:?}", position_name(p));
@@ -323,10 +341,16 @@ mod tests {
         assert_eq!(jural_position(duty.predicate), JURAL_DUTY);
         assert_eq!(duty.subject, bob);
         assert_eq!(duty.object, alice);
-        assert_eq!(jural_content(duty.predicate), jural_content(claim.predicate));
+        assert_eq!(
+            jural_content(duty.predicate),
+            jural_content(claim.predicate)
+        );
         assert_eq!(duty.context, frame);
         // Parity is a valid XOR fold.
-        assert_eq!(duty.parity, duty.subject ^ duty.predicate ^ duty.object ^ duty.context);
+        assert_eq!(
+            duty.parity,
+            duty.subject ^ duty.predicate ^ duty.object ^ duty.context
+        );
     }
 
     #[test]
@@ -351,7 +375,10 @@ mod tests {
         let n = find_unmet_correlatives(&[claim], &mut out);
         assert_eq!(n, 1, "the missing duty must be surfaced");
         assert_eq!(jural_position(out[0].predicate), JURAL_DUTY);
-        assert_eq!(out[0].subject, state, "the State is the would-be duty-bearer");
+        assert_eq!(
+            out[0].subject, state,
+            "the State is the would-be duty-bearer"
+        );
         assert_eq!(out[0].object, alice);
 
         // Once the duty exists, nothing is unmet.
@@ -367,7 +394,14 @@ mod tests {
         let corp = q_hash("https://ns.webcivics.net/values/CorporatePerson");
         let agent = q_hash("https://ns.webcivics.net/values/Agent");
         let sub = q_hash("http://www.w3.org/2000/01/rdf-schema#subClassOf");
-        let e = |s: u64, o: u64| NQuin { subject: s, predicate: sub, object: o, context: 0, metadata: 0, parity: 0 };
+        let e = |s: u64, o: u64| NQuin {
+            subject: s,
+            predicate: sub,
+            object: o,
+            context: 0,
+            metadata: 0,
+            parity: 0,
+        };
         let tbox = [e(corp, legal), e(legal, agent), e(np, agent)];
 
         // A CorporatePerson asserting a Claim to a human-only right → category error.
@@ -387,8 +421,15 @@ mod tests {
         // A holds a Power toward B; B holds a Duty toward C.
         let a_power = compile_jural_quin(a, JURAL_POWER, content, b, frame);
         let b_duty = compile_jural_quin(b, JURAL_DUTY, content, c, frame);
-        assert!(jural_chain_links(&a_power, &b_duty), "A's power over B governs B's duty to C");
-        assert_eq!(jural_chain_pivot(&a_power, &b_duty), Some(b), "the pivot is B");
+        assert!(
+            jural_chain_links(&a_power, &b_duty),
+            "A's power over B governs B's duty to C"
+        );
+        assert_eq!(
+            jural_chain_pivot(&a_power, &b_duty),
+            Some(b),
+            "the pivot is B"
+        );
         assert!(jural_chain_valid(&[a_power, b_duty]));
 
         // A first-order Claim cannot be the governing upstream (not a control position).
@@ -407,18 +448,36 @@ mod tests {
         // Holder has a Duty to φ AND (from another source) a Privilege not to do φ — opposites.
         let duty = compile_jural_quin(holder, JURAL_DUTY, content, cp, frame);
         let privilege = compile_jural_quin(holder, JURAL_PRIVILEGE, content, cp, frame);
-        assert!(jural_collision(&duty, &privilege), "Duty vs Privilege over same content = collision");
+        assert!(
+            jural_collision(&duty, &privilege),
+            "Duty vs Privilege over same content = collision"
+        );
 
         // The non-derogable right prevails over the derogable one.
-        assert_eq!(resolve_collision(&duty, &privilege, true, false), CollisionResolution::FirstPrevails);
-        assert_eq!(resolve_collision(&duty, &privilege, false, true), CollisionResolution::SecondPrevails);
+        assert_eq!(
+            resolve_collision(&duty, &privilege, true, false),
+            CollisionResolution::FirstPrevails
+        );
+        assert_eq!(
+            resolve_collision(&duty, &privilege, false, true),
+            CollisionResolution::SecondPrevails
+        );
         // Both (or neither) non-derogable → genuine proportionality conflict → human review, never flattened.
-        assert_eq!(resolve_collision(&duty, &privilege, true, true), CollisionResolution::RequiresHumanReview);
-        assert_eq!(resolve_collision(&duty, &privilege, false, false), CollisionResolution::RequiresHumanReview);
+        assert_eq!(
+            resolve_collision(&duty, &privilege, true, true),
+            CollisionResolution::RequiresHumanReview
+        );
+        assert_eq!(
+            resolve_collision(&duty, &privilege, false, false),
+            CollisionResolution::RequiresHumanReview
+        );
 
         // No collision when positions are not opposites (Duty vs Duty).
         let duty2 = compile_jural_quin(holder, JURAL_DUTY, content, cp, frame);
         assert!(!jural_collision(&duty, &duty2));
-        assert_eq!(resolve_collision(&duty, &duty2, true, false), CollisionResolution::NoCollision);
+        assert_eq!(
+            resolve_collision(&duty, &duty2, true, false),
+            CollisionResolution::NoCollision
+        );
     }
 }

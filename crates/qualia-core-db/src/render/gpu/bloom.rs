@@ -451,5 +451,4 @@ pub(super) fn run_bloom_passes(
         pass.set_bind_group(0, &composite_bind, &[]);
         pass.draw(0..3, 0..1);
     }
-
 }

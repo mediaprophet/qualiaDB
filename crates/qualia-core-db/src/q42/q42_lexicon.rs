@@ -6,8 +6,8 @@
 use std::collections::HashMap;
 use std::io;
 
+use crate::q42_lex::{LexError, Q42LexMmap};
 use crate::q42_volume::Q42Volume;
-use crate::q42_lex::{Q42LexMmap, LexError};
 use crate::q_hash;
 
 /// Error type for CBOR-LD operations
@@ -43,17 +43,32 @@ pub struct Q42Context {
 impl Q42Context {
     pub fn new() -> Self {
         let mut vocabulary = HashMap::new();
-        vocabulary.insert("rdf".to_string(), "http://www.w3.org/1999/02/22-rdf-syntax-ns#".to_string());
+        vocabulary.insert(
+            "rdf".to_string(),
+            "http://www.w3.org/1999/02/22-rdf-syntax-ns#".to_string(),
+        );
         // RDFS + SHACL are the native modelling layer. The human-centric primitive is
         // grounded in rdfs:Class + sh:NodeShape, NOT owl:Class — a natural person is not an
         // owl:Thing (see shapes/qualia-agency.shacl.ttl). `owl` stays registered only so
         // imported OWL vocabularies (RadLex/DICOM) can be named while being lowered to SHACL.
-        vocabulary.insert("rdfs".to_string(), "http://www.w3.org/2000/01/rdf-schema#".to_string());
+        vocabulary.insert(
+            "rdfs".to_string(),
+            "http://www.w3.org/2000/01/rdf-schema#".to_string(),
+        );
         vocabulary.insert("sh".to_string(), "http://www.w3.org/ns/shacl#".to_string());
-        vocabulary.insert("owl".to_string(), "http://www.w3.org/2002/07/owl#".to_string());
-        vocabulary.insert("xsd".to_string(), "http://www.w3.org/2001/XMLSchema#".to_string());
+        vocabulary.insert(
+            "owl".to_string(),
+            "http://www.w3.org/2002/07/owl#".to_string(),
+        );
+        vocabulary.insert(
+            "xsd".to_string(),
+            "http://www.w3.org/2001/XMLSchema#".to_string(),
+        );
         vocabulary.insert("hcai".to_string(), "http://www.w3.org/ns/hcai#".to_string());
-        vocabulary.insert("qualia".to_string(), "https://webizen.org/ld/vocab/".to_string());
+        vocabulary.insert(
+            "qualia".to_string(),
+            "https://webizen.org/ld/vocab/".to_string(),
+        );
 
         Self {
             base_iri: "https://webizen.org/ld/context/v1".to_string(),
@@ -117,7 +132,10 @@ impl Q42CborLdParser {
 
     pub fn from_volume(volume: &Q42Volume) -> Result<Self, io::Error> {
         let lexicon = Q42Lexicon::from_volume(volume).map_err(|_| {
-            io::Error::new(io::ErrorKind::InvalidData, "Failed to load lexicon from volume")
+            io::Error::new(
+                io::ErrorKind::InvalidData,
+                "Failed to load lexicon from volume",
+            )
         })?;
         Ok(Self::new(lexicon))
     }
@@ -169,17 +187,35 @@ impl Q42Lexicon {
     /// Create a new empty lexicon
     pub fn new() -> Self {
         let mut vocabulary = HashMap::new();
-        vocabulary.insert("rdf".to_string(), "http://www.w3.org/1999/02/22-rdf-syntax-ns#".to_string());
+        vocabulary.insert(
+            "rdf".to_string(),
+            "http://www.w3.org/1999/02/22-rdf-syntax-ns#".to_string(),
+        );
         // RDFS + SHACL are the native modelling layer; the human-centric primitive is
         // grounded in rdfs:Class + sh:NodeShape, not owl:Class. `owl` is input-only (lowered
         // to SHACL). See shapes/qualia-agency.shacl.ttl.
-        vocabulary.insert("rdfs".to_string(), "http://www.w3.org/2000/01/rdf-schema#".to_string());
+        vocabulary.insert(
+            "rdfs".to_string(),
+            "http://www.w3.org/2000/01/rdf-schema#".to_string(),
+        );
         vocabulary.insert("sh".to_string(), "http://www.w3.org/ns/shacl#".to_string());
-        vocabulary.insert("owl".to_string(), "http://www.w3.org/2002/07/owl#".to_string());
-        vocabulary.insert("xsd".to_string(), "http://www.w3.org/2001/XMLSchema#".to_string());
+        vocabulary.insert(
+            "owl".to_string(),
+            "http://www.w3.org/2002/07/owl#".to_string(),
+        );
+        vocabulary.insert(
+            "xsd".to_string(),
+            "http://www.w3.org/2001/XMLSchema#".to_string(),
+        );
         vocabulary.insert("hcai".to_string(), "http://www.w3.org/ns/hcai#".to_string());
-        vocabulary.insert("qualia".to_string(), "https://webizen.org/ld/vocab/".to_string());
-        vocabulary.insert("did".to_string(), "https://www.w3.org/TR/did-core/".to_string());
+        vocabulary.insert(
+            "qualia".to_string(),
+            "https://webizen.org/ld/vocab/".to_string(),
+        );
+        vocabulary.insert(
+            "did".to_string(),
+            "https://www.w3.org/TR/did-core/".to_string(),
+        );
         vocabulary.insert("sec".to_string(), "https://w3id.org/security/".to_string());
 
         Self {
@@ -256,7 +292,9 @@ impl Q42Lexicon {
         if let Some(colon_pos) = compact_iri.find(':') {
             let prefix = &compact_iri[..colon_pos];
             let suffix = &compact_iri[colon_pos + 1..];
-            self.vocabulary.get(prefix).map(|base| format!("{}{}", base, suffix))
+            self.vocabulary
+                .get(prefix)
+                .map(|base| format!("{}{}", base, suffix))
         } else {
             None
         }

@@ -1,4 +1,4 @@
-use crate::{NQuin, q_hash};
+use crate::{q_hash, NQuin};
 
 pub const OP_KNOWS: u8 = 0x20;
 pub const OP_BELIEVES: u8 = 0x21;
@@ -37,7 +37,7 @@ pub enum EpistemicStatus {
 #[derive(Debug)]
 pub enum EpistemicError {
     BufferOverflow,
-    NodeLocked(u64), // Hash of the locked node
+    NodeLocked(u64),      // Hash of the locked node
     NamespaceLocked(u64), // Hash of the locked namespace context
 }
 
@@ -51,8 +51,8 @@ pub struct EpistemicVerdict {
 /// Evaluates a slice of Quins for epistemic/doxastic claims.
 pub fn evaluate_epistemic_frame(
     quins: &[NQuin],
-    agent_did_hash: u64,    // 0 = accept all agents
-    world_hash: u64,        // 0 = accept all worlds
+    agent_did_hash: u64, // 0 = accept all agents
+    world_hash: u64,     // 0 = accept all worlds
     out: &mut [EpistemicVerdict],
 ) -> Result<usize, EpistemicError> {
     let mut count = 0;
@@ -101,7 +101,7 @@ pub fn check_node_locks(
 ) -> Result<(), EpistemicError> {
     for i_quin in intent_quins {
         let opcode = (i_quin.predicate & 0xFF) as u8;
-        
+
         // 1. Check Namespace Locks First
         if opcode == OP_NAMESPACE_LOCK {
             let target_namespace = i_quin.object;
@@ -123,7 +123,7 @@ pub fn check_node_locks(
 
             for c_quin in current_graph {
                 let c_opcode = (c_quin.predicate & 0xFF) as u8;
-                
+
                 // If the entire namespace is locked by another agent, reject the node lock
                 if c_opcode == OP_NAMESPACE_IS_LOCKED && c_quin.object == target_namespace {
                     if c_quin.subject != agent_did_hash {
@@ -206,11 +206,11 @@ mod tests {
                 certainty: 0,
             });
         }
-        
+
         let agent_a = q_hash("agent_a");
         let agent_b = q_hash("agent_b");
         let world_w = q_hash("world_w");
-        
+
         let mut q_knows = NQuin::default();
         q_knows.subject = agent_a;
         q_knows.predicate = (200u64 << CERTAINTY_BIT_SHIFT) | (OP_KNOWS as u64);
@@ -233,13 +233,19 @@ mod tests {
         assert_eq!(count, 2);
         assert_eq!(out[0].status, EpistemicStatus::Active); // Knows
         assert_eq!(out[1].status, EpistemicStatus::Uncertain); // Believes low certainty
-        
+
         // 2. World filter
         let mut out2 = Vec::with_capacity(10);
-        for _ in 0..10 { out2.push(EpistemicVerdict { claim: NQuin::default(), status: EpistemicStatus::Skipped, certainty: 0 }); }
+        for _ in 0..10 {
+            out2.push(EpistemicVerdict {
+                claim: NQuin::default(),
+                status: EpistemicStatus::Skipped,
+                certainty: 0,
+            });
+        }
         let count2 = evaluate_epistemic_frame(&quins, 0, q_hash("other_world"), &mut out2).unwrap();
         assert_eq!(count2, 1);
-        
+
         // 3. Agent filter
         let count3 = evaluate_epistemic_frame(&quins, agent_b, 0, &mut out2).unwrap();
         assert_eq!(count3, 0);
@@ -274,11 +280,19 @@ mod tests {
 
         for b in [CERTAINTY_KNOWS, CERTAINTY_BELIEVES, CERTAINTY_CONSIDERS] {
             evaluate_epistemic_frame(&[mk(b)], agent, world, &mut out).unwrap();
-            assert_eq!(out[0].status, EpistemicStatus::Active, "band {b} should be Active");
+            assert_eq!(
+                out[0].status,
+                EpistemicStatus::Active,
+                "band {b} should be Active"
+            );
         }
         for b in [CERTAINTY_SUPPOSES, CERTAINTY_SPECULATES, CERTAINTY_DOUBTS] {
             evaluate_epistemic_frame(&[mk(b)], agent, world, &mut out).unwrap();
-            assert_eq!(out[0].status, EpistemicStatus::Uncertain, "band {b} should be Uncertain");
+            assert_eq!(
+                out[0].status,
+                EpistemicStatus::Uncertain,
+                "band {b} should be Uncertain"
+            );
         }
     }
 
@@ -305,7 +319,9 @@ mod tests {
         intent_node_lock.context = target_namespace;
 
         let result = check_node_locks(&[intent_node_lock], &current_graph, agent_b);
-        assert!(matches!(result, Err(EpistemicError::NamespaceLocked(ns)) if ns == target_namespace));
+        assert!(
+            matches!(result, Err(EpistemicError::NamespaceLocked(ns)) if ns == target_namespace)
+        );
 
         // Intent: Agent A tries to lock a node within their own namespace lock -> Should Succeed
         let mut intent_node_lock_a = NQuin::default();
@@ -327,7 +343,10 @@ mod tests {
         // Distributed knowledge: pooled fragments cover the requirement.
         let (a, b, c) = (q_hash("f:a"), q_hash("f:b"), q_hash("f:c"));
         assert!(distributed_knowledge(&[a, b], &[a, b, c]));
-        assert!(!distributed_knowledge(&[a, b], &[a, c]), "missing fragment b");
+        assert!(
+            !distributed_knowledge(&[a, b], &[a, c]),
+            "missing fragment b"
+        );
         // Common knowledge via public announcement.
         assert!(common_knowledge_via_announcement(true));
         assert!(!common_knowledge_via_announcement(false));
@@ -348,9 +367,18 @@ mod tests {
     #[test]
     fn agm_belief_revision_is_available_in_the_epistemic_namespace() {
         // The AGM operators (from modal.rs) are re-exported here; revise is consistent.
-        let p = Belief { atom: 1, positive: true };
-        let not_p = Belief { atom: 1, positive: false };
-        let mut out = [Belief { atom: 0, positive: true }; 4];
+        let p = Belief {
+            atom: 1,
+            positive: true,
+        };
+        let not_p = Belief {
+            atom: 1,
+            positive: false,
+        };
+        let mut out = [Belief {
+            atom: 0,
+            positive: true,
+        }; 4];
         let n = agm_revise(&[not_p], p, &mut out);
         assert!(out[..n].contains(&p) && !out[..n].contains(&not_p));
         assert!(belief_set_consistent(&out[..n]));

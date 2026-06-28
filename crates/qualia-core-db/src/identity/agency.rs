@@ -64,11 +64,7 @@ pub fn verify_human_agency(
 
 /// Stamp fiduciary metadata and refresh the XOR parity block before WAL commit.
 /// `principal_did_hash` is embedded in `context`; agent identity in metadata low bits.
-pub fn stamp_fiduciary_metadata(
-    quin: &mut NQuin,
-    principal_did_hash: u64,
-    agent_did_hash: u64,
-) {
+pub fn stamp_fiduciary_metadata(quin: &mut NQuin, principal_did_hash: u64, agent_did_hash: u64) {
     quin.context = principal_did_hash;
     let agent_lane = agent_did_hash & 0xFFFF;
     let principal_clock = (principal_did_hash >> 16) & 0x1FFF_FFFF;

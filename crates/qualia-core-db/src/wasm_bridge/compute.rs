@@ -13,7 +13,6 @@ use wasm_bindgen::prelude::*;
 #[cfg(target_arch = "wasm32")]
 use super::*;
 
-
 #[cfg(target_arch = "wasm32")]
 #[wasm_bindgen]
 pub fn run_semantic_simulation(val: JsValue) -> Result<JsValue, JsValue> {
@@ -53,17 +52,29 @@ pub struct AlignmentParams {
 #[cfg(target_arch = "wasm32")]
 #[wasm_bindgen]
 pub fn compute_pid_step_wasm(val: JsValue) -> Result<JsValue, JsValue> {
-    let p: PidStepParams = serde_wasm_bindgen::from_value(val)
-        .map_err(|e| JsValue::from_str(&e.to_string()))?;
+    let p: PidStepParams =
+        serde_wasm_bindgen::from_value(val).map_err(|e| JsValue::from_str(&e.to_string()))?;
 
     let error = p.setpoint - p.current_value;
-    let derivative = if p.dt > 0.0 { (error - p.prev_error) / p.dt } else { 0.0 };
+    let derivative = if p.dt > 0.0 {
+        (error - p.prev_error) / p.dt
+    } else {
+        0.0
+    };
     let new_integral = p.integral + error * p.dt;
     let output = p.kp * error + p.ki * new_integral + p.kd * derivative;
 
     #[derive(Serialize)]
-    struct PidOut { output: f64, new_error: f64, new_integral: f64 }
-    Ok(serde_wasm_bindgen::to_value(&PidOut { output, new_error: error, new_integral })?)
+    struct PidOut {
+        output: f64,
+        new_error: f64,
+        new_integral: f64,
+    }
+    Ok(serde_wasm_bindgen::to_value(&PidOut {
+        output,
+        new_error: error,
+        new_integral,
+    })?)
 }
 
 // ─── GBM Path ────────────────────────────────────────────────────────────────
@@ -84,8 +95,8 @@ pub struct GbmPathParams {
 #[wasm_bindgen]
 pub fn simulate_gbm_path_wasm(val: JsValue) -> Result<JsValue, JsValue> {
     use rand_distr::{Distribution, StandardNormal};
-    let p: GbmPathParams = serde_wasm_bindgen::from_value(val)
-        .map_err(|e| JsValue::from_str(&e.to_string()))?;
+    let p: GbmPathParams =
+        serde_wasm_bindgen::from_value(val).map_err(|e| JsValue::from_str(&e.to_string()))?;
     let steps = p.steps.min(252);
     let dt = p.time_horizon / steps as f64;
     let mut price = p.initial_price;
@@ -96,16 +107,29 @@ pub fn simulate_gbm_path_wasm(val: JsValue) -> Result<JsValue, JsValue> {
     let mut max_price = p.initial_price;
     for _ in 0..steps {
         let z: f64 = StandardNormal.sample(&mut rng);
-        price *= f64::exp((p.drift - 0.5 * p.volatility * p.volatility) * dt
-                          + p.volatility * f64::sqrt(dt) * z);
+        price *= f64::exp(
+            (p.drift - 0.5 * p.volatility * p.volatility) * dt + p.volatility * f64::sqrt(dt) * z,
+        );
         path.push(price);
-        if price < min_price { min_price = price; }
-        if price > max_price { max_price = price; }
+        if price < min_price {
+            min_price = price;
+        }
+        if price > max_price {
+            max_price = price;
+        }
     }
     #[derive(Serialize)]
-    struct GbmOut { final_price: f64, min_price: f64, max_price: f64, path: Vec<f64> }
+    struct GbmOut {
+        final_price: f64,
+        min_price: f64,
+        max_price: f64,
+        path: Vec<f64>,
+    }
     Ok(serde_wasm_bindgen::to_value(&GbmOut {
-        final_price: price, min_price, max_price, path,
+        final_price: price,
+        min_price,
+        max_price,
+        path,
     })?)
 }
 
@@ -113,28 +137,37 @@ pub fn simulate_gbm_path_wasm(val: JsValue) -> Result<JsValue, JsValue> {
 #[cfg(target_arch = "wasm32")]
 #[wasm_bindgen]
 pub fn black_scholes_wasm(val: JsValue) -> Result<JsValue, JsValue> {
-    let p: BlackScholesParams = serde_wasm_bindgen::from_value(val)
-        .map_err(|e| JsValue::from_str(&e.to_string()))?;
+    let p: BlackScholesParams =
+        serde_wasm_bindgen::from_value(val).map_err(|e| JsValue::from_str(&e.to_string()))?;
     if p.vol <= 0.0 || p.time_years <= 0.0 || p.spot <= 0.0 || p.strike <= 0.0 {
-        return Err(JsValue::from_str("spot, strike, vol, time_years must be positive"));
+        return Err(JsValue::from_str(
+            "spot, strike, vol, time_years must be positive",
+        ));
     }
     let sqrt_t = p.time_years.sqrt();
     let d1 = (f64::ln(p.spot / p.strike) + (p.rate + 0.5 * p.vol * p.vol) * p.time_years)
-             / (p.vol * sqrt_t);
+        / (p.vol * sqrt_t);
     let d2 = d1 - p.vol * sqrt_t;
     let disc = f64::exp(-p.rate * p.time_years);
     let (price, delta) = if p.is_call {
-        (p.spot * phi_norm(d1) - p.strike * disc * phi_norm(d2), phi_norm(d1))
+        (
+            p.spot * phi_norm(d1) - p.strike * disc * phi_norm(d2),
+            phi_norm(d1),
+        )
     } else {
-        (p.strike * disc * phi_norm(-d2) - p.spot * phi_norm(-d1), phi_norm(d1) - 1.0)
+        (
+            p.strike * disc * phi_norm(-d2) - p.spot * phi_norm(-d1),
+            phi_norm(d1) - 1.0,
+        )
     };
     let nd1 = f64::exp(-0.5 * d1 * d1) / f64::sqrt(2.0 * std::f64::consts::PI);
     let gamma = nd1 / (p.spot * p.vol * sqrt_t);
-    let vega  = p.spot * nd1 * sqrt_t / 100.0;
+    let vega = p.spot * nd1 * sqrt_t / 100.0;
     let theta = if p.is_call {
         (-(p.spot * nd1 * p.vol) / (2.0 * sqrt_t) - p.rate * p.strike * disc * phi_norm(d2)) / 365.0
     } else {
-        (-(p.spot * nd1 * p.vol) / (2.0 * sqrt_t) + p.rate * p.strike * disc * phi_norm(-d2)) / 365.0
+        (-(p.spot * nd1 * p.vol) / (2.0 * sqrt_t) + p.rate * p.strike * disc * phi_norm(-d2))
+            / 365.0
     };
     let rho = if p.is_call {
         p.strike * p.time_years * disc * phi_norm(d2) / 100.0
@@ -142,8 +175,22 @@ pub fn black_scholes_wasm(val: JsValue) -> Result<JsValue, JsValue> {
         -p.strike * p.time_years * disc * phi_norm(-d2) / 100.0
     };
     #[derive(Serialize)]
-    struct BsOut { price: f64, delta: f64, gamma: f64, vega: f64, theta: f64, rho: f64 }
-    Ok(serde_wasm_bindgen::to_value(&BsOut { price, delta, gamma, vega, theta, rho })?)
+    struct BsOut {
+        price: f64,
+        delta: f64,
+        gamma: f64,
+        vega: f64,
+        theta: f64,
+        rho: f64,
+    }
+    Ok(serde_wasm_bindgen::to_value(&BsOut {
+        price,
+        delta,
+        gamma,
+        vega,
+        theta,
+        rho,
+    })?)
 }
 
 // ─── SAT Solver ──────────────────────────────────────────────────────────────
@@ -154,17 +201,17 @@ pub fn black_scholes_wasm(val: JsValue) -> Result<JsValue, JsValue> {
 #[cfg(target_arch = "wasm32")]
 #[wasm_bindgen]
 pub fn solve_sat_wasm(val: JsValue) -> Result<JsValue, JsValue> {
-    use crate::solvers::symbolic_logic::{
-        BoundedSatSolver, Clause, Literal,
-    };
+    use crate::solvers::symbolic_logic::{BoundedSatSolver, Clause, Literal};
     use crate::solvers::SolverConfig;
     use std::collections::HashMap;
 
     // Deserialize input: { clauses: Vec<Vec<i32>> }
     #[derive(Deserialize)]
-    struct SatInput { clauses: Vec<Vec<i32>> }
-    let input: SatInput = serde_wasm_bindgen::from_value(val)
-        .map_err(|e| JsValue::from_str(&e.to_string()))?;
+    struct SatInput {
+        clauses: Vec<Vec<i32>>,
+    }
+    let input: SatInput =
+        serde_wasm_bindgen::from_value(val).map_err(|e| JsValue::from_str(&e.to_string()))?;
 
     let mut solver = BoundedSatSolver::new(SolverConfig::default());
 
@@ -178,14 +225,19 @@ pub fn solve_sat_wasm(val: JsValue) -> Result<JsValue, JsValue> {
                 negated: lit < 0,
             };
         }
-        solver.add_clause(clause).map_err(|e| JsValue::from_str(&format!("{:?}", e)))?;
+        solver
+            .add_clause(clause)
+            .map_err(|e| JsValue::from_str(&format!("{:?}", e)))?;
     }
 
     let state = match solver.solve() {
         Ok(s) => s,
         Err(crate::solvers::SolversError::Unsatisfiable) => {
             #[derive(Serialize)]
-            struct SatOut { satisfiable: bool, assignment: HashMap<String, bool> }
+            struct SatOut {
+                satisfiable: bool,
+                assignment: HashMap<String, bool>,
+            }
             return Ok(serde_wasm_bindgen::to_value(&SatOut {
                 satisfiable: false,
                 assignment: HashMap::new(),
@@ -199,7 +251,7 @@ pub fn solve_sat_wasm(val: JsValue) -> Result<JsValue, JsValue> {
     for (i, a) in solver.assignments.iter().enumerate() {
         use crate::solvers::symbolic_logic::AssignmentValue;
         let val_bool = match a.value {
-            AssignmentValue::True  => Some(true),
+            AssignmentValue::True => Some(true),
             AssignmentValue::False => Some(false),
             AssignmentValue::Unassigned => None,
         };
@@ -209,7 +261,10 @@ pub fn solve_sat_wasm(val: JsValue) -> Result<JsValue, JsValue> {
     }
 
     #[derive(Serialize)]
-    struct SatOut { satisfiable: bool, assignment: HashMap<String, bool> }
+    struct SatOut {
+        satisfiable: bool,
+        assignment: HashMap<String, bool>,
+    }
     Ok(serde_wasm_bindgen::to_value(&SatOut {
         satisfiable: state.satisfiable.unwrap_or(false),
         assignment,
@@ -232,15 +287,19 @@ pub struct OdeDecayParams {
 #[cfg(target_arch = "wasm32")]
 #[wasm_bindgen]
 pub fn solve_ode_exponential_decay_wasm(val: JsValue) -> Result<JsValue, JsValue> {
-    let p: OdeDecayParams = serde_wasm_bindgen::from_value(val)
-        .map_err(|e| JsValue::from_str(&e.to_string()))?;
+    let p: OdeDecayParams =
+        serde_wasm_bindgen::from_value(val).map_err(|e| JsValue::from_str(&e.to_string()))?;
 
-    if p.k <= 0.0 { return Err(JsValue::from_str("k must be positive")); }
-    if p.dt <= 0.0 { return Err(JsValue::from_str("dt must be positive")); }
+    if p.k <= 0.0 {
+        return Err(JsValue::from_str("k must be positive"));
+    }
+    if p.dt <= 0.0 {
+        return Err(JsValue::from_str("dt must be positive"));
+    }
 
     // RK4 step for dy/dt = -k*y
     let rk4_step = |t: f64, y: f64, h: f64| -> f64 {
-        let _ = t;  // autonomous ODE — t unused
+        let _ = t; // autonomous ODE — t unused
         let f = |yy: f64| -p.k * yy;
         let k1 = f(y);
         let k2 = f(y + 0.5 * h * k1);
@@ -268,6 +327,14 @@ pub fn solve_ode_exponential_decay_wasm(val: JsValue) -> Result<JsValue, JsValue
     }
 
     #[derive(Serialize)]
-    struct OdeOut { t_values: Vec<f64>, y_values: Vec<f64>, final_y: f64 }
-    Ok(serde_wasm_bindgen::to_value(&OdeOut { t_values, y_values, final_y: y })?)
+    struct OdeOut {
+        t_values: Vec<f64>,
+        y_values: Vec<f64>,
+        final_y: f64,
+    }
+    Ok(serde_wasm_bindgen::to_value(&OdeOut {
+        t_values,
+        y_values,
+        final_y: y,
+    })?)
 }

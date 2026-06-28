@@ -11,10 +11,61 @@ pub fn parse_tool_args(args: &[u8]) -> Result<Value, McpSystemError> {
     serde_json::from_slice(args).map_err(|_| McpSystemError::ParseError)
 }
 
+/// Return the canonical capability catalogue used by chat, CLI, and MCP.
+///
+/// Internal/library-only operations remain visible with no MCP route, while
+/// unavailable families are labelled `fail-closed` rather than advertised as
+/// operational.
+pub fn list_capabilities(args: &[u8]) -> Result<String, McpSystemError> {
+    let v = parse_tool_args(args)?;
+    let domain = v.get("domain").and_then(Value::as_str);
+    let maturity = v.get("maturity").and_then(Value::as_str);
+    let surface = v.get("surface").and_then(Value::as_str);
+
+    let capabilities: Vec<Value> = crate::CAPABILITY_DESCRIPTORS
+        .iter()
+        .filter(|capability| {
+            domain.map_or(true, |wanted| {
+                capability.domain.eq_ignore_ascii_case(wanted)
+            }) && maturity.map_or(true, |wanted| {
+                capability.maturity.eq_ignore_ascii_case(wanted)
+            }) && surface.map_or(true, |wanted| {
+                capability
+                    .surfaces
+                    .iter()
+                    .any(|candidate| candidate.eq_ignore_ascii_case(wanted))
+            })
+        })
+        .map(|capability| {
+            json!({
+                "name": capability.name,
+                "domain": capability.domain,
+                "maturity": capability.maturity,
+                "surfaces": capability.surfaces,
+                "operations": capability.operations,
+                "mcp_tools": capability.mcp_tools,
+                "directly_callable": !capability.mcp_tools.is_empty(),
+                "operational": capability.maturity != "fail-closed",
+            })
+        })
+        .collect();
+
+    let operation_count: usize = capabilities
+        .iter()
+        .filter_map(|capability| capability["operations"].as_array())
+        .map(Vec::len)
+        .sum();
+    Ok(json!({
+        "engine_version": crate::ENGINE_VERSION,
+        "capability_count": capabilities.len(),
+        "operation_group_count": operation_count,
+        "capabilities": capabilities,
+    })
+    .to_string())
+}
+
 fn json_str<'a>(v: &'a Value, key: &str, default: &'a str) -> &'a str {
-    v.get(key)
-        .and_then(Value::as_str)
-        .unwrap_or(default)
+    v.get(key).and_then(Value::as_str).unwrap_or(default)
 }
 
 fn json_f64(v: &Value, key: &str, default: f64) -> f64 {
@@ -34,14 +85,20 @@ fn json_bool(v: &Value, key: &str, default: bool) -> bool {
 }
 
 fn json_f64_array(v: &Value, key: &str) -> Result<Vec<f64>, McpSystemError> {
-    let arr = v.get(key).and_then(Value::as_array).ok_or(McpSystemError::InvalidParameters)?;
+    let arr = v
+        .get(key)
+        .and_then(Value::as_array)
+        .ok_or(McpSystemError::InvalidParameters)?;
     arr.iter()
         .map(|x| x.as_f64().ok_or(McpSystemError::InvalidParameters))
         .collect()
 }
 
 fn json_u8_array(v: &Value, key: &str) -> Result<Vec<u8>, McpSystemError> {
-    let arr = v.get(key).and_then(Value::as_array).ok_or(McpSystemError::InvalidParameters)?;
+    let arr = v
+        .get(key)
+        .and_then(Value::as_array)
+        .ok_or(McpSystemError::InvalidParameters)?;
     arr.iter()
         .map(|x| {
             x.as_u64()
@@ -63,7 +120,10 @@ fn parse_quin(v: &Value) -> Result<NQuin, McpSystemError> {
 }
 
 pub fn parse_quin_slice(v: &Value, key: &str) -> Result<Vec<NQuin>, McpSystemError> {
-    let arr = v.get(key).and_then(Value::as_array).ok_or(McpSystemError::InvalidParameters)?;
+    let arr = v
+        .get(key)
+        .and_then(Value::as_array)
+        .ok_or(McpSystemError::InvalidParameters)?;
     arr.iter().map(parse_quin).collect()
 }
 
@@ -139,7 +199,11 @@ pub fn matrix_operation(args: &[u8]) -> Result<String, McpSystemError> {
             let input = v
                 .get("input_id")
                 .and_then(Value::as_str)
-                .or_else(|| v.get("left").and_then(|l| l.get("id")).and_then(Value::as_str))
+                .or_else(|| {
+                    v.get("left")
+                        .and_then(|l| l.get("id"))
+                        .and_then(Value::as_str)
+                })
                 .unwrap_or("A");
             lib.matrix_transpose(input, &result_id)
         }
@@ -147,12 +211,20 @@ pub fn matrix_operation(args: &[u8]) -> Result<String, McpSystemError> {
             let matrix_id = v
                 .get("matrix_id")
                 .and_then(Value::as_str)
-                .or_else(|| v.get("left").and_then(|l| l.get("id")).and_then(Value::as_str))
+                .or_else(|| {
+                    v.get("left")
+                        .and_then(|l| l.get("id"))
+                        .and_then(Value::as_str)
+                })
                 .unwrap_or("A");
             let rhs_id = v
                 .get("rhs_id")
                 .and_then(Value::as_str)
-                .or_else(|| v.get("right").and_then(|r| r.get("id")).and_then(Value::as_str))
+                .or_else(|| {
+                    v.get("right")
+                        .and_then(|r| r.get("id"))
+                        .and_then(Value::as_str)
+                })
                 .unwrap_or("B");
             lib.solve_linear_system(matrix_id, rhs_id, &result_id)
         }
@@ -160,7 +232,11 @@ pub fn matrix_operation(args: &[u8]) -> Result<String, McpSystemError> {
             let input = v
                 .get("input_id")
                 .and_then(Value::as_str)
-                .or_else(|| v.get("left").and_then(|l| l.get("id")).and_then(Value::as_str))
+                .or_else(|| {
+                    v.get("left")
+                        .and_then(|l| l.get("id"))
+                        .and_then(Value::as_str)
+                })
                 .unwrap_or("A");
             lib.matrix_inverse(input, &result_id)
         }
@@ -168,12 +244,20 @@ pub fn matrix_operation(args: &[u8]) -> Result<String, McpSystemError> {
             let left = v
                 .get("left_id")
                 .and_then(Value::as_str)
-                .or_else(|| v.get("left").and_then(|l| l.get("id")).and_then(Value::as_str))
+                .or_else(|| {
+                    v.get("left")
+                        .and_then(|l| l.get("id"))
+                        .and_then(Value::as_str)
+                })
                 .unwrap_or("A");
             let right = v
                 .get("right_id")
                 .and_then(Value::as_str)
-                .or_else(|| v.get("right").and_then(|r| r.get("id")).and_then(Value::as_str))
+                .or_else(|| {
+                    v.get("right")
+                        .and_then(|r| r.get("id"))
+                        .and_then(Value::as_str)
+                })
                 .unwrap_or("B");
             let alpha = json_f64(&v, "alpha", 1.0);
             let beta = json_f64(&v, "beta", 0.0);
@@ -228,14 +312,19 @@ pub fn algebra_matrix_analyze(args: &[u8]) -> Result<String, McpSystemError> {
         "eigenvalues" => {
             let e =
                 eigenvalues_general(rows, &data).map_err(|_| McpSystemError::InvalidParameters)?;
-            let out: Vec<Value> = e.iter().map(|z| json!({ "re": z.re, "im": z.im })).collect();
+            let out: Vec<Value> = e
+                .iter()
+                .map(|z| json!({ "re": z.re, "im": z.im }))
+                .collect();
             Ok(json!({ "op": op, "eigenvalues": out }).to_string())
         }
         "eigen_symmetric" => {
             let (vals, vecs) =
                 eigen_symmetric(rows, &data).map_err(|_| McpSystemError::InvalidParameters)?;
-            Ok(json!({ "op": op, "n": rows, "eigenvalues": vals, "eigenvectors": vecs })
-                .to_string())
+            Ok(
+                json!({ "op": op, "n": rows, "eigenvalues": vals, "eigenvectors": vecs })
+                    .to_string(),
+            )
         }
         "svd" => {
             let s = svd(rows, cols, &data).map_err(|_| McpSystemError::InvalidParameters)?;
@@ -268,8 +357,9 @@ pub fn values_check(args: &[u8]) -> Result<String, McpSystemError> {
         .get("claimsDignityRight")
         .and_then(Value::as_bool)
         .unwrap_or(false);
-    let agent_type =
-        crate::q_hash(&format!("https://ns.webcivics.net/values/{agent_type_short}"));
+    let agent_type = crate::q_hash(&format!(
+        "https://ns.webcivics.net/values/{agent_type_short}"
+    ));
     let flagged = crate::webizen::check_personhood_category_error(agent_type, claims);
     Ok(json!({
         "tool": "values_check",
@@ -362,8 +452,15 @@ pub fn values_evaluate(args: &[u8]) -> Result<String, McpSystemError> {
         if !unless_s.is_empty() {
             has_exception = true;
             // A permitting defeater on the SAME party + path + contract defeats the norm.
-            let defeater =
-                compile_norm_quin(party, OP_PERMIT, path, crate::q_hash(unless_s), contract, 0, true);
+            let defeater = compile_norm_quin(
+                party,
+                OP_PERMIT,
+                path,
+                crate::q_hash(unless_s),
+                contract,
+                0,
+                true,
+            );
             quins.push(defeater);
         }
     }
@@ -374,22 +471,27 @@ pub fn values_evaluate(args: &[u8]) -> Result<String, McpSystemError> {
     let verdict = out[..n].first().copied().unwrap_or_default();
     let (status_s, meaning) = match verdict.status {
         DeonticStatus::Active => ("Active", format!("the {verb} is in force")),
-        DeonticStatus::Defeated => ("Defeated", format!("the {verb} is overridden by an exception")),
-        DeonticStatus::Expired => {
-            ("Expired", format!("the {verb} has lapsed (past its effective window)"))
-        }
-        DeonticStatus::Malformed => {
-            ("Malformed", "the norm could not be interpreted".to_string())
-        }
-        DeonticStatus::Pending => {
-            ("Pending", format!("the {verb} is valid but not yet in its effective window"))
-        }
-        DeonticStatus::Violated => {
-            ("Violated", format!("the {verb} is in force but the facts show it was not met"))
-        }
-        DeonticStatus::Discharged => {
-            ("Discharged", format!("the {verb} has been fulfilled and the duty terminates"))
-        }
+        DeonticStatus::Defeated => (
+            "Defeated",
+            format!("the {verb} is overridden by an exception"),
+        ),
+        DeonticStatus::Expired => (
+            "Expired",
+            format!("the {verb} has lapsed (past its effective window)"),
+        ),
+        DeonticStatus::Malformed => ("Malformed", "the norm could not be interpreted".to_string()),
+        DeonticStatus::Pending => (
+            "Pending",
+            format!("the {verb} is valid but not yet in its effective window"),
+        ),
+        DeonticStatus::Violated => (
+            "Violated",
+            format!("the {verb} is in force but the facts show it was not met"),
+        ),
+        DeonticStatus::Discharged => (
+            "Discharged",
+            format!("the {verb} has been fulfilled and the duty terminates"),
+        ),
     };
     Ok(json!({
         "tool": "values_evaluate",
@@ -413,16 +515,19 @@ pub fn values_evaluate(args: &[u8]) -> Result<String, McpSystemError> {
 /// enforcement is off, so existing callers are unaffected until the operator flips the switch.
 pub fn cooperation_gate(args: &[u8]) -> Result<(), McpSystemError> {
     match gate_verdict(args, crate::mcp_cooperation::enforcement_enabled()) {
-        None => Ok(()),                                                   // enforcement off → pass
+        None => Ok(()), // enforcement off → pass
         Some(crate::mcp_cooperation::CooperationVerdict::Authorized(_)) => Ok(()),
-        Some(_) => Err(McpSystemError::IntentFrameViolation),            // denied → refuse the call
+        Some(_) => Err(McpSystemError::IntentFrameViolation), // denied → refuse the call
     }
 }
 
 /// Pure decision for [`cooperation_gate`] (env-free, so it is unit-testable). `None` = not
 /// enforcing (pass); `Some(verdict)` = the gate's verdict when enforcing. A call with no/false
 /// `verified` is DeniedUnverified; with `verified` but `grounded:false` is DeniedUngrounded.
-fn gate_verdict(args: &[u8], enforcing: bool) -> Option<crate::mcp_cooperation::CooperationVerdict> {
+fn gate_verdict(
+    args: &[u8],
+    enforcing: bool,
+) -> Option<crate::mcp_cooperation::CooperationVerdict> {
     use crate::mcp_cooperation::{authorize, CallerStandpoint};
     use crate::modalities::interaction_governance::Governance;
     use crate::modalities::logic::deontic::DeonticStatus;
@@ -438,7 +543,12 @@ fn gate_verdict(args: &[u8], enforcing: bool) -> Option<crate::mcp_cooperation::
     };
     // When enforcing, grounding must be positively asserted (strict default).
     let grounded = bool_of("grounded");
-    Some(authorize(&standpoint, grounded, DeonticStatus::Active, Governance::default()))
+    Some(authorize(
+        &standpoint,
+        grounded,
+        DeonticStatus::Active,
+        Governance::default(),
+    ))
 }
 
 /// MCP `jural_correlate` — Hohfeldian correlativity: given a jural position, return the
@@ -519,7 +629,9 @@ pub fn deontic_govern(args: &[u8]) -> Result<String, McpSystemError> {
 /// "<agent>", "role": "<role>"?, "verified": bool, "grounded": bool?, "requestStatus":
 /// "active"|"violated"|..., "nonDerogable"|"humanitarian"|"ambiguous": bool? }`.
 pub fn mcp_cooperate(args: &[u8]) -> Result<String, McpSystemError> {
-    use crate::mcp_cooperation::{authorize, cooperation_label, CallerStandpoint, CooperationVerdict};
+    use crate::mcp_cooperation::{
+        authorize, cooperation_label, CallerStandpoint, CooperationVerdict,
+    };
     use crate::modalities::interaction_governance::Governance;
     use crate::modalities::logic::deontic::DeonticStatus;
     let v = parse_tool_args(args)?;
@@ -535,7 +647,10 @@ pub fn mcp_cooperate(args: &[u8]) -> Result<String, McpSystemError> {
     };
     // grounded defaults to true (a human/legal caller); set false to model an ungrounded AI.
     let grounded = v.get("grounded").and_then(Value::as_bool).unwrap_or(true);
-    let status = match json_str(&v, "requestStatus", "active").to_ascii_lowercase().as_str() {
+    let status = match json_str(&v, "requestStatus", "active")
+        .to_ascii_lowercase()
+        .as_str()
+    {
         "violated" => DeonticStatus::Violated,
         "defeated" => DeonticStatus::Defeated,
         "expired" => DeonticStatus::Expired,
@@ -551,7 +666,9 @@ pub fn mcp_cooperate(args: &[u8]) -> Result<String, McpSystemError> {
     };
     let verdict = authorize(&standpoint, grounded, status, g);
     let mode = match verdict {
-        CooperationVerdict::Authorized(m) | CooperationVerdict::DeniedByPolicy(m) => Some(format!("{m:?}")),
+        CooperationVerdict::Authorized(m) | CooperationVerdict::DeniedByPolicy(m) => {
+            Some(format!("{m:?}"))
+        }
         _ => None,
     };
     Ok(json!({
@@ -577,14 +694,18 @@ pub fn cas(args: &[u8]) -> Result<String, McpSystemError> {
             let wrt = json_str(&v, "var", "x");
             let e = sym::parse(expr_s).map_err(|_| McpSystemError::InvalidParameters)?;
             let d = sym::simplify(&sym::differentiate(&e, wrt));
-            Ok(json!({ "op": op, "input": expr_s, "var": wrt, "derivative": d.to_string() })
-                .to_string())
+            Ok(
+                json!({ "op": op, "input": expr_s, "var": wrt, "derivative": d.to_string() })
+                    .to_string(),
+            )
         }
         "simplify" => {
             let expr_s = json_str(&v, "expr", "");
             let e = sym::parse(expr_s).map_err(|_| McpSystemError::InvalidParameters)?;
-            Ok(json!({ "op": op, "input": expr_s, "simplified": sym::simplify(&e).to_string() })
-                .to_string())
+            Ok(
+                json!({ "op": op, "input": expr_s, "simplified": sym::simplify(&e).to_string() })
+                    .to_string(),
+            )
         }
         "evaluate" => {
             let expr_s = json_str(&v, "expr", "");
@@ -613,8 +734,10 @@ pub fn cas(args: &[u8]) -> Result<String, McpSystemError> {
         "expand" => {
             let expr_s = json_str(&v, "expr", "");
             let e = sym::parse(expr_s).map_err(|_| McpSystemError::InvalidParameters)?;
-            Ok(json!({ "op": op, "input": expr_s, "expanded": sym::expand(&e).to_string() })
-                .to_string())
+            Ok(
+                json!({ "op": op, "input": expr_s, "expanded": sym::expand(&e).to_string() })
+                    .to_string(),
+            )
         }
         "factor" => {
             let a = json_f64(&v, "a", 1.0);
@@ -622,11 +745,15 @@ pub fn cas(args: &[u8]) -> Result<String, McpSystemError> {
             let cc = json_f64(&v, "c", 0.0);
             let varname = json_str(&v, "var", "x");
             match sym::factor_quadratic(a, b, cc, varname) {
-                Some(f) => Ok(json!({ "op": op, "a": a, "b": b, "c": cc, "factored": f.to_string() })
-                    .to_string()),
-                None => Ok(json!({ "op": op, "a": a, "b": b, "c": cc, "factored": Value::Null,
+                Some(f) => Ok(
+                    json!({ "op": op, "a": a, "b": b, "c": cc, "factored": f.to_string() })
+                        .to_string(),
+                ),
+                None => Ok(
+                    json!({ "op": op, "a": a, "b": b, "c": cc, "factored": Value::Null,
                     "note": "no real factorisation (negative discriminant or a = 0)" })
-                    .to_string()),
+                    .to_string(),
+                ),
             }
         }
         _ => Err(McpSystemError::InvalidParameters),
@@ -646,14 +773,8 @@ pub fn ode_solve(args: &[u8]) -> Result<String, McpSystemError> {
     lib.initialize()
         .map_err(|_| McpSystemError::InvalidParameters)?;
 
-    let nx = v
-        .get("nx")
-        .and_then(Value::as_u64)
-        .unwrap_or(10) as usize;
-    let ny = v
-        .get("ny")
-        .and_then(Value::as_u64)
-        .unwrap_or(10) as usize;
+    let nx = v.get("nx").and_then(Value::as_u64).unwrap_or(10) as usize;
+    let ny = v.get("ny").and_then(Value::as_u64).unwrap_or(10) as usize;
     let dx = json_f64(&v, "dx", 0.1);
     let time_step = json_f64(&v, "time_step", 0.001);
     let total_time = json_f64(&v, "total_time", 0.01);
@@ -709,7 +830,7 @@ pub fn ode_solve(args: &[u8]) -> Result<String, McpSystemError> {
 
 pub fn chemical_analysis(args: &[u8]) -> Result<String, McpSystemError> {
     use crate::specialized_libs::chemistry_modeling::{
-        Atom, ChemistryModelingLibrary, Molecule, MolecularProperties, PropertyType,
+        Atom, ChemistryModelingLibrary, MolecularProperties, Molecule, PropertyType,
     };
 
     let v = parse_tool_args(args)?;
@@ -752,7 +873,8 @@ pub fn chemical_analysis(args: &[u8]) -> Result<String, McpSystemError> {
         m
     };
 
-    let props: Vec<PropertyType> = if let Some(arr) = v.get("properties").and_then(Value::as_array) {
+    let props: Vec<PropertyType> = if let Some(arr) = v.get("properties").and_then(Value::as_array)
+    {
         arr.iter()
             .filter_map(|p| match p.as_str()? {
                 "boiling_point" => Some(PropertyType::BoilingPoint),
@@ -827,10 +949,7 @@ pub fn statistical_analysis(args: &[u8]) -> Result<String, McpSystemError> {
         data.push(row_data);
     }
 
-    let col_types: Vec<DataType> = columns
-        .iter()
-        .map(|_| DataType::Float64)
-        .collect();
+    let col_types: Vec<DataType> = columns.iter().map(|_| DataType::Float64).collect();
 
     let mut lib = StatisticalComputingLibrary::new();
     lib.initialize()
@@ -961,7 +1080,9 @@ fn hex_decode(s: &str) -> Result<Vec<u8>, McpSystemError> {
     }
     (0..s.len())
         .step_by(2)
-        .map(|i| u8::from_str_radix(&s[i..i + 2], 16).map_err(|_| McpSystemError::InvalidParameters))
+        .map(|i| {
+            u8::from_str_radix(&s[i..i + 2], 16).map_err(|_| McpSystemError::InvalidParameters)
+        })
         .collect()
 }
 
@@ -1120,8 +1241,8 @@ pub fn medical_score(args: &[u8]) -> Result<String, McpSystemError> {
 
 pub fn engineering_analysis(args: &[u8]) -> Result<String, McpSystemError> {
     use crate::specialized_libs::engineering_analysis::{
-        AnalysisType, EngineeringAnalysisLibrary, EngineeringModel, Geometry, GeometryType,
-        Load, ModelType,
+        AnalysisType, EngineeringAnalysisLibrary, EngineeringModel, Geometry, GeometryType, Load,
+        ModelType,
     };
     let v = parse_tool_args(args)?;
     let analysis = json_str(&v, "analysis", "structural");
@@ -1135,10 +1256,7 @@ pub fn engineering_analysis(args: &[u8]) -> Result<String, McpSystemError> {
             model.model_id = id.to_string();
         }
         if let Some(dims) = m.get("dimensions").and_then(Value::as_array) {
-            model.geometry.dimensions = dims
-                .iter()
-                .filter_map(|x| x.as_f64())
-                .collect();
+            model.geometry.dimensions = dims.iter().filter_map(|x| x.as_f64()).collect();
         }
         if let Some(gt) = m.get("geometry_type").and_then(Value::as_str) {
             model.geometry.geometry_type = match gt {
@@ -1162,7 +1280,8 @@ pub fn engineering_analysis(args: &[u8]) -> Result<String, McpSystemError> {
                             + &i.to_string(),
                         load_type: crate::specialized_libs::engineering_analysis::LoadType::Point,
                         load_magnitude: json_f64(l, "magnitude", 1000.0),
-                        load_direction: json_f64_array(l, "direction").unwrap_or(vec![0.0, -1.0, 0.0]),
+                        load_direction: json_f64_array(l, "direction")
+                            .unwrap_or(vec![0.0, -1.0, 0.0]),
                         application_point: json_f64_array(l, "application_point")
                             .unwrap_or(vec![0.0, 0.0, 0.0]),
                     })
@@ -1182,9 +1301,7 @@ pub fn engineering_analysis(args: &[u8]) -> Result<String, McpSystemError> {
         if let Some(e) = v.get("youngs_modulus").and_then(Value::as_f64) {
             mat.material_properties.youngs_modulus = e;
         }
-        model
-            .materials
-            .insert("default".to_string(), mat);
+        model.materials.insert("default".to_string(), mat);
     }
 
     let analysis_type = match analysis {
@@ -1266,16 +1383,13 @@ pub fn chemical_descriptors(args: &[u8]) -> Result<String, McpSystemError> {
 
 pub fn clinical_risk(args: &[u8]) -> Result<String, McpSystemError> {
     use crate::clinical_engine::{
-        ckd_epi_egfr, cha2ds2_vasc_score, framingham_10yr_risk, sofa_score, Cha2ds2VascInput,
+        cha2ds2_vasc_score, ckd_epi_egfr, framingham_10yr_risk, sofa_score, Cha2ds2VascInput,
         FraminghamInput, RenalInput, SofaInput,
     };
 
     let v = parse_tool_args(args)?;
     let score_type = json_str(&v, "score", "framingham");
-    let input = v
-        .get("input")
-        .cloned()
-        .unwrap_or_else(|| v.clone());
+    let input = v.get("input").cloned().unwrap_or_else(|| v.clone());
 
     let result = match score_type {
         "cha2ds2" | "cha2ds2_vasc" => {
@@ -1317,10 +1431,7 @@ pub fn clinical_risk(args: &[u8]) -> Result<String, McpSystemError> {
         }
         "egfr" | "renal" => {
             let inp = RenalInput {
-                age: v
-                    .get("age")
-                    .and_then(Value::as_u64)
-                    .unwrap_or(55) as u8,
+                age: v.get("age").and_then(Value::as_u64).unwrap_or(55) as u8,
                 sex_male: json_bool(&input, "sex_male", true),
                 weight_kg: json_f64(&input, "weight_kg", 70.0),
                 serum_creatinine: json_f64(&input, "serum_creatinine", 1.0),
@@ -1414,10 +1525,7 @@ pub fn symbolic_logic_infer(args: &[u8]) -> Result<String, McpSystemError> {
                 let mut n = 0u8;
                 for lit in lits.iter().take(5) {
                     literals[n as usize] = Literal {
-                        variable: lit
-                            .get("variable")
-                            .and_then(Value::as_u64)
-                            .unwrap_or(0) as u8,
+                        variable: lit.get("variable").and_then(Value::as_u64).unwrap_or(0) as u8,
                         negated: json_bool(lit, "negated", false),
                     };
                     n += 1;
@@ -1451,10 +1559,7 @@ pub fn symbolic_logic_infer(args: &[u8]) -> Result<String, McpSystemError> {
     if let Some(facts) = v.get("facts").and_then(Value::as_array) {
         for (idx, f) in facts.iter().enumerate() {
             let lit = Literal {
-                variable: f
-                    .get("variable")
-                    .and_then(Value::as_u64)
-                    .unwrap_or(0) as u8,
+                variable: f.get("variable").and_then(Value::as_u64).unwrap_or(0) as u8,
                 negated: json_bool(f, "negated", false),
             };
             let fact = Fact {
@@ -1479,14 +1584,13 @@ pub fn symbolic_logic_infer(args: &[u8]) -> Result<String, McpSystemError> {
             }; 5];
             for (i, a) in antecedents_arr.iter().take(5).enumerate() {
                 antecedents[i] = Literal {
-                    variable: a
-                        .get("variable")
-                        .and_then(Value::as_u64)
-                        .unwrap_or(0) as u8,
+                    variable: a.get("variable").and_then(Value::as_u64).unwrap_or(0) as u8,
                     negated: json_bool(a, "negated", false),
                 };
             }
-            let cons = r.get("consequent").ok_or(McpSystemError::InvalidParameters)?;
+            let cons = r
+                .get("consequent")
+                .ok_or(McpSystemError::InvalidParameters)?;
             let rule = DefeasibleRule {
                 id: idx as u32 + 1,
                 rule_type: match json_str(r, "rule_type", "defeasible") {
@@ -1494,18 +1598,12 @@ pub fn symbolic_logic_infer(args: &[u8]) -> Result<String, McpSystemError> {
                     "defeater" => RuleType::Defeater,
                     _ => RuleType::Defeasible,
                 },
-                priority: v
-                    .get("priority")
-                    .and_then(Value::as_u64)
-                    .unwrap_or(500) as u16,
+                priority: v.get("priority").and_then(Value::as_u64).unwrap_or(500) as u16,
                 active: true,
                 fire_count: 0,
                 antecedents,
                 consequent: Literal {
-                    variable: cons
-                        .get("variable")
-                        .and_then(Value::as_u64)
-                        .unwrap_or(0) as u8,
+                    variable: cons.get("variable").and_then(Value::as_u64).unwrap_or(0) as u8,
                     negated: json_bool(cons, "negated", false),
                 },
             };
@@ -1535,7 +1633,8 @@ pub fn evaluate_modality(args: &[u8]) -> Result<String, McpSystemError> {
             } else {
                 vec![]
             };
-            let formula = parse_ltl_formula(v.get("formula").ok_or(McpSystemError::InvalidParameters)?)?;
+            let formula =
+                parse_ltl_formula(v.get("formula").ok_or(McpSystemError::InvalidParameters)?)?;
             let ok = evaluate_ltl_trace(&trace, &formula);
             Ok(json!({"modality": "ltl", "result": ok}).to_string())
         }
@@ -1581,10 +1680,7 @@ pub fn evaluate_modality(args: &[u8]) -> Result<String, McpSystemError> {
             for q in &mut quins {
                 ensure_parity(q);
             }
-            let now = v
-                .get("now_unix")
-                .and_then(Value::as_u64)
-                .unwrap_or(0) as u32;
+            let now = v.get("now_unix").and_then(Value::as_u64).unwrap_or(0) as u32;
             let mut out = vec![DeonticVerdict::default(); quins.len().max(1)];
             let n = evaluate_deontic_contract(&quins, now, &mut out)
                 .map_err(|_| McpSystemError::InvalidParameters)?;
@@ -1597,18 +1693,24 @@ pub fn evaluate_modality(args: &[u8]) -> Result<String, McpSystemError> {
                     })
                 })
                 .collect();
-            Ok(json!({"modality": "deontic", "verdict_count": n, "verdicts": verdicts}).to_string())
+            Ok(
+                json!({"modality": "deontic", "verdict_count": n, "verdicts": verdicts})
+                    .to_string(),
+            )
         }
         "epistemic" => {
             use crate::modalities::epistemic::{evaluate_epistemic_frame, EpistemicVerdict};
             let quins = parse_quin_slice(&v, "quins")?;
             let agent = json_u64(&v, "agent_did_hash", 0);
             let world = json_u64(&v, "world_hash", 0);
-            let mut out = vec![EpistemicVerdict {
-                claim: NQuin::default(),
-                status: crate::modalities::epistemic::EpistemicStatus::Skipped,
-                certainty: 0,
-            }; quins.len().max(1)];
+            let mut out = vec![
+                EpistemicVerdict {
+                    claim: NQuin::default(),
+                    status: crate::modalities::epistemic::EpistemicStatus::Skipped,
+                    certainty: 0,
+                };
+                quins.len().max(1)
+            ];
             let n = evaluate_epistemic_frame(&quins, agent, world, &mut out)
                 .map_err(|_| McpSystemError::InvalidParameters)?;
             let verdicts: Vec<Value> = out[..n]
@@ -1620,7 +1722,10 @@ pub fn evaluate_modality(args: &[u8]) -> Result<String, McpSystemError> {
                     })
                 })
                 .collect();
-            Ok(json!({"modality": "epistemic", "verdict_count": n, "verdicts": verdicts}).to_string())
+            Ok(
+                json!({"modality": "epistemic", "verdict_count": n, "verdicts": verdicts})
+                    .to_string(),
+            )
         }
         "dl" => {
             use crate::modalities::dl::check_subsumption_quin;
@@ -1651,7 +1756,9 @@ pub fn evaluate_modality(args: &[u8]) -> Result<String, McpSystemError> {
     }
 }
 
-fn parse_ltl_formula(v: &Value) -> Result<crate::modalities::temporal_ltl::LtlFormula, McpSystemError> {
+fn parse_ltl_formula(
+    v: &Value,
+) -> Result<crate::modalities::temporal_ltl::LtlFormula, McpSystemError> {
     use crate::modalities::temporal_ltl::LtlFormula;
     let ty = v
         .get("type")
@@ -1681,17 +1788,15 @@ mod tests {
     #[test]
     fn values_check_tool_flags_corporate_capture() {
         // A corporation claiming a human dignity right → REJECT (PersonhoodCategoryError).
-        let out = values_check(
-            br#"{"agentType":"CorporatePerson","claimsDignityRight":true}"#,
-        )
-        .expect("ok");
+        let out = values_check(br#"{"agentType":"CorporatePerson","claimsDignityRight":true}"#)
+            .expect("ok");
         let p: Value = serde_json::from_str(&out).expect("json");
         assert_eq!(p["flagged"], true);
         assert_eq!(p["flag"], "values:PersonhoodCategoryError");
 
         // A natural person holding their own right → ok.
-        let out2 =
-            values_check(br#"{"agentType":"NaturalPerson","claimsDignityRight":true}"#).expect("ok");
+        let out2 = values_check(br#"{"agentType":"NaturalPerson","claimsDignityRight":true}"#)
+            .expect("ok");
         let p2: Value = serde_json::from_str(&out2).expect("json");
         assert_eq!(p2["flagged"], false);
         assert_eq!(p2["verdict"], "ok");
@@ -1771,7 +1876,10 @@ mod tests {
         // Enforcement OFF → always pass (None), regardless of caller.
         assert!(gate_verdict(br#"{}"#, false).is_none());
         // Enforcement ON, anonymous/unverified → DeniedUnverified.
-        assert!(matches!(gate_verdict(br#"{}"#, true), Some(CooperationVerdict::DeniedUnverified)));
+        assert!(matches!(
+            gate_verdict(br#"{}"#, true),
+            Some(CooperationVerdict::DeniedUnverified)
+        ));
         // ON, verified but not grounded → DeniedUngrounded.
         assert!(matches!(
             gate_verdict(br#"{"caller":"did:bot","verified":true}"#, true),
@@ -1779,7 +1887,10 @@ mod tests {
         ));
         // ON, verified + grounded → Authorized.
         assert!(matches!(
-            gate_verdict(br#"{"caller":"did:alice","verified":true,"grounded":true}"#, true),
+            gate_verdict(
+                br#"{"caller":"did:alice","verified":true,"grounded":true}"#,
+                true
+            ),
             Some(CooperationVerdict::Authorized(_))
         ));
         // The public gate maps a denial to IntentFrameViolation (enforcement defaults off in CI).
@@ -1789,18 +1900,27 @@ mod tests {
     #[test]
     fn mcp_cooperate_tool() {
         // Verified, grounded, ordinary request → Authorized.
-        let ok = mcp_cooperate(br#"{"caller":"did:alice","verified":true,"requestStatus":"active"}"#).expect("ok");
+        let ok =
+            mcp_cooperate(br#"{"caller":"did:alice","verified":true,"requestStatus":"active"}"#)
+                .expect("ok");
         let p: Value = serde_json::from_str(&ok).expect("json");
         assert_eq!(p["verdict"], "Authorized");
         assert_eq!(p["permitted"], true);
 
         // Asserted (not verified) → DeniedUnverified.
         let unv = mcp_cooperate(br#"{"caller":"did:x","verified":false}"#).expect("ok");
-        assert_eq!(serde_json::from_str::<Value>(&unv).unwrap()["verdict"], "DeniedUnverified");
+        assert_eq!(
+            serde_json::from_str::<Value>(&unv).unwrap()["verdict"],
+            "DeniedUnverified"
+        );
 
         // Verified but ungrounded AI → DeniedUngrounded.
-        let ung = mcp_cooperate(br#"{"caller":"did:bot","verified":true,"grounded":false}"#).expect("ok");
-        assert_eq!(serde_json::from_str::<Value>(&ung).unwrap()["verdict"], "DeniedUngrounded");
+        let ung =
+            mcp_cooperate(br#"{"caller":"did:bot","verified":true,"grounded":false}"#).expect("ok");
+        assert_eq!(
+            serde_json::from_str::<Value>(&ung).unwrap()["verdict"],
+            "DeniedUngrounded"
+        );
 
         // Verified + grounded but a non-derogable violation → DeniedByPolicy.
         let blk = mcp_cooperate(br#"{"caller":"did:alice","verified":true,"requestStatus":"violated","nonDerogable":true}"#).expect("ok");
@@ -1862,22 +1982,28 @@ mod tests {
     #[test]
     fn cas_tool_differentiate_and_solve() {
         // d/dx (x^3 - 2*x^2 + 5) then evaluate at x=2 → 4
-        let d = cas(json!({ "op": "differentiate", "expr": "x^3 - 2*x^2 + 5", "var": "x" })
-            .to_string()
-            .as_bytes())
+        let d = cas(
+            json!({ "op": "differentiate", "expr": "x^3 - 2*x^2 + 5", "var": "x" })
+                .to_string()
+                .as_bytes(),
+        )
         .expect("ok");
         assert!(d.contains("derivative"));
 
-        let ev = cas(json!({ "op": "evaluate", "expr": "x^2 + 1", "env": { "x": 3.0 } })
-            .to_string()
-            .as_bytes())
+        let ev = cas(
+            json!({ "op": "evaluate", "expr": "x^2 + 1", "env": { "x": 3.0 } })
+                .to_string()
+                .as_bytes(),
+        )
         .expect("ok");
         let parsed: Value = serde_json::from_str(&ev).expect("json");
         assert!((parsed["value"].as_f64().unwrap() - 10.0).abs() < 1e-9);
 
-        let q = cas(json!({ "op": "solve_quadratic", "a": 1.0, "b": -5.0, "c": 6.0 })
-            .to_string()
-            .as_bytes())
+        let q = cas(
+            json!({ "op": "solve_quadratic", "a": 1.0, "b": -5.0, "c": 6.0 })
+                .to_string()
+                .as_bytes(),
+        )
         .expect("ok");
         assert!(q.contains("roots"));
 
@@ -1887,9 +2013,11 @@ mod tests {
         .expect("ok");
         assert!(ex.contains("expanded"));
 
-        let fac = cas(json!({ "op": "factor", "a": 1.0, "b": -5.0, "c": 6.0, "var": "x" })
-            .to_string()
-            .as_bytes())
+        let fac = cas(
+            json!({ "op": "factor", "a": 1.0, "b": -5.0, "c": 6.0, "var": "x" })
+                .to_string()
+                .as_bytes(),
+        )
         .expect("ok");
         assert!(fac.contains("factored"));
     }

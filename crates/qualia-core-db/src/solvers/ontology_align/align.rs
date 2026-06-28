@@ -91,7 +91,10 @@ pub fn align(sim: &[f64], n_source: usize, n_target: usize, threshold: f64) -> O
         })
         .collect();
 
-    Some(Alignment { correspondences, quality: -neg_q })
+    Some(Alignment {
+        correspondences,
+        quality: -neg_q,
+    })
 }
 
 #[cfg(test)]
@@ -101,11 +104,7 @@ mod tests {
     #[test]
     fn recovers_the_diagonal_correspondence() {
         // 3×3 similarity, strong on the diagonal → align i↔i.
-        let sim = [
-            0.9, 0.1, 0.2,
-            0.1, 0.8, 0.3,
-            0.2, 0.2, 0.95,
-        ];
+        let sim = [0.9, 0.1, 0.2, 0.1, 0.8, 0.3, 0.2, 0.2, 0.95];
         let a = align(&sim, 3, 3, 0.5).unwrap();
         assert_eq!(a.correspondences.len(), 3);
         for c in &a.correspondences {
@@ -122,7 +121,10 @@ mod tests {
         let sim = [0.9, 0.1, 0.1, 0.1];
         let a = align(&sim, 2, 2, 0.5).unwrap();
         assert_eq!(a.correspondences.len(), 1);
-        assert_eq!((a.correspondences[0].source, a.correspondences[0].target), (0, 0));
+        assert_eq!(
+            (a.correspondences[0].source, a.correspondences[0].target),
+            (0, 0)
+        );
     }
 
     #[test]

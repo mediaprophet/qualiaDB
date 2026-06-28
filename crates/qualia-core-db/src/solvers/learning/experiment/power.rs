@@ -12,7 +12,12 @@ use crate::solvers::statistics::distributions::normal;
 /// out of range. Uses the standard normal approximation
 /// `n = 2·(z_{1−α/2} + z_power)² / d²`.
 pub fn required_sample_size_two_sample(d: f64, alpha: f64, power: f64) -> Option<usize> {
-    if d == 0.0 || !(0.0..1.0).contains(&alpha) || alpha <= 0.0 || !(0.0..1.0).contains(&power) || power <= 0.0 {
+    if d == 0.0
+        || !(0.0..1.0).contains(&alpha)
+        || alpha <= 0.0
+        || !(0.0..1.0).contains(&power)
+        || power <= 0.0
+    {
         return None;
     }
     let za = normal::standard_quantile(1.0 - alpha / 2.0);
@@ -35,17 +40,25 @@ pub fn power_two_sample(n: usize, d: f64, alpha: f64) -> Option<f64> {
 
 /// Required sample size per group to detect a difference between two proportions
 /// `p1` vs `p2` at two-sided `alpha` and `power`. `None` on bad inputs / equal props.
-pub fn required_sample_size_two_proportion(p1: f64, p2: f64, alpha: f64, power: f64) -> Option<usize> {
+pub fn required_sample_size_two_proportion(
+    p1: f64,
+    p2: f64,
+    alpha: f64,
+    power: f64,
+) -> Option<usize> {
     if !(0.0..=1.0).contains(&p1) || !(0.0..=1.0).contains(&p2) || (p1 - p2).abs() < 1e-12 {
         return None;
     }
-    if !(0.0..1.0).contains(&alpha) || alpha <= 0.0 || !(0.0..1.0).contains(&power) || power <= 0.0 {
+    if !(0.0..1.0).contains(&alpha) || alpha <= 0.0 || !(0.0..1.0).contains(&power) || power <= 0.0
+    {
         return None;
     }
     let za = normal::standard_quantile(1.0 - alpha / 2.0);
     let zb = normal::standard_quantile(power);
     let pbar = 0.5 * (p1 + p2);
-    let num = (za * (2.0 * pbar * (1.0 - pbar)).sqrt() + zb * (p1 * (1.0 - p1) + p2 * (1.0 - p2)).sqrt()).powi(2);
+    let num = (za * (2.0 * pbar * (1.0 - pbar)).sqrt()
+        + zb * (p1 * (1.0 - p1) + p2 * (1.0 - p2)).sqrt())
+    .powi(2);
     let n = num / (p1 - p2).powi(2);
     Some(n.ceil() as usize)
 }
@@ -58,7 +71,10 @@ mod tests {
     fn sample_size_grows_as_effect_shrinks() {
         let big = required_sample_size_two_sample(0.8, 0.05, 0.8).unwrap();
         let small = required_sample_size_two_sample(0.2, 0.05, 0.8).unwrap();
-        assert!(small > big, "smaller effect needs more data: {small} !> {big}");
+        assert!(
+            small > big,
+            "smaller effect needs more data: {small} !> {big}"
+        );
         // Known textbook value: d=0.5, α=0.05, power=0.8 → ~63–64 per group.
         let mid = required_sample_size_two_sample(0.5, 0.05, 0.8).unwrap();
         assert!((62..=65).contains(&mid), "n per group {mid}");
@@ -92,6 +108,9 @@ mod tests {
     fn guards() {
         assert_eq!(required_sample_size_two_sample(0.0, 0.05, 0.8), None);
         assert_eq!(power_two_sample(0, 0.5, 0.05), None);
-        assert_eq!(required_sample_size_two_proportion(0.2, 0.2, 0.05, 0.8), None);
+        assert_eq!(
+            required_sample_size_two_proportion(0.2, 0.2, 0.05, 0.8),
+            None
+        );
     }
 }

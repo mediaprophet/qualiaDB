@@ -43,44 +43,34 @@ impl ComputeUniverse {
     #[inline]
     pub fn qualia_primitives(self) -> &'static [QualiaPrimitive] {
         match self {
-            ComputeUniverse::LlmInference => {
-                &[
-                    QualiaPrimitive::Phase8LlmForward,
-                    QualiaPrimitive::Phase8Sentinel,
-                    QualiaPrimitive::VramLedgerPin,
-                ]
-            }
-            ComputeUniverse::Tensor10D => {
-                &[
-                    QualiaPrimitive::GraphTensorSubstrate,
-                    QualiaPrimitive::VramLedgerPin,
-                ]
-            }
-            ComputeUniverse::Viewport => {
-                &[
-                    QualiaPrimitive::GraphTensorSubstrate,
-                    QualiaPrimitive::VramLedgerPin,
-                ]
-            }
-            ComputeUniverse::AcousticPlane => {
-                &[
-                    QualiaPrimitive::GraphTensorSubstrate,
-                    QualiaPrimitive::VramLedgerPin,
-                ]
-            }
+            ComputeUniverse::LlmInference => &[
+                QualiaPrimitive::Phase8LlmForward,
+                QualiaPrimitive::Phase8Sentinel,
+                QualiaPrimitive::VramLedgerPin,
+            ],
+            ComputeUniverse::Tensor10D => &[
+                QualiaPrimitive::GraphTensorSubstrate,
+                QualiaPrimitive::VramLedgerPin,
+            ],
+            ComputeUniverse::Viewport => &[
+                QualiaPrimitive::GraphTensorSubstrate,
+                QualiaPrimitive::VramLedgerPin,
+            ],
+            ComputeUniverse::AcousticPlane => &[
+                QualiaPrimitive::GraphTensorSubstrate,
+                QualiaPrimitive::VramLedgerPin,
+            ],
         }
     }
 
     #[inline]
     pub fn phase8_channels(self) -> &'static [Phase8Channel] {
         match self {
-            ComputeUniverse::LlmInference => {
-                &[
-                    Phase8Channel::LogitUpstream,
-                    Phase8Channel::ControlDownstream,
-                    Phase8Channel::ContextInject,
-                ]
-            }
+            ComputeUniverse::LlmInference => &[
+                Phase8Channel::LogitUpstream,
+                Phase8Channel::ControlDownstream,
+                Phase8Channel::ContextInject,
+            ],
             ComputeUniverse::Tensor10D => &[Phase8Channel::ContextInject],
             ComputeUniverse::Viewport => &[],
             ComputeUniverse::AcousticPlane => &[],
@@ -289,9 +279,13 @@ impl UniverseFabric {
     #[inline]
     pub fn reserve_protects_llm_kv(&self, global: OperationalMode) -> bool {
         global == OperationalMode::Reserve
-            && self.orchestrator.effective_mode(ComputeUniverse::LlmInference, global)
+            && self
+                .orchestrator
+                .effective_mode(ComputeUniverse::LlmInference, global)
                 == OperationalMode::Full
-            && self.orchestrator.effective_mode(ComputeUniverse::Viewport, global)
+            && self
+                .orchestrator
+                .effective_mode(ComputeUniverse::Viewport, global)
                 == OperationalMode::Reserve
     }
 
@@ -302,11 +296,7 @@ impl UniverseFabric {
 
     #[inline]
     pub fn can_pin_tensor(&self, ledger: &VramLedger, extra_bytes: u64) -> bool {
-        ledger.can_allocate_in_universe(
-            &self.orchestrator,
-            ComputeUniverse::Tensor10D,
-            extra_bytes,
-        )
+        ledger.can_allocate_in_universe(&self.orchestrator, ComputeUniverse::Tensor10D, extra_bytes)
     }
 }
 
@@ -355,7 +345,8 @@ const ZERO_TENSOR10D: Tensor10D = Tensor10D {
     sigma: 0.0,
 };
 
-static QUERY_TENSOR_CELL: SyncUnsafeCell<Tensor10D> = SyncUnsafeCell(UnsafeCell::new(ZERO_TENSOR10D));
+static QUERY_TENSOR_CELL: SyncUnsafeCell<Tensor10D> =
+    SyncUnsafeCell(UnsafeCell::new(ZERO_TENSOR10D));
 static QUERY_SEQ: AtomicU32 = AtomicU32::new(0);
 
 static ATTENTION_MASK_CELL: SyncUnsafeCell<AttentionRouteMask> =
@@ -498,12 +489,13 @@ pub fn run_tensor_search_producer_cycle(max_distance: f32, vocab_len: u32) -> us
     // So this GPU path and the CPU fallback below (which also uses `full_distance`) agree
     // for ALL `v`, not only `v == 0`. `volume_gpu::cpu_tensor_search_into` is the shared,
     // GPU-independent reference for the same metric.
-    let hit_count = crate::tensor::volume_gpu::try_gpu_tensor_search_into(&query, max_distance, &mut hits)
-        .unwrap_or_else(|| {
-            substrate
-                .tensor_search_into(&query, max_distance, &mut hits)
-                .unwrap_or(0)
-        });
+    let hit_count =
+        crate::tensor::volume_gpu::try_gpu_tensor_search_into(&query, max_distance, &mut hits)
+            .unwrap_or_else(|| {
+                substrate
+                    .tensor_search_into(&query, max_distance, &mut hits)
+                    .unwrap_or(0)
+            });
 
     let mask = build_attention_route_mask(&query, max_distance, &hits, hit_count);
     publish_attention_route_mask(mask);
@@ -711,8 +703,9 @@ pub fn extrapolate_topology_draft_mapped(
     subject_hash: u64,
     gamma: usize,
     vocab_len: u32,
-    #[cfg(any(not(target_arch = "wasm32"), feature = "wasm-llm"))]
-    mapper: Option<&crate::topology_draft::TopologyDraftMapper<'_>>,
+    #[cfg(any(not(target_arch = "wasm32"), feature = "wasm-llm"))] mapper: Option<
+        &crate::topology_draft::TopologyDraftMapper<'_>,
+    >,
 ) -> Option<TopologyDraftBatch> {
     let gamma = gamma.clamp(1, MAX_DRAFT_LEN);
     let substrate = global_resident_substrate();

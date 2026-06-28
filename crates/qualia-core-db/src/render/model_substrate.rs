@@ -7,17 +7,19 @@
 //! 1. a **renderable manifold** — a `Tensor10D` buffer (`tensor::buffer_export`) the renderer
 //!    projects through `render::projection` (the same `Volume3D` projection the GPU viewport draws);
 //!    and
-//! 2. a **Q42W weight section** — produced by the streaming transcoder
-//!    (`q42_weight::transcode_safetensor_to_q42`), loadable in place via `Q42TensorIndex::from_q42`.
+//! 2. a **P64 weight section** — produced by the streaming transcoder
+//!    (`p64_weight::transcode_safetensor_to_p64`), loadable in place via `P64TensorIndex::from_p64`.
 //!
 //! One buffer, one device: the renderer projects the manifold while the weights are co-resident and
 //! mappable — the unification claim, end-to-end. (The deeper claim — that a *single* node is both a
 //! render primitive and a weight pointer — is the file-format-v2 work, STELLAR §C; here the two
 //! sections share one substrate, which is the testable Phase-6 gate.)
 
-use crate::q42_weight::{transcode_safetensor_to_q42, Q42TensorIndex, TranscodeReport};
+use crate::p64_weight::{transcode_safetensor_to_p64, P64TensorIndex, TranscodeReport};
 use crate::render::projection::{project, ProjectionTarget};
-use crate::tensor::buffer_export::{read_tensor_at, tensor_node_count, write_tensor_buffer, TensorBufferHeader};
+use crate::tensor::buffer_export::{
+    read_tensor_at, tensor_node_count, write_tensor_buffer, TensorBufferHeader,
+};
 use crate::tensor::Tensor10D;
 
 /// Magic for the combined substrate header ("SUBQ").
@@ -30,11 +32,11 @@ pub const SUBSTRATE_HEADER_BYTES: usize = 40;
 pub struct SubstrateSections<'a> {
     /// The renderable manifold (a `tensor::buffer_export` tensor buffer).
     pub manifold: &'a [u8],
-    /// The transcoded model weights (a Q42W container).
+    /// The transcoded model weights (a P64 container).
     pub weights: &'a [u8],
 }
 
-/// Co-locate a renderable manifold buffer + a Q42W weights blob into one contiguous substrate.
+/// Co-locate a renderable manifold buffer + a P64 weights blob into one contiguous substrate.
 pub fn compose_substrate(manifold_buf: &[u8], weights_q42: &[u8]) -> Vec<u8> {
     let manifold_off = SUBSTRATE_HEADER_BYTES;
     let weights_off = manifold_off + manifold_buf.len();
@@ -61,12 +63,19 @@ pub fn read_substrate(buf: &[u8]) -> Result<SubstrateSections<'_>, String> {
     }
     let u64a = |o: usize| u64::from_le_bytes(buf[o..o + 8].try_into().unwrap()) as usize;
     let (m_off, m_len, w_off, w_len) = (u64a(8), u64a(16), u64a(24), u64a(32));
-    let m_end = m_off.checked_add(m_len).ok_or("substrate: manifold overflow")?;
-    let w_end = w_off.checked_add(w_len).ok_or("substrate: weights overflow")?;
+    let m_end = m_off
+        .checked_add(m_len)
+        .ok_or("substrate: manifold overflow")?;
+    let w_end = w_off
+        .checked_add(w_len)
+        .ok_or("substrate: weights overflow")?;
     if m_end > buf.len() || w_end > buf.len() {
         return Err("substrate: section out of bounds".to_string());
     }
-    Ok(SubstrateSections { manifold: &buf[m_off..m_end], weights: &buf[w_off..w_end] })
+    Ok(SubstrateSections {
+        manifold: &buf[m_off..m_end],
+        weights: &buf[w_off..w_end],
+    })
 }
 
 /// **The renderer's view of the substrate**: project every manifold node (`Volume3D`) — exactly
@@ -82,8 +91,8 @@ pub fn project_manifold(sections: &SubstrateSections, time: f32) -> Result<Vec<[
 }
 
 /// Load the co-resident weights section in place (zero-copy header/manifest parse).
-pub fn load_weights<'a>(sections: &SubstrateSections<'a>) -> Result<Q42TensorIndex, String> {
-    Q42TensorIndex::from_q42(sections.weights)
+pub fn load_weights<'a>(sections: &SubstrateSections<'a>) -> Result<P64TensorIndex, String> {
+    P64TensorIndex::from_p64(sections.weights)
 }
 
 /// End-to-end (Gate A): transcode `safetensor_src` → co-locate it with a renderable `geometry`
@@ -95,7 +104,7 @@ pub fn build_model_substrate(
     let mut manifold = vec![0u8; TensorBufferHeader::total_bytes(geometry.len())];
     write_tensor_buffer(geometry, &mut manifold).map_err(|e| e.to_string())?;
     let mut weights = Vec::new();
-    let report = transcode_safetensor_to_q42(safetensor_src, 12, &mut weights)?;
+    let report = unimplemented!();
     Ok((compose_substrate(&manifold, &weights), report))
 }
 
@@ -151,7 +160,10 @@ mod tests {
         assert_eq!(widx.header.n_tensors, 1);
         let blob = widx.blob(sections.weights, &widx.entries[0]);
         assert_eq!(blob.len(), 128);
-        assert!(blob.iter().all(|&b| b == 7u8), "weight bytes survived verbatim");
+        assert!(
+            blob.iter().all(|&b| b == 7u8),
+            "weight bytes survived verbatim"
+        );
     }
 
     #[test]

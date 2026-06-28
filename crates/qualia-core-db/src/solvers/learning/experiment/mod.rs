@@ -13,4 +13,6 @@ pub mod power;
 
 pub use ab_test::{ab_test, AbResult};
 pub use bandit::{Bandit, Policy};
-pub use power::{power_two_sample, required_sample_size_two_proportion, required_sample_size_two_sample};
+pub use power::{
+    power_two_sample, required_sample_size_two_proportion, required_sample_size_two_sample,
+};

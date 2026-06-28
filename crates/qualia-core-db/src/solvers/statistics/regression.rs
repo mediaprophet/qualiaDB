@@ -58,7 +58,11 @@ pub fn simple_linear_regression(x: &[f64], y: &[f64]) -> Option<LinearRegression
     }
 
     let df = (n - 2) as f64;
-    let r_squared = if ss_tot > 0.0 { 1.0 - ss_res / ss_tot } else { 1.0 };
+    let r_squared = if ss_tot > 0.0 {
+        1.0 - ss_res / ss_tot
+    } else {
+        1.0
+    };
     let s2 = ss_res / df; // residual variance
     let residual_std_error = s2.sqrt();
 
@@ -127,7 +131,11 @@ mod tests {
         let x = [1.0, 2.0, 3.0, 4.0, 5.0, 6.0];
         let y = [5.0, 4.0, 6.0, 5.0, 6.0, 4.0]; // flat-ish noise
         let r = simple_linear_regression(&x, &y).unwrap();
-        assert!(r.slope_p_value > 0.2, "no real trend: p={}", r.slope_p_value);
+        assert!(
+            r.slope_p_value > 0.2,
+            "no real trend: p={}",
+            r.slope_p_value
+        );
         assert!(r.r_squared < 0.3);
     }
 
@@ -135,6 +143,7 @@ mod tests {
     fn guards_degenerate_input() {
         assert!(simple_linear_regression(&[1.0, 2.0], &[1.0, 2.0]).is_none()); // n<3
         assert!(simple_linear_regression(&[2.0, 2.0, 2.0], &[1.0, 2.0, 3.0]).is_none()); // zero var x
-        assert!(simple_linear_regression(&[1.0, 2.0, 3.0], &[1.0, 2.0]).is_none()); // mismatch
+        assert!(simple_linear_regression(&[1.0, 2.0, 3.0], &[1.0, 2.0]).is_none());
+        // mismatch
     }
 }

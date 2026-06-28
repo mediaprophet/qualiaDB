@@ -1,14 +1,14 @@
-use std::collections::HashMap;
-use std::sync::{Arc, Mutex};
-use std::ops::{Add, Mul, Sub};
-use serde::{Deserialize, Serialize};
 use crate::solvers::SolversError;
+use serde::{Deserialize, Serialize};
+use std::collections::HashMap;
+use std::ops::{Add, Mul, Sub};
+use std::sync::{Arc, Mutex};
 
-use super::core_types::*;
-use super::storage::*;
 use super::computation::*;
+use super::core_types::*;
 use super::optimization::*;
 use super::privacy::*;
+use super::storage::*;
 
 /// Performance monitor for linear algebra operations
 pub struct LAPerformanceMonitor {
@@ -16,7 +16,6 @@ pub struct LAPerformanceMonitor {
     pub matrix_metrics: HashMap<String, MatrixMetrics>,
     pub system_metrics: SystemMetrics,
 }
-
 
 /// Operation metrics
 #[derive(Debug, Clone)]
@@ -30,7 +29,6 @@ pub struct OperationMetrics {
     pub simd_efficiency: f64,
 }
 
-
 /// Matrix metrics
 #[derive(Debug, Clone)]
 pub struct MatrixMetrics {
@@ -42,7 +40,6 @@ pub struct MatrixMetrics {
     pub compression_ratio: f64,
 }
 
-
 /// System metrics
 #[derive(Debug, Clone)]
 pub struct SystemMetrics {
@@ -53,7 +50,6 @@ pub struct SystemMetrics {
     pub compute_utilization: f64,
     pub power_efficiency: f64,
 }
-
 
 impl LAPerformanceMonitor {
     pub fn new() -> Self {
@@ -71,14 +67,20 @@ impl LAPerformanceMonitor {
         }
     }
 
-    pub fn record_operation(&mut self, operation_type: &str, execution_time: u64, memory_usage: u64) {
+    pub fn record_operation(
+        &mut self,
+        operation_type: &str,
+        execution_time: u64,
+        memory_usage: u64,
+    ) {
         self.system_metrics.total_operations += 1;
-        self.system_metrics.average_execution_time = 
-            (self.system_metrics.average_execution_time * (self.system_metrics.total_operations - 1) as f64 + execution_time as f64) / self.system_metrics.total_operations as f64;
+        self.system_metrics.average_execution_time = (self.system_metrics.average_execution_time
+            * (self.system_metrics.total_operations - 1) as f64
+            + execution_time as f64)
+            / self.system_metrics.total_operations as f64;
     }
 
     pub fn get_system_metrics(&self) -> SystemMetrics {
         self.system_metrics.clone()
     }
 }
-

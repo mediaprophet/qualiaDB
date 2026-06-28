@@ -129,22 +129,38 @@ mod tests {
     #[test]
     fn test_crdt_bifurcation() {
         let mut q_local = NQuin {
-            subject: 1, predicate: 2, object: 100, context: 5, metadata: 0, parity: 0,
+            subject: 1,
+            predicate: 2,
+            object: 100,
+            context: 5,
+            metadata: 0,
+            parity: 0,
         };
         q_local.set_lamport_clock(5);
 
         let mut q_remote = NQuin {
-            subject: 1, predicate: 2, object: 200, context: 5, metadata: 0, parity: 0,
+            subject: 1,
+            predicate: 2,
+            object: 200,
+            context: 5,
+            metadata: 0,
+            parity: 0,
         };
         q_remote.set_lamport_clock(8); // Remote occurred later
 
         // Normal sync (qp:Project Commons)
         let winner_commons = CrdtResolver::resolve_lww(&q_local, &q_remote, false);
-        assert_eq!(winner_commons.object, 200, "CRDT failed to resolve higher lamport clock in Commons");
+        assert_eq!(
+            winner_commons.object, 200,
+            "CRDT failed to resolve higher lamport clock in Commons"
+        );
 
         // Sovereign sync (wf: WellFair)
         let winner_sovereign = CrdtResolver::resolve_lww(&q_local, &q_remote, true);
-        assert_eq!(winner_sovereign.object, 100, "CRDT failed to protect sovereign domain from external merge");
+        assert_eq!(
+            winner_sovereign.object, 100,
+            "CRDT failed to protect sovereign domain from external merge"
+        );
     }
 }
 
@@ -184,10 +200,7 @@ impl SuspendedTransactionQueue {
     }
 
     /// Asynchronously wakes up a suspended transaction if the signature threshold is met by an incoming WebRTC token.
-    pub fn apply_consensus_token(
-        &mut self,
-        token_quin: &NQuin,
-    ) -> Option<SuspendedTransaction> {
+    pub fn apply_consensus_token(&mut self, token_quin: &NQuin) -> Option<SuspendedTransaction> {
         for slot in self.queue.iter_mut() {
             if let Some(tx) = slot {
                 if tx.agreement_id == token_quin.context {

@@ -29,7 +29,13 @@ pub struct TreeParams {
 
 impl Default for TreeParams {
     fn default() -> Self {
-        Self { max_depth: 8, min_samples_split: 2, min_samples_leaf: 1, max_features: None, seed: 0 }
+        Self {
+            max_depth: 8,
+            min_samples_split: 2,
+            min_samples_leaf: 1,
+            max_features: None,
+            seed: 0,
+        }
     }
 }
 
@@ -53,7 +59,10 @@ pub struct DecisionTree {
 struct Lcg(u64);
 impl Lcg {
     fn next(&mut self) -> u64 {
-        self.0 = self.0.wrapping_mul(6364136223846793005).wrapping_add(1442695040888963407);
+        self.0 = self
+            .0
+            .wrapping_mul(6364136223846793005)
+            .wrapping_add(1442695040888963407);
         self.0
     }
 }
@@ -67,7 +76,10 @@ fn impurity(y: &[f64], idx: &[usize], criterion: Criterion) -> f64 {
     match criterion {
         Criterion::Mse => {
             let mean = idx.iter().map(|&i| y[i]).sum::<f64>() / n as f64;
-            idx.iter().map(|&i| (y[i] - mean) * (y[i] - mean)).sum::<f64>() / n as f64
+            idx.iter()
+                .map(|&i| (y[i] - mean) * (y[i] - mean))
+                .sum::<f64>()
+                / n as f64
         }
         Criterion::Gini => {
             // Class labels are small non-negative integers stored as f64.
@@ -77,7 +89,13 @@ fn impurity(y: &[f64], idx: &[usize], criterion: Criterion) -> f64 {
                 counts[y[i] as usize] += 1;
             }
             let nf = n as f64;
-            1.0 - counts.iter().map(|&c| { let p = c as f64 / nf; p * p }).sum::<f64>()
+            1.0 - counts
+                .iter()
+                .map(|&c| {
+                    let p = c as f64 / nf;
+                    p * p
+                })
+                .sum::<f64>()
         }
     }
 }
@@ -92,7 +110,12 @@ fn leaf_value(y: &[f64], idx: &[usize], criterion: Criterion) -> f64 {
             for &i in idx {
                 counts[y[i] as usize] += 1;
             }
-            counts.iter().enumerate().max_by_key(|(_, &c)| c).map(|(l, _)| l).unwrap_or(0) as f64
+            counts
+                .iter()
+                .enumerate()
+                .max_by_key(|(_, &c)| c)
+                .map(|(l, _)| l)
+                .unwrap_or(0) as f64
         }
     }
 }
@@ -144,7 +167,9 @@ impl<'a> Builder<'a> {
                     continue; // identical values — no split here
                 }
                 let (left, right) = order.split_at(s);
-                if left.len() < self.params.min_samples_leaf || right.len() < self.params.min_samples_leaf {
+                if left.len() < self.params.min_samples_leaf
+                    || right.len() < self.params.min_samples_leaf
+                {
                     continue;
                 }
                 let il = impurity(self.y, left, self.criterion);
@@ -174,7 +199,13 @@ impl<'a> Builder<'a> {
         }
         // Reserve this node's slot before recursing (children get later indices).
         let me = self.nodes.len();
-        self.nodes.push(Node { feature: best_feat as i32, threshold: best_thr, left: 0, right: 0, value });
+        self.nodes.push(Node {
+            feature: best_feat as i32,
+            threshold: best_thr,
+            left: 0,
+            right: 0,
+            value,
+        });
         let l = self.build(&left_idx, depth + 1);
         let r = self.build(&right_idx, depth + 1);
         self.nodes[me].left = l;
@@ -201,7 +232,13 @@ impl<'a> Builder<'a> {
 
     fn push_leaf(&mut self, value: f64) -> usize {
         let idx = self.nodes.len();
-        self.nodes.push(Node { feature: -1, threshold: 0.0, left: 0, right: 0, value });
+        self.nodes.push(Node {
+            feature: -1,
+            threshold: 0.0,
+            left: 0,
+            right: 0,
+            value,
+        });
         idx
     }
 }
@@ -229,16 +266,32 @@ impl DecisionTree {
         };
         let idx: Vec<usize> = (0..n).collect();
         builder.build(&idx, 0);
-        Ok(Self { nodes: builder.nodes, criterion, p })
+        Ok(Self {
+            nodes: builder.nodes,
+            criterion,
+            p,
+        })
     }
 
     /// Fit a regression tree (`Criterion::Mse`).
-    pub fn fit_regressor(x: &[f64], y: &[f64], n: usize, p: usize, params: TreeParams) -> Result<Self, LearningError> {
+    pub fn fit_regressor(
+        x: &[f64],
+        y: &[f64],
+        n: usize,
+        p: usize,
+        params: TreeParams,
+    ) -> Result<Self, LearningError> {
         Self::fit_inner(x, y, n, p, Criterion::Mse, params)
     }
 
     /// Fit a classification tree (`Criterion::Gini`); labels are small integers.
-    pub fn fit_classifier(x: &[f64], y: &[usize], n: usize, p: usize, params: TreeParams) -> Result<Self, LearningError> {
+    pub fn fit_classifier(
+        x: &[f64],
+        y: &[usize],
+        n: usize,
+        p: usize,
+        params: TreeParams,
+    ) -> Result<Self, LearningError> {
         let yf: Vec<f64> = y.iter().map(|&v| v as f64).collect();
         Self::fit_inner(x, &yf, n, p, Criterion::Gini, params)
     }
@@ -251,12 +304,18 @@ impl DecisionTree {
             if nd.feature < 0 {
                 return nd.value;
             }
-            node = if q[nd.feature as usize] <= nd.threshold { nd.left } else { nd.right };
+            node = if q[nd.feature as usize] <= nd.threshold {
+                nd.left
+            } else {
+                nd.right
+            };
         }
     }
 
     pub fn predict(&self, x: &[f64], m: usize) -> Vec<f64> {
-        (0..m).map(|i| self.predict_row(&x[i * self.p..(i + 1) * self.p])).collect()
+        (0..m)
+            .map(|i| self.predict_row(&x[i * self.p..(i + 1) * self.p]))
+            .collect()
     }
 
     /// Class label prediction (rounds the leaf value) for a classifier tree.
@@ -277,7 +336,10 @@ mod tests {
     fn regression_tree_fits_a_step_function() {
         // y is a step: 0 for x<5, 10 for x>=5. A depth-1 tree captures it exactly.
         let x: Vec<f64> = (0..10).map(|i| i as f64).collect();
-        let y: Vec<f64> = x.iter().map(|&xi| if xi < 5.0 { 0.0 } else { 10.0 }).collect();
+        let y: Vec<f64> = x
+            .iter()
+            .map(|&xi| if xi < 5.0 { 0.0 } else { 10.0 })
+            .collect();
         let t = DecisionTree::fit_regressor(&x, &y, 10, 1, TreeParams::default()).unwrap();
         assert!((t.predict_row(&[2.0]) - 0.0).abs() < 1e-9);
         assert!((t.predict_row(&[8.0]) - 10.0).abs() < 1e-9);
@@ -308,7 +370,10 @@ mod tests {
     fn depth_limit_makes_a_single_leaf() {
         let x = [1.0, 2.0, 3.0, 4.0];
         let y = [1.0, 2.0, 3.0, 4.0];
-        let params = TreeParams { max_depth: 0, ..TreeParams::default() };
+        let params = TreeParams {
+            max_depth: 0,
+            ..TreeParams::default()
+        };
         let t = DecisionTree::fit_regressor(&x, &y, 4, 1, params).unwrap();
         // A single leaf predicts the global mean (2.5) for everything.
         assert!((t.predict_row(&[1.0]) - 2.5).abs() < 1e-9);

@@ -7,14 +7,18 @@
 //!   RawInput → [Orchestrator] → validate_intent → [LlmAgent.infer] → validate_output → .q42 commit
 
 use crate::llm_agent::{AgentIntent, AgentRuntime, LocalLlmAgent, WebizenVerdict};
-use crate::modalities::logic::n3_compiler::{compile_rules_with_shacl_gate, default_observation_shape, N3OutputMode};
+use crate::modalities::logic::n3_compiler::{
+    compile_rules_with_shacl_gate, default_observation_shape, N3OutputMode,
+};
 use crate::modalities::logic::n3_parser::{N3Event, N3Parser};
-use crate::modalities::logic::shacl::{CompiledShape, ShaclCompiler, ShaclConstraint, ShaclSeverity};
-#[cfg(not(target_arch = "wasm32"))]
-use crate::wal::{commit_semantic_mutation, WalHandoffResult, WriteAheadLog};
+use crate::modalities::logic::shacl::{
+    CompiledShape, ShaclCompiler, ShaclConstraint, ShaclSeverity,
+};
 use crate::solvers::grounding::{
     evaluate_output_grounding, GroundingResolver, GroundingThresholds, GroundingVerdict,
 };
+#[cfg(not(target_arch = "wasm32"))]
+use crate::wal::{commit_semantic_mutation, WalHandoffResult, WriteAheadLog};
 use crate::webizen::{SlgArena, SlgOpcode, VmFrame};
 use crate::{q_hash, NQuin};
 use std::sync::atomic::{AtomicBool, AtomicU64, Ordering};
@@ -75,6 +79,60 @@ pub struct NullThermalGovernor;
 impl ThermalGovernor for NullThermalGovernor {
     fn get_thermal_state(&self) -> ThermalStatus {
         ThermalStatus::Cool
+    }
+}
+
+use crate::solvers::calculus::{RungeKutta4Static, ODEFunction};
+use crate::solvers::SolverConfig;
+
+struct NewtonCoolingODE {
+    ambient_temp: f64,
+    cooling_constant: f64,
+    power_input: f64,
+}
+
+impl ODEFunction for NewtonCoolingODE {
+    fn derivatives(&self, _t: f64, y: &[f64; 4]) -> [f64; 4] {
+        let temp = y[0];
+        let dt_dt = -self.cooling_constant * (temp - self.ambient_temp) + self.power_input;
+        [dt_dt, 0.0, 0.0, 0.0]
+    }
+}
+
+pub struct CalculusThermalGovernor {
+    current_temp: std::sync::Mutex<f64>,
+}
+
+impl CalculusThermalGovernor {
+    pub fn new(initial_temp: f64) -> Self {
+        Self {
+            current_temp: std::sync::Mutex::new(initial_temp),
+        }
+    }
+}
+
+impl ThermalGovernor for CalculusThermalGovernor {
+    fn get_thermal_state(&self) -> ThermalStatus {
+        let mut temp = self.current_temp.lock().unwrap();
+        
+        let ode = NewtonCoolingODE {
+            ambient_temp: 25.0,
+            cooling_constant: 0.1,
+            power_input: 5.0, // Represents current SoC TDP
+        };
+        
+        let mut solver = RungeKutta4Static::new(0.1, SolverConfig::default());
+        let final_state = solver.integrate(&ode, 0.0, [*temp, 0.0, 0.0, 0.0], 1.0).unwrap();
+        
+        *temp = final_state.y[0];
+        
+        if *temp > 85.0 {
+            ThermalStatus::Critical
+        } else if *temp > 65.0 {
+            ThermalStatus::Warm
+        } else {
+            ThermalStatus::Cool
+        }
     }
 }
 
@@ -546,7 +604,8 @@ impl TaskOrchestrator {
                 GroundingVerdict::Ungrounded { .. } => {
                     return OrchestrationResult::Blocked {
                         rule_violated: q_hash("q42:GroundingRequired"),
-                        reason: "Claim does not trace to its cited facts (ungrounded). Cannot commit.",
+                        reason:
+                            "Claim does not trace to its cited facts (ungrounded). Cannot commit.",
                     };
                 }
             }
@@ -661,7 +720,14 @@ pub mod tests {
     use std::collections::HashMap;
 
     fn claim_quin(s: u64, p: u64, o: u64) -> NQuin {
-        NQuin { subject: s, predicate: p, object: o, context: 0, metadata: 0, parity: 0 }
+        NQuin {
+            subject: s,
+            predicate: p,
+            object: o,
+            context: 0,
+            metadata: 0,
+            parity: 0,
+        }
     }
 
     /// A mock agent that emits a fixed structured claim + citations, delegating the
@@ -746,7 +812,10 @@ pub mod tests {
             &resolver,
             GroundingThresholds::default(),
         );
-        assert!(matches!(result, OrchestrationResult::Committed { .. }), "got {result:?}");
+        assert!(
+            matches!(result, OrchestrationResult::Committed { .. }),
+            "got {result:?}"
+        );
     }
 
     #[test]
@@ -806,7 +875,10 @@ pub mod tests {
         let agent = claim_agent(claim, vec![0xBB]);
         let orch = TaskOrchestrator::new(Box::new(NullThermalGovernor));
         let result = orch.orchestrate_inference(&agent, "assert", "ctx", grounding_intent(), None);
-        assert!(matches!(result, OrchestrationResult::Committed { .. }), "got {result:?}");
+        assert!(
+            matches!(result, OrchestrationResult::Committed { .. }),
+            "got {result:?}"
+        );
     }
 
     #[test]
@@ -870,8 +942,12 @@ pub mod tests {
         assert_eq!(orch.resident_model_id(), Some(456));
 
         // Ensure Webizen VM logic handles yielding
-        let mut vm = crate::modalities::logic::core::WebizenVM::with_scrubbing_lock(orch.scrubbing_lock.clone());
-        let bytecode = vec![crate::modalities::logic::core::WebizenOpcode::LoadModel(999)];
+        let mut vm = crate::modalities::logic::core::WebizenVM::with_scrubbing_lock(
+            orch.scrubbing_lock.clone(),
+        );
+        let bytecode = vec![crate::modalities::logic::core::WebizenOpcode::LoadModel(
+            999,
+        )];
         vm.load_bytecode(&bytecode);
 
         let quin = crate::NQuin {
@@ -889,7 +965,9 @@ pub mod tests {
         assert!(exec_result.is_none());
         assert_eq!(
             vm.yielded_op,
-            Some(crate::modalities::logic::core::WebizenOpcode::LoadModel(999))
+            Some(crate::modalities::logic::core::WebizenOpcode::LoadModel(
+                999
+            ))
         );
 
         // Wait for scrub to clear

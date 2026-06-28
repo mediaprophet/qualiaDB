@@ -54,8 +54,7 @@ impl QTensorEngine {
                 return None;
             }
             #[cfg(target_arch = "wasm32")]
-            if chunk_idx == 0 {
-            }
+            if chunk_idx == 0 {}
             update_streaming_argmax_sieved(
                 &chunk_logits[..chunk_rows],
                 chunk_rows,
@@ -85,16 +84,16 @@ impl QTensorEngine {
                 label: Some("output_topk"),
                 source: wgpu::ShaderSource::Wgsl(crate::topk::TOPK_REDUCTION_WGSL.into()),
             });
-        let pipeline = self
-            .gpu_device()
-            .create_compute_pipeline(&wgpu::ComputePipelineDescriptor {
-                label: Some("output_topk_pipeline"),
-                layout: None,
-                module: &shader,
-                entry_point: Some("topk_block"),
-                compilation_options: Default::default(),
-                cache: self.native_pipeline_cache_ref(),
-            });
+        let pipeline =
+            self.gpu_device()
+                .create_compute_pipeline(&wgpu::ComputePipelineDescriptor {
+                    label: Some("output_topk_pipeline"),
+                    layout: None,
+                    module: &shader,
+                    entry_point: Some("topk_block"),
+                    compilation_options: Default::default(),
+                    cache: self.native_pipeline_cache_ref(),
+                });
         let pipeline_layout = pipeline.get_bind_group_layout(0);
         // Worst case: a full vocab chunk's blocks × max K candidates.
         let max_blocks = (VOCAB_CHUNK_ROWS / crate::topk::TOPK_BLOCK_SIZE).max(1);
@@ -155,20 +154,37 @@ impl QTensorEngine {
         let mmap = self.gguf_mmap.as_deref()?;
 
         let use_coop = crate::llm_bench::coop_gemv_enabled();
-        let gemm_pipeline: &wgpu::ComputePipeline =
-            if use_coop { &self.coop_gemv_pipeline } else { &self.pipeline };
+        let gemm_pipeline: &wgpu::ComputePipeline = if use_coop {
+            &self.coop_gemv_pipeline
+        } else {
+            &self.pipeline
+        };
         let gemm_layout = self.native_gemm_bind_layout(use_coop).clone();
         let topk_layout = self.output_topk_bind_layout.as_ref()?;
-        let topk_bind = self.gpu_device().create_bind_group(&wgpu::BindGroupDescriptor {
-            label: Some("Top1Bind"),
-            layout: topk_layout,
-            entries: &[
-                wgpu::BindGroupEntry { binding: 0, resource: output_buf.as_entire_binding() },
-                wgpu::BindGroupEntry { binding: 1, resource: topk_params_buf.as_entire_binding() },
-                wgpu::BindGroupEntry { binding: 2, resource: cand_val.as_entire_binding() },
-                wgpu::BindGroupEntry { binding: 3, resource: cand_idx.as_entire_binding() },
-            ],
-        });
+        let topk_bind = self
+            .gpu_device()
+            .create_bind_group(&wgpu::BindGroupDescriptor {
+                label: Some("Top1Bind"),
+                layout: topk_layout,
+                entries: &[
+                    wgpu::BindGroupEntry {
+                        binding: 0,
+                        resource: output_buf.as_entire_binding(),
+                    },
+                    wgpu::BindGroupEntry {
+                        binding: 1,
+                        resource: topk_params_buf.as_entire_binding(),
+                    },
+                    wgpu::BindGroupEntry {
+                        binding: 2,
+                        resource: cand_val.as_entire_binding(),
+                    },
+                    wgpu::BindGroupEntry {
+                        binding: 3,
+                        resource: cand_idx.as_entire_binding(),
+                    },
+                ],
+            });
         let block_size = crate::topk::TOPK_BLOCK_SIZE;
         let full_chunks = vocab_size.div_ceil(VOCAB_CHUNK_ROWS);
         let total_cands = vocab_size.div_ceil(block_size);
@@ -244,19 +260,35 @@ impl QTensorEngine {
             let num_blocks = chunk_rows.div_ceil(block_size);
             let cand_count = num_blocks;
 
-            let gemm_bind = self.gpu_device().create_bind_group(&wgpu::BindGroupDescriptor {
-                label: Some("Top1GemmBind"),
-                layout: &gemm_layout,
-                entries: &[
-                    wgpu::BindGroupEntry { binding: 0, resource: input_buf.as_entire_binding() },
-                    wgpu::BindGroupEntry { binding: 1, resource: weight_resource },
-                    wgpu::BindGroupEntry { binding: 2, resource: params_buf.as_entire_binding() },
-                    wgpu::BindGroupEntry { binding: 3, resource: output_buf.as_entire_binding() },
-                ],
-            });
-            let mut encoder = self
-                .device()
-                .create_command_encoder(&wgpu::CommandEncoderDescriptor { label: Some("Top1Encoder") });
+            let gemm_bind = self
+                .gpu_device()
+                .create_bind_group(&wgpu::BindGroupDescriptor {
+                    label: Some("Top1GemmBind"),
+                    layout: &gemm_layout,
+                    entries: &[
+                        wgpu::BindGroupEntry {
+                            binding: 0,
+                            resource: input_buf.as_entire_binding(),
+                        },
+                        wgpu::BindGroupEntry {
+                            binding: 1,
+                            resource: weight_resource,
+                        },
+                        wgpu::BindGroupEntry {
+                            binding: 2,
+                            resource: params_buf.as_entire_binding(),
+                        },
+                        wgpu::BindGroupEntry {
+                            binding: 3,
+                            resource: output_buf.as_entire_binding(),
+                        },
+                    ],
+                });
+            let mut encoder =
+                self.device()
+                    .create_command_encoder(&wgpu::CommandEncoderDescriptor {
+                        label: Some("Top1Encoder"),
+                    });
             {
                 let mut cpass = encoder.begin_compute_pass(&wgpu::ComputePassDescriptor {
                     label: Some("Top1GemmPass"),
@@ -379,19 +411,36 @@ impl QTensorEngine {
         let block_size = crate::topk::TOPK_BLOCK_SIZE;
         let full_chunks = vocab_size.div_ceil(VOCAB_CHUNK_ROWS);
         let use_coop = crate::llm_bench::coop_gemv_enabled();
-        let gemm_pipeline: &wgpu::ComputePipeline =
-            if use_coop { &self.coop_gemv_pipeline } else { &self.pipeline };
+        let gemm_pipeline: &wgpu::ComputePipeline = if use_coop {
+            &self.coop_gemv_pipeline
+        } else {
+            &self.pipeline
+        };
         let gemm_layout = self.native_gemm_bind_layout(use_coop).clone();
-        let topk_bind = self.gpu_device().create_bind_group(&wgpu::BindGroupDescriptor {
-            label: Some("TopkBind"),
-            layout: topk_layout,
-            entries: &[
-                wgpu::BindGroupEntry { binding: 0, resource: output_buf.as_entire_binding() },
-                wgpu::BindGroupEntry { binding: 1, resource: topk_params_buf.as_entire_binding() },
-                wgpu::BindGroupEntry { binding: 2, resource: cand_val.as_entire_binding() },
-                wgpu::BindGroupEntry { binding: 3, resource: cand_idx.as_entire_binding() },
-            ],
-        });
+        let topk_bind = self
+            .gpu_device()
+            .create_bind_group(&wgpu::BindGroupDescriptor {
+                label: Some("TopkBind"),
+                layout: topk_layout,
+                entries: &[
+                    wgpu::BindGroupEntry {
+                        binding: 0,
+                        resource: output_buf.as_entire_binding(),
+                    },
+                    wgpu::BindGroupEntry {
+                        binding: 1,
+                        resource: topk_params_buf.as_entire_binding(),
+                    },
+                    wgpu::BindGroupEntry {
+                        binding: 2,
+                        resource: cand_val.as_entire_binding(),
+                    },
+                    wgpu::BindGroupEntry {
+                        binding: 3,
+                        resource: cand_idx.as_entire_binding(),
+                    },
+                ],
+            });
 
         let mut all_val: Vec<f32> = Vec::new();
         let mut all_idx: Vec<u32> = Vec::new();
@@ -457,25 +506,42 @@ impl QTensorEngine {
                 .write_buffer(input_buf, 0, bytemuck::cast_slice(&hidden[..n_in]));
             self.gpu_queue()
                 .write_buffer(params_buf, 0, bytemuck::bytes_of(&gparams));
-            let tparams = crate::topk::topk_params_bytes(chunk_rows as u32, k as u32, block_size as u32);
+            let tparams =
+                crate::topk::topk_params_bytes(chunk_rows as u32, k as u32, block_size as u32);
             self.gpu_queue().write_buffer(topk_params_buf, 0, &tparams);
 
             let num_blocks = chunk_rows.div_ceil(block_size);
             let cand_count = num_blocks * k;
 
-            let gemm_bind = self.gpu_device().create_bind_group(&wgpu::BindGroupDescriptor {
-                label: Some("TopkGemmBind"),
-                layout: &gemm_layout,
-                entries: &[
-                    wgpu::BindGroupEntry { binding: 0, resource: input_buf.as_entire_binding() },
-                    wgpu::BindGroupEntry { binding: 1, resource: weight_resource },
-                    wgpu::BindGroupEntry { binding: 2, resource: params_buf.as_entire_binding() },
-                    wgpu::BindGroupEntry { binding: 3, resource: output_buf.as_entire_binding() },
-                ],
-            });
-            let mut encoder = self
-                .device()
-                .create_command_encoder(&wgpu::CommandEncoderDescriptor { label: Some("TopkEncoder") });
+            let gemm_bind = self
+                .gpu_device()
+                .create_bind_group(&wgpu::BindGroupDescriptor {
+                    label: Some("TopkGemmBind"),
+                    layout: &gemm_layout,
+                    entries: &[
+                        wgpu::BindGroupEntry {
+                            binding: 0,
+                            resource: input_buf.as_entire_binding(),
+                        },
+                        wgpu::BindGroupEntry {
+                            binding: 1,
+                            resource: weight_resource,
+                        },
+                        wgpu::BindGroupEntry {
+                            binding: 2,
+                            resource: params_buf.as_entire_binding(),
+                        },
+                        wgpu::BindGroupEntry {
+                            binding: 3,
+                            resource: output_buf.as_entire_binding(),
+                        },
+                    ],
+                });
+            let mut encoder =
+                self.device()
+                    .create_command_encoder(&wgpu::CommandEncoderDescriptor {
+                        label: Some("TopkEncoder"),
+                    });
             {
                 let mut cpass = encoder.begin_compute_pass(&wgpu::ComputePassDescriptor {
                     label: Some("TopkGemmPass"),
@@ -569,5 +635,4 @@ impl QTensorEngine {
         rms_norm_inplace(&mut hidden[..n], &norm_w[..n], RMS_NORM_EPS);
         true
     }
-
 }

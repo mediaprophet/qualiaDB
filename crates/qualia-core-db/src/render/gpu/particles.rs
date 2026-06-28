@@ -1,7 +1,10 @@
 //! Ambient particle instances derived from the resident 10D tensor (CPU side of the field).
 use super::*;
 use crate::tensor::Tensor10D;
-pub(super) fn particles_from_tensor(bytes: &[u8], cap: usize) -> Result<Vec<ParticleInstance>, String> {
+pub(super) fn particles_from_tensor(
+    bytes: &[u8],
+    cap: usize,
+) -> Result<Vec<ParticleInstance>, String> {
     let count = tensor_node_count(bytes).map_err(|e| e.to_string())?;
     if count == 0 {
         return Ok(Vec::new());
@@ -53,4 +56,3 @@ pub fn particle_cap_for_mode(mode: OperationalMode, tier: u8) -> usize {
     let _ = mode;
     MAX_AMBIENT_INSTANCES
 }
-

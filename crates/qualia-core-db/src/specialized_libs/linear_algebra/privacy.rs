@@ -1,15 +1,14 @@
-use std::collections::HashMap;
-use std::sync::{Arc, Mutex};
-use std::ops::{Add, Mul, Sub};
-use serde::{Deserialize, Serialize};
 use crate::solvers::SolversError;
+use serde::{Deserialize, Serialize};
+use std::collections::HashMap;
+use std::ops::{Add, Mul, Sub};
+use std::sync::{Arc, Mutex};
 
-use super::core_types::*;
-use super::storage::*;
 use super::computation::*;
+use super::core_types::*;
 use super::optimization::*;
 use super::performance::*;
-
+use super::storage::*;
 
 /// Privacy engine for secure linear algebra
 pub struct PrivacyEngine {
@@ -19,13 +18,11 @@ pub struct PrivacyEngine {
     pub differential_privacy: DifferentialPrivacy,
 }
 
-
 /// Homomorphic operations
 pub struct HomomorphicOperations {
     pub supported_operations: Vec<HomomorphicOperation>,
     pub key_manager: HomomorphicKeyManager,
 }
-
 
 /// Homomorphic operations
 #[derive(Debug, Clone, PartialEq)]
@@ -36,13 +33,11 @@ pub enum HomomorphicOperation {
     Bootstrap,
 }
 
-
 /// Homomorphic key manager
 pub struct HomomorphicKeyManager {
     pub keys: HashMap<String, HomomorphicKey>,
     pub key_rotation_policy: KeyRotationPolicy,
 }
-
 
 /// Homomorphic key
 #[derive(Debug, Clone)]
@@ -54,7 +49,6 @@ pub struct HomomorphicKey {
     pub expires_at: u64,
 }
 
-
 /// Homomorphic key types
 #[derive(Debug, Clone, PartialEq)]
 pub enum HomomorphicKeyType {
@@ -64,7 +58,6 @@ pub enum HomomorphicKeyType {
     Custom(String),
 }
 
-
 /// Key rotation policy
 #[derive(Debug, Clone)]
 pub struct KeyRotationPolicy {
@@ -73,13 +66,11 @@ pub struct KeyRotationPolicy {
     pub automatic_rotation: bool,
 }
 
-
 /// Secure aggregation
 pub struct SecureAggregation {
     pub aggregation_protocols: Vec<AggregationProtocol>,
     pub privacy_budget: PrivacyBudget,
 }
-
 
 /// Aggregation protocols
 #[derive(Debug, Clone, PartialEq)]
@@ -90,7 +81,6 @@ pub enum AggregationProtocol {
     Custom(String),
 }
 
-
 /// Privacy budget
 pub struct PrivacyBudget {
     pub epsilon: f64,
@@ -99,13 +89,11 @@ pub struct PrivacyBudget {
     pub remaining_delta: f64,
 }
 
-
 /// Differential privacy
 pub struct DifferentialPrivacy {
     pub noise_mechanisms: Vec<NoiseMechanism>,
     pub privacy_accountant: PrivacyAccountant,
 }
-
 
 /// Noise mechanisms
 #[derive(Debug, Clone, PartialEq)]
@@ -116,14 +104,12 @@ pub enum NoiseMechanism {
     Custom(String),
 }
 
-
 /// Privacy accountant
 pub struct PrivacyAccountant {
     pub total_epsilon_spent: f64,
     pub total_delta_spent: f64,
     pub composition_method: CompositionMethod,
 }
-
 
 /// Composition methods
 #[derive(Debug, Clone, PartialEq)]
@@ -133,7 +119,6 @@ pub enum CompositionMethod {
     RDPComposition,
     Custom(String),
 }
-
 
 impl PrivacyEngine {
     pub fn new() -> Self {
@@ -153,7 +138,6 @@ impl PrivacyEngine {
     }
 }
 
-
 impl HomomorphicOperations {
     pub fn new() -> Self {
         Self {
@@ -168,14 +152,13 @@ impl HomomorphicOperations {
     }
 }
 
-
 impl HomomorphicKeyManager {
     pub fn new() -> Self {
         Self {
             keys: HashMap::new(),
             key_rotation_policy: KeyRotationPolicy {
                 rotation_interval: 86400 * 30, // 30 days
-                max_key_age: 86400 * 90, // 90 days
+                max_key_age: 86400 * 90,       // 90 days
                 automatic_rotation: true,
             },
         }
@@ -185,7 +168,6 @@ impl HomomorphicKeyManager {
         Ok(())
     }
 }
-
 
 impl SecureAggregation {
     pub fn new() -> Self {
@@ -205,7 +187,6 @@ impl SecureAggregation {
     }
 }
 
-
 impl DifferentialPrivacy {
     pub fn new() -> Self {
         Self {
@@ -222,4 +203,3 @@ impl DifferentialPrivacy {
         Ok(())
     }
 }
-

@@ -1,18 +1,18 @@
 //! Engineering Analysis Library - Structural, Mechanical, and Systems Engineering Analysis
-//! 
+//!
 //! This module provides high-performance engineering analysis operations leveraging Phase 2 enhancements:
 //! - Linear Algebra Library for matrix computations and finite element analysis
 //! - Physics Simulation Library for structural dynamics and thermal analysis
 //! - Hardware-Sympathetic Storage (ZNS) for zero-copy engineering data
 //! - Statistical Computing Library for reliability analysis and optimization
 
-use std::collections::HashMap;
-use std::sync::{Arc, Mutex};
-use serde::{Deserialize, Serialize};
-use crate::zns_storage::ZnsZoneManager;
 use super::linear_algebra::LinearAlgebraLibrary;
 use super::physics_simulation::PhysicsSimulationLibrary;
 use super::statistical_computing::StatisticalComputingLibrary;
+use crate::zns_storage::ZnsZoneManager;
+use serde::{Deserialize, Serialize};
+use std::collections::HashMap;
+use std::sync::{Arc, Mutex};
 
 /// Real 1-D steady-state heat-conduction solver (Fourier's law, finite-difference
 /// + tridiagonal Thomas algorithm) backing `perform_thermal_analysis`. Split into
@@ -1661,7 +1661,11 @@ impl EngineeringAnalysisLibrary {
     }
 
     /// Perform structural analysis
-    pub fn perform_structural_analysis(&mut self, model: EngineeringModel, analysis_type: AnalysisType) -> Result<EngineeringOperationResult<AnalysisResults>, EngineeringError> {
+    pub fn perform_structural_analysis(
+        &mut self,
+        model: EngineeringModel,
+        analysis_type: AnalysisType,
+    ) -> Result<EngineeringOperationResult<AnalysisResults>, EngineeringError> {
         let start_time = std::time::Instant::now();
 
         // Validate model
@@ -1691,7 +1695,11 @@ impl EngineeringAnalysisLibrary {
     }
 
     /// Perform mechanical analysis
-    pub fn perform_mechanical_analysis(&mut self, model: EngineeringModel, analysis_type: AnalysisType) -> Result<EngineeringOperationResult<AnalysisResults>, EngineeringError> {
+    pub fn perform_mechanical_analysis(
+        &mut self,
+        model: EngineeringModel,
+        analysis_type: AnalysisType,
+    ) -> Result<EngineeringOperationResult<AnalysisResults>, EngineeringError> {
         let start_time = std::time::Instant::now();
 
         // Validate model
@@ -1717,7 +1725,11 @@ impl EngineeringAnalysisLibrary {
     }
 
     /// Perform thermal analysis
-    pub fn perform_thermal_analysis(&mut self, model: EngineeringModel, analysis_type: AnalysisType) -> Result<EngineeringOperationResult<AnalysisResults>, EngineeringError> {
+    pub fn perform_thermal_analysis(
+        &mut self,
+        model: EngineeringModel,
+        analysis_type: AnalysisType,
+    ) -> Result<EngineeringOperationResult<AnalysisResults>, EngineeringError> {
         let start_time = std::time::Instant::now();
 
         // Validate model
@@ -1747,7 +1759,11 @@ impl EngineeringAnalysisLibrary {
     }
 
     /// Perform fluid analysis
-    pub fn perform_fluid_analysis(&mut self, model: EngineeringModel, analysis_type: AnalysisType) -> Result<EngineeringOperationResult<AnalysisResults>, EngineeringError> {
+    pub fn perform_fluid_analysis(
+        &mut self,
+        model: EngineeringModel,
+        analysis_type: AnalysisType,
+    ) -> Result<EngineeringOperationResult<AnalysisResults>, EngineeringError> {
         let start_time = std::time::Instant::now();
 
         // Validate model
@@ -1773,7 +1789,11 @@ impl EngineeringAnalysisLibrary {
     }
 
     /// Perform reliability analysis
-    pub fn perform_reliability_analysis(&mut self, model: EngineeringModel, analysis_type: AnalysisType) -> Result<EngineeringOperationResult<ReliabilityResults>, EngineeringError> {
+    pub fn perform_reliability_analysis(
+        &mut self,
+        model: EngineeringModel,
+        analysis_type: AnalysisType,
+    ) -> Result<EngineeringOperationResult<ReliabilityResults>, EngineeringError> {
         let start_time = std::time::Instant::now();
 
         // Validate model
@@ -1839,12 +1859,18 @@ impl StructuralAnalyzer {
 
     pub fn validate_model(&self, model: &EngineeringModel) -> Result<(), EngineeringError> {
         if model.geometry.dimensions.is_empty() {
-            return Err(EngineeringError::ValidationError("Model must have dimensions".to_string()));
+            return Err(EngineeringError::ValidationError(
+                "Model must have dimensions".to_string(),
+            ));
         }
         Ok(())
     }
 
-    pub fn analyze(&mut self, model: &EngineeringModel, analysis_type: AnalysisType) -> Result<AnalysisResults, EngineeringError> {
+    pub fn analyze(
+        &mut self,
+        model: &EngineeringModel,
+        analysis_type: AnalysisType,
+    ) -> Result<AnalysisResults, EngineeringError> {
         // REAL first-principles axial strength-of-materials (a real member analysis, not full FEA):
         //   stress σ = F / A,  strain ε = σ / E,  axial deflection δ = F·L / (A·E),
         //   factor of safety FoS = σ_yield / |σ|.
@@ -1879,7 +1905,11 @@ impl StructuralAnalyzer {
 
         let stress = force / area; // Pa
         let strain = if e > 0.0 { stress / e } else { 0.0 };
-        let displacement = if e > 0.0 { force * length / (area * e) } else { f64::INFINITY };
+        let displacement = if e > 0.0 {
+            force * length / (area * e)
+        } else {
+            f64::INFINITY
+        };
         let safety_factor = if stress.abs() > 0.0 && sy > 0.0 {
             sy / stress.abs()
         } else if stress.abs() == 0.0 {
@@ -1902,7 +1932,11 @@ impl StructuralAnalyzer {
     }
 
     pub fn list_analysis_types(&self) -> Vec<String> {
-        vec!["LinearStatic".to_string(), "NonlinearStatic".to_string(), "LinearDynamic".to_string()]
+        vec![
+            "LinearStatic".to_string(),
+            "NonlinearStatic".to_string(),
+            "LinearDynamic".to_string(),
+        ]
     }
 
     pub fn get_model(&self, model_id: &str) -> Option<EngineeringModel> {
@@ -2282,12 +2316,18 @@ impl MechanicalAnalyzer {
 
     pub fn validate_model(&self, model: &EngineeringModel) -> Result<(), EngineeringError> {
         if model.geometry.dimensions.is_empty() {
-            return Err(EngineeringError::ValidationError("Model must have dimensions".to_string()));
+            return Err(EngineeringError::ValidationError(
+                "Model must have dimensions".to_string(),
+            ));
         }
         Ok(())
     }
 
-    pub fn analyze(&mut self, _model: &EngineeringModel, _analysis_type: AnalysisType) -> Result<AnalysisResults, EngineeringError> {
+    pub fn analyze(
+        &mut self,
+        _model: &EngineeringModel,
+        _analysis_type: AnalysisType,
+    ) -> Result<AnalysisResults, EngineeringError> {
         // NOT IMPLEMENTED — it must say so, never fabricate. The previous body returned a default
         // AnalysisResults (empty fields + a hardcoded safety_factor) while ignoring the model.
         // Real mechanical / thermal / fluid analysis over an arbitrary model needs a finite-element
@@ -2568,12 +2608,18 @@ impl ThermalAnalyzer {
 
     pub fn validate_model(&self, model: &EngineeringModel) -> Result<(), EngineeringError> {
         if model.geometry.dimensions.is_empty() {
-            return Err(EngineeringError::ValidationError("Model must have dimensions".to_string()));
+            return Err(EngineeringError::ValidationError(
+                "Model must have dimensions".to_string(),
+            ));
         }
         Ok(())
     }
 
-    pub fn analyze(&mut self, model: &EngineeringModel, analysis_type: AnalysisType) -> Result<AnalysisResults, EngineeringError> {
+    pub fn analyze(
+        &mut self,
+        model: &EngineeringModel,
+        analysis_type: AnalysisType,
+    ) -> Result<AnalysisResults, EngineeringError> {
         // REAL: 1-D steady-state heat conduction (Fourier's law), solved on a
         // finite-difference mesh with the tridiagonal Thomas algorithm, from the
         // model's thermal conductivity, geometry length, boundary conditions
@@ -2679,12 +2725,18 @@ impl FluidAnalyzer {
 
     pub fn validate_model(&self, model: &EngineeringModel) -> Result<(), EngineeringError> {
         if model.geometry.dimensions.is_empty() {
-            return Err(EngineeringError::ValidationError("Model must have dimensions".to_string()));
+            return Err(EngineeringError::ValidationError(
+                "Model must have dimensions".to_string(),
+            ));
         }
         Ok(())
     }
 
-    pub fn analyze(&mut self, _model: &EngineeringModel, _analysis_type: AnalysisType) -> Result<AnalysisResults, EngineeringError> {
+    pub fn analyze(
+        &mut self,
+        _model: &EngineeringModel,
+        _analysis_type: AnalysisType,
+    ) -> Result<AnalysisResults, EngineeringError> {
         // NOT IMPLEMENTED — it must say so, never fabricate. The previous body returned a default
         // AnalysisResults (empty fields + a hardcoded safety_factor) while ignoring the model.
         // Real mechanical / thermal / fluid analysis over an arbitrary model needs a finite-element
@@ -2816,12 +2868,18 @@ impl ReliabilityAnalyzer {
 
     pub fn validate_model(&self, model: &EngineeringModel) -> Result<(), EngineeringError> {
         if model.geometry.dimensions.is_empty() {
-            return Err(EngineeringError::ValidationError("Model must have dimensions".to_string()));
+            return Err(EngineeringError::ValidationError(
+                "Model must have dimensions".to_string(),
+            ));
         }
         Ok(())
     }
 
-    pub fn analyze(&mut self, model: &EngineeringModel, analysis_type: AnalysisType) -> Result<ReliabilityResults, EngineeringError> {
+    pub fn analyze(
+        &mut self,
+        model: &EngineeringModel,
+        analysis_type: AnalysisType,
+    ) -> Result<ReliabilityResults, EngineeringError> {
         // Perform analysis
         let results = ReliabilityResults::new();
 
@@ -3201,9 +3259,7 @@ pub struct StressState {
 /// (`solvers::linear_algebra::eigen`); this marshals the tensor and calls it.
 fn principal_stresses(t: &[[f64; 3]; 3]) -> [f64; 3] {
     let a = [
-        t[0][0], t[0][1], t[0][2],
-        t[1][0], t[1][1], t[1][2],
-        t[2][0], t[2][1], t[2][2],
+        t[0][0], t[0][1], t[0][2], t[1][0], t[1][1], t[1][2], t[2][0], t[2][1], t[2][2],
     ];
     crate::solvers::linear_algebra::eigen::symmetric_eigen_3x3(&a)
 }
@@ -3213,8 +3269,7 @@ fn principal_stresses(t: &[[f64; 3]; 3]) -> [f64; 3] {
 pub fn cauchy_stress_analysis(tensor: &[[f64; 3]; 3]) -> StressState {
     let (sxx, syy, szz) = (tensor[0][0], tensor[1][1], tensor[2][2]);
     let (txy, tyz, tzx) = (tensor[0][1], tensor[1][2], tensor[2][0]);
-    let von_mises = (0.5
-        * ((sxx - syy).powi(2) + (syy - szz).powi(2) + (szz - sxx).powi(2))
+    let von_mises = (0.5 * ((sxx - syy).powi(2) + (syy - szz).powi(2) + (szz - sxx).powi(2))
         + 3.0 * (txy * txy + tyz * tyz + tzx * tzx))
         .sqrt();
     let principal = principal_stresses(tensor);
@@ -3228,12 +3283,22 @@ pub fn cauchy_stress_analysis(tensor: &[[f64; 3]; 3]) -> StressState {
 
 /// Aerodynamic drag / wind-load force (N): `F = ½·ρ·v²·C_d·A` — wind-load on a
 /// rapid-deployment structure or drag on a moving camper.
-pub fn drag_force(air_density_kg_m3: f64, velocity_m_s: f64, drag_coefficient: f64, area_m2: f64) -> f64 {
+pub fn drag_force(
+    air_density_kg_m3: f64,
+    velocity_m_s: f64,
+    drag_coefficient: f64,
+    area_m2: f64,
+) -> f64 {
     0.5 * air_density_kg_m3 * velocity_m_s * velocity_m_s * drag_coefficient * area_m2
 }
 
 /// Reynolds number `Re = ρ·v·L / μ` — laminar/turbulent regime for the wind-load model.
-pub fn reynolds_number(density: f64, velocity: f64, char_length_m: f64, dynamic_viscosity: f64) -> f64 {
+pub fn reynolds_number(
+    density: f64,
+    velocity: f64,
+    char_length_m: f64,
+    dynamic_viscosity: f64,
+) -> f64 {
     if dynamic_viscosity == 0.0 {
         return f64::INFINITY;
     }
@@ -3249,7 +3314,8 @@ pub fn fatigue_cycles_basquin(
     fatigue_strength_coeff: f64,
     fatigue_strength_exponent: f64,
 ) -> f64 {
-    if stress_amplitude <= 0.0 || fatigue_strength_coeff <= 0.0 || fatigue_strength_exponent == 0.0 {
+    if stress_amplitude <= 0.0 || fatigue_strength_coeff <= 0.0 || fatigue_strength_exponent == 0.0
+    {
         return f64::INFINITY;
     }
     0.5 * (stress_amplitude / fatigue_strength_coeff).powf(1.0 / fatigue_strength_exponent)
@@ -3287,9 +3353,21 @@ mod survival_engineering_tests {
         // Pure shear τ = 50 → principal {50, 0, −50}, von Mises = √3·50 ≈ 86.6.
         let t = [[0.0, 50.0, 0.0], [50.0, 0.0, 0.0], [0.0, 0.0, 0.0]];
         let s = cauchy_stress_analysis(&t);
-        assert!((s.von_mises - 3f64.sqrt() * 50.0).abs() < 1e-6, "vm {}", s.von_mises);
-        assert!((s.principal[0] - 50.0).abs() < 1e-6, "σ1 {}", s.principal[0]);
-        assert!((s.principal[2] + 50.0).abs() < 1e-6, "σ3 {}", s.principal[2]);
+        assert!(
+            (s.von_mises - 3f64.sqrt() * 50.0).abs() < 1e-6,
+            "vm {}",
+            s.von_mises
+        );
+        assert!(
+            (s.principal[0] - 50.0).abs() < 1e-6,
+            "σ1 {}",
+            s.principal[0]
+        );
+        assert!(
+            (s.principal[2] + 50.0).abs() < 1e-6,
+            "σ3 {}",
+            s.principal[2]
+        );
         assert!((s.max_shear - 50.0).abs() < 1e-6);
     }
 
@@ -3311,7 +3389,10 @@ mod survival_engineering_tests {
         // Miner: two blocks each at half their allowable → D = 1.0 (failure threshold).
         let d = miner_cumulative_damage(&[(500.0, 1000.0), (250.0, 500.0)]);
         assert!((d - 1.0).abs() < 1e-9, "D {d}");
-        assert!(miner_cumulative_damage(&[(100.0, 1000.0)]) < 1.0, "safe block < 1");
+        assert!(
+            miner_cumulative_damage(&[(100.0, 1000.0)]) < 1.0,
+            "safe block < 1"
+        );
     }
 }
 
@@ -3329,7 +3410,7 @@ mod tests {
     fn test_structural_analysis() {
         let mut library = EngineeringAnalysisLibrary::new();
         library.initialize().unwrap();
-        
+
         // Real axial member: steel (E=200000, σ_yield=250), area = 1×1, length = 2, axial load 50.
         // ⇒ σ = F/A = 50,  FoS = σ_yield/σ = 5,  ε = σ/E,  δ = F·L/(A·E).
         let mut model = EngineeringModel::new();
@@ -3348,8 +3429,16 @@ mod tests {
             .unwrap();
         let r = &result.result;
         // REAL computed values, not a fabricated 2.5 safety factor.
-        assert!((r.stress_field[0] - 50.0).abs() < 1e-9, "stress = {}", r.stress_field[0]);
-        assert!((r.safety_factor - 5.0).abs() < 1e-9, "FoS = {}", r.safety_factor);
+        assert!(
+            (r.stress_field[0] - 50.0).abs() < 1e-9,
+            "stress = {}",
+            r.stress_field[0]
+        );
+        assert!(
+            (r.safety_factor - 5.0).abs() < 1e-9,
+            "FoS = {}",
+            r.safety_factor
+        );
         assert!((r.strain_field[0] - 50.0 / 200000.0).abs() < 1e-12);
         assert!((r.displacement_field[0] - 50.0 * 2.0 / (1.0 * 200000.0)).abs() < 1e-12);
         // A bigger load ⇒ smaller safety factor (monotonic, real physics).
@@ -3375,7 +3464,7 @@ mod tests {
     fn test_mechanical_analysis() {
         let mut library = EngineeringAnalysisLibrary::new();
         library.initialize().unwrap();
-        
+
         let model = EngineeringModel::new();
         // HONEST: mechanical FE analysis isn't implemented → NotImplemented, not a fake result.
         let result = library.perform_mechanical_analysis(model, AnalysisType::LinearDynamic);
@@ -3419,12 +3508,22 @@ mod tests {
             },
             materials,
             boundary_conditions: vec![
-                BoundaryCondition { condition_id: "l".to_string(), condition_type: BoundaryConditionType::Temperature, condition_value: 100.0 },
-                BoundaryCondition { condition_id: "r".to_string(), condition_type: BoundaryConditionType::Temperature, condition_value: 300.0 },
+                BoundaryCondition {
+                    condition_id: "l".to_string(),
+                    condition_type: BoundaryConditionType::Temperature,
+                    condition_value: 100.0,
+                },
+                BoundaryCondition {
+                    condition_id: "r".to_string(),
+                    condition_type: BoundaryConditionType::Temperature,
+                    condition_value: 300.0,
+                },
             ],
             loads: Vec::new(),
         };
-        let result = library.perform_thermal_analysis(model, AnalysisType::Thermal).unwrap();
+        let result = library
+            .perform_thermal_analysis(model, AnalysisType::Thermal)
+            .unwrap();
         let t = &result.result.temperature_field;
         assert!(t.len() >= 2);
         assert!((t[0] - 100.0).abs() < 1e-6 && (t[t.len() - 1] - 300.0).abs() < 1e-6);
@@ -3442,7 +3541,7 @@ mod tests {
     fn test_fluid_analysis() {
         let mut library = EngineeringAnalysisLibrary::new();
         library.initialize().unwrap();
-        
+
         let model = EngineeringModel::new();
         // HONEST: fluid (CFD) analysis isn't implemented → NotImplemented, not a fake result.
         let result = library.perform_fluid_analysis(model, AnalysisType::LinearStatic);
@@ -3453,10 +3552,12 @@ mod tests {
     fn test_reliability_analysis() {
         let mut library = EngineeringAnalysisLibrary::new();
         library.initialize().unwrap();
-        
+
         let model = EngineeringModel::new();
-        let result = library.perform_reliability_analysis(model, AnalysisType::LinearStatic).unwrap();
-        
+        let result = library
+            .perform_reliability_analysis(model, AnalysisType::LinearStatic)
+            .unwrap();
+
         assert_eq!(result.result.results_id, "reliability_1");
         assert!(result.result.reliability_index > 0.9);
         assert!(result.convergence_info.converged);
@@ -3466,7 +3567,7 @@ mod tests {
     fn test_performance_metrics() {
         let library = EngineeringAnalysisLibrary::new();
         let metrics = library.get_performance_stats();
-        
+
         assert_eq!(metrics.total_analyses, 0);
         assert_eq!(metrics.average_computation_time, 0.0);
         // Honest: per-analysis accuracy is not tracked by this summary, so it is not fabricated.
@@ -3477,7 +3578,7 @@ mod tests {
     fn test_analysis_types() {
         let library = EngineeringAnalysisLibrary::new();
         let types = library.list_analysis_types();
-        
+
         assert!(types.contains(&"LinearStatic".to_string()));
         assert!(types.contains(&"NonlinearStatic".to_string()));
         assert!(types.contains(&"LinearDynamic".to_string()));

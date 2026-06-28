@@ -187,7 +187,10 @@ mod tests {
             .iter()
             .find(|c| c.kind == CircuitKind::Cpu)
             .unwrap();
-        assert!(cpu.upload_gbps.is_infinite(), "f64::INFINITY must round-trip through CBOR");
+        assert!(
+            cpu.upload_gbps.is_infinite(),
+            "f64::INFINITY must round-trip through CBOR"
+        );
         assert!((back.matrix.circuits[0].ms_per_gemv - 0.43).abs() < 1e-9);
     }
 
@@ -198,7 +201,10 @@ mod tests {
         let dir = tempfile::tempdir().unwrap();
         let path = dir.path().join("passport.cbor");
         write_passport(&p, &path).unwrap();
-        assert!(read_passport(&path).is_none(), "stale version must be rejected → re-probe");
+        assert!(
+            read_passport(&path).is_none(),
+            "stale version must be rejected → re-probe"
+        );
     }
 
     /// Real fast-boot path: first call probes + caches (was_cached=false); second loads (true).

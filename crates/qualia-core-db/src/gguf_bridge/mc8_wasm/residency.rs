@@ -34,7 +34,11 @@ impl QTensorEngine {
     /// MC8 Part 3x: weight binding for `role` at `layer`. When weights are resident, binds the
     /// per-layer sub-range `[layer*stride, layer*stride + stride)`; otherwise the whole (single-
     /// layer) role buffer that the caller just `write_weight_role`'d.
-    pub(crate) fn mc8_weight_binding(&self, role: Mc8WeightRole, layer: u32) -> wgpu::BindingResource<'_> {
+    pub(crate) fn mc8_weight_binding(
+        &self,
+        role: Mc8WeightRole,
+        layer: u32,
+    ) -> wgpu::BindingResource<'_> {
         let buf = self.mc8_weight_role_buf(role);
         if self.mc8_weights_resident {
             let stride = self.mc8_weight_role_stride[role.idx()];
@@ -184,7 +188,10 @@ impl QTensorEngine {
     /// sub-ranges instead of `write_buffer`-ing the whole matrix every token (the decode
     /// throughput killer — Phase 5 root cause). Idempotent. Returns false (→ per-token upload
     /// fallback) if the projection is missing or its bytes don't divide evenly into rows.
-    pub(crate) fn mc8_upload_resident_logits(&mut self, index: &crate::gguf_sharder::GgufTensorIndex) -> bool {
+    pub(crate) fn mc8_upload_resident_logits(
+        &mut self,
+        index: &crate::gguf_sharder::GgufTensorIndex,
+    ) -> bool {
         if self.mc8_logits_resident_buf.is_some() {
             return true;
         }
@@ -202,7 +209,8 @@ impl QTensorEngine {
             None => return false,
         };
         let mmap: &[u8] = &mmap_arc;
-        let raw = match crate::ggml_quants::fetch_tensor_bytes(mmap, index.tensor_data_start, info) {
+        let raw = match crate::ggml_quants::fetch_tensor_bytes(mmap, index.tensor_data_start, info)
+        {
             Ok(s) => s,
             Err(_) => return false,
         };
@@ -236,7 +244,10 @@ impl QTensorEngine {
     /// hot-path RMSNorm binds a per-layer sub-range instead of `write_buffer`-ing the shared
     /// single-layer `norm_weight_buf` every layer. Removes the second per-layer write_buffer race
     /// (the first being the super-arena uniforms) that forces the per-layer submit flush.
-    pub(crate) fn mc8_upload_resident_norms(&mut self, index: &crate::gguf_sharder::GgufTensorIndex) -> bool {
+    pub(crate) fn mc8_upload_resident_norms(
+        &mut self,
+        index: &crate::gguf_sharder::GgufTensorIndex,
+    ) -> bool {
         if self.mc8_norm_resident_buf.is_some() {
             return true;
         }
@@ -310,14 +321,14 @@ impl QTensorEngine {
         }
     }
 
-    /// Phase 4: boot from a `.q42` weight container. Validates integrity (CRC via `from_q42`), builds
+    /// Phase 4: boot from a `.q42` weight container. Validates integrity (CRC via `from_p64`), builds
     /// a synthetic `GgufTensorIndex` from the manifest, points the byte source at the `.q42` bytes
     /// (`tensor_data_start = 0`, absolute blob offsets), reserves the GEMM/KV arenas, and uploads the
     /// resident weights via the **standard** path — so the entire GGUF hot path runs unchanged
     /// (format-agnostic). NOTE: the `.q42` weight container does not yet carry the tokenizer, so a
     /// q42-only boot maps weights/params but cannot tokenize until a tokenizer section lands.
     pub(crate) fn adopt_resident_q42(&mut self, data: Arc<[u8]>) -> Result<(), String> {
-        let q = crate::q42_weight::Q42TensorIndex::from_q42(&data)?;
+        let q = crate::p64_weight::P64TensorIndex::from_p64(&data)?;
         let index = q.to_gguf_index();
         let hp = index.hyperparams;
         if hp.n_layer == 0 || hp.n_embd == 0 {
@@ -368,7 +379,13 @@ impl QTensorEngine {
             && self.mc8_weight_arena.is_some()
     }
 
-    pub(crate) fn upload_norm_weights(&self, mmap: &[u8], tensor_data_start: u64, info: &GgufTensorInfo, n: usize) -> bool {
+    pub(crate) fn upload_norm_weights(
+        &self,
+        mmap: &[u8],
+        tensor_data_start: u64,
+        info: &GgufTensorInfo,
+        n: usize,
+    ) -> bool {
         let mut norm_w = [0f32; MAX_HIDDEN_DIM];
         if dequant_norm_row_into(mmap, tensor_data_start, info, &mut norm_w) < n {
             return false;

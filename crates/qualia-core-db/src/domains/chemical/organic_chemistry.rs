@@ -1393,12 +1393,7 @@ pub fn henderson_hasselbalch(pka: f64, conc_base: f64, conc_acid: f64) -> f64 {
 /// increasing in ξ). Returns ξ in the same units as the input pressures. Simplified
 /// gas-phase model (industrial urea is liquid-phase/high-P — that shifts the numbers,
 /// not the method). Demonstrates Le Chatelier: higher reactant pressure ⇒ higher ξ.
-pub fn urea_equilibrium_extent(
-    delta_g_j_mol: f64,
-    temp_k: f64,
-    p_nh3_0: f64,
-    p_co2_0: f64,
-) -> f64 {
+pub fn urea_equilibrium_extent(delta_g_j_mol: f64, temp_k: f64, p_nh3_0: f64, p_co2_0: f64) -> f64 {
     let k_eq = equilibrium_constant(delta_g_j_mol, temp_k);
     let xi_max = (p_nh3_0 / 2.0).min(p_co2_0).max(0.0);
     if xi_max <= 0.0 {
@@ -1441,7 +1436,8 @@ pub fn deactivated_reaction_rate(
     if initial_activity <= 0.0 {
         return 0.0;
     }
-    base_rate * catalyst_activity(initial_activity, deactivation_rate_per_s, time_s) / initial_activity
+    base_rate * catalyst_activity(initial_activity, deactivation_rate_per_s, time_s)
+        / initial_activity
 }
 
 /// Total fractional conversion of a first-order reaction under a *variable* temperature
@@ -1480,7 +1476,10 @@ mod resilience_chem_tests {
         // Le Chatelier: more reactant pressure ⇒ more product.
         let xi_lo = urea_equilibrium_extent(-10_000.0, 400.0, 1.0, 0.5);
         let xi_hi = urea_equilibrium_extent(-10_000.0, 400.0, 4.0, 2.0);
-        assert!(xi_hi > xi_lo, "higher reactant pressure should raise the extent");
+        assert!(
+            xi_hi > xi_lo,
+            "higher reactant pressure should raise the extent"
+        );
     }
 
     #[test]
@@ -1499,7 +1498,10 @@ mod resilience_chem_tests {
         let (a, ea, dt) = (1e6, 50_000.0, 1.0);
         let cold = conversion_under_variable_temperature(a, ea, &[300.0, 300.0, 300.0], dt);
         let hot = conversion_under_variable_temperature(a, ea, &[350.0, 350.0, 350.0], dt);
-        assert!(hot > cold, "higher temperature ⇒ faster kinetics ⇒ more conversion");
+        assert!(
+            hot > cold,
+            "higher temperature ⇒ faster kinetics ⇒ more conversion"
+        );
         assert!((0.0..=1.0).contains(&hot) && (0.0..=1.0).contains(&cold));
     }
 }

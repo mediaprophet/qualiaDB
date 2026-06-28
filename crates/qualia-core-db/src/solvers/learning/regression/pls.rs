@@ -18,16 +18,30 @@ pub struct PlsModel {
 
 impl PlsModel {
     pub fn predict_row(&self, x_row: &[f64]) -> f64 {
-        self.intercept + self.coefficients.iter().zip(x_row).map(|(b, x)| b * x).sum::<f64>()
+        self.intercept
+            + self
+                .coefficients
+                .iter()
+                .zip(x_row)
+                .map(|(b, x)| b * x)
+                .sum::<f64>()
     }
     pub fn predict(&self, x: &[f64], n: usize, p: usize) -> Vec<f64> {
-        (0..n).map(|i| self.predict_row(&x[i * p..(i + 1) * p])).collect()
+        (0..n)
+            .map(|i| self.predict_row(&x[i * p..(i + 1) * p]))
+            .collect()
     }
 }
 
 /// Fit PLS1 with `n_components` (clamped to `p`). Fails closed on shape mismatch /
 /// `n < 2` / a degenerate (zero-covariance) extraction.
-pub fn fit(x: &[f64], y: &[f64], n: usize, p: usize, n_components: usize) -> Result<PlsModel, LearningError> {
+pub fn fit(
+    x: &[f64],
+    y: &[f64],
+    n: usize,
+    p: usize,
+    n_components: usize,
+) -> Result<PlsModel, LearningError> {
     if n == 0 || p == 0 || x.len() != n * p || y.len() != n {
         return Err(LearningError::InvalidDimension);
     }
@@ -119,7 +133,15 @@ pub fn fit(x: &[f64], y: &[f64], n: usize, p: usize, n_components: usize) -> Res
 
 /// Collapse `a` components into predictor-space coefficients
 /// `β = W (PᵀW)⁻¹ q`, intercept `ȳ − x̄ᵀβ`.
-fn finalize(w_mat: &[f64], p_mat: &[f64], q_vec: &[f64], a: usize, p: usize, xbar: &[f64], ybar: f64) -> Result<PlsModel, LearningError> {
+fn finalize(
+    w_mat: &[f64],
+    p_mat: &[f64],
+    q_vec: &[f64],
+    a: usize,
+    p: usize,
+    xbar: &[f64],
+    ybar: f64,
+) -> Result<PlsModel, LearningError> {
     // M = PᵀW (a×a): M[r,c] = Σ_j p_mat[j,r]·w_mat[j,c].
     let stride = w_mat.len() / p; // = number of allocated components (>= a)
     let mut m = vec![0.0; a * a];
@@ -147,8 +169,17 @@ fn finalize(w_mat: &[f64], p_mat: &[f64], q_vec: &[f64], a: usize, p: usize, xba
         }
         coefficients[j] = s;
     }
-    let intercept = ybar - coefficients.iter().zip(xbar).map(|(b, m)| b * m).sum::<f64>();
-    Ok(PlsModel { coefficients, intercept, n_components: a })
+    let intercept = ybar
+        - coefficients
+            .iter()
+            .zip(xbar)
+            .map(|(b, m)| b * m)
+            .sum::<f64>();
+    Ok(PlsModel {
+        coefficients,
+        intercept,
+        n_components: a,
+    })
 }
 
 #[cfg(test)]
@@ -166,7 +197,12 @@ mod tests {
         let p_pred = pls.predict(&x, 6, 2);
         let o_pred = ols.predict(&x, 6, 2);
         for i in 0..6 {
-            assert!((p_pred[i] - o_pred[i]).abs() < 1e-6, "{} vs {}", p_pred[i], o_pred[i]);
+            assert!(
+                (p_pred[i] - o_pred[i]).abs() < 1e-6,
+                "{} vs {}",
+                p_pred[i],
+                o_pred[i]
+            );
         }
     }
 
@@ -190,6 +226,9 @@ mod tests {
 
     #[test]
     fn guards() {
-        assert_eq!(fit(&[1.0, 2.0, 3.0], &[1.0, 2.0], 2, 2, 1).unwrap_err(), LearningError::InvalidDimension);
+        assert_eq!(
+            fit(&[1.0, 2.0, 3.0], &[1.0, 2.0], 2, 2, 1).unwrap_err(),
+            LearningError::InvalidDimension
+        );
     }
 }

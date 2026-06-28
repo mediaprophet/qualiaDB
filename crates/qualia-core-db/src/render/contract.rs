@@ -3,13 +3,13 @@
 //! Run via `cargo test -p qualia-core-db phenomenal_contract --lib` or
 //! `node docs/tests/phenomenal-verify.mjs`.
 
-use crate::shaders::viewport::{AMBIENT_WGSL, BLOOM_WGSL, PROJECTOR_WGSL};
-use crate::tensor::buffer_export::{
-    TensorBufferHeader, TENSOR_HEADER_BYTES, TENSOR_STRIDE,
+use crate::render::acoustic::{
+    sigma_to_center_frequency_hz, sigma_to_wavelength_nm, ACOUSTIC_UNIFORM_FLOAT_COUNT,
 };
-use crate::render::acoustic::{sigma_to_center_frequency_hz, sigma_to_wavelength_nm, ACOUSTIC_UNIFORM_FLOAT_COUNT};
 use crate::render::control::{PortalControlCommand, CONTROL_RING_CAP, ICP_MAGIC_BIT};
 use crate::render::spectral::sigma_to_cie_xyz;
+use crate::shaders::viewport::{AMBIENT_WGSL, BLOOM_WGSL, PROJECTOR_WGSL};
+use crate::tensor::buffer_export::{TensorBufferHeader, TENSOR_HEADER_BYTES, TENSOR_STRIDE};
 use crate::tensor::Tensor10D;
 
 /// Rust `portal_gpu` projector camera bind group (group 0).
@@ -83,18 +83,18 @@ fn validate_wgsl_smoke(label: &str, source: &str) {
 #[cfg(test)]
 mod tests {
     use super::*;
+    use crate::audio::acoustic_plane::{AcousticUniform, SONIC_RING_CAP};
+    use crate::audio::acoustic_sab::{init_acoustic_sab, ACOUSTIC_SAB_BYTES};
+    use crate::audio::audio_spectral_sheet::SPECTRAL_PREVIEW_BINS;
+    use crate::audio::hrtf::binaural_from_position;
     use crate::gpu_context::{
         ambient_draw_instances_for_mode, ComputeUniverse, OperationalMode, UniverseOrchestrator,
     };
     use crate::render::pga::motor_rq_gated;
     use crate::render::telemetry::{
-        CameraUniform, ObserverStandpoint, ParticleInstance, SystemTelemetry,
-        STANDPOINT_DID, STANDPOINT_EPHEMERAL, STANDPOINT_SPECTATOR, STANDPOINT_VAULT,
+        CameraUniform, ObserverStandpoint, ParticleInstance, SystemTelemetry, STANDPOINT_DID,
+        STANDPOINT_EPHEMERAL, STANDPOINT_SPECTATOR, STANDPOINT_VAULT,
     };
-    use crate::audio::acoustic_plane::{AcousticUniform, SONIC_RING_CAP};
-    use crate::audio::acoustic_sab::{init_acoustic_sab, ACOUSTIC_SAB_BYTES};
-    use crate::audio::hrtf::binaural_from_position;
-    use crate::audio::audio_spectral_sheet::SPECTRAL_PREVIEW_BINS;
     use crate::sonic_token::SonicToken;
     use crate::tensor::buffer_export::tensor_node_count;
 
@@ -132,7 +132,9 @@ mod tests {
 
     #[test]
     fn phenomenal_tensor_header_stride_matches_gpu_upload() {
-        let tensors = [Tensor10D::ground_truth(0.0, 0.0, 0.1, 0.2, 0.3, 0.0, 1.0, 0.0, 0.5)];
+        let tensors = [Tensor10D::ground_truth(
+            0.0, 0.0, 0.1, 0.2, 0.3, 0.0, 1.0, 0.0, 0.5,
+        )];
         let need = TensorBufferHeader::total_bytes(tensors.len());
         let mut buf = vec![0u8; need];
         crate::tensor::buffer_export::write_tensor_buffer(&tensors, &mut buf).unwrap();
@@ -187,11 +189,8 @@ mod tests {
         assert!(full > 8_000, "Full mode must draw >8k instances");
         assert_eq!(eco, 8_000, "Eco mode caps at 8k");
         assert_eq!(
-            UniverseOrchestrator::from_total_budget(
-                6 * 1024 * 1024 * 1024,
-                OperationalMode::Full
-            )
-            .max_particles(ComputeUniverse::Viewport, OperationalMode::Full),
+            UniverseOrchestrator::from_total_budget(6 * 1024 * 1024 * 1024, OperationalMode::Full)
+                .max_particles(ComputeUniverse::Viewport, OperationalMode::Full),
             50_000
         );
     }
@@ -215,7 +214,10 @@ mod tests {
         let bytes = bytemuck::bytes_of(&uniform);
         assert_eq!(bytes.len(), std::mem::size_of::<AcousticUniform>());
         // 18 scalars (binaural + STFT frame) + 64 preview bins
-        assert_eq!(std::mem::size_of::<AcousticUniform>(), 72 + SPECTRAL_PREVIEW_BINS * 4);
+        assert_eq!(
+            std::mem::size_of::<AcousticUniform>(),
+            72 + SPECTRAL_PREVIEW_BINS * 4
+        );
         assert_eq!(std::mem::size_of::<AcousticUniform>(), 328);
     }
 

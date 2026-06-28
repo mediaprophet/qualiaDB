@@ -31,7 +31,7 @@ impl Kernel {
 /// the bias and kernel.
 #[derive(Debug, Clone)]
 pub struct Svm {
-    sv_x: Vec<f64>,     // n_sv × p
+    sv_x: Vec<f64>,       // n_sv × p
     sv_alpha_y: Vec<f64>, // αᵢ·yᵢ per support vector
     b: f64,
     kernel: Kernel,
@@ -41,7 +41,10 @@ pub struct Svm {
 struct Lcg(u64);
 impl Lcg {
     fn below(&mut self, bound: usize) -> usize {
-        self.0 = self.0.wrapping_mul(6364136223846793005).wrapping_add(1442695040888963407);
+        self.0 = self
+            .0
+            .wrapping_mul(6364136223846793005)
+            .wrapping_add(1442695040888963407);
         ((self.0 >> 33) as usize) % bound.max(1)
     }
 }
@@ -133,8 +136,14 @@ pub fn fit(
                 }
                 let ai = ai_old + yi[i] * yi[j] * (aj_old - aj);
                 // Bias update.
-                let b1 = b - ei - yi[i] * (ai - ai_old) * k[i * n + i] - yi[j] * (aj - aj_old) * k[i * n + j];
-                let b2 = b - ej - yi[i] * (ai - ai_old) * k[i * n + j] - yi[j] * (aj - aj_old) * k[j * n + j];
+                let b1 = b
+                    - ei
+                    - yi[i] * (ai - ai_old) * k[i * n + i]
+                    - yi[j] * (aj - aj_old) * k[i * n + j];
+                let b2 = b
+                    - ej
+                    - yi[i] * (ai - ai_old) * k[i * n + j]
+                    - yi[j] * (aj - aj_old) * k[j * n + j];
                 alpha[i] = ai;
                 alpha[j] = aj;
                 b = if ai > 0.0 && ai < c {
@@ -163,7 +172,13 @@ pub fn fit(
             sv_alpha_y.push(alpha[i] * yi[i]);
         }
     }
-    Ok(Svm { sv_x, sv_alpha_y, b, kernel, p })
+    Ok(Svm {
+        sv_x,
+        sv_alpha_y,
+        b,
+        kernel,
+        p,
+    })
 }
 
 impl Svm {
@@ -171,7 +186,10 @@ impl Svm {
     pub fn decision_row(&self, q: &[f64]) -> f64 {
         let mut s = self.b;
         for (k, &ay) in self.sv_alpha_y.iter().enumerate() {
-            s += ay * self.kernel.eval(&self.sv_x[k * self.p..(k + 1) * self.p], q);
+            s += ay
+                * self
+                    .kernel
+                    .eval(&self.sv_x[k * self.p..(k + 1) * self.p], q);
         }
         s
     }
@@ -220,22 +238,51 @@ mod tests {
             y.push(false);
         }
         // outer ring (class true)
-        for &(a, b) in &[(3.0, 0.0), (-3.0, 0.0), (0.0, 3.0), (0.0, -3.0), (2.1, 2.1), (-2.1, -2.1)] {
+        for &(a, b) in &[
+            (3.0, 0.0),
+            (-3.0, 0.0),
+            (0.0, 3.0),
+            (0.0, -3.0),
+            (2.1, 2.1),
+            (-2.1, -2.1),
+        ] {
             x.push(a);
             x.push(b);
             y.push(true);
         }
         let n = 11;
         let svm = fit(&x, &y, n, 2, 1.0, Kernel::Rbf { gamma: 0.5 }, 50, 1e-3).unwrap();
-        assert!(!svm.predict_row(&[0.1, 0.1]), "inner point should be class 0");
-        assert!(svm.predict_row(&[3.0, 0.0]), "outer point should be class 1");
+        assert!(
+            !svm.predict_row(&[0.1, 0.1]),
+            "inner point should be class 0"
+        );
+        assert!(
+            svm.predict_row(&[3.0, 0.0]),
+            "outer point should be class 1"
+        );
         assert!(svm.predict_row(&[0.0, -3.0]));
     }
 
     #[test]
     fn guards() {
-        assert_eq!(fit(&[1.0, 2.0], &[true, true][..1], 1, 2, 1.0, Kernel::Linear, 5, 1e-3).unwrap_err(), LearningError::InsufficientData);
+        assert_eq!(
+            fit(
+                &[1.0, 2.0],
+                &[true, true][..1],
+                1,
+                2,
+                1.0,
+                Kernel::Linear,
+                5,
+                1e-3
+            )
+            .unwrap_err(),
+            LearningError::InsufficientData
+        );
         let x = [0.0, 0.0, 1.0, 1.0];
-        assert_eq!(fit(&x, &[true, true], 2, 2, 1.0, Kernel::Linear, 5, 1e-3).unwrap_err(), LearningError::InsufficientData);
+        assert_eq!(
+            fit(&x, &[true, true], 2, 2, 1.0, Kernel::Linear, 5, 1e-3).unwrap_err(),
+            LearningError::InsufficientData
+        );
     }
 }

@@ -7,7 +7,7 @@ use crate::sparql_ast::*;
 use crate::NQuin;
 
 /// Extension function signature
-/// 
+///
 /// Args: array of argument values (hashes or literals)
 /// Returns: bool indicating success/failure, modifies binding row in-place
 pub type ExtensionFn = fn(args: &[u64], quins: &[NQuin], result: &mut BindingRow) -> bool;
@@ -33,14 +33,14 @@ impl ExtensionRegistry {
         if self.count >= 32 {
             return Err("Extension registry full".to_string());
         }
-        
+
         // Check if already registered
         for i in 0..self.count {
             if self.functions[i].0 == dict_id {
                 return Err("Dictionary ID already registered".to_string());
             }
         }
-        
+
         self.functions[self.count] = (dict_id, func);
         self.count += 1;
         Ok(())
@@ -311,7 +311,11 @@ pub fn ext_c2pa_is_verified(args: &[u64], quins: &[NQuin], result: &mut BindingR
 }
 
 /// c2pa:verificationStatus - get verification status
-pub fn ext_c2pa_verification_status(args: &[u64], quins: &[NQuin], result: &mut BindingRow) -> bool {
+pub fn ext_c2pa_verification_status(
+    args: &[u64],
+    quins: &[NQuin],
+    result: &mut BindingRow,
+) -> bool {
     crate::sparql_mm::c2pa_verification_status(args, quins, result)
 }
 
@@ -365,7 +369,7 @@ pub fn ext_did_permission(args: &[u64], quins: &[NQuin], result: &mut BindingRow
 /// Create a registry with built-in SPARQL functions
 pub fn create_builtin_registry() -> ExtensionRegistry {
     let mut registry = ExtensionRegistry::new();
-    
+
     // Register built-in SPARQL functions (using placeholder hashes - in production, use actual q_hash)
     let _ = registry.register(0xB0_0000_0000_0000_u64, ext_bound);
     let _ = registry.register(0x5452000000000000, ext_str);
@@ -407,7 +411,7 @@ pub fn create_builtin_registry() -> ExtensionRegistry {
     let _ = registry.register(0x433250415F435245_u64, ext_c2pa_created_by);
     let _ = registry.register(0x433250415F564552_u64, ext_c2pa_verify_signature);
     let _ = registry.register(0x433250415F444552_u64, ext_c2pa_derived_from);
-    
+
     registry
 }
 
@@ -440,10 +444,10 @@ mod tests {
     fn test_extension_registry() {
         let mut registry = ExtensionRegistry::new();
         assert_eq!(registry.count, 0);
-        
+
         registry.register(0x1234567890ABCDEF, ext_bound).unwrap();
         assert_eq!(registry.count, 1);
-        
+
         assert!(registry.lookup(0x1234567890ABCDEF).is_some());
         assert!(registry.lookup(0x0000000000000000).is_none());
     }
@@ -451,7 +455,7 @@ mod tests {
     #[test]
     fn test_registry_full() {
         let mut registry = ExtensionRegistry::new();
-        
+
         for i in 0..33 {
             let result = registry.register(i as u64, ext_bound);
             if i < 32 {
@@ -467,7 +471,7 @@ mod tests {
         let registry = create_builtin_registry();
         let quins = vec![];
         let executor = MagicPredicateExecutor::new(&registry, &quins);
-        
+
         let mut result = BindingRow::new();
         let success = executor.execute(0x4142530000000000_u64, &[42], &mut result);
         assert!(success);
@@ -478,7 +482,7 @@ mod tests {
         let mut result = BindingRow::new();
         ext_abs(&[42], &[], &mut result);
         assert_eq!(result.slots[0], Some(42));
-        
+
         ext_abs(&[18446744073709551615], &[], &mut result);
         assert_eq!(result.slots[0], Some(1)); // abs(i64::MAX)
     }
@@ -488,7 +492,7 @@ mod tests {
         let mut result = BindingRow::new();
         ext_is_iri(&[0x1234], &[], &mut result);
         assert_eq!(result.slots[0], Some(1));
-        
+
         ext_is_iri(&[0x8000000000000000], &[], &mut result);
         assert_eq!(result.slots[0], Some(0));
     }

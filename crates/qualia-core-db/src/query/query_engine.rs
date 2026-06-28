@@ -30,9 +30,8 @@ pub fn mmap_query_subject(
         }
 
         let count = len / QUIN_SIZE;
-        let quins: &[NQuin] = unsafe {
-            std::slice::from_raw_parts(mmap.as_ptr() as *const NQuin, count)
-        };
+        let quins: &[NQuin] =
+            unsafe { std::slice::from_raw_parts(mmap.as_ptr() as *const NQuin, count) };
 
         Ok(quins
             .iter()
@@ -114,7 +113,11 @@ pub fn filter_by_context(quins: &[NQuin], context_hash: u64) -> Vec<NQuin> {
     if context_hash == 0 {
         return quins.to_vec();
     }
-    quins.iter().filter(|q| q.context == context_hash).copied().collect()
+    quins
+        .iter()
+        .filter(|q| q.context == context_hash)
+        .copied()
+        .collect()
 }
 
 /// Filter a slice of NQuin by multiple context hashes
@@ -123,7 +126,11 @@ pub fn filter_by_contexts(quins: &[NQuin], context_hashes: &[u64]) -> Vec<NQuin>
         return quins.to_vec();
     }
     let context_set: std::collections::HashSet<u64> = context_hashes.iter().copied().collect();
-    quins.iter().filter(|q| context_set.contains(&q.context)).copied().collect()
+    quins
+        .iter()
+        .filter(|q| context_set.contains(&q.context))
+        .copied()
+        .collect()
 }
 
 /// Count Quins per context hash
@@ -145,16 +152,26 @@ pub fn unique_contexts(quins: &[NQuin]) -> Vec<u64> {
 }
 
 /// Filter Quins by context and subject
-pub fn filter_by_context_and_subject(quins: &[NQuin], context_hash: u64, subject: u64) -> Vec<NQuin> {
-    quins.iter()
+pub fn filter_by_context_and_subject(
+    quins: &[NQuin],
+    context_hash: u64,
+    subject: u64,
+) -> Vec<NQuin> {
+    quins
+        .iter()
         .filter(|q| (context_hash == 0 || q.context == context_hash) && q.subject == subject)
         .copied()
         .collect()
 }
 
 /// Filter Quins by context and predicate
-pub fn filter_by_context_and_predicate(quins: &[NQuin], context_hash: u64, predicate: u64) -> Vec<NQuin> {
-    quins.iter()
+pub fn filter_by_context_and_predicate(
+    quins: &[NQuin],
+    context_hash: u64,
+    predicate: u64,
+) -> Vec<NQuin> {
+    quins
+        .iter()
         .filter(|q| (context_hash == 0 || q.context == context_hash) && q.predicate == predicate)
         .copied()
         .collect()
@@ -162,7 +179,8 @@ pub fn filter_by_context_and_predicate(quins: &[NQuin], context_hash: u64, predi
 
 /// Filter Quins by context and object
 pub fn filter_by_context_and_object(quins: &[NQuin], context_hash: u64, object: u64) -> Vec<NQuin> {
-    quins.iter()
+    quins
+        .iter()
         .filter(|q| (context_hash == 0 || q.context == context_hash) && q.object == object)
         .copied()
         .collect()
@@ -175,11 +193,32 @@ mod context_tests {
     #[test]
     fn test_filter_by_context() {
         let quins = vec![
-            NQuin { subject: 1, predicate: 2, object: 3, context: 100, metadata: 0, parity: 0 },
-            NQuin { subject: 4, predicate: 5, object: 6, context: 200, metadata: 0, parity: 0 },
-            NQuin { subject: 7, predicate: 8, object: 9, context: 100, metadata: 0, parity: 0 },
+            NQuin {
+                subject: 1,
+                predicate: 2,
+                object: 3,
+                context: 100,
+                metadata: 0,
+                parity: 0,
+            },
+            NQuin {
+                subject: 4,
+                predicate: 5,
+                object: 6,
+                context: 200,
+                metadata: 0,
+                parity: 0,
+            },
+            NQuin {
+                subject: 7,
+                predicate: 8,
+                object: 9,
+                context: 100,
+                metadata: 0,
+                parity: 0,
+            },
         ];
-        
+
         let filtered = filter_by_context(&quins, 100);
         assert_eq!(filtered.len(), 2);
         assert_eq!(filtered[0].context, 100);
@@ -189,10 +228,24 @@ mod context_tests {
     #[test]
     fn test_filter_by_context_wildcard() {
         let quins = vec![
-            NQuin { subject: 1, predicate: 2, object: 3, context: 100, metadata: 0, parity: 0 },
-            NQuin { subject: 4, predicate: 5, object: 6, context: 200, metadata: 0, parity: 0 },
+            NQuin {
+                subject: 1,
+                predicate: 2,
+                object: 3,
+                context: 100,
+                metadata: 0,
+                parity: 0,
+            },
+            NQuin {
+                subject: 4,
+                predicate: 5,
+                object: 6,
+                context: 200,
+                metadata: 0,
+                parity: 0,
+            },
         ];
-        
+
         let filtered = filter_by_context(&quins, 0);
         assert_eq!(filtered.len(), 2);
     }
@@ -200,11 +253,32 @@ mod context_tests {
     #[test]
     fn test_count_by_context() {
         let quins = vec![
-            NQuin { subject: 1, predicate: 2, object: 3, context: 100, metadata: 0, parity: 0 },
-            NQuin { subject: 4, predicate: 5, object: 6, context: 200, metadata: 0, parity: 0 },
-            NQuin { subject: 7, predicate: 8, object: 9, context: 100, metadata: 0, parity: 0 },
+            NQuin {
+                subject: 1,
+                predicate: 2,
+                object: 3,
+                context: 100,
+                metadata: 0,
+                parity: 0,
+            },
+            NQuin {
+                subject: 4,
+                predicate: 5,
+                object: 6,
+                context: 200,
+                metadata: 0,
+                parity: 0,
+            },
+            NQuin {
+                subject: 7,
+                predicate: 8,
+                object: 9,
+                context: 100,
+                metadata: 0,
+                parity: 0,
+            },
         ];
-        
+
         let counts = count_by_context(&quins);
         assert_eq!(counts.get(&100), Some(&2));
         assert_eq!(counts.get(&200), Some(&1));
@@ -213,11 +287,32 @@ mod context_tests {
     #[test]
     fn test_filter_by_context_and_subject() {
         let quins = vec![
-            NQuin { subject: 1, predicate: 2, object: 3, context: 100, metadata: 0, parity: 0 },
-            NQuin { subject: 1, predicate: 5, object: 6, context: 200, metadata: 0, parity: 0 },
-            NQuin { subject: 7, predicate: 8, object: 9, context: 100, metadata: 0, parity: 0 },
+            NQuin {
+                subject: 1,
+                predicate: 2,
+                object: 3,
+                context: 100,
+                metadata: 0,
+                parity: 0,
+            },
+            NQuin {
+                subject: 1,
+                predicate: 5,
+                object: 6,
+                context: 200,
+                metadata: 0,
+                parity: 0,
+            },
+            NQuin {
+                subject: 7,
+                predicate: 8,
+                object: 9,
+                context: 100,
+                metadata: 0,
+                parity: 0,
+            },
         ];
-        
+
         let filtered = filter_by_context_and_subject(&quins, 100, 1);
         assert_eq!(filtered.len(), 1);
         assert_eq!(filtered[0].subject, 1);

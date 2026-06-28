@@ -39,8 +39,7 @@ pub fn read_c_q42_quins(path: &Path) -> std::io::Result<Vec<NQuin>> {
             .map_err(|e| std::io::Error::new(std::io::ErrorKind::InvalidData, e))?;
 
         for chunk in uncompressed.chunks_exact(quin_size) {
-            let quin: NQuin =
-                unsafe { std::ptr::read_unaligned(chunk.as_ptr() as *const NQuin) };
+            let quin: NQuin = unsafe { std::ptr::read_unaligned(chunk.as_ptr() as *const NQuin) };
             quins.push(quin);
         }
     }

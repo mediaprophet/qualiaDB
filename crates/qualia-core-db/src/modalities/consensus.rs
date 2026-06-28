@@ -53,7 +53,11 @@ pub fn can_form_joint_during_partition(partitioned: bool) -> bool {
 /// (BFT safety needs `n ≥ 3f+1`).
 #[inline]
 pub fn bft_max_faults(n: usize) -> usize {
-    if n == 0 { 0 } else { (n - 1) / 3 }
+    if n == 0 {
+        0
+    } else {
+        (n - 1) / 3
+    }
 }
 
 /// The BFT quorum size — the supermajority `2f+1` that makes a commit safe despite `f` Byzantine
@@ -123,7 +127,12 @@ pub fn vc_merge(a: &[u64], b: &[u64], out: &mut [u64]) -> bool {
 /// `epoch`? A window of `active_size` validators rotates by one position per epoch over a set of
 /// `set_size` (round-robin), so committee membership churns deterministically. Indices and the
 /// window wrap modulo `set_size`.
-pub fn is_active_validator(validator_idx: usize, epoch: u64, set_size: usize, active_size: usize) -> bool {
+pub fn is_active_validator(
+    validator_idx: usize,
+    epoch: u64,
+    set_size: usize,
+    active_size: usize,
+) -> bool {
     if set_size == 0 || active_size == 0 || validator_idx >= set_size {
         return false;
     }
@@ -172,7 +181,7 @@ mod tests {
     fn lamport_and_vector_clocks() {
         assert_eq!(lamport_tick(4), 5);
         assert_eq!(lamport_recv(4, 9), 10); // max(4,9)+1
-        // a → b (a precedes b causally).
+                                            // a → b (a precedes b causally).
         assert!(vc_happens_before(&[1, 0, 0], &[1, 1, 0]));
         assert!(!vc_happens_before(&[1, 1, 0], &[1, 0, 0]));
         // Concurrent: neither precedes the other.
@@ -188,8 +197,14 @@ mod tests {
     fn equivocation_and_zk_light_client() {
         // Two different values at the same height → slashable equivocation.
         assert!(is_equivocation(10, 0xAA, 10, 0xBB));
-        assert!(!is_equivocation(10, 0xAA, 11, 0xBB), "different heights → not equivocation");
-        assert!(!is_equivocation(10, 0xAA, 10, 0xAA), "same value → just a re-vote");
+        assert!(
+            !is_equivocation(10, 0xAA, 11, 0xBB),
+            "different heights → not equivocation"
+        );
+        assert!(
+            !is_equivocation(10, 0xAA, 10, 0xAA),
+            "same value → just a re-vote"
+        );
         // Light client accepts only a quorum-backed, proof-verified state.
         assert!(light_client_accepts(true, 4, 3));
         assert!(!light_client_accepts(false, 4, 3), "no proof → reject");
@@ -219,7 +234,10 @@ mod tests {
 
     #[test]
     fn local_validity_is_not_global() {
-        assert!(!is_globally_valid(true, false), "valid locally but unsynced → not global");
+        assert!(
+            !is_globally_valid(true, false),
+            "valid locally but unsynced → not global"
+        );
         assert!(is_globally_valid(true, true));
         assert!(!is_globally_valid(false, true));
     }

@@ -206,7 +206,10 @@ mod tests {
         assert!(p < 1e-6, "strong correlation must be significant: p={p}");
         // A tiny correlation over few points is not significant.
         let p2 = correlation_p_value(0.1, 10).unwrap();
-        assert!(p2 > 0.5, "weak correlation should not be significant: p={p2}");
+        assert!(
+            p2 > 0.5,
+            "weak correlation should not be significant: p={p2}"
+        );
         assert_eq!(correlation_p_value(0.5, 2), None); // n < 3
         assert_eq!(correlation_p_value(1.0, 10), Some(0.0)); // perfect → p=0
     }

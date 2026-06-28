@@ -76,7 +76,9 @@ fn mv_norm(c: &[f32; 8]) -> f32 {
 }
 
 #[cfg(target_arch = "wasm32")]
-fn mv_exp_rotor(a: &crate::geometric_algebra::simd_kernel::Multivector) -> crate::geometric_algebra::simd_kernel::Multivector {
+fn mv_exp_rotor(
+    a: &crate::geometric_algebra::simd_kernel::Multivector,
+) -> crate::geometric_algebra::simd_kernel::Multivector {
     use crate::geometric_algebra::simd_kernel::Multivector;
     let b = [a.coeffs[4], a.coeffs[5], a.coeffs[6]];
     let mag = (b[0] * b[0] + b[1] * b[1] + b[2] * b[2]).sqrt();
@@ -175,9 +177,7 @@ pub fn sequence_alignment(input_json: &str) -> Result<String, JsValue> {
         aligned_query: String::from_utf8_lossy(&result.aligned_query).into_owned(),
         aligned_target: String::from_utf8_lossy(&result.aligned_target).into_owned(),
         mode: input.mode,
-        algorithm: input
-            .algo
-            .unwrap_or_else(|| "smith-waterman".to_string()),
+        algorithm: input.algo.unwrap_or_else(|| "smith-waterman".to_string()),
     })
 }
 
@@ -221,7 +221,11 @@ fn framingham_from_params(v: &serde_json::Value) -> Result<serde_json::Value, Js
 
     let current_smoker = bool_param(v, "smoker", bool_param(v, "current_smoker", false));
     let diabetic = bool_param(v, "diabetic", false);
-    let bp_treated = bool_param(v, "bp_treated", bool_param(v, "hypertension_treated", false));
+    let bp_treated = bool_param(
+        v,
+        "bp_treated",
+        bool_param(v, "hypertension_treated", false),
+    );
 
     let ln_age = (age as f64).max(1.0).ln();
     let ln_tc = (total_cholesterol_mmol * 38.67).max(1.0).ln();
@@ -229,9 +233,7 @@ fn framingham_from_params(v: &serde_json::Value) -> Result<serde_json::Value, Js
     let ln_sbp = systolic_bp.max(1.0).ln();
 
     let (sum, mean, s0) = if sex_male {
-        let mut s = 3.06117 * ln_age
-            + 1.12370 * ln_tc
-            - 0.93263 * ln_hdl
+        let mut s = 3.06117 * ln_age + 1.12370 * ln_tc - 0.93263 * ln_hdl
             + (if bp_treated { 1.99881 } else { 1.93303 }) * ln_sbp;
         if current_smoker {
             s += 0.65451;
@@ -241,9 +243,7 @@ fn framingham_from_params(v: &serde_json::Value) -> Result<serde_json::Value, Js
         }
         (s, 23.9802_f64, 0.88936_f64)
     } else {
-        let mut s = 2.32888 * ln_age
-            + 1.20904 * ln_tc
-            - 0.70833 * ln_hdl
+        let mut s = 2.32888 * ln_age + 1.20904 * ln_tc - 0.70833 * ln_hdl
             + (if bp_treated { 2.82263 } else { 2.76157 }) * ln_sbp;
         if current_smoker {
             s += 0.52873;
@@ -512,70 +512,71 @@ pub fn ode_solver(input_json: &str) -> Result<String, JsValue> {
     }
     let steps = input.steps.clamp(10, 10_000);
 
-    let (y0, rhs): ([f64; 2], Box<dyn Fn(f64, &[f64; 2], &mut [f64; 2])>) = match input.preset.as_str() {
-        "sho" => (
-            [1.0, 0.0],
-            Box::new(|_t, y, out| {
-                out[0] = y[1];
-                out[1] = -y[0];
-            }),
-        ),
-        "lorenz" => (
-            [1.0, 1.0],
-            Box::new(|_t, y, out| {
-                let sigma = 10.0;
-                let rho = 28.0;
-                let z = 25.0;
-                let x = y[0];
-                let yy = y[1];
-                out[0] = sigma * (yy - x);
-                out[1] = x * (rho - z) - yy;
-            }),
-        ),
-        "logistic" => (
-            [0.1, 0.0],
-            Box::new(|_t, y, out| {
-                let r = 4.0;
-                let k = 1.0;
-                let x = y[0];
-                let dx = r * x * (1.0 - x / k);
-                out[0] = dx;
-                out[1] = -0.5 * x + dx;
-            }),
-        ),
-        "vanderpol" => (
-            [2.0, 0.0],
-            Box::new(|_t, y, out| {
-                let mu = 1.0;
-                out[0] = y[1];
-                out[1] = mu * (1.0 - y[0] * y[0]) * y[1] - y[0];
-            }),
-        ),
-        "pendulum" => (
-            [1.2, 0.0],
-            Box::new(|_t, y, out| {
-                let g = 9.81;
-                let l = 1.0;
-                let b = 0.15;
-                out[0] = y[1];
-                out[1] = -(g / l) * y[0].sin() - b * y[1];
-            }),
-        ),
-        "lotka" => (
-            [10.0, 5.0],
-            Box::new(|_t, y, out| {
-                let alpha = 1.1;
-                let beta = 0.4;
-                let delta = 0.1;
-                let gamma = 0.4;
-                let x = y[0];
-                let prey = y[1];
-                out[0] = alpha * x - beta * x * prey;
-                out[1] = delta * x * prey - gamma * prey;
-            }),
-        ),
-        other => return Err(json_err(format!("unknown ODE preset: {other}"))),
-    };
+    let (y0, rhs): ([f64; 2], Box<dyn Fn(f64, &[f64; 2], &mut [f64; 2])>) =
+        match input.preset.as_str() {
+            "sho" => (
+                [1.0, 0.0],
+                Box::new(|_t, y, out| {
+                    out[0] = y[1];
+                    out[1] = -y[0];
+                }),
+            ),
+            "lorenz" => (
+                [1.0, 1.0],
+                Box::new(|_t, y, out| {
+                    let sigma = 10.0;
+                    let rho = 28.0;
+                    let z = 25.0;
+                    let x = y[0];
+                    let yy = y[1];
+                    out[0] = sigma * (yy - x);
+                    out[1] = x * (rho - z) - yy;
+                }),
+            ),
+            "logistic" => (
+                [0.1, 0.0],
+                Box::new(|_t, y, out| {
+                    let r = 4.0;
+                    let k = 1.0;
+                    let x = y[0];
+                    let dx = r * x * (1.0 - x / k);
+                    out[0] = dx;
+                    out[1] = -0.5 * x + dx;
+                }),
+            ),
+            "vanderpol" => (
+                [2.0, 0.0],
+                Box::new(|_t, y, out| {
+                    let mu = 1.0;
+                    out[0] = y[1];
+                    out[1] = mu * (1.0 - y[0] * y[0]) * y[1] - y[0];
+                }),
+            ),
+            "pendulum" => (
+                [1.2, 0.0],
+                Box::new(|_t, y, out| {
+                    let g = 9.81;
+                    let l = 1.0;
+                    let b = 0.15;
+                    out[0] = y[1];
+                    out[1] = -(g / l) * y[0].sin() - b * y[1];
+                }),
+            ),
+            "lotka" => (
+                [10.0, 5.0],
+                Box::new(|_t, y, out| {
+                    let alpha = 1.1;
+                    let beta = 0.4;
+                    let delta = 0.1;
+                    let gamma = 0.4;
+                    let x = y[0];
+                    let prey = y[1];
+                    out[0] = alpha * x - beta * x * prey;
+                    out[1] = delta * x * prey - gamma * prey;
+                }),
+            ),
+            other => return Err(json_err(format!("unknown ODE preset: {other}"))),
+        };
 
     let mut y = y0;
     let mut t = 0.0;
@@ -672,7 +673,8 @@ pub fn thermodynamics_mcmc(input_json: &str) -> Result<String, JsValue> {
 
         if i % (iterations / 200).max(1) == 0 {
             let entropy = -(hist.iter().filter(|&&c| c > 0).count() as f64).ln().abs();
-            let gibbs = sampler.calculate_gibbs_free_energy(sampler.current_state.total_energy, entropy);
+            let gibbs =
+                sampler.calculate_gibbs_free_energy(sampler.current_state.total_energy, entropy);
             gibbs_trace.push(gibbs);
             iter_labels.push(i);
         }
@@ -682,7 +684,13 @@ pub fn thermodynamics_mcmc(input_json: &str) -> Result<String, JsValue> {
     let energy_levels: Vec<String> = (-5..=5).map(|s| format!("E{s}")).collect();
     let probabilities: Vec<f64> = hist
         .iter()
-        .map(|&c| if total_samples == 0 { 0.0 } else { c as f64 / total_samples as f64 })
+        .map(|&c| {
+            if total_samples == 0 {
+                0.0
+            } else {
+                c as f64 / total_samples as f64
+            }
+        })
         .collect();
 
     to_json(&ThermoPlaygroundOutput {

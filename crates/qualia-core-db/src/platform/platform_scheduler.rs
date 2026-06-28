@@ -24,10 +24,10 @@
 mod darwin_qos {
     /// QoS class values from <sys/qos.h> (Darwin 18+).
     pub const QOS_CLASS_USER_INTERACTIVE: u32 = 0x21; // 33
-    pub const QOS_CLASS_USER_INITIATED:   u32 = 0x19; // 25
-    pub const QOS_CLASS_DEFAULT:          u32 = 0x15; // 21
-    pub const QOS_CLASS_UTILITY:          u32 = 0x11; // 17
-    pub const QOS_CLASS_BACKGROUND:       u32 = 0x09; // 9
+    pub const QOS_CLASS_USER_INITIATED: u32 = 0x19; // 25
+    pub const QOS_CLASS_DEFAULT: u32 = 0x15; // 21
+    pub const QOS_CLASS_UTILITY: u32 = 0x11; // 17
+    pub const QOS_CLASS_BACKGROUND: u32 = 0x09; // 9
 
     extern "C" {
         /// Set the QoS class of the calling thread.
@@ -77,7 +77,7 @@ impl std::fmt::Display for SchedulerError {
     fn fmt(&self, f: &mut std::fmt::Formatter<'_>) -> std::fmt::Result {
         match self {
             SchedulerError::Unsupported(m) => write!(f, "unsupported: {m}"),
-            SchedulerError::OsError(e)     => write!(f, "OS error {e}"),
+            SchedulerError::OsError(e) => write!(f, "OS error {e}"),
         }
     }
 }
@@ -115,10 +115,10 @@ fn bind_macos(class: QosClass) -> Result<(), SchedulerError> {
         use darwin_qos::*;
         let qos = match class {
             QosClass::UserInteractive => QOS_CLASS_USER_INTERACTIVE,
-            QosClass::UserInitiated   => QOS_CLASS_USER_INITIATED,
-            QosClass::Default         => QOS_CLASS_DEFAULT,
-            QosClass::Utility         => QOS_CLASS_UTILITY,
-            QosClass::Background      => QOS_CLASS_BACKGROUND,
+            QosClass::UserInitiated => QOS_CLASS_USER_INITIATED,
+            QosClass::Default => QOS_CLASS_DEFAULT,
+            QosClass::Utility => QOS_CLASS_UTILITY,
+            QosClass::Background => QOS_CLASS_BACKGROUND,
         };
         // SAFETY: pthread_set_qos_class_self_np is safe to call from any thread.
         let rc = unsafe { pthread_set_qos_class_self_np(qos, 0) };
@@ -128,7 +128,9 @@ fn bind_macos(class: QosClass) -> Result<(), SchedulerError> {
         return Err(SchedulerError::OsError(rc));
     }
     #[cfg(not(target_os = "macos"))]
-    Err(SchedulerError::Unsupported("macOS QoS not available on this platform".into()))
+    Err(SchedulerError::Unsupported(
+        "macOS QoS not available on this platform".into(),
+    ))
 }
 
 // ──────────────────────────────────────────────────────────────────────────────
@@ -175,10 +177,10 @@ fn bind_linux(class: QosClass) -> Result<(), SchedulerError> {
         // Also set Linux thread nice / scheduling policy.
         let nice_val: libc::c_int = match class {
             QosClass::UserInteractive => -10,
-            QosClass::UserInitiated   => -5,
-            QosClass::Default         => 0,
-            QosClass::Utility         => 5,
-            QosClass::Background      => 19,
+            QosClass::UserInitiated => -5,
+            QosClass::Default => 0,
+            QosClass::Utility => 5,
+            QosClass::Background => 19,
         };
         // SAFETY: getpid() always succeeds; setpriority is safe with valid args.
         unsafe {
@@ -187,7 +189,9 @@ fn bind_linux(class: QosClass) -> Result<(), SchedulerError> {
         return Ok(());
     }
     #[cfg(not(target_os = "linux"))]
-    Err(SchedulerError::Unsupported("Linux sched_setaffinity not available".into()))
+    Err(SchedulerError::Unsupported(
+        "Linux sched_setaffinity not available".into(),
+    ))
 }
 
 // ──────────────────────────────────────────────────────────────────────────────
@@ -198,17 +202,16 @@ fn bind_windows(class: QosClass) -> Result<(), SchedulerError> {
     #[cfg(all(target_os = "windows", target_arch = "x86_64"))]
     {
         use windows::Win32::System::Threading::{
-            GetCurrentThread, SetThreadPriority,
-            THREAD_PRIORITY_HIGHEST, THREAD_PRIORITY_ABOVE_NORMAL,
-            THREAD_PRIORITY_NORMAL, THREAD_PRIORITY_BELOW_NORMAL,
-            THREAD_PRIORITY_IDLE,
+            GetCurrentThread, SetThreadPriority, THREAD_PRIORITY_ABOVE_NORMAL,
+            THREAD_PRIORITY_BELOW_NORMAL, THREAD_PRIORITY_HIGHEST, THREAD_PRIORITY_IDLE,
+            THREAD_PRIORITY_NORMAL,
         };
         let priority = match class {
             QosClass::UserInteractive => THREAD_PRIORITY_HIGHEST,
-            QosClass::UserInitiated   => THREAD_PRIORITY_ABOVE_NORMAL,
-            QosClass::Default         => THREAD_PRIORITY_NORMAL,
-            QosClass::Utility         => THREAD_PRIORITY_BELOW_NORMAL,
-            QosClass::Background      => THREAD_PRIORITY_IDLE,
+            QosClass::UserInitiated => THREAD_PRIORITY_ABOVE_NORMAL,
+            QosClass::Default => THREAD_PRIORITY_NORMAL,
+            QosClass::Utility => THREAD_PRIORITY_BELOW_NORMAL,
+            QosClass::Background => THREAD_PRIORITY_IDLE,
         };
         // SAFETY: GetCurrentThread() returns a pseudo-handle that is always valid.
         let ok = unsafe { SetThreadPriority(GetCurrentThread(), priority) };
@@ -221,7 +224,9 @@ fn bind_windows(class: QosClass) -> Result<(), SchedulerError> {
         };
     }
     #[cfg(not(all(target_os = "windows", target_arch = "x86_64")))]
-    Err(SchedulerError::Unsupported("Windows SetThreadPriority not available".into()))
+    Err(SchedulerError::Unsupported(
+        "Windows SetThreadPriority not available".into(),
+    ))
 }
 
 // ──────────────────────────────────────────────────────────────────────────────
@@ -236,13 +241,13 @@ pub fn current_qos_class() -> Option<u32> {
         let mut rel: libc::c_int = 0;
         // SAFETY: pthread_get_qos_class_np with null thread → calling thread.
         let rc = unsafe {
-            darwin_qos::pthread_get_qos_class_np(
-                libc::pthread_self(),
-                &mut cls,
-                &mut rel,
-            )
+            darwin_qos::pthread_get_qos_class_np(libc::pthread_self(), &mut cls, &mut rel)
         };
-        if rc == 0 { Some(cls) } else { None }
+        if rc == 0 {
+            Some(cls)
+        } else {
+            None
+        }
     }
     #[cfg(not(target_os = "macos"))]
     None

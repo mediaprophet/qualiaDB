@@ -56,7 +56,13 @@ pub fn isolate_b_compute(prompt: NQuin) -> Option<NQuin> {
         field_to_f64(m >> 32),
         field_to_f64(m >> 48),
     ];
-    let input = JobInput::DenseLinearProduct { m: 2, k: 2, n: 2, a, b };
+    let input = JobInput::DenseLinearProduct {
+        m: 2,
+        k: 2,
+        n: 2,
+        a,
+        b,
+    };
     let result = LocalKernelExecutor.execute(&input).ok()?;
     let JobResult::DenseLinearProduct { c } = result else {
         return None;
@@ -82,7 +88,14 @@ mod tests {
     use super::*;
 
     fn quin(s: u64, p: u64, o: u64, c: u64, m: u64) -> NQuin {
-        NQuin { subject: s, predicate: p, object: o, context: c, metadata: m, parity: 0 }
+        NQuin {
+            subject: s,
+            predicate: p,
+            object: o,
+            context: c,
+            metadata: m,
+            parity: 0,
+        }
     }
 
     #[test]

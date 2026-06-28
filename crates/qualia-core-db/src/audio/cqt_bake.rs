@@ -1,7 +1,7 @@
 //! Constant-Q transform sidecar bake — log-spaced bins for timbral sovereignty (cold path).
 
 use crate::audio::audio_spectral_sheet::{
-    AudioSpectralSidecarHeader, SPECTRAL_PREVIEW_BINS, SPECTRAL_SIDECAR_MAGIC, SIDECAR_KIND_CQT,
+    AudioSpectralSidecarHeader, SIDECAR_KIND_CQT, SPECTRAL_PREVIEW_BINS, SPECTRAL_SIDECAR_MAGIC,
 };
 use crate::audio::stft_bake::StftBakeError;
 
@@ -79,6 +79,9 @@ mod tests {
         preview[63] = 0.5;
         let cqt = preview_to_cqt_frame(&preview, 0, 8);
         assert!(cqt[0] > 0.0, "low CQT bins sample preview[0]");
-        assert!(cqt[63] > 0.0, "high CQT bins sample preview[63] via log map");
+        assert!(
+            cqt[63] > 0.0,
+            "high CQT bins sample preview[63] via log map"
+        );
     }
 }

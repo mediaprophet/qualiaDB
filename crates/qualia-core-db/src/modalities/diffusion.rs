@@ -44,11 +44,13 @@ pub async fn execute_diffusion_pass(graph: &mut [NQuin]) -> Result<(), String> {
 
     // NQuin is 48 bytes. Cast to u8 for wgpu buffer.
     let bytes: &[u8] = bytemuck::cast_slice(graph);
-    
+
     let storage_buffer = device.create_buffer(&wgpu::BufferDescriptor {
         label: Some("Graph Buffer"),
         size: bytes.len() as wgpu::BufferAddress,
-        usage: wgpu::BufferUsages::STORAGE | wgpu::BufferUsages::COPY_DST | wgpu::BufferUsages::COPY_SRC,
+        usage: wgpu::BufferUsages::STORAGE
+            | wgpu::BufferUsages::COPY_DST
+            | wgpu::BufferUsages::COPY_SRC,
         mapped_at_creation: false,
     });
 
@@ -82,14 +84,20 @@ pub async fn execute_diffusion_pass(graph: &mut [NQuin]) -> Result<(), String> {
         });
         cpass.set_pipeline(&pipeline);
         cpass.set_bind_group(0, &bind_group, &[]);
-        
+
         // The shader operates on u32 array. Number of u32s = bytes.len() / 4.
         let num_u32s = (bytes.len() / 4) as u32;
         let workgroups = (num_u32s + 63) / 64;
         cpass.dispatch_workgroups(workgroups, 1, 1);
     }
 
-    encoder.copy_buffer_to_buffer(&storage_buffer, 0, &staging_buffer, 0, bytes.len() as wgpu::BufferAddress);
+    encoder.copy_buffer_to_buffer(
+        &storage_buffer,
+        0,
+        &staging_buffer,
+        0,
+        bytes.len() as wgpu::BufferAddress,
+    );
 
     queue.submit(Some(encoder.finish()));
 
@@ -201,9 +209,18 @@ mod tests {
         assert!((inject_energy(0.2, 0.3) - 0.5).abs() < 1e-6);
         // Improving moves always accepted; uphill moves gated by temperature.
         assert!(anneal_accept(-1.0, 1.0, 0.99));
-        assert!(anneal_accept(1.0, 10.0, 0.5), "hot → likely accept an uphill move");
-        assert!(!anneal_accept(5.0, 0.01, 0.5), "cold → reject an uphill move");
-        assert!(!anneal_accept(1.0, 0.0, 0.0), "zero temperature → no uphill moves");
+        assert!(
+            anneal_accept(1.0, 10.0, 0.5),
+            "hot → likely accept an uphill move"
+        );
+        assert!(
+            !anneal_accept(5.0, 0.01, 0.5),
+            "cold → reject an uphill move"
+        );
+        assert!(
+            !anneal_accept(1.0, 0.0, 0.0),
+            "zero temperature → no uphill moves"
+        );
         // Cooling shrinks the temperature geometrically.
         assert!((cool(10.0, 0.9) - 9.0).abs() < 1e-6);
     }
@@ -211,9 +228,9 @@ mod tests {
     #[test]
     fn test_execute_diffusion_pass() {
         let mut graph = vec![NQuin::default(); 10];
-        
+
         // Ensure some deterministic setup.
-        // NQuin.subject is mapped as u64, meaning it's 2 u32s. 
+        // NQuin.subject is mapped as u64, meaning it's 2 u32s.
         // We set it to 2 (even), the shader will increment the first u32 to 3.
         graph[0].subject = 2; // Even
         graph[1].subject = 3; // Odd

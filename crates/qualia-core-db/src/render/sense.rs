@@ -28,7 +28,8 @@
 //!   forward DSP and the field-packing live here.
 
 use crate::modalities::logic::deontic::{
-    compile_norm_quin, evaluate_deontic_contract, DeonticStatus, DeonticVerdict, OP_FORBID, OP_PERMIT,
+    compile_norm_quin, evaluate_deontic_contract, DeonticStatus, DeonticVerdict, OP_FORBID,
+    OP_PERMIT,
 };
 use crate::modalities::manifold_logic::{continuous_to_fact, integrate_abs};
 use crate::{q_hash, NQuin};
@@ -99,8 +100,22 @@ pub fn dominant_bin(mags: &[f64]) -> Option<(usize, f64)> {
 
 /// Build a consent norm for sensing: `(agent) OPCODE capture(environment)` in a `frame`, optionally
 /// expiring. Consent is `OP_PERMIT`; a prohibition is `OP_FORBID`.
-pub fn sense_norm(agent: u64, opcode: u8, environment: u64, frame: u64, expiry_unix32: u32) -> NQuin {
-    compile_norm_quin(agent, opcode, P_SENSE_CAPTURE, environment, frame, expiry_unix32, false)
+pub fn sense_norm(
+    agent: u64,
+    opcode: u8,
+    environment: u64,
+    frame: u64,
+    expiry_unix32: u32,
+) -> NQuin {
+    compile_norm_quin(
+        agent,
+        opcode,
+        P_SENSE_CAPTURE,
+        environment,
+        frame,
+        expiry_unix32,
+        false,
+    )
 }
 
 /// **The sense gate.** `true` iff `agent` has Active consent to capture `environment`: there is an
@@ -119,7 +134,9 @@ pub fn sense_permitted(agent: u64, environment: u64, norms: &[NQuin], now_unix: 
     };
     let mut consented = false;
     for v in &out[..n] {
-        if v.status != DeonticStatus::Active || v.norm.subject != agent || v.norm.object != environment
+        if v.status != DeonticStatus::Active
+            || v.norm.subject != agent
+            || v.norm.object != environment
         {
             continue;
         }
@@ -295,7 +312,16 @@ mod tests {
     #[test]
     fn no_consent_refuses_even_a_loud_signal() {
         let s = sine(1000.0, 16000.0, 256);
-        let out = sense_acoustic_to_fact(&s, 16000.0, 50.0, agent(), environment(), standpoint(), &[], 100);
+        let out = sense_acoustic_to_fact(
+            &s,
+            16000.0,
+            50.0,
+            agent(),
+            environment(),
+            standpoint(),
+            &[],
+            100,
+        );
         assert_eq!(out, SenseOutcome::Refused);
     }
 
@@ -304,15 +330,26 @@ mod tests {
     fn consented_tone_emits_a_discrete_fact() {
         let s = sine(1000.0, 16000.0, 256);
         let permit = sense_norm(agent(), OP_PERMIT, environment(), standpoint(), 0);
-        let out =
-            sense_acoustic_to_fact(&s, 16000.0, 50.0, agent(), environment(), standpoint(), &[permit], 100);
+        let out = sense_acoustic_to_fact(
+            &s,
+            16000.0,
+            50.0,
+            agent(),
+            environment(),
+            standpoint(),
+            &[permit],
+            100,
+        );
         match out {
             SenseOutcome::Fact(q) => {
                 // The fact is the discrete percept — WHAT (tone), WHERE (env), no raw audio.
                 assert_eq!(q.object, FACT_ACOUSTIC_TONE);
                 assert_eq!(q.subject, environment());
                 assert_eq!(q.predicate, P_PERCEIVED);
-                assert_eq!(q.parity, q.subject ^ q.predicate ^ q.object ^ q.context ^ q.metadata);
+                assert_eq!(
+                    q.parity,
+                    q.subject ^ q.predicate ^ q.object ^ q.context ^ q.metadata
+                );
                 let (hz, energy) = unpack_percept(q.metadata);
                 assert!((hz - 1000.0).abs() < 1.0, "dominant ~1000 Hz, got {hz}");
                 assert!(energy > 50.0);
@@ -327,7 +364,14 @@ mod tests {
         let silence = [0.0_f64; 256];
         let permit = sense_norm(agent(), OP_PERMIT, environment(), standpoint(), 0);
         let out = sense_acoustic_to_fact(
-            &silence, 16000.0, 50.0, agent(), environment(), standpoint(), &[permit], 100,
+            &silence,
+            16000.0,
+            50.0,
+            agent(),
+            environment(),
+            standpoint(),
+            &[permit],
+            100,
         );
         assert_eq!(out, SenseOutcome::BelowThreshold);
     }
@@ -339,7 +383,14 @@ mod tests {
         let permit = sense_norm(agent(), OP_PERMIT, environment(), standpoint(), 0);
         let forbid = sense_norm(agent(), OP_FORBID, environment(), standpoint(), 0);
         let out = sense_acoustic_to_fact(
-            &s, 16000.0, 50.0, agent(), environment(), standpoint(), &[permit, forbid], 100,
+            &s,
+            16000.0,
+            50.0,
+            agent(),
+            environment(),
+            standpoint(),
+            &[permit, forbid],
+            100,
         );
         assert_eq!(out, SenseOutcome::Refused);
     }
@@ -350,8 +401,16 @@ mod tests {
         let s = sine(1000.0, 16000.0, 256);
         let other_env = q_hash("urn:qualia:env:someone-elses-room");
         let permit = sense_norm(agent(), OP_PERMIT, other_env, standpoint(), 0);
-        let out =
-            sense_acoustic_to_fact(&s, 16000.0, 50.0, agent(), environment(), standpoint(), &[permit], 100);
+        let out = sense_acoustic_to_fact(
+            &s,
+            16000.0,
+            50.0,
+            agent(),
+            environment(),
+            standpoint(),
+            &[permit],
+            100,
+        );
         assert_eq!(out, SenseOutcome::Refused);
     }
 }

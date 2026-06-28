@@ -28,8 +28,18 @@ pub fn framework_from_trace(entries: &[(u64, u64, bool)]) -> ArgumentationFramew
     for (i, &(id_a, lit_a, pos_a)) in entries.iter().enumerate() {
         for &(id_b, lit_b, pos_b) in &entries[i + 1..] {
             if lit_a == lit_b && pos_a != pos_b {
-                af.add_attack(Attack { attacker: id_a, target: id_b, attack_type: AttackType::Rebuttal, strength: 1.0 });
-                af.add_attack(Attack { attacker: id_b, target: id_a, attack_type: AttackType::Rebuttal, strength: 1.0 });
+                af.add_attack(Attack {
+                    attacker: id_a,
+                    target: id_b,
+                    attack_type: AttackType::Rebuttal,
+                    strength: 1.0,
+                });
+                af.add_attack(Attack {
+                    attacker: id_b,
+                    target: id_a,
+                    attack_type: AttackType::Rebuttal,
+                    strength: 1.0,
+                });
             }
         }
     }
@@ -44,13 +54,20 @@ mod tests {
     fn complementary_verdicts_become_a_debate() {
         let permit = crate::q_hash("act:disclose");
         // Trace: arg 1 concludes (disclose, +); arg 2 concludes (disclose, −); arg 3 unrelated.
-        let af = framework_from_trace(&[(1, permit, true), (2, permit, false), (3, crate::q_hash("act:other"), true)]);
+        let af = framework_from_trace(&[
+            (1, permit, true),
+            (2, permit, false),
+            (3, crate::q_hash("act:other"), true),
+        ]);
         assert_eq!(af.arguments.len(), 3);
         // 1 and 2 conflict (mutual attack); 3 is independent.
         assert!(af.attacks.iter().any(|a| a.attacker == 1 && a.target == 2));
         assert!(af.attacks.iter().any(|a| a.attacker == 2 && a.target == 1));
         let g = af.grounded_extension();
-        assert!(!g.contains(&1) && !g.contains(&2), "the conflict is undecided in the grounded extension");
+        assert!(
+            !g.contains(&1) && !g.contains(&2),
+            "the conflict is undecided in the grounded extension"
+        );
         assert!(g.contains(&3), "the independent verdict stands");
     }
 

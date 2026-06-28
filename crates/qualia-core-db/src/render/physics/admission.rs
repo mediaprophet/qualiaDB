@@ -13,7 +13,11 @@ use crate::render::pga::Motor;
 #[derive(Clone, Copy, Debug, PartialEq)]
 pub enum Refusal {
     /// A scale would contract an axis extent below the material floor.
-    Contraction { axis: usize, resulting: f32, floor: f32 },
+    Contraction {
+        axis: usize,
+        resulting: f32,
+        floor: f32,
+    },
     /// The transformed artefact would leave the permitted world bounds.
     OutOfBounds,
 }
@@ -46,7 +50,11 @@ impl Admission {
             for axis in 0..3 {
                 let resulting = e[axis] * scale[axis].abs();
                 if resulting < self.min_extent {
-                    return Err(Refusal::Contraction { axis, resulting, floor: self.min_extent });
+                    return Err(Refusal::Contraction {
+                        axis,
+                        resulting,
+                        floor: self.min_extent,
+                    });
                 }
             }
         }
@@ -72,7 +80,11 @@ mod tests {
     #[test]
     fn admits_a_valid_rigid_move() {
         let policy = Admission::new(0.5, None);
-        let out = policy.admit(&artefact(), motor_translate([3.0, 0.0, 0.0]), [1.0, 1.0, 1.0]);
+        let out = policy.admit(
+            &artefact(),
+            motor_translate([3.0, 0.0, 0.0]),
+            [1.0, 1.0, 1.0],
+        );
         assert!(out.is_ok());
     }
 
@@ -83,7 +95,11 @@ mod tests {
         let verdict = policy.admit(&artefact(), Motor::identity(), [0.1, 1.0, 1.0]);
         assert_eq!(
             verdict,
-            Err(Refusal::Contraction { axis: 0, resulting: 0.2, floor: 0.5 })
+            Err(Refusal::Contraction {
+                axis: 0,
+                resulting: 0.2,
+                floor: 0.5
+            })
         );
     }
 
@@ -101,11 +117,19 @@ mod tests {
         let world = Aabb::new([-2.0, -2.0, -2.0], [2.0, 2.0, 2.0]);
         let policy = Admission::new(0.0, Some(world));
         // translate +5 on x pushes the box outside the world → refused.
-        let verdict = policy.admit(&artefact(), motor_translate([5.0, 0.0, 0.0]), [1.0, 1.0, 1.0]);
+        let verdict = policy.admit(
+            &artefact(),
+            motor_translate([5.0, 0.0, 0.0]),
+            [1.0, 1.0, 1.0],
+        );
         assert_eq!(verdict, Err(Refusal::OutOfBounds));
         // a small move stays inside → admitted.
         assert!(policy
-            .admit(&artefact(), motor_translate([0.5, 0.0, 0.0]), [1.0, 1.0, 1.0])
+            .admit(
+                &artefact(),
+                motor_translate([0.5, 0.0, 0.0]),
+                [1.0, 1.0, 1.0]
+            )
             .is_ok());
     }
 

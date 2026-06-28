@@ -58,7 +58,12 @@ pub const MAX_CAP_NODES: usize = 64;
 /// Returns the minimum total cost, or `None` if `goal` is unreachable. Bounded Dijkstra (A* with
 /// an admissible zero heuristic over a non-negative-cost graph); zero-heap (fixed arrays).
 /// `nodes` enumerates the capability ids (the index space, ≤ [`MAX_CAP_NODES`]).
-pub fn learning_path_cost(nodes: &[u64], edges: &[(u64, u64, u32)], held: &[u64], goal: u64) -> Option<u32> {
+pub fn learning_path_cost(
+    nodes: &[u64],
+    edges: &[(u64, u64, u32)],
+    held: &[u64],
+    goal: u64,
+) -> Option<u32> {
     let n = nodes.len();
     if n == 0 || n > MAX_CAP_NODES {
         return None;
@@ -147,21 +152,42 @@ mod tests {
     #[test]
     fn a_star_finds_the_shortest_learning_path() {
         // welding(held) → fabrication(2) → robotics(3); welding → robotics directly (10).
-        let (welding, fab, robotics) = (q_hash("cap:welding"), q_hash("cap:fabrication"), q_hash("cap:robotics"));
+        let (welding, fab, robotics) = (
+            q_hash("cap:welding"),
+            q_hash("cap:fabrication"),
+            q_hash("cap:robotics"),
+        );
         let nodes = [welding, fab, robotics];
-        let edges = [(welding, fab, 2u32), (fab, robotics, 3u32), (welding, robotics, 10u32)];
+        let edges = [
+            (welding, fab, 2u32),
+            (fab, robotics, 3u32),
+            (welding, robotics, 10u32),
+        ];
         // Shortest path welding→fab→robotics = 5 (beats the direct 10).
-        assert_eq!(learning_path_cost(&nodes, &edges, &[welding], robotics), Some(5));
+        assert_eq!(
+            learning_path_cost(&nodes, &edges, &[welding], robotics),
+            Some(5)
+        );
         // Already held → cost 0.
-        assert_eq!(learning_path_cost(&nodes, &edges, &[robotics], robotics), Some(0));
+        assert_eq!(
+            learning_path_cost(&nodes, &edges, &[robotics], robotics),
+            Some(0)
+        );
         // Unreachable goal.
         let isolated = q_hash("cap:isolated");
-        assert_eq!(learning_path_cost(&[welding, isolated], &edges, &[welding], isolated), None);
+        assert_eq!(
+            learning_path_cost(&[welding, isolated], &edges, &[welding], isolated),
+            None
+        );
     }
 
     #[test]
     fn gap_is_the_set_difference() {
-        let (welding, wiring, plumbing) = (q_hash("cap:welding"), q_hash("cap:wiring"), q_hash("cap:plumbing"));
+        let (welding, wiring, plumbing) = (
+            q_hash("cap:welding"),
+            q_hash("cap:wiring"),
+            q_hash("cap:plumbing"),
+        );
         let required = [welding, wiring, plumbing];
         let held = [welding];
         let mut out = [0u64; 8];

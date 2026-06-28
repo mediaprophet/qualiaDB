@@ -31,19 +31,25 @@ impl QTensorEngine {
         let k_info = match tensors.attn_k.as_ref() {
             Some(i) => i,
             None => {
-                wlog(&format!("[prefill_layer] FAILED missing attn_k layer={layer}"));
+                wlog(&format!(
+                    "[prefill_layer] FAILED missing attn_k layer={layer}"
+                ));
                 return false;
             }
         };
         let v_info = match tensors.attn_v.as_ref() {
             Some(i) => i,
             None => {
-                wlog(&format!("[prefill_layer] FAILED missing attn_v layer={layer}"));
+                wlog(&format!(
+                    "[prefill_layer] FAILED missing attn_v layer={layer}"
+                ));
                 return false;
             }
         };
         if tensors.attn_q.is_none() {
-            wlog(&format!("[prefill_layer] FAILED missing attn_q layer={layer}"));
+            wlog(&format!(
+                "[prefill_layer] FAILED missing attn_q layer={layer}"
+            ));
             return false;
         }
         let h = index.hyperparams;
@@ -144,7 +150,9 @@ impl QTensorEngine {
                 scratch_a,
                 scratch_b,
             ) {
-                wlog(&format!("[prefill_layer] q_ffn FAILED layer={layer} t={t} abs={abs}"));
+                wlog(&format!(
+                    "[prefill_layer] q_ffn FAILED layer={layer} t={t} abs={abs}"
+                ));
                 return false;
             }
         }
@@ -179,19 +187,25 @@ impl QTensorEngine {
         let k_info = match tensors.attn_k.as_ref() {
             Some(i) => i,
             None => {
-                wlog(&format!("[prefill_layer] FAILED missing attn_k layer={layer}"));
+                wlog(&format!(
+                    "[prefill_layer] FAILED missing attn_k layer={layer}"
+                ));
                 return false;
             }
         };
         let v_info = match tensors.attn_v.as_ref() {
             Some(i) => i,
             None => {
-                wlog(&format!("[prefill_layer] FAILED missing attn_v layer={layer}"));
+                wlog(&format!(
+                    "[prefill_layer] FAILED missing attn_v layer={layer}"
+                ));
                 return false;
             }
         };
         if tensors.attn_q.is_none() {
-            wlog(&format!("[prefill_layer] FAILED missing attn_q layer={layer}"));
+            wlog(&format!(
+                "[prefill_layer] FAILED missing attn_q layer={layer}"
+            ));
             return false;
         }
         let h = index.hyperparams;
@@ -231,16 +245,13 @@ impl QTensorEngine {
         let mut norm_w_attn = [0f32; MAX_HIDDEN_DIM];
         let mut norm_scratch = [0f32; PREFILL_CHUNK_STACK_FLOATS];
         let attn_input: &mut [f32] = if let Some(norm_info) = tensors.attn_norm.as_ref() {
-            let n = dequant_norm_row_into(
-                mmap,
-                index.tensor_data_start,
-                norm_info,
-                &mut norm_w_attn,
-            );
+            let n =
+                dequant_norm_row_into(mmap, index.tensor_data_start, norm_info, &mut norm_w_attn);
             if n >= n_embd {
                 for t in 0..n_tokens as usize {
                     let off = t * n_embd;
-                    norm_scratch[off..off + n_embd].copy_from_slice(&batch_hidden[off..off + n_embd]);
+                    norm_scratch[off..off + n_embd]
+                        .copy_from_slice(&batch_hidden[off..off + n_embd]);
                     rms_norm_inplace(
                         &mut norm_scratch[off..off + n_embd],
                         &norm_w_attn[..n_embd],
@@ -313,7 +324,9 @@ impl QTensorEngine {
                 )
                 .await
             {
-                wlog(&format!("[prefill_layer] q_ffn FAILED layer={layer} t={t} abs={abs}"));
+                wlog(&format!(
+                    "[prefill_layer] q_ffn FAILED layer={layer} t={t} abs={abs}"
+                ));
                 return false;
             }
         }
@@ -413,7 +426,9 @@ impl QTensorEngine {
 
         // #48 diagnostic: localize the residual explosion — attention output magnitude per layer.
         if layer < 3 && std::env::var("QUALIA_LLM_DEBUG_DECODE").is_ok() {
-            let max_attn = scratch_a[..emb_dim].iter().fold(0f32, |m, &v| m.max(v.abs()));
+            let max_attn = scratch_a[..emb_dim]
+                .iter()
+                .fold(0f32, |m, &v| m.max(v.abs()));
             let max_hid = hidden[..emb_dim].iter().fold(0f32, |m, &v| m.max(v.abs()));
             eprintln!(
                 "[layer-dbg] L{} attn_ok={} attn_norm={} ffn_norm={} max|attn_out|={:.4} max|hidden_postattn|={:.4}",
@@ -428,14 +443,8 @@ impl QTensorEngine {
 
         #[cfg(not(target_arch = "wasm32"))]
         let t_ffn = std::time::Instant::now();
-        let ffn_ok = self.dispatch_ffn_block_pre_norm(
-            index,
-            hidden,
-            emb_dim,
-            &tensors,
-            scratch_a,
-            scratch_b,
-        );
+        let ffn_ok = self
+            .dispatch_ffn_block_pre_norm(index, hidden, emb_dim, &tensors, scratch_a, scratch_b);
         #[cfg(not(target_arch = "wasm32"))]
         crate::llm_bench::add_decode_ffn_ns(t_ffn.elapsed().as_nanos() as u64);
         ffn_ok
@@ -537,14 +546,7 @@ impl QTensorEngine {
             let (n_in, n_out) = Self::matmul_dims(&info);
             if n_in <= emb_dim
                 && self
-                    .dispatch_gemm_into_async(
-                        index,
-                        &info,
-                        &hidden[..n_in],
-                        scratch_a,
-                        n_in,
-                        n_out,
-                    )
+                    .dispatch_gemm_into_async(index, &info, &hidden[..n_in], scratch_a, n_in, n_out)
                     .await
             {
                 add_residual_inplace(
@@ -561,12 +563,7 @@ impl QTensorEngine {
         }
 
         self.dispatch_ffn_block_pre_norm_async(
-            index,
-            hidden,
-            emb_dim,
-            &tensors,
-            scratch_a,
-            scratch_b,
+            index, hidden, emb_dim, &tensors, scratch_a, scratch_b,
         )
         .await
     }
@@ -602,10 +599,11 @@ impl QTensorEngine {
             Some(i) => i,
             None => return false,
         };
-        let q_raw = match crate::ggml_quants::fetch_tensor_bytes(mmap, index.tensor_data_start, q_info) {
-            Ok(s) => s,
-            Err(_) => return false,
-        };
+        let q_raw =
+            match crate::ggml_quants::fetch_tensor_bytes(mmap, index.tensor_data_start, q_info) {
+                Ok(s) => s,
+                Err(_) => return false,
+            };
         let q_in_buf = if let Some(pre) = attn_input {
             pre
         } else if let Some(norm) = tensors.attn_norm.as_ref() {
@@ -675,25 +673,22 @@ impl QTensorEngine {
         self.mc8_flush(pipeline);
         if let Some(out_info) = tensors.attn_output.as_ref() {
             let (o_in, o_out) = Self::matmul_dims(out_info);
-            let o_raw = match crate::ggml_quants::fetch_tensor_bytes(mmap, index.tensor_data_start, out_info)
-            {
+            let o_raw = match crate::ggml_quants::fetch_tensor_bytes(
+                mmap,
+                index.tensor_data_start,
+                out_info,
+            ) {
                 Ok(s) => s,
                 Err(_) => return false,
             };
             if work_aliases_hidden {
-                pipeline.encoder.copy_buffer_to_buffer(token_hidden, 0, aux_buf, 0, emb_bytes);
+                pipeline
+                    .encoder
+                    .copy_buffer_to_buffer(token_hidden, 0, aux_buf, 0, emb_bytes);
                 self.mc8_flush(pipeline);
             }
             if o_in > q_dim
-                || !self.encode_gemm_bufs(
-                    pipeline,
-                    out_info,
-                    o_raw,
-                    o_in,
-                    o_out,
-                    ffn_buf,
-                    work_buf,
-                )
+                || !self.encode_gemm_bufs(pipeline, out_info, o_raw, o_in, o_out, ffn_buf, work_buf)
             {
                 return false;
             }
@@ -738,28 +733,42 @@ impl QTensorEngine {
         let (gate_in, n_ffn) = Self::matmul_dims(gate_info);
         let (up_in, up_out) = Self::matmul_dims(up_info);
         let (dn_in, dn_out) = Self::matmul_dims(down_info);
-        if gate_in > n_embd || up_in != gate_in || up_out != n_ffn || dn_in != n_ffn || dn_out < n_embd {
+        if gate_in > n_embd
+            || up_in != gate_in
+            || up_out != n_ffn
+            || dn_in != n_ffn
+            || dn_out < n_embd
+        {
             return false;
         }
-        let gate_raw = match crate::ggml_quants::fetch_tensor_bytes(mmap, index.tensor_data_start, gate_info)
-        {
+        let gate_raw = match crate::ggml_quants::fetch_tensor_bytes(
+            mmap,
+            index.tensor_data_start,
+            gate_info,
+        ) {
             Ok(s) => s,
             Err(_) => return false,
         };
-        let up_raw = match crate::ggml_quants::fetch_tensor_bytes(mmap, index.tensor_data_start, up_info) {
-            Ok(s) => s,
-            Err(_) => return false,
-        };
-        let down_raw =
-            match crate::ggml_quants::fetch_tensor_bytes(mmap, index.tensor_data_start, down_info) {
+        let up_raw =
+            match crate::ggml_quants::fetch_tensor_bytes(mmap, index.tensor_data_start, up_info) {
                 Ok(s) => s,
                 Err(_) => return false,
             };
+        let down_raw = match crate::ggml_quants::fetch_tensor_bytes(
+            mmap,
+            index.tensor_data_start,
+            down_info,
+        ) {
+            Ok(s) => s,
+            Err(_) => return false,
+        };
         let base_save = match self.prefill_scratch_buf.as_ref() {
             Some(b) => b,
             None => return false,
         };
-        pipeline.encoder.copy_buffer_to_buffer(token_hidden, 0, base_save, 0, emb_bytes);
+        pipeline
+            .encoder
+            .copy_buffer_to_buffer(token_hidden, 0, base_save, 0, emb_bytes);
         self.mc8_flush(pipeline);
         if let Some(norm) = tensors.ffn_norm.as_ref() {
             if !self.upload_norm_weights(mmap, index.tensor_data_start, norm, n_embd) {
@@ -775,10 +784,14 @@ impl QTensorEngine {
                 aux_buf,
             );
         } else {
-            pipeline.encoder.copy_buffer_to_buffer(token_hidden, 0, aux_buf, 0, emb_bytes);
+            pipeline
+                .encoder
+                .copy_buffer_to_buffer(token_hidden, 0, aux_buf, 0, emb_bytes);
         }
         self.mc8_flush(pipeline);
-        if !self.encode_gemm_bufs(pipeline, gate_info, gate_raw, gate_in, n_ffn, aux_buf, work_buf) {
+        if !self.encode_gemm_bufs(
+            pipeline, gate_info, gate_raw, gate_in, n_ffn, aux_buf, work_buf,
+        ) {
             return false;
         }
         self.mc8_flush(pipeline);
@@ -796,7 +809,9 @@ impl QTensorEngine {
             aux_buf,
         );
         self.mc8_flush(pipeline);
-        if !self.encode_gemm_bufs(pipeline, down_info, down_raw, dn_in, dn_out, aux_buf, work_buf) {
+        if !self.encode_gemm_bufs(
+            pipeline, down_info, down_raw, dn_in, dn_out, aux_buf, work_buf,
+        ) {
             return false;
         }
         self.mc8_flush(pipeline);
@@ -852,14 +867,16 @@ impl QTensorEngine {
         if tensors.attn_q.is_none() {
             return false;
         }
-        let k_raw = match crate::ggml_quants::fetch_tensor_bytes(mmap, index.tensor_data_start, k_info) {
-            Ok(s) => s,
-            Err(_) => return false,
-        };
-        let v_raw = match crate::ggml_quants::fetch_tensor_bytes(mmap, index.tensor_data_start, v_info) {
-            Ok(s) => s,
-            Err(_) => return false,
-        };
+        let k_raw =
+            match crate::ggml_quants::fetch_tensor_bytes(mmap, index.tensor_data_start, k_info) {
+                Ok(s) => s,
+                Err(_) => return false,
+            };
+        let v_raw =
+            match crate::ggml_quants::fetch_tensor_bytes(mmap, index.tensor_data_start, v_info) {
+                Ok(s) => s,
+                Err(_) => return false,
+            };
 
         let attn_input = if let Some(norm) = tensors.attn_norm.as_ref() {
             if !self.upload_norm_weights(mmap, index.tensor_data_start, norm, n_embd) {
@@ -1018,11 +1035,8 @@ impl QTensorEngine {
         let batch_buf = self.gemm_input_buf.as_ref().unwrap();
         let token_buf = self.gemm_output_buf.as_ref().unwrap();
         let norm_buf = self.norm_weight_buf.as_ref().unwrap();
-        self.gpu_queue().write_buffer(
-            batch_buf,
-            0,
-            bytemuck::cast_slice(&hidden[..n_embd]),
-        );
+        self.gpu_queue()
+            .write_buffer(batch_buf, 0, bytemuck::cast_slice(&hidden[..n_embd]));
         let mmap = match self.gguf_mmap.as_deref() {
             Some(m) => m,
             None => return 0,
@@ -1037,7 +1051,11 @@ impl QTensorEngine {
         // flush only at MC8_LAYERS_PER_ENCODER chunk boundaries → 1 submit for ≤64-layer models (vs
         // the old 2/layer). Per-layer write_buffer races are gone (resident norms + accumulating
         // cursors), so KV/work-buffer visibility relies on WebGPU intra-encoder barriers.
-        let mut layer_uniform_cursors = Mc8ChunkUniformCursors { attn: 0, elem: 0, gemm: 0 };
+        let mut layer_uniform_cursors = Mc8ChunkUniformCursors {
+            attn: 0,
+            elem: 0,
+            gemm: 0,
+        };
         let mut enc = WasmGpuPipeline::begin(self);
         for layer in 0..limit {
             if layer > 0 && (layer % MC8_LAYERS_PER_ENCODER) == 0 {
@@ -1053,14 +1071,18 @@ impl QTensorEngine {
                 Some(i) => i,
                 None => break,
             };
-            let k_raw = match crate::ggml_quants::fetch_tensor_bytes(mmap, index.tensor_data_start, k_info) {
-                Ok(s) => s,
-                Err(_) => break,
-            };
-            let v_raw = match crate::ggml_quants::fetch_tensor_bytes(mmap, index.tensor_data_start, v_info) {
-                Ok(s) => s,
-                Err(_) => break,
-            };
+            let k_raw =
+                match crate::ggml_quants::fetch_tensor_bytes(mmap, index.tensor_data_start, k_info)
+                {
+                    Ok(s) => s,
+                    Err(_) => break,
+                };
+            let v_raw =
+                match crate::ggml_quants::fetch_tensor_bytes(mmap, index.tensor_data_start, v_info)
+                {
+                    Ok(s) => s,
+                    Err(_) => break,
+                };
             let h = index.hyperparams;
             let n_kv = h.effective_n_kv_head();
             let used_attn_norm = tensors.attn_norm.is_some();
@@ -1085,9 +1107,14 @@ impl QTensorEngine {
                 if let (Some(norm), Some(off)) =
                     (tensors.attn_norm.as_ref(), uniforms.attn_norm_elem_off)
                 {
-                    let (norm_b, norm_b_off) = match self
-                        .mc8_norm_source(mmap, index.tensor_data_start, norm, n_embd, layer, false)
-                    {
+                    let (norm_b, norm_b_off) = match self.mc8_norm_source(
+                        mmap,
+                        index.tensor_data_start,
+                        norm,
+                        n_embd,
+                        layer,
+                        false,
+                    ) {
                         Some(v) => v,
                         None => break,
                     };
@@ -1126,16 +1153,44 @@ impl QTensorEngine {
             let k_proj = self.mc8_k_proj_buf.as_ref().unwrap();
             let v_proj = self.mc8_v_proj_buf.as_ref().unwrap();
             if !self.encode_gemm_bufs_offset(
-                &mut enc, k_info, k_raw, n_embd, kv_dim, attn_src, 0, geom.batch_in_bytes,
-                k_proj, 0, kv_proj_bytes, n_tokens, n_embd as u32, kv_dim as u32,
-                uniforms.off_k_gemm, layer, Mc8WeightRole::AttnK,
+                &mut enc,
+                k_info,
+                k_raw,
+                n_embd,
+                kv_dim,
+                attn_src,
+                0,
+                geom.batch_in_bytes,
+                k_proj,
+                0,
+                kv_proj_bytes,
+                n_tokens,
+                n_embd as u32,
+                kv_dim as u32,
+                uniforms.off_k_gemm,
+                layer,
+                Mc8WeightRole::AttnK,
             ) {
                 break;
             }
             if !self.encode_gemm_bufs_offset(
-                &mut enc, v_info, v_raw, n_embd, kv_dim, attn_src, 0, geom.batch_in_bytes,
-                v_proj, 0, kv_proj_bytes, n_tokens, n_embd as u32, kv_dim as u32,
-                uniforms.off_v_gemm, layer, Mc8WeightRole::AttnV,
+                &mut enc,
+                v_info,
+                v_raw,
+                n_embd,
+                kv_dim,
+                attn_src,
+                0,
+                geom.batch_in_bytes,
+                v_proj,
+                0,
+                kv_proj_bytes,
+                n_tokens,
+                n_embd as u32,
+                kv_dim as u32,
+                uniforms.off_v_gemm,
+                layer,
+                Mc8WeightRole::AttnV,
             ) {
                 break;
             }
@@ -1237,11 +1292,8 @@ impl QTensorEngine {
         for i in 0..gamma {
             let cur = *ctx.last().unwrap();
             let token_idx = ctx.len().saturating_sub(1) as u32;
-            let hidden_ok = index.dequantize_token_embedding_into(
-                mmap.as_ref(),
-                cur,
-                &mut emb_buf[..emb_dim],
-            );
+            let hidden_ok =
+                index.dequantize_token_embedding_into(mmap.as_ref(), cur, &mut emb_buf[..emb_dim]);
             if hidden_ok == 0 {
                 break;
             }
@@ -1278,5 +1330,4 @@ impl QTensorEngine {
         }
         accepted
     }
-
 }

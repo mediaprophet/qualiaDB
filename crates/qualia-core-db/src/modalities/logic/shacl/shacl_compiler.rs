@@ -3,11 +3,11 @@
 //! Translates SHACL shape constraints into deterministic `SlgOpcode` sequences
 //! for the Webizen SLG VM.
 
-use crate::webizen::SlgOpcode;
 use super::shacl_extension_bridge::append_extension_opcodes;
 use super::shacl_types::{
-    ShaclConstraint, ShaclSeverity, ShaclTarget, CompiledShape, NodeKindType,
+    CompiledShape, NodeKindType, ShaclConstraint, ShaclSeverity, ShaclTarget,
 };
+use crate::webizen::SlgOpcode;
 
 /// SHACL Compiler
 pub struct ShaclCompiler;
@@ -205,7 +205,9 @@ impl ShaclCompiler {
             ShaclConstraint::DeonticPolicy { .. } => {
                 opcodes.push(SlgOpcode::NativeDeonticEval);
             }
-            ShaclConstraint::EpistemicConstraint { certainty_threshold } => {
+            ShaclConstraint::EpistemicConstraint {
+                certainty_threshold,
+            } => {
                 let min = (*certainty_threshold * 255.0).clamp(0.0, 255.0) as u8;
                 opcodes.push(SlgOpcode::NativeEpistemicEval(min));
             }
@@ -311,7 +313,9 @@ mod tests {
         let compiler = ShaclCompiler::new();
         let ops = compiler.compile_shape("ex:Person", "ex:age", "minInclusive", 18.0);
         assert!(!ops.is_empty());
-        assert!(ops.iter().any(|o| matches!(o, SlgOpcode::CheckMinInclusive(v) if *v == 18.0)));
+        assert!(ops
+            .iter()
+            .any(|o| matches!(o, SlgOpcode::CheckMinInclusive(v) if *v == 18.0)));
     }
 
     #[test]
@@ -321,7 +325,9 @@ mod tests {
             &ShaclConstraint::Or(vec!["ex:A".into(), "ex:B".into()]),
             &mut opcodes,
         );
-        assert!(opcodes.iter().any(|o| matches!(o, SlgOpcode::SoftCheckNodeShape(_))));
+        assert!(opcodes
+            .iter()
+            .any(|o| matches!(o, SlgOpcode::SoftCheckNodeShape(_))));
         assert!(opcodes.contains(&SlgOpcode::RequireAnyShape));
     }
 

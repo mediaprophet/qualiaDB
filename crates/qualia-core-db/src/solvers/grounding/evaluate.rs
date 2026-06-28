@@ -30,7 +30,10 @@ pub fn grounding_verdict(score: f64, thresholds: GroundingThresholds) -> Groundi
 /// Resolve a slice of provenance citation hashes to their fact quins via `resolver`,
 /// dropping any that do not resolve. The output is what [`evaluate_grounding`] consumes.
 pub fn resolve_citations(citations: &[u64], resolver: &dyn GroundingResolver) -> Vec<NQuin> {
-    citations.iter().filter_map(|&h| resolver.resolve(h)).collect()
+    citations
+        .iter()
+        .filter_map(|&h| resolver.resolve(h))
+        .collect()
 }
 
 /// End-to-end gate input: resolve the citations and grade the claim in one call. If no
@@ -54,7 +57,14 @@ mod tests {
     use std::collections::HashMap;
 
     fn quin(s: u64, p: u64, o: u64) -> NQuin {
-        NQuin { subject: s, predicate: p, object: o, context: 0, metadata: 0, parity: 0 }
+        NQuin {
+            subject: s,
+            predicate: p,
+            object: o,
+            context: 0,
+            metadata: 0,
+            parity: 0,
+        }
     }
 
     /// A stub store mapping citation hash → fact quin.
@@ -96,7 +106,12 @@ mod tests {
         m.insert(0xBB, quin(9, 9, 9));
         let resolver = MapResolver(m);
         let claim = quin(1, 2, 3);
-        let v = evaluate_output_grounding(&claim, &[0xAA, 0xBB], &resolver, GroundingThresholds::default());
+        let v = evaluate_output_grounding(
+            &claim,
+            &[0xAA, 0xBB],
+            &resolver,
+            GroundingThresholds::default(),
+        );
         assert!(v.is_grounded());
     }
 
@@ -105,7 +120,8 @@ mod tests {
         let resolver = MapResolver(HashMap::new());
         let claim = quin(1, 2, 3);
         // Citation hash present but nothing resolves it → no evidence → ungrounded.
-        let v = evaluate_output_grounding(&claim, &[0x123], &resolver, GroundingThresholds::default());
+        let v =
+            evaluate_output_grounding(&claim, &[0x123], &resolver, GroundingThresholds::default());
         assert!(matches!(v, GroundingVerdict::Ungrounded { score } if score == 0.0));
     }
 }

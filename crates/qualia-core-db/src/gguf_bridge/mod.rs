@@ -361,9 +361,11 @@ pub(crate) async fn await_wgpu_map(slice: wgpu::BufferSlice<'_>) -> bool {
 impl WasmGpuPipeline {
     pub(crate) fn begin(engine: &QTensorEngine) -> Self {
         Self {
-            encoder: engine.device().create_command_encoder(&wgpu::CommandEncoderDescriptor {
-                label: Some("MC8FusedEncoder"),
-            }),
+            encoder: engine
+                .device()
+                .create_command_encoder(&wgpu::CommandEncoderDescriptor {
+                    label: Some("MC8FusedEncoder"),
+                }),
         }
     }
 
@@ -371,7 +373,6 @@ impl WasmGpuPipeline {
         self.encoder.finish()
     }
 }
-
 
 // WASM-only MC8 GPU engine methods (resident weight arena, fused-encoder prefill/decode, async
 // readback) carved into the `mc8_wasm` submodule. cfg-gated so native never compiles it.
@@ -497,16 +498,16 @@ pub(crate) use pipeline_cache::*;
 
 // Concern submodules — each holds an `impl QTensorEngine` block for one hot-path area. Methods are
 // pub(crate) so they call across modules freely; types/imports arrive via each file's `use super::*`.
+mod async_dispatch;
 mod attention;
 mod embedding;
 mod ffn;
-mod gemm;
-mod output;
 mod forward;
-mod async_dispatch;
-mod prefill_async;
+mod gemm;
 mod init;
 mod load;
+mod output;
+mod prefill_async;
 
 /// MC8 pt3e: max abs error over the first `n` elements.
 #[cfg(target_arch = "wasm32")]
@@ -589,7 +590,8 @@ async fn mc8_cpu_l0_ffn_stages(
     )
     .await?;
     let out_info = tensors.attn_output.as_ref()?;
-    let o_raw = crate::ggml_quants::fetch_tensor_bytes(mmap, index.tensor_data_start, out_info).ok()?;
+    let o_raw =
+        crate::ggml_quants::fetch_tensor_bytes(mmap, index.tensor_data_start, out_info).ok()?;
     let (o_in, _) = QTensorEngine::matmul_dims(out_info);
     if o_in > q_dim {
         return None;
@@ -623,9 +625,12 @@ async fn mc8_cpu_l0_ffn_stages(
     let gate_info = tensors.ffn_gate.as_ref()?;
     let up_info = tensors.ffn_up.as_ref()?;
     let down_info = tensors.ffn_down.as_ref()?;
-    let gate_raw = crate::ggml_quants::fetch_tensor_bytes(mmap, index.tensor_data_start, gate_info).ok()?;
-    let up_raw = crate::ggml_quants::fetch_tensor_bytes(mmap, index.tensor_data_start, up_info).ok()?;
-    let down_raw = crate::ggml_quants::fetch_tensor_bytes(mmap, index.tensor_data_start, down_info).ok()?;
+    let gate_raw =
+        crate::ggml_quants::fetch_tensor_bytes(mmap, index.tensor_data_start, gate_info).ok()?;
+    let up_raw =
+        crate::ggml_quants::fetch_tensor_bytes(mmap, index.tensor_data_start, up_info).ok()?;
+    let down_raw =
+        crate::ggml_quants::fetch_tensor_bytes(mmap, index.tensor_data_start, down_info).ok()?;
     let (gate_in, n_ffn) = QTensorEngine::matmul_dims(gate_info);
     let (up_in, up_out) = QTensorEngine::matmul_dims(up_info);
     let (dn_in, dn_out) = QTensorEngine::matmul_dims(down_info);
@@ -638,7 +643,14 @@ async fn mc8_cpu_l0_ffn_stages(
     {
         return None;
     }
-    if !stack_gemm_quant(gate_raw, gate_info, normed, &mut gate[..n_ffn], gate_in, n_ffn) {
+    if !stack_gemm_quant(
+        gate_raw,
+        gate_info,
+        normed,
+        &mut gate[..n_ffn],
+        gate_in,
+        n_ffn,
+    ) {
         return None;
     }
     if !stack_gemm_quant(up_raw, up_info, normed, &mut up[..n_ffn], up_in, n_ffn) {
@@ -649,7 +661,14 @@ async fn mc8_cpu_l0_ffn_stages(
         let silu = g / (1.0 + (-g).exp());
         swiglu[i] = silu * up[i];
     }
-    if !stack_gemm_quant(down_raw, down_info, &swiglu[..dn_in], &mut down[..n_embd], dn_in, n_embd) {
+    if !stack_gemm_quant(
+        down_raw,
+        down_info,
+        &swiglu[..dn_in],
+        &mut down[..n_embd],
+        dn_in,
+        n_embd,
+    ) {
         return None;
     }
     Some(n_ffn)
@@ -735,7 +754,8 @@ async fn mc8_cpu_l0_attn_out(
         &mut norm_w,
     );
     let q_info = tensors.attn_q.as_ref()?;
-    let q_raw = crate::ggml_quants::fetch_tensor_bytes(mmap, index.tensor_data_start, q_info).ok()?;
+    let q_raw =
+        crate::ggml_quants::fetch_tensor_bytes(mmap, index.tensor_data_start, q_info).ok()?;
     let (q_in, q_out) = QTensorEngine::matmul_dims(q_info);
     if q_out != q_dim || !stack_gemm_quant(q_raw, q_info, normed, &mut proj[..q_out], q_in, q_out) {
         return None;
@@ -762,7 +782,15 @@ async fn mc8_cpu_l0_attn_out(
         for past_pos in 0..=token_idx {
             let past_slot = layout.ring_slot(past_pos);
             if !engine
-                .pipeline_read_kv_head(layout, 0, past_slot, kv_h as u32, head_dim, true, &mut k_slot)
+                .pipeline_read_kv_head(
+                    layout,
+                    0,
+                    past_slot,
+                    kv_h as u32,
+                    head_dim,
+                    true,
+                    &mut k_slot,
+                )
                 .await
             {
                 return None;
@@ -786,7 +814,15 @@ async fn mc8_cpu_l0_attn_out(
                 let prob = att_scores[past_pos as usize] / sum_exp;
                 let past_slot = layout.ring_slot(past_pos);
                 if !engine
-                    .pipeline_read_kv_head(layout, 0, past_slot, kv_h as u32, head_dim, false, &mut v_slot)
+                    .pipeline_read_kv_head(
+                        layout,
+                        0,
+                        past_slot,
+                        kv_h as u32,
+                        head_dim,
+                        false,
+                        &mut v_slot,
+                    )
                     .await
                 {
                     return None;
@@ -830,19 +866,16 @@ pub fn reset_gpu_wait_count() {
 /// In-place NEOX-style RoPE over `n_heads` consecutive `head_dim` blocks of `vec`.
 /// Rotates split-half pairs `(i, i + head_dim/2)` — required for Llama/SmolLM2 GGUF weights.
 /// (`fused_attention.wgsl` mirrors this NEOX split-half layout since MC8 Part 2.)
-fn rope_inplace(
-    vec: &mut [f32],
-    n_heads: usize,
-    head_dim: usize,
-    pos: u32,
-    base: f32,
-    scale: f32,
-) {
+fn rope_inplace(vec: &mut [f32], n_heads: usize, head_dim: usize, pos: u32, base: f32, scale: f32) {
     let half = head_dim / 2;
     if half == 0 {
         return;
     }
-    let scale = if scale > 0.0 && scale.is_finite() { scale } else { 1.0 };
+    let scale = if scale > 0.0 && scale.is_finite() {
+        scale
+    } else {
+        1.0
+    };
     let scaled_pos = pos as f32 / scale;
     for head in 0..n_heads {
         let off = head * head_dim;
@@ -872,7 +905,9 @@ mod rope_stem_parity_tests {
         let n_heads = 2usize;
         let head_dim = 8usize;
         let (pos, base, scale) = (7u32, 10000.0f32, 1.0f32);
-        let xs: Vec<f32> = (0..n_heads * head_dim).map(|i| (i as f32 - 8.0) * 0.25).collect();
+        let xs: Vec<f32> = (0..n_heads * head_dim)
+            .map(|i| (i as f32 - 8.0) * 0.25)
+            .collect();
 
         let mut got = xs.clone();
         super::rope_inplace(&mut got, n_heads, head_dim, pos, base, scale);
@@ -1093,7 +1128,6 @@ pub struct QTensorEngine {
     mc8_norm_stride: u32,
 }
 
-
 #[cfg(target_arch = "wasm32")]
 thread_local! {
     pub static WASM_ENGINE_INSTANCE: std::cell::RefCell<Option<QTensorEngine>> = std::cell::RefCell::new(None);
@@ -1107,9 +1141,9 @@ pub async fn initialize_webgpu_engine(gguf_data: std::sync::Arc<[u8]>) -> Result
     // pending forever (the "stuck on Initialising…" hang).
     let mut engine = QTensorEngine::try_new().await?;
     // Dual-format boot gate: inspect the first 4 magic bytes.
-    //   b"Q42W" → Phase 4 AOT container (validate CRC, map blobs straight into the arenas).
+    //   b"P64" → Phase 4 AOT container (validate CRC, map blobs straight into the arenas).
     //   else    → legacy GGUF (parse metadata, reserve GEMM + KV arenas).
-    if gguf_data.len() >= 4 && gguf_data[0..4] == *b"Q42W" {
+    if gguf_data.len() >= 4 && gguf_data[0..4] == *b"P64" {
         engine.adopt_resident_q42(gguf_data)?;
     } else {
         engine.adopt_resident_mmap(gguf_data)?;

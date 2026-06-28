@@ -13,28 +13,28 @@ pub mod ma_ont {
     pub const HAS_TEMPORAL_FRAGMENT: u64 = 0x23456789ABCDEF01; // http://www.w3.org/ns/ma-ont#hasTemporalFragment
     pub const HAS_SPATIAL_FRAGMENT: u64 = 0x3456789ABCDEF012; // http://www.w3.org/ns/ma-ont#hasSpatialFragment
     pub const HAS_TRACK_FRAGMENT: u64 = 0x456789ABCDEF0123; // http://www.w3.org/ns/ma-ont#hasTrackFragment
-    
+
     // Temporal properties
     pub const HAS_START_TIME: u64 = 0x56789ABCDEF01234; // http://www.w3.org/ns/ma-ont#hasStartTime
     pub const HAS_END_TIME: u64 = 0x6789ABCDEF012345; // http://www.w3.org/ns/ma-ont#hasEndTime
     pub const DURATION: u64 = 0x789ABCDEF0123456; // http://www.w3.org/ns/ma-ont#duration
-    
+
     // Spatial properties
     pub const HAS_X: u64 = 0x89ABCDEF01234567; // http://www.w3.org/ns/ma-ont#hasX
     pub const HAS_Y: u64 = 0x9ABCDEF012345678; // http://www.w3.org/ns/ma-ont#hasY
     pub const HAS_WIDTH: u64 = 0xABCDEF0123456789; // http://www.w3.org/ns/ma-ont#hasWidth
     pub const HAS_HEIGHT: u64 = 0xBCDEF0123456789A; // http://www.w3.org/ns/ma-ont#hasHeight
-    
+
     // Track properties
     pub const HAS_TRACK: u64 = 0xCDEF0123456789AB; // http://www.w3.org/ns/ma-ont#hasTrack
     pub const HAS_TRACK_NAME: u64 = 0xDEF0123456789ABC; // http://www.w3.org/ns/ma-ont#hasTrackName
     pub const HAS_TRACK_NUMBER: u64 = 0xEF0123456789ABCD; // http://www.w3.org/ns/ma-ont#hasTrackNumber
-    
+
     // Format properties
     pub const HAS_FORMAT: u64 = 0xF0123456789ABCDE; // http://www.w3.org/ns/ma-ont#hasFormat
     pub const HAS_MIME_TYPE: u64 = 0x0123456789ABCDEF; // http://www.w3.org/ns/ma-ont#hasMimeType
     pub const HAS_CODEC: u64 = 0x123456789ABCDEF0; // http://www.w3.org/ns/ma-ont#hasCodec
-    
+
     // Quality properties
     pub const HAS_BITRATE: u64 = 0x23456789ABCDEF01; // http://www.w3.org/ns/ma-ont#hasBitrate
     pub const HAS_FRAMERATE: u64 = 0x3456789ABCDEF012; // http://www.w3.org/ns/ma-ont#hasFramerate
@@ -50,19 +50,19 @@ pub mod c2pa {
     pub const HAS_SIGNATURE: u64 = 0x89ABCDEF01234567; // http://ns.c2pa.org/signature/hasSignature
     pub const HAS_PROVENANCE: u64 = 0x9ABCDEF012345678; // http://ns.c2pa.org/provenance/hasProvenance
     pub const HAS_ASSERTION: u64 = 0xABCDEF0123456789; // http://ns.c2pa.org/assertion/hasAssertion
-    
+
     // Provenance predicates
     pub const CREATED_AT: u64 = 0xBCDEF0123456789A; // http://ns.c2pa.org/provenance/createdAt
     pub const CREATED_BY: u64 = 0xCDEF0123456789AB; // http://ns.c2pa.org/provenance/createdBy
     pub const MODIFIED_AT: u64 = 0xDEF0123456789ABC; // http://ns.c2pa.org/provenance/modifiedAt
     pub const MODIFIED_BY: u64 = 0xEF0123456789ABCD; // http://ns.c2pa.org/provenance/modifiedBy
     pub const HAS_TOOL: u64 = 0xF0123456789ABCDE; // http://ns.c2pa.org/provenance/hasTool
-    
+
     // Asset relationship predicates
     pub const DERIVED_FROM: u64 = 0x0123456789ABCDEF; // http://ns.c2pa.org/asset/derivedFrom
     pub const COMPONENT_OF: u64 = 0x123456789ABCDEF0; // http://ns.c2pa.org/asset/componentOf
     pub const HAS_COMPONENT: u64 = 0x23456789ABCDEF01; // http://ns.c2pa.org/asset/hasComponent
-    
+
     // Validation predicates
     pub const IS_VERIFIED: u64 = 0x3456789ABCDEF012; // http://ns.c2pa.org/validation/isVerified
     pub const VERIFICATION_STATUS: u64 = 0x456789ABCDEF0123; // http://ns.c2pa.org/validation/verificationStatus
@@ -73,9 +73,20 @@ pub mod c2pa {
 #[repr(C)]
 #[derive(Debug, Clone, Copy, PartialEq, Eq)]
 pub enum MediaFragmentDimension {
-    Temporal { start: u64, end: u64 },
-    Spatial { x: u32, y: u32, width: u32, height: u32 },
-    Track { track_id: u64, track_number: u32 },
+    Temporal {
+        start: u64,
+        end: u64,
+    },
+    Spatial {
+        x: u32,
+        y: u32,
+        width: u32,
+        height: u32,
+    },
+    Track {
+        track_id: u64,
+        track_number: u32,
+    },
 }
 
 /// Media fragment
@@ -144,7 +155,7 @@ impl<'a> SparqlMmHandler<'a> {
 
         // Extract base media URI (before #)
         let base_uri = fragment_uri & 0xFFFFFFFFFFFFFF00;
-        
+
         // Simplified: extract dimensions from URI hash
         // In production, this would parse the actual URI string
         let temporal_hash = fragment_uri & 0xFFFF;
@@ -219,7 +230,12 @@ impl<'a> SparqlMmHandler<'a> {
     }
 
     /// Create a sliding time window
-    pub fn create_sliding_window(&mut self, size_ms: u64, slide_ms: u64, start_ms: u64) -> Result<u8, String> {
+    pub fn create_sliding_window(
+        &mut self,
+        size_ms: u64,
+        slide_ms: u64,
+        start_ms: u64,
+    ) -> Result<u8, String> {
         if self.window_count >= 64 {
             return Err("Window overflow".to_string());
         }
@@ -250,10 +266,13 @@ impl<'a> SparqlMmHandler<'a> {
 
     /// Query quins within a time window
     pub fn query_window(&self, window_id: u8, timestamp_field: u64) -> Result<Vec<&NQuin>, String> {
-        let window = self.windows.get(window_id as usize)
+        let window = self
+            .windows
+            .get(window_id as usize)
             .ok_or("Window ID out of bounds")?;
 
-        let results: Vec<&NQuin> = self.quins
+        let results: Vec<&NQuin> = self
+            .quins
             .iter()
             .filter(|quin| {
                 // Check if quin's timestamp is within window
@@ -267,7 +286,9 @@ impl<'a> SparqlMmHandler<'a> {
 
     /// Query media fragment
     pub fn query_media_fragment(&self, fragment_id: u8) -> Result<Vec<&NQuin>, String> {
-        let fragment = self.media_fragments.get(fragment_id as usize)
+        let fragment = self
+            .media_fragments
+            .get(fragment_id as usize)
             .ok_or("Fragment ID out of bounds")?;
 
         // Filter quins based on fragment dimensions
@@ -432,7 +453,7 @@ impl<'a> SparqlMmHandler<'a> {
         // 2. Get the certificate
         // 3. Verify the signature using the certificate
         // 4. Return true if valid
-        
+
         // Simplified: check if signature exists and is_verified is true
         let _signature = self.get_signature(media_uri)?;
         let verified = self.is_verified(media_uri)?;
@@ -462,7 +483,7 @@ pub fn mm_duration(args: &[u64], quins: &[NQuin], result: &mut BindingRow) -> bo
         return false;
     }
     let media_uri = args[0];
-    
+
     let handler = SparqlMmHandler::new(quins);
     match handler.get_media_duration(media_uri) {
         Ok(duration) => {
@@ -478,7 +499,7 @@ pub fn mm_dimensions(args: &[u64], quins: &[NQuin], result: &mut BindingRow) -> 
         return false;
     }
     let media_uri = args[0];
-    
+
     let handler = SparqlMmHandler::new(quins);
     match handler.get_media_dimensions(media_uri) {
         Ok((width, height)) => {
@@ -497,14 +518,19 @@ pub fn mm_temporal_fragment(args: &[u64], quins: &[NQuin], result: &mut BindingR
     let media_uri = args[0];
     let start = args[1];
     let end = args.get(2).copied().unwrap_or(start);
-    
+
     let mut handler = SparqlMmHandler::new(quins);
     let fragment = MediaFragment {
         media_uri,
-        dimensions: [Some(MediaFragmentDimension::Temporal { start, end }), None, None, None],
+        dimensions: [
+            Some(MediaFragmentDimension::Temporal { start, end }),
+            None,
+            None,
+            None,
+        ],
         dimension_count: 1,
     };
-    
+
     match handler.add_media_fragment(fragment) {
         Ok(_) => {
             result.slots[0] = Some(1); // Success
@@ -520,7 +546,7 @@ pub fn ma_format(args: &[u64], quins: &[NQuin], result: &mut BindingRow) -> bool
         return false;
     }
     let media_uri = args[0];
-    
+
     let handler = SparqlMmHandler::new(quins);
     match handler.get_media_format(media_uri) {
         Ok(format) => {
@@ -536,7 +562,7 @@ pub fn ma_mime_type(args: &[u64], quins: &[NQuin], result: &mut BindingRow) -> b
         return false;
     }
     let media_uri = args[0];
-    
+
     let handler = SparqlMmHandler::new(quins);
     match handler.get_media_mime_type(media_uri) {
         Ok(mime_type) => {
@@ -552,7 +578,7 @@ pub fn ma_codec(args: &[u64], quins: &[NQuin], result: &mut BindingRow) -> bool 
         return false;
     }
     let media_uri = args[0];
-    
+
     let handler = SparqlMmHandler::new(quins);
     match handler.get_media_codec(media_uri) {
         Ok(codec) => {
@@ -568,7 +594,7 @@ pub fn ma_bitrate(args: &[u64], quins: &[NQuin], result: &mut BindingRow) -> boo
         return false;
     }
     let media_uri = args[0];
-    
+
     let handler = SparqlMmHandler::new(quins);
     match handler.get_media_bitrate(media_uri) {
         Ok(bitrate) => {
@@ -583,7 +609,7 @@ pub fn ma_framerate(args: &[u64], quins: &[NQuin], result: &mut BindingRow) -> b
         return false;
     }
     let media_uri = args[0];
-    
+
     let handler = SparqlMmHandler::new(quins);
     match handler.get_media_framerate(media_uri) {
         Ok(framerate) => {
@@ -602,7 +628,7 @@ pub fn c2pa_credential(args: &[u64], quins: &[NQuin], result: &mut BindingRow) -
         return false;
     }
     let media_uri = args[0];
-    
+
     let handler = SparqlMmHandler::new(quins);
     match handler.get_credential(media_uri) {
         Ok(credential) => {
@@ -619,7 +645,7 @@ pub fn c2pa_is_verified(args: &[u64], quins: &[NQuin], result: &mut BindingRow) 
         return false;
     }
     let media_uri = args[0];
-    
+
     let handler = SparqlMmHandler::new(quins);
     match handler.is_verified(media_uri) {
         Ok(verified) => {
@@ -636,7 +662,7 @@ pub fn c2pa_verification_status(args: &[u64], quins: &[NQuin], result: &mut Bind
         return false;
     }
     let media_uri = args[0];
-    
+
     let handler = SparqlMmHandler::new(quins);
     match handler.get_verification_status(media_uri) {
         Ok(status) => {
@@ -653,7 +679,7 @@ pub fn c2pa_created_at(args: &[u64], quins: &[NQuin], result: &mut BindingRow) -
         return false;
     }
     let media_uri = args[0];
-    
+
     let handler = SparqlMmHandler::new(quins);
     match handler.get_created_at(media_uri) {
         Ok(timestamp) => {
@@ -670,7 +696,7 @@ pub fn c2pa_created_by(args: &[u64], quins: &[NQuin], result: &mut BindingRow) -
         return false;
     }
     let media_uri = args[0];
-    
+
     let handler = SparqlMmHandler::new(quins);
     match handler.get_created_by(media_uri) {
         Ok(creator) => {
@@ -687,7 +713,7 @@ pub fn c2pa_verify_signature(args: &[u64], quins: &[NQuin], result: &mut Binding
         return false;
     }
     let media_uri = args[0];
-    
+
     let handler = SparqlMmHandler::new(quins);
     match handler.verify_signature(media_uri) {
         Ok(verified) => {
@@ -704,7 +730,7 @@ pub fn c2pa_derived_from(args: &[u64], quins: &[NQuin], result: &mut BindingRow)
         return false;
     }
     let media_uri = args[0];
-    
+
     let handler = SparqlMmHandler::new(quins);
     match handler.get_derived_from(media_uri) {
         Ok(source) => {
@@ -730,7 +756,7 @@ mod tests {
     fn test_create_tumbling_window() {
         let quins = vec![];
         let mut handler = SparqlMmHandler::new(&quins);
-        
+
         let result = handler.create_tumbling_window(1000, 0);
         assert!(result.is_ok());
         assert_eq!(handler.window_count, 1);
@@ -740,7 +766,7 @@ mod tests {
     fn test_create_sliding_window() {
         let quins = vec![];
         let mut handler = SparqlMmHandler::new(&quins);
-        
+
         let result = handler.create_sliding_window(1000, 500, 0);
         assert!(result.is_ok());
         assert_eq!(handler.window_count, 1);
@@ -750,7 +776,7 @@ mod tests {
     fn test_parse_media_fragment() {
         let quins = vec![];
         let mut handler = SparqlMmHandler::new(&quins);
-        
+
         let fragment = handler.parse_media_fragment(12345).unwrap();
         assert_eq!(fragment.media_uri, 12345);
     }

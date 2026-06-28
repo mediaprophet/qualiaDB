@@ -1,31 +1,29 @@
 //! Linear Algebra Library - High-Performance Mathematical Computing
-//! 
+//!
 //! This module provides high-performance linear algebra operations leveraging Phase 2 enhancements:
 //! - Hardware-Sympathetic Storage (ZNS) for zero-copy matrix operations
 //! - NVMe Computational Storage (CSD) for hardware-accelerated computations
 //! - Zero-Knowledge Semantic Proofs for privacy-preserving linear algebra
 //! - Ambient Sub-Threshold Orchestration for mobile optimization
-pub mod core_types;
-pub mod storage;
 pub mod computation;
+pub mod core_types;
 pub mod optimization;
-pub mod privacy;
 pub mod performance;
+pub mod privacy;
+pub mod storage;
 
-pub use core_types::*;
-pub use storage::*;
 pub use computation::*;
+pub use core_types::*;
 pub use optimization::*;
-pub use privacy::*;
 pub use performance::*;
+pub use privacy::*;
+pub use storage::*;
 
-use std::collections::HashMap;
-use std::sync::{Arc, Mutex};
-use std::ops::{Add, Mul, Sub};
-use serde::{Deserialize, Serialize};
 use crate::solvers::SolversError;
-
-
+use serde::{Deserialize, Serialize};
+use std::collections::HashMap;
+use std::ops::{Add, Mul, Sub};
+use std::sync::{Arc, Mutex};
 
 #[cfg(test)]
 mod tests {
@@ -41,10 +39,12 @@ mod tests {
     fn test_matrix_creation() {
         let mut library = LinearAlgebraLibrary::new();
         library.initialize().unwrap();
-        
+
         let data = vec![1.0, 2.0, 3.0, 4.0];
-        let matrix = library.create_matrix("test_matrix".to_string(), 2, 2, DataType::Float64, data).unwrap();
-        
+        let matrix = library
+            .create_matrix("test_matrix".to_string(), 2, 2, DataType::Float64, data)
+            .unwrap();
+
         assert_eq!(matrix.rows, 2);
         assert_eq!(matrix.cols, 2);
         assert_eq!(matrix.data.len(), 4);
@@ -54,15 +54,19 @@ mod tests {
     fn test_matrix_multiplication() {
         let mut library = LinearAlgebraLibrary::new();
         library.initialize().unwrap();
-        
+
         let a_data = vec![1.0, 2.0, 3.0, 4.0];
         let b_data = vec![5.0, 6.0, 7.0, 8.0];
-        
-        library.create_matrix("A".to_string(), 2, 2, DataType::Float64, a_data).unwrap();
-        library.create_matrix("B".to_string(), 2, 2, DataType::Float64, b_data).unwrap();
-        
+
+        library
+            .create_matrix("A".to_string(), 2, 2, DataType::Float64, a_data)
+            .unwrap();
+        library
+            .create_matrix("B".to_string(), 2, 2, DataType::Float64, b_data)
+            .unwrap();
+
         let result = library.matrix_multiply("A", "B", "C", 1.0, 0.0).unwrap();
-        
+
         assert_eq!(result.result.rows, 2);
         assert_eq!(result.result.cols, 2);
         assert_eq!(result.result.data[0], 19.0); // 1*5 + 2*7
@@ -75,12 +79,14 @@ mod tests {
     fn test_matrix_transpose() {
         let mut library = LinearAlgebraLibrary::new();
         library.initialize().unwrap();
-        
+
         let data = vec![1.0, 2.0, 3.0, 4.0, 5.0, 6.0];
-        library.create_matrix("A".to_string(), 2, 3, DataType::Float64, data).unwrap();
-        
+        library
+            .create_matrix("A".to_string(), 2, 3, DataType::Float64, data)
+            .unwrap();
+
         let result = library.matrix_transpose("A", "AT").unwrap();
-        
+
         assert_eq!(result.result.rows, 3);
         assert_eq!(result.result.cols, 2);
         assert_eq!(result.result.data[0], 1.0);
@@ -95,12 +101,14 @@ mod tests {
     fn test_matrix_inverse() {
         let mut library = LinearAlgebraLibrary::new();
         library.initialize().unwrap();
-        
+
         let data = vec![2.0, 1.0, 1.0, 1.0]; // [[2,1],[1,1]]
-        library.create_matrix("A".to_string(), 2, 2, DataType::Float64, data).unwrap();
-        
+        library
+            .create_matrix("A".to_string(), 2, 2, DataType::Float64, data)
+            .unwrap();
+
         let result = library.matrix_inverse("A", "A_inv").unwrap();
-        
+
         assert_eq!(result.result.rows, 2);
         assert_eq!(result.result.cols, 2);
         // Inverse of [[2,1],[1,1]] is [[1,-1],[-1,2]]
@@ -114,15 +122,19 @@ mod tests {
     fn test_solve_linear_system() {
         let mut library = LinearAlgebraLibrary::new();
         library.initialize().unwrap();
-        
+
         let matrix_data = vec![2.0, 1.0, 1.0, 1.0]; // [[2,1],[1,1]]
         let rhs_data = vec![3.0, 2.0]; // [3,2]
-        
-        library.create_matrix("A".to_string(), 2, 2, DataType::Float64, matrix_data).unwrap();
-        library.create_matrix("b".to_string(), 2, 1, DataType::Float64, rhs_data).unwrap();
-        
+
+        library
+            .create_matrix("A".to_string(), 2, 2, DataType::Float64, matrix_data)
+            .unwrap();
+        library
+            .create_matrix("b".to_string(), 2, 1, DataType::Float64, rhs_data)
+            .unwrap();
+
         let result = library.solve_linear_system("A", "b", "x").unwrap();
-        
+
         assert_eq!(result.result.rows, 2);
         assert_eq!(result.result.cols, 1);
         // Solution should be [1,1] for 2x + y = 3, x + y = 2
@@ -145,7 +157,10 @@ mod tests {
     #[test]
     fn test_solve_quadratic_double_and_complex_and_linear() {
         // x² − 2x + 1 = 0 → double root 1
-        assert_eq!(solve_quadratic(1.0, -2.0, 1.0).unwrap(), QuadraticRoots::DoubleReal(1.0));
+        assert_eq!(
+            solve_quadratic(1.0, -2.0, 1.0).unwrap(),
+            QuadraticRoots::DoubleReal(1.0)
+        );
         // x² + 1 = 0 → ±i
         match solve_quadratic(1.0, 0.0, 1.0).unwrap() {
             QuadraticRoots::ComplexPair { re, im } => {
@@ -154,7 +169,10 @@ mod tests {
             other => panic!("expected complex pair, got {:?}", other),
         }
         // 0·x² + 2x − 4 = 0 → linear root 2
-        assert_eq!(solve_quadratic(0.0, 2.0, -4.0).unwrap(), QuadraticRoots::Linear(2.0));
+        assert_eq!(
+            solve_quadratic(0.0, 2.0, -4.0).unwrap(),
+            QuadraticRoots::Linear(2.0)
+        );
     }
 
     #[test]
@@ -199,7 +217,11 @@ mod tests {
         let a = [2.0, 1.0, 1.0, 2.0];
         let (mut vals, vecs) = eigen_symmetric(2, &a).unwrap();
         vals.sort_by(|x, y| x.partial_cmp(y).unwrap());
-        assert!((vals[0] - 1.0).abs() < 1e-9 && (vals[1] - 3.0).abs() < 1e-9, "vals = {:?}", vals);
+        assert!(
+            (vals[0] - 1.0).abs() < 1e-9 && (vals[1] - 3.0).abs() < 1e-9,
+            "vals = {:?}",
+            vals
+        );
 
         // Re-fetch unsorted to pair eigenvalue j with column j.
         let (vals_u, vecs_u) = eigen_symmetric(2, &a).unwrap();
@@ -209,8 +231,14 @@ mod tests {
             let av0 = a[0] * v0 + a[1] * v1;
             let av1 = a[2] * v0 + a[3] * v1;
             // λ·v
-            assert!((av0 - vals_u[j] * v0).abs() < 1e-7, "A·v != λ·v (row0, col{j})");
-            assert!((av1 - vals_u[j] * v1).abs() < 1e-7, "A·v != λ·v (row1, col{j})");
+            assert!(
+                (av0 - vals_u[j] * v0).abs() < 1e-7,
+                "A·v != λ·v (row0, col{j})"
+            );
+            assert!(
+                (av1 - vals_u[j] * v1).abs() < 1e-7,
+                "A·v != λ·v (row1, col{j})"
+            );
             // unit eigenvector
             assert!(((v0 * v0 + v1 * v1).sqrt() - 1.0).abs() < 1e-9);
         }
@@ -238,17 +266,25 @@ mod tests {
         for i in 0..n {
             l[i * n + i] = 1.0;
             for j in 0..n {
-                if j < i { l[i * n + j] = lu.lu[i * n + j]; }
-                else { u[i * n + j] = lu.lu[i * n + j]; }
+                if j < i {
+                    l[i * n + j] = lu.lu[i * n + j];
+                } else {
+                    u[i * n + j] = lu.lu[i * n + j];
+                }
             }
         }
         for i in 0..n {
             for j in 0..n {
                 let mut acc = 0.0;
-                for k in 0..n { acc += l[i * n + k] * u[k * n + j]; }
+                for k in 0..n {
+                    acc += l[i * n + k] * u[k * n + j];
+                }
                 // (L·U)[i][j] must equal A at the permuted original row.
                 let orig_row = lu.pivots[i];
-                assert!((acc - a[orig_row * n + j]).abs() < 1e-9, "LU != P·A at {i},{j}");
+                assert!(
+                    (acc - a[orig_row * n + j]).abs() < 1e-9,
+                    "LU != P·A at {i},{j}"
+                );
             }
         }
 
@@ -268,7 +304,9 @@ mod tests {
         // Rotation [[0,-1],[1,0]] → eigenvalues ±i (non-symmetric, complex).
         let r = eigenvalues_general(2, &[0.0, -1.0, 1.0, 0.0]).unwrap();
         assert_eq!(r.len(), 2);
-        assert!(r.iter().all(|z| z.re.abs() < 1e-6 && (z.im.abs() - 1.0).abs() < 1e-6));
+        assert!(r
+            .iter()
+            .all(|z| z.re.abs() < 1e-6 && (z.im.abs() - 1.0).abs() < 1e-6));
     }
 
     #[test]
@@ -312,16 +350,23 @@ mod tests {
     fn test_private_matrix_multiplication() {
         let mut library = LinearAlgebraLibrary::new();
         library.initialize().unwrap();
-        
+
         let a_data = vec![1.0, 2.0, 3.0, 4.0];
         let b_data = vec![5.0, 6.0, 7.0, 8.0];
-        
-        library.create_matrix("A".to_string(), 2, 2, DataType::Float64, a_data).unwrap();
-        library.create_matrix("B".to_string(), 2, 2, DataType::Float64, b_data).unwrap();
-        
+
+        library
+            .create_matrix("A".to_string(), 2, 2, DataType::Float64, a_data)
+            .unwrap();
+        library
+            .create_matrix("B".to_string(), 2, 2, DataType::Float64, b_data)
+            .unwrap();
+
         let result = library.private_matrix_multiply("A", "B", "C").unwrap();
 
-        assert!(result.privacy_preserved, "the Groth16 proof of A·B = C must verify");
+        assert!(
+            result.privacy_preserved,
+            "the Groth16 proof of A·B = C must verify"
+        );
         assert_eq!(result.result.rows, 2);
         assert_eq!(result.result.cols, 2);
         // The returned matrix is exactly what the ZK circuit attested: A·B.
@@ -335,10 +380,24 @@ mod tests {
         // signed field encoding. A is 2x3, B is 3x2.
         let mut library = LinearAlgebraLibrary::new();
         library.initialize().unwrap();
-        library.create_matrix("A".to_string(), 2, 3, DataType::Float64,
-            vec![1.0, 2.0, 3.0, 4.0, -5.0, 6.0]).unwrap();
-        library.create_matrix("B".to_string(), 3, 2, DataType::Float64,
-            vec![7.0, 8.0, 9.0, 10.0, 11.0, 12.0]).unwrap();
+        library
+            .create_matrix(
+                "A".to_string(),
+                2,
+                3,
+                DataType::Float64,
+                vec![1.0, 2.0, 3.0, 4.0, -5.0, 6.0],
+            )
+            .unwrap();
+        library
+            .create_matrix(
+                "B".to_string(),
+                3,
+                2,
+                DataType::Float64,
+                vec![7.0, 8.0, 9.0, 10.0, 11.0, 12.0],
+            )
+            .unwrap();
 
         let result = library.private_matrix_multiply("A", "B", "C").unwrap();
 
@@ -356,15 +415,32 @@ mod tests {
         // [[0.5,1.5],[2.5,0.5]] · [[1.0,0.0],[0.0,2.0]] = [[0.5,3.0],[2.5,1.0]]
         let mut library = LinearAlgebraLibrary::new();
         library.initialize().unwrap();
-        library.create_matrix("A".to_string(), 2, 2, DataType::Float64,
-            vec![0.5, 1.5, 2.5, 0.5]).unwrap();
-        library.create_matrix("B".to_string(), 2, 2, DataType::Float64,
-            vec![1.0, 0.0, 0.0, 2.0]).unwrap();
+        library
+            .create_matrix(
+                "A".to_string(),
+                2,
+                2,
+                DataType::Float64,
+                vec![0.5, 1.5, 2.5, 0.5],
+            )
+            .unwrap();
+        library
+            .create_matrix(
+                "B".to_string(),
+                2,
+                2,
+                DataType::Float64,
+                vec![1.0, 0.0, 0.0, 2.0],
+            )
+            .unwrap();
 
         let result = library.private_matrix_multiply("A", "B", "C").unwrap();
         assert!(result.privacy_preserved);
         for (got, want) in result.result.data.iter().zip([0.5, 3.0, 2.5, 1.0]) {
-            assert!((got - want).abs() < 1e-4, "fixed-point ZK result {got} != {want}");
+            assert!(
+                (got - want).abs() < 1e-4,
+                "fixed-point ZK result {got} != {want}"
+            );
         }
     }
 }
@@ -377,7 +453,6 @@ pub struct LinearAlgebraLibrary {
     pub privacy_engine: PrivacyEngine,
     pub performance_monitor: LAPerformanceMonitor,
 }
-
 
 impl LinearAlgebraLibrary {
     /// Create new linear algebra library
@@ -409,10 +484,19 @@ impl LinearAlgebraLibrary {
     }
 
     /// Create a new matrix
-    pub fn create_matrix(&mut self, matrix_id: String, rows: usize, cols: usize, data_type: DataType, data: Vec<f64>) -> Result<Matrix, LinearAlgebraError> {
+    pub fn create_matrix(
+        &mut self,
+        matrix_id: String,
+        rows: usize,
+        cols: usize,
+        data_type: DataType,
+        data: Vec<f64>,
+    ) -> Result<Matrix, LinearAlgebraError> {
         // Validate input
         if data.len() != rows * cols {
-            return Err(LinearAlgebraError::InvalidDimensions("Data size doesn't match dimensions".to_string()));
+            return Err(LinearAlgebraError::InvalidDimensions(
+                "Data size doesn't match dimensions".to_string(),
+            ));
         }
 
         // Create matrix metadata
@@ -448,7 +532,14 @@ impl LinearAlgebraLibrary {
     }
 
     /// Matrix multiplication with hardware acceleration
-    pub fn matrix_multiply(&mut self, left_id: &str, right_id: &str, result_id: &str, alpha: f64, beta: f64) -> Result<LinearAlgebraResult<Matrix>, LinearAlgebraError> {
+    pub fn matrix_multiply(
+        &mut self,
+        left_id: &str,
+        right_id: &str,
+        result_id: &str,
+        alpha: f64,
+        beta: f64,
+    ) -> Result<LinearAlgebraResult<Matrix>, LinearAlgebraError> {
         let start_time = std::time::Instant::now();
 
         // Get matrices
@@ -457,14 +548,20 @@ impl LinearAlgebraLibrary {
 
         // Validate dimensions
         if left.cols != right.rows {
-            return Err(LinearAlgebraError::InvalidDimensions("Matrix dimensions incompatible for multiplication".to_string()));
+            return Err(LinearAlgebraError::InvalidDimensions(
+                "Matrix dimensions incompatible for multiplication".to_string(),
+            ));
         }
 
         // Optimize operation
-        let optimized_operation = self.optimization_engine.optimize_multiplication(&left, &right)?;
+        let optimized_operation = self
+            .optimization_engine
+            .optimize_multiplication(&left, &right)?;
 
         // Execute multiplication
-        let result_data = self.computation_engine.execute_multiplication(&optimized_operation, alpha, beta)?;
+        let result_data =
+            self.computation_engine
+                .execute_multiplication(&optimized_operation, alpha, beta)?;
 
         // Create result matrix
         let result = self.create_matrix(
@@ -478,7 +575,8 @@ impl LinearAlgebraLibrary {
         let execution_time = start_time.elapsed().as_millis() as u64;
 
         // Update performance metrics
-        self.performance_monitor.record_operation("matrix_multiply", execution_time, 0);
+        self.performance_monitor
+            .record_operation("matrix_multiply", execution_time, 0);
 
         Ok(LinearAlgebraResult {
             result,
@@ -490,7 +588,13 @@ impl LinearAlgebraLibrary {
     }
 
     /// Matrix addition
-    pub fn matrix_add(&mut self, left_id: &str, right_id: &str, result_id: &str, alpha: f64) -> Result<LinearAlgebraResult<Matrix>, LinearAlgebraError> {
+    pub fn matrix_add(
+        &mut self,
+        left_id: &str,
+        right_id: &str,
+        result_id: &str,
+        alpha: f64,
+    ) -> Result<LinearAlgebraResult<Matrix>, LinearAlgebraError> {
         let start_time = std::time::Instant::now();
 
         // Get matrices
@@ -499,7 +603,9 @@ impl LinearAlgebraLibrary {
 
         // Validate dimensions
         if left.rows != right.rows || left.cols != right.cols {
-            return Err(LinearAlgebraError::InvalidDimensions("Matrix dimensions incompatible for addition".to_string()));
+            return Err(LinearAlgebraError::InvalidDimensions(
+                "Matrix dimensions incompatible for addition".to_string(),
+            ));
         }
 
         // Execute addition
@@ -520,7 +626,8 @@ impl LinearAlgebraLibrary {
         let execution_time = start_time.elapsed().as_millis() as u64;
 
         // Update performance metrics
-        self.performance_monitor.record_operation("matrix_add", execution_time, 0);
+        self.performance_monitor
+            .record_operation("matrix_add", execution_time, 0);
 
         Ok(LinearAlgebraResult {
             result,
@@ -532,7 +639,11 @@ impl LinearAlgebraLibrary {
     }
 
     /// Matrix transpose
-    pub fn matrix_transpose(&mut self, input_id: &str, result_id: &str) -> Result<LinearAlgebraResult<Matrix>, LinearAlgebraError> {
+    pub fn matrix_transpose(
+        &mut self,
+        input_id: &str,
+        result_id: &str,
+    ) -> Result<LinearAlgebraResult<Matrix>, LinearAlgebraError> {
         let start_time = std::time::Instant::now();
 
         // Get matrix
@@ -558,7 +669,8 @@ impl LinearAlgebraLibrary {
         let execution_time = start_time.elapsed().as_millis() as u64;
 
         // Update performance metrics
-        self.performance_monitor.record_operation("matrix_transpose", execution_time, 0);
+        self.performance_monitor
+            .record_operation("matrix_transpose", execution_time, 0);
 
         Ok(LinearAlgebraResult {
             result,
@@ -570,7 +682,11 @@ impl LinearAlgebraLibrary {
     }
 
     /// Matrix inverse
-    pub fn matrix_inverse(&mut self, input_id: &str, result_id: &str) -> Result<LinearAlgebraResult<Matrix>, LinearAlgebraError> {
+    pub fn matrix_inverse(
+        &mut self,
+        input_id: &str,
+        result_id: &str,
+    ) -> Result<LinearAlgebraResult<Matrix>, LinearAlgebraError> {
         let start_time = std::time::Instant::now();
 
         // Get matrix
@@ -578,13 +694,15 @@ impl LinearAlgebraLibrary {
 
         // Validate square matrix
         if input.rows != input.cols {
-            return Err(LinearAlgebraError::InvalidDimensions("Matrix must be square for inversion".to_string()));
+            return Err(LinearAlgebraError::InvalidDimensions(
+                "Matrix must be square for inversion".to_string(),
+            ));
         }
 
         // Execute inverse (simplified Gaussian elimination)
         let n = input.rows;
         let mut augmented = Vec::with_capacity(n * 2 * n);
-        
+
         // Create augmented matrix [A|I]
         for i in 0..n {
             for j in 0..n {
@@ -613,7 +731,9 @@ impl LinearAlgebraLibrary {
             // Eliminate column
             let pivot = augmented[i * 2 * n + i];
             if pivot.abs() < 1e-10 {
-                return Err(LinearAlgebraError::SingularMatrix("Matrix is singular".to_string()));
+                return Err(LinearAlgebraError::SingularMatrix(
+                    "Matrix is singular".to_string(),
+                ));
             }
 
             for j in 0..(2 * n) {
@@ -639,18 +759,14 @@ impl LinearAlgebraLibrary {
         }
 
         // Create result matrix
-        let result = self.create_matrix(
-            result_id.to_string(),
-            n,
-            n,
-            input.data_type,
-            result_data,
-        )?;
+        let result =
+            self.create_matrix(result_id.to_string(), n, n, input.data_type, result_data)?;
 
         let execution_time = start_time.elapsed().as_millis() as u64;
 
         // Update performance metrics
-        self.performance_monitor.record_operation("matrix_inverse", execution_time, 0);
+        self.performance_monitor
+            .record_operation("matrix_inverse", execution_time, 0);
 
         Ok(LinearAlgebraResult {
             result,
@@ -662,7 +778,12 @@ impl LinearAlgebraLibrary {
     }
 
     /// Solve linear system Ax = b
-    pub fn solve_linear_system(&mut self, matrix_id: &str, rhs_id: &str, solution_id: &str) -> Result<LinearAlgebraResult<Matrix>, LinearAlgebraError> {
+    pub fn solve_linear_system(
+        &mut self,
+        matrix_id: &str,
+        rhs_id: &str,
+        solution_id: &str,
+    ) -> Result<LinearAlgebraResult<Matrix>, LinearAlgebraError> {
         let start_time = std::time::Instant::now();
 
         // Get matrices
@@ -671,10 +792,14 @@ impl LinearAlgebraLibrary {
 
         // Validate dimensions
         if matrix.rows != matrix.cols {
-            return Err(LinearAlgebraError::InvalidDimensions("Matrix must be square".to_string()));
+            return Err(LinearAlgebraError::InvalidDimensions(
+                "Matrix must be square".to_string(),
+            ));
         }
         if matrix.rows != rhs.rows {
-            return Err(LinearAlgebraError::InvalidDimensions("Matrix and RHS dimensions incompatible".to_string()));
+            return Err(LinearAlgebraError::InvalidDimensions(
+                "Matrix and RHS dimensions incompatible".to_string(),
+            ));
         }
 
         // Composition boundary: marshal into caller-owned buffers and solve via
@@ -711,7 +836,8 @@ impl LinearAlgebraLibrary {
         let execution_time = start_time.elapsed().as_millis() as u64;
 
         // Update performance metrics
-        self.performance_monitor.record_operation("solve_linear_system", execution_time, 0);
+        self.performance_monitor
+            .record_operation("solve_linear_system", execution_time, 0);
 
         Ok(LinearAlgebraResult {
             result,
@@ -736,7 +862,12 @@ impl LinearAlgebraLibrary {
     /// 1e6 and rounded to a field integer, so real-valued matrices are supported to
     /// ~1e-6 precision (integer matrices are encoded exactly). The proof attests the
     /// exact scaled-integer identity; the returned matrix is that result rescaled.
-    pub fn private_matrix_multiply(&mut self, left_id: &str, right_id: &str, result_id: &str) -> Result<LinearAlgebraResult<Matrix>, LinearAlgebraError> {
+    pub fn private_matrix_multiply(
+        &mut self,
+        left_id: &str,
+        right_id: &str,
+        result_id: &str,
+    ) -> Result<LinearAlgebraResult<Matrix>, LinearAlgebraError> {
         let start_time = std::time::Instant::now();
 
         let left = self.matrix_storage.get_matrix(left_id)?;
@@ -754,11 +885,23 @@ impl LinearAlgebraLibrary {
         // b' = round(b·S). The product is then scaled by S², so the real result is C'/S².
         // Precision is ~1/S; for integer matrices the encoding is exact (S·int is integer).
         const FIXED_POINT_SCALE: f64 = 1_000_000.0;
-        let a_int: Vec<i128> = left.data.iter().map(|v| (v * FIXED_POINT_SCALE).round() as i128).collect();
-        let b_int: Vec<i128> = right.data.iter().map(|v| (v * FIXED_POINT_SCALE).round() as i128).collect();
+        let a_int: Vec<i128> = left
+            .data
+            .iter()
+            .map(|v| (v * FIXED_POINT_SCALE).round() as i128)
+            .collect();
+        let b_int: Vec<i128> = right
+            .data
+            .iter()
+            .map(|v| (v * FIXED_POINT_SCALE).round() as i128)
+            .collect();
 
         // Build the real circuit, prove, and verify in zero knowledge.
-        let (verified, c_int) = self.privacy_engine.zk_proofs.lock().unwrap()
+        let (verified, c_int) = self
+            .privacy_engine
+            .zk_proofs
+            .lock()
+            .unwrap()
             .prove_matrix_multiply(m, k, n, &a_int, &b_int)
             .map_err(|e| LinearAlgebraError::PrivacyError(format!("{:?}", e)))?;
 
@@ -771,16 +914,21 @@ impl LinearAlgebraLibrary {
         // Recover the real-valued product from the attested fixed-point integers (÷ S²).
         let scale_sq = FIXED_POINT_SCALE * FIXED_POINT_SCALE;
         let result_data: Vec<f64> = c_int.iter().map(|&v| v as f64 / scale_sq).collect();
-        let result = self.create_matrix(result_id.to_string(), m, n, left.data_type, result_data)?;
+        let result =
+            self.create_matrix(result_id.to_string(), m, n, left.data_type, result_data)?;
 
         let execution_time = start_time.elapsed().as_millis() as u64;
-        self.performance_monitor.record_operation("private_matrix_multiply", execution_time, 0);
+        self.performance_monitor
+            .record_operation("private_matrix_multiply", execution_time, 0);
 
         Ok(LinearAlgebraResult {
             result,
             execution_time,
             memory_usage: 0,
-            operations_used: vec!["private_matrix_multiply".to_string(), "groth16_zk_proof".to_string()],
+            operations_used: vec![
+                "private_matrix_multiply".to_string(),
+                "groth16_zk_proof".to_string(),
+            ],
             privacy_preserved: true,
         })
     }
@@ -814,8 +962,9 @@ pub use crate::solvers::polynomial::{Complex, QuadraticRoots};
 /// Solve `a·x² + b·x + c = 0` over the reals — thin facade over the engine
 /// `solvers::polynomial::solve_quadratic` (maps the engine error to this lib's type).
 pub fn solve_quadratic(a: f64, b: f64, c: f64) -> Result<QuadraticRoots, LinearAlgebraError> {
-    crate::solvers::polynomial::solve_quadratic(a, b, c)
-        .map_err(|_| LinearAlgebraError::ComputationError("invalid quadratic coefficients".to_string()))
+    crate::solvers::polynomial::solve_quadratic(a, b, c).map_err(|_| {
+        LinearAlgebraError::ComputationError("invalid quadratic coefficients".to_string())
+    })
 }
 
 /// Find all complex roots of a real polynomial — thin facade over the engine
@@ -870,14 +1019,18 @@ pub fn eigen_symmetric(n: usize, data: &[f64]) -> Result<(Vec<f64>, Vec<f64>), L
     // canonical symmetric eigensolver (replaces an inline cyclic-Jacobi duplicate).
     let mut a = data.to_vec();
     let mut v = vec![0.0_f64; n * n];
-    crate::solvers::linear_algebra::eigen::symmetric_eigen(n, &mut a, &mut v).map_err(|e| match e {
-        crate::solvers::SolversError::InvalidParameters => LinearAlgebraError::ComputationError(
-            "eigen_symmetric requires a symmetric matrix".to_string(),
-        ),
-        _ => LinearAlgebraError::InvalidDimensions(
-            "eigen_symmetric expects a non-empty square n×n matrix".to_string(),
-        ),
-    })?;
+    crate::solvers::linear_algebra::eigen::symmetric_eigen(n, &mut a, &mut v).map_err(
+        |e| match e {
+            crate::solvers::SolversError::InvalidParameters => {
+                LinearAlgebraError::ComputationError(
+                    "eigen_symmetric requires a symmetric matrix".to_string(),
+                )
+            }
+            _ => LinearAlgebraError::InvalidDimensions(
+                "eigen_symmetric expects a non-empty square n×n matrix".to_string(),
+            ),
+        },
+    )?;
     // Eigenvalues are the diagonal of the rotated matrix; v's column j is its eigenvector.
     let eigenvalues: Vec<f64> = (0..n).map(|i| a[i * n + i]).collect();
     Ok((eigenvalues, v))
@@ -912,4 +1065,3 @@ pub fn svd(m: usize, n: usize, data: &[f64]) -> Result<Svd, LinearAlgebraError> 
         LinearAlgebraError::InvalidDimensions("svd expects a non-empty m×n matrix".to_string())
     })
 }
-

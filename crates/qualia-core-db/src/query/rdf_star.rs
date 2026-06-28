@@ -58,24 +58,25 @@ impl std::error::Error for RdfStarSerializeError {}
 /// conversion from format-specific syntax to Virtual IDs.
 pub trait RdfStarParser {
     /// Parse an embedded triple from format-specific syntax
-    /// 
+    ///
     /// Returns (Virtual ID, [subject_id, predicate_id, object_id])
-    fn parse_embedded_triple(&mut self, input: &[u8]) -> Result<(u64, [u64; 3]), RdfStarParseError>;
-    
+    fn parse_embedded_triple(&mut self, input: &[u8])
+        -> Result<(u64, [u64; 3]), RdfStarParseError>;
+
     /// Parse a regular triple (subject, predicate, object)
     fn parse_triple(&mut self, input: &[u8]) -> Result<(u64, u64, u64), RdfStarParseError>;
-    
+
     /// Parse a quad (subject, predicate, object, graph)
-    /// 
+    ///
     /// Returns None if the format doesn't support quads
     fn parse_quad(&mut self, input: &[u8]) -> Result<(u64, u64, u64, u64), RdfStarParseError>;
-    
+
     /// Check if this parser supports quad formats (named graphs)
     fn supports_quads(&self) -> bool;
-    
+
     /// Check if this parser supports named graphs
     fn supports_named_graphs(&self) -> bool;
-    
+
     /// Get the format name for error reporting
     fn format_name(&self) -> &'static str;
 }
@@ -86,14 +87,14 @@ pub trait RdfStarParser {
 /// conversion from Virtual IDs to format-specific syntax.
 pub trait RdfStarSerializer {
     /// Serialize a Virtual ID back to format-specific embedded triple syntax
-    /// 
+    ///
     /// Takes the Virtual ID and its component IDs (retrieved from lexicon)
     fn serialize_embedded_triple(
         &self,
         virtual_id: u64,
         components: &[u64; 3],
     ) -> Result<Vec<u8>, RdfStarSerializeError>;
-    
+
     /// Serialize a regular triple
     fn serialize_triple(
         &self,
@@ -101,7 +102,7 @@ pub trait RdfStarSerializer {
         predicate: u64,
         object: u64,
     ) -> Result<Vec<u8>, RdfStarSerializeError>;
-    
+
     /// Serialize a quad (subject, predicate, object, graph)
     fn serialize_quad(
         &self,
@@ -110,22 +111,26 @@ pub trait RdfStarSerializer {
         object: u64,
         graph: u64,
     ) -> Result<Vec<u8>, RdfStarSerializeError>;
-    
+
     /// Check if this serializer supports quad formats
     fn supports_quads(&self) -> bool;
-    
+
     /// Get the format name for error reporting
     fn format_name(&self) -> &'static str;
 }
 
 /// Helper function to create a Virtual ID from component IDs
-/// 
+///
 /// This is a convenience wrapper around generate_embedded_triple_id
 /// that also validates the TAG_EMBEDDED bit is set correctly.
 #[inline(always)]
 pub fn create_virtual_id(subject: u64, predicate: u64, object: u64) -> u64 {
     let virtual_id = generate_embedded_triple_id(subject, predicate, object);
-    debug_assert_eq!(virtual_id & TAG_EMBEDDED, TAG_EMBEDDED, "TAG_EMBEDDED bit should be set");
+    debug_assert_eq!(
+        virtual_id & TAG_EMBEDDED,
+        TAG_EMBEDDED,
+        "TAG_EMBEDDED bit should be set"
+    );
     virtual_id
 }
 
@@ -149,7 +154,7 @@ mod tests {
     fn test_is_virtual_id() {
         let vid = create_virtual_id(1, 2, 3);
         assert!(is_virtual_id(vid));
-        
+
         let regular_hash = 12345u64;
         assert!(!is_virtual_id(regular_hash));
     }
@@ -163,10 +168,10 @@ mod tests {
 }
 
 /// SPARQL-Star BIND Functions
-/// 
+///
 /// These functions are used in SPARQL queries to extract components from
 /// embedded triples using the BIND keyword.
-/// 
+///
 /// Example: BIND (SUBJECT(?triple) AS ?subject)
 
 /// Extract the subject component from an embedded triple.
@@ -221,12 +226,8 @@ pub fn object_of_virtual_id(
 }
 
 /// Construct a Virtual ID from three component IDs
-/// 
+///
 /// This is the inverse of the extraction functions.
-pub fn triple_from_components(
-    subject: u64,
-    predicate: u64,
-    object: u64,
-) -> u64 {
+pub fn triple_from_components(subject: u64, predicate: u64, object: u64) -> u64 {
     create_virtual_id(subject, predicate, object)
 }

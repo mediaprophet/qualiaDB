@@ -19,9 +19,7 @@ impl QTensorEngine {
         // when enabled, so the FFN gets both wins: one readback per layer and the parallel row
         // reduction kernel.
         #[cfg(not(target_arch = "wasm32"))]
-        if crate::llm_bench::resident_weights_enabled()
-            && crate::llm_bench::ffn_fusion_enabled()
-        {
+        if crate::llm_bench::resident_weights_enabled() && crate::llm_bench::ffn_fusion_enabled() {
             if self.dispatch_ffn_fused_resident(index, hidden, emb_dim, tensors, scratch_a) {
                 return true;
             }
@@ -134,9 +132,18 @@ impl QTensorEngine {
         };
         let mmap: &[u8] = &mmap_arc;
 
-        let gate_info = match tensors.ffn_gate.as_ref() { Some(i) => i, None => return false };
-        let up_info = match tensors.ffn_up.as_ref() { Some(i) => i, None => return false };
-        let down_info = match tensors.ffn_down.as_ref() { Some(i) => i, None => return false };
+        let gate_info = match tensors.ffn_gate.as_ref() {
+            Some(i) => i,
+            None => return false,
+        };
+        let up_info = match tensors.ffn_up.as_ref() {
+            Some(i) => i,
+            None => return false,
+        };
+        let down_info = match tensors.ffn_down.as_ref() {
+            Some(i) => i,
+            None => return false,
+        };
         let (gate_in, n_ffn) = Self::matmul_dims(gate_info);
         let (up_in, up_out) = Self::matmul_dims(up_info);
         let (dn_in, dn_out) = Self::matmul_dims(down_info);
@@ -164,9 +171,27 @@ impl QTensorEngine {
         {
             return false;
         }
-        let gate_raw = match crate::ggml_quants::fetch_tensor_bytes(mmap, index.tensor_data_start, gate_info) { Ok(s) => s, Err(_) => return false };
-        let up_raw = match crate::ggml_quants::fetch_tensor_bytes(mmap, index.tensor_data_start, up_info) { Ok(s) => s, Err(_) => return false };
-        let down_raw = match crate::ggml_quants::fetch_tensor_bytes(mmap, index.tensor_data_start, down_info) { Ok(s) => s, Err(_) => return false };
+        let gate_raw = match crate::ggml_quants::fetch_tensor_bytes(
+            mmap,
+            index.tensor_data_start,
+            gate_info,
+        ) {
+            Ok(s) => s,
+            Err(_) => return false,
+        };
+        let up_raw =
+            match crate::ggml_quants::fetch_tensor_bytes(mmap, index.tensor_data_start, up_info) {
+                Ok(s) => s,
+                Err(_) => return false,
+            };
+        let down_raw = match crate::ggml_quants::fetch_tensor_bytes(
+            mmap,
+            index.tensor_data_start,
+            down_info,
+        ) {
+            Ok(s) => s,
+            Err(_) => return false,
+        };
         if gate_raw.len() > self.max_tensor_bytes
             || up_raw.len() > self.max_tensor_bytes
             || down_raw.len() > self.max_tensor_bytes
@@ -190,25 +215,74 @@ impl QTensorEngine {
         crate::llm_awq::record_ffn_input(&ffn_input[..gate_in]);
 
         // Resident weight buffers (Phase 2). Bail to the per-GEMM path if any is unavailable.
-        let rg = match self.resident_weight_buffer(gate_raw.as_ptr() as u64, gate_raw) { Some(b) => b, None => return false };
-        let ru = match self.resident_weight_buffer(up_raw.as_ptr() as u64, up_raw) { Some(b) => b, None => return false };
-        let rd = match self.resident_weight_buffer(down_raw.as_ptr() as u64, down_raw) { Some(b) => b, None => return false };
+        let rg = match self.resident_weight_buffer(gate_raw.as_ptr() as u64, gate_raw) {
+            Some(b) => b,
+            None => return false,
+        };
+        let ru = match self.resident_weight_buffer(up_raw.as_ptr() as u64, up_raw) {
+            Some(b) => b,
+            None => return false,
+        };
+        let rd = match self.resident_weight_buffer(down_raw.as_ptr() as u64, down_raw) {
+            Some(b) => b,
+            None => return false,
+        };
 
         // GEMM params at 256-aligned uniform sub-ranges: gate@0, up@256, down@512.
         const SLOT: wgpu::BufferAddress = 256;
-        let p_gate = GemmGpuParams { n_in: gate_in as u32, n_out: n_ffn as u32, weight_ggml_type: gate_info.ggml_type, weight_row_elems: gate_info.dims[0] as u32, weight_byte_len: gate_raw.len() as u32, n_batch: 1, in_row_stride: 0, out_row_stride: 0 };
-        let p_up = GemmGpuParams { n_in: up_in as u32, n_out: n_ffn as u32, weight_ggml_type: up_info.ggml_type, weight_row_elems: up_info.dims[0] as u32, weight_byte_len: up_raw.len() as u32, n_batch: 1, in_row_stride: 0, out_row_stride: 0 };
-        let p_down = GemmGpuParams { n_in: n_ffn as u32, n_out: dn_out as u32, weight_ggml_type: down_info.ggml_type, weight_row_elems: down_info.dims[0] as u32, weight_byte_len: down_raw.len() as u32, n_batch: 1, in_row_stride: 0, out_row_stride: 0 };
-        let p_silu = ElemGpuParams { n: n_ffn as u32, batch: 1, op: ELEM_OP_SILU_MUL, eps: RMS_NORM_EPS, a_row_stride: 0, b_row_stride: 0, out_row_stride: 0, a_slot: 0, b_slot: 0, out_slot: 0, _pad: 0 };
+        let p_gate = GemmGpuParams {
+            n_in: gate_in as u32,
+            n_out: n_ffn as u32,
+            weight_ggml_type: gate_info.ggml_type,
+            weight_row_elems: gate_info.dims[0] as u32,
+            weight_byte_len: gate_raw.len() as u32,
+            n_batch: 1,
+            in_row_stride: 0,
+            out_row_stride: 0,
+        };
+        let p_up = GemmGpuParams {
+            n_in: up_in as u32,
+            n_out: n_ffn as u32,
+            weight_ggml_type: up_info.ggml_type,
+            weight_row_elems: up_info.dims[0] as u32,
+            weight_byte_len: up_raw.len() as u32,
+            n_batch: 1,
+            in_row_stride: 0,
+            out_row_stride: 0,
+        };
+        let p_down = GemmGpuParams {
+            n_in: n_ffn as u32,
+            n_out: dn_out as u32,
+            weight_ggml_type: down_info.ggml_type,
+            weight_row_elems: down_info.dims[0] as u32,
+            weight_byte_len: down_raw.len() as u32,
+            n_batch: 1,
+            in_row_stride: 0,
+            out_row_stride: 0,
+        };
+        let p_silu = ElemGpuParams {
+            n: n_ffn as u32,
+            batch: 1,
+            op: ELEM_OP_SILU_MUL,
+            eps: RMS_NORM_EPS,
+            a_row_stride: 0,
+            b_row_stride: 0,
+            out_row_stride: 0,
+            a_slot: 0,
+            b_slot: 0,
+            out_slot: 0,
+            _pad: 0,
+        };
 
         // Lazily create the 3-slot fused GEMM params uniform (&mut self — done before the shared borrows).
         if self.ffn_fused_params.is_none() {
-            self.ffn_fused_params = Some(self.gpu_device().create_buffer(&wgpu::BufferDescriptor {
-                label: Some("FfnFusedGemmParams"),
-                size: SLOT * 3,
-                usage: wgpu::BufferUsages::UNIFORM | wgpu::BufferUsages::COPY_DST,
-                mapped_at_creation: false,
-            }));
+            self.ffn_fused_params =
+                Some(self.gpu_device().create_buffer(&wgpu::BufferDescriptor {
+                    label: Some("FfnFusedGemmParams"),
+                    size: SLOT * 3,
+                    usage: wgpu::BufferUsages::UNIFORM | wgpu::BufferUsages::COPY_DST,
+                    mapped_at_creation: false,
+                }));
         }
 
         // Work buffers: in/G/U/S distinct; D (down output) reuses the now-dead input buffer — its
@@ -222,72 +296,161 @@ impl QTensorEngine {
             self.gemm_output_staging.as_ref(),
             self.elem_params_buf.as_ref(),
         ) {
-            (Some(p), Some(i), Some(g), Some(u), Some(s), Some(st), Some(e)) => (p, i, g, u, s, st, e),
+            (Some(p), Some(i), Some(g), Some(u), Some(s), Some(st), Some(e)) => {
+                (p, i, g, u, s, st, e)
+            }
             _ => return false,
         };
         let d_buf = in_buf;
         let device = self.gpu_device();
 
-        self.gpu_queue().write_buffer(params_buf, 0, bytemuck::bytes_of(&p_gate));
-        self.gpu_queue().write_buffer(params_buf, SLOT, bytemuck::bytes_of(&p_up));
-        self.gpu_queue().write_buffer(params_buf, SLOT * 2, bytemuck::bytes_of(&p_down));
-        self.gpu_queue().write_buffer(elem_params, 0, bytemuck::bytes_of(&p_silu));
-        self.gpu_queue().write_buffer(in_buf, 0, bytemuck::cast_slice(&ffn_input[..gate_in]));
+        self.gpu_queue()
+            .write_buffer(params_buf, 0, bytemuck::bytes_of(&p_gate));
+        self.gpu_queue()
+            .write_buffer(params_buf, SLOT, bytemuck::bytes_of(&p_up));
+        self.gpu_queue()
+            .write_buffer(params_buf, SLOT * 2, bytemuck::bytes_of(&p_down));
+        self.gpu_queue()
+            .write_buffer(elem_params, 0, bytemuck::bytes_of(&p_silu));
+        self.gpu_queue()
+            .write_buffer(in_buf, 0, bytemuck::cast_slice(&ffn_input[..gate_in]));
 
         let use_coop = crate::llm_bench::coop_gemv_enabled();
-        let gemm_pipeline: &wgpu::ComputePipeline =
-            if use_coop { &self.coop_gemv_pipeline } else { &self.pipeline };
+        let gemm_pipeline: &wgpu::ComputePipeline = if use_coop {
+            &self.coop_gemv_pipeline
+        } else {
+            &self.pipeline
+        };
         let gemm_layout = self.native_gemm_bind_layout(use_coop).clone();
         let elem_layout = self.elem_silu_mul_bind_layout.clone();
         let gp_sz = std::num::NonZeroU64::new(std::mem::size_of::<GemmGpuParams>() as u64);
         let ep_sz = std::num::NonZeroU64::new(std::mem::size_of::<ElemGpuParams>() as u64);
-        let gemm_params_at = |slot: wgpu::BufferAddress| wgpu::BindingResource::Buffer(wgpu::BufferBinding { buffer: params_buf, offset: slot, size: gp_sz });
+        let gemm_params_at = |slot: wgpu::BufferAddress| {
+            wgpu::BindingResource::Buffer(wgpu::BufferBinding {
+                buffer: params_buf,
+                offset: slot,
+                size: gp_sz,
+            })
+        };
 
         let gate_bg = device.create_bind_group(&wgpu::BindGroupDescriptor {
-            label: Some("FfnGateBG"), layout: &gemm_layout,
+            label: Some("FfnGateBG"),
+            layout: &gemm_layout,
             entries: &[
-                wgpu::BindGroupEntry { binding: 0, resource: in_buf.as_entire_binding() },
-                wgpu::BindGroupEntry { binding: 1, resource: rg.as_entire_binding() },
-                wgpu::BindGroupEntry { binding: 2, resource: gemm_params_at(0) },
-                wgpu::BindGroupEntry { binding: 3, resource: g_buf.as_entire_binding() },
+                wgpu::BindGroupEntry {
+                    binding: 0,
+                    resource: in_buf.as_entire_binding(),
+                },
+                wgpu::BindGroupEntry {
+                    binding: 1,
+                    resource: rg.as_entire_binding(),
+                },
+                wgpu::BindGroupEntry {
+                    binding: 2,
+                    resource: gemm_params_at(0),
+                },
+                wgpu::BindGroupEntry {
+                    binding: 3,
+                    resource: g_buf.as_entire_binding(),
+                },
             ],
         });
         let up_bg = device.create_bind_group(&wgpu::BindGroupDescriptor {
-            label: Some("FfnUpBG"), layout: &gemm_layout,
+            label: Some("FfnUpBG"),
+            layout: &gemm_layout,
             entries: &[
-                wgpu::BindGroupEntry { binding: 0, resource: in_buf.as_entire_binding() },
-                wgpu::BindGroupEntry { binding: 1, resource: ru.as_entire_binding() },
-                wgpu::BindGroupEntry { binding: 2, resource: gemm_params_at(SLOT) },
-                wgpu::BindGroupEntry { binding: 3, resource: u_buf.as_entire_binding() },
+                wgpu::BindGroupEntry {
+                    binding: 0,
+                    resource: in_buf.as_entire_binding(),
+                },
+                wgpu::BindGroupEntry {
+                    binding: 1,
+                    resource: ru.as_entire_binding(),
+                },
+                wgpu::BindGroupEntry {
+                    binding: 2,
+                    resource: gemm_params_at(SLOT),
+                },
+                wgpu::BindGroupEntry {
+                    binding: 3,
+                    resource: u_buf.as_entire_binding(),
+                },
             ],
         });
         let silu_bg = device.create_bind_group(&wgpu::BindGroupDescriptor {
-            label: Some("FfnSiluBG"), layout: &elem_layout,
+            label: Some("FfnSiluBG"),
+            layout: &elem_layout,
             entries: &[
-                wgpu::BindGroupEntry { binding: 0, resource: g_buf.as_entire_binding() },
-                wgpu::BindGroupEntry { binding: 1, resource: u_buf.as_entire_binding() },
-                wgpu::BindGroupEntry { binding: 2, resource: s_buf.as_entire_binding() },
-                wgpu::BindGroupEntry { binding: 3, resource: wgpu::BindingResource::Buffer(wgpu::BufferBinding { buffer: elem_params, offset: 0, size: ep_sz }) },
+                wgpu::BindGroupEntry {
+                    binding: 0,
+                    resource: g_buf.as_entire_binding(),
+                },
+                wgpu::BindGroupEntry {
+                    binding: 1,
+                    resource: u_buf.as_entire_binding(),
+                },
+                wgpu::BindGroupEntry {
+                    binding: 2,
+                    resource: s_buf.as_entire_binding(),
+                },
+                wgpu::BindGroupEntry {
+                    binding: 3,
+                    resource: wgpu::BindingResource::Buffer(wgpu::BufferBinding {
+                        buffer: elem_params,
+                        offset: 0,
+                        size: ep_sz,
+                    }),
+                },
             ],
         });
         let down_bg = device.create_bind_group(&wgpu::BindGroupDescriptor {
-            label: Some("FfnDownBG"), layout: &gemm_layout,
+            label: Some("FfnDownBG"),
+            layout: &gemm_layout,
             entries: &[
-                wgpu::BindGroupEntry { binding: 0, resource: s_buf.as_entire_binding() },
-                wgpu::BindGroupEntry { binding: 1, resource: rd.as_entire_binding() },
-                wgpu::BindGroupEntry { binding: 2, resource: gemm_params_at(SLOT * 2) },
-                wgpu::BindGroupEntry { binding: 3, resource: d_buf.as_entire_binding() },
+                wgpu::BindGroupEntry {
+                    binding: 0,
+                    resource: s_buf.as_entire_binding(),
+                },
+                wgpu::BindGroupEntry {
+                    binding: 1,
+                    resource: rd.as_entire_binding(),
+                },
+                wgpu::BindGroupEntry {
+                    binding: 2,
+                    resource: gemm_params_at(SLOT * 2),
+                },
+                wgpu::BindGroupEntry {
+                    binding: 3,
+                    resource: d_buf.as_entire_binding(),
+                },
             ],
         });
 
-        let mut encoder = self.device().create_command_encoder(&wgpu::CommandEncoderDescriptor { label: Some("FfnFusedEncoder") });
-        let gate_groups = if use_coop { n_ffn as u32 } else { (n_ffn as u32 + 63) / 64 };
+        let mut encoder = self
+            .device()
+            .create_command_encoder(&wgpu::CommandEncoderDescriptor {
+                label: Some("FfnFusedEncoder"),
+            });
+        let gate_groups = if use_coop {
+            n_ffn as u32
+        } else {
+            (n_ffn as u32 + 63) / 64
+        };
         let up_groups = gate_groups;
-        let down_groups = if use_coop { dn_out as u32 } else { (dn_out as u32 + 63) / 64 };
+        let down_groups = if use_coop {
+            dn_out as u32
+        } else {
+            (dn_out as u32 + 63) / 64
+        };
         for (idx, (label, pipe, bg, groups)) in [
             ("FfnGate", gemm_pipeline, &gate_bg, gate_groups),
             ("FfnUp", gemm_pipeline, &up_bg, up_groups),
-            ("FfnSilu", &self.elem_silu_mul_pipeline, &silu_bg, (n_ffn as u32 + 63) / 64),
+            (
+                "FfnSilu",
+                &self.elem_silu_mul_pipeline,
+                &silu_bg,
+                (n_ffn as u32 + 63) / 64,
+            ),
             ("FfnDown", gemm_pipeline, &down_bg, down_groups),
         ]
         .into_iter()
@@ -314,7 +477,9 @@ impl QTensorEngine {
 
         let slice = staging.slice(..out_bytes);
         let (tx, rx) = futures_channel::oneshot::channel();
-        slice.map_async(wgpu::MapMode::Read, move |r| { let _ = tx.send(r); });
+        slice.map_async(wgpu::MapMode::Read, move |r| {
+            let _ = tx.send(r);
+        });
         self.poll_wait();
         if let Ok(handle) = tokio::runtime::Handle::try_current() {
             if handle.block_on(rx).ok().map(|m| m.is_ok()).unwrap_or(false) {
@@ -323,7 +488,11 @@ impl QTensorEngine {
                 scratch_a[..dn_out].copy_from_slice(&floats[..dn_out]);
                 drop(data);
                 staging.unmap();
-                add_residual_inplace(&mut hidden[..emb_dim], &scratch_a[..dn_out], emb_dim.min(dn_out));
+                add_residual_inplace(
+                    &mut hidden[..emb_dim],
+                    &scratch_a[..dn_out],
+                    emb_dim.min(dn_out),
+                );
                 return true;
             }
         }
@@ -429,5 +598,4 @@ impl QTensorEngine {
         );
         true
     }
-
 }

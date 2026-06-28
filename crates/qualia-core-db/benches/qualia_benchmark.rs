@@ -361,6 +361,35 @@ fn bench_cbor_compiler(c: &mut Criterion) {
     });
 }
 
+fn bench_lanczos_eigensolver(c: &mut Criterion) {
+    use qualia_core_db::solvers::linear_algebra::{FixedLanczosEigensolver, Matrix4x4};
+    use qualia_core_db::solvers::SolverConfig;
+
+    let matrix = Matrix4x4 {
+        data: [
+            [4.0, 1.0, 0.0, 0.0],
+            [1.0, 4.0, 1.0, 0.0],
+            [0.0, 1.0, 4.0, 1.0],
+            [0.0, 0.0, 1.0, 4.0],
+        ],
+    };
+
+    let config = SolverConfig {
+        max_iterations: 100,
+        tolerance: 1e-6,
+        step_size: 0.01,
+        verbose: false,
+    };
+
+    c.bench_function("lanczos_4x4_eigen_solve", |b| {
+        b.iter(|| {
+            let mut solver = FixedLanczosEigensolver::new(config);
+            let eigs = solver.find_lowest_eigenvalues(black_box(&matrix), 4).unwrap();
+            black_box(eigs);
+        })
+    });
+}
+
 criterion_group!(
     competitive_benches,
     bench_point_lookup,
@@ -376,6 +405,7 @@ criterion_group!(
     bench_query_compiler,
     bench_ingestion_pipeline,
     bench_cbor_compiler,
+    bench_lanczos_eigensolver,
 );
 
 criterion_main!(competitive_benches, internal_benches);

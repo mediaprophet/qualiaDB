@@ -79,7 +79,7 @@ impl QTensorEngine {
         }
     }
 
-#[cfg(target_arch = "wasm32")]
+    #[cfg(target_arch = "wasm32")]
     pub(crate) async fn dispatch_gemm_raw_into_async(
         &self,
         info: &GgufTensorInfo,
@@ -123,34 +123,36 @@ impl QTensorEngine {
                 .write_buffer(params_buf, 0, bytemuck::bytes_of(&params));
 
             let bind_layout = self.pipeline.get_bind_group_layout(0);
-            let bind_group = self.gpu_device().create_bind_group(&wgpu::BindGroupDescriptor {
-                label: Some("LayerGemmBindGroup"),
-                layout: &bind_layout,
-                entries: &[
-                    wgpu::BindGroupEntry {
-                        binding: 0,
-                        resource: input_buf.as_entire_binding(),
-                    },
-                    wgpu::BindGroupEntry {
-                        binding: 1,
-                        resource: weight_buf.as_entire_binding(),
-                    },
-                    wgpu::BindGroupEntry {
-                        binding: 2,
-                        resource: params_buf.as_entire_binding(),
-                    },
-                    wgpu::BindGroupEntry {
-                        binding: 3,
-                        resource: output_buf.as_entire_binding(),
-                    },
-                ],
-            });
-
-            let mut encoder = self
-                .device()
-                .create_command_encoder(&wgpu::CommandEncoderDescriptor {
-                    label: Some("LayerGemmEncoder"),
+            let bind_group = self
+                .gpu_device()
+                .create_bind_group(&wgpu::BindGroupDescriptor {
+                    label: Some("LayerGemmBindGroup"),
+                    layout: &bind_layout,
+                    entries: &[
+                        wgpu::BindGroupEntry {
+                            binding: 0,
+                            resource: input_buf.as_entire_binding(),
+                        },
+                        wgpu::BindGroupEntry {
+                            binding: 1,
+                            resource: weight_buf.as_entire_binding(),
+                        },
+                        wgpu::BindGroupEntry {
+                            binding: 2,
+                            resource: params_buf.as_entire_binding(),
+                        },
+                        wgpu::BindGroupEntry {
+                            binding: 3,
+                            resource: output_buf.as_entire_binding(),
+                        },
+                    ],
                 });
+
+            let mut encoder =
+                self.device()
+                    .create_command_encoder(&wgpu::CommandEncoderDescriptor {
+                        label: Some("LayerGemmEncoder"),
+                    });
             {
                 let mut cpass = encoder.begin_compute_pass(&wgpu::ComputePassDescriptor {
                     label: None,
@@ -235,30 +237,32 @@ impl QTensorEngine {
             .write_buffer(params_buf, 0, bytemuck::bytes_of(&params));
 
         let bind_layout = self.pipeline.get_bind_group_layout(0);
-        let bind_group = self.gpu_device().create_bind_group(&wgpu::BindGroupDescriptor {
-            label: Some("ResidentLogitsBind"),
-            layout: &bind_layout,
-            entries: &[
-                wgpu::BindGroupEntry {
-                    binding: 0,
-                    resource: input_buf.as_entire_binding(),
-                },
-                wgpu::BindGroupEntry {
-                    binding: 1,
-                    resource: weight,
-                },
-                // self.pipeline uses MC8GemmBGL, whose binding 2 is a DYNAMIC uniform — bind it
-                // as a 256-sized dynamic slice and pass offset 0 below (matches encode_gemm_bufs_offset).
-                wgpu::BindGroupEntry {
-                    binding: 2,
-                    resource: Self::mc8_dynamic_uniform_binding(params_buf),
-                },
-                wgpu::BindGroupEntry {
-                    binding: 3,
-                    resource: output_buf.as_entire_binding(),
-                },
-            ],
-        });
+        let bind_group = self
+            .gpu_device()
+            .create_bind_group(&wgpu::BindGroupDescriptor {
+                label: Some("ResidentLogitsBind"),
+                layout: &bind_layout,
+                entries: &[
+                    wgpu::BindGroupEntry {
+                        binding: 0,
+                        resource: input_buf.as_entire_binding(),
+                    },
+                    wgpu::BindGroupEntry {
+                        binding: 1,
+                        resource: weight,
+                    },
+                    // self.pipeline uses MC8GemmBGL, whose binding 2 is a DYNAMIC uniform — bind it
+                    // as a 256-sized dynamic slice and pass offset 0 below (matches encode_gemm_bufs_offset).
+                    wgpu::BindGroupEntry {
+                        binding: 2,
+                        resource: Self::mc8_dynamic_uniform_binding(params_buf),
+                    },
+                    wgpu::BindGroupEntry {
+                        binding: 3,
+                        resource: output_buf.as_entire_binding(),
+                    },
+                ],
+            });
 
         let mut encoder = self
             .device()
@@ -292,7 +296,7 @@ impl QTensorEngine {
         let _ = staging.unmap();
         false
     }
-#[cfg(target_arch = "wasm32")]
+    #[cfg(target_arch = "wasm32")]
     pub async fn dispatch_gemm_into_async(
         &self,
         index: &crate::gguf_sharder::GgufTensorIndex,
@@ -319,9 +323,10 @@ impl QTensorEngine {
             Ok(s) => s,
             Err(_) => return false,
         };
-        self.dispatch_gemm_raw_into_async(info, raw, input, out, n_in, n_out).await
+        self.dispatch_gemm_raw_into_async(info, raw, input, out, n_in, n_out)
+            .await
     }
-#[cfg(target_arch = "wasm32")]
+    #[cfg(target_arch = "wasm32")]
     pub(crate) async fn dispatch_attention_layer_async(
         &mut self,
         index: &crate::gguf_sharder::GgufTensorIndex,
@@ -459,7 +464,7 @@ impl QTensorEngine {
         Some(n)
     }
 
-#[cfg(target_arch = "wasm32")]
+    #[cfg(target_arch = "wasm32")]
     pub(crate) async fn dispatch_attention_pass_async(
         &self,
         hidden: &[f32],
@@ -477,7 +482,9 @@ impl QTensorEngine {
         readback_out: Option<&mut [f32]>,
     ) -> bool {
         if !ggml_gpu_quant_supported(info.ggml_type) {
-            wlog(&format!("[attn_pass_async] GUARD unsupported quant kind={proj_kind}"));
+            wlog(&format!(
+                "[attn_pass_async] GUARD unsupported quant kind={proj_kind}"
+            ));
             return false;
         }
         if !ggml_gpu_attention_shader_supported(info.ggml_type) {
@@ -565,36 +572,38 @@ impl QTensorEngine {
         };
 
         let bind_layout = self.attention_pipeline.get_bind_group_layout(0);
-        let bind_group = self.gpu_device().create_bind_group(&wgpu::BindGroupDescriptor {
-            label: Some("FusedAttentionBindGroup"),
-            layout: &bind_layout,
-            entries: &[
-                wgpu::BindGroupEntry {
-                    binding: 0,
-                    resource: input_buf.as_entire_binding(),
-                },
-                wgpu::BindGroupEntry {
-                    binding: 1,
-                    resource: weight_buf.as_entire_binding(),
-                },
-                wgpu::BindGroupEntry {
-                    binding: 2,
-                    resource: params_buf.as_entire_binding(),
-                },
-                wgpu::BindGroupEntry {
-                    binding: 3,
-                    resource: wgpu::BindingResource::Buffer(kv_binding),
-                },
-                wgpu::BindGroupEntry {
-                    binding: 4,
-                    resource: output_buf.as_entire_binding(),
-                },
-                wgpu::BindGroupEntry {
-                    binding: 5,
-                    resource: mask_buf.as_entire_binding(),
-                },
-            ],
-        });
+        let bind_group = self
+            .gpu_device()
+            .create_bind_group(&wgpu::BindGroupDescriptor {
+                label: Some("FusedAttentionBindGroup"),
+                layout: &bind_layout,
+                entries: &[
+                    wgpu::BindGroupEntry {
+                        binding: 0,
+                        resource: input_buf.as_entire_binding(),
+                    },
+                    wgpu::BindGroupEntry {
+                        binding: 1,
+                        resource: weight_buf.as_entire_binding(),
+                    },
+                    wgpu::BindGroupEntry {
+                        binding: 2,
+                        resource: params_buf.as_entire_binding(),
+                    },
+                    wgpu::BindGroupEntry {
+                        binding: 3,
+                        resource: wgpu::BindingResource::Buffer(kv_binding),
+                    },
+                    wgpu::BindGroupEntry {
+                        binding: 4,
+                        resource: output_buf.as_entire_binding(),
+                    },
+                    wgpu::BindGroupEntry {
+                        binding: 5,
+                        resource: mask_buf.as_entire_binding(),
+                    },
+                ],
+            });
 
         let mut encoder = self
             .device()
@@ -639,7 +648,7 @@ impl QTensorEngine {
         let _ = staging.unmap();
         false
     }
-#[cfg(target_arch = "wasm32")]
+    #[cfg(target_arch = "wasm32")]
     pub(crate) async fn dispatch_attention_q_ffn_token_async(
         &mut self,
         index: &crate::gguf_sharder::GgufTensorIndex,
@@ -738,12 +747,7 @@ impl QTensorEngine {
             return false;
         }
         self.dispatch_ffn_block_pre_norm_async(
-            index,
-            hidden,
-            emb_dim,
-            tensors,
-            scratch_a,
-            scratch_b,
+            index, hidden, emb_dim, tensors, scratch_a, scratch_b,
         )
         .await
     }

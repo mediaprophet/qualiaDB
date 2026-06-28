@@ -205,7 +205,9 @@ pub fn is_constructible_number(expr: &Expr) -> ConstructibilityVerdict {
         return bad;
     }
     let n = sqrt_count(expr).min(62);
-    ConstructibilityVerdict::Constructible { degree_bound: 1u64 << n }
+    ConstructibilityVerdict::Constructible {
+        degree_bound: 1u64 << n,
+    }
 }
 
 #[cfg(test)]
@@ -237,11 +239,17 @@ mod tests {
     fn gauss_wantzel_regular_polygons() {
         // Constructible: powers of two, Fermat primes, products of *distinct* ones.
         for n in [3, 4, 5, 6, 8, 10, 12, 15, 16, 17, 20, 257] {
-            assert!(is_regular_polygon_constructible(n), "{n}-gon should be constructible");
+            assert!(
+                is_regular_polygon_constructible(n),
+                "{n}-gon should be constructible"
+            );
         }
         // Not: non-Fermat odd primes, repeated Fermat factor (9 = 3²), their multiples.
         for n in [7, 9, 11, 13, 14, 18, 19, 21, 23, 25] {
-            assert!(!is_regular_polygon_constructible(n), "{n}-gon should NOT be constructible");
+            assert!(
+                !is_regular_polygon_constructible(n),
+                "{n}-gon should NOT be constructible"
+            );
         }
     }
 
@@ -282,9 +290,15 @@ mod tests {
     fn transcendental_subexpression_is_not_constructible() {
         use crate::specialized_libs::symbolic_algebra::{cos, sin, var};
         // sin(1) is transcendental → not constructible.
-        assert_eq!(is_constructible_number(&sin(c(1.0))), ConstructibilityVerdict::Transcendental);
+        assert_eq!(
+            is_constructible_number(&sin(c(1.0))),
+            ConstructibilityVerdict::Transcendental
+        );
         // A symbolic cos(x) (unknown argument) is treated transcendental, not fabricated constructible.
-        assert_eq!(is_constructible_number(&cos(var("x"))), ConstructibilityVerdict::Transcendental);
+        assert_eq!(
+            is_constructible_number(&cos(var("x"))),
+            ConstructibilityVerdict::Transcendental
+        );
         // But cos(0) = 1 (trivial argument) remains constructible.
         assert!(matches!(
             is_constructible_number(&cos(c(0.0))),
@@ -294,7 +308,13 @@ mod tests {
 
     #[test]
     fn fails_closed_on_non_real_and_undefined() {
-        assert_eq!(is_constructible_number(&sqrt(c(-1.0))), ConstructibilityVerdict::NotRealNumber);
-        assert_eq!(is_constructible_number(&div(c(1.0), c(0.0))), ConstructibilityVerdict::Undefined);
+        assert_eq!(
+            is_constructible_number(&sqrt(c(-1.0))),
+            ConstructibilityVerdict::NotRealNumber
+        );
+        assert_eq!(
+            is_constructible_number(&div(c(1.0), c(0.0))),
+            ConstructibilityVerdict::Undefined
+        );
     }
 }

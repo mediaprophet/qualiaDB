@@ -6,7 +6,10 @@
 struct Lcg(u64);
 impl Lcg {
     fn next_below(&mut self, bound: usize) -> usize {
-        self.0 = self.0.wrapping_mul(6364136223846793005).wrapping_add(1442695040888963407);
+        self.0 = self
+            .0
+            .wrapping_mul(6364136223846793005)
+            .wrapping_add(1442695040888963407);
         ((self.0 >> 33) as usize) % bound.max(1)
     }
 }
@@ -68,7 +71,11 @@ pub fn loocv(n: usize) -> Vec<Fold> {
 
 /// A single train/test partition: `test_fraction` of the (shuffled) rows go to
 /// test. `None` if `test_fraction` is not in `(0,1)` or `n < 2`.
-pub fn train_test_split(n: usize, test_fraction: f64, seed: u64) -> Option<(Vec<usize>, Vec<usize>)> {
+pub fn train_test_split(
+    n: usize,
+    test_fraction: f64,
+    seed: u64,
+) -> Option<(Vec<usize>, Vec<usize>)> {
     if n < 2 || !(0.0..1.0).contains(&test_fraction) || test_fraction <= 0.0 {
         return None;
     }
@@ -91,11 +98,18 @@ mod tests {
         assert_eq!(folds.len(), 3);
         let mut all_test: Vec<usize> = folds.iter().flat_map(|f| f.test.iter().copied()).collect();
         all_test.sort_unstable();
-        assert_eq!(all_test, (0..10).collect::<Vec<_>>(), "every row is a test exactly once");
+        assert_eq!(
+            all_test,
+            (0..10).collect::<Vec<_>>(),
+            "every row is a test exactly once"
+        );
         // train and test are disjoint and together cover all rows.
         for f in &folds {
             let t: HashSet<usize> = f.test.iter().copied().collect();
-            assert!(f.train.iter().all(|i| !t.contains(i)), "train/test disjoint");
+            assert!(
+                f.train.iter().all(|i| !t.contains(i)),
+                "train/test disjoint"
+            );
             assert_eq!(f.train.len() + f.test.len(), 10);
         }
     }
@@ -113,7 +127,9 @@ mod tests {
     fn loocv_has_n_folds_of_one() {
         let folds = loocv(5);
         assert_eq!(folds.len(), 5);
-        assert!(folds.iter().all(|f| f.test.len() == 1 && f.train.len() == 4));
+        assert!(folds
+            .iter()
+            .all(|f| f.test.len() == 1 && f.train.len() == 4));
     }
 
     #[test]

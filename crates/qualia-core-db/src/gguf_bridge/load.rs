@@ -96,7 +96,10 @@ impl QTensorEngine {
     /// blobs (rebaked to 2-bit + uploaded once). Returns false if there are no ternary FFN tensors
     /// or the GPU build fails — the FFN then runs the CPU oracle (`dispatch_ternary_ffn` fallback).
     #[cfg(not(target_arch = "wasm32"))]
-    pub(crate) fn build_ternary_ffn_resident(&mut self, q: &crate::q42_weight::Q42TensorIndex) -> bool {
+    pub(crate) fn build_ternary_ffn_resident(
+        &mut self,
+        q: &crate::p64_weight::P64TensorIndex,
+    ) -> bool {
         let mmap_arc = match self.gguf_mmap.clone() {
             Some(a) => a,
             None => return false,
@@ -104,16 +107,16 @@ impl QTensorEngine {
         let data: &[u8] = &mmap_arc;
         let mut tensors: Vec<(u64, usize, usize, &[u8])> = Vec::new();
         for e in &q.entries {
-            if e.ggml_type != crate::ternary::GGML_TYPE_TERNARY_158 {
+            if e.dtype as u32 != crate::ternary::GGML_TYPE_TERNARY_158 {
                 continue;
             }
-            let (n_in, n_out) = (e.dim0 as usize, e.dim1 as usize);
-            let (off, len) = (e.blob_offset as usize, e.byte_len as usize);
+            let (n_in, n_out) = (e.dimensions[0] as usize, e.dimensions[1] as usize);
+            let (off, len) = (e.blob_offset as usize, e.blob_size as usize);
             if n_in == 0 || n_out == 0 || off + len > data.len() {
                 continue;
             }
             // key = the .q42 blob offset == the synthetic index's GgufTensorInfo::byte_offset.
-            tensors.push((e.blob_offset, n_in, n_out, &data[off..off + len]));
+            tensors.push((e.blob_offset as u64, n_in, n_out, &data[off..off + len]));
         }
         if tensors.is_empty() {
             return false;
@@ -137,7 +140,7 @@ impl QTensorEngine {
     }
 
     /// A1b: boot from an already-mapped `.q42` weight container (native). Mirrors the GGUF
-    /// `adopt_resident_mmap` but for the `Q42W` format: validates + builds a synthetic GGUF index
+    /// `adopt_resident_mmap` but for the `P64` format: validates + builds a synthetic GGUF index
     /// from the manifest, points the byte source at the `.q42` bytes (`tensor_data_start = 0`,
     /// absolute blob offsets), reserves the GEMM/KV arenas, makes the (verbatim) output projection
     /// resident, and builds the resident 2-bit ternary-FFN dispatcher from the FFN blobs. The
@@ -151,7 +154,7 @@ impl QTensorEngine {
         if file_size == 0 {
             return Err("Empty Q42 mmap".to_string());
         }
-        let q = crate::q42_weight::Q42TensorIndex::from_q42(&mmap[..])?;
+        let q = crate::p64_weight::P64TensorIndex::from_p64(&mmap[..])?;
         let index = q.to_gguf_index();
         let hp = index.hyperparams;
         if hp.n_layer == 0 || hp.n_embd == 0 {
@@ -208,7 +211,10 @@ impl QTensorEngine {
 
     /// Attach an already-mapped resident GGUF (shared with orchestrator slot).
     #[cfg(not(target_arch = "wasm32"))]
-    pub fn adopt_resident_mmap(&mut self, mmap: Arc<memmap2::Mmap>) -> Result<GgufLoadReport, String> {
+    pub fn adopt_resident_mmap(
+        &mut self,
+        mmap: Arc<memmap2::Mmap>,
+    ) -> Result<GgufLoadReport, String> {
         let file_size = mmap.len();
         if file_size == 0 {
             return Err("Empty GGUF mmap".to_string());
@@ -268,7 +274,10 @@ impl QTensorEngine {
     /// token (the decode throughput killer). Idempotent. Returns false (→ per-token upload
     /// fallback) if the projection is missing or its bytes don't divide evenly into rows.
     #[cfg(not(target_arch = "wasm32"))]
-    pub(crate) fn mc8_upload_resident_logits(&mut self, index: &crate::gguf_sharder::GgufTensorIndex) -> bool {
+    pub(crate) fn mc8_upload_resident_logits(
+        &mut self,
+        index: &crate::gguf_sharder::GgufTensorIndex,
+    ) -> bool {
         if self.mc8_logits_resident_buf.is_some() {
             return true;
         }
@@ -286,7 +295,8 @@ impl QTensorEngine {
             None => return false,
         };
         let mmap: &[u8] = &mmap_arc;
-        let raw = match crate::ggml_quants::fetch_tensor_bytes(mmap, index.tensor_data_start, info) {
+        let raw = match crate::ggml_quants::fetch_tensor_bytes(mmap, index.tensor_data_start, info)
+        {
             Ok(s) => s,
             Err(_) => return false,
         };
@@ -407,5 +417,4 @@ impl QTensorEngine {
             },
         })
     }
-
 }

@@ -133,9 +133,10 @@ impl LogConfiguration {
 impl LogLevel {
     pub fn to_opcodes(&self) -> Vec<SlgOpcode> {
         // Validate that log level is in allowed set
-        self.allowed_levels.iter().map(|level| {
-            SlgOpcode::CheckHasValue(crate::q_hash(level))
-        }).collect()
+        self.allowed_levels
+            .iter()
+            .map(|level| SlgOpcode::CheckHasValue(crate::q_hash(level)))
+            .collect()
     }
 }
 
@@ -169,9 +170,7 @@ impl LogRetention {
 
 impl LogExportFormat {
     pub fn to_opcodes(&self) -> Vec<SlgOpcode> {
-        let mut opcodes = vec![
-            SlgOpcode::CheckMaxInclusive(self.max_export_size_mb as f64),
-        ];
+        let mut opcodes = vec![SlgOpcode::CheckMaxInclusive(self.max_export_size_mb as f64)];
         // Add format validation
         for format in &self.allowed_formats {
             opcodes.push(SlgOpcode::CheckHasValue(crate::q_hash(format)));
@@ -182,9 +181,7 @@ impl LogExportFormat {
 
 impl SystemTrayConfiguration {
     pub fn to_opcodes(&self) -> Vec<SlgOpcode> {
-        vec![
-            SlgOpcode::CheckMaxInclusive(self.max_menu_items as f64),
-        ]
+        vec![SlgOpcode::CheckMaxInclusive(self.max_menu_items as f64)]
     }
 }
 
@@ -215,9 +212,7 @@ impl TrayStatusIndicator {
 
 impl TrayAction {
     pub fn to_opcodes(&self) -> Vec<SlgOpcode> {
-        vec![
-            SlgOpcode::CheckMaxInclusive(self.timeout_ms as f64),
-        ]
+        vec![SlgOpcode::CheckMaxInclusive(self.timeout_ms as f64)]
     }
 }
 
@@ -255,9 +250,9 @@ impl TaxRecipientConfiguration {
 
 impl SecurityConfiguration {
     pub fn to_opcodes(&self) -> Vec<SlgOpcode> {
-        vec![
-            SlgOpcode::CheckMinInclusive(self.min_key_length_bits as f64),
-        ]
+        vec![SlgOpcode::CheckMinInclusive(
+            self.min_key_length_bits as f64,
+        )]
     }
 }
 

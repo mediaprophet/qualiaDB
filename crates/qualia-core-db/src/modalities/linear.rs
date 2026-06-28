@@ -141,7 +141,9 @@ pub fn structural_rule_licensed(rule: StructuralRule, reusable: bool) -> bool {
 /// Validate a whole sequence of structural-rule applications `(rule, reusable)`; every step must
 /// be licensed for the derivation to be well-formed.
 pub fn structural_derivation_valid(steps: &[(StructuralRule, bool)]) -> bool {
-    steps.iter().all(|&(rule, reusable)| structural_rule_licensed(rule, reusable))
+    steps
+        .iter()
+        .all(|&(rule, reusable)| structural_rule_licensed(rule, reusable))
 }
 
 // ─── Proof-net validation (Danos-Regnier correctness, multiplicative fragment) ──────
@@ -271,7 +273,9 @@ mod tests {
     #[test]
     fn linear_negation_is_involutive_and_dualises_connectives() {
         use Connective::*;
-        for c in [Atom, AtomDual, Tensor, Par, Plus, With, One, Bottom, Zero, Top, OfCourse, WhyNot] {
+        for c in [
+            Atom, AtomDual, Tensor, Par, Plus, With, One, Bottom, Zero, Top, OfCourse, WhyNot,
+        ] {
             assert_eq!(c.dual().dual(), c, "(A⊥)⊥ = A for {:?}", c);
             assert_ne!(c.dual(), c, "no connective is its own dual: {:?}", c);
         }
@@ -296,13 +300,23 @@ mod tests {
 
     #[test]
     fn tensor_consumes_both_and_respects_reuse() {
-        let mk = || NQuin { subject: 1, predicate: 2, object: 3, context: 0, metadata: 0, parity: 0 };
+        let mk = || NQuin {
+            subject: 1,
+            predicate: 2,
+            object: 3,
+            context: 0,
+            metadata: 0,
+            parity: 0,
+        };
         // Two linear resources: tensor consumes both; a second demand fails.
         let mut a = mk();
         let mut b = mk();
         assert!(tensor_consume(&mut a, false, &mut b, false));
         assert!(is_consumed(&a) && is_consumed(&b));
-        assert!(!tensor_consume(&mut a, false, &mut b, false), "linear resources are exhausted");
+        assert!(
+            !tensor_consume(&mut a, false, &mut b, false),
+            "linear resources are exhausted"
+        );
 
         // A reusable (!-marked) resource is never exhausted.
         let mut r = mk();
@@ -310,14 +324,20 @@ mod tests {
         assert!(tensor_consume(&mut r, true, &mut s, false));
         assert!(!is_consumed(&r), "reusable resource is not consumed");
         assert!(is_consumed(&s));
-        assert!(tensor_consume(&mut r, true, &mut s, true), "reusable can satisfy again");
+        assert!(
+            tensor_consume(&mut r, true, &mut s, true),
+            "reusable can satisfy again"
+        );
     }
 
     #[test]
     fn structural_rules_are_controlled() {
         // Weakening / contraction only on reusable (!) formulas; never on linear ones.
         assert!(!structural_rule_licensed(StructuralRule::Weakening, false));
-        assert!(!structural_rule_licensed(StructuralRule::Contraction, false));
+        assert!(!structural_rule_licensed(
+            StructuralRule::Contraction,
+            false
+        ));
         assert!(structural_rule_licensed(StructuralRule::Weakening, true));
         assert!(structural_rule_licensed(StructuralRule::Contraction, true));
         // Exchange is always fine.
@@ -328,7 +348,10 @@ mod tests {
             (StructuralRule::Exchange, false),
         ]));
         // …but contraction on a linear resource invalidates it.
-        assert!(!structural_derivation_valid(&[(StructuralRule::Contraction, false)]));
+        assert!(!structural_derivation_valid(&[(
+            StructuralRule::Contraction,
+            false
+        )]));
     }
 
     #[test]
@@ -350,12 +373,22 @@ mod tests {
 
         // Bounds are enforced.
         assert!(!is_proof_net(0, &[], &[]));
-        assert!(!is_proof_net(2, &[(0, 5)], &[]), "edge to out-of-range node rejected");
+        assert!(
+            !is_proof_net(2, &[(0, 5)], &[]),
+            "edge to out-of-range node rejected"
+        );
     }
 
     #[test]
     fn zk_gate_controls_resource_exhaustion() {
-        let mk = || NQuin { subject: 1, predicate: 2, object: 3, context: 0, metadata: 0, parity: 0 };
+        let mk = || NQuin {
+            subject: 1,
+            predicate: 2,
+            object: 3,
+            context: 0,
+            metadata: 0,
+            parity: 0,
+        };
         // No proof → no consumption, resource untouched.
         let mut q = mk();
         assert!(!zk_gated_consume(&mut q, false, false));

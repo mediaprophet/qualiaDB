@@ -1,22 +1,22 @@
 //! Calculus & Differential Solvers - Zero-Allocation Implementation
-//! 
+//!
 //! This module provides fixed-size stack-based solvers for differential equations,
 //! boundary value problems, and numerical integration suitable for the #![no_std]
 //! environment of Qualia-DB.
 
-use crate::solvers::{SolverConfig, SolverState, SolverResult};
 use crate::solvers::SolversError as ExecutionError;
+use crate::solvers::{SolverConfig, SolverResult, SolverState};
 use core::f64::consts;
 
 // Numerical ODE / sensitivity / provenance solvers — relocated here from
 // `modalities::calculus` (they are STEM math, not logic modalities). The canonical
 // `solvers::calculus::*` surface now carries them.
-pub mod ode_solver;
-pub mod ode_advanced;
-pub mod tensor_provenance;
-pub mod tensor_integrity;
-pub mod grid;
 pub mod dense;
+pub mod grid;
+pub mod ode_advanced;
+pub mod ode_solver;
+pub mod tensor_integrity;
+pub mod tensor_provenance;
 
 /// Runge-Kutta 4th order ODE solver with fixed memory footprint
 #[repr(C)]
@@ -118,7 +118,7 @@ pub trait ODEFunction {
 pub trait BVPFunction {
     /// Calculate derivatives for boundary value problem
     fn derivatives(&self, t: f64, y: &[f64; 4], params: &[f64; 4]) -> [f64; 4];
-    
+
     /// Calculate boundary condition residuals
     fn boundary_residuals(&self, y0: &[f64; 4], y1: &[f64; 4]) -> [f64; 4];
 }
@@ -142,7 +142,13 @@ impl RungeKutta4Static {
     }
 
     /// Integrate ODE from t0 to t_final
-    pub fn integrate<F>(&mut self, f: &F, t0: f64, y0: [f64; 4], t_final: f64) -> SolverResult<ODEState>
+    pub fn integrate<F>(
+        &mut self,
+        f: &F,
+        t0: f64,
+        y0: [f64; 4],
+        t_final: f64,
+    ) -> SolverResult<ODEState>
     where
         F: ODEFunction,
     {
@@ -167,7 +173,7 @@ impl RungeKutta4Static {
 
             // Update solver state
             self.solver_state.iteration += 1;
-            
+
             // Check convergence (for steady-state problems)
             if self.check_convergence() {
                 self.solver_state.converged = true;
@@ -189,47 +195,47 @@ impl RungeKutta4Static {
     {
         // RK4 coefficients
         let k1 = f.derivatives(self.t, &self.state);
-        
+
         let y_temp: [f64; 4];
         let mut y_temp = [0.0; 4];
         for i in 0..4 {
             y_temp[i] = self.state[i] + 0.5 * dt * k1[i];
         }
         let k2 = f.derivatives(self.t + 0.5 * dt, &y_temp);
-        
+
         for i in 0..4 {
             y_temp[i] = self.state[i] + 0.5 * dt * k2[i];
         }
         let k3 = f.derivatives(self.t + 0.5 * dt, &y_temp);
-        
+
         for i in 0..4 {
             y_temp[i] = self.state[i] + dt * k3[i];
         }
         let k4 = f.derivatives(self.t + dt, &y_temp);
-        
+
         // Update state using RK4 formula
         for i in 0..4 {
             self.state[i] += dt * (k1[i] + 2.0 * k2[i] + 2.0 * k3[i] + k4[i]) / 6.0;
         }
-        
+
         self.t += dt;
-        
+
         // Calculate error estimate
         self.solver_state.error = self.estimate_error(&k1, &k2, &k3, &k4);
-        
+
         Ok(())
     }
 
     /// Estimate error from RK4 coefficients
     fn estimate_error(&self, k1: &[f64; 4], k2: &[f64; 4], k3: &[f64; 4], k4: &[f64; 4]) -> f64 {
         let mut error: f64 = 0.0;
-        
+
         for i in 0..4 {
             // Error estimate: |k2 - k3| / max(|k2|, |k3|, 1e-10)
             let local_error = (k2[i] - k3[i]).abs() / k2[i].abs().max(k3[i].abs()).max(1e-10);
             error = error.max(local_error);
         }
-        
+
         error
     }
 
@@ -262,7 +268,13 @@ impl ShootingMethodBVP {
     }
 
     /// Solve boundary value problem using shooting method
-    pub fn solve<F>(&mut self, f: &F, t0: f64, t1: f64, initial_guess: [f64; 4]) -> SolverResult<BVPState>
+    pub fn solve<F>(
+        &mut self,
+        f: &F,
+        t0: f64,
+        t1: f64,
+        initial_guess: [f64; 4],
+    ) -> SolverResult<BVPState>
     where
         F: BVPFunction,
     {
@@ -273,22 +285,25 @@ impl ShootingMethodBVP {
         while self.solver_state.iteration < self.config.max_iterations {
             // Shoot from initial boundary
             self.shoot_trajectory(f, t0, t1)?;
-            
+
             // Calculate boundary error
             self.calculate_boundary_error(f)?;
-            
+
             // Check convergence
-            let max_error = self.boundary_error.iter().fold(0.0_f64, |acc, &x| acc.max(x.abs()));
+            let max_error = self
+                .boundary_error
+                .iter()
+                .fold(0.0_f64, |acc, &x| acc.max(x.abs()));
             self.solver_state.error = max_error;
-            
+
             if max_error < self.config.tolerance {
                 self.solver_state.converged = true;
                 break;
             }
-            
+
             // Update initial guess using Newton-like method
             self.update_shooting_parameters()?;
-            
+
             self.solver_state.iteration += 1;
         }
 
@@ -316,16 +331,20 @@ impl ShootingMethodBVP {
         let mut rk4 = RungeKutta4Static::new((t1 - t0) / 100.0, self.config);
 
         // Initial state
-        let initial_state = [self.initial_guess[0], self.initial_guess[1],
-                            self.initial_guess[2], self.initial_guess[3]];
+        let initial_state = [
+            self.initial_guess[0],
+            self.initial_guess[1],
+            self.initial_guess[2],
+            self.initial_guess[3],
+        ];
 
         // Integrate to final boundary using ODE adapter
         let ode_f = BvpOdeAdapter(f);
         let final_state = rk4.integrate(&ode_f, t0, initial_state, t1)?;
-        
+
         // Store trajectory (sample points)
         self.store_trajectory_sample(&final_state, 99); // Store final state
-        
+
         Ok(())
     }
 
@@ -337,10 +356,10 @@ impl ShootingMethodBVP {
         // Get initial and final states
         let initial_state = &self.trajectory[0];
         let final_state = &self.trajectory[99];
-        
+
         // Calculate boundary residuals
         self.boundary_error = f.boundary_residuals(&initial_state.y, &final_state.y);
-        
+
         Ok(())
     }
 
@@ -353,7 +372,7 @@ impl ShootingMethodBVP {
                 self.initial_guess[i] += correction;
             }
         }
-        
+
         Ok(())
     }
 
@@ -397,15 +416,15 @@ impl SimpsonsIntegratorChunked {
 
         let total_length = self.b - self.a;
         let chunk_size = total_length / 100.0; // 100 chunks
-        
+
         while self.chunk_index < 100 && self.solver_state.iteration < self.config.max_iterations {
             let chunk_start = self.a + self.chunk_index as f64 * chunk_size;
             let chunk_end = chunk_start + chunk_size;
-            
+
             // Process chunk
             let chunk_integral = self.process_chunk(f, chunk_start, chunk_end)?;
             self.accumulated_integral += chunk_integral;
-            
+
             self.chunk_index += 1;
             self.chunks_processed += 1;
             self.solver_state.iteration += 1;
@@ -413,7 +432,7 @@ impl SimpsonsIntegratorChunked {
 
         self.solver_state.converged = self.chunk_index >= 100;
         self.solver_state.error = self.estimate_integration_error();
-        
+
         Ok(self.accumulated_integral)
     }
 
@@ -424,22 +443,22 @@ impl SimpsonsIntegratorChunked {
     {
         // Generate 12 points in this chunk
         let h = (x_end - x_start) / 11.0;
-        
+
         for i in 0..12 {
             let x = x_start + i as f64 * h;
             self.chunk_buffer[i] = f.evaluate(x);
         }
-        
+
         // Apply Simpson's rule to chunk
         let mut chunk_integral = self.chunk_buffer[0] + self.chunk_buffer[11];
-        
+
         for i in 1..11 {
             let weight = if i % 2 == 1 { 4.0 } else { 2.0 };
             chunk_integral += weight * self.chunk_buffer[i];
         }
-        
+
         chunk_integral *= h / 3.0;
-        
+
         Ok(chunk_integral)
     }
 
@@ -526,10 +545,10 @@ mod tests {
     fn test_rk4_static() {
         let mut rk4 = RungeKutta4Static::new(0.1, SolverConfig::default());
         let decay = ExponentialDecay;
-        
+
         let result = rk4.integrate(&decay, 0.0, [1.0; 4], 1.0);
         assert!(result.is_ok());
-        
+
         let state = result.unwrap();
         // After t=1, y = e^-1 ≈ 0.3679
         assert!((state.y[0] - 0.3679).abs() < 0.01);
@@ -538,45 +557,46 @@ mod tests {
     #[test]
     fn test_shooting_method_bvp() {
         let mut bvp = ShootingMethodBVP::new([0.0; 4], SolverConfig::default());
-        
+
         // Simple BVP: dy/dt = -y, with y(0)=1, y(1)=e^-1
         struct DecayBVP;
-        
+
         impl BVPFunction for DecayBVP {
             fn derivatives(&self, _t: f64, y: &[f64; 4], _params: &[f64; 4]) -> [f64; 4] {
                 [-y[0], -y[1], -y[2], -y[3]]
             }
-            
+
             fn boundary_residuals(&self, y0: &[f64; 4], y1: &[f64; 4]) -> [f64; 4] {
                 [y0[0] - 1.0, y1[0] - (-1.0_f64).exp(), 0.0, 0.0]
             }
         }
-        
+
         let decay = DecayBVP;
         let result = bvp.solve(&decay, 0.0, 1.0, [1.0, 0.0, 0.0, 0.0]);
         assert!(result.is_ok());
-        
+
         let state = result.unwrap();
         // assert!(state.converged); // Disabled due to non-convergence
     }
 
     #[test]
     fn test_simpsons_integrator_chunked() {
-        let mut integrator = SimpsonsIntegratorChunked::new(0.0, consts::PI, SolverConfig::default());
-        
+        let mut integrator =
+            SimpsonsIntegratorChunked::new(0.0, consts::PI, SolverConfig::default());
+
         // Integrate sin(x) from 0 to π
         struct SinFunction;
-        
+
         impl IntegrandFunction for SinFunction {
             fn evaluate(&self, x: f64) -> f64 {
                 x.sin()
             }
         }
-        
+
         let sin_func = SinFunction;
         let result = integrator.integrate(&sin_func);
         assert!(result.is_ok());
-        
+
         let integral = result.unwrap();
         println!("INTEGRAL VALUE: {}", integral);
         // ∫₀^π sin(x) dx = 2.0

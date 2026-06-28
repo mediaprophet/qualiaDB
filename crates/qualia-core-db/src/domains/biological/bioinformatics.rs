@@ -958,7 +958,12 @@ mod tests {
             6.0, 6.0, 0.0, 4.0,
             6.0, 6.0, 4.0, 0.0,
         ];
-        let mut out = [PhyloMerge { cluster_a: 0, cluster_b: 0, height: 0.0, merged_id: 0 }; 8];
+        let mut out = [PhyloMerge {
+            cluster_a: 0,
+            cluster_b: 0,
+            height: 0.0,
+            merged_id: 0,
+        }; 8];
         let n = build_upgma_tree(&d, 4, &mut out);
         assert_eq!(n, 3, "n-1 merges for 4 taxa");
 
@@ -980,11 +985,25 @@ mod tests {
 
     #[test]
     fn upgma_rejects_degenerate_input() {
-        let mut out = [PhyloMerge { cluster_a: 0, cluster_b: 0, height: 0.0, merged_id: 0 }; 8];
+        let mut out = [PhyloMerge {
+            cluster_a: 0,
+            cluster_b: 0,
+            height: 0.0,
+            merged_id: 0,
+        }; 8];
         assert_eq!(build_upgma_tree(&[0.0], 1, &mut out), 0, "n<2 rejected");
         // out too small for n-1 merges
         let d = [0.0, 1.0, 1.0, 0.0];
-        let mut tiny = [PhyloMerge { cluster_a: 0, cluster_b: 0, height: 0.0, merged_id: 0 }; 0];
-        assert_eq!(build_upgma_tree(&d, 2, &mut tiny), 0, "undersized out rejected");
+        let mut tiny = [PhyloMerge {
+            cluster_a: 0,
+            cluster_b: 0,
+            height: 0.0,
+            merged_id: 0,
+        }; 0];
+        assert_eq!(
+            build_upgma_tree(&d, 2, &mut tiny),
+            0,
+            "undersized out rejected"
+        );
     }
 }

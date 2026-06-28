@@ -49,7 +49,11 @@ pub fn run_job(
         _ => None,
     };
 
-    Ok(DispatchOutcome { result, verdict, settlement })
+    Ok(DispatchOutcome {
+        result,
+        verdict,
+        settlement,
+    })
 }
 
 #[cfg(test)]
@@ -64,7 +68,9 @@ mod tests {
         JobSpec::new(
             mode,
             JobInput::DenseLinearProduct {
-                m: 2, k: 2, n: 2,
+                m: 2,
+                k: 2,
+                n: 2,
                 a: vec![1.0, 2.0, 3.0, 4.0],
                 b: vec![5.0, 6.0, 7.0, 8.0],
             },
@@ -78,7 +84,9 @@ mod tests {
         fn execute(&self, input: &JobInput) -> Result<JobResult, SwarmError> {
             match input {
                 JobInput::DenseLinearProduct { m, n, .. } => {
-                    Ok(JobResult::DenseLinearProduct { c: vec![0.0; m * n] }) // all zeros — wrong
+                    Ok(JobResult::DenseLinearProduct {
+                        c: vec![0.0; m * n],
+                    }) // all zeros — wrong
                 }
                 _ => Err(SwarmError::InvalidJob),
             }
@@ -86,7 +94,11 @@ mod tests {
     }
 
     fn paid_mode() -> JobMode {
-        JobMode::Paid { requester_did: 1, provider_did: 2, price_micro_units: 500 }
+        JobMode::Paid {
+            requester_did: 1,
+            provider_did: 2,
+            price_micro_units: 500,
+        }
     }
 
     #[test]
@@ -94,7 +106,13 @@ mod tests {
         let spec = dense_job(paid_mode());
         let mut escrow = Escrow::offer(spec.id, 1, 2, 500, "$ilp.solar/pay", false);
         escrow.hold().unwrap();
-        let out = run_job(&spec, &LocalKernelExecutor, VerifyPolicy::default(), Some(&mut escrow)).unwrap();
+        let out = run_job(
+            &spec,
+            &LocalKernelExecutor,
+            VerifyPolicy::default(),
+            Some(&mut escrow),
+        )
+        .unwrap();
         assert!(out.verdict.is_verified());
         assert!(matches!(out.settlement, Some(SettlementOutcome::Pay(_))));
         assert_eq!(escrow.state, EscrowState::ReleasedToProvider);
@@ -105,7 +123,13 @@ mod tests {
         let spec = dense_job(paid_mode());
         let mut escrow = Escrow::offer(spec.id, 1, 2, 500, "$ilp.solar/pay", false);
         escrow.hold().unwrap();
-        let out = run_job(&spec, &LyingExecutor, VerifyPolicy::default(), Some(&mut escrow)).unwrap();
+        let out = run_job(
+            &spec,
+            &LyingExecutor,
+            VerifyPolicy::default(),
+            Some(&mut escrow),
+        )
+        .unwrap();
         assert!(!out.verdict.is_verified());
         assert!(
             matches!(out.settlement, Some(SettlementOutcome::Refund { .. })),

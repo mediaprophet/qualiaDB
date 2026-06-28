@@ -165,3 +165,5 @@ pub use temporal_ltl::{
     evaluate_ltl_trace, LtlFormula, OP_LTL_FINALLY, OP_LTL_GLOBALLY, OP_LTL_NEXT, OP_LTL_RELEASE,
     OP_LTL_UNTIL,
 };
+pub mod manifold;
+pub use manifold::project_10d_to_quaternion;

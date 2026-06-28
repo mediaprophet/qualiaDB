@@ -10,7 +10,9 @@ pub const MAX_CTL_STATES: usize = 256;
 
 #[inline]
 fn satisfies(graph: &[NQuin], state: u64, holds: u64, prop: u64) -> bool {
-    graph.iter().any(|q| q.subject == state && q.predicate == holds && q.object == prop)
+    graph
+        .iter()
+        .any(|q| q.subject == state && q.predicate == holds && q.object == prop)
 }
 
 /// **EF φ** — from `start`, SOME path eventually reaches a state satisfying `prop`.
@@ -100,7 +102,9 @@ pub fn always_globally(graph: &[NQuin], start: u64, inv: u64, next: u64, holds: 
 
 /// **EX φ** — SOME immediate successor of `start` satisfies `prop`.
 pub fn exists_next(graph: &[NQuin], start: u64, prop: u64, next: u64, holds: u64) -> bool {
-    graph.iter().any(|q| q.subject == start && q.predicate == next && satisfies(graph, q.object, holds, prop))
+    graph.iter().any(|q| {
+        q.subject == start && q.predicate == next && satisfies(graph, q.object, holds, prop)
+    })
 }
 
 /// **AX φ** — ALL immediate successors of `start` satisfy `prop` (vacuously true if none).
@@ -113,7 +117,14 @@ pub fn always_next(graph: &[NQuin], start: u64, prop: u64, next: u64, holds: u64
 
 /// **E[φ U ψ]** — SOME path on which `phi` holds at every state until `psi` becomes true.
 /// Zero-heap BFS constrained to `phi`-states.
-pub fn exists_until(graph: &[NQuin], start: u64, phi: u64, psi: u64, next: u64, holds: u64) -> bool {
+pub fn exists_until(
+    graph: &[NQuin],
+    start: u64,
+    phi: u64,
+    psi: u64,
+    next: u64,
+    holds: u64,
+) -> bool {
     if satisfies(graph, start, holds, psi) {
         return true;
     }
@@ -137,7 +148,11 @@ pub fn exists_until(graph: &[NQuin], start: u64, phi: u64, psi: u64, next: u64, 
             if satisfies(graph, s2, holds, psi) {
                 return true;
             }
-            if satisfies(graph, s2, holds, phi) && !vis[..vl].contains(&s2) && vl < MAX_CTL_STATES && sl < MAX_CTL_STATES {
+            if satisfies(graph, s2, holds, phi)
+                && !vis[..vl].contains(&s2)
+                && vl < MAX_CTL_STATES
+                && sl < MAX_CTL_STATES
+            {
                 vis[vl] = s2;
                 vl += 1;
                 stack[sl] = s2;
@@ -150,7 +165,12 @@ pub fn exists_until(graph: &[NQuin], start: u64, phi: u64, psi: u64, next: u64, 
 
 /// Collect the states reachable from `start` (inclusive) along `next` edges into `out`. Returns
 /// the count. Bounded + zero-heap.
-fn reachable_states(graph: &[NQuin], start: u64, next: u64, out: &mut [u64; MAX_CTL_STATES]) -> usize {
+fn reachable_states(
+    graph: &[NQuin],
+    start: u64,
+    next: u64,
+    out: &mut [u64; MAX_CTL_STATES],
+) -> usize {
     let mut vl = 1usize;
     out[0] = start;
     let mut i = 0usize;
@@ -212,7 +232,9 @@ pub fn exists_globally(graph: &[NQuin], start: u64, prop: u64, next: u64, holds:
             break;
         }
     }
-    idx_of(&states[..n], start).map(|i| alive[i]).unwrap_or(false)
+    idx_of(&states[..n], start)
+        .map(|i| alive[i])
+        .unwrap_or(false)
 }
 
 /// **AF φ** — on ALL paths from `start`, `prop` eventually holds. Least-fixpoint labelling: a state
@@ -254,7 +276,9 @@ pub fn all_finally(graph: &[NQuin], start: u64, prop: u64, next: u64, holds: u64
             break;
         }
     }
-    idx_of(&states[..n], start).map(|i| is_af[i]).unwrap_or(false)
+    idx_of(&states[..n], start)
+        .map(|i| is_af[i])
+        .unwrap_or(false)
 }
 
 /// **A[φ U ψ]** — on EVERY path from `start`, `phi` holds at each state until `psi` becomes true
@@ -300,7 +324,14 @@ pub fn all_until(graph: &[NQuin], start: u64, phi: u64, psi: u64, next: u64, hol
 }
 
 /// Does the alive state at `start_idx` lie on a cycle within the alive set (reach itself)?
-fn alive_reaches_self(graph: &[NQuin], states: &[u64], n: usize, alive: &[bool], start_idx: usize, next: u64) -> bool {
+fn alive_reaches_self(
+    graph: &[NQuin],
+    states: &[u64],
+    n: usize,
+    alive: &[bool],
+    start_idx: usize,
+    next: u64,
+) -> bool {
     let target = states[start_idx];
     let mut stack = [0usize; MAX_CTL_STATES];
     let mut sl = 0usize;
@@ -349,7 +380,14 @@ fn alive_reaches_self(graph: &[NQuin], states: &[u64], n: usize, alive: &[bool],
 /// is visited infinitely often. The fairness constraint eliminates unrealistic infinite loops that
 /// make no progress. True iff some `fair` state — reachable from `start` within the `prop`-states
 /// that have an infinite `prop`-future — lies on a cycle. Bounded + zero-heap.
-pub fn fair_globally(graph: &[NQuin], start: u64, prop: u64, fair: u64, next: u64, holds: u64) -> bool {
+pub fn fair_globally(
+    graph: &[NQuin],
+    start: u64,
+    prop: u64,
+    fair: u64,
+    next: u64,
+    holds: u64,
+) -> bool {
     let mut states = [0u64; MAX_CTL_STATES];
     let n = reachable_states(graph, start, next, &mut states);
     let mut alive = [false; MAX_CTL_STATES];
@@ -383,7 +421,10 @@ pub fn fair_globally(graph: &[NQuin], start: u64, prop: u64, fair: u64, next: u6
         }
     }
     for i in 0..n {
-        if alive[i] && satisfies(graph, states[i], holds, fair) && alive_reaches_self(graph, &states, n, &alive, i, next) {
+        if alive[i]
+            && satisfies(graph, states[i], holds, fair)
+            && alive_reaches_self(graph, &states, n, &alive, i, next)
+        {
             return true;
         }
     }
@@ -395,12 +436,26 @@ mod tests {
     use super::*;
 
     fn t(from: u64, to: u64) -> NQuin {
-        let mut q = NQuin { subject: from, predicate: crate::q_hash("ctl:next"), object: to, context: 0, metadata: 0, parity: 0 };
+        let mut q = NQuin {
+            subject: from,
+            predicate: crate::q_hash("ctl:next"),
+            object: to,
+            context: 0,
+            metadata: 0,
+            parity: 0,
+        };
         q.parity = q.subject ^ q.predicate ^ q.object ^ q.context;
         q
     }
     fn label(state: u64, prop: u64) -> NQuin {
-        let mut q = NQuin { subject: state, predicate: crate::q_hash("ctl:holds"), object: prop, context: 0, metadata: 0, parity: 0 };
+        let mut q = NQuin {
+            subject: state,
+            predicate: crate::q_hash("ctl:holds"),
+            object: prop,
+            context: 0,
+            metadata: 0,
+            parity: 0,
+        };
         q.parity = q.subject ^ q.predicate ^ q.object ^ q.context;
         q
     }
@@ -412,13 +467,32 @@ mod tests {
         let goal = 100u64;
         let safe = 200u64;
         // 1 → 2 → 3; goal holds at 3; safe holds at 1,2,3.
-        let graph = [t(1, 2), t(2, 3), label(3, goal), label(1, safe), label(2, safe), label(3, safe)];
-        assert!(exists_finally(&graph, 1, goal, next, holds), "EF goal: state 3 is reachable");
-        assert!(always_globally(&graph, 1, safe, next, holds), "AG safe: all reachable states are safe");
+        let graph = [
+            t(1, 2),
+            t(2, 3),
+            label(3, goal),
+            label(1, safe),
+            label(2, safe),
+            label(3, safe),
+        ];
+        assert!(
+            exists_finally(&graph, 1, goal, next, holds),
+            "EF goal: state 3 is reachable"
+        );
+        assert!(
+            always_globally(&graph, 1, safe, next, holds),
+            "AG safe: all reachable states are safe"
+        );
         // Break the invariant at state 2.
         let graph2 = [t(1, 2), t(2, 3), label(1, safe), label(3, safe)];
-        assert!(!always_globally(&graph2, 1, safe, next, holds), "AG fails when a reachable state lacks the invariant");
-        assert!(!exists_finally(&graph2, 1, goal, next, holds), "EF goal is false when no reachable state has it");
+        assert!(
+            !always_globally(&graph2, 1, safe, next, holds),
+            "AG fails when a reachable state lacks the invariant"
+        );
+        assert!(
+            !exists_finally(&graph2, 1, goal, next, holds),
+            "EF goal is false when no reachable state has it"
+        );
     }
 
     #[test]
@@ -430,8 +504,14 @@ mod tests {
         // EX / AX: 1→2, 1→3; p at 2 only.
         let g = [t(1, 2), t(1, 3), label(2, p)];
         assert!(exists_next(&g, 1, p, next, holds), "EX: successor 2 has p");
-        assert!(!always_next(&g, 1, p, next, holds), "AX fails: successor 3 lacks p");
-        assert!(always_next(&g, 2, p, next, holds), "no successors → AX vacuously true");
+        assert!(
+            !always_next(&g, 1, p, next, holds),
+            "AX fails: successor 3 lacks p"
+        );
+        assert!(
+            always_next(&g, 2, p, next, holds),
+            "no successors → AX vacuously true"
+        );
 
         // E[a U goal]: a holds along 1→2 until goal at 3.
         let g2 = [t(1, 2), t(2, 3), label(1, a), label(2, a), label(3, goal)];
@@ -440,7 +520,10 @@ mod tests {
         assert!(!exists_until(&g3, 1, a, goal, next, holds));
         // A[a U goal]: on the only path, a holds until goal → AU holds; broken chain → fails.
         assert!(all_until(&g2, 1, a, goal, next, holds));
-        assert!(!all_until(&g3, 1, a, goal, next, holds), "a breaks before goal");
+        assert!(
+            !all_until(&g3, 1, a, goal, next, holds),
+            "a breaks before goal"
+        );
 
         // EG p: 1→2→2 loop, p everywhere → an infinite p-path exists.
         let g4 = [t(1, 2), t(2, 2), label(1, p), label(2, p)];
@@ -452,7 +535,10 @@ mod tests {
         let g6 = [t(1, 2), t(2, 2), label(2, goal)];
         assert!(all_finally(&g6, 1, goal, next, holds));
         let g7 = [t(1, 2), t(2, 2), label(1, goal)]; // goal-free 2-loop
-        assert!(!all_finally(&g7, 2, goal, next, holds), "a goal-free cycle never reaches goal");
+        assert!(
+            !all_finally(&g7, 2, goal, next, holds),
+            "a goal-free cycle never reaches goal"
+        );
     }
 
     #[test]
@@ -465,7 +551,10 @@ mod tests {
         assert!(fair_globally(&g, 1, p, fair, next, holds));
         // fair only at 1 (NOT on the 2-cycle) → no fair infinite path.
         let g2 = [t(1, 2), t(2, 2), label(1, p), label(2, p), label(1, fair)];
-        assert!(!fair_globally(&g2, 1, p, fair, next, holds), "the cycle has no fair state");
+        assert!(
+            !fair_globally(&g2, 1, p, fair, next, holds),
+            "the cycle has no fair state"
+        );
         // plain EG still holds (the unfair loop is an infinite p-path).
         assert!(exists_globally(&g2, 1, p, next, holds));
     }

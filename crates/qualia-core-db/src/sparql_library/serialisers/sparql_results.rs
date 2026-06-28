@@ -9,7 +9,11 @@ use std::io::Write;
 pub struct ResultFormatter;
 
 impl ResultFormatter {
-    fn format_value_xml<W: Write>(writer: &mut W, value: u64, lexicon: Option<&crate::q42_lex::Q42LexMmap>) -> std::io::Result<()> {
+    fn format_value_xml<W: Write>(
+        writer: &mut W,
+        value: u64,
+        lexicon: Option<&crate::q42_lex::Q42LexMmap>,
+    ) -> std::io::Result<()> {
         if (value >> 60) == 1 {
             if let Some(lex) = lexicon {
                 if let Some([s, p, o]) = lex.lookup_embedded_triple(value) {
@@ -26,7 +30,11 @@ impl ResultFormatter {
                     return writeln!(writer, r#"        </triple>"#);
                 }
             }
-            return writeln!(writer, r#"        <uri>&lt;&lt;{:016x}&gt;&gt;</uri>"#, value);
+            return writeln!(
+                writer,
+                r#"        <uri>&lt;&lt;{:016x}&gt;&gt;</uri>"#,
+                value
+            );
         }
 
         let uri = if let Some(bytes) = crate::resolver::resolve_hash(value) {
@@ -37,7 +45,11 @@ impl ResultFormatter {
         writeln!(writer, r#"        <uri>{}</uri>"#, uri)
     }
 
-    fn format_value_json<W: Write>(writer: &mut W, value: u64, lexicon: Option<&crate::q42_lex::Q42LexMmap>) -> std::io::Result<()> {
+    fn format_value_json<W: Write>(
+        writer: &mut W,
+        value: u64,
+        lexicon: Option<&crate::q42_lex::Q42LexMmap>,
+    ) -> std::io::Result<()> {
         if (value >> 60) == 1 {
             if let Some(lex) = lexicon {
                 if let Some([s, p, o]) = lex.lookup_embedded_triple(value) {
@@ -74,7 +86,11 @@ impl ResultFormatter {
         write!(writer, r#"      }}"#)
     }
 
-    fn format_value_tsv<W: Write>(writer: &mut W, value: u64, lexicon: Option<&crate::q42_lex::Q42LexMmap>) -> std::io::Result<()> {
+    fn format_value_tsv<W: Write>(
+        writer: &mut W,
+        value: u64,
+        lexicon: Option<&crate::q42_lex::Q42LexMmap>,
+    ) -> std::io::Result<()> {
         if (value >> 60) == 1 {
             if let Some(lex) = lexicon {
                 if let Some([s, p, o]) = lex.lookup_embedded_triple(value) {
@@ -89,7 +105,7 @@ impl ResultFormatter {
             }
             return write!(writer, "<<{:016x}>>", value);
         }
-        
+
         let uri = if let Some(bytes) = crate::resolver::resolve_hash(value) {
             String::from_utf8_lossy(bytes).into_owned()
         } else {
@@ -107,19 +123,22 @@ impl ResultFormatter {
         lexicon: Option<&crate::q42_lex::Q42LexMmap>,
     ) -> std::io::Result<()> {
         writeln!(writer, r#"<?xml version="1.0"?>"#)?;
-        writeln!(writer, r#"<sparql xmlns="http://www.w3.org/2005/sparql-results#">"#)?;
+        writeln!(
+            writer,
+            r#"<sparql xmlns="http://www.w3.org/2005/sparql-results#">"#
+        )?;
         writeln!(writer, r#"  <head>"#)?;
         writeln!(writer, r#"    <variables>"#)?;
-        
+
         for var in variables {
             let var_name = ctx.variable_hashes[*var as usize];
             writeln!(writer, r#"      <variable name="{}"/>"#, var_name)?;
         }
-        
+
         writeln!(writer, r#"    </variables>"#)?;
         writeln!(writer, r#"  </head>"#)?;
         writeln!(writer, r#"  <results>"#)?;
-        
+
         for row in results {
             writeln!(writer, r#"    <result>"#)?;
             for var in variables {
@@ -133,10 +152,10 @@ impl ResultFormatter {
             }
             writeln!(writer, r#"    </result>"#)?;
         }
-        
+
         writeln!(writer, r#"  </results>"#)?;
         writeln!(writer, r#"</sparql>"#)?;
-        
+
         Ok(())
     }
 
@@ -150,7 +169,7 @@ impl ResultFormatter {
     ) -> std::io::Result<()> {
         writeln!(writer, r#"{{"#)?;
         writeln!(writer, r#"  "head": {{"vars": ["#)?;
-        
+
         for (i, var) in variables.iter().enumerate() {
             let var_name = ctx.variable_hashes[*var as usize];
             if i > 0 {
@@ -158,17 +177,17 @@ impl ResultFormatter {
             }
             write!(writer, r#""{}""#, var_name)?;
         }
-        
+
         writeln!(writer, r#"]}},"#)?;
         writeln!(writer, r#"  "results": {{"#)?;
         writeln!(writer, r#"    "bindings": ["#)?;
-        
+
         for (i, row) in results.iter().enumerate() {
             if i > 0 {
                 writeln!(writer, r#","#)?;
             }
             writeln!(writer, r#"      {{"#)?;
-            
+
             let mut first = true;
             for var in variables {
                 let var_id = *var;
@@ -182,16 +201,18 @@ impl ResultFormatter {
                     Self::format_value_json(writer, value, lexicon)?;
                 }
             }
-            
-            if !first { writeln!(writer)? };
+
+            if !first {
+                writeln!(writer)?
+            };
             write!(writer, r#"      }}"#)?;
         }
         writeln!(writer)?;
-        
+
         writeln!(writer, r#"    ]"#)?;
         writeln!(writer, r#"  }}"#)?;
         writeln!(writer, r#"}}"#)?;
-        
+
         Ok(())
     }
 
@@ -204,14 +225,18 @@ impl ResultFormatter {
         lexicon: Option<&crate::q42_lex::Q42LexMmap>,
     ) -> std::io::Result<()> {
         for (i, var) in variables.iter().enumerate() {
-            if i > 0 { write!(writer, "\t")?; }
+            if i > 0 {
+                write!(writer, "\t")?;
+            }
             write!(writer, "?{}", ctx.variable_hashes[*var as usize])?;
         }
         writeln!(writer)?;
-        
+
         for row in results {
             for (i, var) in variables.iter().enumerate() {
-                if i > 0 { write!(writer, "\t")?; }
+                if i > 0 {
+                    write!(writer, "\t")?;
+                }
                 if let Some(value) = row.get(*var) {
                     Self::format_value_tsv(writer, value, lexicon)?;
                 }
@@ -230,14 +255,18 @@ impl ResultFormatter {
         lexicon: Option<&crate::q42_lex::Q42LexMmap>,
     ) -> std::io::Result<()> {
         for (i, var) in variables.iter().enumerate() {
-            if i > 0 { write!(writer, ",")?; }
+            if i > 0 {
+                write!(writer, ",")?;
+            }
             write!(writer, "{}", ctx.variable_hashes[*var as usize])?;
         }
         writeln!(writer)?;
-        
+
         for row in results {
             for (i, var) in variables.iter().enumerate() {
-                if i > 0 { write!(writer, ",")?; }
+                if i > 0 {
+                    write!(writer, ",")?;
+                }
                 if let Some(value) = row.get(*var) {
                     let mut temp = Vec::new();
                     Self::format_value_tsv(&mut temp, value, lexicon)?;
@@ -277,7 +306,10 @@ impl ResultFormatter {
 
     pub fn format_ask_xml<W: Write>(writer: &mut W, result: bool) -> std::io::Result<()> {
         writeln!(writer, r#"<?xml version="1.0"?>"#)?;
-        writeln!(writer, r#"<sparql xmlns="http://www.w3.org/2005/sparql-results#">"#)?;
+        writeln!(
+            writer,
+            r#"<sparql xmlns="http://www.w3.org/2005/sparql-results#">"#
+        )?;
         writeln!(writer, r#"  <head></head>"#)?;
         writeln!(writer, r#"  <boolean>{}</boolean>"#, result)?;
         writeln!(writer, r#"</sparql>"#)?;

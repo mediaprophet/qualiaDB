@@ -55,7 +55,11 @@ pub fn hessian_at(
 ) -> Option<Vec<Vec<f64>>> {
     hessian(expr, vars)
         .iter()
-        .map(|row| row.iter().map(|h| h.eval(point)).collect::<Option<Vec<f64>>>())
+        .map(|row| {
+            row.iter()
+                .map(|h| h.eval(point))
+                .collect::<Option<Vec<f64>>>()
+        })
         .collect()
 }
 
@@ -71,7 +75,10 @@ mod tests {
     #[test]
     fn gradient_of_a_quadratic_form() {
         // f = x² + x·y + y²  →  ∇f = [2x + y, x + 2y]
-        let f = add(add(pow(var("x"), 2), mul(var("x"), var("y"))), pow(var("y"), 2));
+        let f = add(
+            add(pow(var("x"), 2), mul(var("x"), var("y"))),
+            pow(var("y"), 2),
+        );
         let g = gradient(&f, &["x", "y"]);
         let p = env(&[("x", 3.0), ("y", 5.0)]);
         // ∂f/∂x = 2·3 + 5 = 11 ; ∂f/∂y = 3 + 2·5 = 13
@@ -82,7 +89,10 @@ mod tests {
     #[test]
     fn hessian_of_a_quadratic_is_constant() {
         // f = x² + x·y + y²  →  H = [[2, 1], [1, 2]], symmetric & constant.
-        let f = add(add(pow(var("x"), 2), mul(var("x"), var("y"))), pow(var("y"), 2));
+        let f = add(
+            add(pow(var("x"), 2), mul(var("x"), var("y"))),
+            pow(var("y"), 2),
+        );
         let h = hessian_at(&f, &["x", "y"], &env(&[("x", 0.0), ("y", 0.0)])).unwrap();
         assert!((h[0][0] - 2.0).abs() < 1e-9);
         assert!((h[0][1] - 1.0).abs() < 1e-9);

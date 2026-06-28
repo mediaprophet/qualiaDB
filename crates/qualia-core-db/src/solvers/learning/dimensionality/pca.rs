@@ -79,7 +79,18 @@ pub fn fit(x: &[f64], n: usize, p: usize) -> Result<Pca, LearningError> {
 
     // Covariance C = Xcᵀ Xc / (n-1)  (p×p, symmetric).
     let mut cov = vec![0.0; p * p];
-    gemm(Transpose::Yes, Transpose::No, p, p, n, 1.0 / (n as f64 - 1.0), &xc, &xc, 0.0, &mut cov)?;
+    gemm(
+        Transpose::Yes,
+        Transpose::No,
+        p,
+        p,
+        n,
+        1.0 / (n as f64 - 1.0),
+        &xc,
+        &xc,
+        0.0,
+        &mut cov,
+    )?;
     // Symmetrize against round-off so the eigensolver's symmetry check passes.
     for i in 0..p {
         for j in (i + 1)..p {
@@ -97,7 +108,11 @@ pub fn fit(x: &[f64], n: usize, p: usize) -> Result<Pca, LearningError> {
 
     // Order components by descending eigenvalue.
     let mut order: Vec<usize> = (0..p).collect();
-    order.sort_by(|&a, &b| eigvals[b].partial_cmp(&eigvals[a]).unwrap_or(core::cmp::Ordering::Equal));
+    order.sort_by(|&a, &b| {
+        eigvals[b]
+            .partial_cmp(&eigvals[a])
+            .unwrap_or(core::cmp::Ordering::Equal)
+    });
 
     let mut components = vec![0.0; p * p]; // p components (rows) × p
     let mut explained_variance = vec![0.0; p];
@@ -131,11 +146,13 @@ mod tests {
     #[test]
     fn one_dominant_direction() {
         // Variance almost entirely along x; tiny along y → PC1 ~ x-axis, ratio ~1.
-        let x = [
-            -2.0, 0.01, -1.0, -0.01, 0.0, 0.0, 1.0, 0.01, 2.0, -0.01,
-        ];
+        let x = [-2.0, 0.01, -1.0, -0.01, 0.0, 0.0, 1.0, 0.01, 2.0, -0.01];
         let m = fit(&x, 5, 2).unwrap();
-        assert!(m.explained_variance_ratio[0] > 0.99, "ratio {}", m.explained_variance_ratio[0]);
+        assert!(
+            m.explained_variance_ratio[0] > 0.99,
+            "ratio {}",
+            m.explained_variance_ratio[0]
+        );
         // PC1 aligns with the x-axis (|component_x| ~ 1, |component_y| ~ 0).
         assert!(m.components[0].abs() > 0.99 && m.components[1].abs() < 0.05);
         // Ratios sum to 1.
@@ -180,12 +197,21 @@ mod tests {
             total_var += variance(&col, true).unwrap();
         }
         let sum_eig: f64 = m.explained_variance.iter().sum();
-        assert!((sum_eig - total_var).abs() < 1e-9, "{sum_eig} vs {total_var}");
+        assert!(
+            (sum_eig - total_var).abs() < 1e-9,
+            "{sum_eig} vs {total_var}"
+        );
     }
 
     #[test]
     fn guards() {
-        assert_eq!(fit(&[1.0, 2.0], 1, 2).unwrap_err(), LearningError::InsufficientData);
-        assert_eq!(fit(&[1.0, 2.0, 3.0], 2, 2).unwrap_err(), LearningError::InvalidDimension);
+        assert_eq!(
+            fit(&[1.0, 2.0], 1, 2).unwrap_err(),
+            LearningError::InsufficientData
+        );
+        assert_eq!(
+            fit(&[1.0, 2.0, 3.0], 2, 2).unwrap_err(),
+            LearningError::InvalidDimension
+        );
     }
 }

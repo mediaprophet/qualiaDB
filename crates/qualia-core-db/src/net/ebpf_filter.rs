@@ -15,20 +15,23 @@
 
 #![cfg(not(target_arch = "wasm32"))]
 
-use crate::storage_driver::{NetworkFilter, NetworkFilterKind, StorageError, NoopFilter};
-use std::sync::{Arc, Mutex};
+use crate::storage_driver::{NetworkFilter, NetworkFilterKind, NoopFilter, StorageError};
 use std::collections::HashMap;
+use std::sync::{Arc, Mutex};
 
 // ──────────────────────────────────────────────────────────────────────────────
 // Rule store (shared by all filter implementations)
 // ──────────────────────────────────────────────────────────────────────────────
 
 #[derive(Debug, Clone, PartialEq)]
-pub enum RuleAction { Allow, Deny }
+pub enum RuleAction {
+    Allow,
+    Deny,
+}
 
 #[derive(Debug, Clone)]
 pub struct FilterRule {
-    pub rule:   String,
+    pub rule: String,
     pub action: RuleAction,
 }
 
@@ -39,7 +42,13 @@ struct RuleStore {
 
 impl RuleStore {
     fn insert(&mut self, rule: &str, action: RuleAction) {
-        self.rules.insert(rule.to_string(), FilterRule { rule: rule.to_string(), action });
+        self.rules.insert(
+            rule.to_string(),
+            FilterRule {
+                rule: rule.to_string(),
+                action,
+            },
+        );
     }
     fn remove(&mut self, rule: &str) {
         self.rules.remove(rule);
@@ -66,27 +75,27 @@ const PASS_ALL_CBPF: [u64; 2] = [
 #[cfg(target_os = "linux")]
 #[repr(C)]
 struct BpfProgLoad {
-    prog_type:             u32,
-    insn_cnt:              u32,
-    insns:                 u64,  // pointer to instructions
-    license:               u64,  // pointer to license string
-    log_level:             u32,
-    log_size:              u32,
-    log_buf:               u64,
-    kern_version:          u32,
-    prog_flags:            u32,
-    prog_name:             [u8; 16],
-    prog_ifindex:          u32,
-    expected_attach_type:  u32,
-    prog_btf_fd:           u32,
-    func_info_rec_size:    u32,
-    func_info:             u64,
-    func_info_cnt:         u32,
-    line_info_rec_size:    u32,
-    line_info:             u64,
-    line_info_cnt:         u32,
-    attach_btf_id:         u32,
-    attach_prog_fd:        u32,
+    prog_type: u32,
+    insn_cnt: u32,
+    insns: u64,   // pointer to instructions
+    license: u64, // pointer to license string
+    log_level: u32,
+    log_size: u32,
+    log_buf: u64,
+    kern_version: u32,
+    prog_flags: u32,
+    prog_name: [u8; 16],
+    prog_ifindex: u32,
+    expected_attach_type: u32,
+    prog_btf_fd: u32,
+    func_info_rec_size: u32,
+    func_info: u64,
+    func_info_cnt: u32,
+    line_info_rec_size: u32,
+    line_info: u64,
+    line_info_cnt: u32,
+    attach_btf_id: u32,
+    attach_prog_fd: u32,
 }
 
 /// Load a cBPF program into the kernel via `bpf(BPF_PROG_LOAD, ...)`.
@@ -98,27 +107,27 @@ fn bpf_prog_load(insns: &[u64]) -> std::io::Result<i32> {
     static LICENSE: &[u8] = b"GPL\0";
 
     let mut attr = BpfProgLoad {
-        prog_type:            BPF_PROG_TYPE_SOCKET_FILTER,
-        insn_cnt:             insns.len() as u32,
-        insns:                insns.as_ptr() as u64,
-        license:              LICENSE.as_ptr() as u64,
-        log_level:            0,
-        log_size:             0,
-        log_buf:              0,
-        kern_version:         0,
-        prog_flags:           0,
-        prog_name:            [0u8; 16],
-        prog_ifindex:         0,
+        prog_type: BPF_PROG_TYPE_SOCKET_FILTER,
+        insn_cnt: insns.len() as u32,
+        insns: insns.as_ptr() as u64,
+        license: LICENSE.as_ptr() as u64,
+        log_level: 0,
+        log_size: 0,
+        log_buf: 0,
+        kern_version: 0,
+        prog_flags: 0,
+        prog_name: [0u8; 16],
+        prog_ifindex: 0,
         expected_attach_type: 0,
-        prog_btf_fd:          0,
-        func_info_rec_size:   0,
-        func_info:            0,
-        func_info_cnt:        0,
-        line_info_rec_size:   0,
-        line_info:            0,
-        line_info_cnt:        0,
-        attach_btf_id:        0,
-        attach_prog_fd:       0,
+        prog_btf_fd: 0,
+        func_info_rec_size: 0,
+        func_info: 0,
+        func_info_cnt: 0,
+        line_info_rec_size: 0,
+        line_info: 0,
+        line_info_cnt: 0,
+        attach_btf_id: 0,
+        attach_prog_fd: 0,
     };
 
     // SAFETY: bpf() is a standard Linux syscall; attr is correctly initialised.
@@ -140,7 +149,7 @@ fn bpf_prog_load(insns: &[u64]) -> std::io::Result<i32> {
 pub struct EbpfLinuxFilter {
     /// fd of the loaded eBPF program (-1 if kernel rejected the load).
     prog_fd: i32,
-    rules:   Arc<Mutex<RuleStore>>,
+    rules: Arc<Mutex<RuleStore>>,
     is_wsl2: bool,
 }
 
@@ -154,13 +163,21 @@ impl EbpfLinuxFilter {
         if prog_fd >= 0 {
             log::info!(
                 "[ebpf] Loaded socket filter (fd={prog_fd}){}",
-                if is_wsl2 { " — WSL2: enforcement scoped to VM vNIC only" } else { "" }
+                if is_wsl2 {
+                    " — WSL2: enforcement scoped to VM vNIC only"
+                } else {
+                    ""
+                }
             );
         } else {
             log::warn!("[ebpf] bpf(BPF_PROG_LOAD) failed — running as NoopFilter");
         }
 
-        Self { prog_fd, rules: Arc::new(Mutex::new(RuleStore::default())), is_wsl2 }
+        Self {
+            prog_fd,
+            rules: Arc::new(Mutex::new(RuleStore::default())),
+            is_wsl2,
+        }
     }
 }
 
@@ -169,13 +186,17 @@ impl Drop for EbpfLinuxFilter {
         if self.prog_fd >= 0 {
             #[cfg(target_os = "linux")]
             // SAFETY: prog_fd was returned by bpf() and is valid until drop.
-            unsafe { libc::close(self.prog_fd); }
+            unsafe {
+                libc::close(self.prog_fd);
+            }
         }
     }
 }
 
 impl NetworkFilter for EbpfLinuxFilter {
-    fn kind(&self) -> NetworkFilterKind { NetworkFilterKind::EbpfLinux }
+    fn kind(&self) -> NetworkFilterKind {
+        NetworkFilterKind::EbpfLinux
+    }
 
     fn allow(&self, rule: &str) -> Result<(), StorageError> {
         self.rules.lock().unwrap().insert(rule, RuleAction::Allow);
@@ -222,7 +243,7 @@ pub struct WfpFilter {
     /// Stored as isize rather than `windows::Win32::Foundation::HANDLE` so
     /// the struct is Send+Sync without unsafe marker impls.
     engine_handle: isize,
-    rules:  Arc<Mutex<RuleStore>>,
+    rules: Arc<Mutex<RuleStore>>,
     active: bool,
 }
 
@@ -235,8 +256,8 @@ impl WfpFilter {
     pub fn new() -> Self {
         #[cfg(all(target_os = "windows", target_arch = "x86_64"))]
         {
-            use windows::Win32::NetworkManagement::WindowsFilteringPlatform::FwpmEngineOpen0;
             use windows::Win32::Foundation::HANDLE;
+            use windows::Win32::NetworkManagement::WindowsFilteringPlatform::FwpmEngineOpen0;
 
             let mut engine_handle = HANDLE::default();
             // FwpmEngineOpen0 returns DWORD (u32), not HRESULT.
@@ -244,10 +265,10 @@ impl WfpFilter {
             // SAFETY: FwpmEngineOpen0 is safe to call; null session = dynamic session.
             let result: u32 = unsafe {
                 FwpmEngineOpen0(
-                    None,       // server name — None = local machine
-                    0xa,        // RPC_C_AUTHN_DEFAULT
-                    None,       // auth identity
-                    None,       // session (None = dynamic)
+                    None, // server name — None = local machine
+                    0xa,  // RPC_C_AUTHN_DEFAULT
+                    None, // auth identity
+                    None, // session (None = dynamic)
                     &mut engine_handle,
                 )
             };
@@ -256,7 +277,7 @@ impl WfpFilter {
                 log::info!("[wfp] WFP engine opened successfully");
                 return Self {
                     engine_handle: engine_handle.0 as isize,
-                    rules:  Arc::new(Mutex::new(RuleStore::default())),
+                    rules: Arc::new(Mutex::new(RuleStore::default())),
                     active: true,
                 };
             } else {
@@ -264,12 +285,16 @@ impl WfpFilter {
             }
             return Self {
                 engine_handle: 0,
-                rules:  Arc::new(Mutex::new(RuleStore::default())),
+                rules: Arc::new(Mutex::new(RuleStore::default())),
                 active: false,
             };
         }
         #[cfg(not(all(target_os = "windows", target_arch = "x86_64")))]
-        Self { engine_handle: 0, rules: Arc::new(Mutex::new(RuleStore::default())), active: false }
+        Self {
+            engine_handle: 0,
+            rules: Arc::new(Mutex::new(RuleStore::default())),
+            active: false,
+        }
     }
 }
 
@@ -277,8 +302,8 @@ impl Drop for WfpFilter {
     fn drop(&mut self) {
         #[cfg(all(target_os = "windows", target_arch = "x86_64"))]
         if self.engine_handle != 0 {
-            use windows::Win32::NetworkManagement::WindowsFilteringPlatform::FwpmEngineClose0;
             use windows::Win32::Foundation::HANDLE;
+            use windows::Win32::NetworkManagement::WindowsFilteringPlatform::FwpmEngineClose0;
             let h = HANDLE(self.engine_handle as *mut _);
             // SAFETY: engine handle is valid until drop.
             let _ = unsafe { FwpmEngineClose0(h) };
@@ -288,11 +313,15 @@ impl Drop for WfpFilter {
 }
 
 impl Default for WfpFilter {
-    fn default() -> Self { Self::new() }
+    fn default() -> Self {
+        Self::new()
+    }
 }
 
 impl NetworkFilter for WfpFilter {
-    fn kind(&self) -> NetworkFilterKind { NetworkFilterKind::WfpWindows }
+    fn kind(&self) -> NetworkFilterKind {
+        NetworkFilterKind::WfpWindows
+    }
 
     fn allow(&self, rule: &str) -> Result<(), StorageError> {
         self.rules.lock().unwrap().insert(rule, RuleAction::Allow);
@@ -348,7 +377,7 @@ impl NetworkFilter for WfpFilter {
 /// Without the entitlement (or the Network Extension target) this struct
 /// falls back gracefully to noop — the daemon still runs correctly.
 pub struct MacNetworkExtFilter {
-    rules:  Arc<Mutex<RuleStore>>,
+    rules: Arc<Mutex<RuleStore>>,
     /// XPC connection to the Network Extension control provider.
     /// Represented as a raw pointer because the XPC C API is not in `libc`.
     #[cfg(target_os = "macos")]
@@ -374,9 +403,9 @@ impl MacNetworkExtFilter {
             // will resolve; otherwise the pointer is null and we run as noop.
             extern "C" {
                 fn xpc_connection_create_mach_service(
-                    name:   *const libc::c_char,
-                    queue:  *mut libc::c_void,
-                    flags:  u64,
+                    name: *const libc::c_char,
+                    queue: *mut libc::c_void,
+                    flags: u64,
                 ) -> *mut libc::c_void;
                 fn xpc_connection_resume(conn: *mut libc::c_void);
             }
@@ -388,8 +417,13 @@ impl MacNetworkExtFilter {
             };
             if !conn.is_null() {
                 // SAFETY: conn is a valid xpc_connection_t.
-                unsafe { xpc_connection_resume(conn); }
-                log::info!("[mac-netfilter] XPC connection to {} established", Self::XPC_SERVICE);
+                unsafe {
+                    xpc_connection_resume(conn);
+                }
+                log::info!(
+                    "[mac-netfilter] XPC connection to {} established",
+                    Self::XPC_SERVICE
+                );
                 return Self {
                     rules: Arc::new(Mutex::new(RuleStore::default())),
                     xpc_conn: Some(conn),
@@ -409,7 +443,10 @@ impl MacNetworkExtFilter {
             };
         }
         #[cfg(not(target_os = "macos"))]
-        Self { rules: Arc::new(Mutex::new(RuleStore::default())), connected: false }
+        Self {
+            rules: Arc::new(Mutex::new(RuleStore::default())),
+            connected: false,
+        }
     }
 
     #[cfg(target_os = "macos")]
@@ -429,36 +466,48 @@ impl Drop for MacNetworkExtFilter {
                 fn xpc_release(obj: *mut libc::c_void);
             }
             // SAFETY: conn is a valid xpc_connection_t; we own the reference.
-            unsafe { xpc_release(conn); }
+            unsafe {
+                xpc_release(conn);
+            }
         }
     }
 }
 
 impl Default for MacNetworkExtFilter {
-    fn default() -> Self { Self::new() }
+    fn default() -> Self {
+        Self::new()
+    }
 }
 
 impl NetworkFilter for MacNetworkExtFilter {
-    fn kind(&self) -> NetworkFilterKind { NetworkFilterKind::MacNetworkExtension }
+    fn kind(&self) -> NetworkFilterKind {
+        NetworkFilterKind::MacNetworkExtension
+    }
 
     fn allow(&self, rule: &str) -> Result<(), StorageError> {
         self.rules.lock().unwrap().insert(rule, RuleAction::Allow);
         #[cfg(target_os = "macos")]
-        if self.connected { self.send_xpc("allow", rule); }
+        if self.connected {
+            self.send_xpc("allow", rule);
+        }
         Ok(())
     }
 
     fn deny(&self, rule: &str) -> Result<(), StorageError> {
         self.rules.lock().unwrap().insert(rule, RuleAction::Deny);
         #[cfg(target_os = "macos")]
-        if self.connected { self.send_xpc("deny", rule); }
+        if self.connected {
+            self.send_xpc("deny", rule);
+        }
         Ok(())
     }
 
     fn remove(&self, rule: &str) -> Result<(), StorageError> {
         self.rules.lock().unwrap().remove(rule);
         #[cfg(target_os = "macos")]
-        if self.connected { self.send_xpc("remove", rule); }
+        if self.connected {
+            self.send_xpc("remove", rule);
+        }
         Ok(())
     }
 
@@ -493,12 +542,17 @@ impl AndroidVpnFilter {
         if tun_fd >= 0 {
             log::info!("[android-vpn] VpnService TUN interface fd={tun_fd}");
         }
-        Self { rules: Arc::new(Mutex::new(RuleStore::default())), tun_fd }
+        Self {
+            rules: Arc::new(Mutex::new(RuleStore::default())),
+            tun_fd,
+        }
     }
 }
 
 impl NetworkFilter for AndroidVpnFilter {
-    fn kind(&self) -> NetworkFilterKind { NetworkFilterKind::AndroidVpnService }
+    fn kind(&self) -> NetworkFilterKind {
+        NetworkFilterKind::AndroidVpnService
+    }
 
     fn allow(&self, rule: &str) -> Result<(), StorageError> {
         self.rules.lock().unwrap().insert(rule, RuleAction::Allow);

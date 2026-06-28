@@ -1,7 +1,7 @@
 //! Fixed-capacity quin collector for RDF parse hot paths.
 
-use crate::NQuin;
 use crate::sparql_library::quin_sink::QuinSink;
+use crate::NQuin;
 use std::io;
 
 pub const MAX_RDF_QUINS: usize = 8_192;
@@ -26,7 +26,8 @@ impl QuinCollector {
     #[inline]
     pub fn push(&mut self, mut q: NQuin) {
         if q.parity == 0 {
-            q.parity = NQuin::calculate_parity(q.subject, q.predicate, q.object, q.context, q.metadata);
+            q.parity =
+                NQuin::calculate_parity(q.subject, q.predicate, q.object, q.context, q.metadata);
         }
         if self.count < MAX_RDF_QUINS {
             self.buf[self.count] = q;

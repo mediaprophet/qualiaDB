@@ -247,19 +247,31 @@ mod tests {
         // An explicit threat forces duress regardless of measured imbalance.
         assert!(detect_duress(0.0, true, 0.7));
         // Below threshold, no threat → capacity unchanged.
-        assert_eq!(capacity_under_pressure(CapacityStatus::Intact, 0.3, false, 0.7), CapacityStatus::Intact);
+        assert_eq!(
+            capacity_under_pressure(CapacityStatus::Intact, 0.3, false, 0.7),
+            CapacityStatus::Intact
+        );
         // Duress never "upgrades" an already-impaired (minor) agent.
-        assert_eq!(capacity_under_pressure(CapacityStatus::Impaired, 0.9, true, 0.7), CapacityStatus::Impaired);
+        assert_eq!(
+            capacity_under_pressure(CapacityStatus::Impaired, 0.9, true, 0.7),
+            CapacityStatus::Impaired
+        );
     }
 
     #[test]
     fn transient_impairment_decays_and_self_clears() {
         // Fully impaired at t0, decaying 0.1/unit, threshold 0.5.
         assert!(decayed_impairment(1.0, 0.0, 0.1) > 0.99);
-        assert_eq!(transient_capacity(1.0, 0.0, 0.1, 0.5), CapacityStatus::Impaired);
+        assert_eq!(
+            transient_capacity(1.0, 0.0, 0.1, 0.5),
+            CapacityStatus::Impaired
+        );
         // After 6 units → level 0.4 < 0.5 → self-cleared.
         assert!((decayed_impairment(1.0, 6.0, 0.1) - 0.4).abs() < 1e-6);
-        assert_eq!(transient_capacity(1.0, 6.0, 0.1, 0.5), CapacityStatus::Intact);
+        assert_eq!(
+            transient_capacity(1.0, 6.0, 0.1, 0.5),
+            CapacityStatus::Intact
+        );
         // Never goes negative.
         assert_eq!(decayed_impairment(0.2, 100.0, 0.1), 0.0);
     }
@@ -275,9 +287,15 @@ mod tests {
         assert!(guardianship_authorized(&delegated, medical));
         assert!(!guardianship_authorized(&delegated, legal));
         // In a delegated domain the guardian carries the dependent's weight…
-        assert_eq!(effective_principal_scoped(guardian, dependent, &delegated, financial), dependent);
+        assert_eq!(
+            effective_principal_scoped(guardian, dependent, &delegated, financial),
+            dependent
+        );
         // …but outside the delegated set they cannot bind the dependent.
-        assert_eq!(effective_principal_scoped(guardian, dependent, &delegated, legal), guardian);
+        assert_eq!(
+            effective_principal_scoped(guardian, dependent, &delegated, legal),
+            guardian
+        );
     }
 
     #[test]
@@ -287,24 +305,46 @@ mod tests {
         let legal = crate::q_hash("domain:legal");
 
         // Attenuation: a sub-delegation must be a subset of the parent's authority.
-        assert!(delegation_attenuates(&[medical, financial, legal], &[medical, financial]));
-        assert!(!delegation_attenuates(&[medical], &[medical, legal]), "cannot broaden authority");
+        assert!(delegation_attenuates(
+            &[medical, financial, legal],
+            &[medical, financial]
+        ));
+        assert!(
+            !delegation_attenuates(&[medical], &[medical, legal]),
+            "cannot broaden authority"
+        );
         assert!(delegation_attenuates(&[medical], &[]));
 
         // Cascading revocation withdraws a domain immediately.
         let authorized = [medical, financial];
         assert!(authorized_after_revocation(&authorized, &[], medical));
-        assert!(!authorized_after_revocation(&authorized, &[medical], medical), "revoked → withdrawn");
-        assert!(authorized_after_revocation(&authorized, &[medical], financial));
+        assert!(
+            !authorized_after_revocation(&authorized, &[medical], medical),
+            "revoked → withdrawn"
+        );
+        assert!(authorized_after_revocation(
+            &authorized,
+            &[medical],
+            financial
+        ));
 
         // A delegation chain: root{med,fin,legal} → sub{med,fin} → subsub{med}.
         let root: &[u64] = &[medical, financial, legal];
         let sub: &[u64] = &[medical, financial];
         let subsub: &[u64] = &[medical];
         let chain = [root, sub, subsub];
-        assert!(chain_authorizes(&chain, medical), "medical survives the whole chain");
-        assert!(!chain_authorizes(&chain, financial), "financial dropped at the last link");
-        assert!(!chain_authorizes(&chain, legal), "legal dropped after the root");
+        assert!(
+            chain_authorizes(&chain, medical),
+            "medical survives the whole chain"
+        );
+        assert!(
+            !chain_authorizes(&chain, financial),
+            "financial dropped at the last link"
+        );
+        assert!(
+            !chain_authorizes(&chain, legal),
+            "legal dropped after the root"
+        );
         // A chain that tries to RE-BROADEN (sub adds legal the parent lacks) fails attenuation.
         let bad_sub: &[u64] = &[medical, legal];
         assert!(!chain_authorizes(&[sub, bad_sub], legal));

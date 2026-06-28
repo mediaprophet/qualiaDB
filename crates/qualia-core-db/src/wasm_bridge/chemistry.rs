@@ -13,7 +13,6 @@ use wasm_bindgen::prelude::*;
 #[cfg(target_arch = "wasm32")]
 use super::*;
 
-
 // ─── Organic chemistry ────────────────────────────────────────────────────────
 
 #[cfg(target_arch = "wasm32")]
@@ -108,14 +107,16 @@ pub fn evaluate_lipinski_wasm(val: JsValue) -> Result<JsValue, JsValue> {
 pub fn detect_functional_groups_wasm(val: JsValue) -> Result<JsValue, JsValue> {
     let p: SmilesParams = serde_wasm_bindgen::from_value(val)?;
     let mol = crate::domains::chemical::organic_chemistry::parse_smiles(&p.smiles);
-    let groups: Vec<String> = crate::domains::chemical::organic_chemistry::detect_functional_groups(&mol)
-        .iter()
-        .map(|g| format!("{:?}", g))
-        .collect();
-    let pkas: Vec<(String, f64, bool)> = crate::domains::chemical::organic_chemistry::estimate_pka(&mol)
-        .iter()
-        .map(|p| (format!("{:?}", p.group), p.pka, p.is_acid))
-        .collect();
+    let groups: Vec<String> =
+        crate::domains::chemical::organic_chemistry::detect_functional_groups(&mol)
+            .iter()
+            .map(|g| format!("{:?}", g))
+            .collect();
+    let pkas: Vec<(String, f64, bool)> =
+        crate::domains::chemical::organic_chemistry::estimate_pka(&mol)
+            .iter()
+            .map(|p| (format!("{:?}", p.group), p.pka, p.is_acid))
+            .collect();
     #[derive(Serialize)]
     struct GroupResult {
         functional_groups: Vec<String>,
@@ -155,7 +156,8 @@ pub fn compute_reaction_metrics_wasm(val: JsValue) -> Result<JsValue, JsValue> {
         })
         .collect();
     let product_mol = crate::domains::chemical::organic_chemistry::parse_smiles(&p.product_smiles);
-    let product_mw = crate::domains::chemical::organic_chemistry::exact_molecular_weight(&product_mol);
+    let product_mw =
+        crate::domains::chemical::organic_chemistry::exact_molecular_weight(&product_mol);
     let ae = crate::domains::chemical::organic_chemistry::atom_economy(&reactant_mws, product_mw);
     let ef = crate::domains::chemical::organic_chemistry::e_factor(
         reactant_mws.iter().sum::<f64>() + p.solvent_kg - p.product_kg,
@@ -192,8 +194,11 @@ pub fn compute_reaction_metrics_wasm(val: JsValue) -> Result<JsValue, JsValue> {
 #[wasm_bindgen]
 pub fn compute_thermochemistry_wasm(val: JsValue) -> Result<JsValue, JsValue> {
     let p: ThermochemParams = serde_wasm_bindgen::from_value(val)?;
-    let dg =
-        crate::domains::chemical::organic_chemistry::gibbs_free_energy(p.delta_h_j_mol, p.delta_s_j_mol_k, p.temp_k);
+    let dg = crate::domains::chemical::organic_chemistry::gibbs_free_energy(
+        p.delta_h_j_mol,
+        p.delta_s_j_mol_k,
+        p.temp_k,
+    );
     let k_eq = crate::domains::chemical::organic_chemistry::equilibrium_constant(dg, p.temp_k);
     let ph = p.pka.map(|pka| {
         crate::domains::chemical::organic_chemistry::henderson_hasselbalch(
@@ -203,7 +208,11 @@ pub fn compute_thermochemistry_wasm(val: JsValue) -> Result<JsValue, JsValue> {
         )
     });
     let k_rate = p.activation_energy_j_mol.map(|ea| {
-        crate::domains::chemical::organic_chemistry::arrhenius_rate(p.pre_exponential_a.unwrap_or(1e13), ea, p.temp_k)
+        crate::domains::chemical::organic_chemistry::arrhenius_rate(
+            p.pre_exponential_a.unwrap_or(1e13),
+            ea,
+            p.temp_k,
+        )
     });
     #[derive(Serialize)]
     struct ThermResult {

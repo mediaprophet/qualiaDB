@@ -121,7 +121,12 @@ impl Mesh {
                 max[k] = max[k].max(p[k]);
             }
         }
-        Ok(Mesh { positions, triangles, min, max })
+        Ok(Mesh {
+            positions,
+            triangles,
+            min,
+            max,
+        })
     }
 }
 
@@ -306,7 +311,10 @@ fn import_stl_ascii(bytes: &[u8]) -> Result<Mesh, AssetError> {
     for raw in text.lines() {
         let line = raw.trim();
         if let Some(rest) = line.strip_prefix("vertex ") {
-            let c: Vec<f32> = rest.split_whitespace().filter_map(|s| s.parse().ok()).collect();
+            let c: Vec<f32> = rest
+                .split_whitespace()
+                .filter_map(|s| s.parse().ok())
+                .collect();
             if c.len() < 3 {
                 return Err(AssetError::Parse("ASCII STL: vertex needs 3 coords".into()));
             }
@@ -350,10 +358,14 @@ pub fn import_glb(bytes: &[u8]) -> Result<Mesh, AssetError> {
     let mut bin: Option<&[u8]> = None;
     let mut off = 12usize;
     while off + 8 <= bytes.len() {
-        let clen =
-            u32::from_le_bytes([bytes[off], bytes[off + 1], bytes[off + 2], bytes[off + 3]]) as usize;
-        let ctype =
-            u32::from_le_bytes([bytes[off + 4], bytes[off + 5], bytes[off + 6], bytes[off + 7]]);
+        let clen = u32::from_le_bytes([bytes[off], bytes[off + 1], bytes[off + 2], bytes[off + 3]])
+            as usize;
+        let ctype = u32::from_le_bytes([
+            bytes[off + 4],
+            bytes[off + 5],
+            bytes[off + 6],
+            bytes[off + 7],
+        ]);
         let dstart = off + 8;
         let dend = dstart
             .checked_add(clen)
@@ -424,20 +436,30 @@ pub fn import_glb(bytes: &[u8]) -> Result<Mesh, AssetError> {
 }
 
 /// Read a FLOAT VEC3 accessor (e.g. `POSITION`) out of the GLB binary buffer.
-fn read_positions(accessor: &Value, bvs: &[Value], bin: &[u8]) -> Result<Vec<[f32; 3]>, AssetError> {
+fn read_positions(
+    accessor: &Value,
+    bvs: &[Value],
+    bin: &[u8],
+) -> Result<Vec<[f32; 3]>, AssetError> {
     if accessor["componentType"].as_u64() != Some(5126) {
-        return Err(AssetError::Parse("POSITION componentType must be FLOAT (5126)".into()));
+        return Err(AssetError::Parse(
+            "POSITION componentType must be FLOAT (5126)".into(),
+        ));
     }
     if accessor["type"].as_str() != Some("VEC3") {
-        return Err(AssetError::Parse("POSITION accessor type must be VEC3".into()));
+        return Err(AssetError::Parse(
+            "POSITION accessor type must be VEC3".into(),
+        ));
     }
     let count = accessor["count"]
         .as_u64()
-        .ok_or_else(|| AssetError::Parse("accessor.count missing".into()))? as usize;
+        .ok_or_else(|| AssetError::Parse("accessor.count missing".into()))?
+        as usize;
     let acc_off = accessor["byteOffset"].as_u64().unwrap_or(0) as usize;
     let bv_idx = accessor["bufferView"]
         .as_u64()
-        .ok_or_else(|| AssetError::Parse("accessor.bufferView missing".into()))? as usize;
+        .ok_or_else(|| AssetError::Parse("accessor.bufferView missing".into()))?
+        as usize;
     let bv = bvs
         .get(bv_idx)
         .ok_or_else(|| AssetError::Parse("bufferView index out of range".into()))?;
@@ -464,21 +486,29 @@ fn read_positions(accessor: &Value, bvs: &[Value], bin: &[u8]) -> Result<Vec<[f3
 /// Read a SCALAR index accessor (u8/u16/u32) out of the GLB binary buffer, widened to `u32`.
 fn read_indices(accessor: &Value, bvs: &[Value], bin: &[u8]) -> Result<Vec<u32>, AssetError> {
     if accessor["type"].as_str() != Some("SCALAR") {
-        return Err(AssetError::Parse("index accessor type must be SCALAR".into()));
+        return Err(AssetError::Parse(
+            "index accessor type must be SCALAR".into(),
+        ));
     }
     let comp = match accessor["componentType"].as_u64() {
         Some(5121) => 1usize,
         Some(5123) => 2,
         Some(5125) => 4,
-        _ => return Err(AssetError::Parse("index componentType must be u8/u16/u32".into())),
+        _ => {
+            return Err(AssetError::Parse(
+                "index componentType must be u8/u16/u32".into(),
+            ))
+        }
     };
     let count = accessor["count"]
         .as_u64()
-        .ok_or_else(|| AssetError::Parse("accessor.count missing".into()))? as usize;
+        .ok_or_else(|| AssetError::Parse("accessor.count missing".into()))?
+        as usize;
     let acc_off = accessor["byteOffset"].as_u64().unwrap_or(0) as usize;
     let bv_idx = accessor["bufferView"]
         .as_u64()
-        .ok_or_else(|| AssetError::Parse("accessor.bufferView missing".into()))? as usize;
+        .ok_or_else(|| AssetError::Parse("accessor.bufferView missing".into()))?
+        as usize;
     let bv = bvs
         .get(bv_idx)
         .ok_or_else(|| AssetError::Parse("bufferView index out of range".into()))?;
@@ -517,19 +547,51 @@ pub fn mesh_to_nquins(
     lexicon.insert(subject, asset_uri.to_owned());
 
     quins.push(make_quin(subject, P_RDF_TYPE, C_MESH));
-    quins.push(make_quin(subject, P_VERTEX_COUNT, mesh.vertex_count() as u64));
-    quins.push(make_quin(subject, P_TRIANGLE_COUNT, mesh.triangle_count() as u64));
+    quins.push(make_quin(
+        subject,
+        P_VERTEX_COUNT,
+        mesh.vertex_count() as u64,
+    ));
+    quins.push(make_quin(
+        subject,
+        P_TRIANGLE_COUNT,
+        mesh.triangle_count() as u64,
+    ));
 
     let fmt_hash = fnv_hash(source_format.as_bytes());
     lexicon.insert(fmt_hash, source_format.to_owned());
     quins.push(make_quin(subject, P_SOURCE_FORMAT, fmt_hash));
 
-    quins.push(make_quin(subject, P_BBOX_MIN_X, pack_float_object(mesh.min[0])));
-    quins.push(make_quin(subject, P_BBOX_MIN_Y, pack_float_object(mesh.min[1])));
-    quins.push(make_quin(subject, P_BBOX_MIN_Z, pack_float_object(mesh.min[2])));
-    quins.push(make_quin(subject, P_BBOX_MAX_X, pack_float_object(mesh.max[0])));
-    quins.push(make_quin(subject, P_BBOX_MAX_Y, pack_float_object(mesh.max[1])));
-    quins.push(make_quin(subject, P_BBOX_MAX_Z, pack_float_object(mesh.max[2])));
+    quins.push(make_quin(
+        subject,
+        P_BBOX_MIN_X,
+        pack_float_object(mesh.min[0]),
+    ));
+    quins.push(make_quin(
+        subject,
+        P_BBOX_MIN_Y,
+        pack_float_object(mesh.min[1]),
+    ));
+    quins.push(make_quin(
+        subject,
+        P_BBOX_MIN_Z,
+        pack_float_object(mesh.min[2]),
+    ));
+    quins.push(make_quin(
+        subject,
+        P_BBOX_MAX_X,
+        pack_float_object(mesh.max[0]),
+    ));
+    quins.push(make_quin(
+        subject,
+        P_BBOX_MAX_Y,
+        pack_float_object(mesh.max[1]),
+    ));
+    quins.push(make_quin(
+        subject,
+        P_BBOX_MAX_Z,
+        pack_float_object(mesh.max[2]),
+    ));
 
     let c = mesh.centroid();
     quins.push(make_quin(subject, P_CENTROID_X, pack_float_object(c[0])));
@@ -541,7 +603,14 @@ pub fn mesh_to_nquins(
 
 #[inline]
 fn make_quin(subject: u64, predicate: u64, object: u64) -> NQuin {
-    NQuin { subject, predicate, object, context: GEOMETRY_CONTEXT, metadata: 0, parity: 0 }
+    NQuin {
+        subject,
+        predicate,
+        object,
+        context: GEOMETRY_CONTEXT,
+        metadata: 0,
+        parity: 0,
+    }
 }
 
 /// FNV-1a (60-bit), matching `crate::q_hash` for runtime strings so asset IRIs hashed here share
@@ -595,7 +664,10 @@ mod tests {
     #[test]
     fn obj_out_of_range_face_is_error() {
         let obj = "v 0 0 0\nv 1 0 0\nf 1 2 9\n";
-        assert!(matches!(import_obj(obj.as_bytes()), Err(AssetError::Parse(_))));
+        assert!(matches!(
+            import_obj(obj.as_bytes()),
+            Err(AssetError::Parse(_))
+        ));
     }
 
     #[test]
@@ -628,8 +700,18 @@ mod tests {
 
     #[test]
     fn dispatch_sniffs_format() {
-        assert_eq!(import_asset(TRI_OBJ.as_bytes(), None).unwrap().triangle_count(), 1);
-        assert_eq!(import_asset(TRI_OBJ.as_bytes(), Some("obj")).unwrap().vertex_count(), 3);
+        assert_eq!(
+            import_asset(TRI_OBJ.as_bytes(), None)
+                .unwrap()
+                .triangle_count(),
+            1
+        );
+        assert_eq!(
+            import_asset(TRI_OBJ.as_bytes(), Some("obj"))
+                .unwrap()
+                .vertex_count(),
+            3
+        );
     }
 
     #[test]

@@ -132,7 +132,9 @@ mod tests {
     #[test]
     fn separates_two_obvious_groups() {
         // Two tight groups far apart → cutting into 2 clusters splits them.
-        let x = [0.0, 0.0, 0.2, 0.1, -0.1, 0.2, 10.0, 10.0, 10.2, 9.9, 9.8, 10.1];
+        let x = [
+            0.0, 0.0, 0.2, 0.1, -0.1, 0.2, 10.0, 10.0, 10.2, 9.9, 9.8, 10.1,
+        ];
         let h = Hierarchical::fit(&x, 6, 2, Linkage::Average).unwrap();
         assert_eq!(h.n_merges(), 5);
         let labels = h.labels(2);
@@ -169,6 +171,9 @@ mod tests {
 
     #[test]
     fn guards() {
-        assert_eq!(Hierarchical::fit(&[1.0, 2.0, 3.0], 2, 2, Linkage::Single).unwrap_err(), LearningError::InvalidDimension);
+        assert_eq!(
+            Hierarchical::fit(&[1.0, 2.0, 3.0], 2, 2, Linkage::Single).unwrap_err(),
+            LearningError::InvalidDimension
+        );
     }
 }

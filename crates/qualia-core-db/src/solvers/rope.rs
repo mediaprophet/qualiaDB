@@ -31,7 +31,11 @@ pub fn rope_interleaved(
     if half == 0 {
         return;
     }
-    let scale = if scale > 0.0 && scale.is_finite() { scale } else { 1.0 };
+    let scale = if scale > 0.0 && scale.is_finite() {
+        scale
+    } else {
+        1.0
+    };
     let scaled_pos = pos / scale;
     for head in 0..n_heads {
         let off = head * head_dim;
@@ -73,7 +77,10 @@ mod tests {
         for i in 0..3 {
             let n0 = orig[2 * i] * orig[2 * i] + orig[2 * i + 1] * orig[2 * i + 1];
             let n1 = v[2 * i] * v[2 * i] + v[2 * i + 1] * v[2 * i + 1];
-            assert!((n0 - n1).abs() < 1e-9, "pair {i} norm changed: {n0} -> {n1}");
+            assert!(
+                (n0 - n1).abs() < 1e-9,
+                "pair {i} norm changed: {n0} -> {n1}"
+            );
         }
     }
 

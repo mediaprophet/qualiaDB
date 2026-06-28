@@ -1,15 +1,14 @@
-use std::collections::HashMap;
-use std::sync::{Arc, Mutex};
-use std::ops::{Add, Mul, Sub};
-use serde::{Deserialize, Serialize};
 use crate::solvers::SolversError;
+use serde::{Deserialize, Serialize};
+use std::collections::HashMap;
+use std::ops::{Add, Mul, Sub};
+use std::sync::{Arc, Mutex};
 
-use super::core_types::*;
 use super::computation::*;
+use super::core_types::*;
 use super::optimization::*;
-use super::privacy::*;
 use super::performance::*;
-
+use super::privacy::*;
 
 /// Matrix storage using ZNS for zero-copy operations
 pub struct MatrixStorage {
@@ -18,7 +17,6 @@ pub struct MatrixStorage {
     pub cache: MatrixCache,
     pub storage_backend: StorageBackend,
 }
-
 
 /// Matrix zone in ZNS storage
 #[derive(Debug, Clone)]
@@ -29,7 +27,6 @@ pub struct MatrixZone {
     pub matrices: HashMap<String, MatrixMetadata>,
     pub access_pattern: AccessPattern,
 }
-
 
 /// Zone types for different matrix workloads
 #[derive(Debug, Clone, PartialEq, Serialize, Deserialize)]
@@ -46,7 +43,6 @@ pub enum ZoneType {
     Cached,
 }
 
-
 /// Access patterns for optimization
 #[derive(Debug, Clone, PartialEq, Serialize, Deserialize)]
 pub enum AccessPattern {
@@ -57,7 +53,6 @@ pub enum AccessPattern {
     Adaptive,
 }
 
-
 /// Matrix allocator for efficient memory management
 pub struct MatrixAllocator {
     pub allocation_strategy: AllocationStrategy,
@@ -65,7 +60,6 @@ pub struct MatrixAllocator {
     pub allocated_blocks: HashMap<String, MemoryBlock>,
     pub fragmentation_threshold: f64,
 }
-
 
 /// Allocation strategies
 #[derive(Debug, Clone, PartialEq)]
@@ -77,7 +71,6 @@ pub enum AllocationStrategy {
     Slab,
 }
 
-
 /// Memory block
 #[derive(Debug, Clone)]
 pub struct MemoryBlock {
@@ -87,7 +80,6 @@ pub struct MemoryBlock {
     pub is_free: bool,
     pub fragmentation_score: f64,
 }
-
 
 /// Matrix cache for frequently accessed matrices
 pub struct MatrixCache {
@@ -99,7 +91,6 @@ pub struct MatrixCache {
     pub miss_count: u64,
 }
 
-
 /// Cache entry
 #[derive(Debug, Clone)]
 pub struct CacheEntry {
@@ -109,7 +100,6 @@ pub struct CacheEntry {
     pub access_count: u64,
     pub size: u64,
 }
-
 
 /// Cache policies
 #[derive(Debug, Clone, PartialEq)]
@@ -121,7 +111,6 @@ pub enum CachePolicy {
     Adaptive,
 }
 
-
 /// Storage backend abstraction
 pub struct StorageBackend {
     pub backend_type: BackendType,
@@ -130,7 +119,6 @@ pub struct StorageBackend {
     pub matrix_store: HashMap<String, Matrix>,
 }
 
-
 /// Backend types
 #[derive(Debug, Clone, PartialEq)]
 pub enum BackendType {
@@ -138,7 +126,6 @@ pub enum BackendType {
     CSD,
     Hybrid,
 }
-
 
 // Supporting implementations
 
@@ -155,16 +142,16 @@ impl MatrixStorage {
     pub fn initialize(&mut self) -> Result<(), LinearAlgebraError> {
         // Initialize zones
         self.create_zones()?;
-        
+
         // Initialize allocator
         self.allocator.initialize()?;
-        
+
         // Initialize cache
         self.cache.initialize()?;
-        
+
         // Initialize storage backend
         self.storage_backend.initialize()?;
-        
+
         Ok(())
     }
 
@@ -195,16 +182,19 @@ impl MatrixStorage {
     pub fn store_matrix(&mut self, matrix: Matrix) -> Result<(), LinearAlgebraError> {
         // Determine best zone for this matrix
         let zone_id = self.select_best_zone(&matrix)?;
-        
+
         // Store in zone
-        let zone = self.zones.get_mut(&zone_id)
+        let zone = self
+            .zones
+            .get_mut(&zone_id)
             .ok_or_else(|| LinearAlgebraError::StorageError("Zone not found".to_string()))?;
-        
-        zone.matrices.insert(matrix.matrix_id.clone(), matrix.metadata.clone());
-        
+
+        zone.matrices
+            .insert(matrix.matrix_id.clone(), matrix.metadata.clone());
+
         // Store actual data
         self.storage_backend.store_matrix_data(&matrix)?;
-        
+
         Ok(())
     }
 
@@ -245,7 +235,6 @@ impl MatrixStorage {
     }
 }
 
-
 impl MatrixAllocator {
     pub fn new() -> Self {
         Self {
@@ -261,7 +250,6 @@ impl MatrixAllocator {
         Ok(())
     }
 }
-
 
 impl MatrixCache {
     pub fn new() -> Self {
@@ -290,14 +278,17 @@ impl MatrixCache {
     }
 }
 
-
 impl StorageBackend {
     pub fn new() -> Self {
         let zns_manager = crate::zns_storage::ZnsZoneManager::new("default_zone")
             .ok()
             .map(|m| Arc::new(Mutex::new(m)));
         Self {
-            backend_type: if zns_manager.is_some() { BackendType::Hybrid } else { BackendType::CSD },
+            backend_type: if zns_manager.is_some() {
+                BackendType::Hybrid
+            } else {
+                BackendType::CSD
+            },
             zns_manager,
             csd_manager: Arc::new(Mutex::new(crate::csd_storage::CsdManager::new())),
             matrix_store: HashMap::new(),
@@ -309,14 +300,14 @@ impl StorageBackend {
     }
 
     pub fn store_matrix_data(&mut self, matrix: &Matrix) -> Result<(), LinearAlgebraError> {
-        self.matrix_store.insert(matrix.matrix_id.clone(), matrix.clone());
+        self.matrix_store
+            .insert(matrix.matrix_id.clone(), matrix.clone());
         Ok(())
     }
 
     pub fn get_matrix_data(&self, matrix_id: &str) -> Result<Matrix, LinearAlgebraError> {
-        self.matrix_store.get(matrix_id)
-            .cloned()
-            .ok_or_else(|| LinearAlgebraError::StorageError(format!("Matrix not found: {}", matrix_id)))
+        self.matrix_store.get(matrix_id).cloned().ok_or_else(|| {
+            LinearAlgebraError::StorageError(format!("Matrix not found: {}", matrix_id))
+        })
     }
 }
-

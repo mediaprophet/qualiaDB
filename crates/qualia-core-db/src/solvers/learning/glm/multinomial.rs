@@ -73,7 +73,11 @@ impl MultinomialLogistic {
         // Design matrix.
         let mut d = vec![0.0; n * k];
         for i in 0..n {
-            design_row(&x[i * p..(i + 1) * p], fit_intercept, &mut d[i * k..(i + 1) * k]);
+            design_row(
+                &x[i * p..(i + 1) * p],
+                fit_intercept,
+                &mut d[i * k..(i + 1) * k],
+            );
         }
 
         let mut w = vec![0.0; c * k];
@@ -109,7 +113,12 @@ impl MultinomialLogistic {
             }
         }
 
-        Ok(Self { classes, weights: w, fit_intercept, p })
+        Ok(Self {
+            classes,
+            weights: w,
+            fit_intercept,
+            p,
+        })
     }
 
     /// Class probabilities for one row, aligned with `classes`.
@@ -118,7 +127,9 @@ impl MultinomialLogistic {
         let k = self.p + usize::from(self.fit_intercept);
         let mut di = vec![0.0; k];
         design_row(x_row, self.fit_intercept, &mut di);
-        let logits: Vec<f64> = (0..c).map(|cc| (0..k).map(|j| self.weights[cc * k + j] * di[j]).sum()).collect();
+        let logits: Vec<f64> = (0..c)
+            .map(|cc| (0..k).map(|j| self.weights[cc * k + j] * di[j]).sum())
+            .collect();
         let mut probs = vec![0.0; c];
         softmax(&logits, &mut probs);
         probs
@@ -166,6 +177,9 @@ mod tests {
 
     #[test]
     fn guards() {
-        assert_eq!(MultinomialLogistic::fit(&[1.0, 2.0], &[0], 1, 2, true, 0.1, 0.0, 10).unwrap_err(), LearningError::InsufficientData);
+        assert_eq!(
+            MultinomialLogistic::fit(&[1.0, 2.0], &[0], 1, 2, true, 0.1, 0.0, 10).unwrap_err(),
+            LearningError::InsufficientData
+        );
     }
 }

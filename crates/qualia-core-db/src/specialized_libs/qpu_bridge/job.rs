@@ -1,28 +1,27 @@
 //! QPU Bridge - Quantum Processing Unit Bridge for Exact Quantum Computing
-//! 
+//!
 //! This module provides a bridge to remote quantum computing resources (IBM Quantum API)
 //! via the NativeQuantumDft module, enabling exact Hamiltonian mapping and quantum
 //! calculations that cannot be approximated on classical hardware.
-//! 
+//!
 //! Architecture:
 //! - Time-metered proxy for IBM Quantum API
 //! - Job submission and result retrieval
 //! - Authentication and rate limiting
 //! - Error handling and fallback mechanisms
 
-use crate::NQuin;
-use crate::lexicon::generate_60bit_token;
 use crate::fiduciary_crypto::FiduciaryCrypto;
+use crate::lexicon::generate_60bit_token;
 use crate::zk_proofs::ZkProofSystem;
-use core::ptr;
+use crate::NQuin;
 use core::mem;
+use core::ptr;
 use core::sync::atomic::{AtomicU32, AtomicU64, Ordering};
 
 /// QPU Bridge Manager - Main interface for quantum computing operations
-/// 
+///
 /// This struct manages connections to remote quantum computing resources while
 /// maintaining strict zero-allocation invariants and security requirements.
-
 use super::*;
 
 #[repr(C)]
@@ -161,7 +160,6 @@ pub struct QPUJobResult {
     pub(crate) error_code: QPUErrorCode,
 }
 
-
 impl QPUJobManager {
     #[inline(always)]
     pub const fn default() -> Self {
@@ -218,7 +216,7 @@ impl QPUJobManager {
     pub fn move_to_completed(&mut self, active_index: usize) {
         // Move job from active to completed
         let job = self.active_jobs[active_index];
-        
+
         // Find empty slot in completed jobs
         for i in 0..64 {
             if self.completed_jobs[i].job_id[0] == 0 {
@@ -226,7 +224,7 @@ impl QPUJobManager {
                 break;
             }
         }
-        
+
         // Clear active slot
         self.active_jobs[active_index] = QPUJob::default();
         self.job_counters.running_jobs -= 1;
@@ -234,23 +232,22 @@ impl QPUJobManager {
 
     fn generate_job_id(&self, slot_index: usize) -> [u8; 64] {
         let mut job_id = [0u8; 64];
-        
+
         // Use slot index and timestamp to generate unique ID
         let timestamp: u64 = 0; // Would use actual timestamp
         let hash = generate_60bit_token(&timestamp.to_le_bytes()) as u64;
-        
+
         // Convert to bytes
         for i in 0..8 {
             job_id[i] = (hash >> (i * 8)) as u8;
         }
-        
+
         // Add slot index
         job_id[8] = slot_index as u8;
-        
+
         job_id
     }
 }
-
 
 impl QPUJob {
     #[inline(always)]
@@ -268,7 +265,6 @@ impl QPUJob {
     }
 }
 
-
 impl QPUJobCounters {
     #[inline(always)]
     pub const fn default() -> Self {
@@ -281,7 +277,6 @@ impl QPUJobCounters {
         }
     }
 }
-
 
 impl QPURateLimiter {
     #[inline(always)]
@@ -312,4 +307,3 @@ impl QPURateLimiter {
         self.quota_remaining -= 1;
     }
 }
-

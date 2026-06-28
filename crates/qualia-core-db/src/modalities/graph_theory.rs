@@ -262,7 +262,8 @@ impl BoundedQualiaGraph {
                 nodes_written += 1;
 
                 for neighbor in 0..self.node_count {
-                    let linked = self.adjacency[node][neighbor] != 0 || self.adjacency[neighbor][node] != 0;
+                    let linked =
+                        self.adjacency[node][neighbor] != 0 || self.adjacency[neighbor][node] != 0;
                     if linked && !visited[neighbor] {
                         visited[neighbor] = true;
                         stack[stack_len] = neighbor;
@@ -469,7 +470,16 @@ impl BoundedQualiaGraph {
         let mut assign = [0usize; MAX_SUBGRAPH_PATTERN_NODES];
         let mut used = [false; MAX_BOUNDED_GRAPH_ANALYSIS_NODES];
         let mut written = 0usize;
-        self.match_subgraph(pattern, 0, 0, max_missing_edges, &mut assign, &mut used, out, &mut written);
+        self.match_subgraph(
+            pattern,
+            0,
+            0,
+            max_missing_edges,
+            &mut assign,
+            &mut used,
+            out,
+            &mut written,
+        );
         written
     }
 
@@ -647,7 +657,7 @@ impl QualiaGraph {
         let mut nodes = HashMap::new();
         let mut edges = HashMap::new();
         let mut adjacency_list = HashMap::new();
-        
+
         // Build graph structure
         for quin in quins {
             // Add source node
@@ -657,7 +667,7 @@ impl QualiaGraph {
                 centrality_score: 0.0,
                 community_id: None,
             });
-            
+
             // Add target node
             nodes.entry(quin.object).or_insert_with(|| GraphNode {
                 id: quin.object,
@@ -665,7 +675,7 @@ impl QualiaGraph {
                 centrality_score: 0.0,
                 community_id: None,
             });
-            
+
             // Add edge
             let edge = GraphEdge {
                 source: quin.subject,
@@ -673,23 +683,26 @@ impl QualiaGraph {
                 weight: 1.0, // Default weight
             };
             edges.insert((quin.subject, quin.object), edge);
-            
+
             // Update adjacency list
-            adjacency_list.entry(quin.subject).or_insert_with(Vec::new).push(quin.object);
-            
+            adjacency_list
+                .entry(quin.subject)
+                .or_insert_with(Vec::new)
+                .push(quin.object);
+
             // Update degrees
             if let Some(node) = nodes.get_mut(&quin.subject) {
                 node.degree += 1;
             }
         }
-        
+
         Self {
             nodes,
             edges,
             adjacency_list,
         }
     }
-    
+
     /// Calculate betweenness centrality for all nodes
     pub fn calculate_betweenness_centrality(&mut self) {
         // Brandes' algorithm for betweenness centrality (directed graph)
@@ -703,7 +716,8 @@ impl QualiaGraph {
             let mut sigma: HashMap<u64, f64> = node_ids.iter().map(|&id| (id, 0.0)).collect();
             let mut dist: HashMap<u64, i64> = node_ids.iter().map(|&id| (id, -1)).collect();
             // predecessors[v] = list of nodes w on a shortest path to v
-            let mut pred: HashMap<u64, Vec<u64>> = node_ids.iter().map(|&id| (id, Vec::new())).collect();
+            let mut pred: HashMap<u64, Vec<u64>> =
+                node_ids.iter().map(|&id| (id, Vec::new())).collect();
             let mut stack: Vec<u64> = Vec::new();
             // FIFO queue for BFS
             let mut queue: std::collections::VecDeque<u64> = std::collections::VecDeque::new();
@@ -761,23 +775,24 @@ impl QualiaGraph {
             }
         }
     }
-    
+
     /// Detect communities using simple modularity optimization
     pub fn detect_communities(&mut self) -> Vec<Vec<u64>> {
-        let mut communities: Vec<Vec<u64>> = self.nodes.keys().cloned().map(|id| vec![id]).collect();
+        let mut communities: Vec<Vec<u64>> =
+            self.nodes.keys().cloned().map(|id| vec![id]).collect();
         let mut improved = true;
-        
+
         while improved {
             improved = false;
-            
+
             for i in 0..communities.len() {
                 if i >= communities.len() {
                     break;
                 }
-                
+
                 let current_community = communities[i].clone();
                 let best_move = self.find_best_community_move(&current_community, &communities, i);
-                
+
                 if let Some((target_community, modularity_gain)) = best_move {
                     if modularity_gain > 0.0 {
                         // Move nodes to target community
@@ -789,7 +804,7 @@ impl QualiaGraph {
                 }
             }
         }
-        
+
         // Update community IDs in nodes
         for (community_id, community) in communities.iter().enumerate() {
             for &node_id in community {
@@ -798,30 +813,35 @@ impl QualiaGraph {
                 }
             }
         }
-        
+
         communities
     }
-    
+
     /// Find best community move for modularity optimization
-    fn find_best_community_move(&self, community: &[u64], all_communities: &[Vec<u64>], current_index: usize) -> Option<(usize, f64)> {
+    fn find_best_community_move(
+        &self,
+        community: &[u64],
+        all_communities: &[Vec<u64>],
+        current_index: usize,
+    ) -> Option<(usize, f64)> {
         let mut best_move = None;
         let mut best_gain = 0.0;
-        
+
         for (i, other_community) in all_communities.iter().enumerate() {
             if i == current_index {
                 continue;
             }
-            
+
             let gain = self.calculate_modularity_gain(community, other_community);
             if gain > best_gain {
                 best_gain = gain;
                 best_move = Some((i, gain));
             }
         }
-        
+
         best_move
     }
-    
+
     /// Calculate modularity gain for merging two communities (Louvain delta-Q).
     ///
     /// ΔQ = e_ij/m  −  (a_i × a_j) / (2m²)
@@ -848,18 +868,20 @@ impl QualiaGraph {
         }
 
         // Degree sums
-        let a1: f64 = comm1.iter()
+        let a1: f64 = comm1
+            .iter()
             .filter_map(|id| self.nodes.get(id))
             .map(|n| n.degree as f64)
             .sum();
-        let a2: f64 = comm2.iter()
+        let a2: f64 = comm2
+            .iter()
             .filter_map(|id| self.nodes.get(id))
             .map(|n| n.degree as f64)
             .sum();
 
         (e_ij / m) - (a1 * a2) / (2.0 * m * m)
     }
-    
+
     /// Find common motifs (3-node patterns)
     pub fn find_motifs(&self) -> Vec<Motif> {
         // Deduplicate triangles by canonical sorted triple so that each
@@ -898,33 +920,35 @@ impl QualiaGraph {
 
         motifs
     }
-    
+
     /// Get top nodes by centrality score
     pub fn get_top_central_nodes(&self, top_n: usize) -> Vec<(u64, f64)> {
-        let mut nodes: Vec<(u64, f64)> = self.nodes.iter()
+        let mut nodes: Vec<(u64, f64)> = self
+            .nodes
+            .iter()
             .map(|(id, node)| (*id, node.centrality_score))
             .collect();
-        
+
         nodes.sort_by(|a, b| b.1.partial_cmp(&a.1).unwrap_or(std::cmp::Ordering::Equal));
         nodes.truncate(top_n);
         nodes
     }
-    
+
     /// Calculate graph density
     pub fn density(&self) -> f64 {
         let n = self.nodes.len();
         if n < 2 {
             return 0.0;
         }
-        
+
         let possible_edges = n * (n - 1);
         self.edges.len() as f64 / possible_edges as f64
     }
-    
+
     /// Convert graph state to NQuin for storage
     pub fn to_quins(&self, context: u64) -> Vec<NQuin> {
         let mut quins = Vec::new();
-        
+
         // Store node centrality scores
         for (node_id, node) in &self.nodes {
             let mut quin = NQuin {
@@ -935,13 +959,13 @@ impl QualiaGraph {
                 metadata: 0,
                 parity: 0,
             };
-            
+
             // Store degree in metadata
             quin.metadata = node.degree as u64;
             quin.parity = quin.subject ^ quin.predicate ^ quin.object ^ quin.context;
             quins.push(quin);
         }
-        
+
         quins
     }
 }
@@ -973,25 +997,25 @@ pub fn analyze_graph_topology(
     }
 
     let mut graph = QualiaGraph::from_quins(quins);
-    
+
     // Calculate centrality
     graph.calculate_betweenness_centrality();
-    
+
     // Detect communities
     let communities = graph.detect_communities();
-    
+
     // Find motifs
     let motifs = graph.find_motifs();
-    
+
     // Get top central nodes
     let top_nodes = graph.get_top_central_nodes(10);
-    
+
     // Calculate density
     let density = graph.density();
-    
+
     // Convert to quins for storage
     let graph_quins = graph.to_quins(context);
-    
+
     Ok(GraphAnalysisResult {
         graph_quins,
         communities,
@@ -1018,7 +1042,7 @@ pub struct GraphAnalysisResult {
 #[cfg(test)]
 mod tests {
     use super::*;
-    
+
     #[test]
     fn test_graph_creation() {
         let quins = vec![
@@ -1047,73 +1071,157 @@ mod tests {
                 parity: 0,
             },
         ];
-        
+
         let graph = QualiaGraph::from_quins(&quins);
-        
+
         assert_eq!(graph.nodes.len(), 3);
         assert_eq!(graph.edges.len(), 3);
         assert_eq!(graph.adjacency_list.get(&1).unwrap().len(), 2);
     }
-    
+
     #[test]
     fn test_centrality_calculation() {
         let quins = vec![
-            NQuin { subject: 1, predicate: 1, object: 2, context: 100, metadata: 0, parity: 0 },
-            NQuin { subject: 2, predicate: 1, object: 3, context: 100, metadata: 0, parity: 0 },
+            NQuin {
+                subject: 1,
+                predicate: 1,
+                object: 2,
+                context: 100,
+                metadata: 0,
+                parity: 0,
+            },
+            NQuin {
+                subject: 2,
+                predicate: 1,
+                object: 3,
+                context: 100,
+                metadata: 0,
+                parity: 0,
+            },
         ];
-        
+
         let mut graph = QualiaGraph::from_quins(&quins);
         graph.calculate_betweenness_centrality();
-        
+
         // Node 2 should have highest betweenness because it is the only bridge from 1 to 3.
         let node2_centrality = graph.nodes.get(&2).unwrap().centrality_score;
         let node1_centrality = graph.nodes.get(&1).unwrap().centrality_score;
-        
+
         assert!(node2_centrality > node1_centrality);
     }
-    
+
     #[test]
     fn test_community_detection() {
         let quins = vec![
-            NQuin { subject: 1, predicate: 1, object: 2, context: 100, metadata: 0, parity: 0 },
-            NQuin { subject: 2, predicate: 1, object: 1, context: 100, metadata: 0, parity: 0 },
-            NQuin { subject: 3, predicate: 1, object: 4, context: 100, metadata: 0, parity: 0 },
-            NQuin { subject: 4, predicate: 1, object: 3, context: 100, metadata: 0, parity: 0 },
+            NQuin {
+                subject: 1,
+                predicate: 1,
+                object: 2,
+                context: 100,
+                metadata: 0,
+                parity: 0,
+            },
+            NQuin {
+                subject: 2,
+                predicate: 1,
+                object: 1,
+                context: 100,
+                metadata: 0,
+                parity: 0,
+            },
+            NQuin {
+                subject: 3,
+                predicate: 1,
+                object: 4,
+                context: 100,
+                metadata: 0,
+                parity: 0,
+            },
+            NQuin {
+                subject: 4,
+                predicate: 1,
+                object: 3,
+                context: 100,
+                metadata: 0,
+                parity: 0,
+            },
         ];
-        
+
         let mut graph = QualiaGraph::from_quins(&quins);
         let communities = graph.detect_communities();
-        
+
         // Should detect two separate communities
         assert_eq!(communities.len(), 2);
     }
-    
+
     #[test]
     fn test_motif_detection() {
         let quins = vec![
-            NQuin { subject: 1, predicate: 1, object: 2, context: 100, metadata: 0, parity: 0 },
-            NQuin { subject: 2, predicate: 1, object: 3, context: 100, metadata: 0, parity: 0 },
-            NQuin { subject: 3, predicate: 1, object: 1, context: 100, metadata: 0, parity: 0 },
+            NQuin {
+                subject: 1,
+                predicate: 1,
+                object: 2,
+                context: 100,
+                metadata: 0,
+                parity: 0,
+            },
+            NQuin {
+                subject: 2,
+                predicate: 1,
+                object: 3,
+                context: 100,
+                metadata: 0,
+                parity: 0,
+            },
+            NQuin {
+                subject: 3,
+                predicate: 1,
+                object: 1,
+                context: 100,
+                metadata: 0,
+                parity: 0,
+            },
         ];
-        
+
         let graph = QualiaGraph::from_quins(&quins);
         let motifs = graph.find_motifs();
-        
+
         // Should detect one triangle motif
         assert_eq!(motifs.len(), 1);
         assert_eq!(motifs[0].pattern, MotifPattern::Triangle);
     }
-    
+
     #[test]
     fn test_graph_analysis() {
         let quins = vec![
-            NQuin { subject: 1, predicate: 1, object: 2, context: 100, metadata: 0, parity: 0 },
-            NQuin { subject: 2, predicate: 1, object: 3, context: 100, metadata: 0, parity: 0 },
-            NQuin { subject: 3, predicate: 1, object: 1, context: 100, metadata: 0, parity: 0 },
+            NQuin {
+                subject: 1,
+                predicate: 1,
+                object: 2,
+                context: 100,
+                metadata: 0,
+                parity: 0,
+            },
+            NQuin {
+                subject: 2,
+                predicate: 1,
+                object: 3,
+                context: 100,
+                metadata: 0,
+                parity: 0,
+            },
+            NQuin {
+                subject: 3,
+                predicate: 1,
+                object: 1,
+                context: 100,
+                metadata: 0,
+                parity: 0,
+            },
         ];
-        
+
         let result = analyze_graph_topology(&quins, 100).unwrap();
-        
+
         assert_eq!(result.node_count, 3);
         assert_eq!(result.edge_count, 3);
         assert!(result.density > 0.0);
@@ -1142,9 +1250,30 @@ mod tests {
     #[test]
     fn test_bounded_graph_analysis_zero_heap_path() {
         let quins = vec![
-            NQuin { subject: 1, predicate: 1, object: 2, context: 100, metadata: 0, parity: 0 },
-            NQuin { subject: 2, predicate: 1, object: 3, context: 100, metadata: 0, parity: 0 },
-            NQuin { subject: 3, predicate: 1, object: 1, context: 100, metadata: 0, parity: 0 },
+            NQuin {
+                subject: 1,
+                predicate: 1,
+                object: 2,
+                context: 100,
+                metadata: 0,
+                parity: 0,
+            },
+            NQuin {
+                subject: 2,
+                predicate: 1,
+                object: 3,
+                context: 100,
+                metadata: 0,
+                parity: 0,
+            },
+            NQuin {
+                subject: 3,
+                predicate: 1,
+                object: 1,
+                context: 100,
+                metadata: 0,
+                parity: 0,
+            },
         ];
         let mut graph_quins = [NQuin::default(); 16];
         let mut community_nodes = [0u64; 16];
@@ -1184,10 +1313,38 @@ mod tests {
     fn test_pagerank_sums_to_one_and_ranks_hub() {
         // Star: 1→3, 2→3, 4→3 (node 3 is the sink hub) plus 3→1 to avoid a pure dangling.
         let quins = vec![
-            NQuin { subject: 1, predicate: 1, object: 3, context: 0, metadata: 0, parity: 0 },
-            NQuin { subject: 2, predicate: 1, object: 3, context: 0, metadata: 0, parity: 0 },
-            NQuin { subject: 4, predicate: 1, object: 3, context: 0, metadata: 0, parity: 0 },
-            NQuin { subject: 3, predicate: 1, object: 1, context: 0, metadata: 0, parity: 0 },
+            NQuin {
+                subject: 1,
+                predicate: 1,
+                object: 3,
+                context: 0,
+                metadata: 0,
+                parity: 0,
+            },
+            NQuin {
+                subject: 2,
+                predicate: 1,
+                object: 3,
+                context: 0,
+                metadata: 0,
+                parity: 0,
+            },
+            NQuin {
+                subject: 4,
+                predicate: 1,
+                object: 3,
+                context: 0,
+                metadata: 0,
+                parity: 0,
+            },
+            NQuin {
+                subject: 3,
+                predicate: 1,
+                object: 1,
+                context: 0,
+                metadata: 0,
+                parity: 0,
+            },
         ];
         let mut ids = [0u64; 16];
         let mut scores = [0f32; 16];
@@ -1196,14 +1353,21 @@ mod tests {
 
         // Probability distribution: scores sum to ~1.
         let total: f32 = scores[..count].iter().sum();
-        assert!((total - 1.0).abs() < 1e-3, "pagerank should sum to 1, got {total}");
+        assert!(
+            (total - 1.0).abs() < 1e-3,
+            "pagerank should sum to 1, got {total}"
+        );
 
         // Node 3 (the hub everyone points at) must rank highest.
         let hub_pos = ids[..count].iter().position(|&id| id == 3).unwrap();
         let hub_score = scores[hub_pos];
         for i in 0..count {
             if i != hub_pos {
-                assert!(hub_score > scores[i], "hub node 3 should outrank node {}", ids[i]);
+                assert!(
+                    hub_score > scores[i],
+                    "hub node 3 should outrank node {}",
+                    ids[i]
+                );
             }
         }
     }
@@ -1212,14 +1376,49 @@ mod tests {
     fn test_subgraph_isomorphism_exact_triangle() {
         // Data graph contains a directed triangle 1→2→3→1 plus an extra edge.
         let quins = vec![
-            NQuin { subject: 1, predicate: 1, object: 2, context: 0, metadata: 0, parity: 0 },
-            NQuin { subject: 2, predicate: 1, object: 3, context: 0, metadata: 0, parity: 0 },
-            NQuin { subject: 3, predicate: 1, object: 1, context: 0, metadata: 0, parity: 0 },
-            NQuin { subject: 3, predicate: 1, object: 4, context: 0, metadata: 0, parity: 0 },
+            NQuin {
+                subject: 1,
+                predicate: 1,
+                object: 2,
+                context: 0,
+                metadata: 0,
+                parity: 0,
+            },
+            NQuin {
+                subject: 2,
+                predicate: 1,
+                object: 3,
+                context: 0,
+                metadata: 0,
+                parity: 0,
+            },
+            NQuin {
+                subject: 3,
+                predicate: 1,
+                object: 1,
+                context: 0,
+                metadata: 0,
+                parity: 0,
+            },
+            NQuin {
+                subject: 3,
+                predicate: 1,
+                object: 4,
+                context: 0,
+                metadata: 0,
+                parity: 0,
+            },
         ];
         // Pattern: directed 3-cycle a→b→c→a.
-        let pattern = SubgraphPattern::new(3).with_edge(0, 1).with_edge(1, 2).with_edge(2, 0);
-        let mut matches = [SubgraphMatch { mapping: [0; MAX_SUBGRAPH_PATTERN_NODES], len: 0, missing_edges: 0 }; 16];
+        let pattern = SubgraphPattern::new(3)
+            .with_edge(0, 1)
+            .with_edge(1, 2)
+            .with_edge(2, 0);
+        let mut matches = [SubgraphMatch {
+            mapping: [0; MAX_SUBGRAPH_PATTERN_NODES],
+            len: 0,
+            missing_edges: 0,
+        }; 16];
         let n = find_subgraph_isomorphisms_bounded(&quins, &pattern, 0, &mut matches).unwrap();
 
         // The directed 3-cycle has exactly 3 rotations of the same triangle.
@@ -1229,7 +1428,10 @@ mod tests {
             assert_eq!(m.len, 3);
             // every matched node id is one of {1,2,3}, never the extra node 4
             for &id in &m.mapping[..3] {
-                assert!(id == 1 || id == 2 || id == 3, "match included non-triangle node {id}");
+                assert!(
+                    id == 1 || id == 2 || id == 3,
+                    "match included non-triangle node {id}"
+                );
             }
         }
     }
@@ -1238,11 +1440,32 @@ mod tests {
     fn test_subgraph_isomorphism_approximate_allows_missing_edge() {
         // Data graph has a path 1→2→3 but NOT the closing edge 3→1.
         let quins = vec![
-            NQuin { subject: 1, predicate: 1, object: 2, context: 0, metadata: 0, parity: 0 },
-            NQuin { subject: 2, predicate: 1, object: 3, context: 0, metadata: 0, parity: 0 },
+            NQuin {
+                subject: 1,
+                predicate: 1,
+                object: 2,
+                context: 0,
+                metadata: 0,
+                parity: 0,
+            },
+            NQuin {
+                subject: 2,
+                predicate: 1,
+                object: 3,
+                context: 0,
+                metadata: 0,
+                parity: 0,
+            },
         ];
-        let triangle = SubgraphPattern::new(3).with_edge(0, 1).with_edge(1, 2).with_edge(2, 0);
-        let mut matches = [SubgraphMatch { mapping: [0; MAX_SUBGRAPH_PATTERN_NODES], len: 0, missing_edges: 0 }; 16];
+        let triangle = SubgraphPattern::new(3)
+            .with_edge(0, 1)
+            .with_edge(1, 2)
+            .with_edge(2, 0);
+        let mut matches = [SubgraphMatch {
+            mapping: [0; MAX_SUBGRAPH_PATTERN_NODES],
+            len: 0,
+            missing_edges: 0,
+        }; 16];
 
         // Exact: no triangle exists.
         let exact = find_subgraph_isomorphisms_bounded(&quins, &triangle, 0, &mut matches).unwrap();
@@ -1250,7 +1473,8 @@ mod tests {
 
         // Approximate (allow 1 missing edge): the open path 1→2→3 matches with the
         // 3→1 edge absent.
-        let approx = find_subgraph_isomorphisms_bounded(&quins, &triangle, 1, &mut matches).unwrap();
+        let approx =
+            find_subgraph_isomorphisms_bounded(&quins, &triangle, 1, &mut matches).unwrap();
         assert!(approx >= 1, "approximate match should find the open path");
         assert!(matches[..approx].iter().any(|m| {
             m.missing_edges == 1 && m.mapping[0] == 1 && m.mapping[1] == 2 && m.mapping[2] == 3

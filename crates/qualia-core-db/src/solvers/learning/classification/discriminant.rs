@@ -4,7 +4,9 @@
 //! `linear_algebra::cholesky` (no new solver). Kernel-class `DenseLinear`.
 
 use crate::solvers::learning::LearningError;
-use crate::solvers::linear_algebra::cholesky::{cholesky_determinant, cholesky_factor, cholesky_solve};
+use crate::solvers::linear_algebra::cholesky::{
+    cholesky_determinant, cholesky_factor, cholesky_solve,
+};
 
 /// Per-class means + priors + the index map, shared setup for LDA and QDA.
 struct ClassStats {
@@ -42,7 +44,12 @@ fn class_stats(x: &[f64], y: &[usize], n: usize, p: usize) -> Result<ClassStats,
             means[ci * p + j] /= counts[ci] as f64;
         }
     }
-    Ok(ClassStats { classes, priors, means, counts })
+    Ok(ClassStats {
+        classes,
+        priors,
+        means,
+        counts,
+    })
 }
 
 // ── LDA ───────────────────────────────────────────────────────────────────────
@@ -95,14 +102,23 @@ impl LdaModel {
             let quad: f64 = mu.iter().zip(wc.iter()).map(|(m, w)| m * w).sum();
             b[ci] = -0.5 * quad + cs.priors[ci].ln();
         }
-        Ok(Self { classes: cs.classes, w, b, p })
+        Ok(Self {
+            classes: cs.classes,
+            w,
+            b,
+            p,
+        })
     }
 
     pub fn predict_row(&self, q: &[f64]) -> usize {
         let mut best = 0;
         let mut best_s = f64::NEG_INFINITY;
         for ci in 0..self.classes.len() {
-            let s: f64 = q.iter().zip(&self.w[ci * self.p..(ci + 1) * self.p]).map(|(x, w)| x * w).sum::<f64>()
+            let s: f64 = q
+                .iter()
+                .zip(&self.w[ci * self.p..(ci + 1) * self.p])
+                .map(|(x, w)| x * w)
+                .sum::<f64>()
                 + self.b[ci];
             if s > best_s {
                 best_s = s;
@@ -113,7 +129,9 @@ impl LdaModel {
     }
 
     pub fn predict(&self, x: &[f64], m: usize) -> Vec<usize> {
-        (0..m).map(|i| self.predict_row(&x[i * self.p..(i + 1) * self.p])).collect()
+        (0..m)
+            .map(|i| self.predict_row(&x[i * self.p..(i + 1) * self.p]))
+            .collect()
     }
 }
 
@@ -124,9 +142,9 @@ impl LdaModel {
 #[derive(Debug, Clone)]
 pub struct QdaModel {
     pub classes: Vec<usize>,
-    means: Vec<f64>,            // n_classes × p
-    chol: Vec<f64>,             // n_classes × p × p : Cholesky factors of Σ_c
-    log_det: Vec<f64>,          // n_classes
+    means: Vec<f64>,   // n_classes × p
+    chol: Vec<f64>,    // n_classes × p × p : Cholesky factors of Σ_c
+    log_det: Vec<f64>, // n_classes
     log_prior: Vec<f64>,
     p: usize,
 }
@@ -167,7 +185,14 @@ impl QdaModel {
             chol[ci * p * p..(ci + 1) * p * p].copy_from_slice(&l);
             log_prior[ci] = cs.priors[ci].ln();
         }
-        Ok(Self { classes: cs.classes, means: cs.means, chol, log_det, log_prior, p })
+        Ok(Self {
+            classes: cs.classes,
+            means: cs.means,
+            chol,
+            log_det,
+            log_prior,
+            p,
+        })
     }
 
     pub fn predict_row(&self, q: &[f64]) -> usize {
@@ -196,7 +221,9 @@ impl QdaModel {
     }
 
     pub fn predict(&self, x: &[f64], m: usize) -> Vec<usize> {
-        (0..m).map(|i| self.predict_row(&x[i * self.p..(i + 1) * self.p])).collect()
+        (0..m)
+            .map(|i| self.predict_row(&x[i * self.p..(i + 1) * self.p]))
+            .collect()
     }
 }
 
@@ -216,7 +243,13 @@ mod tests {
         let mut x = Vec::new();
         let mut y = Vec::new();
         // class 0 around (0,0)
-        for &(a, b) in &[(0.0, 0.0), (0.5, -0.3), (-0.4, 0.2), (0.2, 0.4), (-0.3, -0.2)] {
+        for &(a, b) in &[
+            (0.0, 0.0),
+            (0.5, -0.3),
+            (-0.4, 0.2),
+            (0.2, 0.4),
+            (-0.3, -0.2),
+        ] {
             x.push(a);
             x.push(b);
             y.push(0);
@@ -258,6 +291,9 @@ mod tests {
         // n_c ≤ p → its covariance would be singular → fail closed.
         let x = [0.0, 0.0, 1.0, 0.0, 0.0, 1.0, 5.0, 5.0, 6.0, 5.0];
         let y = [0, 0, 0, 1, 1];
-        assert_eq!(QdaModel::fit(&x, &y, 5, 2).unwrap_err(), LearningError::InsufficientData);
+        assert_eq!(
+            QdaModel::fit(&x, &y, 5, 2).unwrap_err(),
+            LearningError::InsufficientData
+        );
     }
 }

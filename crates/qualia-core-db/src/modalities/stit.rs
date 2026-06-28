@@ -137,7 +137,14 @@ mod tests {
     use crate::modalities::logic::deontic::compile_norm_quin;
 
     fn fact(s: u64, p: u64, o: u64) -> NQuin {
-        let mut q = NQuin { subject: s, predicate: p, object: o, context: 0, metadata: 0, parity: 0 };
+        let mut q = NQuin {
+            subject: s,
+            predicate: p,
+            object: o,
+            context: 0,
+            metadata: 0,
+            parity: 0,
+        };
         q.parity = q.subject ^ q.predicate ^ q.object ^ q.context;
         q
     }
@@ -146,16 +153,35 @@ mod tests {
     fn duty_bearer_vs_bystander() {
         let (state, citizen) = (q_hash("did:state"), q_hash("did:citizen"));
         let ensure = q_hash("q42:ensureRemedy");
-        let norm = compile_norm_quin(state, OP_OBLIGATE, ensure, q_hash("q42:victim"), q_hash("frame"), 0, false);
+        let norm = compile_norm_quin(
+            state,
+            OP_OBLIGATE,
+            ensure,
+            q_hash("q42:victim"),
+            q_hash("frame"),
+            0,
+            false,
+        );
         assert!(is_duty_bearer(&norm, state), "the State bears the duty");
-        assert!(!is_duty_bearer(&norm, citizen), "a citizen is a bystander to this duty");
+        assert!(
+            !is_duty_bearer(&norm, citizen),
+            "a citizen is a bystander to this duty"
+        );
     }
 
     #[test]
     fn obligation_brought_about_is_discharged_else_omission() {
         let state = q_hash("did:state");
         let outcome = q_hash("q42:provideRemedy");
-        let norm = compile_norm_quin(state, OP_OBLIGATE, q_hash("q42:remedyDuty"), outcome, q_hash("frame"), 0, false);
+        let norm = compile_norm_quin(
+            state,
+            OP_OBLIGATE,
+            q_hash("q42:remedyDuty"),
+            outcome,
+            q_hash("frame"),
+            0,
+            false,
+        );
         // Brought about → Discharged.
         let done = [fact(state, q_hash("q42:broughtAbout"), outcome)];
         assert_eq!(agentive_status(&norm, &done), DeonticStatus::Discharged);
@@ -167,7 +193,15 @@ mod tests {
     fn forbidden_act_brought_about_is_violation() {
         let platform = q_hash("did:platformAgent");
         let manipulate = q_hash("q42:manipulateUser");
-        let norm = compile_norm_quin(platform, OP_FORBID, q_hash("q42:noManip"), manipulate, q_hash("frame"), 0, false);
+        let norm = compile_norm_quin(
+            platform,
+            OP_FORBID,
+            q_hash("q42:noManip"),
+            manipulate,
+            q_hash("frame"),
+            0,
+            false,
+        );
         // Performed the forbidden act → Violated.
         let did = [fact(platform, q_hash("q42:broughtAbout"), manipulate)];
         assert_eq!(agentive_status(&norm, &did), DeonticStatus::Violated);
@@ -205,11 +239,20 @@ mod tests {
         assert!(!is_settled(true));
         // dstit: brought about AND could have done otherwise (genuine choice).
         assert!(deliberative_stit(true, true));
-        assert!(!deliberative_stit(true, false), "settled outcome → no deliberative agency");
+        assert!(
+            !deliberative_stit(true, false),
+            "settled outcome → no deliberative agency"
+        );
         assert!(!deliberative_stit(false, true));
         // Counterfactual omission: could have prevented (ability + opportunity, did not act).
         assert!(could_have_prevented(true, true, false));
-        assert!(!could_have_prevented(true, true, true), "acted → no culpable omission");
-        assert!(!could_have_prevented(false, true, false), "no ability → not culpable");
+        assert!(
+            !could_have_prevented(true, true, true),
+            "acted → no culpable omission"
+        );
+        assert!(
+            !could_have_prevented(false, true, false),
+            "no ability → not culpable"
+        );
     }
 }

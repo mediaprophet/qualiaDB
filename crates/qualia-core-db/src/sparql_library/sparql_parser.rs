@@ -11,7 +11,7 @@ pub fn parse_sparql(query: &str) -> Result<(SparqlQuery, SparqlQueryContext), St
     let mut ctx = SparqlQueryContext::new();
     let (query, prefixes) = strip_prefix_declarations(query.trim());
     let query = query.as_str();
-    
+
     // Check for SELECT query
     if query.starts_with("SELECT") {
         let select_query = parse_select_query(query, &mut ctx, &prefixes)?;
@@ -55,12 +55,21 @@ fn strip_prefix_declarations(query: &str) -> (String, HashMap<String, String>) {
 }
 
 fn parse_prefix_line(line: &str) -> Option<(String, String)> {
-    let rest = line.trim_start_matches("PREFIX").trim_start_matches("prefix").trim();
+    let rest = line
+        .trim_start_matches("PREFIX")
+        .trim_start_matches("prefix")
+        .trim();
     let colon = rest.find(':')?;
-    let prefix = rest[..colon].trim().trim_start_matches("PREFIX").to_string();
+    let prefix = rest[..colon]
+        .trim()
+        .trim_start_matches("PREFIX")
+        .to_string();
     let after = rest[colon + 1..].trim();
     let iri = if after.starts_with('<') {
-        after.trim_start_matches('<').trim_end_matches('>').to_string()
+        after
+            .trim_start_matches('<')
+            .trim_end_matches('>')
+            .to_string()
     } else {
         after.trim_matches('"').to_string()
     };
@@ -73,13 +82,13 @@ fn parse_select_query(
     prefixes: &HashMap<String, String>,
 ) -> Result<SelectQuery, String> {
     let mut query_struct = SelectQuery::default();
-    
+
     // Parse SELECT clause
     let after_select = query.trim_start_matches("SELECT").trim();
     let (distinct_reduced, after_distinct) = parse_distinct(after_select);
     query_struct.distinct = distinct_reduced.0;
     query_struct.reduced = distinct_reduced.1;
-    
+
     // Parse variables
     let variables = parse_variables(after_distinct)?;
     for var in variables {
@@ -89,7 +98,7 @@ fn parse_select_query(
             query_struct.var_count += 1;
         }
     }
-    
+
     // Parse WHERE clause - find WHERE in the original query
     let where_start = query.find("WHERE").ok_or("WHERE clause not found")?;
     let where_clause = &query[where_start..];
@@ -98,9 +107,7 @@ fn parse_select_query(
 
     // Parse AS OF / AT TIME temporal modifier (Phase 4).
     // Only search after the closing brace of the WHERE clause to avoid false positives.
-    let after_where = query.rfind('}')
-        .map(|i| &query[i..])
-        .unwrap_or("");
+    let after_where = query.rfind('}').map(|i| &query[i..]).unwrap_or("");
     if let Some(pos) = after_where.find("AS OF") {
         let ts_ms = parse_temporal_literal(after_where[pos + 5..].trim_start());
         let as_of_pat = Pattern::AsOf {
@@ -125,13 +132,13 @@ fn parse_select_query(
         let limit_str = &where_clause[start + 5..];
         query_struct.limit = parse_integer(limit_str);
     }
-    
+
     let offset_start = where_clause.find("OFFSET");
     if let Some(start) = offset_start {
         let offset_str = &where_clause[start + 6..];
         query_struct.offset = parse_integer(offset_str).unwrap_or(0);
     }
-    
+
     Ok(query_struct)
 }
 
@@ -144,7 +151,7 @@ fn parse_ask_query(
     let where_start = after_ask.find("WHERE").ok_or("WHERE clause not found")?;
     let where_clause = &after_ask[where_start..];
     let pattern_id = parse_where_clause(where_clause, ctx, prefixes)?;
-    
+
     Ok(AskQuery {
         root_pattern: pattern_id,
     })
@@ -157,10 +164,12 @@ fn parse_construct_query(
 ) -> Result<ConstructQuery, String> {
     let after_construct = query.trim_start_matches("CONSTRUCT").trim();
     // Simplified - just parse WHERE for now
-    let where_start = after_construct.find("WHERE").ok_or("WHERE clause not found")?;
+    let where_start = after_construct
+        .find("WHERE")
+        .ok_or("WHERE clause not found")?;
     let where_clause = &after_construct[where_start..];
     let pattern_id = parse_where_clause(where_clause, ctx, prefixes)?;
-    
+
     Ok(ConstructQuery {
         template_pattern: 0, // TODO: Parse template
         root_pattern: pattern_id,
@@ -188,7 +197,7 @@ fn parse_describe_query(
     } else {
         None
     };
-    
+
     Ok(DescribeQuery {
         vars_or_ids: [0; MAX_VARIABLES],
         var_count: 0,
@@ -201,7 +210,10 @@ fn parse_distinct(input: &str) -> ((bool, bool), &str) {
     if input.starts_with("DISTINCT") {
         let after_distinct = input.trim_start_matches("DISTINCT").trim();
         if after_distinct.starts_with("REDUCED") {
-            ((true, true), after_distinct.trim_start_matches("REDUCED").trim())
+            (
+                (true, true),
+                after_distinct.trim_start_matches("REDUCED").trim(),
+            )
         } else {
             ((true, false), after_distinct)
         }
@@ -232,7 +244,11 @@ fn parse_where_clause(
     ctx: &mut SparqlQueryContext,
     prefixes: &HashMap<String, String>,
 ) -> Result<PatternId, String> {
-    let inner = input.trim_start_matches("WHERE").trim().trim_start_matches('{').trim();
+    let inner = input
+        .trim_start_matches("WHERE")
+        .trim()
+        .trim_start_matches('{')
+        .trim();
     let inner = inner.trim_end_matches('}').trim();
     parse_triple_patterns(inner, ctx, prefixes)
 }
@@ -444,8 +460,18 @@ fn temporal_days_since_epoch(year: u64, month: u64, day: u64) -> u64 {
         days += if temporal_is_leap(y) { 366 } else { 365 };
     }
     let month_days: [u64; 12] = [
-        31, if temporal_is_leap(year) { 29 } else { 28 },
-        31, 30, 31, 30, 31, 31, 30, 31, 30, 31,
+        31,
+        if temporal_is_leap(year) { 29 } else { 28 },
+        31,
+        30,
+        31,
+        30,
+        31,
+        31,
+        30,
+        31,
+        30,
+        31,
     ];
     for m in 1..month {
         days += month_days[(m - 1) as usize];
@@ -469,17 +495,29 @@ mod tests {
         let bgp = "?a <http://www.w3.org/1999/02/22-rdf-syntax-ns#type> \
                    <https://ns.webcivics.net/values/Undertaking>";
         let parts = split_triple_patterns(bgp);
-        assert_eq!(parts.len(), 1, "a single dotted-IRI triple must stay one pattern");
+        assert_eq!(
+            parts.len(),
+            1,
+            "a single dotted-IRI triple must stay one pattern"
+        );
 
         // Two real triples (terminated by `.`) split into exactly two — the `.`
         // separator still works at angle-depth 0, dots inside IRIs do not.
         let two = "?a <https://ns.webcivics.net/values/partOf> <https://ns.webcivics.net/values/x#Instrument> . \
                    ?a <http://www.w3.org/1999/02/22-rdf-syntax-ns#type> <https://ns.webcivics.net/values/Undertaking>";
-        assert_eq!(split_triple_patterns(two).len(), 2, "the `.` between triples still splits");
+        assert_eq!(
+            split_triple_patterns(two).len(),
+            2,
+            "the `.` between triples still splits"
+        );
 
         // A dot inside a quoted literal is also not a terminator.
         let lit = "?a <https://ns.webcivics.net/values/originalText> \"Art. 3 applies.\"";
-        assert_eq!(split_triple_patterns(lit).len(), 1, "dots in quoted literals are not terminators");
+        assert_eq!(
+            split_triple_patterns(lit).len(),
+            1,
+            "dots in quoted literals are not terminators"
+        );
     }
 
     /// End-to-end parse of a typed BGP with explicit dotted IRIs — must produce a
@@ -489,7 +527,10 @@ mod tests {
         let q = "SELECT ?a WHERE { ?a <http://www.w3.org/1999/02/22-rdf-syntax-ns#type> \
                  <https://ns.webcivics.net/values/Undertaking> }";
         let (_, ctx) = parse_sparql(q).expect("typed IRI BGP must parse");
-        assert!(ctx.pattern_count > 0, "the typed triple pattern must be allocated");
+        assert!(
+            ctx.pattern_count > 0,
+            "the typed triple pattern must be allocated"
+        );
     }
 
     #[test]
@@ -497,7 +538,7 @@ mod tests {
         let query = "SELECT ?s WHERE { ?s knows Bob }";
         let result = parse_sparql(query);
         assert!(result.is_ok());
-        
+
         let (sparql_query, ctx) = result.unwrap();
         if let SparqlQuery::Select(select) = sparql_query {
             assert!(select.var_count > 0);
@@ -512,7 +553,7 @@ mod tests {
         let query = "SELECT DISTINCT ?s WHERE { ?s knows Bob }";
         let result = parse_sparql(query);
         assert!(result.is_ok());
-        
+
         let (sparql_query, _) = result.unwrap();
         if let SparqlQuery::Select(select) = sparql_query {
             assert!(select.distinct);
@@ -526,7 +567,7 @@ mod tests {
         let query = "SELECT ?s WHERE { ?s knows Bob } LIMIT 10";
         let result = parse_sparql(query);
         assert!(result.is_ok());
-        
+
         let (sparql_query, _) = result.unwrap();
         if let SparqlQuery::Select(select) = sparql_query {
             assert_eq!(select.limit, Some(10));
@@ -549,7 +590,9 @@ mod tests {
         if let SparqlQuery::Select(sel) = q {
             let root = &ctx.patterns[sel.root_pattern as usize];
             match root {
-                Pattern::AsOf { timestamp_ms, mode, .. } => {
+                Pattern::AsOf {
+                    timestamp_ms, mode, ..
+                } => {
                     assert_eq!(*timestamp_ms, 1_717_286_400_000);
                     assert_eq!(*mode, TemporalMode::AsOf);
                 }
@@ -566,7 +609,10 @@ mod tests {
         let query = r#"SELECT ?s WHERE { ?s knows Bob } AS OF "2024-06-01"^^xsd:dateTime"#;
         let (q, ctx) = parse_sparql(query).expect("parse failed");
         if let SparqlQuery::Select(sel) = q {
-            if let Pattern::AsOf { timestamp_ms, mode, .. } = ctx.patterns[sel.root_pattern as usize] {
+            if let Pattern::AsOf {
+                timestamp_ms, mode, ..
+            } = ctx.patterns[sel.root_pattern as usize]
+            {
                 assert!(timestamp_ms > 0, "timestamp should be > 0");
                 assert_eq!(mode, TemporalMode::AsOf);
             } else {
@@ -580,7 +626,10 @@ mod tests {
         let query = "SELECT ?s WHERE { ?s knows Bob } AT TIME 9999999";
         let (q, ctx) = parse_sparql(query).expect("parse failed");
         if let SparqlQuery::Select(sel) = q {
-            if let Pattern::AsOf { timestamp_ms, mode, .. } = ctx.patterns[sel.root_pattern as usize] {
+            if let Pattern::AsOf {
+                timestamp_ms, mode, ..
+            } = ctx.patterns[sel.root_pattern as usize]
+            {
                 assert_eq!(timestamp_ms, 9_999_999);
                 assert_eq!(mode, TemporalMode::AtTime);
             } else {
@@ -592,7 +641,10 @@ mod tests {
     #[test]
     fn test_temporal_literal_epoch() {
         // 1970-01-01 = day 0 = ms 0
-        assert_eq!(super::parse_temporal_literal(r#""1970-01-01"^^xsd:dateTime"#), 0);
+        assert_eq!(
+            super::parse_temporal_literal(r#""1970-01-01"^^xsd:dateTime"#),
+            0
+        );
     }
 
     #[test]

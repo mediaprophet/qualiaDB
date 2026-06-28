@@ -126,36 +126,38 @@ impl QTensorEngine {
         };
 
         let attn_layout = self.attention_bind_layout.clone();
-        let attn_bg = self.gpu_device().create_bind_group(&wgpu::BindGroupDescriptor {
-            label: Some("FusedTailAttentionBG"),
-            layout: &attn_layout,
-            entries: &[
-                wgpu::BindGroupEntry {
-                    binding: 0,
-                    resource: input_buf.as_entire_binding(),
-                },
-                wgpu::BindGroupEntry {
-                    binding: 1,
-                    resource: q_weight.as_entire_binding(),
-                },
-                wgpu::BindGroupEntry {
-                    binding: 2,
-                    resource: attn_params_buf.as_entire_binding(),
-                },
-                wgpu::BindGroupEntry {
-                    binding: 3,
-                    resource: wgpu::BindingResource::Buffer(kv_binding),
-                },
-                wgpu::BindGroupEntry {
-                    binding: 4,
-                    resource: attn_out_buf.as_entire_binding(),
-                },
-                wgpu::BindGroupEntry {
-                    binding: 5,
-                    resource: mask_buf.as_entire_binding(),
-                },
-            ],
-        });
+        let attn_bg = self
+            .gpu_device()
+            .create_bind_group(&wgpu::BindGroupDescriptor {
+                label: Some("FusedTailAttentionBG"),
+                layout: &attn_layout,
+                entries: &[
+                    wgpu::BindGroupEntry {
+                        binding: 0,
+                        resource: input_buf.as_entire_binding(),
+                    },
+                    wgpu::BindGroupEntry {
+                        binding: 1,
+                        resource: q_weight.as_entire_binding(),
+                    },
+                    wgpu::BindGroupEntry {
+                        binding: 2,
+                        resource: attn_params_buf.as_entire_binding(),
+                    },
+                    wgpu::BindGroupEntry {
+                        binding: 3,
+                        resource: wgpu::BindingResource::Buffer(kv_binding),
+                    },
+                    wgpu::BindGroupEntry {
+                        binding: 4,
+                        resource: attn_out_buf.as_entire_binding(),
+                    },
+                    wgpu::BindGroupEntry {
+                        binding: 5,
+                        resource: mask_buf.as_entire_binding(),
+                    },
+                ],
+            });
 
         let use_coop = crate::llm_bench::coop_gemv_enabled();
         let gemm_pipeline: &wgpu::ComputePipeline = if use_coop {
@@ -164,28 +166,30 @@ impl QTensorEngine {
             &self.pipeline
         };
         let gemm_layout = self.native_gemm_bind_layout(use_coop).clone();
-        let gemm_bg = self.gpu_device().create_bind_group(&wgpu::BindGroupDescriptor {
-            label: Some("FusedTailOProjBG"),
-            layout: &gemm_layout,
-            entries: &[
-                wgpu::BindGroupEntry {
-                    binding: 0,
-                    resource: input_buf.as_entire_binding(),
-                },
-                wgpu::BindGroupEntry {
-                    binding: 1,
-                    resource: o_weight.as_entire_binding(),
-                },
-                wgpu::BindGroupEntry {
-                    binding: 2,
-                    resource: gemm_params_buf.as_entire_binding(),
-                },
-                wgpu::BindGroupEntry {
-                    binding: 3,
-                    resource: o_out_buf.as_entire_binding(),
-                },
-            ],
-        });
+        let gemm_bg = self
+            .gpu_device()
+            .create_bind_group(&wgpu::BindGroupDescriptor {
+                label: Some("FusedTailOProjBG"),
+                layout: &gemm_layout,
+                entries: &[
+                    wgpu::BindGroupEntry {
+                        binding: 0,
+                        resource: input_buf.as_entire_binding(),
+                    },
+                    wgpu::BindGroupEntry {
+                        binding: 1,
+                        resource: o_weight.as_entire_binding(),
+                    },
+                    wgpu::BindGroupEntry {
+                        binding: 2,
+                        resource: gemm_params_buf.as_entire_binding(),
+                    },
+                    wgpu::BindGroupEntry {
+                        binding: 3,
+                        resource: o_out_buf.as_entire_binding(),
+                    },
+                ],
+            });
 
         let mut encoder = self
             .device()

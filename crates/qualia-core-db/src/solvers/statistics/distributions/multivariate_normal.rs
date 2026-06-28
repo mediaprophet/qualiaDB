@@ -44,7 +44,10 @@ pub fn pdf(x: &[f64], mean: &[f64], cov: &[f64], p: usize) -> Option<f64> {
 struct Rng(u64);
 impl Rng {
     fn unit(&mut self) -> f64 {
-        self.0 = self.0.wrapping_mul(6364136223846793005).wrapping_add(1442695040888963407);
+        self.0 = self
+            .0
+            .wrapping_mul(6364136223846793005)
+            .wrapping_add(1442695040888963407);
         ((self.0 >> 11) as f64) / ((1u64 << 53) as f64)
     }
     fn gaussian(&mut self) -> f64 {
@@ -153,8 +156,14 @@ mod tests {
             data[i * 2 + 1] = s[1];
         }
         let (m, c) = mle(&data, n, 2).unwrap();
-        assert!((m[0] - 3.0).abs() < 0.1 && (m[1] + 1.0).abs() < 0.1, "mean {m:?}");
-        assert!((c[0] - 1.0).abs() < 0.15 && (c[3] - 2.0).abs() < 0.2, "var {c:?}");
+        assert!(
+            (m[0] - 3.0).abs() < 0.1 && (m[1] + 1.0).abs() < 0.1,
+            "mean {m:?}"
+        );
+        assert!(
+            (c[0] - 1.0).abs() < 0.15 && (c[3] - 2.0).abs() < 0.2,
+            "var {c:?}"
+        );
         assert!((c[1] - 0.5).abs() < 0.15, "cov {}", c[1]);
     }
 

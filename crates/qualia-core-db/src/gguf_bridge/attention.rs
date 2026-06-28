@@ -111,7 +111,9 @@ impl QTensorEngine {
             );
         }
         if !ggml_gpu_attention_shader_supported(info.ggml_type) {
-            wlog(&format!("[attn_pass] GUARD unsupported quant kind={proj_kind}"));
+            wlog(&format!(
+                "[attn_pass] GUARD unsupported quant kind={proj_kind}"
+            ));
             return false;
         }
         let batch = num_tokens_in_batch.max(1) as usize;
@@ -171,176 +173,182 @@ impl QTensorEngine {
 
         #[cfg(not(target_arch = "wasm32"))]
         {
-        let (mask_words, mask_active, mask_word_count) =
-            Self::attention_kv_mask_for_dispatch(layout, token_idx, proj_kind);
-        let mut params = Self::attention_gpu_params(
-            h,
-            layout,
-            layer,
-            token_idx,
-            info,
-            raw_weights.len(),
-            proj_kind,
-            num_tokens_in_batch.max(1),
-            batch_start_token_idx,
-            mask_active,
-            mask_word_count,
-            0,
-        );
-        if n_embd != h.n_embd as usize {
-            params.proj_row_stride = n_embd as u32;
-        }
-        let input_buf = self.gemm_input_buf.as_ref().unwrap();
-        let weight_buf = self.gemm_weight_buf.as_ref().unwrap();
-        let output_buf = self.gemm_output_buf.as_ref().unwrap();
-        let params_buf = self.attention_params_buf.as_ref().unwrap();
-        let mask_buf = self.attention_mask_buf.as_ref().unwrap();
-        let kv_buf = self.kv_cache_gpu.as_ref().unwrap();
-        let staging = self.gemm_output_staging.as_ref().unwrap();
+            let (mask_words, mask_active, mask_word_count) =
+                Self::attention_kv_mask_for_dispatch(layout, token_idx, proj_kind);
+            let mut params = Self::attention_gpu_params(
+                h,
+                layout,
+                layer,
+                token_idx,
+                info,
+                raw_weights.len(),
+                proj_kind,
+                num_tokens_in_batch.max(1),
+                batch_start_token_idx,
+                mask_active,
+                mask_word_count,
+                0,
+            );
+            if n_embd != h.n_embd as usize {
+                params.proj_row_stride = n_embd as u32;
+            }
+            let input_buf = self.gemm_input_buf.as_ref().unwrap();
+            let weight_buf = self.gemm_weight_buf.as_ref().unwrap();
+            let output_buf = self.gemm_output_buf.as_ref().unwrap();
+            let params_buf = self.attention_params_buf.as_ref().unwrap();
+            let mask_buf = self.attention_mask_buf.as_ref().unwrap();
+            let kv_buf = self.kv_cache_gpu.as_ref().unwrap();
+            let staging = self.gemm_output_staging.as_ref().unwrap();
 
-        // #49: honor norm_weight on the GPU path. Prefill passes RAW hidden + attn_norm here (the
-        // CPU-reference convention); without per-token RMSNorm the prefill K/V are projected from the
-        // un-normed residual and the KV cache explodes. Decode passes norm_weight=None → single upload.
-        let norm_ok = n_embd <= MAX_HIDDEN_DIM && norm_weight.map_or(false, |w| w.len() >= n_embd);
-        match norm_weight {
-            Some(w) if norm_ok => {
-                let mut norm_tok = [0f32; MAX_HIDDEN_DIM];
-                for t in 0..batch {
-                    let s = t * n_embd;
-                    norm_tok[..n_embd].copy_from_slice(&hidden[s..s + n_embd]);
-                    rms_norm_inplace(&mut norm_tok[..n_embd], &w[..n_embd], RMS_NORM_EPS);
+            // #49: honor norm_weight on the GPU path. Prefill passes RAW hidden + attn_norm here (the
+            // CPU-reference convention); without per-token RMSNorm the prefill K/V are projected from the
+            // un-normed residual and the KV cache explodes. Decode passes norm_weight=None → single upload.
+            let norm_ok =
+                n_embd <= MAX_HIDDEN_DIM && norm_weight.map_or(false, |w| w.len() >= n_embd);
+            match norm_weight {
+                Some(w) if norm_ok => {
+                    let mut norm_tok = [0f32; MAX_HIDDEN_DIM];
+                    for t in 0..batch {
+                        let s = t * n_embd;
+                        norm_tok[..n_embd].copy_from_slice(&hidden[s..s + n_embd]);
+                        rms_norm_inplace(&mut norm_tok[..n_embd], &w[..n_embd], RMS_NORM_EPS);
+                        self.gpu_queue().write_buffer(
+                            input_buf,
+                            (s * 4) as wgpu::BufferAddress,
+                            bytemuck::cast_slice(&norm_tok[..n_embd]),
+                        );
+                    }
+                }
+                _ => {
                     self.gpu_queue().write_buffer(
                         input_buf,
-                        (s * 4) as wgpu::BufferAddress,
-                        bytemuck::cast_slice(&norm_tok[..n_embd]),
+                        0,
+                        bytemuck::cast_slice(&hidden[..hidden_elems]),
                     );
                 }
             }
-            _ => {
-                self.gpu_queue()
-                    .write_buffer(input_buf, 0, bytemuck::cast_slice(&hidden[..hidden_elems]));
-            }
-        }
-        // Phase 2 (attention): bind this projection's resident VRAM buffer (uploaded once, keyed by
-        // its mmap address) instead of re-uploading the Q/K/V weight into the shared buffer EVERY
-        // token. For a 3B that re-upload is ~30 MB/layer × n_layer ≈ ~0.8 GB/token of PCIe traffic
-        // the GEMM path already shed; attention was still paying it. Output is byte-identical (same
-        // bytes, same offsets). Falls back to the per-token upload when residency is off.
-        let resident = if crate::llm_bench::resident_weights_enabled() {
-            self.resident_weight_buffer(raw_weights.as_ptr() as u64, raw_weights)
-        } else {
-            None
-        };
-        let weight_binding: &wgpu::Buffer = match resident.as_ref() {
-            Some(r) => r,
-            None => {
-                self.write_weight_words(raw_weights, self.max_tensor_bytes);
-                weight_buf
-            }
-        };
-        self.gpu_queue()
-            .write_buffer(params_buf, 0, bytemuck::bytes_of(&params));
-        self.gpu_queue()
-            .write_buffer(mask_buf, 0, bytemuck::cast_slice(&mask_words));
-
-        // Bind one layer slice of the KV arena (full arena exceeds 128 MiB wgpu binding cap).
-        let layer_f32s = layout.layer_stride as usize;
-        let layer_bytes = (layer_f32s * std::mem::size_of::<f32>()) as wgpu::BufferAddress;
-        let layer_offset =
-            (layer as usize * layer_f32s * std::mem::size_of::<f32>()) as wgpu::BufferAddress;
-        let kv_binding = wgpu::BufferBinding {
-            buffer: kv_buf,
-            offset: layer_offset,
-            size: std::num::NonZeroU64::new(layer_bytes.max(4)),
-        };
-        let (wg_x, wg_y) = if proj_kind == 0 && num_tokens_in_batch > 1 {
-            (h.n_head, num_tokens_in_batch)
-        } else {
-            (n_workgroups.max(1), 1)
-        };
-
-        let bind_layout = self.attention_bind_layout.clone();
-        let bind_group = self.gpu_device().create_bind_group(&wgpu::BindGroupDescriptor {
-            label: Some("FusedAttentionBindGroup"),
-            layout: &bind_layout,
-            entries: &[
-                wgpu::BindGroupEntry {
-                    binding: 0,
-                    resource: input_buf.as_entire_binding(),
-                },
-                wgpu::BindGroupEntry {
-                    binding: 1,
-                    resource: weight_binding.as_entire_binding(),
-                },
-                wgpu::BindGroupEntry {
-                    binding: 2,
-                    resource: params_buf.as_entire_binding(),
-                },
-                wgpu::BindGroupEntry {
-                    binding: 3,
-                    resource: wgpu::BindingResource::Buffer(kv_binding),
-                },
-                wgpu::BindGroupEntry {
-                    binding: 4,
-                    resource: output_buf.as_entire_binding(),
-                },
-                wgpu::BindGroupEntry {
-                    binding: 5,
-                    resource: mask_buf.as_entire_binding(),
-                },
-            ],
-        });
-
-        let mut encoder = self
-            .device()
-            .create_command_encoder(&wgpu::CommandEncoderDescriptor {
-                label: Some("FusedAttentionEncoder"),
-            });
-        {
-            let mut cpass = encoder.begin_compute_pass(&wgpu::ComputePassDescriptor {
-                label: Some("FusedAttentionPass"),
-                timestamp_writes: crate::llm_gpu_profiler::pass_writes_both(),
-            });
-            cpass.set_pipeline(&self.attention_pipeline);
-            cpass.set_bind_group(0, &bind_group, &[]);
-            cpass.dispatch_workgroups(wg_x, wg_y, 1);
-        }
-
-        let readback_elems = readback_out.as_ref().map(|o| o.len()).unwrap_or(0);
-        if readback_elems > 0 {
-            let out_bytes = (readback_elems * 4) as wgpu::BufferAddress;
-            encoder.copy_buffer_to_buffer(output_buf, 0, staging, 0, out_bytes);
-        }
-        crate::llm_gpu_profiler::resolve(&mut encoder);
-        self.gpu_queue().submit(Some(encoder.finish()));
-        crate::llm_gpu_profiler::accumulate(crate::llm_gpu_profiler::Phase::Attention);
-
-        if readback_elems == 0 {
-            return true;
-        }
-
-        let out_bytes = (readback_elems * 4) as wgpu::BufferAddress;
-        let slice = staging.slice(..out_bytes);
-        let (tx, rx) = futures_channel::oneshot::channel();
-        slice.map_async(wgpu::MapMode::Read, move |r| {
-            let _ = tx.send(r);
-        });
-        self.poll_wait();
-        #[cfg(not(target_arch = "wasm32"))]
-            if let Ok(handle) = tokio::runtime::Handle::try_current() {
-            if handle.block_on(rx).ok().map(|m| m.is_ok()).unwrap_or(false) {
-                let data = slice.get_mapped_range();
-                let floats: &[f32] = bytemuck::cast_slice(&data);
-                if let Some(out) = readback_out {
-                    out[..readback_elems].copy_from_slice(&floats[..readback_elems]);
+            // Phase 2 (attention): bind this projection's resident VRAM buffer (uploaded once, keyed by
+            // its mmap address) instead of re-uploading the Q/K/V weight into the shared buffer EVERY
+            // token. For a 3B that re-upload is ~30 MB/layer × n_layer ≈ ~0.8 GB/token of PCIe traffic
+            // the GEMM path already shed; attention was still paying it. Output is byte-identical (same
+            // bytes, same offsets). Falls back to the per-token upload when residency is off.
+            let resident = if crate::llm_bench::resident_weights_enabled() {
+                self.resident_weight_buffer(raw_weights.as_ptr() as u64, raw_weights)
+            } else {
+                None
+            };
+            let weight_binding: &wgpu::Buffer = match resident.as_ref() {
+                Some(r) => r,
+                None => {
+                    self.write_weight_words(raw_weights, self.max_tensor_bytes);
+                    weight_buf
                 }
-                drop(data);
-                staging.unmap();
+            };
+            self.gpu_queue()
+                .write_buffer(params_buf, 0, bytemuck::bytes_of(&params));
+            self.gpu_queue()
+                .write_buffer(mask_buf, 0, bytemuck::cast_slice(&mask_words));
+
+            // Bind one layer slice of the KV arena (full arena exceeds 128 MiB wgpu binding cap).
+            let layer_f32s = layout.layer_stride as usize;
+            let layer_bytes = (layer_f32s * std::mem::size_of::<f32>()) as wgpu::BufferAddress;
+            let layer_offset =
+                (layer as usize * layer_f32s * std::mem::size_of::<f32>()) as wgpu::BufferAddress;
+            let kv_binding = wgpu::BufferBinding {
+                buffer: kv_buf,
+                offset: layer_offset,
+                size: std::num::NonZeroU64::new(layer_bytes.max(4)),
+            };
+            let (wg_x, wg_y) = if proj_kind == 0 && num_tokens_in_batch > 1 {
+                (h.n_head, num_tokens_in_batch)
+            } else {
+                (n_workgroups.max(1), 1)
+            };
+
+            let bind_layout = self.attention_bind_layout.clone();
+            let bind_group = self
+                .gpu_device()
+                .create_bind_group(&wgpu::BindGroupDescriptor {
+                    label: Some("FusedAttentionBindGroup"),
+                    layout: &bind_layout,
+                    entries: &[
+                        wgpu::BindGroupEntry {
+                            binding: 0,
+                            resource: input_buf.as_entire_binding(),
+                        },
+                        wgpu::BindGroupEntry {
+                            binding: 1,
+                            resource: weight_binding.as_entire_binding(),
+                        },
+                        wgpu::BindGroupEntry {
+                            binding: 2,
+                            resource: params_buf.as_entire_binding(),
+                        },
+                        wgpu::BindGroupEntry {
+                            binding: 3,
+                            resource: wgpu::BindingResource::Buffer(kv_binding),
+                        },
+                        wgpu::BindGroupEntry {
+                            binding: 4,
+                            resource: output_buf.as_entire_binding(),
+                        },
+                        wgpu::BindGroupEntry {
+                            binding: 5,
+                            resource: mask_buf.as_entire_binding(),
+                        },
+                    ],
+                });
+
+            let mut encoder =
+                self.device()
+                    .create_command_encoder(&wgpu::CommandEncoderDescriptor {
+                        label: Some("FusedAttentionEncoder"),
+                    });
+            {
+                let mut cpass = encoder.begin_compute_pass(&wgpu::ComputePassDescriptor {
+                    label: Some("FusedAttentionPass"),
+                    timestamp_writes: crate::llm_gpu_profiler::pass_writes_both(),
+                });
+                cpass.set_pipeline(&self.attention_pipeline);
+                cpass.set_bind_group(0, &bind_group, &[]);
+                cpass.dispatch_workgroups(wg_x, wg_y, 1);
+            }
+
+            let readback_elems = readback_out.as_ref().map(|o| o.len()).unwrap_or(0);
+            if readback_elems > 0 {
+                let out_bytes = (readback_elems * 4) as wgpu::BufferAddress;
+                encoder.copy_buffer_to_buffer(output_buf, 0, staging, 0, out_bytes);
+            }
+            crate::llm_gpu_profiler::resolve(&mut encoder);
+            self.gpu_queue().submit(Some(encoder.finish()));
+            crate::llm_gpu_profiler::accumulate(crate::llm_gpu_profiler::Phase::Attention);
+
+            if readback_elems == 0 {
                 return true;
             }
-        }
-        let _ = staging.unmap();
-        false
+
+            let out_bytes = (readback_elems * 4) as wgpu::BufferAddress;
+            let slice = staging.slice(..out_bytes);
+            let (tx, rx) = futures_channel::oneshot::channel();
+            slice.map_async(wgpu::MapMode::Read, move |r| {
+                let _ = tx.send(r);
+            });
+            self.poll_wait();
+            #[cfg(not(target_arch = "wasm32"))]
+            if let Ok(handle) = tokio::runtime::Handle::try_current() {
+                if handle.block_on(rx).ok().map(|m| m.is_ok()).unwrap_or(false) {
+                    let data = slice.get_mapped_range();
+                    let floats: &[f32] = bytemuck::cast_slice(&data);
+                    if let Some(out) = readback_out {
+                        out[..readback_elems].copy_from_slice(&floats[..readback_elems]);
+                    }
+                    drop(data);
+                    staging.unmap();
+                    return true;
+                }
+            }
+            let _ = staging.unmap();
+            false
         }
     }
 
@@ -370,7 +378,9 @@ impl QTensorEngine {
         }
         let (n_in, out_dim) = Self::matmul_dims(info);
         if out_dim == 0 || out_dim > MAX_STACK_GEMM_OUT || head_dim > out_dim {
-            wlog(&format!("[cpu_attn] bad dims out_dim={out_dim} head_dim={head_dim}"));
+            wlog(&format!(
+                "[cpu_attn] bad dims out_dim={out_dim} head_dim={head_dim}"
+            ));
             return false;
         }
         let proj_heads = out_dim / head_dim;
@@ -394,7 +404,10 @@ impl QTensorEngine {
             let slot = layout.ring_slot(pos);
             let tok_start = t * n_embd;
             if tok_start + n_embd > hidden.len() {
-                wlog(&format!("[cpu_attn] hidden OOB t={t} need={}", tok_start + n_embd));
+                wlog(&format!(
+                    "[cpu_attn] hidden OOB t={t} need={}",
+                    tok_start + n_embd
+                ));
                 return false;
             }
             let htok = &hidden[tok_start..tok_start + n_embd];
@@ -408,7 +421,14 @@ impl QTensorEngine {
             } else {
                 htok
             };
-            if !stack_gemm_quant(raw_weights, info, gemm_in, &mut proj[..out_dim], n_in, out_dim) {
+            if !stack_gemm_quant(
+                raw_weights,
+                info,
+                gemm_in,
+                &mut proj[..out_dim],
+                n_in,
+                out_dim,
+            ) {
                 wlog(&format!("[cpu_attn] proj failed kind={proj_kind} n_in={n_in} out_dim={out_dim} hidden={n_embd}"));
                 return false;
             }
@@ -488,8 +508,7 @@ impl QTensorEngine {
                             let past_slot = layout.ring_slot(past_pos);
                             let mut dot = 0.0f32;
                             for d in 0..head_dim {
-                                let k_idx =
-                                    layout.k_index(layer, past_slot, kv_h as u32, d as u32);
+                                let k_idx = layout.k_index(layer, past_slot, kv_h as u32, d as u32);
                                 if k_idx >= kv.len() {
                                     wlog(&format!(
                                         "[cpu_attn] SDPA K idx OOB idx={k_idx} len={}",
@@ -521,8 +540,7 @@ impl QTensorEngine {
                             let prob = att_scores[past_pos as usize] / sum_exp;
                             let past_slot = layout.ring_slot(past_pos);
                             for d in 0..head_dim {
-                                let v_idx =
-                                    layout.v_index(layer, past_slot, kv_h as u32, d as u32);
+                                let v_idx = layout.v_index(layer, past_slot, kv_h as u32, d as u32);
                                 if v_idx >= kv.len() {
                                     wlog(&format!(
                                         "[cpu_attn] SDPA V idx OOB idx={v_idx} len={}",
@@ -635,9 +653,11 @@ impl QTensorEngine {
                 if let Some(out_info) = tensors.attn_output {
                     let (o_in, o_out) = Self::matmul_dims(&out_info);
                     if o_in <= q_dim && o_out <= scratch_a.len() {
-                        if let Ok(o_raw) =
-                            crate::ggml_quants::fetch_tensor_bytes(mmap, index.tensor_data_start, &out_info)
-                        {
+                        if let Ok(o_raw) = crate::ggml_quants::fetch_tensor_bytes(
+                            mmap,
+                            index.tensor_data_start,
+                            &out_info,
+                        ) {
                             if self.dispatch_attention_q_o_fused(
                                 hidden_input,
                                 n_embd,
@@ -740,9 +760,11 @@ impl QTensorEngine {
             if let Some(out_info) = tensors.attn_output {
                 let (o_in, o_out) = Self::matmul_dims(&out_info);
                 if o_in <= q_dim && o_out <= scratch_a.len() {
-                    if let Ok(o_raw) =
-                        crate::ggml_quants::fetch_tensor_bytes(mmap, index.tensor_data_start, &out_info)
-                    {
+                    if let Ok(o_raw) = crate::ggml_quants::fetch_tensor_bytes(
+                        mmap,
+                        index.tensor_data_start,
+                        &out_info,
+                    ) {
                         if self.dispatch_attention_q_o_fused(
                             hidden_input,
                             n_embd,
@@ -901,5 +923,4 @@ impl QTensorEngine {
         }
         self.dispatch_ffn_block_pre_norm(index, hidden, emb_dim, &tensors, scratch_a, scratch_b)
     }
-
 }

@@ -1,5 +1,5 @@
+use crate::lexicon::{generate_60bit_token, generate_embedded_triple_id};
 use minicbor::Decoder;
-use crate::lexicon::{generate_embedded_triple_id, generate_60bit_token};
 
 // CBOR-LD RDF-Star tags
 const CBOR_TAG_TRIPLE: u64 = 103;
@@ -15,7 +15,6 @@ fn hash_str(s: &str) -> u64 {
     generate_60bit_token(s.as_bytes())
 }
 
-
 /// Check if the next item is a CBOR tag and return it if it's an RDF-Star tag
 fn try_read_rdf_star_tag(decoder: &mut Decoder) -> Option<u64> {
     if decoder.datatype().ok()? == minicbor::data::Type::Tag {
@@ -23,7 +22,11 @@ fn try_read_rdf_star_tag(decoder: &mut Decoder) -> Option<u64> {
             minicbor::data::Tag::Unassigned(v) => v,
             _ => return None,
         };
-        if tag_val == CBOR_TAG_TRIPLE || tag_val == CBOR_TAG_SUBJECT || tag_val == CBOR_TAG_PREDICATE || tag_val == CBOR_TAG_OBJECT {
+        if tag_val == CBOR_TAG_TRIPLE
+            || tag_val == CBOR_TAG_SUBJECT
+            || tag_val == CBOR_TAG_PREDICATE
+            || tag_val == CBOR_TAG_OBJECT
+        {
             return Some(tag_val);
         }
     }
@@ -31,21 +34,23 @@ fn try_read_rdf_star_tag(decoder: &mut Decoder) -> Option<u64> {
 }
 
 /// Parse an embedded triple from CBOR (tag 103)
-fn parse_embedded_triple(decoder: &mut Decoder) -> Result<(u64, [u64; 3]), Box<dyn std::error::Error>> {
+fn parse_embedded_triple(
+    decoder: &mut Decoder,
+) -> Result<(u64, [u64; 3]), Box<dyn std::error::Error>> {
     let array_len = decoder.array()?;
     let len = array_len.unwrap_or(3);
     if len < 3 {
         return Err("Embedded triple must have 3 elements".into());
     }
-    
+
     let subject = parse_cbor_value(decoder)?;
     let predicate = parse_cbor_value(decoder)?;
     let object = parse_cbor_value(decoder)?;
-    
+
     for _ in 3..len {
         decoder.skip()?;
     }
-    
+
     let virtual_id = generate_embedded_triple_id(subject, predicate, object);
     Ok((virtual_id, [subject, predicate, object]))
 }
@@ -56,11 +61,17 @@ fn parse_cbor_value(decoder: &mut Decoder) -> Result<u64, Box<dyn std::error::Er
     match dt {
         minicbor::data::Type::String => Ok(hash_str(decoder.str()?)),
         minicbor::data::Type::Bytes => Ok(hash_bytes(decoder.bytes()?)),
-        minicbor::data::Type::U8 | minicbor::data::Type::U16 | minicbor::data::Type::U32 | minicbor::data::Type::U64 => {
+        minicbor::data::Type::U8
+        | minicbor::data::Type::U16
+        | minicbor::data::Type::U32
+        | minicbor::data::Type::U64 => {
             let val = decoder.u64()?;
             Ok(hash_bytes(&val.to_le_bytes()))
         }
-        minicbor::data::Type::I8 | minicbor::data::Type::I16 | minicbor::data::Type::I32 | minicbor::data::Type::I64 => {
+        minicbor::data::Type::I8
+        | minicbor::data::Type::I16
+        | minicbor::data::Type::I32
+        | minicbor::data::Type::I64 => {
             let val = decoder.i64()?;
             Ok(hash_bytes(&val.to_le_bytes()))
         }
@@ -316,7 +327,7 @@ fn parse_cbor_object_star<S: crate::sparql_library::quin_sink::QuinSink>(
                 }
                 embedded_triples.clear();
             }
-            
+
             let quin = NQuin {
                 subject: subject_hash,
                 predicate: pred_hash,
@@ -368,9 +379,21 @@ mod hash_unification_tests {
 
         assert_eq!(sink.0.len(), 1, "one non-@id property → one quin");
         let q = sink.0[0];
-        assert_eq!(q.subject, generate_60bit_token(b"S"), "@id hashes via generate_60bit_token (== Turtle)");
-        assert_eq!(q.predicate, generate_60bit_token(b"P"), "predicate hashes via generate_60bit_token");
-        assert_eq!(q.object, generate_60bit_token(b"O"), "object hashes via generate_60bit_token");
+        assert_eq!(
+            q.subject,
+            generate_60bit_token(b"S"),
+            "@id hashes via generate_60bit_token (== Turtle)"
+        );
+        assert_eq!(
+            q.predicate,
+            generate_60bit_token(b"P"),
+            "predicate hashes via generate_60bit_token"
+        );
+        assert_eq!(
+            q.object,
+            generate_60bit_token(b"O"),
+            "object hashes via generate_60bit_token"
+        );
 
         // Regression guard: must NOT be the old DefaultHasher/SipHash value (parallel hash-space).
         let sip = {
@@ -379,6 +402,9 @@ mod hash_unification_tests {
             "S".hash(&mut h);
             h.finish()
         };
-        assert_ne!(q.subject, sip, "CBOR terms must no longer use DefaultHasher");
+        assert_ne!(
+            q.subject, sip,
+            "CBOR terms must no longer use DefaultHasher"
+        );
     }
 }

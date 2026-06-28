@@ -457,7 +457,10 @@ mod tests {
         );
         // Round-trips through the FrameLayout packer too.
         let packed = crate::frame_layout::pack_float_object(3.5);
-        assert_eq!(packed & crate::frame_layout::INLINE_TAG_MASK, INLINE_TAG_FLOAT);
+        assert_eq!(
+            packed & crate::frame_layout::INLINE_TAG_MASK,
+            INLINE_TAG_FLOAT
+        );
     }
 
     #[test]
@@ -507,10 +510,7 @@ mod tests {
             "got: {out}"
         );
         assert!(out.contains("<http://schema.org/knows>"), "got: {out}");
-        assert!(
-            out.contains("<http://webizen.org/demo/Bob>"),
-            "got: {out}"
-        );
+        assert!(out.contains("<http://webizen.org/demo/Bob>"), "got: {out}");
         assert!(out.ends_with(" .\n"));
     }
 

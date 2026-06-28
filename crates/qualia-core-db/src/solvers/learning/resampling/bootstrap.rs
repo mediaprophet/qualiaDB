@@ -7,7 +7,10 @@ use crate::solvers::statistics::descriptive::{mean, std_dev};
 struct Lcg(u64);
 impl Lcg {
     fn next_below(&mut self, bound: usize) -> usize {
-        self.0 = self.0.wrapping_mul(6364136223846793005).wrapping_add(1442695040888963407);
+        self.0 = self
+            .0
+            .wrapping_mul(6364136223846793005)
+            .wrapping_add(1442695040888963407);
         ((self.0 >> 33) as usize) % bound.max(1)
     }
 }
@@ -145,7 +148,11 @@ pub fn bootstrap_ci(
                 num += d * d * d;
                 den += d * d;
             }
-            let a = if den > 0.0 { num / (6.0 * den.powf(1.5)) } else { 0.0 };
+            let a = if den > 0.0 {
+                num / (6.0 * den.powf(1.5))
+            } else {
+                0.0
+            };
             // Adjusted percentiles.
             let adj = |z_alpha: f64| {
                 let num = z0 + z_alpha;
@@ -188,8 +195,12 @@ mod tests {
         let analytic_se = std_dev(&data, true).unwrap() / (data.len() as f64).sqrt();
         assert!((r.estimate - mean(&data).unwrap()).abs() < 1e-12);
         // Within ~10% of the analytic SE (Monte-Carlo tolerance).
-        assert!((r.std_error - analytic_se).abs() / analytic_se < 0.1,
-            "boot SE {} vs analytic {}", r.std_error, analytic_se);
+        assert!(
+            (r.std_error - analytic_se).abs() / analytic_se < 0.1,
+            "boot SE {} vs analytic {}",
+            r.std_error,
+            analytic_se
+        );
         // Bias of the mean is ~0.
         assert!(r.bias.abs() < 0.5);
     }
@@ -198,10 +209,20 @@ mod tests {
     fn percentile_ci_brackets_the_true_mean() {
         // Data centered at 10; the 95% bootstrap CI for the mean should bracket 10
         // and be ordered lower < estimate < upper.
-        let data: Vec<f64> = (0..60).map(|i| 10.0 + ((i * 17 % 40) as f64 - 20.0) / 7.0).collect();
-        let ci = bootstrap_ci(&data, 2000, 0.05, 1, CiMethod::Percentile, |s| mean(s).unwrap()).unwrap();
+        let data: Vec<f64> = (0..60)
+            .map(|i| 10.0 + ((i * 17 % 40) as f64 - 20.0) / 7.0)
+            .collect();
+        let ci = bootstrap_ci(&data, 2000, 0.05, 1, CiMethod::Percentile, |s| {
+            mean(s).unwrap()
+        })
+        .unwrap();
         assert!(ci.lower < ci.estimate && ci.estimate < ci.upper);
-        assert!(ci.lower < 10.0 && ci.upper > 10.0, "CI [{}, {}] should bracket 10", ci.lower, ci.upper);
+        assert!(
+            ci.lower < 10.0 && ci.upper > 10.0,
+            "CI [{}, {}] should bracket 10",
+            ci.lower,
+            ci.upper
+        );
         assert!((ci.confidence - 0.95).abs() < 1e-12);
     }
 

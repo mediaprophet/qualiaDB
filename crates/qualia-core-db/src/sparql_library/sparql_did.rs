@@ -147,10 +147,12 @@ impl<'a> SparqlDidHandler<'a> {
         // actually evaluated the permission graph (the Webizen VM / deontic policy
         // layer), not granted unconditionally here. Returning `has_permission: true`
         // would be an authorization bypass: any caller would be granted any graph.
-        Err("did:permission is not available in the SPARQL query layer: \
+        Err(
+            "did:permission is not available in the SPARQL query layer: \
              access-control decisions must be evaluated against the policy graph by \
              the governance layer, not granted unconditionally here."
-            .to_string())
+                .to_string(),
+        )
     }
 
     /// Authenticate with DID (strips heavy payloads at boundary)
@@ -185,11 +187,7 @@ impl<'a> SparqlDidHandler<'a> {
     }
 
     /// Sign data with DID (zero-allocation)
-    pub fn sign_with_did(
-        &self,
-        did: u64,
-        data: &[u8],
-    ) -> Result<Vec<u8>, String> {
+    pub fn sign_with_did(&self, did: u64, data: &[u8]) -> Result<Vec<u8>, String> {
         // Check DID has 0x8 prefix
         if (did & 0x8000000000000000) == 0 {
             return Err("Invalid DID: missing 0x8 prefix".to_string());
@@ -245,7 +243,7 @@ pub fn did_resolve(args: &[u64], quins: &[NQuin], result: &mut BindingRow) -> bo
         return false;
     }
     let did = args[0];
-    
+
     let mut handler = SparqlDidHandler::new(quins);
     match handler.resolve_did(did) {
         Ok(resolution) => {
@@ -265,12 +263,12 @@ pub fn did_verify(args: &[u64], quins: &[NQuin], result: &mut BindingRow) -> boo
     let did = args[0];
     let signature_ptr = args[1];
     let data_ptr = args[2];
-    
+
     let handler = SparqlDidHandler::new(quins);
     // In production, convert pointers to actual byte slices
     let signature = &[0u8; 64]; // Placeholder
     let data = &[0u8; 256]; // Placeholder
-    
+
     match handler.verify_signature(did, signature, data) {
         Ok(verification) => {
             result.slots[0] = Some(if verification.valid { 1 } else { 0 });
@@ -288,10 +286,10 @@ pub fn did_auth(args: &[u64], quins: &[NQuin], result: &mut BindingRow) -> bool 
     }
     let did = args[0];
     let auth_method = args[1] as u8;
-    
+
     let handler = SparqlDidHandler::new(quins);
     let auth_payload = &[0u8; 256]; // Placeholder
-    
+
     match handler.authenticate_did(did, auth_method, auth_payload) {
         Ok(valid) => {
             result.slots[0] = Some(if valid { 1 } else { 0 });
@@ -308,11 +306,11 @@ pub fn did_sign(args: &[u64], quins: &[NQuin], result: &mut BindingRow) -> bool 
     }
     let did = args[0];
     let data_ptr = args[1];
-    
+
     let handler = SparqlDidHandler::new(quins);
     // In production, convert pointer to actual byte slice
     let data = &[0u8; 256]; // Placeholder
-    
+
     match handler.sign_with_did(did, data) {
         Ok(_signature) => {
             result.slots[0] = Some(1); // Success indicator
@@ -330,7 +328,7 @@ pub fn did_permission(args: &[u64], quins: &[NQuin], result: &mut BindingRow) ->
     let did = args[0];
     let graph = args[1];
     let permission_type = args[2] as u8;
-    
+
     let handler = SparqlDidHandler::new(quins);
     match handler.check_permission(did, graph, permission_type) {
         Ok(permission) => {
@@ -357,7 +355,7 @@ mod tests {
     fn test_resolve_did() {
         let quins = vec![];
         let mut handler = SparqlDidHandler::new(&quins);
-        
+
         let result = handler.resolve_did(0x8000000000000001); // With 0x8 prefix
         assert!(result.is_ok());
         assert_eq!(result.unwrap().did, 0x8000000000000001);
@@ -375,7 +373,10 @@ mod tests {
         let data = &[0u8; 256];
 
         let result = handler.verify_signature(0x8000000000000001, signature, data);
-        assert!(result.is_err(), "verify_signature must fail closed, not return valid");
+        assert!(
+            result.is_err(),
+            "verify_signature must fail closed, not return valid"
+        );
     }
 
     #[test]
@@ -385,7 +386,10 @@ mod tests {
         let handler = SparqlDidHandler::new(&quins);
 
         let result = handler.check_permission(0x8000000000000001, 123, 0);
-        assert!(result.is_err(), "check_permission must fail closed, not grant access");
+        assert!(
+            result.is_err(),
+            "check_permission must fail closed, not grant access"
+        );
     }
 
     #[test]
@@ -395,6 +399,9 @@ mod tests {
         let handler = SparqlDidHandler::new(&quins);
 
         let result = handler.authenticate_did(0x8000000000000001, 1, &[0u8; 256]);
-        assert!(result.is_err(), "authenticate_did must fail closed, not authenticate all");
+        assert!(
+            result.is_err(),
+            "authenticate_did must fail closed, not authenticate all"
+        );
     }
 }

@@ -34,7 +34,12 @@ pub fn do_intervention(
     }
 
     // Find causal paths from intervention variable to target
-    find_causal_paths(&intervened_graph, intervention_var, target_var, &mut causal_paths);
+    find_causal_paths(
+        &intervened_graph,
+        intervention_var,
+        target_var,
+        &mut causal_paths,
+    );
 
     if causal_paths.is_empty() {
         return None;
@@ -63,7 +68,7 @@ pub fn counterfactual_query(
             quin.metadata |= COUNTERFACTUAL_BIT;
         }
     }
-    
+
     // Step 2: Action - apply counterfactual intervention.
     // Mark the intervention in metadata (upper bits hold the intervention value)
     // but preserve the structural `object` field (causal successor) so that
@@ -73,7 +78,7 @@ pub fn counterfactual_query(
             quin.metadata |= DO_INTERVENTION_BIT | (intervention_value << 32);
         }
     }
-    
+
     // Step 3: Prediction - compute counterfactual outcome
     if let Some(counterfactual_prob) = do_intervention(
         &updated_graph,
@@ -87,7 +92,7 @@ pub fn counterfactual_query(
         result.object = (counterfactual_prob * 1000.0) as u64; // Store as scaled integer
         result.metadata = COUNTERFACTUAL_BIT;
         result.parity = result.subject ^ result.predicate ^ result.object ^ result.context;
-        
+
         Some(result)
     } else {
         None
@@ -95,17 +100,19 @@ pub fn counterfactual_query(
 }
 
 /// Find all causal paths from source to target in the causal graph
-fn find_causal_paths(
-    graph: &[NQuin],
-    source: u64,
-    target: u64,
-    paths: &mut Vec<Vec<NQuin>>,
-) {
+fn find_causal_paths(graph: &[NQuin], source: u64, target: u64, paths: &mut Vec<Vec<NQuin>>) {
     // Simple depth-first search for causal paths
     let mut visited = std::collections::HashSet::new();
     let mut current_path = Vec::new();
-    
-    dfs_find_paths(graph, source, target, &mut visited, &mut current_path, paths);
+
+    dfs_find_paths(
+        graph,
+        source,
+        target,
+        &mut visited,
+        &mut current_path,
+        paths,
+    );
 }
 
 /// Depth-first search helper for finding causal paths
@@ -120,14 +127,14 @@ fn dfs_find_paths(
     if visited.contains(&current) {
         return;
     }
-    
+
     visited.insert(current);
-    
+
     // Find all outgoing edges from current node
     for quin in graph {
         if quin.subject == current {
             current_path.push(*quin);
-            
+
             if quin.object == target {
                 // Found a path to target
                 all_paths.push(current_path.clone());
@@ -135,11 +142,11 @@ fn dfs_find_paths(
                 // Continue searching
                 dfs_find_paths(graph, quin.object, target, visited, current_path, all_paths);
             }
-            
+
             current_path.pop();
         }
     }
-    
+
     visited.remove(&current);
 }
 
@@ -148,7 +155,7 @@ pub fn are_confounded(graph: &[NQuin], var1: u64, var2: u64) -> bool {
     // Find common causes by looking for nodes that point to both var1 and var2
     let mut parents1 = std::collections::HashSet::new();
     let mut parents2 = std::collections::HashSet::new();
-    
+
     for quin in graph {
         if quin.object == var1 {
             parents1.insert(quin.subject);
@@ -157,7 +164,7 @@ pub fn are_confounded(graph: &[NQuin], var1: u64, var2: u64) -> bool {
             parents2.insert(quin.subject);
         }
     }
-    
+
     // Check for intersection (common causes)
     !parents1.is_disjoint(&parents2)
 }
@@ -171,17 +178,17 @@ pub fn adjust_for_confounding(
 ) -> Option<f64> {
     // Simplified adjustment: P(Y|do(X)) = Σ_z P(Y|X,Z=z) * P(Z=z)
     // This is a basic implementation - full do-calculus would be more sophisticated
-    
+
     let mut adjusted_prob = 0.0;
     let mut confounder_values = std::collections::HashSet::new();
-    
+
     // Collect all possible values of confounder
     for quin in graph {
         if quin.subject == confounder {
             confounder_values.insert(quin.object);
         }
     }
-    
+
     // Compute adjustment
     for &confounder_val in &confounder_values {
         // P(Y|X,Z=z)
@@ -194,14 +201,16 @@ pub fn adjust_for_confounding(
                 quin.object = confounder_val;
             }
         }
-        
-        if let Some(p_y_given_x_z) = compute_conditional_probability(&filtered_graph, outcome, treatment) {
+
+        if let Some(p_y_given_x_z) =
+            compute_conditional_probability(&filtered_graph, outcome, treatment)
+        {
             // P(Z=z) - simplified as uniform distribution
             let p_z = 1.0 / confounder_values.len() as f64;
             adjusted_prob += p_y_given_x_z * p_z;
         }
     }
-    
+
     if adjusted_prob > 0.0 {
         Some(adjusted_prob)
     } else {
@@ -380,7 +389,14 @@ mod tests {
     use super::*;
 
     fn edge(cause: u64, effect: u64) -> NQuin {
-        let mut q = NQuin { subject: cause, predicate: crate::q_hash("causal:causes"), object: effect, context: 0, metadata: 0, parity: 0 };
+        let mut q = NQuin {
+            subject: cause,
+            predicate: crate::q_hash("causal:causes"),
+            object: effect,
+            context: 0,
+            metadata: 0,
+            parity: 0,
+        };
         q.parity = q.subject ^ q.predicate ^ q.object ^ q.context;
         q
     }
@@ -389,17 +405,33 @@ mod tests {
     fn but_for_causal_necessity() {
         // Chain: root → C → effect. C is necessary (removing it disconnects effect).
         let chain = [edge(1, 2), edge(2, 3)];
-        assert!(is_necessary_cause(&chain, 1, 2, 3), "C is a necessary cause in a chain");
+        assert!(
+            is_necessary_cause(&chain, 1, 2, 3),
+            "C is a necessary cause in a chain"
+        );
         // Diamond: root → C → effect AND root → D → effect. C is NOT necessary.
         let diamond = [edge(1, 2), edge(2, 4), edge(1, 3), edge(3, 4)];
-        assert!(!is_necessary_cause(&diamond, 1, 2, 4), "C is not necessary when an alternative path exists");
-        assert!(reachable_avoiding(&diamond, 1, 4, u64::MAX), "effect is reachable normally");
+        assert!(
+            !is_necessary_cause(&diamond, 1, 2, 4),
+            "C is not necessary when an alternative path exists"
+        );
+        assert!(
+            reachable_avoiding(&diamond, 1, 4, u64::MAX),
+            "effect is reachable normally"
+        );
     }
 
     #[test]
     fn dialectical_contradiction_ibis_and_coherence() {
         let mk = |s: u64, p: u64, o: u64| {
-            let mut q = NQuin { subject: s, predicate: p, object: o, context: 0, metadata: 0, parity: 0 };
+            let mut q = NQuin {
+                subject: s,
+                predicate: p,
+                object: o,
+                context: 0,
+                metadata: 0,
+                parity: 0,
+            };
             q.parity = q.subject ^ q.predicate ^ q.object ^ q.context;
             q
         };
@@ -446,12 +478,12 @@ mod tests {
         assert_eq!(syn.context, 10 ^ 20);
         assert!(syn.metadata & SYNTHESIZED_BIT != 0);
     }
-    
+
     #[test]
     fn test_do_intervention() {
         // Create a simple causal graph: X -> Y
         let mut graph = Vec::new();
-        
+
         // X = 1 causes Y = 1
         let mut x_to_y = NQuin::default();
         x_to_y.subject = 1; // X
@@ -460,92 +492,107 @@ mod tests {
         x_to_y.context = 100;
         x_to_y.parity = x_to_y.subject ^ x_to_y.predicate ^ x_to_y.object ^ x_to_y.context;
         graph.push(x_to_y);
-        
+
         // Test intervention: do(X = 1) should affect Y
         let result = do_intervention(&graph, 1, 1, 2);
         assert!(result.is_some());
         assert!(result.unwrap() > 0.0);
     }
-    
+
     #[test]
     fn test_counterfactual_query() {
         // Create causal graph: Treatment -> Outcome
         let mut graph = Vec::new();
-        
+
         let mut treatment_to_outcome = NQuin::default();
         treatment_to_outcome.subject = 10; // Treatment
         treatment_to_outcome.predicate = crate::q_hash("causes");
         treatment_to_outcome.object = 20; // Outcome
         treatment_to_outcome.context = 200;
-        treatment_to_outcome.parity = treatment_to_outcome.subject ^ treatment_to_outcome.predicate ^ treatment_to_outcome.object ^ treatment_to_outcome.context;
+        treatment_to_outcome.parity = treatment_to_outcome.subject
+            ^ treatment_to_outcome.predicate
+            ^ treatment_to_outcome.object
+            ^ treatment_to_outcome.context;
         graph.push(treatment_to_outcome);
-        
+
         // Test counterfactual: "What if Treatment were 0?"
         let result = counterfactual_query(&graph, 1, 10, 0, 20);
         assert!(result.is_some());
-        
+
         let counterfactual = result.unwrap();
         assert_eq!(counterfactual.subject, 20); // Target is outcome
         assert!(counterfactual.metadata & COUNTERFACTUAL_BIT != 0);
     }
-    
+
     #[test]
     fn test_confounding_detection() {
         // Create graph with confounding: Confounder -> Treatment, Confounder -> Outcome
         let mut graph = Vec::new();
-        
+
         // Confounder -> Treatment
         let mut conf_to_treat = NQuin::default();
         conf_to_treat.subject = 100; // Confounder
         conf_to_treat.predicate = crate::q_hash("causes");
         conf_to_treat.object = 10; // Treatment
         conf_to_treat.context = 300;
-        conf_to_treat.parity = conf_to_treat.subject ^ conf_to_treat.predicate ^ conf_to_treat.object ^ conf_to_treat.context;
+        conf_to_treat.parity = conf_to_treat.subject
+            ^ conf_to_treat.predicate
+            ^ conf_to_treat.object
+            ^ conf_to_treat.context;
         graph.push(conf_to_treat);
-        
+
         // Confounder -> Outcome
         let mut conf_to_outcome = NQuin::default();
         conf_to_outcome.subject = 100; // Confounder
         conf_to_outcome.predicate = crate::q_hash("causes");
         conf_to_outcome.object = 20; // Outcome
         conf_to_outcome.context = 301;
-        conf_to_outcome.parity = conf_to_outcome.subject ^ conf_to_outcome.predicate ^ conf_to_outcome.object ^ conf_to_outcome.context;
+        conf_to_outcome.parity = conf_to_outcome.subject
+            ^ conf_to_outcome.predicate
+            ^ conf_to_outcome.object
+            ^ conf_to_outcome.context;
         graph.push(conf_to_outcome);
-        
+
         // Test confounding detection
         let confounded = are_confounded(&graph, 10, 20);
         assert!(confounded);
     }
-    
+
     #[test]
     fn test_adjust_for_confounding() {
         // Create graph with confounding
         let mut graph = Vec::new();
-        
+
         // Confounder -> Treatment
         let mut conf_to_treat = NQuin::default();
         conf_to_treat.subject = 100; // Confounder
         conf_to_treat.predicate = crate::q_hash("causes");
         conf_to_treat.object = 10; // Treatment
         conf_to_treat.context = 400;
-        conf_to_treat.parity = conf_to_treat.subject ^ conf_to_treat.predicate ^ conf_to_treat.object ^ conf_to_treat.context;
+        conf_to_treat.parity = conf_to_treat.subject
+            ^ conf_to_treat.predicate
+            ^ conf_to_treat.object
+            ^ conf_to_treat.context;
         graph.push(conf_to_treat);
-        
+
         // Treatment -> Outcome
         let mut treat_to_outcome = NQuin::default();
         treat_to_outcome.subject = 10; // Treatment
         treat_to_outcome.predicate = crate::q_hash("causes");
         treat_to_outcome.object = 20; // Outcome
         treat_to_outcome.context = 401;
-        treat_to_outcome.parity = treat_to_outcome.subject ^ treat_to_outcome.predicate ^ treat_to_outcome.object ^ treat_to_outcome.context;
+        treat_to_outcome.parity = treat_to_outcome.subject
+            ^ treat_to_outcome.predicate
+            ^ treat_to_outcome.object
+            ^ treat_to_outcome.context;
         graph.push(treat_to_outcome);
-        
+
         // Test adjustment
         let adjusted = adjust_for_confounding(&graph, 10, 20, 100);
         assert!(adjusted.is_some());
         assert!(adjusted.unwrap() >= 0.0);
     }
-    
+
     #[test]
     fn test_no_contradiction() {
         let thesis = NQuin {
@@ -565,7 +612,7 @@ mod tests {
             metadata: 0,
             parity: 0,
         };
-        
+
         assert!(synthesize_dialectical(&thesis, &no_contradiction).is_none());
     }
 }

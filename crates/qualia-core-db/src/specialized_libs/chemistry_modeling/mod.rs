@@ -1,18 +1,18 @@
 //! Chemistry Modeling Library - Molecular Simulation and Chemical Analysis
-//! 
+//!
 //! This module provides high-performance chemistry modeling operations leveraging Phase 2 enhancements:
 //! - NVMe Computational Storage (CSD) for hardware-accelerated molecular computations
 //! - Linear Algebra Library for quantum chemistry calculations
 //! - Hardware-Sympathetic Storage (ZNS) for zero-copy molecular data
 //! - Statistical Computing Library for molecular dynamics analysis
 
-use std::collections::HashMap;
-use std::sync::{Arc, Mutex};
-use serde::{Deserialize, Serialize};
-use crate::csd_storage::CsdManager;
-use crate::zns_storage::ZnsZoneManager;
 use super::linear_algebra::LinearAlgebraLibrary;
 use super::statistical_computing::StatisticalComputingLibrary;
+use crate::csd_storage::CsdManager;
+use crate::zns_storage::ZnsZoneManager;
+use serde::{Deserialize, Serialize};
+use std::collections::HashMap;
+use std::sync::{Arc, Mutex};
 
 /// Real molecular-dynamics engine (Lennard-Jones force field + velocity-Verlet
 /// integrator) backing `run_molecular_dynamics`. Split into its own library
@@ -1376,7 +1376,11 @@ impl ChemistryModelingLibrary {
     }
 
     /// Run molecular dynamics simulation
-    pub fn run_molecular_dynamics(&mut self, config: SimulationConfig, molecule: Molecule) -> Result<ChemistryOperationResult<SimulationTrajectory>, ChemistryError> {
+    pub fn run_molecular_dynamics(
+        &mut self,
+        config: SimulationConfig,
+        molecule: Molecule,
+    ) -> Result<ChemistryOperationResult<SimulationTrajectory>, ChemistryError> {
         let start_time = std::time::Instant::now();
 
         // Validate configuration
@@ -1386,7 +1390,9 @@ impl ChemistryModelingLibrary {
         self.molecular_simulator.store_molecule(molecule.clone());
 
         // Run simulation
-        let trajectory = self.molecular_simulator.run_simulation(&config, &molecule)?;
+        let trajectory = self
+            .molecular_simulator
+            .run_simulation(&config, &molecule)?;
 
         let execution_time = start_time.elapsed().as_millis() as u64;
 
@@ -1413,14 +1419,20 @@ impl ChemistryModelingLibrary {
     }
 
     /// Calculate quantum properties
-    pub fn calculate_quantum_properties(&mut self, molecule: Molecule, method: QuantumMethodType) -> Result<ChemistryOperationResult<QuantumProperties>, ChemistryError> {
+    pub fn calculate_quantum_properties(
+        &mut self,
+        molecule: Molecule,
+        method: QuantumMethodType,
+    ) -> Result<ChemistryOperationResult<QuantumProperties>, ChemistryError> {
         let start_time = std::time::Instant::now();
 
         // Validate molecule
         self.quantum_calculator.validate_molecule(&molecule)?;
 
         // Calculate quantum properties
-        let properties = self.quantum_calculator.calculate_properties(&molecule, method)?;
+        let properties = self
+            .quantum_calculator
+            .calculate_properties(&molecule, method)?;
 
         let execution_time = start_time.elapsed().as_millis() as u64;
 
@@ -1439,14 +1451,20 @@ impl ChemistryModelingLibrary {
     }
 
     /// Analyze reaction kinetics
-    pub fn analyze_reaction_kinetics(&mut self, reaction: Reaction, conditions: ReactionConditions) -> Result<ChemistryOperationResult<KineticsResults>, ChemistryError> {
+    pub fn analyze_reaction_kinetics(
+        &mut self,
+        reaction: Reaction,
+        conditions: ReactionConditions,
+    ) -> Result<ChemistryOperationResult<KineticsResults>, ChemistryError> {
         let start_time = std::time::Instant::now();
 
         // Validate reaction
         self.reaction_analyzer.validate_reaction(&reaction)?;
 
         // Analyze kinetics
-        let results = self.reaction_analyzer.analyze_kinetics(&reaction, &conditions)?;
+        let results = self
+            .reaction_analyzer
+            .analyze_kinetics(&reaction, &conditions)?;
 
         let execution_time = start_time.elapsed().as_millis() as u64;
 
@@ -1466,7 +1484,11 @@ impl ChemistryModelingLibrary {
     }
 
     /// Predict molecular properties
-    pub fn predict_properties(&mut self, molecule: Molecule, properties: Vec<PropertyType>) -> Result<ChemistryOperationResult<PredictedProperties>, ChemistryError> {
+    pub fn predict_properties(
+        &mut self,
+        molecule: Molecule,
+        properties: Vec<PropertyType>,
+    ) -> Result<ChemistryOperationResult<PredictedProperties>, ChemistryError> {
         let start_time = std::time::Instant::now();
 
         // Validate molecule
@@ -1521,7 +1543,8 @@ impl MolecularSimulator {
     }
 
     pub fn store_molecule(&mut self, molecule: Molecule) {
-        self.molecule_store.insert(molecule.molecule_id.clone(), molecule);
+        self.molecule_store
+            .insert(molecule.molecule_id.clone(), molecule);
     }
 
     pub fn initialize(&mut self) -> Result<(), ChemistryError> {
@@ -1533,18 +1556,28 @@ impl MolecularSimulator {
 
     pub fn validate_config(&self, config: &SimulationConfig) -> Result<(), ChemistryError> {
         if config.time_step <= 0.0 {
-            return Err(ChemistryError::ValidationError("Time step must be positive".to_string()));
+            return Err(ChemistryError::ValidationError(
+                "Time step must be positive".to_string(),
+            ));
         }
         if config.total_time <= 0.0 {
-            return Err(ChemistryError::ValidationError("Total time must be positive".to_string()));
+            return Err(ChemistryError::ValidationError(
+                "Total time must be positive".to_string(),
+            ));
         }
         if config.temperature < 0.0 {
-            return Err(ChemistryError::ValidationError("Temperature must be non-negative".to_string()));
+            return Err(ChemistryError::ValidationError(
+                "Temperature must be non-negative".to_string(),
+            ));
         }
         Ok(())
     }
 
-    pub fn run_simulation(&mut self, config: &SimulationConfig, molecule: &Molecule) -> Result<SimulationTrajectory, ChemistryError> {
+    pub fn run_simulation(
+        &mut self,
+        config: &SimulationConfig,
+        molecule: &Molecule,
+    ) -> Result<SimulationTrajectory, ChemistryError> {
         // REAL: Lennard-Jones force field + velocity-Verlet integrator, in
         // `molecular_dynamics::run_md`. The atoms actually move under computed
         // forces, total energy is conserved (asserted in that module's tests),
@@ -1554,7 +1587,11 @@ impl MolecularSimulator {
     }
 
     pub fn list_force_fields(&self) -> Vec<String> {
-        vec!["AMBER".to_string(), "CHARMM".to_string(), "OPLS".to_string()]
+        vec![
+            "AMBER".to_string(),
+            "CHARMM".to_string(),
+            "OPLS".to_string(),
+        ]
     }
 
     pub fn get_molecule(&self, molecule_id: &str) -> Option<Molecule> {
@@ -1795,7 +1832,12 @@ impl AngleParameter {
 impl TorsionParameter {
     pub fn new() -> Self {
         Self {
-            atom_types: vec!["C".to_string(), "C".to_string(), "C".to_string(), "C".to_string()],
+            atom_types: vec![
+                "C".to_string(),
+                "C".to_string(),
+                "C".to_string(),
+                "C".to_string(),
+            ],
             barriers: vec![0.0, 1.0],
             phases: vec![0.0, 180.0],
             periodicities: vec![1, 2],
@@ -2095,7 +2137,11 @@ impl BoundaryConditions {
     pub fn new() -> Self {
         Self {
             boundary_type: BoundaryType::Periodic,
-            box_vectors: vec![vec![10.0, 0.0, 0.0], vec![0.0, 10.0, 0.0], vec![0.0, 0.0, 10.0]],
+            box_vectors: vec![
+                vec![10.0, 0.0, 0.0],
+                vec![0.0, 10.0, 0.0],
+                vec![0.0, 0.0, 10.0],
+            ],
             minimum_image: MinimumImage::new(),
         }
     }
@@ -2128,12 +2174,18 @@ impl QuantumCalculator {
 
     pub fn validate_molecule(&self, molecule: &Molecule) -> Result<(), ChemistryError> {
         if molecule.atoms.is_empty() {
-            return Err(ChemistryError::ValidationError("Molecule must have at least one atom".to_string()));
+            return Err(ChemistryError::ValidationError(
+                "Molecule must have at least one atom".to_string(),
+            ));
         }
         Ok(())
     }
 
-    pub fn calculate_properties(&mut self, _molecule: &Molecule, _method: QuantumMethodType) -> Result<QuantumProperties, ChemistryError> {
+    pub fn calculate_properties(
+        &mut self,
+        _molecule: &Molecule,
+        _method: QuantumMethodType,
+    ) -> Result<QuantumProperties, ChemistryError> {
         // NOT IMPLEMENTED — it must say so, never fabricate. The previous body returned a default
         // `QuantumProperties` (hardcoded energies / HOMO-LUMO) without solving anything. Real
         // quantum-chemistry properties require an actual electronic-structure method (Hartree-Fock
@@ -2299,15 +2351,23 @@ impl ReactionAnalyzer {
 
     pub fn validate_reaction(&self, reaction: &Reaction) -> Result<(), ChemistryError> {
         if reaction.reactants.is_empty() {
-            return Err(ChemistryError::ValidationError("Reaction must have at least one reactant".to_string()));
+            return Err(ChemistryError::ValidationError(
+                "Reaction must have at least one reactant".to_string(),
+            ));
         }
         if reaction.products.is_empty() {
-            return Err(ChemistryError::ValidationError("Reaction must have at least one product".to_string()));
+            return Err(ChemistryError::ValidationError(
+                "Reaction must have at least one product".to_string(),
+            ));
         }
         Ok(())
     }
 
-    pub fn analyze_kinetics(&mut self, reaction: &Reaction, conditions: &ReactionConditions) -> Result<KineticsResults, ChemistryError> {
+    pub fn analyze_kinetics(
+        &mut self,
+        reaction: &Reaction,
+        conditions: &ReactionConditions,
+    ) -> Result<KineticsResults, ChemistryError> {
         // REAL chemical kinetics via the Arrhenius equation:  k = A·exp(−Ea / (R·T)).
         // The mechanism's rate-determining step (highest activation energy) governs the overall
         // rate. `ReactionStep.rate_constant` is taken as the pre-exponential / frequency factor A
@@ -2363,9 +2423,15 @@ impl ReactionAnalyzer {
             f64::INFINITY
         } else {
             match reaction_order {
-                0 => c0 / (2.0 * rate_constant),                       // t½ = [A]₀ / 2k
-                2 => if c0 > 0.0 { 1.0 / (rate_constant * c0) } else { f64::INFINITY }, // 1 / (k[A]₀)
-                _ => std::f64::consts::LN_2 / rate_constant,           // first order: ln2 / k
+                0 => c0 / (2.0 * rate_constant), // t½ = [A]₀ / 2k
+                2 => {
+                    if c0 > 0.0 {
+                        1.0 / (rate_constant * c0)
+                    } else {
+                        f64::INFINITY
+                    }
+                } // 1 / (k[A]₀)
+                _ => std::f64::consts::LN_2 / rate_constant, // first order: ln2 / k
             }
         };
 
@@ -2724,12 +2790,18 @@ impl PropertyPredictor {
 
     pub fn validate_molecule(&self, molecule: &Molecule) -> Result<(), ChemistryError> {
         if molecule.atoms.is_empty() {
-            return Err(ChemistryError::ValidationError("Molecule must have at least one atom".to_string()));
+            return Err(ChemistryError::ValidationError(
+                "Molecule must have at least one atom".to_string(),
+            ));
         }
         Ok(())
     }
 
-    pub fn predict(&mut self, _molecule: &Molecule, _properties: &[PropertyType]) -> Result<PredictedProperties, ChemistryError> {
+    pub fn predict(
+        &mut self,
+        _molecule: &Molecule,
+        _properties: &[PropertyType],
+    ) -> Result<PredictedProperties, ChemistryError> {
         // NOT IMPLEMENTED — it must say so, never fabricate. The previous body inserted 0.0 for
         // every requested property: a "prediction" that predicts nothing. Real property
         // prediction needs validated QSPR / group-contribution models and reference data per
@@ -3177,10 +3249,38 @@ mod tests {
             molecule_id: "ar4".to_string(),
             formula: "Ar4".to_string(),
             atoms: vec![
-                Atom { atom_id: "a".into(), element: "Ar".into(), atomic_number: 18, mass: m, charge: 0.0, coordinates: vec![0.0, 0.0, 0.0] },
-                Atom { atom_id: "b".into(), element: "Ar".into(), atomic_number: 18, mass: m, charge: 0.0, coordinates: vec![3.9, 0.0, 0.0] },
-                Atom { atom_id: "c".into(), element: "Ar".into(), atomic_number: 18, mass: m, charge: 0.0, coordinates: vec![0.0, 3.9, 0.0] },
-                Atom { atom_id: "d".into(), element: "Ar".into(), atomic_number: 18, mass: m, charge: 0.0, coordinates: vec![3.9, 3.9, 0.3] },
+                Atom {
+                    atom_id: "a".into(),
+                    element: "Ar".into(),
+                    atomic_number: 18,
+                    mass: m,
+                    charge: 0.0,
+                    coordinates: vec![0.0, 0.0, 0.0],
+                },
+                Atom {
+                    atom_id: "b".into(),
+                    element: "Ar".into(),
+                    atomic_number: 18,
+                    mass: m,
+                    charge: 0.0,
+                    coordinates: vec![3.9, 0.0, 0.0],
+                },
+                Atom {
+                    atom_id: "c".into(),
+                    element: "Ar".into(),
+                    atomic_number: 18,
+                    mass: m,
+                    charge: 0.0,
+                    coordinates: vec![0.0, 3.9, 0.0],
+                },
+                Atom {
+                    atom_id: "d".into(),
+                    element: "Ar".into(),
+                    atomic_number: 18,
+                    mass: m,
+                    charge: 0.0,
+                    coordinates: vec![3.9, 3.9, 0.3],
+                },
             ],
             bonds: Vec::new(),
             coordinates: Vec::new(),
@@ -3188,11 +3288,18 @@ mod tests {
         };
 
         let result = library.run_molecular_dynamics(config, molecule).unwrap();
-        assert!(result.convergence_info.converged, "energy not conserved: drift {}", result.convergence_info.final_error);
+        assert!(
+            result.convergence_info.converged,
+            "energy not conserved: drift {}",
+            result.convergence_info.final_error
+        );
         assert!(result.result.frames.len() >= 2);
 
         // An empty molecule must be refused, never faked.
-        let empty = Molecule { atoms: Vec::new(), ..Molecule::new() };
+        let empty = Molecule {
+            atoms: Vec::new(),
+            ..Molecule::new()
+        };
         assert!(matches!(
             library.run_molecular_dynamics(SimulationConfig::new(), empty),
             Err(ChemistryError::InsufficientData(_))
@@ -3203,7 +3310,7 @@ mod tests {
     fn test_quantum_properties() {
         let mut library = ChemistryModelingLibrary::new();
         library.initialize().unwrap();
-        
+
         let molecule = Molecule::new();
         let method = QuantumMethodType::HartreeFock;
 
@@ -3217,11 +3324,13 @@ mod tests {
     fn test_reaction_kinetics() {
         let mut library = ChemistryModelingLibrary::new();
         library.initialize().unwrap();
-        
+
         let reaction = Reaction::new(); // 1 step: A=1.0, Ea=10.0 kJ/mol; reactant "A"
         let conditions = ReactionConditions::new(); // T = 298.15 K
 
-        let result = library.analyze_reaction_kinetics(reaction, conditions).unwrap();
+        let result = library
+            .analyze_reaction_kinetics(reaction, conditions)
+            .unwrap();
 
         // Verify the REAL Arrhenius value, not just ">0": k = A·exp(−Ea/(R·T)).
         const R: f64 = 8.314_462_618;
@@ -3250,7 +3359,7 @@ mod tests {
     fn test_property_prediction() {
         let mut library = ChemistryModelingLibrary::new();
         library.initialize().unwrap();
-        
+
         let molecule = Molecule::new();
         let properties = vec![PropertyType::BoilingPoint];
 
@@ -3264,7 +3373,7 @@ mod tests {
     fn test_performance_metrics() {
         let library = ChemistryModelingLibrary::new();
         let metrics = library.get_performance_stats();
-        
+
         assert_eq!(metrics.simulation_metrics.total_simulations, 0);
         assert_eq!(metrics.quantum_metrics.total_calculations, 0);
         assert_eq!(metrics.reaction_metrics.total_reactions, 0);
@@ -3275,7 +3384,7 @@ mod tests {
     fn test_force_field_listing() {
         let library = ChemistryModelingLibrary::new();
         let force_fields = library.list_force_fields();
-        
+
         assert!(force_fields.contains(&"AMBER".to_string()));
         assert!(force_fields.contains(&"CHARMM".to_string()));
         assert!(force_fields.contains(&"OPLS".to_string()));

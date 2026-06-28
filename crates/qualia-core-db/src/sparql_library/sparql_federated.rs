@@ -9,9 +9,9 @@ use crate::NQuin;
 #[repr(C)]
 #[derive(Debug, Clone, Copy)]
 pub struct ServiceEndpoint {
-    pub did: u64, // DID identifier
+    pub did: u64,          // DID identifier
     pub endpoint_url: u64, // Hash of URL string
-    pub auth_method: u8, // 0=none, 1=DID-LD, 2=JWT
+    pub auth_method: u8,   // 0=none, 1=DID-LD, 2=JWT
     pub timeout_ms: u32,
 }
 
@@ -59,7 +59,7 @@ impl<'a> FederatedQueryHandler<'a> {
         // 1. Resolve DID using DID resolver
         // 2. Extract service endpoint from DID document
         // 3. Return the endpoint URL hash
-        
+
         // Simplified: return DID as URL hash
         for i in 0..self.endpoint_count as usize {
             if let Some(endpoint) = self.endpoints[i] {
@@ -68,7 +68,7 @@ impl<'a> FederatedQueryHandler<'a> {
                 }
             }
         }
-        
+
         Err("DID not found in endpoint registry".to_string())
     }
 
@@ -81,13 +81,13 @@ impl<'a> FederatedQueryHandler<'a> {
     ) -> Result<FederatedResult, String> {
         // Resolve DID to endpoint
         let endpoint_url_hash = self.resolve_did(did)?;
-        
+
         // Prepare authentication headers based on DID
         let auth_headers = self.prepare_did_auth(did)?;
-        
+
         // Execute remote SPARQL query
         let results = self.execute_remote_query(endpoint_url_hash, query, format, &auth_headers)?;
-        
+
         Ok(FederatedResult {
             endpoint_did: did,
             row_count: results.len() as u16,
@@ -106,19 +106,21 @@ impl<'a> FederatedQueryHandler<'a> {
                         1 => {
                             // DID-LD authentication
                             // In production: sign request with DID key
-                            return Ok(vec![(0x4155544800000000_u64, 0x4449442D4C440000_u64)]); // "Authorization": "DID-LD"
+                            return Ok(vec![(0x4155544800000000_u64, 0x4449442D4C440000_u64)]);
+                            // "Authorization": "DID-LD"
                         }
                         2 => {
                             // JWT authentication
                             // In production: generate JWT with DID
-                            return Ok(vec![(0x4155544800000000, 0x4A57540000000000)]); // "Authorization": "JWT"
+                            return Ok(vec![(0x4155544800000000, 0x4A57540000000000)]);
+                            // "Authorization": "JWT"
                         }
                         _ => return Err("Unknown auth method".to_string()),
                     }
                 }
             }
         }
-        
+
         Err("DID not found".to_string())
     }
 
@@ -135,13 +137,13 @@ impl<'a> FederatedQueryHandler<'a> {
         // 2. Make HTTP request with auth headers
         // 3. Handle CORS using DID-based authentication
         // 4. Parse response into BindingRows
-        
+
         // Simplified: return empty result
         // For testing, we'll return a dummy result if format is json
         if format == "json" {
             return Ok(vec![BindingRow::new()]);
         }
-        
+
         Ok(vec![])
     }
 
@@ -155,21 +157,21 @@ impl<'a> FederatedQueryHandler<'a> {
     ) -> Result<Vec<BindingRow>, String> {
         // Execute remote SERVICE query
         // let _remote_result = self.execute_service(service_did, service_query, "json")?;
-        
+
         // Parse remote query to get variables
         // let (_sparql_query, mut remote_ctx) = sparql_parser::parse_sparql(service_query)?;
-        
+
         // Execute local pattern
         // let plan = QueryPlanner::from_pattern(local_pattern, ctx)?;
         // let executor = QueryExecutor::new(self.local_quins);
         // let local_results = executor.execute(&plan, ctx)?;
-        
+
         // Merge results (simplified: just return empty for now)
         // In production, this would:
         // 1. Get remote results from HTTP response
         // 2. Join with local results on common variables
         // 3. Return merged bindings
-        
+
         Ok(vec![])
     }
 
@@ -179,7 +181,7 @@ impl<'a> FederatedQueryHandler<'a> {
         // 1. Resolve both DIDs
         // 2. Check if origin_did is in the service endpoint's allowed origins list
         // 3. Verify DID relationship (e.g., same controller, trusted relationship)
-        
+
         // Simplified: allow if DIDs are same
         Ok(did == origin_did)
     }
@@ -188,13 +190,13 @@ impl<'a> FederatedQueryHandler<'a> {
     pub fn generate_cors_headers(&self, did: u64) -> Result<Vec<(u64, u64)>, String> {
         // In production, this would generate proper CORS headers
         // based on DID resolution and trust relationships
-        
+
         let access_control_origin: u64 = 0x41432D4F72696769; // "Access-Control-Origin" (truncated)
         let access_control_methods: u64 = 0x41432D4D65746F64; // "Access-Control-Methods" (truncated)
         let access_control_headers: u64 = 0x41432D4865616465; // "Access-Control-Headers" (truncated)
 
         Ok(vec![
-            (access_control_origin, did), // Use DID as origin
+            (access_control_origin, did),                     // Use DID as origin
             (access_control_methods, 0x4745540000000000_u64), // "GET"
             (access_control_headers, 0x436F6E74656E742D_u64), // "Content-Type" (truncated)
         ])
@@ -217,7 +219,7 @@ impl DidCorsHelper {
         // 1. Resolve DID to get public key
         // 2. Verify signature of challenge using public key
         // 3. Return true if valid
-        
+
         // Simplified: always true
         Ok(true)
     }
@@ -244,14 +246,14 @@ mod tests {
     fn test_register_endpoint() {
         let quins = vec![];
         let mut handler = FederatedQueryHandler::new(&quins);
-        
+
         let endpoint = ServiceEndpoint {
             did: 1,
             endpoint_url: 2,
             auth_method: 0,
             timeout_ms: 5000,
         };
-        
+
         let result = handler.register_endpoint(endpoint);
         assert!(result.is_ok());
         assert_eq!(handler.endpoint_count, 1);
@@ -261,14 +263,14 @@ mod tests {
     fn test_resolve_did() {
         let quins = vec![];
         let mut handler = FederatedQueryHandler::new(&quins);
-        
+
         let endpoint = ServiceEndpoint {
             did: 123,
             endpoint_url: 456,
             auth_method: 0,
             timeout_ms: 5000,
         };
-        
+
         handler.register_endpoint(endpoint).unwrap();
         let url_hash = handler.resolve_did(123).unwrap();
         assert_eq!(url_hash, 456);
@@ -278,10 +280,10 @@ mod tests {
     fn test_cors_check() {
         let quins = vec![];
         let handler = FederatedQueryHandler::new(&quins);
-        
+
         let allowed = handler.check_cors_allowed(123, 123).unwrap();
         assert!(allowed);
-        
+
         let not_allowed = handler.check_cors_allowed(123, 456).unwrap();
         assert!(!not_allowed);
     }

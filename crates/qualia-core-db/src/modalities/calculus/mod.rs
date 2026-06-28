@@ -54,38 +54,36 @@ pub use crate::platform::hetero_dispatch;
 // item re-exports keep resolving (facade).
 pub use crate::solvers::calculus::ode_solver;
 pub use ode_solver::{
-    ShootingMethod, BvpSystem, Rk4Solver, ExponentialDecay, OdeSystem,
-    ChaoitonProfile, LinearDecayBvp, StepSizeAnalyzer, CoupledBoltzmann,
-    QuantizationMapper, StandardModelMasses, HarmonicOscillator,
-    create_ode_step_quin, extract_ode_state, pack_ode_state
+    create_ode_step_quin, extract_ode_state, pack_ode_state, BvpSystem, ChaoitonProfile,
+    CoupledBoltzmann, ExponentialDecay, HarmonicOscillator, LinearDecayBvp, OdeSystem,
+    QuantizationMapper, Rk4Solver, ShootingMethod, StandardModelMasses, StepSizeAnalyzer,
 };
 
 pub use crate::solvers::calculus::ode_advanced;
-pub use ode_advanced::{
-    integrate_symplectic, verlet_step, ruth3_step, yoshida4_step, SymplecticMethod,
-    SymplecticResult, bdf1_step, bdf2_step, integrate_bdf, hermite_dense_output,
-    integrate_with_sensitivity, SensitivityResult,
-};
 pub use crate::solvers::calculus::tensor_provenance;
-pub use tensor_provenance::{TensorState, TensorProvenance};
+pub use ode_advanced::{
+    bdf1_step, bdf2_step, hermite_dense_output, integrate_bdf, integrate_symplectic,
+    integrate_with_sensitivity, ruth3_step, verlet_step, yoshida4_step, SensitivityResult,
+    SymplecticMethod, SymplecticResult,
+};
+pub use tensor_provenance::{TensorProvenance, TensorState};
 
 pub use crate::solvers::calculus::tensor_integrity;
 pub use tensor_integrity::{
-    commit_state, integrity_root, lineage_commitment, transformation_commitment,
-    verify_lineage, LineageCommitment,
+    commit_state, integrity_root, lineage_commitment, transformation_commitment, verify_lineage,
+    LineageCommitment,
 };
 
 #[cfg(not(target_arch = "wasm32"))]
-pub use host::{PAGE_SIZE, DEFAULT_BUFFER_SIZE, IoError, DmaBuffer};
+pub use host::{DmaBuffer, IoError, DEFAULT_BUFFER_SIZE, PAGE_SIZE};
 
 #[cfg(not(target_arch = "wasm32"))]
 pub use gpu::{GpuError, GpuIntegrator, PlatformGpuIntegrator, WebGpuIntegrator};
 
 #[cfg(not(target_arch = "wasm32"))]
 pub use hetero_dispatch::{
-    plan_fusion, select_precision, ComputeBackend, HeterogeneousDispatcher,
-    HostCapabilities, PowerThermalBudget, Precision, TensorOp, TensorOpKind,
-    ZeroCopyStrategy,
+    plan_fusion, select_precision, ComputeBackend, HeterogeneousDispatcher, HostCapabilities,
+    PowerThermalBudget, Precision, TensorOp, TensorOpKind, ZeroCopyStrategy,
 };
 
 // ─── Opcodes ─────────────────────────────────────────────────────────────────────

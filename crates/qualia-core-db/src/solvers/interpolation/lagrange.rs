@@ -89,13 +89,18 @@ mod tests {
         let ys = [1.0, 2.0, 0.0, 8.0];
         let coef = newton_coefficients(&xs, &ys).unwrap();
         for &q in &[0.3, 1.5, 3.0] {
-            assert!((newton_eval(&xs, &coef, q) - lagrange_eval(&xs, &ys, q).unwrap()).abs() < 1e-9);
+            assert!(
+                (newton_eval(&xs, &coef, q) - lagrange_eval(&xs, &ys, q).unwrap()).abs() < 1e-9
+            );
         }
     }
 
     #[test]
     fn fails_closed() {
-        assert_eq!(lagrange_eval(&[], &[], 0.0).unwrap_err(), InterpolationError::InsufficientData);
+        assert_eq!(
+            lagrange_eval(&[], &[], 0.0).unwrap_err(),
+            InterpolationError::InsufficientData
+        );
         assert_eq!(
             lagrange_eval(&[1.0, 1.0], &[2.0, 3.0], 0.0).unwrap_err(),
             InterpolationError::DuplicateNodes

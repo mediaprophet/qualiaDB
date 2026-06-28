@@ -19,7 +19,7 @@ use std::path::Path;
 
 use memmap2::{Mmap, MmapOptions};
 
-use crate::q42_lex::{LexError, Q42LexMmap, LEX_MAGIC, LexiconEntry};
+use crate::q42_lex::{LexError, LexiconEntry, Q42LexMmap, LEX_MAGIC};
 use crate::{NQuin, QUINS_PER_BLOCK};
 
 pub const Q42_MAGIC: [u8; 4] = [0x51, 0x34, 0x32, 0x00]; // "Q42\0"
@@ -37,32 +37,39 @@ pub const FLAG_OBJECT_SORTED: u16 = 0x0002;
 #[repr(C, packed)]
 #[derive(Clone, Copy, Debug)]
 pub struct Q42VolumeHeader {
-    pub magic:            [u8; 4],
-    pub version:          u16,
-    pub flags:            u16,
-    pub lex_offset:       u64,
-    pub lex_length:       u64,
-    pub bidx_offset:      u64,
-    pub bidx_length:      u64,
+    pub magic: [u8; 4],
+    pub version: u16,
+    pub flags: u16,
+    pub lex_offset: u64,
+    pub lex_length: u64,
+    pub bidx_offset: u64,
+    pub bidx_length: u64,
     pub block_dir_offset: u64,
     pub block_dir_length: u64,
-    pub data_offset:      u64,
-    pub data_length:      u64,
-    pub block_count:      u64,
-    pub block_size:       u32,
-    pub quins_per_block:  u32,
+    pub data_offset: u64,
+    pub data_length: u64,
+    pub block_count: u64,
+    pub block_size: u32,
+    pub quins_per_block: u32,
     // v3 extension fields (carved from former _reserved[0..88]):
     pub temporal_index_offset: u64,
     pub temporal_index_length: u64,
-    pub merkle_root:      [u8; 32],  // SHA3-256 of DAG root; all-zero = no history
-    pub assertion_timestamp: u64,    // ms since Unix epoch when volume was last written
-    pub dag_root_offset:  u64,       // offset into file of DagNode store; 0 = absent
-    pub dag_root_length:  u64,       // byte length of DagNode store section
-    pub _reserved:        [u8; 96],  // remaining reserved (88 named + 72 v3 ext + 96 = 256 bytes)
+    pub merkle_root: [u8; 32], // SHA3-256 of DAG root; all-zero = no history
+    pub assertion_timestamp: u64, // ms since Unix epoch when volume was last written
+    pub dag_root_offset: u64,  // offset into file of DagNode store; 0 = absent
+    pub dag_root_length: u64,  // byte length of DagNode store section
+    
+    // Governance / Identity Bifurcation
+    pub natural_person_did_offset: u64, // Offset to human-reality declarative/consent DAG
+    pub software_agent_did_offset: u64, // Offset to agent-reality logic/policy DAG
+    
+    pub _reserved: [u8; 80],   // remaining reserved (88 named + 72 v3 ext + 16 gov + 80 = 256 bytes)
 }
 
-const _: () = assert!(std::mem::size_of::<Q42VolumeHeader>() == 256,
-    "Q42VolumeHeader must be exactly 256 bytes — matches HEADER_SIZE constant");
+const _: () = assert!(
+    std::mem::size_of::<Q42VolumeHeader>() == 256,
+    "Q42VolumeHeader must be exactly 256 bytes — matches HEADER_SIZE constant"
+);
 
 impl Q42VolumeHeader {
     /// Reject v2 files. Call before any read/write on a mapped header.
@@ -74,20 +81,24 @@ impl Q42VolumeHeader {
             return Err(format!("bad magic {magic:?}"));
         }
         if version != Q42_VERSION_V3 {
-            return Err(format!(
-                "Q42 file is version {version}; strict v3 required"
-            ));
+            return Err(format!("Q42 file is version {version}; strict v3 required"));
         }
         Ok(())
     }
 
     /// Build a minimal valid v3 header with all extension fields zeroed.
     pub fn new_v3(
-        lex_offset: u64, lex_length: u64,
-        bidx_offset: u64, bidx_length: u64,
-        block_dir_offset: u64, block_dir_length: u64,
-        data_offset: u64, data_length: u64,
-        block_count: u64, block_size: u32, quins_per_block: u32,
+        lex_offset: u64,
+        lex_length: u64,
+        bidx_offset: u64,
+        bidx_length: u64,
+        block_dir_offset: u64,
+        block_dir_length: u64,
+        data_offset: u64,
+        data_length: u64,
+        block_count: u64,
+        block_size: u32,
+        quins_per_block: u32,
     ) -> Self {
         let assertion_timestamp = std::time::SystemTime::now()
             .duration_since(std::time::UNIX_EPOCH)
@@ -97,18 +108,26 @@ impl Q42VolumeHeader {
             magic: Q42_MAGIC,
             version: Q42_VERSION_V3,
             flags: FLAG_BLOCKS_LZ4 | FLAG_OBJECT_SORTED,
-            lex_offset, lex_length,
-            bidx_offset, bidx_length,
-            block_dir_offset, block_dir_length,
-            data_offset, data_length,
-            block_count, block_size, quins_per_block,
+            lex_offset,
+            lex_length,
+            bidx_offset,
+            bidx_length,
+            block_dir_offset,
+            block_dir_length,
+            data_offset,
+            data_length,
+            block_count,
+            block_size,
+            quins_per_block,
             temporal_index_offset: 0,
             temporal_index_length: 0,
             merkle_root: [0u8; 32],
             assertion_timestamp,
             dag_root_offset: 0,
             dag_root_length: 0,
-            _reserved: [0u8; 96],
+            natural_person_did_offset: 0,
+            software_agent_did_offset: 0,
+            _reserved: [0u8; 80],
         }
     }
 }
@@ -148,7 +167,10 @@ pub fn migrate_v2_to_v3(path: &Path) -> io::Result<()> {
     let mut header = [0u8; HEADER_SIZE];
     f.read_exact(&mut header)?;
     if &header[0..4] != &Q42_MAGIC {
-        return Err(io::Error::new(io::ErrorKind::InvalidData, "not a Q42 volume"));
+        return Err(io::Error::new(
+            io::ErrorKind::InvalidData,
+            "not a Q42 volume",
+        ));
     }
     let version = u16::from_le_bytes([header[4], header[5]]);
     if version >= Q42_VERSION_V3 as u16 {
@@ -316,7 +338,10 @@ pub fn header_to_bytes(h: &Q42VolumeHeader) -> [u8; HEADER_SIZE] {
 
 fn header_from_bytes(buf: &[u8; HEADER_SIZE]) -> io::Result<Q42VolumeHeader> {
     if buf[0..4] != Q42_MAGIC {
-        return Err(io::Error::new(io::ErrorKind::InvalidData, "invalid Q42 magic"));
+        return Err(io::Error::new(
+            io::ErrorKind::InvalidData,
+            "invalid Q42 magic",
+        ));
     }
     let version = u16::from_le_bytes(buf[4..6].try_into().unwrap());
     if version != Q42_VERSION_V3 {
@@ -346,11 +371,11 @@ fn header_from_bytes(buf: &[u8; HEADER_SIZE]) -> io::Result<Q42VolumeHeader> {
         assertion_timestamp: u64::from_le_bytes(buf[136..144].try_into().unwrap()),
         dag_root_offset: u64::from_le_bytes(buf[144..152].try_into().unwrap()),
         dag_root_length: u64::from_le_bytes(buf[152..160].try_into().unwrap()),
-        _reserved: [0; 96],
+        natural_person_did_offset: u64::from_le_bytes(buf[160..168].try_into().unwrap()),
+        software_agent_did_offset: u64::from_le_bytes(buf[168..176].try_into().unwrap()),
+        _reserved: buf[176..256].try_into().unwrap(),
     })
 }
-
-
 
 /// Write a unified v3 `.q42` volume.
 pub fn write_unified_volume(
@@ -464,9 +489,11 @@ impl UnifiedVolumeBuilder {
             .unwrap_or(0);
         let msg = format!("ingest block {seq_id}");
         self.last_dag_hash = if self.last_dag_hash == [0u8; 32] {
-            self.dag_store.genesis_node(quins, self.author_did, ts, &msg)
+            self.dag_store
+                .genesis_node(quins, self.author_did, ts, &msg)
         } else {
-            self.dag_store.commit_node(self.last_dag_hash, quins, self.author_did, ts, &msg)
+            self.dag_store
+                .commit_node(self.last_dag_hash, quins, self.author_did, ts, &msg)
         };
     }
 
@@ -530,7 +557,9 @@ impl UnifiedVolumeBuilder {
             assertion_timestamp,
             dag_root_offset,
             dag_root_length,
-            _reserved: [0; 96],
+            natural_person_did_offset: 0,
+            software_agent_did_offset: 0,
+            _reserved: [0; 80],
         };
 
         let out = OpenOptions::new()
@@ -790,7 +819,11 @@ mod tests {
 
         let vol = Q42Volume::open(tmp.path()).unwrap();
         let quins = vol.read_all_quins().unwrap();
-        assert_eq!(quins.len(), 3, "read_all_quins must return every stored quin");
+        assert_eq!(
+            quins.len(),
+            3,
+            "read_all_quins must return every stored quin"
+        );
         for q in [q1, q2, q3] {
             assert!(
                 quins.iter().any(|r| r.subject == q.subject
@@ -831,7 +864,10 @@ doc:article-1 a values:Undertaking ;
 
         // The verbatim literal is recoverable from the .q42 alone — the CML prerequisite.
         let lit = "Each Member undertakes to suppress forced labour.";
-        assert_eq!(lex.lookup_hash(generate_60bit_token(lit.as_bytes())), Some(lit));
+        assert_eq!(
+            lex.lookup_hash(generate_60bit_token(lit.as_bytes())),
+            Some(lit)
+        );
         // Expanded IRIs are recoverable too (queries become human-readable).
         let undertaking = "https://ns.webcivics.net/values/Undertaking";
         assert_eq!(
@@ -848,7 +884,6 @@ doc:article-1 a values:Undertaking ;
         assert!(is_unified_volume(tmp.path()).unwrap());
     }
 }
-
 
 /// Streaming append-only interface for Q42 Unified Volumes.
 /// Allows continuous block accumulation without loading the entire volume in memory.
@@ -891,7 +926,9 @@ impl StreamingVolumeAppender {
             assertion_timestamp: 0,
             dag_root_offset: 0,
             dag_root_length: 0,
-            _reserved: [0; 96],
+            natural_person_did_offset: 0,
+            software_agent_did_offset: 0,
+            _reserved: [0; 80],
         };
 
         if file.metadata()?.len() >= HEADER_SIZE as u64 {
@@ -935,7 +972,7 @@ impl StreamingVolumeAppender {
         use std::io::{Seek, SeekFrom, Write};
         let append_offset = self.header.data_offset + self.header.data_length;
         self.file.seek(SeekFrom::Start(append_offset))?;
-        
+
         self.dir_entries.push(BlockDirectoryEntry {
             rel_offset: self.header.data_length,
             comp_len: compressed.len() as u32,
@@ -953,9 +990,11 @@ impl StreamingVolumeAppender {
         let msg = format!("runtime block {}", seq_id);
 
         self.last_dag_hash = if self.last_dag_hash == [0u8; 32] {
-            self.dag_store.genesis_node(quins, self.author_did, ts, &msg)
+            self.dag_store
+                .genesis_node(quins, self.author_did, ts, &msg)
         } else {
-            self.dag_store.commit_node(self.last_dag_hash, quins, self.author_did, ts, &msg)
+            self.dag_store
+                .commit_node(self.last_dag_hash, quins, self.author_did, ts, &msg)
         };
 
         // Write BIDX and Directory at the end
@@ -994,4 +1033,3 @@ impl StreamingVolumeAppender {
         Ok(())
     }
 }
-

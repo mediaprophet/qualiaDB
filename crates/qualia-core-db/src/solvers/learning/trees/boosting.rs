@@ -53,7 +53,12 @@ impl GradientBoosting {
             trees.push(tree);
         }
 
-        Ok(Self { init, trees, learning_rate, p })
+        Ok(Self {
+            init,
+            trees,
+            learning_rate,
+            p,
+        })
     }
 
     pub fn predict_row(&self, q: &[f64]) -> f64 {
@@ -61,7 +66,9 @@ impl GradientBoosting {
     }
 
     pub fn predict(&self, x: &[f64], m: usize) -> Vec<f64> {
-        (0..m).map(|i| self.predict_row(&x[i * self.p..(i + 1) * self.p])).collect()
+        (0..m)
+            .map(|i| self.predict_row(&x[i * self.p..(i + 1) * self.p]))
+            .collect()
     }
 
     pub fn n_estimators(&self) -> usize {
@@ -80,12 +87,18 @@ mod tests {
         let n = 50;
         let x: Vec<f64> = (0..n).map(|i| i as f64 / 10.0).collect();
         let y: Vec<f64> = x.iter().map(|&xi| (xi).sin() * 3.0 + 0.5 * xi).collect();
-        let params = TreeParams { max_depth: 3, ..TreeParams::default() };
+        let params = TreeParams {
+            max_depth: 3,
+            ..TreeParams::default()
+        };
         let few = GradientBoosting::fit_regressor(&x, &y, n, 1, 5, 0.1, params).unwrap();
         let many = GradientBoosting::fit_regressor(&x, &y, n, 1, 200, 0.1, params).unwrap();
         let mse_few = mse(&y, &few.predict(&x, n)).unwrap();
         let mse_many = mse(&y, &many.predict(&x, n)).unwrap();
-        assert!(mse_many < mse_few, "more stages should fit better: {mse_many} !< {mse_few}");
+        assert!(
+            mse_many < mse_few,
+            "more stages should fit better: {mse_many} !< {mse_few}"
+        );
         // A well-trained ensemble explains most of the variance.
         assert!(r2_score(&y, &many.predict(&x, n)).unwrap() > 0.9);
     }
@@ -94,7 +107,19 @@ mod tests {
     fn single_stage_is_init_plus_one_tree() {
         let x = [1.0, 2.0, 3.0, 4.0, 5.0, 6.0];
         let y = [1.0, 2.0, 1.0, 5.0, 6.0, 5.0];
-        let gb = GradientBoosting::fit_regressor(&x, &y, 6, 1, 1, 0.5, TreeParams { max_depth: 2, ..TreeParams::default() }).unwrap();
+        let gb = GradientBoosting::fit_regressor(
+            &x,
+            &y,
+            6,
+            1,
+            1,
+            0.5,
+            TreeParams {
+                max_depth: 2,
+                ..TreeParams::default()
+            },
+        )
+        .unwrap();
         assert_eq!(gb.n_estimators(), 1);
         // Prediction is finite and within the data range envelope.
         let p = gb.predict_row(&[3.5]);
@@ -103,7 +128,15 @@ mod tests {
 
     #[test]
     fn guards() {
-        assert_eq!(GradientBoosting::fit_regressor(&[1.0], &[1.0], 1, 1, 0, 0.1, TreeParams::default()).unwrap_err(), LearningError::InsufficientData);
-        assert_eq!(GradientBoosting::fit_regressor(&[1.0], &[1.0], 1, 1, 10, 0.0, TreeParams::default()).unwrap_err(), LearningError::InsufficientData);
+        assert_eq!(
+            GradientBoosting::fit_regressor(&[1.0], &[1.0], 1, 1, 0, 0.1, TreeParams::default())
+                .unwrap_err(),
+            LearningError::InsufficientData
+        );
+        assert_eq!(
+            GradientBoosting::fit_regressor(&[1.0], &[1.0], 1, 1, 10, 0.0, TreeParams::default())
+                .unwrap_err(),
+            LearningError::InsufficientData
+        );
     }
 }

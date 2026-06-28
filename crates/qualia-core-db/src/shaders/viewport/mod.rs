@@ -1,10 +1,7 @@
 //! Viewport WGSL — migrated from webizen-render; owned by qualia-core-db.
 
 pub const SPECTRAL_WGSL: &str = include_str!("spectral.wgsl");
-pub const AMBIENT_WGSL: &str = concat!(
-    include_str!("spectral.wgsl"),
-    include_str!("ambient.wgsl")
-);
+pub const AMBIENT_WGSL: &str = concat!(include_str!("spectral.wgsl"), include_str!("ambient.wgsl"));
 pub const PROJECTOR_WGSL: &str = concat!(
     include_str!("spectral.wgsl"),
     include_str!("projector.wgsl")

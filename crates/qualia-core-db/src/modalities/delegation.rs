@@ -150,7 +150,11 @@ pub fn authority_after_crl(edges: &[NQuin], root_authority: u64, crl: &[u64], ag
             break;
         }
         for e in edges {
-            if e.predicate == p && e.subject == cur && !is_revoked(crl, e.subject) && !is_revoked(crl, e.object) {
+            if e.predicate == p
+                && e.subject == cur
+                && !is_revoked(crl, e.subject)
+                && !is_revoked(crl, e.object)
+            {
                 let nxt = e.object;
                 if nxt == agent {
                     return true;
@@ -204,10 +208,17 @@ mod tests {
         let officer = q_hash("did:officer");
         let ngo = q_hash("did:ngo");
         let edges = [edge(root, agency), edge(agency, officer), edge(root, ngo)];
-        assert!(has_delegated_authority(&edges, root, officer), "transitive delegation");
+        assert!(
+            has_delegated_authority(&edges, root, officer),
+            "transitive delegation"
+        );
         assert!(has_delegated_authority(&edges, root, ngo));
         // An agent with no chain from root holds nothing.
-        assert!(!has_delegated_authority(&edges, root, q_hash("did:stranger")));
+        assert!(!has_delegated_authority(
+            &edges,
+            root,
+            q_hash("did:stranger")
+        ));
     }
 
     #[test]
@@ -232,7 +243,10 @@ mod tests {
     fn attenuation_never_broadens_authority() {
         let (read, write, admin) = (q_hash("cap:read"), q_hash("cap:write"), q_hash("cap:admin"));
         assert!(attenuates(&[read, write, admin], &[read, write]));
-        assert!(!attenuates(&[read], &[read, admin]), "cannot grant a capability the delegator lacks");
+        assert!(
+            !attenuates(&[read], &[read, admin]),
+            "cannot grant a capability the delegator lacks"
+        );
         assert!(attenuates(&[read], &[]));
     }
 
@@ -263,6 +277,9 @@ mod tests {
         let region = q_hash("region:au");
         assert!(delegation_in_region(region, region));
         assert!(!delegation_in_region(region, q_hash("region:us")));
-        assert!(delegation_in_region(0, q_hash("region:anywhere")), "global scope");
+        assert!(
+            delegation_in_region(0, q_hash("region:anywhere")),
+            "global scope"
+        );
     }
 }

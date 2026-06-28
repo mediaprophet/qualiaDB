@@ -62,7 +62,11 @@ impl CubicSpline {
                 m[k + 1] = sol[k];
             }
         }
-        Ok(Self { xs: xs.to_vec(), ys: ys.to_vec(), m })
+        Ok(Self {
+            xs: xs.to_vec(),
+            ys: ys.to_vec(),
+            m,
+        })
     }
 
     /// Evaluate the spline at `x` (clamped to the node range).
@@ -150,7 +154,10 @@ mod tests {
 
     #[test]
     fn fails_closed() {
-        assert_eq!(CubicSpline::natural(&[1.0], &[2.0]).unwrap_err(), InterpolationError::InsufficientData);
+        assert_eq!(
+            CubicSpline::natural(&[1.0], &[2.0]).unwrap_err(),
+            InterpolationError::InsufficientData
+        );
         assert_eq!(
             CubicSpline::natural(&[0.0, 0.0, 1.0], &[1.0, 2.0, 3.0]).unwrap_err(),
             InterpolationError::DuplicateNodes

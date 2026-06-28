@@ -99,9 +99,27 @@ mod tests {
         // Two 5.0s at ids 1 and 4 → lower id (1) wins the tie.
         let logits = [1.0, 5.0, 3.0, 2.0, 5.0, f32::NAN, -1.0];
         let top = topk_cpu(&logits, 3);
-        assert_eq!(top[0], TopKItem { token_id: 1, logit: 5.0 });
-        assert_eq!(top[1], TopKItem { token_id: 4, logit: 5.0 });
-        assert_eq!(top[2], TopKItem { token_id: 2, logit: 3.0 });
+        assert_eq!(
+            top[0],
+            TopKItem {
+                token_id: 1,
+                logit: 5.0
+            }
+        );
+        assert_eq!(
+            top[1],
+            TopKItem {
+                token_id: 4,
+                logit: 5.0
+            }
+        );
+        assert_eq!(
+            top[2],
+            TopKItem {
+                token_id: 2,
+                logit: 3.0
+            }
+        );
     }
 
     #[test]
@@ -120,7 +138,19 @@ mod tests {
         // Mask id 3 (a governance veto) → next-best survives.
         let masked = |id: u32| id == 3;
         let merged = merge_block_candidates(&cand_val, &cand_idx, 2, Some(&masked));
-        assert_eq!(merged[0], TopKItem { token_id: 42, logit: 8.0 });
-        assert_eq!(merged[1], TopKItem { token_id: 10, logit: 7.0 });
+        assert_eq!(
+            merged[0],
+            TopKItem {
+                token_id: 42,
+                logit: 8.0
+            }
+        );
+        assert_eq!(
+            merged[1],
+            TopKItem {
+                token_id: 10,
+                logit: 7.0
+            }
+        );
     }
 }

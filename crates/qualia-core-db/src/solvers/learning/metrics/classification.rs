@@ -78,7 +78,12 @@ pub fn confusion_binary(y_true: &[bool], y_pred: &[bool]) -> Option<ConfusionBin
     if n == 0 || n != y_pred.len() {
         return None;
     }
-    let mut c = ConfusionBinary { tp: 0, fp: 0, tn: 0, fn_: 0 };
+    let mut c = ConfusionBinary {
+        tp: 0,
+        fp: 0,
+        tn: 0,
+        fn_: 0,
+    };
     for (&t, &p) in y_true.iter().zip(y_pred) {
         match (t, p) {
             (true, true) => c.tp += 1,

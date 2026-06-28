@@ -202,18 +202,50 @@ mod tests {
     fn batch_clears_net_per_jurisdiction() {
         let house = TaxClearingHouse::with_standard_schemas();
         let items = [
-            TaxLineItem { jurisdiction_id: "AU_GST_2026", category: "Income", amount: 1000.0 }, // +100
-            TaxLineItem { jurisdiction_id: "AU_GST_2026", category: "Expense", amount: 400.0 },  // −40
-            TaxLineItem { jurisdiction_id: "EU_VAT_2026", category: "Income", amount: 500.0 },   // +100
+            TaxLineItem {
+                jurisdiction_id: "AU_GST_2026",
+                category: "Income",
+                amount: 1000.0,
+            }, // +100
+            TaxLineItem {
+                jurisdiction_id: "AU_GST_2026",
+                category: "Expense",
+                amount: 400.0,
+            }, // −40
+            TaxLineItem {
+                jurisdiction_id: "EU_VAT_2026",
+                category: "Income",
+                amount: 500.0,
+            }, // +100
         ];
         let result = house.clear_batch(&items);
         // Net = 100 − 40 + 100 = 160.
-        assert!((result.net_liability - 160.0).abs() < 1e-9, "net {}", result.net_liability);
+        assert!(
+            (result.net_liability - 160.0).abs() < 1e-9,
+            "net {}",
+            result.net_liability
+        );
         // Two distinct jurisdictions cleared.
         assert_eq!(result.per_jurisdiction.len(), 2);
-        let au = result.per_jurisdiction.iter().find(|j| j.jurisdiction_id == "AU_GST_2026").unwrap();
-        assert!((au.liability - 60.0).abs() < 1e-9, "AU net {}", au.liability);
-        let eu = result.per_jurisdiction.iter().find(|j| j.jurisdiction_id == "EU_VAT_2026").unwrap();
-        assert!((eu.liability - 100.0).abs() < 1e-9, "EU net {}", eu.liability);
+        let au = result
+            .per_jurisdiction
+            .iter()
+            .find(|j| j.jurisdiction_id == "AU_GST_2026")
+            .unwrap();
+        assert!(
+            (au.liability - 60.0).abs() < 1e-9,
+            "AU net {}",
+            au.liability
+        );
+        let eu = result
+            .per_jurisdiction
+            .iter()
+            .find(|j| j.jurisdiction_id == "EU_VAT_2026")
+            .unwrap();
+        assert!(
+            (eu.liability - 100.0).abs() < 1e-9,
+            "EU net {}",
+            eu.liability
+        );
     }
 }

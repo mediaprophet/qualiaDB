@@ -157,16 +157,34 @@ mod tests {
     #[test]
     fn moral_appraisal_blame_praise_excuse() {
         // Good outcome, voluntary, capable → praiseworthy (degree = causal share).
-        assert_eq!(appraise(200, true, true, true, false), MoralAppraisal::Praiseworthy(200));
+        assert_eq!(
+            appraise(200, true, true, true, false),
+            MoralAppraisal::Praiseworthy(200)
+        );
         // Bad outcome + culpable mind, voluntary, capable → blameworthy.
-        assert_eq!(appraise(150, false, true, true, true), MoralAppraisal::Blameworthy(150));
+        assert_eq!(
+            appraise(150, false, true, true, true),
+            MoralAppraisal::Blameworthy(150)
+        );
         // Bad outcome but NO culpable mind → mere accident → excused.
-        assert_eq!(appraise(150, false, true, true, false), MoralAppraisal::Excused);
+        assert_eq!(
+            appraise(150, false, true, true, false),
+            MoralAppraisal::Excused
+        );
         // No capacity, or involuntary → excused regardless of outcome.
-        assert_eq!(appraise(150, false, true, false, true), MoralAppraisal::Excused);
-        assert_eq!(appraise(150, false, false, true, true), MoralAppraisal::Excused);
+        assert_eq!(
+            appraise(150, false, true, false, true),
+            MoralAppraisal::Excused
+        );
+        assert_eq!(
+            appraise(150, false, false, true, true),
+            MoralAppraisal::Excused
+        );
         // No causal contribution → neutral.
-        assert_eq!(appraise(0, false, true, true, true), MoralAppraisal::Neutral);
+        assert_eq!(
+            appraise(0, false, true, true, true),
+            MoralAppraisal::Neutral
+        );
     }
 
     #[test]
@@ -197,7 +215,10 @@ mod tests {
     #[test]
     fn allegation_is_not_a_fact_until_adjudicated() {
         // Default and undecided → Alleged, not enforceable.
-        assert_eq!(ResponsibilityStatus::default(), ResponsibilityStatus::Alleged);
+        assert_eq!(
+            ResponsibilityStatus::default(),
+            ResponsibilityStatus::Alleged
+        );
         assert!(!is_enforceable_fact(ResponsibilityStatus::Alleged));
         assert!(!is_enforceable_fact(adjudicate(false, false)));
         // Confirmed → Adjudicated → enforceable fact.
@@ -213,7 +234,7 @@ mod tests {
         // Institution gets power, person denied remedy → asymmetry flagged.
         assert!(rule_of_law_asymmetry(true, true));
         assert!(!rule_of_law_asymmetry(true, false)); // remedy available → ok
-        // Blocked with no appeal → overreach; blocked WITH an appeal path → ok.
+                                                      // Blocked with no appeal → overreach; blocked WITH an appeal path → ok.
         assert!(enforcer_overreach(true, false));
         assert!(!enforcer_overreach(true, true));
         // Harm with no accountable natural person → accountability vacuum.

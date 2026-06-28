@@ -1,6 +1,11 @@
 //! Canvas2D fallback painters — the non-WebGPU 2.5D field (background, ambient, tensor, HUD).
 use super::*;
-pub(super) fn paint_background(ctx: &CanvasRenderingContext2d, w: f64, h: f64, _spectral_shift: f32) {
+pub(super) fn paint_background(
+    ctx: &CanvasRenderingContext2d,
+    w: f64,
+    h: f64,
+    _spectral_shift: f32,
+) {
     // Black background. (Previously a spectral-shift `rgb(r,g,b)` top stop, which read as a pink
     // wash.) The σ spectral signal still drives the particle colours in `paint_ambient_field`, so
     // the spectral projection stays visible — on black, where it reads cleanly.
@@ -37,11 +42,15 @@ pub(super) fn paint_ambient_field(
         let sigma = ((fi * 0.017 + telemetry.spectral_shift as f64) % 1.0) as f32;
         let (r, g, b) = sigma_to_display_rgb(sigma);
         let alpha = 0.08 + (fi * 0.001 + heat).sin().abs() * 0.35;
-        ctx.set_fill_style(&JsValue::from_str(&format!(
-            "rgba({r},{g},{b},{alpha:.2})"
-        )));
+        ctx.set_fill_style(&JsValue::from_str(&format!("rgba({r},{g},{b},{alpha:.2})")));
         ctx.begin_path();
-        let _ = ctx.arc(px, py, 0.8 + (fi % 3.0) + heat * 2.0, 0.0, std::f64::consts::TAU);
+        let _ = ctx.arc(
+            px,
+            py,
+            0.8 + (fi % 3.0) + heat * 2.0,
+            0.0,
+            std::f64::consts::TAU,
+        );
         ctx.fill();
     }
 }
@@ -129,14 +138,25 @@ pub(super) fn paint_tensor_projection(
                     node.r, node.g, node.b
                 )));
                 ctx.begin_path();
-                let _ = ctx.arc(node.px, node.py, node.radius + 2.5, 0.0, std::f64::consts::TAU);
+                let _ = ctx.arc(
+                    node.px,
+                    node.py,
+                    node.radius + 2.5,
+                    0.0,
+                    std::f64::consts::TAU,
+                );
                 ctx.stroke();
             }
         }
     }
 }
 
-pub(super) fn stroke_segment(ctx: &CanvasRenderingContext2d, a: ProjectedNode, b: ProjectedNode, alpha: f32) {
+pub(super) fn stroke_segment(
+    ctx: &CanvasRenderingContext2d,
+    a: ProjectedNode,
+    b: ProjectedNode,
+    alpha: f32,
+) {
     ctx.set_stroke_style(&JsValue::from_str(&format!(
         "rgba({},{},{},{alpha:.2})",
         a.r, a.g, a.b
@@ -159,7 +179,11 @@ pub(super) fn project_xyz(x: f32, y: f32, z: f32, w: f64, h: f64, yaw: f64) -> (
     (px, py, depth)
 }
 
-pub(super) fn paint_hud(ctx: &CanvasRenderingContext2d, portal: &QualiaPortal, mode: OperationalMode) {
+pub(super) fn paint_hud(
+    ctx: &CanvasRenderingContext2d,
+    portal: &QualiaPortal,
+    mode: OperationalMode,
+) {
     ctx.set_fill_style(&JsValue::from_str("#67e8f9"));
     ctx.set_font("14px Inter, system-ui, sans-serif");
     let tier_label = match portal.tier {
@@ -173,7 +197,10 @@ pub(super) fn paint_hud(ctx: &CanvasRenderingContext2d, portal: &QualiaPortal, m
         OperationalMode::Reserve => "Reserve",
     };
     let _ = ctx.fill_text(
-        &format!("Qualia WASM · {tier_label} · {mode_label} · {}", portal.description),
+        &format!(
+            "Qualia WASM · {tier_label} · {mode_label} · {}",
+            portal.description
+        ),
         16.0,
         28.0,
     );
@@ -188,7 +215,11 @@ pub(super) fn paint_hud(ctx: &CanvasRenderingContext2d, portal: &QualiaPortal, m
     }
 }
 
-pub(super) fn append_parsed_dom(document: &Document, panel: &Element, parsed: &JsValue) -> Result<(), JsValue> {
+pub(super) fn append_parsed_dom(
+    document: &Document,
+    panel: &Element,
+    parsed: &JsValue,
+) -> Result<(), JsValue> {
     if parsed.is_array() {
         let arr: Array = parsed.clone().dyn_into()?;
         for entry in arr.iter() {
@@ -199,7 +230,11 @@ pub(super) fn append_parsed_dom(document: &Document, panel: &Element, parsed: &J
     append_triple_dom(document, panel, parsed)
 }
 
-pub(super) fn append_triple_dom(document: &Document, panel: &Element, triple: &JsValue) -> Result<(), JsValue> {
+pub(super) fn append_triple_dom(
+    document: &Document,
+    panel: &Element,
+    triple: &JsValue,
+) -> Result<(), JsValue> {
     let subject = field_as_string(triple, "subject").or_else(|| field_as_string(triple, "s"));
     let predicate = field_as_string(triple, "predicate").or_else(|| field_as_string(triple, "p"));
     let object = field_as_string(triple, "object").or_else(|| field_as_string(triple, "o"));
@@ -252,7 +287,9 @@ pub(super) fn html_escape(raw: &str) -> String {
 }
 
 #[inline]
-pub(super) fn acoustic_uniform_to_floats(u: &AcousticUniform) -> [f32; ACOUSTIC_UNIFORM_FLOAT_COUNT] {
+pub(super) fn acoustic_uniform_to_floats(
+    u: &AcousticUniform,
+) -> [f32; ACOUSTIC_UNIFORM_FLOAT_COUNT] {
     let mut floats = [0.0_f32; ACOUSTIC_UNIFORM_FLOAT_COUNT];
     floats[0] = u.alpha;
     floats[1] = u.mu;

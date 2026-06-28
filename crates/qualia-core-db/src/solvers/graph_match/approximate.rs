@@ -37,7 +37,11 @@ fn index(data: &[FuzzyTriple]) -> HashMap<(usize, usize, usize), f64> {
 /// Fuzzy match score of a `pattern_node → data_node` mapping: for each pattern
 /// triple `(s,p,o,d_p)`, if the data graph has `(map[s], p, map[o])` with degree
 /// `d_d`, add `d_p · d_d` (product t-norm).
-fn score(pattern: &[FuzzyTriple], idx: &HashMap<(usize, usize, usize), f64>, mapping: &[usize]) -> f64 {
+fn score(
+    pattern: &[FuzzyTriple],
+    idx: &HashMap<(usize, usize, usize), f64>,
+    mapping: &[usize],
+) -> f64 {
     let mut s = 0.0;
     for tr in pattern {
         let key = (mapping[tr.s], tr.p, mapping[tr.o]);
@@ -81,11 +85,16 @@ pub fn approximate_match(
     let mut rng = Rng(seed ^ 0x9E3779B97F4A7C15);
     let mut best: Option<MatchResult> = None;
     for _ in 0..restarts.max(1) {
-        let init: Vec<usize> = (0..n_pattern_nodes).map(|_| rng.below(n_data_nodes)).collect();
+        let init: Vec<usize> = (0..n_pattern_nodes)
+            .map(|_| rng.below(n_data_nodes))
+            .collect();
         let (m, neg) = hill_climbing(init, &neighbors, &objective, 200);
         let sc = -neg;
         if best.as_ref().map(|b| sc > b.score).unwrap_or(true) {
-            best = Some(MatchResult { mapping: m, score: sc });
+            best = Some(MatchResult {
+                mapping: m,
+                score: sc,
+            });
         }
     }
     best

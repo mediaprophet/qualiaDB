@@ -59,7 +59,9 @@ impl MulticlassSvm {
     }
 
     pub fn predict(&self, x: &[f64], m: usize) -> Vec<usize> {
-        (0..m).map(|i| self.predict_row(&x[i * self.p..(i + 1) * self.p])).collect()
+        (0..m)
+            .map(|i| self.predict_row(&x[i * self.p..(i + 1) * self.p]))
+            .collect()
     }
 }
 
@@ -80,7 +82,8 @@ mod tests {
             }
         }
         let n = 15;
-        let m = MulticlassSvm::fit_one_vs_rest(&x, &y, n, 2, 1.0, Kernel::Linear, 30, 1e-3).unwrap();
+        let m =
+            MulticlassSvm::fit_one_vs_rest(&x, &y, n, 2, 1.0, Kernel::Linear, 30, 1e-3).unwrap();
         assert_eq!(m.predict_row(&[0.0, 0.0]), 0);
         assert_eq!(m.predict_row(&[10.0, 0.0]), 1);
         assert_eq!(m.predict_row(&[5.0, 10.0]), 2);
@@ -89,7 +92,17 @@ mod tests {
     #[test]
     fn guards() {
         assert_eq!(
-            MulticlassSvm::fit_one_vs_rest(&[0.0, 0.0, 1.0, 1.0], &[0, 0], 2, 2, 1.0, Kernel::Linear, 5, 1e-3).unwrap_err(),
+            MulticlassSvm::fit_one_vs_rest(
+                &[0.0, 0.0, 1.0, 1.0],
+                &[0, 0],
+                2,
+                2,
+                1.0,
+                Kernel::Linear,
+                5,
+                1e-3
+            )
+            .unwrap_err(),
             LearningError::InsufficientData
         );
     }

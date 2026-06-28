@@ -105,13 +105,27 @@ pub fn transe_score(h: &[f64], r: &[f64], t: &[f64], p: u8) -> f64 {
     -transe_distance(h, r, t, p)
 }
 
-fn transe_grad(h: &[f64], r: &[f64], t: &[f64], p: u8, gh: &mut [f64], gr: &mut [f64], gt: &mut [f64]) {
+fn transe_grad(
+    h: &[f64],
+    r: &[f64],
+    t: &[f64],
+    p: u8,
+    gh: &mut [f64],
+    gr: &mut [f64],
+    gt: &mut [f64],
+) {
     // score = -d. For L2, ∂d/∂h_i = u_i/d where u = h+r-t; ∂(-d)/∂h = -u/d.
     // For L1, ∂d/∂h_i = sign(u_i).
     if p == 1 {
         for i in 0..h.len() {
             let u = h[i] + r[i] - t[i];
-            let s = if u > 0.0 { 1.0 } else if u < 0.0 { -1.0 } else { 0.0 };
+            let s = if u > 0.0 {
+                1.0
+            } else if u < 0.0 {
+                -1.0
+            } else {
+                0.0
+            };
             gh[i] = -s;
             gr[i] = -s;
             gt[i] = s;
@@ -157,7 +171,15 @@ pub fn complex_score(h: &[f64], r: &[f64], t: &[f64], k: usize) -> f64 {
     s
 }
 
-fn complex_grad(h: &[f64], r: &[f64], t: &[f64], k: usize, gh: &mut [f64], gr: &mut [f64], gt: &mut [f64]) {
+fn complex_grad(
+    h: &[f64],
+    r: &[f64],
+    t: &[f64],
+    k: usize,
+    gh: &mut [f64],
+    gr: &mut [f64],
+    gt: &mut [f64],
+) {
     for i in 0..k {
         let (a, b) = (h[i], h[k + i]);
         let (c, d) = (r[i], r[k + i]);
@@ -190,7 +212,15 @@ pub fn rotate_score(h: &[f64], r: &[f64], t: &[f64], k: usize) -> f64 {
     -d
 }
 
-fn rotate_grad(h: &[f64], r: &[f64], t: &[f64], k: usize, gh: &mut [f64], gr: &mut [f64], gt: &mut [f64]) {
+fn rotate_grad(
+    h: &[f64],
+    r: &[f64],
+    t: &[f64],
+    k: usize,
+    gh: &mut [f64],
+    gr: &mut [f64],
+    gt: &mut [f64],
+) {
     // score = -Σ m_i ; gradients of -m_i.
     for i in 0..k {
         let (a, b) = (h[i], h[k + i]);
@@ -275,10 +305,34 @@ mod tests {
     fn gradients_match_finite_difference() {
         // Verify each model's analytic gradient against a numerical one.
         let cases: &[(ScoreModel, usize, &[f64], &[f64], &[f64])] = &[
-            (ScoreModel::TransE { p: 2 }, 3, &[0.3, -0.4, 0.1], &[0.2, 0.5, -0.1], &[0.6, 0.0, 0.2]),
-            (ScoreModel::DistMult, 3, &[0.3, -0.4, 0.1], &[0.2, 0.5, -0.1], &[0.6, 0.0, 0.2]),
-            (ScoreModel::ComplEx, 2, &[0.3, -0.4, 0.1, 0.2], &[0.2, 0.5, -0.1, 0.3], &[0.6, 0.0, 0.2, -0.2]),
-            (ScoreModel::RotatE, 2, &[0.3, -0.4, 0.1, 0.2], &[0.7, -0.3], &[0.6, 0.1, 0.2, -0.2]),
+            (
+                ScoreModel::TransE { p: 2 },
+                3,
+                &[0.3, -0.4, 0.1],
+                &[0.2, 0.5, -0.1],
+                &[0.6, 0.0, 0.2],
+            ),
+            (
+                ScoreModel::DistMult,
+                3,
+                &[0.3, -0.4, 0.1],
+                &[0.2, 0.5, -0.1],
+                &[0.6, 0.0, 0.2],
+            ),
+            (
+                ScoreModel::ComplEx,
+                2,
+                &[0.3, -0.4, 0.1, 0.2],
+                &[0.2, 0.5, -0.1, 0.3],
+                &[0.6, 0.0, 0.2, -0.2],
+            ),
+            (
+                ScoreModel::RotatE,
+                2,
+                &[0.3, -0.4, 0.1, 0.2],
+                &[0.7, -0.3],
+                &[0.6, 0.1, 0.2, -0.2],
+            ),
         ];
         let eps = 1e-6;
         for &(model, k, h, r, t) in cases {
@@ -286,23 +340,35 @@ mod tests {
             let mut gh = vec![0.0; ed];
             let mut gr = vec![0.0; rd];
             let mut gt = vec![0.0; ed];
-            model.gradient(h, r, t, k, &mut gh, &mut gr, &mut gt).unwrap();
+            model
+                .gradient(h, r, t, k, &mut gh, &mut gr, &mut gt)
+                .unwrap();
             // Numerical ∂score/∂h
             for i in 0..ed {
                 let mut hp = h.to_vec();
                 hp[i] += eps;
                 let mut hm = h.to_vec();
                 hm[i] -= eps;
-                let num = (model.score(&hp, r, t, k).unwrap() - model.score(&hm, r, t, k).unwrap()) / (2.0 * eps);
-                assert!((gh[i] - num).abs() < 1e-4, "{model:?} gh[{i}] {} vs {num}", gh[i]);
+                let num = (model.score(&hp, r, t, k).unwrap() - model.score(&hm, r, t, k).unwrap())
+                    / (2.0 * eps);
+                assert!(
+                    (gh[i] - num).abs() < 1e-4,
+                    "{model:?} gh[{i}] {} vs {num}",
+                    gh[i]
+                );
             }
             for i in 0..rd {
                 let mut rp = r.to_vec();
                 rp[i] += eps;
                 let mut rm = r.to_vec();
                 rm[i] -= eps;
-                let num = (model.score(h, &rp, t, k).unwrap() - model.score(h, &rm, t, k).unwrap()) / (2.0 * eps);
-                assert!((gr[i] - num).abs() < 1e-4, "{model:?} gr[{i}] {} vs {num}", gr[i]);
+                let num = (model.score(h, &rp, t, k).unwrap() - model.score(h, &rm, t, k).unwrap())
+                    / (2.0 * eps);
+                assert!(
+                    (gr[i] - num).abs() < 1e-4,
+                    "{model:?} gr[{i}] {} vs {num}",
+                    gr[i]
+                );
             }
         }
     }
@@ -310,6 +376,9 @@ mod tests {
     #[test]
     fn score_fails_closed_on_dim_mismatch() {
         let m = ScoreModel::DistMult;
-        assert_eq!(m.score(&[1.0, 2.0], &[1.0], &[1.0, 2.0], 2).unwrap_err(), KgEmbeddingError::InvalidDimension);
+        assert_eq!(
+            m.score(&[1.0, 2.0], &[1.0], &[1.0, 2.0], 2).unwrap_err(),
+            KgEmbeddingError::InvalidDimension
+        );
     }
 }

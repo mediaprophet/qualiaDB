@@ -539,8 +539,7 @@ fn timed_infer(agent: &LocalLlmAgent, prompt: &str) -> RunTiming {
             v.push(Instant::now());
         }
     };
-    let (_text, _prov, tokens, _quin) =
-        agent.infer_local_model_streaming(prompt, "", Some(cb));
+    let (_text, _prov, tokens, _quin) = agent.infer_local_model_streaming(prompt, "", Some(cb));
     let total = start.elapsed();
     let v = stamps.lock().map(|g| g.clone()).unwrap_or_default();
     let ttft = v.first().map(|f| f.duration_since(start)).unwrap_or(total);
@@ -757,7 +756,7 @@ pub fn compare_topk_decode_blocking(
     rt.block_on(async { compare_topk_decode(model_path, prompt, decode_tokens) })
 }
 
-/// A1b: mount a model (auto-detecting `Q42W` vs GGUF by magic) and run ONE decode of `prompt` for
+/// A1b: mount a model (auto-detecting `P64` vs GGUF by magic) and run ONE decode of `prompt` for
 /// `decode_tokens`, returning `(text, decode_tok_s)`. For a ternary `.q42` the FFN routing follows
 /// the global `set_ternary_ffn` toggle, so a caller can measure GPU-ON vs CPU-OFF on identical
 /// weights. Caller sets the toggle before invoking. (Use the `_blocking` wrapper from sync code.)
@@ -775,7 +774,7 @@ pub fn decode_with_metrics(
         let mut buf = [0u8; 4];
         std::fs::File::open(model_path)
             .and_then(|mut f| f.read_exact(&mut buf))
-            .map(|_| &buf == b"Q42W")
+            .map(|_| &buf == b"p64\0")
             .unwrap_or(false)
     };
     let agent = LocalLlmAgent::with_local_backend(
@@ -993,7 +992,7 @@ pub fn perplexity_eval_blocking(model_path: &str, max_tok: usize) -> Result<(f64
             use std::io::Read;
             std::fs::File::open(&model_path)
                 .and_then(|mut f| f.read_exact(&mut magic))
-                .map(|_| &magic == b"Q42W")
+                .map(|_| &magic == b"p64\0")
                 .unwrap_or(false)
         };
         if is_q42 {
@@ -1010,17 +1009,17 @@ pub fn perplexity_eval_blocking(model_path: &str, max_tok: usize) -> Result<(f64
             .gguf_mmap
             .clone()
             .ok_or_else(|| "model did not memory-map (load failed)".to_string())?;
-        let is_q42_mmap = mmap.len() >= 4 && mmap[0..4] == *b"Q42W";
+        let is_q42_mmap = mmap.len() >= 4 && mmap[0..4] == *b"p64\0";
         let tok = if is_q42_mmap {
-            crate::q42_weight::Q42TensorIndex::from_q42(&mmap)
+            crate::p64_weight::P64TensorIndex::from_p64(&mmap)
                 .ok()
-                .and_then(|qi| GgufTokenizer::from_q42_section(qi.tokenizer_bytes(&mmap)))
+                .and_then(|qi| GgufTokenizer::from_p64_section(qi.tokenizer_bytes(&mmap)))
                 .unwrap_or_default()
         } else {
             GgufTokenizer::from_gguf(&mmap)
         };
         let tensor_idx = if is_q42_mmap {
-            crate::q42_weight::Q42TensorIndex::from_q42(&mmap)
+            crate::p64_weight::P64TensorIndex::from_p64(&mmap)
                 .map(|qi| qi.to_gguf_index())
                 .map_err(|e| format!("q42 index: {e}"))?
         } else {
@@ -1073,7 +1072,8 @@ pub fn perplexity_eval_blocking(model_path: &str, max_tok: usize) -> Result<(f64
                     i as u32,
                     0, // 0 = all layers (full model depth)
                 );
-                let _ = engine.apply_output_norm_inplace(&tensor_idx, &mut emb_buf[..emb_dim], emb_dim);
+                let _ =
+                    engine.apply_output_norm_inplace(&tensor_idx, &mut emb_buf[..emb_dim], emb_dim);
                 let n = engine.dispatch_output_logits_into(
                     &tensor_idx,
                     &emb_buf[..emb_dim],
@@ -1110,9 +1110,9 @@ pub fn awq_sweep_blocking(
     gguf_path: &str,
     alphas: &[f32],
     max_tok: usize,
-    quant: crate::q42_weight::FfnQuant,
+    quant: crate::p64_weight::FfnQuant,
 ) -> Result<(f64, Vec<(f32, f64, f64)>), String> {
-    use crate::q42_weight::compile_gguf_to_q42_ffn_quant_awq;
+    use crate::p64_weight::compile_gguf_to_q42_ffn_quant_awq;
 
     let bytes = std::fs::read(gguf_path).map_err(|e| format!("read gguf: {e}"))?;
     let idx = crate::gguf_sharder::GgufTensorIndex::from_gguf(&bytes);
@@ -1134,11 +1134,15 @@ pub fn awq_sweep_blocking(
 
     // 2. Sweep: AWQ-scaled .q42 per α → eval PPL + coherence. Ternary needs the resident 2-bit path;
     //    Q4_0 runs through the standard quantized GEMM (no ternary toggle).
-    set_ternary_ffn(matches!(quant, crate::q42_weight::FfnQuant::Ternary));
+    set_ternary_ffn(matches!(quant, crate::p64_weight::FfnQuant::Ternary));
     let tmp = std::env::temp_dir();
     let mut results = Vec::with_capacity(alphas.len());
     for &alpha in alphas {
-        let scales = if alpha == 0.0 { None } else { Some(stats.as_slice()) };
+        let scales = if alpha == 0.0 {
+            None
+        } else {
+            Some(stats.as_slice())
+        };
         let q42 = compile_gguf_to_q42_ffn_quant_awq(&bytes, 14, scales, alpha, quant)
             .map_err(|e| format!("AWQ compile (alpha={alpha}): {e}"))?;
         let path = tmp.join(format!("awq_sweep_a{:.2}.q42", alpha));

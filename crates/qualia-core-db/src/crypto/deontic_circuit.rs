@@ -6,7 +6,9 @@ use ark_bls12_381::{Bls12_381, Fr};
 #[cfg(feature = "zk-culling")]
 use ark_groth16::{Groth16, Proof, ProvingKey, VerifyingKey};
 #[cfg(feature = "zk-culling")]
-use ark_relations::gr1cs::{ConstraintSynthesizer, ConstraintSystemRef, LinearCombination, SynthesisError, Variable};
+use ark_relations::gr1cs::{
+    ConstraintSynthesizer, ConstraintSystemRef, LinearCombination, SynthesisError, Variable,
+};
 #[cfg(feature = "zk-culling")]
 use ark_serialize::CanonicalDeserialize;
 #[cfg(feature = "zk-culling")]
@@ -26,19 +28,20 @@ pub struct DeonticAccessCircuit {
 impl ConstraintSynthesizer<Fr> for DeonticAccessCircuit {
     fn generate_constraints(self, cs: ConstraintSystemRef<Fr>) -> Result<(), SynthesisError> {
         let did_var = cs.new_witness_variable(|| {
-            self.user_did_commitment.ok_or(SynthesisError::AssignmentMissing)
+            self.user_did_commitment
+                .ok_or(SynthesisError::AssignmentMissing)
         })?;
-        let role_var = cs.new_witness_variable(|| {
-            self.role_id.ok_or(SynthesisError::AssignmentMissing)
-        })?;
+        let role_var =
+            cs.new_witness_variable(|| self.role_id.ok_or(SynthesisError::AssignmentMissing))?;
         let action_var = cs.new_witness_variable(|| {
-            self.action_permission.ok_or(SynthesisError::AssignmentMissing)
+            self.action_permission
+                .ok_or(SynthesisError::AssignmentMissing)
         })?;
-        let root_var = cs.new_input_variable(|| {
-            self.policy_root.ok_or(SynthesisError::AssignmentMissing)
-        })?;
+        let root_var =
+            cs.new_input_variable(|| self.policy_root.ok_or(SynthesisError::AssignmentMissing))?;
         let time_var = cs.new_input_variable(|| {
-            self.temporal_constraint.ok_or(SynthesisError::AssignmentMissing)
+            self.temporal_constraint
+                .ok_or(SynthesisError::AssignmentMissing)
         })?;
 
         // Access constraint: the prover's secret (did, role, action) must sum to the
@@ -67,7 +70,9 @@ pub struct ZkAccessVerifier {
 #[cfg(feature = "zk-culling")]
 impl ZkAccessVerifier {
     pub fn new() -> Self {
-        Self { verifying_key: None }
+        Self {
+            verifying_key: None,
+        }
     }
 
     pub fn verify_access(
@@ -76,17 +81,19 @@ impl ZkAccessVerifier {
         public_inputs: &[Fr],
     ) -> Result<bool, crate::fiduciary_crypto::MlDsaError> {
         if let Some(ref vk) = self.verifying_key {
-            let parsed_proof = Proof::<Bls12_381>::deserialize_uncompressed(&mut &*proof)
-                .map_err(|e| {
+            let parsed_proof =
+                Proof::<Bls12_381>::deserialize_uncompressed(&mut &*proof).map_err(|e| {
                     crate::fiduciary_crypto::MlDsaError::SignatureVerificationFailed(e.to_string())
                 })?;
             Groth16::<Bls12_381>::verify(vk, public_inputs, &parsed_proof).map_err(|e| {
                 crate::fiduciary_crypto::MlDsaError::SignatureVerificationFailed(e.to_string())
             })
         } else {
-            Err(crate::fiduciary_crypto::MlDsaError::SignatureVerificationFailed(
-                "Verifying key not loaded".to_string(),
-            ))
+            Err(
+                crate::fiduciary_crypto::MlDsaError::SignatureVerificationFailed(
+                    "Verifying key not loaded".to_string(),
+                ),
+            )
         }
     }
 }

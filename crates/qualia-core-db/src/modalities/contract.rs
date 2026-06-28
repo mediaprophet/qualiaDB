@@ -141,22 +141,40 @@ mod tests {
         let deliver_goods = crate::q_hash("act:deliverGoods");
         let forbidden = [waive_dignity];
         assert!(terms_respect_limits(&[deliver_goods], &forbidden));
-        assert!(!terms_respect_limits(&[deliver_goods, waive_dignity], &forbidden), "a void term");
+        assert!(
+            !terms_respect_limits(&[deliver_goods, waive_dignity], &forbidden),
+            "a void term"
+        );
         assert!(terms_respect_limits(&[], &forbidden));
     }
 
     #[test]
     fn breach_state_machine() {
         // Precedent unmet → Pending.
-        assert_eq!(contract_state(false, false, false, true), ContractState::Pending);
+        assert_eq!(
+            contract_state(false, false, false, true),
+            ContractState::Pending
+        );
         // In force, nothing yet → Active.
-        assert_eq!(contract_state(true, false, false, false), ContractState::Active);
+        assert_eq!(
+            contract_state(true, false, false, false),
+            ContractState::Active
+        );
         // Performed → Performed.
-        assert_eq!(contract_state(true, false, true, false), ContractState::Performed);
+        assert_eq!(
+            contract_state(true, false, true, false),
+            ContractState::Performed
+        );
         // Condition subsequent occurred → Discharged (even if deadline passed).
-        assert_eq!(contract_state(true, true, false, true), ContractState::Discharged);
+        assert_eq!(
+            contract_state(true, true, false, true),
+            ContractState::Discharged
+        );
         // Deadline passed, no performance, no discharge → Breached.
-        assert_eq!(contract_state(true, false, false, true), ContractState::Breached);
+        assert_eq!(
+            contract_state(true, false, false, true),
+            ContractState::Breached
+        );
     }
 
     #[test]
@@ -165,7 +183,10 @@ mod tests {
         assert_eq!(performance_ratio(5.0, 0.0), 1.0); // nothing required → satisfied
         assert!(performance_met(10.0, 10.0, true));
         assert!(!performance_met(9.9, 10.0, true), "under-delivered");
-        assert!(!performance_met(10.0, 10.0, false), "untrusted oracle → fail closed");
+        assert!(
+            !performance_met(10.0, 10.0, false),
+            "untrusted oracle → fail closed"
+        );
     }
 
     #[test]
@@ -176,7 +197,11 @@ mod tests {
         let chain = [prime, sub1, sub2];
         assert_eq!(liable_party(&chain, 0), Some(prime));
         assert_eq!(liable_party(&chain, 2), Some(sub2));
-        assert_eq!(liable_party(&chain, 9), Some(sub2), "capped at the performing sub-contractor");
+        assert_eq!(
+            liable_party(&chain, 9),
+            Some(sub2),
+            "capped at the performing sub-contractor"
+        );
         assert_eq!(liable_party(&[], 0), None);
     }
 
@@ -195,9 +220,19 @@ mod tests {
         // Full assent + both intact → binding.
         assert!(is_binding_contract(true, true, intact, intact));
         // Acceptor under duress → not binding (the agreement is voidable, not binding).
-        assert!(!is_binding_contract(true, true, intact, CapacityStatus::UnderDuress));
+        assert!(!is_binding_contract(
+            true,
+            true,
+            intact,
+            CapacityStatus::UnderDuress
+        ));
         // Offeror impaired → not binding.
-        assert!(!is_binding_contract(true, true, CapacityStatus::Impaired, intact));
+        assert!(!is_binding_contract(
+            true,
+            true,
+            CapacityStatus::Impaired,
+            intact
+        ));
         // Mere offer (no assent) → not binding even with capacity.
         assert!(!is_binding_contract(true, false, intact, intact));
     }

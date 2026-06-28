@@ -22,16 +22,30 @@ pub struct RidgeModel {
 
 impl RidgeModel {
     pub fn predict_row(&self, x_row: &[f64]) -> f64 {
-        self.intercept + self.coefficients.iter().zip(x_row).map(|(b, x)| b * x).sum::<f64>()
+        self.intercept
+            + self
+                .coefficients
+                .iter()
+                .zip(x_row)
+                .map(|(b, x)| b * x)
+                .sum::<f64>()
     }
     pub fn predict(&self, x: &[f64], n: usize, p: usize) -> Vec<f64> {
-        (0..n).map(|i| self.predict_row(&x[i * p..(i + 1) * p])).collect()
+        (0..n)
+            .map(|i| self.predict_row(&x[i * p..(i + 1) * p]))
+            .collect()
     }
 }
 
 /// Fit ridge regression with penalty `lambda ≥ 0`. `lambda = 0` reproduces OLS.
 /// Fails closed on shape mismatch / `n < 2`.
-pub fn fit(x: &[f64], y: &[f64], n: usize, p: usize, lambda: f64) -> Result<RidgeModel, LearningError> {
+pub fn fit(
+    x: &[f64],
+    y: &[f64],
+    n: usize,
+    p: usize,
+    lambda: f64,
+) -> Result<RidgeModel, LearningError> {
     if n == 0 || p == 0 || x.len() != n * p || y.len() != n {
         return Err(LearningError::InvalidDimension);
     }
@@ -60,7 +74,18 @@ pub fn fit(x: &[f64], y: &[f64], n: usize, p: usize, lambda: f64) -> Result<Ridg
 
     // A = XcᵀXc + λI, b = Xcᵀyc.
     let mut a = vec![0.0; p * p];
-    gemm(Transpose::Yes, Transpose::No, p, p, n, 1.0, &xc, &xc, 0.0, &mut a)?;
+    gemm(
+        Transpose::Yes,
+        Transpose::No,
+        p,
+        p,
+        n,
+        1.0,
+        &xc,
+        &xc,
+        0.0,
+        &mut a,
+    )?;
     for j in 0..p {
         a[j * p + j] += lambda;
     }
@@ -73,9 +98,18 @@ pub fn fit(x: &[f64], y: &[f64], n: usize, p: usize, lambda: f64) -> Result<Ridg
     cholesky_solve(p, &l, &b, &mut coefficients)?;
 
     // Recover the un-penalized intercept.
-    let intercept = ybar - coefficients.iter().zip(xbar.iter()).map(|(b, m)| b * m).sum::<f64>();
+    let intercept = ybar
+        - coefficients
+            .iter()
+            .zip(xbar.iter())
+            .map(|(b, m)| b * m)
+            .sum::<f64>();
 
-    Ok(RidgeModel { coefficients, intercept, lambda })
+    Ok(RidgeModel {
+        coefficients,
+        intercept,
+        lambda,
+    })
 }
 
 #[cfg(test)]
@@ -101,7 +135,12 @@ mod tests {
         let small = fit(&x, &y, 5, 2, 0.0).unwrap();
         let big = fit(&x, &y, 5, 2, 50.0).unwrap();
         let norm = |m: &RidgeModel| m.coefficients.iter().map(|c| c * c).sum::<f64>().sqrt();
-        assert!(norm(&big) < norm(&small), "ridge must shrink: {} !< {}", norm(&big), norm(&small));
+        assert!(
+            norm(&big) < norm(&small),
+            "ridge must shrink: {} !< {}",
+            norm(&big),
+            norm(&small)
+        );
     }
 
     #[test]
@@ -109,7 +148,10 @@ mod tests {
         // x2 = 2·x1 (collinear) — OLS is singular, ridge regularizes and solves.
         let x = [1.0, 2.0, 2.0, 4.0, 3.0, 6.0, 4.0, 8.0, 5.0, 10.0];
         let y = [1.0, 2.0, 3.0, 4.0, 5.0];
-        assert_eq!(linear::fit(&x, &y, 5, 2, true).unwrap_err(), LearningError::Singular);
+        assert_eq!(
+            linear::fit(&x, &y, 5, 2, true).unwrap_err(),
+            LearningError::Singular
+        );
         let ridge = fit(&x, &y, 5, 2, 1.0).unwrap();
         assert!(ridge.coefficients.iter().all(|c| c.is_finite()));
     }

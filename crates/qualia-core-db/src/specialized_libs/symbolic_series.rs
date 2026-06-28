@@ -29,13 +29,16 @@ pub fn taylor_eval(coeffs: &[f64], a: f64, x: f64) -> f64 {
 
 #[cfg(test)]
 mod tests {
-    use super::*;
     use super::super::symbolic_algebra::{add, c, mul, pow, sqrt, var};
+    use super::*;
 
     #[test]
     fn series_of_polynomial_is_exact() {
         // f = x³ − 2x + 1 about 0 → coeffs [1, −2, 0, 1], higher are 0.
-        let f = add(super::super::symbolic_algebra::sub(pow(var("x"), 3), mul(c(2.0), var("x"))), c(1.0));
+        let f = add(
+            super::super::symbolic_algebra::sub(pow(var("x"), 3), mul(c(2.0), var("x"))),
+            c(1.0),
+        );
         let coeffs = taylor_coefficients(&f, "x", 0.0, 5).unwrap();
         assert!((coeffs[0] - 1.0).abs() < 1e-9);
         assert!((coeffs[1] + 2.0).abs() < 1e-9);

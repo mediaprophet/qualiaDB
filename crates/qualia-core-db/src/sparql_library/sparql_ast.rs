@@ -62,7 +62,11 @@ impl Default for SelectQuery {
             root_pattern: 0,
             group_by: [0; MAX_VARIABLES],
             group_by_count: 0,
-            aggregates: [crate::sparql_planner::AggregateSpec { func: 0, input_var: 0, output_var: 0 }; 16],
+            aggregates: [crate::sparql_planner::AggregateSpec {
+                func: 0,
+                input_var: 0,
+                output_var: 0,
+            }; 16],
             aggregate_count: 0,
             having: None,
             order_by: [OrderCondition::default(); MAX_ORDER_CONDITIONS],
@@ -111,7 +115,7 @@ pub struct DescribeQuery {
 #[derive(Debug, Clone, Copy, PartialEq, Eq)]
 pub enum TemporalMode {
     /// Assertion-time snapshot: include quins with `prov:generatedAtTime ≤ timestamp_ms`.
-    AsOf   = 0,
+    AsOf = 0,
     /// Valid-time point: include quins where `startedAtTime ≤ t ≤ endedAtTime`.
     AtTime = 1,
 }
@@ -127,14 +131,9 @@ pub enum Pattern {
         object: u64,
     },
     /// OPTIONAL pattern - references inner pattern by ID
-    Optional {
-        inner: PatternId,
-    },
+    Optional { inner: PatternId },
     /// UNION pattern - references left and right by IDs
-    Union {
-        left: PatternId,
-        right: PatternId,
-    },
+    Union { left: PatternId, right: PatternId },
     /// GRAPH pattern - references graph var/IRI and inner pattern
     Graph {
         graph_var_or_id: u64,
@@ -146,14 +145,9 @@ pub enum Pattern {
         expression: ExpressionId,
     },
     /// MINUS pattern
-    Minus {
-        inner: PatternId,
-    },
+    Minus { inner: PatternId },
     /// Group graph pattern - references range in child array
-    Group {
-        start_idx: u16,
-        len: u16,
-    },
+    Group { start_idx: u16, len: u16 },
     /// Property path pattern (SPARQL 1.1)
     PropertyPath {
         subject: u64,
@@ -193,15 +187,9 @@ pub enum Path {
     /// Inverse predicate (^pred)
     Inverse(PathId),
     /// Sequence (pred1/pred2)
-    Sequence {
-        left: PathId,
-        right: PathId,
-    },
+    Sequence { left: PathId, right: PathId },
     /// Alternation (pred1|pred2)
-    Alternative {
-        left: PathId,
-        right: PathId,
-    },
+    Alternative { left: PathId, right: PathId },
     /// Zero or more (pred*)
     ZeroOrMore(PathId),
     /// One or more (pred+)
@@ -223,10 +211,7 @@ pub enum Expression {
     /// IRI reference
     Iri(u64),
     /// Unary operation
-    UnaryOp {
-        op: UnaryOp,
-        expr: ExpressionId,
-    },
+    UnaryOp { op: UnaryOp, expr: ExpressionId },
     /// Binary operation
     BinaryOp {
         op: BinaryOp,
@@ -376,7 +361,11 @@ pub struct SparqlQueryContext {
 impl SparqlQueryContext {
     pub fn new() -> Self {
         Self {
-            patterns: [Pattern::Triple { subject: 0, predicate: 0, object: 0 }; MAX_PATTERNS],
+            patterns: [Pattern::Triple {
+                subject: 0,
+                predicate: 0,
+                object: 0,
+            }; MAX_PATTERNS],
             pattern_count: 0,
             expressions: [Expression::Variable(0); MAX_EXPRESSIONS],
             expression_count: 0,
@@ -390,10 +379,17 @@ impl SparqlQueryContext {
                 root_pattern: 0,
                 group_by: [0; MAX_VARIABLES],
                 group_by_count: 0,
-                aggregates: [crate::sparql_planner::AggregateSpec { func: 0, input_var: 0, output_var: 0 }; 16],
+                aggregates: [crate::sparql_planner::AggregateSpec {
+                    func: 0,
+                    input_var: 0,
+                    output_var: 0,
+                }; 16],
                 aggregate_count: 0,
                 having: None,
-                order_by: [OrderCondition { expr: 0, ascending: true }; MAX_ORDER_CONDITIONS],
+                order_by: [OrderCondition {
+                    expr: 0,
+                    ascending: true,
+                }; MAX_ORDER_CONDITIONS],
                 order_by_count: 0,
                 limit: None,
                 offset: 0,
@@ -537,13 +533,13 @@ mod tests {
     #[test]
     fn test_query_context_allocation() {
         let mut ctx = SparqlQueryContext::new();
-        
+
         let pattern = Pattern::Triple {
             subject: 1,
             predicate: 2,
             object: 3,
         };
-        
+
         let id = ctx.alloc_pattern(pattern).unwrap();
         assert_eq!(id, 0);
         assert_eq!(ctx.pattern_count, 1);
@@ -552,10 +548,10 @@ mod tests {
     #[test]
     fn test_variable_registration() {
         let mut ctx = SparqlQueryContext::new();
-        
+
         let id1 = ctx.register_variable("?x").unwrap();
         let id2 = ctx.register_variable("?y").unwrap();
-        
+
         assert_eq!(id1, 0);
         assert_eq!(id2, 1);
         assert_eq!(ctx.variable_count, 2);
@@ -564,10 +560,10 @@ mod tests {
     #[test]
     fn test_variable_duplicate() {
         let mut ctx = SparqlQueryContext::new();
-        
+
         let id1 = ctx.register_variable("?x").unwrap();
         let id2 = ctx.register_variable("?x").unwrap();
-        
+
         assert_eq!(id1, id2);
         assert_eq!(ctx.variable_count, 1);
     }
@@ -575,7 +571,7 @@ mod tests {
     #[test]
     fn test_binding_row() {
         let mut row = BindingRow::new();
-        
+
         row.set(0, 42);
         assert_eq!(row.get(0), Some(42));
         assert_eq!(row.get(1), None);
@@ -584,17 +580,17 @@ mod tests {
     #[test]
     fn test_optional_pattern_index() {
         let mut ctx = SparqlQueryContext::new();
-        
+
         let inner = Pattern::Triple {
             subject: 1,
             predicate: 2,
             object: 3,
         };
         let inner_id = ctx.alloc_pattern(inner).unwrap();
-        
+
         let optional = Pattern::Optional { inner: inner_id };
         let optional_id = ctx.alloc_pattern(optional).unwrap();
-        
+
         assert_eq!(ctx.pattern_count, 2);
         if let Pattern::Optional { inner } = ctx.patterns[optional_id as usize] {
             assert_eq!(inner, inner_id);
@@ -606,7 +602,7 @@ mod tests {
     #[test]
     fn test_union_pattern_index() {
         let mut ctx = SparqlQueryContext::new();
-        
+
         let left = Pattern::Triple {
             subject: 1,
             predicate: 2,
@@ -617,16 +613,16 @@ mod tests {
             predicate: 5,
             object: 6,
         };
-        
+
         let left_id = ctx.alloc_pattern(left).unwrap();
         let right_id = ctx.alloc_pattern(right).unwrap();
-        
+
         let union = Pattern::Union {
             left: left_id,
             right: right_id,
         };
         let union_id = ctx.alloc_pattern(union).unwrap();
-        
+
         assert_eq!(ctx.pattern_count, 3);
         if let Pattern::Union { left, right } = ctx.patterns[union_id as usize] {
             assert_eq!(left, left_id);

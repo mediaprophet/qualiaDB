@@ -128,7 +128,11 @@ fn resources() -> &'static TsResources {
             usage: wgpu::BufferUsages::MAP_READ | wgpu::BufferUsages::COPY_DST,
             mapped_at_creation: false,
         });
-        TsResources { qset, resolve, staging }
+        TsResources {
+            qset,
+            resolve,
+            staging,
+        }
     })
 }
 
@@ -358,7 +362,10 @@ fn main(@builtin(global_invocation_id) gid: vec3<u32>) {
         queue.submit(Some(encoder.finish()));
         accumulate(Phase::Gemm);
 
-        assert!(any_recorded(), "profiler recorded no timestamps on a TIMESTAMP_QUERY device");
+        assert!(
+            any_recorded(),
+            "profiler recorded no timestamps on a TIMESTAMP_QUERY device"
+        );
         let snap = snapshot();
         let gemm = snap
             .iter()
@@ -372,7 +379,10 @@ fn main(@builtin(global_invocation_id) gid: vec3<u32>) {
             gemm.calls
         );
         assert_eq!(gemm.calls, 1, "expected exactly one recorded pass");
-        assert!(gemm.total_ns > 0, "expected non-zero GPU time for a 4096-iter kernel");
+        assert!(
+            gemm.total_ns > 0,
+            "expected non-zero GPU time for a 4096-iter kernel"
+        );
 
         set_enabled(false);
     }

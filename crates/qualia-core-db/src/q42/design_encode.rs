@@ -159,10 +159,7 @@ fn auto_position(index: usize, total: usize) -> [f32; 3] {
     ]
 }
 
-fn relation_midpoint(
-    from: &[f32; 3],
-    to: &[f32; 3],
-) -> [f32; 3] {
+fn relation_midpoint(from: &[f32; 3], to: &[f32; 3]) -> [f32; 3] {
     [
         (from[0] + to[0]) * 0.5,
         (from[1] + to[1]) * 0.5 + 0.25,

@@ -9,19 +9,19 @@
 //! demonstration only. That fake lattice path has been removed and replaced with the
 //! standardized algorithm. The serialized key/signature byte layouts therefore changed.
 
-use std::collections::HashMap;
-use std::sync::{Arc, Mutex};
+use fips204::ml_dsa_65;
+use fips204::traits::{KeyGen, SerDes, Signer, Verifier};
 use serde::{Deserialize, Serialize};
 use serde_bytes;
 use sha3::{Digest, Sha3_512};
-use fips204::ml_dsa_65;
-use fips204::traits::{KeyGen, SerDes, Signer, Verifier};
+use std::collections::HashMap;
+use std::sync::{Arc, Mutex};
 
 /// ML-DSA-65 parameters (FIPS-204, NIST security category 3).
 pub const ML_DSA_SECURITY_LEVEL: usize = 192; // approximate classical security bits
 pub const ML_DSA_PRIVATE_KEY_SIZE: usize = ml_dsa_65::SK_LEN; // 4032 bytes
-pub const ML_DSA_PUBLIC_KEY_SIZE: usize = ml_dsa_65::PK_LEN;  // 1952 bytes
-pub const ML_DSA_SIGNATURE_SIZE: usize = ml_dsa_65::SIG_LEN;  // 3309 bytes
+pub const ML_DSA_PUBLIC_KEY_SIZE: usize = ml_dsa_65::PK_LEN; // 1952 bytes
+pub const ML_DSA_SIGNATURE_SIZE: usize = ml_dsa_65::SIG_LEN; // 3309 bytes
 
 /// ML-DSA cryptographic signer
 pub struct MlDsaSigner {
@@ -119,10 +119,14 @@ pub struct AuditEntry {
 impl MlDsaSigner {
     /// Generate a new real ML-DSA-65 (FIPS-204) key pair.
     pub fn generate_keypair() -> Result<(MlDsaPrivateKey, MlDsaPublicKey), MlDsaError> {
-        let (pk, sk) = ml_dsa_65::try_keygen()
-            .map_err(|e| MlDsaError::KeyGenerationFailed(e.to_string()))?;
-        let private_key = MlDsaPrivateKey { sk_bytes: sk.into_bytes().to_vec() };
-        let public_key = MlDsaPublicKey { pk_bytes: pk.into_bytes().to_vec() };
+        let (pk, sk) =
+            ml_dsa_65::try_keygen().map_err(|e| MlDsaError::KeyGenerationFailed(e.to_string()))?;
+        let private_key = MlDsaPrivateKey {
+            sk_bytes: sk.into_bytes().to_vec(),
+        };
+        let public_key = MlDsaPublicKey {
+            pk_bytes: pk.into_bytes().to_vec(),
+        };
         Ok((private_key, public_key))
     }
 
@@ -140,12 +144,21 @@ impl MlDsaSigner {
     /// The `context` fields are bound to the signature via the FIPS-204 context string
     /// (derived deterministically by `derive_ctx`). Sign and verify must use an equal
     /// `CryptoContext`.
-    pub fn sign(&self, message: &[u8], context: &CryptoContext) -> Result<MlDsaSignature, MlDsaError> {
+    pub fn sign(
+        &self,
+        message: &[u8],
+        context: &CryptoContext,
+    ) -> Result<MlDsaSignature, MlDsaError> {
         Self::sign_with_secret(&self.private_key.sk_bytes, message, context)
     }
 
     /// Verify an ML-DSA-65 signature over `message` against this signer's public key.
-    pub fn verify(&self, message: &[u8], signature: &MlDsaSignature, context: &CryptoContext) -> Result<bool, MlDsaError> {
+    pub fn verify(
+        &self,
+        message: &[u8],
+        signature: &MlDsaSignature,
+        context: &CryptoContext,
+    ) -> Result<bool, MlDsaError> {
         Self::verify_with_public(&self.public_key.pk_bytes, message, signature, context)
     }
 
@@ -180,28 +193,50 @@ impl MlDsaSigner {
     }
 
     /// Sign `message` with a serialized ML-DSA-65 secret key (`SK_LEN` bytes).
-    pub fn sign_with_secret(sk_bytes: &[u8], message: &[u8], context: &CryptoContext) -> Result<MlDsaSignature, MlDsaError> {
-        let sk_arr: [u8; ml_dsa_65::SK_LEN] = sk_bytes.try_into()
-            .map_err(|_| MlDsaError::SignatureGenerationFailed(
-                format!("secret key must be {} bytes", ml_dsa_65::SK_LEN)))?;
+    pub fn sign_with_secret(
+        sk_bytes: &[u8],
+        message: &[u8],
+        context: &CryptoContext,
+    ) -> Result<MlDsaSignature, MlDsaError> {
+        let sk_arr: [u8; ml_dsa_65::SK_LEN] = sk_bytes.try_into().map_err(|_| {
+            MlDsaError::SignatureGenerationFailed(format!(
+                "secret key must be {} bytes",
+                ml_dsa_65::SK_LEN
+            ))
+        })?;
         let sk = ml_dsa_65::PrivateKey::try_from_bytes(sk_arr)
             .map_err(|e| MlDsaError::SignatureGenerationFailed(e.to_string()))?;
         let ctx = Self::derive_ctx(context);
-        let sig = sk.try_sign(message, &ctx)
+        let sig = sk
+            .try_sign(message, &ctx)
             .map_err(|e| MlDsaError::SignatureGenerationFailed(e.to_string()))?;
-        Ok(MlDsaSignature { sig_bytes: sig.to_vec() })
+        Ok(MlDsaSignature {
+            sig_bytes: sig.to_vec(),
+        })
     }
 
     /// Verify an ML-DSA-65 signature using a serialized public key (`PK_LEN` bytes).
-    pub fn verify_with_public(pk_bytes: &[u8], message: &[u8], signature: &MlDsaSignature, context: &CryptoContext) -> Result<bool, MlDsaError> {
-        let pk_arr: [u8; ml_dsa_65::PK_LEN] = pk_bytes.try_into()
-            .map_err(|_| MlDsaError::SignatureVerificationFailed(
-                format!("public key must be {} bytes", ml_dsa_65::PK_LEN)))?;
+    pub fn verify_with_public(
+        pk_bytes: &[u8],
+        message: &[u8],
+        signature: &MlDsaSignature,
+        context: &CryptoContext,
+    ) -> Result<bool, MlDsaError> {
+        let pk_arr: [u8; ml_dsa_65::PK_LEN] = pk_bytes.try_into().map_err(|_| {
+            MlDsaError::SignatureVerificationFailed(format!(
+                "public key must be {} bytes",
+                ml_dsa_65::PK_LEN
+            ))
+        })?;
         let pk = ml_dsa_65::PublicKey::try_from_bytes(pk_arr)
             .map_err(|e| MlDsaError::SignatureVerificationFailed(e.to_string()))?;
-        let sig_arr: [u8; ml_dsa_65::SIG_LEN] = signature.sig_bytes.as_slice().try_into()
-            .map_err(|_| MlDsaError::SignatureVerificationFailed(
-                format!("signature must be {} bytes", ml_dsa_65::SIG_LEN)))?;
+        let sig_arr: [u8; ml_dsa_65::SIG_LEN] =
+            signature.sig_bytes.as_slice().try_into().map_err(|_| {
+                MlDsaError::SignatureVerificationFailed(format!(
+                    "signature must be {} bytes",
+                    ml_dsa_65::SIG_LEN
+                ))
+            })?;
         let ctx = Self::derive_ctx(context);
         Ok(pk.verify(message, &sig_arr, &ctx))
     }
@@ -261,7 +296,9 @@ impl MlDsaKeyManager {
 
     /// Get default signer
     pub fn get_default_signer(&self) -> Option<Arc<Mutex<MlDsaSigner>>> {
-        self.default_key.as_ref().and_then(|key_id| self.get_signer(key_id))
+        self.default_key
+            .as_ref()
+            .and_then(|key_id| self.get_signer(key_id))
     }
 
     /// List all key IDs
@@ -272,7 +309,7 @@ impl MlDsaKeyManager {
     /// Remove key
     pub fn remove_key(&mut self, key_id: &str) -> Result<(), MlDsaError> {
         self.keys.remove(key_id);
-        
+
         // Update default key if necessary
         if self.default_key.as_ref() == Some(&key_id.to_string()) {
             self.default_key = self.keys.keys().next().cloned();
@@ -293,7 +330,11 @@ impl ContextManager {
     }
 
     /// Create new cryptographic context
-    pub fn create_context(&mut self, domain: String, purpose: String) -> Result<CryptoContext, MlDsaError> {
+    pub fn create_context(
+        &mut self,
+        domain: String,
+        purpose: String,
+    ) -> Result<CryptoContext, MlDsaError> {
         let context = CryptoContext {
             domain,
             purpose,
@@ -306,7 +347,7 @@ impl ContextManager {
 
         // Add to cache
         self.context_cache.push(context.clone());
-        
+
         // Limit cache size
         if self.context_cache.len() > self.max_cache_size {
             self.context_cache.remove(0);
@@ -344,7 +385,11 @@ impl ComplianceChecker {
     }
 
     /// Check cryptographic operation compliance
-    pub fn check_compliance(&mut self, operation: &str, key_id: Option<&str>) -> Result<bool, MlDsaError> {
+    pub fn check_compliance(
+        &mut self,
+        operation: &str,
+        key_id: Option<&str>,
+    ) -> Result<bool, MlDsaError> {
         let timestamp = std::time::SystemTime::now()
             .duration_since(std::time::UNIX_EPOCH)
             .unwrap()
@@ -396,13 +441,21 @@ impl FiduciaryCrypto {
     /// NOTE: The signing context uses timestamp=0 and nonce=[0] so that a matching
     /// `verify()` call (which reconstructs the same deterministic context) will succeed.
     /// A future upgrade to FIPS-204 ML-DSA should embed the context in the signature.
-    pub fn sign(&self, message: &[u8], key_id: Option<&str>, domain: String, purpose: String) -> Result<MlDsaSignature, MlDsaError> {
+    pub fn sign(
+        &self,
+        message: &[u8],
+        key_id: Option<&str>,
+        domain: String,
+        purpose: String,
+    ) -> Result<MlDsaSignature, MlDsaError> {
         let key_manager = self.key_manager.lock().unwrap();
         let signer_arc = if let Some(kid) = key_id {
-            key_manager.get_signer(kid)
+            key_manager
+                .get_signer(kid)
                 .ok_or_else(|| MlDsaError::KeyNotFound(kid.to_string()))?
         } else {
-            key_manager.get_default_signer()
+            key_manager
+                .get_default_signer()
                 .ok_or_else(|| MlDsaError::NoDefaultKey)?
         };
         let signer = signer_arc.lock().unwrap();
@@ -418,13 +471,22 @@ impl FiduciaryCrypto {
     }
 
     /// Verify a signature produced by `sign()` using the internal MlDsaSigner.
-    pub fn verify(&self, message: &[u8], signature: &MlDsaSignature, key_id: Option<&str>, domain: String, purpose: String) -> Result<bool, MlDsaError> {
+    pub fn verify(
+        &self,
+        message: &[u8],
+        signature: &MlDsaSignature,
+        key_id: Option<&str>,
+        domain: String,
+        purpose: String,
+    ) -> Result<bool, MlDsaError> {
         let key_manager = self.key_manager.lock().unwrap();
         let signer_arc = if let Some(kid) = key_id {
-            key_manager.get_signer(kid)
+            key_manager
+                .get_signer(kid)
                 .ok_or_else(|| MlDsaError::KeyNotFound(kid.to_string()))?
         } else {
-            key_manager.get_default_signer()
+            key_manager
+                .get_default_signer()
                 .ok_or_else(|| MlDsaError::NoDefaultKey)?
         };
         let signer = signer_arc.lock().unwrap();
@@ -481,8 +543,12 @@ impl std::fmt::Display for MlDsaError {
             MlDsaError::KeyGenerationFailed(msg) => write!(f, "Key generation failed: {}", msg),
             MlDsaError::KeyNotFound(msg) => write!(f, "Key not found: {}", msg),
             MlDsaError::NoDefaultKey => write!(f, "No default key available"),
-            MlDsaError::SignatureGenerationFailed(msg) => write!(f, "Signature generation failed: {}", msg),
-            MlDsaError::SignatureVerificationFailed(msg) => write!(f, "Signature verification failed: {}", msg),
+            MlDsaError::SignatureGenerationFailed(msg) => {
+                write!(f, "Signature generation failed: {}", msg)
+            }
+            MlDsaError::SignatureVerificationFailed(msg) => {
+                write!(f, "Signature verification failed: {}", msg)
+            }
             MlDsaError::InvalidContext(msg) => write!(f, "Invalid context: {}", msg),
             MlDsaError::ComplianceError(msg) => write!(f, "Compliance error: {}", msg),
             MlDsaError::RandomGenerationError(msg) => write!(f, "Random generation error: {}", msg),
@@ -491,7 +557,6 @@ impl std::fmt::Display for MlDsaError {
 }
 
 impl std::error::Error for MlDsaError {}
-
 
 // ── ML-DSA Verifiable Credential Issuance ─────────────────────────────────────
 
@@ -519,28 +584,28 @@ impl MlDsaVcProof {
     ) -> Result<Self, MlDsaError> {
         // 1. Serialize the claim graph to canonical bytes for signing
         let claim_bytes = Self::serialize_claims(claim_quins);
-        
+
         // 2. Sign with ML-DSA
         let signature = MlDsaSigner::sign_with_secret(issuer_sk, &claim_bytes, context)?;
-        
+
         // 3. Fragment the signature into NQuin-sized chunks (8 bytes per object field)
         let sig_bytes = signature.sig_bytes;
         let total_len = sig_bytes.len();
         let fragment_count = (total_len + 7) / 8; // Ceiling division by 8
-        
+
         let mut fragment_quins = Vec::with_capacity(fragment_count);
-        
+
         for i in 0..fragment_count {
             let start = i * 8;
             let end = (start + 8).min(total_len);
             let chunk = &sig_bytes[start..end];
-            
+
             // Pack 8 bytes into a u64
             let mut object: u64 = 0;
             for (j, &byte) in chunk.iter().enumerate() {
                 object |= (byte as u64) << (j * 8);
             }
-            
+
             let metadata = (i as u64) << 32 | (fragment_count as u64);
             let parity = crate::NQuin::calculate_parity(
                 issuer_did_hash,
@@ -581,13 +646,13 @@ impl MlDsaVcProof {
             metadata: head_metadata,
             parity: head_parity,
         };
-        
+
         Ok(Self {
             head_quin: head,
             fragment_quins,
         })
     }
-    
+
     /// Verify an ML-DSA-signed VC by reassembling the signature fragments
     pub fn verify_vc_mldsa(
         &self,
@@ -623,19 +688,19 @@ impl MlDsaVcProof {
         if signature_bytes.len() != total_len {
             return Ok(false);
         }
-        
+
         // 2. Verify the signature
         let signature = MlDsaSignature {
             sig_bytes: signature_bytes,
         };
-        
+
         // 3. Serialize the claim graph for verification
         let claim_bytes = Self::serialize_claims(claim_quins);
-        
+
         // 4. Verify with ML-DSA
         MlDsaSigner::verify_with_public(issuer_pk, &claim_bytes, &signature, context)
     }
-    
+
     /// Serialize claim Quins to canonical bytes for signing
     fn serialize_claims(claims: &[crate::NQuin]) -> Vec<u8> {
         // Simple serialization: concatenate all NQuin bytes
@@ -652,10 +717,9 @@ impl MlDsaVcProof {
     }
 }
 
-
 // ── Interoperability Cryptographic Algorithms (W3C DID Compatibility) ────
 #[cfg(feature = "interop-crypto")]
-use secp256k1::{Secp256k1, SecretKey, PublicKey, Message, ecdsa};
+use secp256k1::{ecdsa, Message, PublicKey, Secp256k1, SecretKey};
 
 /// Interoperability ECDSA secp256k1 signer for W3C DID compatibility
 #[cfg(feature = "interop-crypto")]
@@ -682,14 +746,14 @@ impl InteropEcdsaSigner {
         let secp = Secp256k1::new();
         let mut rng = secp256k1::rand::rng();
         let (secret_key, public_key) = secp.generate_keypair(&mut rng);
-        
+
         Ok(Self {
             secret_key: Some(secret_key.secret_bytes().to_vec()),
             public_key: Some(public_key.serialize().to_vec()),
             key_id: None,
         })
     }
-    
+
     /// Create signer from existing secret key
     pub fn from_secret_key(sk_bytes: &[u8]) -> Result<Self, MlDsaError> {
         let secp = Secp256k1::new();
@@ -722,42 +786,50 @@ impl InteropEcdsaSigner {
             .clone()
             .ok_or_else(|| MlDsaError::KeyGenerationFailed("No secret key available".to_string()))
     }
-    
+
     /// Sign a message using ECDSA
     pub fn sign(&self, message: &[u8]) -> Result<InteropEcdsaSignature, MlDsaError> {
         let secp = Secp256k1::new();
-        let secret_key = self.secret_key.as_ref()
+        let secret_key = self
+            .secret_key
+            .as_ref()
             .ok_or_else(|| MlDsaError::SignatureGenerationFailed("No secret key".to_string()))?;
         let sk = SecretKey::from_slice(secret_key)
             .map_err(|e| MlDsaError::SignatureGenerationFailed(e.to_string()))?;
-        
+
         let msg = Message::from_digest_slice(message)
             .map_err(|e| MlDsaError::SignatureGenerationFailed(e.to_string()))?;
-        
+
         let sig = secp.sign_ecdsa(msg, &sk);
-        
+
         Ok(InteropEcdsaSignature {
             sig_bytes: sig.serialize_compact().to_vec(),
         })
     }
-    
+
     /// Verify an ECDSA signature
-    pub fn verify(&self, message: &[u8], signature: &InteropEcdsaSignature) -> Result<bool, MlDsaError> {
+    pub fn verify(
+        &self,
+        message: &[u8],
+        signature: &InteropEcdsaSignature,
+    ) -> Result<bool, MlDsaError> {
         let secp = Secp256k1::new();
-        let public_key = self.public_key.as_ref()
+        let public_key = self
+            .public_key
+            .as_ref()
             .ok_or_else(|| MlDsaError::SignatureVerificationFailed("No public key".to_string()))?;
         let pk = PublicKey::from_slice(public_key)
             .map_err(|e| MlDsaError::SignatureVerificationFailed(e.to_string()))?;
-        
+
         let msg = Message::from_digest_slice(message)
             .map_err(|e| MlDsaError::SignatureVerificationFailed(e.to_string()))?;
-        
+
         let sig = ecdsa::Signature::from_compact(&signature.sig_bytes)
             .map_err(|e| MlDsaError::SignatureVerificationFailed(e.to_string()))?;
-        
+
         Ok(secp.verify_ecdsa(msg, &sig, &pk).is_ok())
     }
-    
+
     /// Get the public key
     pub fn public_key(&self) -> Option<&[u8]> {
         self.public_key.as_deref()
@@ -791,7 +863,10 @@ mod tests {
         // A different message must fail verification.
         assert!(!signer.verify(b"forged message", &sig, &context).unwrap());
         // A different context must also fail verification.
-        let other_ctx = CryptoContext { purpose: "other".to_string(), ..context.clone() };
+        let other_ctx = CryptoContext {
+            purpose: "other".to_string(),
+            ..context.clone()
+        };
         assert!(!signer.verify(b"genuine message", &sig, &other_ctx).unwrap());
     }
 
@@ -799,13 +874,16 @@ mod tests {
     fn test_sign_verify() {
         let (private_key, public_key) = MlDsaSigner::generate_keypair().unwrap();
         let signer = MlDsaSigner::from_keypair(private_key, public_key);
-        
+
         let message = b"Hello, QualiaDB!";
         let context = CryptoContext {
             domain: "test".to_string(),
             purpose: "authentication".to_string(),
             timestamp: 1234567890,
-            nonce: [1, 2, 3, 4, 5, 6, 7, 8, 9, 10, 11, 12, 13, 14, 15, 16, 17, 18, 19, 20, 21, 22, 23, 24, 25, 26, 27, 28, 29, 30, 31, 32],
+            nonce: [
+                1, 2, 3, 4, 5, 6, 7, 8, 9, 10, 11, 12, 13, 14, 15, 16, 17, 18, 19, 20, 21, 22, 23,
+                24, 25, 26, 27, 28, 29, 30, 31, 32,
+            ],
         };
 
         let signature = signer.sign(message, &context).unwrap();
@@ -817,12 +895,12 @@ mod tests {
     #[test]
     fn test_key_manager() {
         let mut key_manager = MlDsaKeyManager::new();
-        
+
         key_manager.generate_key("test_key".to_string()).unwrap();
-        
+
         let keys = key_manager.list_keys();
         assert!(keys.contains(&"test_key".to_string()));
-        
+
         let signer = key_manager.get_signer("test_key").unwrap();
         assert!(signer.lock().unwrap().key_id() == Some("test_key"));
     }
@@ -830,14 +908,29 @@ mod tests {
     #[test]
     fn test_fiduciary_crypto() {
         let mut crypto = FiduciaryCrypto::new();
-        
+
         crypto.generate_key("test_key".to_string()).unwrap();
-        
+
         let message = b"Test message";
-        let signature = crypto.sign(message, Some("test_key"), "test".to_string(), "auth".to_string()).unwrap();
-        
-        let is_valid = crypto.verify(message, &signature, Some("test_key"), "test".to_string(), "auth".to_string()).unwrap();
-        
+        let signature = crypto
+            .sign(
+                message,
+                Some("test_key"),
+                "test".to_string(),
+                "auth".to_string(),
+            )
+            .unwrap();
+
+        let is_valid = crypto
+            .verify(
+                message,
+                &signature,
+                Some("test_key"),
+                "test".to_string(),
+                "auth".to_string(),
+            )
+            .unwrap();
+
         assert!(is_valid);
     }
 
@@ -846,19 +939,17 @@ mod tests {
         // Generate ML-DSA keypair
         let (private_key, public_key) = MlDsaSigner::generate_keypair().unwrap();
         let issuer_did_hash = 12345u64;
-        
+
         // Create a simple claim graph (one Quin)
-        let claim_quins = vec![
-            crate::NQuin {
-                subject: issuer_did_hash,
-                predicate: crate::q_hash("test:hasRole"),
-                object: crate::q_hash("test:Admin"),
-                context: issuer_did_hash,
-                metadata: 0,
-                parity: 0,
-            }
-        ];
-        
+        let claim_quins = vec![crate::NQuin {
+            subject: issuer_did_hash,
+            predicate: crate::q_hash("test:hasRole"),
+            object: crate::q_hash("test:Admin"),
+            context: issuer_did_hash,
+            metadata: 0,
+            parity: 0,
+        }];
+
         // Create context for signing
         let context = CryptoContext {
             domain: "test".to_string(),
@@ -866,107 +957,100 @@ mod tests {
             timestamp: 0,
             nonce: [0u8; 32],
         };
-        
+
         // Issue VC
         let proof = MlDsaVcProof::issue_vc_mldsa(
             &claim_quins,
             &private_key.sk_bytes,
             issuer_did_hash,
             &context,
-        ).unwrap();
-        
+        )
+        .unwrap();
+
         // Verify VC
-        let is_valid = proof.verify_vc_mldsa(
-            &claim_quins,
-            &public_key.pk_bytes,
-            &context,
-        ).unwrap();
-        
+        let is_valid = proof
+            .verify_vc_mldsa(&claim_quins, &public_key.pk_bytes, &context)
+            .unwrap();
+
         assert!(is_valid, "VC verification should succeed");
     }
-    
+
     #[test]
     fn test_vc_tampered_fragment_fails() {
         let (private_key, public_key) = MlDsaSigner::generate_keypair().unwrap();
         let issuer_did_hash = 12345u64;
-        
-        let claim_quins = vec![
-            crate::NQuin {
-                subject: issuer_did_hash,
-                predicate: crate::q_hash("test:hasRole"),
-                object: crate::q_hash("test:Admin"),
-                context: issuer_did_hash,
-                metadata: 0,
-                parity: 0,
-            }
-        ];
-        
+
+        let claim_quins = vec![crate::NQuin {
+            subject: issuer_did_hash,
+            predicate: crate::q_hash("test:hasRole"),
+            object: crate::q_hash("test:Admin"),
+            context: issuer_did_hash,
+            metadata: 0,
+            parity: 0,
+        }];
+
         let context = CryptoContext {
             domain: "test".to_string(),
             purpose: "vc-issuance".to_string(),
             timestamp: 0,
             nonce: [0u8; 32],
         };
-        
+
         let mut proof = MlDsaVcProof::issue_vc_mldsa(
             &claim_quins,
             &private_key.sk_bytes,
             issuer_did_hash,
             &context,
-        ).unwrap();
-        
+        )
+        .unwrap();
+
         // Tamper with a fragment
         if !proof.fragment_quins.is_empty() {
             proof.fragment_quins[0].object ^= 0xFF; // Flip bits
         }
-        
-        let is_valid = proof.verify_vc_mldsa(
-            &claim_quins,
-            &public_key.pk_bytes,
-            &context,
-        ).unwrap();
-        
+
+        let is_valid = proof
+            .verify_vc_mldsa(&claim_quins, &public_key.pk_bytes, &context)
+            .unwrap();
+
         assert!(!is_valid, "Tampered fragment should fail verification");
     }
-    
+
     #[test]
     fn test_vc_wrong_key_fails() {
         let (private_key, _public_key) = MlDsaSigner::generate_keypair().unwrap();
         let (wrong_private, wrong_public) = MlDsaSigner::generate_keypair().unwrap();
         let issuer_did_hash = 12345u64;
-        
-        let claim_quins = vec![
-            crate::NQuin {
-                subject: issuer_did_hash,
-                predicate: crate::q_hash("test:hasRole"),
-                object: crate::q_hash("test:Admin"),
-                context: issuer_did_hash,
-                metadata: 0,
-                parity: 0,
-            }
-        ];
-        
+
+        let claim_quins = vec![crate::NQuin {
+            subject: issuer_did_hash,
+            predicate: crate::q_hash("test:hasRole"),
+            object: crate::q_hash("test:Admin"),
+            context: issuer_did_hash,
+            metadata: 0,
+            parity: 0,
+        }];
+
         let context = CryptoContext {
             domain: "test".to_string(),
             purpose: "vc-issuance".to_string(),
             timestamp: 0,
             nonce: [0u8; 32],
         };
-        
+
         let proof = MlDsaVcProof::issue_vc_mldsa(
             &claim_quins,
             &private_key.sk_bytes,
             issuer_did_hash,
             &context,
-        ).unwrap();
-        
+        )
+        .unwrap();
+
         // Try to verify with wrong public key
-        let is_valid = proof.verify_vc_mldsa(
-            &claim_quins,
-            &wrong_public.pk_bytes,
-            &context,
-        ).unwrap();
-        
+        let is_valid = proof
+            .verify_vc_mldsa(&claim_quins, &wrong_public.pk_bytes, &context)
+            .unwrap();
+
         assert!(!is_valid, "Wrong public key should fail verification");
     }
 }

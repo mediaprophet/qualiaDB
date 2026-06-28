@@ -24,15 +24,13 @@ impl GpuFeatureCaps {
             timestamp_query: features.contains(wgpu::Features::TIMESTAMP_QUERY),
             timestamp_query_inside_passes: features
                 .contains(wgpu::Features::TIMESTAMP_QUERY_INSIDE_PASSES),
-            pipeline_statistics_query: features
-                .contains(wgpu::Features::PIPELINE_STATISTICS_QUERY),
+            pipeline_statistics_query: features.contains(wgpu::Features::PIPELINE_STATISTICS_QUERY),
             pipeline_cache: features.contains(wgpu::Features::PIPELINE_CACHE),
             shader_f16: features.contains(wgpu::Features::SHADER_F16),
             shader_int64: features.contains(wgpu::Features::SHADER_INT64),
             subgroup: features.contains(wgpu::Features::SUBGROUP),
             subgroup_barrier: features.contains(wgpu::Features::SUBGROUP_BARRIER),
-            cooperative_matrix: features
-                .contains(wgpu::Features::EXPERIMENTAL_COOPERATIVE_MATRIX),
+            cooperative_matrix: features.contains(wgpu::Features::EXPERIMENTAL_COOPERATIVE_MATRIX),
             ray_query: features.contains(wgpu::Features::EXPERIMENTAL_RAY_QUERY),
         }
     }

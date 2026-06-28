@@ -11,7 +11,9 @@ use crate::render::navigation::PICK_SENTINEL;
 use crate::render::pga::{motor_to_mat4_col, Motor};
 use crate::render::physics::{Aabb, Admission, Joint};
 use crate::render::standpoint::spectator_default;
-use crate::render::telemetry::{AmbientUniforms, ObserverStandpoint, ParticleInstance, SystemTelemetry};
+use crate::render::telemetry::{
+    AmbientUniforms, ObserverStandpoint, ParticleInstance, SystemTelemetry,
+};
 use crate::shaders::viewport::{AMBIENT_WGSL, BLOOM_WGSL, MESH_WGSL, PROJECTOR_WGSL};
 use crate::tensor::buffer_export::{
     read_tensor_at, tensor_node_count, TENSOR_HEADER_BYTES, TENSOR_STRIDE,
@@ -140,7 +142,10 @@ impl PortalGpu {
     /// Native sync wrapper around the async initialiser (`block_on` traps in browser WASM, so the
     /// browser path must call `try_new_async` and await it instead).
     #[cfg(not(target_arch = "wasm32"))]
-    pub fn try_new(canvas: &web_sys::HtmlCanvasElement, particle_cap: usize) -> Result<Self, String> {
+    pub fn try_new(
+        canvas: &web_sys::HtmlCanvasElement,
+        particle_cap: usize,
+    ) -> Result<Self, String> {
         pollster::block_on(Self::try_new_async(canvas, particle_cap))
     }
 
@@ -173,19 +178,17 @@ impl PortalGpu {
             .map_err(|e| format!("no WebGPU adapter: {e}"))?;
 
         let (device, queue) = adapter
-            .request_device(
-                &wgpu::DeviceDescriptor {
-                    label: Some("qualia-portal-gpu"),
-                    required_features: wgpu::Features::empty(),
-                    // WebGPU baseline limits — NOT downlevel_webgl2_defaults, which set
-                    // max_storage_buffers_per_shader_stage = 0 and silently invalidate both portal
-                    // pipelines (their vertex shaders read the tensor SOA / particle storage
-                    // buffers), turning the viewport black. Any BROWSER_WEBGPU adapter supports the
-                    // baseline. The limits-shim strips fields Chrome doesn't recognise.
-                    required_limits: wgpu::Limits::default(),
-                    ..Default::default()
-                },
-            )
+            .request_device(&wgpu::DeviceDescriptor {
+                label: Some("qualia-portal-gpu"),
+                required_features: wgpu::Features::empty(),
+                // WebGPU baseline limits — NOT downlevel_webgl2_defaults, which set
+                // max_storage_buffers_per_shader_stage = 0 and silently invalidate both portal
+                // pipelines (their vertex shaders read the tensor SOA / particle storage
+                // buffers), turning the viewport black. Any BROWSER_WEBGPU adapter supports the
+                // baseline. The limits-shim strips fields Chrome doesn't recognise.
+                required_limits: wgpu::Limits::default(),
+                ..Default::default()
+            })
             .await
             .map_err(|e| format!("device: {e}"))?;
 
@@ -333,7 +336,10 @@ impl PortalGpu {
         let projector_pipeline_layout =
             device.create_pipeline_layout(&wgpu::PipelineLayoutDescriptor {
                 label: Some("portal-projector-pipeline-layout"),
-                bind_group_layouts: &[Some(&projector_camera_layout), Some(&projector_tensor_layout)],
+                bind_group_layouts: &[
+                    Some(&projector_camera_layout),
+                    Some(&projector_tensor_layout),
+                ],
                 immediate_size: 0,
             });
 
@@ -497,85 +503,92 @@ impl PortalGpu {
         });
 
         let bloom_wanted = portal_bloom_enabled() && probe_hdr_format(&device);
-        let (ambient_pipeline_hdr, projector_pipeline_hdr, mesh_pipeline_hdr, bloom) = if bloom_wanted {
-            let ambient_hdr = device.create_render_pipeline(&wgpu::RenderPipelineDescriptor {
-                label: Some("portal-ambient-hdr"),
-                layout: Some(&ambient_pipeline_layout),
-                vertex: wgpu::VertexState {
-                    module: &ambient_shader,
-                    entry_point: Some("vertex_main"),
-                    compilation_options: Default::default(),
-                    buffers: &[],
-                },
-                fragment: Some(wgpu::FragmentState {
-                    module: &ambient_shader,
-                    entry_point: Some("fragment_main"),
-                    compilation_options: Default::default(),
-                    targets: &[Some(hdr_color_target_state())],
-                }),
-                primitive: wgpu::PrimitiveState {
-                    topology: wgpu::PrimitiveTopology::TriangleList,
-                    ..Default::default()
-                },
-                depth_stencil: Some(depth_stencil_state_read_only()),
-                multisample: wgpu::MultisampleState::default(),
-                multiview_mask: None,
-                cache: None,
-            });
-            let projector_hdr = device.create_render_pipeline(&wgpu::RenderPipelineDescriptor {
-                label: Some("portal-projector-hdr"),
-                layout: Some(&projector_pipeline_layout),
-                vertex: wgpu::VertexState {
-                    module: &projector_shader,
-                    entry_point: Some("vertex_main"),
-                    compilation_options: Default::default(),
-                    buffers: &[],
-                },
-                fragment: Some(wgpu::FragmentState {
-                    module: &projector_shader,
-                    entry_point: Some("fragment_main"),
-                    compilation_options: Default::default(),
-                    targets: &[Some(hdr_color_target_state())],
-                }),
-                primitive: wgpu::PrimitiveState {
-                    topology: wgpu::PrimitiveTopology::TriangleList,
-                    ..Default::default()
-                },
-                depth_stencil: Some(depth_state.clone()),
-                multisample: wgpu::MultisampleState::default(),
-                multiview_mask: None,
-                cache: None,
-            });
-            let mesh_hdr = device.create_render_pipeline(&wgpu::RenderPipelineDescriptor {
-                label: Some("portal-mesh-hdr"),
-                layout: Some(&mesh_pipeline_layout),
-                vertex: wgpu::VertexState {
-                    module: &mesh_shader,
-                    entry_point: Some("vertex_main"),
-                    compilation_options: Default::default(),
-                    buffers: &[mesh_vertex_layout.clone()],
-                },
-                fragment: Some(wgpu::FragmentState {
-                    module: &mesh_shader,
-                    entry_point: Some("fragment_main"),
-                    compilation_options: Default::default(),
-                    targets: &[Some(hdr_color_target_state())],
-                }),
-                primitive: wgpu::PrimitiveState {
-                    topology: wgpu::PrimitiveTopology::TriangleList,
-                    cull_mode: None,
-                    ..Default::default()
-                },
-                depth_stencil: Some(depth_state.clone()),
-                multisample: wgpu::MultisampleState::default(),
-                multiview_mask: None,
-                cache: None,
-            });
-            let bloom = create_bloom_chain(&device, width, height, format);
-            (Some(ambient_hdr), Some(projector_hdr), Some(mesh_hdr), bloom)
-        } else {
-            (None, None, None, None)
-        };
+        let (ambient_pipeline_hdr, projector_pipeline_hdr, mesh_pipeline_hdr, bloom) =
+            if bloom_wanted {
+                let ambient_hdr = device.create_render_pipeline(&wgpu::RenderPipelineDescriptor {
+                    label: Some("portal-ambient-hdr"),
+                    layout: Some(&ambient_pipeline_layout),
+                    vertex: wgpu::VertexState {
+                        module: &ambient_shader,
+                        entry_point: Some("vertex_main"),
+                        compilation_options: Default::default(),
+                        buffers: &[],
+                    },
+                    fragment: Some(wgpu::FragmentState {
+                        module: &ambient_shader,
+                        entry_point: Some("fragment_main"),
+                        compilation_options: Default::default(),
+                        targets: &[Some(hdr_color_target_state())],
+                    }),
+                    primitive: wgpu::PrimitiveState {
+                        topology: wgpu::PrimitiveTopology::TriangleList,
+                        ..Default::default()
+                    },
+                    depth_stencil: Some(depth_stencil_state_read_only()),
+                    multisample: wgpu::MultisampleState::default(),
+                    multiview_mask: None,
+                    cache: None,
+                });
+                let projector_hdr =
+                    device.create_render_pipeline(&wgpu::RenderPipelineDescriptor {
+                        label: Some("portal-projector-hdr"),
+                        layout: Some(&projector_pipeline_layout),
+                        vertex: wgpu::VertexState {
+                            module: &projector_shader,
+                            entry_point: Some("vertex_main"),
+                            compilation_options: Default::default(),
+                            buffers: &[],
+                        },
+                        fragment: Some(wgpu::FragmentState {
+                            module: &projector_shader,
+                            entry_point: Some("fragment_main"),
+                            compilation_options: Default::default(),
+                            targets: &[Some(hdr_color_target_state())],
+                        }),
+                        primitive: wgpu::PrimitiveState {
+                            topology: wgpu::PrimitiveTopology::TriangleList,
+                            ..Default::default()
+                        },
+                        depth_stencil: Some(depth_state.clone()),
+                        multisample: wgpu::MultisampleState::default(),
+                        multiview_mask: None,
+                        cache: None,
+                    });
+                let mesh_hdr = device.create_render_pipeline(&wgpu::RenderPipelineDescriptor {
+                    label: Some("portal-mesh-hdr"),
+                    layout: Some(&mesh_pipeline_layout),
+                    vertex: wgpu::VertexState {
+                        module: &mesh_shader,
+                        entry_point: Some("vertex_main"),
+                        compilation_options: Default::default(),
+                        buffers: &[mesh_vertex_layout.clone()],
+                    },
+                    fragment: Some(wgpu::FragmentState {
+                        module: &mesh_shader,
+                        entry_point: Some("fragment_main"),
+                        compilation_options: Default::default(),
+                        targets: &[Some(hdr_color_target_state())],
+                    }),
+                    primitive: wgpu::PrimitiveState {
+                        topology: wgpu::PrimitiveTopology::TriangleList,
+                        cull_mode: None,
+                        ..Default::default()
+                    },
+                    depth_stencil: Some(depth_state.clone()),
+                    multisample: wgpu::MultisampleState::default(),
+                    multiview_mask: None,
+                    cache: None,
+                });
+                let bloom = create_bloom_chain(&device, width, height, format);
+                (
+                    Some(ambient_hdr),
+                    Some(projector_hdr),
+                    Some(mesh_hdr),
+                    bloom,
+                )
+            } else {
+                (None, None, None, None)
+            };
 
         let mut render_bytes = (particle_count * std::mem::size_of::<ParticleInstance>()) as u64;
         if let Some(ref chain) = bloom {
@@ -647,8 +660,8 @@ impl PortalGpu {
     }
 
     pub fn upload_tensor_buffer(&mut self, bytes: &[u8]) -> Result<u32, String> {
-        let (header, _) = crate::tensor::buffer_export::parse_header(bytes)
-            .map_err(|e| e.to_string())?;
+        let (header, _) =
+            crate::tensor::buffer_export::parse_header(bytes).map_err(|e| e.to_string())?;
         let count = header.node_count;
         if count == 0 {
             return Ok(0);
@@ -657,11 +670,13 @@ impl PortalGpu {
         let particles = particles_from_tensor(bytes, MAX_AMBIENT_INSTANCES)?;
         let instance_count = particles.len() as u32;
 
-        let particle_buf = self.device.create_buffer_init(&wgpu::util::BufferInitDescriptor {
-            label: Some("portal-tensor-particles"),
-            contents: bytemuck::cast_slice(&particles),
-            usage: wgpu::BufferUsages::STORAGE | wgpu::BufferUsages::COPY_DST,
-        });
+        let particle_buf = self
+            .device
+            .create_buffer_init(&wgpu::util::BufferInitDescriptor {
+                label: Some("portal-tensor-particles"),
+                contents: bytemuck::cast_slice(&particles),
+                usage: wgpu::BufferUsages::STORAGE | wgpu::BufferUsages::COPY_DST,
+            });
 
         // Upload the SOA *body* only (skip the 32-byte header). WebGPU requires storage-buffer
         // binding offsets to be a multiple of minStorageBufferOffsetAlignment (256), so we cannot
@@ -670,11 +685,13 @@ impl PortalGpu {
         let body = bytes
             .get(TENSOR_HEADER_BYTES..)
             .ok_or_else(|| "tensor buffer shorter than header".to_string())?;
-        let tensor_raw_buf = self.device.create_buffer_init(&wgpu::util::BufferInitDescriptor {
-            label: Some("portal-tensor-raw-soa"),
-            contents: body,
-            usage: wgpu::BufferUsages::STORAGE | wgpu::BufferUsages::COPY_DST,
-        });
+        let tensor_raw_buf = self
+            .device
+            .create_buffer_init(&wgpu::util::BufferInitDescriptor {
+                label: Some("portal-tensor-raw-soa"),
+                contents: body,
+                usage: wgpu::BufferUsages::STORAGE | wgpu::BufferUsages::COPY_DST,
+            });
 
         self.ambient_bind_group = make_ambient_bind_group(
             &self.device,
@@ -776,18 +793,26 @@ impl PortalGpu {
             self.mesh = None;
             return 0;
         }
-        let vertex_buf = self.device.create_buffer_init(&wgpu::util::BufferInitDescriptor {
-            label: Some("portal-mesh-verts"),
-            contents: bytemuck::cast_slice(positions),
-            usage: wgpu::BufferUsages::VERTEX | wgpu::BufferUsages::COPY_DST,
-        });
-        let index_buf = self.device.create_buffer_init(&wgpu::util::BufferInitDescriptor {
-            label: Some("portal-mesh-indices"),
-            contents: bytemuck::cast_slice(indices),
-            usage: wgpu::BufferUsages::INDEX | wgpu::BufferUsages::COPY_DST,
-        });
+        let vertex_buf = self
+            .device
+            .create_buffer_init(&wgpu::util::BufferInitDescriptor {
+                label: Some("portal-mesh-verts"),
+                contents: bytemuck::cast_slice(positions),
+                usage: wgpu::BufferUsages::VERTEX | wgpu::BufferUsages::COPY_DST,
+            });
+        let index_buf = self
+            .device
+            .create_buffer_init(&wgpu::util::BufferInitDescriptor {
+                label: Some("portal-mesh-indices"),
+                contents: bytemuck::cast_slice(indices),
+                usage: wgpu::BufferUsages::INDEX | wgpu::BufferUsages::COPY_DST,
+            });
         let index_count = indices.len() as u32;
-        self.mesh = Some(MeshGpu { vertex_buf, index_buf, index_count });
+        self.mesh = Some(MeshGpu {
+            vertex_buf,
+            index_buf,
+            index_count,
+        });
         self.mesh_base_aabb = Aabb::from_points(positions); // for Phase 2 admission
         self.last_admitted = Motor::identity();
         self.last_refused = false;
@@ -843,7 +868,8 @@ impl PortalGpu {
     /// Reconcile HDR bloom textures with current `VramLedger` operational mode.
     pub fn sync_bloom_targets(&mut self) {
         if portal_bloom_enabled() && probe_hdr_format(&self.device) {
-            let bloom = create_bloom_chain(&self.device, self.width, self.height, self.config.format);
+            let bloom =
+                create_bloom_chain(&self.device, self.width, self.height, self.config.format);
             let bloom_bytes = bloom.as_ref().map(|b| b.vram_bytes).unwrap_or(0);
             let particle_bytes =
                 (self.particle_count as usize * std::mem::size_of::<ParticleInstance>()) as u64;
@@ -1000,7 +1026,8 @@ impl PortalGpu {
 
         // wgpu 29: get_current_texture() returns a CurrentSurfaceTexture enum (not a Result).
         let frame = match self.surface.get_current_texture() {
-            wgpu::CurrentSurfaceTexture::Success(t) | wgpu::CurrentSurfaceTexture::Suboptimal(t) => t,
+            wgpu::CurrentSurfaceTexture::Success(t)
+            | wgpu::CurrentSurfaceTexture::Suboptimal(t) => t,
             other => return Err(format!("surface frame unavailable: {other:?}")),
         };
 
@@ -1084,10 +1111,9 @@ impl PortalGpu {
                     pass.draw_indexed(0..mesh.index_count, 0, 0..1);
                 }
 
-                if let (Some(tensor_bind), count) = (
-                    self.projector_tensor_bind.as_ref(),
-                    self.tensor_node_count,
-                ) {
+                if let (Some(tensor_bind), count) =
+                    (self.projector_tensor_bind.as_ref(), self.tensor_node_count)
+                {
                     if count > 0 {
                         pass.set_pipeline(projector_hdr);
                         pass.set_bind_group(0, &self.projector_camera_bind, &[]);
@@ -1144,10 +1170,9 @@ impl PortalGpu {
                 pass.draw_indexed(0..mesh.index_count, 0, 0..1);
             }
 
-            if let (Some(tensor_bind), count) = (
-                self.projector_tensor_bind.as_ref(),
-                self.tensor_node_count,
-            ) {
+            if let (Some(tensor_bind), count) =
+                (self.projector_tensor_bind.as_ref(), self.tensor_node_count)
+            {
                 if count > 0 {
                     pass.set_pipeline(&self.projector_pipeline);
                     pass.set_bind_group(0, &self.projector_camera_bind, &[]);
@@ -1177,9 +1202,9 @@ impl PortalGpu {
 
 // Phase 0.2a: render/gpu submodules (bloom post-pass, resource builders, particle field).
 mod bloom;
-mod resources;
 mod particles;
+mod resources;
 use bloom::*;
-use resources::*;
-use particles::*;
 pub use particles::particle_cap_for_mode;
+use particles::*;
+use resources::*;

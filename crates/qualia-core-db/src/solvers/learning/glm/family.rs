@@ -51,7 +51,11 @@ impl Family {
             Family::Binomial => {
                 let m = mu.clamp(EPS, 1.0 - EPS);
                 let a = if y > 0.0 { y * (y / m).ln() } else { 0.0 };
-                let b = if y < 1.0 { (1.0 - y) * ((1.0 - y) / (1.0 - m)).ln() } else { 0.0 };
+                let b = if y < 1.0 {
+                    (1.0 - y) * ((1.0 - y) / (1.0 - m)).ln()
+                } else {
+                    0.0
+                };
                 2.0 * (a + b)
             }
             Family::Poisson => {

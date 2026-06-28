@@ -26,7 +26,11 @@ static LAYER_CURSOR: AtomicU32 = AtomicU32::new(0);
 /// `max |activation|` bits at `[layer * N_CHAN + chan]`. Allocated once at first use.
 fn stats() -> &'static Vec<AtomicU32> {
     static STATS: OnceLock<Vec<AtomicU32>> = OnceLock::new();
-    STATS.get_or_init(|| (0..MAX_LAYERS * MAX_CHAN).map(|_| AtomicU32::new(0)).collect())
+    STATS.get_or_init(|| {
+        (0..MAX_LAYERS * MAX_CHAN)
+            .map(|_| AtomicU32::new(0))
+            .collect()
+    })
 }
 
 /// Begin an AWQ calibration capture for a model with `n_layer` FFN layers of `n_chan` input channels.

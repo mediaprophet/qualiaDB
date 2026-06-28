@@ -48,7 +48,10 @@ impl Default for GroundingThresholds {
         // A 2-of-3 role match (≈0.67) clears `permit`; a single role or both endpoints
         // merely *appearing* in evidence (≈0.33–0.5) lands in the human-review band; a
         // lone endpoint (≤0.25) is ungrounded.
-        Self { deny: 0.3, permit: 0.6 }
+        Self {
+            deny: 0.3,
+            permit: 0.6,
+        }
     }
 }
 

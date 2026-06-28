@@ -3,9 +3,9 @@
 //! Implements RDF-Star (SPARQL 1.2) parsing for N3 syntax with embedded triples.
 //! N3-Star extends Turtle-Star with formulae, variables, and rules.
 
+use crate::lexicon::{generate_60bit_token, generate_embedded_triple_id};
+use crate::rdf_star::{RdfStarParseError, RdfStarParser};
 use crate::NQuin;
-use crate::lexicon::{generate_embedded_triple_id, generate_60bit_token};
-use crate::rdf_star::{RdfStarParser, RdfStarParseError};
 
 /// N3-Star parser implementation
 pub struct N3StarParser {
@@ -42,7 +42,8 @@ impl N3StarParser {
         }
 
         // Check for rule implications
-        if line.contains("=>") || line.contains("~>") || line.contains("^>") || line.contains("-o") {
+        if line.contains("=>") || line.contains("~>") || line.contains("^>") || line.contains("-o")
+        {
             self.parse_rule(line)
         } else if line.contains("{") {
             self.parse_formula(line)
@@ -98,9 +99,13 @@ impl N3StarParser {
 
     /// Parse an embedded triple line
     fn parse_embedded_triple_line(&self, line: &str) -> Result<ParseResult, RdfStarParseError> {
-        let start = line.find("<<").ok_or(RdfStarParseError::MalformedEmbeddedTriple)?;
-        let end = line.find(">>").ok_or(RdfStarParseError::MalformedEmbeddedTriple)?;
-        
+        let start = line
+            .find("<<")
+            .ok_or(RdfStarParseError::MalformedEmbeddedTriple)?;
+        let end = line
+            .find(">>")
+            .ok_or(RdfStarParseError::MalformedEmbeddedTriple)?;
+
         let embedded_part = &line[start + 2..end];
         let embedded_parts: Vec<&str> = embedded_part.split_whitespace().collect();
         if embedded_parts.len() < 3 {
@@ -143,46 +148,63 @@ impl N3StarParser {
         }
 
         // Strip angle brackets and quotes
-        let term = term.trim_start_matches('<').trim_end_matches('>')
-            .trim_start_matches('"').trim_end_matches('"');
+        let term = term
+            .trim_start_matches('<')
+            .trim_end_matches('>')
+            .trim_start_matches('"')
+            .trim_end_matches('"');
 
         Ok(generate_60bit_token(term.as_bytes()))
     }
 }
 
 impl RdfStarParser for N3StarParser {
-    fn parse_embedded_triple(&mut self, input: &[u8]) -> Result<(u64, [u64; 3]), RdfStarParseError> {
+    fn parse_embedded_triple(
+        &mut self,
+        input: &[u8],
+    ) -> Result<(u64, [u64; 3]), RdfStarParseError> {
         let line = std::str::from_utf8(input).map_err(|_| RdfStarParseError::InvalidUtf8)?;
-        
+
         match self.parse_line(line)? {
-            ParseResult::EmbeddedTriple { virtual_id, components, .. } => {
-                Ok((virtual_id, components))
-            }
+            ParseResult::EmbeddedTriple {
+                virtual_id,
+                components,
+                ..
+            } => Ok((virtual_id, components)),
             _ => Err(RdfStarParseError::MalformedEmbeddedTriple),
         }
     }
 
     fn parse_triple(&mut self, input: &[u8]) -> Result<(u64, u64, u64), RdfStarParseError> {
         let line = std::str::from_utf8(input).map_err(|_| RdfStarParseError::InvalidUtf8)?;
-        
+
         match self.parse_line(line)? {
-            ParseResult::RegularTriple { subject, predicate, object, .. } => {
-                Ok((subject, predicate, object))
-            }
+            ParseResult::RegularTriple {
+                subject,
+                predicate,
+                object,
+                ..
+            } => Ok((subject, predicate, object)),
             _ => Err(RdfStarParseError::InvalidSyntax),
         }
     }
 
     fn parse_quad(&mut self, input: &[u8]) -> Result<(u64, u64, u64, u64), RdfStarParseError> {
         let line = std::str::from_utf8(input).map_err(|_| RdfStarParseError::InvalidUtf8)?;
-        
+
         match self.parse_line(line)? {
-            ParseResult::RegularTriple { subject, predicate, object, graph_hash } => {
-                Ok((subject, predicate, object, graph_hash))
-            }
-            ParseResult::EmbeddedTriple { outer_predicate, outer_object, graph_hash, .. } => {
-                Ok((0, outer_predicate, outer_object, graph_hash))
-            }
+            ParseResult::RegularTriple {
+                subject,
+                predicate,
+                object,
+                graph_hash,
+            } => Ok((subject, predicate, object, graph_hash)),
+            ParseResult::EmbeddedTriple {
+                outer_predicate,
+                outer_object,
+                graph_hash,
+                ..
+            } => Ok((0, outer_predicate, outer_object, graph_hash)),
             _ => Err(RdfStarParseError::InvalidSyntax),
         }
     }
@@ -253,7 +275,12 @@ pub fn parse_n3_star_into<R: std::io::Read, S: crate::sparql_library::quin_sink:
         let line = line?;
         match parser.parse_line(&line)? {
             ParseResult::Comment | ParseResult::Formula | ParseResult::Rule { .. } => continue,
-            ParseResult::RegularTriple { subject, predicate, object, .. } => {
+            ParseResult::RegularTriple {
+                subject,
+                predicate,
+                object,
+                ..
+            } => {
                 sink.push(NQuin {
                     subject,
                     predicate,
@@ -264,7 +291,13 @@ pub fn parse_n3_star_into<R: std::io::Read, S: crate::sparql_library::quin_sink:
                 })?;
                 count += 1;
             }
-            ParseResult::EmbeddedTriple { virtual_id, components, outer_predicate, outer_object, .. } => {
+            ParseResult::EmbeddedTriple {
+                virtual_id,
+                components,
+                outer_predicate,
+                outer_object,
+                ..
+            } => {
                 // Materialise the embedded (quoted) triple itself.
                 sink.push(NQuin {
                     subject: virtual_id,
@@ -301,8 +334,8 @@ pub fn parse_n3_star_stream<R: std::io::Read>(
 
 #[cfg(test)]
 mod tests {
-    use crate::rdf_star::{RdfStarParser, RdfStarSerializer};
     use super::*;
+    use crate::rdf_star::{RdfStarParser, RdfStarSerializer};
 
     #[test]
     fn test_n3_star_parser_creation() {
@@ -338,7 +371,8 @@ mod tests {
     #[test]
     fn test_parse_regular_triple() {
         let mut parser = N3StarParser::new(0);
-        let input = b"<http://example.org/Alice> <http://example.org/knows> <http://example.org/Bob> .";
+        let input =
+            b"<http://example.org/Alice> <http://example.org/knows> <http://example.org/Bob> .";
         let result = parser.parse_triple(input);
         assert!(result.is_ok());
     }

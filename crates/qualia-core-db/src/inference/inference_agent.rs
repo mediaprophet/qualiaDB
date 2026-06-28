@@ -294,7 +294,6 @@ pub enum AgentError {
 
 // ─── Embedding dispatch helpers (native) ─────────────────────────────────────
 
-
 fn pseudo_embedding_forward(
     token_id: u32,
     emb_dim: usize,
@@ -334,13 +333,13 @@ fn cpu_embedding_forward(
 /// If the adapter dimensions do not match `emb_dim` the call silently falls
 /// back to the unmodified embedding (the base model is still correct).
 fn lora_embedding_forward(
-    engine:  &crate::gguf_bridge::QTensorEngine,
-    idx:     &crate::gguf_sharder::GgufTensorIndex,
-    mmap:    &[u8],
+    engine: &crate::gguf_bridge::QTensorEngine,
+    idx: &crate::gguf_sharder::GgufTensorIndex,
+    mmap: &[u8],
     token_id: u32,
     emb_dim: usize,
     emb_buf: &mut [f32],
-    wt:      &crate::gguf_bridge::QTensor,
+    wt: &crate::gguf_bridge::QTensor,
     adapter: &crate::lora::LoRAAdapter,
 ) -> Vec<f32> {
     let n = idx.dequantize_token_embedding_into(mmap, token_id, &mut emb_buf[..emb_dim]);
@@ -395,9 +394,8 @@ enum TopologyDraftStep {
 
 fn drain_tensor_context_inject() {
     while let Some(inject) = crate::compute_universe::pop_tensor_context() {
-        if let Some(tensor) =
-            crate::tensor::resident_substrate::global_resident_substrate()
-                .tensor_at(inject.tensor_index)
+        if let Some(tensor) = crate::tensor::resident_substrate::global_resident_substrate()
+            .tensor_at(inject.tensor_index)
         {
             crate::compute_universe::publish_query_tensor(tensor, inject.subject_hash);
         }
@@ -606,7 +604,7 @@ impl LocalLlmAgent {
     pub fn attach_lora_adapters_with_dims(
         &self,
         adapter_dir: impl Into<std::path::PathBuf>,
-        n_in:  usize,
+        n_in: usize,
         n_out: usize,
     ) {
         let mut mgr = crate::lora::LoRAAdapterManager::new(adapter_dir);
@@ -636,12 +634,18 @@ impl LocalLlmAgent {
     /// Return the currently active LoRA context type, if any.
     pub fn active_lora_context(&self) -> Option<crate::lora::ContextType> {
         let guard = self.lora_manager.lock().unwrap_or_else(|e| e.into_inner());
-        guard.as_ref().and_then(|m| m.active()).map(|a| a.context_type)
+        guard
+            .as_ref()
+            .and_then(|m| m.active())
+            .map(|a| a.context_type)
     }
 
     /// Wire the `.q42.lex` sidecar used to populate FSM sieve masks at inference time.
     pub fn configure_sieve_lex(&self, path: impl Into<String>) {
-        *self.sieve_lex_path.lock().unwrap_or_else(|e| e.into_inner()) = Some(path.into());
+        *self
+            .sieve_lex_path
+            .lock()
+            .unwrap_or_else(|e| e.into_inner()) = Some(path.into());
     }
 
     pub fn agent_did_hash(&self) -> u64 {
@@ -695,7 +699,10 @@ impl LocalLlmAgent {
             None
         };
         let sieve_lex_path = if use_sieve {
-            self.sieve_lex_path.lock().unwrap_or_else(|e| e.into_inner()).clone()
+            self.sieve_lex_path
+                .lock()
+                .unwrap_or_else(|e| e.into_inner())
+                .clone()
         } else {
             None
         };
@@ -729,10 +736,8 @@ impl LocalLlmAgent {
             let lora_active_adapter: Option<crate::lora::LoRAAdapter> = {
                 let mut guard = self.lora_manager.lock().unwrap_or_else(|e| e.into_inner());
                 if let Some(ref mut mgr) = *guard {
-                    let (ctx, conf, _switched) = mgr.auto_switch(
-                        &prompt_owned,
-                        mgr.detector.confidence_threshold,
-                    );
+                    let (ctx, conf, _switched) =
+                        mgr.auto_switch(&prompt_owned, mgr.detector.confidence_threshold);
                     log::debug!("LoRA|context-detect|domain={ctx}|conf={conf:.3}");
                     mgr.active().cloned()
                 } else {
@@ -777,11 +782,20 @@ impl LocalLlmAgent {
                 let rt = tokio::runtime::Builder::new_current_thread()
                     .enable_all()
                     .build()
-                    .unwrap_or_else(|e| panic!("Failed to create Tokio runtime for LLM thread: {}", e));
+                    .unwrap_or_else(|e| {
+                        panic!("Failed to create Tokio runtime for LLM thread: {}", e)
+                    });
                 let _rt_guard = rt.enter();
 
                 // A0 phase timing (D17/D22): once-per-phase, off the per-token hot path.
                 let t_phase = std::time::Instant::now();
+
+                let mut thermal_wal_opt = {
+                    let wal_path = std::env::var("QUALIA_DATA_DIR")
+                        .map(|p| std::path::PathBuf::from(p).join("thermal_eviction.wal"))
+                        .unwrap_or_else(|_| std::env::temp_dir().join("thermal_eviction.wal"));
+                    crate::inference::thermal_wal::ThermalWal::open(&wal_path, 1024).ok()
+                };
 
                 let lora_adapter = lora_for_thread;
                 let sieve_spec = sieve_spec;
@@ -792,9 +806,9 @@ impl LocalLlmAgent {
                 if let Some(mmap) =
                     crate::resident_model::resident_mmap_for_path(model_path.as_str())
                 {
-                    // A1b: a `.q42` weight container (magic `Q42W`) boots through the native q42
+                    // A1b: a `.q42` weight container (magic `P64`) boots through the native q42
                     // path (synthetic index + resident 2-bit ternary FFN); else the GGUF path.
-                    let is_q42 = mmap.len() >= 4 && mmap[0..4] == *b"Q42W";
+                    let is_q42 = mmap.len() >= 4 && mmap[0..4] == *b"p64\0";
                     let adopted = if is_q42 {
                         engine.adopt_resident_q42_mmap(mmap).is_ok()
                     } else {
@@ -813,16 +827,18 @@ impl LocalLlmAgent {
                 let is_q42_mmap = engine
                     .gguf_mmap
                     .as_ref()
-                    .map(|m| m.len() >= 4 && m[0..4] == *b"Q42W")
+                    .map(|m| m.len() >= 4 && m[0..4] == *b"p64\0")
                     .unwrap_or(false);
                 let tok = engine
                     .gguf_mmap
                     .as_ref()
                     .map(|m| {
                         if is_q42_mmap {
-                            crate::q42_weight::Q42TensorIndex::from_q42(m)
+                            crate::p64_weight::P64TensorIndex::from_p64(m)
                                 .ok()
-                                .and_then(|qi| GgufTokenizer::from_q42_section(qi.tokenizer_bytes(m)))
+                                .and_then(|qi| {
+                                    GgufTokenizer::from_p64_section(qi.tokenizer_bytes(m))
+                                })
                                 .unwrap_or_default()
                         } else {
                             GgufTokenizer::from_gguf(m)
@@ -833,7 +849,7 @@ impl LocalLlmAgent {
                 // Parse tensor-info section → real embedding lookup.
                 let tensor_idx = engine.gguf_mmap.as_ref().map(|m| {
                     if is_q42_mmap {
-                        crate::q42_weight::Q42TensorIndex::from_q42(m)
+                        crate::p64_weight::P64TensorIndex::from_p64(m)
                             .map(|qi| qi.to_gguf_index())
                             .unwrap_or_else(|_| crate::gguf_sharder::GgufTensorIndex::from_gguf(m))
                     } else {
@@ -873,6 +889,7 @@ impl LocalLlmAgent {
                 crate::tensor::kv_provenance::rebuild_prompt_provenance(
                     prompt_len as u32,
                     crate::tensor::resident_substrate::global_resident_substrate().node_count(),
+                    0,
                 );
                 let draft_mapper = crate::topology_draft::TopologyDraftMapper::new(&tok);
                 if prompt_len > 1 {
@@ -964,6 +981,19 @@ impl LocalLlmAgent {
                         n as u64,
                     );
                 }
+
+                // Phase 6: Initialize Semantic Chunking State
+                let mut current_page_id = 100u64; // Starting mock page ID
+                let chunk_policy = crate::q42::q42_kvp::Q42ChunkPolicy {
+                    max_tokens: 128,
+                    semantic_shift_threshold: 0.0,
+                    discourse_boundary_weight: 0.0,
+                    attention_phase_weight: 0.0,
+                    max_entropy_drop: -2.0, // A threshold that will trigger when top1 and top2 are close
+                    thermal_pressure_bias: 0.0,
+                    reserved: [0; 40],
+                };
+
                 for step in 0..gen_budget {
                     crate::gpu_context::record_llm_decode_step();
 
@@ -1054,8 +1084,14 @@ impl LocalLlmAgent {
                                 TEST_TRANSFORMER_LAYER_CAP,
                             );
                             // Final output_norm before the vocab projection — REQUIRED on all targets.
-                            let _ = engine.apply_output_norm_inplace(idx, &mut emb_buf[..emb_dim], emb_dim);
-                            crate::llm_bench::add_decode_forward_ns(t_fwd.elapsed().as_nanos() as u64);
+                            let _ = engine.apply_output_norm_inplace(
+                                idx,
+                                &mut emb_buf[..emb_dim],
+                                emb_dim,
+                            );
+                            crate::llm_bench::add_decode_forward_ns(
+                                t_fwd.elapsed().as_nanos() as u64
+                            );
                             let sieve_mask = sieve.as_ref().map(|s| s.current_mask());
                             // Decode-profiler: time the output projection (argmax / top-k).
                             let t_out = std::time::Instant::now();
@@ -1064,7 +1100,11 @@ impl LocalLlmAgent {
                             // through to the existing argmax path if disabled or on any failure — the
                             // working path is never bypassed.
                             let topk_hit = if gpu_topk_enabled && sieve_mask.is_none() {
-                                engine.dispatch_output_top1_chunked(idx, &emb_buf[..emb_dim], emb_dim)
+                                engine.dispatch_output_top1_chunked(
+                                    idx,
+                                    &emb_buf[..emb_dim],
+                                    emb_dim,
+                                )
                             } else {
                                 None
                             };
@@ -1087,18 +1127,54 @@ impl LocalLlmAgent {
                                     (0usize, f32::NEG_INFINITY)
                                 }
                             } else {
-                                emb_buf[..emb_dim].iter().enumerate().fold(
-                                    (0usize, f32::NEG_INFINITY),
-                                    |(bi, bv), (i, &v)| {
-                                        if v > bv {
-                                            (i, v)
-                                        } else {
-                                            (bi, bv)
-                                        }
-                                    },
-                                )
+                                let mut top1_v = f32::NEG_INFINITY;
+                                let mut top1_i = 0usize;
+                                let mut top2_v = f32::NEG_INFINITY;
+                                for (i, &v) in emb_buf[..emb_dim].iter().enumerate() {
+                                    if v > top1_v {
+                                        top2_v = top1_v;
+                                        top1_v = v;
+                                        top1_i = i;
+                                    } else if v > top2_v {
+                                        top2_v = v;
+                                    }
+                                }
+
+                                // Phase 6: Semantic Chunking Entropy Calculation
+                                let fast_entropy = -(top1_v - top2_v);
+                                if fast_entropy > chunk_policy.max_entropy_drop {
+                                    current_page_id += 1;
+                                    
+                                    if let Some(ref mut wal) = thermal_wal_opt {
+                                        let record = crate::inference::thermal_wal::ThermalEvictionRecord {
+                                            timestamp_ms: std::time::SystemTime::now()
+                                                .duration_since(std::time::UNIX_EPOCH)
+                                                .unwrap_or_default()
+                                                .as_millis() as u64,
+                                            page_id: (current_page_id - 1) as u32,
+                                            fast_entropy,
+                                            top1_v,
+                                            top2_v,
+                                            reserved: [0; 8],
+                                        };
+                                        wal.append(record);
+                                    }
+
+                                    if std::env::var("QUALIA_LLM_DEBUG_DECODE").is_ok() {
+                                        eprintln!("[NEW CHUNK] page_id={} entropy={:.3}", current_page_id, fast_entropy);
+                                        eprintln!("[THERMAL EVICT] Hard eviction logged for page_id={}", current_page_id - 1);
+                                    }
+                                }
+
+                                // Update KV provenance for this new token
+                                let token_idx = ctx.len() as u32;
+                                crate::tensor::kv_provenance::record_kv_provenance(token_idx, token_idx, current_page_id);
+
+                                (top1_i, top1_v)
                             };
-                            crate::llm_bench::add_decode_output_ns(t_out.elapsed().as_nanos() as u64);
+                            crate::llm_bench::add_decode_output_ns(
+                                t_out.elapsed().as_nanos() as u64
+                            );
                             out_sel
                         } else {
                             (0usize, 0.0)
@@ -1133,9 +1209,12 @@ impl LocalLlmAgent {
                             tok.decode(&[top_i as u32])
                         );
                         if let Some(idx) = tensor_idx.as_ref() {
-                            if let Some(top5) =
-                                engine.dispatch_output_topk_chunked(idx, &emb_buf[..emb_dim], emb_dim, 5)
-                            {
+                            if let Some(top5) = engine.dispatch_output_topk_chunked(
+                                idx,
+                                &emb_buf[..emb_dim],
+                                emb_dim,
+                                5,
+                            ) {
                                 for it in &top5 {
                                     eprintln!(
                                         "[top5] id={} logit={:.3} dec={:?}",
@@ -1255,12 +1334,12 @@ impl LocalLlmAgent {
             return (text, prov, tokens, semantic_quin);
         }
 
-// ── Native GPU path ─────────────────────────────────────────────────
+        // ── Native GPU path ─────────────────────────────────────────────────
         #[cfg(target_arch = "wasm32")]
         {
             use crate::gguf_bridge::{QTensor, QTensorEngine};
             use crate::gguf_sharder::GgufTokenizer;
-                        
+
             let model_path = match &self.backend {
                 AgentBackend::Local { model_path, .. } => model_path.clone(),
                 _ => {
@@ -1272,13 +1351,14 @@ impl LocalLlmAgent {
                     )
                 }
             };
-            
+
             // ── WASM Extension Bus Offloading ────────────────────────────────
             if crate::extension_bus::wasm_bus::is_connected() {
                 if let Some(cb) = on_token {
                     let _ = crate::extension_bus::wasm_bus::send_intent(prompt, graph_context, cb);
                 } else {
-                    let _ = crate::extension_bus::wasm_bus::send_intent(prompt, graph_context, |_| {});
+                    let _ =
+                        crate::extension_bus::wasm_bus::send_intent(prompt, graph_context, |_| {});
                 }
                 return (String::new(), vec![prov_hash], 0, None);
             }
@@ -1292,10 +1372,8 @@ impl LocalLlmAgent {
             let lora_active_adapter: Option<crate::lora::LoRAAdapter> = {
                 let mut guard = self.lora_manager.lock().unwrap_or_else(|e| e.into_inner());
                 if let Some(ref mut mgr) = *guard {
-                    let (ctx, conf, _switched) = mgr.auto_switch(
-                        &prompt_owned,
-                        mgr.detector.confidence_threshold,
-                    );
+                    let (ctx, conf, _switched) =
+                        mgr.auto_switch(&prompt_owned, mgr.detector.confidence_threshold);
                     log::debug!("LoRA|context-detect|domain={ctx}|conf={conf:.3}");
                     mgr.active().cloned()
                 } else {
@@ -1319,8 +1397,6 @@ impl LocalLlmAgent {
                 DenyRollback,
             }
 
-            
-            
             // Move the (optional) LoRA adapter into the inference thread.
             let lora_for_thread = lora_active_adapter;
 
@@ -1334,8 +1410,11 @@ impl LocalLlmAgent {
                 // Build the GPU engine and memory-map the GGUF inside the thread to
                 // avoid Send constraints on the DirectML / wgpu device handles.
                 let mut engine = {
-                    let engine_guard = crate::gguf_bridge::WASM_ENGINE_INSTANCE.with(|g| g.borrow_mut().take());
-                    engine_guard.expect("WASM WebGPU engine not initialized. Call initialize_webgpu_engine first.")
+                    let engine_guard =
+                        crate::gguf_bridge::WASM_ENGINE_INSTANCE.with(|g| g.borrow_mut().take());
+                    engine_guard.expect(
+                        "WASM WebGPU engine not initialized. Call initialize_webgpu_engine first.",
+                    )
                 };
 
                 let tok = engine
@@ -1378,6 +1457,7 @@ impl LocalLlmAgent {
                 crate::tensor::kv_provenance::rebuild_prompt_provenance(
                     prompt_len as u32,
                     crate::tensor::resident_substrate::global_resident_substrate().node_count(),
+                    0,
                 );
                 let draft_mapper = crate::topology_draft::TopologyDraftMapper::new(&tok);
                 if prompt_len > 1 {
@@ -1446,9 +1526,7 @@ impl LocalLlmAgent {
                 for step in 0..gen_budget {
                     crate::gpu_context::record_llm_decode_step();
 
-                    let on_token_sink = on_token
-                        .as_mut()
-                        .map(|cb| cb as &mut dyn FnMut(String));
+                    let on_token_sink = on_token.as_mut().map(|cb| cb as &mut dyn FnMut(String));
                     let draft_step = try_accept_topology_draft(
                         &mut engine,
                         tensor_idx.as_ref(),
@@ -1528,7 +1606,11 @@ impl LocalLlmAgent {
                                 TEST_TRANSFORMER_LAYER_CAP,
                             );
                             // Final output_norm before the vocab projection — REQUIRED on all targets.
-                            let _ = engine.apply_output_norm_inplace(idx, &mut emb_buf[..emb_dim], emb_dim);
+                            let _ = engine.apply_output_norm_inplace(
+                                idx,
+                                &mut emb_buf[..emb_dim],
+                                emb_dim,
+                            );
                             let sieve_mask = sieve.as_ref().map(|s| s.current_mask());
                             if let Some(argmax) = engine.dispatch_output_argmax_chunked(
                                 idx,
@@ -1632,7 +1714,7 @@ impl LocalLlmAgent {
                 } else {
                     tok.decode(&out_ids)
                 };
-                
+
                 // Return engine to global instance
                 {
                     crate::gguf_bridge::WASM_ENGINE_INSTANCE.with(|g| {
@@ -1656,8 +1738,6 @@ impl LocalLlmAgent {
             }
             return (text, prov, tokens, semantic_quin);
         }
-
-        
     }
 }
 

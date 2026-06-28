@@ -6,11 +6,12 @@
 //! fixed caller-supplied buffers.
 
 use crate::modalities::logic::n3_parser::{Formula, Rule, RuleType, Term, Triple};
+use crate::modalities::logic::shacl::{
+    CompiledShape, ShaclCompiler, ShaclConstraint, ShaclSeverity,
+};
 use crate::q_hash;
-use crate::modalities::logic::shacl::{CompiledShape, ShaclCompiler, ShaclConstraint, ShaclSeverity};
 use crate::webizen::{execute_vm_frame, SlgArena, SlgOpcode, VmFrame};
 use crate::NQuin;
-
 
 #[derive(Debug, Clone, Copy, PartialEq, Eq)]
 pub enum CompiledTerm {
@@ -62,7 +63,7 @@ impl CompiledTerm {
             CompiledTerm::Literal(h) => *h,
         }
     }
-    
+
     pub fn is_variable(&self) -> bool {
         matches!(self, CompiledTerm::Variable(_))
     }
@@ -75,9 +76,9 @@ pub fn compile_term(term: &Term<'_>) -> CompiledTerm {
         Term::Literal(s) => CompiledTerm::Literal(q_hash(s)),
         // A quoted formula is a ground node identified by the canonical hash of
         // its statement text — the handle other nquins use to reason about it.
-        Term::Formula(s) => CompiledTerm::Uri(
-            crate::modalities::logic::n3_parser::q_hash_formula(s),
-        ),
+        Term::Formula(s) => {
+            CompiledTerm::Uri(crate::modalities::logic::n3_parser::q_hash_formula(s))
+        }
     }
 }
 
@@ -107,8 +108,6 @@ pub fn compile_rule_to_zero_heap(rule: &Rule<'_>) -> CompiledRule {
         conclusion: compile_formula(&rule.conclusion),
     }
 }
-
-
 
 pub const MAX_COMPILED_OPCODES: usize = 256;
 pub const MAX_COMPILED_QUINS: usize = 64;
@@ -177,10 +176,7 @@ fn term_hash(term: &Term<'_>) -> Result<u64, N3CompileError> {
     }
 }
 
-pub fn triple_to_quin(
-    triple: &CompiledTriple,
-    context: u64,
-) -> Result<NQuin, N3CompileError> {
+pub fn triple_to_quin(triple: &CompiledTriple, context: u64) -> Result<NQuin, N3CompileError> {
     let mut quin = NQuin::default();
     quin.subject = triple.subject.as_u64();
     quin.predicate = triple.predicate.as_u64();
@@ -190,7 +186,9 @@ pub fn triple_to_quin(
     Ok(quin)
 }
 
-fn first_triple<'a>(f: &'a crate::modalities::logic::n3_compiler::CompiledFormula) -> Result<&'a crate::modalities::logic::n3_compiler::CompiledTriple, N3CompileError> {
+fn first_triple<'a>(
+    f: &'a crate::modalities::logic::n3_compiler::CompiledFormula,
+) -> Result<&'a crate::modalities::logic::n3_compiler::CompiledTriple, N3CompileError> {
     f.triples.first().ok_or(N3CompileError::MalformedTriple)
 }
 
@@ -202,7 +200,11 @@ pub fn validate_rule_against_shapes(
     if shapes.is_empty() {
         return Ok(());
     }
-    let conclusion = rule.conclusion.triples.first().ok_or(N3CompileError::MalformedTriple)?;
+    let conclusion = rule
+        .conclusion
+        .triples
+        .first()
+        .ok_or(N3CompileError::MalformedTriple)?;
     let property_hash = term_hash(&conclusion.predicate)?;
     let mut matched = false;
     for shape in shapes {
@@ -274,7 +276,9 @@ pub fn compile_rule_to_quin(
     contract_hash: u64,
     out: &mut [NQuin],
 ) -> Result<usize, N3CompileError> {
-    if let Some(norm) = crate::modalities::logic::deontic::compile_n3_rule_to_norm(rule, contract_hash, 0) {
+    if let Some(norm) =
+        crate::modalities::logic::deontic::compile_n3_rule_to_norm(rule, contract_hash, 0)
+    {
         if out.is_empty() {
             return Err(N3CompileError::QuinBufferFull);
         }
@@ -387,7 +391,14 @@ mod tests {
     #[test]
     fn compiles_strict_rule_to_opcodes() {
         let mut opcodes = [SlgOpcode::Call; MAX_COMPILED_OPCODES];
-        let count = compile_rule_to_opcodes(&crate::modalities::logic::n3_compiler::compile_rule_to_zero_heap(&sample_strict_rule()), &mut opcodes).unwrap();
+        let count =
+            compile_rule_to_opcodes(
+                &crate::modalities::logic::n3_compiler::compile_rule_to_zero_heap(
+                    &sample_strict_rule(),
+                ),
+                &mut opcodes,
+            )
+            .unwrap();
         assert_eq!(count, 3);
         assert_eq!(opcodes[0], SlgOpcode::Unify);
         assert_eq!(opcodes[1], SlgOpcode::Call);

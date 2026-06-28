@@ -6,9 +6,7 @@ use crate::NQuin;
 use serde_json::{json, Value};
 
 fn json_str<'a>(v: &'a Value, key: &str, default: &'a str) -> &'a str {
-    v.get(key)
-        .and_then(Value::as_str)
-        .unwrap_or(default)
+    v.get(key).and_then(Value::as_str).unwrap_or(default)
 }
 
 fn json_u64(v: &Value, key: &str, default: u64) -> u64 {
@@ -18,13 +16,14 @@ fn json_u64(v: &Value, key: &str, default: u64) -> u64 {
 }
 
 fn qualia_storage_path() -> std::path::PathBuf {
-    std::env::var("QUALIA_STORAGE_PATH").unwrap_or_else(|_| {
-        std::env::var("HOME")
-            .or_else(|_| std::env::var("USERPROFILE"))
-            .map(|h| format!("{h}/.qualia"))
-            .unwrap_or_else(|_| ".qualia".to_string())
-    })
-    .into()
+    std::env::var("QUALIA_STORAGE_PATH")
+        .unwrap_or_else(|_| {
+            std::env::var("HOME")
+                .or_else(|_| std::env::var("USERPROFILE"))
+                .map(|h| format!("{h}/.qualia"))
+                .unwrap_or_else(|_| ".qualia".to_string())
+        })
+        .into()
 }
 
 fn qapps_root() -> std::path::PathBuf {
@@ -88,8 +87,8 @@ fn bundled_qapp_source_candidates(qapp_name: &str) -> Vec<std::path::PathBuf> {
 
 fn read_qapp_manifest_value(qapp_name: &str) -> Result<Value, McpSystemError> {
     let dir = resolve_qapp_dir(qapp_name)?;
-    let content = std::fs::read_to_string(dir.join("qapp.json"))
-        .map_err(|_| McpSystemError::ParseError)?;
+    let content =
+        std::fs::read_to_string(dir.join("qapp.json")).map_err(|_| McpSystemError::ParseError)?;
     serde_json::from_str(&content).map_err(|_| McpSystemError::ParseError)
 }
 
@@ -118,20 +117,20 @@ pub fn query_sparql(args: &[u8]) -> Result<String, McpSystemError> {
     if query.is_empty() {
         return Err(McpSystemError::InvalidParameters);
     }
-    let limit = v
-        .get("limit")
-        .and_then(|x| x.as_u64())
-        .unwrap_or(1_000) as usize;
+    let limit = v.get("limit").and_then(|x| x.as_u64()).unwrap_or(1_000) as usize;
 
     let graph = crate::daemon_graph::graph_read_guard();
-    let (stats, results) =
-        crate::daemon_query::execute_query_on_graph(query, graph.as_slice())
-            .map_err(|e| match e {
+    let (stats, results) = crate::daemon_query::execute_query_on_graph(query, graph.as_slice())
+        .map_err(|e| match e {
             crate::daemon_query::QueryExecError::EmptyQuery
             | crate::daemon_query::QueryExecError::ParseError(_)
-            | crate::daemon_query::QueryExecError::InvalidProgram => McpSystemError::InvalidParameters,
+            | crate::daemon_query::QueryExecError::InvalidProgram => {
+                McpSystemError::InvalidParameters
+            }
             crate::daemon_query::QueryExecError::OutputBufferFull => McpSystemError::ParseError,
-            crate::daemon_query::QueryExecError::ClassifiedEgress => McpSystemError::SanctuaryGateTriggered,
+            crate::daemon_query::QueryExecError::ClassifiedEgress => {
+                McpSystemError::SanctuaryGateTriggered
+            }
         })?;
 
     let truncated = results.len().min(limit);
@@ -318,15 +317,13 @@ pub fn list_models(_args: &[u8]) -> Result<String, McpSystemError> {
 #[cfg(not(target_arch = "wasm32"))]
 pub fn qpu_optimize(args: &[u8]) -> Result<String, McpSystemError> {
     use crate::qubo_compiler::{solve_classical, QuboMatrix};
-    use crate::solvers::qpu::pre_solver::ProblemDescription;
     use crate::solvers::qpu::pre_solver::PreSolver;
+    use crate::solvers::qpu::pre_solver::ProblemDescription;
 
     let v = parse_tool_args(args)?;
-    let problem_val = v
-        .get("problem")
-        .ok_or(McpSystemError::InvalidParameters)?;
-    let problem: ProblemDescription =
-        serde_json::from_value(problem_val.clone()).map_err(|_| McpSystemError::InvalidParameters)?;
+    let problem_val = v.get("problem").ok_or(McpSystemError::InvalidParameters)?;
+    let problem: ProblemDescription = serde_json::from_value(problem_val.clone())
+        .map_err(|_| McpSystemError::InvalidParameters)?;
 
     let mut solver = PreSolver::new();
     let job = solver
@@ -386,9 +383,7 @@ pub fn qpu_dft(args: &[u8]) -> Result<String, McpSystemError> {
     serde_json::to_string(&payload).map_err(|_| McpSystemError::ParseError)
 }
 
-fn qpu_job_status_label(
-    status: crate::specialized_libs::qpu_bridge::QPUJobStatus,
-) -> &'static str {
+fn qpu_job_status_label(status: crate::specialized_libs::qpu_bridge::QPUJobStatus) -> &'static str {
     use crate::specialized_libs::qpu_bridge::QPUJobStatus;
     match status {
         QPUJobStatus::Queued => "queued",
@@ -495,7 +490,9 @@ pub fn ingest_ontology(_args: &[u8]) -> Result<String, McpSystemError> {
     Err(McpSystemError::ToolNotReady)
 }
 
-fn parse_shacl_constraints(v: &Value) -> Result<Vec<crate::shacl_compiler::ShaclConstraint>, McpSystemError> {
+fn parse_shacl_constraints(
+    v: &Value,
+) -> Result<Vec<crate::shacl_compiler::ShaclConstraint>, McpSystemError> {
     let arr = v
         .get("constraints")
         .and_then(Value::as_array)
@@ -514,7 +511,9 @@ fn parse_shacl_constraints(v: &Value) -> Result<Vec<crate::shacl_compiler::Shacl
                     .and_then(Value::as_str)
                     .unwrap_or("xsd:string");
                 let iri = format!("xsd:{dt}");
-                if let Some(dt) = crate::shacl_compiler::ShaclDatatype::from_iri_hash(crate::q_hash(&iri)) {
+                if let Some(dt) =
+                    crate::shacl_compiler::ShaclDatatype::from_iri_hash(crate::q_hash(&iri))
+                {
                     out.push(crate::shacl_compiler::ShaclConstraint::Datatype(dt));
                 }
             }
@@ -530,7 +529,10 @@ fn parse_shacl_constraints(v: &Value) -> Result<Vec<crate::shacl_compiler::Shacl
             "deonticPermit" => out.push(crate::shacl_compiler::ShaclConstraint::DeonticPermit),
             "deonticForbid" => out.push(crate::shacl_compiler::ShaclConstraint::DeonticForbid),
             "epistemicKnowledge" => {
-                let min = item.get("min_certainty").and_then(|x| x.as_u64()).unwrap_or(128) as u8;
+                let min = item
+                    .get("min_certainty")
+                    .and_then(|x| x.as_u64())
+                    .unwrap_or(128) as u8;
                 out.push(crate::shacl_compiler::ShaclConstraint::EpistemicKnowledge {
                     min_certainty: min,
                 });
@@ -655,7 +657,9 @@ pub fn shacl_credential_gate(args: &[u8]) -> Result<String, McpSystemError> {
         required_claim_object: json_u64(g, "required_claim_object", 0),
         accepted_issuer: json_u64(g, "accepted_issuer", 0),
     };
-    let c = v.get("credential").ok_or(McpSystemError::InvalidParameters)?;
+    let c = v
+        .get("credential")
+        .ok_or(McpSystemError::InvalidParameters)?;
     let mut claims = Vec::new();
     if let Some(items) = c.get("claims").and_then(Value::as_array) {
         for q in items {
@@ -763,23 +767,32 @@ mod identity_tool_tests {
     #[test]
     fn credential_gate_tool_applies_and_rejects() {
         let ok = br#"{"focus_node":100,"gate":{"shape":1,"required_claim_predicate":50,"required_claim_object":60,"accepted_issuer":9},"credential":{"issuer":9,"subject":100,"claims":[{"s":100,"p":50,"o":60}]}}"#;
-        assert!(shacl_credential_gate(ok).unwrap().contains("\"applies\":true"));
+        assert!(shacl_credential_gate(ok)
+            .unwrap()
+            .contains("\"applies\":true"));
         // wrong issuer → rejected
         let bad = br#"{"focus_node":100,"gate":{"shape":1,"required_claim_predicate":50,"required_claim_object":60,"accepted_issuer":7},"credential":{"issuer":9,"subject":100,"claims":[{"s":100,"p":50,"o":60}]}}"#;
-        assert!(shacl_credential_gate(bad).unwrap().contains("\"applies\":false"));
+        assert!(shacl_credential_gate(bad)
+            .unwrap()
+            .contains("\"applies\":false"));
     }
 
     #[test]
     fn degrade_violations_tool_offgrid_vs_critical() {
         let viol = br#"{"violations":[{"shape":1,"focus_node":10,"severity":"violation"}],"mode":"offgrid"}"#;
-        assert!(shacl_degrade_violations(viol).unwrap().contains("\"subgraphUsable\":true"));
+        assert!(shacl_degrade_violations(viol)
+            .unwrap()
+            .contains("\"subgraphUsable\":true"));
         let crit = br#"{"violations":[{"shape":1,"focus_node":10,"severity":"critical"}],"mode":"offgrid"}"#;
-        assert!(shacl_degrade_violations(crit).unwrap().contains("\"subgraphUsable\":false"));
+        assert!(shacl_degrade_violations(crit)
+            .unwrap()
+            .contains("\"subgraphUsable\":false"));
     }
 
     #[test]
     fn route_tool_shapes_for_locus() {
-        let args = br#"{"routes":[{"shape":1,"locus":100},{"shape":2,"locus":100}],"query_locus":100}"#;
+        let args =
+            br#"{"routes":[{"shape":1,"locus":100},{"shape":2,"locus":100}],"query_locus":100}"#;
         let out = shacl_route(args).unwrap();
         assert!(out.contains("\"shapes\""), "got {out}");
     }
@@ -828,7 +841,12 @@ pub fn inspect_qapp_readiness(qapp_name: &str) -> Result<String, McpSystemError>
 
     if let Some(entrypoints) = ext.get("entrypoints").and_then(Value::as_object) {
         for (key, value) in entrypoints {
-            let rel = value.as_str().unwrap_or("index.html").split('#').next().unwrap_or("index.html");
+            let rel = value
+                .as_str()
+                .unwrap_or("index.html")
+                .split('#')
+                .next()
+                .unwrap_or("index.html");
             let exists = dir.join(rel).is_file();
             checks.push(json!({
                 "kind": "entrypoint",
@@ -951,7 +969,7 @@ pub fn get_pending_tasks(_args: &[u8]) -> Result<String, McpSystemError> {
     // Currently, we just instantiate a new manager because there is no global singleton.
     let manager = crate::ambient_orchestration::AmbientOrchestrationManager::new();
     let tasks = manager.get_pending_tasks();
-    
+
     // We manually map it to avoid any lifetime/serde generic issues.
     let mut mapped_tasks = Vec::new();
     for task in tasks {
@@ -963,11 +981,11 @@ pub fn get_pending_tasks(_args: &[u8]) -> Result<String, McpSystemError> {
             "dependencies": task.dependencies,
         }));
     }
-    
+
     let payload = json!({
         "pendingTasks": mapped_tasks,
         "count": mapped_tasks.len(),
     });
-    
+
     serde_json::to_string(&payload).map_err(|_| McpSystemError::ParseError)
 }

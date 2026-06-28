@@ -334,7 +334,11 @@ mod tests {
         let b = linear(1.0);
         let g = a.gcd(&b);
         // monic(x - 1) = x - 1
-        assert!(approx(&g, &Polynomial::new(vec![-1.0, 1.0])), "gcd = {:?}", g);
+        assert!(
+            approx(&g, &Polynomial::new(vec![-1.0, 1.0])),
+            "gcd = {:?}",
+            g
+        );
     }
 
     #[test]
@@ -359,12 +363,20 @@ mod tests {
         // Share root x=2 ⇒ resultant 0.
         let a = linear(1.0).mul(&linear(2.0)); // (x-1)(x-2)
         let b = linear(2.0).mul(&linear(3.0)); // (x-2)(x-3)
-        assert!(a.resultant(&b).abs() < 1e-6, "expected ~0, got {}", a.resultant(&b));
+        assert!(
+            a.resultant(&b).abs() < 1e-6,
+            "expected ~0, got {}",
+            a.resultant(&b)
+        );
 
         // No common root ⇒ resultant non-zero.
         let c = linear(1.0).mul(&linear(2.0)); // (x-1)(x-2)
         let d = linear(3.0).mul(&linear(4.0)); // (x-3)(x-4)
-        assert!(c.resultant(&d).abs() > 1e-6, "expected non-zero, got {}", c.resultant(&d));
+        assert!(
+            c.resultant(&d).abs() > 1e-6,
+            "expected non-zero, got {}",
+            c.resultant(&d)
+        );
     }
 
     #[test]

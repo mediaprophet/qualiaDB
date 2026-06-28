@@ -112,14 +112,19 @@ mod tests {
         assert_eq!(Dimension::LENGTH.powi(2), Dimension::AREA);
         assert_eq!(Dimension::LENGTH.powi(3), Dimension::VOLUME);
         // velocity² has dimension L²T⁻².
-        assert_eq!(Dimension::VELOCITY.powi(2), Dimension::new([2, 0, -2, 0, 0, 0, 0]));
+        assert_eq!(
+            Dimension::VELOCITY.powi(2),
+            Dimension::new([2, 0, -2, 0, 0, 0, 0])
+        );
     }
 
     #[test]
     fn dimensionless_detection() {
         assert!(Dimension::DIMENSIONLESS.is_dimensionless());
         // velocity / velocity = dimensionless
-        assert!(Dimension::VELOCITY.div(&Dimension::VELOCITY).is_dimensionless());
+        assert!(Dimension::VELOCITY
+            .div(&Dimension::VELOCITY)
+            .is_dimensionless());
         assert!(!Dimension::FORCE.is_dimensionless());
     }
 }

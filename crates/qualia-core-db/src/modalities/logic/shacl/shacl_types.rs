@@ -267,7 +267,11 @@ pub struct CompiledShape {
 }
 
 impl CompiledShape {
-    pub fn new(shape_class: String, constraints: Vec<ShaclConstraint>, severity: ShaclSeverity) -> Self {
+    pub fn new(
+        shape_class: String,
+        constraints: Vec<ShaclConstraint>,
+        severity: ShaclSeverity,
+    ) -> Self {
         Self {
             shape_class,
             constraints,
@@ -278,7 +282,7 @@ impl CompiledShape {
             name: None,
         }
     }
-    
+
     pub fn is_empty(&self) -> bool {
         self.constraints.is_empty()
     }

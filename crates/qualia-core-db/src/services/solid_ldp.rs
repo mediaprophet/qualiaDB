@@ -1,5 +1,5 @@
 use crate::{
-    PermissiveRoutingLane, NQuin, QualiaSuperBlock, BLOCK_MULTIPLIER_SIZE, QUINS_PER_BLOCK,
+    NQuin, PermissiveRoutingLane, QualiaSuperBlock, BLOCK_MULTIPLIER_SIZE, QUINS_PER_BLOCK,
 };
 use std::fs::{create_dir_all, File};
 use std::io::{Read, Write};
@@ -128,7 +128,10 @@ mod tests {
     fn test_allocation_firewall() {
         // Assert that the `QualiaSuperBlock` buffer contains precisely what we expect
         // without heap allocation.
-        assert_eq!(std::mem::size_of::<QualiaSuperBlock>(), crate::BLOCK_MULTIPLIER_SIZE);
+        assert_eq!(
+            std::mem::size_of::<QualiaSuperBlock>(),
+            crate::BLOCK_MULTIPLIER_SIZE
+        );
         let mut block = Box::new(unsafe { std::mem::zeroed::<QualiaSuperBlock>() });
         let block_slice = unsafe {
             std::slice::from_raw_parts_mut(
@@ -136,14 +139,14 @@ mod tests {
                 crate::BLOCK_MULTIPLIER_SIZE,
             )
         };
-        
+
         // Zero-scrub
         unsafe {
             for byte in block_slice.iter_mut() {
                 core::ptr::write_volatile(byte, 0);
             }
         }
-        
+
         // Check that the memory was effectively zeroed
         for &byte in block_slice.iter() {
             assert_eq!(byte, 0);

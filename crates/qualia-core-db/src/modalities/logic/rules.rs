@@ -44,7 +44,7 @@ impl RuleEngine {
     /// Evaluate all rulesets against a Quin
     pub fn evaluate(&self, quin: &crate::NQuin) -> Vec<RuleResult> {
         let mut results = Vec::new();
-        
+
         for ruleset in &self.rulesets {
             for rule in &ruleset.rules {
                 // Placeholder rule evaluation logic
@@ -57,7 +57,7 @@ impl RuleEngine {
                 results.push(result);
             }
         }
-        
+
         results
     }
 }
@@ -109,7 +109,7 @@ mod tests {
             rules: vec![],
         };
         engine.add_ruleset(ruleset);
-        
+
         let retrieved = engine.get_ruleset("test_ruleset");
         assert!(retrieved.is_some());
         assert_eq!(retrieved.unwrap().name, "test_ruleset");

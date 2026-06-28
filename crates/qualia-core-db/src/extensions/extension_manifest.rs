@@ -58,7 +58,7 @@ pub struct ExtensionManifest {
     pub version: String,
     pub display_name: String,
     pub description: String,
-    
+
     pub transport: TransportProtocol,
     pub capabilities: Vec<ExtensionCapability>,
     pub security: ExtensionSecurity,

@@ -8,7 +8,9 @@
 //!
 //! Native only — mirrors `ternary_gpu.rs`.
 
-use crate::topk::{merge_block_candidates, topk_params_bytes, TopKItem, TOPK_BLOCK_SIZE, TOPK_REDUCTION_WGSL};
+use crate::topk::{
+    merge_block_candidates, topk_params_bytes, TopKItem, TOPK_BLOCK_SIZE, TOPK_REDUCTION_WGSL,
+};
 
 /// Reduce `logits` to its global top-K on the GPU. `block_size` is elements per workgroup
 /// (clamped to `TOPK_BLOCK_SIZE`, the WGSL `var<workgroup>` cap). Blocking (native readback).
@@ -83,15 +85,28 @@ pub fn topk_gpu(
         label: Some("topk_bind"),
         layout: &pipeline.get_bind_group_layout(0),
         entries: &[
-            wgpu::BindGroupEntry { binding: 0, resource: logits_buf.as_entire_binding() },
-            wgpu::BindGroupEntry { binding: 1, resource: params_buf.as_entire_binding() },
-            wgpu::BindGroupEntry { binding: 2, resource: cand_val.as_entire_binding() },
-            wgpu::BindGroupEntry { binding: 3, resource: cand_idx.as_entire_binding() },
+            wgpu::BindGroupEntry {
+                binding: 0,
+                resource: logits_buf.as_entire_binding(),
+            },
+            wgpu::BindGroupEntry {
+                binding: 1,
+                resource: params_buf.as_entire_binding(),
+            },
+            wgpu::BindGroupEntry {
+                binding: 2,
+                resource: cand_val.as_entire_binding(),
+            },
+            wgpu::BindGroupEntry {
+                binding: 3,
+                resource: cand_idx.as_entire_binding(),
+            },
         ],
     });
 
-    let mut encoder =
-        device.create_command_encoder(&wgpu::CommandEncoderDescriptor { label: Some("topk_enc") });
+    let mut encoder = device.create_command_encoder(&wgpu::CommandEncoderDescriptor {
+        label: Some("topk_enc"),
+    });
     {
         let mut pass = encoder.begin_compute_pass(&wgpu::ComputePassDescriptor {
             label: Some("topk_pass"),
@@ -110,8 +125,12 @@ pub fn topk_gpu(
     let si = stg_idx.slice(..);
     let (tx_v, rx_v) = std::sync::mpsc::channel();
     let (tx_i, rx_i) = std::sync::mpsc::channel();
-    sv.map_async(wgpu::MapMode::Read, move |r| { let _ = tx_v.send(r); });
-    si.map_async(wgpu::MapMode::Read, move |r| { let _ = tx_i.send(r); });
+    sv.map_async(wgpu::MapMode::Read, move |r| {
+        let _ = tx_v.send(r);
+    });
+    si.map_async(wgpu::MapMode::Read, move |r| {
+        let _ = tx_i.send(r);
+    });
     let _ = device.poll(wgpu::PollType::wait_indefinitely());
     rx_v.recv().expect("map val").expect("map topk val");
     rx_i.recv().expect("map idx").expect("map topk idx");
@@ -138,15 +157,22 @@ mod tests {
         let adapter = pollster::block_on(instance.request_adapter(&wgpu::RequestAdapterOptions {
             power_preference: wgpu::PowerPreference::HighPerformance,
             ..Default::default()
-        })).ok()?;
+        }))
+        .ok()?;
         pollster::block_on(adapter.request_device(&wgpu::DeviceDescriptor::default())).ok()
     }
 
     fn assert_parity(gpu: &[TopKItem], cpu: &[TopKItem]) {
         assert_eq!(gpu.len(), cpu.len(), "top-k length");
         for (g, c) in gpu.iter().zip(cpu.iter()) {
-            assert_eq!(g.token_id, c.token_id, "token id mismatch: gpu {g:?} cpu {c:?}");
-            assert!((g.logit - c.logit).abs() < 1e-5, "logit mismatch: gpu {g:?} cpu {c:?}");
+            assert_eq!(
+                g.token_id, c.token_id,
+                "token id mismatch: gpu {g:?} cpu {c:?}"
+            );
+            assert!(
+                (g.logit - c.logit).abs() < 1e-5,
+                "logit mismatch: gpu {g:?} cpu {c:?}"
+            );
         }
     }
 
@@ -179,8 +205,9 @@ mod tests {
             return;
         };
         let n = 49_152usize;
-        let logits: Vec<f32> =
-            (0..n).map(|i| (((i * 1103515245 + 12345) >> 7) % 1000) as f32 * 0.01 - 5.0).collect();
+        let logits: Vec<f32> = (0..n)
+            .map(|i| (((i * 1103515245 + 12345) >> 7) % 1000) as f32 * 0.01 - 5.0)
+            .collect();
         for k in [1usize, 32, 64] {
             let gpu = topk_gpu(&device, &queue, &logits, k, TOPK_BLOCK_SIZE);
             let cpu = topk_cpu(&logits, k);

@@ -1,5 +1,5 @@
 //! NVMe Computational Storage (CSD) Implementation
-//! 
+//!
 //! This module provides computational storage pushdown using NVMe CSD (Computational Storage Device).
 //! Designed for hardware-accelerated mathematical computations and query processing.
 
@@ -9,10 +9,10 @@ use std::fs::{File, OpenOptions};
 #[cfg(unix)]
 use std::os::unix::io::AsRawFd;
 
+use serde::{Deserialize, Serialize};
 #[cfg(windows)]
 use std::os::windows::io::AsRawHandle;
 use std::path::Path;
-use serde::{Deserialize, Serialize};
 
 /// CSD Manager for computational storage operations
 pub struct CsdManager {
@@ -308,7 +308,7 @@ impl CsdManager {
     /// Discover CSD devices
     pub fn discover_devices(&mut self) -> Result<Vec<String>, CsdError> {
         let mut discovered_devices = Vec::new();
-        
+
         // Scan for CSD devices
         for i in 0..16 {
             let device_path = format!("/dev/nvme{}", i);
@@ -324,7 +324,10 @@ impl CsdManager {
     }
 
     /// Discover devices into a caller-owned fixed buffer.
-    pub fn discover_devices_into(&mut self, out: &mut [CsdDeviceHandle]) -> Result<usize, CsdError> {
+    pub fn discover_devices_into(
+        &mut self,
+        out: &mut [CsdDeviceHandle],
+    ) -> Result<usize, CsdError> {
         let mut written = 0;
 
         for i in 0..16 {
@@ -332,7 +335,9 @@ impl CsdManager {
             if Path::new(&device_path).exists() {
                 if let Ok(device) = self.probe_device(&device_path) {
                     if written >= out.len() {
-                        return Err(CsdError::BufferTooSmall("device discovery output buffer exhausted".to_string()));
+                        return Err(CsdError::BufferTooSmall(
+                            "device discovery output buffer exhausted".to_string(),
+                        ));
                     }
                     out[written] = Self::device_handle(&device);
                     written += 1;
@@ -354,7 +359,7 @@ impl CsdManager {
 
         // Get device information using ioctl
         let device_id = format!("csd-{}", device_path);
-        
+
         // For now, use reasonable defaults
         let capabilities = CsdCapabilities {
             max_concurrent_operations: 16,
@@ -395,7 +400,8 @@ impl CsdManager {
         self.validate_function(&function)?;
 
         // Store function
-        self.functions.insert(function.function_id.clone(), function);
+        self.functions
+            .insert(function.function_id.clone(), function);
 
         Ok(())
     }
@@ -412,7 +418,13 @@ impl CsdManager {
     }
 
     /// Execute matrix multiplication
-    pub fn matrix_multiply(&mut self, device_id: &str, a: &[f32], b: &[f32], dimensions: (usize, usize, usize)) -> Result<Vec<f32>, CsdError> {
+    pub fn matrix_multiply(
+        &mut self,
+        device_id: &str,
+        a: &[f32],
+        b: &[f32],
+        dimensions: (usize, usize, usize),
+    ) -> Result<Vec<f32>, CsdError> {
         let mut result = vec![0.0f32; dimensions.0 * dimensions.2];
         let written = self.matrix_multiply_into(device_id, a, b, dimensions, &mut result)?;
         result.truncate(written);
@@ -431,14 +443,20 @@ impl CsdManager {
         self.ensure_device_exists(device_id)?;
         let (rows_a, shared, cols_b) = dimensions;
         if a.len() != rows_a * shared {
-            return Err(CsdError::InvalidOperation("matrix A dimensions do not match input length".to_string()));
+            return Err(CsdError::InvalidOperation(
+                "matrix A dimensions do not match input length".to_string(),
+            ));
         }
         if b.len() != shared * cols_b {
-            return Err(CsdError::InvalidOperation("matrix B dimensions do not match input length".to_string()));
+            return Err(CsdError::InvalidOperation(
+                "matrix B dimensions do not match input length".to_string(),
+            ));
         }
         let required = rows_a * cols_b;
         if out.len() < required {
-            return Err(CsdError::BufferTooSmall("matrix multiply output buffer too small".to_string()));
+            return Err(CsdError::BufferTooSmall(
+                "matrix multiply output buffer too small".to_string(),
+            ));
         }
 
         for row in 0..rows_a {
@@ -455,9 +473,14 @@ impl CsdManager {
     }
 
     /// Execute vector dot product
-    pub fn vector_dot_product(&mut self, device_id: &str, a: &[f32], b: &[f32]) -> Result<f32, CsdError> {
+    pub fn vector_dot_product(
+        &mut self,
+        device_id: &str,
+        a: &[f32],
+        b: &[f32],
+    ) -> Result<f32, CsdError> {
         let operation_id = self.generate_operation_id();
-        
+
         let operation = CsdOperationRequest {
             operation_id,
             function_id: "vector_dot_product".to_string(),
@@ -474,13 +497,11 @@ impl CsdManager {
                     location: DataLocation::HostMemory,
                 },
             ],
-            outputs: vec![
-                OperationOutput {
-                    name: "result".to_string(),
-                    size: 4, // 4 bytes for f32
-                    location: DataLocation::HostMemory,
-                },
-            ],
+            outputs: vec![OperationOutput {
+                name: "result".to_string(),
+                size: 4, // 4 bytes for f32
+                location: DataLocation::HostMemory,
+            }],
             priority: OperationPriority::Normal,
             deadline: None,
         };
@@ -497,7 +518,13 @@ impl CsdManager {
     }
 
     /// Execute convolution operation
-    pub fn convolution(&mut self, device_id: &str, input: &[f32], kernel: &[f32], dimensions: (usize, usize, usize, usize)) -> Result<Vec<f32>, CsdError> {
+    pub fn convolution(
+        &mut self,
+        device_id: &str,
+        input: &[f32],
+        kernel: &[f32],
+        dimensions: (usize, usize, usize, usize),
+    ) -> Result<Vec<f32>, CsdError> {
         let mut result = vec![0.0f32; dimensions.0 * dimensions.1];
         let written = self.convolution_into(device_id, input, kernel, dimensions, &mut result)?;
         result.truncate(written);
@@ -516,14 +543,20 @@ impl CsdManager {
         self.ensure_device_exists(device_id)?;
         let (width, height, kernel_width, kernel_height) = dimensions;
         if input.len() != width * height {
-            return Err(CsdError::InvalidOperation("convolution input dimensions do not match input length".to_string()));
+            return Err(CsdError::InvalidOperation(
+                "convolution input dimensions do not match input length".to_string(),
+            ));
         }
         if kernel.len() != kernel_width * kernel_height {
-            return Err(CsdError::InvalidOperation("convolution kernel dimensions do not match kernel length".to_string()));
+            return Err(CsdError::InvalidOperation(
+                "convolution kernel dimensions do not match kernel length".to_string(),
+            ));
         }
         let required = width * height;
         if out.len() < required {
-            return Err(CsdError::BufferTooSmall("convolution output buffer too small".to_string()));
+            return Err(CsdError::BufferTooSmall(
+                "convolution output buffer too small".to_string(),
+            ));
         }
 
         let kernel_x_radius = kernel_width / 2;
@@ -533,14 +566,20 @@ impl CsdManager {
             for x in 0..width {
                 let mut acc = 0.0f32;
                 for ky in 0..kernel_height {
-                    let Some(input_y) = y.checked_add(ky).and_then(|value| value.checked_sub(kernel_y_radius)) else {
+                    let Some(input_y) = y
+                        .checked_add(ky)
+                        .and_then(|value| value.checked_sub(kernel_y_radius))
+                    else {
                         continue;
                     };
                     if input_y >= height {
                         continue;
                     }
                     for kx in 0..kernel_width {
-                        let Some(input_x) = x.checked_add(kx).and_then(|value| value.checked_sub(kernel_x_radius)) else {
+                        let Some(input_x) = x
+                            .checked_add(kx)
+                            .and_then(|value| value.checked_sub(kernel_x_radius))
+                        else {
                             continue;
                         };
                         if input_x >= width {
@@ -560,7 +599,9 @@ impl CsdManager {
 
     /// Get device statistics
     pub fn get_device_stats(&self, device_id: &str) -> Option<CsdDeviceStats> {
-        self.devices.get(device_id).map(|device| device.device_stats.clone())
+        self.devices
+            .get(device_id)
+            .map(|device| device.device_stats.clone())
     }
 
     /// Get performance statistics
@@ -576,7 +617,9 @@ impl CsdManager {
     /// List available devices into a compact caller-owned buffer.
     pub fn list_devices_into(&self, out: &mut [CsdDeviceHandle]) -> Result<usize, CsdError> {
         if out.len() < self.devices.len() {
-            return Err(CsdError::BufferTooSmall("device listing output buffer too small".to_string()));
+            return Err(CsdError::BufferTooSmall(
+                "device listing output buffer too small".to_string(),
+            ));
         }
 
         let mut written = 0;
@@ -595,7 +638,9 @@ impl CsdManager {
     /// List available functions into a compact caller-owned buffer.
     pub fn list_functions_into(&self, out: &mut [CsdFunctionHandle]) -> Result<usize, CsdError> {
         if out.len() < self.functions.len() {
-            return Err(CsdError::BufferTooSmall("function listing output buffer too small".to_string()));
+            return Err(CsdError::BufferTooSmall(
+                "function listing output buffer too small".to_string(),
+            ));
         }
 
         let mut written = 0;
@@ -611,11 +656,15 @@ impl CsdManager {
     /// Validate function
     fn validate_function(&self, function: &CsdFunction) -> Result<(), CsdError> {
         if function.function_id.is_empty() {
-            return Err(CsdError::InvalidFunction("Function ID cannot be empty".to_string()));
+            return Err(CsdError::InvalidFunction(
+                "Function ID cannot be empty".to_string(),
+            ));
         }
 
         if function.bytecode.is_empty() {
-            return Err(CsdError::InvalidFunction("Function bytecode cannot be empty".to_string()));
+            return Err(CsdError::InvalidFunction(
+                "Function bytecode cannot be empty".to_string(),
+            ));
         }
 
         Ok(())
@@ -635,7 +684,9 @@ impl CsdManager {
 
         // Check inputs
         if operation.inputs.is_empty() {
-            return Err(CsdError::InvalidOperation("Operation must have inputs".to_string()));
+            return Err(CsdError::InvalidOperation(
+                "Operation must have inputs".to_string(),
+            ));
         }
 
         Ok(())
@@ -705,7 +756,10 @@ impl CsdManager {
     }
 
     /// Serialize convolution dimensions
-    fn serialize_convolution_dimensions(&self, dimensions: (usize, usize, usize, usize)) -> Vec<u8> {
+    fn serialize_convolution_dimensions(
+        &self,
+        dimensions: (usize, usize, usize, usize),
+    ) -> Vec<u8> {
         let mut bytes = Vec::with_capacity(16);
         bytes.extend_from_slice(&(dimensions.0 as u32).to_le_bytes());
         bytes.extend_from_slice(&(dimensions.1 as u32).to_le_bytes());
@@ -812,9 +866,12 @@ impl CsdPerformanceMonitor {
     pub fn update_metrics(&mut self, operation_id: u64, execution_time: u64, data_size: u64) {
         self.global_metrics.total_operations += 1;
         self.global_metrics.total_execution_time += execution_time;
-        self.global_metrics.average_execution_time = self.global_metrics.total_execution_time as f64 / self.global_metrics.total_operations as f64;
+        self.global_metrics.average_execution_time = self.global_metrics.total_execution_time
+            as f64
+            / self.global_metrics.total_operations as f64;
         self.global_metrics.total_data_processed += data_size;
-        self.global_metrics.overall_throughput = self.global_metrics.total_data_processed as f64 / self.global_metrics.total_execution_time as f64;
+        self.global_metrics.overall_throughput = self.global_metrics.total_data_processed as f64
+            / self.global_metrics.total_execution_time as f64;
     }
 
     /// Get global statistics
@@ -843,9 +900,15 @@ impl MathComputationBuilder {
     }
 
     /// Add matrix multiplication operation
-    pub fn add_matrix_multiply(&mut self, device_id: String, a: Vec<f32>, b: Vec<f32>, dimensions: (usize, usize, usize)) -> &mut Self {
+    pub fn add_matrix_multiply(
+        &mut self,
+        device_id: String,
+        a: Vec<f32>,
+        b: Vec<f32>,
+        dimensions: (usize, usize, usize),
+    ) -> &mut Self {
         let operation_id = self.generate_operation_id();
-        
+
         let operation = CsdOperationRequest {
             operation_id,
             function_id: "matrix_multiply".to_string(),
@@ -862,13 +925,11 @@ impl MathComputationBuilder {
                     location: DataLocation::HostMemory,
                 },
             ],
-            outputs: vec![
-                OperationOutput {
-                    name: format!("result_{}", operation_id),
-                    size: ((dimensions.0 * dimensions.2) * 4) as u64,
-                    location: DataLocation::HostMemory,
-                },
-            ],
+            outputs: vec![OperationOutput {
+                name: format!("result_{}", operation_id),
+                size: ((dimensions.0 * dimensions.2) * 4) as u64,
+                location: DataLocation::HostMemory,
+            }],
             priority: OperationPriority::Normal,
             deadline: None,
         };
@@ -896,11 +957,11 @@ impl MathComputationBuilder {
         // Simple dependency analysis - in real implementation would be more sophisticated
         for (i, operation) in self.operations.iter().enumerate() {
             let mut dependencies = Vec::new();
-            
+
             // Check if this operation depends on previous operations
             for j in 0..i {
                 let prev_operation = &self.operations[j];
-                
+
                 // Check if any output of previous operation is used as input
                 for output in &prev_operation.outputs {
                     for input in &operation.inputs {
@@ -910,8 +971,9 @@ impl MathComputationBuilder {
                     }
                 }
             }
-            
-            self.data_dependencies.insert(operation.function_id.clone(), dependencies);
+
+            self.data_dependencies
+                .insert(operation.function_id.clone(), dependencies);
         }
     }
 
@@ -927,11 +989,17 @@ impl MathComputationBuilder {
 
             for operation in &self.operations {
                 if !processed_operations.contains(&operation.function_id) {
-                    let dependencies = self.data_dependencies.get(&operation.function_id).cloned().unwrap_or_default();
-                    
+                    let dependencies = self
+                        .data_dependencies
+                        .get(&operation.function_id)
+                        .cloned()
+                        .unwrap_or_default();
+
                     // Check if all dependencies are processed
-                    let can_execute = dependencies.iter().all(|dep| processed_operations.contains(dep));
-                    
+                    let can_execute = dependencies
+                        .iter()
+                        .all(|dep| processed_operations.contains(dep));
+
                     if can_execute {
                         current_stage.push(operation.function_id.clone());
                         stage_dependencies.extend(dependencies.clone());
@@ -951,7 +1019,7 @@ impl MathComputationBuilder {
             };
 
             self.execution_plan.stages.push(stage);
-            
+
             for operation in &current_stage {
                 processed_operations.insert(operation.clone());
             }
@@ -963,7 +1031,7 @@ impl MathComputationBuilder {
     /// Estimate execution time
     fn estimate_execution_time(&mut self) {
         let mut total_time = 0.0;
-        
+
         for stage in &self.execution_plan.stages {
             total_time += stage.estimated_time;
         }
@@ -1034,7 +1102,7 @@ mod tests {
     #[test]
     fn test_matrix_multiply() {
         let mut manager = CsdManager::new();
-        
+
         // Create dummy device
         let device = CsdDevice {
             device_id: "test_device".to_string(),
@@ -1062,7 +1130,7 @@ mod tests {
         // and just test the matrix multiplication logic
         let a = vec![1.0, 2.0, 3.0, 4.0];
         let b = vec![5.0, 6.0, 7.0, 8.0];
-        
+
         // This would normally work with a real device
         // let result = manager.matrix_multiply("test_device", &a, &b, (2, 2, 2));
     }
@@ -1070,15 +1138,15 @@ mod tests {
     #[test]
     fn test_math_computation_builder() {
         let mut builder = MathComputationBuilder::new();
-        
+
         let a = vec![1.0, 2.0, 3.0, 4.0];
         let b = vec![5.0, 6.0, 7.0, 8.0];
-        
+
         builder.add_matrix_multiply("device1".to_string(), a, b, (2, 2, 2));
-        
+
         let plan = builder.build();
         assert!(plan.is_ok());
-        
+
         if let Ok(plan) = plan {
             assert_eq!(plan.stages.len(), 1);
             assert!(plan.estimated_time > 0.0);

@@ -1,4 +1,4 @@
-use crate::{NQuin, q_hash};
+use crate::{q_hash, NQuin};
 
 /// A zero-heap representation of a degraded claim.
 /// Ensures the engine outputs probabilistic analyses, dialectical maps, and Socratic questions
@@ -33,18 +33,21 @@ pub const LEGAL_DISCLAIMER: &str = "**Informational/Educational Ontology:** This
 /// Identifies if a Quin encodes a definitive claim that crosses Epistemic Boundaries.
 pub fn identify_degradation_vector(quin: &NQuin) -> DegradationVector {
     let predicate = quin.predicate;
-    
+
     // Medical/Biological Vectors
-    if predicate == q_hash("q42:biochemicalPathway") || predicate == q_hash("q42:medicalDiagnosis") {
+    if predicate == q_hash("q42:biochemicalPathway") || predicate == q_hash("q42:medicalDiagnosis")
+    {
         return DegradationVector::BiochemicalPathway;
     }
-    if predicate == q_hash("q42:thermodynamicState") || predicate == q_hash("q42:kineticSimulation") {
+    if predicate == q_hash("q42:thermodynamicState") || predicate == q_hash("q42:kineticSimulation")
+    {
         return DegradationVector::ThermodynamicTracking;
     }
-    if predicate == q_hash("q42:genomicAlignment") || predicate == q_hash("q42:sequenceProcessing") {
+    if predicate == q_hash("q42:genomicAlignment") || predicate == q_hash("q42:sequenceProcessing")
+    {
         return DegradationVector::GenomicPrivacy;
     }
-    
+
     // Legal/Jural Vectors
     if predicate == q_hash("q42:contractualClause") || predicate == q_hash("q42:legalVerdict") {
         return DegradationVector::ContractualPower;
@@ -52,15 +55,18 @@ pub fn identify_degradation_vector(quin: &NQuin) -> DegradationVector {
     if predicate == q_hash("q42:proportionalityTest") || predicate == q_hash("q42:rightsConflict") {
         return DegradationVector::ProportionalityTest;
     }
-    if predicate == q_hash("q42:governancePolicy") || predicate == q_hash("q42:enforcementProtocol") {
+    if predicate == q_hash("q42:governancePolicy") || predicate == q_hash("q42:enforcementProtocol")
+    {
         return DegradationVector::InteractionGovernance;
     }
-    
+
     // Fiduciary Vectors
-    if predicate == q_hash("q42:financialFiduciary") || predicate == q_hash("q42:investmentDirective") {
+    if predicate == q_hash("q42:financialFiduciary")
+        || predicate == q_hash("q42:investmentDirective")
+    {
         return DegradationVector::FiduciaryAdvice;
     }
-    
+
     DegradationVector::Unknown
 }
 
@@ -179,7 +185,10 @@ pub fn detect_referral_trigger(quin: &NQuin) -> Option<ReferralTrigger> {
 /// Socratic softening to an overriding referral (medical for bio/thermo/genomic vectors;
 /// legal for contractual/proportionality/governance/fiduciary). Below the floor → `None`
 /// (the caller uses the Linguistic Degradation Matrix as normal).
-pub fn detect_referral_by_severity(vector: DegradationVector, metadata: u64) -> Option<ReferralTrigger> {
+pub fn detect_referral_by_severity(
+    vector: DegradationVector,
+    metadata: u64,
+) -> Option<ReferralTrigger> {
     let severity = (metadata & 0xFF) as u8;
     if severity < REFERRAL_SEVERITY_FLOOR {
         return None;
@@ -257,15 +266,27 @@ mod tests {
         // A legal verdict degrades to the educational/jural map.
         let lv = identify_degradation_vector(&claim("q42:legalVerdict", 0));
         assert_eq!(lv, DegradationVector::ContractualPower);
-        assert_eq!(degrade_claim_to_socratic(lv).unwrap().immutable_disclaimer, LEGAL_DISCLAIMER);
+        assert_eq!(
+            degrade_claim_to_socratic(lv).unwrap().immutable_disclaimer,
+            LEGAL_DISCLAIMER
+        );
         // An ordinary claim is untouched.
-        assert_eq!(identify_degradation_vector(&claim("q42:hasColour", 0)), DegradationVector::Unknown);
+        assert_eq!(
+            identify_degradation_vector(&claim("q42:hasColour", 0)),
+            DegradationVector::Unknown
+        );
     }
 
     #[test]
     fn acute_harm_triggers_overriding_medical_referral() {
-        for p in ["q42:acutePhysicalHarm", "q42:medicalEmergency", "q42:selfHarmRisk", "q42:overdoseRisk"] {
-            let t = detect_referral_trigger(&claim(p, 0)).expect("acute-harm predicate must trigger");
+        for p in [
+            "q42:acutePhysicalHarm",
+            "q42:medicalEmergency",
+            "q42:selfHarmRisk",
+            "q42:overdoseRisk",
+        ] {
+            let t =
+                detect_referral_trigger(&claim(p, 0)).expect("acute-harm predicate must trigger");
             assert_eq!(t.domain, ReferralDomain::MedicalEmergency);
             assert!(t.overriding_prompt.contains("emergency services"));
         }
@@ -275,7 +296,12 @@ mod tests {
 
     #[test]
     fn imminent_jeopardy_triggers_overriding_legal_referral() {
-        for p in ["q42:imminentLegalJeopardy", "q42:arrestRisk", "q42:custodialThreat", "q42:filingDeadlineImminent"] {
+        for p in [
+            "q42:imminentLegalJeopardy",
+            "q42:arrestRisk",
+            "q42:custodialThreat",
+            "q42:filingDeadlineImminent",
+        ] {
             let t = detect_referral_trigger(&claim(p, 0)).expect("jeopardy predicate must trigger");
             assert_eq!(t.domain, ReferralDomain::LegalJeopardy);
             assert!(t.overriding_prompt.contains("licensed lawyer"));
@@ -290,7 +316,11 @@ mod tests {
         let t = detect_referral_by_severity(DegradationVector::BiochemicalPathway, 0xFF).unwrap();
         assert_eq!(t.domain, ReferralDomain::MedicalEmergency);
         // Legal-family vectors escalate to a legal referral.
-        let l = detect_referral_by_severity(DegradationVector::ProportionalityTest, REFERRAL_SEVERITY_FLOOR as u64).unwrap();
+        let l = detect_referral_by_severity(
+            DegradationVector::ProportionalityTest,
+            REFERRAL_SEVERITY_FLOOR as u64,
+        )
+        .unwrap();
         assert_eq!(l.domain, ReferralDomain::LegalJeopardy);
         // Unknown never escalates.
         assert!(detect_referral_by_severity(DegradationVector::Unknown, 0xFF).is_none());
@@ -298,19 +328,39 @@ mod tests {
 
     #[test]
     fn definitive_classifications_are_structurally_refused() {
-        assert!(forbids_definitive_classification(q_hash("q42:medicalDiagnosis")));
-        assert!(forbids_definitive_classification(q_hash("q42:legalVerdict")));
-        assert!(forbids_definitive_classification(q_hash("q42:guiltDetermination")));
+        assert!(forbids_definitive_classification(q_hash(
+            "q42:medicalDiagnosis"
+        )));
+        assert!(forbids_definitive_classification(q_hash(
+            "q42:legalVerdict"
+        )));
+        assert!(forbids_definitive_classification(q_hash(
+            "q42:guiltDetermination"
+        )));
         // A mechanistic pathway predicate is allowed (it is the *permitted* mechanistic output).
-        assert!(!forbids_definitive_classification(q_hash("q42:biochemicalPathway")));
+        assert!(!forbids_definitive_classification(q_hash(
+            "q42:biochemicalPathway"
+        )));
     }
 
     #[test]
     fn physiological_data_is_quarantined_from_public_ontologies() {
-        assert!(requires_physiological_quarantine(&claim("q42:medicalDiagnosis", 0)));
-        assert!(requires_physiological_quarantine(&claim("q42:genomicAlignment", 0)));
-        assert!(requires_physiological_quarantine(&claim("q42:physiologicalReading", 0)));
+        assert!(requires_physiological_quarantine(&claim(
+            "q42:medicalDiagnosis",
+            0
+        )));
+        assert!(requires_physiological_quarantine(&claim(
+            "q42:genomicAlignment",
+            0
+        )));
+        assert!(requires_physiological_quarantine(&claim(
+            "q42:physiologicalReading",
+            0
+        )));
         // A purely legal claim does not need physiological quarantine.
-        assert!(!requires_physiological_quarantine(&claim("q42:contractualClause", 0)));
+        assert!(!requires_physiological_quarantine(&claim(
+            "q42:contractualClause",
+            0
+        )));
     }
 }

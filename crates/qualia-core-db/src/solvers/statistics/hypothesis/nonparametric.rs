@@ -25,8 +25,16 @@ pub fn mcnemar(b: u64, c: u64) -> Option<NonparametricResult> {
         return None;
     }
     let diff = (nb - nc).abs();
-    let stat = if diff >= 1.0 { (diff - 1.0).powi(2) / (nb + nc) } else { 0.0 };
-    Some(NonparametricResult { statistic: stat, p_value: chi_squared::upper_p(stat, 1.0), dof: 1.0 })
+    let stat = if diff >= 1.0 {
+        (diff - 1.0).powi(2) / (nb + nc)
+    } else {
+        0.0
+    };
+    Some(NonparametricResult {
+        statistic: stat,
+        p_value: chi_squared::upper_p(stat, 1.0),
+        dof: 1.0,
+    })
 }
 
 /// Friedman test result, including the Iman-Davenport F-correction.

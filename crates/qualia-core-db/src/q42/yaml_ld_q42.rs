@@ -66,8 +66,8 @@ pub fn compile_yaml_ld_to_quins(
     lamport_clock: u64,
 ) -> Result<Vec<NQuin>, &'static str> {
     // 1. Parse the YAML into our structured workspace
-    let workspace: WebizenWorkspace = serde_yaml::from_slice(yaml_bytes)
-        .map_err(|_| "Failed to parse yaml-ld-q42 payload")?;
+    let workspace: WebizenWorkspace =
+        serde_yaml::from_slice(yaml_bytes).map_err(|_| "Failed to parse yaml-ld-q42 payload")?;
 
     let mut quins = Vec::new();
     let pred_pane = q_hash("q42:SystemPaneState");
@@ -103,7 +103,7 @@ pub fn compile_yaml_ld_to_quins(
             // we would CBOR-encode them here:
             // let mut cbor_buf = [0u8; 128];
             // let cbor_len = ciborium::into_writer(&pane_config, &mut cbor_buf[..]).unwrap();
-            // Then we would store the cbor_buf in a dedicated payload store and put the 
+            // Then we would store the cbor_buf in a dedicated payload store and put the
             // payload hash in the NQuin `object` field.
 
             quins.push(NQuin {

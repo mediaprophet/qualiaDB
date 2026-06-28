@@ -54,7 +54,10 @@ mod tests {
     fn cdf_is_exponential_for_k_two() {
         // χ²(2) = Exp with mean 2 → CDF(x) = 1 - e^{-x/2}.
         for &x in &[0.5, 2.0, 5.0] {
-            assert!((cdf(x, 2.0) - (1.0 - (-x / 2.0).exp())).abs() < 1e-10, "x={x}");
+            assert!(
+                (cdf(x, 2.0) - (1.0 - (-x / 2.0).exp())).abs() < 1e-10,
+                "x={x}"
+            );
         }
     }
 

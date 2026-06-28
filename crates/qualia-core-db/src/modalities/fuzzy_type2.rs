@@ -24,7 +24,10 @@ impl IntervalType2 {
     /// Construct, clamping to `[0,1]` and ordering so `lower ≤ upper`.
     pub fn new(a: f32, b: f32) -> Self {
         let (lo, hi) = if a <= b { (a, b) } else { (b, a) };
-        Self { lower: lo.clamp(0.0, 1.0), upper: hi.clamp(0.0, 1.0) }
+        Self {
+            lower: lo.clamp(0.0, 1.0),
+            upper: hi.clamp(0.0, 1.0),
+        }
     }
 
     /// A crisp (type-1) degree as the degenerate interval `[d, d]`.
@@ -56,7 +59,10 @@ impl IntervalType2 {
 
     /// Complement `[1−upper, 1−lower]`.
     pub fn complement(self) -> Self {
-        Self { lower: 1.0 - self.upper, upper: 1.0 - self.lower }
+        Self {
+            lower: 1.0 - self.upper,
+            upper: 1.0 - self.lower,
+        }
     }
 
     /// Type-reduce a single interval to a crisp degree (interval midpoint).
@@ -126,7 +132,13 @@ mod tests {
         assert_eq!(c.footprint(), 0.0);
         assert!((c.type_reduce() - 0.7).abs() < 1e-6);
         // Construction orders the bounds.
-        assert_eq!(IntervalType2::new(0.9, 0.2), IntervalType2 { lower: 0.2, upper: 0.9 });
+        assert_eq!(
+            IntervalType2::new(0.9, 0.2),
+            IntervalType2 {
+                lower: 0.2,
+                upper: 0.9
+            }
+        );
     }
 
     #[test]
@@ -155,7 +167,10 @@ mod tests {
         let lmf = [0.1, 0.4, 0.6, 0.4, 0.1];
         let umf = [0.3, 0.7, 0.9, 0.7, 0.3];
         let (cl, cr) = karnik_mendel(&x, &lmf, &umf).unwrap();
-        assert!(cl <= 2.0 + 1e-4 && cr >= 2.0 - 1e-4, "centroid [{cl},{cr}] should bracket 2");
+        assert!(
+            cl <= 2.0 + 1e-4 && cr >= 2.0 - 1e-4,
+            "centroid [{cl},{cr}] should bracket 2"
+        );
         assert!(cl <= cr);
     }
 

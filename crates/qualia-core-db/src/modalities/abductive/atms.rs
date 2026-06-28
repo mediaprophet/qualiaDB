@@ -98,7 +98,10 @@ mod tests {
     fn nogoods_are_superset_closed() {
         let nogoods = [A | B]; // {A,B} is contradictory
         assert!(is_nogood(A | B, &nogoods));
-        assert!(is_nogood(A | B | C, &nogoods), "any superset of a nogood is a nogood");
+        assert!(
+            is_nogood(A | B | C, &nogoods),
+            "any superset of a nogood is a nogood"
+        );
         assert!(!is_nogood(A | C, &nogoods));
         assert!(!is_nogood(A, &nogoods));
     }

@@ -19,7 +19,10 @@ pub struct PermutationResult {
 struct Lcg(u64);
 impl Lcg {
     fn below(&mut self, bound: usize) -> usize {
-        self.0 = self.0.wrapping_mul(6364136223846793005).wrapping_add(1442695040888963407);
+        self.0 = self
+            .0
+            .wrapping_mul(6364136223846793005)
+            .wrapping_add(1442695040888963407);
         ((self.0 >> 33) as usize) % bound.max(1)
     }
 }
@@ -67,7 +70,11 @@ pub fn two_sample_test(
     }
     // Add-one smoothing so the p-value is never exactly 0.
     let p_value = (1.0 + count_extreme as f64) / (n_perm as f64 + 1.0);
-    Some(PermutationResult { observed, p_value, n_permutations: n_perm })
+    Some(PermutationResult {
+        observed,
+        p_value,
+        n_permutations: n_perm,
+    })
 }
 
 #[cfg(test)]
@@ -82,7 +89,11 @@ mod tests {
         let b = [8.0, 9.0, 8.5, 9.5, 8.2, 9.1];
         let r = two_sample_test(&a, &b, 5000, 1, |s| mean(s).unwrap()).unwrap();
         assert!(r.observed < 0.0); // mean(a) - mean(b) < 0
-        assert!(r.p_value < 0.01, "clear difference should be significant: p={}", r.p_value);
+        assert!(
+            r.p_value < 0.01,
+            "clear difference should be significant: p={}",
+            r.p_value
+        );
     }
 
     #[test]
@@ -91,7 +102,11 @@ mod tests {
         let a = [5.0, 6.0, 4.0, 5.5, 4.5, 6.5];
         let b = [5.2, 5.8, 4.2, 5.6, 4.8, 6.2];
         let r = two_sample_test(&a, &b, 5000, 7, |s| mean(s).unwrap()).unwrap();
-        assert!(r.p_value > 0.2, "similar groups should not be significant: p={}", r.p_value);
+        assert!(
+            r.p_value > 0.2,
+            "similar groups should not be significant: p={}",
+            r.p_value
+        );
     }
 
     #[test]

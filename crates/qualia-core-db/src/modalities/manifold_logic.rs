@@ -157,7 +157,11 @@ mod tests {
         let mut b0 = [0usize; 3];
         let m = persistent_h0(&dist, n, &[0.5, 1.0, 10.0], &mut b0);
         assert_eq!(m, 3);
-        assert_eq!(b0, [4, 2, 1], "b0 is monotonically non-increasing as ε grows");
+        assert_eq!(
+            b0,
+            [4, 2, 1],
+            "b0 is monotonically non-increasing as ε grows"
+        );
     }
 
     #[test]
@@ -174,10 +178,23 @@ mod tests {
     #[test]
     fn wave_eval_at_origin_peak() {
         // origin (envelope=1), f=0, phi=π/2, t=0 → sin(π/2)=1 → Ψ = a.
-        let c = WaveCoord { x: 0.0, y: 0.0, z: 0.0, t: 0.0, f: 0.0, a: 2.0, phi: PI / 2.0 };
+        let c = WaveCoord {
+            x: 0.0,
+            y: 0.0,
+            z: 0.0,
+            t: 0.0,
+            f: 0.0,
+            a: 2.0,
+            phi: PI / 2.0,
+        };
         assert!((wave_eval(&c) - 2.0).abs() < 1e-9);
         // Off-origin attenuates: same wave at r²=3 (x=y=z=1) → 2 * 1/(1+3) = 0.5.
-        let c2 = WaveCoord { x: 1.0, y: 1.0, z: 1.0, ..c };
+        let c2 = WaveCoord {
+            x: 1.0,
+            y: 1.0,
+            z: 1.0,
+            ..c
+        };
         assert!((wave_eval(&c2) - 0.5).abs() < 1e-9);
     }
 

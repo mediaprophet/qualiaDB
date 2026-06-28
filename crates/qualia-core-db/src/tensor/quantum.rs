@@ -32,7 +32,7 @@ impl QuantumState {
             QuantumState::ParallelContext
         }
     }
-    
+
     pub fn to_q_value(&self) -> f32 {
         match self {
             QuantumState::GroundTruth => 0.0,

@@ -2,7 +2,7 @@
 //! async readback. Split into concern submodules (structural; no behaviour change).
 //! The cfg(wasm32) `mod mc8_wasm;` in gguf_bridge/mod.rs gates the whole module.
 
-mod residency;
-mod params;
 mod encode;
+mod params;
 mod readback;
+mod residency;

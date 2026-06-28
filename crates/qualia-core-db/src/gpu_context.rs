@@ -164,7 +164,8 @@ impl VramByteRange {
     /// True when `[offset, offset+size)` lies entirely inside this partition pin.
     #[inline]
     pub fn contains(&self, alloc_offset: u64, alloc_size: u64) -> bool {
-        alloc_size == 0 || alloc_offset >= self.offset && alloc_offset.saturating_add(alloc_size) <= self.end()
+        alloc_size == 0
+            || alloc_offset >= self.offset && alloc_offset.saturating_add(alloc_size) <= self.end()
     }
 }
 
@@ -261,7 +262,11 @@ impl UniverseOrchestrator {
 
     /// Global mode mapped per universe — LLM (U0) wins under pressure.
     #[inline]
-    pub fn effective_mode(&self, universe: ComputeUniverse, global: OperationalMode) -> OperationalMode {
+    pub fn effective_mode(
+        &self,
+        universe: ComputeUniverse,
+        global: OperationalMode,
+    ) -> OperationalMode {
         match global {
             OperationalMode::Full => OperationalMode::Full,
             OperationalMode::Eco => match universe {
@@ -271,7 +276,9 @@ impl UniverseOrchestrator {
             OperationalMode::Reserve => match universe {
                 ComputeUniverse::LlmInference => OperationalMode::Full,
                 ComputeUniverse::Tensor10D => OperationalMode::Eco,
-                ComputeUniverse::Viewport | ComputeUniverse::AcousticPlane => OperationalMode::Reserve,
+                ComputeUniverse::Viewport | ComputeUniverse::AcousticPlane => {
+                    OperationalMode::Reserve
+                }
             },
         }
     }
@@ -357,9 +364,9 @@ impl VramLedger {
         };
         match slot {
             VramLedgerSlot::LlmKvCache => self.kv_cache_bytes.store(bytes, Ordering::Relaxed),
-            VramLedgerSlot::LlmWeightStaging => {
-                self.llm_weight_staging_bytes.store(bytes, Ordering::Relaxed)
-            }
+            VramLedgerSlot::LlmWeightStaging => self
+                .llm_weight_staging_bytes
+                .store(bytes, Ordering::Relaxed),
             VramLedgerSlot::Tensor10D => self.tensor_bytes.store(bytes, Ordering::Relaxed),
             VramLedgerSlot::Viewport => self.render_bytes.store(bytes, Ordering::Relaxed),
         }
@@ -415,18 +422,14 @@ impl VramLedger {
         if used.saturating_add(extra_bytes) > part.vram_budget_bytes {
             return false;
         }
-        part.ledger_range.contains(
-            part.ledger_range.offset.saturating_add(used),
-            extra_bytes,
-        ) && self.can_allocate(extra_bytes)
+        part.ledger_range
+            .contains(part.ledger_range.offset.saturating_add(used), extra_bytes)
+            && self.can_allocate(extra_bytes)
     }
 
     /// Map a ledger slot to its pinned byte offset inside the adapter ledger.
     #[inline]
-    pub fn slot_byte_offset(
-        orchestrator: &UniverseOrchestrator,
-        slot: VramLedgerSlot,
-    ) -> u64 {
+    pub fn slot_byte_offset(orchestrator: &UniverseOrchestrator, slot: VramLedgerSlot) -> u64 {
         let universe = match slot {
             VramLedgerSlot::LlmKvCache | VramLedgerSlot::LlmWeightStaging => {
                 ComputeUniverse::LlmInference
@@ -436,7 +439,10 @@ impl VramLedger {
         };
         let used_before = match slot {
             VramLedgerSlot::LlmWeightStaging => {
-                orchestrator.partition(ComputeUniverse::LlmInference).ledger_range.offset
+                orchestrator
+                    .partition(ComputeUniverse::LlmInference)
+                    .ledger_range
+                    .offset
                     + global_vram_ledger().used_in_slot(VramLedgerSlot::LlmKvCache)
             }
             _ => orchestrator.partition(universe).ledger_range.offset,
@@ -470,7 +476,11 @@ impl VramLedger {
 
     #[inline]
     pub fn record_kv_cache(&self, bytes: u64) {
-        self.record_universe(ComputeUniverse::LlmInference, VramLedgerSlot::LlmKvCache, bytes);
+        self.record_universe(
+            ComputeUniverse::LlmInference,
+            VramLedgerSlot::LlmKvCache,
+            bytes,
+        );
     }
 
     #[inline]
@@ -677,7 +687,9 @@ async fn init_shared_gpu_async() -> Result<SharedGpuContext, String> {
         adapter_caps.summary_line(),
         adapter_caps.llm_feature_line()
     );
-    if adapter_caps.is_integrated_gpu() && std::env::var("QUALIA_LLM_ALLOW_IGPU").ok().as_deref() != Some("1") {
+    if adapter_caps.is_integrated_gpu()
+        && std::env::var("QUALIA_LLM_ALLOW_IGPU").ok().as_deref() != Some("1")
+    {
         log::warn!(
             "shared_gpu|adapter|integrated_gpu_selected|set QUALIA_LLM_ALLOW_IGPU=1 to acknowledge this for native LLM runs"
         );
@@ -786,15 +798,23 @@ mod tests {
         let orch = UniverseOrchestrator::from_total_budget_full(10_000);
         let sum: u64 = orch.partitions.iter().map(|p| p.vram_budget_bytes).sum();
         assert!(sum <= 10_000);
-        assert_eq!(orch.partition(ComputeUniverse::LlmInference).vram_budget_bytes, 5500);
+        assert_eq!(
+            orch.partition(ComputeUniverse::LlmInference)
+                .vram_budget_bytes,
+            5500
+        );
     }
 
     #[test]
     fn reserve_mode_caps_u2_at_ten_percent() {
         let orch = UniverseOrchestrator::from_total_budget(10_000, OperationalMode::Reserve);
-        assert_eq!(orch.partition(ComputeUniverse::Viewport).vram_budget_bytes, 1_000);
         assert_eq!(
-            orch.partition(ComputeUniverse::LlmInference).vram_budget_bytes,
+            orch.partition(ComputeUniverse::Viewport).vram_budget_bytes,
+            1_000
+        );
+        assert_eq!(
+            orch.partition(ComputeUniverse::LlmInference)
+                .vram_budget_bytes,
             4_500
         );
         assert_eq!(orch.active_mode, OperationalMode::Reserve);
@@ -836,15 +856,37 @@ mod tests {
 
     #[test]
     fn ambient_draw_instant_step_by_mode() {
-        let orch = UniverseOrchestrator::from_total_budget(6 * 1024 * 1024 * 1024, OperationalMode::Full);
-        assert_eq!(orch.max_particles(ComputeUniverse::Viewport, OperationalMode::Full), 50_000);
-        assert_eq!(orch.max_particles(ComputeUniverse::Viewport, OperationalMode::Eco), 8_000);
-        assert_eq!(orch.max_particles(ComputeUniverse::Viewport, OperationalMode::Reserve), 0);
+        let orch =
+            UniverseOrchestrator::from_total_budget(6 * 1024 * 1024 * 1024, OperationalMode::Full);
+        assert_eq!(
+            orch.max_particles(ComputeUniverse::Viewport, OperationalMode::Full),
+            50_000
+        );
+        assert_eq!(
+            orch.max_particles(ComputeUniverse::Viewport, OperationalMode::Eco),
+            8_000
+        );
+        assert_eq!(
+            orch.max_particles(ComputeUniverse::Viewport, OperationalMode::Reserve),
+            0
+        );
 
         let resident = 50_000_u32;
-        assert_eq!(ambient_draw_instances_for_mode(resident, OperationalMode::Full), 50_000);
-        assert_eq!(ambient_draw_instances_for_mode(resident, OperationalMode::Eco), 8_000);
-        assert_eq!(ambient_draw_instances_for_mode(resident, OperationalMode::Reserve), 0);
-        assert_eq!(ambient_draw_instances_for_mode(3_000, OperationalMode::Eco), 3_000);
+        assert_eq!(
+            ambient_draw_instances_for_mode(resident, OperationalMode::Full),
+            50_000
+        );
+        assert_eq!(
+            ambient_draw_instances_for_mode(resident, OperationalMode::Eco),
+            8_000
+        );
+        assert_eq!(
+            ambient_draw_instances_for_mode(resident, OperationalMode::Reserve),
+            0
+        );
+        assert_eq!(
+            ambient_draw_instances_for_mode(3_000, OperationalMode::Eco),
+            3_000
+        );
     }
 }

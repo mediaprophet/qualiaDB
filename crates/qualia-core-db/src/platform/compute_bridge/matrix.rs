@@ -17,10 +17,10 @@
 
 use std::time::Instant;
 
-use crate::device_benchmark::{benchmark_devices, CircuitBench, CircuitKind};
 use super::backend::{BackendId, KernelPanel, ProbeableBackend};
 use super::kernel_class::KernelClass;
 use super::reference;
+use crate::device_benchmark::{benchmark_devices, CircuitBench, CircuitKind};
 
 /// Measured per-class capability: for each class, the backend rows ranked
 /// fastest-first. `best_for` is the O(1)-ish lookup the STEM call sites use.
@@ -57,7 +57,12 @@ impl ClassMatrix {
             for (i, r) in rows.iter().enumerate() {
                 s.push_str(&format!(
                     "    {}. {:<26} [{:?}/{}] {:>9.4} ms  score {:.3}\n",
-                    i + 1, r.label, r.kind, r.backend, r.ms_per_gemv, r.rel_score
+                    i + 1,
+                    r.label,
+                    r.kind,
+                    r.backend,
+                    r.ms_per_gemv,
+                    r.rel_score
                 ));
             }
         }
@@ -112,7 +117,9 @@ impl ProbeableBackend for CpuBackend {
                 time_ms(10, || reference::stencil3(&x, &mut y))
             }
             KernelClass::AllPairs => {
-                let pts: Vec<f32> = (0..panel.nbody_n * 3).map(|i| (i % 97) as f32 * 0.1).collect();
+                let pts: Vec<f32> = (0..panel.nbody_n * 3)
+                    .map(|i| (i % 97) as f32 * 0.1)
+                    .collect();
                 time_ms(3, || {
                     let _ = reference::allpairs_potential(&pts);
                 })
@@ -196,11 +203,17 @@ pub fn probe_class_matrix(
         }
         // Rank fastest-first by measured ms, fill relative scores.
         rows.sort_by(|a, b| {
-            a.ms_per_gemv.partial_cmp(&b.ms_per_gemv).unwrap_or(std::cmp::Ordering::Equal)
+            a.ms_per_gemv
+                .partial_cmp(&b.ms_per_gemv)
+                .unwrap_or(std::cmp::Ordering::Equal)
         });
         if let Some(best) = rows.first().map(|c| c.ms_per_gemv) {
             for r in &mut rows {
-                r.rel_score = if r.ms_per_gemv > 0.0 { best / r.ms_per_gemv } else { 0.0 };
+                r.rel_score = if r.ms_per_gemv > 0.0 {
+                    best / r.ms_per_gemv
+                } else {
+                    0.0
+                };
             }
         }
         per_class.push((class, rows));
@@ -210,8 +223,8 @@ pub fn probe_class_matrix(
 
 #[cfg(test)]
 mod tests {
-    use super::*;
     use super::super::backend::BackendRegistry;
+    use super::*;
 
     #[test]
     fn cpu_backend_probes_every_class_with_real_rows() {
@@ -220,7 +233,11 @@ mod tests {
         for class in KernelClass::ALL {
             let rows = cpu.probe_class(class, &panel);
             assert_eq!(rows.len(), 1, "CPU must yield a row for {}", class.label());
-            assert!(rows[0].ms_per_gemv > 0.0, "{} CPU time must be positive", class.label());
+            assert!(
+                rows[0].ms_per_gemv > 0.0,
+                "{} CPU time must be positive",
+                class.label()
+            );
             assert!(rows[0].upload_gbps.is_infinite(), "CPU is in-pool");
         }
     }

@@ -170,8 +170,14 @@ mod tests {
         let n = shamir_split(secret, &coeffs, 5, &mut ys); // 5 shares
         assert_eq!(n, 5);
         // Any 3 shares reconstruct the secret.
-        assert_eq!(shamir_reconstruct(&[1, 2, 3], &[ys[0], ys[1], ys[2]], 3), secret);
-        assert_eq!(shamir_reconstruct(&[2, 4, 5], &[ys[1], ys[3], ys[4]], 3), secret);
+        assert_eq!(
+            shamir_reconstruct(&[1, 2, 3], &[ys[0], ys[1], ys[2]], 3),
+            secret
+        );
+        assert_eq!(
+            shamir_reconstruct(&[2, 4, 5], &[ys[1], ys[3], ys[4]], 3),
+            secret
+        );
         // Fewer than k shares do NOT yield the secret.
         assert_ne!(shamir_reconstruct(&[1, 2], &[ys[0], ys[1]], 2), secret);
     }
@@ -183,7 +189,10 @@ mod tests {
         assert_eq!(enumerated_identity_confidence(1, 0), 0.0);
         // ZKP capability: granted only when the trait is proven AND the id stays hidden.
         assert!(zkp_capability_granted(true, false));
-        assert!(!zkp_capability_granted(true, true), "revealing the identifier defeats the point");
+        assert!(
+            !zkp_capability_granted(true, true),
+            "revealing the identifier defeats the point"
+        );
         assert!(!zkp_capability_granted(false, false));
         // Web-of-trust decay: 0.9 base, decay 0.5 → depth 0 = 0.9, depth 2 = 0.225.
         assert!((web_of_trust_confidence(0.9, 0, 0.5) - 0.9).abs() < 1e-6);
@@ -212,7 +221,10 @@ mod tests {
         let lost = [key, device]; // stolen phone + its key
         let mut out = [0u64; 8];
         let n = recompute_fabric(&all, &lost, &mut out);
-        assert_eq!(n, 2, "identity re-computes from the surviving relational fabric");
+        assert_eq!(
+            n, 2,
+            "identity re-computes from the surviving relational fabric"
+        );
         assert!(out[..n].contains(&social) && out[..n].contains(&bio));
         assert!(!out[..n].contains(&key));
         assert!(identifier_is_not_identity());

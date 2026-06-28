@@ -192,7 +192,8 @@ pub unsafe extern "C" fn nets_map_lorentz(
     let out_lorentz = std::slice::from_raw_parts_mut(out_lorentz_ptr, quins_len);
 
     for i in 0..quins_len {
-        out_lorentz[i] = crate::domains::mathematical::geometric::LorentzVector::from_quin(&quins[i]);
+        out_lorentz[i] =
+            crate::domains::mathematical::geometric::LorentzVector::from_quin(&quins[i]);
     }
 }
 

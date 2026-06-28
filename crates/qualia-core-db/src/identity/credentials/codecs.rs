@@ -34,8 +34,9 @@ impl CredentialCodec for OpenBadgeCodec {
     }
 
     fn decode(&self, payload: &[u8]) -> Result<Credential, CodecError> {
-        let credential: Credential = serde_json::from_slice(payload)
-            .map_err(|e| CodecError::SerializationError(format!("OpenBadge decoding failed: {e}")))?;
+        let credential: Credential = serde_json::from_slice(payload).map_err(|e| {
+            CodecError::SerializationError(format!("OpenBadge decoding failed: {e}"))
+        })?;
         if !credential.types.iter().any(|s| s == "OpenBadgeCredential") {
             return Err(CodecError::SerializationError(
                 "Not a valid OpenBadgeCredential".to_string(),
@@ -60,7 +61,11 @@ impl CredentialCodec for PdfCodec {
         pdf.extend_from_slice(b"2 0 obj\n<< /Type /Pages /Kids [] /Count 0 >>\nendobj\n");
         pdf.extend_from_slice(b"3 0 obj\n");
         pdf.extend_from_slice(
-            format!("<< /Type /Metadata /Subtype /XML /Length {} >>\n", json.len()).as_bytes(),
+            format!(
+                "<< /Type /Metadata /Subtype /XML /Length {} >>\n",
+                json.len()
+            )
+            .as_bytes(),
         );
         pdf.extend_from_slice(b"stream\n");
         pdf.extend_from_slice(json.as_bytes());

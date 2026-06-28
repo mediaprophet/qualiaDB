@@ -141,7 +141,11 @@ mod tests {
         let ran = accelerated_gemm_f32(m, k, n, &a, &b, &mut c);
         eprintln!("[accelerated_gemm_f32] 128³ ran on {ran:?}");
         let reference = ref_gemm(m, k, n, &a, &b);
-        let max_err = c.iter().zip(&reference).map(|(x, y)| (x - y).abs()).fold(0.0f32, f32::max);
+        let max_err = c
+            .iter()
+            .zip(&reference)
+            .map(|(x, y)| (x - y).abs())
+            .fold(0.0f32, f32::max);
         assert!(max_err < 1e-2, "max abs err {max_err} on {ran:?}");
     }
 }

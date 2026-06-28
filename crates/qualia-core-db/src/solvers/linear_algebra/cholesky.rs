@@ -103,7 +103,12 @@ mod tests {
         cholesky_factor(3, &A3, &mut l).unwrap();
         let expect = [2.0, 0.0, 0.0, 6.0, 1.0, 0.0, -8.0, 5.0, 3.0];
         for i in 0..9 {
-            assert!((l[i] - expect[i]).abs() < EPS, "l[{i}]={} != {}", l[i], expect[i]);
+            assert!(
+                (l[i] - expect[i]).abs() < EPS,
+                "l[{i}]={} != {}",
+                l[i],
+                expect[i]
+            );
         }
     }
 
@@ -153,12 +158,18 @@ mod tests {
         // Symmetric but indefinite (negative eigenvalue): [[1,2],[2,1]].
         let a = [1.0, 2.0, 2.0, 1.0];
         let mut l = [0.0; 4];
-        assert_eq!(cholesky_factor(2, &a, &mut l), Err(SolversError::SingularMatrix));
+        assert_eq!(
+            cholesky_factor(2, &a, &mut l),
+            Err(SolversError::SingularMatrix)
+        );
     }
 
     #[test]
     fn rejects_bad_dims() {
         let mut l = [0.0; 9];
-        assert_eq!(cholesky_factor(2, &A3, &mut l), Err(SolversError::InvalidDimension));
+        assert_eq!(
+            cholesky_factor(2, &A3, &mut l),
+            Err(SolversError::InvalidDimension)
+        );
     }
 }

@@ -16,14 +16,26 @@ pub struct KnnClassifier {
 
 impl KnnClassifier {
     /// Store the training data. Fails closed on shape mismatch or `k` out of range.
-    pub fn fit(x: &[f64], y: &[usize], n: usize, p: usize, k: usize) -> Result<Self, LearningError> {
+    pub fn fit(
+        x: &[f64],
+        y: &[usize],
+        n: usize,
+        p: usize,
+        k: usize,
+    ) -> Result<Self, LearningError> {
         if n == 0 || p == 0 || x.len() != n * p || y.len() != n {
             return Err(LearningError::InvalidDimension);
         }
         if k == 0 || k > n {
             return Err(LearningError::InsufficientData);
         }
-        Ok(Self { x: x.to_vec(), y: y.to_vec(), n, p, k })
+        Ok(Self {
+            x: x.to_vec(),
+            y: y.to_vec(),
+            n,
+            p,
+            k,
+        })
     }
 
     /// Predict the class of one query row by majority vote of the `k` nearest
@@ -56,7 +68,9 @@ impl KnnClassifier {
 
     /// Predict classes for a row-major `m × p` query matrix.
     pub fn predict(&self, x: &[f64], m: usize) -> Vec<usize> {
-        (0..m).map(|i| self.predict_row(&x[i * self.p..(i + 1) * self.p])).collect()
+        (0..m)
+            .map(|i| self.predict_row(&x[i * self.p..(i + 1) * self.p]))
+            .collect()
     }
 
     #[inline]
@@ -93,7 +107,13 @@ mod tests {
 
     #[test]
     fn guards() {
-        assert_eq!(KnnClassifier::fit(&[1.0, 2.0], &[0], 1, 2, 5).unwrap_err(), LearningError::InsufficientData);
-        assert_eq!(KnnClassifier::fit(&[1.0, 2.0], &[0, 1], 2, 2, 1).unwrap_err(), LearningError::InvalidDimension);
+        assert_eq!(
+            KnnClassifier::fit(&[1.0, 2.0], &[0], 1, 2, 5).unwrap_err(),
+            LearningError::InsufficientData
+        );
+        assert_eq!(
+            KnnClassifier::fit(&[1.0, 2.0], &[0, 1], 2, 2, 1).unwrap_err(),
+            LearningError::InvalidDimension
+        );
     }
 }

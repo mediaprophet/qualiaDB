@@ -118,7 +118,11 @@ pub fn validate_enumerated_identity(
 /// Emit the SHACL opcodes for the enumerated-identity shape into `out` (zero-heap);
 /// returns the count written. The richer semantic enforcement (collapse rejection,
 /// noisy-OR confidence) lives in [`validate_enumerated_identity`].
-pub fn enumerated_identity_opcodes(min_distinct: u32, min_attested: u32, out: &mut [SlgOpcode]) -> usize {
+pub fn enumerated_identity_opcodes(
+    min_distinct: u32,
+    min_attested: u32,
+    out: &mut [SlgOpcode],
+) -> usize {
     let ops = [
         SlgOpcode::CheckMinCount(min_distinct),
         SlgOpcode::CheckMinCount(min_attested),
@@ -363,7 +367,12 @@ mod tests {
     use crate::verifiable_credential::Credential;
     use crate::{q_hash, NQuin};
 
-    fn binding(id: &str, scheme: CryptoScheme, attested: bool, confidence: f32) -> IdentifierBinding {
+    fn binding(
+        id: &str,
+        scheme: CryptoScheme,
+        attested: bool,
+        confidence: f32,
+    ) -> IdentifierBinding {
         IdentifierBinding {
             identifier: q_hash(id),
             scheme,
@@ -427,10 +436,22 @@ mod tests {
     #[test]
     fn decentralized_routing_dispatches_to_loci() {
         let routes = [
-            ShapeRoute { shape: 1, locus: 100 },
-            ShapeRoute { shape: 2, locus: 100 },
-            ShapeRoute { shape: 1, locus: 200 },
-            ShapeRoute { shape: 1, locus: 100 }, // duplicate, must dedup
+            ShapeRoute {
+                shape: 1,
+                locus: 100,
+            },
+            ShapeRoute {
+                shape: 2,
+                locus: 100,
+            },
+            ShapeRoute {
+                shape: 1,
+                locus: 200,
+            },
+            ShapeRoute {
+                shape: 1,
+                locus: 100,
+            }, // duplicate, must dedup
         ];
         let mut shapes = [0u64; 8];
         let n = shapes_for_locus(&routes, 100, &mut shapes);
@@ -449,8 +470,16 @@ mod tests {
     #[test]
     fn severity_degradation_offgrid_keeps_partial_subgraph_usable() {
         let violations = [
-            ShapeViolation { shape: 1, focus_node: 10, severity: ShaclSeverity::Violation },
-            ShapeViolation { shape: 2, focus_node: 11, severity: ShaclSeverity::Warning },
+            ShapeViolation {
+                shape: 1,
+                focus_node: 10,
+                severity: ShaclSeverity::Violation,
+            },
+            ShapeViolation {
+                shape: 2,
+                focus_node: 11,
+                severity: ShaclSeverity::Warning,
+            },
         ];
         let mut out = [violations[0]; 2];
 
@@ -514,7 +543,11 @@ mod tests {
         // Matches: right subject, issuer, and claim.
         assert!(credential_gates_target(&gate, alice, &vc));
         // Wrong focus node → does not apply.
-        assert!(!credential_gates_target(&gate, q_hash("did:example:bob"), &vc));
+        assert!(!credential_gates_target(
+            &gate,
+            q_hash("did:example:bob"),
+            &vc
+        ));
         // Wrong issuer → rejected.
         let gate_other_issuer = CredentialGate {
             accepted_issuer: q_hash("did:example:rogue"),
