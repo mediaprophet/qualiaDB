@@ -462,18 +462,6 @@ impl QTensorEngine {
         } else {
             max_layers.min(n_layer)
         };
-        // 0.0.21 resident-activation decode (opt-in): keep the residual stream in VRAM across the
-        // stack (GPU RMSNorm + residual; one readback after the last layer) instead of two CPU
-        // readbacks per layer. On any ineligibility it returns None with `hidden` untouched, so we
-        // fall through to the legacy CPU-hidden path below recomputing from the identical input.
-        #[cfg(not(target_arch = "wasm32"))]
-        if crate::llm_bench::resident_decode_enabled() {
-            if let Some(n) =
-                self.dispatch_transformer_forward_resident(index, hidden, emb_dim, token_idx, max_layers)
-            {
-                return n;
-            }
-        }
         // #48 diagnostic: localize where the hidden state turns non-finite (gated; runs once).
         use std::sync::atomic::{AtomicBool, Ordering as DbgOrdering};
         static FWD_DBG_DONE: AtomicBool = AtomicBool::new(false);

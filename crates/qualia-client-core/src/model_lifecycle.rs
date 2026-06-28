@@ -13,6 +13,7 @@ use qualia_core_db::{
     wal::WriteAheadLog,
 };
 use serde::{Deserialize, Serialize};
+use sha2::{Digest, Sha256};
 
 #[derive(Debug)]
 pub enum ModelError {
@@ -133,8 +134,12 @@ pub fn record_llm_memory_sample(bytes: u64) {
     }
     let mut current = LLM_MEMORY_BYTES.load(Ordering::Relaxed);
     while bytes > current {
-        match LLM_MEMORY_BYTES.compare_exchange(current, bytes, Ordering::Relaxed, Ordering::Relaxed)
-        {
+        match LLM_MEMORY_BYTES.compare_exchange(
+            current,
+            bytes,
+            Ordering::Relaxed,
+            Ordering::Relaxed,
+        ) {
             Ok(_) => return,
             Err(observed) => current = observed,
         }
@@ -188,9 +193,7 @@ fn probe_and_activate_model(
             let wait_started = std::time::Instant::now();
             while orch.scrubbing_lock.load(Ordering::Acquire) {
                 if wait_started.elapsed() > std::time::Duration::from_secs(5) {
-                    log::error!(
-                        "LLM_LOAD|failed|1.00|Timed out waiting for prior model eviction"
-                    );
+                    log::error!("LLM_LOAD|failed|1.00|Timed out waiting for prior model eviction");
                     return Err(ModelError::Activate(
                         "Timed out waiting for prior model eviction".to_string(),
                     ));
@@ -199,9 +202,7 @@ fn probe_and_activate_model(
             }
             record_llm_memory_bytes(0);
             record_kv_cache_used_mb(0);
-            log::info!(
-                "LLM_LOAD|unload-done|0.03|Previous resident model scrubbed from memory"
-            );
+            log::info!("LLM_LOAD|unload-done|0.03|Previous resident model scrubbed from memory");
         }
     }
     let mut sys = sysinfo::System::new_all();
@@ -263,9 +264,7 @@ pub fn unload_active_model(profile_id: Option<u64>) {
     let orch = orchestrator();
     let resident = profile_id.or_else(|| orch.resident_model_id());
     if let Some(model_id) = resident {
-        log::info!(
-            "LLM_LOAD|unload-start|0.00|Unloading resident model 0x{model_id:016x}"
-        );
+        log::info!("LLM_LOAD|unload-start|0.00|Unloading resident model 0x{model_id:016x}");
         orch.evict_model(model_id);
         let wait_started = std::time::Instant::now();
         while orch.scrubbing_lock.load(Ordering::Acquire) {
@@ -530,6 +529,25 @@ pub struct VaultGgufEntry {
     pub size_bytes: u64,
 }
 
+/// Exact duplicate GGUF files, grouped by content rather than filename.
+///
+/// The audit is deliberately read-only: lifecycle code may report redundant files,
+/// but never copies, moves, or deletes a model behind the operator's back.
+#[derive(Debug, Clone, Serialize, PartialEq, Eq)]
+pub struct VaultDuplicateGroup {
+    pub sha256: String,
+    pub size_bytes: u64,
+    pub canonical_path: String,
+    pub duplicate_paths: Vec<String>,
+}
+
+impl VaultDuplicateGroup {
+    pub fn reclaimable_bytes(&self) -> u64 {
+        self.size_bytes
+            .saturating_mul(self.duplicate_paths.len() as u64)
+    }
+}
+
 /// Recursively scan `vault_dir` for `.gguf` files.
 pub fn scan_vault_gguf(vault_dir: &Path) -> Result<Vec<VaultGgufEntry>, std::io::Error> {
     if !vault_dir.is_dir() {
@@ -544,6 +562,76 @@ pub fn scan_vault_gguf(vault_dir: &Path) -> Result<Vec<VaultGgufEntry>, std::io:
     Ok(out)
 }
 
+/// Hash only same-sized GGUF candidates and report byte-identical duplicates.
+///
+/// Size bucketing avoids reading every multi-gigabyte model during a routine audit.
+/// Within each exact-content group the shortest, then lexicographically first, path
+/// is suggested as the canonical keeper. No filesystem mutation is performed.
+pub fn audit_vault_duplicates(
+    vault_dir: &Path,
+) -> Result<Vec<VaultDuplicateGroup>, std::io::Error> {
+    use std::collections::BTreeMap;
+    use std::io::Read;
+
+    let entries = scan_vault_gguf(vault_dir)?;
+    let mut by_size: BTreeMap<u64, Vec<&VaultGgufEntry>> = BTreeMap::new();
+    for entry in &entries {
+        by_size.entry(entry.size_bytes).or_default().push(entry);
+    }
+
+    let mut groups = Vec::new();
+    for (size_bytes, candidates) in by_size {
+        if candidates.len() < 2 {
+            continue;
+        }
+        let mut by_digest: BTreeMap<String, Vec<String>> = BTreeMap::new();
+        for candidate in candidates {
+            let mut file = std::fs::File::open(&candidate.path)?;
+            let mut hasher = Sha256::new();
+            // Keep the cold-path hash buffer modest enough for Windows' default
+            // main-thread stack while still reading in efficient chunks.
+            let mut buffer = [0u8; 64 * 1024];
+            loop {
+                let read = file.read(&mut buffer)?;
+                if read == 0 {
+                    break;
+                }
+                hasher.update(&buffer[..read]);
+            }
+            let digest = hasher.finalize();
+            let mut digest_hex = String::with_capacity(digest.len() * 2);
+            for byte in digest {
+                use std::fmt::Write;
+                let _ = write!(digest_hex, "{byte:02x}");
+            }
+            by_digest
+                .entry(digest_hex)
+                .or_default()
+                .push(candidate.path.clone());
+        }
+
+        for (sha256, mut paths) in by_digest {
+            if paths.len() < 2 {
+                continue;
+            }
+            paths.sort_by(|a, b| {
+                let a_depth = Path::new(a).components().count();
+                let b_depth = Path::new(b).components().count();
+                a_depth.cmp(&b_depth).then_with(|| a.cmp(b))
+            });
+            let canonical_path = paths.remove(0);
+            groups.push(VaultDuplicateGroup {
+                sha256,
+                size_bytes,
+                canonical_path,
+                duplicate_paths: paths,
+            });
+        }
+    }
+    groups.sort_by(|a, b| a.canonical_path.cmp(&b.canonical_path));
+    Ok(groups)
+}
+
 fn collect_vault_gguf(dir: &Path, out: &mut Vec<VaultGgufEntry>) -> Result<(), std::io::Error> {
     for entry in std::fs::read_dir(dir)? {
         let entry = entry?;
@@ -555,10 +643,7 @@ fn collect_vault_gguf(dir: &Path, out: &mut Vec<VaultGgufEntry>) -> Result<(), s
         if path.extension().and_then(|e| e.to_str()) != Some("gguf") {
             continue;
         }
-        let stem = path
-            .file_stem()
-            .and_then(|s| s.to_str())
-            .unwrap_or("model");
+        let stem = path.file_stem().and_then(|s| s.to_str()).unwrap_or("model");
         let model_id = sanitize_local_model_id(stem);
         let size_bytes = entry.metadata()?.len();
         out.push(VaultGgufEntry {
@@ -866,5 +951,34 @@ pub fn get_model_status(active: Option<ActiveModelRecord>) -> ModelStatus {
         profile_id: active.as_ref().map(|r| r.profile_id),
         active,
         lifecycle_state: lifecycle_label(lifecycle).to_string(),
+    }
+}
+
+#[cfg(test)]
+mod tests {
+    use super::*;
+
+    #[test]
+    fn duplicate_audit_groups_only_identical_gguf_files() {
+        let root = std::env::temp_dir().join(format!(
+            "qualia-gguf-audit-{}-{}",
+            std::process::id(),
+            unix_now()
+        ));
+        let nested = root.join("nested");
+        std::fs::create_dir_all(&nested).unwrap();
+        std::fs::write(root.join("keeper.gguf"), b"same model bytes").unwrap();
+        std::fs::write(nested.join("copy.gguf"), b"same model bytes").unwrap();
+        std::fs::write(root.join("same-size-not-copy.gguf"), b"other model byte").unwrap();
+
+        let groups = audit_vault_duplicates(&root).unwrap();
+        assert_eq!(groups.len(), 1);
+        assert_eq!(groups[0].size_bytes, 16);
+        assert!(groups[0].canonical_path.ends_with("keeper.gguf"));
+        assert_eq!(groups[0].duplicate_paths.len(), 1);
+        assert!(groups[0].duplicate_paths[0].ends_with("copy.gguf"));
+        assert_eq!(groups[0].reclaimable_bytes(), 16);
+
+        std::fs::remove_dir_all(root).unwrap();
     }
 }

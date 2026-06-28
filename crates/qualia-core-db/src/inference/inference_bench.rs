@@ -248,33 +248,7 @@ pub fn coop_gemv_enabled() -> bool {
 }
 
 // ── 0.0.21: resident-activation decode toggle ─────────────────────────────────
-// Default OFF. When on, native decode keeps the residual stream (`hidden`) resident in a GPU
-// buffer across the whole transformer stack: RMSNorm and the residual add run on the GPU, and the
-// attention / FFN compute feed off `gemm_input_buf` without a per-layer CPU readback. Only ONE
 // readback happens, after the final layer — replacing the legacy 2 readbacks/layer (each forced by
-// the CPU RMSNorm pre-norm needing `hidden` in CPU memory). `QUALIA_LLM_RESIDENT_DECODE=1` opts in;
-// the value also gates so the working CPU-hidden path stays the verified default until coherence is
-// proven on the resident path.
-static RESIDENT_DECODE: AtomicBool = AtomicBool::new(false);
-
-/// Enable/disable the native resident-activation decode forward (`QUALIA_LLM_RESIDENT_DECODE`).
-#[inline]
-pub fn set_resident_decode(on: bool) {
-    RESIDENT_DECODE.store(on, Ordering::Relaxed);
-}
-
-/// Whether native decode should keep the residual stream resident in VRAM (one readback per stack)
-/// rather than reading `hidden` back to the CPU twice per layer. Env forces either direction;
-/// otherwise the atomic flag (default OFF).
-#[inline]
-pub fn resident_decode_enabled() -> bool {
-    match std::env::var("QUALIA_LLM_RESIDENT_DECODE").ok().as_deref() {
-        Some("0") | Some("false") => false,
-        Some("1") | Some("true") => true,
-        _ => RESIDENT_DECODE.load(Ordering::Relaxed),
-    }
-}
-
 // ── #48 correctness path: CPU attention reference ─────────────────────────────
 // Route native attention through the wasm-proven CPU SDPA (`cpu_attention_pass`) instead of the
 // GPU attention shader (whose output is currently unbounded). Correct-but-slower; opt-in.

@@ -12,7 +12,7 @@ pub struct CapabilityProfile {
     /// Stable identity hash — e.g. `q_hash("profile:phi3-mini-edge")`.
     pub profile_id: u64,
 
-    /// If non-empty, acts as an allow-list mask over the CAPABILITY_REGISTRY.
+    /// If non-empty, acts as an allow-list mask over `CAPABILITY_DESCRIPTORS`.
     /// Only the listed `SlgOpcode` variants may be dispatched in this session.
     /// An empty vec means no engine restrictions apply at the profile layer.
     pub active_engines: Vec<SlgOpcode>,

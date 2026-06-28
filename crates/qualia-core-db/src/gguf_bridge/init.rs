@@ -644,7 +644,6 @@ impl QTensorEngine {
             gemm_aux_buf: None,
             gemm_ffn_buf: None,
             #[cfg(not(target_arch = "wasm32"))]
-            resident_hidden_buf: None,
             #[cfg(target_arch = "wasm32")]
             prefill_scratch_buf: None,
             #[cfg(target_arch = "wasm32")]

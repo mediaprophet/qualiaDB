@@ -3,12 +3,12 @@
 // We still need access to standard library for I/O and String during init phase
 extern crate std;
 
-#[path = "mcp_tool_impls.rs"]
-mod mcp_tool_impls;
-#[path = "mcp_stub_impls.rs"]
-mod mcp_stub_impls;
 #[path = "mcp_format_impls.rs"]
 mod mcp_format_impls;
+#[path = "mcp_stub_impls.rs"]
+mod mcp_stub_impls;
+#[path = "mcp_tool_impls.rs"]
+mod mcp_tool_impls;
 
 use crate::wal::append_mutation;
 use crate::NQuin;
@@ -442,7 +442,9 @@ pub unsafe fn enforce_fiduciary_tool_dispatch(
 
         // ── Scientific Computing Tools ───────────────────────────────────────
         b"matrix_operation" => execute_matrix_operation(payload.arguments_raw, intent_frame),
-        b"algebra_solve_polynomial" => mcp_tool_impls::algebra_solve_polynomial(payload.arguments_raw),
+        b"algebra_solve_polynomial" => {
+            mcp_tool_impls::algebra_solve_polynomial(payload.arguments_raw)
+        }
         b"algebra_matrix_analyze" => mcp_tool_impls::algebra_matrix_analyze(payload.arguments_raw),
         b"cas" => mcp_tool_impls::cas(payload.arguments_raw),
 
@@ -633,10 +635,7 @@ unsafe fn execute_qpu_optimize(
     mcp_stub_impls::qpu_optimize(args)
 }
 
-unsafe fn execute_qpu_dft(
-    args: &[u8],
-    _intent: &McpIntentFrame,
-) -> Result<String, McpSystemError> {
+unsafe fn execute_qpu_dft(args: &[u8], _intent: &McpIntentFrame) -> Result<String, McpSystemError> {
     mcp_stub_impls::qpu_dft(args)
 }
 
@@ -926,17 +925,16 @@ fn daemon_health_ok(port: u16) -> bool {
     use std::net::{SocketAddr, TcpStream};
     use std::time::Duration;
 
-    let addr: SocketAddr = format!("127.0.0.1:{port}").parse().unwrap_or_else(|_| {
-        SocketAddr::from(([127, 0, 0, 1], port))
-    });
+    let addr: SocketAddr = format!("127.0.0.1:{port}")
+        .parse()
+        .unwrap_or_else(|_| SocketAddr::from(([127, 0, 0, 1], port)));
     let mut stream = match TcpStream::connect_timeout(&addr, Duration::from_secs(2)) {
         Ok(stream) => stream,
         Err(_) => return false,
     };
     let _ = stream.set_read_timeout(Some(Duration::from_secs(2)));
-    let request = format!(
-        "GET /health HTTP/1.1\r\nHost: 127.0.0.1:{port}\r\nConnection: close\r\n\r\n"
-    );
+    let request =
+        format!("GET /health HTTP/1.1\r\nHost: 127.0.0.1:{port}\r\nConnection: close\r\n\r\n");
     if stream.write_all(request.as_bytes()).is_err() {
         return false;
     }
@@ -1478,6 +1476,21 @@ mod tests {
         assert!(tools.iter().any(|tool| tool["name"] == "parse_rdf"));
         assert!(tools.iter().any(|tool| tool["name"] == "list_qapps"));
         assert_eq!(tools.len(), stable_mcp_tools().len());
+    }
+
+    #[test]
+    fn inference_capability_tools_are_registered() {
+        let registered: Vec<&str> = stable_mcp_tools().iter().map(|tool| tool.name).collect();
+        for capability in crate::CAPABILITY_DESCRIPTORS {
+            for tool in capability.mcp_tools {
+                assert!(
+                    registered.contains(tool),
+                    "{} routes to missing MCP tool {}",
+                    capability.name,
+                    tool
+                );
+            }
+        }
     }
 
     #[test]

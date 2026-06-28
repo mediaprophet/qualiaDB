@@ -428,26 +428,102 @@ pub mod wasm_capabilities;
 /// Crate semver baked in at compile time — shared by daemon `/health`, CLI, and WASM `get_engine_version()`.
 pub const ENGINE_VERSION: &str = env!("CARGO_PKG_VERSION");
 
-pub const CAPABILITY_REGISTRY: &[&str] = &[
-    "SHACL",
-    "Memory",
-    "Database",
-    "Migration",
-    "DeonticLogic",
-    "EpistemicLogic",
-    "ParaconsistentLogic",
-    "DialecticalLogic",
-    "TemporalLTL",
-    "Bioinformatics",
-    "OrganicChemistry",
-    "Economics",
-    "DicomImaging",
-    "ComorbidityEval",
-    "CogAI",
-    "N3Compiler",
-    "Calculus",
-    "GeometricAlgebra",
-    "SIMDKernel",
+/// Canonical description of an inference capability and the MCP tools that
+/// execute it. Chat prompting and MCP registration both consume this table, so
+/// STEM solvers are exposed as tools rather than reimplemented in the LLM layer.
+#[derive(Debug, Clone, Copy, PartialEq, Eq)]
+pub struct CapabilityDescriptor {
+    pub name: &'static str,
+    pub domain: &'static str,
+    pub mcp_tools: &'static [&'static str],
+}
+
+pub const CAPABILITY_DESCRIPTORS: &[CapabilityDescriptor] = &[
+    CapabilityDescriptor {
+        name: "SHACL",
+        domain: "ontology",
+        mcp_tools: &["validate_shacl", "shacl_route"],
+    },
+    CapabilityDescriptor {
+        name: "GraphDatabase",
+        domain: "ontology",
+        mcp_tools: &["query_graph", "query_sparql", "graph_resolve"],
+    },
+    CapabilityDescriptor {
+        name: "DeonticLogic",
+        domain: "logic",
+        mcp_tools: &["evaluate_modality", "deontic_govern", "jural_correlate"],
+    },
+    CapabilityDescriptor {
+        name: "EpistemicLogic",
+        domain: "logic",
+        mcp_tools: &["evaluate_modality", "symbolic_logic_infer"],
+    },
+    CapabilityDescriptor {
+        name: "ParaconsistentLogic",
+        domain: "logic",
+        mcp_tools: &["evaluate_modality", "symbolic_logic_infer"],
+    },
+    CapabilityDescriptor {
+        name: "DialecticalLogic",
+        domain: "logic",
+        mcp_tools: &["evaluate_modality", "symbolic_logic_infer"],
+    },
+    CapabilityDescriptor {
+        name: "TemporalLTL",
+        domain: "logic",
+        mcp_tools: &["evaluate_modality", "symbolic_logic_infer"],
+    },
+    CapabilityDescriptor {
+        name: "AlgebraAndCalculus",
+        domain: "mathematics",
+        mcp_tools: &[
+            "algebra_solve_polynomial",
+            "algebra_matrix_analyze",
+            "cas",
+            "matrix_operation",
+        ],
+    },
+    CapabilityDescriptor {
+        name: "GeometricAlgebra",
+        domain: "mathematics",
+        mcp_tools: &["geometric_algebra_op"],
+    },
+    CapabilityDescriptor {
+        name: "PhysicsAndODE",
+        domain: "physics",
+        mcp_tools: &["ode_solve", "qpu_dft"],
+    },
+    CapabilityDescriptor {
+        name: "Bioinformatics",
+        domain: "bioscience",
+        mcp_tools: &["bioinformatics_align"],
+    },
+    CapabilityDescriptor {
+        name: "OrganicChemistry",
+        domain: "chemistry",
+        mcp_tools: &["chemical_analysis", "chemical_descriptors"],
+    },
+    CapabilityDescriptor {
+        name: "ClinicalRisk",
+        domain: "clinical",
+        mcp_tools: &["medical_score", "clinical_risk"],
+    },
+    CapabilityDescriptor {
+        name: "StatisticsAndEconomics",
+        domain: "economics",
+        mcp_tools: &["statistical_analysis", "financial_model"],
+    },
+    CapabilityDescriptor {
+        name: "EngineeringAnalysis",
+        domain: "engineering",
+        mcp_tools: &["engineering_analysis_op"],
+    },
+    CapabilityDescriptor {
+        name: "MachineLearning",
+        domain: "machine-learning",
+        mcp_tools: &["ml_inference"],
+    },
 ];
 
 /// Bare-metal 40-byte continuous statement container for the Qualia engine.

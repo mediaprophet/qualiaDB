@@ -8,17 +8,17 @@ use std::path::PathBuf;
 pub mod bench;
 mod benchmark_env;
 pub mod compress;
+pub mod daemon;
 pub mod evaluate;
 pub mod ingest;
 mod llm_lifecycle;
 mod llm_testing;
-pub mod daemon;
 pub mod mcp;
-mod service;
 pub mod qpu;
 pub mod query;
 pub mod resources;
 pub mod science;
+mod service;
 pub mod solve;
 pub mod telemetry_server;
 
@@ -1102,8 +1102,14 @@ pub enum IngestFormat {
 pub enum LlmAction {
     /// Scan a vault directory for `.gguf` models
     List {
-        /// Directory containing GGUF files (default: `QUALIA_LLM_VAULT` or `C:/llmmodels`)
+        /// Directory containing GGUF files (default: `QUALIA_LLM_VAULT`, `C:/LLM_Models`, or legacy `C:/llmmodels`)
         #[arg(short, long)]
+        vault_path: Option<PathBuf>,
+    },
+    /// Read-only SHA-256 audit for byte-identical GGUF files
+    Duplicates {
+        /// Directory containing GGUF files
+        #[arg(long)]
         vault_path: Option<PathBuf>,
     },
     /// Memory-map a GGUF via `memmap2` and transition lifecycle → Active
@@ -1342,6 +1348,9 @@ async fn main() -> Result<(), Box<dyn std::error::Error>> {
                 LlmAction::List { vault_path } => {
                     llm_lifecycle::run_list(&vault(vault_path))?;
                 }
+                LlmAction::Duplicates { vault_path } => {
+                    llm_lifecycle::run_duplicate_audit(&vault(vault_path))?;
+                }
                 LlmAction::Load { model, vault_path } => {
                     llm_lifecycle::run_load(&vault(vault_path), model)?;
                 }
@@ -1421,8 +1430,13 @@ async fn main() -> Result<(), Box<dyn std::error::Error>> {
                 println!("============================================================");
                 println!("🧠 QualiaDB Runtime Capability Registry");
                 println!("============================================================");
-                for cap in qualia_core_db::CAPABILITY_REGISTRY {
-                    println!("  - {}", cap);
+                for capability in qualia_core_db::CAPABILITY_DESCRIPTORS {
+                    println!(
+                        "  - {} [{}] -> {}",
+                        capability.name,
+                        capability.domain,
+                        capability.mcp_tools.join(", ")
+                    );
                 }
                 println!("============================================================");
             } else {

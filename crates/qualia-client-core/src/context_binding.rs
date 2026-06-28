@@ -12,7 +12,7 @@ use qualia_core_db::{
     profiles::CapabilityProfile,
     q_hash,
     resource_catalog::{OntologyResource, ResourceCatalog},
-    NQuin, CAPABILITY_REGISTRY,
+    NQuin, CAPABILITY_DESCRIPTORS,
 };
 
 use crate::chat_session::{ChatEnvironment, OntologyScopeSummary};
@@ -192,9 +192,9 @@ pub fn compile_chat_environment(
 
     let installed_qapps = list_qapp_names(storage);
     let daemon_reachable = daemon_is_running();
-    let engine_capabilities: Vec<String> = CAPABILITY_REGISTRY
+    let engine_capabilities: Vec<String> = CAPABILITY_DESCRIPTORS
         .iter()
-        .map(|s| (*s).to_string())
+        .map(|capability| capability.name.to_string())
         .collect();
 
     let model_id = active.as_ref().map(|r| r.model_id.clone());
@@ -614,9 +614,18 @@ fn build_capability_briefing(
     }
 
     lines.push(format!("native_engines: {}", engines.join(", ")));
+    lines.push("native_tool_routing:".to_string());
+    for capability in CAPABILITY_DESCRIPTORS {
+        lines.push(format!(
+            "  - {} [{}] -> {}",
+            capability.name,
+            capability.domain,
+            capability.mcp_tools.join(", ")
+        ));
+    }
 
     lines.push(
-        "instructions: Ground factual claims in installed ontology quins. Cite graph scope hashes when asserting domain facts. Use Anatomy qapp handoff for spatial/clinical visualization. Refuse ungrounded speculation when ontologies are available.".to_string(),
+        "instructions: Ground factual claims in installed ontology quins. Route exact STEM calculations through the listed native MCP tools; do not imitate those solvers in generated prose. Cite graph scope hashes when asserting domain facts. Use Anatomy qapp handoff for spatial/clinical visualization. Refuse ungrounded speculation when ontologies are available.".to_string(),
     );
 
     lines.push(crate::chat_ontology::build_chat_ontology_briefing(storage));
