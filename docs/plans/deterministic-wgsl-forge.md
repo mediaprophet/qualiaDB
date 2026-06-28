@@ -15,7 +15,7 @@ The Forge is designed for decentralized, heterogeneous deployment. It acknowledg
 The system must preserve these project constraints:
 
 - P64 remains the canonical on-disk format; GPU execution layouts are derived views.
-- Portable WGSL represents 64-bit values as paired `u32` words.
+- The IR understands native 64-bit types (e.g., `f64`, `u64`). Representing 64-bit values as paired `u32` words is an emission-level lowering handled strictly by the WGSL/SPIR-V fallback pipelines.
 - Generated runtime kernels do not allocate from the heap.
 - Search is bounded, reproducible, and safe under device loss or unsupported features.
 - A shader is never called “certified” merely because it parses.
@@ -47,6 +47,8 @@ KernelSpec (typed buffers, operations, Hardware Intrinsics [MMA, RayQuery], CPU 
 This separation ensures that tuning changes execution strategy without changing the
 kernel’s mathematical meaning.
 
+If a target-specific native backend (e.g., PTX or MSL) fails to initialize on the host, the Forge must automatically fall back to the next available compilation target (e.g., SPIR-V or WGSL) to ensure the compute pipeline remains operational, albeit at a potentially reduced performance tier.
+
 Stateless Execution & Persistent Memory: The execution layer is strictly stateless. Dynamic allocation in the hot loop is forbidden. The orchestrator manages a persistent, topology-aware ring buffer (pinned memory for discrete PCIe devices, zero-copy for unified memory) and passes lightweight offsets to the target-specific `QualiaCompute` implementation.
 
 ## 3. Repository layout
@@ -60,7 +62,7 @@ crates/qualia-core-db/src/wgsl_forge/
         mod.rs          
         core.rs         # Universal math and memory operations
         intrinsics.rs   # Hardware-specific nodes (Warp, MMA, RayQuery)
-        capabilities.rs # Hardware capability matrix and lowering fallback logic
+        capabilities.rs # Hardware capability matrix (including 64-bit arithmetic) and lowering fallback logic
     schedule.rs     bounded schedule parameters and adapter constraints
     emit/           # Target-specific deterministic writers
         mod.rs
@@ -164,9 +166,9 @@ gate. Optional scoring can include p95 latency, throughput, memory, and thermal 
   oracle mismatch. If a target adapter drops or a device is lost during execution, the trait must return a unified `DeviceLost` error rather than backend-specific panic codes, allowing the search space to safely prune the candidate and continue.
 - Use fixed deterministic test vectors and record their seed/hash.
 
-## 8. Cache identity
+## 8. Tuning Signatures
 
-Tuning records are reusable only when all identity fields match:
+Tuning records are reusable only when all signature fields match:
 
 - adapter name, vendor, device, device type, backend, driver and driver info;
 - WGSL Forge schema version;
@@ -176,7 +178,7 @@ Tuning records are reusable only when all identity fields match:
 - wgpu/Naga/cudarc version;
 - correctness tolerance profile.
 
-The `CertificationManifest` acts as a hardware-specific fingerprint. If the software is deployed to a new machine, the Forge will first check for an exact adapter match in a pre-shipped cache. If a match is missing or the hardware environment has changed, the Forge triggers a local tuning run to generate and cache a new optimal manifest for that specific hardware profile.
+The `CertificationManifest` acts as a hardware-specific fingerprint. If a node boots up, it should first poll the cluster's manifest registry (or a local cache directory) for an identical topology manifest. Only if a match is absent does it drop into the `auto-tune-all` phase to generate and cache a new optimal manifest for that specific hardware profile.
 
 The initial implementation serializes records as JSON. Runtime code may later use a
 compact fixed-record format after the schema stabilizes.
@@ -192,7 +194,7 @@ qualia-cli shader validate <file-or-kernel> [--target wgsl|msl|hlsl|spirv|ptx]
 qualia-cli shader certify <kernel> [--manifest result.json]
 qualia-cli shader tune <kernel> [--max-candidates N] [--manifest result.json]
 qualia-cli shader profile-hardware [--export topology.json]
-qualia-cli shader auto-tune-all [--budget-ms N] [--update-local-manifest]
+qualia-cli shader auto-tune-all [--budget-ms N] [--thermal-limit 75C] [--update-local-manifest]
 ```
 
 Commands print human-readable summaries by default and support JSON output for CI.
@@ -211,10 +213,11 @@ Required tests:
 - CPU oracle produces known results;
 - tolerance comparator handles finite values, NaN, infinity, absolute and relative error;
 - search order and winner selection are deterministic for fixed measurements;
-- manifest hashes and cache identity change when source/schema/schedule changes;
+- manifest hashes and tuning signatures change when source/schema/schedule changes;
 - headless GPU oracle test runs when an adapter is available and skips honestly otherwise;
 - CLI smoke tests cover generation and validation without requiring a GPU;
-- oracle tests must execute the exact same CPU reference vectors across all available `QualiaCompute` backend implementations on the host machine to ensure tolerance checks hold true across different compiler toolchains and hardware precision limits.
+- oracle tests must execute the exact same CPU reference vectors across all available `QualiaCompute` backend implementations on the host machine to ensure tolerance checks hold true across different compiler toolchains and hardware precision limits;
+- oracle tests must explicitly verify that the read/write heads of the ring buffer do not lap each other during sustained, high-throughput asynchronous dispatches to guarantee memory safety across the `QualiaSlabAllocator`.
 
 ## 11. Continuation ledger
 
@@ -235,16 +238,14 @@ Update this section before ending any implementation session.
 
 ### Next exact action
 
-Draft the core structures for `qualia-core-db::wgsl_forge::ir.rs` to abstract away backend-specific syntax. Define the IR to support standard scalar/vector operations as well as "Hardware Intrinsic" nodes for future RT/Tensor core mappings. Following the IR definition, design the `QualiaSlabAllocator` in `execute/memory.rs` to handle persistent ring buffers. Then, define the `QualiaCompute` trait in `execute/compute.rs` to accept slices of this memory, ensuring the execution bridges remain stateless.
+Draft the core structures for `qualia-core-db::wgsl_forge::ir.rs` to abstract away backend-specific syntax. Define the IR to support standard scalar/vector operations as well as "Hardware Intrinsic" nodes for future RT/Tensor core mappings. Following the IR definition, design the `QualiaSlabAllocator` in `execute/memory.rs` to handle persistent ring buffers, ensuring the allocator dynamically scales its requested slab size based on the VRAM/Unified Memory limits detected by the local hardware topology checker. Then, define the `QualiaCompute` trait in `execute/compute.rs` to accept slices of this memory, ensuring the execution bridges remain stateless.
 
 ### Decisions still open
 
 - Generated shaders remain command output; they are not automatically checked into
   source control.
 - Whether the eventual build wrapper is `xtask`, `build.rs`, or a thin derive helper.
-- Whether the `auto-tune-all` process runs automatically as a Just-In-Time (JIT) initialization on the first launch of a new cluster node, or if it must be explicitly invoked via an Ahead-Of-Time (AOT) installation script.
-- How to handle cross-node manifest sharing if managing a cluster of identical hardware, to prevent every single node from needing to run the expensive thermal and timing benchmarks.
-- Will this local hardware tuning occur seamlessly in the background the first time the application boots on a new machine, or is it intended to be run explicitly by the user during the initial installation phase?
+- How to execute the `auto-tune-all` process across a decentralized cluster: Should it run as an Ahead-Of-Time (AOT) installation script via the CLI, or as a Just-In-Time (JIT) initialization on the first launch of a new node? Furthermore, how do we distribute these manifests across a local cluster (e.g., Apple Silicon or Raspberry Pi swarms) of identical hardware to prevent redundant, expensive tuning benchmarks on every single node?
 
 ### 2026-06-28 implementation evidence
 
