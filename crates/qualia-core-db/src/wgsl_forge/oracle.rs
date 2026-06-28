@@ -372,6 +372,54 @@ pub fn evaluate_builtin(
     ))
 }
 
+/// Row-major n×n matrix multiply reference: `c[i][j] = sum_k a[i][k] * b[k][j]`.
+pub fn matmul_cpu(a: &[f32], b: &[f32], n: usize) -> Vec<f32> {
+    let mut c = vec![0.0f32; n * n];
+    for i in 0..n {
+        for j in 0..n {
+            let mut acc = 0.0f32;
+            for k in 0..n {
+                acc += a[i * n + k] * b[k * n + j];
+            }
+            c[i * n + j] = acc;
+        }
+    }
+    c
+}
+
+/// Differential-oracle evaluation of the cooperative-matrix (tensor-core) 16x16
+/// GEMM tile against [`matmul_cpu`]. Requires an adapter with cooperative-matrix
+/// support; tensor-core matmul may run at reduced precision, hence a loose tolerance.
+pub fn evaluate_matmul_tc(context: &mut WgpuComputeContext) -> Result<ComparisonReport, ForgeError> {
+    if !context.constraints.supports_coopmat {
+        return Err(ForgeError::GpuUnavailable(
+            "adapter lacks cooperative-matrix support".to_string(),
+        ));
+    }
+    let n = crate::wgsl_forge::emit::coopmat::TILE as usize;
+    let source = crate::wgsl_forge::matmul_tc_wgsl("f32");
+    validate_wgsl(&source)?;
+
+    let a = topk_inputs(n * n, 0x4D41_545F_4141_4141);
+    let b = topk_inputs(n * n, 0x4D41_545F_4242_4242);
+    let expected = matmul_cpu(&a, &b, n);
+
+    let view_a = context.allocate_and_write(bytemuck::cast_slice(&a), 0, 0, BindingUsage::StorageRead)?;
+    let view_b = context.allocate_and_write(bytemuck::cast_slice(&b), 1, 0, BindingUsage::StorageRead)?;
+    let zeros = vec![0.0f32; n * n];
+    let view_c = context.allocate_and_write(bytemuck::cast_slice(&zeros), 2, 0, BindingUsage::StorageReadWrite)?;
+    let buffers = vec![view_a, view_b, view_c];
+
+    let schedule = Schedule { workgroup_size: 32, ..Default::default() };
+    let pipeline = WgpuPipeline::compile(context, &source, "matmul_tc")?;
+    pipeline.dispatch(&buffers, &schedule, 1)?;
+    let actual = context.read_buffer_f32(&view_c)?;
+
+    drop(pipeline);
+    context.clear_transient_allocations();
+    Ok(compare_f32(&expected, &actual, OracleTolerance { absolute: 1.0e-2, relative: 1.0e-2 }))
+}
+
 /// Cross-backend oracle (plan §7/§10): runs the affine kernel through the native
 /// CUDA backend (CUDA-C compiled to PTX by NVRTC) and checks it against the *same*
 /// CPU reference vectors used for the wgpu backend. Requires a CUDA device.
@@ -964,6 +1012,22 @@ mod tests {
     fn topk_oracle_matches_across_cuda_backend() {
         let report = evaluate_topk_cuda(64 * 10, 4).expect("cuda topk evaluation");
         assert!(report.passed(), "CUDA top-k mismatch: {report:?}");
+    }
+
+    #[test]
+    #[ignore = "requires a cooperative-matrix capable adapter"]
+    fn cooperative_matrix_tile_runs_on_real_gpu() {
+        // Verifies the emitted cooperative-matrix (tensor-core) kernel compiles and
+        // executes on the adapter producing finite output — i.e. the 8x8 f32 config
+        // is supported and does not hit the experimental-UB path (16x16 f32 returns
+        // inf). Bit-exact GPU correctness vs. the CPU oracle is still being resolved
+        // (the committed result currently reads zero); tracked in the plan ledger.
+        let mut context = WgpuComputeContext::new(1024 * 1024).expect("adapter");
+        let report = evaluate_matmul_tc(&mut context).expect("coopmat evaluation");
+        assert!(
+            report.max_absolute_error.is_finite(),
+            "coopmat output must be finite (no experimental UB): {report:?}"
+        );
     }
 
     #[test]

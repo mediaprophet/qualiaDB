@@ -35,7 +35,12 @@ impl WgpuComputeContext {
         .map_err(|error| ForgeError::GpuUnavailable(error.to_string()))?;
         let info = adapter.get_info();
         let available_features = adapter.features();
-        let required_features = available_features & wgpu::Features::TIMESTAMP_QUERY;
+        // Request timestamp queries plus subgroup + cooperative-matrix support
+        // when the adapter offers them (cooperative-matrix kernels need both).
+        let wanted = wgpu::Features::TIMESTAMP_QUERY
+            | wgpu::Features::SUBGROUP
+            | wgpu::Features::EXPERIMENTAL_COOPERATIVE_MATRIX;
+        let required_features = available_features & wanted;
         let timestamp_supported = required_features.contains(wgpu::Features::TIMESTAMP_QUERY);
         let limits = adapter.limits();
         // Populate intrinsic-capability flags from the adapter's real feature set
@@ -51,6 +56,11 @@ impl WgpuComputeContext {
         let (device, queue) = pollster::block_on(adapter.request_device(&wgpu::DeviceDescriptor {
             required_features,
             required_limits: wgpu::Limits::default(),
+            // The cooperative-matrix feature is gated behind wgpu's experimental
+            // token. Only requested (above) when the adapter advertises it; the
+            // token is harmless when no experimental feature is actually enabled.
+            // Safety: we only use it for the cooperative-matrix matmul kernel.
+            experimental_features: unsafe { wgpu::ExperimentalFeatures::enabled() },
             ..Default::default()
         }))
         .map_err(|error| ForgeError::GpuUnavailable(error.to_string()))?;

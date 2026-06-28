@@ -307,6 +307,26 @@ top-k, and ray-query WGSL emits + Naga-validates (see evidence below). Remaining
   phase" error; `certify`/`tune` remain affine-only (non-affine oracle path is a
   named follow-up). cudarc was modernised 0.11→0.19 (official, `cuda-13030`).
 
+### 2026-06-28 cooperative-matrix (tensor-core) emission — partial
+
+- Forge can emit valid WGSL cooperative-matrix code: `emit/coopmat.rs` produces an
+  8x8 GEMM tile (`enable wgpu_cooperative_matrix`, `coop_mat8x8<f32, role>`,
+  `coopLoadT`/`coopMultiplyAdd`/`coopStoreT`). It passes full Naga validation with
+  `Capabilities::COOPERATIVE_MATRIX` (`cooperative_matrix_tile_validates`).
+- It also compiles and executes on the A2000: `WgpuComputeContext` now opts into
+  wgpu's experimental features (`ExperimentalFeatures::enabled`) and requests
+  SUBGROUP + EXPERIMENTAL_COOPERATIVE_MATRIX when available; the existing GPU tests
+  (affine/ffn/p64/top-k) still pass with this enabled. The 8x8 *f32* config runs
+  with finite output (`cooperative_matrix_tile_runs_on_real_gpu`); 16x16 f32 is
+  accepted by the validator but returns inf on hardware (unsupported experimental
+  config), so the emitter uses 8x8.
+- Honest gaps (not dressed up): the GPU result currently reads zero, i.e. it is
+  not yet bit-exact against the row-major CPU matmul oracle — a cooperative-matrix
+  load/subgroup-semantics issue that needs value-level GPU debugging. And this is a
+  standalone tile; wiring it into the fused-FFN matmul is the follow-on. So coopmat
+  is: emitted + Naga-validated + runs-on-hardware, with bit-exact correctness and
+  FFN integration still to do.
+
 ### 2026-06-28 generic CUDA via NVRTC CUDA-C (affine/ffn/top-k)
 
 - Generic CUDA execution now mirrors the HLSL->DXC path: a CUDA-C emitter

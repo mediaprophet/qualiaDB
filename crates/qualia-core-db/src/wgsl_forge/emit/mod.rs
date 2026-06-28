@@ -3,6 +3,7 @@ pub mod hlsl;
 pub mod msl;
 pub mod ptx;
 pub mod cuda_c;
+pub mod coopmat;
 pub mod dxc;
 
 use serde::{Deserialize, Serialize};
@@ -13,6 +14,7 @@ pub use msl::emit_msl;
 pub use hlsl::emit_hlsl;
 pub use ptx::emit_ptx;
 pub use cuda_c::emit_cuda_c;
+pub use coopmat::matmul_tc_wgsl;
 pub use dxc::compile_hlsl_to_spirv;
 
 #[derive(Debug, Clone, Copy, PartialEq, Eq, Serialize, Deserialize)]

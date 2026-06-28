@@ -16,7 +16,7 @@ pub mod tune;
 pub mod validate;
 
 pub use cache::ManifestCache;
-pub use emit::{emit_shader, GeneratedShader, TargetBackend};
+pub use emit::{emit_shader, matmul_tc_wgsl, GeneratedShader, TargetBackend};
 pub use ir::{
     BufferAccess, BufferElement, BufferSpec, BuiltinKernel, KernelSpec, Op,
     P64GpuWords64, ScalarType, SharedLen, SharedMemorySpec,
@@ -27,7 +27,8 @@ pub use manifest::{
 };
 pub use oracle::{
     candidate_evaluation, certify_builtin, compare_f32, evaluate_builtin, evaluate_ffn,
-    evaluate_p64, evaluate_topk, ffn_cpu, ffn_tensors, p64_project_cpu, p64_records, topk_cpu,
+    evaluate_matmul_tc, evaluate_p64, evaluate_topk, ffn_cpu, ffn_tensors, matmul_cpu,
+    p64_project_cpu, p64_records, topk_cpu,
     topk_inputs, AffineParams, ComparisonReport, FfnParams, GpuEvaluation, OracleCase,
     OracleTolerance, TopKParams,
 };

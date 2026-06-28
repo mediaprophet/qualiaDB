@@ -15,11 +15,11 @@ pub struct ValidationReport {
 pub fn validate_wgsl(source: &str) -> Result<ValidationReport, ForgeError> {
     let module = naga::front::wgsl::parse_str(source)
         .map_err(|error| ForgeError::WgslParse(error.emit_to_string(source)))?;
-    // RAY_QUERY permits ray-query kernels to validate; it only widens what is
-    // accepted, so non-ray kernels are unaffected.
+    // Enabling capabilities only widens what is accepted, so kernels that do not
+    // use ray-query or cooperative-matrix features are unaffected.
     let mut validator = naga::valid::Validator::new(
         naga::valid::ValidationFlags::all(),
-        naga::valid::Capabilities::RAY_QUERY,
+        naga::valid::Capabilities::RAY_QUERY | naga::valid::Capabilities::COOPERATIVE_MATRIX,
     );
     validator
         .validate(&module)
@@ -227,6 +227,14 @@ mod tests {
         let report = validate_wgsl(&generated.source).expect("Naga validation of ray-probe");
         assert_eq!(report.entry_points, vec!["ray_probe"]);
         assert_eq!(report.binding_count, 3);
+    }
+
+    #[test]
+    fn cooperative_matrix_tile_validates() {
+        // Single 16x16x16 tensor-core tile: C = A * B (one subgroup cooperative).
+        let source = crate::wgsl_forge::matmul_tc_wgsl("f32");
+        let report = validate_wgsl(&source).expect("coopmat tile should validate");
+        assert_eq!(report.entry_points, vec!["matmul_tc"]);
     }
 
     #[test]
