@@ -1,10 +1,58 @@
 use serde::{Deserialize, Serialize};
 
+use super::intrinsics::{Intrinsic, IntrinsicClass};
+
 #[derive(Debug, Clone, PartialEq, Eq, Hash, Serialize, Deserialize, Default)]
 pub struct HardwareCapabilityMatrix {
     pub supports_f64: bool,
     pub subgroup_size: Option<u32>,
+    /// Cooperative-matrix / Tensor-core matrix-multiply-accumulate support.
     pub supports_coopmat: bool,
+    /// Ray-query / RT-core support (hardware ray-triangle intersection).
+    pub supports_rt_cores: bool,
+}
+
+/// Outcome of checking one [`Intrinsic`] against the local hardware (plan §6).
+#[derive(Debug, Clone, Copy, PartialEq, Eq)]
+pub enum IntrinsicSupport {
+    /// The adapter executes the intrinsic natively.
+    Native,
+    /// No hardware path, but the Forge can lower it to a portable shared-memory
+    /// equivalent (e.g. a subgroup reduction → barrier-synchronised tree reduction).
+    LowerToSharedMemory,
+    /// No hardware and no safe lowering: schedules requiring it must be excluded
+    /// from the search on this adapter.
+    Exclude,
+}
+
+impl HardwareCapabilityMatrix {
+    /// Classifies how an intrinsic can be served on this hardware.
+    pub const fn intrinsic_support(&self, intrinsic: &Intrinsic) -> IntrinsicSupport {
+        match intrinsic.class() {
+            IntrinsicClass::Subgroup => {
+                if self.subgroup_size.is_some() {
+                    IntrinsicSupport::Native
+                } else {
+                    // Warp reductions/shuffles degrade to a shared-memory tree.
+                    IntrinsicSupport::LowerToSharedMemory
+                }
+            }
+            IntrinsicClass::CooperativeMatrix => {
+                if self.supports_coopmat {
+                    IntrinsicSupport::Native
+                } else {
+                    IntrinsicSupport::Exclude
+                }
+            }
+            IntrinsicClass::RayTracing => {
+                if self.supports_rt_cores {
+                    IntrinsicSupport::Native
+                } else {
+                    IntrinsicSupport::Exclude
+                }
+            }
+        }
+    }
 }
 
 #[derive(Debug, Clone, PartialEq, Eq, Hash)]
@@ -32,5 +80,53 @@ impl LoweringContext {
         } else {
             LoweringPolicy64Bit::PairedU32Emulation
         }
+    }
+
+    /// How the local hardware can serve `intrinsic` (native / lower / exclude).
+    pub const fn intrinsic_support(&self, intrinsic: &Intrinsic) -> IntrinsicSupport {
+        self.capabilities.intrinsic_support(intrinsic)
+    }
+}
+
+#[cfg(test)]
+mod tests {
+    use super::*;
+    use crate::wgsl_forge::ir::intrinsics::SubgroupReduceOp;
+
+    fn ray_query() -> Intrinsic {
+        Intrinsic::RayQuery {
+            acceleration_structure: "tlas".to_string(),
+            origin: "o".to_string(),
+            direction: "d".to_string(),
+            t_min: "tmin".to_string(),
+            t_max: "tmax".to_string(),
+            destination: "hit".to_string(),
+        }
+    }
+
+    #[test]
+    fn rt_intrinsic_excluded_without_rt_cores() {
+        let absent = HardwareCapabilityMatrix::default();
+        assert_eq!(absent.intrinsic_support(&ray_query()), IntrinsicSupport::Exclude);
+
+        let present = HardwareCapabilityMatrix {
+            supports_rt_cores: true,
+            ..Default::default()
+        };
+        assert_eq!(present.intrinsic_support(&ray_query()), IntrinsicSupport::Native);
+    }
+
+    #[test]
+    fn coopmat_excluded_but_subgroup_lowers() {
+        let caps = HardwareCapabilityMatrix::default();
+        assert_eq!(
+            caps.intrinsic_support(&Intrinsic::CoopMatMul { m: 16, n: 16, k: 16 }),
+            IntrinsicSupport::Exclude
+        );
+        // No subgroup hardware → portable shared-memory lowering, not exclusion.
+        assert_eq!(
+            caps.intrinsic_support(&Intrinsic::SubgroupReduce { op: SubgroupReduceOp::Add }),
+            IntrinsicSupport::LowerToSharedMemory
+        );
     }
 }

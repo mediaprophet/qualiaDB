@@ -83,7 +83,10 @@ impl CudaComputeContext {
             max_invocations_per_workgroup: 1024,
             max_workgroups_per_dimension: 65_535,
             supports_subgroups: true,
+            // Tensor/RT-core presence depends on the specific NVIDIA part; leave
+            // false until a real compute-capability probe is wired.
             supports_coopmat: false,
+            supports_rt_cores: false,
         };
 
         let topology = MemoryTopology::Discrete { staging_required: true };

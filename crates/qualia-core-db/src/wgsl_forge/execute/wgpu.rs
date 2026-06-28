@@ -30,7 +30,14 @@ impl WgpuComputeContext {
         let required_features = available_features & wgpu::Features::TIMESTAMP_QUERY;
         let timestamp_supported = required_features.contains(wgpu::Features::TIMESTAMP_QUERY);
         let limits = adapter.limits();
-        let constraints = AdapterConstraints::from_wgpu_limits(&limits);
+        // Populate intrinsic-capability flags from the adapter's real feature set
+        // so the tuner can prune schedules that rely on absent hardware (plan §6).
+        let mut constraints = AdapterConstraints::from_wgpu_limits(&limits);
+        constraints.supports_subgroups = available_features.contains(wgpu::Features::SUBGROUP);
+        constraints.supports_coopmat =
+            available_features.contains(wgpu::Features::EXPERIMENTAL_COOPERATIVE_MATRIX);
+        constraints.supports_rt_cores =
+            available_features.contains(wgpu::Features::EXPERIMENTAL_RAY_QUERY);
         let (device, queue) = pollster::block_on(adapter.request_device(&wgpu::DeviceDescriptor {
             required_features,
             required_limits: wgpu::Limits::default(),

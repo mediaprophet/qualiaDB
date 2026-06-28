@@ -239,6 +239,25 @@ impl KernelSpec {
         let bytes = serde_json::to_vec(self)?;
         Ok(blake3::hash(&bytes).to_hex().to_string())
     }
+
+    /// Hardware intrinsics this kernel requires, gathered recursively through
+    /// loop bodies. The capability checker uses these to prune schedules on
+    /// adapters lacking the necessary hardware (plan §6).
+    pub fn required_intrinsics(&self) -> Vec<Intrinsic> {
+        let mut found = Vec::new();
+        collect_intrinsics(&self.ops, &mut found);
+        found
+    }
+}
+
+fn collect_intrinsics(ops: &[Op], out: &mut Vec<Intrinsic>) {
+    for op in ops {
+        match op {
+            Op::Intrinsic(intrinsic) => out.push(intrinsic.clone()),
+            Op::Loop { body, .. } => collect_intrinsics(body, out),
+            _ => {}
+        }
+    }
 }
 
 fn validate_affine_buffers(buffers: &[BufferSpec]) -> Result<(), ForgeError> {

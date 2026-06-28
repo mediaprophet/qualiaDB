@@ -1,6 +1,7 @@
 use serde::{Deserialize, Serialize};
 
-use super::{ForgeError, KernelSpec, Op};
+use super::ir::IntrinsicClass;
+use super::{ForgeError, KernelSpec};
 
 #[derive(Debug, Clone, Copy, PartialEq, Eq, Hash, Serialize, Deserialize)]
 pub struct Schedule {
@@ -63,7 +64,26 @@ impl Schedule {
         if self.use_subgroup && !constraints.supports_subgroups {
             return Err(ForgeError::InvalidSchedule("adapter does not support subgroups".to_string()));
         }
-        
+
+        // Intrinsic-availability check (plan §6): a kernel that requires RT or
+        // cooperative-matrix hardware cannot run on an adapter that lacks it, so
+        // such candidates are pruned before emission. Subgroup intrinsics are not
+        // pruned here because they can be lowered to a shared-memory equivalent.
+        for intrinsic in kernel.required_intrinsics() {
+            match intrinsic.class() {
+                IntrinsicClass::CooperativeMatrix if !constraints.supports_coopmat => {
+                    return Err(ForgeError::InvalidSchedule(
+                        "kernel requires cooperative-matrix (tensor cores) unavailable on this adapter".to_string(),
+                    ));
+                }
+                IntrinsicClass::RayTracing if !constraints.supports_rt_cores => {
+                    return Err(ForgeError::InvalidSchedule(
+                        "kernel requires ray-query (RT cores) unavailable on this adapter".to_string(),
+                    ));
+                }
+                _ => {}
+            }
+        }
 
         Ok(())
     }
@@ -92,7 +112,10 @@ pub struct AdapterConstraints {
     pub max_invocations_per_workgroup: u32,
     pub max_workgroups_per_dimension: u32,
     pub supports_subgroups: bool,
+    /// Cooperative-matrix / Tensor-core matrix-multiply-accumulate support.
     pub supports_coopmat: bool,
+    /// Ray-query / RT-core support (hardware ray-triangle intersection).
+    pub supports_rt_cores: bool,
 }
 
 impl AdapterConstraints {
@@ -103,17 +126,21 @@ impl AdapterConstraints {
             max_workgroups_per_dimension: 65_535,
             supports_subgroups: false,
             supports_coopmat: false,
+            supports_rt_cores: false,
         }
     }
 
     #[cfg(feature = "gpu-runtime")]
     pub fn from_wgpu_limits(limits: &wgpu::Limits) -> Self {
+        // Intrinsic-capability flags default to false here and are populated from
+        // the adapter's feature set at device creation (see WgpuComputeContext).
         Self {
             max_workgroup_size_x: limits.max_compute_workgroup_size_x,
             max_invocations_per_workgroup: limits.max_compute_invocations_per_workgroup,
             max_workgroups_per_dimension: limits.max_compute_workgroups_per_dimension,
-            supports_subgroups: false, // Discovered at device creation
+            supports_subgroups: false,
             supports_coopmat: false,
+            supports_rt_cores: false,
         }
     }
 }
@@ -188,5 +215,47 @@ mod tests {
             ..Default::default()
         };
         assert_eq!(schedule.dispatch_workgroups(513), 2);
+    }
+
+    #[test]
+    fn rt_kernel_pruned_without_rt_cores() {
+        use crate::wgsl_forge::ir::{
+            BufferAccess, BufferElement, BufferSpec, Intrinsic, KernelSpec, Op, ScalarType,
+        };
+
+        let kernel = KernelSpec {
+            id: "rt-probe".to_string(),
+            semantic_version: 1,
+            entry_point: "rt_probe".to_string(),
+            description: "ray-query smoke kernel".to_string(),
+            buffers: vec![BufferSpec {
+                group: 0,
+                binding: 0,
+                name: "output".to_string(),
+                element: BufferElement::Scalar(ScalarType::F32),
+                access: BufferAccess::StorageReadWrite,
+            }],
+            ops: vec![Op::Intrinsic(Intrinsic::RayQuery {
+                acceleration_structure: "tlas".to_string(),
+                origin: "o".to_string(),
+                direction: "d".to_string(),
+                t_min: "tmin".to_string(),
+                t_max: "tmax".to_string(),
+                destination: "hit".to_string(),
+            })],
+            shared_memory: Vec::new(),
+        };
+
+        let schedule = Schedule::default();
+        // No RT cores → the schedule is pruned.
+        let without = AdapterConstraints::portable();
+        assert!(schedule.validate(&kernel, &without).is_err());
+
+        // RT cores present → the same schedule is accepted.
+        let with = AdapterConstraints {
+            supports_rt_cores: true,
+            ..AdapterConstraints::portable()
+        };
+        assert!(schedule.validate(&kernel, &with).is_ok());
     }
 }

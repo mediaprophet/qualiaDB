@@ -246,14 +246,20 @@ Update this section before ending any implementation session.
 
 ### Next exact action
 
-RT-core awareness (the piece previously missed): add `RayQuery` intrinsic node(s)
-to `ir/intrinsics.rs`, a `supports_rt_cores` flag to the
-`HardwareCapabilityMatrix`, RT/tensor-core detection in the topology probe, and
-schedule pruning that excludes RT/MMA-dependent schedules when the local adapter
-lacks them (plan §6, intrinsic-availability checks). Then continue native-backend
-parity for the fused-FFN and top-k kernels (MSL/HLSL/PTX emission of shared
-memory + barriers), and wire a non-affine differential-oracle path so `certify`
-and `tune` can certify top-k on hardware.
+RT-core awareness is now wired (intrinsic IR + capability detection + pruning;
+see evidence below). Remaining, in priority order:
+
+1. A non-affine differential-oracle path so `certify`/`tune` can certify the
+   top-k (and fused-FFN) kernels on hardware, then run the opt-in GPU parity
+   tests on this machine's adapter and record the numbers.
+2. Native-backend parity for shared memory + barriers (MSL/HLSL/PTX emission of
+   the top-k reduction), removing the WGSL-only restriction.
+3. Real `RayQuery` WGSL emission (acceleration-structure binding type +
+   `rayQueryInitialize/Proceed/getCommittedIntersection`) once an RT-capable
+   adapter and a test BVH are available; today RT kernels are represented,
+   capability-gated, and pruned, but not yet emitted.
+4. Tensor-core (cooperative-matrix) MMA emission for the fused-FFN matmul,
+   gated on the newly-detected `supports_coopmat`.
 
 ### Decisions still open
 
@@ -300,6 +306,29 @@ and `tune` can certify top-k on hardware.
   machine's adapter; MSL/HLSL/PTX top-k emission returns a clear "WGSL-only this
   phase" error; `certify`/`tune` remain affine-only (non-affine oracle path is a
   named follow-up). cudarc was modernised 0.11→0.19 (official, `cuda-13030`).
+
+### 2026-06-28 RT-core awareness evidence
+
+- IR: added `Intrinsic::RayQuery { acceleration_structure, origin, direction,
+  t_min, t_max, destination }` and an `IntrinsicClass` ({Subgroup,
+  CooperativeMatrix, RayTracing}) so every intrinsic declares the hardware family
+  it needs.
+- Capability matrix: `HardwareCapabilityMatrix` and `AdapterConstraints` gained
+  `supports_rt_cores` (alongside the existing `supports_coopmat`). The wgpu probe
+  now populates all three intrinsic flags from the adapter's real feature set —
+  `SUBGROUP`, `EXPERIMENTAL_COOPERATIVE_MATRIX`, `EXPERIMENTAL_RAY_QUERY` (wgpu 29).
+- The §6 checker: `HardwareCapabilityMatrix::intrinsic_support` returns
+  Native / LowerToSharedMemory / Exclude — subgroup ops degrade to the Phase 2
+  shared-memory reduction; cooperative-matrix and ray-query are excluded when the
+  hardware is absent. `Schedule::validate` now prunes any candidate whose kernel
+  requires RT or tensor-core hardware the adapter lacks
+  (`KernelSpec::required_intrinsics`).
+- Verified: `rt_intrinsic_excluded_without_rt_cores`,
+  `coopmat_excluded_but_subgroup_lowers`, and `rt_kernel_pruned_without_rt_cores`
+  pass. Forge suite: 20 passed / 0 failed / 2 ignored.
+- Honest scope: RT kernels are represented, capability-gated, and pruned, but the
+  actual `ray_query` WGSL body is not yet emitted (needs an acceleration-structure
+  binding type, an RT-capable adapter, and a test BVH).
 
 ## 12. Deployment & Setup Process
 
