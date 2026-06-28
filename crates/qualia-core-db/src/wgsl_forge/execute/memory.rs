@@ -193,6 +193,35 @@ mod tests {
     }
 
     #[test]
+    fn sustained_dispatch_never_laps_read_head() {
+        // Plan §10: under sustained, high-throughput async dispatch the read/write
+        // heads must never lap. Model several in-flight buffers (the read head lags
+        // the write head by a few "dispatches") and recycle the ring many times.
+        let capacity = 1 << 14; // 16 KiB, a multiple of the 256-byte alignment
+        let mut allocator = QualiaSlabAllocator::new(
+            MemoryTopology::Discrete { staging_required: true },
+            capacity,
+        );
+        let chunk = 512usize;
+        let in_flight = 4usize; // up to 4 dispatches outstanding (4*512 << 16 KiB)
+        let mut pending: std::collections::VecDeque<usize> = std::collections::VecDeque::new();
+        for i in 0..100_000 {
+            let view = allocator
+                .allocate_transient(chunk, 0, 0, BindingUsage::StorageReadWrite)
+                .unwrap_or_else(|e| panic!("iteration {i} must fit in the ring: {e}"));
+            assert_eq!(view.offset % DEFAULT_BINDING_ALIGNMENT, 0);
+            assert!(view.offset + view.length_bytes <= allocator.capacity());
+            pending.push_back(view.offset + chunk);
+            // Once the pipeline is `in_flight` deep, the oldest dispatch completes
+            // and its region is freed by advancing the read head past it.
+            if pending.len() > in_flight {
+                let freed = pending.pop_front().unwrap();
+                allocator.advance_read_head(freed % allocator.capacity());
+            }
+        }
+    }
+
+    #[test]
     fn every_view_offset_is_binding_aligned() {
         // Mirrors the affine case (4099 f32 = 16396 bytes) that wgpu rejected at
         // offset 16396 for not respecting min_storage_buffer_offset_alignment.
