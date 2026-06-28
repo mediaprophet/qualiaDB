@@ -428,10 +428,12 @@ fn emit_ops(source: &mut String, ops: &[Op], indent: &str) -> Result<(), ForgeEr
                 t_max,
                 destination,
             }) => {
-                // Hardware ray-query: initialise, proceed, read the committed hit.
+                // Hardware ray-query: initialise, proceed to completion, read the
+                // committed hit. Traversal must loop until `rayQueryProceed` returns
+                // false — a single call can leave a multi-node BVH partially walked.
                 writeln!(source, "{indent}var rq: ray_query;").map_err(|error| ForgeError::Emission(error.to_string()))?;
                 writeln!(source, "{indent}rayQueryInitialize(&rq, {acceleration_structure}, RayDesc(0u, 0xFFu, {t_min}, {t_max}, {origin}, {direction}));").map_err(|error| ForgeError::Emission(error.to_string()))?;
-                writeln!(source, "{indent}rayQueryProceed(&rq);").map_err(|error| ForgeError::Emission(error.to_string()))?;
+                writeln!(source, "{indent}loop {{ if (!rayQueryProceed(&rq)) {{ break; }} }}").map_err(|error| ForgeError::Emission(error.to_string()))?;
                 writeln!(source, "{indent}let committed = rayQueryGetCommittedIntersection(&rq);").map_err(|error| ForgeError::Emission(error.to_string()))?;
                 writeln!(source, "{indent}var {destination} = -1.0;").map_err(|error| ForgeError::Emission(error.to_string()))?;
                 writeln!(source, "{indent}if (committed.kind != RAY_QUERY_INTERSECTION_NONE) {{ {destination} = committed.t; }}").map_err(|error| ForgeError::Emission(error.to_string()))?;

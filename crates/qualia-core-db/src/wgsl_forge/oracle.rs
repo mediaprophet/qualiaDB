@@ -297,6 +297,11 @@ pub fn evaluate_builtin(
     if builtin == BuiltinKernel::P64Project {
         return evaluate_p64(context, schedule, length.clamp(1, 65_536), warmups, samples);
     }
+    if builtin == BuiltinKernel::RayProbe {
+        // Ray-probe uses a fixed BLAS/TLAS scene and ray set (length is not a knob),
+        // and an acceleration-structure binding the generic buffer path can't carry.
+        return evaluate_rayprobe(context, schedule, warmups, samples);
+    }
     let kernel = builtin.spec();
     schedule.validate(&kernel, &context.constraints)?;
     context.constraints.supports_kernel(&kernel)?;
@@ -930,6 +935,201 @@ pub fn evaluate_topk(
     ))
 }
 
+// ── Ray-query (ray-probe) differential oracle ──────────────────────────────
+
+fn rp_sub(a: [f32; 3], b: [f32; 3]) -> [f32; 3] {
+    [a[0] - b[0], a[1] - b[1], a[2] - b[2]]
+}
+fn rp_cross(a: [f32; 3], b: [f32; 3]) -> [f32; 3] {
+    [
+        a[1] * b[2] - a[2] * b[1],
+        a[2] * b[0] - a[0] * b[2],
+        a[0] * b[1] - a[1] * b[0],
+    ]
+}
+fn rp_dot(a: [f32; 3], b: [f32; 3]) -> f32 {
+    a[0] * b[0] + a[1] * b[1] + a[2] * b[2]
+}
+
+/// Möller–Trumbore ray/triangle intersection. Returns the hit distance `t` along
+/// `dir` (which need not be normalised — `t` is in units of `dir`) when the ray
+/// crosses the triangle interior, else `None`. This is the CPU mirror of the GPU's
+/// committed-intersection `t`.
+fn ray_triangle_intersect(
+    origin: [f32; 3],
+    dir: [f32; 3],
+    v0: [f32; 3],
+    v1: [f32; 3],
+    v2: [f32; 3],
+) -> Option<f32> {
+    const EPS: f32 = 1.0e-7;
+    let e1 = rp_sub(v1, v0);
+    let e2 = rp_sub(v2, v0);
+    let p = rp_cross(dir, e2);
+    let det = rp_dot(e1, p);
+    if det.abs() < EPS {
+        return None; // ray parallel to the triangle plane
+    }
+    let inv = 1.0 / det;
+    let tvec = rp_sub(origin, v0);
+    let u = rp_dot(tvec, p) * inv;
+    if !(0.0..=1.0).contains(&u) {
+        return None;
+    }
+    let q = rp_cross(tvec, e1);
+    let v = rp_dot(dir, q) * inv;
+    if v < 0.0 || u + v > 1.0 {
+        return None;
+    }
+    Some(rp_dot(e2, q) * inv)
+}
+
+/// The fixed ray-probe scene: three world-space triangles as a flat `f32` list
+/// (9 floats/triangle = 3 verts × xyz). Two coplanar triangles tile the quad
+/// `[0,2]²` at `z = 2`; a third sits behind them at `z = 4`, so rays through the
+/// lower-left region hit two triangles and must commit the nearer one (t at z=2).
+pub fn rayprobe_scene() -> Vec<f32> {
+    vec![
+        // T0 @ z=2 (lower-left half of the quad: x>=0, y>=0, x+y<=2)
+        0.0, 0.0, 2.0, 2.0, 0.0, 2.0, 0.0, 2.0, 2.0, //
+        // T1 @ z=2 (upper-right half: x<=2, y<=2, x+y>=2)
+        2.0, 2.0, 2.0, 0.0, 2.0, 2.0, 2.0, 0.0, 2.0, //
+        // T2 @ z=4 (behind T0; same lower-left footprint)
+        0.0, 0.0, 4.0, 2.0, 0.0, 4.0, 0.0, 2.0, 4.0,
+    ]
+}
+
+/// The fixed ray set as the 8-float-per-ray layout the emitter expects
+/// (`origin.xyz, dir.xyz, t_min, t_max`). All rays originate at `z = -1` and point
+/// along `+z`; hit rays target clear triangle interiors (away from edges) so GPU
+/// BVH traversal and the CPU reference agree, and miss rays point well outside.
+pub fn rayprobe_rays() -> Vec<f32> {
+    // (x, y) at z=-1; expected committed t = 3.0 for hits at z=2, else -1.0.
+    let xy: [(f32, f32); 12] = [
+        (0.5, 0.5),   // T0 (also over T2 -> commit nearer T0)
+        (0.3, 0.3),   // T0 (over T2)
+        (1.0, 0.5),   // T0
+        (0.5, 1.0),   // T0
+        (1.5, 1.7),   // T1
+        (1.7, 1.5),   // T1
+        (1.6, 1.6),   // T1
+        (5.0, 5.0),   // miss
+        (-2.0, 0.5),  // miss
+        (0.5, -2.0),  // miss
+        (3.0, 3.0),   // miss
+        (10.0, -10.0), // miss
+    ];
+    let mut rays = Vec::with_capacity(xy.len() * 8);
+    for (x, y) in xy {
+        rays.extend_from_slice(&[x, y, -1.0, 0.0, 0.0, 1.0, 0.001, 100.0]);
+    }
+    rays
+}
+
+/// CPU reference for the ray-probe kernel: for each ray, the nearest committed
+/// triangle hit `t` within `[t_min, t_max]`, or `-1.0` on a miss — matching the
+/// emitter's `hits[i] = committed.t else -1.0`.
+pub fn rayprobe_cpu(rays: &[f32], scene: &[f32]) -> Vec<f32> {
+    let tri = |k: usize| -> ([f32; 3], [f32; 3], [f32; 3]) {
+        let b = k * 9;
+        (
+            [scene[b], scene[b + 1], scene[b + 2]],
+            [scene[b + 3], scene[b + 4], scene[b + 5]],
+            [scene[b + 6], scene[b + 7], scene[b + 8]],
+        )
+    };
+    let triangles = scene.len() / 9;
+    let mut out = Vec::with_capacity(rays.len() / 8);
+    for r in rays.chunks_exact(8) {
+        let origin = [r[0], r[1], r[2]];
+        let dir = [r[3], r[4], r[5]];
+        let (t_min, t_max) = (r[6], r[7]);
+        let mut nearest = f32::INFINITY;
+        for k in 0..triangles {
+            let (v0, v1, v2) = tri(k);
+            if let Some(t) = ray_triangle_intersect(origin, dir, v0, v1, v2) {
+                if t >= t_min && t <= t_max && t < nearest {
+                    nearest = t;
+                }
+            }
+        }
+        out.push(if nearest.is_finite() { nearest } else { -1.0 });
+    }
+    out
+}
+
+/// Differential-oracle evaluation of the ray-query (ray-probe) kernel: builds a
+/// BLAS+TLAS for [`rayprobe_scene`], dispatches the emitted `ray_probe` WGSL over
+/// [`rayprobe_rays`] on the GPU, and checks the committed hit distances against
+/// [`rayprobe_cpu`]. Requires a ray-query-capable adapter (RT cores).
+pub fn evaluate_rayprobe(
+    context: &mut WgpuComputeContext,
+    schedule: Schedule,
+    warmups: usize,
+    samples: usize,
+) -> Result<(GeneratedShader, GpuEvaluation), ForgeError> {
+    if samples == 0 {
+        return Err(ForgeError::GpuValidation(
+            "sample count must be non-zero".to_string(),
+        ));
+    }
+    let kernel = BuiltinKernel::RayProbe.spec();
+    schedule.validate(&kernel, &context.constraints)?;
+    context.constraints.supports_kernel(&kernel)?;
+    let generated = emit_shader(&kernel, schedule, TargetBackend::Wgsl)?;
+    validate_wgsl(&generated.source)?;
+
+    let scene = rayprobe_scene();
+    let rays = rayprobe_rays();
+    let n_rays = rays.len() / 8;
+    let expected = rayprobe_cpu(&rays, &scene);
+
+    // The acceleration structure is binding 0 (not a slab buffer); rays are binding
+    // 1 (read), hits are binding 2 (read-write).
+    let (_blas, tlas) = context.build_triangle_scene(&scene)?;
+    let view_rays = context.allocate_and_write(bytemuck::cast_slice(&rays), 1, 0, BindingUsage::StorageRead)?;
+    let output_bytes_len = (n_rays * size_of::<f32>()).max(4);
+    let view_hits = context.allocate_transient(output_bytes_len, 2, 0, BindingUsage::StorageReadWrite)?;
+    let buffers = vec![view_rays, view_hits];
+
+    let pipeline = WgpuPipeline::compile(context, &generated.source, &kernel.entry_point)?;
+    for _ in 0..warmups {
+        pipeline.dispatch_rayprobe(&tlas, &buffers, &schedule, n_rays)?;
+    }
+    let mut timing_samples = Vec::with_capacity(samples);
+    for _ in 0..samples {
+        timing_samples.push(pipeline.dispatch_rayprobe(&tlas, &buffers, &schedule, n_rays)?);
+    }
+
+    let actual = context.read_buffer_f32(&view_hits)?;
+    let oracle = compare_f32(&expected, &actual, OracleTolerance { absolute: 1.0e-2, relative: 1.0e-2 });
+
+    drop(pipeline);
+    context.clear_transient_allocations();
+
+    if !oracle.passed() {
+        return Err(ForgeError::OracleMismatch(format!(
+            "ray-probe: {} mismatches; first={:?}, max_abs={}; expected={:?} actual={:?}",
+            oracle.mismatch_count, oracle.first_mismatch, oracle.max_absolute_error, expected, actual
+        )));
+    }
+
+    // dispatch_rayprobe uses a wall-clock completion timer (no timestamp pass).
+    let timing = TimingSummary::from_samples(TimingSource::CompletionClock, &timing_samples)
+        .ok_or_else(|| ForgeError::GpuValidation("GPU produced no timing samples".to_string()))?;
+
+    Ok((
+        generated,
+        GpuEvaluation {
+            adapter: context.adapter.clone(),
+            constraints: context.constraints,
+            oracle,
+            timing,
+            samples_ns: timing_samples,
+        },
+    ))
+}
+
 #[cfg(test)]
 mod tests {
     use super::*;
@@ -945,6 +1145,53 @@ mod tests {
             OracleTolerance::default()
         )
         .passed());
+    }
+
+    #[test]
+    fn rayprobe_cpu_reference_is_sane() {
+        let scene = rayprobe_scene();
+        let rays = rayprobe_rays();
+        let hits = rayprobe_cpu(&rays, &scene);
+        assert_eq!(hits.len(), 12);
+        // First 7 rays hit the z=2 quad (committed t = 3.0); last 5 miss (-1.0).
+        for (i, &t) in hits.iter().enumerate() {
+            if i < 7 {
+                assert!((t - 3.0).abs() < 1.0e-4, "ray {i} expected t=3, got {t}");
+            } else {
+                assert_eq!(t, -1.0, "ray {i} expected a miss");
+            }
+        }
+    }
+
+    #[test]
+    #[ignore = "requires a ray-query capable adapter (RT cores)"]
+    fn rayprobe_certifies_on_real_gpu() {
+        // Feasibility + correctness: build a BLAS/TLAS and run the emitted ray_probe
+        // shader, checking committed hit distances against the Möller–Trumbore CPU
+        // reference. This is the gate for whether wgpu 29.0.3 ray-query *executes*.
+        let mut context = WgpuComputeContext::new(1024 * 1024).expect("adapter");
+        let schedule = Schedule { workgroup_size: 64, ..Default::default() };
+        let (_, eval) =
+            evaluate_rayprobe(&mut context, schedule, 1, 3).expect("ray-probe evaluation");
+        assert!(
+            eval.oracle.passed(),
+            "ray-probe GPU/oracle mismatch: {:?}",
+            eval.oracle
+        );
+    }
+
+    #[test]
+    #[ignore = "requires a ray-query capable adapter (RT cores)"]
+    fn rayprobe_certify_builtin_on_real_gpu() {
+        // Full certification pipeline: certify_builtin -> evaluate_builtin ->
+        // evaluate_rayprobe -> manifest, proving RayProbe is a first-class
+        // certifiable builtin (not just a standalone test).
+        let mut context = WgpuComputeContext::new(1024 * 1024).expect("adapter");
+        let schedule = Schedule { workgroup_size: 64, ..Default::default() };
+        let manifest = certify_builtin(&mut context, BuiltinKernel::RayProbe, schedule, 12, 1, 3)
+            .expect("ray-probe certification");
+        assert_eq!(manifest.validation_level, ValidationLevel::Certified);
+        assert!(manifest.oracle.as_ref().is_some_and(|o| o.passed()));
     }
 
     #[test]

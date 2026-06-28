@@ -367,6 +367,44 @@ naga/wgpu 29.0.3 source:
   and ready to light up (`evaluate_matmul_tc`) the moment wgpu ships #9741. Nothing
   faked, nothing dressed up as a follow-up.
 
+### 2026-06-29 ray-query GPU execution via BVH (BLAS/TLAS) — done, hardware-verified
+
+The second frontier item. Applied the same recon-first playbook to de-risk wgpu 29's
+*other* experimental subsystem before building, given the coopmat lesson that 29.0.3's
+experimental execution paths can be silently broken.
+
+- **Feasibility settled empirically — ray-query EXECUTES on the A2000** (unlike
+  coopmat). The adversarial-feasibility recon agent crashed before emitting its verdict,
+  but its preview ("fully implemented, not stubbed" — wgpu-hal 29.0.3 Vulkan) plus the
+  decisive on-hardware test confirmed it. The one blocker was **config, not upstream**:
+  the device was created with `Limits::default()`, where the acceleration-structure
+  limits (`max_blas_geometry_count`/`max_blas_primitive_count`/`max_tlas_instance_count`/
+  `max_acceleration_structures_per_shader_stage`) default to **0**, so `create_blas`
+  failed validation. Fixed by raising them from the adapter's reported limits.
+- **End-to-end GPU execution implemented:**
+  - `execute/wgpu.rs`: requests `EXPERIMENTAL_RAY_QUERY`; `build_triangle_scene()`
+    creates + builds an `OPAQUE` triangle BLAS and a 1-instance TLAS (identity
+    transform); `WgpuPipeline::dispatch_rayprobe()` binds the TLAS as the
+    `acceleration_structure` at binding 0 alongside the rays/hits buffers (the generic
+    dispatch only binds buffers, so this is a dedicated path).
+  - `emit/wgsl.rs`: fixed the ray-query lowering to **loop `rayQueryProceed` to
+    completion** — a single call can leave a multi-node BVH partially traversed (§13
+    fix-along-the-way).
+  - `oracle.rs`: `evaluate_rayprobe` builds the scene, dispatches the emitted
+    `ray_probe` WGSL over a fixed 12-ray set (7 clean interior hits, 5 clean misses),
+    and checks committed hit distances against a **Möller–Trumbore** CPU reference
+    (`rayprobe_cpu`). Wired into `evaluate_builtin` + `has_gpu_oracle`, so `certify`/
+    `tune` treat RayProbe as a first-class builtin; non-RT adapters skip it via the
+    existing `supports_kernel` gate (no regression).
+- **Verified on the A2000:** `rayprobe_certifies_on_real_gpu` (committed t = 3.0 for the
+  7 hits, −1 for the 5 misses, within 1e-2) and `rayprobe_certify_builtin_on_real_gpu`
+  (full certification manifest) — both **passing**; `rayprobe_cpu_reference_is_sane`
+  (non-GPU). Full forge GPU+CUDA regression after enabling the feature + raising limits:
+  **11 passed / 0 failed** (affine/topk/ffn/p64 certify, coopmat load/store, WMMA, 3×
+  CUDA oracle, 2× ray-probe) — device-creation change is regression-clean.
+- **Net:** ray-query GPU execution via BVH is real and hardware-verified — task done.
+  Both frontier items (tensor cores #18, ray-BVH #19) are now delivered on real hardware.
+
 ### 2026-06-28 generic CUDA via NVRTC CUDA-C (affine/ffn/top-k)
 
 - Generic CUDA execution now mirrors the HLSL->DXC path: a CUDA-C emitter

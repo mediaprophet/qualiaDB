@@ -389,7 +389,10 @@ impl BuiltinKernel {
     /// CPU reference + GPU dispatch wired for this kernel, so it can be certified
     /// and tuned on hardware. Others generate/validate but are not yet GPU-graded.
     pub const fn has_gpu_oracle(self) -> bool {
-        matches!(self, Self::AffineF32 | Self::TopK | Self::FusedFfn | Self::P64Project)
+        matches!(
+            self,
+            Self::AffineF32 | Self::TopK | Self::FusedFfn | Self::P64Project | Self::RayProbe
+        )
     }
 
     pub fn spec(self) -> KernelSpec {

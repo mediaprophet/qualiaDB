@@ -40,7 +40,8 @@ impl WgpuComputeContext {
         let wanted = wgpu::Features::TIMESTAMP_QUERY
             | wgpu::Features::SUBGROUP
             | wgpu::Features::SHADER_F16
-            | wgpu::Features::EXPERIMENTAL_COOPERATIVE_MATRIX;
+            | wgpu::Features::EXPERIMENTAL_COOPERATIVE_MATRIX
+            | wgpu::Features::EXPERIMENTAL_RAY_QUERY;
         let required_features = available_features & wanted;
         let timestamp_supported = required_features.contains(wgpu::Features::TIMESTAMP_QUERY);
         let limits = adapter.limits();
@@ -54,9 +55,20 @@ impl WgpuComputeContext {
             available_features.contains(wgpu::Features::EXPERIMENTAL_RAY_QUERY);
         // Warp/wavefront width by vendor: AMD wavefronts are 64, others 32.
         constraints.warp_size = if info.vendor == 0x1002 { 64 } else { 32 };
+        // The ray-tracing acceleration-structure limits default to 0, which forbids
+        // BLAS/TLAS creation even with EXPERIMENTAL_RAY_QUERY enabled. Raise them to
+        // the adapter's supported values (a no-op on adapters that report 0).
+        let required_limits = wgpu::Limits {
+            max_blas_primitive_count: limits.max_blas_primitive_count,
+            max_blas_geometry_count: limits.max_blas_geometry_count,
+            max_tlas_instance_count: limits.max_tlas_instance_count,
+            max_acceleration_structures_per_shader_stage: limits
+                .max_acceleration_structures_per_shader_stage,
+            ..wgpu::Limits::default()
+        };
         let (device, queue) = pollster::block_on(adapter.request_device(&wgpu::DeviceDescriptor {
             required_features,
-            required_limits: wgpu::Limits::default(),
+            required_limits,
             // The cooperative-matrix feature is gated behind wgpu's experimental
             // token. Only requested (above) when the adapter advertises it; the
             // token is harmless when no experimental feature is actually enabled.
@@ -173,6 +185,101 @@ impl WgpuComputeContext {
         self.allocator.clear();
     }
     
+    /// Builds a bottom-level (BLAS) + top-level (TLAS) acceleration structure for a
+    /// triangle soup and returns both, ready to bind to a ray-query shader. `vertices`
+    /// is a flat list of `f32` triples (3 per vertex, 3 vertices per triangle),
+    /// row-major. The BLAS geometry is marked `OPAQUE` (required — naga's ray-query
+    /// has no candidate/any-hit path, so non-opaque geometry yields no committed hits),
+    /// and the single TLAS instance uses the identity transform. Both structures are
+    /// built and the queue drained before returning. Requires the adapter to support
+    /// (and the device to have enabled) `EXPERIMENTAL_RAY_QUERY`.
+    ///
+    /// The returned `Blas` must be kept alive alongside the `Tlas` for the lifetime of
+    /// any bind group referencing the TLAS (the `TlasInstance` borrows the BLAS).
+    pub fn build_triangle_scene(
+        &self,
+        vertices: &[f32],
+    ) -> Result<(wgpu::Blas, wgpu::Tlas), ForgeError> {
+        if !self.constraints.supports_rt_cores {
+            return Err(ForgeError::GpuUnavailable(
+                "adapter lacks ray-query (RT) support".to_string(),
+            ));
+        }
+        if vertices.is_empty() || vertices.len() % 9 != 0 {
+            return Err(ForgeError::GpuValidation(format!(
+                "triangle scene needs a non-empty multiple of 9 floats (3 verts x xyz); got {}",
+                vertices.len()
+            )));
+        }
+        let vertex_count = (vertices.len() / 3) as u32;
+
+        let vertex_buffer = self.device.create_buffer(&wgpu::BufferDescriptor {
+            label: Some("forge-blas-vertices"),
+            size: (vertices.len() * size_of::<f32>()) as u64,
+            usage: wgpu::BufferUsages::BLAS_INPUT | wgpu::BufferUsages::COPY_DST,
+            mapped_at_creation: false,
+        });
+        self.queue
+            .write_buffer(&vertex_buffer, 0, bytemuck::cast_slice(vertices));
+
+        let size_desc = wgpu::BlasTriangleGeometrySizeDescriptor {
+            vertex_format: wgpu::VertexFormat::Float32x3,
+            vertex_count,
+            index_format: None,
+            index_count: None,
+            flags: wgpu::AccelerationStructureGeometryFlags::OPAQUE,
+        };
+        let blas = self.device.create_blas(
+            &wgpu::CreateBlasDescriptor {
+                label: Some("forge-blas"),
+                flags: wgpu::AccelerationStructureFlags::PREFER_FAST_TRACE,
+                update_mode: wgpu::AccelerationStructureUpdateMode::Build,
+            },
+            wgpu::BlasGeometrySizeDescriptors::Triangles {
+                descriptors: vec![size_desc.clone()],
+            },
+        );
+
+        let mut tlas = self.device.create_tlas(&wgpu::CreateTlasDescriptor {
+            label: Some("forge-tlas"),
+            max_instances: 1,
+            flags: wgpu::AccelerationStructureFlags::PREFER_FAST_TRACE,
+            update_mode: wgpu::AccelerationStructureUpdateMode::Build,
+        });
+        // 3x4 row-major identity (scene vertices are already in world space).
+        let identity: [f32; 12] = [
+            1.0, 0.0, 0.0, 0.0, //
+            0.0, 1.0, 0.0, 0.0, //
+            0.0, 0.0, 1.0, 0.0,
+        ];
+        tlas[0] = Some(wgpu::TlasInstance::new(&blas, identity, 0, 0xFF));
+
+        let geometry = wgpu::BlasTriangleGeometry {
+            size: &size_desc,
+            vertex_buffer: &vertex_buffer,
+            first_vertex: 0,
+            vertex_stride: (3 * size_of::<f32>()) as wgpu::BufferAddress,
+            index_buffer: None,
+            first_index: None,
+            transform_buffer: None,
+            transform_buffer_offset: None,
+        };
+        let entry = wgpu::BlasBuildEntry {
+            blas: &blas,
+            geometry: wgpu::BlasGeometries::TriangleGeometries(vec![geometry]),
+        };
+        let mut encoder = self
+            .device
+            .create_command_encoder(&wgpu::CommandEncoderDescriptor {
+                label: Some("forge-build-accel"),
+            });
+        encoder.build_acceleration_structures(std::iter::once(&entry), std::iter::once(&tlas));
+        self.queue.submit(Some(encoder.finish()));
+        let _ = self.device.poll(wgpu::PollType::wait_indefinitely());
+
+        Ok((blas, tlas))
+    }
+
     pub fn read_buffer_f32(&self, view: &BufferView) -> Result<Vec<f32>, ForgeError> {
         let size = view.length_bytes as u64;
         let staging = self.device.create_buffer(&wgpu::BufferDescriptor {
@@ -220,6 +327,66 @@ impl<'a> WgpuPipeline<'a> {
             return Err(ForgeError::GpuValidation(error.to_string()));
         }
         Ok(Self { context, pipeline })
+    }
+
+    /// Dispatch a ray-query kernel, binding `tlas` as the `acceleration_structure`
+    /// at binding 0 and the supplied buffer views (rays at binding 1, hits at
+    /// binding 2) at their own bindings. The generic [`QualiaCompute::dispatch`]
+    /// only binds buffers, so this is the dedicated path for the acceleration-
+    /// structure binding. Returns wall-clock nanoseconds (ray-query passes skip the
+    /// timestamp path). The caller must keep the TLAS (and its BLAS) alive.
+    pub fn dispatch_rayprobe(
+        &self,
+        tlas: &wgpu::Tlas,
+        buffers: &[BufferView],
+        schedule: &Schedule,
+        element_count: usize,
+    ) -> Result<u64, ForgeError> {
+        let mut entries = Vec::with_capacity(buffers.len() + 1);
+        entries.push(wgpu::BindGroupEntry {
+            binding: 0,
+            resource: tlas.as_binding(),
+        });
+        for view in buffers {
+            let size = wgpu::BufferSize::new(view.length_bytes as u64);
+            entries.push(wgpu::BindGroupEntry {
+                binding: view.binding,
+                resource: wgpu::BindingResource::Buffer(wgpu::BufferBinding {
+                    buffer: self.context.slab_for(view.usage),
+                    offset: view.offset as wgpu::BufferAddress,
+                    size,
+                }),
+            });
+        }
+        let bind_group = self
+            .context
+            .device
+            .create_bind_group(&wgpu::BindGroupDescriptor {
+                label: Some("forge-rayprobe-bind-group"),
+                layout: &self.pipeline.get_bind_group_layout(0),
+                entries: &entries,
+            });
+        let dispatch_x = schedule.dispatch_workgroups(element_count);
+
+        let started = Instant::now();
+        let mut encoder = self
+            .context
+            .device
+            .create_command_encoder(&wgpu::CommandEncoderDescriptor {
+                label: Some("forge-rayprobe-dispatch"),
+            });
+        {
+            let mut pass = encoder.begin_compute_pass(&wgpu::ComputePassDescriptor {
+                label: Some("forge-rayprobe-pass"),
+                timestamp_writes: None,
+            });
+            pass.set_pipeline(&self.pipeline);
+            pass.set_bind_group(0, &bind_group, &[]);
+            pass.dispatch_workgroups(dispatch_x, 1, 1);
+        }
+        self.context.queue.submit(Some(encoder.finish()));
+        let _ = self.context.device.poll(wgpu::PollType::wait_indefinitely());
+        Ok(started.elapsed().as_nanos().min(u64::MAX as u128) as u64)
     }
 }
 
