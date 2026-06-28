@@ -18,6 +18,7 @@ pub mod qpu;
 pub mod query;
 pub mod resources;
 pub mod science;
+pub mod shader;
 mod service;
 pub mod solve;
 pub mod telemetry_server;
@@ -69,6 +70,11 @@ pub enum Commands {
     Llm {
         #[command(subcommand)]
         action: LlmAction,
+    },
+    /// Deterministically generate, validate, certify, and tune WGSL compute kernels.
+    Shader {
+        #[command(subcommand)]
+        action: shader::ShaderAction,
     },
     /// Dynamically lists features and capabilities compiled into the engine
     Capabilities {
@@ -1424,6 +1430,9 @@ async fn main() -> Result<(), Box<dyn std::error::Error>> {
                     )?;
                 }
             }
+        }
+        Commands::Shader { action } => {
+            shader::run(action)?;
         }
         Commands::Capabilities { list } => {
             if *list {

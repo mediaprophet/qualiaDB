@@ -73,6 +73,7 @@ parity     [0..63]   XOR fold: subject ^ predicate ^ object ^ context (ECC stub)
 | **SLG Arena** | `webizen.rs` | ✅ 42MB ring buffer | 917,504 Quin slots |
 | **P64 GGUF weight container** | `q42/p64_weight.rs` | ✅ byte-exact disk round-trip verified | 64B headers/entries/manifold records, metadata + per-tensor CRC-32C |
 | **10D Manifold → WebizenVM bridge** | `modalities/manifold.rs`, `governance/webizen.rs` | ✅ LTL + stable-model ASP wired | Two parity-valid Quins per state; bounded zero-heap VM evaluation |
+| **WGSL Forge** | `wgsl_forge/`, `qualia-cli/src/shader.rs` | ✅ deterministic generation/certification/tuning | Typed kernel/schedule IR, Naga validation, CPU oracle, real GPU timing, adapter-keyed cache |
 
 ## 2-B. Other Real Implementations (do NOT stub-replace without reading first)
 
@@ -619,6 +620,46 @@ At the end of your session:
 ---
 
 ## 7. Session Notes
+
+### 2026-06-28 — Codex (deterministic WGSL Forge)
+
+**Completed:**
+- Added the durable architecture/continuation plan at
+  `docs/plans/deterministic-wgsl-forge.md` and the operator manual at
+  `docs/manuals/wgsl-forge.md`.
+- Added `wgsl_forge`: typed kernel and schedule IR, deterministic WGSL emission,
+  adapter-limit pruning, full Naga semantic validation, deterministic CPU reference
+  vectors, absolute/relative error diagnostics, and explicit evidence levels.
+- Added scalar, `vec2`, and `vec4` affine schedules with non-multiple tail guards.
+- Added real headless wgpu pipeline creation, CPU/GPU differential checking, timestamp
+  queries with honestly labelled completion-clock fallback, warm-ups, and robust
+  min/median/p95 timing records.
+- Added deterministic grid/successive-halving tuning, correctness-gated ranking,
+  failure evidence, adapter/source/schema cache identities, and atomic JSON manifest
+  caching.
+- Added `qualia-cli shader list-kernels|generate|validate|certify|tune`.
+
+**Verification:**
+- `cargo check -p qualia-core-db -p qualia-cli`
+- WGSL Forge tests: 14 passed, 1 ignored hardware gate
+- Full `qualia-core-db` library binary: 2,133 passed, 0 failed, 2 ignored
+- No-default normal dependency graph excludes both `naga` and `wgsl-forge`
+- Naga CLI validation: 3 bindings / `affine_f32` entry point
+- RTX A2000 real certification over 4,099 elements, including vector tail handling
+- RTX A2000 bounded eight-candidate real tuning run completed successfully
+
+**Architectural decisions:**
+1. Kernel semantics and hardware schedules are separate typed inputs; the tuner never
+   mutates arbitrary WGSL text.
+2. Naga errors identify generator defects. They are not fed into an improvised
+   source-repair loop.
+3. Portable 64-bit GPU values use paired `u32` words. P64 disk records and GPU
+   execution views remain deliberately distinct.
+4. Existing inference shaders remain production defaults until generated replacements
+   pass equivalent CPU/GPU certification.
+5. A full native `--no-default-features` build still fails in pre-existing modules
+   that reference optional `wgpu` without feature guards; dependency-tree verification
+   confirms Forge itself is absent from that profile.
 
 ### 2026-06-28 — Codex (P64 parity + 10D Webizen reasoning)
 

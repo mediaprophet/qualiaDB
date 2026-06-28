@@ -1,0 +1,265 @@
+# Qualia WGSL Forge — Deterministic Generator, Certifier, and Tuner
+
+Status: implementation in progress  
+Started: 2026-06-28  
+Primary branch: `feature/p64-manifold-wal-eigensolver`
+
+## 1. Purpose
+
+Qualia WGSL Forge removes hand-written layout arithmetic and ad-hoc shader tuning
+from the inference and scientific-compute pipelines. It deterministically generates
+highly optimized target-specific shader code (WGSL, MSL, HLSL, or PTX) from a shared typed kernel description. It proves the generated module is structurally valid, checks GPU results against a CPU oracle, and searches a bounded hardware schedule space to lock in peak performance for the exact local hardware topology.
+
+The Forge is designed for decentralized, heterogeneous deployment. It acknowledges that a statically compiled schedule cannot optimally serve all hardware. Therefore, the Forge acts as a local evaluator—using the system's specific adapter topology (e.g., unified memory vs. discrete, thermal constraints, compute unit counts) to prune the search space, run the hardware-specific "checker," and lock in the optimal schedule for that exact machine.
+
+The system must preserve these project constraints:
+
+- P64 remains the canonical on-disk format; GPU execution layouts are derived views.
+- Portable WGSL represents 64-bit values as paired `u32` words.
+- Generated runtime kernels do not allocate from the heap.
+- Search is bounded, reproducible, and safe under device loss or unsupported features.
+- A shader is never called “certified” merely because it parses.
+- Tuning results are adapter-, driver-, schema-, and shader-specific.
+
+## 2. Architectural decision
+
+The implementation is a reusable core module plus a thin CLI. A procedural macro is
+not the source of truth: derive macros cannot reliably observe final Rust layout.
+Build integration may be added later as a thin caller of the same deterministic API.
+
+The compiler separates semantics from scheduling, and introduces diverging execution paths:
+
+```text
+KernelSpec (typed buffers, operations, Hardware Intrinsics [MMA, RayQuery], CPU oracle)
+    + Local Hardware Topology (Compute units, VRAM limits, Tensor/RT presence)
+    + Schedule (workgroup, tile, vector width, warp sizing)
+    -> constraint validation & schedule pruning
+    -> Backend Emission Branch:
+         ├─> MSL (Metal)       -> wgpu pipeline
+         ├─> HLSL (DXC)        -> SPIR-V -> wgpu pipeline
+         ├─> WGSL (Fallback)   -> Naga -> wgpu pipeline
+         └─> PTX (Native NV)   -> cudarc (Native CUDA Driver API)
+    -> Execution & CPU/GPU differential oracle
+    -> robust timing samples
+    -> Local Hardware CertificationManifest
+```
+
+This separation ensures that tuning changes execution strategy without changing the
+kernel’s mathematical meaning.
+
+Stateless Execution & Persistent Memory: The execution layer is strictly stateless. Dynamic allocation in the hot loop is forbidden. The orchestrator manages a persistent, topology-aware ring buffer (pinned memory for discrete PCIe devices, zero-copy for unified memory) and passes lightweight offsets to the target-specific `QualiaCompute` implementation.
+
+## 3. Repository layout
+
+Planned implementation layout:
+
+```text
+crates/qualia-core-db/src/wgsl_forge/
+    mod.rs          public API and error model
+    ir/
+        mod.rs          
+        core.rs         # Universal math and memory operations
+        intrinsics.rs   # Hardware-specific nodes (Warp, MMA, RayQuery)
+        capabilities.rs # Hardware capability matrix and lowering fallback logic
+    schedule.rs     bounded schedule parameters and adapter constraints
+    emit/           # Target-specific deterministic writers
+        mod.rs
+        wgsl.rs     # Deterministic WGSL writer (Fallback)
+        msl.rs      # Metal Shading Language
+        hlsl.rs     # High-Level Shading Language (compiled to SPIR-V via DXC)
+        ptx.rs      # NVIDIA Parallel Thread Execution assembly
+    execute/        # Runtime bridges for the differential oracle
+        mod.rs          # Exposes the QualiaCompute trait and backend selector
+        compute.rs      # QualiaCompute trait (requires pre-allocated BufferViews)
+        memory.rs       # Topology-aware Ring Buffer & Slab Allocator
+        wgpu.rs         # Handles MSL, SPIR-V, and WGSL pipelines
+        cuda.rs         # Uses `cudarc` to load and launch PTX modules
+    validate.rs     Syntax/Semantic validation for generated outputs
+    oracle.rs       CPU reference execution and tolerance comparison
+    tune.rs         grid/racing search, topology checks, and cost scoring
+    manifest.rs     certification and tuning records
+
+crates/qualia-cli/src/shader.rs
+    generate, validate, certify, tune, list-kernels, profile-hardware, auto-tune-all
+```
+
+If keeping the first slice smaller materially improves correctness, files may begin as
+one module and be split along these boundaries before completion.
+
+## 4. First supported kernel
+
+The first end-to-end kernel is a deterministic vector transform:
+
+```text
+out[i] = input[i] * scale + bias
+```
+
+It is deliberately simple enough to certify exhaustively while exercising:
+
+- typed storage and uniform buffers;
+- workgroup and items-per-thread scheduling;
+- bounds guards;
+- WGSL generation;
+- Naga validation;
+- CPU oracle evaluation;
+- adapter-backed execution;
+- timing and tuning.
+
+The next kernels are P64 descriptor projection, ternary dequant/GEMV, fused FFN, and
+top-k reduction. Existing hand-authored shaders remain production defaults until their
+generated equivalents have oracle-backed parity evidence.
+
+## 5. Validation levels
+
+Every result declares its achieved validation level:
+
+1. `Generated` — deterministic source emitted.
+2. `NagaValidated` — parsed and passed `naga::valid::Validator`.
+3. `PipelineCreated` — target adapter accepted shader and pipeline.
+4. `OracleVerified` — GPU output matched CPU reference within declared tolerances.
+5. `Profiled` — warm-up and robust timing samples completed.
+6. `Certified` — all required levels passed and a reproducible manifest was written.
+
+No level implies a later level.
+
+## 6. Search and optimisation
+
+Initial schedule space:
+
+- workgroup size: `32, 64, 128, 256`;
+- items per invocation: `1, 2, 4, 8`;
+- vector width: initially `1`, then `2, 4` once vector emission is certified;
+- optional tile dimensions for matrix kernels.
+
+Candidates are pruned before compilation using:
+
+- adapter workgroup limits;
+- invocation and workgroup-storage limits;
+- divisibility/alignment rules;
+- kernel-specific constraints;
+- memory architecture classification (e.g., heavily biasing tile dimensions differently for unified memory architectures versus discrete PCIe GPUs);
+- local thermal and power profile constraints to avoid aggressive schedules that cause thermal throttling during the search;
+- compute unit saturation thresholds derived from the local adapter's declared capabilities;
+- warp-size alignment (strictly 32 for PTX/NVIDIA, flexible/64 for Vulkan/AMD/Apple);
+- intrinsic availability checks: the checker must verify if the local adapter supports `SPV_KHR_cooperative_matrix` (Vulkan) or native Tensor/RT cores before exploring schedules that rely on them;
+- hardware capability manifest: the local topology checker must query the adapter for advanced intrinsic support (e.g., Subgroup sizes, MMA/Tensor Core availability, async memory copy support, and RT core presence) before search begins;
+- semantic lowering: if a kernel requires an intrinsic (like a warp reduction) that the local hardware lacks, the Forge must decide whether to gracefully lower that operation into a standard shared-memory equivalent, or exclude the schedule entirely;
+- a simple roofline lower bound where applicable.
+
+The first tuner uses deterministic grid search. The second stage uses successive
+halving: all valid candidates receive a small sample budget, then only the strongest
+receive additional samples. Ranking uses median latency with correctness as a hard
+gate. Optional scoring can include p95 latency, throughput, memory, and thermal cost.
+
+## 7. Measurement rules
+
+- The differential oracle must only interact with the target hardware via the `QualiaCompute` trait; it must remain completely agnostic to whether the underlying backend is wgpu or cudarc.
+- Timing mechanisms must be delegated to the backend implementation of the trait (e.g., using CUDA Events for PTX, and timestamp queries for wgpu), returning a standardized `Duration` to the tuning loop.
+- Always perform warm-up dispatches.
+- Prefer GPU timestamp queries when negotiated (or equivalent native event timing).
+- Fall back to completion-timed batches and label the timing source honestly.
+- Use multiple samples and median ranking; retain min, median, p95, and sample count.
+- Never compare a profiled run’s end-to-end token throughput with an unprofiled run.
+- Abort a candidate on validation error, pipeline error, timeout, device loss, or
+  oracle mismatch. If a target adapter drops or a device is lost during execution, the trait must return a unified `DeviceLost` error rather than backend-specific panic codes, allowing the search space to safely prune the candidate and continue.
+- Use fixed deterministic test vectors and record their seed/hash.
+
+## 8. Cache identity
+
+Tuning records are reusable only when all identity fields match:
+
+- adapter name, vendor, device, device type, backend, driver and driver info;
+- WGSL Forge schema version;
+- kernel semantic hash;
+- generated WGSL hash;
+- P64 schema version where relevant;
+- wgpu/Naga/cudarc version;
+- correctness tolerance profile.
+
+The `CertificationManifest` acts as a hardware-specific fingerprint. If the software is deployed to a new machine, the Forge will first check for an exact adapter match in a pre-shipped cache. If a match is missing or the hardware environment has changed, the Forge triggers a local tuning run to generate and cache a new optimal manifest for that specific hardware profile.
+
+The initial implementation serializes records as JSON. Runtime code may later use a
+compact fixed-record format after the schema stabilizes.
+
+## 9. CLI contract
+
+Target interface:
+
+```text
+qualia-cli shader list-kernels
+qualia-cli shader generate <kernel> [--target wgsl|msl|hlsl|spirv|ptx] [--schedule ...] [--out kernel.<ext>]
+qualia-cli shader validate <file-or-kernel> [--target wgsl|msl|hlsl|spirv|ptx]
+qualia-cli shader certify <kernel> [--manifest result.json]
+qualia-cli shader tune <kernel> [--max-candidates N] [--manifest result.json]
+qualia-cli shader profile-hardware [--export topology.json]
+qualia-cli shader auto-tune-all [--budget-ms N] [--update-local-manifest]
+```
+
+Commands print human-readable summaries by default and support JSON output for CI.
+Generation and Naga validation work without a GPU. Certification and tuning degrade
+cleanly when no compatible adapter or timestamp-query feature exists.
+
+## 10. Testing
+
+Required tests:
+
+- deterministic emission produces identical bytes for identical inputs;
+- all generated baseline schedules pass Naga parse and semantic validation;
+- invalid schedule and layout combinations are rejected before emission;
+- WGSL layout uses paired `u32` words for every portable 64-bit field;
+- bounds guards cover non-multiple dispatch lengths;
+- CPU oracle produces known results;
+- tolerance comparator handles finite values, NaN, infinity, absolute and relative error;
+- search order and winner selection are deterministic for fixed measurements;
+- manifest hashes and cache identity change when source/schema/schedule changes;
+- headless GPU oracle test runs when an adapter is available and skips honestly otherwise;
+- CLI smoke tests cover generation and validation without requiring a GPU;
+- oracle tests must execute the exact same CPU reference vectors across all available `QualiaCompute` backend implementations on the host machine to ensure tolerance checks hold true across different compiler toolchains and hardware precision limits.
+
+## 11. Continuation ledger
+
+Update this section before ending any implementation session.
+
+### Completed
+
+- [x] Architecture and continuation plan created.
+- [x] Repository inventory completed.
+- [ ] Typed kernel and schedule IR implemented (extended for multi-backend and intrinsics).
+- [ ] Deterministic emitters implemented (WGSL, MSL, HLSL, PTX).
+- [ ] `QualiaCompute` unified execution trait and `QualiaSlabAllocator` implemented.
+- [x] CPU oracle and tolerance contract implemented.
+- [x] Certification manifest implemented (needs topology extension).
+- [x] Deterministic tuner implemented.
+- [x] Adapter cache identity and atomic manifest cache implemented.
+- [x] CLI commands implemented (needs target flags and auto-tune/profile modes).
+
+### Next exact action
+
+Draft the core structures for `qualia-core-db::wgsl_forge::ir.rs` to abstract away backend-specific syntax. Define the IR to support standard scalar/vector operations as well as "Hardware Intrinsic" nodes for future RT/Tensor core mappings. Following the IR definition, design the `QualiaSlabAllocator` in `execute/memory.rs` to handle persistent ring buffers. Then, define the `QualiaCompute` trait in `execute/compute.rs` to accept slices of this memory, ensuring the execution bridges remain stateless.
+
+### Decisions still open
+
+- Generated shaders remain command output; they are not automatically checked into
+  source control.
+- Whether the eventual build wrapper is `xtask`, `build.rs`, or a thin derive helper.
+- Whether the `auto-tune-all` process runs automatically as a Just-In-Time (JIT) initialization on the first launch of a new cluster node, or if it must be explicitly invoked via an Ahead-Of-Time (AOT) installation script.
+- How to handle cross-node manifest sharing if managing a cluster of identical hardware, to prevent every single node from needing to run the expensive thermal and timing benchmarks.
+- Will this local hardware tuning occur seamlessly in the background the first time the application boots on a new machine, or is it intended to be run explicitly by the user during the initial installation phase?
+
+### 2026-06-28 implementation evidence
+
+- 14 deterministic Forge tests pass; one native-GPU test is opt-in.
+- Full library binary: 2,133 passed, 0 failed, 2 ignored.
+- `cargo tree -p qualia-core-db --no-default-features -e normal` contains neither
+  `naga` nor `wgsl-forge`, confirming the lite dependency graph excludes Forge.
+- The repository-wide native `--no-default-features` compile is not currently a valid
+  gate: pre-existing platform/inference modules reference optional `wgpu` without
+  feature guards and produce errors outside Forge.
+- Naga validated scalar, `vec2`, and `vec4` generated variants.
+- Real certification passed on NVIDIA RTX A2000 12GB for a 4,099-element tail case:
+  median 7,616 ns and p95 9,728 ns in the observed run.
+- A bounded eight-candidate real tuning run selected
+  `workgroup=32, items=2, vector=1`: median 6,880 ns and p95 7,136 ns in the
+  observed run.
+- These timings are hardware/run evidence, not universal constants; the adapter-keyed
+  cache prevents applying them to a different device or shader/schema hash.

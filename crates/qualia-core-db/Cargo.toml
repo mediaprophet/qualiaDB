@@ -5,7 +5,7 @@ edition = "2021"
 authors = ["Timothy Charles Holborn <timothy.holborn@gmail.com>"]
 
 [features]
-default = ["profile_target_1024", "zk-culling", "gpu-runtime"]
+default = ["profile_target_1024", "zk-culling", "gpu-runtime", "wgsl-forge"]
 
 # ── Qualia WASM portal build profiles (use with --no-default-features on wasm32) ──
 # Ontology MCP kernel:              --features wasm-ontology (exclusive)
@@ -15,6 +15,7 @@ default = ["profile_target_1024", "zk-culling", "gpu-runtime"]
 # Browser model runtime:            --features wasm-llm
 # Full API explorer / playground:   --features wasm-full
 gpu-runtime = ["dep:wgpu"]
+wgsl-forge = ["dep:naga"]
 portal = ["wasm_simd", "gpu-runtime"]
 wasm-ontology = []
 wasm-logic = []
@@ -130,6 +131,7 @@ dashmap = "6.2.1"
 rand_distr = "0.6.0"
 fast_qr = { version = "0.13.1", features = ["svg"] }
 wgpu = { version = "29", features = ["webgpu"], optional = true }
+naga = { version = "29", features = ["wgsl-in"], optional = true }
 
 
 [lib]

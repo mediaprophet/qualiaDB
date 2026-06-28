@@ -222,6 +222,8 @@ pub use identity::vault_manifest;
 pub use identity::webizen_identifiers;
 pub mod gpu_context;
 pub mod shaders;
+#[cfg(all(not(target_arch = "wasm32"), feature = "wgsl-forge"))]
+pub mod wgsl_forge;
 // --- foundation/ category (reorg) ---
 pub mod foundation;
 #[cfg(any(
