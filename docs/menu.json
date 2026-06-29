@@ -91,6 +91,13 @@
       "group": "Sciences"
     },
     {
+      "label": "WGSL Forge",
+      "href": "forge-showcase.html",
+      "icon": "fa-hammer",
+      "highlight": true,
+      "group": "Sciences"
+    },
+    {
       "label": "Spatial / GeoSPARQL",
       "href": "spatial.html",
       "icon": "fa-cube",
