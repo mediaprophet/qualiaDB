@@ -75,8 +75,37 @@ path that CUDA covered.
 
 ---
 
+## Project posture for v1 (Timothy, 2026-06-29)
+
+**We are working toward the first build, so experimental solutions are acceptable — this is the
+first version, not the last.** Concretely, this *relaxes* the earlier "don't pin the production
+project to git": for v1 it is fine to **pin wgpu to a git rev** to pick up a merged-but-unreleased
+fix (e.g. #9741) *provided the full build + GPU suite stay green*, and to ship **experimental,
+dormant-but-ready** kernels (probe-gated so they never produce wrong results). **Authoring PRs back
+to upstream is sanctioned** when we carry a fix of our own. The bar stays: probe-gate anything that
+might be wrong on a given adapter, and keep a correct CPU/plain floor.
+
+## The tensor-core reality (important — single-tile primitives, not full GEMMs)
+
+Both tensor-core kernels are **proven single-*tile* primitives, not drop-in GEMM backends**:
+- `emit/coopmat.rs::matmul_tc_wgsl` — one **8×8×8** all-f32 coopmat tile (returns zeros on 29.0.3).
+- `emit/cuda_c.rs::WMMA_GEMM_16X16` — one **16×16×16** warp tile, f16→f32 (hardware-verified on the A2000).
+
+The hard part (making the tensor-core multiply compute correctly) is done for WMMA and merely
+upstream-gated for coopmat. **What's missing is the tiled-GEMM orchestration** that loops a primitive
+over arbitrary `M/N/K` with shared-memory/K-loop staging, plus the capability-selected dispatch. That
+is real kernel work — tracked as **DAG-IR plan P4c** — not a flag flip. Note the precision split:
+coopmat is **f32** (no loss), WMMA is **f16-input/f32-accumulate** (lossy → opt-in via `MatMul.tc`).
+
 ## Action items
 
-- [ ] **Re-check crates.io for a wgpu release that includes [#9741](https://github.com/gfx-rs/wgpu/pull/9741)**; when published, bump the pin and delete any patch. (Tracked task.)
-- [ ] **Soft-fork test-patch experiment** (steps 1–3 above) to verify WGSL coopmat on the A2000 with the merged fix; light up the portable coopmat path if green. (Tracked task — discrete experiment, needs Timothy's go since it perturbs the dep pin.)
-- [ ] If df64-reassociation (#2) ever blocks a real consumer, file a naga issue requesting an fp-contraction / no-reassociation control; until then the runtime probe is sufficient.
+- [ ] **DAG-IR P4c — tiled tensor-core GEMM + capability-selected `MatMul.tc`** (the "ensure there's a
+      wgpu tensor-core pathway" work): build a tiled WMMA GEMM (CUDA, immediate NVIDIA uplift, f16-lossy,
+      opt-in) and a tiled coopmat GEMM (WGSL, experimental/dormant until #9741), add a `coopmat_usable()`
+      runtime probe (mirrors `df64_usable`), and wire `MatMul.tc=true` to select coopmat → WMMA → plain.
+- [ ] **Soft-fork test-patch** (steps 1–5 above): once P4c exists, `[patch.crates-io]` wgpu → the #9741
+      git rev on a throwaway branch and verify the coopmat tiled GEMM now computes on the A2000; adopt the
+      pin for v1 if the build stays green.
+- [ ] **Watch crates.io** for a wgpu release including #9741; prefer it over the git pin when it ships.
+- [ ] If df64-reassociation (#2) ever blocks a real consumer, file a naga issue requesting an
+      fp-contraction / no-reassociation control; until then the runtime probe is sufficient.
