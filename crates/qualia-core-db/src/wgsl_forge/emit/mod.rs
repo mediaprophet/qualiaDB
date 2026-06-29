@@ -11,7 +11,7 @@ pub mod spirv;
 use serde::{Deserialize, Serialize};
 
 use super::{ForgeError, KernelSpec, Schedule};
-pub use wgsl::emit_wgsl;
+pub use wgsl::{emit_graph_wgsl, emit_wgsl};
 pub use msl::emit_msl;
 pub use hlsl::emit_hlsl;
 pub use ptx::emit_ptx;

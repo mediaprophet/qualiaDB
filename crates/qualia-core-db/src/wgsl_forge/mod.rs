@@ -9,6 +9,7 @@ pub mod cache;
 pub mod dispatch;
 pub mod emit;
 pub mod execute;
+pub mod graph_ops;
 pub mod ir;
 pub mod manifest;
 pub mod oracle;

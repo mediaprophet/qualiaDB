@@ -145,3 +145,36 @@ the **honest RT-core boundary** is in the plan: RT cores back the `Neighbor`/spa
 only (SPH/N-body/kNN/ANN) — they do **not** accelerate the LLM dense matmuls.
 **Next** — P2 (GatherDequant + Reduce + Broadcast), then P3 (Softmax + LLM elementwise + fused-ffn
 as an emergent fusion).
+
+---
+
+## 2026-06-29 · DAG-IR Phase 2 — native Reduce + Broadcast op-nodes · DONE (GPU-certified)
+
+The first **non-delegating** lowerings: Phase 1's gemm/gemv/fft delegate to legacy emitters; these
+two op-classes have no legacy standalone kernel, so the WGSL is emitted **directly from the graph
+node** — proving the native-template path the rest of the IR will use.
+
+**What was built** — new [`wgsl_forge/graph_ops/`](crates/qualia-core-db/src/wgsl_forge/graph_ops/):
+- `reduce.rs`: single-workgroup tree reduction (grid-stride fold → shared-mem tree → `output[0]`) for
+  `Sum/Mean/Max/L2` — the RMSNorm-variance and softmax-max/denominator primitive. `reduce_wgsl(op,wg)`
+  template + exact `reduce_cpu` (f64-accumulated floor) + `reduce_gpu` dispatch.
+- `broadcast.rs`: index-remap tile (`out[i]=input[i%in_len]`) — RMSNorm/bias scale-fanout. Template +
+  exact `broadcast_cpu` + `broadcast_gpu`.
+- `WgslGraphLowerer` (no `KernelSpec`) + `emit_graph_wgsl` in `emit/wgsl.rs`: lowers `OpNode::Reduce`/
+  `OpNode::Broadcast` from the node payload + per-node schedule. Phase 1's delegating lowerer is
+  untouched (its byte-equal guarantee intact).
+
+**Honest re-scope** — the design's P2 also bundled **GatherDequant + the ternary `{GatherDequant→MatMul}`
+template**. That split is a *2-node* graph whose dequantized-weights intermediate must stay GPU-side,
+which needs the **topological multi-dispatch executor P4 builds** (the adversarial verifier's §8.1
+finding: `WgpuPipeline::dispatch` is one-encoder-per-call). Rather than half-build it, it's **moved to
+P2b/P4-adjacency** and tracked — not faked into P2.
+
+**Measured** — `wgsl_forge::graph_ops` + emit native-lowering test **10 passed/0 failed** (non-GPU);
+**GPU-certify on A2000**: `reduce_gpu_matches_oracle` (all four kinds) + `broadcast_gpu_matches_oracle`
+**pass**; full `wgsl_forge` non-GPU green; `--features cuda` + cli build clean.
+
+**⚑ Where I need the human** — none this step.
+**Next** — P3: complete the Elementwise LLM kit (Silu/Gelu/Exp/RecipSqrt/…) + Softmax sugar
+(legalizes to Reduce→Broadcast→Elementwise — now that Reduce/Broadcast exist) + the MatMul→Elementwise
+fusion that makes fused-ffn emergent.
