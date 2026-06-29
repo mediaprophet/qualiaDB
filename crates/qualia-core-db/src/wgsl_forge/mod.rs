@@ -12,6 +12,7 @@ pub mod execute;
 pub mod ir;
 pub mod manifest;
 pub mod oracle;
+pub mod physics;
 pub mod roofline;
 pub mod runtime;
 pub mod schedule;

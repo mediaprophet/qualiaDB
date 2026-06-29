@@ -86,14 +86,16 @@ graphics (🚫) and listed at the end for completeness.
 | `sieve.wgsl` | GPU prime/quin sieve (bitmask out) | `platform/npu_ffi.rs` | ♻️ (u32 bit-ops; integer kernel) |
 | `tensor_volume.wgsl` | 10D distance filter over quins | `tensor/volume_gpu.rs` | ♻️/🧩 batched distance + filter |
 | `diffusion.wgsl` | discrete diffusion / graph denoise CA | `modalities/diffusion.rs` | ♻️/🔨 stencil kernel |
-| `molecular_dynamics.wgsl` | Verlet MD + PBC | **👻 not dispatched** | 👻 → forge N-body kernel |
-| `kinematics.wgsl` | N-body / Lennard-Jones / electrostatics | **👻 not dispatched** | 👻 → forge N-body kernel |
-| `fluid_dynamics.wgsl` | Navier-Stokes cell update | **👻 not dispatched** | 👻 → forge stencil kernel |
-| `quantum_bio.wgsl` | electron tunneling / radical-pair evolution | **👻 not dispatched** | 👻 → forge kernel (if used) |
+| `molecular_dynamics.wgsl` | velocity-Verlet MD + PBC | `wgsl_forge::physics::molecular_dynamics` | ✅ **FORMALIZED** — corrected (added the missing velocity update; flat layout), exact CPU oracle, naga-validated, **GPU-certified on A2000** |
+| `kinematics.wgsl` | softened inverse-square N-body | `wgsl_forge::physics::kinematics` | ✅ **FORMALIZED** — corrected (double-buffered, race fixed; Plummer softening), exact CPU oracle, naga-validated, **GPU-certified on A2000** |
+| `fluid_dynamics.wgsl` | Navier-Stokes cell update | **👻 not dispatched** | ⚑ **CURATION** — current shader is a `velocity *= 0.99` placeholder; needs Timothy's fluid-model direction before formalizing (faking the scheme is disallowed) |
+| `quantum_bio.wgsl` | electron tunneling / radical-pair evolution | **👻 not dispatched** | ⚑ **CURATION** — non-compiling + demo-grade (one uniform reused as several quantities); needs the intended quantum-biology model before formalizing |
 | `viewport/*.wgsl`, `webizen-render/*.wgsl` | ambient/bloom/mesh/projector/screen/spectral/epistemic | viewport/render | 🚫 graphics (out of scope) |
 
-> The 👻 orphans are a quick win: four already-written compute shaders with no caller — formalizing
-> them as forge kernels gives them a correctness oracle and a live, tuned dispatch path.
+> The MD + kinematics 👻 orphans are now ✅ certified forge kernels (correct, oracle-graded,
+> GPU-verified). The remaining two (fluid, quantum_bio) are ⚑ curation: their on-disk shaders are
+> placeholder/broken, and formalizing them honestly needs a physical-model decision reserved for Timothy
+> — they are deliberately left for that direction rather than faked.
 
 ---
 
@@ -115,14 +117,22 @@ All paths below were confirmed to exist. **"Now"** = current acceleration status
 | `inference/ggml_quants.rs` | quantized dot products | **CPU scalar** (no SIMD yet) | 🚫 (CPU SIMD/NPU target) / 🧩 (a GPU dot/GEMV variant) |
 | `inference/inference_awq.rs` | AWQ weight quant | **CPU scalar** | 🧩 fused contraction → CUDA WMMA / `fused_tensor_contraction` migrate |
 
-### 3.2 Linear algebra — **all CPU-only scalar today** (`solvers/linear_algebra/`)
+### 3.2 Linear algebra (`solvers/linear_algebra/`) — GEMM-shaped steps now best-path
+
+The keystone `gemm()`/`matvec()` offload was generalized to **all transpose combos and
+arbitrary `alpha`/`beta`** (materialise the transposed operand + apply `alpha`/`beta` in the
+O(mn) combine), so every dense product below routes through the best path on the machine with
+a byte-identical CPU floor. Genuinely non-GEMM factorizations (Jacobi/Householder) stay CPU —
+honestly, not faked.
 
 | File | Operation | Now | Forge path |
 |---|---|---|---|
-| `svd.rs` | SVD (via AᵀA eigen) | CPU scalar | 🔨 (one-sided Jacobi + rotation kernel) |
-| `eigen.rs` | symmetric eigen (cyclic Jacobi) | CPU scalar | 🔨 (Lanczos/QR-iter; matvec is 🧩) |
-| `cholesky.rs` | Cholesky | CPU scalar | 🔨 (blocked GEMM tiles + panel kernel) |
-| `qr.rs` | Householder QR | CPU scalar | 🔨 (Householder + trailing-GEMM) |
+| `gemm.rs` | GEMM / GEMV | ✅ **WIRED** — best-path `dispatch::gemm_f64`/`gemv_f64`, all transpose + α/β | ✅ done |
+| `svd.rs` | SVD (via AᵀA eigen) | ✅ **WIRED** — `AᵀA` gram + `U=A·V` routed through forge GEMM; the Jacobi eigen stays CPU | ✅ done (the two GEMMs) |
+| `spectral.rs` | characteristic polynomial | ✅ **WIRED** — Faddeev–LeVerrier `A·M` routed through forge GEMM (O(n⁴) → accelerated) | ✅ done |
+| `eigen.rs` | symmetric eigen (cyclic Jacobi) | CPU scalar | 🚫 **not forge-able** — cyclic-Jacobi is fine-grained data-dependent rotations, not a GEMM (consumers' covariance is wired separately) |
+| `cholesky.rs` | Cholesky | CPU scalar | 🔨 deferred — unblocked form has no single dense GEMM; a *blocked* rewrite (trailing SYRK/GEMM) is a mid-feature algorithm change, deferred to a dedicated pass |
+| `qr.rs` | Householder QR | CPU scalar | 🚫 narrow Householder panels; not a clean GEMM |
 
 > **Build a blocked-GEMM core once**, then SVD/QR/Cholesky/eigen (and PCA/k-means/SVM below) reuse
 > it. This is the single highest-leverage solver investment.
@@ -140,9 +150,11 @@ All paths below were confirmed to exist. **"Now"** = current acceleration status
 
 | File | Operation | Now | Forge path |
 |---|---|---|---|
-| `clustering/kmeans.rs` | centroid distances | CPU scalar | 🧩 (‖x−c‖² = GEMM + reduce) |
-| `dimensionality/pca.rs` | covariance / PCA | CPU scalar (`gemm()`+`symmetric_eigen()`) | 🧩 (XᵀX = forge GEMM; eigen → §3.2) |
-| `classification/svm.rs` | RBF kernel matrix | CPU scalar (SMO) | 🧩 kernel matrix (distance+exp); SMO loop stays CPU |
+| `clustering/kmeans.rs` | centroid distances | ✅ **WIRED** — assignment `AllPairs` via `dispatch::pairwise_sq_dist_f64` (gated; exact per-point CPU floor below threshold) | ✅ done |
+| `dimensionality/pca.rs` | covariance / PCA | ✅ **WIRED** — `XᵀX` covariance now offloads (transpose + `alpha=1/(n−1)` combine); eigen stays Jacobi-CPU | ✅ done (covariance) |
+| `dimensionality/`, `regression/{ridge,linear,bayesian}.rs`, `attention.rs`, `kalman.rs` | covariance / Gram / QKᵀV | ✅ **WIRED transitively** — all call the keystone `gemm()`/`matvec()`, now best-path incl. transposed `XᵀX`/`Q·Kᵀ` | ✅ done |
+| `classification/svm.rs` | kernel matrix | ✅ **WIRED** — linear `X·Xᵀ` GEMM, RBF `exp(−γ·pairwise)`; SMO loop stays CPU (divergent) | ✅ done (kernel matrix) |
+| `clustering/gmm.rs` | E-step responsibilities | CPU scalar | 🚫 per-component diagonal-covariance reduction (each component rescales features) — not a uniform GEMM/pairwise |
 | `trees/random_forest.rs` | ensemble traversal | CPU scalar | 🚫 (divergent) / 🔨 (GPU bucketed-eval, low priority) |
 
 ### 3.5 Audio (`audio/`) — real forward transforms now wired
