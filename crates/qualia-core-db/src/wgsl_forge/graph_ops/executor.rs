@@ -197,34 +197,97 @@ impl ForgeGraphExecutor {
     /// output tensor. Intermediates are kept device-side; every node's dispatch and its GPU→GPU
     /// hand-off copy are recorded into ONE command encoder and submitted once
     /// ([`WgpuComputeContext::submit_graph`], Option B). Re-uses the device/slab across calls.
+    /// **Every** external is (re)uploaded into the transient ring this call; for the decode loop
+    /// where the big matrices are constant across tokens, use [`Self::load_weights`] +
+    /// [`Self::run_resident`] instead so they upload once.
     pub fn run(
         &mut self,
         graph: &ComputeGraph,
         externals: &[Vec<f32>],
     ) -> Result<Vec<f32>, ForgeError> {
-        let ctx = &mut self.ctx;
+        // Per-call slab reset: free the previous call's transient allocations so this call starts
+        // with the full capacity. Safe — the previous run's readback fully synchronized the device.
+        self.ctx.clear_transient_allocations();
 
-        // Per-call slab reset: free the previous call's transient allocations so this call
-        // starts with the full capacity. Safe here — the previous `run`'s final readback
-        // (`read_buffer_f32`) fully synchronized the device before returning.
-        ctx.clear_transient_allocations();
-
-        // Upload externals once into the READ slab (they are only ever read; binding is
-        // overwritten per consumer). Every node's *readable* tensor lives in the read slab;
-        // outputs are written to the read_write slab and copied back (the hand-off copy).
+        // Upload every external into the transient READ slab (binding overwritten per consumer).
         let mut ext_views: Vec<BufferView> = Vec::with_capacity(externals.len());
         for data in externals {
-            ext_views.push(ctx.allocate_and_write(
+            ext_views.push(self.ctx.allocate_and_write(
                 bytemuck::cast_slice(data),
                 0,
                 0,
                 BindingUsage::StorageRead,
             )?);
         }
+        self.run_prepared(graph, ext_views)
+    }
 
-        // Phase A — prepare every node: allocate its output + params (read/read_write slab
-        // split), compile its pipeline, build its bind group. No GPU work is submitted yet.
-        // Each node's output (the read-slab hand-off copy) is threaded forward as a `BufferView`.
+    /// Like [`Self::run`], but external indices already uploaded into the persistent weight region
+    /// (via [`Self::load_weights`]) are bound to their **resident** on-device buffers instead of
+    /// being re-uploaded — only the *activation* externals (those not in `resident`) are written
+    /// this call. This is the decode-step usage: the big projection / FFN matrices live on-device
+    /// across every token; each token uploads just `x` (+ tiny scalars). `externals[i]` is ignored
+    /// for any `i` that is resident (pass an empty `vec![]` there for clarity).
+    pub fn run_resident(
+        &mut self,
+        graph: &ComputeGraph,
+        externals: &[Vec<f32>],
+        resident: &ResidentWeights,
+    ) -> Result<Vec<f32>, ForgeError> {
+        self.ctx.clear_transient_allocations();
+        let mut ext_views: Vec<BufferView> = Vec::with_capacity(externals.len());
+        for (i, data) in externals.iter().enumerate() {
+            if let Some(view) = resident.view_for(i) {
+                ext_views.push(view);
+            } else {
+                ext_views.push(self.ctx.allocate_and_write(
+                    bytemuck::cast_slice(data),
+                    0,
+                    0,
+                    BindingUsage::StorageRead,
+                )?);
+            }
+        }
+        self.run_prepared(graph, ext_views)
+    }
+
+    /// Upload a set of `(external_index, data)` weights ONCE into the executor's persistent weight
+    /// region and return a [`ResidentWeights`] handle mapping those indices to their on-device
+    /// views. Additive — successive calls accumulate (use [`Self::clear_weights`] to start over).
+    /// Pass the handle to [`Self::run_resident`] so those externals are referenced by offset, not
+    /// re-uploaded per token (the LLM-on-forge weight-residency lever).
+    pub fn load_weights(
+        &mut self,
+        weights: &[(usize, Vec<f32>)],
+    ) -> Result<ResidentWeights, ForgeError> {
+        let mut views = std::collections::HashMap::with_capacity(weights.len());
+        for (idx, data) in weights {
+            let view = self.ctx.allocate_weight(bytemuck::cast_slice(data), 0, 0)?;
+            views.insert(*idx, view);
+        }
+        Ok(ResidentWeights { views })
+    }
+
+    /// Drop all resident weights, freeing the persistent region for a new model/layer set. Any
+    /// [`ResidentWeights`] handles from before this call are stale and must not be reused.
+    pub fn clear_weights(&mut self) {
+        self.ctx.clear_weights();
+    }
+
+    /// The shared execution core: given the externals already resolved to device [`BufferView`]s
+    /// (freshly uploaded and/or resident), prepare every node, record the whole graph into one
+    /// encoder, submit once, and read back the output. Both [`Self::run`] and [`Self::run_resident`]
+    /// funnel through here so the residency path and the upload path share identical scheduling.
+    fn run_prepared(
+        &mut self,
+        graph: &ComputeGraph,
+        ext_views: Vec<BufferView>,
+    ) -> Result<Vec<f32>, ForgeError> {
+        let ctx = &mut self.ctx;
+
+        // Phase A — prepare every node: allocate its output + params (read/read_write slab split),
+        // compile its pipeline, build its bind group. No GPU work submitted yet. Each node's output
+        // (the read-slab hand-off copy) is threaded forward as a `BufferView`.
         let mut passes: Vec<GraphPass> = Vec::with_capacity(graph.nodes.len());
         let mut node_out: Vec<Option<BufferView>> = vec![None; graph.nodes.len()];
         for (i, node) in graph.nodes.iter().enumerate() {
@@ -258,6 +321,29 @@ impl ForgeGraphExecutor {
         let out = node_out[id.0 as usize]
             .ok_or_else(|| ForgeError::Emission("graph has no output node".to_string()))?;
         ctx.read_buffer_f32(&out)
+    }
+}
+
+/// A handle to weights uploaded once into a [`ForgeGraphExecutor`]'s persistent weight region by
+/// [`ForgeGraphExecutor::load_weights`]. Maps a graph's **external input index** to its resident
+/// on-device [`BufferView`]; passed to [`ForgeGraphExecutor::run_resident`] so those inputs are
+/// referenced by offset across many runs instead of re-uploaded per call.
+#[derive(Debug, Clone, Default)]
+pub struct ResidentWeights {
+    views: std::collections::HashMap<usize, BufferView>,
+}
+
+impl ResidentWeights {
+    /// The resident device view for external index `i`, if it was loaded.
+    pub fn view_for(&self, i: usize) -> Option<BufferView> {
+        self.views.get(&i).copied()
+    }
+    /// Number of resident weight tensors held.
+    pub fn len(&self) -> usize {
+        self.views.len()
+    }
+    pub fn is_empty(&self) -> bool {
+        self.views.is_empty()
     }
 }
 
@@ -928,6 +1014,84 @@ mod tests {
                 );
             }
         }
+    }
+
+    /// Weight-residency cert + perf (LLM-on-forge Phase 1b): a decode block's FFN matrices
+    /// (Wg, Wu, Wd) are uploaded ONCE via `load_weights`, then `run_resident` is called repeatedly
+    /// with only the activations. Correctness: the resident path matches both the all-upload `run`
+    /// path **exactly** (same kernels, same bytes) and the composed CPU oracle, across multiple
+    /// calls (proving the resident weights survive the per-call transient-ring reset). Perf: prints
+    /// ms/call for resident vs all-upload and the per-call weight bytes no longer re-uploaded.
+    #[test]
+    #[ignore = "requires a GPU adapter"]
+    fn resident_weights_decode_block() {
+        use std::time::Instant;
+        let (d, kv, ffn) = (576u32, 128u32, 1536u32);
+        let inv_scale = 1.0f32 / (d as f32).sqrt();
+        let eps = 1e-5f32;
+        let x: Vec<f32> = (0..d).map(|i| ((i % 17) as f32) * 0.05 - 0.4).collect();
+        let kt: Vec<f32> = (0..d * kv).map(|i| ((i * 5 % 7) as f32) * 0.03 - 0.09).collect();
+        let v: Vec<f32> = (0..kv * d).map(|i| ((i * 3 % 5) as f32) * 0.04 - 0.08).collect();
+        let wg: Vec<f32> = (0..d * ffn).map(|i| ((i % 13) as f32) * 0.02 - 0.12).collect();
+        let wu: Vec<f32> = (0..d * ffn).map(|i| ((i % 11) as f32) * 0.015 - 0.07).collect();
+        let wd: Vec<f32> = (0..ffn * d).map(|i| ((i % 7) as f32) * 0.01 - 0.03).collect();
+        let g = decode_block_graph(d, kv, ffn).unwrap();
+
+        // All-upload externals (the run() baseline) — every tensor provided.
+        let full = vec![
+            x.clone(), kt.clone(), v.clone(), wg.clone(), wu.clone(), wd.clone(),
+            vec![inv_scale], vec![eps],
+        ];
+        // Resident-activation externals: indices 3,4,5 (Wg,Wu,Wd) are resident → empty placeholders.
+        let acts = vec![
+            x.clone(), kt.clone(), v.clone(), vec![], vec![], vec![],
+            vec![inv_scale], vec![eps],
+        ];
+
+        let mut exec = ForgeGraphExecutor::new().expect("forge executor");
+        // Upload the FFN weight matrices once into the persistent region.
+        let resident = exec
+            .load_weights(&[(3, wg.clone()), (4, wu.clone()), (5, wd.clone())])
+            .expect("load_weights");
+        assert_eq!(resident.len(), 3);
+        let resident_bytes = exec.context().resident_weight_bytes();
+
+        let cpu = execute_graph_cpu(&g, &full).unwrap();
+        let upload_ref = exec.run(&g, &full).expect("run all-upload");
+
+        // Resident path matches the all-upload path EXACTLY (identical kernels + bytes), and the
+        // CPU oracle, on every one of several calls (resident weights persist across runs).
+        for call in 0..3 {
+            let res = exec.run_resident(&g, &acts, &resident).expect("run_resident");
+            assert_eq!(res.len(), upload_ref.len());
+            for (a, b) in res.iter().zip(upload_ref.iter()) {
+                assert_eq!(a, b, "resident != all-upload on call {call}");
+            }
+            for (a, b) in res.iter().zip(cpu.iter()) {
+                assert!((a - b).abs() <= 1e-2 * b.abs().max(1.0), "resident != oracle: {a} vs {b}");
+            }
+        }
+
+        // Perf: time resident vs all-upload (after warmup).
+        let iters = 50;
+        for _ in 0..5 {
+            let _ = exec.run(&g, &full).unwrap();
+            let _ = exec.run_resident(&g, &acts, &resident).unwrap();
+        }
+        let t0 = Instant::now();
+        for _ in 0..iters {
+            let _ = exec.run(&g, &full).unwrap();
+        }
+        let upload_ms = t0.elapsed().as_secs_f64() * 1e3 / iters as f64;
+        let t1 = Instant::now();
+        for _ in 0..iters {
+            let _ = exec.run_resident(&g, &acts, &resident).unwrap();
+        }
+        let resident_ms = t1.elapsed().as_secs_f64() * 1e3 / iters as f64;
+        let saved_bytes = (wg.len() + wu.len() + wd.len()) * std::mem::size_of::<f32>();
+        println!(
+            "[weight residency] decode block d={d} kv={kv} ffn={ffn} | resident {resident_ms:.3} ms/call vs all-upload {upload_ms:.3} ms/call | weights {resident_bytes} B resident, {saved_bytes} B/call NOT re-uploaded. Correctness: resident==all-upload (exact) + matches CPU oracle across 3 calls."
+        );
     }
 
     // ── P4b: attention + GatherDequant + decode block ────────────────────────────────

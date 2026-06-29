@@ -47,6 +47,13 @@ pub enum BindingUsage {
     StorageRead,
     StorageReadWrite,
     Uniform,
+    /// Read-only storage that lives in the **persistent weight region**, not the recycling
+    /// transient ring. Backed by its own device buffer (`weight_slab`) and a write-once bump
+    /// cursor, so a view with this usage survives [`super::wgpu::WgpuComputeContext::clear_transient_allocations`]
+    /// — uploaded once (e.g. a decode layer's projection / FFN matrices) and referenced by offset
+    /// across many `run`s. Bound exactly like [`Self::StorageRead`] in the shader (a distinct
+    /// read-only storage buffer in the same bind group); only the backing buffer differs.
+    StorageReadResident,
 }
 
 /// A lightweight, heap-free pointer representing a contiguous memory slice on the device.

@@ -4,7 +4,9 @@ use std::sync::mpsc;
 use std::time::Instant;
 
 use super::compute::QualiaCompute;
-use super::memory::{BindingUsage, BufferView, MemoryTopology, QualiaSlabAllocator};
+use super::memory::{
+    BindingUsage, BufferView, DEFAULT_BINDING_ALIGNMENT, MemoryTopology, QualiaSlabAllocator,
+};
 use super::oracle_ctx::OracleContext;
 use crate::wgsl_forge::{
     emit_shader, AdapterConstraints, AdapterIdentity, ForgeError, HardwareProfile, KernelSpec,
@@ -28,6 +30,14 @@ pub struct WgpuComputeContext {
     /// exclusive usage, so it cannot share a buffer with the read-only inputs in
     /// the same dispatch.
     pub out_slab: wgpu::Buffer,
+    /// Backs the **persistent weight region** ([`BindingUsage::StorageReadResident`]): big,
+    /// upload-once matrices (a decode layer's projection / FFN weights) that are referenced by
+    /// offset across many `run`s instead of being re-uploaded each call. Separate buffer from the
+    /// transient ring so [`Self::clear_transient_allocations`] never recycles it.
+    pub weight_slab: wgpu::Buffer,
+    /// Write-once bump cursor into `weight_slab` (bytes, kept 256-aligned). Weights are never
+    /// freed individually; [`Self::clear_weights`] resets it to reuse the region for a new model.
+    weight_cursor: usize,
     pub timestamp_supported: bool,
     pub timestamp_period_ns: f32,
     timestamp_resources: Option<TimestampResources>,
@@ -154,6 +164,14 @@ impl WgpuComputeContext {
             mapped_at_creation: false,
         });
 
+        let weight_slab = device.create_buffer(&wgpu::BufferDescriptor {
+            label: Some("forge-weight-slab"),
+            size: capacity_bytes as u64,
+            usage: wgpu::BufferUsages::STORAGE
+                | wgpu::BufferUsages::COPY_DST
+                | wgpu::BufferUsages::COPY_SRC,
+            mapped_at_creation: false,
+        });
         let timestamp_resources = timestamp_supported.then(|| TimestampResources::new(&device));
 
         Ok(Self {
@@ -165,6 +183,8 @@ impl WgpuComputeContext {
             allocator,
             slab,
             out_slab,
+            weight_slab,
+            weight_cursor: 0,
             timestamp_supported,
             timestamp_period_ns,
             timestamp_resources,
@@ -265,6 +285,14 @@ impl WgpuComputeContext {
                 | wgpu::BufferUsages::COPY_SRC,
             mapped_at_creation: false,
         });
+        let weight_slab = device.create_buffer(&wgpu::BufferDescriptor {
+            label: Some("forge-weight-slab"),
+            size: capacity_bytes as u64,
+            usage: wgpu::BufferUsages::STORAGE
+                | wgpu::BufferUsages::COPY_DST
+                | wgpu::BufferUsages::COPY_SRC,
+            mapped_at_creation: false,
+        });
         let timestamp_resources = timestamp_supported.then(|| TimestampResources::new(&device));
 
         Ok(Self {
@@ -276,6 +304,8 @@ impl WgpuComputeContext {
             allocator,
             slab,
             out_slab,
+            weight_slab,
+            weight_cursor: 0,
             timestamp_supported,
             timestamp_period_ns,
             timestamp_resources,
@@ -287,6 +317,7 @@ impl WgpuComputeContext {
     fn slab_for(&self, usage: BindingUsage) -> &wgpu::Buffer {
         match usage {
             BindingUsage::StorageReadWrite => &self.out_slab,
+            BindingUsage::StorageReadResident => &self.weight_slab,
             BindingUsage::StorageRead | BindingUsage::Uniform => &self.slab,
         }
     }
@@ -309,13 +340,56 @@ impl WgpuComputeContext {
     pub fn allocate_and_write(&mut self, data: &[u8], binding: u32, group: u32, usage: BindingUsage) -> Result<BufferView, ForgeError> {
         let view = self.allocator.allocate_transient(data.len(), binding, group, usage)?;
         if !data.is_empty() {
-            let slab = match usage {
-                BindingUsage::StorageReadWrite => &self.out_slab,
-                BindingUsage::StorageRead | BindingUsage::Uniform => &self.slab,
-            };
+            let slab = self.slab_for(usage);
             self.queue.write_buffer(slab, view.offset as wgpu::BufferAddress, data);
         }
         Ok(view)
+    }
+
+    /// Bump-allocate `data` into the **persistent weight region** (`weight_slab`) and upload it
+    /// once, returning a [`BufferView`] tagged [`BindingUsage::StorageReadResident`]. Unlike
+    /// [`Self::allocate_and_write`] (transient ring), this view **survives**
+    /// [`Self::clear_transient_allocations`], so a decode layer's projection / FFN matrices are
+    /// uploaded a single time and referenced by offset across every token's `run` — eliminating
+    /// the per-call weight re-upload. Offsets are 256-aligned for direct bind-group use.
+    pub fn allocate_weight(
+        &mut self,
+        data: &[u8],
+        binding: u32,
+        group: u32,
+    ) -> Result<BufferView, ForgeError> {
+        let offset = self.weight_cursor.div_ceil(DEFAULT_BINDING_ALIGNMENT) * DEFAULT_BINDING_ALIGNMENT;
+        let end = offset + data.len();
+        let cap = self.weight_slab.size() as usize;
+        if end > cap {
+            return Err(ForgeError::GpuValidation(format!(
+                "weight region overflow: need {end} bytes but weight slab is {cap} (raise capacity)"
+            )));
+        }
+        if !data.is_empty() {
+            self.queue
+                .write_buffer(&self.weight_slab, offset as wgpu::BufferAddress, data);
+        }
+        self.weight_cursor = end;
+        Ok(BufferView {
+            offset,
+            length_bytes: data.len(),
+            binding,
+            group,
+            usage: BindingUsage::StorageReadResident,
+        })
+    }
+
+    /// Reset the persistent weight region so it can be reused for a different model/layer set.
+    /// Any [`BufferView`]s previously returned by [`Self::allocate_weight`] become stale — drop
+    /// the corresponding handles and re-load. (Weights are write-once; no per-tensor free.)
+    pub fn clear_weights(&mut self) {
+        self.weight_cursor = 0;
+    }
+
+    /// Bytes currently consumed in the persistent weight region (for tests / introspection).
+    pub fn resident_weight_bytes(&self) -> usize {
+        self.weight_cursor
     }
 
     pub fn allocate_transient(&mut self, size_bytes: usize, binding: u32, group: u32, usage: BindingUsage) -> Result<BufferView, ForgeError> {
