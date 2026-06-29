@@ -267,3 +267,39 @@ need real weights. One file unlocks the competition proof.
 **Next step:** the p64→forge bridge (read role tensors via `from_p64`, map to `decode_layer_graph`
 externals using `trans_b` for the native layout, `load_weights` them resident) + a hermetic
 synthetic-full-layer-p64 cert; then the model-gated engine bake-off.
+
+---
+
+## 2026-06-29 — p64 → forge bridge: forge decode layer on REAL SmolLM2-360M weights (DONE)
+
+**Step / phase:** the p64→forge bridge + the first **real-weights** proof (Timothy supplied the model:
+`C:\LLM_Models\GGUF\smollm2-360m-instruct-q8_0.gguf`). **Status: done, run on the A2000.**
+
+**What was built** (`crates/qualia-core-db/src/wgsl_forge/graph_ops/p64_bridge.rs`, new):
+- `read_role(index, data, role, layer)` — locate a role-tagged tensor in a `P64TensorIndex` and
+  dequantize it to f32 via `ggml_quants::dequantize_row_into` (handles the model's Q8_0).
+- `read_forge_layer_weights(index, data, layer)` — read a decode layer's `Wq/Wo/Wg/Wu/Wd/attn_norm/
+  ffn_norm`, transposing the 2-D projections from the native `[out,in]` p64 layout to the `[in,out]`
+  the forge graph consumes (one-time load cost; `trans_b` is the no-copy upgrade for a follow-on).
+
+**Measured / verified** (A2000, `#[ignore]` real-model cert):
+- `forge_decode_layer_on_real_p64_weights_matches_oracle` — **PASS**. Loads the 386 MB SmolLM2-360M
+  Q8_0 GGUF, `compile_gguf_to_p64`, `from_p64`, reads layer-0 weights through the bridge, and runs the
+  forge `decode_layer_graph` at the model's **real** dims (n_embd 960, 15 heads, 5 kv-heads GQA,
+  head_dim 64, ffn 2560, RoPE base 100k). **forge == composed CPU oracle at max rel 3.28e-6** — the
+  forge runs SmolLM2's actual layer-0 weights correctly. (Skips cleanly when no model is on disk.)
+- Non-GPU `wgsl_forge::` 142 passed / 0 failed / 49 ignored; lib builds clean.
+
+**Honest boundary:** the **weights, dims, and RoPE base are the model's real values**; `x` and the KV
+cache are synthetic (this certifies the layer *compute* on real weights, not generated text). The
+remaining piece for the full competition number is the **engine head-to-head**: run the *hand-written*
+`dispatch_transformer_layer` on the same p64-derived index and assert forge==engine token-for-token,
+plus ms/layer + end-to-end tok/s. That needs constructing the engine (KV cache + `GgufTensorIndex` via
+`to_gguf_index()`) — the next unit, now unblocked by the model on disk.
+
+**⚑ Where I need the human:** none this step (model supplied — thank you).
+
+**Next step:** engine head-to-head — forge `decode_layer_graph` vs the hand-written
+`dispatch_attention_pass`/`dispatch_ffn_pass` on the same SmolLM2 weights (parity + ms/layer), then
+wire the forge path into the decode loop behind a flag (`inference_agent.rs` seam ~1077) with KV-cache
+update, for end-to-end tok/s.

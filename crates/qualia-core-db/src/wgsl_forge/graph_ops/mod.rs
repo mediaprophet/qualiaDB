@@ -13,6 +13,7 @@ pub mod elementwise;
 pub mod executor;
 pub mod gather_dequant;
 pub mod neighbor;
+pub mod p64_bridge;
 pub mod reduce;
 pub mod scatter;
 pub mod slice;
