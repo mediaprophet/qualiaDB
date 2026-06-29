@@ -30,20 +30,36 @@ Four things already exist in this repo, built but **not connected**:
 and the existing governance intact. The win is **connecting** what exists and replacing hand-written
 WGSL with generated+certified graphs.
 
-## Competitive frame (run the race we can win)
+## Competitive frame — define "faster" by the binding constraint, not the wrong baseline
 
-Not a tok/s drag race vs vLLM/TensorRT on NVIDIA — they win that. The category **nobody else enters**,
-and whose pieces are mostly already here:
+The "just competitive enough" framing used the wrong yardstick (datacenter-NVIDIA throughput). vLLM /
+TensorRT win *that* race; it is not the contest, and we don't pretend to it. The honest, sharper claim:
 
-- **Provable correctness** — every decode kernel certified against a CPU oracle (the forge's discipline).
-- **Provenance + consent + audit** — q42 Merkle-DAG over p64 weights + the Phase-8 Sentinel:
-  *auditable, consent-anchored, governed* local inference.
-- **Memory edge with proof** — AWQ ternary FFN (~1.6-bit) consumed by the forge's **certified** ternary
-  GatherDequant: BitNet-class footprint *with* correctness + provenance, which nobody combines.
-- **Portability** — one DAG-IR → any GPU (WGSL/CUDA/MSL/HLSL), not hand-written per backend.
+**Locally — edge clusters, unified-memory (Apple Silicon), off-grid / RERSS hardware — the binding
+constraint is memory bandwidth, not compute.** On that axis this architecture is genuinely *faster than
+naive local inference*, through structural efficiencies others don't get for free:
 
-Speed only has to reach **"competitive enough"** (tensor cores + weight residency + pipeline cache);
-the moat is the differentiator.
+- **Transfer tax eliminated.** p64 weights resident once (`load_weights`); only activations cross the bus
+  per token — no per-token weight re-upload. Bypasses the PCIe/bus bottleneck on every decode step.
+- **Bandwidth wall broken.** AWQ ternary FFN (~1.58-bit) through the **certified** `GatherDequant`: the
+  dominant FFN payload is ~5–10× denser than f16, so the memory-bound step stops stalling. **This win is
+  real on any GPU, including unified-memory edge — it is bandwidth, not a tensor-core feature.**
+- **Orchestration collapsed.** The pipeline-cached decode graph hands **one** submitted graph to the
+  U0-owned queue per token, instead of per-layer host-driven dispatch/binding. CPU-bound orchestration →
+  continuous GPU saturation.
+- **Portable.** One DAG-IR → any GPU via WGSL, not hand-written per backend.
+
+**Gated, kept separate (no conflation):** *continuous* tensor-core feeding needs the coopmat path
+(dormant, #57) or CUDA WMMA (NVIDIA-only). That is an additional layer; the memory-bandwidth + residency +
+orchestration win stands **today**, on any GPU.
+
+**What is genuinely unavailable by other means:** the optimizations and the
+provenance/consent/governance are the **same substrate** — p64 GPU-resident weights + the q42 Merkle-DAG
+over them + the Phase-8 gates — so a fully *auditable, consent-anchored* forward pass runs at edge-viable
+latency at **no extra architectural cost**. Extraction-architecture engines can't bolt this on without
+abandoning their model; here it is native. Optimization at the bare metal *is* the political act: edge
+viability is the precondition for breaking dependence on hyperscale APIs and the "platform-as-god" model —
+this is the infrastructure for localized cognitive autonomy, not just an inference engine.
 
 ## Approach — phased, **non-destructive**
 
