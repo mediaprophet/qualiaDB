@@ -22,11 +22,11 @@
 //! so the context capacity must hold the whole graph's tensors at once — fine for a decode block;
 //! long sequences will want buffer-lifetime reuse (a follow-on).
 
-use super::{broadcast, elementwise, reduce};
+use super::{broadcast, elementwise, gather_dequant, reduce};
 use crate::wgsl_forge::execute::{
     BindingUsage, BufferView, QualiaCompute, WgpuComputeContext, WgpuPipeline,
 };
-use crate::wgsl_forge::ir::graph::{ComputeGraph, EwKind, GraphNode, NodeId, OpNode};
+use crate::wgsl_forge::ir::graph::{ComputeGraph, DType, EwKind, GraphNode, NodeId, OpNode};
 use crate::wgsl_forge::ir::BuiltinKernel;
 use crate::wgsl_forge::{ForgeError, Schedule};
 
@@ -76,6 +76,16 @@ pub fn execute_graph_cpu(
             },
             OpNode::MatMul { m, n, k, .. } => {
                 crate::wgsl_forge::oracle::gemm_cpu(&ins[0], &ins[1], m as usize, k as usize, n as usize)
+            }
+            OpNode::GatherDequant { scheme, .. } => {
+                if scheme != DType::Ternary {
+                    return Err(ForgeError::Emission(format!(
+                        "execute_graph_cpu GatherDequant: scheme {scheme:?} unsupported"
+                    )));
+                }
+                let rows = node.out.shape.dims[0] as usize;
+                let cols = node.out.shape.dims[1] as usize;
+                gather_dequant::gather_dequant_ternary_cpu(&ins[0], &ins[1], rows, cols)
             }
             other => {
                 return Err(ForgeError::Emission(format!(
@@ -229,6 +239,27 @@ fn run_node_to_out_slab(
             Ok(out)
         }
         OpNode::Elementwise { f } => run_elementwise(ctx, f, node.n_in, ins),
+        OpNode::GatherDequant { scheme, .. } => {
+            if scheme != DType::Ternary {
+                return Err(ForgeError::Emission(format!(
+                    "executor GatherDequant: scheme {scheme:?} unsupported (Ternary only this phase)"
+                )));
+            }
+            const WG: u32 = 64;
+            let rows = node.out.shape.dims[0];
+            let cols = node.out.shape.dims[1];
+            let k_words = cols.div_ceil(16);
+            let out_elems = (rows as usize) * (cols as usize);
+            let out = alloc_out(ctx, out_elems, 2)?;
+            let params =
+                alloc_params(ctx, &[rows, cols, k_words, 0], 3, BindingUsage::StorageRead)?;
+            let src = gather_dequant::gather_dequant_ternary_wgsl(WG);
+            let pipeline = WgpuPipeline::compile(ctx, &src, gather_dequant::GATHER_DEQUANT_ENTRY)?;
+            let sched = Schedule { workgroup_size: WG, ..Default::default() };
+            // packed (0), scale (1), output (2, read_write), params (3).
+            pipeline.dispatch(&[at(ins[0], 0), at(ins[1], 1), out, params], &sched, out_elems)?;
+            Ok(out)
+        }
         OpNode::MatMul { m, n, k, tc, .. } => {
             // `tc=true` requests tensor cores. The portable wgpu path is the coopmat tiled
             // GEMM — taken only when the adapter advertises coopmat AND the runtime probe
@@ -411,6 +442,152 @@ pub fn swiglu_ffn_graph(seq: u32, dim: u32, ffn: u32) -> Result<ComputeGraph, Fo
     Ok(g)
 }
 
+// ── Composable sub-block helpers (append nodes to an existing graph) ──────────────────
+
+use crate::wgsl_forge::ir::graph::{Axis, RedKind, Shape, TensorRef};
+
+/// Append RMSNorm-core (no weight/eps) of `x` (a `len`-element row) to `g`, returning the
+/// output `TensorRef`. `Mul(x,x) → Reduce(Mean) → RecipSqrt → Broadcast → Mul(x,·)`.
+fn push_rmsnorm(
+    g: &mut ComputeGraph,
+    x: TensorRef,
+    sh_row: Shape,
+    sh_1: Shape,
+    s: Schedule,
+) -> Result<TensorRef, ForgeError> {
+    let sq = g.push(OpNode::Elementwise { f: EwKind::Mul }, &[x, x], sh_row, DType::F32, s)?;
+    let ms = g.push(OpNode::Reduce { op: RedKind::Mean, axis: Axis::Last }, &[sq], sh_1, DType::F32, s)?;
+    let r = g.push(OpNode::Elementwise { f: EwKind::RecipSqrt }, &[ms], sh_1, DType::F32, s)?;
+    let rb = g.push(OpNode::Broadcast { shape: sh_row }, &[r], sh_row, DType::F32, s)?;
+    g.push(OpNode::Elementwise { f: EwKind::Mul }, &[x, rb], sh_row, DType::F32, s)
+}
+
+/// Append numerically-stable softmax of `scores` (a `len`-element vector) to `g`, returning
+/// the output `TensorRef`. `Reduce(Max) → Broadcast → Sub → Exp → Reduce(Sum) → Broadcast → Div`.
+fn push_softmax(
+    g: &mut ComputeGraph,
+    scores: TensorRef,
+    sh_vec: Shape,
+    sh_1: Shape,
+    s: Schedule,
+) -> Result<TensorRef, ForgeError> {
+    let mx = g.push(OpNode::Reduce { op: RedKind::Max, axis: Axis::Last }, &[scores], sh_1, DType::F32, s)?;
+    let mxb = g.push(OpNode::Broadcast { shape: sh_vec }, &[mx], sh_vec, DType::F32, s)?;
+    let shifted = g.push(OpNode::Elementwise { f: EwKind::Sub }, &[scores, mxb], sh_vec, DType::F32, s)?;
+    let e = g.push(OpNode::Elementwise { f: EwKind::Exp }, &[shifted], sh_vec, DType::F32, s)?;
+    let sm = g.push(OpNode::Reduce { op: RedKind::Sum, axis: Axis::Last }, &[e], sh_1, DType::F32, s)?;
+    let smb = g.push(OpNode::Broadcast { shape: sh_vec }, &[sm], sh_vec, DType::F32, s)?;
+    g.push(OpNode::Elementwise { f: EwKind::Div }, &[e, smb], sh_vec, DType::F32, s)
+}
+
+/// Single-token (decode-step) scaled-dot-product **attention** as one graph:
+/// `probs = softmax(q · Kᵀ)`, `out = probs · V`. For a single query row the softmax is over
+/// the whole `kv`-length score vector — exactly the LLM decode case (one new token attends to
+/// the cached keys/values). Externals: `[0]=q [1,d]`, `[1]=kt = Kᵀ [d,kv]`, `[2]=v [kv,d]`.
+/// (Multi-row / prefill attention needs a *row-wise* (axis-aware) reduce — a later extension;
+/// this is the decode hot path.)
+pub fn attention_graph(d: u32, kv: u32) -> Result<ComputeGraph, ForgeError> {
+    let mut g = ComputeGraph::new();
+    let s = Schedule::default();
+    let sh_q = Shape::new(&[1, d]);
+    let sh_kt = Shape::new(&[d, kv]);
+    let sh_v = Shape::new(&[kv, d]);
+    let sh_scores = Shape::new(&[1, kv]);
+    let sh_1 = Shape::new(&[1]);
+    let sh_o = Shape::new(&[1, d]);
+    let q = TensorRef::input(0, sh_q, DType::F32);
+    let kt = TensorRef::input(1, sh_kt, DType::F32);
+    let v = TensorRef::input(2, sh_v, DType::F32);
+    let mm = |m, n, k| OpNode::MatMul { m, n, k, tc: false, trans_b: false };
+    // scores = Q[1,d] · Kᵀ[d,kv] = [1,kv]
+    let scores = g.push(mm(1, kv, d), &[q, kt], sh_scores, DType::F32, s)?;
+    let probs = push_softmax(&mut g, scores, sh_scores, sh_1, s)?;
+    // out = probs[1,kv] · V[kv,d] = [1,d]
+    let out = g.push(mm(1, d, kv), &[probs, v], sh_o, DType::F32, s)?;
+    g.mark_output(out);
+    Ok(g)
+}
+
+/// A full single-token transformer **decode block** as one graph — the headline P4b
+/// composition: `res1 = x + attn(RMSNorm(x))`, `out = res1 + SwiGLU-FFN(RMSNorm(res1))`,
+/// both residuals. Uses the cached `Kᵀ`/`V` as externals (the stateful cache-append of the
+/// current token's k/v is the engine's job, not the graph's). Externals: `[0]=x [1,d]`,
+/// `[1]=kt [d,kv]`, `[2]=v [kv,d]`, `[3]=Wg [d,ffn]`, `[4]=Wu [d,ffn]`, `[5]=Wd [ffn,d]`.
+pub fn decode_block_graph(d: u32, kv: u32, ffn: u32) -> Result<ComputeGraph, ForgeError> {
+    let mut g = ComputeGraph::new();
+    let s = Schedule::default();
+    let sh_row = Shape::new(&[1, d]);
+    let sh_1 = Shape::new(&[1]);
+    let sh_kt = Shape::new(&[d, kv]);
+    let sh_v = Shape::new(&[kv, d]);
+    let sh_scores = Shape::new(&[1, kv]);
+    let sh_w = Shape::new(&[d, ffn]);
+    let sh_wd = Shape::new(&[ffn, d]);
+    let sh_h = Shape::new(&[1, ffn]);
+    let mm = |m, n, k| OpNode::MatMul { m, n, k, tc: false, trans_b: false };
+
+    let x = TensorRef::input(0, sh_row, DType::F32);
+    let kt = TensorRef::input(1, sh_kt, DType::F32);
+    let v = TensorRef::input(2, sh_v, DType::F32);
+    let wg = TensorRef::input(3, sh_w, DType::F32);
+    let wu = TensorRef::input(4, sh_w, DType::F32);
+    let wd = TensorRef::input(5, sh_wd, DType::F32);
+
+    // ── Attention sub-block over RMSNorm(x), residual back to x ──
+    let n1 = push_rmsnorm(&mut g, x, sh_row, sh_1, s)?;
+    let scores = g.push(mm(1, kv, d), &[n1, kt], sh_scores, DType::F32, s)?;
+    let probs = push_softmax(&mut g, scores, sh_scores, sh_1, s)?;
+    let attn = g.push(mm(1, d, kv), &[probs, v], sh_row, DType::F32, s)?;
+    let res1 = g.push(OpNode::Elementwise { f: EwKind::Add }, &[x, attn], sh_row, DType::F32, s)?;
+
+    // ── SwiGLU-FFN sub-block over RMSNorm(res1), residual back to res1 ──
+    let n2 = push_rmsnorm(&mut g, res1, sh_row, sh_1, s)?;
+    let gate = g.push(mm(1, ffn, d), &[n2, wg], sh_h, DType::F32, s)?;
+    let up = g.push(mm(1, ffn, d), &[n2, wu], sh_h, DType::F32, s)?;
+    let sg = g.push(OpNode::Elementwise { f: EwKind::Silu }, &[gate], sh_h, DType::F32, s)?;
+    let h = g.push(OpNode::Elementwise { f: EwKind::Mul }, &[sg, up], sh_h, DType::F32, s)?;
+    let ffn_out = g.push(mm(1, d, ffn), &[h, wd], sh_row, DType::F32, s)?;
+    let out = g.push(OpNode::Elementwise { f: EwKind::Add }, &[res1, ffn_out], sh_row, DType::F32, s)?;
+    g.mark_output(out);
+    Ok(g)
+}
+
+/// A single-token GEMV against a **ternary-packed** weight matrix — the `{GatherDequant →
+/// MatMul}` split that decompresses a BitNet-style weight on the fly and immediately consumes
+/// it. `w_f32 = GatherDequant(packed, scale)`, `y = x · w_f32`. Externals: `[0]=x [1,rows]`,
+/// `[1]=packed [rows·ceil(cols/16)] (u32-as-f32 codewords)`, `[2]=scale [rows]`.
+/// `w_f32` is `[rows, cols]`, so `y = x[1,rows] · w[rows,cols] = [1,cols]`.
+pub fn dequant_matmul_graph(rows: u32, cols: u32) -> Result<ComputeGraph, ForgeError> {
+    use crate::wgsl_forge::ir::graph::DType as D;
+    let mut g = ComputeGraph::new();
+    let s = Schedule::default();
+    let k_words = cols.div_ceil(16);
+    let sh_x = Shape::new(&[1, rows]);
+    let sh_packed = Shape::new(&[rows * k_words]);
+    let sh_scale = Shape::new(&[rows]);
+    let sh_w = Shape::new(&[rows, cols]);
+    let sh_y = Shape::new(&[1, cols]);
+    let x = TensorRef::input(0, sh_x, D::F32);
+    let packed = TensorRef::input(1, sh_packed, D::F32);
+    let scale = TensorRef::input(2, sh_scale, D::F32);
+    let w = g.push(
+        OpNode::GatherDequant { scheme: D::Ternary, block: cols },
+        &[packed, scale],
+        sh_w,
+        D::F32,
+        s,
+    )?;
+    let y = g.push(
+        OpNode::MatMul { m: 1, n: cols, k: rows, tc: false, trans_b: false },
+        &[x, w],
+        sh_y,
+        D::F32,
+        s,
+    )?;
+    g.mark_output(y);
+    Ok(g)
+}
+
 #[cfg(test)]
 mod tests {
     use super::*;
@@ -531,5 +708,233 @@ mod tests {
                 assert!((a - b).abs() <= 1e-2 * b.abs().max(1.0), "ffn: {a} vs {b}");
             }
         }
+    }
+
+    // ── P4b: attention + GatherDequant + decode block ────────────────────────────────
+
+    /// Row-major matmul helper for the test references.
+    fn ref_mm(a: &[f32], b: &[f32], m: usize, k: usize, n: usize) -> Vec<f32> {
+        let mut c = vec![0.0f32; m * n];
+        for i in 0..m {
+            for j in 0..n {
+                let mut acc = 0.0f32;
+                for kk in 0..k {
+                    acc += a[i * k + kk] * b[kk * n + j];
+                }
+                c[i * n + j] = acc;
+            }
+        }
+        c
+    }
+
+    fn ref_softmax(s: &[f32]) -> Vec<f32> {
+        let m = s.iter().cloned().fold(f32::MIN, f32::max);
+        let e: Vec<f32> = s.iter().map(|&v| (v - m).exp()).collect();
+        let z: f32 = e.iter().sum();
+        e.iter().map(|&x| x / z).collect()
+    }
+
+    fn ref_rmsnorm(x: &[f32]) -> Vec<f32> {
+        let ms = x.iter().map(|v| v * v).sum::<f32>() / x.len() as f32;
+        let inv = ms.sqrt().recip();
+        x.iter().map(|&v| v * inv).collect()
+    }
+
+    /// The decode-step attention graph's composed CPU oracle matches an independent
+    /// `softmax(q·Kᵀ)·V` reference.
+    #[test]
+    fn attention_cpu_oracle_matches_reference() {
+        let (d, kv) = (4usize, 6usize);
+        let q: Vec<f32> = (0..d).map(|i| (i as f32) * 0.2 - 0.3).collect();
+        let kt: Vec<f32> = (0..d * kv).map(|i| ((i * 5 % 7) as f32) * 0.1 - 0.25).collect();
+        let v: Vec<f32> = (0..kv * d).map(|i| ((i * 3 % 5) as f32) * 0.15 - 0.2).collect();
+        let g = attention_graph(d as u32, kv as u32).unwrap();
+        let out = execute_graph_cpu(&g, &[q.clone(), kt.clone(), v.clone()]).unwrap();
+        // Reference: scores = q·Kᵀ [1,kv]; probs = softmax(scores); out = probs·V [1,d].
+        let scores = ref_mm(&q, &kt, 1, d, kv);
+        let probs = ref_softmax(&scores);
+        let want = ref_mm(&probs, &v, 1, kv, d);
+        assert_eq!(out.len(), d);
+        for (o, w) in out.iter().zip(&want) {
+            assert!((o - w).abs() < 1e-5, "{o} vs {w}");
+        }
+    }
+
+    /// The `{GatherDequant → MatMul}` graph dequantizes a ternary weight on the fly and
+    /// matmuls it; its CPU oracle matches `x · (scale ⊙ vals)` from the *known* ternary
+    /// values (an independent reference, not the same unpack code).
+    #[test]
+    fn dequant_matmul_cpu_oracle_matches_reference() {
+        use crate::wgsl_forge::graph_ops::gather_dequant::pack_ternary_as_words;
+        let (rows, cols) = (5usize, 8usize);
+        let vals: Vec<f32> = (0..rows * cols)
+            .map(|i| match (i * 7) % 3 {
+                0 => 1.0,
+                1 => -1.0,
+                _ => 0.0,
+            })
+            .collect();
+        let scale: Vec<f32> = (0..rows).map(|r| 0.5 + r as f32 * 0.1).collect();
+        let packed = pack_ternary_as_words(&vals, rows, cols);
+        let x: Vec<f32> = (0..rows).map(|i| (i as f32) * 0.3 - 0.6).collect();
+        let g = dequant_matmul_graph(rows as u32, cols as u32).unwrap();
+        let out = execute_graph_cpu(&g, &[x.clone(), packed, scale.clone()]).unwrap();
+        // Independent reference W[r,c] = scale[r]*vals[r,c]; y = x·W.
+        let w: Vec<f32> = (0..rows * cols)
+            .map(|i| scale[i / cols] * vals[i])
+            .collect();
+        let want = ref_mm(&x, &w, 1, rows, cols);
+        assert_eq!(out.len(), cols);
+        for (o, r) in out.iter().zip(&want) {
+            assert!((o - r).abs() < 1e-5, "{o} vs {r}");
+        }
+    }
+
+    /// The full decode-block graph's composed CPU oracle matches an independent
+    /// `x + attn(RMSNorm(x)); + SwiGLU(RMSNorm(·))` reference (both residuals).
+    #[test]
+    fn decode_block_cpu_oracle_matches_reference() {
+        let (d, kv, ffn) = (4usize, 5usize, 6usize);
+        let x: Vec<f32> = (0..d).map(|i| (i as f32) * 0.2 - 0.3).collect();
+        let kt: Vec<f32> = (0..d * kv).map(|i| ((i * 5 % 7) as f32) * 0.1 - 0.25).collect();
+        let v: Vec<f32> = (0..kv * d).map(|i| ((i * 3 % 5) as f32) * 0.15 - 0.2).collect();
+        let wg: Vec<f32> = (0..d * ffn).map(|i| ((i % 11) as f32) * 0.03 - 0.15).collect();
+        let wu: Vec<f32> = (0..d * ffn).map(|i| ((i % 7) as f32) * 0.02 - 0.07).collect();
+        let wd: Vec<f32> = (0..ffn * d).map(|i| ((i % 5) as f32) * 0.04 - 0.08).collect();
+        let g = decode_block_graph(d as u32, kv as u32, ffn as u32).unwrap();
+        let ext = vec![x.clone(), kt.clone(), v.clone(), wg.clone(), wu.clone(), wd.clone()];
+        let out = execute_graph_cpu(&g, &ext).unwrap();
+
+        // Reference.
+        let n1 = ref_rmsnorm(&x);
+        let scores = ref_mm(&n1, &kt, 1, d, kv);
+        let probs = ref_softmax(&scores);
+        let attn = ref_mm(&probs, &v, 1, kv, d);
+        let res1: Vec<f32> = x.iter().zip(&attn).map(|(a, b)| a + b).collect();
+        let n2 = ref_rmsnorm(&res1);
+        let gate = ref_mm(&n2, &wg, 1, d, ffn);
+        let up = ref_mm(&n2, &wu, 1, d, ffn);
+        let h: Vec<f32> = gate
+            .iter()
+            .zip(&up)
+            .map(|(&gv, &uv)| (gv / (1.0 + (-gv).exp())) * uv)
+            .collect();
+        let ffn_out = ref_mm(&h, &wd, 1, ffn, d);
+        let want: Vec<f32> = res1.iter().zip(&ffn_out).map(|(a, b)| a + b).collect();
+
+        assert_eq!(out.len(), d);
+        for (o, w) in out.iter().zip(&want) {
+            assert!((o - w).abs() < 1e-5, "{o} vs {w}");
+        }
+    }
+
+    /// GPU certify (A2000): attention, `{GatherDequant→MatMul}`, and the full decode block —
+    /// each executed device-side — match their composed CPU oracle within f32 tolerance.
+    #[test]
+    #[ignore = "requires a GPU adapter"]
+    fn p4b_graphs_gpu_match_cpu_oracle() {
+        use crate::wgsl_forge::graph_ops::gather_dequant::pack_ternary_as_words;
+        // Attention (decode).
+        {
+            let (d, kv) = (64usize, 96usize);
+            let q: Vec<f32> = (0..d).map(|i| ((i * 7 % 23) as f32) * 0.05 - 0.5).collect();
+            let kt: Vec<f32> = (0..d * kv).map(|i| ((i % 19) as f32) * 0.02 - 0.18).collect();
+            let v: Vec<f32> = (0..kv * d).map(|i| ((i % 13) as f32) * 0.03 - 0.18).collect();
+            let g = attention_graph(d as u32, kv as u32).unwrap();
+            let ext = vec![q, kt, v];
+            let gpu = execute_graph(&g, &ext).expect("attn gpu");
+            let cpu = execute_graph_cpu(&g, &ext).unwrap();
+            for (a, b) in gpu.iter().zip(&cpu) {
+                assert!((a - b).abs() <= 1e-3 * b.abs().max(1.0), "attn: {a} vs {b}");
+            }
+        }
+        // {GatherDequant → MatMul}.
+        {
+            let (rows, cols) = (48usize, 64usize);
+            let vals: Vec<f32> = (0..rows * cols)
+                .map(|i| match (i * 7) % 3 { 0 => 1.0, 1 => -1.0, _ => 0.0 })
+                .collect();
+            let scale: Vec<f32> = (0..rows).map(|r| 0.25 + (r % 5) as f32 * 0.1).collect();
+            let packed = pack_ternary_as_words(&vals, rows, cols);
+            let x: Vec<f32> = (0..rows).map(|i| ((i % 9) as f32) * 0.1 - 0.4).collect();
+            let g = dequant_matmul_graph(rows as u32, cols as u32).unwrap();
+            let ext = vec![x, packed, scale];
+            let gpu = execute_graph(&g, &ext).expect("dequant gpu");
+            let cpu = execute_graph_cpu(&g, &ext).unwrap();
+            for (a, b) in gpu.iter().zip(&cpu) {
+                assert!((a - b).abs() <= 1e-3 * b.abs().max(1.0), "dequant: {a} vs {b}");
+            }
+        }
+        // Full decode block.
+        {
+            let (d, kv, ffn) = (64u32, 80u32, 128u32);
+            let mk = |n: usize, m: u32| (0..n).map(|i| ((i as u32 % m) as f32) * 0.01 - 0.1).collect::<Vec<f32>>();
+            let ext = vec![
+                mk(d as usize, 17),
+                mk((d * kv) as usize, 19),
+                mk((kv * d) as usize, 13),
+                mk((d * ffn) as usize, 11),
+                mk((d * ffn) as usize, 7),
+                mk((ffn * d) as usize, 5),
+            ];
+            let g = decode_block_graph(d, kv, ffn).unwrap();
+            let gpu = execute_graph(&g, &ext).expect("decode gpu");
+            let cpu = execute_graph_cpu(&g, &ext).unwrap();
+            assert_eq!(gpu.len(), cpu.len());
+            for (a, b) in gpu.iter().zip(&cpu) {
+                assert!((a - b).abs() <= 1e-2 * b.abs().max(1.0), "decode: {a} vs {b}");
+            }
+        }
+    }
+
+    /// **Honest kernel-level uplift benchmark** — times one decode-block graph (≈SmolLM2-360M
+    /// dims: d=576, kv=128, ffn=1536) executed on the GPU vs the composed CPU oracle. Reports
+    /// wall-clock per call. **Caveats (do not over-read):** this is ONE decode block, not a
+    /// full L-layer model; the GPU path is Option-A per-node submit (one `queue.submit()` per
+    /// node + a small GPU→GPU copy), so the figure is dominated by per-node dispatch latency,
+    /// **NOT** a fused kernel; it is **not** end-to-end tokens/sec and does not include sampling,
+    /// KV-cache management, or host↔device transfer of the result beyond the final readback.
+    #[test]
+    #[ignore = "benchmark; requires a GPU adapter. Run with --nocapture to see timings."]
+    fn decode_block_kernel_uplift_bench() {
+        use std::time::Instant;
+        let (d, kv, ffn) = (576u32, 128u32, 1536u32);
+        let mk = |n: usize, m: u32, off: f32| {
+            (0..n).map(|i| ((i as u32 % m) as f32) * 0.001 - off).collect::<Vec<f32>>()
+        };
+        let ext = vec![
+            mk(d as usize, 97, 0.05),
+            mk((d * kv) as usize, 89, 0.04),
+            mk((kv * d) as usize, 83, 0.04),
+            mk((d * ffn) as usize, 79, 0.03),
+            mk((d * ffn) as usize, 73, 0.03),
+            mk((ffn * d) as usize, 71, 0.03),
+        ];
+        let g = decode_block_graph(d, kv, ffn).unwrap();
+        let nodes = g.nodes.len();
+
+        // Warm up (shader compile + first dispatch) then time.
+        let _ = execute_graph(&g, &ext).expect("warmup");
+        let iters = 20;
+        let t0 = Instant::now();
+        for _ in 0..iters {
+            let _ = execute_graph(&g, &ext).expect("gpu");
+        }
+        let gpu_ms = t0.elapsed().as_secs_f64() * 1e3 / iters as f64;
+
+        let c0 = Instant::now();
+        for _ in 0..iters {
+            let _ = execute_graph_cpu(&g, &ext).expect("cpu");
+        }
+        let cpu_ms = c0.elapsed().as_secs_f64() * 1e3 / iters as f64;
+
+        eprintln!(
+            "[decode-block uplift] d={d} kv={kv} ffn={ffn} nodes={nodes} | \
+             GPU {gpu_ms:.3} ms/call (Option-A per-node submit; ~{:.3} ms/node) | \
+             CPU oracle {cpu_ms:.3} ms/call | ratio {:.2}x. \
+             NOT end-to-end tok/s; one block, not L layers; per-node submit, not fused.",
+            gpu_ms / nodes as f64,
+            cpu_ms / gpu_ms,
+        );
     }
 }

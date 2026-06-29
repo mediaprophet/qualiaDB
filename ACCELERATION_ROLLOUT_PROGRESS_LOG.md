@@ -368,3 +368,46 @@ dispatch, which is the consistent per-node acceptance bar (WGSL kit nodes are na
 **⚑ Where I need the human** — none this step.
 **Next** — P4b (full attention block + ternary GatherDequant split + honest kernel-level uplift
 benchmark), then P6 (q42 substrate binding), then P7 (RT Neighbor + Stencil/ScatterAccum + MSL/HLSL).
+
+---
+
+## 2026-06-29 · DAG-IR P4b — attention block + ternary GatherDequant + decode block + **honest** uplift bench — DONE (correctness/generality; speed NOT yet — measured 0.07×)
+
+**Step / phase** — DAG-IR forge P4b. Status: **done** (graphs assembled + a new GatherDequant node, all GPU-certified on the A2000; uplift honestly measured).
+
+**What was built**
+- `graph_ops/gather_dequant.rs` (NEW) — native **ternary `GatherDequant`** op-node: 2-bit codes
+  (16/u32, `0→0, 1→+1, 2→-1, 3→0`) × per-row scale → f32, the BitNet-style on-the-fly weight
+  dequant. WGSL kernel + exact CPU oracle + a `pack_ternary_as_words` fixture + a host GPU helper.
+  **Subtlety handled honestly:** the packed code-words are carried through the f32 external ABI as
+  `f32::from_bits(word)` and bound in WGSL as `array<u32>` (a byte reinterpret, no f32 *load*) — this
+  dodges GPU NaN-canonicalization that would silently corrupt code-words that are f32 NaN patterns.
+- `graph_ops/executor.rs` — `GatherDequant` arm in both the GPU executor and the composed CPU oracle;
+  composable `push_rmsnorm`/`push_softmax` helpers; and three builders: `attention_graph`
+  (decode-step `softmax(q·Kᵀ)·V`), `decode_block_graph` (RMSNorm→attn→residual→RMSNorm→SwiGLU-FFN→
+  residual — the full transformer decode block), `dequant_matmul_graph` (`{GatherDequant→MatMul}`).
+
+**Measured results (A2000, real)**
+- CPU-oracle hand-refs (non-GPU): `attention_cpu_oracle_matches_reference`,
+  `dequant_matmul_cpu_oracle_matches_reference`, `decode_block_cpu_oracle_matches_reference`,
+  `gather_dequant_wgsl_validates` (naga), `pack_unpack_roundtrips_cpu` — **all green**.
+- GPU certify: `p4b_graphs_gpu_match_cpu_oracle` (attention + `{GatherDequant→MatMul}` + full decode
+  block, device-side vs composed CPU oracle) + `gather_dequant_gpu_matches_oracle` (exact) — **green
+  on the A2000**. `execute_graph_gpu_matches_cpu_oracle` (P4) still green.
+- **Honest kernel-level uplift (`decode_block_kernel_uplift_bench`, d=576/kv=128/ffn=1536, 26 nodes):**
+  **GPU 869.9 ms/call vs CPU oracle 61.7 ms/call → 0.07× (the GPU is ~14× SLOWER here).** This is the
+  truth, not a let-down dressed up: the executor is **Option-A** (one `queue.submit()` + a GPU→GPU copy
+  *per node*, ≈33 ms/node) **and** `execute_graph` rebuilds a fresh `WgpuComputeContext` every call —
+  both are latency, not math. So P4b's win is **correctness + generality** (the IR generates *and*
+  certifies a whole decode block, both backends), **not throughput**. The throughput pass is explicit
+  and unclaimed: single-encoder deferred-submit **fusion** (plan §8.1) + **context reuse** + the
+  tensor-core `MatMul.tc` path (P4c) lighting up. NOT end-to-end tok/s; one block, not L layers.
+
+**Honest boundary** — decode-step (single-query) attention; multi-row/prefill needs an axis-aware
+(row-wise) reduce — a later extension (the current `Reduce` is whole-tensor). Stacking ×L layers +
+ternary-weight matmuls is mechanical composition of these certified pieces.
+
+**⚑ Where I need the human** — none this step.
+**Next** — P6 (q42 substrate binding: serialize ComputeGraph ↔ NQuins, feedsInto predicate, op-kind
+opcode 0x10+, round-trip certify), then P7 (RT Neighbor + Stencil/ScatterAccum + MSL/HLSL lowerers).
+The executor perf pass (fusion + context reuse) is a separate, named optimization, flagged not done.
