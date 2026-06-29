@@ -196,3 +196,44 @@ fn push_flag(out: &mut String, label: &str, enabled: bool) {
     out.push('=');
     out.push_str(if enabled { "1" } else { "0" });
 }
+
+// ── Inference-pipeline (GPU backend) selection — the "which pipeline for this machine" checker ──
+
+/// An explicit GPU-backend override for the inference device, from `QUALIA_WGPU_BACKEND`
+/// (`vulkan` | `dx12` | `metal` | `gl` | `primary` | `all`). `None` ⇒ use wgpu's default selection
+/// (which still honors wgpu's own `WGPU_BACKEND`). This is what lets a machine be pinned to the
+/// **vendor-neutral Vulkan** path (AMD/Intel/NVIDIA/ARM/Linux) rather than whatever wgpu picks.
+#[cfg(not(target_arch = "wasm32"))]
+pub fn qualia_backend_override() -> Option<wgpu::Backends> {
+    let raw = std::env::var("QUALIA_WGPU_BACKEND").ok()?;
+    let v = raw.trim().to_ascii_lowercase();
+    Some(match v.as_str() {
+        "vulkan" | "vk" => wgpu::Backends::VULKAN,
+        "dx12" | "d3d12" | "directx12" => wgpu::Backends::DX12,
+        "metal" | "mtl" => wgpu::Backends::METAL,
+        "gl" | "opengl" | "gles" => wgpu::Backends::GL,
+        "primary" => wgpu::Backends::PRIMARY,
+        "all" => wgpu::Backends::all(),
+        other => {
+            log::warn!("QUALIA_WGPU_BACKEND='{other}' unrecognized — using wgpu default selection");
+            return None;
+        }
+    })
+}
+
+/// Capability-aware recommendation for which GPU backend this machine *should* run inference on
+/// (advisory; surfaced by the doctor/setup checker). Prefers the **portable, vendor-neutral**
+/// path so the build is not silently locked to Windows (DX12) or NVIDIA (CUDA). Reactive to the
+/// adapter actually in hand; a full enumerate-all-backends-and-pick is the next layer.
+#[cfg(not(target_arch = "wasm32"))]
+pub fn recommend_inference_backend(caps: &GpuAdapterCaps) -> &'static str {
+    match caps.backend {
+        wgpu::Backend::Vulkan => "vulkan — vendor-neutral & portable (recommended)",
+        wgpu::Backend::Metal => "metal — Apple-native (recommended on macOS)",
+        wgpu::Backend::Dx12 => {
+            "dx12 — Windows-native; set QUALIA_WGPU_BACKEND=vulkan for the portable path"
+        }
+        wgpu::Backend::Gl => "gl — compatibility fallback, limited compute (last resort)",
+        _ => "noop/unknown — no GPU compute path",
+    }
+}

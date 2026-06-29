@@ -16,7 +16,10 @@ use std::sync::OnceLock;
 #[cfg(not(target_arch = "wasm32"))]
 mod caps;
 #[cfg(not(target_arch = "wasm32"))]
-pub use caps::{requested_native_llm_features, GpuAdapterCaps, GpuFeatureCaps, GpuLimitCaps};
+pub use caps::{
+    qualia_backend_override, recommend_inference_backend, requested_native_llm_features,
+    GpuAdapterCaps, GpuFeatureCaps, GpuLimitCaps,
+};
 
 /// Desktop / portal operational mode (thermal + VRAM driven).
 #[repr(u8)]
@@ -673,7 +676,18 @@ static SHARED_GPU: OnceLock<SharedGpuContext> = OnceLock::new();
 
 #[cfg(not(target_arch = "wasm32"))]
 async fn init_shared_gpu_async() -> Result<SharedGpuContext, String> {
-    let instance = wgpu::Instance::default();
+    // Inference-pipeline (GPU backend) selection. Default = wgpu's own pick; `QUALIA_WGPU_BACKEND`
+    // pins it (e.g. =vulkan for the vendor-neutral path). The capability checker then reports what
+    // was actually selected + the recommendation, so "which pipeline is this machine on" is visible.
+    let instance = match caps::qualia_backend_override() {
+        Some(backends) => {
+            log::info!("shared_gpu|backend_override|QUALIA_WGPU_BACKEND={backends:?}");
+            let mut desc = wgpu::InstanceDescriptor::new_without_display_handle();
+            desc.backends = backends;
+            wgpu::Instance::new(desc)
+        }
+        None => wgpu::Instance::default(),
+    };
     let adapter = instance
         .request_adapter(&wgpu::RequestAdapterOptions {
             power_preference: wgpu::PowerPreference::HighPerformance,
@@ -686,6 +700,11 @@ async fn init_shared_gpu_async() -> Result<SharedGpuContext, String> {
         "shared_gpu|adapter|{}|{}",
         adapter_caps.summary_line(),
         adapter_caps.llm_feature_line()
+    );
+    log::info!(
+        "shared_gpu|inference_backend|{}|recommend: {}",
+        adapter_caps.backend_label(),
+        caps::recommend_inference_backend(&adapter_caps)
     );
     if adapter_caps.is_integrated_gpu()
         && std::env::var("QUALIA_LLM_ALLOW_IGPU").ok().as_deref() != Some("1")
@@ -781,6 +800,23 @@ pub fn shared_gpu() -> &'static SharedGpuContext {
 #[cfg(test)]
 mod tests {
     use super::*;
+
+    /// Reports which GPU backend the engine's shared device actually selected for inference on this
+    /// machine (default, or pinned by `QUALIA_WGPU_BACKEND`). Run default vs `QUALIA_WGPU_BACKEND=vulkan`
+    /// in separate processes to confirm the override drives the real device.
+    #[test]
+    #[ignore = "requires a GPU adapter; reports the selected inference backend"]
+    fn report_inference_backend() {
+        let g = shared_gpu();
+        eprintln!(
+            "[inference-backend] selected = {} | recommend: {}",
+            g.adapter_caps.backend_label(),
+            recommend_inference_backend(&g.adapter_caps),
+        );
+        eprintln!("[inference-backend] {}", g.adapter_caps.summary_line());
+        // The device must really exist (a backend was selected and an adapter acquired).
+        assert!(!g.adapter_caps.backend_label().is_empty());
+    }
 
     #[test]
     fn pressure_triggers_eco_and_reserve() {
