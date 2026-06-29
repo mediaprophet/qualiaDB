@@ -10,4 +10,5 @@
 
 pub mod broadcast;
 pub mod elementwise;
+pub mod executor;
 pub mod reduce;

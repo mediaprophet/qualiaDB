@@ -207,3 +207,35 @@ f32 tol); full `wgsl_forge` non-GPU green; `--features cuda` + cli clean.
 kept GPU-side in `QualiaSlabAllocator`). It unblocks everything multi-node at once: softmax, the
 fused-ffn fusion, the ternary `{GatherDequant→MatMul}` split, and the full LLM decode-block DAG graded
 against a graph-composed CPU oracle.
+
+---
+
+## 2026-06-29 · DAG-IR Phase 4 — topological multi-node executor · DONE (GPU-certified, the keystone)
+
+The phase the whole LLM path was waiting on: a **whole `ComputeGraph` executed on the GPU**, intermediates
+kept device-side, graded against a topologically-composed CPU oracle.
+
+**What was built** — [`graph_ops/executor.rs`](crates/qualia-core-db/src/wgsl_forge/graph_ops/executor.rs):
+- `execute_graph(graph, externals)` — runs nodes in topo order; per node it binds inputs, allocates an
+  output, dispatches the op's kernel (Reduce/Broadcast/Elementwise native + **MatMul** via the gemm
+  module), then hands the output to the next node **on the GPU** (no host readback).
+- `execute_graph_cpu` — the composed differential oracle (threads node CPU floors in topo order).
+- Graph builders: `softmax_graph` (7 nodes), `rmsnorm_graph` (5), `swiglu_ffn_graph` (5 — the LLM FFN).
+- Added `EwKind::Sub`/`Div` (softmax needs them) + `WgpuComputeContext::copy_view` (GPU→GPU hand-off).
+
+**The real bug, found & fixed on hardware** — wgpu forbids the **same buffer** being bound read-write
+*and* read-only within one dispatch (read_write is exclusive). The first design put every tensor in one
+slab → validation error on the A2000. Fix: inputs/params live in the **read slab**, each output is written
+to the **read_write slab** then `copy_view`'d back into the read slab for the next node. Honest two-slab
+device-side hand-off; the per-node submit + copy latency is the accepted Option-A cost (single-encoder
+fusion is a later perf pass).
+
+**Measured** — `execute_graph_*` CPU-oracle tests 3 pass/0 fail; **GPU-certify on the A2000**:
+`execute_graph_gpu_matches_cpu_oracle` **passes** — softmax (1024-wide), RMSNorm (768), and the
+**SwiGLU-FFN block** (MatMul·MatMul·Silu·Mul·MatMul, seq8×dim64×ffn128) all match the composed CPU oracle.
+Full `wgsl_forge` non-GPU green; `--features cuda` + cli clean.
+
+**⚑ Where I need the human** — none. (Fluid model still stands for P7.)
+**Next** — P4b (assemble the full attention block + ternary GatherDequant split + an honest kernel-level
+uplift benchmark), then P5 (`CudaCLowerer` — the same graph → CUDA-C in one pass), P6 (q42 persistence),
+P7 (RT `Neighbor` + fluids).

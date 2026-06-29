@@ -35,7 +35,9 @@ fn unary_expr(kind: EwKind) -> Option<&'static str> {
 fn binary_expr(kind: EwKind) -> Option<&'static str> {
     Some(match kind {
         EwKind::Add => "a + b",
+        EwKind::Sub => "a - b",
         EwKind::Mul => "a * b",
+        EwKind::Div => "a / b",
         _ => return None,
     })
 }
@@ -132,7 +134,9 @@ pub fn binary_cpu(a: &[f32], b: &[f32], kind: EwKind) -> Vec<f32> {
         .zip(b.iter())
         .map(|(&a, &b)| match kind {
             EwKind::Add => a + b,
+            EwKind::Sub => a - b,
             EwKind::Mul => a * b,
+            EwKind::Div => a / b,
             _ => a,
         })
         .collect()

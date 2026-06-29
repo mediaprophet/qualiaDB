@@ -108,6 +108,19 @@ impl TensorRef {
             layout: Layout::RowMajor,
         }
     }
+
+    /// A graph input identified by index `idx` — the executor supplies its data as
+    /// `externals[idx]`. Use this (not [`external`](Self::external)) when a graph has more
+    /// than one input (e.g. an FFN block's activations + weight matrices).
+    pub fn input(idx: u32, shape: Shape, dtype: DType) -> Self {
+        TensorRef {
+            producer: NodeId::EXTERNAL,
+            tensor: TensorId(idx),
+            shape,
+            dtype,
+            layout: Layout::RowMajor,
+        }
+    }
 }
 
 /// Elementwise function kinds. Phase 1 carries the affine subset; the LLM kit
@@ -116,6 +129,8 @@ impl TensorRef {
 pub enum EwKind {
     Mul,
     Add,
+    Sub,
+    Div,
     Fma,
     Scale,
     Bias,

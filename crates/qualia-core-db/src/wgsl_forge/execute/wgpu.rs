@@ -301,6 +301,31 @@ impl WgpuComputeContext {
         Ok((blas, tlas))
     }
 
+    /// Copy `src`'s bytes to `dst` on the device (GPU→GPU, no host readback), honouring
+    /// each view's slab. Used by the multi-node graph executor to move a node's output out
+    /// of the read_write slab into the read slab, so a downstream node can bind it as a
+    /// read-only input without aliasing its own read_write output (wgpu forbids the same
+    /// buffer being bound read-write and read-only within one dispatch). Submits on the
+    /// shared queue, so it is ordered before any later dispatch that reads `dst`.
+    pub fn copy_view(&self, src: &BufferView, dst: &BufferView) -> Result<(), ForgeError> {
+        let len = src.length_bytes.min(dst.length_bytes) as u64;
+        if len == 0 {
+            return Ok(());
+        }
+        let mut encoder = self.device.create_command_encoder(&wgpu::CommandEncoderDescriptor {
+            label: Some("forge-view-copy"),
+        });
+        encoder.copy_buffer_to_buffer(
+            self.slab_for(src.usage),
+            src.offset as u64,
+            self.slab_for(dst.usage),
+            dst.offset as u64,
+            len,
+        );
+        self.queue.submit(Some(encoder.finish()));
+        Ok(())
+    }
+
     pub fn read_buffer_f32(&self, view: &BufferView) -> Result<Vec<f32>, ForgeError> {
         let size = view.length_bytes as u64;
         let staging = self.device.create_buffer(&wgpu::BufferDescriptor {
