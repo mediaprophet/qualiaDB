@@ -103,3 +103,45 @@ yours to make — inventing the model would violate the no-faking / give-evidenc
   curation-grade (and brushes medical/chemistry claims you reserve) — I won't invent it.
 
 **Next** — none until direction; the rest of the rollout is complete.
+
+---
+
+## 2026-06-29 · DAG-IR forge — design pass + Phase 1 spine · DONE (green slice)
+
+Reframed after Timothy's point that the forge had been **accreting per-`kernel.id` string
+emitters** (gemm/gemv/fft are hand-written WGSL; MSL/HLSL/PTX emit *zero* of them) instead of
+*generating* kernels — and that the **q42 format already represents DAGs**. The fix: a typed
+**compute-graph IR** the forge lowers to every backend in one pass, riding the q42 substrate.
+
+**What was built**
+- **Design pass** (ultracode workflow, 10 agents): parallel reads of the q42 substrate, the
+  IR/emit pipeline, schedule/certify, and the ray-query path; three judged architecture
+  proposals; adversarial verification against the real code. Output → [`docs/plans/dag-ir-forge.md`](docs/plans/dag-ir-forge.md)
+  (full scope: 10-node op vocabulary, IR types, one-pass Lowerer architecture, honest q42
+  encoding, RT-core `Neighbor` boundary, certify plan, P1–P7).
+- **Phase 1 (spine):** new [`wgsl_forge/ir/graph.rs`](crates/qualia-core-db/src/wgsl_forge/ir/graph.rs) —
+  `ComputeGraph`/`OpNode`(12-arm vocabulary)/`GraphNode`/`TensorRef`/`Shape`/`DType`, arena-backed,
+  **acyclic by construction** (insertion == topo order), with shape/dtype + cycle asserts. A
+  `Lowerer` visitor trait + `lower_graph` topological driver. `KernelSpec::to_graph()` bridges
+  gemm/gemv/fft to one-node graphs. `emit_kernel_body` now **routes gemm/gemv/fft through the
+  graph** (`to_graph → lower_graph → WgslDelegateLowerer`); the lowerer **delegates** to the proven
+  `emit_*_wgsl` functions, so the WGSL is **byte-identical by construction** (the adversarial
+  verifier's #1 risk — `source_hash` cache invalidation — neutralized).
+
+**Honest scope** — Phase 1 establishes the *seam* (IR + topo-walk + trait dispatch + routing),
+proven end-to-end; the leaf WGSL still delegates to the legacy emitters. Native graph-template
+emission, the other op-classes, the LLM decode DAG, the CUDA/MSL/HLSL lowerers, q42 persistence,
+and the RT `Neighbor` node are **scoped follow-on phases P2–P7** (tracked tasks #49–#54) — not
+stubs hidden in P1.
+
+**Measured** — `wgsl_forge::ir::graph` + emit byte-equal tests **11 passed/0 failed**; full
+`wgsl_forge` non-GPU **91 passed/0 failed/28 ignored**; **GPU-certify on the A2000**: the routed
+`generated_{gemm,gemv,fft}_matches_oracle_on_real_gpu` all **pass** (the kernels now flow through
+the DAG-IR and still certify byte-equal on hardware). `cargo build --lib --features cuda` exit 0.
+
+**⚑ Where I need the human** — none to *build* P2–P5 (LLM-pipeline path, all mechanical +
+certifiable). The fluid/SPH side (P7) still folds in the **fluid-model curation ask** (B2). And
+the **honest RT-core boundary** is in the plan: RT cores back the `Neighbor`/spatial op-class
+only (SPH/N-body/kNN/ANN) — they do **not** accelerate the LLM dense matmuls.
+**Next** — P2 (GatherDequant + Reduce + Broadcast), then P3 (Softmax + LLM elementwise + fused-ffn
+as an emergent fusion).
