@@ -92,3 +92,31 @@ hashing-only crypto module (SHA-256/512 / BLAKE3 / HKDF need no RNG and would bu
 
 **Done.** The full computational engine now runs in the browser, demonstrated and verified. CI rebuilds the
 same bundle on push; the committed bundle makes the demo work immediately on Pages.
+
+---
+
+## Step 4 — Follow-ups Timothy approved: crypto-hash + stats/graph extras — DONE (2026-06-30)
+
+**Status:** done. 76 → **85 exports**.
+
+**What was built.** Timothy: *"yup do it"* (the offered follow-ups).
+- **`engine/crypto.rs`** (new domain, 5 fns): `crypto_sha256`, `crypto_sha512`, `crypto_sha3_256`,
+  `crypto_blake3`, `crypto_hkdf_sha256` — the deterministic, **RNG-free** RustCrypto primitives
+  (`sha2`/`sha3`/`blake3`/`hkdf`, un-gated → wasm-clean) the native crypto lib uses. Input as `{text}` or
+  `{hex}`. **Key generation / signing (Ed25519, ML-DSA) is still excluded — it needs a browser RNG.**
+- **stats extras (3):** `stats_mcnemar_wasm`, `stats_friedman_wasm` (nonparametric), `stats_fisher_f_wasm`
+  (F-distribution pdf/cdf/quantile) — the wasm-clean fns the drafter had flagged.
+- **graph extra (1):** `graph_kge_predict` — KGE link prediction (rank candidate tails for a fixed
+  head/relation).
+- Demo page: new **Cryptography** tab + the 3 stats / 1 graph cards (85 cards, 9 tabs). Bundle rebuilt
+  (3.26 → 3.32 MB).
+
+**Measured (real, in-browser):** **all 85 functions run, 0 errors.** Correctness spot-checks:
+`SHA-256("hello world")` = `b94d27b9…e2efcde9` (the canonical value); BLAKE3 likewise; HKDF → 32 derived
+bytes; `McNemar(12,5)` = 36/17 = 2.1176 (dof 1); `F(3; 5,10)` cdf 0.9344, quantile(.95) = 3.326;
+`kge_predict` ranks by DistMult score [9, 3.5, 1.5]. All correct.
+
+**⚑ Human:** none. Remaining honest exclusions are unchanged (native-only specialized libs, advanced CAS,
+GPU forge, key-gen crypto). If you later want AEAD (AES-GCM / ChaCha20-Poly1305) in-browser with
+caller-supplied key+nonce, that's wasm-clean too — say the word (it carries a nonce-reuse footgun, so I left
+it out by default).

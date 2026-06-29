@@ -1046,6 +1046,73 @@ export function create_canvas(width, height) {
 }
 
 /**
+ * BLAKE3 digest (256-bit).
+ * @param {any} val
+ * @returns {any}
+ */
+export function crypto_blake3(val) {
+    const ret = wasm.crypto_blake3(val);
+    if (ret[2]) {
+        throw takeFromExternrefTable0(ret[1]);
+    }
+    return takeFromExternrefTable0(ret[0]);
+}
+
+/**
+ * HKDF-SHA256 key derivation (RFC 5869). Input
+ * `{ ikm:{text|hex}, salt?:{text|hex}, info?:{text|hex}, length }` →
+ * `{ algorithm, okm_hex, length }`. `length` is output bytes (1..=8160).
+ * @param {any} val
+ * @returns {any}
+ */
+export function crypto_hkdf_sha256(val) {
+    const ret = wasm.crypto_hkdf_sha256(val);
+    if (ret[2]) {
+        throw takeFromExternrefTable0(ret[1]);
+    }
+    return takeFromExternrefTable0(ret[0]);
+}
+
+/**
+ * SHA-256 digest of `{ text } | { hex }` → `{ algorithm, hex, bytes }`.
+ * @param {any} val
+ * @returns {any}
+ */
+export function crypto_sha256(val) {
+    const ret = wasm.crypto_sha256(val);
+    if (ret[2]) {
+        throw takeFromExternrefTable0(ret[1]);
+    }
+    return takeFromExternrefTable0(ret[0]);
+}
+
+/**
+ * SHA3-256 (Keccak) digest.
+ * @param {any} val
+ * @returns {any}
+ */
+export function crypto_sha3_256(val) {
+    const ret = wasm.crypto_sha3_256(val);
+    if (ret[2]) {
+        throw takeFromExternrefTable0(ret[1]);
+    }
+    return takeFromExternrefTable0(ret[0]);
+}
+
+/**
+ * SHA-512 digest.
+ * @param {any} val
+ * @returns {any}
+ */
+export function crypto_sha512(val) {
+    const ret = wasm.crypto_sha512(val);
+    if (ret[2]) {
+        throw takeFromExternrefTable0(ret[1]);
+    }
+    return takeFromExternrefTable0(ret[0]);
+}
+
+/**
  * @param {string} json
  * @returns {any}
  */
@@ -1385,6 +1452,23 @@ export function get_engine_version() {
  */
 export function graph_fuzzy_similarity(val) {
     const ret = wasm.graph_fuzzy_similarity(val);
+    if (ret[2]) {
+        throw takeFromExternrefTable0(ret[1]);
+    }
+    return takeFromExternrefTable0(ret[0]);
+}
+
+/**
+ * Knowledge-graph link prediction: score a set of candidate tails for a fixed
+ * (head, relation) under TransE / DistMult / ComplEx / RotatE and rank them by
+ * plausibility (higher = better). Input
+ * `{ model, head:[f64], relation:[f64], candidates:[[f64],…], p?, top_k? }` →
+ * `{ model, rank, ranking:[{index, score}] }` sorted best-first.
+ * @param {any} val
+ * @returns {any}
+ */
+export function graph_kge_predict(val) {
+    const ret = wasm.graph_kge_predict(val);
     if (ret[2]) {
         throw takeFromExternrefTable0(ret[1]);
     }
@@ -2559,6 +2643,36 @@ export function stats_describe_wasm(val) {
 }
 
 /**
+ * Fisher–Snedecor F-distribution: pdf and cdf at x with (d1, d2) degrees of
+ * freedom, plus the inverse-cdf quantile when an optional `p` is supplied.
+ * Input `{ x, d1, d2, p? }` → `{ pdf, cdf, quantile? }`.
+ * @param {any} val
+ * @returns {any}
+ */
+export function stats_fisher_f_wasm(val) {
+    const ret = wasm.stats_fisher_f_wasm(val);
+    if (ret[2]) {
+        throw takeFromExternrefTable0(ret[1]);
+    }
+    return takeFromExternrefTable0(ret[0]);
+}
+
+/**
+ * Friedman test for k treatments across n blocks (e.g. classifiers × datasets).
+ * Input `{ blocks:[[m1,…,mk], …] }` (each block length k, higher = better) →
+ * `{ chi_square, chi_p_value, df, iman_davenport_f, f_p_value }`.
+ * @param {any} val
+ * @returns {any}
+ */
+export function stats_friedman_wasm(val) {
+    const ret = wasm.stats_friedman_wasm(val);
+    if (ret[2]) {
+        throw takeFromExternrefTable0(ret[1]);
+    }
+    return takeFromExternrefTable0(ret[0]);
+}
+
+/**
  * Simple (one-predictor) OLS linear regression of `y` on `x`. Input
  * `{ x:[..], y:[..] }` (equal length, n ≥ 3, x not constant) →
  * `{ slope, intercept, r_squared, residual_std_error, slope_std_error, slope_t,
@@ -2569,6 +2683,21 @@ export function stats_describe_wasm(val) {
  */
 export function stats_linear_regression_wasm(val) {
     const ret = wasm.stats_linear_regression_wasm(val);
+    if (ret[2]) {
+        throw takeFromExternrefTable0(ret[1]);
+    }
+    return takeFromExternrefTable0(ret[0]);
+}
+
+/**
+ * McNemar's test for two paired binary classifiers. Input `{ b, c }` — the
+ * discordant counts (b = first right / second wrong, c = first wrong / second
+ * right) — → `{ statistic, p_value, dof }`. Continuity-corrected χ², dof 1.
+ * @param {any} val
+ * @returns {any}
+ */
+export function stats_mcnemar_wasm(val) {
+    const ret = wasm.stats_mcnemar_wasm(val);
     if (ret[2]) {
         throw takeFromExternrefTable0(ret[1]);
     }
@@ -4379,12 +4508,12 @@ function __wbg_get_imports() {
             return ret;
         }, arguments); },
         __wbindgen_cast_0000000000000001: function(arg0, arg1) {
-            // Cast intrinsic for `Closure(Closure { owned: true, function: Function { arguments: [Externref], shim_idx: 1032, ret: Unit, inner_ret: Some(Unit) }, mutable: true }) -> Externref`.
+            // Cast intrinsic for `Closure(Closure { owned: true, function: Function { arguments: [Externref], shim_idx: 1040, ret: Unit, inner_ret: Some(Unit) }, mutable: true }) -> Externref`.
             const ret = makeMutClosure(arg0, arg1, wasm_bindgen__convert__closures_____invoke__h7fccdcc556118add);
             return ret;
         },
         __wbindgen_cast_0000000000000002: function(arg0, arg1) {
-            // Cast intrinsic for `Closure(Closure { owned: true, function: Function { arguments: [Externref], shim_idx: 1164, ret: Result(Unit), inner_ret: Some(Result(Unit)) }, mutable: true }) -> Externref`.
+            // Cast intrinsic for `Closure(Closure { owned: true, function: Function { arguments: [Externref], shim_idx: 1172, ret: Result(Unit), inner_ret: Some(Result(Unit)) }, mutable: true }) -> Externref`.
             const ret = makeMutClosure(arg0, arg1, wasm_bindgen__convert__closures_____invoke__h506e6bb0ff87352d);
             return ret;
         },

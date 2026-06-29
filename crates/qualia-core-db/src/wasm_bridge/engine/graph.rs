@@ -402,3 +402,104 @@ pub fn graph_kge_score(val: JsValue) -> Result<JsValue, JsValue> {
         rank: k,
     })?)
 }
+
+/// Knowledge-graph link prediction: score a set of candidate tails for a fixed
+/// (head, relation) under TransE / DistMult / ComplEx / RotatE and rank them by
+/// plausibility (higher = better). Input
+/// `{ model, head:[f64], relation:[f64], candidates:[[f64],…], p?, top_k? }` →
+/// `{ model, rank, ranking:[{index, score}] }` sorted best-first.
+#[wasm_bindgen]
+pub fn graph_kge_predict(val: JsValue) -> Result<JsValue, JsValue> {
+    #[derive(Deserialize)]
+    struct In {
+        model: String,
+        head: Vec<f64>,
+        relation: Vec<f64>,
+        candidates: Vec<Vec<f64>>,
+        #[serde(default = "default_p_pred")]
+        p: u8,
+        #[serde(default)]
+        top_k: usize,
+    }
+    fn default_p_pred() -> u8 {
+        2
+    }
+    let inp: In = serde_wasm_bindgen::from_value(val).map_err(jserr)?;
+    if inp.head.is_empty() || inp.relation.is_empty() {
+        return Err(JsValue::from_str("head and relation must be non-empty"));
+    }
+    if inp.candidates.is_empty() {
+        return Err(JsValue::from_str("candidates must be non-empty"));
+    }
+    let ent_len = inp.head.len();
+    let model_name = inp.model.to_ascii_lowercase();
+    let (model, k) = match model_name.as_str() {
+        "transe" => {
+            if inp.p != 1 && inp.p != 2 {
+                return Err(JsValue::from_str("transe norm order p must be 1 or 2"));
+            }
+            (ScoreModel::TransE { p: inp.p }, ent_len)
+        }
+        "distmult" => (ScoreModel::DistMult, ent_len),
+        "complex" => {
+            if ent_len % 2 != 0 {
+                return Err(JsValue::from_str("complex entity vectors must be even length (2k)"));
+            }
+            (ScoreModel::ComplEx, ent_len / 2)
+        }
+        "rotate" => {
+            if ent_len % 2 != 0 {
+                return Err(JsValue::from_str("rotate entity vectors must be even length (2k)"));
+            }
+            (ScoreModel::RotatE, ent_len / 2)
+        }
+        other => {
+            return Err(JsValue::from_str(&format!(
+                "unknown model '{other}' (expected transe | distmult | complex | rotate)"
+            )))
+        }
+    };
+
+    let mut scored: Vec<(usize, f64)> = Vec::with_capacity(inp.candidates.len());
+    for (i, tail) in inp.candidates.iter().enumerate() {
+        if tail.len() != ent_len {
+            return Err(JsValue::from_str(&format!(
+                "candidate {i} length {} != head length {ent_len}",
+                tail.len()
+            )));
+        }
+        let s = model
+            .score(&inp.head, &inp.relation, tail, k)
+            .map_err(|e| JsValue::from_str(&format!("{e:?}")))?;
+        scored.push((i, s));
+    }
+    // Higher score = more plausible; rank best-first (stable on ties by index).
+    scored.sort_by(|a, b| b.1.partial_cmp(&a.1).unwrap_or(std::cmp::Ordering::Equal));
+    let limit = if inp.top_k == 0 {
+        scored.len()
+    } else {
+        inp.top_k.min(scored.len())
+    };
+
+    #[derive(Serialize)]
+    struct Ranked {
+        index: usize,
+        score: f64,
+    }
+    let ranking: Vec<Ranked> = scored
+        .into_iter()
+        .take(limit)
+        .map(|(index, score)| Ranked { index, score })
+        .collect();
+    #[derive(Serialize)]
+    struct Out {
+        model: String,
+        rank: usize,
+        ranking: Vec<Ranked>,
+    }
+    Ok(serde_wasm_bindgen::to_value(&Out {
+        model: model_name,
+        rank: k,
+        ranking,
+    })?)
+}

@@ -16,6 +16,7 @@
 //!   module is simply empty (the engine is reached through MCP there).
 
 mod cas;
+mod crypto;
 mod exact;
 mod graph;
 mod linalg;
@@ -25,6 +26,7 @@ mod transforms;
 mod units;
 
 pub use cas::*;
+pub use crypto::*;
 pub use exact::*;
 pub use graph::*;
 pub use linalg::*;

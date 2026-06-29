@@ -541,3 +541,94 @@ fn default_true() -> bool {
 fn default_one() -> f64 {
     1.0
 }
+/// McNemar's test for two paired binary classifiers. Input `{ b, c }` — the
+/// discordant counts (b = first right / second wrong, c = first wrong / second
+/// right) — → `{ statistic, p_value, dof }`. Continuity-corrected χ², dof 1.
+#[wasm_bindgen]
+pub fn stats_mcnemar_wasm(val: JsValue) -> Result<JsValue, JsValue> {
+    #[derive(Deserialize)]
+    struct In {
+        b: u64,
+        c: u64,
+    }
+    let p: In = serde_wasm_bindgen::from_value(val).map_err(jserr)?;
+    let r = crate::solvers::statistics::hypothesis::mcnemar(p.b, p.c)
+        .ok_or_else(|| JsValue::from_str("mcnemar requires b + c > 0"))?;
+    #[derive(Serialize)]
+    struct Out {
+        statistic: f64,
+        p_value: f64,
+        dof: f64,
+    }
+    Ok(serde_wasm_bindgen::to_value(&Out {
+        statistic: r.statistic,
+        p_value: r.p_value,
+        dof: r.dof,
+    })?)
+}
+
+/// Friedman test for k treatments across n blocks (e.g. classifiers × datasets).
+/// Input `{ blocks:[[m1,…,mk], …] }` (each block length k, higher = better) →
+/// `{ chi_square, chi_p_value, df, iman_davenport_f, f_p_value }`.
+#[wasm_bindgen]
+pub fn stats_friedman_wasm(val: JsValue) -> Result<JsValue, JsValue> {
+    #[derive(Deserialize)]
+    struct In {
+        blocks: Vec<Vec<f64>>,
+    }
+    let p: In = serde_wasm_bindgen::from_value(val).map_err(jserr)?;
+    if p.blocks.len() < 2 {
+        return Err(JsValue::from_str("friedman needs >= 2 blocks"));
+    }
+    let rows: Vec<&[f64]> = p.blocks.iter().map(|b| b.as_slice()).collect();
+    let r = crate::solvers::statistics::hypothesis::friedman(&rows).ok_or_else(|| {
+        JsValue::from_str("friedman requires >= 2 blocks of equal length k >= 2")
+    })?;
+    #[derive(Serialize)]
+    struct Out {
+        chi_square: f64,
+        chi_p_value: f64,
+        df: f64,
+        iman_davenport_f: f64,
+        f_p_value: f64,
+    }
+    Ok(serde_wasm_bindgen::to_value(&Out {
+        chi_square: r.chi_square,
+        chi_p_value: r.chi_p_value,
+        df: r.df,
+        iman_davenport_f: r.iman_davenport_f,
+        f_p_value: r.f_p_value,
+    })?)
+}
+
+/// Fisher–Snedecor F-distribution: pdf and cdf at x with (d1, d2) degrees of
+/// freedom, plus the inverse-cdf quantile when an optional `p` is supplied.
+/// Input `{ x, d1, d2, p? }` → `{ pdf, cdf, quantile? }`.
+#[wasm_bindgen]
+pub fn stats_fisher_f_wasm(val: JsValue) -> Result<JsValue, JsValue> {
+    #[derive(Deserialize)]
+    struct In {
+        x: f64,
+        d1: f64,
+        d2: f64,
+        #[serde(default)]
+        p: Option<f64>,
+    }
+    let inp: In = serde_wasm_bindgen::from_value(val).map_err(jserr)?;
+    if inp.d1 <= 0.0 || inp.d2 <= 0.0 {
+        return Err(JsValue::from_str("d1 and d2 must be positive"));
+    }
+    use crate::solvers::statistics::distributions::fisher_f as f;
+    let quantile = inp.p.map(|p| f::quantile(p, inp.d1, inp.d2));
+    #[derive(Serialize)]
+    struct Out {
+        pdf: f64,
+        cdf: f64,
+        quantile: Option<f64>,
+    }
+    Ok(serde_wasm_bindgen::to_value(&Out {
+        pdf: f::pdf(inp.x, inp.d1, inp.d2),
+        cdf: f::cdf(inp.x, inp.d1, inp.d2),
+        quantile,
+    })?)
+}
