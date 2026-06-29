@@ -91,6 +91,30 @@ shaders are not automatically replaced. Ternary dequantisation, GEMV, fused FFN,
 top-k kernels should migrate only after their generated versions pass equivalent
 oracle-backed certification on supported backends.
 
+## LLM decode kernels — certification status (2026-06-29)
+
+The forge now builds and **certifies** a full multi-head (GQA) transformer decode layer against a
+CPU oracle on **real SmolLM2-360M weights** (`decode_layer_graph` + `graph_ops/p64_bridge.rs`;
+max-rel 3.28e-6 on the A2000): RMSNorm·weight, real RoPE (interleaved + NeoX), GQA attention,
+output projection, SwiGLU, residuals — built on on-device `Slice`, a first-class `Rope` op, and a
+real `MatMul.trans_b` that consumes the native `[out,in]` GGUF/p64 weight layout.
+
+Stated honestly: this is **certification** (the executor runs the graph node-by-node and diffs the
+oracle) — **not** an inference runtime. The engine (`gguf_bridge`) runs inference (~18.8 tok/s decode
+on SmolLM2-360M Q8, A2000, Vulkan, compute-bound). And the decode graph currently only *runs* through
+the executor: the cross-backend lowerers (`emit/{wgsl,cuda_graph,graph_msl,graph_hlsl}.rs`) do **not**
+yet emit `Slice`/`Rope`/`MatMul`, so the forge cannot yet *generate* the decode shader as source for
+the engine to adopt. Real SPIR-V emission (`emit/spirv.rs`) exists for the gemm/gemv/fft/affine/top-k
+kit. **Ternary 1.58-bit FFN PTQ is a dead end** (PPL ≈ 6.5M on a non-ternary-trained model; Q4_0-AWQ
+lands +9.4% over the 5% quality gate) — standard **Q4_K_M** is the shippable compression.
+
+## Inference backend selection
+
+`gpu_context::qualia_backend_override()` honors `QUALIA_WGPU_BACKEND`
+(`vulkan|dx12|metal|gl|primary|all`) to pin the inference GPU backend; `recommend_inference_backend()`
+advises the portable Vulkan path; `shared_gpu()` logs the selected backend. On the A2000 the default
+is **Vulkan** (vendor-neutral), and the override is verified to switch the real device (Vulkan↔DX12).
+
 The implementation lives in
 `crates/qualia-core-db/src/wgsl_forge/`; the CLI surface is
 `crates/qualia-cli/src/shader.rs`.

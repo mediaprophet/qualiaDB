@@ -6,6 +6,51 @@ The format follows [Keep a Changelog](https://keepachangelog.com/en/1.0.0/).
 
 ---
 
+## [unreleased] — branch `feature/p64-manifold-wal-eigensolver` — 2026-06-29
+
+Forge **LLM-on-forge** (kernel generation + certification for the decode path) and an
+**inference-backend selector**. Framing (clarified mid-session): the **forge produces + certifies**
+kernels and transcodes GGUF→p64; the **engine runs** the p64. Nothing below makes the forge an
+inference runtime, and nothing is a "forge is faster than the engine" claim — the engine owns tok/s.
+
+### Added — forge decode-layer certification (on real weights)
+- DAG-IR decode-layer builder (`decode_layer_graph`): RMSNorm·weight → Q-proj → **real RoPE**
+  (interleaved + NeoX, per-position/per-dimension) → multi-head **GQA** attention → output projection
+  → residual → SwiGLU → residual — composed from forge ops, including two new ones (on-device `Slice`,
+  a first-class `Rope` op) and a real `MatMul.trans_b` (a silently-dropped flag, now actually computed)
+  so the forge consumes native `[out,in]` GGUF/p64 weight layout.
+- **p64 → forge bridge** (`graph_ops/p64_bridge.rs`): reads role-tagged weights from a
+  `P64TensorIndex` and runs the forge decode layer on **real SmolLM2-360M layer-0 weights**, matching
+  the composed CPU oracle to **max-rel 3.28e-6** on the A2000. This is *certification* of the decode
+  kernels — not inference.
+- `WgpuComputeContext::from_device` + `ForgeGraphExecutor::on_shared_gpu`/`with_context` (the forge
+  certification executor runs on the process-wide device); weight residency (`load_weights` /
+  `run_resident`) uploads weights once.
+
+### Added — inference backend selection (the "which pipeline for this machine" checker)
+- `gpu_context::qualia_backend_override()` (`QUALIA_WGPU_BACKEND` = `vulkan|dx12|metal|gl|primary|all`)
+  + `recommend_inference_backend()`; `shared_gpu()` logs `inference_backend|<backend>`. Verified on the
+  A2000: default selection is **Vulkan** (the vendor-neutral path) — inference was already on Vulkan,
+  not DirectML; the override switches the real device (proven Vulkan↔DX12, driver string changes too).
+  Measured decode: **~18.8 tok/s** on SmolLM2-360M Q8 (Vulkan, compute-bound: ~63% attention, ~37% FFN,
+  ~19% fence). Real SPIR-V emission (`emit/spirv.rs`) exists for the kernel kit.
+
+### Honest findings (measured, retracts prior expectations)
+- **Ternary (1.58-bit) FFN PTQ does not work** on a model not trained ternary: PPL ≈ 6.5 million
+  (garbage); **AWQ helps but cannot rescue it**. Q4_0-FFN + AWQ is coherent but lands **+9.4% ΔPPL**
+  (≈2× over the 5% gate). The shippable compression is **standard Q4_K_M** (transcoded to p64
+  verbatim). The earlier "~2.5× ternary FFN win" expectation is **retracted**.
+- The forge **cannot yet emit the LLM decode graph as shader source** — the cross-backend lowerers
+  lack `Slice`/`Rope`/`MatMul`; the decode layer currently only *runs* through the certification
+  executor, not the codegen path.
+
+### Fixed
+- `a1b` ternary test asserted a false invariant (GPU==CPU byte-identical text "because ±1 is exact").
+  The multiply is exact but the f32 reduction order differs, so logits match only within tolerance —
+  corrected to require token match only when both decodes are coherent.
+
+---
+
 ## [0.0.21-la] — 2026-06-27
 
 The **mathematical / statistical substrate** push on branch `0.0.21-la`: one engine is the

@@ -6,6 +6,27 @@ context) or another instrument to pick up **cold** and execute without re-derivi
 
 ---
 
+> ## ⚠️ CORRECTION (2026-06-29, later the same day) — read this before the rest
+>
+> This handover was written under a **mis-framing** the project lead corrected. It speaks of "running
+> the LLM **on** the forge" and treats the forge as an inference runtime. **It is not.** The design is:
+> the **forge produces + certifies** kernels and transcodes GGUF→p64; the **engine (`gguf_bridge`)
+> runs** the p64. Consequences for everything below:
+> - "Wire the forge into the decode loop / measure forge tok/s" is the **wrong goal** — the engine owns
+>   inference and tok/s (measured **~18.8 tok/s** on SmolLM2-360M Q8, A2000, **Vulkan**, compute-bound).
+> - What the forge actually delivered is **certification** of a full GQA decode layer on **real**
+>   SmolLM2-360M weights (max-rel 3.28e-6) — proving the kernels, not running them. The real forge gap:
+>   it **cannot yet emit the decode graph as shader source** (the cross-backend lowerers lack
+>   `Slice`/`Rope`/`MatMul`), so it can't yet *generate* the kernels the engine would adopt.
+> - The **"~2.5× ternary FFN win"** claimed in §0 is **retracted**. 1.58-bit PTQ on a non-ternary-trained
+>   model is a dead end (PPL ≈ 6.5M); AWQ helps but Q4_0-FFN-AWQ is still **+9.4%** over the quality gate.
+>   **Standard Q4_K_M** is the shippable compression — do not pursue ternary.
+> - **Vulkan** is the live default backend (not DirectML); pin it with `QUALIA_WGPU_BACKEND=vulkan`.
+>
+> The mission/*why* is intact; the *forge-runtime* mechanics below are not. Read accordingly.
+
+---
+
 ## 0. The mission (the *why* — non-negotiable, read it once)
 
 Build a **local, edge-viable, rights-respecting** LLM inference path that runs on commodity / off-grid
