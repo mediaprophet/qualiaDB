@@ -115,6 +115,20 @@ pub fn roofline_for(kernel: BuiltinKernel, n: u64) -> RooflineEstimate {
             let bytes = (row * n_cols + n_cols + row) * 4;
             RooflineEstimate::new(flops, bytes)
         }
+        // Radix-2 FFT of `n` complex points: log2(n) stages, each doing n/2
+        // butterflies; one butterfly is ~10 FLOP (complex multiply + two complex
+        // add/sub), so ~5*n*log2(n) FLOP total. Bytes: read 2*n f32 in + write
+        // 2*n f32 out = 4*n f32 = 4*n*4 bytes (the transform itself stays in
+        // workgroup-shared memory). For modest n the log factor keeps arithmetic
+        // intensity low, so this reads as memory-bound at small sizes — the
+        // honest answer for a single-workgroup transform that is dominated by the
+        // shared-memory traffic, not global FLOPs.
+        BuiltinKernel::Fft => {
+            let log2n = (n.max(1)).next_power_of_two().trailing_zeros() as u64;
+            let flops = 5 * n * log2n;
+            let bytes = 4 * n * 4;
+            RooflineEstimate::new(flops, bytes)
+        }
     }
 }
 

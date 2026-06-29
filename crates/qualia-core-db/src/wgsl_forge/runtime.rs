@@ -26,7 +26,7 @@
 use std::path::PathBuf;
 
 use super::execute::{BindingUsage, QualiaCompute, WgpuComputeContext, WgpuPipeline};
-use super::oracle::{GemmParams, GemvParams, TERNARY_CODES_PER_WORD, TernaryGemvParams, TopKParams};
+use super::oracle::{FftParams, GemmParams, GemvParams, TERNARY_CODES_PER_WORD, TernaryGemvParams, TopKParams};
 use super::{
     BuiltinKernel, ForgeError, ManifestCache, Schedule, TargetBackend, emit_shader, validate_wgsl,
 };
@@ -575,6 +575,101 @@ impl ForgeRuntime {
         self.context.clear_transient_allocations();
         Ok(out)
     }
+
+    /// Real-data forward FFT: `out = DFT(in)` of `n = complex_interleaved.len()/2`
+    /// complex points, computed by the workgroup-local radix-2 Decimation-In-Time
+    /// kernel. The input and output are interleaved f32 — element `j` is
+    /// `(buf[2*j], buf[2*j+1]) = (real, imag)` — so both have length `2*n`.
+    ///
+    /// **Precondition:** `n` must be a power of two and `<= 1024` (the kernel runs
+    /// ONE workgroup of `n` threads, so `n` is also the workgroup size, capped by
+    /// the maximum workgroup size). Unlike the other runtime methods, the schedule
+    /// here is pinned to `workgroup_size = n` (the transform length is the parallel
+    /// width), not the tuned default; `n` ranges over distinct power-of-two sizes.
+    ///
+    /// Buffer wiring is identical to [`evaluate_fft`](super::oracle::evaluate_fft):
+    /// binding 0 = `input` (storage-read, `2*n` f32), 1 = `output`
+    /// (storage-read-write, `2*n` f32), 2 = [`FftParams`] (uniform); dispatch
+    /// `element_count = n` so exactly one workgroup launches. The CALLER's signal is
+    /// fed directly — no oracle, no test vectors, no comparison.
+    ///
+    /// # Example
+    /// ```no_run
+    /// # use qualia_core_db::wgsl_forge::ForgeRuntime;
+    /// # let mut rt = ForgeRuntime::new(1 << 20, None)?;
+    /// // A real unit impulse at index 0 (rest zero) has a flat spectrum: all ones.
+    /// let mut signal = vec![0.0f32; 2 * 8];
+    /// signal[0] = 1.0;
+    /// let spectrum = rt.fft(&signal)?; // every bin == (1, 0)
+    /// # Ok::<(), qualia_core_db::wgsl_forge::ForgeError>(())
+    /// ```
+    pub fn fft(&mut self, complex_interleaved: &[f32]) -> Result<Vec<f32>, ForgeError> {
+        if complex_interleaved.len() % 2 != 0 {
+            return Err(ForgeError::GpuValidation(format!(
+                "fft input must be interleaved complex (even length = 2*n); got {}",
+                complex_interleaved.len()
+            )));
+        }
+        let n = complex_interleaved.len() / 2;
+        if n == 0 || !n.is_power_of_two() {
+            return Err(ForgeError::GpuValidation(format!(
+                "fft length n = (input.len()/2) must be a power of two; got {n}"
+            )));
+        }
+        // One workgroup of n threads: n must fit the maximum workgroup size.
+        let max_wg = self.context.constraints.max_workgroup_size_x as usize;
+        if n > max_wg.min(1024) {
+            return Err(ForgeError::GpuValidation(format!(
+                "fft length n = {n} exceeds the maximum single-workgroup size {}",
+                max_wg.min(1024)
+            )));
+        }
+
+        // The transform length IS the parallel width: pin workgroup_size = n.
+        let schedule = Schedule {
+            workgroup_size: n as u32,
+            items_per_invocation: 1,
+            vector_width: 1,
+        };
+        let kernel = BuiltinKernel::Fft.spec();
+        schedule.validate(&kernel, &self.context.constraints)?;
+        self.context.constraints.supports_kernel(&kernel)?;
+        let generated = emit_shader(&kernel, schedule, TargetBackend::Wgsl)?;
+        validate_wgsl(&generated.source)?;
+
+        let view_input = self.context.allocate_and_write(
+            bytemuck::cast_slice(complex_interleaved),
+            0,
+            0,
+            BindingUsage::StorageRead,
+        )?;
+        let output_bytes_len = (2 * n * size_of::<f32>()).max(4);
+        let view_output =
+            self.context
+                .allocate_transient(output_bytes_len, 1, 0, BindingUsage::StorageReadWrite)?;
+        let params = FftParams {
+            n: n as u32,
+            log2n: n.trailing_zeros(),
+            _pad0: 0,
+            _pad1: 0,
+        };
+        let view_params = self.context.allocate_and_write(
+            bytemuck::bytes_of(&params),
+            2,
+            0,
+            BindingUsage::Uniform,
+        )?;
+
+        let buffers = vec![view_input, view_output, view_params];
+        let pipeline = WgpuPipeline::compile(&self.context, &generated.source, &kernel.entry_point)?;
+        pipeline.dispatch(&buffers, &schedule, n)?;
+        let mut out = self.context.read_buffer_f32(&view_output)?;
+        out.truncate(2 * n);
+
+        drop(pipeline);
+        self.context.clear_transient_allocations();
+        Ok(out)
+    }
 }
 
 #[cfg(test)]
@@ -695,5 +790,31 @@ mod tests {
         let x = [1.0f32, 1.0, 1.0];
         let out = rt.gemv(&a, &x, 2, 3).expect("gemv");
         assert_eq!(out, vec![6.0, 15.0]);
+    }
+
+    /// Real-data forward FFT — a real unit impulse at index 0 has a flat
+    /// spectrum: every bin is (1, 0). N=8 (one workgroup of 8 threads). The
+    /// impulse → all-ones identity is exact, so a tight tolerance holds.
+    #[test]
+    #[ignore = "requires a GPU adapter"]
+    fn runtime_fft_runs_real_data() {
+        let mut rt = ForgeRuntime::new(1 << 20, None).expect("gpu context");
+        let n = 8usize;
+        let mut signal = vec![0.0f32; 2 * n]; // interleaved (real, imag)
+        signal[0] = 1.0; // unit impulse at j=0
+        let spectrum = rt.fft(&signal).expect("fft");
+        assert_eq!(spectrum.len(), 2 * n);
+        for k in 0..n {
+            assert!(
+                (spectrum[2 * k] - 1.0).abs() < 1e-4,
+                "bin {k} real should be 1, got {}",
+                spectrum[2 * k]
+            );
+            assert!(
+                spectrum[2 * k + 1].abs() < 1e-4,
+                "bin {k} imag should be 0, got {}",
+                spectrum[2 * k + 1]
+            );
+        }
     }
 }

@@ -372,11 +372,12 @@ pub enum BuiltinKernel {
     TernaryGemv,
     Gemm,
     Gemv,
+    Fft,
 }
 
 impl BuiltinKernel {
-    pub const ALL: [Self; 8] =
-        [Self::AffineF32, Self::FusedFfn, Self::P64Project, Self::TopK, Self::RayProbe, Self::TernaryGemv, Self::Gemm, Self::Gemv];
+    pub const ALL: [Self; 9] =
+        [Self::AffineF32, Self::FusedFfn, Self::P64Project, Self::TopK, Self::RayProbe, Self::TernaryGemv, Self::Gemm, Self::Gemv, Self::Fft];
 
     pub const fn name(self) -> &'static str {
         match self {
@@ -388,6 +389,7 @@ impl BuiltinKernel {
             Self::TernaryGemv => "ternary-gemv",
             Self::Gemm => "gemm",
             Self::Gemv => "gemv",
+            Self::Fft => "fft",
         }
     }
 
@@ -406,6 +408,7 @@ impl BuiltinKernel {
                 | Self::TernaryGemv
                 | Self::Gemm
                 | Self::Gemv
+                | Self::Fft
         )
     }
 
@@ -595,6 +598,34 @@ impl BuiltinKernel {
                 ops: Vec::new(),
                 shared_memory: Vec::new(),
             },
+            Self::Fft => KernelSpec {
+                id: self.name().to_string(),
+                semantic_version: 1,
+                entry_point: "fft".to_string(),
+                // Forward DFT via iterative radix-2 Decimation-In-Time over ONE
+                // workgroup of N threads (N = workgroup_size = power of two), one
+                // thread per complex element. Complex data is interleaved f32:
+                // element j is (input[2*j], input[2*j+1]) = (real, imag), so the
+                // input/output buffers hold 2*N f32. The bit-reversal load + log2(N)
+                // butterfly stages are target-specialised in the WGSL emitter; the
+                // Barrier op and the s_re/s_im shared arrays are the reusable IR
+                // primitives (mirroring top-k).
+                description: "out = forward DFT(in) via workgroup radix-2 DIT".to_string(),
+                buffers: vec![
+                    BufferSpec { group: 0, binding: 0, name: "input".to_string(), element: BufferElement::Scalar(ScalarType::F32), access: BufferAccess::StorageRead },
+                    BufferSpec { group: 0, binding: 1, name: "output".to_string(), element: BufferElement::Scalar(ScalarType::F32), access: BufferAccess::StorageReadWrite },
+                    // A generic 16-byte uniform block (n, log2n, _pad0, _pad1),
+                    // reusing the AffineParams element purely as a 16-byte uniform.
+                    BufferSpec { group: 0, binding: 2, name: "params".to_string(), element: BufferElement::AffineParams, access: BufferAccess::Uniform },
+                ],
+                // The butterfly control flow is specialised in the WGSL emitter; the
+                // Barrier op and these shared arrays are the reusable IR primitives.
+                ops: vec![Op::Barrier],
+                shared_memory: vec![
+                    SharedMemorySpec { name: "s_re".to_string(), element: ScalarType::F32, length: SharedLen::WorkgroupSize },
+                    SharedMemorySpec { name: "s_im".to_string(), element: ScalarType::F32, length: SharedLen::WorkgroupSize },
+                ],
+            },
         }
     }
 }
@@ -612,6 +643,7 @@ impl FromStr for BuiltinKernel {
             "ternary-gemv" | "ternary_gemv" | "ternary" | "bitnet" => Ok(Self::TernaryGemv),
             "gemm" | "matmul" | "dense-gemm" | "dense_gemm" => Ok(Self::Gemm),
             "gemv" | "matvec" => Ok(Self::Gemv),
+            "fft" | "dft" | "radix2" | "radix-2" => Ok(Self::Fft),
             other => Err(ForgeError::UnknownKernel(other.to_string())),
         }
     }

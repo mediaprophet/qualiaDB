@@ -310,6 +310,35 @@ mod tests {
     }
 
     #[test]
+    fn generated_fft_passes_naga_validation() {
+        // The FFT uses workgroup-shared memory + barriers and reverseBits, so the
+        // schedule's workgroup_size must be a power of two (it is the transform
+        // length N). Exercise a representative power-of-two size.
+        let generated = generate_builtin(
+            BuiltinKernel::Fft,
+            Schedule {
+                workgroup_size: 256,
+                items_per_invocation: 1,
+                vector_width: 1,
+                ..Schedule::default()
+            },
+            TargetBackend::Wgsl,
+        )
+        .unwrap();
+        assert!(generated.source.contains("struct FftParams"));
+        // Bit-reversal load + barriers + the forward twiddle are the heart of it.
+        assert!(generated.source.contains("reverseBits("));
+        assert!(generated.source.contains("workgroupBarrier()"));
+        assert!(
+            generated.source.contains("array<f32, 256>"),
+            "shared arrays sized to workgroup size"
+        );
+        let report = validate_wgsl(&generated.source).expect("Naga validation of fft");
+        assert_eq!(report.entry_points, vec!["fft"]);
+        assert_eq!(report.binding_count, 3);
+    }
+
+    #[test]
     fn cooperative_matrix_tile_validates() {
         // Single 8x8x8 tensor-core tile: C = A * B (one subgroup cooperative).
         let source = crate::wgsl_forge::matmul_tc_wgsl();

@@ -34,10 +34,10 @@ pub use manifest::{
     TuningManifest, ValidationLevel,
 };
 pub use oracle::{
-    candidate_evaluation, certify_builtin, compare_f32, evaluate_builtin, evaluate_ffn,
-    evaluate_matmul_tc, evaluate_p64, evaluate_topk, ffn_cpu, ffn_tensors, matmul_cpu,
-    p64_project_cpu, p64_records, topk_cpu,
-    topk_inputs, AffineParams, ComparisonReport, FfnParams, GpuEvaluation, OracleCase,
+    candidate_evaluation, certify_builtin, compare_f32, dft_cpu, evaluate_builtin, evaluate_ffn,
+    evaluate_fft, evaluate_matmul_tc, evaluate_p64, evaluate_topk, ffn_cpu, ffn_tensors,
+    fft_inputs, matmul_cpu, p64_project_cpu, p64_records, topk_cpu,
+    topk_inputs, AffineParams, ComparisonReport, FfnParams, FftParams, GpuEvaluation, OracleCase,
     OracleTolerance, TopKParams,
 };
 #[cfg(feature = "cuda")]

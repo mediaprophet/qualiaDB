@@ -69,6 +69,17 @@ pub struct GemvParams {
     pub _pad1: u32,
 }
 
+/// 16-byte uniform block for the radix-2 FFT kernel: `n` complex elements,
+/// `log2n = log2(n)`. The kernel runs one workgroup of `n` threads.
+#[repr(C)]
+#[derive(Debug, Clone, Copy, PartialEq, Pod, Zeroable, Serialize, Deserialize)]
+pub struct FftParams {
+    pub n: u32,
+    pub log2n: u32,
+    pub _pad0: u32,
+    pub _pad1: u32,
+}
+
 #[derive(Debug, Clone, Copy, PartialEq, Serialize, Deserialize)]
 pub struct OracleTolerance {
     pub absolute: f32,
@@ -453,6 +464,14 @@ pub fn evaluate_builtin(
         // parameter).
         return evaluate_gemv(context, schedule, 256, 256, warmups, samples);
     }
+    if builtin == BuiltinKernel::Fft {
+        // One workgroup of n = workgroup_size threads (n a power of two, one
+        // complex element per thread). The schedule's workgroup_size IS the
+        // transform length; when it is not set the default workgroup_size (256)
+        // gives a 256-point FFT, independent of the generic per-element `length`.
+        let n = schedule.workgroup_size as usize;
+        return evaluate_fft(context, schedule, n, warmups, samples);
+    }
     // The only remaining builtin is the affine kernel — evaluated by the generic
     // cross-backend path (plan §7), here on the wgpu context.
     evaluate_affine(context, schedule, length, warmups, samples)
@@ -616,6 +635,149 @@ pub fn gemv_tensors(m: usize, n: usize, seed: u64) -> (Vec<f32>, Vec<f32>) {
         .map(|v| v * scale)
         .collect();
     (a, x)
+}
+
+/// Naive `O(N²)` forward Discrete Fourier Transform, the reference the GPU
+/// radix-2 FFT is differentially checked against. Complex data is interleaved
+/// f32: element `j` is `(input[2*j], input[2*j+1]) = (real, imag)`, so both the
+/// `input` slice and the returned vector hold `2*N` f32.
+///
+/// `X[k] = sum_{j<N} x[j] * exp(-2*pi*i * k * j / N)` — the SAME forward sign
+/// convention `exp(-2*pi*i*...)` the emitted kernel's twiddle uses, so the CPU
+/// reference and the GPU FFT compute the identical transform. Angles are
+/// accumulated in f64 for a clean reference; the comparison tolerance covers the
+/// f32-vs-f64 and FFT-vs-DFT summation differences.
+pub fn dft_cpu(input_interleaved: &[f32], n: usize) -> Vec<f32> {
+    use std::f64::consts::PI;
+    let mut out = vec![0.0f32; 2 * n];
+    for k in 0..n {
+        let mut re = 0.0f64;
+        let mut im = 0.0f64;
+        for j in 0..n {
+            let xr = input_interleaved[2 * j] as f64;
+            let xi = input_interleaved[2 * j + 1] as f64;
+            let ang = -2.0 * PI * (k as f64) * (j as f64) / (n as f64);
+            let (s, c) = ang.sin_cos();
+            // x * (c + i s): real = xr*c - xi*s, imag = xr*s + xi*c.
+            re += xr * c - xi * s;
+            im += xr * s + xi * c;
+        }
+        out[2 * k] = re as f32;
+        out[2 * k + 1] = im as f32;
+    }
+    out
+}
+
+/// Deterministic complex test signal as interleaved f32 (`2*n` values), drawn
+/// from the same xorshift stream as every other oracle vector so it is
+/// reproducible. Both the real and imaginary parts land in `[-1, 1]`.
+pub fn fft_inputs(n: usize, seed: u64) -> Vec<f32> {
+    // 2*n interleaved (real, imag) samples in [-1, 1].
+    topk_inputs(2 * n, seed)
+}
+
+/// Differential-oracle evaluation of the radix-2 FFT (`out = forward DFT(in)`)
+/// against [`dft_cpu`]. One workgroup of `n = schedule.workgroup_size` threads
+/// (one complex element per thread; `n` must be a power of two), mirroring the
+/// single-workgroup dispatch of [`evaluate_topk`]: `element_count = n` with
+/// `workgroup_size = n` launches exactly one workgroup. The input/output buffers
+/// hold `2*n` interleaved f32.
+pub fn evaluate_fft(
+    context: &mut WgpuComputeContext,
+    schedule: Schedule,
+    n: usize,
+    warmups: usize,
+    samples: usize,
+) -> Result<(GeneratedShader, GpuEvaluation), ForgeError> {
+    if samples == 0 {
+        return Err(ForgeError::GpuValidation("sample count must be non-zero".to_string()));
+    }
+    if n == 0 || !n.is_power_of_two() {
+        return Err(ForgeError::GpuValidation(format!(
+            "fft length n must be a power of two; got {n}"
+        )));
+    }
+    if n != schedule.workgroup_size as usize {
+        return Err(ForgeError::GpuValidation(format!(
+            "fft requires schedule.workgroup_size == n ({n}); got {}",
+            schedule.workgroup_size
+        )));
+    }
+    let kernel = BuiltinKernel::Fft.spec();
+    schedule.validate(&kernel, &context.constraints)?;
+    context.constraints.supports_kernel(&kernel)?;
+    let generated = emit_shader(&kernel, schedule, TargetBackend::Wgsl)?;
+    validate_wgsl(&generated.source)?;
+
+    let vector_seed = 0x46_46_54_5F_53_45_44_00u64; // "FFT_SED\0" tag
+    let input = fft_inputs(n, vector_seed);
+    let expected = dft_cpu(&input, n);
+    let log2n = n.trailing_zeros();
+
+    let view_input = context.allocate_and_write(bytemuck::cast_slice(&input), 0, 0, BindingUsage::StorageRead)?;
+    let output_bytes_len = (2 * n * size_of::<f32>()).max(4);
+    let view_output = context.allocate_transient(output_bytes_len, 1, 0, BindingUsage::StorageReadWrite)?;
+    let params = FftParams {
+        n: n as u32,
+        log2n,
+        _pad0: 0,
+        _pad1: 0,
+    };
+    let view_params = context.allocate_and_write(bytemuck::bytes_of(&params), 2, 0, BindingUsage::Uniform)?;
+
+    let buffers = vec![view_input, view_output, view_params];
+    let pipeline = WgpuPipeline::compile(context, &generated.source, &kernel.entry_point)?;
+
+    // One workgroup of n threads: element_count = n with workgroup_size = n.
+    for _ in 0..warmups {
+        pipeline.dispatch(&buffers, &schedule, n)?;
+    }
+    let mut timing_samples = Vec::with_capacity(samples);
+    for _ in 0..samples {
+        timing_samples.push(pipeline.dispatch(&buffers, &schedule, n)?);
+    }
+    if timing_samples.iter().any(|s| *s == 0) {
+        return Err(ForgeError::GpuValidation("GPU produced a zero-duration timing sample".to_string()));
+    }
+
+    let actual = context.read_buffer_f32(&view_output)?;
+    // f32 FFT vs (f64-accumulated) DFT: for N<=1024 they agree to ~1e-3..1e-2.
+    // The absolute tolerance carries near-zero bins (cancellation), the relative
+    // one carries the O(1) bins.
+    let tolerance = OracleTolerance { absolute: 1.0e-2, relative: 1.0e-2 };
+    let oracle = compare_f32(&expected, &actual, tolerance);
+
+    drop(pipeline);
+    context.clear_transient_allocations();
+
+    if !oracle.passed() {
+        return Err(ForgeError::OracleMismatch(format!(
+            "fft: {} mismatches; first={:?}, max_abs={}, max_rel={}",
+            oracle.mismatch_count, oracle.first_mismatch, oracle.max_absolute_error, oracle.max_relative_error
+        )));
+    }
+
+    let timing_source = if context.timestamp_supported {
+        TimingSource::GpuTimestamp
+    } else {
+        TimingSource::CompletionClock
+    };
+    let timing = TimingSummary::from_samples(timing_source, &timing_samples)
+        .ok_or_else(|| ForgeError::GpuValidation("GPU produced no timing samples".to_string()))?;
+
+    Ok((
+        generated,
+        GpuEvaluation {
+            adapter: context.adapter.clone(),
+            constraints: context.constraints,
+            oracle,
+            timing,
+            samples_ns: timing_samples,
+            tolerance: (tolerance.absolute, tolerance.relative),
+            vector_seed: Some(vector_seed),
+            vector_hash: vector_hash_f32(&expected),
+        },
+    ))
 }
 
 /// Differential-oracle evaluation of the cooperative-matrix (tensor-core) 8x8
@@ -1858,6 +2020,70 @@ mod tests {
         let (a, x) = gemv_tensors(8, 16, 7);
         assert_eq!(a.len(), 8 * 16);
         assert_eq!(x.len(), 16);
+    }
+
+    #[test]
+    fn dft_cpu_impulse_is_all_ones() {
+        // A unit impulse at index 0 (x[0] = 1, rest 0) has a flat spectrum:
+        // X[k] = sum_j x[j] e^{-2pi i kj/N} = x[0] = 1 for every k. So every
+        // output bin is exactly (1, 0). Hand-verified, exact.
+        let n = 8usize;
+        let mut input = vec![0.0f32; 2 * n];
+        input[0] = 1.0; // real impulse at j=0
+        let out = dft_cpu(&input, n);
+        assert_eq!(out.len(), 2 * n);
+        for k in 0..n {
+            assert!((out[2 * k] - 1.0).abs() < 1e-5, "bin {k} real should be 1");
+            assert!(out[2 * k + 1].abs() < 1e-5, "bin {k} imag should be 0");
+        }
+    }
+
+    #[test]
+    fn dft_cpu_dc_signal_concentrates_in_bin_zero() {
+        // A constant real signal x[j] = 1 for all j has all its energy in bin 0:
+        // X[0] = N, X[k>0] = 0. For N=4 input [1,0, 1,0, 1,0, 1,0]:
+        //   X[0] = 1+1+1+1 = 4
+        //   X[1] = 1 + e^{-i pi/2} + e^{-i pi} + e^{-i 3pi/2} = 1 - i - 1 + i = 0
+        //   X[2], X[3] = 0 by the same cancellation.
+        // Hand-verified -> expected interleaved [4,0, 0,0, 0,0, 0,0].
+        let n = 4usize;
+        let input = [1.0f32, 0.0, 1.0, 0.0, 1.0, 0.0, 1.0, 0.0];
+        let out = dft_cpu(&input, n);
+        assert!((out[0] - 4.0).abs() < 1e-5, "X[0] real should be 4");
+        assert!(out[1].abs() < 1e-5, "X[0] imag should be 0");
+        for k in 1..n {
+            assert!(out[2 * k].abs() < 1e-5, "bin {k} real should be 0");
+            assert!(out[2 * k + 1].abs() < 1e-5, "bin {k} imag should be 0");
+        }
+    }
+
+    #[test]
+    fn fft_inputs_are_deterministic_interleaved() {
+        let a = fft_inputs(16, 7);
+        let b = fft_inputs(16, 7);
+        assert_eq!(a, b);
+        assert_eq!(a.len(), 2 * 16, "interleaved complex => 2*n f32");
+    }
+
+    #[test]
+    #[ignore = "requires a native wgpu adapter"]
+    fn generated_fft_matches_oracle_on_real_gpu() {
+        // N=256-point forward FFT, one workgroup of 256 threads, checked against
+        // the O(N²) DFT reference (same forward sign convention).
+        let mut context = WgpuComputeContext::new(4 * 1024 * 1024).expect("adapter");
+        let schedule = Schedule {
+            workgroup_size: 256,
+            items_per_invocation: 1,
+            vector_width: 1,
+            ..Default::default()
+        };
+        let (_, evaluation) =
+            evaluate_fft(&mut context, schedule, 256, 2, 5).expect("fft evaluation");
+        assert!(
+            evaluation.oracle.passed(),
+            "fft GPU/oracle mismatch: {:?}",
+            evaluation.oracle
+        );
     }
 
     #[test]
