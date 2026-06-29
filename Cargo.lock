@@ -6237,7 +6237,7 @@ checksum = "e0c5ccf5294c6ccd63a74f1565028353830a9c2f5eb0c682c355c471726a6e3f"
 
 [[package]]
 name = "qualia-cli"
-version = "0.0.20"
+version = "0.0.23"
 dependencies = [
  "atoi",
  "bytemuck",
@@ -6271,7 +6271,7 @@ dependencies = [
 
 [[package]]
 name = "qualia-client-core"
-version = "0.0.20"
+version = "0.0.23"
 dependencies = [
  "base64 0.22.1",
  "bip39",
@@ -6308,7 +6308,7 @@ dependencies = [
 
 [[package]]
 name = "qualia-core-db"
-version = "0.0.20"
+version = "0.0.23"
 dependencies = [
  "aead",
  "aes-gcm",
@@ -6411,7 +6411,7 @@ dependencies = [
 
 [[package]]
 name = "qualia-extensions"
-version = "0.0.20"
+version = "0.0.23"
 dependencies = [
  "approx",
  "async-trait",
@@ -6437,7 +6437,7 @@ dependencies = [
 
 [[package]]
 name = "qualia-mobile-harness"
-version = "0.0.20"
+version = "0.0.23"
 dependencies = [
  "dioxus",
  "futures-util",
@@ -6452,7 +6452,7 @@ dependencies = [
 
 [[package]]
 name = "qualia-semantic-library"
-version = "0.0.20"
+version = "0.0.23"
 dependencies = [
  "anyhow",
  "blake3",
@@ -6472,7 +6472,7 @@ dependencies = [
 
 [[package]]
 name = "qualia-solid-bridge"
-version = "0.0.20"
+version = "0.0.23"
 dependencies = [
  "bytes",
  "core_affinity",
@@ -9196,7 +9196,7 @@ dependencies = [
 
 [[package]]
 name = "webizen-component-harvester"
-version = "0.1.0"
+version = "0.0.23"
 dependencies = [
  "anyhow",
  "reqwest 0.13.4",
@@ -9206,7 +9206,7 @@ dependencies = [
 
 [[package]]
 name = "webizen-lite-wasm"
-version = "0.0.21"
+version = "0.0.23"
 dependencies = [
  "qualia-core-db",
  "serde_json",
@@ -9245,7 +9245,7 @@ checksum = "a28ac98ddc8b9274cb41bb4d9d4d5c425b6020c50c46f25559911905610b4a88"
 
 [[package]]
 name = "wellfare-core"
-version = "0.0.4-dev"
+version = "0.0.23"
 dependencies = [
  "chrono",
  "csv",

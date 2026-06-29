@@ -790,6 +790,9 @@ impl LocalLlmAgent {
                 // A0 phase timing (D17/D22): once-per-phase, off the per-token hot path.
                 let t_phase = std::time::Instant::now();
 
+                // Thermal-eviction WAL is a native-only file mmap (`memmap2`); on
+                // wasm there is no mmap'd-file WAL, so the telemetry is simply absent.
+                #[cfg(not(target_arch = "wasm32"))]
                 let mut thermal_wal_opt = {
                     let wal_path = std::env::var("QUALIA_DATA_DIR")
                         .map(|p| std::path::PathBuf::from(p).join("thermal_eviction.wal"))
@@ -1145,6 +1148,7 @@ impl LocalLlmAgent {
                                 if fast_entropy > chunk_policy.max_entropy_drop {
                                     current_page_id += 1;
                                     
+                                    #[cfg(not(target_arch = "wasm32"))]
                                     if let Some(ref mut wal) = thermal_wal_opt {
                                         let record = crate::inference::thermal_wal::ThermalEvictionRecord {
                                             timestamp_ms: std::time::SystemTime::now()

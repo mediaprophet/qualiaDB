@@ -55,5 +55,11 @@ pub mod ternary_gpu;
 pub mod topk;
 #[cfg(not(target_arch = "wasm32"))]
 pub mod topk_gpu;
+// OMP sparse KV-cache decomposition builds on `crate::solvers` (dense linear
+// algebra), which is itself native-or-`wasm-scientific`; mirror that gate.
+#[cfg(any(not(target_arch = "wasm32"), feature = "wasm-scientific"))]
 pub mod sparse_cache;
+// The thermal-eviction WAL is a file-backed `memmap2` mmap — fundamentally
+// native (no mmap'd files on wasm32).
+#[cfg(not(target_arch = "wasm32"))]
 pub mod thermal_wal;

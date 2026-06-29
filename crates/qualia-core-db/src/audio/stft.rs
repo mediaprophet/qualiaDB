@@ -67,8 +67,7 @@ pub fn forward_stft(
         // Forge FFT (GPU best-path, CPU DFT floor). On any forge error fft_f32
         // itself falls through to the CPU floor, so this only errors on a bad
         // (odd) length — which `interleaved` never has.
-        let spectrum = crate::wgsl_forge::dispatch::fft_f32(&interleaved)
-            .map_err(|_| StftBakeError::InvalidFrameCount)?;
+        let spectrum = fft_interleaved(&interleaved)?;
 
         let mut frame = Vec::with_capacity(frame_size);
         for k in 0..frame_size {
@@ -80,6 +79,53 @@ pub fn forward_stft(
     }
 
     Ok(frames)
+}
+
+/// FFT of one interleaved-complex frame. Uses the forge (GPU best-path with its
+/// own CPU DFT floor) when the `wgsl_forge` module is compiled in; otherwise — on
+/// `wasm32`, or with the `wgsl-forge` feature off — a self-contained naive CPU
+/// DFT with the *identical* forward sign convention (`exp(-2πi·k·j/N)`), so the
+/// spectrum is the same transform either way. Keeps the audio path self-sufficient
+/// without depending on the native-only forge.
+#[inline]
+fn fft_interleaved(interleaved: &[f32]) -> Result<Vec<f32>, StftBakeError> {
+    #[cfg(all(not(target_arch = "wasm32"), feature = "wgsl-forge"))]
+    {
+        crate::wgsl_forge::dispatch::fft_f32(interleaved)
+            .map_err(|_| StftBakeError::InvalidFrameCount)
+    }
+    #[cfg(not(all(not(target_arch = "wasm32"), feature = "wgsl-forge")))]
+    {
+        if interleaved.len() % 2 != 0 {
+            return Err(StftBakeError::InvalidFrameCount);
+        }
+        Ok(dft_interleaved_cpu(interleaved, interleaved.len() / 2))
+    }
+}
+
+/// Naive O(N²) forward DFT of interleaved-complex input — the CPU floor used when
+/// the forge isn't compiled in. Angles accumulate in f64 for a clean reference;
+/// matches `wgsl_forge::oracle::dft_cpu` exactly.
+#[cfg(not(all(not(target_arch = "wasm32"), feature = "wgsl-forge")))]
+fn dft_interleaved_cpu(input_interleaved: &[f32], n: usize) -> Vec<f32> {
+    use core::f64::consts::PI;
+    let mut out = vec![0.0_f32; 2 * n];
+    for k in 0..n {
+        let mut re = 0.0f64;
+        let mut im = 0.0f64;
+        for j in 0..n {
+            let xr = input_interleaved[2 * j] as f64;
+            let xi = input_interleaved[2 * j + 1] as f64;
+            let ang = -2.0 * PI * (k as f64) * (j as f64) / (n as f64);
+            let (s, c) = ang.sin_cos();
+            // x * (c + i s): real = xr·c − xi·s, imag = xr·s + xi·c.
+            re += xr * c - xi * s;
+            im += xr * s + xi * c;
+        }
+        out[2 * k] = re as f32;
+        out[2 * k + 1] = im as f32;
+    }
+    out
 }
 
 /// Per-frame one-sided magnitude spectrum: the first `frame_size/2 + 1` bins

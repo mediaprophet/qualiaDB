@@ -107,17 +107,22 @@ BLAKE3, HKDF. (See CLAUDE.md §8 for the authoritative real-vs-scaffold list.)
 - **Build gates (RESULTS):**
   - Debug workspace: **green**. Release workspace (`cargo build --release --workspace`): **green** (8m10s).
   - CUDA (`cargo build --release -p qualia-core-db --features cuda`): **green** (4m18s).
-  - **WASM: FAILS** — `cargo build -p webizen-lite-wasm --target wasm32-unknown-unknown` errors with
-    qualia-core-db references to native-only modules on wasm32: `cannot find solvers/wgsl_forge in crate`,
-    `unresolved import q42::p64_weight`, `unresolved import memmap2` (5 errors). The dep wiring is
-    **correct** (`crates/webizen-lite-wasm/Cargo.toml` gates wasm32 to `default-features=false,
-    features=["wasm-ontology"]`), so the bug is that **a module inside the `wasm-ontology` feature set
-    references those native-only modules un-gated**. **Appears PRE-EXISTING** (this session's changes don't
-    reference `solvers`/`wgsl_forge` in any wasm-reachable module; `lib.rs` + `webizen-lite-wasm` are
-    unchanged vs main). **Next session: diagnose** — `cargo build -p webizen-lite-wasm --target
-    wasm32-unknown-unknown 2>&1 | grep -A3 "E0432\|E0433"` to find the offending `use` sites in the
-    `wasm-ontology` cfg/feature set and gate them; confirm whether main `0.0.21-modality-first` also fails
-    (to settle pre-existing vs regression). This is a **release blocker for the WASM artifact**.
+  - **WASM: FIXED** (2026-06-30). `cargo build -p webizen-lite-wasm --target wasm32-unknown-unknown` is
+    **green**. Root cause settled: **a branch regression, NOT pre-existing** — the P64/thermal-WAL/
+    eigensolver commits (`c5d6e188`, `f9be78e4`, both branch-only, confirmed *not* on
+    `0.0.21-modality-first`) added four un-gated references to native-only modules that compile on
+    wasm32 under `wasm-ontology` (which is `[]` — no `wasm-llm`/`wasm-scientific`/`gpu-runtime`/
+    `wgsl-forge`). The fix (one cfg-gate each, no logic change):
+    - `inference/mod.rs`: `sparse_cache` (uses `crate::solvers`) → `#[cfg(any(not(wasm32), feature="wasm-scientific"))]`;
+      `thermal_wal` (uses `memmap2`, a native file-mmap) → `#[cfg(not(wasm32))]`.
+    - `lib.rs`: `pub use q42::p64_weight as q42_weight` → gated to mirror the already-gated `p64_weight` re-export above it (`any(not(wasm32), feature="wasm-llm")`).
+    - `audio/stft.rs`: the `wgsl_forge::dispatch::fft_f32` call → routed through a new `fft_interleaved()`
+      helper that uses the forge when compiled in, else a self-contained naive CPU DFT floor
+      (verbatim of the tested `wgsl_forge::oracle::dft_cpu`, identical `exp(-2πi·k·j/N)` convention).
+    - `inference/inference_agent.rs` (only compiled on wasm under `wasm-llm`): the two `thermal_wal`
+      usages gated `#[cfg(not(wasm32))]` so the native WAL telemetry doesn't leak into a wasm build.
+    Verified: wasm build green, native `qualia-core-db` check green, `audio::stft` tests (7) pass on the
+    native forge path. No longer a blocker.
   - Non-workspace `webizen-{desktop,render,runtime,studio,web}` crates were NOT built — build if they ship.
 - **Then:** merge `0.0.23` → main (`0.0.21-modality-first`) and generate binaries (native binary =
   `qualia-cli`; WASM = `webizen-lite-wasm` / mobile harness via the `wasm-release` profile) — **after the
