@@ -16,7 +16,7 @@ pub use msl::emit_msl;
 pub use hlsl::emit_hlsl;
 pub use ptx::emit_ptx;
 pub use cuda_c::emit_cuda_c;
-pub use coopmat::matmul_tc_wgsl;
+pub use coopmat::{matmul_tc_wgsl, matmul_tc_wgsl_tiled, MATMUL_TC_TILED_ENTRY};
 pub use df64::{GEMM_DF64_ENTRY, GEMM_DF64_WGSL};
 pub use dxc::compile_hlsl_to_spirv;
 pub use spirv::{decode_spirv_words, emit_spirv};

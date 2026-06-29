@@ -347,6 +347,21 @@ mod tests {
     }
 
     #[test]
+    fn cooperative_matrix_tiled_gemm_validates() {
+        // Tiled coopmat GEMM (loops the 8x8x8 tile over arbitrary m/n/k via workgroup_id +
+        // a K-loop, dims = [m,n,k] storage buffer). The WGSL is correct + naga-valid today;
+        // its *execution* is dormant until wgpu #9741 (the coopmat multiply returns zeros on
+        // 29.0.3) — `dispatch::coopmat_usable()` gates it until then.
+        let source = crate::wgsl_forge::emit::matmul_tc_wgsl_tiled();
+        let report = validate_wgsl(&source).expect("tiled coopmat GEMM should validate");
+        assert_eq!(
+            report.entry_points,
+            vec![crate::wgsl_forge::emit::MATMUL_TC_TILED_ENTRY]
+        );
+        assert_eq!(report.binding_count, 4);
+    }
+
+    #[test]
     fn semantic_errors_are_rejected() {
         let source = "@compute @workgroup_size(64) fn broken() { let x: u32 = 1.0; }";
         assert!(validate_wgsl(source).is_err());

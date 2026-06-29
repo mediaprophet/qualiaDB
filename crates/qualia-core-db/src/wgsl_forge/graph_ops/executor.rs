@@ -229,23 +229,79 @@ fn run_node_to_out_slab(
             Ok(out)
         }
         OpNode::Elementwise { f } => run_elementwise(ctx, f, node.n_in, ins),
-        OpNode::MatMul { m, n, k, .. } => {
-            const WG: u32 = 64;
-            let out_elems = (m as usize) * (n as usize);
-            let out = alloc_out(ctx, out_elems, 2)?;
-            // GEMM params is a 16-byte UNIFORM block [m, n, k, _pad].
-            let params = alloc_params(ctx, &[m, n, k, 0], 3, BindingUsage::Uniform)?;
-            let spec = BuiltinKernel::Gemm.spec();
-            let sched = Schedule { workgroup_size: WG, ..Default::default() };
-            let module = crate::wgsl_forge::emit::emit_wgsl(&spec, sched)?;
-            let pipeline = WgpuPipeline::compile(ctx, &module.source, &spec.entry_point)?;
-            pipeline.dispatch(&[at(ins[0], 0), at(ins[1], 1), out, params], &sched, out_elems)?;
-            Ok(out)
+        OpNode::MatMul { m, n, k, tc, .. } => {
+            // `tc=true` requests tensor cores. The portable wgpu path is the coopmat tiled
+            // GEMM — taken only when the adapter advertises coopmat AND the runtime probe
+            // confirms the multiply actually computes (dormant on wgpu 29.0.3 / #9741, so
+            // this falls to the certified plain GEMM floor there). 8-multiple dims required.
+            // The CUDA WMMA tensor-core path is reached host-side via `dispatch::gemm_f32_tc`
+            // and wired graph-side by the CudaCLowerer (P5), not from this wgpu executor.
+            if tc
+                && m % 8 == 0
+                && n % 8 == 0
+                && k % 8 == 0
+                && crate::wgsl_forge::dispatch::caps().coopmat
+                && crate::wgsl_forge::dispatch::coopmat_usable()
+            {
+                dispatch_matmul_coopmat(ctx, m, n, k, ins)
+            } else {
+                dispatch_matmul_plain(ctx, m, n, k, ins)
+            }
         }
         other => Err(ForgeError::Emission(format!(
             "executor: op {other:?} not supported"
         ))),
     }
+}
+
+/// Plain f32 GEMM node (the always-correct floor): the certified [`BuiltinKernel::Gemm`]
+/// WGSL kernel, `C[m×n]=A·B` into the read_write slab. Used for `MatMul.tc=false` and as
+/// the fallback when the tensor-core path is unavailable.
+fn dispatch_matmul_plain(
+    ctx: &mut WgpuComputeContext,
+    m: u32,
+    n: u32,
+    k: u32,
+    ins: &[BufferView],
+) -> Result<BufferView, ForgeError> {
+    const WG: u32 = 64;
+    let out_elems = (m as usize) * (n as usize);
+    let out = alloc_out(ctx, out_elems, 2)?;
+    // GEMM params is a 16-byte UNIFORM block [m, n, k, _pad].
+    let params = alloc_params(ctx, &[m, n, k, 0], 3, BindingUsage::Uniform)?;
+    let spec = BuiltinKernel::Gemm.spec();
+    let sched = Schedule { workgroup_size: WG, ..Default::default() };
+    let module = crate::wgsl_forge::emit::emit_wgsl(&spec, sched)?;
+    let pipeline = WgpuPipeline::compile(ctx, &module.source, &spec.entry_point)?;
+    pipeline.dispatch(&[at(ins[0], 0), at(ins[1], 1), out, params], &sched, out_elems)?;
+    Ok(out)
+}
+
+/// Tensor-core f32 GEMM node via the tiled cooperative-matrix kernel
+/// ([`matmul_tc_wgsl_tiled`](crate::wgsl_forge::emit::matmul_tc_wgsl_tiled)) — the portable
+/// wgpu tensor-core path, kept device-side in the slab model like the plain path. One
+/// workgroup (== one subgroup, `@workgroup_size(32)`) per 8×8 output tile. Callers gate this
+/// on [`coopmat_usable`](crate::wgsl_forge::dispatch::coopmat_usable), so it runs only where
+/// the coopmat multiply actually computes (dormant on wgpu 29.0.3 / #9741).
+fn dispatch_matmul_coopmat(
+    ctx: &mut WgpuComputeContext,
+    m: u32,
+    n: u32,
+    k: u32,
+    ins: &[BufferView],
+) -> Result<BufferView, ForgeError> {
+    use crate::wgsl_forge::emit::{matmul_tc_wgsl_tiled, MATMUL_TC_TILED_ENTRY};
+    let out_elems = (m as usize) * (n as usize);
+    // c is the read_write slab output AND the zero-seeded accumulator (the kernel loads it).
+    let out = alloc_out(ctx, out_elems, 2)?;
+    // dims = [m, n, k] as a u32 storage buffer (binding 3, read slab).
+    let dims = alloc_params(ctx, &[m, n, k, 0], 3, BindingUsage::StorageRead)?;
+    let src = matmul_tc_wgsl_tiled();
+    let pipeline = WgpuPipeline::compile(ctx, &src, MATMUL_TC_TILED_ENTRY)?;
+    let num_tiles = ((m / 8) * (n / 8)) as usize;
+    let sched = Schedule { workgroup_size: 32, ..Default::default() };
+    pipeline.dispatch(&[at(ins[0], 0), at(ins[1], 1), out, dims], &sched, num_tiles * 32)?;
+    Ok(out)
 }
 
 fn run_elementwise(

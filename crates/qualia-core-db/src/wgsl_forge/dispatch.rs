@@ -297,6 +297,111 @@ fn df64_usable() -> bool {
     })
 }
 
+/// Runtime probe: does this adapter's WGSL **cooperative-matrix** (tensor-core) multiply
+/// actually compute, or does it return zeros? Measured once, then cached — the f32 mirror
+/// of [`df64_usable`].
+///
+/// The coopmat kernels are correct and naga-validated, but on wgpu 29.0.3 the
+/// `coopMultiplyAdd` is a no-op that returns all-zeros (gfx-rs/wgpu #9741: coopmat emits
+/// Device-scope SPIR-V memory ops invalid unless `vulkanMemoryModelDeviceScope` is
+/// auto-enabled at device creation — fixed on `main` after 29.0.3, the newest crates.io
+/// release). So we never *assume* coopmat works from the advertised feature bit: we MEASURE
+/// it by running a tiny 8×8×8 coopmat GEMM whose exact result is non-zero (all-ones inputs
+/// → every output `= 8.0`) and accepting coopmat only if the result matches. On 29.0.3 this
+/// returns `false` (zeros); it returns `true` automatically once a wgpu release (or the
+/// [`docs/WGPU_UPSTREAM_TRACKING.md`] soft-fork) carries the fix. Gated first on
+/// [`caps().wgpu`](caps) and [`caps().coopmat`](caps) so non-coopmat adapters never dispatch.
+pub fn coopmat_usable() -> bool {
+    static USABLE: OnceLock<bool> = OnceLock::new();
+    *USABLE.get_or_init(|| {
+        let c = caps();
+        if !c.wgpu || !c.coopmat {
+            return false;
+        }
+        // 8×8×8, all-ones: exact C[i][j] = sum_{0..8} 1*1 = 8.0. A working coopmat lands on
+        // 8.0; the #9741 no-op returns 0.0, so the tolerance check rejects it.
+        let n = 8usize;
+        let a = vec![1.0f32; n * n];
+        let b = vec![1.0f32; n * n];
+        match gemm_f32_tc_coopmat(n, n, n, &a, &b) {
+            Ok(out) => {
+                out.len() == n * n && out.iter().all(|&v| (v - 8.0).abs() <= 1.0e-3)
+            }
+            Err(_) => false,
+        }
+    })
+}
+
+/// **Cooperative-matrix (tensor-core) f32 GEMM on a wgpu adapter**: row-major
+/// `C[m×n] = A[m×k]·B[k×n]`, all `f32`, computed by the tiled coopmat kernel
+/// ([`matmul_tc_wgsl_tiled`](super::emit::matmul_tc_wgsl_tiled)). `m`, `n`, `k` must be
+/// non-zero multiples of 8 (the 8×8×8 cooperative-matrix tile).
+///
+/// This is the *portable* tensor-core path — it needs only a coopmat-capable wgpu adapter
+/// (no CUDA), so it covers NVIDIA/AMD/Intel/Apple alike once the driver computes coopmat.
+/// **It is dormant on wgpu 29.0.3** (the multiply returns zeros, #9741); callers gate on
+/// [`coopmat_usable`] so it is invoked only where it actually computes.
+///
+/// Mechanics mirror [`gemm_f64_df64`]: a transient [`WgpuComputeContext`], `a`(0,
+/// [`StorageRead`]) / `b`(1, [`StorageRead`]) / zeroed `c`(2, [`StorageReadWrite`]) /
+/// `dims=[m,n,k]`(3, [`StorageRead`]), compile the tiled kernel, dispatch one workgroup
+/// (== one subgroup, `@workgroup_size(32)`) per 8×8 output tile (`num_tiles = (m/8)·(n/8)`),
+/// read back `c`.
+///
+/// [`StorageRead`]: super::execute::BindingUsage::StorageRead
+/// [`StorageReadWrite`]: super::execute::BindingUsage::StorageReadWrite
+pub fn gemm_f32_tc_coopmat(
+    m: usize,
+    k: usize,
+    n: usize,
+    a: &[f32],
+    b: &[f32],
+) -> Result<Vec<f32>, ForgeError> {
+    use super::emit::{matmul_tc_wgsl_tiled, MATMUL_TC_TILED_ENTRY};
+    use super::execute::{BindingUsage, QualiaCompute, WgpuPipeline};
+    use super::Schedule;
+
+    if m == 0 || n == 0 || k == 0 || m % 8 != 0 || n % 8 != 0 || k % 8 != 0 {
+        return Err(ForgeError::GpuValidation(format!(
+            "gemm_f32_tc_coopmat: m={m}, n={n}, k={k} must be non-zero multiples of 8 (coopmat tile)"
+        )));
+    }
+    validate_dims(m, k, n, a.len(), b.len())?;
+
+    let element_count = m
+        .checked_mul(n)
+        .ok_or_else(|| ForgeError::GpuValidation("m*n overflow in gemm_f32_tc_coopmat".to_string()))?;
+    let capacity = (element_count.saturating_mul(8)).max(4 << 20);
+    let mut ctx = WgpuComputeContext::new(capacity)?;
+
+    let view_a = ctx.allocate_and_write(bytemuck::cast_slice(a), 0, 0, BindingUsage::StorageRead)?;
+    let view_b = ctx.allocate_and_write(bytemuck::cast_slice(b), 1, 0, BindingUsage::StorageRead)?;
+    let zeros = vec![0.0f32; element_count];
+    let view_c = ctx.allocate_and_write(
+        bytemuck::cast_slice(&zeros),
+        2,
+        0,
+        BindingUsage::StorageReadWrite,
+    )?;
+    let dims: [u32; 3] = [m as u32, n as u32, k as u32];
+    let view_dims =
+        ctx.allocate_and_write(bytemuck::cast_slice(&dims), 3, 0, BindingUsage::StorageRead)?;
+
+    let buffers = vec![view_a, view_b, view_c, view_dims];
+    let src = matmul_tc_wgsl_tiled();
+    let pipeline = WgpuPipeline::compile(&ctx, &src, MATMUL_TC_TILED_ENTRY)?;
+    // One workgroup (== one subgroup, @workgroup_size(32)) per 8×8 output tile.
+    let num_tiles = (m / 8) * (n / 8);
+    let schedule = Schedule {
+        workgroup_size: 32,
+        ..Default::default()
+    };
+    pipeline.dispatch(&buffers, &schedule, num_tiles * 32)?;
+    let mut out = ctx.read_buffer_f32(&view_c)?;
+    out.truncate(element_count);
+    Ok(out)
+}
+
 /// Native CUDA double-precision GEMM. Builds a transient
 /// [`CudaComputeContext`](super::execute::CudaComputeContext), uploads `a` (binding
 /// 0) / `b` (binding 1) / a zeroed `c` (binding 2) and the `dims = [m, n, k]` u32
@@ -345,9 +450,11 @@ fn gemm_f64_cuda(
 /// that makes the `MatMul.tc` request real. Row-major `C[m×n] = A[m×k]·B[k×n]`, f32 in/out.
 ///
 /// Selection (best tensor-core path on this machine, with a correct floor):
-/// 1. **WGSL coopmat** (the *portable* wgpu tensor-core path, f32) — the intended first
-///    choice, but **gated off until the upstream fix [#9741] lets it compute correctly**
-///    (see [`docs/WGPU_UPSTREAM_TRACKING.md`]); wired via `coopmat_usable()` once built.
+/// 1. **WGSL coopmat** ([`gemm_f32_tc_coopmat`]) — the *portable* wgpu tensor-core path
+///    (f32), the intended first choice. Built (tiled kernel + runtime probe), but gated on
+///    [`coopmat_usable`]: on wgpu 29.0.3 the coopmat multiply returns zeros (#9741), so the
+///    probe is `false` and this tier is **dormant until a wgpu release / soft-fork carries
+///    the fix**, then self-activates (see [`docs/WGPU_UPSTREAM_TRACKING.md`]). 8-multiple dims.
 /// 2. **CUDA WMMA** ([`gemm_tc_cuda`]) — genuine NVIDIA tensor cores at f16-input precision,
 ///    when `cuda` is available and `m,n,k` are multiples of 16. Carries tensor cores **today**.
 /// 3. **plain f32 GEMM** ([`gemm_f32`]) — the always-correct floor (full f32 precision).
@@ -355,9 +462,28 @@ fn gemm_f64_cuda(
 /// This is **opt-in** because tiers 1–2 trade f32 precision for tensor-core throughput; the
 /// default [`gemm_f32`] stays full-precision. Use for LLM matmuls (already f16-tolerant).
 pub fn gemm_f32_tc(m: usize, k: usize, n: usize, a: &[f32], b: &[f32]) -> Result<Vec<f32>, ForgeError> {
-    // Tier 1 (WGSL coopmat) is not selectable yet — its tiled kernel is dormant until
-    // #9741 (it returns zeros on wgpu 29.0.3), so there is nothing to probe. It slots in
-    // here behind a `coopmat_usable()` gate when built (DAG-IR P4c / tracking doc).
+    validate_dims(m, k, n, a.len(), b.len())?;
+
+    // Tier 1: WGSL coopmat — the *portable* wgpu tensor-core path (f32), gated on the
+    // runtime probe `coopmat_usable()`. On wgpu 29.0.3 the coopmat multiply returns zeros
+    // (#9741), so the probe is `false` and this tier stays dormant — it self-activates the
+    // moment a wgpu release (or the soft-fork) carries the fix. Requires 8-multiple dims
+    // (the 8×8×8 tile). The probe runs at most one tiny GPU dispatch, then caches.
+    if caps().wgpu
+        && caps().coopmat
+        && m % 8 == 0
+        && n % 8 == 0
+        && k % 8 == 0
+        && m.min(n).min(k) > 0
+        && coopmat_usable()
+    {
+        if let Ok(out) = gemm_f32_tc_coopmat(m, k, n, a, b) {
+            return Ok(out);
+        }
+        // Coopmat path eligible but errored — fall through to the next tier.
+    }
+
+    // Tier 2: CUDA WMMA (genuine NVIDIA tensor cores, f16-input precision).
     #[cfg(feature = "cuda")]
     {
         if caps().cuda
@@ -969,6 +1095,59 @@ mod tests {
         let b = [7.0f32, 8.0, 9.0, 10.0, 11.0, 12.0];
         let out = gemm_f32_tc(2, 3, 2, &a, &b).expect("gemm_f32_tc");
         assert_eq!(out, vec![58.0, 64.0, 139.0, 154.0]);
+    }
+
+    /// The coopmat (WGSL tensor-core) probe is honest and memoised: it can only be `true`
+    /// where the adapter actually advertises coopmat, it is `false` without one (or no GPU),
+    /// and repeated calls agree. On wgpu 29.0.3 it is `false` even on a coopmat-capable
+    /// adapter (the multiply returns zeros, #9741) — so this never wrongly enables the path.
+    #[test]
+    fn coopmat_usable_respects_caps_and_is_cached() {
+        let first = coopmat_usable();
+        if !caps().coopmat {
+            assert!(
+                !first,
+                "coopmat_usable must be false without a coopmat-capable adapter"
+            );
+        }
+        // usable ⇒ the adapter advertises coopmat (never the other way on 29.0.3).
+        assert!(!first || caps().coopmat);
+        // Memoised: a second call returns the same verdict.
+        assert_eq!(first, coopmat_usable());
+    }
+
+    /// Wrong dims are a hard error on the coopmat GEMM (non-8-multiple / zero), so the
+    /// executor/dispatcher never dispatches an ill-formed tile. Non-GPU safe (validates
+    /// before touching the device).
+    #[test]
+    fn gemm_f32_tc_coopmat_rejects_non_8_multiples() {
+        assert!(gemm_f32_tc_coopmat(8, 8, 12, &[0.0; 96], &[0.0; 96]).is_err());
+        assert!(gemm_f32_tc_coopmat(0, 8, 8, &[], &[0.0; 64]).is_err());
+    }
+
+    /// **GPU certify (A2000)** — the tiled coopmat f32 GEMM matches the exact f32 CPU
+    /// reference. **Dormant on wgpu 29.0.3**: the coopmat multiply returns zeros (#9741), so
+    /// this is `#[ignore]` until a wgpu release / the soft-fork carries the fix — at which
+    /// point [`coopmat_usable`] flips `true` and this asserts the real tensor-core result.
+    /// 16×16×16 = a 2×2 grid of 8×8 output tiles, 2 K-tiles each (so it exercises the loop +
+    /// `workgroup_id` tiling, not just a single tile).
+    #[test]
+    #[ignore = "coopmat multiply dormant on wgpu 29.0.3 (#9741); lights up via wgpu release / soft-fork"]
+    fn gemm_f32_tc_coopmat_matches_cpu_reference() {
+        let (m, k, n) = (16usize, 16usize, 16usize);
+        let a: Vec<f32> = (0..m * k).map(|i| ((i % 7) as f32) * 0.5 - 1.0).collect();
+        let b: Vec<f32> = (0..k * n).map(|i| ((i % 5) as f32) * 0.25 + 0.1).collect();
+        let got = gemm_f32_tc_coopmat(m, k, n, &a, &b).expect("coopmat gemm");
+        let want = crate::wgsl_forge::oracle::gemm_cpu(&a, &b, m, k, n);
+        assert_eq!(got.len(), want.len());
+        for (g, w) in got.iter().zip(&want) {
+            assert!(
+                (g - w).abs() <= 1.0e-3 + 1.0e-3 * w.abs(),
+                "coopmat {g} vs cpu {w}"
+            );
+        }
+        // Non-zero sanity — the #9741 no-op returns all-zeros, which this would catch.
+        assert!(got.iter().any(|&v| v.abs() > 1.0e-6));
     }
 
     /// Dimension mismatches are hard errors on both entry points.

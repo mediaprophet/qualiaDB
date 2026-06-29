@@ -275,3 +275,54 @@ perturbs the dep pin (your earlier "experimental OK for v1" covers it).
 **Next** — P4c part 2 (tiled coopmat WGSL + probe, alongside the #9741 soft-fork), then wire `gemm_f32_tc`
 into the DAG-IR `MatMul.tc` (cleanest via the P5 CudaCLowerer, where tensor-core matmul composes without a
 host round-trip). Then P4b / P5 / P6 / P7.
+
+---
+
+## 2026-06-29 · DAG-IR P4c **part 2** — tiled coopmat WGSL GEMM + `coopmat_usable()` probe + `MatMul.tc` real in the executor — DONE (wgpu pathway built; multiply dormant until #9741)
+
+**Step / phase** — DAG-IR forge P4c part 2 (the *wgpu* tensor-core half). Status: **done** (built, naga-validated, executor-wired, A2000-checked); coopmat **execution** remains dormant on wgpu 29.0.3 (an upstream bug, not our code).
+
+**What was built**
+- `emit/coopmat.rs::matmul_tc_wgsl_tiled` (+ `MATMUL_TC_TILED_ENTRY`) — a **tiled** cooperative-matrix
+  GEMM that loops the proven single-8×8×8-tile primitive over arbitrary `m/n/k` (multiples of 8): one
+  workgroup (== one subgroup, `@workgroup_size(32)`) per 8×8 output tile, accumulating across K in a
+  coopmat register fragment. Bindings `a`(0)/`b`(1)/`c`(2,rw)/`dims`(3)=[m,n,k]. **Mirrors**
+  `WMMA_GEMM_TILED_SRC` structurally, so both backends tile the same DAG node identically.
+- `dispatch::gemm_f32_tc_coopmat` — host-side wgpu dispatch of that kernel (transient ctx, two-slab
+  bindings, `num_tiles=(m/8)·(n/8)` workgroups), mirroring `gemm_f64_df64`. Pure wgpu (no CUDA).
+- `dispatch::coopmat_usable()` — runtime probe (the f32 mirror of `df64_usable`): runs a tiny 8×8×8
+  all-ones coopmat GEMM (exact result 8.0) and accepts coopmat only if the result matches. On 29.0.3 the
+  multiply returns zeros → probe is **false**; it flips **true automatically** once a wgpu release / the
+  soft-fork carries #9741. Gated first on `caps().coopmat`; memoised.
+- `dispatch::gemm_f32_tc` — tier-1 coopmat slot now **filled** (coopmat → CUDA WMMA → plain f32 floor),
+  selected via `coopmat_usable()`.
+- `graph_ops/executor.rs` — `OpNode::MatMul.tc` is now **real**: `tc=true` routes to the coopmat tiled
+  kernel (device-side, in the slab model) when `coopmat_usable()` & 8-multiple dims, else the certified
+  plain GEMM floor. Extracted `dispatch_matmul_plain` / added `dispatch_matmul_coopmat`. (The CUDA WMMA
+  tensor-core path is reached host-side via `gemm_f32_tc` and graph-side by the P5 CudaCLowerer — not from
+  the wgpu executor, which would otherwise break the GPU-side intermediate model.)
+
+**Measured results (A2000, real)**
+- `cooperative_matrix_tiled_gemm_validates` — naga-validates the tiled kernel (4 bindings, entry
+  `matmul_tc_tiled`). **green.**
+- `coopmat_usable_respects_caps_and_is_cached` — the probe **runs on the A2000**, returns **false**
+  (29.0.3 coopmat multiply = zeros, #9741), is consistent with `caps()`, and is memoised. **green.**
+- `gemm_f32_tc_coopmat_rejects_non_8_multiples` + `gemm_f32_tc_falls_to_plain_floor` — **green.**
+- `execute_graph_gpu_matches_cpu_oracle` (P4 multi-node: softmax / RMSNorm / SwiGLU-FFN) — **still green**
+  after the MatMul-arm refactor.
+- `gemm_f32_tc_coopmat_matches_cpu_reference` — `#[ignore]` GPU cert (16×16×16 = 2×2 tiles × 2 K-tiles);
+  asserts the real tensor-core result + a non-zero sanity check. **Dormant until #9741** — it is the test
+  that lights up the moment the soft-fork (#56) / a wgpu release makes the multiply compute.
+- Full `wgsl_forge::` non-ignored sweep: **106 passed, 0 failed**; lib + `--features cuda` build clean.
+
+**Honest state of the "is there a wgpu tensor-core pathway?" question** — **yes, and it is now built, not
+just slotted.** The tiled coopmat kernel exists and is naga-valid; the probe + selection + executor wiring
+are in place and exercised on hardware. The *only* thing that cannot be certified today is the coopmat
+**multiply itself**, which is a wgpu 29.0.3 upstream defect (#9741, merged upstream, unreleased) — so the
+GPU cert is `#[ignore]` and `coopmat_usable()` correctly keeps the path dormant until the fix ships. Active
+tensor-core GEMM today = CUDA WMMA; portable wgpu coopmat = built + self-activating.
+
+**⚑ Where I need the human** — none this step. The remaining coopmat *verification* rides the #56 soft-fork
+(perturbs the dep pin; covered by your "experimental OK for v1").
+**Next** — P5 CudaCLowerer (same graph → CUDA-C in one pass; the clean home for `MatMul.tc → WMMA`
+graph-side), then P4b attention + GatherDequant + uplift bench, P6 q42 binding, P7 RT/Stencil/MSL/HLSL.
