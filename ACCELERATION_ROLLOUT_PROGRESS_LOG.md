@@ -326,3 +326,45 @@ tensor-core GEMM today = CUDA WMMA; portable wgpu coopmat = built + self-activat
 (perturbs the dep pin; covered by your "experimental OK for v1").
 **Next** — P5 CudaCLowerer (same graph → CUDA-C in one pass; the clean home for `MatMul.tc → WMMA`
 graph-side), then P4b attention + GatherDequant + uplift bench, P6 q42 binding, P7 RT/Stencil/MSL/HLSL.
+
+---
+
+## 2026-06-29 · DAG-IR P5 — `CudaCLowerer`: the same graph lowers to CUDA-C in one pass (MatMul.tc→WMMA) — DONE, cross-backend oracle green on A2000
+
+**Step / phase** — DAG-IR forge P5 (second backend in one pass). Status: **done** (codegen + cross-backend cert on the A2000).
+
+**What was built**
+- `emit/cuda_graph.rs` (NEW) — `CudaCLowerer`, an impl of the **same** `Lowerer` trait the WGSL
+  backend uses, so `lower_graph` walks one `ComputeGraph` into CUDA-C with **no per-`kernel.id`
+  branch**. Coverage: `MatMul` (`tc=true`→`WMMA_GEMM_TILED_SRC` genuine NVIDIA tensor cores;
+  `tc=false`→new `GEMM_F32_SRC`), `Gemv`→new `GEMV_F32_SRC`, and CUDA-C twins of the
+  Elementwise/Reduce/Broadcast kit (identical binding ABI + math to the WGSL `graph_ops`, so both
+  backends grade against the *same* CPU oracles). `Fft` + the unbuilt op-classes inherit the
+  trait's explicit `Err` (never a silent no-op), matching the WGSL coverage at this phase.
+- `emit/cuda_c.rs` — added `GEMM_F32_SRC`/`GEMV_F32_SRC` (f32 twins of the f64 CUDA-C GEMM/GEMV);
+  `emit_cuda_c` now routes `gemm`/`gemv` through `to_graph→lower_graph` into the `CudaCLowerer`
+  (the CUDA mirror of how `emit_wgsl` routes the seed kernels) — preserving kernel identity / the
+  certify-cache hash.
+- `emit_graph_cuda_c` mirrors `emit_graph_wgsl` (pure-graph entry); `graph_cuda_entry` resolves a
+  single-node graph's CUDA entry point so a caller can compile+dispatch the emitted source.
+
+**Measured results (A2000, real — the P5 verification)**
+- `plain_matmul_graph_certifies_on_cuda` — the **same** one-node MatMul graph the WGSL backend
+  certifies, lowered to CUDA-C, NVRTC-compiled, dispatched, **matches `gemm_cpu`** (32×32×32). green.
+- `tc_matmul_graph_certifies_on_cuda_wmma` — same graph with `tc=true` → CUDA-C **WMMA tensor
+  cores**, matches the f16-rounded reference (16×16×16). green. → `MatMul.tc→WMMA` is real cross-backend.
+- `kit_kernels_nvrtc_compile` — every CudaCLowerer-emitted kit kernel (elementwise unary/binary/fma,
+  all 4 reduce kinds, broadcast, gemv) **NVRTC-compiles** (the CUDA analogue of naga-validate). green.
+- Non-GPU: `cuda_c_kit_emits_each_node`, `matmul_graph_lowers_to_cuda_c`,
+  `unsupported_matmul_and_ops_error` green. Full `wgsl_forge::` non-ignored sweep **109 passed/0
+  failed**; lib + `--features cuda --tests` build clean.
+
+**Honest boundary** — this is the **codegen** half: the *same graph → two backends* thesis is proven,
+and single-node seed graphs execute end-to-end. A device-side **multi-node CUDA executor** (the CUDA
+twin of P4's wgpu executor, keeping intermediates device-side across nodes) is a separate later
+deliverable; the kit nodes are certified by NVRTC-compile (valid CUDA-C) rather than multi-node
+dispatch, which is the consistent per-node acceptance bar (WGSL kit nodes are naga-validated the same way).
+
+**⚑ Where I need the human** — none this step.
+**Next** — P4b (full attention block + ternary GatherDequant split + honest kernel-level uplift
+benchmark), then P6 (q42 substrate binding), then P7 (RT Neighbor + Stencil/ScatterAccum + MSL/HLSL).

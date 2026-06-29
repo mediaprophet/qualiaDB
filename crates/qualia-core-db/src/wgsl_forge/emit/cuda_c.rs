@@ -20,6 +20,15 @@ pub fn emit_cuda_c(kernel: &KernelSpec, schedule: Schedule) -> Result<GeneratedS
         "affine-f32" => emit_affine(&mut source)?,
         "fused-ffn" => emit_ffn(&mut source)?,
         "topk" => emit_topk(&mut source, wg)?,
+        // gemm / gemv lower through the compute-graph IR: the KernelSpec becomes a one-node
+        // ComputeGraph (`to_graph`) and `lower_graph` walks it into the CudaCLowerer — the
+        // SAME graph the WGSL backend lowers, no per-id CUDA branch. (`fft` has no CUDA-C
+        // lowering this phase, so it stays out of the route and errors via `other` below.)
+        "gemm" | "gemv" => {
+            let graph = kernel.to_graph()?;
+            let mut lowerer = super::cuda_graph::CudaCLowerer { source: &mut source };
+            crate::wgsl_forge::ir::graph::lower_graph(&graph, &mut lowerer)?;
+        }
         other => {
             return Err(ForgeError::Emission(format!(
                 "CUDA-C emission not implemented for kernel {other}"
@@ -181,6 +190,59 @@ pub const GEMV_F64_SRC: &str = r#"extern "C" __global__ void gemv_f64(const doub
     unsigned i = blockIdx.x * blockDim.x + threadIdx.x;
     if (i >= m) return;
     double acc = 0.0;
+    unsigned a_row = i * n;
+    for (unsigned j = 0; j < n; j++) {
+        acc += a[a_row + j] * x[j];
+    }
+    y[i] = acc;
+}"#;
+
+/// Single-precision dense GEMM entry point — the CUDA-C twin of the WGSL
+/// [`emit_gemm_wgsl`](super::wgsl) kernel, for the `CudaCLowerer` plain (`tc=false`)
+/// `MatMul` path. Lets the **same** compute-graph node lower to f32 on both backends so
+/// the cross-backend differential oracle compares like with like (the WMMA path is the
+/// reduced-precision `tc=true` alternative).
+pub const GEMM_F32_ENTRY: &str = "gemm_f32";
+
+/// Source for [`GEMM_F32_ENTRY`]: row-major `C[M×N] = A[M×K] · B[K×N]`, all `float`, one
+/// thread per output element. `dims = [m, n, k]` is a 3-element `unsigned` **storage**
+/// buffer (binding 3), matching the pointer-only ABI of
+/// [`crate::wgsl_forge::execute::CudaPipeline::compile_cuda_c_source`]. The inner `kk` sum
+/// order matches the WGSL f32 GEMM and the CPU reference [`crate::wgsl_forge::oracle::matmul_cpu`].
+pub const GEMM_F32_SRC: &str = r#"extern "C" __global__ void gemm_f32(const float* a,
+                                    const float* b,
+                                    float* c,
+                                    const unsigned* dims) {
+    unsigned m = dims[0];
+    unsigned n = dims[1];
+    unsigned k = dims[2];
+    unsigned o = blockIdx.x * blockDim.x + threadIdx.x;
+    if (o >= m * n) return;
+    unsigned row = o / n;
+    unsigned col = o % n;
+    float acc = 0.0f;
+    for (unsigned kk = 0; kk < k; kk++) {
+        acc += a[row * k + kk] * b[kk * n + col];
+    }
+    c[o] = acc;
+}"#;
+
+/// Single-precision dense GEMV entry point — the CUDA-C twin of the WGSL GEMV kernel, for
+/// the `CudaCLowerer` `Gemv` node. `y[M] = A[M×N] · x[N]`, all `float`, one thread per row.
+pub const GEMV_F32_ENTRY: &str = "gemv_f32";
+
+/// Source for [`GEMV_F32_ENTRY`]: row-major `y[M] = A[M×N] · x[N]`, all `float`, one thread
+/// per output **row**. `dims = [m, n]` is a 2-element `unsigned` **storage** buffer
+/// (binding 3). The inner `j` sum order matches the WGSL f32 GEMV and the CPU reference.
+pub const GEMV_F32_SRC: &str = r#"extern "C" __global__ void gemv_f32(const float* a,
+                                    const float* x,
+                                    float* y,
+                                    const unsigned* dims) {
+    unsigned m = dims[0];
+    unsigned n = dims[1];
+    unsigned i = blockIdx.x * blockDim.x + threadIdx.x;
+    if (i >= m) return;
+    float acc = 0.0f;
     unsigned a_row = i * n;
     for (unsigned j = 0; j < n; j++) {
         acc += a[a_row + j] * x[j];
