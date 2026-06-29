@@ -120,6 +120,64 @@ pub fn liquidity_after(initial: u64, inflow: u64, drain_percent: u64, steps: u32
     pool
 }
 
+// ─── Usury circuit-breaker (multi-agent token ceiling) ────────────────────────────
+//
+// MULTI_AGENT_PROTOCOL.md's resource-governance guard: an agent's projected spend may
+// run up to — but not past — an agreed budget plus a small overage; breaching the
+// ceiling is *usurious* and the operation is refused (`ERROR_USURY_LIMIT_EXCEEDED`).
+// A hard anti-extraction cap in the same family as the capped ROI and the E-ROI floor
+// above, not a soft warning. Deterministic saturating integer arithmetic.
+
+/// Default permitted overage above an agreed budget, in percent — the spec's **110%**
+/// token ceiling is `budget × (1 + 10/100)`.
+pub const USURY_OVERAGE_PERCENT_DEFAULT: u64 = 10;
+
+/// Maximum spend permitted before the usury breaker trips: `budget × (1 + overage/100)`
+/// (saturating). With the default 10% overage this is the 110% ceiling.
+#[inline]
+pub fn usury_ceiling(budget: u64, overage_percent: u64) -> u64 {
+    let margin = budget.saturating_mul(overage_percent) / 100;
+    budget.saturating_add(margin)
+}
+
+/// Has `projected_spend` breached the usury ceiling for `budget`? Spending *up to and
+/// including* the ceiling is permitted; only a strictly greater spend is usurious.
+#[inline]
+pub fn is_usurious(projected_spend: u64, budget: u64, overage_percent: u64) -> bool {
+    projected_spend > usury_ceiling(budget, overage_percent)
+}
+
+/// `ERROR_USURY_LIMIT_EXCEEDED` — a projected spend breached the agreed budget's
+/// ceiling. Carries the `budget`, the computed `ceiling`, and the offending
+/// `projected` spend so the caller can write a faithful conduct-violation record.
+#[derive(Debug, Clone, Copy, PartialEq, Eq)]
+pub struct UsuryError {
+    pub budget: u64,
+    pub ceiling: u64,
+    pub projected: u64,
+}
+
+/// Gate a projected spend against the usury ceiling — `Ok(())` while at/under the
+/// ceiling, `Err(UsuryError)` once it is breached. The fiduciary circuit-breaker an
+/// agent's resource declaration is checked through before the spend is admitted.
+#[inline]
+pub fn check_usury(
+    projected_spend: u64,
+    budget: u64,
+    overage_percent: u64,
+) -> Result<(), UsuryError> {
+    let ceiling = usury_ceiling(budget, overage_percent);
+    if projected_spend > ceiling {
+        Err(UsuryError {
+            budget,
+            ceiling,
+            projected: projected_spend,
+        })
+    } else {
+        Ok(())
+    }
+}
+
 #[cfg(test)]
 mod tests {
     use super::*;
@@ -177,6 +235,25 @@ mod tests {
         // corporate 300% vs non-profit 50% of the same base.
         assert_eq!(royalty(100, 300), 300);
         assert_eq!(royalty(100, 50), 50);
+    }
+
+    #[test]
+    fn usury_breaker_trips_past_the_110_percent_ceiling() {
+        // A 1000-token budget admits spend up to the 110% ceiling (1100); past it is usurious.
+        assert_eq!(usury_ceiling(1000, USURY_OVERAGE_PERCENT_DEFAULT), 1100);
+        assert!(check_usury(1000, 1000, USURY_OVERAGE_PERCENT_DEFAULT).is_ok());
+        assert!(check_usury(1100, 1000, USURY_OVERAGE_PERCENT_DEFAULT).is_ok(), "exactly at ceiling is permitted");
+        assert!(!is_usurious(1100, 1000, USURY_OVERAGE_PERCENT_DEFAULT));
+        let err = check_usury(1101, 1000, USURY_OVERAGE_PERCENT_DEFAULT).unwrap_err();
+        assert_eq!(err.ceiling, 1100);
+        assert_eq!(err.projected, 1101);
+        assert!(is_usurious(1101, 1000, USURY_OVERAGE_PERCENT_DEFAULT));
+        // A zero budget permits no positive spend.
+        assert!(check_usury(1, 0, USURY_OVERAGE_PERCENT_DEFAULT).is_err());
+        assert!(check_usury(0, 0, USURY_OVERAGE_PERCENT_DEFAULT).is_ok());
+        // The overage is a policy knob: a stricter 0% overage caps exactly at budget.
+        assert_eq!(usury_ceiling(1000, 0), 1000);
+        assert!(check_usury(1001, 1000, 0).is_err());
     }
 
     #[test]
