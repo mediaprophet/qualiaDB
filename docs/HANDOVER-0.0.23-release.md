@@ -104,11 +104,24 @@ BLAKE3, HKDF. (See CLAUDE.md §8 for the authoritative real-vs-scaffold list.)
 
 ## 5. Remaining release-prep before main + binaries
 
-- **Build gates:** debug + **release** workspace green. CHECK the cuda (`--features cuda`) + wasm
-  (`wasm32-unknown-unknown`, `webizen-lite-wasm`) gate results (were building at handover). The non-workspace
-  `webizen-{desktop,render,runtime,studio,web}` crates were NOT built — build them if they ship.
-- **Then:** merge `0.0.23` → main (`0.0.21-modality-first`) and generate binaries (the native binary is
-  `qualia-cli`; WASM is `webizen-lite-wasm` / the mobile harness via the `wasm-release` profile).
+- **Build gates (RESULTS):**
+  - Debug workspace: **green**. Release workspace (`cargo build --release --workspace`): **green** (8m10s).
+  - CUDA (`cargo build --release -p qualia-core-db --features cuda`): **green** (4m18s).
+  - **WASM: FAILS** — `cargo build -p webizen-lite-wasm --target wasm32-unknown-unknown` errors with
+    qualia-core-db references to native-only modules on wasm32: `cannot find solvers/wgsl_forge in crate`,
+    `unresolved import q42::p64_weight`, `unresolved import memmap2` (5 errors). The dep wiring is
+    **correct** (`crates/webizen-lite-wasm/Cargo.toml` gates wasm32 to `default-features=false,
+    features=["wasm-ontology"]`), so the bug is that **a module inside the `wasm-ontology` feature set
+    references those native-only modules un-gated**. **Appears PRE-EXISTING** (this session's changes don't
+    reference `solvers`/`wgsl_forge` in any wasm-reachable module; `lib.rs` + `webizen-lite-wasm` are
+    unchanged vs main). **Next session: diagnose** — `cargo build -p webizen-lite-wasm --target
+    wasm32-unknown-unknown 2>&1 | grep -A3 "E0432\|E0433"` to find the offending `use` sites in the
+    `wasm-ontology` cfg/feature set and gate them; confirm whether main `0.0.21-modality-first` also fails
+    (to settle pre-existing vs regression). This is a **release blocker for the WASM artifact**.
+  - Non-workspace `webizen-{desktop,render,runtime,studio,web}` crates were NOT built — build if they ship.
+- **Then:** merge `0.0.23` → main (`0.0.21-modality-first`) and generate binaries (native binary =
+  `qualia-cli`; WASM = `webizen-lite-wasm` / mobile harness via the `wasm-release` profile) — **after the
+  WASM build is fixed**.
 
 ## 6. Key pointers
 
