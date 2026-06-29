@@ -30,14 +30,32 @@ Four things already exist in this repo, built but **not connected**:
 and the existing governance intact. The win is **connecting** what exists and replacing hand-written
 WGSL with generated+certified graphs.
 
-## Competitive frame — define "faster" by the binding constraint, not the wrong baseline
+## Competitive frame — name the real competitors; target genuinely faster, then measure
 
-The "just competitive enough" framing used the wrong yardstick (datacenter-NVIDIA throughput). vLLM /
-TensorRT win *that* race; it is not the contest, and we don't pretend to it. The honest, sharper claim:
+**Name the actual competitors.** The local-LLM field is **Ollama / LM Studio** (UX wrappers around
+**llama.cpp / MLX**) and llama.cpp itself — hand-written kernel engines with **no compute-graph IR, no
+auto-tune+certify, no q42/p64 substrate, no in-queue solvers**. Datacenter vLLM/TensorRT are a different
+deployment and not the target. **Do not import "can't beat the datacenter SOTA" onto the local field** —
+that is a defeatist anti-pattern; from a position of *structural advantage* it manufactures insecurity.
 
-**Locally — edge clusters, unified-memory (Apple Silicon), off-grid / RERSS hardware — the binding
-constraint is memory bandwidth, not compute.** On that axis this architecture is genuinely *faster than
-naive local inference*, through structural efficiencies others don't get for free:
+Qualia has a **computational engine the local competitors structurally lack**, and that is a *speed asset*,
+not only a moat. Local decode is **memory-bandwidth-bound, not compute-bound**, and the engine gives
+specific levers to be **genuinely faster** (not "competitive enough") — to be **built and measured**, never
+pre-conceded and never pre-claimed:
+
+- **Sub-4-bit weights.** AWQ ternary FFN (~1.58-bit) through the certified `GatherDequant` moves **~2.5×
+  fewer bytes per token** than llama.cpp's Q4_K on the FFN bulk (the dominant param mass). Fewer bytes off
+  VRAM / unified memory ⇒ faster decode. They don't ship BitNet-1.58 for arbitrary models; we transcode to it.
+- **Per-hardware auto-tuned, certified schedules.** The forge's tune/certify + topology cache fits the
+  dispatch (workgroup/tiling/warp-align) to the *actual* adapter and caches a certified-optimal; llama.cpp
+  ships fixed kernels. Across a heterogeneous fleet (Pi / Apple / AMD / off-grid) per-machine tuning beats one-size.
+- **Composite workload in one GPU queue.** Inference + N3 logic + solvers + verification on the *same*
+  device/queue — no CPU/process round-trips. Ollama/LM Studio are inference-only; Qualia's governed/grounded/
+  reasoned generation would force them off-GPU. They can't match this because they lack the engine.
+- **Cached-graph orchestration** (one submitted graph/token to the U0 queue) beats naive per-layer WGSL
+  dispatch on the portable any-GPU path.
+
+These rest on the same memory-residency + bandwidth efficiencies that beat **naive local inference**:
 
 - **Transfer tax eliminated.** p64 weights resident once (`load_weights`); only activations cross the bus
   per token — no per-token weight re-upload. Bypasses the PCIe/bus bottleneck on every decode step.
@@ -181,3 +199,9 @@ the certified + provenanced + portable + memory-efficient category.
 Q4_K/Q8_0 dequant), the `--ignored` GPU certs on the A2000, the decode bench for ms/layer + tok/s, and a
 real SmolLM2-360M generation through the forge path matching the hand-written path token-for-token (greedy)
 with its provenance citation attached.
+
+**The competition proof (do not skip):** a **head-to-head vs Ollama / LM Studio** on the *same* model and
+the *same* hardware — tok/s, time-to-first-token, peak VRAM, and watts — reported honestly (the ternary +
+auto-tune + residency levers are the thesis; measure whether they net to *faster*, not just different). Run
+it on at least one memory-bandwidth-bound target (a unified-memory / edge box), since that is where the
+structural advantage is largest. Pre-conceding is forbidden; pre-claiming a win before the numbers is equally forbidden.

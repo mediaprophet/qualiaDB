@@ -15,11 +15,19 @@ sophisticated inference at acceptable latency/power, the user capitulates to the
 model. Memory-residency + ternary quantization + a cached compute graph are the material counter to
 asymmetric centralization and the extraction economy it runs on.
 
-**Define "faster" correctly:** *not* a datacenter tok/s drag race (vLLM/TensorRT win that; not the contest).
-**Locally the binding constraint is memory bandwidth, not compute** — and on that axis this beats naive
-local inference, on **any GPU**, *while* dragging the full q42 provenance + ODRL consent + Phase-8
-governance through the same forward pass at no extra architectural cost. You can't out-audit a system whose
-substrate **is** the audit trail. Full framing: `docs/plans/llm-on-forge-q42-p64.md` → "Competitive frame".
+**Define "faster" correctly — and don't pre-concede it.** The real competitors are **local**: Ollama /
+LM Studio (= llama.cpp / MLX wrappers), which have **no compute-graph IR, no auto-tune/certify, no q42/p64
+substrate, no in-queue solvers**. Datacenter vLLM/TensorRT are a different deployment, not the target — do
+NOT import "can't beat the datacenter SOTA" onto the local field (that's a defeatist anti-pattern; we hold a
+structural advantage). Local decode is **memory-bandwidth-bound**, and the engine the competitors *lack*
+gives specific levers to be **genuinely faster**, to build + measure: (1) sub-4-bit AWQ ternary FFN (~1.58
+bit, ~2.5× fewer FFN bytes/token than their Q4_K), (2) per-hardware auto-tuned certified schedules vs their
+fixed kernels, (3) inference+logic+solvers+verification in **one GPU queue** (no round-trips), (4) cached-graph
+orchestration on the portable path. All while dragging full q42 provenance + ODRL consent + Phase-8 governance
+through the same pass at no extra cost — you can't out-audit a system whose substrate **is** the audit trail.
+Proof = the Phase-1 bake-off **plus a head-to-head vs Ollama/LM Studio on the same model + hardware**. Target
+faster, build it, measure it — no pre-conceding, no pre-claiming. Full framing:
+`docs/plans/llm-on-forge-q42-p64.md` → "Competitive frame".
 
 Be precise, not sycophantic. Honest measurement (never claim done when it isn't). See the memory note
 `feedback-plans-and-ownership-holborn` for how Timothy wants you to work (repo-markdown plans not hidden
