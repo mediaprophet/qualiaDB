@@ -57,6 +57,10 @@ fn emit_kernel_body(
         return emit_gemm_wgsl(source, kernel, schedule);
     }
 
+    if kernel.id == "gemv" {
+        return emit_gemv_wgsl(source, kernel, schedule);
+    }
+
     if kernel.id == "ray-probe" {
         // The ray-query enable extension must precede any other item.
         writeln!(source, "enable wgpu_ray_query;").map_err(|error| ForgeError::Emission(error.to_string()))?;
@@ -482,6 +486,49 @@ fn {entry}(@builtin(global_invocation_id) gid: vec3<u32>) {{
         acc = acc + a[a_row + kk] * b[kk * params.n + col];
     }}
     c[o] = acc;
+}}"#,
+        wg = wg,
+        entry = kernel.entry_point
+    )
+    .map_err(|error| ForgeError::Emission(error.to_string()))?;
+    Ok(())
+}
+
+/// Dense row-major matrix-vector product, all f32: one invocation per output ROW
+/// `i` computes `y[i] = sum_j A[i*N+j] * x[j]`. Self-contained (no shared memory);
+/// dimensions come from the uniform params block (m, n, _pad0, _pad1). The inner
+/// accumulation index is `j`.
+fn emit_gemv_wgsl(
+    source: &mut String,
+    kernel: &KernelSpec,
+    schedule: Schedule,
+) -> Result<(), ForgeError> {
+    let wg = schedule.workgroup_size;
+    writeln!(
+        source,
+        r#"
+struct GemvParams {{
+    m: u32,
+    n: u32,
+    _pad0: u32,
+    _pad1: u32,
+}}
+
+@group(0) @binding(0) var<storage, read> a: array<f32>;
+@group(0) @binding(1) var<storage, read> x: array<f32>;
+@group(0) @binding(2) var<storage, read_write> y: array<f32>;
+@group(0) @binding(3) var<uniform> params: GemvParams;
+
+@compute @workgroup_size({wg})
+fn {entry}(@builtin(global_invocation_id) gid: vec3<u32>) {{
+    let i = gid.x;
+    if (i >= params.m) {{ return; }}
+    var acc = 0.0;
+    let a_row = i * params.n;
+    for (var j: u32 = 0u; j < params.n; j = j + 1u) {{
+        acc = acc + a[a_row + j] * x[j];
+    }}
+    y[i] = acc;
 }}"#,
         wg = wg,
         entry = kernel.entry_point

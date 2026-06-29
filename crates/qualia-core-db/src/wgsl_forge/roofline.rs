@@ -102,6 +102,19 @@ pub fn roofline_for(kernel: BuiltinKernel, n: u64) -> RooflineEstimate {
             let bytes = (n * (2 * k + 1)) * 4;
             RooflineEstimate::new(flops, bytes)
         }
+        // Dense GEMV y[M] = A[M×N]·x[N] (N=256). `n` is the output-row count M, one
+        // invocation each. Per output row: N MACs = 2N FLOP. Bytes: the whole matrix
+        // A (M*N) is read once, x (N) is read once (amortised), plus the M output
+        // writes — i.e. (M*N + N + M)*4. GEMV is memory-bound (each A element is read
+        // exactly once, AI ≈ 2 FLOP/byte/2 = ~0.5), the desired roofline answer for a
+        // matrix-vector product.
+        BuiltinKernel::Gemv => {
+            let row = n; // output-row count M
+            let n_cols = 256u64;
+            let flops = row * 2 * n_cols;
+            let bytes = (row * n_cols + n_cols + row) * 4;
+            RooflineEstimate::new(flops, bytes)
+        }
     }
 }
 

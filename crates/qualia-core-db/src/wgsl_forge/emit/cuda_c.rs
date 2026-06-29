@@ -105,6 +105,35 @@ pub const GEMM_F64_SRC: &str = r#"extern "C" __global__ void gemm_f64(const doub
     c[o] = acc;
 }"#;
 
+/// Native double-precision dense GEMV entry point. WGSL has no `f64` (only
+/// f32/f16/i32/u32), so an exact-double GEMV has no WGSL/IR analogue; PTX/CUDA-C,
+/// by contrast, has native `double` and `fma.rn.f64`, which is why the f64
+/// best-path is CUDA, not WGSL (the dispatcher's `gemv_f64`).
+pub const GEMV_F64_ENTRY: &str = "gemv_f64";
+
+/// Source for [`GEMV_F64_ENTRY`]: row-major `y[M] = A[M×N] · x[N]`, all `double`,
+/// one thread per output **row**. `dims` is a 2-element `unsigned` **storage** buffer
+/// `[m, n]` (binding 3) — a storage buffer, not a by-value uniform, so it rides the
+/// same pointer-only ABI
+/// [`crate::wgsl_forge::execute::CudaPipeline::compile_cuda_c_source`] uses. The inner
+/// `j` sum order matches the WGSL/f32 GEMV and the CPU reference so results agree to
+/// f64 summation precision.
+pub const GEMV_F64_SRC: &str = r#"extern "C" __global__ void gemv_f64(const double* a,
+                                    const double* x,
+                                    double* y,
+                                    const unsigned* dims) {
+    unsigned m = dims[0];
+    unsigned n = dims[1];
+    unsigned i = blockIdx.x * blockDim.x + threadIdx.x;
+    if (i >= m) return;
+    double acc = 0.0;
+    unsigned a_row = i * n;
+    for (unsigned j = 0; j < n; j++) {
+        acc += a[a_row + j] * x[j];
+    }
+    y[i] = acc;
+}"#;
+
 fn emit_affine(source: &mut String) -> Result<(), ForgeError> {
     writeln!(
         source,

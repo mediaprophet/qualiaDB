@@ -26,7 +26,7 @@
 use std::path::PathBuf;
 
 use super::execute::{BindingUsage, QualiaCompute, WgpuComputeContext, WgpuPipeline};
-use super::oracle::{GemmParams, TERNARY_CODES_PER_WORD, TernaryGemvParams, TopKParams};
+use super::oracle::{GemmParams, GemvParams, TERNARY_CODES_PER_WORD, TernaryGemvParams, TopKParams};
 use super::{
     BuiltinKernel, ForgeError, ManifestCache, Schedule, TargetBackend, emit_shader, validate_wgsl,
 };
@@ -485,6 +485,96 @@ impl ForgeRuntime {
         self.context.clear_transient_allocations();
         Ok(out)
     }
+
+    /// Real-data dense GEMV: row-major `y[M] = A[M×N] · x[N]`, all f32, i.e.
+    /// `y[i] = sum_{j<N} a[i*N + j] * x[j]`, for `m` output rows.
+    ///
+    /// `a` must have `m * n` elements (row-major) and `x` must have `n` elements.
+    /// The returned vector has `m` elements.
+    ///
+    /// Buffer wiring is identical to [`evaluate_gemv`](super::oracle::evaluate_gemv):
+    /// binding 0 = `a`, 1 = `x` (both storage-read), 2 = `y` (storage-read-write,
+    /// `m` f32s), 3 = [`GemvParams`] (uniform); dispatch `element_count = m`. The
+    /// CALLER's matrix/vector are fed directly — no oracle, no test vectors.
+    ///
+    /// # Example
+    /// ```no_run
+    /// # use qualia_core_db::wgsl_forge::ForgeRuntime;
+    /// # let mut rt = ForgeRuntime::new(1 << 20, None)?;
+    /// // A (2×3) · x (3): A=[[1,2,3],[4,5,6]], x=[1,1,1]
+    /// let a = [1.0, 2.0, 3.0, 4.0, 5.0, 6.0];
+    /// let x = [1.0, 1.0, 1.0];
+    /// let y = rt.gemv(&a, &x, 2, 3)?; // -> [6, 15]
+    /// # Ok::<(), qualia_core_db::wgsl_forge::ForgeError>(())
+    /// ```
+    pub fn gemv(
+        &mut self,
+        a: &[f32],
+        x: &[f32],
+        m: usize,
+        n: usize,
+    ) -> Result<Vec<f32>, ForgeError> {
+        if m == 0 || n == 0 {
+            return Err(ForgeError::GpuValidation(
+                "gemv requires m > 0 and n > 0".to_string(),
+            ));
+        }
+        if a.len() != m * n {
+            return Err(ForgeError::GpuValidation(format!(
+                "a must have m*n = {} elements; got {}",
+                m * n,
+                a.len()
+            )));
+        }
+        if x.len() != n {
+            return Err(ForgeError::GpuValidation(format!(
+                "x must have n = {} elements; got {}",
+                n,
+                x.len()
+            )));
+        }
+
+        let schedule = self.tuned_schedule(BuiltinKernel::Gemv);
+        let kernel = BuiltinKernel::Gemv.spec();
+        schedule.validate(&kernel, &self.context.constraints)?;
+        self.context.constraints.supports_kernel(&kernel)?;
+        let generated = emit_shader(&kernel, schedule, TargetBackend::Wgsl)?;
+        validate_wgsl(&generated.source)?;
+
+        let element_count = m;
+        let view_a =
+            self.context
+                .allocate_and_write(bytemuck::cast_slice(a), 0, 0, BindingUsage::StorageRead)?;
+        let view_x =
+            self.context
+                .allocate_and_write(bytemuck::cast_slice(x), 1, 0, BindingUsage::StorageRead)?;
+        let output_bytes_len = (element_count * size_of::<f32>()).max(4);
+        let view_y =
+            self.context
+                .allocate_transient(output_bytes_len, 2, 0, BindingUsage::StorageReadWrite)?;
+        let params = GemvParams {
+            m: m as u32,
+            n: n as u32,
+            _pad0: 0,
+            _pad1: 0,
+        };
+        let view_params = self.context.allocate_and_write(
+            bytemuck::bytes_of(&params),
+            3,
+            0,
+            BindingUsage::Uniform,
+        )?;
+
+        let buffers = vec![view_a, view_x, view_y, view_params];
+        let pipeline = WgpuPipeline::compile(&self.context, &generated.source, &kernel.entry_point)?;
+        pipeline.dispatch(&buffers, &schedule, element_count)?;
+        let mut out = self.context.read_buffer_f32(&view_y)?;
+        out.truncate(element_count);
+
+        drop(pipeline);
+        self.context.clear_transient_allocations();
+        Ok(out)
+    }
 }
 
 #[cfg(test)]
@@ -591,5 +681,19 @@ mod tests {
         let b = [7.0f32, 8.0, 9.0, 10.0, 11.0, 12.0];
         let out = rt.gemm(&a, &b, 2, 3, 2).expect("gemm");
         assert_eq!(out, vec![58.0, 64.0, 139.0, 154.0]);
+    }
+
+    /// Real-data dense GEMV — the hand-checked 2×3 · 3 case mirrored from
+    /// `oracle.rs::gemv_cpu_matches_hand_checked_2x3`:
+    ///   A = [[1,2,3],[4,5,6]], x = [1,1,1] -> y = [6, 15].
+    /// Small integers are exact in f32, so an exact equality holds.
+    #[test]
+    #[ignore = "requires a GPU adapter"]
+    fn runtime_gemv_runs_real_data() {
+        let mut rt = ForgeRuntime::new(1 << 20, None).expect("gpu context");
+        let a = [1.0f32, 2.0, 3.0, 4.0, 5.0, 6.0];
+        let x = [1.0f32, 1.0, 1.0];
+        let out = rt.gemv(&a, &x, 2, 3).expect("gemv");
+        assert_eq!(out, vec![6.0, 15.0]);
     }
 }

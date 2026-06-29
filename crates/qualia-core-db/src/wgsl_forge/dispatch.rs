@@ -33,7 +33,7 @@
 
 use std::sync::{Mutex, OnceLock};
 
-use super::oracle::gemm_cpu;
+use super::oracle::{gemm_cpu, gemv_cpu};
 use super::ForgeError;
 use super::execute::WgpuComputeContext;
 use super::ForgeRuntime;
@@ -293,6 +293,181 @@ pub fn gemm_cpu_f64(a: &[f64], b: &[f64], m: usize, k: usize, n: usize) -> Vec<f
     c
 }
 
+/// Best-path single-precision dense GEMV: row-major `y[M] = A[M×N] · x[N]`.
+///
+/// Path selection (mirrors [`gemm_f32`]):
+/// 1. **WGSL GPU** — when [`caps().wgpu`](caps) is set *and* the problem is at least
+///    [`GEMM_GPU_THRESHOLD`] MACs (`m * n`), run the certified GEMV via the shared
+///    [`ForgeRuntime`]. A runtime build/dispatch failure is **not** propagated — the
+///    call falls through to the CPU floor so it is never broken.
+/// 2. **CPU floor** — otherwise compute on the CPU via [`gemv_cpu`].
+///
+/// `a` must have `m * n` elements (row-major) and `x` must have `n`. Returns `m`
+/// row elements. Dimension/length mismatches are the only hard errors.
+pub fn gemv_f32(
+    m: usize,
+    n: usize,
+    a: &[f32],
+    x: &[f32],
+) -> Result<Vec<f32>, ForgeError> {
+    validate_gemv_dims(m, n, a.len(), x.len())?;
+
+    let work = m.saturating_mul(n);
+    if caps().wgpu && work >= GEMM_GPU_THRESHOLD {
+        if let Some(out) = gemv_f32_gpu(m, n, a, x) {
+            return Ok(out);
+        }
+        // GPU path was eligible but failed at runtime — fall through to the CPU
+        // floor rather than propagating, so the call is never broken.
+    }
+
+    Ok(gemv_cpu(a, x, m, n))
+}
+
+/// Run the f32 GEMV through the shared [`ForgeRuntime`], returning `None` on any
+/// runtime failure (runtime un-buildable now, or dispatch error) so the caller can
+/// fall through to the CPU floor. Never propagates a GPU error.
+fn gemv_f32_gpu(m: usize, n: usize, a: &[f32], x: &[f32]) -> Option<Vec<f32>> {
+    let cell = forge_rt_cell();
+    let mut guard = cell.lock().ok()?;
+    if guard.is_none() {
+        match ForgeRuntime::new(64 * 1024 * 1024, None) {
+            Ok(rt) => *guard = Some(rt),
+            Err(_) => return None,
+        }
+    }
+    let rt = guard.as_mut()?;
+    rt.gemv(a, x, m, n).ok()
+}
+
+/// Best-path double-precision dense GEMV: row-major `y[M] = A[M×N] · x[N]`, all
+/// `f64`.
+///
+/// Path selection (see the module doc for *why* this differs from [`gemv_f32`] —
+/// WGSL has no `f64`):
+/// 1. **native CUDA-f64 GPU** — when [`caps().cuda`](caps) is set *and* the problem
+///    is at least [`GEMM_GPU_THRESHOLD`] MACs (`m * n`), run the native
+///    double-precision CUDA GEMV. On any runtime error the call falls through to the
+///    CPU floor (never propagated).
+/// 2. **CPU floor** — otherwise compute on the CPU via [`gemv_cpu_f64`].
+///
+/// There is intentionally **no WGSL path here**: WGSL has no `f64`. Today the f64
+/// chain is exactly **CUDA-f64 → CPU**.
+///
+/// `a` must have `m * n` elements (row-major) and `x` must have `n`. Returns `m`
+/// row elements.
+pub fn gemv_f64(
+    m: usize,
+    n: usize,
+    a: &[f64],
+    x: &[f64],
+) -> Result<Vec<f64>, ForgeError> {
+    validate_gemv_dims(m, n, a.len(), x.len())?;
+
+    #[cfg(feature = "cuda")]
+    {
+        let work = m.saturating_mul(n);
+        if caps().cuda && work >= GEMM_GPU_THRESHOLD {
+            if let Ok(out) = gemv_f64_cuda(m, n, a, x) {
+                return Ok(out);
+            }
+            // CUDA path was eligible but errored — fall through to the CPU floor.
+        }
+    }
+
+    Ok(gemv_cpu_f64(a, x, m, n))
+}
+
+/// Native CUDA double-precision GEMV. Builds a transient
+/// [`CudaComputeContext`](super::execute::CudaComputeContext), uploads `a` (binding
+/// 0) / `x` (binding 1) / a zeroed `y` (binding 2) and the `dims = [m, n]` u32
+/// storage buffer (binding 3), compiles
+/// [`GEMV_F64_SRC`](super::emit::cuda_c::GEMV_F64_SRC) via NVRTC, dispatches one
+/// thread per output row (`element_count = m`), and reads back the `y` buffer as
+/// `f64`. This is the exact-double path WGSL cannot provide.
+#[cfg(feature = "cuda")]
+fn gemv_f64_cuda(
+    m: usize,
+    n: usize,
+    a: &[f64],
+    x: &[f64],
+) -> Result<Vec<f64>, ForgeError> {
+    use super::emit::cuda_c::{GEMV_F64_ENTRY, GEMV_F64_SRC};
+    use super::execute::{CudaComputeContext, CudaPipeline, QualiaCompute};
+    use super::Schedule;
+
+    let mut ctx = CudaComputeContext::new(64 * 1024 * 1024)?;
+
+    let element_count = m;
+    let view_a = ctx.allocate_and_write(bytemuck::cast_slice(a), 0, 0)?;
+    let view_x = ctx.allocate_and_write(bytemuck::cast_slice(x), 1, 0)?;
+    let zeros = vec![0.0f64; element_count];
+    let view_y = ctx.allocate_and_write(bytemuck::cast_slice(&zeros), 2, 0)?;
+    // dims = [m, n] as u32, written as a storage buffer (binding 3) — no by-value
+    // uniform, matching compile_cuda_c_source's pointer-only binding ABI.
+    let dims: [u32; 2] = [m as u32, n as u32];
+    let view_dims = ctx.allocate_and_write(bytemuck::cast_slice(&dims), 3, 0)?;
+
+    let buffers = vec![view_a, view_x, view_y, view_dims];
+    let pipeline =
+        CudaPipeline::compile_cuda_c_source(&ctx, GEMV_F64_SRC, GEMV_F64_ENTRY, &[0, 1, 2, 3])?;
+    let schedule = Schedule {
+        workgroup_size: 64,
+        ..Default::default()
+    };
+    pipeline.dispatch(&buffers, &schedule, element_count)?;
+    let mut out = ctx.read_buffer_f64(&view_y)?;
+    out.truncate(element_count);
+    Ok(out)
+}
+
+/// CPU reference for the double-precision dense GEMV — the `f64` mirror of
+/// [`gemv_cpu`]: row-major `y[M] = A[M×N] · x[N]`,
+/// `y[i] = sum_{j<N} A[i*N + j] * x[j]`. The inner `j` sum order matches the
+/// CUDA-f64 kernel so the two agree to f64 summation precision. This is the
+/// always-present f64 floor.
+pub fn gemv_cpu_f64(a: &[f64], x: &[f64], m: usize, n: usize) -> Vec<f64> {
+    let mut y = vec![0.0f64; m];
+    for i in 0..m {
+        let a_row = i * n;
+        let mut acc = 0.0f64;
+        for j in 0..n {
+            acc += a[a_row + j] * x[j];
+        }
+        y[i] = acc;
+    }
+    y
+}
+
+/// Shared dimension/length validation for both GEMV entry points: `a` is `m*n`
+/// (row-major) and `x` is `n`.
+fn validate_gemv_dims(
+    m: usize,
+    n: usize,
+    a_len: usize,
+    x_len: usize,
+) -> Result<(), ForgeError> {
+    if m == 0 || n == 0 {
+        return Err(ForgeError::GpuValidation(
+            "gemv requires m > 0 and n > 0".to_string(),
+        ));
+    }
+    if a_len != m * n {
+        return Err(ForgeError::GpuValidation(format!(
+            "a must have m*n = {} elements; got {}",
+            m * n,
+            a_len
+        )));
+    }
+    if x_len != n {
+        return Err(ForgeError::GpuValidation(format!(
+            "x must have n = {} elements; got {}",
+            n, x_len
+        )));
+    }
+    Ok(())
+}
+
 /// Shared dimension/length validation for both GEMM entry points.
 fn validate_dims(
     m: usize,
@@ -375,6 +550,46 @@ mod tests {
         assert_eq!(gemm_cpu_f64(&a, &b, 2, 3, 2), vec![58.0, 64.0, 139.0, 154.0]);
     }
 
+    /// Non-GPU: a sub-threshold f32 GEMV is forced onto the CPU floor and must match
+    /// the hand-checked 2×3 · 3 reference [6, 15].
+    /// A=[[1,2,3],[4,5,6]], x=[1,1,1].
+    #[test]
+    fn gemv_f32_cpu_fallback_is_correct() {
+        let a = [1.0f32, 2.0, 3.0, 4.0, 5.0, 6.0];
+        let x = [1.0f32, 1.0, 1.0];
+        // 2*3 = 6 MACs, far below GEMM_GPU_THRESHOLD, so this is the CPU path even on
+        // a GPU machine.
+        let out = gemv_f32(2, 3, &a, &x).expect("gemv_f32");
+        assert_eq!(out, vec![6.0, 15.0]);
+    }
+
+    /// Non-GPU: the f64 twin of the above, on the f64 CPU floor.
+    #[test]
+    fn gemv_f64_cpu_fallback_is_correct() {
+        let a = [1.0f64, 2.0, 3.0, 4.0, 5.0, 6.0];
+        let x = [1.0f64, 1.0, 1.0];
+        let out = gemv_f64(2, 3, &a, &x).expect("gemv_f64");
+        assert_eq!(out, vec![6.0, 15.0]);
+    }
+
+    /// Dimension mismatches are hard errors on both GEMV entry points.
+    #[test]
+    fn gemv_dim_mismatch_errors() {
+        assert!(gemv_f32(2, 3, &[1.0; 5], &[1.0; 3]).is_err()); // a too short
+        assert!(gemv_f64(2, 3, &[1.0; 6], &[1.0; 2]).is_err()); // x too short
+        assert!(gemv_f32(0, 3, &[], &[1.0; 3]).is_err()); // m == 0
+    }
+
+    /// `gemv_cpu_f64` agrees with the hand-checked reference on small exact-integer
+    /// inputs, pinning the f64 floor's layout/sum order independently of the
+    /// dispatcher.
+    #[test]
+    fn gemv_cpu_f64_matches_hand_checked() {
+        let a = [1.0f64, 2.0, 3.0, 4.0, 5.0, 6.0];
+        let x = [1.0f64, 1.0, 1.0];
+        assert_eq!(gemv_cpu_f64(&a, &x, 2, 3), vec![6.0, 15.0]);
+    }
+
     // ── GPU / CUDA end-to-end tests (require a real device; run by the orchestrator) ──
 
     /// Deterministic xorshift fill in [-1, 1], so GPU and CPU see identical inputs.
@@ -411,6 +626,22 @@ mod tests {
         }
     }
 
+    /// Above-threshold f32 GEMV on the WGSL GPU path must match the CPU reference
+    /// within f32 summation tolerance. m=n=256 → 65536 MACs ≥ threshold.
+    #[test]
+    #[ignore = "requires a GPU adapter"]
+    fn gemv_f32_gpu_matches_cpu() {
+        let (m, n) = (256usize, 256);
+        let a = det_f32(m * n, 0x6745_4D56_4633_3201);
+        let x = det_f32(n, 0x6745_4D56_4633_3202);
+        let gpu = gemv_f32(m, n, &a, &x).expect("gemv_f32 gpu");
+        let cpu = gemv_cpu(&a, &x, m, n);
+        assert_eq!(gpu.len(), cpu.len());
+        for (g, c) in gpu.iter().zip(cpu.iter()) {
+            assert!((g - c).abs() <= 1.0e-3, "f32 GPU/CPU mismatch: {g} vs {c}");
+        }
+    }
+
     /// Above-threshold f64 GEMM on the native CUDA path must match the f64 CPU
     /// reference to near-exact precision (native double, no emulation).
     #[cfg(feature = "cuda")]
@@ -428,6 +659,29 @@ mod tests {
             .collect();
         let gpu = gemm_f64(m, k, n, &a, &b).expect("gemm_f64 cuda");
         let cpu = gemm_cpu_f64(&a, &b, m, k, n);
+        assert_eq!(gpu.len(), cpu.len());
+        for (g, c) in gpu.iter().zip(cpu.iter()) {
+            assert!((g - c).abs() <= 1.0e-9, "f64 CUDA/CPU mismatch: {g} vs {c}");
+        }
+    }
+
+    /// Above-threshold f64 GEMV on the native CUDA path must match the f64 CPU
+    /// reference to near-exact precision (native double, no emulation). m=n=256.
+    #[cfg(feature = "cuda")]
+    #[test]
+    #[ignore = "requires a CUDA device"]
+    fn gemv_f64_cuda_matches_cpu() {
+        let (m, n) = (256usize, 256);
+        let a: Vec<f64> = det_f32(m * n, 0x6745_4D56_4636_3401)
+            .into_iter()
+            .map(|v| v as f64)
+            .collect();
+        let x: Vec<f64> = det_f32(n, 0x6745_4D56_4636_3402)
+            .into_iter()
+            .map(|v| v as f64)
+            .collect();
+        let gpu = gemv_f64(m, n, &a, &x).expect("gemv_f64 cuda");
+        let cpu = gemv_cpu_f64(&a, &x, m, n);
         assert_eq!(gpu.len(), cpu.len());
         for (g, c) in gpu.iter().zip(cpu.iter()) {
             assert!((g - c).abs() <= 1.0e-9, "f64 CUDA/CPU mismatch: {g} vs {c}");

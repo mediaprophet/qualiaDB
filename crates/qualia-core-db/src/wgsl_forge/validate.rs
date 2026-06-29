@@ -289,6 +289,27 @@ mod tests {
     }
 
     #[test]
+    fn generated_gemv_passes_naga_validation() {
+        let generated = generate_builtin(
+            BuiltinKernel::Gemv,
+            Schedule {
+                workgroup_size: 64,
+                items_per_invocation: 1,
+                vector_width: 1,
+                ..Schedule::default()
+            },
+            TargetBackend::Wgsl,
+        )
+        .unwrap();
+        assert!(generated.source.contains("struct GemvParams"));
+        // The N-loop accumulates A-row * x into the output row.
+        assert!(generated.source.contains("a[a_row + j] * x[j]"));
+        let report = validate_wgsl(&generated.source).expect("Naga validation of gemv");
+        assert_eq!(report.entry_points, vec!["gemv"]);
+        assert_eq!(report.binding_count, 4);
+    }
+
+    #[test]
     fn cooperative_matrix_tile_validates() {
         // Single 8x8x8 tensor-core tile: C = A * B (one subgroup cooperative).
         let source = crate::wgsl_forge::matmul_tc_wgsl();

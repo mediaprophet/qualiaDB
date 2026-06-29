@@ -59,6 +59,16 @@ pub struct GemmParams {
     pub _pad: u32,
 }
 
+/// 16-byte uniform block for the dense GEMV kernel: row-major `y[M] = A[M×N]·x[N]`.
+#[repr(C)]
+#[derive(Debug, Clone, Copy, PartialEq, Pod, Zeroable, Serialize, Deserialize)]
+pub struct GemvParams {
+    pub m: u32,
+    pub n: u32,
+    pub _pad0: u32,
+    pub _pad1: u32,
+}
+
 #[derive(Debug, Clone, Copy, PartialEq, Serialize, Deserialize)]
 pub struct OracleTolerance {
     pub absolute: f32,
@@ -435,6 +445,14 @@ pub fn evaluate_builtin(
         // not a natural GEMM shape parameter).
         return evaluate_gemm(context, schedule, 64, 64, 64, warmups, samples);
     }
+    if builtin == BuiltinKernel::Gemv {
+        // Fixed representative square 256×256 GEMV (256 output rows, one invocation
+        // each). The kernel/oracle handle arbitrary M,N; a fixed square is used here
+        // so the certified evidence is over a stable problem size independent of
+        // `length` (the generic per-element `length` knob is not a natural GEMV shape
+        // parameter).
+        return evaluate_gemv(context, schedule, 256, 256, warmups, samples);
+    }
     // The only remaining builtin is the affine kernel — evaluated by the generic
     // cross-backend path (plan §7), here on the wgpu context.
     evaluate_affine(context, schedule, length, warmups, samples)
@@ -565,6 +583,39 @@ pub fn gemm_tensors(m: usize, k: usize, n: usize, seed: u64) -> (Vec<f32>, Vec<f
         .map(|v| v * scale)
         .collect();
     (a, b)
+}
+
+/// Row-major dense GEMV reference, the bit-for-bit mirror of the emitted `gemv`
+/// kernel: `y[M] = A[M×N] · x[N]`, i.e. `y[i] = sum_{j<N} A[i*N + j] * x[j]`. The
+/// inner-sum order (j ascending) matches the kernel's `j` loop so GPU/CPU agree to
+/// f32 summation precision.
+pub fn gemv_cpu(a: &[f32], x: &[f32], m: usize, n: usize) -> Vec<f32> {
+    let mut y = vec![0.0f32; m];
+    for i in 0..m {
+        let a_row = i * n;
+        let mut acc = 0.0f32;
+        for j in 0..n {
+            acc += a[a_row + j] * x[j];
+        }
+        y[i] = acc;
+    }
+    y
+}
+
+/// Deterministic GEMV test tensors: A (M×N) and x (N), both drawn from the same
+/// xorshift stream as every other oracle vector and scaled by `1/sqrt(N)` so the
+/// length-N dot products stay O(1) and GPU/CPU agree within a tight tolerance.
+pub fn gemv_tensors(m: usize, n: usize, seed: u64) -> (Vec<f32>, Vec<f32>) {
+    let scale = 1.0 / (n.max(1) as f32).sqrt();
+    let a: Vec<f32> = topk_inputs(m * n, seed ^ 0x1111)
+        .into_iter()
+        .map(|v| v * scale)
+        .collect();
+    let x: Vec<f32> = topk_inputs(n, seed ^ 0x2222)
+        .into_iter()
+        .map(|v| v * scale)
+        .collect();
+    (a, x)
 }
 
 /// Differential-oracle evaluation of the cooperative-matrix (tensor-core) 8x8
@@ -1171,6 +1222,96 @@ pub fn evaluate_gemm(
     ))
 }
 
+/// Differential-oracle evaluation for the dense GEMV against [`gemv_cpu`]. One
+/// workgroup-thread per output ROW; the output buffer is `m` elements. Row-major
+/// `y[M] = A[M×N] · x[N]`, all f32.
+pub fn evaluate_gemv(
+    context: &mut WgpuComputeContext,
+    schedule: Schedule,
+    m: usize,
+    n: usize,
+    warmups: usize,
+    samples: usize,
+) -> Result<(GeneratedShader, GpuEvaluation), ForgeError> {
+    if samples == 0 {
+        return Err(ForgeError::GpuValidation("sample count must be non-zero".to_string()));
+    }
+    let kernel = BuiltinKernel::Gemv.spec();
+    schedule.validate(&kernel, &context.constraints)?;
+    context.constraints.supports_kernel(&kernel)?;
+    let generated = emit_shader(&kernel, schedule, TargetBackend::Wgsl)?;
+    validate_wgsl(&generated.source)?;
+
+    let vector_seed = 0x47_45_4D_56_53_45_44_00u64; // "GEMVSED\0" tag
+    let (a, x) = gemv_tensors(m, n, vector_seed);
+    let expected = gemv_cpu(&a, &x, m, n);
+    let element_count = m;
+
+    let view_a = context.allocate_and_write(bytemuck::cast_slice(&a), 0, 0, BindingUsage::StorageRead)?;
+    let view_x = context.allocate_and_write(bytemuck::cast_slice(&x), 1, 0, BindingUsage::StorageRead)?;
+    let output_bytes_len = (element_count * size_of::<f32>()).max(4);
+    let view_y = context.allocate_transient(output_bytes_len, 2, 0, BindingUsage::StorageReadWrite)?;
+    let params = GemvParams {
+        m: m as u32,
+        n: n as u32,
+        _pad0: 0,
+        _pad1: 0,
+    };
+    let view_params = context.allocate_and_write(bytemuck::bytes_of(&params), 3, 0, BindingUsage::Uniform)?;
+
+    let buffers = vec![view_a, view_x, view_y, view_params];
+    let pipeline = WgpuPipeline::compile(context, &generated.source, &kernel.entry_point)?;
+
+    for _ in 0..warmups {
+        pipeline.dispatch(&buffers, &schedule, element_count)?;
+    }
+    let mut timing_samples = Vec::with_capacity(samples);
+    for _ in 0..samples {
+        timing_samples.push(pipeline.dispatch(&buffers, &schedule, element_count)?);
+    }
+    if timing_samples.iter().any(|s| *s == 0) {
+        return Err(ForgeError::GpuValidation("GPU produced a zero-duration timing sample".to_string()));
+    }
+
+    let actual = context.read_buffer_f32(&view_y)?;
+    // Dense f32 GEMV: only the length-N summation order differs between GPU and CPU
+    // (no transcendentals), so a tight tolerance covers accumulation drift.
+    let tolerance = OracleTolerance { absolute: 1.0e-3, relative: 1.0e-3 };
+    let oracle = compare_f32(&expected, &actual, tolerance);
+
+    drop(pipeline);
+    context.clear_transient_allocations();
+
+    if !oracle.passed() {
+        return Err(ForgeError::OracleMismatch(format!(
+            "gemv: {} mismatches; first={:?}, max_abs={}, max_rel={}",
+            oracle.mismatch_count, oracle.first_mismatch, oracle.max_absolute_error, oracle.max_relative_error
+        )));
+    }
+
+    let timing_source = if context.timestamp_supported {
+        TimingSource::GpuTimestamp
+    } else {
+        TimingSource::CompletionClock
+    };
+    let timing = TimingSummary::from_samples(timing_source, &timing_samples)
+        .ok_or_else(|| ForgeError::GpuValidation("GPU produced no timing samples".to_string()))?;
+
+    Ok((
+        generated,
+        GpuEvaluation {
+            adapter: context.adapter.clone(),
+            constraints: context.constraints,
+            oracle,
+            timing,
+            samples_ns: timing_samples,
+            tolerance: (tolerance.absolute, tolerance.relative),
+            vector_seed: Some(vector_seed),
+            vector_hash: vector_hash_f32(&expected),
+        },
+    ))
+}
+
 /// Cross-backend differential-oracle evaluation for the top-k kernel against
 /// [`topk_cpu`] (plan §7). Generic over [`OracleContext`] — the same code runs on
 /// wgpu and CUDA; only [`OracleContext::run_kernel`] differs.
@@ -1695,6 +1836,31 @@ mod tests {
     }
 
     #[test]
+    fn gemv_cpu_matches_hand_checked_2x3() {
+        // A (2×3) · x (3) = y (2), computed by hand. Row-major.
+        //   A = [[1, 2, 3],      x = [1, 1, 1]
+        //        [4, 5, 6]]
+        //   y[0] = 1*1 + 2*1 + 3*1 =  6
+        //   y[1] = 4*1 + 5*1 + 6*1 = 15
+        let a = [1.0f32, 2.0, 3.0, 4.0, 5.0, 6.0];
+        let x = [1.0f32, 1.0, 1.0];
+        let y = gemv_cpu(&a, &x, 2, 3);
+        assert_eq!(y, vec![6.0, 15.0]);
+        // GEMV is the N-column special case of GEMM with N_gemm = 1; a 2×3 · 3×1
+        // GEMM must produce the same vector, confirming the references are consistent.
+        let x_col = gemm_cpu(&a, &x, 2, 3, 1);
+        assert_eq!(x_col, y);
+    }
+
+    #[test]
+    fn gemv_tensors_are_deterministic() {
+        assert_eq!(gemv_tensors(8, 16, 7), gemv_tensors(8, 16, 7));
+        let (a, x) = gemv_tensors(8, 16, 7);
+        assert_eq!(a.len(), 8 * 16);
+        assert_eq!(x.len(), 16);
+    }
+
+    #[test]
     #[ignore = "requires a native wgpu adapter"]
     fn generated_ternary_gemv_matches_oracle_on_real_gpu() {
         let mut context = WgpuComputeContext::new(4 * 1024 * 1024).expect("adapter");
@@ -1728,6 +1894,25 @@ mod tests {
         assert!(
             evaluation.oracle.passed(),
             "gemm GPU/oracle mismatch: {:?}",
+            evaluation.oracle
+        );
+    }
+
+    #[test]
+    #[ignore = "requires a native wgpu adapter"]
+    fn generated_gemv_matches_oracle_on_real_gpu() {
+        let mut context = WgpuComputeContext::new(4 * 1024 * 1024).expect("adapter");
+        let schedule = Schedule {
+            workgroup_size: 64,
+            items_per_invocation: 1,
+            vector_width: 1,
+            ..Default::default()
+        };
+        let (_, evaluation) =
+            evaluate_gemv(&mut context, schedule, 256, 256, 2, 5).expect("gemv evaluation");
+        assert!(
+            evaluation.oracle.passed(),
+            "gemv GPU/oracle mismatch: {:?}",
             evaluation.oracle
         );
     }
