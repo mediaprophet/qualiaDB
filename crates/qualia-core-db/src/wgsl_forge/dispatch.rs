@@ -14,22 +14,34 @@
 //! to come from **CUDA/PTX**, which has a real `double` type and `fma.rn.f64`. That
 //! is the whole reason [`gemm_f32`] and [`gemm_f64`] resolve to different backends:
 //!
-//! | dtype | best path (if available)        | floor (always present) |
-//! |-------|---------------------------------|------------------------|
-//! | f32   | WGSL GEMM ([`ForgeRuntime::gemm`]) | [`gemm_cpu`] (f32)   |
-//! | f64   | native CUDA-f64 GEMM            | [`gemm_cpu_f64`]       |
+//! | dtype | best path (if available)                    | floor (always present) |
+//! |-------|---------------------------------------------|------------------------|
+//! | f32   | WGSL GEMM ([`ForgeRuntime::gemm`])          | [`gemm_cpu`] (f32)     |
+//! | f64   | native CUDA-f64 → df64-WGSL (double-single) | [`gemm_cpu_f64`]       |
 //!
-//! ## The remaining f64-on-non-NVIDIA slot (documented, not implemented)
+//! ## f64 on every GPU: the 3-tier chain (native CUDA → df64-WGSL → CPU)
 //!
-//! For `f64` on a **non-NVIDIA** GPU (no CUDA, but a wgpu adapter is present) the
-//! known technique is *emulated* double precision in WGSL: double-single / `df64`
-//! pair-arithmetic (a hi/lo `vec2<f32>` carrying ~44 effective mantissa bits via
-//! error-free transforms — Dekker/TwoSum/TwoProd). That is **real, separate work**
-//! (its own kernel, its own oracle, its own precision contract) and is **not**
-//! implemented here — it is a clearly-marked future slot, deliberately not faked.
-//! Today the f64 chain is exactly: **native CUDA-f64 → CPU**. On a non-NVIDIA GPU,
-//! f64 therefore runs on the CPU floor (correct, just not GPU-accelerated) until the
-//! df64-WGSL path is built and certified.
+//! `f64` now has a GPU path on **every** machine, not just NVIDIA. The chain in
+//! [`gemm_f64`] is three tiers:
+//!
+//! 1. **native CUDA-f64** ([`gemm_f64_cuda`]) — exact double via PTX `fma.rn.f64`,
+//!    NVIDIA only (`cuda` feature + a CUDA device).
+//! 2. **df64 / double-single WGSL** ([`gemm_f64_df64`]) — *emulated* double on any
+//!    other wgpu adapter (AMD, Intel, Apple, mobile). Each `f64` is a hi/lo pair of
+//!    `f32` and the accumulation uses error-free transforms (Dekker/TwoSum/TwoProd),
+//!    giving ~44–48 effective mantissa bits — well beyond a single `f32`'s 24. The
+//!    kernel is the raw WGSL [`GEMM_DF64_WGSL`](super::emit::GEMM_DF64_WGSL).
+//! 3. **CPU floor** ([`gemm_cpu_f64`]) — exact double, always present, never broken.
+//!
+//! So a non-NVIDIA GPU can get real f64 *acceleration* (tier 2) instead of dropping
+//! straight to the CPU — **but only where the adapter's WGSL float arithmetic preserves
+//! the df64 error-free transforms.** Many drivers (incl. the naga→SPIR-V→NVIDIA-Vulkan
+//! path) reassociate floats (`c - (c - a)` → `a`, `fma(x,y,-(x*y))` → `0`), which
+//! silently collapses df64 to f32 precision. WGSL exposes no portable way to forbid
+//! that, so tier 2 is gated on a runtime precision probe ([`df64_usable`]): df64 runs
+//! only where it actually delivers ~double precision; elsewhere the chain uses native
+//! CUDA (if present) or the exact CPU floor — never a degraded df64 masquerading as f64.
+//! (GEMV's f64 chain is `CUDA-f64 → CPU` — the df64 path is GEMM-only today.)
 
 use std::sync::{Mutex, OnceLock};
 
@@ -192,17 +204,26 @@ fn gemm_f32_gpu(m: usize, k: usize, n: usize, a: &[f32], b: &[f32]) -> Option<Ve
 /// Best-path double-precision dense GEMM: row-major `C[M×N] = A[M×K] · B[K×N]`, all
 /// `f64`.
 ///
-/// Path selection (see the module doc for *why* this differs from [`gemm_f32`]):
-/// 1. **native CUDA-f64 GPU** — when [`caps().cuda`](caps) is set *and* the problem
-///    is at least [`GEMM_GPU_THRESHOLD`] FMAs, run the native double-precision CUDA
-///    GEMM. On any runtime error the call falls through to the CPU floor (never
-///    propagated).
-/// 2. **CPU floor** — otherwise compute on the CPU via [`gemm_cpu_f64`].
+/// # The 3-tier f64 chain ("best f64 path on every machine")
 ///
-/// There is intentionally **no WGSL path here**: WGSL has no `f64`. The
-/// emulated-double (`df64` / double-single) WGSL path for f64 on non-NVIDIA GPUs is
-/// a documented future slot (see the module doc), not implemented — so today the f64
-/// chain is exactly **CUDA-f64 → CPU**.
+/// WGSL has no native `f64`, so double precision on the GPU is reached two different
+/// ways depending on the hardware; this is the whole reason `gemm_f64` resolves
+/// through three tiers rather than the single accelerator arm of [`gemm_f32`]:
+///
+/// | tier | path                              | when                                                    |
+/// |------|-----------------------------------|---------------------------------------------------------|
+/// | 1    | **native CUDA-f64** ([`gemm_f64_cuda`], NVIDIA only) | [`caps().cuda`](caps) and ≥ [`GEMM_GPU_THRESHOLD`] FMAs |
+/// | 2    | **df64 / double-single WGSL** ([`gemm_f64_df64`], any other GPU) | [`caps().wgpu`](caps) and ≥ [`GEMM_GPU_THRESHOLD`] FMAs |
+/// | 3    | **CPU floor** ([`gemm_cpu_f64`])  | otherwise, or if every eligible accelerator errors      |
+///
+/// Tier 1 is *exact* double (native `double` + `fma.rn.f64`). Tier 2 emulates each
+/// `f64` as a hi/lo pair of `f32` with error-free transforms (~44–48 effective
+/// mantissa bits, well beyond a single `f32`'s 24) — so a non-NVIDIA GPU (AMD,
+/// Intel, Apple, mobile) now gets real f64 *acceleration* instead of dropping
+/// straight to the CPU. On any accelerator runtime error the call falls through to
+/// the next tier (errors are **never** propagated), so it is never broken. The CUDA
+/// arm is compiled in only under the `cuda` feature; the df64 arm is always present
+/// (it needs only a wgpu adapter).
 ///
 /// `a` must have `m * k` elements, `b` must have `k * n`; both row-major. Returns
 /// `m * n` row-major elements.
@@ -215,18 +236,65 @@ pub fn gemm_f64(
 ) -> Result<Vec<f64>, ForgeError> {
     validate_dims(m, k, n, a.len(), b.len())?;
 
+    let work = m.saturating_mul(n).saturating_mul(k);
+
+    // Tier 1: native CUDA-f64 (exact double) on an NVIDIA device.
     #[cfg(feature = "cuda")]
     {
-        let work = m.saturating_mul(n).saturating_mul(k);
         if caps().cuda && work >= GEMM_GPU_THRESHOLD {
             if let Ok(out) = gemm_f64_cuda(m, k, n, a, b) {
                 return Ok(out);
             }
-            // CUDA path was eligible but errored — fall through to the CPU floor.
+            // CUDA path was eligible but errored — fall through to the next tier.
         }
     }
 
+    // Tier 2: df64 (double-single) emulated-f64 in WGSL — but ONLY on adapters whose
+    // WGSL float semantics actually preserve the error-free transforms. Many drivers
+    // (incl. the naga->SPIR-V->NVIDIA-Vulkan path) reassociate floats, collapsing the
+    // df64 residuals to ~0 (f32 precision); `df64_usable()` probes for that at runtime
+    // so we never return f32-precision results dressed up as f64 — we drop to the CPU
+    // floor (exact f64) instead.
+    if caps().wgpu && work >= GEMM_GPU_THRESHOLD && df64_usable() {
+        if let Ok(out) = gemm_f64_df64(m, k, n, a, b) {
+            return Ok(out);
+        }
+        // df64 path was eligible but errored — fall through to the CPU floor.
+    }
+
+    // Tier 3: CPU floor (always present, never broken).
     Ok(gemm_cpu_f64(a, b, m, k, n))
+}
+
+/// Runtime probe: does this adapter's WGSL float arithmetic preserve the df64
+/// error-free transforms (genuine ~double precision), or does the driver reassociate
+/// floats and silently collapse df64 to f32? Measured once, then cached.
+///
+/// df64 (double-single) is correct only where each f32 `+`/`-`/`*` rounds per IEEE
+/// without reassociation. Some drivers — notably the naga->SPIR-V->NVIDIA-Vulkan path
+/// on this hardware — algebraically simplify `c - (c - a)` to `a` and `fma(x,y,-(x*y))`
+/// to `0`, which destroys the residual (lo) terms. WGSL exposes no portable way to
+/// forbid that, so we MEASURE it: run a tiny df64 GEMM whose exact f64 result differs
+/// from f32 by ~1e-7, and accept df64 only if it lands within f64 tolerance. On
+/// adapters that fail the probe, the f64 chain uses native CUDA (if present) or the
+/// exact CPU floor — never a degraded df64.
+fn df64_usable() -> bool {
+    static USABLE: OnceLock<bool> = OnceLock::new();
+    *USABLE.get_or_init(|| {
+        if !caps().wgpu {
+            return false;
+        }
+        // 8x8x8 with low-mantissa-bit perturbations: the exact f64 result differs from
+        // an f32 evaluation by ~1e-7, so only a working df64 lands within 1e-9.
+        let n = 8usize;
+        let a: Vec<f64> = (0..n * n).map(|i| 1.0 + (i as f64) * 1.0e-7 + 1.0e-9).collect();
+        let b: Vec<f64> = (0..n * n).map(|i| 1.0 - (i as f64) * 1.0e-7 + 3.0e-10).collect();
+        let cpu = gemm_cpu_f64(&a, &b, n, n, n);
+        match gemm_f64_df64(n, n, n, &a, &b) {
+            Ok(df) => df.iter().zip(&cpu).all(|(d, c)| (d - c).abs() <= 1.0e-9),
+            Err(_) => false,
+        }
+    })
 }
 
 /// Native CUDA double-precision GEMM. Builds a transient
@@ -271,6 +339,132 @@ fn gemm_f64_cuda(
     let mut out = ctx.read_buffer_f64(&view_c)?;
     out.truncate(element_count);
     Ok(out)
+}
+
+/// Split one `f64` into a double-single (`df64`) hi/lo pair of `f32`. `hi` is the
+/// `f64` rounded to nearest `f32`; `lo` is the (exactly representable in `f32`)
+/// residual `v - hi`. Together the pair carries ~44–48 effective mantissa bits, far
+/// beyond a single `f32`'s 24. Inverse of [`df32_to_f64`].
+fn f64_to_df32(v: f64) -> [f32; 2] {
+    let hi = v as f32;
+    let lo = (v - hi as f64) as f32;
+    [hi, lo]
+}
+
+/// Recombine a double-single (`df64`) hi/lo `f32` pair back into an `f64`. The sum
+/// is exact in `f64` (both operands are `f32`-representable and `|lo| ≤ ½ ulp(hi)`),
+/// so this is the exact inverse of [`f64_to_df32`] up to the `f32` rounding of `hi`.
+fn df32_to_f64(hi: f32, lo: f32) -> f64 {
+    hi as f64 + lo as f64
+}
+
+/// Pack an `&[f64]` into a flat `Vec<f32>` of twice the length, hi/lo interleaved
+/// per element (`[hi0, lo0, hi1, lo1, …]`) — the df64 GEMM's input layout. Inverse
+/// of [`unpack_df32`].
+fn pack_df32(values: &[f64]) -> Vec<f32> {
+    let mut out = Vec::with_capacity(values.len() * 2);
+    for &v in values {
+        let [hi, lo] = f64_to_df32(v);
+        out.push(hi);
+        out.push(lo);
+    }
+    out
+}
+
+/// Unpack a flat `&[f32]` of hi/lo-interleaved df64 pairs (`[hi0, lo0, hi1, lo1, …]`)
+/// back into an `&[f64]` of half the length. Inverse of [`pack_df32`]. A trailing
+/// half-pair (odd length) is ignored.
+fn unpack_df32(packed: &[f32]) -> Vec<f64> {
+    packed
+        .chunks_exact(2)
+        .map(|pair| df32_to_f64(pair[0], pair[1]))
+        .collect()
+}
+
+/// Emulated double-precision (`df64` / double-single) dense GEMM on **any** wgpu
+/// adapter: row-major `C[M×N] = A[M×K] · B[K×N]`, all `f64`.
+///
+/// WGSL has no `f64`, so each double is carried as a hi/lo pair of `f32` and the
+/// accumulation runs with error-free transforms (Dekker/Knuth `two_prod`/`two_sum`)
+/// inside the raw kernel [`GEMM_DF64_WGSL`]. This is the portable f64-on-GPU path
+/// that complements the NVIDIA-only native-CUDA-f64 path: an AMD/Intel/Apple/mobile
+/// GPU gets real f64 acceleration here, at ~44–48 effective mantissa bits (vs a
+/// single f32's 24).
+///
+/// Mechanics (mirrors the raw-source path of
+/// [`crate::wgsl_forge::oracle::evaluate_coopmat_loadstore`]): build a transient
+/// [`WgpuComputeContext`], pack `a`→`2*M*K` f32 (binding 0, [`StorageRead`]) and
+/// `b`→`2*K*N` f32 (binding 1, [`StorageRead`]), allocate a zeroed `c` of `2*M*N`
+/// f32 (binding 2, [`StorageReadWrite`]) and `dims = [m, n, k]` as `u32` (binding 3,
+/// [`StorageRead`]), compile [`GEMM_DF64_WGSL`] / [`GEMM_DF64_ENTRY`], dispatch one
+/// invocation per output element (`element_count = m * n`, `workgroup_size = 64`),
+/// read back `c` as `2*M*N` f32 and unpack to `M*N` f64.
+///
+/// [`StorageRead`]: super::execute::BindingUsage::StorageRead
+/// [`StorageReadWrite`]: super::execute::BindingUsage::StorageReadWrite
+pub fn gemm_f64_df64(
+    m: usize,
+    k: usize,
+    n: usize,
+    a: &[f64],
+    b: &[f64],
+) -> Result<Vec<f64>, ForgeError> {
+    use super::emit::{GEMM_DF64_ENTRY, GEMM_DF64_WGSL};
+    use super::execute::{BindingUsage, QualiaCompute, WgpuPipeline};
+    use super::Schedule;
+
+    // Slab must hold a (2*M*K f32) + b (2*K*N f32) on the read slab and c (2*M*N f32)
+    // + dims (3 u32) on the out/read slabs. Size to M*N*16 bytes of headroom (>= the
+    // 2*M*N f32 = M*N*8-byte output, doubled), floored at 4 MiB so small GEMMs still
+    // fit comfortably alongside the inputs.
+    let element_count = m
+        .checked_mul(n)
+        .ok_or_else(|| ForgeError::GpuValidation("m*n overflow in gemm_f64_df64".to_string()))?;
+    let capacity = (element_count.saturating_mul(16)).max(4 << 20);
+    let mut ctx = WgpuComputeContext::new(capacity)?;
+
+    let a_packed = pack_df32(a); // 2*M*K f32
+    let b_packed = pack_df32(b); // 2*K*N f32
+    let view_a = ctx.allocate_and_write(
+        bytemuck::cast_slice(&a_packed),
+        0,
+        0,
+        BindingUsage::StorageRead,
+    )?;
+    let view_b = ctx.allocate_and_write(
+        bytemuck::cast_slice(&b_packed),
+        1,
+        0,
+        BindingUsage::StorageRead,
+    )?;
+    let zeros = vec![0.0f32; element_count * 2]; // 2*M*N f32
+    let view_c = ctx.allocate_and_write(
+        bytemuck::cast_slice(&zeros),
+        2,
+        0,
+        BindingUsage::StorageReadWrite,
+    )?;
+    // dims is a u32 storage buffer [m, n, k] (binding 3, StorageRead) — note the
+    // kernel reads dims[0]=m, dims[1]=n, dims[2]=k.
+    let dims: [u32; 3] = [m as u32, n as u32, k as u32];
+    let view_dims = ctx.allocate_and_write(
+        bytemuck::cast_slice(&dims),
+        3,
+        0,
+        BindingUsage::StorageRead,
+    )?;
+
+    let buffers = vec![view_a, view_b, view_c, view_dims];
+    let pipeline = WgpuPipeline::compile(&ctx, GEMM_DF64_WGSL, GEMM_DF64_ENTRY)?;
+    // @workgroup_size(64); one invocation per output element. The Schedule's
+    // dispatch_workgroups computes ceil(element_count / 64) workgroups.
+    let schedule = Schedule {
+        workgroup_size: 64,
+        ..Default::default()
+    };
+    pipeline.dispatch(&buffers, &schedule, element_count)?;
+    let packed = ctx.read_buffer_f32(&view_c)?; // 2*M*N f32
+    Ok(unpack_df32(&packed))
 }
 
 /// CPU reference for the double-precision dense GEMM — the `f64` mirror of
@@ -614,6 +808,42 @@ mod tests {
         assert_eq!(gemm_cpu_f64(&a, &b, 2, 3, 2), vec![58.0, 64.0, 139.0, 154.0]);
     }
 
+    /// Non-GPU: the df64 (double-single) host pack/unpack helpers round-trip a
+    /// handful of `f64` values to ~1e-15. `f64_to_df32` splits a double into a hi/lo
+    /// `f32` pair carrying ~44–48 mantissa bits; `df32_to_f64` recombines them. The
+    /// residual is the `f32` rounding of `hi` refined by `lo`, far tighter than a
+    /// single `f32` (~1e-7) — this pins the host side of the df64 path independently
+    /// of any GPU.
+    #[test]
+    fn df64_pack_roundtrips() {
+        let values = [
+            0.0f64,
+            1.0,
+            -1.0,
+            0.1,
+            std::f64::consts::PI,
+            -std::f64::consts::E,
+            123.456_789,
+            1.0 / 3.0,
+        ];
+        for &v in &values {
+            let [hi, lo] = f64_to_df32(v);
+            let back = df32_to_f64(hi, lo);
+            assert!(
+                (back - v).abs() <= 1.0e-15 * (1.0 + v.abs()),
+                "df64 roundtrip {v} -> {back} (hi={hi}, lo={lo})"
+            );
+        }
+        // And the flat-vector pack/unpack is the elementwise round-trip.
+        let packed = pack_df32(&values);
+        assert_eq!(packed.len(), values.len() * 2);
+        let unpacked = unpack_df32(&packed);
+        assert_eq!(unpacked.len(), values.len());
+        for (u, v) in unpacked.iter().zip(values.iter()) {
+            assert!((u - v).abs() <= 1.0e-15 * (1.0 + v.abs()), "{u} vs {v}");
+        }
+    }
+
     /// Non-GPU: a sub-threshold f32 GEMV is forced onto the CPU floor and must match
     /// the hand-checked 2×3 · 3 reference [6, 15].
     /// A=[[1,2,3],[4,5,6]], x=[1,1,1].
@@ -779,6 +1009,54 @@ mod tests {
         assert_eq!(gpu.len(), cpu.len());
         for (g, c) in gpu.iter().zip(cpu.iter()) {
             assert!((g - c).abs() <= 1.0e-9, "f64 CUDA/CPU mismatch: {g} vs {c}");
+        }
+    }
+
+    /// df64 (double-single) emulated-f64 GEMM is correct only on adapters that do NOT
+    /// reassociate f32 arithmetic (which would collapse the error-free transforms to
+    /// f32 precision). `df64_usable()` probes this at runtime. This test verifies the
+    /// probe is HONEST and the public `gemm_f64` is correct on every adapter:
+    ///   - where the probe reports usable, the direct df64 GEMM is genuinely f64-precise;
+    ///   - regardless, `gemm_f64` lands within f64 tolerance via the best working path
+    ///     (df64 if usable, else native CUDA-f64, else the exact CPU floor).
+    /// On the naga->SPIR-V->NVIDIA-Vulkan path here, the probe reports NOT usable (the
+    /// driver reassociates floats), so df64 is correctly skipped and CUDA/CPU is used.
+    #[test]
+    #[ignore = "requires a GPU adapter"]
+    fn df64_precision_is_probed_and_honest() {
+        let (m, k, n) = (64usize, 64, 64);
+        let a: Vec<f64> = det_f32(m * k, 0x6446_3634_4D4D_3401)
+            .into_iter()
+            .map(|x| x as f64)
+            .collect();
+        let b: Vec<f64> = det_f32(k * n, 0x6446_3634_4D4D_3402)
+            .into_iter()
+            .map(|x| x as f64)
+            .collect();
+        let cpu = gemm_cpu_f64(&a, &b, m, k, n);
+
+        if df64_usable() {
+            // The probe says this adapter preserves the error-free transforms — so the
+            // direct df64 GEMM MUST be genuinely f64-precise.
+            let df = gemm_f64_df64(m, k, n, &a, &b).expect("df64 gpu");
+            for (d, c) in df.iter().zip(cpu.iter()) {
+                assert!(
+                    (d - c).abs() <= 1.0e-9,
+                    "df64 reported usable but imprecise: {d} vs {c}"
+                );
+            }
+        } else {
+            eprintln!(
+                "df64 not usable on this adapter (driver reassociates floats) — \
+                 the f64 chain uses native CUDA or the exact CPU floor instead."
+            );
+        }
+
+        // The PUBLIC f64 entry point must be correct on every adapter, via whichever
+        // tier actually works (df64 / CUDA-f64 / CPU).
+        let chain = gemm_f64(m, k, n, &a, &b).expect("gemm_f64");
+        for (g, c) in chain.iter().zip(cpu.iter()) {
+            assert!((g - c).abs() <= 1.0e-9, "gemm_f64 chain incorrect: {g} vs {c}");
         }
     }
 

@@ -4,6 +4,7 @@ pub mod msl;
 pub mod ptx;
 pub mod cuda_c;
 pub mod coopmat;
+pub mod df64;
 pub mod dxc;
 pub mod spirv;
 
@@ -16,6 +17,7 @@ pub use hlsl::emit_hlsl;
 pub use ptx::emit_ptx;
 pub use cuda_c::emit_cuda_c;
 pub use coopmat::matmul_tc_wgsl;
+pub use df64::{GEMM_DF64_ENTRY, GEMM_DF64_WGSL};
 pub use dxc::compile_hlsl_to_spirv;
 pub use spirv::{decode_spirv_words, emit_spirv};
 
