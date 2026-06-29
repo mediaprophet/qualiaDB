@@ -157,6 +157,12 @@ whole-graph certificate = **AND of per-node certificates**; a stale node re-cert
 
 ## 8. Known constraints (from adversarial verification — recorded, not glossed)
 
+> wgpu/naga upstream issues hit by this project (coopmat, df64-reassociation, the read/read_write
+> validation rule, …) are categorized and tracked — with the soft-fork → PR workflow — in
+> [`docs/WGPU_UPSTREAM_TRACKING.md`](../WGPU_UPSTREAM_TRACKING.md). Net: one genuine upstream bug
+> (coopmat, fix merged upstream 2026-06-29, unreleased); the rest were app-side (fixed) or spec limits.
+
+
 1. **Multi-node GPU execution has per-node submit latency.** `WgpuPipeline::dispatch()` builds and
    submits **one encoder per call** (`execute/wgpu.rs`). The Phase-4 graph executor (Option A) loops
    `dispatch()` per node with intermediates kept GPU-side in `QualiaSlabAllocator` — correct, but it
