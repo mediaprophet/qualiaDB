@@ -147,15 +147,45 @@ pub struct ForgeGraphExecutor {
 }
 
 impl ForgeGraphExecutor {
-    /// Create an executor with the default per-slab capacity ([`EXEC_CAPACITY`]). Acquires the
-    /// GPU adapter + device once; reuse the returned value across calls/decode steps.
+    /// Create an executor with the default per-slab capacity ([`EXEC_CAPACITY`]). Acquires its
+    /// **own** GPU adapter + device once; reuse the returned value across calls/decode steps.
+    /// To instead run on the process-wide LLM device, use [`Self::on_shared_gpu`].
     pub fn new() -> Result<Self, ForgeError> {
         Self::with_capacity(EXEC_CAPACITY)
     }
 
-    /// Create an executor with an explicit per-slab capacity in bytes.
+    /// Create an executor with an explicit per-slab capacity in bytes, on its own device.
     pub fn with_capacity(capacity_bytes: usize) -> Result<Self, ForgeError> {
-        Ok(Self { ctx: WgpuComputeContext::new(capacity_bytes)? })
+        Ok(Self::with_context(WgpuComputeContext::new(capacity_bytes)?))
+    }
+
+    /// Wrap an executor around a **caller-supplied** context — e.g. one built on the process-wide
+    /// [`crate::gpu_context::shared_gpu`] device via [`WgpuComputeContext::from_device`]. This is
+    /// how the forge is made to run on the SAME device that owns the resident LLM weights / KV
+    /// cache instead of spinning up a second device (LLM-on-forge plan, Phase 1a).
+    pub fn with_context(ctx: WgpuComputeContext) -> Self {
+        Self { ctx }
+    }
+
+    /// Build an executor on the process-wide shared GPU device ([`crate::gpu_context::shared_gpu`]),
+    /// at the default per-slab capacity, so the forge shares the device that owns LLM weights +
+    /// KV cache. Native only (`shared_gpu` is host-side). The keystone entry point for decode-on-forge.
+    #[cfg(not(target_arch = "wasm32"))]
+    pub fn on_shared_gpu() -> Result<Self, ForgeError> {
+        Self::on_shared_gpu_with_capacity(EXEC_CAPACITY)
+    }
+
+    /// [`Self::on_shared_gpu`] with an explicit per-slab capacity in bytes.
+    #[cfg(not(target_arch = "wasm32"))]
+    pub fn on_shared_gpu_with_capacity(capacity_bytes: usize) -> Result<Self, ForgeError> {
+        let shared = crate::gpu_context::shared_gpu();
+        let ctx = WgpuComputeContext::from_device(
+            shared.device.clone(),
+            shared.queue.clone(),
+            &shared.adapter_caps,
+            capacity_bytes,
+        )?;
+        Ok(Self::with_context(ctx))
     }
 
     /// Borrow the underlying context (e.g. to read adapter identity / profile).
@@ -832,6 +862,70 @@ mod tests {
             assert_eq!(gpu.len(), cpu.len());
             for (a, b) in gpu.iter().zip(cpu.iter()) {
                 assert!((a - b).abs() <= 1e-2 * b.abs().max(1.0), "ffn: {a} vs {b}");
+            }
+        }
+    }
+
+    /// Device-unification cert (LLM-on-forge Phase 1a): the forge running on the **process-wide
+    /// shared GPU device** ([`crate::gpu_context::shared_gpu`], the device that owns the LLM
+    /// weights + KV cache) produces results identical (within f32 tol) to the composed CPU oracle —
+    /// for a full **faithful decode block** (RMSNorm·eps → scaled attention → residual → SwiGLU-FFN
+    /// → residual). Proves `WgpuComputeContext::from_device` + `ForgeGraphExecutor::on_shared_gpu`
+    /// run real multi-node graphs correctly on the shared device, not a second one.
+    #[test]
+    #[ignore = "requires a GPU adapter"]
+    fn shared_device_executor_matches_cpu_oracle() {
+        let mut exec = ForgeGraphExecutor::on_shared_gpu()
+            .expect("forge executor on shared_gpu device");
+
+        // The forge must report the SAME adapter as the process-wide shared device — i.e. it did
+        // not silently spin up a second adapter/device.
+        let shared = crate::gpu_context::shared_gpu();
+        let forge_adapter = &exec.context().adapter;
+        assert_eq!(
+            forge_adapter.vendor, shared.adapter_caps.vendor,
+            "forge ran on a different vendor than shared_gpu"
+        );
+        assert_eq!(
+            forge_adapter.device, shared.adapter_caps.device,
+            "forge ran on a different device than shared_gpu"
+        );
+
+        // softmax (1024-wide) on the shared device matches the oracle and is a distribution.
+        {
+            let n = 1024usize;
+            let x: Vec<f32> = (0..n).map(|i| ((i * 13 % 97) as f32) * 0.1 - 5.0).collect();
+            let g = softmax_graph(n as u32).unwrap();
+            let gpu = exec.run(&g, &[x.clone()]).expect("softmax shared-gpu");
+            let cpu = execute_graph_cpu(&g, &[x]).unwrap();
+            for (a, b) in gpu.iter().zip(cpu.iter()) {
+                assert!((a - b).abs() <= 1e-4, "softmax(shared): {a} vs {b}");
+            }
+            assert!((gpu.iter().sum::<f32>() - 1.0).abs() < 1e-3);
+        }
+
+        // Full faithful decode block on the SAME held executor (the decode-step usage pattern):
+        // externals = [x, Kᵀ, V, Wg, Wu, Wd, inv_scale, eps].
+        {
+            let (d, kv, ffn) = (64u32, 32u32, 128u32);
+            let inv_scale = 1.0f32 / (d as f32).sqrt();
+            let eps = 1e-5f32;
+            let x: Vec<f32> = (0..d).map(|i| ((i % 17) as f32) * 0.05 - 0.4).collect();
+            let kt: Vec<f32> = (0..d * kv).map(|i| ((i * 5 % 7) as f32) * 0.03 - 0.09).collect();
+            let v: Vec<f32> = (0..kv * d).map(|i| ((i * 3 % 5) as f32) * 0.04 - 0.08).collect();
+            let wg: Vec<f32> = (0..d * ffn).map(|i| ((i % 13) as f32) * 0.02 - 0.12).collect();
+            let wu: Vec<f32> = (0..d * ffn).map(|i| ((i % 11) as f32) * 0.015 - 0.07).collect();
+            let wd: Vec<f32> = (0..ffn * d).map(|i| ((i % 7) as f32) * 0.01 - 0.03).collect();
+            let ext = vec![x, kt, v, wg, wu, wd, vec![inv_scale], vec![eps]];
+            let g = decode_block_graph(d, kv, ffn).unwrap();
+            let gpu = exec.run(&g, &ext).expect("decode-block shared-gpu");
+            let cpu = execute_graph_cpu(&g, &ext).unwrap();
+            assert_eq!(gpu.len(), cpu.len());
+            for (a, b) in gpu.iter().zip(cpu.iter()) {
+                assert!(
+                    (a - b).abs() <= 1e-2 * b.abs().max(1.0),
+                    "decode-block(shared): {a} vs {b}"
+                );
             }
         }
     }

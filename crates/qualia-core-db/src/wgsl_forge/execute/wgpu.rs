@@ -10,6 +10,8 @@ use crate::wgsl_forge::{
     emit_shader, AdapterConstraints, AdapterIdentity, ForgeError, HardwareProfile, KernelSpec,
     Schedule, TargetBackend,
 };
+#[cfg(not(target_arch = "wasm32"))]
+use crate::gpu_context::GpuAdapterCaps;
 
 pub struct WgpuComputeContext {
     pub device: wgpu::Device,
@@ -152,6 +154,117 @@ impl WgpuComputeContext {
             mapped_at_creation: false,
         });
 
+        let timestamp_resources = timestamp_supported.then(|| TimestampResources::new(&device));
+
+        Ok(Self {
+            device,
+            queue,
+            adapter,
+            constraints,
+            profile,
+            allocator,
+            slab,
+            out_slab,
+            timestamp_supported,
+            timestamp_period_ns,
+            timestamp_resources,
+            pipeline_cache: RefCell::new(HashMap::new()),
+        })
+    }
+
+    /// Build a forge context on an **already-existing** `wgpu::Device` + `Queue` (e.g. the
+    /// process-wide [`crate::gpu_context::shared_gpu`]) instead of requesting a *second* adapter
+    /// and device the way [`Self::new`] does. wgpu `Device`/`Queue` are cheap `Arc` clones, so the
+    /// forge then runs on the **same** device that owns the resident LLM weights + KV cache — the
+    /// device-unification keystone for running decode on the forge (LLM-on-forge plan, Phase 1a).
+    ///
+    /// Adapter identity / constraints / hardware profile are reconstructed from the **live**
+    /// `device.limits()` + `device.features()` plus the caller's [`GpuAdapterCaps`] snapshot,
+    /// because the original `wgpu::Adapter` is consumed at shared-gpu init and not retained.
+    ///
+    /// Honest boundary: this inherits the *host* device's negotiated features and limits verbatim.
+    /// In particular, if the shared device was created without the ray-tracing acceleration-structure
+    /// limits raised (as `shared_gpu` currently does), RT-core Neighbor cannot create BLAS/TLAS on
+    /// this context even when `supports_rt_cores` is true — `from_device` does not silently widen the
+    /// host device. The decode path (matmul/elementwise/reduce) needs none of that.
+    #[cfg(not(target_arch = "wasm32"))]
+    pub fn from_device(
+        device: wgpu::Device,
+        queue: wgpu::Queue,
+        caps: &GpuAdapterCaps,
+        capacity_bytes: usize,
+    ) -> Result<Self, ForgeError> {
+        let features = device.features();
+        let limits = device.limits();
+        let timestamp_supported = features.contains(wgpu::Features::TIMESTAMP_QUERY);
+
+        // Mirror `new()`'s capability derivation, but from the live device + caps snapshot.
+        let mut constraints = AdapterConstraints::from_wgpu_limits(&limits);
+        constraints.supports_subgroups = features.contains(wgpu::Features::SUBGROUP);
+        constraints.supports_coopmat =
+            features.contains(wgpu::Features::EXPERIMENTAL_COOPERATIVE_MATRIX);
+        constraints.supports_rt_cores =
+            features.contains(wgpu::Features::EXPERIMENTAL_RAY_QUERY);
+        // AMD wavefronts are 64-wide; others 32. Vendor id 0x1002 = AMD.
+        constraints.warp_size = if caps.vendor == 0x1002 { 64 } else { 32 };
+
+        let topology = if matches!(
+            caps.device_type,
+            wgpu::DeviceType::IntegratedGpu | wgpu::DeviceType::Cpu
+        ) {
+            MemoryTopology::Unified { zero_copy: true }
+        } else {
+            MemoryTopology::Discrete { staging_required: true }
+        };
+        let memory_class = match topology {
+            MemoryTopology::Unified { .. } => "unified",
+            MemoryTopology::Discrete { .. } => "discrete",
+        }
+        .to_string();
+
+        let adapter = AdapterIdentity {
+            name: caps.name.clone(),
+            vendor: caps.vendor,
+            device: caps.device,
+            device_type: format!("{:?}", caps.device_type),
+            backend: format!("{:?}", caps.backend),
+            driver: caps.driver.clone(),
+            driver_info: caps.driver_info.clone(),
+        };
+        let timestamp_period_ns = if timestamp_supported {
+            queue.get_timestamp_period()
+        } else {
+            0.0
+        };
+        let profile = HardwareProfile {
+            adapter: adapter.clone(),
+            constraints,
+            memory_class,
+            supports_timestamp_query: timestamp_supported,
+            max_compute_workgroup_storage_size: limits.max_compute_workgroup_storage_size,
+            max_storage_buffer_binding_size: limits.max_storage_buffer_binding_size,
+            min_storage_buffer_offset_alignment: limits.min_storage_buffer_offset_alignment,
+            min_uniform_buffer_offset_alignment: limits.min_uniform_buffer_offset_alignment,
+        };
+
+        let allocator = QualiaSlabAllocator::new(topology, capacity_bytes);
+        let slab = device.create_buffer(&wgpu::BufferDescriptor {
+            label: Some("forge-slab"),
+            size: capacity_bytes as u64,
+            usage: wgpu::BufferUsages::STORAGE
+                | wgpu::BufferUsages::UNIFORM
+                | wgpu::BufferUsages::COPY_DST
+                | wgpu::BufferUsages::COPY_SRC,
+            mapped_at_creation: false,
+        });
+        let out_slab = device.create_buffer(&wgpu::BufferDescriptor {
+            label: Some("forge-out-slab"),
+            size: capacity_bytes as u64,
+            usage: wgpu::BufferUsages::STORAGE
+                | wgpu::BufferUsages::COPY_DST
+                | wgpu::BufferUsages::COPY_SRC,
+            mapped_at_creation: false,
+        });
         let timestamp_resources = timestamp_supported.then(|| TimestampResources::new(&device));
 
         Ok(Self {

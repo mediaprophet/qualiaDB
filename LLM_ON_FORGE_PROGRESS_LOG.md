@@ -1,0 +1,70 @@
+# LLM-on-Forge — Progress Log
+
+Honest engineering record for wiring the LLM forward pass onto the DAG-IR forge, off the native
+q42/p64 substrate, with q42 provenance + the existing Phase-8 governance intact.
+
+- **Plan:** [`docs/plans/llm-on-forge-q42-p64.md`](docs/plans/llm-on-forge-q42-p64.md)
+- **Handover:** [`docs/HANDOVER-llm-on-forge.md`](docs/HANDOVER-llm-on-forge.md)
+- **Branch:** `feature/p64-manifold-wal-eigensolver` · **Hardware:** NVIDIA RTX A2000 (8 GB)
+
+Measurement-honesty rule applies: real numbers or "not measured"; never extrapolate a kernel
+figure to end-to-end tok/s.
+
+---
+
+## 2026-06-29 — Phase 1a: device unification (DONE)
+
+**Step / phase:** Phase 1a (device unification) — the keystone prerequisite for weight residency
+and the p64 bake-off. **Status: done, GPU-certified on A2000.**
+
+**What was built** (files: `crates/qualia-core-db/src/wgsl_forge/execute/wgpu.rs`,
+`crates/qualia-core-db/src/wgsl_forge/graph_ops/executor.rs`):
+
+- `WgpuComputeContext::from_device(device, queue, caps, capacity_bytes)` — builds a forge context
+  on an **already-existing** `wgpu::Device` + `Queue` (cheap `Arc` clones) instead of requesting a
+  *second* adapter/device the way `new()` does. Adapter identity / constraints / hardware profile
+  are reconstructed from the **live** `device.limits()` + `device.features()` plus the caller's
+  `GpuAdapterCaps` snapshot (the original `wgpu::Adapter` is consumed at shared-gpu init and not
+  retained). The existing `new()` path (own device, used by standalone forge tests) is untouched.
+- `ForgeGraphExecutor::with_context(ctx)` + `ForgeGraphExecutor::on_shared_gpu()` /
+  `on_shared_gpu_with_capacity()` — construct an executor around a caller-supplied context, and a
+  convenience that builds one on the process-wide `gpu_context::shared_gpu()` device. This is the
+  entry point by which the forge runs on the **same** device that owns the resident LLM weights +
+  KV cache, rather than a separate device. `with_capacity()` now routes through `with_context()`.
+- A GPU cert `shared_device_executor_matches_cpu_oracle` (`#[ignore]`, native) that builds the
+  executor via `on_shared_gpu()`, asserts its reported adapter `vendor`/`device` equal the shared
+  device's (i.e. **no second adapter was created**), and runs softmax (1024-wide) + a full faithful
+  decode block (RMSNorm·eps → scaled attention → residual → SwiGLU-FFN → residual) against the
+  composed CPU oracle within f32 tolerance.
+
+**Mechanism in one sentence:** the forge can now adopt the LLM's own GPU device instead of spinning
+up its own, so subsequent phases (resident weights, p64 bake-off, decode-loop swap) can share one
+device + one set of weight buffers.
+
+**Measured results** (A2000, release `--ignored`, `--test-threads=1`):
+
+- `shared_device_executor_matches_cpu_oracle` — **PASS** (forge on `shared_gpu()` matches CPU oracle
+  for softmax + faithful decode block; adapter vendor/device equal the shared device's).
+- Existing certs still green: `execute_graph_gpu_matches_cpu_oracle`, `p4b_graphs_gpu_match_cpu_oracle`,
+  `pipeline_cache_amortizes_across_runs` — all PASS.
+- `decode_block_kernel_uplift_bench` (own-device path, unchanged by 1a): d=576/kv=128/ffn=1536,
+  30 nodes, 12 cached pipelines → GPU reused **12.573 ms/call** (~0.419 ms/node) vs CPU oracle
+  56.918 ms/call = **4.53× CPU**. One block, NOT end-to-end tok/s, NOT ×L layers.
+- Non-GPU `wgsl_forge::` sweep: **134 passed / 0 failed / 45 ignored**. Lib builds clean plain and
+  `--features cuda` (both EXIT 0).
+
+**Honest boundary:** `from_device` inherits the host device's negotiated features + limits verbatim.
+`shared_gpu()` today does **not** raise the ray-tracing acceleration-structure limits, so RT-core
+Neighbor cannot create BLAS/TLAS on a shared-device forge context even though `supports_rt_cores`
+reports true. `from_device` deliberately does **not** silently widen the host device. The decode
+path (matmul / elementwise / reduce / softmax) needs none of that, so 1a is unaffected; RT-on-shared
+is a later coordination point with the LLM lane (it would mean `shared_gpu` raising those limits).
+
+**⚑ Where I need the human:** none this step. (The bake-off acceptable-quality threshold for the
+AWQ-ternary FFN — Phase 3 — will be a curation call, flagged when we reach it.)
+
+**Next step:** Phase 1b — weight residency. Add a persistent weight region + `load_weights` to the
+executor so the big matrices upload **once** (referenced by offset across tokens) and `run()` takes
+activation-only externals; then the p64→forge bridge (`P64TensorIndex::from_p64` → role-tagged
+graph externals) and the real-layer builders (QKV, output proj, multi-head, RoPE) for the
+one-real-layer bake-off vs the hand-written `dispatch_attention_pass`/`dispatch_ffn_pass`.
