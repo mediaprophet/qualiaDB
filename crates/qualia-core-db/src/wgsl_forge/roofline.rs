@@ -91,6 +91,17 @@ pub fn roofline_for(kernel: BuiltinKernel, n: u64) -> RooflineEstimate {
             let bytes = (n * (k / 16) + k + n + n) * 4;
             RooflineEstimate::new(flops, bytes)
         }
+        // Dense GEMM C[M×N] = A[M×K]·B[K×N] (K=64). `n` is the output-element
+        // count (M*N), one invocation each. Per output element: K MACs = 2K FLOP.
+        // Bytes: the K-length A-row and B-column read per element (2*K), plus the
+        // one output write — i.e. (n*(2*K + 1))*4. Large-N this is compute-bound,
+        // the desired roofline answer for a dense matmul.
+        BuiltinKernel::Gemm => {
+            let k = 64u64;
+            let flops = n * 2 * k;
+            let bytes = (n * (2 * k + 1)) * 4;
+            RooflineEstimate::new(flops, bytes)
+        }
     }
 }
 

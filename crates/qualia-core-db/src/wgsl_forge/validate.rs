@@ -268,6 +268,27 @@ mod tests {
     }
 
     #[test]
+    fn generated_gemm_passes_naga_validation() {
+        let generated = generate_builtin(
+            BuiltinKernel::Gemm,
+            Schedule {
+                workgroup_size: 64,
+                items_per_invocation: 1,
+                vector_width: 1,
+                ..Schedule::default()
+            },
+            TargetBackend::Wgsl,
+        )
+        .unwrap();
+        assert!(generated.source.contains("struct GemmParams"));
+        // The K-loop accumulates A-row * B-column into the output element.
+        assert!(generated.source.contains("kk * params.n + col"));
+        let report = validate_wgsl(&generated.source).expect("Naga validation of gemm");
+        assert_eq!(report.entry_points, vec!["gemm"]);
+        assert_eq!(report.binding_count, 4);
+    }
+
+    #[test]
     fn cooperative_matrix_tile_validates() {
         // Single 8x8x8 tensor-core tile: C = A * B (one subgroup cooperative).
         let source = crate::wgsl_forge::matmul_tc_wgsl();

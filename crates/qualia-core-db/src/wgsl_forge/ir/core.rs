@@ -370,11 +370,12 @@ pub enum BuiltinKernel {
     TopK,
     RayProbe,
     TernaryGemv,
+    Gemm,
 }
 
 impl BuiltinKernel {
-    pub const ALL: [Self; 6] =
-        [Self::AffineF32, Self::FusedFfn, Self::P64Project, Self::TopK, Self::RayProbe, Self::TernaryGemv];
+    pub const ALL: [Self; 7] =
+        [Self::AffineF32, Self::FusedFfn, Self::P64Project, Self::TopK, Self::RayProbe, Self::TernaryGemv, Self::Gemm];
 
     pub const fn name(self) -> &'static str {
         match self {
@@ -384,6 +385,7 @@ impl BuiltinKernel {
             Self::TopK => "topk",
             Self::RayProbe => "ray-probe",
             Self::TernaryGemv => "ternary-gemv",
+            Self::Gemm => "gemm",
         }
     }
 
@@ -400,6 +402,7 @@ impl BuiltinKernel {
                 | Self::P64Project
                 | Self::RayProbe
                 | Self::TernaryGemv
+                | Self::Gemm
         )
     }
 
@@ -549,6 +552,26 @@ impl BuiltinKernel {
                 ops: Vec::new(),
                 shared_memory: Vec::new(),
             },
+            Self::Gemm => KernelSpec {
+                id: self.name().to_string(),
+                semantic_version: 1,
+                entry_point: "gemm".to_string(),
+                // General dense row-major GEMM, all f32: one invocation per output
+                // element o = i*N + j computes C[i][j] = sum_k A[i*K+k] * B[k*N+j].
+                description: "C[i][j] = sum_k A[i*K+k] * B[k*N+j]".to_string(),
+                buffers: vec![
+                    BufferSpec { group: 0, binding: 0, name: "a".to_string(), element: BufferElement::Scalar(ScalarType::F32), access: BufferAccess::StorageRead },
+                    BufferSpec { group: 0, binding: 1, name: "b".to_string(), element: BufferElement::Scalar(ScalarType::F32), access: BufferAccess::StorageRead },
+                    BufferSpec { group: 0, binding: 2, name: "c".to_string(), element: BufferElement::Scalar(ScalarType::F32), access: BufferAccess::StorageReadWrite },
+                    // A generic 16-byte uniform block (m, n, k, _pad), reusing the
+                    // AffineParams element purely as a 16-byte uniform.
+                    BufferSpec { group: 0, binding: 3, name: "params".to_string(), element: BufferElement::AffineParams, access: BufferAccess::Uniform },
+                ],
+                // The triple-index + K-loop accumulate body is target-specialised in
+                // the WGSL emitter; dimensions come from the uniform params block.
+                ops: Vec::new(),
+                shared_memory: Vec::new(),
+            },
         }
     }
 }
@@ -564,6 +587,7 @@ impl FromStr for BuiltinKernel {
             "topk" | "top-k" | "top_k" => Ok(Self::TopK),
             "ray-probe" | "ray_probe" | "rayquery" | "ray_query" | "rt" => Ok(Self::RayProbe),
             "ternary-gemv" | "ternary_gemv" | "ternary" | "bitnet" => Ok(Self::TernaryGemv),
+            "gemm" | "matmul" | "dense-gemm" | "dense_gemm" => Ok(Self::Gemm),
             other => Err(ForgeError::UnknownKernel(other.to_string())),
         }
     }

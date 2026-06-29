@@ -53,6 +53,10 @@ fn emit_kernel_body(
         return emit_ternary_gemv_wgsl(source, kernel, schedule);
     }
 
+    if kernel.id == "gemm" {
+        return emit_gemm_wgsl(source, kernel, schedule);
+    }
+
     if kernel.id == "ray-probe" {
         // The ray-query enable extension must precede any other item.
         writeln!(source, "enable wgpu_ray_query;").map_err(|error| ForgeError::Emission(error.to_string()))?;
@@ -432,6 +436,52 @@ fn {entry}(@builtin(global_invocation_id) gid: vec3<u32>) {{
         }}
     }}
     output[o] = scale[o] * acc;
+}}"#,
+        wg = wg,
+        entry = kernel.entry_point
+    )
+    .map_err(|error| ForgeError::Emission(error.to_string()))?;
+    Ok(())
+}
+
+/// General dense row-major GEMM, all f32: one invocation per output element
+/// `o = i*N + j` computes `C[i][j] = sum_k A[i*K+k] * B[k*N+j]`. Self-contained
+/// (no shared memory); dimensions come from the uniform params block (m, n, k, _pad).
+/// The K dimension is `params.k`; the inner accumulation index is `kk` so it never
+/// shadows the dimension name.
+fn emit_gemm_wgsl(
+    source: &mut String,
+    kernel: &KernelSpec,
+    schedule: Schedule,
+) -> Result<(), ForgeError> {
+    let wg = schedule.workgroup_size;
+    writeln!(
+        source,
+        r#"
+struct GemmParams {{
+    m: u32,
+    n: u32,
+    k: u32,
+    _pad: u32,
+}}
+
+@group(0) @binding(0) var<storage, read> a: array<f32>;
+@group(0) @binding(1) var<storage, read> b: array<f32>;
+@group(0) @binding(2) var<storage, read_write> c: array<f32>;
+@group(0) @binding(3) var<uniform> params: GemmParams;
+
+@compute @workgroup_size({wg})
+fn {entry}(@builtin(global_invocation_id) gid: vec3<u32>) {{
+    let o = gid.x;
+    if (o >= params.m * params.n) {{ return; }}
+    let row = o / params.n;
+    let col = o % params.n;
+    var acc = 0.0;
+    let a_row = row * params.k;
+    for (var kk: u32 = 0u; kk < params.k; kk = kk + 1u) {{
+        acc = acc + a[a_row + kk] * b[kk * params.n + col];
+    }}
+    c[o] = acc;
 }}"#,
         wg = wg,
         entry = kernel.entry_point
