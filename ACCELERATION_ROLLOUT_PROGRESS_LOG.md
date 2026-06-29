@@ -675,3 +675,43 @@ real decode loop uses, so this number is representative of the per-block kernel 
 **⚑ Where I need the human** — none this step.
 **Next** — optional: the #56 coopmat soft-fork (portable tensor cores), and stacking the certified decode
 block ×L behind a held executor for a full-model kernel-level figure.
+
+---
+
+## 2026-06-29 · DAG-IR decode block — **faithfulness fix** (1/√d attention scale + RMSNorm eps), found by an adversarial review; honest claim corrected
+
+**Step / phase** — "make it awesome" correctness step. A parallel adversarial-review pass (workflow
+wzh4zr3r0: verify-perf / next-cliff / soft-fork / faithfulness) flagged a **real, undocumented gap**:
+the decode block's attention was missing the standard **`1/√d` score scaling**, and RMSNorm had no
+**`eps`** — so "certified LLM decode" **overreached** (it certified the *implemented* graph, which was
+not faithful to a real transformer). Fixed.
+
+**What was wrong → what was fixed**
+- `attention_graph` computed `softmax(q·Kᵀ)·V` — **missing the `1/√d_head` scale** every real
+  scaled-dot-product attention applies. → now `softmax((q·Kᵀ)·inv_scale)·V`, `inv_scale=[1/√d]` a scalar
+  graph input (Broadcast + Mul before softmax).
+- `push_rmsnorm` computed `rsqrt(mean(x²))` — **no eps** (a documented omission, but a real
+  faithfulness/stability gap: `rsqrt(~0)→∞`). → now `rsqrt(mean(x²)+eps)`, `eps=[1e-5]` a scalar input.
+- `decode_block_graph` externals are now `[x, kt, v, Wg, Wu, Wd, inv_scale, eps]`; docstrings state the
+  honest modeling choices (single head; RoPE assumed applied upstream or absent; learned RMSNorm γ folded
+  into Wg/Wu; KV cache given not computed).
+
+**Measured results (A2000)**
+- CPU oracles updated to the **faithful** reference (scaled scores + eps) and **green**:
+  `attention_cpu_oracle_matches_reference`, `decode_block_cpu_oracle_matches_reference`.
+- GPU certify green: `p4b_graphs_gpu_match_cpu_oracle`, `execute_graph_gpu_matches_cpu_oracle`,
+  `pipeline_cache_amortizes_across_runs`. q42 round-trip still node-for-node. Full `wgsl_forge::` sweep
+  **134 passed / 0 failed**.
+- **Honest decode-block number (now faithful):** the block grew 26→**30 nodes** (the 4 scale/eps nodes),
+  and runs **GPU reused 19.5 ms/call vs CPU 56.5 ms = 2.89×** (was 3.42× at 26 unfaithful nodes — the
+  faithfulness nodes cost ~3 ms, an honest trade). `cached_pipelines=12` (the new Add/Mul/Broadcast reuse
+  existing pipelines).
+
+**Correction to the earlier claim (honesty rule):** the previous log entry's "certified LLM decode" /
+"3.4× faster" described a decode block that was **not yet faithful** to a real transformer (no `1/√d`, no
+`eps`). The faithful block is **2.89× faster than the CPU** and now matches a real transformer's math (modulo
+the explicitly-documented decode-step choices). Still ONE block, not L layers, not end-to-end tok/s, plain
+f32 GEMM (coopmat via #56; CUDA WMMA host-side).
+
+**⚑ Where I need the human** — none this step. **Next** — the #56 coopmat soft-fork (GO per the review:
+exact commit 56535d7d, minimal HAL-only patch, probe-gated) for portable tensor cores.

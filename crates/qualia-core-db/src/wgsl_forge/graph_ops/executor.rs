@@ -547,18 +547,24 @@ pub fn swiglu_ffn_graph(seq: u32, dim: u32, ffn: u32) -> Result<ComputeGraph, Fo
 
 use crate::wgsl_forge::ir::graph::{Axis, RedKind, Shape, TensorRef};
 
-/// Append RMSNorm-core (no weight/eps) of `x` (a `len`-element row) to `g`, returning the
-/// output `TensorRef`. `Mul(x,x) → Reduce(Mean) → RecipSqrt → Broadcast → Mul(x,·)`.
+/// Append **RMSNorm** (no learned weight) of `x` (a `len`-element row) to `g`, returning the
+/// output `TensorRef`: `x · rsqrt(mean(x²) + eps)` — the real, numerically-stable RMSNorm
+/// (`Mul(x,x) → Reduce(Mean) → Add(eps) → RecipSqrt → Broadcast → Mul(x,·)`). `eps_ref` is a
+/// scalar `[1]` graph input (e.g. `1e-5`); the `+eps` guards `rsqrt` against a near-zero mean
+/// (matching what trained models use). The per-feature learned scale `γ` is folded into the
+/// caller's weight matrices in this decode block, so it is not a separate node here.
 fn push_rmsnorm(
     g: &mut ComputeGraph,
     x: TensorRef,
+    eps_ref: TensorRef,
     sh_row: Shape,
     sh_1: Shape,
     s: Schedule,
 ) -> Result<TensorRef, ForgeError> {
     let sq = g.push(OpNode::Elementwise { f: EwKind::Mul }, &[x, x], sh_row, DType::F32, s)?;
     let ms = g.push(OpNode::Reduce { op: RedKind::Mean, axis: Axis::Last }, &[sq], sh_1, DType::F32, s)?;
-    let r = g.push(OpNode::Elementwise { f: EwKind::RecipSqrt }, &[ms], sh_1, DType::F32, s)?;
+    let ms_eps = g.push(OpNode::Elementwise { f: EwKind::Add }, &[ms, eps_ref], sh_1, DType::F32, s)?;
+    let r = g.push(OpNode::Elementwise { f: EwKind::RecipSqrt }, &[ms_eps], sh_1, DType::F32, s)?;
     let rb = g.push(OpNode::Broadcast { shape: sh_row }, &[r], sh_row, DType::F32, s)?;
     g.push(OpNode::Elementwise { f: EwKind::Mul }, &[x, rb], sh_row, DType::F32, s)
 }
@@ -581,12 +587,17 @@ fn push_softmax(
     g.push(OpNode::Elementwise { f: EwKind::Div }, &[e, smb], sh_vec, DType::F32, s)
 }
 
-/// Single-token (decode-step) scaled-dot-product **attention** as one graph:
-/// `probs = softmax(q · Kᵀ)`, `out = probs · V`. For a single query row the softmax is over
-/// the whole `kv`-length score vector — exactly the LLM decode case (one new token attends to
-/// the cached keys/values). Externals: `[0]=q [1,d]`, `[1]=kt = Kᵀ [d,kv]`, `[2]=v [kv,d]`.
-/// (Multi-row / prefill attention needs a *row-wise* (axis-aware) reduce — a later extension;
-/// this is the decode hot path.)
+/// Single-token (decode-step) **scaled** dot-product attention as one graph:
+/// `probs = softmax((q · Kᵀ) · inv_scale)`, `out = probs · V` — the real attention, **with the
+/// `1/√d_head` score scaling** (`inv_scale`, a scalar `[1]` graph input the caller sets to
+/// `1/√d`). For a single query row the softmax is over the whole `kv`-length score vector —
+/// exactly the LLM decode case (one new token attends to the cached keys/values).
+///
+/// Externals: `[0]=q [1,d]`, `[1]=kt = Kᵀ [d,kv]`, `[2]=v [kv,d]`, `[3]=inv_scale [1]` (=`1/√d`).
+///
+/// **Faithfulness notes (honest):** RoPE is assumed **already applied** to `q`/`kt` upstream
+/// (or absent) — this graph does not rotate them. Multi-row / prefill attention needs a
+/// *row-wise* (axis-aware) reduce — a later extension; this is the decode hot path.
 pub fn attention_graph(d: u32, kv: u32) -> Result<ComputeGraph, ForgeError> {
     let mut g = ComputeGraph::new();
     let s = Schedule::default();
@@ -599,10 +610,13 @@ pub fn attention_graph(d: u32, kv: u32) -> Result<ComputeGraph, ForgeError> {
     let q = TensorRef::input(0, sh_q, DType::F32);
     let kt = TensorRef::input(1, sh_kt, DType::F32);
     let v = TensorRef::input(2, sh_v, DType::F32);
+    let inv_scale = TensorRef::input(3, sh_1, DType::F32);
     let mm = |m, n, k| OpNode::MatMul { m, n, k, tc: false, trans_b: false };
-    // scores = Q[1,d] · Kᵀ[d,kv] = [1,kv]
+    // scores = Q[1,d] · Kᵀ[d,kv] = [1,kv], scaled by 1/√d before softmax.
     let scores = g.push(mm(1, kv, d), &[q, kt], sh_scores, DType::F32, s)?;
-    let probs = push_softmax(&mut g, scores, sh_scores, sh_1, s)?;
+    let inv_bc = g.push(OpNode::Broadcast { shape: sh_scores }, &[inv_scale], sh_scores, DType::F32, s)?;
+    let scaled = g.push(OpNode::Elementwise { f: EwKind::Mul }, &[scores, inv_bc], sh_scores, DType::F32, s)?;
+    let probs = push_softmax(&mut g, scaled, sh_scores, sh_1, s)?;
     // out = probs[1,kv] · V[kv,d] = [1,d]
     let out = g.push(mm(1, d, kv), &[probs, v], sh_o, DType::F32, s)?;
     g.mark_output(out);
@@ -610,10 +624,17 @@ pub fn attention_graph(d: u32, kv: u32) -> Result<ComputeGraph, ForgeError> {
 }
 
 /// A full single-token transformer **decode block** as one graph — the headline P4b
-/// composition: `res1 = x + attn(RMSNorm(x))`, `out = res1 + SwiGLU-FFN(RMSNorm(res1))`,
-/// both residuals. Uses the cached `Kᵀ`/`V` as externals (the stateful cache-append of the
-/// current token's k/v is the engine's job, not the graph's). Externals: `[0]=x [1,d]`,
-/// `[1]=kt [d,kv]`, `[2]=v [kv,d]`, `[3]=Wg [d,ffn]`, `[4]=Wu [d,ffn]`, `[5]=Wd [ffn,d]`.
+/// composition: `res1 = x + attn(RMSNorm(x))`, `out = res1 + SwiGLU-FFN(RMSNorm(res1))`, both
+/// residuals, with the **`1/√d` attention scaling** and **RMSNorm `eps`** (so it is faithful to
+/// a real transformer block). Uses the cached `Kᵀ`/`V` as externals (the stateful cache-append
+/// of the current token's k/v is the engine's job, not the graph's).
+///
+/// Externals: `[0]=x [1,d]`, `[1]=kt [d,kv]`, `[2]=v [kv,d]`, `[3]=Wg [d,ffn]`, `[4]=Wu [d,ffn]`,
+/// `[5]=Wd [ffn,d]`, `[6]=inv_scale [1]` (=`1/√d`), `[7]=eps [1]` (RMSNorm epsilon, e.g. `1e-5`).
+///
+/// **Faithfulness notes (honest):** single-head (one `d`-wide head); RoPE is assumed applied to
+/// `q`/`kt` upstream or absent; the per-feature RMSNorm scale `γ` is folded into `Wg`/`Wu`; the
+/// KV cache is given (not computed). These are decode-step modeling choices, all explicit.
 pub fn decode_block_graph(d: u32, kv: u32, ffn: u32) -> Result<ComputeGraph, ForgeError> {
     let mut g = ComputeGraph::new();
     let s = Schedule::default();
@@ -633,16 +654,20 @@ pub fn decode_block_graph(d: u32, kv: u32, ffn: u32) -> Result<ComputeGraph, For
     let wg = TensorRef::input(3, sh_w, DType::F32);
     let wu = TensorRef::input(4, sh_w, DType::F32);
     let wd = TensorRef::input(5, sh_wd, DType::F32);
+    let inv_scale = TensorRef::input(6, sh_1, DType::F32);
+    let eps = TensorRef::input(7, sh_1, DType::F32);
 
     // ── Attention sub-block over RMSNorm(x), residual back to x ──
-    let n1 = push_rmsnorm(&mut g, x, sh_row, sh_1, s)?;
+    let n1 = push_rmsnorm(&mut g, x, eps, sh_row, sh_1, s)?;
     let scores = g.push(mm(1, kv, d), &[n1, kt], sh_scores, DType::F32, s)?;
-    let probs = push_softmax(&mut g, scores, sh_scores, sh_1, s)?;
+    let inv_bc = g.push(OpNode::Broadcast { shape: sh_scores }, &[inv_scale], sh_scores, DType::F32, s)?;
+    let scaled = g.push(OpNode::Elementwise { f: EwKind::Mul }, &[scores, inv_bc], sh_scores, DType::F32, s)?;
+    let probs = push_softmax(&mut g, scaled, sh_scores, sh_1, s)?;
     let attn = g.push(mm(1, d, kv), &[probs, v], sh_row, DType::F32, s)?;
     let res1 = g.push(OpNode::Elementwise { f: EwKind::Add }, &[x, attn], sh_row, DType::F32, s)?;
 
     // ── SwiGLU-FFN sub-block over RMSNorm(res1), residual back to res1 ──
-    let n2 = push_rmsnorm(&mut g, res1, sh_row, sh_1, s)?;
+    let n2 = push_rmsnorm(&mut g, res1, eps, sh_row, sh_1, s)?;
     let gate = g.push(mm(1, ffn, d), &[n2, wg], sh_h, DType::F32, s)?;
     let up = g.push(mm(1, ffn, d), &[n2, wu], sh_h, DType::F32, s)?;
     let sg = g.push(OpNode::Elementwise { f: EwKind::Silu }, &[gate], sh_h, DType::F32, s)?;
@@ -835,24 +860,25 @@ mod tests {
         e.iter().map(|&x| x / z).collect()
     }
 
-    fn ref_rmsnorm(x: &[f32]) -> Vec<f32> {
+    fn ref_rmsnorm(x: &[f32], eps: f32) -> Vec<f32> {
         let ms = x.iter().map(|v| v * v).sum::<f32>() / x.len() as f32;
-        let inv = ms.sqrt().recip();
+        let inv = (ms + eps).sqrt().recip();
         x.iter().map(|&v| v * inv).collect()
     }
 
-    /// The decode-step attention graph's composed CPU oracle matches an independent
-    /// `softmax(q·Kᵀ)·V` reference.
+    /// The decode-step **scaled** attention graph's composed CPU oracle matches an independent
+    /// `softmax((q·Kᵀ)/√d)·V` reference — with the 1/√d score scaling.
     #[test]
     fn attention_cpu_oracle_matches_reference() {
         let (d, kv) = (4usize, 6usize);
+        let inv_scale = 1.0f32 / (d as f32).sqrt();
         let q: Vec<f32> = (0..d).map(|i| (i as f32) * 0.2 - 0.3).collect();
         let kt: Vec<f32> = (0..d * kv).map(|i| ((i * 5 % 7) as f32) * 0.1 - 0.25).collect();
         let v: Vec<f32> = (0..kv * d).map(|i| ((i * 3 % 5) as f32) * 0.15 - 0.2).collect();
         let g = attention_graph(d as u32, kv as u32).unwrap();
-        let out = execute_graph_cpu(&g, &[q.clone(), kt.clone(), v.clone()]).unwrap();
-        // Reference: scores = q·Kᵀ [1,kv]; probs = softmax(scores); out = probs·V [1,d].
-        let scores = ref_mm(&q, &kt, 1, d, kv);
+        let out = execute_graph_cpu(&g, &[q.clone(), kt.clone(), v.clone(), vec![inv_scale]]).unwrap();
+        // Reference: scores = (q·Kᵀ)/√d [1,kv]; probs = softmax(scores); out = probs·V [1,d].
+        let scores: Vec<f32> = ref_mm(&q, &kt, 1, d, kv).iter().map(|s| s * inv_scale).collect();
         let probs = ref_softmax(&scores);
         let want = ref_mm(&probs, &v, 1, kv, d);
         assert_eq!(out.len(), d);
@@ -896,6 +922,8 @@ mod tests {
     #[test]
     fn decode_block_cpu_oracle_matches_reference() {
         let (d, kv, ffn) = (4usize, 5usize, 6usize);
+        let inv_scale = 1.0f32 / (d as f32).sqrt();
+        let eps = 1e-5f32;
         let x: Vec<f32> = (0..d).map(|i| (i as f32) * 0.2 - 0.3).collect();
         let kt: Vec<f32> = (0..d * kv).map(|i| ((i * 5 % 7) as f32) * 0.1 - 0.25).collect();
         let v: Vec<f32> = (0..kv * d).map(|i| ((i * 3 % 5) as f32) * 0.15 - 0.2).collect();
@@ -903,16 +931,19 @@ mod tests {
         let wu: Vec<f32> = (0..d * ffn).map(|i| ((i % 7) as f32) * 0.02 - 0.07).collect();
         let wd: Vec<f32> = (0..ffn * d).map(|i| ((i % 5) as f32) * 0.04 - 0.08).collect();
         let g = decode_block_graph(d as u32, kv as u32, ffn as u32).unwrap();
-        let ext = vec![x.clone(), kt.clone(), v.clone(), wg.clone(), wu.clone(), wd.clone()];
+        let ext = vec![
+            x.clone(), kt.clone(), v.clone(), wg.clone(), wu.clone(), wd.clone(),
+            vec![inv_scale], vec![eps],
+        ];
         let out = execute_graph_cpu(&g, &ext).unwrap();
 
-        // Reference.
-        let n1 = ref_rmsnorm(&x);
-        let scores = ref_mm(&n1, &kt, 1, d, kv);
+        // Reference (with 1/√d attention scale + RMSNorm eps).
+        let n1 = ref_rmsnorm(&x, eps);
+        let scores: Vec<f32> = ref_mm(&n1, &kt, 1, d, kv).iter().map(|s| s * inv_scale).collect();
         let probs = ref_softmax(&scores);
         let attn = ref_mm(&probs, &v, 1, kv, d);
         let res1: Vec<f32> = x.iter().zip(&attn).map(|(a, b)| a + b).collect();
-        let n2 = ref_rmsnorm(&res1);
+        let n2 = ref_rmsnorm(&res1, eps);
         let gate = ref_mm(&n2, &wg, 1, d, ffn);
         let up = ref_mm(&n2, &wu, 1, d, ffn);
         let h: Vec<f32> = gate
@@ -942,7 +973,7 @@ mod tests {
             let kt: Vec<f32> = (0..d * kv).map(|i| ((i % 19) as f32) * 0.02 - 0.18).collect();
             let v: Vec<f32> = (0..kv * d).map(|i| ((i % 13) as f32) * 0.03 - 0.18).collect();
             let g = attention_graph(d as u32, kv as u32).unwrap();
-            let ext = vec![q, kt, v];
+            let ext = vec![q, kt, v, vec![1.0f32 / (d as f32).sqrt()]];
             let gpu = execute_graph(&g, &ext).expect("attn gpu");
             let cpu = execute_graph_cpu(&g, &ext).unwrap();
             for (a, b) in gpu.iter().zip(&cpu) {
@@ -977,6 +1008,8 @@ mod tests {
                 mk((d * ffn) as usize, 11),
                 mk((d * ffn) as usize, 7),
                 mk((ffn * d) as usize, 5),
+                vec![1.0f32 / (d as f32).sqrt()],
+                vec![1e-5f32],
             ];
             let g = decode_block_graph(d, kv, ffn).unwrap();
             let gpu = execute_graph(&g, &ext).expect("decode gpu");
@@ -1017,6 +1050,8 @@ mod tests {
             mk((d * ffn) as usize, 79, 0.03),
             mk((d * ffn) as usize, 73, 0.03),
             mk((ffn * d) as usize, 71, 0.03),
+            vec![1.0f32 / (d as f32).sqrt()],
+            vec![1e-5f32],
         ];
         let g = decode_block_graph(d, kv, ffn).unwrap();
         let nodes = g.nodes.len();
@@ -1070,6 +1105,7 @@ mod tests {
         let ext = vec![
             mk(d as usize, 17), mk((d * kv) as usize, 19), mk((kv * d) as usize, 13),
             mk((d * ffn) as usize, 11), mk((d * ffn) as usize, 7), mk((ffn * d) as usize, 5),
+            vec![1.0f32 / (d as f32).sqrt()], vec![1e-5f32],
         ];
         let g = decode_block_graph(d, kv, ffn).unwrap();
         let mut exec = ForgeGraphExecutor::new().expect("executor");
