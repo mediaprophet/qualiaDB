@@ -84,6 +84,7 @@ pub fn dft_accelerated(x: &[Cplx]) -> Vec<Cplx> {
     // ── Accelerated fast path: WGSL forge forward FFT (f32), same convention. ──
     // Eligible only for a power-of-two N in [2, 1024] on a machine with a wgpu
     // adapter; any forge error falls straight through to the exact CPU DFT.
+    #[cfg(all(not(target_arch = "wasm32"), feature = "wgsl-forge"))]
     if n.is_power_of_two()
         && (2..=1024).contains(&n)
         && crate::wgsl_forge::dispatch::caps().wgpu

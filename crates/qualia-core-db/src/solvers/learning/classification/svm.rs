@@ -97,29 +97,37 @@ pub fn fit(
     // Off accelerator or sub-threshold, the exact symmetric CPU loop runs — byte-identical
     // to before. A forge error never propagates: it falls back to the CPU floor.
     let mut k = vec![0.0; n * n];
-    let work = n.saturating_mul(n).saturating_mul(p);
-    let caps = crate::wgsl_forge::dispatch::caps();
-    let accelerated =
-        (caps.cuda || caps.wgpu) && work >= crate::wgsl_forge::dispatch::GEMM_GPU_THRESHOLD;
-    if accelerated {
-        match kernel {
-            Kernel::Linear => {
-                use crate::solvers::linear_algebra::gemm::{gemm, Transpose};
-                // Gram = X·Xᵀ ([n×n]): op(A)=X (n×p), op(B)=Xᵀ (p×n).
-                if gemm(Transpose::No, Transpose::Yes, n, n, p, 1.0, x, x, 0.0, &mut k).is_err() {
-                    fill_kernel_cpu(&mut k, x, n, p, kernel);
+    // GPU best-path kernel-matrix build via the forge — only when it's compiled in
+    // (native + wgsl-forge). On wasm32 the exact symmetric CPU kernel loop runs.
+    #[cfg(all(not(target_arch = "wasm32"), feature = "wgsl-forge"))]
+    {
+        let work = n.saturating_mul(n).saturating_mul(p);
+        let caps = crate::wgsl_forge::dispatch::caps();
+        let accelerated =
+            (caps.cuda || caps.wgpu) && work >= crate::wgsl_forge::dispatch::GEMM_GPU_THRESHOLD;
+        if accelerated {
+            match kernel {
+                Kernel::Linear => {
+                    use crate::solvers::linear_algebra::gemm::{gemm, Transpose};
+                    // Gram = X·Xᵀ ([n×n]): op(A)=X (n×p), op(B)=Xᵀ (p×n).
+                    if gemm(Transpose::No, Transpose::Yes, n, n, p, 1.0, x, x, 0.0, &mut k).is_err()
+                    {
+                        fill_kernel_cpu(&mut k, x, n, p, kernel);
+                    }
+                }
+                Kernel::Rbf { gamma } => {
+                    let d = crate::wgsl_forge::dispatch::pairwise_sq_dist_f64(x, x, n, n, p);
+                    for (kij, &dij) in k.iter_mut().zip(d.iter()) {
+                        *kij = (-gamma * dij).exp();
+                    }
                 }
             }
-            Kernel::Rbf { gamma } => {
-                let d = crate::wgsl_forge::dispatch::pairwise_sq_dist_f64(x, x, n, n, p);
-                for (kij, &dij) in k.iter_mut().zip(d.iter()) {
-                    *kij = (-gamma * dij).exp();
-                }
-            }
+        } else {
+            fill_kernel_cpu(&mut k, x, n, p, kernel);
         }
-    } else {
-        fill_kernel_cpu(&mut k, x, n, p, kernel);
     }
+    #[cfg(not(all(not(target_arch = "wasm32"), feature = "wgsl-forge")))]
+    fill_kernel_cpu(&mut k, x, n, p, kernel);
 
     let mut alpha = vec![0.0; n];
     let mut b = 0.0;

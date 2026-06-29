@@ -127,26 +127,41 @@ pub fn fit(
         // accelerator, or sub-threshold, the EXACT per-point `nearest` loop runs —
         // byte-identical to before, including its lowest-index tie-break.
         let mut changed = false;
-        let work = n.saturating_mul(k).saturating_mul(p);
-        let caps = crate::wgsl_forge::dispatch::caps();
-        if (caps.cuda || caps.wgpu) && work >= crate::wgsl_forge::dispatch::GEMM_GPU_THRESHOLD {
-            let dist = crate::wgsl_forge::dispatch::pairwise_sq_dist_f64(x, &centroids, n, k, p);
-            for i in 0..n {
-                let row = &dist[i * k..(i + 1) * k];
-                let mut best = 0;
-                let mut best_d = row[0];
-                for (c, &d) in row.iter().enumerate().skip(1) {
-                    if d < best_d {
-                        best_d = d;
-                        best = c;
+        // GPU best-path (point↔centroid squared-distance matrix via the forge) only when
+        // it's compiled in (native + wgsl-forge). On wasm32 the exact per-point CPU loop runs.
+        #[cfg(all(not(target_arch = "wasm32"), feature = "wgsl-forge"))]
+        {
+            let work = n.saturating_mul(k).saturating_mul(p);
+            let caps = crate::wgsl_forge::dispatch::caps();
+            if (caps.cuda || caps.wgpu) && work >= crate::wgsl_forge::dispatch::GEMM_GPU_THRESHOLD {
+                let dist = crate::wgsl_forge::dispatch::pairwise_sq_dist_f64(x, &centroids, n, k, p);
+                for i in 0..n {
+                    let row = &dist[i * k..(i + 1) * k];
+                    let mut best = 0;
+                    let mut best_d = row[0];
+                    for (c, &d) in row.iter().enumerate().skip(1) {
+                        if d < best_d {
+                            best_d = d;
+                            best = c;
+                        }
+                    }
+                    if labels[i] != best {
+                        labels[i] = best;
+                        changed = true;
                     }
                 }
-                if labels[i] != best {
-                    labels[i] = best;
-                    changed = true;
+            } else {
+                for i in 0..n {
+                    let (c, _) = nearest(&centroids, k, p, &x[i * p..(i + 1) * p]);
+                    if labels[i] != c {
+                        labels[i] = c;
+                        changed = true;
+                    }
                 }
             }
-        } else {
+        }
+        #[cfg(not(all(not(target_arch = "wasm32"), feature = "wgsl-forge")))]
+        {
             for i in 0..n {
                 let (c, _) = nearest(&centroids, k, p, &x[i * p..(i + 1) * p]);
                 if labels[i] != c {

@@ -88,6 +88,9 @@ pub fn gemm(
     // Crucially, a forge error is NEVER propagated out of the solver: on `Err(_)` we fall
     // through to the CPU path below, which is always correct. Sub-threshold or
     // off-accelerator, the unchanged CPU code runs — byte-identical to before.
+    // GPU best-path GEMM via the forge — only when it's compiled in (native +
+    // wgsl-forge). On wasm32 the forge module doesn't exist; the CPU floor below runs.
+    #[cfg(all(not(target_arch = "wasm32"), feature = "wgsl-forge"))]
     {
         use crate::wgsl_forge::dispatch::{caps, GEMM_GPU_THRESHOLD};
         use std::borrow::Cow;
@@ -225,6 +228,7 @@ pub fn matvec(
     // A forge error is NEVER propagated: on `Err(_)` we fall through to the CPU loop
     // below, which is always correct. Any transpose, sub-threshold size, or
     // off-accelerator run executes the unchanged CPU code — byte-identical to before.
+    #[cfg(all(not(target_arch = "wasm32"), feature = "wgsl-forge"))]
     if transa == Transpose::No {
         use crate::wgsl_forge::dispatch::{caps, GEMM_GPU_THRESHOLD};
         let work = m.saturating_mul(n);
