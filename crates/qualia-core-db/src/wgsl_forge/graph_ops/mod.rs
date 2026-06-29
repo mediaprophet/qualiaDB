@@ -9,4 +9,5 @@
 //! [`docs/plans/dag-ir-forge.md`].
 
 pub mod broadcast;
+pub mod elementwise;
 pub mod reduce;

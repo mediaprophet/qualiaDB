@@ -528,6 +528,25 @@ impl crate::wgsl_forge::ir::graph::Lowerer for WgslGraphLowerer<'_> {
             ));
         Ok(())
     }
+
+    fn elementwise(
+        &mut self,
+        node: &crate::wgsl_forge::ir::graph::GraphNode,
+    ) -> Result<(), ForgeError> {
+        use crate::wgsl_forge::ir::graph::OpNode;
+        if let OpNode::Elementwise { f } = node.op {
+            let src = crate::wgsl_forge::graph_ops::elementwise::elementwise_wgsl(
+                f,
+                node.sched.workgroup_size,
+            )?;
+            self.source.push_str(&src);
+            Ok(())
+        } else {
+            Err(ForgeError::Emission(
+                "WgslGraphLowerer::elementwise received a non-Elementwise node".to_string(),
+            ))
+        }
+    }
 }
 
 /// Emit a complete WGSL module for a **pure compute-graph** (no backing `KernelSpec`) —

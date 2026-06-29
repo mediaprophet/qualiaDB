@@ -178,3 +178,32 @@ P2b/P4-adjacency** and tracked — not faked into P2.
 **Next** — P3: complete the Elementwise LLM kit (Silu/Gelu/Exp/RecipSqrt/…) + Softmax sugar
 (legalizes to Reduce→Broadcast→Elementwise — now that Reduce/Broadcast exist) + the MatMul→Elementwise
 fusion that makes fused-ffn emergent.
+
+---
+
+## 2026-06-29 · DAG-IR Phase 3a — native Elementwise LLM kit · DONE (GPU-certified)
+
+The activation/arithmetic op-class that, with P2's Reduce + Broadcast, completes the **single-node
+vocabulary** for RMSNorm / softmax / SwiGLU.
+
+**What was built** — [`graph_ops/elementwise.rs`](crates/qualia-core-db/src/wgsl_forge/graph_ops/elementwise.rs):
+three arities under one op-class — unary `Silu/Gelu/Exp/RecipSqrt/Relu/Recip` (`out=f(in)`), binary
+`Add/Mul` (`out=a⊙b`), ternary `Fma` (`out=a·b+c`) — emitted from `OpNode::Elementwise{f}` by the
+`WgslGraphLowerer`, each with an exact CPU oracle matching the WGSL math. `Scale`/`Bias` deliberately
+defer to the certified `affine-f32` kernel (explicit `Err`, not a silent stub).
+
+**Honest scope split** — the design's P3 also wanted **Softmax legalization** and the
+**`MatMul→Elementwise` fusion** (fused-ffn emergent). Those are **multi-node** graphs; their GPU
+certification needs the topo-order executor → they move to **P3b/P4** (the CPU-composed oracle is
+buildable independently, but I won't claim a GPU-certified multi-node result before the executor
+exists). Tracked, not faked.
+
+**Measured** — `graph_ops::elementwise` 3 non-GPU pass/0 fail; **GPU-certify on A2000**:
+`elementwise_gpu_matches_oracle` passes (Silu/Gelu/Exp/Relu/RecipSqrt/Recip + Add/Mul vs oracle,
+f32 tol); full `wgsl_forge` non-GPU green; `--features cuda` + cli clean.
+
+**⚑ Where I need the human** — none. (The fluid-model curation ask still stands for P7.)
+**Next** — **P4: the topological multi-node executor** (Option A: per-node dispatch with intermediates
+kept GPU-side in `QualiaSlabAllocator`). It unblocks everything multi-node at once: softmax, the
+fused-ffn fusion, the ternary `{GatherDequant→MatMul}` split, and the full LLM decode-block DAG graded
+against a graph-composed CPU oracle.
