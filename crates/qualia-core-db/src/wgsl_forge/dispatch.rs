@@ -33,7 +33,7 @@
 
 use std::sync::{Mutex, OnceLock};
 
-use super::oracle::{gemm_cpu, gemv_cpu};
+use super::oracle::{dft_cpu, gemm_cpu, gemv_cpu};
 use super::ForgeError;
 use super::execute::WgpuComputeContext;
 use super::ForgeRuntime;
@@ -439,6 +439,70 @@ pub fn gemv_cpu_f64(a: &[f64], x: &[f64], m: usize, n: usize) -> Vec<f64> {
     y
 }
 
+/// Best-path forward FFT: `out = DFT(in)` over `n = complex_interleaved.len()/2`
+/// complex points, input and output interleaved f32 (`[re0, im0, re1, im1, …]`,
+/// length `2*n`). The transform is **un-normalized** and uses the forward sign
+/// convention `X[k] = Σ_j x[j] · e^{−2πi kj/N}`, identical on both paths.
+///
+/// # Why this differs from the GEMM/GEMV dispatch shape
+///
+/// Unlike [`gemm_f32`]/[`gemm_f64`], the FFT has **no CUDA/df64 arm** — the forge
+/// only ships a *WGSL* radix-2 kernel today, so the accelerated path is
+/// wgpu-only. There is therefore exactly one accelerator branch:
+///
+/// | path (in order)              | when                                            |
+/// |------------------------------|-------------------------------------------------|
+/// | WGSL forge ([`ForgeRuntime::fft`]) | `caps().wgpu` and `n` a power of two, `2 ≤ n ≤ 1024` |
+/// | CPU floor ([`dft_cpu`])      | otherwise, or if the forge errors at runtime    |
+///
+/// The CPU floor is the naive O(N²) DFT [`dft_cpu`] — always present, never
+/// broken. The forge kernel runs ONE workgroup of `n` threads, which is why `n`
+/// must be a power of two and `≤ 1024` (the single-workgroup cap); inputs outside
+/// that window fall straight to the CPU floor. On any forge build/dispatch error
+/// the call falls through to the CPU floor rather than propagating (mirrors
+/// [`gemm_f32`]).
+///
+/// `complex_interleaved.len()` must be even (it is `2*n`); an odd length is the
+/// only hard error.
+pub fn fft_f32(complex_interleaved: &[f32]) -> Result<Vec<f32>, ForgeError> {
+    if complex_interleaved.len() % 2 != 0 {
+        return Err(ForgeError::GpuValidation(format!(
+            "fft input must be interleaved complex (even length = 2*n); got {}",
+            complex_interleaved.len()
+        )));
+    }
+    let n = complex_interleaved.len() / 2;
+
+    // Accelerated path is WGSL-only and single-workgroup: power-of-two n in
+    // [2, 1024]. (n == 1 is a trivial identity the CPU floor handles directly.)
+    if caps().wgpu && n.is_power_of_two() && (2..=1024).contains(&n) {
+        if let Some(out) = fft_f32_gpu(complex_interleaved) {
+            return Ok(out);
+        }
+        // Forge path was eligible but failed at runtime — fall through to the CPU
+        // floor rather than propagating, so the call is never broken.
+    }
+
+    Ok(dft_cpu(complex_interleaved, n))
+}
+
+/// Run the forward FFT through the shared [`ForgeRuntime`], returning `None` on
+/// any runtime failure (runtime un-buildable now, or dispatch error) so the
+/// caller can fall through to the CPU floor. Never propagates a GPU error.
+/// Reuses the same process-wide [`forge_rt_cell`] as [`gemm_f32`]/[`gemv_f32`].
+fn fft_f32_gpu(complex_interleaved: &[f32]) -> Option<Vec<f32>> {
+    let cell = forge_rt_cell();
+    let mut guard = cell.lock().ok()?;
+    if guard.is_none() {
+        match ForgeRuntime::new(64 * 1024 * 1024, None) {
+            Ok(rt) => *guard = Some(rt),
+            Err(_) => return None,
+        }
+    }
+    let rt = guard.as_mut()?;
+    rt.fft(complex_interleaved).ok()
+}
+
 /// Shared dimension/length validation for both GEMV entry points: `a` is `m*n`
 /// (row-major) and `x` is `n`.
 fn validate_gemv_dims(
@@ -590,6 +654,40 @@ mod tests {
         assert_eq!(gemv_cpu_f64(&a, &x, 2, 3), vec![6.0, 15.0]);
     }
 
+    /// Either path: the forward FFT of a real unit impulse at index 0 (`x[0] = 1`,
+    /// rest 0) has a flat spectrum — every bin is exactly `(1, 0)` — because
+    /// `X[k] = Σ_j x[j] e^{−2πi kj/N} = x[0] = 1` for all `k`. This identity is
+    /// exact regardless of whether the WGSL forge or the CPU DFT floor runs, so it
+    /// validates `fft_f32` on a GPU-less box (CPU floor) and a GPU box (forge)
+    /// alike. N=4 (a power of two ≤ 1024, so the forge path is eligible when a
+    /// wgpu adapter is present).
+    #[test]
+    fn fft_cpu_fallback_matches_dft() {
+        let n = 4usize;
+        let mut signal = vec![0.0f32; 2 * n]; // interleaved (real, imag)
+        signal[0] = 1.0; // unit impulse at j=0
+        let spectrum = fft_f32(&signal).expect("fft_f32");
+        assert_eq!(spectrum.len(), 2 * n);
+        for k in 0..n {
+            assert!(
+                (spectrum[2 * k] - 1.0).abs() < 1e-4,
+                "bin {k} real should be 1, got {}",
+                spectrum[2 * k]
+            );
+            assert!(
+                spectrum[2 * k + 1].abs() < 1e-4,
+                "bin {k} imag should be 0, got {}",
+                spectrum[2 * k + 1]
+            );
+        }
+    }
+
+    /// An odd-length (not `2*n`) input is the only hard error on `fft_f32`.
+    #[test]
+    fn fft_f32_odd_length_errors() {
+        assert!(fft_f32(&[1.0f32, 2.0, 3.0]).is_err());
+    }
+
     // ── GPU / CUDA end-to-end tests (require a real device; run by the orchestrator) ──
 
     /// Deterministic xorshift fill in [-1, 1], so GPU and CPU see identical inputs.
@@ -639,6 +737,25 @@ mod tests {
         assert_eq!(gpu.len(), cpu.len());
         for (g, c) in gpu.iter().zip(cpu.iter()) {
             assert!((g - c).abs() <= 1.0e-3, "f32 GPU/CPU mismatch: {g} vs {c}");
+        }
+    }
+
+    /// Forward FFT on the WGSL forge path must match the naive DFT floor within
+    /// f32-vs-(f64-accumulated)-DFT tolerance. N=256 (a power-of-two single
+    /// workgroup); both fed the SAME deterministic interleaved signal so the GPU
+    /// FFT and the CPU `dft_cpu` reference compute the identical transform.
+    #[test]
+    #[ignore = "requires a GPU adapter"]
+    fn fft_f32_gpu_matches_dft() {
+        let n = 256usize;
+        // 2*n interleaved (real, imag) samples, deterministic and identical for
+        // both paths.
+        let signal = det_f32(2 * n, 0x4646_545F_4D54_4348);
+        let gpu = fft_f32(&signal).expect("fft_f32 gpu");
+        let cpu = dft_cpu(&signal, n);
+        assert_eq!(gpu.len(), cpu.len());
+        for (g, c) in gpu.iter().zip(cpu.iter()) {
+            assert!((g - c).abs() <= 1.0e-2, "f32 FFT/DFT mismatch: {g} vs {c}");
         }
     }
 

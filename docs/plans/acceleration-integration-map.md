@@ -131,7 +131,7 @@ All paths below were confirmed to exist. **"Now"** = current acceleration status
 
 | File | Operation | Now | Forge path |
 |---|---|---|---|
-| `transforms/fourier.rs` | FFT | **CPU scalar, naive O(N²) DFT** | 🔨 radix-2/4 butterfly (complex = paired f32) |
+| `transforms/fourier.rs` | FFT | ✅ **WIRED** — `dft_accelerated()` routes the forward DFT through `dispatch::fft_f32` (WGSL forge radix-2, power-of-two N∈[2,1024]); CPU O(N²) floor + f64-exact `dft()` retained | ✅ done (forward; f32 spectral) |
 | `transforms/laplace.rs` | Laplace | CPU scalar (Simpson) | 🧩 (quadrature as matvec) |
 | `calculus/ode_solver.rs` | RK4/RK45 | CPU scalar (`PlatformGpuIntegrator` stub) | 🔨 (parallel state propagation; `Fma`) |
 | `calculus/dense.rs` | Jacobian/Hessian | CPU scalar (finite diff) | 🧩 (batched column-parallel eval) |

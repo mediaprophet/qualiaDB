@@ -21,7 +21,7 @@ pub mod validate;
 pub use backend::resolve_execution_backend;
 pub use cache::ManifestCache;
 pub use dispatch::{
-    caps, gemm_cpu_f64, gemm_f32, gemm_f64, gemv_cpu_f64, gemv_f32, gemv_f64, ComputeCaps,
+    caps, fft_f32, gemm_cpu_f64, gemm_f32, gemm_f64, gemv_cpu_f64, gemv_f32, gemv_f64, ComputeCaps,
     GEMM_GPU_THRESHOLD,
 };
 pub use emit::{decode_spirv_words, emit_shader, matmul_tc_wgsl, GeneratedShader, TargetBackend};
