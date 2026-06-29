@@ -164,6 +164,42 @@ pub fn matvec(
     if a.len() != m * n || x.len() != n || y.len() != m {
         return Err(SolversError::InvalidDimension);
     }
+
+    // ── Best-path-with-CPU-floor offload (additive; behaviour-preserving) ──────────
+    //
+    // Mirror of the [`gemm`] fast-path above. The forge dispatcher
+    // (`wgsl_forge::dispatch::gemv_f64`) computes the *plain* product `y = A·x` only
+    // (it has no transpose support), so we only hand off when ALL hold:
+    //   1. it IS the plain product — `transa == Transpose::No` — because `gemv_f64`
+    //      cannot express `Aᵀ·x`;
+    //   2. an accelerator actually exists (`caps().cuda || caps().wgpu`) — so a no-GPU
+    //      machine takes the EXACT existing CPU loop below with zero behaviour change;
+    //   3. the problem is large enough (`m·n >= GEMM_GPU_THRESHOLD`) to amortise
+    //      dispatch/transfer overhead — small GEMVs stay on the CPU.
+    //
+    // Dimensions map directly: here `A` is m×n (row-major), `x` is length n, `y` is
+    // length m — exactly `gemv_f64(m, n, a, x)`'s `y[M] = A[M×N]·x[N]` contract, so no
+    // re-mapping is needed (unlike gemm's (m,n,k)→(m,k,n) swap). f64 on the GPU is
+    // CUDA-only (WGSL has no f64); on a non-NVIDIA GPU the dispatcher itself falls back
+    // to its own f64 CPU floor, whose increasing-`j` summation order matches this loop,
+    // so answers agree to f64 summation precision.
+    //
+    // A forge error is NEVER propagated: on `Err(_)` we fall through to the CPU loop
+    // below, which is always correct. Any transpose, sub-threshold size, or
+    // off-accelerator run executes the unchanged CPU code — byte-identical to before.
+    if transa == Transpose::No {
+        use crate::wgsl_forge::dispatch::{caps, GEMM_GPU_THRESHOLD};
+        let work = m.saturating_mul(n);
+        let caps = caps();
+        if (caps.cuda || caps.wgpu) && work >= GEMM_GPU_THRESHOLD {
+            if let Ok(result) = crate::wgsl_forge::dispatch::gemv_f64(m, n, a, x) {
+                y.copy_from_slice(&result);
+                return Ok(());
+            }
+            // Forge path was eligible but errored — fall through to the CPU floor.
+        }
+    }
+
     let a_at = |i: usize, j: usize| -> f64 {
         match transa {
             Transpose::No => a[i * n + j],
@@ -427,6 +463,47 @@ mod tests {
         .unwrap();
 
         approx(&c, &reference);
+    }
+
+    #[test]
+    fn plain_gemv_matches_cpu_above_threshold() {
+        // A large plain matrix–vector product (m=n=256 → work = 65_536 ≥
+        // GEMM_GPU_THRESHOLD=32_768) routed through `matvec(No, ..)`. On an
+        // accelerator box this exercises the forge offload (`dispatch::gemv_f64`);
+        // on CI (no accelerator) it exercises the CPU floor. EITHER WAY the result
+        // must equal a SEPARATE pure-CPU reference computed inline here, so the test
+        // is hermetic and GPU-agnostic.
+        const M: usize = 256;
+        const N: usize = 256;
+
+        // Deterministic data — no RNG, no GPU assumption.
+        let mut a = vec![0.0f64; M * N];
+        for i in 0..M {
+            for j in 0..N {
+                a[i * N + j] = ((i * 7 + j * 3) % 11) as f64 * 0.25 - 1.0;
+            }
+        }
+        let mut x = vec![0.0f64; N];
+        for (j, xj) in x.iter_mut().enumerate() {
+            *xj = ((j * 5) % 13) as f64 * 0.125 - 0.75;
+        }
+
+        // Reference: independent dot-product per row, increasing-j accumulation order.
+        let mut reference = vec![0.0f64; M];
+        for i in 0..M {
+            let row = i * N;
+            let mut acc = 0.0f64;
+            for j in 0..N {
+                acc += a[row + j] * x[j];
+            }
+            reference[i] = acc;
+        }
+
+        // Through the wired matvec (plain product → eligible for offload).
+        let mut y = vec![0.0f64; M];
+        matvec(Transpose::No, M, N, &a, &x, &mut y).unwrap();
+
+        approx(&y, &reference);
     }
 
     #[test]
