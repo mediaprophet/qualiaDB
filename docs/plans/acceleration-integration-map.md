@@ -145,13 +145,18 @@ All paths below were confirmed to exist. **"Now"** = current acceleration status
 | `classification/svm.rs` | RBF kernel matrix | CPU scalar (SMO) | 🧩 kernel matrix (distance+exp); SMO loop stays CPU |
 | `trees/random_forest.rs` | ensemble traversal | CPU scalar | 🚫 (divergent) / 🔨 (GPU bucketed-eval, low priority) |
 
-### 3.5 Audio (`audio/`) — all CPU scalar
+### 3.5 Audio (`audio/`) — real forward transforms now wired
+
+> **2026-06-29:** the bake modules previously only *synthesized* / log-resampled / analytic-panned —
+> the genuine forward transforms over real samples were missing. They now exist (additive; all prior
+> fns + tests retained). STFT routes its per-frame FFT through the forge (§3.3 `dispatch::fft_f32`);
+> CQT and HRTF are direct CPU (correct, cold-path ingest). 42 `audio::` tests pass (was 30).
 
 | File | Operation | Now | Forge path |
 |---|---|---|---|
-| `stft_bake.rs` | STFT | CPU scalar | 🧩 (reuses §3.3 FFT + windowing) |
-| `cqt_bake.rs` | Constant-Q | CPU scalar | 🧩 (sparse-matvec / FFT + log-bin) |
-| `hrtf.rs` | HRTF convolution | CPU scalar | 🔨 (3D conv; FFT-domain reuses §3.3) |
+| `stft.rs` (NEW) | forward STFT | ✅ **WIRED** — `forward_stft` Hann-windows each frame and runs it through `dispatch::fft_f32` (WGSL forge, CPU DFT floor); `stft_magnitudes`; `bake_stft_sidecar_from_samples` (real STFT → preview bins) | ✅ done (forward; uses §3.3 FFT) |
+| `cqt_bake.rs` | Constant-Q | ✅ **REAL** — `forward_cqt` direct constant-Q (Hann-windowed complex inner product per log-spaced bin); `bake_cqt_sidecar_from_samples`. CPU (cold-path ingest) | 🧩 future: FFT + log-bin GPU path |
+| `hrtf.rs` | HRTF convolution | ✅ **REAL** — `convolve_fir` (direct linear), `synthesize_hrir` (ITD fractional-delay + ILD gain + contralateral head-shadow LP), `binaural_render`. Measured KEMAR HRIRs remain an optional cold asset | 🔨 future: FFT-domain conv reuses §3.3 |
 
 ### 3.6 Geometric algebra & rendering
 

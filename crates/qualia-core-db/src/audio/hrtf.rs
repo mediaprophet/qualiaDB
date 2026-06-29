@@ -135,6 +135,144 @@ pub fn room_damp_from_manifold(manifold_w: f32) -> f32 {
     (1.0 - manifold_w * 0.08).clamp(0.55, 1.0)
 }
 
+// ---------------------------------------------------------------------------
+// Real HRTF convolution (cold path; heap OK).
+//
+// Full measured KEMAR HRIRs remain an optional cold asset. The functions below
+// SYNTHESIZE a physically-plausible HRIR directly from the ITD/ILD model in
+// `BinauralGains` (interaural time difference as a fractional sample delay,
+// interaural level difference as per-ear gain, and a one-pole head-shadow
+// low-pass on the farther/contralateral ear). `binaural_render` then convolves a
+// mono source with the left/right impulse responses to produce a binaural pair.
+// ---------------------------------------------------------------------------
+
+/// Direct linear (FIR) convolution: `y[i] = Σ_j signal[j]·h[i-j]`.
+///
+/// Output length is `signal.len() + h.len() - 1`. Either operand empty → empty.
+pub fn convolve_fir(signal: &[f32], h: &[f32]) -> Vec<f32> {
+    if signal.is_empty() || h.is_empty() {
+        return Vec::new();
+    }
+    let out_len = signal.len() + h.len() - 1;
+    let mut out = vec![0.0_f32; out_len];
+    for (j, &s) in signal.iter().enumerate() {
+        if s == 0.0 {
+            continue;
+        }
+        for (m, &hm) in h.iter().enumerate() {
+            out[j + m] += s * hm;
+        }
+    }
+    out
+}
+
+/// Write a unit impulse scaled by `gain` at fractional `delay_samples` into `ir`,
+/// splitting energy linearly across the two straddling integer taps.
+#[inline]
+fn place_fractional_impulse(ir: &mut [f32], delay_samples: f32, gain: f32) {
+    if ir.is_empty() {
+        return;
+    }
+    let d = delay_samples.max(0.0);
+    let i0 = d.floor() as usize;
+    let frac = d - i0 as f32;
+    if i0 < ir.len() {
+        ir[i0] += gain * (1.0 - frac);
+    }
+    if i0 + 1 < ir.len() {
+        ir[i0 + 1] += gain * frac;
+    }
+}
+
+/// One-pole low-pass `y[n] = y[n-1] + a·(x[n] - y[n-1])` applied in place
+/// (head-shadow model; `a ∈ (0,1]`, smaller `a` = more high-frequency rolloff).
+#[inline]
+fn one_pole_lowpass_in_place(buf: &mut [f32], a: f32) {
+    let a = a.clamp(0.0, 1.0);
+    let mut y = 0.0_f32;
+    for x in buf.iter_mut() {
+        y += a * (*x - y);
+        *x = y;
+    }
+}
+
+/// Synthesize left/right HRIRs from `gains`.
+///
+/// Each ear is a unit impulse scaled by `gain_l`/`gain_r`, delayed by its ear
+/// delay: the nearer ear sits at ~0, the farther ear is delayed by
+/// `|itd_seconds|·sample_rate` samples (placed with linear-interpolated
+/// fractional delay). A gentle one-pole low-pass (head shadow) is applied ONLY
+/// to the contralateral (farther, quieter) ear so its highs are attenuated.
+///
+/// `itd_seconds < 0` ⇒ source to the left ⇒ right ear is the farther/contralateral
+/// one; `itd_seconds > 0` ⇒ left ear is farther. Returns `(left_ir, right_ir)`,
+/// both length `taps` (min 1).
+pub fn synthesize_hrir(
+    gains: &BinauralGains,
+    sample_rate: f32,
+    taps: usize,
+) -> (Vec<f32>, Vec<f32>) {
+    let n = taps.max(1);
+    let mut left = vec![0.0_f32; n];
+    let mut right = vec![0.0_f32; n];
+
+    let delay = (gains.itd_seconds.abs() * sample_rate.max(1.0)).max(0.0);
+    // Head-shadow low-pass coefficient for the contralateral ear (gentle).
+    const SHADOW_A: f32 = 0.35;
+
+    if gains.itd_seconds <= 0.0 {
+        // Source to the LEFT: left ear nearer (no delay), right ear farther.
+        place_fractional_impulse(&mut left, 0.0, gains.gain_l);
+        place_fractional_impulse(&mut right, delay, gains.gain_r);
+        one_pole_lowpass_in_place(&mut right, SHADOW_A);
+    } else {
+        // Source to the RIGHT: right ear nearer, left ear farther.
+        place_fractional_impulse(&mut right, 0.0, gains.gain_r);
+        place_fractional_impulse(&mut left, delay, gains.gain_l);
+        one_pole_lowpass_in_place(&mut left, SHADOW_A);
+    }
+
+    (left, right)
+}
+
+/// Render a `mono` source at `source` (world space) into a binaural pair.
+///
+/// Pipeline: `binaural_from_position` (active `HrtfProfile`) →
+/// `synthesize_hrir` → `convolve_fir` the mono signal with each ear's HRIR.
+/// Returns `(left, right)`, each of length `mono.len() + taps - 1` (taps = 64).
+pub fn binaural_render(
+    mono: &[f32],
+    source: [f32; 3],
+    listener_yaw: f32,
+    sample_rate: f32,
+) -> (Vec<f32>, Vec<f32>) {
+    const TAPS: usize = 64;
+    let gains = binaural_from_position(source, listener_yaw);
+    let (hl, hr) = synthesize_hrir(&gains, sample_rate, TAPS);
+    let left = convolve_fir(mono, &hl);
+    let right = convolve_fir(mono, &hr);
+    (left, right)
+}
+
+/// First index where the running energy of `x` crosses `frac` of its total
+/// energy (onset proxy for ITD comparison). Returns `x.len()` if all-zero.
+#[cfg(test)]
+fn energy_onset(x: &[f32], frac: f32) -> usize {
+    let total: f32 = x.iter().map(|&v| v * v).sum();
+    if total <= 0.0 {
+        return x.len();
+    }
+    let threshold = total * frac;
+    let mut acc = 0.0_f32;
+    for (i, &v) in x.iter().enumerate() {
+        acc += v * v;
+        if acc >= threshold {
+            return i;
+        }
+    }
+    x.len()
+}
+
 #[cfg(test)]
 mod tests {
     use super::*;
@@ -184,5 +322,102 @@ mod tests {
             (g0.gain_l - g1.gain_r).abs() < 0.12,
             "yaw swap: g0.gain_l≈g1.gain_r"
         );
+    }
+
+    #[test]
+    fn convolve_identity_kernel_returns_input() {
+        let x = [0.1_f32, -0.4, 0.7, 0.2, -0.9];
+        let y = convolve_fir(&x, &[1.0]);
+        assert_eq!(y.len(), x.len());
+        for (a, b) in y.iter().zip(x.iter()) {
+            assert!((a - b).abs() < 1e-6, "identity convolution");
+        }
+    }
+
+    #[test]
+    fn convolve_output_length() {
+        let x = vec![0.5_f32; 17];
+        let h = vec![0.25_f32; 9];
+        let y = convolve_fir(&x, &h);
+        assert_eq!(y.len(), x.len() + h.len() - 1);
+    }
+
+    #[test]
+    fn convolve_known_result() {
+        // [1,2,3] * [1,1] = [1, 3, 5, 3]
+        let y = convolve_fir(&[1.0, 2.0, 3.0], &[1.0, 1.0]);
+        assert_eq!(y.len(), 4);
+        let expect = [1.0, 3.0, 5.0, 3.0];
+        for (a, b) in y.iter().zip(expect.iter()) {
+            assert!((a - b).abs() < 1e-6, "got {y:?}");
+        }
+    }
+
+    #[test]
+    fn hard_left_source_earlier_and_louder_on_left() {
+        set_hrtf_profile(HrtfProfile::KemarLite);
+        let sample_rate = 48_000.0_f32;
+        // A unit click followed by silence.
+        let mut click = vec![0.0_f32; 128];
+        click[0] = 1.0;
+        // Hard-left source (−X, in front).
+        let (left, right) = binaural_render(&click, [-1.0, 0.0, -1.0], 0.0, sample_rate);
+
+        // ITD: the left (nearer) ear's energy onset is EARLIER than the right.
+        let onset_l = energy_onset(&left, 0.5);
+        let onset_r = energy_onset(&right, 0.5);
+        assert!(
+            onset_l < onset_r,
+            "left onset {onset_l} should precede right onset {onset_r} (ITD)"
+        );
+
+        // ILD: left energy >= right energy (nearer/louder ear).
+        let energy_l: f32 = left.iter().map(|&v| v * v).sum();
+        let energy_r: f32 = right.iter().map(|&v| v * v).sum();
+        assert!(
+            energy_l >= energy_r,
+            "left energy {energy_l} should be >= right energy {energy_r} (ILD)"
+        );
+    }
+
+    #[test]
+    fn synthesize_hrir_delays_contralateral_ear() {
+        let sample_rate = 48_000.0_f32;
+        // itd < 0 ⇒ source left ⇒ right ear delayed.
+        let g = BinauralGains {
+            gain_l: 0.8,
+            gain_r: 0.6,
+            itd_seconds: -0.0006,
+            ..Default::default()
+        };
+        let (left, right) = synthesize_hrir(&g, sample_rate, 64);
+        assert_eq!(left.len(), 64);
+        assert_eq!(right.len(), 64);
+        // Left ear (near) has its first tap energetic; right ear's peak is later.
+        let left_peak = left
+            .iter()
+            .enumerate()
+            .max_by(|a, b| a.1.abs().partial_cmp(&b.1.abs()).unwrap())
+            .unwrap()
+            .0;
+        let right_peak = right
+            .iter()
+            .enumerate()
+            .max_by(|a, b| a.1.abs().partial_cmp(&b.1.abs()).unwrap())
+            .unwrap()
+            .0;
+        assert_eq!(left_peak, 0, "near (left) ear impulse at tap 0");
+        assert!(
+            right_peak > 0,
+            "contralateral (right) ear delayed, peak at {right_peak}"
+        );
+    }
+
+    #[test]
+    fn binaural_render_output_length() {
+        let mono = vec![0.3_f32; 100];
+        let (l, r) = binaural_render(&mono, [1.0, 0.0, -1.0], 0.0, 48_000.0);
+        assert_eq!(l.len(), 100 + 64 - 1);
+        assert_eq!(r.len(), 100 + 64 - 1);
     }
 }
