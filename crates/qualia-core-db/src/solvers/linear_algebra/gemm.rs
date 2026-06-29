@@ -58,6 +58,49 @@ pub fn gemm(
     if a.len() != m * k || b.len() != k * n || c.len() != m * n {
         return Err(SolversError::InvalidDimension);
     }
+
+    // ── Best-path-with-CPU-floor offload (additive; behaviour-preserving) ──────────
+    //
+    // The capability-aware forge dispatcher (`wgsl_forge::dispatch::gemm_f64`) picks
+    // the best compute path *actually present on this machine* for the plain product
+    // `C = A·B`, while always keeping this CPU triple-loop as the floor. We only hand
+    // off when ALL of the following hold:
+    //   1. it IS the plain product — no transpose, `alpha == 1`, `beta == 0` — because
+    //      `gemm_f64` computes `C = A·B` only (it has no transpose/alpha/beta support);
+    //   2. an accelerator actually exists (`caps().cuda || caps().wgpu`) — so a no-GPU
+    //      machine takes the EXACT existing CPU path below with zero behaviour change;
+    //   3. the problem is large enough (`m·n·k >= GEMM_GPU_THRESHOLD`) to amortise
+    //      dispatch/transfer overhead — small GEMMs stay on the CPU.
+    //
+    // f64 on the GPU is **CUDA-only**: WGSL has no `f64`, so for a non-NVIDIA GPU the
+    // dispatcher itself falls back to its own f64 CPU floor (the `caps().wgpu` term
+    // above just means "an accelerator is present"; the actual f64 GPU kernel is the
+    // native CUDA-f64 path). The dispatcher's CPU floor and our CPU loop use the same
+    // increasing-`k` summation order, so the answers agree to f64 summation precision.
+    //
+    // Crucially, a forge error is NEVER propagated out of the solver: on `Err(_)` we
+    // fall through to the CPU path below, which is always correct. Anything that is not
+    // the plain product (any transpose, `alpha != 1`, `beta != 0`), or is sub-threshold,
+    // or runs off-accelerator, executes the unchanged CPU code — byte-identical to before.
+    if transa == Transpose::No
+        && transb == Transpose::No
+        && alpha == 1.0
+        && beta == 0.0
+    {
+        use crate::wgsl_forge::dispatch::{caps, GEMM_GPU_THRESHOLD};
+        let work = m.saturating_mul(n).saturating_mul(k);
+        let caps = caps();
+        if (caps.cuda || caps.wgpu) && work >= GEMM_GPU_THRESHOLD {
+            // BLAS gemm dims are (m, n, k); the dispatcher takes (m, k, n). A is m×k,
+            // B is k×n, C is m×n, so the mapping is gemm(m,n,k) → dispatch(m,k,n).
+            if let Ok(result) = crate::wgsl_forge::dispatch::gemm_f64(m, k, n, a, b) {
+                c.copy_from_slice(&result);
+                return Ok(());
+            }
+            // Forge path was eligible but errored — fall through to the CPU floor.
+        }
+    }
+
     // op(A)[i][l] — A stored m×k (No) or k×m (Yes).
     let a_at = |i: usize, l: usize| -> f64 {
         match transa {
@@ -328,6 +371,62 @@ mod tests {
         )
         .unwrap();
         approx(&y_mv, &y_gemm);
+    }
+
+    #[test]
+    fn plain_gemm_matches_cpu_above_threshold() {
+        // A large plain product (48×48×48 = 110_592 ≥ GEMM_GPU_THRESHOLD) routed
+        // through `gemm(No, No, .., 1.0, a, b, 0.0, c)`. On an accelerator box this
+        // exercises the forge offload; on CI (no accelerator) it exercises the CPU
+        // floor. EITHER WAY the result must equal a SEPARATE pure-CPU triple-loop
+        // reference computed inline here, so the test is hermetic and GPU-agnostic.
+        const M: usize = 48;
+        const K: usize = 48;
+        const N: usize = 48;
+
+        // Deterministic data — no RNG, no GPU assumption.
+        let mut a = vec![0.0f64; M * K];
+        let mut b = vec![0.0f64; K * N];
+        for i in 0..M {
+            for l in 0..K {
+                a[i * K + l] = ((i * 7 + l * 3) % 11) as f64 * 0.25 - 1.0;
+            }
+        }
+        for l in 0..K {
+            for j in 0..N {
+                b[l * N + j] = ((l * 5 + j * 2) % 13) as f64 * 0.125 - 0.75;
+            }
+        }
+
+        // Reference: independent triple loop, increasing-k accumulation order.
+        let mut reference = vec![0.0f64; M * N];
+        for i in 0..M {
+            for j in 0..N {
+                let mut acc = 0.0f64;
+                for l in 0..K {
+                    acc += a[i * K + l] * b[l * N + j];
+                }
+                reference[i * N + j] = acc;
+            }
+        }
+
+        // Through the wired gemm (plain product → eligible for offload).
+        let mut c = vec![0.0f64; M * N];
+        gemm(
+            Transpose::No,
+            Transpose::No,
+            M,
+            N,
+            K,
+            1.0,
+            &a,
+            &b,
+            0.0,
+            &mut c,
+        )
+        .unwrap();
+
+        approx(&c, &reference);
     }
 
     #[test]
