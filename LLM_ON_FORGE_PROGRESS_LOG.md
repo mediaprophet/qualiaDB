@@ -172,3 +172,50 @@ take a `RopeConfig` and route `RopePair` through the real RoPE; `Laplacian` unch
 - `execute/memory.rs` unified zero-copy "not yet implemented" — honest scope note; the uniform copy
   path is correct on both topologies, and the unified-only optimization cannot be verified on this
   discrete-only A2000 (shipping it unverified would over-claim). Left as documented.
+
+---
+
+## 2026-06-29 — Real multi-head (GQA) decode layer on the forge (DONE)
+
+**Step / phase:** Phase 1c (real-layer builders) — a genuine multi-head decode layer composed from
+forge ops, the prerequisite for the p64 bake-off. **Status: done, GPU-certified on A2000.**
+
+**What was built:**
+- Two real new IR ops (graph.rs, q42_bridge.rs opcodes `0x1B`/`0x1C`, `lower_graph` + `Lowerer` trait
+  arms, executor GPU + CPU-oracle arms):
+  - **`Slice { offset, len }`** (`graph_ops/slice.rs`) — extract a contiguous sub-range on-device.
+    The projected q/K/V are node outputs, so per-head slicing must run on the GPU, not the host.
+  - **`Rope { head_dim, pos, mode, base_bits }`** — first-class RoPE op reusing the real
+    `stencil::rope_wgsl`/`rope_cpu`. `pos` rides in the params **buffer**, not the kernel source, so
+    the pipeline cache stays warm across tokens (only the buffer changes per position).
+- **`decode_layer_graph(n_heads, n_kv_heads, head_dim, seq, ffn, pos, rope_mode, theta_base)`**
+  (executor.rs): `RMSNorm(x) → Q-proj → RoPE(q) → per-head { slice q_h / Kᵀ_h / V_h ; scaled
+  softmax(q_h·Kᵀ_h)·V_h ; o_h·Wo_h } summed → +x → RMSNorm → SwiGLU-FFN → +`. Real **grouped-query
+  attention** (each kv-head serves `n_heads/n_kv_heads` query heads); the per-head output projection
+  is summed (`Σ_h o_h·Wo_h`), so no concat op is needed. Head-major K/V cache layout makes every
+  per-head slice contiguous.
+
+**Measured / verified** (A2000):
+- `decode_layer_cpu_oracle_matches_reference` — **PASS**, the strong proof: the graph's composed CPU
+  oracle matches an **independent hand-written reference** (real RMSNorm/RoPE/attention/SwiGLU math,
+  not the graph code) in **both** RoPE conventions with GQA 2:1. This proves the graph computes a
+  *real* decode layer, not merely that the GPU matches its own oracle.
+- `decode_layer_gpu_matches_cpu_oracle` — **PASS**: the layer runs on the A2000 and matches the
+  composed oracle, both conventions, at a realistic shape (4 heads, 2 kv-heads, head_dim 16, seq 8,
+  ffn 32).
+- `every_op_class_roundtrips` extended to Slice + Rope (q42 byte round-trip). Non-GPU `wgsl_forge::`
+  **141 passed / 0 failed / 47 ignored**; lib clean plain + `--features cuda`.
+
+**Honest boundary:** K and V come from the (head-major) cache **externals** — already RoPE'd, as the
+engine stores them. The *current token's* K/V projection + RoPE + append into the mutable cache is the
+**decode-loop integration step** (the cache is mutable state living at that seam, not in this
+functional graph); this layer is the attention-over-cache compute, which is exactly what the bake-off
+compares. Still f32 (not yet the p64/quantized weights), and not yet wired into `inference_agent`.
+
+**⚑ Where I need the human:** none this step.
+
+**Next step:** the **p64 → forge bridge** + the **one-real-layer bake-off**. Read a real small model's
+weights via `P64TensorIndex::from_p64` (role-tagged), `load_weights` the projections/FFN resident,
+drive `decode_layer_graph` per token, and bake off — same weights — against the hand-written
+`dispatch_attention_pass`/`dispatch_ffn_pass`, asserting f32-tol match (the working engine is the
+oracle) and reporting ms/layer for both. Then KV-cache update at the decode-loop seam.

@@ -36,7 +36,7 @@
 //! want buffer-lifetime reuse (a follow-on). Pipelines are still compiled per node per call;
 //! caching them across calls is a further, independent step.
 
-use super::{broadcast, elementwise, gather_dequant, reduce};
+use super::{broadcast, elementwise, gather_dequant, reduce, slice, stencil};
 use crate::wgsl_forge::execute::{
     BindingUsage, BufferView, GraphPass, WgpuComputeContext,
 };
@@ -100,6 +100,23 @@ pub fn execute_graph_cpu(
                 let rows = node.out.shape.dims[0] as usize;
                 let cols = node.out.shape.dims[1] as usize;
                 gather_dequant::gather_dequant_ternary_cpu(&ins[0], &ins[1], rows, cols)
+            }
+            OpNode::Slice { offset, len } => {
+                slice::slice_cpu(&ins[0], offset as usize, len as usize)
+            }
+            OpNode::Rope { head_dim, pos, mode, base_bits } => {
+                let rope_mode = if mode == 0 {
+                    stencil::RopeMode::Interleaved
+                } else {
+                    stencil::RopeMode::Neox
+                };
+                let cfg = stencil::RopeConfig {
+                    head_dim,
+                    pos,
+                    mode: rope_mode,
+                    theta_base: f32::from_bits(base_bits),
+                };
+                stencil::rope_cpu(&ins[0], &cfg)?
             }
             other => {
                 return Err(ForgeError::Emission(format!(
@@ -478,6 +495,32 @@ fn prepare_node(
                 prepare_matmul_plain(ctx, m, n, k, ins)
             }
         }
+        OpNode::Slice { offset, len } => {
+            const WG: u32 = 64;
+            let out_len = len as usize;
+            let out = alloc_out(ctx, out_len, 1)?;
+            let params = alloc_params(ctx, &[len, offset, 0, 0], 2, BindingUsage::StorageRead)?;
+            let src = slice::slice_wgsl(WG);
+            let sched = Schedule { workgroup_size: WG, ..Default::default() };
+            // input (0), output (1, read_write), params (2).
+            record_kernel(ctx, &src, slice::SLICE_ENTRY, &[at(ins[0], 0), out, params], out, sched, out_len)
+        }
+        OpNode::Rope { head_dim, pos, mode, base_bits } => {
+            const WG: u32 = 64;
+            let n = elems(&ins[0]);
+            let out = alloc_out(ctx, n, 1)?;
+            // params = [n, head_dim, pos, mode, theta_base_bits] (the real RoPE block). `pos` lives
+            // in the buffer, not the source, so the pipeline cache stays warm across tokens.
+            let params = alloc_params(
+                ctx,
+                &[n as u32, head_dim, pos, mode, base_bits],
+                2,
+                BindingUsage::StorageRead,
+            )?;
+            let src = stencil::rope_wgsl(WG)?;
+            let sched = Schedule { workgroup_size: WG, ..Default::default() };
+            record_kernel(ctx, &src, stencil::STENCIL_ENTRY, &[at(ins[0], 0), out, params], out, sched, n)
+        }
         other => Err(ForgeError::Emission(format!(
             "executor: op {other:?} not supported"
         ))),
@@ -790,6 +833,127 @@ pub fn decode_block_graph(d: u32, kv: u32, ffn: u32) -> Result<ComputeGraph, For
     let h = g.push(OpNode::Elementwise { f: EwKind::Mul }, &[sg, up], sh_h, DType::F32, s)?;
     let ffn_out = g.push(mm(1, d, ffn), &[h, wd], sh_row, DType::F32, s)?;
     let out = g.push(OpNode::Elementwise { f: EwKind::Add }, &[res1, ffn_out], sh_row, DType::F32, s)?;
+    g.mark_output(out);
+    Ok(g)
+}
+
+/// A **real multi-head (GQA) decode layer** over a KV cache of length `seq`, composed entirely from
+/// forge ops: `RMSNorm(x) → Q-proj → RoPE(q) → per-head { slice q_h / Kᵀ_h / V_h ; scaled
+/// softmax(q_h·Kᵀ_h)·V_h ; o_h·Wo_h } summed → +x → RMSNorm → SwiGLU-FFN → +`. K/V come from the
+/// (head-major) cache externals — already RoPE'd, as the engine stores them; the current token's
+/// K/V projection + cache append is the decode-loop integration step (the cache is mutable state
+/// living at that seam, not in this functional graph). Grouped-query attention: each kv-head serves
+/// `n_heads/n_kv_heads` query heads. Per-head slicing is contiguous because the cache is head-major.
+///
+/// Cache layout: `Kt` = `[n_kv_heads, head_dim, seq]` (transposed keys), `V` = `[n_kv_heads, seq,
+/// head_dim]`. Externals: `[0]=x[1,d] [1]=Kt [2]=V [3]=Wq[d,d] [4]=Wo[d,d] [5]=Wg[d,ffn]
+/// [6]=Wu[d,ffn] [7]=Wd[ffn,d] [8]=inv_scale[1] [9]=eps[1]`, with `d=n_heads·head_dim`. `rope_mode`
+/// is 0=interleaved / 1=NeoX; `pos` is the query's absolute position.
+#[allow(clippy::too_many_arguments)]
+pub fn decode_layer_graph(
+    n_heads: u32,
+    n_kv_heads: u32,
+    head_dim: u32,
+    seq: u32,
+    ffn: u32,
+    pos: u32,
+    rope_mode: u32,
+    theta_base: f32,
+) -> Result<ComputeGraph, ForgeError> {
+    if n_kv_heads == 0 || n_heads % n_kv_heads != 0 {
+        return Err(ForgeError::Emission(format!(
+            "decode_layer: n_heads {n_heads} must be a positive multiple of n_kv_heads {n_kv_heads}"
+        )));
+    }
+    let d = n_heads * head_dim;
+    let group = n_heads / n_kv_heads;
+    let base_bits = theta_base.to_bits();
+    let mut g = ComputeGraph::new();
+    let s = Schedule::default();
+    let sh_d = Shape::new(&[1, d]);
+    let sh_1 = Shape::new(&[1]);
+    let sh_hd = Shape::new(&[1, head_dim]);
+    let sh_seq = Shape::new(&[1, seq]);
+    let sh_ffn = Shape::new(&[1, ffn]);
+    let mm = |m, n, k| OpNode::MatMul { m, n, k, tc: false, trans_b: false };
+
+    let x = TensorRef::input(0, sh_d, DType::F32);
+    let kt = TensorRef::input(1, Shape::new(&[n_kv_heads * head_dim * seq]), DType::F32);
+    let v = TensorRef::input(2, Shape::new(&[n_kv_heads * seq * head_dim]), DType::F32);
+    let wq = TensorRef::input(3, Shape::new(&[d, d]), DType::F32);
+    let wo = TensorRef::input(4, Shape::new(&[d, d]), DType::F32);
+    let wg = TensorRef::input(5, Shape::new(&[d, ffn]), DType::F32);
+    let wu = TensorRef::input(6, Shape::new(&[d, ffn]), DType::F32);
+    let wd = TensorRef::input(7, Shape::new(&[ffn, d]), DType::F32);
+    let inv_scale = TensorRef::input(8, sh_1, DType::F32);
+    let eps = TensorRef::input(9, sh_1, DType::F32);
+
+    // Attention: RMSNorm(x) → Q-proj → RoPE(q) → per-head GQA attention → residual.
+    let n1 = push_rmsnorm(&mut g, x, eps, sh_d, sh_1, s)?;
+    let q = g.push(mm(1, d, d), &[n1, wq], sh_d, DType::F32, s)?;
+    let q = g.push(
+        OpNode::Rope { head_dim, pos, mode: rope_mode, base_bits },
+        &[q],
+        sh_d,
+        DType::F32,
+        s,
+    )?;
+
+    let mut head_parts: Vec<TensorRef> = Vec::with_capacity(n_heads as usize);
+    for h in 0..n_heads {
+        let kh = h / group; // GQA: query head h reads kv-head kh.
+        let q_h = g.push(
+            OpNode::Slice { offset: h * head_dim, len: head_dim },
+            &[q],
+            sh_hd,
+            DType::F32,
+            s,
+        )?;
+        let kt_h = g.push(
+            OpNode::Slice { offset: kh * head_dim * seq, len: head_dim * seq },
+            &[kt],
+            Shape::new(&[head_dim, seq]),
+            DType::F32,
+            s,
+        )?;
+        let v_h = g.push(
+            OpNode::Slice { offset: kh * seq * head_dim, len: seq * head_dim },
+            &[v],
+            Shape::new(&[seq, head_dim]),
+            DType::F32,
+            s,
+        )?;
+        // scores = q_h · Kᵀ_h [1,seq]; scaled by 1/√head_dim; softmax; · V_h → o_h [1,head_dim].
+        let scores = g.push(mm(1, seq, head_dim), &[q_h, kt_h], sh_seq, DType::F32, s)?;
+        let inv_bc = g.push(OpNode::Broadcast { shape: sh_seq }, &[inv_scale], sh_seq, DType::F32, s)?;
+        let scaled = g.push(OpNode::Elementwise { f: EwKind::Mul }, &[scores, inv_bc], sh_seq, DType::F32, s)?;
+        let probs = push_softmax(&mut g, scaled, sh_seq, sh_1, s)?;
+        let o_h = g.push(mm(1, head_dim, seq), &[probs, v_h], sh_hd, DType::F32, s)?;
+        // Output projection, per head: o_h · Wo[h·head_dim : (h+1)·head_dim, :] → [1,d]; summed.
+        let wo_h = g.push(
+            OpNode::Slice { offset: h * head_dim * d, len: head_dim * d },
+            &[wo],
+            Shape::new(&[head_dim, d]),
+            DType::F32,
+            s,
+        )?;
+        let part = g.push(mm(1, d, head_dim), &[o_h, wo_h], sh_d, DType::F32, s)?;
+        head_parts.push(part);
+    }
+    let mut attn = head_parts[0];
+    for &part in &head_parts[1..] {
+        attn = g.push(OpNode::Elementwise { f: EwKind::Add }, &[attn, part], sh_d, DType::F32, s)?;
+    }
+    let res1 = g.push(OpNode::Elementwise { f: EwKind::Add }, &[x, attn], sh_d, DType::F32, s)?;
+
+    // SwiGLU-FFN over RMSNorm(res1), residual.
+    let n2 = push_rmsnorm(&mut g, res1, eps, sh_d, sh_1, s)?;
+    let gate = g.push(mm(1, ffn, d), &[n2, wg], sh_ffn, DType::F32, s)?;
+    let up = g.push(mm(1, ffn, d), &[n2, wu], sh_ffn, DType::F32, s)?;
+    let sg = g.push(OpNode::Elementwise { f: EwKind::Silu }, &[gate], sh_ffn, DType::F32, s)?;
+    let hh = g.push(OpNode::Elementwise { f: EwKind::Mul }, &[sg, up], sh_ffn, DType::F32, s)?;
+    let ffn_out = g.push(mm(1, d, ffn), &[hh, wd], sh_d, DType::F32, s)?;
+    let out = g.push(OpNode::Elementwise { f: EwKind::Add }, &[res1, ffn_out], sh_d, DType::F32, s)?;
     g.mark_output(out);
     Ok(g)
 }
@@ -1142,6 +1306,142 @@ mod tests {
         assert_eq!(out.len(), d);
         for (o, w) in out.iter().zip(&want) {
             assert!((o - w).abs() < 1e-5, "{o} vs {w}");
+        }
+    }
+
+    // ── Real multi-head (GQA) decode layer ───────────────────────────────────────────
+
+    /// Deterministic externals for [`decode_layer_graph`] (head-major K/V cache layout).
+    fn decode_layer_externals(
+        n_heads: u32,
+        n_kv_heads: u32,
+        head_dim: u32,
+        seq: u32,
+        ffn: u32,
+    ) -> Vec<Vec<f32>> {
+        let d = (n_heads * head_dim) as usize;
+        let (hd, seqn, ffnn, n_kv) =
+            (head_dim as usize, seq as usize, ffn as usize, n_kv_heads as usize);
+        let gen = |len: usize, salt: usize| -> Vec<f32> {
+            (0..len)
+                .map(|i| (((i * 7 + salt * 13) % 23) as f32) * 0.05 - 0.55)
+                .collect()
+        };
+        let inv_scale = 1.0f32 / (head_dim as f32).sqrt();
+        vec![
+            gen(d, 1),                  // x  [1,d]
+            gen(n_kv * hd * seqn, 2),   // Kt [n_kv, head_dim, seq]
+            gen(n_kv * seqn * hd, 3),   // V  [n_kv, seq, head_dim]
+            gen(d * d, 4),              // Wq [d,d]
+            gen(d * d, 5),              // Wo [d,d]
+            gen(d * ffnn, 6),           // Wg [d,ffn]
+            gen(d * ffnn, 7),           // Wu [d,ffn]
+            gen(ffnn * d, 8),           // Wd [ffn,d]
+            vec![inv_scale],            // inv_scale
+            vec![1e-5],                 // eps
+        ]
+    }
+
+    /// Independent hand-written reference for the real decode layer (mirrors the math, not the
+    /// graph code): RMSNorm → Q-proj → RoPE(q) → per-head GQA `softmax(q_h·Kᵀ_h/√hd)·V_h` →
+    /// `o_h·Wo_h` summed → +x → RMSNorm → SwiGLU → +.
+    #[allow(clippy::too_many_arguments)]
+    fn ref_decode_layer(
+        ext: &[Vec<f32>],
+        n_heads: u32,
+        n_kv_heads: u32,
+        head_dim: u32,
+        seq: u32,
+        ffn: u32,
+        pos: u32,
+        mode: u32,
+        base: f32,
+    ) -> Vec<f32> {
+        use crate::wgsl_forge::graph_ops::stencil::{rope_cpu, RopeConfig, RopeMode};
+        let d = (n_heads * head_dim) as usize;
+        let (hd, seqn, ffnn) = (head_dim as usize, seq as usize, ffn as usize);
+        let group = (n_heads / n_kv_heads) as usize;
+        let (x, kt, v, wq, wo, wg, wu, wd) =
+            (&ext[0], &ext[1], &ext[2], &ext[3], &ext[4], &ext[5], &ext[6], &ext[7]);
+        let inv_scale = ext[8][0];
+        let eps = ext[9][0];
+        let n1 = ref_rmsnorm(x, eps);
+        let q = ref_mm(&n1, wq, 1, d, d);
+        let rmode = if mode == 0 { RopeMode::Interleaved } else { RopeMode::Neox };
+        let q = rope_cpu(&q, &RopeConfig { head_dim, pos, mode: rmode, theta_base: base }).unwrap();
+        let mut attn = vec![0.0f32; d];
+        for h in 0..n_heads as usize {
+            let kh = h / group;
+            let q_h = &q[h * hd..(h + 1) * hd];
+            let kt_h = &kt[kh * hd * seqn..(kh + 1) * hd * seqn];
+            let v_h = &v[kh * seqn * hd..(kh + 1) * seqn * hd];
+            let scores: Vec<f32> =
+                ref_mm(q_h, kt_h, 1, hd, seqn).iter().map(|s| s * inv_scale).collect();
+            let probs = ref_softmax(&scores);
+            let o_h = ref_mm(&probs, v_h, 1, seqn, hd);
+            let wo_h = &wo[h * hd * d..(h + 1) * hd * d];
+            let part = ref_mm(&o_h, wo_h, 1, hd, d);
+            for (a, p) in attn.iter_mut().zip(&part) {
+                *a += *p;
+            }
+        }
+        let res1: Vec<f32> = x.iter().zip(&attn).map(|(a, b)| a + b).collect();
+        let n2 = ref_rmsnorm(&res1, eps);
+        let gate = ref_mm(&n2, wg, 1, d, ffnn);
+        let up = ref_mm(&n2, wu, 1, d, ffnn);
+        let hsl: Vec<f32> = gate
+            .iter()
+            .zip(&up)
+            .map(|(g, u)| (g / (1.0 + (-g).exp())) * u)
+            .collect();
+        let ffn_out = ref_mm(&hsl, wd, 1, ffnn, d);
+        res1.iter().zip(&ffn_out).map(|(a, b)| a + b).collect()
+    }
+
+    /// The real multi-head (GQA) decode-layer graph's **composed CPU oracle** matches an
+    /// INDEPENDENT hand-written reference — proving the graph computes a real decode layer (not
+    /// merely that the GPU matches its own oracle). Covers both RoPE conventions + GQA (2:1).
+    #[test]
+    fn decode_layer_cpu_oracle_matches_reference() {
+        let (n_heads, n_kv_heads, head_dim, seq, ffn) = (2u32, 1u32, 8u32, 4u32, 16u32);
+        let (pos, base) = (3u32, 10000.0f32);
+        let ext = decode_layer_externals(n_heads, n_kv_heads, head_dim, seq, ffn);
+        for mode in [0u32, 1u32] {
+            let g =
+                decode_layer_graph(n_heads, n_kv_heads, head_dim, seq, ffn, pos, mode, base).unwrap();
+            let cpu = execute_graph_cpu(&g, &ext).unwrap();
+            let want =
+                ref_decode_layer(&ext, n_heads, n_kv_heads, head_dim, seq, ffn, pos, mode, base);
+            assert_eq!(cpu.len(), (n_heads * head_dim) as usize);
+            for (a, b) in cpu.iter().zip(&want) {
+                assert!(
+                    (a - b).abs() <= 1e-4 * b.abs().max(1.0),
+                    "decode-layer oracle vs ref (mode {mode}): {a} vs {b}"
+                );
+            }
+        }
+    }
+
+    /// GPU certify: the real multi-head decode layer on the A2000 matches its composed CPU oracle,
+    /// for both RoPE conventions, at a realistic shape (4 heads, 2 kv-heads = GQA 2:1, head_dim 16).
+    #[test]
+    #[ignore = "requires a GPU adapter"]
+    fn decode_layer_gpu_matches_cpu_oracle() {
+        let (n_heads, n_kv_heads, head_dim, seq, ffn) = (4u32, 2u32, 16u32, 8u32, 32u32);
+        let (pos, base) = (5u32, 10000.0f32);
+        let ext = decode_layer_externals(n_heads, n_kv_heads, head_dim, seq, ffn);
+        for mode in [0u32, 1u32] {
+            let g =
+                decode_layer_graph(n_heads, n_kv_heads, head_dim, seq, ffn, pos, mode, base).unwrap();
+            let gpu = execute_graph(&g, &ext).expect("decode-layer gpu");
+            let cpu = execute_graph_cpu(&g, &ext).unwrap();
+            assert_eq!(gpu.len(), (n_heads * head_dim) as usize);
+            for (a, b) in gpu.iter().zip(&cpu) {
+                assert!(
+                    (a - b).abs() <= 1e-2 * b.abs().max(1.0),
+                    "decode-layer gpu vs oracle (mode {mode}): {a} vs {b}"
+                );
+            }
         }
     }
 

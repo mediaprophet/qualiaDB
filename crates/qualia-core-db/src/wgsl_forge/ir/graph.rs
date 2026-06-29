@@ -195,10 +195,10 @@ pub enum NeighborEnc {
     Project,
 }
 
-/// An op-CLASS and its compile-time payload — the node label of the compute DAG. Twelve
-/// arms by design (plan §2). Seed arms (`Elementwise`/`MatMul`/`Gemv`/`Fft`) have a real
-/// lowering today; the rest are declared so the vocabulary is fixed, and lower to an
-/// explicit `Err` until their phase builds them.
+/// An op-CLASS and its compile-time payload — the node label of the compute DAG (plan §2;
+/// `Slice`/`Rope` added for the real decode layer). Seed arms (`Elementwise`/`MatMul`/`Gemv`/
+/// `Fft`) have a real lowering today; the rest are declared so the vocabulary is fixed, and lower
+/// to an explicit `Err` until their phase builds them.
 #[derive(Debug, Clone, Copy, PartialEq)]
 pub enum OpNode {
     Elementwise { f: EwKind },
@@ -212,6 +212,14 @@ pub enum OpNode {
     Stencil { kind: StencilKind, halo: u32, axis: Axis },
     ScatterAccum { op: AccumKind },
     Neighbor { kind: NbKind, k_or_r: f32, dims: u8, enc: NeighborEnc },
+    /// Extract a contiguous sub-range `input[offset .. offset+len]` (1 input → `[len]`). The
+    /// composable primitive for per-head slicing of projected q/K/V in multi-head attention.
+    Slice { offset: u32, len: u32 },
+    /// Rotary position embedding over a flat `[.., head_dim]` vector (1 input). `pos` is carried so
+    /// the executor writes it into the kernel's params buffer — the kernel *source* is independent
+    /// of `pos`, so the pipeline cache stays warm across tokens. `mode` is 0=interleaved / 1=NeoX;
+    /// `base_bits` is the f32 θ-base bit pattern. See `graph_ops::stencil::{rope_wgsl, rope_cpu}`.
+    Rope { head_dim: u32, pos: u32, mode: u32, base_bits: u32 },
 }
 
 /// One node of a [`ComputeGraph`]: an op, its input edges, its single output edge, and a
@@ -363,6 +371,12 @@ pub trait Lowerer {
     fn neighbor(&mut self, _node: &GraphNode) -> Result<(), ForgeError> {
         unsupported("neighbor")
     }
+    fn slice(&mut self, _node: &GraphNode) -> Result<(), ForgeError> {
+        unsupported("slice")
+    }
+    fn rope(&mut self, _node: &GraphNode) -> Result<(), ForgeError> {
+        unsupported("rope")
+    }
 }
 
 fn unsupported(op: &str) -> Result<(), ForgeError> {
@@ -388,6 +402,8 @@ pub fn lower_graph<L: Lowerer>(graph: &ComputeGraph, lowerer: &mut L) -> Result<
             OpNode::Stencil { .. } => lowerer.stencil(node)?,
             OpNode::ScatterAccum { .. } => lowerer.scatter_accum(node)?,
             OpNode::Neighbor { .. } => lowerer.neighbor(node)?,
+            OpNode::Slice { .. } => lowerer.slice(node)?,
+            OpNode::Rope { .. } => lowerer.rope(node)?,
         }
     }
     Ok(())

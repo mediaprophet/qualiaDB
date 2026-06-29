@@ -15,4 +15,5 @@ pub mod gather_dequant;
 pub mod neighbor;
 pub mod reduce;
 pub mod scatter;
+pub mod slice;
 pub mod stencil;

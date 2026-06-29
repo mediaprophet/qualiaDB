@@ -61,6 +61,8 @@ const OP_SOFTMAX: u64 = 0x17;
 const OP_STENCIL: u64 = 0x18;
 const OP_SCATTER_ACCUM: u64 = 0x19;
 const OP_NEIGHBOR: u64 = 0x1A;
+const OP_SLICE: u64 = 0x1B;
+const OP_ROPE: u64 = 0x1C;
 
 /// The op-kind opcode for an [`OpNode`] (the value stored in a `q42:opKind` quin's `object`).
 pub fn opcode_of(op: &OpNode) -> u64 {
@@ -76,6 +78,8 @@ pub fn opcode_of(op: &OpNode) -> u64 {
         OpNode::Stencil { .. } => OP_STENCIL,
         OpNode::ScatterAccum { .. } => OP_SCATTER_ACCUM,
         OpNode::Neighbor { .. } => OP_NEIGHBOR,
+        OpNode::Slice { .. } => OP_SLICE,
+        OpNode::Rope { .. } => OP_ROPE,
     }
 }
 
@@ -313,6 +317,14 @@ fn encode_op(op: &OpNode) -> Result<(u64, u64, u64), ForgeError> {
                 | ((k_or_r.to_bits() as u64) << 32),
             0,
         ),
+        OpNode::Slice { offset, len } => {
+            (OP_SLICE, (offset as u64) | ((len as u64) << 32), 0)
+        }
+        OpNode::Rope { head_dim, pos, mode, base_bits } => (
+            OP_ROPE,
+            (head_dim as u64) | ((pos as u64) << 32),
+            (mode as u64) | ((base_bits as u64) << 32),
+        ),
     })
 }
 
@@ -352,6 +364,16 @@ fn decode_op(opcode: u64, w0: u64, w1: u64) -> Result<OpNode, ForgeError> {
             dims: ((w0 >> 8) & 0xFF) as u8,
             enc: enc_from((w0 >> 16) & 0xFF)?,
             k_or_r: f32::from_bits((w0 >> 32) as u32),
+        },
+        OP_SLICE => OpNode::Slice {
+            offset: (w0 & 0xFFFF_FFFF) as u32,
+            len: (w0 >> 32) as u32,
+        },
+        OP_ROPE => OpNode::Rope {
+            head_dim: (w0 & 0xFFFF_FFFF) as u32,
+            pos: (w0 >> 32) as u32,
+            mode: (w1 & 0xFFFF_FFFF) as u32,
+            base_bits: (w1 >> 32) as u32,
         },
         other => return Err(err(format!("q42: unknown op-kind opcode {other:#x}"))),
     })
@@ -591,6 +613,8 @@ mod tests {
             OpNode::Stencil { kind: StencilKind::Advection, halo: 2, axis: Axis::Last },
             OpNode::ScatterAccum { op: AccumKind::Max },
             OpNode::Neighbor { kind: NbKind::Knn, k_or_r: 3.5, dims: 3, enc: NeighborEnc::Project },
+            OpNode::Slice { offset: 7, len: 13 },
+            OpNode::Rope { head_dim: 64, pos: 9, mode: 1, base_bits: 10000.0f32.to_bits() },
         ];
         for op in ops {
             let (opcode, w0, w1) = encode_op(&op).expect("encode");
