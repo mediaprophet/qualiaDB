@@ -112,7 +112,11 @@ fn emit_kernel_body(
             emit_ops(source, &kernel.ops, "            ")?;
             writeln!(source, "        }}").map_err(|error| ForgeError::Emission(error.to_string()))?;
         } else {
-            // Simplified for now, fallback to loop for vector sizes in MSL
+            // Vectorized affine (affine-f32 is the only kernel that sets vector_width>1):
+            // an unrolled fast path when the whole VECTOR_WIDTH span is in bounds, plus a
+            // bounds-checked tail for the final partial span. Correct for affine-f32 (its sole
+            // op is out = in*scale + bias). Native Metal float4 SIMD loads would be a throughput
+            // optimization (needs a Metal compiler to validate — absent on this host), not a gap.
             writeln!(source, "        if (global_id + {}u < params.length) {{", schedule.vector_width - 1).map_err(|error| ForgeError::Emission(error.to_string()))?;
             for index in 0..schedule.vector_width {
                 writeln!(source, "            output[global_id + {index}u] = input[global_id + {index}u] * params.scale + params.bias;").map_err(|error| ForgeError::Emission(error.to_string()))?;

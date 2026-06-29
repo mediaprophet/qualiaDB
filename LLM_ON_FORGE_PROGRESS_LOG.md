@@ -130,3 +130,45 @@ graph (QKV projection, output projection, multi-head attention, RoPE), and bake 
 weights — against the hand-written `dispatch_attention_pass`/`dispatch_ffn_pass`, asserting f32-tol
 match (the working engine is the oracle) and reporting ms/layer for both. "No lanes" (Timothy,
 2026-06-29): the decode-loop seam in `inference_agent.rs` + `gguf_bridge` is in scope for that wiring.
+
+---
+
+## 2026-06-29 — Real RoPE (placeholder removed), directed by Timothy ("no placeholders")
+
+**Step / phase:** remove the RoPE placeholder before building the real decode layer. **Status: done,
+GPU-certified on A2000.**
+
+**What was the placeholder:** `wgsl_forge/graph_ops/stencil.rs::RopePair` was a **fixed-angle**
+rotation (`c = cos(1), s = sin(1)`), self-described as a "content-free structural rotation" — it
+applied the *same* unit rotation to every pair regardless of position or dimension. Not RoPE.
+
+**What was built** (file: `crates/qualia-core-db/src/wgsl_forge/graph_ops/stencil.rs`): a **real**
+rotary position embedding. `RopeConfig { head_dim, pos, mode, theta_base }`, `RopeMode::{Interleaved,
+Neox}` (GGUF `NORM` = adjacent pairs `(2j,2j+1)`; GGUF `NEOX`/HF `rotate_half` = split pairs
+`(j, j+head_dim/2)`); each pair rotated by the true angle `θ = pos · base^(−2j/head_dim)`. Real WGSL
+kernel (`rope_wgsl`, reads `[n, head_dim, pos, mode, theta_bits]` params, default base 10000), exact
+f32 CPU oracle (`rope_cpu`), standalone GPU runner (`rope_gpu`). The generic `stencil_{cpu,gpu}` now
+take a `RopeConfig` and route `RopePair` through the real RoPE; `Laplacian` unchanged.
+
+**Measured / verified** (A2000):
+- 7 non-GPU stencil/RoPE tests pass, incl. **relative-position invariance** — RoPE's *defining*
+  property, that `dot(RoPE(q,m), RoPE(k,n))` depends only on `m−n`, verified in **both** conventions
+  (the score is unchanged when both positions shift by the same Δ); plus single-pair hand-check,
+  pos-0-is-identity, per-pair norm preservation, bad-head_dim rejection, naga validation.
+- GPU cert `stencil_gpu_matches_oracle` — **PASS**: real RoPE (both conventions, head_dim 64, pos 5,
+  multi-head 512-wide) + Laplacian match the CPU oracle on hardware.
+- Full non-GPU `wgsl_forge::` 138 passed / 0 failed / 46 ignored; lib clean plain + `--features cuda`.
+
+**Other placeholders scanned (Timothy: "any others you come across"):**
+- `emit/{hlsl,msl}.rs` "Simplified for now" vectorized-affine path — **examined: not a fake.** It is a
+  correct unrolled fast-path + bounds-checked tail, and `affine-f32` (gated by `kernel.id`) is the only
+  kernel that sets `vector_width>1`, whose sole op is `out = in·scale + bias`. Native float4 SIMD loads
+  would be a throughput optimization needing DXC/Metal to validate (absent on this Windows host), not a
+  correctness gap. Corrected the misleading comments; left the (correct) codegen.
+- `fluid_dynamics` (`velocity*=0.99`) + `Divergence`/`Advection` stencils + `quantum_bio` — these
+  return honest `Err`s / are flagged as **curation item #45**: they need Timothy's physical-model
+  direction (which discretization / scheme), the one allowed defer per §12. Not faked, not silently
+  no-op. Left for his call.
+- `execute/memory.rs` unified zero-copy "not yet implemented" — honest scope note; the uniform copy
+  path is correct on both topologies, and the unified-only optimization cannot be verified on this
+  discrete-only A2000 (shipping it unverified would over-claim). Left as documented.
