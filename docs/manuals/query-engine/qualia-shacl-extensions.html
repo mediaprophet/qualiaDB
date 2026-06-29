@@ -506,6 +506,121 @@
     </section>
   </section>
 
+  <section id="computational-maths-constraints">
+    <h2>Computational Mathematics Constraints</h2>
+    <p>The computational-mathematics engine — units &amp; dimensional analysis, number theory,
+    special functions, interpolation, integral transforms, vector calculus, arbitrary-precision
+    exact arithmetic, the symbolic CAS, and general-dimension numerical methods — carries a SHACL
+    <code>q42:*ConfigurationShape</code> per capability. Each shape bounds the capability's resource
+    parameters (compiled to a bounded <code>Vec&lt;SlgOpcode&gt;</code> at config time, off the hot
+    path) and restricts its operation set with <code>sh:in</code>. Namespace
+    <code>q42: &lt;https://webizen.org/q42#&gt;</code>. The normative shapes are emitted by
+    <code>get_computational_maths_shacl_ttl()</code> in
+    <code>crates/qualia-core-db/src/modalities/logic/computational_maths_shacl.rs</code> (mirrors the
+    in-browser computational engine — see the <a href="../../compute-engine.html">Computational Engine</a>
+    demo).</p>
+
+    <div class="constraint-box">
+      <h4>q42:UnitsConfigurationShape</h4>
+      <p>Bounds SI dimensional analysis and the supported unit systems.</p>
+      <table>
+        <tr><th>Property</th><th>Type</th><th>Range / values</th></tr>
+        <tr><td>q42:dimensionComponents</td><td>xsd:integer</td><td>1 – 7 (SI base-dimension vector)</td></tr>
+        <tr><td>q42:allowedUnitSystems</td><td>sh:in</td><td>si | cgs | imperial</td></tr>
+      </table>
+    </div>
+
+    <div class="constraint-box">
+      <h4>q42:NumberTheoryConfigurationShape</h4>
+      <p>Bounds number-theory input size and the supported primitives.</p>
+      <table>
+        <tr><th>Property</th><th>Type</th><th>Range / values</th></tr>
+        <tr><td>q42:maxInputBits</td><td>xsd:integer</td><td>1 – 4096</td></tr>
+        <tr><td>q42:allowedOperations</td><td>sh:in</td><td>primality | factorization | gcd | totient | modular | combinatorics</td></tr>
+      </table>
+    </div>
+
+    <div class="constraint-box">
+      <h4>q42:SpecialFunctionConfigurationShape</h4>
+      <p>Bounds series truncation and the supported special-function families.</p>
+      <table>
+        <tr><th>Property</th><th>Type</th><th>Range / values</th></tr>
+        <tr><td>q42:maxSeriesTerms</td><td>xsd:integer</td><td>1 – 100,000</td></tr>
+        <tr><td>q42:allowedFamilies</td><td>sh:in</td><td>bessel | airy | zeta | legendre | chebyshev | hermite | laguerre</td></tr>
+      </table>
+    </div>
+
+    <div class="constraint-box">
+      <h4>q42:InterpolationConfigurationShape</h4>
+      <p>Bounds interpolation node count and the supported methods.</p>
+      <table>
+        <tr><th>Property</th><th>Type</th><th>Range / values</th></tr>
+        <tr><td>q42:maxNodes</td><td>xsd:integer</td><td>2 – 1,000,000</td></tr>
+        <tr><td>q42:allowedMethods</td><td>sh:in</td><td>lagrange | newton | cubic_spline | least_squares</td></tr>
+      </table>
+    </div>
+
+    <div class="constraint-box">
+      <h4>q42:IntegralTransformConfigurationShape</h4>
+      <p>Bounds transform sample count and the supported transforms.</p>
+      <table>
+        <tr><th>Property</th><th>Type</th><th>Range / values</th></tr>
+        <tr><td>q42:maxSamples</td><td>xsd:integer</td><td>2 – 16,777,216</td></tr>
+        <tr><td>q42:allowedTransforms</td><td>sh:in</td><td>dft | laplace | ztransform</td></tr>
+      </table>
+    </div>
+
+    <div class="constraint-box">
+      <h4>q42:VectorCalculusConfigurationShape</h4>
+      <p>Bounds the spatial dimension and the supported differential/integral operators.</p>
+      <table>
+        <tr><th>Property</th><th>Type</th><th>Range / values</th></tr>
+        <tr><td>q42:maxSpatialDimension</td><td>xsd:integer</td><td>2 – 3 (2-D / 3-D fields)</td></tr>
+        <tr><td>q42:allowedOperators</td><td>sh:in</td><td>gradient | divergence | curl | laplacian | line_integral | surface_integral</td></tr>
+      </table>
+    </div>
+
+    <div class="constraint-box">
+      <h4>q42:ExactArithmeticConfigurationShape</h4>
+      <p>Bounds arbitrary-precision digit count and the supported exact types.</p>
+      <table>
+        <tr><th>Property</th><th>Type</th><th>Range / values</th></tr>
+        <tr><td>q42:maxDigits</td><td>xsd:integer</td><td>1 – 1,000,000</td></tr>
+        <tr><td>q42:allowedTypes</td><td>sh:in</td><td>bigint | bigrational</td></tr>
+      </table>
+    </div>
+
+    <div class="constraint-box">
+      <h4>q42:SymbolicCalculusConfigurationShape</h4>
+      <p>Bounds the symbolic CAS order and the supported symbolic operations.</p>
+      <table>
+        <tr><th>Property</th><th>Type</th><th>Range / values</th></tr>
+        <tr><td>q42:maxOrder</td><td>xsd:integer</td><td>1 – 1024</td></tr>
+        <tr><td>q42:allowedOperations</td><td>sh:in</td><td>integrate | series | limit | solve | ode_solve | pde_classify | gradient | jacobian | hessian</td></tr>
+      </table>
+    </div>
+
+    <div class="constraint-box">
+      <h4>q42:AssumptionConfigurationShape</h4>
+      <p>Keeps assumption-gated symbolic rewrites sound, and restricts the sign-assumption domain.</p>
+      <table>
+        <tr><th>Property</th><th>Type</th><th>Range / values</th></tr>
+        <tr><td>q42:requireSoundRewrite</td><td>xsd:boolean</td><td>true ⇒ rewrites must preserve soundness</td></tr>
+        <tr><td>q42:allowedSigns</td><td>sh:in</td><td>positive | nonnegative | negative | nonpositive | nonzero</td></tr>
+      </table>
+    </div>
+
+    <div class="constraint-box">
+      <h4>q42:NumericalMethodConfigurationShape</h4>
+      <p>Bounds the ODE state dimension and the supported general-dimension integrators.</p>
+      <table>
+        <tr><th>Property</th><th>Type</th><th>Range / values</th></tr>
+        <tr><td>q42:maxStateDimension</td><td>xsd:integer</td><td>1 – 100,000</td></tr>
+        <tr><td>q42:allowedIntegrators</td><td>sh:in</td><td>rk4 | simpson | shooting_bvp</td></tr>
+      </table>
+    </div>
+  </section>
+
   <section id="infrastructure-constraints">
     <h2>Infrastructure Constraints</h2>
     <p>Infrastructure constraints validate parameters for domain-specific engines,
