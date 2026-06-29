@@ -239,3 +239,39 @@ Full `wgsl_forge` non-GPU green; `--features cuda` + cli clean.
 **Next** — P4b (assemble the full attention block + ternary GatherDequant split + an honest kernel-level
 uplift benchmark), then P5 (`CudaCLowerer` — the same graph → CUDA-C in one pass), P6 (q42 persistence),
 P7 (RT `Neighbor` + fluids).
+
+---
+
+## 2026-06-29 · DAG-IR P4c (part 1) — tiled tensor-core WMMA GEMM + `gemm_f32_tc` · DONE (GPU-certified)
+
+Triggered by Timothy's "have we *ensured a wgpu pathway*, or just pushed to alternatives?" The honest
+audit found the tensor-core kernels were proven single-*tile* primitives (8×8×8 coopmat / 16×16×16 WMMA),
+**not** GEMM backends, and the `MatMul.tc` flag was a no-op. This step builds the real tiled GEMM.
+
+**What was built**
+- `emit/cuda_c.rs::WMMA_GEMM_TILED_SRC` — a **tiled** WMMA GEMM: one warp per 16×16 output tile, looping
+  the proven single-tile primitive across `K/16` inner tiles (registers accumulate). `C[M,N] f32 =
+  A[M,K] f16 · B[K,N] f16`, `M/N/K` multiples of 16. A real tensor-core GEMM, not one tile.
+- `dispatch::gemm_tc_cuda` — f32→f16 host pack, `dims=[m,n,k]` storage buffer, NVRTC compile, grid of
+  `(M/16)·(N/16)` warps.
+- `dispatch::gemm_f32_tc` — the **opt-in capability-selected** entry point that makes `MatMul.tc` real:
+  WGSL coopmat (portable, *dormant until #9741*) → CUDA WMMA (NVIDIA tensor cores, **now**) → plain f32
+  floor. Reduced precision (f16 inputs) is opt-in; plain `gemm_f32` stays full-precision.
+
+**Honest scope** — this is the **CUDA tensor-core** half of P4c, certified now. The **WGSL coopmat** half
+(the actual *wgpu* tensor-core pathway) is a tiled coopmat WGSL kernel + `coopmat_usable()` probe; it is
+**dormant on wgpu 29.0.3** (coopmat multiply returns zeros), so it is built+verified **together with the
+#9741 soft-fork experiment** (task #56) — there's no way to certify its tiling before the multiply works.
+So today the *active* tensor-core path is CUDA WMMA; the wgpu coopmat slot is wired-in-spirit (the
+selection point + probe gate) and lights up when the fix lands. Recorded in `docs/WGPU_UPSTREAM_TRACKING.md`.
+
+**Measured** — `gemm_tc_cuda_tiled_matches_f16_reference` **passes on the A2000** (64×64×64 = 4×4 tiles ×
+4 K-tiles, vs the f16-rounded f32 reference, with a non-zero sanity check that rules out the
+broken-multiply symptom); `gemm_f32_tc_falls_to_plain_floor` (non-GPU) green; lib `--features cuda` + cli
+build clean.
+
+**⚑ Where I need the human** — none to build; the coopmat-half + soft-fork (#56) is the experiment that
+perturbs the dep pin (your earlier "experimental OK for v1" covers it).
+**Next** — P4c part 2 (tiled coopmat WGSL + probe, alongside the #9741 soft-fork), then wire `gemm_f32_tc`
+into the DAG-IR `MatMul.tc` (cleanest via the P5 CudaCLowerer, where tensor-core matmul composes without a
+host round-trip). Then P4b / P5 / P6 / P7.

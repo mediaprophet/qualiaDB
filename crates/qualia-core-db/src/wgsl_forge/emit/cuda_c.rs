@@ -74,6 +74,60 @@ extern "C" __global__ void wmma_gemm_16x16(const __half *A,
     wmma::store_matrix_sync(C, c_frag, 16, wmma::mem_row_major);
 }"#;
 
+/// Entry point of [`WMMA_GEMM_TILED_SRC`].
+pub const WMMA_GEMM_TILED_ENTRY: &str = "wmma_gemm_tiled";
+
+/// Source for [`WMMA_GEMM_TILED_ENTRY`] — a **tiled** WMMA GEMM that loops the proven
+/// single-tile primitive over arbitrary `M/N/K` (each a multiple of 16): the real
+/// tensor-core GEMM backend, not just one tile. `C[M×N]` f32 = `A[M×K]` f16 · `B[K×N]`
+/// f16, row-major. One warp (a 32-thread block) computes one 16×16 output tile,
+/// accumulating across the `K/16` inner tiles in registers (`c_frag`). Launch with
+/// `workgroup_size = 32` and `element_count = (M/16)·(N/16)·32` so `gridDim.x` equals the
+/// number of output tiles; `blockIdx.x` selects the tile. `dims = [M, N, K]` is a
+/// 3-element `unsigned` **storage** buffer (binding 3), matching the pointer-only ABI of
+/// [`crate::wgsl_forge::execute::CudaPipeline::compile_cuda_c_source`].
+///
+/// This is the **reduced-precision** path (f16 inputs, f32 accumulate) — it is opt-in via
+/// `MatMul.tc`, since it trades f32 precision for tensor-core throughput; the plain f32
+/// GEMM stays the default. `K = 16` reduces to the single-tile [`WMMA_GEMM_16X16_SRC`].
+pub const WMMA_GEMM_TILED_SRC: &str = r#"#include <mma.h>
+using namespace nvcuda;
+
+// Tiled WMMA GEMM: C[M,N] f32 = A[M,K] f16 * B[K,N] f16, all row-major.
+// M, N, K must be multiples of 16. One warp (block of 32) per 16x16 output tile.
+extern "C" __global__ void wmma_gemm_tiled(const __half *A,
+                                           const __half *B,
+                                           float *C,
+                                           const unsigned *dims) {
+    unsigned M = dims[0];
+    unsigned N = dims[1];
+    unsigned K = dims[2];
+    unsigned tiles_n = N / 16u;
+    unsigned num_tiles = (M / 16u) * tiles_n;
+    unsigned tile = blockIdx.x;
+    if (tile >= num_tiles) {
+        return;
+    }
+    unsigned tile_row = tile / tiles_n;   // 16-row block
+    unsigned tile_col = tile % tiles_n;   // 16-col block
+
+    wmma::fragment<wmma::matrix_a, 16, 16, 16, __half, wmma::row_major> a_frag;
+    wmma::fragment<wmma::matrix_b, 16, 16, 16, __half, wmma::row_major> b_frag;
+    wmma::fragment<wmma::accumulator, 16, 16, 16, float> c_frag;
+    wmma::fill_fragment(c_frag, 0.0f);
+
+    for (unsigned kt = 0u; kt < K; kt += 16u) {
+        const __half *a_tile = A + (tile_row * 16u) * K + kt;   // ldm = K
+        const __half *b_tile = B + kt * N + (tile_col * 16u);   // ldm = N
+        wmma::load_matrix_sync(a_frag, a_tile, K);
+        wmma::load_matrix_sync(b_frag, b_tile, N);
+        wmma::mma_sync(c_frag, a_frag, b_frag, c_frag);
+    }
+
+    float *c_tile = C + (tile_row * 16u) * N + (tile_col * 16u);
+    wmma::store_matrix_sync(c_tile, c_frag, N, wmma::mem_row_major);
+}"#;
+
 /// Native double-precision dense GEMM entry point. WGSL has no `f64` (only
 /// f32/f16/i32/u32), so an exact-double GEMM has no WGSL/IR analogue; PTX/CUDA-C,
 /// by contrast, has native `double` and `fma.rn.f64`, which is why the f64

@@ -341,6 +341,88 @@ fn gemm_f64_cuda(
     Ok(out)
 }
 
+/// **Opt-in tensor-core GEMM** (reduced precision) — the capability-selected entry point
+/// that makes the `MatMul.tc` request real. Row-major `C[m×n] = A[m×k]·B[k×n]`, f32 in/out.
+///
+/// Selection (best tensor-core path on this machine, with a correct floor):
+/// 1. **WGSL coopmat** (the *portable* wgpu tensor-core path, f32) — the intended first
+///    choice, but **gated off until the upstream fix [#9741] lets it compute correctly**
+///    (see [`docs/WGPU_UPSTREAM_TRACKING.md`]); wired via `coopmat_usable()` once built.
+/// 2. **CUDA WMMA** ([`gemm_tc_cuda`]) — genuine NVIDIA tensor cores at f16-input precision,
+///    when `cuda` is available and `m,n,k` are multiples of 16. Carries tensor cores **today**.
+/// 3. **plain f32 GEMM** ([`gemm_f32`]) — the always-correct floor (full f32 precision).
+///
+/// This is **opt-in** because tiers 1–2 trade f32 precision for tensor-core throughput; the
+/// default [`gemm_f32`] stays full-precision. Use for LLM matmuls (already f16-tolerant).
+pub fn gemm_f32_tc(m: usize, k: usize, n: usize, a: &[f32], b: &[f32]) -> Result<Vec<f32>, ForgeError> {
+    // Tier 1 (WGSL coopmat) is not selectable yet — its tiled kernel is dormant until
+    // #9741 (it returns zeros on wgpu 29.0.3), so there is nothing to probe. It slots in
+    // here behind a `coopmat_usable()` gate when built (DAG-IR P4c / tracking doc).
+    #[cfg(feature = "cuda")]
+    {
+        if caps().cuda
+            && m % 16 == 0
+            && n % 16 == 0
+            && k % 16 == 0
+            && m.min(n).min(k) > 0
+        {
+            if let Ok(out) = gemm_tc_cuda(m, k, n, a, b) {
+                return Ok(out);
+            }
+            // Tensor-core path eligible but errored — fall through to the exact floor.
+        }
+    }
+    gemm_f32(m, k, n, a, b)
+}
+
+/// **Tensor-core** GEMM via the tiled CUDA WMMA kernel: row-major `C[m×n] = A[m×k]·B[k×n]`,
+/// with `A`/`B` rounded to **f16** and accumulated in **f32** on NVIDIA tensor cores. This
+/// is the genuine reduced-precision tensor-core path — the throughput win that the plain
+/// f32 GEMM cannot get — exposed as an **opt-in** (`MatMul.tc`) because it trades f32
+/// precision for speed. `m`, `n`, `k` must be non-zero multiples of 16 (the WMMA tile);
+/// callers with other shapes pad or fall back to the plain path.
+///
+/// f32 inputs are converted to f16 bit patterns host-side and uploaded as `u16`; the
+/// `dims = [m, n, k]` storage buffer drives the kernel's tiling. Returns `m*n` f32 outputs.
+#[cfg(feature = "cuda")]
+pub fn gemm_tc_cuda(m: usize, k: usize, n: usize, a: &[f32], b: &[f32]) -> Result<Vec<f32>, ForgeError> {
+    use crate::wgsl_forge::emit::cuda_c::{WMMA_GEMM_TILED_ENTRY, WMMA_GEMM_TILED_SRC};
+    use crate::wgsl_forge::execute::{CudaComputeContext, CudaPipeline, QualiaCompute};
+
+    if m == 0 || n == 0 || k == 0 || m % 16 != 0 || n % 16 != 0 || k % 16 != 0 {
+        return Err(ForgeError::GpuValidation(format!(
+            "gemm_tc_cuda: m={m}, n={n}, k={k} must be non-zero multiples of 16 (WMMA tile)"
+        )));
+    }
+    validate_dims(m, k, n, a.len(), b.len())?;
+
+    let a_bits: Vec<u16> = a.iter().map(|&x| half::f16::from_f32(x).to_bits()).collect();
+    let b_bits: Vec<u16> = b.iter().map(|&x| half::f16::from_f32(x).to_bits()).collect();
+
+    let mut ctx = CudaComputeContext::new(64 * 1024 * 1024)?;
+    let view_a = ctx.allocate_and_write(bytemuck::cast_slice(&a_bits), 0, 0)?;
+    let view_b = ctx.allocate_and_write(bytemuck::cast_slice(&b_bits), 1, 0)?;
+    let zeros = vec![0.0f32; m * n];
+    let view_c = ctx.allocate_and_write(bytemuck::cast_slice(&zeros), 2, 0)?;
+    let dims: [u32; 3] = [m as u32, n as u32, k as u32];
+    let view_dims = ctx.allocate_and_write(bytemuck::cast_slice(&dims), 3, 0)?;
+
+    let buffers = vec![view_a, view_b, view_c, view_dims];
+    let num_tiles = (m / 16) * (n / 16);
+    // workgroup_size 32 (one warp/tile) → element_count = num_tiles*32 gives num_tiles blocks.
+    let schedule = super::Schedule { workgroup_size: 32, ..Default::default() };
+    let pipeline = CudaPipeline::compile_cuda_c_source(
+        &ctx,
+        WMMA_GEMM_TILED_SRC,
+        WMMA_GEMM_TILED_ENTRY,
+        &[0, 1, 2, 3],
+    )?;
+    pipeline.dispatch(&buffers, &schedule, num_tiles * 32)?;
+    let mut out = ctx.read_buffer_f32(&view_c)?;
+    out.truncate(m * n);
+    Ok(out)
+}
+
 /// Split one `f64` into a double-single (`df64`) hi/lo pair of `f32`. `hi` is the
 /// `f64` rounded to nearest `f32`; `lo` is the (exactly representable in `f32`)
 /// residual `v - hi`. Together the pair carries ~44–48 effective mantissa bits, far
@@ -877,6 +959,18 @@ mod tests {
         assert_eq!(out, vec![58.0, 64.0, 139.0, 154.0]);
     }
 
+    /// Non-GPU / non-16-multiple: the opt-in tensor-core `gemm_f32_tc` falls through to the
+    /// exact plain f32 floor (the 2×3·3×2 case is neither a 16-multiple nor on an
+    /// accelerator), so it returns the hand-checked [58, 64, 139, 154] — proving the
+    /// tensor-core path never breaks a call that can't use it.
+    #[test]
+    fn gemm_f32_tc_falls_to_plain_floor() {
+        let a = [1.0f32, 2.0, 3.0, 4.0, 5.0, 6.0];
+        let b = [7.0f32, 8.0, 9.0, 10.0, 11.0, 12.0];
+        let out = gemm_f32_tc(2, 3, 2, &a, &b).expect("gemm_f32_tc");
+        assert_eq!(out, vec![58.0, 64.0, 139.0, 154.0]);
+    }
+
     /// Dimension mismatches are hard errors on both entry points.
     #[test]
     fn gemm_dim_mismatch_errors() {
@@ -1148,6 +1242,34 @@ mod tests {
         for (g, c) in gpu.iter().zip(cpu.iter()) {
             assert!((g - c).abs() <= 1.0e-9, "f64 CUDA/CPU mismatch: {g} vs {c}");
         }
+    }
+
+    /// Tiled tensor-core (WMMA) GEMM on the CUDA backend: f16-input / f32-accumulate, so it
+    /// is graded against an f32 matmul of the SAME inputs rounded through f16 first (the
+    /// reduced-precision contract). 64×64×64 = a 4×4 grid of output tiles, each looping 4
+    /// K-tiles — this exercises the tiling orchestration, not just a single tile.
+    #[cfg(feature = "cuda")]
+    #[test]
+    #[ignore = "requires a CUDA device"]
+    fn gemm_tc_cuda_tiled_matches_f16_reference() {
+        let (m, k, n) = (64usize, 64, 64);
+        // Small-magnitude data so f16 rounding error stays bounded over the K=64 sum.
+        let a: Vec<f32> = det_f32(m * k, 0x574D_4D41_5449_4C45).iter().map(|&x| x * 0.5).collect();
+        let b: Vec<f32> = det_f32(k * n, 0x574D_4D41_5449_4C46).iter().map(|&x| x * 0.5).collect();
+        // Reference: f32 matmul of the f16-rounded inputs.
+        let ar: Vec<f32> = a.iter().map(|&x| half::f16::from_f32(x).to_f32()).collect();
+        let br: Vec<f32> = b.iter().map(|&x| half::f16::from_f32(x).to_f32()).collect();
+        let expected = gemm_cpu(&ar, &br, m, k, n);
+        let actual = gemm_tc_cuda(m, k, n, &a, &b).expect("gemm_tc_cuda");
+        assert_eq!(actual.len(), expected.len());
+        for (e, g) in expected.iter().zip(actual.iter()) {
+            assert!(
+                (e - g).abs() <= 5.0e-2 + 5.0e-2 * e.abs(),
+                "WMMA tiled GEMM mismatch: cpu {e} vs gpu {g}"
+            );
+        }
+        // Sanity: real output, not the all-zeros symptom of a broken tensor-core multiply.
+        assert!(actual.iter().any(|&v| v.abs() > 1.0e-3));
     }
 
     /// df64 (double-single) emulated-f64 GEMM is correct only on adapters that do NOT
