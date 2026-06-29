@@ -562,3 +562,40 @@ direction (same class of ask as fluid_dynamics B2 / Task #45). Surfaced, not gue
 **Next** — P7 part 2: `MslLowerer`/`HlslLowerer` for the portable nodes (naga/dxc-validate), then P7
 part 3: RT-backed `Neighbor` (`build_aabb_scene` + AABB BufferElement + `legalize` grid-fallback for
 dims>3 + differential oracle vs exact grid).
+
+---
+
+## 2026-06-29 · DAG-IR P7 (part 2) — MSL + HLSL lowerers for the portable graph nodes — DONE
+
+**Step / phase** — DAG-IR forge P7, second slice (portable backends). Status: **done** (the same graph now lowers to four backends — WGSL, CUDA-C, MSL, HLSL — through the one `lower_graph` driver).
+
+**What was built**
+- `emit/graph_msl.rs` (NEW) — `MslLowerer` impl of the shared `Lowerer` trait: emits **Metal** for
+  the portable native kit (`Elementwise` unary/binary/fma, `Reduce` all 4 kinds, `Broadcast`), same
+  binding ABI + math as the WGSL `graph_ops` kernels (`threadgroup`/`threadgroup_barrier`,
+  `as_type<float>` sentinel, `rsqrt`/`fma`). `emit_graph_msl` mirrors `emit_graph_wgsl`.
+- `emit/graph_hlsl.rs` (NEW) — `HlslLowerer` (same trait): emits **HLSL** compute shaders
+  (`StructuredBuffer`/`RWStructuredBuffer`, `groupshared` + `GroupMemoryBarrierWithGroupSync`,
+  `asfloat` sentinel, `mad`). `emit_graph_hlsl` mirror. Non-portable / unbuilt op-classes inherit the
+  trait's explicit `Err` (incl. `Neighbor`, which is WGSL/CUDA-only — Metal RT is a distinct API).
+
+**Measured results**
+- Structural + graph-lowering tests green: `msl_portable_kit_emits_metal_constructs`,
+  `emit_graph_msl_lowers_a_softmax_subgraph_node`, `hlsl_portable_kit_emits_hlsl_constructs`,
+  `emit_graph_hlsl_lowers_a_softmax_subgraph` — the all-portable softmax graph lowers to **both** MSL
+  and HLSL (`reduce_main` + `ewise_main` present).
+- HLSL **DXC** validation (`hlsl_portable_kit_dxc_compiles`, `#[cfg(feature="dxc")] #[ignore]`):
+  compiles every portable-kit HLSL kernel to SPIR-V via DXC. **Not run here** — no DXC CLI on this
+  Windows/NVIDIA host (`command -v dxc` → none); it runs where the toolchain is present. MSL has no
+  Windows compiler, so it is structurally checked — the same honest limit the existing top-k MSL/HLSL
+  emitters carry.
+
+**Honest boundary** — MSL/HLSL are **emitted + structurally validated** (HLSL DXC-validatable with the
+toolchain); the numeric certification lives on the WGSL + CUDA-C paths (which run on this box). This is
+the established cross-backend stance: the SAME `ComputeGraph` lowers to four backends with no per-id
+branch — the DAG-IR thesis, now four-wide.
+
+**⚑ Where I need the human** — none this step (a macOS/Metal box would let MSL be runtime-certified; a
+DXC install would light up the HLSL DXC test — both optional).
+**Next** — P7 part 3: RT-backed `Neighbor` (`build_aabb_scene` + AABB `BufferElement` + RayQuery
+lowering + `legalize` grid-fallback for dims>3 + the mandatory differential oracle vs an exact grid).
