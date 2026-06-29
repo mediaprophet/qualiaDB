@@ -184,4 +184,74 @@ mod tests {
              {max_rel:.2e}) on REAL p64-dequantized weights"
         );
     }
+
+    /// Profiles the forge **certification executor's** per-layer cost on real SmolLM2-360M weights
+    /// (resident weights, warm pipeline cache, single-encoder submit). IMPORTANT framing: this is the
+    /// forge's oracle-diff *certification* harness running the decode graph node-by-node — it is **not**
+    /// the inference runtime, and this number is **not** a forge-vs-engine runtime comparison. The
+    /// engine (`gguf_bridge`) is the runtime (18.32 tok/s decode on this A2000, Vulkan); the forge's job
+    /// is to *produce + certify* kernels, not to run them. Recorded only as a forge profiling datum (it
+    /// also omits the current-token K/V projection + cache append). Skips if no model is on disk.
+    #[test]
+    #[ignore = "requires a SmolLM2 GGUF on disk"]
+    fn forge_decode_layer_real_weights_ms_per_layer() {
+        use crate::wgsl_forge::graph_ops::executor::{decode_layer_graph, ForgeGraphExecutor};
+        use std::time::Instant;
+        let Some(path) = find_smollm_gguf() else {
+            eprintln!("[forge-bench] no SmolLM2 GGUF found — skipping");
+            return;
+        };
+        let gguf = std::fs::read(&path).expect("read gguf");
+        let p64 = crate::q42::p64_weight::compile_gguf_to_p64(&gguf, 14).expect("compile gguf->p64");
+        drop(gguf);
+        let index = P64TensorIndex::from_p64(&p64).expect("from_p64");
+        let h = &index.hparams;
+        let n_head = h.n_head;
+        let n_kv = if h.n_kv_head > 0 { h.n_kv_head } else { h.n_head };
+        let head_dim = h.n_embd / n_head;
+        let d = n_head * head_dim;
+        let theta = if h.rope_freq_base > 0.0 { h.rope_freq_base } else { 10000.0 };
+        let w = read_forge_layer_weights(&index, &p64, 0).expect("read layer 0");
+        let ffn = (w.wg.len() as u32) / d;
+        let (seq, pos) = (24u32, 23u32);
+        let inv_scale = 1.0f32 / (head_dim as f32).sqrt();
+        let gen = |len: usize, salt: usize| -> Vec<f32> {
+            (0..len).map(|i| (((i * 7 + salt * 13) % 23) as f32) * 0.02 - 0.23).collect()
+        };
+
+        let g = decode_layer_graph(n_head, n_kv, head_dim, seq, ffn, pos, 0, theta).unwrap();
+        let mut exec = ForgeGraphExecutor::on_shared_gpu().expect("forge on shared gpu");
+        // Big matrices resident (indices 3..=9); activations uploaded per call (0,1,2,10,11).
+        let resident = exec
+            .load_weights(&[
+                (3, w.wq), (4, w.wo), (5, w.wg), (6, w.wu), (7, w.wd),
+                (8, w.attn_norm), (9, w.ffn_norm),
+            ])
+            .expect("load_weights");
+        let acts = vec![
+            gen(d as usize, 1),                       // x
+            gen((n_kv * head_dim * seq) as usize, 2), // Kt
+            gen((n_kv * seq * head_dim) as usize, 3), // V
+            vec![], vec![], vec![], vec![], vec![], vec![], vec![], // resident slots
+            vec![inv_scale],
+            vec![1e-5],
+        ];
+
+        for _ in 0..15 {
+            let _ = exec.run_resident(&g, &acts, &resident).unwrap();
+        }
+        let iters = 100;
+        let t = Instant::now();
+        for _ in 0..iters {
+            let _ = exec.run_resident(&g, &acts, &resident).unwrap();
+        }
+        let ms_layer = t.elapsed().as_secs_f64() * 1e3 / iters as f64;
+        println!(
+            "[forge-bench] SmolLM2-360M decode LAYER on the forge: {ms_layer:.3} ms/layer \
+             (resident weights, warm cache, single-encoder submit, seq={seq}, d={d}, ffn={ffn}) \
+             | engine baseline (measured, same A2000): 1.63 ms/layer forward, 18.32 tok/s decode. \
+             PER-LAYER compute — forge omits current-token K/V projection (decode-loop seam); NOT \
+             end-to-end tok/s."
+        );
+    }
 }
