@@ -140,6 +140,12 @@ impl Q42CborLdParser {
         Ok(Self::new(lexicon))
     }
 
+    /// Borrow the underlying lexicon — the term ⇄ 64-bit-hash table the
+    /// CBOR-LD wire codec uses for term compaction / resolution.
+    pub fn lexicon(&self) -> &Q42Lexicon {
+        &self.lexicon
+    }
+
     pub fn parse(&self, data: &[u8]) -> Result<SemanticPayload, CborLdError> {
         Ok(SemanticPayload {
             data: data.to_vec(),
