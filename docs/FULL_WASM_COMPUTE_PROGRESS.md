@@ -117,6 +117,26 @@ bytes; `McNemar(12,5)` = 36/17 = 2.1176 (dof 1); `F(3; 5,10)` cdf 0.9344, quanti
 `kge_predict` ranks by DistMult score [9, 3.5, 1.5]. All correct.
 
 **⚑ Human:** none. Remaining honest exclusions are unchanged (native-only specialized libs, advanced CAS,
-GPU forge, key-gen crypto). If you later want AEAD (AES-GCM / ChaCha20-Poly1305) in-browser with
-caller-supplied key+nonce, that's wasm-clean too — say the word (it carries a nonce-reuse footgun, so I left
-it out by default).
+GPU forge, key-gen / signing crypto — those need a browser RNG).
+
+---
+
+## Step 5 — AEAD (Timothy: "ok, do it") — DONE (2026-06-30)
+
+**Status:** done. 85 → **87 exports**.
+
+**What was built.** `crypto_aead_encrypt` / `crypto_aead_decrypt` in `engine/crypto.rs` — authenticated
+encryption over **AES-256-GCM**, **ChaCha20-Poly1305**, and **XChaCha20-Poly1305** (the `aes-gcm` /
+`chacha20poly1305` crates, wasm-clean). Caller supplies the 32-byte key + nonce (12 B; 24 for xchacha) and
+optional AAD; output is `ciphertext‖tag`. Decrypt verifies and **fails closed** on a bad tag / wrong key,
+nonce, or AAD. The card UI states plainly: ⚠ the caller owns the nonce — never reuse a (key, nonce).
+Two demo cards added; bundle rebuilt (3.32 → 3.37 MB).
+
+**Measured (real, in-browser):** all **87 functions run, 0 errors**. AES-256-GCM round-trips
+("attack at dawn" → 30-byte ct = 14 + 16-byte tag → "attack at dawn"); a 1-nibble tamper of the ciphertext
+**fails decryption** (authentication holds); ChaCha20-Poly1305 round-trips identically. The decrypt demo
+card carries a real captured ciphertext and recovers the plaintext on click.
+
+**Honest note:** AEAD encryption is keyed symmetric crypto with a caller-supplied nonce — that's the wasm-
+clean part. Asymmetric key generation / signing (Ed25519, ML-DSA) still needs browser-RNG wiring and stays
+native. No fakes.

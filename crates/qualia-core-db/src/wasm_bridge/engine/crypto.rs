@@ -153,3 +153,165 @@ pub fn crypto_hkdf_sha256(val: JsValue) -> Result<JsValue, JsValue> {
         length: inp.length,
     })?)
 }
+
+// ── AEAD (authenticated encryption) ─────────────────────────────────────────
+// Caller supplies the 32-byte key and the nonce; the demo is explicit that nonce
+// reuse under a fixed key breaks the security guarantee. The output ciphertext is
+// `ciphertext || 16-byte Poly1305/GCM tag`.
+
+/// Resolve a 32-byte key + an algorithm-correct nonce, then seal. Validates all
+/// lengths and fails closed (no panic) before touching the fixed-size GenericArrays.
+fn aead_seal(alg: &str, key: &[u8], nonce: &[u8], pt: &[u8], aad: &[u8]) -> Result<Vec<u8>, JsValue> {
+    use aes_gcm::aead::generic_array::GenericArray;
+    use aes_gcm::aead::{Aead, KeyInit, Payload};
+    if key.len() != 32 {
+        return Err(JsValue::from_str("key must be 32 bytes (64 hex chars)"));
+    }
+    let payload = Payload { msg: pt, aad };
+    let fail = || JsValue::from_str("AEAD seal failed");
+    match alg.to_ascii_lowercase().as_str() {
+        "aes256gcm" | "aes-256-gcm" => {
+            if nonce.len() != 12 {
+                return Err(JsValue::from_str("aes256gcm nonce must be 12 bytes (24 hex)"));
+            }
+            let c = aes_gcm::Aes256Gcm::new(GenericArray::from_slice(key));
+            c.encrypt(GenericArray::from_slice(nonce), payload).map_err(|_| fail())
+        }
+        "chacha20poly1305" | "chacha" => {
+            if nonce.len() != 12 {
+                return Err(JsValue::from_str("chacha20poly1305 nonce must be 12 bytes (24 hex)"));
+            }
+            let c = chacha20poly1305::ChaCha20Poly1305::new(GenericArray::from_slice(key));
+            c.encrypt(GenericArray::from_slice(nonce), payload).map_err(|_| fail())
+        }
+        "xchacha20poly1305" | "xchacha" => {
+            if nonce.len() != 24 {
+                return Err(JsValue::from_str("xchacha20poly1305 nonce must be 24 bytes (48 hex)"));
+            }
+            let c = chacha20poly1305::XChaCha20Poly1305::new(GenericArray::from_slice(key));
+            c.encrypt(GenericArray::from_slice(nonce), payload).map_err(|_| fail())
+        }
+        other => Err(JsValue::from_str(&format!(
+            "unknown algorithm '{other}' (aes256gcm | chacha20poly1305 | xchacha20poly1305)"
+        ))),
+    }
+}
+
+/// Open (decrypt + verify). Same validation; returns the plaintext or fails closed
+/// on a bad tag / wrong key / wrong nonce / tampered ciphertext.
+fn aead_open(alg: &str, key: &[u8], nonce: &[u8], ct: &[u8], aad: &[u8]) -> Result<Vec<u8>, JsValue> {
+    use aes_gcm::aead::generic_array::GenericArray;
+    use aes_gcm::aead::{Aead, KeyInit, Payload};
+    if key.len() != 32 {
+        return Err(JsValue::from_str("key must be 32 bytes (64 hex chars)"));
+    }
+    let payload = Payload { msg: ct, aad };
+    let fail = || JsValue::from_str("AEAD open failed (bad tag / wrong key, nonce, or aad)");
+    match alg.to_ascii_lowercase().as_str() {
+        "aes256gcm" | "aes-256-gcm" => {
+            if nonce.len() != 12 {
+                return Err(JsValue::from_str("aes256gcm nonce must be 12 bytes (24 hex)"));
+            }
+            let c = aes_gcm::Aes256Gcm::new(GenericArray::from_slice(key));
+            c.decrypt(GenericArray::from_slice(nonce), payload).map_err(|_| fail())
+        }
+        "chacha20poly1305" | "chacha" => {
+            if nonce.len() != 12 {
+                return Err(JsValue::from_str("chacha20poly1305 nonce must be 12 bytes (24 hex)"));
+            }
+            let c = chacha20poly1305::ChaCha20Poly1305::new(GenericArray::from_slice(key));
+            c.decrypt(GenericArray::from_slice(nonce), payload).map_err(|_| fail())
+        }
+        "xchacha20poly1305" | "xchacha" => {
+            if nonce.len() != 24 {
+                return Err(JsValue::from_str("xchacha20poly1305 nonce must be 24 bytes (48 hex)"));
+            }
+            let c = chacha20poly1305::XChaCha20Poly1305::new(GenericArray::from_slice(key));
+            c.decrypt(GenericArray::from_slice(nonce), payload).map_err(|_| fail())
+        }
+        other => Err(JsValue::from_str(&format!(
+            "unknown algorithm '{other}' (aes256gcm | chacha20poly1305 | xchacha20poly1305)"
+        ))),
+    }
+}
+
+/// AEAD encrypt. Input `{ algorithm, key:{text|hex}, nonce:{text|hex},
+/// plaintext:{text|hex}, aad?:{text|hex} }` → `{ algorithm, ciphertext_hex, bytes }`.
+/// `algorithm` ∈ aes256gcm | chacha20poly1305 | xchacha20poly1305. Key is 32 bytes;
+/// nonce 12 (24 for xchacha). The caller owns the nonce — NEVER reuse a (key, nonce).
+#[wasm_bindgen]
+pub fn crypto_aead_encrypt(val: JsValue) -> Result<JsValue, JsValue> {
+    #[derive(Deserialize)]
+    struct In {
+        algorithm: String,
+        key: BytesIn,
+        nonce: BytesIn,
+        plaintext: BytesIn,
+        #[serde(default)]
+        aad: Option<BytesIn>,
+    }
+    let inp: In = serde_wasm_bindgen::from_value(val).map_err(jserr)?;
+    let aad = match &inp.aad {
+        Some(a) => a.bytes()?,
+        None => Vec::new(),
+    };
+    let ct = aead_seal(
+        &inp.algorithm,
+        &inp.key.bytes()?,
+        &inp.nonce.bytes()?,
+        &inp.plaintext.bytes()?,
+        &aad,
+    )?;
+    #[derive(Serialize)]
+    struct Out {
+        algorithm: String,
+        ciphertext_hex: String,
+        bytes: usize,
+    }
+    Ok(serde_wasm_bindgen::to_value(&Out {
+        algorithm: inp.algorithm,
+        bytes: ct.len(),
+        ciphertext_hex: to_hex(&ct),
+    })?)
+}
+
+/// AEAD decrypt + verify. Input `{ algorithm, key:{text|hex}, nonce:{text|hex},
+/// ciphertext:{text|hex}, aad?:{text|hex} }` → `{ algorithm, plaintext_hex,
+/// plaintext_utf8?, bytes }`. Fails closed on a bad tag / wrong key, nonce, or aad.
+#[wasm_bindgen]
+pub fn crypto_aead_decrypt(val: JsValue) -> Result<JsValue, JsValue> {
+    #[derive(Deserialize)]
+    struct In {
+        algorithm: String,
+        key: BytesIn,
+        nonce: BytesIn,
+        ciphertext: BytesIn,
+        #[serde(default)]
+        aad: Option<BytesIn>,
+    }
+    let inp: In = serde_wasm_bindgen::from_value(val).map_err(jserr)?;
+    let aad = match &inp.aad {
+        Some(a) => a.bytes()?,
+        None => Vec::new(),
+    };
+    let pt = aead_open(
+        &inp.algorithm,
+        &inp.key.bytes()?,
+        &inp.nonce.bytes()?,
+        &inp.ciphertext.bytes()?,
+        &aad,
+    )?;
+    #[derive(Serialize)]
+    struct Out {
+        algorithm: String,
+        plaintext_hex: String,
+        plaintext_utf8: Option<String>,
+        bytes: usize,
+    }
+    Ok(serde_wasm_bindgen::to_value(&Out {
+        algorithm: inp.algorithm,
+        bytes: pt.len(),
+        plaintext_utf8: String::from_utf8(pt.clone()).ok(),
+        plaintext_hex: to_hex(&pt),
+    })?)
+}

@@ -1046,6 +1046,37 @@ export function create_canvas(width, height) {
 }
 
 /**
+ * AEAD decrypt + verify. Input `{ algorithm, key:{text|hex}, nonce:{text|hex},
+ * ciphertext:{text|hex}, aad?:{text|hex} }` → `{ algorithm, plaintext_hex,
+ * plaintext_utf8?, bytes }`. Fails closed on a bad tag / wrong key, nonce, or aad.
+ * @param {any} val
+ * @returns {any}
+ */
+export function crypto_aead_decrypt(val) {
+    const ret = wasm.crypto_aead_decrypt(val);
+    if (ret[2]) {
+        throw takeFromExternrefTable0(ret[1]);
+    }
+    return takeFromExternrefTable0(ret[0]);
+}
+
+/**
+ * AEAD encrypt. Input `{ algorithm, key:{text|hex}, nonce:{text|hex},
+ * plaintext:{text|hex}, aad?:{text|hex} }` → `{ algorithm, ciphertext_hex, bytes }`.
+ * `algorithm` ∈ aes256gcm | chacha20poly1305 | xchacha20poly1305. Key is 32 bytes;
+ * nonce 12 (24 for xchacha). The caller owns the nonce — NEVER reuse a (key, nonce).
+ * @param {any} val
+ * @returns {any}
+ */
+export function crypto_aead_encrypt(val) {
+    const ret = wasm.crypto_aead_encrypt(val);
+    if (ret[2]) {
+        throw takeFromExternrefTable0(ret[1]);
+    }
+    return takeFromExternrefTable0(ret[0]);
+}
+
+/**
  * BLAKE3 digest (256-bit).
  * @param {any} val
  * @returns {any}
@@ -4508,12 +4539,12 @@ function __wbg_get_imports() {
             return ret;
         }, arguments); },
         __wbindgen_cast_0000000000000001: function(arg0, arg1) {
-            // Cast intrinsic for `Closure(Closure { owned: true, function: Function { arguments: [Externref], shim_idx: 1040, ret: Unit, inner_ret: Some(Unit) }, mutable: true }) -> Externref`.
+            // Cast intrinsic for `Closure(Closure { owned: true, function: Function { arguments: [Externref], shim_idx: 1041, ret: Unit, inner_ret: Some(Unit) }, mutable: true }) -> Externref`.
             const ret = makeMutClosure(arg0, arg1, wasm_bindgen__convert__closures_____invoke__h7fccdcc556118add);
             return ret;
         },
         __wbindgen_cast_0000000000000002: function(arg0, arg1) {
-            // Cast intrinsic for `Closure(Closure { owned: true, function: Function { arguments: [Externref], shim_idx: 1172, ret: Result(Unit), inner_ret: Some(Result(Unit)) }, mutable: true }) -> Externref`.
+            // Cast intrinsic for `Closure(Closure { owned: true, function: Function { arguments: [Externref], shim_idx: 1173, ret: Result(Unit), inner_ret: Some(Result(Unit)) }, mutable: true }) -> Externref`.
             const ret = makeMutClosure(arg0, arg1, wasm_bindgen__convert__closures_____invoke__h506e6bb0ff87352d);
             return ret;
         },
