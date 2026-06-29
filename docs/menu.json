@@ -91,6 +91,13 @@
       "group": "Sciences"
     },
     {
+      "label": "Computational Engine",
+      "href": "compute-engine.html",
+      "icon": "fa-calculator",
+      "highlight": true,
+      "group": "Sciences"
+    },
+    {
       "label": "WGSL Forge",
       "href": "forge-showcase.html",
       "icon": "fa-hammer",

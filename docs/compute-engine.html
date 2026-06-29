@@ -1,0 +1,177 @@
+<!DOCTYPE html>
+<html lang="en">
+<head>
+    <meta charset="UTF-8">
+    <meta name="viewport" content="width=device-width, initial-scale=1.0">
+    <title>Computational Engine — Live in your browser · QualiaDB</title>
+    <link rel="stylesheet" href="css/tailwind-built.css">
+    <link rel="stylesheet" href="css/site-nav.css">
+    <link rel="stylesheet" href="https://cdnjs.cloudflare.com/ajax/libs/font-awesome/6.5.1/css/all.min.css">
+    <script src="js/menu-loader.js"></script>
+    <style>
+        body { font-family: 'Inter', system-ui, sans-serif; }
+        .glass-strong { background: rgba(255,255,255,0.06); backdrop-filter: blur(20px); border: 1px solid rgba(255,255,255,0.12); }
+        pre, textarea { font-family: 'Fira Code', ui-monospace, monospace; }
+        textarea { resize: vertical; }
+        .tab-btn.active { background: rgba(56,189,248,0.15); color: #38bdf8; border-color: rgba(56,189,248,0.4); }
+        .card-out.err { color: #fca5a5; }
+        .card-out.ok { color: #86efac; }
+    </style>
+</head>
+<body class="bg-zinc-950 text-zinc-200">
+    <nav class="sticky top-0 z-50 border-b border-white/10" style="background:rgba(17,23,31,0.88);backdrop-filter:blur(32px)">
+        <div class="max-w-screen-2xl mx-auto px-8">
+            <div class="flex items-center justify-between h-16">
+                <div class="flex items-center gap-8">
+                    <a href="index.html" class="flex items-center gap-3">
+                        <div class="w-8 h-8 bg-gradient-to-br from-blue-500 to-cyan-400 rounded-xl flex items-center justify-center">
+                            <span class="text-black font-bold text-xl">Q</span>
+                        </div>
+                        <div><span class="font-semibold tracking-tight text-xl">Qualia</span><span class="text-blue-400 text-xl">DB</span></div>
+                    </a>
+                    <div id="dynamic-nav" class="relative flex items-center text-sm"></div>
+                </div>
+                <div id="wasm-badge" class="flex items-center gap-2 text-xs px-3 py-1.5 rounded-2xl bg-slate-800 text-slate-400 border border-slate-700">
+                    <div class="w-2 h-2 rounded-full bg-slate-500" id="wasm-dot"></div>
+                    <span id="wasm-text">Loading WASM…</span>
+                </div>
+            </div>
+        </div>
+    </nav>
+
+    <div class="max-w-screen-2xl mx-auto px-8 pt-12 pb-16">
+        <div class="mb-8">
+            <h1 class="text-5xl font-semibold tracking-tighter mb-4">Computational Engine</h1>
+            <p class="text-xl text-slate-400 max-w-3xl">Every result below is computed <span class="text-white">in your browser</span> by the QualiaDB engine compiled to WebAssembly — the same solver code the native engine and its 600+ unit tests run. No server, no API call, no GPU required.</p>
+        </div>
+
+        <!-- Honest framing -->
+        <div class="glass-strong rounded-3xl p-6 mb-8">
+            <div class="grid grid-cols-1 md:grid-cols-2 gap-6">
+                <div>
+                    <h2 class="text-base font-medium text-cyan-400 mb-2"><i class="fas fa-microchip mr-2"></i>What runs here (CPU-exact, in-browser)</h2>
+                    <p class="text-white/60 text-sm">Dense linear algebra, statistics &amp; hypothesis tests, symbolic algebra, special functions &amp; number theory, arbitrary-precision exact arithmetic, SI units &amp; dimensional analysis, Fourier / Laplace / Z transforms, and graph reasoning — wrapping <code class="text-cyan-300">crate::solvers::*</code>, the wasm-clean math layer. The GPU forge fast-paths are native-only; in the browser these take the exact CPU floor.</p>
+                </div>
+                <div>
+                    <h2 class="text-base font-medium text-amber-300 mb-2"><i class="fas fa-scale-balanced mr-2"></i>What is <span class="text-amber-300">not</span> here (native-only)</h2>
+                    <p class="text-white/60 text-sm">The 9 specialized domain libraries (finance, medical, chemistry, engineering, full ML), the advanced CAS (symbolic integration / limits / series / ODE), the GPU kernel forge, and key-generating cryptography (needs browser-RNG wiring) are <code class="text-amber-200">#[cfg(not(wasm32))]</code> by construction and run on the native / MCP engine. Several already have live demos on the <a href="science-playground.html" class="text-cyan-400 hover:underline">Sciences</a> pages.</p>
+                </div>
+            </div>
+        </div>
+
+        <!-- Tabs -->
+        <div id="tabs" class="flex flex-wrap gap-2 mb-6"></div>
+        <div id="func-count" class="text-white/40 text-xs mb-4"></div>
+
+        <!-- Cards -->
+        <div id="cards" class="grid grid-cols-1 lg:grid-cols-2 gap-5"></div>
+
+        <div class="text-center text-white/40 text-sm mt-12">
+            <p>QualiaDB v0.0.23 &bull; Computational Engine &bull; bundle <code class="text-white/50">docs/playground/qualia_core_db_bg.wasm</code> (<code class="text-white/50">--features wasm-full</code>) &bull; exports: <code class="text-white/50">crates/qualia-core-db/src/wasm_bridge/engine/</code></p>
+        </div>
+    </div>
+
+    <script type="module">
+    const FUNCS = [{"domain":"linalg","name":"la_matmul_wasm","summary":"Matrix multiply C=A*B","input":"{\"a\":{\"rows\":2,\"cols\":3,\"data\":[1,2,3,4,5,6]},\"b\":{\"rows\":3,\"cols\":2,\"data\":[7,8,9,10,11,12]}}"},{"domain":"linalg","name":"la_transpose_wasm","summary":"Matrix transpose","input":"{\"rows\":2,\"cols\":3,\"data\":[1,2,3,4,5,6]}"},{"domain":"linalg","name":"la_determinant_wasm","summary":"Determinant via LU","input":"{\"rows\":2,\"cols\":2,\"data\":[1,2,3,4]}"},{"domain":"linalg","name":"la_solve_wasm","summary":"Solve A x = b","input":"{\"a\":{\"rows\":2,\"cols\":2,\"data\":[3,2,1,2]},\"b\":[5,5]}"},{"domain":"linalg","name":"la_eigen_symmetric_wasm","summary":"Symmetric eigendecomposition (Jacobi)","input":"{\"rows\":2,\"cols\":2,\"data\":[2,1,1,2]}"},{"domain":"linalg","name":"la_eigenvalues_wasm","summary":"General eigenvalues (complex)","input":"{\"rows\":2,\"cols\":2,\"data\":[0,-1,1,0]}"},{"domain":"linalg","name":"la_svd_wasm","summary":"Singular value decomposition","input":"{\"rows\":2,\"cols\":2,\"data\":[1,0,0,2]}"},{"domain":"linalg","name":"la_polynomial_roots_wasm","summary":"All complex roots of a polynomial","input":"{\"coeffs\":[1,-5,6]}"},{"domain":"stats","name":"stats_describe_wasm","summary":"Full descriptive summary (n, sum, mean, variance, std_dev, min, max, median, q1, q3, skewness, excess kurtosis) of a sample; sample-vs-population flag for variance/std.","input":"{\"data\":[2,4,4,4,5,5,7,9],\"sample\":false}"},{"domain":"stats","name":"stats_quantile_wasm","summary":"Linear-interpolated quantile (numpy linear / R type-7) of a sample at q in [0,1].","input":"{\"data\":[1,2,3,4],\"q\":0.25}"},{"domain":"stats","name":"stats_correlation_wasm","summary":"Pearson, Spearman, and Kendall correlation of two equal-length series, plus the two-sided p-value of the Pearson coefficient.","input":"{\"x\":[1,2,3,4,5],\"y\":[1,4,9,16,25]}"},{"domain":"stats","name":"stats_one_sample_t_wasm","summary":"One-sample t-test of the sample mean against mu, with exact Student-t p-value and 95% CI.","input":"{\"data\":[1,2,3,4,5],\"mu\":0}"},{"domain":"stats","name":"stats_two_sample_t_wasm","summary":"Two-sample t-test of mean(a)-mean(b)=0; Welch (default) or pooled-variance via equal_var, with p-value and 95% CI for the difference.","input":"{\"a\":[20,22,19,24,25,21],\"b\":[28,31,26,30,29,27],\"equal_var\":false}"},{"domain":"stats","name":"stats_paired_t_wasm","summary":"Paired t-test (one-sample t of the paired differences against 0), with p-value and 95% CI.","input":"{\"a\":[10,12,9,11,13],\"b\":[11,14,10,12,15]}"},{"domain":"stats","name":"stats_anova_wasm","summary":"One-way ANOVA F-test for equality of k group means, with F-tail p-value and the full sum-of-squares / mean-square / dof table.","input":"{\"groups\":[[6,8,4,5,3,4],[8,12,9,11,6,8],[13,9,11,8,7,12]]}"},{"domain":"stats","name":"stats_chi_square_gof_wasm","summary":"Pearson chi-square goodness-of-fit test (sum (O-E)^2/E, dof=k-1) with upper-tail p-value.","input":"{\"observed\":[9,11,10,12,8,10],\"expected\":[10,10,10,10,10,10]}"},{"domain":"stats","name":"stats_chi_square_independence_wasm","summary":"Chi-square test of independence on an RxC contingency table, dof=(R-1)(C-1), with upper-tail p-value.","input":"{\"table\":[[90,60],[30,120]]}"},{"domain":"stats","name":"stats_linear_regression_wasm","summary":"Simple OLS linear regression of y on x: slope, intercept, R^2, residual SE, t-based standard errors and p-values for slope and intercept.","input":"{\"x\":[1,2,3,4,5],\"y\":[2.1,3.9,6.1,7.9,10.2]}"},{"domain":"stats","name":"stats_normal_wasm","summary":"Normal distribution pdf and cdf at x (mean mu, std sigma), plus the inverse-cdf quantile when an optional p is supplied.","input":"{\"x\":1.96,\"mu\":0,\"sigma\":1,\"p\":0.975}"},{"domain":"stats","name":"stats_students_t_wasm","summary":"Student's t-distribution pdf, cdf, and two-sided p-value at t with nu dof, plus inverse-cdf quantile when an optional p is supplied.","input":"{\"t\":2.228,\"nu\":10,\"p\":0.975}"},{"domain":"stats","name":"stats_chi_squared_dist_wasm","summary":"Chi-squared distribution pdf, cdf, and upper-tail p-value at x with k dof, plus inverse-cdf quantile when an optional p is supplied.","input":"{\"x\":3.841,\"k\":1,\"p\":0.95}"},{"domain":"cas","name":"cas_differentiate_wasm","summary":"Parse an expression string, take its symbolic derivative w.r.t. a named variable, simplify, and render to a string.","input":"{\"expr\":\"x^3 - 2*x^2 + 5\",\"var\":\"x\"}"},{"domain":"cas","name":"cas_simplify_wasm","summary":"Parse and algebraically simplify an expression (constant folding + identity elimination to a bounded fixpoint).","input":"{\"expr\":\"x + 0 + x*1\"}"},{"domain":"cas","name":"cas_expand_wasm","summary":"Parse and expand an expression by distributing products over sums and expanding small integer powers (value-preserving).","input":"{\"expr\":\"(x + 1)*(x + 2)\"}"},{"domain":"cas","name":"cas_evaluate_wasm","summary":"Numerically evaluate an expression given variable bindings; errors on unbound variable or non-finite result.","input":"{\"expr\":\"x^2 + 3*x + 2\",\"bindings\":{\"x\":4}}"},{"domain":"cas","name":"cas_factor_wasm","summary":"Factor a real quadratic a*x^2 + b*x + c into a*(x - r1)*(x - r2) when it has real roots; errors when a=0 or discriminant<0.","input":"{\"a\":1,\"b\":-5,\"c\":6,\"var\":\"x\"}"},{"domain":"cas","name":"cas_solve_quadratic_wasm","summary":"Symbolic roots of a*x^2 + b*x + c = 0 as (-b ± sqrt(b^2-4ac))/(2a) expression strings plus numeric values (null if complex).","input":"{\"a\":1,\"b\":-5,\"c\":6}"},{"domain":"numerics","name":"num_bessel_j_wasm","summary":"Bessel function of the first kind J_n(x), integer order (any sign), all real x.","input":"{\"n\":1,\"x\":1.0}"},{"domain":"numerics","name":"num_bessel_i_wasm","summary":"Modified Bessel function of the first kind I_n(x), integer order, all real x.","input":"{\"n\":1,\"x\":1.0}"},{"domain":"numerics","name":"num_bessel_y_wasm","summary":"Bessel function of the second kind Y_n(x), n>=0; requires x>0 (fails closed otherwise).","input":"{\"n\":0,\"x\":1.0}"},{"domain":"numerics","name":"num_bessel_k_wasm","summary":"Modified Bessel function of the second kind K_n(x), n>=0; requires x>0.","input":"{\"n\":1,\"x\":1.0}"},{"domain":"numerics","name":"num_airy_wasm","summary":"Airy functions Ai(x) and Bi(x), both from one Maclaurin-series evaluation.","input":"{\"x\":1.0}"},{"domain":"numerics","name":"num_zeta_wasm","summary":"Riemann zeta(s) for real s>1 (Euler-Maclaurin); fails closed for s<=1.","input":"{\"s\":2.0}"},{"domain":"numerics","name":"num_orthopoly_wasm","summary":"Classical orthogonal polynomial P_n(x) (legendre|chebyshev_t|chebyshev_u|hermite|laguerre) by recurrence.","input":"{\"kind\":\"legendre\",\"n\":3,\"x\":0.5}"},{"domain":"numerics","name":"num_is_prime_wasm","summary":"Deterministic Miller-Rabin primality test, exact for all u64.","input":"{\"n\":1000000007}"},{"domain":"numerics","name":"num_next_prime_wasm","summary":"Smallest prime strictly greater than n.","input":"{\"n\":89}"},{"domain":"numerics","name":"num_prime_factorize_wasm","summary":"Prime factorization (trial division + Pollard's rho), correct across all u64.","input":"{\"n\":360}"},{"domain":"numerics","name":"num_divisors_wasm","summary":"All positive divisors of n, ascending.","input":"{\"n\":28}"},{"domain":"numerics","name":"num_gcd_lcm_wasm","summary":"Greatest common divisor and least common multiple of a and b.","input":"{\"a\":54,\"b\":24}"},{"domain":"numerics","name":"num_mod_pow_wasm","summary":"(base^exp) mod modulus by repeated squaring (overflow-safe via u128).","input":"{\"base\":2,\"exp\":10,\"modulus\":1000}"},{"domain":"numerics","name":"num_mod_inverse_wasm","summary":"Modular multiplicative inverse of a mod m; fails closed when gcd(a,m)!=1.","input":"{\"a\":3,\"m\":11}"},{"domain":"numerics","name":"num_arithmetic_functions_wasm","summary":"Euler totient phi(n), Mobius mu(n), divisor count d(n) and divisor sum sigma(n).","input":"{\"n\":28}"},{"domain":"numerics","name":"num_binomial_wasm","summary":"Binomial coefficient C(n,k) as an exact decimal string; fails closed on u128 overflow.","input":"{\"n\":52,\"k\":5}"},{"domain":"numerics","name":"num_factorial_wasm","summary":"Factorial n! as an exact decimal string; fails closed for n>=35 (u128 overflow).","input":"{\"n\":20}"},{"domain":"numerics","name":"num_partitions_wasm","summary":"Number of integer partitions p(n).","input":"{\"n\":10}"},{"domain":"numerics","name":"num_combinatorics_wasm","summary":"Catalan(n) plus Stirling S(n,k) (2nd kind) and c(n,k) (unsigned 1st kind), as decimal strings.","input":"{\"n\":4,\"k\":2}"},{"domain":"numerics","name":"num_lagrange_eval_wasm","summary":"Evaluate the Lagrange interpolating polynomial through (xs,ys) at x.","input":"{\"xs\":[0.0,1.0,2.0,3.0],\"ys\":[1.0,3.0,2.0,5.0],\"x\":1.5}"},{"domain":"numerics","name":"num_newton_eval_wasm","summary":"Newton divided-difference interpolation: coefficients plus value at x.","input":"{\"xs\":[0.0,1.0,2.0,4.0],\"ys\":[1.0,2.0,0.0,8.0],\"x\":3.0}"},{"domain":"numerics","name":"num_cubic_spline_wasm","summary":"Natural cubic spline through (xs,ys), evaluated at each query.","input":"{\"xs\":[0.0,1.0,2.0,3.0,4.0],\"ys\":[0.0,1.0,0.0,1.0,0.0],\"queries\":[0.5,1.5,2.5]}"},{"domain":"numerics","name":"num_linear_interp_wasm","summary":"Piecewise-linear interpolation of (xs,ys) at x (clamped to endpoints).","input":"{\"xs\":[0.0,2.0,4.0],\"ys\":[0.0,10.0,0.0],\"x\":1.0}"},{"domain":"numerics","name":"num_poly_fit_wasm","summary":"Least-squares polynomial fit (ascending coeffs); optionally evaluate at queries.","input":"{\"xs\":[0.0,1.0,2.0,3.0,4.0],\"ys\":[1.0,4.0,7.0,10.0,13.0],\"degree\":1,\"queries\":[5.0]}"},{"domain":"numerics","name":"num_minimize_wasm","summary":"Nelder-Mead minimize over a built-in objective (sphere|rosenbrock|booth|matyas|sum_abs) by name.","input":"{\"objective\":\"rosenbrock\",\"start\":[0.0,0.0,0.0,0.0],\"max_iterations\":2000,\"tolerance\":1e-8}"},{"domain":"exact","name":"exact_bigint_factorial","summary":"Exact n! as a decimal string (e.g. 100! -> full 158 digits). n capped at 50000 for the browser.","input":"{\"n\": 100}"},{"domain":"exact","name":"exact_bigint_pow","summary":"Exact integer power base^exp over arbitrary-precision base (decimal string), exp a u32 (capped 1000000). e.g. 2^100.","input":"{\"base\": \"2\", \"exp\": 100}"},{"domain":"exact","name":"exact_bigint_add","summary":"Exact sum a + b of two arbitrary-precision decimal-string integers (signs allowed).","input":"{\"a\": \"123456789012345678901234567890\", \"b\": \"987654321098765432109876543210\"}"},{"domain":"exact","name":"exact_bigint_mul","summary":"Exact product a * b of two arbitrary-precision decimal-string integers (schoolbook multiply).","input":"{\"a\": \"99999999999999999999\", \"b\": \"-99999999999999999999\"}"},{"domain":"exact","name":"exact_bigint_divmod","summary":"Truncated division with remainder: a = quotient*b + remainder, remainder takes the sign of a. Fails closed on b==0.","input":"{\"a\": \"-100\", \"b\": \"7\"}"},{"domain":"exact","name":"exact_bigint_gcd","summary":"Greatest common divisor gcd(a,b), always non-negative; gcd(0,0)=0.","input":"{\"a\": \"48\", \"b\": \"36\"}"},{"domain":"exact","name":"exact_rational_add","summary":"Exact rational sum a + b given two \"p/q\" strings (bare \"p\" read as p/1), returned reduced and sign-normalised as \"p/q\".","input":"{\"a\": \"1/3\", \"b\": \"1/6\"}"},{"domain":"exact","name":"exact_rational_mul","summary":"Exact rational product a * b given two \"p/q\" strings, returned reduced and sign-normalised as \"p/q\".","input":"{\"a\": \"3/4\", \"b\": \"1/4\"}"},{"domain":"units","name":"units_convert","summary":"Convert a magnitude between two named units of the same physical dimension (linear and affine temperature handled); fails closed if dimensions differ.","input":"{\"value\":100,\"from\":\"°C\",\"to\":\"°F\"}"},{"domain":"units","name":"units_quantity_op","summary":"Multiply or divide two dimensioned quantities {value,unit}, composing dimensions; result value in coherent SI base units, dimension as the SI 7-vector.","input":"{\"a\":{\"value\":100,\"unit\":\"m\"},\"b\":{\"value\":10,\"unit\":\"s\"},\"op\":\"divide\"}"},{"domain":"units","name":"units_constant","summary":"Look up a CODATA / SI-2019 physical constant by name (or symbol alias), returning value in SI base units plus its 7-vector dimension.","input":"{\"name\":\"speed_of_light\"}"},{"domain":"units","name":"units_list_units","summary":"List every unit the engine can convert between, each with a label and dimension 7-vector.","input":"{}"},{"domain":"units","name":"units_list_constants","summary":"List every CODATA constant available to units_constant (name, symbol, description, value, dimension).","input":"{}"},{"domain":"transforms","name":"xform_dft","summary":"Forward DFT X[k]=Σ x[n] e^{-2πi kn/N} (f64-exact CPU). Real signal via data, or complex via re/im arrays; returns re/im/magnitude.","input":"{\"data\":[1,1,1,1]}"},{"domain":"transforms","name":"xform_idft","summary":"Inverse DFT x[n]=(1/N)Σ X[k] e^{+2πi kn/N}; round-trips xform_dft to ~1e-9.","input":"{\"re\":[4,0,0,0],\"im\":[0,0,0,0]}"},{"domain":"transforms","name":"xform_z_transform","summary":"Z-transform of a finite causal sequence X(z)=Σ x[n] z^{-n} at a complex z. Fails closed at z=0.","input":"{\"x\":[1,2,3],\"z_re\":2,\"z_im\":0}"},{"domain":"transforms","name":"xform_z_unit_step","summary":"Closed-form unit-step Z-transform X(z)=z/(z-1) at complex z (|z|>1).","input":"{\"z_re\":2,\"z_im\":0}"},{"domain":"transforms","name":"xform_z_geometric","summary":"Closed-form geometric a^n u[n] Z-transform X(z)=1/(1-a z^{-1}) at complex z (|z|>|a|).","input":"{\"a\":0.5,\"z_re\":2,\"z_im\":0}"},{"domain":"transforms","name":"xform_laplace_numeric","summary":"Numerical Laplace L{f}(s)=∫₀^∞ e^{-st}f(t)dt by Simpson quadrature for a built-in family (one|t|exp|poly|sin|cos), a/n params.","input":"{\"fn\":\"exp\",\"a\":-1,\"s\":1,\"t_max\":60,\"steps\":4000}"},{"domain":"transforms","name":"xform_laplace_table","summary":"Symbolic Laplace of a polynomial Σ coeff·t^power via the CAS table; returns the transform in s and (if s given) its value.","input":"{\"terms\":[{\"coeff\":1,\"power\":1},{\"coeff\":5,\"power\":0}],\"s\":1}"},{"domain":"graph","name":"graph_shortest_path","summary":"Single-source single-target shortest path over a directed non-negative weighted graph (exact Dijkstra); returns distance, reachability, and the path.","input":"{\"edges\":[[0,1,1.0],[1,2,2.0],[0,2,4.0]],\"source\":0,\"target\":2}"},{"domain":"graph","name":"graph_spreading_activation","summary":"Spreading-activation relevance propagation: activation from seeds through directed weighted edges, decaying per hop; returns per-node activation + top-k.","input":"{\"edges\":[[0,1,1.0],[0,2,1.0],[0,3,1.0],[1,4,1.0]],\"seeds\":[[0,1.0]],\"decay\":0.6,\"top_k\":3}"},{"domain":"graph","name":"graph_fuzzy_similarity","summary":"Degree-aware similarity between two fuzzy RDF graphs: fuzzy Jaccard (Σmin/Σmax) and Dice. Triples carry a degree in [0,1].","input":"{\"g1\":[[0,1,2,0.8],[3,1,4,0.6]],\"g2\":[[0,1,2,0.4],[5,1,6,0.7]]}"},{"domain":"graph","name":"graph_kge_score","summary":"Knowledge-graph embedding plausibility score for (head, relation, tail) under TransE / DistMult / ComplEx / RotatE.","input":"{\"model\":\"distmult\",\"head\":[1.0,2.0,3.0],\"relation\":[0.5,0.5,0.5],\"tail\":[2.0,1.0,1.0]}"}];
+
+    const DOMAIN_LABELS = {
+        linalg: 'Linear Algebra', stats: 'Statistics', cas: 'Computer Algebra',
+        numerics: 'Numerics', exact: 'Exact Arithmetic', units: 'Units & Dimensions',
+        transforms: 'Transforms', graph: 'Graph & Relational'
+    };
+    const DOMAIN_ORDER = ['linalg','stats','cas','numerics','exact','units','transforms','graph'];
+
+    let wasm = null;
+    let active = DOMAIN_ORDER[0];
+
+    function setBadge(state, text) {
+        const dot = document.getElementById('wasm-dot');
+        const txt = document.getElementById('wasm-text');
+        dot.classList.remove('bg-slate-500','bg-emerald-500','bg-red-500');
+        dot.classList.add(state === 'ok' ? 'bg-emerald-500' : state === 'err' ? 'bg-red-500' : 'bg-slate-500');
+        txt.textContent = text;
+    }
+
+    async function loadWasm() {
+        try {
+            const module = await import('./playground/qualia_core_db.js');
+            const resp = await fetch('./playground/qualia_core_db_bg.wasm', { cache: 'no-store' });
+            if (!resp.ok) throw new Error('WASM fetch failed: ' + resp.status);
+            await module.default(resp);
+            wasm = module;
+            setBadge('ok', 'WASM Ready');
+            return true;
+        } catch (e) {
+            setBadge('err', 'WASM failed');
+            console.error(e);
+            return false;
+        }
+    }
+
+    function renderTabs() {
+        const el = document.getElementById('tabs');
+        el.innerHTML = '';
+        for (const d of DOMAIN_ORDER) {
+            const n = FUNCS.filter(f => f.domain === d).length;
+            const b = document.createElement('button');
+            b.className = 'tab-btn px-4 py-2 rounded-2xl text-sm border border-white/10 hover:bg-white/5 transition-colors' + (d === active ? ' active' : '');
+            b.textContent = DOMAIN_LABELS[d] + ' (' + n + ')';
+            b.onclick = () => { active = d; renderTabs(); renderCards(); };
+            el.appendChild(b);
+        }
+        document.getElementById('func-count').textContent =
+            FUNCS.length + ' live functions across ' + DOMAIN_ORDER.length + ' domains — every result computed in-browser.';
+    }
+
+    function renderCards() {
+        const wrap = document.getElementById('cards');
+        wrap.innerHTML = '';
+        for (const f of FUNCS.filter(x => x.domain === active)) {
+            const card = document.createElement('div');
+            card.className = 'glass-strong rounded-2xl p-5';
+            const ta_id = 'in_' + f.name, out_id = 'out_' + f.name;
+            let pretty;
+            try { pretty = JSON.stringify(JSON.parse(f.input), null, 2); } catch { pretty = f.input; }
+            card.innerHTML =
+                '<div class="flex items-center justify-between gap-3 mb-2">' +
+                  '<code class="text-cyan-300 text-sm font-medium">' + f.name + '</code>' +
+                  '<button class="run-btn px-3 py-1 rounded-xl text-xs bg-cyan-500/15 text-cyan-300 border border-cyan-500/30 hover:bg-cyan-500/25">Run ▸</button>' +
+                '</div>' +
+                '<p class="text-white/50 text-xs mb-3 leading-relaxed">' + f.summary + '</p>' +
+                '<textarea id="' + ta_id + '" rows="3" class="w-full text-xs bg-black/30 border border-white/10 rounded-lg p-2 text-white/80 mb-2">' + pretty + '</textarea>' +
+                '<pre id="' + out_id + '" class="card-out text-xs text-white/40 bg-black/20 rounded-lg p-2 min-h-[2.2rem] whitespace-pre-wrap break-words">— click Run —</pre>';
+            const btn = card.querySelector('.run-btn');
+            btn.onclick = () => runCard(f.name, ta_id, out_id);
+            wrap.appendChild(card);
+        }
+    }
+
+    function runCard(fn, taId, outId) {
+        const out = document.getElementById(outId);
+        out.classList.remove('ok','err');
+        if (!wasm) { out.textContent = 'WASM not loaded yet.'; out.classList.add('err'); return; }
+        if (typeof wasm[fn] !== 'function') {
+            out.textContent = 'Export ' + fn + ' is not in this bundle yet (rebuild docs/playground with --features wasm-full).';
+            out.classList.add('err'); return;
+        }
+        let arg;
+        try { arg = JSON.parse(document.getElementById(taId).value); }
+        catch (e) { out.textContent = 'Invalid JSON input: ' + e.message; out.classList.add('err'); return; }
+        try {
+            const t0 = performance.now();
+            const res = wasm[fn](arg);
+            const ms = (performance.now() - t0).toFixed(3);
+            out.textContent = JSON.stringify(res, null, 2) + '\n\n// computed in ' + ms + ' ms (in-browser)';
+            out.classList.add('ok');
+        } catch (e) {
+            out.textContent = 'Engine error: ' + (e && e.message ? e.message : String(e));
+            out.classList.add('err');
+        }
+    }
+
+    renderTabs();
+    renderCards();
+    loadWasm();
+    </script>
+</body>
+</html>
