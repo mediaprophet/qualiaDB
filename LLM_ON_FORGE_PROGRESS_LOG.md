@@ -219,3 +219,51 @@ weights via `P64TensorIndex::from_p64` (role-tagged), `load_weights` the project
 drive `decode_layer_graph` per token, and bake off — same weights — against the hand-written
 `dispatch_attention_pass`/`dispatch_ffn_pass`, asserting f32-tol match (the working engine is the
 oracle) and reporting ms/layer for both. Then KV-cache update at the decode-loop seam.
+
+---
+
+## 2026-06-29 — Bake-off prep: engine map + faithful RMSNorm weight + native-layout `trans_b`
+
+**Step / phase:** map the real engine (the bake-off oracle) and close the two faithfulness gaps it
+revealed before wiring the p64 bridge. **Status: done, GPU-certified on A2000.**
+
+**Engine map** (three parallel Explore scouts over `gguf_bridge/`, `inference/`, `q42/p64_weight.rs`,
+model assets). The facts that constrain the forge to match the *working engine*:
+- **RoPE = interleaved (GGUF NORM), base = `rope_freq_base` (100,000 for SmolLM2), `scaled_pos =
+  pos/rope_scale`**; K is RoPE'd, V is not. My `Rope` op (mode 0, base param) matches.
+- **Projection weights are `[in,out]` row-major in GGUF metadata, but the tensor DATA is laid out
+  `[out,in]` row-major** (ne[0]=in is the contiguous dim) — i.e. the native weight is `Bᵀ` of what a
+  plain `A·B` wants. The engine's GEMM reads it as `[out,in]` and computes `y[out]=Σ W[out,in]·x[in]`.
+- **RMSNorm carries a learned weight** (`x·inv_rms·weight[i]`), eps `1e-5`. SwiGLU FFN, GQA via
+  `kv_h = q_h/(n_head/n_kv_head)`, scale `1/√head_dim` — all already matched.
+- **p64 API**: `P64TensorIndex::from_p64(&[u8]) → .entries` (role_id, dtype, manifold_idx=layer,
+  dimensions), `index.blob(&data, entry)`, `ggml_quants::dequantize_row_into(blob, dtype, n, &mut out)`.
+  Roles: ATTN_K/V/Q/OUTPUT 0–3, FFN_GATE/UP/DOWN 4–6, ATTN_NORM/FFN_NORM 7–8, embd/output/norm 9–11.
+- **No model file on disk** (gitignored; tests skip when absent). SmolLM2-360M: 32 layers, n_embd 960,
+  15 heads, 5 kv-heads, head_dim 64, ffn 2560, rope θ 100k.
+
+**Two gaps closed** (commits `acc6ed66`, this commit), both certified:
+1. **Faithful RMSNorm learned weight** — `decode_layer_graph` now multiplies each RMSNorm by its
+   `attn_norm`/`ffn_norm` weight (externals [8]/[9]). Cert: composed oracle vs independent reference
+   (with norm weights, both RoPE conventions) + A2000 GPU.
+2. **`MatMul.trans_b` was a silently-dropped flag** — the IR carried `trans_b`, the executor pattern
+   `MatMul { m,n,k,tc,.. }` dropped it AND the CPU oracle ignored it (a latent fake). Now real: a
+   `gemm_trans_b` WGSL kernel + CPU oracle branch compute `C[m,n]=A[m,k]·Bᵀ` with **B bound `[n,k]`
+   row-major** — exactly the native `[out,in]` GGUF/p64 weight layout, so the forge can consume p64
+   projection weights with **no transpose copy**. Cert: CPU oracle vs independent `A·Bᵀ` reference,
+   and A2000 GPU vs **plain GEMM on an explicitly-transposed B** (a different kernel path — the gold
+   cross-check).
+
+**Verified A2000:** 8/8 executor GPU certs pass (incl. `matmul_trans_b_gpu_matches_plain_on_transposed`,
+`decode_layer_*`); non-GPU `wgsl_forge::` **142 passed / 0 failed / 48 ignored**; lib clean plain +
+`--features cuda`.
+
+**⚑ Where I need the human:** to run the **real head-to-head** (forge layer vs the hand-written engine
+on actual SmolLM2 weights, + tok/s), drop a SmolLM2-360M GGUF into `docs/models/` (e.g.
+`smollm2-360m-instruct-q8_0.gguf` or `SmolLM2-360M-Instruct-Q4_K_M.gguf`). With no model on disk the
+bake-off can build the bridge + a hermetic synthetic-p64 cert, but the engine-parity + tok/s numbers
+need real weights. One file unlocks the competition proof.
+
+**Next step:** the p64→forge bridge (read role tensors via `from_p64`, map to `decode_layer_graph`
+externals using `trans_b` for the native layout, `load_weights` them resident) + a hermetic
+synthetic-full-layer-p64 cert; then the model-gated engine bake-off.

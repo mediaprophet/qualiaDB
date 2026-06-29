@@ -88,8 +88,25 @@ pub fn execute_graph_cpu(
                     )))
                 }
             },
-            OpNode::MatMul { m, n, k, .. } => {
-                crate::wgsl_forge::oracle::gemm_cpu(&ins[0], &ins[1], m as usize, k as usize, n as usize)
+            OpNode::MatMul { m, n, k, trans_b, .. } => {
+                if trans_b {
+                    // C[m,n] = A[m,k] · Bᵀ, B stored [n,k] row-major (native [out,in] weight layout).
+                    let (mm, nn, kk) = (m as usize, n as usize, k as usize);
+                    let (a, b) = (&ins[0], &ins[1]);
+                    let mut c = vec![0.0f32; mm * nn];
+                    for i in 0..mm {
+                        for j in 0..nn {
+                            let mut acc = 0.0f32;
+                            for x in 0..kk {
+                                acc += a[i * kk + x] * b[j * kk + x];
+                            }
+                            c[i * nn + j] = acc;
+                        }
+                    }
+                    c
+                } else {
+                    crate::wgsl_forge::oracle::gemm_cpu(&ins[0], &ins[1], m as usize, k as usize, n as usize)
+                }
             }
             OpNode::GatherDequant { scheme, .. } => {
                 if scheme != DType::Ternary {
@@ -476,14 +493,17 @@ fn prepare_node(
                 out_elems,
             )
         }
-        OpNode::MatMul { m, n, k, tc, .. } => {
-            // `tc=true` requests tensor cores. The portable wgpu path is the coopmat tiled
-            // GEMM — taken only when the adapter advertises coopmat AND the runtime probe
-            // confirms the multiply actually computes (dormant on wgpu 29.0.3 / #9741, so
-            // this falls to the certified plain GEMM floor there). 8-multiple dims required.
-            // The CUDA WMMA tensor-core path is reached host-side via `dispatch::gemm_f32_tc`
-            // and wired graph-side by the CudaCLowerer (P5), not from this wgpu executor.
-            if tc
+        OpNode::MatMul { m, n, k, tc, trans_b } => {
+            // `trans_b` consumes B as `[n,k]` row-major (the native GGUF/p64 weight layout
+            // `[out,in]`), computing `C[m,n] = A[m,k] · Bᵀ` with no transpose copy — this is what
+            // lets the forge feed on p64 projection weights directly. `tc=true` requests tensor
+            // cores: the portable wgpu coopmat tiled GEMM, taken only when the adapter advertises
+            // coopmat AND the runtime probe confirms it computes (dormant on wgpu 29.0.3 / #9741,
+            // falling to the certified plain GEMM floor). The CUDA WMMA path is reached host-side
+            // via `dispatch::gemm_f32_tc` / the CudaCLowerer (P5), not this wgpu executor.
+            if trans_b {
+                prepare_matmul_trans_b(ctx, m, n, k, ins)
+            } else if tc
                 && m % 8 == 0
                 && n % 8 == 0
                 && k % 8 == 0
@@ -550,6 +570,59 @@ fn prepare_matmul_plain(
         &module.source,
         &spec.entry_point,
         &[at(ins[0], 0), at(ins[1], 1), out, params],
+        out,
+        sched,
+        out_elems,
+    )
+}
+
+/// WGSL for `C[m,n] = A[m,k] · Bᵀ` with **B stored `[n,k]` row-major** (the native GGUF/p64 weight
+/// layout `[out,in]`). One invocation per output element. Binding ABI: `a`(0), `b`(1), `c`(2,
+/// read_write), `dims`(3, read storage `[m,n,k,_]`).
+const GEMM_TRANS_B_ENTRY: &str = "gemm_trans_b_main";
+fn gemm_trans_b_wgsl(wg: u32) -> String {
+    format!(
+        r#"@group(0) @binding(0) var<storage, read> a: array<f32>;
+@group(0) @binding(1) var<storage, read> b: array<f32>;
+@group(0) @binding(2) var<storage, read_write> c: array<f32>;
+@group(0) @binding(3) var<storage, read> dims: array<u32>;
+@compute @workgroup_size({wg})
+fn {entry}(@builtin(global_invocation_id) gid: vec3<u32>) {{
+    let idx = gid.x;
+    let m = dims[0]; let n = dims[1]; let k = dims[2];
+    if (idx >= m * n) {{ return; }}
+    let row = idx / n; let col = idx % n;
+    var acc = 0.0;
+    for (var kk = 0u; kk < k; kk = kk + 1u) {{
+        acc = acc + a[row * k + kk] * b[col * k + kk];
+    }}
+    c[idx] = acc;
+}}
+"#,
+        entry = GEMM_TRANS_B_ENTRY,
+    )
+}
+
+/// Transposed-B GEMM node: `C[m,n] = A[m,k] · Bᵀ`, B bound as `[n,k]` row-major. Lets the forge
+/// consume native `[out,in]` GGUF/p64 projection weights without a host transpose.
+fn prepare_matmul_trans_b(
+    ctx: &mut WgpuComputeContext,
+    m: u32,
+    n: u32,
+    k: u32,
+    ins: &[BufferView],
+) -> Result<(GraphPass, BufferView), ForgeError> {
+    const WG: u32 = 64;
+    let out_elems = (m as usize) * (n as usize);
+    let out = alloc_out(ctx, out_elems, 2)?;
+    let dims = alloc_params(ctx, &[m, n, k, 0], 3, BindingUsage::StorageRead)?;
+    let src = gemm_trans_b_wgsl(WG);
+    let sched = Schedule { workgroup_size: WG, ..Default::default() };
+    record_kernel(
+        ctx,
+        &src,
+        GEMM_TRANS_B_ENTRY,
+        &[at(ins[0], 0), at(ins[1], 1), out, dims],
         out,
         sched,
         out_elems,
@@ -1455,6 +1528,95 @@ mod tests {
                     "decode-layer gpu vs oracle (mode {mode}): {a} vs {b}"
                 );
             }
+        }
+    }
+
+    // ── MatMul.trans_b (native [out,in] weight layout) ───────────────────────────────
+
+    fn trans_b_graph(m: u32, n: u32, k: u32) -> ComputeGraph {
+        let mut g = ComputeGraph::new();
+        let s = Schedule::default();
+        let a = TensorRef::input(0, Shape::new(&[m, k]), DType::F32);
+        let b = TensorRef::input(1, Shape::new(&[n, k]), DType::F32);
+        let out = g
+            .push(
+                OpNode::MatMul { m, n, k, tc: false, trans_b: true },
+                &[a, b],
+                Shape::new(&[m, n]),
+                DType::F32,
+                s,
+            )
+            .unwrap();
+        g.mark_output(out);
+        g
+    }
+
+    /// `MatMul.trans_b` CPU oracle (B bound `[n,k]`) matches an independent `A·Bᵀ` reference —
+    /// proving the previously-silently-dropped `trans_b` flag now computes.
+    #[test]
+    fn matmul_trans_b_cpu_oracle_matches_reference() {
+        let (m, n, k) = (2usize, 3usize, 4usize);
+        let a: Vec<f32> = (0..m * k).map(|i| (i as f32) * 0.2 - 0.5).collect();
+        let b_nk: Vec<f32> = (0..n * k).map(|i| (i as f32) * 0.1 - 0.2).collect();
+        let cpu =
+            execute_graph_cpu(&trans_b_graph(m as u32, n as u32, k as u32), &[a.clone(), b_nk.clone()])
+                .unwrap();
+        let mut want = vec![0.0f32; m * n];
+        for i in 0..m {
+            for j in 0..n {
+                let mut acc = 0.0f32;
+                for kk in 0..k {
+                    acc += a[i * k + kk] * b_nk[j * k + kk];
+                }
+                want[i * n + j] = acc;
+            }
+        }
+        for (c, w) in cpu.iter().zip(&want) {
+            assert!((c - w).abs() < 1e-5, "trans_b cpu {c} vs ref {w}");
+        }
+    }
+
+    /// GPU certify `trans_b` two ways on the A2000: vs the composed CPU oracle, AND vs the **plain
+    /// GEMM run on an explicitly-transposed B** (a different kernel path) — the gold cross-check.
+    #[test]
+    #[ignore = "requires a GPU adapter"]
+    fn matmul_trans_b_gpu_matches_plain_on_transposed() {
+        let (m, n, k) = (3usize, 5usize, 4usize);
+        let a: Vec<f32> = (0..m * k).map(|i| (i as f32) * 0.1 - 0.3).collect();
+        let b_nk: Vec<f32> = (0..n * k).map(|i| ((i * 3 % 7) as f32) * 0.05 - 0.15).collect();
+        let g = trans_b_graph(m as u32, n as u32, k as u32);
+        let gpu = execute_graph(&g, &[a.clone(), b_nk.clone()]).expect("trans_b gpu");
+        let cpu = execute_graph_cpu(&g, &[a.clone(), b_nk.clone()]).unwrap();
+        for (gp, cp) in gpu.iter().zip(&cpu) {
+            assert!((gp - cp).abs() <= 1e-4 * cp.abs().max(1.0), "trans_b gpu {gp} vs cpu {cp}");
+        }
+        // Cross-check: plain GEMM on B explicitly transposed to [k,n] must match.
+        let mut b_kn = vec![0.0f32; k * n];
+        for j in 0..n {
+            for kk in 0..k {
+                b_kn[kk * n + j] = b_nk[j * k + kk];
+            }
+        }
+        let mut g2 = ComputeGraph::new();
+        let s = Schedule::default();
+        let a2 = TensorRef::input(0, Shape::new(&[m as u32, k as u32]), DType::F32);
+        let b2 = TensorRef::input(1, Shape::new(&[k as u32, n as u32]), DType::F32);
+        let out2 = g2
+            .push(
+                OpNode::MatMul { m: m as u32, n: n as u32, k: k as u32, tc: false, trans_b: false },
+                &[a2, b2],
+                Shape::new(&[m as u32, n as u32]),
+                DType::F32,
+                s,
+            )
+            .unwrap();
+        g2.mark_output(out2);
+        let plain = execute_graph(&g2, &[a, b_kn]).expect("plain gpu");
+        for (t, p) in gpu.iter().zip(&plain) {
+            assert!(
+                (t - p).abs() <= 1e-4 * p.abs().max(1.0),
+                "trans_b {t} vs plain-on-transposed {p}"
+            );
         }
     }
 
