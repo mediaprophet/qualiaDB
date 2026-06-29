@@ -117,13 +117,42 @@ pub fn fit(
 
     for it in 1..=max_iter.max(1) {
         iters = it;
-        // Assignment step.
+        // Assignment step — assign each point to its nearest centroid.
+        //
+        // Best-path-with-CPU-floor (mirrors `linear_algebra::gemm`): the point↔centroid
+        // squared-distance matrix (`n × k`, the `AllPairs` kernel) is the dominant cost
+        // when `n·k·p` is large, so above `GEMM_GPU_THRESHOLD` and with an accelerator
+        // present we compute it in one pass via `dispatch::pairwise_sq_dist_f64` (whose
+        // cross-term GEMM takes the best path on this machine) and argmin each row. Off
+        // accelerator, or sub-threshold, the EXACT per-point `nearest` loop runs —
+        // byte-identical to before, including its lowest-index tie-break.
         let mut changed = false;
-        for i in 0..n {
-            let (c, _) = nearest(&centroids, k, p, &x[i * p..(i + 1) * p]);
-            if labels[i] != c {
-                labels[i] = c;
-                changed = true;
+        let work = n.saturating_mul(k).saturating_mul(p);
+        let caps = crate::wgsl_forge::dispatch::caps();
+        if (caps.cuda || caps.wgpu) && work >= crate::wgsl_forge::dispatch::GEMM_GPU_THRESHOLD {
+            let dist = crate::wgsl_forge::dispatch::pairwise_sq_dist_f64(x, &centroids, n, k, p);
+            for i in 0..n {
+                let row = &dist[i * k..(i + 1) * k];
+                let mut best = 0;
+                let mut best_d = row[0];
+                for (c, &d) in row.iter().enumerate().skip(1) {
+                    if d < best_d {
+                        best_d = d;
+                        best = c;
+                    }
+                }
+                if labels[i] != best {
+                    labels[i] = best;
+                    changed = true;
+                }
+            }
+        } else {
+            for i in 0..n {
+                let (c, _) = nearest(&centroids, k, p, &x[i * p..(i + 1) * p]);
+                if labels[i] != c {
+                    labels[i] = c;
+                    changed = true;
+                }
             }
         }
         // Update step: centroid = mean of its members; empty clusters keep place.

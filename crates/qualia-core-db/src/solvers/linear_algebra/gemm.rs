@@ -62,39 +62,77 @@ pub fn gemm(
     // ── Best-path-with-CPU-floor offload (additive; behaviour-preserving) ──────────
     //
     // The capability-aware forge dispatcher (`wgsl_forge::dispatch::gemm_f64`) picks
-    // the best compute path *actually present on this machine* for the plain product
-    // `C = A·B`, while always keeping this CPU triple-loop as the floor. We only hand
-    // off when ALL of the following hold:
-    //   1. it IS the plain product — no transpose, `alpha == 1`, `beta == 0` — because
-    //      `gemm_f64` computes `C = A·B` only (it has no transpose/alpha/beta support);
-    //   2. an accelerator actually exists (`caps().cuda || caps().wgpu`) — so a no-GPU
+    // the best compute path *actually present on this machine* for the raw product
+    // `P = op(A)·op(B)`, while always keeping this CPU triple-loop as the floor. We hand
+    // off the product whenever:
+    //   1. an accelerator actually exists (`caps().cuda || caps().wgpu`) — so a no-GPU
     //      machine takes the EXACT existing CPU path below with zero behaviour change;
-    //   3. the problem is large enough (`m·n·k >= GEMM_GPU_THRESHOLD`) to amortise
+    //   2. the problem is large enough (`m·n·k >= GEMM_GPU_THRESHOLD`) to amortise
     //      dispatch/transfer overhead — small GEMMs stay on the CPU.
     //
-    // f64 on the GPU is **CUDA-only**: WGSL has no `f64`, so for a non-NVIDIA GPU the
-    // dispatcher itself falls back to its own f64 CPU floor (the `caps().wgpu` term
-    // above just means "an accelerator is present"; the actual f64 GPU kernel is the
-    // native CUDA-f64 path). The dispatcher's CPU floor and our CPU loop use the same
-    // increasing-`k` summation order, so the answers agree to f64 summation precision.
+    // `gemm_f64` computes only the *plain* row-major product (no alpha/beta/transpose),
+    // so the full BLAS shape is reconstructed around it:
+    //   • a transpose flag is honoured by *materialising* that operand once into a
+    //     row-major scratch buffer (`op(A)` as `m×k`, `op(B)` as `k×n`) — an O(m·k)/O(k·n)
+    //     copy dominated by the O(m·n·k) GEMM being offloaded. This unlocks the hot
+    //     covariance `XᵀX` (PCA/ridge/linear) and attention `Q·Kᵀ`.
+    //   • `alpha`/`beta` are applied in the O(m·n) CPU combine afterward, exactly as the
+    //     loop below would (`beta == 0` is a hard zero, so `c` is not read — BLAS rule).
+    // The materialised operand equals exactly what `a_at`/`b_at` would read, and the
+    // dispatcher's CPU floor uses the same increasing-index accumulation as the loop
+    // below, so the answers agree to f64 summation precision.
     //
-    // Crucially, a forge error is NEVER propagated out of the solver: on `Err(_)` we
-    // fall through to the CPU path below, which is always correct. Anything that is not
-    // the plain product (any transpose, `alpha != 1`, `beta != 0`), or is sub-threshold,
-    // or runs off-accelerator, executes the unchanged CPU code — byte-identical to before.
-    if transa == Transpose::No
-        && transb == Transpose::No
-        && alpha == 1.0
-        && beta == 0.0
+    // f64 on the GPU is **CUDA-only**: WGSL has no `f64`, so for a non-NVIDIA GPU the
+    // dispatcher itself falls back to its own f64 CPU floor (the `caps().wgpu` term just
+    // means "an accelerator is present"; the actual f64 GPU kernel is native CUDA-f64).
+    // Crucially, a forge error is NEVER propagated out of the solver: on `Err(_)` we fall
+    // through to the CPU path below, which is always correct. Sub-threshold or
+    // off-accelerator, the unchanged CPU code runs — byte-identical to before.
     {
         use crate::wgsl_forge::dispatch::{caps, GEMM_GPU_THRESHOLD};
+        use std::borrow::Cow;
         let work = m.saturating_mul(n).saturating_mul(k);
         let caps = caps();
         if (caps.cuda || caps.wgpu) && work >= GEMM_GPU_THRESHOLD {
-            // BLAS gemm dims are (m, n, k); the dispatcher takes (m, k, n). A is m×k,
-            // B is k×n, C is m×n, so the mapping is gemm(m,n,k) → dispatch(m,k,n).
-            if let Ok(result) = crate::wgsl_forge::dispatch::gemm_f64(m, k, n, a, b) {
-                c.copy_from_slice(&result);
+            // op(A): row-major m×k — stored m×k already (No) or k×m (Yes → transpose).
+            let a_eff: Cow<[f64]> = match transa {
+                Transpose::No => Cow::Borrowed(a),
+                Transpose::Yes => {
+                    let mut t = vec![0.0_f64; m * k];
+                    for i in 0..m {
+                        for l in 0..k {
+                            t[i * k + l] = a[l * m + i];
+                        }
+                    }
+                    Cow::Owned(t)
+                }
+            };
+            // op(B): row-major k×n — stored k×n already (No) or n×k (Yes → transpose).
+            let b_eff: Cow<[f64]> = match transb {
+                Transpose::No => Cow::Borrowed(b),
+                Transpose::Yes => {
+                    let mut t = vec![0.0_f64; k * n];
+                    for l in 0..k {
+                        for j in 0..n {
+                            t[l * n + j] = b[j * k + l];
+                        }
+                    }
+                    Cow::Owned(t)
+                }
+            };
+            // BLAS gemm dims are (m, n, k); the dispatcher takes (m, k, n): op(A) is m×k,
+            // op(B) is k×n, C is m×n, so the mapping is gemm(m,n,k) → dispatch(m,k,n).
+            if let Ok(product) = crate::wgsl_forge::dispatch::gemm_f64(m, k, n, &a_eff, &b_eff) {
+                // Apply alpha/beta exactly as the CPU loop would (beta==0 ⇒ c not read).
+                if beta == 0.0 {
+                    for (ci, &p) in c.iter_mut().zip(product.iter()) {
+                        *ci = alpha * p;
+                    }
+                } else {
+                    for (ci, &p) in c.iter_mut().zip(product.iter()) {
+                        *ci = alpha * p + beta * *ci;
+                    }
+                }
                 return Ok(());
             }
             // Forge path was eligible but errored — fall through to the CPU floor.
@@ -504,6 +542,118 @@ mod tests {
         matvec(Transpose::No, M, N, &a, &x, &mut y).unwrap();
 
         approx(&y, &reference);
+    }
+
+    #[test]
+    fn transposed_covariance_matches_cpu_above_threshold() {
+        // The hot ML op: covariance `Cov = Xᵀ·X` for tall-skinny `X` (n≫p), expressed
+        // as `gemm(Transpose::Yes, Transpose::No, p, p, n, 1.0, x, x, 0.0, cov)`. With
+        // n=4096, p=8 the work is p·p·n = 262_144 ≥ GEMM_GPU_THRESHOLD, so on an
+        // accelerator box this exercises the NEW transpose-materialising offload path;
+        // on CI (no accelerator) it exercises the CPU floor. EITHER WAY the result must
+        // equal a SEPARATE pure-CPU `XᵀX` reference computed inline here — hermetic,
+        // GPU-agnostic, and the regression guard that materialise-then-dispatch equals
+        // the index-arithmetic CPU loop.
+        const NSAMP: usize = 4096; // k (contraction dim)
+        const P: usize = 8; // m == n (feature dim)
+
+        // X is NSAMP×P row-major (stored as op==Yes's k×m). Deterministic, no RNG.
+        let mut x = vec![0.0f64; NSAMP * P];
+        for r in 0..NSAMP {
+            for c in 0..P {
+                x[r * P + c] = ((r * 3 + c * 7) % 17) as f64 * 0.125 - 1.0;
+            }
+        }
+
+        // Reference: Cov[i][j] = Σ_r X[r][i]·X[r][j], increasing-r accumulation.
+        let mut reference = vec![0.0f64; P * P];
+        for i in 0..P {
+            for j in 0..P {
+                let mut acc = 0.0f64;
+                for r in 0..NSAMP {
+                    acc += x[r * P + i] * x[r * P + j];
+                }
+                reference[i * P + j] = acc;
+            }
+        }
+
+        // Through the wired gemm: op(A)=Xᵀ (P×NSAMP), op(B)=X (NSAMP×P) → C (P×P).
+        let mut cov = vec![0.0f64; P * P];
+        gemm(
+            Transpose::Yes,
+            Transpose::No,
+            P,
+            P,
+            NSAMP,
+            1.0,
+            &x,
+            &x,
+            0.0,
+            &mut cov,
+        )
+        .unwrap();
+
+        approx(&cov, &reference);
+        // Covariance must be symmetric.
+        for i in 0..P {
+            for j in 0..P {
+                assert!((cov[i * P + j] - cov[j * P + i]).abs() < 1e-9);
+            }
+        }
+    }
+
+    #[test]
+    fn scaled_accumulate_transposed_matches_cpu_above_threshold() {
+        // Exercises the offload's `alpha`/`beta` combine *together with* a transpose, on
+        // the real PCA covariance shape: `C := alpha·(Xᵀ·X) + beta·C0` with
+        // alpha=1/(NSAMP−1) (exactly what `pca::fit` passes) and a non-zero beta so the
+        // `c`-read branch is hit. Above threshold (P²·NSAMP ≥ GEMM_GPU_THRESHOLD) → on an
+        // accelerator this is the materialise→dispatch→combine path; on CI the CPU floor.
+        // Either way it must equal the inline reference.
+        const NSAMP: usize = 4096;
+        const P: usize = 8;
+        let alpha = 1.0 / (NSAMP as f64 - 1.0);
+        let beta = 0.5;
+
+        let mut x = vec![0.0f64; NSAMP * P];
+        for r in 0..NSAMP {
+            for c in 0..P {
+                x[r * P + c] = ((r * 5 + c * 3) % 13) as f64 * 0.1 - 0.6;
+            }
+        }
+        // Initial C0 — read because beta != 0.
+        let mut c = vec![0.0f64; P * P];
+        for (i, ci) in c.iter_mut().enumerate() {
+            *ci = (i % 5) as f64 * 0.25;
+        }
+        let c0 = c.clone();
+
+        // Reference: alpha·Σ_r X[r][i]·X[r][j] + beta·C0[i][j].
+        let mut reference = vec![0.0f64; P * P];
+        for i in 0..P {
+            for j in 0..P {
+                let mut acc = 0.0f64;
+                for r in 0..NSAMP {
+                    acc += x[r * P + i] * x[r * P + j];
+                }
+                reference[i * P + j] = alpha * acc + beta * c0[i * P + j];
+            }
+        }
+
+        gemm(
+            Transpose::Yes,
+            Transpose::No,
+            P,
+            P,
+            NSAMP,
+            alpha,
+            &x,
+            &x,
+            beta,
+            &mut c,
+        )
+        .unwrap();
+        approx(&c, &reference);
     }
 
     #[test]

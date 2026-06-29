@@ -16,20 +16,17 @@ pub fn characteristic_polynomial(n: usize, data: &[f64]) -> Result<Vec<f64>, Sol
     if n == 0 || data.len() != n * n {
         return Err(SolversError::InvalidDimension);
     }
-    let mul = |x: &[f64], y: &[f64]| -> Vec<f64> {
+    // Each Faddeev–LeVerrier step needs the dense product `A·M` (`n×n · n×n`). Route it
+    // through the engine's one GEMM (`super::gemm::matmul`), which itself picks the
+    // best path on this machine — offloading to the forge dispatcher above
+    // `GEMM_GPU_THRESHOLD` on an accelerator, and otherwise running its exact f64 CPU
+    // floor (same increasing-`k` accumulation, so byte-identical off-accelerator). The
+    // whole algorithm is `n` such products (O(n⁴)), so a large characteristic-polynomial
+    // is exactly the case the accelerator earns its keep.
+    let mul = |x: &[f64], y: &[f64]| -> Result<Vec<f64>, SolversError> {
         let mut out = vec![0.0_f64; n * n];
-        for i in 0..n {
-            for k in 0..n {
-                let xik = x[i * n + k];
-                if xik == 0.0 {
-                    continue;
-                }
-                for j in 0..n {
-                    out[i * n + j] += xik * y[k * n + j];
-                }
-            }
-        }
-        out
+        super::gemm::matmul(n, n, n, x, y, &mut out)?;
+        Ok(out)
     };
     let trace = |x: &[f64]| -> f64 { (0..n).map(|i| x[i * n + i]).sum() };
 
@@ -41,7 +38,7 @@ pub fn characteristic_polynomial(n: usize, data: &[f64]) -> Result<Vec<f64>, Sol
         m[i * n + i] = 1.0;
     }
     for k in 1..=n {
-        let am = mul(data, &m);
+        let am = mul(data, &m)?;
         let ck = -trace(&am) / (k as f64);
         coeffs[k] = ck;
         // M ← A·M + ck·I  (not needed after the final iteration).

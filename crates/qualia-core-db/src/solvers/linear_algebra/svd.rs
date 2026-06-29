@@ -30,17 +30,23 @@ pub fn svd(m: usize, n: usize, data: &[f64]) -> Result<Svd, SolversError> {
         return Err(SolversError::InvalidDimension);
     }
 
-    // M = AᵀA  (n×n, symmetric positive semi-definite).
+    // M = AᵀA  (n×n, symmetric positive semi-definite). Routed through the engine GEMM,
+    // which offloads `Aᵀ·A` to the best path on this machine above `GEMM_GPU_THRESHOLD`
+    // and runs the exact f64 CPU floor otherwise (byte-identical off-accelerator). For a
+    // tall `A` (m ≫ n) this n²·m product is the SVD's heaviest step.
     let mut ata = vec![0.0_f64; n * n];
-    for p in 0..n {
-        for q in 0..n {
-            let mut acc = 0.0;
-            for i in 0..m {
-                acc += data[i * n + p] * data[i * n + q];
-            }
-            ata[p * n + q] = acc;
-        }
-    }
+    super::gemm::gemm(
+        super::gemm::Transpose::Yes,
+        super::gemm::Transpose::No,
+        n,
+        n,
+        m,
+        1.0,
+        data,
+        data,
+        0.0,
+        &mut ata,
+    )?;
 
     // Engine symmetric eigensolver: ata's diagonal ← eigenvalues, eigvecs ← eigenvectors.
     let mut eigvecs = vec![0.0_f64; n * n];
@@ -64,7 +70,11 @@ pub fn svd(m: usize, n: usize, data: &[f64]) -> Result<Svd, SolversError> {
         }
     }
 
-    // U[:,k] = A·V[:,k] / σ_k  (zero column when σ_k ≈ 0).
+    // U[:,k] = A·V[:,k] / σ_k  (zero column when σ_k ≈ 0). Compute the full `AV = A·V`
+    // (m×n) once through the engine GEMM (best-path offload above threshold; exact CPU
+    // floor otherwise), then column-scale by 1/σ_k.
+    let mut av = vec![0.0_f64; m * n];
+    super::gemm::matmul(m, n, n, data, &v, &mut av)?;
     let mut u = vec![0.0_f64; m * n];
     let smax = singular_values.first().copied().unwrap_or(0.0).max(1.0);
     for k in 0..n {
@@ -73,11 +83,7 @@ pub fn svd(m: usize, n: usize, data: &[f64]) -> Result<Svd, SolversError> {
             continue;
         }
         for i in 0..m {
-            let mut acc = 0.0;
-            for p in 0..n {
-                acc += data[i * n + p] * v[p * n + k];
-            }
-            u[i * n + k] = acc / sigma;
+            u[i * n + k] = av[i * n + k] / sigma;
         }
     }
 

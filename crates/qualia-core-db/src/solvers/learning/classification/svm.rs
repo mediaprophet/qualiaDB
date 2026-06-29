@@ -49,6 +49,20 @@ impl Lcg {
     }
 }
 
+/// Fill the `n×n` kernel matrix on the CPU — the always-correct floor: one
+/// `kernel.eval` per upper-triangle pair, mirrored into a symmetric matrix. This is
+/// byte-identical to the original inline loop and is used off-accelerator, below
+/// threshold, or if a forge offload errors.
+fn fill_kernel_cpu(k: &mut [f64], x: &[f64], n: usize, p: usize, kernel: Kernel) {
+    for i in 0..n {
+        for j in i..n {
+            let v = kernel.eval(&x[i * p..(i + 1) * p], &x[j * p..(j + 1) * p]);
+            k[i * n + j] = v;
+            k[j * n + i] = v;
+        }
+    }
+}
+
 /// Fit a soft-margin SVM by simplified SMO. `c` is the regularization (box) bound,
 /// `max_passes` the number of consecutive no-change sweeps to declare convergence.
 /// Fails closed on shape mismatch / a single-class target.
@@ -74,14 +88,37 @@ pub fn fit(
         return Err(LearningError::InsufficientData); // need both classes
     }
 
-    // Precompute the kernel matrix.
+    // Precompute the kernel matrix (the `DenseLinear` kernel class) — best path on this
+    // machine, with the CPU floor [`fill_kernel_cpu`]. Above `GEMM_GPU_THRESHOLD` and with
+    // an accelerator present, the whole `n×n` matrix is built from one dense pass:
+    //   • `Linear`: the Gram matrix `X·Xᵀ` straight through the engine GEMM;
+    //   • `Rbf`:    `exp(−γ·‖xᵢ−xⱼ‖²)` over `dispatch::pairwise_sq_dist_f64`'s best-path
+    //     squared-distance matrix, with the elementwise `exp` on the CPU.
+    // Off accelerator or sub-threshold, the exact symmetric CPU loop runs — byte-identical
+    // to before. A forge error never propagates: it falls back to the CPU floor.
     let mut k = vec![0.0; n * n];
-    for i in 0..n {
-        for j in i..n {
-            let v = kernel.eval(&x[i * p..(i + 1) * p], &x[j * p..(j + 1) * p]);
-            k[i * n + j] = v;
-            k[j * n + i] = v;
+    let work = n.saturating_mul(n).saturating_mul(p);
+    let caps = crate::wgsl_forge::dispatch::caps();
+    let accelerated =
+        (caps.cuda || caps.wgpu) && work >= crate::wgsl_forge::dispatch::GEMM_GPU_THRESHOLD;
+    if accelerated {
+        match kernel {
+            Kernel::Linear => {
+                use crate::solvers::linear_algebra::gemm::{gemm, Transpose};
+                // Gram = X·Xᵀ ([n×n]): op(A)=X (n×p), op(B)=Xᵀ (p×n).
+                if gemm(Transpose::No, Transpose::Yes, n, n, p, 1.0, x, x, 0.0, &mut k).is_err() {
+                    fill_kernel_cpu(&mut k, x, n, p, kernel);
+                }
+            }
+            Kernel::Rbf { gamma } => {
+                let d = crate::wgsl_forge::dispatch::pairwise_sq_dist_f64(x, x, n, n, p);
+                for (kij, &dij) in k.iter_mut().zip(d.iter()) {
+                    *kij = (-gamma * dij).exp();
+                }
+            }
         }
+    } else {
+        fill_kernel_cpu(&mut k, x, n, p, kernel);
     }
 
     let mut alpha = vec![0.0; n];

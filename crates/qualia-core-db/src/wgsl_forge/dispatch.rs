@@ -487,6 +487,92 @@ pub fn gemm_cpu_f64(a: &[f64], b: &[f64], m: usize, k: usize, n: usize) -> Vec<f
     c
 }
 
+/// All-pairs squared Euclidean distance `D[i][j] = ‖a_i − b_j‖²` between the rows of
+/// `a` (`n×p`, row-major) and `b` (`m×p`, row-major), returned row-major `n×m`.
+///
+/// This is the kernel under **k-means assignment**, the **GMM E-step**, and the
+/// **RBF-kernel Gram matrix** — the dominant cost when `n·m·p` is large. It is computed
+/// with the best path on this machine via the identity
+///
+/// ```text
+/// ‖a_i − b_j‖² = ‖a_i‖² + ‖b_j‖² − 2·(a_i · b_j)
+/// ```
+///
+/// where the cross-term Gram matrix `a · bᵀ` (`n×m`) is the dense product `A·Bᵀ` routed
+/// through [`gemm_f64`], so it inherits that function's CUDA-f64 / CPU-floor best-path
+/// selection and the [`GEMM_GPU_THRESHOLD`] crossover automatically. The per-row norms
+/// and the final combine are a linear-time CPU pass. Float cancellation can make a
+/// near-zero entry slightly negative; such entries are clamped to `0.0`.
+///
+/// Because it uses the `‖·‖²` identity (not a direct `Σ(a−b)²` loop), entries whose true
+/// distance is tiny *relative to the operands' norms* carry the usual catastrophic-
+/// cancellation error of that identity — fine for argmin-style clustering/kernels, which
+/// is what every caller does. [`pairwise_sq_dist_cpu_f64`] is the exact direct reference.
+///
+/// On any shape mismatch (`p == 0`, or a slice length that disagrees with `n`/`m`/`p`),
+/// or if the GEMM cross-term errors, it returns the exact CPU floor instead of failing.
+pub fn pairwise_sq_dist_f64(a: &[f64], b: &[f64], n: usize, m: usize, p: usize) -> Vec<f64> {
+    if p == 0 || a.len() != n * p || b.len() != m * p {
+        return pairwise_sq_dist_cpu_f64(a, b, n, m, p);
+    }
+
+    // Row norms ‖a_i‖² and ‖b_j‖².
+    let mut norm_a = vec![0.0_f64; n];
+    for (i, na) in norm_a.iter_mut().enumerate() {
+        let row = &a[i * p..i * p + p];
+        *na = row.iter().map(|&v| v * v).sum();
+    }
+    let mut norm_b = vec![0.0_f64; m];
+    for (j, nb) in norm_b.iter_mut().enumerate() {
+        let row = &b[j * p..j * p + p];
+        *nb = row.iter().map(|&v| v * v).sum();
+    }
+
+    // Cross term A·Bᵀ = [n×m]. Materialise Bᵀ (p×m, row-major) and route the dense
+    // product through the best-path GEMM: gemm_f64(m=n, k=p, n=m) computes A[n×p]·Bᵀ[p×m].
+    let mut bt = vec![0.0_f64; p * m];
+    for j in 0..m {
+        for d in 0..p {
+            bt[d * m + j] = b[j * p + d];
+        }
+    }
+    let cross = match gemm_f64(n, p, m, a, &bt) {
+        Ok(c) => c,
+        Err(_) => return pairwise_sq_dist_cpu_f64(a, b, n, m, p),
+    };
+
+    let mut out = vec![0.0_f64; n * m];
+    for i in 0..n {
+        for j in 0..m {
+            let d = norm_a[i] + norm_b[j] - 2.0 * cross[i * m + j];
+            out[i * m + j] = if d > 0.0 { d } else { 0.0 };
+        }
+    }
+    out
+}
+
+/// Exact direct reference for [`pairwise_sq_dist_f64`]: `D[i][j] = Σ_d (a[i][d] − b[j][d])²`
+/// computed without the `‖·‖²` identity, so there is no cancellation. Always on the CPU,
+/// always correct; this is the always-present floor and the differential oracle for the
+/// accelerated form. Returns a zero-filled `n×m` for any shape mismatch.
+pub fn pairwise_sq_dist_cpu_f64(a: &[f64], b: &[f64], n: usize, m: usize, p: usize) -> Vec<f64> {
+    let mut out = vec![0.0_f64; n * m];
+    if a.len() != n * p || b.len() != m * p {
+        return out;
+    }
+    for i in 0..n {
+        for j in 0..m {
+            let mut s = 0.0_f64;
+            for d in 0..p {
+                let diff = a[i * p + d] - b[j * p + d];
+                s += diff * diff;
+            }
+            out[i * m + j] = s;
+        }
+    }
+    out
+}
+
 /// Best-path single-precision dense GEMV: row-major `y[M] = A[M×N] · x[N]`.
 ///
 /// Path selection (mirrors [`gemm_f32`]):
@@ -882,6 +968,58 @@ mod tests {
         let a = [1.0f64, 2.0, 3.0, 4.0, 5.0, 6.0];
         let x = [1.0f64, 1.0, 1.0];
         assert_eq!(gemv_cpu_f64(&a, &x, 2, 3), vec![6.0, 15.0]);
+    }
+
+    /// `pairwise_sq_dist_cpu_f64` — the exact direct reference — on a hand-checked
+    /// 2-point × 2-point, 2-D case. a=[[0,0],[1,1]], b=[[1,0],[0,1]]:
+    /// ‖a0−b0‖²=1, ‖a0−b1‖²=1, ‖a1−b0‖²=1, ‖a1−b1‖²=1.
+    #[test]
+    fn pairwise_cpu_matches_hand_checked() {
+        let a = [0.0f64, 0.0, 1.0, 1.0];
+        let b = [1.0f64, 0.0, 0.0, 1.0];
+        let d = pairwise_sq_dist_cpu_f64(&a, &b, 2, 2, 2);
+        assert_eq!(d, vec![1.0, 1.0, 1.0, 1.0]);
+        // A point's distance to itself is exactly 0.
+        let self_d = pairwise_sq_dist_cpu_f64(&a, &a, 2, 2, 2);
+        assert_eq!(self_d[0], 0.0);
+        assert_eq!(self_d[3], 0.0);
+    }
+
+    /// The best-path `pairwise_sq_dist_f64` (GEMM-identity form) must agree with the
+    /// exact direct CPU reference within f64 tolerance. Sub-threshold here, so the
+    /// cross-term GEMM takes its own CPU floor — exercising the identity arithmetic and
+    /// the norm/combine pass on a GPU-less box. Deterministic data, no RNG.
+    #[test]
+    fn pairwise_identity_matches_direct_reference() {
+        let (n, m, p) = (5usize, 4usize, 3usize);
+        let mut a = vec![0.0f64; n * p];
+        for i in 0..n {
+            for d in 0..p {
+                a[i * p + d] = ((i * 3 + d * 2) % 7) as f64 * 0.5 - 1.0;
+            }
+        }
+        let mut b = vec![0.0f64; m * p];
+        for j in 0..m {
+            for d in 0..p {
+                b[j * p + d] = ((j * 5 + d) % 6) as f64 * 0.25 - 0.5;
+            }
+        }
+        let identity = pairwise_sq_dist_f64(&a, &b, n, m, p);
+        let direct = pairwise_sq_dist_cpu_f64(&a, &b, n, m, p);
+        assert_eq!(identity.len(), direct.len());
+        for (id, dr) in identity.iter().zip(direct.iter()) {
+            assert!((id - dr).abs() < 1e-9, "pairwise mismatch: {id} vs {dr}");
+        }
+        // All squared distances are non-negative (clamp holds).
+        assert!(identity.iter().all(|&v| v >= 0.0));
+    }
+
+    /// Shape mismatch is not a panic — it falls to the zero-filled CPU floor.
+    #[test]
+    fn pairwise_shape_mismatch_is_graceful() {
+        // a has 5 elems but n*p = 2*3 = 6.
+        let out = pairwise_sq_dist_f64(&[1.0; 5], &[1.0; 6], 2, 2, 3);
+        assert_eq!(out.len(), 4);
     }
 
     /// Either path: the forward FFT of a real unit impulse at index 0 (`x[0] = 1`,
