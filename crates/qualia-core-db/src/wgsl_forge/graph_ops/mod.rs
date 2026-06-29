@@ -13,3 +13,5 @@ pub mod elementwise;
 pub mod executor;
 pub mod gather_dequant;
 pub mod reduce;
+pub mod scatter;
+pub mod stencil;

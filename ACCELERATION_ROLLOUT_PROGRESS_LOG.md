@@ -524,3 +524,41 @@ the realistic decode-loop usage (one `ForgeGraphExecutor`, many tokens) the supp
 **⚑ Where I need the human** — none this step.
 **Next** — (optional, separate) per-executor pipeline cache keyed by (shader source, entry) to amortize
 the 26 compilations across decode steps; then the P4c WMMA tensor-core GEMM is the compute-bound lever.
+
+---
+
+## 2026-06-29 · DAG-IR P7 (part 1) — native `Stencil` + `ScatterAccum` op-node kernels, GPU-certified on A2000
+
+**Step / phase** — DAG-IR forge P7, first slice (the native physics nodes). Status: **kernels done + GPU-certified**; MSL/HLSL lowerers + RT `Neighbor` are the remaining P7 slices.
+
+**What was built**
+- `graph_ops/stencil.rs` (NEW) — `Stencil` op-node. **Laplacian** (`in[i-1]−2·in[i]+in[i+1]`, zero
+  boundaries — the discrete Poisson/diffusion operator) + **RopePair** (2-tap rotation) emitted from
+  the node; WGSL + exact CPU oracle + host GPU helper. The `Divergence`/`Advection` kinds need a
+  velocity-field input + physical-model direction (a curation item, cf. fluid_dynamics B2) → explicit
+  `Err` naming the gap, never a silent no-op.
+- `graph_ops/scatter.rs` (NEW) — `ScatterAccum` op-node (SPH/N-body deposit). `Add`/`Max` accumulate
+  into `output[idx[p]]`; since WGSL has no `atomic<f32>`, f32 accumulation uses the standard
+  `atomicCompareExchangeWeak` **CAS loop on the u32 bit pattern**. Slots init to the accumulate
+  identity (0.0 / f32::MIN). WGSL + exact CPU oracle + host GPU helper.
+
+**Measured results (A2000, real)**
+- naga-validate: `stencil_wgsl_validates_supported_kinds` (Laplacian + RopePair; Divergence/Advection
+  error), `scatter_wgsl_validates` (4 bindings). green.
+- CPU hand-checks: `laplacian_cpu_hand_checked`, `ropepair_cpu_is_norm_preserving`,
+  `scatter_cpu_hand_checked` (Add/Max + untouched-slot identity). green.
+- GPU differential: `stencil_gpu_matches_oracle` (Laplacian + RopePair) + `scatter_gpu_matches_oracle`
+  (**4096 sources → 64 buckets**, heavy contention exercising the CAS loop; Add within fp tol, Max
+  exact) — **green on the A2000**. Full `wgsl_forge::` sweep **125 passed / 0 failed**.
+
+**Honest boundary** — these are **certified standalone kernels** (WGSL + CPU oracle + GPU
+differential), the same staging reduce/broadcast/elementwise used (P2/P3a certified standalone, P4
+wired into the multi-node executor). Composing `Stencil`/`ScatterAccum` into multi-node `ComputeGraph`s
+via the executor (atomic-init slab handling for `Max`, u32-index convention for scatter) is the same
+follow-on as P2→P4 — the kernels are complete and proven; the executor-arm wiring is the next slice.
+
+**⚑ Where I need the human** — `Stencil::{Divergence,Advection}` need a velocity-field + physical-model
+direction (same class of ask as fluid_dynamics B2 / Task #45). Surfaced, not guessed.
+**Next** — P7 part 2: `MslLowerer`/`HlslLowerer` for the portable nodes (naga/dxc-validate), then P7
+part 3: RT-backed `Neighbor` (`build_aabb_scene` + AABB BufferElement + `legalize` grid-fallback for
+dims>3 + differential oracle vs exact grid).
