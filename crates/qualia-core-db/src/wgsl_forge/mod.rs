@@ -12,6 +12,7 @@ pub mod ir;
 pub mod manifest;
 pub mod oracle;
 pub mod roofline;
+pub mod runtime;
 pub mod schedule;
 pub mod tune;
 pub mod validate;
@@ -37,6 +38,7 @@ pub use oracle::{
 #[cfg(feature = "cuda")]
 pub use oracle::{evaluate_affine_cuda, evaluate_ffn_cuda, evaluate_topk_cuda};
 pub use roofline::{roofline_for, RooflineBound, RooflineEstimate};
+pub use runtime::ForgeRuntime;
 pub use schedule::{AdapterConstraints, Schedule, ScheduleSpace};
 pub use tune::{
     tune_with, CandidateEvaluation, CandidateFailure, CandidateResult, TuningConfig, TuningResult,
