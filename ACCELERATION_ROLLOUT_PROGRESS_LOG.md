@@ -411,3 +411,46 @@ ternary-weight matmuls is mechanical composition of these certified pieces.
 **Next** — P6 (q42 substrate binding: serialize ComputeGraph ↔ NQuins, feedsInto predicate, op-kind
 opcode 0x10+, round-trip certify), then P7 (RT Neighbor + Stencil/ScatterAccum + MSL/HLSL lowerers).
 The executor perf pass (fusion + context reuse) is a separate, named optimization, flagged not done.
+
+---
+
+## 2026-06-29 · DAG-IR P6 — q42 substrate binding: ComputeGraph ↔ NQuin serialization (round-trip identity) — DONE
+
+**Step / phase** — DAG-IR forge P6 (persistence/provenance view). Status: **done** (round-trip identity + zero-copy byte path + Merkle root, all green).
+
+**What was built**
+- `ir/q42_bridge.rs` (NEW) — `serialize_graph(&ComputeGraph) -> Vec<NQuin>` and
+  `deserialize_graph(&[NQuin]) -> ComputeGraph`, the persistence/provenance view of a compute
+  DAG in the same 48-byte Merkle-DAG quin store as the rest of QualiaDB. Per node: a `q42:opKind`
+  quin (opcode **0x10–0x1A**, the reserved-modality range — no overlap with `mini_parser` 0x00–0x04
+  or deontic 0x50+, core invariant §6; op payload in the quin's `context`/`parity` words) +
+  `q42:tensorShape`/`q42:dtype`/`q42:scheduleHint` companions + one `q42:feedsInto` edge quin per
+  input (carrying producer/slot/tensor + the input edge's shape/dtype/layout) + `q42:graphOutput`.
+  Matmul/gemv dims ride the op payload at **full u32** (exact); shape companions pack dims as `u16`
+  per axis with a **hard error on overflow** (never a silent truncation). `graph_merkle_root` =
+  blake3 over the flat NQuin byte image (the content address a q42 superblock / DagStore node carries).
+- `ir/graph.rs` — `GraphNode` now derives `PartialEq` (so the round-trip is asserted node-for-node).
+
+**Measured results (all green, non-GPU — this is encoding, not compute)**
+- `softmax_graph_roundtrips_identically` + `decode_block_graph_roundtrips_identically` — graph →
+  quins → graph reproduces the graph **node-for-node** (incl. the full transformer decode block:
+  MatMul u32 dims, Reduce/Broadcast/Elementwise, residual adds), and a re-serialization yields the
+  same Merkle root.
+- `every_op_class_roundtrips` — all 11 `OpNode` arms encode/decode their payload + round-trip as a
+  one-node graph (MatMul with m=70000/k=99999 proves full-u32 payload dims).
+- `graph_survives_a_byte_roundtrip` — serialize → **raw bytes** (`bytemuck`, zero-copy) → quins →
+  graph reproduces the graph + a stable Merkle root: the on-disk q42 persistence path.
+- `opcodes_are_in_the_reserved_modality_range` + `oversize_shape_dim_errors_not_truncates` — opcode
+  range / no-collision / distinctness asserted; oversize dim is a hard error. Full `wgsl_forge::`
+  sweep **120 passed / 0 failed**.
+
+**Honest boundary** — this satisfies the P6 verification ("round-trip reproduces an identical certify;
+zero-copy holds"): the in-arena `ComputeGraph` stays the **source of truth** (plan §5), and the quin
+encoding is its persistence/provenance view. Wiring the serialized DAG into the platform `DagStore`
+(git_bridge VC-ancestry) and writing/reading a full **q42 volume file** on disk is the deeper
+persistence-layer integration — a separable follow-on, not needed for correctness (the Vec<NQuin> +
+byte image already *is* what a superblock holds).
+
+**⚑ Where I need the human** — none this step.
+**Next** — P7 (RT-backed `Neighbor` + `build_aabb_scene` + `Stencil`/`ScatterAccum` native nodes +
+`MslLowerer`/`HlslLowerer` for portable nodes). After P7 the DAG-IR plan (P1–P7) is complete.

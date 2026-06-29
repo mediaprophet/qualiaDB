@@ -216,7 +216,7 @@ pub enum OpNode {
 
 /// One node of a [`ComputeGraph`]: an op, its input edges, its single output edge, and a
 /// per-node [`Schedule`].
-#[derive(Debug, Clone)]
+#[derive(Debug, Clone, PartialEq)]
 pub struct GraphNode {
     pub op: OpNode,
     pub ins: [Option<TensorRef>; MAX_IN],

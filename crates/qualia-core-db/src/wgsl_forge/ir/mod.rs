@@ -2,6 +2,7 @@ pub mod capabilities;
 pub mod core;
 pub mod graph;
 pub mod intrinsics;
+pub mod q42_bridge;
 
 pub use capabilities::{
     HardwareCapabilityMatrix, IntrinsicSupport, LoweringContext, LoweringPolicy64Bit,
@@ -14,3 +15,4 @@ pub use graph::{
     ComputeGraph, DType, GraphNode, Layout, Lowerer, NodeId, OpNode, Shape, TensorRef, lower_graph,
 };
 pub use intrinsics::{Intrinsic, IntrinsicClass, SubgroupReduceOp};
+pub use q42_bridge::{deserialize_graph, graph_merkle_root, opcode_of, serialize_graph};
