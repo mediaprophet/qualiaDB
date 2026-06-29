@@ -845,10 +845,13 @@ pub fn decode_block_graph(d: u32, kv: u32, ffn: u32) -> Result<ComputeGraph, For
 /// living at that seam, not in this functional graph). Grouped-query attention: each kv-head serves
 /// `n_heads/n_kv_heads` query heads. Per-head slicing is contiguous because the cache is head-major.
 ///
-/// Cache layout: `Kt` = `[n_kv_heads, head_dim, seq]` (transposed keys), `V` = `[n_kv_heads, seq,
-/// head_dim]`. Externals: `[0]=x[1,d] [1]=Kt [2]=V [3]=Wq[d,d] [4]=Wo[d,d] [5]=Wg[d,ffn]
-/// [6]=Wu[d,ffn] [7]=Wd[ffn,d] [8]=inv_scale[1] [9]=eps[1]`, with `d=n_heads·head_dim`. `rope_mode`
-/// is 0=interleaved / 1=NeoX; `pos` is the query's absolute position.
+/// RMSNorm carries its **learned weight** (`x·inv_rms·w`), as the real engine does. Cache layout:
+/// `Kt` = `[n_kv_heads, head_dim, seq]` (transposed keys), `V` = `[n_kv_heads, seq, head_dim]`.
+/// Externals: `[0]=x[1,d] [1]=Kt [2]=V [3]=Wq[d,d] [4]=Wo[d,d] [5]=Wg[d,ffn] [6]=Wu[d,ffn]
+/// [7]=Wd[ffn,d] [8]=attn_norm[d] [9]=ffn_norm[d] [10]=inv_scale[1] [11]=eps[1]`, with
+/// `d=n_heads·head_dim`. The projection weights are `[in,out]` row-major (the GGUF/p64 layout), i.e.
+/// exactly `[k,n]` for the `MatMul(m=1,n=out,k=in)` here — no transpose. `rope_mode` is
+/// 0=interleaved (GGUF NORM) / 1=NeoX; `pos` is the query's absolute position.
 #[allow(clippy::too_many_arguments)]
 pub fn decode_layer_graph(
     n_heads: u32,
@@ -885,11 +888,14 @@ pub fn decode_layer_graph(
     let wg = TensorRef::input(5, Shape::new(&[d, ffn]), DType::F32);
     let wu = TensorRef::input(6, Shape::new(&[d, ffn]), DType::F32);
     let wd = TensorRef::input(7, Shape::new(&[ffn, d]), DType::F32);
-    let inv_scale = TensorRef::input(8, sh_1, DType::F32);
-    let eps = TensorRef::input(9, sh_1, DType::F32);
+    let attn_norm = TensorRef::input(8, sh_d, DType::F32);
+    let ffn_norm = TensorRef::input(9, sh_d, DType::F32);
+    let inv_scale = TensorRef::input(10, sh_1, DType::F32);
+    let eps = TensorRef::input(11, sh_1, DType::F32);
 
-    // Attention: RMSNorm(x) → Q-proj → RoPE(q) → per-head GQA attention → residual.
+    // Attention: RMSNorm·w(x) → Q-proj → RoPE(q) → per-head GQA attention → residual.
     let n1 = push_rmsnorm(&mut g, x, eps, sh_d, sh_1, s)?;
+    let n1 = g.push(OpNode::Elementwise { f: EwKind::Mul }, &[n1, attn_norm], sh_d, DType::F32, s)?;
     let q = g.push(mm(1, d, d), &[n1, wq], sh_d, DType::F32, s)?;
     let q = g.push(
         OpNode::Rope { head_dim, pos, mode: rope_mode, base_bits },
@@ -946,8 +952,9 @@ pub fn decode_layer_graph(
     }
     let res1 = g.push(OpNode::Elementwise { f: EwKind::Add }, &[x, attn], sh_d, DType::F32, s)?;
 
-    // SwiGLU-FFN over RMSNorm(res1), residual.
+    // SwiGLU-FFN over RMSNorm·w(res1), residual.
     let n2 = push_rmsnorm(&mut g, res1, eps, sh_d, sh_1, s)?;
+    let n2 = g.push(OpNode::Elementwise { f: EwKind::Mul }, &[n2, ffn_norm], sh_d, DType::F32, s)?;
     let gate = g.push(mm(1, ffn, d), &[n2, wg], sh_ffn, DType::F32, s)?;
     let up = g.push(mm(1, ffn, d), &[n2, wu], sh_ffn, DType::F32, s)?;
     let sg = g.push(OpNode::Elementwise { f: EwKind::Silu }, &[gate], sh_ffn, DType::F32, s)?;
@@ -1337,6 +1344,8 @@ mod tests {
             gen(d * ffnn, 6),           // Wg [d,ffn]
             gen(d * ffnn, 7),           // Wu [d,ffn]
             gen(ffnn * d, 8),           // Wd [ffn,d]
+            gen(d, 9),                  // attn_norm [d]
+            gen(d, 10),                 // ffn_norm  [d]
             vec![inv_scale],            // inv_scale
             vec![1e-5],                 // eps
         ]
@@ -1363,9 +1372,12 @@ mod tests {
         let group = (n_heads / n_kv_heads) as usize;
         let (x, kt, v, wq, wo, wg, wu, wd) =
             (&ext[0], &ext[1], &ext[2], &ext[3], &ext[4], &ext[5], &ext[6], &ext[7]);
-        let inv_scale = ext[8][0];
-        let eps = ext[9][0];
-        let n1 = ref_rmsnorm(x, eps);
+        let attn_norm = &ext[8];
+        let ffn_norm = &ext[9];
+        let inv_scale = ext[10][0];
+        let eps = ext[11][0];
+        let n1: Vec<f32> =
+            ref_rmsnorm(x, eps).iter().zip(attn_norm).map(|(a, w)| a * w).collect();
         let q = ref_mm(&n1, wq, 1, d, d);
         let rmode = if mode == 0 { RopeMode::Interleaved } else { RopeMode::Neox };
         let q = rope_cpu(&q, &RopeConfig { head_dim, pos, mode: rmode, theta_base: base }).unwrap();
@@ -1386,7 +1398,8 @@ mod tests {
             }
         }
         let res1: Vec<f32> = x.iter().zip(&attn).map(|(a, b)| a + b).collect();
-        let n2 = ref_rmsnorm(&res1, eps);
+        let n2: Vec<f32> =
+            ref_rmsnorm(&res1, eps).iter().zip(ffn_norm).map(|(a, w)| a * w).collect();
         let gate = ref_mm(&n2, wg, 1, d, ffnn);
         let up = ref_mm(&n2, wu, 1, d, ffnn);
         let hsl: Vec<f32> = gate
