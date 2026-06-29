@@ -1,3 +1,5 @@
+use std::cell::RefCell;
+use std::collections::HashMap;
 use std::sync::mpsc;
 use std::time::Instant;
 
@@ -27,6 +29,16 @@ pub struct WgpuComputeContext {
     pub timestamp_supported: bool,
     pub timestamp_period_ns: f32,
     timestamp_resources: Option<TimestampResources>,
+    /// Process-lifetime cache of compiled compute pipelines, keyed by `entry\0source`.
+    /// Pipeline creation (shader compile + PSO build) is the dominant per-node cost once
+    /// the device + slab are reused; a graph re-run over the same kernels (e.g. one decode
+    /// block per generated token) then pays zero compile after the first. Survives
+    /// [`clear_transient_allocations`](Self::clear_transient_allocations) — pipelines reference
+    /// the shader + bind-group *layout*, never the slab buffers (bind groups are rebuilt per
+    /// call). `RefCell` because [`compile_pipeline_cached`](Self::compile_pipeline_cached) takes
+    /// `&self`; the context is used single-threaded per dispatch (shared dispatch is serialized
+    /// behind a `Mutex` by the dispatcher).
+    pipeline_cache: RefCell<HashMap<String, wgpu::ComputePipeline>>,
 }
 
 impl WgpuComputeContext {
@@ -154,6 +166,7 @@ impl WgpuComputeContext {
             timestamp_supported,
             timestamp_period_ns,
             timestamp_resources,
+            pipeline_cache: RefCell::new(HashMap::new()),
         })
     }
 
@@ -328,6 +341,33 @@ impl WgpuComputeContext {
             return Err(ForgeError::GpuValidation(error.to_string()));
         }
         Ok(pipeline)
+    }
+
+    /// [`compile_pipeline`](Self::compile_pipeline) with a process-lifetime cache keyed by
+    /// `entry\0source` — the same `(source, entry)` returns the previously-built pipeline
+    /// (a cheap `Arc`-clone) instead of recompiling. This is what makes a re-run of a fixed
+    /// graph (e.g. one decode block per generated token, via a held [`ForgeGraphExecutor`])
+    /// pay shader compilation **once**, not per call. The graph executor records its nodes
+    /// through this path; one-shot callers see a cold cache (built + dropped with the context).
+    pub fn compile_pipeline_cached(
+        &self,
+        source: &str,
+        entry_point: &str,
+    ) -> Result<wgpu::ComputePipeline, ForgeError> {
+        let key = format!("{entry_point}\u{0}{source}");
+        if let Some(pipeline) = self.pipeline_cache.borrow().get(&key) {
+            return Ok(pipeline.clone());
+        }
+        let pipeline = self.compile_pipeline(source, entry_point)?;
+        self.pipeline_cache
+            .borrow_mut()
+            .insert(key, pipeline.clone());
+        Ok(pipeline)
+    }
+
+    /// Number of distinct pipelines currently cached (for tests / introspection).
+    pub fn cached_pipeline_count(&self) -> usize {
+        self.pipeline_cache.borrow().len()
     }
 
     /// Build a bind group binding each [`BufferView`] at its `binding` slot, choosing the

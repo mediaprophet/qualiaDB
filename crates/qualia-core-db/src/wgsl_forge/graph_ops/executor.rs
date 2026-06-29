@@ -267,7 +267,9 @@ fn record_kernel(
     sched: Schedule,
     element_count: usize,
 ) -> Result<(GraphPass, BufferView), ForgeError> {
-    let pipeline = ctx.compile_pipeline(source, entry)?;
+    // Cached compile: a held ForgeGraphExecutor re-running the same graph (one decode block
+    // per token) compiles each node's shader once total, then pays only bind-group + dispatch.
+    let pipeline = ctx.compile_pipeline_cached(source, entry)?;
     let bind_group = ctx.create_compute_bind_group(&pipeline, bindings);
     let workgroups = sched.dispatch_workgroups(element_count);
     // Device-side hand-off: a fresh read-slab buffer the consumer binds read-only. The copy
@@ -994,11 +996,12 @@ mod tests {
     /// - **one-shot** — `execute_graph` per call (fresh device/slab each call): single-encoder
     ///   submit but no context reuse, so `reused` vs `one-shot` isolates the device-creation cost.
     ///
-    /// **Caveats (do not over-read):** this is ONE decode block, not a full L-layer model; the
-    /// GPU path now records the whole graph into one encoder + one submit, but pipelines are
-    /// still compiled per node per call (an independent follow-on); it is **not** end-to-end
-    /// tokens/sec and does not include sampling, KV-cache management, or host↔device transfer
-    /// of the result beyond the final readback.
+    /// **Caveats (do not over-read):** this is ONE decode block, not a full L-layer model; it is
+    /// **not** end-to-end tokens/sec and does not include sampling, KV-cache management, or
+    /// host↔device transfer beyond the final readback. The `reused` path now records the whole
+    /// graph into one encoder + one submit **and** compiles each node's pipeline only once (the
+    /// context-level pipeline cache), so the warmup run pays compilation and the timed loop pays
+    /// only bind-group build + dispatch + readback — the realistic held-executor decode step.
     #[test]
     #[ignore = "benchmark; requires a GPU adapter. Run with --nocapture to see timings."]
     fn decode_block_kernel_uplift_bench() {
@@ -1042,14 +1045,45 @@ mod tests {
         }
         let cpu_ms = c0.elapsed().as_secs_f64() * 1e3 / iters as f64;
 
+        let cached = exec.context().cached_pipeline_count();
         eprintln!(
-            "[decode-block uplift] d={d} kv={kv} ffn={ffn} nodes={nodes} | \
-             GPU reused {gpu_reuse_ms:.3} ms/call (single-encoder + ctx reuse; ~{:.3} ms/node) | \
+            "[decode-block uplift] d={d} kv={kv} ffn={ffn} nodes={nodes} cached_pipelines={cached} | \
+             GPU reused {gpu_reuse_ms:.3} ms/call (ctx reuse + 1 encoder + pipeline cache; ~{:.3} ms/node) | \
              GPU one-shot {gpu_oneshot_ms:.3} ms/call (fresh device/slab per call) | \
              CPU oracle {cpu_ms:.3} ms/call | ratio (reused vs CPU) {:.2}x. \
-             NOT end-to-end tok/s; one block, not L layers; pipelines still compiled per node/call.",
+             NOT end-to-end tok/s; one block, not L layers.",
             gpu_reuse_ms / nodes as f64,
             cpu_ms / gpu_reuse_ms,
         );
+    }
+
+    /// The context-level pipeline cache amortizes shader compilation across `run()` calls: a
+    /// held [`ForgeGraphExecutor`] re-running the same graph compiles each distinct node kernel
+    /// exactly once, so the cache count is **stable** after the first run (and bounded by the
+    /// number of distinct kernels, well below the node count for a decode block with repeated
+    /// op-classes). This is what turns the per-call compile cost into a one-time warmup.
+    #[test]
+    #[ignore = "requires a GPU adapter"]
+    fn pipeline_cache_amortizes_across_runs() {
+        let (d, kv, ffn) = (64u32, 80u32, 128u32);
+        let mk = |n: usize, m: u32| (0..n).map(|i| ((i as u32 % m) as f32) * 0.01 - 0.1).collect::<Vec<f32>>();
+        let ext = vec![
+            mk(d as usize, 17), mk((d * kv) as usize, 19), mk((kv * d) as usize, 13),
+            mk((d * ffn) as usize, 11), mk((d * ffn) as usize, 7), mk((ffn * d) as usize, 5),
+        ];
+        let g = decode_block_graph(d, kv, ffn).unwrap();
+        let mut exec = ForgeGraphExecutor::new().expect("executor");
+        let _ = exec.run(&g, &ext).expect("run 1");
+        let after_first = exec.context().cached_pipeline_count();
+        let _ = exec.run(&g, &ext).expect("run 2");
+        let after_second = exec.context().cached_pipeline_count();
+        // Stable: the second run compiled nothing new.
+        assert_eq!(after_first, after_second, "cache must be stable across runs");
+        // Distinct kernels < node count (repeated op-classes share a pipeline).
+        assert!(after_first > 0 && after_first <= g.nodes.len(), "cached={after_first} nodes={}", g.nodes.len());
+        // The result is unchanged across runs (cache returns the same pipeline).
+        let a = exec.run(&g, &ext).unwrap();
+        let b = exec.run(&g, &ext).unwrap();
+        assert_eq!(a, b, "cached runs must be deterministic");
     }
 }
