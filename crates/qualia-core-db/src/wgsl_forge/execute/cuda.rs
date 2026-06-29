@@ -157,6 +157,21 @@ impl CudaComputeContext {
         let output = bytemuck::cast_slice::<u8, f32>(&bytes)[..elements].to_vec();
         Ok(output)
     }
+
+    /// Double-precision readback, the `f64` mirror of [`Self::read_buffer_f32`]
+    /// (8 bytes/elem). Used by the native CUDA-f64 GEMM path — WGSL has no `f64`,
+    /// so this is CUDA-only by construction.
+    pub fn read_buffer_f64(&self, view: &BufferView) -> Result<Vec<f64>, ForgeError> {
+        let src = self.slab.slice(view.offset..view.offset + view.length_bytes);
+        let bytes = self
+            .stream
+            .clone_dtoh(&src)
+            .map_err(|e| ForgeError::GpuValidation(format!("D2H transfer failed: {:?}", e)))?;
+
+        let elements = view.length_bytes / std::mem::size_of::<f64>();
+        let output = bytemuck::cast_slice::<u8, f64>(&bytes)[..elements].to_vec();
+        Ok(output)
+    }
 }
 
 #[cfg(feature = "cuda")]

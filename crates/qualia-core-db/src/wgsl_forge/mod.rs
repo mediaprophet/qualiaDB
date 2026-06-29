@@ -6,6 +6,7 @@
 
 pub mod backend;
 pub mod cache;
+pub mod dispatch;
 pub mod emit;
 pub mod execute;
 pub mod ir;
@@ -19,6 +20,7 @@ pub mod validate;
 
 pub use backend::resolve_execution_backend;
 pub use cache::ManifestCache;
+pub use dispatch::{caps, gemm_cpu_f64, gemm_f32, gemm_f64, ComputeCaps, GEMM_GPU_THRESHOLD};
 pub use emit::{decode_spirv_words, emit_shader, matmul_tc_wgsl, GeneratedShader, TargetBackend};
 pub use ir::{
     BufferAccess, BufferElement, BufferSpec, BuiltinKernel, KernelSpec, Op,
