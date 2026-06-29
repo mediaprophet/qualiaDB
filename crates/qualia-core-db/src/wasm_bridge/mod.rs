@@ -21,5 +21,11 @@ pub use dataio::*;
 mod compute;
 #[cfg(feature = "wasm-scientific")]
 pub use compute::*;
+// Computational-engine exports (linear algebra, CAS, statistics, numerics, exact,
+// units, transforms, graph) — the solver/CAS math surfaced to the full-wasm bundle.
+#[cfg(feature = "wasm-scientific")]
+mod engine;
+#[cfg(feature = "wasm-scientific")]
+pub use engine::*;
 mod meta;
 pub use meta::*;
