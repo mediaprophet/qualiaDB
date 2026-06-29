@@ -1,5 +1,6 @@
 //! `governance` category (reorg).
 
+pub mod coordination;
 pub mod illocution;
 pub mod modal_kind;
 pub mod provenance;
