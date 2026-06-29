@@ -301,6 +301,113 @@ impl WgpuComputeContext {
         Ok((blas, tlas))
     }
 
+    /// Compile a WGSL compute pipeline and return the **owned** `wgpu::ComputePipeline`
+    /// (no borrow of `self`), wrapped in a validation error scope. This is the building
+    /// block the multi-node graph executor uses to compile every node's kernel up front
+    /// before recording them into a single command encoder ([`Self::submit_graph`]).
+    /// [`WgpuPipeline::compile`] delegates here.
+    pub fn compile_pipeline(
+        &self,
+        source: &str,
+        entry_point: &str,
+    ) -> Result<wgpu::ComputePipeline, ForgeError> {
+        let error_scope = self.device.push_error_scope(wgpu::ErrorFilter::Validation);
+        let shader = self.device.create_shader_module(wgpu::ShaderModuleDescriptor {
+            label: Some("qualia-wgsl-forge"),
+            source: wgpu::ShaderSource::Wgsl(source.into()),
+        });
+        let pipeline = self.device.create_compute_pipeline(&wgpu::ComputePipelineDescriptor {
+            label: Some("qualia-wgsl-forge-pipeline"),
+            layout: None,
+            module: &shader,
+            entry_point: Some(entry_point),
+            compilation_options: Default::default(),
+            cache: None,
+        });
+        if let Some(error) = pollster::block_on(error_scope.pop()) {
+            return Err(ForgeError::GpuValidation(error.to_string()));
+        }
+        Ok(pipeline)
+    }
+
+    /// Build a bind group binding each [`BufferView`] at its `binding` slot, choosing the
+    /// physical slab per the view's usage ([`Self::slab_for`]). Shared by the per-node
+    /// [`WgpuPipeline::dispatch`] path and the deferred-submit graph path.
+    pub fn create_compute_bind_group(
+        &self,
+        pipeline: &wgpu::ComputePipeline,
+        buffers: &[BufferView],
+    ) -> wgpu::BindGroup {
+        let mut entries = Vec::with_capacity(buffers.len());
+        for view in buffers {
+            let size = wgpu::BufferSize::new(view.length_bytes as u64);
+            entries.push(wgpu::BindGroupEntry {
+                binding: view.binding,
+                resource: wgpu::BindingResource::Buffer(wgpu::BufferBinding {
+                    buffer: self.slab_for(view.usage),
+                    offset: view.offset as wgpu::BufferAddress,
+                    size,
+                }),
+            });
+        }
+        self.device.create_bind_group(&wgpu::BindGroupDescriptor {
+            label: Some("forge-bind-group"),
+            layout: &pipeline.get_bind_group_layout(0),
+            entries: &entries,
+        })
+    }
+
+    /// Record **all** of a graph's node dispatches — and the GPU→GPU hand-off copies
+    /// between them — into ONE [`wgpu::CommandEncoder`] and submit it **once**, instead of
+    /// one `queue.submit()` per node. This is the single-encoder deferred-submit fusion
+    /// (plan §8.1 "Option B"): within one command buffer wgpu preserves command order and
+    /// inserts the necessary buffer hazard barriers, so a producer's compute pass, its
+    /// `copy_buffer_to_buffer` hand-off, and the consumer's dispatch are correctly ordered
+    /// with no host round-trip and no per-node submit latency. The caller (the executor)
+    /// has already encoded each node's data dependencies in `passes` (insertion/topological
+    /// order) and built each bind group, so this loop is pure recording. Blocks on device
+    /// completion and surfaces any validation error.
+    pub fn submit_graph(&self, passes: &[GraphPass]) -> Result<(), ForgeError> {
+        let error_scope = self.device.push_error_scope(wgpu::ErrorFilter::Validation);
+        let mut encoder = self.device.create_command_encoder(&wgpu::CommandEncoderDescriptor {
+            label: Some("forge-graph-encoder"),
+        });
+        for pass in passes {
+            {
+                let mut cpass = encoder.begin_compute_pass(&wgpu::ComputePassDescriptor {
+                    label: Some("forge-graph-pass"),
+                    timestamp_writes: None,
+                });
+                cpass.set_pipeline(&pass.pipeline);
+                cpass.set_bind_group(0, &pass.bind_group, &[]);
+                cpass.dispatch_workgroups(pass.workgroups, 1, 1);
+            }
+            // GPU→GPU hand-off: copy this node's read_write output into the fresh
+            // read-slab buffer a downstream node will bind read-only. Recorded in the
+            // SAME encoder, so it is ordered after the pass that produced it.
+            if let Some((src, dst)) = &pass.copy {
+                let len = src.length_bytes.min(dst.length_bytes) as u64;
+                if len > 0 {
+                    encoder.copy_buffer_to_buffer(
+                        self.slab_for(src.usage),
+                        src.offset as u64,
+                        self.slab_for(dst.usage),
+                        dst.offset as u64,
+                        len,
+                    );
+                }
+            }
+        }
+        self.queue.submit(Some(encoder.finish()));
+        self.device
+            .poll(wgpu::PollType::wait_indefinitely())
+            .map_err(|e| ForgeError::DeviceLost(format!("device poll failed submitting graph: {e:?}")))?;
+        if let Some(error) = pollster::block_on(error_scope.pop()) {
+            return Err(ForgeError::GpuValidation(error.to_string()));
+        }
+        Ok(())
+    }
+
     /// Copy `src`'s bytes to `dst` on the device (GPU→GPU, no host readback), honouring
     /// each view's slab. Used by the multi-node graph executor to move a node's output out
     /// of the read_write slab into the read slab, so a downstream node can bind it as a
@@ -416,6 +523,18 @@ impl OracleContext for WgpuComputeContext {
     }
 }
 
+/// One recorded graph node, ready for [`WgpuComputeContext::submit_graph`] to play into a
+/// shared command encoder: the compiled pipeline, its bind group, the workgroup count, and
+/// the optional GPU→GPU hand-off copy (`src` in the read_write slab → `dst` in the read
+/// slab) emitted after the node's compute pass. The pipeline and bind group are owned so the
+/// executor can build them all up front and submit the whole graph in one go.
+pub struct GraphPass {
+    pub pipeline: wgpu::ComputePipeline,
+    pub bind_group: wgpu::BindGroup,
+    pub workgroups: u32,
+    pub copy: Option<(BufferView, BufferView)>,
+}
+
 pub struct WgpuPipeline<'a> {
     context: &'a WgpuComputeContext,
     pipeline: wgpu::ComputePipeline,
@@ -423,22 +542,7 @@ pub struct WgpuPipeline<'a> {
 
 impl<'a> WgpuPipeline<'a> {
     pub fn compile(context: &'a WgpuComputeContext, source: &str, entry_point: &str) -> Result<Self, ForgeError> {
-        let error_scope = context.device.push_error_scope(wgpu::ErrorFilter::Validation);
-        let shader = context.device.create_shader_module(wgpu::ShaderModuleDescriptor {
-            label: Some("qualia-wgsl-forge"),
-            source: wgpu::ShaderSource::Wgsl(source.into()),
-        });
-        let pipeline = context.device.create_compute_pipeline(&wgpu::ComputePipelineDescriptor {
-            label: Some("qualia-wgsl-forge-pipeline"),
-            layout: None,
-            module: &shader,
-            entry_point: Some(entry_point),
-            compilation_options: Default::default(),
-            cache: None,
-        });
-        if let Some(error) = pollster::block_on(error_scope.pop()) {
-            return Err(ForgeError::GpuValidation(error.to_string()));
-        }
+        let pipeline = context.compile_pipeline(source, entry_point)?;
         Ok(Self { context, pipeline })
     }
 
@@ -510,24 +614,7 @@ impl<'a> QualiaCompute for WgpuPipeline<'a> {
         schedule: &Schedule,
         element_count: usize,
     ) -> Result<u64, ForgeError> {
-        let mut entries = Vec::with_capacity(buffers.len());
-        for view in buffers {
-            let size = wgpu::BufferSize::new(view.length_bytes as u64);
-            entries.push(wgpu::BindGroupEntry {
-                binding: view.binding,
-                resource: wgpu::BindingResource::Buffer(wgpu::BufferBinding {
-                    buffer: self.context.slab_for(view.usage),
-                    offset: view.offset as wgpu::BufferAddress,
-                    size,
-                }),
-            });
-        }
-
-        let bind_group = self.context.device.create_bind_group(&wgpu::BindGroupDescriptor {
-            label: Some("forge-bind-group"),
-            layout: &self.pipeline.get_bind_group_layout(0),
-            entries: &entries,
-        });
+        let bind_group = self.context.create_compute_bind_group(&self.pipeline, buffers);
         let dispatch_x = schedule.dispatch_workgroups(element_count);
 
         let started = Instant::now();

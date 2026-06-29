@@ -454,3 +454,73 @@ byte image already *is* what a superblock holds).
 **⚑ Where I need the human** — none this step.
 **Next** — P7 (RT-backed `Neighbor` + `build_aabb_scene` + `Stencil`/`ScatterAccum` native nodes +
 `MslLowerer`/`HlslLowerer` for portable nodes). After P7 the DAG-IR plan (P1–P7) is complete.
+
+---
+
+## 2026-06-29 · DAG-IR throughput pass — executor context-reuse + single-encoder deferred submit (Option B) — DONE
+
+**Step / phase** — DAG-IR forge throughput pass (plan §8.1; the named, previously-unclaimed perf
+follow-on to P4b). Status: **done**. Both correctness certificates stay green; the latency-bound GPU
+graph path goes from ~0.01–0.07× to **0.57×** of the CPU oracle (a ~34× speedup of the GPU path
+itself), with the win attributed honestly below.
+
+**What was built**
+- `wgsl_forge/execute/wgpu.rs` — three additive methods on `WgpuComputeContext` + a `GraphPass`
+  record type:
+  - `compile_pipeline()` returns an **owned** `wgpu::ComputePipeline` (no `&self` borrow), so the
+    executor can compile every node up front and hold the pipelines; `WgpuPipeline::compile` now
+    delegates to it (the per-node `dispatch` path is unchanged).
+  - `create_compute_bind_group()` factors out bind-group construction from `dispatch` (reused by both
+    the per-node path and the new graph path; no behaviour change to `dispatch`).
+  - `submit_graph(&[GraphPass])` — records **all** node compute passes **and** the GPU→GPU hand-off
+    copies into **one** `CommandEncoder` and `queue.submit()`s **once** for the whole graph, then
+    blocks on completion inside a validation error scope. (Option B.) wgpu preserves command order
+    within a command buffer and inserts the buffer hazard barriers, so the producer-pass →
+    copy-handoff → consumer-pass dependencies hold with no host round-trip and no per-node submit.
+- `wgsl_forge/graph_ops/executor.rs` — new `ForgeGraphExecutor` that **owns one
+  `WgpuComputeContext`** (device + queue + the two 64-MiB slabs created **once**). `ForgeGraphExecutor::run`
+  resets the bump-ring slab per call (`clear_transient_allocations`, safe because the prior call's
+  readback fully synchronized the device), uploads externals, **prepares** every node
+  (`prepare_node`/`record_kernel`: allocate output+params, compile pipeline, build bind group — no
+  submit), then plays the whole graph through `submit_graph` and reads back the final tensor. The
+  free function `execute_graph` keeps its one-shot signature by building a throwaway executor (used by
+  the certify tests). The old per-node `run_node`/`finish_node`/`*dispatch*` helpers were replaced by
+  the `prepare_*` recording variants; the read/read_write two-slab discipline and topological
+  insertion order are preserved exactly.
+
+**Measured results** (RTX A2000, `decode_block_kernel_uplift_bench`, d=576 kv=128 ffn=1536, 26 nodes,
+`--release`, 20 iters; same machine before & after):
+
+| Path | GPU ms/call | vs CPU oracle | note |
+|------|------------:|--------------:|------|
+| **Before** (throwaway ctx + per-node submit) | **687.0** (~26.4 ms/node) | 0.01× (CPU 9.8 ms) | the P4b state |
+| After — **one-shot** (`execute_graph`: single-encoder submit, *fresh* device/slab per call) | **742.3** | — | fusion only |
+| After — **reused** (`ForgeGraphExecutor::run`: ctx reuse **+** single-encoder submit) | **20.3** (~0.78 ms/node) | **0.57×** (CPU 11.7 ms) | the decode-step path |
+
+- **Honest attribution.** The one-shot path (742 ms ≈ the 687 ms baseline) proves the dominant cost
+  was **`WgpuComputeContext::new()` recreation** (adapter request + device + two 64-MiB buffer
+  allocations) — single-encoder fusion *alone* does not move it at this size. **Context reuse is the
+  win**: it drops the per-call cost ~34× (687 → 20.3 ms), exactly as the task predicted ("this alone
+  should remove the dominant cost"). Fusion is correct and removes 26 `queue.submit()`s + 26 blocking
+  per-node timestamp map-reads per call; its absolute benefit is folded into the 20.3 ms reused
+  figure and is small *relative to* the eliminated device-creation cost at this graph size.
+- **Correctness preserved.** `execute_graph_gpu_matches_cpu_oracle` (softmax 1024 / RMSNorm 768 /
+  SwiGLU-FFN) and `p4b_graphs_gpu_match_cpu_oracle` (attention / {GatherDequant→MatMul} / full decode
+  block) both **PASS** on the A2000 against the composed CPU oracle — through the new single-encoder
+  path. Full non-GPU `wgsl_forge::` sweep **125 passed / 0 failed / 42 ignored**; `--features cuda`
+  lib + `qualia-cli` build clean (EXIT 0).
+
+**Honest boundary** — the reused ratio is still **0.57× (GPU ~1.75× slower than the plain-Rust CPU
+oracle)** for *one tiny* decode block. That is expected and not hidden: a single d=576 block is now
+**overhead-bound, not compute-bound** — the 20.3 ms is dominated by **26 per-call pipeline
+compilations** + the single submit + the final readback, not by arithmetic. The remaining wins are
+named and unclaimed: (a) **pipeline caching across calls** (decode steps reuse the same graph → same
+shaders; this would cut the new per-call floor sharply) — an independent next step, *flagged not
+done*; (b) stacking ×L layers / larger batch (compute starts to dominate); (c) the tensor-core
+`MatMul.tc` path (P4c WMMA) lighting up. This pass removes the catastrophic latency floor and makes
+the realistic decode-loop usage (one `ForgeGraphExecutor`, many tokens) the supported path; it does
+**not** claim end-to-end tok/s.
+
+**⚑ Where I need the human** — none this step.
+**Next** — (optional, separate) per-executor pipeline cache keyed by (shader source, entry) to amortize
+the 26 compilations across decode steps; then the P4c WMMA tensor-core GEMM is the compute-bound lever.

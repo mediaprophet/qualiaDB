@@ -8,6 +8,6 @@ pub mod cuda;
 pub use compute::QualiaCompute;
 pub use memory::{BindingUsage, BufferView, MemoryTopology, QualiaSlabAllocator};
 pub use oracle_ctx::OracleContext;
-pub use wgpu::{WgpuComputeContext, WgpuPipeline};
+pub use wgpu::{GraphPass, WgpuComputeContext, WgpuPipeline};
 #[cfg(feature = "cuda")]
 pub use cuda::{CudaComputeContext, CudaPipeline};

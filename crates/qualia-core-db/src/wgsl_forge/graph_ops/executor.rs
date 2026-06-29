@@ -3,7 +3,7 @@
 //! what unblocks softmax, RMSNorm, the SwiGLU-FFN block, and the full LLM decode DAG. See
 //! [`docs/plans/dag-ir-forge.md`] §7–§9.
 //!
-//! # Execution model (Option A — honest)
+//! # Execution model (throughput pass — context reuse + single-encoder fusion)
 //!
 //! Nodes run in topological (insertion) order. The slab split matters: wgpu forbids the **same
 //! buffer** being bound read-write *and* read-only within one dispatch (read_write is an
@@ -12,19 +12,33 @@
 //! - graph inputs, params, and every node's *readable* tensor live in the **read slab**
 //!   (`slab`); GEMM's 16-byte uniform params block likewise (the read slab is uniform-capable);
 //! - a node writes its output into the **read_write slab** (`out_slab`), then it is copied
-//!   (GPU→GPU, [`WgpuComputeContext::copy_view`]) into a fresh read-slab buffer — the device-side
-//!   hand-off to the next node, with **no host readback between nodes**.
+//!   (GPU→GPU) into a fresh read-slab buffer — the device-side hand-off to the next node, with
+//!   **no host readback between nodes**.
 //!
 //! A producer's output is fed to a consumer by re-binding the (`Copy`) [`BufferView`] to the
-//! consumer's binding slot ([`at`]). Each node is one `dispatch()` (one `queue.submit()`) plus
-//! one small copy — the per-node submit latency the design accepts; single-encoder multi-pass
-//! fusion is a later perf pass. Buffers are never freed within a run (the slab is a bump ring),
-//! so the context capacity must hold the whole graph's tensors at once — fine for a decode block;
-//! long sequences will want buffer-lifetime reuse (a follow-on).
+//! consumer's binding slot ([`at`]). Two optimizations vs the original Option-A executor
+//! (plan §8.1, both proven here against the same CPU oracle):
+//!
+//! 1. **Context reuse.** [`ForgeGraphExecutor`] owns one [`WgpuComputeContext`] (device, queue,
+//!    and the two 64-MiB slabs created **once**); [`ForgeGraphExecutor::run`] resets the slab
+//!    (the bump ring is freed) at the start of each call and reuses everything else. The
+//!    free-function [`execute_graph`] keeps its one-shot signature by building a throwaway
+//!    executor, but a caller decoding many tokens should hold a [`ForgeGraphExecutor`] and call
+//!    [`run`](ForgeGraphExecutor::run) per step, paying device creation only once.
+//! 2. **Single-encoder deferred submit (Option B).** Every node's dispatch *and* its GPU→GPU
+//!    hand-off copy are recorded into **one** [`wgpu::CommandEncoder`] and submitted **once** per
+//!    graph ([`WgpuComputeContext::submit_graph`]), instead of one `queue.submit()` per node.
+//!    wgpu preserves command order within a command buffer and inserts the buffer hazard
+//!    barriers, so the per-node data dependencies (already correct by insertion order) hold.
+//!
+//! Buffers are never freed *within* a run (the slab is a bump ring), so the context capacity
+//! must hold the whole graph's tensors at once — fine for a decode block; long sequences will
+//! want buffer-lifetime reuse (a follow-on). Pipelines are still compiled per node per call;
+//! caching them across calls is a further, independent step.
 
 use super::{broadcast, elementwise, gather_dequant, reduce};
 use crate::wgsl_forge::execute::{
-    BindingUsage, BufferView, QualiaCompute, WgpuComputeContext, WgpuPipeline,
+    BindingUsage, BufferView, GraphPass, WgpuComputeContext,
 };
 use crate::wgsl_forge::ir::graph::{ComputeGraph, DType, EwKind, GraphNode, NodeId, OpNode};
 use crate::wgsl_forge::ir::BuiltinKernel;
@@ -110,53 +124,111 @@ fn final_output<T: Clone>(graph: &ComputeGraph, node_out: &[T]) -> Result<T, For
         .ok_or_else(|| ForgeError::Emission("graph has no output node".to_string()))
 }
 
-/// Execute the whole graph on the GPU and read back the final tensor. Differs from the
-/// composed CPU floor only by f32 GPU arithmetic; certified against [`execute_graph_cpu`].
+/// Execute the whole graph on the GPU and read back the final tensor (one-shot). Differs from
+/// the composed CPU floor only by f32 GPU arithmetic; certified against [`execute_graph_cpu`].
+///
+/// This builds a throwaway [`ForgeGraphExecutor`] (one device + slab per call). A caller that
+/// runs many graphs — e.g. one decode block per generated token — should instead hold a
+/// [`ForgeGraphExecutor`] and call [`ForgeGraphExecutor::run`] per step, so device/slab
+/// creation is paid once rather than per call (the throughput pass, plan §8.1).
 pub fn execute_graph(
     graph: &ComputeGraph,
     externals: &[Vec<f32>],
 ) -> Result<Vec<f32>, ForgeError> {
-    let mut ctx = WgpuComputeContext::new(EXEC_CAPACITY)?;
+    ForgeGraphExecutor::new()?.run(graph, externals)
+}
 
-    // Upload externals once into the READ slab (they are only ever read; binding is
-    // overwritten per consumer). Every node's *readable* tensor lives in the read slab;
-    // outputs are written to the read_write slab and copied back (see `finish_node`).
-    let mut ext_views: Vec<BufferView> = Vec::with_capacity(externals.len());
-    for data in externals {
-        ext_views.push(ctx.allocate_and_write(
-            bytemuck::cast_slice(data),
-            0,
-            0,
-            BindingUsage::StorageRead,
-        )?);
+/// A reusable GPU graph executor: owns one [`WgpuComputeContext`] (device, queue, and the two
+/// slabs created **once**) so running many graphs does not recreate the device per call. The
+/// slab is reset between calls ([`ForgeGraphExecutor::run`]), so each call gets the full
+/// capacity back (the slab is a bump ring; buffers are not freed mid-run).
+pub struct ForgeGraphExecutor {
+    ctx: WgpuComputeContext,
+}
+
+impl ForgeGraphExecutor {
+    /// Create an executor with the default per-slab capacity ([`EXEC_CAPACITY`]). Acquires the
+    /// GPU adapter + device once; reuse the returned value across calls/decode steps.
+    pub fn new() -> Result<Self, ForgeError> {
+        Self::with_capacity(EXEC_CAPACITY)
     }
 
-    let mut node_out: Vec<Option<BufferView>> = vec![None; graph.nodes.len()];
-    for (i, node) in graph.nodes.iter().enumerate() {
-        let mut ins: Vec<BufferView> = Vec::with_capacity(node.n_in as usize);
-        for k in 0..node.n_in as usize {
-            let tr = node.ins[k].expect("declared input present");
-            let v = if tr.producer == NodeId::EXTERNAL {
-                *ext_views
-                    .get(tr.tensor.0 as usize)
-                    .ok_or_else(|| ForgeError::Emission("missing external input".to_string()))?
-            } else {
-                node_out[tr.producer.0 as usize]
-                    .ok_or_else(|| ForgeError::Emission("input from unrun node".to_string()))?
-            };
-            ins.push(v);
+    /// Create an executor with an explicit per-slab capacity in bytes.
+    pub fn with_capacity(capacity_bytes: usize) -> Result<Self, ForgeError> {
+        Ok(Self { ctx: WgpuComputeContext::new(capacity_bytes)? })
+    }
+
+    /// Borrow the underlying context (e.g. to read adapter identity / profile).
+    pub fn context(&self) -> &WgpuComputeContext {
+        &self.ctx
+    }
+
+    /// Execute `graph` on the GPU with `externals` as the graph inputs, returning the final
+    /// output tensor. Intermediates are kept device-side; every node's dispatch and its GPU→GPU
+    /// hand-off copy are recorded into ONE command encoder and submitted once
+    /// ([`WgpuComputeContext::submit_graph`], Option B). Re-uses the device/slab across calls.
+    pub fn run(
+        &mut self,
+        graph: &ComputeGraph,
+        externals: &[Vec<f32>],
+    ) -> Result<Vec<f32>, ForgeError> {
+        let ctx = &mut self.ctx;
+
+        // Per-call slab reset: free the previous call's transient allocations so this call
+        // starts with the full capacity. Safe here — the previous `run`'s final readback
+        // (`read_buffer_f32`) fully synchronized the device before returning.
+        ctx.clear_transient_allocations();
+
+        // Upload externals once into the READ slab (they are only ever read; binding is
+        // overwritten per consumer). Every node's *readable* tensor lives in the read slab;
+        // outputs are written to the read_write slab and copied back (the hand-off copy).
+        let mut ext_views: Vec<BufferView> = Vec::with_capacity(externals.len());
+        for data in externals {
+            ext_views.push(ctx.allocate_and_write(
+                bytemuck::cast_slice(data),
+                0,
+                0,
+                BindingUsage::StorageRead,
+            )?);
         }
-        node_out[i] = Some(run_node(&mut ctx, node, &ins)?);
-    }
 
-    let id = graph
-        .outputs
-        .last()
-        .copied()
-        .unwrap_or(NodeId(graph.nodes.len().saturating_sub(1) as u32));
-    let out = node_out[id.0 as usize]
-        .ok_or_else(|| ForgeError::Emission("graph has no output node".to_string()))?;
-    ctx.read_buffer_f32(&out)
+        // Phase A — prepare every node: allocate its output + params (read/read_write slab
+        // split), compile its pipeline, build its bind group. No GPU work is submitted yet.
+        // Each node's output (the read-slab hand-off copy) is threaded forward as a `BufferView`.
+        let mut passes: Vec<GraphPass> = Vec::with_capacity(graph.nodes.len());
+        let mut node_out: Vec<Option<BufferView>> = vec![None; graph.nodes.len()];
+        for (i, node) in graph.nodes.iter().enumerate() {
+            let mut ins: Vec<BufferView> = Vec::with_capacity(node.n_in as usize);
+            for k in 0..node.n_in as usize {
+                let tr = node.ins[k].expect("declared input present");
+                let v = if tr.producer == NodeId::EXTERNAL {
+                    *ext_views
+                        .get(tr.tensor.0 as usize)
+                        .ok_or_else(|| ForgeError::Emission("missing external input".to_string()))?
+                } else {
+                    node_out[tr.producer.0 as usize]
+                        .ok_or_else(|| ForgeError::Emission("input from unrun node".to_string()))?
+                };
+                ins.push(v);
+            }
+            let (pass, out_view) = prepare_node(ctx, node, &ins)?;
+            node_out[i] = Some(out_view);
+            passes.push(pass);
+        }
+
+        // Phase B — record all node dispatches + GPU→GPU hand-off copies into ONE encoder and
+        // submit once for the whole graph (Option B; eliminates per-node submit latency).
+        ctx.submit_graph(&passes)?;
+
+        let id = graph
+            .outputs
+            .last()
+            .copied()
+            .unwrap_or(NodeId(graph.nodes.len().saturating_sub(1) as u32));
+        let out = node_out[id.0 as usize]
+            .ok_or_else(|| ForgeError::Emission("graph has no output node".to_string()))?;
+        ctx.read_buffer_f32(&out)
+    }
 }
 
 /// Allocate a zeroed `n`-element f32 output buffer at `binding` (read_write slab).
@@ -181,33 +253,40 @@ fn at(mut v: BufferView, binding: u32) -> BufferView {
     v
 }
 
-/// After a node has written its output to the read_write slab, copy it (GPU→GPU) into a
-/// fresh READ-slab buffer and return that — so a downstream node can bind it as a
-/// read-only input without aliasing its own read_write output. This is the device-side
-/// hand-off between nodes (no host readback).
-fn finish_node(ctx: &mut WgpuComputeContext, out: BufferView) -> Result<BufferView, ForgeError> {
+/// Compile a node's kernel, build its bind group, and package it as a [`GraphPass`] to be
+/// recorded later (no dispatch here — the whole graph is submitted in one encoder). `bindings`
+/// is the node's full binding list (inputs at their slots + the read_write `out` view);
+/// `out` is that read_write output. Allocates a fresh read-slab buffer for the GPU→GPU
+/// hand-off copy and returns it as the node's output `BufferView` for downstream consumers.
+fn record_kernel(
+    ctx: &mut WgpuComputeContext,
+    source: &str,
+    entry: &str,
+    bindings: &[BufferView],
+    out: BufferView,
+    sched: Schedule,
+    element_count: usize,
+) -> Result<(GraphPass, BufferView), ForgeError> {
+    let pipeline = ctx.compile_pipeline(source, entry)?;
+    let bind_group = ctx.create_compute_bind_group(&pipeline, bindings);
+    let workgroups = sched.dispatch_workgroups(element_count);
+    // Device-side hand-off: a fresh read-slab buffer the consumer binds read-only. The copy
+    // (`out` read_write slab → `read_copy` read slab) is recorded into the shared encoder by
+    // `submit_graph`, so it is ordered after this node's pass and before any consumer.
     let read_copy = ctx.allocate_transient(out.length_bytes, 0, 0, BindingUsage::StorageRead)?;
-    ctx.copy_view(&out, &read_copy)?;
-    Ok(read_copy)
+    let pass = GraphPass { pipeline, bind_group, workgroups, copy: Some((out, read_copy)) };
+    Ok((pass, read_copy))
 }
 
-/// Run one node on the GPU and return its output as a READ-slab [`BufferView`] (ready to
-/// feed the next node).
-fn run_node(
+/// Prepare one node into a recordable [`GraphPass`], returning it plus the node's output as a
+/// READ-slab [`BufferView`] (the hand-off copy, ready to feed the next node). Allocates +
+/// uploads the node's buffers and compiles its pipeline, but submits no GPU work — the whole
+/// graph is recorded into a single encoder and submitted once (see [`ForgeGraphExecutor::run`]).
+fn prepare_node(
     ctx: &mut WgpuComputeContext,
     node: &GraphNode,
     ins: &[BufferView],
-) -> Result<BufferView, ForgeError> {
-    let out = run_node_to_out_slab(ctx, node, ins)?;
-    finish_node(ctx, out)
-}
-
-/// Dispatch a node, leaving its output in the read_write slab (the caller copies it back).
-fn run_node_to_out_slab(
-    ctx: &mut WgpuComputeContext,
-    node: &GraphNode,
-    ins: &[BufferView],
-) -> Result<BufferView, ForgeError> {
+) -> Result<(GraphPass, BufferView), ForgeError> {
     match node.op {
         OpNode::Reduce { op, .. } => {
             const WG: u32 = 256;
@@ -215,11 +294,9 @@ fn run_node_to_out_slab(
             let out = alloc_out(ctx, 1, 1)?;
             let params = alloc_params(ctx, &[n as u32, 0, 0, 0], 2, BindingUsage::StorageRead)?;
             let src = reduce::reduce_wgsl(op, WG);
-            let pipeline = WgpuPipeline::compile(ctx, &src, reduce::REDUCE_ENTRY)?;
             let sched = Schedule { workgroup_size: WG, ..Default::default() };
             // element_count == WG → one workgroup (the reduce is single-workgroup).
-            pipeline.dispatch(&[at(ins[0], 0), out, params], &sched, WG as usize)?;
-            Ok(out)
+            record_kernel(ctx, &src, reduce::REDUCE_ENTRY, &[at(ins[0], 0), out, params], out, sched, WG as usize)
         }
         OpNode::Broadcast { .. } => {
             const WG: u32 = 64;
@@ -233,12 +310,10 @@ fn run_node_to_out_slab(
                 BindingUsage::StorageRead,
             )?;
             let src = broadcast::broadcast_wgsl(WG);
-            let pipeline = WgpuPipeline::compile(ctx, &src, broadcast::BROADCAST_ENTRY)?;
             let sched = Schedule { workgroup_size: WG, ..Default::default() };
-            pipeline.dispatch(&[at(ins[0], 0), out, params], &sched, out_len)?;
-            Ok(out)
+            record_kernel(ctx, &src, broadcast::BROADCAST_ENTRY, &[at(ins[0], 0), out, params], out, sched, out_len)
         }
-        OpNode::Elementwise { f } => run_elementwise(ctx, f, node.n_in, ins),
+        OpNode::Elementwise { f } => prepare_elementwise(ctx, f, node.n_in, ins),
         OpNode::GatherDequant { scheme, .. } => {
             if scheme != DType::Ternary {
                 return Err(ForgeError::Emission(format!(
@@ -254,11 +329,17 @@ fn run_node_to_out_slab(
             let params =
                 alloc_params(ctx, &[rows, cols, k_words, 0], 3, BindingUsage::StorageRead)?;
             let src = gather_dequant::gather_dequant_ternary_wgsl(WG);
-            let pipeline = WgpuPipeline::compile(ctx, &src, gather_dequant::GATHER_DEQUANT_ENTRY)?;
             let sched = Schedule { workgroup_size: WG, ..Default::default() };
             // packed (0), scale (1), output (2, read_write), params (3).
-            pipeline.dispatch(&[at(ins[0], 0), at(ins[1], 1), out, params], &sched, out_elems)?;
-            Ok(out)
+            record_kernel(
+                ctx,
+                &src,
+                gather_dequant::GATHER_DEQUANT_ENTRY,
+                &[at(ins[0], 0), at(ins[1], 1), out, params],
+                out,
+                sched,
+                out_elems,
+            )
         }
         OpNode::MatMul { m, n, k, tc, .. } => {
             // `tc=true` requests tensor cores. The portable wgpu path is the coopmat tiled
@@ -274,9 +355,9 @@ fn run_node_to_out_slab(
                 && crate::wgsl_forge::dispatch::caps().coopmat
                 && crate::wgsl_forge::dispatch::coopmat_usable()
             {
-                dispatch_matmul_coopmat(ctx, m, n, k, ins)
+                prepare_matmul_coopmat(ctx, m, n, k, ins)
             } else {
-                dispatch_matmul_plain(ctx, m, n, k, ins)
+                prepare_matmul_plain(ctx, m, n, k, ins)
             }
         }
         other => Err(ForgeError::Emission(format!(
@@ -288,13 +369,13 @@ fn run_node_to_out_slab(
 /// Plain f32 GEMM node (the always-correct floor): the certified [`BuiltinKernel::Gemm`]
 /// WGSL kernel, `C[m×n]=A·B` into the read_write slab. Used for `MatMul.tc=false` and as
 /// the fallback when the tensor-core path is unavailable.
-fn dispatch_matmul_plain(
+fn prepare_matmul_plain(
     ctx: &mut WgpuComputeContext,
     m: u32,
     n: u32,
     k: u32,
     ins: &[BufferView],
-) -> Result<BufferView, ForgeError> {
+) -> Result<(GraphPass, BufferView), ForgeError> {
     const WG: u32 = 64;
     let out_elems = (m as usize) * (n as usize);
     let out = alloc_out(ctx, out_elems, 2)?;
@@ -303,9 +384,15 @@ fn dispatch_matmul_plain(
     let spec = BuiltinKernel::Gemm.spec();
     let sched = Schedule { workgroup_size: WG, ..Default::default() };
     let module = crate::wgsl_forge::emit::emit_wgsl(&spec, sched)?;
-    let pipeline = WgpuPipeline::compile(ctx, &module.source, &spec.entry_point)?;
-    pipeline.dispatch(&[at(ins[0], 0), at(ins[1], 1), out, params], &sched, out_elems)?;
-    Ok(out)
+    record_kernel(
+        ctx,
+        &module.source,
+        &spec.entry_point,
+        &[at(ins[0], 0), at(ins[1], 1), out, params],
+        out,
+        sched,
+        out_elems,
+    )
 }
 
 /// Tensor-core f32 GEMM node via the tiled cooperative-matrix kernel
@@ -314,13 +401,13 @@ fn dispatch_matmul_plain(
 /// workgroup (== one subgroup, `@workgroup_size(32)`) per 8×8 output tile. Callers gate this
 /// on [`coopmat_usable`](crate::wgsl_forge::dispatch::coopmat_usable), so it runs only where
 /// the coopmat multiply actually computes (dormant on wgpu 29.0.3 / #9741).
-fn dispatch_matmul_coopmat(
+fn prepare_matmul_coopmat(
     ctx: &mut WgpuComputeContext,
     m: u32,
     n: u32,
     k: u32,
     ins: &[BufferView],
-) -> Result<BufferView, ForgeError> {
+) -> Result<(GraphPass, BufferView), ForgeError> {
     use crate::wgsl_forge::emit::{matmul_tc_wgsl_tiled, MATMUL_TC_TILED_ENTRY};
     let out_elems = (m as usize) * (n as usize);
     // c is the read_write slab output AND the zero-seeded accumulator (the kernel loads it).
@@ -328,19 +415,25 @@ fn dispatch_matmul_coopmat(
     // dims = [m, n, k] as a u32 storage buffer (binding 3, read slab).
     let dims = alloc_params(ctx, &[m, n, k, 0], 3, BindingUsage::StorageRead)?;
     let src = matmul_tc_wgsl_tiled();
-    let pipeline = WgpuPipeline::compile(ctx, &src, MATMUL_TC_TILED_ENTRY)?;
     let num_tiles = ((m / 8) * (n / 8)) as usize;
     let sched = Schedule { workgroup_size: 32, ..Default::default() };
-    pipeline.dispatch(&[at(ins[0], 0), at(ins[1], 1), out, dims], &sched, num_tiles * 32)?;
-    Ok(out)
+    record_kernel(
+        ctx,
+        &src,
+        MATMUL_TC_TILED_ENTRY,
+        &[at(ins[0], 0), at(ins[1], 1), out, dims],
+        out,
+        sched,
+        num_tiles * 32,
+    )
 }
 
-fn run_elementwise(
+fn prepare_elementwise(
     ctx: &mut WgpuComputeContext,
     f: EwKind,
     n_in: u8,
     ins: &[BufferView],
-) -> Result<BufferView, ForgeError> {
+) -> Result<(GraphPass, BufferView), ForgeError> {
     const WG: u32 = 64;
     let n = elems(&ins[0]);
     let src = elementwise::elementwise_wgsl(f, WG)?;
@@ -349,27 +442,33 @@ fn run_elementwise(
         1 => {
             let out = alloc_out(ctx, n, 1)?;
             let params = alloc_params(ctx, &[n as u32, 0, 0, 0], 2, BindingUsage::StorageRead)?;
-            let pipeline = WgpuPipeline::compile(ctx, &src, elementwise::EWISE_ENTRY)?;
-            pipeline.dispatch(&[at(ins[0], 0), out, params], &sched, n)?;
-            Ok(out)
+            record_kernel(ctx, &src, elementwise::EWISE_ENTRY, &[at(ins[0], 0), out, params], out, sched, n)
         }
         2 => {
             let out = alloc_out(ctx, n, 2)?;
             let params = alloc_params(ctx, &[n as u32, 0, 0, 0], 3, BindingUsage::StorageRead)?;
-            let pipeline = WgpuPipeline::compile(ctx, &src, elementwise::EWISE_ENTRY)?;
-            pipeline.dispatch(&[at(ins[0], 0), at(ins[1], 1), out, params], &sched, n)?;
-            Ok(out)
+            record_kernel(
+                ctx,
+                &src,
+                elementwise::EWISE_ENTRY,
+                &[at(ins[0], 0), at(ins[1], 1), out, params],
+                out,
+                sched,
+                n,
+            )
         }
         3 => {
             let out = alloc_out(ctx, n, 3)?;
             let params = alloc_params(ctx, &[n as u32, 0, 0, 0], 4, BindingUsage::StorageRead)?;
-            let pipeline = WgpuPipeline::compile(ctx, &src, elementwise::EWISE_ENTRY)?;
-            pipeline.dispatch(
+            record_kernel(
+                ctx,
+                &src,
+                elementwise::EWISE_ENTRY,
                 &[at(ins[0], 0), at(ins[1], 1), at(ins[2], 2), out, params],
-                &sched,
+                out,
+                sched,
                 n,
-            )?;
-            Ok(out)
+            )
         }
         other => Err(ForgeError::Emission(format!(
             "elementwise arity {other} unsupported"
@@ -889,11 +988,17 @@ mod tests {
 
     /// **Honest kernel-level uplift benchmark** — times one decode-block graph (≈SmolLM2-360M
     /// dims: d=576, kv=128, ffn=1536) executed on the GPU vs the composed CPU oracle. Reports
-    /// wall-clock per call. **Caveats (do not over-read):** this is ONE decode block, not a
-    /// full L-layer model; the GPU path is Option-A per-node submit (one `queue.submit()` per
-    /// node + a small GPU→GPU copy), so the figure is dominated by per-node dispatch latency,
-    /// **NOT** a fused kernel; it is **not** end-to-end tokens/sec and does not include sampling,
-    /// KV-cache management, or host↔device transfer of the result beyond the final readback.
+    /// wall-clock per call for two GPU paths so the throughput pass is attributable:
+    /// - **reused** — one [`ForgeGraphExecutor`] held across calls (`run` per step): context
+    ///   reuse **+** single-encoder deferred submit (the realistic decode-step usage);
+    /// - **one-shot** — `execute_graph` per call (fresh device/slab each call): single-encoder
+    ///   submit but no context reuse, so `reused` vs `one-shot` isolates the device-creation cost.
+    ///
+    /// **Caveats (do not over-read):** this is ONE decode block, not a full L-layer model; the
+    /// GPU path now records the whole graph into one encoder + one submit, but pipelines are
+    /// still compiled per node per call (an independent follow-on); it is **not** end-to-end
+    /// tokens/sec and does not include sampling, KV-cache management, or host↔device transfer
+    /// of the result beyond the final readback.
     #[test]
     #[ignore = "benchmark; requires a GPU adapter. Run with --nocapture to see timings."]
     fn decode_block_kernel_uplift_bench() {
@@ -912,15 +1017,24 @@ mod tests {
         ];
         let g = decode_block_graph(d, kv, ffn).unwrap();
         let nodes = g.nodes.len();
-
-        // Warm up (shader compile + first dispatch) then time.
-        let _ = execute_graph(&g, &ext).expect("warmup");
         let iters = 20;
+
+        // ── Reused executor: context reuse + single-encoder submit (the decode-step path) ──
+        let mut exec = ForgeGraphExecutor::new().expect("executor");
+        let _ = exec.run(&g, &ext).expect("warmup reused"); // shader compile + first dispatch
         let t0 = Instant::now();
         for _ in 0..iters {
-            let _ = execute_graph(&g, &ext).expect("gpu");
+            let _ = exec.run(&g, &ext).expect("gpu reused");
         }
-        let gpu_ms = t0.elapsed().as_secs_f64() * 1e3 / iters as f64;
+        let gpu_reuse_ms = t0.elapsed().as_secs_f64() * 1e3 / iters as f64;
+
+        // ── One-shot: fresh device/slab per call (single-encoder submit, no context reuse) ──
+        let _ = execute_graph(&g, &ext).expect("warmup one-shot");
+        let t1 = Instant::now();
+        for _ in 0..iters {
+            let _ = execute_graph(&g, &ext).expect("gpu one-shot");
+        }
+        let gpu_oneshot_ms = t1.elapsed().as_secs_f64() * 1e3 / iters as f64;
 
         let c0 = Instant::now();
         for _ in 0..iters {
@@ -930,11 +1044,12 @@ mod tests {
 
         eprintln!(
             "[decode-block uplift] d={d} kv={kv} ffn={ffn} nodes={nodes} | \
-             GPU {gpu_ms:.3} ms/call (Option-A per-node submit; ~{:.3} ms/node) | \
-             CPU oracle {cpu_ms:.3} ms/call | ratio {:.2}x. \
-             NOT end-to-end tok/s; one block, not L layers; per-node submit, not fused.",
-            gpu_ms / nodes as f64,
-            cpu_ms / gpu_ms,
+             GPU reused {gpu_reuse_ms:.3} ms/call (single-encoder + ctx reuse; ~{:.3} ms/node) | \
+             GPU one-shot {gpu_oneshot_ms:.3} ms/call (fresh device/slab per call) | \
+             CPU oracle {cpu_ms:.3} ms/call | ratio (reused vs CPU) {:.2}x. \
+             NOT end-to-end tok/s; one block, not L layers; pipelines still compiled per node/call.",
+            gpu_reuse_ms / nodes as f64,
+            cpu_ms / gpu_reuse_ms,
         );
     }
 }
