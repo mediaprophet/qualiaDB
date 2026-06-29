@@ -78,6 +78,23 @@ The demo site was audited; three "the demo lies" blockers were fixed in `0.0.23`
 
 ## 4. THE NEXT TASK (Timothy's request) — computational-engine demo coverage
 
+> **STATUS UPDATE 2026-06-30 — largely DONE.** Audited (5-agent sweep), then Timothy asked to go further:
+> *"update the wasm exports for the full-wasm version, to incorporate everything that can function in wasm,
+> then create demos for them all."* Delivered:
+> - **`wasm_bridge::engine`** — **76 new `#[wasm_bindgen]` exports** wrapping the wasm-clean solver layer
+>   (linear algebra, statistics, CAS, numerics, exact arithmetic, units, transforms, graph). Commits
+>   `34e094df` (fix wasm-full build) → `7f320fe3` (exports) → `2fcf288f` (demo + bundle).
+> - **`docs/compute-engine.html`** — all 76 as live in-browser cards across 8 tabs; rebuilt `docs/playground`
+>   bundle; menu entry. **Verified end-to-end in a real browser: 76/76 run, 0 errors, results correct.**
+> - Full record: [`docs/FULL_WASM_COMPUTE_PROGRESS.md`](FULL_WASM_COMPUTE_PROGRESS.md).
+> - **Honest boundary:** the 9 `specialized_libs` domain wrappers (finance/medical/chemistry/engineering/
+>   full ML/stats/crypto/QPU), advanced CAS, GPU forge, and key-gen crypto are `#[cfg(not(wasm32))]`
+>   native-only and stay on the native/MCP path (several already demoed on the science pages). Optional
+>   follow-ups Timothy may want: nonparametric stats, KGE link-prediction, hashing-only crypto (no RNG).
+>
+> The original audit's other findings (api.html stale 0.0.18 stamp + 5.9 tok/s; api-explorer crypto/ML
+> over-claims) are honesty fixes still open — see the un-struck text below for the full audit.
+
 Timothy: *"the 'computational engine' (all the math libraries, etc.) — I don't think that's got full
 coverage online in the demos. Audit first, then build the additional pages."*
 
