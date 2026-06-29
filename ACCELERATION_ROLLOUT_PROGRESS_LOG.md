@@ -599,3 +599,39 @@ branch — the DAG-IR thesis, now four-wide.
 DXC install would light up the HLSL DXC test — both optional).
 **Next** — P7 part 3: RT-backed `Neighbor` (`build_aabb_scene` + AABB `BufferElement` + RayQuery
 lowering + `legalize` grid-fallback for dims>3 + the mandatory differential oracle vs an exact grid).
+
+---
+
+## 2026-06-29 · DAG-IR P7 (part 3) — exact-grid `Neighbor` (FRNN/kNN/Range) + `legalize` + recall oracle — DONE (RT-core accel = optional remainder)
+
+**Step / phase** — DAG-IR forge P7, third slice (the `Neighbor` op). Status: **the Neighbor op is complete + exact + certified on the grid path**; the RT-core *acceleration* of the 3-D case is an optional, separately-tracked slice (honest reasons below).
+
+**What was built**
+- `graph_ops/neighbor.rs` (NEW) — the exact-grid `Neighbor`: `frnn_grid_cpu` (fixed-radius / Range),
+  `knn_grid_cpu` (k nearest, distance-then-index sorted), `neighbor_grid_cpu` (unified dispatch on
+  `NbKind`). `legalize(dims, enc)` — the §6 gate: RT admitted **only** for ≤3-D native or a declared
+  faithful projection; `dims>3` native is **routed to the exact grid** (never a lossy 3-D embedding).
+  `recall_vs_grid` — the **mandatory differential-oracle measure** (fraction of true neighbours an
+  approximate/RT shortlist recovers).
+
+**Measured results (hand-checked, exact — green)**
+- `frnn_hand_checked` (1-D line, radius), `knn_hand_checked` (2-D grid, distance+tie order),
+  `legalize_gates_rt_on_3d` (3-D→RT, 4-D-native→grid, Project→RT), `recall_metric`,
+  `neighbor_dispatch_routes_kinds`. Full `wgsl_forge::` sweep **134 passed / 0 failed**.
+
+**Honest boundary — why the grid is the deliverable and RT is the optional remainder**
+- Per plan §6, the exact grid is **load-bearing twice**: it is the always-available, *any-dimensional*
+  **correct implementation** of `Neighbor`, **and** the oracle any RT path must match (RT proximity is
+  approximate). So the Neighbor op is **complete and exact** here — RT would only *speed up* the 3-D case.
+- The RT-core accelerator (`build_aabb_scene` = a point→bounding-sphere AABB BLAS mirroring the certified
+  `build_triangle_scene`, + an AABB `BufferElement`, + a `ray_query` collection kernel, recall-graded vs
+  this grid) is **deferred as an optional slice** — and honestly so: **wgpu-29 procedural-AABB
+  `ray_query` support needs feasibility verification** (wgpu ray_query is triangle-centric; custom
+  AABB/procedural intersection is the uncertain part). I will not claim a certified RT neighbor before
+  the multiply… the *intersection* path is proven. Tracked as its own task, not buried.
+
+**⚑ Where I need the human** — none to proceed; the RT-accel slice is an optional speedup, not a
+correctness gap. (`Stencil::{Divergence,Advection}` still want a velocity-field+model, cf. #45.)
+**Next** — DAG-IR P1–P7 are now substantially complete (every op-class lowers to WGSL; LLM kit + CUDA-C
+cross-backend; q42 persistence; physics nodes; MSL/HLSL; exact Neighbor). Remaining tracked items:
+RT-core Neighbor acceleration (optional), the wgpu coopmat soft-fork (#56), and curation #45.
