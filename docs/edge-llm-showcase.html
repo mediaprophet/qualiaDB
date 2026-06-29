@@ -62,7 +62,7 @@
                 </div>
                 <div class="bg-black/20 rounded-xl p-4">
                     <h3 class="font-medium text-blue-400 mb-2">GPU Dispatch</h3>
-                    <p class="text-white/60 text-sm">DirectML (Windows), Accelerate (macOS), wgpu/Vulkan (Linux)</p>
+                    <p class="text-white/60 text-sm">wgpu &rarr; Vulkan (default, vendor-neutral); DX12 / Metal / GL selectable</p>
                 </div>
                 <div class="bg-black/20 rounded-xl p-4">
                     <h3 class="font-medium text-blue-400 mb-2">Phase 8 Bifurcation</h3>
@@ -204,54 +204,30 @@ qualia llm infer --model gemma-3-1b-it-q4_0 "Explain quantum computing"</code></
                 Performance Characteristics
             </h2>
             
-            <p class="text-white/70 mb-6">Benchmark results on various hardware:</p>
-            
+            <p class="text-white/70 mb-6">Measured decode throughput — single configuration benchmarked to date:</p>
+
             <div class="overflow-x-auto">
                 <table class="w-full text-left">
                     <thead>
                         <tr class="border-b border-white/10">
                             <th class="py-3 px-4">Hardware</th>
                             <th class="py-3 px-4">Model</th>
-                            <th class="py-3 px-4">Tokens/sec</th>
-                            <th class="py-3 px-4">Memory</th>
+                            <th class="py-3 px-4">Backend</th>
+                            <th class="py-3 px-4">Decode tok/s</th>
                         </tr>
                     </thead>
                     <tbody>
-                        <tr class="bg-emerald-500/10 border-b border-white/5">
-                            <td class="py-3 px-4 font-medium">M1 MacBook Pro</td>
-                            <td class="py-3 px-4 font-medium">Gemma 3 1B Q4_0</td>
-                            <td class="py-3 px-4 font-medium">~55 t/s</td>
-                            <td class="py-3 px-4 font-medium">~1.1 GB</td>
-                        </tr>
-                        <tr class="border-b border-white/5">
-                            <td class="py-3 px-4">M1 MacBook Pro</td>
-                            <td class="py-3 px-4">Llama 3.2 3B</td>
-                            <td class="py-3 px-4">~45 t/s</td>
-                            <td class="py-3 px-4">~3.2 GB</td>
-                        </tr>
-                        <tr class="border-b border-white/5">
-                            <td class="py-3 px-4">RTX 3060 (Windows)</td>
-                            <td class="py-3 px-4">Llama 3.2 3B</td>
-                            <td class="py-3 px-4">~120 t/s</td>
-                            <td class="py-3 px-4">~2.8 GB</td>
-                        </tr>
-                        <tr class="border-b border-white/5">
-                            <td class="py-3 px-4">Ryzen 7 5800X (Linux)</td>
-                            <td class="py-3 px-4">SmolLM2 1.7B</td>
-                            <td class="py-3 px-4">~25 t/s</td>
-                            <td class="py-3 px-4">~1.8 GB</td>
-                        </tr>
                         <tr class="bg-emerald-500/10">
-                            <td class="py-3 px-4 font-medium">iPhone 15 Pro</td>
-                            <td class="py-3 px-4 font-medium">SmolLM2 360M</td>
-                            <td class="py-3 px-4 font-medium">~12 t/s</td>
-                            <td class="py-3 px-4 font-medium">~800 MB</td>
+                            <td class="py-3 px-4 font-medium">NVIDIA RTX A2000 12GB</td>
+                            <td class="py-3 px-4 font-medium">SmolLM2-360M Q8_0</td>
+                            <td class="py-3 px-4 font-medium">Vulkan</td>
+                            <td class="py-3 px-4 font-medium">~18.8 t/s</td>
                         </tr>
                     </tbody>
                 </table>
             </div>
 
-            <p class="text-white/50 text-sm mt-4">* Performance varies with quantization, context length, and thermal throttling</p>
+            <p class="text-white/50 text-sm mt-4">This is the only configuration benchmarked so far (decode, compute-bound: ~63% attention, ~37% FFN). Other hardware/model combinations are not yet measured — no throughput is claimed for them.</p>
         </div>
 
         <!-- Integration with Graph -->
@@ -303,7 +279,7 @@ prompt = "Extract information about Alice and return as JSON-LD"
         <div class="max-w-screen-2xl mx-auto px-8">
             <div class="flex items-center justify-between">
                 <div class="text-white/50 text-sm">
-                    QualiaDB v0.0.18 • Human-Centric Semantic Engine
+                    QualiaDB v0.0.23 • Human-Centric Semantic Engine
                 </div>
                 <div class="flex items-center gap-6 text-sm">
                     <a href="manuals/" class="hover:text-white transition-colors">Manuals</a>
