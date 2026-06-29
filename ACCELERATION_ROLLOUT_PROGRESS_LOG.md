@@ -715,3 +715,40 @@ f32 GEMM (coopmat via #56; CUDA WMMA host-side).
 
 **⚑ Where I need the human** — none this step. **Next** — the #56 coopmat soft-fork (GO per the review:
 exact commit 56535d7d, minimal HAL-only patch, probe-gated) for portable tensor cores.
+
+---
+
+## 2026-06-29 · wgpu coopmat soft-fork (#56) — ATTEMPTED on the A2000; honest NO-GO (crate-wide API drift across lanes) → wait for release
+
+**Step / phase** — Task #56 (the greenlit "make it awesome" experiment): patch wgpu to the merged
+#9741 fix and verify the WGSL cooperative-matrix multiply computes on the A2000 (lighting up the
+*portable* tensor-core GEMM). Status: **attempted, reverted; decision = wait for the wgpu release.**
+
+**What happened (honest)**
+- Confirmed feasibility: shallow-cloned gfx-rs/wgpu at commit `56535d7d` (the #9741 fix), workspace
+  version **29.0.0** (semver-OK with our `29` pin). Bumped the clone to `29.0.4` so Cargo preferred
+  the `[patch.crates-io]`; all wgpu sub-crates + naga resolved to the clone. **wgpu compiled from
+  source** (the ~40-min build the review predicted).
+- **`qualia-core-db` would not compile against it** — ~25 errors from wgpu **public-API drift** (58
+  days of `main` past 29.0.3), *not* the HAL fix: `get_mapped_range()` now returns
+  `Result<BufferView, …>` (7+ deref/index sites + ~17 `mismatched types`), and `RequestAdapterOptions`
+  gained a required field.
+- **Decisive: those call sites live in `gguf_bridge/output.rs` (the LLM lane, off-limits per §10),
+  `platform/gpu.rs`, and `tensor/volume_gpu.rs` — not `wgsl_forge`.** Fixing them to verify a
+  probe-gated dormant kernel would barge into another instrument's lane **and** pin the whole crate to
+  an unreleased wgpu API. Per §10 (no lane-barging) + §13 (modernize on a deliberate bump), that is the
+  wrong trade.
+
+**Outcome** — reverted cleanly (`[patch.crates-io]` removed, clone deleted, Cargo.lock restored);
+rebuilt green on stable wgpu 29.0.3; `wgsl_forge::` sweep **134 passed / 0 failed**. The precise reason
+the soft-fork must wait is now **documented** (`docs/WGPU_UPSTREAM_TRACKING.md`): it is the crate-wide
+API drift + lane boundary, **not** the coopmat fix. The coopmat tiled kernel + `coopmat_usable()` probe
+remain in place, so the portable tensor-core path **self-activates** when the fix ships in a wgpu
+release — at which point #57 bumps the pin and the buffer-mapping/`RequestAdapterOptions` modernization
+is done crate-wide as one deliberate dependency bump with the lane owners. **Active tensor-core GEMM
+today stays CUDA WMMA (certified).**
+
+**⚑ Where I need the human** — none. This was a self-contained experiment with a clean revert; the
+result strengthens the "wait for release" plan (#57) with hardware-grounded precision instead of a guess.
+**Next** — nothing forced; the DAG-IR forge is complete + faithful + fast (GPU 2.89× CPU on a decode
+block) + hardened. Open optional items: #57 (release watch), #59 (RT Neighbor accel), #45 (fluid curation).

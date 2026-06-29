@@ -109,3 +109,31 @@ coopmat is **f32** (no loss), WMMA is **f16-input/f32-accumulate** (lossy → op
 - [ ] **Watch crates.io** for a wgpu release including #9741; prefer it over the git pin when it ships.
 - [ ] If df64-reassociation (#2) ever blocks a real consumer, file a naga issue requesting an
       fp-contraction / no-reassociation control; until then the runtime probe is sufficient.
+
+---
+
+## Soft-fork attempt result (2026-06-29) — #9741 fix is real, but the unreleased commit has crate-wide API drift → WAIT for release
+
+Attempted the Task #56 soft-fork (`[patch.crates-io]` wgpu+naga → gfx-rs/wgpu commit
+`56535d7d` = the merged #9741 fix) to verify the WGSL coopmat multiply on the A2000. **Honest
+outcome: NO-GO for now**, for a reason that is *not* the coopmat fix itself:
+
+- **Feasibility confirmed:** wgpu at that commit is workspace version **29.0.0** (semver-compatible
+  with our `29` pin). Bumping the local clone to `29.0.4` made Cargo prefer the patch cleanly; all
+  wgpu sub-crates (wgpu/-core/-hal/-types, naga) resolved to the clone. **wgpu itself compiled.**
+- **Blocker — crate-wide API drift (58 days of `main` past 29.0.3):** `qualia-core-db` fails to
+  compile against the commit with ~25 errors from **public-API changes**, not the HAL fix:
+  - `BufferSlice::get_mapped_range()` now returns `Result<BufferView, MapRangeError>` (was the view
+    directly) → 7+ index/deref sites + ~17 `mismatched types`;
+  - `RequestAdapterOptions` gained a required field `apply_limit_buckets`.
+- **Lane boundary — decisive:** those call sites are in `platform/gpu.rs`, `tensor/volume_gpu.rs`,
+  and **`gguf_bridge/output.rs` (the LLM lane, off-limits per AGENTS §10)** — *not* confined to
+  `wgsl_forge`. Modernizing them to verify a probe-gated dormant kernel would (a) reach into another
+  instrument's lane and (b) pin the **whole crate** to an *unreleased* wgpu API. Not worth it.
+
+**Decision:** revert to the stable crates.io pin (done; tree clean) and **wait for the fix to ship
+in a wgpu release** (Task #57) — then bump the pin and do the buffer-mapping/`RequestAdapterOptions`
+modernization as one deliberate dependency bump (project rule §13), crate-wide, with the lane owners.
+The coopmat path stays built + naga-validated + `coopmat_usable()`-probe-gated, so it self-activates
+on that release with zero further forge work. Active tensor-core GEMM today remains **CUDA WMMA**
+(certified). The recipe (commit `56535d7d`, version-bump trick) is recorded here for the release bump.
