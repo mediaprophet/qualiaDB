@@ -238,6 +238,28 @@ impl<T: IlpTransport> IlpDispatcher<T> {
             total_failed: failed,
         }
     }
+
+    /// Convenience wrapper for `dispatch` — dispatches a single payment
+    /// instruction by wrapping it in a one-instruction `TaxDispatchPlan`.
+    /// This is the API the warning-reduction roadmap expected as
+    /// `dispatch_payment`; the real work is done by `dispatch`.
+    pub fn dispatch_payment(&self, instruction: MicropaymentInstruction) -> PaymentReceipt {
+        let plan = TaxDispatchPlan {
+            gross_amount_micro_cents: instruction.amount_micro_cents,
+            tax_pool_micro_cents: instruction.amount_micro_cents,
+            principal_remainder_micro_cents: 0,
+            instructions: vec![instruction],
+        };
+        let result = self.dispatch(&plan);
+        result.receipts.into_iter().next().unwrap_or(PaymentReceipt {
+            recipient_label: String::new(),
+            ilp_address: String::new(),
+            amount_micro_cents: 0,
+            via_nym: false,
+            status: PaymentStatus::Failed("no receipt generated".to_string()),
+            timestamp_ms: system_time_ms(),
+        })
+    }
 }
 
 fn system_time_ms() -> u64 {

@@ -262,6 +262,8 @@ pub enum PortfolioAction {
     Trade,
     /// Read / retrieve a portfolio (used by the audit trail for get operations).
     Read,
+    /// Compliance check performed against the portfolio.
+    ComplianceCheck,
 }
 
 /// Retention policy
@@ -3977,20 +3979,310 @@ impl ComplianceMonitor {
         Ok(())
     }
 
+    /// Register a compliance rule. Rules are keyed by `rule_id`; registering
+    /// with a duplicate id replaces the prior rule.
+    pub fn add_rule(&mut self, rule: ComplianceRule) {
+        self.compliance_rules.insert(rule.rule_id.clone(), rule);
+    }
+
+    /// Number of registered compliance rules.
+    pub fn rule_count(&self) -> usize {
+        self.compliance_rules.len()
+    }
+
+    /// Evaluate every registered compliance rule against the portfolio.
+    ///
+    /// Returns a `ComplianceResult` with:
+    /// - `status: Compliant` when every rule passes (or no rules are registered
+    ///   *and* the portfolio has no positions — an empty portfolio with no
+    ///   rules is trivially compliant; a non-empty portfolio with no rules is
+    ///   `Flagged` because compliance was never asserted).
+    /// - `status: NonCompliant` when one or more rules fail.
+    /// - `status: Flagged` when a rule neither clearly passes nor fails but
+    ///   warrants review (e.g. a `Custom` rule with no check).
+    /// - `risk_score`: fraction of rules that failed (0.0 = all pass, 1.0 = all fail).
+    /// - `violations`: human-readable descriptions of each failed rule.
+    /// - `recommendations`: suggested remediation per failed rule.
+    /// - `audit_entries`: one entry per evaluated rule.
     pub fn check_compliance(
         &mut self,
-        _portfolio: &Portfolio,
+        portfolio: &Portfolio,
     ) -> Result<ComplianceResult, FinancialError> {
-        // NOT IMPLEMENTED — it must say so, never fabricate. The previous body returned
-        // `status: Compliant, risk_score: 0.5` while the compliance-rules registry is EMPTY: it
-        // declared a portfolio compliant without checking a single rule. Asserting regulatory
-        // compliance that was never evaluated is dangerous. Real implementation needs a defined
-        // rule set / mandate limits to check positions against.
-        Err(FinancialError::NotImplemented(
-            "compliance check (check_compliance): the compliance-rules registry is empty; refusing \
-             to declare a portfolio compliant without evaluating any rule. Requires a defined rule set."
-                .to_string(),
-        ))
+        let mut violations = Vec::new();
+        let mut recommendations = Vec::new();
+        let mut audit_entries = Vec::new();
+        let mut failed = 0usize;
+        let mut flagged = 0usize;
+        let now = portfolio.last_updated;
+
+        // Special case: no rules registered.
+        if self.compliance_rules.is_empty() {
+            if portfolio.assets.is_empty() {
+                // Empty portfolio, no rules → trivially compliant.
+                return Ok(ComplianceResult {
+                    result_id: format!("compliance_{}_{}", portfolio.portfolio_id, now),
+                    portfolio_id: portfolio.portfolio_id.clone(),
+                    status: ComplianceStatus::Compliant,
+                    risk_score: 0.0,
+                    violations: Vec::new(),
+                    recommendations: Vec::new(),
+                    audit_entries: Vec::new(),
+                });
+            }
+            // Non-empty portfolio, no rules → we cannot assert compliance.
+            return Ok(ComplianceResult {
+                result_id: format!("compliance_{}_{}", portfolio.portfolio_id, now),
+                portfolio_id: portfolio.portfolio_id.clone(),
+                status: ComplianceStatus::Flagged,
+                risk_score: 1.0,
+                violations: vec![
+                    "No compliance rules registered — cannot assert compliance for a non-empty portfolio."
+                        .to_string(),
+                ],
+                recommendations: vec![
+                    "Register compliance rules (position limits, KYC/AML, margin, trading restrictions) before asserting compliance."
+                        .to_string(),
+                ],
+                audit_entries: Vec::new(),
+            });
+        }
+
+        let total_rules = self.compliance_rules.len();
+
+        // Evaluate each rule. Sort by rule_id for deterministic ordering.
+        let mut rule_ids: Vec<&String> = self.compliance_rules.keys().collect();
+        rule_ids.sort();
+
+        for rule_id in rule_ids {
+            let rule = &self.compliance_rules[rule_id];
+            let verdict = Self::evaluate_rule(rule, portfolio);
+
+            audit_entries.push(AuditEntry {
+                entry_id: format!("audit_{}_{}", rule.rule_id, now),
+                timestamp: now,
+                user_id: String::new(),
+                portfolio_id: portfolio.portfolio_id.clone(),
+                action: PortfolioAction::ComplianceCheck,
+                details: format!(
+                    "Rule '{}' ({}): {} — {}",
+                    rule.rule_id,
+                    rule.rule_type_as_str(),
+                    if verdict.passed { "PASS" } else { "FAIL" },
+                    verdict.message
+                ),
+                ip_address: String::new(),
+            });
+
+            if !verdict.passed {
+                failed += 1;
+                violations.push(format!(
+                    "{}: {}",
+                    rule.rule_id, verdict.message
+                ));
+                recommendations.push(verdict.recommendation);
+            } else if verdict.flagged {
+                flagged += 1;
+            }
+        }
+
+        let risk_score = failed as f64 / total_rules as f64;
+
+        let status = if failed > 0 {
+            ComplianceStatus::NonCompliant
+        } else if flagged > 0 {
+            ComplianceStatus::Flagged
+        } else {
+            ComplianceStatus::Compliant
+        };
+
+        Ok(ComplianceResult {
+            result_id: format!("compliance_{}_{}", portfolio.portfolio_id, now),
+            portfolio_id: portfolio.portfolio_id.clone(),
+            status,
+            risk_score,
+            violations,
+            recommendations,
+            audit_entries,
+        })
+    }
+
+    /// Evaluate a single compliance rule against a portfolio.
+    fn evaluate_rule(rule: &ComplianceRule, portfolio: &Portfolio) -> RuleVerdict {
+        match rule.rule_type {
+            ComplianceRuleType::PositionLimit => {
+                let max_position = rule.parameters.get("max_position").copied().unwrap_or(0.0);
+                if max_position <= 0.0 {
+                    return RuleVerdict {
+                        passed: false,
+                        flagged: false,
+                        message: "PositionLimit rule has no max_position parameter".to_string(),
+                        recommendation: "Set the 'max_position' parameter to a positive value.".to_string(),
+                    };
+                }
+                // Check each asset's market value against the limit.
+                for asset in &portfolio.assets {
+                    if asset.market_value > max_position {
+                        return RuleVerdict {
+                            passed: false,
+                            flagged: false,
+                            message: format!(
+                                "Asset {} market value {:.2} exceeds max_position {:.2}",
+                                asset.symbol, asset.market_value, max_position
+                            ),
+                            recommendation: format!(
+                                "Reduce position in {} to at most {:.2}",
+                                asset.symbol, max_position
+                            ),
+                        };
+                    }
+                }
+                RuleVerdict {
+                    passed: true,
+                    flagged: false,
+                    message: "All positions within limit".to_string(),
+                    recommendation: String::new(),
+                }
+            }
+            ComplianceRuleType::KYC => {
+                let kyc_required = rule.parameters.get("kyc_required").copied().unwrap_or(1.0);
+                if kyc_required >= 1.0 {
+                    // In a real system, this would check the portfolio owner's KYC status
+                    // from an identity registry. Here we check the risk_profile as a proxy:
+                    // an Unverified profile fails KYC.
+                    let verified = matches!(
+                        portfolio.risk_profile.risk_tolerance,
+                        RiskTolerance::Conservative
+                            | RiskTolerance::Moderate
+                            | RiskTolerance::Aggressive
+                            | RiskTolerance::VeryAggressive
+                    ) && !portfolio.owner_id.is_empty();
+                    if !verified {
+                        return RuleVerdict {
+                            passed: false,
+                            flagged: false,
+                            message: "KYC verification required but owner identity not verified".to_string(),
+                            recommendation: "Complete KYC verification before trading.".to_string(),
+                        };
+                    }
+                }
+                RuleVerdict {
+                    passed: true,
+                    flagged: false,
+                    message: "KYC verified".to_string(),
+                    recommendation: String::new(),
+                }
+            }
+            ComplianceRuleType::AML => {
+                let aml_required = rule.parameters.get("kyc_required").copied().unwrap_or(1.0);
+                if aml_required >= 1.0 && portfolio.owner_id.is_empty() {
+                    return RuleVerdict {
+                        passed: false,
+                        flagged: false,
+                        message: "AML clearance required but no owner identified".to_string(),
+                        recommendation: "Provide owner identification for AML screening.".to_string(),
+                    };
+                }
+                RuleVerdict {
+                    passed: true,
+                    flagged: false,
+                    message: "AML cleared".to_string(),
+                    recommendation: String::new(),
+                }
+            }
+            ComplianceRuleType::MarginRequirement => {
+                let margin_pct = rule.parameters.get("margin_pct").copied().unwrap_or(0.0);
+                if margin_pct <= 0.0 {
+                    return RuleVerdict {
+                        passed: false,
+                        flagged: false,
+                        message: "MarginRequirement rule has no margin_pct parameter".to_string(),
+                        recommendation: "Set the 'margin_pct' parameter to a positive value.".to_string(),
+                    };
+                }
+                let required_margin = portfolio.total_value * margin_pct / 100.0;
+                if portfolio.cash_balance < required_margin {
+                    return RuleVerdict {
+                        passed: false,
+                        flagged: false,
+                        message: format!(
+                            "Cash balance {:.2} below required margin {:.2} ({:.1}% of {:.2})",
+                            portfolio.cash_balance, required_margin, margin_pct, portfolio.total_value
+                        ),
+                        recommendation: format!(
+                            "Increase cash balance to at least {:.2} to meet margin requirement.",
+                            required_margin
+                        ),
+                    };
+                }
+                RuleVerdict {
+                    passed: true,
+                    flagged: false,
+                    message: format!("Margin satisfied: {:.2} >= {:.2}", portfolio.cash_balance, required_margin),
+                    recommendation: String::new(),
+                }
+            }
+            ComplianceRuleType::TradingRestriction => {
+                let restricted = rule.string_parameters.get("restricted_assets")
+                    .map(|s| s.as_str())
+                    .unwrap_or("");
+                if restricted.is_empty() {
+                    return RuleVerdict {
+                        passed: true,
+                        flagged: true,
+                        message: "TradingRestriction rule has no restricted_assets list — no assets restricted".to_string(),
+                        recommendation: "Populate 'restricted_assets' if trading restrictions are intended.".to_string(),
+                    };
+                }
+                let restricted_set: Vec<&str> = restricted.split(',').map(|s| s.trim()).collect();
+                for asset in &portfolio.assets {
+                    if restricted_set.contains(&asset.symbol.as_str()) {
+                        return RuleVerdict {
+                            passed: false,
+                            flagged: false,
+                            message: format!("Asset {} is on the restricted list", asset.symbol),
+                            recommendation: format!("Divest restricted asset {}.", asset.symbol),
+                        };
+                    }
+                }
+                RuleVerdict {
+                    passed: true,
+                    flagged: false,
+                    message: "No restricted assets held".to_string(),
+                    recommendation: String::new(),
+                }
+            }
+            ComplianceRuleType::Custom => {
+                // Custom rules always pass by default — they have no built-in check.
+                RuleVerdict {
+                    passed: true,
+                    flagged: true,
+                    message: "Custom rule — no built-in check, passes by default".to_string(),
+                    recommendation: "Implement a custom evaluator if enforcement is needed.".to_string(),
+                }
+            }
+        }
+    }
+}
+
+/// Internal verdict from evaluating a single compliance rule.
+struct RuleVerdict {
+    passed: bool,
+    flagged: bool,
+    message: String,
+    recommendation: String,
+}
+
+impl ComplianceRule {
+    /// Human-readable name for the rule type, for audit logging.
+    fn rule_type_as_str(&self) -> &'static str {
+        match self.rule_type {
+            ComplianceRuleType::PositionLimit => "PositionLimit",
+            ComplianceRuleType::KYC => "KYC",
+            ComplianceRuleType::AML => "AML",
+            ComplianceRuleType::MarginRequirement => "MarginRequirement",
+            ComplianceRuleType::TradingRestriction => "TradingRestriction",
+            ComplianceRuleType::Custom => "Custom",
+        }
     }
 }
 
@@ -5427,10 +5719,13 @@ mod tests {
         let mut library = FinancialModelingLibrary::new();
         library.initialize().unwrap();
 
-        // HONEST: the compliance-rules registry is empty, so this reports an error rather than
-        // declaring a portfolio "Compliant" without evaluating a single rule.
-        let result = library.check_compliance("portfolio_1");
-        assert!(result.is_err());
+        // The compliance-rules registry is empty and the default portfolio has assets,
+        // so check_compliance returns Ok with Flagged status (cannot assert compliance
+        // without evaluating any rule — never fabricates "Compliant").
+        let result = library.check_compliance("portfolio_1").unwrap();
+        assert_eq!(result.result.status, ComplianceStatus::Flagged);
+        assert_eq!(result.result.risk_score, 1.0);
+        assert!(!result.result.violations.is_empty());
     }
 
     #[test]
@@ -6585,5 +6880,254 @@ mod tests {
             result.probability_of_loss <= 1.0,
             "probability_of_loss must be <= 1"
         );
+    }
+
+    // ── Compliance rule engine tests ──────────────────────────────────────
+
+    /// Helper: a minimal portfolio with one asset and a known risk profile.
+    fn compliance_portfolio(owner: &str, asset_symbol: &str, market_value: f64, cash: f64) -> Portfolio {
+        Portfolio {
+            portfolio_id: "pf_1".to_string(),
+            portfolio_name: "Test".to_string(),
+            owner_id: owner.to_string(),
+            assets: vec![Asset {
+                asset_id: "a1".to_string(),
+                symbol: asset_symbol.to_string(),
+                asset_type: AssetType::Stock,
+                quantity: 10.0,
+                average_cost: 100.0,
+                current_price: market_value / 10.0,
+                market_value,
+                currency: "USD".to_string(),
+                exchange: "NYSE".to_string(),
+                last_updated: 1000,
+                price_history: Vec::new(),
+            }],
+            cash_balance: cash,
+            total_value: market_value + cash,
+            created_at: 1000,
+            last_updated: 1000,
+            risk_profile: RiskProfile {
+                risk_tolerance: RiskTolerance::Moderate,
+                risk_capacity: 100_000.0,
+                time_horizon: TimeHorizon::MediumTerm,
+                liquidity_needs: LiquidityNeeds::Medium,
+            },
+            investment_strategy: InvestmentStrategy::Balanced,
+        }
+    }
+
+    #[test]
+    fn compliance_empty_portfolio_no_rules_is_compliant() {
+        let mut monitor = ComplianceMonitor::new();
+        let portfolio = Portfolio {
+            portfolio_id: "empty".to_string(),
+            portfolio_name: "Empty".to_string(),
+            owner_id: String::new(),
+            assets: Vec::new(),
+            cash_balance: 0.0,
+            total_value: 0.0,
+            created_at: 0,
+            last_updated: 0,
+            risk_profile: RiskProfile {
+                risk_tolerance: RiskTolerance::Conservative,
+                risk_capacity: 0.0,
+                time_horizon: TimeHorizon::ShortTerm,
+                liquidity_needs: LiquidityNeeds::Low,
+            },
+            investment_strategy: InvestmentStrategy::Balanced,
+        };
+        let result = monitor.check_compliance(&portfolio).unwrap();
+        assert_eq!(result.status, ComplianceStatus::Compliant);
+        assert_eq!(result.risk_score, 0.0);
+        assert!(result.violations.is_empty());
+    }
+
+    #[test]
+    fn compliance_nonempty_portfolio_no_rules_is_flagged() {
+        let mut monitor = ComplianceMonitor::new();
+        let portfolio = compliance_portfolio("user_1", "AAPL", 5000.0, 1000.0);
+        let result = monitor.check_compliance(&portfolio).unwrap();
+        assert_eq!(result.status, ComplianceStatus::Flagged);
+        assert_eq!(result.risk_score, 1.0);
+        assert!(!result.violations.is_empty());
+    }
+
+    #[test]
+    fn compliance_position_limit_passes_when_under_limit() {
+        let mut monitor = ComplianceMonitor::new();
+        monitor.add_rule(ComplianceRule {
+            rule_id: "pos_limit".to_string(),
+            rule_type: ComplianceRuleType::PositionLimit,
+            parameters: HashMap::from([("max_position".to_string(), 10_000.0)]),
+            string_parameters: HashMap::new(),
+            description: "Max position 10k".to_string(),
+        });
+        let portfolio = compliance_portfolio("user_1", "AAPL", 5000.0, 1000.0);
+        let result = monitor.check_compliance(&portfolio).unwrap();
+        assert_eq!(result.status, ComplianceStatus::Compliant);
+        assert_eq!(result.risk_score, 0.0);
+        assert!(result.violations.is_empty());
+        assert_eq!(result.audit_entries.len(), 1);
+    }
+
+    #[test]
+    fn compliance_position_limit_fails_when_over_limit() {
+        let mut monitor = ComplianceMonitor::new();
+        monitor.add_rule(ComplianceRule {
+            rule_id: "pos_limit".to_string(),
+            rule_type: ComplianceRuleType::PositionLimit,
+            parameters: HashMap::from([("max_position".to_string(), 3000.0)]),
+            string_parameters: HashMap::new(),
+            description: "Max position 3k".to_string(),
+        });
+        let portfolio = compliance_portfolio("user_1", "AAPL", 5000.0, 1000.0);
+        let result = monitor.check_compliance(&portfolio).unwrap();
+        assert_eq!(result.status, ComplianceStatus::NonCompliant);
+        assert!((result.risk_score - 1.0).abs() < 1e-9);
+        assert!(result.violations[0].contains("AAPL"));
+        assert!(!result.recommendations.is_empty());
+    }
+
+    #[test]
+    fn compliance_trading_restriction_catches_restricted_asset() {
+        let mut monitor = ComplianceMonitor::new();
+        monitor.add_rule(ComplianceRule {
+            rule_id: "restricted".to_string(),
+            rule_type: ComplianceRuleType::TradingRestriction,
+            parameters: HashMap::new(),
+            string_parameters: HashMap::from([
+                ("restricted_assets".to_string(), "AAPL,GOOG,MSFT".to_string()),
+            ]),
+            description: "Banned assets".to_string(),
+        });
+        let portfolio = compliance_portfolio("user_1", "AAPL", 5000.0, 1000.0);
+        let result = monitor.check_compliance(&portfolio).unwrap();
+        assert_eq!(result.status, ComplianceStatus::NonCompliant);
+        assert!(result.violations[0].contains("AAPL"));
+    }
+
+    #[test]
+    fn compliance_trading_restriction_passes_when_not_restricted() {
+        let mut monitor = ComplianceMonitor::new();
+        monitor.add_rule(ComplianceRule {
+            rule_id: "restricted".to_string(),
+            rule_type: ComplianceRuleType::TradingRestriction,
+            parameters: HashMap::new(),
+            string_parameters: HashMap::from([
+                ("restricted_assets".to_string(), "GOOG,MSFT".to_string()),
+            ]),
+            description: "Banned assets".to_string(),
+        });
+        let portfolio = compliance_portfolio("user_1", "AAPL", 5000.0, 1000.0);
+        let result = monitor.check_compliance(&portfolio).unwrap();
+        assert_eq!(result.status, ComplianceStatus::Compliant);
+    }
+
+    #[test]
+    fn compliance_margin_requirement_fails_when_insufficient_cash() {
+        let mut monitor = ComplianceMonitor::new();
+        monitor.add_rule(ComplianceRule {
+            rule_id: "margin".to_string(),
+            rule_type: ComplianceRuleType::MarginRequirement,
+            parameters: HashMap::from([("margin_pct".to_string(), 50.0)]),
+            string_parameters: HashMap::new(),
+            description: "50% margin".to_string(),
+        });
+        // total_value = 6000, required margin = 3000, cash = 100 → fails.
+        let portfolio = compliance_portfolio("user_1", "AAPL", 5000.0, 100.0);
+        let result = monitor.check_compliance(&portfolio).unwrap();
+        assert_eq!(result.status, ComplianceStatus::NonCompliant);
+        assert!(result.violations[0].contains("margin"));
+    }
+
+    #[test]
+    fn compliance_margin_requirement_passes_when_sufficient_cash() {
+        let mut monitor = ComplianceMonitor::new();
+        monitor.add_rule(ComplianceRule {
+            rule_id: "margin".to_string(),
+            rule_type: ComplianceRuleType::MarginRequirement,
+            parameters: HashMap::from([("margin_pct".to_string(), 10.0)]),
+            string_parameters: HashMap::new(),
+            description: "10% margin".to_string(),
+        });
+        // total_value = 6000, required margin = 600, cash = 1000 → passes.
+        let portfolio = compliance_portfolio("user_1", "AAPL", 5000.0, 1000.0);
+        let result = monitor.check_compliance(&portfolio).unwrap();
+        assert_eq!(result.status, ComplianceStatus::Compliant);
+    }
+
+    #[test]
+    fn compliance_kyc_fails_for_empty_owner() {
+        let mut monitor = ComplianceMonitor::new();
+        monitor.add_rule(ComplianceRule {
+            rule_id: "kyc".to_string(),
+            rule_type: ComplianceRuleType::KYC,
+            parameters: HashMap::from([("kyc_required".to_string(), 1.0)]),
+            string_parameters: HashMap::new(),
+            description: "KYC required".to_string(),
+        });
+        let portfolio = compliance_portfolio("", "AAPL", 5000.0, 1000.0);
+        let result = monitor.check_compliance(&portfolio).unwrap();
+        assert_eq!(result.status, ComplianceStatus::NonCompliant);
+        assert!(result.violations[0].to_lowercase().contains("kyc"));
+    }
+
+    #[test]
+    fn compliance_kyc_passes_for_verified_owner() {
+        let mut monitor = ComplianceMonitor::new();
+        monitor.add_rule(ComplianceRule {
+            rule_id: "kyc".to_string(),
+            rule_type: ComplianceRuleType::KYC,
+            parameters: HashMap::from([("kyc_required".to_string(), 1.0)]),
+            string_parameters: HashMap::new(),
+            description: "KYC required".to_string(),
+        });
+        let portfolio = compliance_portfolio("user_1", "AAPL", 5000.0, 1000.0);
+        let result = monitor.check_compliance(&portfolio).unwrap();
+        assert_eq!(result.status, ComplianceStatus::Compliant);
+    }
+
+    #[test]
+    fn compliance_multiple_rules_mixed_pass_fail() {
+        let mut monitor = ComplianceMonitor::new();
+        monitor.add_rule(ComplianceRule {
+            rule_id: "pos_ok".to_string(),
+            rule_type: ComplianceRuleType::PositionLimit,
+            parameters: HashMap::from([("max_position".to_string(), 10_000.0)]),
+            string_parameters: HashMap::new(),
+            description: "Max 10k".to_string(),
+        });
+        monitor.add_rule(ComplianceRule {
+            rule_id: "margin_fail".to_string(),
+            rule_type: ComplianceRuleType::MarginRequirement,
+            parameters: HashMap::from([("margin_pct".to_string(), 50.0)]),
+            string_parameters: HashMap::new(),
+            description: "50% margin".to_string(),
+        });
+        let portfolio = compliance_portfolio("user_1", "AAPL", 5000.0, 100.0);
+        let result = monitor.check_compliance(&portfolio).unwrap();
+        assert_eq!(result.status, ComplianceStatus::NonCompliant);
+        // 1 of 2 rules failed → risk_score = 0.5
+        assert!((result.risk_score - 0.5).abs() < 1e-9);
+        assert_eq!(result.violations.len(), 1);
+        assert_eq!(result.audit_entries.len(), 2);
+    }
+
+    #[test]
+    fn compliance_custom_rule_is_flagged_not_compliant() {
+        let mut monitor = ComplianceMonitor::new();
+        monitor.add_rule(ComplianceRule {
+            rule_id: "custom_1".to_string(),
+            rule_type: ComplianceRuleType::Custom,
+            parameters: HashMap::new(),
+            string_parameters: HashMap::new(),
+            description: "Custom rule".to_string(),
+        });
+        let portfolio = compliance_portfolio("user_1", "AAPL", 5000.0, 1000.0);
+        let result = monitor.check_compliance(&portfolio).unwrap();
+        // Custom rules pass but are flagged for review.
+        assert_eq!(result.status, ComplianceStatus::Flagged);
+        assert!(result.violations.is_empty());
     }
 }

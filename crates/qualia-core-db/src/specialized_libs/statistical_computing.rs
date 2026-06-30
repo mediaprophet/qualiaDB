@@ -6,7 +6,6 @@
 //! - Zero-Knowledge Semantic Proofs for privacy-preserving statistics
 //! - NVMe Computational Storage (CSD) for accelerated statistical operations
 
-use crate::csd_storage::CsdManager;
 use crate::fiduciary_crypto::{FiduciaryCrypto, MlDsaSignature};
 use crate::zk_proofs::{CircuitExpression, FieldElement, VariableType, ZkProof, ZkProofSystem};
 use crate::zns_storage::ZnsZoneManager;
