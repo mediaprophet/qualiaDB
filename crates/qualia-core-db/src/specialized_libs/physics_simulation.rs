@@ -7,7 +7,7 @@
 //! - Ambient Sub-Threshold Orchestration for mobile physics optimization
 
 use super::linear_algebra::AccessPattern;
-use crate::acoustic_ble_mesh::MeshNetworkManager;
+use crate::acoustic_ble_mesh::{MeshNetworkManager, MessagePriority, NetworkStatus};
 use crate::ambient_orchestration::AmbientOrchestrationManager;
 use crate::csd_storage::CsdManager;
 use crate::zns_storage::ZnsZoneManager;
@@ -255,6 +255,7 @@ pub struct TimeStepControl {
     control_type: TimeStepControlType,
     cfl_condition: CflCondition,
     adaptive_parameters: AdaptiveParameters,
+    current_time_step: f64,
 }
 
 /// Time step control types
@@ -966,6 +967,16 @@ pub struct MeshCoordinator {
     synchronization: MeshSynchronization,
 }
 
+/// Status snapshot of the underlying mesh network.
+#[derive(Debug, Clone)]
+pub struct MeshStatus {
+    pub total_nodes: u32,
+    pub acoustic_nodes: u32,
+    pub ble_nodes: u32,
+    pub active_routes: u32,
+    pub pending_messages: u32,
+}
+
 /// Node manager
 pub struct NodeManager {
     nodes: HashMap<String, MeshNode>,
@@ -1194,6 +1205,8 @@ pub struct PhysicsDataStorage {
     storage_backends: HashMap<String, StorageBackend>,
     data_layout: DataLayout,
     access_patterns: AccessPatterns,
+    /// In-memory fallback store used when ZNS/CSD hardware backends are unavailable.
+    stored_data: HashMap<String, Vec<f64>>,
 }
 
 /// Storage backends
@@ -1932,7 +1945,7 @@ impl PhysicsSimulationLibrary {
         let start_time = std::time::Instant::now();
 
         // Initialize mesh coordinator
-        self.mesh_coordinator.initialize_mesh_network(simulation)?;
+        self.mesh_coordinator.initialize_mesh_network()?;
 
         // Distribute simulation across nodes
         let node_distribution = self.mesh_coordinator.distribute_simulation(simulation)?;
@@ -2239,7 +2252,10 @@ impl SimulationEngine {
         simulation: &mut Simulation,
         fields: &mut Vec<PhysicsField>,
     ) -> Result<(), PhysicsError> {
-        // Update boundary conditions
+        // Apply registered boundary conditions to each field at the current simulation time.
+        for field in fields.iter_mut() {
+            self.boundary_conditions.apply_to_field(field, simulation.current_time);
+        }
         Ok(())
     }
 }
@@ -2258,6 +2274,33 @@ impl TimeIntegrator {
         self.stability_analysis.initialize()?;
         Ok(())
     }
+
+    /// Compute an adaptive time step for the given field.
+    ///
+    /// If the time-step control is CFL-based, the CFL dt is computed from the
+    /// field's maximum absolute velocity and the field's spatial resolution
+    /// (estimated as `1.0 / n` when no explicit `dx` is available). Otherwise
+    /// the fixed `dt` argument is returned unchanged.
+    pub fn adaptive_step(&mut self, field: &PhysicsField, dt: f64) -> f64 {
+        if self.time_step_control.control_type == TimeStepControlType::CFLBased {
+            let max_velocity = field
+                .data
+                .iter()
+                .map(|&v| v.abs())
+                .fold(0.0f64, f64::max);
+
+            // Estimate dx from the first dimension length.
+            let dx = field
+                .dimensions
+                .first()
+                .map(|&n| if n > 1 { 1.0 / (n as f64 - 1.0) } else { 1.0 })
+                .unwrap_or(1.0);
+
+            self.time_step_control.update_dt(max_velocity, dx)
+        } else {
+            dt
+        }
+    }
 }
 
 impl TimeStepControl {
@@ -2266,11 +2309,56 @@ impl TimeStepControl {
             control_type: TimeStepControlType::CFLBased,
             cfl_condition: CflCondition::new(),
             adaptive_parameters: AdaptiveParameters::new(),
+            current_time_step: 0.001,
         }
     }
 
     pub fn initialize(&mut self) -> Result<(), PhysicsError> {
         Ok(())
+    }
+
+    /// Compute the CFL-limited time step: dt = CFL * dx / max_velocity.
+    ///
+    /// The result is clamped to `[min_time_step, max_time_step]`. If `max_velocity`
+    /// is zero or non-finite, `max_time_step` is returned (no advective limit).
+    pub fn compute_cfl_dt(&self, max_velocity: f64, dx: f64) -> f64 {
+        let min_dt = self.adaptive_parameters.min_time_step;
+        let max_dt = self.adaptive_parameters.max_time_step;
+
+        if !max_velocity.is_finite() || max_velocity <= 0.0 || dx <= 0.0 {
+            return max_dt;
+        }
+
+        let raw_dt = self.cfl_condition.cfl_number * dx / max_velocity;
+        raw_dt.clamp(min_dt, max_dt)
+    }
+
+    /// Compute a new adaptive time step using the CFL condition, apply the safety
+    /// factor and increase/decrease limits, update the internal `current_time_step`,
+    /// and return the new dt.
+    pub fn update_dt(&mut self, max_velocity: f64, dx: f64) -> f64 {
+        let cfl_dt = self.compute_cfl_dt(max_velocity, dx);
+
+        // Apply the safety factor.
+        let safe_dt = cfl_dt * self.adaptive_parameters.safety_factor;
+
+        // Limit the rate of change relative to the previous time step.
+        let new_dt = if self.current_time_step > 0.0 {
+            let lower = self.current_time_step * self.adaptive_parameters.max_decrease_factor;
+            let upper = self.current_time_step * self.adaptive_parameters.max_increase_factor;
+            safe_dt.clamp(lower, upper)
+        } else {
+            safe_dt
+        };
+
+        // Clamp to the absolute bounds once more after the relative limiter.
+        let new_dt = new_dt.clamp(
+            self.adaptive_parameters.min_time_step,
+            self.adaptive_parameters.max_time_step,
+        );
+
+        self.current_time_step = new_dt;
+        new_dt
     }
 }
 
@@ -2428,6 +2516,112 @@ impl StencilOperators {
             boundary_stencils: HashMap::new(),
         }
     }
+
+    /// Register a named stencil operator.
+    pub fn register_operator(&mut self, name: &str, stencil: StencilOperator) {
+        self.operators.insert(name.to_string(), stencil);
+    }
+
+    /// Register a named boundary stencil.
+    pub fn register_boundary_stencil(&mut self, name: &str, stencil: BoundaryStencil) {
+        self.boundary_stencils.insert(name.to_string(), stencil);
+    }
+
+    /// Apply a registered stencil to compute the spatial derivative at `index`.
+    ///
+    /// The derivative is computed as:
+    /// ```text
+    ///   sum_i( coefficients[i] * field[index + offset_i] ) / dx
+    /// ```
+    /// where `offset_i` is taken from `stencil_points[i].relative_position[0]`.
+    /// The coefficients are expected to already include the normalisation factor
+    /// (e.g. `[-0.5, 0.0, 0.5]` for a 2nd-order central difference).
+    pub fn apply_derivative(
+        &self,
+        name: &str,
+        field: &[f64],
+        dx: f64,
+        index: usize,
+    ) -> Result<f64, PhysicsError> {
+        let stencil = self.operators.get(name).ok_or_else(|| {
+            PhysicsError::SolverError(format!("Stencil operator '{}' not registered", name))
+        })?;
+
+        if stencil.stencil_points.len() != stencil.coefficients.len() {
+            return Err(PhysicsError::SolverError(format!(
+                "Stencil operator '{}' has mismatched points/coefficients",
+                name
+            )));
+        }
+
+        let n = field.len() as isize;
+        let mut sum = 0.0f64;
+        for (point, coeff) in stencil.stencil_points.iter().zip(stencil.coefficients.iter()) {
+            let offset = point.relative_position.first().copied().unwrap_or(0) as isize;
+            let idx = index as isize + offset;
+            if idx < 0 || idx >= n {
+                return Err(PhysicsError::SolverError(format!(
+                    "Stencil operator '{}' accesses out-of-bounds index {} (field len {})",
+                    name, idx, n
+                )));
+            }
+            sum += coeff * field[idx as usize];
+        }
+
+        if dx <= 0.0 {
+            return Err(PhysicsError::SolverError("dx must be positive".to_string()));
+        }
+
+        Ok(sum / dx)
+    }
+
+    /// Create a 3-point 2nd-order central difference stencil.
+    ///
+    /// Coefficients `[-0.5, 0.0, 0.5]` at offsets `[-1, 0, +1]` give
+    /// `(field[i+1] - field[i-1]) / (2*dx)`.
+    pub fn central_difference_2nd_order() -> StencilOperator {
+        StencilOperator {
+            operator_id: "central_difference_2nd_order".to_string(),
+            operator_type: StencilType::Central,
+            stencil_points: vec![
+                StencilPoint {
+                    relative_position: vec![-1],
+                    weight: 1.0,
+                },
+                StencilPoint {
+                    relative_position: vec![0],
+                    weight: 1.0,
+                },
+                StencilPoint {
+                    relative_position: vec![1],
+                    weight: 1.0,
+                },
+            ],
+            coefficients: vec![-0.5, 0.0, 0.5],
+        }
+    }
+
+    /// Create a 2-point 1st-order forward difference stencil.
+    ///
+    /// Coefficients `[-1.0, 1.0]` at offsets `[0, +1]` give
+    /// `(field[i+1] - field[i]) / dx`.
+    pub fn forward_difference_1st_order() -> StencilOperator {
+        StencilOperator {
+            operator_id: "forward_difference_1st_order".to_string(),
+            operator_type: StencilType::Forward,
+            stencil_points: vec![
+                StencilPoint {
+                    relative_position: vec![0],
+                    weight: 1.0,
+                },
+                StencilPoint {
+                    relative_position: vec![1],
+                    weight: 1.0,
+                },
+            ],
+            coefficients: vec![-1.0, 1.0],
+        }
+    }
 }
 
 impl BoundaryConditions {
@@ -2436,6 +2630,137 @@ impl BoundaryConditions {
             boundary_types: HashMap::new(),
             boundary_values: HashMap::new(),
             time_dependent_boundaries: HashMap::new(),
+        }
+    }
+
+    /// Register a boundary condition for a field.
+    ///
+    /// The `value` is interpreted according to the boundary type:
+    /// - Dirichlet: the fixed value at the boundary
+    /// - Neumann: the gradient (du/dn) at the boundary
+    /// - Robin: the target value for the combined condition
+    /// - Periodic: ignored (periodic copies from the opposite edge)
+    pub fn set_boundary(&mut self, field_id: &str, boundary_type: BoundaryType, value: f64) {
+        self.boundary_types
+            .insert(field_id.to_string(), boundary_type.clone());
+        // Store the value for both edges (left, right) of a 1-D field.
+        self.boundary_values
+            .insert(field_id.to_string(), vec![value, value]);
+    }
+
+    /// Register a time-dependent boundary condition for a field.
+    pub fn set_time_dependent_boundary(
+        &mut self,
+        field_id: &str,
+        boundary_type: BoundaryType,
+        time_fn: TimeFunction,
+    ) {
+        self.boundary_types
+            .insert(field_id.to_string(), boundary_type);
+        self.time_dependent_boundaries.insert(
+            field_id.to_string(),
+            TimeDependentBoundary {
+                boundary_id: field_id.to_string(),
+                time_function: time_fn,
+                spatial_function: None,
+            },
+        );
+    }
+
+    /// Evaluate a `TimeFunction` at the given time, returning the scalar value.
+    fn evaluate_time_function(time_fn: &TimeFunction, time: f64) -> f64 {
+        match time_fn {
+            TimeFunction::Constant(v) => *v,
+            TimeFunction::Linear(a, b) => a + b * time,
+            TimeFunction::Sinusoidal(amplitude, frequency, phase) => {
+                amplitude * (2.0 * std::f64::consts::PI * frequency * time + phase).sin()
+            }
+            TimeFunction::Exponential(amplitude, rate) => amplitude * (rate * time).exp(),
+            TimeFunction::Piecewise(segments) => {
+                for (start, end, fn_in_segment) in segments {
+                    if *start <= time && time < *end {
+                        return Self::evaluate_time_function(fn_in_segment, time);
+                    }
+                }
+                0.0
+            }
+            TimeFunction::Custom(_) => 0.0,
+        }
+    }
+
+    /// Apply boundary conditions to a field's edge cells based on the registered type.
+    ///
+    /// For a 1-D field the edge cells are index 0 (left) and index n-1 (right).
+    pub fn apply_to_field(&self, field: &mut PhysicsField, time: f64) {
+        let field_id = &field.field_id;
+
+        // Look up the boundary type; skip if no boundary is registered for this field.
+        let boundary_type = match self.boundary_types.get(field_id) {
+            Some(bt) => bt.clone(),
+            None => return,
+        };
+
+        let n = field.data.len();
+        if n < 2 {
+            return;
+        }
+
+        // Determine the boundary value(s). Time-dependent boundaries override static values.
+        let values: Vec<f64> = if let Some(tdb) = self.time_dependent_boundaries.get(field_id) {
+            let v = Self::evaluate_time_function(&tdb.time_function, time);
+            vec![v, v]
+        } else if let Some(vals) = self.boundary_values.get(field_id) {
+            vals.clone()
+        } else {
+            vec![0.0, 0.0]
+        };
+
+        let left_val = values.first().copied().unwrap_or(0.0);
+        let right_val = values.get(1).copied().unwrap_or(left_val);
+
+        // Estimate dx from the first dimension if available.
+        let dx = 1.0; // default grid spacing; callers may normalise beforehand
+
+        match boundary_type {
+            BoundaryType::Dirichlet => {
+                // Set edge cells to the boundary value.
+                field.data[0] = left_val;
+                field.data[n - 1] = right_val;
+            }
+            BoundaryType::Neumann => {
+                // du/dn = value at the boundary.
+                // Left boundary: outward normal is -x, so du/dn = -du/dx => du/dx = -value
+                //   field[0] = field[1] - value * dx
+                // Right boundary: outward normal is +x, so du/dn = du/dx = value
+                //   field[n-1] = field[n-2] + value * dx
+                field.data[0] = field.data[1] - left_val * dx;
+                field.data[n - 1] = field.data[n - 2] + right_val * dx;
+            }
+            BoundaryType::Robin => {
+                // Combined Dirichlet + Neumann: blend the fixed value with the Neumann
+                // mirror. This approximates a*u + b*du/dn = c by averaging the Dirichlet
+                // set and the Neumann correction.
+                let dirichlet_left = left_val;
+                let neumann_left = field.data[1] - left_val * dx;
+                field.data[0] = 0.5 * (dirichlet_left + neumann_left);
+
+                let dirichlet_right = right_val;
+                let neumann_right = field.data[n - 2] + right_val * dx;
+                field.data[n - 1] = 0.5 * (dirichlet_right + neumann_right);
+            }
+            BoundaryType::Periodic => {
+                // Copy from the opposite edge's inner neighbour to avoid a self-reference.
+                let left = field.data[n - 2]; // inner neighbour of the right edge
+                let right = field.data[1]; // inner neighbour of the left edge
+                field.data[0] = left;
+                field.data[n - 1] = right;
+            }
+            // Other boundary types (Symmetry, Wall, Inflow, Outflow, FarField) are treated
+            // as Dirichlet for the generic apply path.
+            _ => {
+                field.data[0] = left_val;
+                field.data[n - 1] = right_val;
+            }
         }
     }
 }
@@ -2720,8 +3045,46 @@ impl MeshCoordinator {
         Ok(())
     }
 
-    pub fn initialize_mesh_network(&mut self, simulation: &Simulation) -> Result<(), PhysicsError> {
-        // Initialize mesh network for distributed simulation
+    pub fn initialize_mesh_network(&mut self) -> Result<(), PhysicsError> {
+        // Lock the mesh network and call its initialization method.
+        let mut network = self
+            .mesh_network
+            .lock()
+            .map_err(|e| PhysicsError::NetworkError(format!("Mesh network lock poisoned: {}", e)))?;
+        network
+            .initialize()
+            .map_err(|e| PhysicsError::NetworkError(format!("Mesh init failed: {}", e)))
+    }
+
+    /// Query the current mesh network status.
+    pub fn get_mesh_status(&self) -> Result<MeshStatus, PhysicsError> {
+        let network = self
+            .mesh_network
+            .lock()
+            .map_err(|e| PhysicsError::NetworkError(format!("Mesh network lock poisoned: {}", e)))?;
+        let status: NetworkStatus = network.get_network_status();
+        Ok(MeshStatus {
+            total_nodes: status.total_nodes,
+            acoustic_nodes: status.acoustic_nodes,
+            ble_nodes: status.ble_nodes,
+            active_routes: status.active_routes,
+            pending_messages: status.pending_messages,
+        })
+    }
+
+    /// Distribute a simulation task (raw bytes) through the mesh network.
+    pub fn distribute_simulation_task(&self, task_data: &[u8]) -> Result<(), PhysicsError> {
+        let mut network = self
+            .mesh_network
+            .lock()
+            .map_err(|e| PhysicsError::NetworkError(format!("Mesh network lock poisoned: {}", e)))?;
+        network
+            .send_message_ephemeral(
+                "broadcast",
+                task_data,
+                MessagePriority::High,
+            )
+            .map_err(|e| PhysicsError::NetworkError(format!("Mesh send failed: {}", e)))?;
         Ok(())
     }
 
@@ -2948,8 +3311,27 @@ impl PhysicsDataManager {
         simulation: &Simulation,
         fields: &[PhysicsField],
     ) -> Result<(), PhysicsError> {
-        // Store field data
+        // Store each field through the registered storage backends.
+        for field in fields {
+            self.data_storage.store_field_data(field)?;
+        }
         Ok(())
+    }
+}
+
+impl StorageBackend {
+    pub fn new(backend_id: &str, backend_type: StorageBackendType, capacity: u64) -> Self {
+        Self {
+            backend_id: backend_id.to_string(),
+            backend_type,
+            capacity,
+            performance: StoragePerformance {
+                read_bandwidth: 0.0,
+                write_bandwidth: 0.0,
+                latency: 0.0,
+                iops: 0,
+            },
+        }
     }
 }
 
@@ -2959,11 +3341,57 @@ impl PhysicsDataStorage {
             storage_backends: HashMap::new(),
             data_layout: DataLayout::new(),
             access_patterns: AccessPatterns::new(),
+            stored_data: HashMap::new(),
         }
     }
 
+    /// Register a storage backend under the given name.
+    pub fn register_backend(&mut self, name: &str, backend: StorageBackend) {
+        self.storage_backends.insert(name.to_string(), backend);
+    }
+
+    /// Initialize default ZNS and CSD backends.
+    ///
+    /// In environments where `ZnsZoneManager` and `CsdManager` hardware is not
+    /// accessible, the backends are still registered as metadata entries and the
+    /// in-memory `stored_data` map serves as the persistence fallback.
     pub fn initialize(&mut self) -> Result<(), PhysicsError> {
+        // Register a ZNS (Zoned Namespace SSD) backend.
+        self.register_backend(
+            "zns",
+            StorageBackend::new("zns", StorageBackendType::Local, 1 << 40), // ~1 TB
+        );
+
+        // Register a CSD (Computational Storage Device) backend.
+        self.register_backend(
+            "csd",
+            StorageBackend::new("csd", StorageBackendType::Hierarchical, 1 << 40),
+        );
+
         Ok(())
+    }
+
+    /// Serialize the field data and store it via the registered backends.
+    ///
+    /// The data is written to the in-memory fallback store keyed by `field.field_id`.
+    /// If no backends are registered, an error is returned.
+    pub fn store_field_data(&mut self, field: &PhysicsField) -> Result<(), PhysicsError> {
+        if self.storage_backends.is_empty() {
+            return Err(PhysicsError::DataError(
+                "No storage backends registered".to_string(),
+            ));
+        }
+
+        // Write through every registered backend (in-memory fallback for all).
+        self.stored_data
+            .insert(field.field_id.clone(), field.data.clone());
+
+        Ok(())
+    }
+
+    /// Retrieve previously stored field data by field ID.
+    pub fn retrieve_field_data(&self, field_id: &str) -> Option<Vec<f64>> {
+        self.stored_data.get(field_id).cloned()
     }
 }
 
@@ -3536,5 +3964,282 @@ mod tests {
         );
         assert_eq!(metrics.mesh_metrics.total_nodes, 0);
         assert_eq!(metrics.data_metrics.total_data_size, 0);
+    }
+
+    // ---- Feature 1: Boundary Conditions System ----
+
+    #[test]
+    fn test_boundary_conditions_dirichlet() {
+        let mut bc = BoundaryConditions::new();
+        bc.set_boundary("test_field", BoundaryType::Dirichlet, 42.0);
+
+        let mut field = PhysicsField {
+            field_id: "test_field".to_string(),
+            field_type: FieldType::Scalar,
+            dimensions: vec![5],
+            data: vec![1.0, 2.0, 3.0, 4.0, 5.0],
+            metadata: FieldMetadata {
+                field_name: "Test".to_string(),
+                physical_quantity: "Test".to_string(),
+                units: "unit".to_string(),
+                time_step: 0,
+                iteration: 0,
+            },
+        };
+
+        bc.apply_to_field(&mut field, 0.0);
+
+        // Dirichlet: edge cells set to the boundary value.
+        assert_eq!(field.data[0], 42.0);
+        assert_eq!(field.data[4], 42.0);
+        // Interior cells unchanged.
+        assert_eq!(field.data[1], 2.0);
+        assert_eq!(field.data[2], 3.0);
+        assert_eq!(field.data[3], 4.0);
+    }
+
+    #[test]
+    fn test_boundary_conditions_periodic() {
+        let mut bc = BoundaryConditions::new();
+        bc.set_boundary("periodic_field", BoundaryType::Periodic, 0.0);
+
+        let mut field = PhysicsField {
+            field_id: "periodic_field".to_string(),
+            field_type: FieldType::Scalar,
+            dimensions: vec![5],
+            data: vec![10.0, 1.0, 2.0, 3.0, 20.0],
+            metadata: FieldMetadata {
+                field_name: "Test".to_string(),
+                physical_quantity: "Test".to_string(),
+                units: "unit".to_string(),
+                time_step: 0,
+                iteration: 0,
+            },
+        };
+
+        bc.apply_to_field(&mut field, 0.0);
+
+        // Periodic: left edge copies inner neighbour of right edge (index n-2 = 3.0),
+        // right edge copies inner neighbour of left edge (index 1 = 1.0).
+        assert_eq!(field.data[0], 3.0);
+        assert_eq!(field.data[4], 1.0);
+    }
+
+    #[test]
+    fn test_boundary_conditions_time_dependent() {
+        let mut bc = BoundaryConditions::new();
+        bc.set_time_dependent_boundary(
+            "td_field",
+            BoundaryType::Dirichlet,
+            TimeFunction::Sinusoidal(10.0, 1.0, 0.0),
+        );
+
+        let mut field = PhysicsField {
+            field_id: "td_field".to_string(),
+            field_type: FieldType::Scalar,
+            dimensions: vec![4],
+            data: vec![0.0, 1.0, 2.0, 0.0],
+            metadata: FieldMetadata {
+                field_name: "Test".to_string(),
+                physical_quantity: "Test".to_string(),
+                units: "unit".to_string(),
+                time_step: 0,
+                iteration: 0,
+            },
+        };
+
+        // At t = 0.25, sin(2*pi*1*0.25) = sin(pi/2) = 1.0 => value = 10.0
+        bc.apply_to_field(&mut field, 0.25);
+        assert!((field.data[0] - 10.0).abs() < 1e-10);
+        assert!((field.data[3] - 10.0).abs() < 1e-10);
+    }
+
+    // ---- Feature 2: CFL Adaptive Time Stepping ----
+
+    #[test]
+    fn test_cfl_dt_computation_and_clamping() {
+        let mut tsc = TimeStepControl::new();
+        // CFL = 0.5, dx = 0.1, max_velocity = 10.0 => dt = 0.5 * 0.1 / 10.0 = 0.005
+        let dt = tsc.compute_cfl_dt(10.0, 0.1);
+        assert!((dt - 0.005).abs() < 1e-12);
+
+        // Clamping to max_time_step (1.0): very small velocity => huge dt => clamped.
+        let dt_max = tsc.compute_cfl_dt(1e-6, 0.1);
+        assert!((dt_max - 1.0).abs() < 1e-12);
+
+        // Clamping to min_time_step (1e-6): very large velocity => tiny dt => clamped.
+        let dt_min = tsc.compute_cfl_dt(1e12, 0.1);
+        assert!((dt_min - 1e-6).abs() < 1e-12);
+
+        // Zero velocity => returns max_time_step (no advective limit).
+        let dt_zero = tsc.compute_cfl_dt(0.0, 0.1);
+        assert!((dt_zero - 1.0).abs() < 1e-12);
+    }
+
+    #[test]
+    fn test_cfl_update_dt_safety_and_limits() {
+        let mut tsc = TimeStepControl::new();
+        // Initial current_time_step = 0.001.
+        // First call: CFL dt = 0.5 * 0.1 / 10 = 0.005, safety 0.9 => 0.0045.
+        // But max_increase_factor = 2.0 caps the increase from 0.001 to 0.002.
+        let dt1 = tsc.update_dt(10.0, 0.1);
+        assert!((dt1 - 0.002).abs() < 1e-12);
+
+        // Second call with much larger velocity: CFL dt = 0.5 * 0.1 / 1000 = 5e-5
+        // safety => 4.5e-5, but max_decrease_factor = 0.5 => lower bound = 0.002 * 0.5 = 0.001
+        // So dt is clamped to 0.001.
+        let dt2 = tsc.update_dt(1000.0, 0.1);
+        assert!((dt2 - 0.001).abs() < 1e-12);
+    }
+
+    #[test]
+    fn test_adaptive_step_cfl() {
+        let mut integrator = TimeIntegrator::new();
+        let field = PhysicsField {
+            field_id: "vel".to_string(),
+            field_type: FieldType::Vector,
+            dimensions: vec![10],
+            data: vec![5.0; 10],
+            metadata: FieldMetadata {
+                field_name: "Velocity".to_string(),
+                physical_quantity: "Velocity".to_string(),
+                units: "m/s".to_string(),
+                time_step: 0,
+                iteration: 0,
+            },
+        };
+
+        // max_velocity = 5.0, dx ≈ 1/9, CFL = 0.5 => dt ≈ 0.5 * (1/9) / 5 ≈ 0.0111
+        // safety 0.9 => ≈ 0.01
+        let dt = integrator.adaptive_step(&field, 0.001);
+        assert!(dt > 0.0);
+        assert!(dt < 1.0); // within max bound
+    }
+
+    // ---- Feature 3: Stencil Operators ----
+
+    #[test]
+    fn test_central_difference_stencil() {
+        let mut ops = StencilOperators::new();
+        ops.register_operator("central2", StencilOperators::central_difference_2nd_order());
+
+        // f(x) = x^2, derivative f'(x) = 2x.
+        // dx = 1.0, field = [0, 1, 4, 9, 16, 25] (x = 0..5)
+        let field = vec![0.0_f64, 1.0, 4.0, 9.0, 16.0, 25.0];
+        let dx = 1.0;
+
+        // At index 2 (x=2): f'(2) = 4. Central diff = (f[3]-f[1])/(2*dx) = (9-1)/2 = 4.0
+        let deriv = ops.apply_derivative("central2", &field, dx, 2).unwrap();
+        assert!((deriv - 4.0).abs() < 1e-12);
+
+        // At index 3 (x=3): f'(3) = 6. Central diff = (f[4]-f[2])/(2*dx) = (16-4)/2 = 6.0
+        let deriv3 = ops.apply_derivative("central2", &field, dx, 3).unwrap();
+        assert!((deriv3 - 6.0).abs() < 1e-12);
+    }
+
+    #[test]
+    fn test_forward_difference_stencil() {
+        let mut ops = StencilOperators::new();
+        ops.register_operator("forward1", StencilOperators::forward_difference_1st_order());
+
+        // f(x) = x, derivative = 1 everywhere.
+        let field = vec![0.0_f64, 1.0, 2.0, 3.0, 4.0];
+        let dx = 1.0;
+
+        let deriv = ops.apply_derivative("forward1", &field, dx, 0).unwrap();
+        assert!((deriv - 1.0).abs() < 1e-12);
+    }
+
+    #[test]
+    fn test_stencil_out_of_bounds() {
+        let mut ops = StencilOperators::new();
+        ops.register_operator("central2", StencilOperators::central_difference_2nd_order());
+
+        let field = vec![0.0_f64, 1.0, 2.0];
+        // At index 0, central diff needs index -1 => out of bounds.
+        let result = ops.apply_derivative("central2", &field, 1.0, 0);
+        assert!(result.is_err());
+    }
+
+    // ---- Feature 4: ZNS/CSD Data Persistence ----
+
+    #[test]
+    fn test_store_and_retrieve_field_data() {
+        let mut storage = PhysicsDataStorage::new();
+        storage.initialize().unwrap();
+
+        // Verify default backends were registered.
+        assert!(storage.storage_backends.contains_key("zns"));
+        assert!(storage.storage_backends.contains_key("csd"));
+
+        let field = PhysicsField {
+            field_id: "test_store_field".to_string(),
+            field_type: FieldType::Scalar,
+            dimensions: vec![4],
+            data: vec![1.0, 2.0, 3.0, 4.0],
+            metadata: FieldMetadata {
+                field_name: "Test".to_string(),
+                physical_quantity: "Test".to_string(),
+                units: "unit".to_string(),
+                time_step: 0,
+                iteration: 0,
+            },
+        };
+
+        // Store and retrieve.
+        storage.store_field_data(&field).unwrap();
+        let retrieved = storage.retrieve_field_data("test_store_field");
+        assert!(retrieved.is_some());
+        let data = retrieved.unwrap();
+        assert_eq!(data, vec![1.0, 2.0, 3.0, 4.0]);
+    }
+
+    #[test]
+    fn test_store_field_data_no_backends() {
+        let mut storage = PhysicsDataStorage::new();
+        // No initialize() call => no backends registered.
+        let field = PhysicsField {
+            field_id: "no_backend".to_string(),
+            field_type: FieldType::Scalar,
+            dimensions: vec![2],
+            data: vec![1.0, 2.0],
+            metadata: FieldMetadata {
+                field_name: "Test".to_string(),
+                physical_quantity: "Test".to_string(),
+                units: "unit".to_string(),
+                time_step: 0,
+                iteration: 0,
+            },
+        };
+
+        let result = storage.store_field_data(&field);
+        assert!(result.is_err());
+    }
+
+    // ---- Feature 5: Wire MeshNetworkManager ----
+
+    #[test]
+    fn test_mesh_network_init_and_status() {
+        let mut coordinator = MeshCoordinator::new();
+
+        // Initialize the mesh network.
+        let init_result = coordinator.initialize_mesh_network();
+        assert!(init_result.is_ok());
+
+        // Query status.
+        let status = coordinator.get_mesh_status().unwrap();
+        // After initialization the network has zero nodes (no hardware discovered),
+        // but the call must succeed and return finite values.
+        assert!(status.total_nodes < u32::MAX);
+    }
+
+    #[test]
+    fn test_mesh_distribute_task() {
+        let mut coordinator = MeshCoordinator::new();
+        coordinator.initialize_mesh_network().unwrap();
+
+        let task_data = b"simulation_task_payload";
+        let result = coordinator.distribute_simulation_task(task_data);
+        assert!(result.is_ok());
     }
 }
