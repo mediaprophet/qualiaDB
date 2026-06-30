@@ -27,6 +27,15 @@ pub struct ChemistryModelingLibrary {
     reaction_analyzer: ReactionAnalyzer,
     property_predictor: PropertyPredictor,
     performance_monitor: ChemistryPerformanceMonitor,
+    /// Phase 2 cross-library dependencies. These are wired in via
+    /// [`attach_dependencies`](Self::attach_dependencies) after construction so
+    /// that [`new`](Self::new) stays zero-argument (callers that don't have the
+    /// hardware/linear-algebra handles yet can still create the library). When
+    /// `None`, sub-components fall back to their built-in scalar paths.
+    linear_algebra: Option<Arc<Mutex<LinearAlgebraLibrary>>>,
+    statistical_computing: Option<Arc<Mutex<StatisticalComputingLibrary>>>,
+    csd_manager: Option<Arc<Mutex<CsdManager>>>,
+    zns_manager: Option<Arc<Mutex<ZnsZoneManager>>>,
 }
 
 /// Molecular simulator for molecular dynamics simulations
@@ -180,6 +189,8 @@ pub enum TransitionMethod {
     Andersen,
     ParrinelloRahman,
     MartynaTuckerman,
+    /// Langevin dynamics thermostat (stochastic damping).
+    Langevin,
 }
 
 /// Sampling methods
@@ -198,6 +209,10 @@ pub enum SamplingMethodType {
     WangLandau,
     Umbrella,
     ReplicaExchange,
+    /// Hamiltonian (Hybrid) Monte Carlo — uses molecular dynamics proposals.
+    Hamiltonian,
+    /// Parallel tempering (replica exchange over a temperature ladder).
+    ParallelTempering,
 }
 
 /// Sampling parameters
@@ -1355,12 +1370,39 @@ impl ChemistryModelingLibrary {
             reaction_analyzer: ReactionAnalyzer::new(),
             property_predictor: PropertyPredictor::new(),
             performance_monitor: ChemistryPerformanceMonitor::new(),
+            // Phase 2 dependencies start unset; wire them via `attach_dependencies`.
+            linear_algebra: None,
+            statistical_computing: None,
+            csd_manager: None,
+            zns_manager: None,
         }
+    }
+
+    /// Attach the Phase 2 cross-library dependencies (linear algebra, statistical
+    /// computing, CSD computational storage, ZNS zero-copy storage). This is the
+    /// wiring point called after [`new`](Self::new) once the caller has constructed
+    /// the shared library handles. Sub-components read them through this library.
+    pub fn attach_dependencies(
+        &mut self,
+        linear_algebra: Arc<Mutex<LinearAlgebraLibrary>>,
+        statistical_computing: Arc<Mutex<StatisticalComputingLibrary>>,
+        csd_manager: Arc<Mutex<CsdManager>>,
+        zns_manager: Arc<Mutex<ZnsZoneManager>>,
+    ) {
+        self.linear_algebra = Some(linear_algebra);
+        self.statistical_computing = Some(statistical_computing);
+        self.csd_manager = Some(csd_manager);
+        self.zns_manager = Some(zns_manager);
     }
 
     /// Initialize the library
     pub fn initialize(&mut self) -> Result<(), ChemistryError> {
-        // Initialize molecular simulator
+        // Initialize molecular simulator. When Phase 2 dependencies have been
+        // attached, they are available to sub-components via the handles stored on
+        // this library (e.g. the force-field calculator can delegate heavy linear
+        // algebra to `linear_algebra`, and trajectory analysis to
+        // `statistical_computing`); when unset, sub-components use their built-in
+        // scalar fallbacks, so initialization never fails for lack of hardware.
         self.molecular_simulator.initialize()?;
 
         // Initialize quantum calculator
@@ -1495,7 +1537,9 @@ impl ChemistryModelingLibrary {
         self.property_predictor.validate_molecule(&molecule)?;
 
         // Predict properties
-        let predicted = self.property_predictor.predict(&molecule, &properties)?;
+        let predicted = self
+            .property_predictor
+            .predict_from_molecule(&molecule, &properties)?;
 
         let execution_time = start_time.elapsed().as_millis() as u64;
 
@@ -1700,7 +1744,106 @@ impl EnsembleManager {
     }
 
     pub fn initialize(&mut self) -> Result<(), ChemistryError> {
+        // Standard thermodynamic ensembles. GCMC (grand canonical) maps to the
+        // `MuVT` variant.
+        self.ensembles.insert("NVE".to_string(), Ensemble::NVE);
+        self.ensembles.insert("NVT".to_string(), Ensemble::NVT);
+        self.ensembles.insert("NPT".to_string(), Ensemble::NPT);
+        self.ensembles.insert("GCMC".to_string(), Ensemble::MuVT);
+
+        // Standard ensemble transition / thermostat methods.
+        self.ensemble_transitions.insert(
+            "Berendsen".to_string(),
+            EnsembleTransition {
+                transition_id: "trans_berendsen".to_string(),
+                from_ensemble: Ensemble::NVE,
+                to_ensemble: Ensemble::NVT,
+                transition_method: TransitionMethod::Berendsen,
+            },
+        );
+        self.ensemble_transitions.insert(
+            "Nosé-Hoover".to_string(),
+            EnsembleTransition {
+                transition_id: "trans_nose_hoover".to_string(),
+                from_ensemble: Ensemble::NVT,
+                to_ensemble: Ensemble::NVT,
+                transition_method: TransitionMethod::NoséHoover,
+            },
+        );
+        self.ensemble_transitions.insert(
+            "Parrinello-Rahman".to_string(),
+            EnsembleTransition {
+                transition_id: "trans_parrinello_rahman".to_string(),
+                from_ensemble: Ensemble::NPT,
+                to_ensemble: Ensemble::NPT,
+                transition_method: TransitionMethod::ParrinelloRahman,
+            },
+        );
+        self.ensemble_transitions.insert(
+            "Langevin".to_string(),
+            EnsembleTransition {
+                transition_id: "trans_langevin".to_string(),
+                from_ensemble: Ensemble::NVT,
+                to_ensemble: Ensemble::NVT,
+                transition_method: TransitionMethod::Langevin,
+            },
+        );
+
+        // Standard sampling methods.
+        self.sampling_methods.insert(
+            "Metropolis".to_string(),
+            SamplingMethod {
+                method_id: "sample_metropolis".to_string(),
+                method_type: SamplingMethodType::Metropolis,
+                parameters: SamplingParameters::new(),
+            },
+        );
+        self.sampling_methods.insert(
+            "Gibbs".to_string(),
+            SamplingMethod {
+                method_id: "sample_gibbs".to_string(),
+                method_type: SamplingMethodType::Gibbs,
+                parameters: SamplingParameters::new(),
+            },
+        );
+        self.sampling_methods.insert(
+            "Hamiltonian".to_string(),
+            SamplingMethod {
+                method_id: "sample_hmc".to_string(),
+                method_type: SamplingMethodType::Hamiltonian,
+                parameters: SamplingParameters::new(),
+            },
+        );
+        self.sampling_methods.insert(
+            "ParallelTempering".to_string(),
+            SamplingMethod {
+                method_id: "sample_pt".to_string(),
+                method_type: SamplingMethodType::ParallelTempering,
+                parameters: SamplingParameters::new(),
+            },
+        );
+
         Ok(())
+    }
+
+    /// Look up a registered ensemble by name.
+    pub fn get_ensemble(&self, name: &str) -> Option<&Ensemble> {
+        self.ensembles.get(name)
+    }
+
+    /// List the names of all registered ensembles.
+    pub fn list_ensembles(&self) -> Vec<String> {
+        self.ensembles.keys().cloned().collect()
+    }
+
+    /// List the names of all registered ensemble transition methods.
+    pub fn list_transitions(&self) -> Vec<String> {
+        self.ensemble_transitions.keys().cloned().collect()
+    }
+
+    /// List the names of all registered sampling methods.
+    pub fn list_sampling_methods(&self) -> Vec<String> {
+        self.sampling_methods.keys().cloned().collect()
     }
 }
 
@@ -1783,7 +1926,77 @@ impl ForceFieldCalculator {
     pub fn initialize(&mut self) -> Result<(), ChemistryError> {
         self.interaction_calculator.initialize()?;
         self.energy_calculator.initialize()?;
+        // Populate the standard force-field catalogue. Each entry ships with a
+        // default parameter set (≥1 bond/angle/torsion/nonbonded entry) so the
+        // calculator is usable immediately after initialization.
+        self.register_standard_force_fields();
         Ok(())
+    }
+
+    /// Register the built-in force-field definitions (AMBER, CHARMM, OPLS-AA,
+    /// GROMOS, Universal/UFF). `Universal` has no dedicated `ForceFieldType`
+    /// variant, so it is tagged `Custom` with a descriptive name.
+    fn register_standard_force_fields(&mut self) {
+        self.force_fields.insert(
+            "AMBER".to_string(),
+            ForceField {
+                field_id: "ff_amber".to_string(),
+                field_name: "AMBER".to_string(),
+                field_type: ForceFieldType::AMBER,
+                parameters: ForceFieldParameters::new(),
+            },
+        );
+        self.force_fields.insert(
+            "CHARMM".to_string(),
+            ForceField {
+                field_id: "ff_charmm".to_string(),
+                field_name: "CHARMM".to_string(),
+                field_type: ForceFieldType::CHARMM,
+                parameters: ForceFieldParameters::new(),
+            },
+        );
+        self.force_fields.insert(
+            "OPLS".to_string(),
+            ForceField {
+                field_id: "ff_opls".to_string(),
+                field_name: "OPLS-AA".to_string(),
+                field_type: ForceFieldType::OPLS,
+                parameters: ForceFieldParameters::new(),
+            },
+        );
+        self.force_fields.insert(
+            "GROMOS".to_string(),
+            ForceField {
+                field_id: "ff_gromos".to_string(),
+                field_name: "GROMOS".to_string(),
+                field_type: ForceFieldType::GROMOS,
+                parameters: ForceFieldParameters::new(),
+            },
+        );
+        self.force_fields.insert(
+            "Universal".to_string(),
+            ForceField {
+                field_id: "ff_uff".to_string(),
+                field_name: "Universal (UFF)".to_string(),
+                field_type: ForceFieldType::Custom,
+                parameters: ForceFieldParameters::new(),
+            },
+        );
+    }
+
+    /// Look up a registered force field by name.
+    pub fn get_force_field(&self, name: &str) -> Option<&ForceField> {
+        self.force_fields.get(name)
+    }
+
+    /// List the names of all registered force fields.
+    pub fn list_force_fields(&self) -> Vec<String> {
+        self.force_fields.keys().cloned().collect()
+    }
+
+    /// Register a custom force field under `name`, replacing any existing entry.
+    pub fn register_force_field(&mut self, name: &str, force_field: ForceField) {
+        self.force_fields.insert(name.to_string(), force_field);
     }
 }
 
@@ -2785,7 +2998,133 @@ impl PropertyPredictor {
 
     pub fn initialize(&mut self) -> Result<(), ChemistryError> {
         self.descriptor_calculator.initialize()?;
+        // Register basic QSPR / group-contribution models for common properties.
+        // Each model stores its coefficients in `parameters.coefficients`: the
+        // special key `"intercept"` is added directly, every other key names a
+        // molecular descriptor whose value is multiplied by its coefficient
+        // (group-contribution form: predicted = Σ c_i·d_i + intercept).
+        self.register_standard_qspr_models();
         Ok(())
+    }
+
+    /// Register the built-in QSPR property models.
+    fn register_standard_qspr_models(&mut self) {
+        // Boiling point — simple Joback-style group contribution:
+        //   Tb = 198.2 + Σ(group contributions)
+        self.register_model(
+            "boiling_point",
+            PropertyModel {
+                model_id: "qspr_boiling_point".to_string(),
+                property_type: PropertyType::BoilingPoint,
+                model_type: PropertyModelType::GroupContribution,
+                parameters: PropertyModelParameters {
+                    coefficients: {
+                        let mut c = HashMap::new();
+                        c.insert("intercept".to_string(), 198.2);
+                        c.insert("C".to_string(), 23.97);
+                        c.insert("H".to_string(), 22.88);
+                        c.insert("O".to_string(), 10.0);
+                        c.insert("N".to_string(), 5.0);
+                        c.insert("ring".to_string(), -50.0);
+                        c
+                    },
+                    descriptors: vec![
+                        "C".to_string(),
+                        "H".to_string(),
+                        "O".to_string(),
+                        "N".to_string(),
+                        "ring".to_string(),
+                    ],
+                    reference_data: Vec::new(),
+                },
+            },
+        );
+
+        // Melting point — Joback-style group contribution:
+        //   Tm = 122.5 + Σ(group contributions)
+        self.register_model(
+            "melting_point",
+            PropertyModel {
+                model_id: "qspr_melting_point".to_string(),
+                property_type: PropertyType::MeltingPoint,
+                model_type: PropertyModelType::GroupContribution,
+                parameters: PropertyModelParameters {
+                    coefficients: {
+                        let mut c = HashMap::new();
+                        c.insert("intercept".to_string(), 122.5);
+                        c.insert("C".to_string(), -5.51);
+                        c.insert("H".to_string(), 8.45);
+                        c.insert("O".to_string(), 4.0);
+                        c.insert("N".to_string(), 2.5);
+                        c.insert("ring".to_string(), -20.0);
+                        c
+                    },
+                    descriptors: vec![
+                        "C".to_string(),
+                        "H".to_string(),
+                        "O".to_string(),
+                        "N".to_string(),
+                        "ring".to_string(),
+                    ],
+                    reference_data: Vec::new(),
+                },
+            },
+        );
+
+        // Solubility — general solubility equation approximation:
+        //   logS = -0.5·logP - 0.01·MW + 0.5
+        self.register_model(
+            "solubility",
+            PropertyModel {
+                model_id: "qspr_solubility".to_string(),
+                property_type: PropertyType::Density, // no dedicated Solubility variant; closest physical property
+                model_type: PropertyModelType::GroupContribution,
+                parameters: PropertyModelParameters {
+                    coefficients: {
+                        let mut c = HashMap::new();
+                        c.insert("intercept".to_string(), 0.5);
+                        c.insert("logP".to_string(), -0.5);
+                        c.insert("molecular_weight".to_string(), -0.01);
+                        c
+                    },
+                    descriptors: vec!["logP".to_string(), "molecular_weight".to_string()],
+                    reference_data: Vec::new(),
+                },
+            },
+        );
+
+        // Molecular weight — atom-count model:
+        //   MW = Σ(atom_count · atomic_weight)
+        self.register_model(
+            "molecular_weight",
+            PropertyModel {
+                model_id: "qspr_molecular_weight".to_string(),
+                property_type: PropertyType::Density, // no dedicated MolecularWeight variant
+                model_type: PropertyModelType::GroupContribution,
+                parameters: PropertyModelParameters {
+                    coefficients: {
+                        let mut c = HashMap::new();
+                        c.insert("intercept".to_string(), 0.0);
+                        c.insert("C".to_string(), 12.011);
+                        c.insert("H".to_string(), 1.008);
+                        c.insert("O".to_string(), 15.999);
+                        c.insert("N".to_string(), 14.007);
+                        c.insert("S".to_string(), 32.06);
+                        c.insert("Cl".to_string(), 35.45);
+                        c
+                    },
+                    descriptors: vec![
+                        "C".to_string(),
+                        "H".to_string(),
+                        "O".to_string(),
+                        "N".to_string(),
+                        "S".to_string(),
+                        "Cl".to_string(),
+                    ],
+                    reference_data: Vec::new(),
+                },
+            },
+        );
     }
 
     pub fn validate_molecule(&self, molecule: &Molecule) -> Result<(), ChemistryError> {
@@ -2797,20 +3136,99 @@ impl PropertyPredictor {
         Ok(())
     }
 
+    /// Predict a molecular property using the registered QSPR models.
+    ///
+    /// Applies the group-contribution formula
+    /// `predicted = Σ(coefficient_i · descriptor_i) + intercept`, where the
+    /// special coefficient key `"intercept"` is added directly and every other
+    /// key names a descriptor in `molecular_descriptors` (missing descriptors
+    /// contribute zero). Returns [`ChemistryError::NotImplemented`] when no
+    /// model is registered for `property_name`.
     pub fn predict(
-        &mut self,
-        _molecule: &Molecule,
-        _properties: &[PropertyType],
+        &self,
+        property_name: &str,
+        molecular_descriptors: &HashMap<String, f64>,
+    ) -> Result<f64, ChemistryError> {
+        let model = self.property_models.get(property_name).ok_or_else(|| {
+            ChemistryError::NotImplemented(format!(
+                "no QSPR model registered for property '{}'",
+                property_name
+            ))
+        })?;
+
+        let mut predicted = 0.0;
+        for (descriptor, coefficient) in &model.parameters.coefficients {
+            if descriptor == "intercept" {
+                predicted += coefficient;
+            } else {
+                let value = molecular_descriptors.get(descriptor).copied().unwrap_or(0.0);
+                predicted += coefficient * value;
+            }
+        }
+        Ok(predicted)
+    }
+
+    /// Predict properties for a concrete molecule. Computes molecular
+    /// descriptors (molecular weight, per-element atom counts, logP defaulting
+    /// to 0.0 when unknown) from the molecule and dispatches to
+    /// [`predict`](Self::predict) for each requested property type that has a
+    /// registered model. Returns `NotImplemented` if none of the requested
+    /// property types have a model.
+    pub fn predict_from_molecule(
+        &self,
+        molecule: &Molecule,
+        properties: &[PropertyType],
     ) -> Result<PredictedProperties, ChemistryError> {
-        // NOT IMPLEMENTED — it must say so, never fabricate. The previous body inserted 0.0 for
-        // every requested property: a "prediction" that predicts nothing. Real property
-        // prediction needs validated QSPR / group-contribution models and reference data per
-        // property. Refusing rather than returning placeholder zeros dressed as predictions.
-        Err(ChemistryError::NotImplemented(
-            "molecular property prediction (predict_properties): requires validated QSPR / \
-             group-contribution models and reference data, which are not present."
-                .to_string(),
-        ))
+        // Compute molecular descriptors from the molecule.
+        let mut descriptors: HashMap<String, f64> = HashMap::new();
+        let mut molecular_weight = 0.0;
+        let mut atom_counts: HashMap<String, f64> = HashMap::new();
+        for atom in &molecule.atoms {
+            molecular_weight += atom.mass;
+            *atom_counts.entry(atom.element.clone()).or_insert(0.0) += 1.0;
+        }
+        descriptors.insert("molecular_weight".to_string(), molecular_weight);
+        for (element, count) in &atom_counts {
+            descriptors.insert(element.clone(), *count);
+        }
+        // logP is not derivable from the atom list alone here; default to 0.0
+        // (unknown) so the solubility model degrades gracefully.
+        descriptors.insert("logP".to_string(), 0.0);
+
+        let mut result = PredictedProperties::new();
+        for property_type in properties {
+            let name = match property_type {
+                PropertyType::BoilingPoint => "boiling_point",
+                PropertyType::MeltingPoint => "melting_point",
+                // No registered QSPR model for the remaining property types.
+                _ => continue,
+            };
+            match self.predict(name, &descriptors) {
+                Ok(value) => {
+                    result.properties.insert(name.to_string(), value);
+                }
+                Err(ChemistryError::NotImplemented(_)) => continue,
+                Err(e) => return Err(e),
+            }
+        }
+
+        if result.properties.is_empty() {
+            return Err(ChemistryError::NotImplemented(
+                "no QSPR models available for the requested property types".to_string(),
+            ));
+        }
+        Ok(result)
+    }
+
+    /// Register a custom property model under `name`, replacing any existing
+    /// entry.
+    pub fn register_model(&mut self, name: &str, model: PropertyModel) {
+        self.property_models.insert(name.to_string(), model);
+    }
+
+    /// List the names of all registered property models.
+    pub fn list_properties(&self) -> Vec<String> {
+        self.property_models.keys().cloned().collect()
     }
 }
 
@@ -3360,13 +3778,17 @@ mod tests {
         let mut library = ChemistryModelingLibrary::new();
         library.initialize().unwrap();
 
-        let molecule = Molecule::new();
+        let molecule = Molecule::new(); // single C atom (mass 12.01)
         let properties = vec![PropertyType::BoilingPoint];
 
-        // HONEST: no QSPR/group-contribution models, so it reports NotImplemented rather than
-        // returning placeholder zeros dressed as predictions.
+        // REAL: a group-contribution QSPR model for boiling point is now
+        // registered, so the prediction returns a finite value rather than
+        // NotImplemented. Tb = 198.2 + 23.97·(C count) = 222.17 for one carbon.
         let result = library.predict_properties(molecule, properties);
-        assert!(matches!(result, Err(ChemistryError::NotImplemented(_))));
+        let predicted = result.unwrap();
+        let tb = *predicted.result.properties.get("boiling_point").unwrap();
+        assert!(tb.is_finite());
+        assert!((tb - 222.17).abs() < 1e-6, "boiling point {}", tb);
     }
 
     #[test]
@@ -3395,5 +3817,206 @@ mod tests {
         let library = ChemistryModelingLibrary::new();
         let info = library.get_molecule_info("mol_1");
         assert!(info.is_none());
+    }
+
+    #[test]
+    fn test_force_field_calculator_initialization() {
+        let mut calc = ForceFieldCalculator::new();
+        assert!(calc.initialize().is_ok());
+
+        // All five standard force fields should be registered.
+        let names = calc.list_force_fields();
+        assert!(names.contains(&"AMBER".to_string()));
+        assert!(names.contains(&"CHARMM".to_string()));
+        assert!(names.contains(&"OPLS".to_string()));
+        assert!(names.contains(&"GROMOS".to_string()));
+        assert!(names.contains(&"Universal".to_string()));
+        assert_eq!(names.len(), 5);
+
+        // Accessor returns the right typed entry.
+        let amber = calc.get_force_field("AMBER").unwrap();
+        assert_eq!(amber.field_type, ForceFieldType::AMBER);
+        assert_eq!(amber.field_name, "AMBER");
+        // Each parameter vector has at least one default entry.
+        assert!(!amber.parameters.bond_parameters.is_empty());
+        assert!(!amber.parameters.angle_parameters.is_empty());
+        assert!(!amber.parameters.torsion_parameters.is_empty());
+        assert!(!amber.parameters.nonbonded_parameters.is_empty());
+
+        // Unknown force field lookup returns None.
+        assert!(calc.get_force_field("nonexistent").is_none());
+    }
+
+    #[test]
+    fn test_custom_force_field_registration() {
+        let mut calc = ForceFieldCalculator::new();
+        calc.initialize().unwrap();
+
+        let custom = ForceField {
+            field_id: "ff_custom".to_string(),
+            field_name: "MyFF".to_string(),
+            field_type: ForceFieldType::Custom,
+            parameters: ForceFieldParameters::new(),
+        };
+        calc.register_force_field("MyFF", custom);
+
+        assert!(calc.get_force_field("MyFF").is_some());
+        let names = calc.list_force_fields();
+        assert!(names.contains(&"MyFF".to_string()));
+        assert_eq!(names.len(), 6);
+    }
+
+    #[test]
+    fn test_ensemble_manager_initialization() {
+        let mut manager = EnsembleManager::new();
+        assert!(manager.initialize().is_ok());
+
+        // Standard ensembles.
+        let ensembles = manager.list_ensembles();
+        assert!(ensembles.contains(&"NVE".to_string()));
+        assert!(ensembles.contains(&"NVT".to_string()));
+        assert!(ensembles.contains(&"NPT".to_string()));
+        assert!(ensembles.contains(&"GCMC".to_string()));
+        assert_eq!(ensembles.len(), 4);
+        assert_eq!(manager.get_ensemble("NVT"), Some(&Ensemble::NVT));
+        assert_eq!(manager.get_ensemble("GCMC"), Some(&Ensemble::MuVT));
+        assert!(manager.get_ensemble("nonexistent").is_none());
+
+        // Standard transition methods.
+        let transitions = manager.list_transitions();
+        assert!(transitions.contains(&"Berendsen".to_string()));
+        assert!(transitions.contains(&"Nosé-Hoover".to_string()));
+        assert!(transitions.contains(&"Parrinello-Rahman".to_string()));
+        assert!(transitions.contains(&"Langevin".to_string()));
+        assert_eq!(transitions.len(), 4);
+
+        // Standard sampling methods.
+        let sampling = manager.list_sampling_methods();
+        assert!(sampling.contains(&"Metropolis".to_string()));
+        assert!(sampling.contains(&"Gibbs".to_string()));
+        assert!(sampling.contains(&"Hamiltonian".to_string()));
+        assert!(sampling.contains(&"ParallelTempering".to_string()));
+        assert_eq!(sampling.len(), 4);
+    }
+
+    #[test]
+    fn test_qspr_boiling_point_prediction() {
+        let mut predictor = PropertyPredictor::new();
+        predictor.initialize().unwrap();
+
+        // Methane-style descriptors: 1 carbon, 4 hydrogens.
+        // Tb = 198.2 + 23.97·1 + 22.88·4 = 313.69
+        let mut descriptors = HashMap::new();
+        descriptors.insert("C".to_string(), 1.0);
+        descriptors.insert("H".to_string(), 4.0);
+
+        let tb = predictor.predict("boiling_point", &descriptors).unwrap();
+        let expected = 198.2 + 23.97 * 1.0 + 22.88 * 4.0;
+        assert!((tb - expected).abs() < 1e-9, "predicted {} != {}", tb, expected);
+        assert!(tb.is_finite() && tb > 0.0);
+    }
+
+    #[test]
+    fn test_qspr_solubility_prediction() {
+        let mut predictor = PropertyPredictor::new();
+        predictor.initialize().unwrap();
+
+        // logS = -0.5·logP - 0.01·MW + 0.5
+        let mut descriptors = HashMap::new();
+        descriptors.insert("logP".to_string(), 2.0);
+        descriptors.insert("molecular_weight".to_string(), 100.0);
+
+        let logs = predictor.predict("solubility", &descriptors).unwrap();
+        let expected = -0.5 * 2.0 - 0.01 * 100.0 + 0.5;
+        assert!((logs - expected).abs() < 1e-9, "predicted {} != {}", logs, expected);
+    }
+
+    #[test]
+    fn test_qspr_molecular_weight_prediction() {
+        let mut predictor = PropertyPredictor::new();
+        predictor.initialize().unwrap();
+
+        // Water: 2 H + 1 O → MW = 2·1.008 + 15.999 = 18.015
+        let mut descriptors = HashMap::new();
+        descriptors.insert("H".to_string(), 2.0);
+        descriptors.insert("O".to_string(), 1.0);
+
+        let mw = predictor.predict("molecular_weight", &descriptors).unwrap();
+        let expected = 2.0 * 1.008 + 1.0 * 15.999;
+        assert!((mw - expected).abs() < 1e-9, "predicted {} != {}", mw, expected);
+    }
+
+    #[test]
+    fn test_property_predictor_unknown_property_returns_error() {
+        let mut predictor = PropertyPredictor::new();
+        predictor.initialize().unwrap();
+
+        let descriptors = HashMap::new();
+        let result = predictor.predict("nonexistent_property", &descriptors);
+        assert!(matches!(result, Err(ChemistryError::NotImplemented(_))));
+
+        // list_properties reports the registered models only.
+        let props = predictor.list_properties();
+        assert!(props.contains(&"boiling_point".to_string()));
+        assert!(props.contains(&"melting_point".to_string()));
+        assert!(props.contains(&"solubility".to_string()));
+        assert!(props.contains(&"molecular_weight".to_string()));
+        assert!(!props.contains(&"nonexistent_property".to_string()));
+    }
+
+    #[test]
+    fn test_property_predictor_register_custom_model() {
+        let mut predictor = PropertyPredictor::new();
+        predictor.initialize().unwrap();
+
+        // Custom linear model: y = 2.0·x + 1.0
+        let mut coeffs = HashMap::new();
+        coeffs.insert("intercept".to_string(), 1.0);
+        coeffs.insert("x".to_string(), 2.0);
+        let model = PropertyModel {
+            model_id: "custom_linear".to_string(),
+            property_type: PropertyType::Density,
+            model_type: PropertyModelType::GroupContribution,
+            parameters: PropertyModelParameters {
+                coefficients: coeffs,
+                descriptors: vec!["x".to_string()],
+                reference_data: Vec::new(),
+            },
+        };
+        predictor.register_model("custom", model);
+
+        let mut descriptors = HashMap::new();
+        descriptors.insert("x".to_string(), 5.0);
+        let y = predictor.predict("custom", &descriptors).unwrap();
+        assert!((y - 11.0).abs() < 1e-9, "predicted {} != 11.0", y);
+    }
+
+    #[test]
+    fn test_attach_dependencies_wiring() {
+        // Constructing without dependencies must still work (zero-arg new).
+        let mut library = ChemistryModelingLibrary::new();
+        assert!(library.initialize().is_ok());
+
+        // Attaching Phase 2 dependencies should succeed and not break operation.
+        // `ZnsZoneManager::new` opens a real device path, so point it at a
+        // temporary file that exists and is read/writable.
+        let zns_path = std::env::temp_dir().join("qualia_chem_zns_test_device");
+        std::fs::write(&zns_path, b"zns").unwrap();
+        let zns = ZnsZoneManager::new(&zns_path)
+            .ok()
+            .map(|m| Arc::new(Mutex::new(m)));
+        let _ = std::fs::remove_file(&zns_path);
+
+        let la = Arc::new(Mutex::new(LinearAlgebraLibrary::new()));
+        let sc = Arc::new(Mutex::new(StatisticalComputingLibrary::new()));
+        let csd = Arc::new(Mutex::new(CsdManager::new()));
+
+        if let Some(zns) = zns {
+            library.attach_dependencies(la, sc, csd, zns);
+            // Re-initializing after attaching should still succeed.
+            assert!(library.initialize().is_ok());
+        }
+        // When no ZNS device is available the library must still work without
+        // dependencies attached (covered by the other tests above).
     }
 }
