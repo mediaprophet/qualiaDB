@@ -443,6 +443,192 @@ mod tests {
             );
         }
     }
+
+    // === Integration tests for cache, monitoring, and pattern recognition ===
+
+    #[test]
+    fn test_multiply_uses_cache_and_records_metrics() {
+        let mut library = LinearAlgebraLibrary::new();
+        library.initialize().unwrap();
+
+        let a_data = vec![1.0, 2.0, 3.0, 4.0];
+        let b_data = vec![5.0, 6.0, 7.0, 8.0];
+
+        library
+            .create_matrix("A".to_string(), 2, 2, DataType::Float64, a_data)
+            .unwrap();
+        library
+            .create_matrix("B".to_string(), 2, 2, DataType::Float64, b_data)
+            .unwrap();
+
+        // First multiply — should compute and cache the result
+        let result1 = library.matrix_multiply("A", "B", "C", 1.0, 0.0).unwrap();
+        assert_eq!(result1.result.data, vec![19.0, 22.0, 43.0, 50.0]);
+
+        // Verify performance metrics were recorded
+        let stats = library.get_performance_stats();
+        assert!(stats.total_operations > 0);
+
+        // Verify operation metrics were recorded
+        let op_metrics = library.performance_monitor.get_operation_metrics("matrix_multiply");
+        assert!(op_metrics.is_some());
+        assert!(op_metrics.unwrap().count > 0);
+
+        // Verify matrix access was recorded
+        let m_metrics = library.performance_monitor.get_matrix_metrics("A");
+        assert!(m_metrics.is_some());
+        assert!(m_metrics.unwrap().access_count > 0);
+    }
+
+    #[test]
+    fn test_cache_populated_after_operation() {
+        let mut library = LinearAlgebraLibrary::new();
+        library.initialize().unwrap();
+
+        library
+            .create_matrix("A".to_string(), 2, 2, DataType::Float64, vec![1.0, 2.0, 3.0, 4.0])
+            .unwrap();
+        library
+            .create_matrix("B".to_string(), 2, 2, DataType::Float64, vec![5.0, 6.0, 7.0, 8.0])
+            .unwrap();
+
+        // After multiply, the result "C" should be in the cache
+        library.matrix_multiply("A", "B", "C", 1.0, 0.0).unwrap();
+
+        // The cache should have entries (at least the result matrix)
+        assert!(library.matrix_storage.cache.cache_size() > 0);
+    }
+
+    #[test]
+    fn test_analyze_matrix_method() {
+        let mut library = LinearAlgebraLibrary::new();
+        library.initialize().unwrap();
+
+        // Create a symmetric positive definite matrix
+        library
+            .create_matrix(
+                "S".to_string(),
+                2,
+                2,
+                DataType::Float64,
+                vec![2.0, 1.0, 1.0, 2.0],
+            )
+            .unwrap();
+
+        let analysis = library.analyze_matrix("S").unwrap();
+        assert_eq!(analysis.matrix_id, "S");
+        assert!(analysis.detected_patterns.contains(&MatrixPattern::Symmetric));
+        assert!(analysis.detected_patterns.contains(&MatrixPattern::PositiveDefinite));
+        assert!(!analysis.recommended_algorithms.is_empty());
+    }
+
+    #[test]
+    fn test_analyze_diagonal_matrix() {
+        let mut library = LinearAlgebraLibrary::new();
+        library.initialize().unwrap();
+
+        library
+            .create_matrix(
+                "D".to_string(),
+                3,
+                3,
+                DataType::Float64,
+                vec![1.0, 0.0, 0.0, 0.0, 2.0, 0.0, 0.0, 0.0, 3.0],
+            )
+            .unwrap();
+
+        let analysis = library.analyze_matrix("D").unwrap();
+        assert!(analysis.detected_patterns.contains(&MatrixPattern::Diagonal));
+    }
+
+    #[test]
+    fn test_performance_summary() {
+        let mut library = LinearAlgebraLibrary::new();
+        library.initialize().unwrap();
+
+        library
+            .create_matrix("A".to_string(), 2, 2, DataType::Float64, vec![1.0, 2.0, 3.0, 4.0])
+            .unwrap();
+        library
+            .create_matrix("B".to_string(), 2, 2, DataType::Float64, vec![5.0, 6.0, 7.0, 8.0])
+            .unwrap();
+        library.matrix_multiply("A", "B", "C", 1.0, 0.0).unwrap();
+
+        let summary = library.performance_summary();
+        assert!(summary.contains("Linear Algebra Performance Summary"));
+        assert!(summary.contains("matrix_multiply"));
+    }
+
+    #[test]
+    fn test_cache_hit_rate_accessor() {
+        let mut library = LinearAlgebraLibrary::new();
+        library.initialize().unwrap();
+
+        // Initially, no cache accesses
+        assert_eq!(library.cache_hit_rate(), 0.0);
+
+        library
+            .create_matrix("A".to_string(), 2, 2, DataType::Float64, vec![1.0, 2.0, 3.0, 4.0])
+            .unwrap();
+        library
+            .create_matrix("B".to_string(), 2, 2, DataType::Float64, vec![5.0, 6.0, 7.0, 8.0])
+            .unwrap();
+        library.matrix_multiply("A", "B", "C", 1.0, 0.0).unwrap();
+
+        // After an operation, cache should have entries
+        assert!(library.cache_size() > 0);
+    }
+
+    #[test]
+    fn test_transpose_records_metrics() {
+        let mut library = LinearAlgebraLibrary::new();
+        library.initialize().unwrap();
+
+        library
+            .create_matrix("A".to_string(), 2, 3, DataType::Float64, vec![1.0, 2.0, 3.0, 4.0, 5.0, 6.0])
+            .unwrap();
+
+        library.matrix_transpose("A", "AT").unwrap();
+
+        let op_metrics = library.performance_monitor.get_operation_metrics("matrix_transpose");
+        assert!(op_metrics.is_some());
+        assert!(op_metrics.unwrap().count > 0);
+    }
+
+    #[test]
+    fn test_inverse_records_metrics() {
+        let mut library = LinearAlgebraLibrary::new();
+        library.initialize().unwrap();
+
+        library
+            .create_matrix("A".to_string(), 2, 2, DataType::Float64, vec![2.0, 1.0, 1.0, 1.0])
+            .unwrap();
+
+        library.matrix_inverse("A", "A_inv").unwrap();
+
+        let op_metrics = library.performance_monitor.get_operation_metrics("matrix_inverse");
+        assert!(op_metrics.is_some());
+        assert!(op_metrics.unwrap().count > 0);
+    }
+
+    #[test]
+    fn test_solve_records_metrics() {
+        let mut library = LinearAlgebraLibrary::new();
+        library.initialize().unwrap();
+
+        library
+            .create_matrix("A".to_string(), 2, 2, DataType::Float64, vec![2.0, 1.0, 1.0, 1.0])
+            .unwrap();
+        library
+            .create_matrix("b".to_string(), 2, 1, DataType::Float64, vec![3.0, 2.0])
+            .unwrap();
+
+        library.solve_linear_system("A", "b", "x").unwrap();
+
+        let op_metrics = library.performance_monitor.get_operation_metrics("solve_linear_system");
+        assert!(op_metrics.is_some());
+        assert!(op_metrics.unwrap().count > 0);
+    }
 }
 
 /// Linear Algebra Library Manager
@@ -542,9 +728,36 @@ impl LinearAlgebraLibrary {
     ) -> Result<LinearAlgebraResult<Matrix>, LinearAlgebraError> {
         let start_time = std::time::Instant::now();
 
+        // Check cache for the result matrix
+        let cache_key = format!("mul:{}:{}:{}:{}:{}", left_id, right_id, result_id, alpha, beta);
+        let cache_hit = self.matrix_storage.cache.get(&cache_key).is_some();
+        if cache_hit {
+            // Retrieve from cache
+            if let Some(cached) = self.matrix_storage.cache.get(&cache_key) {
+                let execution_time = start_time.elapsed().as_millis() as u64;
+                self.performance_monitor
+                    .record_operation("matrix_multiply", execution_time, 0);
+                self.performance_monitor
+                    .record_matrix_access(result_id, "matrix_multiply", true);
+                return Ok(LinearAlgebraResult {
+                    result: cached,
+                    execution_time,
+                    memory_usage: 0,
+                    operations_used: vec!["matrix_multiply".to_string(), "cache_hit".to_string()],
+                    privacy_preserved: false,
+                });
+            }
+        }
+
         // Get matrices
         let left = self.matrix_storage.get_matrix(left_id)?;
         let right = self.matrix_storage.get_matrix(right_id)?;
+
+        // Record cache miss for input matrices
+        self.performance_monitor
+            .record_matrix_access(left_id, "matrix_multiply", false);
+        self.performance_monitor
+            .record_matrix_access(right_id, "matrix_multiply", false);
 
         // Validate dimensions
         if left.cols != right.rows {
@@ -568,20 +781,28 @@ impl LinearAlgebraLibrary {
             result_id.to_string(),
             left.rows,
             right.cols,
-            left.data_type,
+            left.data_type.clone(),
             result_data,
         )?;
 
-        let execution_time = start_time.elapsed().as_millis() as u64;
+        // Store result in cache
+        self.matrix_storage.cache.put(&result)?;
 
-        // Update performance metrics
+        let execution_time = start_time.elapsed().as_millis() as u64;
+        let memory_usage = (left.rows * right.cols * 8) as u64;
+
+        // Update performance metrics with detailed info
         self.performance_monitor
-            .record_operation("matrix_multiply", execution_time, 0);
+            .record_operation_detailed("matrix_multiply", execution_time as f64, (left.rows, right.cols));
+        self.performance_monitor
+            .record_operation("matrix_multiply", execution_time, memory_usage);
+        self.performance_monitor
+            .record_matrix_access(result_id, "matrix_multiply", false);
 
         Ok(LinearAlgebraResult {
             result,
             execution_time,
-            memory_usage: 0,
+            memory_usage,
             operations_used: vec!["matrix_multiply".to_string()],
             privacy_preserved: false,
         })
@@ -601,6 +822,12 @@ impl LinearAlgebraLibrary {
         let left = self.matrix_storage.get_matrix(left_id)?;
         let right = self.matrix_storage.get_matrix(right_id)?;
 
+        // Record matrix access for monitoring
+        self.performance_monitor
+            .record_matrix_access(left_id, "matrix_add", false);
+        self.performance_monitor
+            .record_matrix_access(right_id, "matrix_add", false);
+
         // Validate dimensions
         if left.rows != right.rows || left.cols != right.cols {
             return Err(LinearAlgebraError::InvalidDimensions(
@@ -619,20 +846,28 @@ impl LinearAlgebraLibrary {
             result_id.to_string(),
             left.rows,
             left.cols,
-            left.data_type,
+            left.data_type.clone(),
             result_data,
         )?;
 
+        // Store result in cache
+        self.matrix_storage.cache.put(&result)?;
+
         let execution_time = start_time.elapsed().as_millis() as u64;
+        let memory_usage = (left.rows * left.cols * 8) as u64;
 
         // Update performance metrics
         self.performance_monitor
-            .record_operation("matrix_add", execution_time, 0);
+            .record_operation_detailed("matrix_add", execution_time as f64, (left.rows, left.cols));
+        self.performance_monitor
+            .record_operation("matrix_add", execution_time, memory_usage);
+        self.performance_monitor
+            .record_matrix_access(result_id, "matrix_add", false);
 
         Ok(LinearAlgebraResult {
             result,
             execution_time,
-            memory_usage: 0,
+            memory_usage,
             operations_used: vec!["matrix_add".to_string()],
             privacy_preserved: false,
         })
@@ -649,6 +884,10 @@ impl LinearAlgebraLibrary {
         // Get matrix
         let input = self.matrix_storage.get_matrix(input_id)?;
 
+        // Record matrix access for monitoring
+        self.performance_monitor
+            .record_matrix_access(input_id, "matrix_transpose", false);
+
         // Execute transpose
         let mut result_data = Vec::with_capacity(input.data.len());
         for j in 0..input.cols {
@@ -662,20 +901,28 @@ impl LinearAlgebraLibrary {
             result_id.to_string(),
             input.cols,
             input.rows,
-            input.data_type,
+            input.data_type.clone(),
             result_data,
         )?;
 
+        // Store result in cache
+        self.matrix_storage.cache.put(&result)?;
+
         let execution_time = start_time.elapsed().as_millis() as u64;
+        let memory_usage = (input.rows * input.cols * 8) as u64;
 
         // Update performance metrics
         self.performance_monitor
-            .record_operation("matrix_transpose", execution_time, 0);
+            .record_operation_detailed("matrix_transpose", execution_time as f64, (input.rows, input.cols));
+        self.performance_monitor
+            .record_operation("matrix_transpose", execution_time, memory_usage);
+        self.performance_monitor
+            .record_matrix_access(result_id, "matrix_transpose", false);
 
         Ok(LinearAlgebraResult {
             result,
             execution_time,
-            memory_usage: 0,
+            memory_usage,
             operations_used: vec!["matrix_transpose".to_string()],
             privacy_preserved: false,
         })
@@ -691,6 +938,10 @@ impl LinearAlgebraLibrary {
 
         // Get matrix
         let input = self.matrix_storage.get_matrix(input_id)?;
+
+        // Record matrix access for monitoring
+        self.performance_monitor
+            .record_matrix_access(input_id, "matrix_inverse", false);
 
         // Validate square matrix
         if input.rows != input.cols {
@@ -760,18 +1011,26 @@ impl LinearAlgebraLibrary {
 
         // Create result matrix
         let result =
-            self.create_matrix(result_id.to_string(), n, n, input.data_type, result_data)?;
+            self.create_matrix(result_id.to_string(), n, n, input.data_type.clone(), result_data)?;
+
+        // Store result in cache
+        self.matrix_storage.cache.put(&result)?;
 
         let execution_time = start_time.elapsed().as_millis() as u64;
+        let memory_usage = (n * n * 8) as u64;
 
         // Update performance metrics
         self.performance_monitor
-            .record_operation("matrix_inverse", execution_time, 0);
+            .record_operation_detailed("matrix_inverse", execution_time as f64, (n, n));
+        self.performance_monitor
+            .record_operation("matrix_inverse", execution_time, memory_usage);
+        self.performance_monitor
+            .record_matrix_access(result_id, "matrix_inverse", false);
 
         Ok(LinearAlgebraResult {
             result,
             execution_time,
-            memory_usage: 0,
+            memory_usage,
             operations_used: vec!["matrix_inverse".to_string()],
             privacy_preserved: false,
         })
@@ -789,6 +1048,12 @@ impl LinearAlgebraLibrary {
         // Get matrices
         let matrix = self.matrix_storage.get_matrix(matrix_id)?;
         let rhs = self.matrix_storage.get_matrix(rhs_id)?;
+
+        // Record matrix access for monitoring
+        self.performance_monitor
+            .record_matrix_access(matrix_id, "solve_linear_system", false);
+        self.performance_monitor
+            .record_matrix_access(rhs_id, "solve_linear_system", false);
 
         // Validate dimensions
         if matrix.rows != matrix.cols {
@@ -829,20 +1094,28 @@ impl LinearAlgebraLibrary {
             solution_id.to_string(),
             n,
             1,
-            matrix.data_type,
+            matrix.data_type.clone(),
             solution_data,
         )?;
 
+        // Store result in cache
+        self.matrix_storage.cache.put(&result)?;
+
         let execution_time = start_time.elapsed().as_millis() as u64;
+        let memory_usage = (n * n * 8) as u64;
 
         // Update performance metrics
         self.performance_monitor
-            .record_operation("solve_linear_system", execution_time, 0);
+            .record_operation_detailed("solve_linear_system", execution_time as f64, (n, n));
+        self.performance_monitor
+            .record_operation("solve_linear_system", execution_time, memory_usage);
+        self.performance_monitor
+            .record_matrix_access(solution_id, "solve_linear_system", false);
 
         Ok(LinearAlgebraResult {
             result,
             execution_time,
-            memory_usage: 0,
+            memory_usage,
             operations_used: vec!["solve_linear_system".to_string()],
             privacy_preserved: false,
         })
@@ -933,9 +1206,36 @@ impl LinearAlgebraLibrary {
         })
     }
 
+    /// Analyze a matrix: detect structural patterns and return optimization hints.
+    /// Uses the MatrixAnalyzer to detect diagonal, triangular, symmetric, sparse,
+    /// banded, block-diagonal, Toeplitz, orthogonal, circulant, Hankel, and
+    /// positive-definite patterns.
+    pub fn analyze_matrix(
+        &mut self,
+        matrix_id: &str,
+    ) -> Result<MatrixAnalysis, LinearAlgebraError> {
+        let matrix = self.matrix_storage.get_matrix(matrix_id)?;
+        self.optimization_engine.analyzer.analyze_matrix(&matrix)
+    }
+
     /// Get performance statistics
     pub fn get_performance_stats(&self) -> SystemMetrics {
         self.performance_monitor.get_system_metrics()
+    }
+
+    /// Get a human-readable performance summary
+    pub fn performance_summary(&self) -> String {
+        self.performance_monitor.summary()
+    }
+
+    /// Get the cache hit rate (0.0 to 1.0)
+    pub fn cache_hit_rate(&self) -> f64 {
+        self.matrix_storage.cache.hit_rate()
+    }
+
+    /// Get the current cache size in bytes
+    pub fn cache_size(&self) -> usize {
+        self.matrix_storage.cache.cache_size()
     }
 
     /// List all matrices
