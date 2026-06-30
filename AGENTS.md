@@ -74,6 +74,7 @@ parity     [0..63]   XOR fold: subject ^ predicate ^ object ^ context (ECC stub)
 | **P64 GGUF weight container** | `q42/p64_weight.rs` | ✅ byte-exact disk round-trip verified | 64B headers/entries/manifold records, metadata + per-tensor CRC-32C |
 | **10D Manifold → WebizenVM bridge** | `modalities/manifold.rs`, `governance/webizen.rs` | ✅ LTL + stable-model ASP wired | Two parity-valid Quins per state; bounded zero-heap VM evaluation |
 | **WGSL Forge** | `wgsl_forge/`, `qualia-cli/src/shader.rs` | ✅ deterministic generation/certification/tuning | Typed kernel/schedule IR, Naga validation, CPU oracle, real GPU timing, adapter-keyed cache |
+| **N-Dimensional Renderer SDK** | `render/gpu/`, `webizen-render/` | ✅ native + WASM volumetric path | Shared wgpu 29 device, Tensor10D projector, depth/bloom/mesh/picking, caller-buffered RGBA8, serde SDK adapter |
 
 ## 2-B. Other Real Implementations (do NOT stub-replace without reading first)
 
@@ -903,3 +904,34 @@ cargo test
    `docs/manuals/wasm-capability-profiles.md` synchronized.
 3. `HANDOVER.md` is deleted in the existing worktree, so this session did not
    recreate or modify it.
+
+---
+
+### 2026-06-30 — Codex (cross-platform volumetric renderer SDK)
+
+**Completed:**
+- Lifted `render::gpu::PortalGpu` from a wasm-only module to a cross-platform wgpu 29 renderer.
+- Added native offscreen construction on `gpu_context::shared_gpu()`, reusable RGBA8 targets,
+  resize support, and caller-owned readback buffers.
+- Fixed invalid uniform-array layouts in the ambient, projector, and mesh WGSL shaders.
+- Added `webizen_render::VolumetricRenderer` and `RenderScene` adaptation: nodes become Tensor10D
+  projector instances; faces/edges become a depth-tested mesh; PNG helpers route through this path.
+- Migrated `webizen-render` from wgpu 0.19 to 29, unified spectral colour with the engine oracle,
+  and added the verified renderer + studio crates to the workspace.
+- Updated the renderer SDK draft to v0.2 and reconciled the standards backlog.
+
+**Verification:**
+- `cargo check -p qualia-core-db --lib`
+- A2000 hardware gate: native shared-GPU tensor + mesh render and RGBA8 readback passed.
+- `cargo test -p webizen-render --lib` — 41 passed.
+- `cargo check -p webizen-studio`
+- `cargo check -p qualia-core-db --target wasm32-unknown-unknown --no-default-features --features portal`
+- Desktop verification was blocked before compilation because uncached Tauri dependencies required
+  network access that was unavailable in this session.
+
+**Architectural decisions:**
+1. `qualia_core_db::render::gpu` owns the canonical draw graph and device ABI.
+2. `webizen-render` is the serde/SDK/image-codec adapter; its immediate-mode renderer is compatibility,
+   not a second semantic engine.
+3. Native inference and volumetric rendering share `gpu_context::shared_gpu()`; no second adapter is
+   requested by the default renderer path.

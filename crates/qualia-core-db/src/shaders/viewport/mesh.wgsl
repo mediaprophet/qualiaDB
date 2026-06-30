@@ -8,7 +8,9 @@ struct Camera {
     pitch: f32,
     zoom: f32,
     tensor_mode: u32,
-    _padding: array<f32, 12>,
+    _padding0: vec4<f32>,
+    _padding1: vec4<f32>,
+    _padding2: vec4<f32>,
 };
 
 @group(0) @binding(0) var<uniform> camera: Camera;
@@ -18,13 +20,18 @@ struct Camera {
 struct VertexOutput {
     @builtin(position) clip_position: vec4<f32>,
     @location(0) world_pos: vec3<f32>,
+    @location(1) color: vec4<f32>,
 };
 
 @vertex
-fn vertex_main(@location(0) position: vec3<f32>) -> VertexOutput {
+fn vertex_main(
+    @location(0) position: vec3<f32>,
+    @location(1) color: vec4<f32>
+) -> VertexOutput {
     var output: VertexOutput;
     let world = (model * vec4<f32>(position, 1.0)).xyz;
     output.world_pos = world;
+    output.color = color;
     output.clip_position = camera.view_projection * vec4<f32>(world, 1.0);
     return output;
 }
@@ -38,7 +45,7 @@ fn fragment_main(input: VertexOutput) -> @location(0) vec4<f32> {
     // Cheap rim term so silhouettes read against the dark field.
     let facing = clamp(abs(n.z), 0.0, 1.0);
     let rim = pow(1.0 - facing, 2.0);
-    let base = vec3<f32>(0.50, 0.60, 0.82);
+    let base = input.color.rgb;
     let col = base * (0.22 + 0.78 * diffuse) + vec3<f32>(0.10, 0.14, 0.22) * rim;
-    return vec4<f32>(col, 1.0);
+    return vec4<f32>(col, input.color.a);
 }

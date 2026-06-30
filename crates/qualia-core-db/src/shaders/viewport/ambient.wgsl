@@ -37,7 +37,9 @@ struct Camera {
     pitch: f32,
     zoom: f32,
     tensor_mode: u32,
-    _padding: array<f32, 12>,
+    _padding0: vec4<f32>,
+    _padding1: vec4<f32>,
+    _padding2: vec4<f32>,
 };
 
 @group(0) @binding(0) var<uniform> uniforms: Uniforms;

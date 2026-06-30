@@ -3,8 +3,8 @@
 //! Phase 0.2a (`RENDERER_IMPLEMENTATION_PLAN.md`): the formerly-flat `portal_*` modules are
 //! consolidated under one `render` tree. The platform-agnostic pieces (camera, PGA oracle,
 //! projection, telemetry, standpoint, spectral, acoustic, control, contract, asset import) compile
-//! everywhere; the WebGPU surface (`gpu`, `portal`, `portal_wasm`) is gated to the wasm `portal`
-//! build, as before. Phase 0.2b will lift this tree into a standalone `qualia-render` crate.
+//! everywhere. The WebGPU renderer core (`gpu`) compiles wherever `gpu-runtime` is enabled; only
+//! the browser facade (`portal`, `portal_wasm`) remains gated to wasm + `portal`.
 
 pub mod acoustic;
 /// Asset import: OBJ / STL / GLB → `Mesh` + semantic NQuins (Phase 1.3).
@@ -60,7 +60,7 @@ pub mod standpoint;
 pub mod telemetry;
 
 /// WebGPU renderer (`PortalGpu`) — depth, bloom, tensor-node projection, mesh surfaces.
-#[cfg(all(target_arch = "wasm32", feature = "portal"))]
+#[cfg(feature = "gpu-runtime")]
 pub mod gpu;
 /// The `#[wasm_bindgen]` portal facade (`QualiaPortal`) driving the browser viewport.
 #[cfg(all(target_arch = "wasm32", feature = "portal"))]

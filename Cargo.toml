@@ -6,6 +6,8 @@ members = [
     "crates/qualia-client-core",
     "crates/qualia-extensions",
     "crates/webizen-component-harvester",
+    "crates/webizen-render",
+    "crates/webizen-studio",
     "crates/qualia-mobile-harness",
     "crates/wellfare-core",
     "crates/qualia-semantic-library",

@@ -1,6 +1,47 @@
 //! GPU resource builders — depth/picking textures, bind-group layouts/groups, target states.
 use super::*;
-use crate::tensor::Tensor10D;
+
+pub(super) fn create_offscreen_texture(
+    device: &wgpu::Device,
+    format: wgpu::TextureFormat,
+    width: u32,
+    height: u32,
+) -> wgpu::Texture {
+    device.create_texture(&wgpu::TextureDescriptor {
+        label: Some("qualia-render-offscreen"),
+        size: wgpu::Extent3d {
+            width: width.max(1),
+            height: height.max(1),
+            depth_or_array_layers: 1,
+        },
+        mip_level_count: 1,
+        sample_count: 1,
+        dimension: wgpu::TextureDimension::D2,
+        format,
+        usage: wgpu::TextureUsages::RENDER_ATTACHMENT | wgpu::TextureUsages::COPY_SRC,
+        view_formats: &[],
+    })
+}
+
+pub(super) fn padded_bytes_per_row(width: u32) -> u32 {
+    let tight = width.max(1).saturating_mul(4);
+    let align = wgpu::COPY_BYTES_PER_ROW_ALIGNMENT;
+    tight.div_ceil(align) * align
+}
+
+pub(super) fn create_readback_buffer(
+    device: &wgpu::Device,
+    padded_bytes_per_row: u32,
+    height: u32,
+) -> wgpu::Buffer {
+    device.create_buffer(&wgpu::BufferDescriptor {
+        label: Some("qualia-render-readback"),
+        size: padded_bytes_per_row as u64 * height.max(1) as u64,
+        usage: wgpu::BufferUsages::COPY_DST | wgpu::BufferUsages::MAP_READ,
+        mapped_at_creation: false,
+    })
+}
+
 pub(super) fn create_picking_texture(
     device: &wgpu::Device,
     width: u32,

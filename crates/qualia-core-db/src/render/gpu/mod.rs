@@ -1,4 +1,4 @@
-//! U2 WebGPU viewport for the Qualia WASM portal (wasm32).
+//! Cross-platform WebGPU viewport for the Qualia renderer SDK.
 //!
 //! Phenomenal viewport: projector (depth write) → ambient → optional T2 Kawase bloom.
 
@@ -81,6 +81,7 @@ struct BloomChain {
 /// (already centred + scaled to the orbit frame by the caller); `index_count` is `triangles * 3`.
 struct MeshGpu {
     vertex_buf: wgpu::Buffer,
+    color_buf: wgpu::Buffer,
     index_buf: wgpu::Buffer,
     index_count: u32,
 }
@@ -88,8 +89,12 @@ struct MeshGpu {
 pub struct PortalGpu {
     device: Arc<wgpu::Device>,
     queue: Arc<wgpu::Queue>,
-    surface: wgpu::Surface<'static>,
-    config: wgpu::SurfaceConfiguration,
+    surface: Option<wgpu::Surface<'static>>,
+    config: Option<wgpu::SurfaceConfiguration>,
+    offscreen_texture: Option<wgpu::Texture>,
+    readback_buf: Option<wgpu::Buffer>,
+    readback_bytes_per_row: u32,
+    color_format: wgpu::TextureFormat,
     depth_texture: wgpu::Texture,
     depth_view: wgpu::TextureView,
     picking_texture: wgpu::Texture,
@@ -139,26 +144,34 @@ pub struct PortalGpu {
 }
 
 impl PortalGpu {
-    /// Native sync wrapper around the async initialiser (`block_on` traps in browser WASM, so the
-    /// browser path must call `try_new_async` and await it instead).
+    /// Build a native offscreen renderer on QualiaDB's process-wide shared GPU device.
+    ///
+    /// The output target is linear `Rgba8Unorm`. Call [`Self::render`] and then
+    /// [`Self::read_rgba8_into`] to retrieve tightly packed pixels into a caller-owned buffer.
     #[cfg(not(target_arch = "wasm32"))]
-    pub fn try_new(
-        canvas: &web_sys::HtmlCanvasElement,
-        particle_cap: usize,
-    ) -> Result<Self, String> {
-        pollster::block_on(Self::try_new_async(canvas, particle_cap))
+    pub fn new_offscreen(width: u32, height: u32, particle_cap: usize) -> Result<Self, String> {
+        let shared = crate::gpu_context::shared_gpu();
+        pollster::block_on(Self::from_device(
+            Arc::new(shared.device.clone()),
+            Arc::new(shared.queue.clone()),
+            width.max(1),
+            height.max(1),
+            wgpu::TextureFormat::Rgba8Unorm,
+            None,
+            None,
+            particle_cap,
+        ))
     }
 
     /// Async WebGPU init — awaits `request_adapter` / `request_device` (the browser main thread
     /// cannot block). Native callers use the `try_new` wrapper above.
+    #[cfg(all(target_arch = "wasm32", feature = "portal"))]
     pub async fn try_new_async(
         canvas: &web_sys::HtmlCanvasElement,
         particle_cap: usize,
     ) -> Result<Self, String> {
         let width = canvas.width().max(1);
         let height = canvas.height().max(1);
-        let _ = particle_cap;
-        let particle_count = MAX_AMBIENT_INSTANCES.max(256);
 
         let mut instance_desc = wgpu::InstanceDescriptor::new_without_display_handle();
         instance_desc.backends = wgpu::Backends::BROWSER_WEBGPU;
@@ -192,13 +205,6 @@ impl PortalGpu {
             .await
             .map_err(|e| format!("device: {e}"))?;
 
-        let device = Arc::new(device);
-        let queue = Arc::new(queue);
-
-        // DIAG: capture deferred pipeline/shader creation validation errors.
-        // wgpu 29: push_error_scope returns an RAII ErrorScopeGuard; hold it and `.pop()` later.
-        let error_scope = device.push_error_scope(wgpu::ErrorFilter::Validation);
-
         let caps = surface.get_capabilities(&adapter);
         let format = caps
             .formats
@@ -219,8 +225,51 @@ impl PortalGpu {
         };
         surface.configure(&device, &config);
 
+        Self::from_device(
+            Arc::new(device),
+            Arc::new(queue),
+            width,
+            height,
+            format,
+            Some(surface),
+            Some(config),
+            particle_cap,
+        )
+        .await
+    }
+
+    async fn from_device(
+        device: Arc<wgpu::Device>,
+        queue: Arc<wgpu::Queue>,
+        width: u32,
+        height: u32,
+        format: wgpu::TextureFormat,
+        surface: Option<wgpu::Surface<'static>>,
+        config: Option<wgpu::SurfaceConfiguration>,
+        particle_cap: usize,
+    ) -> Result<Self, String> {
+        let particle_count = particle_cap.clamp(256, MAX_AMBIENT_INSTANCES);
+
+        // Capture deferred pipeline/shader creation errors on both Dawn and native backends.
+        let error_scope = device.push_error_scope(wgpu::ErrorFilter::Validation);
+
         let (depth_texture, depth_view) = create_depth_texture(&device, width, height);
         let (picking_texture, picking_view) = create_picking_texture(&device, width, height);
+        let offscreen_texture = if surface.is_none() {
+            Some(create_offscreen_texture(&device, format, width, height))
+        } else {
+            None
+        };
+        let readback_bytes_per_row = padded_bytes_per_row(width);
+        let readback_buf = if surface.is_none() {
+            Some(create_readback_buffer(
+                &device,
+                readback_bytes_per_row,
+                height,
+            ))
+        } else {
+            None
+        };
 
         let particles = generate_particles(particle_count);
         let particle_buf = device.create_buffer_init(&wgpu::util::BufferInitDescriptor {
@@ -444,6 +493,15 @@ impl PortalGpu {
                 shader_location: 0,
             }],
         };
+        let mesh_color_layout = wgpu::VertexBufferLayout {
+            array_stride: 16,
+            step_mode: wgpu::VertexStepMode::Vertex,
+            attributes: &[wgpu::VertexAttribute {
+                format: wgpu::VertexFormat::Float32x4,
+                offset: 0,
+                shader_location: 1,
+            }],
+        };
         let mesh_pipeline = device.create_render_pipeline(&wgpu::RenderPipelineDescriptor {
             label: Some("portal-mesh-pipeline"),
             layout: Some(&mesh_pipeline_layout),
@@ -451,7 +509,7 @@ impl PortalGpu {
                 module: &mesh_shader,
                 entry_point: Some("vertex_main"),
                 compilation_options: Default::default(),
-                buffers: &[mesh_vertex_layout.clone()],
+                buffers: &[mesh_vertex_layout.clone(), mesh_color_layout.clone()],
             },
             fragment: Some(wgpu::FragmentState {
                 module: &mesh_shader,
@@ -561,7 +619,7 @@ impl PortalGpu {
                         module: &mesh_shader,
                         entry_point: Some("vertex_main"),
                         compilation_options: Default::default(),
-                        buffers: &[mesh_vertex_layout.clone()],
+                        buffers: &[mesh_vertex_layout.clone(), mesh_color_layout.clone()],
                     },
                     fragment: Some(wgpu::FragmentState {
                         module: &mesh_shader,
@@ -606,13 +664,19 @@ impl PortalGpu {
                 &format!("[portal_gpu] pipeline/shader creation error: {err}").into(),
             );
         }
-        let _ = &scope_err;
+        if let Some(err) = scope_err {
+            return Err(format!("renderer pipeline/shader creation failed: {err}"));
+        }
 
         Ok(Self {
             device,
             queue,
             surface,
             config,
+            offscreen_texture,
+            readback_buf,
+            readback_bytes_per_row,
+            color_format: format,
             depth_texture,
             depth_view,
             picking_texture,
@@ -789,15 +853,44 @@ impl PortalGpu {
     /// centres + scales them to the orbit frame); `indices` is a flat triangle list (`tris * 3`).
     /// Returns the triangle count; clears any prior mesh when empty.
     pub fn upload_mesh(&mut self, positions: &[[f32; 3]], indices: &[u32]) -> u32 {
+        self.upload_mesh_colored(positions, &[], indices)
+    }
+
+    /// Upload a triangle mesh with per-vertex linear RGBA colours. When `colors` is empty the
+    /// engine's neutral blue-grey material is used; any non-empty slice must match `positions`.
+    pub fn upload_mesh_colored(
+        &mut self,
+        positions: &[[f32; 3]],
+        colors: &[[f32; 4]],
+        indices: &[u32],
+    ) -> u32 {
         if positions.is_empty() || indices.len() < 3 {
             self.mesh = None;
             return 0;
         }
+        if !colors.is_empty() && colors.len() != positions.len() {
+            self.mesh = None;
+            return 0;
+        }
+        let default_colors;
+        let colors = if colors.is_empty() {
+            default_colors = vec![[0.50, 0.60, 0.82, 1.0]; positions.len()];
+            default_colors.as_slice()
+        } else {
+            colors
+        };
         let vertex_buf = self
             .device
             .create_buffer_init(&wgpu::util::BufferInitDescriptor {
                 label: Some("portal-mesh-verts"),
                 contents: bytemuck::cast_slice(positions),
+                usage: wgpu::BufferUsages::VERTEX | wgpu::BufferUsages::COPY_DST,
+            });
+        let color_buf = self
+            .device
+            .create_buffer_init(&wgpu::util::BufferInitDescriptor {
+                label: Some("portal-mesh-colors"),
+                contents: bytemuck::cast_slice(colors),
                 usage: wgpu::BufferUsages::VERTEX | wgpu::BufferUsages::COPY_DST,
             });
         let index_buf = self
@@ -810,6 +903,7 @@ impl PortalGpu {
         let index_count = indices.len() as u32;
         self.mesh = Some(MeshGpu {
             vertex_buf,
+            color_buf,
             index_buf,
             index_count,
         });
@@ -853,9 +947,24 @@ impl PortalGpu {
         }
         self.width = width;
         self.height = height;
-        self.config.width = width;
-        self.config.height = height;
-        self.surface.configure(&self.device, &self.config);
+        if let (Some(surface), Some(config)) = (self.surface.as_ref(), self.config.as_mut()) {
+            config.width = width;
+            config.height = height;
+            surface.configure(&self.device, config);
+        } else {
+            self.offscreen_texture = Some(create_offscreen_texture(
+                &self.device,
+                self.color_format,
+                width,
+                height,
+            ));
+            self.readback_bytes_per_row = padded_bytes_per_row(width);
+            self.readback_buf = Some(create_readback_buffer(
+                &self.device,
+                self.readback_bytes_per_row,
+                height,
+            ));
+        }
         let (depth_texture, depth_view) = create_depth_texture(&self.device, width, height);
         let (picking_texture, picking_view) = create_picking_texture(&self.device, width, height);
         self.depth_texture = depth_texture;
@@ -869,7 +978,7 @@ impl PortalGpu {
     pub fn sync_bloom_targets(&mut self) {
         if portal_bloom_enabled() && probe_hdr_format(&self.device) {
             let bloom =
-                create_bloom_chain(&self.device, self.width, self.height, self.config.format);
+                create_bloom_chain(&self.device, self.width, self.height, self.color_format);
             let bloom_bytes = bloom.as_ref().map(|b| b.vram_bytes).unwrap_or(0);
             let particle_bytes =
                 (self.particle_count as usize * std::mem::size_of::<ParticleInstance>()) as u64;
@@ -1024,11 +1133,16 @@ impl PortalGpu {
         self.write_observer_uniform();
         self.update_model(time);
 
-        // wgpu 29: get_current_texture() returns a CurrentSurfaceTexture enum (not a Result).
-        let frame = match self.surface.get_current_texture() {
-            wgpu::CurrentSurfaceTexture::Success(t)
-            | wgpu::CurrentSurfaceTexture::Suboptimal(t) => t,
-            other => return Err(format!("surface frame unavailable: {other:?}")),
+        // A browser target acquires a swapchain frame; a native/headless target keeps a reusable
+        // COPY_SRC texture. The draw graph below is identical for both.
+        let surface_frame = if let Some(surface) = self.surface.as_ref() {
+            match surface.get_current_texture() {
+                wgpu::CurrentSurfaceTexture::Success(t)
+                | wgpu::CurrentSurfaceTexture::Suboptimal(t) => Some(t),
+                other => return Err(format!("surface frame unavailable: {other:?}")),
+            }
+        } else {
+            None
         };
 
         // On the web backend the swapchain texture tracks the canvas backing store, which can
@@ -1037,26 +1151,37 @@ impl PortalGpu {
         // A depth attachment whose dimensions don't match the colour attachment fails render-pass
         // validation, the whole frame is dropped, and the viewport stays black. Reconcile every
         // attachment to the *actual* acquired texture before recording any pass.
-        let fw = frame.texture.width();
-        let fh = frame.texture.height();
-        if fw > 0 && fh > 0 && (fw, fh) != (self.width, self.height) {
-            self.width = fw;
-            self.height = fh;
-            self.config.width = fw;
-            self.config.height = fh;
-            let (depth_texture, depth_view) = create_depth_texture(&self.device, fw, fh);
-            let (picking_texture, picking_view) = create_picking_texture(&self.device, fw, fh);
-            self.depth_texture = depth_texture;
-            self.depth_view = depth_view;
-            self.picking_texture = picking_texture;
-            self.picking_view = picking_view;
-            self.sync_bloom_targets();
-            self.write_camera_uniform(time);
+        if let Some(frame) = surface_frame.as_ref() {
+            let fw = frame.texture.width();
+            let fh = frame.texture.height();
+            if fw > 0 && fh > 0 && (fw, fh) != (self.width, self.height) {
+                self.width = fw;
+                self.height = fh;
+                if let Some(config) = self.config.as_mut() {
+                    config.width = fw;
+                    config.height = fh;
+                }
+                let (depth_texture, depth_view) = create_depth_texture(&self.device, fw, fh);
+                let (picking_texture, picking_view) = create_picking_texture(&self.device, fw, fh);
+                self.depth_texture = depth_texture;
+                self.depth_view = depth_view;
+                self.picking_texture = picking_texture;
+                self.picking_view = picking_view;
+                self.sync_bloom_targets();
+                self.write_camera_uniform(time);
+            }
         }
 
-        let view = frame
-            .texture
-            .create_view(&wgpu::TextureViewDescriptor::default());
+        let view = if let Some(frame) = surface_frame.as_ref() {
+            frame
+                .texture
+                .create_view(&wgpu::TextureViewDescriptor::default())
+        } else {
+            self.offscreen_texture
+                .as_ref()
+                .ok_or_else(|| "renderer has no output target".to_string())?
+                .create_view(&wgpu::TextureViewDescriptor::default())
+        };
 
         let mut encoder = self
             .device
@@ -1107,6 +1232,7 @@ impl PortalGpu {
                     pass.set_bind_group(0, &self.projector_camera_bind, &[]);
                     pass.set_bind_group(1, &self.mesh_model_bind, &[]);
                     pass.set_vertex_buffer(0, mesh.vertex_buf.slice(..));
+                    pass.set_vertex_buffer(1, mesh.color_buf.slice(..));
                     pass.set_index_buffer(mesh.index_buf.slice(..), wgpu::IndexFormat::Uint32);
                     pass.draw_indexed(0..mesh.index_count, 0, 0..1);
                 }
@@ -1166,6 +1292,7 @@ impl PortalGpu {
                 pass.set_bind_group(0, &self.projector_camera_bind, &[]);
                 pass.set_bind_group(1, &self.mesh_model_bind, &[]);
                 pass.set_vertex_buffer(0, mesh.vertex_buf.slice(..));
+                pass.set_vertex_buffer(1, mesh.color_buf.slice(..));
                 pass.set_index_buffer(mesh.index_buf.slice(..), wgpu::IndexFormat::Uint32);
                 pass.draw_indexed(0..mesh.index_count, 0, 0..1);
             }
@@ -1191,8 +1318,88 @@ impl PortalGpu {
 
         self.record_pick_copy(&mut encoder);
         self.queue.submit(std::iter::once(encoder.finish()));
-        frame.present();
+        if let Some(frame) = surface_frame {
+            frame.present();
+        }
         Ok(())
+    }
+
+    /// Number of bytes required by [`Self::read_rgba8_into`].
+    pub fn required_rgba8_bytes(&self) -> usize {
+        self.width as usize * self.height as usize * 4
+    }
+
+    /// Read the most recently rendered native offscreen frame into tightly packed RGBA8 bytes.
+    ///
+    /// This is deliberately caller-buffered: no `Vec` is created in the renderer. Browser surface
+    /// instances return an error because their swapchain images are presented, not retained.
+    #[cfg(not(target_arch = "wasm32"))]
+    pub fn read_rgba8_into(&self, out: &mut [u8]) -> Result<usize, String> {
+        let need = self.required_rgba8_bytes();
+        if out.len() < need {
+            return Err(format!(
+                "RGBA8 output buffer too small: need {need}, got {}",
+                out.len()
+            ));
+        }
+        let texture = self
+            .offscreen_texture
+            .as_ref()
+            .ok_or_else(|| "RGBA8 readback requires an offscreen renderer".to_string())?;
+        let staging = self
+            .readback_buf
+            .as_ref()
+            .ok_or_else(|| "offscreen readback buffer is unavailable".to_string())?;
+
+        let mut encoder = self
+            .device
+            .create_command_encoder(&wgpu::CommandEncoderDescriptor {
+                label: Some("qualia-render-readback-encoder"),
+            });
+        encoder.copy_texture_to_buffer(
+            wgpu::TexelCopyTextureInfo {
+                texture,
+                mip_level: 0,
+                origin: wgpu::Origin3d::ZERO,
+                aspect: wgpu::TextureAspect::All,
+            },
+            wgpu::TexelCopyBufferInfo {
+                buffer: staging,
+                layout: wgpu::TexelCopyBufferLayout {
+                    offset: 0,
+                    bytes_per_row: Some(self.readback_bytes_per_row),
+                    rows_per_image: Some(self.height),
+                },
+            },
+            wgpu::Extent3d {
+                width: self.width,
+                height: self.height,
+                depth_or_array_layers: 1,
+            },
+        );
+        self.queue.submit(std::iter::once(encoder.finish()));
+
+        let slice = staging.slice(..);
+        let (tx, rx) = std::sync::mpsc::channel();
+        slice.map_async(wgpu::MapMode::Read, move |result| {
+            let _ = tx.send(result);
+        });
+        let _ = self.device.poll(wgpu::PollType::wait_indefinitely());
+        rx.recv()
+            .map_err(|e| format!("RGBA8 readback callback failed: {e}"))?
+            .map_err(|e| format!("RGBA8 buffer map failed: {e}"))?;
+
+        let mapped = slice.get_mapped_range();
+        let tight_row = self.width as usize * 4;
+        let padded_row = self.readback_bytes_per_row as usize;
+        for row in 0..self.height as usize {
+            let src = &mapped[row * padded_row..row * padded_row + tight_row];
+            let dst = &mut out[row * tight_row..(row + 1) * tight_row];
+            dst.copy_from_slice(src);
+        }
+        drop(mapped);
+        staging.unmap();
+        Ok(need)
     }
 
     pub fn particle_count(&self) -> u32 {
@@ -1208,3 +1415,60 @@ use bloom::*;
 pub use particles::particle_cap_for_mode;
 use particles::*;
 use resources::*;
+
+#[cfg(all(test, not(target_arch = "wasm32")))]
+mod tests {
+    use super::*;
+    use crate::tensor::buffer_export::{write_tensor_buffer, TensorBufferHeader};
+    use crate::tensor::Tensor10D;
+
+    #[test]
+    fn offscreen_size_contract_is_caller_buffered() {
+        assert_eq!(padded_bytes_per_row(1), wgpu::COPY_BYTES_PER_ROW_ALIGNMENT);
+        assert_eq!(padded_bytes_per_row(64), 256);
+        assert_eq!(padded_bytes_per_row(65), 512);
+    }
+
+    #[test]
+    #[ignore = "requires a native GPU adapter"]
+    fn native_offscreen_renders_tensor_and_mesh_on_shared_gpu() {
+        let mut renderer =
+            PortalGpu::new_offscreen(96, 96, 256).expect("native offscreen renderer");
+
+        let tensors = [
+            Tensor10D::ground_truth(0.0, 0.0, -0.35, 0.0, 0.0, 0.0, 1.0, 0.0, 0.2),
+            Tensor10D::ground_truth(0.0, 0.0, 0.35, 0.0, 0.1, 0.0, 1.0, 0.0, 0.8),
+        ];
+        let mut tensor_bytes = vec![0u8; TensorBufferHeader::total_bytes(tensors.len())];
+        write_tensor_buffer(&tensors, &mut tensor_bytes).expect("tensor export");
+        assert_eq!(
+            renderer
+                .upload_tensor_buffer(&tensor_bytes)
+                .expect("tensor upload"),
+            2
+        );
+        assert_eq!(
+            renderer.upload_mesh(
+                &[[-0.6, -0.5, 0.2], [0.6, -0.5, 0.2], [0.0, 0.6, 0.2]],
+                &[0, 1, 2],
+            ),
+            1
+        );
+
+        renderer
+            .render(0.25, &SystemTelemetry::default())
+            .expect("offscreen draw");
+        let mut rgba = vec![0u8; renderer.required_rgba8_bytes()];
+        assert_eq!(
+            renderer
+                .read_rgba8_into(&mut rgba)
+                .expect("offscreen readback"),
+            rgba.len()
+        );
+        assert!(
+            rgba.chunks_exact(4)
+                .any(|px| px != [8, 13, 20, 255] && px[3] != 0),
+            "expected projected tensor, mesh, or ambient pixels over the clear colour"
+        );
+    }
+}

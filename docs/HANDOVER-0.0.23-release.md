@@ -45,6 +45,10 @@ All committed + pushed to `origin/0.0.23` (latest ~`10ba23a8`). Highlights:
 - **Docs**: CHANGELOG 0.0.23 section; `docs/manuals/wgsl-forge.md` updated; `docs/HANDOVER-llm-on-forge.md`
   got a CORRECTION banner; demo honesty fixes (see §3); **`docs/forge-showcase.html`** created (the model
   for new demo pages) + nav entry in `docs/menu.json`.
+- **Renderer SDK**: `render::gpu::PortalGpu` now runs on native and WASM wgpu 29. Native rendering
+  uses `shared_gpu()`, supports depth/bloom/Tensor10D SOA/mesh/picking, and reads linear RGBA8 into a
+  caller buffer. `webizen-render` is a workspace SDK adapter and routes scene PNG helpers through the
+  volumetric engine. A real A2000 tensor+mesh render/readback and 41 renderer tests pass.
 
 ## 2. Honest findings (settled — don't re-litigate, build on them)
 

@@ -13,8 +13,10 @@ struct Camera {
     pitch: f32,
     zoom: f32,
     tensor_mode: u32,
-    // [0] = frame time (seconds); [1..4] = camera eye xyz for T_pull
-    _padding: array<f32, 12>,
+    // _padding0.x = frame time; _padding0.yzw = camera eye xyz for T_pull.
+    _padding0: vec4<f32>,
+    _padding1: vec4<f32>,
+    _padding2: vec4<f32>,
 };
 
 // Matches portal_telemetry::ObserverStandpoint (128 B). u64 fields as vec2<u32> LE.
@@ -27,7 +29,12 @@ struct ObserverStandpoint {
     deontic_lane: u32,
     standpoint_class: u32,
     fabric_gate: u32,
-    _padding: array<f32, 22>,
+    _padding0: vec2<f32>,
+    _padding1: vec4<f32>,
+    _padding2: vec4<f32>,
+    _padding3: vec4<f32>,
+    _padding4: vec4<f32>,
+    _padding5: vec4<f32>,
 };
 
 // Matches Tensor10D SOA stride (40 B).
@@ -300,8 +307,8 @@ fn vertex_main(
     );
 
     let tensor = tensors[instance_index];
-    let frame_time = camera._padding[0];
-    let camera_eye = vec3<f32>(camera._padding[1], camera._padding[2], camera._padding[3]);
+    let frame_time = camera._padding0.x;
+    let camera_eye = camera._padding0.yzw;
 
     // Temporal scrub — discard vertices outside the observer's t_window band.
     let temporal_delta = abs(tensor.t - observer.t_slice);

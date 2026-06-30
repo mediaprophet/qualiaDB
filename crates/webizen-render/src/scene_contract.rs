@@ -5,7 +5,6 @@
 //! GPU rendering. The contract is backend-agnostic and uses CSS colors to match
 //! the existing codebase visual semantics.
 
-use bytemuck::{Pod, Zeroable};
 use serde::{Deserialize, Serialize};
 
 // Re-export SystemTelemetry from telemetry module to avoid duplication
@@ -47,6 +46,27 @@ pub struct SceneNode {
     /// Temporal version (t value)
     #[serde(default)]
     pub version: f64,
+}
+
+impl Default for SceneNode {
+    fn default() -> Self {
+        Self {
+            id: String::new(),
+            position: ScenePoint {
+                x: 0.5,
+                y: 0.5,
+                z: 0.0,
+            },
+            color: "#ffffff".to_string(),
+            radius: 4.0,
+            alpha: 1.0,
+            is_inferencing: false,
+            pulse_rate: 0.0,
+            tensor: Tensor10DProjection::default(),
+            epistemic_state: EpistemicState::Collapsed,
+            version: 0.0,
+        }
+    }
 }
 
 /// A renderable edge (line) with semantic styling
@@ -161,23 +181,34 @@ impl Tensor10DProjection {
     ///
     /// Zero-heap consideration: Uses stack-allocated arrays for CIE matrices
     pub fn spectral_to_color(&self) -> String {
-        // Project spectral to CIE XYZ using stack-allocated matrices
-        let xyz = self.spectral_to_cie_xyz();
-        // Convert XYZ to sRGB using stack-allocated matrices
-        let rgb = self.cie_xyz_to_srgb(xyz);
+        #[cfg(feature = "qualia")]
+        {
+            let (r, g, b) =
+                qualia_core_db::render::spectral::sigma_to_display_rgb(self.sigma as f32);
+            return format!("rgb({r}, {g}, {b})");
+        }
 
-        format!(
-            "rgb({}, {}, {})",
-            (rgb[0].clamp(0.0, 1.0) * 255.0) as u8,
-            (rgb[1].clamp(0.0, 1.0) * 255.0) as u8,
-            (rgb[2].clamp(0.0, 1.0) * 255.0) as u8
-        )
+        #[cfg(not(feature = "qualia"))]
+        {
+            // Project spectral to CIE XYZ using stack-allocated matrices
+            let xyz = self.spectral_to_cie_xyz();
+            // Convert XYZ to sRGB using stack-allocated matrices
+            let rgb = self.cie_xyz_to_srgb(xyz);
+
+            format!(
+                "rgb({}, {}, {})",
+                (rgb[0].clamp(0.0, 1.0) * 255.0) as u8,
+                (rgb[1].clamp(0.0, 1.0) * 255.0) as u8,
+                (rgb[2].clamp(0.0, 1.0) * 255.0) as u8
+            )
+        }
     }
 
     /// Project spectral signature (σ) to CIE XYZ color space
     /// Uses CIE 1931 2-degree color matching functions
     ///
     /// Zero-heap consideration: Stack-allocated matrices, no heap allocation
+    #[cfg(not(feature = "qualia"))]
     fn spectral_to_cie_xyz(&self) -> [f64; 3] {
         // Simplified spectral projection using stack-allocated CMF matrices
         // In full implementation, would use actual CIE 1931 2-degree CMF data
@@ -199,6 +230,7 @@ impl Tensor10DProjection {
     /// Convert CIE XYZ to sRGB display gamut
     ///
     /// Zero-heap consideration: Stack-allocated transformation matrix
+    #[cfg(not(feature = "qualia"))]
     fn cie_xyz_to_srgb(&self, xyz: [f64; 3]) -> [f64; 3] {
         // Stack-allocated XYZ to sRGB transformation matrix
         let xyz_to_srgb = [
@@ -396,6 +428,7 @@ mod tests {
             alpha: 1.0,
             is_inferencing: false,
             pulse_rate: 0.0,
+            ..SceneNode::default()
         };
         let serialized = serde_json::to_string(&node).unwrap();
         let deserialized: SceneNode = serde_json::from_str(&serialized).unwrap();
@@ -420,11 +453,13 @@ mod tests {
                 alpha: 1.0,
                 is_inferencing: false,
                 pulse_rate: 0.0,
+                ..SceneNode::default()
             }],
             edges: vec![],
             faces: vec![],
             camera: SceneCamera::default(),
             background: "#101820".to_string(),
+            ..RenderScene::default()
         };
         let serialized = serde_json::to_string(&scene).unwrap();
         let deserialized: RenderScene = serde_json::from_str(&serialized).unwrap();
@@ -451,8 +486,20 @@ mod tests {
             alpha: 0.8,
             is_inferencing: false,
             pulse_rate: 0.0,
+            ..SceneNode::default()
         });
         assert!(!scene.is_empty());
         assert_eq!(scene.element_count(), 1);
+    }
+
+    #[cfg(feature = "qualia")]
+    #[test]
+    fn spectral_color_uses_engine_oracle() {
+        let tensor = Tensor10DProjection {
+            sigma: 0.42,
+            ..Tensor10DProjection::default()
+        };
+        let (r, g, b) = qualia_core_db::render::spectral::sigma_to_display_rgb(0.42);
+        assert_eq!(tensor.spectral_to_color(), format!("rgb({r}, {g}, {b})"));
     }
 }

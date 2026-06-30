@@ -1,6 +1,5 @@
 //! Ambient particle instances derived from the resident 10D tensor (CPU side of the field).
 use super::*;
-use crate::tensor::Tensor10D;
 pub(super) fn particles_from_tensor(
     bytes: &[u8],
     cap: usize,

@@ -340,6 +340,41 @@ Each of those should become its own draft with its own conformance language.
   - [ ] at least one non-QualiaDB agent completes a conformant negotiation
   - [ ] privacy review against the Front Door DID isolation model
 
+## 13. Webizen N-Dimensional Renderer SDK
+
+- Scope: the renderer's SDK surface — the manifold→projection→view model
+  (`qualia_core_db::render::projection`), the PGA semantic-motor oracle (`render::pga`), the
+  zero-heap GPU ABI (Motor 64 B / RenderQuin 64 B / Tensor10D 40 B / uniforms), the neutral
+  serde **scene contract** (`webizen_render::scene_contract`), the device renderer
+  (`WgpuRenderer` — offscreen → PNG/data-URI, scene draw, picking, orbit camera), and the
+  semantic/epistemic layer (standpoint gating, σ vision+audio parity, deontic culling, VRAM
+  ledger). Two deployment profiles: **WASM** (`QualiaPortal` portal facade) and **native /
+  webizen-browser** (`webizen-render` + the engine).
+- Why it is a candidate: the projection model, ABI, scene contract, offscreen render, and
+  semantic layer are implemented + tested; it is intended to be **employable as an SDK** in WASM
+  or the webizen-browser, so the contract is specified independently of backend completeness.
+- First doc to write here: `webizen-renderer-sdk-spec.md` ✅ **DRAFTED (2026-06-30, v0.2)**
+- Primary SDO: internal first (the projection/ABI/scene contract); a future render-interop note
+  is possible once the volumetric path and packaging settle.
+- Recommended format: internal SDK specification with a conformance section (parity oracle,
+  binding coverage, ABI sizes, σ determinism, offscreen image contract).
+- Exit criteria before external submission / "fully implemented":
+  - [x] **Cross-platform volumetric 3D draw** wired into `webizen-render` (depth buffer +
+        `Tensor10D` SOA upload + `projector.wgsl` + bloom), with native caller-buffered RGBA8
+        readback on the engine's shared wgpu 29 device (2026-06-30).
+  - [x] `scene_contract::spectral_to_color` unified onto the engine
+        `render::spectral::sigma_to_display_rgb` path so embedder + GPU colors agree by construction
+  - [ ] deontic/temporal culling promoted to a named pipeline stage with its own conformance test
+  - [~] `webizen-render` / `webizen-desktop` / `webizen-studio` / `webizen-web` brought into the
+        default workspace. `webizen-render` tests and `webizen-studio` check pass; desktop
+        verification awaits uncached Tauri dependencies (network unavailable in this session).
+  - [ ] Phase 0.2b: lift `qualia_core_db::render` to a standalone `qualia-render` crate (resolves the
+        dangling `RENDERER_IMPLEMENTATION_PLAN.md` reference)
+  - [ ] SDK packaging: published `webizen-render` crate + a wasm bundle entry with an embedding example
+  - [~] ⚑ **Out-of-band (Timothy):** decommission / clearly mark the legacy `C:\Projects\webizen-browser`
+        copies so the renderer has one source of truth (it was pulled into qualiaDB to unify the engine;
+        the external checkout still holds parallel copies building against an older qualiaDB checkout)
+
 ## Suggested file backlog for this folder
 
 > **Reconciliation (2026-06-30)** — statuses verified against on-disk reality + current code.
@@ -366,6 +401,8 @@ Done (in `standards/`):
   Darwinian law implemented 2026-06-30 (`governance::coordination`)
 - [x] `webizen-protocol-rfc.md` — the broad protocol RFC (the file the backlog earlier planned
   as `webizen-protocol-split.md`)
+- [x] `webizen-renderer-sdk-spec.md` — N-Dimensional Renderer SDK draft (v0.2, 2026-06-30);
+  projection model + ABI + scene contract + native/WASM volumetric render + semantic layer ✅
 
 Done, but living under `docs/manuals/query-engine/` (cross-linked from `standards/index.html`):
 
