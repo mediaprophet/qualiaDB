@@ -705,6 +705,13 @@ impl<'a> ShaclEngine<'a> {
             // (`shacl_compiler` → `webizen` VM), not by per-value data validation, so
             // there is nothing for the data validator to check here.
             ShaclConstraint::DeonticPolicy { .. }
+            | ShaclConstraint::DeonticObligate
+            | ShaclConstraint::DeonticPermit
+            | ShaclConstraint::DeonticForbid
+            | ShaclConstraint::DeonticNotExpired { .. }
+            | ShaclConstraint::EpistemicKnowledge { .. }
+            | ShaclConstraint::EpistemicBelief { .. }
+            | ShaclConstraint::CommonKnowledge
             | ShaclConstraint::LtlConstraint { .. }
             | ShaclConstraint::ParaconsistentConstraint { .. }
             | ShaclConstraint::CalculusConstraint { .. }

@@ -365,6 +365,51 @@ mod tests {
     }
 
     #[test]
+    fn common_knowledge_propagation_across_two_agents() {
+        // Two agents both know φ (OP_KNOWS, certainty 255) in the same world.
+        // When everyone knows φ and a public announcement is made, φ becomes
+        // common knowledge. This tests the propagation path:
+        //   individual knowledge → everyone-knows → common knowledge
+        let agent_a = q_hash("agent_a");
+        let agent_b = q_hash("agent_b");
+        let world_w = q_hash("world_w");
+
+        let mk_knows = |agent: u64| {
+            let mut q = NQuin::default();
+            q.subject = agent;
+            q.predicate = (255u64 << CERTAINTY_BIT_SHIFT) | (OP_KNOWS as u64);
+            q.context = world_w;
+            q
+        };
+
+        let quins = [mk_knows(agent_a), mk_knows(agent_b)];
+
+        // Evaluate: both agents' knowledge claims should be Active
+        let mut out = [
+            EpistemicVerdict {
+                claim: NQuin::default(),
+                status: EpistemicStatus::Skipped,
+                certainty: 0,
+            };
+            4
+        ];
+        let count = evaluate_epistemic_frame(&quins, 0, world_w, &mut out).unwrap();
+        assert_eq!(count, 2, "both agents' claims must be evaluated");
+        assert_eq!(out[0].status, EpistemicStatus::Active);
+        assert_eq!(out[1].status, EpistemicStatus::Active);
+
+        // Both agents know → everyone_knows is true
+        let agent_knows = [out[0].status == EpistemicStatus::Active, out[1].status == EpistemicStatus::Active];
+        assert!(everyone_knows(&agent_knows), "everyone knows φ");
+
+        // Public announcement → common knowledge
+        assert!(
+            common_knowledge_via_announcement(everyone_knows(&agent_knows)),
+            "φ becomes common knowledge when everyone knows and it is publicly announced"
+        );
+    }
+
+    #[test]
     fn agm_belief_revision_is_available_in_the_epistemic_namespace() {
         // The AGM operators (from modal.rs) are re-exported here; revise is consistent.
         let p = Belief {

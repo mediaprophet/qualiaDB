@@ -205,11 +205,33 @@ impl ShaclCompiler {
             ShaclConstraint::DeonticPolicy { .. } => {
                 opcodes.push(SlgOpcode::NativeDeonticEval);
             }
+            ShaclConstraint::DeonticObligate => {
+                opcodes.push(SlgOpcode::NativeDeonticEval);
+            }
+            ShaclConstraint::DeonticPermit => {
+                opcodes.push(SlgOpcode::NativeDeonticEval);
+            }
+            ShaclConstraint::DeonticForbid => {
+                opcodes.push(SlgOpcode::NativeDeonticEval);
+            }
+            ShaclConstraint::DeonticNotExpired { .. } => {
+                opcodes.push(SlgOpcode::NativeDeonticEval);
+            }
             ShaclConstraint::EpistemicConstraint {
                 certainty_threshold,
             } => {
                 let min = (*certainty_threshold * 255.0).clamp(0.0, 255.0) as u8;
                 opcodes.push(SlgOpcode::NativeEpistemicEval(min));
+            }
+            ShaclConstraint::EpistemicKnowledge { min_certainty } => {
+                opcodes.push(SlgOpcode::NativeEpistemicEval(*min_certainty));
+            }
+            ShaclConstraint::EpistemicBelief { min_certainty } => {
+                opcodes.push(SlgOpcode::NativeEpistemicEval(*min_certainty));
+            }
+            ShaclConstraint::CommonKnowledge => {
+                // Common knowledge requires max certainty (255) — all agents know
+                opcodes.push(SlgOpcode::NativeEpistemicEval(255));
             }
             ShaclConstraint::LtlConstraint { .. } => {
                 opcodes.push(SlgOpcode::NativeLtlGlobally);
@@ -342,5 +364,58 @@ mod tests {
             &mut opcodes,
         );
         assert!(opcodes.contains(&SlgOpcode::NativeDeonticEval));
+    }
+
+    #[test]
+    fn deontic_typed_constraints_emit_native_eval() {
+        for constraint in &[
+            ShaclConstraint::DeonticObligate,
+            ShaclConstraint::DeonticPermit,
+            ShaclConstraint::DeonticForbid,
+            ShaclConstraint::DeonticNotExpired { now_unix: 1000 },
+        ] {
+            let mut opcodes = Vec::new();
+            ShaclCompiler::push_constraint(constraint, &mut opcodes);
+            assert!(
+                opcodes.contains(&SlgOpcode::NativeDeonticEval),
+                "Deontic typed constraint must emit NativeDeonticEval"
+            );
+        }
+    }
+
+    #[test]
+    fn epistemic_knowledge_constraint_emits_native_eval_with_min_certainty() {
+        let mut opcodes = Vec::new();
+        ShaclCompiler::push_constraint(
+            &ShaclConstraint::EpistemicKnowledge { min_certainty: 200 },
+            &mut opcodes,
+        );
+        assert!(
+            opcodes.iter().any(|o| matches!(o, SlgOpcode::NativeEpistemicEval(m) if *m == 200)),
+            "EpistemicKnowledge must emit NativeEpistemicEval with the specified min_certainty"
+        );
+    }
+
+    #[test]
+    fn epistemic_belief_constraint_emits_native_eval_with_min_certainty() {
+        let mut opcodes = Vec::new();
+        ShaclCompiler::push_constraint(
+            &ShaclConstraint::EpistemicBelief { min_certainty: 128 },
+            &mut opcodes,
+        );
+        assert!(
+            opcodes.iter().any(|o| matches!(o, SlgOpcode::NativeEpistemicEval(m) if *m == 128)),
+            "EpistemicBelief must emit NativeEpistemicEval with the specified min_certainty"
+        );
+    }
+
+    #[test]
+    fn common_knowledge_constraint_emits_native_eval_with_max_certainty() {
+        let mut opcodes = Vec::new();
+        ShaclCompiler::push_constraint(&ShaclConstraint::CommonKnowledge, &mut opcodes);
+        assert!(
+            opcodes.iter().any(|o| matches!(o, SlgOpcode::NativeEpistemicEval(m) if *m == 255)),
+            "CommonKnowledge must emit NativeEpistemicEval with certainty 255 (max)"
+        );
     }
 }
