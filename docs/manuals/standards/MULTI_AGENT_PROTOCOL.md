@@ -84,13 +84,19 @@ Reference: `governance::coordination::compute_priority(windowed_faults, usury_ev
 > and other modality encodings. They are reallocated to the collision-free **`0x70–0x7F`** block. The
 > opcodes execute **atomically** within the Sentinel VM frame.
 >
-> **Implementation status (0.0.23).** The *decidable core* of all three opcodes — the expiry gate, the
-> anti-usury resource contract + circuit breakers, the fidelity/efficiency arithmetic, and the Darwinian
-> priority law above — is implemented and unit-tested in `crates/qualia-core-db/src/governance/coordination.rs`.
-> The non-decidable substrate (root-delegation signature verification against the key-vault Root Key, the
-> `SuspendedTransactionQueue`, and VC minting to the Context Graph) is reached through named seams and is the
-> next increment, together with adding an operand-stack execution path to `webizen_bytecode` (today a
-> per-quin matcher, not a stack machine).
+> **Implementation status (0.0.23).** Implemented and unit-tested in
+> `crates/qualia-core-db/src/governance/coordination.rs`:
+> (a) the *decidable core* of all three opcodes — the expiry gate, the anti-usury resource contract +
+> circuit breakers, the fidelity/efficiency arithmetic, and the Darwinian priority law above; and
+> (b) a fixed-depth, zero-heap **operand-stack VM** (`execute_coordination` + `OP_PUSH_U64` `0x7F`) that runs
+> these opcodes with the exact stack effects below (the Sentinel's `webizen_bytecode` is a per-quin matcher,
+> so the coordination ISA is its own bounded stack machine). Verified end-to-end: grant (+ expiry / bad-sig
+> faults), resource declaration (+ over-allowance), privileged performance rating (mints the VC hash), and
+> stack-bound guards.
+> The remaining increment is **host-side seam wiring**: root-delegation signature verification against the
+> key-vault Root Key (the `verify_root_delegation` seam), the `SuspendedTransactionQueue`
+> (`InsufficientGlobalResources` yield), VC minting of the `PerformanceRecord` to the Context Graph, and the
+> Darwinian routing in `daemon_swarm.rs` (`compute_priority`).
 
 ### 0x70 — `OP_AUTHORIZATION_GRANT`
 Verifies the cryptographic delegation Human-Root → ephemeral agent.

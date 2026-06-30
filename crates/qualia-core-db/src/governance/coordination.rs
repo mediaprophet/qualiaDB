@@ -217,9 +217,163 @@ pub fn compute_priority(windowed_faults: u32, usury_event: bool) -> u64 {
     p.max(PRIORITY_FLOOR)
 }
 
+// ─── Coordination operand-stack VM (ISA 0x70–0x7F) ────────────────────────────────
+//
+// `webizen_bytecode` is a per-quin matcher; the coordination ISA is instead a small
+// **fixed-depth operand-stack machine**. A program PUSHes the opcode operands then executes
+// 0x70 / 0x71 / 0x72 with the stack effects in MULTI_AGENT_PROTOCOL.md §5. Zero-heap (the
+// stack is a fixed array), keeping the Sentinel VM's bounded discipline.
+
+/// Operand-stack depth — fixed/bounded like the rest of the VM.
+pub const COORD_STACK_DEPTH: usize = 16;
+/// `0x7F` — push the next 8 little-endian bytes as a `u64` operand.
+pub const OP_PUSH_U64: u8 = 0x7F;
+
+/// Host-provided seams the coordination VM cannot decide itself (the daemon backs these).
+pub struct CoordContext<V: Fn(u64, u64) -> bool> {
+    /// Current epoch — the `0x70` expiry gate.
+    pub current_epoch: u64,
+    /// The daemon's global token allowance — the `0x71` admission check.
+    pub global_token_limit: u64,
+    /// Whether the caller is the privileged Sentinel daemon — gates `0x72`.
+    pub is_sentinel_daemon: bool,
+    /// Root-delegation signature verification against the enclave Root Key — `0x70`.
+    pub verify_root_delegation: V,
+}
+
+/// What a coordination program produced (besides the operand stack).
+#[derive(Debug, Clone, PartialEq, Eq, Default)]
+pub struct CoordOutcome {
+    /// `0x70` result, if executed.
+    pub granted: Option<bool>,
+    /// `0x71` contract, if executed — the host arms the breakers / yields to the queue.
+    pub contract: Option<ResourceContract>,
+    /// `0x72` record, if executed — the host mints the VC nquin into the context graph.
+    pub performance: Option<PerformanceRecord>,
+    /// Top of the operand stack at halt (e.g. the minted VC hash), if any.
+    pub stack_top: Option<u64>,
+}
+
+/// Coordination VM faults.
+#[derive(Debug, Clone, PartialEq, Eq)]
+pub enum CoordVmError {
+    StackUnderflow,
+    StackOverflow,
+    /// Truncated operand or an unknown opcode.
+    InvalidProgram,
+    /// An opcode raised a coordination fault — the frame is dumped.
+    Fault(CoordFault),
+}
+
+/// Deterministic VC identity for a minted performance record — the `nquin_hash` `0x72` pushes
+/// to confirm minting. The host writes the full [`PerformanceRecord`] to the context graph.
+pub fn perf_vc_hash(rec: &PerformanceRecord) -> u64 {
+    crate::q_hash(&format!(
+        "q42:perfVC:{}:{}:{}:{}",
+        rec.agent_did_hash, rec.fidelity, rec.efficiency_bp, rec.usurious
+    ))
+}
+
+/// Execute a coordination-ISA program against a fresh fixed-depth operand stack.
+pub fn execute_coordination<V: Fn(u64, u64) -> bool>(
+    program: &[u8],
+    ctx: &CoordContext<V>,
+) -> Result<CoordOutcome, CoordVmError> {
+    let mut stack = [0u64; COORD_STACK_DEPTH];
+    let mut sp = 0usize;
+    let mut ip = 0usize;
+    let mut outcome = CoordOutcome::default();
+
+    while ip < program.len() {
+        match program[ip] {
+            OP_PUSH_U64 => {
+                if ip + 9 > program.len() {
+                    return Err(CoordVmError::InvalidProgram);
+                }
+                if sp >= COORD_STACK_DEPTH {
+                    return Err(CoordVmError::StackOverflow);
+                }
+                let bytes: [u8; 8] = program[ip + 1..ip + 9]
+                    .try_into()
+                    .map_err(|_| CoordVmError::InvalidProgram)?;
+                stack[sp] = u64::from_le_bytes(bytes);
+                sp += 1;
+                ip += 9;
+            }
+            OP_AUTHORIZATION_GRANT => {
+                if sp < 3 {
+                    return Err(CoordVmError::StackUnderflow);
+                }
+                // [Agent, Root, Timestamp] — Timestamp on top.
+                let timestamp = stack[sp - 1];
+                let root = stack[sp - 2];
+                let agent = stack[sp - 3];
+                sp -= 3;
+                let granted = eval_authorization_grant(
+                    agent,
+                    root,
+                    timestamp,
+                    ctx.current_epoch,
+                    &ctx.verify_root_delegation,
+                )
+                .map_err(CoordVmError::Fault)?;
+                stack[sp] = u64::from(granted);
+                sp += 1;
+                outcome.granted = Some(granted);
+                ip += 1;
+            }
+            OP_RESOURCE_DECLARATION => {
+                if sp < 3 {
+                    return Err(CoordVmError::StackUnderflow);
+                }
+                // [Task, Ceiling, MaxCycles] — MaxCycles on top.
+                let max_cycles = stack[sp - 1];
+                let ceiling = stack[sp - 2];
+                let task = stack[sp - 3];
+                sp -= 3;
+                let contract =
+                    eval_resource_declaration(task, ceiling, max_cycles, ctx.global_token_limit)
+                        .map_err(CoordVmError::Fault)?;
+                outcome.contract = Some(contract);
+                ip += 1;
+            }
+            OP_PERFORMANCE_RATING => {
+                require_privileged(ctx.is_sentinel_daemon).map_err(CoordVmError::Fault)?;
+                if sp < 4 {
+                    return Err(CoordVmError::StackUnderflow);
+                }
+                // [Agent, Declared, Actual, Validation] — Validation on top.
+                let validation = stack[sp - 1] != 0;
+                let actual = stack[sp - 2];
+                let declared = stack[sp - 3];
+                let agent = stack[sp - 4];
+                sp -= 4;
+                let rec = eval_performance_rating(agent, declared, actual, validation);
+                if sp >= COORD_STACK_DEPTH {
+                    return Err(CoordVmError::StackOverflow);
+                }
+                stack[sp] = perf_vc_hash(&rec);
+                sp += 1;
+                outcome.performance = Some(rec);
+                ip += 1;
+            }
+            _ => return Err(CoordVmError::InvalidProgram),
+        }
+    }
+
+    outcome.stack_top = (sp > 0).then(|| stack[sp - 1]);
+    Ok(outcome)
+}
+
 #[cfg(test)]
 mod tests {
     use super::*;
+
+    /// Append `OP_PUSH_U64 <v LE>` to a program.
+    fn push(p: &mut Vec<u8>, v: u64) {
+        p.push(OP_PUSH_U64);
+        p.extend_from_slice(&v.to_le_bytes());
+    }
 
     #[test]
     fn grant_gate_checks_expiry_then_signature() {
@@ -292,5 +446,126 @@ mod tests {
         // Usury is the bright line: immediate hard quarantine regardless of fault count.
         assert_eq!(compute_priority(0, true), 0);
         assert_eq!(compute_priority(1, true), 0);
+    }
+
+    #[test]
+    fn coordination_vm_executes_grant_program() {
+        // PUSH agent, PUSH root, PUSH timestamp(100), GRANT — epoch 50, valid signature.
+        let mut prog = Vec::new();
+        push(&mut prog, 0xA);
+        push(&mut prog, 0xB0);
+        push(&mut prog, 100);
+        prog.push(OP_AUTHORIZATION_GRANT);
+        let ctx = CoordContext {
+            current_epoch: 50,
+            global_token_limit: 10_000,
+            is_sentinel_daemon: false,
+            verify_root_delegation: |_a, _r| true,
+        };
+        let out = execute_coordination(&prog, &ctx).unwrap();
+        assert_eq!(out.granted, Some(true));
+        assert_eq!(out.stack_top, Some(1)); // pushed 1 (True)
+
+        // Expired epoch → GrantExpired fault, signature never consulted.
+        let ctx_exp = CoordContext {
+            current_epoch: 101,
+            global_token_limit: 10_000,
+            is_sentinel_daemon: false,
+            verify_root_delegation: |_a, _r| panic!("must not verify when expired"),
+        };
+        assert_eq!(
+            execute_coordination(&prog, &ctx_exp),
+            Err(CoordVmError::Fault(CoordFault::GrantExpired { now: 101, valid_until: 100 }))
+        );
+
+        // Bad signature → UnauthorizedActor.
+        let ctx_bad = CoordContext {
+            current_epoch: 50,
+            global_token_limit: 10_000,
+            is_sentinel_daemon: false,
+            verify_root_delegation: |_a, _r| false,
+        };
+        assert_eq!(
+            execute_coordination(&prog, &ctx_bad),
+            Err(CoordVmError::Fault(CoordFault::UnauthorizedActor { agent: 0xA }))
+        );
+    }
+
+    #[test]
+    fn coordination_vm_executes_resource_and_performance_programs() {
+        let ctx = CoordContext {
+            current_epoch: 0,
+            global_token_limit: 4000,
+            is_sentinel_daemon: true,
+            verify_root_delegation: |_a, _r| true,
+        };
+        // RESOURCE_DECLARATION: PUSH task, ceiling(1000), max_cycles(50), DECLARE.
+        let mut prog = Vec::new();
+        push(&mut prog, 7);
+        push(&mut prog, 1000);
+        push(&mut prog, 50);
+        prog.push(OP_RESOURCE_DECLARATION);
+        let c = execute_coordination(&prog, &ctx).unwrap().contract.unwrap();
+        assert_eq!(c.token_ceiling, 1000);
+        assert_eq!(c.cycles_remaining, 50);
+
+        // Over the global allowance → InsufficientGlobalResources (→ suspended queue).
+        let mut prog2 = Vec::new();
+        push(&mut prog2, 7);
+        push(&mut prog2, 5000);
+        push(&mut prog2, 50);
+        prog2.push(OP_RESOURCE_DECLARATION);
+        assert_eq!(
+            execute_coordination(&prog2, &ctx),
+            Err(CoordVmError::Fault(CoordFault::InsufficientGlobalResources {
+                declared: 5000,
+                global_limit: 4000
+            }))
+        );
+
+        // PERFORMANCE_RATING (privileged): PUSH agent, declared(1000), actual(800), valid(1), RATE.
+        let mut prog3 = Vec::new();
+        push(&mut prog3, 0xA);
+        push(&mut prog3, 1000);
+        push(&mut prog3, 800);
+        push(&mut prog3, 1);
+        prog3.push(OP_PERFORMANCE_RATING);
+        let out3 = execute_coordination(&prog3, &ctx).unwrap();
+        let rec = out3.performance.unwrap();
+        assert_eq!(rec.fidelity, 1);
+        assert_eq!(rec.efficiency_bp, 2000);
+        assert_eq!(out3.stack_top, Some(perf_vc_hash(&rec))); // minted-VC hash pushed
+
+        // A non-privileged caller cannot mint → PrivilegeViolation.
+        let ctx_np = CoordContext {
+            current_epoch: 0,
+            global_token_limit: 4000,
+            is_sentinel_daemon: false,
+            verify_root_delegation: |_a, _r| true,
+        };
+        assert_eq!(
+            execute_coordination(&prog3, &ctx_np),
+            Err(CoordVmError::Fault(CoordFault::PrivilegeViolation))
+        );
+    }
+
+    #[test]
+    fn coordination_vm_guards_stack_bounds() {
+        let ctx = CoordContext {
+            current_epoch: 0,
+            global_token_limit: 4000,
+            is_sentinel_daemon: true,
+            verify_root_delegation: |_a, _r| true,
+        };
+        // GRANT with too few operands → underflow (frame dumped, not silent).
+        let mut prog = Vec::new();
+        push(&mut prog, 1);
+        prog.push(OP_AUTHORIZATION_GRANT);
+        assert_eq!(execute_coordination(&prog, &ctx), Err(CoordVmError::StackUnderflow));
+        // Truncated PUSH operand → invalid program.
+        assert_eq!(
+            execute_coordination(&[OP_PUSH_U64, 1, 2, 3], &ctx),
+            Err(CoordVmError::InvalidProgram)
+        );
     }
 }
