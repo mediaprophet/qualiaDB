@@ -1,7 +1,5 @@
-use crate::solvers::SolversError;
 use serde::{Deserialize, Serialize};
 use std::collections::HashMap;
-use std::ops::{Add, Mul, Sub};
 use std::sync::{Arc, Mutex};
 
 use super::computation::*;
@@ -93,6 +91,14 @@ pub struct MatrixCache {
     pub current_size: u64,
     pub hit_count: u64,
     pub miss_count: u64,
+    /// Monotonic logical clock used for LRU access-time tracking.
+    /// Every `get` and `put` advances this counter, yielding deterministic
+    /// ordering without relying on wall-clock time.
+    pub logical_clock: u64,
+    /// Monotonic counter used for FIFO insertion-order tracking.
+    /// Each `put` advances this counter, so the oldest inserted entry has
+    /// the smallest `insertion_order`.
+    pub insertion_counter: u64,
 }
 
 /// Cache entry
@@ -105,6 +111,9 @@ pub struct CacheEntry {
     pub size: u64,
     /// The cached matrix itself (stored directly for zero-deserialization retrieval)
     pub matrix: Option<Matrix>,
+    /// FIFO insertion order — assigned from `MatrixCache::insertion_counter`
+    /// at insert time. Lower values were inserted earlier.
+    pub insertion_order: u64,
 }
 
 /// Cache policies
@@ -472,6 +481,8 @@ impl MatrixCache {
             current_size: 0,
             hit_count: 0,
             miss_count: 0,
+            logical_clock: 0,
+            insertion_counter: 0,
         }
     }
 
@@ -480,24 +491,36 @@ impl MatrixCache {
         self.current_size = 0;
         self.hit_count = 0;
         self.miss_count = 0;
+        self.logical_clock = 0;
+        self.insertion_counter = 0;
         Ok(())
     }
 
-    /// Get the current time as a monotonic counter (nanoseconds since UNIX_EPOCH)
-    fn current_time() -> u64 {
-        std::time::SystemTime::now()
-            .duration_since(std::time::UNIX_EPOCH)
-            .unwrap_or_default()
-            .as_nanos() as u64
+    /// Advance the logical clock and return the new value.
+    /// Used to stamp `access_time` on every `get`/`put` so that LRU
+    /// ordering is deterministic and independent of wall-clock time.
+    fn tick_clock(&mut self) -> u64 {
+        self.logical_clock += 1;
+        self.logical_clock
+    }
+
+    /// Advance the insertion counter and return the new value.
+    /// Used to stamp `insertion_order` on every `put` so that FIFO
+    /// ordering reflects insertion sequence.
+    fn tick_insertion(&mut self) -> u64 {
+        self.insertion_counter += 1;
+        self.insertion_counter
     }
 
     /// Look up a matrix by ID. On a hit, updates access time and access count,
     /// increments hit_count, and returns the matrix. On a miss, increments
     /// miss_count and returns None.
     pub fn get(&mut self, matrix_id: &str) -> Option<Matrix> {
-        if let Some(entry) = self.cache_entries.get_mut(matrix_id) {
+        if self.cache_entries.contains_key(matrix_id) {
             self.hit_count += 1;
-            entry.access_time = Self::current_time();
+            let now = self.tick_clock();
+            let entry = self.cache_entries.get_mut(matrix_id).unwrap();
+            entry.access_time = now;
             entry.access_count += 1;
             return entry.matrix.clone();
         }
@@ -505,24 +528,35 @@ impl MatrixCache {
         None
     }
 
-    /// Store a matrix in the cache. Updates current_size and evicts LRU entries
-    /// if the cache exceeds max_size.
+    /// Store a matrix in the cache. Updates current_size and evicts entries
+    /// according to the current `cache_policy` if the cache exceeds max_size.
     pub fn put(&mut self, matrix: &Matrix) -> Result<(), LinearAlgebraError> {
         // Estimate size as rows * cols * 8 (f64 = 8 bytes)
         let size_bytes = (matrix.rows * matrix.cols * 8) as u64;
-        let now = Self::current_time();
+
+        // Edge case: capacity 0 — evict everything and store nothing.
+        // This guarantees the cache remains empty on every put.
+        if self.max_size == 0 {
+            self.cache_entries.clear();
+            self.current_size = 0;
+            return Ok(());
+        }
 
         // If updating an existing entry, subtract its old size first
         if let Some(existing) = self.cache_entries.get(matrix.matrix_id.as_str()) {
             self.current_size -= existing.size;
         }
 
-        // Evict LRU entries until we have room for the new entry
+        // Evict entries until we have room for the new entry
         while self.current_size + size_bytes > self.max_size
             && !self.cache_entries.is_empty()
         {
-            self.evict_lru();
+            self.evict();
         }
+
+        // Stamp the new entry with the current logical clock and insertion order
+        let now = self.tick_clock();
+        let insertion_order = self.tick_insertion();
 
         // If the single entry is larger than max_size, still store it
         // (it will be evicted on the next put if needed)
@@ -533,12 +567,30 @@ impl MatrixCache {
             access_count: 1,
             size: size_bytes,
             matrix: Some(matrix.clone()),
+            insertion_order,
         };
 
         self.cache_entries.insert(matrix.matrix_id.clone(), entry);
         self.current_size += size_bytes;
 
         Ok(())
+    }
+
+    /// Evict one entry from the cache according to the current `cache_policy`.
+    ///
+    /// - **LRU**: evicts the entry with the oldest `access_time`.
+    /// - **LFU**: evicts the entry with the lowest `access_count`
+    ///   (ties broken by oldest `access_time`).
+    /// - **FIFO**: evicts the entry with the smallest `insertion_order`.
+    /// - **Random**: evicts an arbitrary entry (HashMap iteration order).
+    /// - **Adaptive**: currently delegates to LRU.
+    pub fn evict(&mut self) {
+        match self.cache_policy {
+            CachePolicy::LRU | CachePolicy::Adaptive => self.evict_lru(),
+            CachePolicy::LFU => self.evict_lfu(),
+            CachePolicy::FIFO => self.evict_fifo(),
+            CachePolicy::Random => self.evict_random(),
+        }
     }
 
     /// Find the entry with the oldest access_time, remove it, and update current_size.
@@ -554,6 +606,61 @@ impl MatrixCache {
             .map(|(id, _)| id.clone());
 
         if let Some(id) = oldest_id {
+            if let Some(entry) = self.cache_entries.remove(&id) {
+                self.current_size -= entry.size;
+            }
+        }
+    }
+
+    /// Find the entry with the lowest access_count (ties broken by oldest
+    /// access_time), remove it, and update current_size.
+    pub fn evict_lfu(&mut self) {
+        if self.cache_entries.is_empty() {
+            return;
+        }
+        // Find the entry with the lowest access_count; break ties by access_time
+        let victim_id = self
+            .cache_entries
+            .iter()
+            .min_by_key(|(_, entry)| (entry.access_count, entry.access_time))
+            .map(|(id, _)| id.clone());
+
+        if let Some(id) = victim_id {
+            if let Some(entry) = self.cache_entries.remove(&id) {
+                self.current_size -= entry.size;
+            }
+        }
+    }
+
+    /// Find the entry with the smallest insertion_order (oldest inserted),
+    /// remove it, and update current_size.
+    pub fn evict_fifo(&mut self) {
+        if self.cache_entries.is_empty() {
+            return;
+        }
+        // Find the entry with the smallest insertion_order
+        let oldest_id = self
+            .cache_entries
+            .iter()
+            .min_by_key(|(_, entry)| entry.insertion_order)
+            .map(|(id, _)| id.clone());
+
+        if let Some(id) = oldest_id {
+            if let Some(entry) = self.cache_entries.remove(&id) {
+                self.current_size -= entry.size;
+            }
+        }
+    }
+
+    /// Evict an arbitrary entry (used by the Random policy).
+    /// HashMap iteration order is not truly random, but it is unspecified
+    /// and sufficient for a simple random-eviction strategy.
+    pub fn evict_random(&mut self) {
+        if self.cache_entries.is_empty() {
+            return;
+        }
+        let victim_id = self.cache_entries.keys().next().cloned();
+        if let Some(id) = victim_id {
             if let Some(entry) = self.cache_entries.remove(&id) {
                 self.current_size -= entry.size;
             }
@@ -785,6 +892,238 @@ mod tests {
         // Update with a larger matrix
         cache.put(&make_test_matrix("m1", 4, 4)).unwrap();
         assert_eq!(cache.cache_size(), 128); // 4*4*8 = 128, not 128+32
+    }
+
+    // === Eviction policy tests ===
+
+    #[test]
+    fn test_lru_eviction() {
+        // Fill cache to capacity, insert one more, verify the least-recently-used
+        // entry was evicted.
+        let mut cache = MatrixCache::new();
+        cache.cache_policy = CachePolicy::LRU;
+        // Each 2x2 matrix = 32 bytes; max 96 bytes → can hold 3
+        cache.max_size = 96;
+        cache.initialize().unwrap();
+
+        // Insert m1, m2, m3 (fills the cache)
+        cache.put(&make_test_matrix("m1", 2, 2)).unwrap();
+        cache.put(&make_test_matrix("m2", 2, 2)).unwrap();
+        cache.put(&make_test_matrix("m3", 2, 2)).unwrap();
+        assert_eq!(cache.cache_entries.len(), 3);
+
+        // Access m1 and m3 so that m2 becomes the least-recently-used
+        cache.get("m1");
+        cache.get("m3");
+
+        // Insert m4 — should evict m2 (oldest access_time)
+        cache.put(&make_test_matrix("m4", 2, 2)).unwrap();
+
+        assert!(
+            cache.cache_entries.contains_key("m1"),
+            "m1 was accessed recently and should still be cached"
+        );
+        assert!(
+            !cache.cache_entries.contains_key("m2"),
+            "m2 is the least-recently-used and should have been evicted"
+        );
+        assert!(
+            cache.cache_entries.contains_key("m3"),
+            "m3 was accessed recently and should still be cached"
+        );
+        assert!(
+            cache.cache_entries.contains_key("m4"),
+            "m4 was just inserted and should be cached"
+        );
+    }
+
+    #[test]
+    fn test_lfu_eviction() {
+        // Access entries different numbers of times, then trigger eviction,
+        // verify the least-frequently-used was evicted.
+        let mut cache = MatrixCache::new();
+        cache.cache_policy = CachePolicy::LFU;
+        // Each 2x2 matrix = 32 bytes; max 96 bytes → can hold 3
+        cache.max_size = 96;
+        cache.initialize().unwrap();
+
+        // Insert m1, m2, m3 (fills the cache)
+        cache.put(&make_test_matrix("m1", 2, 2)).unwrap();
+        cache.put(&make_test_matrix("m2", 2, 2)).unwrap();
+        cache.put(&make_test_matrix("m3", 2, 2)).unwrap();
+        assert_eq!(cache.cache_entries.len(), 3);
+
+        // Access m1 three times, m2 once, m3 two times.
+        // After puts, each has access_count=1.
+        // m1: 1 + 3 = 4, m2: 1 + 1 = 2, m3: 1 + 2 = 3
+        cache.get("m1");
+        cache.get("m1");
+        cache.get("m1");
+        cache.get("m3");
+        cache.get("m3");
+
+        // Insert m4 — LFU should evict m2 (lowest access_count = 2)
+        cache.put(&make_test_matrix("m4", 2, 2)).unwrap();
+
+        assert!(
+            cache.cache_entries.contains_key("m1"),
+            "m1 has the highest access_count and should still be cached"
+        );
+        assert!(
+            !cache.cache_entries.contains_key("m2"),
+            "m2 has the lowest access_count and should have been evicted"
+        );
+        assert!(
+            cache.cache_entries.contains_key("m3"),
+            "m3 has a higher access_count than m2 and should still be cached"
+        );
+        assert!(
+            cache.cache_entries.contains_key("m4"),
+            "m4 was just inserted and should be cached"
+        );
+    }
+
+    #[test]
+    fn test_fifo_eviction() {
+        // Fill cache, insert one more, verify the first-inserted entry was evicted.
+        let mut cache = MatrixCache::new();
+        cache.cache_policy = CachePolicy::FIFO;
+        // Each 2x2 matrix = 32 bytes; max 96 bytes → can hold 3
+        cache.max_size = 96;
+        cache.initialize().unwrap();
+
+        // Insert m1, m2, m3 (fills the cache)
+        cache.put(&make_test_matrix("m1", 2, 2)).unwrap();
+        cache.put(&make_test_matrix("m2", 2, 2)).unwrap();
+        cache.put(&make_test_matrix("m3", 2, 2)).unwrap();
+        assert_eq!(cache.cache_entries.len(), 3);
+
+        // Access m1 — FIFO ignores access patterns, so m1 is still the
+        // first-inserted entry and should be evicted next.
+        cache.get("m1");
+        cache.get("m3");
+
+        // Insert m4 — FIFO should evict m1 (oldest insertion_order)
+        cache.put(&make_test_matrix("m4", 2, 2)).unwrap();
+
+        assert!(
+            !cache.cache_entries.contains_key("m1"),
+            "m1 was inserted first and should have been evicted under FIFO"
+        );
+        assert!(
+            cache.cache_entries.contains_key("m2"),
+            "m2 should still be cached"
+        );
+        assert!(
+            cache.cache_entries.contains_key("m3"),
+            "m3 should still be cached"
+        );
+        assert!(
+            cache.cache_entries.contains_key("m4"),
+            "m4 was just inserted and should be cached"
+        );
+    }
+
+    #[test]
+    fn test_cache_get_updates_metadata() {
+        // Verify that get() updates access time (LRU) and access count (LFU).
+        let mut cache = MatrixCache::new();
+        cache.cache_policy = CachePolicy::LRU;
+        cache.max_size = 96; // can hold 3 entries of 32 bytes
+        cache.initialize().unwrap();
+
+        cache.put(&make_test_matrix("m1", 2, 2)).unwrap();
+        cache.put(&make_test_matrix("m2", 2, 2)).unwrap();
+        cache.put(&make_test_matrix("m3", 2, 2)).unwrap();
+
+        // Record m1's initial metadata
+        let m1_initial = cache.cache_entries.get("m1").unwrap().clone();
+        assert_eq!(m1_initial.access_count, 1, "put sets access_count to 1");
+
+        // Access m1 — should update access_time and access_count
+        cache.get("m1");
+
+        let m1_after = cache.cache_entries.get("m1").unwrap().clone();
+        assert_eq!(
+            m1_after.access_count, 2,
+            "get should increment access_count"
+        );
+        assert!(
+            m1_after.access_time > m1_initial.access_time,
+            "get should advance access_time"
+        );
+
+        // Now trigger eviction: m2 should be the LRU victim because m1 was
+        // just accessed and m3 was inserted after m2.
+        cache.put(&make_test_matrix("m4", 2, 2)).unwrap();
+        assert!(
+            !cache.cache_entries.contains_key("m2"),
+            "m2 should be evicted as the least-recently-used"
+        );
+        assert!(
+            cache.cache_entries.contains_key("m1"),
+            "m1's updated access_time should have protected it from eviction"
+        );
+
+        // Verify LFU metadata: access_count drives eviction under LFU
+        let mut cache = MatrixCache::new();
+        cache.cache_policy = CachePolicy::LFU;
+        cache.max_size = 64; // can hold 2 entries of 32 bytes
+        cache.initialize().unwrap();
+
+        cache.put(&make_test_matrix("a", 2, 2)).unwrap();
+        cache.put(&make_test_matrix("b", 2, 2)).unwrap();
+
+        // Access "a" multiple times so it has a higher count than "b"
+        cache.get("a");
+        cache.get("a");
+
+        let a_count = cache.cache_entries.get("a").unwrap().access_count;
+        let b_count = cache.cache_entries.get("b").unwrap().access_count;
+        assert!(a_count > b_count, "a should have a higher access_count than b");
+
+        // Insert "c" — LFU should evict "b" (lowest access_count)
+        cache.put(&make_test_matrix("c", 2, 2)).unwrap();
+        assert!(
+            !cache.cache_entries.contains_key("b"),
+            "b has the lowest access_count and should be evicted under LFU"
+        );
+        assert!(
+            cache.cache_entries.contains_key("a"),
+            "a has a higher access_count and should be retained"
+        );
+    }
+
+    #[test]
+    fn test_cache_capacity_zero() {
+        // Edge case: capacity 0 should always evict immediately — nothing
+        // should ever be stored in the cache.
+        let mut cache = MatrixCache::new();
+        cache.cache_policy = CachePolicy::LRU;
+        cache.max_size = 0;
+        cache.initialize().unwrap();
+
+        // Attempt to insert several matrices
+        cache.put(&make_test_matrix("m1", 2, 2)).unwrap();
+        cache.put(&make_test_matrix("m2", 4, 4)).unwrap();
+        cache.put(&make_test_matrix("m3", 8, 8)).unwrap();
+
+        // Cache should remain empty
+        assert_eq!(
+            cache.cache_entries.len(),
+            0,
+            "capacity-0 cache should never store entries"
+        );
+        assert_eq!(
+            cache.cache_size(),
+            0,
+            "capacity-0 cache should report zero size"
+        );
+
+        // get() should always miss
+        assert!(cache.get("m1").is_none(), "get on a capacity-0 cache should miss");
+        assert_eq!(cache.miss_count, 1);
+        assert_eq!(cache.hit_count, 0);
     }
 
     // === MatrixAllocator tests ===

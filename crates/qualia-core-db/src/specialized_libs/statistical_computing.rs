@@ -317,26 +317,83 @@ pub struct ExecutionPlan {
     pub execution_time: u64,
 }
 
-/// Query operations
-#[derive(Debug, Clone, PartialEq)]
-pub enum QueryOperationType {
-    Scan,
-    Filter,
-    Project,
-    Aggregate,
-    Join,
-    Sort,
-    Limit,
+/// Join strategy selected by the query optimizer.
+#[derive(Debug, Clone, Copy, PartialEq, Eq)]
+pub enum JoinType {
+    NestedLoop,
+    HashJoin,
 }
 
-/// A single query operation paired with the amount of data it operates on.
-///
-/// `data_size` is an estimate of the number of rows (or bytes) the operation
-/// will touch; the [`QueryOptimizer`] uses it to estimate execution cost.
+/// A single logical query operation. Each variant carries the data the
+/// optimizer needs to estimate cost, reorder steps, and select join strategies.
+#[derive(Debug, Clone, PartialEq)]
+pub enum QueryOperation {
+    /// Full table scan; `estimated_rows` is the table's row count.
+    Scan { table: String, estimated_rows: usize },
+    /// Predicate filter; `selectivity` (0.0–1.0) is the fraction of rows that pass.
+    Filter { predicate: String, selectivity: f64 },
+    /// Join of two inputs; `left_cost`/`right_cost` are estimated row counts
+    /// of the left and right inputs. The optimizer may override `join_type`.
+    Join { left_cost: f64, right_cost: f64, join_type: JoinType },
+    /// Aggregation; `group_by` lists the grouping columns.
+    Aggregate { group_by: Vec<String> },
+    /// Sort by the given columns.
+    Sort { columns: Vec<String> },
+    /// Limit to at most `count` rows.
+    Limit { count: usize },
+    /// Column projection.
+    Project { columns: Vec<String> },
+}
+
+/// A single step in an optimized query plan: the operation plus its estimated
+/// cost and output row count.
 #[derive(Debug, Clone)]
-pub struct QueryOperation {
-    pub operation_type: QueryOperationType,
-    pub data_size: usize,
+pub struct QueryStep {
+    pub operation: QueryOperation,
+    pub estimated_cost: f64,
+    pub estimated_rows: usize,
+}
+
+/// An optimized query plan: ordered steps with aggregate cost/row estimates.
+#[derive(Debug, Clone)]
+pub struct QueryPlan {
+    pub operations: Vec<QueryStep>,
+    pub estimated_cost: f64,
+    pub estimated_rows: usize,
+}
+
+impl QueryOperation {
+    /// A rough data-size proxy used by the legacy `estimate_cost` / 
+    /// `optimize_with_cost` path when the input row count is not known
+    /// in isolation. The `optimize()` method uses proper per-step tracking.
+    fn data_size_hint(&self) -> f64 {
+        match self {
+            QueryOperation::Scan { estimated_rows, .. } => *estimated_rows as f64,
+            QueryOperation::Filter { selectivity, .. } => {
+                100.0 / selectivity.max(0.01)
+            }
+            QueryOperation::Join { left_cost, right_cost, .. } => left_cost * right_cost,
+            QueryOperation::Aggregate { group_by } => group_by.len().max(1) as f64 * 100.0,
+            QueryOperation::Sort { columns } => columns.len().max(1) as f64 * 100.0,
+            QueryOperation::Limit { count } => *count as f64,
+            QueryOperation::Project { columns } => columns.len().max(1) as f64 * 100.0,
+        }
+    }
+
+    /// Canonical ordering priority for stable reordering by `optimize()`.
+    /// Lower = earlier in the plan. Operations with the same priority
+    /// preserve their relative input order (stable sort).
+    fn plan_priority(&self) -> u8 {
+        match self {
+            QueryOperation::Scan { .. } => 0,
+            QueryOperation::Project { .. } => 0,
+            QueryOperation::Filter { .. } => 1,
+            QueryOperation::Join { .. } => 2,
+            QueryOperation::Aggregate { .. } => 3,
+            QueryOperation::Sort { .. } => 4,
+            QueryOperation::Limit { .. } => 5,
+        }
+    }
 }
 
 /// Statistical computation engine
@@ -2694,52 +2751,52 @@ impl QueryOptimizer {
     /// that cheaper operations (Filter, Project, Limit) sort before expensive
     /// ones (Scan, Join, Aggregate, Sort).
     pub fn estimate_cost(&self, operation: &QueryOperation) -> CostModel {
-        let n = operation.data_size.max(1) as f64;
-        match operation.operation_type {
+        let n = operation.data_size_hint();
+        match operation {
             // Full scan: heavy I/O, light CPU.
-            QueryOperationType::Scan => CostModel {
+            QueryOperation::Scan { .. } => CostModel {
                 cpu_cost: 0.1 * n,
                 io_cost: 1.0 * n,
                 memory_cost: 0.05 * n,
                 network_cost: 0.0,
             },
             // Filter: cheap, mostly CPU.
-            QueryOperationType::Filter => CostModel {
+            QueryOperation::Filter { .. } => CostModel {
                 cpu_cost: 0.2 * n,
                 io_cost: 0.0,
                 memory_cost: 0.02 * n,
                 network_cost: 0.0,
             },
             // Project: cheap column selection.
-            QueryOperationType::Project => CostModel {
+            QueryOperation::Project { .. } => CostModel {
                 cpu_cost: 0.1 * n,
                 io_cost: 0.0,
                 memory_cost: 0.02 * n,
                 network_cost: 0.0,
             },
             // Aggregate: moderate CPU + memory.
-            QueryOperationType::Aggregate => CostModel {
+            QueryOperation::Aggregate { .. } => CostModel {
                 cpu_cost: 0.5 * n,
                 io_cost: 0.1 * n,
                 memory_cost: 0.3 * n,
                 network_cost: 0.0,
             },
             // Join: the most expensive — CPU, memory, and network.
-            QueryOperationType::Join => CostModel {
+            QueryOperation::Join { .. } => CostModel {
                 cpu_cost: 1.0 * n,
                 io_cost: 0.5 * n,
                 memory_cost: 1.0 * n,
                 network_cost: 0.5 * n,
             },
             // Sort: CPU + memory heavy.
-            QueryOperationType::Sort => CostModel {
+            QueryOperation::Sort { .. } => CostModel {
                 cpu_cost: 0.6 * n,
                 io_cost: 0.2 * n,
                 memory_cost: 0.5 * n,
                 network_cost: 0.0,
             },
             // Limit: very cheap.
-            QueryOperationType::Limit => CostModel {
+            QueryOperation::Limit { .. } => CostModel {
                 cpu_cost: 0.05 * n,
                 io_cost: 0.0,
                 memory_cost: 0.01 * n,
@@ -2815,6 +2872,114 @@ impl QueryOptimizer {
     fn next_plan_id(&self) -> u64 {
         // Use the current plan's operation count as a cheap discriminator.
         self.execution_plan.operations.len() as u64 + 1
+    }
+
+    /// Optimize a sequence of operations into a [`QueryPlan`].
+    ///
+    /// Applies three rewrite rules:
+    /// 1. **Predicate pushdown** — filters are moved ahead of joins so rows are
+    ///    reduced before the expensive join.
+    /// 2. **Join-type selection** — HashJoin is selected when both join inputs
+    ///    are ≥ 1000 rows; NestedLoop when both are < 100; otherwise the
+    ///    caller-supplied join type is retained.
+    /// 3. **Limit-last** — Limit is always the final step.
+    ///
+    /// After reordering, per-step cost and output row count are estimated
+    /// using a simple cost model that tracks the running row count through
+    /// the plan.
+    pub fn optimize(
+        &self,
+        operations: Vec<QueryOperation>,
+    ) -> Result<QueryPlan, StatisticalError> {
+        if operations.is_empty() {
+            return Ok(QueryPlan {
+                operations: Vec::new(),
+                estimated_cost: 0.0,
+                estimated_rows: 0,
+            });
+        }
+
+        // 1. Stable reorder by canonical plan priority (scan → filter → join →
+        //    aggregate → sort → limit).  This achieves both filter-pushdown
+        //    and limit-last in a single pass.
+        let mut reordered: Vec<QueryOperation> = operations;
+        reordered.sort_by_key(|op| op.plan_priority());
+
+        // 2. Join-type selection: override join_type based on input sizes.
+        for op in reordered.iter_mut() {
+            if let QueryOperation::Join { left_cost, right_cost, join_type } = op {
+                if *left_cost >= 1000.0 && *right_cost >= 1000.0 {
+                    *join_type = JoinType::HashJoin;
+                } else if *left_cost < 100.0 && *right_cost < 100.0 {
+                    *join_type = JoinType::NestedLoop;
+                }
+            }
+        }
+
+        // 3. Build plan with per-step cost and row estimates.
+        let mut steps: Vec<QueryStep> = Vec::with_capacity(reordered.len());
+        let mut current_rows: usize = 0;
+        let mut total_cost: f64 = 0.0;
+
+        for op in reordered {
+            let (cost, output_rows) = Self::estimate_step(&op, current_rows);
+            steps.push(QueryStep {
+                operation: op,
+                estimated_cost: cost,
+                estimated_rows: output_rows,
+            });
+            current_rows = output_rows;
+            total_cost += cost;
+        }
+
+        Ok(QueryPlan {
+            operations: steps,
+            estimated_cost: total_cost,
+            estimated_rows: current_rows,
+        })
+    }
+
+    /// Per-step cost and output-row estimation. `input_rows` is the running
+    /// row count from the previous step (0 for the first step).
+    fn estimate_step(op: &QueryOperation, input_rows: usize) -> (f64, usize) {
+        match op {
+            QueryOperation::Scan { estimated_rows, .. } => {
+                let cost = *estimated_rows as f64 * 0.01;
+                (cost, *estimated_rows)
+            }
+            QueryOperation::Filter { selectivity, .. } => {
+                let n = input_rows.max(1) as f64;
+                let cost = n * selectivity * 0.005;
+                let output = (n * selectivity).round() as usize;
+                (cost, output)
+            }
+            QueryOperation::Join { left_cost, right_cost, .. } => {
+                let n = left_cost * right_cost;
+                let cost = n * 0.001;
+                let output = n.round() as usize;
+                (cost, output)
+            }
+            QueryOperation::Aggregate { .. } => {
+                let n = input_rows.max(1) as f64;
+                let cost = n * 0.01;
+                (cost, input_rows)
+            }
+            QueryOperation::Sort { .. } => {
+                let n = input_rows.max(1) as f64;
+                let cost = n * 0.01;
+                (cost, input_rows)
+            }
+            QueryOperation::Limit { count } => {
+                let cost = *count as f64 * 0.001;
+                let output = (*count).min(input_rows.max(1));
+                (cost, output)
+            }
+            QueryOperation::Project { .. } => {
+                let n = input_rows.max(1) as f64;
+                let cost = n * 0.001;
+                (cost, input_rows)
+            }
+        }
     }
 }
 
@@ -4226,77 +4391,218 @@ mod tests {
     }
 
     #[test]
-    fn test_query_optimizer_estimate_cost() {
+    fn test_filter_pushdown() {
+        // Filter placed *after* a Join should be pushed ahead of it so rows
+        // are reduced before the expensive join.
         let optimizer = QueryOptimizer::new();
-        let scan = QueryOperation {
-            operation_type: QueryOperationType::Scan,
-            data_size: 1000,
-        };
-        let limit = QueryOperation {
-            operation_type: QueryOperationType::Limit,
-            data_size: 1000,
-        };
-        // Scan is far more expensive than Limit at the same data size.
-        assert!(optimizer.estimate_cost(&limit).total_cost()
-            < optimizer.estimate_cost(&scan).total_cost());
-    }
-
-    #[test]
-    fn test_query_optimizer_reorders_by_cost() {
-        let mut optimizer = QueryOptimizer::new();
-        optimizer.initialize().unwrap();
-
-        // No plan before optimization.
-        assert!(optimizer.get_execution_plan().is_none());
-
-        // Deliberately out-of-order: expensive Join first, cheap Limit last.
         let operations = vec![
-            QueryOperation {
-                operation_type: QueryOperationType::Join,
-                data_size: 10_000,
+            QueryOperation::Join {
+                left_cost: 500.0,
+                right_cost: 500.0,
+                join_type: JoinType::NestedLoop,
             },
-            QueryOperation {
-                operation_type: QueryOperationType::Sort,
-                data_size: 5_000,
-            },
-            QueryOperation {
-                operation_type: QueryOperationType::Filter,
-                data_size: 5_000,
-            },
-            QueryOperation {
-                operation_type: QueryOperationType::Limit,
-                data_size: 100,
+            QueryOperation::Filter {
+                predicate: "x > 10".to_string(),
+                selectivity: 0.1,
             },
         ];
 
-        let plan = optimizer.optimize_with_cost(&operations).unwrap();
+        let plan = optimizer.optimize(operations).unwrap();
 
-        // The plan must be sorted cheapest-first.
-        let costs: Vec<f64> = plan
-            .operations
-            .iter()
-            .map(|op| optimizer.estimate_cost(op).total_cost())
-            .collect();
-        let mut sorted = costs.clone();
-        sorted.sort_by(|a, b| a.partial_cmp(b).unwrap());
-        assert_eq!(costs, sorted, "operations should be ordered cheapest-first");
+        // The Filter must come before the Join.
+        assert!(
+            matches!(plan.operations[0].operation, QueryOperation::Filter { .. }),
+            "filter should be pushed before the join"
+        );
+        assert!(
+            matches!(plan.operations[1].operation, QueryOperation::Join { .. }),
+            "join should follow the filter"
+        );
+        assert_eq!(plan.operations.len(), 2);
+    }
 
-        // The first operation should be the cheapest (Limit), not the Join.
-        assert_eq!(plan.operations[0].operation_type, QueryOperationType::Limit);
+    #[test]
+    fn test_hash_join_selection() {
+        // Both sides > 1000 rows → HashJoin should be chosen regardless of the
+        // join_type the caller supplied.
+        let optimizer = QueryOptimizer::new();
+        let operations = vec![QueryOperation::Join {
+            left_cost: 5000.0,
+            right_cost: 4000.0,
+            join_type: JoinType::NestedLoop,
+        }];
 
-        // Estimated cost equals the sum of per-operation costs.
-        let sum: f64 = costs.iter().sum();
+        let plan = optimizer.optimize(operations).unwrap();
+
+        match &plan.operations[0].operation {
+            QueryOperation::Join { join_type, .. } => {
+                assert_eq!(*join_type, JoinType::HashJoin);
+            }
+            other => panic!("expected a join, got {:?}", other),
+        }
+    }
+
+    #[test]
+    fn test_nested_loop_small_tables() {
+        // Both sides < 100 rows → NestedLoop is acceptable (and chosen).
+        let optimizer = QueryOptimizer::new();
+        let operations = vec![QueryOperation::Join {
+            left_cost: 50.0,
+            right_cost: 30.0,
+            join_type: JoinType::HashJoin,
+        }];
+
+        let plan = optimizer.optimize(operations).unwrap();
+
+        match &plan.operations[0].operation {
+            QueryOperation::Join { join_type, .. } => {
+                assert_eq!(*join_type, JoinType::NestedLoop);
+            }
+            other => panic!("expected a join, got {:?}", other),
+        }
+    }
+
+    #[test]
+    fn test_cost_estimation() {
+        // Every step should carry a positive, finite estimated cost and the
+        // plan total should equal the sum of the per-step costs.
+        let optimizer = QueryOptimizer::new();
+        let operations = vec![
+            QueryOperation::Scan {
+                table: "t".to_string(),
+                estimated_rows: 1000,
+            },
+            QueryOperation::Filter {
+                predicate: "x > 1".to_string(),
+                selectivity: 0.5,
+            },
+            QueryOperation::Limit { count: 10 },
+        ];
+
+        let plan = optimizer.optimize(operations).unwrap();
+
+        assert!(plan.estimated_cost > 0.0);
+        assert!(plan.estimated_cost.is_finite());
+        for step in &plan.operations {
+            assert!(step.estimated_cost >= 0.0, "cost must be non-negative");
+            assert!(step.estimated_cost.is_finite(), "cost must be finite");
+            assert!(step.estimated_rows <= 10_000_000, "rows bounded");
+        }
+
+        let sum: f64 = plan.operations.iter().map(|s| s.estimated_cost).sum();
         assert!((plan.estimated_cost - sum).abs() < 1e-9);
 
-        // The optimizer's cost_model field is now populated (used, not dead).
-        assert!(optimizer.cost_model.total_cost() > 0.0);
+        // Scan cost = 1000 * 0.01 = 10.0
+        assert!((plan.operations[0].estimated_cost - 10.0).abs() < 1e-9);
+        // Filter cost = 1000 * 0.5 * 0.005 = 2.5
+        assert!((plan.operations[1].estimated_cost - 2.5).abs() < 1e-9);
+        // Limit cost = 10 * 0.001 = 0.01
+        assert!((plan.operations[2].estimated_cost - 0.01).abs() < 1e-9);
+    }
 
-        // The plan is retrievable via the accessor.
-        let retrieved = optimizer.get_execution_plan();
-        assert!(retrieved.is_some());
-        assert_eq!(retrieved.unwrap().operations.len(), operations.len());
+    #[test]
+    fn test_limit_last() {
+        // Limit must always be the final step, even if supplied first.
+        let optimizer = QueryOptimizer::new();
+        let operations = vec![
+            QueryOperation::Limit { count: 5 },
+            QueryOperation::Scan {
+                table: "t".to_string(),
+                estimated_rows: 100,
+            },
+            QueryOperation::Filter {
+                predicate: "x > 0".to_string(),
+                selectivity: 0.5,
+            },
+        ];
 
-        // Reordering must not drop or duplicate operations.
-        assert_eq!(plan.operations.len(), operations.len());
+        let plan = optimizer.optimize(operations).unwrap();
+
+        assert!(
+            matches!(
+                plan.operations.last().unwrap().operation,
+                QueryOperation::Limit { .. }
+            ),
+            "limit must be the last operation"
+        );
+        // No other Limit appears mid-plan.
+        let limit_count = plan
+            .operations
+            .iter()
+            .filter(|s| matches!(s.operation, QueryOperation::Limit { .. }))
+            .count();
+        assert_eq!(limit_count, 1);
+    }
+
+    #[test]
+    fn test_full_plan_optimization() {
+        // A complex query: scan → filter → join → aggregate → sort → limit.
+        let optimizer = QueryOptimizer::new();
+        let operations = vec![
+            QueryOperation::Scan {
+                table: "orders".to_string(),
+                estimated_rows: 5000,
+            },
+            QueryOperation::Filter {
+                predicate: "status = 'paid'".to_string(),
+                selectivity: 0.2,
+            },
+            QueryOperation::Join {
+                left_cost: 1000.0,
+                right_cost: 2000.0,
+                join_type: JoinType::NestedLoop,
+            },
+            QueryOperation::Aggregate {
+                group_by: vec!["customer_id".to_string()],
+            },
+            QueryOperation::Sort {
+                columns: vec!["total".to_string()],
+            },
+            QueryOperation::Limit { count: 100 },
+        ];
+
+        let plan = optimizer.optimize(operations).unwrap();
+
+        // No operations dropped or duplicated.
+        assert_eq!(plan.operations.len(), 6);
+
+        // Ordering: Scan, Filter, Join, Aggregate, Sort, Limit.
+        let kinds: Vec<&str> = plan
+            .operations
+            .iter()
+            .map(|s| match &s.operation {
+                QueryOperation::Scan { .. } => "scan",
+                QueryOperation::Filter { .. } => "filter",
+                QueryOperation::Join { .. } => "join",
+                QueryOperation::Aggregate { .. } => "aggregate",
+                QueryOperation::Sort { .. } => "sort",
+                QueryOperation::Limit { .. } => "limit",
+                QueryOperation::Project { .. } => "project",
+            })
+            .collect();
+        assert_eq!(
+            kinds,
+            vec!["scan", "filter", "join", "aggregate", "sort", "limit"]
+        );
+
+        // Both join sides > 1000 → HashJoin selected.
+        if let QueryOperation::Join { join_type, .. } = &plan.operations[2].operation {
+            assert_eq!(*join_type, JoinType::HashJoin);
+        }
+
+        // Plan-level aggregates are populated.
+        assert!(plan.estimated_cost > 0.0);
+        assert!(plan.estimated_rows > 0);
+    }
+
+    #[test]
+    fn test_empty_operations() {
+        // An empty operation list yields an empty plan.
+        let optimizer = QueryOptimizer::new();
+        let plan = optimizer.optimize(Vec::new()).unwrap();
+
+        assert!(plan.operations.is_empty());
+        assert!((plan.estimated_cost - 0.0).abs() < 1e-12);
+        assert_eq!(plan.estimated_rows, 0);
     }
 }

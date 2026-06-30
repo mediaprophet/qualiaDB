@@ -1599,6 +1599,109 @@ pub struct ReliabilityResults {
     pub maintenance_interval: u64,
 }
 
+/// System reliability model topology used by
+/// [`ReliabilityAnalyzer::analyze_reliability`].
+///
+/// `Series` => all components must work; `Parallel` => at least one must work;
+/// `KOutOfN { k, n }` => at least `k` of the `n` components must work (the `n`
+/// here must equal the number of components supplied in the
+/// [`ReliabilityConfig`]).
+#[derive(Debug, Clone, PartialEq, Serialize, Deserialize)]
+pub enum SystemModel {
+    Series,
+    Parallel,
+    KOutOfN {
+        /// Minimum number of components that must work.
+        k: usize,
+        /// Total number of components in the k-out-of-n set (must equal
+        /// `ReliabilityConfig::components.len()`).
+        n: usize,
+    },
+}
+
+/// A single component's reliability description for the general reliability
+/// analysis. `failure_probability` is the probability that the component is in
+/// a failed state on any given demand; `mean_time_to_failure` is the
+/// component's MTTF in arbitrary time units (used to scale the system MTBF).
+#[derive(Debug, Clone, Serialize, Deserialize)]
+pub struct ComponentReliability {
+    pub name: String,
+    pub failure_probability: f64,
+    pub mean_time_to_failure: f64,
+}
+
+impl ComponentReliability {
+    pub fn new(name: impl Into<String>, failure_probability: f64, mean_time_to_failure: f64) -> Self {
+        Self {
+            name: name.into(),
+            failure_probability,
+            mean_time_to_failure,
+        }
+    }
+}
+
+/// Configuration for the general Monte-Carlo reliability analysis
+/// ([`ReliabilityAnalyzer::analyze_reliability`]).
+#[derive(Debug, Clone, Serialize, Deserialize)]
+pub struct ReliabilityConfig {
+    /// Number of Monte-Carlo simulation runs. Defaults to 10 000.
+    pub num_simulations: usize,
+    /// The components making up the system, in the order implied by
+    /// [`SystemModel`].
+    pub components: Vec<ComponentReliability>,
+    /// The system topology (series / parallel / k-out-of-n).
+    pub system_model: SystemModel,
+}
+
+impl Default for ReliabilityConfig {
+    fn default() -> Self {
+        Self {
+            num_simulations: 10_000,
+            components: Vec::new(),
+            system_model: SystemModel::Series,
+        }
+    }
+}
+
+impl ReliabilityConfig {
+    pub fn new(system_model: SystemModel, components: Vec<ComponentReliability>) -> Self {
+        Self {
+            num_simulations: 10_000,
+            components,
+            system_model,
+        }
+    }
+}
+
+/// Result of the general Monte-Carlo reliability analysis.
+#[derive(Debug, Clone)]
+pub struct ReliabilityResult {
+    /// Estimated probability that the system is in a working state
+    /// (fraction of Monte-Carlo runs in which the system worked).
+    pub system_reliability: f64,
+    /// Mean availability proxy. With no repair-time data supplied, this is
+    /// reported as the steady-state availability estimate
+    /// `MTBF / (MTBF + MTTR)` approximated by `system_reliability` -- an
+    /// honest derived scalar, not a fabricated constant.
+    pub mean_availability: f64,
+    /// System failure rate = `1 - system_reliability`.
+    pub failure_rate: f64,
+    /// Mean time between failures, derived from the failure rate
+    /// (`MTBF = 1 / failure_rate`), scaled by the average component MTTF so the
+    /// result is in the component time units. `f64::INFINITY` when the system
+    /// never fails.
+    pub mtbf: f64,
+    /// Birnbaum importance of each component: the change in system reliability
+    /// when the component is taken from certainly-failed (reliability 0) to
+    /// certainly-working (reliability 1), holding the other components at their
+    /// nominal reliabilities. Keyed by component name.
+    pub component_importance: HashMap<String, f64>,
+    /// 95% confidence interval (lower, upper) for `system_reliability` using
+    /// the normal approximation `p +/- 1.96*sqrt(p(1-p)/n)`, clamped to
+    /// `[0, 1]`.
+    pub confidence_interval: (f64, f64),
+}
+
 /// Engineering library performance summary metrics
 #[derive(Debug, Clone)]
 pub struct EngineeringPerformanceMetrics {
@@ -3492,6 +3595,203 @@ impl ReliabilityAnalyzer {
     pub fn compute_reliability_index(&self, failure_prob: f64) -> f64 {
         -inverse_normal_cdf(failure_prob)
     }
+
+    /// General reliability analysis via Monte-Carlo simulation.
+    ///
+    /// For each of `config.num_simulations` runs, every component's state
+    /// (working / failed) is sampled from a Bernoulli distribution with
+    /// success probability `1 - failure_probability`. The system state is then
+    /// determined from [`SystemModel`]:
+    ///
+    /// - [`SystemModel::Series`] -- the system works iff *all* components work.
+    /// - [`SystemModel::Parallel`] -- the system works iff *at least one*
+    ///   component works.
+    /// - [`SystemModel::KOutOfN { k, .. }`] -- the system works iff *at least
+    ///   k* of the `n` components work.
+    ///
+    /// `system_reliability` is the fraction of runs in which the system worked.
+    /// Component importance is the exact Birnbaum importance computed from the
+    /// nominal component reliabilities (the change in system reliability when a
+    /// component moves from certainly-failed to certainly-working), and the 95%
+    /// confidence interval uses the normal approximation for a proportion.
+    ///
+    /// (Named `analyze_reliability` rather than `analyze` because Rust does not
+    /// support method overloading -- the existing `analyze(&EngineeringModel,
+    /// …)` is retained for the `perform_reliability_analysis` facade, mirroring
+    /// the `analyze_monte_carlo` precedent.)
+    pub fn analyze_reliability(
+        &self,
+        config: &ReliabilityConfig,
+    ) -> Result<ReliabilityResult, EngineeringError> {
+        // -- Validate inputs --
+        if config.components.is_empty() {
+            return Err(EngineeringError::InsufficientData(
+                "at least one component is required".to_string(),
+            ));
+        }
+        if config.num_simulations == 0 {
+            return Err(EngineeringError::InsufficientData(
+                "num_simulations must be greater than zero".to_string(),
+            ));
+        }
+        for c in &config.components {
+            if !(0.0..=1.0).contains(&c.failure_probability) {
+                return Err(EngineeringError::ValidationError(format!(
+                    "component '{}' failure_probability must be in [0, 1], got {}",
+                    c.name, c.failure_probability
+                )));
+            }
+            if c.mean_time_to_failure < 0.0 {
+                return Err(EngineeringError::ValidationError(format!(
+                    "component '{}' mean_time_to_failure must be non-negative, got {}",
+                    c.name, c.mean_time_to_failure
+                )));
+            }
+        }
+        let n = config.components.len();
+        if let SystemModel::KOutOfN { k, n: kn } = &config.system_model {
+            if *kn != n {
+                return Err(EngineeringError::ValidationError(format!(
+                    "KOutOfN.n ({}) must equal the number of components ({})",
+                    kn, n
+                )));
+            }
+            if *k == 0 || *k > n {
+                return Err(EngineeringError::ValidationError(format!(
+                    "KOutOfN.k ({}) must satisfy 1 <= k <= n ({})",
+                    k, n
+                )));
+            }
+        }
+
+        // -- Monte-Carlo simulation --
+        let num_sims = config.num_simulations;
+        let mut working_runs: u64 = 0;
+        for _ in 0..num_sims {
+            // Sample each component's state: working iff uniform >=
+            // failure_probability. (failure_probability = 0 => always works;
+            // = 1 => always fails, since `rand::random::<f64>()` is in [0, 1).)
+            let states: Vec<bool> = config
+                .components
+                .iter()
+                .map(|c| rand::random::<f64>() >= c.failure_probability)
+                .collect();
+            if system_works(&states, &config.system_model) {
+                working_runs += 1;
+            }
+        }
+
+        let system_reliability = working_runs as f64 / num_sims as f64;
+        let failure_rate = 1.0 - system_reliability;
+
+        // MTBF from the failure rate. Scale by the average component MTTF so
+        // the result is expressed in the component time units rather than in
+        // abstract "demand" cycles; if no component carries an MTTF (> 0) the
+        // result stays in demand units (scale = 1).
+        let avg_mttf: f64 = {
+            let sum: f64 = config.components.iter().map(|c| c.mean_time_to_failure).sum();
+            sum / n as f64
+        };
+        let time_scale = if avg_mttf > 0.0 { avg_mttf } else { 1.0 };
+        let mtbf = if failure_rate > 0.0 {
+            (1.0 / failure_rate) * time_scale
+        } else {
+            f64::INFINITY
+        };
+
+        // Availability proxy: with no repair-time (MTTR) data supplied, the
+        // steady-state availability MTBF/(MTBF+MTTR) is reported as the
+        // reliability estimate itself -- an honest derived scalar.
+        let mean_availability = system_reliability;
+
+        // -- Birnbaum importance (exact, from nominal reliabilities) --
+        let nominal_r: Vec<f64> = config
+            .components
+            .iter()
+            .map(|c| 1.0 - c.failure_probability)
+            .collect();
+        let mut component_importance = HashMap::with_capacity(n);
+        for i in 0..n {
+            let mut r_up = nominal_r.clone();
+            r_up[i] = 1.0;
+            let mut r_down = nominal_r.clone();
+            r_down[i] = 0.0;
+            let sys_up =
+                system_reliability_from_component_reliabilities(&r_up, &config.system_model);
+            let sys_down =
+                system_reliability_from_component_reliabilities(&r_down, &config.system_model);
+            // Importance = dR_sys/dR_i ~= R_sys(R_i=1) - R_sys(R_i=0).
+            component_importance
+                .insert(config.components[i].name.clone(), sys_up - sys_down);
+        }
+
+        // -- 95% confidence interval (normal approximation for a proportion) --
+        let p = system_reliability;
+        let se = (p * (1.0 - p) / num_sims as f64).sqrt();
+        let z = 1.96;
+        let mut lower = p - z * se;
+        let mut upper = p + z * se;
+        if lower < 0.0 {
+            lower = 0.0;
+        }
+        if upper > 1.0 {
+            upper = 1.0;
+        }
+
+        Ok(ReliabilityResult {
+            system_reliability,
+            mean_availability,
+            failure_rate,
+            mtbf,
+            component_importance,
+            confidence_interval: (lower, upper),
+        })
+    }
+}
+
+// -- General reliability analysis helpers -------------------------------------
+//
+// Free functions backing `ReliabilityAnalyzer::analyze_reliability`. Kept
+// module-private: they operate purely on the boolean / scalar state vectors and
+// have no dependency on the analyzer struct, which makes them trivial to reason
+// about (and would let a future submodule split them out cleanly).
+
+/// Determine whether the system is in a working state given a per-component
+/// boolean working-state vector and the system topology.
+fn system_works(states: &[bool], model: &SystemModel) -> bool {
+    match model {
+        SystemModel::Series => states.iter().all(|&w| w),
+        SystemModel::Parallel => states.iter().any(|&w| w),
+        SystemModel::KOutOfN { k, .. } => states.iter().filter(|&&w| w).count() >= *k,
+    }
+}
+
+/// Exact system reliability from per-component reliabilities (probability each
+/// component is working). Used for the Birnbaum importance calculation.
+///
+/// - Series: product of r_i
+/// - Parallel: 1 - product of (1 - r_i)
+/// - KOutOfN { k, n }: P(>= k of n work) via the Poisson-binomial distribution
+///   (handles non-identical components), computed with an O(n^2) DP.
+fn system_reliability_from_component_reliabilities(r: &[f64], model: &SystemModel) -> f64 {
+    match model {
+        SystemModel::Series => r.iter().product(),
+        SystemModel::Parallel => 1.0 - r.iter().map(|&ri| 1.0 - ri).product::<f64>(),
+        SystemModel::KOutOfN { k, .. } => {
+            // Poisson-binomial: prob[j] = P(exactly j components work).
+            let mut prob = vec![0.0; r.len() + 1];
+            prob[0] = 1.0;
+            for &ri in r {
+                // Walk j downwards so we don't double-count within this step.
+                for j in (0..=r.len()).rev() {
+                    prob[j] = prob[j] * (1.0 - ri)
+                        + if j > 0 { prob[j - 1] * ri } else { 0.0 };
+                }
+            }
+            // P(>= k) = sum_{j=k..n} prob[j]
+            prob[*k..].iter().sum()
+        }
+    }
 }
 
 impl ReliabilityMethods {
@@ -4532,6 +4832,213 @@ mod tests {
         ));
         assert!(matches!(
             ma.analyze_dynamics(-1.0, 10.0, 0.0, &[1.0]),
+            Err(EngineeringError::ValidationError(_))
+        ));
+    }
+
+    // ─── Feature 6: General reliability analysis (Monte Carlo) ─────────────
+
+    fn components(reliabilities: &[f64]) -> Vec<ComponentReliability> {
+        reliabilities
+            .iter()
+            .enumerate()
+            .map(|(i, &r)| {
+                ComponentReliability::new(format!("c{}", i + 1), 1.0 - r, 1000.0)
+            })
+            .collect()
+    }
+
+    #[test]
+    fn test_series_system() {
+        // 3 components in series, each 0.9 reliability => 0.9^3 = 0.729.
+        let analyzer = ReliabilityAnalyzer::new();
+        let config = ReliabilityConfig::new(
+            SystemModel::Series,
+            components(&[0.9, 0.9, 0.9]),
+        );
+        let result = analyzer.analyze_reliability(&config).unwrap();
+        assert!(
+            (result.system_reliability - 0.729).abs() < 0.02,
+            "series reliability {} should be ~0.729",
+            result.system_reliability
+        );
+        assert!(
+            result.confidence_interval.0 <= result.system_reliability
+                && result.system_reliability <= result.confidence_interval.1,
+            "point estimate must lie within CI {:?}",
+            result.confidence_interval
+        );
+    }
+
+    #[test]
+    fn test_parallel_system() {
+        // 3 components in parallel, each 0.5 => 1 - 0.5^3 = 0.875.
+        let analyzer = ReliabilityAnalyzer::new();
+        let config = ReliabilityConfig::new(
+            SystemModel::Parallel,
+            components(&[0.5, 0.5, 0.5]),
+        );
+        let result = analyzer.analyze_reliability(&config).unwrap();
+        assert!(
+            (result.system_reliability - 0.875).abs() < 0.02,
+            "parallel reliability {} should be ~0.875",
+            result.system_reliability
+        );
+    }
+
+    #[test]
+    fn test_k_out_of_n() {
+        // 2 out of 3, each 0.8 => P(>=2 of 3) = 0.512 + 0.384 = 0.896.
+        let analyzer = ReliabilityAnalyzer::new();
+        let config = ReliabilityConfig::new(
+            SystemModel::KOutOfN { k: 2, n: 3 },
+            components(&[0.8, 0.8, 0.8]),
+        );
+        let result = analyzer.analyze_reliability(&config).unwrap();
+        assert!(
+            (result.system_reliability - 0.896).abs() < 0.02,
+            "k-out-of-n reliability {} should be ~0.896",
+            result.system_reliability
+        );
+    }
+
+    #[test]
+    fn test_perfect_components() {
+        // All 1.0 reliability => system 1.0 (series and parallel).
+        let analyzer = ReliabilityAnalyzer::new();
+        let series = ReliabilityConfig::new(
+            SystemModel::Series,
+            components(&[1.0, 1.0, 1.0]),
+        );
+        let r = analyzer.analyze_reliability(&series).unwrap();
+        assert!(
+            (r.system_reliability - 1.0).abs() < 1e-9,
+            "perfect series reliability {} should be 1.0",
+            r.system_reliability
+        );
+        assert!(r.failure_rate.abs() < 1e-9);
+        assert!(r.mtbf.is_infinite());
+
+        let parallel = ReliabilityConfig::new(
+            SystemModel::Parallel,
+            components(&[1.0, 1.0, 1.0]),
+        );
+        let r = analyzer.analyze_reliability(&parallel).unwrap();
+        assert!(
+            (r.system_reliability - 1.0).abs() < 1e-9,
+            "perfect parallel reliability {} should be 1.0",
+            r.system_reliability
+        );
+    }
+
+    #[test]
+    fn test_failed_components() {
+        // All 0.0 reliability => system 0.0 (series and parallel).
+        let analyzer = ReliabilityAnalyzer::new();
+        let series = ReliabilityConfig::new(
+            SystemModel::Series,
+            components(&[0.0, 0.0, 0.0]),
+        );
+        let r = analyzer.analyze_reliability(&series).unwrap();
+        assert!(
+            r.system_reliability.abs() < 1e-9,
+            "failed series reliability {} should be 0.0",
+            r.system_reliability
+        );
+        assert!((r.failure_rate - 1.0).abs() < 1e-9);
+
+        let parallel = ReliabilityConfig::new(
+            SystemModel::Parallel,
+            components(&[0.0, 0.0, 0.0]),
+        );
+        let r = analyzer.analyze_reliability(&parallel).unwrap();
+        assert!(
+            r.system_reliability.abs() < 1e-9,
+            "failed parallel reliability {} should be 0.0",
+            r.system_reliability
+        );
+    }
+
+    #[test]
+    fn test_component_importance() {
+        // Series system: Birnbaum importance of component i = product of the
+        // other components' reliabilities. With reliabilities [0.9, 0.8, 0.7]:
+        //   I(c1) = 0.8*0.7 = 0.56
+        //   I(c2) = 0.9*0.7 = 0.63
+        //   I(c3) = 0.9*0.8 = 0.72
+        let analyzer = ReliabilityAnalyzer::new();
+        let config = ReliabilityConfig::new(
+            SystemModel::Series,
+            components(&[0.9, 0.8, 0.7]),
+        );
+        let result = analyzer.analyze_reliability(&config).unwrap();
+        assert_eq!(result.component_importance.len(), 3);
+        let i1 = *result.component_importance.get("c1").unwrap();
+        let i2 = *result.component_importance.get("c2").unwrap();
+        let i3 = *result.component_importance.get("c3").unwrap();
+        assert!((i1 - 0.56).abs() < 1e-9, "I(c1) = {i1}");
+        assert!((i2 - 0.63).abs() < 1e-9, "I(c2) = {i2}");
+        assert!((i3 - 0.72).abs() < 1e-9, "I(c3) = {i3}");
+        // Importance values are non-negative and bounded by 1.
+        for &v in result.component_importance.values() {
+            assert!((0.0..=1.0).contains(&v), "importance {v} out of [0,1]");
+        }
+    }
+
+    #[test]
+    fn test_confidence_interval() {
+        // The 95% CI must contain the point estimate and be a valid interval.
+        let analyzer = ReliabilityAnalyzer::new();
+        let config = ReliabilityConfig::new(
+            SystemModel::Series,
+            components(&[0.9, 0.9, 0.9]),
+        );
+        let result = analyzer.analyze_reliability(&config).unwrap();
+        let (lo, hi) = result.confidence_interval;
+        assert!(lo <= hi, "CI lower {lo} > upper {hi}");
+        assert!(
+            lo <= result.system_reliability && result.system_reliability <= hi,
+            "point estimate {} outside CI [{lo}, {hi}]",
+            result.system_reliability
+        );
+        assert!(lo >= 0.0 && hi <= 1.0, "CI [{lo}, {hi}] out of [0,1]");
+        // With 10k samples the CI half-width for p~0.73 is ~0.017.
+        let half = (hi - lo) / 2.0;
+        assert!(half > 0.0 && half < 0.05, "CI half-width {half} unreasonable");
+    }
+
+    #[test]
+    fn test_reliability_analysis_validation() {
+        let analyzer = ReliabilityAnalyzer::new();
+        // Empty components.
+        let cfg = ReliabilityConfig::new(SystemModel::Series, vec![]);
+        assert!(matches!(
+            analyzer.analyze_reliability(&cfg),
+            Err(EngineeringError::InsufficientData(_))
+        ));
+        // Zero simulations.
+        let mut cfg = ReliabilityConfig::new(SystemModel::Series, components(&[0.9]));
+        cfg.num_simulations = 0;
+        assert!(matches!(
+            analyzer.analyze_reliability(&cfg),
+            Err(EngineeringError::InsufficientData(_))
+        ));
+        // failure_probability out of range.
+        let cfg = ReliabilityConfig::new(
+            SystemModel::Series,
+            vec![ComponentReliability::new("x", 1.5, 1000.0)],
+        );
+        assert!(matches!(
+            analyzer.analyze_reliability(&cfg),
+            Err(EngineeringError::ValidationError(_))
+        ));
+        // KOutOfN.n mismatch.
+        let cfg = ReliabilityConfig::new(
+            SystemModel::KOutOfN { k: 2, n: 3 },
+            components(&[0.8, 0.8]),
+        );
+        assert!(matches!(
+            analyzer.analyze_reliability(&cfg),
             Err(EngineeringError::ValidationError(_))
         ));
     }

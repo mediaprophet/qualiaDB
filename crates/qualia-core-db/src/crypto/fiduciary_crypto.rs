@@ -317,6 +317,19 @@ impl MlDsaKeyManager {
 
         Ok(())
     }
+
+    /// Check if a key should be rotated based on the rotation policy.
+    /// Returns true if the key has exceeded its maximum signature count
+    /// or the rotation interval has elapsed.
+    pub fn should_rotate_key(&self, key_id: &str, signature_count: u64, key_age_seconds: u64) -> bool {
+        signature_count >= self.key_rotation_policy.max_signatures
+            || key_age_seconds >= self.key_rotation_policy.rotation_interval
+    }
+
+    /// Get the current key rotation policy
+    pub fn rotation_policy(&self) -> &KeyRotationPolicy {
+        &self.key_rotation_policy
+    }
 }
 
 impl ContextManager {
@@ -417,6 +430,24 @@ impl ComplianceChecker {
     /// Clear audit log
     pub fn clear_audit_log(&mut self) {
         self.audit_log.clear();
+    }
+
+    /// Check if the current configuration meets quantum resistance requirements.
+    /// Evaluates the ML-DSA security level against the configured threshold.
+    pub fn check_quantum_readiness(&self) -> bool {
+        let ml_dsa_security = ML_DSA_SECURITY_LEVEL as f64 / 256.0;
+        ml_dsa_security >= self.quantum_resistance_threshold
+            && self.fiduciary_standards.quantum_resistance_required
+    }
+
+    /// Get the current fiduciary standards configuration
+    pub fn fiduciary_standards(&self) -> &FiduciaryStandards {
+        &self.fiduciary_standards
+    }
+
+    /// Get quantum resistance threshold
+    pub fn quantum_resistance_threshold(&self) -> f64 {
+        self.quantum_resistance_threshold
     }
 }
 
@@ -521,6 +552,48 @@ impl FiduciaryCrypto {
     pub fn get_audit_log(&self) -> Vec<AuditEntry> {
         let compliance_checker = &self.compliance_checker;
         compliance_checker.get_audit_log().to_vec()
+    }
+
+    /// Sign a message using a context managed by the internal ContextManager.
+    /// Creates a fresh cryptographic context for the given domain/purpose and
+    /// uses it to bind the signature.
+    pub fn sign_with_managed_context(
+        &mut self,
+        message: &[u8],
+        key_id: Option<&str>,
+        domain: String,
+        purpose: String,
+    ) -> Result<(MlDsaSignature, CryptoContext), MlDsaError> {
+        let context = self.context_manager.create_context(domain, purpose)?;
+        let key_manager = self.key_manager.lock().unwrap();
+        let signer_arc = if let Some(kid) = key_id {
+            key_manager
+                .get_signer(kid)
+                .ok_or_else(|| MlDsaError::KeyNotFound(kid.to_string()))?
+        } else {
+            key_manager
+                .get_default_signer()
+                .ok_or_else(|| MlDsaError::NoDefaultKey)?
+        };
+        let signer = signer_arc.lock().unwrap();
+        let sig = signer.sign(message, &context)?;
+        Ok((sig, context))
+    }
+
+    /// Check if a key should be rotated according to the key manager's policy.
+    pub fn should_rotate_key(&self, key_id: &str, signature_count: u64, key_age_seconds: u64) -> bool {
+        let key_manager = self.key_manager.lock().unwrap();
+        key_manager.should_rotate_key(key_id, signature_count, key_age_seconds)
+    }
+
+    /// Check quantum readiness of the compliance checker
+    pub fn check_quantum_readiness(&self) -> bool {
+        self.compliance_checker.check_quantum_readiness()
+    }
+
+    /// Get context manager reference for inspection
+    pub fn context_manager(&self) -> &ContextManager {
+        &self.context_manager
     }
 }
 
@@ -1019,7 +1092,7 @@ mod tests {
     #[test]
     fn test_vc_wrong_key_fails() {
         let (private_key, _public_key) = MlDsaSigner::generate_keypair().unwrap();
-        let (wrong_private, wrong_public) = MlDsaSigner::generate_keypair().unwrap();
+        let (_wrong_private, wrong_public) = MlDsaSigner::generate_keypair().unwrap();
         let issuer_did_hash = 12345u64;
 
         let claim_quins = vec![crate::NQuin {

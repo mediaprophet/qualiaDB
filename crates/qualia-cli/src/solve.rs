@@ -9,7 +9,7 @@ use qualia_core_db::solvers::optimization::{
 use qualia_core_db::solvers::SolverConfig;
 use qualia_core_db::solvers::quantum_optimizers::{
     QAOAAngleOptimizer, SpsaOptimizer, QAOAAngles,
-    QuantumCostFunction, SpsaCostFunction, QuantumOptimizerState,
+    QuantumCostFunction, SpsaCostFunction,
 };
 use qualia_core_db::solvers::symbolic_logic::{
     ForwardChainingDefeasible, BoundedSatSolver,

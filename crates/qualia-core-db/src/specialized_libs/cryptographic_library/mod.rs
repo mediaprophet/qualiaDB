@@ -6,7 +6,6 @@
 //! - Hardware-Sympathetic Storage (ZNS) for secure key storage
 //! - Allocation Firewall (eBPF) for kernel-level cryptographic operations
 
-use crate::ebpf_firewall::EbpfFirewall;
 use crate::fiduciary_crypto::{CryptoContext, MlDsaSignature, MlDsaSigner, MlDsaVcProof};
 use crate::zk_proofs::ZkProofSystem;
 use crate::zns_storage::ZnsZoneManager;
@@ -97,7 +96,7 @@ pub enum KeyType {
 }
 
 /// Key algorithms
-#[derive(Debug, Clone, PartialEq, Eq, Hash, Serialize, Deserialize)]
+#[derive(Debug, Clone, Copy, PartialEq, Eq, Hash, Serialize, Deserialize)]
 pub enum KeyAlgorithm {
     /// Post-quantum algorithms
     MLDSA,
@@ -201,6 +200,12 @@ pub struct KeyIndexEntry {
 pub struct KeySearchEngine {
     engine_type: SearchEngineType,
     indexing_strategy: IndexingStrategy,
+    /// Indexed key metadata keyed by key id.
+    key_metadata: HashMap<String, KeyMetadata>,
+    /// Tags attached to each key.
+    key_tags: HashMap<String, Vec<String>>,
+    /// Purpose assigned to each key.
+    key_purposes: HashMap<String, KeyPurpose>,
 }
 
 /// Search engine types
@@ -222,6 +227,112 @@ pub enum IndexingStrategy {
     Encrypted,
 }
 
+/// Key purposes for search filtering.
+///
+/// A key's purpose describes the cryptographic role it is intended for
+/// (signing, encryption, key exchange, etc.). This is orthogonal to the
+/// raw [`KeyAlgorithm`] — e.g. an `AES` key may be used for either
+/// `Encryption` or `Decryption`.
+#[derive(Debug, Clone, PartialEq, Eq, Hash, Serialize, Deserialize)]
+pub enum KeyPurpose {
+    /// Digital signature generation
+    Signing,
+    /// Signature verification
+    Verification,
+    /// Data encryption
+    Encryption,
+    /// Data decryption
+    Decryption,
+    /// Key exchange / key agreement
+    KeyExchange,
+    /// Authentication / identity proof
+    Authentication,
+    /// Key derivation
+    Derivation,
+    /// Hashing / fingerprinting
+    Hashing,
+}
+
+/// Structured query against the [`KeySearchIndex`].
+///
+/// Every field is optional; a `None`/empty field is treated as a wildcard
+/// (i.e. it does not constrain the result set). When multiple fields are
+/// populated they are combined as a logical AND — only keys satisfying every
+/// constraint are returned.
+#[derive(Debug, Clone, Default)]
+pub struct SearchQuery {
+    /// Free-form text matched as a case-insensitive substring against the
+    /// key id and metadata fields (algorithm, key type, security level, …).
+    pub text: Option<String>,
+    /// Exact algorithm filter.
+    pub algorithm: Option<KeyAlgorithm>,
+    /// Exact purpose filter.
+    pub purpose: Option<KeyPurpose>,
+    /// Tag filter — a key matches if it carries *any* of the listed tags.
+    pub tags: Vec<String>,
+    /// Inclusive lower bound on the key creation timestamp.
+    pub created_after: Option<u64>,
+    /// Inclusive upper bound on the key creation timestamp.
+    pub created_before: Option<u64>,
+}
+
+impl SearchQuery {
+    /// Build an empty query (matches everything).
+    pub fn new() -> Self {
+        Self::default()
+    }
+
+    /// Set the free-form text filter.
+    pub fn with_text(mut self, text: impl Into<String>) -> Self {
+        self.text = Some(text.into());
+        self
+    }
+
+    /// Set the algorithm filter.
+    pub fn with_algorithm(mut self, algorithm: KeyAlgorithm) -> Self {
+        self.algorithm = Some(algorithm);
+        self
+    }
+
+    /// Set the purpose filter.
+    pub fn with_purpose(mut self, purpose: KeyPurpose) -> Self {
+        self.purpose = Some(purpose);
+        self
+    }
+
+    /// Add a tag to the tag filter.
+    pub fn with_tag(mut self, tag: impl Into<String>) -> Self {
+        self.tags.push(tag.into());
+        self
+    }
+
+    /// Set the inclusive creation-date lower bound.
+    pub fn with_created_after(mut self, ts: u64) -> Self {
+        self.created_after = Some(ts);
+        self
+    }
+
+    /// Set the inclusive creation-date upper bound.
+    pub fn with_created_before(mut self, ts: u64) -> Self {
+        self.created_before = Some(ts);
+        self
+    }
+}
+
+/// A single search hit returned by [`KeySearchIndex::search`].
+#[derive(Debug, Clone, PartialEq)]
+pub struct SearchResult {
+    /// The id of the matching key.
+    pub key_id: String,
+    /// Aggregate relevance score in the range `0.0..=1.0+`. Higher is more
+    /// relevant; exact matches contribute `1.0` and partial matches `0.5`,
+    /// with multiple matching fields summed.
+    pub relevance_score: f64,
+    /// Names of the fields that contributed to the match (e.g. `"key_id"`,
+    /// `"algorithm"`, `"tag:production"`).
+    pub matched_fields: Vec<String>,
+}
+
 /// Encryption at rest
 pub struct EncryptionAtRest {
     encryption_algorithm: EncryptionAlgorithm,
@@ -239,11 +350,38 @@ pub enum EncryptionAlgorithm {
 }
 
 /// Encryption policy
+///
+/// A named policy that defines the cryptographic constraints a key or
+/// encryption-at-rest configuration must satisfy. Policies are registered
+/// with [`EncryptionPolicyEngine`] and validated against keys and storage
+/// configurations.
+#[derive(Debug, Clone)]
 pub struct EncryptionPolicy {
-    pub encryption_required: bool,
-    pub key_rotation_interval: u64,
-    pub algorithm_preference: Vec<EncryptionAlgorithm>,
-    pub compliance_requirements: Vec<ComplianceRequirement>,
+    /// Unique identifier for the policy.
+    pub policy_id: String,
+    /// Human-readable policy name.
+    pub name: String,
+    /// Minimum acceptable key size in bits.
+    pub min_key_size: u32,
+    /// Algorithms that are permitted by this policy.
+    pub required_algorithms: Vec<KeyAlgorithm>,
+    /// Compliance standards the policy enforces.
+    pub compliance_standards: Vec<ComplianceStandard>,
+    /// Maximum age (in days) a key may reach before requiring rotation.
+    pub key_rotation_interval_days: u32,
+    /// Whether encryption at rest is mandatory under this policy.
+    pub require_encryption_at_rest: bool,
+}
+
+/// Compliance standards enforced by an [`EncryptionPolicy`].
+#[derive(Debug, Clone, PartialEq, Eq, Hash, Serialize, Deserialize)]
+pub enum ComplianceStandard {
+    FIPS140,
+    HIPAA,
+    GDPR,
+    SOC2,
+    PCI_DSS,
+    ISO27001,
 }
 
 /// Compliance requirements
@@ -257,6 +395,185 @@ pub enum ComplianceRequirement {
     SOX,
     PCI_DSS,
     Custom(String),
+}
+
+/// Error returned by the encryption policy engine.
+#[derive(Debug, Clone, PartialEq)]
+pub enum PolicyError {
+    /// No policy registered with the requested id.
+    UnknownPolicy(String),
+}
+
+impl std::fmt::Display for PolicyError {
+    fn fmt(&self, f: &mut std::fmt::Formatter<'_>) -> std::fmt::Result {
+        match self {
+            PolicyError::UnknownPolicy(id) => write!(f, "Unknown policy: {}", id),
+        }
+    }
+}
+
+impl std::error::Error for PolicyError {}
+
+/// Severity of a policy violation.
+#[derive(Debug, Clone, PartialEq, Eq, Serialize, Deserialize)]
+pub enum ViolationSeverity {
+    Warning,
+    Critical,
+}
+
+/// A single policy rule violation.
+#[derive(Debug, Clone)]
+pub struct PolicyViolation {
+    pub rule: String,
+    pub detail: String,
+    pub severity: ViolationSeverity,
+}
+
+/// Result of validating a key or configuration against a policy.
+#[derive(Debug, Clone)]
+pub struct PolicyValidationResult {
+    pub policy_id: String,
+    pub passed: bool,
+    pub violations: Vec<PolicyViolation>,
+    pub checked_at: u64,
+}
+
+impl PolicyValidationResult {
+    /// Convenience: returns true when there are no violations.
+    pub fn is_compliant(&self) -> bool {
+        self.violations.is_empty()
+    }
+}
+
+/// Engine that registers encryption policies and validates keys/configurations
+/// against them.
+pub struct EncryptionPolicyEngine {
+    policies: HashMap<String, EncryptionPolicy>,
+}
+
+impl EncryptionPolicyEngine {
+    /// Create a new empty policy engine.
+    pub fn new() -> Self {
+        Self {
+            policies: HashMap::new(),
+        }
+    }
+
+    /// Register a policy. Replaces any existing policy with the same id.
+    pub fn add_policy(&mut self, policy: EncryptionPolicy) {
+        self.policies.insert(policy.policy_id.clone(), policy);
+    }
+
+    /// Look up a policy by id, returning an error if unknown.
+    fn get_policy(&self, policy_id: &str) -> Result<&EncryptionPolicy, PolicyError> {
+        self.policies
+            .get(policy_id)
+            .ok_or_else(|| PolicyError::UnknownPolicy(policy_id.to_string()))
+    }
+
+    /// Current unix timestamp in seconds.
+    fn now_secs() -> u64 {
+        std::time::SystemTime::now()
+            .duration_since(std::time::UNIX_EPOCH)
+            .map(|d| d.as_secs())
+            .unwrap_or(0)
+    }
+
+    /// Validate a key against a policy.
+    ///
+    /// Checks:
+    /// - key size >= `min_key_size`
+    /// - key algorithm is in `required_algorithms`
+    /// - key age (days since `created_at`) < `key_rotation_interval_days`
+    pub fn validate_key(
+        &self,
+        key: &Key,
+        policy_id: &str,
+    ) -> Result<PolicyValidationResult, PolicyError> {
+        let policy = self.get_policy(policy_id)?;
+        let now = Self::now_secs();
+        let mut violations: Vec<PolicyViolation> = Vec::new();
+
+        // Key size check (metadata.key_size is in bits).
+        if (key.metadata.key_size as u32) < policy.min_key_size {
+            violations.push(PolicyViolation {
+                rule: "min_key_size".to_string(),
+                detail: format!(
+                    "key size {} bits is below minimum {} bits",
+                    key.metadata.key_size, policy.min_key_size
+                ),
+                severity: ViolationSeverity::Critical,
+            });
+        }
+
+        // Algorithm check.
+        if !policy.required_algorithms.contains(&key.key_algorithm) {
+            violations.push(PolicyViolation {
+                rule: "required_algorithms".to_string(),
+                detail: format!(
+                    "key algorithm {:?} is not in the required set",
+                    key.key_algorithm
+                ),
+                severity: ViolationSeverity::Critical,
+            });
+        }
+
+        // Key age check (days since created_at).
+        let age_seconds = now.saturating_sub(key.metadata.created_at);
+        let age_days = age_seconds / 86_400;
+        if age_days >= policy.key_rotation_interval_days as u64 {
+            violations.push(PolicyViolation {
+                rule: "key_rotation_interval_days".to_string(),
+                detail: format!(
+                    "key age {} days meets/exceeds rotation interval {} days",
+                    age_days, policy.key_rotation_interval_days
+                ),
+                severity: ViolationSeverity::Warning,
+            });
+        }
+
+        Ok(Self::build_result(policy_id, violations, now))
+    }
+
+    /// Validate whether encryption at rest is present when required by a policy.
+    pub fn validate_encryption_at_rest(
+        &self,
+        encrypted: bool,
+        policy_id: &str,
+    ) -> Result<PolicyValidationResult, PolicyError> {
+        let policy = self.get_policy(policy_id)?;
+        let now = Self::now_secs();
+        let mut violations: Vec<PolicyViolation> = Vec::new();
+
+        if policy.require_encryption_at_rest && !encrypted {
+            violations.push(PolicyViolation {
+                rule: "require_encryption_at_rest".to_string(),
+                detail: "encryption at rest is required but not present".to_string(),
+                severity: ViolationSeverity::Critical,
+            });
+        }
+
+        Ok(Self::build_result(policy_id, violations, now))
+    }
+
+    fn build_result(
+        policy_id: &str,
+        violations: Vec<PolicyViolation>,
+        now: u64,
+    ) -> PolicyValidationResult {
+        PolicyValidationResult {
+            policy_id: policy_id.to_string(),
+            passed: violations.is_empty(),
+            violations,
+            checked_at: now,
+        }
+    }
+}
+
+impl Default for EncryptionPolicyEngine {
+    fn default() -> Self {
+        Self::new()
+    }
 }
 
 /// Key access control
@@ -2693,7 +3010,7 @@ impl KeyCatalog {
         }
 
         // 3. Match against the search index entries.
-        for entry in self.search_index.search(query) {
+        for entry in self.search_index.search_by_keyword(query) {
             matches.insert(entry.entry_id.clone());
         }
 
@@ -2725,7 +3042,7 @@ impl KeySearchIndex {
     pub fn new() -> Self {
         Self {
             index_entries: HashMap::new(),
-            search_engine: KeySearchEngine::new(),
+            search_engine: KeySearchEngine::new(SearchEngineType::Encrypted),
         }
     }
 
@@ -2741,10 +3058,26 @@ impl KeySearchIndex {
         self.index_entries.insert(entry.entry_id.clone(), entry);
     }
 
+    /// Index a key together with its metadata so it becomes discoverable via
+    /// [`Self::search`] with a structured [`SearchQuery`].
+    pub fn index_key(&mut self, key_id: &str, metadata: &KeyMetadata) {
+        self.search_engine.index_key(key_id, metadata);
+    }
+
+    /// Attach a tag to an indexed key.
+    pub fn add_tag(&mut self, key_id: &str, tag: &str) {
+        self.search_engine.add_tag(key_id, tag);
+    }
+
+    /// Assign a purpose to an indexed key.
+    pub fn set_purpose(&mut self, key_id: &str, purpose: KeyPurpose) {
+        self.search_engine.set_purpose(key_id, purpose);
+    }
+
     /// Keyword search across index entries (case-insensitive substring match).
     /// Returns references to every entry whose `entry_id` or any keyword contains
     /// the query substring.
-    pub fn search(&self, query: &str) -> Vec<&KeyIndexEntry> {
+    pub fn search_by_keyword(&self, query: &str) -> Vec<&KeyIndexEntry> {
         let q = query.to_lowercase();
         self.index_entries
             .values()
@@ -2758,18 +3091,232 @@ impl KeySearchIndex {
             .collect()
     }
 
+    /// Structured search over the indexed keys. Delegates to the underlying
+    /// [`KeySearchEngine`].
+    pub fn search(&self, query: &SearchQuery) -> Vec<SearchResult> {
+        self.search_engine.search(query)
+    }
+
     /// Number of indexed entries.
     pub fn entry_count(&self) -> usize {
         self.index_entries.len()
     }
+
+    /// Number of keys indexed via [`Self::index_key`].
+    pub fn indexed_key_count(&self) -> usize {
+        self.search_engine.indexed_key_count()
+    }
 }
 
 impl KeySearchEngine {
-    pub fn new() -> Self {
+    pub fn new(engine_type: SearchEngineType) -> Self {
+        let indexing_strategy = match engine_type {
+            SearchEngineType::Encrypted => IndexingStrategy::Encrypted,
+            _ => IndexingStrategy::Inverted,
+        };
         Self {
-            engine_type: SearchEngineType::Encrypted,
-            indexing_strategy: IndexingStrategy::Encrypted,
+            engine_type,
+            indexing_strategy,
+            key_metadata: HashMap::new(),
+            key_tags: HashMap::new(),
+            key_purposes: HashMap::new(),
         }
+    }
+
+    /// Index a key together with its metadata.
+    ///
+    /// The metadata is stored verbatim so that subsequent [`Self::search`]
+    /// calls can filter on algorithm, creation date, and the textual
+    /// representation of the metadata fields.
+    pub fn index_key(&mut self, key_id: &str, metadata: &KeyMetadata) {
+        self.key_metadata.insert(key_id.to_string(), metadata.clone());
+    }
+
+    /// Attach a tag to a previously indexed key. Tags are case-sensitive but
+    /// compared case-insensitively during search.
+    pub fn add_tag(&mut self, key_id: &str, tag: &str) {
+        self.key_tags
+            .entry(key_id.to_string())
+            .or_default()
+            .push(tag.to_string());
+    }
+
+    /// Assign a purpose to a previously indexed key.
+    pub fn set_purpose(&mut self, key_id: &str, purpose: KeyPurpose) {
+        self.key_purposes.insert(key_id.to_string(), purpose);
+    }
+
+    /// Number of indexed keys.
+    pub fn indexed_key_count(&self) -> usize {
+        self.key_metadata.len()
+    }
+
+    /// Run a structured [`SearchQuery`] against the indexed keys.
+    ///
+    /// Each populated query field acts as both a hard filter (non-matching
+    /// keys are excluded) and a relevance signal. Relevance is accumulated:
+    /// an exact match contributes `1.0`, a partial (substring) match
+    /// contributes `0.5`. Results are returned sorted by descending
+    /// relevance score.
+    pub fn search(&self, query: &SearchQuery) -> Vec<SearchResult> {
+        let q_text = query.text.as_deref().map(|t| t.trim().to_lowercase());
+        let q_text = q_text.filter(|t| !t.is_empty());
+
+        let mut results: Vec<SearchResult> = self
+            .key_metadata
+            .iter()
+            .filter_map(|(key_id, metadata)| {
+                let mut score: f64 = 0.0;
+                let mut matched_fields: Vec<String> = Vec::new();
+
+                // --- Text filter (substring on key_id + metadata fields) ---
+                if let Some(ref q) = q_text {
+                    let mut text_matched = false;
+
+                    // key_id
+                    let key_id_lc = key_id.to_lowercase();
+                    if key_id_lc == *q {
+                        score += 1.0;
+                        matched_fields.push("key_id".to_string());
+                        text_matched = true;
+                    } else if key_id_lc.contains(q) {
+                        score += 0.5;
+                        matched_fields.push("key_id".to_string());
+                        text_matched = true;
+                    }
+
+                    // algorithm
+                    let algo_lc = format!("{:?}", metadata.key_algorithm).to_lowercase();
+                    if algo_lc == *q {
+                        score += 1.0;
+                        matched_fields.push("algorithm".to_string());
+                        text_matched = true;
+                    } else if algo_lc.contains(q) {
+                        score += 0.5;
+                        matched_fields.push("algorithm".to_string());
+                        text_matched = true;
+                    }
+
+                    // key_type
+                    let kt_lc = format!("{:?}", metadata.key_type).to_lowercase();
+                    if kt_lc == *q {
+                        score += 1.0;
+                        matched_fields.push("key_type".to_string());
+                        text_matched = true;
+                    } else if kt_lc.contains(q) {
+                        score += 0.5;
+                        matched_fields.push("key_type".to_string());
+                        text_matched = true;
+                    }
+
+                    // security_level
+                    let sl_lc = format!("{:?}", metadata.security_level).to_lowercase();
+                    if sl_lc == *q {
+                        score += 1.0;
+                        matched_fields.push("security_level".to_string());
+                        text_matched = true;
+                    } else if sl_lc.contains(q) {
+                        score += 0.5;
+                        matched_fields.push("security_level".to_string());
+                        text_matched = true;
+                    }
+
+                    // tags
+                    if let Some(tags) = self.key_tags.get(key_id) {
+                        for tag in tags {
+                            let tag_lc = tag.to_lowercase();
+                            if tag_lc == *q {
+                                score += 1.0;
+                                matched_fields.push(format!("tag:{}", tag));
+                                text_matched = true;
+                            } else if tag_lc.contains(q) {
+                                score += 0.5;
+                                matched_fields.push(format!("tag:{}", tag));
+                                text_matched = true;
+                            }
+                        }
+                    }
+
+                    if !text_matched {
+                        return None;
+                    }
+                }
+
+                // --- Algorithm filter (exact match) ---
+                if let Some(ref algo) = query.algorithm {
+                    if metadata.key_algorithm != *algo {
+                        return None;
+                    }
+                    score += 1.0;
+                    matched_fields.push("algorithm".to_string());
+                }
+
+                // --- Purpose filter (exact match) ---
+                if let Some(ref purpose) = query.purpose {
+                    match self.key_purposes.get(key_id) {
+                        Some(p) if p == purpose => {
+                            score += 1.0;
+                            matched_fields.push("purpose".to_string());
+                        }
+                        _ => return None,
+                    }
+                }
+
+                // --- Tag filter (any tag matches, case-insensitive) ---
+                if !query.tags.is_empty() {
+                    let tags = self.key_tags.get(key_id);
+                    let mut tag_matched = false;
+                    if let Some(tags) = tags {
+                        for query_tag in &query.tags {
+                            let qt_lc = query_tag.to_lowercase();
+                            if tags.iter().any(|t| t.to_lowercase() == qt_lc) {
+                                score += 0.5;
+                                matched_fields.push(format!("tag:{}", query_tag));
+                                tag_matched = true;
+                            }
+                        }
+                    }
+                    if !tag_matched {
+                        return None;
+                    }
+                }
+
+                // --- Date range filter (inclusive) ---
+                if let Some(after) = query.created_after {
+                    if metadata.created_at < after {
+                        return None;
+                    }
+                    matched_fields.push("created_after".to_string());
+                }
+                if let Some(before) = query.created_before {
+                    if metadata.created_at > before {
+                        return None;
+                    }
+                    matched_fields.push("created_before".to_string());
+                }
+
+                // A key that satisfied only filter constraints (no text) still
+                // gets a baseline score so it is represented in the output.
+                if score == 0.0 {
+                    score = 1.0;
+                }
+
+                Some(SearchResult {
+                    key_id: key_id.clone(),
+                    relevance_score: score,
+                    matched_fields,
+                })
+            })
+            .collect();
+
+        // Sort by descending relevance score, then by key_id for determinism.
+        results.sort_by(|a, b| {
+            b.relevance_score
+                .partial_cmp(&a.relevance_score)
+                .unwrap_or(std::cmp::Ordering::Equal)
+                .then_with(|| a.key_id.cmp(&b.key_id))
+        });
+        results
     }
 }
 
@@ -2779,10 +3326,13 @@ impl EncryptionAtRest {
             encryption_algorithm: EncryptionAlgorithm::AES256GCM,
             key_encryption_keys: HashMap::new(),
             encryption_policy: EncryptionPolicy {
-                encryption_required: true,
-                key_rotation_interval: 86400 * 30, // 30 days
-                algorithm_preference: vec![EncryptionAlgorithm::AES256GCM],
-                compliance_requirements: vec![ComplianceRequirement::FIPS140_2],
+                policy_id: "default".to_string(),
+                name: "Default Encryption Policy".to_string(),
+                min_key_size: 256,
+                required_algorithms: vec![KeyAlgorithm::AES],
+                compliance_standards: vec![ComplianceStandard::FIPS140],
+                key_rotation_interval_days: 30,
+                require_encryption_at_rest: true,
             },
         }
     }
@@ -6205,11 +6755,11 @@ mod tests {
         });
         assert_eq!(index.entry_count(), 2);
 
-        let signing_hits = index.search("signing");
+        let signing_hits = index.search_by_keyword("signing");
         assert_eq!(signing_hits.len(), 1);
         assert_eq!(signing_hits[0].entry_id, "key_1");
 
-        let aes_hits = index.search("AES");
+        let aes_hits = index.search_by_keyword("AES");
         assert_eq!(aes_hits.len(), 1);
         assert_eq!(aes_hits[0].entry_id, "key_2");
     }
@@ -6242,6 +6792,189 @@ mod tests {
         // The indexed entry should be discoverable via the catalog search.
         let hits = catalog.search("indexed_key");
         assert!(hits.contains(&"indexed_key".to_string()));
+    }
+
+    // ---- Key Search Engine (structured SearchQuery) ----
+
+    /// Helper: build a [`KeyMetadata`] with a configurable creation timestamp.
+    fn search_metadata(key_id: &str, algorithm: KeyAlgorithm, created_at: u64) -> KeyMetadata {
+        KeyMetadata {
+            key_id: key_id.to_string(),
+            key_type: KeyType::Symmetric,
+            key_algorithm: algorithm,
+            key_size: 256,
+            created_at,
+            expires_at: 0,
+            last_used: 0,
+            usage_count: 0,
+            security_level: SecurityLevel::High,
+            access_level: AccessLevel::Secret,
+        }
+    }
+
+    /// Build an index populated with three keys used across the search tests.
+    fn populated_index() -> KeySearchIndex {
+        let mut index = KeySearchIndex::new();
+        index.index_key(
+            "signing_master_key",
+            &search_metadata("signing_master_key", KeyAlgorithm::MLDSA, 1000),
+        );
+        index.index_key(
+            "aes_encrypt_key",
+            &search_metadata("aes_encrypt_key", KeyAlgorithm::AES, 2000),
+        );
+        index.index_key(
+            "rsa_backup_key",
+            &search_metadata("rsa_backup_key", KeyAlgorithm::RSA, 3000),
+        );
+
+        index.add_tag("signing_master_key", "production");
+        index.add_tag("aes_encrypt_key", "production");
+        index.add_tag("rsa_backup_key", "backup");
+
+        index.set_purpose("signing_master_key", KeyPurpose::Signing);
+        index.set_purpose("aes_encrypt_key", KeyPurpose::Encryption);
+        index
+    }
+
+    #[test]
+    fn test_text_search() {
+        let index = populated_index();
+
+        // Partial key_id substring "encrypt" should match only aes_encrypt_key.
+        let hits = index.search(&SearchQuery::new().with_text("encrypt"));
+        assert_eq!(hits.len(), 1, "partial key_id should match one key");
+        assert_eq!(hits[0].key_id, "aes_encrypt_key");
+
+        // Partial substring "key" matches all three key ids.
+        let key_hits = index.search(&SearchQuery::new().with_text("key"));
+        assert_eq!(key_hits.len(), 3, "common substring should match all keys");
+    }
+
+    #[test]
+    fn test_algorithm_filter() {
+        let index = populated_index();
+
+        let aes_hits = index.search(&SearchQuery::new().with_algorithm(KeyAlgorithm::AES));
+        assert_eq!(aes_hits.len(), 1);
+        assert_eq!(aes_hits[0].key_id, "aes_encrypt_key");
+
+        let rsa_hits = index.search(&SearchQuery::new().with_algorithm(KeyAlgorithm::RSA));
+        assert_eq!(rsa_hits.len(), 1);
+        assert_eq!(rsa_hits[0].key_id, "rsa_backup_key");
+
+        // An algorithm with no matching keys returns nothing.
+        let none = index.search(&SearchQuery::new().with_algorithm(KeyAlgorithm::Kyber));
+        assert!(none.is_empty());
+    }
+
+    #[test]
+    fn test_tag_search() {
+        let index = populated_index();
+
+        let prod = index.search(&SearchQuery::new().with_tag("production"));
+        assert_eq!(prod.len(), 2, "two keys are tagged production");
+        let prod_ids: Vec<&str> = prod.iter().map(|r| r.key_id.as_str()).collect();
+        assert!(prod_ids.contains(&"signing_master_key"));
+        assert!(prod_ids.contains(&"aes_encrypt_key"));
+
+        let backup = index.search(&SearchQuery::new().with_tag("backup"));
+        assert_eq!(backup.len(), 1);
+        assert_eq!(backup[0].key_id, "rsa_backup_key");
+
+        // Tag matching is case-insensitive.
+        let prod_upper = index.search(&SearchQuery::new().with_tag("PRODUCTION"));
+        assert_eq!(prod_upper.len(), 2);
+    }
+
+    #[test]
+    fn test_date_range() {
+        let index = populated_index();
+
+        // created_after: only keys with created_at >= 2000.
+        let after = index.search(&SearchQuery::new().with_created_after(2000));
+        let after_ids: Vec<&str> = after.iter().map(|r| r.key_id.as_str()).collect();
+        assert!(after_ids.contains(&"aes_encrypt_key"));
+        assert!(after_ids.contains(&"rsa_backup_key"));
+        assert!(!after_ids.contains(&"signing_master_key"));
+
+        // created_before: only keys with created_at <= 2000.
+        let before = index.search(&SearchQuery::new().with_created_before(2000));
+        let before_ids: Vec<&str> = before.iter().map(|r| r.key_id.as_str()).collect();
+        assert!(before_ids.contains(&"signing_master_key"));
+        assert!(before_ids.contains(&"aes_encrypt_key"));
+        assert!(!before_ids.contains(&"rsa_backup_key"));
+
+        // Bounded range [1500, 2500] → only aes_encrypt_key (2000).
+        let bounded = index.search(
+            &SearchQuery::new()
+                .with_created_after(1500)
+                .with_created_before(2500),
+        );
+        assert_eq!(bounded.len(), 1);
+        assert_eq!(bounded[0].key_id, "aes_encrypt_key");
+    }
+
+    #[test]
+    fn test_combined_query() {
+        let index = populated_index();
+
+        // text "key" + algorithm AES + tag "production" → only aes_encrypt_key
+        // satisfies all three constraints.
+        let combined = index.search(
+            &SearchQuery::new()
+                .with_text("key")
+                .with_algorithm(KeyAlgorithm::AES)
+                .with_tag("production"),
+        );
+        assert_eq!(combined.len(), 1, "combined query should intersect");
+        assert_eq!(combined[0].key_id, "aes_encrypt_key");
+
+        // A combined query that no key satisfies returns empty.
+        let impossible = index.search(
+            &SearchQuery::new()
+                .with_algorithm(KeyAlgorithm::RSA)
+                .with_tag("production"),
+        );
+        assert!(impossible.is_empty(), "rsa key is not tagged production");
+    }
+
+    #[test]
+    fn test_empty_index() {
+        let index = KeySearchIndex::new();
+        let hits = index.search(&SearchQuery::new().with_text("anything"));
+        assert!(hits.is_empty(), "empty index yields no results");
+
+        // An unconstrained query over an empty index also yields nothing.
+        let all = index.search(&SearchQuery::new());
+        assert!(all.is_empty());
+    }
+
+    #[test]
+    fn test_relevance_scoring() {
+        let mut index = KeySearchIndex::new();
+        index.index_key(
+            "alpha_key",
+            &search_metadata("alpha_key", KeyAlgorithm::AES, 1000),
+        );
+
+        // Exact key_id match scores higher than a partial substring match.
+        let exact = index.search(&SearchQuery::new().with_text("alpha_key"));
+        assert_eq!(exact.len(), 1);
+        let exact_score = exact[0].relevance_score;
+
+        let partial = index.search(&SearchQuery::new().with_text("alpha"));
+        assert_eq!(partial.len(), 1);
+        let partial_score = partial[0].relevance_score;
+
+        assert!(
+            exact_score > partial_score,
+            "exact match ({}) should score higher than partial ({})",
+            exact_score,
+            partial_score
+        );
+        assert_eq!(exact_score, 1.0, "exact match contributes 1.0");
+        assert_eq!(partial_score, 0.5, "partial match contributes 0.5");
     }
 
     // ---- Feature 2: Entropy Source Selection ----
@@ -6326,6 +7059,210 @@ mod tests {
         assert!(
             !data.iter().all(|&b| b == 0),
             "quantum placeholder should still produce non-zero data"
+        );
+    }
+
+    // ---- Feature: Encryption Policy Enforcement ----
+
+    /// Current unix timestamp in seconds (for deterministic age-based tests).
+    fn now_secs() -> u64 {
+        std::time::SystemTime::now()
+            .duration_since(std::time::UNIX_EPOCH)
+            .map(|d| d.as_secs())
+            .unwrap_or(0)
+    }
+
+    /// Build a `Key` with the given algorithm, size (bits) and created_at timestamp.
+    fn sample_key(algorithm: KeyAlgorithm, key_size: usize, created_at: u64) -> Key {
+        Key {
+            key_id: "policy_test_key".to_string(),
+            key_type: KeyType::Symmetric,
+            key_algorithm: algorithm,
+            key_data: vec![0u8; 32],
+            metadata: KeyMetadata {
+                key_id: "policy_test_key".to_string(),
+                key_type: KeyType::Symmetric,
+                key_algorithm: algorithm,
+                key_size,
+                created_at,
+                expires_at: 0,
+                last_used: 0,
+                usage_count: 0,
+                security_level: SecurityLevel::High,
+                access_level: AccessLevel::Secret,
+            },
+        }
+    }
+
+    /// A standard policy used across the policy-engine tests.
+    fn standard_policy() -> EncryptionPolicy {
+        EncryptionPolicy {
+            policy_id: "std".to_string(),
+            name: "Standard Policy".to_string(),
+            min_key_size: 256,
+            required_algorithms: vec![KeyAlgorithm::AES, KeyAlgorithm::ChaCha20],
+            compliance_standards: vec![ComplianceStandard::FIPS140, ComplianceStandard::SOC2],
+            key_rotation_interval_days: 90,
+            require_encryption_at_rest: true,
+        }
+    }
+
+    #[test]
+    fn test_key_size_validation() {
+        let mut engine = EncryptionPolicyEngine::new();
+        engine.add_policy(standard_policy());
+
+        // Key is only 128 bits but policy requires >= 256.
+        let key = sample_key(KeyAlgorithm::AES, 128, now_secs());
+        let result = engine.validate_key(&key, "std").unwrap();
+
+        assert!(
+            !result.passed,
+            "a too-small key should not pass validation"
+        );
+        assert!(
+            result
+                .violations
+                .iter()
+                .any(|v| v.rule == "min_key_size" && v.severity == ViolationSeverity::Critical),
+            "expected a critical min_key_size violation, got {:?}",
+            result.violations
+        );
+    }
+
+    #[test]
+    fn test_algorithm_validation() {
+        let mut engine = EncryptionPolicyEngine::new();
+        engine.add_policy(standard_policy());
+
+        // RSA is not in the required_algorithms set.
+        let key = sample_key(KeyAlgorithm::RSA, 256, now_secs());
+        let result = engine.validate_key(&key, "std").unwrap();
+
+        assert!(!result.passed, "a wrong-algorithm key should not pass");
+        assert!(
+            result
+                .violations
+                .iter()
+                .any(|v| v.rule == "required_algorithms"
+                    && v.severity == ViolationSeverity::Critical),
+            "expected a critical required_algorithms violation, got {:?}",
+            result.violations
+        );
+    }
+
+    #[test]
+    fn test_key_age_validation() {
+        let mut engine = EncryptionPolicyEngine::new();
+        engine.add_policy(standard_policy());
+
+        // Key is older than the 90-day rotation interval.
+        let now = now_secs();
+        let too_old = now.saturating_sub((91 * 86_400) as u64);
+        let key = sample_key(KeyAlgorithm::AES, 256, too_old);
+        let result = engine.validate_key(&key, "std").unwrap();
+
+        assert!(!result.passed, "an expired key should not pass");
+        assert!(
+            result
+                .violations
+                .iter()
+                .any(|v| v.rule == "key_rotation_interval_days"
+                    && v.severity == ViolationSeverity::Warning),
+            "expected a warning key_rotation_interval_days violation, got {:?}",
+            result.violations
+        );
+    }
+
+    #[test]
+    fn test_encryption_at_rest_required() {
+        let mut engine = EncryptionPolicyEngine::new();
+        engine.add_policy(standard_policy());
+
+        // Policy requires encryption at rest, but it is not present.
+        let result = engine.validate_encryption_at_rest(false, "std").unwrap();
+
+        assert!(
+            !result.passed,
+            "missing required encryption at rest should not pass"
+        );
+        assert!(
+            result
+                .violations
+                .iter()
+                .any(|v| v.rule == "require_encryption_at_rest"
+                    && v.severity == ViolationSeverity::Critical),
+            "expected a critical require_encryption_at_rest violation, got {:?}",
+            result.violations
+        );
+
+        // When encryption is present, it should pass.
+        let ok = engine.validate_encryption_at_rest(true, "std").unwrap();
+        assert!(ok.passed, "present encryption at rest should pass");
+        assert!(ok.violations.is_empty());
+    }
+
+    #[test]
+    fn test_valid_key_passes() {
+        let mut engine = EncryptionPolicyEngine::new();
+        engine.add_policy(standard_policy());
+
+        // Fresh, correctly-sized AES key — all checks pass.
+        let key = sample_key(KeyAlgorithm::AES, 256, now_secs());
+        let result = engine.validate_key(&key, "std").unwrap();
+
+        assert!(result.passed, "a compliant key should pass");
+        assert!(result.violations.is_empty(), "no violations expected");
+        assert_eq!(result.policy_id, "std");
+        assert!(result.checked_at > 0, "checked_at should be populated");
+    }
+
+    #[test]
+    fn test_multiple_violations() {
+        let mut engine = EncryptionPolicyEngine::new();
+        engine.add_policy(standard_policy());
+
+        // A key that is too small, wrong algorithm, AND too old.
+        let now = now_secs();
+        let too_old = now.saturating_sub((365 * 86_400) as u64);
+        let key = sample_key(KeyAlgorithm::RSA, 128, too_old);
+        let result = engine.validate_key(&key, "std").unwrap();
+
+        assert!(!result.passed, "a key violating multiple rules should not pass");
+        let rules: Vec<&str> = result.violations.iter().map(|v| v.rule.as_str()).collect();
+        assert!(
+            rules.contains(&"min_key_size"),
+            "expected min_key_size violation, rules = {:?}",
+            rules
+        );
+        assert!(
+            rules.contains(&"required_algorithms"),
+            "expected required_algorithms violation, rules = {:?}",
+            rules
+        );
+        assert!(
+            rules.contains(&"key_rotation_interval_days"),
+            "expected key_rotation_interval_days violation, rules = {:?}",
+            rules
+        );
+        assert_eq!(result.violations.len(), 3, "expected exactly three violations");
+    }
+
+    #[test]
+    fn test_unknown_policy() {
+        let engine = EncryptionPolicyEngine::new();
+
+        let key = sample_key(KeyAlgorithm::AES, 256, now_secs());
+        let key_res = engine.validate_key(&key, "does_not_exist");
+        assert!(
+            matches!(key_res, Err(PolicyError::UnknownPolicy(_))),
+            "validate_key with unknown policy should return UnknownPolicy error"
+        );
+
+        let ear_res = engine.validate_encryption_at_rest(true, "does_not_exist");
+        assert!(
+            matches!(ear_res, Err(PolicyError::UnknownPolicy(_))),
+            "validate_encryption_at_rest with unknown policy should return UnknownPolicy error"
         );
     }
 }

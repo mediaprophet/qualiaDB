@@ -6,12 +6,8 @@
 //! - Hardware-Sympathetic Storage (ZNS) for zero-copy financial data
 //! - Statistical Computing Library for advanced financial analytics
 
-use super::statistical_computing::StatisticalComputingLibrary;
-use crate::fiduciary_crypto::FiduciaryCrypto;
-use crate::zk_proofs::ZkProofSystem;
-use crate::zns_storage::ZnsZoneManager;
 use serde::{Deserialize, Serialize};
-use std::collections::HashMap;
+use std::collections::{HashMap, HashSet};
 use std::sync::{Arc, Mutex};
 
 /// Real return-based portfolio risk metrics (volatility, historical VaR/CVaR,
@@ -470,24 +466,40 @@ pub struct ComplianceChecker {
     screening_lists: HashMap<String, ScreeningList>,
 }
 
-/// Compliance rules
+/// Compliance rules evaluated by the `ComplianceMonitor` rule engine.
+///
+/// Each rule is parameterised by numeric `parameters` (e.g. `max_position`,
+/// `margin_pct`, `kyc_required`) and, where a rule needs non-numeric payloads
+/// (e.g. the comma-separated `restricted_assets` list used by
+/// `TradingRestriction`), by `string_parameters`. The latter is kept separate
+/// from `parameters` so the former stays a clean `HashMap<String, f64>` as
+/// specified.
 #[derive(Debug, Clone)]
 pub struct ComplianceRule {
     pub rule_id: String,
-    pub rule_name: String,
     pub rule_type: ComplianceRuleType,
-    pub conditions: Vec<ComplianceCondition>,
-    pub actions: Vec<ComplianceAction>,
+    pub parameters: HashMap<String, f64>,
+    /// String-valued parameters — used by rules that need non-numeric payloads
+    /// (e.g. `restricted_assets` = `"AAPL,GOOG,MSFT"`).
+    pub string_parameters: HashMap<String, String>,
+    pub description: String,
 }
 
-/// Compliance rule types
+/// Compliance rule types evaluated by the `ComplianceMonitor` rule engine.
 #[derive(Debug, Clone, PartialEq, Serialize, Deserialize)]
 pub enum ComplianceRuleType {
+    /// Maximum aggregate position size for an asset (param `max_position`).
+    PositionLimit,
+    /// Know-Your-Customer verification (param `kyc_required` = 1.0).
     KYC,
+    /// Anti-Money-Laundering clearance (param `kyc_required` = 1.0).
     AML,
-    Sanctions,
-    MarketAbuse,
-    InsiderTrading,
+    /// Margin coverage for the order (param `margin_pct` of order value).
+    MarginRequirement,
+    /// Asset-level trading ban (string param `restricted_assets`, comma-separated).
+    TradingRestriction,
+    /// User-defined rule with no built-in check (always passes by default).
+    Custom,
 }
 
 /// Compliance conditions
@@ -667,6 +679,9 @@ pub struct ScenarioAnalyzer {
     scenarios: HashMap<String, Scenario>,
     stress_tests: HashMap<String, StressTest>,
     sensitivity_analyzer: SensitivityAnalyzer,
+    /// Registered `MarketScenario`s used by `run_scenarios` and as the basis
+    /// for deterministic scenario-based stress testing.
+    market_scenarios: Vec<MarketScenario>,
 }
 
 /// Scenarios
@@ -724,6 +739,69 @@ pub struct StressTestResults {
     pub worst_case_loss: f64,
     pub recovery_time: u32,
     pub affected_assets: Vec<String>,
+}
+
+/// A market scenario used for scenario-based stress testing.
+///
+/// `shocks` maps `asset_id` → price shock percentage, where e.g. `-0.20`
+/// means a 20% drop in that asset's price. Assets without an entry are
+/// assumed to be unaffected by the scenario.
+#[derive(Debug, Clone, Serialize, Deserialize)]
+pub struct MarketScenario {
+    pub name: String,
+    pub probability: f64,
+    pub shocks: HashMap<String, f64>,
+}
+
+impl MarketScenario {
+    pub fn new(name: impl Into<String>, probability: f64, shocks: HashMap<String, f64>) -> Self {
+        Self {
+            name: name.into(),
+            probability,
+            shocks,
+        }
+    }
+}
+
+/// Aggregated results of a Monte Carlo stress-test simulation run.
+///
+/// All monetary values are expressed in the portfolio's currency. VaR figures
+/// are reported as positive numbers representing the magnitude of loss at the
+/// given confidence level (i.e. the loss that is not exceeded with the stated
+/// probability). `expected_shortfall` is the average loss in the tail beyond
+/// the 95% VaR. `max_drawdown` is the worst single-simulation loss relative to
+/// the initial portfolio value.
+#[derive(Debug, Clone, PartialEq)]
+pub struct StressTestResult {
+    /// Value-at-Risk at the 95% confidence level (positive = loss magnitude).
+    pub var_95: f64,
+    /// Value-at-Risk at the 99% confidence level (positive = loss magnitude).
+    pub var_99: f64,
+    /// Expected shortfall (average loss beyond the 95% VaR).
+    pub expected_shortfall: f64,
+    /// Largest single-simulation loss relative to the initial portfolio value.
+    pub max_drawdown: f64,
+    /// Fraction of simulations that ended below the initial portfolio value.
+    pub probability_of_loss: f64,
+    /// Mean portfolio value across all simulations.
+    pub mean_portfolio_value: f64,
+    /// Standard deviation of simulated portfolio values.
+    pub std_dev: f64,
+    /// Number of simulations run.
+    pub num_simulations: usize,
+}
+
+/// The impact of a single defined `MarketScenario` on a portfolio.
+#[derive(Debug, Clone, PartialEq)]
+pub struct ScenarioResult {
+    /// Name of the scenario that was applied.
+    pub scenario_name: String,
+    /// Change in portfolio value (negative = loss) as an absolute amount.
+    pub portfolio_impact: f64,
+    /// Portfolio value after applying the scenario's shocks.
+    pub final_value: f64,
+    /// The probability assigned to this scenario.
+    pub probability: f64,
 }
 
 /// Sensitivity analyzer
@@ -2053,47 +2131,106 @@ pub struct ReportDistributor {
     delivery_tracker: DeliveryTracker,
 }
 
-/// Distribution channels
-#[derive(Debug, Clone)]
-pub struct DistributionChannel {
-    pub channel_id: String,
-    pub channel_type: DistributionChannelType,
-    pub configuration: ChannelConfiguration,
+/// Distribution channels — the concrete transport targets a `FinancialReport`
+/// can be sent to. There is no real network in the library, so each variant
+/// carries only the configuration needed to *validate* a delivery attempt.
+#[derive(Debug, Clone, PartialEq)]
+pub enum DistributionChannel {
+    /// Email delivery to one or more recipients.
+    Email { recipients: Vec<String> },
+    /// FTP upload to `host` under directory `path`.
+    Ftp { host: String, path: String },
+    /// HTTP/HTTPS webhook POST to `url`.
+    Webhook { url: String },
+    /// Authenticated API endpoint POST to `url` using `auth_token`.
+    ApiEndpoint { url: String, auth_token: String },
+    /// Local file export written to `path`.
+    FileExport { path: String },
 }
 
-/// Distribution channel types
-#[derive(Debug, Clone, PartialEq, Serialize, Deserialize)]
-pub enum DistributionChannelType {
-    Email,
-    FTP,
-    SFTP,
-    API,
-    Webhook,
-}
-
-/// Delivery tracker
+/// Delivery tracker — records every delivery attempt per channel so success
+/// rates and history can be queried after the fact.
 pub struct DeliveryTracker {
-    deliveries: HashMap<String, DeliveryRecord>,
+    /// All recorded delivery attempts, keyed by channel name (insertion order
+    /// preserved within each channel's `Vec`).
+    deliveries: HashMap<String, Vec<DeliveryRecord>>,
     delivery_status: DeliveryStatus,
 }
 
-/// Delivery records
+/// A recorded delivery attempt — the persisted form of a `DeliveryResult`.
 #[derive(Debug, Clone)]
 pub struct DeliveryRecord {
-    pub record_id: String,
-    pub report_id: String,
-    pub channel_id: String,
+    pub channel_name: String,
+    pub success: bool,
     pub timestamp: u64,
-    pub status: DeliveryRecordStatus,
+    pub message: String,
 }
 
-/// Delivery record status
-#[derive(Debug, Clone, PartialEq, Serialize, Deserialize)]
-pub enum DeliveryRecordStatus {
-    Pending,
-    Sent,
-    Delivered,
-    Failed,
+/// The outcome of attempting to distribute a report to a single channel.
+#[derive(Debug, Clone)]
+pub struct DeliveryResult {
+    pub channel_name: String,
+    pub success: bool,
+    pub timestamp: u64,
+    pub message: String,
+}
+
+/// Distribution error types
+#[derive(Debug, Clone)]
+pub enum DistributionError {
+    /// The named channel was not registered with the distributor.
+    ChannelNotFound(String),
+    /// Channel configuration failed validation (e.g. malformed recipient/URL).
+    ValidationFailed(String),
+    /// The delivery attempt itself failed.
+    DeliveryFailed(String),
+}
+
+impl std::fmt::Display for DistributionError {
+    fn fmt(&self, f: &mut std::fmt::Formatter<'_>) -> std::fmt::Result {
+        match self {
+            DistributionError::ChannelNotFound(name) => {
+                write!(f, "Distribution channel not found: {}", name)
+            }
+            DistributionError::ValidationFailed(msg) => {
+                write!(f, "Distribution validation failed: {}", msg)
+            }
+            DistributionError::DeliveryFailed(msg) => {
+                write!(f, "Distribution delivery failed: {}", msg)
+            }
+        }
+    }
+}
+
+impl std::error::Error for DistributionError {}
+
+/// A generated financial report ready for distribution.
+#[derive(Debug, Clone)]
+pub struct FinancialReport {
+    pub report_id: String,
+    pub report_type: ReportTemplateType,
+    pub generated_at: u64,
+    pub content: Vec<u8>,
+    pub format: ContentFormat,
+}
+
+impl FinancialReport {
+    /// Create a new financial report.
+    pub fn new(
+        report_id: String,
+        report_type: ReportTemplateType,
+        generated_at: u64,
+        content: Vec<u8>,
+        format: ContentFormat,
+    ) -> Self {
+        Self {
+            report_id,
+            report_type,
+            generated_at,
+            content,
+            format,
+        }
+    }
 }
 
 /// Delivery status
@@ -2876,11 +3013,217 @@ impl ScenarioAnalyzer {
             scenarios: HashMap::new(),
             stress_tests: HashMap::new(),
             sensitivity_analyzer: SensitivityAnalyzer::new(),
+            market_scenarios: Vec::new(),
         }
     }
 
     pub fn initialize(&mut self) -> Result<(), FinancialError> {
         Ok(())
+    }
+
+    /// Register a `MarketScenario` for later use by `run_scenarios`.
+    pub fn add_scenario(&mut self, scenario: MarketScenario) {
+        self.market_scenarios.push(scenario);
+    }
+
+    /// Run a Monte Carlo stress-test simulation over `portfolio`.
+    ///
+    /// For each of `num_simulations` trials, every asset receives an
+    /// independent multiplicative shock drawn from a normal distribution with
+    /// mean `0.0` and standard deviation `volatility` (i.e. a simple return
+    /// model: `new_price = price * (1 + z * volatility)` where `z ~ N(0,1)`
+    /// via an inline Box-Muller transform). The portfolio value after shocks
+    /// is recorded and aggregated into a `StressTestResult`.
+    ///
+    /// A fixed deterministic seed is used so results are reproducible across
+    /// runs (important for test stability). Returns
+    /// `FinancialError::PortfolioError` if the portfolio has no assets or no
+    /// positive value, and `FinancialError::ValidationError` if
+    /// `num_simulations` is zero or `volatility` is negative.
+    pub fn run_monte_carlo(
+        &self,
+        portfolio: &Portfolio,
+        num_simulations: usize,
+        volatility: f64,
+    ) -> Result<StressTestResult, FinancialError> {
+        if num_simulations == 0 {
+            return Err(FinancialError::ValidationError(
+                "num_simulations must be greater than zero".to_string(),
+            ));
+        }
+        if volatility < 0.0 {
+            return Err(FinancialError::ValidationError(
+                "volatility must be non-negative".to_string(),
+            ));
+        }
+        if portfolio.assets.is_empty() {
+            return Err(FinancialError::PortfolioError(
+                "portfolio has no assets to simulate".to_string(),
+            ));
+        }
+
+        let initial_value: f64 =
+            portfolio.assets.iter().map(|a| a.market_value).sum::<f64>() + portfolio.cash_balance;
+        if !(initial_value > 0.0) {
+            return Err(FinancialError::PortfolioError(
+                "portfolio has no positive value to simulate".to_string(),
+            ));
+        }
+
+        // Deterministic seed for reproducible results (and stable tests).
+        let mut rng = McRng::new(0x9E37_79B9_7F4A_7C15);
+
+        let mut values: Vec<f64> = Vec::with_capacity(num_simulations);
+        for _ in 0..num_simulations {
+            let mut sim_value = portfolio.cash_balance;
+            for asset in &portfolio.assets {
+                let z = if volatility > 0.0 { rng.next_normal() } else { 0.0 };
+                let shock = z * volatility;
+                let new_price = asset.current_price * (1.0 + shock);
+                sim_value += new_price * asset.quantity;
+            }
+            values.push(sim_value);
+        }
+
+        Ok(aggregate_stress_test_result(&values, initial_value, num_simulations))
+    }
+
+    /// Apply each registered `MarketScenario` to `portfolio` and compute its
+    /// impact. Returns one `ScenarioResult` per registered scenario, in
+    /// registration order. An empty scenario set yields an empty result list.
+    pub fn run_scenarios(
+        &self,
+        portfolio: &Portfolio,
+    ) -> Result<Vec<ScenarioResult>, FinancialError> {
+        if portfolio.assets.is_empty() {
+            return Err(FinancialError::PortfolioError(
+                "portfolio has no assets to stress".to_string(),
+            ));
+        }
+
+        let initial_value: f64 =
+            portfolio.assets.iter().map(|a| a.market_value).sum::<f64>() + portfolio.cash_balance;
+
+        let mut results = Vec::with_capacity(self.market_scenarios.len());
+        for scenario in &self.market_scenarios {
+            let mut final_value = portfolio.cash_balance;
+            for asset in &portfolio.assets {
+                let shock = scenario.shocks.get(&asset.asset_id).copied().unwrap_or(0.0);
+                let new_price = asset.current_price * (1.0 + shock);
+                final_value += new_price * asset.quantity;
+            }
+            results.push(ScenarioResult {
+                scenario_name: scenario.name.clone(),
+                portfolio_impact: final_value - initial_value,
+                final_value,
+                probability: scenario.probability,
+            });
+        }
+        Ok(results)
+    }
+}
+
+/// Aggregate a vector of simulated portfolio values into a `StressTestResult`.
+///
+/// `initial_value` is the pre-shock portfolio value used as the reference for
+/// loss/drawdown calculations. Expects `values.len() == num_simulations`.
+fn aggregate_stress_test_result(
+    values: &[f64],
+    initial_value: f64,
+    num_simulations: usize,
+) -> StressTestResult {
+    let n = values.len();
+    let mean: f64 = values.iter().sum::<f64>() / n as f64;
+    let variance: f64 = values.iter().map(|v| (v - mean).powi(2)).sum::<f64>() / n as f64;
+    let std_dev = variance.sqrt();
+
+    // Losses relative to the initial value (positive = loss).
+    let mut losses: Vec<f64> = values.iter().map(|v| initial_value - v).collect();
+    losses.sort_by(|a, b| a.partial_cmp(b).unwrap_or(std::cmp::Ordering::Equal));
+
+    // Percentile helper: returns the loss at the given percentile (p in [0,1])
+    // using nearest-rank interpolation.
+    let percentile = |p: f64| -> f64 {
+        if n == 1 {
+            return losses[0];
+        }
+        let rank = (p * (n - 1) as f64).round() as usize;
+        losses[rank.min(n - 1)]
+    };
+
+    let var_95 = percentile(0.95).max(0.0);
+    let var_99 = percentile(0.99).max(0.0);
+
+    // Expected shortfall: average of losses at/above the 95% VaR threshold.
+    let tail_threshold = percentile(0.95);
+    let tail_losses: Vec<f64> =
+        losses.iter().filter(|&&l| l >= tail_threshold).copied().collect();
+    let expected_shortfall = if tail_losses.is_empty() {
+        var_95
+    } else {
+        tail_losses.iter().sum::<f64>() / tail_losses.len() as f64
+    };
+
+    let max_drawdown = losses.last().copied().unwrap_or(0.0).max(0.0);
+
+    let num_losses = values.iter().filter(|v| **v < initial_value).count() as f64;
+    let probability_of_loss = num_losses / n as f64;
+
+    StressTestResult {
+        var_95,
+        var_99,
+        expected_shortfall,
+        max_drawdown,
+        probability_of_loss,
+        mean_portfolio_value: mean,
+        std_dev,
+        num_simulations,
+    }
+}
+
+/// A small, deterministic, seedable PRNG for Monte Carlo simulation.
+///
+/// Implements a 64-bit linear congruential generator (Numerical Recipes
+/// constants) plus an inline Box-Muller transform for standard normal
+/// samples. No external crate required.
+struct McRng {
+    state: u64,
+}
+
+impl McRng {
+    fn new(seed: u64) -> Self {
+        // LCG requires a non-zero state; fall back to a canonical seed.
+        Self { state: if seed == 0 { 0x9E37_79B9_7F4A_7C15 } else { seed } }
+    }
+
+    /// Next raw u64 from the LCG.
+    fn next_u64(&mut self) -> u64 {
+        // Numerical Recipes 64-bit LCG constants.
+        self.state = self
+            .state
+            .wrapping_mul(6364136223846793005)
+            .wrapping_add(1442695040888963407);
+        self.state
+    }
+
+    /// Next uniform f64 in [0, 1).
+    fn next_uniform(&mut self) -> f64 {
+        // Use the high 53 bits for a full-precision mantissa.
+        let x = self.next_u64() >> 11;
+        (x as f64) * (1.0 / (1u64 << 53) as f64)
+    }
+
+    /// Next standard normal sample via the Box-Muller transform.
+    fn next_normal(&mut self) -> f64 {
+        // z = sqrt(-2 ln u1) * cos(2π u2)
+        let mut u1 = self.next_uniform();
+        if u1 < f64::MIN_POSITIVE {
+            u1 = f64::MIN_POSITIVE;
+        }
+        let u2 = self.next_uniform();
+        let r = (-2.0 * u1.ln()).sqrt();
+        let theta = 2.0 * std::f64::consts::PI * u2;
+        r * theta.cos()
     }
 }
 
@@ -3358,36 +3701,129 @@ impl PricingEngine {
         &self,
         params: &OptionParameters,
     ) -> Result<OptionPrice, FinancialError> {
-        // Simplified Black-Scholes implementation
-        let d1 = ((params.underlying_price / params.strike).ln()
-            + (params.risk_free_rate + 0.5 * params.volatility.powi(2)) * params.time_to_maturity)
-            / (params.volatility * params.time_to_maturity.sqrt());
-        let d2 = d1 - params.volatility * params.time_to_maturity.sqrt();
+        let s = params.underlying_price;
+        let k = params.strike;
+        let r = params.risk_free_rate;
+        let sigma = params.volatility;
+        let t = params.time_to_maturity;
 
-        let price = match params.option_type {
+        // Edge case: zero time to expiry -> option is worth its intrinsic value
+        // (no time value remains). Greeks collapse to their intrinsic boundary.
+        if t <= 0.0 {
+            return Ok(self.intrinsic_price(params));
+        }
+
+        // Edge case: zero volatility -> payoff is deterministic. The terminal
+        // price is S*exp(rT), so the discounted call payoff is max(S - K*exp(-rT), 0)
+        // and the put payoff is max(K*exp(-rT) - S, 0). Greeks are zero except
+        // delta, which is the step function at the strike.
+        if sigma <= 0.0 {
+            let disc = (-r * t).exp();
+            let fwd = s - k * disc;
+            let (price, delta) = match params.option_type {
+                OptionType::Call => (fwd.max(0.0), if fwd > 0.0 { 1.0 } else { 0.0 }),
+                OptionType::Put => ((-fwd).max(0.0), if fwd < 0.0 { -1.0 } else { 0.0 }),
+            };
+            return Ok(OptionPrice {
+                price,
+                delta,
+                gamma: 0.0,
+                theta: 0.0,
+                vega: 0.0,
+                rho: 0.0,
+            });
+        }
+
+        // Edge case: zero underlying price -> call is worthless, put is the
+        // discounted strike.
+        if s <= 0.0 {
+            let disc = (-r * t).exp();
+            return Ok(match params.option_type {
+                OptionType::Call => OptionPrice {
+                    price: 0.0,
+                    delta: 0.0,
+                    gamma: 0.0,
+                    theta: 0.0,
+                    vega: 0.0,
+                    rho: 0.0,
+                },
+                OptionType::Put => OptionPrice {
+                    price: k * disc,
+                    delta: -1.0,
+                    gamma: 0.0,
+                    theta: r * k * disc,
+                    vega: 0.0,
+                    rho: -t * k * disc,
+                },
+            });
+        }
+
+        // Standard Black-Scholes formula.
+        let sqrt_t = t.sqrt();
+        let d1 = ((s / k).ln() + (r + 0.5 * sigma * sigma) * t) / (sigma * sqrt_t);
+        let d2 = d1 - sigma * sqrt_t;
+        let disc = (-r * t).exp();
+        let pdf_d1 = self.normal_pdf(d1);
+
+        let (price, delta) = match params.option_type {
             OptionType::Call => {
-                params.underlying_price * self.normal_cdf(d1)
-                    - params.strike
-                        * (-params.risk_free_rate * params.time_to_maturity).exp()
-                        * self.normal_cdf(d2)
+                let p = s * self.normal_cdf(d1) - k * disc * self.normal_cdf(d2);
+                (p, self.normal_cdf(d1))
             }
             OptionType::Put => {
-                params.strike
-                    * (-params.risk_free_rate * params.time_to_maturity).exp()
-                    * self.normal_cdf(-d2)
-                    - params.underlying_price * self.normal_cdf(-d1)
+                let p = k * disc * self.normal_cdf(-d2) - s * self.normal_cdf(-d1);
+                (p, self.normal_cdf(d1) - 1.0)
             }
         };
 
+        // Gamma and Vega are identical for calls and puts.
+        let gamma = pdf_d1 / (s * sigma * sqrt_t);
+        let vega = s * pdf_d1 * sqrt_t;
+
+        let theta = self.calculate_theta(params, d1, d2, pdf_d1);
+        let rho = self.calculate_rho(params, d2, disc);
+
         Ok(OptionPrice {
             price,
-            delta: self.normal_cdf(d1),
-            gamma: self.normal_pdf(d1)
-                / (params.underlying_price * params.volatility * params.time_to_maturity.sqrt()),
-            theta: self.calculate_theta(params, d1, d2),
-            vega: params.underlying_price * self.normal_pdf(d1) * params.time_to_maturity.sqrt(),
-            rho: self.calculate_rho(params, d2),
+            delta,
+            gamma,
+            theta,
+            vega,
+            rho,
         })
+    }
+
+    /// Intrinsic value at expiry (T=0): call = max(S-K, 0), put = max(K-S, 0).
+    /// Delta is the step at the strike; other Greeks are zero.
+    fn intrinsic_price(&self, params: &OptionParameters) -> OptionPrice {
+        let intrinsic = match params.option_type {
+            OptionType::Call => (params.underlying_price - params.strike).max(0.0),
+            OptionType::Put => (params.strike - params.underlying_price).max(0.0),
+        };
+        let delta = match params.option_type {
+            OptionType::Call => {
+                if params.underlying_price > params.strike {
+                    1.0
+                } else {
+                    0.0
+                }
+            }
+            OptionType::Put => {
+                if params.underlying_price < params.strike {
+                    -1.0
+                } else {
+                    0.0
+                }
+            }
+        };
+        OptionPrice {
+            price: intrinsic,
+            delta,
+            gamma: 0.0,
+            theta: 0.0,
+            vega: 0.0,
+            rho: 0.0,
+        }
     }
 
     fn normal_cdf(&self, x: f64) -> f64 {
@@ -3410,42 +3846,38 @@ impl PricingEngine {
         (-0.5 * x * x).exp() / (2.0 * std::f64::consts::PI).sqrt()
     }
 
-    fn calculate_theta(&self, params: &OptionParameters, d1: f64, d2: f64) -> f64 {
-        // Simplified theta calculation
-        match params.option_type {
+    fn calculate_theta(
+        &self,
+        params: &OptionParameters,
+        d1: f64,
+        d2: f64,
+        pdf_d1: f64,
+    ) -> f64 {
+        // Theta per calendar day (divided by 365). The annualized theta is the
+        // standard Black-Scholes expression; reporting per-day matches how the
+        // Greek is conventionally quoted.
+        let sqrt_t = params.time_to_maturity.sqrt();
+        let disc = (-params.risk_free_rate * params.time_to_maturity).exp();
+        let annualized = match params.option_type {
             OptionType::Call => {
-                -(params.underlying_price * self.normal_pdf(d1) * params.volatility)
-                    / (2.0 * params.time_to_maturity.sqrt())
-                    - params.risk_free_rate
-                        * params.strike
-                        * (-params.risk_free_rate * params.time_to_maturity).exp()
-                        * self.normal_cdf(d2)
+                -(params.underlying_price * pdf_d1 * params.volatility) / (2.0 * sqrt_t)
+                    - params.risk_free_rate * params.strike * disc * self.normal_cdf(d2)
             }
             OptionType::Put => {
-                -(params.underlying_price * self.normal_pdf(d1) * params.volatility)
-                    / (2.0 * params.time_to_maturity.sqrt())
-                    + params.risk_free_rate
-                        * params.strike
-                        * (-params.risk_free_rate * params.time_to_maturity).exp()
-                        * self.normal_cdf(-d2)
+                -(params.underlying_price * pdf_d1 * params.volatility) / (2.0 * sqrt_t)
+                    + params.risk_free_rate * params.strike * disc * self.normal_cdf(-d2)
             }
-        }
+        };
+        annualized / 365.0
     }
 
-    fn calculate_rho(&self, params: &OptionParameters, d2: f64) -> f64 {
-        // Simplified rho calculation
+    fn calculate_rho(&self, params: &OptionParameters, d2: f64, disc: f64) -> f64 {
         match params.option_type {
             OptionType::Call => {
-                params.strike
-                    * params.time_to_maturity
-                    * (-params.risk_free_rate * params.time_to_maturity).exp()
-                    * self.normal_cdf(d2)
+                params.strike * params.time_to_maturity * disc * self.normal_cdf(d2)
             }
             OptionType::Put => {
-                -params.strike
-                    * params.time_to_maturity
-                    * (-params.risk_free_rate * params.time_to_maturity).exp()
-                    * self.normal_cdf(-d2)
+                -params.strike * params.time_to_maturity * disc * self.normal_cdf(-d2)
             }
         }
     }
@@ -3667,6 +4099,7 @@ impl DataAggregator {
 }
 
 impl ReportDistributor {
+    /// Create a new report distributor with no registered channels.
     pub fn new() -> Self {
         Self {
             distribution_channels: HashMap::new(),
@@ -3677,13 +4110,190 @@ impl ReportDistributor {
     pub fn initialize(&mut self) -> Result<(), FinancialError> {
         Ok(())
     }
+
+    /// Register a distribution channel under `name`. If a channel with the same
+    /// name already exists it is replaced.
+    pub fn add_channel(&mut self, name: String, channel: DistributionChannel) {
+        self.distribution_channels.insert(name, channel);
+    }
+
+    /// Distribute `report` to every registered channel, returning one
+    /// `DeliveryResult` per channel in registration (HashMap) order. Each
+    /// attempt is also recorded on the internal `DeliveryTracker`.
+    ///
+    /// Because there is no real network, each channel only *validates* its
+    /// configuration and reports success/failure accordingly — no bytes are
+    /// actually transmitted.
+    pub fn distribute(
+        &mut self,
+        report: &FinancialReport,
+    ) -> Result<Vec<DeliveryResult>, DistributionError> {
+        let mut results = Vec::with_capacity(self.distribution_channels.len());
+
+        for (name, channel) in &self.distribution_channels {
+            let result = self.deliver_to_channel(name, channel, report);
+            self.delivery_tracker.record_delivery(result.clone());
+            results.push(result);
+        }
+
+        Ok(results)
+    }
+
+    /// Validate a single channel's configuration and produce a `DeliveryResult`.
+    /// `timestamp` is taken from the report's `generated_at` so deliveries are
+    /// deterministically associated with the report that produced them.
+    fn deliver_to_channel(
+        &self,
+        name: &str,
+        channel: &DistributionChannel,
+        report: &FinancialReport,
+    ) -> DeliveryResult {
+        let timestamp = report.generated_at;
+        match channel {
+            DistributionChannel::Email { recipients } => {
+                if !recipients.is_empty() && recipients.iter().all(|r| r.contains('@')) {
+                    DeliveryResult {
+                        channel_name: name.to_string(),
+                        success: true,
+                        timestamp,
+                        message: format!(
+                            "Email delivered to {} recipient(s)",
+                            recipients.len()
+                        ),
+                    }
+                } else {
+                    DeliveryResult {
+                        channel_name: name.to_string(),
+                        success: false,
+                        timestamp,
+                        message: "Invalid email recipient(s): missing '@'".to_string(),
+                    }
+                }
+            }
+            DistributionChannel::Ftp { host, path } => {
+                if !host.is_empty() {
+                    DeliveryResult {
+                        channel_name: name.to_string(),
+                        success: true,
+                        timestamp,
+                        message: format!("FTP delivery to {}{}", host, path),
+                    }
+                } else {
+                    DeliveryResult {
+                        channel_name: name.to_string(),
+                        success: false,
+                        timestamp,
+                        message: "Invalid FTP configuration: empty host".to_string(),
+                    }
+                }
+            }
+            DistributionChannel::Webhook { url } => {
+                if url.starts_with("http") {
+                    DeliveryResult {
+                        channel_name: name.to_string(),
+                        success: true,
+                        timestamp,
+                        message: format!("Webhook POST to {}", url),
+                    }
+                } else {
+                    DeliveryResult {
+                        channel_name: name.to_string(),
+                        success: false,
+                        timestamp,
+                        message: "Invalid webhook URL: must start with 'http'".to_string(),
+                    }
+                }
+            }
+            DistributionChannel::ApiEndpoint { url, auth_token } => {
+                if url.starts_with("http") && !auth_token.is_empty() {
+                    DeliveryResult {
+                        channel_name: name.to_string(),
+                        success: true,
+                        timestamp,
+                        message: format!("API delivery to {}", url),
+                    }
+                } else {
+                    DeliveryResult {
+                        channel_name: name.to_string(),
+                        success: false,
+                        timestamp,
+                        message: "Invalid API endpoint: URL must start with 'http' and token must be present".to_string(),
+                    }
+                }
+            }
+            DistributionChannel::FileExport { path } => {
+                if !path.is_empty() {
+                    DeliveryResult {
+                        channel_name: name.to_string(),
+                        success: true,
+                        timestamp,
+                        message: format!("File exported to {}", path),
+                    }
+                } else {
+                    DeliveryResult {
+                        channel_name: name.to_string(),
+                        success: false,
+                        timestamp,
+                        message: "Invalid file export: empty path".to_string(),
+                    }
+                }
+            }
+        }
+    }
+
+    /// Borrow the internal delivery tracker (e.g. for history/success-rate queries).
+    pub fn delivery_tracker(&self) -> &DeliveryTracker {
+        &self.delivery_tracker
+    }
 }
 
 impl DeliveryTracker {
+    /// Create a new, empty delivery tracker.
     pub fn new() -> Self {
         Self {
             deliveries: HashMap::new(),
             delivery_status: DeliveryStatus::new(),
+        }
+    }
+
+    /// Record a delivery attempt under its channel name.
+    pub fn record_delivery(&mut self, result: DeliveryResult) {
+        let success = result.success;
+        self.deliveries
+            .entry(result.channel_name.clone())
+            .or_default()
+            .push(DeliveryRecord {
+                channel_name: result.channel_name.clone(),
+                success,
+                timestamp: result.timestamp,
+                message: result.message,
+            });
+        // Keep the aggregate DeliveryStatus counters in sync.
+        self.delivery_status.total_deliveries += 1;
+        if success {
+            self.delivery_status.successful_deliveries += 1;
+        } else {
+            self.delivery_status.failed_deliveries += 1;
+        }
+    }
+
+    /// Query the full delivery history for a channel, in insertion order.
+    pub fn get_delivery_history(&self, channel_name: &str) -> Vec<&DeliveryRecord> {
+        self.deliveries
+            .get(channel_name)
+            .map(|records| records.iter().collect())
+            .unwrap_or_default()
+    }
+
+    /// Compute the success rate (0.0–1.0) for a channel. Returns 0.0 when the
+    /// channel has no recorded deliveries.
+    pub fn success_rate(&self, channel_name: &str) -> f64 {
+        match self.deliveries.get(channel_name) {
+            Some(records) if !records.is_empty() => {
+                let successes = records.iter().filter(|r| r.success).count();
+                successes as f64 / records.len() as f64
+            }
+            _ => 0.0,
         }
     }
 }
@@ -3943,10 +4553,10 @@ impl ComplianceRule {
     pub fn new() -> Self {
         Self {
             rule_id: "rule_1".to_string(),
-            rule_name: "Price validation".to_string(),
-            rule_type: ComplianceRuleType::MarketAbuse,
-            conditions: vec![ComplianceCondition::new()],
-            actions: vec![ComplianceAction::Approve],
+            rule_type: ComplianceRuleType::PositionLimit,
+            parameters: HashMap::from([("max_position".to_string(), 1000.0)]),
+            string_parameters: HashMap::new(),
+            description: "Default position-limit rule".to_string(),
         }
     }
 }
@@ -4675,16 +5285,31 @@ pub struct ComplianceResult {
     pub audit_entries: Vec<AuditEntry>,
 }
 
-/// Compliance report for regulatory reporting
+/// Per-order compliance report produced by `ComplianceMonitor::check_order`.
+///
+/// Aggregates the pass/fail verdict of every registered rule against a single
+/// order; `overall_pass` is `true` only when every `rule_result` passed. An
+/// empty rule set yields `overall_pass = true` with no `rule_results`.
 #[derive(Debug, Clone)]
 pub struct ComplianceReport {
-    pub report_id: String,
-    pub portfolio_id: String,
-    pub status: ComplianceStatus,
-    pub risk_score: f64,
-    pub generated_at: u64,
-    pub violations: Vec<String>,
+    pub order_id: String,
+    pub overall_pass: bool,
+    pub rule_results: Vec<RuleResult>,
+    pub timestamp: u64,
 }
+
+/// Result of evaluating a single compliance rule against an order.
+#[derive(Debug, Clone)]
+pub struct RuleResult {
+    pub rule_id: String,
+    pub passed: bool,
+    pub message: String,
+}
+
+/// Error type returned by compliance-rule evaluation. Aliased to the library's
+/// general `FinancialError` so callers can handle all financial errors uniformly
+/// (the `FinancialError::ComplianceError` variant carries the compliance message).
+pub type ComplianceError = FinancialError;
 
 /// Financial library performance summary metrics
 #[derive(Debug, Clone)]
@@ -5468,5 +6093,497 @@ mod tests {
         assert_eq!(catalog.list_asset_classes(), vec!["alt_1".to_string()]);
         assert!(catalog.get_asset_class("alt_1").is_some());
         assert!(catalog.get_asset_class("missing").is_none());
+    }
+
+    // ----- Black-Scholes options pricing tests --------------------------------
+
+    /// ATM option parameters: S=K=100, r=0.05, sigma=0.2, T=1.
+    fn atm_params(option_type: OptionType) -> OptionParameters {
+        OptionParameters {
+            underlying_price: 100.0,
+            strike: 100.0,
+            time_to_maturity: 1.0,
+            risk_free_rate: 0.05,
+            volatility: 0.2,
+            option_type,
+        }
+    }
+
+    #[test]
+    fn test_black_scholes_call_atm() {
+        // ATM call (S=K=100, r=0.05, sigma=0.2, T=1) ≈ 10.4506.
+        let engine = PricingEngine::new();
+        let result = engine.price_option(&atm_params(OptionType::Call)).unwrap();
+        assert!(
+            (result.price - 10.45).abs() < 0.02,
+            "ATM call price {} expected ~10.45",
+            result.price
+        );
+    }
+
+    #[test]
+    fn test_black_scholes_put_atm() {
+        // ATM put (S=K=100, r=0.05, sigma=0.2, T=1) ≈ 5.5735.
+        let engine = PricingEngine::new();
+        let result = engine.price_option(&atm_params(OptionType::Put)).unwrap();
+        assert!(
+            (result.price - 5.57).abs() < 0.02,
+            "ATM put price {} expected ~5.57",
+            result.price
+        );
+    }
+
+    #[test]
+    fn test_put_call_parity() {
+        // Put-call parity: C - P = S - K*exp(-rT).
+        let engine = PricingEngine::new();
+        let call = engine.price_option(&atm_params(OptionType::Call)).unwrap();
+        let put = engine.price_option(&atm_params(OptionType::Put)).unwrap();
+        let s = 100.0_f64;
+        let k = 100.0_f64;
+        let r = 0.05_f64;
+        let t = 1.0_f64;
+        let parity = s - k * (-r * t).exp();
+        assert!(
+            ((call.price - put.price) - parity).abs() < 1e-6,
+            "C-P = {} but parity = {}",
+            call.price - put.price,
+            parity
+        );
+    }
+
+    #[test]
+    fn test_greeks_delta() {
+        // ATM call delta ≈ 0.6368 (N(d1) with d1≈0.36).
+        let engine = PricingEngine::new();
+        let result = engine.price_option(&atm_params(OptionType::Call)).unwrap();
+        assert!(
+            (result.delta - 0.6377).abs() < 0.01,
+            "call delta {} expected ~0.6377",
+            result.delta
+        );
+        // Put delta = call delta - 1.
+        let put = engine.price_option(&atm_params(OptionType::Put)).unwrap();
+        assert!(
+            (put.delta - (result.delta - 1.0)).abs() < 1e-9,
+            "put delta {} expected {}",
+            put.delta,
+            result.delta - 1.0
+        );
+    }
+
+    #[test]
+    fn test_zero_time_to_expiry() {
+        // T=0 -> intrinsic value. ITM call (S=110, K=100) -> 10; OTM call -> 0.
+        let engine = PricingEngine::new();
+        let itm = OptionParameters {
+            underlying_price: 110.0,
+            strike: 100.0,
+            time_to_maturity: 0.0,
+            risk_free_rate: 0.05,
+            volatility: 0.2,
+            option_type: OptionType::Call,
+        };
+        let result = engine.price_option(&itm).unwrap();
+        assert!((result.price - 10.0).abs() < 1e-9, "ITM intrinsic {}", result.price);
+        assert!((result.delta - 1.0).abs() < 1e-9);
+
+        let otm = OptionParameters {
+            underlying_price: 90.0,
+            strike: 100.0,
+            time_to_maturity: 0.0,
+            risk_free_rate: 0.05,
+            volatility: 0.2,
+            option_type: OptionType::Call,
+        };
+        let result = engine.price_option(&otm).unwrap();
+        assert!((result.price - 0.0).abs() < 1e-9, "OTM intrinsic {}", result.price);
+        assert!((result.delta - 0.0).abs() < 1e-9);
+
+        // ITM put intrinsic.
+        let itm_put = OptionParameters {
+            underlying_price: 90.0,
+            strike: 100.0,
+            time_to_maturity: 0.0,
+            risk_free_rate: 0.05,
+            volatility: 0.2,
+            option_type: OptionType::Put,
+        };
+        let result = engine.price_option(&itm_put).unwrap();
+        assert!((result.price - 10.0).abs() < 1e-9, "ITM put intrinsic {}", result.price);
+    }
+
+    #[test]
+    fn test_zero_volatility() {
+        // sigma=0 -> deterministic discounted intrinsic.
+        // Call: max(S - K*exp(-rT), 0); Put: max(K*exp(-rT) - S, 0).
+        let engine = PricingEngine::new();
+        let r = 0.05_f64;
+        let t = 1.0_f64;
+        let disc = (-r * t).exp();
+
+        // ITM call (S=110, K=100): 110 - 100*disc > 0.
+        let call = OptionParameters {
+            underlying_price: 110.0,
+            strike: 100.0,
+            time_to_maturity: t,
+            risk_free_rate: r,
+            volatility: 0.0,
+            option_type: OptionType::Call,
+        };
+        let result = engine.price_option(&call).unwrap();
+        let expected = (110.0 - 100.0 * disc).max(0.0);
+        assert!(
+            (result.price - expected).abs() < 1e-9,
+            "zero-vol call {} expected {}",
+            result.price,
+            expected
+        );
+        assert!((result.delta - 1.0).abs() < 1e-9);
+
+        // OTM call (S=90, K=100): 90 - 100*disc < 0 -> 0.
+        let otm_call = OptionParameters {
+            underlying_price: 90.0,
+            strike: 100.0,
+            time_to_maturity: t,
+            risk_free_rate: r,
+            volatility: 0.0,
+            option_type: OptionType::Call,
+        };
+        let result = engine.price_option(&otm_call).unwrap();
+        assert!((result.price - 0.0).abs() < 1e-9, "zero-vol OTM call {}", result.price);
+        assert!((result.delta - 0.0).abs() < 1e-9);
+
+        // ITM put (S=90, K=100): 100*disc - 90 > 0.
+        let put = OptionParameters {
+            underlying_price: 90.0,
+            strike: 100.0,
+            time_to_maturity: t,
+            risk_free_rate: r,
+            volatility: 0.0,
+            option_type: OptionType::Put,
+        };
+        let result = engine.price_option(&put).unwrap();
+        let expected = (100.0 * disc - 90.0).max(0.0);
+        assert!(
+            (result.price - expected).abs() < 1e-9,
+            "zero-vol put {} expected {}",
+            result.price,
+            expected
+        );
+        assert!((result.delta - (-1.0)).abs() < 1e-9);
+    }
+
+    // ---- Report Distribution Channels ----
+
+    fn sample_report() -> FinancialReport {
+        FinancialReport::new(
+            "report_1".to_string(),
+            ReportTemplateType::Portfolio,
+            1_700_000_000,
+            b"sample report content".to_vec(),
+            ContentFormat::JSON,
+        )
+    }
+
+    #[test]
+    fn test_email_distribution_valid() {
+        let mut distributor = ReportDistributor::new();
+        distributor.add_channel(
+            "email_channel".to_string(),
+            DistributionChannel::Email {
+                recipients: vec!["analyst@example.com".to_string()],
+            },
+        );
+        let results = distributor.distribute(&sample_report()).unwrap();
+        assert_eq!(results.len(), 1);
+        assert!(results[0].success, "expected success, got: {}", results[0].message);
+        assert_eq!(results[0].channel_name, "email_channel");
+    }
+
+    #[test]
+    fn test_email_distribution_invalid() {
+        let mut distributor = ReportDistributor::new();
+        distributor.add_channel(
+            "email_channel".to_string(),
+            DistributionChannel::Email {
+                recipients: vec!["not-an-email".to_string()],
+            },
+        );
+        let results = distributor.distribute(&sample_report()).unwrap();
+        assert_eq!(results.len(), 1);
+        assert!(!results[0].success);
+        assert!(results[0].message.contains("Invalid email recipient"));
+    }
+
+    #[test]
+    fn test_webhook_distribution() {
+        let mut distributor = ReportDistributor::new();
+        distributor.add_channel(
+            "webhook_channel".to_string(),
+            DistributionChannel::Webhook {
+                url: "https://hooks.example.com/report".to_string(),
+            },
+        );
+        let results = distributor.distribute(&sample_report()).unwrap();
+        assert_eq!(results.len(), 1);
+        assert!(results[0].success, "expected success, got: {}", results[0].message);
+        assert_eq!(results[0].channel_name, "webhook_channel");
+    }
+
+    #[test]
+    fn test_multiple_channels() {
+        let mut distributor = ReportDistributor::new();
+        distributor.add_channel(
+            "email".to_string(),
+            DistributionChannel::Email {
+                recipients: vec!["a@example.com".to_string()],
+            },
+        );
+        distributor.add_channel(
+            "webhook".to_string(),
+            DistributionChannel::Webhook {
+                url: "https://example.com/hook".to_string(),
+            },
+        );
+        distributor.add_channel(
+            "file".to_string(),
+            DistributionChannel::FileExport {
+                path: "/tmp/report.json".to_string(),
+            },
+        );
+        let results = distributor.distribute(&sample_report()).unwrap();
+        assert_eq!(results.len(), 3, "expected 3 results");
+        assert!(results.iter().all(|r| r.success));
+    }
+
+    #[test]
+    fn test_delivery_tracking() {
+        let mut tracker = DeliveryTracker::new();
+        tracker.record_delivery(DeliveryResult {
+            channel_name: "email".to_string(),
+            success: true,
+            timestamp: 100,
+            message: "ok".to_string(),
+        });
+        tracker.record_delivery(DeliveryResult {
+            channel_name: "email".to_string(),
+            success: false,
+            timestamp: 101,
+            message: "bad".to_string(),
+        });
+        let history = tracker.get_delivery_history("email");
+        assert_eq!(history.len(), 2);
+        assert!(history[0].success);
+        assert!(!history[1].success);
+        // Unknown channel returns empty history.
+        assert!(tracker.get_delivery_history("nope").is_empty());
+    }
+
+    #[test]
+    fn test_success_rate() {
+        let mut tracker = DeliveryTracker::new();
+        // 3 successes, 1 failure -> 0.75
+        for i in 0..3 {
+            tracker.record_delivery(DeliveryResult {
+                channel_name: "ch".to_string(),
+                success: true,
+                timestamp: i,
+                message: "ok".to_string(),
+            });
+        }
+        tracker.record_delivery(DeliveryResult {
+            channel_name: "ch".to_string(),
+            success: false,
+            timestamp: 3,
+            message: "fail".to_string(),
+        });
+        let rate = tracker.success_rate("ch");
+        assert!((rate - 0.75).abs() < 1e-9, "success rate {} expected 0.75", rate);
+    }
+
+    #[test]
+    fn test_empty_channels() {
+        let mut distributor = ReportDistributor::new();
+        let results = distributor.distribute(&sample_report()).unwrap();
+        assert!(results.is_empty(), "no channels should yield no results");
+    }
+
+    // ----- Monte Carlo stress testing tests -----------------------------------
+
+    /// Build a simple two-asset portfolio for stress testing.
+    fn mc_test_portfolio() -> Portfolio {
+        let a = Asset {
+            asset_id: "asset_1".to_string(),
+            symbol: "AAPL".to_string(),
+            asset_type: AssetType::Stock,
+            quantity: 100.0,
+            average_cost: 150.0,
+            current_price: 150.0,
+            market_value: 15000.0,
+            currency: "USD".to_string(),
+            exchange: "NASDAQ".to_string(),
+            last_updated: 0,
+            price_history: Vec::new(),
+        };
+        let b = Asset {
+            asset_id: "asset_2".to_string(),
+            symbol: "MSFT".to_string(),
+            asset_type: AssetType::Stock,
+            quantity: 50.0,
+            average_cost: 300.0,
+            current_price: 300.0,
+            market_value: 15000.0,
+            currency: "USD".to_string(),
+            exchange: "NASDAQ".to_string(),
+            last_updated: 0,
+            price_history: Vec::new(),
+        };
+        Portfolio {
+            portfolio_id: "mc_pf".to_string(),
+            portfolio_name: "MC Portfolio".to_string(),
+            owner_id: "user_1".to_string(),
+            assets: vec![a, b],
+            cash_balance: 5000.0,
+            total_value: 35000.0,
+            created_at: 0,
+            last_updated: 0,
+            risk_profile: RiskProfile::new(),
+            investment_strategy: InvestmentStrategy::Balanced,
+        }
+    }
+
+    #[test]
+    fn test_monte_carlo_basic() {
+        let analyzer = ScenarioAnalyzer::new();
+        let portfolio = mc_test_portfolio();
+        let result = analyzer.run_monte_carlo(&portfolio, 1000, 0.20).unwrap();
+
+        assert_eq!(result.num_simulations, 1000);
+        // Mean should be in a sane range around the initial value (35000).
+        assert!(
+            (result.mean_portfolio_value - 35000.0).abs() < 5000.0,
+            "mean {} should be near 35000",
+            result.mean_portfolio_value
+        );
+        // With non-zero volatility there should be dispersion.
+        assert!(result.std_dev > 0.0, "std_dev should be positive");
+        // VaR figures are non-negative loss magnitudes.
+        assert!(result.var_95 >= 0.0, "var_95 should be non-negative");
+        assert!(result.var_99 >= 0.0, "var_99 should be non-negative");
+        // Expected shortfall is at least the 95% VaR.
+        assert!(
+            result.expected_shortfall >= result.var_95 - 1e-9,
+            "expected_shortfall {} should be >= var_95 {}",
+            result.expected_shortfall,
+            result.var_95
+        );
+        // Max drawdown is non-negative and at least the 99% VaR.
+        assert!(result.max_drawdown >= 0.0);
+        assert!(
+            result.max_drawdown >= result.var_99 - 1e-9,
+            "max_drawdown {} should be >= var_99 {}",
+            result.max_drawdown,
+            result.var_99
+        );
+        // Probability of loss is a valid fraction.
+        assert!(
+            (0.0..=1.0).contains(&result.probability_of_loss),
+            "probability_of_loss {} out of range",
+            result.probability_of_loss
+        );
+    }
+
+    #[test]
+    fn test_var_ordering() {
+        let analyzer = ScenarioAnalyzer::new();
+        let portfolio = mc_test_portfolio();
+        let result = analyzer.run_monte_carlo(&portfolio, 1000, 0.30).unwrap();
+        assert!(
+            result.var_99 >= result.var_95 - 1e-9,
+            "var_99 ({}) should be >= var_95 ({})",
+            result.var_99,
+            result.var_95
+        );
+    }
+
+    #[test]
+    fn test_monte_carlo_zero_volatility() {
+        let analyzer = ScenarioAnalyzer::new();
+        let portfolio = mc_test_portfolio();
+        let result = analyzer.run_monte_carlo(&portfolio, 1000, 0.0).unwrap();
+
+        // With zero volatility every simulation equals the initial value.
+        let initial = 35000.0_f64;
+        assert!(
+            (result.mean_portfolio_value - initial).abs() < 1e-6,
+            "mean {} should equal initial {}",
+            result.mean_portfolio_value,
+            initial
+        );
+        assert!(result.std_dev < 1e-6, "std_dev should be ~0, got {}", result.std_dev);
+        assert!(
+            result.probability_of_loss < 1e-9,
+            "no losses expected with zero volatility, got {}",
+            result.probability_of_loss
+        );
+        assert!(result.var_95 < 1e-6, "var_95 should be ~0");
+        assert!(result.var_99 < 1e-6, "var_99 should be ~0");
+        assert!(result.max_drawdown < 1e-6, "max_drawdown should be ~0");
+    }
+
+    #[test]
+    fn test_scenario_impact() {
+        let mut analyzer = ScenarioAnalyzer::new();
+        let mut shocks = HashMap::new();
+        shocks.insert("asset_1".to_string(), -0.20);
+        shocks.insert("asset_2".to_string(), -0.20);
+        analyzer.add_scenario(MarketScenario::new("market_crash", 0.05, shocks));
+
+        let portfolio = mc_test_portfolio();
+        let results = analyzer.run_scenarios(&portfolio).unwrap();
+
+        assert_eq!(results.len(), 1);
+        let r = &results[0];
+        assert_eq!(r.scenario_name, "market_crash");
+        assert_eq!(r.probability, 0.05);
+        // Initial asset value = 30000, after -20% shock = 24000; cash 5000 untouched.
+        // final_value = 24000 + 5000 = 29000; impact = 29000 - 35000 = -6000.
+        assert!(
+            (r.final_value - 29000.0).abs() < 1e-6,
+            "final_value {} expected 29000",
+            r.final_value
+        );
+        assert!(
+            (r.portfolio_impact - (-6000.0)).abs() < 1e-6,
+            "portfolio_impact {} expected -6000",
+            r.portfolio_impact
+        );
+        assert!(r.portfolio_impact < 0.0, "crash should produce a negative impact");
+    }
+
+    #[test]
+    fn test_no_scenarios() {
+        let analyzer = ScenarioAnalyzer::new();
+        let portfolio = mc_test_portfolio();
+        let results = analyzer.run_scenarios(&portfolio).unwrap();
+        assert!(results.is_empty(), "no scenarios should yield empty results");
+    }
+
+    #[test]
+    fn test_probability_of_loss() {
+        let analyzer = ScenarioAnalyzer::new();
+        let portfolio = mc_test_portfolio();
+        // High volatility makes losses likely in a meaningful fraction of sims.
+        let result = analyzer.run_monte_carlo(&portfolio, 1000, 0.50).unwrap();
+        assert!(
+            result.probability_of_loss > 0.0,
+            "with high volatility probability_of_loss should be > 0, got {}",
+            result.probability_of_loss
+        );
+        assert!(
+            result.probability_of_loss <= 1.0,
+            "probability_of_loss must be <= 1"
+        );
     }
 }

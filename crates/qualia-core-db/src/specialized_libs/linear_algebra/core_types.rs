@@ -1,7 +1,5 @@
-use crate::solvers::SolversError;
 use serde::{Deserialize, Serialize};
 use std::collections::HashMap;
-use std::ops::{Add, Mul, Sub};
 use std::sync::{Arc, Mutex};
 
 use super::computation::*;
@@ -43,6 +41,10 @@ pub enum StorageFormat {
     Blocked,
     CompressedSparseRow,
     CompressedSparseColumn,
+    /// SIMD-packed: rows padded to a multiple of the SIMD vector width so
+    /// each row is vector-load aligned. Element (i,j) lives at
+    /// `data[i * stride + j]` where `stride` is the padded column count.
+    Packed,
 }
 
 /// Compression types

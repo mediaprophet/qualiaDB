@@ -1,7 +1,5 @@
-use crate::solvers::SolversError;
 use serde::{Deserialize, Serialize};
 use std::collections::HashMap;
-use std::ops::{Add, Mul, Sub};
 use std::sync::{Arc, Mutex};
 
 use super::computation::*;
@@ -123,6 +121,41 @@ pub struct TransformationRecord {
     pub transformation: TransformationRule,
     pub performance_impact: f64,
 }
+
+/// Target memory layout for a `MatrixTransformer` layout conversion.
+///
+/// The `Matrix.data` buffer is always a flat `Vec<f64>`; the layout describes
+/// how logical element `(i, j)` is addressed within that buffer. Converting
+/// between layouts reorganises the buffer in place and updates
+/// `Matrix.storage_format` accordingly.
+#[derive(Debug, Clone, PartialEq)]
+pub enum MatrixLayout {
+    /// Row-major storage: element `(i, j)` lives at `data[i * cols + j]`.
+    /// This is the canonical layout used throughout the linear-algebra
+    /// library and the default for sequential row-wise access.
+    RowMajor,
+    /// Column-major storage: element `(i, j)` lives at `data[j * rows + i]`.
+    /// Preferred for column-heavy (strided) access patterns.
+    ColMajor,
+    /// Cache-friendly blocked (tiled) storage. The matrix is partitioned into
+    /// `block_size` x `block_size` sub-blocks. Blocks themselves are laid out
+    /// in row-major block order (block row, then block column); within each
+    /// block the element order follows `inner` (typically `RowMajor`).
+    ///
+    /// Edge blocks that fall outside the matrix dimensions contain only the
+    /// valid elements, so the total buffer length remains `rows * cols`.
+    Blocked(Box<MatrixLayout>, usize),
+    /// SIMD-packed storage: each row is zero-padded to a multiple of
+    /// [`SIMD_WIDTH`] so that a full SIMD vector load never crosses a row
+    /// boundary. Element `(i, j)` lives at `data[i * stride + j]` where
+    /// `stride = ceil(cols / SIMD_WIDTH) * SIMD_WIDTH`; padding slots are `0.0`.
+    Packed,
+}
+
+/// SIMD vector width (in `f64` elements) used by the [`MatrixLayout::Packed`]
+/// layout. The value `4` corresponds to a 256-bit AVX2 register holding four
+/// double-precision lanes.
+const SIMD_WIDTH: usize = 4;
 
 impl OptimizationEngine {
     pub fn new() -> Self {
@@ -774,6 +807,8 @@ impl MatrixTransformer {
         Self {
             transformation_rules: vec![
                 TransformationRule::LayoutConversion,
+                TransformationRule::RowColumnSwap,
+                TransformationRule::BlockReordering,
                 TransformationRule::DataTypeConversion,
             ],
             transformation_history: Vec::new(),
@@ -783,6 +818,226 @@ impl MatrixTransformer {
     pub fn initialize(&mut self) -> Result<(), LinearAlgebraError> {
         Ok(())
     }
+
+    /// Transform a matrix's in-memory storage layout to `target_layout`.
+    ///
+    /// The source layout is inferred from `matrix.storage_format`. The
+    /// returned matrix has its `data` buffer reorganised and its
+    /// `storage_format` (and `metadata.storage_format`) updated to reflect
+    /// the new layout. Row/column dimensions and element values are preserved.
+    ///
+    /// Supported conversions:
+    /// - `RowMajor` <-> `ColMajor` (transpose storage layout)
+    /// - `Blocked(inner, block_size)` (reorganise into cache-friendly tiles)
+    /// - `Packed` (pad each row to a multiple of the SIMD vector width)
+    ///
+    /// Reading from a `Blocked` source is not supported because the block size
+    /// is not carried in `Matrix` metadata; reading from sparse formats
+    /// (`CompressedSparseRow` / `CompressedSparseColumn`) is likewise
+    /// unsupported. Both return an `OptimizationError`.
+    pub fn transform_matrix(
+        &self,
+        matrix: &Matrix,
+        target_layout: MatrixLayout,
+    ) -> Result<Matrix, LinearAlgebraError> {
+        let rows = matrix.rows;
+        let cols = matrix.cols;
+
+        // Validate the source buffer is consistent with its declared layout.
+        validate_source_buffer(matrix)?;
+
+        // Read a logical element (i, j) from the source according to its
+        // current storage_format.
+        let src = |i: usize, j: usize| -> Result<f64, LinearAlgebraError> {
+            read_element(matrix, i, j)
+        };
+
+        let (data, storage_format) = match target_layout {
+            MatrixLayout::RowMajor => {
+                let mut data = Vec::with_capacity(rows * cols);
+                for i in 0..rows {
+                    for j in 0..cols {
+                        data.push(src(i, j)?);
+                    }
+                }
+                (data, StorageFormat::RowMajor)
+            }
+            MatrixLayout::ColMajor => {
+                let mut data = Vec::with_capacity(rows * cols);
+                // Column-major: contiguous down each column.
+                for j in 0..cols {
+                    for i in 0..rows {
+                        data.push(src(i, j)?);
+                    }
+                }
+                (data, StorageFormat::ColumnMajor)
+            }
+            MatrixLayout::Blocked(inner, block_size) => {
+                if block_size == 0 {
+                    return Err(LinearAlgebraError::OptimizationError(
+                        "Blocked layout requires block_size > 0".to_string(),
+                    ));
+                }
+                let mut data = Vec::with_capacity(rows * cols);
+                let block_rows = (rows + block_size - 1) / block_size;
+                let block_cols = (cols + block_size - 1) / block_size;
+                // Within-block element order follows the inner layout; default
+                // to row-major for any non-column-major inner layout.
+                let col_major_inner = *inner == MatrixLayout::ColMajor;
+                for bi in 0..block_rows {
+                    for bj in 0..block_cols {
+                        let i_start = bi * block_size;
+                        let i_end = rows.min((bi + 1) * block_size);
+                        let j_start = bj * block_size;
+                        let j_end = cols.min((bj + 1) * block_size);
+                        if col_major_inner {
+                            for j in j_start..j_end {
+                                for i in i_start..i_end {
+                                    data.push(src(i, j)?);
+                                }
+                            }
+                        } else {
+                            for i in i_start..i_end {
+                                for j in j_start..j_end {
+                                    data.push(src(i, j)?);
+                                }
+                            }
+                        }
+                    }
+                }
+                (data, StorageFormat::Blocked)
+            }
+            MatrixLayout::Packed => {
+                let stride = padded_stride(cols);
+                let mut data = vec![0.0; rows * stride];
+                for i in 0..rows {
+                    for j in 0..cols {
+                        data[i * stride + j] = src(i, j)?;
+                    }
+                }
+                (data, StorageFormat::Packed)
+            }
+        };
+
+        let mut result = matrix.clone();
+        result.data = data;
+        result.storage_format = storage_format.clone();
+        result.metadata.storage_format = storage_format;
+        Ok(result)
+    }
+
+    /// Analyse an access pattern and automatically pick the best layout for
+    /// the given matrix, then transform it.
+    ///
+    /// Layout selection heuristic:
+    /// - [`AccessPattern::Sequential`] (row-wise traversal) -> `RowMajor`
+    /// - [`AccessPattern::Strided`] (column-wise traversal) -> `ColMajor`
+    /// - [`AccessPattern::Blocked`] -> `Blocked(RowMajor, block_size)` where
+    ///   `block_size` is a cache-friendly tile (capped at 16)
+    /// - [`AccessPattern::Random`] -> `RowMajor` (no clear winner; keep the
+    ///   canonical layout)
+    /// - [`AccessPattern::Adaptive`] -> `ColMajor` for tall matrices
+    ///   (`rows > cols`), `RowMajor` otherwise
+    pub fn optimize_layout(
+        &self,
+        matrix: &Matrix,
+        access_pattern: &AccessPattern,
+    ) -> Result<Matrix, LinearAlgebraError> {
+        let target = match access_pattern {
+            AccessPattern::Sequential => MatrixLayout::RowMajor,
+            AccessPattern::Strided => MatrixLayout::ColMajor,
+            AccessPattern::Blocked => {
+                // Pick a cache-friendly tile size bounded by the matrix's
+                // smaller dimension and a 16-element cap.
+                let block_size = matrix.rows.min(matrix.cols).max(1).min(16);
+                MatrixLayout::Blocked(Box::new(MatrixLayout::RowMajor), block_size)
+            }
+            AccessPattern::Random => MatrixLayout::RowMajor,
+            AccessPattern::Adaptive => {
+                if matrix.rows > matrix.cols {
+                    MatrixLayout::ColMajor
+                } else {
+                    MatrixLayout::RowMajor
+                }
+            }
+        };
+        self.transform_matrix(matrix, target)
+    }
+}
+
+/// Padded row stride for the [`MatrixLayout::Packed`] layout: the column count
+/// rounded up to the next multiple of [`SIMD_WIDTH`].
+fn padded_stride(cols: usize) -> usize {
+    ((cols + SIMD_WIDTH - 1) / SIMD_WIDTH) * SIMD_WIDTH
+}
+
+/// Read logical element `(i, j)` from `matrix` according to its
+/// `storage_format`. Returns an error for unsupported source layouts
+/// (`Blocked`, sparse formats) or out-of-bounds indices.
+fn read_element(matrix: &Matrix, i: usize, j: usize) -> Result<f64, LinearAlgebraError> {
+    let rows = matrix.rows;
+    let cols = matrix.cols;
+    if i >= rows || j >= cols {
+        return Err(LinearAlgebraError::OptimizationError(format!(
+            "element index ({}, {}) out of bounds for matrix of shape {}x{}",
+            i, j, rows, cols
+        )));
+    }
+    let idx = match matrix.storage_format {
+        StorageFormat::RowMajor => i * cols + j,
+        StorageFormat::ColumnMajor => j * rows + i,
+        StorageFormat::Packed => {
+            let stride = padded_stride(cols);
+            i * stride + j
+        }
+        StorageFormat::Blocked => {
+            return Err(LinearAlgebraError::OptimizationError(
+                "cannot read from Blocked source: block size is not stored in Matrix metadata"
+                    .to_string(),
+            ));
+        }
+        StorageFormat::CompressedSparseRow | StorageFormat::CompressedSparseColumn => {
+            return Err(LinearAlgebraError::OptimizationError(
+                "sparse source layouts are not supported by the layout transformer".to_string(),
+            ));
+        }
+    };
+    if idx >= matrix.data.len() {
+        return Err(LinearAlgebraError::OptimizationError(format!(
+            "linear index {} out of bounds for data buffer of length {} (layout {:?})",
+            idx,
+            matrix.data.len(),
+            matrix.storage_format
+        )));
+    }
+    Ok(matrix.data[idx])
+}
+
+/// Validate that the source matrix's `data` buffer length is consistent with
+/// its declared `storage_format` and dimensions.
+fn validate_source_buffer(matrix: &Matrix) -> Result<(), LinearAlgebraError> {
+    let expected = match matrix.storage_format {
+        StorageFormat::RowMajor | StorageFormat::ColumnMajor | StorageFormat::Blocked => {
+            matrix.rows * matrix.cols
+        }
+        StorageFormat::Packed => matrix.rows * padded_stride(matrix.cols),
+        StorageFormat::CompressedSparseRow | StorageFormat::CompressedSparseColumn => {
+            // Sparse formats carry their own structure; skip strict length
+            // validation rather than guess the expected buffer size.
+            return Ok(());
+        }
+    };
+    if matrix.data.len() != expected {
+        return Err(LinearAlgebraError::OptimizationError(format!(
+            "source data length {} does not match expected {} for {:?} layout ({}x{})",
+            matrix.data.len(),
+            expected,
+            matrix.storage_format,
+            matrix.rows,
+            matrix.cols
+        )));
+    }
+    Ok(())
 }
 
 #[derive(Debug, Clone)]
@@ -1045,5 +1300,210 @@ mod tests {
         );
         let result = analyzer.analyze_matrix(&m).unwrap();
         assert!((result.sparsity - 6.0 / 9.0).abs() < 1e-10); // 6 zeros, 3 non-zeros
+    }
+
+    // ---- MatrixTransformer layout-conversion tests ----
+
+    fn make_transformer() -> MatrixTransformer {
+        let mut t = MatrixTransformer::new();
+        t.initialize().unwrap();
+        t
+    }
+
+    /// Build a column-major matrix from a row-major `data` description.
+    /// `data` is given in row-major order (row by row); the returned matrix
+    /// stores it in column-major order with `storage_format = ColumnMajor`.
+    fn make_col_matrix(id: &str, rows: usize, cols: usize, row_major_data: Vec<f64>) -> Matrix {
+        // Reorganise row-major input into column-major storage.
+        let mut col_major = Vec::with_capacity(rows * cols);
+        for j in 0..cols {
+            for i in 0..rows {
+                col_major.push(row_major_data[i * cols + j]);
+            }
+        }
+        let metadata = MatrixMetadata {
+            matrix_id: id.to_string(),
+            rows,
+            cols,
+            data_type: DataType::Float64,
+            storage_format: StorageFormat::ColumnMajor,
+            compression: CompressionType::None,
+            created_at: 0,
+            last_accessed: 0,
+            access_count: 0,
+        };
+        Matrix {
+            matrix_id: id.to_string(),
+            rows,
+            cols,
+            data_type: DataType::Float64,
+            data: col_major,
+            storage_format: StorageFormat::ColumnMajor,
+            metadata,
+        }
+    }
+
+    /// Read element (i, j) from a blocked-layout matrix with a known block size
+    /// (row-major within blocks, row-major block order). Used to verify the
+    /// blocked transform reorganised the data correctly.
+    fn read_blocked(m: &Matrix, block_size: usize, i: usize, j: usize) -> f64 {
+        let rows = m.rows;
+        let cols = m.cols;
+        let block_rows = (rows + block_size - 1) / block_size;
+        let block_cols = (cols + block_size - 1) / block_size;
+        let bi = i / block_size;
+        let bj = j / block_size;
+        let li = i % block_size; // local row within block
+        let lj = j % block_size; // local col within block
+        // Count elements in blocks preceding (bi, bj) in row-major block order.
+        let mut offset = 0usize;
+        'outer: for bbi in 0..block_rows {
+            for bbj in 0..block_cols {
+                if bbi == bi && bbj == bj {
+                    break 'outer;
+                }
+                let i_end = rows.min((bbi + 1) * block_size);
+                let j_end = cols.min((bbj + 1) * block_size);
+                offset += (i_end - bbi * block_size) * (j_end - bbj * block_size);
+            }
+        }
+        // Local block dimensions for block (bi, bj).
+        let i_start = bi * block_size;
+        let j_start = bj * block_size;
+        let local_rows = rows.min((bi + 1) * block_size) - i_start;
+        let local_cols = cols.min((bj + 1) * block_size) - j_start;
+        // Row-major within block.
+        offset += li * local_cols + lj;
+        m.data[offset]
+    }
+
+    #[test]
+    fn test_row_to_col_major() {
+        let transformer = make_transformer();
+        // 2x3 matrix:
+        //   [[1, 2, 3],
+        //    [4, 5, 6]]
+        let m = make_matrix("rm", 2, 3, vec![1.0, 2.0, 3.0, 4.0, 5.0, 6.0]);
+        assert_eq!(m.storage_format, StorageFormat::RowMajor);
+
+        let result = transformer
+            .transform_matrix(&m, MatrixLayout::ColMajor)
+            .unwrap();
+
+        assert_eq!(result.storage_format, StorageFormat::ColumnMajor);
+        assert_eq!(result.metadata.storage_format, StorageFormat::ColumnMajor);
+        assert_eq!(result.rows, 2);
+        assert_eq!(result.cols, 3);
+        // Column-major: column 0 = [1, 4], column 1 = [2, 5], column 2 = [3, 6]
+        assert_eq!(result.data, vec![1.0, 4.0, 2.0, 5.0, 3.0, 6.0]);
+        // Verify every logical element is preserved under col-major addressing.
+        for i in 0..2 {
+            for j in 0..3 {
+                let expected = m.data[i * 3 + j];
+                let got = result.data[j * 2 + i];
+                assert_eq!(got, expected, "element ({},{}) mismatch", i, j);
+            }
+        }
+    }
+
+    #[test]
+    fn test_col_to_row_major() {
+        let transformer = make_transformer();
+        // Build a column-major matrix representing [[1,2,3],[4,5,6]].
+        let m = make_col_matrix("cm", 2, 3, vec![1.0, 2.0, 3.0, 4.0, 5.0, 6.0]);
+        assert_eq!(m.storage_format, StorageFormat::ColumnMajor);
+        assert_eq!(m.data, vec![1.0, 4.0, 2.0, 5.0, 3.0, 6.0]);
+
+        let result = transformer
+            .transform_matrix(&m, MatrixLayout::RowMajor)
+            .unwrap();
+
+        assert_eq!(result.storage_format, StorageFormat::RowMajor);
+        assert_eq!(result.rows, 2);
+        assert_eq!(result.cols, 3);
+        // Row-major: [[1,2,3],[4,5,6]] flattened row by row.
+        assert_eq!(result.data, vec![1.0, 2.0, 3.0, 4.0, 5.0, 6.0]);
+        // Verify every logical element is preserved under row-major addressing.
+        for i in 0..2 {
+            for j in 0..3 {
+                let expected = m.data[j * 2 + i]; // col-major source read
+                let got = result.data[i * 3 + j]; // row-major result read
+                assert_eq!(got, expected, "element ({},{}) mismatch", i, j);
+            }
+        }
+    }
+
+    #[test]
+    fn test_blocked_layout() {
+        let transformer = make_transformer();
+        // 4x4 matrix 1..16 (row-major):
+        //   [[ 1,  2,  3,  4],
+        //    [ 5,  6,  7,  8],
+        //    [ 9, 10, 11, 12],
+        //    [13, 14, 15, 16]]
+        let m = make_matrix(
+            "blk",
+            4,
+            4,
+            vec![
+                1.0, 2.0, 3.0, 4.0, 5.0, 6.0, 7.0, 8.0, 9.0, 10.0, 11.0, 12.0, 13.0, 14.0, 15.0,
+                16.0,
+            ],
+        );
+
+        let result = transformer
+            .transform_matrix(&m, MatrixLayout::Blocked(Box::new(MatrixLayout::RowMajor), 2))
+            .unwrap();
+
+        assert_eq!(result.storage_format, StorageFormat::Blocked);
+        assert_eq!(result.rows, 4);
+        assert_eq!(result.cols, 4);
+        assert_eq!(result.data.len(), 16);
+        // Expected block order (2x2 blocks, row-major within each block):
+        //   block(0,0) = [1, 2, 5, 6]
+        //   block(0,1) = [3, 4, 7, 8]
+        //   block(1,0) = [9, 10, 13, 14]
+        //   block(1,1) = [11, 12, 15, 16]
+        assert_eq!(
+            result.data,
+            vec![
+                1.0, 2.0, 5.0, 6.0, 3.0, 4.0, 7.0, 8.0, 9.0, 10.0, 13.0, 14.0, 11.0, 12.0, 15.0,
+                16.0,
+            ]
+        );
+        // Verify every logical element is recoverable from the blocked buffer.
+        for i in 0..4 {
+            for j in 0..4 {
+                let expected = m.data[i * 4 + j];
+                let got = read_blocked(&result, 2, i, j);
+                assert_eq!(got, expected, "blocked element ({},{}) mismatch", i, j);
+            }
+        }
+    }
+
+    #[test]
+    fn test_optimize_layout_row_access() {
+        let transformer = make_transformer();
+        let m = make_matrix("r", 2, 3, vec![1.0, 2.0, 3.0, 4.0, 5.0, 6.0]);
+        // Sequential access = row-heavy traversal -> RowMajor.
+        let result = transformer
+            .optimize_layout(&m, &AccessPattern::Sequential)
+            .unwrap();
+        assert_eq!(result.storage_format, StorageFormat::RowMajor);
+        // Row-major data is unchanged from the row-major source.
+        assert_eq!(result.data, vec![1.0, 2.0, 3.0, 4.0, 5.0, 6.0]);
+    }
+
+    #[test]
+    fn test_optimize_layout_col_access() {
+        let transformer = make_transformer();
+        let m = make_matrix("c", 2, 3, vec![1.0, 2.0, 3.0, 4.0, 5.0, 6.0]);
+        // Strided access = column-heavy traversal -> ColMajor.
+        let result = transformer
+            .optimize_layout(&m, &AccessPattern::Strided)
+            .unwrap();
+        assert_eq!(result.storage_format, StorageFormat::ColumnMajor);
+        // Column-major reorganisation: [1, 4, 2, 5, 3, 6].
+        assert_eq!(result.data, vec![1.0, 4.0, 2.0, 5.0, 3.0, 6.0]);
     }
 }
