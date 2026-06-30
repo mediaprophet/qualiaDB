@@ -513,22 +513,15 @@ supporting G/F/X/U/R over Quin traces. The legacy `logic.rs` opcodes are left in
 to avoid breaking existing tests — use `temporal_ltl::evaluate_ltl_trace` for real
 temporal reasoning.
 
-### 4-D Object field type-tag conflict between `logic.rs` and `resolver.rs`
+### 4-D Object field type-tag conflict between `logic.rs` and `resolver.rs` — RESOLVED
 
-`resolver.rs` (authoritative) defines `0b001 << 60` as `xsd:integer`, with the integer
-value in bits 0-59.
-
-`logic.rs::extract_float` treats `0b001 << 60` (= `0x1 << 60`) as an f32 tag, with the
-f32 bit-pattern in bits 0-31.
-
-**These are the same bit pattern used for different purposes.** A Quin written by the
-inference system using `logic.rs` float encoding will be misread by `resolver.rs` as an
-integer, and vice versa.
-
-**Do not "fix" this unilaterally** — it requires alignment across both systems and
-the ingest layer. For now: if your new module emits object values as scalars, use the
-`resolver.rs` convention (bits 0-59 = payload, bits 60-62 = type tag). Document in the
-function's doc comment which convention you're following.
+The former collision (`logic.rs` used `0b001 << 60` for f32, `resolver.rs` used the same
+bits for `xsd:integer`) has been fixed. A new `INLINE_TAG_FLOAT = 0b101 << 60` was
+allocated in `resolver.rs` (the canonical tag definition site). `frame_layout.rs`
+re-exports all inline tags as the ABI coordination layer and provides
+`pack_float_object()` / `unpack_float_object()` / `object_tag()` helpers. `logic.rs`
+(core.rs) now uses `frame_layout::INLINE_TAG_FLOAT` instead of its old hardcoded `0x1`.
+A test (`object_datatype_tags_are_distinct`) verifies all 5 tags are pairwise distinct.
 
 ### 4-E `derive_lane_key` in `agency.rs` — RESOLVED
 
