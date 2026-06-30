@@ -1,0 +1,225 @@
+---
+created: 2026-06-30
+updated: 2026-06-30
+update_scope: Comprehensive
+---
+
+# src Index
+
+## Functionality Overview
+Comprehensive index of functionality for `src`. This document serves as the ground truth for bots regarding implemented components and dependencies.
+
+## File & Subdirectory Manifest
+### Subdirectories
+- 📁 `[bench](bench/DIRECTORY_INDEX.md)`
+- 📁 `[bin](bin/DIRECTORY_INDEX.md)`
+- 📁 `[ingest](ingest/DIRECTORY_INDEX.md)`
+- 📁 `[query](query/DIRECTORY_INDEX.md)`
+
+### Files & Exported Functionality
+- 📄 `benchmark_env.rs`
+  - `fn host_class`
+  - `fn collect_device_manifest`
+  - `fn bench_execution_environment`
+- 📄 `compress.rs`
+  - `struct CompressStats`
+  - `fn compress_q42`
+  - `fn compress_raw`
+  - `fn write_lz4_block`
+  - `fn read_exact_or_eof`
+- 📄 `daemon.rs`
+  - `struct DaemonOpts`
+  - `enum DaemonAction`
+  - `struct DaemonServiceRecord`
+  - `fn handle`
+  - `fn serve_foreground`
+  - `fn start_service`
+  - `fn stop_service`
+  - `fn print_status`
+  - `fn print_doctor`
+  - `fn ping_daemon`
+  - `fn spawn_detached_service`
+  - `fn spawn_detached_service_windows`
+  - `fn spawn_detached_service_portable`
+  - `fn ensure_runtime_dir`
+  - `fn runtime_dir`
+  - *(...and 8 more)*
+- 📄 `evaluate.rs`
+  - `fn map_quins`
+  - `fn cast_quins`
+  - `fn run_deontic`
+  - `fn run_epistemic`
+  - `fn run_paraconsistent`
+  - `fn run_ltl`
+  - `fn run_asp`
+  - `fn run_dl`
+  - `fn run_probabilistic`
+  - `fn run_linear_logic`
+  - `fn run_dialectical`
+  - `fn run_diffusion`
+  - `fn run_spatio_temporal`
+  - `fn run_interval`
+  - `fn run_graph_topology`
+  - *(...and 3 more)*
+- 📄 `llm_lifecycle.rs`
+  - `struct CliSession`
+  - `fn session_lock`
+  - `fn store_session`
+  - `fn with_session`
+  - `fn clear_session`
+  - `fn init_log_stream`
+  - `fn run_list`
+  - `fn run_duplicate_audit`
+  - `fn run_load`
+  - `fn run_status`
+  - `fn run_eval`
+  - `fn run_evict`
+  - `fn parse_model_id_ref`
+  - `fn cli_read_intent`
+  - `fn default_vault_path`
+- 📄 `llm_testing.rs`
+  - `fn run_test_models`
+  - `fn run_comprehensive_llm_test`
+  - `fn test_single_model`
+  - `struct TestResult`
+  - `fn benchmark_model`
+  - `fn validate_model`
+  - `fn list_models`
+  - `fn run_validate_models`
+  - `fn run_benchmark_models`
+  - `fn run_generate_report`
+- 📄 `llm_testing_old.rs`
+  - `struct ModelParameters`
+  - `struct ModelTestConfig`
+  - `struct LlmModelTester`
+  - `impl LlmModelTester`
+  - `fn new`
+  - `fn run_all_tests`
+  - `fn run_test_models`
+  - `fn run_validate_models`
+  - `fn run_benchmark_models`
+  - `fn run_generate_report`
+  - `fn filter_models`
+  - `fn create_test_configs_from_vault`
+  - `fn detect_model_type`
+  - `fn validate_single_model`
+  - `fn benchmark_single_model`
+  - *(...and 8 more)*
+- 📄 `main.rs`
+  - `struct Cli`
+  - `enum Commands`
+  - `enum ExtensionAction`
+  - `enum EvaluateModality`
+  - `enum ShaclAction`
+  - `enum GovernanceAction`
+  - `enum SolveAction`
+  - `enum OdeAction`
+  - `enum QuantumSolveAction`
+  - `enum SymbolicSolveAction`
+  - `enum LinalgAction`
+  - `enum OptimizeAction`
+  - `enum ScienceAction`
+  - `enum ChemAction`
+  - `enum BioAction`
+  - *(...and 29 more)*
+- 📄 `mcp.rs`
+  - `enum McpTransport`
+  - `enum McpAction`
+  - `struct McpServiceRecord`
+  - `fn handle`
+  - `fn serve_tcp`
+  - `fn handle_tcp_client`
+  - `fn start_background`
+  - `fn spawn_detached_service`
+  - `fn spawn_detached_service_windows`
+  - `fn spawn_detached_service_portable`
+  - `fn stop_background`
+  - `fn print_status`
+  - `fn print_doctor`
+  - `fn ping_service`
+  - `fn send_request`
+  - *(...and 10 more)*
+- 📄 `qpu.rs`
+  - `struct ProviderInfo`
+  - `fn find_provider`
+  - `struct ProviderConfig`
+  - `struct QpuConfigStore`
+  - `fn config_path`
+  - `fn load_config`
+  - `fn save_config`
+  - `fn mask`
+  - `fn display_opt`
+  - `fn run_list_providers`
+  - `fn run_configure`
+  - `fn run_show`
+  - `fn run_clear`
+  - `fn run_test_connection`
+  - `fn auth_type_for`
+  - *(...and 1 more)*
+- 📄 `resources.rs`
+  - `fn load_catalog`
+  - `fn handle`
+  - `fn cmd_list`
+  - `fn list_llms`
+  - `fn list_ontologies`
+  - `fn list_sparql`
+  - `fn cmd_show`
+  - `fn default_storage_root`
+  - `fn cmd_download`
+  - `fn cmd_import_ontology`
+  - `fn print_help`
+- 📄 `science.rs`
+  - `fn run_chem_smiles`
+  - `fn run_chem_thermo`
+  - `fn run_chem_druglike`
+  - `fn run_chem_pka`
+  - `fn run_bio_align`
+  - `fn run_bio_kmer`
+  - `fn run_bio_translate`
+  - `fn run_bio_isoelectric`
+  - `fn run_bio_jaccard`
+  - `fn run_bio_minhash`
+  - `fn run_geo_embed_h3`
+  - `fn run_thermo_gibbs`
+  - `fn run_thermo_anneal`
+  - `fn parse_vec3`
+  - `fn run_geometric_cross`
+  - *(...and 9 more)*
+- 📄 `service.rs`
+  - `enum ServiceAction`
+  - `fn handle`
+- 📄 `shader.rs`
+  - `struct ScheduleArgs`
+  - `impl ScheduleArgs`
+  - `fn schedule`
+  - `enum ShaderAction`
+  - `fn run`
+  - `fn parse_kernel`
+  - `fn read_gpu_temperature_celsius`
+  - `fn check_native_toolchain`
+  - `fn write_json`
+- 📄 `solve.rs`
+  - `fn parse_f64s`
+  - `fn build_matrix4x4`
+  - `fn parse_matrix4x4`
+  - `fn parse_vector4`
+  - `fn build_tensor3x3x3`
+  - `fn parse_tensor3x3x3`
+  - `fn parse_params4`
+  - `fn default_config`
+  - `fn run_matrix_multiply`
+  - `fn run_determinant`
+  - `fn run_solve_system`
+  - `fn run_eigenvalues`
+  - `fn run_tensor_contract`
+  - `fn print_matrix4x4`
+  - `struct ClosureFn`
+  - *(...and 31 more)*
+- 📄 `telemetry_server.rs`
+  - `struct TelemetryPayload`
+  - `struct HotBlock`
+  - `fn start_telemetry_server`
+  - `fn get_peak_rss`
+
+## Changelog
+- **2026-06-30**: Automated full index generation, extracting code definitions.

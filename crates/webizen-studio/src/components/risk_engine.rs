@@ -1,4 +1,25 @@
 use dioxus::prelude::*;
+use serde::{Deserialize, Serialize};
+use wasm_bindgen::prelude::*;
+
+#[wasm_bindgen]
+extern "C" {
+    #[wasm_bindgen(js_namespace = ["window", "__TAURI__", "core"], js_name = invoke, catch)]
+    pub async fn tauri_invoke(cmd: &str, args: JsValue) -> Result<JsValue, JsValue>;
+}
+
+#[derive(Serialize)]
+struct RiskArgs {
+    portfolio_value: f64,
+    volatility: f64,
+    time_horizon: f64,
+}
+
+#[derive(Deserialize, Default, Clone)]
+struct RiskProps {
+    monte_carlo_var: f64,
+    expected_shortfall: f64,
+}
 
 #[component]
 pub fn RiskEngine() -> Element {
@@ -25,15 +46,30 @@ pub fn RiskEngine() -> Element {
         val * z_score() * vol * t.sqrt()
     });
 
-    let monte_carlo_var = use_memo(move || {
-        // Mocking MC VaR to be slightly higher for realism
-        parametric_var() * 1.05
+    let risk_resource = use_resource(move || {
+        let current_val = portfolio_value.read().clone();
+        let current_vol = volatility.read().clone();
+        let current_time = time_horizon.read().clone();
+        
+        async move {
+            if let Ok(args) = serde_wasm_bindgen::to_value(&RiskArgs {
+                portfolio_value: current_val,
+                volatility: current_vol,
+                time_horizon: current_time,
+            }) {
+                if let Ok(res) = tauri_invoke("calculate_monte_carlo_var", args).await {
+                    if let Ok(parsed) = serde_wasm_bindgen::from_value::<RiskProps>(res) {
+                        return parsed;
+                    }
+                }
+            }
+            RiskProps::default()
+        }
     });
 
-    let expected_shortfall = use_memo(move || {
-        // CVaR mock (Expected Shortfall)
-        parametric_var() * 1.25
-    });
+    let risk_props = risk_resource.read().clone().unwrap_or_default();
+    let monte_carlo_var = risk_props.monte_carlo_var;
+    let expected_shortfall = risk_props.expected_shortfall;
 
     rsx! {
         div {
@@ -118,13 +154,13 @@ pub fn RiskEngine() -> Element {
                         "Qualia Compute"
                     }
                     h3 { style: "color: #94a3b8; font-size: 1rem; font-weight: 500; margin-bottom: 0.5rem;", "Monte Carlo VaR" }
-                    div { style: "font-size: 2.5rem; font-weight: 700; color: #f43f5e;", "${monte_carlo_var():.0}" }
+                    div { style: "font-size: 2.5rem; font-weight: 700; color: #f43f5e;", "${monte_carlo_var:.0}" }
                     div { style: "color: #ef4444; font-size: 0.9rem; margin-top: 0.5rem;", "100k simulation paths" }
                 }
 
                 div {
                     h3 { style: "color: #94a3b8; font-size: 1rem; font-weight: 500; margin-bottom: 0.5rem;", "Expected Shortfall" }
-                    div { style: "font-size: 2.5rem; font-weight: 700; color: #be123c;", "${expected_shortfall():.0}" }
+                    div { style: "font-size: 2.5rem; font-weight: 700; color: #be123c;", "${expected_shortfall:.0}" }
                     div { style: "color: #ef4444; font-size: 0.9rem; margin-top: 0.5rem;", "Average loss beyond VaR" }
                 }
             }

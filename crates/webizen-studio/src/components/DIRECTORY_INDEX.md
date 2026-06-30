@@ -1,0 +1,887 @@
+---
+created: 2026-06-30
+updated: 2026-06-30
+update_scope: Comprehensive
+---
+
+# components Index
+
+## Functionality Overview
+Comprehensive index of functionality for `components`. This document serves as the ground truth for bots regarding implemented components and dependencies.
+
+## File & Subdirectory Manifest
+### Files & Exported Functionality
+- 📄 `about_page.rs`
+  - `fn tauri_invoke`
+  - `fn invoke_tauri_json`
+  - `struct AgentConfigSnapshot`
+  - `struct WalletStatusSnapshot`
+  - `struct LocalPreviewProbe`
+  - `struct RuntimeSnapshotRecord`
+  - `struct RuntimeLedgerHealth`
+  - `struct QualiaComputeProfile`
+  - `struct RuntimeAboutState`
+  - `impl Default`
+  - `fn default`
+  - `fn InfoPill`
+  - `fn CopyRow`
+  - `fn AboutPage`
+- 📄 `aesthetics_qapp.rs`
+  - `fn AestheticsQapp`
+- 📄 `affect_theory_qapp.rs`
+  - `fn AffectTheoryQapp`
+- 📄 `african_american_studies_qapp.rs`
+  - `fn AfricanAmericanStudiesQapp`
+- 📄 `african_studies_qapp.rs`
+  - `fn AfricanStudiesQapp`
+- 📄 `agent_config.rs`
+  - `fn AgentConfig`
+- 📄 `agreements_rights.rs`
+  - `fn AgreementsRights`
+- 📄 `ambient_field.rs`
+  - `struct AmbientTelemetry`
+  - `fn tauri_invoke`
+  - `fn fetch_telemetry`
+  - `fn canvas_ctx`
+  - `fn paint_ambient`
+  - `fn sigma_rgb`
+  - `fn AmbientFieldCanvas`
+- 📄 `american_studies_qapp.rs`
+  - `fn AmericanStudiesQapp`
+- 📄 `anatomy_test.rs`
+  - `fn AnatomyTest`
+- 📄 `ancient_near_eastern_studies_qapp.rs`
+  - `fn AncientNearEasternStudiesQapp`
+- 📄 `animal_studies_human_animal_studies_qapp.rs`
+  - `fn AnimalStudiesHumanAnimalStudiesQapp`
+- 📄 `animation_and_digital_arts_qapp.rs`
+  - `fn AnimationAndDigitalArtsQapp`
+- 📄 `anthropology_qapp.rs`
+  - `fn AnthropologyQapp`
+- 📄 `appalachian_studies_qapp.rs`
+  - `fn AppalachianStudiesQapp`
+- 📄 `applied_linguistics_qapp.rs`
+  - `fn AppliedLinguisticsQapp`
+- 📄 `archaeology_qapp.rs`
+  - `fn ArchaeologyQapp`
+- 📄 `architectural_history_qapp.rs`
+  - `fn ArchitecturalHistoryQapp`
+- 📄 `architectural_studies_qapp.rs`
+  - `fn ArchitecturalStudiesQapp`
+- 📄 `arctic_studies_qapp.rs`
+  - `fn ArcticStudiesQapp`
+- 📄 `area_and_regional_studies_qapp.rs`
+  - `fn AreaAndRegionalStudiesQapp`
+- 📄 `art_conservation_qapp.rs`
+  - `fn ArtConservationQapp`
+- 📄 `art_history_qapp.rs`
+  - `fn ArtHistoryQapp`
+- 📄 `arthurian_studies_qapp.rs`
+  - `fn ArthurianStudiesQapp`
+- 📄 `arts_management_and_administration_qapp.rs`
+  - `fn ArtsManagementAndAdministrationQapp`
+- 📄 `asian_studies_qapp.rs`
+  - `fn AsianStudiesQapp`
+- 📄 `astrobiology_qapp.rs`
+  - `fn AstrobiologyQapp`
+- 📄 `astronomy_qapp.rs`
+  - `fn AstronomyQapp`
+- 📄 `astrophysics_qapp.rs`
+  - `fn AstrophysicsQapp`
+- 📄 `atmospheric_science_qapp.rs`
+  - `fn AtmosphericScienceQapp`
+- 📄 `balkan_studies_qapp.rs`
+  - `fn BalkanStudiesQapp`
+- 📄 `behavioral_ecology_qapp.rs`
+  - `fn BehavioralEcologyQapp`
+- 📄 `behavioral_economics_qapp.rs`
+  - `fn BehavioralEconomicsQapp`
+- 📄 `benchmark_harness.rs`
+  - `struct RuntimeSnapshotRecord`
+  - `struct RuntimeLedgerHealth`
+  - `struct LocalPreviewProbe`
+  - `struct ForgeKernelProbe`
+  - `struct ForgeComputeProbe`
+  - `struct BenchmarkReport`
+  - `fn tauri_invoke`
+  - `fn invoke_tauri_json`
+  - `fn sleep_ms`
+  - `fn is_tauri`
+  - `fn measure_snapshot_call`
+  - `fn measure_reconfigure_ack`
+  - `fn run_benchmark_sweep`
+  - `fn BenchmarkHarness`
+  - `fn metric_card`
+  - *(...and 2 more)*
+- 📄 `biblical_studies_qapp.rs`
+  - `fn BiblicalStudiesQapp`
+- 📄 `bioethics_qapp.rs`
+  - `fn BioethicsQapp`
+- 📄 `biogeochemistry_qapp.rs`
+  - `fn BiogeochemistryQapp`
+- 📄 `bioinformatics_lab.rs`
+  - `fn BioinformaticsLab`
+- 📄 `bioinformatics_qapp.rs`
+  - `fn BioinformaticsQapp`
+- 📄 `biology_qapp.rs`
+  - `fn BiologyQapp`
+- 📄 `biomathematics_qapp.rs`
+  - `fn BiomathematicsQapp`
+- 📄 `biophysics_qapp.rs`
+  - `fn BiophysicsQapp`
+- 📄 `biopolitics_qapp.rs`
+  - `fn BiopoliticsQapp`
+- 📄 `body_studies_qapp.rs`
+  - `fn BodyStudiesQapp`
+- 📄 `book_arts_and_papermaking_qapp.rs`
+  - `fn BookArtsAndPapermakingQapp`
+- 📄 `botany_qapp.rs`
+  - `fn BotanyQapp`
+- 📄 `browser_panes.rs`
+  - `fn tauri_invoke`
+  - `fn invoke_tauri`
+  - `struct BrowserTab`
+  - `fn WebBrowserPane`
+  - `fn DialecticalSidebarPane`
+  - `fn CognitiveMonitorPane`
+- 📄 `browser_unavailable.rs`
+  - `fn BrowserUnavailable`
+- 📄 `buddhist_studies_qapp.rs`
+  - `fn BuddhistStudiesQapp`
+- 📄 `camera_controls.rs`
+  - `struct CameraControlState`
+  - `impl CameraControlState`
+  - `fn new`
+  - `fn CameraControls`
+- 📄 `canon_law_qapp.rs`
+  - `fn CanonLawQapp`
+- 📄 `capital_studies_qapp.rs`
+  - `fn CapitalStudiesQapp`
+- 📄 `caribbean_studies_qapp.rs`
+  - `fn CaribbeanStudiesQapp`
+- 📄 `celtic_studies_qapp.rs`
+  - `fn CelticStudiesQapp`
+- 📄 `central_asian_studies_qapp.rs`
+  - `fn CentralAsianStudiesQapp`
+- 📄 `ceramics_qapp.rs`
+  - `fn CeramicsQapp`
+- 📄 `chat_graph.rs`
+  - `fn NeuroSymbolicChat`
+- 📄 `chemical_physics_qapp.rs`
+  - `fn ChemicalPhysicsQapp`
+- 📄 `chemistry_modeler.rs`
+  - `fn tauri_invoke`
+  - `struct ChemistryArgs`
+  - `struct ChemistryProps`
+  - `fn ChemistryModeler`
+- 📄 `chemistry_qapp.rs`
+  - `fn ChemistryQapp`
+- 📄 `chicano_and_latino_studies_qapp.rs`
+  - `fn ChicanoAndLatinoStudiesQapp`
+- 📄 `childrens_literature_qapp.rs`
+  - `fn ChildrensLiteratureQapp`
+- 📄 `cinematography_qapp.rs`
+  - `fn CinematographyQapp`
+- 📄 `classics_qapp.rs`
+  - `fn ClassicsQapp`
+- 📄 `cli_bridge.rs`
+  - `fn CliBridge`
+- 📄 `clinical_risk_scorer.rs`
+  - `fn tauri_invoke`
+  - `struct FraminghamArgs`
+  - `struct ClinicalRiskProps`
+  - `fn ClinicalRiskScorer`
+- 📄 `cognitive_science_qapp.rs`
+  - `fn CognitiveScienceQapp`
+- 📄 `comics_and_graphic_novel_studies_qapp.rs`
+  - `fn ComicsAndGraphicNovelStudiesQapp`
+- 📄 `communication_studies_qapp.rs`
+  - `fn CommunicationStudiesQapp`
+- 📄 `comorbidity_analyzer.rs`
+  - `fn tauri_invoke`
+  - `fn ComorbidityAnalyzer`
+- 📄 `comparative_literature_qapp.rs`
+  - `fn ComparativeLiteratureQapp`
+- 📄 `computational_linguistics_qapp.rs`
+  - `fn ComputationalLinguisticsQapp`
+- 📄 `computer_science_qapp.rs`
+  - `fn ComputerScienceQapp`
+- 📄 `contextual_workspace.rs`
+  - `enum NodeZone`
+  - `enum NodeCat`
+  - `struct GraphNode`
+  - `struct GraphEdge`
+  - `enum Lens`
+  - `struct ChatMsg`
+  - `fn graph_nodes`
+  - `fn graph_edges`
+  - `fn zone_color`
+  - `fn node_opacity`
+  - `fn find_xy`
+  - `fn inforg_reply`
+  - `fn ContextualWorkspace`
+- 📄 `creative_writing_qapp.rs`
+  - `fn CreativeWritingQapp`
+- 📄 `criminology_and_criminal_justice_qapp.rs`
+  - `fn CriminologyAndCriminalJusticeQapp`
+- 📄 `critical_disability_studies_qapp.rs`
+  - `fn CriticalDisabilityStudiesQapp`
+- 📄 `critical_film_studies_qapp.rs`
+  - `fn CriticalFilmStudiesQapp`
+- 📄 `critical_gentrification_studies_qapp.rs`
+  - `fn CriticalGentrificationStudiesQapp`
+- 📄 `critical_race_and_ethnic_studies_qapp.rs`
+  - `fn CriticalRaceAndEthnicStudiesQapp`
+- 📄 `critical_theory_qapp.rs`
+  - `fn CriticalTheoryQapp`
+- 📄 `cryptography_qapp.rs`
+  - `fn CryptographyQapp`
+- 📄 `cultural_ecology_qapp.rs`
+  - `fn CulturalEcologyQapp`
+- 📄 `cultural_studies_qapp.rs`
+  - `fn CulturalStudiesQapp`
+- 📄 `curatorial_studies_qapp.rs`
+  - `fn CuratorialStudiesQapp`
+- 📄 `cyberculture_studies_qapp.rs`
+  - `fn CybercultureStudiesQapp`
+- 📄 `dance_qapp.rs`
+  - `fn DanceQapp`
+- 📄 `dashboard.rs`
+  - `fn hex_is_dark`
+  - `fn hex_to_rgba`
+  - `fn persist_custom_theme`
+  - `fn read_custom_themes`
+  - `fn health_sparkline`
+  - `fn cpu_sparkline`
+  - `fn mem_sparkline`
+  - `fn lat_sparkline`
+  - `fn bar_data`
+  - `fn Dashboard`
+- 📄 `deaf_studies_qapp.rs`
+  - `fn DeafStudiesQapp`
+- 📄 `decolonial_studies_qapp.rs`
+  - `fn DecolonialStudiesQapp`
+- 📄 `demography_and_population_studies_qapp.rs`
+  - `fn DemographyAndPopulationStudiesQapp`
+- 📄 `deontic_logic_editor.rs`
+  - `fn DeonticLogicEditor`
+- 📄 `diaspora_studies_qapp.rs`
+  - `fn DiasporaStudiesQapp`
+- 📄 `dicom_viewer.rs`
+  - `fn DicomViewer`
+- 📄 `diffusion_visualizer.rs`
+  - `struct RuntimeSnapshotRecord`
+  - `struct RuntimeLedgerHealth`
+  - `fn tauri_invoke`
+  - `fn tauri_listen`
+  - `fn invoke_tauri_json`
+  - `fn get_canvas_context`
+  - `fn draw_snapshot`
+  - `fn DiffusionVisualizer`
+- 📄 `digital_humanities_qapp.rs`
+  - `fn DigitalHumanitiesQapp`
+- 📄 `disability_studies_qapp.rs`
+  - `fn DisabilityStudiesQapp`
+- 📄 `disaster_studies_qapp.rs`
+  - `fn DisasterStudiesQapp`
+- 📄 `dramaturgy_qapp.rs`
+  - `fn DramaturgyQapp`
+- 📄 `earth_science_qapp.rs`
+  - `fn EarthScienceQapp`
+- 📄 `ebpf_filter_manager.rs`
+  - `fn EbpfFilterManager`
+- 📄 `eco_critical_theory_qapp.rs`
+  - `fn EcoCriticalTheoryQapp`
+- 📄 `eco_feminism_qapp.rs`
+  - `fn EcoFeminismQapp`
+- 📄 `eco_queer_theory_qapp.rs`
+  - `fn EcoQueerTheoryQapp`
+- 📄 `ecology_qapp.rs`
+  - `fn EcologyQapp`
+- 📄 `economics_qapp.rs`
+  - `fn EconomicsQapp`
+- 📄 `education_studies_qapp.rs`
+  - `fn EducationStudiesQapp`
+- 📄 `egyptology_qapp.rs`
+  - `fn EgyptologyQapp`
+- 📄 `english_language_and_literature_qapp.rs`
+  - `fn EnglishLanguageAndLiteratureQapp`
+- 📄 `environmental_chemistry_qapp.rs`
+  - `fn EnvironmentalChemistryQapp`
+- 📄 `environmental_design_qapp.rs`
+  - `fn EnvironmentalDesignQapp`
+- 📄 `environmental_humanities_qapp.rs`
+  - `fn EnvironmentalHumanitiesQapp`
+- 📄 `environmental_justice_qapp.rs`
+  - `fn EnvironmentalJusticeQapp`
+- 📄 `environmental_science_qapp.rs`
+  - `fn EnvironmentalScienceQapp`
+- 📄 `epistemic_status.rs`
+  - `enum EpistemicState`
+  - `fn EpistemicStatus`
+- 📄 `epistemology_qapp.rs`
+  - `fn EpistemologyQapp`
+- 📄 `ethics_qapp.rs`
+  - `fn EthicsQapp`
+- 📄 `ethnomusicology_qapp.rs`
+  - `fn EthnomusicologyQapp`
+- 📄 `european_studies_qapp.rs`
+  - `fn EuropeanStudiesQapp`
+- 📄 `evolutionary_biology_qapp.rs`
+  - `fn EvolutionaryBiologyQapp`
+- 📄 `extension_bus.rs`
+  - `fn ExtensionBus`
+- 📄 `family_studies_qapp.rs`
+  - `fn FamilyStudiesQapp`
+- 📄 `fan_studies_qapp.rs`
+  - `fn FanStudiesQapp`
+- 📄 `fat_studies_qapp.rs`
+  - `fn FatStudiesQapp`
+- 📄 `film_and_media_studies_qapp.rs`
+  - `fn FilmAndMediaStudiesQapp`
+- 📄 `film_philosophy_qapp.rs`
+  - `fn FilmPhilosophyQapp`
+- 📄 `folklore_and_mythology_qapp.rs`
+  - `fn FolkloreAndMythologyQapp`
+- 📄 `food_studies_qapp.rs`
+  - `fn FoodStudiesQapp`
+- 📄 `foreign_languages_and_literatures_qapp.rs`
+  - `fn ForeignLanguagesAndLiteraturesQapp`
+- 📄 `francophone_studies_qapp.rs`
+  - `fn FrancophonieStudiesQapp`
+- 📄 `futures_studies_and_foresight_qapp.rs`
+  - `fn FuturesStudiesAndForesightQapp`
+- 📄 `game_studies_qapp.rs`
+  - `fn GameStudiesQapp`
+- 📄 `gbm_simulator.rs`
+  - `struct Lcg`
+  - `impl Lcg`
+  - `fn new`
+  - `fn next_f64`
+  - `fn next_normal`
+  - `fn GbmSimulator`
+- 📄 `gender_and_sexuality_studies_qapp.rs`
+  - `fn GenderAndSexualityStudiesQapp`
+- 📄 `gender_studies_qapp.rs`
+  - `fn GenderStudiesQapp`
+- 📄 `geochemistry_qapp.rs`
+  - `fn GeochemistryQapp`
+- 📄 `geography_human_geography_qapp.rs`
+  - `fn GeographyHumanGeographyQapp`
+- 📄 `geology_qapp.rs`
+  - `fn GeologyQapp`
+- 📄 `geophysics_qapp.rs`
+  - `fn GeophysicsQapp`
+- 📄 `germanic_languages_and_literatures_qapp.rs`
+  - `fn GermanicLanguagesAndLiteraturesQapp`
+- 📄 `gerontology_qapp.rs`
+  - `fn GerontologyQapp`
+- 📄 `global_critical_studies_qapp.rs`
+  - `fn GlobalCriticalStudiesQapp`
+- 📄 `global_studies_qapp.rs`
+  - `fn GlobalStudiesQapp`
+- 📄 `grassroots_studies_qapp.rs`
+  - `fn GrassrootsStudiesQapp`
+- 📄 `grief_studies_qapp.rs`
+  - `fn GriefStudiesQapp`
+- 📄 `hardware_capabilities.rs`
+  - `enum HardwareTier`
+  - `struct BrowserCapabilities`
+  - `impl Default`
+  - `fn default`
+  - `fn HardwareCapabilities`
+  - `fn register_capabilities_with_backend`
+  - `fn detect_capabilities_browser_side`
+  - `fn detect_webgpu_capabilities`
+  - `fn determine_tier_from_vram`
+- 📄 `hardware_configurator.rs`
+  - `struct ModuleAttachmentArgs`
+  - `enum ConfigStatus`
+  - `struct HardwareConfigState`
+  - `fn HardwareConfigurator`
+- 📄 `haunted_humanities_qapp.rs`
+  - `fn HauntedHumanitiesQapp`
+- 📄 `health_monitor.rs`
+  - `fn HealthVitalMonitor`
+- 📄 `health_vital_monitor.rs`
+  - `fn HealthVitalMonitor`
+- 📄 `hermeneutics_qapp.rs`
+  - `fn HermeneuticsQapp`
+- 📄 `hindu_studies_qapp.rs`
+  - `fn HinduStudiesQapp`
+- 📄 `hispanic_and_luso_brazilian_studies_qapp.rs`
+  - `fn HispanicAndLusoBrazilianStudiesQapp`
+- 📄 `historical_linguistics_qapp.rs`
+  - `fn HistoricalLinguisticsQapp`
+- 📄 `historiography_qapp.rs`
+  - `fn HistoriographyQapp`
+- 📄 `history_of_art_and_architecture_qapp.rs`
+  - `fn HistoryOfArtAndArchitectureQapp`
+- 📄 `history_of_science_and_medicine_qapp.rs`
+  - `fn HistoryOfScienceAndMedicineQapp`
+- 📄 `history_qapp.rs`
+  - `fn HistoryQapp`
+- 📄 `human_rights_studies_qapp.rs`
+  - `fn HumanRightsStudiesQapp`
+- 📄 `ideology_critique_qapp.rs`
+  - `fn IdeologyCritiqueQapp`
+- 📄 `indigenous_and_native_american_studies_qapp.rs`
+  - `fn IndigenousAndNativeAmericanStudiesQapp`
+- 📄 `indigenous_feminisms_qapp.rs`
+  - `fn IndigenousFeminismsQapp`
+- 📄 `indigenous_language_revitalization_qapp.rs`
+  - `fn IndigenousLanguageRevitalizationQapp`
+- 📄 `inference_monitor.rs`
+  - `fn InferenceMonitor`
+- 📄 `integral_studies_qapp.rs`
+  - `fn IntegralStudiesQapp`
+- 📄 `intellectual_history_qapp.rs`
+  - `fn IntellectualHistoryQapp`
+- 📄 `intermedia_studies_qapp.rs`
+  - `fn IntermediaStudiesQapp`
+- 📄 `international_relations_qapp.rs`
+  - `fn InternationalRelationsQapp`
+- 📄 `islamic_studies_qapp.rs`
+  - `fn IslamicStudiesQapp`
+- 📄 `jewish_studies_qapp.rs`
+  - `fn JewishStudiesQapp`
+- 📄 `journalism_qapp.rs`
+  - `fn JournalismQapp`
+- 📄 `key_vault_manager.rs`
+  - `fn KeyVaultManager`
+- 📄 `kinesiology_and_movement_studies_qapp.rs`
+  - `fn KinesiologyAndMovementStudiesQapp`
+- 📄 `landscape_phenomenology_qapp.rs`
+  - `fn LandscapePhenomenologyQapp`
+- 📄 `landscape_studies_qapp.rs`
+  - `fn LandscapeStudiesQapp`
+- 📄 `latin_american_studies_qapp.rs`
+  - `fn LatinAmericanStudiesQapp`
+- 📄 `leadership_studies_qapp.rs`
+  - `fn LeadershipStudiesQapp`
+- 📄 `legal_studies_qapp.rs`
+  - `fn LegalStudiesQapp`
+- 📄 `leisure_studies_qapp.rs`
+  - `fn LeisureStudiesQapp`
+- 📄 `liberation_studies_qapp.rs`
+  - `fn LiberationStudiesQapp`
+- 📄 `library_and_information_science_qapp.rs`
+  - `fn LibraryAndInformationScienceQapp`
+- 📄 `linguistics_qapp.rs`
+  - `fn LinguisticsQapp`
+- 📄 `literature_and_law_qapp.rs`
+  - `fn LiteratureAndLawQapp`
+- 📄 `llm_harness.rs`
+  - `fn LlmHarness`
+- 📄 `logic_qapp.rs`
+  - `fn LogicQapp`
+- 📄 `lora_manager.rs`
+  - `fn LoraManager`
+- 📄 `marine_biology_qapp.rs`
+  - `fn MarineBiologyQapp`
+- 📄 `maritime_history_qapp.rs`
+  - `fn MaritimeHistoryQapp`
+- 📄 `material_culture_studies_qapp.rs`
+  - `fn MaterialCultureStudiesQapp`
+- 📄 `materialist_aesthetics_qapp.rs`
+  - `fn MaterialistAestheticsQapp`
+- 📄 `materials_science_qapp.rs`
+  - `fn MaterialsScienceQapp`
+- 📄 `mathematical_biology_qapp.rs`
+  - `fn MathematicalBiologyQapp`
+- 📄 `mathematical_economics_qapp.rs`
+  - `fn MathematicalEconomicsQapp`
+- 📄 `mathematics_qapp.rs`
+  - `fn MathematicsQapp`
+- 📄 `matrix_lab.rs`
+  - `fn MatrixLab`
+- 📄 `mcp_inspector.rs`
+  - `fn McpInspector`
+- 📄 `media_ecology_qapp.rs`
+  - `fn MediaEcologyQapp`
+- 📄 `media_theory_qapp.rs`
+  - `fn MediaTheoryQapp`
+- 📄 `medical_humanities_qapp.rs`
+  - `fn MedicalHumanitiesQapp`
+- 📄 `medieval_and_renaissance_studies_qapp.rs`
+  - `fn MedievalAndRenaissanceStudiesQapp`
+- 📄 `memory_studies_qapp.rs`
+  - `fn MemoryStudiesQapp`
+- 📄 `metamodernism_qapp.rs`
+  - `fn MetamodernismQapp`
+- 📄 `metaphysics_qapp.rs`
+  - `fn MetaphysicsQapp`
+- 📄 `meteorology_qapp.rs`
+  - `fn MeteorologyQapp`
+- 📄 `middle_eastern_studies_qapp.rs`
+  - `fn MiddleEasternStudiesQapp`
+- 📄 `military_history_qapp.rs`
+  - `fn MilitaryHistoryQapp`
+- 📄 `missiology_qapp.rs`
+  - `fn MissiologyQapp`
+- 📄 `mod.rs`
+- 📄 `model_lifecycle.rs`
+  - `fn ModelLifecycle`
+- 📄 `morphology_qapp.rs`
+  - `fn MorphologyQapp`
+- 📄 `museum_studies_qapp.rs`
+  - `fn MuseumStudiesQapp`
+- 📄 `music_history_qapp.rs`
+  - `fn MusicHistoryQapp`
+- 📄 `music_performance_qapp.rs`
+  - `fn MusicPerformanceQapp`
+- 📄 `music_theory_qapp.rs`
+  - `fn MusicTheoryQapp`
+- 📄 `musicology_qapp.rs`
+  - `fn MusicologyQapp`
+- 📄 `mycology_qapp.rs`
+  - `fn MycologyQapp`
+- 📄 `n3_logic_studio.rs`
+  - `fn N3LogicStudio`
+- 📄 `neuroscience_qapp.rs`
+  - `fn NeuroscienceQapp`
+- 📄 `nexus.rs`
+  - `enum Lens`
+  - `enum NType`
+  - `enum EType`
+  - `enum ModalOp`
+  - `struct RNode`
+  - `struct REdge`
+  - `struct EClaim`
+  - `struct ND`
+  - `struct ED`
+  - `struct CD`
+  - `fn research_nodes`
+  - `fn research_edges`
+  - `fn initial_claims`
+  - `fn Nexus`
+- 📄 `oceanic_and_pacific_island_studies_qapp.rs`
+  - `fn OceanicAndPacificIslandStudiesQapp`
+- 📄 `oceanography_qapp.rs`
+  - `fn OceanographyQapp`
+- 📄 `ode_solver.rs`
+  - `fn OdeSolver`
+- 📄 `oral_history_qapp.rs`
+  - `fn OralHistoryQapp`
+- 📄 `p2p_dashboard.rs`
+  - `fn P2pDashboard`
+- 📄 `paleography_qapp.rs`
+  - `fn PaleographyQapp`
+- 📄 `paleontology_qapp.rs`
+  - `fn PaleontologyQapp`
+- 📄 `patristics_qapp.rs`
+  - `fn PatristicsQapp`
+- 📄 `peace_and_conflict_studies_qapp.rs`
+  - `fn PeaceAndConflictStudiesQapp`
+- 📄 `penology_qapp.rs`
+  - `fn PenologyQapp`
+- 📄 `personal_ontology.rs`
+  - `fn PersonalOntologyBuilder`
+- 📄 `phenomenology_qapp.rs`
+  - `fn PhenomenologyQapp`
+- 📄 `philanthropy_and_nonprofit_studies_qapp.rs`
+  - `fn PhilanthropyAndNonprofitStudiesQapp`
+- 📄 `philology_qapp.rs`
+  - `fn PhilologyQapp`
+- 📄 `philosophy_of_mind_qapp.rs`
+  - `fn PhilosophyOfMindQapp`
+- 📄 `philosophy_of_religion_qapp.rs`
+  - `fn PhilosophyOfReligionQapp`
+- 📄 `philosophy_of_science_qapp.rs`
+  - `fn PhilosophyOfScienceQapp`
+- 📄 `philosophy_qapp.rs`
+  - `fn PhilosophyQapp`
+- 📄 `photography_qapp.rs`
+  - `fn PhotographyQapp`
+- 📄 `physics_qapp.rs`
+  - `fn PhysicsQapp`
+- 📄 `physics_simulator.rs`
+  - `struct ForgePhysicsCertification`
+  - `fn tauri_invoke`
+  - `fn invoke_forge_physics`
+  - `fn get_canvas_context`
+  - `fn sample_height`
+  - `fn draw_scene`
+  - `fn PhysicsSimulator`
+  - `fn probe_metric`
+  - `fn summary_card`
+  - `fn control_slider`
+- 📄 `planetary_science_qapp.rs`
+  - `fn PlanetaryScienceQapp`
+- 📄 `playwriting_qapp.rs`
+  - `fn PlaywritingQapp`
+- 📄 `poetry_and_poetics_qapp.rs`
+  - `fn PoetryAndPoeticsQapp`
+- 📄 `political_economy_qapp.rs`
+  - `fn PoliticalEconomyQapp`
+- 📄 `political_science_qapp.rs`
+  - `fn PoliticalScienceQapp`
+- 📄 `portfolio_analyzer.rs`
+  - `fn tauri_invoke`
+  - `struct Asset`
+  - `fn PortfolioAnalyzer`
+- 📄 `post_critical_pedagogy_qapp.rs`
+  - `fn PostCriticalPedagogyQapp`
+- 📄 `postcolonial_studies_qapp.rs`
+  - `fn PostcolonialStudiesQapp`
+- 📄 `posthumanities_qapp.rs`
+  - `fn PosthumanitiesQapp`
+- 📄 `poststructuralism_qapp.rs`
+  - `fn PoststructuralismQapp`
+- 📄 `poverty_and_inequality_studies_qapp.rs`
+  - `fn PovertyAndInequalityStudiesQapp`
+- 📄 `pragmatics_qapp.rs`
+  - `fn PragmaticsQapp`
+- 📄 `printmaking_qapp.rs`
+  - `fn PrintmakingQapp`
+- 📄 `provenance_graph.rs`
+  - `fn ProvenanceGraph`
+- 📄 `psychoanalysis_qapp.rs`
+  - `fn PsychoanalysisQapp`
+- 📄 `psycholinguistics_qapp.rs`
+  - `fn PsycholinguisticsQapp`
+- 📄 `psychology_qapp.rs`
+  - `fn PsychologyQapp`
+- 📄 `public_health_qapp.rs`
+  - `fn PublicHealthQapp`
+- 📄 `public_history_qapp.rs`
+  - `fn PublicHistoryQapp`
+- 📄 `public_policy_qapp.rs`
+  - `fn PublicPolicyQapp`
+- 📄 `q42_volume_manager.rs`
+  - `fn Q42VolumeManager`
+- 📄 `qaoa_explorer.rs`
+  - `fn tauri_invoke`
+  - `fn QaoaExplorer`
+- 📄 `qapp_dispatcher.rs`
+  - `fn QAppDispatcher`
+- 📄 `qapp_engine.rs`
+  - `struct AnalysisRequest`
+  - `struct AnalysisResult`
+  - `fn analyze`
+  - `fn tauri_invoke`
+  - `fn invoke_native`
+  - `fn stub_analyze`
+  - `fn provenance_hash`
+  - `fn slug`
+  - `fn truncate`
+  - `fn EnginePanel`
+  - `fn stub_is_deterministic_and_filters_empty_fields`
+- 📄 `qapps.rs`
+  - `enum Cat`
+  - `impl Cat`
+  - `fn label`
+  - `fn cat_list`
+  - `enum Stat`
+  - `enum AppRoute`
+  - `struct QApp`
+  - `struct Template`
+  - `fn featured_templates`
+  - `fn qapp_catalog`
+  - `enum BtnKind`
+  - `struct CardData`
+  - `fn QApps`
+  - `fn first_quoted`
+  - `fn academic_ids`
+  - *(...and 3 more)*
+- 📄 `qpu_optimizer.rs`
+  - `fn QpuOptimizer`
+- 📄 `qpu_providers.rs`
+  - `fn QpuProviders`
+- 📄 `quantum_dft.rs`
+  - `fn tauri_invoke`
+  - `struct QuantumDftArgs`
+  - `struct QuantumDftProps`
+  - `fn QuantumDft`
+- 📄 `queer_cinema_studies_qapp.rs`
+  - `fn QueerCinemaStudiesQapp`
+- 📄 `queer_studies_qapp.rs`
+  - `fn QueerStudiesQapp`
+- 📄 `queer_theory_qapp.rs`
+  - `fn QueerTheoryQapp`
+- 📄 `race_critical_theory_qapp.rs`
+  - `fn RaceCriticalTheoryQapp`
+- 📄 `race_studies_qapp.rs`
+  - `fn RaceStudiesQapp`
+- 📄 `race_theory_qapp.rs`
+  - `fn RaceTheoryQapp`
+- 📄 `radical_media_studies_qapp.rs`
+  - `fn RadicalMediaStudiesQapp`
+- 📄 `rdf_star_editor.rs`
+  - `fn RdfStarEditor`
+- 📄 `regionalism_qapp.rs`
+  - `fn RegionalismQapp`
+- 📄 `religion_and_theology_qapp.rs`
+  - `fn ReligionAndTheologyQapp`
+- 📄 `render_preview.rs`
+  - `struct RenderCameraState`
+  - `impl RenderCameraState`
+  - `fn default_camera`
+  - `fn tauri_invoke`
+  - `fn tauri_listen`
+  - `fn invoke_tauri_json`
+  - `fn RenderPreview`
+- 📄 `revisionist_critical_theory_qapp.rs`
+  - `fn RevisionistCriticalTheoryQapp`
+- 📄 `rhetoric_and_composition_qapp.rs`
+  - `fn RhetoricAndCompositionQapp`
+- 📄 `risk_engine.rs`
+  - `fn tauri_invoke`
+  - `struct RiskArgs`
+  - `struct RiskProps`
+  - `fn RiskEngine`
+- 📄 `romance_languages_and_literatures_qapp.rs`
+  - `fn RomanceLanguagesAndLiteraturesQapp`
+- 📄 `rural_studies_qapp.rs`
+  - `fn RuralStudiesQapp`
+- 📄 `scandinavian_studies_qapp.rs`
+  - `fn ScandinavianStudiesQapp`
+- 📄 `scene_interaction.rs`
+  - `enum EpistemicState`
+  - `impl Default`
+  - `fn default`
+  - `struct InteractionState`
+  - `fn SceneInteraction`
+- 📄 `science_fiction_and_fantasy_studies_qapp.rs`
+  - `fn ScienceFictionAndFantasyStudiesQapp`
+- 📄 `science_technology_and_society_sts_qapp.rs`
+  - `fn ScienceTechnologyAndSocietyStsQapp`
+- 📄 `screen_philosophy_qapp.rs`
+  - `fn ScreenPhilosophyQapp`
+- 📄 `screenwriting_qapp.rs`
+  - `fn ScreenwritingQapp`
+- 📄 `sculpture_qapp.rs`
+  - `fn SculptureQapp`
+- 📄 `semantics_qapp.rs`
+  - `fn SemanticsQapp`
+- 📄 `semiotics_qapp.rs`
+  - `fn SemioticsQapp`
+- 📄 `settings_page.rs`
+  - `fn tauri_invoke`
+  - `fn invoke_tauri_json`
+  - `struct AgentConfigSnapshot`
+  - `struct QpuSettingsSnapshot`
+  - `struct QpuProviderConfig`
+  - `impl Default`
+  - `fn default`
+  - `fn read_custom_themes`
+  - `fn theme_label`
+  - `fn SummaryTile`
+  - `fn TextControl`
+  - `fn NumberControl`
+  - `fn SelectControl`
+  - `fn SettingsPage`
+- 📄 `shacl_validator.rs`
+  - `fn ShaclValidator`
+- 📄 `shoelace.rs`
+  - `fn SlAlert`
+  - `fn SlAnimatedImage`
+  - `fn SlAnimation`
+  - `fn SlAvatar`
+  - `fn SlBadge`
+  - `fn SlBreadcrumb`
+  - `fn SlButton`
+  - `fn SlBreadcrumbItem`
+  - `fn SlButtonGroup`
+  - `fn SlCard`
+  - `fn SlCarousel`
+  - `fn SlCarouselItem`
+  - `fn SlCheckbox`
+  - `fn SlColorPicker`
+  - `fn SlCopyButton`
+  - *(...and 43 more)*
+- 📄 `site_specificity_theory_qapp.rs`
+  - `fn SiteSpecificityTheoryQapp`
+- 📄 `slavic_studies_qapp.rs`
+  - `fn SlavicStudiesQapp`
+- 📄 `social_activism_qapp.rs`
+  - `fn SocialActivismQapp`
+- 📄 `social_and_cultural_analysis_qapp.rs`
+  - `fn SocialAndCulturalAnalysisQapp`
+- 📄 `social_and_political_philosophy_qapp.rs`
+  - `fn SocialAndPoliticalPhilosophyQapp`
+- 📄 `social_psychology_qapp.rs`
+  - `fn SocialPsychologyQapp`
+- 📄 `social_work_qapp.rs`
+  - `fn SocialWorkQapp`
+- 📄 `sociolinguistics_qapp.rs`
+  - `fn SociolinguisticsQapp`
+- 📄 `sociology_qapp.rs`
+  - `fn SociologyQapp`
+- 📄 `soft_skills_theory_qapp.rs`
+  - `fn SoftSkillsTheoryQapp`
+- 📄 `solid_ldp_browser.rs`
+  - `fn tauri_invoke`
+  - `fn SolidLdpBrowser`
+- 📄 `sound_studies_qapp.rs`
+  - `fn SoundStudiesQapp`
+- 📄 `south_asian_studies_qapp.rs`
+  - `fn SouthAsianStudiesQapp`
+- 📄 `southeast_asian_studies_qapp.rs`
+  - `fn SoutheastAsianStudiesQapp`
+- 📄 `sparql_explorer.rs`
+  - `fn tauri_invoke`
+  - `fn SparqlExplorer`
+- 📄 `spatial_data_science_qapp.rs`
+  - `fn SpatialDataScienceQapp`
+- 📄 `spinoza_studies_qapp.rs`
+  - `fn SpinozaStudiesQapp`
+- 📄 `sports_studies_qapp.rs`
+  - `fn SportsStudiesQapp`
+- 📄 `statistical_analysis.rs`
+  - `fn StatisticalAnalysis`
+- 📄 `statistics_qapp.rs`
+  - `fn StatisticsQapp`
+- 📄 `storage_driver_config.rs`
+  - `fn StorageDriverConfig`
+- 📄 `structuralism_qapp.rs`
+  - `fn StructuralismQapp`
+- 📄 `studio_art_qapp.rs`
+  - `fn StudioArtQapp`
+- 📄 `sustainability_studies_qapp.rs`
+  - `fn SustainabilityStudiesQapp`
+- 📄 `syntax_qapp.rs`
+  - `fn SyntaxQapp`
+- 📄 `systems_biology_qapp.rs`
+  - `fn SystemsBiologyQapp`
+- 📄 `temporal_scrubber.rs`
+  - `fn TemporalScrubber`
+- 📄 `textual_criticism_qapp.rs`
+  - `fn TextualCriticismQapp`
+- 📄 `theater_and_drama_qapp.rs`
+  - `fn TheaterAndDramaQapp`
+- 📄 `translation_studies_qapp.rs`
+  - `fn TranslationStudiesQapp`
+- 📄 `trauma_studies_qapp.rs`
+  - `fn TraumaStudiesQapp`
+- 📄 `urban_ecology_qapp.rs`
+  - `fn UrbanEcologyQapp`
+- 📄 `urban_planning_and_design_qapp.rs`
+  - `fn UrbanPlanningAndDesignQapp`
+- 📄 `urban_studies_qapp.rs`
+  - `fn UrbanStudiesQapp`
+- 📄 `urban_theory_qapp.rs`
+  - `fn UrbanTheoryQapp`
+- 📄 `utopian_studies_qapp.rs`
+  - `fn UtopianStudiesQapp`
+- 📄 `visual_and_critical_studies_qapp.rs`
+  - `fn VisualAndCriticalStudiesQapp`
+- 📄 `visual_studies_qapp.rs`
+  - `fn VisualStudiesQapp`
+- 📄 `vital_materialism_qapp.rs`
+  - `fn VitalMaterialismQapp`
+- 📄 `wal_inspector.rs`
+  - `fn WalInspector`
+- 📄 `webtorrent_seeder.rs`
+  - `fn WebtorrentSeeder`
+- 📄 `white_studies_qapp.rs`
+  - `fn WhiteStudiesQapp`
+- 📄 `whiteness_studies_qapp.rs`
+  - `fn WhitenessStudiesQapp`
+- 📄 `zk_proof_studio.rs`
+  - `fn ZkProofStudio`
+- 📄 `zoology_qapp.rs`
+  - `fn ZoologyQapp`
+
+## Changelog
+- **2026-06-30**: Automated full index generation, extracting code definitions.

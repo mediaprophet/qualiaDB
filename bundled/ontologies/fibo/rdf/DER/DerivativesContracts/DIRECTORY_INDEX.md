@@ -1,0 +1,27 @@
+---
+created: 2026-06-30
+updated: 2026-06-30
+update_scope: Comprehensive
+---
+
+# DerivativesContracts Index
+
+## Functionality Overview
+Comprehensive index of functionality for `DerivativesContracts`. This document serves as the ground truth for bots regarding implemented components and dependencies.
+
+## File & Subdirectory Manifest
+### Files & Exported Functionality
+- 📄 `CommoditiesContracts.rdf`
+- 📄 `CurrencyContracts.rdf`
+- 📄 `DerivativesBasics.rdf`
+- 📄 `DerivativesMasterAgreements.rdf`
+- 📄 `ExoticOptions.rdf`
+- 📄 `FuturesAndForwards.rdf`
+- 📄 `MetadataDERDerivativesContracts.rdf`
+- 📄 `Options.rdf`
+- 📄 `RightsAndWarrants.rdf`
+- 📄 `Swaps.rdf`
+- 📄 `SwapsIndividuals.rdf`
+
+## Changelog
+- **2026-06-30**: Automated full index generation, extracting code definitions.

@@ -1,0 +1,157 @@
+---
+created: 2026-06-30
+updated: 2026-06-30
+update_scope: Comprehensive
+---
+
+# parsers Index
+
+## Functionality Overview
+Comprehensive index of functionality for `parsers`. This document serves as the ground truth for bots regarding implemented components and dependencies.
+
+## File & Subdirectory Manifest
+### Files & Exported Functionality
+- 📄 `cbor_parser.rs`
+  - `fn hash_str`
+  - `fn try_read_rdf_star_tag`
+  - `fn parse_embedded_triple`
+  - `fn parse_cbor_value`
+  - `fn hash_bytes`
+  - `fn parse_cbor_ld_stream`
+  - `fn parse_cbor_object`
+  - `fn parse_cbor_ld_into`
+  - `fn parse_cbor_ld_star_stream`
+  - `fn parse_cbor_ld_star_sink`
+  - `fn parse_cbor_object_star`
+  - `struct VecSink`
+  - `impl QuinSink`
+  - `fn push`
+  - `fn cbor_terms_share_one_hash_space_with_turtle`
+- 📄 `chk_parser.rs`
+  - `fn hash_str`
+  - `fn parse_chk_stream`
+- 📄 `csv_parser.rs`
+  - `enum CsvDatatype`
+  - `struct CsvColumnMapping`
+  - `struct CsvMappingProfile`
+  - `fn parse_csv_to_quins`
+  - `fn parse_datetime_millis`
+- 📄 `json_ld_stream.rs`
+  - `fn hash_str`
+  - `fn parse_json_ld_into`
+  - `fn parse_json_ld_star_stream`
+  - `fn parse_json_ld_stream`
+  - `fn parse_json_ld_star_into`
+  - `enum ParseState`
+  - `enum ParseStateStar`
+- 📄 `json_parser.rs`
+  - `enum JsonDatatype`
+  - `struct JsonFieldMapping`
+  - `struct JsonMappingProfile`
+  - `fn parse_json_to_quins`
+  - `fn parse_datetime_millis`
+- 📄 `mod.rs`
+- 📄 `n3_star.rs`
+  - `struct N3StarParser`
+  - `impl N3StarParser`
+  - `fn new`
+  - `fn bind_variable`
+  - `fn get_variable`
+  - `fn parse_line`
+  - `fn parse_rule`
+  - `fn parse_formula`
+  - `fn parse_triple_line`
+  - `fn parse_embedded_triple_line`
+  - `fn resolve_term`
+  - `impl RdfStarParser`
+  - `fn parse_embedded_triple`
+  - `fn parse_triple`
+  - `fn parse_quad`
+  - *(...and 13 more)*
+- 📄 `nquads_star.rs`
+  - `struct NQuadsStarParser`
+  - `impl NQuadsStarParser`
+  - `fn new`
+  - `fn parse_line`
+  - `fn parse_quad_line`
+  - `fn parse_embedded_triple_line`
+  - `impl RdfStarParser`
+  - `fn parse_embedded_triple`
+  - `fn parse_triple`
+  - `fn parse_quad`
+  - `fn supports_quads`
+  - `fn supports_named_graphs`
+  - `fn format_name`
+  - `enum ParseResult`
+  - `fn parse_nquads_star_into`
+  - *(...and 4 more)*
+- 📄 `ntriples_star.rs`
+  - `struct NTriplesStarParser`
+  - `impl NTriplesStarParser`
+  - `fn new`
+  - `fn parse_line`
+  - `fn parse_regular_triple_line`
+  - `fn parse_embedded_triple_line`
+  - `impl RdfStarParser`
+  - `fn parse_embedded_triple`
+  - `fn parse_triple`
+  - `fn parse_quad`
+  - `fn supports_quads`
+  - `fn supports_named_graphs`
+  - `fn format_name`
+  - `enum ParseResult`
+  - `fn parse_ntriples_star_into`
+  - *(...and 4 more)*
+- 📄 `trig_star.rs`
+  - `struct TrigStarParser`
+  - `impl TrigStarParser`
+  - `fn new`
+  - `fn set_current_graph`
+  - `fn current_graph`
+  - `fn parse_line`
+  - `fn parse_graph_block`
+  - `fn parse_triple_line`
+  - `fn parse_embedded_triple_line`
+  - `impl RdfStarParser`
+  - `fn parse_embedded_triple`
+  - `fn parse_triple`
+  - `fn parse_quad`
+  - `fn supports_quads`
+  - `fn supports_named_graphs`
+  - *(...and 8 more)*
+- 📄 `turtle_doc.rs`
+  - `enum Tok`
+  - `fn tokenize`
+  - `fn read_literal`
+  - `fn unescape`
+  - `fn expand`
+  - `fn resolve`
+  - `fn parse_turtle_doc_into`
+  - `fn parse_turtle_doc_stream`
+  - `struct VecSink`
+  - `impl QuinSink`
+  - `fn push`
+  - `fn parse`
+  - `fn multiline_predicate_object_list_with_prefix_and_literals`
+  - `fn object_list_comma_repeats_subject_and_predicate`
+  - `fn non_ascii_literals_roundtrip_intact`
+- 📄 `turtle_star.rs`
+  - `enum ParsingState`
+  - `struct StackFrame`
+  - `impl StackFrame`
+  - `fn new`
+  - `struct ParserStack`
+  - `impl ParserStack`
+  - `fn push`
+  - `fn pop`
+  - `fn current`
+  - `fn is_empty`
+  - `fn depth`
+  - `struct TurtleStarParser`
+  - `impl TurtleStarParser`
+  - `fn parse_token`
+  - `fn parse_embedded_triple_internal`
+  - *(...and 45 more)*
+
+## Changelog
+- **2026-06-30**: Automated full index generation, extracting code definitions.

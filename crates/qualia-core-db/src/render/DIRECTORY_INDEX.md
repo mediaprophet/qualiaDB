@@ -1,0 +1,246 @@
+---
+created: 2026-06-30
+updated: 2026-06-30
+update_scope: Comprehensive
+---
+
+# render Index
+
+## Functionality Overview
+Comprehensive index of functionality for `render`. This document serves as the ground truth for bots regarding implemented components and dependencies.
+
+## File & Subdirectory Manifest
+### Subdirectories
+- 📁 `[gpu](gpu/DIRECTORY_INDEX.md)`
+- 📁 `[physics](physics/DIRECTORY_INDEX.md)`
+- 📁 `[portal](portal/DIRECTORY_INDEX.md)`
+
+### Files & Exported Functionality
+- 📄 `acoustic.rs`
+  - `fn fract_sigma`
+  - `fn sigma_to_wavelength_nm`
+  - `fn sigma_to_center_frequency_hz`
+  - `fn phenomenal_acoustic_params`
+  - `fn phenomenal_voice_frequency_hz`
+  - `fn phenomenal_fm_index`
+  - `fn sigma_wavelength_matches_spectral_fract`
+  - `fn sigma_frequency_monotonic_in_fract_band`
+  - `fn phenomenal_params_preserves_alpha_mu`
+  - `fn uniform_float_count_matches_portal`
+- 📄 `assets.rs`
+  - `enum AssetError`
+  - `impl std`
+  - `fn fmt`
+  - `struct Mesh`
+  - `impl Mesh`
+  - `fn vertex_count`
+  - `fn triangle_count`
+  - `fn centroid`
+  - `fn build`
+  - `fn import_asset`
+  - `fn looks_like_obj`
+  - `fn looks_like_ascii_stl`
+  - `fn looks_like_binary_stl`
+  - `fn import_obj`
+  - `fn import_stl`
+  - *(...and 20 more)*
+- 📄 `authoring.rs`
+  - `enum ViewKind`
+  - `enum Sensitivity`
+  - `struct QappView`
+  - `impl QappView`
+  - `fn public`
+  - `struct RenderStandpoint`
+  - `enum ViewDisposition`
+  - `fn supports_3d`
+  - `fn attestation_quin`
+  - `fn has_attestation`
+  - `fn view_render_norm`
+  - `fn rights_render_permitted`
+  - `fn plan_view`
+  - `fn plan_qapp`
+  - `fn sample_world_qapp`
+  - *(...and 10 more)*
+- 📄 `camera.rs`
+  - `struct CameraState`
+  - `impl Default`
+  - `fn default`
+  - `impl CameraState`
+  - `fn clamped`
+  - `fn to_uniform`
+  - `fn orbit_eye_position`
+  - `fn orbit_view_projection`
+  - `fn look_at_rh`
+  - `fn perspective_rh_gl`
+  - `fn mat4_mul`
+  - `fn sub`
+  - `fn dot`
+  - `fn cross`
+  - `fn normalize`
+  - *(...and 3 more)*
+- 📄 `contract.rs`
+  - `fn parse_wgsl_bindings`
+  - `fn parse_u32_after`
+  - `fn assert_wgsl_bindings_covered`
+  - `fn validate_wgsl_smoke`
+  - `fn phenomenal_shader_modules_parse`
+  - `fn phenomenal_binding_layout_matches_wgsl`
+  - `fn phenomenal_uniform_struct_sizes_match_wgsl`
+  - `fn phenomenal_tensor_header_stride_matches_gpu_upload`
+  - `fn phenomenal_standpoint_rq_motor_identity_gate`
+  - `fn phenomenal_vram_ledger_full_mode_draws_above_eco_cap`
+  - `fn phenomenal_vram_ledger_pressure_step_down`
+  - `fn phenomenal_acoustic_uniform_layout`
+  - `fn phenomenal_sigma_visual_audio_parity`
+  - `fn phenomenal_hrtf_and_sab_layout`
+  - `fn phenomenal_icp_command_layout`
+  - *(...and 1 more)*
+- 📄 `control.rs`
+  - `struct PortalControlCommand`
+  - `impl PortalControlCommand`
+  - `fn opcode`
+  - `fn has_icp_magic`
+  - `fn tensor_or_menu_index`
+  - `fn param_a_i16`
+  - `fn param_b_i8`
+  - `fn channel`
+  - `fn with_magic`
+  - `fn pack`
+  - `fn set_camera_delta_scaled`
+  - `fn decode_camera_delta`
+  - `fn navigate_index`
+  - `fn collapse_q`
+  - `fn menu_action`
+  - *(...and 18 more)*
+- 📄 `mod.rs`
+- 📄 `model_substrate.rs`
+  - `struct SubstrateSections`
+  - `fn compose_substrate`
+  - `fn read_substrate`
+  - `fn project_manifold`
+  - `fn load_weights`
+  - `fn build_model_substrate`
+  - `fn synth_safetensor`
+  - `fn renders_a_manifold_that_also_holds_weights`
+  - `fn substrate_round_trips_sections`
+- 📄 `navigation.rs`
+  - `struct CameraFlyTo`
+  - `impl CameraFlyTo`
+  - `fn is_active`
+  - `fn start_toward`
+  - `fn advance`
+  - `fn camera_frame_node`
+  - `fn lerp_camera`
+  - `fn cpu_pick_node_at`
+  - `fn project_xyz_canvas`
+  - `fn camera_frame_node_produces_finite_orbit`
+  - `fn fly_to_converges_toward_target`
+- 📄 `pga.rs`
+  - `struct Motor`
+  - `impl Motor`
+  - `fn from_rotor`
+  - `fn quat_mul`
+  - `fn quat_conj`
+  - `fn quat_add`
+  - `fn blade4_to_quat`
+  - `fn quat_to_blade4`
+  - `fn motor_reverse`
+  - `fn motor_mul`
+  - `fn motor_translate`
+  - `fn tensor_deontic_lane`
+  - `fn bilateral_pull_active`
+  - `fn pull_vector`
+  - `fn sandwich_point`
+  - *(...and 27 more)*
+- 📄 `place_time.rs`
+  - `fn pack_interval`
+  - `fn unpack_interval`
+  - `fn situate_artefact`
+  - `fn artefact_location`
+  - `fn artefact_interval`
+  - `fn place_relation`
+  - `fn situated_within`
+  - `fn time_relation`
+  - `fn active_during`
+  - `fn render_norm`
+  - `fn render_permitted`
+  - `struct SituatedVerdict`
+  - `fn situated_render_verdict`
+  - `fn jurisdiction`
+  - `fn art_id`
+  - *(...and 4 more)*
+- 📄 `portal_wasm.rs`
+  - `fn init_panic_hook`
+  - `fn create_canvas`
+  - `struct WebEngine`
+  - `impl WebEngine`
+  - `fn new`
+  - `fn load_q42`
+  - `fn load_json_scene`
+  - `fn render_to_canvas`
+  - `fn last_parsed`
+  - `fn mount_qapp`
+- 📄 `projection.rs`
+  - `enum ProjectionTarget`
+  - `fn manifold_world`
+  - `fn project`
+  - `fn node`
+  - `fn one_projection_many_views`
+  - `fn euclidean_node_projects_to_itself`
+  - `fn projection_is_deterministic`
+- 📄 `sense.rs`
+  - `fn hann`
+  - `fn dft_magnitudes`
+  - `fn bin_to_hz`
+  - `fn dominant_bin`
+  - `fn sense_norm`
+  - `fn sense_permitted`
+  - `fn pack_percept`
+  - `fn unpack_percept`
+  - `fn perceived_fact_quin`
+  - `enum SenseOutcome`
+  - `fn sense_acoustic_to_fact`
+  - `enum SenseBand`
+  - `fn band_available`
+  - `fn agent`
+  - `fn environment`
+  - *(...and 10 more)*
+- 📄 `spectral.rs`
+  - `fn fract_sigma`
+  - `fn sigma_to_cie_xyz`
+  - `fn xyz_to_linear_srgb`
+  - `fn sigma_to_linear_rgb`
+  - `fn linear_to_srgb_channel`
+  - `fn sigma_to_display_rgb`
+  - `fn same_sigma_same_linear_rgb`
+  - `fn sigma_wraps_via_fract`
+  - `fn green_band_dominates_mid_sigma`
+  - `fn linear_components_non_negative`
+- 📄 `standpoint.rs`
+  - `fn generate_session_nonce`
+  - `fn spectator_default`
+  - `fn ephemeral_session`
+  - `fn identifier_standpoint`
+  - `fn vault_standpoint`
+  - `fn resolve_standpoint_hash`
+  - `fn spectator_hash_is_deterministic_for_nonce`
+  - `fn identifier_standpoint_uses_supplied_hash`
+- 📄 `telemetry.rs`
+  - `struct SystemTelemetry`
+  - `impl SystemTelemetry`
+  - `fn from_samples`
+  - `fn refresh_from_ledger`
+  - `fn apply_floats`
+  - `struct AmbientUniforms`
+  - `struct ParticleInstance`
+  - `struct TensorRenderInstance`
+  - `struct CameraUniform`
+  - `struct ObserverStandpoint`
+  - `impl ObserverStandpoint`
+  - `fn with_temporal`
+  - `fn temporal_visible`
+  - `fn system_telemetry_is_48_bytes`
+  - `fn temporal_filter_respects_window`
+
+## Changelog
+- **2026-06-30**: Automated full index generation, extracting code definitions.

@@ -10,7 +10,7 @@ use crate::llm_lifecycle::{default_vault_path, init_log_stream};
 pub fn run_test_models(
     vault_path: Option<PathBuf>,
     models: Option<Vec<String>>,
-    quantization: Option<String>,
+    _quantization: Option<String>,
     verbose: bool,
 ) -> Result<(), String> {
     let vault_path = vault_path.unwrap_or_else(default_vault_path);
@@ -148,7 +148,7 @@ pub fn run_comprehensive_llm_test(
     let mut total_ttft_ms = 0;
     let mut successful_tests = 0;
     
-    for (test_name, prompt, max_tokens) in test_prompts.iter() {
+    for (test_name, prompt, _max_tokens) in test_prompts.iter() {
         println!("┌─ Test: {}", test_name);
         println!("├─ Prompt: {}", prompt);
         
@@ -247,6 +247,7 @@ fn test_single_model(vault_path: &Path, model: &VaultGgufEntry, verbose: bool) -
 /// Test result
 #[derive(Debug, Clone)]
 pub struct TestResult {
+    #[allow(dead_code)]
     pub model_name: String,
     pub load_time_ms: u64,
     pub memory_mb: f64,
@@ -254,6 +255,7 @@ pub struct TestResult {
 }
 
 /// CLI command to benchmark a single model
+#[allow(dead_code)]
 pub fn benchmark_model(
     vault_path: Option<PathBuf>,
     model_name: String,
@@ -284,6 +286,7 @@ pub fn benchmark_model(
 }
 
 /// CLI command to validate model structure
+#[allow(dead_code)]
 pub fn validate_model(
     vault_path: Option<PathBuf>,
     model_name: String,
@@ -310,6 +313,7 @@ pub fn validate_model(
 }
 
 /// CLI command to list available models
+#[allow(dead_code)]
 pub fn list_models(vault_path: Option<PathBuf>) -> Result<(), String> {
     let vault_path = vault_path.unwrap_or_else(default_vault_path);
     

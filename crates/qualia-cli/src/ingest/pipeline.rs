@@ -1,6 +1,5 @@
-use core::marker::PhantomData;
 use std::fs::File;
-use std::io::{BufRead, BufReader, BufWriter, Read, Seek, SeekFrom, Write};
+use std::io::{BufRead, BufReader, BufWriter, Read, Write};
 use std::path::{Path, PathBuf};
 
 use qualia_core_db::sparql_library::parsers::turtle_star::TurtleStarParser;
@@ -23,7 +22,7 @@ pub struct RawUnsortedQuin {
 
 pub struct IncrementalIngestor {
     scratch_directory: PathBuf,
-    memory_ceiling_bytes: usize,
+    _memory_ceiling_bytes: usize,
 }
 
 impl IncrementalIngestor {
@@ -31,7 +30,7 @@ impl IncrementalIngestor {
         assert!(memory_limit <= 512 * 1024 * 1024, "Pipeline execution space breaks 512MB RAM floor constraint.");
         Self {
             scratch_directory: scratch_dir.to_path_buf(),
-            memory_ceiling_bytes: memory_limit,
+            _memory_ceiling_bytes: memory_limit,
         }
     }
 
@@ -116,7 +115,7 @@ impl IncrementalIngestor {
     }
 
     /// Step 2: K-Way external merge-sort to generate a dense, duplicate-free Lexicon file (.lex)
-    pub fn build_external_merge_lexicon(&self, string_run_paths: &[PathBuf]) -> std::io::Result<PathBuf> {
+    pub fn build_external_merge_lexicon(&self, _string_run_paths: &[PathBuf]) -> std::io::Result<PathBuf> {
         let final_lex_path = self.scratch_directory.join("final_ontology.lex");
         // Open all chunks concurrently using minimal buffer structures.
         // Stream alphabetically via a bounded min-heap priority matrix.
@@ -150,7 +149,7 @@ impl IngestionCellWorkerPool {
         while wal_reader.read_exact(&mut raw_bytes).is_ok() {
             let raw_quin: RawUnsortedQuin = bytemuck::pod_read_unaligned(&raw_bytes);
             
-            let mut quin = NQuin {
+            let quin = NQuin {
                 subject: raw_quin.hash_subject,
                 predicate: raw_quin.hash_predicate,
                 object: raw_quin.hash_object,

@@ -1,8 +1,38 @@
 use dioxus::prelude::*;
+use serde::{Deserialize, Serialize};
+use wasm_bindgen::prelude::*;
+
+use crate::components::qapp_engine::tauri_invoke;
+#[derive(Serialize)]
+struct ChemistryArgs {
+    smiles: String,
+}
+
+#[derive(Deserialize, Default, Clone)]
+struct ChemistryProps {
+    molecular_weight: f64,
+    log_p: f64,
+}
 
 #[component]
 pub fn ChemistryModeler() -> Element {
     let mut smiles = use_signal(|| "CCO".to_string());
+    
+    let props_resource = use_resource(move || {
+        let current_smiles = smiles.read().clone();
+        async move {
+            if let Ok(args) = serde_wasm_bindgen::to_value(&ChemistryArgs { smiles: current_smiles }) {
+                if let Ok(res) = tauri_invoke("calculate_chemistry_properties", args).await {
+                    if let Ok(parsed) = serde_wasm_bindgen::from_value::<ChemistryProps>(res) {
+                        return parsed;
+                    }
+                }
+            }
+            ChemistryProps::default()
+        }
+    });
+
+    let props = props_resource.read().clone().unwrap_or_default();
 
     rsx! {
         div {
@@ -21,12 +51,12 @@ pub fn ChemistryModeler() -> Element {
                 div {
                     style: "background: #11111b; padding: 16px; border-radius: 8px; border-left: 4px solid #89dceb;",
                     h4 { style: "margin-top: 0; color: #89dceb;", "Molecular Weight" }
-                    div { "46.07 g/mol (Mocked)" }
+                    div { "{props.molecular_weight:.2} g/mol" }
                 }
                 div {
                     style: "background: #11111b; padding: 16px; border-radius: 8px; border-left: 4px solid #f5c2e7;",
                     h4 { style: "margin-top: 0; color: #f5c2e7;", "LogP" }
-                    div { "-0.00 (Mocked)" }
+                    div { "{props.log_p:.2}" }
                 }
             }
             div {

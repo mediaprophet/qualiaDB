@@ -24,6 +24,7 @@ qualia-client-core = { path = "../qualia-client-core" }
 webizen-runtime = { path = "../webizen-runtime" }
 webizen-render = { path = "../webizen-render" }
 webizen-studio = { path = "../webizen-studio" }
+qualia-semantic-library = { path = "../qualia-semantic-library" }
 futures-util = "0.3"
 mime_guess = "2.0"
 pdf-extract = "0.12"

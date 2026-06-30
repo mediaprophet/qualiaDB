@@ -1,6 +1,7 @@
 use crossbeam_channel::{bounded, Receiver, Sender, TrySendError};
 use qualia_client_core::state::AppState;
 
+#[allow(unused_imports)]
 use qualia_core_db::{q_hash, NQuin};
 use serde::Serialize;
 use std::path::{Path, PathBuf};
@@ -8,6 +9,7 @@ use std::sync::atomic::{AtomicU64, Ordering};
 use std::sync::{Arc, Mutex};
 use std::thread;
 use std::time::{Duration, Instant};
+#[allow(unused_imports)]
 use tauri::{AppHandle, Emitter, Manager};
 use webizen_runtime::{
     DiffusionConfig, FrameHandle, LedgerRecord, LedgerSink, RuntimeCommand, SharedFrameBuffer,

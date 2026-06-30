@@ -1,0 +1,179 @@
+---
+created: 2026-06-30
+updated: 2026-06-30
+update_scope: Comprehensive
+---
+
+# wgsl_forge Index
+
+## Functionality Overview
+Comprehensive index of functionality for `wgsl_forge`. This document serves as the ground truth for bots regarding implemented components and dependencies.
+
+## File & Subdirectory Manifest
+### Subdirectories
+- 📁 `[emit](emit/DIRECTORY_INDEX.md)`
+- 📁 `[execute](execute/DIRECTORY_INDEX.md)`
+- 📁 `[graph_ops](graph_ops/DIRECTORY_INDEX.md)`
+- 📁 `[ir](ir/DIRECTORY_INDEX.md)`
+- 📁 `[physics](physics/DIRECTORY_INDEX.md)`
+
+### Files & Exported Functionality
+- 📄 `backend.rs`
+  - `fn fallback_chain`
+  - `fn resolve_execution_backend`
+  - `fn available`
+  - `fn preferred_available_yields_no_downgrade`
+  - `fn wgsl_is_always_available_even_if_predicate_denies_it`
+  - `fn ptx_unavailable_falls_to_wgsl_with_note`
+  - `fn cuda_c_unavailable_falls_to_wgsl_with_note`
+  - `fn msl_unavailable_prefers_spirv_when_available`
+  - `fn msl_unavailable_falls_to_wgsl_when_spirv_also_unavailable`
+  - `fn hlsl_unavailable_prefers_spirv_then_wgsl`
+  - `fn resolution_is_deterministic`
+- 📄 `cache.rs`
+  - `struct ManifestCache`
+  - `impl ManifestCache`
+  - `fn new`
+  - `fn root`
+  - `fn store_certification`
+  - `fn store_tuning`
+  - `fn load_tuning`
+  - `fn topology_key`
+  - `fn load_tuning_for_topology`
+  - `fn store_tuning_for_topology`
+  - `fn store_json`
+  - `fn path_for`
+  - `fn validate_cache_key`
+  - `fn tuning_cache_round_trips_by_adapter_key`
+- 📄 `dispatch.rs`
+  - `struct ComputeCaps`
+  - `fn caps`
+  - `fn probe_caps`
+  - `fn probe_cuda`
+  - `fn forge_rt_cell`
+  - `fn gemm_f32`
+  - `fn gemm_f32_gpu`
+  - `fn gemm_f64`
+  - `fn df64_usable`
+  - `fn coopmat_usable`
+  - `fn gemm_f32_tc_coopmat`
+  - `fn gemm_f64_cuda`
+  - `fn gemm_f32_tc`
+  - `fn gemm_tc_cuda`
+  - `fn f64_to_df32`
+  - *(...and 43 more)*
+- 📄 `manifest.rs`
+  - `struct HardwareProfile`
+  - `impl HardwareProfile`
+  - `fn topology_hash`
+  - `fn to_pretty_json`
+  - `enum ValidationLevel`
+  - `enum TimingSource`
+  - `struct TimingSummary`
+  - `impl TimingSummary`
+  - `fn from_samples`
+  - `struct AdapterIdentity`
+  - `impl AdapterIdentity`
+  - `fn cache_key`
+  - `struct CertificationManifest`
+  - `impl CertificationManifest`
+  - `fn naga_only`
+  - *(...and 7 more)*
+- 📄 `mod.rs`
+  - `enum ForgeError`
+  - `impl core`
+  - `fn fmt`
+  - `impl std`
+  - `impl From`
+  - `fn from`
+  - `fn generate_builtin`
+- 📄 `oracle.rs`
+  - `struct AffineParams`
+  - `struct TopKParams`
+  - `struct FfnParams`
+  - `struct TernaryGemvParams`
+  - `struct GemmParams`
+  - `struct GemvParams`
+  - `struct FftParams`
+  - `struct OracleTolerance`
+  - `impl Default`
+  - `fn default`
+  - `struct ComparisonReport`
+  - `impl ComparisonReport`
+  - `struct OracleCase`
+  - `impl OracleCase`
+  - `fn affine`
+  - *(...and 83 more)*
+- 📄 `roofline.rs`
+  - `enum RooflineBound`
+  - `struct RooflineEstimate`
+  - `impl RooflineEstimate`
+  - `fn new`
+  - `fn roofline_for`
+  - `fn affine_is_memory_bound_ffn_is_compute_bound`
+  - `fn intensity_is_flops_over_bytes`
+- 📄 `runtime.rs`
+  - `struct ForgeRuntime`
+  - `impl ForgeRuntime`
+  - `fn new`
+  - `fn tuned_schedule`
+  - `fn lookup_tuned_schedule`
+  - `fn default_schedule`
+  - `fn topk`
+  - `fn ternary_gemv`
+  - `fn p64_project`
+  - `fn gemm`
+  - `fn gemv`
+  - `fn fft`
+  - `fn tuned_schedule_defaults_without_cache`
+  - `fn tuned_schedule_defaults_on_cache_miss`
+  - `fn runtime_topk_runs_real_data`
+  - *(...and 4 more)*
+- 📄 `schedule.rs`
+  - `struct Schedule`
+  - `impl Default`
+  - `fn default`
+  - `impl Schedule`
+  - `fn validate`
+  - `fn dispatch_workgroups`
+  - `struct AdapterConstraints`
+  - `impl AdapterConstraints`
+  - `fn supports_kernel`
+  - `fn from_wgpu_limits`
+  - `struct ScheduleSpace`
+  - `impl ScheduleSpace`
+  - `fn candidates`
+  - `fn candidates_are_bounded_and_deterministic`
+  - `fn dispatch_covers_tail_elements`
+  - *(...and 2 more)*
+- 📄 `tune.rs`
+  - `struct CandidateEvaluation`
+  - `struct CandidateResult`
+  - `struct CandidateFailure`
+  - `struct TuningConfig`
+  - `impl Default`
+  - `fn default`
+  - `struct TuningResult`
+  - `fn tune_with`
+  - `fn sort_results`
+  - `fn passing_report`
+  - `fn tuner_is_deterministic_and_correctness_gated`
+- 📄 `validate.rs`
+  - `struct ValidationReport`
+  - `fn validate_wgsl`
+  - `fn validate_native`
+  - `fn generated_schedules_pass_full_naga_validation`
+  - `fn generated_topk_passes_full_naga_validation`
+  - `fn generated_p64_passes_naga_validation`
+  - `fn generated_ffn_passes_naga_validation`
+  - `fn generated_ray_probe_passes_naga_validation`
+  - `fn generated_ternary_gemv_passes_naga_validation`
+  - `fn generated_gemm_passes_naga_validation`
+  - `fn generated_gemv_passes_naga_validation`
+  - `fn generated_fft_passes_naga_validation`
+  - `fn cooperative_matrix_tile_validates`
+  - `fn cooperative_matrix_tiled_gemm_validates`
+  - `fn semantic_errors_are_rejected`
+
+## Changelog
+- **2026-06-30**: Automated full index generation, extracting code definitions.

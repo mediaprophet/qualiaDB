@@ -5,7 +5,7 @@
 //! rendering with Projective Geometric Algebra support.
 
 use crate::render::{Camera, Renderer, ScreenPoint, Vec3};
-use webizen_render::{
+use qualia_core_db::render::{
     Camera as WebCamera, ScreenPoint as WebScreenPoint, Vec3 as WebVec3,
     WgpuRenderer as WebizenWgpuRenderer,
 };

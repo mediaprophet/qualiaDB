@@ -2,20 +2,17 @@
 ///
 /// Tests zero-copy GLB ingestion and memory profiling without requiring Tauri IPC
 /// Validates chunk isolation, semantic extraction, and coordinate extraction
-use std::path::PathBuf;
 
-#[path = "../src/commands/glb_ingest.rs"]
-mod glb_ingest;
-
-#[path = "../src/commands/binary_registry.rs"]
-mod binary_registry;
 
 #[path = "../src/commands/mod.rs"]
-mod commands;
+pub mod commands;
+
+#[path = "../src/runtime.rs"]
+pub mod runtime;
 
 fn main() -> Result<(), String> {
-    use binary_registry::BinaryNodeRegistry;
-    use glb_ingest::{GLBIngestionManager, SemanticExtractor, Tensor10DMapping};
+    use commands::binary_registry::BinaryNodeRegistry;
+    use commands::glb_ingest::{GLBIngestionManager, SemanticExtractor, Tensor10DMapping};
     use std::time::Instant;
 
     println!("=== Blood Vasculature Stress Test (18MB) ===");

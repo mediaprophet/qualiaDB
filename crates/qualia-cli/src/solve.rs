@@ -279,7 +279,7 @@ pub fn run_ode_harmonic(omega: f64, t_start: f64, t_end: f64, y0: f64, step_size
 
 pub fn run_ode_bvp(t_start: f64, t_end: f64, y_left: f64, y_right: f64, threshold: f64) {
     use qualia_core_db::modalities::calculus::ode_solver::{
-        ShootingMethod, BvpSystem, ExponentialDecay,
+        ShootingMethod, BvpSystem,
     };
 
     struct SimpleBvp { lambda: f64 }
@@ -367,7 +367,7 @@ pub fn run_quantum_qaoa(depth: u8, beta_str: &str, gamma_str: &str) {
     }
 }
 
-struct DemoSpsa(u8);
+struct DemoSpsa(#[allow(dead_code)] u8);
 
 impl SpsaCostFunction for DemoSpsa {
     fn evaluate(

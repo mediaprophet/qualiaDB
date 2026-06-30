@@ -369,7 +369,7 @@ pub fn run_control_feedback(kp: f64, ki: f64, kd: f64, setpoint: f64, measuremen
 }
 
 pub fn run_neuro_symbolic() {
-    use qualia_core_db::neuro_symbolic_sieve::{SieveLexSpec, SieveState};
+    use qualia_core_db::neuro_symbolic_sieve::SieveLexSpec;
     use qualia_core_db::q_hash;
 
     // Demonstrate the grammar sieve spec — shows which NQuin hashes constrain token generation

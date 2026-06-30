@@ -1,0 +1,392 @@
+---
+created: 2026-06-30
+updated: 2026-06-30
+update_scope: Comprehensive
+---
+
+# src Index
+
+## Functionality Overview
+Comprehensive index of functionality for `src`. This document serves as the ground truth for bots regarding implemented components and dependencies.
+
+## File & Subdirectory Manifest
+### Subdirectories
+- 📁 `[audio](audio/DIRECTORY_INDEX.md)`
+- 📁 `[bin](bin/DIRECTORY_INDEX.md)`
+- 📁 `[crypto](crypto/DIRECTORY_INDEX.md)`
+- 📁 `[domains](domains/DIRECTORY_INDEX.md)`
+- 📁 `[extensions](extensions/DIRECTORY_INDEX.md)`
+- 📁 `[foundation](foundation/DIRECTORY_INDEX.md)`
+- 📁 `[gguf_bridge](gguf_bridge/DIRECTORY_INDEX.md)`
+- 📁 `[governance](governance/DIRECTORY_INDEX.md)`
+- 📁 `[gpu_context](gpu_context/DIRECTORY_INDEX.md)`
+- 📁 `[identity](identity/DIRECTORY_INDEX.md)`
+- 📁 `[inference](inference/DIRECTORY_INDEX.md)`
+- 📁 `[lora](lora/DIRECTORY_INDEX.md)`
+- 📁 `[mcp](mcp/DIRECTORY_INDEX.md)`
+- 📁 `[medical](medical/DIRECTORY_INDEX.md)`
+- 📁 `[modalities](modalities/DIRECTORY_INDEX.md)`
+- 📁 `[modalities_lite](modalities_lite/DIRECTORY_INDEX.md)`
+- 📁 `[net](net/DIRECTORY_INDEX.md)`
+- 📁 `[obfuscation](obfuscation/DIRECTORY_INDEX.md)`
+- 📁 `[p2p](p2p/DIRECTORY_INDEX.md)`
+- 📁 `[platform](platform/DIRECTORY_INDEX.md)`
+- 📁 `[q42](q42/DIRECTORY_INDEX.md)`
+- 📁 `[query](query/DIRECTORY_INDEX.md)`
+- 📁 `[render](render/DIRECTORY_INDEX.md)`
+- 📁 `[services](services/DIRECTORY_INDEX.md)`
+- 📁 `[shaders](shaders/DIRECTORY_INDEX.md)`
+- 📁 `[solvers](solvers/DIRECTORY_INDEX.md)`
+- 📁 `[sparql_library](sparql_library/DIRECTORY_INDEX.md)`
+- 📁 `[specialized_libs](specialized_libs/DIRECTORY_INDEX.md)`
+- 📁 `[storage](storage/DIRECTORY_INDEX.md)`
+- 📁 `[tensor](tensor/DIRECTORY_INDEX.md)`
+- 📁 `[wasm_bridge](wasm_bridge/DIRECTORY_INDEX.md)`
+- 📁 `[wgsl_forge](wgsl_forge/DIRECTORY_INDEX.md)`
+
+### Files & Exported Functionality
+- 📄 `archive.rs`
+  - `struct Q42Preamble`
+  - `struct Q42JumpEntry`
+  - `impl Q42JumpEntry`
+  - `fn physical_offset`
+  - `struct Q42Archive`
+  - `impl Q42Archive`
+  - `fn open`
+  - `fn preamble`
+  - `fn read_jump_table`
+  - `fn read_dictionary`
+  - `fn decompress_frame`
+  - `fn test_zero_deserialization_header_alignment`
+  - `fn test_q42_archive_mapping`
+- 📄 `clinical_engine.rs`
+  - `enum RiskCategory`
+  - `struct FraminghamInput`
+  - `struct FraminghamResult`
+  - `fn framingham_10yr_risk`
+  - `struct Cha2ds2VascInput`
+  - `struct Cha2ds2VascResult`
+  - `fn cha2ds2_vasc_score`
+  - `enum Score2Region`
+  - `struct Score2Input`
+  - `struct Score2Result`
+  - `fn score2_risk`
+  - `enum InteractionSeverity`
+  - `struct DrugInteraction`
+  - `fn check_drug_interactions`
+  - `struct ContraindicationResult`
+  - *(...and 34 more)*
+- 📄 `csd_storage.rs`
+  - `struct CsdManager`
+  - `struct CsdDeviceHandle`
+  - `struct CsdFunctionHandle`
+  - `struct CsdDevice`
+  - `struct CsdCapabilities`
+  - `enum CsdOperationType`
+  - `struct CsdFunction`
+  - `struct FunctionParameter`
+  - `enum ParameterType`
+  - `struct PerformanceProfile`
+  - `struct CsdDeviceStats`
+  - `struct CsdScheduler`
+  - `struct CsdOperationRequest`
+  - `struct OperationInput`
+  - `struct OperationOutput`
+  - *(...and 63 more)*
+- 📄 `deontic_logic.rs`
+  - `struct VcAttributes`
+  - `impl VcAttributes`
+  - `fn unauthenticated`
+  - `fn from_quins`
+  - `fn has_role`
+  - `enum DeonticResult`
+  - `impl DeonticResult`
+  - `fn is_permitted`
+  - `fn evaluate_vc_for_subgraph_key_release`
+  - `fn evaluate_accessible_layers`
+  - `fn write_vc_claim_quins`
+  - `fn compile_n3_rule_to_norm`
+  - `fn test_vault`
+  - `fn vc_with_role`
+  - `fn public_layer_always_accessible`
+  - *(...and 8 more)*
+- 📄 `deontic_mapping.rs`
+  - `fn bytes_to_field_element`
+  - `enum ActionPermission`
+  - `impl ActionPermission`
+  - `fn from_u8`
+  - `fn as_u8`
+  - `fn test_bytes_to_field_element`
+  - `fn test_action_permission_roundtrip`
+- 📄 `epistemic.rs`
+  - `fn agent_epistemic_context`
+  - `enum EpistemicState`
+  - `fn classify_epistemic_state`
+  - `fn higher`
+  - `fn predicate_to_state`
+  - `fn assert_objective_knowledge`
+  - `fn assert_inferred_belief`
+  - `fn assert_hearsay_belief`
+  - `fn record_query_observation`
+  - `fn register_crypto_sensor_output`
+  - `fn register_query_event`
+  - `fn objective_knowledge_of`
+  - `fn all_beliefs_of`
+  - `fn has_objective_proof`
+  - `fn make_ep`
+  - *(...and 10 more)*
+- 📄 `gguf_parser.rs`
+- 📄 `gguf_tensor_index.rs`
+- 📄 `gguf_tokenizer.rs`
+- 📄 `gpu_context.rs`
+  - `enum OperationalMode`
+  - `impl OperationalMode`
+  - `fn from_pressure`
+  - `fn max_particles`
+  - `fn bloom_enabled`
+  - `fn supports_3d`
+  - `enum ComputeUniverse`
+  - `impl ComputeUniverse`
+  - `fn partition_index`
+  - `fn label`
+  - `fn default_queue_lane`
+  - `fn ledger_slots`
+  - `enum VramLedgerSlot`
+  - `enum QueueLane`
+  - `struct VramByteRange`
+  - *(...and 65 more)*
+- 📄 `lib.rs`
+  - `struct Q42LexMmap`
+  - `fn from_bytes`
+  - `fn lookup_embedded_triple`
+  - `fn lookup_hash`
+  - `struct Q42LexFile`
+  - `impl Q42LexFile`
+  - `fn open`
+  - `fn view`
+  - `struct GeneExpressionResult`
+  - `fn evaluate_gene_expression`
+  - `struct CapabilityDescriptor`
+  - `struct NQuin`
+  - `impl NQuin`
+  - `fn is_subject_nested`
+  - `fn get_subject_literal_id`
+  - *(...and 37 more)*
+- 📄 `ode_solver.rs`
+  - `struct PhysicalState`
+  - `fn rk4_step`
+  - `fn evaluate_continuous_dynamics`
+- 📄 `q42_lex.rs`
+  - `enum LexiconKey`
+  - `enum LexiconEntry`
+  - `struct Q42Lexicon`
+  - `enum LexError`
+  - `struct Q42LexMmap`
+  - `fn from_bytes`
+  - `fn entry_count`
+  - `fn lookup_hash`
+  - `fn read_string_at`
+  - `fn lookup_embedded_triple`
+  - `fn read_embedded_triple_at`
+  - `struct Q42LexFile`
+  - `impl Q42LexFile`
+  - `fn open`
+  - `fn view`
+  - *(...and 10 more)*
+- 📄 `qpu_ingress.rs`
+  - `enum QpuIngressError`
+  - `fn parse_dwave_samples`
+  - `fn parse_ibm_counts`
+  - `fn bits_to_provenance_quins`
+  - `fn parse_ibm_counts_bitstring`
+- 📄 `quantum_dft.rs`
+  - `struct ElectronDensity`
+  - `impl ElectronDensity`
+  - `fn new`
+  - `fn calculate_ground_state_energy`
+  - `struct QuantumLattice`
+  - `struct QuantumProposition`
+  - `enum QuantumTruthValue`
+  - `impl QuantumLattice`
+  - `fn add_proposition`
+  - `fn orthocomplement`
+  - `fn are_compatible`
+  - `fn quantum_and`
+  - `fn quantum_or`
+  - `fn measure`
+  - `fn quantum_lattice_to_quin`
+  - *(...and 6 more)*
+- 📄 `qubo_compiler.rs`
+  - `struct QuboMatrix`
+  - `struct Coupler`
+  - `impl Default`
+  - `fn default`
+  - `impl QuboMatrix`
+  - `fn new`
+  - `fn set_linear`
+  - `fn set_quadratic`
+  - `fn emit_coupler`
+  - `fn solve_classical`
+  - `fn compile_quins_to_qubo`
+  - `fn rehydrate_solution`
+  - `fn scrub_metadata`
+  - `fn serialize_matrix`
+  - `fn publish_to_commons`
+  - *(...and 1 more)*
+- 📄 `spatial_wasm.rs`
+  - `struct SpatialEncodeRequest`
+  - `struct QuinJson`
+  - `struct SpatialEncodeResponse`
+  - `fn pack_coord`
+  - `fn hex_u64`
+  - `fn sample_vertices`
+  - `fn vertices_to_tensors`
+  - `fn spatial_encode_wasm`
+  - `struct GeosparqlRequest`
+  - `fn default_crs`
+  - `fn parse_point`
+  - `fn parse_polygon`
+  - `fn point_in_polygon`
+  - `fn geosparql_operation_wasm`
+  - `struct GeoResult`
+  - *(...and 7 more)*
+- 📄 `storage.rs`
+  - `struct SuperBlockWriter`
+  - `impl SuperBlockWriter`
+  - `fn open`
+  - `fn flush_block`
+  - `fn test_flush_superblock`
+  - `trait VirtualFileSystem`
+  - `fn read_chunk`
+  - `fn write_chunk`
+  - `struct NativeVfs`
+  - `impl VirtualFileSystem`
+  - `struct OpfsVfs`
+- 📄 `storage_driver.rs`
+  - `fn clonefile`
+  - `fn clonefile_paths`
+  - `enum StorageError`
+  - `impl std`
+  - `fn fmt`
+  - `enum DriverKind`
+  - `struct DriverCapabilities`
+  - `trait StorageDriver`
+  - `fn capabilities`
+  - `fn write`
+  - `fn append`
+  - `fn read`
+  - `fn read_range`
+  - `fn delete`
+  - `fn snapshot`
+  - *(...and 43 more)*
+- 📄 `sync.rs`
+  - `struct JumpTableEntry`
+  - `struct MerkleCrdtSynchronizer`
+  - `impl MerkleCrdtSynchronizer`
+  - `fn extract_lamport_time`
+  - `fn diff_jump_tables`
+  - `fn resolve_frame_conflict`
+- 📄 `wal.rs`
+  - `struct WriteAheadLog`
+  - `impl WriteAheadLog`
+  - `fn open`
+  - `fn append_mutation`
+  - `fn append_mutation_volatile`
+  - `fn recover`
+  - `fn truncate`
+  - `fn checkpoint_to_dag`
+  - `fn buffered_count`
+  - `fn quin_as_bytes`
+  - `enum WalHandoffResult`
+  - `fn commit_semantic_mutation`
+  - `fn log_adversarial_conduct`
+  - `fn make_quin`
+  - `fn wal_append_and_recover`
+  - *(...and 4 more)*
+- 📄 `wasm_bridge_core.rs`
+  - `fn parse_cbor_ld_wasm`
+  - `struct QOut`
+  - `struct JsonLdFlatTriple`
+  - `fn parse_json_wasm`
+- 📄 `wasm_capabilities.rs`
+- 📄 `wasm_edge.rs`
+  - `struct WasmOffloadIntent`
+  - `impl WasmOffloadIntent`
+  - `fn new`
+  - `fn with_string_payload`
+  - `fn intercept_computational_opcode`
+  - `fn intercept_pharmacogenomics_intent`
+  - `struct FederatedNodeManager`
+  - `impl FederatedNodeManager`
+  - `fn discover_capabilities`
+  - `fn offload_intent`
+  - `fn prune_and_validate_mesh`
+  - `fn enforce_rights_ontology`
+  - `fn serialize_float_array`
+  - `fn serialize_float64_array`
+  - `fn webizen_propose_agreement`
+  - *(...and 2 more)*
+- 📄 `wasm_llm.rs`
+  - `fn get_engine_version`
+  - `fn engine_ready`
+  - `fn restore_engine`
+  - `fn take_engine`
+  - `fn run_inference`
+  - `fn run_inference_streaming`
+  - `fn run_inference_async`
+  - `fn is_webgpu_engine_ready`
+  - `fn initialize_webgpu_engine`
+  - `fn release_webgpu_engine`
+  - `fn infer_wasm`
+  - `fn infer_wasm_with_context`
+  - `fn infer_wasm_streaming`
+  - `fn infer_wasm_streaming_with_context`
+  - `fn infer_wasm_async`
+  - *(...and 2 more)*
+- 📄 `wasm_playground.rs`
+  - `fn json_err`
+  - `fn to_json`
+  - `fn parse_json`
+  - `fn lcg_uniform`
+  - `struct GaInput`
+  - `struct GaOutput`
+  - `fn mv_from_slice`
+  - `fn grade_magnitudes`
+  - `fn mv_norm`
+  - `fn mv_exp_rotor`
+  - `fn geometric_algebra_operation`
+  - `struct AlignPlaygroundInput`
+  - `fn sequence_alignment`
+  - `struct AlignOut`
+  - `struct ClinicalRiskInput`
+  - *(...and 18 more)*
+- 📄 `wasm_storage.rs`
+  - `fn pack_quins_into_superblock`
+  - `fn verify_superblock_ecc`
+  - `fn estimate_browser_storage`
+  - `fn write_opfs_block`
+  - `fn read_opfs_block`
+  - `fn is_opfs_block_cached`
+  - `fn opfs_root`
+  - `fn get_or_create_file_handle`
+  - `fn block_file_name`
+- 📄 `zns_storage.rs`
+  - `struct ZnsZoneManager`
+  - `struct ZnsZone`
+  - `enum ZoneType`
+  - `enum ZoneState`
+  - `struct ZnsDeviceInfo`
+  - `struct ZoneAllocator`
+  - `enum AllocationStrategy`
+  - `struct ZoneHandle`
+  - `struct ZnsIoScheduler`
+  - `enum ZnsOperation`
+  - `struct ZnsCompletion`
+  - `enum CompletionStatus`
+  - `enum SchedulerPolicy`
+  - `struct ZeroCopyBuffer`
+  - `impl ZnsZoneManager`
+  - *(...and 25 more)*
+
+## Changelog
+- **2026-06-30**: Automated full index generation, extracting code definitions.

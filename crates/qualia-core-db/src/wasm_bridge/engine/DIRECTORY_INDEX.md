@@ -1,0 +1,160 @@
+---
+created: 2026-06-30
+updated: 2026-06-30
+update_scope: Comprehensive
+---
+
+# engine Index
+
+## Functionality Overview
+Comprehensive index of functionality for `engine`. This document serves as the ground truth for bots regarding implemented components and dependencies.
+
+## File & Subdirectory Manifest
+### Files & Exported Functionality
+- 📄 `cas.rs`
+  - `fn cas_differentiate_wasm`
+  - `struct In`
+  - `struct Out`
+  - `fn cas_simplify_wasm`
+  - `fn cas_expand_wasm`
+  - `fn cas_evaluate_wasm`
+  - `fn cas_factor_wasm`
+  - `fn default_var`
+  - `fn cas_solve_quadratic_wasm`
+  - `struct Root`
+- 📄 `crypto.rs`
+  - `struct BytesIn`
+  - `fn from_hex`
+  - `fn to_hex`
+  - `impl BytesIn`
+  - `fn bytes`
+  - `struct HashOut`
+  - `fn hash_out`
+  - `fn crypto_sha256`
+  - `fn crypto_sha512`
+  - `fn crypto_sha3_256`
+  - `fn crypto_blake3`
+  - `fn crypto_hkdf_sha256`
+  - `struct In`
+  - `struct Out`
+  - `fn aead_seal`
+  - *(...and 3 more)*
+- 📄 `exact.rs`
+  - `struct TwoBigInts`
+  - `struct StringOut`
+  - `fn parse_int`
+  - `fn parse_rational`
+  - `fn rational_pq`
+  - `fn exact_bigint_factorial`
+  - `struct In`
+  - `fn exact_bigint_pow`
+  - `fn exact_bigint_add`
+  - `fn exact_bigint_mul`
+  - `fn exact_bigint_divmod`
+  - `struct Out`
+  - `fn exact_bigint_gcd`
+  - `fn exact_rational_add`
+  - `fn exact_rational_mul`
+- 📄 `graph.rs`
+  - `fn build_adjacency`
+  - `fn graph_shortest_path`
+  - `struct In`
+  - `struct Out`
+  - `fn graph_spreading_activation`
+  - `fn default_threshold`
+  - `fn default_max_hops`
+  - `fn parse_fuzzy_triples`
+  - `fn graph_fuzzy_similarity`
+  - `fn graph_kge_score`
+  - `fn default_p`
+  - `fn graph_kge_predict`
+  - `fn default_p_pred`
+  - `struct Ranked`
+- 📄 `linalg.rs`
+  - `struct Matrix`
+  - `impl Matrix`
+  - `fn check`
+  - `struct MatrixOut`
+  - `struct Cplx`
+  - `fn la_matmul_wasm`
+  - `struct In`
+  - `fn la_transpose_wasm`
+  - `fn la_determinant_wasm`
+  - `struct Out`
+  - `fn la_solve_wasm`
+  - `fn la_eigen_symmetric_wasm`
+  - `fn la_eigenvalues_wasm`
+  - `fn la_svd_wasm`
+  - `fn la_polynomial_roots_wasm`
+- 📄 `mod.rs`
+- 📄 `numerics.rs`
+  - `fn num_bessel_j_wasm`
+  - `struct In`
+  - `struct Out`
+  - `fn num_bessel_i_wasm`
+  - `fn num_bessel_y_wasm`
+  - `fn num_bessel_k_wasm`
+  - `fn num_airy_wasm`
+  - `fn num_zeta_wasm`
+  - `fn num_orthopoly_wasm`
+  - `fn num_is_prime_wasm`
+  - `fn num_next_prime_wasm`
+  - `fn num_prime_factorize_wasm`
+  - `struct Factor`
+  - `fn num_divisors_wasm`
+  - `fn num_gcd_lcm_wasm`
+  - *(...and 18 more)*
+- 📄 `stats.rs`
+  - `fn stats_describe_wasm`
+  - `struct In`
+  - `struct Out`
+  - `fn stats_quantile_wasm`
+  - `fn stats_correlation_wasm`
+  - `fn stats_one_sample_t_wasm`
+  - `fn stats_two_sample_t_wasm`
+  - `fn stats_paired_t_wasm`
+  - `fn stats_anova_wasm`
+  - `fn stats_chi_square_gof_wasm`
+  - `fn stats_chi_square_independence_wasm`
+  - `fn stats_linear_regression_wasm`
+  - `fn stats_normal_wasm`
+  - `fn stats_students_t_wasm`
+  - `fn stats_chi_squared_dist_wasm`
+  - *(...and 5 more)*
+- 📄 `transforms.rs`
+  - `fn build_cplx`
+  - `struct Spectrum`
+  - `fn to_spectrum`
+  - `fn xform_dft`
+  - `struct In`
+  - `fn xform_idft`
+  - `fn xform_z_transform`
+  - `fn xform_z_unit_step`
+  - `fn xform_z_geometric`
+  - `struct CplxOut`
+  - `impl From`
+  - `fn from`
+  - `fn xform_laplace_numeric`
+  - `struct Out`
+  - `fn xform_laplace_table`
+  - *(...and 2 more)*
+- 📄 `units.rs`
+  - `fn unit_by_name`
+  - `fn constant_by_name`
+  - `struct DimensionOut`
+  - `impl From`
+  - `fn from`
+  - `fn map_units_err`
+  - `fn units_convert`
+  - `struct In`
+  - `struct Out`
+  - `fn units_quantity_op`
+  - `struct QtyIn`
+  - `fn units_constant`
+  - `fn units_list_units`
+  - `struct UnitInfo`
+  - `fn units_list_constants`
+  - *(...and 1 more)*
+
+## Changelog
+- **2026-06-30**: Automated full index generation, extracting code definitions.

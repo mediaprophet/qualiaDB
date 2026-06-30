@@ -1,5 +1,11 @@
 use dioxus::prelude::*;
 
+#[wasm_bindgen::prelude::wasm_bindgen]
+extern "C" {
+    #[wasm_bindgen::prelude::wasm_bindgen(js_namespace = ["window", "__TAURI__", "core"], js_name = invoke, catch)]
+    pub async fn tauri_invoke(cmd: &str, args: wasm_bindgen::JsValue) -> Result<wasm_bindgen::JsValue, wasm_bindgen::JsValue>;
+}
+
 #[component]
 pub fn SparqlExplorer() -> Element {
     let mut query = use_signal(|| {
@@ -11,21 +17,24 @@ pub fn SparqlExplorer() -> Element {
 
     let run_query = move |_| {
         is_loading.set(true);
-        // Mock query execution
-        let mock_data = vec![
-            (
-                "did:q42:alice".to_string(),
-                "foaf:knows".to_string(),
-                "did:q42:bob".to_string(),
-            ),
-            (
-                "did:q42:bob".to_string(),
-                "foaf:name".to_string(),
-                "\"Bob\"".to_string(),
-            ),
-        ];
-        results.set(mock_data);
-        is_loading.set(false);
+        spawn(async move {
+            let js_args = serde_json::json!({
+                "query": query.read().clone(),
+            });
+            
+            let js_value = serde_wasm_bindgen::to_value(&js_args).unwrap();
+            
+            if let Ok(res) = tauri_invoke("execute_sparql_query", js_value).await {
+                if let Ok(data) = serde_wasm_bindgen::from_value::<Vec<(String, String, String)>>(res) {
+                    results.set(data);
+                } else {
+                    results.set(vec![("Error parsing response".to_string(), "".to_string(), "".to_string())]);
+                }
+            } else {
+                results.set(vec![("Error executing query".to_string(), "".to_string(), "".to_string())]);
+            }
+            is_loading.set(false);
+        });
     };
 
     rsx! {

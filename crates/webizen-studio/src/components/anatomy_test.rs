@@ -1,4 +1,5 @@
 use dioxus::prelude::*;
+use crate::components::qapp_engine::tauri_invoke;
 
 /// Anatomy Project stress test component
 ///
@@ -17,8 +18,13 @@ pub fn AnatomyTest() -> Element {
         #[cfg(not(target_arch = "wasm32"))]
         {
             // Tauri invocation will be added here
-            test_result.set("IPC handshake: Tauri invocation pending".to_string());
-            is_running.set(false);
+            dioxus::prelude::spawn(async move {
+                match tauri_invoke("test_ccf_ipc_handshake", wasm_bindgen::JsValue::NULL).await {
+                    Ok(val) => test_result.set(val.as_string().unwrap_or("Success".to_string())),
+                    Err(e) => test_result.set(format!("Error: {:?}", e)),
+                }
+                is_running.set(false);
+            });
         }
 
         #[cfg(target_arch = "wasm32")]
@@ -34,8 +40,13 @@ pub fn AnatomyTest() -> Element {
 
         #[cfg(not(target_arch = "wasm32"))]
         {
-            test_result.set("Larynx smoke test: Tauri invocation pending".to_string());
-            is_running.set(false);
+            dioxus::prelude::spawn(async move {
+                match tauri_invoke("test_larynx_smoke", wasm_bindgen::JsValue::NULL).await {
+                    Ok(val) => test_result.set(val.as_string().unwrap_or("Success".to_string())),
+                    Err(e) => test_result.set(format!("Error: {:?}", e)),
+                }
+                is_running.set(false);
+            });
         }
 
         #[cfg(target_arch = "wasm32")]
@@ -52,8 +63,13 @@ pub fn AnatomyTest() -> Element {
 
         #[cfg(not(target_arch = "wasm32"))]
         {
-            test_result.set("Vasculature stress test: Tauri invocation pending".to_string());
-            is_running.set(false);
+            dioxus::prelude::spawn(async move {
+                match tauri_invoke("test_vasculature_stress", wasm_bindgen::JsValue::NULL).await {
+                    Ok(val) => test_result.set(val.as_string().unwrap_or("Success".to_string())),
+                    Err(e) => test_result.set(format!("Error: {:?}", e)),
+                }
+                is_running.set(false);
+            });
         }
 
         #[cfg(target_arch = "wasm32")]

@@ -10,7 +10,7 @@ use std::io::Read;
 /// - Byte reference views (TensorBufferView pattern)
 /// - Binary IPC transport (u64 indices instead of String IDs)
 use std::path::Path;
-use std::sync::Arc;
+
 
 /// GLB asset metadata
 #[derive(Debug, Clone)]
@@ -247,7 +247,7 @@ impl SemanticExtractor {
     /// Returns binary indices for zero-heap runtime access
     pub fn extract_semantic_ids(
         json_chunk: &[u8],
-        binary_registry: &crate::commands::binary_registry::BinaryNodeRegistry,
+        binary_registry: &super::binary_registry::BinaryNodeRegistry,
     ) -> Result<SemanticMapping, String> {
         // Parse JSON chunk (one-time heap allocation)
         let json_str = std::str::from_utf8(json_chunk)
@@ -271,7 +271,7 @@ impl SemanticExtractor {
     /// Extract FMA identifier from GLTF metadata
     fn extract_fma_id(
         json: &serde_json::Value,
-        binary_registry: &crate::commands::binary_registry::BinaryNodeRegistry,
+        binary_registry: &super::binary_registry::BinaryNodeRegistry,
     ) -> Result<Option<u64>, String> {
         // Look for FMA ID in asset metadata or custom properties
         if let Some(asset) = json.get("asset") {
@@ -307,7 +307,7 @@ impl SemanticExtractor {
     /// Extract SNOMED-CT identifier from GLTF metadata
     fn extract_snomed_id(
         json: &serde_json::Value,
-        binary_registry: &crate::commands::binary_registry::BinaryNodeRegistry,
+        binary_registry: &super::binary_registry::BinaryNodeRegistry,
     ) -> Result<Option<u64>, String> {
         // Look for SNOMED ID in asset metadata or custom properties
         if let Some(asset) = json.get("asset") {
@@ -327,7 +327,7 @@ impl SemanticExtractor {
     /// Extract custom ontology identifier from GLTF metadata
     fn extract_custom_id(
         json: &serde_json::Value,
-        binary_registry: &crate::commands::binary_registry::BinaryNodeRegistry,
+        binary_registry: &super::binary_registry::BinaryNodeRegistry,
     ) -> Result<Option<u64>, String> {
         // Look for custom ID in asset metadata
         if let Some(asset) = json.get("asset") {

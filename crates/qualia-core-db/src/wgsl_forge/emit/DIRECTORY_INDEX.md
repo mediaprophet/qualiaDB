@@ -1,0 +1,132 @@
+---
+created: 2026-06-30
+updated: 2026-06-30
+update_scope: Comprehensive
+---
+
+# emit Index
+
+## Functionality Overview
+Comprehensive index of functionality for `emit`. This document serves as the ground truth for bots regarding implemented components and dependencies.
+
+## File & Subdirectory Manifest
+### Files & Exported Functionality
+- 📄 `coopmat.rs`
+  - `fn matmul_tc_wgsl`
+  - `fn matmul_tc`
+  - `fn matmul_tc_wgsl_tiled`
+- 📄 `cuda_c.rs`
+  - `fn emit_cuda_c`
+  - `fn emit_affine`
+  - `fn emit_ffn`
+  - `fn emit_topk`
+- 📄 `cuda_graph.rs`
+  - `fn unary_expr_cuda`
+  - `fn binary_expr_cuda`
+  - `fn elementwise_cuda_c`
+  - `fn reduce_fragments_cuda`
+  - `fn reduce_cuda_c`
+  - `fn broadcast_cuda_c`
+  - `struct CudaCLowerer`
+  - `impl Lowerer`
+  - `fn matmul`
+  - `fn gemv`
+  - `fn elementwise`
+  - `fn reduce`
+  - `fn broadcast`
+  - `fn graph_cuda_entry`
+  - `fn emit_graph_cuda_c`
+  - *(...and 8 more)*
+- 📄 `df64.rs`
+  - `fn quick_two_sum`
+  - `fn two_sum`
+  - `fn split`
+  - `fn two_prod`
+  - `fn df_add`
+  - `fn df_mul`
+  - `fn gemm_df64`
+  - `fn gemm_df64_wgsl_validates`
+- 📄 `dxc.rs`
+  - `fn compile_hlsl_to_spirv`
+- 📄 `graph_hlsl.rs`
+  - `fn unary_expr_hlsl`
+  - `fn binary_expr_hlsl`
+  - `fn elementwise_hlsl`
+  - `fn reduce_fragments_hlsl`
+  - `fn reduce_hlsl`
+  - `fn broadcast_hlsl`
+  - `struct HlslLowerer`
+  - `impl Lowerer`
+  - `fn elementwise`
+  - `fn reduce`
+  - `fn broadcast`
+  - `fn emit_graph_hlsl`
+  - `fn hlsl_portable_kit_emits_hlsl_constructs`
+  - `fn emit_graph_hlsl_lowers_a_softmax_subgraph`
+  - `fn hlsl_portable_kit_dxc_compiles`
+- 📄 `graph_msl.rs`
+  - `fn unary_expr_msl`
+  - `fn binary_expr_msl`
+  - `fn elementwise_msl`
+  - `fn reduce_fragments_msl`
+  - `fn reduce_msl`
+  - `fn broadcast_msl`
+  - `struct MslLowerer`
+  - `impl Lowerer`
+  - `fn elementwise`
+  - `fn reduce`
+  - `fn broadcast`
+  - `fn emit_graph_msl`
+  - `fn msl_portable_kit_emits_metal_constructs`
+  - `fn emit_graph_msl_lowers_a_softmax_subgraph_node`
+- 📄 `hlsl.rs`
+  - `fn emit_hlsl`
+  - `fn emit_kernel_body`
+  - `fn emit_topk_hlsl`
+  - `fn emit_ffn_hlsl`
+  - `fn emit_p64_hlsl`
+  - `fn hlsl_scalar`
+  - `fn emit_ops`
+- 📄 `mod.rs`
+  - `enum TargetBackend`
+  - `impl Default`
+  - `fn default`
+  - `impl std`
+  - `fn from_str`
+  - `struct GeneratedShader`
+  - `fn emit_shader`
+- 📄 `msl.rs`
+  - `fn emit_msl`
+  - `fn emit_kernel_body`
+  - `fn emit_topk_msl`
+  - `fn emit_ffn_msl`
+  - `struct FfnParams`
+  - `fn msl_scalar`
+  - `fn emit_ops`
+- 📄 `ptx.rs`
+  - `fn emit_ptx`
+  - `fn emit_kernel_body`
+- 📄 `spirv.rs`
+  - `fn emit_spirv`
+  - `fn decode_spirv_words`
+  - `fn affine_emits_non_empty_spirv_words`
+- 📄 `wgsl.rs`
+  - `fn emit_wgsl`
+  - `fn emit_kernel_body`
+  - `struct AffineParams`
+  - `fn emit_topk_wgsl`
+  - `struct TopKParams`
+  - `fn emit_ffn_wgsl`
+  - `struct FfnParams`
+  - `fn emit_p64_wgsl`
+  - `struct P64Words64`
+  - `fn emit_ternary_gemv_wgsl`
+  - `struct TernaryGemvParams`
+  - `struct WgslDelegateLowerer`
+  - `impl crate`
+  - `fn matmul`
+  - `fn gemv`
+  - *(...and 17 more)*
+
+## Changelog
+- **2026-06-30**: Automated full index generation, extracting code definitions.

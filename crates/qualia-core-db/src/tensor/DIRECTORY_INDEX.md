@@ -1,0 +1,181 @@
+---
+created: 2026-06-30
+updated: 2026-06-30
+update_scope: Comprehensive
+---
+
+# tensor Index
+
+## Functionality Overview
+Comprehensive index of functionality for `tensor`. This document serves as the ground truth for bots regarding implemented components and dependencies.
+
+## File & Subdirectory Manifest
+### Files & Exported Functionality
+- 📄 `bake_pipeline.rs`
+  - `fn audio_sidecar_relpath`
+  - `fn format_hash16`
+  - `fn sigma_sheet_index_from_nquin`
+  - `fn decode_packed_coord`
+  - `fn sign_extend_20`
+  - `fn is_geo_vertex_quin`
+  - `fn semantic_xyz_from_nquin`
+  - `fn bake_quin_to_tensor`
+  - `fn bake_quins_into`
+  - `fn pack_coord`
+  - `fn packed_coord_round_trip`
+  - `fn audio_sidecar_path_format`
+  - `fn spectral_sheet_predicate_extracts_index`
+  - `fn geo_vertex_bake_uses_packed_xyz`
+- 📄 `buffer_export.rs`
+  - `struct TensorBufferHeader`
+  - `impl TensorBufferHeader`
+  - `fn new`
+  - `fn total_bytes`
+  - `fn parse_header`
+  - `fn tensor_node_count`
+  - `fn write_tensor_q_at`
+  - `fn read_tensor_at`
+  - `fn tensor_render_color`
+  - `fn write_tensor_buffer`
+  - `fn write_tensor_slice_from_resident`
+  - `fn header_size_stable`
+  - `fn write_tensor_slice_from_resident_round_trip`
+  - `fn write_tensor_q_at_collapses_epistemic_field`
+  - `fn read_tensor_at_round_trip`
+  - *(...and 1 more)*
+- 📄 `coordinate.rs`
+- 📄 `gsr.rs`
+  - `struct QuboProblem`
+  - `impl Default`
+  - `fn default`
+  - `impl QuboProblem`
+  - `fn add_coefficient`
+  - `fn add_linear_term`
+  - `struct GsrResult`
+  - `struct GsrRequest`
+  - `struct GroundStateResolver`
+  - `impl GroundStateResolver`
+  - `fn new`
+  - `fn submit_problem`
+  - `fn get_result`
+  - `fn process_requests`
+  - `fn solve_with_qpu`
+  - *(...and 18 more)*
+- 📄 `kv_provenance.rs`
+  - `struct KvSlotInfo`
+  - `impl KvSlotInfo`
+  - `struct KvProvenanceMap`
+  - `impl KvProvenanceMap`
+  - `fn new`
+  - `fn generation`
+  - `fn record`
+  - `fn build_prompt_alignment`
+  - `fn kv_slot_for_tensor`
+  - `fn page_id_for_tensor`
+  - `fn kv_lock`
+  - `fn global_kv_provenance`
+  - `fn rebuild_prompt_provenance`
+  - `fn record_kv_provenance`
+  - `fn prompt_alignment_maps_tensor_to_kv`
+- 📄 `manifold.rs`
+  - `enum ManifoldDomain`
+  - `impl Default`
+  - `fn default`
+  - `impl ManifoldDomain`
+  - `fn from_index`
+  - `fn to_index`
+- 📄 `mod.rs`
+  - `struct Tensor10D`
+  - `impl Default`
+  - `fn default`
+  - `impl Tensor10D`
+  - `fn new`
+  - `fn ground_truth`
+  - `fn parallel_context`
+  - `fn is_ground_truth`
+  - `fn spatial_distance`
+  - `fn full_distance`
+  - `fn euclidean_distance`
+  - `fn cyclic_distance`
+  - `fn hyperbolic_distance`
+  - `fn boundary_distance`
+  - `fn is_parallel_context`
+  - *(...and 6 more)*
+- 📄 `payload.rs`
+  - `struct SpectralPayload`
+  - `impl Default`
+  - `fn default`
+  - `impl SpectralPayload`
+  - `fn new`
+- 📄 `q42_integration.rs`
+  - `enum TensorVolumeError`
+  - `struct TensorMetadata`
+  - `impl Default`
+  - `fn default`
+  - `impl TensorMetadata`
+  - `fn from_nquin_and_tensor`
+  - `fn from_nquin_only`
+  - `struct TensorizedEntry`
+  - `impl Tensor10D`
+  - `fn from_nquin`
+  - `fn extract_quantum_context`
+  - `fn extract_topological_class`
+  - `fn extract_manifold_index`
+  - `fn extract_semantic_coordinates`
+  - `fn extract_temporal_state`
+  - *(...and 41 more)*
+- 📄 `quantum.rs`
+  - `enum QuantumState`
+  - `impl Default`
+  - `fn default`
+  - `impl QuantumState`
+  - `fn from_q_value`
+  - `fn to_q_value`
+- 📄 `resident_substrate.rs`
+  - `struct ResidentTensorSubstrate`
+  - `fn empty_nquin`
+  - `impl ResidentTensorSubstrate`
+  - `fn new`
+  - `fn node_count`
+  - `fn load_generation`
+  - `fn subject_hash_at`
+  - `fn tensor_at`
+  - `fn load_from_tensor_buffer`
+  - `fn tensor_search_into`
+  - `fn load_from_tensors`
+  - `fn stub_nquin_for_tensor`
+  - `fn global_resident_substrate`
+  - `fn load_and_search_resident_substrate`
+- 📄 `spacetime.rs`
+  - `struct SpacetimeCoord`
+  - `impl Default`
+  - `fn default`
+  - `impl SpacetimeCoord`
+  - `fn new`
+  - `fn spatial_distance`
+- 📄 `spectral.rs`
+  - `struct SpectralDecomposition`
+  - `impl Default`
+  - `fn default`
+  - `impl SpectralDecomposition`
+  - `fn new`
+- 📄 `topology.rs`
+  - `enum TopologyClass`
+  - `impl Default`
+  - `fn default`
+  - `impl TopologyClass`
+  - `fn calculate_distance`
+- 📄 `volume_gpu.rs`
+  - `struct VolumeGpuParams`
+  - `struct TensorVolumeGpu`
+  - `impl TensorVolumeGpu`
+  - `fn try_new`
+  - `fn upload_nodes`
+  - `fn tensor_search_into`
+  - `fn try_gpu_tensor_search_into`
+  - `fn cpu_tensor_search_into`
+  - `fn cpu_tensor_search_matches_metric`
+  - `fn cpu_tensor_search_honors_topology_class`
+
+## Changelog
+- **2026-06-30**: Automated full index generation, extracting code definitions.

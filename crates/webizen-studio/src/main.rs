@@ -45,9 +45,6 @@ pub enum Route {
     #[route("/anatomy-test")]
     AnatomyTestRoute {}, // Access via /anatomy-test route
 
-    #[route("/llm")]
-    LlmHarnessRoute {},
-
     #[route("/qapps")]
     QAppsRoute {},
 
@@ -86,11 +83,6 @@ pub enum Route {
 #[component]
 fn AnatomyTestRoute() -> Element {
     rsx! { components::anatomy_test::AnatomyTest {} }
-}
-
-#[component]
-fn LlmHarnessRoute() -> Element {
-    rsx! { components::llm_harness::LlmHarness {} }
 }
 
 #[component]
@@ -255,16 +247,9 @@ fn AppLayout() -> Element {
                 Link {
                     to: Route::AnatomyTestRoute {},
                     class: "nav-item",
-                    style: "color: {text_muted};",
+                    style: "color: {accent}; font-weight: 600;",
                     sl-icon { "name": "activity", style: "font-size: 0.9rem;" }
                     "Anatomy Test"
-                }
-                Link {
-                    to: Route::LlmHarnessRoute {},
-                    class: "nav-item",
-                    style: "color: {accent}; font-weight: 600;",
-                    sl-icon { "name": "cpu", style: "font-size: 0.9rem;" }
-                    "LLM Engine"
                 }
                 Link {
                     to: Route::QAppsRoute {},

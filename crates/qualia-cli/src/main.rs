@@ -873,7 +873,7 @@ pub enum CompileAction {
 }
 
 #[derive(Subcommand, Debug)]
-enum ProfileAction {
+pub enum ProfileAction {
     /// Compile a JSON-LD capability profile source into a binary .qchk file.
     /// Usage: qualia-cli profile compile health.jsonld [--out health.qchk]
     Compile {
@@ -893,7 +893,7 @@ enum ProfileAction {
 }
 
 #[derive(Subcommand, Debug)]
-enum MigrateAction {
+pub enum MigrateAction {
     /// Migrate a .q42 volume from v2 to v3 (Lamport clock bit-shift + v3 header).
     ///
     /// Rewrites the header in-place and shifts each quin's Lamport clock from bits [60:32]
@@ -1024,7 +1024,7 @@ pub enum QpuAction {
 }
 
 #[derive(Subcommand, Debug)]
-enum WebizenAction {
+pub enum WebizenAction {
     /// Initialize a bare git repository with a generated did:git agency identity
     Init {
         #[arg(help = "Path to the repository to initialize")]
@@ -1211,7 +1211,7 @@ pub enum LlmAction {
 }
 
 #[derive(Subcommand, Debug)]
-enum BenchmarkAction {
+pub enum BenchmarkAction {
     /// Evaluates SPARQL-Star nested graph queries
     SparqlStar { path: PathBuf },
     /// Simulates querying a percentage of the compressed graph and tracks peak RSS

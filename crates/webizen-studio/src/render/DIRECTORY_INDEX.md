@@ -1,0 +1,157 @@
+---
+created: 2026-06-30
+updated: 2026-06-30
+update_scope: Comprehensive
+---
+
+# render Index
+
+## Functionality Overview
+Comprehensive index of functionality for `render`. This document serves as the ground truth for bots regarding implemented components and dependencies.
+
+## File & Subdirectory Manifest
+### Files & Exported Functionality
+- 📄 `canvas2d.rs`
+  - `struct Canvas2dRenderer`
+  - `impl Canvas2dRenderer`
+  - `fn new`
+  - `impl Renderer`
+  - `fn viewport`
+  - `fn set_camera`
+  - `fn clear`
+  - `fn project`
+  - `fn line`
+  - `fn point`
+  - `fn fill_polygon`
+- 📄 `graph.rs`
+  - `struct Style`
+  - `impl Default`
+  - `fn default`
+  - `impl Style`
+  - `fn wire`
+  - `fn solid`
+  - `fn with_alpha`
+  - `struct Node`
+  - `impl Node`
+  - `fn new`
+  - `fn with_mesh`
+  - `fn with_style`
+  - `fn with_transform`
+  - `fn at`
+  - `fn child`
+  - *(...and 7 more)*
+- 📄 `mesh.rs`
+  - `struct Transform`
+  - `impl Default`
+  - `fn default`
+  - `fn rotate_x`
+  - `fn rotate_y`
+  - `fn rotate_z`
+  - `impl Transform`
+  - `fn at`
+  - `fn with_scale`
+  - `fn with_rotation`
+  - `fn apply`
+  - `struct Mesh`
+  - `impl Mesh`
+  - `fn line`
+  - `fn cube`
+  - *(...and 6 more)*
+- 📄 `mod.rs`
+  - `trait Renderer`
+  - `fn viewport`
+  - `fn set_camera`
+  - `fn clear`
+  - `fn project`
+  - `fn line`
+  - `fn point`
+  - `fn fill_polygon`
+- 📄 `motion.rs`
+  - `struct Timeline`
+  - `struct Spring`
+  - `impl Spring`
+  - `fn new`
+  - `fn set_target`
+  - `fn step`
+  - `fn is_at_target`
+- 📄 `native.rs`
+  - `struct NativeRenderer`
+  - `impl NativeRenderer`
+  - `fn new`
+  - `fn resize`
+  - `fn read_pixels`
+  - `fn read_png`
+  - `impl Renderer`
+  - `fn viewport`
+  - `fn set_camera`
+  - `fn clear`
+  - `fn project`
+  - `fn line`
+  - `fn point`
+  - `fn fill_polygon`
+- 📄 `qualia.rs`
+  - `enum ItemState`
+  - `struct SceneItem`
+  - `struct SemanticScene`
+  - `trait SceneSource`
+  - `fn semantic_scene`
+  - `impl SceneSource`
+  - `fn item_color`
+  - `fn build_scene`
+  - `fn item_color_intensity_monotonic_alpha`
+  - `fn build_scene_uses_layout_and_skips_unknown`
+  - `fn semantic_scene_deserializes_from_contract_json`
+- 📄 `scene.rs`
+  - `struct Vec3`
+  - `impl Vec3`
+  - `fn new`
+  - `fn sub`
+  - `fn add`
+  - `fn scale`
+  - `fn dot`
+  - `fn cross`
+  - `fn length`
+  - `fn normalize`
+  - `struct ScreenPoint`
+  - `struct Camera`
+  - `impl Default`
+  - `fn default`
+  - `impl Camera`
+  - *(...and 4 more)*
+- 📄 `scene_to_contract.rs`
+  - `impl From`
+  - `fn from`
+  - `fn collect_scene_elements`
+  - `fn extract_semantic_weight`
+  - `fn compute_edge_weight`
+  - `fn compute_edge_attributes`
+  - `fn compute_radius_from_weight`
+  - `fn extract_classification_from_label`
+  - `fn map_classification_to_color`
+  - `fn extract_animation_state`
+  - `enum SemanticClassification`
+  - `fn normalize_coordinate`
+  - `fn resolve_css_color`
+  - `fn test_camera_conversion`
+  - `fn test_empty_scene_conversion`
+  - *(...and 3 more)*
+- 📄 `tensor_buffer.rs`
+  - `struct TensorBufferView`
+  - `fn new_with_index`
+  - `fn new`
+  - `fn len`
+  - `fn is_empty`
+  - `fn get_by_index`
+  - `fn get_by_offset`
+  - `fn get`
+  - `fn read_f64_le`
+  - `fn build_index_table`
+  - `struct Tensor10DView`
+  - `impl Tensor10DView`
+  - `fn spectral_color`
+  - `fn opacity`
+  - `fn test_tensor_buffer_view_empty`
+  - *(...and 3 more)*
+
+## Changelog
+- **2026-06-30**: Automated full index generation, extracting code definitions.

@@ -8,7 +8,7 @@
 
 use super::graph::{Node, Scene, Style};
 use super::scene::{Camera, Vec3};
-use webizen_render::scene_contract::{
+use qualia_core_db::render::contract::{
     RenderScene, SceneCamera, SceneEdge, SceneFace, SceneNode, ScenePoint,
 };
 
@@ -138,8 +138,8 @@ fn collect_scene_elements(
                     alpha: style.alpha,
                     is_inferencing,
                     pulse_rate,
-                    tensor: webizen_render::scene_contract::Tensor10DProjection::default(),
-                    epistemic_state: webizen_render::scene_contract::EpistemicState::Collapsed,
+                    tensor: qualia_core_db::render::contract::Tensor10DProjection::default(),
+                    epistemic_state: qualia_core_db::render::contract::EpistemicState::Collapsed,
                     version: 0.0,
                 });
             }

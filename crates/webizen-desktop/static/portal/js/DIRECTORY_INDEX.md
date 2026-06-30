@@ -1,0 +1,135 @@
+---
+created: 2026-06-30
+updated: 2026-06-30
+update_scope: Comprehensive
+---
+
+# js Index
+
+## Functionality Overview
+Comprehensive index of functionality for `js`. This document serves as the ground truth for bots regarding implemented components and dependencies.
+
+## File & Subdirectory Manifest
+### Files & Exported Functionality
+- 📄 `ambient-viz.js`
+  - `const TELEMETRY_KEYS`
+  - `function defaultTelemetry`
+  - `function clamp01`
+  - `function lerp`
+  - `function hash`
+  - `const x`
+  - `class AmbientViz`
+  - `const u`
+  - `const v`
+  - `const w`
+  - `const r`
+  - `const theta`
+  - `const phi`
+  - `const y`
+  - `const z`
+  - *(...and 46 more)*
+- 📄 `asset-recommendations.js`
+  - `function detectBrowserDevice`
+  - `const nav`
+  - `const ram_gb`
+  - `const cpu_cores`
+  - `function probeWebGpu`
+  - `const adapter`
+  - `function inferDomains`
+  - `const lower`
+  - `const rules`
+  - `const out`
+  - `function llmFits`
+  - `function recommendFromCatalog`
+  - `const domains`
+  - `const llms`
+  - `const need`
+  - *(...and 15 more)*
+- 📄 `coi-serviceworker.js`
+  - `const r`
+  - `const request`
+  - `const newHeaders`
+  - `const reloadedBySelf`
+  - `const coepDegrading`
+  - `const coi`
+  - `const n`
+  - `const controlling`
+  - `const coepHasFailed`
+  - `const reloadToDegrade`
+- 📄 `design-studio-app.js`
+  - `const STORAGE_KEY`
+  - `const DESIGN_TYPE`
+  - `const DESIGN_VERSION`
+  - `function telemetryToFloats`
+  - `const base`
+  - `const merged`
+  - `function showLoading`
+  - `function showError`
+  - `function updateWasmBadge`
+  - `const dot`
+  - `const text`
+  - `const badge`
+  - `const tier`
+  - `const labels`
+  - `function updateHud`
+  - *(...and 63 more)*
+- 📄 `menu-loader.js`
+  - `function docsRootFromScript`
+  - `const script`
+  - `const src`
+  - `const pagesBase`
+  - `const base`
+  - `function ensureSiteNavCss`
+  - `const root`
+  - `const link`
+  - `function resolveHref`
+  - `function normalizeIcon`
+  - `function pageMatchesHref`
+  - `const target`
+  - `const targetUrl`
+  - `const leaf`
+  - `const path`
+  - *(...and 27 more)*
+- 📄 `qualia-coi.js`
+  - `function ensureCrossOriginIsolation`
+  - `const existing`
+  - `const s`
+  - `const isolated`
+  - `function isCrossOriginIsolated`
+- 📄 `qualia-shell.js`
+  - `const DAEMON_DEFAULT_PORT`
+  - `const DAEMON_BASE`
+  - `const DaemonLinkState`
+  - `const STANDPOINT_IDENTIFIER`
+  - `const TENSOR_HEADER_BYTES`
+  - `const TENSOR_MAGIC`
+  - `const daemonLinkListeners`
+  - `const REFRESH_DEBOUNCE_MS`
+  - `const signingKeyCache`
+  - `function formatCanonicalF32`
+  - `const s`
+  - `function canonicalTensorSlicePayload`
+  - `function generateSessionNonce`
+  - `const bytes`
+  - `function getSessionNonce`
+  - *(...and 93 more)*
+- 📄 `qualia-wasm-runtime.js`
+  - `function resolvePaths`
+  - `const siteRoot`
+  - `const portalJs`
+  - `const portalWasm`
+  - `const jsUrl`
+  - `const wasmUrl`
+  - `function initQualiaWasm`
+  - `const paths`
+  - `const tryInit`
+  - `const module`
+  - `const response`
+  - `function readVersion`
+  - `function readInfo`
+  - `const raw`
+  - `const version`
+  - *(...and 8 more)*
+
+## Changelog
+- **2026-06-30**: Automated full index generation, extracting code definitions.

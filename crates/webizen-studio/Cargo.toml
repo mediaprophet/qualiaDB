@@ -15,6 +15,7 @@ uuid = { version = "1.10", features = ["v4", "js"] }
 futures-util = "0.3.30"
 wasm-bindgen-futures = "0.4.75"
 serde-wasm-bindgen = "0.6.5"
+base64 = "0.22.1"
 
 # Surfaces wasm panics with a readable message + stack in the browser console
 # instead of an opaque `unreachable`. Only pulled into the wasm build.

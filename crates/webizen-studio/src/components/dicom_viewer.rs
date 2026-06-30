@@ -1,19 +1,39 @@
 use dioxus::prelude::*;
 
+#[wasm_bindgen::prelude::wasm_bindgen]
+extern "C" {
+    #[wasm_bindgen::prelude::wasm_bindgen(js_namespace = ["window", "__TAURI__", "core"], js_name = invoke, catch)]
+    pub async fn tauri_invoke(cmd: &str, args: wasm_bindgen::JsValue) -> Result<wasm_bindgen::JsValue, wasm_bindgen::JsValue>;
+}
+
 #[component]
 pub fn DicomViewer() -> Element {
     let mut slice_idx = use_signal(|| 45);
     let mut window_level = use_signal(|| 40);
     let mut window_width = use_signal(|| 400);
     let mut tool = use_signal(|| "pan".to_string());
+    
+    let mut image_data_b64 = use_signal(|| String::new());
+
+    use_effect(move || {
+        let current_slice = slice_idx();
+        spawn(async move {
+            // Using the slice index as a slot mock for diffusion_frame
+            let args = serde_json::json!({ "slot": (current_slice % 8) as u8 });
+            if let Ok(js_val) = serde_wasm_bindgen::to_value(&args) {
+                if let Ok(res) = tauri_invoke("get_diffusion_frame_rgba", js_val).await {
+                    if let Ok(data) = serde_wasm_bindgen::from_value::<Vec<u8>>(res) {
+                        use base64::Engine;
+                        let b64 = base64::engine::general_purpose::STANDARD.encode(&data);
+                        image_data_b64.set(format!("data:image/png;base64,{}", b64));
+                    }
+                }
+            }
+        });
+    });
 
     let opacity = window_width() as f64 / 800.0;
     let brightness = window_level() as f64 / 50.0;
-
-    let is_pan = tool() == "pan";
-    let is_zoom = tool() == "zoom";
-    let is_wl = tool() == "wl";
-    let is_measure = tool() == "measure";
 
     rsx! {
         div {
@@ -54,9 +74,15 @@ pub fn DicomViewer() -> Element {
             div {
                 style: "flex: 1; position: relative; background: radial-gradient(circle, #27272a, #000000); display: flex; align-items: center; justify-content: center;",
 
-                // Mock Image (Brain Scan Pattern)
-                div {
-                    style: "width: 400px; height: 400px; border-radius: 50%; background: conic-gradient(from 0deg, #111, #444, #888, #333, #111); opacity: {opacity}; filter: brightness({brightness}); box-shadow: inset 0 0 50px black;"
+                if !image_data_b64.read().is_empty() {
+                    img {
+                        src: "{image_data_b64.read()}",
+                        style: "max-width: 100%; max-height: 100%; opacity: {opacity}; filter: brightness({brightness});"
+                    }
+                } else {
+                    div {
+                        style: "width: 400px; height: 400px; border-radius: 50%; background: conic-gradient(from 0deg, #111, #444, #888, #333, #111); opacity: {opacity}; filter: brightness({brightness}); box-shadow: inset 0 0 50px black;"
+                    }
                 }
 
                 // Overlays

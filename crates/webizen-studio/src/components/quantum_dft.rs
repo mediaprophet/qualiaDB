@@ -1,7 +1,38 @@
 use dioxus::prelude::*;
+use serde::{Deserialize, Serialize};
+use wasm_bindgen::prelude::*;
+
+use crate::components::qapp_engine::tauri_invoke;
+#[derive(Serialize)]
+struct QuantumDftArgs {
+    molecule: String,
+}
+
+#[derive(Deserialize, Default, Clone)]
+struct QuantumDftProps {
+    energy: f64,
+}
 
 #[component]
 pub fn QuantumDft() -> Element {
+    let mut geometry = use_signal(|| "O 0.000 0.000 0.000\nH 0.757 0.586 0.000\nH -0.757 0.586 0.000".to_string());
+    
+    let energy_resource = use_resource(move || {
+        let current_geometry = geometry.read().clone();
+        async move {
+            if let Ok(args) = serde_wasm_bindgen::to_value(&QuantumDftArgs { molecule: current_geometry }) {
+                if let Ok(res) = tauri_invoke("calculate_quantum_dft", args).await {
+                    if let Ok(parsed) = serde_wasm_bindgen::from_value::<QuantumDftProps>(res) {
+                        return parsed;
+                    }
+                }
+            }
+            QuantumDftProps::default()
+        }
+    });
+
+    let energy_props = energy_resource.read().clone().unwrap_or_default();
+
     rsx! {
         div {
             style: "padding: 20px; background: #1e1e2e; color: #cdd6f4; border-radius: 12px; font-family: monospace; display: flex; flex-direction: column; gap: 16px; height: 100%;",
@@ -30,8 +61,9 @@ pub fn QuantumDft() -> Element {
             div {
                 label { "Geometry (XYZ format)" }
                 textarea {
-                    style: "width: 100%; height: 100px; padding: 8px; background: #181825; border: 1px solid #45475a; color: #cdd6f4; border-radius: 4px; margin-top: 4px; font-family: monospace;",
-                    "O 0.000 0.000 0.000\nH 0.757 0.586 0.000\nH -0.757 0.586 0.000"
+                    value: "{geometry}",
+                    oninput: move |e| geometry.set(e.value().clone()),
+                    style: "width: 100%; height: 100px; padding: 8px; background: #181825; border: 1px solid #45475a; color: #cdd6f4; border-radius: 4px; margin-top: 4px; font-family: monospace;"
                 }
             }
             button {
@@ -40,7 +72,7 @@ pub fn QuantumDft() -> Element {
             }
             div {
                 style: "background: #11111b; padding: 16px; border-radius: 8px; border-left: 4px solid #89b4fa;",
-                "Energy: -76.4089 Hartree (Mocked)"
+                "Energy: {energy_props.energy:.4} Hartree"
             }
         }
     }

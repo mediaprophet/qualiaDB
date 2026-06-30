@@ -3,15 +3,7 @@ use serde_json::json;
 use uuid::Uuid;
 use wasm_bindgen::prelude::*;
 
-#[wasm_bindgen]
-extern "C" {
-    #[wasm_bindgen(js_namespace = ["window", "__TAURI__", "core"], js_name = invoke, catch)]
-    async fn tauri_invoke(
-        cmd: &str,
-        args: js_sys::Object,
-    ) -> Result<wasm_bindgen::JsValue, wasm_bindgen::JsValue>;
-}
-
+use crate::components::qapp_engine::tauri_invoke;
 async fn invoke_tauri(cmd: &str, args: serde_json::Value) -> Result<String, String> {
     let js_args = serde_wasm_bindgen::to_value(&args).map_err(|e| e.to_string())?;
     match tauri_invoke(cmd, js_args.into()).await {
