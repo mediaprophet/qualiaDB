@@ -953,3 +953,66 @@ cargo test
   duplicates command definitions. That work was preserved and excluded from this session's
   commit; it currently prevents a final desktop/workspace build despite the Tauri 2 migration
   compiling successfully immediately before the concurrent rewrite.
+
+---
+
+### 2026-06-30 — Devin (specialized_libs warning audit + implementation sprint)
+
+**Completed:**
+- Audited 677 compiler warnings across `specialized_libs/`, distinguishing
+  intentional architectural stubs from genuinely dead code.
+- Launched 6 parallel deep-dive subagents to identify implementation
+  opportunities in crypto, financial, ML, medical, physics, and statistical
+  modules. Each found 5+ feasible opportunities.
+- Implemented 12 of 13 planned features across 3 modules:
+
+**Cryptographic library** (`specialized_libs/cryptographic_library/mod.rs`):
+- Audit log writing: `log_entry()`, `entry_count()`, `entries()` on all 4
+  audit log types (Access, Signature, Hash, Proof). Wired into sign/verify/
+  hash/proof operations with retention policy enforcement.
+- Key relationship tracking: `add_relationship()`, `get_relationships()`,
+  `find_related()`, `register_key()`, `add_tag()` on KeyCatalog. Wired
+  KeyPair into key generation, RotatedFrom into key rotation.
+- Performance metrics: EMA-based `record_*_time()` methods on all 4
+  performance optimizers. Wired into all crypto operations.
+- Key access policy enforcement: `add_policy()`, `check_permission()`,
+  `check_permission_with_context()` on KeyAccessControl. Added
+  `get_key_with_access()` to KeyStorage with deny-by-default semantics.
+- Key encryption at rest: AES-256-GCM master KEK generation, encrypt/decrypt
+  key data with nonce+ciphertext packing.
+- 8 new tests (all passing). Warnings: 677 → 669.
+
+**Financial modeling** (`specialized_libs/financial_modeling/`):
+- Risk profile validation: compares computed volatility/VaR against
+  portfolio's declared RiskTolerance, returns warning if misaligned.
+- Portfolio access control: `check_permission()`, `add_access_policy()`,
+  audit trail with `log_action()`, `entry_count()`, `entries()`.
+  Wired into store_portfolio and get_portfolio.
+- Benchmark-based beta/alpha: `compute_risk_metrics()` now accepts
+  optional benchmark returns, computes real beta = Cov/Var and
+  alpha = mean(R_p) - beta*mean(R_b). No more NaN placeholders.
+- Price feed wiring: `register_price_feed()`, `update_price_history()`,
+  `ingest_from_feed()`, `apply_to_asset()`, `MarketData::sync_to_assets()`.
+- Rebalancing logic: `calculate_drift()`, `rebalance()` with
+  RebalanceTrade generation, `PortfolioManager::rebalance_portfolio()`.
+- 15 new tests (all passing, 36 total financial tests).
+
+**Machine learning** (`specialized_libs/machine_learning.rs`):
+- ModelCache with LRU eviction: `get()` updates access metadata and
+  hit/miss stats, `put()` enforces max size with LRU eviction.
+- InferenceEngine wired to linear algebra backend: real MLP forward pass
+  through Linear layers with activation functions (ReLU, sigmoid, tanh,
+  GELU, softmax, SiLU, LeakyReLU, ELU). Unsupported layer types
+  (Convolutional, Attention, etc.) return clear error messages.
+- 4 new tests (all passing).
+
+**Verification:**
+- `cargo test -p qualia-core-db --lib -- cryptographic financial model_cache inference`
+  → 186 passed; 0 failed; 1 ignored
+- `cargo check -p qualia-core-db` → no errors (669 warnings, down from 677)
+
+**Still pending:**
+- ML model loading from GGUF files (subagent in progress)
+- Medical HIPAA compliance features (not started this session)
+- Physics boundary conditions, CFL time stepping, ZNS persistence (not started)
+- Statistical sensitivity analysis, ZNS data persistence (not started)
