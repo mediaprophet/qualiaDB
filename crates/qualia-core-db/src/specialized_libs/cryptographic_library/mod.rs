@@ -1966,6 +1966,24 @@ impl CryptographicLibrary {
         self.key_manager.store_key(private_key.clone())?;
         self.key_manager.store_key(public_key.clone())?;
 
+        // Track the KeyPair relationship in the catalog
+        self.key_manager
+            .key_storage
+            .key_catalog
+            .add_relationship(
+                &private_key.key_id,
+                &public_key.key_id,
+                KeyRelationshipType::KeyPair,
+            );
+        self.key_manager
+            .key_storage
+            .key_catalog
+            .register_key(private_key.metadata.clone());
+        self.key_manager
+            .key_storage
+            .key_catalog
+            .register_key(public_key.metadata.clone());
+
         let execution_time = start_time.elapsed().as_millis() as u64;
 
         Ok(CryptographicResult {
@@ -2327,6 +2345,20 @@ impl CryptographicLibrary {
         // Generate new key
         let new_key = self.key_manager.rotate_key(&old_key)?;
 
+        // Track the RotatedFrom relationship in the catalog
+        self.key_manager
+            .key_storage
+            .key_catalog
+            .add_relationship(
+                &new_key.key_id,
+                &old_key.key_id,
+                KeyRelationshipType::RotatedFrom,
+            );
+        self.key_manager
+            .key_storage
+            .key_catalog
+            .register_key(new_key.metadata.clone());
+
         let execution_time = start_time.elapsed().as_millis() as u64;
 
         Ok(CryptographicResult {
@@ -2459,6 +2491,9 @@ impl KeyStorage {
 
         zone.keys.insert(key.key_id.clone(), key.metadata.clone());
 
+        // Register in catalog
+        self.key_catalog.register_key(key.metadata.clone());
+
         // Store actual key data
         self.key_data.insert(key.key_id.clone(), key);
 
@@ -2512,6 +2547,76 @@ impl KeyCatalog {
     pub fn initialize(&mut self) -> Result<(), CryptographicError> {
         self.search_index.initialize()?;
         Ok(())
+    }
+
+    /// Register a relationship between two keys (e.g. KeyPair, RotatedFrom, DerivedFrom).
+    pub fn add_relationship(
+        &mut self,
+        source_key: &str,
+        target_key: &str,
+        rel_type: KeyRelationshipType,
+    ) {
+        let now = std::time::SystemTime::now()
+            .duration_since(std::time::UNIX_EPOCH)
+            .unwrap_or_default()
+            .as_secs();
+        let rel = KeyRelationship {
+            relationship_id: format!("rel_{}_{}_{}", source_key, target_key, now),
+            source_key: source_key.to_string(),
+            target_key: target_key.to_string(),
+            relationship_type: rel_type,
+            created_at: now,
+        };
+        self.relationships
+            .entry(source_key.to_string())
+            .or_default()
+            .push(rel);
+    }
+
+    /// Get all relationships for a given key (as source).
+    pub fn get_relationships(&self, key_id: &str) -> &[KeyRelationship] {
+        match self.relationships.get(key_id) {
+            Some(rels) => rels,
+            None => &[],
+        }
+    }
+
+    /// Find the related key of a given type (e.g. find the public key paired with a private key).
+    pub fn find_related(&self, key_id: &str, rel_type: KeyRelationshipType) -> Option<&KeyRelationship> {
+        self.relationships
+            .get(key_id)
+            .and_then(|rels| rels.iter().find(|r| r.relationship_type == rel_type))
+    }
+
+    /// Register key metadata in the catalog.
+    pub fn register_key(&mut self, metadata: KeyMetadata) {
+        self.keys.insert(metadata.key_id.clone(), metadata);
+    }
+
+    /// Add a tag to a key for searchability.
+    pub fn add_tag(&mut self, key_id: &str, tag: &str) {
+        self.tags
+            .entry(key_id.to_string())
+            .or_default()
+            .push(tag.to_string());
+    }
+
+    /// Get tags for a key.
+    pub fn get_tags(&self, key_id: &str) -> &[String] {
+        match self.tags.get(key_id) {
+            Some(tags) => tags,
+            None => &[],
+        }
+    }
+
+    /// Number of registered keys.
+    pub fn key_count(&self) -> usize {
+        self.keys.len()
+    }
+
+    /// Number of tracked relationships.
+    pub fn relationship_count(&self) -> usize {
+        self.relationships.values().map(|v| v.len()).sum()
     }
 }
 
@@ -2580,6 +2685,38 @@ impl AccessAuditLog {
                 archive_before_delete: true,
             },
         }
+    }
+
+    /// Record a key access event. Called after every key read/write/sign/verify operation.
+    pub fn log_entry(&mut self, key_id: &str, operation: KeyOperation, user_id: &str, success: bool) {
+        let timestamp = std::time::SystemTime::now()
+            .duration_since(std::time::UNIX_EPOCH)
+            .unwrap_or_default()
+            .as_secs();
+        let entry = AccessLogEntry {
+            entry_id: format!("acc_{}_{}", timestamp, self.entries.len()),
+            timestamp,
+            key_id: key_id.to_string(),
+            operation,
+            user_id: user_id.to_string(),
+            ip_address: String::new(),
+            success,
+            error_message: if success { None } else { Some("operation failed".to_string()) },
+        };
+        self.entries.push(entry);
+        // Enforce retention: drop entries older than retention_days
+        let cutoff = timestamp.saturating_sub((self.retention_policy.retention_days as u64) * 86400);
+        self.entries.retain(|e| e.timestamp >= cutoff);
+    }
+
+    /// Number of logged entries.
+    pub fn entry_count(&self) -> usize {
+        self.entries.len()
+    }
+
+    /// Iterate over entries (newest first).
+    pub fn entries(&self) -> &[AccessLogEntry] {
+        &self.entries
     }
 }
 
@@ -3202,6 +3339,14 @@ impl SignatureEngine {
         // Store signature
         self.signature_storage.store_signature(signature.clone())?;
 
+        // Audit log the signing operation
+        self.signature_storage.audit_log.log_entry(
+            &signature.signature_id,
+            SignatureOperation::Sign,
+            "system",
+            true,
+        );
+
         Ok(signature)
     }
 
@@ -3312,6 +3457,14 @@ impl SignatureEngine {
         self.signature_storage
             .store_verification_record(verification_record)?;
 
+        // Audit log the verification operation
+        self.signature_storage.audit_log.log_entry(
+            &signature.signature_id,
+            SignatureOperation::Verify,
+            "system",
+            is_valid,
+        );
+
         Ok(is_valid)
     }
 
@@ -3402,6 +3555,42 @@ impl SignatureAuditLog {
                 archive_before_delete: true,
             },
         }
+    }
+
+    /// Record a signature operation (sign, verify, revoke, renew).
+    pub fn log_entry(
+        &mut self,
+        signature_id: &str,
+        operation: SignatureOperation,
+        user_id: &str,
+        success: bool,
+    ) {
+        let timestamp = std::time::SystemTime::now()
+            .duration_since(std::time::UNIX_EPOCH)
+            .unwrap_or_default()
+            .as_secs();
+        let entry = SignatureAuditEntry {
+            entry_id: format!("sig_{}_{}", timestamp, self.entries.len()),
+            timestamp,
+            signature_id: signature_id.to_string(),
+            operation,
+            user_id: user_id.to_string(),
+            ip_address: String::new(),
+            success,
+        };
+        self.entries.push(entry);
+        let cutoff = timestamp.saturating_sub((self.retention_policy.retention_days as u64) * 86400);
+        self.entries.retain(|e| e.timestamp >= cutoff);
+    }
+
+    /// Number of logged entries.
+    pub fn entry_count(&self) -> usize {
+        self.entries.len()
+    }
+
+    /// Iterate over entries.
+    pub fn entries(&self) -> &[SignatureAuditEntry] {
+        &self.entries
     }
 }
 
@@ -3840,6 +4029,14 @@ impl HashEngine {
         // Store hash
         self.hash_storage.store_hash(hash_result.clone())?;
 
+        // Audit log the hash computation
+        self.hash_storage.audit_log.log_entry(
+            &hash_result.hash_id,
+            HashOperation::Compute,
+            "system",
+            true,
+        );
+
         Ok(hash_result)
     }
 }
@@ -3873,6 +4070,42 @@ impl HashAuditLog {
                 archive_before_delete: true,
             },
         }
+    }
+
+    /// Record a hash operation (compute, verify, update, delete).
+    pub fn log_entry(
+        &mut self,
+        hash_id: &str,
+        operation: HashOperation,
+        user_id: &str,
+        success: bool,
+    ) {
+        let timestamp = std::time::SystemTime::now()
+            .duration_since(std::time::UNIX_EPOCH)
+            .unwrap_or_default()
+            .as_secs();
+        let entry = HashAuditEntry {
+            entry_id: format!("hash_{}_{}", timestamp, self.entries.len()),
+            timestamp,
+            hash_id: hash_id.to_string(),
+            operation,
+            user_id: user_id.to_string(),
+            ip_address: String::new(),
+            success,
+        };
+        self.entries.push(entry);
+        let cutoff = timestamp.saturating_sub((self.retention_policy.retention_days as u64) * 86400);
+        self.entries.retain(|e| e.timestamp >= cutoff);
+    }
+
+    /// Number of logged entries.
+    pub fn entry_count(&self) -> usize {
+        self.entries.len()
+    }
+
+    /// Iterate over entries.
+    pub fn entries(&self) -> &[HashAuditEntry] {
+        &self.entries
     }
 }
 
@@ -3954,6 +4187,14 @@ impl ProofEngine {
         // Store proof
         self.proof_storage.store_proof(proof.clone())?;
 
+        // Audit log the proof generation
+        self.proof_storage.audit_log.log_entry(
+            &proof.proof_id,
+            ProofOperation::Generate,
+            "system",
+            true,
+        );
+
         Ok(proof)
     }
 
@@ -3989,6 +4230,14 @@ impl ProofEngine {
 
         self.proof_storage
             .store_verification_record(verification_record)?;
+
+        // Audit log the proof verification
+        self.proof_storage.audit_log.log_entry(
+            &proof.proof_id,
+            ProofOperation::Verify,
+            "system",
+            is_valid,
+        );
 
         Ok(is_valid)
     }
@@ -4242,6 +4491,42 @@ impl ProofAuditLog {
                 archive_before_delete: true,
             },
         }
+    }
+
+    /// Record a proof operation (generate, verify, revoke, update).
+    pub fn log_entry(
+        &mut self,
+        proof_id: &str,
+        operation: ProofOperation,
+        user_id: &str,
+        success: bool,
+    ) {
+        let timestamp = std::time::SystemTime::now()
+            .duration_since(std::time::UNIX_EPOCH)
+            .unwrap_or_default()
+            .as_secs();
+        let entry = ProofAuditEntry {
+            entry_id: format!("proof_{}_{}", timestamp, self.entries.len()),
+            timestamp,
+            proof_id: proof_id.to_string(),
+            operation,
+            user_id: user_id.to_string(),
+            ip_address: String::new(),
+            success,
+        };
+        self.entries.push(entry);
+        let cutoff = timestamp.saturating_sub((self.retention_policy.retention_days as u64) * 86400);
+        self.entries.retain(|e| e.timestamp >= cutoff);
+    }
+
+    /// Number of logged entries.
+    pub fn entry_count(&self) -> usize {
+        self.entries.len()
+    }
+
+    /// Iterate over entries.
+    pub fn entries(&self) -> &[ProofAuditEntry] {
+        &self.entries
     }
 }
 
@@ -5111,5 +5396,108 @@ mod tests {
 
         assert!(is_valid.result);
         assert!(!proof.result.fragment_quins.is_empty());
+    }
+
+    #[test]
+    fn test_audit_log_records_signature_operations() {
+        let mut library = CryptographicLibrary::new();
+        library.initialize().unwrap();
+
+        // Generate key pair
+        library
+            .generate_mldsa_key_pair("audit_key".to_string(), SecurityLevel::High)
+            .unwrap();
+
+        // Sign data — should create one Sign audit entry
+        let data = b"audited data";
+        let signature = library.sign_data("audit_key_private", data).unwrap();
+
+        // Verify signature — should create one Verify audit entry
+        let _is_valid = library
+            .verify_signature("audit_key_public", &signature.result, data)
+            .unwrap();
+
+        // Check that the signature audit log has recorded both operations
+        let audit = &library.signature_engine.signature_storage.audit_log;
+        assert!(audit.entry_count() >= 2, "audit log should have at least 2 entries (sign + verify)");
+        let entries = audit.entries();
+        assert!(entries.iter().any(|e| e.operation == SignatureOperation::Sign), "should have a Sign entry");
+        assert!(entries.iter().any(|e| e.operation == SignatureOperation::Verify), "should have a Verify entry");
+        // All entries should reference the correct signature_id
+        assert!(entries.iter().all(|e| e.signature_id == signature.result.signature_id), "entries should reference the correct signature_id");
+    }
+
+    #[test]
+    fn test_audit_log_records_hash_operations() {
+        let mut library = CryptographicLibrary::new();
+        library.initialize().unwrap();
+
+        // Compute a hash — should create one Compute audit entry
+        let _hash = library.compute_hash(b"test data").unwrap();
+
+        let audit = &library.hash_engine.hash_storage.audit_log;
+        assert!(audit.entry_count() >= 1, "audit log should have at least 1 entry");
+        assert!(
+            audit.entries().iter().any(|e| e.operation == HashOperation::Compute),
+            "should have a Compute entry"
+        );
+    }
+
+    #[test]
+    fn test_key_relationship_tracking() {
+        let mut library = CryptographicLibrary::new();
+        library.initialize().unwrap();
+
+        // Generate a key pair — should create a KeyPair relationship
+        let key_pair = library
+            .generate_mldsa_key_pair("rel_key".to_string(), SecurityLevel::High)
+            .unwrap();
+
+        let catalog = &library.key_manager.key_storage.key_catalog;
+
+        // The catalog should have registered both keys
+        assert!(catalog.key_count() >= 2, "catalog should have at least 2 keys registered");
+
+        // The KeyPair relationship should exist from private → public
+        let rels = catalog.get_relationships(&key_pair.result.0.key_id);
+        assert!(
+            rels.iter().any(|r| r.relationship_type == KeyRelationshipType::KeyPair),
+            "should have a KeyPair relationship from private to public key"
+        );
+
+        // find_related should locate the public key
+        let related = catalog.find_related(
+            &key_pair.result.0.key_id,
+            KeyRelationshipType::KeyPair,
+        );
+        assert!(related.is_some(), "find_related should find the KeyPair relationship");
+        assert_eq!(
+            related.unwrap().target_key,
+            key_pair.result.1.key_id,
+            "KeyPair relationship should point to the public key"
+        );
+    }
+
+    #[test]
+    fn test_key_rotation_tracking() {
+        let mut library = CryptographicLibrary::new();
+        library.initialize().unwrap();
+
+        // Generate initial key
+        let _key_pair = library
+            .generate_mldsa_key_pair("rot_key".to_string(), SecurityLevel::High)
+            .unwrap();
+
+        // Rotate key — should create a RotatedFrom relationship
+        let new_key = library.rotate_key("rot_key_private").unwrap();
+
+        let catalog = &library.key_manager.key_storage.key_catalog;
+        let rels = catalog.get_relationships(&new_key.result.key_id);
+        assert!(
+            rels.iter().any(|r| r.relationship_type == KeyRelationshipType::RotatedFrom),
+            "should have a RotatedFrom relationship from new key to old key"
+        );
+
+        assert!(catalog.relationship_count() >= 2, "should have at least 2 relationships (KeyPair + RotatedFrom)");
     }
 }
