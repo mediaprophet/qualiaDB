@@ -272,6 +272,9 @@ pub enum ModelRelationshipType {
 pub struct ModelSearchIndex {
     index_entries: HashMap<String, ModelIndexEntry>,
     search_engine: ModelSearchEngine,
+    /// Whether `initialize()` has actually configured the index (the search methods are
+    /// only valid once this is `true`).
+    initialized: bool,
 }
 
 /// Model index entry
@@ -1723,6 +1726,25 @@ pub struct TrainingConfig {
     pub validation_split: f64,
 }
 
+/// Result of a completed training run.
+///
+/// Captures the loss before and after training, how many epochs actually ran, whether the
+/// loop converged early, and the wall-clock training time. This is the honest record of
+/// what the SGD loop did (not a stub).
+#[derive(Debug, Clone)]
+pub struct TrainingResult {
+    /// Mean squared error measured on the full dataset before the first weight update.
+    pub initial_loss: f64,
+    /// Mean squared error measured on the full dataset after the final epoch.
+    pub final_loss: f64,
+    /// Number of epochs actually executed (may be less than `config.epochs` if converged).
+    pub epochs_completed: usize,
+    /// True if the loss plateaued below the convergence threshold before all epochs ran.
+    pub convergence_achieved: bool,
+    /// Wall-clock training time in milliseconds.
+    pub training_time_ms: u64,
+}
+
 /// Training status
 #[derive(Debug, Clone, PartialEq, Serialize, Deserialize)]
 pub enum TrainingStatus {
@@ -1853,7 +1875,7 @@ impl MachineLearningLibrary {
         };
 
         // Start training
-        self.training_engine.start_training(&job)?;
+        self.training_engine.start_training_job(&job)?;
 
         let execution_time = start_time.elapsed().as_millis() as u64;
 
@@ -2187,6 +2209,103 @@ impl ModelCatalog {
         self.search_index.initialize()?;
         Ok(())
     }
+
+    /// Register a model in the catalog and add it to the search index.
+    ///
+    /// The model's id becomes both the catalog key and the index entry id. The model type
+    /// and framework are added as keywords so the model is searchable by those terms, and
+    /// the architecture's total parameter count is recorded in the index entry metadata.
+    pub fn register_model(&mut self, model_id: &str, metadata: ModelMetadata) {
+        // Build a search-index entry from the metadata before inserting it.
+        let entry = ModelIndexEntry {
+            entry_id: model_id.to_string(),
+            keywords: vec![
+                model_id.to_string(),
+                format!("{:?}", metadata.model_type),
+                format!("{:?}", metadata.framework),
+            ],
+            metadata: {
+                let mut m = HashMap::new();
+                m.insert("model_type".to_string(), format!("{:?}", metadata.model_type));
+                m.insert("framework".to_string(), format!("{:?}", metadata.framework));
+                m.insert(
+                    "total_parameters".to_string(),
+                    metadata.architecture.total_parameters.to_string(),
+                );
+                m
+            },
+            relevance_score: 1.0,
+        };
+        self.search_index.index(entry);
+        self.models.insert(model_id.to_string(), metadata);
+    }
+
+    /// Add a tag to a model for searchability.
+    ///
+    /// Tags are stored both in the catalog's `tags` map (tag → model ids) and as a keyword
+    /// on the model's search-index entry, so a single `search()` call covers both paths.
+    pub fn add_tag(&mut self, model_id: &str, tag: &str) {
+        let tag_lower = tag.to_lowercase();
+        self.tags
+            .entry(tag_lower.clone())
+            .or_default()
+            .push(model_id.to_string());
+
+        // Mirror the tag into the index entry's keywords so keyword search finds it too.
+        if let Some(entry) = self.search_index.index_entries.get_mut(model_id) {
+            if !entry.keywords.iter().any(|k| k == &tag_lower) {
+                entry.keywords.push(tag_lower);
+            }
+        }
+    }
+
+    /// Search models by name, tags, or keywords (case-insensitive substring match).
+    ///
+    /// Returns matching model ids. A model matches if the query (lower-cased) is a substring
+    /// of its id, any of its tags, or any keyword/metadata value on its index entry.
+    pub fn search(&self, query: &str) -> Vec<String> {
+        let q = query.to_lowercase();
+        if q.is_empty() {
+            return Vec::new();
+        }
+
+        let mut matches = Vec::new();
+
+        // 1. Match by model id.
+        for model_id in self.models.keys() {
+            if model_id.to_lowercase().contains(&q) {
+                matches.push(model_id.clone());
+            }
+        }
+
+        // 2. Match by tag.
+        for (tag, model_ids) in &self.tags {
+            if tag.contains(&q) {
+                for id in model_ids {
+                    if !matches.contains(id) {
+                        matches.push(id.clone());
+                    }
+                }
+            }
+        }
+
+        // 3. Match by index entry keywords / metadata.
+        for entry in self.search_index.search(&q) {
+            if !matches.contains(&entry.entry_id) {
+                matches.push(entry.entry_id.clone());
+            }
+        }
+
+        matches
+    }
+
+    /// Find all models that carry a given tag (case-insensitive).
+    pub fn get_by_tag(&self, tag: &str) -> Vec<String> {
+        self.tags
+            .get(&tag.to_lowercase())
+            .cloned()
+            .unwrap_or_default()
+    }
 }
 
 impl ModelSearchIndex {
@@ -2194,11 +2313,44 @@ impl ModelSearchIndex {
         Self {
             index_entries: HashMap::new(),
             search_engine: ModelSearchEngine::new(),
+            initialized: false,
         }
     }
 
+    /// Actually initialize the search index: configure the engine for hybrid keyword
+    /// search and mark the index as ready. Search calls before this return empty results.
     pub fn initialize(&mut self) -> Result<(), MLError> {
+        // Configure a keyword/hybrid strategy suited to the catalog's text-based entries
+        // (the default is a Semantic/Vector engine, which has no embedding backend here).
+        self.search_engine.engine_type = SearchEngineType::Hybrid;
+        self.search_engine.indexing_strategy = IndexingStrategy::Text;
+        self.initialized = true;
         Ok(())
+    }
+
+    /// Add an entry to the search index. Replaces any existing entry with the same id.
+    pub fn index(&mut self, entry: ModelIndexEntry) {
+        self.index_entries.insert(entry.entry_id.clone(), entry);
+    }
+
+    /// Keyword search across index entries (case-insensitive substring match on the
+    /// entry id, keywords, and metadata values). Returns references to matching entries.
+    pub fn search(&self, query: &str) -> Vec<&ModelIndexEntry> {
+        if !self.initialized || query.is_empty() {
+            return Vec::new();
+        }
+        let q = query.to_lowercase();
+        self.index_entries
+            .values()
+            .filter(|entry| {
+                entry.entry_id.to_lowercase().contains(&q)
+                    || entry.keywords.iter().any(|k| k.to_lowercase().contains(&q))
+                    || entry
+                        .metadata
+                        .values()
+                        .any(|v| v.to_lowercase().contains(&q))
+            })
+            .collect()
     }
 }
 
@@ -3296,10 +3448,292 @@ impl TrainingEngine {
         Ok(())
     }
 
-    pub fn start_training(&mut self, job: &TrainingJob) -> Result<(), MLError> {
+    /// Start a training *job* (the catalog/scheduler path). This records the job with the
+    /// scheduler but performs no weight updates; use [`start_training`] for the real SGD
+    /// loop that mutates a model's weights.
+    pub fn start_training_job(&mut self, job: &TrainingJob) -> Result<(), MLError> {
         // Start training job
         Ok(())
     }
+
+    /// Run a real stochastic gradient descent (SGD) training loop on a linear model.
+    ///
+    /// This implements basic batch SGD for a single `Linear` layer with no activation
+    /// (i.e. linear regression). For each epoch the samples are deterministically shuffled
+    /// (a fixed-seed Fisher–Yates, so runs are reproducible), then processed in batches:
+    /// a forward pass computes predictions, the MSE loss and its gradients are computed,
+    /// and the weights are updated as `W -= learning_rate * gradient`.
+    ///
+    /// `training_data` is a flat buffer of inputs laid out as
+    /// `[s0_i0, s0_i1, ..., s1_i0, ...]` with `input_size = architecture.layers[0].input_shape[0]`.
+    /// `targets` is laid out as `[s0_o0, s0_o1, ..., s1_o0, ...]` with
+    /// `output_size = architecture.layers[0].output_shape[0]`.
+    ///
+    /// Only `TrainingAlgorithm::SGD` is implemented here; other optimizers return a clear
+    /// error rather than silently degrading. Only a single `Linear` layer with no
+    /// activation is supported (the explicit scope of this training backend).
+    pub fn start_training(
+        &mut self,
+        model: &mut Model,
+        training_data: &[f64],
+        targets: &[f64],
+        config: &TrainingConfig,
+    ) -> Result<TrainingResult, MLError> {
+        // --- Validate the optimizer. ---
+        if config.optimizer != TrainingAlgorithm::SGD {
+            return Err(MLError::TrainingError(format!(
+                "start_training currently implements SGD only; {:?} is not yet supported \
+                 by this training backend",
+                config.optimizer
+            )));
+        }
+
+        // --- Validate the model architecture: exactly one Linear layer, no activation. ---
+        let layers = &model.architecture.layers;
+        if layers.len() != 1 {
+            return Err(MLError::TrainingError(format!(
+                "start_training (SGD) supports a single Linear layer; this model has {} \
+                 layers",
+                layers.len()
+            )));
+        }
+        let layer = &layers[0];
+        if layer.layer_type != LayerType::Linear {
+            return Err(MLError::TrainingError(format!(
+                "start_training (SGD) supports only Linear layers; layer '{}' is {:?}",
+                layer.layer_id, layer.layer_type
+            )));
+        }
+        if layer.activation.is_some() {
+            return Err(MLError::TrainingError(format!(
+                "start_training (SGD) implements linear regression (no activation); layer \
+                 '{}' has an activation function set",
+                layer.layer_id
+            )));
+        }
+        let in_size = layer
+            .input_shape
+            .first()
+            .copied()
+            .ok_or_else(|| MLError::TrainingError("layer missing input dimension".into()))?;
+        let out_size = layer
+            .output_shape
+            .first()
+            .copied()
+            .ok_or_else(|| MLError::TrainingError("layer missing output dimension".into()))?;
+
+        let weight_count = in_size * out_size;
+        let bias_count = out_size;
+        let needed = weight_count + bias_count;
+        if model.weights.len() < needed {
+            return Err(MLError::TrainingError(format!(
+                "model has {} weights but the linear layer needs {} ({} weights + {} bias)",
+                model.weights.len(),
+                needed,
+                weight_count,
+                bias_count
+            )));
+        }
+
+        // --- Validate the data shapes. ---
+        if in_size == 0 {
+            return Err(MLError::TrainingError("input dimension is zero".into()));
+        }
+        if training_data.len() % in_size != 0 {
+            return Err(MLError::DataError(format!(
+                "training_data length ({}) is not a multiple of input_size ({})",
+                training_data.len(),
+                in_size
+            )));
+        }
+        let n_samples = training_data.len() / in_size;
+        if n_samples == 0 {
+            return Err(MLError::DataError("no training samples".into()));
+        }
+        if targets.len() != n_samples * out_size {
+            return Err(MLError::DataError(format!(
+                "targets length ({}) does not match n_samples ({}) * output_size ({})",
+                targets.len(),
+                n_samples,
+                out_size
+            )));
+        }
+        if config.batch_size == 0 {
+            return Err(MLError::TrainingError("batch_size must be > 0".into()));
+        }
+
+        let start = std::time::Instant::now();
+
+        // --- Initial loss (before any weight update). ---
+        let initial_loss = Self::full_dataset_mse(&model.weights, training_data, targets, in_size, out_size);
+
+        let mut last_loss = initial_loss;
+        let mut epochs_completed: usize = 0;
+        let mut convergence_achieved = false;
+
+        const CONVERGENCE_THRESHOLD: f64 = 1e-9;
+
+        for epoch in 0..config.epochs {
+            // Deterministic shuffle of sample indices (fixed seed → reproducible runs).
+            let order = deterministic_shuffle(n_samples, epoch as u64);
+
+            let batch_size = config.batch_size.min(n_samples);
+            for chunk in order.chunks(batch_size) {
+                // Accumulate batch gradients over the samples in this batch.
+                let mut grad = vec![0.0f64; needed];
+                let b = chunk.len() as f64;
+                for &s in chunk {
+                    let x = &training_data[s * in_size..s * in_size + in_size];
+                    let t = &targets[s * out_size..s * out_size + out_size];
+                    // Forward pass for this sample.
+                    let pred = forward_linear(&model.weights, x, in_size, out_size);
+                    // Per-sample gradient contribution: dL/dW and dL/db for MSE.
+                    // L_s = sum_j (pred_j - t_j)^2 ; averaged over batch and outputs below.
+                    for j in 0..out_size {
+                        let diff = pred[j] - t[j];
+                        // dL_s/dW[j*in+i] = 2 * diff * x[i]
+                        for i in 0..in_size {
+                            grad[j * in_size + i] += 2.0 * diff * x[i];
+                        }
+                        // dL_s/db[j] = 2 * diff
+                        grad[weight_count + j] += 2.0 * diff;
+                    }
+                }
+
+                // Average over (batch_size * out_size) and apply the learning rate.
+                let scale = config.learning_rate / (b * out_size as f64);
+                for k in 0..needed {
+                    model.weights[k] -= scale * grad[k];
+                }
+            }
+
+            epochs_completed = (epoch + 1) as usize;
+            let loss = Self::full_dataset_mse(&model.weights, training_data, targets, in_size, out_size);
+            if (last_loss - loss).abs() < CONVERGENCE_THRESHOLD {
+                convergence_achieved = true;
+                last_loss = loss;
+                break;
+            }
+            last_loss = loss;
+        }
+
+        let training_time_ms = start.elapsed().as_millis() as u64;
+
+        Ok(TrainingResult {
+            initial_loss,
+            final_loss: last_loss,
+            epochs_completed,
+            convergence_achieved,
+            training_time_ms,
+        })
+    }
+
+    /// Mean squared error between predictions and targets: `(1/N) * sum (p - t)^2`.
+    pub fn compute_mse(predictions: &[f64], targets: &[f64]) -> f64 {
+        if predictions.is_empty() || predictions.len() != targets.len() {
+            return 0.0;
+        }
+        let n = predictions.len() as f64;
+        let sum: f64 = predictions
+            .iter()
+            .zip(targets.iter())
+            .map(|(p, t)| {
+                let d = p - t;
+                d * d
+            })
+            .sum();
+        sum / n
+    }
+
+    /// Compute the MSE gradient (scaled by `learning_rate`) for a single linear sample.
+    ///
+    /// For a linear model `y = W·x + b` with `weights = [W (out×in), b (out)]`, the MSE
+    /// loss for one sample is `L = sum_j (pred_j - target_j)^2`. The returned vector has
+    /// the same layout as `weights` and contains `learning_rate * dL/dweight`, i.e. the
+    /// amount to *subtract* from each weight. (For a single-output model `pred` and
+    /// `target` are scalars and `inputs` is the input vector.)
+    pub fn compute_gradients(
+        weights: &[f64],
+        inputs: &[f64],
+        prediction: f64,
+        target: f64,
+        learning_rate: f64,
+    ) -> Vec<f64> {
+        // Infer the layout: weights = [W (out×in), b (out)].
+        // weights.len() = out_size * in_size + out_size = out_size * (in_size + 1)
+        //  =>  out_size = weights.len() / (in_size + 1)
+        let in_size = inputs.len();
+        if in_size == 0 {
+            return Vec::new();
+        }
+        let out_size = if weights.len() >= in_size + 1 {
+            weights.len() / (in_size + 1)
+        } else {
+            1
+        };
+        let weight_count = in_size * out_size;
+        let diff = prediction - target;
+        let mut grad = vec![0.0f64; weights.len()];
+        for j in 0..out_size {
+            // For the single-output case the prediction/target are the scalar values.
+            let d = if out_size == 1 { diff } else { diff };
+            for i in 0..in_size {
+                grad[j * in_size + i] = learning_rate * 2.0 * d * inputs[i];
+            }
+            grad[weight_count + j] = learning_rate * 2.0 * d;
+        }
+        grad
+    }
+
+    /// MSE over the full dataset using the model's current weights (helper for the loop).
+    fn full_dataset_mse(
+        weights: &[f64],
+        training_data: &[f64],
+        targets: &[f64],
+        in_size: usize,
+        out_size: usize,
+    ) -> f64 {
+        let n_samples = training_data.len() / in_size;
+        let mut preds = Vec::with_capacity(n_samples * out_size);
+        for s in 0..n_samples {
+            let x = &training_data[s * in_size..s * in_size + in_size];
+            let pred = forward_linear(weights, x, in_size, out_size);
+            preds.extend_from_slice(&pred);
+        }
+        Self::compute_mse(&preds, targets)
+    }
+}
+
+/// Forward pass for a single `Linear` layer (no activation): `out = W·x + b`.
+/// `weights` = `[W (out×in, row-major), b (out)]`.
+fn forward_linear(weights: &[f64], x: &[f64], in_size: usize, out_size: usize) -> Vec<f64> {
+    let weight_count = in_size * out_size;
+    let mut out = vec![0.0f64; out_size];
+    for j in 0..out_size {
+        let mut acc = 0.0;
+        for i in 0..in_size {
+            acc += weights[j * in_size + i] * x[i];
+        }
+        acc += weights[weight_count + j];
+        out[j] = acc;
+    }
+    out
+}
+
+/// Deterministic Fisher–Yates shuffle of `0..n` seeded by `seed`.
+///
+/// Uses a simple multiplicative LCG (Knuth constants) so that the same `(n, seed)` always
+/// produces the same permutation — training runs are reproducible without depending on a
+/// crate-level RNG.
+fn deterministic_shuffle(n: usize, seed: u64) -> Vec<usize> {
+    let mut order: Vec<usize> = (0..n).collect();
+    let mut state = seed.wrapping_add(0x9E3779B97F4A7C15);
+    for i in (1..n).rev() {
+        state = state.wrapping_mul(6364136223846793005).wrapping_add(1442695040888963407);
+        let j = (state >> 33) as usize % (i + 1);
+        order.swap(i, j);
+    }
+    order
 }
 
 impl TrainingBackend {
@@ -4333,5 +4767,286 @@ mod tests {
                 "fallback mock model should have 1000 weights"
             );
         }
+    }
+
+    // ------------------------------------------------------------------
+    // Feature 1: ModelCatalog search index
+    // ------------------------------------------------------------------
+
+    #[test]
+    fn test_model_catalog_register_search_by_tag() {
+        let mut catalog = ModelCatalog::new();
+        catalog.initialize().unwrap();
+
+        // Register two models with distinct metadata.
+        let mut meta_a = ModelMetadata::new();
+        meta_a.model_id = "vision-resnet".to_string();
+        meta_a.model_type = ModelType::CNN;
+        let mut meta_b = ModelMetadata::new();
+        meta_b.model_id = "llm-bert".to_string();
+        meta_b.model_type = ModelType::LLM;
+
+        catalog.register_model("vision-resnet", meta_a);
+        catalog.register_model("llm-bert", meta_b);
+
+        // Tag them.
+        catalog.add_tag("vision-resnet", "vision");
+        catalog.add_tag("vision-resnet", "classification");
+        catalog.add_tag("llm-bert", "nlp");
+        catalog.add_tag("llm-bert", "classification");
+
+        // get_by_tag returns the right model ids (case-insensitive).
+        let vision = catalog.get_by_tag("Vision");
+        assert_eq!(vision, vec!["vision-resnet".to_string()]);
+        let nlp = catalog.get_by_tag("NLP");
+        assert_eq!(nlp, vec!["llm-bert".to_string()]);
+
+        // Both models share the "classification" tag.
+        let mut cls = catalog.get_by_tag("classification");
+        cls.sort();
+        assert_eq!(
+            cls,
+            vec!["llm-bert".to_string(), "vision-resnet".to_string()]
+        );
+
+        // Unknown tag → empty.
+        assert!(catalog.get_by_tag("nonexistent").is_empty());
+    }
+
+    #[test]
+    fn test_model_catalog_search_by_keyword_and_name() {
+        let mut catalog = ModelCatalog::new();
+        catalog.initialize().unwrap();
+
+        let mut meta = ModelMetadata::new();
+        meta.model_id = "audio-transformer".to_string();
+        meta.model_type = ModelType::Transformer;
+        catalog.register_model("audio-transformer", meta);
+        catalog.add_tag("audio-transformer", "speech");
+
+        // Search by a substring of the model id.
+        let by_name = catalog.search("audio");
+        assert_eq!(by_name, vec!["audio-transformer".to_string()]);
+
+        // Search by tag keyword.
+        let by_tag = catalog.search("speech");
+        assert_eq!(by_tag, vec!["audio-transformer".to_string()]);
+
+        // Search by the model type keyword that register_model adds to the index.
+        let by_type = catalog.search("Transformer");
+        assert_eq!(by_type, vec!["audio-transformer".to_string()]);
+
+        // A query that matches nothing returns empty.
+        assert!(catalog.search("zzz-no-match").is_empty());
+
+        // Empty query returns empty (no spurious matches).
+        assert!(catalog.search("").is_empty());
+    }
+
+    #[test]
+    fn test_model_search_index_initialize_and_search() {
+        let mut index = ModelSearchIndex::new();
+        // Before initialize, search returns nothing even with a matching entry.
+        index.index(ModelIndexEntry {
+            entry_id: "m1".to_string(),
+            keywords: vec!["alpha".to_string()],
+            metadata: HashMap::new(),
+            relevance_score: 1.0,
+        });
+        assert!(index.search("alpha").is_empty(), "search before initialize must be empty");
+
+        index.initialize().unwrap();
+        let hits = index.search("alpha");
+        assert_eq!(hits.len(), 1);
+        assert_eq!(hits[0].entry_id, "m1");
+
+        // Metadata values are also searchable.
+        let mut md = HashMap::new();
+        md.insert("framework".to_string(), "PyTorch".to_string());
+        index.index(ModelIndexEntry {
+            entry_id: "m2".to_string(),
+            keywords: vec![],
+            metadata: md,
+            relevance_score: 0.5,
+        });
+        let hits2 = index.search("pytorch");
+        assert_eq!(hits2.len(), 1);
+        assert_eq!(hits2[0].entry_id, "m2");
+    }
+
+    // ------------------------------------------------------------------
+    // Feature 2: SGD training loop
+    // ------------------------------------------------------------------
+
+    #[test]
+    fn test_compute_mse() {
+        let preds = [1.0, 2.0, 3.0];
+        let targets = [1.0, 2.0, 3.0];
+        assert!((TrainingEngine::compute_mse(&preds, &targets) - 0.0).abs() < 1e-12);
+
+        let preds = [2.0, 4.0];
+        let targets = [1.0, 1.0];
+        // MSE = ((2-1)^2 + (4-1)^2) / 2 = (1 + 9)/2 = 5.0
+        assert!((TrainingEngine::compute_mse(&preds, &targets) - 5.0).abs() < 1e-12);
+
+        // Mismatched lengths → 0.0 (defined behaviour).
+        assert_eq!(TrainingEngine::compute_mse(&[1.0], &[1.0, 2.0]), 0.0);
+    }
+
+    #[test]
+    fn test_compute_gradients_linear() {
+        // y = w*x + b, weights = [w, b] = [3.0, -1.0], x = [2.0], pred = 3*2 - 1 = 5, target = 1.
+        // diff = 4 ; dL/dw = 2*4*2 = 16 ; dL/db = 2*4 = 8 ; lr = 0.1
+        // returned (scaled) = [0.1*16, 0.1*8] = [1.6, 0.8]
+        let weights = [3.0, -1.0];
+        let inputs = [2.0];
+        let grad = TrainingEngine::compute_gradients(&weights, &inputs, 5.0, 1.0, 0.1);
+        assert_eq!(grad.len(), 2);
+        assert!((grad[0] - 1.6).abs() < 1e-12, "grad[0] = {}", grad[0]);
+        assert!((grad[1] - 0.8).abs() < 1e-12, "grad[1] = {}", grad[1]);
+    }
+
+    #[test]
+    fn test_sgd_training_learns_linear_function() {
+        // Build a 1->1 linear model with no activation: y = w*x + b.
+        // weights = [w, b], initialised to zero.
+        let mut model = Model {
+            model_id: "linreg".to_string(),
+            model_type: ModelType::RNN, // arbitrary; not used by the trainer
+            framework: MLFramework::Custom("test".to_string()),
+            architecture: ModelArchitecture {
+                layers: vec![LayerInfo {
+                    layer_id: "l1".to_string(),
+                    layer_type: LayerType::Linear,
+                    input_shape: vec![1],
+                    output_shape: vec![1],
+                    parameters: 2, // 1 weight + 1 bias
+                    activation: None,
+                }],
+                connections: vec![],
+                input_shape: vec![1],
+                output_shape: vec![1],
+                total_parameters: 2,
+            },
+            weights: vec![0.0, 0.0],
+            metadata: ModelMetadata::new(),
+        };
+
+        // Training data from y = 2x + 1 over x in [-2, 2].
+        let xs: Vec<f64> = (-20..=20).map(|i| i as f64 * 0.2).collect();
+        let training_data: Vec<f64> = xs.clone();
+        let targets: Vec<f64> = xs.iter().map(|x| 2.0 * x + 1.0).collect();
+
+        let config = TrainingConfig {
+            epochs: 500,
+            batch_size: 8,
+            learning_rate: 0.05,
+            optimizer: TrainingAlgorithm::SGD,
+            loss_function: "mse".to_string(),
+            metrics: vec!["loss".to_string()],
+            validation_split: 0.0,
+        };
+
+        let mut engine = TrainingEngine::new();
+        let result = engine
+            .start_training(&mut model, &training_data, &targets, &config)
+            .expect("SGD training should succeed");
+
+        // Loss must drop dramatically.
+        assert!(
+            result.final_loss < result.initial_loss,
+            "final loss ({}) should be less than initial loss ({})",
+            result.final_loss,
+            result.initial_loss
+        );
+        assert!(
+            result.final_loss < 1e-3,
+            "final loss ({}) should be near zero for a perfectly linear dataset",
+            result.final_loss
+        );
+        // The loop may converge early (loss plateau) before all epochs run; both outcomes
+        // are valid, so only bound the completed count.
+        assert!(
+            result.epochs_completed <= config.epochs as usize,
+            "epochs_completed ({}) must not exceed configured epochs ({})",
+            result.epochs_completed,
+            config.epochs
+        );
+
+        // Learned weights should be close to the true [w=2, b=1].
+        let w = model.weights[0];
+        let b = model.weights[1];
+        assert!(
+            (w - 2.0).abs() < 0.05,
+            "learned weight w = {} should be ~2.0",
+            w
+        );
+        assert!(
+            (b - 1.0).abs() < 0.05,
+            "learned bias b = {} should be ~1.0",
+            b
+        );
+    }
+
+    #[test]
+    fn test_sgd_training_rejects_unsupported_config() {
+        // A non-SGD optimizer must be rejected, not silently ignored.
+        let mut model = Model::new();
+        let config = TrainingConfig {
+            epochs: 1,
+            batch_size: 1,
+            learning_rate: 0.01,
+            optimizer: TrainingAlgorithm::Adam,
+            loss_function: "mse".to_string(),
+            metrics: vec![],
+            validation_split: 0.0,
+        };
+        let mut engine = TrainingEngine::new();
+        let err = engine
+            .start_training(&mut model, &[1.0], &[1.0], &config)
+            .expect_err("Adam must be rejected by the SGD-only trainer");
+        let msg = format!("{}", err);
+        assert!(msg.contains("SGD"), "error should name SGD: {}", msg);
+    }
+
+    #[test]
+    fn test_sgd_training_rejects_activation() {
+        // A Linear layer with an activation is out of scope for linear-regression SGD.
+        let mut model = Model {
+            model_id: "act".to_string(),
+            model_type: ModelType::LLM,
+            framework: MLFramework::PyTorch,
+            architecture: ModelArchitecture {
+                layers: vec![LayerInfo {
+                    layer_id: "l1".to_string(),
+                    layer_type: LayerType::Linear,
+                    input_shape: vec![1],
+                    output_shape: vec![1],
+                    parameters: 2,
+                    activation: Some(ActivationFunction::ReLU),
+                }],
+                connections: vec![],
+                input_shape: vec![1],
+                output_shape: vec![1],
+                total_parameters: 2,
+            },
+            weights: vec![0.0, 0.0],
+            metadata: ModelMetadata::new(),
+        };
+        let config = TrainingConfig {
+            epochs: 1,
+            batch_size: 1,
+            learning_rate: 0.01,
+            optimizer: TrainingAlgorithm::SGD,
+            loss_function: "mse".to_string(),
+            metrics: vec![],
+            validation_split: 0.0,
+        };
+        let mut engine = TrainingEngine::new();
+        let err = engine
+            .start_training(&mut model, &[1.0], &[1.0], &config)
+            .expect_err("activated layer must be rejected");
+        let msg = format!("{}", err);
+        assert!(msg.contains("activation"), "error should mention activation: {}", msg);
     }
 }
