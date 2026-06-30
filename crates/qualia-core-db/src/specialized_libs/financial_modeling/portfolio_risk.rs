@@ -26,9 +26,11 @@
 //! Honesty boundaries (never fabricated):
 //! - No usable price history (need ≥ 3 prices ⇒ ≥ 2 returns) ⇒ `InsufficientData`.
 //! - Misaligned histories (different lengths, no dates to align on) ⇒ `InsufficientData`.
-//! - **beta** and **alpha** are reported as `NaN` because they are defined only
-//!   relative to a benchmark return series, which the portfolio model does not
-//!   carry. `NaN` is an unmistakable "not computed", not a plausible fake value.
+//! - **beta** and **alpha** are reported as `NaN` when no benchmark return series
+//!   is supplied, because they are defined only relative to one. When a benchmark
+//!   series is supplied (via the optional `benchmark_returns` argument), beta is
+//!   `Cov(R_p, R_b)/Var(R_b)` and alpha is `mean(R_p) − beta·mean(R_b)`. `NaN` (in
+//!   the no-benchmark case) is an unmistakable "not computed", not a plausible fake.
 
 use super::{FinancialError, Portfolio, RiskMetrics};
 use crate::solvers::statistics::descriptive;
@@ -125,7 +127,18 @@ fn portfolio_returns(portfolio: &Portfolio) -> Result<Vec<f64>, FinancialError> 
 
 /// Compute the real risk metrics for `portfolio`. See the module docs for the
 /// definitions and the honesty boundaries.
-pub fn compute_risk_metrics(portfolio: &Portfolio) -> Result<RiskMetrics, FinancialError> {
+///
+/// `benchmark_returns`, when supplied, enables genuine beta/alpha:
+/// - `beta  = Cov(R_p, R_b) / Var(R_b)`
+/// - `alpha = mean(R_p) − beta · mean(R_b)`
+///
+/// The benchmark series must be the same length as the portfolio return series
+/// (i.e. one benchmark return per period). A length mismatch, or zero benchmark
+/// variance, leaves beta/alpha as `NaN` (undefined) rather than fabricating them.
+pub fn compute_risk_metrics(
+    portfolio: &Portfolio,
+    benchmark_returns: Option<&[f64]>,
+) -> Result<RiskMetrics, FinancialError> {
     let r = portfolio_returns(portfolio)?;
     let n = r.len();
 
@@ -182,21 +195,41 @@ pub fn compute_risk_metrics(portfolio: &Portfolio) -> Result<RiskMetrics, Financ
         }
     }
 
+    // Beta / alpha against an optional benchmark return series. Defined only
+    // when the benchmark is supplied, length-aligned to the portfolio returns,
+    // and has positive variance. Otherwise NaN (never a fabricated 1.0/0.0).
+    let (beta, alpha) = match benchmark_returns {
+        Some(br) if br.len() == n => {
+            let var_b = descriptive::variance(br, true).unwrap_or(0.0);
+            if var_b > 0.0 {
+                let cov = descriptive::covariance(&r, br, true).unwrap_or(0.0);
+                let b = cov / var_b;
+                let mean_b = descriptive::mean(br).unwrap_or(0.0);
+                let a = mean - b * mean_b;
+                (b, a)
+            } else {
+                (f64::NAN, f64::NAN)
+            }
+        }
+        _ => (f64::NAN, f64::NAN),
+    };
+
     Ok(RiskMetrics {
         portfolio_id: portfolio.portfolio_id.clone(),
         var_95,
         cvar_95,
         volatility,
-        // beta/alpha require a benchmark return series the model does not carry —
-        // NaN signals "not computed", never a fabricated 1.0/0.0.
-        beta: f64::NAN,
-        alpha: f64::NAN,
+        beta,
+        alpha,
         sharpe_ratio,
         sortino_ratio,
         max_drawdown,
         // Headline single-number risk: the 95% historical VaR (a real, defined
         // loss fraction), used as the operation's risk_score.
         overall_risk_score: var_95,
+        // Filled in by the caller (RiskAnalyzer) against the portfolio's declared
+        // risk profile; the raw computation has no opinion on tolerance fit.
+        risk_profile_assessment: None,
     })
 }
 
@@ -248,7 +281,7 @@ mod tests {
     fn single_asset_matches_hand_computation() {
         // prices 100→110→99→108.9 ⇒ returns 0.1, -0.1, 0.1.
         let p = portfolio(vec![asset("A", 1000.0, vec![100.0, 110.0, 99.0, 108.9])]);
-        let m = compute_risk_metrics(&p).unwrap();
+        let m = compute_risk_metrics(&p, None).unwrap();
 
         // mean = 0.1/3; sample stddev computed by hand below.
         assert!(
@@ -273,9 +306,9 @@ mod tests {
         // (real drawdown). A 50/50 value blend's drawdown must sit strictly between.
         let a = asset("A", 500.0, vec![100.0, 101.0, 102.0, 103.0]);
         let b = asset("B", 500.0, vec![100.0, 99.0, 98.0, 97.0]);
-        let blended = compute_risk_metrics(&portfolio(vec![a.clone(), b.clone()])).unwrap();
-        let only_a = compute_risk_metrics(&portfolio(vec![a])).unwrap();
-        let only_b = compute_risk_metrics(&portfolio(vec![b])).unwrap();
+        let blended = compute_risk_metrics(&portfolio(vec![a.clone(), b.clone()]), None).unwrap();
+        let only_a = compute_risk_metrics(&portfolio(vec![a]), None).unwrap();
+        let only_b = compute_risk_metrics(&portfolio(vec![b]), None).unwrap();
         assert!(
             only_a.max_drawdown < 1e-12,
             "rising asset should have no drawdown: {}",
@@ -298,7 +331,7 @@ mod tests {
     fn refuses_without_history() {
         let mut a = asset("A", 1000.0, Vec::new());
         a.price_history.clear();
-        let r = compute_risk_metrics(&portfolio(vec![a]));
+        let r = compute_risk_metrics(&portfolio(vec![a]), None);
         assert!(matches!(r, Err(FinancialError::InsufficientData(_))));
     }
 
@@ -306,14 +339,39 @@ mod tests {
     fn refuses_misaligned_histories() {
         let a = asset("A", 500.0, vec![100.0, 101.0, 102.0, 103.0]);
         let b = asset("B", 500.0, vec![100.0, 99.0]); // shorter
-        let r = compute_risk_metrics(&portfolio(vec![a, b]));
+        let r = compute_risk_metrics(&portfolio(vec![a, b]), None);
         assert!(matches!(r, Err(FinancialError::InsufficientData(_))));
     }
 
     #[test]
     fn refuses_too_short_history() {
         let a = asset("A", 1000.0, vec![100.0, 101.0]); // only 1 return
-        let r = compute_risk_metrics(&portfolio(vec![a]));
+        let r = compute_risk_metrics(&portfolio(vec![a]), None);
         assert!(matches!(r, Err(FinancialError::InsufficientData(_))));
+    }
+
+    #[test]
+    fn benchmark_supplies_real_beta_and_alpha() {
+        // Portfolio returns (from prices 100→110→99→108.9): 0.1, -0.1, 0.1.
+        let p = portfolio(vec![asset("A", 1000.0, vec![100.0, 110.0, 99.0, 108.9])]);
+        // Benchmark returns aligned to the same 3 periods — same sign pattern as
+        // the portfolio but half the magnitude ⇒ beta = 2.0, alpha ≈ 0.0.
+        let benchmark = [0.05, -0.05, 0.05];
+
+        let m = compute_risk_metrics(&p, Some(&benchmark)).unwrap();
+
+        // beta/alpha must now be real numbers, not NaN.
+        assert!(!m.beta.is_nan(), "beta should be computed with a benchmark");
+        assert!(!m.alpha.is_nan(), "alpha should be computed with a benchmark");
+        assert!((m.beta - 2.0).abs() < 1e-9, "beta {} should be 2.0", m.beta);
+        assert!(m.alpha.abs() < 1e-9, "alpha {} should be ~0.0", m.alpha);
+
+        // Mismatched benchmark length ⇒ beta/alpha stay NaN (no fabrication).
+        let m_mis = compute_risk_metrics(&p, Some(&[0.05, 0.05])).unwrap();
+        assert!(m_mis.beta.is_nan() && m_mis.alpha.is_nan());
+
+        // No benchmark ⇒ beta/alpha stay NaN (the honesty boundary).
+        let m_none = compute_risk_metrics(&p, None).unwrap();
+        assert!(m_none.beta.is_nan() && m_none.alpha.is_nan());
     }
 }

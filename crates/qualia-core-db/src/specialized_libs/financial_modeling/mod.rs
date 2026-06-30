@@ -236,7 +236,9 @@ pub enum AuthenticationMethod {
 
 /// Portfolio audit trail
 pub struct PortfolioAuditTrail {
-    audit_entries: Vec<AuditEntry>,
+    // Interior-mutable so that read-only operations (e.g. `PortfolioStorage::get_portfolio`,
+    // which borrows `&self`) can still append audit entries without widening the borrow.
+    audit_entries: Mutex<Vec<AuditEntry>>,
     retention_policy: RetentionPolicy,
 }
 
@@ -262,6 +264,8 @@ pub enum PortfolioAction {
     RemoveAsset,
     Rebalance,
     Trade,
+    /// Read / retrieve a portfolio (used by the audit trail for get operations).
+    Read,
 }
 
 /// Retention policy
@@ -1404,6 +1408,12 @@ pub struct RiskAnalyzer {
     risk_models: HashMap<String, RiskModel>,
     risk_metrics: HashMap<String, RiskMetric>,
     scenario_analyzer: ScenarioAnalyzer,
+    /// Registered benchmark return series used to compute real beta/alpha (see
+    /// `portfolio_risk::compute_risk_metrics`). Without an active benchmark,
+    /// beta/alpha are honestly reported as NaN rather than fabricated.
+    benchmark_comparator: BenchmarkComparator,
+    /// Name of the benchmark to use in `calculate_risk_metrics`, if any.
+    active_benchmark: Option<String>,
 }
 
 /// Pricing engine
@@ -2320,16 +2330,55 @@ impl PortfolioStorage {
     }
 
     pub fn store_portfolio(&mut self, portfolio: Portfolio) -> Result<(), FinancialError> {
-        self.portfolios
-            .insert(portfolio.portfolio_id.clone(), portfolio);
+        let pid = portfolio.portfolio_id.clone();
+        let owner = portfolio.owner_id.clone();
+        let is_update = self.portfolios.contains_key(&pid);
+        self.portfolios.insert(pid.clone(), portfolio);
+
+        // Record the mutation in the audit trail.
+        self.audit_trail.log_action(AuditEntry {
+            entry_id: format!("audit_store_{}_{}", pid, self.audit_trail.entry_count()),
+            timestamp: 0,
+            user_id: owner,
+            portfolio_id: pid.clone(),
+            action: if is_update {
+                PortfolioAction::Update
+            } else {
+                PortfolioAction::Create
+            },
+            details: if is_update {
+                format!("Updated portfolio {}", pid)
+            } else {
+                format!("Stored portfolio {}", pid)
+            },
+            ip_address: String::new(),
+        });
         Ok(())
     }
 
     pub fn get_portfolio(&self, portfolio_id: &str) -> Result<Portfolio, FinancialError> {
-        self.portfolios
+        let portfolio = self
+            .portfolios
             .get(portfolio_id)
             .cloned()
-            .ok_or_else(|| FinancialError::PortfolioError("Portfolio not found".to_string()))
+            .ok_or_else(|| FinancialError::PortfolioError("Portfolio not found".to_string()))?;
+
+        // Record the read access in the audit trail (shared borrow — relies on
+        // the audit trail's interior mutability).
+        self.audit_trail.log_action(AuditEntry {
+            entry_id: format!(
+                "audit_get_{}_{}",
+                portfolio_id,
+                self.audit_trail.entry_count()
+            ),
+            timestamp: 0,
+            user_id: portfolio.owner_id.clone(),
+            portfolio_id: portfolio_id.to_string(),
+            action: PortfolioAction::Read,
+            details: format!("Retrieved portfolio {}", portfolio_id),
+            ip_address: String::new(),
+        });
+        Ok(portfolio)
     }
 
     pub fn list_portfolios(&self) -> Vec<String> {
@@ -2345,14 +2394,61 @@ impl PortfolioAccessControl {
             audit_logging: true,
         }
     }
+
+    /// Register an access policy. The policy is keyed by its `policy_id` and
+    /// grants `user_id` the listed `permissions` over `portfolio_id`.
+    pub fn add_access_policy(&mut self, policy: AccessPolicy) {
+        self.access_policies.insert(policy.policy_id.clone(), policy);
+    }
+
+    /// Return `true` iff some registered policy grants `user_id` the
+    /// `required_permission` on `portfolio_id`. No matching policy ⇒ `false`
+    /// (deny by default — never a fabricated grant).
+    pub fn check_permission(
+        &self,
+        user_id: &str,
+        portfolio_id: &str,
+        required_permission: Permission,
+    ) -> bool {
+        self.access_policies.values().any(|policy| {
+            policy.user_id == user_id
+                && policy.portfolio_id == portfolio_id
+                && policy.permissions.contains(&required_permission)
+        })
+    }
 }
 
 impl PortfolioAuditTrail {
     pub fn new() -> Self {
         Self {
-            audit_entries: Vec::new(),
+            audit_entries: Mutex::new(Vec::new()),
             retention_policy: RetentionPolicy::new(),
         }
+    }
+
+    /// Append an audit entry. Takes `&self` (interior mutability) so callers that
+    /// only hold a shared borrow — notably `PortfolioStorage::get_portfolio` — can
+    /// still record access.
+    pub fn log_action(&self, entry: AuditEntry) {
+        if let Ok(mut entries) = self.audit_entries.lock() {
+            entries.push(entry);
+        }
+    }
+
+    /// Number of recorded audit entries.
+    pub fn entry_count(&self) -> usize {
+        self.audit_entries
+            .lock()
+            .map(|entries| entries.len())
+            .unwrap_or(0)
+    }
+
+    /// A snapshot (clone) of all recorded audit entries, oldest first.
+    pub fn entries(&self) -> Vec<AuditEntry> {
+        self.audit_entries
+            .lock()
+            .map(|entries| entries.clone())
+            .unwrap_or_default()
     }
 }
 
@@ -2679,6 +2775,25 @@ impl BenchmarkComparator {
             comparison_metrics: HashMap::new(),
         }
     }
+
+    /// Register a benchmark return series under `name`. Re-registering the same
+    /// name replaces the prior series.
+    pub fn add_benchmark(&mut self, name: &str, returns: Vec<f64>) {
+        self.benchmarks.insert(
+            name.to_string(),
+            Benchmark {
+                benchmark_id: name.to_string(),
+                benchmark_name: name.to_string(),
+                benchmark_type: BenchmarkType::Custom,
+                returns,
+            },
+        );
+    }
+
+    /// Borrow the return series registered under `name`, if present.
+    pub fn benchmark_returns(&self, name: &str) -> Option<&[f64]> {
+        self.benchmarks.get(name).map(|b| b.returns.as_slice())
+    }
 }
 
 impl AttributionAnalyzer {
@@ -2696,12 +2811,30 @@ impl RiskAnalyzer {
             risk_models: HashMap::new(),
             risk_metrics: HashMap::new(),
             scenario_analyzer: ScenarioAnalyzer::new(),
+            benchmark_comparator: BenchmarkComparator::new(),
+            active_benchmark: None,
         }
     }
 
     pub fn initialize(&mut self) -> Result<(), FinancialError> {
         self.scenario_analyzer.initialize()?;
         Ok(())
+    }
+
+    /// Register a benchmark return series by name. If no benchmark is currently
+    /// active, the newly registered one becomes active so that subsequent
+    /// `calculate_risk_metrics` calls produce real beta/alpha.
+    pub fn add_benchmark(&mut self, name: &str, returns: Vec<f64>) {
+        self.benchmark_comparator.add_benchmark(name, returns);
+        if self.active_benchmark.is_none() {
+            self.active_benchmark = Some(name.to_string());
+        }
+    }
+
+    /// Select which registered benchmark `calculate_risk_metrics` should use, or
+    /// `None` to compute beta/alpha-free (NaN) metrics.
+    pub fn set_active_benchmark(&mut self, name: Option<&str>) {
+        self.active_benchmark = name.map(|s| s.to_string());
     }
 
     pub fn calculate_risk_metrics(
@@ -2715,8 +2848,53 @@ impl RiskAnalyzer {
         // sample statistics — never the old fabricated defaults (Sharpe 0.75 etc).
         // When no return history is present, it still REFUSES with InsufficientData
         // (the metrics are undefined without returns); beta/alpha are reported NaN
-        // because they require a benchmark series the model does not carry.
-        portfolio_risk::compute_risk_metrics(portfolio)
+        // unless an active benchmark is registered, in which case they are
+        // Cov(R_p,R_b)/Var(R_b) and mean(R_p)−beta·mean(R_b).
+        let benchmark_returns = self
+            .active_benchmark
+            .as_deref()
+            .and_then(|name| self.benchmark_comparator.benchmark_returns(name));
+        let mut metrics = portfolio_risk::compute_risk_metrics(portfolio, benchmark_returns)?;
+
+        // Risk-profile validation: compare the computed volatility / 95% VaR
+        // against the portfolio's declared RiskTolerance. A mismatch yields a
+        // plain-language warning in `risk_profile_assessment` (never a fabricated
+        // "all clear" — `None` means within tolerance, not "unchecked").
+        metrics.risk_profile_assessment =
+            assess_risk_profile(&portfolio.risk_profile.risk_tolerance, &metrics);
+        Ok(metrics)
+    }
+}
+
+/// Compare computed risk metrics against a declared `RiskTolerance` and return a
+/// warning string when the portfolio is riskier than its profile permits. Returns
+/// `None` when the metrics fit the declared tolerance.
+fn assess_risk_profile(tolerance: &RiskTolerance, metrics: &RiskMetrics) -> Option<String> {
+    // Per-period volatility / VaR thresholds for each tolerance band. These are
+    // stated, conservative guards — a Conservative portfolio carrying >10%
+    // per-period volatility or >5% 95% VaR is flagged, etc.
+    let (max_vol, max_var): (f64, f64) = match tolerance {
+        RiskTolerance::Conservative => (0.10, 0.05),
+        RiskTolerance::Moderate => (0.20, 0.10),
+        RiskTolerance::Aggressive => (0.35, 0.18),
+        RiskTolerance::VeryAggressive => (f64::INFINITY, f64::INFINITY),
+    };
+    let over_vol = metrics.volatility > max_vol;
+    let over_var = metrics.var_95 > max_var;
+    if over_vol || over_var {
+        let label = match tolerance {
+            RiskTolerance::Conservative => "Conservative",
+            RiskTolerance::Moderate => "Moderate",
+            RiskTolerance::Aggressive => "Aggressive",
+            RiskTolerance::VeryAggressive => "VeryAggressive",
+        };
+        Some(format!(
+            "Portfolio declared as {label} but computed risk exceeds its tolerance band \
+             (volatility {:.4} > limit {:.4}, VaR(95%) {:.4} > limit {:.4}).",
+            metrics.volatility, max_vol, metrics.var_95, max_var,
+        ))
+    } else {
+        None
     }
 }
 
@@ -3948,6 +4126,7 @@ impl RiskMetrics {
             sortino_ratio: 0.0,
             max_drawdown: 0.0,
             overall_risk_score: 0.0,
+            risk_profile_assessment: None,
         }
     }
 }
@@ -4065,6 +4244,11 @@ pub struct RiskMetrics {
     pub sortino_ratio: f64,
     pub max_drawdown: f64,
     pub overall_risk_score: f64,
+    /// Plain-language assessment of whether the computed volatility / VaR fit the
+    /// portfolio's declared `RiskProfile.risk_tolerance`. `None` when the metrics
+    /// are within tolerance (or when no assessment was performed); `Some(warning)`
+    /// when a conservative profile carries high risk — never a fabricated pass.
+    pub risk_profile_assessment: Option<String>,
 }
 
 /// Compliance check result for a portfolio
@@ -4234,5 +4418,217 @@ mod tests {
         let library = FinancialModelingLibrary::new();
         let info = library.get_portfolio_info("portfolio_1");
         assert!(info.is_none());
+    }
+
+    // ---- Part 1: risk-profile validation wiring ----
+
+    /// Build an asset carrying a real price history (oldest first).
+    fn asset_with_history(symbol: &str, market_value: f64, prices: Vec<f64>) -> Asset {
+        Asset {
+            asset_id: symbol.to_string(),
+            symbol: symbol.to_string(),
+            asset_type: AssetType::Stock,
+            quantity: 1.0,
+            average_cost: 0.0,
+            current_price: *prices.last().unwrap_or(&0.0),
+            market_value,
+            currency: "USD".to_string(),
+            exchange: "TEST".to_string(),
+            last_updated: 0,
+            price_history: prices,
+        }
+    }
+
+    /// Build a portfolio with a single asset and a chosen risk tolerance.
+    fn portfolio_with_tolerance(tolerance: RiskTolerance, prices: Vec<f64>) -> Portfolio {
+        Portfolio {
+            portfolio_id: "rp_test".to_string(),
+            portfolio_name: "rp_test".to_string(),
+            owner_id: "owner_1".to_string(),
+            assets: vec![asset_with_history("A", 1000.0, prices)],
+            cash_balance: 0.0,
+            total_value: 1000.0,
+            created_at: 0,
+            last_updated: 0,
+            risk_profile: RiskProfile {
+                risk_tolerance: tolerance,
+                risk_capacity: 100000.0,
+                time_horizon: TimeHorizon::LongTerm,
+                liquidity_needs: LiquidityNeeds::Low,
+            },
+            investment_strategy: InvestmentStrategy::Balanced,
+        }
+    }
+
+    #[test]
+    fn risk_profile_flags_conservative_with_high_volatility() {
+        // prices 100→130→90→125 ⇒ returns 0.3, -0.3077, 0.3889 — high volatility
+        // (~0.35) that exceeds the Conservative band (vol > 0.10, VaR > 0.05).
+        let portfolio = portfolio_with_tolerance(
+            RiskTolerance::Conservative,
+            vec![100.0, 130.0, 90.0, 125.0],
+        );
+        let analyzer = RiskAnalyzer::new();
+        let metrics = analyzer.calculate_risk_metrics(&portfolio).unwrap();
+
+        assert!(
+            metrics.risk_profile_assessment.is_some(),
+            "a Conservative portfolio with high volatility must be flagged"
+        );
+        let assessment = metrics.risk_profile_assessment.unwrap();
+        assert!(
+            assessment.contains("Conservative"),
+            "assessment should name the declared tolerance: {}",
+            assessment
+        );
+    }
+
+    #[test]
+    fn risk_profile_passes_moderate_within_tolerance() {
+        // prices 100→101→102→103 ⇒ returns 0.01, 0.0099, 0.0098 — tiny volatility
+        // well within every band, so no assessment warning is produced.
+        let portfolio =
+            portfolio_with_tolerance(RiskTolerance::Moderate, vec![100.0, 101.0, 102.0, 103.0]);
+        let analyzer = RiskAnalyzer::new();
+        let metrics = analyzer.calculate_risk_metrics(&portfolio).unwrap();
+
+        assert!(
+            metrics.risk_profile_assessment.is_none(),
+            "a Moderate portfolio with tiny volatility should not be flagged"
+        );
+    }
+
+    #[test]
+    fn risk_profile_very_aggressive_never_flagged() {
+        // VeryAggressive has an infinite tolerance band, so even wild volatility
+        // is never flagged — the assessment is honestly `None`, not a fabricated pass.
+        let portfolio = portfolio_with_tolerance(
+            RiskTolerance::VeryAggressive,
+            vec![100.0, 130.0, 90.0, 125.0],
+        );
+        let analyzer = RiskAnalyzer::new();
+        let metrics = analyzer.calculate_risk_metrics(&portfolio).unwrap();
+        assert!(metrics.risk_profile_assessment.is_none());
+    }
+
+    // ---- Part 2: portfolio access control + audit trail wiring ----
+
+    #[test]
+    fn access_control_check_permission_grants_and_denies() {
+        let mut ac = PortfolioAccessControl::new();
+        ac.add_access_policy(AccessPolicy {
+            policy_id: "pol_1".to_string(),
+            user_id: "alice".to_string(),
+            portfolio_id: "pf_1".to_string(),
+            permissions: vec![Permission::Read, Permission::Write],
+            time_restrictions: TimeRestrictions::new(),
+            ip_restrictions: Vec::new(),
+        });
+
+        // Granted: alice has Read on pf_1.
+        assert!(ac.check_permission("alice", "pf_1", Permission::Read));
+        assert!(ac.check_permission("alice", "pf_1", Permission::Write));
+        // Denied: alice lacks Admin on pf_1.
+        assert!(!ac.check_permission("alice", "pf_1", Permission::Admin));
+        // Denied: bob has no policy at all.
+        assert!(!ac.check_permission("bob", "pf_1", Permission::Read));
+        // Denied: alice has no policy on pf_2.
+        assert!(!ac.check_permission("alice", "pf_2", Permission::Read));
+    }
+
+    #[test]
+    fn audit_trail_logs_and_reports_entries() {
+        let trail = PortfolioAuditTrail::new();
+        assert_eq!(trail.entry_count(), 0);
+        assert!(trail.entries().is_empty());
+
+        trail.log_action(AuditEntry {
+            entry_id: "e1".to_string(),
+            timestamp: 1,
+            user_id: "alice".to_string(),
+            portfolio_id: "pf_1".to_string(),
+            action: PortfolioAction::Create,
+            details: "created".to_string(),
+            ip_address: "10.0.0.1".to_string(),
+        });
+        trail.log_action(AuditEntry {
+            entry_id: "e2".to_string(),
+            timestamp: 2,
+            user_id: "alice".to_string(),
+            portfolio_id: "pf_1".to_string(),
+            action: PortfolioAction::Read,
+            details: "read".to_string(),
+            ip_address: "10.0.0.1".to_string(),
+        });
+
+        assert_eq!(trail.entry_count(), 2);
+        let entries = trail.entries();
+        assert_eq!(entries.len(), 2);
+        assert_eq!(entries[0].entry_id, "e1");
+        assert_eq!(entries[1].action, PortfolioAction::Read);
+    }
+
+    #[test]
+    fn storage_store_and_get_log_audit_entries() {
+        let mut storage = PortfolioStorage::new();
+        let mut portfolio = Portfolio::new();
+        portfolio.portfolio_id = "audit_pf".to_string();
+        portfolio.owner_id = "auditor".to_string();
+
+        // store_portfolio logs a Create entry.
+        storage.store_portfolio(portfolio).unwrap();
+        assert_eq!(storage.audit_trail.entry_count(), 1);
+        assert_eq!(
+            storage.audit_trail.entries()[0].action,
+            PortfolioAction::Create
+        );
+
+        // get_portfolio logs a Read entry (shared borrow — relies on interior mutability).
+        let _ = storage.get_portfolio("audit_pf").unwrap();
+        assert_eq!(storage.audit_trail.entry_count(), 2);
+        assert_eq!(
+            storage.audit_trail.entries()[1].action,
+            PortfolioAction::Read
+        );
+
+        // A second store on the same id logs an Update, not a Create.
+        let mut portfolio2 = Portfolio::new();
+        portfolio2.portfolio_id = "audit_pf".to_string();
+        portfolio2.owner_id = "auditor".to_string();
+        storage.store_portfolio(portfolio2).unwrap();
+        assert_eq!(storage.audit_trail.entry_count(), 3);
+        assert_eq!(
+            storage.audit_trail.entries()[2].action,
+            PortfolioAction::Update
+        );
+    }
+
+    // ---- Part 3: benchmark-based beta/alpha via RiskAnalyzer ----
+
+    #[test]
+    fn risk_analyzer_benchmark_makes_beta_alpha_real() {
+        // Portfolio returns (prices 100→110→99→108.9): 0.1, -0.1, 0.1.
+        let portfolio = portfolio_with_tolerance(
+            RiskTolerance::Moderate,
+            vec![100.0, 110.0, 99.0, 108.9],
+        );
+
+        // Without a benchmark, beta/alpha are NaN.
+        let analyzer = RiskAnalyzer::new();
+        let none_metrics = analyzer.calculate_risk_metrics(&portfolio).unwrap();
+        assert!(none_metrics.beta.is_nan() && none_metrics.alpha.is_nan());
+
+        // Register a benchmark (same sign pattern, half magnitude ⇒ beta = 2.0).
+        let mut analyzer = RiskAnalyzer::new();
+        analyzer.add_benchmark("idx", vec![0.05, -0.05, 0.05]);
+        let metrics = analyzer.calculate_risk_metrics(&portfolio).unwrap();
+        assert!(!metrics.beta.is_nan());
+        assert!(!metrics.alpha.is_nan());
+        assert!((metrics.beta - 2.0).abs() < 1e-9, "beta {}", metrics.beta);
+
+        // Deactivating the benchmark reverts beta/alpha to NaN.
+        analyzer.set_active_benchmark(None);
+        let off_metrics = analyzer.calculate_risk_metrics(&portfolio).unwrap();
+        assert!(off_metrics.beta.is_nan() && off_metrics.alpha.is_nan());
     }
 }
