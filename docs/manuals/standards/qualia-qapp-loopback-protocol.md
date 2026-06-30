@@ -7,9 +7,9 @@ This document describes the current localhost serving boundary for installed Qua
 
 It focuses on the host-side asset protocol implemented in:
 
-- [crates/qualia-client-core/src/qapps_protocol.rs](/C:/Projects/qualiaDB/crates/qualia-client-core/src/qapps_protocol.rs:1)
-- [crates/qualia-client-core/src/api.rs](/C:/Projects/qualiaDB/crates/qualia-client-core/src/api.rs:2805)
-- [crates/qualia-client-core/src/qapp_registry.rs](/C:/Projects/qualiaDB/crates/qualia-client-core/src/qapp_registry.rs:5)
+- [crates/qualia-client-core/src/qapps_protocol.rs](../../../crates/qualia-client-core/src/qapps_protocol.rs:1)
+- [crates/qualia-client-core/src/api.rs](../../../crates/qualia-client-core/src/api.rs:2805)
+- [crates/qualia-client-core/src/qapp_registry.rs](../../../crates/qualia-client-core/src/qapp_registry.rs:5)
 
 ## 1. Scope
 
@@ -100,7 +100,7 @@ Important fields in `qapp.json` include:
 - `x_qualia.chat_integration`
 - `x_qualia.ui_surfaces`
 
-The host manifest type is defined in [crates/qualia-client-core/src/qapp_registry.rs](/C:/Projects/qualiaDB/crates/qualia-client-core/src/qapp_registry.rs:189).
+The host manifest type is defined in [crates/qualia-client-core/src/qapp_registry.rs](../../../crates/qualia-client-core/src/qapp_registry.rs:189).
 
 ## 5. Launch Resolution
 

@@ -312,10 +312,13 @@ Each of those should become its own draft with its own conformance language.
   sign-and-verify negotiation handshake, and the WebRTC session binding. The one
   genuine multi-party interoperability surface carved out of the WebAI
   Orchestration Layer (`devnotes/orchastration-webai.md`).
-- Why it is a candidate (not yet submittable): the identifier substrate and DNS
-  resolution exist, but the negotiation/binding layer (`dns_frontdoor.rs`,
-  `hcai_agreement.rs`) is proposed, not implemented, and no non-QualiaDB party
-  has completed a conformant negotiation yet.
+- Why it is a candidate (not yet submittable): the identifier substrate, **DNS Front Door
+  discovery** (`qualia-client-core/src/dns_resolver.rs::verify_front_door_did_via_dns`), and the
+  **Front Door identity + invite** flow (`state::FrontDoor`; `api::generate_front_door` /
+  `generate_front_door_invite` / `generate_connect_invite`, surfaced as `webizen-desktop` commands)
+  **exist** (`webizen-browser` repo for the desktop surface). What remains is the signed
+  agreement-negotiation **handshake** + WebRTC session binding (the `hcai_agreement` layer), and no
+  non-QualiaDB party has completed a conformant negotiation yet.
 - First doc to write here: `hcai-agreement-negotiation-protocol.md` ✅ **DRAFTED (2026-06-13)**
 - Primary SDO: W3C (agreement vocabulary + `did:web` Frontdoor); secondary IETF /
   DNS-AID (service-type registration)
@@ -329,7 +332,9 @@ Each of those should become its own draft with its own conformance language.
   local defensive mechanisms (inference scheduling, anti-siphoning, billing
   interdiction), which are Node-side implementation, not interop.
 - Exit criteria before submission:
-  - [ ] negotiation layer implemented (`dns_frontdoor.rs`, `hcai_agreement.rs`)
+  - [~] Front Door discovery + DNS DID verify + identity/invites implemented
+    (`dns_resolver.rs::verify_front_door_did_via_dns`, `state::FrontDoor`, `api::generate_front_door*`);
+    **remaining:** the signed agreement-negotiation handshake + WebRTC binding (`hcai_agreement` layer)
   - [ ] agreement vocabulary namespace frozen and published
   - [ ] canonicalisation + signature suite pinned with test vectors
   - [ ] at least one non-QualiaDB agent completes a conformant negotiation

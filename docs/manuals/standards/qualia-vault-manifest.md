@@ -24,7 +24,7 @@ It is not:
 
 Those roles remain with other artifacts:
 
-- `.q42` for graph/data substrate (prefer unified v2 volumes with embedded
+- `.q42` for graph/data substrate (prefer unified v3 volumes with embedded
   lexicon and block index)
 - legacy `.q42.lex` and `.q42.bidx` sidecars when opening pre-v2 datasets only
 - `.qchk` for capability envelopes
@@ -36,7 +36,7 @@ Historically, the repo used `.qualia` in a looser way before the `q42` family
 was formalized. At that earlier stage, `.qualia` could refer to a general
 payload or blob checked into a Webizen or git-oriented workflow.
 
-Now that unified v2 `.q42` volumes embed lexicon and block-index sections,
+Now that unified v3 `.q42` volumes embed lexicon and block-index sections,
 `.qualia` should reference data files primarily by `.q42` path. Sidecar pointers
 are optional legacy hints for pre-v2 trees.
 
@@ -124,8 +124,8 @@ This draft proposes the following minimum terms:
 - `qualia:identifierContext`
 - `qualia:humanContext`
 - `qualia:includesDataFile`
-- `qualia:includesLexiconFile` (optional — legacy v1 sidecar hint; omit for v2)
-- `qualia:includesBlockIndexFile` (optional — legacy v1 sidecar hint; omit for v2)
+- `qualia:includesLexiconFile` (optional — legacy v1 sidecar hint; omit for v3)
+- `qualia:includesBlockIndexFile` (optional — legacy v1 sidecar hint; omit for v3)
 - `qualia:includesCapabilityEnvelope`
 - `qualia:entryPointQapp`
 - `qualia:preferredShell`
@@ -152,7 +152,7 @@ Optional but useful extensions:
   qualia:humanContext "Primary personal vault context for continuity across desktop and mobile environments." ;
   qualia:agencyContext <did:q42:example-agency-context> ;
   qualia:includesDataFile <vault/main.q42>, <vault/health.q42> ;
-  # Legacy v1 only — omit when .q42 files are unified v2 volumes:
+  # Legacy v1 only — omit when .q42 files are unified v3 volumes:
   # qualia:includesLexiconFile <vault/main.q42.lex> ;
   # qualia:includesBlockIndexFile <vault/main.q42.bidx> ;
   qualia:includesCapabilityEnvelope <profiles/health.qchk> ;
@@ -171,7 +171,7 @@ When a `.qualia` manifest is opened, the vault environment should:
 3. preserve any stated human context without collapsing it into a mere
    technical identifier
 4. locate associated `.q42` artifacts
-5. load embedded lexicon and block index from v2 volumes, or legacy sidecars
+5. load embedded lexicon and block index from v3 volumes, or legacy sidecars
    when opening pre-v2 files
 6. apply any associated `.qchk` capability envelopes
 7. resolve the preferred qapp or shell entry context
@@ -185,7 +185,7 @@ The repo already has neighboring concepts that should inform, but not replace,
 the `.qualia` manifest:
 
 - `DirectoryState` in
-  [crates/qualia-client-core/src/api.rs](/C:/Projects/qualiaDB/crates/qualia-client-core/src/api.rs:3103)
+  [crates/qualia-client-core/src/api.rs](../../../crates/qualia-client-core/src/api.rs:3103)
   persists actors, rules, front doors, and installed qapps under `.qualia/`
 - `qapp.json` defines qapp-local metadata and launch entrypoints
 - `qualia://localhost/` and loopback qapp serving define qapp-host interaction

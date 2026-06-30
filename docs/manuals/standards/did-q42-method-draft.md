@@ -39,10 +39,10 @@ dispatch pointer than to a conventional DID resolver ecosystem.
 
 Relevant implementation anchors:
 
-- [identifier.rs](/C:/Projects/qualiaDB/crates/qualia-core-db/src/identifier.rs:1)
-- [mini_parser.rs](/C:/Projects/qualiaDB/crates/qualia-core-db/src/mini_parser.rs:97)
-- [resolver.rs](/C:/Projects/qualiaDB/crates/qualia-core-db/src/resolver.rs:134)
-- [webizen_bytecode.rs](/C:/Projects/qualiaDB/crates/qualia-core-db/src/webizen_bytecode.rs:15)
+- [identifier.rs](../../../crates/qualia-core-db/src/identity/identifier.rs:1)
+- [mini_parser.rs](../../../crates/qualia-core-db/src/query/mini_parser.rs:97)
+- [resolver.rs](../../../crates/qualia-core-db/src/query/resolver.rs:134)
+- [webizen_bytecode.rs](../../../crates/qualia-core-db/src/governance/webizen_bytecode.rs:15)
 
 ## 3. Method Name
 
