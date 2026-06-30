@@ -227,6 +227,11 @@ fn stable_mcp_tools() -> &'static [McpToolDescriptor] {
             input_schema: r#"{"type":"object","required":["modality"],"properties":{"modality":{"type":"string"},"quins":{"type":"array"},"trace":{"type":"array"},"formula":{"type":"object"},"now_unix":{"type":"integer"},"agent_did_hash":{"type":"integer"},"world_hash":{"type":"integer"}}}"#,
         },
         McpToolDescriptor {
+            name: "evaluate_logic_rules",
+            description: "Load N3 rules into the RuleEngine, fire them in the Webizen VM, and evaluate a Quin against the fired conclusions. Emits WAL audit events. Returns per-rule pass/fail verdicts.",
+            input_schema: r#"{"type":"object","required":["n3_source","quin"],"properties":{"n3_source":{"type":"string","description":"N3 rule text to parse and fire"},"quin":{"type":"object","description":"The Quin to evaluate","properties":{"subject":{"type":"integer"},"predicate":{"type":"integer"},"object":{"type":"integer"},"context":{"type":"integer"}}},"ruleset_name":{"type":"string","default":"default"},"contract_hash":{"type":"integer","default":0}}}"#,
+        },
+        McpToolDescriptor {
             name: "matrix_operation",
             description: "Linear algebra: multiply, transpose, solve, or inverse with caller-supplied matrices.",
             input_schema: r#"{"type":"object","required":["op"],"properties":{"op":{"type":"string","enum":["multiply","transpose","solve","inverse"]},"left":{"type":"object","properties":{"id":{"type":"string"},"rows":{"type":"integer"},"cols":{"type":"integer"},"data":{"type":"array","items":{"type":"number"}}}},"right":{"type":"object"},"matrices":{"type":"array"},"result_id":{"type":"string"}}}"#,
@@ -517,6 +522,10 @@ pub unsafe fn enforce_fiduciary_tool_dispatch(
 
         // ── Extended Logic & Science Tools ───────────────────────────────────
         b"evaluate_modality" => execute_evaluate_modality(payload.arguments_raw, intent_frame),
+
+        b"evaluate_logic_rules" => {
+            mcp_tool_impls::evaluate_logic_rules(payload.arguments_raw)
+        }
 
         b"bioinformatics_align" => {
             execute_bioinformatics_align(payload.arguments_raw, intent_frame)

@@ -290,6 +290,43 @@ pub fn log_adversarial_conduct(intent_quin: &NQuin, violation_code: u8) -> io::R
     append_mutation(&violation_quin)
 }
 
+/// Logs a rule-evaluation audit event to the WAL.
+///
+/// For each `RuleResult` in `results`, appends a `q42:ruleEvaluation` Quin to the
+/// WAL with:
+/// - `subject`    = the evaluated Quin's subject
+/// - `predicate`  = `q_hash("q42:ruleEvaluation")`
+/// - `object`     = `q_hash(rule_name)` (the rule that was evaluated)
+/// - `context`    = the contract graph hash
+/// - `metadata`   = bit 0 = passed/failed; bits [8..15] = result count
+///
+/// This ensures every rule evaluation is durable, replayable, and auditable —
+/// the general-purpose event API complement to `log_adversarial_conduct`.
+pub fn log_rule_evaluation(
+    input_quin: &NQuin,
+    results: &[crate::modalities::logic::rules::RuleResult],
+    contract_hash: u64,
+) -> io::Result<()> {
+    let eval_predicate = crate::q_hash("q42:ruleEvaluation");
+    let result_count = results.len().min(255) as u64;
+    for (i, result) in results.iter().enumerate().take(255) {
+        let rule_hash = crate::q_hash(&result.rule_name);
+        let mut metadata = if result.passed { 1u64 } else { 0u64 };
+        metadata |= (i as u64) << 16;
+        metadata |= result_count << 8;
+        let eval_quin = NQuin {
+            subject: input_quin.subject,
+            predicate: eval_predicate,
+            object: rule_hash,
+            context: contract_hash,
+            metadata,
+            parity: 0,
+        };
+        append_mutation(&eval_quin)?;
+    }
+    Ok(())
+}
+
 #[cfg(test)]
 mod tests {
     use super::*;

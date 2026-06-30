@@ -1781,6 +1781,82 @@ fn parse_ltl_formula(
     })
 }
 
+/// Load N3 rules into a `RuleEngine`, fire them in the Webizen VM, and evaluate
+/// a Quin against the fired conclusions. Emits WAL audit events for each result.
+///
+/// Args:
+/// ```json
+/// {
+///   "n3_source": "{ ex:A q42:p ex:B } => { ex:A q42:q ex:C } .",
+///   "quin": { "subject": 123, "predicate": 456, "object": 789, "context": 0 },
+///   "ruleset_name": "default",
+///   "contract_hash": 0
+/// }
+/// ```
+///
+/// Returns per-rule pass/fail verdicts as JSON.
+pub fn evaluate_logic_rules(args: &[u8]) -> Result<String, McpSystemError> {
+    use crate::modalities::logic::rules::RuleEngine;
+
+    let v = parse_tool_args(args)?;
+    let n3_source = v
+        .get("n3_source")
+        .and_then(Value::as_str)
+        .ok_or(McpSystemError::InvalidParameters)?;
+    let quin_obj = v
+        .get("quin")
+        .ok_or(McpSystemError::InvalidParameters)?;
+    let subject = json_u64(quin_obj, "subject", 0);
+    let predicate = json_u64(quin_obj, "predicate", 0);
+    let object = json_u64(quin_obj, "object", 0);
+    let context = json_u64(quin_obj, "context", 0);
+    let ruleset_name = json_str(&v, "ruleset_name", "default");
+    let contract_hash = json_u64(&v, "contract_hash", 0);
+
+    let mut engine = RuleEngine::with_contract(contract_hash);
+    let rules_loaded = engine.load_n3(ruleset_name, n3_source);
+
+    let quin = NQuin {
+        subject,
+        predicate,
+        object,
+        context,
+        metadata: 0,
+        parity: subject ^ predicate ^ object ^ context,
+    };
+
+    let results = engine.evaluate(&quin);
+    let passed_count = results.iter().filter(|r| r.passed).count();
+    let results_json: Vec<Value> = results
+        .iter()
+        .map(|r| {
+            json!({
+                "ruleset_name": r.ruleset_name,
+                "rule_name": r.rule_name,
+                "passed": r.passed,
+                "message": r.message,
+            })
+        })
+        .collect();
+
+    Ok(json!({
+        "rules_loaded": rules_loaded,
+        "ruleset_name": ruleset_name,
+        "contract_hash": contract_hash,
+        "input_quin": {
+            "subject": subject,
+            "predicate": predicate,
+            "object": object,
+            "context": context,
+        },
+        "total_results": results_json.len(),
+        "passed_count": passed_count,
+        "failed_count": results_json.len() - passed_count,
+        "results": results_json,
+    })
+    .to_string())
+}
+
 #[cfg(test)]
 mod tests {
     use super::*;
