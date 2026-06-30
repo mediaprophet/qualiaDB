@@ -285,6 +285,11 @@ pub struct PowerManager {
     battery_monitor: BatteryMonitor,
     thermal_monitor: ThermalMonitor,
     power_optimizer: PowerOptimizer,
+    /// Current orchestration state, used to estimate power when no platform
+    /// power API is available.
+    orchestration_state: AmbientOrchestrationState,
+    /// Number of models currently loaded/active on the managed device.
+    active_model_count: usize,
 }
 
 /// Power policies
@@ -337,6 +342,36 @@ pub enum ThermalState {
     Warm,
     Hot,
     Critical,
+}
+
+/// Ambient orchestration state machine used for power estimation.
+///
+/// Mirrors the `ModelLifecycle` states from `orchestrator.rs` that are relevant
+/// to mobile power budgeting. This is NOT a hot-path type (Vec/HashMap/String
+/// are acceptable in this module).
+#[derive(Debug, Clone, Copy, PartialEq, Eq)]
+pub enum AmbientOrchestrationState {
+    /// Device idle — no active inference, model streaming, or scrubbing.
+    Idle,
+    /// Active inference running on one or more models.
+    ActiveInference,
+    /// Background scrubbing / memory compaction pass.
+    Scrubbing,
+    /// Streaming model weights into VRAM/resident memory.
+    Streaming,
+}
+
+/// Aggregated power/thermal/battery snapshot for battery-aware ML scheduling.
+#[derive(Debug, Clone, PartialEq)]
+pub struct PowerMetrics {
+    /// Current estimated power draw in watts.
+    pub current_power_w: f64,
+    /// Thermal state derived from the current power draw.
+    pub thermal_state: ThermalState,
+    /// Estimated battery life remaining in hours, if a battery is present.
+    pub estimated_battery_hours: Option<f64>,
+    /// Number of models currently active on the device.
+    pub active_model_count: usize,
 }
 
 /// Power optimizer
@@ -751,6 +786,41 @@ impl AmbientOrchestrationManager {
         self.performance_monitor.get_global_stats()
     }
 
+    /// Set the ambient orchestration state used for power estimation.
+    ///
+    /// Callers (e.g. the `TaskOrchestrator` state machine in `orchestrator.rs`)
+    /// should push `ModelLifecycle` transitions here so the power manager can
+    /// track real power draw.
+    pub fn set_orchestration_state(&mut self, state: AmbientOrchestrationState) {
+        self.power_manager.set_orchestration_state(state);
+    }
+
+    /// Set the number of models currently active on the managed device.
+    pub fn set_active_model_count(&mut self, count: usize) {
+        self.power_manager.set_active_model_count(count);
+    }
+
+    /// Get the aggregated power/thermal/battery snapshot.
+    pub fn get_power_metrics(&self) -> PowerMetrics {
+        self.power_manager.get_power_metrics()
+    }
+
+    /// Estimate battery life remaining (hours) for the given charge and
+    /// battery capacity.
+    pub fn estimate_battery_life_remaining(
+        &self,
+        current_battery_pct: f64,
+        battery_capacity_wh: f64,
+    ) -> f64 {
+        self.power_manager
+            .estimate_battery_life_remaining(current_battery_pct, battery_capacity_wh)
+    }
+
+    /// Whether inference should be throttled due to thermal or battery pressure.
+    pub fn should_throttle_inference(&self) -> bool {
+        self.power_manager.should_throttle_inference()
+    }
+
     /// List all devices
     pub fn list_devices(&self) -> Vec<String> {
         self.devices.keys().cloned().collect()
@@ -927,7 +997,20 @@ impl PowerManager {
             battery_monitor: BatteryMonitor::new(),
             thermal_monitor: ThermalMonitor::new(),
             power_optimizer: PowerOptimizer::new(),
+            orchestration_state: AmbientOrchestrationState::Idle,
+            active_model_count: 0,
         }
+    }
+
+    /// Set the current orchestration state so power estimates track the
+    /// real state machine in `orchestrator.rs` (`ModelLifecycle`).
+    pub fn set_orchestration_state(&mut self, state: AmbientOrchestrationState) {
+        self.orchestration_state = state;
+    }
+
+    /// Set the number of models currently active on the managed device.
+    pub fn set_active_model_count(&mut self, count: usize) {
+        self.active_model_count = count;
     }
 
     /// Check if device can execute task
@@ -961,14 +1044,120 @@ impl PowerManager {
         self.battery_monitor.current_level
     }
 
-    /// Get thermal state
+    /// Get thermal state derived from the current estimated power draw.
+    ///
+    /// Power-to-thermal mapping (mobile SoC heuristic):
+    /// - `< 3W`  → `Normal` (cool)
+    /// - `3–7W`  → `Warm`
+    /// - `> 7W`  → `Critical`
     pub fn get_thermal_state(&self, device_id: &str) -> ThermalState {
-        self.thermal_monitor.thermal_state.clone()
+        let power = self.get_power_consumption(device_id);
+        if power > 7.0 {
+            ThermalState::Critical
+        } else if power >= 3.0 {
+            ThermalState::Warm
+        } else {
+            ThermalState::Normal
+        }
     }
 
-    /// Get power consumption
+    /// Get power consumption in watts.
+    ///
+    /// On platforms exposing a power API (e.g. RAPL on Intel, the Energy
+    /// Meter on Android) this would query the hardware. On every other target
+    /// we estimate consumption from the current orchestration state and the
+    /// number of active models, which is what battery-aware ML scheduling and
+    /// thermal management rely on:
+    ///
+    /// | State            | Base power |
+    /// |------------------|------------|
+    /// | Idle             | ~0.5 W     |
+    /// | Active inference | ~5.0 W + (active_models × 2.0 W) |
+    /// | Scrubbing        | ~3.0 W     |
+    /// | Streaming        | ~4.0 W     |
     pub fn get_power_consumption(&self, device_id: &str) -> f64 {
-        2.0 // Placeholder
+        // NOTE: a real implementation would probe `/sys/class/powercap/` (RAPL),
+        // `android.os.PowerManager` via JNI, or the CoreML energy log. Until a
+        // platform power API is wired in, estimate from the orchestration state.
+        let _ = device_id; // hardware query would be keyed on this id
+        match self.orchestration_state {
+            AmbientOrchestrationState::Idle => 0.5,
+            AmbientOrchestrationState::ActiveInference => {
+                5.0 + (self.active_model_count as f64) * 2.0
+            }
+            AmbientOrchestrationState::Scrubbing => 3.0,
+            AmbientOrchestrationState::Streaming => 4.0,
+        }
+    }
+
+    /// Estimate battery life remaining in hours.
+    ///
+    /// `hours = (battery_capacity_wh * current_battery_pct / 100.0) / power_consumption`
+    ///
+    /// Returns `0.0` if the estimated power consumption is zero (avoids
+    /// division by zero) or if the battery percentage is non-positive.
+    pub fn estimate_battery_life_remaining(
+        &self,
+        current_battery_pct: f64,
+        battery_capacity_wh: f64,
+    ) -> f64 {
+        if current_battery_pct <= 0.0 || battery_capacity_wh <= 0.0 {
+            return 0.0;
+        }
+        let power = self.get_power_consumption("");
+        if power <= 0.0 {
+            return 0.0;
+        }
+        (battery_capacity_wh * current_battery_pct / 100.0) / power
+    }
+
+    /// Decide whether inference should be throttled.
+    ///
+    /// Returns `true` when the thermal state is `Critical` or when the
+    /// estimated battery life (using the battery monitor's current charge
+    /// against a 15 Wh mobile battery as a reasonable default) drops below
+    /// 1 hour.
+    pub fn should_throttle_inference(&self) -> bool {
+        let thermal = self.get_thermal_state("");
+        if thermal == ThermalState::Critical {
+            return true;
+        }
+        // Reasonable mobile default: 15 Wh battery. Use the battery monitor's
+        // current charge level so real battery drain drives the decision.
+        let battery_pct = self.battery_monitor.current_level;
+        if battery_pct <= 0.0 {
+            return true; // No battery left — must throttle.
+        }
+        let estimated_hours = self.estimate_battery_life_remaining(battery_pct, 15.0);
+        estimated_hours < 1.0
+    }
+
+    /// Aggregate the current power/thermal/battery snapshot.
+    ///
+    /// `estimated_battery_hours` is `Some` when a non-zero battery capacity is
+    /// known; here we use the battery monitor's current level against a 15 Wh
+    /// mobile battery default. Returns `None` when the device has no battery
+    /// (e.g. mains-powered embedded host).
+    pub fn get_power_metrics(&self) -> PowerMetrics {
+        let current_power_w = self.get_power_consumption("");
+        let thermal_state = self.get_thermal_state("");
+
+        // The battery monitor tracks a 0–100 percentage. Use a 15 Wh mobile
+        // battery as the default capacity when one is present.
+        let battery_pct = self.battery_monitor.current_level;
+        let estimated_battery_hours = if battery_pct > 0.0 {
+            let hours = self.estimate_battery_life_remaining(battery_pct, 15.0);
+            if hours > 0.0 { Some(hours) } else { None }
+        } else {
+            None
+        };
+
+        PowerMetrics {
+            current_power_w,
+            thermal_state,
+            estimated_battery_hours,
+            active_model_count: self.active_model_count,
+        }
     }
 }
 
@@ -1345,5 +1534,202 @@ mod tests {
 
         let result = manager.execute_neural_inference(device_id, &model_data, &input_data);
         assert!(result.is_ok());
+    }
+
+    // ── Ambient power monitoring tests ───────────────────────────────────
+
+    #[test]
+    fn test_power_consumption_changes_with_orchestration_state() {
+        let mut pm = PowerManager::new();
+
+        // Idle baseline
+        pm.set_orchestration_state(AmbientOrchestrationState::Idle);
+        let idle_power = pm.get_power_consumption("local_host");
+        assert!(
+            (idle_power - 0.5).abs() < f64::EPSILON,
+            "idle power should be ~0.5W, got {idle_power}"
+        );
+
+        // Active inference scales with active model count
+        pm.set_active_model_count(2);
+        pm.set_orchestration_state(AmbientOrchestrationState::ActiveInference);
+        let active_power = pm.get_power_consumption("local_host");
+        // 5.0 + 2 * 2.0 = 9.0
+        assert!(
+            (active_power - 9.0).abs() < f64::EPSILON,
+            "active inference power with 2 models should be ~9.0W, got {active_power}"
+        );
+
+        // Scrubbing
+        pm.set_orchestration_state(AmbientOrchestrationState::Scrubbing);
+        let scrub_power = pm.get_power_consumption("local_host");
+        assert!(
+            (scrub_power - 3.0).abs() < f64::EPSILON,
+            "scrubbing power should be ~3.0W, got {scrub_power}"
+        );
+
+        // Streaming
+        pm.set_orchestration_state(AmbientOrchestrationState::Streaming);
+        let stream_power = pm.get_power_consumption("local_host");
+        assert!(
+            (stream_power - 4.0).abs() < f64::EPSILON,
+            "streaming power should be ~4.0W, got {stream_power}"
+        );
+
+        // Verify ordering: idle < scrubbing < streaming < active(2 models)
+        assert!(idle_power < scrub_power);
+        assert!(scrub_power < stream_power);
+        assert!(stream_power < active_power);
+    }
+
+    #[test]
+    fn test_power_consumption_scales_with_active_models() {
+        let mut pm = PowerManager::new();
+        pm.set_orchestration_state(AmbientOrchestrationState::ActiveInference);
+
+        pm.set_active_model_count(0);
+        assert!((pm.get_power_consumption("d") - 5.0).abs() < f64::EPSILON);
+
+        pm.set_active_model_count(1);
+        assert!((pm.get_power_consumption("d") - 7.0).abs() < f64::EPSILON);
+
+        pm.set_active_model_count(3);
+        assert!((pm.get_power_consumption("d") - 11.0).abs() < f64::EPSILON);
+    }
+
+    #[test]
+    fn test_thermal_state_mapping_cool_warm_critical() {
+        let mut pm = PowerManager::new();
+
+        // < 3W → Normal (Cool)
+        pm.set_orchestration_state(AmbientOrchestrationState::Idle);
+        assert_eq!(pm.get_thermal_state("d"), ThermalState::Normal);
+
+        // 3W (boundary) → Warm
+        pm.set_orchestration_state(AmbientOrchestrationState::Scrubbing);
+        assert_eq!(pm.get_thermal_state("d"), ThermalState::Warm);
+
+        // 4W → Warm
+        pm.set_orchestration_state(AmbientOrchestrationState::Streaming);
+        assert_eq!(pm.get_thermal_state("d"), ThermalState::Warm);
+
+        // > 7W → Critical
+        pm.set_orchestration_state(AmbientOrchestrationState::ActiveInference);
+        pm.set_active_model_count(2); // 9.0W
+        assert_eq!(pm.get_thermal_state("d"), ThermalState::Critical);
+
+        // Exactly 7W boundary → Warm (>= 3.0 and <= 7.0)
+        pm.set_active_model_count(1); // 7.0W
+        assert_eq!(pm.get_thermal_state("d"), ThermalState::Warm);
+    }
+
+    #[test]
+    fn test_estimate_battery_life_remaining() {
+        let mut pm = PowerManager::new();
+        pm.set_orchestration_state(AmbientOrchestrationState::ActiveInference);
+        pm.set_active_model_count(0); // 5.0W
+
+        // 50% of a 10Wh battery = 5Wh / 5W = 1.0 hour
+        let hours = pm.estimate_battery_life_remaining(50.0, 10.0);
+        assert!(
+            (hours - 1.0).abs() < 1e-9,
+            "expected 1.0 hour, got {hours}"
+        );
+
+        // 100% of 15Wh / 5W = 3.0 hours
+        let hours = pm.estimate_battery_life_remaining(100.0, 15.0);
+        assert!(
+            (hours - 3.0).abs() < 1e-9,
+            "expected 3.0 hours, got {hours}"
+        );
+
+        // Zero power → 0.0 (avoid div-by-zero). Idle is 0.5W, so use a
+        // contrived zero-battery case instead.
+        assert_eq!(pm.estimate_battery_life_remaining(0.0, 10.0), 0.0);
+        assert_eq!(pm.estimate_battery_life_remaining(50.0, 0.0), 0.0);
+    }
+
+    #[test]
+    fn test_should_throttle_inference_thermal_critical() {
+        let mut pm = PowerManager::new();
+        // Force Critical thermal: > 7W
+        pm.set_orchestration_state(AmbientOrchestrationState::ActiveInference);
+        pm.set_active_model_count(2); // 9.0W → Critical
+        assert!(
+            pm.should_throttle_inference(),
+            "should throttle when thermal state is Critical"
+        );
+    }
+
+    #[test]
+    fn test_should_throttle_inference_low_battery() {
+        let mut pm = PowerManager::new();
+        // Idle: 0.5W, thermal Normal. Drain battery so estimated life < 1h.
+        // With 0.5W and 15Wh default, full charge = 30h. To get < 1h we need
+        // battery_pct such that (15 * pct/100) / 0.5 < 1 → pct < 3.33%.
+        pm.set_orchestration_state(AmbientOrchestrationState::Idle);
+        pm.battery_monitor.current_level = 2.0; // ~0.6h remaining
+        assert!(
+            pm.should_throttle_inference(),
+            "should throttle when estimated battery life < 1 hour"
+        );
+    }
+
+    #[test]
+    fn test_should_not_throttle_when_healthy() {
+        let mut pm = PowerManager::new();
+        // Idle, 0.5W, full battery → 30h remaining, Normal thermal.
+        pm.set_orchestration_state(AmbientOrchestrationState::Idle);
+        pm.battery_monitor.current_level = 100.0;
+        assert!(
+            !pm.should_throttle_inference(),
+            "should not throttle when thermal is cool and battery is healthy"
+        );
+    }
+
+    #[test]
+    fn test_power_metrics_aggregation() {
+        let mut pm = PowerManager::new();
+        pm.set_orchestration_state(AmbientOrchestrationState::ActiveInference);
+        pm.set_active_model_count(1); // 7.0W → Warm
+        pm.battery_monitor.current_level = 50.0;
+
+        let metrics = pm.get_power_metrics();
+        assert!((metrics.current_power_w - 7.0).abs() < f64::EPSILON);
+        assert_eq!(metrics.thermal_state, ThermalState::Warm);
+        assert_eq!(metrics.active_model_count, 1);
+        // 50% of 15Wh / 7W = 1.0714...h
+        let expected = (15.0 * 50.0 / 100.0) / 7.0;
+        assert!(metrics.estimated_battery_hours.is_some());
+        assert!(
+            (metrics.estimated_battery_hours.unwrap() - expected).abs() < 1e-9
+        );
+    }
+
+    #[test]
+    fn test_power_metrics_no_battery() {
+        let mut pm = PowerManager::new();
+        pm.battery_monitor.current_level = 0.0;
+        let metrics = pm.get_power_metrics();
+        assert!(metrics.estimated_battery_hours.is_none());
+    }
+
+    #[test]
+    fn test_manager_power_monitoring_integration() {
+        let mut manager = AmbientOrchestrationManager::new();
+
+        // Default idle state
+        let metrics = manager.get_power_metrics();
+        assert!((metrics.current_power_w - 0.5).abs() < f64::EPSILON);
+        assert_eq!(metrics.thermal_state, ThermalState::Normal);
+
+        // Transition to active inference with 3 models
+        manager.set_orchestration_state(AmbientOrchestrationState::ActiveInference);
+        manager.set_active_model_count(3); // 11.0W → Critical
+
+        let metrics = manager.get_power_metrics();
+        assert!((metrics.current_power_w - 11.0).abs() < f64::EPSILON);
+        assert_eq!(metrics.thermal_state, ThermalState::Critical);
+        assert!(manager.should_throttle_inference());
     }
 }

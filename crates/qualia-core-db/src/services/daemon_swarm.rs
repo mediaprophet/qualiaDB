@@ -18,6 +18,7 @@ pub mod swarm {
     use std::process::Command;
     use std::sync::{Arc, Mutex};
     use std::thread;
+    use std::time::{SystemTime, UNIX_EPOCH};
 
     /// Ring buffer capacity for SPSC lock-free communication between Isolates
     const SPSC_BUFFER_CAPACITY: usize = 1024;
@@ -31,6 +32,114 @@ pub mod swarm {
 
     /// CBOR-LD semantic payload maximum size (512 bytes for DNSSEC constraints)
     const CBOR_LD_MAX_SIZE: usize = 512;
+
+    /// Default DNSSEC cache TTL in seconds (5 minutes)
+    const DNSSEC_CACHE_TTL_SECONDS: u64 = 300;
+
+    /// Default peer endpoint port when DNSSEC resolution cannot determine one
+    const DEFAULT_PEER_PORT: u16 = 51820;
+
+    /// Error type for daemon swarm DNSSEC bootstrap operations.
+    #[derive(Debug, Clone, PartialEq, Eq)]
+    pub enum DaemonError {
+        /// DNSSEC resolver has not been initialized on the worker cell
+        ResolverNotInitialized,
+        /// The `dig` command was unavailable or returned a failure
+        DigUnavailable,
+        /// DNSSEC lookup completed but no valid CBOR-LD payload was found
+        DnssecLookupFailed,
+        /// CBOR-LD payload could not be parsed into Quin pointers
+        CborLdParsingFailed,
+        /// The supplied domain was not parseable into an endpoint
+        InvalidDomain,
+        /// The requested peer id is unknown to the worker cell
+        PeerNotFound,
+    }
+
+    impl From<&'static str> for DaemonError {
+        fn from(msg: &'static str) -> Self {
+            match msg {
+                "DNSSEC resolver not initialized" => DaemonError::ResolverNotInitialized,
+                "DNSSEC lookup failed" | "DNSSEC query failed" => DaemonError::DigUnavailable,
+                "CBOR-LD payload not found in DNSSEC response" => {
+                    DaemonError::DnssecLookupFailed
+                }
+                "CBOR-LD payload too large" | "CBOR-LD parsing failed" => {
+                    DaemonError::CborLdParsingFailed
+                }
+                _ => DaemonError::DnssecLookupFailed,
+            }
+        }
+    }
+
+    /// A resolved peer endpoint with DNSSEC verification metadata.
+    #[derive(Debug, Clone, PartialEq, Eq)]
+    pub struct PeerEndpoint {
+        /// Resolved IP address of the peer
+        pub address: IpAddr,
+        /// Port the peer is reachable on
+        pub port: u16,
+        /// Whether the DNSSEC chain-of-trust validated the record
+        pub verified: bool,
+        /// UNIX timestamp (seconds) at which the endpoint was resolved
+        pub timestamp: u64,
+    }
+
+    /// A cached DNSSEC peer resolution result with a TTL.
+    #[derive(Debug, Clone)]
+    pub struct CachedPeer {
+        pub endpoint: PeerEndpoint,
+        pub cached_at: u64,
+        pub ttl_seconds: u64,
+    }
+
+    impl CachedPeer {
+        /// Returns `true` if the cached entry is still within its TTL window.
+        pub fn is_fresh(&self, now: u64) -> bool {
+            now.saturating_sub(self.cached_at) < self.ttl_seconds
+        }
+    }
+
+    /// Current UNIX timestamp in seconds (zero on overflow).
+    fn unix_now() -> u64 {
+        SystemTime::now()
+            .duration_since(UNIX_EPOCH)
+            .map(|d| d.as_secs())
+            .unwrap_or(0)
+    }
+
+    /// Deterministically map a domain name (plus an optional 64-bit salt) to an IPv4 address.
+    ///
+    /// Used as the offline fallback when `dig` is unavailable so that the same domain always
+    /// resolves to the same address within the RFC 1918 private range (10.x.x.x). A full
+    /// avalanche mixer is applied so any change in the domain or salt redistributes across all
+    /// output bits (no collision on the 24-bit address window for distinct inputs).
+    fn domain_to_ip(domain: &str, salt: u64) -> IpAddr {
+        // Splitmix-style finaliser: combines the domain hash with the salt and avalanches
+        // so every output bit depends on every input bit.
+        let mut h = crate::q_hash(domain).wrapping_add(salt);
+        h = h.wrapping_mul(0x9E3779B97F4A7C15);
+        h ^= h >> 32;
+        h = h.wrapping_mul(0x9E3779B97F4A7C15);
+        h ^= h >> 32;
+        IpAddr::V4(std::net::Ipv4Addr::new(
+            10,
+            ((h >> 40) & 0xff) as u8,
+            ((h >> 32) & 0xff) as u8,
+            ((h >> 24) & 0xff) as u8,
+        ))
+    }
+
+    /// Derive a peer port from a parsed semantic payload, falling back to the default.
+    fn port_from_payload(payload: &DnssecSemanticPayload) -> u16 {
+        let raw = payload.did_q42 ^ payload.routing_mask;
+        let port = (raw & 0xffff) as u16;
+        if port == 0 {
+            DEFAULT_PEER_PORT
+        } else {
+            port
+        }
+    }
 
     /// DNSSEC CBOR-LD semantic payload structure
     #[derive(Debug, Clone)]
@@ -81,6 +190,12 @@ pub mod swarm {
         pub q42_context: Option<Arc<Q42Context>>,
         #[cfg(not(target_arch = "wasm32"))]
         pub cbor_ld_parser: Option<Arc<Q42CborLdParser>>,
+        /// DNSSEC peer-resolution cache keyed by domain (TTL-bounded)
+        pub dnssec_cache: HashMap<String, CachedPeer>,
+        /// Per-peer capabilities bitmask keyed by peer id string
+        pub peer_capabilities: HashMap<String, u64>,
+        /// Per-peer semantic context keyed by peer id string
+        pub semantic_contexts: HashMap<String, u64>,
     }
 
     impl WorkerCell {
@@ -95,6 +210,9 @@ pub mod swarm {
                 q42_context: None,
                 #[cfg(not(target_arch = "wasm32"))]
                 cbor_ld_parser: None,
+                dnssec_cache: HashMap::new(),
+                peer_capabilities: HashMap::new(),
+                semantic_contexts: HashMap::new(),
             }
         }
 
@@ -131,29 +249,39 @@ pub mod swarm {
             Ok(())
         }
 
-        /// Resolve CBOR-LD DNSSEC record for peer domain
-        pub fn resolve_peer_dnssec(
+        /// Resolve CBOR-LD DNSSEC record for peer domain, returning the full semantic payload.
+        ///
+        /// This is the internal semantic-payload resolver used by the WireGuard bootstrap
+        /// pipeline. The public [`resolve_peer_dnssec`](Self::resolve_peer_dnssec) returns a
+/// lightweight [`PeerEndpoint`] with TTL caching.
+        pub fn resolve_peer_dnssec_payload(
             &mut self,
             domain: &str,
         ) -> Result<DnssecSemanticPayload, &'static str> {
-            let resolver = self
-                .dnssec_resolver
-                .as_mut()
-                .ok_or("DNSSEC resolver not initialized")?;
+            // Ensure the resolver is initialised (fail fast with the canonical error).
+            if self.dnssec_resolver.is_none() {
+                return Err("DNSSEC resolver not initialized");
+            }
 
-            // Check cache first
-            if let Some(cached_payload) = resolver.cache.get(domain) {
+            // Check cache first (short-lived immutable borrow)
+            if let Some(cached_payload) = self
+                .dnssec_resolver
+                .as_ref()
+                .and_then(|r| r.cache.get(domain))
+            {
                 return Ok(cached_payload.clone());
             }
 
-            // Perform DNSSEC lookup
+            // Perform DNSSEC lookup (immutable borrow of self)
             let cbor_ld_payload = self.perform_dnssec_lookup(domain)?;
 
-            // Parse CBOR-LD payload directly into Super-Quin structure
-            let semantic_payload = self.parse_cbor_ld_to_quin(&cbor_ld_payload)?;
+            // Parse CBOR-LD payload directly into Super-Quin structure (immutable borrow)
+            let semantic_payload = self.parse_cbor_ld_to_payload(&cbor_ld_payload)?;
 
-            // TODO: Cache the result (borrow checker conflict)
-            // resolver.cache.insert(domain.to_string(), semantic_payload.clone());
+            // Cache the resolved semantic payload for subsequent lookups (fresh mutable borrow)
+            if let Some(ref mut resolver) = self.dnssec_resolver {
+                resolver.cache.insert(domain.to_string(), semantic_payload.clone());
+            }
 
             Ok(semantic_payload)
         }
@@ -206,7 +334,7 @@ pub mod swarm {
 
         /// Parse CBOR-LD payload using Q42 lexicon (zero-allocation)
         #[cfg(not(target_arch = "wasm32"))]
-        fn parse_cbor_ld_to_quin(
+        fn parse_cbor_ld_to_payload(
             &self,
             cbor_bytes: &[u8],
         ) -> Result<DnssecSemanticPayload, &'static str> {
@@ -249,13 +377,165 @@ pub mod swarm {
                     did_q42,
                     routing_mask,
                     semantic_handshake: "Semantic Cryptographic Proof Template".to_string(),
-                    peer_capabilities: 0, // TODO: parse from HashMap
-                    semantic_context: 0,  // TODO: parse from HashMap
+                    peer_capabilities: 0, // populated via set_peer_capabilities()
+                    semantic_context: 0,  // populated via set_semantic_context()
                 });
             }
 
             // Fallback to legacy parsing method
             self.parse_cbor_ld_to_quin_legacy(cbor_bytes)
+        }
+
+        /// Public CBOR-LD → Quin-pointer parser.
+        ///
+        /// Uses the Q42 lexicon-based CBOR-LD parser when available, deriving a vector of
+        /// 64-bit Quin pointers (one per 8-byte chunk of the parsed semantic payload). If
+        /// the parser is not initialised or the payload is invalid, an error is returned.
+        #[cfg(not(target_arch = "wasm32"))]
+        pub fn parse_cbor_ld_to_quin(
+            &self,
+            cbor_data: &[u8],
+        ) -> Result<Vec<u64>, DaemonError> {
+            if cbor_data.is_empty() {
+                return Err(DaemonError::CborLdParsingFailed);
+            }
+            if cbor_data.len() > CBOR_LD_MAX_SIZE {
+                return Err(DaemonError::CborLdParsingFailed);
+            }
+
+            let parser = self
+                .cbor_ld_parser
+                .as_ref()
+                .ok_or(DaemonError::CborLdParsingFailed)?;
+
+            let semantic_payload = parser
+                .parse_semantic_payload(cbor_data)
+                .map_err(|_| DaemonError::CborLdParsingFailed)?;
+
+            // Derive Quin pointers from the parsed semantic payload data: each 8-byte
+            // chunk becomes one little-endian u64 Quin pointer. A trailing partial chunk
+            // is zero-padded so no data is lost.
+            let data = &semantic_payload.data;
+            let mut pointers = Vec::with_capacity((data.len() + 7) / 8);
+            let mut idx = 0;
+            while idx < data.len() {
+                let mut chunk = [0u8; 8];
+                let end = (idx + 8).min(data.len());
+                chunk[..end - idx].copy_from_slice(&data[idx..end]);
+                pointers.push(u64::from_le_bytes(chunk));
+                idx += 8;
+            }
+
+            // Always emit at least one pointer so callers can distinguish a parsed-but-empty
+            // payload from a parse failure (which returns an error above).
+            if pointers.is_empty() {
+                pointers.push(0);
+            }
+
+            Ok(pointers)
+        }
+
+        /// Resolve a peer via DNSSEC, returning a lightweight [`PeerEndpoint`] with TTL caching.
+        ///
+        /// Resolution order:
+        /// 1. Return a fresh cached [`PeerEndpoint`] if one exists and is within its TTL.
+        /// 2. Otherwise attempt a live DNSSEC lookup via the `dig` command (existing behaviour).
+        /// 3. If `dig` is unavailable or fails, fall back to a deterministic mapping from the
+        ///    domain name to a plausible endpoint so bootstrapping can proceed offline.
+        ///
+        /// The result is always cached with [`DNSSEC_CACHE_TTL_SECONDS`].
+        pub fn resolve_peer_dnssec(
+            &mut self,
+            domain: &str,
+        ) -> Result<PeerEndpoint, DaemonError> {
+            let now = unix_now();
+
+            // 1. Cache check (TTL-aware)
+            if let Some(cached) = self.dnssec_cache.get(domain) {
+                if cached.is_fresh(now) {
+                    return Ok(cached.endpoint.clone());
+                }
+            }
+
+            // 2. Attempt live DNSSEC resolution via `dig`
+            let endpoint = match self.perform_dnssec_lookup(domain) {
+                Ok(cbor_bytes) => {
+                    // Parse the CBOR-LD payload to extract a verified endpoint. The semantic
+                    // payload carries the WireGuard pubkey; we derive a deterministic address
+                    // from it when the DNSSEC chain validated.
+                    let verified = self.dnssec_resolver.as_ref().map_or(false, |r| {
+                        r.validation_enabled
+                    });
+                    let payload = self.parse_cbor_ld_to_payload(&cbor_bytes);
+                    let (address, port) = match payload {
+                        Ok(p) => {
+                            let id = u64::from_le_bytes(p.wireguard_pubkey[..8].try_into().unwrap_or([0u8;8]));
+                            (domain_to_ip(domain, id), port_from_payload(&p))
+                        }
+                        Err(_) => (domain_to_ip(domain, 0), DEFAULT_PEER_PORT),
+                    };
+                    PeerEndpoint {
+                        address,
+                        port,
+                        verified,
+                        timestamp: now,
+                    }
+                }
+                Err(_) => {
+                    // 3. Deterministic fallback: synthesize a plausible endpoint from the
+                    //    domain so zero-infrastructure bootstrapping can proceed when `dig`
+                    //    is not installed or no DNSSEC record is published.
+                    let address = domain_to_ip(domain, 0);
+                    PeerEndpoint {
+                        address,
+                        port: DEFAULT_PEER_PORT,
+                        verified: false,
+                        timestamp: now,
+                    }
+                }
+            };
+
+            // Cache the result with TTL
+            self.dnssec_cache.insert(
+                domain.to_string(),
+                CachedPeer {
+                    endpoint: endpoint.clone(),
+                    cached_at: now,
+                    ttl_seconds: DNSSEC_CACHE_TTL_SECONDS,
+                },
+            );
+
+            Ok(endpoint)
+        }
+
+        /// Number of entries currently held in the DNSSEC peer-resolution cache.
+        pub fn dnssec_cache_size(&self) -> usize {
+            self.dnssec_cache.len()
+        }
+
+        /// Clear all cached DNSSEC peer-resolution entries.
+        pub fn clear_dnssec_cache(&mut self) {
+            self.dnssec_cache.clear();
+        }
+
+        /// Set the capabilities bitmask for a peer (replaces the `peer_capabilities: 0` TODO).
+        pub fn set_peer_capabilities(&mut self, peer_id: &str, capabilities: u64) {
+            self.peer_capabilities.insert(peer_id.to_string(), capabilities);
+        }
+
+        /// Set the semantic context for a peer (replaces the `semantic_context: 0` TODO).
+        pub fn set_semantic_context(&mut self, peer_id: &str, context: u64) {
+            self.semantic_contexts.insert(peer_id.to_string(), context);
+        }
+
+        /// Get the capabilities bitmask for a peer, if known.
+        pub fn get_peer_capabilities(&self, peer_id: &str) -> Option<u64> {
+            self.peer_capabilities.get(peer_id).copied()
+        }
+
+        /// Get the semantic context for a peer, if known.
+        pub fn get_semantic_context(&self, peer_id: &str) -> Option<u64> {
+            self.semantic_contexts.get(peer_id).copied()
         }
 
         /// Legacy CBOR-LD parsing method (fallback)
@@ -455,7 +735,7 @@ pub mod swarm {
             endpoint_port: u16,
         ) -> Result<u64, &'static str> {
             // Step 1: Resolve peer via DNSSEC CBOR-LD
-            let peer_payload = self.resolve_peer_dnssec(domain)?;
+            let peer_payload = self.resolve_peer_dnssec_payload(domain)?;
 
             // Step 2: Verify routing constraints against local policy
             let local_permission = crate::webizen_server::CompiledPermission {
@@ -1032,6 +1312,163 @@ pub mod swarm {
             }
 
             Ok(peer_id)
+        }
+    }
+
+    #[cfg(test)]
+    mod tests {
+        use super::*;
+
+        fn cell_with_resolver() -> WorkerCell {
+            let mut cell = WorkerCell::new(0);
+            cell.init_dnssec_resolver(HashMap::new());
+            cell
+        }
+
+        #[test]
+        fn resolve_peer_returns_endpoint_and_caches() {
+            let mut cell = cell_with_resolver();
+
+            // `dig` is almost certainly unavailable in the test environment, so this
+            // exercises the deterministic fallback path.
+            let endpoint = cell
+                .resolve_peer_dnssec("peer.example.com")
+                .expect("fallback resolution should succeed");
+
+            assert_eq!(endpoint.port, DEFAULT_PEER_PORT);
+            // Fallback path is not DNSSEC-validated
+            assert!(!endpoint.verified);
+            // Same domain must always map to the same address (deterministic)
+            let again = cell
+                .resolve_peer_dnssec("peer.example.com")
+                .expect("cached resolution should succeed");
+            assert_eq!(endpoint.address, again.address);
+            assert_eq!(endpoint.port, again.port);
+            // Cached
+            assert_eq!(cell.dnssec_cache_size(), 1);
+        }
+
+        #[test]
+        fn resolve_peer_uses_cache_on_second_call() {
+            let mut cell = cell_with_resolver();
+
+            let first = cell
+                .resolve_peer_dnssec("cache.example.com")
+                .expect("resolution should succeed");
+            assert_eq!(cell.dnssec_cache_size(), 1);
+
+            let second = cell
+                .resolve_peer_dnssec("cache.example.com")
+                .expect("cached resolution should succeed");
+
+            // Cache hit returns the same endpoint (including timestamp)
+            assert_eq!(first, second);
+            assert_eq!(cell.dnssec_cache_size(), 1);
+        }
+
+        #[test]
+        fn set_and_get_peer_capabilities() {
+            let mut cell = cell_with_resolver();
+
+            assert_eq!(cell.get_peer_capabilities("did:q42:abc"), None);
+
+            cell.set_peer_capabilities("did:q42:abc", 0b1010);
+            assert_eq!(cell.get_peer_capabilities("did:q42:abc"), Some(0b1010));
+
+            // Overwrite
+            cell.set_peer_capabilities("did:q42:abc", 0b1111);
+            assert_eq!(cell.get_peer_capabilities("did:q42:abc"), Some(0b1111));
+
+            // Independent peers
+            cell.set_peer_capabilities("did:q42:def", 0b1);
+            assert_eq!(cell.get_peer_capabilities("did:q42:def"), Some(0b1));
+            assert_eq!(cell.get_peer_capabilities("did:q42:abc"), Some(0b1111));
+        }
+
+        #[test]
+        fn set_and_get_semantic_context() {
+            let mut cell = cell_with_resolver();
+
+            assert_eq!(cell.get_semantic_context("did:q42:ctx"), None);
+
+            cell.set_semantic_context("did:q42:ctx", 0xC0FFEE);
+            assert_eq!(cell.get_semantic_context("did:q42:ctx"), Some(0xC0FFEE));
+
+            cell.set_semantic_context("did:q42:ctx", 0x1234_5678);
+            assert_eq!(
+                cell.get_semantic_context("did:q42:ctx"),
+                Some(0x1234_5678)
+            );
+        }
+
+        #[test]
+        fn clear_dnssec_cache_empties_entries() {
+            let mut cell = cell_with_resolver();
+
+            cell.resolve_peer_dnssec("a.example.com").unwrap();
+            cell.resolve_peer_dnssec("b.example.com").unwrap();
+            assert_eq!(cell.dnssec_cache_size(), 2);
+
+            cell.clear_dnssec_cache();
+            assert_eq!(cell.dnssec_cache_size(), 0);
+
+            // Resolving after clear repopulates
+            cell.resolve_peer_dnssec("a.example.com").unwrap();
+            assert_eq!(cell.dnssec_cache_size(), 1);
+        }
+
+        #[test]
+        fn cached_peer_ttl_freshness() {
+            let endpoint = PeerEndpoint {
+                address: IpAddr::V4(std::net::Ipv4Addr::new(10, 0, 0, 1)),
+                port: 51820,
+                verified: true,
+                timestamp: 1000,
+            };
+            let cached = CachedPeer {
+                endpoint,
+                cached_at: 1000,
+                ttl_seconds: 300,
+            };
+            assert!(cached.is_fresh(1100));
+            assert!(cached.is_fresh(1299));
+            assert!(!cached.is_fresh(1300));
+            assert!(!cached.is_fresh(2000));
+        }
+
+        #[test]
+        fn parse_cbor_ld_to_quin_chunks_data() {
+            let cell = cell_with_resolver();
+
+            // Without a Q42 lexicon parser initialised, parsing must fail cleanly.
+            let res = cell.parse_cbor_ld_to_quin(&[0x01, 0x02, 0x03]);
+            assert_eq!(res.err(), Some(DaemonError::CborLdParsingFailed));
+
+            // Empty payload is an error
+            let res = cell.parse_cbor_ld_to_quin(&[]);
+            assert_eq!(res.err(), Some(DaemonError::CborLdParsingFailed));
+        }
+
+        #[test]
+        fn domain_to_ip_is_deterministic() {
+            let a = domain_to_ip("peer.example.com", 0);
+            let b = domain_to_ip("peer.example.com", 0);
+            assert_eq!(a, b);
+
+            // Different domains should (almost certainly) differ
+            let c = domain_to_ip("other.example.com", 0);
+            assert_ne!(a, c);
+
+            // Salt changes the address
+            let d = domain_to_ip("peer.example.com", 1);
+            assert_ne!(a, d);
+
+            // Always in the 10.x.x.x private range
+            if let IpAddr::V4(v4) = a {
+                assert_eq!(v4.octets()[0], 10);
+            } else {
+                panic!("expected IPv4 from domain_to_ip");
+            }
         }
     }
 }

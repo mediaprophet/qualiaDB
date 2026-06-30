@@ -2333,14 +2333,54 @@ impl TimeStepControl {
         raw_dt.clamp(min_dt, max_dt)
     }
 
+    /// Compute the CFL-limited time step using the velocity field (or sound
+    /// speed fallback) stored on the `CflCondition`.
+    ///
+    /// This is the field-driven overload of `compute_cfl_dt`: it derives
+    /// `max_velocity` from `CflCondition::max_velocity()` instead of requiring
+    /// it as a parameter. When neither a velocity field nor a sound speed is
+    /// set, `max_velocity()` returns `0.0` and `max_time_step` is returned.
+    pub fn compute_cfl_dt_from_field(&self, dx: f64) -> f64 {
+        self.compute_cfl_dt(self.cfl_condition.max_velocity(), dx)
+    }
+
+    /// Compute the diffusive CFL-limited time step:
+    /// `dt_diff = CFL * dx^2 / (2 * diffusion_coeff)`.
+    ///
+    /// The result is clamped to `[min_time_step, max_time_step]`. Returns `0.0`
+    /// for a zero (or non-finite) diffusion coefficient, clamped to the minimum
+    /// bound so callers always receive a usable dt.
+    pub fn compute_diffusion_dt(&self, diffusion_coeff: f64, dx: f64) -> f64 {
+        let min_dt = self.adaptive_parameters.min_time_step;
+        let max_dt = self.adaptive_parameters.max_time_step;
+
+        if !diffusion_coeff.is_finite() || diffusion_coeff <= 0.0 || dx <= 0.0 {
+            return max_dt;
+        }
+
+        let raw_dt = self.cfl_condition.cfl_number * dx * dx / (2.0 * diffusion_coeff);
+        raw_dt.clamp(min_dt, max_dt)
+    }
+
+    /// Compute the combined advective + diffusive CFL limit and return the
+    /// most restrictive (minimum) of the two, clamped to
+    /// `[min_time_step, max_time_step]`.
+    pub fn compute_combined_dt(&self, max_velocity: f64, diffusion_coeff: f64, dx: f64) -> f64 {
+        let advective = self.compute_cfl_dt(max_velocity, dx);
+        let diffusive = self.compute_diffusion_dt(diffusion_coeff, dx);
+        let min_dt = self.adaptive_parameters.min_time_step;
+        let max_dt = self.adaptive_parameters.max_time_step;
+        advective.min(diffusive).clamp(min_dt, max_dt)
+    }
+
     /// Compute a new adaptive time step using the CFL condition, apply the safety
     /// factor and increase/decrease limits, update the internal `current_time_step`,
     /// and return the new dt.
     pub fn update_dt(&mut self, max_velocity: f64, dx: f64) -> f64 {
         let cfl_dt = self.compute_cfl_dt(max_velocity, dx);
 
-        // Apply the safety factor.
-        let safe_dt = cfl_dt * self.adaptive_parameters.safety_factor;
+        // Apply the safety factor and absolute clamping via AdaptiveParameters.
+        let safe_dt = self.adaptive_parameters.apply_safety_factor(cfl_dt);
 
         // Limit the rate of change relative to the previous time step.
         let new_dt = if self.current_time_step > 0.0 {
@@ -2352,10 +2392,7 @@ impl TimeStepControl {
         };
 
         // Clamp to the absolute bounds once more after the relative limiter.
-        let new_dt = new_dt.clamp(
-            self.adaptive_parameters.min_time_step,
-            self.adaptive_parameters.max_time_step,
-        );
+        let new_dt = self.adaptive_parameters.clamp_dt(new_dt);
 
         self.current_time_step = new_dt;
         new_dt
@@ -2371,6 +2408,51 @@ impl CflCondition {
             diffusion_coefficient: None,
         }
     }
+
+    /// Set the velocity field used for CFL advective time-step estimation.
+    pub fn set_velocity_field(&mut self, velocities: Vec<f64>) {
+        self.velocity_field = Some(velocities);
+    }
+
+    /// Set the sound speed used as a fallback wave speed when no velocity
+    /// field is populated.
+    pub fn set_sound_speed(&mut self, speed: f64) {
+        self.sound_speed = Some(speed);
+    }
+
+    /// Set the diffusion coefficient used for the diffusive CFL limit.
+    pub fn set_diffusion_coefficient(&mut self, coeff: f64) {
+        self.diffusion_coefficient = Some(coeff);
+    }
+
+    /// Return the maximum absolute velocity from the velocity field.
+    ///
+    /// Falls back to `sound_speed` when no velocity field is present, and to
+    /// `0.0` when neither is set. Non-finite entries in the velocity field are
+    /// ignored.
+    pub fn max_velocity(&self) -> f64 {
+        if let Some(field) = &self.velocity_field {
+            field
+                .iter()
+                .copied()
+                .filter(|v| v.is_finite())
+                .map(|v| v.abs())
+                .fold(0.0f64, f64::max)
+        } else if let Some(c) = self.sound_speed {
+            if c.is_finite() {
+                c
+            } else {
+                0.0
+            }
+        } else {
+            0.0
+        }
+    }
+
+    /// Accessor for the velocity field, if populated.
+    pub fn get_velocity_field(&self) -> Option<&Vec<f64>> {
+        self.velocity_field.as_ref()
+    }
 }
 
 impl AdaptiveParameters {
@@ -2382,6 +2464,28 @@ impl AdaptiveParameters {
             max_increase_factor: 2.0,
             max_decrease_factor: 0.5,
         }
+    }
+
+    /// Constructor with explicit bounds and safety factor. The relative
+    /// increase/decrease limits keep their defaults.
+    pub fn with_values(min_ts: f64, max_ts: f64, safety: f64) -> Self {
+        Self {
+            min_time_step: min_ts,
+            max_time_step: max_ts,
+            safety_factor: safety,
+            max_increase_factor: 2.0,
+            max_decrease_factor: 0.5,
+        }
+    }
+
+    /// Clamp `dt` to `[min_time_step, max_time_step]`.
+    pub fn clamp_dt(&self, dt: f64) -> f64 {
+        dt.clamp(self.min_time_step, self.max_time_step)
+    }
+
+    /// Multiply `dt` by the safety factor, then clamp to the absolute bounds.
+    pub fn apply_safety_factor(&self, dt: f64) -> f64 {
+        self.clamp_dt(dt * self.safety_factor)
     }
 }
 
@@ -4114,6 +4218,157 @@ mod tests {
         let dt = integrator.adaptive_step(&field, 0.001);
         assert!(dt > 0.0);
         assert!(dt < 1.0); // within max bound
+    }
+
+    // ---- Feature: CFL Velocity Field Population ----
+
+    #[test]
+    fn test_cfl_velocity_field_max_velocity() {
+        let mut cfl = CflCondition::new();
+        // No velocity field yet: falls back to default sound_speed (343.0).
+        assert!((cfl.max_velocity() - 343.0).abs() < 1e-12);
+
+        cfl.set_velocity_field(vec![-1.0, 3.0, -7.0, 2.0]);
+        // max absolute velocity = 7.0
+        assert!((cfl.max_velocity() - 7.0).abs() < 1e-12);
+
+        // Accessor returns the populated field.
+        let field = cfl.get_velocity_field().unwrap();
+        assert_eq!(field.len(), 4);
+        assert_eq!(field[2], -7.0);
+    }
+
+    #[test]
+    fn test_cfl_max_velocity_sound_speed_fallback() {
+        let mut cfl = CflCondition::new();
+        cfl.set_sound_speed(500.0);
+        // No velocity field => sound speed used.
+        assert!((cfl.max_velocity() - 500.0).abs() < 1e-12);
+
+        // Velocity field takes precedence over sound speed.
+        cfl.set_velocity_field(vec![2.0, -4.0]);
+        assert!((cfl.max_velocity() - 4.0).abs() < 1e-12);
+    }
+
+    #[test]
+    fn test_cfl_max_velocity_neither_set() {
+        let mut cfl = CflCondition::new();
+        cfl.sound_speed = None;
+        assert!((cfl.max_velocity() - 0.0).abs() < 1e-12);
+    }
+
+    #[test]
+    fn test_compute_cfl_dt_from_field() {
+        let mut tsc = TimeStepControl::new();
+        tsc.cfl_condition.set_velocity_field(vec![1.0, -10.0, 5.0]);
+        // max_velocity = 10.0, CFL = 0.5, dx = 0.1 => dt = 0.5 * 0.1 / 10 = 0.005
+        let dt = tsc.compute_cfl_dt_from_field(0.1);
+        assert!((dt - 0.005).abs() < 1e-12);
+    }
+
+    // ---- Feature: Diffusion Coefficient in CFL ----
+
+    #[test]
+    fn test_compute_diffusion_dt() {
+        let tsc = TimeStepControl::new();
+        // CFL = 0.5, dx = 0.1, diffusion_coeff = 1.0
+        // dt_diff = 0.5 * 0.1^2 / (2 * 1.0) = 0.5 * 0.01 / 2 = 0.0025
+        let dt = tsc.compute_diffusion_dt(1.0, 0.1);
+        assert!((dt - 0.0025).abs() < 1e-12);
+
+        // Zero diffusion coefficient => no diffusive limit => max_time_step.
+        let dt_zero = tsc.compute_diffusion_dt(0.0, 0.1);
+        assert!((dt_zero - 1.0).abs() < 1e-12);
+    }
+
+    #[test]
+    fn test_compute_diffusion_dt_clamping() {
+        let tsc = TimeStepControl::new();
+        // Very small diffusion => huge dt => clamped to max_time_step (1.0).
+        let dt_max = tsc.compute_diffusion_dt(1e-9, 0.1);
+        assert!((dt_max - 1.0).abs() < 1e-12);
+
+        // Very large diffusion => tiny dt => clamped to min_time_step (1e-6).
+        let dt_min = tsc.compute_diffusion_dt(1e9, 0.1);
+        assert!((dt_min - 1e-6).abs() < 1e-12);
+    }
+
+    #[test]
+    fn test_compute_combined_dt_takes_minimum() {
+        let tsc = TimeStepControl::new();
+        // Advective: 0.5 * 0.1 / 10.0 = 0.005
+        // Diffusive: 0.5 * 0.01 / 2.0 = 0.0025
+        // Combined => min(0.005, 0.0025) = 0.0025
+        let dt = tsc.compute_combined_dt(10.0, 1.0, 0.1);
+        assert!((dt - 0.0025).abs() < 1e-12);
+
+        // Swap so advective is more restrictive.
+        // Advective: 0.5 * 0.1 / 100.0 = 0.0005
+        // Diffusive: 0.5 * 0.01 / 2.0 = 0.0025
+        // Combined => min(0.0005, 0.0025) = 0.0005
+        let dt2 = tsc.compute_combined_dt(100.0, 1.0, 0.1);
+        assert!((dt2 - 0.0005).abs() < 1e-12);
+    }
+
+    #[test]
+    fn test_cfl_set_diffusion_coefficient() {
+        let mut cfl = CflCondition::new();
+        assert!(cfl.diffusion_coefficient.is_none());
+        cfl.set_diffusion_coefficient(2.5);
+        assert_eq!(cfl.diffusion_coefficient, Some(2.5));
+    }
+
+    // ---- Feature: AdaptiveParameters Usage ----
+
+    #[test]
+    fn test_adaptive_parameters_with_values() {
+        let params = AdaptiveParameters::with_values(1e-4, 0.5, 0.8);
+        assert!((params.min_time_step - 1e-4).abs() < 1e-12);
+        assert!((params.max_time_step - 0.5).abs() < 1e-12);
+        assert!((params.safety_factor - 0.8).abs() < 1e-12);
+        // Relative limits keep defaults.
+        assert!((params.max_increase_factor - 2.0).abs() < 1e-12);
+        assert!((params.max_decrease_factor - 0.5).abs() < 1e-12);
+    }
+
+    #[test]
+    fn test_adaptive_parameters_clamp_dt() {
+        let params = AdaptiveParameters::with_values(1e-3, 1.0, 0.9);
+
+        // Within bounds => unchanged.
+        assert!((params.clamp_dt(0.5) - 0.5).abs() < 1e-12);
+
+        // Below min => clamped to min.
+        assert!((params.clamp_dt(1e-6) - 1e-3).abs() < 1e-12);
+
+        // Above max => clamped to max.
+        assert!((params.clamp_dt(10.0) - 1.0).abs() < 1e-12);
+    }
+
+    #[test]
+    fn test_adaptive_parameters_apply_safety_factor() {
+        let params = AdaptiveParameters::with_values(1e-4, 1.0, 0.5);
+
+        // 0.5 * 0.5 = 0.25, within bounds.
+        assert!((params.apply_safety_factor(0.5) - 0.25).abs() < 1e-12);
+
+        // 10.0 * 0.5 = 5.0, clamped to max 1.0.
+        assert!((params.apply_safety_factor(10.0) - 1.0).abs() < 1e-12);
+
+        // 1e-5 * 0.5 = 5e-6, clamped to min 1e-4.
+        assert!((params.apply_safety_factor(1e-5) - 1e-4).abs() < 1e-12);
+    }
+
+    #[test]
+    fn test_update_dt_uses_adaptive_parameters_clamp_and_safety() {
+        let mut tsc = TimeStepControl::new();
+        tsc.adaptive_parameters = AdaptiveParameters::with_values(1e-6, 1.0, 0.9);
+        tsc.current_time_step = 0.0; // bypass relative limiter on first call
+
+        // CFL dt = 0.5 * 0.1 / 10 = 0.005, safety 0.9 => 0.0045, within bounds.
+        let dt = tsc.update_dt(10.0, 0.1);
+        assert!((dt - 0.0045).abs() < 1e-12);
+        assert!((tsc.current_time_step - 0.0045).abs() < 1e-12);
     }
 
     // ---- Feature 3: Stencil Operators ----
