@@ -67,7 +67,7 @@ Successfully updated all SDO documentation to reflect the completed CBOR-LD with
 ```
 
 **Q42 Lexicon Integration:**
-- Embedded in v2 volumes (no external dependencies)
+- Embedded in v3 volumes (no external dependencies)
 - Zero-allocation term resolution (O(1) hash lookup)
 - Semantic validation against Q42 vocabulary
 - Full offline operation capability
@@ -200,7 +200,7 @@ The Qualia Protocol Ecosystem is now ready for external standardization with a s
 ### **Semantic Interoperability:**
 - **Vocabulary Resolution**: Q42 lexicon provides embedded vocabulary
 - **Term Resolution**: O(1) hash lookup for semantic terms
-- **Context Management**: Simple lexicon lookup from embedded v2 volumes
+- **Context Management**: Simple lexicon lookup from embedded v3 volumes
 - **Validation**: Semantic validation against Q42 vocabulary
 
 ---

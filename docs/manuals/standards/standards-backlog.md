@@ -337,19 +337,42 @@ Each of those should become its own draft with its own conformance language.
 
 ## Suggested file backlog for this folder
 
-- [x] `q42-format-internal-draft.md`
+> **Reconciliation (2026-06-30)** — statuses verified against on-disk reality + current code.
+> Two specs previously marked done actually live under `docs/manuals/query-engine/`, not this
+> folder (now cross-linked from `standards/index.html`); several real specs were untracked and
+> are added; `webizen-protocol-split.md` was the planned name for what shipped as
+> `webizen-protocol-rfc.md`.
+
+Done (in `standards/`):
+
+- [x] `q42-format-internal-draft.md` — v3 volume + separate `.p64` weight container (refreshed 2026-06-30)
 - [x] `did-q42-method-draft.md`
 - [x] `qualia-vault-manifest.md`
-- [x] `qualia-sync-protocol.md`
-- [ ] `qualia-shacl-extensions.md`
+- [x] `qualia-sync-protocol.md` — CBOR-LD §13 now implemented in `p2p::protocol::qcborld`
+  (lossless, lexicon-compacted, round-trip tested). **Follow-up:** the codec uses a transient
+  per-frame `ciborium::Value`; a hand-rolled streaming zero-allocation CBOR-LD encoder/decoder is
+  still to write (§13 claim 3 is honestly marked partial until then).
 - [x] `qualia-qapp-loopback-protocol.md`
-- [x] `sparql-temporal-extension.md`
-- [ ] `solid-webizen-bridge-profile.md`
+- [x] `hcai-agreement-negotiation-protocol.md` — draft (negotiation layer not yet implemented)
+- [x] `yaml-ld-q42-specification.md`
+- [x] `CBOR_LD_SDO_Update_Summary.md` — notes / changelog
+- [x] `AGENT_INTENT_LOGGING_SPEC.md`, `SEMANTIC_HEADER_SCHEMA.md`, `MULTI_AGENT_PROTOCOL.md` —
+  multi-agent transparency family; coordination opcodes `0x70–0x72` + the operand-stack VM +
+  Darwinian law implemented 2026-06-30 (`governance::coordination`)
+- [x] `webizen-protocol-rfc.md` — the broad protocol RFC (the file the backlog earlier planned
+  as `webizen-protocol-split.md`)
+
+Done, but living under `docs/manuals/query-engine/` (cross-linked from `standards/index.html`):
+
+- [x] `query-engine/qualia-shacl-extensions.html` — + Computational Mathematics Constraints (2026-06-30)
+- [x] `query-engine/sparql-temporal-extension.md`
+
+Genuinely outstanding (file absent on disk — accurate):
+
+- [ ] `solid-webizen-bridge-profile.md` — a Solid-bridge ADR exists at `../adr/006-zero-allocation-solid-bridge.md`
 - [ ] `qchk-capability-profile.md`
 - [ ] `mcp-fiduciary-mediation-explainer.md`
-- [ ] `webizen-protocol-split.md`
 - [ ] `webizen-execution-model.md`
-- [x] `hcai-agreement-negotiation-protocol.md`
 
 ## Recommended order of work
 
@@ -367,10 +390,16 @@ Each of those should become its own draft with its own conformance language.
 
 ## Notes for the q42 draft
 
-The `q42-format-internal-draft.md` was revised 2026-06-09 to reflect
-implemented v2 unified volumes. Remaining doc/code alignment:
+The `q42-format-internal-draft.md` was refreshed 2026-06-30 to reflect implemented **v3**
+unified volumes and the separate **`.p64`** LLM-weight container. Resolved since the earlier
+v2 note:
 
-- WASM playground VFS still legacy
-- `.c.q42` deprecated but retained as copy alias
-- object-hash BIDX is normative; subject-hash prose in older docs is stale
-- `q42` / `qla` naming drift in older storage comments
+- object-hash BIDX is normative — the doc honors it (no subject-hash contradiction remains)
+- the stale `Q42W` weight-container section was rewritten to `.p64` (`Q42W` is superseded;
+  retained only as migration fixtures)
+
+Still open:
+
+- WASM playground VFS still legacy (or document the build-time translation)
+- `.c.q42` deprecated but retained as a copy alias
+- propose content-type names + publish worked v3 test vectors (Priority-1 item 1 exit criteria)

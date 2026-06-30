@@ -310,13 +310,21 @@ Must:
 
 **CBOR-LD with Q42 Lexicon Implementation Complete**
 
+> **Implementation reference (2026-06-30).** The CBOR-LD wire codec is implemented and unit-tested in
+> [`crates/qualia-core-db/src/p2p/protocol.rs`](../../../crates/qualia-core-db/src/p2p/protocol.rs)
+> (`mod qcborld`): a self-identifying (magic-tagged), **lossless**, Q42-lexicon-compacted CBOR-LD map —
+> the `@context` IRI and every field term is resolved through the Q42 lexicon to a 64-bit key. The
+> request-response codec emits/decodes it on both directions and falls back to plain ciborium only for a
+> non-CBOR-LD frame. Round-trip tests prove losslessness over every variant and that a CBOR-LD frame does
+> **not** decode as the plain enum.
+
 The previous contradictions have been resolved through the implementation of CBOR-LD with Q42's native lexicon system:
 
 ### **Resolved Issues:**
 
 1. **✅ CBOR-LD Semantic Payloads**: Implemented with Q42 lexicon resolution
    - Current implementation uses CBOR-LD semantic payloads throughout
-   - Q42 lexicon embedded in v2 volumes eliminates external dependencies
+   - Q42 lexicon embedded in v3 volumes eliminates external dependencies
    - Zero-allocation parsing maintains performance constraints
 
 2. **✅ Semantic Handshake Structure**: Replaced binary buffer with typed CBOR-LD
@@ -324,14 +332,17 @@ The previous contradictions have been resolved through the implementation of CBO
    - Credentials carried as semantic payload with DID Q42 identification
    - Field names updated to reflect actual semantic structure
 
-3. **✅ Zero-Allocation Compliance**: Eliminated heap allocations in hot paths
-   - Q42 lexicon provides zero-allocation term resolution
-   - Semantic processing maintains 512MB memory constraints
-   - Parsing overhead reduced to 2-3x vs 4-5x with JSON-LD
+3. **◑ Allocation profile** *(correct + lossless now; true zero-alloc is a tracked follow-up)*
+   - The Q42 lexicon provides O(1) term ⇄ 64-bit-hash resolution
+   - The shipped `qcborld` codec is **correct and lossless** but uses a **transient per-frame
+     allocation** (it builds a `ciborium::Value` map per message) — it is **not** yet zero-allocation.
+     A hand-rolled streaming CBOR-LD encoder/decoder (no intermediate `Value`) is the zero-alloc
+     follow-up (tracked in the standards backlog).
+   - Term-compacted CBOR-LD keeps the payload smaller than JSON-LD; no external schema fetch
 
-4. **✅ Stable Block Transfer**: Defined in unified v2 `.q42` format
-   - Block transfer grammar tied to v2 volume specification
-   - CBOR-LD payloads reference v2 volume structures
+4. **✅ Stable Block Transfer**: Defined in unified v3 `.q42` format
+   - Block transfer grammar tied to v3 volume specification
+   - CBOR-LD payloads reference v3 volume structures
    - Legacy compatibility maintained for `.c.q42` transport
 
 5. **✅ Trust Logic Enhancement**: Semantic validation with Q42 lexicon

@@ -1,7 +1,7 @@
 # Human-Centric Multi-Agent Coordination Specification
 
 **Version:** 1.0.0
-**Target Environment:** QualiaDB `0.0.17-dev` (Sentinel VM & Swarm Daemon)
+**Target Environment:** QualiaDB `0.0.23` _(draft — Sentinel VM & Swarm Daemon; coordination ISA 0x70–0x72 implemented, see §5; remaining parts proposed)_
 
 This specification defines the strict mechanical and cryptographic boundaries for multi-agent interaction within the QualiaDB ecosystem. It solves the "Competitive Bot" / "Black-Box Agent" problem by enforcing transparent provenance, shared context ingestion, and strict token-bidding economics at the physical memory layer. 
 
