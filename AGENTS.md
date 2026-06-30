@@ -502,22 +502,16 @@ pub fn synthesize_dialectical(
 
 ## 4. Known Bugs / Correctness Issues (fix while working in the area)
 
-### 4-A `prune_defeasible_claims` in `logic.rs` uses heap
-`WebizenVM::prune_defeasible_claims` takes `&mut Vec<NQuin>` and uses `HashSet`. This
-violates the zero-heap mandate. If you're touching `logic.rs`, replace with:
-```rust
-// Caller supplies two output buffers; function partitions in-place
-pub fn partition_defeasible(
-    quins: &[NQuin],
-    out_hard: &mut [NQuin],
-    out_defeasible: &mut [NQuin],
-) -> (usize, usize)
-```
+### 4-A `prune_defeasible_claims` in `logic.rs` — RESOLVED
+`WebizenVM::prune_defeasible_claims` now takes `&mut [NQuin]` and does in-place
+two-pointer compaction (zero heap allocation, no `Vec` or `HashSet`). Defeasible
+claims contradicted by hard facts are removed; remaining slots are zeroed.
 
-### 4-B `Always/Eventually/Next` semantics in `logic.rs`
-These opcodes currently compare a float threshold on a single Quin's object field. They are
-NOT LTL operators. Do not rely on them for temporal reasoning. Use Task B's `evaluate_ltl_trace`
-instead. The existing opcodes are left in place only to avoid breaking existing tests.
+### 4-B `Always/Eventually/Next` semantics in `logic.rs` — RESOLVED
+The correct LTL evaluator lives in `modalities/temporal_ltl.rs` with `evaluate_ltl_trace`
+supporting G/F/X/U/R over Quin traces. The legacy `logic.rs` opcodes are left in place
+to avoid breaking existing tests — use `temporal_ltl::evaluate_ltl_trace` for real
+temporal reasoning.
 
 ### 4-D Object field type-tag conflict between `logic.rs` and `resolver.rs`
 
@@ -536,11 +530,11 @@ the ingest layer. For now: if your new module emits object values as scalars, us
 `resolver.rs` convention (bits 0-59 = payload, bits 60-62 = type tag). Document in the
 function's doc comment which convention you're following.
 
-### 4-E `derive_lane_key` in `agency.rs` uses SHA256 instead of PBKDF2
+### 4-E `derive_lane_key` in `agency.rs` — RESOLVED
 
-`derive_lane_key(pin, salt)` is a single SHA256 round. The comment says production
-needs `PBKDF2-HMAC-SHA256` with 310,000 iterations. Until fixed, Sanctuary Mode PINs
-are trivially brutable offline. Do not ship this for real user data.
+`derive_lane_key(pin, salt)` now delegates to `sanctuary_crypto::derive_lane_cipher_key`
+which uses `pbkdf2_hmac::<Sha256>` with `DEFAULT_PBKDF2_ITERATIONS = 310_000`. Intermediate
+key material is zeroized after derivation. The old single-SHA256 version has been replaced.
 
 ### 4-F `DelegatedAccess` in `crdt.rs` — RESOLVED (2026-06-25)
 
@@ -552,8 +546,9 @@ buffers in `deontic_logic.rs::evaluate_accessible_layers` and
 `epistemic.rs::{objective_knowledge_of, all_beliefs_of}`, and `core::mem::take` (no
 per-call clone) in `webizen.rs` SLG rule firing.
 
-### 4-C `execute_differential_diagnostics` in `logic.rs` returns `Vec`
-Violates zero-heap mandate. Caller should pass `out: &mut [NQuin]`.
+### 4-C `execute_differential_diagnostics` in `logic.rs` — RESOLVED
+Now takes `qualia_graph: &[NQuin]` and `out: &mut [NQuin]`, returns
+`Result<usize, DiagnosticError>`. Caller-provided buffer pattern, zero heap allocation.
 
 ---
 
