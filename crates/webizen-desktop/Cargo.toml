@@ -5,17 +5,18 @@ edition = "2021"
 authors = ["Timothy Charles Holborn <timothy.holborn@gmail.com>"]
 
 [build-dependencies]
-tauri-build = { version = "1.5", features = [] }
+tauri-build = { version = "2.6", features = [] }
 
 [dependencies]
-tauri = { version = "1.5", features = [ "protocol-asset", "os-all", "updater", "system-tray" ] }
+tauri = { version = "2.11", features = ["protocol-asset", "tray-icon", "image-png"] }
+tauri-plugin-updater = "2.10"
 serde = { version = "1.0", features = ["derive"] }
 serde_json = "1.0"
-sysinfo = "0.30"
+sysinfo = "0.39"
 tokio = { version = "1", features = ["full"] }
 reqwest = { version = "0.13", default-features = false, features = ["rustls", "json", "stream"] }
-axum = { version = "0.7", features = ["ws"] }
-tower-http = { version = "0.5", features = ["cors", "fs", "set-header"] }
+axum = { version = "0.8", features = ["ws"] }
+tower-http = { version = "0.7", features = ["cors", "fs", "set-header"] }
 base64 = "0.22"
 open = "5"
 qualia-core-db = { path = "../qualia-core-db" }
@@ -25,7 +26,7 @@ webizen-render = { path = "../webizen-render" }
 webizen-studio = { path = "../webizen-studio" }
 futures-util = "0.3"
 mime_guess = "2.0"
-pdf-extract = "0.7"
+pdf-extract = "0.12"
 rtrb = "0.3.1"
 byteorder = "1.5"
 bip39 = { version = "2.2.2", features = ["rand"] }
@@ -41,4 +42,3 @@ pollster = "0.4.0"
 
 [features]
 custom-protocol = ["tauri/custom-protocol"]
-

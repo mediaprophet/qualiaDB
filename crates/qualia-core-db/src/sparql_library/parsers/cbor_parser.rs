@@ -18,10 +18,7 @@ fn hash_str(s: &str) -> u64 {
 /// Check if the next item is a CBOR tag and return it if it's an RDF-Star tag
 fn try_read_rdf_star_tag(decoder: &mut Decoder) -> Option<u64> {
     if decoder.datatype().ok()? == minicbor::data::Type::Tag {
-        let tag_val = match decoder.tag().ok()? {
-            minicbor::data::Tag::Unassigned(v) => v,
-            _ => return None,
-        };
+        let tag_val = decoder.tag().ok()?.as_u64();
         if tag_val == CBOR_TAG_TRIPLE
             || tag_val == CBOR_TAG_SUBJECT
             || tag_val == CBOR_TAG_PREDICATE

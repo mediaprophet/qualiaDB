@@ -2719,8 +2719,7 @@ impl KeyGenerator {
             KeyAlgorithm::RSA => {
                 #[cfg(feature = "interop-crypto")]
                 {
-                    use rand_core::OsRng;
-                    use rsa::{pkcs8::EncodePrivateKey, RsaPrivateKey};
+                    use rsa::{pkcs8::EncodePrivateKey, rand_core::OsRng, RsaPrivateKey};
                     let mut rng = OsRng;
                     let priv_key = RsaPrivateKey::new(&mut rng, 2048)
                         .map_err(|e| CryptographicError::SignatureError(e.to_string()))?;
@@ -3568,7 +3567,7 @@ impl EncryptionEngine {
         additional_data: Option<&[u8]>,
         algorithm: &EncryptionAlgorithm,
     ) -> Result<(Vec<u8>, Vec<u8>), CryptographicError> {
-        use aes_gcm::aead::generic_array::GenericArray;
+        use aead::{AeadInOut, KeyInit};
         if key.key_data.len() < 32 {
             return Err(CryptographicError::EncryptionError(
                 "AEAD key must be 32 bytes".to_string(),
@@ -3584,26 +3583,43 @@ impl EncryptionEngine {
         let mut buffer = data.to_vec();
         let tag = match algorithm {
             EncryptionAlgorithm::AES256GCM => {
-                use aes_gcm::{AeadInPlace, Aes256Gcm, KeyInit};
-                let cipher = Aes256Gcm::new(GenericArray::from_slice(&key.key_data[..32]));
+                use aes_gcm::Aes256Gcm;
+                let cipher =
+                    Aes256Gcm::new(&aes_gcm::Key::<Aes256Gcm>::try_from(&key.key_data[..32]).unwrap());
                 cipher
-                    .encrypt_in_place_detached(GenericArray::from_slice(iv), aad, &mut buffer)
+                    .encrypt_inout_detached(
+                        &aes_gcm::Nonce::try_from(iv).unwrap(),
+                        aad,
+                        (&mut buffer[..]).into(),
+                    )
                     .map_err(|e| CryptographicError::EncryptionError(e.to_string()))?
                     .to_vec()
             }
             EncryptionAlgorithm::ChaCha20Poly1305 => {
-                use chacha20poly1305::{AeadInPlace, ChaCha20Poly1305, KeyInit};
-                let cipher = ChaCha20Poly1305::new(GenericArray::from_slice(&key.key_data[..32]));
+                use chacha20poly1305::ChaCha20Poly1305;
+                let cipher = ChaCha20Poly1305::new(
+                    &chacha20poly1305::Key::try_from(&key.key_data[..32]).unwrap(),
+                );
                 cipher
-                    .encrypt_in_place_detached(GenericArray::from_slice(iv), aad, &mut buffer)
+                    .encrypt_inout_detached(
+                        &chacha20poly1305::Nonce::try_from(iv).unwrap(),
+                        aad,
+                        (&mut buffer[..]).into(),
+                    )
                     .map_err(|e| CryptographicError::EncryptionError(e.to_string()))?
                     .to_vec()
             }
             EncryptionAlgorithm::XChaCha20Poly1305 => {
-                use chacha20poly1305::{AeadInPlace, KeyInit, XChaCha20Poly1305};
-                let cipher = XChaCha20Poly1305::new(GenericArray::from_slice(&key.key_data[..32]));
+                use chacha20poly1305::XChaCha20Poly1305;
+                let cipher = XChaCha20Poly1305::new(
+                    &chacha20poly1305::Key::try_from(&key.key_data[..32]).unwrap(),
+                );
                 cipher
-                    .encrypt_in_place_detached(GenericArray::from_slice(iv), aad, &mut buffer)
+                    .encrypt_inout_detached(
+                        &chacha20poly1305::XNonce::try_from(iv).unwrap(),
+                        aad,
+                        (&mut buffer[..]).into(),
+                    )
                     .map_err(|e| CryptographicError::EncryptionError(e.to_string()))?
                     .to_vec()
             }
@@ -3625,7 +3641,7 @@ impl EncryptionEngine {
         additional_data: Option<&[u8]>,
         algorithm: &EncryptionAlgorithm,
     ) -> Result<Vec<u8>, CryptographicError> {
-        use aes_gcm::aead::generic_array::GenericArray;
+        use aead::{AeadInOut, KeyInit};
         if key.key_data.len() < 32 {
             return Err(CryptographicError::DecryptionError(
                 "AEAD key must be 32 bytes".to_string(),
@@ -3643,42 +3659,46 @@ impl EncryptionEngine {
             ));
         }
         let aad = additional_data.unwrap_or(b"");
-        let tag_arr = GenericArray::from_slice(tag);
         let mut buffer = ciphertext.to_vec();
         match algorithm {
             EncryptionAlgorithm::AES256GCM => {
-                use aes_gcm::{AeadInPlace, Aes256Gcm, KeyInit};
-                let cipher = Aes256Gcm::new(GenericArray::from_slice(&key.key_data[..32]));
+                use aes_gcm::Aes256Gcm;
+                let cipher =
+                    Aes256Gcm::new(&aes_gcm::Key::<Aes256Gcm>::try_from(&key.key_data[..32]).unwrap());
                 cipher
-                    .decrypt_in_place_detached(
-                        GenericArray::from_slice(iv),
+                    .decrypt_inout_detached(
+                        &aes_gcm::Nonce::try_from(iv).unwrap(),
                         aad,
-                        &mut buffer,
-                        tag_arr,
+                        (&mut buffer[..]).into(),
+                        &aes_gcm::Tag::try_from(tag).unwrap(),
                     )
                     .map_err(|e| CryptographicError::DecryptionError(e.to_string()))?;
             }
             EncryptionAlgorithm::ChaCha20Poly1305 => {
-                use chacha20poly1305::{AeadInPlace, ChaCha20Poly1305, KeyInit};
-                let cipher = ChaCha20Poly1305::new(GenericArray::from_slice(&key.key_data[..32]));
+                use chacha20poly1305::ChaCha20Poly1305;
+                let cipher = ChaCha20Poly1305::new(
+                    &chacha20poly1305::Key::try_from(&key.key_data[..32]).unwrap(),
+                );
                 cipher
-                    .decrypt_in_place_detached(
-                        GenericArray::from_slice(iv),
+                    .decrypt_inout_detached(
+                        &chacha20poly1305::Nonce::try_from(iv).unwrap(),
                         aad,
-                        &mut buffer,
-                        tag_arr,
+                        (&mut buffer[..]).into(),
+                        &chacha20poly1305::Tag::try_from(tag).unwrap(),
                     )
                     .map_err(|e| CryptographicError::DecryptionError(e.to_string()))?;
             }
             EncryptionAlgorithm::XChaCha20Poly1305 => {
-                use chacha20poly1305::{AeadInPlace, KeyInit, XChaCha20Poly1305};
-                let cipher = XChaCha20Poly1305::new(GenericArray::from_slice(&key.key_data[..32]));
+                use chacha20poly1305::XChaCha20Poly1305;
+                let cipher = XChaCha20Poly1305::new(
+                    &chacha20poly1305::Key::try_from(&key.key_data[..32]).unwrap(),
+                );
                 cipher
-                    .decrypt_in_place_detached(
-                        GenericArray::from_slice(iv),
+                    .decrypt_inout_detached(
+                        &chacha20poly1305::XNonce::try_from(iv).unwrap(),
                         aad,
-                        &mut buffer,
-                        tag_arr,
+                        (&mut buffer[..]).into(),
+                        &chacha20poly1305::Tag::try_from(tag).unwrap(),
                     )
                     .map_err(|e| CryptographicError::DecryptionError(e.to_string()))?;
             }

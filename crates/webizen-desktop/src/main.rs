@@ -4,9 +4,10 @@
 )]
 
 use std::path::PathBuf;
-use tauri::{
-    CustomMenuItem, Manager, SystemTray, SystemTrayEvent, SystemTrayMenu, SystemTrayMenuItem,
-};
+use tauri::menu::{MenuBuilder, MenuItem};
+use tauri::tray::{MouseButton, MouseButtonState, TrayIconBuilder, TrayIconEvent};
+use tauri::{Emitter, Manager};
+use tauri_plugin_updater::UpdaterExt;
 
 pub mod commands;
 pub mod runtime;
@@ -19,26 +20,29 @@ use qualia_client_core::qapp_registry::QAPPS_DIR;
 use qualia_client_core::state::{dirs_default_path, init_app_state};
 use runtime::{spawn_runtime, RuntimeHandle};
 
-type ProtocolResult = Result<tauri::http::Response, Box<dyn std::error::Error>>;
+type ProtocolResponse = tauri::http::Response<Vec<u8>>;
 
-fn diffusion_frame_response(app: &tauri::AppHandle, slot: u8) -> ProtocolResult {
+fn protocol_response(status: u16, mime: Option<&str>, body: Vec<u8>) -> ProtocolResponse {
+    let mut builder = tauri::http::Response::builder().status(status);
+    if let Some(mime) = mime {
+        builder = builder.header(tauri::http::header::CONTENT_TYPE, mime);
+    }
+    builder
+        .body(body)
+        .expect("static protocol response metadata is valid")
+}
+
+fn diffusion_frame_response(app: &tauri::AppHandle, slot: u8) -> ProtocolResponse {
     match app.try_state::<RuntimeHandle>() {
         Some(runtime) => match runtime.frame_rgba(slot) {
-            Some(frame) => tauri::http::ResponseBuilder::new()
-                .mimetype("application/octet-stream")
-                .status(200)
-                .body(frame),
-            None => tauri::http::ResponseBuilder::new()
-                .status(404)
-                .body(Vec::new()),
+            Some(frame) => protocol_response(200, Some("application/octet-stream"), frame),
+            None => protocol_response(404, None, Vec::new()),
         },
-        None => tauri::http::ResponseBuilder::new()
-            .status(503)
-            .body(Vec::new()),
+        None => protocol_response(503, None, Vec::new()),
     }
 }
 
-fn render_preview_response(app: &tauri::AppHandle) -> ProtocolResult {
+fn render_preview_response(app: &tauri::AppHandle) -> ProtocolResponse {
     match app.try_state::<PreviewState>() {
         Some(state) => {
             let bytes = state
@@ -47,32 +51,20 @@ fn render_preview_response(app: &tauri::AppHandle) -> ProtocolResult {
                 .map(|guard| guard.clone())
                 .unwrap_or_default();
             if bytes.is_empty() {
-                tauri::http::ResponseBuilder::new()
-                    .status(404)
-                    .body(Vec::new())
+                protocol_response(404, None, Vec::new())
             } else {
-                tauri::http::ResponseBuilder::new()
-                    .mimetype("image/png")
-                    .status(200)
-                    .body(bytes)
+                protocol_response(200, Some("image/png"), bytes)
             }
         }
-        None => tauri::http::ResponseBuilder::new()
-            .status(503)
-            .body(Vec::new()),
+        None => protocol_response(503, None, Vec::new()),
     }
 }
 
 fn webizen_protocol_response(
     app: &tauri::AppHandle,
-    request: &tauri::http::Request,
-) -> ProtocolResult {
-    let uri = request.uri();
-    let request_path = uri.strip_prefix("webizen://localhost/").unwrap_or("");
-    let path = request_path
-        .split_once('?')
-        .map(|(path, _)| path)
-        .unwrap_or(request_path);
+    request: &tauri::http::Request<Vec<u8>>,
+) -> ProtocolResponse {
+    let path = request.uri().path().trim_start_matches('/');
     let segments: Vec<&str> = path
         .split('/')
         .filter(|segment| !segment.is_empty())
@@ -81,19 +73,15 @@ fn webizen_protocol_response(
     match segments.as_slice() {
         ["diffusion", "frame", slot] => match slot.parse::<u8>() {
             Ok(slot) => diffusion_frame_response(app, slot),
-            Err(_) => tauri::http::ResponseBuilder::new()
-                .status(400)
-                .body(Vec::new()),
+            Err(_) => protocol_response(400, None, Vec::new()),
         },
         ["render", "preview.png"] => render_preview_response(app),
-        _ => tauri::http::ResponseBuilder::new()
-            .status(404)
-            .body(Vec::new()),
+        _ => protocol_response(404, None, Vec::new()),
     }
 }
 
 fn show_main_window(app: &tauri::AppHandle) {
-    if let Some(window) = app.get_window("main") {
+    if let Some(window) = app.get_webview_window("main") {
         let _ = window.show();
         let _ = window.unminimize();
         let _ = window.set_focus();
@@ -107,77 +95,12 @@ fn main() {
 
     let vault_for_daemon = app_state.key_vault.clone();
 
-    // Create system tray menu
-    let show = CustomMenuItem::new("show".to_string(), "Open Webizen Studio");
-    let settings = CustomMenuItem::new("settings".to_string(), "Settings");
-    let logs = CustomMenuItem::new("logs".to_string(), "View Logs");
-    let localhost_preview =
-        CustomMenuItem::new("localhost_preview".to_string(), "Open Settings Portal");
-    let revoke = CustomMenuItem::new("revoke".to_string(), "Revoke Sessions");
-    let daemon_status = CustomMenuItem::new("daemon_status".to_string(), "Daemon Status");
-    let toggle_ambient =
-        CustomMenuItem::new("toggle_ambient".to_string(), "Toggle Ambient Visualization");
-    let quit = CustomMenuItem::new("quit".to_string(), "Quit");
-
-    let tray_menu = SystemTrayMenu::new()
-        .add_item(show)
-        .add_native_item(SystemTrayMenuItem::Separator)
-        .add_item(settings)
-        .add_item(logs)
-        .add_item(localhost_preview)
-        .add_native_item(SystemTrayMenuItem::Separator)
-        .add_item(revoke)
-        .add_native_item(SystemTrayMenuItem::Separator)
-        .add_item(daemon_status)
-        .add_item(toggle_ambient)
-        .add_native_item(SystemTrayMenuItem::Separator)
-        .add_item(quit);
-
     let (tx, mut rx) = tokio::sync::mpsc::channel::<String>(100);
-    let tx_for_tray = tx.clone();
-
-    let system_tray = SystemTray::new().with_menu(tray_menu);
 
     tauri::Builder::default()
-        .system_tray(system_tray)
-        .on_system_tray_event(move |app, event| match event {
-            SystemTrayEvent::LeftClick { .. } => {
-                show_main_window(app);
-            }
-            SystemTrayEvent::MenuItemClick { id, .. } => {
-                match id.as_str() {
-                    "show" | "logs" => {
-                        show_main_window(app);
-                    }
-                    "settings" => {
-                        show_main_window(app);
-                        let _ = app.emit_all("open-settings", "settings");
-                    }
-                    "localhost_preview" => {
-                        let _ = open::that("http://127.0.0.1:8080/");
-                    }
-                    "revoke" => {
-                        let _ = tx_for_tray.try_send("REVOKE".to_string());
-                    }
-                    "daemon_status" => {
-                        // We could show a simple native notification here in the future
-                    }
-                    "toggle_ambient" => {
-                        let _ = tx_for_tray.try_send("TOGGLE_AMBIENT".to_string());
-                    }
-                    "quit" => {
-                        std::process::exit(0);
-                    }
-                    _ => {}
-                }
-            }
-            _ => {}
-        })
+        .plugin(tauri_plugin_updater::Builder::new().build())
         .register_uri_scheme_protocol("qualia", move |_app, request| {
-            let path = request
-                .uri()
-                .strip_prefix("qualia://localhost/")
-                .unwrap_or("");
+            let path = request.uri().path().trim_start_matches('/');
             let safe_path: PathBuf = PathBuf::from(path)
                 .components()
                 .filter(|c| matches!(c, std::path::Component::Normal(_)))
@@ -189,18 +112,13 @@ fn main() {
             match std::fs::read(&full_path) {
                 Ok(data) => {
                     let mime = mime_guess::from_path(&full_path).first_or_octet_stream();
-                    tauri::http::ResponseBuilder::new()
-                        .mimetype(mime.as_ref())
-                        .status(200)
-                        .body(data)
+                    protocol_response(200, Some(mime.as_ref()), data)
                 }
-                Err(_) => tauri::http::ResponseBuilder::new()
-                    .status(404)
-                    .body(Vec::new()),
+                Err(_) => protocol_response(404, None, Vec::new()),
             }
         })
-        .register_uri_scheme_protocol("webizen", move |app, request| {
-            webizen_protocol_response(app, request)
+        .register_uri_scheme_protocol("webizen", move |context, request| {
+            webizen_protocol_response(context.app_handle(), &request)
         })
         .manage(app_state.clone())
         .manage(PreviewState::default())
@@ -217,6 +135,56 @@ fn main() {
         .manage(telemetry_bridge::TelemetryBridge::new())
         .setup(move |app| {
             let handle = app.handle();
+            let daemon_status_item =
+                MenuItem::with_id(app, "daemon_status", "Daemon Status", true, None::<&str>)?;
+            let tray_menu = MenuBuilder::new(app)
+                .text("show", "Open Webizen Studio")
+                .separator()
+                .text("settings", "Settings")
+                .text("logs", "View Logs")
+                .text("localhost_preview", "Open Settings Portal")
+                .separator()
+                .text("revoke", "Revoke Sessions")
+                .separator()
+                .item(&daemon_status_item)
+                .text("toggle_ambient", "Toggle Ambient Visualization")
+                .separator()
+                .text("quit", "Quit")
+                .build()?;
+            let tx_for_tray = tx.clone();
+            TrayIconBuilder::with_id("main")
+                .menu(&tray_menu)
+                .show_menu_on_left_click(false)
+                .on_menu_event(move |app, event| match event.id().as_ref() {
+                    "show" | "logs" => show_main_window(app),
+                    "settings" => {
+                        show_main_window(app);
+                        let _ = app.emit("open-settings", "settings");
+                    }
+                    "localhost_preview" => {
+                        let _ = open::that("http://127.0.0.1:8080/");
+                    }
+                    "revoke" => {
+                        let _ = tx_for_tray.try_send("REVOKE".to_string());
+                    }
+                    "toggle_ambient" => {
+                        let _ = tx_for_tray.try_send("TOGGLE_AMBIENT".to_string());
+                    }
+                    "quit" => app.exit(0),
+                    _ => {}
+                })
+                .on_tray_icon_event(|tray, event| {
+                    if let TrayIconEvent::Click {
+                        button: MouseButton::Left,
+                        button_state: MouseButtonState::Up,
+                        ..
+                    } = event
+                    {
+                        show_main_window(tray.app_handle());
+                    }
+                })
+                .build(app)?;
+
             let runtime_handle = spawn_runtime(handle.clone(), app_state.clone())
                 .map_err(|err| -> Box<dyn std::error::Error> { err.into() })?;
             app.manage(runtime_handle);
@@ -244,13 +212,13 @@ fn main() {
             tauri::async_runtime::spawn(async move {
                 let mut sys = sysinfo::System::new_all();
                 loop {
-                    sys.refresh_cpu();
+                    sys.refresh_cpu_usage();
                     sys.refresh_memory();
 
-                    let cpu_usage = sys.global_cpu_info().cpu_usage();
+                    let cpu_usage = sys.global_cpu_usage();
                     let mem_used = sys.used_memory() as f64 / 1024.0 / 1024.0 / 1024.0;
 
-                    let _ = telemetry_handle.emit_all(
+                    let _ = telemetry_handle.emit(
                         "hardware-telemetry",
                         serde_json::json!({
                             "cpu": format!("{:.1}%", cpu_usage),
@@ -287,8 +255,6 @@ fn main() {
             // ── Start daemon ──────────────────────────────────────────────────
             // ── Start daemon ──────────────────────────────────────────────────────────
             let flag = daemon_flag.clone();
-            let tray_h = handle.clone();
-
             // Extract port and host from config, cloning them for the background thread
             let config_clone = default_config.clone();
             let host = config_clone.daemon_host;
@@ -316,17 +282,18 @@ fn main() {
             qualia_client_core::api::set_active_daemon_port(final_port);
 
             let vault_clone = vault_for_daemon.clone();
+            let daemon_status_for_runtime = daemon_status_item.clone();
 
             tauri::async_runtime::spawn(async move {
                 *flag.lock().unwrap() = true;
-                if let Some(item) = tray_h.tray_handle().try_get_item("daemon_status") {
-                    let _ = item.set_title(&format!("Daemon: running (:{})", final_port));
-                }
+                let _ = daemon_status_for_runtime
+                    .set_text(format!("Daemon: running (:{final_port})"));
 
                 let control_tx = qualia_core_db::daemon::start_local_daemon_with_options(
                     final_port,
                     false,
                     vault_clone,
+                    false,
                 )
                 .await;
 
@@ -348,19 +315,24 @@ fn main() {
                 }
 
                 *flag.lock().unwrap() = false;
-                if let Some(item) = tray_h.tray_handle().try_get_item("daemon_status") {
-                    let _ = item.set_title("Daemon: stopped");
-                }
+                let _ = daemon_status_for_runtime.set_text("Daemon: stopped");
             });
 
             // ── Auto-update check ─────────────────────────────────────────────
             let upd_h = handle.clone();
             tauri::async_runtime::spawn(async move {
-                match tauri::updater::builder(upd_h).check().await {
-                    Ok(update) if update.is_update_available() => {
-                        let _ = update.download_and_install().await;
+                let updater = match upd_h.updater() {
+                    Ok(updater) => updater,
+                    Err(error) => {
+                        eprintln!("Update check skipped: {error}");
+                        return;
                     }
-                    Err(e) => eprintln!("Update check skipped: {e}"),
+                };
+                match updater.check().await {
+                    Ok(Some(update)) => {
+                        let _ = update.download_and_install(|_, _| {}, || {}).await;
+                    }
+                    Err(error) => eprintln!("Update check skipped: {error}"),
                     _ => {}
                 }
             });

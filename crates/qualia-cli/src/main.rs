@@ -2482,9 +2482,9 @@ async fn main() -> Result<(), Box<dyn std::error::Error>> {
 
                     // 1. Generate Ed25519 Identity
                     use ed25519_dalek::SigningKey;
-                    use rand_core::OsRng;
-                    let mut csprng = OsRng;
-                    let signing_key = SigningKey::generate(&mut csprng);
+                    let mut secret = [0u8; 32];
+                    getrandom::fill(&mut secret)?;
+                    let signing_key = SigningKey::from_bytes(&secret);
                     let public_key = signing_key.verifying_key();
                     let pub_hex = public_key
                         .as_bytes()

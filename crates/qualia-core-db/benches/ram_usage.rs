@@ -11,7 +11,7 @@
 //! Designed to be wired into CI as a blocking check.
 
 use std::time::Instant;
-use sysinfo::{Pid, System};
+use sysinfo::{Pid, ProcessesToUpdate, System};
 
 /// Architectural RAM ceiling.  Any commit that pushes peak RSS above this
 /// value on a 500 MB shard should be blocked in CI.
@@ -23,7 +23,7 @@ const QUIN_SIZE: usize = 48;
 const SYNTHETIC_QUIN_COUNT: usize = 10_000_000;
 
 fn rss_bytes(sys: &mut System, pid: Pid) -> u64 {
-    sys.refresh_process(pid);
+    sys.refresh_processes(ProcessesToUpdate::Some(&[pid]), true);
     sys.process(pid).map(|p| p.memory()).unwrap_or(0)
 }
 

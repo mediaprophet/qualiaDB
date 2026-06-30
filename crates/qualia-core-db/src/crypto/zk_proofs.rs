@@ -1422,7 +1422,7 @@ mod tests {
 pub(crate) fn zk_secure_rng() -> ark_std::rand::rngs::StdRng {
     use ark_std::rand::SeedableRng;
     let mut seed = [0u8; 32];
-    getrandom_02::getrandom(&mut seed).expect("OS entropy for zk RNG seed");
+    getrandom::fill(&mut seed).expect("OS entropy for zk RNG seed");
     ark_std::rand::rngs::StdRng::from_seed(seed)
 }
 

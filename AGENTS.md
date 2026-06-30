@@ -935,3 +935,33 @@ cargo test
    not a second semantic engine.
 3. Native inference and volumetric rendering share `gpu_context::shared_gpu()`; no second adapter is
    requested by the default renderer path.
+
+---
+
+### 2026-06-30 — Codex (workspace dependency modernization)
+
+**Completed:**
+- Added the runtime, desktop, and WASM browser crates to the root workspace.
+- Updated every independently upgradable direct dependency to its current stable release.
+- Removed the wgpu 0.19 dependency graph by migrating `webizen-runtime` to wgpu 29.
+- Migrated the desktop shell from Tauri 1 to Tauri 2, including configuration, tray/menu,
+  updater-plugin, custom-protocol, webview, event, and sysinfo APIs.
+- Migrated minicbor 0.20 to 2.2 and the RustCrypto AEAD stack to aead 0.6 /
+  aes-gcm 0.11 / chacha20poly1305 0.11 on native and wasm32 paths.
+- Updated PDF, archive, XML, HTTP, configuration, JNI, and browser-WASM dependencies.
+
+**Verification:**
+- `cargo outdated --workspace --root-deps-only`: only the wasm32 `getrandom 0.2`
+  feature-unification shim required by stable fips20x/x25519 dependencies remains.
+- `cargo test -p qualia-core-db --lib` passed.
+- `cargo test --workspace --exclude webizen-desktop --no-run` passed.
+- `cargo test -p webizen-runtime -p qualia-semantic-library` passed.
+- wasm32 checks passed for `qualia-wasm`, `qualia-mobile-harness`, `wellfare-core`,
+  `webizen-lite-wasm`, and `webizen-studio`.
+
+**Concurrent-work note:**
+- During final verification, another process rewrote
+  `crates/webizen-desktop/src/commands/mod.rs` with a large Webizen migration block that
+  duplicates command definitions. That work was preserved and excluded from this session's
+  commit; it currently prevents a final desktop/workspace build despite the Tauri 2 migration
+  compiling successfully immediately before the concurrent rewrite.

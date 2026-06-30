@@ -276,11 +276,11 @@ async fn telemetry_handler() -> Sse<impl Stream<Item = Result<Event, Infallible>
     let stream = stream::unfold(0u64, |tick| async move {
         tokio::time::sleep(Duration::from_secs(2)).await;
         let mut sys = sysinfo::System::new_all();
-        sys.refresh_cpu();
+        sys.refresh_cpu_usage();
         sys.refresh_memory();
         let payload = serde_json::json!({
             "tick": tick,
-            "cpu_percent": sys.global_cpu_info().cpu_usage(),
+            "cpu_percent": sys.global_cpu_usage(),
             "ram_gb": sys.used_memory() as f64 / 1024.0 / 1024.0 / 1024.0,
             "ts": chrono::Utc::now().to_rfc3339(),
         });

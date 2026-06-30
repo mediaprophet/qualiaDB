@@ -4,6 +4,8 @@
 //! Build: `wasm-pack build --target web --out-dir pkg-qualia`
 //! Publish as `qualia.js` + `qualia_bg.wasm` on GitHub Pages.
 
+#![cfg(target_arch = "wasm32")]
+
 mod qualia_portal;
 
 use wasm_bindgen::prelude::*;

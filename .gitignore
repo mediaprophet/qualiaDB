@@ -79,6 +79,8 @@ htmlcov/
 site/
 build/
 dist/
+!/crates/webizen-studio/dist/
+!/crates/webizen-studio/dist/.gitkeep
 *.egg-info/
 pip-wheel-metadata/
 

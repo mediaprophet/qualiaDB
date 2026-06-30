@@ -25,18 +25,18 @@ llm-http = ["dep:reqwest"]
 serde = { version = "1", features = ["derive"] }
 serde_json = "1"
 blake3 = "1"
-zip = { version = "2", default-features = false, features = ["deflate"] }
+zip = { version = "8.6", default-features = false, features = ["deflate"] }
 walkdir = "2"
 anyhow = "1"
-thiserror = "1"
+thiserror = "2"
 chrono = { version = "0.4", default-features = false, features = ["clock", "serde"] }
 clap = { version = "4", features = ["derive"] }
 html-escape = "0.2"
 
 # optional / feature-gated
-pdf-extract = { version = "0.7", optional = true }
-lopdf = { version = "0.34", optional = true }
-reqwest = { version = "0.12", default-features = false, features = ["blocking", "json", "rustls-tls"], optional = true }
+pdf-extract = { version = "0.12", optional = true }
+lopdf = { version = "0.43", optional = true }
+reqwest = { version = "0.13", default-features = false, features = ["blocking", "json", "rustls"], optional = true }
 
 [dev-dependencies]
 tempfile = "3"

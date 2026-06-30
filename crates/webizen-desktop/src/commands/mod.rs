@@ -5,7 +5,9 @@ use qualia_client_core::state::{Actor, AgentConfig, DelegationRule, FrontDoor, P
 use qualia_core_db::ilp_dispatcher::DispatchResult;
 use qualia_core_db::rpc::TaxRecipientSuite;
 use std::time::Duration;
-use tauri::{command, AppHandle, Manager, State, WindowBuilder, WindowUrl};
+use tauri::{
+    command, AppHandle, Emitter, Manager, State, WebviewUrl, WebviewWindowBuilder,
+};
 use webizen_runtime::DiffusionConfig;
 
 use crate::runtime::{RuntimeHandle, RuntimeLedgerHealth, RuntimeSnapshotRecord};
@@ -128,7 +130,7 @@ pub fn launch_installed_qapp(app: AppHandle, qapp_name: String) -> Result<(), St
             .collect::<String>()
     );
 
-    if let Some(window) = app.get_window(&label) {
+    if let Some(window) = app.get_webview_window(&label) {
         window.set_focus().map_err(|e| e.to_string())?;
         return Ok(());
     }
@@ -136,7 +138,7 @@ pub fn launch_installed_qapp(app: AppHandle, qapp_name: String) -> Result<(), St
     let parsed = url
         .parse()
         .map_err(|e| format!("Invalid launch URL '{url}': {e}"))?;
-    WindowBuilder::new(&app, label, WindowUrl::External(parsed))
+    WebviewWindowBuilder::new(&app, label, WebviewUrl::External(parsed))
         .title(qapp_name)
         .inner_size(1200.0, 800.0)
         .build()
@@ -1420,7 +1422,7 @@ pub async fn toggle_render_loop(
                         *positions = node_positions;
                     }
 
-                    let _ = app_handle_clone.emit_all("render-preview-ready", ());
+                    let _ = app_handle_clone.emit("render-preview-ready", ());
                 }
 
                 // Energy-aware sleep: only sleep for the REMAINING time in the frame window
@@ -1503,7 +1505,7 @@ pub async fn update_render_preview(
         .png
         .lock()
         .map_err(|_| "preview state poisoned".to_string())? = png;
-    app.emit_all("render-preview-ready", ())
+    app.emit("render-preview-ready", ())
         .map_err(|err| err.to_string())?;
     Ok(())
 }
@@ -1915,7 +1917,7 @@ pub async fn register_browser_capabilities(
 
 // ── Handler registration ──────────────────────────────────────────────────────
 
-pub fn get_invoke_handler() -> impl Fn(tauri::Invoke) {
+pub fn get_invoke_handler() -> impl Fn(tauri::ipc::Invoke<tauri::Wry>) -> bool {
     tauri::generate_handler![
         list_installed_qapps,
         generate_qapp_credential,
