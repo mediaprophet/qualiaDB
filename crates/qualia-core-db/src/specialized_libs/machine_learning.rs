@@ -2509,15 +2509,99 @@ impl ModelCache {
         Ok(())
     }
 
-    pub fn get(&self, model_id: &str) -> Option<Model> {
-        // Simplified cache implementation
-        None
+    pub fn get(&mut self, model_id: &str) -> Option<Model> {
+        let now = current_timestamp_secs();
+        let found = self.cache_entries.get_mut(model_id).map(|entry| {
+            entry.access_count += 1;
+            entry.last_accessed = now;
+            entry.model.clone()
+        });
+
+        match found {
+            Some(model) => {
+                self.cache_stats.hit_count += 1;
+                self.update_hit_rate();
+                Some(model)
+            }
+            None => {
+                self.cache_stats.miss_count += 1;
+                self.update_hit_rate();
+                None
+            }
+        }
     }
 
     pub fn put(&mut self, model_id: String, model: Model) -> Result<(), MLError> {
-        // Simplified cache implementation
+        let size = (model.weights.len() * std::mem::size_of::<f64>()) as u64;
+        let now = current_timestamp_secs();
+
+        // If updating an existing entry, subtract its old size first.
+        if let Some(existing) = self.cache_entries.get(&model_id) {
+            self.cache_stats.total_size -= existing.size;
+        }
+
+        let entry = ModelCacheEntry {
+            entry_id: model_id.clone(),
+            model: model.clone(),
+            access_count: 1,
+            last_accessed: now,
+            size,
+            hit_rate: 0.0,
+        };
+        self.cache_entries.insert(model_id, entry);
+        self.cache_stats.total_size += size;
+
+        // Evict LRU entries while the cache exceeds the configured max size.
+        while self.cache_stats.total_size > self.cache_policy.max_size
+            && self.cache_entries.len() > 1
+        {
+            self.evict_lru();
+        }
+
         Ok(())
     }
+
+    /// Returns the number of entries currently held in the cache.
+    pub fn cache_size(&self) -> usize {
+        self.cache_entries.len()
+    }
+
+    /// Returns a reference to the cache statistics.
+    pub fn cache_stats(&self) -> &ModelCacheStats {
+        &self.cache_stats
+    }
+
+    /// Recompute the rolling hit rate from hit/miss counts.
+    fn update_hit_rate(&mut self) {
+        let total = self.cache_stats.hit_count + self.cache_stats.miss_count;
+        self.cache_stats.hit_rate = if total == 0 {
+            0.0
+        } else {
+            self.cache_stats.hit_count as f64 / total as f64
+        };
+    }
+
+    /// Evict the entry with the oldest `last_accessed` timestamp (LRU).
+    fn evict_lru(&mut self) {
+        if let Some((lru_key, lru_size)) = self
+            .cache_entries
+            .iter()
+            .min_by_key(|(_, e)| e.last_accessed)
+            .map(|(k, e)| (k.clone(), e.size))
+        {
+            self.cache_entries.remove(&lru_key);
+            self.cache_stats.total_size -= lru_size;
+            self.cache_stats.eviction_count += 1;
+        }
+    }
+}
+
+/// Current time in seconds since the Unix epoch, used for `last_accessed` stamps.
+fn current_timestamp_secs() -> u64 {
+    std::time::SystemTime::now()
+        .duration_since(std::time::UNIX_EPOCH)
+        .map(|d| d.as_secs())
+        .unwrap_or(0)
 }
 
 impl ModelCachePolicy {
@@ -3572,5 +3656,79 @@ mod tests {
         let library = MachineLearningLibrary::new();
         let info = library.get_model_info("test_model");
         assert!(info.is_none());
+    }
+
+    #[test]
+    fn test_model_cache_get_put_and_stats() {
+        let mut cache = ModelCache::new();
+
+        // Miss on an empty cache.
+        assert!(cache.get("missing").is_none());
+        let stats = cache.cache_stats();
+        assert_eq!(stats.hit_count, 0);
+        assert_eq!(stats.miss_count, 1);
+        assert!((stats.hit_rate - 0.0).abs() < f64::EPSILON);
+
+        // Put a model in and retrieve it (hit).
+        let mut model = Model::new();
+        model.model_id = "m1".to_string();
+        cache.put("m1".to_string(), model.clone()).unwrap();
+        assert_eq!(cache.cache_size(), 1);
+
+        let retrieved = cache.get("m1").expect("cached model should be present");
+        assert_eq!(retrieved.model_id, "m1");
+        let stats = cache.cache_stats();
+        assert_eq!(stats.hit_count, 1);
+        assert_eq!(stats.miss_count, 1);
+        assert!((stats.hit_rate - 0.5).abs() < f64::EPSILON);
+
+        // A second miss.
+        assert!(cache.get("nope").is_none());
+        let stats = cache.cache_stats();
+        assert_eq!(stats.hit_count, 1);
+        assert_eq!(stats.miss_count, 2);
+        let expected = 1.0 / 3.0;
+        assert!((stats.hit_rate - expected).abs() < 1e-9);
+    }
+
+    #[test]
+    fn test_model_cache_lru_eviction() {
+        // Build a cache with a tiny max size so eviction is exercised.
+        let mut cache = ModelCache {
+            cache_entries: HashMap::new(),
+            cache_policy: ModelCachePolicy {
+                eviction_policy: ModelEvictionPolicy::LRU,
+                max_size: 16, // two 8-byte entries fit; a third forces LRU eviction
+                ttl: 3600,
+                priority_levels: vec![PriorityLevel::Medium],
+            },
+            cache_stats: ModelCacheStats::new(),
+        };
+
+        let mut mk = |id: &str| {
+            let mut m = Model::new();
+            m.model_id = id.to_string();
+            // One f64 weight = 8 bytes per entry.
+            m.weights = vec![0.0];
+            m
+        };
+
+        cache.put("a".to_string(), mk("a")).unwrap();
+        cache.put("b".to_string(), mk("b")).unwrap();
+
+        // Access "a" so "b" becomes the LRU candidate.
+        std::thread::sleep(std::time::Duration::from_millis(1100));
+        let _ = cache.get("a");
+
+        // Adding "c" exceeds the budget and must evict the oldest (b).
+        cache.put("c".to_string(), mk("c")).unwrap();
+
+        assert!(cache.get("b").is_none(), "LRU entry 'b' should have been evicted");
+        assert!(cache.get("a").is_some(), "'a' should still be resident");
+        assert!(cache.get("c").is_some(), "'c' should be resident");
+
+        let stats = cache.cache_stats();
+        assert!(stats.eviction_count >= 1, "eviction_count should reflect evictions");
+        assert!(stats.total_size <= cache.cache_policy.max_size);
     }
 }

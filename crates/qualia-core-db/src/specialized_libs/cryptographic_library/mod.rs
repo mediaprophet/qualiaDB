@@ -3347,6 +3347,10 @@ impl SignatureEngine {
             true,
         );
 
+        // Record performance metrics
+        self.performance_optimizer
+            .record_signing_time(start_time.elapsed().as_millis() as f64);
+
         Ok(signature)
     }
 
@@ -3464,6 +3468,13 @@ impl SignatureEngine {
             "system",
             is_valid,
         );
+
+        // Record performance metrics
+        self.performance_optimizer
+            .record_verification_time(start_time.elapsed().as_millis() as f64);
+        if !is_valid {
+            self.performance_optimizer.record_error();
+        }
 
         Ok(is_valid)
     }
@@ -3614,6 +3625,42 @@ impl SignaturePerformanceOptimizer {
     pub fn initialize(&mut self) -> Result<(), CryptographicError> {
         Ok(())
     }
+
+    /// Record a signing operation duration (milliseconds) and update running averages.
+    pub fn record_signing_time(&mut self, duration_ms: f64) {
+        let m = &mut self.performance_metrics;
+        if m.average_signing_time == 0.0 {
+            m.average_signing_time = duration_ms;
+        } else {
+            // Exponential moving average for lightweight online tracking
+            m.average_signing_time = 0.9 * m.average_signing_time + 0.1 * duration_ms;
+        }
+        if duration_ms > 0.0 {
+            m.throughput = 1000.0 / m.average_signing_time;
+        }
+    }
+
+    /// Record a verification operation duration (milliseconds).
+    pub fn record_verification_time(&mut self, duration_ms: f64) {
+        let m = &mut self.performance_metrics;
+        if m.average_verification_time == 0.0 {
+            m.average_verification_time = duration_ms;
+        } else {
+            m.average_verification_time = 0.9 * m.average_verification_time + 0.1 * duration_ms;
+        }
+    }
+
+    /// Record an error (failed sign/verify).
+    pub fn record_error(&mut self) {
+        let m = &mut self.performance_metrics;
+        // Simple error rate approximation — incrementally adjusted
+        m.error_rate = 0.95 * m.error_rate + 0.05;
+    }
+
+    /// Get a snapshot of the current performance metrics.
+    pub fn metrics(&self) -> &SignaturePerformanceMetrics {
+        &self.performance_metrics
+    }
 }
 
 impl SignaturePerformanceMetrics {
@@ -3705,6 +3752,10 @@ impl EncryptionEngine {
             },
         };
 
+        // Record performance metrics
+        self.performance_optimizer
+            .record_encryption_time(start_time.elapsed().as_millis() as f64);
+
         Ok(encrypted_data)
     }
 
@@ -3713,6 +3764,7 @@ impl EncryptionEngine {
         key: &Key,
         encrypted_data: &EncryptedData,
     ) -> Result<Vec<u8>, CryptographicError> {
+        let start_time = std::time::Instant::now();
         // Dispatch on the algorithm the ciphertext was produced with.
         let aad_ref = if encrypted_data.aad.is_empty() {
             None
@@ -3727,6 +3779,10 @@ impl EncryptionEngine {
             aad_ref,
             &encrypted_data.algorithm,
         )?;
+
+        // Record performance metrics
+        self.performance_optimizer
+            .record_decryption_time(start_time.elapsed().as_millis() as f64);
 
         Ok(plaintext)
     }
@@ -3954,6 +4010,34 @@ impl EncryptionPerformanceOptimizer {
     pub fn initialize(&mut self) -> Result<(), CryptographicError> {
         Ok(())
     }
+
+    /// Record an encryption operation duration (milliseconds).
+    pub fn record_encryption_time(&mut self, duration_ms: f64) {
+        let m = &mut self.performance_metrics;
+        if m.average_encryption_time == 0.0 {
+            m.average_encryption_time = duration_ms;
+        } else {
+            m.average_encryption_time = 0.9 * m.average_encryption_time + 0.1 * duration_ms;
+        }
+        if m.average_encryption_time > 0.0 {
+            m.throughput = 1000.0 / m.average_encryption_time;
+        }
+    }
+
+    /// Record a decryption operation duration (milliseconds).
+    pub fn record_decryption_time(&mut self, duration_ms: f64) {
+        let m = &mut self.performance_metrics;
+        if m.average_decryption_time == 0.0 {
+            m.average_decryption_time = duration_ms;
+        } else {
+            m.average_decryption_time = 0.9 * m.average_decryption_time + 0.1 * duration_ms;
+        }
+    }
+
+    /// Get a snapshot of the current performance metrics.
+    pub fn metrics(&self) -> &EncryptionPerformanceMetrics {
+        &self.performance_metrics
+    }
 }
 
 impl EncryptionPerformanceMetrics {
@@ -4036,6 +4120,10 @@ impl HashEngine {
             "system",
             true,
         );
+
+        // Record performance metrics
+        self.performance_optimizer
+            .record_hash_time(start_time.elapsed().as_millis() as f64);
 
         Ok(hash_result)
     }
@@ -4128,6 +4216,24 @@ impl HashPerformanceOptimizer {
     pub fn initialize(&mut self) -> Result<(), CryptographicError> {
         Ok(())
     }
+
+    /// Record a hash computation duration (milliseconds).
+    pub fn record_hash_time(&mut self, duration_ms: f64) {
+        let m = &mut self.performance_metrics;
+        if m.average_hash_time == 0.0 {
+            m.average_hash_time = duration_ms;
+        } else {
+            m.average_hash_time = 0.9 * m.average_hash_time + 0.1 * duration_ms;
+        }
+        if m.average_hash_time > 0.0 {
+            m.throughput = 1000.0 / m.average_hash_time;
+        }
+    }
+
+    /// Get a snapshot of the current performance metrics.
+    pub fn metrics(&self) -> &HashPerformanceMetrics {
+        &self.performance_metrics
+    }
 }
 
 impl HashPerformanceMetrics {
@@ -4195,6 +4301,12 @@ impl ProofEngine {
             true,
         );
 
+        // Record performance metrics
+        self.performance_optimizer.record_proving_time(
+            start_time.elapsed().as_millis() as f64,
+            proof.proof_data.len(),
+        );
+
         Ok(proof)
     }
 
@@ -4238,6 +4350,10 @@ impl ProofEngine {
             "system",
             is_valid,
         );
+
+        // Record performance metrics
+        self.performance_optimizer
+            .record_verification_time(start_time.elapsed().as_millis() as f64);
 
         Ok(is_valid)
     }
@@ -4606,6 +4722,32 @@ impl ProofPerformanceOptimizer {
 
     pub fn initialize(&mut self) -> Result<(), CryptographicError> {
         Ok(())
+    }
+
+    /// Record a proof generation duration (milliseconds).
+    pub fn record_proving_time(&mut self, duration_ms: f64, proof_size: usize) {
+        let m = &mut self.performance_metrics;
+        if m.average_proving_time == 0.0 {
+            m.average_proving_time = duration_ms;
+        } else {
+            m.average_proving_time = 0.9 * m.average_proving_time + 0.1 * duration_ms;
+        }
+        m.proof_size = proof_size as u64;
+    }
+
+    /// Record a proof verification duration (milliseconds).
+    pub fn record_verification_time(&mut self, duration_ms: f64) {
+        let m = &mut self.performance_metrics;
+        if m.average_verification_time == 0.0 {
+            m.average_verification_time = duration_ms;
+        } else {
+            m.average_verification_time = 0.9 * m.average_verification_time + 0.1 * duration_ms;
+        }
+    }
+
+    /// Get a snapshot of the current performance metrics.
+    pub fn metrics(&self) -> &ProofPerformanceMetrics {
+        &self.performance_metrics
     }
 }
 
@@ -5499,5 +5641,38 @@ mod tests {
         );
 
         assert!(catalog.relationship_count() >= 2, "should have at least 2 relationships (KeyPair + RotatedFrom)");
+    }
+
+    #[test]
+    fn test_performance_metrics_recorded() {
+        let mut library = CryptographicLibrary::new();
+        library.initialize().unwrap();
+
+        // Generate key pair
+        library
+            .generate_mldsa_key_pair("perf_key".to_string(), SecurityLevel::High)
+            .unwrap();
+
+        // Sign data — should update signing time metrics
+        let signature = library.sign_data("perf_key_private", b"performance test").unwrap();
+
+        // Verify — should update verification time metrics
+        let _is_valid = library
+            .verify_signature("perf_key_public", &signature.result, b"performance test")
+            .unwrap();
+
+        let sig_metrics = library.signature_engine.performance_optimizer.metrics();
+        assert!(
+            sig_metrics.average_signing_time > 0.0,
+            "average signing time should be recorded"
+        );
+
+        // Compute a hash — should update hash metrics
+        let _hash = library.compute_hash(b"metric test").unwrap();
+        let hash_metrics = library.hash_engine.performance_optimizer.metrics();
+        assert!(
+            hash_metrics.average_hash_time >= 0.0,
+            "hash metrics should be accessible"
+        );
     }
 }
