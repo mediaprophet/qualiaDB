@@ -2507,6 +2507,32 @@ impl KeyStorage {
             .ok_or_else(|| CryptographicError::StorageError(format!("Key not found: {}", key_id)))
     }
 
+    /// Get a key with access control enforcement. Returns an error if the
+    /// operation is not permitted by any registered access policy.
+    /// Deny-by-default when policies exist but none match.
+    pub fn get_key_with_access(
+        &mut self,
+        key_id: &str,
+        operation: KeyOperation,
+        user_id: &str,
+    ) -> Result<Key, CryptographicError> {
+        // If policies are registered, enforce them
+        if self.access_control.policy_count() > 0 {
+            if !self.access_control.check_permission(key_id, operation.clone()) {
+                self.access_control
+                    .log_access(key_id, operation.clone(), user_id, false);
+                return Err(CryptographicError::AccessDenied(format!(
+                    "Access denied for operation {:?} on key {}",
+                    operation, key_id
+                )));
+            }
+        }
+        let key = self.get_key(key_id)?;
+        self.access_control
+            .log_access(key_id, operation, user_id, true);
+        Ok(key)
+    }
+
     pub fn get_key_metadata(&self, key_id: &str) -> Option<KeyMetadata> {
         for zone in self.zones.values() {
             if let Some(metadata) = zone.keys.get(key_id) {
@@ -2657,7 +2683,74 @@ impl EncryptionAtRest {
     }
 
     pub fn initialize(&mut self) -> Result<(), CryptographicError> {
+        // Generate a default master key encryption key (KEK) if none exists
+        if !self.key_encryption_keys.contains_key("master_kek") {
+            let kek: [u8; 32] = rand::random();
+            self.key_encryption_keys
+                .insert("master_kek".to_string(), kek.to_vec());
+        }
         Ok(())
+    }
+
+    /// Encrypt key data using the master KEK via AES-256-GCM.
+    /// Returns (ciphertext, nonce, tag) tuple flattened into a single Vec
+    /// with layout: [12-byte nonce | 16-byte tag | ciphertext].
+    pub fn encrypt_key_data(&self, plaintext: &[u8]) -> Result<Vec<u8>, CryptographicError> {
+        let kek = self
+            .key_encryption_keys
+            .get("master_kek")
+            .ok_or_else(|| CryptographicError::EncryptionError("no master KEK available".to_string()))?;
+
+        use aes_gcm::{aead::Aead, Aes256Gcm, KeyInit, Nonce};
+        let key = aes_gcm::Key::<Aes256Gcm>::from_slice(kek);
+        let cipher = Aes256Gcm::new(key);
+
+        let nonce_bytes: [u8; 12] = rand::random();
+        let nonce = Nonce::from_slice(&nonce_bytes);
+
+        let ciphertext = cipher
+            .encrypt(nonce, plaintext)
+            .map_err(|e| CryptographicError::EncryptionError(format!("AES-GCM encrypt failed: {e}")))?;
+
+        // Pack: nonce (12) + ciphertext (includes 16-byte GCM tag appended by aes-gcm)
+        let mut packed = Vec::with_capacity(12 + ciphertext.len());
+        packed.extend_from_slice(&nonce_bytes);
+        packed.extend_from_slice(&ciphertext);
+        Ok(packed)
+    }
+
+    /// Decrypt key data previously encrypted with `encrypt_key_data`.
+    pub fn decrypt_key_data(&self, packed: &[u8]) -> Result<Vec<u8>, CryptographicError> {
+        if packed.len() < 12 {
+            return Err(CryptographicError::DecryptionError(
+                "packed data too short".to_string(),
+            ));
+        }
+        let kek = self
+            .key_encryption_keys
+            .get("master_kek")
+            .ok_or_else(|| CryptographicError::DecryptionError("no master KEK available".to_string()))?;
+
+        use aes_gcm::{aead::Aead, Aes256Gcm, KeyInit, Nonce};
+        let key = aes_gcm::Key::<Aes256Gcm>::from_slice(kek);
+        let cipher = Aes256Gcm::new(key);
+
+        let nonce = Nonce::from_slice(&packed[..12]);
+        let ciphertext = &packed[12..];
+
+        cipher
+            .decrypt(nonce, ciphertext)
+            .map_err(|e| CryptographicError::DecryptionError(format!("AES-GCM decrypt failed: {e}")))
+    }
+
+    /// Check if encryption at rest is enabled (KEK exists).
+    pub fn is_enabled(&self) -> bool {
+        self.key_encryption_keys.contains_key("master_kek")
+    }
+
+    /// Number of registered KEKs.
+    pub fn kek_count(&self) -> usize {
+        self.key_encryption_keys.len()
     }
 }
 
@@ -2672,6 +2765,77 @@ impl KeyAccessControl {
 
     pub fn initialize(&mut self) -> Result<(), CryptographicError> {
         Ok(())
+    }
+
+    /// Register an access policy for a key.
+    pub fn add_policy(&mut self, policy: AccessPolicy) {
+        self.access_policies.insert(policy.policy_id.clone(), policy);
+    }
+
+    /// Check whether a given operation is permitted on a key.
+    /// Returns true if a policy exists that explicitly allows the operation.
+    /// Deny-by-default: no matching policy means denial.
+    pub fn check_permission(&self, key_id: &str, operation: KeyOperation) -> bool {
+        self.access_policies
+            .values()
+            .any(|p| p.key_id == key_id && p.allowed_operations.contains(&operation))
+    }
+
+    /// Check permission with full context (time restrictions, IP).
+    pub fn check_permission_with_context(
+        &self,
+        key_id: &str,
+        operation: KeyOperation,
+        current_hour: u8,
+        current_day: u8,
+        ip_address: &str,
+    ) -> bool {
+        self.access_policies
+            .values()
+            .any(|p| {
+                if p.key_id != key_id || !p.allowed_operations.contains(&operation) {
+                    return false;
+                }
+                // Check time restrictions
+                if !p.time_restrictions.allowed_hours.is_empty()
+                    && !p.time_restrictions.allowed_hours.contains(&current_hour)
+                {
+                    return false;
+                }
+                if !p.time_restrictions.allowed_days.is_empty()
+                    && !p.time_restrictions.allowed_days.contains(&current_day)
+                {
+                    return false;
+                }
+                // Check IP restrictions
+                if !p.ip_restrictions.is_empty()
+                    && !p.ip_restrictions.iter().any(|ip| ip == ip_address)
+                {
+                    return false;
+                }
+                true
+            })
+    }
+
+    /// Record an access attempt in the audit log.
+    pub fn log_access(
+        &mut self,
+        key_id: &str,
+        operation: KeyOperation,
+        user_id: &str,
+        success: bool,
+    ) {
+        self.audit_log.log_entry(key_id, operation, user_id, success);
+    }
+
+    /// Number of registered policies.
+    pub fn policy_count(&self) -> usize {
+        self.access_policies.len()
+    }
+
+    /// Get a reference to the audit log.
+    pub fn audit_log(&self) -> &AccessAuditLog {
+        &self.audit_log
     }
 }
 
@@ -5017,6 +5181,7 @@ pub enum CryptographicError {
     ProofError(String),
     SecurityError(String),
     ComplianceError(String),
+    AccessDenied(String),
 }
 
 impl std::fmt::Display for CryptographicError {
@@ -5034,6 +5199,7 @@ impl std::fmt::Display for CryptographicError {
             CryptographicError::ProofError(msg) => write!(f, "Proof error: {}", msg),
             CryptographicError::SecurityError(msg) => write!(f, "Security error: {}", msg),
             CryptographicError::ComplianceError(msg) => write!(f, "Compliance error: {}", msg),
+            CryptographicError::AccessDenied(msg) => write!(f, "Access denied: {}", msg),
         }
     }
 }
@@ -5674,5 +5840,117 @@ mod tests {
             hash_metrics.average_hash_time >= 0.0,
             "hash metrics should be accessible"
         );
+    }
+
+    #[test]
+    fn test_access_control_enforces_policies() {
+        let mut library = CryptographicLibrary::new();
+        library.initialize().unwrap();
+
+        // Generate a key pair
+        library
+            .generate_mldsa_key_pair("acl_key".to_string(), SecurityLevel::High)
+            .unwrap();
+
+        // By default (no policies), access is allowed
+        let key = library.key_manager.get_key("acl_key_private").unwrap();
+        assert_eq!(key.key_id, "acl_key_private");
+
+        // Register a restrictive policy that only allows Sign on the private key
+        let policy = AccessPolicy {
+            policy_id: "policy_1".to_string(),
+            key_id: "acl_key_private".to_string(),
+            allowed_operations: vec![KeyOperation::Sign],
+            required_auth: vec![AuthenticationMethod::MultiFactor],
+            time_restrictions: TimeRestrictions {
+                allowed_hours: vec![],
+                allowed_days: vec![],
+                start_date: None,
+                end_date: None,
+            },
+            ip_restrictions: vec![],
+        };
+        library
+            .key_manager
+            .key_storage
+            .access_control
+            .add_policy(policy);
+
+        // Sign should be allowed
+        assert!(
+            library
+                .key_manager
+                .key_storage
+                .access_control
+                .check_permission("acl_key_private", KeyOperation::Sign),
+            "Sign should be allowed by policy"
+        );
+
+        // Read should be denied
+        assert!(
+            !library
+                .key_manager
+                .key_storage
+                .access_control
+                .check_permission("acl_key_private", KeyOperation::Read),
+            "Read should be denied by policy"
+        );
+
+        // get_key_with_access should deny Read and log the failure
+        let result = library
+            .key_manager
+            .key_storage
+            .get_key_with_access("acl_key_private", KeyOperation::Read, "test_user");
+        assert!(result.is_err(), "get_key_with_access should deny Read");
+
+        // Sign should succeed
+        let result = library
+            .key_manager
+            .key_storage
+            .get_key_with_access("acl_key_private", KeyOperation::Sign, "test_user");
+        assert!(result.is_ok(), "get_key_with_access should allow Sign");
+
+        // Audit log should have both the denied and allowed entries
+        let audit = library.key_manager.key_storage.access_control.audit_log();
+        assert!(audit.entry_count() >= 2, "audit log should have at least 2 entries");
+    }
+
+    #[test]
+    fn test_encryption_at_rest_roundtrip() {
+        let mut ear = EncryptionAtRest::new();
+        assert!(!ear.is_enabled(), "KEK should not exist before initialize");
+
+        ear.initialize().unwrap();
+        assert!(ear.is_enabled(), "master KEK should be generated after initialize");
+        assert!(ear.kek_count() >= 1, "should have at least one KEK");
+
+        // Encrypt some key data
+        let plaintext = b"super_secret_key_material_12345";
+        let encrypted = ear.encrypt_key_data(plaintext).unwrap();
+
+        // Ciphertext should be different from plaintext (nonce + tag + ciphertext)
+        assert_ne!(
+            &encrypted[..], plaintext,
+            "encrypted data should differ from plaintext"
+        );
+        assert!(
+            encrypted.len() > plaintext.len() + 12,
+            "encrypted should be longer due to nonce + tag"
+        );
+
+        // Decrypt and verify roundtrip
+        let decrypted = ear.decrypt_key_data(&encrypted).unwrap();
+        assert_eq!(
+            &decrypted[..], plaintext,
+            "decrypted data should match original plaintext"
+        );
+    }
+
+    #[test]
+    fn test_encryption_at_rest_without_kek_fails() {
+        let ear = EncryptionAtRest::new();
+        // Without initialize(), no KEK exists
+        let result = ear.encrypt_key_data(b"test");
+        assert!(result.is_err(), "encryption should fail without a KEK");
     }
 }

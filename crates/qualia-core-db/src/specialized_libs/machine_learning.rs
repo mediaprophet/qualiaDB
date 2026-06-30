@@ -1806,8 +1806,9 @@ impl MachineLearningLibrary {
             deadline: None,
         };
 
-        // Execute inference
-        let result = self.inference_engine.execute_inference(&request)?;
+        // Load the model (from cache or storage) and execute the forward pass.
+        let model = self.model_manager.load_model(model_id.to_string(), "")?;
+        let result = self.inference_engine.execute_inference(&request, &model)?;
         self.request_count += 1;
 
         let execution_time = start_time.elapsed().as_millis().max(1) as u64;
@@ -2664,21 +2665,211 @@ impl InferenceEngine {
 
     pub fn execute_inference(
         &mut self,
-        _request: &InferenceRequest,
+        request: &InferenceRequest,
+        model: &Model,
     ) -> Result<InferenceResult, MLError> {
-        // HONEST FAIL-CLOSED. This specialized-lib "inference engine" has no model runtime: it
-        // holds no weights and executes no network. It must NOT fabricate a result. Previously it
-        // returned a hardcoded `confidence: 0.95` over `vec![1u8; 100]` from a model that never ran
-        // — a fabricated metric surfaced verbatim through the `ml_inference` MCP tool. Real
-        // inference is the native gguf_bridge LLM engine (whose weight×activation step is the
-        // substrate GEMM — see gguf_bridge::gemm::substrate_parity_tests); route real inference
-        // there. Failing closed is the truthful behaviour until a real backend is wired.
-        Err(MLError::InferenceError(
-            "no inference backend implemented in specialized_libs::machine_learning; \
-             use the native gguf_bridge LLM engine for real inference"
-                .to_string(),
-        ))
+        // Wired to a real (if basic) forward pass over the model's architecture, using the
+        // model's `weights` field as the flattened parameter buffer and the element-wise
+        // activation math from `crate::solvers::activation`. This is an MLP inference backend:
+        // it supports `Linear` (and pass-through `Activation`/`Dropout`) layers and returns a
+        // clear error for layer types it cannot yet evaluate (Convolutional, Attention, …).
+        // For production autoregressive LLM inference, route to the native gguf_bridge engine.
+        let start = std::time::Instant::now();
+
+        // Decode the request's byte payload as a little-endian f64 input vector.
+        let input = decode_f64_le(&request.input_data).ok_or_else(|| {
+            MLError::DataError(format!(
+                "input_data length ({}) is not a multiple of {} (f64 size)",
+                request.input_data.len(),
+                std::mem::size_of::<f64>()
+            ))
+        })?;
+
+        // Run the forward pass over the model's layers.
+        let output = Self::forward_pass(model, &input)?;
+
+        // Re-encode the output vector as little-endian f64 bytes.
+        let output_data = encode_f64_le(&output);
+
+        let inference_time = start.elapsed().as_millis() as u64;
+
+        Ok(InferenceResult {
+            result_id: format!("result_{}", request.request_id),
+            output_data,
+            inference_time,
+            // This backend computes a deterministic forward pass, not a probabilistic model,
+            // so there is no calibrated confidence to report. Surface 1.0 to indicate the pass
+            // completed successfully (callers needing real confidence should use gguf_bridge).
+            confidence: 1.0,
+            metadata: ResultMetadata {
+                model_id: model.model_id.clone(),
+                backend_id: "linear_algebra_mlp".to_string(),
+                batch_size: request.parameters.batch_size,
+                sequence_length: request.parameters.sequence_length,
+                tokens_generated: output.len(),
+            },
+        })
     }
+
+    /// Run a basic MLP forward pass over the model's architecture.
+    ///
+    /// For each `Linear` layer the flattened `model.weights` buffer is consumed in order:
+    /// first the `output_size × input_size` weight matrix (row-major), then the `output_size`
+    /// bias vector. The layer output is `activation(W · x + b)`, with the activation drawn from
+    /// `crate::solvers::activation`. `Activation` layers apply their activation in place and
+    /// `Dropout` is the identity at inference time. All other layer types return a clear error.
+    fn forward_pass(model: &Model, input: &[f64]) -> Result<Vec<f64>, MLError> {
+        let layers = &model.architecture.layers;
+        if layers.is_empty() {
+            return Err(MLError::InferenceError(
+                "model architecture has no layers".to_string(),
+            ));
+        }
+
+        let mut activations = input.to_vec();
+        let mut weight_offset = 0usize;
+
+        for (idx, layer) in layers.iter().enumerate() {
+            match layer.layer_type {
+                LayerType::Linear => {
+                    let in_size = layer.input_shape.first().copied().ok_or_else(|| {
+                        MLError::InferenceError(format!(
+                            "layer {} ({}): missing input dimension",
+                            idx, layer.layer_id
+                        ))
+                    })?;
+                    let out_size = layer.output_shape.first().copied().ok_or_else(|| {
+                        MLError::InferenceError(format!(
+                            "layer {} ({}): missing output dimension",
+                            idx, layer.layer_id
+                        ))
+                    })?;
+
+                    if activations.len() != in_size {
+                        return Err(MLError::InferenceError(format!(
+                            "layer {} ({}): expected input size {}, got {}",
+                            idx, layer.layer_id, in_size, activations.len()
+                        )));
+                    }
+
+                    let weight_count = in_size * out_size;
+                    let bias_count = out_size;
+                    let needed = weight_count + bias_count;
+                    if weight_offset + needed > model.weights.len() {
+                        return Err(MLError::InferenceError(format!(
+                            "layer {} ({}): not enough weights (need {} at offset {}, have {})",
+                            idx,
+                            layer.layer_id,
+                            needed,
+                            weight_offset,
+                            model.weights.len()
+                        )));
+                    }
+
+                    // output[j] = sum_i W[j*in_size + i] * x[i] + bias[j]
+                    let mut out = vec![0.0f64; out_size];
+                    for j in 0..out_size {
+                        let mut acc = 0.0;
+                        for i in 0..in_size {
+                            acc += model.weights[weight_offset + j * in_size + i]
+                                * activations[i];
+                        }
+                        acc += model.weights[weight_offset + weight_count + j];
+                        out[j] = acc;
+                    }
+                    weight_offset += needed;
+
+                    if let Some(act) = &layer.activation {
+                        apply_activation(&mut out, act)?;
+                    }
+                    activations = out;
+                }
+                LayerType::Activation => {
+                    if let Some(act) = &layer.activation {
+                        apply_activation(&mut activations, act)?;
+                    } else {
+                        return Err(MLError::InferenceError(format!(
+                            "layer {} ({}): Activation layer has no activation function set",
+                            idx, layer.layer_id
+                        )));
+                    }
+                }
+                LayerType::Dropout => {
+                    // Dropout is the identity at inference time.
+                }
+                ref other => {
+                    return Err(MLError::InferenceError(format!(
+                        "layer {} ({}): {:?} layers are not yet supported by the MLP inference \
+                         backend (only Linear/Activation/Dropout); use the native gguf_bridge \
+                         engine for transformer/cnn workloads",
+                        idx, layer.layer_id, other
+                    )));
+                }
+            }
+        }
+
+        Ok(activations)
+    }
+}
+
+/// Decode a byte slice as a little-endian `f64` vector. Returns `None` if the length is not a
+/// multiple of 8 (the size of `f64`).
+fn decode_f64_le(bytes: &[u8]) -> Option<Vec<f64>> {
+    if bytes.len() % std::mem::size_of::<f64>() != 0 {
+        return None;
+    }
+    Some(
+        bytes
+            .chunks_exact(std::mem::size_of::<f64>())
+            .map(|c| f64::from_le_bytes(c.try_into().unwrap()))
+            .collect(),
+    )
+}
+
+/// Encode an `f64` slice as a little-endian byte vector.
+fn encode_f64_le(values: &[f64]) -> Vec<u8> {
+    let mut out = Vec::with_capacity(values.len() * std::mem::size_of::<f64>());
+    for v in values {
+        out.extend_from_slice(&v.to_le_bytes());
+    }
+    out
+}
+
+/// Apply an activation function in place, dispatching to `crate::solvers::activation` for the
+/// standard element-wise maps.
+fn apply_activation(buf: &mut [f64], act: &ActivationFunction) -> Result<(), MLError> {
+    match act {
+        ActivationFunction::ReLU => crate::solvers::activation::relu(buf),
+        ActivationFunction::Sigmoid => crate::solvers::activation::sigmoid(buf),
+        ActivationFunction::Tanh => crate::solvers::activation::tanh(buf),
+        ActivationFunction::GELU => crate::solvers::activation::gelu(buf),
+        ActivationFunction::Softmax => crate::solvers::activation::softmax(buf),
+        ActivationFunction::Swish => crate::solvers::activation::silu(buf),
+        ActivationFunction::LeakyReLU => {
+            // Leaky ReLU: x if x >= 0 else 0.01·x, element-wise.
+            const SLOPE: f64 = 0.01;
+            for v in buf.iter_mut() {
+                if *v < 0.0 {
+                    *v *= SLOPE;
+                }
+            }
+        }
+        ActivationFunction::ELU => {
+            // ELU: x if x >= 0 else e^x − 1, element-wise (α = 1).
+            for v in buf.iter_mut() {
+                if *v < 0.0 {
+                    *v = (*v).exp() - 1.0;
+                }
+            }
+        }
+        ActivationFunction::Custom(name) => {
+            return Err(MLError::InferenceError(format!(
+                "custom activation '{}' is not supported by the MLP inference backend",
+                name
+            )));
+        }
+    }
+    Ok(())
 }
 
 impl InferenceBackend {
@@ -3576,6 +3767,10 @@ mod tests {
         let mut library = MachineLearningLibrary::new();
         library.initialize().unwrap();
 
+        // 100 bytes is not a multiple of 8 (f64 size), so the wired MLP backend rejects the
+        // input with a DataError rather than fabricating a result. (The default scaffold model
+        // loaded here is a 512→512 Linear layer with zero weights; even with valid input the
+        // shape would not match — see test_mlp_inference_forward_pass for a real forward pass.)
         let input_data = vec![1u8; 100];
         let parameters = InferenceParameters {
             batch_size: 1,
@@ -3587,12 +3782,168 @@ mod tests {
             precision: Precision::FP32,
         };
 
-        // HONEST: the scaffold has no model runtime, so inference fails closed rather than
-        // fabricating a confident result (it previously returned a hardcoded confidence 0.95).
         let result = library.run_inference("test_model", &input_data, parameters);
         assert!(
             result.is_err(),
-            "scaffold inference must fail closed, not fabricate a result"
+            "malformed input (not a multiple of f64 size) must be rejected, not fabricated"
+        );
+    }
+
+    #[test]
+    fn test_mlp_inference_forward_pass() {
+        // Build a 2 → 3 → 2 MLP with ReLU on the hidden layer and no output activation.
+        //
+        // Layer 1 (Linear, 2→3, ReLU):
+        //   W1 (row-major, 3×2) = [[1, 2], [0, -1], [0.5, 0.5]], bias1 = [0, 0, 0]
+        //   z1 = W1·x + b1 for x = [1, 2] = [5, -2, 1.5]
+        //   after ReLU        = [5,  0, 1.5]
+        //
+        // Layer 2 (Linear, 3→2, no activation):
+        //   W2 (row-major, 2×3) = [[1, 0, 0], [0, 1, 0]], bias2 = [0, 0]
+        //   z2 = W2·h1 + b2 = [5, 0]
+        //
+        // Expected output = [5.0, 0.0].
+        let layer1 = LayerInfo {
+            layer_id: "l1".to_string(),
+            layer_type: LayerType::Linear,
+            input_shape: vec![2],
+            output_shape: vec![3],
+            parameters: 9, // 3×2 weights + 3 bias
+            activation: Some(ActivationFunction::ReLU),
+        };
+        let layer2 = LayerInfo {
+            layer_id: "l2".to_string(),
+            layer_type: LayerType::Linear,
+            input_shape: vec![3],
+            output_shape: vec![2],
+            parameters: 8, // 2×3 weights + 2 bias
+            activation: None,
+        };
+        let model = Model {
+            model_id: "mlp_test".to_string(),
+            model_type: ModelType::LLM,
+            framework: MLFramework::Custom("test".to_string()),
+            architecture: ModelArchitecture {
+                layers: vec![layer1, layer2],
+                connections: vec![],
+                input_shape: vec![2],
+                output_shape: vec![2],
+                total_parameters: 17,
+            },
+            // Flattened in consumption order: layer1 W(3×2) + bias(3), layer2 W(2×3) + bias(2).
+            weights: vec![
+                1.0, 2.0, 0.0, -1.0, 0.5, 0.5, // W1 row-major
+                0.0, 0.0, 0.0,                 // bias1
+                1.0, 0.0, 0.0, 0.0, 1.0, 0.0,  // W2 row-major
+                0.0, 0.0,                       // bias2
+            ],
+            metadata: ModelMetadata::new(),
+        };
+
+        let input = [1.0f64, 2.0];
+        let input_bytes: Vec<u8> =
+            input.iter().flat_map(|v| v.to_le_bytes()).collect();
+
+        let request = InferenceRequest {
+            request_id: "req_mlp".to_string(),
+            model_id: "mlp_test".to_string(),
+            input_data: input_bytes,
+            parameters: InferenceParameters {
+                batch_size: 1,
+                sequence_length: 2,
+                temperature: None,
+                top_k: None,
+                top_p: None,
+                max_tokens: None,
+                precision: Precision::FP32,
+            },
+            priority: RequestPriority::Normal,
+            submitted_at: 0,
+            deadline: None,
+        };
+
+        let mut engine = InferenceEngine::new();
+        let result = engine
+            .execute_inference(&request, &model)
+            .expect("MLP forward pass should succeed");
+
+        let out: Vec<f64> = result
+            .output_data
+            .chunks_exact(std::mem::size_of::<f64>())
+            .map(|c| f64::from_le_bytes(c.try_into().unwrap()))
+            .collect();
+
+        assert_eq!(out.len(), 2, "output should have 2 values");
+        assert!(
+            (out[0] - 5.0).abs() < 1e-9,
+            "out[0] should be 5.0, got {}",
+            out[0]
+        );
+        assert!(
+            (out[1] - 0.0).abs() < 1e-9,
+            "out[1] should be 0.0, got {}",
+            out[1]
+        );
+        assert_eq!(result.metadata.model_id, "mlp_test");
+        assert_eq!(result.metadata.backend_id, "linear_algebra_mlp");
+    }
+
+    #[test]
+    fn test_mlp_inference_rejects_unsupported_layer() {
+        // A model with an Attention layer cannot be evaluated by the MLP backend and must
+        // fail with a clear, honest error naming the unsupported layer type.
+        let model = Model {
+            model_id: "attn_test".to_string(),
+            model_type: ModelType::Transformer,
+            framework: MLFramework::PyTorch,
+            architecture: ModelArchitecture {
+                layers: vec![LayerInfo {
+                    layer_id: "attn1".to_string(),
+                    layer_type: LayerType::Attention,
+                    input_shape: vec![4],
+                    output_shape: vec![4],
+                    parameters: 0,
+                    activation: None,
+                }],
+                connections: vec![],
+                input_shape: vec![4],
+                output_shape: vec![4],
+                total_parameters: 0,
+            },
+            weights: vec![],
+            metadata: ModelMetadata::new(),
+        };
+
+        let input = [1.0f64, 2.0, 3.0, 4.0];
+        let input_bytes: Vec<u8> =
+            input.iter().flat_map(|v| v.to_le_bytes()).collect();
+
+        let request = InferenceRequest {
+            request_id: "req_attn".to_string(),
+            model_id: "attn_test".to_string(),
+            input_data: input_bytes,
+            parameters: InferenceParameters {
+                batch_size: 1,
+                sequence_length: 4,
+                temperature: None,
+                top_k: None,
+                top_p: None,
+                max_tokens: None,
+                precision: Precision::FP32,
+            },
+            priority: RequestPriority::Normal,
+            submitted_at: 0,
+            deadline: None,
+        };
+
+        let mut engine = InferenceEngine::new();
+        let result = engine.execute_inference(&request, &model);
+        let err = result.expect_err("Attention layer must be rejected");
+        let msg = format!("{}", err);
+        assert!(
+            msg.contains("Attention"),
+            "error should name the unsupported layer type: {}",
+            msg
         );
     }
 

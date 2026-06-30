@@ -282,6 +282,12 @@ pub struct AssetManager {
     price_feeds: HashMap<String, PriceFeed>,
     market_data: MarketData,
     asset_validator: AssetValidator,
+    /// Per-asset price history cache (oldest first), populated by
+    /// `update_price_history` / `ingest_from_feed` and applied to `Asset`s via
+    /// `apply_to_asset`. The `AssetManager` does not own `Portfolio`/`Asset`
+    /// instances (those live in `PortfolioStorage`), so it keeps the histories it
+    /// ingests here until a caller asks to copy them onto an asset.
+    price_histories: HashMap<String, Vec<f64>>,
 }
 
 /// Asset catalog
@@ -354,6 +360,14 @@ pub struct PriceFeed {
     pub update_frequency: u64,
     pub data_quality: DataQuality,
     pub last_update: u64,
+    /// The asset this feed serves. Used to associate a feed with an asset so
+    /// `AssetManager::ingest_from_feed` can look it up by `asset_id`.
+    pub asset_id: String,
+    /// Cached price series (oldest first) fetched from the feed. When non-empty
+    /// this is used directly to populate an asset's `price_history`; when empty,
+    /// `ingest_from_feed` falls back to a deterministic generator seeded from
+    /// `feed_id` (there is no real network in this scaffold).
+    pub cached_prices: Vec<f64>,
 }
 
 /// Feed types
@@ -760,6 +774,30 @@ pub struct RebalancingStrategy {
     pub strategy_type: RebalancingStrategyType,
     pub parameters: RebalancingParameters,
     pub constraints: RebalancingConstraints,
+    /// Target portfolio weights keyed by `asset_id`, summing to ~1.0. Used by
+    /// `RebalancingEngine::rebalance` to compute drift away from the target
+    /// allocation. Assets without an entry are treated as target weight 0.0.
+    pub target_weights: HashMap<String, f64>,
+}
+
+/// A single rebalance trade produced by `RebalancingEngine::rebalance`.
+#[derive(Debug, Clone, PartialEq, Serialize, Deserialize)]
+pub struct RebalanceTrade {
+    /// The asset to trade.
+    pub asset_id: String,
+    /// Whether to buy or sell.
+    pub action: TradeAction,
+    /// Number of units to trade (always positive; direction is in `action`).
+    pub quantity: f64,
+    /// The target weight this trade moves the asset towards.
+    pub target_weight: f64,
+}
+
+/// Direction of a `RebalanceTrade`.
+#[derive(Debug, Clone, PartialEq, Serialize, Deserialize)]
+pub enum TradeAction {
+    Buy,
+    Sell,
 }
 
 /// Rebalancing strategy types
@@ -2313,6 +2351,32 @@ impl PortfolioManager {
     pub fn get_performance_metrics(&self) -> FinancialPerformanceMetrics {
         self.performance_tracker.get_metrics()
     }
+
+    /// Register a rebalancing strategy with the underlying engine (keyed by
+    /// `strategy.strategy_id`) so `rebalance_portfolio` can use it.
+    pub fn register_rebalancing_strategy(&mut self, strategy: RebalancingStrategy) {
+        self.rebalancing_engine.register_strategy(strategy);
+    }
+
+    /// Public rebalancing API: look up the portfolio, compute drift against a
+    /// registered strategy (or a default strategy when none is registered for
+    /// the default id), and return the proposed `RebalanceTrade`s. The portfolio
+    /// is not mutated — trades are proposals for the execution layer.
+    pub fn rebalance_portfolio(
+        &self,
+        portfolio_id: &str,
+    ) -> Result<Vec<RebalanceTrade>, FinancialError> {
+        let mut portfolio = self.portfolio_storage.get_portfolio(portfolio_id)?;
+        // Use a registered strategy if one exists under the default id, else a
+        // fresh default strategy (empty target_weights ⇒ no trades, which is the
+        // honest result when no targets have been configured).
+        let default_strategy = RebalancingStrategy::new();
+        let strategy = self
+            .rebalancing_engine
+            .get_strategy(&default_strategy.strategy_id)
+            .unwrap_or(&default_strategy);
+        self.rebalancing_engine.rebalance(&mut portfolio, strategy)
+    }
 }
 
 impl PortfolioStorage {
@@ -2469,6 +2533,7 @@ impl AssetManager {
             price_feeds: HashMap::new(),
             market_data: MarketData::new(),
             asset_validator: AssetValidator::new(),
+            price_histories: HashMap::new(),
         }
     }
 
@@ -2477,6 +2542,92 @@ impl AssetManager {
         self.asset_validator.initialize()?;
         Ok(())
     }
+
+    /// Register a price feed. The feed is keyed by its `asset_id` so that
+    /// `ingest_from_feed(asset_id)` can locate it. Re-registering a feed for the
+    /// same asset replaces the prior one.
+    pub fn register_price_feed(&mut self, feed: PriceFeed) {
+        self.price_feeds.insert(feed.asset_id.clone(), feed);
+    }
+
+    /// Directly set the cached price history (oldest first) for `asset_id`. This
+    /// is the manual entry point; `ingest_from_feed` is the feed-driven one. The
+    /// history is held in the manager's cache until `apply_to_asset` copies it
+    /// onto an `Asset`.
+    pub fn update_price_history(&mut self, asset_id: &str, prices: Vec<f64>) {
+        self.price_histories.insert(asset_id.to_string(), prices);
+    }
+
+    /// Look up the cached price history for `asset_id`, if any.
+    pub fn get_price_history(&self, asset_id: &str) -> Option<&Vec<f64>> {
+        self.price_histories.get(asset_id)
+    }
+
+    /// Simulate fetching data from a registered price feed for `asset_id` and
+    /// populate the manager's price-history cache. If the feed carries
+    /// `cached_prices`, those are used directly; otherwise a deterministic series
+    /// (seeded from `feed_id`, so the same feed always yields the same history)
+    /// is generated — there is no real network in this scaffold. Returns
+    /// `DataError` when no feed is registered for the asset.
+    pub fn ingest_from_feed(&mut self, asset_id: &str) -> Result<(), FinancialError> {
+        let feed = self.price_feeds.get(asset_id).cloned().ok_or_else(|| {
+            FinancialError::DataError(format!(
+                "no price feed registered for asset '{}'",
+                asset_id
+            ))
+        })?;
+
+        let prices = if !feed.cached_prices.is_empty() {
+            feed.cached_prices.clone()
+        } else {
+            deterministic_price_series(&feed.feed_id, 30)
+        };
+        self.price_histories.insert(asset_id.to_string(), prices);
+        Ok(())
+    }
+
+    /// Copy the manager's cached price history for `asset.asset_id` onto the
+    /// asset's `price_history`, and refresh `current_price`/`market_value` from
+    /// the last price. No-op when no history is cached for the asset.
+    pub fn apply_to_asset(&self, asset: &mut Asset) {
+        if let Some(prices) = self.price_histories.get(&asset.asset_id) {
+            asset.price_history = prices.clone();
+            if let Some(&last) = prices.last() {
+                asset.current_price = last;
+                asset.market_value = asset.quantity * last;
+            }
+        }
+    }
+}
+
+/// Generate a deterministic price series (oldest first) from a seed string.
+/// Uses a simple xorshift LCG seeded by an FNV-1a hash of `seed`, so the same
+/// feed id always produces the same history (reproducible, no fabrication of
+/// "real" market data). The series oscillates around a 100.0 baseline.
+fn deterministic_price_series(seed: &str, len: usize) -> Vec<f64> {
+    // FNV-1a hash of the seed string → u64 state.
+    let mut state: u64 = 0xcbf2_9ce4_8422_2325;
+    for &b in seed.as_bytes() {
+        state ^= b as u64;
+        state = state.wrapping_mul(0x1000_0000_01b3);
+    }
+    if state == 0 {
+        state = 0x9e37_79b9_7f4a_7c15;
+    }
+
+    let mut prices = Vec::with_capacity(len);
+    let mut price = 100.0;
+    for _ in 0..len {
+        // xorshift64
+        state ^= state << 13;
+        state ^= state >> 7;
+        state ^= state << 17;
+        // map to a small step in [-1.5, +1.5)
+        let step = ((state >> 33) as f64) / (i32::MAX as f64) * 1.5;
+        price = (price + step).max(1.0);
+        prices.push(price);
+    }
+    prices
 }
 
 impl AssetCatalog {
@@ -2500,6 +2651,36 @@ impl MarketData {
             volume_data: HashMap::new(),
             technical_indicators: HashMap::new(),
         }
+    }
+
+    /// Copy cached price data from `price_data` into each asset's `price_history`.
+    /// For every asset in `assets` that has a `PriceData` entry (keyed by
+    /// `asset_id`), the asset's `price_history` is replaced with the cached
+    /// close/adjusted-close series. Because `price_data` holds a single
+    /// `PriceData` per asset (the latest bar), this yields a one-point history;
+    /// callers needing a multi-point series for risk computation should use
+    /// `AssetManager::update_price_history` / `ingest_from_feed` instead.
+    pub fn sync_to_assets(&self, assets: &mut HashMap<String, Asset>) {
+        for asset in assets.values_mut() {
+            if let Some(pd) = self.price_data.get(&asset.asset_id) {
+                // Prefer adjusted_close (split/dividend-adjusted) when present,
+                // else fall back to the raw close.
+                let px = if pd.adjusted_close != 0.0 {
+                    pd.adjusted_close
+                } else {
+                    pd.close
+                };
+                asset.price_history = vec![px];
+                asset.current_price = px;
+                asset.market_value = asset.quantity * px;
+            }
+        }
+    }
+
+    /// Insert/replace a `PriceData` entry (keyed by `asset_id`). Convenience for
+    /// tests and callers that populate market data before syncing.
+    pub fn upsert_price_data(&mut self, data: PriceData) {
+        self.price_data.insert(data.asset_id.clone(), data);
     }
 }
 
@@ -2594,6 +2775,93 @@ impl RebalancingEngine {
         self.optimization_engine.initialize()?;
         self.execution_engine.initialize()?;
         Ok(())
+    }
+
+    /// Register a rebalancing strategy, keyed by `strategy.strategy_id`.
+    pub fn register_strategy(&mut self, strategy: RebalancingStrategy) {
+        self.rebalancing_strategies
+            .insert(strategy.strategy_id.clone(), strategy);
+    }
+
+    /// Look up a registered strategy by id.
+    pub fn get_strategy(&self, strategy_id: &str) -> Option<&RebalancingStrategy> {
+        self.rebalancing_strategies.get(strategy_id)
+    }
+
+    /// Compute the current portfolio weights (`market_value / total`) keyed by
+    /// `asset_id`. These are the "drifted" weights that `rebalance` compares
+    /// against a strategy's `target_weights`. Returns an empty map when the
+    /// portfolio has no positive market value.
+    pub fn calculate_drift(portfolio: &Portfolio) -> HashMap<String, f64> {
+        let total: f64 = portfolio.assets.iter().map(|a| a.market_value).sum();
+        let mut weights = HashMap::new();
+        if !(total > 0.0) {
+            return weights;
+        }
+        for asset in &portfolio.assets {
+            weights.insert(asset.asset_id.clone(), asset.market_value / total);
+        }
+        weights
+    }
+
+    /// Compute drift against `strategy.target_weights` and, for any asset whose
+    /// drift exceeds `strategy.parameters.deviation_threshold`, generate a
+    /// `RebalanceTrade` that would move the asset back to its target weight.
+    ///
+    /// Trades are sized in units: `quantity = |target_value − current_value| /
+    /// current_price`, where `target_value = target_weight · total_value`. The
+    /// portfolio is **not** mutated by this method — it only proposes trades;
+    /// applying them (and their costs) is the execution layer's job.
+    pub fn rebalance(
+        &self,
+        portfolio: &mut Portfolio,
+        strategy: &RebalancingStrategy,
+    ) -> Result<Vec<RebalanceTrade>, FinancialError> {
+        let total_value: f64 = portfolio.assets.iter().map(|a| a.market_value).sum();
+        if !(total_value > 0.0) {
+            return Err(FinancialError::PortfolioError(
+                "cannot rebalance: total portfolio market value is not positive".to_string(),
+            ));
+        }
+
+        let current_weights = Self::calculate_drift(portfolio);
+        let threshold = strategy.parameters.deviation_threshold;
+        let mut trades = Vec::new();
+
+        for asset in &portfolio.assets {
+            let current_weight = current_weights.get(&asset.asset_id).copied().unwrap_or(0.0);
+            let target_weight = strategy
+                .target_weights
+                .get(&asset.asset_id)
+                .copied()
+                .unwrap_or(0.0);
+            let drift = current_weight - target_weight;
+
+            if drift.abs() > threshold {
+                if asset.current_price <= 0.0 {
+                    return Err(FinancialError::AssetError(format!(
+                        "asset '{}' has non-positive current price; cannot size a trade",
+                        asset.asset_id
+                    )));
+                }
+                let target_value = target_weight * total_value;
+                let value_diff = target_value - asset.market_value;
+                let quantity = value_diff / asset.current_price;
+                let action = if quantity >= 0.0 {
+                    TradeAction::Buy
+                } else {
+                    TradeAction::Sell
+                };
+                trades.push(RebalanceTrade {
+                    asset_id: asset.asset_id.clone(),
+                    action,
+                    quantity: quantity.abs(),
+                    target_weight,
+                });
+            }
+        }
+
+        Ok(trades)
     }
 }
 
@@ -3451,6 +3719,8 @@ impl PriceFeed {
             update_frequency: 1,
             data_quality: DataQuality::new(),
             last_update: 0,
+            asset_id: "asset_1".to_string(),
+            cached_prices: Vec::new(),
         }
     }
 }
@@ -3708,6 +3978,7 @@ impl RebalancingStrategy {
             strategy_type: RebalancingStrategyType::TimeBased,
             parameters: RebalancingParameters::new(),
             constraints: RebalancingConstraints::new(),
+            target_weights: HashMap::new(),
         }
     }
 }
@@ -4630,5 +4901,304 @@ mod tests {
         analyzer.set_active_benchmark(None);
         let off_metrics = analyzer.calculate_risk_metrics(&portfolio).unwrap();
         assert!(off_metrics.beta.is_nan() && off_metrics.alpha.is_nan());
+    }
+
+    // ---- Part 4: price feeds → asset price history wiring ----
+
+    #[test]
+    fn register_price_feed_and_ingest_uses_cached_prices() {
+        let mut manager = AssetManager::new();
+        let cached = vec![100.0, 102.0, 101.0, 105.0, 107.0];
+        let feed = PriceFeed {
+            feed_id: "feed_A".to_string(),
+            feed_name: "A feed".to_string(),
+            feed_type: FeedType::EndOfDay,
+            update_frequency: 86400,
+            data_quality: DataQuality::new(),
+            last_update: 0,
+            asset_id: "A".to_string(),
+            cached_prices: cached.clone(),
+        };
+        manager.register_price_feed(feed);
+
+        // No feed for unknown asset ⇒ DataError, never a fabricated history.
+        assert!(matches!(
+            manager.ingest_from_feed("ZZZ"),
+            Err(FinancialError::DataError(_))
+        ));
+
+        manager.ingest_from_feed("A").unwrap();
+        let history = manager.get_price_history("A").expect("history cached for A");
+        assert_eq!(history, &cached);
+    }
+
+    #[test]
+    fn ingest_from_feed_generates_deterministic_series_when_no_cache() {
+        let mut manager = AssetManager::new();
+        manager.register_price_feed(PriceFeed {
+            feed_id: "seeded_feed".to_string(),
+            feed_name: "no cache".to_string(),
+            feed_type: FeedType::Historical,
+            update_frequency: 86400,
+            data_quality: DataQuality::new(),
+            last_update: 0,
+            asset_id: "B".to_string(),
+            cached_prices: Vec::new(),
+        });
+
+        manager.ingest_from_feed("B").unwrap();
+        let first = manager.get_price_history("B").expect("history for B").clone();
+        // Deterministic: re-ingesting yields the identical series.
+        manager.ingest_from_feed("B").unwrap();
+        let second = manager.get_price_history("B").expect("history for B").clone();
+        assert_eq!(first, second);
+        // Enough points for risk computation (need ≥ 3).
+        assert!(first.len() >= 3);
+    }
+
+    #[test]
+    fn update_price_history_then_apply_to_asset_feeds_risk_metrics() {
+        // Register a feed (so the wiring is exercised), but populate history
+        // directly via update_price_history, apply it to an asset, build a
+        // portfolio, and verify real risk metrics come back.
+        let mut manager = AssetManager::new();
+        manager.register_price_feed(PriceFeed {
+            feed_id: "feed_A".to_string(),
+            feed_name: "A".to_string(),
+            feed_type: FeedType::EndOfDay,
+            update_frequency: 86400,
+            data_quality: DataQuality::new(),
+            last_update: 0,
+            asset_id: "A".to_string(),
+            cached_prices: Vec::new(),
+        });
+
+        // A real, mildly volatile series: 100→110→99→108.9 (returns 0.1, -0.1, 0.1).
+        manager.update_price_history("A", vec![100.0, 110.0, 99.0, 108.9]);
+
+        let mut asset = asset_with_history("A", 1000.0, Vec::new());
+        // Overwrite the empty history; apply_to_asset will fill it from the cache.
+        asset.price_history = Vec::new();
+        manager.apply_to_asset(&mut asset);
+
+        // apply_to_asset refreshes current_price/market_value from the last price.
+        assert!((asset.current_price - 108.9).abs() < 1e-9);
+        assert!((asset.market_value - asset.quantity * 108.9).abs() < 1e-9);
+        assert_eq!(asset.price_history.len(), 4);
+
+        let portfolio = Portfolio {
+            portfolio_id: "feed_pf".to_string(),
+            portfolio_name: "feed_pf".to_string(),
+            owner_id: "owner".to_string(),
+            assets: vec![asset],
+            cash_balance: 0.0,
+            total_value: 1000.0,
+            created_at: 0,
+            last_updated: 0,
+            risk_profile: RiskProfile::new(),
+            investment_strategy: InvestmentStrategy::Balanced,
+        };
+
+        let analyzer = RiskAnalyzer::new();
+        let metrics = analyzer.calculate_risk_metrics(&portfolio).unwrap();
+        // Genuine, non-fabricated numbers: volatility > 0, finite Sharpe.
+        assert!(metrics.volatility > 0.0);
+        assert!(metrics.var_95 > 0.0);
+        assert!(metrics.sharpe_ratio.is_finite());
+    }
+
+    #[test]
+    fn market_data_sync_to_assets_copies_close_into_history() {
+        let mut market_data = MarketData::new();
+        market_data.upsert_price_data(PriceData {
+            asset_id: "X".to_string(),
+            timestamp: 42,
+            open: 100.0,
+            high: 105.0,
+            low: 99.0,
+            close: 103.0,
+            adjusted_close: 103.0,
+            volume: 1000,
+        });
+
+        let mut assets = HashMap::new();
+        assets.insert(
+            "X".to_string(),
+            Asset {
+                asset_id: "X".to_string(),
+                symbol: "X".to_string(),
+                asset_type: AssetType::Stock,
+                quantity: 10.0,
+                average_cost: 100.0,
+                current_price: 0.0,
+                market_value: 0.0,
+                currency: "USD".to_string(),
+                exchange: "TEST".to_string(),
+                last_updated: 0,
+                price_history: Vec::new(),
+            },
+        );
+        // Asset without market data stays untouched.
+        assets.insert(
+            "Y".to_string(),
+            Asset {
+                asset_id: "Y".to_string(),
+                symbol: "Y".to_string(),
+                asset_type: AssetType::Stock,
+                quantity: 10.0,
+                average_cost: 100.0,
+                current_price: 0.0,
+                market_value: 0.0,
+                currency: "USD".to_string(),
+                exchange: "TEST".to_string(),
+                last_updated: 0,
+                price_history: Vec::new(),
+            },
+        );
+
+        market_data.sync_to_assets(&mut assets);
+
+        let x = &assets["X"];
+        assert_eq!(x.price_history, vec![103.0]);
+        assert!((x.current_price - 103.0).abs() < 1e-9);
+        assert!((x.market_value - 10.0 * 103.0).abs() < 1e-9);
+        // Y had no PriceData entry ⇒ unchanged (empty history).
+        assert!(assets["Y"].price_history.is_empty());
+    }
+
+    // ---- Part 5: rebalancing logic ----
+
+    /// Build a portfolio with two assets at given market values and a shared
+    /// current price (so trade sizing is deterministic).
+    fn two_asset_portfolio(id_a: &str, id_b: &str, mv_a: f64, mv_b: f64, price: f64) -> Portfolio {
+        let qty_a = mv_a / price;
+        let qty_b = mv_b / price;
+        Portfolio {
+            portfolio_id: "rebal_pf".to_string(),
+            portfolio_name: "rebal".to_string(),
+            owner_id: "owner".to_string(),
+            assets: vec![
+                Asset {
+                    asset_id: id_a.to_string(),
+                    symbol: id_a.to_string(),
+                    asset_type: AssetType::Stock,
+                    quantity: qty_a,
+                    average_cost: price,
+                    current_price: price,
+                    market_value: mv_a,
+                    currency: "USD".to_string(),
+                    exchange: "TEST".to_string(),
+                    last_updated: 0,
+                    price_history: Vec::new(),
+                },
+                Asset {
+                    asset_id: id_b.to_string(),
+                    symbol: id_b.to_string(),
+                    asset_type: AssetType::Stock,
+                    quantity: qty_b,
+                    average_cost: price,
+                    current_price: price,
+                    market_value: mv_b,
+                    currency: "USD".to_string(),
+                    exchange: "TEST".to_string(),
+                    last_updated: 0,
+                    price_history: Vec::new(),
+                },
+            ],
+            cash_balance: 0.0,
+            total_value: mv_a + mv_b,
+            created_at: 0,
+            last_updated: 0,
+            risk_profile: RiskProfile::new(),
+            investment_strategy: InvestmentStrategy::Balanced,
+        }
+    }
+
+    #[test]
+    fn calculate_drift_reports_current_weights() {
+        // 70/30 split ⇒ weights 0.7 and 0.3.
+        let portfolio = two_asset_portfolio("A", "B", 700.0, 300.0, 100.0);
+        let drift = RebalancingEngine::calculate_drift(&portfolio);
+        assert!((drift["A"] - 0.7).abs() < 1e-9);
+        assert!((drift["B"] - 0.3).abs() < 1e-9);
+    }
+
+    #[test]
+    fn rebalance_generates_trades_when_drift_exceeds_threshold() {
+        // Drifted to 70/30; target 50/50. Drift of 0.2 exceeds the 0.05 threshold.
+        let mut portfolio = two_asset_portfolio("A", "B", 700.0, 300.0, 100.0);
+        let mut strategy = RebalancingStrategy::new();
+        strategy.parameters.deviation_threshold = 0.05;
+        strategy.target_weights = HashMap::from([
+            ("A".to_string(), 0.5),
+            ("B".to_string(), 0.5),
+        ]);
+
+        let engine = RebalancingEngine::new();
+        let trades = engine.rebalance(&mut portfolio, &strategy).unwrap();
+
+        // Both assets drift by 0.2 ⇒ both get a trade.
+        assert_eq!(trades.len(), 2);
+
+        let a_trade = trades.iter().find(|t| t.asset_id == "A").unwrap();
+        let b_trade = trades.iter().find(|t| t.asset_id == "B").unwrap();
+
+        // A is overweight (0.7 vs 0.5) ⇒ sell down to 500 (200 units at 100).
+        assert_eq!(a_trade.action, TradeAction::Sell);
+        assert!((a_trade.quantity - 2.0).abs() < 1e-9, "A qty {}", a_trade.quantity);
+        assert!((a_trade.target_weight - 0.5).abs() < 1e-9);
+
+        // B is underweight (0.3 vs 0.5) ⇒ buy up to 500 (200 units at 100).
+        assert_eq!(b_trade.action, TradeAction::Buy);
+        assert!((b_trade.quantity - 2.0).abs() < 1e-9, "B qty {}", b_trade.quantity);
+        assert!((b_trade.target_weight - 0.5).abs() < 1e-9);
+    }
+
+    #[test]
+    fn rebalance_emits_no_trades_when_within_threshold() {
+        // 52/48 vs 50/50 ⇒ drift 0.02, below the 0.05 threshold ⇒ no trades.
+        let mut portfolio = two_asset_portfolio("A", "B", 520.0, 480.0, 100.0);
+        let mut strategy = RebalancingStrategy::new();
+        strategy.parameters.deviation_threshold = 0.05;
+        strategy.target_weights = HashMap::from([
+            ("A".to_string(), 0.5),
+            ("B".to_string(), 0.5),
+        ]);
+
+        let engine = RebalancingEngine::new();
+        let trades = engine.rebalance(&mut portfolio, &strategy).unwrap();
+        assert!(trades.is_empty(), "no trades expected within threshold");
+    }
+
+    #[test]
+    fn rebalance_rejects_non_positive_total_value() {
+        let mut portfolio = two_asset_portfolio("A", "B", 0.0, 0.0, 100.0);
+        let strategy = RebalancingStrategy::new();
+        let engine = RebalancingEngine::new();
+        assert!(engine.rebalance(&mut portfolio, &strategy).is_err());
+    }
+
+    #[test]
+    fn portfolio_manager_rebalance_portfolio_uses_registered_strategy() {
+        // Store a drifted portfolio, register a strategy with targets, and verify
+        // the public API returns the expected trades.
+        let mut pm = PortfolioManager::new();
+        pm.initialize().unwrap();
+
+        let portfolio = two_asset_portfolio("A", "B", 700.0, 300.0, 100.0);
+        pm.create_portfolio(portfolio).unwrap();
+
+        let mut strategy = RebalancingStrategy::new();
+        strategy.parameters.deviation_threshold = 0.05;
+        strategy.target_weights = HashMap::from([
+            ("A".to_string(), 0.5),
+            ("B".to_string(), 0.5),
+        ]);
+        pm.register_rebalancing_strategy(strategy);
+
+        let trades = pm.rebalance_portfolio("rebal_pf").unwrap();
+        assert_eq!(trades.len(), 2);
+        assert!(trades.iter().any(|t| t.asset_id == "A" && t.action == TradeAction::Sell));
+        assert!(trades.iter().any(|t| t.asset_id == "B" && t.action == TradeAction::Buy));
     }
 }
