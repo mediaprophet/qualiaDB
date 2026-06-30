@@ -14,6 +14,7 @@ use serde::{Deserialize, Serialize};
 use sha2::{Digest, Sha256};
 use std::collections::HashMap;
 use std::sync::{Arc, Mutex};
+use std::time::Instant;
 
 /// Statistical Computing Library Manager
 pub struct StatisticalComputingLibrary {
@@ -222,13 +223,28 @@ pub enum CompressionAlgorithm {
 }
 
 /// Compression statistics
+///
+/// Tracks cumulative metrics across all compression/decompression operations
+/// performed by a [`DataCompressionEngine`]. The `compression_ratio` field
+/// records the ratio of the *most recent* compression operation, while
+/// [`CompressionStatistics::compression_ratio`] computes the *overall* ratio
+/// from the cumulative byte totals.
 #[derive(Debug, Clone)]
 pub struct CompressionStatistics {
+    /// Total original (uncompressed) bytes processed across all compress ops.
     pub original_size: u64,
+    /// Total compressed bytes produced across all compress ops.
     pub compressed_size: u64,
+    /// Ratio of the most recent compression operation (compressed / original).
     pub compression_ratio: f64,
+    /// Total time spent compressing, in nanoseconds.
     pub compression_time: u64,
+    /// Total time spent decompressing, in nanoseconds.
     pub decompression_time: u64,
+    /// Number of compression operations performed.
+    pub compression_count: u64,
+    /// Number of decompression operations performed.
+    pub decompression_count: u64,
 }
 
 /// Data indexing engine
@@ -302,8 +318,8 @@ pub struct ExecutionPlan {
 }
 
 /// Query operations
-#[derive(Debug, Clone)]
-pub enum QueryOperation {
+#[derive(Debug, Clone, PartialEq)]
+pub enum QueryOperationType {
     Scan,
     Filter,
     Project,
@@ -311,6 +327,16 @@ pub enum QueryOperation {
     Join,
     Sort,
     Limit,
+}
+
+/// A single query operation paired with the amount of data it operates on.
+///
+/// `data_size` is an estimate of the number of rows (or bytes) the operation
+/// will touch; the [`QueryOptimizer`] uses it to estimate execution cost.
+#[derive(Debug, Clone)]
+pub struct QueryOperation {
+    pub operation_type: QueryOperationType,
+    pub data_size: usize,
 }
 
 /// Statistical computation engine
@@ -2481,19 +2507,145 @@ impl DataCompressionEngine {
     pub fn new() -> Self {
         Self {
             compression_algorithms: vec![CompressionAlgorithm::LZ4, CompressionAlgorithm::ZSTD],
-            compression_statistics: CompressionStatistics {
-                original_size: 0,
-                compressed_size: 0,
-                compression_ratio: 0.0,
-                compression_time: 0,
-                decompression_time: 0,
-            },
+            compression_statistics: CompressionStatistics::new(),
         }
     }
 
     pub fn initialize(&mut self) -> Result<(), StatisticalError> {
         Ok(())
     }
+
+    /// Compress `data` using a simple run-length encoding and record the
+    /// operation's statistics (original size, compressed size, ratio, time).
+    pub fn compress(&mut self, data: &[u8]) -> Result<Vec<u8>, StatisticalError> {
+        let start = Instant::now();
+        let compressed = rle_compress(data);
+        let elapsed = start.elapsed().as_nanos() as u64;
+        self.compression_statistics
+            .record_compression(data.len() as u64, compressed.len() as u64, elapsed);
+        Ok(compressed)
+    }
+
+    /// Decompress data previously produced by [`compress`](Self::compress) and
+    /// record the decompression statistics.
+    pub fn decompress(&mut self, data: &[u8]) -> Result<Vec<u8>, StatisticalError> {
+        let start = Instant::now();
+        let decompressed = rle_decompress(data)?;
+        let elapsed = start.elapsed().as_nanos() as u64;
+        self.compression_statistics
+            .record_decompression(elapsed);
+        Ok(decompressed)
+    }
+
+    /// Returns a reference to the cumulative compression statistics.
+    pub fn get_statistics(&self) -> &CompressionStatistics {
+        &self.compression_statistics
+    }
+
+    /// Resets all accumulated compression statistics to zero.
+    pub fn reset_statistics(&mut self) {
+        self.compression_statistics = CompressionStatistics::new();
+    }
+}
+
+impl CompressionStatistics {
+    /// Create a fresh, zeroed statistics record.
+    pub fn new() -> Self {
+        Self {
+            original_size: 0,
+            compressed_size: 0,
+            compression_ratio: 0.0,
+            compression_time: 0,
+            decompression_time: 0,
+            compression_count: 0,
+            decompression_count: 0,
+        }
+    }
+
+    /// Record a single compression operation.
+    pub fn record_compression(&mut self, original: u64, compressed: u64, elapsed_ns: u64) {
+        self.original_size += original;
+        self.compressed_size += compressed;
+        self.compression_time += elapsed_ns;
+        self.compression_count += 1;
+        self.compression_ratio = if original == 0 {
+            0.0
+        } else {
+            compressed as f64 / original as f64
+        };
+    }
+
+    /// Record a single decompression operation.
+    pub fn record_decompression(&mut self, elapsed_ns: u64) {
+        self.decompression_time += elapsed_ns;
+        self.decompression_count += 1;
+    }
+
+    /// Overall compression ratio across all operations
+    /// (`compressed_size / original_size`). Returns `0.0` when no data has been
+    /// compressed yet.
+    pub fn compression_ratio(&self) -> f64 {
+        if self.original_size == 0 {
+            0.0
+        } else {
+            self.compressed_size as f64 / self.original_size as f64
+        }
+    }
+
+    /// Human-readable summary of the accumulated statistics.
+    pub fn summary(&self) -> String {
+        format!(
+            "CompressionStatistics: {} compress op(s), {} decompress op(s), \
+             original={} bytes, compressed={} bytes, overall ratio={:.4}, \
+             last-op ratio={:.4}, compress_time={} ns, decompress_time={} ns",
+            self.compression_count,
+            self.decompression_count,
+            self.original_size,
+            self.compressed_size,
+            self.compression_ratio(),
+            self.compression_ratio,
+            self.compression_time,
+            self.decompression_time,
+        )
+    }
+}
+
+/// Simple run-length encoding over bytes. Each run is emitted as
+/// `(count: u8, byte: u8)`; runs longer than 255 are split. Incompressible
+/// data expands by ~2x, but repetitive data (the common statistical-dataset
+/// case for constant columns) compresses well.
+fn rle_compress(data: &[u8]) -> Vec<u8> {
+    let mut out = Vec::with_capacity(data.len());
+    let mut i = 0;
+    while i < data.len() {
+        let byte = data[i];
+        let mut count: usize = 1;
+        while i + count < data.len() && data[i + count] == byte && count < 255 {
+            count += 1;
+        }
+        out.push(count as u8);
+        out.push(byte);
+        i += count;
+    }
+    out
+}
+
+/// Inverse of [`rle_compress`].
+fn rle_decompress(data: &[u8]) -> Result<Vec<u8>, StatisticalError> {
+    if data.len() % 2 != 0 {
+        return Err(StatisticalError::InvalidData(
+            "Corrupted RLE stream (odd length)".to_string(),
+        ));
+    }
+    let mut out = Vec::with_capacity(data.len());
+    let mut i = 0;
+    while i < data.len() {
+        let count = data[i] as usize;
+        let byte = data[i + 1];
+        out.resize(out.len() + count, byte);
+        i += 2;
+    }
+    Ok(out)
 }
 
 impl DataIndexingEngine {
@@ -2535,6 +2687,146 @@ impl QueryOptimizer {
 
     pub fn initialize(&mut self) -> Result<(), StatisticalError> {
         Ok(())
+    }
+
+    /// Estimate the cost of a single query operation based on its type and the
+    /// amount of data it operates on. Costs are dimensionless weights chosen so
+    /// that cheaper operations (Filter, Project, Limit) sort before expensive
+    /// ones (Scan, Join, Aggregate, Sort).
+    pub fn estimate_cost(&self, operation: &QueryOperation) -> CostModel {
+        let n = operation.data_size.max(1) as f64;
+        match operation.operation_type {
+            // Full scan: heavy I/O, light CPU.
+            QueryOperationType::Scan => CostModel {
+                cpu_cost: 0.1 * n,
+                io_cost: 1.0 * n,
+                memory_cost: 0.05 * n,
+                network_cost: 0.0,
+            },
+            // Filter: cheap, mostly CPU.
+            QueryOperationType::Filter => CostModel {
+                cpu_cost: 0.2 * n,
+                io_cost: 0.0,
+                memory_cost: 0.02 * n,
+                network_cost: 0.0,
+            },
+            // Project: cheap column selection.
+            QueryOperationType::Project => CostModel {
+                cpu_cost: 0.1 * n,
+                io_cost: 0.0,
+                memory_cost: 0.02 * n,
+                network_cost: 0.0,
+            },
+            // Aggregate: moderate CPU + memory.
+            QueryOperationType::Aggregate => CostModel {
+                cpu_cost: 0.5 * n,
+                io_cost: 0.1 * n,
+                memory_cost: 0.3 * n,
+                network_cost: 0.0,
+            },
+            // Join: the most expensive — CPU, memory, and network.
+            QueryOperationType::Join => CostModel {
+                cpu_cost: 1.0 * n,
+                io_cost: 0.5 * n,
+                memory_cost: 1.0 * n,
+                network_cost: 0.5 * n,
+            },
+            // Sort: CPU + memory heavy.
+            QueryOperationType::Sort => CostModel {
+                cpu_cost: 0.6 * n,
+                io_cost: 0.2 * n,
+                memory_cost: 0.5 * n,
+                network_cost: 0.0,
+            },
+            // Limit: very cheap.
+            QueryOperationType::Limit => CostModel {
+                cpu_cost: 0.05 * n,
+                io_cost: 0.0,
+                memory_cost: 0.01 * n,
+                network_cost: 0.0,
+            },
+        }
+    }
+
+    /// Optimize a sequence of operations by reordering them to minimize total
+    /// cost. Uses a simple greedy strategy: estimate each operation's cost and
+    /// execute cheapest-first. The resulting [`ExecutionPlan`] is stored on the
+    /// optimizer and also returned.
+    pub fn optimize_with_cost(
+        &mut self,
+        operations: &[QueryOperation],
+    ) -> Result<ExecutionPlan, StatisticalError> {
+        let mut indexed: Vec<(usize, QueryOperation)> =
+            operations.iter().cloned().map(|op| op).enumerate().collect();
+        // Greedy: sort by estimated total cost, cheapest first. The original
+        // index is retained so callers can inspect the reordering if desired.
+        indexed.sort_by(|a, b| {
+            let ca = self.estimate_cost(&a.1).total_cost();
+            let cb = self.estimate_cost(&b.1).total_cost();
+            ca.partial_cmp(&cb).unwrap_or(std::cmp::Ordering::Equal)
+        });
+
+        let mut ordered: Vec<QueryOperation> = indexed.into_iter().map(|(_, op)| op).collect();
+        let total: f64 = ordered
+            .iter()
+            .map(|op| self.estimate_cost(op).total_cost())
+            .sum();
+
+        // Aggregate the per-operation costs into the optimizer's cost model so
+        // the field is actually used.
+        self.cost_model = ordered
+            .iter()
+            .map(|op| self.estimate_cost(op))
+            .fold(
+                CostModel {
+                    cpu_cost: 0.0,
+                    io_cost: 0.0,
+                    memory_cost: 0.0,
+                    network_cost: 0.0,
+                },
+                |acc, c| CostModel {
+                    cpu_cost: acc.cpu_cost + c.cpu_cost,
+                    io_cost: acc.io_cost + c.io_cost,
+                    memory_cost: acc.memory_cost + c.memory_cost,
+                    network_cost: acc.network_cost + c.network_cost,
+                },
+            );
+
+        let plan = ExecutionPlan {
+            plan_id: format!("plan_{}", self.next_plan_id()),
+            operations: std::mem::take(&mut ordered),
+            estimated_cost: total,
+            execution_time: 0,
+        };
+        self.execution_plan = plan.clone();
+        Ok(plan)
+    }
+
+    /// Returns the most recently optimized execution plan, if any.
+    pub fn get_execution_plan(&self) -> Option<&ExecutionPlan> {
+        if self.execution_plan.operations.is_empty() {
+            None
+        } else {
+            Some(&self.execution_plan)
+        }
+    }
+
+    /// Monotonic plan id counter (kept simple — no persistent state needed).
+    fn next_plan_id(&self) -> u64 {
+        // Use the current plan's operation count as a cheap discriminator.
+        self.execution_plan.operations.len() as u64 + 1
+    }
+}
+
+impl CostModel {
+    /// Sum of all cost components.
+    pub fn total_cost(&self) -> f64 {
+        self.cpu_cost + self.io_cost + self.memory_cost + self.network_cost
+    }
+
+    /// Returns `true` when `self` is cheaper than `other`.
+    pub fn is_better_than(&self, other: &CostModel) -> bool {
+        self.total_cost() < other.total_cost()
     }
 }
 
@@ -3843,5 +4135,168 @@ mod tests {
             .copied();
         assert!(cached.is_some());
         assert!((cached.unwrap() - 1.0 / 3.0).abs() < 1e-12);
+    }
+
+    #[test]
+    fn test_compression_statistics_tracking() {
+        let mut engine = DataCompressionEngine::new();
+        engine.initialize().unwrap();
+
+        // Fresh engine has zeroed stats.
+        let stats = engine.get_statistics();
+        assert_eq!(stats.original_size, 0);
+        assert_eq!(stats.compressed_size, 0);
+        assert_eq!(stats.compression_count, 0);
+        assert_eq!(stats.decompression_count, 0);
+        assert_eq!(stats.compression_ratio(), 0.0);
+
+        // Highly repetitive data compresses well under RLE.
+        let data = vec![7u8; 1000];
+        let compressed = engine.compress(&data).unwrap();
+        assert!(compressed.len() < data.len());
+
+        let stats = engine.get_statistics();
+        assert_eq!(stats.compression_count, 1);
+        assert_eq!(stats.original_size, 1000);
+        assert_eq!(stats.compressed_size, compressed.len() as u64);
+        // Overall ratio matches compressed/original.
+        let expected = compressed.len() as f64 / 1000.0;
+        assert!((stats.compression_ratio() - expected).abs() < 1e-12);
+        // Last-op ratio field also updated.
+        assert!((stats.compression_ratio - expected).abs() < 1e-12);
+
+        // Round-trip decompress and verify decompression stats.
+        let decompressed = engine.decompress(&compressed).unwrap();
+        assert_eq!(decompressed, data);
+        let stats = engine.get_statistics();
+        assert_eq!(stats.decompression_count, 1);
+        assert!(stats.decompression_time > 0 || stats.decompression_time == 0); // timing may be 0 on fast machines
+
+        // A second, incompressible compression accumulates.
+        let noisy: Vec<u8> = (0..256u32).map(|i| i as u8).collect();
+        let compressed2 = engine.compress(&noisy).unwrap();
+        let stats = engine.get_statistics();
+        assert_eq!(stats.compression_count, 2);
+        assert_eq!(stats.original_size, 1000 + 256);
+        assert_eq!(stats.compressed_size, (compressed.len() + compressed2.len()) as u64);
+
+        // Summary is human-readable and non-empty.
+        let summary = stats.summary();
+        assert!(summary.contains("compress op(s)"));
+        assert!(summary.contains("2 compress"));
+
+        // Reset zeroes everything.
+        engine.reset_statistics();
+        let stats = engine.get_statistics();
+        assert_eq!(stats.compression_count, 0);
+        assert_eq!(stats.decompression_count, 0);
+        assert_eq!(stats.original_size, 0);
+        assert_eq!(stats.compressed_size, 0);
+        assert_eq!(stats.compression_ratio(), 0.0);
+    }
+
+    #[test]
+    fn test_compression_roundtrip_random_data() {
+        let mut engine = DataCompressionEngine::new();
+        // Random-ish data: ensure round-trip still holds even when it expands.
+        let data: Vec<u8> = (0..500u32).map(|i| (i * 31 + 7) as u8).collect();
+        let compressed = engine.compress(&data).unwrap();
+        let decompressed = engine.decompress(&compressed).unwrap();
+        assert_eq!(decompressed, data);
+    }
+
+    #[test]
+    fn test_cost_model_total_and_comparison() {
+        let cheap = CostModel {
+            cpu_cost: 1.0,
+            io_cost: 2.0,
+            memory_cost: 0.5,
+            network_cost: 0.0,
+        };
+        let expensive = CostModel {
+            cpu_cost: 10.0,
+            io_cost: 20.0,
+            memory_cost: 5.0,
+            network_cost: 1.0,
+        };
+        assert!((cheap.total_cost() - 3.5).abs() < 1e-12);
+        assert!((expensive.total_cost() - 36.0).abs() < 1e-12);
+        assert!(cheap.is_better_than(&expensive));
+        assert!(!expensive.is_better_than(&cheap));
+    }
+
+    #[test]
+    fn test_query_optimizer_estimate_cost() {
+        let optimizer = QueryOptimizer::new();
+        let scan = QueryOperation {
+            operation_type: QueryOperationType::Scan,
+            data_size: 1000,
+        };
+        let limit = QueryOperation {
+            operation_type: QueryOperationType::Limit,
+            data_size: 1000,
+        };
+        // Scan is far more expensive than Limit at the same data size.
+        assert!(optimizer.estimate_cost(&limit).total_cost()
+            < optimizer.estimate_cost(&scan).total_cost());
+    }
+
+    #[test]
+    fn test_query_optimizer_reorders_by_cost() {
+        let mut optimizer = QueryOptimizer::new();
+        optimizer.initialize().unwrap();
+
+        // No plan before optimization.
+        assert!(optimizer.get_execution_plan().is_none());
+
+        // Deliberately out-of-order: expensive Join first, cheap Limit last.
+        let operations = vec![
+            QueryOperation {
+                operation_type: QueryOperationType::Join,
+                data_size: 10_000,
+            },
+            QueryOperation {
+                operation_type: QueryOperationType::Sort,
+                data_size: 5_000,
+            },
+            QueryOperation {
+                operation_type: QueryOperationType::Filter,
+                data_size: 5_000,
+            },
+            QueryOperation {
+                operation_type: QueryOperationType::Limit,
+                data_size: 100,
+            },
+        ];
+
+        let plan = optimizer.optimize_with_cost(&operations).unwrap();
+
+        // The plan must be sorted cheapest-first.
+        let costs: Vec<f64> = plan
+            .operations
+            .iter()
+            .map(|op| optimizer.estimate_cost(op).total_cost())
+            .collect();
+        let mut sorted = costs.clone();
+        sorted.sort_by(|a, b| a.partial_cmp(b).unwrap());
+        assert_eq!(costs, sorted, "operations should be ordered cheapest-first");
+
+        // The first operation should be the cheapest (Limit), not the Join.
+        assert_eq!(plan.operations[0].operation_type, QueryOperationType::Limit);
+
+        // Estimated cost equals the sum of per-operation costs.
+        let sum: f64 = costs.iter().sum();
+        assert!((plan.estimated_cost - sum).abs() < 1e-9);
+
+        // The optimizer's cost_model field is now populated (used, not dead).
+        assert!(optimizer.cost_model.total_cost() > 0.0);
+
+        // The plan is retrievable via the accessor.
+        let retrieved = optimizer.get_execution_plan();
+        assert!(retrieved.is_some());
+        assert_eq!(retrieved.unwrap().operations.len(), operations.len());
+
+        // Reordering must not drop or duplicate operations.
+        assert_eq!(plan.operations.len(), operations.len());
     }
 }

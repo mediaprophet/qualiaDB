@@ -343,6 +343,7 @@ pub struct RetentionPolicy {
 pub struct KeyGenerator {
     generation_algorithms: HashMap<KeyAlgorithm, GenerationAlgorithm>,
     entropy_sources: Vec<EntropySource>,
+    selected_entropy_source: Option<EntropySource>,
     quality_metrics: KeyQualityMetrics,
 }
 
@@ -2616,6 +2617,35 @@ impl KeyCatalog {
 
     /// Register key metadata in the catalog.
     pub fn register_key(&mut self, metadata: KeyMetadata) {
+        // Populate the search index so the key is discoverable by keyword/metadata.
+        let mut index_metadata = HashMap::new();
+        index_metadata.insert(
+            "key_type".to_string(),
+            format!("{:?}", metadata.key_type),
+        );
+        index_metadata.insert(
+            "algorithm".to_string(),
+            format!("{:?}", metadata.key_algorithm),
+        );
+        index_metadata.insert(
+            "security_level".to_string(),
+            format!("{:?}", metadata.security_level),
+        );
+        index_metadata.insert("key_size".to_string(), metadata.key_size.to_string());
+
+        let entry = KeyIndexEntry {
+            entry_id: metadata.key_id.clone(),
+            keywords: vec![
+                metadata.key_id.clone(),
+                format!("{:?}", metadata.key_algorithm),
+                format!("{:?}", metadata.key_type),
+                format!("{:?}", metadata.security_level),
+            ],
+            metadata: index_metadata,
+            relevance_score: 1.0,
+        };
+        self.search_index.index(entry);
+
         self.keys.insert(metadata.key_id.clone(), metadata);
     }
 
@@ -2633,6 +2663,51 @@ impl KeyCatalog {
             Some(tags) => tags,
             None => &[],
         }
+    }
+
+    /// Search keys by keyword, tag, or metadata (case-insensitive substring).
+    /// Returns the matching key IDs.
+    pub fn search(&self, query: &str) -> Vec<String> {
+        let q = query.to_lowercase();
+        let mut matches = std::collections::HashSet::new();
+
+        // 1. Match against registered key metadata (key_id, algorithm, type, level).
+        for (key_id, metadata) in &self.keys {
+            if key_id.to_lowercase().contains(&q)
+                || format!("{:?}", metadata.key_algorithm).to_lowercase().contains(&q)
+                || format!("{:?}", metadata.key_type).to_lowercase().contains(&q)
+                || format!("{:?}", metadata.security_level).to_lowercase().contains(&q)
+            {
+                matches.insert(key_id.clone());
+            }
+        }
+
+        // 2. Match against tags (case-insensitive).
+        for (key_id, tags) in &self.tags {
+            if tags
+                .iter()
+                .any(|t| t.to_lowercase().contains(&q))
+            {
+                matches.insert(key_id.clone());
+            }
+        }
+
+        // 3. Match against the search index entries.
+        for entry in self.search_index.search(query) {
+            matches.insert(entry.entry_id.clone());
+        }
+
+        matches.into_iter().collect()
+    }
+
+    /// Find all keys with a given tag (case-insensitive).
+    pub fn get_by_tag(&self, tag: &str) -> Vec<String> {
+        let t = tag.to_lowercase();
+        self.tags
+            .iter()
+            .filter(|(_, tags)| tags.iter().any(|x| x.to_lowercase() == t))
+            .map(|(key_id, _)| key_id.clone())
+            .collect()
     }
 
     /// Number of registered keys.
@@ -2655,7 +2730,37 @@ impl KeySearchIndex {
     }
 
     pub fn initialize(&mut self) -> Result<(), CryptographicError> {
+        // Actually configure the search engine rather than returning Ok(()) blindly.
+        self.search_engine.engine_type = SearchEngineType::Hybrid;
+        self.search_engine.indexing_strategy = IndexingStrategy::Inverted;
         Ok(())
+    }
+
+    /// Add an entry to the search index, keyed by its `entry_id`.
+    pub fn index(&mut self, entry: KeyIndexEntry) {
+        self.index_entries.insert(entry.entry_id.clone(), entry);
+    }
+
+    /// Keyword search across index entries (case-insensitive substring match).
+    /// Returns references to every entry whose `entry_id` or any keyword contains
+    /// the query substring.
+    pub fn search(&self, query: &str) -> Vec<&KeyIndexEntry> {
+        let q = query.to_lowercase();
+        self.index_entries
+            .values()
+            .filter(|entry| {
+                entry.entry_id.to_lowercase().contains(&q)
+                    || entry
+                        .keywords
+                        .iter()
+                        .any(|k| k.to_lowercase().contains(&q))
+            })
+            .collect()
+    }
+
+    /// Number of indexed entries.
+    pub fn entry_count(&self) -> usize {
+        self.index_entries.len()
     }
 }
 
@@ -2888,7 +2993,12 @@ impl KeyGenerator {
     pub fn new() -> Self {
         Self {
             generation_algorithms: HashMap::new(),
-            entropy_sources: vec![EntropySource::HardwareRNG, EntropySource::Quantum],
+            entropy_sources: vec![
+                EntropySource::HardwareRNG,
+                EntropySource::OSRandom,
+                EntropySource::Quantum,
+            ],
+            selected_entropy_source: None,
             quality_metrics: KeyQualityMetrics::new(),
         }
     }
@@ -2911,6 +3021,64 @@ impl KeyGenerator {
         Ok(())
     }
 
+    /// Set the preferred entropy source for key generation.
+    pub fn set_entropy_source(&mut self, source: EntropySource) {
+        self.selected_entropy_source = Some(source);
+    }
+
+    /// Get the currently selected entropy source, if any.
+    pub fn get_entropy_source(&self) -> Option<&EntropySource> {
+        self.selected_entropy_source.as_ref()
+    }
+
+    /// List the available entropy sources by name.
+    pub fn list_entropy_sources(&self) -> Vec<String> {
+        self.entropy_sources
+            .iter()
+            .map(|s| format!("{:?}", s))
+            .collect()
+    }
+
+    /// Generate random key data of the requested size using the selected
+    /// entropy source. For `HardwareRNG`, `OSRandom`, and `Quantum` (used as a
+    /// placeholder since a real quantum RNG is not available) the bytes are
+    /// filled with `rand::random()`. The generated material is also folded into
+    /// the quality metrics as a simple entropy estimate.
+    pub fn generate_key_data(&mut self, key_size: usize) -> Result<Vec<u8>, CryptographicError> {
+        let source = self.selected_entropy_source.clone().unwrap_or(EntropySource::OSRandom);
+
+        if !self.entropy_sources.contains(&source) {
+            return Err(CryptographicError::SecurityError(format!(
+                "selected entropy source {:?} is not available",
+                source
+            )));
+        }
+
+        let mut data = vec![0u8; key_size];
+        match source {
+            EntropySource::HardwareRNG
+            | EntropySource::OSRandom
+            | EntropySource::Quantum => {
+                // rand::random() draws from the OS CSPRNG; for HardwareRNG and
+                // Quantum this is a placeholder until dedicated hardware is wired.
+                for byte in data.iter_mut() {
+                    *byte = rand::random();
+                }
+            }
+            _ => {
+                return Err(CryptographicError::SecurityError(format!(
+                    "entropy source {:?} not yet supported for raw key generation",
+                    source
+                )));
+            }
+        }
+
+        // Update quality metrics with a simple entropy estimate (8 bits/byte ideal).
+        self.quality_metrics.entropy_score = if key_size > 0 { 8.0 } else { 0.0 };
+
+        Ok(data)
+    }
+
     pub fn generate_key(
         &mut self,
         key_id: String,
@@ -2923,7 +3091,7 @@ impl KeyGenerator {
         })?;
 
         // Generate key data
-        let key_data = self.generate_key_data(&generation_algorithm, security_level.clone())?;
+        let key_data = self.generate_algorithm_key_data(&generation_algorithm, security_level.clone())?;
 
         // Create metadata
         let metadata = KeyMetadata {
@@ -2984,7 +3152,7 @@ impl KeyGenerator {
         })
     }
 
-    fn generate_key_data(
+    fn generate_algorithm_key_data(
         &self,
         algorithm: &GenerationAlgorithm,
         _security_level: SecurityLevel,
@@ -5952,5 +6120,212 @@ mod tests {
         // Without initialize(), no KEK exists
         let result = ear.encrypt_key_data(b"test");
         assert!(result.is_err(), "encryption should fail without a KEK");
+    }
+
+    // ---- Feature 1: Key Catalog Search ----
+
+    fn sample_metadata(key_id: &str, algorithm: KeyAlgorithm) -> KeyMetadata {
+        KeyMetadata {
+            key_id: key_id.to_string(),
+            key_type: KeyType::Symmetric,
+            key_algorithm: algorithm,
+            key_size: 256,
+            created_at: 1000,
+            expires_at: 0,
+            last_used: 0,
+            usage_count: 0,
+            security_level: SecurityLevel::High,
+            access_level: AccessLevel::Secret,
+        }
+    }
+
+    #[test]
+    fn test_key_catalog_search_by_keyword() {
+        let mut catalog = KeyCatalog::new();
+        catalog.initialize().unwrap();
+        catalog.register_key(sample_metadata("aes_signing_key", KeyAlgorithm::AES));
+        catalog.register_key(sample_metadata("mldsa_master_key", KeyAlgorithm::MLDSA));
+
+        // Search by algorithm keyword (case-insensitive)
+        let aes_hits = catalog.search("aes");
+        assert!(
+            aes_hits.contains(&"aes_signing_key".to_string()),
+            "search should find the AES key"
+        );
+        assert!(
+            !aes_hits.contains(&"mldsa_master_key".to_string()),
+            "AES search should not return the MLDSA key"
+        );
+
+        // Search by key id substring (case-insensitive)
+        let master_hits = catalog.search("MASTER");
+        assert!(
+            master_hits.contains(&"mldsa_master_key".to_string()),
+            "case-insensitive search should find master key"
+        );
+    }
+
+    #[test]
+    fn test_key_catalog_search_by_tag() {
+        let mut catalog = KeyCatalog::new();
+        catalog.initialize().unwrap();
+        catalog.register_key(sample_metadata("key_one", KeyAlgorithm::AES));
+        catalog.register_key(sample_metadata("key_two", KeyAlgorithm::ChaCha20));
+        catalog.add_tag("key_one", "production");
+        catalog.add_tag("key_two", "staging");
+
+        let prod = catalog.get_by_tag("Production");
+        assert_eq!(prod, vec!["key_one".to_string()]);
+
+        let staging = catalog.get_by_tag("staging");
+        assert_eq!(staging, vec!["key_two".to_string()]);
+
+        // search() should also match tags
+        let hits = catalog.search("production");
+        assert!(hits.contains(&"key_one".to_string()));
+    }
+
+    #[test]
+    fn test_key_search_index_index_and_search() {
+        let mut index = KeySearchIndex::new();
+        index.initialize().unwrap();
+        assert_eq!(index.entry_count(), 0);
+
+        index.index(KeyIndexEntry {
+            entry_id: "key_1".to_string(),
+            keywords: vec!["signing".to_string(), "mldsa".to_string()],
+            metadata: HashMap::new(),
+            relevance_score: 0.9,
+        });
+        index.index(KeyIndexEntry {
+            entry_id: "key_2".to_string(),
+            keywords: vec!["encryption".to_string(), "aes".to_string()],
+            metadata: HashMap::new(),
+            relevance_score: 0.8,
+        });
+        assert_eq!(index.entry_count(), 2);
+
+        let signing_hits = index.search("signing");
+        assert_eq!(signing_hits.len(), 1);
+        assert_eq!(signing_hits[0].entry_id, "key_1");
+
+        let aes_hits = index.search("AES");
+        assert_eq!(aes_hits.len(), 1);
+        assert_eq!(aes_hits[0].entry_id, "key_2");
+    }
+
+    #[test]
+    fn test_key_search_index_initialize_sets_strategy() {
+        let mut index = KeySearchIndex::new();
+        // Before initialize the engine defaults to Encrypted/Encrypted.
+        assert_eq!(index.search_engine.engine_type, SearchEngineType::Encrypted);
+        assert_eq!(index.search_engine.indexing_strategy, IndexingStrategy::Encrypted);
+
+        index.initialize().unwrap();
+        assert_eq!(index.search_engine.engine_type, SearchEngineType::Hybrid);
+        assert_eq!(index.search_engine.indexing_strategy, IndexingStrategy::Inverted);
+    }
+
+    #[test]
+    fn test_register_key_populates_search_index() {
+        let mut catalog = KeyCatalog::new();
+        catalog.initialize().unwrap();
+        assert_eq!(catalog.search_index.entry_count(), 0);
+
+        catalog.register_key(sample_metadata("indexed_key", KeyAlgorithm::AES));
+        assert_eq!(
+            catalog.search_index.entry_count(),
+            1,
+            "register_key should populate the search index"
+        );
+
+        // The indexed entry should be discoverable via the catalog search.
+        let hits = catalog.search("indexed_key");
+        assert!(hits.contains(&"indexed_key".to_string()));
+    }
+
+    // ---- Feature 2: Entropy Source Selection ----
+
+    #[test]
+    fn test_key_generator_list_entropy_sources() {
+        let gen = KeyGenerator::new();
+        let sources = gen.list_entropy_sources();
+        assert!(
+            sources.contains(&"HardwareRNG".to_string()),
+            "HardwareRNG should be listed"
+        );
+        assert!(
+            sources.contains(&"OSRandom".to_string()),
+            "OSRandom should be listed"
+        );
+        assert!(
+            sources.contains(&"Quantum".to_string()),
+            "Quantum should be listed"
+        );
+    }
+
+    #[test]
+    fn test_key_generator_set_and_get_entropy_source() {
+        let mut gen = KeyGenerator::new();
+        assert!(gen.get_entropy_source().is_none(), "no source selected by default");
+
+        gen.set_entropy_source(EntropySource::HardwareRNG);
+        assert_eq!(
+            gen.get_entropy_source(),
+            Some(&EntropySource::HardwareRNG),
+            "selected source should be HardwareRNG"
+        );
+
+        gen.set_entropy_source(EntropySource::Quantum);
+        assert_eq!(
+            gen.get_entropy_source(),
+            Some(&EntropySource::Quantum),
+            "selected source should be Quantum after re-set"
+        );
+    }
+
+    #[test]
+    fn test_key_generator_generate_key_data() {
+        let mut gen = KeyGenerator::new();
+        gen.initialize().unwrap();
+        gen.set_entropy_source(EntropySource::OSRandom);
+
+        let key_size = 32;
+        let data = gen.generate_key_data(key_size).unwrap();
+        assert_eq!(data.len(), key_size, "generated data should have the requested length");
+        assert!(
+            !data.iter().all(|&b| b == 0),
+            "generated data should not be all zeros"
+        );
+
+        // Quality metrics should be updated.
+        assert!(
+            gen.quality_metrics.entropy_score > 0.0,
+            "entropy score should be updated after generation"
+        );
+    }
+
+    #[test]
+    fn test_key_generator_generate_key_data_default_source() {
+        let mut gen = KeyGenerator::new();
+        // No source explicitly selected — should fall back to OSRandom.
+        let data = gen.generate_key_data(16).unwrap();
+        assert_eq!(data.len(), 16);
+        assert!(
+            !data.iter().all(|&b| b == 0),
+            "default-source data should not be all zeros"
+        );
+    }
+
+    #[test]
+    fn test_key_generator_generate_key_data_quantum_placeholder() {
+        let mut gen = KeyGenerator::new();
+        gen.set_entropy_source(EntropySource::Quantum);
+        let data = gen.generate_key_data(64).unwrap();
+        assert_eq!(data.len(), 64);
+        assert!(
+            !data.iter().all(|&b| b == 0),
+            "quantum placeholder should still produce non-zero data"
+        );
     }
 }

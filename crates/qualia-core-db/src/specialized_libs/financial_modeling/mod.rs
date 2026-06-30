@@ -2639,7 +2639,148 @@ impl AssetCatalog {
         }
     }
 
+    /// Register an `AssetInfo` in the catalog, keyed by its `asset_id`. Re-registering
+    /// an asset with the same id replaces the prior entry.
+    pub fn register_asset(&mut self, asset: AssetInfo) {
+        self.assets.insert(asset.asset_id.clone(), asset);
+    }
+
+    /// Look up an asset by id.
+    pub fn get_asset(&self, asset_id: &str) -> Option<&AssetInfo> {
+        self.assets.get(asset_id)
+    }
+
+    // ----- Asset relationship tracking ----------------------------------------
+
+    /// Add a relationship between two assets. The relationship is stored under the
+    /// `source_asset` id (so `get_relationships(source)` returns it). The
+    /// `source_asset`/`target_asset` fields on `relationship` are authoritative —
+    /// the `source_asset`/`target_asset` arguments here are used only to key the
+    /// storage and are expected to match the relationship's own fields.
+    pub fn add_relationship(
+        &mut self,
+        source_asset: &str,
+        target_asset: &str,
+        relationship: AssetRelationship,
+    ) {
+        let _ = target_asset; // keyed by source; target recorded on the relationship
+        self.asset_relationships
+            .entry(source_asset.to_string())
+            .or_default()
+            .push(relationship);
+    }
+
+    /// Get all relationships for which `asset_id` is the source asset.
+    pub fn get_relationships(&self, asset_id: &str) -> Vec<&AssetRelationship> {
+        self.asset_relationships
+            .get(asset_id)
+            .map(|rels| rels.iter().collect())
+            .unwrap_or_default()
+    }
+
+    /// Get all asset ids related to `asset_id` (as the target of a relationship
+    /// originating from `asset_id`). Duplicates are preserved in insertion order.
+    pub fn get_related_assets(&self, asset_id: &str) -> Vec<String> {
+        self.asset_relationships
+            .get(asset_id)
+            .map(|rels| rels.iter().map(|r| r.target_asset.clone()).collect())
+            .unwrap_or_default()
+    }
+
+    /// Total number of relationships tracked across all source assets.
+    pub fn relationship_count(&self) -> usize {
+        self.asset_relationships
+            .values()
+            .map(|rels| rels.len())
+            .sum()
+    }
+
+    // ----- Asset classification system ----------------------------------------
+
+    /// Register an `AssetClass` keyed by `class_id`. Re-registering a class with the
+    /// same id replaces the prior entry.
+    pub fn register_asset_class(&mut self, class_id: &str, asset_class: AssetClass) {
+        self.asset_classes.insert(class_id.to_string(), asset_class);
+    }
+
+    /// Classify an asset into a class. Verifies that both the asset and the class
+    /// are registered first; returns `AssetError` otherwise. The classification is
+    /// recorded by adding the asset's id to the class's `characteristics` list
+    /// (the catalog has no separate membership map, so the class's own fields carry
+    /// membership). Returns `Ok(())` when the asset is already a member (idempotent).
+    pub fn classify_asset(
+        &mut self,
+        asset_id: &str,
+        class_id: &str,
+    ) -> Result<(), FinancialError> {
+        if !self.assets.contains_key(asset_id) {
+            return Err(FinancialError::AssetError(format!(
+                "asset '{}' is not registered in the catalog",
+                asset_id
+            )));
+        }
+        let class = self
+            .asset_classes
+            .get_mut(class_id)
+            .ok_or_else(|| FinancialError::AssetError(format!("asset class '{}' is not registered", class_id)))?;
+        if !class.characteristics.iter().any(|c| c == asset_id) {
+            class.characteristics.push(asset_id.to_string());
+        }
+        Ok(())
+    }
+
+    /// Get an asset class by id.
+    pub fn get_asset_class(&self, class_id: &str) -> Option<&AssetClass> {
+        self.asset_classes.get(class_id)
+    }
+
+    /// Get all asset ids that are members of `class_id`. Membership is recorded in
+    /// the class's `characteristics` list by `classify_asset`; entries that were not
+    /// inserted by `classify_asset` (i.e. pre-existing descriptive characteristics)
+    /// are filtered out against the registered asset set so only real asset ids are
+    /// returned.
+    pub fn get_assets_by_class(&self, class_id: &str) -> Vec<String> {
+        match self.asset_classes.get(class_id) {
+            Some(class) => class
+                .characteristics
+                .iter()
+                .filter(|c| self.assets.contains_key(*c))
+                .cloned()
+                .collect(),
+            None => Vec::new(),
+        }
+    }
+
+    /// List all registered asset class ids.
+    pub fn list_asset_classes(&self) -> Vec<String> {
+        self.asset_classes.keys().cloned().collect()
+    }
+
+    /// Populate the catalog with the standard set of asset classes:
+    /// Equity, FixedIncome, Commodity, RealEstate, Cash, Derivative, Cryptocurrency.
+    /// Each is keyed by a lowercase id and tagged with its corresponding `AssetType`.
     pub fn initialize(&mut self) -> Result<(), FinancialError> {
+        let standards: &[(&str, &str, AssetType, RiskLevel, &[&str])] = &[
+            ("equity", "Equity", AssetType::Stock, RiskLevel::Medium, &["Stocks", "Shares"]),
+            ("fixed_income", "Fixed Income", AssetType::Bond, RiskLevel::Low, &["Bonds", "Debt instruments"]),
+            ("commodity", "Commodity", AssetType::Commodity, RiskLevel::High, &["Physical goods", "Futures"]),
+            ("real_estate", "Real Estate", AssetType::RealEstate, RiskLevel::Medium, &["Property", "Land"]),
+            ("cash", "Cash", AssetType::Currency, RiskLevel::Low, &["Currency", "Money market"]),
+            ("derivative", "Derivative", AssetType::Derivative, RiskLevel::VeryHigh, &["Options", "Futures", "Swaps"]),
+            ("cryptocurrency", "Cryptocurrency", AssetType::Cryptocurrency, RiskLevel::VeryHigh, &["Digital assets", "Tokens"]),
+        ];
+        for (id, name, ty, risk, chars) in standards {
+            self.register_asset_class(
+                id,
+                AssetClass {
+                    class_id: id.to_string(),
+                    class_name: name.to_string(),
+                    class_type: ty.clone(),
+                    characteristics: chars.iter().map(|s| s.to_string()).collect(),
+                    risk_level: risk.clone(),
+                },
+            );
+        }
         Ok(())
     }
 }
@@ -5200,5 +5341,132 @@ mod tests {
         assert_eq!(trades.len(), 2);
         assert!(trades.iter().any(|t| t.asset_id == "A" && t.action == TradeAction::Sell));
         assert!(trades.iter().any(|t| t.asset_id == "B" && t.action == TradeAction::Buy));
+    }
+
+    // ----- Asset relationship tracking tests ----------------------------------
+
+    fn catalog_with_assets() -> AssetCatalog {
+        let mut catalog = AssetCatalog::new();
+        let mut aapl = AssetInfo::new();
+        aapl.asset_id = "AAPL".to_string();
+        aapl.symbol = "AAPL".to_string();
+        let mut msft = AssetInfo::new();
+        msft.asset_id = "MSFT".to_string();
+        msft.symbol = "MSFT".to_string();
+        let mut googl = AssetInfo::new();
+        googl.asset_id = "GOOGL".to_string();
+        googl.symbol = "GOOGL".to_string();
+        catalog.register_asset(aapl);
+        catalog.register_asset(msft);
+        catalog.register_asset(googl);
+        catalog
+    }
+
+    #[test]
+    fn asset_relationship_add_and_retrieve() {
+        let mut catalog = catalog_with_assets();
+
+        let rel = AssetRelationship {
+            relationship_id: "rel_1".to_string(),
+            source_asset: "AAPL".to_string(),
+            target_asset: "MSFT".to_string(),
+            relationship_type: AssetRelationshipType::Correlation,
+            correlation: 0.85,
+        };
+        catalog.add_relationship("AAPL", "MSFT", rel);
+
+        let rels = catalog.get_relationships("AAPL");
+        assert_eq!(rels.len(), 1);
+        assert_eq!(rels[0].target_asset, "MSFT");
+        assert_eq!(rels[0].relationship_type, AssetRelationshipType::Correlation);
+
+        let related = catalog.get_related_assets("AAPL");
+        assert_eq!(related, vec!["MSFT".to_string()]);
+    }
+
+    #[test]
+    fn asset_relationship_count_and_empty() {
+        let mut catalog = catalog_with_assets();
+        assert_eq!(catalog.relationship_count(), 0);
+        assert!(catalog.get_relationships("AAPL").is_empty());
+        assert!(catalog.get_related_assets("AAPL").is_empty());
+
+        for (i, target) in ["MSFT", "GOOGL"].iter().enumerate() {
+            catalog.add_relationship(
+                "AAPL",
+                target,
+                AssetRelationship {
+                    relationship_id: format!("rel_{}", i),
+                    source_asset: "AAPL".to_string(),
+                    target_asset: target.to_string(),
+                    relationship_type: AssetRelationshipType::Correlation,
+                    correlation: 0.5,
+                },
+            );
+        }
+        assert_eq!(catalog.relationship_count(), 2);
+        assert_eq!(catalog.get_related_assets("AAPL"), vec!["MSFT".to_string(), "GOOGL".to_string()]);
+    }
+
+    // ----- Asset classification system tests ----------------------------------
+
+    #[test]
+    fn asset_class_initialize_registers_standards() {
+        let mut catalog = AssetCatalog::new();
+        catalog.initialize().unwrap();
+        let classes = catalog.list_asset_classes();
+        for expected in ["equity", "fixed_income", "commodity", "real_estate", "cash", "derivative", "cryptocurrency"] {
+            assert!(classes.iter().any(|c| c == expected), "missing class {}", expected);
+        }
+        let equity = catalog.get_asset_class("equity").unwrap();
+        assert_eq!(equity.class_name, "Equity");
+        assert_eq!(equity.class_type, AssetType::Stock);
+    }
+
+    #[test]
+    fn classify_asset_and_membership() {
+        let mut catalog = catalog_with_assets();
+        catalog.initialize().unwrap();
+
+        catalog.classify_asset("AAPL", "equity").unwrap();
+        catalog.classify_asset("MSFT", "equity").unwrap();
+
+        let members = catalog.get_assets_by_class("equity");
+        assert!(members.contains(&"AAPL".to_string()));
+        assert!(members.contains(&"MSFT".to_string()));
+        assert!(!members.contains(&"GOOGL".to_string()));
+
+        // idempotent: classifying again does not duplicate
+        catalog.classify_asset("AAPL", "equity").unwrap();
+        let members2 = catalog.get_assets_by_class("equity");
+        assert_eq!(members2.iter().filter(|m| *m == "AAPL").count(), 1);
+    }
+
+    #[test]
+    fn classify_asset_rejects_unknown_asset_or_class() {
+        let mut catalog = catalog_with_assets();
+        catalog.initialize().unwrap();
+
+        let err = catalog.classify_asset("NOPE", "equity").unwrap_err();
+        assert!(matches!(err, FinancialError::AssetError(_)));
+
+        let err = catalog.classify_asset("AAPL", "no_such_class").unwrap_err();
+        assert!(matches!(err, FinancialError::AssetError(_)));
+    }
+
+    #[test]
+    fn register_asset_class_and_list() {
+        let mut catalog = AssetCatalog::new();
+        let custom = AssetClass {
+            class_id: "alt_1".to_string(),
+            class_name: "Alternative".to_string(),
+            class_type: AssetType::Alternative,
+            characteristics: vec![],
+            risk_level: RiskLevel::High,
+        };
+        catalog.register_asset_class("alt_1", custom);
+        assert_eq!(catalog.list_asset_classes(), vec!["alt_1".to_string()]);
+        assert!(catalog.get_asset_class("alt_1").is_some());
+        assert!(catalog.get_asset_class("missing").is_none());
     }
 }

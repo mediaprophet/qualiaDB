@@ -345,13 +345,21 @@ pub struct CompressionQualityMetrics {
     pub accuracy_preservation: f64,
     pub performance_impact: f64,
     pub memory_savings: f64,
+    /// Overall compression ratio (original_size / compressed_size).
+    pub compression_ratio: f64,
+    /// Fractional size reduction (0.0–1.0).
+    pub size_reduction: f64,
+    /// Number of compression operations recorded.
+    pub compression_count: u64,
 }
 
 /// Model version control
 pub struct ModelVersionControl {
     versions: HashMap<String, ModelVersion>,
-    branches: HashMap<String, ModelBranch>,
-    tags: HashMap<String, ModelTag>,
+    branches: HashMap<String, Vec<String>>,
+    tags: HashMap<String, Vec<String>>,
+    /// Whether `initialize()` has actually configured the controller.
+    initialized: bool,
 }
 
 /// Model version
@@ -2373,7 +2381,92 @@ impl ModelCompression {
     }
 
     pub fn initialize(&mut self) -> Result<(), MLError> {
+        // Register the standard set of compression algorithms.
+        self.register_algorithm("QuantizationInt8", CompressionAlgorithm::Quantization);
+        self.register_algorithm("QuantizationFP16", CompressionAlgorithm::Quantization);
+        self.register_algorithm("Pruning", CompressionAlgorithm::Pruning);
+        self.register_algorithm(
+            "Distillation",
+            CompressionAlgorithm::KnowledgeDistillation,
+        );
         Ok(())
+    }
+
+    /// Register a compression algorithm under the given name.
+    pub fn register_algorithm(&mut self, name: &str, algorithm: CompressionAlgorithm) {
+        self.compression_algorithms
+            .insert(name.to_string(), algorithm);
+    }
+
+    /// Get a registered compression algorithm by name.
+    pub fn get_algorithm(&self, name: &str) -> Option<&CompressionAlgorithm> {
+        self.compression_algorithms.get(name)
+    }
+
+    /// List the names of all registered compression algorithms.
+    pub fn list_algorithms(&self) -> Vec<String> {
+        self.compression_algorithms.keys().cloned().collect()
+    }
+
+    /// Record the result of a compression operation and update the aggregate
+    /// quality metrics.
+    pub fn record_compression(
+        &mut self,
+        algorithm_name: &str,
+        original_size: usize,
+        compressed_size: usize,
+        accuracy_before: f64,
+        accuracy_after: f64,
+    ) -> Result<(), MLError> {
+        if !self.compression_algorithms.contains_key(algorithm_name) {
+            return Err(MLError::OptimizationError(format!(
+                "unknown compression algorithm '{}'",
+                algorithm_name
+            )));
+        }
+        if original_size == 0 {
+            return Err(MLError::ValidationError(
+                "original_size must be greater than zero".to_string(),
+            ));
+        }
+
+        let ratio = original_size as f64 / compressed_size.max(1) as f64;
+        let size_reduction = 1.0 - (compressed_size as f64 / original_size as f64);
+        let accuracy_preservation = if accuracy_before > 0.0 {
+            (accuracy_after / accuracy_before).clamp(0.0, 1.0)
+        } else {
+            0.0
+        };
+
+        // Update the running aggregate statistics.
+        let count = self.quality_metrics.compression_count;
+        let prev_ratio = self.quality_metrics.compression_ratio;
+        let prev_reduction = self.quality_metrics.size_reduction;
+        let prev_accuracy = self.quality_metrics.accuracy_preservation;
+
+        let new_count = count + 1;
+        self.quality_metrics.compression_count = new_count;
+        // Running average across all recorded compressions.
+        self.quality_metrics.compression_ratio =
+            (prev_ratio * count as f64 + ratio) / new_count as f64;
+        self.quality_metrics.size_reduction =
+            (prev_reduction * count as f64 + size_reduction) / new_count as f64;
+        self.quality_metrics.accuracy_preservation =
+            (prev_accuracy * count as f64 + accuracy_preservation) / new_count as f64;
+        // Memory savings mirror the size reduction for this simple wiring.
+        self.quality_metrics.memory_savings = self.quality_metrics.size_reduction;
+
+        Ok(())
+    }
+
+    /// Access the aggregate compression quality metrics.
+    pub fn get_quality_metrics(&self) -> &CompressionQualityMetrics {
+        &self.quality_metrics
+    }
+
+    /// Return the overall compression ratio recorded so far.
+    pub fn compression_ratio(&self) -> f64 {
+        self.quality_metrics.compression_ratio
     }
 }
 
@@ -2395,6 +2488,9 @@ impl CompressionQualityMetrics {
             accuracy_preservation: 0.0,
             performance_impact: 0.0,
             memory_savings: 0.0,
+            compression_ratio: 0.0,
+            size_reduction: 0.0,
+            compression_count: 0,
         }
     }
 }
@@ -2405,12 +2501,131 @@ impl ModelVersionControl {
             versions: HashMap::new(),
             branches: HashMap::new(),
             tags: HashMap::new(),
+            initialized: false,
         }
     }
 
     pub fn initialize(&mut self) -> Result<(), MLError> {
+        // Seed the default `main` branch so the controller is usable immediately.
+        self.branches
+            .entry("main".to_string())
+            .or_insert_with(Vec::new);
+        self.initialized = true;
         Ok(())
     }
+
+    /// Register a new version for a model. Returns an error if a version with
+    /// the same `version_id` is already registered for that model.
+    pub fn create_version(
+        &mut self,
+        model_id: &str,
+        version: ModelVersion,
+    ) -> Result<(), MLError> {
+        let key = version_key(model_id, &version.version_id);
+        if self.versions.contains_key(&key) {
+            return Err(MLError::ModelError(format!(
+                "version '{}' already exists for model '{}'",
+                version.version_id, model_id
+            )));
+        }
+        let version_id = version.version_id.clone();
+        self.versions.insert(key, version);
+        // Append the new version to the `main` branch if it exists.
+        if let Some(branch) = self.branches.get_mut("main") {
+            if !branch.iter().any(|v| v == &version_id) {
+                branch.push(version_id);
+            }
+        }
+        Ok(())
+    }
+
+    /// Get a specific version of a model by its version id.
+    pub fn get_version(&self, model_id: &str, version_id: &str) -> Option<&ModelVersion> {
+        self.versions.get(&version_key(model_id, version_id))
+    }
+
+    /// List all version ids registered for a model.
+    pub fn list_versions(&self, model_id: &str) -> Vec<String> {
+        let prefix = format!("{}::", model_id);
+        self.versions
+            .keys()
+            .filter_map(|k| k.strip_prefix(&prefix).map(|s| s.to_string()))
+            .collect()
+    }
+
+    /// Create a branch starting from an existing version. The branch initially
+    /// contains only the originating version.
+    pub fn create_branch(&mut self, branch_name: &str, from_version: &str) -> Result<(), MLError> {
+        if self.branches.contains_key(branch_name) {
+            return Err(MLError::ModelError(format!(
+                "branch '{}' already exists",
+                branch_name
+            )));
+        }
+        // Validate that the originating version is registered somewhere.
+        let exists = self
+            .versions
+            .values()
+            .any(|v| v.version_id == from_version);
+        if !exists {
+            return Err(MLError::ModelError(format!(
+                "cannot branch from unknown version '{}'",
+                from_version
+            )));
+        }
+        self.branches
+            .insert(branch_name.to_string(), vec![from_version.to_string()]);
+        Ok(())
+    }
+
+    /// Get the list of version ids in a branch.
+    pub fn get_branch(&self, branch_name: &str) -> Option<&Vec<String>> {
+        self.branches.get(branch_name)
+    }
+
+    /// Tag a version. Multiple tags may be attached to the same version.
+    pub fn tag_version(&mut self, version_id: &str, tag: &str) -> Result<(), MLError> {
+        // The version must exist somewhere in the registry.
+        let exists = self.versions.values().any(|v| v.version_id == version_id);
+        if !exists {
+            return Err(MLError::ModelError(format!(
+                "cannot tag unknown version '{}'",
+                version_id
+            )));
+        }
+        let entry = self.tags.entry(version_id.to_string()).or_insert_with(Vec::new);
+        if !entry.iter().any(|t| t == tag) {
+            entry.push(tag.to_string());
+        }
+        Ok(())
+    }
+
+    /// Get all tags attached to a version.
+    pub fn get_tags(&self, version_id: &str) -> Vec<String> {
+        self.tags
+            .get(version_id)
+            .cloned()
+            .unwrap_or_default()
+    }
+
+    /// Find all version ids that carry the given tag.
+    pub fn get_by_tag(&self, tag: &str) -> Vec<String> {
+        self.tags
+            .iter()
+            .filter_map(|(version_id, tags)| {
+                if tags.iter().any(|t| t == tag) {
+                    Some(version_id.clone())
+                } else {
+                    None
+                }
+            })
+            .collect()
+    }
+}
+
+/// Build the composite key used to store versions per model.
+fn version_key(model_id: &str, version_id: &str) -> String {
+    format!("{}::{}", model_id, version_id)
 }
 
 impl ModelVersion {
@@ -5048,5 +5263,217 @@ mod tests {
             .expect_err("activated layer must be rejected");
         let msg = format!("{}", err);
         assert!(msg.contains("activation"), "error should mention activation: {}", msg);
+    }
+
+    // ------------------------------------------------------------------
+    // Feature 1: Model Version Control
+    // ------------------------------------------------------------------
+
+    fn sample_version(id: &str) -> ModelVersion {
+        ModelVersion {
+            version_id: id.to_string(),
+            version_number: id.to_string(),
+            changes: vec![],
+            created_at: 0,
+            created_by: "tester".to_string(),
+        }
+    }
+
+    #[test]
+    fn test_version_control_create_and_get() {
+        let mut vc = ModelVersionControl::new();
+        assert!(vc.initialize().is_ok());
+
+        let v1 = sample_version("v1");
+        assert!(vc.create_version("model-a", v1.clone()).is_ok());
+
+        // Duplicate version should be rejected.
+        let err = vc
+            .create_version("model-a", sample_version("v1"))
+            .expect_err("duplicate version must be rejected");
+        assert!(format!("{}", err).contains("already exists"));
+
+        // Retrieval works.
+        let got = vc.get_version("model-a", "v1").expect("version should exist");
+        assert_eq!(got.version_id, "v1");
+
+        // Unknown model/version returns None.
+        assert!(vc.get_version("model-a", "v2").is_none());
+        assert!(vc.get_version("model-b", "v1").is_none());
+    }
+
+    #[test]
+    fn test_version_control_list_versions() {
+        let mut vc = ModelVersionControl::new();
+        vc.initialize().unwrap();
+        vc.create_version("model-a", sample_version("v1")).unwrap();
+        vc.create_version("model-a", sample_version("v2")).unwrap();
+        vc.create_version("model-b", sample_version("v1")).unwrap();
+
+        let mut a_versions = vc.list_versions("model-a");
+        a_versions.sort();
+        assert_eq!(a_versions, vec!["v1".to_string(), "v2".to_string()]);
+
+        let b_versions = vc.list_versions("model-b");
+        assert_eq!(b_versions, vec!["v1".to_string()]);
+
+        assert!(vc.list_versions("model-c").is_empty());
+    }
+
+    #[test]
+    fn test_version_control_branches() {
+        let mut vc = ModelVersionControl::new();
+        vc.initialize().unwrap();
+        vc.create_version("model-a", sample_version("v1")).unwrap();
+
+        // Creating a branch from an existing version succeeds.
+        assert!(vc.create_branch("dev", "v1").is_ok());
+        let branch = vc.get_branch("dev").expect("branch should exist");
+        assert_eq!(branch, &vec!["v1".to_string()]);
+
+        // Duplicate branch is rejected.
+        let err = vc
+            .create_branch("dev", "v1")
+            .expect_err("duplicate branch must be rejected");
+        assert!(format!("{}", err).contains("already exists"));
+
+        // Branching from an unknown version fails.
+        assert!(vc.create_branch("feat", "nope").is_err());
+
+        // The default `main` branch is seeded by initialize().
+        assert!(vc.get_branch("main").is_some());
+
+        // Unknown branch returns None.
+        assert!(vc.get_branch("ghost").is_none());
+    }
+
+    #[test]
+    fn test_version_control_tags() {
+        let mut vc = ModelVersionControl::new();
+        vc.initialize().unwrap();
+        vc.create_version("model-a", sample_version("v1")).unwrap();
+        vc.create_version("model-a", sample_version("v2")).unwrap();
+
+        // Tag versions.
+        assert!(vc.tag_version("v1", "stable").is_ok());
+        assert!(vc.tag_version("v2", "latest").is_ok());
+        assert!(vc.tag_version("v2", "stable").is_ok());
+
+        // Tagging an unknown version fails.
+        assert!(vc.tag_version("v9", "x").is_err());
+
+        // get_tags returns all tags for a version.
+        let mut v2_tags = vc.get_tags("v2");
+        v2_tags.sort();
+        assert_eq!(v2_tags, vec!["latest".to_string(), "stable".to_string()]);
+
+        // get_by_tag returns all versions carrying the tag.
+        let mut stable_versions = vc.get_by_tag("stable");
+        stable_versions.sort();
+        assert_eq!(stable_versions, vec!["v1".to_string(), "v2".to_string()]);
+
+        assert!(vc.get_by_tag("nonexistent").is_empty());
+        assert!(vc.get_tags("v9").is_empty());
+    }
+
+    #[test]
+    fn test_version_control_initialize_seeds_main_branch() {
+        let mut vc = ModelVersionControl::new();
+        // Before initialize, no branches exist.
+        assert!(vc.get_branch("main").is_none());
+        assert!(vc.initialize().is_ok());
+        assert!(vc.get_branch("main").is_some());
+    }
+
+    // ------------------------------------------------------------------
+    // Feature 2: Compression Quality Metrics
+    // ------------------------------------------------------------------
+
+    #[test]
+    fn test_compression_register_and_get_algorithm() {
+        let mut mc = ModelCompression::new();
+        assert!(mc.list_algorithms().is_empty());
+
+        mc.register_algorithm("my-pruner", CompressionAlgorithm::Pruning);
+        assert_eq!(mc.list_algorithms(), vec!["my-pruner".to_string()]);
+        assert_eq!(
+            mc.get_algorithm("my-pruner"),
+            Some(&CompressionAlgorithm::Pruning)
+        );
+        assert!(mc.get_algorithm("missing").is_none());
+    }
+
+    #[test]
+    fn test_compression_initialize_registers_standard_algorithms() {
+        let mut mc = ModelCompression::new();
+        assert!(mc.initialize().is_ok());
+
+        let mut names = mc.list_algorithms();
+        names.sort();
+        assert_eq!(
+            names,
+            vec![
+                "Distillation".to_string(),
+                "Pruning".to_string(),
+                "QuantizationFP16".to_string(),
+                "QuantizationInt8".to_string(),
+            ]
+        );
+    }
+
+    #[test]
+    fn test_compression_record_updates_metrics() {
+        let mut mc = ModelCompression::new();
+        mc.initialize().unwrap();
+
+        // 1000 bytes -> 250 bytes is a 4x compression ratio (75% reduction).
+        assert!(
+            mc.record_compression("QuantizationInt8", 1000, 250, 0.90, 0.88)
+                .is_ok()
+        );
+
+        let metrics = mc.get_quality_metrics();
+        assert_eq!(metrics.compression_count, 1);
+        assert!((metrics.compression_ratio - 4.0).abs() < 1e-9);
+        assert!((metrics.size_reduction - 0.75).abs() < 1e-9);
+        // accuracy preservation = 0.88 / 0.90
+        assert!((metrics.accuracy_preservation - (0.88 / 0.90)).abs() < 1e-9);
+
+        // The accessor and helper agree.
+        assert!((mc.compression_ratio() - metrics.compression_ratio).abs() < 1e-9);
+    }
+
+    #[test]
+    fn test_compression_record_rejects_unknown_algorithm() {
+        let mut mc = ModelCompression::new();
+        let err = mc
+            .record_compression("ghost", 100, 50, 1.0, 1.0)
+            .expect_err("unknown algorithm must be rejected");
+        assert!(format!("{}", err).contains("unknown compression algorithm"));
+    }
+
+    #[test]
+    fn test_compression_record_rejects_zero_original_size() {
+        let mut mc = ModelCompression::new();
+        mc.register_algorithm("x", CompressionAlgorithm::Pruning);
+        let err = mc
+            .record_compression("x", 0, 0, 1.0, 1.0)
+            .expect_err("zero original size must be rejected");
+        assert!(format!("{}", err).contains("original_size"));
+    }
+
+    #[test]
+    fn test_compression_record_running_average() {
+        let mut mc = ModelCompression::new();
+        mc.register_algorithm("x", CompressionAlgorithm::Pruning);
+
+        // First: ratio 4.0 (1000 -> 250). Second: ratio 2.0 (1000 -> 500).
+        // Average ratio should be 3.0.
+        mc.record_compression("x", 1000, 250, 1.0, 1.0).unwrap();
+        mc.record_compression("x", 1000, 500, 1.0, 1.0).unwrap();
+
+        let metrics = mc.get_quality_metrics();
+        assert_eq!(metrics.compression_count, 2);
+        assert!((metrics.compression_ratio - 3.0).abs() < 1e-9);
     }
 }
