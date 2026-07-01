@@ -68,6 +68,7 @@ impl WebizenHostApi {
         if let Ok(count) = self.vault.journal_count() {
             snap.health_record_count = count as u32;
         }
+        snap.graph_quin_count = self.vault.graph_quin_count() as u32;
         if let Ok(pending) = self.vault.wal_buffered_quins() {
             snap.pending_jobs = pending as u32;
             snap.sync_state = if pending > 0 {
@@ -136,6 +137,10 @@ impl WebizenHostApi {
 
     pub fn list_receipts(&self, limit: usize) -> Result<Vec<ReceiptRecord>, String> {
         self.vault.list_receipts(limit).map_err(|e| e.to_string())
+    }
+
+    pub fn graph_quin_count(&self) -> usize {
+        self.vault.graph_quin_count()
     }
 
     pub fn import_samsung_health_folder(&mut self, folder: &Path) -> SamsungImportReport {

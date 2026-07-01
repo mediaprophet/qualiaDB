@@ -80,6 +80,7 @@ pub struct WellfairHostSnapshot {
     pub accessibility: AccessibilityPreferences,
     pub pending_jobs: u32,
     pub health_record_count: u32,
+    pub graph_quin_count: u32,
     pub last_checkpoint_prefix: Option<String>,
     pub capabilities_ready: bool,
     pub host_api_version: String,
@@ -101,6 +102,7 @@ impl Default for WellfairHostSnapshot {
             },
             pending_jobs: 0,
             health_record_count: 0,
+            graph_quin_count: 0,
             last_checkpoint_prefix: None,
             capabilities_ready: false,
             host_api_version: "1".to_string(),
@@ -118,6 +120,26 @@ pub struct HealthRecordDto {
     pub blob_hash: Option<String>,
     pub source: String,
     pub committed_unix: u32,
+}
+
+#[derive(Debug, Clone, PartialEq, Eq, Serialize, Deserialize)]
+pub struct ActorDto {
+    pub id: String,
+    pub actor_type: String,
+    pub name: String,
+    pub organization: Option<String>,
+    pub roles: Vec<String>,
+    pub verification_status: String,
+    pub pairwise_did: String,
+}
+
+#[derive(Debug, Clone, PartialEq, Eq, Serialize, Deserialize)]
+pub struct DelegationRuleDto {
+    pub id: String,
+    pub actor_id: String,
+    pub granted_roles: Vec<String>,
+    pub legal_basis: String,
+    pub is_active: bool,
 }
 
 #[derive(Debug, Clone, PartialEq, Eq, Serialize, Deserialize)]

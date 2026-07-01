@@ -27,6 +27,7 @@ pub fn WellfairHealthPanel() -> Element {
     let mut records = use_signal(Vec::<HealthRecordDto>::new);
     let mut status = use_signal(|| "Loading health records…".to_string());
     let mut record_count = use_signal(|| 0u32);
+    let mut graph_count = use_signal(|| 0u32);
     let mut checkpoint = use_signal(|| None::<String>);
 
     let reload = move || {
@@ -34,6 +35,7 @@ pub fn WellfairHealthPanel() -> Element {
             status.set("Loading…".into());
             let snap = fetch_host_snapshot().await;
             record_count.set(snap.health_record_count);
+            graph_count.set(snap.graph_quin_count);
             checkpoint.set(snap.last_checkpoint_prefix.clone());
             match fetch_health_records(64).await {
                 Ok(list) => {
@@ -79,7 +81,7 @@ pub fn WellfairHealthPanel() -> Element {
                 h2 { style: "margin:0;font-size:1rem;", "Health — observations" }
                 div {
                     style: "display:flex;gap:0.5rem;align-items:center;font-size:0.78rem;color:var(--qualia-text-muted,#666);",
-                    span { "{record_count()} total in journal" }
+                    span { "{record_count()} journal · {graph_count()} graph quins" }
                     if let Some(cp) = checkpoint() {
                         span { "· checkpoint {cp}…" }
                     }

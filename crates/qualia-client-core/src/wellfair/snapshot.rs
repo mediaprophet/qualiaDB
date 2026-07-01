@@ -49,6 +49,7 @@ pub fn build_host_snapshot_with_storage(
             .unwrap_or_default(),
         pending_jobs: 0,
         health_record_count: 0,
+        graph_quin_count: 0,
         last_checkpoint_prefix: None,
         capabilities_ready: host_api_ready && !key_vault.is_locked(),
         host_api_version: crate::qapp_install::SUPPORTED_HOST_API_VERSION.to_string(),

@@ -1,5 +1,7 @@
 pub mod accessibility_prefs;
 pub mod api;
+pub mod checkpoint_store;
+pub mod graph_store;
 pub mod host_state;
 pub mod import_samsung;
 pub mod journal;

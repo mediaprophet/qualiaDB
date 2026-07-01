@@ -1,5 +1,6 @@
 use super::health_panel::WellfairHealthPanel;
 use super::personal_panel::WellfairPersonalPanel;
+use super::social_book_panel::WellfairSocialBookPanel;
 use super::host_client::use_host_snapshot;
 use super::host_dto::{ConsentGrantDraft, PolicyDecisionDto, ProvenanceHop, SensitivityClassDto, VaultLifecycle};
 use super::shared::{
@@ -61,6 +62,7 @@ pub fn WellfairShell() -> Element {
     let area_content = match active_area().as_str() {
         "Personal" => rsx! { WellfairPersonalPanel {} },
         "Health" => rsx! { WellfairHealthPanel {} },
+        "Relationships" => rsx! { WellfairSocialBookPanel {} },
         "Tools" => rsx! {
             CompanionPairingPanel {}
             WellfairToolsPanel {}
@@ -153,7 +155,7 @@ pub fn WellfairShell() -> Element {
             aside {
                 style: "padding:0.75rem;border-radius:10px;border:1px dashed var(--qualia-border,#ccc);font-size:0.78rem;color:var(--qualia-text-muted,#666);",
                 "Accessibility: text {snap.accessibility.text_scale_percent}% · high contrast {snap.accessibility.high_contrast} · reduced motion {snap.accessibility.reduced_motion}. "
-                "Journal: {snap.health_record_count} records"
+                "Journal: {snap.health_record_count} records · graph: {snap.graph_quin_count} quins"
                 if let Some(cp) = &snap.last_checkpoint_prefix {
                     " · checkpoint {cp}…"
                 }

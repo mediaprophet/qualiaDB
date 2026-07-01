@@ -1,6 +1,8 @@
 //! Host API client — all operating state flows through Tauri invoke, not Dioxus authority.
 
-use super::host_dto::{HealthRecordDto, ReceiptDto, WellfairHostSnapshot};
+use super::host_dto::{
+    ActorDto, DelegationRuleDto, HealthRecordDto, ReceiptDto, WellfairHostSnapshot,
+};
 use dioxus::prelude::*;
 
 #[cfg(target_arch = "wasm32")]
@@ -164,4 +166,30 @@ pub async fn save_accessibility(prefs: &super::host_dto::AccessibilityPreference
 #[cfg(not(target_arch = "wasm32"))]
 pub async fn save_accessibility(_prefs: &super::host_dto::AccessibilityPreferences) -> Result<(), String> {
     Err("Accessibility save requires the Tauri desktop host".into())
+}
+
+#[cfg(target_arch = "wasm32")]
+pub async fn fetch_directory_actors() -> Result<Vec<ActorDto>, String> {
+    let js = tauri_invoke("get_directory_actors", wasm_bindgen::JsValue::NULL)
+        .await
+        .map_err(|e| format!("{e:?}"))?;
+    serde_wasm_bindgen::from_value(js).map_err(|e| e.to_string())
+}
+
+#[cfg(not(target_arch = "wasm32"))]
+pub async fn fetch_directory_actors() -> Result<Vec<ActorDto>, String> {
+    Ok(vec![])
+}
+
+#[cfg(target_arch = "wasm32")]
+pub async fn fetch_delegation_rules() -> Result<Vec<DelegationRuleDto>, String> {
+    let js = tauri_invoke("get_delegation_rules", wasm_bindgen::JsValue::NULL)
+        .await
+        .map_err(|e| format!("{e:?}"))?;
+    serde_wasm_bindgen::from_value(js).map_err(|e| e.to_string())
+}
+
+#[cfg(not(target_arch = "wasm32"))]
+pub async fn fetch_delegation_rules() -> Result<Vec<DelegationRuleDto>, String> {
+    Ok(vec![])
 }

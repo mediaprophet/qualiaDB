@@ -147,6 +147,19 @@ fn App() -> Element {
 
     use_effect(move || {
         if *state.read() == AppState::Initializing {
+            let stored = loadOutbox(OUTBOX_KEY);
+            if !stored.is_empty() {
+                if let Ok(bundle) = serde_json::from_str::<CompanionHealthBundle>(&stored) {
+                    let file_count = bundle.files.len();
+                    state.set(AppState::BundleReady {
+                        json: stored,
+                        file_count,
+                    });
+                    status_msg.set("Restored health bundle from outbox.".into());
+                    return;
+                }
+            }
+
             let window = web_sys::window().unwrap();
             let has_picker = js_sys::Reflect::has(
                 &window,
