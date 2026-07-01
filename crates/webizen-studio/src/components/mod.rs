@@ -8,6 +8,7 @@ pub mod hardware_configurator;
 pub mod health_monitor;
 pub mod llm_harness;
 pub mod nexus;
+pub mod ontology_import_wizard;
 pub mod personal_ontology;
 pub mod qapp_dispatcher;
 pub mod qapps;

@@ -141,6 +141,7 @@ async fn run_settings_server(state: SettingsServerState, port: u16) -> Result<()
         .route("/api/status", get(status_handler))
         .route("/api/config", get(get_config_handler).post(save_config_handler))
         .route("/manifest", get(get_manifest_handler).post(post_manifest_handler))
+        .route("/manifest/history", get(get_manifest_history_handler))
         .route("/telemetry", get(telemetry_handler))
         .route("/api/jobs", get(list_jobs_handler).post(enqueue_job_handler))
         .route("/api/jobs/:id", get(get_job_handler))
@@ -261,8 +262,26 @@ async fn post_manifest_handler(
         eprintln!("workspace manifest persist failed: {err}");
         return StatusCode::INTERNAL_SERVER_ERROR;
     }
+    if let Err(err) = qualia_client_core::studio_workspace_wal::append_workspace_deploy(
+        &storage_path,
+        &body,
+    ) {
+        eprintln!("studio workspace WAL append failed: {err}");
+    }
     *state.manifest.lock().unwrap() = body;
     StatusCode::NO_CONTENT
+}
+
+async fn get_manifest_history_handler(State(state): State<SettingsServerState>) -> impl IntoResponse {
+    let storage_path = state.app_state.config.lock().unwrap().storage_path.clone();
+    match qualia_client_core::studio_workspace_wal::list_deploy_history(&storage_path) {
+        Ok(records) => (StatusCode::OK, Json(records)).into_response(),
+        Err(err) => (
+            StatusCode::INTERNAL_SERVER_ERROR,
+            Json(serde_json::json!({ "error": err })),
+        )
+            .into_response(),
+    }
 }
 
 async fn system_telemetry_handler() -> Json<SystemTelemetry> {

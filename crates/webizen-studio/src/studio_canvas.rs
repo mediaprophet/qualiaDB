@@ -43,6 +43,9 @@ use crate::canvas_editor::{
     clamp_pane_origin, clamp_pane_size, grid_metrics, new_workspace_shell, pixel_delta_to_grid,
     qprime_elevation_css, snap_u16, CanvasEditorMode, PaneInteraction, WorkspaceHistory,
 };
+use crate::components::ontology_import_wizard::{
+    OntologyImportWizard, OntologyLayoutSuggestion,
+};
 use crate::pane_registry::{
     builtin_pane_definitions, category_label, find_pane, PaneCategory, PaneDefinition,
 };
@@ -781,11 +784,13 @@ pub fn DynamicPage(path: Vec<String>, #[props(default)] app_id: Option<String>) 
     };
 
     let mut save_status = use_signal(|| String::new());
+    let mut deploy_revision = use_signal(|| Option::<u64>::None);
 
     // ── Persist workspace to local settings portal (survives restart) ──
     let save_workspace = {
         let workspace = workspace.clone();
         let mut save_status = save_status.clone();
+        let mut deploy_revision = deploy_revision.clone();
         move |_| {
             save_status.set("Saving…".to_string());
             spawn(async move {
@@ -807,6 +812,23 @@ pub fn DynamicPage(path: Vec<String>, #[props(default)] app_id: Option<String>) 
                     .await
                 {
                     Ok(res) if res.status().is_success() => {
+                        if let Ok(history_res) =
+                            client.get(crate::endpoints::manifest_history_url()).send().await
+                        {
+                            if history_res.status().is_success() {
+                                if let Ok(rows) = history_res.json::<Vec<DeployHistoryRow>>().await
+                                {
+                                    if let Some(last) = rows.last() {
+                                        deploy_revision.set(Some(last.revision));
+                                        save_status.set(format!(
+                                            "Saved · WAL rev #{} ({} pane quins)",
+                                            last.revision, last.pane_count
+                                        ));
+                                        return;
+                                    }
+                                }
+                            }
+                        }
                         save_status.set("Workspace saved locally.".to_string());
                     }
                     Ok(res) => {
@@ -817,6 +839,21 @@ pub fn DynamicPage(path: Vec<String>, #[props(default)] app_id: Option<String>) 
                     }
                 }
             });
+        }
+    };
+
+    let apply_ontology_layout = {
+        let mut workspace = workspace.clone();
+        let mut history = history.clone();
+        let current_path = format!("/{}", path.join("/"));
+        move |suggestion: OntologyLayoutSuggestion| {
+            history.write().push(workspace.read().clone());
+            let mut ws = workspace.write();
+            if let Some(page) = ws.pages.iter_mut().find(|p| p.url_path == current_path) {
+                page.panes = suggestion.panes;
+                page.presentation_mode = suggestion.presentation;
+                page.name = suggestion.label;
+            }
         }
     };
 
@@ -987,6 +1024,10 @@ pub fn DynamicPage(path: Vec<String>, #[props(default)] app_id: Option<String>) 
                             "{page.name}"
                         }
                     }
+                }
+
+                OntologyImportWizard {
+                    on_apply: apply_ontology_layout,
                 }
 
                 // Component Palette — draggable items grouped by category
@@ -1552,11 +1593,17 @@ pub fn DynamicPage(path: Vec<String>, #[props(default)] app_id: Option<String>) 
                     }
                 }
 
-                // Save workspace (local settings portal + disk)
+                // Save workspace (local settings portal + disk + Quin WAL)
                 if !save_status.read().is_empty() {
                     p {
                         style: "font-size: 0.72rem; color: var(--qualia-text-muted, #888); margin: 0;",
                         "{save_status.read()}"
+                    }
+                }
+                if let Some(rev) = *deploy_revision.read() {
+                    div {
+                        style: "font-size: 0.68rem; padding: 0.35rem 0.5rem; border-radius: 6px; border: 1px solid var(--qualia-border); color: var(--qualia-accent); background: rgba(245,158,11,0.06);",
+                        "Provenance: studio-workspace.wal rev #{rev}"
                     }
                 }
                 button {
@@ -1567,6 +1614,14 @@ pub fn DynamicPage(path: Vec<String>, #[props(default)] app_id: Option<String>) 
             }
         }
     }
+}
+
+#[derive(Clone, Debug, Deserialize)]
+struct DeployHistoryRow {
+    revision: u64,
+    unix_ts: u32,
+    pane_count: u16,
+    manifest_hash: u64,
 }
 
 // ─────────────────────────────────────────────────────────────

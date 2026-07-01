@@ -1,48 +1,99 @@
 use dioxus::prelude::*;
+use serde::Deserialize;
+
+#[derive(Clone, Debug, Deserialize)]
+struct DeployRecord {
+    revision: u64,
+    unix_ts: u32,
+    pane_count: u16,
+    manifest_hash: u64,
+}
 
 #[component]
 pub fn WalInspector() -> Element {
-    rsx! {
-        div { style: "padding: 24px; background: #fafafa; color: #333; height: 100%; font-family: 'Inter', sans-serif;",
-            h1 { style: "margin-top: 0; color: #111;", "Write-Ahead Log (WAL) Inspector" }
+    let mut records = use_signal(Vec::<DeployRecord>::new);
+    let mut status = use_signal(|| "Loading deploy history…".to_string());
 
-            div { style: "display: flex; gap: 12px; margin-bottom: 24px;",
-                div { style: "padding: 16px; background: white; border-radius: 8px; box-shadow: 0 1px 3px rgba(0,0,0,0.1); flex: 1;",
-                    div { style: "font-size: 12px; color: #666; text-transform: uppercase;", "Current LSN" }
-                    div { style: "font-size: 24px; font-weight: 700;", "0x8A4B_F192" }
+    use_effect(move || {
+        if !crate::endpoints::is_native_host() {
+            status.set("WAL history requires the desktop host.".to_string());
+            return;
+        }
+        spawn(async move {
+            match reqwest::get(crate::endpoints::manifest_history_url()).await {
+                Ok(res) if res.status().is_success() => {
+                    match res.json::<Vec<DeployRecord>>().await {
+                        Ok(rows) => {
+                            let count = rows.len();
+                            records.set(rows);
+                            status.set(format!("{count} deploy checkpoint(s) in studio-workspace.wal"));
+                        }
+                        Err(err) => status.set(format!("History parse failed: {err}")),
+                    }
                 }
-                div { style: "padding: 16px; background: white; border-radius: 8px; box-shadow: 0 1px 3px rgba(0,0,0,0.1); flex: 1;",
-                    div { style: "font-size: 12px; color: #666; text-transform: uppercase;", "Unflushed Bytes" }
-                    div { style: "font-size: 24px; font-weight: 700; color: #d97706;", "4.2 MB" }
+                Ok(res) => status.set(format!("History fetch failed ({})", res.status())),
+                Err(err) => status.set(format!("History unreachable: {err}")),
+            }
+        });
+    });
+
+    let rows = records.read();
+    let latest_revision = rows.last().map(|r| r.revision).unwrap_or(0);
+    let total_panes: u16 = rows.iter().map(|r| r.pane_count).sum();
+
+    rsx! {
+        div {
+            style: "padding: 24px; background: var(--qualia-bg, #050510); color: var(--qualia-text, #e5e5e5); height: 100%; font-family: 'Inter', sans-serif; overflow-y: auto;",
+            h1 { style: "margin-top: 0; color: var(--qualia-accent, #f59e0b); font-size: 1.1rem;",
+                "Studio Deploy WAL"
+            }
+            p { style: "font-size: 0.8rem; color: var(--qualia-text-muted, #888); margin-top: 0;",
+                "{status()}"
+            }
+
+            div { style: "display: flex; gap: 12px; margin: 1rem 0 1.5rem;",
+                div { style: "padding: 14px; background: var(--qualia-surface, #111); border-radius: 8px; border: 1px solid var(--qualia-border, #333); flex: 1;",
+                    div { style: "font-size: 11px; color: var(--qualia-text-muted); text-transform: uppercase;", "Latest revision" }
+                    div { style: "font-size: 22px; font-weight: 700;", "{latest_revision}" }
                 }
-                div { style: "padding: 16px; background: white; border-radius: 8px; box-shadow: 0 1px 3px rgba(0,0,0,0.1); flex: 1;",
-                    div { style: "font-size: 12px; color: #666; text-transform: uppercase;", "Sync Mode" }
-                    div { style: "font-size: 24px; font-weight: 700; color: #059669;", "O_DIRECT" }
+                div { style: "padding: 14px; background: var(--qualia-surface, #111); border-radius: 8px; border: 1px solid var(--qualia-border, #333); flex: 1;",
+                    div { style: "font-size: 11px; color: var(--qualia-text-muted); text-transform: uppercase;", "Deploy events" }
+                    div { style: "font-size: 22px; font-weight: 700; color: var(--qualia-accent);", "{rows.len()}" }
+                }
+                div { style: "padding: 14px; background: var(--qualia-surface, #111); border-radius: 8px; border: 1px solid var(--qualia-border, #333); flex: 1;",
+                    div { style: "font-size: 11px; color: var(--qualia-text-muted); text-transform: uppercase;", "Pane quins (sum)" }
+                    div { style: "font-size: 22px; font-weight: 700; color: #34d399;", "{total_panes}" }
                 }
             }
 
-            h3 { "Recent Transactions" }
-            table { style: "width: 100%; border-collapse: collapse; background: white; box-shadow: 0 1px 3px rgba(0,0,0,0.1); border-radius: 8px; overflow: hidden;",
-                thead { style: "background: #f1f5f9; border-bottom: 1px solid #e2e8f0;",
-                    tr {
-                        th { style: "padding: 12px 16px; text-align: left; font-size: 14px;", "TXID" }
-                        th { style: "padding: 12px 16px; text-align: left; font-size: 14px;", "Opcode" }
-                        th { style: "padding: 12px 16px; text-align: left; font-size: 14px;", "Payload" }
-                        th { style: "padding: 12px 16px; text-align: left; font-size: 14px;", "Status" }
-                    }
+            h3 { style: "font-size: 0.85rem; margin-bottom: 0.5rem;", "Deploy checkpoints" }
+            if rows.is_empty() {
+                div {
+                    style: "padding: 1rem; border: 1px dashed var(--qualia-border); border-radius: 8px; color: var(--qualia-text-muted); font-size: 0.8rem;",
+                    "Save a workspace from QApp Studio to append the first Quin checkpoint."
                 }
-                tbody {
-                    tr { style: "border-bottom: 1px solid #f1f5f9;",
-                        td { style: "padding: 12px 16px; font-family: monospace;", "TX-991" }
-                        td { style: "padding: 12px 16px;", "INSERT_QUIN" }
-                        td { style: "padding: 12px 16px; font-family: monospace; font-size: 12px;", "[did:q42:alice] [knows] [did:q42:bob]" }
-                        td { style: "padding: 12px 16px;", span { style: "background: #def7ec; color: #03543f; padding: 2px 8px; border-radius: 12px; font-size: 12px;", "FLUSHED" } }
+            } else {
+                table {
+                    style: "width: 100%; border-collapse: collapse; background: var(--qualia-surface); border: 1px solid var(--qualia-border); border-radius: 8px; overflow: hidden; font-size: 0.78rem;",
+                    thead { style: "background: rgba(245,158,11,0.08); border-bottom: 1px solid var(--qualia-border);",
+                        tr {
+                            th { style: "padding: 10px 12px; text-align: left;", "Rev" }
+                            th { style: "padding: 10px 12px; text-align: left;", "Unix ts" }
+                            th { style: "padding: 10px 12px; text-align: left;", "Panes" }
+                            th { style: "padding: 10px 12px; text-align: left;", "Manifest hash" }
+                        }
                     }
-                    tr { style: "border-bottom: 1px solid #f1f5f9;",
-                        td { style: "padding: 12px 16px; font-family: monospace;", "TX-992" }
-                        td { style: "padding: 12px 16px;", "DELETE_GRAPH" }
-                        td { style: "padding: 12px 16px; font-family: monospace; font-size: 12px;", "context_hash: 0x123...abc" }
-                        td { style: "padding: 12px 16px;", span { style: "background: #fdf6b2; color: #723b13; padding: 2px 8px; border-radius: 12px; font-size: 12px;", "PENDING" } }
+                    tbody {
+                        for row in rows.iter().rev() {
+                            tr { style: "border-bottom: 1px solid var(--qualia-border);",
+                                td { style: "padding: 10px 12px; font-family: monospace;", "#{row.revision}" }
+                                td { style: "padding: 10px 12px; font-family: monospace;", "{row.unix_ts}" }
+                                td { style: "padding: 10px 12px;", "{row.pane_count}" }
+                                td { style: "padding: 10px 12px; font-family: monospace; font-size: 0.7rem;",
+                                    "0x{row.manifest_hash:012x}"
+                                }
+                            }
+                        }
                     }
                 }
             }

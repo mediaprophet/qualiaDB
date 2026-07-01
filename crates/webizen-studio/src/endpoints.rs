@@ -24,6 +24,16 @@ pub fn manifest_url() -> String {
     format!("{DAEMON_HTTP}/manifest")
 }
 
+/// `{DAEMON_HTTP}/manifest/history` — Quin WAL deploy checkpoints.
+pub fn manifest_history_url() -> String {
+    format!("{DAEMON_HTTP}/manifest/history")
+}
+
+/// Live Qualia Portal design studio (T2 WASM stack).
+pub fn portal_design_studio_url() -> String {
+    format!("{DAEMON_HTTP}/design-studio.html")
+}
+
 /// `{DAEMON_HTTP}/telemetry` — server-sent telemetry stream.
 pub fn telemetry_url() -> String {
     format!("{DAEMON_HTTP}/telemetry")

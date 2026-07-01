@@ -46,7 +46,8 @@ where
 #[component]
 pub fn SpatialBridgeCanvas(page: Page) -> Element {
     let epoch = use_signal(|| 0u64);
-    let status = use_signal(|| {
+    let mut live_portal = use_signal(|| false);
+    let mut status = use_signal(|| {
         if crate::endpoints::is_native_host() {
             "Initializing volumetric renderer…".to_string()
         } else {
@@ -126,15 +127,37 @@ pub fn SpatialBridgeCanvas(page: Page) -> Element {
         }
     };
 
+    let toggle_live_portal = {
+        let mut live_portal = live_portal;
+        let mut status = status;
+        move |_| {
+            let next = !live_portal();
+            live_portal.set(next);
+            if next {
+                status.set("Live Qualia Portal (T2 WASM)".to_string());
+            } else {
+                status.set("PortalGpu volumetric frame".to_string());
+            }
+        }
+    };
+
     let frame_src = format!("webizen://localhost/render/preview.png?t={}", epoch());
+    let portal_src = crate::endpoints::portal_design_studio_url();
     let native = crate::endpoints::is_native_host();
-    let has_frame = native && epoch() > 0;
+    let has_frame = native && epoch() > 0 && !live_portal();
+    let show_live = native && live_portal();
 
     rsx! {
         div {
             style: "position: relative; width: 100%; height: 100%; min-height: 500px; background: var(--qualia-bg, #050510); border: 1px solid var(--qualia-border, #333); border-radius: 12px; overflow: hidden;",
 
-            if has_frame {
+            if show_live {
+                iframe {
+                    src: "{portal_src}",
+                    title: "Qualia Portal Design Studio",
+                    style: "position: absolute; inset: 0; width: 100%; height: 100%; border: 0; display: block;",
+                }
+            } else if has_frame {
                 img {
                     src: "{frame_src}",
                     style: "position: absolute; inset: 0; width: 100%; height: 100%; object-fit: cover; display: block;",
@@ -165,8 +188,15 @@ pub fn SpatialBridgeCanvas(page: Page) -> Element {
                 if native {
                     button {
                         style: "padding: 0.3rem 0.65rem; border-radius: 6px; border: 1px solid var(--qualia-border); background: rgba(0,0,0,0.45); color: var(--qualia-text); font-size: 0.7rem; cursor: pointer; backdrop-filter: blur(8px);",
-                        onclick: refresh,
-                        "↻"
+                        onclick: toggle_live_portal,
+                        if live_portal() { "PNG" } else { "Live" }
+                    }
+                    if !live_portal() {
+                        button {
+                            style: "padding: 0.3rem 0.65rem; border-radius: 6px; border: 1px solid var(--qualia-border); background: rgba(0,0,0,0.45); color: var(--qualia-text); font-size: 0.7rem; cursor: pointer; backdrop-filter: blur(8px);",
+                            onclick: refresh,
+                            "↻"
+                        }
                     }
                 }
                 span {

@@ -1,0 +1,238 @@
+//! Quin-backed audit trail for studio workspace deploys.
+//!
+//! Each manifest save appends a deploy checkpoint Quin plus one placement Quin per
+//! pane. History is recoverable from `{storage}/studio-workspace.wal`.
+
+use qualia_core_db::{q_hash, wal::WriteAheadLog, NQuin};
+
+const OBJECT_HASH_MASK: u64 = 0x0FFF_FFFF_FFFF_FFFF;
+const LAMPORT_SHIFT: u32 = 32;
+const LAMPORT_MASK: u64 = 0x1FFF_FFFF;
+
+pub const STUDIO_WAL_FILE: &str = "studio-workspace.wal";
+const WORKSPACE_SUBJECT: &str = "studio:workspace";
+const PREDICATE_DEPLOY: &str = "q42:studioDeploy";
+const PREDICATE_PANE: &str = "q42:studioPanePlacement";
+
+#[derive(Debug, Clone, serde::Serialize, serde::Deserialize, PartialEq, Eq)]
+pub struct StudioDeployRecord {
+    pub revision: u64,
+    pub unix_ts: u32,
+    pub pane_count: u16,
+    pub manifest_hash: u64,
+}
+
+#[derive(Debug, Clone, serde::Deserialize)]
+struct WalManifestPage {
+    url_path: String,
+    panes: Vec<WalManifestPane>,
+}
+
+#[derive(Debug, Clone, serde::Deserialize)]
+struct WalManifestPane {
+    component_id: String,
+    x: u16,
+    y: u16,
+    w: u16,
+    h: u16,
+}
+
+#[derive(Debug, Clone, serde::Deserialize)]
+struct WalManifest {
+    pages: Vec<WalManifestPage>,
+}
+
+pub fn studio_wal_path(storage_path: &str) -> std::path::PathBuf {
+    std::path::PathBuf::from(storage_path).join(STUDIO_WAL_FILE)
+}
+
+fn workspace_subject() -> u64 {
+    q_hash(WORKSPACE_SUBJECT)
+}
+
+fn author_context_hash() -> u64 {
+    let profile = crate::user_profile::load_profile();
+    q_hash(&profile.public_did)
+}
+
+fn manifest_content_hash(manifest_json: &str) -> u64 {
+    q_hash(manifest_json) & OBJECT_HASH_MASK
+}
+
+fn pack_placement(x: u16, y: u16, w: u16, h: u16) -> u64 {
+    ((w as u64) << 48) | ((h as u64) << 32) | ((y as u64) << 16) | (x as u64)
+}
+
+fn build_deploy_quin(revision: u64, manifest_json: &str) -> NQuin {
+    let subject = workspace_subject();
+    let predicate = q_hash(PREDICATE_DEPLOY);
+    let object = manifest_content_hash(manifest_json);
+    let context = author_context_hash();
+    let unix_ts = std::time::SystemTime::now()
+        .duration_since(std::time::UNIX_EPOCH)
+        .unwrap_or_default()
+        .as_secs() as u32;
+    let metadata = ((revision & LAMPORT_MASK) << LAMPORT_SHIFT) | (unix_ts as u64);
+    let parity = subject ^ predicate ^ object ^ context ^ metadata;
+    NQuin {
+        subject,
+        predicate,
+        object,
+        context,
+        metadata,
+        parity,
+    }
+}
+
+fn build_pane_quin(
+    page_path: &str,
+    component_id: &str,
+    x: u16,
+    y: u16,
+    w: u16,
+    h: u16,
+    revision: u64,
+) -> NQuin {
+    let subject = q_hash(component_id);
+    let predicate = q_hash(PREDICATE_PANE);
+    let object = pack_placement(x, y, w, h) & OBJECT_HASH_MASK;
+    let context = q_hash(page_path);
+    let metadata = (revision & LAMPORT_MASK) << LAMPORT_SHIFT;
+    let parity = subject ^ predicate ^ object ^ context ^ metadata;
+    NQuin {
+        subject,
+        predicate,
+        object,
+        context,
+        metadata,
+        parity,
+    }
+}
+
+fn count_existing_deploys(wal_path: &std::path::Path) -> u64 {
+    let Ok(mut wal) = WriteAheadLog::open(wal_path) else {
+        return 0;
+    };
+    let Ok(quins) = wal.recover() else {
+        return 0;
+    };
+    let deploy_pred = q_hash(PREDICATE_DEPLOY);
+    quins
+        .iter()
+        .filter(|q| q.predicate == deploy_pred)
+        .count() as u64
+}
+
+/// Append deploy + pane placement Quins for a saved workspace manifest.
+pub fn append_workspace_deploy(storage_path: &str, manifest_json: &str) -> Result<u64, String> {
+    let manifest: WalManifest =
+        serde_json::from_str(manifest_json).map_err(|e| format!("manifest parse: {e}"))?;
+    let wal_path = studio_wal_path(storage_path);
+    let revision = count_existing_deploys(&wal_path) + 1;
+
+    let mut wal =
+        WriteAheadLog::open(&wal_path).map_err(|e| format!("wal open: {e}"))?;
+    wal.append_mutation(&build_deploy_quin(revision, manifest_json))
+        .map_err(|e| format!("wal deploy append: {e}"))?;
+
+    for page in &manifest.pages {
+        for pane in &page.panes {
+            let quin = build_pane_quin(
+                &page.url_path,
+                &pane.component_id,
+                pane.x,
+                pane.y,
+                pane.w,
+                pane.h,
+                revision,
+            );
+            wal.append_mutation(&quin)
+                .map_err(|e| format!("wal pane append: {e}"))?;
+        }
+    }
+
+    Ok(revision)
+}
+
+/// Recover deploy checkpoints from the studio WAL (most recent last).
+pub fn list_deploy_history(storage_path: &str) -> Result<Vec<StudioDeployRecord>, String> {
+    let wal_path = studio_wal_path(storage_path);
+    if !wal_path.is_file() {
+        return Ok(Vec::new());
+    }
+    let mut wal = WriteAheadLog::open(&wal_path).map_err(|e| format!("wal open: {e}"))?;
+    let quins = wal.recover().map_err(|e| format!("wal recover: {e}"))?;
+    let deploy_pred = q_hash(PREDICATE_DEPLOY);
+    let pane_pred = q_hash(PREDICATE_PANE);
+    let mut pane_counts: std::collections::HashMap<u64, u16> = std::collections::HashMap::new();
+    for quin in &quins {
+        if quin.predicate != pane_pred {
+            continue;
+        }
+        let revision = (quin.metadata >> LAMPORT_SHIFT) & LAMPORT_MASK;
+        let entry = pane_counts.entry(revision).or_insert(0);
+        *entry = entry.saturating_add(1);
+    }
+
+    let mut records = Vec::new();
+    for quin in quins {
+        if quin.predicate != deploy_pred {
+            continue;
+        }
+        let revision = (quin.metadata >> LAMPORT_SHIFT) & LAMPORT_MASK;
+        let unix_ts = (quin.metadata & 0xFFFF_FFFF) as u32;
+        let pane_count = pane_counts.get(&revision).copied().unwrap_or(0);
+        records.push(StudioDeployRecord {
+            revision,
+            unix_ts,
+            pane_count,
+            manifest_hash: quin.object,
+        });
+    }
+    Ok(records)
+}
+
+#[cfg(test)]
+mod tests {
+    use super::*;
+    use std::fs;
+
+    #[test]
+    fn append_and_recover_deploy_history() {
+        let dir = std::env::temp_dir().join(format!(
+            "qualia-studio-wal-{}",
+            std::time::SystemTime::now()
+                .duration_since(std::time::UNIX_EPOCH)
+                .unwrap()
+                .as_nanos()
+        ));
+        fs::create_dir_all(&dir).unwrap();
+        let storage = dir.to_string_lossy().to_string();
+        let manifest = r#"{"pages":[{"url_path":"/","panes":[{"component_id":"n3-logic-studio","x":0,"y":0,"w":40,"h":30}]}]}"#;
+
+        let rev = append_workspace_deploy(&storage, manifest).unwrap();
+        assert_eq!(rev, 1);
+
+        let history = list_deploy_history(&storage).unwrap();
+        assert_eq!(history.len(), 1);
+        assert_eq!(history[0].revision, 1);
+        assert_eq!(history[0].pane_count, 1);
+        assert_eq!(history[0].manifest_hash, manifest_content_hash(manifest));
+
+        let rev2 = append_workspace_deploy(&storage, manifest).unwrap();
+        assert_eq!(rev2, 2);
+        let history2 = list_deploy_history(&storage).unwrap();
+        assert_eq!(history2.len(), 2);
+
+        let _ = fs::remove_dir_all(dir);
+    }
+
+    #[test]
+    fn pack_placement_roundtrip_bits() {
+        let packed = pack_placement(4, 8, 32, 16);
+        assert_eq!(packed & 0xFFFF, 4);
+        assert_eq!((packed >> 16) & 0xFFFF, 8);
+        assert_eq!((packed >> 32) & 0xFFFF, 16);
+        assert_eq!((packed >> 48) & 0xFFFF, 32);
+    }
+}
