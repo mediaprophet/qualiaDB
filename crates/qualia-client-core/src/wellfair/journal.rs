@@ -20,10 +20,18 @@ pub struct JournalEntry {
     pub blob_hash: Option<String>,
     pub source: String,
     pub committed_unix: u32,
+    /// Compact JSON projection for UI dashboards (sleep duration, weight kg, etc.).
+    #[serde(default, skip_serializing_if = "Option::is_none")]
+    pub summary: Option<String>,
 }
 
 impl JournalEntry {
-    pub fn from_envelope(envelope: &RecordEnvelope, source: &str, committed_unix: u32) -> Self {
+    pub fn from_envelope(
+        envelope: &RecordEnvelope,
+        source: &str,
+        committed_unix: u32,
+        summary: Option<String>,
+    ) -> Self {
         let kind = infer_kind(&envelope.id);
         Self {
             id: envelope.id.clone(),
@@ -34,6 +42,7 @@ impl JournalEntry {
             blob_hash: envelope.blob_hash.clone(),
             source: source.to_string(),
             committed_unix,
+            summary,
         }
     }
 }
@@ -135,7 +144,7 @@ mod tests {
             blob_hash: Some("deadbeef".into()),
             tombstone: false,
         };
-        let entry = JournalEntry::from_envelope(&envelope, "companion:phone-1", 1_700_000_100);
+        let entry = JournalEntry::from_envelope(&envelope, "companion:phone-1", 1_700_000_100, None);
         journal.append(&entry).unwrap();
         let listed = journal.list_recent(10).unwrap();
         assert_eq!(listed.len(), 1);

@@ -1,6 +1,8 @@
+pub mod consent_panel;
 pub mod health_panel;
 pub mod personal_panel;
 pub mod receipts_panel;
+pub mod sleep_panel;
 pub mod social_book_panel;
 pub mod host_client;
 pub mod host_dto;
@@ -9,8 +11,10 @@ pub mod shared;
 pub mod shell;
 pub mod tools_panel;
 
+pub use consent_panel::WellfairConsentPanel;
 pub use health_panel::WellfairHealthPanel;
 pub use personal_panel::WellfairPersonalPanel;
+pub use sleep_panel::WellfairSleepPanel;
 pub use receipts_panel::WellfairReceiptsPanel;
 pub use social_book_panel::WellfairSocialBookPanel;
 pub use host_client::{fetch_host_snapshot, HostSnapshotProvider};

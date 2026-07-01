@@ -18,6 +18,12 @@ use super::api::WebizenHostApi;
 
 const QAPP_HEALTH: &str = "wellfair-health";
 
+#[derive(Debug, Clone)]
+pub struct EnvelopeWithSummary {
+    pub envelope: RecordEnvelope,
+    pub summary: Option<String>,
+}
+
 #[derive(Debug, Clone, Serialize, Deserialize, PartialEq, Eq)]
 pub struct SamsungFileReport {
     pub path: String,
@@ -65,50 +71,90 @@ fn envelope_from_parts(
     }
 }
 
-fn weight_envelopes(records: &[WeightRecord], owner: &str, author: &str) -> Vec<RecordEnvelope> {
+fn weight_envelopes(records: &[WeightRecord], owner: &str, author: &str) -> Vec<EnvelopeWithSummary> {
     records
         .iter()
         .filter_map(|r| {
             let payload = serde_json::to_string(r).ok()?;
             let id = format!("urn:wellfair:weight:{}", r.uuid);
             let unix = r.start_datetime.timestamp().max(0) as u32;
-            Some(envelope_from_parts(&id, owner, author, unix, &payload))
+            let summary = serde_json::json!({
+                "weight_kg": r.weight,
+                "bmi": r.bmi,
+            })
+            .to_string();
+            Some(EnvelopeWithSummary {
+                envelope: envelope_from_parts(&id, owner, author, unix, &payload),
+                summary: Some(summary),
+            })
         })
         .collect()
 }
 
-fn sleep_envelopes(records: &[SleepRecord], owner: &str, author: &str) -> Vec<RecordEnvelope> {
+fn sleep_envelopes(records: &[SleepRecord], owner: &str, author: &str) -> Vec<EnvelopeWithSummary> {
     records
         .iter()
         .filter_map(|r| {
             let payload = serde_json::to_string(r).ok()?;
             let id = format!("urn:wellfair:sleep:{}", r.uuid);
             let unix = r.start_datetime.timestamp().max(0) as u32;
-            Some(envelope_from_parts(&id, owner, author, unix, &payload))
+            let summary = serde_json::json!({
+                "duration_min": r.sleep_duration,
+                "efficiency": r.efficiency,
+                "deep_min": r.deep_sleep,
+                "rem_min": r.rem_sleep,
+                "light_min": r.light_sleep,
+            })
+            .to_string();
+            Some(EnvelopeWithSummary {
+                envelope: envelope_from_parts(&id, owner, author, unix, &payload),
+                summary: Some(summary),
+            })
         })
         .collect()
 }
 
-fn heart_rate_envelopes(records: &[HeartRateRecord], owner: &str, author: &str) -> Vec<RecordEnvelope> {
+fn heart_rate_envelopes(
+    records: &[HeartRateRecord],
+    owner: &str,
+    author: &str,
+) -> Vec<EnvelopeWithSummary> {
     records
         .iter()
         .filter_map(|r| {
             let payload = serde_json::to_string(r).ok()?;
             let id = format!("urn:wellfair:heart_rate:{}", r.uuid);
             let unix = r.start_datetime.timestamp().max(0) as u32;
-            Some(envelope_from_parts(&id, owner, author, unix, &payload))
+            let summary = serde_json::json!({
+                "heart_rate": r.heart_rate,
+                "min": r.min,
+                "max": r.max,
+            })
+            .to_string();
+            Some(EnvelopeWithSummary {
+                envelope: envelope_from_parts(&id, owner, author, unix, &payload),
+                summary: Some(summary),
+            })
         })
         .collect()
 }
 
-fn steps_envelopes(records: &[StepRecord], owner: &str, author: &str) -> Vec<RecordEnvelope> {
+fn steps_envelopes(records: &[StepRecord], owner: &str, author: &str) -> Vec<EnvelopeWithSummary> {
     records
         .iter()
         .filter_map(|r| {
             let payload = serde_json::to_string(r).ok()?;
             let id = format!("urn:wellfair:steps:{}", r.uuid);
             let unix = r.start_datetime.timestamp().max(0) as u32;
-            Some(envelope_from_parts(&id, owner, author, unix, &payload))
+            let summary = serde_json::json!({
+                "steps": r.count,
+                "distance_m": r.distance,
+            })
+            .to_string();
+            Some(EnvelopeWithSummary {
+                envelope: envelope_from_parts(&id, owner, author, unix, &payload),
+                summary: Some(summary),
+            })
         })
         .collect()
 }
@@ -153,7 +199,7 @@ pub fn parse_csv_named_content(
     content: &str,
     owner_did: &str,
     author_did: &str,
-) -> Result<(SamsungCsvKind, Vec<RecordEnvelope>, u32), String> {
+) -> Result<(SamsungCsvKind, Vec<EnvelopeWithSummary>, u32), String> {
     let kind = classify_samsung_csv(filename);
     match kind {
         SamsungCsvKind::Weight => {
@@ -180,7 +226,7 @@ fn parse_csv_file(
     path: &Path,
     owner_did: &str,
     author_did: &str,
-) -> Result<(SamsungCsvKind, Vec<RecordEnvelope>, u32), String> {
+) -> Result<(SamsungCsvKind, Vec<EnvelopeWithSummary>, u32), String> {
     let content = fs::read_to_string(path).map_err(|e| format!("read {}: {e}", path.display()))?;
     let name = path
         .file_name()
@@ -194,12 +240,17 @@ fn commit_envelopes(
     report: &mut SamsungImportReport,
     path_label: &str,
     kind: SamsungCsvKind,
-    envelopes: Vec<RecordEnvelope>,
+    envelopes: Vec<EnvelopeWithSummary>,
     rejected: u32,
 ) {
     let mut committed = 0u32;
-    for envelope in envelopes {
-        match host.submit_record(QAPP_HEALTH, envelope, &report.source) {
+    for item in envelopes {
+        match host.submit_record_with_summary(
+            QAPP_HEALTH,
+            item.envelope,
+            &report.source,
+            item.summary,
+        ) {
             Ok(n) => {
                 report.records_committed += n;
                 committed += 1;
@@ -353,7 +404,10 @@ mod tests {
             parse_csv_file(&csv, "did:wf:owner", "did:wf:owner").unwrap();
         assert_eq!(kind, SamsungCsvKind::Weight);
         assert_eq!(envelopes.len(), 1);
-        assert_eq!(envelopes[0].evidence_type, EvidenceType::DeviceMeasured);
+        assert_eq!(
+            envelopes[0].envelope.evidence_type,
+            EvidenceType::DeviceMeasured
+        );
     }
 
     #[test]

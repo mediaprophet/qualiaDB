@@ -1,8 +1,10 @@
 //! Host API client — all operating state flows through Tauri invoke, not Dioxus authority.
 
 use super::host_dto::{
-    ActorDto, DelegationRuleDto, HealthRecordDto, ReceiptDto, WellfairHostSnapshot,
+    ActorDto, ConsentGrantDto, DelegationRuleDto, HealthRecordDto, PolicyDecisionDto,
+    ReceiptDto, WellfairHostSnapshot,
 };
+use super::host_dto::ConsentGrantDraft;
 use dioxus::prelude::*;
 
 #[cfg(target_arch = "wasm32")]
@@ -191,5 +193,103 @@ pub async fn fetch_delegation_rules() -> Result<Vec<DelegationRuleDto>, String> 
 
 #[cfg(not(target_arch = "wasm32"))]
 pub async fn fetch_delegation_rules() -> Result<Vec<DelegationRuleDto>, String> {
+    Ok(vec![])
+}
+
+#[cfg(target_arch = "wasm32")]
+pub async fn evaluate_policy(
+    qapp_id: &str,
+    scope: &str,
+    sensitivity: &str,
+    epistemic: &str,
+) -> Result<PolicyDecisionDto, String> {
+    let args = js_sys::Object::new();
+    for (key, val) in [
+        ("qappId", qapp_id),
+        ("scope", scope),
+        ("sensitivity", sensitivity),
+        ("epistemic", epistemic),
+    ] {
+        js_sys::Reflect::set(&args, &key.into(), &wasm_bindgen::JsValue::from_str(val))
+            .map_err(|_| "failed to build invoke args".to_string())?;
+    }
+    let js = tauri_invoke("wellfair_evaluate_policy", args.into())
+        .await
+        .map_err(|e| format!("{e:?}"))?;
+    let json = js
+        .as_string()
+        .ok_or_else(|| "policy response was not a JSON string".to_string())?;
+    serde_json::from_str(&json).map_err(|e| e.to_string())
+}
+
+#[cfg(not(target_arch = "wasm32"))]
+pub async fn evaluate_policy(
+    _qapp_id: &str,
+    _scope: &str,
+    _sensitivity: &str,
+    _epistemic: &str,
+) -> Result<PolicyDecisionDto, String> {
+    Err("Policy evaluation requires the Tauri desktop host".into())
+}
+
+#[cfg(target_arch = "wasm32")]
+pub async fn grant_consent(draft: &ConsentGrantDraft, scope: &str) -> Result<ConsentGrantDto, String> {
+    let json = serde_json::to_string(draft).map_err(|e| e.to_string())?;
+    let args = js_sys::Object::new();
+    js_sys::Reflect::set(&args, &"draftJson".into(), &wasm_bindgen::JsValue::from_str(&json))
+        .map_err(|_| "failed to build invoke args".to_string())?;
+    js_sys::Reflect::set(&args, &"scope".into(), &wasm_bindgen::JsValue::from_str(scope))
+        .map_err(|_| "failed to build invoke args".to_string())?;
+    let js = tauri_invoke("wellfair_grant_consent", args.into())
+        .await
+        .map_err(|e| format!("{e:?}"))?;
+    let out = js
+        .as_string()
+        .ok_or_else(|| "grant response was not a JSON string".to_string())?;
+    serde_json::from_str(&out).map_err(|e| e.to_string())
+}
+
+#[cfg(not(target_arch = "wasm32"))]
+pub async fn grant_consent(_draft: &ConsentGrantDraft, _scope: &str) -> Result<ConsentGrantDto, String> {
+    Err("Consent grant requires the Tauri desktop host".into())
+}
+
+#[cfg(target_arch = "wasm32")]
+pub async fn revoke_consent(grant_id: &str) -> Result<bool, String> {
+    let args = js_sys::Object::new();
+    js_sys::Reflect::set(
+        &args,
+        &"grantId".into(),
+        &wasm_bindgen::JsValue::from_str(grant_id),
+    )
+    .map_err(|_| "failed to build invoke args".to_string())?;
+    let js = tauri_invoke("wellfair_revoke_consent", args.into())
+        .await
+        .map_err(|e| format!("{e:?}"))?;
+    let json = js
+        .as_string()
+        .ok_or_else(|| "revoke response was not a JSON string".to_string())?;
+    let v: serde_json::Value = serde_json::from_str(&json).map_err(|e| e.to_string())?;
+    Ok(v.get("revoked").and_then(|b| b.as_bool()).unwrap_or(false))
+}
+
+#[cfg(not(target_arch = "wasm32"))]
+pub async fn revoke_consent(_grant_id: &str) -> Result<bool, String> {
+    Err("Consent revoke requires the Tauri desktop host".into())
+}
+
+#[cfg(target_arch = "wasm32")]
+pub async fn fetch_consents() -> Result<Vec<ConsentGrantDto>, String> {
+    let js = tauri_invoke("wellfair_list_consents", wasm_bindgen::JsValue::NULL)
+        .await
+        .map_err(|e| format!("{e:?}"))?;
+    let json = js
+        .as_string()
+        .ok_or_else(|| "consents response was not a JSON string".to_string())?;
+    serde_json::from_str(&json).map_err(|e| e.to_string())
+}
+
+#[cfg(not(target_arch = "wasm32"))]
+pub async fn fetch_consents() -> Result<Vec<ConsentGrantDto>, String> {
     Ok(vec![])
 }

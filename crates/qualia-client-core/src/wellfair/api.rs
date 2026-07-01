@@ -1,7 +1,10 @@
 use std::path::Path;
 
+use std::time::{SystemTime, UNIX_EPOCH};
+
 use super::accessibility_prefs;
-use super::host_state::AccessibilityPreferences;
+use super::consent_store::ConsentGrantRecord;
+use super::host_state::{AccessibilityPreferences, ConsentGrantDraft, PolicyDecisionDto};
 use super::import_samsung::{
     import_samsung_folder, ingest_companion_health_bundle, SamsungImportReport,
 };
@@ -83,17 +86,116 @@ impl WebizenHostApi {
         snap
     }
 
+    fn now_unix() -> u64 {
+        SystemTime::now()
+            .duration_since(UNIX_EPOCH)
+            .map(|d| d.as_secs())
+            .unwrap_or(0)
+    }
+
+    pub fn evaluate_policy(
+        &self,
+        qapp_id: &str,
+        requested_scope: &str,
+        sensitivity: wellfare_core::record::SensitivityClass,
+        epistemic: wellfare_core::record::EpistemicStatus,
+    ) -> Result<PolicyDecisionDto, String> {
+        let now = Self::now_unix();
+        let grants = self
+            .vault
+            .list_active_consents(now)
+            .map_err(|e| e.to_string())?;
+        let decision = self.policy.evaluate_access(
+            qapp_id,
+            requested_scope,
+            sensitivity,
+            epistemic,
+            &grants,
+            now,
+        );
+        Ok(decision.to_dto())
+    }
+
+    pub fn grant_consent(
+        &mut self,
+        draft: &ConsentGrantDraft,
+        scope: &str,
+    ) -> Result<ConsentGrantRecord, String> {
+        let grant = ConsentGrantRecord::from_draft(draft, scope);
+        self.vault
+            .append_consent(&grant)
+            .map_err(|e| e.to_string())?;
+        let ts = grant.granted_at_unix;
+        let decision = DecisionResult::Permit {
+            obligations: vec!["consent_granted".into(), "emit_wal_receipt".into()],
+        };
+        let receipt = receipt_from_decision(
+            "wellfair-shell",
+            &grant.id,
+            ts,
+            &decision,
+            self.vault.last_checkpoint_hash(),
+        );
+        self.vault.append_receipt(&receipt).map_err(|e| e.to_string())?;
+        Ok(grant)
+    }
+
+    pub fn revoke_consent(&mut self, grant_id: &str) -> Result<bool, String> {
+        let revoked = self
+            .vault
+            .revoke_consent(grant_id)
+            .map_err(|e| e.to_string())?;
+        if revoked {
+            let ts = Self::now_unix() as u32;
+            let decision = DecisionResult::Deny {
+                reasons: vec!["consent_revoked".into()],
+            };
+            let receipt = receipt_from_decision(
+                "wellfair-shell",
+                grant_id,
+                ts,
+                &decision,
+                self.vault.last_checkpoint_hash(),
+            );
+            self.vault.append_receipt(&receipt).map_err(|e| e.to_string())?;
+        }
+        Ok(revoked)
+    }
+
+    pub fn list_consents(&self) -> Result<Vec<ConsentGrantRecord>, String> {
+        self.vault
+            .list_active_consents(Self::now_unix())
+            .map_err(|e| e.to_string())
+    }
+
     pub fn submit_record(
         &mut self,
         qapp_id: &str,
         envelope: RecordEnvelope,
         source: &str,
     ) -> Result<usize, String> {
+        self.submit_record_with_summary(qapp_id, envelope, source, None)
+    }
+
+    pub fn submit_record_with_summary(
+        &mut self,
+        qapp_id: &str,
+        envelope: RecordEnvelope,
+        source: &str,
+        summary: Option<String>,
+    ) -> Result<usize, String> {
+        let now = Self::now_unix();
+        let grants = self
+            .vault
+            .list_active_consents(now)
+            .map_err(|e| e.to_string())?;
         let decision = self.policy.evaluate_access(
             qapp_id,
             "write_record",
             envelope.sensitivity,
             envelope.epistemic_status,
+            &grants,
+            now,
         );
 
         match &decision {
@@ -107,7 +209,13 @@ impl WebizenHostApi {
                 let principal_did = qualia_core_db::q_hash(&self.owner_did);
                 let committed = self
                     .vault
-                    .commit_envelope(&envelope, &self.signing_key, principal_did, source)
+                    .commit_envelope(
+                        &envelope,
+                        &self.signing_key,
+                        principal_did,
+                        source,
+                        summary,
+                    )
                     .map_err(|e| e.to_string())?;
 
                 let ts = envelope.asserted_time_unix;

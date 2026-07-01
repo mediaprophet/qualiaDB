@@ -4,6 +4,10 @@ use super::host_client::fetch_receipts;
 use super::host_dto::ReceiptDto;
 use dioxus::prelude::*;
 
+fn cp_prefix(hash: &str) -> String {
+    hash.chars().take(12).collect()
+}
+
 #[component]
 pub fn WellfairReceiptsPanel() -> Element {
     let mut receipts = use_signal(Vec::<ReceiptDto>::new);
@@ -49,9 +53,7 @@ pub fn WellfairReceiptsPanel() -> Element {
                     "{status()}"
                 }
             }
-            if receipts.read().is_empty() {
-                rsx! {}
-            } else {
+            if !receipts.read().is_empty() {
                 ul {
                     style: "margin:0;padding:0;list-style:none;display:flex;flex-direction:column;gap:0.4rem;",
                     for r in receipts.read().clone() {
@@ -68,7 +70,7 @@ pub fn WellfairReceiptsPanel() -> Element {
                             }
                             if let Some(cp) = &r.checkpoint_hash {
                                 div { style: "margin-top:0.15rem;color:var(--qualia-text-muted,#888);font-size:0.68rem;",
-                                    "checkpoint {cp.chars().take(12).collect::<String>()}…"
+                                    "checkpoint {cp_prefix(cp)}…"
                                 }
                             }
                         }

@@ -9,6 +9,7 @@ use qualia_core_db::NQuin;
 use wellfare_core::record::RecordEnvelope;
 
 use super::checkpoint_store::{self, load_dag, load_meta};
+use super::consent_store::ConsentStore;
 use super::graph_store::GraphStore;
 use super::journal::{JournalEntry, WellfairJournal};
 use super::receipt::{ReceiptLog, ReceiptRecord};
@@ -23,6 +24,7 @@ pub struct VaultService {
     storage_root: PathBuf,
     journal: WellfairJournal,
     receipts: ReceiptLog,
+    consents: ConsentStore,
     last_checkpoint_hash: Option<[u8; 32]>,
 }
 
@@ -39,6 +41,7 @@ impl VaultService {
         let suspended = SuspendedTransactionQueue::new();
         let journal = WellfairJournal::open(&storage_root)?;
         let receipts = ReceiptLog::open(&storage_root)?;
+        let consents = ConsentStore::open(&storage_root)?;
 
         let last_checkpoint_hash = if wal.prev_dag_hash != [0u8; 32] {
             Some(wal.prev_dag_hash)
@@ -59,6 +62,7 @@ impl VaultService {
             storage_root,
             journal,
             receipts,
+            consents,
             last_checkpoint_hash,
         })
     }
@@ -81,6 +85,21 @@ impl VaultService {
 
     pub fn list_receipts(&self, limit: usize) -> std::io::Result<Vec<ReceiptRecord>> {
         self.receipts.list_recent(limit)
+    }
+
+    pub fn list_active_consents(&self, now_unix: u64) -> std::io::Result<Vec<super::consent_store::ConsentGrantRecord>> {
+        self.consents.list_active(now_unix)
+    }
+
+    pub fn append_consent(
+        &self,
+        grant: &super::consent_store::ConsentGrantRecord,
+    ) -> std::io::Result<()> {
+        self.consents.append(grant)
+    }
+
+    pub fn revoke_consent(&self, grant_id: &str) -> std::io::Result<bool> {
+        self.consents.revoke(grant_id)
     }
 
     pub fn wal_buffered_quins(&mut self) -> std::io::Result<usize> {
@@ -147,6 +166,7 @@ impl VaultService {
         signing_key: &SigningKey,
         principal_did_hash: u64,
         source: &str,
+        summary: Option<String>,
     ) -> std::io::Result<usize> {
         let mut buffer = [wellfare_core::record::NQuin::default(); 8];
         let count = envelope.compile_to_quins(&mut buffer);
@@ -169,7 +189,7 @@ impl VaultService {
             .duration_since(UNIX_EPOCH)
             .map(|d| d.as_secs() as u32)
             .unwrap_or(0);
-        let entry = JournalEntry::from_envelope(envelope, source, committed_unix);
+        let entry = JournalEntry::from_envelope(envelope, source, committed_unix, summary);
         self.journal.append(&entry)?;
         Ok(committed)
     }
@@ -209,7 +229,7 @@ mod tests {
             tombstone: false,
         };
         vault
-            .commit_envelope(&envelope, &signing_key, 1, "test")
+            .commit_envelope(&envelope, &signing_key, 1, "test", None)
             .unwrap();
         let hash = vault.checkpoint().unwrap();
         assert_ne!(hash, [0u8; 32]);

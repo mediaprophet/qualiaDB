@@ -1,5 +1,6 @@
 pub mod accessibility_prefs;
 pub mod api;
+pub mod consent_store;
 pub mod checkpoint_store;
 pub mod graph_store;
 pub mod host_state;

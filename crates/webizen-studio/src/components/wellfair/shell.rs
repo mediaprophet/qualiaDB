@@ -1,11 +1,11 @@
+use super::consent_panel::WellfairConsentPanel;
 use super::health_panel::WellfairHealthPanel;
 use super::personal_panel::WellfairPersonalPanel;
+use super::sleep_panel::WellfairSleepPanel;
 use super::social_book_panel::WellfairSocialBookPanel;
 use super::host_client::use_host_snapshot;
-use super::host_dto::{ConsentGrantDraft, PolicyDecisionDto, ProvenanceHop, SensitivityClassDto, VaultLifecycle};
-use super::shared::{
-    ConsentGrantEditor, OfflineState, ProvenanceTrail, SensitivityBadge, SyncState,
-};
+use super::host_dto::{ProvenanceHop, SensitivityClassDto, VaultLifecycle};
+use super::shared::{OfflineState, ProvenanceTrail, SensitivityBadge, SyncState};
 use super::pairing_panel::CompanionPairingPanel;
 use super::receipts_panel::WellfairReceiptsPanel;
 use super::tools_panel::WellfairToolsPanel;
@@ -15,7 +15,8 @@ const AREAS: &[(&str, &str)] = &[
     ("Personal", "Phase 2 — profile and accessibility"),
     ("Health", "Phase 2 — observations and sleep"),
     ("Life", "Phase 3 — events and welfare"),
-    ("Relationships", "Phase 2 — Social Book"),
+    ("Relationships", "Phase 2 — Social Book + consent"),
+    ("Consent", "Phase 2 — access profiles"),
     ("Sanctuary", "Phase 3 — isolated domain"),
     ("Projects", "Phase 5 — cooperative work"),
     ("Tools", "Phase 1 — diagnostics and packages"),
@@ -52,17 +53,17 @@ pub fn WellfairShell() -> Element {
             hash_prefix: "a1b2c3…".into(),
         },
     ];
-    let sample_draft = ConsentGrantDraft {
-        recipient: "care.team@example".into(),
-        purpose: "Minimum projection preview".into(),
-        fields: vec!["profile.display_name".into(), "emergency.contact".into()],
-        expires_at_unix: None,
-    };
-
     let area_content = match active_area().as_str() {
         "Personal" => rsx! { WellfairPersonalPanel {} },
-        "Health" => rsx! { WellfairHealthPanel {} },
-        "Relationships" => rsx! { WellfairSocialBookPanel {} },
+        "Health" => rsx! {
+            WellfairHealthPanel {}
+            WellfairSleepPanel {}
+        },
+        "Relationships" => rsx! {
+            WellfairSocialBookPanel {}
+            WellfairConsentPanel {}
+        },
+        "Consent" => rsx! { WellfairConsentPanel {} },
         "Tools" => rsx! {
             CompanionPairingPanel {}
             WellfairToolsPanel {}
@@ -128,27 +129,10 @@ pub fn WellfairShell() -> Element {
 
             {area_content}
 
-            if active_area() != "Tools" {
+            if active_area() != "Tools" && active_area() != "Consent" && active_area() != "Relationships" {
                 section {
-                    style: "display:grid;grid-template-columns:1fr 1fr;gap:1rem;",
-                    div {
-                        h2 { style: "margin:0 0 0.5rem;font-size:1rem;", "Provenance" }
-                        ProvenanceTrail { hops: sample_hops }
-                    }
-                    div {
-                        h2 { style: "margin:0 0 0.5rem;font-size:1rem;", "Consent template" }
-                        ConsentGrantEditor {
-                            draft: sample_draft,
-                            decision: Some(PolicyDecisionDto::Prompt {
-                                requested_consent: ConsentGrantDraft {
-                                    recipient: "care.team@example".into(),
-                                    purpose: "Minimum projection preview".into(),
-                                    fields: vec!["profile.display_name".into()],
-                                    expires_at_unix: None,
-                                },
-                            }),
-                        }
-                    }
+                    h2 { style: "margin:0 0 0.5rem;font-size:1rem;", "Provenance" }
+                    ProvenanceTrail { hops: sample_hops }
                 }
             }
 

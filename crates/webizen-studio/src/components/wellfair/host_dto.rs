@@ -120,6 +120,8 @@ pub struct HealthRecordDto {
     pub blob_hash: Option<String>,
     pub source: String,
     pub committed_unix: u32,
+    #[serde(default)]
+    pub summary: Option<String>,
 }
 
 #[derive(Debug, Clone, PartialEq, Eq, Serialize, Deserialize)]
@@ -140,6 +142,18 @@ pub struct DelegationRuleDto {
     pub granted_roles: Vec<String>,
     pub legal_basis: String,
     pub is_active: bool,
+}
+
+#[derive(Debug, Clone, PartialEq, Eq, Serialize, Deserialize)]
+pub struct ConsentGrantDto {
+    pub id: String,
+    pub recipient: String,
+    pub purpose: String,
+    pub fields: Vec<String>,
+    pub scope: String,
+    pub granted_at_unix: u32,
+    pub expires_at_unix: Option<u64>,
+    pub revoked: bool,
 }
 
 #[derive(Debug, Clone, PartialEq, Eq, Serialize, Deserialize)]

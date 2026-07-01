@@ -304,6 +304,83 @@ pub fn wellfair_ingest_companion_health(
     serde_json::to_string(&report).map_err(|e| e.to_string())
 }
 
+fn parse_sensitivity(s: &str) -> wellfare_core::record::SensitivityClass {
+    match s.to_ascii_lowercase().as_str() {
+        "classified" => wellfare_core::record::SensitivityClass::Classified,
+        "public" => wellfare_core::record::SensitivityClass::Public,
+        _ => wellfare_core::record::SensitivityClass::Restricted,
+    }
+}
+
+fn parse_epistemic(s: &str) -> wellfare_core::record::EpistemicStatus {
+    match s.to_ascii_lowercase().as_str() {
+        "hypothesis" => wellfare_core::record::EpistemicStatus::Hypothesis,
+        "disputed" => wellfare_core::record::EpistemicStatus::Disputed,
+        "refuted" => wellfare_core::record::EpistemicStatus::Refuted,
+        _ => wellfare_core::record::EpistemicStatus::Asserted,
+    }
+}
+
+#[command]
+pub fn wellfair_evaluate_policy(
+    app: AppHandle,
+    qapp_id: String,
+    scope: String,
+    sensitivity: String,
+    epistemic: String,
+) -> Result<String, String> {
+    let sens = parse_sensitivity(&sensitivity);
+    let ep = parse_epistemic(&epistemic);
+    let state = app.state::<HostApiState>();
+    let guard = state.0.lock().map_err(|e| e.to_string())?;
+    let decision = if let Some(host) = guard.as_ref() {
+        host.evaluate_policy(&qapp_id, &scope, sens, ep)?
+    } else {
+        let svc = qualia_client_core::wellfair::policy::PolicyDecisionService::new();
+        svc.evaluate_access(&qapp_id, &scope, sens, ep, &[], 0).to_dto()
+    };
+    serde_json::to_string(&decision).map_err(|e| e.to_string())
+}
+
+#[command]
+pub fn wellfair_grant_consent(
+    app: AppHandle,
+    draft_json: String,
+    scope: String,
+) -> Result<String, String> {
+    let draft: qualia_client_core::wellfair::host_state::ConsentGrantDraft =
+        serde_json::from_str(&draft_json).map_err(|e| format!("invalid consent draft: {e}"))?;
+    let state = app.state::<HostApiState>();
+    let mut guard = state.0.lock().map_err(|e| e.to_string())?;
+    let host = guard
+        .as_mut()
+        .ok_or_else(|| "Host API not initialized — unlock vault first".to_string())?;
+    let grant = host.grant_consent(&draft, &scope)?;
+    serde_json::to_string(&grant).map_err(|e| e.to_string())
+}
+
+#[command]
+pub fn wellfair_revoke_consent(app: AppHandle, grant_id: String) -> Result<String, String> {
+    let state = app.state::<HostApiState>();
+    let mut guard = state.0.lock().map_err(|e| e.to_string())?;
+    let host = guard
+        .as_mut()
+        .ok_or_else(|| "Host API not initialized — unlock vault first".to_string())?;
+    let revoked = host.revoke_consent(&grant_id)?;
+    serde_json::to_string(&serde_json::json!({ "revoked": revoked })).map_err(|e| e.to_string())
+}
+
+#[command]
+pub fn wellfair_list_consents(app: AppHandle) -> Result<String, String> {
+    let state = app.state::<HostApiState>();
+    let guard = state.0.lock().map_err(|e| e.to_string())?;
+    let host = guard
+        .as_ref()
+        .ok_or_else(|| "Host API not initialized — unlock vault first".to_string())?;
+    let grants = host.list_consents()?;
+    serde_json::to_string(&grants).map_err(|e| e.to_string())
+}
+
 // ── Wallet / identity ─────────────────────────────────────────────────────────
 
 #[command]
@@ -2706,6 +2783,10 @@ pub fn get_invoke_handler() -> impl Fn(tauri::ipc::Invoke<tauri::Wry>) -> bool {
         wellfair_companion_pairing,
         wellfair_import_samsung_folder,
         wellfair_ingest_companion_health,
+        wellfair_evaluate_policy,
+        wellfair_grant_consent,
+        wellfair_revoke_consent,
+        wellfair_list_consents,
         get_wallet_status,
         is_first_run,
         read_identity,
