@@ -1,12 +1,14 @@
 #![allow(non_snake_case)]
 
+pub mod canvas_model;
+pub mod canvas_editor;
 pub mod components;
 mod endpoints;
 mod pane_registry;
 mod render;
 mod studio_canvas;
 pub mod telemetry;
-mod theme_engine;
+pub mod theme_engine;
 
 use dioxus::prelude::*;
 use studio_canvas::DynamicPage;
@@ -372,7 +374,7 @@ fn App() -> Element {
     let theme_state = use_signal(|| {
         let catalog = theme_engine::builtin_theme_catalog();
         let binding = theme_engine::ThemeBinding {
-            theme_id: Some("human-warmth".to_string()),
+            theme_id: Some("fiduciary-dark".to_string()),
             ..Default::default()
         };
         theme_engine::resolve_theme(Some(&binding), &catalog)
@@ -381,37 +383,37 @@ fn App() -> Element {
     use_context_provider(|| theme_state);
 
     let t = theme_state();
-    let bg = t.tokens.get("bg").cloned().unwrap_or("#fbf9f6".to_string());
+    let bg = t.tokens.get("bg").cloned().unwrap_or("#0a1122".to_string());
     let surface = t
         .tokens
         .get("surface")
         .cloned()
-        .unwrap_or("rgba(255,255,255,0.72)".to_string());
+        .unwrap_or("rgba(20, 28, 48, 0.7)".to_string());
     let border = t
         .tokens
         .get("border")
         .cloned()
-        .unwrap_or("rgba(220,210,200,0.55)".to_string());
+        .unwrap_or("rgba(80, 90, 110, 0.5)".to_string());
     let text = t
         .tokens
         .get("text")
         .cloned()
-        .unwrap_or("#2d2824".to_string());
+        .unwrap_or("#f8f9fb".to_string());
     let text_muted = t
         .tokens
         .get("text-muted")
         .cloned()
-        .unwrap_or("#8b8178".to_string());
+        .unwrap_or("#94a3b8".to_string());
     let accent = t
         .tokens
         .get("accent")
         .cloned()
-        .unwrap_or("#e07a5f".to_string());
+        .unwrap_or("#f59e0b".to_string());
     let accent_glow = t
         .tokens
         .get("accent-glow")
         .cloned()
-        .unwrap_or("rgba(224,122,95,0.18)".to_string());
+        .unwrap_or("rgba(245, 158, 11, 0.18)".to_string());
     let bg_gradient = t
         .tokens
         .get("bg-gradient")

@@ -127,7 +127,7 @@ pub fn Dashboard() -> Element {
     let current_id = theme_state()
         .theme_key
         .clone()
-        .unwrap_or("human-warmth".to_string());
+        .unwrap_or("fiduciary-dark".to_string());
 
     let all_themes: Vec<ThemeDefinition> = {
         let mut v = theme_engine::builtin_theme_catalog();

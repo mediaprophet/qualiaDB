@@ -1,13 +1,57 @@
-# Webizen Studio Theming
+# Webizen Studio Theming (QPrime Design System)
 
-Webizen Studio now supports layered themes instead of a single global token dump. A theme can be attached at four scopes:
+Webizen Studio implements a layered, human-centric theme engine. Instead of a single global token dump, themes can be attached at four scopes:
 
 1. `environment` via `:root`
 2. `app` via the studio shell
 3. `page` via the active canvas page
-4. `module` via an individual pane or Qapp/module wrapper
+4. `module` via an individual pane or QAPP/module wrapper
 
-This keeps the renderer CSS-first and zero-JS while still letting a workspace mix broad visual identity with local overrides.
+This keeps the renderer CSS-first and zero-JS while allowing a workspace to mix a broad visual identity with local overrides.
+
+## Human-Centric Token Architecture
+
+The aesthetic and semantic architecture reinforce each other. The interface is an extension of human agency, dignity, and curiosity.
+
+### Core Semantic Tokens
+
+| Token | Purpose & Semantic Meaning |
+|---|---|
+| `--qualia-bg` | Primary background. Establishes the core mood and spatial void. |
+| `--qualia-surface` | Elevated panes/cards. Opacity dictates the "glassmorphism" clarity. |
+| `--qualia-border` | Dividers. Represents consent boundaries and structural edges. |
+| `--qualia-text` | Main text. High legibility and contrast for accessibility. |
+| `--qualia-text-muted` | Secondary text for provenance and metadata. |
+| `--qualia-accent` | Action/highlight color. Represents warmth, human presence, or agency. |
+| `--qualia-accent-glow` | Accent shadow/glow. Emphasizes focus and semantic relationships. |
+| `--qualia-bg-gradient` | Premium dynamic background gradient for environmental depth. |
+
+### Semantic Depth & Elevation (Z-Space)
+
+Elevation in QPrime maps directly to *semantic depth*:
+*   **Base Level (Z=0)**: The infosphere itself (background).
+*   **Level 1 (Z=10, Blur=12px)**: Knowledge layers and standard panes (`--qualia-surface`).
+*   **Level 2 (Z=20, Blur=24px)**: Provenance overlays, consent boundaries, and Episteme prompts.
+*   **Level 3 (Z=30, Blur=32px)**: Active agency affordances (drag operations, focused editors).
+
+*Note: Glassmorphism is achieved via `backdrop-filter: blur(X)` combined with semi-transparent `rgba()` values on `--qualia-surface`.*
+
+## Built-In Premium Presets
+
+The engine provides 4 built-in presets designed for specific cognitive states:
+
+1.  **Fiduciary Dark** (Default)
+    *   *Palette*: Deep navy/charcoal glass (`#0a1122`), warm gold accents (`#f59e0b`).
+    *   *Vibe*: Conveys trust, depth, and careful stewardship.
+2.  **Commons Light**
+    *   *Palette*: Soft cream (`#faf9f6`), sage-tinted borders, warm accessible slate (`#4a5568`).
+    *   *Vibe*: Collaborative, open, daylight feel.
+3.  **Sanctuary Mode**
+    *   *Palette*: Muted, high-clarity (`#fefeff`), calm trustworthy blue (`#2b6cb0`).
+    *   *Vibe*: For sensitive work, wellbeing review, or when the user needs calm (higher contrast, reduced motion).
+4.  **Infosphere**
+    *   *Palette*: Deep space (`#050510`), soft rose/neural accents (`#eb6f92`).
+    *   *Vibe*: Experimental, semantic exploration.
 
 ## Theme Model
 
@@ -33,30 +77,14 @@ pub struct PanePlacement {
 
 `ThemeDefinition` is a reusable preset. `ThemeBinding` is what gets attached to a scope. Bindings can reference a preset with `theme_id`, add local token overrides, and optionally load a stylesheet.
 
-```rust
-pub struct ThemeDefinition {
-    pub id: String,
-    pub stylesheet_href: Option<String>,
-    pub class_name: Option<String>,
-    pub tokens: HashMap<String, String>,
-}
-
-pub struct ThemeBinding {
-    pub theme_id: Option<String>,
-    pub stylesheet_href: Option<String>,
-    pub class_name: Option<String>,
-    pub tokens: HashMap<String, String>,
-}
-```
-
 ## How Scoping Works
 
 The renderer emits token blocks for each active scope:
 
 ```css
-:root { --qualia-bg: #09090b; }
-.webizen-studio-shell { --qualia-accent: #06b6d4; }
-.webizen-page-shell { --qualia-surface: rgba(24, 24, 27, 0.7); }
+:root { --qualia-bg: #0a1122; }
+.webizen-studio-shell { --qualia-accent: #f59e0b; }
+.webizen-page-shell { --qualia-surface: rgba(20, 28, 48, 0.7); }
 .webizen-module-pane[data-pane-index='2'] { --qualia-border: #7dd3a7; }
 ```
 
@@ -65,39 +93,8 @@ It also annotates the DOM so theme CSS files can target the same scopes safely:
 ```html
 <div class="webizen-studio-shell theme-fiduciary-dark" data-theme-scope="app" data-theme="fiduciary-dark">
 <div class="webizen-page-shell report-theme" data-theme-scope="page" data-theme="commons-light">
-<div class="webizen-module-pane chart-theme" data-theme-scope="module" data-theme="forest-ledger">
+<div class="webizen-module-pane chart-theme" data-theme-scope="module" data-theme="sanctuary">
 ```
-
-## Stylesheet Themes
-
-For whole-theme CSS files, attach a `stylesheet_href` to either a preset or a binding. The studio will load the stylesheet once and let the CSS file decide what to style through the provided classes and `data-theme-*` attributes.
-
-That means a theme file should avoid raw global selectors like `body { ... }` unless it is intentionally an environment-wide theme. Prefer scoped selectors such as:
-
-```css
-.webizen-page-shell[data-theme="commons-light"] .ledger-card {
-    background: var(--qualia-surface);
-    color: var(--qualia-text);
-}
-
-.webizen-module-pane[data-theme="forest-ledger"] .chart-title {
-    color: var(--qualia-accent);
-}
-```
-
-## Core Tokens
-
-The current built-in presets share these semantic tokens:
-
-| Token | Purpose |
-|---|---|
-| `--qualia-bg` | Primary background |
-| `--qualia-surface` | Elevated panes/cards |
-| `--qualia-border` | Dividers and outlines |
-| `--qualia-text` | Main text |
-| `--qualia-text-muted` | Secondary text |
-| `--qualia-accent` | Action/highlight color |
-| `--qualia-accent-glow` | Accent shadow/glow |
 
 ## Guidance For Modules
 
@@ -108,10 +105,15 @@ Custom modules should consume tokens rather than hardcoding colors:
     background: var(--qualia-surface, #111);
     color: var(--qualia-text, #fff);
     border: 1px solid var(--qualia-border, #333);
+    /* Glassmorphism */
+    backdrop-filter: blur(12px);
+    -webkit-backdrop-filter: blur(12px);
 }
 
 .my-custom-pane:hover {
     box-shadow: 0 0 10px var(--qualia-accent-glow);
+    /* Micro-animation */
+    transition: box-shadow 0.3s cubic-bezier(0.4, 0, 0.2, 1);
 }
 ```
 

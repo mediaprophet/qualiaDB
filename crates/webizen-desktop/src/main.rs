@@ -230,6 +230,22 @@ fn main() {
                 }
             });
 
+            // ── Spatial render preview daemon (toggle via toggle_render_loop) ─
+            let render_daemon_handle = handle.clone();
+            tauri::async_runtime::spawn(async move {
+                use std::sync::atomic::Ordering;
+                loop {
+                    let active = render_daemon_handle
+                        .try_state::<RenderLoopState>()
+                        .map(|s| s.0.load(Ordering::SeqCst))
+                        .unwrap_or(false);
+                    if active {
+                        let _ = commands::render_preview_tick(&render_daemon_handle).await;
+                    }
+                    tokio::time::sleep(std::time::Duration::from_millis(750)).await;
+                }
+            });
+
             // ── Periodic Telemetry Collection for Ambient Visualization ───────
             let bridge_handle_telemetry = handle.clone();
             tauri::async_runtime::spawn(async move {

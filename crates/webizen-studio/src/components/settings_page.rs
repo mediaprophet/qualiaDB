@@ -302,7 +302,7 @@ pub fn SettingsPage() -> Element {
     let current_theme_id = theme_state()
         .theme_key
         .clone()
-        .unwrap_or_else(|| "human-warmth".to_string());
+        .unwrap_or_else(|| "fiduciary-dark".to_string());
 
     let theme_options: Vec<(String, String)> = theme_catalog
         .iter()

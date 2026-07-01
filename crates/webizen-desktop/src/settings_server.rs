@@ -32,6 +32,32 @@ pub const DEFAULT_SETTINGS_PORT: u16 = 8080;
 const EMPTY_MANIFEST: &str =
     r#"{"pages":[],"theme_tokens":{},"themes":[],"environment_theme":{},"app_theme":{}}"#;
 
+const WORKSPACE_MANIFEST_FILE: &str = "studio-workspace.json";
+
+fn workspace_manifest_path(storage_path: &str) -> PathBuf {
+    PathBuf::from(storage_path).join(WORKSPACE_MANIFEST_FILE)
+}
+
+fn load_persisted_manifest(storage_path: &str) -> String {
+    let path = workspace_manifest_path(storage_path);
+    match std::fs::read_to_string(&path) {
+        Ok(body) if body.trim().is_empty() => EMPTY_MANIFEST.to_string(),
+        Ok(body) => body,
+        Err(_) => EMPTY_MANIFEST.to_string(),
+    }
+}
+
+fn persist_manifest_to_disk(storage_path: &str, body: &str) -> Result<(), String> {
+    let path = workspace_manifest_path(storage_path);
+    if let Some(parent) = path.parent() {
+        std::fs::create_dir_all(parent).map_err(|e| e.to_string())?;
+    }
+    let tmp = path.with_extension("json.tmp");
+    std::fs::write(&tmp, body.as_bytes()).map_err(|e| e.to_string())?;
+    std::fs::rename(&tmp, &path).map_err(|e| e.to_string())?;
+    Ok(())
+}
+
 #[derive(Clone)]
 pub struct SettingsServerState {
     pub app_state: Arc<AppState>,
@@ -83,9 +109,11 @@ fn static_portal_dir() -> PathBuf {
 
 pub fn spawn_settings_server(app_state: Arc<AppState>) -> u16 {
     let port = find_open_port("127.0.0.1", DEFAULT_SETTINGS_PORT);
+    let storage_path = app_state.config.lock().unwrap().storage_path.clone();
+    let initial_manifest = load_persisted_manifest(&storage_path);
     let state = SettingsServerState {
         app_state,
-        manifest: Arc::new(Mutex::new(EMPTY_MANIFEST.to_string())),
+        manifest: Arc::new(Mutex::new(initial_manifest)),
         listen_port: Arc::new(Mutex::new(port)),
         static_root: static_portal_dir(),
     };
@@ -227,6 +255,11 @@ async fn post_manifest_handler(
 ) -> StatusCode {
     if body.trim().is_empty() {
         return StatusCode::BAD_REQUEST;
+    }
+    let storage_path = state.app_state.config.lock().unwrap().storage_path.clone();
+    if let Err(err) = persist_manifest_to_disk(&storage_path, &body) {
+        eprintln!("workspace manifest persist failed: {err}");
+        return StatusCode::INTERNAL_SERVER_ERROR;
     }
     *state.manifest.lock().unwrap() = body;
     StatusCode::NO_CONTENT

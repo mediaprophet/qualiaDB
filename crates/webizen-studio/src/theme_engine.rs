@@ -85,29 +85,59 @@ pub fn builtin_theme_catalog() -> Vec<ThemeDefinition> {
             class_name: Some("theme-fiduciary-dark".to_string()),
             stylesheet_href: None,
             tokens: HashMap::from([
-                ("bg".to_string(), "#09090b".to_string()),
-                ("surface".to_string(), "rgba(24, 24, 27, 0.7)".to_string()),
-                ("border".to_string(), "rgba(63, 63, 70, 0.5)".to_string()),
-                ("text".to_string(), "#f4f4f5".to_string()),
-                ("text-muted".to_string(), "#a1a1aa".to_string()),
-                ("accent".to_string(), "#06b6d4".to_string()),
-                ("accent-glow".to_string(), "rgba(6, 182, 212, 0.18)".to_string()),
-                ("bg-gradient".to_string(), "radial-gradient(ellipse at 20% 20%, rgba(6,182,212,0.10) 0%, transparent 50%), linear-gradient(160deg, #07070a 0%, #0b0b0f 100%)".to_string()),
+                ("bg".to_string(), "#0a1122".to_string()), // Deep navy
+                ("surface".to_string(), "rgba(20, 28, 48, 0.7)".to_string()), // Charcoal glass
+                ("border".to_string(), "rgba(80, 90, 110, 0.5)".to_string()),
+                ("text".to_string(), "#f8f9fb".to_string()),
+                ("text-muted".to_string(), "#94a3b8".to_string()),
+                ("accent".to_string(), "#f59e0b".to_string()), // Warm gold
+                ("accent-glow".to_string(), "rgba(245, 158, 11, 0.18)".to_string()),
+                ("bg-gradient".to_string(), "radial-gradient(ellipse at 20% 20%, rgba(245,158,11,0.10) 0%, transparent 50%), linear-gradient(160deg, #050a14 0%, #0a1122 100%)".to_string()),
             ]),
         },
         ThemeDefinition {
-            id: "forest-moss".to_string(),
-            class_name: Some("theme-forest-moss".to_string()),
+            id: "commons-light".to_string(),
+            class_name: Some("theme-commons-light".to_string()),
             stylesheet_href: None,
             tokens: HashMap::from([
-                ("bg".to_string(), "#f2f5f0".to_string()),
-                ("surface".to_string(), "rgba(240, 245, 235, 0.75)".to_string()),
-                ("border".to_string(), "rgba(180, 200, 170, 0.5)".to_string()),
-                ("text".to_string(), "#1e2d1a".to_string()),
-                ("text-muted".to_string(), "#5a7050".to_string()),
-                ("accent".to_string(), "#3d8b5e".to_string()),
-                ("accent-glow".to_string(), "rgba(61, 139, 94, 0.18)".to_string()),
-                ("bg-gradient".to_string(), "radial-gradient(ellipse at 20% 15%, rgba(100,180,120,0.22) 0%, transparent 55%), radial-gradient(ellipse at 80% 80%, rgba(60,140,80,0.15) 0%, transparent 50%), linear-gradient(160deg, #eef4e8 0%, #e0edd6 100%)".to_string()),
+                ("bg".to_string(), "#faf9f6".to_string()), // Soft cream
+                ("surface".to_string(), "rgba(255, 255, 255, 0.75)".to_string()),
+                ("border".to_string(), "rgba(163, 177, 161, 0.4)".to_string()), // Sage-tinted border
+                ("text".to_string(), "#2d3748".to_string()),
+                ("text-muted".to_string(), "#718096".to_string()),
+                ("accent".to_string(), "#4a5568".to_string()), // Accessible slate/sage
+                ("accent-glow".to_string(), "rgba(74, 85, 104, 0.15)".to_string()),
+                ("bg-gradient".to_string(), "radial-gradient(ellipse at 20% 20%, rgba(163,177,161,0.15) 0%, transparent 50%), linear-gradient(160deg, #ffffff 0%, #f4f5f0 100%)".to_string()),
+            ]),
+        },
+        ThemeDefinition {
+            id: "sanctuary".to_string(),
+            class_name: Some("theme-sanctuary".to_string()),
+            stylesheet_href: None,
+            tokens: HashMap::from([
+                ("bg".to_string(), "#fefeff".to_string()),
+                ("surface".to_string(), "rgba(244, 246, 248, 0.95)".to_string()), // High clarity, opaque glass
+                ("border".to_string(), "rgba(200, 205, 212, 0.8)".to_string()),
+                ("text".to_string(), "#1a202c".to_string()), // High contrast text
+                ("text-muted".to_string(), "#4a5568".to_string()),
+                ("accent".to_string(), "#2b6cb0".to_string()), // Calm, trustworthy blue
+                ("accent-glow".to_string(), "rgba(43, 108, 176, 0.1)".to_string()),
+                ("bg-gradient".to_string(), "none".to_string()), // Muted, gentle
+            ]),
+        },
+        ThemeDefinition {
+            id: "infosphere".to_string(),
+            class_name: Some("theme-infosphere".to_string()),
+            stylesheet_href: None,
+            tokens: HashMap::from([
+                ("bg".to_string(), "#050510".to_string()), // Deep space
+                ("surface".to_string(), "rgba(18, 15, 38, 0.6)".to_string()),
+                ("border".to_string(), "rgba(78, 65, 128, 0.5)".to_string()),
+                ("text".to_string(), "#e0def4".to_string()),
+                ("text-muted".to_string(), "#908caa".to_string()),
+                ("accent".to_string(), "#eb6f92".to_string()), // Soft rose / neural
+                ("accent-glow".to_string(), "rgba(235, 111, 146, 0.25)".to_string()),
+                ("bg-gradient".to_string(), "radial-gradient(circle at 50% 50%, rgba(235,111,146,0.1) 0%, transparent 40%), radial-gradient(circle at 10% 80%, rgba(156,207,216,0.1) 0%, transparent 30%), linear-gradient(180deg, #020208 0%, #050510 100%)".to_string()),
             ]),
         },
     ]

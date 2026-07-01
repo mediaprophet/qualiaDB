@@ -5,7 +5,7 @@ use qualia_client_core::state::{Actor, AgentConfig, DelegationRule, FrontDoor, P
 use qualia_core_db::ilp_dispatcher::DispatchResult;
 use qualia_core_db::rpc::TaxRecipientSuite;
 use std::time::Duration;
-use tauri::{command, AppHandle, Manager, State};
+use tauri::{command, AppHandle, Emitter, Manager, State};
 use tauri::webview::WebviewWindowBuilder;
 
 use crate::runtime::{RuntimeHandle, RuntimeLedgerHealth, RuntimeSnapshotRecord};
@@ -1852,16 +1852,102 @@ pub async fn toggle_render_loop(
 /// The render is blocking (drives a GPU readback), so it runs on the blocking pool.
 #[command]
 pub async fn update_render_preview(
-    _width: u32,
-    _height: u32,
-    _state: State<'_, PreviewState>,
-    _app: AppHandle,
+    width: u32,
+    height: u32,
+    state: State<'_, PreviewState>,
+    app_state: State<'_, std::sync::Arc<qualia_client_core::state::AppState>>,
+    app: AppHandle,
 ) -> Result<(), String> {
+    let width = width.max(64).min(4096);
+    let height = height.max(64).min(4096);
+
+    let storage_path = app_state
+        .config
+        .lock()
+        .map_err(|e| format!("config lock poisoned: {e}"))?
+        .storage_path
+        .clone();
+    let qualia_db_path = std::path::PathBuf::from(&storage_path)
+        .join("Index")
+        .join("graph.q42")
+        .to_string_lossy()
+        .to_string();
+
+    let pick_slot = state.node_positions.clone();
+
+    let png = tokio::task::spawn_blocking(move || -> Result<Vec<u8>, String> {
+        let semantic = fetch_local_neighborhood(&qualia_db_path)?;
+        let render_scene = render_pipeline::semantic_to_render_scene(&semantic);
+        let picks = render_pipeline::compute_pick_positions(&render_scene, width, height);
+
+        let png = webizen_render::render_scene_png(&render_scene, width, height)
+            .ok_or_else(|| "GPU render_scene_png returned no frame".to_string())?;
+
+        if let Ok(mut guard) = pick_slot.lock() {
+            *guard = picks;
+        }
+
+        Ok(png)
+    })
+    .await
+    .map_err(|e| format!("render task join failed: {e}"))??;
+
+    if let Ok(mut guard) = state.png.lock() {
+        *guard = png;
+    }
+
+    let _ = app.emit("render-preview-ready", ());
+    Ok(())
+}
+
+/// Background daemon tick — same pipeline as [`update_render_preview`], for spatial view loops.
+pub async fn render_preview_tick(app: &AppHandle) -> Result<(), String> {
+    let preview = app
+        .try_state::<PreviewState>()
+        .ok_or_else(|| "PreviewState not mounted".to_string())?;
+    let app_state = app
+        .try_state::<std::sync::Arc<qualia_client_core::state::AppState>>()
+        .ok_or_else(|| "AppState not mounted".to_string())?;
+
+    let width = 960u32;
+    let height = 540u32;
+    let storage_path = app_state
+        .config
+        .lock()
+        .map_err(|e| format!("config lock poisoned: {e}"))?
+        .storage_path
+        .clone();
+    let qualia_db_path = std::path::PathBuf::from(&storage_path)
+        .join("Index")
+        .join("graph.q42")
+        .to_string_lossy()
+        .to_string();
+
+    let pick_slot = preview.node_positions.clone();
+    let png = tokio::task::spawn_blocking(move || -> Result<Vec<u8>, String> {
+        let semantic = fetch_local_neighborhood(&qualia_db_path)?;
+        let render_scene = render_pipeline::semantic_to_render_scene(&semantic);
+        let picks = render_pipeline::compute_pick_positions(&render_scene, width, height);
+        let png = webizen_render::render_scene_png(&render_scene, width, height)
+            .ok_or_else(|| "GPU render_scene_png returned no frame".to_string())?;
+        if let Ok(mut guard) = pick_slot.lock() {
+            *guard = picks;
+        }
+        Ok(png)
+    })
+    .await
+    .map_err(|e| format!("render task join failed: {e}"))??;
+
+    if let Ok(mut guard) = preview.png.lock() {
+        *guard = png;
+    }
+    let _ = app.emit("render-preview-ready", ());
     Ok(())
 }
 
 // ── Binary IPC Optimization ─────────────────────────────────────────────────────
 
+pub mod render_pipeline;
 pub mod binary_registry;
 pub mod glb_ingest;
 
