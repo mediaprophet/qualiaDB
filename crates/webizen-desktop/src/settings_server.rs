@@ -4,7 +4,7 @@
 //! `webizen-studio` expects (`/manifest`, `/telemetry`).
 
 use axum::{
-    extract::{Path, State},
+    extract::{Path, Query, State},
     http::{header, HeaderMap, StatusCode},
     response::{
         sse::{Event, KeepAlive, Sse},
@@ -142,6 +142,8 @@ async fn run_settings_server(state: SettingsServerState, port: u16) -> Result<()
         .route("/api/config", get(get_config_handler).post(save_config_handler))
         .route("/manifest", get(get_manifest_handler).post(post_manifest_handler))
         .route("/manifest/history", get(get_manifest_history_handler))
+        .route("/manifest/undo-chain", get(get_manifest_undo_chain_handler))
+        .route("/manifest/undo-frame", post(post_manifest_undo_frame_handler))
         .route("/manifest/replay/:revision", post(replay_manifest_handler))
         .route("/manifest/replay/{revision}", post(replay_manifest_handler))
         .route("/telemetry", get(telemetry_handler))
@@ -610,8 +612,56 @@ async fn generate_pane_handler(
             "prompt or ontology_domain required".to_string(),
         ));
     }
-    let plan = qualia_client_core::studio_pane_generator::generate_panes_from_request(&body);
+    let req = body;
+    let plan = tokio::task::spawn_blocking(move || {
+        qualia_client_core::studio_pane_llm::generate_panes_with_llm_or_fallback(&req)
+    })
+    .await
+    .map_err(|e| (StatusCode::INTERNAL_SERVER_ERROR, format!("generate join: {e}")))?;
     Ok(Json(plan))
+}
+
+#[derive(Deserialize)]
+struct UndoFrameQuery {
+    #[serde(default)]
+    stack_index: u16,
+}
+
+async fn post_manifest_undo_frame_handler(
+    State(state): State<SettingsServerState>,
+    Query(query): Query<UndoFrameQuery>,
+    body: String,
+) -> Result<Json<serde_json::Value>, (StatusCode, String)> {
+    if body.trim().is_empty() {
+        return Err((StatusCode::BAD_REQUEST, "empty undo frame".to_string()));
+    }
+    let storage_path = state.app_state.config.lock().unwrap().storage_path.clone();
+    let stack_index = query.stack_index;
+    let frame_seq = qualia_client_core::studio_workspace_wal::append_undo_frame(
+        &storage_path,
+        stack_index,
+        &body,
+    )
+    .map_err(|e| (StatusCode::INTERNAL_SERVER_ERROR, e))?;
+    Ok(Json(serde_json::json!({ "frame_seq": frame_seq })))
+}
+
+async fn get_manifest_undo_chain_handler(State(state): State<SettingsServerState>) -> impl IntoResponse {
+    let storage_path = state.app_state.config.lock().unwrap().storage_path.clone();
+    match qualia_client_core::studio_workspace_wal::recover_undo_chain_manifests(&storage_path) {
+        Ok(manifests) => {
+            let parsed: Vec<serde_json::Value> = manifests
+                .iter()
+                .filter_map(|m| serde_json::from_str(m).ok())
+                .collect();
+            (StatusCode::OK, Json(serde_json::json!({ "manifests": parsed }))).into_response()
+        }
+        Err(err) => (
+            StatusCode::INTERNAL_SERVER_ERROR,
+            Json(serde_json::json!({ "error": err })),
+        )
+            .into_response(),
+    }
 }
 
 async fn assets_enqueue_handler(

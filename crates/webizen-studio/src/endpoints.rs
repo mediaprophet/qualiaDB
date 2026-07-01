@@ -55,6 +55,14 @@ pub fn generate_pane_url() -> String {
     format!("{DAEMON_HTTP}/generate_pane")
 }
 
+pub fn manifest_undo_chain_url() -> String {
+    format!("{DAEMON_HTTP}/manifest/undo-chain")
+}
+
+pub fn manifest_undo_frame_url(stack_index: u16) -> String {
+    format!("{DAEMON_HTTP}/manifest/undo-frame?stack_index={stack_index}")
+}
+
 /// `{DAEMON_HTTP}/telemetry` — server-sent telemetry stream.
 pub fn telemetry_url() -> String {
     format!("{DAEMON_HTTP}/telemetry")

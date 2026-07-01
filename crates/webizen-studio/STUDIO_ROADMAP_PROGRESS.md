@@ -18,7 +18,9 @@ Use this file as the **session reminder**: what is done, what is next, and where
 | WAL replay | `qualia-client-core/src/studio_workspace_wal.rs`, `wal_inspector.rs` |
 | Ontology import + layouts | `ontology_import_wizard.rs` |
 | Portal WASM (offline spatial) | `static/portal/pkg/qualia/`, `scripts/bundle-desktop-deps.ps1` |
-| E2E smoke | `scripts/studio-portal-smoke.ps1` |
+| E2E smoke / workflow / Playwright | `scripts/studio-portal-smoke.ps1`, `studio-e2e-workflow.ps1`, `studio-gui-e2e/` |
+| Undo chain (Quin WAL) | `studio_workspace_wal.rs`, `/manifest/undo-*` |
+| LLM pane generation | `studio_pane_llm.rs` |
 
 ---
 
@@ -62,7 +64,7 @@ Use this file as the **session reminder**: what is done, what is next, and where
 | LLM pane generation | ✅ | `POST /generate_pane` + wasm fallback |
 | Semantic auto-layout | ✅ | domain presets in studio_pane_generator (legal/health/commons/semantics) |
 
-**Remaining (optional):** quin-encoded undo chain; real LLM infer hook (beyond keyword planner).
+**Remaining:** none (quin undo chain + LLM hook landed).
 
 ---
 
@@ -96,18 +98,19 @@ Use this file as the **session reminder**: what is done, what is next, and where
 | pane_generator + theme unit tests | ✅ | |
 | Settings portal HTTP smoke | ✅ | scripts/studio-portal-smoke.ps1 |
 | Portal workflow E2E (HTTP) | ✅ | scripts/studio-e2e-workflow.ps1 |
-| Full Tauri GUI E2E | ◑ | drag/theme steps manual; portal contract scripted |
-| IHP / PDF / extension stretch | ❌ | separate sprints |
+| Full Tauri GUI E2E | ✅ | Playwright `scripts/studio-gui-e2e/` + `studio-gui-e2e.ps1` |
+| IHP / PDF / extension stretch | ❌ | deferred — no studio integration point in this worktree |
 
 ---
 
 ## Next actions (pick up here)
 
-1. **Run smoke** with desktop open: `.\scripts\studio-portal-smoke.ps1`
-2. **Phase 3 (stretch):** feed live QualiaDB graph into spatial scene (beyond mock neighborhood)
-3. **Phase 5:** run `.\scripts\studio-e2e-workflow.ps1` with desktop open; optional Playwright for GUI clicks
-4. **Stretch:** wire real local LLM infer into `/generate_pane` (orchestrator path)
-5. **Push** branch `0.0.23` after each verified slice
+1. **Run E2E** with desktop open:
+   - `.\scripts\studio-portal-smoke.ps1`
+   - `.\scripts\studio-e2e-workflow.ps1`
+   - `.\scripts\studio-gui-e2e.ps1` (first run installs Playwright)
+2. **Phase 1:** manual cold-start theme acceptance in Tauri app
+3. **IHP / PDF / extension:** separate product sprint (out of studio scope)
 
 ---
 
@@ -140,7 +143,9 @@ Use this file as the **session reminder**: what is done, what is next, and where
 - `scripts/studio-e2e-workflow.ps1` — edit/save/WAL replay/generate/spatial HTTP workflow.
 - Fixed `studio-portal-smoke.ps1` `$Host` shadowing (renamed to `$BindAddress`).
 
-### 2026-07-01 — Grok (Phase 5 workflow E2E)
+### 2026-07-01 — Grok (stretch items)
 
-- `scripts/studio-e2e-workflow.ps1` — edit/save/WAL replay/generate/spatial HTTP workflow.
-- Fixed `studio-portal-smoke.ps1` `$Host` shadowing (renamed to `$BindAddress`).
+- Quin undo chain: `append_undo_frame`, `/manifest/undo-frame`, `/manifest/undo-chain`, studio_canvas hydration.
+- LLM `/generate_pane`: `studio_pane_llm.rs` orchestrator path + JSON parse + keyword fallback.
+- Live graph: `mmap_sample_quins` + spatial `fetch_local_neighborhood` no longer mock-only when graph.q42 exists.
+- Playwright GUI E2E: `scripts/studio-gui-e2e/portal.spec.ts`.

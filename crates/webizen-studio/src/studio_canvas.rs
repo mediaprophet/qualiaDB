@@ -596,6 +596,22 @@ pub fn DynamicPage(path: Vec<String>, #[props(default)] app_id: Option<String>) 
                     }
                 }
             }
+            #[derive(Deserialize)]
+            struct UndoChainResponse {
+                manifests: Vec<WebizenWorkspace>,
+            }
+            if let Ok(res) = reqwest::get(crate::endpoints::manifest_undo_chain_url()).await {
+                if res.status().is_success() {
+                    if let Ok(chain) = res.json::<UndoChainResponse>().await {
+                        if let Some(h) = WorkspaceHistory::from_manifest_entries(chain.manifests)
+                        {
+                            let current = h.current().clone();
+                            workspace.set(current);
+                            history.set(h);
+                        }
+                    }
+                }
+            }
             if let Ok(res) = reqwest::get(crate::endpoints::manifest_history_url()).await {
                 if res.status().is_success() {
                     if let Ok(rows) = res.json::<Vec<DeployHistoryRow>>().await {
@@ -715,6 +731,22 @@ pub fn DynamicPage(path: Vec<String>, #[props(default)] app_id: Option<String>) 
         let workspace = workspace.clone();
         move || {
             history.write().push(workspace.read().clone());
+            #[cfg(target_arch = "wasm32")]
+            if crate::endpoints::is_native_host() {
+                let ws = workspace.read().clone();
+                let stack_index = history.read().stack_index();
+                spawn(async move {
+                    if let Ok(json) = serde_json::to_string(&ws) {
+                        let url = crate::endpoints::manifest_undo_frame_url(stack_index);
+                        let _ = reqwest::Client::new()
+                            .post(url)
+                            .header("Content-Type", "application/json")
+                            .body(json)
+                            .send()
+                            .await;
+                    }
+                });
+            }
         }
     };
 

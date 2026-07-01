@@ -141,11 +141,11 @@ pub fn SpatialBridgeCanvas(page: Page) -> Element {
     }
 
     let refresh = {
-        let page = page.clone();
+        let page_snapshot = page.clone();
         move |_| {
             #[cfg(target_arch = "wasm32")]
             if crate::endpoints::is_native_host() {
-                spawn_spatial_refresh(page.clone(), epoch, status);
+                spawn_spatial_refresh(page_snapshot.clone(), epoch, status);
             }
         }
     };

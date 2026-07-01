@@ -40,6 +40,9 @@ pub struct GeneratePaneRequest {
     /// When set, prefer the ontology-domain preset (legal, health, commons, semantics).
     #[serde(default)]
     pub ontology_domain: Option<String>,
+    /// When true (default), try local LLM layout generation before keyword routing.
+    #[serde(default)]
+    pub use_llm: Option<bool>,
 }
 
 fn pane(id: &str, x: u16, y: u16, w: u16, h: u16, bindings: &[&str]) -> PanePlacement {
@@ -229,6 +232,7 @@ mod tests {
             prompt: "Health tracker with vitals chart".to_string(),
             palette_ids: vec![],
             ontology_domain: None,
+            use_llm: None,
         });
         assert!(plan
             .panes
@@ -242,6 +246,7 @@ mod tests {
             prompt: "10D manifold spatial portal".to_string(),
             palette_ids: vec![],
             ontology_domain: None,
+            use_llm: None,
         });
         assert_eq!(plan.presentation, PresentationMode::Spatial);
     }
@@ -252,6 +257,7 @@ mod tests {
             prompt: "anything".to_string(),
             palette_ids: vec![],
             ontology_domain: Some("commons".to_string()),
+            use_llm: None,
         });
         assert_eq!(plan.presentation, PresentationMode::Spatial);
         assert!(plan.panes.iter().any(|p| p.component_id == "nexus"));

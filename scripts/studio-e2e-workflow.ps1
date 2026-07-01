@@ -108,10 +108,17 @@ $plan = Invoke-RestMethod -Uri "$base/generate_pane" -Method Post -Body $genBody
 if ($plan.panes.Count -lt 1) { throw "generate_pane empty" }
 Write-Host "  [6/7] generate_pane: $($plan.panes.Count) panes"
 
-# 7. Offline spatial shell
+# 7. Quin undo-chain
+$undoBody = $manifestV1
+Invoke-WebRequest -Uri "$base/manifest/undo-frame?stack_index=0" -Method Post -Body $undoBody -ContentType "application/json" | Out-Null
+$chain = Invoke-RestMethod -Uri "$base/manifest/undo-chain" -Method Get
+if ($chain.manifests.Count -lt 1) { throw "undo-chain empty" }
+Write-Host "  [7/8] undo-chain: $($chain.manifests.Count) frames"
+
+# 8. Offline spatial shell
 $studio = Invoke-WebRequest -Uri "$base/design-studio.html" -Method Get
 Assert-Status $studio.StatusCode "design-studio.html"
-Write-Host "  [7/7] design-studio.html reachable (offline spatial)"
+Write-Host "  [8/8] design-studio.html reachable (offline spatial)"
 
 Write-Host ""
 Write-Host "Studio E2E workflow: PASS"

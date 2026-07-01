@@ -82,6 +82,22 @@ impl WorkspaceHistory {
         self.index += 1;
         Some(self.entries[self.index].clone())
     }
+
+    /// Rebuild history from recovered undo-chain manifests (native WAL hydration).
+    pub fn from_manifest_entries(entries: Vec<WebizenWorkspace>) -> Option<Self> {
+        if entries.is_empty() {
+            return None;
+        }
+        let mut history = Self::new(entries[0].clone());
+        for ws in entries.into_iter().skip(1) {
+            history.push(ws);
+        }
+        Some(history)
+    }
+
+    pub fn stack_index(&self) -> u16 {
+        self.index.min(u16::MAX as usize) as u16
+    }
 }
 
 pub fn default_fiduciary_binding() -> ThemeBinding {
@@ -222,6 +238,16 @@ pub fn qprime_elevation_css() -> &'static str {
 #[cfg(test)]
 mod tests {
     use super::*;
+
+    #[test]
+    fn history_from_manifest_entries() {
+        let a = new_workspace_shell("A".into(), vec![]);
+        let mut b = a.clone();
+        b.pages[0].name = "B".into();
+        let h = WorkspaceHistory::from_manifest_entries(vec![a.clone(), b.clone()]).unwrap();
+        assert_eq!(h.current().pages[0].name, "B");
+        assert!(h.can_undo());
+    }
 
     #[test]
     fn history_undo_redo_roundtrip() {

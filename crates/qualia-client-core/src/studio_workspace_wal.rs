@@ -14,6 +14,18 @@ pub const REVISION_SNAPSHOT_PREFIX: &str = "studio-workspace-rev-";
 const WORKSPACE_SUBJECT: &str = "studio:workspace";
 const PREDICATE_DEPLOY: &str = "q42:studioDeploy";
 const PREDICATE_PANE: &str = "q42:studioPanePlacement";
+const PREDICATE_UNDO_FRAME: &str = "q42:studioUndoFrame";
+
+pub const UNDO_FRAME_SNAPSHOT_PREFIX: &str = "studio-undo-frame-";
+pub const MAX_UNDO_FRAMES: usize = 32;
+
+#[derive(Debug, Clone, serde::Serialize, serde::Deserialize, PartialEq, Eq)]
+pub struct StudioUndoFrameRecord {
+    pub frame_seq: u64,
+    pub stack_index: u16,
+    pub manifest_hash: u64,
+    pub unix_ts: u32,
+}
 
 #[derive(Debug, Clone, serde::Serialize, serde::Deserialize, PartialEq, Eq)]
 pub struct StudioDeployRecord {
@@ -60,6 +72,10 @@ fn manifest_content_hash(manifest_json: &str) -> u64 {
     q_hash(manifest_json) & OBJECT_HASH_MASK
 }
 
+pub fn undo_frame_snapshot_path(storage_path: &str, frame_seq: u64) -> std::path::PathBuf {
+    std::path::PathBuf::from(storage_path).join(format!("{UNDO_FRAME_SNAPSHOT_PREFIX}{frame_seq}.json"))
+}
+
 pub fn revision_snapshot_path(storage_path: &str, revision: u64) -> std::path::PathBuf {
     std::path::PathBuf::from(storage_path)
         .join(format!("{REVISION_SNAPSHOT_PREFIX}{revision}.json"))
@@ -92,6 +108,38 @@ pub fn unpack_placement(object: u64) -> (u16, u16, u16, u16) {
 
 fn pack_placement(x: u16, y: u16, w: u16, h: u16) -> u64 {
     ((w as u64) << 48) | ((h as u64) << 32) | ((y as u64) << 16) | (x as u64)
+}
+
+fn count_existing_undo_frames(wal_path: &std::path::Path) -> u64 {
+    let Ok(mut wal) = WriteAheadLog::open(wal_path) else {
+        return 0;
+    };
+    let Ok(quins) = wal.recover() else {
+        return 0;
+    };
+    let undo_pred = q_hash(PREDICATE_UNDO_FRAME);
+    quins
+        .iter()
+        .filter(|q| q.predicate == undo_pred)
+        .count() as u64
+}
+
+fn build_undo_frame_quin(frame_seq: u64, stack_index: u16, manifest_json: &str) -> NQuin {
+    let subject = workspace_subject();
+    let predicate = q_hash(PREDICATE_UNDO_FRAME);
+    let object = manifest_content_hash(manifest_json);
+    let context = author_context_hash();
+    let metadata =
+        ((frame_seq & LAMPORT_MASK) << LAMPORT_SHIFT) | ((stack_index as u64) & 0xFFFF);
+    let parity = subject ^ predicate ^ object ^ context ^ metadata;
+    NQuin {
+        subject,
+        predicate,
+        object,
+        context,
+        metadata,
+        parity,
+    }
 }
 
 fn build_deploy_quin(revision: u64, manifest_json: &str) -> NQuin {
@@ -183,6 +231,99 @@ pub fn append_workspace_deploy(storage_path: &str, manifest_json: &str) -> Resul
     }
 
     Ok(revision)
+}
+
+/// Append an undo-stack frame Quin plus on-disk snapshot (bounded to [`MAX_UNDO_FRAMES`]).
+pub fn append_undo_frame(
+    storage_path: &str,
+    stack_index: u16,
+    manifest_json: &str,
+) -> Result<u64, String> {
+    if manifest_json.trim().is_empty() {
+        return Err("empty undo manifest".to_string());
+    }
+    let wal_path = studio_wal_path(storage_path);
+    let frame_seq = count_existing_undo_frames(&wal_path) + 1;
+    let snap_path = undo_frame_snapshot_path(storage_path, frame_seq);
+    if let Some(parent) = snap_path.parent() {
+        std::fs::create_dir_all(parent).map_err(|e| e.to_string())?;
+    }
+    let tmp = snap_path.with_extension("json.tmp");
+    std::fs::write(&tmp, manifest_json.as_bytes()).map_err(|e| e.to_string())?;
+    std::fs::rename(&tmp, &snap_path).map_err(|e| e.to_string())?;
+
+    let mut wal = WriteAheadLog::open(&wal_path).map_err(|e| format!("wal open: {e}"))?;
+    wal.append_mutation(&build_undo_frame_quin(frame_seq, stack_index, manifest_json))
+        .map_err(|e| format!("wal undo append: {e}"))?;
+
+    prune_old_undo_snapshots(storage_path, frame_seq)?;
+    Ok(frame_seq)
+}
+
+fn prune_old_undo_snapshots(storage_path: &str, latest_seq: u64) -> Result<(), String> {
+    if latest_seq <= MAX_UNDO_FRAMES as u64 {
+        return Ok(());
+    }
+    let remove_before = latest_seq - MAX_UNDO_FRAMES as u64;
+    for seq in 1..=remove_before {
+        let path = undo_frame_snapshot_path(storage_path, seq);
+        if path.is_file() {
+            let _ = std::fs::remove_file(path);
+        }
+    }
+    Ok(())
+}
+
+/// List undo-frame checkpoints from the studio WAL (oldest first).
+pub fn list_undo_frames(storage_path: &str) -> Result<Vec<StudioUndoFrameRecord>, String> {
+    let wal_path = studio_wal_path(storage_path);
+    if !wal_path.is_file() {
+        return Ok(Vec::new());
+    }
+    let mut wal = WriteAheadLog::open(&wal_path).map_err(|e| format!("wal open: {e}"))?;
+    let quins = wal.recover().map_err(|e| format!("wal recover: {e}"))?;
+    let undo_pred = q_hash(PREDICATE_UNDO_FRAME);
+    let mut records = Vec::new();
+    for quin in quins {
+        if quin.predicate != undo_pred {
+            continue;
+        }
+        let frame_seq = (quin.metadata >> LAMPORT_SHIFT) & LAMPORT_MASK;
+        let stack_index = (quin.metadata & 0xFFFF) as u16;
+        records.push(StudioUndoFrameRecord {
+            frame_seq,
+            stack_index,
+            manifest_hash: quin.object,
+            unix_ts: 0,
+        });
+    }
+    Ok(records)
+}
+
+/// Load a single undo-frame manifest snapshot by sequence id.
+pub fn load_undo_frame_manifest(storage_path: &str, frame_seq: u64) -> Result<String, String> {
+    let path = undo_frame_snapshot_path(storage_path, frame_seq);
+    if !path.is_file() {
+        return Err(format!("undo frame {frame_seq} snapshot missing"));
+    }
+    std::fs::read_to_string(&path).map_err(|e| e.to_string())
+}
+
+/// Recover the last N undo manifests in chronological order for history hydration.
+pub fn recover_undo_chain_manifests(storage_path: &str) -> Result<Vec<String>, String> {
+    let frames = list_undo_frames(storage_path)?;
+    if frames.is_empty() {
+        return Ok(Vec::new());
+    }
+    let start = frames.len().saturating_sub(MAX_UNDO_FRAMES);
+    let mut manifests = Vec::new();
+    for frame in &frames[start..] {
+        match load_undo_frame_manifest(storage_path, frame.frame_seq) {
+            Ok(body) => manifests.push(body),
+            Err(err) => eprintln!("undo frame {} skip: {err}", frame.frame_seq),
+        }
+    }
+    Ok(manifests)
 }
 
 /// Recover deploy checkpoints from the studio WAL (most recent last).
@@ -329,6 +470,30 @@ mod tests {
         let loaded = replay_workspace_manifest(&storage, 3).unwrap();
         assert_eq!(loaded, body);
         let _ = std::fs::remove_dir_all(dir);
+    }
+
+    #[test]
+    fn undo_frame_append_and_recover() {
+        let dir = std::env::temp_dir().join(format!(
+            "qualia-studio-undo-{}",
+            std::time::SystemTime::now()
+                .duration_since(std::time::UNIX_EPOCH)
+                .unwrap()
+                .as_nanos()
+        ));
+        fs::create_dir_all(&dir).unwrap();
+        let storage = dir.to_string_lossy().to_string();
+        let m1 = r#"{"pages":[{"url_path":"/","panes":[{"component_id":"a","x":0,"y":0,"w":10,"h":10}]}]}"#;
+        let m2 = r#"{"pages":[{"url_path":"/","panes":[{"component_id":"b","x":1,"y":1,"w":20,"h":20}]}]}"#;
+        let s1 = append_undo_frame(&storage, 0, m1).unwrap();
+        let s2 = append_undo_frame(&storage, 1, m2).unwrap();
+        assert_eq!(s1, 1);
+        assert_eq!(s2, 2);
+        let chain = recover_undo_chain_manifests(&storage).unwrap();
+        assert_eq!(chain.len(), 2);
+        assert_eq!(chain[0], m1);
+        assert_eq!(chain[1], m2);
+        let _ = fs::remove_dir_all(dir);
     }
 
     #[test]

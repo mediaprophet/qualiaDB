@@ -4,6 +4,57 @@ use std::io::{Read, Seek, SeekFrom};
 use std::path::Path;
 use std::time::Instant;
 
+/// Bounded scan of a flat `.q42` graph file — returns up to `max_quins` records.
+pub fn mmap_sample_quins(
+    file_path: &str,
+    max_quins: usize,
+) -> Result<Vec<NQuin>, Box<dyn std::error::Error>> {
+    #[cfg(not(target_arch = "wasm32"))]
+    {
+        use memmap2::MmapOptions;
+        use std::fs::File;
+
+        const QUIN_SIZE: usize = std::mem::size_of::<NQuin>();
+        if max_quins == 0 {
+            return Ok(Vec::new());
+        }
+
+        let file = File::open(file_path)?;
+        let mmap = unsafe { MmapOptions::new().map(&file)? };
+        let len = mmap.len();
+        if len % QUIN_SIZE != 0 {
+            return Err(format!(
+                "File size {} is not a multiple of NQuin ({} bytes)",
+                len, QUIN_SIZE
+            )
+            .into());
+        }
+
+        let count = len / QUIN_SIZE;
+        let quins: &[NQuin] =
+            unsafe { std::slice::from_raw_parts(mmap.as_ptr() as *const NQuin, count) };
+
+        let cap = max_quins.min(count);
+        let stride = (count / cap).max(1);
+        let mut out = Vec::with_capacity(cap);
+        let mut idx = 0usize;
+        while out.len() < cap && idx < count {
+            let quin = quins[idx];
+            if quin.subject != 0 || quin.predicate != 0 {
+                out.push(quin);
+            }
+            idx += stride;
+        }
+        Ok(out)
+    }
+    #[cfg(target_arch = "wasm32")]
+    {
+        let _ = file_path;
+        let _ = max_quins;
+        Err("mmap_sample_quins is not available on wasm32".into())
+    }
+}
+
 /// Memory-maps a flat `.q42` file (packed `NQuin` records) and returns
 /// all quins whose `subject` field matches `subject_id`.
 pub fn mmap_query_subject(

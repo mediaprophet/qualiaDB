@@ -1725,17 +1725,29 @@ fn mock_qualia_projection() -> webizen_studio::render::qualia::SemanticScene {
 fn fetch_local_neighborhood(
     qualia_db_path: &str,
 ) -> Result<webizen_studio::render::qualia::SemanticScene, String> {
-    use qualia_core_db::{q_hash, query_engine::mmap_query_subject};
+    use qualia_core_db::{
+        q_hash,
+        query_engine::{mmap_query_subject, mmap_sample_quins},
+    };
     use webizen_studio::render::qualia::{ItemState, SceneItem};
 
-    // Try to query QualiaDB - if file doesn't exist, fall back to mock
-    let quins = match mmap_query_subject(qualia_db_path, q_hash("webizen:render:root")) {
-        Ok(quins) => quins,
-        Err(_) => {
-            // Fall back to mock if QualiaDB file not found
-            return Ok(mock_qualia_projection());
-        }
+    let quins = if std::path::Path::new(qualia_db_path).is_file() {
+        mmap_sample_quins(qualia_db_path, 64)
+            .ok()
+            .filter(|q| !q.is_empty())
+            .or_else(|| {
+                mmap_query_subject(qualia_db_path, q_hash("webizen:render:root"))
+                    .ok()
+                    .filter(|q| !q.is_empty())
+            })
+            .unwrap_or_default()
+    } else {
+        Vec::new()
     };
+
+    if quins.is_empty() {
+        return Ok(mock_qualia_projection());
+    }
 
     // Convert NQuin results to SemanticScene
     let mut items = Vec::new();
@@ -1770,11 +1782,6 @@ fn fetch_local_neighborhood(
             provenance: Some(format!("q42:{:x}", quin.subject)),
             reasons: vec![format!("Queried from QualiaDB context {:x}", quin.context)],
         });
-    }
-
-    // If no results from QualiaDB, use mock data
-    if items.is_empty() {
-        return Ok(mock_qualia_projection());
     }
 
     let entity_count = items.len();
