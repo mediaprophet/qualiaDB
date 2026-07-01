@@ -1,6 +1,6 @@
 //! RequestAnimationFrame / interval driver for spring-smoothed UI motion.
 
-use crate::render::motion::{Spring, Timeline};
+use crate::render::motion::Spring;
 
 /// Advance a selection-highlight spring toward `1.0` when selected, `0.0` otherwise.
 pub fn step_selection_spring(
@@ -13,6 +13,25 @@ pub fn step_selection_spring(
     let timeline = crate::render::motion::timeline_from_theme(0.0, dt, theme_class);
     let v = spring.step(&timeline);
     (1.0 + v * 0.035).clamp(1.0, 1.04)
+}
+
+/// Impulse the presentation-mode toolbar spring (one-shot pulse on mode switch).
+pub fn trigger_mode_pulse(spring: &mut Spring) {
+    spring.value = 0.0;
+    spring.velocity = 14.0;
+    spring.set_target(0.0);
+}
+
+/// Advance the toolbar pulse spring; returns a scale bump in `[0.0, 0.045]`.
+pub fn step_mode_pulse_spring(spring: &mut Spring, dt: f64) -> f64 {
+    let timeline = crate::render::motion::Timeline {
+        current_time: 0.0,
+        delta_t: dt,
+        reduced_motion: crate::render::motion::prefers_reduced_motion(),
+    };
+    spring.set_target(0.0);
+    spring.step(&timeline);
+    (spring.value.abs() + spring.velocity.abs() * 0.018).clamp(0.0, 0.045)
 }
 
 #[cfg(target_arch = "wasm32")]

@@ -21,7 +21,7 @@ base64 = "0.22.1"
 # instead of an opaque `unreachable`. Only pulled into the wasm build.
 [target.'cfg(target_arch = "wasm32")'.dependencies]
 console_error_panic_hook = "0.1.7"
-gloo-timers = "0.4"
+gloo-timers = { version = "0.4", features = ["futures"] }
 
 # qualia-core-db and webizen-render are only needed for the native (non-wasm32)
 # build. The wasm32/web build (GitHub Pages demo) uses stub types instead.

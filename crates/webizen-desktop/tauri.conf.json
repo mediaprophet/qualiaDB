@@ -5,8 +5,8 @@
   "identifier": "org.webizen.browser",
   "build": {
     "frontendDist": "../webizen-studio/dist",
-    "beforeDevCommand": "powershell -ExecutionPolicy Bypass -File ../../scripts/bundle-shoelace.ps1",
-    "beforeBuildCommand": "powershell -ExecutionPolicy Bypass -File ../../scripts/bundle-shoelace.ps1"
+    "beforeDevCommand": "powershell -ExecutionPolicy Bypass -File ../../scripts/bundle-desktop-deps.ps1 -SkipWasmBuild",
+    "beforeBuildCommand": "powershell -ExecutionPolicy Bypass -File ../../scripts/bundle-desktop-deps.ps1"
   },
   "app": {
     "security": {

@@ -46,6 +46,16 @@ export class QualiaPortal {
      */
     acoustic_uniform_floats(): Float32Array;
     /**
+     * Phase 2 — drive the loaded mesh artefact with a kinematic joint (visible physics). `kind` is
+     * `"prismatic"` (slide) or anything else = `"revolute"` (spin); `(ax,ay,az)` is the axis
+     * (normalised here; defaults to +Y if zero); `rate` is rad/s (revolute) or units/s (prismatic).
+     */
+    animate_artefact(kind: string, ax: number, ay: number, az: number, rate: number): void;
+    /**
+     * Phase 2 — whether the artefact's proposed motion is currently being refused (clamped).
+     */
+    artefact_refused(): boolean;
+    /**
      * Cold-bake CQT sidecar (log-spaced bins) for selected tensor node.
      */
     bake_cqt_sidecar_demo(frames: number): Uint8Array;
@@ -53,6 +63,12 @@ export class QualiaPortal {
      * Cold-bake STFT sidecar for selected tensor node; pins bytes for hot frame reads.
      */
     bake_stft_sidecar_demo(frames: number): Uint8Array;
+    /**
+     * Phase 5 (affordability rail) — whether a device tier (`0`=Full, `1`=Eco, `2`=Reserve)
+     * collapses a qapp's 3D scene to its 2D pane under the budget rule. Pure (no state change);
+     * the qapp planner (`render::authoring`) uses the same `OperationalMode::supports_3d` source.
+     */
+    budget_collapses_3d(mode_code: number): boolean;
     camera_pitch(): number;
     camera_yaw(): number;
     camera_zoom(): number;
@@ -68,6 +84,12 @@ export class QualiaPortal {
      * Allocate zeroed acoustic SAB with Q3AS header.
      */
     create_acoustic_sab(): SharedArrayBuffer;
+    /**
+     * Phase 2 — visible **deterministic refusal**: slide the artefact along +X (prismatic joint)
+     * into a world bound; the admission gate refuses poses that would leave the bound, so the
+     * artefact deterministically halts at the wall instead of passing through.
+     */
+    demo_artefact_refusal(): void;
     /**
      * Drain up to `max` control commands and apply to this portal. Returns count applied.
      */
@@ -140,6 +162,10 @@ export class QualiaPortal {
     sonic_token_pending(): number;
     spatial_encode(json: string): any;
     standpoint_class(): number;
+    /**
+     * Phase 2 — freeze the artefact (joint → identity, no world clamp).
+     */
+    stop_artefact_animation(): void;
     t_slice(): number;
     t_window(): number;
     tick(canvas: HTMLCanvasElement, dt_ms: number): void;
@@ -313,40 +339,10 @@ export type InitInput = RequestInfo | URL | Response | BufferSource | WebAssembl
 
 export interface InitOutput {
     readonly memory: WebAssembly.Memory;
-    readonly __wbg_federatednodemanager_free: (a: number, b: number) => void;
-    readonly __wbg_get_wasmoffloadintent_opcode: (a: number) => number;
-    readonly __wbg_get_wasmoffloadintent_payload_size: (a: number) => number;
-    readonly __wbg_get_wasmoffloadintent_priority: (a: number) => number;
-    readonly __wbg_set_wasmoffloadintent_opcode: (a: number, b: number) => void;
-    readonly __wbg_set_wasmoffloadintent_payload_size: (a: number, b: number) => void;
-    readonly __wbg_set_wasmoffloadintent_priority: (a: number, b: number) => void;
-    readonly __wbg_wasmoffloadintent_free: (a: number, b: number) => void;
-    readonly enforce_rights_ontology: (a: bigint) => number;
-    readonly federatednodemanager_discover_capabilities: (a: number) => number;
-    readonly federatednodemanager_new: () => number;
-    readonly federatednodemanager_offload_intent: (a: number, b: number) => [number, number, number, number];
-    readonly intercept_computational_opcode: (a: number, b: number) => number;
-    readonly intercept_pharmacogenomics_intent: (a: number, b: number) => number;
-    readonly serialize_float64_array: (a: number, b: number) => any;
-    readonly serialize_float_array: (a: number, b: number) => any;
-    readonly wasmoffloadintent_new: (a: number, b: number, c: number) => number;
-    readonly wasmoffloadintent_with_string_payload: (a: number, b: number, c: number, d: number) => number;
-    readonly webizen_poll_agreements: () => [number, number];
-    readonly webizen_propose_agreement: (a: any, b: number, c: number, d: number, e: number, f: number) => bigint;
-    readonly webizen_sign_agreement: (a: bigint, b: number, c: number) => void;
-    readonly prune_and_validate_mesh: (a: bigint) => number;
-    readonly design_encode_wasm: (a: number, b: number) => [number, number, number];
     readonly estimate_browser_storage: () => any;
-    readonly export_tensor_buffer_wasm: (a: number, b: number) => [number, number, number];
-    readonly export_tensor_slice_wasm: (a: number) => [number, number, number];
-    readonly geosparql_operation_wasm: (a: number, b: number) => [number, number, number];
     readonly is_opfs_block_cached: (a: number) => any;
     readonly pack_quins_into_superblock: (a: bigint, b: bigint, c: number, d: number) => [number, number, number];
-    readonly parse_cbor_ld_wasm: (a: number, b: number) => any;
-    readonly parse_json_wasm: (a: number, b: number) => any;
     readonly read_opfs_block: (a: number) => any;
-    readonly sample_browser_telemetry_wasm: () => [number, number, number];
-    readonly spatial_encode_wasm: (a: number, b: number) => [number, number, number];
     readonly verify_superblock_ecc: (a: number, b: number) => [number, number];
     readonly write_opfs_block: (a: number, b: number, c: number) => any;
     readonly __wbg_qualiaportal_free: (a: number, b: number) => void;
@@ -357,14 +353,18 @@ export interface InitOutput {
     readonly qualiaportal_acoustic_uniform_bytes: (a: number) => [number, number, number];
     readonly qualiaportal_acoustic_uniform_float_count: (a: number) => number;
     readonly qualiaportal_acoustic_uniform_floats: (a: number) => [number, number, number];
+    readonly qualiaportal_animate_artefact: (a: number, b: number, c: number, d: number, e: number, f: number, g: number) => void;
+    readonly qualiaportal_artefact_refused: (a: number) => number;
     readonly qualiaportal_bake_cqt_sidecar_demo: (a: number, b: number) => [number, number, number];
     readonly qualiaportal_bake_stft_sidecar_demo: (a: number, b: number) => [number, number, number];
+    readonly qualiaportal_budget_collapses_3d: (a: number, b: number) => number;
     readonly qualiaportal_camera_pitch: (a: number) => number;
     readonly qualiaportal_camera_yaw: (a: number) => number;
     readonly qualiaportal_camera_zoom: (a: number) => number;
     readonly qualiaportal_collapse_node_q: (a: number, b: number) => [number, number];
     readonly qualiaportal_control_pending: (a: number) => number;
     readonly qualiaportal_create_acoustic_sab: (a: number) => [number, number, number];
+    readonly qualiaportal_demo_artefact_refusal: (a: number) => void;
     readonly qualiaportal_drain_control_commands: (a: number, b: number) => number;
     readonly qualiaportal_drain_sonic_tokens: (a: number, b: number) => [number, number, number];
     readonly qualiaportal_encode_geometry: (a: number, b: number, c: number) => [number, number, number];
@@ -393,6 +393,7 @@ export interface InitOutput {
     readonly qualiaportal_sonic_token_pending: (a: number) => number;
     readonly qualiaportal_spatial_encode: (a: number, b: number, c: number) => [number, number, number];
     readonly qualiaportal_standpoint_class: (a: number) => number;
+    readonly qualiaportal_stop_artefact_animation: (a: number) => void;
     readonly qualiaportal_t_slice: (a: number) => number;
     readonly qualiaportal_t_window: (a: number) => number;
     readonly qualiaportal_tick: (a: number, b: any, c: number) => [number, number];
@@ -409,10 +410,39 @@ export interface InitOutput {
     readonly webengine_new: () => [number, number, number];
     readonly webengine_render_to_canvas: (a: number) => [number, number];
     readonly init_panic_hook: () => void;
-    readonly wasm_bindgen__convert__closures_____invoke__h04e3064d3f666bd6: (a: number, b: number, c: any) => [number, number];
-    readonly wasm_bindgen__convert__closures_____invoke__h710533e233c29f5b: (a: number, b: number, c: any, d: any) => void;
-    readonly wasm_bindgen__convert__closures_____invoke__h59d672308a0bcda2: (a: number, b: number, c: any) => void;
-    readonly wasm_bindgen__convert__closures_____invoke__h59d672308a0bcda2_2: (a: number, b: number, c: any) => void;
+    readonly design_encode_wasm: (a: number, b: number) => [number, number, number];
+    readonly export_tensor_buffer_wasm: (a: number, b: number) => [number, number, number];
+    readonly export_tensor_slice_wasm: (a: number) => [number, number, number];
+    readonly geosparql_operation_wasm: (a: number, b: number) => [number, number, number];
+    readonly sample_browser_telemetry_wasm: () => [number, number, number];
+    readonly spatial_encode_wasm: (a: number, b: number) => [number, number, number];
+    readonly __wbg_federatednodemanager_free: (a: number, b: number) => void;
+    readonly __wbg_get_wasmoffloadintent_opcode: (a: number) => number;
+    readonly __wbg_get_wasmoffloadintent_payload_size: (a: number) => number;
+    readonly __wbg_get_wasmoffloadintent_priority: (a: number) => number;
+    readonly __wbg_set_wasmoffloadintent_opcode: (a: number, b: number) => void;
+    readonly __wbg_set_wasmoffloadintent_payload_size: (a: number, b: number) => void;
+    readonly __wbg_set_wasmoffloadintent_priority: (a: number, b: number) => void;
+    readonly __wbg_wasmoffloadintent_free: (a: number, b: number) => void;
+    readonly enforce_rights_ontology: (a: bigint) => number;
+    readonly federatednodemanager_discover_capabilities: (a: number) => number;
+    readonly federatednodemanager_new: () => number;
+    readonly federatednodemanager_offload_intent: (a: number, b: number) => [number, number, number, number];
+    readonly intercept_computational_opcode: (a: number, b: number) => number;
+    readonly intercept_pharmacogenomics_intent: (a: number, b: number) => number;
+    readonly parse_cbor_ld_wasm: (a: number, b: number) => any;
+    readonly parse_json_wasm: (a: number, b: number) => any;
+    readonly serialize_float64_array: (a: number, b: number) => any;
+    readonly serialize_float_array: (a: number, b: number) => any;
+    readonly wasmoffloadintent_new: (a: number, b: number, c: number) => number;
+    readonly wasmoffloadintent_with_string_payload: (a: number, b: number, c: number, d: number) => number;
+    readonly webizen_poll_agreements: () => [number, number];
+    readonly webizen_propose_agreement: (a: any, b: number, c: number, d: number, e: number, f: number) => bigint;
+    readonly webizen_sign_agreement: (a: bigint, b: number, c: number) => void;
+    readonly prune_and_validate_mesh: (a: bigint) => number;
+    readonly wasm_bindgen__convert__closures_____invoke__he28403b51550e204: (a: number, b: number, c: any) => [number, number];
+    readonly wasm_bindgen__convert__closures_____invoke__h39bad9493cebb510: (a: number, b: number, c: any, d: any) => void;
+    readonly wasm_bindgen__convert__closures_____invoke__h01e70aad0a806b4b: (a: number, b: number, c: any) => void;
     readonly __wbindgen_malloc: (a: number, b: number) => number;
     readonly __wbindgen_realloc: (a: number, b: number, c: number, d: number) => number;
     readonly __wbindgen_exn_store: (a: number) => void;

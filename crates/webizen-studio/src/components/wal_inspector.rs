@@ -13,8 +13,10 @@ struct DeployRecord {
 pub fn WalInspector() -> Element {
     let mut records = use_signal(Vec::<DeployRecord>::new);
     let mut status = use_signal(|| "Loading deploy history…".to_string());
+    let mut replay_status = use_signal(|| String::new());
+    let mut replaying = use_signal(|| None::<u64>);
 
-    use_effect(move || {
+    let mut refresh_history = move || {
         if !crate::endpoints::is_native_host() {
             status.set("WAL history requires the desktop host.".to_string());
             return;
@@ -26,7 +28,9 @@ pub fn WalInspector() -> Element {
                         Ok(rows) => {
                             let count = rows.len();
                             records.set(rows);
-                            status.set(format!("{count} deploy checkpoint(s) in studio-workspace.wal"));
+                            status.set(format!(
+                                "{count} deploy checkpoint(s) in studio-workspace.wal"
+                            ));
                         }
                         Err(err) => status.set(format!("History parse failed: {err}")),
                     }
@@ -35,6 +39,10 @@ pub fn WalInspector() -> Element {
                 Err(err) => status.set(format!("History unreachable: {err}")),
             }
         });
+    };
+
+    use_effect(move || {
+        refresh_history();
     });
 
     let rows = records.read();
@@ -49,6 +57,12 @@ pub fn WalInspector() -> Element {
             }
             p { style: "font-size: 0.8rem; color: var(--qualia-text-muted, #888); margin-top: 0;",
                 "{status()}"
+            }
+            if !replay_status.read().is_empty() {
+                p {
+                    style: "font-size: 0.75rem; color: var(--qualia-accent); margin: 0.35rem 0 0;",
+                    "{replay_status.read()}"
+                }
             }
 
             div { style: "display: flex; gap: 12px; margin: 1rem 0 1.5rem;",
@@ -81,6 +95,7 @@ pub fn WalInspector() -> Element {
                             th { style: "padding: 10px 12px; text-align: left;", "Unix ts" }
                             th { style: "padding: 10px 12px; text-align: left;", "Panes" }
                             th { style: "padding: 10px 12px; text-align: left;", "Manifest hash" }
+                            th { style: "padding: 10px 12px; text-align: left;", "Restore" }
                         }
                     }
                     tbody {
@@ -91,6 +106,49 @@ pub fn WalInspector() -> Element {
                                 td { style: "padding: 10px 12px;", "{row.pane_count}" }
                                 td { style: "padding: 10px 12px; font-family: monospace; font-size: 0.7rem;",
                                     "0x{row.manifest_hash:012x}"
+                                }
+                                td { style: "padding: 10px 12px;",
+                                    if crate::endpoints::is_native_host() {
+                                        button {
+                                            style: "padding: 0.2rem 0.5rem; font-size: 0.65rem; border-radius: 5px; border: 1px solid var(--qualia-accent); background: rgba(245,158,11,0.1); color: var(--qualia-text); cursor: pointer;",
+                                            disabled: replaying() == Some(row.revision),
+                                            onclick: {
+                                                let rev = row.revision;
+                                                let mut replay_status = replay_status.clone();
+                                                let mut replaying = replaying.clone();
+                                                move |_| {
+                                                    replaying.set(Some(rev));
+                                                    replay_status.set(format!("Restoring rev #{rev}…"));
+                                                    spawn(async move {
+                                                        let client = reqwest::Client::new();
+                                                        let url = crate::endpoints::manifest_replay_url(rev);
+                                                        match client.post(&url).send().await {
+                                                            Ok(res) if res.status().is_success() => {
+                                                                replay_status.set(format!(
+                                                                    "Restored rev #{rev} — reload QApp Studio to edit the workspace."
+                                                                ));
+                                                            }
+                                                            Ok(res) => {
+                                                                replay_status.set(format!(
+                                                                    "Restore failed ({}) for rev #{rev}",
+                                                                    res.status()
+                                                                ));
+                                                            }
+                                                            Err(err) => {
+                                                                replay_status.set(format!(
+                                                                    "Restore unreachable: {err}"
+                                                                ));
+                                                            }
+                                                        }
+                                                        replaying.set(None);
+                                                    });
+                                                }
+                                            },
+                                            if replaying() == Some(row.revision) { "…" } else { "Restore" }
+                                        }
+                                    } else {
+                                        span { style: "color: var(--qualia-text-muted); font-size: 0.65rem;", "—" }
+                                    }
                                 }
                             }
                         }

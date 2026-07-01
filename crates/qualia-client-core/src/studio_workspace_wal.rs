@@ -10,6 +10,7 @@ const LAMPORT_SHIFT: u32 = 32;
 const LAMPORT_MASK: u64 = 0x1FFF_FFFF;
 
 pub const STUDIO_WAL_FILE: &str = "studio-workspace.wal";
+pub const REVISION_SNAPSHOT_PREFIX: &str = "studio-workspace-rev-";
 const WORKSPACE_SUBJECT: &str = "studio:workspace";
 const PREDICATE_DEPLOY: &str = "q42:studioDeploy";
 const PREDICATE_PANE: &str = "q42:studioPanePlacement";
@@ -22,13 +23,13 @@ pub struct StudioDeployRecord {
     pub manifest_hash: u64,
 }
 
-#[derive(Debug, Clone, serde::Deserialize)]
+#[derive(Debug, Clone, serde::Serialize, serde::Deserialize)]
 struct WalManifestPage {
     url_path: String,
     panes: Vec<WalManifestPane>,
 }
 
-#[derive(Debug, Clone, serde::Deserialize)]
+#[derive(Debug, Clone, serde::Serialize, serde::Deserialize)]
 struct WalManifestPane {
     component_id: String,
     x: u16,
@@ -37,7 +38,7 @@ struct WalManifestPane {
     h: u16,
 }
 
-#[derive(Debug, Clone, serde::Deserialize)]
+#[derive(Debug, Clone, serde::Serialize, serde::Deserialize)]
 struct WalManifest {
     pages: Vec<WalManifestPage>,
 }
@@ -57,6 +58,36 @@ fn author_context_hash() -> u64 {
 
 fn manifest_content_hash(manifest_json: &str) -> u64 {
     q_hash(manifest_json) & OBJECT_HASH_MASK
+}
+
+pub fn revision_snapshot_path(storage_path: &str, revision: u64) -> std::path::PathBuf {
+    std::path::PathBuf::from(storage_path)
+        .join(format!("{REVISION_SNAPSHOT_PREFIX}{revision}.json"))
+}
+
+pub fn persist_revision_snapshot(
+    storage_path: &str,
+    revision: u64,
+    manifest_json: &str,
+) -> Result<(), String> {
+    let path = revision_snapshot_path(storage_path, revision);
+    if let Some(parent) = path.parent() {
+        std::fs::create_dir_all(parent).map_err(|e| e.to_string())?;
+    }
+    let tmp = path.with_extension("json.tmp");
+    std::fs::write(&tmp, manifest_json.as_bytes()).map_err(|e| e.to_string())?;
+    std::fs::rename(&tmp, &path).map_err(|e| e.to_string())?;
+    Ok(())
+}
+
+pub fn unpack_placement(object: u64) -> (u16, u16, u16, u16) {
+    let o = object & OBJECT_HASH_MASK;
+    (
+        (o & 0xFFFF) as u16,
+        ((o >> 16) & 0xFFFF) as u16,
+        ((o >> 32) & 0xFFFF) as u16,
+        ((o >> 48) & 0xFFFF) as u16,
+    )
 }
 
 fn pack_placement(x: u16, y: u16, w: u16, h: u16) -> u64 {
@@ -192,6 +223,61 @@ pub fn list_deploy_history(storage_path: &str) -> Result<Vec<StudioDeployRecord>
     Ok(records)
 }
 
+/// Reconstruct a minimal workspace manifest from pane placement Quins at `revision`.
+pub fn reconstruct_manifest_from_pane_quins(
+    storage_path: &str,
+    revision: u64,
+) -> Result<String, String> {
+    let wal_path = studio_wal_path(storage_path);
+    let mut wal = WriteAheadLog::open(&wal_path).map_err(|e| format!("wal open: {e}"))?;
+    let quins = wal.recover().map_err(|e| format!("wal recover: {e}"))?;
+    let pane_pred = q_hash(PREDICATE_PANE);
+
+    let mut pages: std::collections::HashMap<String, Vec<WalManifestPane>> =
+        std::collections::HashMap::new();
+
+    for quin in &quins {
+        if quin.predicate != pane_pred {
+            continue;
+        }
+        let rev = (quin.metadata >> LAMPORT_SHIFT) & LAMPORT_MASK;
+        if rev != revision {
+            continue;
+        }
+        let page_path = format!("wal-page-{}", quin.context);
+        let (x, y, w, h) = unpack_placement(quin.object);
+        let component_id = format!("wal-pane-{}", quin.subject);
+        pages.entry(page_path).or_default().push(WalManifestPane {
+            component_id,
+            x,
+            y,
+            w,
+            h,
+        });
+    }
+
+    if pages.is_empty() {
+        return Err(format!("no pane quins for revision {revision}"));
+    }
+
+    let manifest = WalManifest {
+        pages: pages
+            .into_iter()
+            .map(|(url_path, panes)| WalManifestPage { url_path, panes })
+            .collect(),
+    };
+    serde_json::to_string(&manifest).map_err(|e| format!("manifest encode: {e}"))
+}
+
+/// Load a saved revision snapshot, falling back to pane-quin reconstruction.
+pub fn replay_workspace_manifest(storage_path: &str, revision: u64) -> Result<String, String> {
+    let snap = revision_snapshot_path(storage_path, revision);
+    if snap.is_file() {
+        return std::fs::read_to_string(&snap).map_err(|e| e.to_string());
+    }
+    reconstruct_manifest_from_pane_quins(storage_path, revision)
+}
+
 #[cfg(test)]
 mod tests {
     use super::*;
@@ -225,6 +311,24 @@ mod tests {
         assert_eq!(history2.len(), 2);
 
         let _ = fs::remove_dir_all(dir);
+    }
+
+    #[test]
+    fn revision_snapshot_roundtrip() {
+        let dir = std::env::temp_dir().join(format!(
+            "qualia-studio-snap-{}",
+            std::time::SystemTime::now()
+                .duration_since(std::time::UNIX_EPOCH)
+                .unwrap()
+                .as_nanos()
+        ));
+        std::fs::create_dir_all(&dir).unwrap();
+        let storage = dir.to_string_lossy().to_string();
+        let body = r#"{"pages":[{"url_path":"/","panes":[]}]}"#;
+        persist_revision_snapshot(&storage, 3, body).unwrap();
+        let loaded = replay_workspace_manifest(&storage, 3).unwrap();
+        assert_eq!(loaded, body);
+        let _ = std::fs::remove_dir_all(dir);
     }
 
     #[test]

@@ -48,7 +48,9 @@ use crate::components::ontology_import_wizard::{
 };
 use crate::components::selection_sidebar::SelectionSidebar;
 use crate::render::motion::Spring;
-use crate::render::motion_loop::{spawn_ui_motion_loop, step_selection_spring};
+use crate::render::motion_loop::{
+    spawn_ui_motion_loop, step_mode_pulse_spring, step_selection_spring, trigger_mode_pulse,
+};
 use crate::pane_registry::{
     builtin_pane_definitions, category_label, find_pane, PaneCategory, PaneDefinition,
 };
@@ -474,16 +476,27 @@ pub fn DynamicPage(path: Vec<String>, #[props(default)] app_id: Option<String>) 
     let pane_palette = use_signal(builtin_pane_definitions);
     let mut selection_spring = use_signal(|| Spring::new(0.0));
     let mut selection_scale = use_signal(|| 1.0_f64);
+    let mut mode_pulse_spring = use_signal(|| Spring::new(0.0));
+    let mut mode_pulse_scale = use_signal(|| 0.0_f64);
+    let mut save_status = use_signal(|| String::new());
+    let mut deploy_revision = use_signal(|| Option::<u64>::None);
+    let mut deploy_history = use_signal(Vec::<DeployHistoryRow>::new);
+    let mut replay_status = use_signal(|| String::new());
+    let mut replaying_revision = use_signal(|| None::<u64>);
 
     #[cfg(target_arch = "wasm32")]
     use_effect(move || {
         let mut selection_spring = selection_spring;
         let mut selection_scale = selection_scale;
+        let mut mode_pulse_spring = mode_pulse_spring;
+        let mut mode_pulse_scale = mode_pulse_scale;
         let selected_pane_index = selected_pane_index;
         spawn_ui_motion_loop(move |dt| {
             let selected = selected_pane_index.read().is_some();
             let scale = step_selection_spring(&mut selection_spring.write(), selected, None, dt);
             selection_scale.set(scale);
+            let pulse = step_mode_pulse_spring(&mut mode_pulse_spring.write(), dt);
+            mode_pulse_scale.set(pulse);
         });
     });
 
@@ -500,6 +513,16 @@ pub fn DynamicPage(path: Vec<String>, #[props(default)] app_id: Option<String>) 
                     if !data.pages.is_empty() {
                         workspace.set(data.clone());
                         history.set(WorkspaceHistory::new(data));
+                    }
+                }
+            }
+            if let Ok(res) = reqwest::get(crate::endpoints::manifest_history_url()).await {
+                if res.status().is_success() {
+                    if let Ok(rows) = res.json::<Vec<DeployHistoryRow>>().await {
+                        if let Some(last) = rows.last() {
+                            deploy_revision.set(Some(last.revision));
+                        }
+                        deploy_history.set(rows);
                     }
                 }
             }
@@ -646,11 +669,17 @@ pub fn DynamicPage(path: Vec<String>, #[props(default)] app_id: Option<String>) 
     };
 
     let current_path_for_mode = format!("/{}", path.join("/"));
+    let mut pulse_toolbar = {
+        let mut mode_pulse_spring = mode_pulse_spring.clone();
+        move || trigger_mode_pulse(&mut mode_pulse_spring.write())
+    };
     let switch_grid_mode = {
         let mut workspace = workspace.clone();
         let mut history = history.clone();
         let current_path = current_path_for_mode.clone();
+        let mut pulse_toolbar = pulse_toolbar.clone();
         move |_| {
+            pulse_toolbar();
             history.write().push(workspace.read().clone());
             let mut ws = workspace.write();
             if let Some(page) = ws.pages.iter_mut().find(|p| p.url_path == current_path) {
@@ -662,7 +691,9 @@ pub fn DynamicPage(path: Vec<String>, #[props(default)] app_id: Option<String>) 
         let mut workspace = workspace.clone();
         let mut history = history.clone();
         let current_path = current_path_for_mode.clone();
+        let mut pulse_toolbar = pulse_toolbar.clone();
         move |_| {
+            pulse_toolbar();
             history.write().push(workspace.read().clone());
             let mut ws = workspace.write();
             if let Some(page) = ws.pages.iter_mut().find(|p| p.url_path == current_path) {
@@ -674,7 +705,9 @@ pub fn DynamicPage(path: Vec<String>, #[props(default)] app_id: Option<String>) 
         let mut workspace = workspace.clone();
         let mut history = history.clone();
         let current_path = current_path_for_mode;
+        let mut pulse_toolbar = pulse_toolbar.clone();
         move |_| {
+            pulse_toolbar();
             history.write().push(workspace.read().clone());
             let mut ws = workspace.write();
             if let Some(page) = ws.pages.iter_mut().find(|p| p.url_path == current_path) {
@@ -763,14 +796,12 @@ pub fn DynamicPage(path: Vec<String>, #[props(default)] app_id: Option<String>) 
         }
     };
 
-    let mut save_status = use_signal(|| String::new());
-    let mut deploy_revision = use_signal(|| Option::<u64>::None);
-
     // ── Persist workspace to local settings portal (survives restart) ──
     let save_workspace = {
         let workspace = workspace.clone();
         let mut save_status = save_status.clone();
         let mut deploy_revision = deploy_revision.clone();
+        let mut deploy_history = deploy_history.clone();
         move |_| {
             save_status.set("Saving…".to_string());
             spawn(async move {
@@ -798,6 +829,7 @@ pub fn DynamicPage(path: Vec<String>, #[props(default)] app_id: Option<String>) 
                             if history_res.status().is_success() {
                                 if let Ok(rows) = history_res.json::<Vec<DeployHistoryRow>>().await
                                 {
+                                    deploy_history.set(rows.clone());
                                     if let Some(last) = rows.last() {
                                         deploy_revision.set(Some(last.revision));
                                         save_status.set(format!(
@@ -834,6 +866,46 @@ pub fn DynamicPage(path: Vec<String>, #[props(default)] app_id: Option<String>) 
                 page.presentation_mode = suggestion.presentation;
                 page.name = suggestion.label;
             }
+        }
+    };
+
+    let restore_deploy_revision = {
+        let mut workspace = workspace.clone();
+        let mut history = history.clone();
+        let mut replay_status = replay_status.clone();
+        let mut replaying_revision = replaying_revision.clone();
+        let mut deploy_revision = deploy_revision.clone();
+        move |revision: u64| {
+            replaying_revision.set(Some(revision));
+            replay_status.set(format!("Restoring WAL rev #{revision}…"));
+            spawn(async move {
+                let client = reqwest::Client::new();
+                let url = crate::endpoints::manifest_replay_url(revision);
+                match client.post(&url).send().await {
+                    Ok(res) if res.status().is_success() => {
+                        match res.json::<WebizenWorkspace>().await {
+                            Ok(data) => {
+                                workspace.set(data.clone());
+                                history.set(WorkspaceHistory::new(data));
+                                deploy_revision.set(Some(revision));
+                                replay_status.set(format!(
+                                    "Restored WAL rev #{revision} into the editor."
+                                ));
+                            }
+                            Err(err) => {
+                                replay_status.set(format!("Restore parse failed: {err}"));
+                            }
+                        }
+                    }
+                    Ok(res) => {
+                        replay_status.set(format!("Restore failed ({})", res.status()));
+                    }
+                    Err(err) => {
+                        replay_status.set(format!("Restore unreachable: {err}"));
+                    }
+                }
+                replaying_revision.set(None);
+            });
         }
     };
 
@@ -962,6 +1034,10 @@ pub fn DynamicPage(path: Vec<String>, #[props(default)] app_id: Option<String>) 
     let grid_btn_style = mode_btn_style(grid_mode_active);
     let node_btn_style = mode_btn_style(node_mode_active);
     let spatial_btn_style = mode_btn_style(spatial_mode_active);
+    let toolbar_pulse_scale = 1.0 + mode_pulse_scale();
+    let toolbar_pulse_style = format!(
+        "transform: scale({toolbar_pulse_scale:.4}); transform-origin: right center;"
+    );
 
     // ── Create New Page ────────────────────────────────────
     let create_new_page = {
@@ -1095,7 +1171,7 @@ pub fn DynamicPage(path: Vec<String>, #[props(default)] app_id: Option<String>) 
                                 }
                             }
                             div {
-                                style: "display: flex; gap: 0.35rem; flex-wrap: wrap;",
+                                style: "display: flex; gap: 0.35rem; flex-wrap: wrap; {toolbar_pulse_style}",
                                 button {
                                     style: "{grid_btn_style}",
                                     onclick: switch_grid_mode,
@@ -1605,11 +1681,50 @@ pub fn DynamicPage(path: Vec<String>, #[props(default)] app_id: Option<String>) 
                     }
                 }
 
+                // Deploy WAL history + restore
+                if crate::endpoints::is_native_host() && !deploy_history.read().is_empty() {
+                    div {
+                        h3 {
+                            style: "font-size: 0.75rem; text-transform: uppercase; letter-spacing: 0.1em; color: var(--qualia-text-muted, #888); margin: 0 0 0.5rem 0;",
+                            "Deploy history"
+                        }
+                        div {
+                            style: "display: flex; flex-direction: column; gap: 0.35rem; max-height: 140px; overflow-y: auto;",
+                            for row in deploy_history.read().iter().rev().take(6) {
+                                div {
+                                    key: "rev-{row.revision}",
+                                    style: "display: flex; align-items: center; justify-content: space-between; gap: 0.4rem; padding: 0.35rem 0.45rem; border-radius: 6px; border: 1px solid var(--qualia-border); background: var(--qualia-bg); font-size: 0.68rem;",
+                                    span {
+                                        style: "font-family: monospace; color: var(--qualia-text);",
+                                        "rev #{row.revision} · {row.pane_count} panes"
+                                    }
+                                    button {
+                                        style: "padding: 0.15rem 0.4rem; font-size: 0.6rem; border-radius: 5px; border: 1px solid var(--qualia-accent); background: rgba(245,158,11,0.08); color: var(--qualia-text); cursor: pointer;",
+                                        disabled: replaying_revision() == Some(row.revision),
+                                        onclick: {
+                                            let rev = row.revision;
+                                            let mut restore = restore_deploy_revision.clone();
+                                            move |_| restore(rev)
+                                        },
+                                        if replaying_revision() == Some(row.revision) { "…" } else { "Restore" }
+                                    }
+                                }
+                            }
+                        }
+                    }
+                }
+
                 // Save workspace (local settings portal + disk + Quin WAL)
                 if !save_status.read().is_empty() {
                     p {
                         style: "font-size: 0.72rem; color: var(--qualia-text-muted, #888); margin: 0;",
                         "{save_status.read()}"
+                    }
+                }
+                if !replay_status.read().is_empty() {
+                    p {
+                        style: "font-size: 0.68rem; color: var(--qualia-accent); margin: 0;",
+                        "{replay_status.read()}"
                     }
                 }
                 if let Some(rev) = *deploy_revision.read() {

@@ -142,6 +142,8 @@ async fn run_settings_server(state: SettingsServerState, port: u16) -> Result<()
         .route("/api/config", get(get_config_handler).post(save_config_handler))
         .route("/manifest", get(get_manifest_handler).post(post_manifest_handler))
         .route("/manifest/history", get(get_manifest_history_handler))
+        .route("/manifest/replay/:revision", post(replay_manifest_handler))
+        .route("/manifest/replay/{revision}", post(replay_manifest_handler))
         .route("/telemetry", get(telemetry_handler))
         .route("/api/jobs", get(list_jobs_handler).post(enqueue_job_handler))
         .route("/api/jobs/:id", get(get_job_handler))
@@ -262,14 +264,55 @@ async fn post_manifest_handler(
         eprintln!("workspace manifest persist failed: {err}");
         return StatusCode::INTERNAL_SERVER_ERROR;
     }
-    if let Err(err) = qualia_client_core::studio_workspace_wal::append_workspace_deploy(
-        &storage_path,
-        &body,
-    ) {
-        eprintln!("studio workspace WAL append failed: {err}");
+    match qualia_client_core::studio_workspace_wal::append_workspace_deploy(&storage_path, &body) {
+        Ok(revision) => {
+            if let Err(err) =
+                qualia_client_core::studio_workspace_wal::persist_revision_snapshot(
+                    &storage_path,
+                    revision,
+                    &body,
+                )
+            {
+                eprintln!("studio revision snapshot failed: {err}");
+            }
+        }
+        Err(err) => eprintln!("studio workspace WAL append failed: {err}"),
     }
     *state.manifest.lock().unwrap() = body;
     StatusCode::NO_CONTENT
+}
+
+async fn replay_manifest_handler(
+    State(state): State<SettingsServerState>,
+    Path(revision): Path<u64>,
+) -> impl IntoResponse {
+    let storage_path = state.app_state.config.lock().unwrap().storage_path.clone();
+    match qualia_client_core::studio_workspace_wal::replay_workspace_manifest(
+        &storage_path,
+        revision,
+    ) {
+        Ok(body) => {
+            if let Err(err) = persist_manifest_to_disk(&storage_path, &body) {
+                return (
+                    StatusCode::INTERNAL_SERVER_ERROR,
+                    Json(serde_json::json!({ "error": err })),
+                )
+                    .into_response();
+            }
+            *state.manifest.lock().unwrap() = body.clone();
+            (
+                StatusCode::OK,
+                [(header::CONTENT_TYPE, "application/json")],
+                body,
+            )
+                .into_response()
+        }
+        Err(err) => (
+            StatusCode::NOT_FOUND,
+            Json(serde_json::json!({ "error": err })),
+        )
+            .into_response(),
+    }
 }
 
 async fn get_manifest_history_handler(State(state): State<SettingsServerState>) -> impl IntoResponse {

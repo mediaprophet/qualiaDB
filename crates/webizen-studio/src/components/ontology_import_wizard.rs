@@ -33,6 +33,68 @@ struct EnqueueJobResponse {
     id: String,
 }
 
+#[derive(Clone, Debug, Deserialize)]
+struct LocalJob {
+    id: String,
+    status: JobStatus,
+    progress: f64,
+    message: String,
+    #[serde(default)]
+    error: Option<String>,
+}
+
+#[derive(Clone, Debug, Deserialize)]
+#[serde(rename_all = "snake_case")]
+enum JobStatus {
+    Queued,
+    Running,
+    Completed,
+    Failed,
+    Cancelled,
+}
+
+async fn poll_interval_ms(ms: u32) {
+    #[cfg(target_arch = "wasm32")]
+    {
+        gloo_timers::future::TimeoutFuture::new(ms).await;
+    }
+    #[cfg(not(target_arch = "wasm32"))]
+    {
+        use std::time::{Duration, Instant};
+        let deadline = Instant::now() + Duration::from_millis(ms as u64);
+        while Instant::now() < deadline {
+            std::thread::yield_now();
+        }
+    }
+}
+
+async fn poll_job_until_done(job_id: &str) -> Result<LocalJob, String> {
+    let client = reqwest::Client::new();
+    let url = crate::endpoints::job_url(job_id);
+    for _ in 0..120 {
+        let res = client
+            .get(&url)
+            .send()
+            .await
+            .map_err(|e| e.to_string())?;
+        if !res.status().is_success() {
+            return Err(format!("job poll failed ({})", res.status()));
+        }
+        let job = res.json::<LocalJob>().await.map_err(|e| e.to_string())?;
+        match job.status {
+            JobStatus::Completed => return Ok(job),
+            JobStatus::Failed => {
+                return Err(job.error.unwrap_or_else(|| job.message.clone()));
+            }
+            JobStatus::Cancelled => return Err("job cancelled".to_string()),
+            JobStatus::Queued | JobStatus::Running => {
+                poll_interval_ms(500).await;
+            }
+        }
+    }
+    Err("job poll timed out".to_string())
+}
+
 fn pane(id: &str, x: u16, y: u16, w: u16, h: u16) -> PanePlacement {
     PanePlacement {
         component_id: id.to_string(),
@@ -263,7 +325,22 @@ pub fn OntologyImportWizard(
                                             for id in ids {
                                                 let bundled = id == "shacl";
                                                 match enqueue_ontology_import(&id, bundled).await {
-                                                    Ok(job_id) => messages.push(format!("{id} → job {job_id}")),
+                                                    Ok(job_id) => {
+                                                        import_status.set(format!(
+                                                            "{id}: queued ({job_id})…"
+                                                        ));
+                                                        match poll_job_until_done(&job_id).await {
+                                                            Ok(job) => messages.push(format!(
+                                                                "{id}: done ({:.0}%) — {}",
+                                                                job.progress * 100.0,
+                                                                job.message
+                                                            )),
+                                                            Err(err) => messages.push(format!(
+                                                                "{id}: {err}"
+                                                            )),
+                                                        }
+                                                        import_status.set(messages.join(" · "));
+                                                    }
                                                     Err(err) => messages.push(format!("{id}: {err}")),
                                                 }
                                             }

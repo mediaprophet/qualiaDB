@@ -42,6 +42,14 @@ pub fn assets_enqueue_url() -> String {
     format!("{DAEMON_HTTP}/api/assets/enqueue")
 }
 
+pub fn job_url(job_id: &str) -> String {
+    format!("{DAEMON_HTTP}/api/jobs/{job_id}")
+}
+
+pub fn manifest_replay_url(revision: u64) -> String {
+    format!("{DAEMON_HTTP}/manifest/replay/{revision}")
+}
+
 /// `{DAEMON_HTTP}/telemetry` — server-sent telemetry stream.
 pub fn telemetry_url() -> String {
     format!("{DAEMON_HTTP}/telemetry")
