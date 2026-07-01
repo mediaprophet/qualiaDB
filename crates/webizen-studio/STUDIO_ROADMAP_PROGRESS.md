@@ -95,7 +95,8 @@ Use this file as the **session reminder**: what is done, what is next, and where
 | Portal WASM offline bundle | ✅ | static/portal/pkg/qualia |
 | pane_generator + theme unit tests | ✅ | |
 | Settings portal HTTP smoke | ✅ | scripts/studio-portal-smoke.ps1 |
-| Full Tauri GUI E2E | ❌ | cold start → edit → save → WAL restore (manual) |
+| Portal workflow E2E (HTTP) | ✅ | scripts/studio-e2e-workflow.ps1 |
+| Full Tauri GUI E2E | ◑ | drag/theme steps manual; portal contract scripted |
 | IHP / PDF / extension stretch | ❌ | separate sprints |
 
 ---
@@ -104,7 +105,7 @@ Use this file as the **session reminder**: what is done, what is next, and where
 
 1. **Run smoke** with desktop open: `.\scripts\studio-portal-smoke.ps1`
 2. **Phase 3 (stretch):** feed live QualiaDB graph into spatial scene (beyond mock neighborhood)
-3. **Phase 5:** Tauri GUI walkthrough script (optional Playwright/webdriver)
+3. **Phase 5:** run `.\scripts\studio-e2e-workflow.ps1` with desktop open; optional Playwright for GUI clicks
 4. **Stretch:** wire real local LLM infer into `/generate_pane` (orchestrator path)
 5. **Push** branch `0.0.23` after each verified slice
 
@@ -133,3 +134,13 @@ Use this file as the **session reminder**: what is done, what is next, and where
 - `render_pipeline::merge_workspace_panes` — maps studio pane grid to manifold nodes + binding edges.
 - `update_render_preview` accepts optional `panes`; spatial_bridge passes current page layout.
 - Tests: `workspace_panes_merge_into_scene` + wasm32 check green.
+
+### 2026-07-01 — Grok (Phase 5 workflow E2E)
+
+- `scripts/studio-e2e-workflow.ps1` — edit/save/WAL replay/generate/spatial HTTP workflow.
+- Fixed `studio-portal-smoke.ps1` `$Host` shadowing (renamed to `$BindAddress`).
+
+### 2026-07-01 — Grok (Phase 5 workflow E2E)
+
+- `scripts/studio-e2e-workflow.ps1` — edit/save/WAL replay/generate/spatial HTTP workflow.
+- Fixed `studio-portal-smoke.ps1` `$Host` shadowing (renamed to `$BindAddress`).

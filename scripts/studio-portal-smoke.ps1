@@ -3,11 +3,11 @@
 # or pass -Port if the portal bound to a different port.
 param(
     [int]$Port = 8080,
-    [string]$Host = "127.0.0.1"
+    [string]$BindAddress = "127.0.0.1"
 )
 
 $ErrorActionPreference = "Stop"
-$base = "http://${Host}:${Port}"
+$base = "http://${BindAddress}:${Port}"
 
 function Assert-Ok($response, [string]$label) {
     if (-not $response) {
