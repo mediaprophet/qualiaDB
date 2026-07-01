@@ -197,6 +197,22 @@ pub struct Tensor10DView {
 }
 
 impl Tensor10DView {
+    /// Combined magnitude across all manifold axes (telemetry / culling helper).
+    #[inline]
+    pub fn manifold_energy(&self) -> f64 {
+        let sum = self.q * self.q
+            + self.v * self.v
+            + self.w * self.w
+            + self.x * self.x
+            + self.y * self.y
+            + self.z * self.z
+            + self.t * self.t
+            + self.alpha * self.alpha
+            + self.mu * self.mu
+            + self.sigma * self.sigma;
+        sum.sqrt()
+    }
+
     /// Get spectral color from sigma value
     ///
     /// Zero-heap consideration: Stack-allocated string formatting

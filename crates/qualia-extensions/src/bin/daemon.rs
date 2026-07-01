@@ -6,7 +6,7 @@
 use qualia_extensions::{ExtensionManager, ExtensionJob, ExtensionResult, qpu_extension::QpuExtension, pinn_extension::PinnExtension, webgpu_extension::WebGpuExtension};
 use std::collections::HashMap;
 use std::sync::Arc;
-use std::time::{Duration, Instant};
+use std::time::Instant;
 use tokio::net::{TcpListener, TcpStream};
 use tokio::io::{AsyncReadExt, AsyncWriteExt};
 use tokio::sync::mpsc;
@@ -37,7 +37,7 @@ async fn main() -> Result<(), Box<dyn std::error::Error>> {
     info!("Extensions daemon listening on 127.0.0.1:8080");
 
     // Create job queue
-    let (job_tx, mut job_rx) = mpsc::channel::<ExtensionJob>(100);
+    let (_job_tx, mut job_rx) = mpsc::channel::<ExtensionJob>(100);
     let (result_tx, mut result_rx) = mpsc::channel::<ExtensionResult>(100);
 
     // Spawn job processor

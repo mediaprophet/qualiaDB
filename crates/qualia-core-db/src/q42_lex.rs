@@ -146,12 +146,41 @@ impl<'a> Q42LexMmap<'a> {
         None
     }
 
+    /// Binary search for `hash`; returns the authoritative Webizen identity string.
+    pub fn lookup_webizen_identity(&self, hash: u64) -> Option<&'a str> {
+        let mut lo = 0usize;
+        let mut hi = self.entry_count;
+        while lo < hi {
+            let mid = lo + (hi - lo) / 2;
+            let off = HEADER_SIZE + mid * INDEX_ENTRY_SIZE;
+            let entry_hash = u64::from_le_bytes(self.data[off..off + 8].try_into().ok()?);
+            match entry_hash.cmp(&hash) {
+                std::cmp::Ordering::Less => lo = mid + 1,
+                std::cmp::Ordering::Greater => hi = mid,
+                std::cmp::Ordering::Equal => {
+                    let str_off =
+                        u64::from_le_bytes(self.data[off + 8..off + 16].try_into().ok()?) as usize;
+                    return Self::read_webizen_at(self.data, self.strings_offset, str_off);
+                }
+            }
+        }
+        None
+    }
+
+    fn read_webizen_at(data: &[u8], blob_base: usize, rel_off: usize) -> Option<&str> {
+        let start = blob_base.saturating_add(rel_off);
+        if start + 3 > data.len() || data[start] != LEX_TAG_WEBIZEN {
+            return None;
+        }
+        let len = u16::from_le_bytes(data[start + 1..start + 3].try_into().ok()?) as usize;
+        let text_start = start + 3;
+        let text_end = text_start.saturating_add(len).min(data.len());
+        std::str::from_utf8(&data[text_start..text_end]).ok()
+    }
+
     /// Reads a 24-byte embedded triple [u64; 3] at the given offset.
     ///
     /// Format: [TAG_EMBEDDED (1 byte)] + [24-byte triple]
-    /// This is used for SPARQL-Star embedded triples where the lexicon stores
-    /// the three component IDs (subject, predicate, object) as a fixed-size
-    /// binary tuple instead of a UTF-8 string.
     fn read_embedded_triple_at(data: &[u8], blob_base: usize, rel_off: usize) -> Option<&[u64; 3]> {
         let start = blob_base.saturating_add(rel_off);
         if start + 1 + 24 > data.len() {

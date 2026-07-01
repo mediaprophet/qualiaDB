@@ -334,6 +334,26 @@ pub fn join_theme_classes(base_class: &str, theme: &ResolvedTheme) -> String {
     }
 }
 
+/// Motion timeline honoring sanctuary preset and resolved theme class.
+pub fn theme_motion_timeline(theme: &ResolvedTheme, dt: f64) -> crate::render::motion::Timeline {
+    let class = theme.class_name.as_deref();
+    crate::render::motion::timeline_from_theme(0.0, dt, class)
+}
+
+/// Spring scale bump when a pane is selected (native + wasm shared helper).
+pub fn theme_selection_pulse(
+    spring: &mut crate::render::motion::Spring,
+    selected: bool,
+    theme: &ResolvedTheme,
+) -> f64 {
+    crate::render::motion_loop::step_selection_spring(
+        spring,
+        selected,
+        theme.class_name.as_deref(),
+        0.016,
+    )
+}
+
 /// Human-readable provenance for inspector chips (Phase 2B).
 pub fn theme_binding_provenance(binding: &ThemeBinding) -> &'static str {
     if !binding.tokens.is_empty()
@@ -385,6 +405,19 @@ mod tests {
             .find(|t| t.id == "sanctuary")
             .expect("sanctuary preset");
         assert_eq!(theme.tokens.get("motion-duration").map(String::as_str), Some("0ms"));
+    }
+
+    #[test]
+    fn theme_motion_timeline_honors_sanctuary() {
+        let theme = resolve_theme(
+            Some(&ThemeBinding {
+                theme_id: Some("sanctuary".to_string()),
+                ..Default::default()
+            }),
+            &builtin_theme_catalog(),
+        );
+        let timeline = theme_motion_timeline(&theme, 0.016);
+        assert!(timeline.reduced_motion);
     }
 }
 

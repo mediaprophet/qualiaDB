@@ -1156,6 +1156,8 @@ pub struct ThermalAnalyzer {
     thermal_analysis: ThermalAnalysis,
     /// Phase 2 physics-simulation library for coupled thermal analysis.
     physics_simulation: Option<Arc<Mutex<PhysicsSimulationLibrary>>>,
+    /// Phase 2 statistical-computing library for stochastic thermal analysis.
+    statistical_computing: Option<Arc<Mutex<StatisticalComputingLibrary>>>,
 }
 
 /// Heat transfer
@@ -1931,6 +1933,8 @@ impl EngineeringAnalysisLibrary {
             .attach_physics_simulation(self.physics_simulation.clone());
         self.thermal_analyzer
             .attach_physics_simulation(self.physics_simulation.clone());
+        self.thermal_analyzer
+            .attach_statistical_computing(self.statistical_computing.clone());
         self.reliability_analyzer
             .attach_statistical_computing(self.statistical_computing.clone());
     }
@@ -1949,6 +1953,8 @@ impl EngineeringAnalysisLibrary {
             .attach_physics_simulation(self.physics_simulation.clone());
         self.thermal_analyzer
             .attach_physics_simulation(self.physics_simulation.clone());
+        self.thermal_analyzer
+            .attach_statistical_computing(self.statistical_computing.clone());
         self.reliability_analyzer
             .attach_statistical_computing(self.statistical_computing.clone());
 
@@ -2863,6 +2869,84 @@ impl StructuralDynamics {
     pub fn harmonic_analysis_mut(&mut self) -> &mut HarmonicAnalysis {
         &mut self.harmonic_analysis
     }
+
+    /// Genuine transient time-history analysis for a 1-DOF system (m, c, k) driven
+    /// by the configured `loading_history`. Uses explicit integration with `time_step`
+    /// up to `total_time` from the `time_integration` configuration.
+    pub fn analyze_transient(
+        &self,
+        mass: f64,
+        stiffness: f64,
+        damping: f64,
+    ) -> Result<DynamicsResults, EngineeringError> {
+        if mass <= 0.0 {
+            return Err(EngineeringError::ValidationError("mass must be positive".to_string()));
+        }
+        let ti = &self.transient_analysis.time_integration;
+        let lh = &self.transient_analysis.loading_history;
+        if ti.time_step <= 0.0 || ti.total_time <= 0.0 {
+            return Err(EngineeringError::ValidationError(
+                "time_step and total_time must be positive".to_string(),
+            ));
+        }
+
+        let num_steps = (ti.total_time / ti.time_step).ceil() as usize;
+        let mut positions = Vec::with_capacity(num_steps + 1);
+        let mut velocities = Vec::with_capacity(num_steps + 1);
+        let mut accelerations = Vec::with_capacity(num_steps + 1);
+
+        let mut pos = 0.0;
+        let mut vel = 0.0;
+        let dt = ti.time_step;
+
+        for i in 0..=num_steps {
+            let t = i as f64 * dt;
+            
+            // Interpolate force from loading history
+            let mut force = 0.0;
+            if !lh.time_points.is_empty() && lh.time_points.len() == lh.load_values.len() {
+                if t <= lh.time_points[0] {
+                    force = lh.load_values[0];
+                } else if t >= *lh.time_points.last().unwrap() {
+                    force = *lh.load_values.last().unwrap();
+                } else {
+                    for j in 0..lh.time_points.len() - 1 {
+                        if t >= lh.time_points[j] && t <= lh.time_points[j + 1] {
+                            let dt_int = lh.time_points[j + 1] - lh.time_points[j];
+                            let df = lh.load_values[j + 1] - lh.load_values[j];
+                            let frac = (t - lh.time_points[j]) / dt_int;
+                            force = lh.load_values[j] + df * frac;
+                            break;
+                        }
+                    }
+                }
+            }
+
+            let acc = (force - damping * vel - stiffness * pos) / mass;
+            
+            positions.push(pos);
+            velocities.push(vel);
+            accelerations.push(acc);
+
+            // Symplectic Euler step
+            vel += acc * dt;
+            pos += vel * dt;
+        }
+
+        let final_pos = positions.last().copied().unwrap_or(0.0);
+        let final_vel = velocities.last().copied().unwrap_or(0.0);
+        let ke = 0.5 * mass * final_vel * final_vel;
+        let pe = 0.5 * stiffness * final_pos * final_pos;
+        Ok(DynamicsResults {
+            positions,
+            velocities,
+            accelerations,
+            kinetic_energy: ke,
+            potential_energy: pe,
+            total_energy: ke + pe,
+            time_steps: (0..=num_steps).map(|i| i as f64 * dt).collect(),
+        })
+    }
 }
 
 impl ModalAnalysis {
@@ -3254,6 +3338,7 @@ impl MechanicalAnalyzer {
             time_steps: time_steps.to_vec(),
         })
     }
+
 
     /// Dynamics time-history analysis from Newton's second law (F = m·a).
     ///
@@ -3691,12 +3776,17 @@ impl ThermalAnalyzer {
             thermal_stress: ThermalStress::new(),
             thermal_analysis: ThermalAnalysis::new(),
             physics_simulation: None,
+            statistical_computing: None,
         }
     }
 
-    /// Attach the Phase 2 physics-simulation library for coupled thermal analysis.
     pub fn attach_physics_simulation(&mut self, lib: Option<Arc<Mutex<PhysicsSimulationLibrary>>>) {
         self.physics_simulation = lib;
+    }
+
+    /// Attach the Phase 2 statistical-computing library for stochastic thermal analysis.
+    pub fn attach_statistical_computing(&mut self, lib: Option<Arc<Mutex<StatisticalComputingLibrary>>>) {
+        self.statistical_computing = lib;
     }
 
     pub fn initialize(&mut self) -> Result<(), EngineeringError> {
@@ -3725,7 +3815,12 @@ impl ThermalAnalyzer {
         // temperature field + heat-flux field; missing/ill-posed inputs return
         // InsufficientData rather than a fabricated default. (Full 2-D/3-D FE
         // thermal is a larger subsystem and is flagged, not faked.)
-        thermal_conduction::analyze_conduction(model, analysis_type)
+        thermal_conduction::analyze_conduction(
+            model,
+            analysis_type,
+            self.physics_simulation.clone(),
+            self.statistical_computing.clone(),
+        )
     }
 
     /// Borrow the heat-transfer sub-component.

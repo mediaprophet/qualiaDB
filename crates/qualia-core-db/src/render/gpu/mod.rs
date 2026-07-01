@@ -76,6 +76,26 @@ struct BloomChain {
     vram_bytes: u64,
 }
 
+impl BloomChain {
+    /// HDR scene target extent in pixels.
+    pub(super) fn hdr_extent(&self) -> (u32, u32) {
+        (
+            self.hdr_texture.width(),
+            self.hdr_texture.height(),
+        )
+    }
+
+    /// Half-resolution Kawase ping-pong extent.
+    pub(super) fn blur_extent(&self) -> (u32, u32) {
+        (self.half_width, self.half_height)
+    }
+
+    /// Keep texture handles alive for resize validation / VRAM accounting.
+    pub(super) fn texture_handles(&self) -> (&wgpu::Texture, &wgpu::Texture, &wgpu::Texture) {
+        (&self.hdr_texture, &self.blur_a, &self.blur_b)
+    }
+}
+
 /// WebGPU phenomenal viewport — tensor projector + ambient particles.
 /// GPU buffers for an imported triangle mesh (Phase 1.2). Positions are model-space `f32x3`
 /// (already centred + scaled to the orbit frame by the caller); `index_count` is `triangles * 3`.
@@ -767,6 +787,21 @@ impl PortalGpu {
             &particle_buf,
         );
 
+        self.projector_camera_bind = self.device.create_bind_group(&wgpu::BindGroupDescriptor {
+            label: Some("portal-projector-camera-bind"),
+            layout: &self.projector_camera_layout,
+            entries: &[
+                wgpu::BindGroupEntry {
+                    binding: 0,
+                    resource: self.camera_buf.as_entire_binding(),
+                },
+                wgpu::BindGroupEntry {
+                    binding: 1,
+                    resource: self.observer_buf.as_entire_binding(),
+                },
+            ],
+        });
+
         self.projector_tensor_bind = Some(make_projector_tensor_bind_group(
             &self.device,
             &self.projector_tensor_layout,
@@ -979,6 +1014,15 @@ impl PortalGpu {
         if portal_bloom_enabled() && probe_hdr_format(&self.device) {
             let bloom =
                 create_bloom_chain(&self.device, self.width, self.height, self.color_format);
+            if let Some(ref chain) = bloom {
+                let (hw, hh) = chain.hdr_extent();
+                let (bw, bh) = chain.blur_extent();
+                debug_assert_eq!(hw, self.width);
+                debug_assert_eq!(hh, self.height);
+                debug_assert_eq!(bw, (self.width / 2).max(1));
+                debug_assert_eq!(bh, (self.height / 2).max(1));
+                let _ = chain.texture_handles();
+            }
             let bloom_bytes = bloom.as_ref().map(|b| b.vram_bytes).unwrap_or(0);
             let particle_bytes =
                 (self.particle_count as usize * std::mem::size_of::<ParticleInstance>()) as u64;

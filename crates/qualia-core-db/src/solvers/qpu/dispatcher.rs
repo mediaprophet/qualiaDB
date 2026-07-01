@@ -121,21 +121,36 @@ impl JobQueue {
 
         for job in jobs {
             let job_id = job.job_id.clone();
-            match dispatch(&job) {
+            
+            let mut state = JobState {
+                job: job.clone(),
+                enqueued_at_ms: now_ms(),
+                retries: 0,
+                status: InternalStatus::Queued,
+            };
+            
+            let mut dispatch_result = dispatch(&job);
+            
+            while dispatch_result.is_err() && state.retries < 3 {
+                state.retries += 1;
+                log::warn!("Retrying QPU dispatch for {} (retry {})", job_id, state.retries);
+                dispatch_result = dispatch(&job);
+            }
+            
+            match dispatch_result {
                 Ok(provider_id) => {
-                    let state = JobState {
-                        job: QpuJob {
-                            job_id: provider_id.clone(),
-                            ..job
-                        },
-                        enqueued_at_ms: now_ms(),
-                        retries: 0,
-                        status: InternalStatus::Submitted,
-                    };
-                    self.running.write().await.insert(provider_id, state);
+                    state.job.job_id = provider_id.clone();
+                    state.status = InternalStatus::Submitted;
+                    self.running.write().await.insert(provider_id.clone(), state.clone());
+                    
+                    let mut running = self.running.write().await;
+                    if let Some(s) = running.get_mut(&provider_id) {
+                        s.status = InternalStatus::Running;
+                    }
                 }
                 Err(e) => {
-                    log::error!("QPU dispatch failed for {}: {}", job_id, e);
+                    log::error!("QPU dispatch failed for {} after {} retries: {}", job_id, state.retries, e);
+                    state.status = InternalStatus::Failed;
                     let result = QpuResult::failed(job_id, e);
                     self.completed.lock().await.push(result);
                 }
@@ -147,8 +162,13 @@ impl JobQueue {
     /// Mark a running job as completed or failed based on a polled status.
     pub async fn record_result(&self, job_id: &str, result: QpuResult) {
         let mut running = self.running.write().await;
-        if let Some(state) = running.remove(job_id) {
-            let _ = state;
+        if let Some(mut state) = running.remove(job_id) {
+            state.status = if result.error.is_some() {
+                InternalStatus::Failed
+            } else {
+                InternalStatus::Completed
+            };
+            let _duration = now_ms() - state.enqueued_at_ms;
         }
         self.completed.lock().await.push(result);
     }

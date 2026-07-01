@@ -29,6 +29,8 @@
 //! (never a fabricated field). Full 2-D/3-D finite-element thermal analysis is a
 //! larger subsystem and is flagged in the register, not faked here.
 
+use std::sync::{Arc, Mutex};
+
 use super::{
     AnalysisResults, AnalysisType, BoundaryConditionType, EngineeringError, EngineeringModel,
 };
@@ -164,6 +166,8 @@ fn heat_flux(temps: &[f64], k: f64, h: f64) -> Vec<f64> {
 pub fn analyze_conduction(
     model: &EngineeringModel,
     analysis_type: AnalysisType,
+    _physics_simulation: Option<Arc<Mutex<crate::specialized_libs::physics_simulation::PhysicsSimulationLibrary>>>,
+    _statistical_computing: Option<Arc<Mutex<crate::specialized_libs::statistical_computing::StatisticalComputingLibrary>>>,
 ) -> Result<AnalysisResults, EngineeringError> {
     // Thermal conductivity from the (first) material.
     let material = model.materials.values().next().ok_or_else(|| {
@@ -330,7 +334,7 @@ mod tests {
         let l = 2.0;
         let (tl, tr) = (100.0, 300.0);
         let m = model(k, l, vec![temp_bc(tl), temp_bc(tr)], 0.0);
-        let r = analyze_conduction(&m, AnalysisType::Thermal).unwrap();
+        let r = analyze_conduction(&m, AnalysisType::Thermal, None, None).unwrap();
         let t = &r.temperature_field;
         assert_eq!(t.len(), N_NODES);
         for (i, &ti) in t.iter().enumerate() {
@@ -354,7 +358,7 @@ mod tests {
         let (tl, tr) = (50.0, 50.0);
         let g = 1000.0;
         let m = model(k, l, vec![temp_bc(tl), temp_bc(tr)], g);
-        let r = analyze_conduction(&m, AnalysisType::Thermal).unwrap();
+        let r = analyze_conduction(&m, AnalysisType::Thermal, None, None).unwrap();
         for (i, &ti) in r.temperature_field.iter().enumerate() {
             let x = l * i as f64 / (N_NODES - 1) as f64;
             let expected = tl + (tr - tl) * x / l + (g / (2.0 * k)) * x * (l - x);
@@ -374,7 +378,7 @@ mod tests {
         let tl = 200.0;
         let q = 100.0;
         let m = model(k, l, vec![temp_bc(tl), flux_bc(q)], 0.0);
-        let r = analyze_conduction(&m, AnalysisType::Thermal).unwrap();
+        let r = analyze_conduction(&m, AnalysisType::Thermal, None, None).unwrap();
         for (i, &ti) in r.temperature_field.iter().enumerate() {
             let x = l * i as f64 / (N_NODES - 1) as f64;
             let expected = tl - (q / k) * x;
@@ -387,7 +391,7 @@ mod tests {
         let mut m = model(50.0, 1.0, vec![temp_bc(100.0), temp_bc(200.0)], 0.0);
         m.materials.clear();
         assert!(matches!(
-            analyze_conduction(&m, AnalysisType::Thermal),
+            analyze_conduction(&m, AnalysisType::Thermal, None, None),
             Err(EngineeringError::InsufficientData(_))
         ));
     }
@@ -396,7 +400,7 @@ mod tests {
     fn refuses_nonpositive_conductivity() {
         let m = model(0.0, 1.0, vec![temp_bc(100.0), temp_bc(200.0)], 0.0);
         assert!(matches!(
-            analyze_conduction(&m, AnalysisType::Thermal),
+            analyze_conduction(&m, AnalysisType::Thermal, None, None),
             Err(EngineeringError::InsufficientData(_))
         ));
     }
@@ -405,7 +409,7 @@ mod tests {
     fn refuses_too_few_bcs() {
         let m = model(50.0, 1.0, vec![temp_bc(100.0)], 0.0);
         assert!(matches!(
-            analyze_conduction(&m, AnalysisType::Thermal),
+            analyze_conduction(&m, AnalysisType::Thermal, None, None),
             Err(EngineeringError::InsufficientData(_))
         ));
     }
@@ -414,7 +418,7 @@ mod tests {
     fn refuses_two_flux_ends() {
         let m = model(50.0, 1.0, vec![flux_bc(10.0), flux_bc(10.0)], 0.0);
         assert!(matches!(
-            analyze_conduction(&m, AnalysisType::Thermal),
+            analyze_conduction(&m, AnalysisType::Thermal, None, None),
             Err(EngineeringError::InsufficientData(_))
         ));
     }

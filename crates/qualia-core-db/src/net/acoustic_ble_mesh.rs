@@ -1301,6 +1301,11 @@ impl MeshNetworkManager {
         // Update performance metrics
         self.performance_monitor.update_receive_metrics(&message);
 
+        // Forward if not destined for this node
+        if message.destination != "local_node" && message.ttl.as_secs() > 0 {
+            self.route_message(&message)?;
+        }
+
         Ok(())
     }
 

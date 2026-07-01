@@ -322,7 +322,12 @@ impl QTensorEngine {
                 label: None,
                 timestamp_writes: crate::llm_gpu_profiler::pass_writes_both(),
             });
-            cpass.set_pipeline(&self.pipeline);
+            let pipeline = if self.gguf_mmap.is_none() {
+                &self.mock_pipeline
+            } else {
+                &self.pipeline
+            };
+            cpass.set_pipeline(pipeline);
             cpass.set_bind_group(0, &bind_group, &[]);
             cpass.dispatch_workgroups((rows as u32 + 63) / 64, 1, 1);
         }

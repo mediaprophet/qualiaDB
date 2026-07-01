@@ -1729,6 +1729,16 @@ mod tests {
     }
 
     #[test]
+    fn smiles_parse_paracetamol_methane() {
+        let p = paracetamol();
+        assert!(p.is_valid);
+        assert_eq!(p.atoms.iter().filter(|a| a.element == "C").count(), 8);
+        let m = methane();
+        assert!(m.is_valid);
+        assert_eq!(m.atoms.iter().filter(|a| a.element == "C").count(), 1);
+    }
+
+    #[test]
     fn molecular_weight_ethanol() {
         let mol = ethanol();
         let mw = exact_molecular_weight(&mol);

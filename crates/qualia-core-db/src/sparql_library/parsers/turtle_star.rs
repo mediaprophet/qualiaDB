@@ -19,7 +19,7 @@ const MAX_NESTING_DEPTH: usize = 16;
 
 /// Parsing state for a single frame
 #[repr(C)]
-#[derive(Debug, Clone, Copy)]
+#[derive(Debug, Clone, Copy, PartialEq, Eq)]
 enum ParsingState {
     ExpectSubject,
     ExpectPredicate,
@@ -110,6 +110,28 @@ impl TurtleStarParser {
         }
     }
 
+    /// Session context hash stamped onto emitted quads.
+    pub fn session_context(&self) -> u64 {
+        self.context_hash
+    }
+
+    /// Whether the embedded-triple stack is empty (no in-flight `<<` frames).
+    pub fn stack_is_empty(&self) -> bool {
+        self.stack.is_empty()
+    }
+
+    fn expect_state(
+        frame: &mut StackFrame,
+        expected: ParsingState,
+        next: ParsingState,
+    ) -> Result<(), RdfStarParseError> {
+        if frame.parsing_state != expected {
+            return Err(RdfStarParseError::MalformedEmbeddedTriple);
+        }
+        frame.parsing_state = next;
+        Ok(())
+    }
+
     /// Parse a Turtle-Star token (IRI, literal, or delimiter)
     ///
     /// Returns Ok(Some(hash)) for valid IRIs/literals, Ok(None) for delimiters
@@ -189,31 +211,54 @@ impl TurtleStarParser {
         let _start_depth = self.stack.depth();
 
         // Parse subject
+        {
+            let frame = self.stack.current();
+            Self::expect_state(frame, ParsingState::ExpectSubject, ParsingState::ExpectPredicate)?;
+        }
         match self.parse_token(input, pos)? {
             Some(hash) => self.stack.current().subject = Some(hash),
             None => return Err(RdfStarParseError::MalformedEmbeddedTriple),
         }
 
         // Parse predicate
+        {
+            let frame = self.stack.current();
+            Self::expect_state(frame, ParsingState::ExpectPredicate, ParsingState::ExpectObject)?;
+        }
         match self.parse_token(input, pos)? {
             Some(hash) => self.stack.current().predicate = Some(hash),
             None => return Err(RdfStarParseError::MalformedEmbeddedTriple),
         }
 
         // Parse object (could be another embedded triple)
+        {
+            let frame = self.stack.current();
+            Self::expect_state(frame, ParsingState::ExpectObject, ParsingState::ExpectEmbeddedEnd)?;
+        }
         match self.parse_token(input, pos)? {
             Some(hash) => self.stack.current().object = Some(hash),
             None => {
-                // Object might be another embedded triple
-                // For now, return error - full recursive parsing would go here
                 return Err(RdfStarParseError::MalformedEmbeddedTriple);
             }
         }
 
         // Expect >> terminator
-        // TODO: Proper termination check
+        {
+            let frame = self.stack.current();
+            Self::expect_state(frame, ParsingState::ExpectEmbeddedEnd, ParsingState::ExpectSubject)?;
+        }
+        while *pos + 1 < input.len() && input[*pos].is_ascii_whitespace() {
+            *pos += 1;
+        }
+        if *pos + 1 >= input.len() || input[*pos] != b'>' || input[*pos + 1] != b'>' {
+            return Err(RdfStarParseError::MalformedEmbeddedTriple);
+        }
+        *pos += 2;
 
         // Pop frame and get components
+        if !self.stack.is_empty() && self.stack.depth() > 1 {
+            // Nested frames remain for future recursive `<<` support.
+        }
         let frame = self
             .stack
             .pop()

@@ -34,6 +34,19 @@ impl TrigStarParser {
         self.current_graph
     }
 
+    /// Session context hash used when no explicit `GRAPH` block is active.
+    pub fn session_context(&self) -> u64 {
+        self.context_hash
+    }
+
+    fn effective_graph(&self) -> u64 {
+        if self.current_graph != 0 {
+            self.current_graph
+        } else {
+            self.context_hash
+        }
+    }
+
     /// Parse a Trig line (subject, predicate, object) in current graph context
     fn parse_line(&self, line: &str) -> Result<ParseResult, RdfStarParseError> {
         let line = line.trim();
@@ -97,7 +110,7 @@ impl TrigStarParser {
             subject: subject_hash,
             predicate: predicate_hash,
             object: object_hash,
-            graph_hash: self.current_graph,
+            graph_hash: self.effective_graph(),
         })
     }
 
@@ -158,7 +171,7 @@ impl TrigStarParser {
             components: [subject_hash, predicate_hash, object_hash],
             outer_predicate: outer_predicate_hash,
             outer_object: outer_object_hash,
-            graph_hash: self.current_graph,
+            graph_hash: self.effective_graph(),
         })
     }
 }

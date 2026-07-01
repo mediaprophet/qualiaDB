@@ -318,16 +318,29 @@ fn solve(
     // Physical velocity is recovered: u_phys = u_lattice * (U_phys / U_lattice).
     let nu_phys = cfg.viscosity / cfg.density;
 
-    // Determine characteristic velocity and length from BCs.
-    let u_char = match bc.top {
-        BcKind::Inflow { u, .. } => u.abs(),
-        _ => match bc.bottom { BcKind::Inflow { u, .. } => u.abs(), _ => 0.0 },
-    }.max(1e-10);
+    // Determine characteristic velocity from all inflow boundaries.
+    let mut u_char = 0.0f64;
+    for kind in [bc.left, bc.right, bc.bottom, bc.top] {
+        if let BcKind::Inflow { u, v } = kind {
+            u_char = u_char.max(u.abs()).max(v.abs());
+        }
+    }
+    u_char = u_char.max(1e-10);
+
+    // CFL stability: u·Δt / Δx ≤ 1 (explicit advection / LBM streaming limit).
+    let cfl = u_char * cfg.dt / dx.min(dy);
+    if cfl > 1.0 {
+        return Err(EngineeringError::ValidationError(format!(
+            "CFL condition violated: u·Δt/Δx = {:.4} > 1 (u={}, dt={}, dx={})",
+            cfl, u_char, cfg.dt, dx
+        )));
+    }
+
     let l_char = dx * nx as f64;
     let re = u_char * l_char / nu_phys;
 
-    // Lattice velocity (kept small for incompressibility).
-    let u_lattice = 0.1;
+    // Lattice velocity derived from physical time step (see lid-driven cavity test).
+    let u_lattice = (u_char * cfg.dt / dx).clamp(1e-4, 0.3);
     let nu_lattice = u_lattice * nx as f64 / re.max(1.0);
     let tau = 3.0 * nu_lattice + 0.5;
 

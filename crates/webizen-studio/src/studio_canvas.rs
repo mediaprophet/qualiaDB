@@ -12,7 +12,7 @@ struct NQuin {
     metadata: u64,
     parity: u64,
 }
-use serde::{Deserialize, Serialize};
+use serde::Deserialize;
 #[cfg(target_arch = "wasm32")]
 use wasm_bindgen::closure::Closure;
 #[cfg(target_arch = "wasm32")]
@@ -50,14 +50,14 @@ use crate::components::ontology_import_wizard::{
 use crate::components::selection_sidebar::SelectionSidebar;
 use crate::render::motion::Spring;
 use crate::render::motion_loop::{
-    spawn_ui_motion_loop, step_mode_pulse_spring, step_selection_spring, trigger_mode_pulse,
+    spawn_ui_motion_loop, step_mode_pulse_spring, trigger_mode_pulse,
 };
 use crate::pane_registry::{
     builtin_pane_definitions, category_label, find_pane, PaneCategory, PaneDefinition,
 };
 use crate::theme_engine::{
     builtin_theme_catalog, collect_stylesheets, join_theme_classes, render_scope_tokens,
-    resolve_theme, theme_binding_provenance, ResolvedTheme, ThemeBinding, ThemeDefinition,
+    resolve_theme, theme_binding_provenance, theme_selection_pulse, ResolvedTheme, ThemeBinding,
 };
 use crate::theme_engine;
 
@@ -476,19 +476,20 @@ pub fn DynamicPage(path: Vec<String>, #[props(default)] app_id: Option<String>) 
     let drag_anchor = use_signal(|| (0.0_f64, 0.0_f64));
     let canvas_extent = use_signal(|| (800.0_f64, 520.0_f64));
     let pane_palette = use_signal(builtin_pane_definitions);
-    let mut selection_spring = use_signal(|| Spring::new(0.0));
-    let mut selection_scale = use_signal(|| 1.0_f64);
-    let mut mode_pulse_spring = use_signal(|| Spring::new(0.0));
-    let mut mode_pulse_scale = use_signal(|| 0.0_f64);
-    let mut save_status = use_signal(|| String::new());
+    let selection_spring = use_signal(|| Spring::new(0.0));
+    let selection_scale = use_signal(|| 1.0_f64);
+    let mode_pulse_spring = use_signal(|| Spring::new(0.0));
+    let mode_pulse_scale = use_signal(|| 0.0_f64);
+    let save_status = use_signal(|| String::new());
     let mut deploy_revision = use_signal(|| Option::<u64>::None);
     let mut deploy_history = use_signal(Vec::<DeployHistoryRow>::new);
-    let mut replay_status = use_signal(|| String::new());
-    let mut replaying_revision = use_signal(|| None::<u64>);
+    let replay_status = use_signal(|| String::new());
+    let replaying_revision = use_signal(|| None::<u64>);
     let mut motion_theme_class = use_signal(|| String::new());
     let mut pane_prompt = use_signal(|| String::new());
     let mut generate_status = use_signal(|| String::new());
-    let mut generate_nonce = use_signal(|| 0u32);
+    let generate_nonce = use_signal(|| 0u32);
+    let mut telemetry_logs = use_signal(Vec::<String>::new);
     let global_theme = consume_context::<Signal<ResolvedTheme>>();
 
     use_effect(move || {
@@ -509,7 +510,9 @@ pub fn DynamicPage(path: Vec<String>, #[props(default)] app_id: Option<String>) 
     });
 
     let generate_path = format!("/{}", path.join("/"));
-    use_effect(move || {
+    use_effect({
+        let generate_path = generate_path.clone();
+        move || {
         if generate_nonce() == 0 {
             return;
         }
@@ -554,9 +557,9 @@ pub fn DynamicPage(path: Vec<String>, #[props(default)] app_id: Option<String>) 
                 pane_generator::generate_panes_from_prompt(&prompt, &palette_snapshot);
             apply_plan(plan);
         }
+        }
     });
 
-    #[cfg(target_arch = "wasm32")]
     use_effect(move || {
         let mut selection_spring = selection_spring;
         let mut selection_scale = selection_scale;
@@ -564,6 +567,7 @@ pub fn DynamicPage(path: Vec<String>, #[props(default)] app_id: Option<String>) 
         let mut mode_pulse_scale = mode_pulse_scale;
         let selected_pane_index = selected_pane_index;
         let motion_theme_class = motion_theme_class;
+        let global_theme = global_theme;
         spawn_ui_motion_loop(move |dt| {
             let theme_class = motion_theme_class.read().clone();
             let theme_ref = if theme_class.is_empty() {
@@ -572,11 +576,73 @@ pub fn DynamicPage(path: Vec<String>, #[props(default)] app_id: Option<String>) 
                 Some(theme_class.as_str())
             };
             let selected = selected_pane_index.read().is_some();
-            let scale =
-                step_selection_spring(&mut selection_spring.write(), selected, theme_ref, dt);
+            let scale = theme_selection_pulse(
+                &mut selection_spring.write(),
+                selected,
+                &global_theme(),
+            );
             selection_scale.set(scale);
             let pulse = step_mode_pulse_spring(&mut mode_pulse_spring.write(), theme_ref, dt);
             mode_pulse_scale.set(pulse);
+        });
+    });
+
+    let mut spatial_contract_nodes =
+        use_signal(|| crate::render::render_stack_revision().saturating_sub(1));
+
+    #[cfg(not(target_arch = "wasm32"))]
+    use_effect({
+        let generate_path = generate_path.clone();
+        move || {
+        let ws = workspace.read().clone();
+        let page_path = generate_path.clone();
+        let page = ws
+            .pages
+            .iter()
+            .find(|p| p.url_path == page_path || page_path == "/")
+            .or_else(|| ws.pages.first());
+        if let Some(page) = page {
+            let contract = crate::render::render_contract_from_panes(&page.panes);
+            spatial_contract_nodes.set(contract.element_count());
+            let draw_count = crate::render::rasterize_scene_draw_count(&page.panes);
+            let (_tensor_count, opacity) = crate::render::tensor_buffer_digest(&[]);
+            telemetry_logs.write().push(format!(
+                "Spatial preview: {} elements, {draw_count} draw ops (tensor opacity {opacity:.2})",
+                contract.element_count()
+            ));
+            let panes_snapshot = page.panes.clone();
+            spawn(async move {
+                if let Some(png_len) =
+                    crate::render::native_headless_png_byte_len(&panes_snapshot, 960, 540).await
+                {
+                    telemetry_logs.write().push(format!(
+                        "Native GPU preview frame: {png_len} bytes"
+                    ));
+                }
+            });
+        }
+        }
+    });
+
+    #[cfg(not(target_arch = "wasm32"))]
+    use_effect(move || {
+        if !crate::endpoints::is_native_host() {
+            return;
+        }
+        for surface in crate::endpoints::all_host_surfaces() {
+            telemetry_logs.write().push(format!(
+                "Surface: {}",
+                crate::endpoints::host_surface_label(surface)
+            ));
+        }
+        spawn(async move {
+            if let Ok(resp) = reqwest::get(crate::endpoints::telemetry_url()).await {
+                if let Ok(txt) = resp.text().await {
+                    if !txt.trim().is_empty() {
+                        telemetry_logs.write().push(txt);
+                    }
+                }
+            }
         });
     });
 
@@ -645,12 +711,17 @@ pub fn DynamicPage(path: Vec<String>, #[props(default)] app_id: Option<String>) 
 
     #[cfg(not(target_arch = "wasm32"))]
     use_effect(move || {
-        is_native_llm_active.set(true); // Always true on native build
+        let ws_url = crate::endpoints::native_handshake_ws();
+        let reachable = crate::endpoints::probe_native_handshake_port();
+        is_native_llm_active.set(reachable);
+        if !reachable {
+            telemetry_logs.write().push(format!(
+                "Native LLM handshake offline ({ws_url})"
+            ));
+        }
     });
 
     // 🔴🔴 Telemetry SSE 🔴🔴🔴🔴🔴🔴🔴🔴🔴🔴🔴🔴🔴🔴🔴🔴🔴🔴🔴🔴🔴🔴🔴🔴🔴🔴🔴🔴🔴🔴🔴🔴🔴🔴🔴🔴🔴🔴🔴🔴🔴🔴🔴
-    let mut telemetry_logs = use_signal(Vec::<String>::new);
-
     #[cfg(target_arch = "wasm32")]
     use_effect(move || {
         if !crate::endpoints::is_native_host() {
@@ -726,12 +797,11 @@ pub fn DynamicPage(path: Vec<String>, #[props(default)] app_id: Option<String>) 
         evt.prevent_default();
     };
 
-    let mut record_workspace = {
+    let record_workspace = {
         let mut history = history.clone();
         let workspace = workspace.clone();
         move || {
             history.write().push(workspace.read().clone());
-            #[cfg(target_arch = "wasm32")]
             if crate::endpoints::is_native_host() {
                 let ws = workspace.read().clone();
                 let stack_index = history.read().stack_index();
@@ -781,7 +851,7 @@ pub fn DynamicPage(path: Vec<String>, #[props(default)] app_id: Option<String>) 
     };
 
     let current_path_for_mode = format!("/{}", path.join("/"));
-    let mut pulse_toolbar = {
+    let pulse_toolbar = {
         let mut mode_pulse_spring = mode_pulse_spring.clone();
         move || trigger_mode_pulse(&mut mode_pulse_spring.write())
     };
@@ -828,7 +898,7 @@ pub fn DynamicPage(path: Vec<String>, #[props(default)] app_id: Option<String>) 
         }
     };
 
-    let mut finish_interaction = {
+    let finish_interaction = {
         let mut pane_interaction = pane_interaction.clone();
         let mut record_workspace = record_workspace.clone();
         move || {
@@ -1368,6 +1438,12 @@ pub fn DynamicPage(path: Vec<String>, #[props(default)] app_id: Option<String>) 
                                     "Pan/Zoom Ready"
                                 }
                             }
+                            if spatial_contract_nodes() > 0 {
+                                span {
+                                    style: "font-size: 0.68rem; color: var(--qualia-accent, #0ff); background: rgba(6, 182, 212, 0.08); border: 1px solid rgba(6, 182, 212, 0.35); padding: 0.2rem 0.55rem; border-radius: 999px;",
+                                    "{spatial_contract_nodes()} GPU elements"
+                                }
+                            }
                         }
 
                         match page.presentation_mode {
@@ -1862,7 +1938,8 @@ pub fn DynamicPage(path: Vec<String>, #[props(default)] app_id: Option<String>) 
                                     style: "display: flex; align-items: center; justify-content: space-between; gap: 0.4rem; padding: 0.35rem 0.45rem; border-radius: 6px; border: 1px solid var(--qualia-border); background: var(--qualia-bg); font-size: 0.68rem;",
                                     span {
                                         style: "font-family: monospace; color: var(--qualia-text);",
-                                        "rev #{row.revision} · {row.pane_count} panes"
+                                        title: "manifest #{row.manifest_hash:016x}",
+                                        "rev #{row.revision} · {row.pane_count} panes · ts {row.unix_ts}"
                                     }
                                     button {
                                         style: "padding: 0.15rem 0.4rem; font-size: 0.6rem; border-radius: 5px; border: 1px solid var(--qualia-accent); background: rgba(245,158,11,0.08); color: var(--qualia-text); cursor: pointer;",

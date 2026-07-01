@@ -16,7 +16,7 @@ pub struct OntologyLayoutSuggestion {
 }
 
 #[derive(Clone, Debug, Deserialize)]
-struct CatalogOntology {
+pub struct CatalogOntology {
     id: String,
     name: String,
     domain: Option<String>,
@@ -84,7 +84,11 @@ async fn poll_job_until_done(job_id: &str) -> Result<LocalJob, String> {
         match job.status {
             JobStatus::Completed => return Ok(job),
             JobStatus::Failed => {
-                return Err(job.error.unwrap_or_else(|| job.message.clone()));
+                return Err(format!(
+                    "job {} failed: {}",
+                    job.id,
+                    job.error.unwrap_or_else(|| job.message.clone())
+                ));
             }
             JobStatus::Cancelled => return Err("job cancelled".to_string()),
             JobStatus::Queued | JobStatus::Running => {
@@ -92,7 +96,7 @@ async fn poll_job_until_done(job_id: &str) -> Result<LocalJob, String> {
             }
         }
     }
-    Err("job poll timed out".to_string())
+    Err(format!("job {job_id} poll timed out"))
 }
 
 fn pane(id: &str, x: u16, y: u16, w: u16, h: u16) -> PanePlacement {
@@ -116,7 +120,7 @@ fn pane(id: &str, x: u16, y: u16, w: u16, h: u16) -> PanePlacement {
 }
 
 pub fn builtin_layout_suggestions(catalog: &[CatalogOntology]) -> Vec<OntologyLayoutSuggestion> {
-    let mut specs = vec![
+    let specs = vec![
         (
             "Legal & guardianship",
             "legal",
@@ -198,7 +202,10 @@ fn resolve_ontology_ids(domain: &str, keywords: &[&str], catalog: &[CatalogOntol
             })
         }).unwrap_or(false);
         let id_hit = keywords.iter().any(|k| ont.id.to_ascii_lowercase().contains(k));
-        if domain_hit || tag_hit || id_hit {
+        let name_hit = keywords
+            .iter()
+            .any(|k| ont.name.to_ascii_lowercase().contains(k));
+        if domain_hit || tag_hit || id_hit || name_hit {
             ids.push(ont.id.clone());
         }
     }
@@ -259,7 +266,7 @@ pub fn OntologyImportWizard(
     on_apply: EventHandler<OntologyLayoutSuggestion>,
 ) -> Element {
     let mut catalog = use_signal(Vec::<CatalogOntology>::new);
-    let mut import_status = use_signal(|| String::new());
+    let import_status = use_signal(|| String::new());
 
     use_effect(move || {
         spawn(async move {

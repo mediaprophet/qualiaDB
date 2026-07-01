@@ -9,7 +9,7 @@ use axum::{
     routing::{get, post},
     Json, Router,
 };
-use futures_util::{SinkExt, StreamExt};
+use futures_util::StreamExt;
 use serde::{Deserialize, Serialize};
 use serde_json::json;
 use std::net::SocketAddr;
@@ -32,6 +32,52 @@ use crate::{
 const OFFICIAL_WEB_HUB_ORIGIN: &str = "https://mediaprophet.github.io";
 const QUERY_PAYLOAD_LIMIT_BYTES: u64 = 64 * 1024;
 const PROXY_FETCH_MAX_BYTES: usize = 64 * 1024 * 1024;
+
+/// Block loopback / RFC1918 targets for the browser CORS relay (`GET /proxy/fetch`).
+fn proxy_target_allowed(url: &reqwest::Url) -> bool {
+    match url.scheme() {
+        "http" | "https" => {}
+        _ => return false,
+    }
+
+    let host = match url.host_str() {
+        Some(h) => h.to_ascii_lowercase(),
+        None => return false,
+    };
+
+    if host == "localhost" || host.ends_with(".localhost") || host == "127.0.0.1" {
+        return false;
+    }
+    if host.starts_with("127.") || host == "::1" || host == "[::1]" {
+        return false;
+    }
+    if host.starts_with("10.")
+        || host.starts_with("192.168.")
+        || host.starts_with("169.254.")
+        || host.starts_with("fe80:")
+    {
+        return false;
+    }
+    if let Some(stripped) = host.strip_prefix('[').and_then(|h| h.strip_suffix(']')) {
+        if let Ok(ip) = stripped.parse::<std::net::IpAddr>() {
+            return !ip_is_restricted(ip);
+        }
+    }
+    if let Ok(ip) = host.parse::<std::net::IpAddr>() {
+        return !ip_is_restricted(ip);
+    }
+
+    true
+}
+
+fn ip_is_restricted(ip: std::net::IpAddr) -> bool {
+    match ip {
+        std::net::IpAddr::V4(v4) => v4.is_loopback() || v4.is_private() || v4.is_link_local(),
+        std::net::IpAddr::V6(v6) => {
+            v6.is_loopback() || v6.is_unicast_link_local() || v6.is_unique_local()
+        }
+    }
+}
 
 /// Shared state for the Webizen loopback server
 #[derive(Clone)]
@@ -150,6 +196,7 @@ pub fn spawn_loopback_server(
     port: u16,
     dev: bool,
     vault: Arc<Mutex<crate::key_vault::KeyVault>>,
+    token: Option<String>,
 ) -> Arc<WebizenState> {
     let mut flat_index = Vec::new();
     let index_predicate = q_hash("q42:TypeIndex");
@@ -178,9 +225,11 @@ pub fn spawn_loopback_server(
         telemetry_tx: telemetry_tx.clone(),
         type_index: flat_index.into(),
         dev,
-        token: std::env::var("QUALIA_TOKEN")
-            .ok()
-            .or_else(|| std::env::var("QUALIA_DEV_TOKEN").ok()),
+        token: token.or_else(|| {
+            std::env::var("QUALIA_TOKEN")
+                .ok()
+                .or_else(|| std::env::var("QUALIA_DEV_TOKEN").ok())
+        }),
         vault: vault.clone(),
         storage_path: storage_path.clone(),
         port,
@@ -366,7 +415,7 @@ async fn tensor_slice_handler(
         build_tensor_slice_bytes, verify_tensor_slice_signature, TensorSliceAuthError,
         TensorSliceError, TensorSliceLane, TensorSliceRequest, DEFAULT_SLICE_MAX_NODES,
     };
-    use crate::render::telemetry::STANDPOINT_DID;
+    use crate::render::telemetry::{STANDPOINT_DID, STANDPOINT_VAULT};
     use crate::tensor::buffer_export::tensor_node_count;
 
     let max_nodes = header_parse_u32(&headers, "x-qualia-max-nodes")
@@ -388,7 +437,9 @@ async fn tensor_slice_handler(
     let session_nonce = header_str(&headers, "x-qualia-session-nonce").unwrap_or_default();
     let signature_hex = header_str(&headers, "x-qualia-signature").unwrap_or_default();
 
-    let mut lane = if standpoint_class >= STANDPOINT_DID {
+    let mut lane = if standpoint_class >= STANDPOINT_VAULT {
+        TensorSliceLane::Identifier
+    } else if standpoint_class >= STANDPOINT_DID {
         TensorSliceLane::Identifier
     } else {
         TensorSliceLane::Commons
@@ -591,8 +642,7 @@ async fn health_handler(State(state): State<Arc<WebizenState>>) -> impl IntoResp
             "graph_quin_count": crate::daemon_graph::graph_quin_count(),
             "graph_revision": crate::daemon_graph::graph_revision(),
             "webtorrent": crate::webtorrent_seeder::telemetry(),
-            // mock execution environment
-            "execution_environment": { "runner": "qualia-core-db daemon", "topology": { "mode": "single_cell" } }
+            "execution_environment": crate::services::daemon::execution_environment_json(),
         })),
     )
 }
@@ -619,7 +669,14 @@ async fn proxy_fetch_handler(
         }
     };
 
-    // Check if proxy target allowed (omitted strict implementation for brevity, simplified)
+    if !proxy_target_allowed(&parsed) {
+        return (
+            StatusCode::FORBIDDEN,
+            Json(json!({"error": "proxy target not allowed"})),
+        )
+            .into_response();
+    }
+
     let client = reqwest::Client::builder()
         .timeout(std::time::Duration::from_secs(120))
         .build()
@@ -800,6 +857,14 @@ async fn bridge_handler(
                         let reply = match frame_type {
                             "query" => {
                                 let q = frame.get("query").and_then(|v| v.as_str()).unwrap_or("");
+                                if q.len() as u64 > QUERY_PAYLOAD_LIMIT_BYTES {
+                                    json!({
+                                        "type": "error",
+                                        "id": id,
+                                        "code": "query_too_large",
+                                        "message": format!("query exceeds {QUERY_PAYLOAD_LIMIT_BYTES} byte limit")
+                                    })
+                                } else {
                                 let graph = crate::daemon_graph::graph_read_guard();
                                 match daemon_query::execute_ntriples_metrics(q, graph.as_slice()) {
                                     Ok(stats) => json!({
@@ -809,6 +874,7 @@ async fn bridge_handler(
                                         "vm_cycles": stats.vm_cycles
                                     }),
                                     Err(err) => ws_query_error_json(id, err),
+                                }
                                 }
                             }
                             "bench_load" if state.dev => {
@@ -907,6 +973,17 @@ async fn query_handler(
         return (
             StatusCode::BAD_REQUEST,
             Json(json!({"error": "empty query"})),
+        )
+            .into_response();
+    }
+
+    if request.query.len() as u64 > QUERY_PAYLOAD_LIMIT_BYTES {
+        return (
+            StatusCode::PAYLOAD_TOO_LARGE,
+            Json(json!({
+                "error": "query too large",
+                "limit_bytes": QUERY_PAYLOAD_LIMIT_BYTES
+            })),
         )
             .into_response();
     }

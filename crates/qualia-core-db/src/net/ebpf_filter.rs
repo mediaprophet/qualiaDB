@@ -392,7 +392,19 @@ unsafe impl Send for MacNetworkExtFilter {}
 unsafe impl Sync for MacNetworkExtFilter {}
 
 impl MacNetworkExtFilter {
+    #[cfg(target_os = "macos")]
     const XPC_SERVICE: &'static str = "com.qualiadb.netfilter";
+
+    pub fn service_name(&self) -> &'static str {
+        #[cfg(target_os = "macos")]
+        {
+            Self::XPC_SERVICE
+        }
+        #[cfg(not(target_os = "macos"))]
+        {
+            "com.qualiadb.netfilter"
+        }
+    }
 
     pub fn new() -> Self {
         #[cfg(target_os = "macos")]
@@ -485,6 +497,7 @@ impl NetworkFilter for MacNetworkExtFilter {
     }
 
     fn allow(&self, rule: &str) -> Result<(), StorageError> {
+        log::debug!("[{}] allow rule {rule}", self.service_name());
         self.rules.lock().unwrap().insert(rule, RuleAction::Allow);
         #[cfg(target_os = "macos")]
         if self.connected {

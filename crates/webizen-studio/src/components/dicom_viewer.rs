@@ -9,8 +9,8 @@ extern "C" {
 #[component]
 pub fn DicomViewer() -> Element {
     let mut slice_idx = use_signal(|| 45);
-    let mut window_level = use_signal(|| 40);
-    let mut window_width = use_signal(|| 400);
+    let window_level = use_signal(|| 40);
+    let window_width = use_signal(|| 400);
     let mut tool = use_signal(|| "pan".to_string());
     
     let mut image_data_b64 = use_signal(|| String::new());

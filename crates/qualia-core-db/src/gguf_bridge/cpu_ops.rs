@@ -2,6 +2,7 @@
 //! Split out of the monolithic `gguf_bridge` module (structural refactor; no behaviour change).
 
 use super::{RMS_NORM_EPS, VOCAB_CHUNK_ROWS};
+use super::gpu_params::{elem_op_label, ELEM_OP_RELU};
 use crate::gguf_sharder::GgufTensorInfo;
 
 #[inline]
@@ -66,6 +67,19 @@ pub(crate) fn relu_inplace(buf: &mut [f32], n: usize) {
         if *v < 0.0 {
             *v = 0.0;
         }
+    }
+}
+
+/// CPU fallback for elementwise GPU ops when WGSL kernels are unavailable.
+#[inline]
+pub(crate) fn apply_cpu_elem_op(op: u32, buf: &mut [f32], n: usize) -> bool {
+    let _label = elem_op_label(op);
+    match op {
+        ELEM_OP_RELU => {
+            relu_inplace(buf, n);
+            true
+        }
+        _ => false,
     }
 }
 

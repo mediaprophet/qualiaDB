@@ -186,6 +186,16 @@ pub fn q_hash_formula(text: &str) -> u64 {
     h
 }
 
+/// Map a parsed N3 [`Term`] to its 64-bit quin hash (variables return `None`).
+pub fn term_uri_hash(term: &Term<'_>) -> Option<u64> {
+    match term {
+        Term::Uri(uri) => Some(crate::q_hash(uri)),
+        Term::Literal(lit) => Some(crate::q_hash(lit)),
+        Term::Formula(s) => Some(q_hash_formula(s)),
+        Term::Variable(_) => None,
+    }
+}
+
 /// Tokenizer over one N3 statement-block. Yields, in order:
 /// * a `{ … }` quoted formula (balanced braces) as a single token (incl. braces),
 /// * a `"…"` string literal as a single token (incl. quotes),

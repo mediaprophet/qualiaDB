@@ -230,9 +230,8 @@ pub fn parse_cbor_ld_into<R: std::io::Read, S: crate::sparql_library::quin_sink:
     context_hash: u64,
     sink: &mut S,
 ) -> Result<u64, Box<dyn std::error::Error>> {
-    use std::io::Read;
     let mut bytes = Vec::new();
-    reader.read_to_end(&mut bytes)?;
+    std::io::Read::read_to_end(&mut reader, &mut bytes)?;
     parse_cbor_ld_star_sink(&bytes, context_hash, sink)
 }
 

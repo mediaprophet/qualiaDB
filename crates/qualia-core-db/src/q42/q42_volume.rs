@@ -775,7 +775,7 @@ mod tests {
         let mut blocks = vec![vec![q1], vec![q2]];
         blocks.sort_by_key(|chunk| chunk[0].object);
 
-        let mut tmp = NamedTempFile::new().unwrap();
+        let tmp = NamedTempFile::new().unwrap();
         let ranges: Vec<_> = blocks
             .iter()
             .map(|chunk| {
@@ -879,7 +879,7 @@ doc:article-1 a values:Undertaking ;
     #[test]
     fn v2_magic_detected() {
         let (q, lex) = sample_quin("a", "b", "c");
-        let mut tmp = NamedTempFile::new().unwrap();
+        let tmp = NamedTempFile::new().unwrap();
         write_unified_volume(tmp.path(), &lex, &[(q.object, q.object)], &[vec![q]]).unwrap();
         assert!(is_unified_volume(tmp.path()).unwrap());
     }

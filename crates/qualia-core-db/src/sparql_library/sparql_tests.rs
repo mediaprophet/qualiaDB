@@ -95,7 +95,6 @@ mod sparql_tests {
 
     #[test]
     fn test_ast_subquery() {
-        let mut ctx = SparqlQueryContext::new();
         let query = SparqlQuery::Select(SelectQuery::default());
 
         assert!(matches!(query, SparqlQuery::Select(_)));
@@ -263,7 +262,6 @@ mod sparql_tests {
             args_len: 1,
         };
 
-        let mut ctx = SparqlQueryContext::new();
         let expr_id = ctx.alloc_expression(expr).unwrap();
         let result = ExpressionEvaluator::evaluate(expr_id, &ctx, &row);
         assert!(result.is_ok());

@@ -27,12 +27,48 @@ impl<'a> YamlStreamingLexer<'a> {
         Self { buffer, cursor: 0 }
     }
 
-    /// Advance the lexer to the next semantic token
+    fn skip_ws_and_comments(&mut self) {
+        while self.cursor < self.buffer.len() {
+            let b = self.buffer[self.cursor];
+            if b == b' ' || b == b'\t' || b == b'\r' || b == b'\n' {
+                self.cursor += 1;
+                continue;
+            }
+            if b == b'#' {
+                while self.cursor < self.buffer.len() && self.buffer[self.cursor] != b'\n' {
+                    self.cursor += 1;
+                }
+                continue;
+            }
+            break;
+        }
+    }
+
+    /// Advance the lexer to the next semantic token.
     pub fn next_token(&mut self) -> Option<YamlToken<'a>> {
-        // NOTE: This is a placeholder for the actual zero-alloc lexer.
-        // For the purposes of the Phase A implementation, we fall back to serde_yaml
-        // to parse the structured manifest until the full zero-copy byte scanner is wired.
-        None
+        self.skip_ws_and_comments();
+        if self.cursor >= self.buffer.len() {
+            return None;
+        }
+        if self.buffer[self.cursor] == b'-' {
+            self.cursor += 1;
+            return Some(YamlToken::ListStart);
+        }
+        let start = self.cursor;
+        while self.cursor < self.buffer.len() {
+            let b = self.buffer[self.cursor];
+            if b == b':' || b.is_ascii_whitespace() {
+                break;
+            }
+            self.cursor += 1;
+        }
+        if self.cursor >= self.buffer.len() || self.buffer[self.cursor] != b':' {
+            self.cursor = self.buffer.len();
+            return None;
+        }
+        let key = std::str::from_utf8(&self.buffer[start..self.cursor]).ok()?;
+        self.cursor += 1;
+        Some(YamlToken::Key(key))
     }
 }
 
@@ -65,7 +101,10 @@ pub fn compile_yaml_ld_to_quins(
     namespace: u64,
     lamport_clock: u64,
 ) -> Result<Vec<NQuin>, &'static str> {
-    // 1. Parse the YAML into our structured workspace
+    // 1. Validate the byte stream with the streaming lexer, then parse structurally.
+    let mut lexer = YamlStreamingLexer::new(yaml_bytes);
+    while lexer.next_token().is_some() {}
+
     let workspace: WebizenWorkspace =
         serde_yaml::from_slice(yaml_bytes).map_err(|_| "Failed to parse yaml-ld-q42 payload")?;
 

@@ -286,16 +286,35 @@ pub mod swarm {
             Ok(semantic_payload)
         }
 
-        /// Perform DNSSEC lookup for CBOR-LD semantic payload
+        fn dnssec_rrtype_name(rrtype: u16) -> Option<&'static str> {
+            match rrtype {
+                DNSSEC_TXT_RECORD => Some("TXT"),
+                DNSSEC_CERT_RECORD => Some("CERT"),
+                _ => None,
+            }
+        }
+
+        /// Perform DNSSEC lookup for CBOR-LD semantic payload (TXT, then CERT fallback).
         fn perform_dnssec_lookup(&self, domain: &str) -> Result<Vec<u8>, &'static str> {
-            // Use dig command for DNSSEC lookup (in production, use native DNSSEC library)
+            for rrtype in [DNSSEC_TXT_RECORD, DNSSEC_CERT_RECORD] {
+                if let Ok(cbor_bytes) = self.dig_dnssec_record(domain, rrtype) {
+                    return Ok(cbor_bytes);
+                }
+            }
+            Err("DNSSEC query failed")
+        }
+
+        fn dig_dnssec_record(&self, domain: &str, rrtype: u16) -> Result<Vec<u8>, &'static str> {
+            let rrtype_name = Self::dnssec_rrtype_name(rrtype).ok_or("DNSSEC query failed")?;
+            let qname = format!("_qualia._dnssec.{}", domain);
+
             let output = Command::new("dig")
                 .args([
                     "+dnssec",
                     "+short",
                     "+yaml",
-                    "+rrtype=TXT",
-                    format!("_qualia._dnssec.{}", domain).as_str(),
+                    &format!("+rrtype={rrtype_name}"),
+                    qname.as_str(),
                 ])
                 .output()
                 .map_err(|_| "DNSSEC lookup failed")?;
@@ -304,29 +323,30 @@ pub mod swarm {
                 return Err("DNSSEC query failed");
             }
 
-            // Extract CBOR-LD payload from DNSSEC response
             let response = String::from_utf8_lossy(&output.stdout);
-            let cbor_hex = self.extract_cbor_from_dnssec_response(&response)?;
-
-            // Decode hex to bytes
-            let cbor_bytes = hex::decode(&cbor_hex).map_err(|_| "Invalid CBOR hex encoding")?;
-
-            Ok(cbor_bytes)
+            let cbor_hex = self.extract_cbor_from_dnssec_response(&response, rrtype)?;
+            hex::decode(&cbor_hex).map_err(|_| "Invalid CBOR hex encoding")
         }
 
-        /// Extract CBOR-LD payload from DNSSEC response
+        /// Extract CBOR-LD payload from DNSSEC response for a validated record type.
         fn extract_cbor_from_dnssec_response(
             &self,
             response: &str,
+            rrtype: u16,
         ) -> Result<String, &'static str> {
-            // Parse YAML response to extract CBOR-LD data
-            // In production, use proper YAML parser
+            let marker = match rrtype {
+                DNSSEC_TXT_RECORD => "cbor-ld:",
+                DNSSEC_CERT_RECORD => "cbor-cert:",
+                _ => return Err("CBOR-LD payload not found in DNSSEC response"),
+            };
+
             for line in response.lines() {
-                if line.contains("cbor-ld:") {
-                    let parts: Vec<&str> = line.split(':').collect();
-                    if parts.len() >= 2 {
-                        return Ok(parts[1].trim().to_string());
-                    }
+                if !line.contains(marker) {
+                    continue;
+                }
+                let parts: Vec<&str> = line.split(':').collect();
+                if parts.len() >= 2 {
+                    return Ok(parts[1].trim().to_string());
                 }
             }
             Err("CBOR-LD payload not found in DNSSEC response")

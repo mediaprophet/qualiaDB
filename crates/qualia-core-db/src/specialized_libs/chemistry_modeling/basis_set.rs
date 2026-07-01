@@ -354,8 +354,10 @@ impl ContractedShell {
     pub fn cartesian_powers(&self, am: AngularMomentum) -> Vec<[u8; 3]> {
         let l = am.0 as i32;
         let mut powers = Vec::with_capacity(am.n_cartesian());
-        for lx in 0..=l {
-            for ly in 0..=(l - lx) {
+        // Standard Cartesian ordering: x-first (lx descending), then y, then z.
+        // e.g. l=1 → [1,0,0], [0,1,0], [0,0,1]
+        for lx in (0..=l).rev() {
+            for ly in (0..=(l - lx)).rev() {
                 let lz = l - lx - ly;
                 powers.push([lx as u8, ly as u8, lz as u8]);
             }
@@ -569,11 +571,21 @@ impl MolecularBasis {
         self.atoms.iter().flat_map(|(_, _, _, eb)| eb.shells.iter()).collect()
     }
 
-    /// Collect all split (simple) shells from all atoms.
+    /// Collect all shells from all atoms with per-atom nuclear centers assigned.
+    ///
+    /// Unlike [`ElementBasis::split_shells`], combined contractions (e.g. STO-3G
+    /// SP shells) are kept intact; only the molecular → per-atom flattening is
+    /// performed.
     pub fn all_split_shells(&self) -> Vec<ContractedShell> {
         self.atoms
             .iter()
-            .flat_map(|(_, _, _, eb)| eb.split_shells())
+            .flat_map(|(_, _, center, eb)| {
+                eb.shells.iter().map(|shell| {
+                    let mut positioned = shell.clone();
+                    positioned.center = *center;
+                    positioned
+                })
+            })
             .collect()
     }
 }

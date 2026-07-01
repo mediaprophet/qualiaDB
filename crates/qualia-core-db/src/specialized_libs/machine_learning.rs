@@ -6398,7 +6398,7 @@ mod tests {
             cache_stats: ModelCacheStats::new(),
         };
 
-        let mut mk = |id: &str| {
+        let mk = |id: &str| {
             let mut m = Model::new();
             m.model_id = id.to_string();
             // One f64 weight = 8 bytes per entry.

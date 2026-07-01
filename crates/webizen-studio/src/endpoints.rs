@@ -68,6 +68,38 @@ pub fn telemetry_url() -> String {
     format!("{DAEMON_HTTP}/telemetry")
 }
 
+/// Native LLM / handshake WebSocket endpoint (desktop daemon).
+pub fn native_handshake_ws() -> &'static str {
+    NATIVE_WS
+}
+
+/// Human-readable label for the active host surface (studio status chips).
+pub fn host_surface_label(surface: HostSurface) -> &'static str {
+    match surface {
+        HostSurface::PublicWeb => "Public web demo",
+        HostSurface::DesktopWebview => "Desktop webview",
+    }
+}
+
+/// All host surfaces the studio can run in (picker + capability docs).
+pub fn all_host_surfaces() -> [HostSurface; 2] {
+    [HostSurface::DesktopWebview, HostSurface::PublicWeb]
+}
+
+/// Probe whether the native LLM handshake port is reachable (TCP preflight).
+#[cfg(not(target_arch = "wasm32"))]
+pub fn probe_native_handshake_port() -> bool {
+    let addr = NATIVE_WS
+        .trim_start_matches("ws://")
+        .trim_start_matches("wss://");
+    std::net::TcpStream::connect(addr).is_ok()
+}
+
+#[cfg(target_arch = "wasm32")]
+pub fn probe_native_handshake_port() -> bool {
+    false
+}
+
 /// Bundled Shoelace path (offline Tauri desktop). GH Pages demo uses CDN.
 pub const SHOELACE_VENDOR_BASE: &str = "/vendor/shoelace";
 pub const SHOELACE_CDN_BASE: &str =

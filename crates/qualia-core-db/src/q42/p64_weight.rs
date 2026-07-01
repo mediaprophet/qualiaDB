@@ -651,6 +651,8 @@ fn compile_gguf_to_p64_legacy(input: &[u8], page_log2: u16) -> Result<Vec<u8>, S
 
     out[36..40].copy_from_slice(&tensor_count.to_le_bytes());
     out[40..44].copy_from_slice(&(page as u32).to_le_bytes());
+    // reserved[0..4]: embedded tokenizer blob byte length
+    out[44..48].copy_from_slice(&tokenizer_size.to_le_bytes());
 
     // 2. HParams
     // Just mock for now or use the fields if they are pub. The DOD rewrite doesn't require a strict HParams struct unless defined.
@@ -1093,8 +1095,6 @@ fn transcode_safetensor_with_policy<W: std::io::Write>(
         ggml_elem_bytes, is_high_fidelity_ggml, parse_safetensor_header, safetensor_dtype_to_ggml,
     };
     use crate::ternary::{ternary_blob, ternary_blob_len, GGML_TYPE_TERNARY_158};
-    use std::io::Write;
-
     let page_log2 = if page_log2 == 0 {
         P64_DEFAULT_PAGE_LOG2
     } else {

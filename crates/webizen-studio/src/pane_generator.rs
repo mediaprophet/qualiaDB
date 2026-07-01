@@ -6,7 +6,11 @@
 use serde::Deserialize;
 
 use crate::canvas_model::{LayerBehavior, PanePlacement, PresentationMode};
-use crate::pane_registry::{builtin_pane_definitions, PaneDefinition};
+use crate::pane_registry::PaneDefinition;
+
+fn registry_palette() -> Vec<PaneDefinition> {
+    crate::pane_registry::builtin_pane_definitions()
+}
 use crate::theme_engine::ThemeBinding;
 
 #[derive(Clone, Debug, PartialEq)]
@@ -125,6 +129,13 @@ pub async fn fetch_plan_from_prompt(
 
 /// Map a natural-language prompt to a bounded pane layout using the built-in palette.
 pub fn generate_panes_from_prompt(prompt: &str, palette: &[PaneDefinition]) -> PaneGenerationPlan {
+    let owned_palette;
+    let palette = if palette.is_empty() {
+        owned_palette = registry_palette();
+        owned_palette.as_slice()
+    } else {
+        palette
+    };
     let p = prompt.to_ascii_lowercase();
     let has = |ids: &[&str]| ids.iter().any(|id| palette.iter().any(|d| d.component_id == *id));
 
@@ -244,7 +255,7 @@ mod tests {
     fn health_prompt_selects_clinical_panes() {
         let plan = generate_panes_from_prompt(
             "Health tracker with vitals chart",
-            &builtin_pane_definitions(),
+            &registry_palette(),
         );
         assert!(plan
             .panes
@@ -256,7 +267,7 @@ mod tests {
     fn spatial_prompt_sets_spatial_mode() {
         let plan = generate_panes_from_prompt(
             "10D manifold spatial portal",
-            &builtin_pane_definitions(),
+            &registry_palette(),
         );
         assert_eq!(plan.presentation, PresentationMode::Spatial);
     }

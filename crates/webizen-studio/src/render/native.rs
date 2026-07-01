@@ -5,15 +5,14 @@
 //! rendering with Projective Geometric Algebra support.
 
 use crate::render::{Camera, Renderer, ScreenPoint, Vec3};
-use qualia_core_db::render::{
-    Camera as WebCamera, ScreenPoint as WebScreenPoint, Vec3 as WebVec3,
-    WgpuRenderer as WebizenWgpuRenderer,
+use webizen_render::{
+    Camera as WebCamera, ScreenPoint as WebScreenPoint, Vec3 as WebVec3, WgpuRenderer,
 };
 
 #[cfg(not(target_arch = "wasm32"))]
 /// Native WebGPU renderer implementation
 pub struct NativeRenderer {
-    inner: WebizenWgpuRenderer<'static>,
+    inner: WgpuRenderer<'static>,
 }
 
 #[cfg(not(target_arch = "wasm32"))]
@@ -24,26 +23,22 @@ impl NativeRenderer {
     /// window to provide a `wgpu::Surface`. We render headless into a texture and
     /// expose the frame via [`NativeRenderer::read_pixels`], to be displayed
     /// through the same CPU frame-buffer path the diffusion compute already uses.
-    #[allow(dead_code)]
     pub async fn new(width: u32, height: u32) -> Result<Self, String> {
-        let inner = WebizenWgpuRenderer::new_offscreen(width, height).await?;
+        let inner = WgpuRenderer::new_offscreen(width, height).await?;
         Ok(Self { inner })
     }
 
     /// Resize the offscreen render target.
-    #[allow(dead_code)]
     pub fn resize(&mut self, width: u32, height: u32) {
         self.inner.resize(width, height);
     }
 
     /// Read the current frame back as tightly-packed RGBA8 (`width*height*4` bytes).
-    #[allow(dead_code)]
     pub fn read_pixels(&self) -> Option<Vec<u8>> {
         self.inner.read_pixels()
     }
 
     /// Read the current frame back as PNG-encoded bytes (for webview delivery).
-    #[allow(dead_code)]
     pub fn read_png(&self) -> Option<Vec<u8>> {
         self.inner.read_png()
     }

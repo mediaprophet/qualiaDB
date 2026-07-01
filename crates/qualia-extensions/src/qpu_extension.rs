@@ -309,7 +309,6 @@ impl QpuExtension {
     async fn simulate_local(&self, circuit: &QuantumCircuit, shots: u32) -> Result<QpuExecutionResult, ExtensionError> {
         let mut counts = HashMap::new();
         let mut probabilities = HashMap::new();
-        let mut execution_time_ms = 0;
         let mut fidelity = None;
 
         #[cfg(feature = "qualia-q-forge")]
@@ -363,7 +362,7 @@ impl QpuExtension {
                     fidelity = Some(1.0); // Local simulation is theoretically exact
                 }
             }
-            execution_time_ms = start_time.elapsed().as_millis() as u64;
+            let execution_time_ms = start_time.elapsed().as_millis() as u64;
             
             Ok(QpuExecutionResult {
                 counts,
@@ -380,7 +379,7 @@ impl QpuExtension {
             // Mock local statevector execution
             counts.insert("0".repeat(circuit.qubits as usize), shots); // Perfect fidelity baseline
             probabilities.insert("0".repeat(circuit.qubits as usize), 1.0);
-            execution_time_ms = 50;
+            let execution_time_ms = 50;
             fidelity = Some(1.0);
             
             Ok(QpuExecutionResult {

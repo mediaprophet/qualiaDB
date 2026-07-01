@@ -255,7 +255,3 @@ harness = false
 [[bench]]
 name = "ram_usage"
 harness = false
-
-
-csv = "1.3"
-atoi = "3.0"

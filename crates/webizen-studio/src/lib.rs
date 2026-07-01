@@ -7,3 +7,5 @@ pub mod canvas_graph;
 pub mod endpoints;
 pub mod render;
 pub mod theme_engine;
+
+pub use render::render_stack_revision;

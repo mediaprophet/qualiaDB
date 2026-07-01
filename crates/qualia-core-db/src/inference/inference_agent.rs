@@ -362,6 +362,40 @@ fn lora_embedding_forward(
     engine.dispatch_fused_transformer_block(wt, &emb_buf[..actual_n])
 }
 
+/// Decode fallback when full hidden-state projection is unavailable: real GGUF
+/// embedding lookup when mmap/index exist, otherwise deterministic pseudo logits.
+fn embedding_fallback_logits(
+    engine: &crate::gguf_bridge::QTensorEngine,
+    tensor_idx: Option<&crate::gguf_sharder::GgufTensorIndex>,
+    lora_adapter: Option<&crate::lora::LoRAAdapter>,
+    token_id: u32,
+    emb_dim: usize,
+    emb_buf: &mut [f32],
+    wt: &crate::gguf_bridge::QTensor,
+) -> Vec<f32> {
+    if let (Some(idx), Some(mmap)) = (tensor_idx, engine.gguf_mmap.as_deref()) {
+        if let Some(adapter) = lora_adapter {
+            lora_embedding_forward(engine, idx, mmap, token_id, emb_dim, emb_buf, wt, adapter)
+        } else {
+            #[cfg(not(target_arch = "wasm32"))]
+            {
+                cpu_embedding_forward(engine, idx, mmap, token_id, emb_dim, emb_buf, wt)
+            }
+            #[cfg(target_arch = "wasm32")]
+            {
+                let n = idx.dequantize_token_embedding_into(mmap, token_id, &mut emb_buf[..emb_dim]);
+                if n > 0 {
+                    engine.dispatch_fused_transformer_block(wt, &emb_buf[..n])
+                } else {
+                    pseudo_embedding_forward(token_id, emb_dim, emb_buf, engine, wt)
+                }
+            }
+        }
+    } else {
+        pseudo_embedding_forward(token_id, emb_dim, emb_buf, engine, wt)
+    }
+}
+
 fn push_decode_stream_delta(
     tok: &crate::gguf_sharder::GgufTokenizer,
     out_ids: &[u32],
@@ -1185,8 +1219,15 @@ impl LocalLlmAgent {
                         }
                     } else {
                         let wt = QTensor::new(vec![emb_dim, emb_dim], 0, true);
-                        let logits =
-                            pseudo_embedding_forward(cur, emb_dim, &mut emb_buf[..], &engine, &wt);
+                        let logits = embedding_fallback_logits(
+                            &engine,
+                            tensor_idx.as_ref(),
+                            lora_adapter.as_ref(),
+                            cur,
+                            emb_dim,
+                            &mut emb_buf[..],
+                            &wt,
+                        );
                         logits.iter().enumerate().fold(
                             (0usize, f32::NEG_INFINITY),
                             |(bi, bv), (i, &v)| if v > bv { (i, v) } else { (bi, bv) },
@@ -1647,8 +1688,15 @@ impl LocalLlmAgent {
                         }
                     } else {
                         let wt = QTensor::new(vec![emb_dim, emb_dim], 0, true);
-                        let logits =
-                            pseudo_embedding_forward(cur, emb_dim, &mut emb_buf[..], &engine, &wt);
+                        let logits = embedding_fallback_logits(
+                            &engine,
+                            tensor_idx.as_ref(),
+                            lora_adapter.as_ref(),
+                            cur,
+                            emb_dim,
+                            &mut emb_buf[..],
+                            &wt,
+                        );
                         logits.iter().enumerate().fold(
                             (0usize, f32::NEG_INFINITY),
                             |(bi, bv), (i, &v)| if v > bv { (i, v) } else { (bi, bv) },

@@ -1,5 +1,5 @@
 use dioxus::prelude::*;
-use serde::{Deserialize, Serialize};
+
 
 #[wasm_bindgen::prelude::wasm_bindgen]
 extern "C" {

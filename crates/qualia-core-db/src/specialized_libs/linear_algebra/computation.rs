@@ -11,6 +11,7 @@ pub struct ComputationEngine {
     pub execution_engine: ExecutionEngine,
     pub parallel_executor: ParallelExecutor,
     pub simd_optimizer: SIMDOptimizer,
+    pub privacy: PrivacyEngine,
 }
 
 /// Matrix operations
@@ -339,6 +340,7 @@ impl ComputationEngine {
             execution_engine: ExecutionEngine::new(),
             parallel_executor: ParallelExecutor::new(4),
             simd_optimizer: SIMDOptimizer::new(),
+            privacy: PrivacyEngine::new(),
         }
     }
 
@@ -346,6 +348,7 @@ impl ComputationEngine {
         self.execution_engine.initialize()?;
         self.parallel_executor.initialize()?;
         self.simd_optimizer.initialize()?;
+        self.privacy.initialize()?;
         Ok(())
     }
 

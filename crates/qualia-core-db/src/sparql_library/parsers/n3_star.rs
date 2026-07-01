@@ -5,7 +5,7 @@
 
 use crate::lexicon::{generate_60bit_token, generate_embedded_triple_id};
 use crate::rdf_star::{RdfStarParseError, RdfStarParser};
-use crate::NQuin;
+use crate::{q_hash, NQuin};
 
 /// N3-Star parser implementation
 pub struct N3StarParser {
@@ -240,6 +240,7 @@ enum ParseResult {
     Comment,
     Formula,
     Rule {
+        #[allow(dead_code)]
         rule_type: RuleType,
     },
     RegularTriple {
@@ -274,7 +275,20 @@ pub fn parse_n3_star_into<R: std::io::Read, S: crate::sparql_library::quin_sink:
     for line in buf_reader.lines() {
         let line = line?;
         match parser.parse_line(&line)? {
-            ParseResult::Comment | ParseResult::Formula | ParseResult::Rule { .. } => continue,
+            ParseResult::Comment | ParseResult::Formula => continue,
+            ParseResult::Rule { rule_type } => {
+                let pred = q_hash("q42:n3RuleType");
+                let tag = rule_type as u64;
+                sink.push(NQuin {
+                    subject: context_hash,
+                    predicate: pred,
+                    object: tag,
+                    context: context_hash,
+                    metadata: 0,
+                    parity: context_hash ^ pred ^ tag ^ context_hash,
+                })?;
+                count += 1;
+            }
             ParseResult::RegularTriple {
                 subject,
                 predicate,
@@ -335,11 +349,11 @@ pub fn parse_n3_star_stream<R: std::io::Read>(
 #[cfg(test)]
 mod tests {
     use super::*;
-    use crate::rdf_star::{RdfStarParser, RdfStarSerializer};
+    use crate::rdf_star::RdfStarParser;
 
     #[test]
     fn test_n3_star_parser_creation() {
-        let mut parser = N3StarParser::new(0);
+        let parser = N3StarParser::new(0);
         assert_eq!(parser.format_name(), "N3-Star");
         assert!(parser.supports_quads());
         assert!(!parser.supports_named_graphs());

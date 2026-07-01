@@ -68,6 +68,22 @@ impl TensorSliceRequest {
     pub fn requires_identifier_auth(&self) -> bool {
         self.standpoint_class >= STANDPOINT_DID
     }
+
+    /// Vault standpoints export the full sealed graph (identifier lane, no commons filter).
+    #[inline]
+    pub fn requires_vault_export(&self) -> bool {
+        self.standpoint_class >= STANDPOINT_VAULT
+    }
+
+    /// Resolve the effective routing lane for cold-path tensor export.
+    #[inline]
+    pub fn export_lane(&self) -> TensorSliceLane {
+        if self.requires_vault_export() || self.requires_identifier_auth() {
+            TensorSliceLane::Identifier
+        } else {
+            self.lane
+        }
+    }
 }
 
 #[derive(Debug, PartialEq, Eq)]
@@ -163,8 +179,9 @@ pub fn build_tensor_slice_bytes(
     let cap = TensorSliceRequest::clamp_max_nodes(req.max_nodes);
     let mut tensors = Vec::with_capacity(cap.min(quins.len()));
 
+    let lane = req.export_lane();
     for q in quins {
-        if !quin_matches_lane(q, req.lane) {
+        if !quin_matches_lane(q, lane) {
             continue;
         }
         let t = bake_quin_to_tensor(q);

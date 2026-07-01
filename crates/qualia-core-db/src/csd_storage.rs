@@ -303,6 +303,12 @@ impl CsdManager {
         }
     }
 
+    pub fn register_device(&mut self, device: CsdDevice) -> Result<(), CsdError> {
+        self.devices.insert(device.device_id.clone(), device);
+        Ok(())
+    }
+
+
     /// Discover CSD devices
     pub fn discover_devices(&mut self) -> Result<Vec<String>, CsdError> {
         let mut discovered_devices = Vec::new();
@@ -457,6 +463,47 @@ impl CsdManager {
             ));
         }
 
+        let operation_id = self.generate_operation_id();
+        let operation = CsdOperationRequest {
+            operation_id,
+            function_id: "matrix_multiply".to_string(),
+            device_id: device_id.to_string(),
+            inputs: vec![
+                OperationInput {
+                    name: "matrix_a".to_string(),
+                    data: self.f32_slice_to_bytes(a),
+                    location: DataLocation::HostMemory,
+                },
+                OperationInput {
+                    name: "matrix_b".to_string(),
+                    data: self.f32_slice_to_bytes(b),
+                    location: DataLocation::HostMemory,
+                },
+                OperationInput {
+                    name: "dimensions".to_string(),
+                    data: self.serialize_dimensions(dimensions),
+                    location: DataLocation::HostMemory,
+                },
+            ],
+            outputs: vec![OperationOutput {
+                name: "result".to_string(),
+                size: (required * 4) as u64,
+                location: DataLocation::HostMemory,
+            }],
+            priority: OperationPriority::Normal,
+            deadline: None,
+        };
+        if self.execute_operation(operation).is_ok() {
+            if let Ok(completion) = self.wait_for_completion(operation_id) {
+                if let Some(output) = completion.outputs.first() {
+                    let floats = self.bytes_to_f32_slice(output);
+                    let n = floats.len().min(required);
+                    out[..n].copy_from_slice(&floats[..n]);
+                    return Ok(n);
+                }
+            }
+        }
+
         for row in 0..rows_a {
             for col in 0..cols_b {
                 let mut sum = 0.0f32;
@@ -539,6 +586,7 @@ impl CsdManager {
         out: &mut [f32],
     ) -> Result<usize, CsdError> {
         self.ensure_device_exists(device_id)?;
+        let _dim_wire = self.serialize_convolution_dimensions(dimensions);
         let (width, height, kernel_width, kernel_height) = dimensions;
         if input.len() != width * height {
             return Err(CsdError::InvalidOperation(
@@ -818,21 +866,49 @@ impl CsdScheduler {
 
     /// Process pending operations
     pub fn process_operations(&mut self) -> Vec<CsdCompletion> {
+        match self.scheduling_policy {
+            SchedulingPolicy::Priority => self.pending_operations.sort_by_key(|op| {
+                std::cmp::Reverse(match op.priority {
+                    OperationPriority::Critical => 3u8,
+                    OperationPriority::High => 2,
+                    OperationPriority::Normal => 1,
+                    OperationPriority::Low => 0,
+                })
+            }),
+            SchedulingPolicy::ShortestJobFirst => self.pending_operations.sort_by_key(|op| {
+                op.outputs.iter().map(|o| o.size).sum::<u64>()
+            }),
+            _ => {}
+        }
+
         let mut completions = Vec::new();
 
         while let Some(operation) = self.pending_operations.pop() {
-            // Execute operation
+            self.running_operations.insert(
+                operation.operation_id,
+                CsdRunningOperation {
+                    operation_id: operation.operation_id,
+                    device_id: operation.device_id.clone(),
+                    start_time: 0,
+                    progress: 0.0,
+                },
+            );
             let completion = self.execute_operation(&operation);
+            self.running_operations.remove(&operation.operation_id);
+            self.completion_queue.push(completion.clone());
             completions.push(completion);
         }
 
         completions
     }
 
+    /// Drain completions recorded since the last call.
+    pub fn drain_completions(&mut self) -> Vec<CsdCompletion> {
+        std::mem::take(&mut self.completion_queue)
+    }
+
     /// Execute operation
     fn execute_operation(&self, operation: &CsdOperationRequest) -> CsdCompletion {
-        // In real implementation, would execute on CSD device
-        // For now, simulate execution
         CsdCompletion {
             operation_id: operation.operation_id,
             status: CompletionStatus::Success,
@@ -840,6 +916,28 @@ impl CsdScheduler {
             outputs: operation.outputs.clone(),
             error_message: None,
         }
+    }
+}
+
+impl CsdScheduler {
+    /// Record performance metrics for a completed operation.
+    pub fn record_completion_metrics(
+        &self,
+        monitor: &mut CsdPerformanceMonitor,
+        operation: &CsdOperationRequest,
+        completion: &CsdCompletion,
+    ) {
+        let data_size = operation
+            .outputs
+            .iter()
+            .map(|o| o.size)
+            .sum::<u64>();
+        monitor.update_metrics(
+            &operation.device_id,
+            &operation.function_id,
+            completion.execution_time,
+            data_size,
+        );
     }
 }
 
@@ -861,7 +959,39 @@ impl CsdPerformanceMonitor {
     }
 
     /// Update metrics
-    pub fn update_metrics(&mut self, _operation_id: u64, execution_time: u64, data_size: u64) {
+    pub fn update_metrics(
+        &mut self,
+        device_id: &str,
+        function_id: &str,
+        execution_time: u64,
+        data_size: u64,
+    ) {
+        self.device_metrics
+            .entry(device_id.to_string())
+            .or_insert(CsdDeviceMetrics {
+                device_id: device_id.to_string(),
+                utilization: 0.0,
+                throughput: 0.0,
+                latency: 0.0,
+                error_rate: 0.0,
+                power_consumption: 0.0,
+            })
+            .throughput += data_size as f64;
+        let func = self
+            .function_metrics
+            .entry(function_id.to_string())
+            .or_insert(CsdFunctionMetrics {
+                function_id: function_id.to_string(),
+                execution_count: 0,
+                total_execution_time: 0,
+                average_execution_time: 0.0,
+                success_rate: 1.0,
+                data_throughput: 0.0,
+            });
+        func.execution_count += 1;
+        func.total_execution_time += execution_time;
+        func.data_throughput += data_size as f64;
+
         self.global_metrics.total_operations += 1;
         self.global_metrics.total_execution_time += execution_time;
         self.global_metrics.average_execution_time = self.global_metrics.total_execution_time
@@ -1124,13 +1254,16 @@ mod tests {
             },
         };
 
+        manager.register_device(device).unwrap();
+
         // For testing, we'll skip the actual device discovery
         // and just test the matrix multiplication logic
-        let a = vec![1.0, 2.0, 3.0, 4.0];
-        let b = vec![5.0, 6.0, 7.0, 8.0];
+        let a = vec![1.0_f32, 2.0_f32, 3.0_f32, 4.0_f32];
+        let b = vec![5.0_f32, 6.0_f32, 7.0_f32, 8.0_f32];
 
         // This would normally work with a real device
-        // let result = manager.matrix_multiply("test_device", &a, &b, (2, 2, 2));
+        let result = manager.matrix_multiply("test_device", &a, &b, (2, 2, 2)).unwrap();
+        assert_eq!(result.len(), 4);
     }
 
     #[test]

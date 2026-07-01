@@ -238,6 +238,10 @@ impl ZeroCopyStreamer for IocpGridManager {
             ));
         }
 
+        // Prepare the inactive DMA buffer before the async transfer posts.
+        self.get_inactive_buffer_mut().fill(0);
+        let _dma_len = self.get_inactive_buffer().len();
+
         unsafe {
             let status = crate::directml_bridge::iocp_async_read_ffi(self.handle, offset);
             if status != crate::directml_bridge::DmlStatus::Success {

@@ -8,7 +8,7 @@ use serde_json;
 use std::collections::HashMap;
 use tokio::net::TcpStream;
 use tokio::io::{AsyncReadExt, AsyncWriteExt};
-use tracing::{info, warn, error};
+use tracing::{info, warn};
 
 #[derive(Parser)]
 #[command(name = "qualia-extensions")]

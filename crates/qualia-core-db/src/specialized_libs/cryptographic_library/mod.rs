@@ -6673,6 +6673,10 @@ mod tests {
         // Sign data
         let data = b"Hello, World!";
         let signature = library.sign_data("test_key_private", data).unwrap();
+        
+        // Verify signature
+        let is_valid = library.verify_signature("test_key", &signature.result, data).unwrap();
+        assert!(is_valid.result);
 
         assert_eq!(signature.result.key_id, "test_key_private");
         assert_eq!(signature.result.algorithm, KeyAlgorithm::MLDSA);

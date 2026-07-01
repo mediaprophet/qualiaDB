@@ -161,24 +161,29 @@ impl VaultManifestProcessor {
     /// Validate manifest against Q42 lexicon
     pub fn validate_manifest(&self, manifest: &VaultManifest) -> Result<(), CborLdError> {
         // Check if all terms exist in Q42 lexicon
+        let lexicon = self.cbor_ld_parser.lexicon();
         for collection in &manifest.collections {
-            if let Some(_hash) = self
-                .q42_context
-                .resolve_semantic_term(&collection.collection_type)
+            if lexicon
+                .resolve_term(&collection.collection_type)
+                .is_none()
+                && self
+                    .q42_context
+                    .resolve_semantic_term(&collection.collection_type)
+                    .is_none()
             {
-                // Term exists in lexicon
-            } else {
                 return Err(CborLdError::InvalidUtf8);
             }
         }
 
         for capability in &manifest.capabilities {
-            if let Some(_hash) = self
-                .q42_context
-                .resolve_semantic_term(&capability.capability_type)
+            if lexicon
+                .resolve_term(&capability.capability_type)
+                .is_none()
+                && self
+                    .q42_context
+                    .resolve_semantic_term(&capability.capability_type)
+                    .is_none()
             {
-                // Term exists in lexicon
-            } else {
                 return Err(CborLdError::InvalidUtf8);
             }
         }

@@ -77,12 +77,37 @@ fn spawn_spatial_refresh(page: Page, mut epoch: Signal<u64>, mut status: Signal<
 pub fn SpatialBridgeCanvas(page: Page) -> Element {
     let page_for_effect = page.clone();
     let epoch = use_signal(|| 0u64);
-    let mut live_portal = use_signal(|| false);
-    let mut status = use_signal(|| {
+    let live_portal = use_signal(|| false);
+    let status = use_signal(|| {
         if crate::endpoints::is_native_host() {
             "Initializing volumetric renderer…".to_string()
         } else {
             "Spatial view requires the Webizen desktop host.".to_string()
+        }
+    });
+
+    #[cfg(not(target_arch = "wasm32"))]
+    use_effect({
+        let page_for_effect = page_for_effect.clone();
+        move || {
+            if !crate::endpoints::is_native_host() {
+                return;
+            }
+            let mut epoch = epoch;
+            let mut status = status;
+            let panes = page_for_effect.panes.clone();
+            spawn(async move {
+                if let Some(png_len) =
+                    crate::render::native_headless_png_byte_len(&panes, 960, 540).await
+                {
+                    epoch.set(epoch() + 1);
+                    status.set(format!(
+                        "PortalGpu frame — {} bytes, {} panes",
+                        png_len,
+                        panes.len()
+                    ));
+                }
+            });
         }
     });
 
@@ -147,6 +172,23 @@ pub fn SpatialBridgeCanvas(page: Page) -> Element {
             if crate::endpoints::is_native_host() {
                 spawn_spatial_refresh(page_snapshot.clone(), epoch, status);
             }
+            #[cfg(not(target_arch = "wasm32"))]
+            if crate::endpoints::is_native_host() {
+                let panes = page_snapshot.panes.clone();
+                let mut epoch = epoch;
+                let mut status = status;
+                spawn(async move {
+                    if let Some(png_len) =
+                        crate::render::native_headless_png_byte_len(&panes, 960, 540).await
+                    {
+                        epoch.set(epoch() + 1);
+                        status.set(format!(
+                            "PortalGpu refresh — {png_len} bytes, {} panes",
+                            panes.len()
+                        ));
+                    }
+                });
+            }
         }
     };
     let refresh_again = refresh.clone();
@@ -154,6 +196,7 @@ pub fn SpatialBridgeCanvas(page: Page) -> Element {
     let toggle_live_portal = {
         let mut live_portal = live_portal;
         let mut status = status;
+        let _ = page_for_effect.panes.len();
         move |_| {
             let next = !live_portal();
             live_portal.set(next);

@@ -258,7 +258,7 @@ pub fn PhysicsSimulator() -> Element {
     let status = use_signal(|| "Booting spatial viewport...".to_string());
     let mut forge_status =
         use_signal(|| "Run the bounded native probe to certify the Forge kernel.".to_string());
-    let mut forge_running = use_signal(|| false);
+    let forge_running = use_signal(|| false);
     let forge_result = use_signal(|| None::<ForgePhysicsCertification>);
     #[cfg(target_arch = "wasm32")]
     let animation_started = use_signal(|| false);

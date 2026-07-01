@@ -126,11 +126,23 @@ pub fn pull_vector(node: [f32; 3], camera_eye: [f32; 3], alpha: f32, epistemic_q
     [dx / len * delta, dy / len * delta, dz / len * delta]
 }
 
+#[inline]
+fn approx_eq3(a: [f32; 3], b: [f32; 3], eps: f32) -> bool {
+    (a[0] - b[0]).abs() <= eps && (a[1] - b[1]).abs() <= eps && (a[2] - b[2]).abs() <= eps
+}
+
 /// Null-vector sandwich on euclidean `(x, y, z)` — `P' = Ω P Ω̃`.
 ///
 /// `P = e₀ + x·e₁ + y·e₂ + z·e₃`. When `m.d == 0`, ε terms vanish → pure rotation.
 #[inline]
 pub fn sandwich_point(m: Motor, p: [f32; 3]) -> [f32; 3] {
+    const IDENTITY_EPS: f32 = 1e-6;
+    if (m.r[0] - 1.0).abs() <= IDENTITY_EPS
+        && approx_eq3([m.r[1], m.r[2], m.r[3]], [0.0, 0.0, 0.0], IDENTITY_EPS)
+        && m.d.iter().all(|&x| x.abs() <= IDENTITY_EPS)
+    {
+        return p;
+    }
     let qr = blade4_to_quat(m.r);
     let qd = blade4_to_quat(m.d);
     let qr_conj = quat_conj(qr);
@@ -359,11 +371,6 @@ pub fn motor_to_mat4_col(m: Motor) -> [[f32; 4]; 4] {
         [cz[0] - t[0], cz[1] - t[1], cz[2] - t[2], 0.0],
         [t[0], t[1], t[2], 1.0],
     ]
-}
-
-#[inline]
-fn approx_eq3(a: [f32; 3], b: [f32; 3], eps: f32) -> bool {
-    (a[0] - b[0]).abs() <= eps && (a[1] - b[1]).abs() <= eps && (a[2] - b[2]).abs() <= eps
 }
 
 #[cfg(test)]

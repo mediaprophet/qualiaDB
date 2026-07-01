@@ -26,7 +26,8 @@
 //! cargo bench --package qualia-core-db 2>&1 | tee bench_results.txt
 //! ```
 
-use criterion::{black_box, criterion_group, criterion_main, BenchmarkId, Criterion, Throughput};
+use std::hint::black_box;
+use criterion::{criterion_group, criterion_main, BenchmarkId, Criterion, Throughput};
 use qualia_core_db::query_compiler::QueryCompiler;
 use qualia_core_db::NQuin;
 use std::collections::{BTreeMap, HashMap};

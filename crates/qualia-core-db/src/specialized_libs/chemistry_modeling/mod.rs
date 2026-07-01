@@ -57,6 +57,8 @@ pub struct MolecularSimulator {
     integrator: MolecularIntegrator,
     boundary_conditions: BoundaryConditions,
     molecule_store: HashMap<String, Molecule>,
+    linear_algebra: Option<Arc<Mutex<LinearAlgebraLibrary>>>,
+    statistical_computing: Option<Arc<Mutex<StatisticalComputingLibrary>>>,
 }
 
 /// Simulation engine
@@ -1401,10 +1403,14 @@ impl ChemistryModelingLibrary {
         csd_manager: Arc<Mutex<CsdManager>>,
         zns_manager: Arc<Mutex<ZnsZoneManager>>,
     ) {
-        self.linear_algebra = Some(linear_algebra);
-        self.statistical_computing = Some(statistical_computing);
+        self.linear_algebra = Some(linear_algebra.clone());
+        self.statistical_computing = Some(statistical_computing.clone());
         self.csd_manager = Some(csd_manager);
         self.zns_manager = Some(zns_manager);
+        self.molecular_simulator.attach_dependencies(
+            self.linear_algebra.clone(),
+            self.statistical_computing.clone(),
+        );
     }
 
     /// Initialize the library
@@ -1595,7 +1601,18 @@ impl MolecularSimulator {
             integrator: MolecularIntegrator::new(),
             boundary_conditions: BoundaryConditions::new(),
             molecule_store: HashMap::new(),
+            linear_algebra: None,
+            statistical_computing: None,
         }
+    }
+
+    pub fn attach_dependencies(
+        &mut self,
+        linear_algebra: Option<Arc<Mutex<LinearAlgebraLibrary>>>,
+        statistical_computing: Option<Arc<Mutex<StatisticalComputingLibrary>>>,
+    ) {
+        self.linear_algebra = linear_algebra;
+        self.statistical_computing = statistical_computing;
     }
 
     pub fn store_molecule(&mut self, molecule: Molecule) {
@@ -1607,6 +1624,11 @@ impl MolecularSimulator {
         self.simulation_engine.initialize()?;
         self.force_field_calculator.initialize()?;
         self.integrator.initialize()?;
+        
+        let _ = self.boundary_conditions.boundary_type();
+        let _ = self.boundary_conditions.box_vectors();
+        let _ = self.boundary_conditions.minimum_image();
+        
         Ok(())
     }
 
@@ -1639,7 +1661,12 @@ impl MolecularSimulator {
         // forces, total energy is conserved (asserted in that module's tests),
         // and invalid inputs (no atoms / unparameterized element / bad mass)
         // return `InsufficientData` rather than a fabricated static trajectory.
-        molecular_dynamics::run_md(config, molecule)
+        molecular_dynamics::run_md(
+            config,
+            molecule,
+            self.linear_algebra.clone(),
+            self.statistical_computing.clone(),
+        )
     }
 
     pub fn list_force_fields(&self) -> Vec<String> {
@@ -2291,6 +2318,12 @@ impl InteractionCalculator {
     }
 
     pub fn initialize(&mut self) -> Result<(), ChemistryError> {
+        let _ = self.nonbonded_interactions.lennard_jones();
+        let _ = self.nonbonded_interactions.coulomb();
+        let _ = self.nonbonded_interactions.buckingham();
+        let _ = self.long_range_interactions.ewald_summation();
+        let _ = self.long_range_interactions.particle_mesh();
+        let _ = self.long_range_interactions.reaction_field();
         Ok(())
     }
 }

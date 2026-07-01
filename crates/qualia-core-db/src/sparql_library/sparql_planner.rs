@@ -487,6 +487,7 @@ mod tests {
 
         let mut plan = ExecutionPlan::new();
         let op_id = QueryPlanner::plan_pattern(pattern_id, &ctx, &mut plan).unwrap();
+        assert_eq!(op_id, 0);
         assert_eq!(plan.operator_count, 1);
     }
 }

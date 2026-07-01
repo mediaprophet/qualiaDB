@@ -294,12 +294,18 @@ pub struct WgpuRenderer<'a> {
     max_vertices: usize,
     // Track node positions for epistemic anchor coordination (zero-heap: binary indices)
     node_positions: Vec<(usize, ScreenPoint, f64)>, // (index, position, radius)
-    // Ambient visualization state
+    // Legacy ambient particle layer (standalone wgpu path without qualia volumetric).
+    #[cfg(not(feature = "qualia"))]
     ambient_config: AmbientConfig,
+    #[cfg(not(feature = "qualia"))]
     ambient_pipeline: Option<wgpu::RenderPipeline>,
+    #[cfg(not(feature = "qualia"))]
     particle_buffer: Option<wgpu::Buffer>,
+    #[cfg(not(feature = "qualia"))]
     ambient_uniform_buffer: Option<wgpu::Buffer>,
+    #[cfg(not(feature = "qualia"))]
     telemetry_buffer: Option<wgpu::Buffer>,
+    #[cfg(not(feature = "qualia"))]
     particle_count: usize,
 }
 
@@ -334,15 +340,15 @@ impl<'a> WgpuRenderer<'a> {
         let render_pipeline = Self::create_render_pipeline(&device, surface_format);
         let (vertex_buffer, max_vertices) = Self::create_vertex_buffer(&device);
 
-        // Initialize ambient visualization
-        let ambient_config = AmbientConfig::default();
+        #[cfg(not(feature = "qualia"))]
         let (
+            ambient_config,
             ambient_pipeline,
             particle_buffer,
             ambient_uniform_buffer,
             telemetry_buffer,
             particle_count,
-        ) = Self::init_ambient_visualization(&device, &ambient_config, width, height);
+        ) = Self::ambient_fields(&device, width, height);
 
         Ok(Self {
             device,
@@ -357,11 +363,17 @@ impl<'a> WgpuRenderer<'a> {
             vertex_buffer,
             max_vertices,
             node_positions: Vec::new(),
+            #[cfg(not(feature = "qualia"))]
             ambient_config,
+            #[cfg(not(feature = "qualia"))]
             ambient_pipeline,
+            #[cfg(not(feature = "qualia"))]
             particle_buffer,
+            #[cfg(not(feature = "qualia"))]
             ambient_uniform_buffer,
+            #[cfg(not(feature = "qualia"))]
             telemetry_buffer,
+            #[cfg(not(feature = "qualia"))]
             particle_count,
         })
     }
@@ -395,15 +407,15 @@ impl<'a> WgpuRenderer<'a> {
         let render_pipeline = Self::create_render_pipeline(&device, format);
         let (vertex_buffer, max_vertices) = Self::create_vertex_buffer(&device);
 
-        // Initialize ambient visualization
-        let ambient_config = AmbientConfig::default();
+        #[cfg(not(feature = "qualia"))]
         let (
+            ambient_config,
             ambient_pipeline,
             particle_buffer,
             ambient_uniform_buffer,
             telemetry_buffer,
             particle_count,
-        ) = Self::init_ambient_visualization(&device, &ambient_config, width, height);
+        ) = Self::ambient_fields(&device, width, height);
 
         Ok(WgpuRenderer {
             device,
@@ -420,13 +432,50 @@ impl<'a> WgpuRenderer<'a> {
             vertex_buffer,
             max_vertices,
             node_positions: Vec::new(),
+            #[cfg(not(feature = "qualia"))]
+            ambient_config,
+            #[cfg(not(feature = "qualia"))]
+            ambient_pipeline,
+            #[cfg(not(feature = "qualia"))]
+            particle_buffer,
+            #[cfg(not(feature = "qualia"))]
+            ambient_uniform_buffer,
+            #[cfg(not(feature = "qualia"))]
+            telemetry_buffer,
+            #[cfg(not(feature = "qualia"))]
+            particle_count,
+        })
+    }
+
+    #[cfg(not(feature = "qualia"))]
+    fn ambient_fields(
+        device: &wgpu::Device,
+        width: u32,
+        height: u32,
+    ) -> (
+        AmbientConfig,
+        Option<wgpu::RenderPipeline>,
+        Option<wgpu::Buffer>,
+        Option<wgpu::Buffer>,
+        Option<wgpu::Buffer>,
+        usize,
+    ) {
+        let ambient_config = AmbientConfig::default();
+        let (
+            ambient_pipeline,
+            particle_buffer,
+            ambient_uniform_buffer,
+            telemetry_buffer,
+            particle_count,
+        ) = Self::init_ambient_visualization(device, &ambient_config, width, height);
+        (
             ambient_config,
             ambient_pipeline,
             particle_buffer,
             ambient_uniform_buffer,
             telemetry_buffer,
             particle_count,
-        })
+        )
     }
 
     /// Request an adapter + device. `HighPerformance` selects the discrete GPU on
@@ -569,6 +618,7 @@ impl<'a> WgpuRenderer<'a> {
     ///
     /// Creates particle buffer with random 3D coordinates, uniform buffers,
     /// and render pipeline for GPU-driven ambient effects.
+    #[cfg(not(feature = "qualia"))]
     fn init_ambient_visualization(
         device: &wgpu::Device,
         config: &AmbientConfig,
@@ -649,6 +699,7 @@ impl<'a> WgpuRenderer<'a> {
     }
 
     /// Create ambient visualization render pipeline with additive blending
+    #[cfg(not(feature = "qualia"))]
     fn create_ambient_pipeline(
         device: &wgpu::Device,
         _width: u32,
@@ -988,11 +1039,13 @@ impl<'a> WgpuRenderer<'a> {
     }
 
     /// Configure ambient visualization options
+    #[cfg(not(feature = "qualia"))]
     pub fn set_ambient_config(&mut self, config: AmbientConfig) {
         self.ambient_config = config;
     }
 
     /// Get current ambient configuration
+    #[cfg(not(feature = "qualia"))]
     pub fn get_ambient_config(&self) -> AmbientConfig {
         self.ambient_config
     }
@@ -1316,11 +1369,6 @@ pub fn render_scene_png(
     render_scene_png_with_time(scene, width, height, 0.0)
 }
 
-/// Linear interpolation between two values
-fn lerp(a: f64, b: f64, t: f64) -> f64 {
-    a + (b - a) * t
-}
-
 /// Render scene with time parameter for animation effects.
 /// Time is in seconds, used for pulsing/glowing animations.
 pub fn render_scene_png_with_time(
@@ -1362,6 +1410,11 @@ pub fn render_scene_png_with_time_and_telemetry(
 
     #[cfg(not(feature = "qualia"))]
     {
+        #[inline]
+        fn lerp(a: f64, b: f64, t: f64) -> f64 {
+            a + (b - a) * t
+        }
+
         let mut renderer = pollster::block_on(WgpuRenderer::new_offscreen(width, height)).ok()?;
 
         let (w, h) = (width as f64, height as f64);

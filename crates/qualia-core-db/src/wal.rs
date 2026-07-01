@@ -278,13 +278,17 @@ pub fn append_mutation(quin: &NQuin) -> io::Result<()> {
 }
 
 /// Logs an adversarial conduct violation to the WAL when the Sentinel VM halts execution.
-pub fn log_adversarial_conduct(intent_quin: &NQuin, violation_code: u8) -> io::Result<()> {
+pub fn log_adversarial_conduct(
+    intent_quin: &NQuin,
+    violation_code: u8,
+    vm_cycles: u64,
+) -> io::Result<()> {
     let violation_quin = NQuin {
         subject: intent_quin.subject,
         predicate: crate::q_hash("q42:conductViolation"),
         object: intent_quin.object,
         context: intent_quin.context,
-        metadata: violation_code as u64,
+        metadata: (violation_code as u64) | (vm_cycles << 8),
         parity: 0,
     };
     append_mutation(&violation_quin)
@@ -307,7 +311,7 @@ pub fn log_rule_evaluation(
     results: &[crate::modalities::logic::rules::RuleResult],
     contract_hash: u64,
 ) -> io::Result<()> {
-    let eval_predicate = crate::q_hash("q42:ruleEvaluation");
+    let eval_predicate = crate::modalities::logic::rules::RULE_EVAL_PREDICATE;
     let result_count = results.len().min(255) as u64;
     for (i, result) in results.iter().enumerate().take(255) {
         let rule_hash = crate::q_hash(&result.rule_name);

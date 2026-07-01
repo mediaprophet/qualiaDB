@@ -513,7 +513,7 @@ mod cuda_tests {
     #[ignore = "requires an NVIDIA CUDA toolkit + device (NVRTC compile)"]
     fn kit_kernels_nvrtc_compile() {
         let ctx = CudaComputeContext::new(8 * 1024 * 1024).expect("cuda ctx");
-        let mut compile = |src: &str, entry: &str, binds: &[u32]| {
+        let compile = |src: &str, entry: &str, binds: &[u32]| {
             CudaPipeline::compile_cuda_c_source(&ctx, src, entry, binds)
                 .unwrap_or_else(|e| panic!("nvrtc compile {entry}: {e}"));
         };

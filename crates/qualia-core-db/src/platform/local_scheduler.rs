@@ -217,8 +217,7 @@ impl WorkerCell {
 /// Production queue supervisor - coordinates worker threads
 pub struct ProductionQueue {
     num_workers: usize,
-    job_senders: Vec<Sender<Job>>,
-    job_receiver: Receiver<Job>,
+    job_sender: Sender<Job>,
     result_receiver: Receiver<Job>,
     shutdown_signal: Arc<AtomicBool>,
     pause_signal: Arc<AtomicBool>,
@@ -243,7 +242,7 @@ impl ProductionQueue {
             num_logical_cores
         );
 
-        let (_job_sender, job_receiver) = bounded(JOB_QUEUE_CAPACITY);
+        let (job_sender, job_receiver) = bounded(JOB_QUEUE_CAPACITY);
         let (result_sender, result_receiver) = bounded(JOB_QUEUE_CAPACITY);
         let shutdown_signal = Arc::new(AtomicBool::new(false));
         let pause_signal = Arc::new(AtomicBool::new(false));
@@ -265,19 +264,41 @@ impl ProductionQueue {
         let estimator = Arc::new(Mutex::new(JobEstimator::new()));
         log::info!("Job estimator initialized");
 
-        let mut job_senders = Vec::new();
+        let mut worker_senders = Vec::new();
+        let mut worker_receivers = Vec::new();
+        for _ in 0..num_logical_cores {
+            let (worker_job_sender, worker_job_receiver) = bounded(16);
+            worker_senders.push(worker_job_sender);
+            worker_receivers.push(worker_job_receiver);
+        }
 
-        // Spawn worker threads
-        for worker_id in 0..num_logical_cores {
+        // Ingress dispatcher: shared queue → per-worker mailboxes.
+        let dispatch_targets = worker_senders.clone();
+        let dispatcher_active = active_jobs.clone();
+        let dispatcher_shutdown = shutdown_signal.clone();
+        thread::spawn(move || {
+            while !dispatcher_shutdown.load(Ordering::Relaxed) {
+                match job_receiver.recv_timeout(Duration::from_millis(100)) {
+                    Ok(job) => {
+                        let worker_id = dispatcher_active.fetch_add(1, Ordering::Relaxed) as usize
+                            % num_logical_cores;
+                        if dispatch_targets[worker_id].send(job).is_err() {
+                            dispatcher_active.fetch_sub(1, Ordering::Relaxed);
+                        }
+                    }
+                    Err(crossbeam_channel::RecvTimeoutError::Timeout) => continue,
+                    Err(crossbeam_channel::RecvTimeoutError::Disconnected) => break,
+                }
+            }
+        });
+
+        for (worker_id, worker_job_receiver) in worker_receivers.into_iter().enumerate() {
             let core_id = CoreId {
                 id: worker_id % num_logical_cores,
             };
-            let (worker_job_sender, worker_job_receiver) = bounded(16);
             let worker_result_sender = result_sender.clone();
             let worker_shutdown = shutdown_signal.clone();
             let worker_pause = pause_signal.clone();
-
-            job_senders.push(worker_job_sender);
 
             let worker = WorkerCell::new(
                 worker_id,
@@ -295,8 +316,7 @@ impl ProductionQueue {
 
         Self {
             num_workers: num_logical_cores,
-            job_senders,
-            job_receiver,
+            job_sender,
             result_receiver,
             shutdown_signal,
             pause_signal,
@@ -319,20 +339,17 @@ impl ProductionQueue {
             }
         }
 
-        // Round-robin job distribution
-        let worker_id =
-            self.active_jobs.fetch_add(1, Ordering::Relaxed) as usize % self.num_workers;
-
-        if let Err(e) = self.job_senders[worker_id].send(job) {
-            self.active_jobs.fetch_sub(1, Ordering::Relaxed);
-            return Err(format!(
-                "Failed to submit job to worker {}: {}",
-                worker_id, e
-            ));
+        if let Err(e) = self.job_sender.send(job) {
+            return Err(format!("Failed to enqueue job: {}", e));
         }
 
-        log::debug!("Job submitted to worker {}", worker_id);
+        log::debug!("Job enqueued for dispatcher");
         Ok(())
+    }
+
+    /// WAL path used for job persistence and recovery.
+    pub fn wal_path(&self) -> &str {
+        &self.wal_path
     }
 
     /// Recover pending jobs from WAL on startup
@@ -345,7 +362,11 @@ impl ProductionQueue {
                             .into_iter()
                             .map(|quin| Job::new(quin, 10000)) // Default total_bytes, should be stored in metadata
                             .collect();
-                        log::info!("Recovered {} jobs from WAL", jobs.len());
+                        log::info!(
+                            "Recovered {} jobs from WAL at {}",
+                            jobs.len(),
+                            self.wal_path()
+                        );
                         return Ok(jobs);
                     }
                     Err(e) => return Err(format!("Failed to recover jobs from WAL: {}", e)),
@@ -843,7 +864,7 @@ mod tests {
         // Calculate telemetry
         let telemetry = queue.calculate_telemetry(total_bytes);
 
-        assert!(telemetry.total_jobs >= 0);
+        assert!(telemetry.total_jobs > 0);
         assert!(telemetry.overall_progress >= 0.0 && telemetry.overall_progress <= 100.0);
 
         queue.shutdown();

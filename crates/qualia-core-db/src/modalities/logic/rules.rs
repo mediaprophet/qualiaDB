@@ -23,7 +23,7 @@ use crate::{q_hash, NQuin};
 pub const GUARDIANSHIP_RULESET: &str = "guardianship_rules";
 
 /// WAL predicate hash for rule-evaluation audit events.
-const RULE_EVAL_PREDICATE: u64 = q_hash("q42:ruleEvaluation");
+pub const RULE_EVAL_PREDICATE: u64 = q_hash("q42:ruleEvaluation");
 
 /// Rule engine for evaluating rule-based constraints against live Quins.
 ///

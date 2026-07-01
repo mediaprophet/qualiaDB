@@ -22,6 +22,7 @@ pub fn EbpfFilterManager() -> Element {
                             div { style: "font-size: 18px; font-weight: 600; margin-bottom: 4px;", "{name}" }
                             div { style: "font-size: 14px; color: #64748b; display: flex; gap: 16px;",
                                 span { style: "background: #0f172a; padding: 2px 8px; border-radius: 4px;", "{hook}" }
+                                span { "{status}" }
                                 span { "Hits: {hits}" }
                             }
                         }

@@ -477,7 +477,15 @@ generate_simple_opcodes!(DigitalSignatureConfiguration, max_signature_size_bytes
 generate_simple_opcodes!(QuantumCircuitConfiguration, max_gates);
 generate_simple_opcodes!(QuantumAnnealingConfiguration, max_annealing_time_us);
 generate_simple_opcodes!(BiomolecularConfiguration, max_atoms);
-generate_simple_opcodes!(QuantumBiologyCalculation, max_quantum_states);
+impl QuantumBiologyCalculation {
+    pub fn to_opcodes(&self) -> Vec<SlgOpcode> {
+        let mut ops = vec![SlgOpcode::CheckMaxInclusive(self.max_quantum_states as f64)];
+        if self.require_solvent_model {
+            ops.push(SlgOpcode::CheckHasValue(crate::q_hash("solvent_model_required")));
+        }
+        ops
+    }
+}
 
 // ── SHACL TTL Vocabulary for Specialized Libraries ─────────────────────────────
 

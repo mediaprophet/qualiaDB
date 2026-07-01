@@ -654,6 +654,7 @@ mod tests {
         assert!(state.quantum_calls > 0);
 
         let optimized_params = optimizer.get_parameters();
+        assert!(!optimized_params.is_empty());
         // // assert!((optimized_params[0] - 0.5).abs() < 0.5); // Disabled due to precision issues // Should move toward target
         // // assert!((optimized_params[1] - 1.0).abs() < 0.5); // Disabled due to precision issues
         // assert!((optimized_params[2] - 1.5).abs() < 0.5);

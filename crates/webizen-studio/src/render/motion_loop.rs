@@ -58,7 +58,19 @@ pub fn spawn_ui_motion_loop(mut on_frame: impl FnMut(f64) + 'static) {
 }
 
 #[cfg(not(target_arch = "wasm32"))]
-pub fn spawn_ui_motion_loop(_on_frame: impl FnMut(f64) + 'static) {}
+pub fn spawn_ui_motion_loop(mut on_frame: impl FnMut(f64) + 'static) {
+    // UI signals are !Send — drive springs on the Dioxus runtime thread, not a worker.
+    dioxus::prelude::spawn(async move {
+        let mut last = std::time::Instant::now();
+        loop {
+            tokio::time::sleep(std::time::Duration::from_millis(16)).await;
+            let now = std::time::Instant::now();
+            let dt = now.duration_since(last).as_secs_f64().clamp(0.001, 0.05);
+            last = now;
+            on_frame(dt);
+        }
+    });
+}
 
 #[cfg(test)]
 mod tests {

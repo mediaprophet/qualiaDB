@@ -348,6 +348,11 @@ pub(super) fn run_bloom_passes(
     device: &wgpu::Device,
     surface_view: &wgpu::TextureView,
 ) {
+    let (blur_w, blur_h) = bloom.blur_extent();
+    let _ = bloom.texture_handles();
+    debug_assert_eq!(blur_w, bloom.blur_a.width());
+    debug_assert_eq!(blur_h, bloom.blur_b.height());
+
     write_bloom_uniform(queue, &bloom.uniform_buf, 1.0);
     let extract_bind = make_bloom_bind_group(
         device,

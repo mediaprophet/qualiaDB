@@ -85,6 +85,11 @@ impl GpRegressor {
         })
     }
 
+    /// Training noise variance σ²ₙ used when fitting the regressor.
+    pub fn noise_variance(&self) -> f64 {
+        self.noise_var
+    }
+
     /// Predictive distribution at one input: `(mean, variance)`. The variance
     /// includes the model uncertainty (small near training data, large away from it).
     pub fn predict_row(&self, x_star: &[f64]) -> (f64, f64) {
@@ -104,7 +109,8 @@ impl GpRegressor {
         let _ = cholesky_solve(self.n, &self.l, &kstar, &mut v);
         let reduction: f64 = kstar.iter().zip(&v).map(|(k, vi)| k * vi).sum();
         let kxx = self.signal_var; // k(x*,x*) for the SE kernel
-        (mean, (kxx - reduction).max(0.0))
+        let floor = self.noise_var;
+        (mean, (kxx - reduction).max(floor))
     }
 
     /// Predictive `(mean, variance)` for each row of a row-major `m × p` matrix.

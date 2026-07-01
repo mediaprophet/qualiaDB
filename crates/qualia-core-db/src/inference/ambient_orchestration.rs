@@ -855,6 +855,21 @@ impl AmbientOrchestrationManager {
 
     /// Optimize orchestration policy
     pub fn optimize_orchestration(&mut self) -> Result<(), AmbientError> {
+        // Feed execution history into workload analyzer
+        let history = self.task_scheduler.recent_history(10);
+        for record in history {
+            let sample = WorkloadSample {
+                timestamp: record.end_time,
+                cpu_usage: record.resource_usage.compute_units_used as f64 / 100.0,
+                memory_usage: record.resource_usage.memory_used as f64 / (1024.0 * 1024.0),
+                neural_engine_usage: record.resource_usage.neural_engines_used as f64,
+                power_consumption: record.resource_usage.power_consumed,
+                thermal_state: record.resource_usage.thermal_impact,
+                battery_level: self.power_manager.get_battery_level(&record.device_id),
+            };
+            self.orchestrator.workload_analyzer.record_sample(sample);
+        }
+
         // Analyze current workload
         let workload_analysis = self.orchestrator.workload_analyzer.analyze_workload();
 
@@ -864,8 +879,16 @@ impl AmbientOrchestrationManager {
             .adaptation_engine
             .adapt_policy(workload_analysis);
 
+        // Adjust based on active power policy
+        let adjusted_policy = match self.power_manager.power_policy() {
+            PowerPolicy::PowerSaving | PowerPolicy::UltraPowerSaving => {
+                OrchestrationPolicy::BatteryAware
+            }
+            _ => new_policy,
+        };
+
         // Update orchestration policy
-        self.orchestrator.orchestration_policy = new_policy;
+        self.orchestrator.orchestration_policy = adjusted_policy;
 
         Ok(())
     }

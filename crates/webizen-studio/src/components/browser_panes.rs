@@ -1,6 +1,7 @@
 use dioxus::prelude::*;
 use serde_json::json;
 use uuid::Uuid;
+#[cfg(target_arch = "wasm32")]
 use wasm_bindgen::prelude::*;
 
 use crate::components::qapp_engine::tauri_invoke;

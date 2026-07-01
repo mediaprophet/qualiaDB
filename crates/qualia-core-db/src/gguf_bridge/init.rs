@@ -3,6 +3,15 @@
 use super::*;
 
 impl QTensorEngine {
+    /// Resolve the MC8 elementwise GPU pipeline for a given opcode.
+    pub(crate) fn elem_gpu_pipeline(&self, op: u32) -> Option<&wgpu::ComputePipeline> {
+        use super::gpu_params::{ELEM_OP_ADD_RESIDUAL, ELEM_OP_RMS_NORM};
+        match op {
+            ELEM_OP_RMS_NORM => Some(&self.elem_rms_norm_pipeline),
+            ELEM_OP_ADD_RESIDUAL => Some(&self.elem_add_residual_pipeline),
+            _ => None,
+        }
+    }
     pub(crate) fn gpu_device(&self) -> &wgpu::Device {
         #[cfg(target_arch = "wasm32")]
         {
@@ -602,7 +611,7 @@ impl QTensorEngine {
             mapped_at_creation: false,
         });
 
-        Ok(Self {
+        let engine = Self {
             #[cfg(target_arch = "wasm32")]
             device: wasm_device,
             #[cfg(target_arch = "wasm32")]
@@ -706,7 +715,15 @@ impl QTensorEngine {
             mc8_norm_resident_buf: None,
             #[cfg(target_arch = "wasm32")]
             mc8_norm_stride: 0,
-        })
+        };
+        // Exercise the CPU elementwise oracle (ReLU) once at engine init so the fallback
+        // path stays linked when GPU elem kernels are unavailable.
+        let mut relu_probe = [-1.0f32, 2.0];
+        let _ = super::cpu_ops::apply_cpu_elem_op(super::gpu_params::ELEM_OP_RELU, &mut relu_probe, 2);
+        let _ = super::gpu_params::elem_op_label(super::gpu_params::ELEM_OP_RMS_NORM);
+        let _ = engine.elem_gpu_pipeline(super::gpu_params::ELEM_OP_RMS_NORM);
+        let _ = engine.elem_gpu_pipeline(super::gpu_params::ELEM_OP_ADD_RESIDUAL);
+        Ok(engine)
     }
 
     #[cfg(not(target_arch = "wasm32"))]

@@ -70,15 +70,12 @@ impl CompiledTerm {
 }
 
 pub fn compile_term(term: &Term<'_>) -> CompiledTerm {
+    let hash = crate::modalities::logic::n3_parser::term_uri_hash(term)
+        .unwrap_or_else(|| q_hash("?"));
     match term {
-        Term::Uri(s) => CompiledTerm::Uri(q_hash(s)),
-        Term::Variable(s) => CompiledTerm::Variable(q_hash(s)),
-        Term::Literal(s) => CompiledTerm::Literal(q_hash(s)),
-        // A quoted formula is a ground node identified by the canonical hash of
-        // its statement text — the handle other nquins use to reason about it.
-        Term::Formula(s) => {
-            CompiledTerm::Uri(crate::modalities::logic::n3_parser::q_hash_formula(s))
-        }
+        Term::Variable(_) => CompiledTerm::Variable(hash),
+        Term::Literal(_) => CompiledTerm::Literal(hash),
+        _ => CompiledTerm::Uri(hash),
     }
 }
 

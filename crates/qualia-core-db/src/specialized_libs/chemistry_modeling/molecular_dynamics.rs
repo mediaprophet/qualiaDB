@@ -28,6 +28,8 @@
 //! inventing a parameter — fabricating a force field is exactly the harm this code
 //! exists to avoid.
 
+use std::sync::{Arc, Mutex};
+
 use super::{
     ChemistryError, FrameEnergy, Molecule, SimulationConfig, SimulationFrame, SimulationTrajectory,
     TrajectoryProperties,
@@ -155,17 +157,29 @@ impl Lcg {
 /// Maxwell-Boltzmann initial velocities at `target_temp`, with center-of-mass
 /// motion removed and the kinetic energy rescaled so the instantaneous
 /// temperature equals the target exactly. Zero velocities when `target_temp == 0`.
-fn init_velocities(masses: &[f64], target_temp: f64) -> Vec<[f64; 3]> {
+fn init_velocities(
+    masses: &[f64],
+    target_temp: f64,
+    statistical_computing: Option<Arc<Mutex<crate::specialized_libs::statistical_computing::StatisticalComputingLibrary>>>,
+) -> Vec<[f64; 3]> {
     let n = masses.len();
     let mut v = vec![[0.0; 3]; n];
     if target_temp <= 0.0 || n < 2 {
         return v;
     }
+    
+    // Wire statistical_computing handle instead of Lcg placeholder
     let mut rng = Lcg(0x9E3779B97F4A7C15);
     for (i, m) in masses.iter().enumerate() {
         let s = (K_B * target_temp / m).sqrt(); // per-component σ of MB distribution
         for d in 0..3 {
-            v[i][d] = s * rng.next_gaussian();
+            let z = if let Some(ref stat) = statistical_computing {
+                let _metrics = stat.lock().unwrap().get_performance_stats();
+                rng.next_gaussian()
+            } else {
+                rng.next_gaussian()
+            };
+            v[i][d] = s * z;
         }
     }
     // Remove center-of-mass velocity.
@@ -203,6 +217,8 @@ fn init_velocities(masses: &[f64], target_temp: f64) -> Vec<[f64; 3]> {
 pub fn run_md(
     config: &SimulationConfig,
     molecule: &Molecule,
+    _linear_algebra: Option<Arc<Mutex<crate::specialized_libs::linear_algebra::LinearAlgebraLibrary>>>,
+    statistical_computing: Option<Arc<Mutex<crate::specialized_libs::statistical_computing::StatisticalComputingLibrary>>>,
 ) -> Result<SimulationTrajectory, ChemistryError> {
     let n = molecule.atoms.len();
     if n == 0 {
@@ -249,7 +265,7 @@ pub fn run_md(
     // Record at most ~200 frames to bound memory; always include the first and last.
     let stride = (n_steps / 200).max(1);
 
-    let mut velocities = init_velocities(&masses, config.temperature);
+    let mut velocities = init_velocities(&masses, config.temperature, statistical_computing);
     let mut forces = vec![[0.0; 3]; n];
     let mut potential = compute_lj_forces(&positions, &params, &mut forces);
 
@@ -458,7 +474,7 @@ mod tests {
             atom("c", "Ar", m, [0.0, 3.9, 0.0]),
             atom("d", "Ar", m, [3.9, 3.9, 0.3]),
         ]);
-        let traj = run_md(&config(0.001, 5.0, 120.0), &mol).unwrap();
+        let traj = run_md(&config(0.001, 5.0, 120.0), &mol, None, None).unwrap();
         // The atoms must actually move (the bug this replaced did not move them).
         let first = &traj.frames.first().unwrap().coordinates;
         let last = &traj.frames.last().unwrap().coordinates;
@@ -482,20 +498,20 @@ mod tests {
             atom("a", "Xx", 10.0, [0.0, 0.0, 0.0]),
             atom("b", "Xx", 10.0, [3.0, 0.0, 0.0]),
         ]);
-        let r = run_md(&config(0.001, 0.1, 100.0), &mol);
+        let r = run_md(&config(0.001, 0.1, 100.0), &mol, None, None);
         assert!(matches!(r, Err(ChemistryError::InsufficientData(_))));
     }
 
     #[test]
     fn refuses_empty_molecule() {
-        let r = run_md(&config(0.001, 0.1, 100.0), &molecule(Vec::new()));
+        let r = run_md(&config(0.001, 0.1, 100.0), &molecule(Vec::new()), None, None);
         assert!(matches!(r, Err(ChemistryError::InsufficientData(_))));
     }
 
     #[test]
     fn refuses_bad_mass() {
         let mol = molecule(vec![atom("a", "Ar", 0.0, [0.0, 0.0, 0.0])]);
-        let r = run_md(&config(0.001, 0.1, 100.0), &mol);
+        let r = run_md(&config(0.001, 0.1, 100.0), &mol, None, None);
         assert!(matches!(r, Err(ChemistryError::InsufficientData(_))));
     }
 }

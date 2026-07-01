@@ -2,8 +2,6 @@ use crate::NQuin;
 use ed25519_dalek::{Signature, Signer, SigningKey, Verifier, VerifyingKey};
 use sha2::{Digest, Sha256};
 
-const LANE_KEY_LENGTH: usize = 32;
-
 #[derive(Debug, PartialEq, Eq)]
 pub enum AgencyError {
     InvalidSignature,
@@ -94,6 +92,9 @@ pub fn sign_graph_mutation(signing_key: &SigningKey, quin: &NQuin) -> Signature 
 /// Derives a 32-byte AES-256-GCM key from the user's PIN for Deniable Encryption (Sanctuary Mode).
 /// By passing different PINs, different keys are derived, which unlocks different DB Lanes.
 /// The decoy lane operates exactly identically to the sanctuary lane.
+#[cfg(all(feature = "sanctuary-crypto", not(target_arch = "wasm32")))]
+const LANE_KEY_LENGTH: usize = 32;
+
 #[cfg(all(feature = "sanctuary-crypto", not(target_arch = "wasm32")))]
 pub fn derive_lane_key(pin: &str, salt: &[u8]) -> [u8; LANE_KEY_LENGTH] {
     crate::sanctuary_crypto::derive_lane_cipher_key(

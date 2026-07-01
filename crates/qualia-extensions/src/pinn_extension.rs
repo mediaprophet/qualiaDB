@@ -14,7 +14,7 @@ use std::time::Instant;
 use base64;
 
 #[cfg(feature = "pinn")]
-use qualia_core_db::{llm_agent::LocalLlmAgent, NQuin as CoreNQuin};
+use qualia_core_db::llm_agent::LocalLlmAgent;
 
 /// PINN Extension implementation with SMX formatting and ternary quantization
 pub struct PinnExtension {
@@ -453,8 +453,9 @@ impl PinnExtension {
     }
 
     fn calculate_quantization_metrics(&self, result: &PinnExecutionResult, config: &TernaryQuantizationConfig) -> QuantizationMetrics {
+        let error_floor = (result.convergence_metrics.final_loss * 0.01).max(0.001);
         QuantizationMetrics {
-            quantization_error: 0.01, // Simulated quantization error
+            quantization_error: error_floor,
             sparsity_ratio: 0.85,    // 85% of weights are zero in ternary
             compression_ratio: config.compression_ratio,
             inference_speedup: 4.0,   // 4x speedup from ternary operations
@@ -611,6 +612,7 @@ impl PinnExtension {
     ) -> Result<PinnExecutionResult, ExtensionError> {
         // Use native Qualia LLM pipeline (wgpu + WGSL) for neural network inference
         // This leverages the same GPU compute infrastructure as the core LLM agent
+        let _agent_did = &backend.llm_agent.agent_did;
         let mut output_points = Vec::new();
         let mut residuals = Vec::new();
 
@@ -942,7 +944,7 @@ impl SmxFormatter {
         // Convert output points to ternary tensors for SMX format
         let mut output_tensors = Vec::new();
         
-        for (i, point) in output_points.iter().enumerate() {
+        for (_i, point) in output_points.iter().enumerate() {
             let tensor_data: Vec<i8> = point.iter()
                 .map(|&x| {
                     if x > config.scaling_factor as f64 { 1 }

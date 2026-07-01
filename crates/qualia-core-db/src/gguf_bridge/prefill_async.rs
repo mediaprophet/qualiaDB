@@ -1406,14 +1406,24 @@ impl QTensorEngine {
             if !ok {
                 return None;
             }
-            update_streaming_argmax_sieved(
-                &chunk_logits[..chunk_rows],
-                chunk_rows,
-                chunk_idx,
-                sieve_mask,
-                &mut best_token_id,
-                &mut max_logit,
-            );
+            if let Some(mask) = sieve_mask {
+                update_streaming_argmax_sieved(
+                    &chunk_logits[..chunk_rows],
+                    chunk_rows,
+                    chunk_idx,
+                    Some(mask),
+                    &mut best_token_id,
+                    &mut max_logit,
+                );
+            } else {
+                update_streaming_argmax(
+                    &chunk_logits[..chunk_rows],
+                    chunk_rows,
+                    chunk_idx,
+                    &mut best_token_id,
+                    &mut max_logit,
+                );
+            }
             scrub_f32_volatile(&mut chunk_logits[..chunk_rows], chunk_rows);
         }
         if max_logit == f32::NEG_INFINITY {

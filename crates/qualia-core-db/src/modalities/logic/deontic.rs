@@ -489,13 +489,8 @@ pub fn evaluate_deontic_contract(
     feature = "wasm-scientific",
     feature = "wasm-full"
 ))]
-fn term_uri_hash(term: &Term) -> Option<u64> {
-    match term {
-        Term::Uri(uri) => Some(q_hash(uri)),
-        Term::Literal(lit) => Some(q_hash(lit)),
-        Term::Formula(s) => Some(crate::modalities::logic::n3_parser::q_hash_formula(s)),
-        Term::Variable(_) => None,
-    }
+pub fn term_uri_hash(term: &Term) -> Option<u64> {
+    crate::modalities::logic::n3_parser::term_uri_hash(term)
 }
 
 // Canonical `values:` deontic operators. The registry stores a compiled rule

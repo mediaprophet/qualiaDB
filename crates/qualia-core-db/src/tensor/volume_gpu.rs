@@ -100,7 +100,7 @@ impl TensorVolumeGpu {
 
     fn upload_nodes(&self, queue: &wgpu::Queue, node_count: u32) -> bool {
         let substrate = global_resident_substrate();
-        let count = node_count.min(substrate.node_count());
+        let count = node_count.min(substrate.node_count()).min(self.max_nodes);
         if count == 0 {
             return false;
         }
@@ -140,7 +140,9 @@ impl TensorVolumeGpu {
         max_distance: f32,
         out: &mut [usize],
     ) -> usize {
-        let node_count = global_resident_substrate().node_count();
+        let node_count = global_resident_substrate()
+            .node_count()
+            .min(self.max_nodes);
         if node_count == 0 || out.is_empty() || !self.upload_nodes(queue, node_count) {
             return 0;
         }

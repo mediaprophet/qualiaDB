@@ -249,7 +249,10 @@ impl Q42Lexicon {
                 break;
             }
             let hash = u64::from_le_bytes(lex_data[off..off + 8].try_into().unwrap_or([0u8; 8]));
-            if let Some(text) = lex_view.lookup_hash(hash) {
+            if let Some(text) = lex_view
+                .lookup_webizen_identity(hash)
+                .or_else(|| lex_view.lookup_hash(hash))
+            {
                 terms.insert(text.to_string(), hash);
                 reverse.insert(hash, text.to_string());
             }

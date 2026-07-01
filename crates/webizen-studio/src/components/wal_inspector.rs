@@ -13,8 +13,8 @@ struct DeployRecord {
 pub fn WalInspector() -> Element {
     let mut records = use_signal(Vec::<DeployRecord>::new);
     let mut status = use_signal(|| "Loading deploy history…".to_string());
-    let mut replay_status = use_signal(|| String::new());
-    let mut replaying = use_signal(|| None::<u64>);
+    let replay_status = use_signal(|| String::new());
+    let replaying = use_signal(|| None::<u64>);
 
     let mut refresh_history = move || {
         if !crate::endpoints::is_native_host() {

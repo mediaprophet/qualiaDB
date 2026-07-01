@@ -1,5 +1,6 @@
 use dioxus::prelude::*;
 use serde::{Deserialize, Serialize};
+#[cfg(target_arch = "wasm32")]
 use wasm_bindgen::prelude::*;
 
 use crate::components::qapp_engine::tauri_invoke;
@@ -24,7 +25,7 @@ pub fn ClinicalRiskScorer() -> Element {
     let mut gender = use_signal(|| "Male".to_string());
     let mut systolic_bp = use_signal(|| 120.0f64);
     let mut total_cholesterol = use_signal(|| 200.0f64);
-    let mut hdl = use_signal(|| 50.0f64);
+    let hdl = use_signal(|| 50.0f64);
     let mut smoker = use_signal(|| false);
     let mut diabetes = use_signal(|| false);
     let mut afib = use_signal(|| false);
@@ -71,7 +72,7 @@ pub fn ClinicalRiskScorer() -> Element {
         0
     }) + (if gender() == "Female" { 1 } else { 0 })
         + (if diabetes() { 1 } else { 0 })
-        + 1; // Assuming hypertension
+        + (if bp_treated() { 1 } else { 2 }); // Treated vs untreated hypertension
 
     rsx! {
         div {
@@ -145,6 +146,10 @@ pub fn ClinicalRiskScorer() -> Element {
                         label { style: "display: flex; align-items: center; gap: 0.5rem; cursor: pointer;",
                             input { type: "checkbox", checked: "{afib}", onchange: move |_| afib.set(!afib()), style: "accent-color: #3b82f6; width: 1.2rem; height: 1.2rem;" }
                             span { style: "font-size: 0.9rem;", "Atrial Fibrillation" }
+                        }
+                        label { style: "display: flex; align-items: center; gap: 0.5rem; cursor: pointer;",
+                            input { type: "checkbox", checked: "{bp_treated}", onchange: move |_| bp_treated.set(!bp_treated()), style: "accent-color: #3b82f6; width: 1.2rem; height: 1.2rem;" }
+                            span { style: "font-size: 0.9rem;", "Hypertension (treated)" }
                         }
                     }
                 }

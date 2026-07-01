@@ -79,3 +79,16 @@ pub(crate) struct ElemGpuParams {
 pub(crate) const ELEM_OP_RMS_NORM: u32 = 0;
 pub(crate) const ELEM_OP_SILU_MUL: u32 = 1;
 pub(crate) const ELEM_OP_ADD_RESIDUAL: u32 = 2;
+/// CPU/native ReLU gate fallback (negative logits clamped before SiLU path).
+pub(crate) const ELEM_OP_RELU: u32 = 3;
+
+/// Map an elementwise opcode to its human-readable kernel label (logging / diagnostics).
+pub(crate) fn elem_op_label(op: u32) -> &'static str {
+    match op {
+        ELEM_OP_RMS_NORM => "rms_norm",
+        ELEM_OP_SILU_MUL => "silu_mul",
+        ELEM_OP_ADD_RESIDUAL => "add_residual",
+        ELEM_OP_RELU => "relu",
+        _ => "unknown",
+    }
+}

@@ -351,6 +351,7 @@ mod tests {
         assert!(validate_shacl_property(&[knows], agent, prop, &constraints));
     }
 
+    #[test]
     fn test_shacl_cardinality() {
         let subj = q_hash("did:q42:user1");
         let prop = q_hash("schema:email");

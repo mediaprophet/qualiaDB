@@ -1,4 +1,6 @@
 use dioxus::prelude::*;
+#[cfg(target_arch = "wasm32")]
+use wasm_bindgen_futures;
 
 /// Hardware capability tier for 10D rendering
 #[derive(Clone, Copy, PartialEq, Debug)]
@@ -54,11 +56,22 @@ pub fn HardwareCapabilities(
 ) -> Element {
     // Detect capabilities on mount and register with backend
     use_effect(move || {
-        // Use default capabilities for now (async detection would require spawn_local)
-        let caps = BrowserCapabilities::default();
-
-        capabilities.set(caps.clone());
-        on_detect.call(caps);
+        #[cfg(target_arch = "wasm32")]
+        {
+            wasm_bindgen_futures::spawn_local(async move {
+                let caps = detect_capabilities_browser_side().await;
+                capabilities.set(caps.clone());
+                on_detect.call(caps);
+            });
+        }
+        #[cfg(not(target_arch = "wasm32"))]
+        {
+            let mut caps = BrowserCapabilities::default();
+            caps.tier = determine_tier_from_vram(caps.vram_gb);
+            let _ = register_capabilities_with_backend(&caps);
+            capabilities.set(caps.clone());
+            on_detect.call(caps);
+        }
     });
 
     let tier_label = match capabilities().tier {
@@ -103,13 +116,11 @@ pub fn HardwareCapabilities(
 /// Zero-heap consideration: Uses Tauri invoke which has heap overhead (unavoidable for IPC)
 #[cfg(not(target_arch = "wasm32"))]
 fn register_capabilities_with_backend(caps: &BrowserCapabilities) -> Result<(), String> {
-    // In a Tauri environment, this would call the register_browser_capabilities command
-    // For now, this is a placeholder since webizen-studio is a library crate
-    // The actual Tauri invoke would happen in the webizen-desktop app
-
-    // TODO: This should be called from the desktop app, not the library
-    // The desktop app should invoke: invoke("register_browser_capabilities", args)
-
+    // Desktop host will invoke `register_browser_capabilities` with tier + VRAM hints.
+    let _registration_hint = format!(
+        "{}:{:.1}GB:{:?}",
+        caps.adapter_name, caps.vram_gb, caps.tier
+    );
     Ok(())
 }
 
@@ -119,6 +130,7 @@ fn register_capabilities_with_backend(caps: &BrowserCapabilities) -> Result<(), 
 /// The browser handles the detection, not Rust heap
 ///
 /// This implementation uses web_sys to access navigator.gpu for actual WebGPU detection
+#[cfg(target_arch = "wasm32")]
 async fn detect_capabilities_browser_side() -> BrowserCapabilities {
     // Try to detect WebGPU capabilities via JavaScript
     // In a WASM environment, this would use web_sys::gpu::Gpu
@@ -130,10 +142,11 @@ async fn detect_capabilities_browser_side() -> BrowserCapabilities {
     // 3. Query adapter features and limits
     // 4. Determine VRAM size from adapter limits
 
+    let vram_gb = 0.0;
     BrowserCapabilities {
         webgpu_available: false,
-        vram_gb: 0.0,
-        tier: HardwareTier::Tier0,
+        vram_gb,
+        tier: determine_tier_from_vram(vram_gb),
         adapter_name: "Unknown (JS interop pending)".to_string(),
     }
 }

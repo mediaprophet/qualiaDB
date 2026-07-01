@@ -1,123 +1,10 @@
 #![cfg(not(target_arch = "wasm32"))]
 
-use futures_util::{SinkExt, StreamExt};
-use serde::Deserialize;
+use futures_util::StreamExt;
 use serde_json::json;
+use tokio::sync::mpsc;
 
-const OFFICIAL_WEB_HUB_ORIGIN: &str = "https://mediaprophet.github.io";
-const QUERY_PAYLOAD_LIMIT_BYTES: u64 = 64 * 1024;
-const PROXY_FETCH_MAX_BYTES: usize = 64 * 1024 * 1024;
 const CELL_MEMORY_FLOOR_MB: u16 = 512;
-
-/// Block loopback / RFC1918 targets for the browser CORS relay (`GET /proxy/fetch`).
-fn proxy_target_allowed(url: &reqwest::Url) -> bool {
-    match url.scheme() {
-        "http" | "https" => {}
-        _ => return false,
-    }
-
-    let host = match url.host_str() {
-        Some(h) => h.to_ascii_lowercase(),
-        None => return false,
-    };
-
-    if host == "localhost" || host.ends_with(".localhost") || host == "127.0.0.1" {
-        return false;
-    }
-    if host.starts_with("127.") || host == "::1" || host == "[::1]" {
-        return false;
-    }
-    if host.starts_with("10.")
-        || host.starts_with("192.168.")
-        || host.starts_with("169.254.")
-        || host.starts_with("fe80:")
-    {
-        return false;
-    }
-    if let Some(stripped) = host.strip_prefix('[').and_then(|h| h.strip_suffix(']')) {
-        if let Ok(ip) = stripped.parse::<std::net::IpAddr>() {
-            return !ip_is_restricted(ip);
-        }
-    }
-    if let Ok(ip) = host.parse::<std::net::IpAddr>() {
-        return !ip_is_restricted(ip);
-    }
-
-    true
-}
-
-fn ip_is_restricted(ip: std::net::IpAddr) -> bool {
-    match ip {
-        std::net::IpAddr::V4(v4) => v4.is_loopback() || v4.is_private() || v4.is_link_local(),
-        std::net::IpAddr::V6(v6) => {
-            v6.is_loopback() || v6.is_unicast_link_local() || v6.is_unique_local()
-        }
-    }
-}
-
-fn ws_query_error_json(id: u64, err: QueryExecError) -> serde_json::Value {
-    match err {
-        QueryExecError::EmptyQuery => json!({
-            "type": "error",
-            "id": id,
-            "code": "empty_query",
-            "message": "query must be non-empty",
-        }),
-        QueryExecError::ParseError(message) => json!({
-            "type": "error",
-            "id": id,
-            "code": "parse_error",
-            "message": message,
-        }),
-        QueryExecError::OutputBufferFull => json!({
-            "type": "error",
-            "id": id,
-            "code": "result_set_too_large",
-            "message": "query matched more than the output buffer allows",
-        }),
-        QueryExecError::InvalidProgram => json!({
-            "type": "error",
-            "id": id,
-            "code": "vm_error",
-            "message": "internal VM rejected the compiled program",
-        }),
-        QueryExecError::ClassifiedEgress => json!({
-            "type": "error",
-            "id": id,
-            "code": "restricted_data_access",
-            "message": "gatekeeper blocked classified context egress",
-        }),
-    }
-}
-
-fn decode_bench_load_b64(b64: &str) -> Result<Vec<u8>, &'static str> {
-    let cleaned: String = b64.chars().filter(|c| !c.is_whitespace()).collect();
-    let padded = match cleaned.len() % 4 {
-        0 => cleaned,
-        n => format!("{cleaned}{}", "=".repeat(4 - n)),
-    };
-    let mut out = Vec::with_capacity(padded.len() * 3 / 4);
-    let table = b"ABCDEFGHIJKLMNOPQRSTUVWXYZabcdefghijklmnopqrstuvwxyz0123456789+/";
-    let mut buf = 0u32;
-    let mut bits = 0u32;
-    for ch in padded.bytes() {
-        if ch == b'=' {
-            break;
-        }
-        let val = table
-            .iter()
-            .position(|&t| t == ch)
-            .ok_or("invalid base64")? as u32;
-        buf = (buf << 6) | val;
-        bits += 6;
-        if bits >= 8 {
-            bits -= 8;
-            out.push((buf >> bits) as u8);
-            buf &= (1u32 << bits) - 1;
-        }
-    }
-    Ok(out)
-}
 
 /// Fractal-sharding topology configured at daemon boot (`qualia-cli daemon --workers N`).
 #[derive(Clone, Copy, Debug, Default, serde::Serialize)]
@@ -164,82 +51,12 @@ pub fn execution_environment_json() -> serde_json::Value {
     })
 }
 
-use crate::daemon_query::QueryExecError;
-
 #[derive(Clone)]
 struct DaemonSecurity {
     dev: bool,
     token: Option<String>,
     vault: std::sync::Arc<std::sync::Mutex<crate::key_vault::KeyVault>>,
 }
-
-#[derive(Deserialize)]
-struct NativeQueryRequest {
-    query: String,
-    format: Option<String>,
-}
-
-// ---------------------------------------------------------------------------
-// Output-format negotiation
-// ---------------------------------------------------------------------------
-
-enum OutputFormat {
-    /// `application/ld+json` — default
-    JsonLd,
-    /// `application/n-triples` — text serialisation of SPO triples
-    NTriples,
-    /// `application/x-qualia-q42` — raw binary stream (future)
-    RawQ42,
-}
-
-/// Resolve the desired output format from the JSON payload `"format"` key
-/// (higher priority) or the HTTP `Accept` header.  Returns `Err(())` when
-/// the client explicitly names a format the daemon cannot produce.
-fn negotiate_format(
-    payload_format: Option<&str>,
-    accept: Option<&str>,
-) -> Result<OutputFormat, ()> {
-    if let Some(fmt) = payload_format {
-        return match fmt {
-            "json-ld" | "application/ld+json" => Ok(OutputFormat::JsonLd),
-            "n-triples" | "application/n-triples" => Ok(OutputFormat::NTriples),
-            "q42" | "application/x-qualia-q42" => Ok(OutputFormat::RawQ42),
-            _ => Err(()),
-        };
-    }
-    if let Some(accept) = accept {
-        if accept.contains("application/x-qualia-q42") {
-            return Ok(OutputFormat::RawQ42);
-        }
-        if accept.contains("application/n-triples") {
-            return Ok(OutputFormat::NTriples);
-        }
-        if accept.contains("application/ld+json")
-            || accept.contains("application/json")
-            || accept.contains("*/*")
-        {
-            return Ok(OutputFormat::JsonLd);
-        }
-        return Err(());
-    }
-    Ok(OutputFormat::JsonLd)
-}
-
-// ---------------------------------------------------------------------------
-// Response helper
-// ---------------------------------------------------------------------------
-
-/// Build an HTTP response with an explicit `content-type`.
-/// `warp::http::Response<String>` implements `warp::Reply`, so every branch of
-/// the query handler can return the same concrete type.
-
-/// Build a successful query response that includes the `X-Qualia-Compute-Cost`
-/// telemetry header.  The header value is `{match_count}+{vm_cycles}` — the
-/// number of results found and the total VM opcodes decoded to find them.
-
-// ---------------------------------------------------------------------------
-// Daemon entry points
-// ---------------------------------------------------------------------------
 
 /// Starts the native loopback daemon on 127.0.0.1 with strict token checks.
 pub async fn start_local_daemon(
@@ -250,8 +67,6 @@ pub async fn start_local_daemon(
 }
 
 /// Starts the native loopback daemon with WebSocket and REST handoff routes.
-use tokio::sync::mpsc;
-
 pub async fn start_local_daemon_with_options(
     port: u16,
     dev: bool,
@@ -309,7 +124,12 @@ pub async fn start_local_daemon_with_options(
 
     let (control_tx, mut control_rx) = mpsc::channel::<String>(16);
 
-    let state = crate::webizen_server::spawn_loopback_server(port, dev, security.vault.clone());
+    let state = crate::webizen_server::spawn_loopback_server(
+        port,
+        security.dev,
+        security.vault.clone(),
+        security.token,
+    );
 
     // Wire up control channel
     let state_clone = state.clone();

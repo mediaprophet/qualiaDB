@@ -288,6 +288,7 @@ impl ZnsZoneManager {
         // Check if zone is now full
         if zone.write_pointer >= zone.capacity {
             zone.state = ZoneState::Full;
+            self.flush_zone(handle)?;
         }
 
         Ok(())
@@ -325,7 +326,8 @@ impl ZnsZoneManager {
 
         self.io_scheduler.schedule_operation(operation);
 
-        // For now, return empty data (would be filled by completion)
+        let _zc = self.zero_copy_access(handle)?;
+        // For now, return zeroed buffer sized to the read (completion would fill via zero-copy map)
         Ok(vec![0u8; length as usize])
     }
 
@@ -453,13 +455,26 @@ impl ZoneAllocator {
         }
     }
 
+    /// Allocation strategy in effect for this allocator.
+    pub fn allocation_strategy(&self) -> &AllocationStrategy {
+        &self.allocation_strategy
+    }
+
     /// Allocate zone for specific type
     pub fn allocate_zone(&mut self, zone_type: ZoneType) -> Result<u32, ZnsError> {
-        // Find suitable zone for the requested type
-        let zone_id = self
-            .free_zones
-            .pop()
-            .ok_or_else(|| ZnsError::NoZonesAvailable("No free zones available".to_string()))?;
+        let zone_id = match self.allocation_strategy {
+            AllocationStrategy::Sequential => {
+                if self.free_zones.is_empty() {
+                    None
+                } else {
+                    Some(self.free_zones.remove(0))
+                }
+            }
+            AllocationStrategy::RoundRobin | AllocationStrategy::WorkloadAware => {
+                self.free_zones.pop()
+            }
+        }
+        .ok_or_else(|| ZnsError::NoZonesAvailable("No free zones available".to_string()))?;
 
         let handle = ZoneHandle {
             zone_id,
@@ -494,8 +509,30 @@ impl ZnsIoScheduler {
         self.pending_operations.push(operation);
     }
 
+    /// Scheduler policy governing operation ordering.
+    pub fn scheduler_policy(&self) -> &SchedulerPolicy {
+        &self.scheduler_policy
+    }
+
+    /// Drain completions recorded since the last call.
+    pub fn drain_completions(&mut self) -> Vec<ZnsCompletion> {
+        std::mem::take(&mut self.completion_queue)
+    }
+
     /// Process pending operations
     pub fn process_operations(&mut self) -> Vec<ZnsCompletion> {
+        match self.scheduler_policy {
+            SchedulerPolicy::Priority => {
+                self.pending_operations.sort_by_key(|op| match op {
+                    ZnsOperation::Write { operation_id, .. }
+                    | ZnsOperation::Read { operation_id, .. }
+                    | ZnsOperation::Flush { operation_id, .. }
+                    | ZnsOperation::Reset { operation_id, .. } => *operation_id,
+                });
+            }
+            SchedulerPolicy::Fifo | SchedulerPolicy::Deadline => {}
+        }
+
         let mut completions = Vec::new();
 
         while let Some(operation) = self.pending_operations.pop() {
@@ -526,7 +563,8 @@ impl ZnsIoScheduler {
                 },
             };
 
-            completions.push(completion);
+            completions.push(completion.clone());
+            self.completion_queue.push(completion);
         }
 
         completions

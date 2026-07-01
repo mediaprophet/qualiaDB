@@ -374,7 +374,7 @@ mod tests {
     fn test_quantum_measurement() {
         let mut lattice = QuantumLattice::new();
 
-        let mut prop = QuantumProposition {
+        let prop = QuantumProposition {
             id: 100,
             truth_value: QuantumTruthValue::Superposed,
             orthocomplement: None,

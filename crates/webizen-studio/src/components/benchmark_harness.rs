@@ -16,6 +16,7 @@ use wasm_bindgen::JsValue;
 #[cfg(target_arch = "wasm32")]
 use wasm_bindgen_futures::JsFuture;
 
+#[cfg(target_arch = "wasm32")]
 #[derive(Clone, Debug, Deserialize, PartialEq)]
 struct RuntimeSnapshotRecord {
     epoch: u64,
@@ -341,7 +342,7 @@ async fn run_benchmark_sweep() -> Result<BenchmarkReport, String> {
 
 #[component]
 pub fn BenchmarkHarness() -> Element {
-    let mut running = use_signal(|| false);
+    let running = use_signal(|| false);
     #[cfg(target_arch = "wasm32")]
     let mut status = use_signal(|| {
         if is_tauri() {
@@ -354,7 +355,7 @@ pub fn BenchmarkHarness() -> Element {
     let mut status =
         use_signal(|| "Benchmark harness is only active in the webview runtime.".to_string());
     let report = use_signal(|| None::<BenchmarkReport>);
-    let mut forge_running = use_signal(|| false);
+    let forge_running = use_signal(|| false);
     let mut forge_status =
         use_signal(|| "Ready to run bounded real-data Forge kernels.".to_string());
     let forge_report = use_signal(|| None::<ForgeComputeProbe>);

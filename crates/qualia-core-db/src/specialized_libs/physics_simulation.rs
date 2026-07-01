@@ -5322,7 +5322,7 @@ mod tests {
 
     #[test]
     fn test_cfl_dt_computation_and_clamping() {
-        let mut tsc = TimeStepControl::new();
+        let tsc = TimeStepControl::new();
         // CFL = 0.5, dx = 0.1, max_velocity = 10.0 => dt = 0.5 * 0.1 / 10.0 = 0.005
         let dt = tsc.compute_cfl_dt(10.0, 0.1);
         assert!((dt - 0.005).abs() < 1e-12);

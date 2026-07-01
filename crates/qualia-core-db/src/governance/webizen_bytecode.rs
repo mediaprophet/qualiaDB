@@ -158,7 +158,7 @@ pub fn execute_program_with_stats(
                     if let Some(ctx) = guardianship_context {
                         // If intent is initiated by principal but no guardian is present, halt
                         if ctx.guardian_did.is_none() && quin.subject == ctx.principal_did {
-                            let _ = crate::wal::log_adversarial_conduct(&quin, 1);
+                            let _ = crate::wal::log_adversarial_conduct(&quin, 1, stats.vm_cycles);
                             return Err(VmError::HaltViolation);
                         }
                     }
@@ -174,7 +174,7 @@ pub fn execute_program_with_stats(
                     stats.vm_cycles += 1;
                     if let Some(ctx) = guardianship_context {
                         if quin.subject == ctx.principal_did {
-                            let _ = crate::wal::log_adversarial_conduct(&quin, 2);
+                            let _ = crate::wal::log_adversarial_conduct(&quin, 2, stats.vm_cycles);
                             return Err(VmError::HaltViolation);
                         }
                     }
@@ -183,7 +183,7 @@ pub fn execute_program_with_stats(
 
                 OP_HALT_VIOLATION => {
                     stats.vm_cycles += 1;
-                    let _ = crate::wal::log_adversarial_conduct(&quin, 3);
+                    let _ = crate::wal::log_adversarial_conduct(&quin, 3, stats.vm_cycles);
                     return Err(VmError::HaltViolation);
                 }
 

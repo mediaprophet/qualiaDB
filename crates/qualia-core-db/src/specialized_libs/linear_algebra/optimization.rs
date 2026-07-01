@@ -1368,7 +1368,7 @@ mod tests {
         // Local block dimensions for block (bi, bj).
         let i_start = bi * block_size;
         let j_start = bj * block_size;
-        let local_rows = rows.min((bi + 1) * block_size) - i_start;
+        let _local_rows = rows.min((bi + 1) * block_size) - i_start;
         let local_cols = cols.min((bj + 1) * block_size) - j_start;
         // Row-major within block.
         offset += li * local_cols + lj;
