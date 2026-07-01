@@ -9,17 +9,17 @@ use tauri::tray::{MouseButton, MouseButtonState, TrayIconBuilder, TrayIconEvent}
 use tauri::{Emitter, Manager};
 use tauri_plugin_updater::UpdaterExt;
 
-pub mod commands;
-pub mod companion_gateway;
-pub mod runtime;
-pub mod settings_server;
-pub mod telemetry_bridge;
-pub mod telemetry_hooks;
-pub use commands::*;
+use webizen_desktop::{
+    commands::{self, PreviewState, RenderLoopState},
+    generate_qapp_credential,
+    runtime::{spawn_runtime, RuntimeHandle},
+    settings_server,
+    telemetry_bridge,
+    telemetry_hooks,
+};
 
 use qualia_client_core::qapp_registry::QAPPS_DIR;
 use qualia_client_core::state::{dirs_default_path, init_app_state};
-use runtime::{spawn_runtime, RuntimeHandle};
 
 type ProtocolResponse = tauri::http::Response<Vec<u8>>;
 
@@ -297,7 +297,7 @@ fn main() {
                     {
                         if bridge.is_enabled() {
                             // Collect system telemetry (stack-allocated operation)
-                            let telemetry = crate::telemetry_hooks::collect_system_telemetry();
+                            let telemetry = telemetry_hooks::collect_system_telemetry();
 
                             // Update the bridge state (minimal CPU overhead)
                             bridge.set_telemetry(telemetry);

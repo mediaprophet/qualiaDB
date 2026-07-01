@@ -14,6 +14,7 @@ YYYY-MM-DD | INSTRUMENT | CLAIM|PROGRESS|BLOCKED|RELEASE | short description | p
 
 ## Active notices
 
+2026-07-02 | Grok | RELEASE | Social Book write path + sharing preview; lib.rs fixes companion_gateway RA; 36 wellfair tests pass | webizen-desktop/lib.rs, social_book_panel, host_client
 2026-07-02 | Grok | RELEASE | Q2+Q6: disputed diagnosis, housing/safety, med reminder prefs+due slots; 36 wellfair tests pass | personal_records, med_reminders, personal_panel, medication_panel
 2026-07-02 | Grok | RELEASE | §8.1 exit sprint: journey test, Turtle export package, graph coverage query; 31 wellfair tests pass | wellfair/{journey_tests,export_package,graph_query}, tools_panel, webizen-desktop
 2026-07-02 | Grok | RELEASE | Parallel sprint landed: sync outbox, replay idempotency, conditions/allergies UI+API; 27 wellfair + 3 conditions tests pass | wellfair/{sync_outbox,replay_tests,api,vault}, wellfare-core/conditions.rs, personal_panel, webizen-desktop commands

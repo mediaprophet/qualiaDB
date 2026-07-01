@@ -84,7 +84,7 @@ a1000001-0000-4000-8000-000000000001,1777632000000,1777632060000,60,72.0,18.5,32
         host.add_condition(&ConditionReport::new("Hypertension"))
             .unwrap();
 
-        // Step 7–8 — consent grant for scoped read
+        // Step 7–8 — contact relationship + scoped sharing request (consent grant)
         let draft = ConsentGrantDraft {
             recipient: "wellfair-care".into(),
             purpose: "care_coordination".into(),

@@ -215,6 +215,108 @@ pub async fn fetch_delegation_rules() -> Result<Vec<DelegationRuleDto>, String> 
 }
 
 #[cfg(target_arch = "wasm32")]
+#[derive(Debug, Clone, Serialize)]
+struct DirectoryActorWire {
+    id: String,
+    actor_type: String,
+    name: String,
+    #[serde(skip_serializing_if = "Option::is_none")]
+    organization: Option<String>,
+    qualifications: Vec<String>,
+    roles: Vec<String>,
+    verification_status: String,
+    pairwise_did: String,
+    #[serde(skip_serializing_if = "Option::is_none")]
+    root_did_uri: Option<String>,
+    routing_hints: Vec<String>,
+}
+
+#[cfg(target_arch = "wasm32")]
+#[derive(Debug, Clone, Serialize)]
+struct DelegationRuleWire {
+    id: String,
+    actor_id: String,
+    granted_roles: Vec<String>,
+    legal_basis: String,
+    privacy_mode_limit: String,
+    allowed_record_types: Vec<String>,
+    restricted_records: Vec<String>,
+    is_active: bool,
+}
+
+#[cfg(target_arch = "wasm32")]
+pub async fn add_directory_actor(
+    name: &str,
+    actor_type: &str,
+    organization: Option<&str>,
+    roles: &[String],
+) -> Result<(), String> {
+    let id = format!("actor-{}", uuid::Uuid::new_v4());
+    let pairwise_did = format!("did:q42:pairwise:{id}");
+    let actor = DirectoryActorWire {
+        id: id.clone(),
+        actor_type: actor_type.to_string(),
+        name: name.to_string(),
+        organization: organization.map(str::to_string),
+        qualifications: vec![],
+        roles: roles.to_vec(),
+        verification_status: "self_asserted".into(),
+        pairwise_did,
+        root_did_uri: None,
+        routing_hints: vec![],
+    };
+    let js = serde_wasm_bindgen::to_value(&serde_json::json!({ "actor": actor }))
+        .map_err(|e| e.to_string())?;
+    tauri_invoke("add_directory_actor", js)
+        .await
+        .map_err(|e| format!("{e:?}"))?;
+    Ok(())
+}
+
+#[cfg(not(target_arch = "wasm32"))]
+pub async fn add_directory_actor(
+    _name: &str,
+    _actor_type: &str,
+    _organization: Option<&str>,
+    _roles: &[String],
+) -> Result<(), String> {
+    Err("Directory actors require the Tauri desktop host".into())
+}
+
+#[cfg(target_arch = "wasm32")]
+pub async fn add_delegation_rule(
+    actor_id: &str,
+    legal_basis: &str,
+    granted_roles: &[String],
+) -> Result<(), String> {
+    let rule = DelegationRuleWire {
+        id: format!("delegation-{}", uuid::Uuid::new_v4()),
+        actor_id: actor_id.to_string(),
+        granted_roles: granted_roles.to_vec(),
+        legal_basis: legal_basis.to_string(),
+        privacy_mode_limit: "minimum_projection".into(),
+        allowed_record_types: vec!["health.observation".into(), "medication".into()],
+        restricted_records: vec![],
+        is_active: true,
+    };
+    let js = serde_wasm_bindgen::to_value(&serde_json::json!({ "rule": rule }))
+        .map_err(|e| e.to_string())?;
+    tauri_invoke("add_delegation_rule", js)
+        .await
+        .map_err(|e| format!("{e:?}"))?;
+    Ok(())
+}
+
+#[cfg(not(target_arch = "wasm32"))]
+pub async fn add_delegation_rule(
+    _actor_id: &str,
+    _legal_basis: &str,
+    _granted_roles: &[String],
+) -> Result<(), String> {
+    Err("Delegation rules require the Tauri desktop host".into())
+}
+
+#[cfg(target_arch = "wasm32")]
 pub async fn evaluate_policy(
     qapp_id: &str,
     scope: &str,
