@@ -309,7 +309,7 @@ impl QpuExtension {
     async fn simulate_local(&self, circuit: &QuantumCircuit, shots: u32) -> Result<QpuExecutionResult, ExtensionError> {
         let mut counts = HashMap::new();
         let mut probabilities = HashMap::new();
-        let mut _execution_time_ms = 0;
+        let mut execution_time_ms = 0;
         let mut fidelity = None;
 
         #[cfg(feature = "qualia-q-forge")]
