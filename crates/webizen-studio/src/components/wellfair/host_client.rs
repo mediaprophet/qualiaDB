@@ -1,10 +1,12 @@
 //! Host API client — all operating state flows through Tauri invoke, not Dioxus authority.
 
-use super::host_dto::WellfairHostSnapshot;
+use super::host_dto::{HealthRecordDto, ReceiptDto, WellfairHostSnapshot};
 use dioxus::prelude::*;
 
 #[cfg(target_arch = "wasm32")]
 use crate::components::qapp_engine::tauri_invoke;
+#[cfg(target_arch = "wasm32")]
+use js_sys;
 
 #[cfg(target_arch = "wasm32")]
 pub async fn fetch_host_snapshot() -> WellfairHostSnapshot {
@@ -87,4 +89,42 @@ pub async fn fetch_companion_pairing() -> Result<String, String> {
 #[cfg(not(target_arch = "wasm32"))]
 pub async fn fetch_companion_pairing() -> Result<String, String> {
     Err("Companion pairing requires the Tauri desktop host".into())
+}
+
+#[cfg(target_arch = "wasm32")]
+pub async fn fetch_health_records(limit: usize) -> Result<Vec<HealthRecordDto>, String> {
+    let args = js_sys::Object::new();
+    js_sys::Reflect::set(&args, &"limit".into(), &wasm_bindgen::JsValue::from(limit as u32))
+        .map_err(|_| "failed to build invoke args".to_string())?;
+    let js = tauri_invoke("wellfair_list_health_records", args.into())
+        .await
+        .map_err(|e| format!("{e:?}"))?;
+    let json = js
+        .as_string()
+        .ok_or_else(|| "health records response was not a JSON string".to_string())?;
+    serde_json::from_str(&json).map_err(|e| e.to_string())
+}
+
+#[cfg(not(target_arch = "wasm32"))]
+pub async fn fetch_health_records(_limit: usize) -> Result<Vec<HealthRecordDto>, String> {
+    Ok(vec![])
+}
+
+#[cfg(target_arch = "wasm32")]
+pub async fn fetch_receipts(limit: usize) -> Result<Vec<ReceiptDto>, String> {
+    let args = js_sys::Object::new();
+    js_sys::Reflect::set(&args, &"limit".into(), &wasm_bindgen::JsValue::from(limit as u32))
+        .map_err(|_| "failed to build invoke args".to_string())?;
+    let js = tauri_invoke("wellfair_list_receipts", args.into())
+        .await
+        .map_err(|e| format!("{e:?}"))?;
+    let json = js
+        .as_string()
+        .ok_or_else(|| "receipts response was not a JSON string".to_string())?;
+    serde_json::from_str(&json).map_err(|e| e.to_string())
+}
+
+#[cfg(not(target_arch = "wasm32"))]
+pub async fn fetch_receipts(_limit: usize) -> Result<Vec<ReceiptDto>, String> {
+    Ok(vec![])
 }

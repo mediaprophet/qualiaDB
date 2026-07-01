@@ -201,11 +201,7 @@ pub fn wellfair_host_snapshot(
     host_state: State<'_, HostApiState>,
 ) -> Result<String, String> {
     let kv = app_state.key_vault.lock().map_err(|e| e.to_string())?;
-    let host_ready = host_state
-        .0
-        .lock()
-        .map_err(|e| e.to_string())?
-        .is_some();
+    let mut guard = host_state.0.lock().map_err(|e| e.to_string())?;
     let owner_label = api::read_identity()
         .and_then(|v| {
             v.get("display_name")
@@ -213,13 +209,37 @@ pub fn wellfair_host_snapshot(
                 .map(|s| s.to_string())
         })
         .unwrap_or_else(|| "Owner vault".to_string());
-    let snapshot = qualia_client_core::wellfair::build_host_snapshot(
-        &kv,
-        host_ready,
-        &owner_label,
-        false,
-    );
+    let snapshot = if let Some(host) = guard.as_mut() {
+        host.build_snapshot(&kv, &owner_label)
+    } else {
+        qualia_client_core::wellfair::build_host_snapshot(&kv, false, &owner_label, false)
+    };
     serde_json::to_string(&snapshot).map_err(|e| e.to_string())
+}
+
+#[command]
+pub fn wellfair_list_health_records(
+    app: AppHandle,
+    limit: Option<usize>,
+) -> Result<String, String> {
+    let state = app.state::<HostApiState>();
+    let guard = state.0.lock().map_err(|e| e.to_string())?;
+    let host = guard
+        .as_ref()
+        .ok_or_else(|| "Host API not initialized — unlock vault first".to_string())?;
+    let records = host.list_health_records(limit.unwrap_or(64))?;
+    serde_json::to_string(&records).map_err(|e| e.to_string())
+}
+
+#[command]
+pub fn wellfair_list_receipts(app: AppHandle, limit: Option<usize>) -> Result<String, String> {
+    let state = app.state::<HostApiState>();
+    let guard = state.0.lock().map_err(|e| e.to_string())?;
+    let host = guard
+        .as_ref()
+        .ok_or_else(|| "Host API not initialized — unlock vault first".to_string())?;
+    let receipts = host.list_receipts(limit.unwrap_or(32))?;
+    serde_json::to_string(&receipts).map_err(|e| e.to_string())
 }
 
 #[command]
@@ -871,12 +891,13 @@ pub fn submit_record(
     app: tauri::AppHandle,
     qapp_id: String,
     envelope: wellfare_core::record::RecordEnvelope,
+    source: String,
 ) -> Result<usize, String> {
     let state = app.state::<HostApiState>();
     let mut api_guard = state.0.lock().map_err(|e| e.to_string())?;
 
     if let Some(host_api) = api_guard.as_mut() {
-        host_api.submit_record(&qapp_id, envelope)
+        host_api.submit_record(&qapp_id, envelope, &source)
     } else {
         Err("Host API not initialized".into())
     }
@@ -2654,6 +2675,8 @@ pub fn get_invoke_handler() -> impl Fn(tauri::ipc::Invoke<tauri::Wry>) -> bool {
         get_config,
         save_config,
         wellfair_host_snapshot,
+        wellfair_list_health_records,
+        wellfair_list_receipts,
         wellfair_companion_pairing,
         wellfair_import_samsung_folder,
         wellfair_ingest_companion_health,

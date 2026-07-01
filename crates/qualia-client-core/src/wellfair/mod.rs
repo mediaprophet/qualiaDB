@@ -1,7 +1,9 @@
 pub mod api;
 pub mod host_state;
 pub mod import_samsung;
+pub mod journal;
 pub mod policy;
+pub mod receipt;
 pub mod snapshot;
 pub mod vault;
 

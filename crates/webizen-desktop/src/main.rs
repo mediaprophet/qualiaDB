@@ -212,6 +212,7 @@ fn main() {
                         std::path::PathBuf::from(storage_path).join("qualia_global.wal");
                     if let Ok(vault) = qualia_client_core::wellfair::vault::VaultService::open(
                         &wal_path,
+                        &storage_path,
                         author_did_hash,
                     ) {
                         let policy =

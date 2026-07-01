@@ -92,6 +92,8 @@ pub struct WellfairHostSnapshot {
     pub owner_label: String,
     pub accessibility: AccessibilityPreferences,
     pub pending_jobs: u32,
+    pub health_record_count: u32,
+    pub last_checkpoint_prefix: Option<String>,
     pub capabilities_ready: bool,
     pub host_api_version: String,
 }
@@ -106,6 +108,8 @@ impl Default for WellfairHostSnapshot {
             owner_label: String::new(),
             accessibility: AccessibilityPreferences::default(),
             pending_jobs: 0,
+            health_record_count: 0,
+            last_checkpoint_prefix: None,
             capabilities_ready: false,
             host_api_version: crate::qapp_install::SUPPORTED_HOST_API_VERSION.to_string(),
         }
@@ -122,6 +126,8 @@ pub fn fixture_host_snapshot() -> WellfairHostSnapshot {
         owner_label: "Owner vault (fixture)".to_string(),
         accessibility: AccessibilityPreferences::default(),
         pending_jobs: 0,
+        health_record_count: 0,
+        last_checkpoint_prefix: None,
         capabilities_ready: true,
         host_api_version: crate::qapp_install::SUPPORTED_HOST_API_VERSION.to_string(),
     }

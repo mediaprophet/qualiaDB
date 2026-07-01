@@ -33,6 +33,8 @@ pub struct SamsungImportReport {
     pub records_committed: usize,
     pub records_skipped: usize,
     pub errors: Vec<String>,
+    #[serde(default, skip_serializing_if = "Option::is_none")]
+    pub checkpoint_hash: Option<String>,
 }
 
 fn content_hash_hex(payload: &str) -> String {
@@ -197,7 +199,7 @@ fn commit_envelopes(
 ) {
     let mut committed = 0u32;
     for envelope in envelopes {
-        match host.submit_record(QAPP_HEALTH, envelope) {
+        match host.submit_record(QAPP_HEALTH, envelope, &report.source) {
             Ok(n) => {
                 report.records_committed += n;
                 committed += 1;
@@ -229,6 +231,7 @@ pub fn ingest_companion_health_bundle(
         records_committed: 0,
         records_skipped: 0,
         errors: Vec::new(),
+        checkpoint_hash: None,
     };
 
     if let Err(e) = bundle.validate() {
@@ -269,6 +272,7 @@ pub fn import_samsung_folder(
         records_committed: 0,
         records_skipped: 0,
         errors: Vec::new(),
+        checkpoint_hash: None,
     };
 
     if !folder.is_dir() {

@@ -79,6 +79,8 @@ pub struct WellfairHostSnapshot {
     pub owner_label: String,
     pub accessibility: AccessibilityPreferences,
     pub pending_jobs: u32,
+    pub health_record_count: u32,
+    pub last_checkpoint_prefix: Option<String>,
     pub capabilities_ready: bool,
     pub host_api_version: String,
 }
@@ -98,10 +100,35 @@ impl Default for WellfairHostSnapshot {
                 screen_reader_hints: true,
             },
             pending_jobs: 0,
+            health_record_count: 0,
+            last_checkpoint_prefix: None,
             capabilities_ready: false,
             host_api_version: "1".to_string(),
         }
     }
+}
+
+#[derive(Debug, Clone, PartialEq, Eq, Serialize, Deserialize)]
+pub struct HealthRecordDto {
+    pub id: String,
+    pub kind: String,
+    pub asserted_time_unix: u32,
+    pub evidence_type: String,
+    pub sensitivity: String,
+    pub blob_hash: Option<String>,
+    pub source: String,
+    pub committed_unix: u32,
+}
+
+#[derive(Debug, Clone, PartialEq, Eq, Serialize, Deserialize)]
+pub struct ReceiptDto {
+    pub id: String,
+    pub timestamp_unix: u32,
+    pub qapp_id: String,
+    pub record_id: String,
+    pub decision: String,
+    pub obligations: Vec<String>,
+    pub checkpoint_hash: Option<String>,
 }
 
 pub fn fixture_snapshot() -> WellfairHostSnapshot {

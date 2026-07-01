@@ -1,3 +1,4 @@
+use super::health_panel::WellfairHealthPanel;
 use super::host_client::use_host_snapshot;
 use super::host_dto::{ConsentGrantDraft, PolicyDecisionDto, ProvenanceHop, SensitivityClassDto, VaultLifecycle};
 use super::shared::{
@@ -21,6 +22,7 @@ const AREAS: &[(&str, &str)] = &[
 pub fn WellfairShell() -> Element {
     let snapshot = use_host_snapshot();
     let snap = snapshot();
+    let mut active_area = use_signal(|| "Health".to_string());
 
     let vault_label = match snap.vault {
         VaultLifecycle::Unconfigured => "Create owner vault",
@@ -52,6 +54,21 @@ pub fn WellfairShell() -> Element {
         purpose: "Minimum projection preview".into(),
         fields: vec!["profile.display_name".into(), "emergency.contact".into()],
         expires_at_unix: None,
+    };
+
+    let area_content = match active_area().as_str() {
+        "Health" => rsx! { WellfairHealthPanel {} },
+        "Tools" => rsx! {
+            CompanionPairingPanel {}
+            WellfairToolsPanel {}
+        },
+        name => rsx! {
+            div {
+                style: "padding:1.25rem;border:1px dashed var(--qualia-border,#ccc);border-radius:10px;text-align:center;color:var(--qualia-text-muted,#666);font-size:0.85rem;",
+                strong { "{name}" }
+                p { style: "margin:0.5rem 0 0;", "Coming in a later phase. Select Health or Tools to use live features." }
+            }
+        },
     };
 
     rsx! {
@@ -87,36 +104,44 @@ pub fn WellfairShell() -> Element {
                 aria_label: "WellFair areas",
                 style: "display:grid;grid-template-columns:repeat(auto-fill,minmax(140px,1fr));gap:0.5rem;",
                 for (name, note) in AREAS {
-                    div {
+                    button {
                         key: "{name}",
-                        style: "padding:0.65rem 0.75rem;border:1px solid var(--qualia-border,#ddd);border-radius:10px;background:var(--qualia-surface,#fafafa);",
+                        type: "button",
+                        aria_pressed: "{active_area() == *name}",
+                        style: if active_area() == *name {
+                            "padding:0.65rem 0.75rem;border:2px solid var(--qualia-accent,#2a6f97);border-radius:10px;background:var(--qualia-surface,#fafafa);cursor:pointer;text-align:left;"
+                        } else {
+                            "padding:0.65rem 0.75rem;border:1px solid var(--qualia-border,#ddd);border-radius:10px;background:var(--qualia-surface,#fafafa);cursor:pointer;text-align:left;"
+                        },
+                        onclick: move |_| active_area.set(name.to_string()),
                         strong { style: "display:block;font-size:0.88rem;", "{name}" }
                         span { style: "font-size:0.72rem;color:var(--qualia-text-muted,#666);", "{note}" }
                     }
                 }
             }
 
-            CompanionPairingPanel {}
-            WellfairToolsPanel {}
+            {area_content}
 
-            section {
-                style: "display:grid;grid-template-columns:1fr 1fr;gap:1rem;",
-                div {
-                    h2 { style: "margin:0 0 0.5rem;font-size:1rem;", "Provenance" }
-                    ProvenanceTrail { hops: sample_hops }
-                }
-                div {
-                    h2 { style: "margin:0 0 0.5rem;font-size:1rem;", "Consent template" }
-                    ConsentGrantEditor {
-                        draft: sample_draft,
-                        decision: Some(PolicyDecisionDto::Prompt {
-                            requested_consent: ConsentGrantDraft {
-                                recipient: "care.team@example".into(),
-                                purpose: "Minimum projection preview".into(),
-                                fields: vec!["profile.display_name".into()],
-                                expires_at_unix: None,
-                            },
-                        }),
+            if active_area() != "Tools" {
+                section {
+                    style: "display:grid;grid-template-columns:1fr 1fr;gap:1rem;",
+                    div {
+                        h2 { style: "margin:0 0 0.5rem;font-size:1rem;", "Provenance" }
+                        ProvenanceTrail { hops: sample_hops }
+                    }
+                    div {
+                        h2 { style: "margin:0 0 0.5rem;font-size:1rem;", "Consent template" }
+                        ConsentGrantEditor {
+                            draft: sample_draft,
+                            decision: Some(PolicyDecisionDto::Prompt {
+                                requested_consent: ConsentGrantDraft {
+                                    recipient: "care.team@example".into(),
+                                    purpose: "Minimum projection preview".into(),
+                                    fields: vec!["profile.display_name".into()],
+                                    expires_at_unix: None,
+                                },
+                            }),
+                        }
                     }
                 }
             }
@@ -124,7 +149,11 @@ pub fn WellfairShell() -> Element {
             aside {
                 style: "padding:0.75rem;border-radius:10px;border:1px dashed var(--qualia-border,#ccc);font-size:0.78rem;color:var(--qualia-text-muted,#666);",
                 "Accessibility: text {snap.accessibility.text_scale_percent}% · high contrast {snap.accessibility.high_contrast} · reduced motion {snap.accessibility.reduced_motion}. "
-                "Capabilities ready: {snap.capabilities_ready}. All state from WebizenHostApi — Dioxus signals are view bindings only."
+                "Journal: {snap.health_record_count} records"
+                if let Some(cp) = &snap.last_checkpoint_prefix {
+                    " · checkpoint {cp}…"
+                }
+                ". Capabilities ready: {snap.capabilities_ready}. All state from WebizenHostApi."
             }
         }
     }
