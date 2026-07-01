@@ -12,6 +12,7 @@ use tauri_plugin_updater::UpdaterExt;
 use webizen_desktop::{
     commands::{self, PreviewState, RenderLoopState},
     generate_qapp_credential,
+    med_reminder_notifier::{self, MedReminderNotifierState},
     runtime::{spawn_runtime, RuntimeHandle},
     settings_server,
     telemetry_bridge,
@@ -103,6 +104,7 @@ fn main() {
 
     tauri::Builder::default()
         .plugin(tauri_plugin_updater::Builder::new().build())
+        .plugin(tauri_plugin_notification::init())
         .register_uri_scheme_protocol("qualia", move |_app, request| {
             let path = request.uri().path().trim_start_matches('/');
             let safe_path: PathBuf = PathBuf::from(path)
@@ -138,8 +140,10 @@ fn main() {
         .manage(commands::binary_registry::BinaryNodeRegistry::new())
         .manage(telemetry_bridge::TelemetryBridge::new())
         .manage(commands::HostApiState(host_api_state.clone()))
+        .manage(MedReminderNotifierState::default())
         .setup(move |app| {
             let handle = app.handle();
+            med_reminder_notifier::spawn_med_reminder_poller(handle.clone());
             let daemon_status_item =
                 MenuItem::with_id(app, "daemon_status", "Daemon Status", true, None::<&str>)?;
             let tray_menu = MenuBuilder::new(app)

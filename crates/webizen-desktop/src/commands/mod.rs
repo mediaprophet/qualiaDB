@@ -551,6 +551,7 @@ pub fn wellfair_grant_med_reminder_permission(app: AppHandle) -> Result<String, 
         .as_ref()
         .ok_or_else(|| "Host API not initialized — unlock vault first".to_string())?;
     let prefs = host.grant_med_reminder_permission()?;
+    let _ = crate::med_reminder_notifier::request_os_notification_permission(&app);
     serde_json::to_string(&prefs).map_err(|e| e.to_string())
 }
 
@@ -580,6 +581,20 @@ pub fn wellfair_list_due_med_reminders(
         .ok_or_else(|| "Host API not initialized — unlock vault first".to_string())?;
     let due = host.list_due_med_reminders(window_minutes.unwrap_or(30))?;
     serde_json::to_string(&due).map_err(|e| e.to_string())
+}
+
+#[command]
+pub fn wellfair_query_graph_coverage(
+    app: AppHandle,
+    limit: Option<usize>,
+) -> Result<String, String> {
+    let state = app.state::<HostApiState>();
+    let guard = state.0.lock().map_err(|e| e.to_string())?;
+    let host = guard
+        .as_ref()
+        .ok_or_else(|| "Host API not initialized — unlock vault first".to_string())?;
+    let rows = host.query_graph_coverage(limit.unwrap_or(64))?;
+    serde_json::to_string(&rows).map_err(|e| e.to_string())
 }
 
 fn parse_administration_status(s: &str) -> wellfare_core::medication::AdministrationStatus {
@@ -3101,6 +3116,7 @@ pub fn get_invoke_handler() -> impl Fn(tauri::ipc::Invoke<tauri::Wry>) -> bool {
         wellfair_grant_med_reminder_permission,
         wellfair_set_med_reminders_enabled,
         wellfair_list_due_med_reminders,
+        wellfair_query_graph_coverage,
         wellfair_add_medication,
         wellfair_record_administration,
         wellfair_add_diet_entry,

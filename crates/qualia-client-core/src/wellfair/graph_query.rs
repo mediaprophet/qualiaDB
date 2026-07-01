@@ -5,7 +5,7 @@ use wellfare_core::record::q_hash_str;
 
 use super::journal::JournalEntry;
 
-#[derive(Debug, Clone, PartialEq, Eq)]
+#[derive(Debug, Clone, PartialEq, Eq, serde::Serialize, serde::Deserialize)]
 pub struct GraphCoverageRow {
     pub record_id: String,
     pub kind: String,

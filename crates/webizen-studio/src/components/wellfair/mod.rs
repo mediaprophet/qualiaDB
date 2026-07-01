@@ -1,3 +1,4 @@
+pub mod audit_panel;
 pub mod consent_panel;
 pub mod health_panel;
 pub mod medication_panel;
@@ -12,6 +13,7 @@ pub mod shared;
 pub mod shell;
 pub mod tools_panel;
 
+pub use audit_panel::WellfairAuditPanel;
 pub use consent_panel::WellfairConsentPanel;
 pub use health_panel::WellfairHealthPanel;
 pub use medication_panel::WellfairMedicationPanel;

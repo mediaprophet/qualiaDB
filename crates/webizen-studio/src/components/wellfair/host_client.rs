@@ -1,8 +1,8 @@
 //! Host API client — all operating state flows through Tauri invoke, not Dioxus authority.
 
 use super::host_dto::{
-    ActorDto, ConsentGrantDto, DelegationRuleDto, HealthRecordDto, PolicyDecisionDto,
-    ReceiptDto, WellfairHostSnapshot,
+    ActorDto, ConsentGrantDto, DelegationRuleDto, GraphCoverageDto, HealthRecordDto,
+    PolicyDecisionDto, ReceiptDto, WellfairHostSnapshot,
 };
 use super::host_dto::ConsentGrantDraft;
 use dioxus::prelude::*;
@@ -131,6 +131,25 @@ pub async fn fetch_receipts(limit: usize) -> Result<Vec<ReceiptDto>, String> {
 
 #[cfg(not(target_arch = "wasm32"))]
 pub async fn fetch_receipts(_limit: usize) -> Result<Vec<ReceiptDto>, String> {
+    Ok(vec![])
+}
+
+#[cfg(target_arch = "wasm32")]
+pub async fn fetch_graph_coverage(limit: usize) -> Result<Vec<GraphCoverageDto>, String> {
+    let args = js_sys::Object::new();
+    js_sys::Reflect::set(&args, &"limit".into(), &wasm_bindgen::JsValue::from(limit as u32))
+        .map_err(|_| "failed to build invoke args".to_string())?;
+    let js = tauri_invoke("wellfair_query_graph_coverage", args.into())
+        .await
+        .map_err(|e| format!("{e:?}"))?;
+    let json = js
+        .as_string()
+        .ok_or_else(|| "coverage response was not a JSON string".to_string())?;
+    serde_json::from_str(&json).map_err(|e| e.to_string())
+}
+
+#[cfg(not(target_arch = "wasm32"))]
+pub async fn fetch_graph_coverage(_limit: usize) -> Result<Vec<GraphCoverageDto>, String> {
     Ok(vec![])
 }
 

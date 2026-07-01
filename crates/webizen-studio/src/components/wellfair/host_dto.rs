@@ -157,6 +157,13 @@ pub struct ConsentGrantDto {
 }
 
 #[derive(Debug, Clone, PartialEq, Eq, Serialize, Deserialize)]
+pub struct GraphCoverageDto {
+    pub record_id: String,
+    pub kind: String,
+    pub quin_count: usize,
+}
+
+#[derive(Debug, Clone, PartialEq, Eq, Serialize, Deserialize)]
 pub struct ReceiptDto {
     pub id: String,
     pub timestamp_unix: u32,

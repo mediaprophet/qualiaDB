@@ -1,5 +1,6 @@
 pub mod accessibility_prefs;
 pub mod api;
+pub mod companion_tests;
 pub mod consent_store;
 pub mod export_package;
 pub mod graph_query;

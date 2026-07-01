@@ -14,6 +14,7 @@ YYYY-MM-DD | INSTRUMENT | CLAIM|PROGRESS|BLOCKED|RELEASE | short description | p
 
 ## Active notices
 
+2026-07-02 | Grok | RELEASE | Phase 2 closeout: OS med notifications, companion E2E, audit/graph panel; 38 wellfair tests; PHASE2 doc | med_reminder_notifier, companion_tests, audit_panel, WELLFAIR_PHASE2_CLOSEOUT.md
 2026-07-02 | Grok | RELEASE | Social Book write path + sharing preview; lib.rs fixes companion_gateway RA; 36 wellfair tests pass | webizen-desktop/lib.rs, social_book_panel, host_client
 2026-07-02 | Grok | RELEASE | Q2+Q6: disputed diagnosis, housing/safety, med reminder prefs+due slots; 36 wellfair tests pass | personal_records, med_reminders, personal_panel, medication_panel
 2026-07-02 | Grok | RELEASE | §8.1 exit sprint: journey test, Turtle export package, graph coverage query; 31 wellfair tests pass | wellfair/{journey_tests,export_package,graph_query}, tools_panel, webizen-desktop

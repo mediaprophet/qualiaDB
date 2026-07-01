@@ -281,4 +281,18 @@ mod tests {
 
         assert!(verify_pairing_response(&challenge, &response).is_ok());
     }
+
+    #[test]
+    fn pairing_info_includes_ws_url_and_port() {
+        let info = companion_pairing_info(DEFAULT_COMPANION_PORT);
+        assert!(info.ws_url.contains("/mobile/stream"));
+        assert_eq!(info.port, DEFAULT_COMPANION_PORT);
+        assert!(!info.lan_ip.is_empty());
+    }
+
+    #[test]
+    fn qr_svg_is_non_empty() {
+        let svg = companion_qr_svg("ws://192.168.1.10:8080/mobile/stream");
+        assert!(svg.contains("<svg"));
+    }
 }

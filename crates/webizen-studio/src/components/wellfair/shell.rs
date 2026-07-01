@@ -8,7 +8,7 @@ use super::host_client::use_host_snapshot;
 use super::host_dto::{ProvenanceHop, SensitivityClassDto, VaultLifecycle};
 use super::shared::{OfflineState, ProvenanceTrail, SensitivityBadge, SyncState};
 use super::pairing_panel::CompanionPairingPanel;
-use super::receipts_panel::WellfairReceiptsPanel;
+use super::audit_panel::WellfairAuditPanel;
 use super::tools_panel::WellfairToolsPanel;
 use dioxus::prelude::*;
 
@@ -69,7 +69,7 @@ pub fn WellfairShell() -> Element {
         "Tools" => rsx! {
             CompanionPairingPanel {}
             WellfairToolsPanel {}
-            WellfairReceiptsPanel {}
+            WellfairAuditPanel {}
         },
         name => rsx! {
             div {
