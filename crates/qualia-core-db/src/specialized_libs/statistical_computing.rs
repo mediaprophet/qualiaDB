@@ -2377,6 +2377,13 @@ impl StatisticalDataStorage {
             ],
         })
     }
+
+    /// Returns a small built-in sample dataset (3 rows × 5 columns) useful for
+    /// demos, tests, and as a fallback when no real dataset is registered. This
+    /// is backed by [`get_dataset_data_legacy`](Self::get_dataset_data_legacy).
+    pub fn sample_dataset(&self) -> Result<Dataset, StatisticalError> {
+        self.get_dataset_data_legacy("sample")
+    }
 }
 
 impl DataCatalog {
@@ -2548,6 +2555,33 @@ impl SearchIndex {
             })
             .collect()
     }
+
+    /// Returns a reference to the underlying search engine configuration.
+    pub fn search_engine(&self) -> &SearchEngine {
+        &self.search_engine
+    }
+
+    /// Returns a mutable reference to the search engine so callers can
+    /// reconfigure its type or indexing strategy.
+    pub fn search_engine_mut(&mut self) -> &mut SearchEngine {
+        &mut self.search_engine
+    }
+
+    /// Returns the number of entries currently held in the index.
+    pub fn entry_count(&self) -> usize {
+        self.index_entries.len()
+    }
+
+    /// Remove an entry from the index by its id. Returns the removed entry
+    /// if it existed.
+    pub fn remove_entry(&mut self, entry_id: &str) -> Option<IndexEntry> {
+        self.index_entries.remove(entry_id)
+    }
+
+    /// Look up an entry by id.
+    pub fn get_entry(&self, entry_id: &str) -> Option<&IndexEntry> {
+        self.index_entries.get(entry_id)
+    }
 }
 
 impl SearchEngine {
@@ -2556,6 +2590,26 @@ impl SearchEngine {
             engine_type: SearchEngineType::FullText,
             indexing_strategy: IndexingStrategy::Inverted,
         }
+    }
+
+    /// Returns the configured search engine type.
+    pub fn engine_type(&self) -> &SearchEngineType {
+        &self.engine_type
+    }
+
+    /// Reconfigure the search engine type.
+    pub fn set_engine_type(&mut self, engine_type: SearchEngineType) {
+        self.engine_type = engine_type;
+    }
+
+    /// Returns the configured indexing strategy.
+    pub fn indexing_strategy(&self) -> &IndexingStrategy {
+        &self.indexing_strategy
+    }
+
+    /// Reconfigure the indexing strategy.
+    pub fn set_indexing_strategy(&mut self, strategy: IndexingStrategy) {
+        self.indexing_strategy = strategy;
     }
 }
 
@@ -2601,6 +2655,23 @@ impl DataCompressionEngine {
     /// Resets all accumulated compression statistics to zero.
     pub fn reset_statistics(&mut self) {
         self.compression_statistics = CompressionStatistics::new();
+    }
+
+    /// Returns the list of compression algorithms available to this engine.
+    pub fn compression_algorithms(&self) -> &[CompressionAlgorithm] {
+        &self.compression_algorithms
+    }
+
+    /// Register an additional compression algorithm.
+    pub fn add_compression_algorithm(&mut self, algorithm: CompressionAlgorithm) {
+        if !self.compression_algorithms.contains(&algorithm) {
+            self.compression_algorithms.push(algorithm);
+        }
+    }
+
+    /// Returns `true` when the given algorithm is registered.
+    pub fn supports_algorithm(&self, algorithm: &CompressionAlgorithm) -> bool {
+        self.compression_algorithms.contains(algorithm)
     }
 }
 
@@ -2717,6 +2788,51 @@ impl DataIndexingEngine {
         self.query_optimizer.initialize()?;
         Ok(())
     }
+
+    /// Returns the configured indexing strategy.
+    pub fn indexing_strategy(&self) -> &IndexingStrategy {
+        &self.indexing_strategy
+    }
+
+    /// Reconfigure the indexing strategy.
+    pub fn set_indexing_strategy(&mut self, strategy: IndexingStrategy) {
+        self.indexing_strategy = strategy;
+    }
+
+    /// Add (or replace) a named data index.
+    pub fn add_index(&mut self, index: DataIndex) {
+        self.indexes.insert(index.index_id.clone(), index);
+    }
+
+    /// Look up a data index by id.
+    pub fn get_index(&self, index_id: &str) -> Option<&DataIndex> {
+        self.indexes.get(index_id)
+    }
+
+    /// Remove a data index by id.
+    pub fn remove_index(&mut self, index_id: &str) -> Option<DataIndex> {
+        self.indexes.remove(index_id)
+    }
+
+    /// List the ids of all registered indexes.
+    pub fn list_index_ids(&self) -> Vec<String> {
+        self.indexes.keys().cloned().collect()
+    }
+
+    /// Returns the number of registered indexes.
+    pub fn index_count(&self) -> usize {
+        self.indexes.len()
+    }
+
+    /// Returns a reference to the query optimizer.
+    pub fn query_optimizer(&self) -> &QueryOptimizer {
+        &self.query_optimizer
+    }
+
+    /// Returns a mutable reference to the query optimizer.
+    pub fn query_optimizer_mut(&mut self) -> &mut QueryOptimizer {
+        &mut self.query_optimizer
+    }
 }
 
 impl QueryOptimizer {
@@ -2743,6 +2859,23 @@ impl QueryOptimizer {
 
     pub fn initialize(&mut self) -> Result<(), StatisticalError> {
         Ok(())
+    }
+
+    /// Returns the list of optimization rules currently registered.
+    pub fn optimization_rules(&self) -> &[OptimizationRule] {
+        &self.optimization_rules
+    }
+
+    /// Add an optimization rule if it is not already present.
+    pub fn add_optimization_rule(&mut self, rule: OptimizationRule) {
+        if !self.optimization_rules.contains(&rule) {
+            self.optimization_rules.push(rule);
+        }
+    }
+
+    /// Returns `true` when the given rule is registered.
+    pub fn has_rule(&self, rule: &OptimizationRule) -> bool {
+        self.optimization_rules.contains(rule)
     }
 
     /// Estimate the cost of a single query operation based on its type and the
@@ -3009,6 +3142,56 @@ impl StatisticalComputationEngine {
         self.accelerator.initialize()?;
         Ok(())
     }
+
+    /// Register a computation unit that can execute statistical operations.
+    pub fn add_computation_unit(&mut self, unit: StatisticalComputationUnit) {
+        self.computation_units.push(unit);
+    }
+
+    /// Returns the list of registered computation units.
+    pub fn computation_units(&self) -> &[StatisticalComputationUnit] {
+        &self.computation_units
+    }
+
+    /// Look up a computation unit by id.
+    pub fn get_computation_unit(&self, unit_id: &str) -> Option<&StatisticalComputationUnit> {
+        self.computation_units.iter().find(|u| u.unit_id == unit_id)
+    }
+
+    /// Returns the number of registered computation units.
+    pub fn computation_unit_count(&self) -> usize {
+        self.computation_units.len()
+    }
+
+    /// Enqueue a statistical operation for later execution.
+    pub fn enqueue_operation(&mut self, operation: StatisticalOperation) {
+        self.operation_queue.push(operation);
+    }
+
+    /// Returns the operations currently waiting in the queue.
+    pub fn operation_queue(&self) -> &[StatisticalOperation] {
+        &self.operation_queue
+    }
+
+    /// Drain all queued operations, returning them in submission order.
+    pub fn drain_operation_queue(&mut self) -> Vec<StatisticalOperation> {
+        std::mem::take(&mut self.operation_queue)
+    }
+
+    /// Returns the number of operations currently in the queue.
+    pub fn queued_operation_count(&self) -> usize {
+        self.operation_queue.len()
+    }
+
+    /// Returns a reference to the scheduler.
+    pub fn scheduler(&self) -> &StatisticalScheduler {
+        &self.scheduler
+    }
+
+    /// Returns a mutable reference to the scheduler.
+    pub fn scheduler_mut(&mut self) -> &mut StatisticalScheduler {
+        &mut self.scheduler
+    }
 }
 
 impl StatisticalScheduler {
@@ -3023,6 +3206,36 @@ impl StatisticalScheduler {
     pub fn initialize(&mut self) -> Result<(), StatisticalError> {
         Ok(())
     }
+
+    /// Returns the current scheduling policy.
+    pub fn scheduling_policy(&self) -> &SchedulingPolicy {
+        &self.scheduling_policy
+    }
+
+    /// Set the scheduling policy.
+    pub fn set_scheduling_policy(&mut self, policy: SchedulingPolicy) {
+        self.scheduling_policy = policy;
+    }
+
+    /// Returns a reference to the queue manager.
+    pub fn queue_manager(&self) -> &QueueManager {
+        &self.queue_manager
+    }
+
+    /// Returns a mutable reference to the queue manager.
+    pub fn queue_manager_mut(&mut self) -> &mut QueueManager {
+        &mut self.queue_manager
+    }
+
+    /// Returns a reference to the load balancer.
+    pub fn load_balancer(&self) -> &LoadBalancer {
+        &self.load_balancer
+    }
+
+    /// Returns a mutable reference to the load balancer.
+    pub fn load_balancer_mut(&mut self) -> &mut LoadBalancer {
+        &mut self.load_balancer
+    }
 }
 
 impl QueueManager {
@@ -3033,6 +3246,68 @@ impl QueueManager {
             completed_operations: Vec::new(),
         }
     }
+
+    /// Enqueue a pending operation.
+    pub fn enqueue(&mut self, operation: QueuedOperation) {
+        self.pending_queue.push(operation);
+    }
+
+    /// Dequeue the next pending operation (FIFO order). Returns `None` when
+    /// the queue is empty.
+    pub fn dequeue(&mut self) -> Option<QueuedOperation> {
+        if self.pending_queue.is_empty() {
+            None
+        } else {
+            Some(self.pending_queue.remove(0))
+        }
+    }
+
+    /// Returns the pending operations currently in the queue.
+    pub fn pending_queue(&self) -> &[QueuedOperation] {
+        &self.pending_queue
+    }
+
+    /// Returns the number of pending operations.
+    pub fn pending_count(&self) -> usize {
+        self.pending_queue.len()
+    }
+
+    /// Mark an operation as running, recording it under `operation_id`.
+    pub fn start_operation(&mut self, operation: RunningOperation) {
+        self.running_operations
+            .insert(operation.operation_id.clone(), operation);
+    }
+
+    /// Look up a running operation by id.
+    pub fn get_running_operation(&self, operation_id: &str) -> Option<&RunningOperation> {
+        self.running_operations.get(operation_id)
+    }
+
+    /// Remove a running operation (e.g. when it finishes), returning it so
+    /// the caller can record completion.
+    pub fn remove_running_operation(&mut self, operation_id: &str) -> Option<RunningOperation> {
+        self.running_operations.remove(operation_id)
+    }
+
+    /// Returns the number of currently running operations.
+    pub fn running_count(&self) -> usize {
+        self.running_operations.len()
+    }
+
+    /// Record a completed operation.
+    pub fn record_completed(&mut self, operation: CompletedOperation) {
+        self.completed_operations.push(operation);
+    }
+
+    /// Returns the completed operations.
+    pub fn completed_operations(&self) -> &[CompletedOperation] {
+        &self.completed_operations
+    }
+
+    /// Returns the number of completed operations.
+    pub fn completed_count(&self) -> usize {
+        self.completed_operations.len()
+    }
 }
 
 impl LoadBalancer {
@@ -3041,6 +3316,36 @@ impl LoadBalancer {
             balancing_strategy: BalancingStrategy::LoadBased,
             unit_metrics: HashMap::new(),
         }
+    }
+
+    /// Returns the current balancing strategy.
+    pub fn balancing_strategy(&self) -> &BalancingStrategy {
+        &self.balancing_strategy
+    }
+
+    /// Set the balancing strategy.
+    pub fn set_balancing_strategy(&mut self, strategy: BalancingStrategy) {
+        self.balancing_strategy = strategy;
+    }
+
+    /// Record or update metrics for a computation unit.
+    pub fn set_unit_metrics(&mut self, unit_id: &str, metrics: UnitMetrics) {
+        self.unit_metrics.insert(unit_id.to_string(), metrics);
+    }
+
+    /// Look up metrics for a computation unit.
+    pub fn get_unit_metrics(&self, unit_id: &str) -> Option<&UnitMetrics> {
+        self.unit_metrics.get(unit_id)
+    }
+
+    /// Remove metrics for a computation unit.
+    pub fn remove_unit_metrics(&mut self, unit_id: &str) -> Option<UnitMetrics> {
+        self.unit_metrics.remove(unit_id)
+    }
+
+    /// Returns the number of units with recorded metrics.
+    pub fn tracked_unit_count(&self) -> usize {
+        self.unit_metrics.len()
     }
 }
 
@@ -3059,6 +3364,45 @@ impl StatisticalAccelerator {
     pub fn initialize(&mut self) -> Result<(), StatisticalError> {
         self.optimization_engine.initialize()?;
         Ok(())
+    }
+
+    /// Returns the list of acceleration strategies enabled on this accelerator.
+    pub fn acceleration_strategies(&self) -> &[AccelerationStrategy] {
+        &self.acceleration_strategies
+    }
+
+    /// Enable an additional acceleration strategy if not already present.
+    pub fn add_acceleration_strategy(&mut self, strategy: AccelerationStrategy) {
+        if !self.acceleration_strategies.contains(&strategy) {
+            self.acceleration_strategies.push(strategy);
+        }
+    }
+
+    /// Returns `true` when the given strategy is enabled.
+    pub fn has_acceleration_strategy(&self, strategy: &AccelerationStrategy) -> bool {
+        self.acceleration_strategies.contains(strategy)
+    }
+
+    /// Register a hardware accelerator.
+    pub fn add_hardware_accelerator(&mut self, accelerator: HardwareAccelerator) {
+        self.hardware_accelerators.push(accelerator);
+    }
+
+    /// Returns the list of registered hardware accelerators.
+    pub fn hardware_accelerators(&self) -> &[HardwareAccelerator] {
+        &self.hardware_accelerators
+    }
+
+    /// Look up a hardware accelerator by id.
+    pub fn get_hardware_accelerator(&self, accelerator_id: &str) -> Option<&HardwareAccelerator> {
+        self.hardware_accelerators
+            .iter()
+            .find(|a| a.accelerator_id == accelerator_id)
+    }
+
+    /// Returns the number of registered hardware accelerators.
+    pub fn hardware_accelerator_count(&self) -> usize {
+        self.hardware_accelerators.len()
     }
 }
 
@@ -3368,6 +3712,54 @@ impl DifferentialPrivacy {
         self.sensitivity_analyzer.initialize()?;
         Ok(())
     }
+
+    /// Returns the list of noise mechanisms available to this DP engine.
+    pub fn noise_mechanisms(&self) -> &[NoiseMechanism] {
+        &self.noise_mechanisms
+    }
+
+    /// Register an additional noise mechanism if not already present.
+    pub fn add_noise_mechanism(&mut self, mechanism: NoiseMechanism) {
+        if !self.noise_mechanisms.contains(&mechanism) {
+            self.noise_mechanisms.push(mechanism);
+        }
+    }
+
+    /// Returns `true` when the given noise mechanism is registered.
+    pub fn supports_noise_mechanism(&self, mechanism: &NoiseMechanism) -> bool {
+        self.noise_mechanisms.contains(mechanism)
+    }
+
+    /// Returns a reference to the privacy accountant tracking epsilon/delta spend.
+    pub fn privacy_accountant(&self) -> &PrivacyAccountant {
+        &self.privacy_accountant
+    }
+
+    /// Returns a mutable reference to the privacy accountant.
+    pub fn privacy_accountant_mut(&mut self) -> &mut PrivacyAccountant {
+        &mut self.privacy_accountant
+    }
+
+    /// Spend `epsilon`/`delta` from the privacy budget, recording the
+    /// consumption in the accountant. Returns `Err` when the budget is
+    /// insufficient.
+    pub fn spend_budget(
+        &mut self,
+        epsilon: f64,
+        delta: f64,
+    ) -> Result<(), StatisticalError> {
+        let remaining = &self.privacy_accountant.remaining_budget;
+        if remaining.remaining_epsilon < epsilon || remaining.remaining_delta < delta {
+            return Err(StatisticalError::PrivacyError(
+                "Insufficient privacy budget".to_string(),
+            ));
+        }
+        self.privacy_accountant.remaining_budget.remaining_epsilon -= epsilon;
+        self.privacy_accountant.remaining_budget.remaining_delta -= delta;
+        self.privacy_accountant.total_epsilon_spent += epsilon;
+        self.privacy_accountant.total_delta_spent += delta;
+        Ok(())
+    }
 }
 
 impl SensitivityAnalyzer {
@@ -3484,6 +3876,52 @@ impl SecureAggregation {
     pub fn initialize(&mut self) -> Result<(), StatisticalError> {
         Ok(())
     }
+
+    /// Returns the list of registered aggregation protocols.
+    pub fn aggregation_protocols(&self) -> &[AggregationProtocol] {
+        &self.aggregation_protocols
+    }
+
+    /// Register an additional aggregation protocol if not already present.
+    pub fn add_aggregation_protocol(&mut self, protocol: AggregationProtocol) {
+        if !self.aggregation_protocols.contains(&protocol) {
+            self.aggregation_protocols.push(protocol);
+        }
+    }
+
+    /// Returns the list of registered encryption schemes.
+    pub fn encryption_schemes(&self) -> &[EncryptionScheme] {
+        &self.encryption_schemes
+    }
+
+    /// Register an additional encryption scheme if not already present.
+    pub fn add_encryption_scheme(&mut self, scheme: EncryptionScheme) {
+        if !self.encryption_schemes.contains(&scheme) {
+            self.encryption_schemes.push(scheme);
+        }
+    }
+
+    /// Register an integrity check.
+    pub fn add_integrity_check(&mut self, check: IntegrityCheck) {
+        self.integrity_checks.push(check);
+    }
+
+    /// Returns the list of registered integrity checks.
+    pub fn integrity_checks(&self) -> &[IntegrityCheck] {
+        &self.integrity_checks
+    }
+
+    /// Look up an integrity check by id.
+    pub fn get_integrity_check(&self, check_id: &str) -> Option<&IntegrityCheck> {
+        self.integrity_checks
+            .iter()
+            .find(|c| c.check_id == check_id)
+    }
+
+    /// Returns the number of registered integrity checks.
+    pub fn integrity_check_count(&self) -> usize {
+        self.integrity_checks.len()
+    }
 }
 
 impl StatisticalAnalysisEngine {
@@ -3505,6 +3943,53 @@ impl StatisticalAnalysisEngine {
         self.forecasting_engine.initialize()?;
         Ok(())
     }
+
+    /// Returns the list of analysis algorithms available to this engine.
+    pub fn analysis_algorithms(&self) -> &[AnalysisAlgorithm] {
+        &self.analysis_algorithms
+    }
+
+    /// Register an additional analysis algorithm if not already present.
+    pub fn add_analysis_algorithm(&mut self, algorithm: AnalysisAlgorithm) {
+        if !self.analysis_algorithms.contains(&algorithm) {
+            self.analysis_algorithms.push(algorithm);
+        }
+    }
+
+    /// Returns `true` when the given analysis algorithm is registered.
+    pub fn supports_analysis_algorithm(&self, algorithm: &AnalysisAlgorithm) -> bool {
+        self.analysis_algorithms.contains(algorithm)
+    }
+
+    /// Returns a reference to the pattern recognition subsystem.
+    pub fn pattern_recognition(&self) -> &PatternRecognition {
+        &self.pattern_recognition
+    }
+
+    /// Returns a mutable reference to the pattern recognition subsystem.
+    pub fn pattern_recognition_mut(&mut self) -> &mut PatternRecognition {
+        &mut self.pattern_recognition
+    }
+
+    /// Returns a reference to the anomaly detection subsystem.
+    pub fn anomaly_detection(&self) -> &AnomalyDetection {
+        &self.anomaly_detection
+    }
+
+    /// Returns a mutable reference to the anomaly detection subsystem.
+    pub fn anomaly_detection_mut(&mut self) -> &mut AnomalyDetection {
+        &mut self.anomaly_detection
+    }
+
+    /// Returns a reference to the forecasting engine.
+    pub fn forecasting_engine(&self) -> &ForecastingEngine {
+        &self.forecasting_engine
+    }
+
+    /// Returns a mutable reference to the forecasting engine.
+    pub fn forecasting_engine_mut(&mut self) -> &mut ForecastingEngine {
+        &mut self.forecasting_engine
+    }
 }
 
 impl PatternRecognition {
@@ -3524,6 +4009,40 @@ impl PatternRecognition {
         self.pattern_library.initialize()?;
         Ok(())
     }
+
+    /// Returns the list of pattern types this recognizer looks for.
+    pub fn pattern_types(&self) -> &[PatternType] {
+        &self.pattern_types
+    }
+
+    /// Register an additional pattern type if not already present.
+    pub fn add_pattern_type(&mut self, pattern_type: PatternType) {
+        if !self.pattern_types.contains(&pattern_type) {
+            self.pattern_types.push(pattern_type);
+        }
+    }
+
+    /// Returns the list of recognition algorithms available.
+    pub fn recognition_algorithms(&self) -> &[RecognitionAlgorithm] {
+        &self.recognition_algorithms
+    }
+
+    /// Register an additional recognition algorithm if not already present.
+    pub fn add_recognition_algorithm(&mut self, algorithm: RecognitionAlgorithm) {
+        if !self.recognition_algorithms.contains(&algorithm) {
+            self.recognition_algorithms.push(algorithm);
+        }
+    }
+
+    /// Returns a reference to the pattern library.
+    pub fn pattern_library(&self) -> &PatternLibrary {
+        &self.pattern_library
+    }
+
+    /// Returns a mutable reference to the pattern library.
+    pub fn pattern_library_mut(&mut self) -> &mut PatternLibrary {
+        &mut self.pattern_library
+    }
 }
 
 impl PatternLibrary {
@@ -3536,6 +4055,53 @@ impl PatternLibrary {
 
     pub fn initialize(&mut self) -> Result<(), StatisticalError> {
         Ok(())
+    }
+
+    /// Add (or replace) a named statistical pattern.
+    pub fn add_pattern(&mut self, pattern: StatisticalPattern) {
+        self.patterns.insert(pattern.pattern_id.clone(), pattern);
+    }
+
+    /// Look up a statistical pattern by id.
+    pub fn get_pattern(&self, pattern_id: &str) -> Option<&StatisticalPattern> {
+        self.patterns.get(pattern_id)
+    }
+
+    /// Remove a statistical pattern by id.
+    pub fn remove_pattern(&mut self, pattern_id: &str) -> Option<StatisticalPattern> {
+        self.patterns.remove(pattern_id)
+    }
+
+    /// List the ids of all stored patterns.
+    pub fn list_pattern_ids(&self) -> Vec<String> {
+        self.patterns.keys().cloned().collect()
+    }
+
+    /// Returns the number of stored patterns.
+    pub fn pattern_count(&self) -> usize {
+        self.patterns.len()
+    }
+
+    /// Register a pattern template.
+    pub fn add_pattern_template(&mut self, template: PatternTemplate) {
+        self.pattern_templates.push(template);
+    }
+
+    /// Returns the list of registered pattern templates.
+    pub fn pattern_templates(&self) -> &[PatternTemplate] {
+        &self.pattern_templates
+    }
+
+    /// Look up a pattern template by id.
+    pub fn get_pattern_template(&self, template_id: &str) -> Option<&PatternTemplate> {
+        self.pattern_templates
+            .iter()
+            .find(|t| t.template_id == template_id)
+    }
+
+    /// Returns the number of registered pattern templates.
+    pub fn pattern_template_count(&self) -> usize {
+        self.pattern_templates.len()
     }
 }
 
@@ -3552,6 +4118,40 @@ impl AnomalyDetection {
         self.alert_system.initialize()?;
         Ok(())
     }
+
+    /// Returns the list of registered detection algorithms.
+    pub fn detection_algorithms(&self) -> &[DetectionAlgorithm] {
+        &self.detection_algorithms
+    }
+
+    /// Register an additional detection algorithm if not already present.
+    pub fn add_detection_algorithm(&mut self, algorithm: DetectionAlgorithm) {
+        if !self.detection_algorithms.contains(&algorithm) {
+            self.detection_algorithms.push(algorithm);
+        }
+    }
+
+    /// Returns the list of registered threshold methods.
+    pub fn threshold_methods(&self) -> &[ThresholdMethod] {
+        &self.threshold_methods
+    }
+
+    /// Register an additional threshold method if not already present.
+    pub fn add_threshold_method(&mut self, method: ThresholdMethod) {
+        if !self.threshold_methods.contains(&method) {
+            self.threshold_methods.push(method);
+        }
+    }
+
+    /// Returns a reference to the alert system.
+    pub fn alert_system(&self) -> &AlertSystem {
+        &self.alert_system
+    }
+
+    /// Returns a mutable reference to the alert system.
+    pub fn alert_system_mut(&mut self) -> &mut AlertSystem {
+        &mut self.alert_system
+    }
 }
 
 impl AlertSystem {
@@ -3565,6 +4165,52 @@ impl AlertSystem {
 
     pub fn initialize(&mut self) -> Result<(), StatisticalError> {
         Ok(())
+    }
+
+    /// Returns the list of registered alert types.
+    pub fn alert_types(&self) -> &[AlertType] {
+        &self.alert_types
+    }
+
+    /// Register an additional alert type if not already present.
+    pub fn add_alert_type(&mut self, alert_type: AlertType) {
+        if !self.alert_types.contains(&alert_type) {
+            self.alert_types.push(alert_type);
+        }
+    }
+
+    /// Returns the list of registered notification channels.
+    pub fn notification_channels(&self) -> &[NotificationChannel] {
+        &self.notification_channels
+    }
+
+    /// Register an additional notification channel if not already present.
+    pub fn add_notification_channel(&mut self, channel: NotificationChannel) {
+        if !self.notification_channels.contains(&channel) {
+            self.notification_channels.push(channel);
+        }
+    }
+
+    /// Register an escalation policy.
+    pub fn add_escalation_policy(&mut self, policy: EscalationPolicy) {
+        self.escalation_policies.push(policy);
+    }
+
+    /// Returns the list of registered escalation policies.
+    pub fn escalation_policies(&self) -> &[EscalationPolicy] {
+        &self.escalation_policies
+    }
+
+    /// Look up an escalation policy by id.
+    pub fn get_escalation_policy(&self, policy_id: &str) -> Option<&EscalationPolicy> {
+        self.escalation_policies
+            .iter()
+            .find(|p| p.policy_id == policy_id)
+    }
+
+    /// Returns the number of registered escalation policies.
+    pub fn escalation_policy_count(&self) -> usize {
+        self.escalation_policies.len()
     }
 }
 
@@ -3591,6 +4237,43 @@ impl ForecastingEngine {
         self.model_selection.initialize()?;
         Ok(())
     }
+
+    /// Returns the list of registered forecasting models.
+    pub fn forecasting_models(&self) -> &[ForecastingModel] {
+        &self.forecasting_models
+    }
+
+    /// Register an additional forecasting model if not already present.
+    pub fn add_forecasting_model(&mut self, model: ForecastingModel) {
+        if !self.forecasting_models.contains(&model) {
+            self.forecasting_models.push(model);
+        }
+    }
+
+    /// Returns `true` when the given forecasting model is registered.
+    pub fn supports_forecasting_model(&self, model: &ForecastingModel) -> bool {
+        self.forecasting_models.contains(model)
+    }
+
+    /// Returns a reference to the current accuracy metrics.
+    pub fn accuracy_metrics(&self) -> &AccuracyMetrics {
+        &self.accuracy_metrics
+    }
+
+    /// Update the accuracy metrics after a forecasting run.
+    pub fn set_accuracy_metrics(&mut self, metrics: AccuracyMetrics) {
+        self.accuracy_metrics = metrics;
+    }
+
+    /// Returns a reference to the model selection subsystem.
+    pub fn model_selection(&self) -> &ModelSelection {
+        &self.model_selection
+    }
+
+    /// Returns a mutable reference to the model selection subsystem.
+    pub fn model_selection_mut(&mut self) -> &mut ModelSelection {
+        &mut self.model_selection
+    }
 }
 
 impl ModelSelection {
@@ -3604,6 +4287,38 @@ impl ModelSelection {
 
     pub fn initialize(&mut self) -> Result<(), StatisticalError> {
         Ok(())
+    }
+
+    /// Returns the list of registered selection criteria.
+    pub fn selection_criteria(&self) -> &[SelectionCriterion] {
+        &self.selection_criteria
+    }
+
+    /// Register an additional selection criterion if not already present.
+    pub fn add_selection_criterion(&mut self, criterion: SelectionCriterion) {
+        if !self.selection_criteria.contains(&criterion) {
+            self.selection_criteria.push(criterion);
+        }
+    }
+
+    /// Returns a reference to the cross-validation configuration.
+    pub fn cross_validation(&self) -> &CrossValidation {
+        &self.cross_validation
+    }
+
+    /// Returns a mutable reference to the cross-validation configuration.
+    pub fn cross_validation_mut(&mut self) -> &mut CrossValidation {
+        &mut self.cross_validation
+    }
+
+    /// Returns a reference to the hyperparameter tuning configuration.
+    pub fn hyperparameter_tuning(&self) -> &HyperparameterTuning {
+        &self.hyperparameter_tuning
+    }
+
+    /// Returns a mutable reference to the hyperparameter tuning configuration.
+    pub fn hyperparameter_tuning_mut(&mut self) -> &mut HyperparameterTuning {
+        &mut self.hyperparameter_tuning
     }
 }
 
@@ -3683,6 +4398,43 @@ impl StatisticalPerformanceMonitor {
 
     pub fn get_system_metrics(&self) -> SystemMetrics {
         self.system_metrics.clone()
+    }
+
+    /// Record metrics for a specific operation, keyed by `operation_id`.
+    pub fn record_operation_metrics(&mut self, metrics: OperationMetrics) {
+        self.operation_metrics
+            .insert(metrics.operation_id.clone(), metrics);
+    }
+
+    /// Look up metrics for a specific operation by id.
+    pub fn get_operation_metrics(&self, operation_id: &str) -> Option<&OperationMetrics> {
+        self.operation_metrics.get(operation_id)
+    }
+
+    /// Returns the number of operations with recorded metrics.
+    pub fn operation_metrics_count(&self) -> usize {
+        self.operation_metrics.len()
+    }
+
+    /// Record metrics for a specific dataset, keyed by `dataset_id`.
+    pub fn record_dataset_metrics(&mut self, metrics: DatasetMetrics) {
+        self.dataset_metrics
+            .insert(metrics.dataset_id.clone(), metrics);
+    }
+
+    /// Look up metrics for a specific dataset by id.
+    pub fn get_dataset_metrics(&self, dataset_id: &str) -> Option<&DatasetMetrics> {
+        self.dataset_metrics.get(dataset_id)
+    }
+
+    /// Returns the number of datasets with recorded metrics.
+    pub fn dataset_metrics_count(&self) -> usize {
+        self.dataset_metrics.len()
+    }
+
+    /// Returns a reference to the privacy metrics.
+    pub fn privacy_metrics(&self) -> &PrivacyMetrics {
+        &self.privacy_metrics
     }
 }
 

@@ -179,20 +179,81 @@ impl IntegralEngine {
         weights[0] = f_vals[0];
         
         let mut eri = 0.0;
+
+        // Compute Gaussian product centers P (from a,b) and Q (from c,d).
+        let r_p = [
+            (alpha * a.origin[0] + beta * b.origin[0]) / p,
+            (alpha * a.origin[1] + beta * b.origin[1]) / p,
+            (alpha * a.origin[2] + beta * b.origin[2]) / p,
+        ];
+        let r_q = [
+            (gamma * c.origin[0] + delta * d.origin[0]) / q,
+            (gamma * c.origin[1] + delta * d.origin[1]) / q,
+            (gamma * c.origin[2] + delta * d.origin[2]) / q,
+        ];
+
         for i in 0..n_roots {
-            // Evaluates the 2D integrals over the Rys roots
+            // Evaluates the 1D Hermite integrals over the Rys roots
             let u2 = roots[i];
             let w = weights[i];
-            
-            // Simplified sum over the cartesian dimensions using the root u2
-            let ix = 1.0; // Px(u2)
-            let iy = 1.0; // Py(u2)
-            let iz = 1.0; // Pz(u2)
-            
+
+            // For each Cartesian dimension, compute the Hermite vertical recurrence.
+            // For s-type (l=0): I = 1.0
+            // For p-type (l=1): I = u * displacement
+            // Higher angular momentum would need the full VRR recurrence.
+            let ix = Self::hermite_1d(u2, r_p[0] - a.origin[0], r_p[0] - b.origin[0],
+                                      r_q[0] - c.origin[0], r_q[0] - d.origin[0],
+                                      a.l[0], b.l[0], c.l[0], d.l[0]);
+            let iy = Self::hermite_1d(u2, r_p[1] - a.origin[1], r_p[1] - b.origin[1],
+                                      r_q[1] - c.origin[1], r_q[1] - d.origin[1],
+                                      a.l[1], b.l[1], c.l[1], d.l[1]);
+            let iz = Self::hermite_1d(u2, r_p[2] - a.origin[2], r_p[2] - b.origin[2],
+                                      r_q[2] - c.origin[2], r_q[2] - d.origin[2],
+                                      a.l[2], b.l[2], c.l[2], d.l[2]);
+
             eri += w * ix * iy * iz;
         }
         
         eri * a.coefficient * b.coefficient * c.coefficient * d.coefficient
+    }
+
+    /// 1D Hermite integral for a single Cartesian dimension in Rys quadrature.
+    ///
+    /// Computes I(la, lb, lc, ld; u) using the vertical recurrence relation (VRR).
+    /// For s-type (all l=0): returns 1.0.
+    /// For p-type (l=1): returns u * displacement.
+    /// For higher angular momentum, applies the VRR recurrence:
+    ///   I(n+1) = u * PA * I(n) + (n/2p) * I(n-1) + ... (bra side)
+    ///   then transfers to the ket side with QC/QD terms.
+    ///
+    /// This is a simplified implementation that handles up to l=1 (p-type)
+    /// exactly and falls back to the s-type value for higher l.
+    fn hermite_1d(u: f64, pa: f64, pb: f64, qc: f64, qd: f64,
+                  la: u8, lb: u8, lc: u8, ld: u8) -> f64 {
+        // ssss: I(0,0,0,0) = 1
+        if la + lb + lc + ld == 0 {
+            return 1.0;
+        }
+
+        // Build up the bra side (la, lb) using VRR on PA/PB.
+        // I(1,0,0,0) = u * PA
+        // I(0,1,0,0) = u * PB
+        let bra = if la == 1 && lb == 0 { u * pa }
+                  else if la == 0 && lb == 1 { u * pb }
+                  else if la == 1 && lb == 1 { u * u * pa * pb }
+                  else if la == 2 && lb == 0 { u * u * pa * pa + 0.5 }
+                  else if la == 0 && lb == 2 { u * u * pb * pb + 0.5 }
+                  else { 1.0 }; // fallback for unsupported l
+
+        // Build up the ket side (lc, ld) using VRR on QC/QD.
+        let ket = if lc == 1 && ld == 0 { u * qc }
+                  else if lc == 0 && ld == 1 { u * qd }
+                  else if lc == 1 && ld == 1 { u * u * qc * qd }
+                  else if lc == 2 && ld == 0 { u * u * qc * qc + 0.5 }
+                  else if lc == 0 && ld == 2 { u * u * qd * qd + 0.5 }
+                  else { 1.0 };
+
+        bra * ket
     }
 
     /// Evaluates the Boys function F_n(t) using a zero-heap segmented method:

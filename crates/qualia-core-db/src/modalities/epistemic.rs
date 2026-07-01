@@ -195,6 +195,7 @@ pub fn muddy_child_knows(num_muddy: u32, round: u32) -> bool {
 #[cfg(test)]
 mod tests {
     use super::*;
+    use crate::q_hash;
 
     #[test]
     fn test_epistemic_evaluation() {

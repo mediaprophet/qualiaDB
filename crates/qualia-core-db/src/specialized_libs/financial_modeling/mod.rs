@@ -2587,6 +2587,27 @@ impl PortfolioStorage {
     pub fn list_portfolios(&self) -> Vec<String> {
         self.portfolios.keys().cloned().collect()
     }
+
+    pub fn add_metadata(&mut self, metadata: PortfolioMetadata) {
+        self.portfolio_metadata
+            .insert(metadata.portfolio_id.clone(), metadata);
+    }
+
+    pub fn get_metadata(&self, portfolio_id: &str) -> Option<&PortfolioMetadata> {
+        self.portfolio_metadata.get(portfolio_id)
+    }
+
+    pub fn list_metadata(&self) -> Vec<String> {
+        self.portfolio_metadata.keys().cloned().collect()
+    }
+
+    pub fn access_control(&self) -> &PortfolioAccessControl {
+        &self.access_control
+    }
+
+    pub fn access_control_mut(&mut self) -> &mut PortfolioAccessControl {
+        &mut self.access_control
+    }
 }
 
 impl PortfolioAccessControl {
@@ -2618,6 +2639,30 @@ impl PortfolioAccessControl {
                 && policy.portfolio_id == portfolio_id
                 && policy.permissions.contains(&required_permission)
         })
+    }
+
+    pub fn add_authentication_requirement(&mut self, requirement: AuthenticationRequirement) {
+        self.authentication_requirements
+            .insert(requirement.requirement_id.clone(), requirement);
+    }
+
+    pub fn get_authentication_requirement(
+        &self,
+        requirement_id: &str,
+    ) -> Option<&AuthenticationRequirement> {
+        self.authentication_requirements.get(requirement_id)
+    }
+
+    pub fn list_authentication_requirements(&self) -> Vec<String> {
+        self.authentication_requirements.keys().cloned().collect()
+    }
+
+    pub fn is_audit_logging_enabled(&self) -> bool {
+        self.audit_logging
+    }
+
+    pub fn set_audit_logging(&mut self, enabled: bool) {
+        self.audit_logging = enabled;
     }
 }
 
@@ -2652,6 +2697,14 @@ impl PortfolioAuditTrail {
             .lock()
             .map(|entries| entries.clone())
             .unwrap_or_default()
+    }
+
+    pub fn retention_policy(&self) -> &RetentionPolicy {
+        &self.retention_policy
+    }
+
+    pub fn set_retention_policy(&mut self, policy: RetentionPolicy) {
+        self.retention_policy = policy;
     }
 }
 
@@ -2736,6 +2789,14 @@ impl AssetManager {
                 asset.market_value = asset.quantity * last;
             }
         }
+    }
+
+    pub fn market_data(&self) -> &MarketData {
+        &self.market_data
+    }
+
+    pub fn market_data_mut(&mut self) -> &mut MarketData {
+        &mut self.market_data
     }
 }
 
@@ -2962,6 +3023,23 @@ impl MarketData {
     pub fn upsert_price_data(&mut self, data: PriceData) {
         self.price_data.insert(data.asset_id.clone(), data);
     }
+
+    pub fn upsert_volume_data(&mut self, data: VolumeData) {
+        self.volume_data.insert(data.asset_id.clone(), data);
+    }
+
+    pub fn get_volume_data(&self, asset_id: &str) -> Option<&VolumeData> {
+        self.volume_data.get(asset_id)
+    }
+
+    pub fn upsert_technical_indicators(&mut self, indicators: TechnicalIndicators) {
+        self.technical_indicators
+            .insert(indicators.asset_id.clone(), indicators);
+    }
+
+    pub fn get_technical_indicators(&self, asset_id: &str) -> Option<&TechnicalIndicators> {
+        self.technical_indicators.get(asset_id)
+    }
 }
 
 impl AssetValidator {
@@ -2978,6 +3056,18 @@ impl AssetValidator {
         self.risk_assessor.initialize()?;
         Ok(())
     }
+
+    pub fn add_validation_rule(&mut self, rule: ValidationRule) {
+        self.validation_rules.push(rule);
+    }
+
+    pub fn list_validation_rules(&self) -> &[ValidationRule] {
+        &self.validation_rules
+    }
+
+    pub fn validation_rule_count(&self) -> usize {
+        self.validation_rules.len()
+    }
 }
 
 impl ComplianceChecker {
@@ -2991,6 +3081,34 @@ impl ComplianceChecker {
 
     pub fn initialize(&mut self) -> Result<(), FinancialError> {
         Ok(())
+    }
+
+    pub fn add_compliance_rule(&mut self, rule: ComplianceRule) {
+        self.compliance_rules.push(rule);
+    }
+
+    pub fn list_compliance_rules(&self) -> &[ComplianceRule] {
+        &self.compliance_rules
+    }
+
+    pub fn add_regulatory_framework(&mut self, framework: RegulatoryFramework) {
+        self.regulatory_frameworks.push(framework);
+    }
+
+    pub fn list_regulatory_frameworks(&self) -> &[RegulatoryFramework] {
+        &self.regulatory_frameworks
+    }
+
+    pub fn add_screening_list(&mut self, list: ScreeningList) {
+        self.screening_lists.insert(list.list_id.clone(), list);
+    }
+
+    pub fn get_screening_list(&self, list_id: &str) -> Option<&ScreeningList> {
+        self.screening_lists.get(list_id)
+    }
+
+    pub fn list_screening_lists(&self) -> Vec<String> {
+        self.screening_lists.keys().cloned().collect()
     }
 }
 
@@ -3006,6 +3124,30 @@ impl RiskAssessor {
     pub fn initialize(&mut self) -> Result<(), FinancialError> {
         self.scenario_analyzer.initialize()?;
         Ok(())
+    }
+
+    pub fn add_risk_model(&mut self, model: RiskModel) {
+        self.risk_models.insert(model.model_id.clone(), model);
+    }
+
+    pub fn get_risk_model(&self, model_id: &str) -> Option<&RiskModel> {
+        self.risk_models.get(model_id)
+    }
+
+    pub fn list_risk_models(&self) -> Vec<String> {
+        self.risk_models.keys().cloned().collect()
+    }
+
+    pub fn add_risk_metric(&mut self, metric: RiskMetric) {
+        self.risk_metrics.insert(metric.metric_id.clone(), metric);
+    }
+
+    pub fn get_risk_metric(&self, metric_id: &str) -> Option<&RiskMetric> {
+        self.risk_metrics.get(metric_id)
+    }
+
+    pub fn list_risk_metrics(&self) -> Vec<String> {
+        self.risk_metrics.keys().cloned().collect()
     }
 }
 
@@ -3123,6 +3265,39 @@ impl ScenarioAnalyzer {
         }
         Ok(results)
     }
+
+    pub fn add_named_scenario(&mut self, scenario: Scenario) {
+        self.scenarios
+            .insert(scenario.scenario_id.clone(), scenario);
+    }
+
+    pub fn get_named_scenario(&self, scenario_id: &str) -> Option<&Scenario> {
+        self.scenarios.get(scenario_id)
+    }
+
+    pub fn list_named_scenarios(&self) -> Vec<String> {
+        self.scenarios.keys().cloned().collect()
+    }
+
+    pub fn add_stress_test(&mut self, test: StressTest) {
+        self.stress_tests.insert(test.test_id.clone(), test);
+    }
+
+    pub fn get_stress_test(&self, test_id: &str) -> Option<&StressTest> {
+        self.stress_tests.get(test_id)
+    }
+
+    pub fn list_stress_tests(&self) -> Vec<String> {
+        self.stress_tests.keys().cloned().collect()
+    }
+
+    pub fn sensitivity_analyzer(&self) -> &SensitivityAnalyzer {
+        &self.sensitivity_analyzer
+    }
+
+    pub fn sensitivity_analyzer_mut(&mut self) -> &mut SensitivityAnalyzer {
+        &mut self.sensitivity_analyzer
+    }
 }
 
 /// Aggregate a vector of simulated portfolio values into a `StressTestResult`.
@@ -3235,6 +3410,27 @@ impl SensitivityAnalyzer {
             sensitivity_factors: HashMap::new(),
             correlation_matrix: CorrelationMatrix::new(),
         }
+    }
+
+    pub fn add_factor(&mut self, factor: SensitivityFactor) {
+        self.sensitivity_factors
+            .insert(factor.factor_id.clone(), factor);
+    }
+
+    pub fn get_factor(&self, factor_id: &str) -> Option<&SensitivityFactor> {
+        self.sensitivity_factors.get(factor_id)
+    }
+
+    pub fn list_factors(&self) -> Vec<String> {
+        self.sensitivity_factors.keys().cloned().collect()
+    }
+
+    pub fn correlation_matrix(&self) -> &CorrelationMatrix {
+        &self.correlation_matrix
+    }
+
+    pub fn set_correlation_matrix(&mut self, matrix: CorrelationMatrix) {
+        self.correlation_matrix = matrix;
     }
 }
 
@@ -3363,6 +3559,40 @@ impl OptimizationEngine {
     pub fn initialize(&mut self) -> Result<(), FinancialError> {
         Ok(())
     }
+
+    pub fn add_algorithm(&mut self, algorithm: OptimizationAlgorithm) {
+        self.optimization_algorithms
+            .insert(algorithm.algorithm_id.clone(), algorithm);
+    }
+
+    pub fn get_algorithm(&self, algorithm_id: &str) -> Option<&OptimizationAlgorithm> {
+        self.optimization_algorithms.get(algorithm_id)
+    }
+
+    pub fn list_algorithms(&self) -> Vec<String> {
+        self.optimization_algorithms.keys().cloned().collect()
+    }
+
+    pub fn add_objective_function(&mut self, function: ObjectiveFunction) {
+        self.objective_functions
+            .insert(function.function_id.clone(), function);
+    }
+
+    pub fn get_objective_function(&self, function_id: &str) -> Option<&ObjectiveFunction> {
+        self.objective_functions.get(function_id)
+    }
+
+    pub fn list_objective_functions(&self) -> Vec<String> {
+        self.objective_functions.keys().cloned().collect()
+    }
+
+    pub fn add_constraint(&mut self, constraint: OptimizationConstraint) {
+        self.constraints.push(constraint);
+    }
+
+    pub fn list_constraints(&self) -> &[OptimizationConstraint] {
+        &self.constraints
+    }
 }
 
 impl ExecutionEngine {
@@ -3379,6 +3609,19 @@ impl ExecutionEngine {
         self.settlement_engine.initialize()?;
         Ok(())
     }
+
+    pub fn add_execution_strategy(&mut self, strategy: ExecutionStrategy) {
+        self.execution_strategies
+            .insert(strategy.strategy_id.clone(), strategy);
+    }
+
+    pub fn get_execution_strategy(&self, strategy_id: &str) -> Option<&ExecutionStrategy> {
+        self.execution_strategies.get(strategy_id)
+    }
+
+    pub fn list_execution_strategies(&self) -> Vec<String> {
+        self.execution_strategies.keys().cloned().collect()
+    }
 }
 
 impl OrderManager {
@@ -3393,6 +3636,34 @@ impl OrderManager {
     pub fn initialize(&mut self) -> Result<(), FinancialError> {
         Ok(())
     }
+
+    pub fn add_order(&mut self, order: Order) {
+        self.orders.insert(order.order_id.clone(), order);
+    }
+
+    pub fn get_order(&self, order_id: &str) -> Option<&Order> {
+        self.orders.get(order_id)
+    }
+
+    pub fn list_orders(&self) -> Vec<String> {
+        self.orders.keys().cloned().collect()
+    }
+
+    pub fn order_validation(&self) -> &OrderValidation {
+        &self.order_validation
+    }
+
+    pub fn order_validation_mut(&mut self) -> &mut OrderValidation {
+        &mut self.order_validation
+    }
+
+    pub fn order_routing(&self) -> &OrderRouting {
+        &self.order_routing
+    }
+
+    pub fn order_routing_mut(&mut self) -> &mut OrderRouting {
+        &mut self.order_routing
+    }
 }
 
 impl OrderValidation {
@@ -3401,6 +3672,22 @@ impl OrderValidation {
             validation_rules: Vec::new(),
             compliance_checker: OrderComplianceChecker::new(),
         }
+    }
+
+    pub fn add_validation_rule(&mut self, rule: OrderValidationRule) {
+        self.validation_rules.push(rule);
+    }
+
+    pub fn list_validation_rules(&self) -> &[OrderValidationRule] {
+        &self.validation_rules
+    }
+
+    pub fn compliance_checker(&self) -> &OrderComplianceChecker {
+        &self.compliance_checker
+    }
+
+    pub fn compliance_checker_mut(&mut self) -> &mut OrderComplianceChecker {
+        &mut self.compliance_checker
     }
 }
 
@@ -3411,6 +3698,26 @@ impl OrderComplianceChecker {
             regulatory_limits: HashMap::new(),
         }
     }
+
+    pub fn add_compliance_rule(&mut self, rule: OrderComplianceRule) {
+        self.compliance_rules.push(rule);
+    }
+
+    pub fn list_compliance_rules(&self) -> &[OrderComplianceRule] {
+        &self.compliance_rules
+    }
+
+    pub fn add_regulatory_limit(&mut self, limit: RegulatoryLimit) {
+        self.regulatory_limits.insert(limit.limit_id.clone(), limit);
+    }
+
+    pub fn get_regulatory_limit(&self, limit_id: &str) -> Option<&RegulatoryLimit> {
+        self.regulatory_limits.get(limit_id)
+    }
+
+    pub fn list_regulatory_limits(&self) -> Vec<String> {
+        self.regulatory_limits.keys().cloned().collect()
+    }
 }
 
 impl OrderRouting {
@@ -3420,6 +3727,27 @@ impl OrderRouting {
             venue_selector: VenueSelector::new(),
         }
     }
+
+    pub fn add_routing_strategy(&mut self, strategy: RoutingStrategy) {
+        self.routing_strategies
+            .insert(strategy.strategy_id.clone(), strategy);
+    }
+
+    pub fn get_routing_strategy(&self, strategy_id: &str) -> Option<&RoutingStrategy> {
+        self.routing_strategies.get(strategy_id)
+    }
+
+    pub fn list_routing_strategies(&self) -> Vec<String> {
+        self.routing_strategies.keys().cloned().collect()
+    }
+
+    pub fn venue_selector(&self) -> &VenueSelector {
+        &self.venue_selector
+    }
+
+    pub fn venue_selector_mut(&mut self) -> &mut VenueSelector {
+        &mut self.venue_selector
+    }
 }
 
 impl VenueSelector {
@@ -3428,6 +3756,27 @@ impl VenueSelector {
             venues: HashMap::new(),
             venue_performance: HashMap::new(),
         }
+    }
+
+    pub fn add_venue(&mut self, venue: TradingVenue) {
+        self.venues.insert(venue.venue_id.clone(), venue);
+    }
+
+    pub fn get_venue(&self, venue_id: &str) -> Option<&TradingVenue> {
+        self.venues.get(venue_id)
+    }
+
+    pub fn list_venues(&self) -> Vec<String> {
+        self.venues.keys().cloned().collect()
+    }
+
+    pub fn add_venue_performance(&mut self, performance: VenuePerformance) {
+        self.venue_performance
+            .insert(performance.venue_id.clone(), performance);
+    }
+
+    pub fn get_venue_performance(&self, venue_id: &str) -> Option<&VenuePerformance> {
+        self.venue_performance.get(venue_id)
     }
 }
 
@@ -3442,6 +3791,35 @@ impl SettlementEngine {
 
     pub fn initialize(&mut self) -> Result<(), FinancialError> {
         Ok(())
+    }
+
+    pub fn add_settlement_method(&mut self, method: SettlementMethod) {
+        self.settlement_methods
+            .insert(method.method_id.clone(), method);
+    }
+
+    pub fn get_settlement_method(&self, method_id: &str) -> Option<&SettlementMethod> {
+        self.settlement_methods.get(method_id)
+    }
+
+    pub fn list_settlement_methods(&self) -> Vec<String> {
+        self.settlement_methods.keys().cloned().collect()
+    }
+
+    pub fn clearing_house(&self) -> &ClearingHouse {
+        &self.clearing_house
+    }
+
+    pub fn clearing_house_mut(&mut self) -> &mut ClearingHouse {
+        &mut self.clearing_house
+    }
+
+    pub fn settlement_validator(&self) -> &SettlementValidator {
+        &self.settlement_validator
+    }
+
+    pub fn settlement_validator_mut(&mut self) -> &mut SettlementValidator {
+        &mut self.settlement_validator
     }
 }
 
@@ -3493,6 +3871,22 @@ impl SettlementValidator {
             compliance_checker: SettlementComplianceChecker::new(),
         }
     }
+
+    pub fn add_validation_rule(&mut self, rule: SettlementValidationRule) {
+        self.validation_rules.push(rule);
+    }
+
+    pub fn list_validation_rules(&self) -> &[SettlementValidationRule] {
+        &self.validation_rules
+    }
+
+    pub fn compliance_checker(&self) -> &SettlementComplianceChecker {
+        &self.compliance_checker
+    }
+
+    pub fn compliance_checker_mut(&mut self) -> &mut SettlementComplianceChecker {
+        &mut self.compliance_checker
+    }
 }
 
 impl SettlementComplianceChecker {
@@ -3501,6 +3895,22 @@ impl SettlementComplianceChecker {
             compliance_rules: Vec::new(),
             regulatory_requirements: Vec::new(),
         }
+    }
+
+    pub fn add_compliance_rule(&mut self, rule: SettlementComplianceRule) {
+        self.compliance_rules.push(rule);
+    }
+
+    pub fn list_compliance_rules(&self) -> &[SettlementComplianceRule] {
+        &self.compliance_rules
+    }
+
+    pub fn add_regulatory_requirement(&mut self, requirement: RegulatoryRequirement) {
+        self.regulatory_requirements.push(requirement);
+    }
+
+    pub fn list_regulatory_requirements(&self) -> &[RegulatoryRequirement] {
+        &self.regulatory_requirements
     }
 }
 
@@ -3519,6 +3929,35 @@ impl PerformanceTracker {
 
     pub fn get_metrics(&self) -> FinancialPerformanceMetrics {
         FinancialPerformanceMetrics::new()
+    }
+
+    pub fn record_performance_metrics(&mut self, metrics: PerformanceMetrics) {
+        self.performance_metrics
+            .insert(metrics.portfolio_id.clone(), metrics);
+    }
+
+    pub fn get_performance_metrics(&self, portfolio_id: &str) -> Option<&PerformanceMetrics> {
+        self.performance_metrics.get(portfolio_id)
+    }
+
+    pub fn list_performance_metrics(&self) -> Vec<String> {
+        self.performance_metrics.keys().cloned().collect()
+    }
+
+    pub fn benchmark_comparator(&self) -> &BenchmarkComparator {
+        &self.benchmark_comparator
+    }
+
+    pub fn benchmark_comparator_mut(&mut self) -> &mut BenchmarkComparator {
+        &mut self.benchmark_comparator
+    }
+
+    pub fn attribution_analyzer(&self) -> &AttributionAnalyzer {
+        &self.attribution_analyzer
+    }
+
+    pub fn attribution_analyzer_mut(&mut self) -> &mut AttributionAnalyzer {
+        &mut self.attribution_analyzer
     }
 }
 
@@ -3548,6 +3987,18 @@ impl BenchmarkComparator {
     pub fn benchmark_returns(&self, name: &str) -> Option<&[f64]> {
         self.benchmarks.get(name).map(|b| b.returns.as_slice())
     }
+
+    pub fn record_comparison(&mut self, key: &str, metrics: ComparisonMetrics) {
+        self.comparison_metrics.insert(key.to_string(), metrics);
+    }
+
+    pub fn get_comparison(&self, key: &str) -> Option<&ComparisonMetrics> {
+        self.comparison_metrics.get(key)
+    }
+
+    pub fn list_comparisons(&self) -> Vec<String> {
+        self.comparison_metrics.keys().cloned().collect()
+    }
 }
 
 impl AttributionAnalyzer {
@@ -3556,6 +4007,32 @@ impl AttributionAnalyzer {
             attribution_models: HashMap::new(),
             attribution_results: HashMap::new(),
         }
+    }
+
+    pub fn add_attribution_model(&mut self, model: AttributionModel) {
+        self.attribution_models
+            .insert(model.model_id.clone(), model);
+    }
+
+    pub fn get_attribution_model(&self, model_id: &str) -> Option<&AttributionModel> {
+        self.attribution_models.get(model_id)
+    }
+
+    pub fn list_attribution_models(&self) -> Vec<String> {
+        self.attribution_models.keys().cloned().collect()
+    }
+
+    pub fn add_attribution_result(&mut self, result: AttributionResult) {
+        self.attribution_results
+            .insert(result.result_id.clone(), result);
+    }
+
+    pub fn get_attribution_result(&self, result_id: &str) -> Option<&AttributionResult> {
+        self.attribution_results.get(result_id)
+    }
+
+    pub fn list_attribution_results(&self) -> Vec<String> {
+        self.attribution_results.keys().cloned().collect()
     }
 }
 
@@ -3617,6 +4094,30 @@ impl RiskAnalyzer {
         metrics.risk_profile_assessment =
             assess_risk_profile(&portfolio.risk_profile.risk_tolerance, &metrics);
         Ok(metrics)
+    }
+
+    pub fn add_risk_model(&mut self, model: RiskModel) {
+        self.risk_models.insert(model.model_id.clone(), model);
+    }
+
+    pub fn get_risk_model(&self, model_id: &str) -> Option<&RiskModel> {
+        self.risk_models.get(model_id)
+    }
+
+    pub fn list_risk_models(&self) -> Vec<String> {
+        self.risk_models.keys().cloned().collect()
+    }
+
+    pub fn add_risk_metric(&mut self, metric: RiskMetric) {
+        self.risk_metrics.insert(metric.metric_id.clone(), metric);
+    }
+
+    pub fn get_risk_metric(&self, metric_id: &str) -> Option<&RiskMetric> {
+        self.risk_metrics.get(metric_id)
+    }
+
+    pub fn list_risk_metrics(&self) -> Vec<String> {
+        self.risk_metrics.keys().cloned().collect()
     }
 }
 
@@ -3883,6 +4384,26 @@ impl PricingEngine {
             }
         }
     }
+
+    pub fn add_pricing_model(&mut self, model: PricingModel) {
+        self.pricing_models.insert(model.model_id.clone(), model);
+    }
+
+    pub fn get_pricing_model(&self, model_id: &str) -> Option<&PricingModel> {
+        self.pricing_models.get(model_id)
+    }
+
+    pub fn list_pricing_models(&self) -> Vec<String> {
+        self.pricing_models.keys().cloned().collect()
+    }
+
+    pub fn market_data(&self) -> &MarketData {
+        &self.market_data
+    }
+
+    pub fn market_data_mut(&mut self) -> &mut MarketData {
+        &mut self.market_data
+    }
 }
 
 impl ValuationEngine {
@@ -3896,6 +4417,36 @@ impl ValuationEngine {
 
     pub fn initialize(&mut self) -> Result<(), FinancialError> {
         Ok(())
+    }
+
+    pub fn add_valuation_method(&mut self, method: ValuationMethod) {
+        self.valuation_methods
+            .insert(method.method_id.clone(), method);
+    }
+
+    pub fn get_valuation_method(&self, method_id: &str) -> Option<&ValuationMethod> {
+        self.valuation_methods.get(method_id)
+    }
+
+    pub fn list_valuation_methods(&self) -> Vec<String> {
+        self.valuation_methods.keys().cloned().collect()
+    }
+
+    pub fn set_discount_rate(&mut self, name: &str, rate: f64) {
+        self.discount_rates.insert(name.to_string(), rate);
+    }
+
+    pub fn get_discount_rate(&self, name: &str) -> Option<&f64> {
+        self.discount_rates.get(name)
+    }
+
+    pub fn add_cash_flow_projection(&mut self, projection: CashFlowProjection) {
+        self.cash_flow_projections
+            .insert(projection.projection_id.clone(), projection);
+    }
+
+    pub fn get_cash_flow_projection(&self, projection_id: &str) -> Option<&CashFlowProjection> {
+        self.cash_flow_projections.get(projection_id)
     }
 }
 
@@ -3943,6 +4494,14 @@ impl TradingEngine {
                 .to_string(),
         ))
     }
+
+    pub fn position_manager(&self) -> &PositionManager {
+        &self.position_manager
+    }
+
+    pub fn position_manager_mut(&mut self) -> &mut PositionManager {
+        &mut self.position_manager
+    }
 }
 
 impl PositionManager {
@@ -3953,6 +4512,34 @@ impl PositionManager {
             margin_calculator: MarginCalculator::new(),
         }
     }
+
+    pub fn add_position(&mut self, position: Position) {
+        self.positions.insert(position.position_id.clone(), position);
+    }
+
+    pub fn get_position(&self, position_id: &str) -> Option<&Position> {
+        self.positions.get(position_id)
+    }
+
+    pub fn list_positions(&self) -> Vec<String> {
+        self.positions.keys().cloned().collect()
+    }
+
+    pub fn add_position_limit(&mut self, limit: PositionLimit) {
+        self.position_limits.insert(limit.limit_id.clone(), limit);
+    }
+
+    pub fn get_position_limit(&self, limit_id: &str) -> Option<&PositionLimit> {
+        self.position_limits.get(limit_id)
+    }
+
+    pub fn margin_calculator(&self) -> &MarginCalculator {
+        &self.margin_calculator
+    }
+
+    pub fn margin_calculator_mut(&mut self) -> &mut MarginCalculator {
+        &mut self.margin_calculator
+    }
 }
 
 impl MarginCalculator {
@@ -3961,6 +4548,22 @@ impl MarginCalculator {
             margin_methods: HashMap::new(),
             margin_requirements: MarginRequirements::new(),
         }
+    }
+
+    pub fn add_margin_method(&mut self, method: MarginMethod) {
+        self.margin_methods.insert(method.method_id.clone(), method);
+    }
+
+    pub fn get_margin_method(&self, method_id: &str) -> Option<&MarginMethod> {
+        self.margin_methods.get(method_id)
+    }
+
+    pub fn list_margin_methods(&self) -> Vec<String> {
+        self.margin_methods.keys().cloned().collect()
+    }
+
+    pub fn margin_requirements(&self) -> &MarginRequirements {
+        &self.margin_requirements
     }
 }
 
@@ -4300,6 +4903,18 @@ impl SurveillanceEngine {
         self.alert_manager.initialize()?;
         Ok(())
     }
+
+    pub fn add_surveillance_rule(&mut self, rule: SurveillanceRule) {
+        self.surveillance_rules.insert(rule.rule_id.clone(), rule);
+    }
+
+    pub fn get_surveillance_rule(&self, rule_id: &str) -> Option<&SurveillanceRule> {
+        self.surveillance_rules.get(rule_id)
+    }
+
+    pub fn list_surveillance_rules(&self) -> Vec<String> {
+        self.surveillance_rules.keys().cloned().collect()
+    }
 }
 
 impl AnomalyDetector {
@@ -4312,6 +4927,32 @@ impl AnomalyDetector {
 
     pub fn initialize(&mut self) -> Result<(), FinancialError> {
         Ok(())
+    }
+
+    pub fn add_detection_algorithm(&mut self, algorithm: DetectionAlgorithm) {
+        self.detection_algorithms
+            .insert(algorithm.algorithm_id.clone(), algorithm);
+    }
+
+    pub fn get_detection_algorithm(&self, algorithm_id: &str) -> Option<&DetectionAlgorithm> {
+        self.detection_algorithms.get(algorithm_id)
+    }
+
+    pub fn list_detection_algorithms(&self) -> Vec<String> {
+        self.detection_algorithms.keys().cloned().collect()
+    }
+
+    pub fn add_anomaly_pattern(&mut self, pattern: AnomalyPattern) {
+        self.anomaly_patterns
+            .insert(pattern.pattern_id.clone(), pattern);
+    }
+
+    pub fn get_anomaly_pattern(&self, pattern_id: &str) -> Option<&AnomalyPattern> {
+        self.anomaly_patterns.get(pattern_id)
+    }
+
+    pub fn list_anomaly_patterns(&self) -> Vec<String> {
+        self.anomaly_patterns.keys().cloned().collect()
     }
 }
 
@@ -4327,6 +4968,34 @@ impl AlertManager {
     pub fn initialize(&mut self) -> Result<(), FinancialError> {
         Ok(())
     }
+
+    pub fn add_alert(&mut self, alert: Alert) {
+        self.alerts.insert(alert.alert_id.clone(), alert);
+    }
+
+    pub fn get_alert(&self, alert_id: &str) -> Option<&Alert> {
+        self.alerts.get(alert_id)
+    }
+
+    pub fn list_alerts(&self) -> Vec<String> {
+        self.alerts.keys().cloned().collect()
+    }
+
+    pub fn alert_escalation(&self) -> &AlertEscalation {
+        &self.alert_escalation
+    }
+
+    pub fn alert_escalation_mut(&mut self) -> &mut AlertEscalation {
+        &mut self.alert_escalation
+    }
+
+    pub fn notification_system(&self) -> &NotificationSystem {
+        &self.notification_system
+    }
+
+    pub fn notification_system_mut(&mut self) -> &mut NotificationSystem {
+        &mut self.notification_system
+    }
 }
 
 impl AlertEscalation {
@@ -4336,6 +5005,31 @@ impl AlertEscalation {
             escalation_history: HashMap::new(),
         }
     }
+
+    pub fn add_escalation_rule(&mut self, rule: EscalationRule) {
+        self.escalation_rules.insert(rule.rule_id.clone(), rule);
+    }
+
+    pub fn get_escalation_rule(&self, rule_id: &str) -> Option<&EscalationRule> {
+        self.escalation_rules.get(rule_id)
+    }
+
+    pub fn list_escalation_rules(&self) -> Vec<String> {
+        self.escalation_rules.keys().cloned().collect()
+    }
+
+    pub fn add_escalation_history(&mut self, history: EscalationHistory) {
+        self.escalation_history
+            .insert(history.history_id.clone(), history);
+    }
+
+    pub fn get_escalation_history(&self, history_id: &str) -> Option<&EscalationHistory> {
+        self.escalation_history.get(history_id)
+    }
+
+    pub fn list_escalation_history(&self) -> Vec<String> {
+        self.escalation_history.keys().cloned().collect()
+    }
 }
 
 impl NotificationSystem {
@@ -4344,6 +5038,32 @@ impl NotificationSystem {
             notification_channels: HashMap::new(),
             notification_templates: HashMap::new(),
         }
+    }
+
+    pub fn add_channel(&mut self, channel: NotificationChannel) {
+        self.notification_channels
+            .insert(channel.channel_id.clone(), channel);
+    }
+
+    pub fn get_channel(&self, channel_id: &str) -> Option<&NotificationChannel> {
+        self.notification_channels.get(channel_id)
+    }
+
+    pub fn list_channels(&self) -> Vec<String> {
+        self.notification_channels.keys().cloned().collect()
+    }
+
+    pub fn add_template(&mut self, template: NotificationTemplate) {
+        self.notification_templates
+            .insert(template.template_id.clone(), template);
+    }
+
+    pub fn get_template(&self, template_id: &str) -> Option<&NotificationTemplate> {
+        self.notification_templates.get(template_id)
+    }
+
+    pub fn list_templates(&self) -> Vec<String> {
+        self.notification_templates.keys().cloned().collect()
     }
 }
 
@@ -4361,6 +5081,19 @@ impl ReportingEngine {
         self.report_distributor.initialize()?;
         Ok(())
     }
+
+    pub fn add_report_template(&mut self, template: ReportTemplate) {
+        self.report_templates
+            .insert(template.template_id.clone(), template);
+    }
+
+    pub fn get_report_template(&self, template_id: &str) -> Option<&ReportTemplate> {
+        self.report_templates.get(template_id)
+    }
+
+    pub fn list_report_templates(&self) -> Vec<String> {
+        self.report_templates.keys().cloned().collect()
+    }
 }
 
 impl ReportGenerator {
@@ -4375,6 +5108,19 @@ impl ReportGenerator {
         self.data_aggregator.initialize()?;
         Ok(())
     }
+
+    pub fn add_generation_strategy(&mut self, strategy: GenerationStrategy) {
+        self.generation_strategies
+            .insert(strategy.strategy_id.clone(), strategy);
+    }
+
+    pub fn get_generation_strategy(&self, strategy_id: &str) -> Option<&GenerationStrategy> {
+        self.generation_strategies.get(strategy_id)
+    }
+
+    pub fn list_generation_strategies(&self) -> Vec<String> {
+        self.generation_strategies.keys().cloned().collect()
+    }
 }
 
 impl DataAggregator {
@@ -4387,6 +5133,30 @@ impl DataAggregator {
 
     pub fn initialize(&mut self) -> Result<(), FinancialError> {
         Ok(())
+    }
+
+    pub fn add_aggregation_rule(&mut self, rule: AggregationRule) {
+        self.aggregation_rules.insert(rule.rule_id.clone(), rule);
+    }
+
+    pub fn get_aggregation_rule(&self, rule_id: &str) -> Option<&AggregationRule> {
+        self.aggregation_rules.get(rule_id)
+    }
+
+    pub fn list_aggregation_rules(&self) -> Vec<String> {
+        self.aggregation_rules.keys().cloned().collect()
+    }
+
+    pub fn add_data_source(&mut self, source: DataSource) {
+        self.data_sources.insert(source.source_id.clone(), source);
+    }
+
+    pub fn get_data_source(&self, source_id: &str) -> Option<&DataSource> {
+        self.data_sources.get(source_id)
+    }
+
+    pub fn list_data_sources(&self) -> Vec<String> {
+        self.data_sources.keys().cloned().collect()
     }
 }
 

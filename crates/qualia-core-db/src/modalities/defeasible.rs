@@ -261,6 +261,7 @@ pub fn grounded_justified_rules(
 #[cfg(test)]
 mod tests {
     use super::*;
+    use crate::q_hash;
 
     fn rule(id: u64, kind: RuleKind, lit: u64, positive: bool) -> DefeasibleRule {
         DefeasibleRule {

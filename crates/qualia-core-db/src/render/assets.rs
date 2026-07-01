@@ -628,6 +628,7 @@ fn fnv_hash(bytes: &[u8]) -> u64 {
 #[cfg(test)]
 mod tests {
     use super::*;
+    use crate::frame_layout::unpack_float_object;
 
     const TRI_OBJ: &str = "# a single triangle\nv 0 0 0\nv 1 0 0\nv 0 1 0\nf 1 2 3\n";
 

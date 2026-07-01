@@ -3013,6 +3013,26 @@ impl PatientManager {
     pub fn get_performance_metrics(&self) -> MedicalPerformanceMetrics {
         MedicalPerformanceMetrics::new()
     }
+
+    pub fn get_medical_history(&self) -> &MedicalHistory {
+        &self.medical_history
+    }
+
+    pub fn add_condition(&mut self, condition: MedicalCondition) {
+        self.medical_history.conditions.push(condition);
+    }
+
+    pub fn add_surgery(&mut self, surgery: Surgery) {
+        self.medical_history.surgeries.push(surgery);
+    }
+
+    pub fn active_conditions(&self) -> Vec<&MedicalCondition> {
+        self.medical_history
+            .conditions
+            .iter()
+            .filter(|c| c.status == ConditionStatus::Active || c.status == ConditionStatus::Chronic)
+            .collect()
+    }
 }
 
 impl PatientRecords {
@@ -3042,6 +3062,28 @@ impl PatientRecords {
 
     pub fn list_patients(&self) -> Vec<String> {
         self.patients.keys().cloned().collect()
+    }
+
+    pub fn store_demographics(&mut self, patient_id: &str, demographics: Demographics) {
+        self.demographics.insert(patient_id.to_string(), demographics);
+    }
+
+    pub fn get_demographics(&self, patient_id: &str) -> Option<&Demographics> {
+        self.demographics.get(patient_id)
+    }
+
+    pub fn store_identifier(&mut self, patient_id: &str, identifier: MedicalIdentifier) {
+        self.medical_identifiers.insert(patient_id.to_string(), identifier);
+    }
+
+    pub fn get_identifier(&self, patient_id: &str) -> Option<&MedicalIdentifier> {
+        self.medical_identifiers.get(patient_id)
+    }
+
+    pub fn remove_patient(&mut self, patient_id: &str) -> Option<Patient> {
+        self.demographics.remove(patient_id);
+        self.medical_identifiers.remove(patient_id);
+        self.patients.remove(patient_id)
     }
 }
 
@@ -3134,6 +3176,19 @@ impl EncryptionManager {
         self.data_protection.initialize()?;
         Ok(())
     }
+
+    pub fn add_algorithm(&mut self, algorithm: EncryptionAlgorithm) {
+        self.encryption_algorithms
+            .insert(algorithm.algorithm_id.clone(), algorithm);
+    }
+
+    pub fn get_algorithm(&self, algorithm_id: &str) -> Option<&EncryptionAlgorithm> {
+        self.encryption_algorithms.get(algorithm_id)
+    }
+
+    pub fn list_algorithms(&self) -> Vec<String> {
+        self.encryption_algorithms.keys().cloned().collect()
+    }
 }
 
 impl KeyManagement {
@@ -3148,6 +3203,26 @@ impl KeyManagement {
     pub fn initialize(&mut self) -> Result<(), MedicalError> {
         Ok(())
     }
+
+    pub fn add_key(&mut self, key: EncryptionKey) {
+        self.keys.insert(key.key_id.clone(), key);
+    }
+
+    pub fn get_key(&self, key_id: &str) -> Option<&EncryptionKey> {
+        self.keys.get(key_id)
+    }
+
+    pub fn remove_key(&mut self, key_id: &str) -> Option<EncryptionKey> {
+        self.keys.remove(key_id)
+    }
+
+    pub fn key_rotation(&self) -> &KeyRotation {
+        &self.key_rotation
+    }
+
+    pub fn key_recovery(&self) -> &KeyRecovery {
+        &self.key_recovery
+    }
 }
 
 impl KeyRotation {
@@ -3157,6 +3232,18 @@ impl KeyRotation {
             rotation_schedule: RotationSchedule::new(),
             rotation_history: RotationHistory::new(),
         }
+    }
+
+    pub fn rotation_policy(&self) -> &RotationPolicy {
+        &self.rotation_policy
+    }
+
+    pub fn rotation_schedule(&self) -> &RotationSchedule {
+        &self.rotation_schedule
+    }
+
+    pub fn rotation_history(&self) -> &RotationHistory {
+        &self.rotation_history
     }
 }
 
@@ -3201,6 +3288,22 @@ impl KeyRecovery {
             recovery_procedures: HashMap::new(),
         }
     }
+
+    pub fn add_recovery_method(&mut self, method: RecoveryMethod) {
+        self.recovery_methods.insert(method.method_id.clone(), method);
+    }
+
+    pub fn get_recovery_method(&self, method_id: &str) -> Option<&RecoveryMethod> {
+        self.recovery_methods.get(method_id)
+    }
+
+    pub fn add_recovery_procedure(&mut self, procedure: RecoveryProcedure) {
+        self.recovery_procedures.insert(procedure.procedure_id.clone(), procedure);
+    }
+
+    pub fn get_recovery_procedure(&self, procedure_id: &str) -> Option<&RecoveryProcedure> {
+        self.recovery_procedures.get(procedure_id)
+    }
 }
 
 impl DataProtection {
@@ -3215,6 +3318,22 @@ impl DataProtection {
     pub fn initialize(&mut self) -> Result<(), MedicalError> {
         Ok(())
     }
+
+    pub fn add_protection_policy(&mut self, policy: ProtectionPolicy) {
+        self.protection_policies.insert(policy.policy_id.clone(), policy);
+    }
+
+    pub fn get_protection_policy(&self, policy_id: &str) -> Option<&ProtectionPolicy> {
+        self.protection_policies.get(policy_id)
+    }
+
+    pub fn breach_detection(&self) -> &BreachDetection {
+        &self.breach_detection
+    }
+
+    pub fn incident_response(&self) -> &IncidentResponse {
+        &self.incident_response
+    }
 }
 
 impl BreachDetection {
@@ -3223,6 +3342,22 @@ impl BreachDetection {
             detection_algorithms: HashMap::new(),
             alert_systems: HashMap::new(),
         }
+    }
+
+    pub fn add_detection_algorithm(&mut self, algorithm: DetectionAlgorithm) {
+        self.detection_algorithms.insert(algorithm.algorithm_id.clone(), algorithm);
+    }
+
+    pub fn get_detection_algorithm(&self, algorithm_id: &str) -> Option<&DetectionAlgorithm> {
+        self.detection_algorithms.get(algorithm_id)
+    }
+
+    pub fn add_alert_system(&mut self, system: AlertSystem) {
+        self.alert_systems.insert(system.system_id.clone(), system);
+    }
+
+    pub fn get_alert_system(&self, system_id: &str) -> Option<&AlertSystem> {
+        self.alert_systems.get(system_id)
     }
 }
 
@@ -3233,6 +3368,22 @@ impl IncidentResponse {
             response_team: ResponseTeam::new(),
             escalation_procedures: EscalationProcedures::new(),
         }
+    }
+
+    pub fn add_response_plan(&mut self, plan: ResponsePlan) {
+        self.response_plans.insert(plan.plan_id.clone(), plan);
+    }
+
+    pub fn get_response_plan(&self, plan_id: &str) -> Option<&ResponsePlan> {
+        self.response_plans.get(plan_id)
+    }
+
+    pub fn response_team(&self) -> &ResponseTeam {
+        &self.response_team
+    }
+
+    pub fn escalation_procedures(&self) -> &EscalationProcedures {
+        &self.escalation_procedures
     }
 }
 
@@ -3253,6 +3404,18 @@ impl EscalationProcedures {
             escalation_rules: HashMap::new(),
             escalation_matrix: EscalationMatrix::new(),
         }
+    }
+
+    pub fn add_escalation_rule(&mut self, rule: EscalationRule) {
+        self.escalation_rules.insert(rule.rule_id.clone(), rule);
+    }
+
+    pub fn get_escalation_rule(&self, rule_id: &str) -> Option<&EscalationRule> {
+        self.escalation_rules.get(rule_id)
+    }
+
+    pub fn escalation_matrix(&self) -> &EscalationMatrix {
+        &self.escalation_matrix
     }
 }
 
@@ -3278,6 +3441,26 @@ impl AnonymizationEngine {
     pub fn initialize(&mut self) -> Result<(), MedicalError> {
         Ok(())
     }
+
+    pub fn add_anonymization_method(&mut self, method: AnonymizationMethod) {
+        self.anonymization_methods.insert(method.method_id.clone(), method);
+    }
+
+    pub fn get_anonymization_method(&self, method_id: &str) -> Option<&AnonymizationMethod> {
+        self.anonymization_methods.get(method_id)
+    }
+
+    pub fn add_privacy_model(&mut self, model: PrivacyModel) {
+        self.privacy_models.insert(model.model_id.clone(), model);
+    }
+
+    pub fn get_privacy_model(&self, model_id: &str) -> Option<&PrivacyModel> {
+        self.privacy_models.get(model_id)
+    }
+
+    pub fn risk_assessment(&self) -> &RiskAssessment {
+        &self.risk_assessment
+    }
 }
 
 impl RiskAssessment {
@@ -3286,6 +3469,33 @@ impl RiskAssessment {
             risk_models: HashMap::new(),
             risk_metrics: HashMap::new(),
         }
+    }
+
+    pub fn add_risk_model(&mut self, model: RiskModel) {
+        self.risk_models.insert(model.model_id.clone(), model);
+    }
+
+    pub fn get_risk_model(&self, model_id: &str) -> Option<&RiskModel> {
+        self.risk_models.get(model_id)
+    }
+
+    pub fn add_risk_metric(&mut self, metric: RiskMetric) {
+        self.risk_metrics.insert(metric.metric_id.clone(), metric);
+    }
+
+    pub fn get_risk_metric(&self, metric_id: &str) -> Option<&RiskMetric> {
+        self.risk_metrics.get(metric_id)
+    }
+
+    pub fn assess_risk(&self, factors: &[RiskFactor]) -> f64 {
+        if factors.is_empty() {
+            return 0.0;
+        }
+        let total_weight: f64 = factors.iter().map(|f| f.factor_weight).sum();
+        if total_weight == 0.0 {
+            return 0.0;
+        }
+        factors.iter().map(|f| f.factor_weight * f.factor_value).sum::<f64>() / total_weight
     }
 }
 
@@ -3301,6 +3511,22 @@ impl AccessLogging {
     pub fn initialize(&mut self) -> Result<(), MedicalError> {
         Ok(())
     }
+
+    pub fn add_log_entry(&mut self, entry: LogEntry) {
+        self.log_entries.insert(entry.entry_id.clone(), entry);
+    }
+
+    pub fn get_log_entry(&self, entry_id: &str) -> Option<&LogEntry> {
+        self.log_entries.get(entry_id)
+    }
+
+    pub fn log_analysis(&self) -> &LogAnalysis {
+        &self.log_analysis
+    }
+
+    pub fn retention_policy(&self) -> &RetentionPolicy {
+        &self.retention_policy
+    }
 }
 
 impl LogAnalysis {
@@ -3310,6 +3536,18 @@ impl LogAnalysis {
             anomaly_detection: AnomalyDetection::new(),
         }
     }
+
+    pub fn add_analysis_method(&mut self, method: AnalysisMethod) {
+        self.analysis_methods.insert(method.method_id.clone(), method);
+    }
+
+    pub fn get_analysis_method(&self, method_id: &str) -> Option<&AnalysisMethod> {
+        self.analysis_methods.get(method_id)
+    }
+
+    pub fn anomaly_detection(&self) -> &AnomalyDetection {
+        &self.anomaly_detection
+    }
 }
 
 impl AnomalyDetection {
@@ -3318,6 +3556,22 @@ impl AnomalyDetection {
             detection_algorithms: HashMap::new(),
             alert_thresholds: HashMap::new(),
         }
+    }
+
+    pub fn add_detection_algorithm(&mut self, algorithm: DetectionAlgorithm) {
+        self.detection_algorithms.insert(algorithm.algorithm_id.clone(), algorithm);
+    }
+
+    pub fn get_detection_algorithm(&self, algorithm_id: &str) -> Option<&DetectionAlgorithm> {
+        self.detection_algorithms.get(algorithm_id)
+    }
+
+    pub fn set_alert_threshold(&mut self, metric_name: &str, threshold: f64) {
+        self.alert_thresholds.insert(metric_name.to_string(), threshold);
+    }
+
+    pub fn get_alert_threshold(&self, metric_name: &str) -> Option<&f64> {
+        self.alert_thresholds.get(metric_name)
     }
 }
 
@@ -3345,6 +3599,30 @@ impl ConsentManagement {
     pub fn initialize(&mut self) -> Result<(), MedicalError> {
         Ok(())
     }
+
+    pub fn add_consent_record(&mut self, record: ConsentRecord) {
+        self.consent_records.insert(record.record_id.clone(), record);
+    }
+
+    pub fn get_consent_record(&self, record_id: &str) -> Option<&ConsentRecord> {
+        self.consent_records.get(record_id)
+    }
+
+    pub fn add_consent_policy(&mut self, policy: ConsentPolicy) {
+        self.consent_policies.insert(policy.policy_id.clone(), policy);
+    }
+
+    pub fn get_consent_policy(&self, policy_id: &str) -> Option<&ConsentPolicy> {
+        self.consent_policies.get(policy_id)
+    }
+
+    pub fn add_consent_workflow(&mut self, workflow: ConsentWorkflow) {
+        self.consent_workflows.insert(workflow.workflow_id.clone(), workflow);
+    }
+
+    pub fn get_consent_workflow(&self, workflow_id: &str) -> Option<&ConsentWorkflow> {
+        self.consent_workflows.get(workflow_id)
+    }
 }
 
 impl DataAccessControl {
@@ -3361,6 +3639,18 @@ impl DataAccessControl {
         self.authorization.initialize()?;
         Ok(())
     }
+
+    pub fn add_access_policy(&mut self, policy: AccessPolicy) {
+        self.access_policies.insert(policy.policy_id.clone(), policy);
+    }
+
+    pub fn get_access_policy(&self, policy_id: &str) -> Option<&AccessPolicy> {
+        self.access_policies.get(policy_id)
+    }
+
+    pub fn list_access_policies(&self) -> Vec<String> {
+        self.access_policies.keys().cloned().collect()
+    }
 }
 
 impl AuthenticationSystem {
@@ -3375,6 +3665,22 @@ impl AuthenticationSystem {
     pub fn initialize(&mut self) -> Result<(), MedicalError> {
         Ok(())
     }
+
+    pub fn add_authentication_method(&mut self, method: AuthenticationMethod) {
+        self.authentication_methods.insert(method.method_id.clone(), method);
+    }
+
+    pub fn get_authentication_method(&self, method_id: &str) -> Option<&AuthenticationMethod> {
+        self.authentication_methods.get(method_id)
+    }
+
+    pub fn session_management(&self) -> &SessionManagement {
+        &self.session_management
+    }
+
+    pub fn multi_factor(&self) -> &MultiFactorAuthentication {
+        &self.multi_factor
+    }
 }
 
 impl SessionManagement {
@@ -3384,6 +3690,26 @@ impl SessionManagement {
             session_policies: HashMap::new(),
         }
     }
+
+    pub fn add_session(&mut self, session: Session) {
+        self.sessions.insert(session.session_id.clone(), session);
+    }
+
+    pub fn get_session(&self, session_id: &str) -> Option<&Session> {
+        self.sessions.get(session_id)
+    }
+
+    pub fn remove_session(&mut self, session_id: &str) -> Option<Session> {
+        self.sessions.remove(session_id)
+    }
+
+    pub fn add_session_policy(&mut self, policy: SessionPolicy) {
+        self.session_policies.insert(policy.policy_id.clone(), policy);
+    }
+
+    pub fn get_session_policy(&self, policy_id: &str) -> Option<&SessionPolicy> {
+        self.session_policies.get(policy_id)
+    }
 }
 
 impl MultiFactorAuthentication {
@@ -3392,6 +3718,22 @@ impl MultiFactorAuthentication {
             factors: HashMap::new(),
             factor_combinations: HashMap::new(),
         }
+    }
+
+    pub fn add_factor(&mut self, factor: AuthenticationFactor) {
+        self.factors.insert(factor.factor_id.clone(), factor);
+    }
+
+    pub fn get_factor(&self, factor_id: &str) -> Option<&AuthenticationFactor> {
+        self.factors.get(factor_id)
+    }
+
+    pub fn add_factor_combination(&mut self, combination: FactorCombination) {
+        self.factor_combinations.insert(combination.combination_id.clone(), combination);
+    }
+
+    pub fn get_factor_combination(&self, combination_id: &str) -> Option<&FactorCombination> {
+        self.factor_combinations.get(combination_id)
     }
 }
 
@@ -3407,6 +3749,22 @@ impl AuthorizationSystem {
     pub fn initialize(&mut self) -> Result<(), MedicalError> {
         Ok(())
     }
+
+    pub fn add_authorization_policy(&mut self, policy: AuthorizationPolicy) {
+        self.authorization_policies.insert(policy.policy_id.clone(), policy);
+    }
+
+    pub fn get_authorization_policy(&self, policy_id: &str) -> Option<&AuthorizationPolicy> {
+        self.authorization_policies.get(policy_id)
+    }
+
+    pub fn permission_management(&self) -> &PermissionManagement {
+        &self.permission_management
+    }
+
+    pub fn role_management(&self) -> &RoleManagement {
+        &self.role_management
+    }
 }
 
 impl PermissionManagement {
@@ -3416,6 +3774,22 @@ impl PermissionManagement {
             permission_groups: HashMap::new(),
         }
     }
+
+    pub fn add_permission(&mut self, name: &str, permission: Permission) {
+        self.permissions.insert(name.to_string(), permission);
+    }
+
+    pub fn get_permission(&self, name: &str) -> Option<&Permission> {
+        self.permissions.get(name)
+    }
+
+    pub fn add_permission_group(&mut self, group: PermissionGroup) {
+        self.permission_groups.insert(group.group_id.clone(), group);
+    }
+
+    pub fn get_permission_group(&self, group_id: &str) -> Option<&PermissionGroup> {
+        self.permission_groups.get(group_id)
+    }
 }
 
 impl RoleManagement {
@@ -3424,6 +3798,18 @@ impl RoleManagement {
             roles: HashMap::new(),
             role_hierarchy: RoleHierarchy::new(),
         }
+    }
+
+    pub fn add_role(&mut self, role: Role) {
+        self.roles.insert(role.role_id.clone(), role);
+    }
+
+    pub fn get_role(&self, role_id: &str) -> Option<&Role> {
+        self.roles.get(role_id)
+    }
+
+    pub fn role_hierarchy(&self) -> &RoleHierarchy {
+        &self.role_hierarchy
     }
 }
 
@@ -3488,6 +3874,22 @@ impl DiagnosticEngine {
     pub fn initialize(&mut self) -> Result<(), MedicalError> {
         Ok(())
     }
+
+    pub fn add_diagnostic_algorithm(&mut self, algorithm: DiagnosticAlgorithm) {
+        self.diagnostic_algorithms.insert(algorithm.algorithm_id.clone(), algorithm);
+    }
+
+    pub fn get_diagnostic_algorithm(&self, algorithm_id: &str) -> Option<&DiagnosticAlgorithm> {
+        self.diagnostic_algorithms.get(algorithm_id)
+    }
+
+    pub fn symptom_analyzer(&self) -> &SymptomAnalyzer {
+        &self.symptom_analyzer
+    }
+
+    pub fn lab_interpreter(&self) -> &LabInterpreter {
+        &self.lab_interpreter
+    }
 }
 
 impl SymptomAnalyzer {
@@ -3497,6 +3899,22 @@ impl SymptomAnalyzer {
             symptom_correlations: HashMap::new(),
         }
     }
+
+    pub fn add_symptom_pattern(&mut self, pattern: SymptomPattern) {
+        self.symptom_patterns.insert(pattern.pattern_id.clone(), pattern);
+    }
+
+    pub fn get_symptom_pattern(&self, pattern_id: &str) -> Option<&SymptomPattern> {
+        self.symptom_patterns.get(pattern_id)
+    }
+
+    pub fn add_symptom_correlation(&mut self, correlation: SymptomCorrelation) {
+        self.symptom_correlations.insert(correlation.correlation_id.clone(), correlation);
+    }
+
+    pub fn get_symptom_correlation(&self, correlation_id: &str) -> Option<&SymptomCorrelation> {
+        self.symptom_correlations.get(correlation_id)
+    }
 }
 
 impl LabInterpreter {
@@ -3504,6 +3922,30 @@ impl LabInterpreter {
         Self {
             reference_ranges: HashMap::new(),
             abnormality_detector: AbnormalityDetector::new(),
+        }
+    }
+
+    pub fn add_reference_range(&mut self, test_code: &str, range: ReferenceRange) {
+        self.reference_ranges.insert(test_code.to_string(), range);
+    }
+
+    pub fn get_reference_range(&self, test_code: &str) -> Option<&ReferenceRange> {
+        self.reference_ranges.get(test_code)
+    }
+
+    pub fn abnormality_detector(&self) -> &AbnormalityDetector {
+        &self.abnormality_detector
+    }
+
+    pub fn interpret_result(&self, result: &LabResult) -> ResultStatus {
+        if let Some(range) = self.reference_ranges.get(&result.test_code) {
+            if result.value < range.minimum || result.value > range.maximum {
+                ResultStatus::Abnormal
+            } else {
+                ResultStatus::Normal
+            }
+        } else {
+            result.status.clone()
         }
     }
 }
@@ -3515,6 +3957,18 @@ impl AbnormalityDetector {
             severity_assessment: SeverityAssessment::new(),
         }
     }
+
+    pub fn add_detection_algorithm(&mut self, algorithm: DetectionAlgorithm) {
+        self.detection_algorithms.insert(algorithm.algorithm_id.clone(), algorithm);
+    }
+
+    pub fn get_detection_algorithm(&self, algorithm_id: &str) -> Option<&DetectionAlgorithm> {
+        self.detection_algorithms.get(algorithm_id)
+    }
+
+    pub fn severity_assessment(&self) -> &SeverityAssessment {
+        &self.severity_assessment
+    }
 }
 
 impl SeverityAssessment {
@@ -3523,6 +3977,18 @@ impl SeverityAssessment {
             assessment_criteria: HashMap::new(),
             scoring_system: ScoringSystem::new(),
         }
+    }
+
+    pub fn add_criterion(&mut self, criterion: AssessmentCriterion) {
+        self.assessment_criteria.insert(criterion.criterion_id.clone(), criterion);
+    }
+
+    pub fn get_criterion(&self, criterion_id: &str) -> Option<&AssessmentCriterion> {
+        self.assessment_criteria.get(criterion_id)
+    }
+
+    pub fn scoring_system(&self) -> &ScoringSystem {
+        &self.scoring_system
     }
 }
 
@@ -3547,6 +4013,34 @@ impl ClinicalRiskAssessment {
     pub fn initialize(&mut self) -> Result<(), MedicalError> {
         Ok(())
     }
+
+    pub fn add_risk_model(&mut self, model: ClinicalRiskModel) {
+        self.risk_models.insert(model.model_id.clone(), model);
+    }
+
+    pub fn get_risk_model(&self, model_id: &str) -> Option<&ClinicalRiskModel> {
+        self.risk_models.get(model_id)
+    }
+
+    pub fn add_risk_factor(&mut self, factor: ClinicalRiskFactor) {
+        self.risk_factors.insert(factor.factor_id.clone(), factor);
+    }
+
+    pub fn get_risk_factor(&self, factor_id: &str) -> Option<&ClinicalRiskFactor> {
+        self.risk_factors.get(factor_id)
+    }
+
+    pub fn compute_risk_score(&self, factor_ids: &[String]) -> f64 {
+        if factor_ids.is_empty() {
+            return 0.0;
+        }
+        let total_weight: f64 = factor_ids
+            .iter()
+            .filter_map(|id| self.risk_factors.get(id))
+            .map(|f| f.factor_weight)
+            .sum();
+        total_weight / factor_ids.len() as f64
+    }
 }
 
 impl TreatmentPlanner {
@@ -3560,6 +4054,18 @@ impl TreatmentPlanner {
     pub fn initialize(&mut self) -> Result<(), MedicalError> {
         Ok(())
     }
+
+    pub fn add_treatment_guideline(&mut self, guideline: TreatmentGuideline) {
+        self.treatment_guidelines.insert(guideline.guideline_id.clone(), guideline);
+    }
+
+    pub fn get_treatment_guideline(&self, guideline_id: &str) -> Option<&TreatmentGuideline> {
+        self.treatment_guidelines.get(guideline_id)
+    }
+
+    pub fn decision_support(&self) -> &DecisionSupport {
+        &self.decision_support
+    }
 }
 
 impl DecisionSupport {
@@ -3568,6 +4074,22 @@ impl DecisionSupport {
             decision_trees: HashMap::new(),
             scoring_systems: HashMap::new(),
         }
+    }
+
+    pub fn add_decision_tree(&mut self, tree: DecisionTree) {
+        self.decision_trees.insert(tree.tree_id.clone(), tree);
+    }
+
+    pub fn get_decision_tree(&self, tree_id: &str) -> Option<&DecisionTree> {
+        self.decision_trees.get(tree_id)
+    }
+
+    pub fn add_scoring_system(&mut self, system: ScoringSystem) {
+        self.scoring_systems.insert(system.system_id.clone(), system);
+    }
+
+    pub fn get_scoring_system(&self, system_id: &str) -> Option<&ScoringSystem> {
+        self.scoring_systems.get(system_id)
     }
 }
 
@@ -3581,6 +4103,22 @@ impl OutcomePredictor {
 
     pub fn initialize(&mut self) -> Result<(), MedicalError> {
         Ok(())
+    }
+
+    pub fn add_prediction_model(&mut self, model_id: &str, model: PredictionModel) {
+        self.prediction_models.insert(model_id.to_string(), model);
+    }
+
+    pub fn get_prediction_model(&self, model_id: &str) -> Option<&PredictionModel> {
+        self.prediction_models.get(model_id)
+    }
+
+    pub fn add_outcome_metric(&mut self, metric_id: &str, value: OutcomeMetric) {
+        self.outcome_metrics.insert(metric_id.to_string(), value);
+    }
+
+    pub fn get_outcome_metric(&self, metric_id: &str) -> Option<&OutcomeMetric> {
+        self.outcome_metrics.get(metric_id)
     }
 }
 
@@ -3640,6 +4178,18 @@ impl ImageAcquisition {
     pub fn initialize(&mut self) -> Result<(), MedicalError> {
         Ok(())
     }
+
+    pub fn add_acquisition_protocol(&mut self, protocol: AcquisitionProtocol) {
+        self.acquisition_protocols.insert(protocol.protocol_id.clone(), protocol);
+    }
+
+    pub fn get_acquisition_protocol(&self, protocol_id: &str) -> Option<&AcquisitionProtocol> {
+        self.acquisition_protocols.get(protocol_id)
+    }
+
+    pub fn quality_control(&self) -> &QualityControl {
+        &self.quality_control
+    }
 }
 
 impl QualityControl {
@@ -3648,6 +4198,22 @@ impl QualityControl {
             quality_metrics: HashMap::new(),
             quality_standards: HashMap::new(),
         }
+    }
+
+    pub fn add_quality_metric(&mut self, metric: QualityMetric) {
+        self.quality_metrics.insert(metric.metric_id.clone(), metric);
+    }
+
+    pub fn get_quality_metric(&self, metric_id: &str) -> Option<&QualityMetric> {
+        self.quality_metrics.get(metric_id)
+    }
+
+    pub fn add_quality_standard(&mut self, standard: QualityStandard) {
+        self.quality_standards.insert(standard.standard_id.clone(), standard);
+    }
+
+    pub fn get_quality_standard(&self, standard_id: &str) -> Option<&QualityStandard> {
+        self.quality_standards.get(standard_id)
     }
 }
 
@@ -3662,6 +4228,22 @@ impl ImageProcessing {
     pub fn initialize(&mut self) -> Result<(), MedicalError> {
         Ok(())
     }
+
+    pub fn add_preprocessing_algorithm(&mut self, algorithm: PreprocessingAlgorithm) {
+        self.preprocessing_algorithms.insert(algorithm.algorithm_id.clone(), algorithm);
+    }
+
+    pub fn get_preprocessing_algorithm(&self, algorithm_id: &str) -> Option<&PreprocessingAlgorithm> {
+        self.preprocessing_algorithms.get(algorithm_id)
+    }
+
+    pub fn add_enhancement_technique(&mut self, technique: EnhancementTechnique) {
+        self.enhancement_techniques.insert(technique.technique_id.clone(), technique);
+    }
+
+    pub fn get_enhancement_technique(&self, technique_id: &str) -> Option<&EnhancementTechnique> {
+        self.enhancement_techniques.get(technique_id)
+    }
 }
 
 impl ImageAnalysis {
@@ -3675,6 +4257,22 @@ impl ImageAnalysis {
     pub fn initialize(&mut self) -> Result<(), MedicalError> {
         Ok(())
     }
+
+    pub fn add_analysis_algorithm(&mut self, algorithm: AnalysisAlgorithm) {
+        self.analysis_algorithms.insert(algorithm.algorithm_id.clone(), algorithm);
+    }
+
+    pub fn get_analysis_algorithm(&self, algorithm_id: &str) -> Option<&AnalysisAlgorithm> {
+        self.analysis_algorithms.get(algorithm_id)
+    }
+
+    pub fn add_detection_method(&mut self, method: DetectionMethod) {
+        self.detection_methods.insert(method.method_id.clone(), method);
+    }
+
+    pub fn get_detection_method(&self, method_id: &str) -> Option<&DetectionMethod> {
+        self.detection_methods.get(method_id)
+    }
 }
 
 impl ImageStorage {
@@ -3687,6 +4285,22 @@ impl ImageStorage {
 
     pub fn initialize(&mut self) -> Result<(), MedicalError> {
         Ok(())
+    }
+
+    pub fn add_storage_system(&mut self, system: StorageSystem) {
+        self.storage_systems.insert(system.system_id.clone(), system);
+    }
+
+    pub fn get_storage_system(&self, system_id: &str) -> Option<&StorageSystem> {
+        self.storage_systems.get(system_id)
+    }
+
+    pub fn add_compression_method(&mut self, method: CompressionMethod) {
+        self.compression_methods.insert(method.method_id.clone(), method);
+    }
+
+    pub fn get_compression_method(&self, method_id: &str) -> Option<&CompressionMethod> {
+        self.compression_methods.get(method_id)
     }
 }
 
@@ -3745,6 +4359,22 @@ impl TargetIdentification {
     pub fn initialize(&mut self) -> Result<(), MedicalError> {
         Ok(())
     }
+
+    pub fn add_target_database(&mut self, database: TargetDatabase) {
+        self.target_databases.insert(database.database_id.clone(), database);
+    }
+
+    pub fn get_target_database(&self, database_id: &str) -> Option<&TargetDatabase> {
+        self.target_databases.get(database_id)
+    }
+
+    pub fn add_validation_method(&mut self, method: ValidationMethod) {
+        self.validation_methods.insert(method.method_id.clone(), method);
+    }
+
+    pub fn get_validation_method(&self, method_id: &str) -> Option<&ValidationMethod> {
+        self.validation_methods.get(method_id)
+    }
 }
 
 impl CompoundScreening {
@@ -3757,6 +4387,22 @@ impl CompoundScreening {
 
     pub fn initialize(&mut self) -> Result<(), MedicalError> {
         Ok(())
+    }
+
+    pub fn add_compound_library(&mut self, library: CompoundLibrary) {
+        self.compound_libraries.insert(library.library_id.clone(), library);
+    }
+
+    pub fn get_compound_library(&self, library_id: &str) -> Option<&CompoundLibrary> {
+        self.compound_libraries.get(library_id)
+    }
+
+    pub fn add_screening_assay(&mut self, assay: ScreeningAssay) {
+        self.screening_assays.insert(assay.assay_id.clone(), assay);
+    }
+
+    pub fn get_screening_assay(&self, assay_id: &str) -> Option<&ScreeningAssay> {
+        self.screening_assays.get(assay_id)
     }
 }
 
@@ -3771,6 +4417,18 @@ impl LeadOptimization {
     pub fn initialize(&mut self) -> Result<(), MedicalError> {
         Ok(())
     }
+
+    pub fn add_optimization_strategy(&mut self, strategy: OptimizationStrategy) {
+        self.optimization_strategies.insert(strategy.strategy_id.clone(), strategy);
+    }
+
+    pub fn get_optimization_strategy(&self, strategy_id: &str) -> Option<&OptimizationStrategy> {
+        self.optimization_strategies.get(strategy_id)
+    }
+
+    pub fn adme_prediction(&self) -> &ADMEPrediction {
+        &self.adme_prediction
+    }
 }
 
 impl ADMEPrediction {
@@ -3781,6 +4439,26 @@ impl ADMEPrediction {
             metabolism_model: MetabolismModel::new(),
             excretion_model: ExcretionModel::new(),
         }
+    }
+
+    pub fn absorption_model(&self) -> &AbsorptionModel {
+        &self.absorption_model
+    }
+
+    pub fn distribution_model(&self) -> &DistributionModel {
+        &self.distribution_model
+    }
+
+    pub fn metabolism_model(&self) -> &MetabolismModel {
+        &self.metabolism_model
+    }
+
+    pub fn excretion_model(&self) -> &ExcretionModel {
+        &self.excretion_model
+    }
+
+    pub fn overall_bioavailability(&self) -> f64 {
+        self.absorption_model.bioavailability
     }
 }
 
@@ -3835,6 +4513,18 @@ impl PreclinicalTesting {
     pub fn initialize(&mut self) -> Result<(), MedicalError> {
         Ok(())
     }
+
+    pub fn in_vitro_testing(&self) -> &InVitroTesting {
+        &self.in_vitro_testing
+    }
+
+    pub fn in_vivo_testing(&self) -> &InVivoTesting {
+        &self.in_vivo_testing
+    }
+
+    pub fn toxicology_studies(&self) -> &ToxicologyStudies {
+        &self.toxicology_studies
+    }
 }
 
 impl InVitroTesting {
@@ -3843,6 +4533,22 @@ impl InVitroTesting {
             test_types: HashMap::new(),
             results: HashMap::new(),
         }
+    }
+
+    pub fn add_test(&mut self, test: InVitroTest) {
+        self.test_types.insert(test.test_id.clone(), test);
+    }
+
+    pub fn get_test(&self, test_id: &str) -> Option<&InVitroTest> {
+        self.test_types.get(test_id)
+    }
+
+    pub fn add_result(&mut self, result: TestResult) {
+        self.results.insert(result.result_id.clone(), result);
+    }
+
+    pub fn get_result(&self, result_id: &str) -> Option<&TestResult> {
+        self.results.get(result_id)
     }
 }
 
@@ -3853,6 +4559,22 @@ impl InVivoTesting {
             study_designs: HashMap::new(),
         }
     }
+
+    pub fn add_animal_model(&mut self, model: AnimalModel) {
+        self.animal_models.insert(model.model_id.clone(), model);
+    }
+
+    pub fn get_animal_model(&self, model_id: &str) -> Option<&AnimalModel> {
+        self.animal_models.get(model_id)
+    }
+
+    pub fn add_study_design(&mut self, design: StudyDesign) {
+        self.study_designs.insert(design.design_id.clone(), design);
+    }
+
+    pub fn get_study_design(&self, design_id: &str) -> Option<&StudyDesign> {
+        self.study_designs.get(design_id)
+    }
 }
 
 impl ToxicologyStudies {
@@ -3861,6 +4583,22 @@ impl ToxicologyStudies {
             study_types: HashMap::new(),
             safety_assessments: HashMap::new(),
         }
+    }
+
+    pub fn add_study(&mut self, study: ToxicologyStudy) {
+        self.study_types.insert(study.study_id.clone(), study);
+    }
+
+    pub fn get_study(&self, study_id: &str) -> Option<&ToxicologyStudy> {
+        self.study_types.get(study_id)
+    }
+
+    pub fn add_safety_assessment(&mut self, assessment: SafetyAssessment) {
+        self.safety_assessments.insert(assessment.assessment_id.clone(), assessment);
+    }
+
+    pub fn get_safety_assessment(&self, assessment_id: &str) -> Option<&SafetyAssessment> {
+        self.safety_assessments.get(assessment_id)
     }
 }
 
@@ -3905,6 +4643,26 @@ impl HIPAACompliance {
     pub fn initialize(&mut self) -> Result<(), MedicalError> {
         Ok(())
     }
+
+    pub fn add_privacy_rule(&mut self, rule: PrivacyRule) {
+        self.privacy_rules.insert(rule.rule_id.clone(), rule);
+    }
+
+    pub fn get_privacy_rule(&self, rule_id: &str) -> Option<&PrivacyRule> {
+        self.privacy_rules.get(rule_id)
+    }
+
+    pub fn add_security_rule(&mut self, rule: SecurityRule) {
+        self.security_rules.insert(rule.rule_id.clone(), rule);
+    }
+
+    pub fn get_security_rule(&self, rule_id: &str) -> Option<&SecurityRule> {
+        self.security_rules.get(rule_id)
+    }
+
+    pub fn breach_notification(&self) -> &BreachNotification {
+        &self.breach_notification
+    }
 }
 
 impl BreachNotification {
@@ -3913,6 +4671,22 @@ impl BreachNotification {
             notification_rules: HashMap::new(),
             notification_templates: HashMap::new(),
         }
+    }
+
+    pub fn add_notification_rule(&mut self, rule: NotificationRule) {
+        self.notification_rules.insert(rule.rule_id.clone(), rule);
+    }
+
+    pub fn get_notification_rule(&self, rule_id: &str) -> Option<&NotificationRule> {
+        self.notification_rules.get(rule_id)
+    }
+
+    pub fn add_notification_template(&mut self, template: NotificationTemplate) {
+        self.notification_templates.insert(template.template_id.clone(), template);
+    }
+
+    pub fn get_notification_template(&self, template_id: &str) -> Option<&NotificationTemplate> {
+        self.notification_templates.get(template_id)
     }
 }
 
@@ -3928,6 +4702,30 @@ impl GDPRCompliance {
     pub fn initialize(&mut self) -> Result<(), MedicalError> {
         Ok(())
     }
+
+    pub fn add_data_protection_principle(&mut self, principle: DataProtectionPrinciple) {
+        self.data_protection_principles.insert(principle.principle_id.clone(), principle);
+    }
+
+    pub fn get_data_protection_principle(&self, principle_id: &str) -> Option<&DataProtectionPrinciple> {
+        self.data_protection_principles.get(principle_id)
+    }
+
+    pub fn add_data_subject_right(&mut self, right: DataSubjectRight) {
+        self.data_subject_rights.insert(right.right_id.clone(), right);
+    }
+
+    pub fn get_data_subject_right(&self, right_id: &str) -> Option<&DataSubjectRight> {
+        self.data_subject_rights.get(right_id)
+    }
+
+    pub fn add_data_processing_agreement(&mut self, agreement: DataProcessingAgreement) {
+        self.data_processing_agreements.insert(agreement.agreement_id.clone(), agreement);
+    }
+
+    pub fn get_data_processing_agreement(&self, agreement_id: &str) -> Option<&DataProcessingAgreement> {
+        self.data_processing_agreements.get(agreement_id)
+    }
 }
 
 impl ClinicalStandards {
@@ -3941,6 +4739,30 @@ impl ClinicalStandards {
 
     pub fn initialize(&mut self) -> Result<(), MedicalError> {
         Ok(())
+    }
+
+    pub fn add_clinical_guideline(&mut self, guideline: ClinicalGuideline) {
+        self.clinical_guidelines.insert(guideline.guideline_id.clone(), guideline);
+    }
+
+    pub fn get_clinical_guideline(&self, guideline_id: &str) -> Option<&ClinicalGuideline> {
+        self.clinical_guidelines.get(guideline_id)
+    }
+
+    pub fn add_quality_metric(&mut self, metric: QualityMetric) {
+        self.quality_metrics.insert(metric.metric_id.clone(), metric);
+    }
+
+    pub fn get_quality_metric(&self, metric_id: &str) -> Option<&QualityMetric> {
+        self.quality_metrics.get(metric_id)
+    }
+
+    pub fn add_best_practice(&mut self, practice: BestPractice) {
+        self.best_practices.insert(practice.practice_id.clone(), practice);
+    }
+
+    pub fn get_best_practice(&self, practice_id: &str) -> Option<&BestPractice> {
+        self.best_practices.get(practice_id)
     }
 }
 
@@ -3956,6 +4778,26 @@ impl AuditSystem {
     pub fn initialize(&mut self) -> Result<(), MedicalError> {
         Ok(())
     }
+
+    pub fn add_audit_trail(&mut self, trail: AuditTrail) {
+        self.audit_trails.insert(trail.trail_id.clone(), trail);
+    }
+
+    pub fn get_audit_trail(&self, trail_id: &str) -> Option<&AuditTrail> {
+        self.audit_trails.get(trail_id)
+    }
+
+    pub fn add_audit_report(&mut self, report: AuditReport) {
+        self.audit_reports.insert(report.report_id.clone(), report);
+    }
+
+    pub fn get_audit_report(&self, report_id: &str) -> Option<&AuditReport> {
+        self.audit_reports.get(report_id)
+    }
+
+    pub fn compliance_monitoring(&self) -> &ComplianceMonitoring {
+        &self.compliance_monitoring
+    }
 }
 
 impl ComplianceMonitoring {
@@ -3963,6 +4805,30 @@ impl ComplianceMonitoring {
         Self {
             monitoring_rules: HashMap::new(),
             compliance_metrics: HashMap::new(),
+        }
+    }
+
+    pub fn add_monitoring_rule(&mut self, rule: MonitoringRule) {
+        self.monitoring_rules.insert(rule.rule_id.clone(), rule);
+    }
+
+    pub fn get_monitoring_rule(&self, rule_id: &str) -> Option<&MonitoringRule> {
+        self.monitoring_rules.get(rule_id)
+    }
+
+    pub fn add_compliance_metric(&mut self, metric: ComplianceMetric) {
+        self.compliance_metrics.insert(metric.metric_id.clone(), metric);
+    }
+
+    pub fn get_compliance_metric(&self, metric_id: &str) -> Option<&ComplianceMetric> {
+        self.compliance_metrics.get(metric_id)
+    }
+
+    pub fn is_compliant(&self, metric_id: &str) -> bool {
+        if let Some(metric) = self.compliance_metrics.get(metric_id) {
+            metric.metric_value >= metric.metric_target
+        } else {
+            false
         }
     }
 }

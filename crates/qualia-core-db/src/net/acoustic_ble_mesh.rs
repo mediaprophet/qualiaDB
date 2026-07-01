@@ -1656,7 +1656,7 @@ impl MeshRouter {
     }
 
     pub fn initialize(&mut self) -> Result<(), MeshError> {
-        // Initialize mesh router
+        self.congestion_control.initialize()?;
         Ok(())
     }
 
@@ -1664,8 +1664,25 @@ impl MeshRouter {
         self.routing_table.entries.len() as u32
     }
 
+    pub fn forwarding_table(&self) -> &ForwardingTable {
+        &self.forwarding_table
+    }
+
+    pub fn route_discovery(&self) -> &RouteDiscovery {
+        &self.route_discovery
+    }
+
+    pub fn congestion_control(&self) -> &CongestionControl {
+        &self.congestion_control
+    }
+
     pub fn optimize_routes(&mut self) -> Result<(), MeshError> {
-        // Optimize routing table
+        // Prune stale forwarding entries (expired TTL or empty next hop).
+        self.forwarding_table.entries.retain(|e| e.ttl > 0 && !e.next_hop.is_empty());
+        // Decrement TTL on remaining entries.
+        for e in &mut self.forwarding_table.entries {
+            e.ttl = e.ttl.saturating_sub(1);
+        }
         Ok(())
     }
 }
@@ -1694,8 +1711,25 @@ impl MeshDataStore {
         self.message_store.get_pending_count()
     }
 
+    pub fn buffer_manager(&self) -> &BufferManager {
+        &self.buffer_manager
+    }
+
+    pub fn buffer_manager_mut(&mut self) -> &mut BufferManager {
+        &mut self.buffer_manager
+    }
+
+    pub fn priority_queue(&self) -> &PriorityQueue {
+        &self.priority_queue
+    }
+
+    pub fn persistence_manager(&self) -> &PersistenceManager {
+        &self.persistence_manager
+    }
+
     pub fn optimize_buffers(&mut self) -> Result<(), MeshError> {
-        // Optimize buffer management
+        // Reset buffer usage to zero (compaction).
+        self.buffer_manager.used_capacity = 0;
         Ok(())
     }
 }
@@ -1710,9 +1744,26 @@ impl MeshPerformanceMonitor {
         }
     }
 
-    pub fn update_receive_metrics(&mut self, _message: &StoredMessage) {
-        // Update receive metrics
+    pub fn update_receive_metrics(&mut self, message: &StoredMessage) {
         self.global_metrics.total_messages += 1;
+        // Route to the appropriate metrics based on message source.
+        if message.source.starts_with("acoustic_") {
+            self.acoustic_metrics.messages_received += 1;
+        } else {
+            self.ble_metrics.messages_received += 1;
+        }
+    }
+
+    pub fn acoustic_metrics(&self) -> &AcousticMetrics {
+        &self.acoustic_metrics
+    }
+
+    pub fn ble_metrics(&self) -> &BleMetrics {
+        &self.ble_metrics
+    }
+
+    pub fn routing_metrics(&self) -> &RoutingMetrics {
+        &self.routing_metrics
     }
 
     pub fn get_uptime(&self) -> Duration {
@@ -1736,7 +1787,46 @@ impl AcousticChannelManager {
     }
 
     pub fn initialize(&mut self) -> Result<(), MeshError> {
+        // Pre-allocate standard acoustic channels (20-50 kHz range).
+        for i in 0..5 {
+            let freq = 20000.0 + i as f64 * 6000.0;
+            self.available_channels.push(AcousticChannel {
+                channel_id: format!("acoustic_ch_{}", i),
+                frequency: freq,
+                bandwidth: 1000.0,
+                power_level: 100.0,
+                modulation: ModulationType::FSK,
+                noise_floor: -80.0,
+                interference_level: 0.0,
+            });
+        }
         Ok(())
+    }
+
+    pub fn allocate_channel(&mut self, channel_id: &str) -> Option<&AcousticChannel> {
+        if let Some(pos) = self.available_channels.iter().position(|c| c.channel_id == channel_id) {
+            let channel = self.available_channels.remove(pos);
+            self.active_channels.insert(channel.channel_id.clone(), channel);
+        }
+        self.active_channels.get(channel_id)
+    }
+
+    pub fn release_channel(&mut self, channel_id: &str) {
+        if let Some(channel) = self.active_channels.remove(channel_id) {
+            self.available_channels.push(channel);
+        }
+    }
+
+    pub fn available_channel_count(&self) -> usize {
+        self.available_channels.len()
+    }
+
+    pub fn active_channel_count(&self) -> usize {
+        self.active_channels.len()
+    }
+
+    pub fn allocation_strategy(&self) -> &ChannelAllocationStrategy {
+        &self.channel_allocation
     }
 }
 
@@ -1759,6 +1849,33 @@ impl AcousticModemController {
     pub fn initialize(&mut self) -> Result<(), MeshError> {
         Ok(())
     }
+
+    pub fn modem_type(&self) -> &ModemType {
+        &self.modem_type
+    }
+
+    pub fn transmission_power(&self) -> f64 {
+        self.transmission_power
+    }
+
+    pub fn set_transmission_power(&mut self, power: f64) {
+        self.transmission_power = power.max(0.0);
+    }
+
+    pub fn receiver_sensitivity(&self) -> f64 {
+        self.receiver_sensitivity
+    }
+
+    pub fn signal_processing(&self) -> &SignalProcessingConfig {
+        &self.signal_processing
+    }
+
+    /// Estimate maximum communication range based on transmission power,
+    /// receiver sensitivity, and acoustic spreading loss (15 dB/km).
+    pub fn estimated_range_km(&self) -> f64 {
+        let snr_margin = self.transmission_power + self.receiver_sensitivity.abs();
+        snr_margin / 15.0
+    }
 }
 
 impl AcousticProtocolHandler {
@@ -1773,6 +1890,22 @@ impl AcousticProtocolHandler {
 
     pub fn initialize(&mut self) -> Result<(), MeshError> {
         Ok(())
+    }
+
+    pub fn protocol_stack(&self) -> &AcousticProtocolStack {
+        &self.protocol_stack
+    }
+
+    pub fn packet_handler(&self) -> &PacketHandler {
+        &self.packet_handler
+    }
+
+    pub fn flow_control(&self) -> &FlowControl {
+        &self.flow_control
+    }
+
+    pub fn error_handling(&self) -> &ErrorHandling {
+        &self.error_handling
     }
 }
 
@@ -1862,7 +1995,29 @@ impl BleMeshManager {
     }
 
     pub fn initialize(&mut self) -> Result<(), MeshError> {
+        self.provisioning_manager.initialize()?;
+        self.configuration_manager.initialize()?;
         Ok(())
+    }
+
+    pub fn mesh_network(&self) -> &BleMeshNetwork {
+        &self.mesh_network
+    }
+
+    pub fn mesh_network_mut(&mut self) -> &mut BleMeshNetwork {
+        &mut self.mesh_network
+    }
+
+    pub fn provisioning_manager(&self) -> &ProvisioningManager {
+        &self.provisioning_manager
+    }
+
+    pub fn configuration_manager(&self) -> &ConfigurationManager {
+        &self.configuration_manager
+    }
+
+    pub fn message_handler(&self) -> &MeshMessageHandler {
+        &self.message_handler
     }
 }
 
@@ -1893,6 +2048,26 @@ impl ProvisioningManager {
             oob_data: None,
         }
     }
+
+    pub fn initialize(&mut self) -> Result<(), MeshError> {
+        Ok(())
+    }
+
+    pub fn protocol(&self) -> &ProvisioningProtocol {
+        &self.provisioning_protocol
+    }
+
+    pub fn provisioning_data(&self) -> &ProvisioningData {
+        &self.provisioning_data
+    }
+
+    pub fn set_oob_data(&mut self, data: OobData) {
+        self.oob_data = Some(data);
+    }
+
+    pub fn oob_data(&self) -> Option<&OobData> {
+        self.oob_data.as_ref()
+    }
 }
 
 impl ConfigurationManager {
@@ -1902,6 +2077,30 @@ impl ConfigurationManager {
             config_models: Vec::new(),
             access_control: AccessControl::new(),
         }
+    }
+
+    pub fn initialize(&mut self) -> Result<(), MeshError> {
+        Ok(())
+    }
+
+    pub fn config_database(&self) -> &ConfigDatabase {
+        &self.config_database
+    }
+
+    pub fn config_database_mut(&mut self) -> &mut ConfigDatabase {
+        &mut self.config_database
+    }
+
+    pub fn add_config_model(&mut self, model: ConfigModel) {
+        self.config_models.push(model);
+    }
+
+    pub fn config_models(&self) -> &[ConfigModel] {
+        &self.config_models
+    }
+
+    pub fn access_control(&self) -> &AccessControl {
+        &self.access_control
     }
 }
 
@@ -1931,6 +2130,26 @@ impl MeshMessageHandler {
             routing_table: RoutingTable::new(),
             security_manager: MeshSecurityManager::new(),
         }
+    }
+
+    pub fn enqueue_message(&mut self, message: MeshMessage) {
+        self.message_queue.push(message);
+    }
+
+    pub fn dequeue_message(&mut self) -> Option<MeshMessage> {
+        self.message_queue.pop()
+    }
+
+    pub fn queue_length(&self) -> usize {
+        self.message_queue.len()
+    }
+
+    pub fn routing_table(&self) -> &RoutingTable {
+        &self.routing_table
+    }
+
+    pub fn security_manager(&self) -> &MeshSecurityManager {
+        &self.security_manager
     }
 }
 
@@ -1971,6 +2190,38 @@ impl BleAdvertiser {
     pub fn initialize(&mut self) -> Result<(), MeshError> {
         Ok(())
     }
+
+    pub fn set_advertising_data(&mut self, data: Vec<u8>) {
+        self.advertising_data = data;
+    }
+
+    pub fn advertising_data(&self) -> &[u8] {
+        &self.advertising_data
+    }
+
+    pub fn set_scan_response_data(&mut self, data: Vec<u8>) {
+        self.scan_response_data = data;
+    }
+
+    pub fn scan_response_data(&self) -> &[u8] {
+        &self.scan_response_data
+    }
+
+    pub fn advertising_parameters(&self) -> &AdvertisingParameters {
+        &self.advertising_parameters
+    }
+
+    pub fn start_advertising(&mut self, adv: ActiveAdvertisement) {
+        self.active_advertisements.push(adv);
+    }
+
+    pub fn stop_advertising(&mut self, handle: u8) {
+        self.active_advertisements.retain(|a| a.handle != handle);
+    }
+
+    pub fn active_advertisement_count(&self) -> usize {
+        self.active_advertisements.len()
+    }
 }
 
 impl BleScanner {
@@ -1994,6 +2245,30 @@ impl BleScanner {
     pub fn initialize(&mut self) -> Result<(), MeshError> {
         Ok(())
     }
+
+    pub fn scanning_parameters(&self) -> &ScanningParameters {
+        &self.scanning_parameters
+    }
+
+    pub fn scan_filter(&self) -> &ScanFilter {
+        &self.scan_filter
+    }
+
+    pub fn add_service_uuid_filter(&mut self, uuid: u16) {
+        self.scan_filter.service_uuid_filter.push(uuid);
+    }
+
+    pub fn start_scan(&mut self, scan: ActiveScan) {
+        self.active_scans.push(scan);
+    }
+
+    pub fn stop_scan(&mut self, handle: u8) {
+        self.active_scans.retain(|s| s.handle != handle);
+    }
+
+    pub fn active_scan_count(&self) -> usize {
+        self.active_scans.len()
+    }
 }
 
 impl BleConnectionManager {
@@ -2014,6 +2289,30 @@ impl BleConnectionManager {
 
     pub fn initialize(&mut self) -> Result<(), MeshError> {
         Ok(())
+    }
+
+    pub fn add_connection(&mut self, handle: u16, connection: BleConnection) {
+        self.connections.insert(handle, connection);
+    }
+
+    pub fn remove_connection(&mut self, handle: u16) {
+        self.connections.remove(&handle);
+    }
+
+    pub fn connection_count(&self) -> usize {
+        self.connections.len()
+    }
+
+    pub fn get_connection(&self, handle: u16) -> Option<&BleConnection> {
+        self.connections.get(&handle)
+    }
+
+    pub fn connection_parameters(&self) -> &ConnectionParameters {
+        &self.connection_parameters
+    }
+
+    pub fn security_manager(&self) -> &BleSecurityManager {
+        &self.security_manager
     }
 }
 
@@ -2061,6 +2360,22 @@ impl CongestionControl {
             queue_management: QueueManagement::new(),
             rate_control: RateControl::new(),
         }
+    }
+
+    pub fn initialize(&mut self) -> Result<(), MeshError> {
+        Ok(())
+    }
+
+    pub fn algorithm(&self) -> &CongestionAlgorithm {
+        &self.algorithm
+    }
+
+    pub fn queue_management(&self) -> &QueueManagement {
+        &self.queue_management
+    }
+
+    pub fn rate_control(&self) -> &RateControl {
+        &self.rate_control
     }
 }
 

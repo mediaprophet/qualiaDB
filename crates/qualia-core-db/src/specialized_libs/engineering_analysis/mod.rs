@@ -2262,6 +2262,26 @@ impl StructuralAnalyzer {
     pub fn get_performance_metrics(&self) -> EngineeringPerformanceMetrics {
         EngineeringPerformanceMetrics::new()
     }
+
+    /// Borrow the buckling-analysis sub-analyzer.
+    pub fn buckling_analysis(&self) -> &BucklingAnalysis {
+        &self.buckling_analysis
+    }
+
+    /// Mutably borrow the buckling-analysis sub-analyzer.
+    pub fn buckling_analysis_mut(&mut self) -> &mut BucklingAnalysis {
+        &mut self.buckling_analysis
+    }
+
+    /// Borrow the vibration-analysis sub-analyzer.
+    pub fn vibration_analysis(&self) -> &VibrationAnalysis {
+        &self.vibration_analysis
+    }
+
+    /// Mutably borrow the vibration-analysis sub-analyzer.
+    pub fn vibration_analysis_mut(&mut self) -> &mut VibrationAnalysis {
+        &mut self.vibration_analysis
+    }
 }
 
 impl FiniteElementSolver {
@@ -2392,6 +2412,16 @@ impl MeshGenerator {
         names.sort();
         names
     }
+
+    /// Borrow the mesh-quality sub-component.
+    pub fn mesh_quality(&self) -> &MeshQuality {
+        &self.mesh_quality
+    }
+
+    /// Mutably borrow the mesh-quality sub-component.
+    pub fn mesh_quality_mut(&mut self) -> &mut MeshQuality {
+        &mut self.mesh_quality
+    }
 }
 
 impl MeshQuality {
@@ -2400,6 +2430,29 @@ impl MeshQuality {
             quality_metrics: HashMap::new(),
             quality_assessment: QualityAssessment::new(),
         }
+    }
+
+    /// Register a quality metric under `metric.metric_name`.
+    pub fn add_metric(&mut self, metric: QualityMetric) {
+        self.quality_metrics
+            .insert(metric.metric_name.clone(), metric);
+    }
+
+    /// Look up a registered quality metric by name.
+    pub fn get_metric(&self, name: &str) -> Option<&QualityMetric> {
+        self.quality_metrics.get(name)
+    }
+
+    /// List the names of all registered quality metrics.
+    pub fn list_metrics(&self) -> Vec<String> {
+        let mut names: Vec<String> = self.quality_metrics.keys().cloned().collect();
+        names.sort();
+        names
+    }
+
+    /// Borrow the quality-assessment summary.
+    pub fn quality_assessment(&self) -> &QualityAssessment {
+        &self.quality_assessment
     }
 }
 
@@ -2572,6 +2625,43 @@ impl SolverEngine {
     pub fn initialize(&mut self) -> Result<(), EngineeringError> {
         Ok(())
     }
+
+    /// Register a solver under `solver.solver_id`.
+    pub fn add_solver(&mut self, solver: Solver) {
+        self.solvers.insert(solver.solver_id.clone(), solver);
+    }
+
+    /// Look up a registered solver by id.
+    pub fn get_solver(&self, id: &str) -> Option<&Solver> {
+        self.solvers.get(id)
+    }
+
+    /// List the ids of all registered solvers.
+    pub fn list_solvers(&self) -> Vec<String> {
+        let mut ids: Vec<String> = self.solvers.keys().cloned().collect();
+        ids.sort();
+        ids
+    }
+
+    /// Borrow the solver parameters.
+    pub fn solver_parameters(&self) -> &SolverParameters {
+        &self.solver_parameters
+    }
+
+    /// Mutably borrow the solver parameters.
+    pub fn solver_parameters_mut(&mut self) -> &mut SolverParameters {
+        &mut self.solver_parameters
+    }
+
+    /// Borrow the convergence criteria.
+    pub fn convergence_criteria(&self) -> &ConvergenceCriteria {
+        &self.convergence_criteria
+    }
+
+    /// Mutably borrow the convergence criteria.
+    pub fn convergence_criteria_mut(&mut self) -> &mut ConvergenceCriteria {
+        &mut self.convergence_criteria
+    }
 }
 
 impl SolverParameters {
@@ -2608,6 +2698,24 @@ impl PostProcessor {
         self.report_generator.initialize()?;
         Ok(())
     }
+
+    /// Register a result extractor under `extractor.extractor_id`.
+    pub fn add_extractor(&mut self, extractor: ResultExtractor) {
+        self.result_extractors
+            .insert(extractor.extractor_id.clone(), extractor);
+    }
+
+    /// Look up a registered result extractor by id.
+    pub fn get_extractor(&self, id: &str) -> Option<&ResultExtractor> {
+        self.result_extractors.get(id)
+    }
+
+    /// List the ids of all registered result extractors.
+    pub fn list_extractors(&self) -> Vec<String> {
+        let mut ids: Vec<String> = self.result_extractors.keys().cloned().collect();
+        ids.sort();
+        ids
+    }
 }
 
 impl VisualizationEngine {
@@ -2620,6 +2728,33 @@ impl VisualizationEngine {
 
     pub fn initialize(&mut self) -> Result<(), EngineeringError> {
         Ok(())
+    }
+
+    /// Register a visualization type under `name`.
+    pub fn add_visualization_type(&mut self, name: impl Into<String>, vtype: VisualizationType) {
+        self.visualization_types.insert(name.into(), vtype);
+    }
+
+    /// Look up a registered visualization type by name.
+    pub fn get_visualization_type(&self, name: &str) -> Option<&VisualizationType> {
+        self.visualization_types.get(name)
+    }
+
+    /// List the names of all registered visualization types.
+    pub fn list_visualization_types(&self) -> Vec<String> {
+        let mut names: Vec<String> = self.visualization_types.keys().cloned().collect();
+        names.sort();
+        names
+    }
+
+    /// Borrow the rendering engine.
+    pub fn rendering_engine(&self) -> &RenderingEngine {
+        &self.rendering_engine
+    }
+
+    /// Mutably borrow the rendering engine.
+    pub fn rendering_engine_mut(&mut self) -> &mut RenderingEngine {
+        &mut self.rendering_engine
     }
 }
 
@@ -2654,6 +2789,36 @@ impl ReportGenerator {
     pub fn initialize(&mut self) -> Result<(), EngineeringError> {
         Ok(())
     }
+
+    /// Register a report template under `template.template_id`.
+    pub fn add_template(&mut self, template: ReportTemplate) {
+        self.report_templates
+            .insert(template.template_id.clone(), template);
+    }
+
+    /// Look up a registered report template by id.
+    pub fn get_template(&self, id: &str) -> Option<&ReportTemplate> {
+        self.report_templates.get(id)
+    }
+
+    /// List the ids of all registered report templates.
+    pub fn list_templates(&self) -> Vec<String> {
+        let mut ids: Vec<String> = self.report_templates.keys().cloned().collect();
+        ids.sort();
+        ids
+    }
+
+    /// Borrow the supported export formats.
+    pub fn export_formats(&self) -> &[ExportFormat] {
+        &self.export_formats
+    }
+
+    /// Add a supported export format.
+    pub fn add_export_format(&mut self, format: ExportFormat) {
+        if !self.export_formats.contains(&format) {
+            self.export_formats.push(format);
+        }
+    }
 }
 
 impl StructuralDynamics {
@@ -2668,6 +2833,36 @@ impl StructuralDynamics {
     pub fn initialize(&mut self) -> Result<(), EngineeringError> {
         Ok(())
     }
+
+    /// Borrow the modal-analysis sub-component.
+    pub fn modal_analysis(&self) -> &ModalAnalysis {
+        &self.modal_analysis
+    }
+
+    /// Mutably borrow the modal-analysis sub-component.
+    pub fn modal_analysis_mut(&mut self) -> &mut ModalAnalysis {
+        &mut self.modal_analysis
+    }
+
+    /// Borrow the transient-analysis sub-component.
+    pub fn transient_analysis(&self) -> &TransientAnalysis {
+        &self.transient_analysis
+    }
+
+    /// Mutably borrow the transient-analysis sub-component.
+    pub fn transient_analysis_mut(&mut self) -> &mut TransientAnalysis {
+        &mut self.transient_analysis
+    }
+
+    /// Borrow the harmonic-analysis sub-component.
+    pub fn harmonic_analysis(&self) -> &HarmonicAnalysis {
+        &self.harmonic_analysis
+    }
+
+    /// Mutably borrow the harmonic-analysis sub-component.
+    pub fn harmonic_analysis_mut(&mut self) -> &mut HarmonicAnalysis {
+        &mut self.harmonic_analysis
+    }
 }
 
 impl ModalAnalysis {
@@ -2677,6 +2872,36 @@ impl ModalAnalysis {
             mode_shapes: Vec::new(),
             modal_parameters: ModalParameters::new(),
         }
+    }
+
+    /// Borrow the eigenvalue solver configuration.
+    pub fn eigenvalue_solver(&self) -> &EigenvalueSolver {
+        &self.eigenvalue_solver
+    }
+
+    /// Mutably borrow the eigenvalue solver configuration.
+    pub fn eigenvalue_solver_mut(&mut self) -> &mut EigenvalueSolver {
+        &mut self.eigenvalue_solver
+    }
+
+    /// Append a computed mode shape to the results.
+    pub fn add_mode_shape(&mut self, mode: ModeShape) {
+        self.mode_shapes.push(mode);
+    }
+
+    /// Borrow the computed mode shapes.
+    pub fn mode_shapes(&self) -> &[ModeShape] {
+        &self.mode_shapes
+    }
+
+    /// Borrow the modal parameters.
+    pub fn modal_parameters(&self) -> &ModalParameters {
+        &self.modal_parameters
+    }
+
+    /// Mutably borrow the modal parameters.
+    pub fn modal_parameters_mut(&mut self) -> &mut ModalParameters {
+        &mut self.modal_parameters
     }
 }
 
@@ -2707,6 +2932,36 @@ impl TransientAnalysis {
             loading_history: LoadingHistory::new(),
             response_calculation: ResponseCalculation::new(),
         }
+    }
+
+    /// Borrow the time-integration configuration.
+    pub fn time_integration(&self) -> &TimeIntegration {
+        &self.time_integration
+    }
+
+    /// Mutably borrow the time-integration configuration.
+    pub fn time_integration_mut(&mut self) -> &mut TimeIntegration {
+        &mut self.time_integration
+    }
+
+    /// Borrow the loading history.
+    pub fn loading_history(&self) -> &LoadingHistory {
+        &self.loading_history
+    }
+
+    /// Mutably borrow the loading history.
+    pub fn loading_history_mut(&mut self) -> &mut LoadingHistory {
+        &mut self.loading_history
+    }
+
+    /// Borrow the response-calculation configuration.
+    pub fn response_calculation(&self) -> &ResponseCalculation {
+        &self.response_calculation
+    }
+
+    /// Mutably borrow the response-calculation configuration.
+    pub fn response_calculation_mut(&mut self) -> &mut ResponseCalculation {
+        &mut self.response_calculation
     }
 }
 
@@ -2746,6 +3001,26 @@ impl HarmonicAnalysis {
             resonance_detection: ResonanceDetection::new(),
         }
     }
+
+    /// Borrow the frequency-response data.
+    pub fn frequency_response(&self) -> &FrequencyResponse {
+        &self.frequency_response
+    }
+
+    /// Mutably borrow the frequency-response data.
+    pub fn frequency_response_mut(&mut self) -> &mut FrequencyResponse {
+        &mut self.frequency_response
+    }
+
+    /// Borrow the resonance-detection data.
+    pub fn resonance_detection(&self) -> &ResonanceDetection {
+        &self.resonance_detection
+    }
+
+    /// Mutably borrow the resonance-detection data.
+    pub fn resonance_detection_mut(&mut self) -> &mut ResonanceDetection {
+        &mut self.resonance_detection
+    }
 }
 
 impl FrequencyResponse {
@@ -2779,6 +3054,26 @@ impl BucklingAnalysis {
     pub fn initialize(&mut self) -> Result<(), EngineeringError> {
         Ok(())
     }
+
+    /// Borrow the eigenvalue-buckling sub-component.
+    pub fn eigenvalue_buckling(&self) -> &EigenvalueBuckling {
+        &self.eigenvalue_buckling
+    }
+
+    /// Mutably borrow the eigenvalue-buckling sub-component.
+    pub fn eigenvalue_buckling_mut(&mut self) -> &mut EigenvalueBuckling {
+        &mut self.eigenvalue_buckling
+    }
+
+    /// Borrow the nonlinear-buckling sub-component.
+    pub fn nonlinear_buckling(&self) -> &NonlinearBuckling {
+        &self.nonlinear_buckling
+    }
+
+    /// Mutably borrow the nonlinear-buckling sub-component.
+    pub fn nonlinear_buckling_mut(&mut self) -> &mut NonlinearBuckling {
+        &mut self.nonlinear_buckling
+    }
 }
 
 impl EigenvalueBuckling {
@@ -2810,6 +3105,36 @@ impl VibrationAnalysis {
 
     pub fn initialize(&mut self) -> Result<(), EngineeringError> {
         Ok(())
+    }
+
+    /// Borrow the free-vibration sub-component.
+    pub fn free_vibration(&self) -> &FreeVibration {
+        &self.free_vibration
+    }
+
+    /// Mutably borrow the free-vibration sub-component.
+    pub fn free_vibration_mut(&mut self) -> &mut FreeVibration {
+        &mut self.free_vibration
+    }
+
+    /// Borrow the forced-vibration sub-component.
+    pub fn forced_vibration(&self) -> &ForcedVibration {
+        &self.forced_vibration
+    }
+
+    /// Mutably borrow the forced-vibration sub-component.
+    pub fn forced_vibration_mut(&mut self) -> &mut ForcedVibration {
+        &mut self.forced_vibration
+    }
+
+    /// Borrow the random-vibration sub-component.
+    pub fn random_vibration(&self) -> &RandomVibration {
+        &self.random_vibration
+    }
+
+    /// Mutably borrow the random-vibration sub-component.
+    pub fn random_vibration_mut(&mut self) -> &mut RandomVibration {
+        &mut self.random_vibration
     }
 }
 
@@ -2999,6 +3324,36 @@ impl Kinematics {
     pub fn initialize(&mut self) -> Result<(), EngineeringError> {
         Ok(())
     }
+
+    /// Borrow the position-analysis sub-component.
+    pub fn position_analysis(&self) -> &PositionAnalysis {
+        &self.position_analysis
+    }
+
+    /// Mutably borrow the position-analysis sub-component.
+    pub fn position_analysis_mut(&mut self) -> &mut PositionAnalysis {
+        &mut self.position_analysis
+    }
+
+    /// Borrow the velocity-analysis sub-component.
+    pub fn velocity_analysis(&self) -> &VelocityAnalysis {
+        &self.velocity_analysis
+    }
+
+    /// Mutably borrow the velocity-analysis sub-component.
+    pub fn velocity_analysis_mut(&mut self) -> &mut VelocityAnalysis {
+        &mut self.velocity_analysis
+    }
+
+    /// Borrow the acceleration-analysis sub-component.
+    pub fn acceleration_analysis(&self) -> &AccelerationAnalysis {
+        &self.acceleration_analysis
+    }
+
+    /// Mutably borrow the acceleration-analysis sub-component.
+    pub fn acceleration_analysis_mut(&mut self) -> &mut AccelerationAnalysis {
+        &mut self.acceleration_analysis
+    }
 }
 
 impl PositionAnalysis {
@@ -3042,6 +3397,36 @@ impl Dynamics {
 
     pub fn initialize(&mut self) -> Result<(), EngineeringError> {
         Ok(())
+    }
+
+    /// Borrow the force-analysis sub-component.
+    pub fn force_analysis(&self) -> &ForceAnalysis {
+        &self.force_analysis
+    }
+
+    /// Mutably borrow the force-analysis sub-component.
+    pub fn force_analysis_mut(&mut self) -> &mut ForceAnalysis {
+        &mut self.force_analysis
+    }
+
+    /// Borrow the inertia-analysis sub-component.
+    pub fn inertia_analysis(&self) -> &InertiaAnalysis {
+        &self.inertia_analysis
+    }
+
+    /// Mutably borrow the inertia-analysis sub-component.
+    pub fn inertia_analysis_mut(&mut self) -> &mut InertiaAnalysis {
+        &mut self.inertia_analysis
+    }
+
+    /// Borrow the energy-analysis sub-component.
+    pub fn energy_analysis(&self) -> &EnergyAnalysis {
+        &self.energy_analysis
+    }
+
+    /// Mutably borrow the energy-analysis sub-component.
+    pub fn energy_analysis_mut(&mut self) -> &mut EnergyAnalysis {
+        &mut self.energy_analysis
     }
 }
 
@@ -3087,6 +3472,36 @@ impl MechanismAnalysis {
 
     pub fn initialize(&mut self) -> Result<(), EngineeringError> {
         Ok(())
+    }
+
+    /// Borrow the mechanism-synthesis sub-component.
+    pub fn synthesis(&self) -> &MechanismSynthesis {
+        &self.synthesis
+    }
+
+    /// Mutably borrow the mechanism-synthesis sub-component.
+    pub fn synthesis_mut(&mut self) -> &mut MechanismSynthesis {
+        &mut self.synthesis
+    }
+
+    /// Borrow the mechanism-analysis-engine sub-component.
+    pub fn analysis(&self) -> &MechanismAnalysisEngine {
+        &self.analysis
+    }
+
+    /// Mutably borrow the mechanism-analysis-engine sub-component.
+    pub fn analysis_mut(&mut self) -> &mut MechanismAnalysisEngine {
+        &mut self.analysis
+    }
+
+    /// Borrow the mechanism-optimization sub-component.
+    pub fn optimization(&self) -> &MechanismOptimization {
+        &self.optimization
+    }
+
+    /// Mutably borrow the mechanism-optimization sub-component.
+    pub fn optimization_mut(&mut self) -> &mut MechanismOptimization {
+        &mut self.optimization
     }
 }
 
@@ -3140,6 +3555,36 @@ impl MachineDesign {
 
     pub fn initialize(&mut self) -> Result<(), EngineeringError> {
         Ok(())
+    }
+
+    /// Borrow the component-design sub-component.
+    pub fn component_design(&self) -> &ComponentDesign {
+        &self.component_design
+    }
+
+    /// Mutably borrow the component-design sub-component.
+    pub fn component_design_mut(&mut self) -> &mut ComponentDesign {
+        &mut self.component_design
+    }
+
+    /// Borrow the assembly-design sub-component.
+    pub fn assembly_design(&self) -> &AssemblyDesign {
+        &self.assembly_design
+    }
+
+    /// Mutably borrow the assembly-design sub-component.
+    pub fn assembly_design_mut(&mut self) -> &mut AssemblyDesign {
+        &mut self.assembly_design
+    }
+
+    /// Borrow the tolerance-analysis sub-component.
+    pub fn tolerance_analysis(&self) -> &ToleranceAnalysis {
+        &self.tolerance_analysis
+    }
+
+    /// Mutably borrow the tolerance-analysis sub-component.
+    pub fn tolerance_analysis_mut(&mut self) -> &mut ToleranceAnalysis {
+        &mut self.tolerance_analysis
     }
 }
 
@@ -3282,6 +3727,36 @@ impl ThermalAnalyzer {
         // thermal is a larger subsystem and is flagged, not faked.)
         thermal_conduction::analyze_conduction(model, analysis_type)
     }
+
+    /// Borrow the heat-transfer sub-component.
+    pub fn heat_transfer(&self) -> &HeatTransfer {
+        &self.heat_transfer
+    }
+
+    /// Mutably borrow the heat-transfer sub-component.
+    pub fn heat_transfer_mut(&mut self) -> &mut HeatTransfer {
+        &mut self.heat_transfer
+    }
+
+    /// Borrow the thermal-stress sub-component.
+    pub fn thermal_stress(&self) -> &ThermalStress {
+        &self.thermal_stress
+    }
+
+    /// Mutably borrow the thermal-stress sub-component.
+    pub fn thermal_stress_mut(&mut self) -> &mut ThermalStress {
+        &mut self.thermal_stress
+    }
+
+    /// Borrow the thermal-analysis sub-component.
+    pub fn thermal_analysis(&self) -> &ThermalAnalysis {
+        &self.thermal_analysis
+    }
+
+    /// Mutably borrow the thermal-analysis sub-component.
+    pub fn thermal_analysis_mut(&mut self) -> &mut ThermalAnalysis {
+        &mut self.thermal_analysis
+    }
 }
 
 impl HeatTransfer {
@@ -3291,6 +3766,36 @@ impl HeatTransfer {
             convection: Convection::new(),
             radiation: Radiation::new(),
         }
+    }
+
+    /// Borrow the conduction sub-component.
+    pub fn conduction(&self) -> &Conduction {
+        &self.conduction
+    }
+
+    /// Mutably borrow the conduction sub-component.
+    pub fn conduction_mut(&mut self) -> &mut Conduction {
+        &mut self.conduction
+    }
+
+    /// Borrow the convection sub-component.
+    pub fn convection(&self) -> &Convection {
+        &self.convection
+    }
+
+    /// Mutably borrow the convection sub-component.
+    pub fn convection_mut(&mut self) -> &mut Convection {
+        &mut self.convection
+    }
+
+    /// Borrow the radiation sub-component.
+    pub fn radiation(&self) -> &Radiation {
+        &self.radiation
+    }
+
+    /// Mutably borrow the radiation sub-component.
+    pub fn radiation_mut(&mut self) -> &mut Radiation {
+        &mut self.radiation
     }
 }
 
@@ -3375,6 +3880,26 @@ impl FluidAnalyzer {
         Ok(())
     }
 
+    /// Borrow the pipe-flow sub-component.
+    pub fn pipe_flow(&self) -> &PipeFlow {
+        &self.pipe_flow
+    }
+
+    /// Mutably borrow the pipe-flow sub-component.
+    pub fn pipe_flow_mut(&mut self) -> &mut PipeFlow {
+        &mut self.pipe_flow
+    }
+
+    /// Borrow the open-channel-flow sub-component.
+    pub fn open_channel_flow(&self) -> &OpenChannelFlow {
+        &self.open_channel_flow
+    }
+
+    /// Mutably borrow the open-channel-flow sub-component.
+    pub fn open_channel_flow_mut(&mut self) -> &mut OpenChannelFlow {
+        &mut self.open_channel_flow
+    }
+
     pub fn validate_model(&self, model: &EngineeringModel) -> Result<(), EngineeringError> {
         if model.geometry.dimensions.is_empty() {
             return Err(EngineeringError::ValidationError(
@@ -3413,6 +3938,36 @@ impl ComputationalFluidDynamics {
 
     pub fn initialize(&mut self) -> Result<(), EngineeringError> {
         Ok(())
+    }
+
+    /// Borrow the Navier–Stokes solver configuration.
+    pub fn navier_stokes_solver(&self) -> &NavierStokesSolver {
+        &self.navier_stokes_solver
+    }
+
+    /// Mutably borrow the Navier–Stokes solver configuration.
+    pub fn navier_stokes_solver_mut(&mut self) -> &mut NavierStokesSolver {
+        &mut self.navier_stokes_solver
+    }
+
+    /// Borrow the turbulence-modeling configuration.
+    pub fn turbulence_modeling(&self) -> &TurbulenceModeling {
+        &self.turbulence_modeling
+    }
+
+    /// Mutably borrow the turbulence-modeling configuration.
+    pub fn turbulence_modeling_mut(&mut self) -> &mut TurbulenceModeling {
+        &mut self.turbulence_modeling
+    }
+
+    /// Borrow the CFD mesh generator.
+    pub fn mesh_generator(&self) -> &CFDMeshGenerator {
+        &self.mesh_generator
+    }
+
+    /// Mutably borrow the CFD mesh generator.
+    pub fn mesh_generator_mut(&mut self) -> &mut CFDMeshGenerator {
+        &mut self.mesh_generator
     }
 }
 
@@ -3935,6 +4490,26 @@ impl ReliabilityMethods {
     pub fn initialize(&mut self) -> Result<(), EngineeringError> {
         Ok(())
     }
+
+    /// Borrow the probability-analysis sub-component.
+    pub fn probability_analysis(&self) -> &ProbabilityAnalysis {
+        &self.probability_analysis
+    }
+
+    /// Mutably borrow the probability-analysis sub-component.
+    pub fn probability_analysis_mut(&mut self) -> &mut ProbabilityAnalysis {
+        &mut self.probability_analysis
+    }
+
+    /// Borrow the statistical-analysis sub-component.
+    pub fn statistical_analysis(&self) -> &StatisticalAnalysis {
+        &self.statistical_analysis
+    }
+
+    /// Mutably borrow the statistical-analysis sub-component.
+    pub fn statistical_analysis_mut(&mut self) -> &mut StatisticalAnalysis {
+        &mut self.statistical_analysis
+    }
 }
 
 impl ProbabilityAnalysis {
@@ -4031,6 +4606,36 @@ impl FailureAnalysis {
     pub fn initialize(&mut self) -> Result<(), EngineeringError> {
         Ok(())
     }
+
+    /// Borrow the failure-modes sub-component.
+    pub fn failure_modes(&self) -> &FailureModes {
+        &self.failure_modes
+    }
+
+    /// Mutably borrow the failure-modes sub-component.
+    pub fn failure_modes_mut(&mut self) -> &mut FailureModes {
+        &mut self.failure_modes
+    }
+
+    /// Borrow the fault-tree sub-component.
+    pub fn fault_tree(&self) -> &FaultTree {
+        &self.fault_tree
+    }
+
+    /// Mutably borrow the fault-tree sub-component.
+    pub fn fault_tree_mut(&mut self) -> &mut FaultTree {
+        &mut self.fault_tree
+    }
+
+    /// Borrow the FMEA sub-component.
+    pub fn fmea(&self) -> &FMEA {
+        &self.fmea
+    }
+
+    /// Mutably borrow the FMEA sub-component.
+    pub fn fmea_mut(&mut self) -> &mut FMEA {
+        &mut self.fmea
+    }
 }
 
 impl FailureModes {
@@ -4075,6 +4680,36 @@ impl MaintenanceOptimization {
 
     pub fn initialize(&mut self) -> Result<(), EngineeringError> {
         Ok(())
+    }
+
+    /// Borrow the preventive-maintenance sub-component.
+    pub fn preventive_maintenance(&self) -> &PreventiveMaintenance {
+        &self.preventive_maintenance
+    }
+
+    /// Mutably borrow the preventive-maintenance sub-component.
+    pub fn preventive_maintenance_mut(&mut self) -> &mut PreventiveMaintenance {
+        &mut self.preventive_maintenance
+    }
+
+    /// Borrow the predictive-maintenance sub-component.
+    pub fn predictive_maintenance(&self) -> &PredictiveMaintenance {
+        &self.predictive_maintenance
+    }
+
+    /// Mutably borrow the predictive-maintenance sub-component.
+    pub fn predictive_maintenance_mut(&mut self) -> &mut PredictiveMaintenance {
+        &mut self.predictive_maintenance
+    }
+
+    /// Borrow the condition-based-maintenance sub-component.
+    pub fn condition_based_maintenance(&self) -> &ConditionBasedMaintenance {
+        &self.condition_based_maintenance
+    }
+
+    /// Mutably borrow the condition-based-maintenance sub-component.
+    pub fn condition_based_maintenance_mut(&mut self) -> &mut ConditionBasedMaintenance {
+        &mut self.condition_based_maintenance
     }
 }
 

@@ -4,7 +4,7 @@
 //! Identifier/Vault standpoints (class ≥ 2) require Ed25519 over the canonical request string.
 
 use crate::key_vault::KeyVault;
-use crate::render::telemetry::STANDPOINT_DID;
+use crate::render::telemetry::{STANDPOINT_DID, STANDPOINT_VAULT};
 use crate::tensor::bake_pipeline::bake_quin_to_tensor;
 use crate::tensor::buffer_export::{write_tensor_buffer, TensorBufferHeader};
 use crate::NQuin;

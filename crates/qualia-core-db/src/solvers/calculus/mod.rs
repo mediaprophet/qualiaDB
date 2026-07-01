@@ -586,7 +586,7 @@ mod tests {
     #[test]
     fn test_simpsons_integrator_chunked() {
         let mut integrator =
-            SimpsonsIntegratorChunked::new(0.0, consts::PI, SolverConfig::default());
+            SimpsonsIntegratorChunked::new(0.0, std::f64::consts::PI, SolverConfig::default());
 
         // Integrate sin(x) from 0 to π
         struct SinFunction;

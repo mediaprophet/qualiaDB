@@ -338,7 +338,7 @@ pub struct EncryptionAtRest {
 }
 
 /// Encryption algorithms
-#[derive(Debug, Clone, PartialEq, Serialize, Deserialize)]
+#[derive(Debug, Clone, PartialEq, Eq, Hash, Serialize, Deserialize)]
 pub enum EncryptionAlgorithm {
     AES256GCM,
     ChaCha20Poly1305,
@@ -3404,6 +3404,26 @@ impl EncryptionAtRest {
     pub fn kek_count(&self) -> usize {
         self.key_encryption_keys.len()
     }
+
+    /// Get the encryption algorithm used at rest.
+    pub fn encryption_algorithm(&self) -> &EncryptionAlgorithm {
+        &self.encryption_algorithm
+    }
+
+    /// Set the encryption algorithm used at rest.
+    pub fn set_encryption_algorithm(&mut self, algorithm: EncryptionAlgorithm) {
+        self.encryption_algorithm = algorithm;
+    }
+
+    /// Get the encryption policy governing encryption at rest.
+    pub fn encryption_policy(&self) -> &EncryptionPolicy {
+        &self.encryption_policy
+    }
+
+    /// Set the encryption policy governing encryption at rest.
+    pub fn set_encryption_policy(&mut self, policy: EncryptionPolicy) {
+        self.encryption_policy = policy;
+    }
 }
 
 impl KeyAccessControl {
@@ -3488,6 +3508,23 @@ impl KeyAccessControl {
     /// Get a reference to the audit log.
     pub fn audit_log(&self) -> &AccessAuditLog {
         &self.audit_log
+    }
+
+    /// Get the list of configured authentication methods.
+    pub fn authentication_methods(&self) -> &[AuthenticationMethod] {
+        &self.authentication_methods
+    }
+
+    /// Add an authentication method if not already present.
+    pub fn add_authentication_method(&mut self, method: AuthenticationMethod) {
+        if !self.authentication_methods.contains(&method) {
+            self.authentication_methods.push(method);
+        }
+    }
+
+    /// Check whether a given authentication method is supported.
+    pub fn supports_authentication_method(&self, method: &AuthenticationMethod) -> bool {
+        self.authentication_methods.contains(method)
     }
 }
 
@@ -3989,6 +4026,26 @@ impl KeyRotator {
         };
         Ok(new_key)
     }
+
+    /// Get a reference to the rotation schedule.
+    pub fn rotation_schedule(&self) -> &RotationSchedule {
+        &self.rotation_schedule
+    }
+
+    /// Get a mutable reference to the rotation schedule.
+    pub fn rotation_schedule_mut(&mut self) -> &mut RotationSchedule {
+        &mut self.rotation_schedule
+    }
+
+    /// Get a reference to the rotation history.
+    pub fn rotation_history(&self) -> &RotationHistory {
+        &self.rotation_history
+    }
+
+    /// Get a mutable reference to the rotation history.
+    pub fn rotation_history_mut(&mut self) -> &mut RotationHistory {
+        &mut self.rotation_history
+    }
 }
 
 impl RotationPolicy {
@@ -4039,6 +4096,30 @@ impl RotationHistory {
             },
         }
     }
+
+    /// Record a rotation in the history, enforcing retention.
+    pub fn add_entry(&mut self, entry: RotationHistoryEntry) {
+        let cutoff = entry
+            .timestamp
+            .saturating_sub((self.retention_policy.retention_days as u64) * 86400);
+        self.entries.retain(|e| e.timestamp >= cutoff);
+        self.entries.push(entry);
+    }
+
+    /// Number of recorded rotation history entries.
+    pub fn entry_count(&self) -> usize {
+        self.entries.len()
+    }
+
+    /// Iterate over history entries.
+    pub fn entries(&self) -> &[RotationHistoryEntry] {
+        &self.entries
+    }
+
+    /// Get the retention policy for rotation history.
+    pub fn retention_policy(&self) -> &RetentionPolicy {
+        &self.retention_policy
+    }
 }
 
 impl KeyRecovery {
@@ -4068,6 +4149,38 @@ impl KeyRecovery {
 
     pub fn initialize(&mut self) -> Result<(), CryptographicError> {
         Ok(())
+    }
+
+    /// Get the list of configured recovery methods.
+    pub fn recovery_methods(&self) -> &[RecoveryMethod] {
+        &self.recovery_methods
+    }
+
+    /// Add a recovery method if not already present.
+    pub fn add_recovery_method(&mut self, method: RecoveryMethod) {
+        if !self.recovery_methods.contains(&method) {
+            self.recovery_methods.push(method);
+        }
+    }
+
+    /// Get the recovery policies.
+    pub fn recovery_policies(&self) -> &RecoveryPolicies {
+        &self.recovery_policies
+    }
+
+    /// Get a mutable reference to the recovery policies.
+    pub fn recovery_policies_mut(&mut self) -> &mut RecoveryPolicies {
+        &mut self.recovery_policies
+    }
+
+    /// Get a reference to the recovery attempts.
+    pub fn recovery_attempts(&self) -> &RecoveryAttempts {
+        &self.recovery_attempts
+    }
+
+    /// Get a mutable reference to the recovery attempts.
+    pub fn recovery_attempts_mut(&mut self) -> &mut RecoveryAttempts {
+        &mut self.recovery_attempts
     }
 }
 
@@ -4108,6 +4221,45 @@ impl SignatureEngine {
         self.signature_storage.initialize()?;
         self.performance_optimizer.initialize()?;
         Ok(())
+    }
+
+    /// Register a signing algorithm configuration.
+    pub fn add_signing_algorithm(&mut self, algorithm: SigningAlgorithm) {
+        self.signing_algorithms
+            .insert(algorithm.key_algorithm, algorithm);
+    }
+
+    /// Look up a signing algorithm by key algorithm.
+    pub fn get_signing_algorithm(&self, algorithm: &KeyAlgorithm) -> Option<&SigningAlgorithm> {
+        self.signing_algorithms.get(algorithm)
+    }
+
+    /// Iterate over all registered signing algorithms.
+    pub fn list_signing_algorithms(&self) -> impl Iterator<Item = &SigningAlgorithm> {
+        self.signing_algorithms.values()
+    }
+
+    /// Register a verification algorithm configuration.
+    pub fn add_verification_algorithm(
+        &mut self,
+        key_algorithm: KeyAlgorithm,
+        algorithm: VerificationAlgorithm,
+    ) {
+        self.verification_algorithms
+            .insert(key_algorithm, algorithm);
+    }
+
+    /// Look up a verification algorithm by key algorithm.
+    pub fn get_verification_algorithm(
+        &self,
+        algorithm: &KeyAlgorithm,
+    ) -> Option<&VerificationAlgorithm> {
+        self.verification_algorithms.get(algorithm)
+    }
+
+    /// Iterate over all registered verification algorithms.
+    pub fn list_verification_algorithms(&self) -> impl Iterator<Item = &VerificationAlgorithm> {
+        self.verification_algorithms.values()
     }
 
     /// Deterministic ML-DSA context used for fiduciary sign/verify in this library.
@@ -4505,6 +4657,18 @@ impl SignaturePerformanceOptimizer {
         Ok(())
     }
 
+    /// Get the configured optimization strategies.
+    pub fn optimization_strategies(&self) -> &[SignatureOptimizationStrategy] {
+        &self.optimization_strategies
+    }
+
+    /// Add an optimization strategy if not already present.
+    pub fn add_optimization_strategy(&mut self, strategy: SignatureOptimizationStrategy) {
+        if !self.optimization_strategies.contains(&strategy) {
+            self.optimization_strategies.push(strategy);
+        }
+    }
+
     /// Record a signing operation duration (milliseconds) and update running averages.
     pub fn record_signing_time(&mut self, duration_ms: f64) {
         let m = &mut self.performance_metrics;
@@ -4568,6 +4732,50 @@ impl EncryptionEngine {
         self.key_derivation.initialize()?;
         self.performance_optimizer.initialize()?;
         Ok(())
+    }
+
+    /// Register an encryption algorithm implementation.
+    pub fn add_encryption_algorithm(
+        &mut self,
+        algorithm: EncryptionAlgorithm,
+        implementation: EncryptionAlgorithmImpl,
+    ) {
+        self.encryption_algorithms.insert(algorithm, implementation);
+    }
+
+    /// Look up an encryption algorithm implementation.
+    pub fn get_encryption_algorithm(
+        &self,
+        algorithm: &EncryptionAlgorithm,
+    ) -> Option<&EncryptionAlgorithmImpl> {
+        self.encryption_algorithms.get(algorithm)
+    }
+
+    /// Iterate over all registered encryption algorithm implementations.
+    pub fn list_encryption_algorithms(&self) -> impl Iterator<Item = &EncryptionAlgorithmImpl> {
+        self.encryption_algorithms.values()
+    }
+
+    /// Register a decryption algorithm implementation.
+    pub fn add_decryption_algorithm(
+        &mut self,
+        algorithm: EncryptionAlgorithm,
+        implementation: DecryptionAlgorithmImpl,
+    ) {
+        self.decryption_algorithms.insert(algorithm, implementation);
+    }
+
+    /// Look up a decryption algorithm implementation.
+    pub fn get_decryption_algorithm(
+        &self,
+        algorithm: &EncryptionAlgorithm,
+    ) -> Option<&DecryptionAlgorithmImpl> {
+        self.decryption_algorithms.get(algorithm)
+    }
+
+    /// Iterate over all registered decryption algorithm implementations.
+    pub fn list_decryption_algorithms(&self) -> impl Iterator<Item = &DecryptionAlgorithmImpl> {
+        self.decryption_algorithms.values()
     }
 
     /// Derive key material using HKDF-SHA256 via the embedded [`KeyDerivation`] engine.
@@ -4854,6 +5062,21 @@ impl KeyDerivation {
         Ok(())
     }
 
+    /// Register a derivation function under a named key.
+    pub fn add_derivation_function(&mut self, name: String, function: DerivationFunction) {
+        self.derivation_functions.insert(name, function);
+    }
+
+    /// Look up a derivation function by name.
+    pub fn get_derivation_function(&self, name: &str) -> Option<&DerivationFunction> {
+        self.derivation_functions.get(name)
+    }
+
+    /// Iterate over all registered derivation function names.
+    pub fn list_derivation_functions(&self) -> impl Iterator<Item = (&String, &DerivationFunction)> {
+        self.derivation_functions.iter()
+    }
+
     /// Derive `output_length` bytes from input keying material using HKDF-SHA256.
     ///
     /// Uses the configured `derivation_parameters.salt` and `output_length`. `info`
@@ -4888,6 +5111,18 @@ impl EncryptionPerformanceOptimizer {
 
     pub fn initialize(&mut self) -> Result<(), CryptographicError> {
         Ok(())
+    }
+
+    /// Get the configured optimization strategies.
+    pub fn optimization_strategies(&self) -> &[EncryptionOptimizationStrategy] {
+        &self.optimization_strategies
+    }
+
+    /// Add an optimization strategy if not already present.
+    pub fn add_optimization_strategy(&mut self, strategy: EncryptionOptimizationStrategy) {
+        if !self.optimization_strategies.contains(&strategy) {
+            self.optimization_strategies.push(strategy);
+        }
     }
 
     /// Record an encryption operation duration (milliseconds).
@@ -4944,6 +5179,21 @@ impl HashEngine {
         self.hash_storage.initialize()?;
         self.performance_optimizer.initialize()?;
         Ok(())
+    }
+
+    /// Register a hash algorithm implementation.
+    pub fn add_hash_algorithm(&mut self, name: String, implementation: HashAlgorithmImpl) {
+        self.hash_algorithms.insert(name, implementation);
+    }
+
+    /// Look up a hash algorithm implementation by name.
+    pub fn get_hash_algorithm(&self, name: &str) -> Option<&HashAlgorithmImpl> {
+        self.hash_algorithms.get(name)
+    }
+
+    /// Iterate over all registered hash algorithm implementations.
+    pub fn list_hash_algorithms(&self) -> impl Iterator<Item = &HashAlgorithmImpl> {
+        self.hash_algorithms.values()
     }
 
     pub fn compute_hash(
@@ -5025,6 +5275,26 @@ impl HashStorage {
         self.hashes.insert(hash.hash_id.clone(), hash);
         Ok(())
     }
+
+    /// Store a hash verification record.
+    pub fn store_verification_record(
+        &mut self,
+        record: HashVerificationRecord,
+    ) -> Result<(), CryptographicError> {
+        self.verification_records
+            .insert(record.verification_id.clone(), record);
+        Ok(())
+    }
+
+    /// Look up a hash verification record by id.
+    pub fn get_verification_record(&self, id: &str) -> Option<&HashVerificationRecord> {
+        self.verification_records.get(id)
+    }
+
+    /// Iterate over all stored hash verification records.
+    pub fn list_verification_records(&self) -> impl Iterator<Item = &HashVerificationRecord> {
+        self.verification_records.values()
+    }
 }
 
 impl HashAuditLog {
@@ -5096,6 +5366,18 @@ impl HashPerformanceOptimizer {
         Ok(())
     }
 
+    /// Get the configured optimization strategies.
+    pub fn optimization_strategies(&self) -> &[HashOptimizationStrategy] {
+        &self.optimization_strategies
+    }
+
+    /// Add an optimization strategy if not already present.
+    pub fn add_optimization_strategy(&mut self, strategy: HashOptimizationStrategy) {
+        if !self.optimization_strategies.contains(&strategy) {
+            self.optimization_strategies.push(strategy);
+        }
+    }
+
     /// Record a hash computation duration (milliseconds).
     pub fn record_hash_time(&mut self, duration_ms: f64) {
         let m = &mut self.performance_metrics;
@@ -5141,6 +5423,21 @@ impl ProofEngine {
         self.verification_engine.initialize()?;
         self.performance_optimizer.initialize()?;
         Ok(())
+    }
+
+    /// Register a proof system.
+    pub fn add_proof_system(&mut self, system: ProofSystem) {
+        self.proof_systems.insert(system.system_id.clone(), system);
+    }
+
+    /// Look up a proof system by id.
+    pub fn get_proof_system(&self, system_id: &str) -> Option<&ProofSystem> {
+        self.proof_systems.get(system_id)
+    }
+
+    /// Iterate over all registered proof systems.
+    pub fn list_proof_systems(&self) -> impl Iterator<Item = &ProofSystem> {
+        self.proof_systems.values()
     }
 
     pub fn generate_proof(
@@ -5538,6 +5835,31 @@ impl ProofVerificationEngine {
         self.performance_optimizer.initialize()?;
         Ok(())
     }
+
+    /// Register a verification algorithm under a named key.
+    pub fn add_verification_algorithm(&mut self, name: String, algorithm: VerificationAlgorithm) {
+        self.verification_algorithms.insert(name, algorithm);
+    }
+
+    /// Look up a verification algorithm by name.
+    pub fn get_verification_algorithm(&self, name: &str) -> Option<&VerificationAlgorithm> {
+        self.verification_algorithms.get(name)
+    }
+
+    /// Iterate over all registered verification algorithms.
+    pub fn list_verification_algorithms(&self) -> impl Iterator<Item = &VerificationAlgorithm> {
+        self.verification_algorithms.values()
+    }
+
+    /// Get a reference to the batch verifier.
+    pub fn batch_verifier(&self) -> &BatchVerifier {
+        &self.batch_verifier
+    }
+
+    /// Get a mutable reference to the batch verifier.
+    pub fn batch_verifier_mut(&mut self) -> &mut BatchVerifier {
+        &mut self.batch_verifier
+    }
 }
 
 impl BatchVerifier {
@@ -5547,6 +5869,45 @@ impl BatchVerifier {
             parallel_verification: true,
             verification_queue: Vec::new(),
         }
+    }
+
+    /// Get the configured batch size.
+    pub fn batch_size(&self) -> usize {
+        self.batch_size
+    }
+
+    /// Set the batch size.
+    pub fn set_batch_size(&mut self, size: usize) {
+        self.batch_size = size;
+    }
+
+    /// Whether parallel verification is enabled.
+    pub fn parallel_verification(&self) -> bool {
+        self.parallel_verification
+    }
+
+    /// Enable or disable parallel verification.
+    pub fn set_parallel_verification(&mut self, enabled: bool) {
+        self.parallel_verification = enabled;
+    }
+
+    /// Enqueue a verification for batch processing.
+    pub fn enqueue_verification(&mut self, verification: QueuedVerification) {
+        self.verification_queue.push(verification);
+    }
+
+    /// Dequeue the next verification (FIFO order).
+    pub fn dequeue_verification(&mut self) -> Option<QueuedVerification> {
+        if self.verification_queue.is_empty() {
+            None
+        } else {
+            Some(self.verification_queue.remove(0))
+        }
+    }
+
+    /// Number of verifications currently queued.
+    pub fn queue_len(&self) -> usize {
+        self.verification_queue.len()
     }
 }
 
@@ -5568,6 +5929,37 @@ impl VerificationPerformanceOptimizer {
 
     pub fn initialize(&mut self) -> Result<(), CryptographicError> {
         Ok(())
+    }
+
+    /// Get the configured optimization strategies.
+    pub fn optimization_strategies(&self) -> &[VerificationOptimizationStrategy] {
+        &self.optimization_strategies
+    }
+
+    /// Add an optimization strategy if not already present.
+    pub fn add_optimization_strategy(&mut self, strategy: VerificationOptimizationStrategy) {
+        if !self.optimization_strategies.contains(&strategy) {
+            self.optimization_strategies.push(strategy);
+        }
+    }
+
+    /// Record a verification duration (milliseconds) and update running averages.
+    pub fn record_verification_time(&mut self, duration_ms: f64) {
+        let m = &mut self.performance_metrics;
+        if m.average_verification_time == 0.0 {
+            m.average_verification_time = duration_ms;
+        } else {
+            m.average_verification_time =
+                0.9 * m.average_verification_time + 0.1 * duration_ms;
+        }
+        if m.average_verification_time > 0.0 {
+            m.throughput = 1000.0 / m.average_verification_time;
+        }
+    }
+
+    /// Get a snapshot of the current performance metrics.
+    pub fn metrics(&self) -> &VerificationPerformanceMetrics {
+        &self.performance_metrics
     }
 }
 
@@ -5601,6 +5993,18 @@ impl ProofPerformanceOptimizer {
 
     pub fn initialize(&mut self) -> Result<(), CryptographicError> {
         Ok(())
+    }
+
+    /// Get the configured optimization strategies.
+    pub fn optimization_strategies(&self) -> &[ProofOptimizationStrategy] {
+        &self.optimization_strategies
+    }
+
+    /// Add an optimization strategy if not already present.
+    pub fn add_optimization_strategy(&mut self, strategy: ProofOptimizationStrategy) {
+        if !self.optimization_strategies.contains(&strategy) {
+            self.optimization_strategies.push(strategy);
+        }
     }
 
     /// Record a proof generation duration (milliseconds).
@@ -5677,6 +6081,32 @@ impl ThreatDetector {
         self.alert_system.initialize()?;
         Ok(())
     }
+
+    /// Register a threat signature.
+    pub fn add_threat_signature(&mut self, signature: ThreatSignature) {
+        self.threat_signatures
+            .insert(signature.signature_id.clone(), signature);
+    }
+
+    /// Look up a threat signature by id.
+    pub fn get_threat_signature(&self, signature_id: &str) -> Option<&ThreatSignature> {
+        self.threat_signatures.get(signature_id)
+    }
+
+    /// Iterate over all registered threat signatures.
+    pub fn list_threat_signatures(&self) -> impl Iterator<Item = &ThreatSignature> {
+        self.threat_signatures.values()
+    }
+
+    /// Add a detection rule.
+    pub fn add_detection_rule(&mut self, rule: DetectionRule) {
+        self.detection_rules.push(rule);
+    }
+
+    /// Iterate over all registered detection rules.
+    pub fn list_detection_rules(&self) -> impl Iterator<Item = &DetectionRule> {
+        self.detection_rules.iter()
+    }
 }
 
 impl SecurityAlertSystem {
@@ -5691,6 +6121,40 @@ impl SecurityAlertSystem {
     pub fn initialize(&mut self) -> Result<(), CryptographicError> {
         Ok(())
     }
+
+    /// Get the configured alert types.
+    pub fn alert_types(&self) -> &[SecurityAlertType] {
+        &self.alert_types
+    }
+
+    /// Add an alert type if not already present.
+    pub fn add_alert_type(&mut self, alert_type: SecurityAlertType) {
+        if !self.alert_types.contains(&alert_type) {
+            self.alert_types.push(alert_type);
+        }
+    }
+
+    /// Get the configured notification channels.
+    pub fn notification_channels(&self) -> &[NotificationChannel] {
+        &self.notification_channels
+    }
+
+    /// Add a notification channel if not already present.
+    pub fn add_notification_channel(&mut self, channel: NotificationChannel) {
+        if !self.notification_channels.contains(&channel) {
+            self.notification_channels.push(channel);
+        }
+    }
+
+    /// Add an escalation policy.
+    pub fn add_escalation_policy(&mut self, policy: EscalationPolicy) {
+        self.escalation_policies.push(policy);
+    }
+
+    /// Iterate over all registered escalation policies.
+    pub fn list_escalation_policies(&self) -> impl Iterator<Item = &EscalationPolicy> {
+        self.escalation_policies.iter()
+    }
 }
 
 impl AnomalyDetector {
@@ -5704,6 +6168,43 @@ impl AnomalyDetector {
 
     pub fn initialize(&mut self) -> Result<(), CryptographicError> {
         Ok(())
+    }
+
+    /// Get the configured detection algorithms.
+    pub fn detection_algorithms(&self) -> &[AnomalyDetectionAlgorithm] {
+        &self.detection_algorithms
+    }
+
+    /// Add a detection algorithm if not already present.
+    pub fn add_detection_algorithm(&mut self, algorithm: AnomalyDetectionAlgorithm) {
+        if !self.detection_algorithms.contains(&algorithm) {
+            self.detection_algorithms.push(algorithm);
+        }
+    }
+
+    /// Register a baseline model.
+    pub fn add_baseline_model(&mut self, model: BaselineModel) {
+        self.baseline_models.insert(model.model_id.clone(), model);
+    }
+
+    /// Look up a baseline model by id.
+    pub fn get_baseline_model(&self, model_id: &str) -> Option<&BaselineModel> {
+        self.baseline_models.get(model_id)
+    }
+
+    /// Iterate over all registered baseline models.
+    pub fn list_baseline_models(&self) -> impl Iterator<Item = &BaselineModel> {
+        self.baseline_models.values()
+    }
+
+    /// Set an alert threshold for a named metric.
+    pub fn set_alert_threshold(&mut self, metric: String, threshold: f64) {
+        self.alert_thresholds.insert(metric, threshold);
+    }
+
+    /// Look up an alert threshold by metric name.
+    pub fn get_alert_threshold(&self, metric: &str) -> Option<f64> {
+        self.alert_thresholds.get(metric).copied()
     }
 }
 
@@ -5720,6 +6221,32 @@ impl ComplianceMonitor {
         self.reporting_engine.initialize()?;
         Ok(())
     }
+
+    /// Register a compliance framework.
+    pub fn add_compliance_framework(&mut self, framework: ComplianceFramework) {
+        self.compliance_frameworks
+            .insert(framework.framework_id.clone(), framework);
+    }
+
+    /// Look up a compliance framework by id.
+    pub fn get_compliance_framework(&self, framework_id: &str) -> Option<&ComplianceFramework> {
+        self.compliance_frameworks.get(framework_id)
+    }
+
+    /// Iterate over all registered compliance frameworks.
+    pub fn list_compliance_frameworks(&self) -> impl Iterator<Item = &ComplianceFramework> {
+        self.compliance_frameworks.values()
+    }
+
+    /// Get a reference to the audit trail.
+    pub fn audit_trail(&self) -> &AuditTrail {
+        &self.audit_trail
+    }
+
+    /// Get a mutable reference to the audit trail.
+    pub fn audit_trail_mut(&mut self) -> &mut AuditTrail {
+        &mut self.audit_trail
+    }
 }
 
 impl AuditTrail {
@@ -5732,6 +6259,30 @@ impl AuditTrail {
                 archive_before_delete: true,
             },
         }
+    }
+
+    /// Record an audit entry, enforcing retention policy.
+    pub fn add_entry(&mut self, entry: AuditEntry) {
+        let cutoff = entry
+            .timestamp
+            .saturating_sub((self.retention_policy.retention_days as u64) * 86400);
+        self.entries.retain(|e| e.timestamp >= cutoff);
+        self.entries.push(entry);
+    }
+
+    /// Number of recorded audit entries.
+    pub fn entry_count(&self) -> usize {
+        self.entries.len()
+    }
+
+    /// Iterate over audit entries.
+    pub fn entries(&self) -> &[AuditEntry] {
+        &self.entries
+    }
+
+    /// Get the retention policy for the audit trail.
+    pub fn retention_policy(&self) -> &RetentionPolicy {
+        &self.retention_policy
     }
 }
 
@@ -5749,6 +6300,22 @@ impl ComplianceReportingEngine {
         self.distribution_engine.initialize()?;
         Ok(())
     }
+
+    /// Register a report template.
+    pub fn add_report_template(&mut self, template: ReportTemplate) {
+        self.report_templates
+            .insert(template.template_id.clone(), template);
+    }
+
+    /// Look up a report template by id.
+    pub fn get_report_template(&self, template_id: &str) -> Option<&ReportTemplate> {
+        self.report_templates.get(template_id)
+    }
+
+    /// Iterate over all registered report templates.
+    pub fn list_report_templates(&self) -> impl Iterator<Item = &ReportTemplate> {
+        self.report_templates.values()
+    }
 }
 
 impl ReportSchedulingEngine {
@@ -5762,6 +6329,32 @@ impl ReportSchedulingEngine {
     pub fn initialize(&mut self) -> Result<(), CryptographicError> {
         Ok(())
     }
+
+    /// Register a report schedule.
+    pub fn add_schedule(&mut self, schedule: ReportSchedule) {
+        self.schedules
+            .insert(schedule.schedule_id.clone(), schedule);
+    }
+
+    /// Look up a report schedule by id.
+    pub fn get_schedule(&self, schedule_id: &str) -> Option<&ReportSchedule> {
+        self.schedules.get(schedule_id)
+    }
+
+    /// Iterate over all registered report schedules.
+    pub fn list_schedules(&self) -> impl Iterator<Item = &ReportSchedule> {
+        self.schedules.values()
+    }
+
+    /// Get a reference to the report scheduler.
+    pub fn scheduler(&self) -> &ReportScheduler {
+        &self.scheduler
+    }
+
+    /// Get a mutable reference to the report scheduler.
+    pub fn scheduler_mut(&mut self) -> &mut ReportScheduler {
+        &mut self.scheduler
+    }
 }
 
 impl ReportScheduler {
@@ -5770,6 +6363,26 @@ impl ReportScheduler {
             scheduler_type: SchedulerType::Cron,
             queue_manager: ReportQueueManager::new(),
         }
+    }
+
+    /// Get the scheduler type.
+    pub fn scheduler_type(&self) -> &SchedulerType {
+        &self.scheduler_type
+    }
+
+    /// Set the scheduler type.
+    pub fn set_scheduler_type(&mut self, scheduler_type: SchedulerType) {
+        self.scheduler_type = scheduler_type;
+    }
+
+    /// Get a reference to the queue manager.
+    pub fn queue_manager(&self) -> &ReportQueueManager {
+        &self.queue_manager
+    }
+
+    /// Get a mutable reference to the queue manager.
+    pub fn queue_manager_mut(&mut self) -> &mut ReportQueueManager {
+        &mut self.queue_manager
     }
 }
 
@@ -5780,6 +6393,50 @@ impl ReportQueueManager {
             running_reports: Vec::new(),
             completed_reports: Vec::new(),
         }
+    }
+
+    /// Enqueue a pending report.
+    pub fn enqueue_report(&mut self, report: QueuedReport) {
+        self.pending_reports.push(report);
+    }
+
+    /// Dequeue the next pending report and mark it as running.
+    pub fn start_next_report(&mut self) -> Option<QueuedReport> {
+        if self.pending_reports.is_empty() {
+            None
+        } else {
+            let report = self.pending_reports.remove(0);
+            self.running_reports.push(RunningReport {
+                report_id: report.report_id.clone(),
+                started_at: std::time::SystemTime::now()
+                    .duration_since(std::time::UNIX_EPOCH)
+                    .unwrap_or_default()
+                    .as_secs(),
+                progress: 0.0,
+            });
+            Some(report)
+        }
+    }
+
+    /// Mark a running report as completed.
+    pub fn complete_report(&mut self, report: CompletedReport) {
+        self.running_reports.retain(|r| r.report_id != report.report_id);
+        self.completed_reports.push(report);
+    }
+
+    /// Number of pending reports.
+    pub fn pending_count(&self) -> usize {
+        self.pending_reports.len()
+    }
+
+    /// Number of running reports.
+    pub fn running_count(&self) -> usize {
+        self.running_reports.len()
+    }
+
+    /// Number of completed reports.
+    pub fn completed_count(&self) -> usize {
+        self.completed_reports.len()
     }
 }
 
@@ -5794,6 +6451,32 @@ impl ReportDistributionEngine {
     pub fn initialize(&mut self) -> Result<(), CryptographicError> {
         Ok(())
     }
+
+    /// Register a distribution channel.
+    pub fn add_distribution_channel(&mut self, channel: DistributionChannel) {
+        self.distribution_channels
+            .insert(channel.channel_id.clone(), channel);
+    }
+
+    /// Look up a distribution channel by id.
+    pub fn get_distribution_channel(&self, channel_id: &str) -> Option<&DistributionChannel> {
+        self.distribution_channels.get(channel_id)
+    }
+
+    /// Iterate over all registered distribution channels.
+    pub fn list_distribution_channels(&self) -> impl Iterator<Item = &DistributionChannel> {
+        self.distribution_channels.values()
+    }
+
+    /// Get a reference to the delivery tracker.
+    pub fn delivery_tracker(&self) -> &DeliveryTracker {
+        &self.delivery_tracker
+    }
+
+    /// Get a mutable reference to the delivery tracker.
+    pub fn delivery_tracker_mut(&mut self) -> &mut DeliveryTracker {
+        &mut self.delivery_tracker
+    }
 }
 
 impl DeliveryTracker {
@@ -5807,6 +6490,34 @@ impl DeliveryTracker {
                 pending_deliveries: 0,
             },
         }
+    }
+
+    /// Record a delivery and update aggregate status counters.
+    pub fn record_delivery(&mut self, record: DeliveryRecord) {
+        self.status.total_deliveries += 1;
+        match record.final_status {
+            DeliveryFinalStatus::Delivered => self.status.successful_deliveries += 1,
+            DeliveryFinalStatus::Failed => self.status.failed_deliveries += 1,
+            DeliveryFinalStatus::Pending | DeliveryFinalStatus::Cancelled => {
+                self.status.pending_deliveries += 1;
+            }
+        }
+        self.deliveries.insert(record.record_id.clone(), record);
+    }
+
+    /// Look up a delivery record by id.
+    pub fn get_delivery(&self, record_id: &str) -> Option<&DeliveryRecord> {
+        self.deliveries.get(record_id)
+    }
+
+    /// Iterate over all recorded deliveries.
+    pub fn list_deliveries(&self) -> impl Iterator<Item = &DeliveryRecord> {
+        self.deliveries.values()
+    }
+
+    /// Get a snapshot of the aggregate delivery status.
+    pub fn status(&self) -> &DeliveryStatus {
+        &self.status
     }
 }
 

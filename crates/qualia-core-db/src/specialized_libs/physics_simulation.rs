@@ -2255,6 +2255,26 @@ impl SimulationEngine {
         }
         Ok(())
     }
+
+    /// Get a reference to the simulation configuration.
+    pub fn get_simulation_config(&self) -> &SimulationConfig {
+        &self.simulation_config
+    }
+
+    /// Set the simulation configuration.
+    pub fn set_simulation_config(&mut self, config: SimulationConfig) {
+        self.simulation_config = config;
+    }
+
+    /// Get a reference to the initial conditions.
+    pub fn get_initial_conditions(&self) -> &InitialConditions {
+        &self.initial_conditions
+    }
+
+    /// Get a mutable reference to the initial conditions.
+    pub fn get_initial_conditions_mut(&mut self) -> &mut InitialConditions {
+        &mut self.initial_conditions
+    }
 }
 
 impl TimeIntegrator {
@@ -2297,6 +2317,16 @@ impl TimeIntegrator {
         } else {
             dt
         }
+    }
+
+    /// Get the integrator type.
+    pub fn get_integrator_type(&self) -> &TimeIntegratorType {
+        &self.integrator_type
+    }
+
+    /// Set the integrator type.
+    pub fn set_integrator_type(&mut self, integrator_type: TimeIntegratorType) {
+        self.integrator_type = integrator_type;
     }
 }
 
@@ -2498,6 +2528,36 @@ impl StabilityAnalysis {
     pub fn initialize(&mut self) -> Result<(), PhysicsError> {
         Ok(())
     }
+
+    /// Get the analysis method.
+    pub fn get_analysis_method(&self) -> &StabilityAnalysisMethod {
+        &self.analysis_method
+    }
+
+    /// Set the analysis method.
+    pub fn set_analysis_method(&mut self, method: StabilityAnalysisMethod) {
+        self.analysis_method = method;
+    }
+
+    /// Get a reference to the eigenvalue analysis.
+    pub fn get_eigenvalue_analysis(&self) -> &EigenvalueAnalysis {
+        &self.eigenvalue_analysis
+    }
+
+    /// Get a mutable reference to the eigenvalue analysis.
+    pub fn get_eigenvalue_analysis_mut(&mut self) -> &mut EigenvalueAnalysis {
+        &mut self.eigenvalue_analysis
+    }
+
+    /// Get a reference to the von Neumann analysis.
+    pub fn get_von_neumann_analysis(&self) -> &VonNeumannAnalysis {
+        &self.von_neumann_analysis
+    }
+
+    /// Get a mutable reference to the von Neumann analysis.
+    pub fn get_von_neumann_analysis_mut(&mut self) -> &mut VonNeumannAnalysis {
+        &mut self.von_neumann_analysis
+    }
 }
 
 impl EigenvalueAnalysis {
@@ -2535,6 +2595,26 @@ impl SpatialDiscretizer {
         self.mesh_generator.initialize()?;
         Ok(())
     }
+
+    /// Get the discretization method.
+    pub fn get_discretization_method(&self) -> &SpatialDiscretizationMethod {
+        &self.discretization_method
+    }
+
+    /// Set the discretization method.
+    pub fn set_discretization_method(&mut self, method: SpatialDiscretizationMethod) {
+        self.discretization_method = method;
+    }
+
+    /// Get a reference to the stencil operators.
+    pub fn get_stencil_operators(&self) -> &StencilOperators {
+        &self.stencil_operators
+    }
+
+    /// Get a mutable reference to the stencil operators.
+    pub fn get_stencil_operators_mut(&mut self) -> &mut StencilOperators {
+        &mut self.stencil_operators
+    }
 }
 
 impl GridGenerator {
@@ -2548,6 +2628,36 @@ impl GridGenerator {
 
     pub fn initialize(&mut self) -> Result<(), PhysicsError> {
         Ok(())
+    }
+
+    /// Get the grid type.
+    pub fn get_grid_type(&self) -> &GridType {
+        &self.grid_type
+    }
+
+    /// Set the grid type.
+    pub fn set_grid_type(&mut self, grid_type: GridType) {
+        self.grid_type = grid_type;
+    }
+
+    /// Get a reference to the grid parameters.
+    pub fn get_grid_parameters(&self) -> &GridParameters {
+        &self.grid_parameters
+    }
+
+    /// Get a mutable reference to the grid parameters.
+    pub fn get_grid_parameters_mut(&mut self) -> &mut GridParameters {
+        &mut self.grid_parameters
+    }
+
+    /// Get a reference to the grid quality metrics.
+    pub fn get_quality_metrics(&self) -> &GridQualityMetrics {
+        &self.quality_metrics
+    }
+
+    /// Get a mutable reference to the grid quality metrics.
+    pub fn get_quality_metrics_mut(&mut self) -> &mut GridQualityMetrics {
+        &mut self.quality_metrics
     }
 }
 
@@ -2585,6 +2695,36 @@ impl MeshGenerator {
 
     pub fn initialize(&mut self) -> Result<(), PhysicsError> {
         Ok(())
+    }
+
+    /// Get the mesh type.
+    pub fn get_mesh_type(&self) -> &MeshType {
+        &self.mesh_type
+    }
+
+    /// Set the mesh type.
+    pub fn set_mesh_type(&mut self, mesh_type: MeshType) {
+        self.mesh_type = mesh_type;
+    }
+
+    /// Get a reference to the mesh parameters.
+    pub fn get_mesh_parameters(&self) -> &MeshParameters {
+        &self.mesh_parameters
+    }
+
+    /// Get a mutable reference to the mesh parameters.
+    pub fn get_mesh_parameters_mut(&mut self) -> &mut MeshParameters {
+        &mut self.mesh_parameters
+    }
+
+    /// Get a reference to the mesh quality metrics.
+    pub fn get_quality_metrics(&self) -> &MeshQualityMetrics {
+        &self.quality_metrics
+    }
+
+    /// Get a mutable reference to the mesh quality metrics.
+    pub fn get_quality_metrics_mut(&mut self) -> &mut MeshQualityMetrics {
+        &mut self.quality_metrics
     }
 }
 
@@ -2874,6 +3014,56 @@ impl InitialConditions {
             perturbations: HashMap::new(),
         }
     }
+
+    /// Register an initial condition for a field: its type and the initial values.
+    pub fn set_condition(
+        &mut self,
+        field_id: &str,
+        cond_type: InitialConditionType,
+        values: Vec<f64>,
+    ) {
+        self.condition_types
+            .insert(field_id.to_string(), cond_type);
+        self.condition_values
+            .insert(field_id.to_string(), values);
+    }
+
+    /// Get the initial condition type registered for a field, if any.
+    pub fn get_condition_type(&self, field_id: &str) -> Option<&InitialConditionType> {
+        self.condition_types.get(field_id)
+    }
+
+    /// Get the initial condition values registered for a field, if any.
+    pub fn get_condition_values(&self, field_id: &str) -> Option<&Vec<f64>> {
+        self.condition_values.get(field_id)
+    }
+
+    /// Remove a field's initial condition (type and values).
+    pub fn remove_condition(&mut self, field_id: &str) {
+        self.condition_types.remove(field_id);
+        self.condition_values.remove(field_id);
+    }
+
+    /// List all field IDs that have a registered initial condition.
+    pub fn list_condition_fields(&self) -> Vec<String> {
+        self.condition_types.keys().cloned().collect()
+    }
+
+    /// Add a perturbation for a field.
+    pub fn add_perturbation(&mut self, field_id: &str, perturbation: Perturbation) {
+        self.perturbations
+            .insert(field_id.to_string(), perturbation);
+    }
+
+    /// Get the perturbation registered for a field, if any.
+    pub fn get_perturbation(&self, field_id: &str) -> Option<&Perturbation> {
+        self.perturbations.get(field_id)
+    }
+
+    /// List all field IDs that have a registered perturbation.
+    pub fn list_perturbation_fields(&self) -> Vec<String> {
+        self.perturbations.keys().cloned().collect()
+    }
 }
 
 impl Perturbation {
@@ -2959,6 +3149,16 @@ impl PhysicsSolver {
             error_message: None,
         })
     }
+
+    /// Get the solver type.
+    pub fn get_solver_type(&self) -> &SolverType {
+        &self.solver_type
+    }
+
+    /// Set the solver type.
+    pub fn set_solver_type(&mut self, solver_type: SolverType) {
+        self.solver_type = solver_type;
+    }
 }
 
 impl LinearSolver {
@@ -2974,6 +3174,93 @@ impl LinearSolver {
     pub fn initialize(&mut self) -> Result<(), PhysicsError> {
         Ok(())
     }
+
+    /// Get the solver method.
+    pub fn get_solver_method(&self) -> &LinearSolverMethod {
+        &self.solver_method
+    }
+
+    /// Set the solver method.
+    pub fn set_solver_method(&mut self, method: LinearSolverMethod) {
+        self.solver_method = method;
+    }
+
+    /// Get a reference to the preconditioner.
+    pub fn get_preconditioner(&self) -> &Preconditioner {
+        &self.preconditioner
+    }
+
+    /// Get a mutable reference to the preconditioner.
+    pub fn get_preconditioner_mut(&mut self) -> &mut Preconditioner {
+        &mut self.preconditioner
+    }
+
+    /// Get a reference to the convergence criteria.
+    pub fn get_convergence_criteria(&self) -> &ConvergenceCriteria {
+        &self.convergence_criteria
+    }
+
+    /// Get a mutable reference to the convergence criteria.
+    pub fn get_convergence_criteria_mut(&mut self) -> &mut ConvergenceCriteria {
+        &mut self.convergence_criteria
+    }
+
+    /// Get a reference to the solver parameters.
+    pub fn get_solver_parameters(&self) -> &SolverParameters {
+        &self.solver_parameters
+    }
+
+    /// Get a mutable reference to the solver parameters.
+    pub fn get_solver_parameters_mut(&mut self) -> &mut SolverParameters {
+        &mut self.solver_parameters
+    }
+}
+
+impl CfdSolver {
+    /// Get the solver ID.
+    pub fn get_solver_id(&self) -> &str {
+        &self.solver_id
+    }
+
+    /// Get the solver method.
+    pub fn get_solver_method(&self) -> &LinearSolverMethod {
+        &self.solver_method
+    }
+
+    /// Set the solver method.
+    pub fn set_solver_method(&mut self, method: LinearSolverMethod) {
+        self.solver_method = method;
+    }
+
+    /// Get a reference to the preconditioner.
+    pub fn get_preconditioner(&self) -> &Preconditioner {
+        &self.preconditioner
+    }
+
+    /// Get a mutable reference to the preconditioner.
+    pub fn get_preconditioner_mut(&mut self) -> &mut Preconditioner {
+        &mut self.preconditioner
+    }
+
+    /// Get a reference to the convergence criteria.
+    pub fn get_convergence_criteria(&self) -> &ConvergenceCriteria {
+        &self.convergence_criteria
+    }
+
+    /// Get a mutable reference to the convergence criteria.
+    pub fn get_convergence_criteria_mut(&mut self) -> &mut ConvergenceCriteria {
+        &mut self.convergence_criteria
+    }
+
+    /// Get a reference to the solver parameters.
+    pub fn get_solver_parameters(&self) -> &SolverParameters {
+        &self.solver_parameters
+    }
+
+    /// Get a mutable reference to the solver parameters.
+    pub fn get_solver_parameters_mut(&mut self) -> &mut SolverParameters {
+        &mut self.solver_parameters
+    }
 }
 
 impl Preconditioner {
@@ -2982,6 +3269,26 @@ impl Preconditioner {
             preconditioner_type: PreconditionerType::ILU,
             preconditioner_parameters: PreconditionerParameters::new(),
         }
+    }
+
+    /// Get the preconditioner type.
+    pub fn get_preconditioner_type(&self) -> &PreconditionerType {
+        &self.preconditioner_type
+    }
+
+    /// Set the preconditioner type.
+    pub fn set_preconditioner_type(&mut self, ptype: PreconditionerType) {
+        self.preconditioner_type = ptype;
+    }
+
+    /// Get a reference to the preconditioner parameters.
+    pub fn get_preconditioner_parameters(&self) -> &PreconditionerParameters {
+        &self.preconditioner_parameters
+    }
+
+    /// Get a mutable reference to the preconditioner parameters.
+    pub fn get_preconditioner_parameters_mut(&mut self) -> &mut PreconditionerParameters {
+        &mut self.preconditioner_parameters
     }
 }
 
@@ -3033,6 +3340,36 @@ impl NonlinearSolver {
         self.linear_solver.initialize()?;
         Ok(())
     }
+
+    /// Get the solver method.
+    pub fn get_solver_method(&self) -> &NonlinearSolverMethod {
+        &self.solver_method
+    }
+
+    /// Set the solver method.
+    pub fn set_solver_method(&mut self, method: NonlinearSolverMethod) {
+        self.solver_method = method;
+    }
+
+    /// Get a reference to the convergence criteria.
+    pub fn get_convergence_criteria(&self) -> &ConvergenceCriteria {
+        &self.convergence_criteria
+    }
+
+    /// Get a mutable reference to the convergence criteria.
+    pub fn get_convergence_criteria_mut(&mut self) -> &mut ConvergenceCriteria {
+        &mut self.convergence_criteria
+    }
+
+    /// Get a reference to the solver parameters.
+    pub fn get_solver_parameters(&self) -> &NonlinearSolverParameters {
+        &self.solver_parameters
+    }
+
+    /// Get a mutable reference to the solver parameters.
+    pub fn get_solver_parameters_mut(&mut self) -> &mut NonlinearSolverParameters {
+        &mut self.solver_parameters
+    }
 }
 
 impl NonlinearSolverParameters {
@@ -3057,6 +3394,36 @@ impl EigenvalueSolver {
 
     pub fn initialize(&mut self) -> Result<(), PhysicsError> {
         Ok(())
+    }
+
+    /// Get the solver method.
+    pub fn get_solver_method(&self) -> &EigenvalueSolverMethod {
+        &self.solver_method
+    }
+
+    /// Set the solver method.
+    pub fn set_solver_method(&mut self, method: EigenvalueSolverMethod) {
+        self.solver_method = method;
+    }
+
+    /// Get the eigenvalue type.
+    pub fn get_eigenvalue_type(&self) -> &EigenvalueType {
+        &self.eigenvalue_type
+    }
+
+    /// Set the eigenvalue type.
+    pub fn set_eigenvalue_type(&mut self, etype: EigenvalueType) {
+        self.eigenvalue_type = etype;
+    }
+
+    /// Get a reference to the solver parameters.
+    pub fn get_solver_parameters(&self) -> &EigenvalueSolverParameters {
+        &self.solver_parameters
+    }
+
+    /// Get a mutable reference to the solver parameters.
+    pub fn get_solver_parameters_mut(&mut self) -> &mut EigenvalueSolverParameters {
+        &mut self.solver_parameters
     }
 }
 
@@ -3084,6 +3451,55 @@ impl OptimizationSolver {
     pub fn initialize(&mut self) -> Result<(), PhysicsError> {
         Ok(())
     }
+
+    /// Get the optimizer type.
+    pub fn get_optimizer_type(&self) -> &OptimizerType {
+        &self.optimizer_type
+    }
+
+    /// Set the optimizer type.
+    pub fn set_optimizer_type(&mut self, otype: OptimizerType) {
+        self.optimizer_type = otype;
+    }
+
+    /// Get a reference to the objective function.
+    pub fn get_objective_function(&self) -> &ObjectiveFunction {
+        &self.objective_function
+    }
+
+    /// Get a mutable reference to the objective function.
+    pub fn get_objective_function_mut(&mut self) -> &mut ObjectiveFunction {
+        &mut self.objective_function
+    }
+
+    /// Add a constraint to the optimization problem.
+    pub fn add_constraint(&mut self, constraint: Constraint) {
+        self.constraints.push(constraint);
+    }
+
+    /// List all constraints.
+    pub fn list_constraints(&self) -> &[Constraint] {
+        &self.constraints
+    }
+
+    /// Remove a constraint by index.
+    pub fn remove_constraint(&mut self, index: usize) -> Option<Constraint> {
+        if index < self.constraints.len() {
+            Some(self.constraints.remove(index))
+        } else {
+            None
+        }
+    }
+
+    /// Get a reference to the solver parameters.
+    pub fn get_solver_parameters(&self) -> &OptimizationSolverParameters {
+        &self.solver_parameters
+    }
+
+    /// Get a mutable reference to the solver parameters.
+    pub fn get_solver_parameters_mut(&mut self) -> &mut OptimizationSolverParameters {
+        &mut self.solver_parameters
+    }
 }
 
 impl ObjectiveFunction {
@@ -3095,6 +3511,41 @@ impl ObjectiveFunction {
             hessian_available: true,
         }
     }
+
+    /// Get the function ID.
+    pub fn get_function_id(&self) -> &str {
+        &self.function_id
+    }
+
+    /// Get the function type.
+    pub fn get_function_type(&self) -> &ObjectiveFunctionType {
+        &self.function_type
+    }
+
+    /// Set the function type.
+    pub fn set_function_type(&mut self, ftype: ObjectiveFunctionType) {
+        self.function_type = ftype;
+    }
+
+    /// Returns whether a gradient is available for this objective function.
+    pub fn is_gradient_available(&self) -> bool {
+        self.gradient_available
+    }
+
+    /// Set whether a gradient is available.
+    pub fn set_gradient_available(&mut self, available: bool) {
+        self.gradient_available = available;
+    }
+
+    /// Returns whether a Hessian is available for this objective function.
+    pub fn is_hessian_available(&self) -> bool {
+        self.hessian_available
+    }
+
+    /// Set whether a Hessian is available.
+    pub fn set_hessian_available(&mut self, available: bool) {
+        self.hessian_available = available;
+    }
 }
 
 impl Constraint {
@@ -3105,6 +3556,41 @@ impl Constraint {
             constraint_function: "default".to_string(),
             bounds: None,
         }
+    }
+
+    /// Get the constraint ID.
+    pub fn get_constraint_id(&self) -> &str {
+        &self.constraint_id
+    }
+
+    /// Get the constraint type.
+    pub fn get_constraint_type(&self) -> &ConstraintType {
+        &self.constraint_type
+    }
+
+    /// Set the constraint type.
+    pub fn set_constraint_type(&mut self, ctype: ConstraintType) {
+        self.constraint_type = ctype;
+    }
+
+    /// Get the constraint function expression.
+    pub fn get_constraint_function(&self) -> &str {
+        &self.constraint_function
+    }
+
+    /// Set the constraint function expression.
+    pub fn set_constraint_function(&mut self, func: String) {
+        self.constraint_function = func;
+    }
+
+    /// Get the bounds, if any.
+    pub fn get_bounds(&self) -> Option<&Bounds> {
+        self.bounds.as_ref()
+    }
+
+    /// Set the bounds.
+    pub fn set_bounds(&mut self, bounds: Option<Bounds>) {
+        self.bounds = bounds;
     }
 }
 
@@ -3291,6 +3777,32 @@ impl NodeManager {
         self.nodes.insert("node1".to_string(), node1);
         Ok(())
     }
+
+    /// Register capabilities for a node.
+    pub fn add_node_capability(&mut self, node_id: &str, caps: NodeCapabilities) {
+        self.node_capabilities
+            .insert(node_id.to_string(), caps);
+    }
+
+    /// Get the capabilities registered for a node, if any.
+    pub fn get_node_capability(&self, node_id: &str) -> Option<&NodeCapabilities> {
+        self.node_capabilities.get(node_id)
+    }
+
+    /// Set the status of a node.
+    pub fn set_node_status(&mut self, node_id: &str, status: NodeStatus) {
+        self.node_status.insert(node_id.to_string(), status);
+    }
+
+    /// Get the status of a node, if any.
+    pub fn get_node_status(&self, node_id: &str) -> Option<&NodeStatus> {
+        self.node_status.get(node_id)
+    }
+
+    /// List all node IDs that have a registered status.
+    pub fn list_node_status_ids(&self) -> Vec<String> {
+        self.node_status.keys().cloned().collect()
+    }
 }
 
 impl NodeCapabilities {
@@ -3317,6 +3829,36 @@ impl MeshLoadBalancer {
 
     pub fn initialize(&mut self) -> Result<(), PhysicsError> {
         Ok(())
+    }
+
+    /// Get the balancing strategy.
+    pub fn get_balancing_strategy(&self) -> &LoadBalancingStrategy {
+        &self.balancing_strategy
+    }
+
+    /// Set the balancing strategy.
+    pub fn set_balancing_strategy(&mut self, strategy: LoadBalancingStrategy) {
+        self.balancing_strategy = strategy;
+    }
+
+    /// Get a reference to the load metrics.
+    pub fn get_load_metrics(&self) -> &LoadMetrics {
+        &self.load_metrics
+    }
+
+    /// Get a mutable reference to the load metrics.
+    pub fn get_load_metrics_mut(&mut self) -> &mut LoadMetrics {
+        &mut self.load_metrics
+    }
+
+    /// Get a reference to the redistribution policy.
+    pub fn get_redistribution_policy(&self) -> &RedistributionPolicy {
+        &self.redistribution_policy
+    }
+
+    /// Get a mutable reference to the redistribution policy.
+    pub fn get_redistribution_policy_mut(&mut self) -> &mut RedistributionPolicy {
+        &mut self.redistribution_policy
     }
 }
 
@@ -3354,6 +3896,26 @@ impl MeshSynchronization {
         self.conflict_resolution.initialize()?;
         Ok(())
     }
+
+    /// Get the synchronization method.
+    pub fn get_synchronization_method(&self) -> &SynchronizationMethod {
+        &self.synchronization_method
+    }
+
+    /// Set the synchronization method.
+    pub fn set_synchronization_method(&mut self, method: SynchronizationMethod) {
+        self.synchronization_method = method;
+    }
+
+    /// Get the consistency model.
+    pub fn get_consistency_model(&self) -> &ConsistencyModel {
+        &self.consistency_model
+    }
+
+    /// Set the consistency model.
+    pub fn set_consistency_model(&mut self, model: ConsistencyModel) {
+        self.consistency_model = model;
+    }
 }
 
 impl ConflictResolution {
@@ -3368,6 +3930,36 @@ impl ConflictResolution {
     pub fn initialize(&mut self) -> Result<(), PhysicsError> {
         Ok(())
     }
+
+    /// Get the resolution strategy.
+    pub fn get_resolution_strategy(&self) -> &ConflictResolutionStrategy {
+        &self.resolution_strategy
+    }
+
+    /// Set the resolution strategy.
+    pub fn set_resolution_strategy(&mut self, strategy: ConflictResolutionStrategy) {
+        self.resolution_strategy = strategy;
+    }
+
+    /// Get a reference to the conflict detection.
+    pub fn get_conflict_detection(&self) -> &ConflictDetection {
+        &self.conflict_detection
+    }
+
+    /// Get a mutable reference to the conflict detection.
+    pub fn get_conflict_detection_mut(&mut self) -> &mut ConflictDetection {
+        &mut self.conflict_detection
+    }
+
+    /// Get a reference to the resolution policy.
+    pub fn get_resolution_policy(&self) -> &ResolutionPolicy {
+        &self.resolution_policy
+    }
+
+    /// Get a mutable reference to the resolution policy.
+    pub fn get_resolution_policy_mut(&mut self) -> &mut ResolutionPolicy {
+        &mut self.resolution_policy
+    }
 }
 
 impl ConflictDetection {
@@ -3376,6 +3968,26 @@ impl ConflictDetection {
             detection_method: ConflictDetectionMethod::Timestamp,
             conflict_types: vec![ConflictType::WriteWrite],
         }
+    }
+
+    /// Get the detection method.
+    pub fn get_detection_method(&self) -> &ConflictDetectionMethod {
+        &self.detection_method
+    }
+
+    /// Set the detection method.
+    pub fn set_detection_method(&mut self, method: ConflictDetectionMethod) {
+        self.detection_method = method;
+    }
+
+    /// Get all registered conflict types.
+    pub fn get_conflict_types(&self) -> &[ConflictType] {
+        &self.conflict_types
+    }
+
+    /// Add a conflict type to monitor.
+    pub fn add_conflict_type(&mut self, ctype: ConflictType) {
+        self.conflict_types.push(ctype);
     }
 }
 
@@ -3386,6 +3998,31 @@ impl ResolutionPolicy {
             policy_rules: Vec::new(),
             default_action: ResolutionAction::Accept,
         }
+    }
+
+    /// Get the policy ID.
+    pub fn get_policy_id(&self) -> &str {
+        &self.policy_id
+    }
+
+    /// Get all policy rules.
+    pub fn get_policy_rules(&self) -> &[ResolutionRule] {
+        &self.policy_rules
+    }
+
+    /// Add a resolution rule to the policy.
+    pub fn add_policy_rule(&mut self, rule: ResolutionRule) {
+        self.policy_rules.push(rule);
+    }
+
+    /// Get the default action.
+    pub fn get_default_action(&self) -> &ResolutionAction {
+        &self.default_action
+    }
+
+    /// Set the default action.
+    pub fn set_default_action(&mut self, action: ResolutionAction) {
+        self.default_action = action;
     }
 }
 

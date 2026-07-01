@@ -2384,6 +2384,38 @@ impl ModelCatalog {
             .cloned()
             .unwrap_or_default()
     }
+
+    /// Record a relationship between two models (e.g. fine-tuned-from, quantized-from).
+    ///
+    /// The relationship is stored under the source model's id so all relationships
+    /// originating from a given model can be retrieved together.
+    pub fn add_relationship(&mut self, relationship: ModelRelationship) {
+        self.relationships
+            .entry(relationship.source_model.clone())
+            .or_default()
+            .push(relationship);
+    }
+
+    /// Return all relationships originating from `source_model`.
+    pub fn get_relationships(&self, source_model: &str) -> Vec<&ModelRelationship> {
+        self.relationships
+            .get(source_model)
+            .map(|rels| rels.iter().collect())
+            .unwrap_or_default()
+    }
+
+    /// Remove all relationships originating from `source_model`. Returns the number removed.
+    pub fn remove_relationships(&mut self, source_model: &str) -> usize {
+        self.relationships
+            .remove(source_model)
+            .map(|rels| rels.len())
+            .unwrap_or(0)
+    }
+
+    /// Return the total number of relationships recorded in the catalog.
+    pub fn relationship_count(&self) -> usize {
+        self.relationships.values().map(|rels| rels.len()).sum()
+    }
 }
 
 impl ModelSearchIndex {
@@ -3310,6 +3342,38 @@ impl ModelLoader {
         self.loading_cache.initialize()?;
         Ok(())
     }
+
+    /// Register a loading strategy under the given name.
+    pub fn register_loading_strategy(&mut self, name: &str, strategy: LoadingStrategy) {
+        self.loading_strategies
+            .insert(name.to_string(), strategy);
+    }
+
+    /// Get a registered loading strategy by name.
+    pub fn get_loading_strategy(&self, name: &str) -> Option<&LoadingStrategy> {
+        self.loading_strategies.get(name)
+    }
+
+    /// List the names of all registered loading strategies.
+    pub fn list_loading_strategies(&self) -> Vec<String> {
+        self.loading_strategies.keys().cloned().collect()
+    }
+
+    /// Register a format converter under the given name.
+    pub fn register_format_converter(&mut self, name: &str, converter: FormatConverter) {
+        self.format_converters
+            .insert(name.to_string(), converter);
+    }
+
+    /// Get a registered format converter by name.
+    pub fn get_format_converter(&self, name: &str) -> Option<&FormatConverter> {
+        self.format_converters.get(name)
+    }
+
+    /// List the names of all registered format converters.
+    pub fn list_format_converters(&self) -> Vec<String> {
+        self.format_converters.keys().cloned().collect()
+    }
 }
 
 impl LoadingStrategy {
@@ -3366,6 +3430,62 @@ impl LoadingCache {
     pub fn initialize(&mut self) -> Result<(), MLError> {
         Ok(())
     }
+
+    /// Insert or replace a cache entry by id.
+    pub fn put_entry(&mut self, entry: CacheEntry) {
+        self.cache_entries.insert(entry.entry_id.clone(), entry);
+    }
+
+    /// Retrieve a cache entry by id, incrementing its access count and updating
+    /// the last-accessed timestamp.
+    pub fn get_entry(&mut self, entry_id: &str) -> Option<CacheEntry> {
+        let now = current_timestamp_secs();
+        let found = self.cache_entries.get_mut(entry_id).map(|entry| {
+            entry.access_count += 1;
+            entry.last_accessed = now;
+            entry.clone()
+        });
+        match &found {
+            Some(_) => self.cache_stats.hit_count += 1,
+            None => self.cache_stats.miss_count += 1,
+        }
+        self.update_hit_rate();
+        found
+    }
+
+    /// Remove a cache entry by id. Returns `true` if an entry was removed.
+    pub fn remove_entry(&mut self, entry_id: &str) -> bool {
+        let removed = self.cache_entries.remove(entry_id).is_some();
+        if removed {
+            self.update_hit_rate();
+        }
+        removed
+    }
+
+    /// Number of entries currently held in the cache.
+    pub fn cache_size(&self) -> usize {
+        self.cache_entries.len()
+    }
+
+    /// Return a reference to the cache policy.
+    pub fn cache_policy(&self) -> &CachePolicy {
+        &self.cache_policy
+    }
+
+    /// Return a reference to the cache statistics.
+    pub fn cache_stats(&self) -> &CacheStats {
+        &self.cache_stats
+    }
+
+    /// Recompute the rolling hit rate from hit/miss counts.
+    fn update_hit_rate(&mut self) {
+        let total = self.cache_stats.hit_count + self.cache_stats.miss_count;
+        self.cache_stats.hit_rate = if total == 0 {
+            0.0
+        } else {
+            self.cache_stats.hit_count as f64 / total as f64
+        };
+    }
 }
 
 impl CachePolicy {
@@ -3413,6 +3533,38 @@ impl ModelConverter {
     pub fn initialize(&mut self) -> Result<(), MLError> {
         self.validation_engine.initialize()?;
         Ok(())
+    }
+
+    /// Register a conversion pipeline under the given name.
+    pub fn register_pipeline(&mut self, name: &str, pipeline: ConversionPipeline) {
+        self.conversion_pipelines
+            .insert(name.to_string(), pipeline);
+    }
+
+    /// Get a registered conversion pipeline by name.
+    pub fn get_pipeline(&self, name: &str) -> Option<&ConversionPipeline> {
+        self.conversion_pipelines.get(name)
+    }
+
+    /// List the names of all registered conversion pipelines.
+    pub fn list_pipelines(&self) -> Vec<String> {
+        self.conversion_pipelines.keys().cloned().collect()
+    }
+
+    /// Register an optimization strategy under the given name.
+    pub fn register_optimization_strategy(&mut self, name: &str, strategy: OptimizationStrategy) {
+        self.optimization_strategies
+            .insert(name.to_string(), strategy);
+    }
+
+    /// Get a registered optimization strategy by name.
+    pub fn get_optimization_strategy(&self, name: &str) -> Option<&OptimizationStrategy> {
+        self.optimization_strategies.get(name)
+    }
+
+    /// List the names of all registered optimization strategies.
+    pub fn list_optimization_strategies(&self) -> Vec<String> {
+        self.optimization_strategies.keys().cloned().collect()
     }
 }
 
@@ -3492,6 +3644,42 @@ impl ValidationEngine {
 
     pub fn initialize(&mut self) -> Result<(), MLError> {
         Ok(())
+    }
+
+    /// Register a validator under the given id.
+    pub fn register_validator(&mut self, validator: Validator) {
+        self.validators
+            .insert(validator.validator_id.clone(), validator);
+    }
+
+    /// Get a registered validator by id.
+    pub fn get_validator(&self, validator_id: &str) -> Option<&Validator> {
+        self.validators.get(validator_id)
+    }
+
+    /// List the ids of all registered validators.
+    pub fn list_validators(&self) -> Vec<String> {
+        self.validators.keys().cloned().collect()
+    }
+
+    /// Add a validation rule to the engine.
+    pub fn add_validation_rule(&mut self, rule: ValidationRule) {
+        self.validation_rules.push(rule);
+    }
+
+    /// Return a reference to all validation rules.
+    pub fn validation_rules(&self) -> &[ValidationRule] {
+        &self.validation_rules
+    }
+
+    /// Return a reference to the test suite.
+    pub fn test_suite(&self) -> &TestSuite {
+        &self.test_suite
+    }
+
+    /// Return a mutable reference to the test suite.
+    pub fn test_suite_mut(&mut self) -> &mut TestSuite {
+        &mut self.test_suite
     }
 }
 
@@ -3803,6 +3991,27 @@ impl InferenceEngine {
         Ok(())
     }
 
+    /// Register an inference backend under its backend id.
+    pub fn register_backend(&mut self, backend: InferenceBackend) {
+        self.inference_backends
+            .insert(backend.backend_id.clone(), backend);
+    }
+
+    /// Get a registered inference backend by id.
+    pub fn get_backend(&self, backend_id: &str) -> Option<&InferenceBackend> {
+        self.inference_backends.get(backend_id)
+    }
+
+    /// List the ids of all registered inference backends.
+    pub fn list_backends(&self) -> Vec<String> {
+        self.inference_backends.keys().cloned().collect()
+    }
+
+    /// Remove a registered inference backend by id. Returns `true` if removed.
+    pub fn remove_backend(&mut self, backend_id: &str) -> bool {
+        self.inference_backends.remove(backend_id).is_some()
+    }
+
     pub fn execute_inference(
         &mut self,
         request: &InferenceRequest,
@@ -4051,6 +4260,36 @@ impl RequestScheduler {
         Ok(())
     }
 
+    /// Return the current scheduling policy.
+    pub fn scheduling_policy(&self) -> &SchedulingPolicy {
+        &self.scheduling_policy
+    }
+
+    /// Set the scheduling policy.
+    pub fn set_scheduling_policy(&mut self, policy: SchedulingPolicy) {
+        self.scheduling_policy = policy;
+    }
+
+    /// Return a reference to the queue manager.
+    pub fn queue_manager(&self) -> &QueueManager {
+        &self.queue_manager
+    }
+
+    /// Return a mutable reference to the queue manager.
+    pub fn queue_manager_mut(&mut self) -> &mut QueueManager {
+        &mut self.queue_manager
+    }
+
+    /// Return a reference to the load balancer.
+    pub fn load_balancer(&self) -> &LoadBalancer {
+        &self.load_balancer
+    }
+
+    /// Return a mutable reference to the load balancer.
+    pub fn load_balancer_mut(&mut self) -> &mut LoadBalancer {
+        &mut self.load_balancer
+    }
+
     pub fn schedule_request(&mut self, _request: &InferenceRequest) -> Result<String, MLError> {
         // Simplified scheduling - return backend ID
         Ok("backend_1".to_string())
@@ -4065,6 +4304,58 @@ impl QueueManager {
             completed_requests: Vec::new(),
         }
     }
+
+    /// Enqueue a pending inference request.
+    pub fn enqueue(&mut self, request: InferenceRequest) {
+        self.pending_requests.push(request);
+    }
+
+    /// Dequeue the next pending request (FIFO order).
+    pub fn dequeue(&mut self) -> Option<InferenceRequest> {
+        if self.pending_requests.is_empty() {
+            None
+        } else {
+            Some(self.pending_requests.remove(0))
+        }
+    }
+
+    /// Mark a request as running on a given backend.
+    pub fn start_request(&mut self, running: RunningRequest) {
+        self.running_requests
+            .insert(running.request_id.clone(), running);
+    }
+
+    /// Mark a running request as completed, removing it from the running set
+    /// and appending it to the completed list.
+    pub fn complete_request(&mut self, request_id: &str, completed: CompletedRequest) {
+        self.running_requests.remove(request_id);
+        self.completed_requests.push(completed);
+    }
+
+    /// Return a reference to the pending requests queue.
+    pub fn pending_requests(&self) -> &[InferenceRequest] {
+        &self.pending_requests
+    }
+
+    /// Return a reference to the running requests map.
+    pub fn running_requests(&self) -> &HashMap<String, RunningRequest> {
+        &self.running_requests
+    }
+
+    /// Return a reference to the completed requests list.
+    pub fn completed_requests(&self) -> &[CompletedRequest] {
+        &self.completed_requests
+    }
+
+    /// Number of pending requests.
+    pub fn pending_count(&self) -> usize {
+        self.pending_requests.len()
+    }
+
+    /// Number of currently running requests.
+    pub fn running_count(&self) -> usize {
+        self.running_requests.len()
+    }
 }
 
 impl LoadBalancer {
@@ -4075,6 +4366,42 @@ impl LoadBalancer {
             health_checker: HealthChecker::new(),
         }
     }
+
+    /// Return the current load-balancing strategy.
+    pub fn balancing_strategy(&self) -> &LoadBalancingStrategy {
+        &self.balancing_strategy
+    }
+
+    /// Set the load-balancing strategy.
+    pub fn set_balancing_strategy(&mut self, strategy: LoadBalancingStrategy) {
+        self.balancing_strategy = strategy;
+    }
+
+    /// Record or update metrics for a backend.
+    pub fn record_backend_metrics(&mut self, metrics: BackendMetrics) {
+        self.backend_metrics
+            .insert(metrics.backend_id.clone(), metrics);
+    }
+
+    /// Get metrics for a specific backend.
+    pub fn get_backend_metrics(&self, backend_id: &str) -> Option<&BackendMetrics> {
+        self.backend_metrics.get(backend_id)
+    }
+
+    /// List the ids of all backends with recorded metrics.
+    pub fn list_backend_metrics(&self) -> Vec<String> {
+        self.backend_metrics.keys().cloned().collect()
+    }
+
+    /// Return a reference to the health checker.
+    pub fn health_checker(&self) -> &HealthChecker {
+        &self.health_checker
+    }
+
+    /// Return a mutable reference to the health checker.
+    pub fn health_checker_mut(&mut self) -> &mut HealthChecker {
+        &mut self.health_checker
+    }
 }
 
 impl HealthChecker {
@@ -4084,6 +4411,47 @@ impl HealthChecker {
             check_interval: 30, // 30 seconds
             timeout: 5,         // 5 seconds
         }
+    }
+
+    /// Register a health check under its check id.
+    pub fn register_health_check(&mut self, check: HealthCheck) {
+        self.health_checks
+            .insert(check.check_id.clone(), check);
+    }
+
+    /// Get a registered health check by id.
+    pub fn get_health_check(&self, check_id: &str) -> Option<&HealthCheck> {
+        self.health_checks.get(check_id)
+    }
+
+    /// List the ids of all registered health checks.
+    pub fn list_health_checks(&self) -> Vec<String> {
+        self.health_checks.keys().cloned().collect()
+    }
+
+    /// Remove a registered health check by id. Returns `true` if removed.
+    pub fn remove_health_check(&mut self, check_id: &str) -> bool {
+        self.health_checks.remove(check_id).is_some()
+    }
+
+    /// Return the check interval (seconds).
+    pub fn check_interval(&self) -> u64 {
+        self.check_interval
+    }
+
+    /// Set the check interval (seconds).
+    pub fn set_check_interval(&mut self, interval: u64) {
+        self.check_interval = interval;
+    }
+
+    /// Return the timeout (seconds).
+    pub fn timeout(&self) -> u64 {
+        self.timeout
+    }
+
+    /// Set the timeout (seconds).
+    pub fn set_timeout(&mut self, timeout: u64) {
+        self.timeout = timeout;
     }
 }
 
@@ -4112,6 +4480,36 @@ impl BatchProcessor {
         self.batch_optimizer.initialize()?;
         Ok(())
     }
+
+    /// Return the current batching strategy.
+    pub fn batching_strategy(&self) -> &BatchingStrategy {
+        &self.batching_strategy
+    }
+
+    /// Set the batching strategy.
+    pub fn set_batching_strategy(&mut self, strategy: BatchingStrategy) {
+        self.batching_strategy = strategy;
+    }
+
+    /// Return the configured batch size.
+    pub fn batch_size(&self) -> usize {
+        self.batch_size
+    }
+
+    /// Set the batch size.
+    pub fn set_batch_size(&mut self, size: usize) {
+        self.batch_size = size;
+    }
+
+    /// Return the configured batch timeout (milliseconds).
+    pub fn batch_timeout(&self) -> u64 {
+        self.batch_timeout
+    }
+
+    /// Set the batch timeout (milliseconds).
+    pub fn set_batch_timeout(&mut self, timeout: u64) {
+        self.batch_timeout = timeout;
+    }
 }
 
 impl BatchOptimizer {
@@ -4124,6 +4522,32 @@ impl BatchOptimizer {
 
     pub fn initialize(&mut self) -> Result<(), MLError> {
         Ok(())
+    }
+
+    /// Register a batch optimization algorithm under the given name.
+    pub fn register_algorithm(&mut self, name: &str, algorithm: BatchOptimizationAlgorithm) {
+        self.optimization_algorithms
+            .insert(name.to_string(), algorithm);
+    }
+
+    /// Get a registered batch optimization algorithm by name.
+    pub fn get_algorithm(&self, name: &str) -> Option<&BatchOptimizationAlgorithm> {
+        self.optimization_algorithms.get(name)
+    }
+
+    /// List the names of all registered batch optimization algorithms.
+    pub fn list_algorithms(&self) -> Vec<String> {
+        self.optimization_algorithms.keys().cloned().collect()
+    }
+
+    /// Return a reference to the optimization metrics.
+    pub fn optimization_metrics(&self) -> &BatchOptimizationMetrics {
+        &self.optimization_metrics
+    }
+
+    /// Return a mutable reference to the optimization metrics.
+    pub fn optimization_metrics_mut(&mut self) -> &mut BatchOptimizationMetrics {
+        &mut self.optimization_metrics
     }
 }
 
@@ -4152,6 +4576,21 @@ impl InferenceOptimizer {
         self.auto_tuner.initialize()?;
         Ok(())
     }
+
+    /// Return a reference to the configured optimization strategies.
+    pub fn optimization_strategies(&self) -> &[InferenceOptimizationStrategy] {
+        &self.optimization_strategies
+    }
+
+    /// Add an optimization strategy to the configured set.
+    pub fn add_optimization_strategy(&mut self, strategy: InferenceOptimizationStrategy) {
+        self.optimization_strategies.push(strategy);
+    }
+
+    /// Replace the full set of optimization strategies.
+    pub fn set_optimization_strategies(&mut self, strategies: Vec<InferenceOptimizationStrategy>) {
+        self.optimization_strategies = strategies;
+    }
 }
 
 impl PerformanceAnalyzer {
@@ -4166,6 +4605,32 @@ impl PerformanceAnalyzer {
     pub fn initialize(&mut self) -> Result<(), MLError> {
         self.bottleneck_detector.initialize()?;
         Ok(())
+    }
+
+    /// Return a reference to the configured analysis methods.
+    pub fn analysis_methods(&self) -> &[AnalysisMethod] {
+        &self.analysis_methods
+    }
+
+    /// Add an analysis method to the configured set.
+    pub fn add_analysis_method(&mut self, method: AnalysisMethod) {
+        self.analysis_methods.push(method);
+    }
+
+    /// Register a performance profile under its profile id.
+    pub fn register_profile(&mut self, profile: PerformanceProfile) {
+        self.performance_profiles
+            .insert(profile.profile_id.clone(), profile);
+    }
+
+    /// Get a registered performance profile by id.
+    pub fn get_profile(&self, profile_id: &str) -> Option<&PerformanceProfile> {
+        self.performance_profiles.get(profile_id)
+    }
+
+    /// List the ids of all registered performance profiles.
+    pub fn list_profiles(&self) -> Vec<String> {
+        self.performance_profiles.keys().cloned().collect()
     }
 }
 
@@ -4214,6 +4679,26 @@ impl BottleneckDetector {
     pub fn initialize(&mut self) -> Result<(), MLError> {
         Ok(())
     }
+
+    /// Return a reference to the configured detection algorithms.
+    pub fn detection_algorithms(&self) -> &[BottleneckDetectionAlgorithm] {
+        &self.detection_algorithms
+    }
+
+    /// Add a detection algorithm to the configured set.
+    pub fn add_detection_algorithm(&mut self, algorithm: BottleneckDetectionAlgorithm) {
+        self.detection_algorithms.push(algorithm);
+    }
+
+    /// Return a reference to the detection thresholds.
+    pub fn detection_thresholds(&self) -> &DetectionThresholds {
+        &self.detection_thresholds
+    }
+
+    /// Return a mutable reference to the detection thresholds.
+    pub fn detection_thresholds_mut(&mut self) -> &mut DetectionThresholds {
+        &mut self.detection_thresholds
+    }
 }
 
 impl DetectionThresholds {
@@ -4239,6 +4724,42 @@ impl AutoTuner {
     pub fn initialize(&mut self) -> Result<(), MLError> {
         Ok(())
     }
+
+    /// Register a tuning algorithm under the given name.
+    pub fn register_tuning_algorithm(&mut self, name: &str, algorithm: TuningAlgorithm) {
+        self.tuning_algorithms
+            .insert(name.to_string(), algorithm);
+    }
+
+    /// Get a registered tuning algorithm by name.
+    pub fn get_tuning_algorithm(&self, name: &str) -> Option<&TuningAlgorithm> {
+        self.tuning_algorithms.get(name)
+    }
+
+    /// List the names of all registered tuning algorithms.
+    pub fn list_tuning_algorithms(&self) -> Vec<String> {
+        self.tuning_algorithms.keys().cloned().collect()
+    }
+
+    /// Add a tuning objective to the configured set.
+    pub fn add_tuning_objective(&mut self, objective: TuningObjective) {
+        self.tuning_objectives.push(objective);
+    }
+
+    /// Return a reference to the configured tuning objectives.
+    pub fn tuning_objectives(&self) -> &[TuningObjective] {
+        &self.tuning_objectives
+    }
+
+    /// Return a reference to the tuning history.
+    pub fn tuning_history(&self) -> &TuningHistory {
+        &self.tuning_history
+    }
+
+    /// Return a mutable reference to the tuning history.
+    pub fn tuning_history_mut(&mut self) -> &mut TuningHistory {
+        &mut self.tuning_history
+    }
 }
 
 impl TuningHistory {
@@ -4247,6 +4768,32 @@ impl TuningHistory {
             tuning_records: Vec::new(),
             best_configurations: HashMap::new(),
         }
+    }
+
+    /// Append a tuning record to the history.
+    pub fn add_record(&mut self, record: TuningRecord) {
+        self.tuning_records.push(record);
+    }
+
+    /// Return a reference to all tuning records.
+    pub fn records(&self) -> &[TuningRecord] {
+        &self.tuning_records
+    }
+
+    /// Record a best configuration for a given objective name.
+    pub fn record_best_configuration(&mut self, objective: &str, config: TuningConfiguration) {
+        self.best_configurations
+            .insert(objective.to_string(), config);
+    }
+
+    /// Get the best configuration for a given objective.
+    pub fn get_best_configuration(&self, objective: &str) -> Option<&TuningConfiguration> {
+        self.best_configurations.get(objective)
+    }
+
+    /// List the objective names that have a recorded best configuration.
+    pub fn list_best_configurations(&self) -> Vec<String> {
+        self.best_configurations.keys().cloned().collect()
     }
 }
 
@@ -4287,6 +4834,27 @@ impl TrainingEngine {
         self.data_pipeline.initialize()?;
         self.training_optimizer.initialize()?;
         Ok(())
+    }
+
+    /// Register a training backend under its backend id.
+    pub fn register_backend(&mut self, backend: TrainingBackend) {
+        self.training_backends
+            .insert(backend.backend_id.clone(), backend);
+    }
+
+    /// Get a registered training backend by id.
+    pub fn get_backend(&self, backend_id: &str) -> Option<&TrainingBackend> {
+        self.training_backends.get(backend_id)
+    }
+
+    /// List the ids of all registered training backends.
+    pub fn list_backends(&self) -> Vec<String> {
+        self.training_backends.keys().cloned().collect()
+    }
+
+    /// Remove a registered training backend by id. Returns `true` if removed.
+    pub fn remove_backend(&mut self, backend_id: &str) -> bool {
+        self.training_backends.remove(backend_id).is_some()
     }
 
     /// Start a training *job* (the catalog/scheduler path). This records the job with the
@@ -4664,6 +5232,16 @@ impl TrainingScheduler {
         self.progress_tracker.initialize()?;
         Ok(())
     }
+
+    /// Return the current training scheduling policy.
+    pub fn scheduling_policy(&self) -> &TrainingSchedulingPolicy {
+        &self.scheduling_policy
+    }
+
+    /// Set the training scheduling policy.
+    pub fn set_scheduling_policy(&mut self, policy: TrainingSchedulingPolicy) {
+        self.scheduling_policy = policy;
+    }
 }
 
 impl ResourceManager {
@@ -4678,6 +5256,37 @@ impl ResourceManager {
     pub fn initialize(&mut self) -> Result<(), MLError> {
         self.utilization_tracker.initialize()?;
         Ok(())
+    }
+
+    /// Register a resource under its resource id.
+    pub fn register_resource(&mut self, resource: Resource) {
+        self.resources
+            .insert(resource.resource_id.clone(), resource);
+    }
+
+    /// Get a registered resource by id.
+    pub fn get_resource(&self, resource_id: &str) -> Option<&Resource> {
+        self.resources.get(resource_id)
+    }
+
+    /// Get a mutable reference to a registered resource by id.
+    pub fn get_resource_mut(&mut self, resource_id: &str) -> Option<&mut Resource> {
+        self.resources.get_mut(resource_id)
+    }
+
+    /// List the ids of all registered resources.
+    pub fn list_resources(&self) -> Vec<String> {
+        self.resources.keys().cloned().collect()
+    }
+
+    /// Return the current allocation strategy.
+    pub fn allocation_strategy(&self) -> &AllocationStrategy {
+        &self.allocation_strategy
+    }
+
+    /// Set the allocation strategy.
+    pub fn set_allocation_strategy(&mut self, strategy: AllocationStrategy) {
+        self.allocation_strategy = strategy;
     }
 }
 
@@ -4703,6 +5312,36 @@ impl UtilizationTracker {
 
     pub fn initialize(&mut self) -> Result<(), MLError> {
         Ok(())
+    }
+
+    /// Record a utilization sample for a resource, appending it to the history
+    /// and updating the current utilization value.
+    pub fn record_utilization(&mut self, record: UtilizationRecord) {
+        self.utilization_history
+            .entry(record.resource_id.clone())
+            .or_default()
+            .push(record.clone());
+        self.current_utilization
+            .insert(record.resource_id, record.utilization);
+    }
+
+    /// Return the utilization history for a given resource.
+    pub fn get_utilization_history(&self, resource_id: &str) -> &[UtilizationRecord] {
+        self.utilization_history
+            .get(resource_id)
+            .map(|v| v.as_slice())
+            .unwrap_or(&[])
+    }
+
+    /// Return the current utilization for a given resource.
+    pub fn current_utilization(&self, resource_id: &str) -> Option<f64> {
+        self.current_utilization.get(resource_id).copied()
+    }
+
+    /// Set the current utilization for a given resource.
+    pub fn set_current_utilization(&mut self, resource_id: &str, utilization: f64) {
+        self.current_utilization
+            .insert(resource_id.to_string(), utilization);
     }
 }
 

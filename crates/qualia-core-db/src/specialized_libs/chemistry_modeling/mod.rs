@@ -1653,6 +1653,46 @@ impl MolecularSimulator {
     pub fn get_molecule(&self, molecule_id: &str) -> Option<Molecule> {
         self.molecule_store.get(molecule_id).cloned()
     }
+
+    /// Borrow the boundary-conditions configuration.
+    pub fn boundary_conditions(&self) -> &BoundaryConditions {
+        &self.boundary_conditions
+    }
+
+    /// Mutably borrow the boundary-conditions configuration.
+    pub fn boundary_conditions_mut(&mut self) -> &mut BoundaryConditions {
+        &mut self.boundary_conditions
+    }
+
+    /// Borrow the simulation engine.
+    pub fn simulation_engine(&self) -> &SimulationEngine {
+        &self.simulation_engine
+    }
+
+    /// Mutably borrow the simulation engine.
+    pub fn simulation_engine_mut(&mut self) -> &mut SimulationEngine {
+        &mut self.simulation_engine
+    }
+
+    /// Borrow the force-field calculator.
+    pub fn force_field_calculator(&self) -> &ForceFieldCalculator {
+        &self.force_field_calculator
+    }
+
+    /// Mutably borrow the force-field calculator.
+    pub fn force_field_calculator_mut(&mut self) -> &mut ForceFieldCalculator {
+        &mut self.force_field_calculator
+    }
+
+    /// Borrow the molecular integrator.
+    pub fn integrator(&self) -> &MolecularIntegrator {
+        &self.integrator
+    }
+
+    /// Mutably borrow the molecular integrator.
+    pub fn integrator_mut(&mut self) -> &mut MolecularIntegrator {
+        &mut self.integrator
+    }
 }
 
 impl SimulationEngine {
@@ -1670,6 +1710,46 @@ impl SimulationEngine {
         self.ensemble_manager.initialize()?;
         self.temperature_controller.initialize()?;
         Ok(())
+    }
+
+    /// Borrow the simulation configuration.
+    pub fn simulation_config(&self) -> &SimulationConfig {
+        &self.simulation_config
+    }
+
+    /// Mutably borrow the simulation configuration.
+    pub fn simulation_config_mut(&mut self) -> &mut SimulationConfig {
+        &mut self.simulation_config
+    }
+
+    /// Borrow the time-step controller.
+    pub fn time_step_control(&self) -> &TimeStepControl {
+        &self.time_step_control
+    }
+
+    /// Mutably borrow the time-step controller.
+    pub fn time_step_control_mut(&mut self) -> &mut TimeStepControl {
+        &mut self.time_step_control
+    }
+
+    /// Borrow the ensemble manager.
+    pub fn ensemble_manager(&self) -> &EnsembleManager {
+        &self.ensemble_manager
+    }
+
+    /// Mutably borrow the ensemble manager.
+    pub fn ensemble_manager_mut(&mut self) -> &mut EnsembleManager {
+        &mut self.ensemble_manager
+    }
+
+    /// Borrow the temperature controller.
+    pub fn temperature_controller(&self) -> &TemperatureController {
+        &self.temperature_controller
+    }
+
+    /// Mutably borrow the temperature controller.
+    pub fn temperature_controller_mut(&mut self) -> &mut TemperatureController {
+        &mut self.temperature_controller
     }
 }
 
@@ -1698,6 +1778,36 @@ impl TimeStepControl {
         }
     }
 
+    /// Borrow the time-step control strategy.
+    pub fn control_type(&self) -> &TimeStepControlType {
+        &self.control_type
+    }
+
+    /// Set the time-step control strategy.
+    pub fn set_control_type(&mut self, control_type: TimeStepControlType) {
+        self.control_type = control_type;
+    }
+
+    /// Borrow the adaptive time-step parameters.
+    pub fn adaptive_parameters(&self) -> &AdaptiveParameters {
+        &self.adaptive_parameters
+    }
+
+    /// Mutably borrow the adaptive time-step parameters.
+    pub fn adaptive_parameters_mut(&mut self) -> &mut AdaptiveParameters {
+        &mut self.adaptive_parameters
+    }
+
+    /// Borrow the stability analysis.
+    pub fn stability_analysis(&self) -> &StabilityAnalysis {
+        &self.stability_analysis
+    }
+
+    /// Mutably borrow the stability analysis.
+    pub fn stability_analysis_mut(&mut self) -> &mut StabilityAnalysis {
+        &mut self.stability_analysis
+    }
+
     pub fn initialize(&mut self) -> Result<(), ChemistryError> {
         Ok(())
     }
@@ -1721,6 +1831,36 @@ impl StabilityAnalysis {
             energy_conservation: EnergyConservation::new(),
             temperature_fluctuation: TemperatureFluctuation::new(),
         }
+    }
+
+    /// Borrow the stability analysis method.
+    pub fn analysis_method(&self) -> &StabilityAnalysisMethod {
+        &self.analysis_method
+    }
+
+    /// Set the stability analysis method.
+    pub fn set_analysis_method(&mut self, method: StabilityAnalysisMethod) {
+        self.analysis_method = method;
+    }
+
+    /// Borrow the energy-conservation metrics.
+    pub fn energy_conservation(&self) -> &EnergyConservation {
+        &self.energy_conservation
+    }
+
+    /// Mutably borrow the energy-conservation metrics.
+    pub fn energy_conservation_mut(&mut self) -> &mut EnergyConservation {
+        &mut self.energy_conservation
+    }
+
+    /// Borrow the temperature-fluctuation metrics.
+    pub fn temperature_fluctuation(&self) -> &TemperatureFluctuation {
+        &self.temperature_fluctuation
+    }
+
+    /// Mutably borrow the temperature-fluctuation metrics.
+    pub fn temperature_fluctuation_mut(&mut self) -> &mut TemperatureFluctuation {
+        &mut self.temperature_fluctuation
     }
 }
 
@@ -1898,6 +2038,36 @@ impl TemperatureController {
             thermostat_parameters: ThermostatParameters::new(),
             temperature_profile: TemperatureProfile::new(),
         }
+    }
+
+    /// Borrow the temperature control method.
+    pub fn control_method(&self) -> &TemperatureControlMethod {
+        &self.control_method
+    }
+
+    /// Set the temperature control method.
+    pub fn set_control_method(&mut self, method: TemperatureControlMethod) {
+        self.control_method = method;
+    }
+
+    /// Borrow the thermostat parameters.
+    pub fn thermostat_parameters(&self) -> &ThermostatParameters {
+        &self.thermostat_parameters
+    }
+
+    /// Mutably borrow the thermostat parameters.
+    pub fn thermostat_parameters_mut(&mut self) -> &mut ThermostatParameters {
+        &mut self.thermostat_parameters
+    }
+
+    /// Borrow the temperature profile.
+    pub fn temperature_profile(&self) -> &TemperatureProfile {
+        &self.temperature_profile
+    }
+
+    /// Mutably borrow the temperature profile.
+    pub fn temperature_profile_mut(&mut self) -> &mut TemperatureProfile {
+        &mut self.temperature_profile
     }
 
     pub fn initialize(&mut self) -> Result<(), ChemistryError> {
@@ -2090,6 +2260,36 @@ impl InteractionCalculator {
         }
     }
 
+    /// Borrow the bonded-interactions calculator.
+    pub fn bonded_interactions(&self) -> &BondedInteractions {
+        &self.bonded_interactions
+    }
+
+    /// Mutably borrow the bonded-interactions calculator.
+    pub fn bonded_interactions_mut(&mut self) -> &mut BondedInteractions {
+        &mut self.bonded_interactions
+    }
+
+    /// Borrow the nonbonded-interactions calculator.
+    pub fn nonbonded_interactions(&self) -> &NonbondedInteractions {
+        &self.nonbonded_interactions
+    }
+
+    /// Mutably borrow the nonbonded-interactions calculator.
+    pub fn nonbonded_interactions_mut(&mut self) -> &mut NonbondedInteractions {
+        &mut self.nonbonded_interactions
+    }
+
+    /// Borrow the long-range-interactions calculator.
+    pub fn long_range_interactions(&self) -> &LongRangeInteractions {
+        &self.long_range_interactions
+    }
+
+    /// Mutably borrow the long-range-interactions calculator.
+    pub fn long_range_interactions_mut(&mut self) -> &mut LongRangeInteractions {
+        &mut self.long_range_interactions
+    }
+
     pub fn initialize(&mut self) -> Result<(), ChemistryError> {
         Ok(())
     }
@@ -2103,6 +2303,46 @@ impl BondedInteractions {
             torsion_calculator: TorsionCalculator::new(),
             improper_calculator: ImproperCalculator::new(),
         }
+    }
+
+    /// Borrow the bond-stretch calculator.
+    pub fn bond_calculator(&self) -> &BondCalculator {
+        &self.bond_calculator
+    }
+
+    /// Mutably borrow the bond-stretch calculator.
+    pub fn bond_calculator_mut(&mut self) -> &mut BondCalculator {
+        &mut self.bond_calculator
+    }
+
+    /// Borrow the angle-bend calculator.
+    pub fn angle_calculator(&self) -> &AngleCalculator {
+        &self.angle_calculator
+    }
+
+    /// Mutably borrow the angle-bend calculator.
+    pub fn angle_calculator_mut(&mut self) -> &mut AngleCalculator {
+        &mut self.angle_calculator
+    }
+
+    /// Borrow the torsion calculator.
+    pub fn torsion_calculator(&self) -> &TorsionCalculator {
+        &self.torsion_calculator
+    }
+
+    /// Mutably borrow the torsion calculator.
+    pub fn torsion_calculator_mut(&mut self) -> &mut TorsionCalculator {
+        &mut self.torsion_calculator
+    }
+
+    /// Borrow the improper-torsion calculator.
+    pub fn improper_calculator(&self) -> &ImproperCalculator {
+        &self.improper_calculator
+    }
+
+    /// Mutably borrow the improper-torsion calculator.
+    pub fn improper_calculator_mut(&mut self) -> &mut ImproperCalculator {
+        &mut self.improper_calculator
     }
 }
 
@@ -2189,6 +2429,36 @@ impl NonbondedInteractions {
             buckingham: Buckingham::new(),
         }
     }
+
+    /// Borrow the Lennard-Jones potential parameters.
+    pub fn lennard_jones(&self) -> &LennardJones {
+        &self.lennard_jones
+    }
+
+    /// Mutably borrow the Lennard-Jones potential parameters.
+    pub fn lennard_jones_mut(&mut self) -> &mut LennardJones {
+        &mut self.lennard_jones
+    }
+
+    /// Borrow the Coulomb potential parameters.
+    pub fn coulomb(&self) -> &Coulomb {
+        &self.coulomb
+    }
+
+    /// Mutably borrow the Coulomb potential parameters.
+    pub fn coulomb_mut(&mut self) -> &mut Coulomb {
+        &mut self.coulomb
+    }
+
+    /// Borrow the Buckingham potential parameters.
+    pub fn buckingham(&self) -> &Buckingham {
+        &self.buckingham
+    }
+
+    /// Mutably borrow the Buckingham potential parameters.
+    pub fn buckingham_mut(&mut self) -> &mut Buckingham {
+        &mut self.buckingham
+    }
 }
 
 impl LennardJones {
@@ -2232,6 +2502,36 @@ impl LongRangeInteractions {
             reaction_field: ReactionField::new(),
         }
     }
+
+    /// Borrow the Ewald-summation parameters.
+    pub fn ewald_summation(&self) -> &EwaldSummation {
+        &self.ewald_summation
+    }
+
+    /// Mutably borrow the Ewald-summation parameters.
+    pub fn ewald_summation_mut(&mut self) -> &mut EwaldSummation {
+        &mut self.ewald_summation
+    }
+
+    /// Borrow the particle-mesh (PME) parameters.
+    pub fn particle_mesh(&self) -> &ParticleMesh {
+        &self.particle_mesh
+    }
+
+    /// Mutably borrow the particle-mesh (PME) parameters.
+    pub fn particle_mesh_mut(&mut self) -> &mut ParticleMesh {
+        &mut self.particle_mesh
+    }
+
+    /// Borrow the reaction-field parameters.
+    pub fn reaction_field(&self) -> &ReactionField {
+        &self.reaction_field
+    }
+
+    /// Mutably borrow the reaction-field parameters.
+    pub fn reaction_field_mut(&mut self) -> &mut ReactionField {
+        &mut self.reaction_field
+    }
 }
 
 impl EwaldSummation {
@@ -2272,6 +2572,36 @@ impl EnergyCalculator {
             potential_energy: PotentialEnergy::new(),
             total_energy: TotalEnergy::new(),
         }
+    }
+
+    /// Borrow the kinetic-energy state.
+    pub fn kinetic_energy(&self) -> &KineticEnergy {
+        &self.kinetic_energy
+    }
+
+    /// Mutably borrow the kinetic-energy state.
+    pub fn kinetic_energy_mut(&mut self) -> &mut KineticEnergy {
+        &mut self.kinetic_energy
+    }
+
+    /// Borrow the potential-energy state.
+    pub fn potential_energy(&self) -> &PotentialEnergy {
+        &self.potential_energy
+    }
+
+    /// Mutably borrow the potential-energy state.
+    pub fn potential_energy_mut(&mut self) -> &mut PotentialEnergy {
+        &mut self.potential_energy
+    }
+
+    /// Borrow the total-energy state.
+    pub fn total_energy(&self) -> &TotalEnergy {
+        &self.total_energy
+    }
+
+    /// Mutably borrow the total-energy state.
+    pub fn total_energy_mut(&mut self) -> &mut TotalEnergy {
+        &mut self.total_energy
     }
 
     pub fn initialize(&mut self) -> Result<(), ChemistryError> {
@@ -2319,6 +2649,26 @@ impl MolecularIntegrator {
         }
     }
 
+    /// Borrow the integrator type.
+    pub fn integrator_type(&self) -> &IntegratorType {
+        &self.integrator_type
+    }
+
+    /// Set the integrator type.
+    pub fn set_integrator_type(&mut self, integrator_type: IntegratorType) {
+        self.integrator_type = integrator_type;
+    }
+
+    /// Borrow the integrator parameters.
+    pub fn integrator_parameters(&self) -> &IntegratorParameters {
+        &self.integrator_parameters
+    }
+
+    /// Mutably borrow the integrator parameters.
+    pub fn integrator_parameters_mut(&mut self) -> &mut IntegratorParameters {
+        &mut self.integrator_parameters
+    }
+
     pub fn initialize(&mut self) -> Result<(), ChemistryError> {
         self.constraint_handler.initialize()?;
         Ok(())
@@ -2341,6 +2691,26 @@ impl ConstraintHandler {
             constraint_algorithm: ConstraintAlgorithm::SHAKE,
             constraint_parameters: ConstraintParameters::new(),
         }
+    }
+
+    /// Borrow the constraint algorithm.
+    pub fn constraint_algorithm(&self) -> &ConstraintAlgorithm {
+        &self.constraint_algorithm
+    }
+
+    /// Set the constraint algorithm.
+    pub fn set_constraint_algorithm(&mut self, algorithm: ConstraintAlgorithm) {
+        self.constraint_algorithm = algorithm;
+    }
+
+    /// Borrow the constraint parameters.
+    pub fn constraint_parameters(&self) -> &ConstraintParameters {
+        &self.constraint_parameters
+    }
+
+    /// Mutably borrow the constraint parameters.
+    pub fn constraint_parameters_mut(&mut self) -> &mut ConstraintParameters {
+        &mut self.constraint_parameters
     }
 
     pub fn initialize(&mut self) -> Result<(), ChemistryError> {
@@ -2369,6 +2739,36 @@ impl BoundaryConditions {
             ],
             minimum_image: MinimumImage::new(),
         }
+    }
+
+    /// Borrow the boundary type.
+    pub fn boundary_type(&self) -> &BoundaryType {
+        &self.boundary_type
+    }
+
+    /// Set the boundary type.
+    pub fn set_boundary_type(&mut self, boundary_type: BoundaryType) {
+        self.boundary_type = boundary_type;
+    }
+
+    /// Borrow the simulation box vectors.
+    pub fn box_vectors(&self) -> &Vec<Vec<f64>> {
+        &self.box_vectors
+    }
+
+    /// Mutably borrow the simulation box vectors.
+    pub fn box_vectors_mut(&mut self) -> &mut Vec<Vec<f64>> {
+        &mut self.box_vectors
+    }
+
+    /// Borrow the minimum-image convention state.
+    pub fn minimum_image(&self) -> &MinimumImage {
+        &self.minimum_image
+    }
+
+    /// Mutably borrow the minimum-image convention state.
+    pub fn minimum_image_mut(&mut self) -> &mut MinimumImage {
+        &mut self.minimum_image
     }
 }
 
@@ -2434,6 +2834,36 @@ impl WavefunctionCalculator {
         }
     }
 
+    /// Borrow the quantum method type.
+    pub fn method_type(&self) -> &QuantumMethodType {
+        &self.method_type
+    }
+
+    /// Set the quantum method type.
+    pub fn set_method_type(&mut self, method_type: QuantumMethodType) {
+        self.method_type = method_type;
+    }
+
+    /// Borrow the basis set.
+    pub fn basis_set(&self) -> &BasisSet {
+        &self.basis_set
+    }
+
+    /// Mutably borrow the basis set.
+    pub fn basis_set_mut(&mut self) -> &mut BasisSet {
+        &mut self.basis_set
+    }
+
+    /// Borrow the SCF parameters.
+    pub fn scf_parameters(&self) -> &SCFParameters {
+        &self.scf_parameters
+    }
+
+    /// Mutably borrow the SCF parameters.
+    pub fn scf_parameters_mut(&mut self) -> &mut SCFParameters {
+        &mut self.scf_parameters
+    }
+
     pub fn initialize(&mut self) -> Result<(), ChemistryError> {
         Ok(())
     }
@@ -2482,6 +2912,36 @@ impl QuantumEnergyCalculator {
         }
     }
 
+    /// Borrow the electronic-energy breakdown.
+    pub fn electronic_energy(&self) -> &ElectronicEnergy {
+        &self.electronic_energy
+    }
+
+    /// Mutably borrow the electronic-energy breakdown.
+    pub fn electronic_energy_mut(&mut self) -> &mut ElectronicEnergy {
+        &mut self.electronic_energy
+    }
+
+    /// Borrow the nuclear-energy breakdown.
+    pub fn nuclear_energy(&self) -> &NuclearEnergy {
+        &self.nuclear_energy
+    }
+
+    /// Mutably borrow the nuclear-energy breakdown.
+    pub fn nuclear_energy_mut(&mut self) -> &mut NuclearEnergy {
+        &mut self.nuclear_energy
+    }
+
+    /// Borrow the total-energy breakdown.
+    pub fn total_energy(&self) -> &QuantumTotalEnergy {
+        &self.total_energy
+    }
+
+    /// Mutably borrow the total-energy breakdown.
+    pub fn total_energy_mut(&mut self) -> &mut QuantumTotalEnergy {
+        &mut self.total_energy
+    }
+
     pub fn initialize(&mut self) -> Result<(), ChemistryError> {
         Ok(())
     }
@@ -2527,6 +2987,36 @@ impl QuantumPropertyCalculator {
         }
     }
 
+    /// Borrow the dipole-moment result.
+    pub fn dipole_moment(&self) -> &DipoleMoment {
+        &self.dipole_moment
+    }
+
+    /// Mutably borrow the dipole-moment result.
+    pub fn dipole_moment_mut(&mut self) -> &mut DipoleMoment {
+        &mut self.dipole_moment
+    }
+
+    /// Borrow the polarizability result.
+    pub fn polarizability(&self) -> &Polarizability {
+        &self.polarizability
+    }
+
+    /// Mutably borrow the polarizability result.
+    pub fn polarizability_mut(&mut self) -> &mut Polarizability {
+        &mut self.polarizability
+    }
+
+    /// Borrow the Mulliken-charges result.
+    pub fn mulliken_charges(&self) -> &MullikenCharges {
+        &self.mulliken_charges
+    }
+
+    /// Mutably borrow the Mulliken-charges result.
+    pub fn mulliken_charges_mut(&mut self) -> &mut MullikenCharges {
+        &mut self.mulliken_charges
+    }
+
     pub fn initialize(&mut self) -> Result<(), ChemistryError> {
         Ok(())
     }
@@ -2566,6 +3056,16 @@ impl ReactionAnalyzer {
             kinetics_calculator: KineticsCalculator::new(),
             thermodynamics_calculator: ThermodynamicsCalculator::new(),
         }
+    }
+
+    /// Borrow the reaction network.
+    pub fn reaction_network(&self) -> &ReactionNetwork {
+        &self.reaction_network
+    }
+
+    /// Mutably borrow the reaction network.
+    pub fn reaction_network_mut(&mut self) -> &mut ReactionNetwork {
+        &mut self.reaction_network
     }
 
     pub fn initialize(&mut self) -> Result<(), ChemistryError> {
@@ -2677,6 +3177,62 @@ impl ReactionNetwork {
             pathways: Vec::new(),
         }
     }
+
+    /// Register a reaction under its `reaction_id`, replacing any existing entry.
+    pub fn add_reaction(&mut self, reaction: Reaction) {
+        self.reactions
+            .insert(reaction.reaction_id.clone(), reaction);
+    }
+
+    /// Look up a reaction by id.
+    pub fn get_reaction(&self, reaction_id: &str) -> Option<&Reaction> {
+        self.reactions.get(reaction_id)
+    }
+
+    /// List the ids of all registered reactions.
+    pub fn list_reactions(&self) -> Vec<String> {
+        self.reactions.keys().cloned().collect()
+    }
+
+    /// Remove a reaction by id.
+    pub fn remove_reaction(&mut self, reaction_id: &str) -> Option<Reaction> {
+        self.reactions.remove(reaction_id)
+    }
+
+    /// Register a species under its `species_id`, replacing any existing entry.
+    pub fn add_species(&mut self, species: Species) {
+        self.species.insert(species.species_id.clone(), species);
+    }
+
+    /// Look up a species by id.
+    pub fn get_species(&self, species_id: &str) -> Option<&Species> {
+        self.species.get(species_id)
+    }
+
+    /// List the ids of all registered species.
+    pub fn list_species(&self) -> Vec<String> {
+        self.species.keys().cloned().collect()
+    }
+
+    /// Remove a species by id.
+    pub fn remove_species(&mut self, species_id: &str) -> Option<Species> {
+        self.species.remove(species_id)
+    }
+
+    /// Append a reaction pathway.
+    pub fn add_pathway(&mut self, pathway: ReactionPathway) {
+        self.pathways.push(pathway);
+    }
+
+    /// Borrow the reaction pathways.
+    pub fn pathways(&self) -> &Vec<ReactionPathway> {
+        &self.pathways
+    }
+
+    /// Mutably borrow the reaction pathways.
+    pub fn pathways_mut(&mut self) -> &mut Vec<ReactionPathway> {
+        &mut self.pathways
+    }
 }
 
 impl Reaction {
@@ -2755,6 +3311,52 @@ impl KineticsCalculator {
             rate_constants: HashMap::new(),
             reaction_rates: HashMap::new(),
         }
+    }
+
+    /// Register a rate law under its `law_id`, replacing any existing entry.
+    pub fn add_rate_law(&mut self, law: RateLaw) {
+        self.rate_laws.insert(law.law_id.clone(), law);
+    }
+
+    /// Look up a rate law by id.
+    pub fn get_rate_law(&self, law_id: &str) -> Option<&RateLaw> {
+        self.rate_laws.get(law_id)
+    }
+
+    /// List the ids of all registered rate laws.
+    pub fn list_rate_laws(&self) -> Vec<String> {
+        self.rate_laws.keys().cloned().collect()
+    }
+
+    /// Register a rate constant under its `constant_id`, replacing any existing entry.
+    pub fn add_rate_constant(&mut self, constant: RateConstant) {
+        self.rate_constants
+            .insert(constant.constant_id.clone(), constant);
+    }
+
+    /// Look up a rate constant by id.
+    pub fn get_rate_constant(&self, constant_id: &str) -> Option<&RateConstant> {
+        self.rate_constants.get(constant_id)
+    }
+
+    /// List the ids of all registered rate constants.
+    pub fn list_rate_constants(&self) -> Vec<String> {
+        self.rate_constants.keys().cloned().collect()
+    }
+
+    /// Record the instantaneous rate for a reaction id.
+    pub fn set_reaction_rate(&mut self, reaction_id: &str, rate: f64) {
+        self.reaction_rates.insert(reaction_id.to_string(), rate);
+    }
+
+    /// Look up the recorded rate for a reaction id.
+    pub fn get_reaction_rate(&self, reaction_id: &str) -> Option<&f64> {
+        self.reaction_rates.get(reaction_id)
+    }
+
+    /// List the reaction ids that have a recorded rate.
+    pub fn list_reaction_rates(&self) -> Vec<String> {
+        self.reaction_rates.keys().cloned().collect()
     }
 
     pub fn initialize(&mut self) -> Result<(), ChemistryError> {
@@ -2850,6 +3452,26 @@ impl ThermodynamicsCalculator {
         }
     }
 
+    /// Register thermodynamic data under its `data_id`, replacing any existing entry.
+    pub fn add_thermodynamic_data(&mut self, data: ThermodynamicData) {
+        self.thermodynamic_data.insert(data.data_id.clone(), data);
+    }
+
+    /// Look up thermodynamic data by id.
+    pub fn get_thermodynamic_data(&self, data_id: &str) -> Option<&ThermodynamicData> {
+        self.thermodynamic_data.get(data_id)
+    }
+
+    /// List the ids of all registered thermodynamic data entries.
+    pub fn list_thermodynamic_data(&self) -> Vec<String> {
+        self.thermodynamic_data.keys().cloned().collect()
+    }
+
+    /// Remove thermodynamic data by id.
+    pub fn remove_thermodynamic_data(&mut self, data_id: &str) -> Option<ThermodynamicData> {
+        self.thermodynamic_data.remove(data_id)
+    }
+
     pub fn initialize(&mut self) -> Result<(), ChemistryError> {
         self.equilibrium_calculator.initialize()?;
         self.phase_calculator.initialize()?;
@@ -2877,6 +3499,36 @@ impl EquilibriumCalculator {
             reaction_quotient: ReactionQuotient::new(),
             gibbs_energy: GibbsEnergy::new(),
         }
+    }
+
+    /// Borrow the equilibrium constant.
+    pub fn equilibrium_constant(&self) -> &EquilibriumConstant {
+        &self.equilibrium_constant
+    }
+
+    /// Mutably borrow the equilibrium constant.
+    pub fn equilibrium_constant_mut(&mut self) -> &mut EquilibriumConstant {
+        &mut self.equilibrium_constant
+    }
+
+    /// Borrow the reaction quotient.
+    pub fn reaction_quotient(&self) -> &ReactionQuotient {
+        &self.reaction_quotient
+    }
+
+    /// Mutably borrow the reaction quotient.
+    pub fn reaction_quotient_mut(&mut self) -> &mut ReactionQuotient {
+        &mut self.reaction_quotient
+    }
+
+    /// Borrow the Gibbs energy.
+    pub fn gibbs_energy(&self) -> &GibbsEnergy {
+        &self.gibbs_energy
+    }
+
+    /// Mutably borrow the Gibbs energy.
+    pub fn gibbs_energy_mut(&mut self) -> &mut GibbsEnergy {
+        &mut self.gibbs_energy
     }
 
     pub fn initialize(&mut self) -> Result<(), ChemistryError> {
@@ -2920,6 +3572,53 @@ impl PhaseCalculator {
             phase_transitions: HashMap::new(),
             phase_equilibria: HashMap::new(),
         }
+    }
+
+    /// Register a phase diagram under its `diagram_id`, replacing any existing entry.
+    pub fn add_phase_diagram(&mut self, diagram: PhaseDiagram) {
+        self.phase_diagrams.insert(diagram.diagram_id.clone(), diagram);
+    }
+
+    /// Look up a phase diagram by id.
+    pub fn get_phase_diagram(&self, diagram_id: &str) -> Option<&PhaseDiagram> {
+        self.phase_diagrams.get(diagram_id)
+    }
+
+    /// List the ids of all registered phase diagrams.
+    pub fn list_phase_diagrams(&self) -> Vec<String> {
+        self.phase_diagrams.keys().cloned().collect()
+    }
+
+    /// Register a phase transition under its `transition_id`, replacing any existing entry.
+    pub fn add_phase_transition(&mut self, transition: PhaseTransition) {
+        self.phase_transitions
+            .insert(transition.transition_id.clone(), transition);
+    }
+
+    /// Look up a phase transition by id.
+    pub fn get_phase_transition(&self, transition_id: &str) -> Option<&PhaseTransition> {
+        self.phase_transitions.get(transition_id)
+    }
+
+    /// List the ids of all registered phase transitions.
+    pub fn list_phase_transitions(&self) -> Vec<String> {
+        self.phase_transitions.keys().cloned().collect()
+    }
+
+    /// Register a phase equilibrium under its `equilibrium_id`, replacing any existing entry.
+    pub fn add_phase_equilibrium(&mut self, equilibrium: PhaseEquilibrium) {
+        self.phase_equilibria
+            .insert(equilibrium.equilibrium_id.clone(), equilibrium);
+    }
+
+    /// Look up a phase equilibrium by id.
+    pub fn get_phase_equilibrium(&self, equilibrium_id: &str) -> Option<&PhaseEquilibrium> {
+        self.phase_equilibria.get(equilibrium_id)
+    }
+
+    /// List the ids of all registered phase equilibria.
+    pub fn list_phase_equilibria(&self) -> Vec<String> {
+        self.phase_equilibria.keys().cloned().collect()
     }
 
     pub fn initialize(&mut self) -> Result<(), ChemistryError> {
@@ -3241,6 +3940,33 @@ impl PropertyPredictor {
     /// List the names of all registered property models.
     pub fn list_properties(&self) -> Vec<String> {
         self.property_models.keys().cloned().collect()
+    }
+
+    /// Register a machine-learning model under its `model_id`, replacing any
+    /// existing entry.
+    pub fn register_ml_model(&mut self, model: MLModel) {
+        self.machine_learning_models
+            .insert(model.model_id.clone(), model);
+    }
+
+    /// Look up a machine-learning model by id.
+    pub fn get_ml_model(&self, model_id: &str) -> Option<&MLModel> {
+        self.machine_learning_models.get(model_id)
+    }
+
+    /// Mutably borrow a machine-learning model by id.
+    pub fn get_ml_model_mut(&mut self, model_id: &str) -> Option<&mut MLModel> {
+        self.machine_learning_models.get_mut(model_id)
+    }
+
+    /// List the ids of all registered machine-learning models.
+    pub fn list_ml_models(&self) -> Vec<String> {
+        self.machine_learning_models.keys().cloned().collect()
+    }
+
+    /// Remove a machine-learning model by id.
+    pub fn remove_ml_model(&mut self, model_id: &str) -> Option<MLModel> {
+        self.machine_learning_models.remove(model_id)
     }
 }
 

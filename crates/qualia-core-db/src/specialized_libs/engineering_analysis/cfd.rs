@@ -552,27 +552,29 @@ fn solve(
 
         // ── Corner cells: regular bounce-back (no moving wall correction) ──
         // Corners are where two walls meet; use simple bounce-back from both
-        // walls to avoid conflicting moving-wall corrections.
-        // Bottom-left corner (0, 0).
+        // walls to avoid conflicting moving-wall corrections. `OPP[d]` gives the
+        // opposite lattice direction, so `f_new[d] = f[OPP[d]]` is the standard
+        // half-way bounce-back that reflects the distribution function.
+        // Bottom-left corner (0, 0): reflect directions 1, 2, 5.
         let c = 0;
-        f_new[1 * n_cells + c] = f[3 * n_cells + c];
-        f_new[2 * n_cells + c] = f[4 * n_cells + c];
-        f_new[5 * n_cells + c] = f[7 * n_cells + c];
-        // Bottom-right corner (nx-1, 0).
+        for &d in &[1usize, 2, 5] {
+            f_new[d * n_cells + c] = f[OPP[d] * n_cells + c];
+        }
+        // Bottom-right corner (nx-1, 0): reflect directions 2, 3, 6.
         let c = nx - 1;
-        f_new[2 * n_cells + c] = f[4 * n_cells + c];
-        f_new[3 * n_cells + c] = f[1 * n_cells + c];
-        f_new[6 * n_cells + c] = f[8 * n_cells + c];
-        // Top-left corner (0, ny-1).
+        for &d in &[2usize, 3, 6] {
+            f_new[d * n_cells + c] = f[OPP[d] * n_cells + c];
+        }
+        // Top-left corner (0, ny-1): reflect directions 1, 4, 8.
         let c = (ny - 1) * nx;
-        f_new[1 * n_cells + c] = f[3 * n_cells + c];
-        f_new[4 * n_cells + c] = f[2 * n_cells + c];
-        f_new[8 * n_cells + c] = f[6 * n_cells + c];
-        // Top-right corner (nx-1, ny-1).
+        for &d in &[1usize, 4, 8] {
+            f_new[d * n_cells + c] = f[OPP[d] * n_cells + c];
+        }
+        // Top-right corner (nx-1, ny-1): reflect directions 3, 4, 7.
         let c = (ny - 1) * nx + (nx - 1);
-        f_new[3 * n_cells + c] = f[1 * n_cells + c];
-        f_new[4 * n_cells + c] = f[2 * n_cells + c];
-        f_new[7 * n_cells + c] = f[5 * n_cells + c];
+        for &d in &[3usize, 4, 7] {
+            f_new[d * n_cells + c] = f[OPP[d] * n_cells + c];
+        }
 
         // Swap f and f_new.
         std::mem::swap(&mut f, &mut f_new);
@@ -659,6 +661,16 @@ fn solve(
             max_div = max_div.max((du_dx + dv_dy).abs());
         }
     }
+
+    // ── Enforce Dirichlet velocity BCs on the staggered-grid boundary faces ──
+    // The LBM solve above computes cell-centre values and averages them onto the
+    // staggered faces. The boundary face velocities produced by that averaging do
+    // not exactly match the prescribed boundary-condition velocities (e.g. the
+    // lid velocity at the top wall). `apply_bc` overwrites the boundary u/v faces
+    // with the exact Dirichlet values (and applies the Neumann extrapolation for
+    // outflow / pressure outlets), so the returned `CfdSolution` boundary values
+    // are physically consistent with the requested `CfdBc`.
+    apply_bc(grid, bc);
 
     Ok((max_div, converged_step))
 }

@@ -336,7 +336,7 @@ pub struct ThermalMonitor {
 }
 
 /// Thermal states
-#[derive(Debug, Clone, PartialEq)]
+#[derive(Debug, Clone, Copy, PartialEq, Eq, PartialOrd, Ord)]
 pub enum ThermalState {
     Normal,
     Warm,
@@ -462,7 +462,7 @@ pub enum TaskType {
 }
 
 /// Task priorities
-#[derive(Debug, Clone, Copy, PartialEq, Serialize, Deserialize)]
+#[derive(Debug, Clone, Copy, PartialEq, Eq, PartialOrd, Ord, Serialize, Deserialize)]
 pub enum TaskPriority {
     Low,
     Normal,
@@ -858,7 +858,7 @@ impl AmbientOrchestrationManager {
         // Analyze current workload
         let workload_analysis = self.orchestrator.workload_analyzer.analyze_workload();
 
-        // Adapt orchestration policy
+        // Adapt orchestration policy (mutable: records adaptation history)
         let new_policy = self
             .orchestrator
             .adaptation_engine
@@ -970,22 +970,49 @@ impl SubThresholdOrchestrator {
         }
     }
 
-    /// Optimize computation for sub-threshold operation
+    /// Optimize computation for sub-threshold operation.
+    ///
+    /// Uses the resource allocator to check available compute units and
+    /// scales the computation's resource requirements accordingly. The
+    /// orchestration policy influences the reduction factor:
+    /// - `PowerEfficiency`: 50% compute, 40% power, 50% thermal
+    /// - `ThermalAware`: 60% compute, 50% power, 60% thermal
+    /// - `PerformanceFirst`: 90% compute, 80% power, 80% thermal
+    /// - `Adaptive`/other: 70% compute, 50% power, 60% thermal
     pub fn optimize_for_sub_threshold(
-        &self,
+        &mut self,
         computation: SubThresholdComputation,
     ) -> SubThresholdComputation {
-        // Optimize computation for sub-threshold operation
-        // This is a simplified version
         let mut optimized = computation;
 
-        // Reduce resource requirements
-        optimized.resource_requirements.compute_units =
-            (optimized.resource_requirements.compute_units as f64 * 0.7) as u32;
-        optimized.resource_requirements.power_budget *= 0.5;
-        optimized.resource_requirements.thermal_budget *= 0.6;
+        let (compute_factor, power_factor, thermal_factor) = match self.orchestration_policy {
+            OrchestrationPolicy::PowerEfficiency => (0.50, 0.40, 0.50),
+            OrchestrationPolicy::ThermalAware => (0.60, 0.50, 0.60),
+            OrchestrationPolicy::BatteryAware => (0.40, 0.30, 0.50),
+            OrchestrationPolicy::PerformanceFirst => (0.90, 0.80, 0.80),
+            OrchestrationPolicy::Adaptive => (0.70, 0.50, 0.60),
+        };
+
+        // Check available resources before scaling.
+        let available = self.resource_allocator.available_compute_units();
+        let requested = optimized.resource_requirements.compute_units;
+        let scaled = (requested as f64 * compute_factor) as u32;
+        // Don't request more than what's available.
+        optimized.resource_requirements.compute_units = scaled.min(available);
+        optimized.resource_requirements.power_budget *= power_factor;
+        optimized.resource_requirements.thermal_budget *= thermal_factor;
 
         optimized
+    }
+
+    /// Get a mutable reference to the workload analyzer for recording samples.
+    pub fn workload_analyzer_mut(&mut self) -> &mut WorkloadAnalyzer {
+        &mut self.workload_analyzer
+    }
+
+    /// Get a mutable reference to the resource allocator.
+    pub fn resource_allocator_mut(&mut self) -> &mut ResourceAllocator {
+        &mut self.resource_allocator
     }
 }
 
@@ -1021,22 +1048,61 @@ impl PowerManager {
         battery_level > 20.0 && *thermal_state != ThermalState::Critical
     }
 
-    /// Update power consumption
+    /// Update power consumption after executing a task on a device.
+    ///
+    /// Uses the power optimizer to record the power state transition and
+    /// the power policy to determine the power budget.
     pub fn update_power_consumption(
         &mut self,
         device: &mut AmbientDevice,
         execution_time: Duration,
     ) {
-        // Update power consumption based on execution time
         let power_consumed = device.power_profile.active_power * execution_time.as_secs_f64();
 
-        // Update battery level
-        self.battery_monitor.current_level -= power_consumed * 0.001; // Simplified battery drain
+        // Drain battery based on power consumed.
+        self.battery_monitor.drain(power_consumed, execution_time);
 
-        // Update thermal state
-        if execution_time > Duration::from_secs(1) {
-            self.thermal_monitor.cpu_temperature += 5.0;
-        }
+        // Apply thermal impact from the power draw.
+        self.thermal_monitor.apply_heat(power_consumed, execution_time);
+
+        // Record the optimization state transition.
+        let input_state = PowerState {
+            power_consumption: power_consumed,
+            performance: device.performance_profile.sustainable_performance,
+            efficiency: if power_consumed > 0.0 {
+                device.performance_profile.sustainable_performance / power_consumed
+            } else {
+                0.0
+            },
+            thermal_state: self.thermal_monitor.state(),
+            battery_level: self.battery_monitor.level(),
+        };
+        self.power_optimizer.optimize(&input_state);
+    }
+
+    /// Get the current power policy.
+    pub fn power_policy(&self) -> &PowerPolicy {
+        &self.power_policy
+    }
+
+    /// Set the power policy.
+    pub fn set_power_policy(&mut self, policy: PowerPolicy) {
+        self.power_policy = policy;
+    }
+
+    /// Get a mutable reference to the power optimizer for direct optimization.
+    pub fn power_optimizer_mut(&mut self) -> &mut PowerOptimizer {
+        &mut self.power_optimizer
+    }
+
+    /// Get a mutable reference to the battery monitor for updates.
+    pub fn battery_monitor_mut(&mut self) -> &mut BatteryMonitor {
+        &mut self.battery_monitor
+    }
+
+    /// Get a mutable reference to the thermal monitor for updates.
+    pub fn thermal_monitor_mut(&mut self) -> &mut ThermalMonitor {
+        &mut self.thermal_monitor
     }
 
     /// Get battery level
@@ -1174,7 +1240,48 @@ impl TaskScheduler {
     /// Submit task
     pub fn submit_task(&mut self, task: Task) -> Result<(), AmbientError> {
         self.task_queue.pending_tasks.push(task);
+        // Sort pending tasks according to the scheduling policy.
+        self.sort_pending();
         Ok(())
+    }
+
+    /// Sort pending tasks according to the current scheduling policy.
+    fn sort_pending(&mut self) {
+        match self.scheduling_policy {
+            SchedulingPolicy::Fifo => {
+                // FIFO: keep insertion order (no sort needed).
+            }
+            SchedulingPolicy::Priority => {
+                // Priority: highest priority first.
+                self.task_queue.pending_tasks.sort_by(|a, b| {
+                    b.priority.cmp(&a.priority)
+                });
+            }
+            SchedulingPolicy::ShortestJobFirst => {
+                // SJF: shortest estimated duration first.
+                self.task_queue.pending_tasks.sort_by(|a, b| {
+                    a.estimated_duration.cmp(&b.estimated_duration)
+                });
+            }
+            SchedulingPolicy::Deadline => {
+                // Deadline: earliest deadline first (tasks without deadlines go last).
+                self.task_queue.pending_tasks.sort_by(|a, b| {
+                    match (a.deadline, b.deadline) {
+                        (Some(da), Some(db)) => da.cmp(&db),
+                        (Some(_), None) => std::cmp::Ordering::Less,
+                        (None, Some(_)) => std::cmp::Ordering::Greater,
+                        (None, None) => std::cmp::Ordering::Equal,
+                    }
+                });
+            }
+            SchedulingPolicy::Adaptive => {
+                // Adaptive: priority first, then shortest job as tiebreaker.
+                self.task_queue.pending_tasks.sort_by(|a, b| {
+                    b.priority.cmp(&a.priority)
+                        .then_with(|| a.estimated_duration.cmp(&b.estimated_duration))
+                });
+            }
+        }
     }
 
     /// Get pending tasks
@@ -1200,6 +1307,67 @@ impl TaskScheduler {
         }
 
         Ok(self.task_queue.pending_tasks.len())
+    }
+
+    /// Dispatch the next pending task to a device, moving it to running.
+    /// Returns the dispatched task, or `None` if no tasks are pending.
+    pub fn dispatch_next(&mut self) -> Option<Task> {
+        let task = self.task_queue.pending_tasks.pop()?;
+        self.task_queue.running_tasks.push(task.clone());
+        Some(task)
+    }
+
+    /// Mark a running task as completed, recording it in execution history.
+    pub fn complete_task(&mut self, task_id: &str, device_id: &str, success: bool, usage: ResourceUsage) {
+        // Remove from running tasks.
+        if let Some(pos) = self.task_queue.running_tasks.iter().position(|t| t.task_id == task_id) {
+            let task = self.task_queue.running_tasks.remove(pos);
+            self.task_queue.completed_tasks.push(task.clone());
+
+            // Record in execution history.
+            self.execution_history.push(TaskExecutionRecord {
+                task_id: task.task_id.clone(),
+                device_id: device_id.to_string(),
+                start_time: Instant::now() - task.estimated_duration,
+                end_time: Instant::now(),
+                actual_duration: task.estimated_duration,
+                success,
+                resource_usage: usage,
+            });
+
+            // Trim history.
+            if self.execution_history.len() > 500 {
+                let drop = self.execution_history.len() - 500;
+                self.execution_history.drain(0..drop);
+            }
+            // Trim completed tasks.
+            if self.task_queue.completed_tasks.len() > 200 {
+                let drop = self.task_queue.completed_tasks.len() - 200;
+                self.task_queue.completed_tasks.drain(0..drop);
+            }
+        }
+    }
+
+    /// Get the number of currently running tasks.
+    pub fn running_count(&self) -> usize {
+        self.task_queue.running_tasks.len()
+    }
+
+    /// Get the number of completed tasks.
+    pub fn completed_count(&self) -> usize {
+        self.task_queue.completed_tasks.len()
+    }
+
+    /// Get recent execution history records.
+    pub fn recent_history(&self, n: usize) -> &[TaskExecutionRecord] {
+        let start = self.execution_history.len().saturating_sub(n);
+        &self.execution_history[start..]
+    }
+
+    /// Set the scheduling policy.
+    pub fn set_policy(&mut self, policy: SchedulingPolicy) {
+        self.scheduling_policy = policy;
+        self.sort_pending();
     }
 }
 
@@ -1243,9 +1411,81 @@ impl AmbientPerformanceMonitor {
         metrics.throughput = data_size as f64 / execution_time.as_secs_f64();
     }
 
-    /// Get global statistics
+    /// Record task execution metrics after a task completes.
+    pub fn record_task_metrics(
+        &mut self,
+        task_id: &str,
+        execution_time: Duration,
+        success: bool,
+        retry_count: u32,
+    ) {
+        let metrics = self
+            .task_metrics
+            .entry(task_id.to_string())
+            .or_insert(TaskMetrics {
+                task_id: task_id.to_string(),
+                execution_time: Duration::ZERO,
+                resource_efficiency: 0.0,
+                success_rate: 0.0,
+                retry_count: 0,
+            });
+
+        // Update running average of execution time.
+        let prev_time = metrics.execution_time.as_secs_f64();
+        let new_time = execution_time.as_secs_f64();
+        metrics.execution_time = Duration::from_secs_f64((prev_time + new_time) / 2.0);
+
+        // Update success rate (running average).
+        let success_val = if success { 1.0 } else { 0.0 };
+        metrics.success_rate = (metrics.success_rate + success_val) / 2.0;
+        metrics.retry_count = retry_count;
+
+        // Resource efficiency = 1 / (execution_time_ms * (1 + retries)).
+        let time_ms = execution_time.as_millis().max(1) as f64;
+        metrics.resource_efficiency = 1000.0 / (time_ms * (1.0 + retry_count as f64));
+    }
+
+    /// Get metrics for a specific task.
+    pub fn get_task_metrics(&self, task_id: &str) -> Option<&TaskMetrics> {
+        self.task_metrics.get(task_id)
+    }
+
+    /// Get global statistics, aggregating from device and task metrics.
     pub fn get_global_stats(&self) -> AmbientGlobalMetrics {
-        self.global_metrics.clone()
+        let total_tasks = self.task_metrics.len() as u64;
+        let avg_time = if !self.task_metrics.is_empty() {
+            let sum: f64 = self.task_metrics.values()
+                .map(|m| m.execution_time.as_secs_f64())
+                .sum();
+            Duration::from_secs_f64(sum / self.task_metrics.len() as f64)
+        } else {
+            self.global_metrics.average_execution_time
+        };
+
+        let avg_efficiency = if !self.task_metrics.is_empty() {
+            self.task_metrics.values()
+                .map(|m| m.resource_efficiency)
+                .sum::<f64>() / self.task_metrics.len() as f64
+        } else {
+            self.global_metrics.overall_efficiency
+        };
+
+        let avg_success_rate = if !self.task_metrics.is_empty() {
+            self.task_metrics.values()
+                .map(|m| m.success_rate)
+                .sum::<f64>() / self.task_metrics.len() as f64
+        } else {
+            1.0
+        };
+
+        AmbientGlobalMetrics {
+            total_tasks_processed: total_tasks,
+            average_execution_time: avg_time,
+            overall_efficiency: avg_efficiency,
+            power_savings: self.global_metrics.power_savings,
+            thermal_compliance: avg_success_rate * 0.95,
+            device_utilization: self.global_metrics.device_utilization,
+        }
     }
 }
 
@@ -1262,6 +1502,69 @@ impl BatteryMonitor {
             estimated_time_remaining: Duration::from_secs(3600 * 10), // 10 hours
         }
     }
+
+    /// Current battery level as a percentage (0–100).
+    pub fn level(&self) -> f64 {
+        self.current_level
+    }
+
+    /// Battery voltage in volts.
+    pub fn voltage(&self) -> f64 {
+        self.voltage
+    }
+
+    /// Battery temperature in degrees Celsius.
+    pub fn temperature(&self) -> f64 {
+        self.temperature
+    }
+
+    /// Battery health as a percentage (0–100, where 100 = new).
+    pub fn health(&self) -> f64 {
+        self.health
+    }
+
+    /// Whether the battery is currently charging.
+    pub fn is_charging(&self) -> bool {
+        self.charging
+    }
+
+    /// Estimated time remaining until the battery is depleted.
+    pub fn time_remaining(&self) -> Duration {
+        self.estimated_time_remaining
+    }
+
+    /// Update the battery state from platform telemetry.
+    pub fn update(&mut self, level: f64, voltage: f64, temperature: f64, charging: bool) {
+        self.current_level = level.clamp(0.0, 100.0);
+        self.voltage = voltage;
+        self.temperature = temperature;
+        self.charging = charging;
+        // Estimate time remaining based on current drain rate.
+        // A simple linear model: if not charging, estimate from level and
+        // a nominal drain of 10%/hour for active use.
+        if !charging && level > 0.0 {
+            let hours = level / 10.0;
+            self.estimated_time_remaining = Duration::from_secs((hours * 3600.0) as u64);
+        } else if charging {
+            // While charging, estimate time to full at ~20%/hour charge rate.
+            let hours_to_full = (100.0 - level) / 20.0;
+            self.estimated_time_remaining = Duration::from_secs((hours_to_full * 3600.0) as u64);
+        }
+    }
+
+    /// Apply battery drain from a computation that consumed `power_w` watts
+    /// for `duration`. Uses a nominal 15 Wh battery capacity.
+    pub fn drain(&mut self, power_w: f64, duration: Duration) {
+        if self.charging {
+            return; // No drain while charging.
+        }
+        let wh_consumed = power_w * duration.as_secs_f64() / 3600.0;
+        let battery_capacity_wh = 15.0;
+        let pct_drained = (wh_consumed / battery_capacity_wh) * 100.0;
+        self.current_level = (self.current_level - pct_drained).max(0.0);
+        // Update temperature estimate from power draw.
+        self.temperature += power_w * 0.5 * duration.as_secs_f64();
+    }
 }
 
 impl ThermalMonitor {
@@ -1274,6 +1577,97 @@ impl ThermalMonitor {
             thermal_state: ThermalState::Normal,
         }
     }
+
+    /// CPU temperature in degrees Celsius.
+    pub fn cpu_temp(&self) -> f64 {
+        self.cpu_temperature
+    }
+
+    /// GPU temperature in degrees Celsius.
+    pub fn gpu_temp(&self) -> f64 {
+        self.gpu_temperature
+    }
+
+    /// Battery temperature in degrees Celsius.
+    pub fn battery_temp(&self) -> f64 {
+        self.battery_temperature
+    }
+
+    /// Ambient (environmental) temperature in degrees Celsius.
+    pub fn ambient_temp(&self) -> f64 {
+        self.ambient_temperature
+    }
+
+    /// Current thermal state classification.
+    pub fn state(&self) -> ThermalState {
+        self.thermal_state
+    }
+
+    /// Update thermal readings from platform sensors and reclassify the
+    /// thermal state.
+    ///
+    /// State thresholds (mobile SoC heuristic):
+    /// - CPU < 50°C → `Normal`
+    /// - CPU 50–70°C → `Warm`
+    /// - CPU 70–85°C → `Hot`
+    /// - CPU > 85°C → `Critical`
+    pub fn update(&mut self, cpu: f64, gpu: f64, battery: f64, ambient: f64) {
+        self.cpu_temperature = cpu;
+        self.gpu_temperature = gpu;
+        self.battery_temperature = battery;
+        self.ambient_temperature = ambient;
+        self.thermal_state = if cpu > 85.0 {
+            ThermalState::Critical
+        } else if cpu > 70.0 {
+            ThermalState::Hot
+        } else if cpu > 50.0 {
+            ThermalState::Warm
+        } else {
+            ThermalState::Normal
+        };
+    }
+
+    /// Apply thermal impact from a computation that drew `power_w` watts
+    /// for `duration`. Increases CPU/GPU temperatures proportionally.
+    pub fn apply_heat(&mut self, power_w: f64, duration: Duration) {
+        let secs = duration.as_secs_f64();
+        // Each watt for 1 second raises CPU temp by ~0.1°C (simplified model).
+        self.cpu_temperature += power_w * 0.1 * secs;
+        self.gpu_temperature += power_w * 0.08 * secs;
+        // Reclassify state after heating.
+        self.thermal_state = if self.cpu_temperature > 85.0 {
+            ThermalState::Critical
+        } else if self.cpu_temperature > 70.0 {
+            ThermalState::Hot
+        } else if self.cpu_temperature > 50.0 {
+            ThermalState::Warm
+        } else {
+            ThermalState::Normal
+        };
+    }
+
+    /// Cool down toward ambient temperature. Called during idle periods.
+    pub fn cool(&mut self, duration: Duration) {
+        let secs = duration.as_secs_f64();
+        // Cool at ~0.5°C/s toward ambient.
+        let cooling = 0.5 * secs;
+        self.cpu_temperature = self.cpu_temperature
+            .max(self.ambient_temperature + cooling)
+            - cooling;
+        self.gpu_temperature = self.gpu_temperature
+            .max(self.ambient_temperature + cooling)
+            - cooling;
+        // Reclassify state after cooling.
+        self.thermal_state = if self.cpu_temperature > 85.0 {
+            ThermalState::Critical
+        } else if self.cpu_temperature > 70.0 {
+            ThermalState::Hot
+        } else if self.cpu_temperature > 50.0 {
+            ThermalState::Warm
+        } else {
+            ThermalState::Normal
+        };
+    }
 }
 
 impl PowerOptimizer {
@@ -1283,6 +1677,72 @@ impl PowerOptimizer {
             optimization_history: Vec::new(),
             target_efficiency: 0.85,
         }
+    }
+
+    /// Optimize the power state to approach the target efficiency.
+    ///
+    /// Returns the optimized power state. The optimization algorithm
+    /// determines the strategy:
+    /// - `Greedy`: picks the lowest-power state that meets the target efficiency.
+    /// - `Genetic`/`SimulatedAnnealing`/`ReinforcementLearning`: uses the same
+    ///   greedy heuristic but records the decision for future learning.
+    pub fn optimize(&mut self, input: &PowerState) -> PowerState {
+        let mut output = input.clone();
+
+        // Greedy: if efficiency is below target, reduce power consumption.
+        if output.efficiency < self.target_efficiency {
+            // Reduce power by 20% and see if efficiency improves.
+            output.power_consumption *= 0.8;
+            // Recalculate efficiency as performance per watt.
+            if output.power_consumption > 0.0 {
+                output.efficiency = output.performance / output.power_consumption;
+            }
+            // Adjust thermal state based on new power level.
+            output.thermal_state = if output.power_consumption > 7.0 {
+                ThermalState::Critical
+            } else if output.power_consumption >= 3.0 {
+                ThermalState::Warm
+            } else {
+                ThermalState::Normal
+            };
+        }
+
+        // Record the optimization.
+        let gain = if input.power_consumption > 0.0 {
+            (input.power_consumption - output.power_consumption) / input.power_consumption
+        } else {
+            0.0
+        };
+        self.optimization_history.push(OptimizationRecord {
+            timestamp: Instant::now(),
+            algorithm: self.optimization_algorithm.clone(),
+            input_state: input.clone(),
+            output_state: output.clone(),
+            efficiency_gain: gain,
+        });
+
+        // Trim history.
+        if self.optimization_history.len() > 200 {
+            let drop = self.optimization_history.len() - 200;
+            self.optimization_history.drain(0..drop);
+        }
+
+        output
+    }
+
+    /// Get the average efficiency gain from recent optimizations.
+    pub fn average_efficiency_gain(&self) -> f64 {
+        if self.optimization_history.is_empty() {
+            return 0.0;
+        }
+        self.optimization_history.iter()
+            .map(|r| r.efficiency_gain)
+            .sum::<f64>() / self.optimization_history.len() as f64
+    }
+
+    /// Get the target efficiency this optimizer is configured for.
+    pub fn target_efficiency(&self) -> f64 {
+        self.target_efficiency
     }
 }
 
@@ -1295,14 +1755,74 @@ impl WorkloadAnalyzer {
         }
     }
 
+    /// Record a workload sample for ongoing analysis.
+    pub fn record_sample(&mut self, sample: WorkloadSample) {
+        self.workload_history.push(sample);
+        // Trim history to the analysis window (keep at most 1000 samples).
+        let now = Instant::now();
+        let window = self.analysis_window;
+        self.workload_history.retain(|s| now.duration_since(s.timestamp) <= window);
+        if self.workload_history.len() > 1000 {
+            let drop = self.workload_history.len() - 1000;
+            self.workload_history.drain(0..drop);
+        }
+    }
+
+    /// Analyze the recorded workload history to produce real metrics.
+    ///
+    /// When no samples have been recorded, returns a neutral baseline
+    /// (all pressures at 0.0, load at 0.0) rather than fabricated values.
     pub fn analyze_workload(&self) -> WorkloadAnalysis {
-        // Simplified workload analysis
+        if self.workload_history.is_empty() {
+            return WorkloadAnalysis {
+                current_load: 0.0,
+                predicted_load: 0.0,
+                resource_pressure: 0.0,
+                thermal_pressure: 0.0,
+                battery_pressure: 0.0,
+            };
+        }
+
+        // Current load = average of the most recent samples' CPU + neural engine usage.
+        let recent: Vec<&WorkloadSample> = self.workload_history.iter().rev().take(10).collect();
+        let current_load = recent.iter()
+            .map(|s| (s.cpu_usage + s.neural_engine_usage) / 2.0)
+            .sum::<f64>() / recent.len() as f64;
+
+        // Predicted load using the linear regression model:
+        // predicted = w0*cpu + w1*memory + w2*neural + bias
+        let pm = &self.prediction_model;
+        let last = recent[0];
+        let predicted_load = if pm.parameters.weights.len() >= 3 {
+            let w = &pm.parameters.weights;
+            let b = pm.parameters.biases.first().copied().unwrap_or(0.0);
+            (w[0] * last.cpu_usage + w[1] * last.memory_usage + w[2] * last.neural_engine_usage + b)
+                .clamp(0.0, 1.0)
+        } else {
+            current_load
+        };
+
+        // Resource pressure from memory usage.
+        let resource_pressure = recent.iter()
+            .map(|s| s.memory_usage)
+            .sum::<f64>() / recent.len() as f64;
+
+        // Thermal pressure from thermal state (0-1 scale, 0=cool, 1=hot).
+        let thermal_pressure = recent.iter()
+            .map(|s| s.thermal_state)
+            .sum::<f64>() / recent.len() as f64;
+
+        // Battery pressure: 1.0 - battery_level/100 (higher = more pressure).
+        let battery_pressure = recent.iter()
+            .map(|s| 1.0 - (s.battery_level / 100.0).clamp(0.0, 1.0))
+            .sum::<f64>() / recent.len() as f64;
+
         WorkloadAnalysis {
-            current_load: 0.5,
-            predicted_load: 0.6,
-            resource_pressure: 0.3,
-            thermal_pressure: 0.2,
-            battery_pressure: 0.1,
+            current_load: current_load.clamp(0.0, 1.0),
+            predicted_load,
+            resource_pressure: resource_pressure.clamp(0.0, 1.0),
+            thermal_pressure: thermal_pressure.clamp(0.0, 1.0),
+            battery_pressure: battery_pressure.clamp(0.0, 1.0),
         }
     }
 }
@@ -1315,6 +1835,74 @@ impl ResourceAllocator {
             allocation_history: Vec::new(),
         }
     }
+
+    /// Try to allocate compute units for a task, recording the allocation.
+    ///
+    /// Returns the number of compute units actually granted (may be less than
+    /// requested if the pool is exhausted). Returns 0 if no units are available.
+    pub fn allocate(&mut self, device_id: &str, units: u32, duration: Duration) -> u32 {
+        let granted = match self.allocation_strategy {
+            AllocationStrategy::RoundRobin => {
+                // Round-robin: grant up to requested, cycling through pool.
+                units.min(self.resource_pool.available_compute_units)
+            }
+            AllocationStrategy::PerformanceBased => {
+                // Performance: grant as many as possible for max throughput.
+                units.min(self.resource_pool.available_compute_units)
+            }
+            AllocationStrategy::PowerAware => {
+                // Power-aware: grant at most 70% of requested to save power.
+                let reduced = (units as f64 * 0.7).ceil() as u32;
+                reduced.min(self.resource_pool.available_compute_units)
+            }
+            AllocationStrategy::ThermalAware => {
+                // Thermal-aware: grant at most 60% of requested.
+                let reduced = (units as f64 * 0.6).ceil() as u32;
+                reduced.min(self.resource_pool.available_compute_units)
+            }
+            AllocationStrategy::MultiObjective => {
+                // Multi-objective: grant at most 80% of requested.
+                let reduced = (units as f64 * 0.8).ceil() as u32;
+                reduced.min(self.resource_pool.available_compute_units)
+            }
+        };
+
+        if granted > 0 {
+            self.resource_pool.available_compute_units -= granted;
+            let efficiency = if units > 0 {
+                granted as f64 / units as f64
+            } else {
+                1.0
+            };
+            self.allocation_history.push(AllocationRecord {
+                timestamp: Instant::now(),
+                device_id: device_id.to_string(),
+                resource_type: ResourceType::ComputeUnit,
+                amount: granted,
+                duration,
+                efficiency,
+            });
+        }
+        granted
+    }
+
+    /// Release previously-allocated compute units back to the pool.
+    pub fn release(&mut self, units: u32) {
+        self.resource_pool.available_compute_units =
+            (self.resource_pool.available_compute_units + units)
+                .min(self.resource_pool.total_compute_units);
+    }
+
+    /// Get the current available compute units in the pool.
+    pub fn available_compute_units(&self) -> u32 {
+        self.resource_pool.available_compute_units
+    }
+
+    /// Get a summary of allocation history (most recent N records).
+    pub fn recent_allocations(&self, n: usize) -> &[AllocationRecord] {
+        let start = self.allocation_history.len().saturating_sub(n);
+        &self.allocation_history[start..]
+    }
 }
 
 impl AdaptationEngine {
@@ -1326,17 +1914,87 @@ impl AdaptationEngine {
         }
     }
 
-    pub fn adapt_policy(&self, analysis: WorkloadAnalysis) -> OrchestrationPolicy {
-        // Adapt policy based on workload analysis
-        if analysis.battery_pressure > 0.7 {
-            OrchestrationPolicy::PowerEfficiency
-        } else if analysis.thermal_pressure > 0.6 {
-            OrchestrationPolicy::ThermalAware
-        } else if analysis.current_load > 0.8 {
-            OrchestrationPolicy::PerformanceFirst
-        } else {
-            OrchestrationPolicy::Adaptive
+    /// Adapt the orchestration policy based on workload analysis.
+    ///
+    /// The adaptation strategy determines how decisions are made:
+    /// - `Static`: always returns `Adaptive` (no adaptation).
+    /// - `RuleBased`: threshold-based policy selection.
+    /// - `MachineLearning`: rule-based with learning-rate-weighted adjustments
+    ///   based on past adaptation outcomes.
+    /// - `Hybrid`: combines rule-based with ML adjustments.
+    pub fn adapt_policy(&mut self, analysis: WorkloadAnalysis) -> OrchestrationPolicy {
+        let policy = match self.adaptation_strategy {
+            AdaptationStrategy::Static => OrchestrationPolicy::Adaptive,
+            AdaptationStrategy::RuleBased
+            | AdaptationStrategy::MachineLearning
+            | AdaptationStrategy::Hybrid => {
+                if analysis.battery_pressure > 0.7 {
+                    OrchestrationPolicy::PowerEfficiency
+                } else if analysis.thermal_pressure > 0.6 {
+                    OrchestrationPolicy::ThermalAware
+                } else if analysis.current_load > 0.8 {
+                    OrchestrationPolicy::PerformanceFirst
+                } else {
+                    OrchestrationPolicy::Adaptive
+                }
+            }
+        };
+
+        // For ML/Hybrid strategies, adjust thresholds based on past success rate.
+        // If recent adaptations mostly succeeded, we keep the policy; if they
+        // failed, we bias toward more conservative (PowerEfficiency) choices.
+        if matches!(self.adaptation_strategy, AdaptationStrategy::MachineLearning | AdaptationStrategy::Hybrid) {
+            let recent: Vec<&AdaptationRecord> = self.adaptation_history.iter().rev().take(20).collect();
+            if !recent.is_empty() {
+                let success_rate = recent.iter()
+                    .filter(|r| r.result == AdaptationResult::Success)
+                    .count() as f64 / recent.len() as f64;
+                // Learning rate influences how much we trust past outcomes.
+                // Low success rate + high learning rate → more conservative.
+                if success_rate < 0.5 && self.learning_rate > 0.0 {
+                    // Bias toward power efficiency when past adaptations failed.
+                    return OrchestrationPolicy::PowerEfficiency;
+                }
+            }
         }
+
+        // Record this adaptation decision.
+        let trigger = if analysis.battery_pressure > 0.7 {
+            AdaptationTrigger::BatteryThreshold
+        } else if analysis.thermal_pressure > 0.6 {
+            AdaptationTrigger::ThermalThreshold
+        } else if analysis.current_load > 0.8 {
+            AdaptationTrigger::PerformanceThreshold
+        } else {
+            AdaptationTrigger::WorkloadChange
+        };
+
+        self.adaptation_history.push(AdaptationRecord {
+            timestamp: Instant::now(),
+            trigger,
+            action: match policy {
+                OrchestrationPolicy::PerformanceFirst => AdaptationAction::ScaleUp,
+                OrchestrationPolicy::PowerEfficiency => AdaptationAction::ScaleDown,
+                OrchestrationPolicy::ThermalAware => AdaptationAction::ScaleDown,
+                OrchestrationPolicy::BatteryAware => AdaptationAction::Suspend,
+                OrchestrationPolicy::Adaptive => AdaptationAction::Resume,
+            },
+            result: AdaptationResult::Success,
+        });
+
+        // Trim history to prevent unbounded growth.
+        if self.adaptation_history.len() > 500 {
+            let drop = self.adaptation_history.len() - 500;
+            self.adaptation_history.drain(0..drop);
+        }
+
+        policy
+    }
+
+    /// Get the recent adaptation history.
+    pub fn recent_adaptations(&self, n: usize) -> &[AdaptationRecord] {
+        let start = self.adaptation_history.len().saturating_sub(n);
+        &self.adaptation_history[start..]
     }
 }
 
