@@ -1,3 +1,4 @@
+pub mod wellfair;
 pub mod browser_panes;
 pub mod camera_controls;
 pub mod chat_graph;

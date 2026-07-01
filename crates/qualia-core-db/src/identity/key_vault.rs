@@ -77,6 +77,11 @@ impl KeyVault {
         signing_key.sign(payload)
     }
 
+    /// Vault is always unlocked once loaded from disk (lock/unlock UI is a follow-up).
+    pub fn is_locked(&self) -> bool {
+        false
+    }
+
     /// Exposes the raw bytes of the master key for libp2p identity bindings
     pub fn get_master_key_bytes(&self) -> [u8; 32] {
         self.master_key.to_bytes()

@@ -8473,11 +8473,13 @@ dependencies = [
  "sha1 0.11.0",
  "sha2 0.11.0",
  "sysinfo",
+ "tempfile",
  "tiny_http",
  "tokio",
  "url",
  "urlencoding",
  "uuid",
+ "wellfare-core",
  "winreg 0.56.0",
 ]
 
@@ -8625,6 +8627,7 @@ dependencies = [
  "wasm-bindgen",
  "wasm-bindgen-futures",
  "web-sys",
+ "wellfare-core",
 ]
 
 [[package]]
@@ -12411,6 +12414,7 @@ dependencies = [
  "webizen-render",
  "webizen-runtime",
  "webizen-studio",
+ "wellfare-core",
 ]
 
 [[package]]

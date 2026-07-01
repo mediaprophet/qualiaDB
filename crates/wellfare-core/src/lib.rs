@@ -1,5 +1,7 @@
+pub mod companion_sync;
 pub mod models;
 pub mod parser;
+pub mod record;
 pub mod rdf;
 pub mod store;
 pub mod shapes;

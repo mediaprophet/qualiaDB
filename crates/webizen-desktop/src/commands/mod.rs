@@ -195,6 +195,63 @@ pub fn save_config(new_config: AgentConfig) -> Result<(), String> {
     api::save_config(new_config)
 }
 
+#[command]
+pub fn wellfair_host_snapshot(
+    app_state: State<'_, std::sync::Arc<qualia_client_core::state::AppState>>,
+    host_state: State<'_, HostApiState>,
+) -> Result<String, String> {
+    let kv = app_state.key_vault.lock().map_err(|e| e.to_string())?;
+    let host_ready = host_state
+        .0
+        .lock()
+        .map_err(|e| e.to_string())?
+        .is_some();
+    let owner_label = api::read_identity()
+        .and_then(|v| {
+            v.get("display_name")
+                .and_then(|n| n.as_str())
+                .map(|s| s.to_string())
+        })
+        .unwrap_or_else(|| "Owner vault".to_string());
+    let snapshot = qualia_client_core::wellfair::build_host_snapshot(
+        &kv,
+        host_ready,
+        &owner_label,
+        false,
+    );
+    serde_json::to_string(&snapshot).map_err(|e| e.to_string())
+}
+
+#[command]
+pub fn wellfair_import_samsung_folder(
+    app: AppHandle,
+    folder_path: String,
+) -> Result<String, String> {
+    let state = app.state::<HostApiState>();
+    let mut guard = state.0.lock().map_err(|e| e.to_string())?;
+    let host = guard
+        .as_mut()
+        .ok_or_else(|| "Host API not initialized — unlock vault first".to_string())?;
+    let report = host.import_samsung_health_folder(std::path::Path::new(&folder_path));
+    serde_json::to_string(&report).map_err(|e| e.to_string())
+}
+
+#[command]
+pub fn wellfair_ingest_companion_health(
+    app: AppHandle,
+    bundle_json: String,
+) -> Result<String, String> {
+    let bundle: wellfare_core::companion_sync::CompanionHealthBundle =
+        serde_json::from_str(&bundle_json).map_err(|e| format!("invalid bundle JSON: {e}"))?;
+    let state = app.state::<HostApiState>();
+    let mut guard = state.0.lock().map_err(|e| e.to_string())?;
+    let host = guard
+        .as_mut()
+        .ok_or_else(|| "Host API not initialized — unlock vault first".to_string())?;
+    let report = host.ingest_companion_health_bundle(&bundle);
+    serde_json::to_string(&report).map_err(|e| e.to_string())
+}
+
 // ── Wallet / identity ─────────────────────────────────────────────────────────
 
 #[command]
@@ -794,6 +851,28 @@ fn qapp_slug(s: &str) -> String {
         }
     }
     out.trim_matches('_').to_string()
+}
+
+// ── Webizen Host API (qApp Message Bus) ──────────────────────────────────────
+
+pub struct HostApiState(
+    pub std::sync::Arc<std::sync::Mutex<Option<qualia_client_core::wellfair::api::WebizenHostApi>>>,
+);
+
+#[tauri::command]
+pub fn submit_record(
+    app: tauri::AppHandle,
+    qapp_id: String,
+    envelope: wellfare_core::record::RecordEnvelope,
+) -> Result<usize, String> {
+    let state = app.state::<HostApiState>();
+    let mut api_guard = state.0.lock().map_err(|e| e.to_string())?;
+
+    if let Some(host_api) = api_guard.as_mut() {
+        host_api.submit_record(&qapp_id, envelope)
+    } else {
+        Err("Host API not initialized".into())
+    }
 }
 
 fn qapp_evidence_score(key: &str, value: &str) -> f32 {
@@ -2567,6 +2646,9 @@ pub fn get_invoke_handler() -> impl Fn(tauri::ipc::Invoke<tauri::Wry>) -> bool {
         run_engine_command,
         get_config,
         save_config,
+        wellfair_host_snapshot,
+        wellfair_import_samsung_folder,
+        wellfair_ingest_companion_health,
         get_wallet_status,
         is_first_run,
         read_identity,
@@ -2662,5 +2744,6 @@ pub fn get_invoke_handler() -> impl Fn(tauri::ipc::Invoke<tauri::Wry>) -> bool {
         calculate_framingham_risk,
         calculate_quantum_dft,
         calculate_monte_carlo_var,
+        submit_record,
     ]
 }
