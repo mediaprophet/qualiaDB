@@ -2,7 +2,7 @@
 
 use super::accessibility_prefs;
 use super::host_state::{
-    AccessibilityPreferences, NetworkExposure, SyncQueueState, VaultLifecycle, WellfairHostSnapshot,
+    NetworkExposure, SyncQueueState, VaultLifecycle, WellfairHostSnapshot,
 };
 use qualia_core_db::key_vault::KeyVault;
 use std::path::Path;
