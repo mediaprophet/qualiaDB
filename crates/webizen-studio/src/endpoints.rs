@@ -50,6 +50,11 @@ pub fn manifest_replay_url(revision: u64) -> String {
     format!("{DAEMON_HTTP}/manifest/replay/{revision}")
 }
 
+/// `{DAEMON_HTTP}/generate_pane` — keyword/domain pane layout planner.
+pub fn generate_pane_url() -> String {
+    format!("{DAEMON_HTTP}/generate_pane")
+}
+
 /// `{DAEMON_HTTP}/telemetry` — server-sent telemetry stream.
 pub fn telemetry_url() -> String {
     format!("{DAEMON_HTTP}/telemetry")

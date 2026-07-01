@@ -1,4 +1,9 @@
 //! Keyword-driven pane layout planner for the studio prompt bar.
+//!
+//! On desktop the prompt bar prefers `POST /generate_pane` on the settings portal;
+//! this module provides the local fallback used by the GitHub Pages demo.
+
+use serde::Deserialize;
 
 use crate::canvas_model::{LayerBehavior, PanePlacement, PresentationMode};
 use crate::pane_registry::{builtin_pane_definitions, PaneDefinition};
@@ -40,6 +45,82 @@ fn pane(
 
 fn contains_any(haystack: &str, needles: &[&str]) -> bool {
     needles.iter().any(|n| haystack.contains(n))
+}
+
+#[derive(Deserialize)]
+struct ApiPanePlacement {
+    component_id: String,
+    x: u16,
+    y: u16,
+    w: u16,
+    h: u16,
+    #[serde(default)]
+    data_bindings: Vec<String>,
+}
+
+#[derive(Deserialize)]
+struct ApiPaneGenerationPlan {
+    panes: Vec<ApiPanePlacement>,
+    presentation: PresentationMode,
+    summary: String,
+}
+
+fn placement_from_api(api: ApiPanePlacement) -> PanePlacement {
+    PanePlacement {
+        component_id: api.component_id,
+        x: api.x,
+        y: api.y,
+        w: api.w,
+        h: api.h,
+        data_bindings: api.data_bindings,
+        binds_rpc: None,
+        requires_capability: Vec::new(),
+        ui_mode: None,
+        layer: LayerBehavior::Docked,
+        anchor: None,
+        min_w_points: 0,
+        min_h_points: 0,
+        supported_presentations: Vec::new(),
+        theme: ThemeBinding::default(),
+    }
+}
+
+fn plan_from_api(api: ApiPaneGenerationPlan) -> PaneGenerationPlan {
+    PaneGenerationPlan {
+        panes: api.panes.into_iter().map(placement_from_api).collect(),
+        presentation: api.presentation,
+        summary: api.summary,
+    }
+}
+
+/// Fetch a layout plan from the local settings portal (`POST /generate_pane`).
+pub async fn fetch_plan_from_prompt(
+    prompt: &str,
+    palette_ids: &[String],
+) -> Result<PaneGenerationPlan, String> {
+    #[derive(serde::Serialize)]
+    struct Body<'a> {
+        prompt: &'a str,
+        palette_ids: &'a [String],
+    }
+    let client = reqwest::Client::new();
+    let res = client
+        .post(crate::endpoints::generate_pane_url())
+        .json(&Body {
+            prompt,
+            palette_ids,
+        })
+        .send()
+        .await
+        .map_err(|e| e.to_string())?;
+    if !res.status().is_success() {
+        return Err(format!("generate_pane failed ({})", res.status()));
+    }
+    let api = res
+        .json::<ApiPaneGenerationPlan>()
+        .await
+        .map_err(|e| e.to_string())?;
+    Ok(plan_from_api(api))
 }
 
 /// Map a natural-language prompt to a bounded pane layout using the built-in palette.

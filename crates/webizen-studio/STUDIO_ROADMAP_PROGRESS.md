@@ -2,6 +2,26 @@
 
 _Branch: `0.0.23` | Tracker for Agent 1/2/3 delegation plan_
 
+Use this file as the **session reminder**: what is done, what is next, and where the code lives.
+
+---
+
+## Quick reference — where things live
+
+| Concern | Primary files |
+|---------|---------------|
+| Theme engine / QPrime | `theme_engine.rs`, `canvas_editor.rs`, `main.rs` |
+| Canvas editor | `studio_canvas.rs`, `canvas_editor.rs` |
+| Pane generation (API) | `qualia-client-core/src/studio_pane_generator.rs` |
+| Pane generation (wasm fallback) | `pane_generator.rs` |
+| Settings portal routes | `webizen-desktop/src/settings_server.rs` |
+| WAL replay | `qualia-client-core/src/studio_workspace_wal.rs`, `wal_inspector.rs` |
+| Ontology import + layouts | `ontology_import_wizard.rs` |
+| Portal WASM (offline spatial) | `static/portal/pkg/qualia/`, `scripts/bundle-desktop-deps.ps1` |
+| E2E smoke | `scripts/studio-portal-smoke.ps1` |
+
+---
+
 ## Phase 1 — Premium Visual Identity & Theme Engine
 
 | Item | Status | Notes |
@@ -21,6 +41,10 @@ _Branch: `0.0.23` | Tracker for Agent 1/2/3 delegation plan_
 
 **Acceptance:** picker shows QPrime first; switch updates shell + canvas + Shoelace; sanctuary = no motion; fiduciary-dark on cold start.
 
+**Remaining:** manual cold-start verify in running Tauri app (Timothy or next session).
+
+---
+
 ## Phase 2 — Interactive QAPP Studio Editor
 
 | Item | Status | Notes |
@@ -35,8 +59,12 @@ _Branch: `0.0.23` | Tracker for Agent 1/2/3 delegation plan_
 | WAL append + replay | ✅ | qualia-client-core + settings :8080 |
 | Ontology import + job poll | ✅ | ontology_import_wizard.rs |
 | Theme binding picker | ✅ | inspector QPrime preset select |
-| LLM pane generation | ✅ | pane_generator.rs keyword planner + prompt bar |
-| Semantic auto-layout | ◑ | ontology wizard presets only |
+| LLM pane generation | ✅ | `POST /generate_pane` + wasm fallback |
+| Semantic auto-layout | ✅ | domain presets in studio_pane_generator (legal/health/commons/semantics) |
+
+**Remaining (optional):** quin-encoded undo chain; real LLM infer hook (beyond keyword planner).
+
+---
 
 ## Phase 3 — Multi-Mode Renderers (Agent 3)
 
@@ -45,6 +73,9 @@ _Branch: `0.0.23` | Tracker for Agent 1/2/3 delegation plan_
 | node_graph SVG edges | ✅ | strength glow |
 | spatial_bridge Live portal | ✅ | iframe + offline WASM |
 | canvas_graph edge derivation | ✅ | |
+| Native PortalGpu parity (PR-C10) | ❌ | replace iframe where desired |
+
+---
 
 ## Phase 4 — Deploy, WAL & Provenance
 
@@ -54,6 +85,8 @@ _Branch: `0.0.23` | Tracker for Agent 1/2/3 delegation plan_
 | Replay API + UI | ✅ | wal_inspector + studio sidebar |
 | Provenance chips | ✅ | theme_binding_provenance |
 
+---
+
 ## Phase 5 — Integration & E2E
 
 | Item | Status | Notes |
@@ -61,8 +94,19 @@ _Branch: `0.0.23` | Tracker for Agent 1/2/3 delegation plan_
 | wasm32 + desktop check | ✅ | |
 | Portal WASM offline bundle | ✅ | static/portal/pkg/qualia |
 | pane_generator + theme unit tests | ✅ | |
-| Full Tauri E2E smoke | ❌ | manual / future script |
+| Settings portal HTTP smoke | ✅ | scripts/studio-portal-smoke.ps1 |
+| Full Tauri GUI E2E | ❌ | cold start → edit → save → WAL restore (manual) |
 | IHP / PDF / extension stretch | ❌ | separate sprints |
+
+---
+
+## Next actions (pick up here)
+
+1. **Run smoke** with desktop open: `.\scripts\studio-portal-smoke.ps1`
+2. **Phase 3:** native `PortalGpu` spatial path (PR-C10) vs iframe WASM
+3. **Phase 5:** Tauri GUI walkthrough script (optional Playwright/webdriver)
+4. **Stretch:** wire real local LLM infer into `/generate_pane` (orchestrator path)
+5. **Push** branch `0.0.23` after each verified slice
 
 ---
 
@@ -76,3 +120,10 @@ _Branch: `0.0.23` | Tracker for Agent 1/2/3 delegation plan_
 - `pane_generator.rs` — keyword pane planner for prompt bar.
 - App shell theme class + Shoelace bridge on `:root`.
 - Verified: `cargo check -p webizen-studio --target wasm32-unknown-unknown`.
+
+### 2026-07-01 — Grok (generate_pane API + smoke)
+
+- `qualia-client-core/src/studio_pane_generator.rs` — shared planner + ontology domain presets.
+- `POST /generate_pane` on settings portal (`settings_server.rs`).
+- Studio prompt bar calls API on desktop; local fallback for GitHub Pages demo.
+- `scripts/studio-portal-smoke.ps1` — HTTP smoke (health, generate, manifest, history, spatial shell).

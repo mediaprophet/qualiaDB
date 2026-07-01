@@ -518,14 +518,42 @@ pub fn DynamicPage(path: Vec<String>, #[props(default)] app_id: Option<String>) 
             generate_status.set("Describe a pane layout first.".to_string());
             return;
         }
-        let plan = pane_generator::generate_panes_from_prompt(&prompt, &pane_palette.read());
-        history.write().push(workspace.read().clone());
-        let mut ws = workspace.write();
-        if let Some(page) = ws.pages.iter_mut().find(|p| p.url_path == generate_path) {
-            page.panes = plan.panes;
-            page.presentation_mode = plan.presentation;
+
+        let palette_snapshot = pane_palette.read().clone();
+        let palette_ids: Vec<String> = palette_snapshot
+            .iter()
+            .map(|d| d.component_id.clone())
+            .collect();
+        let path_for_apply = generate_path.clone();
+
+        let mut apply_plan = move |plan: pane_generator::PaneGenerationPlan| {
+            history.write().push(workspace.read().clone());
+            let mut ws = workspace.write();
+            if let Some(page) = ws.pages.iter_mut().find(|p| p.url_path == path_for_apply) {
+                page.panes = plan.panes;
+                page.presentation_mode = plan.presentation;
+            }
+            generate_status.set(plan.summary);
+        };
+
+        if crate::endpoints::is_native_host() {
+            generate_status.set("Generating layout…".to_string());
+            spawn(async move {
+                let plan = match pane_generator::fetch_plan_from_prompt(&prompt, &palette_ids).await
+                {
+                    Ok(plan) => plan,
+                    Err(_) => pane_generator::generate_panes_from_prompt(
+                        &prompt,
+                        &palette_snapshot,
+                    ),
+                };
+                apply_plan(plan);
+            });
+        } else {
+            let plan =
+                pane_generator::generate_panes_from_prompt(&prompt, &palette_snapshot);
+            apply_plan(plan);
         }
-        generate_status.set(plan.summary);
     });
 
     #[cfg(target_arch = "wasm32")]

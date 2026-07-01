@@ -154,6 +154,7 @@ async fn run_settings_server(state: SettingsServerState, port: u16) -> Result<()
         .route("/api/assets/catalog", get(assets_catalog_handler))
         .route("/api/assets/recommend", post(assets_recommend_handler))
         .route("/api/assets/enqueue", post(assets_enqueue_handler))
+        .route("/generate_pane", post(generate_pane_handler))
         .nest_service("/", ServeDir::new(static_root).append_index_html_on_directories(true))
         .layer(CorsLayer::permissive())
         .with_state(state);
@@ -597,6 +598,20 @@ struct AssetsEnqueueRequest {
     pub kind: String,
     #[serde(default)]
     pub ontology_id: Option<String>,
+}
+
+async fn generate_pane_handler(
+    Json(body): Json<qualia_client_core::studio_pane_generator::GeneratePaneRequest>,
+) -> Result<Json<qualia_client_core::studio_pane_generator::PaneGenerationPlan>, (StatusCode, String)> {
+    let prompt = body.prompt.trim();
+    if prompt.is_empty() && body.ontology_domain.as_deref().unwrap_or("").is_empty() {
+        return Err((
+            StatusCode::BAD_REQUEST,
+            "prompt or ontology_domain required".to_string(),
+        ));
+    }
+    let plan = qualia_client_core::studio_pane_generator::generate_panes_from_request(&body);
+    Ok(Json(plan))
 }
 
 async fn assets_enqueue_handler(

@@ -35,6 +35,7 @@ pub mod qpu_oracle;
 pub mod qpu_pipeline;
 pub mod resource_import;
 pub mod social_connect;
+pub mod studio_pane_generator;
 pub mod studio_workspace_wal;
 pub mod state;
 pub mod system_telemetry;
