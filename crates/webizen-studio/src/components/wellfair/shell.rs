@@ -1,9 +1,12 @@
 use super::consent_panel::WellfairConsentPanel;
 use super::health_panel::WellfairHealthPanel;
+use super::life_panel::WellfairLifePanel;
 use super::medication_panel::WellfairMedicationPanel;
 use super::personal_panel::WellfairPersonalPanel;
+use super::sanctuary_panel::WellfairSanctuaryPanel;
 use super::sleep_panel::WellfairSleepPanel;
 use super::social_book_panel::WellfairSocialBookPanel;
+use super::wellbeing_panel::WellfairWellbeingPanel;
 use super::host_client::use_host_snapshot;
 use super::host_dto::{ProvenanceHop, SensitivityClassDto, VaultLifecycle};
 use super::shared::{OfflineState, ProvenanceTrail, SensitivityBadge, SyncState};
@@ -58,9 +61,12 @@ pub fn WellfairShell() -> Element {
         "Personal" => rsx! { WellfairPersonalPanel {} },
         "Health" => rsx! {
             WellfairHealthPanel {}
+            WellfairWellbeingPanel {}
             WellfairSleepPanel {}
             WellfairMedicationPanel {}
         },
+        "Life" => rsx! { WellfairLifePanel {} },
+        "Sanctuary" => rsx! { WellfairSanctuaryPanel {} },
         "Relationships" => rsx! {
             WellfairSocialBookPanel {}
             WellfairConsentPanel {}
