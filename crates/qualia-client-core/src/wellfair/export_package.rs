@@ -34,6 +34,14 @@ fn assurance_label(evidence_type: &str, kind: &str) -> &'static str {
         "disputed_self_reported_restricted"
     } else if kind == "housing_safety" {
         "safety_context_restricted"
+    } else if kind == "life_event" || kind == "case_task" {
+        "life_event_restricted"
+    } else if kind == "welfare_case" {
+        "welfare_case_sanctuary"
+    } else if kind == "wellbeing_observation" {
+        "wellbeing_self_report"
+    } else if kind == "therapy_note" || kind == "sanctuary_note" {
+        "sanctuary_classified"
     } else if evidence_type.contains("SelfReported") {
         "self_reported_restricted"
     } else if evidence_type.contains("DeviceMeasured") {

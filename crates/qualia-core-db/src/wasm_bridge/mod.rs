@@ -14,7 +14,11 @@ mod medical;
 #[cfg(feature = "wasm-scientific")]
 pub use medical::*;
 mod semantic;
+#[allow(unused_imports)]
+pub use semantic::*;
 mod dataio;
+#[allow(unused_imports)]
+pub use dataio::*;
 #[cfg(feature = "wasm-scientific")]
 mod compute;
 #[cfg(feature = "wasm-scientific")]
@@ -26,3 +30,5 @@ mod engine;
 #[cfg(feature = "wasm-scientific")]
 pub use engine::*;
 mod meta;
+#[allow(unused_imports)]
+pub use meta::*;

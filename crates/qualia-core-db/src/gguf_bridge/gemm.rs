@@ -214,7 +214,7 @@ impl QTensorEngine {
         if n_in > input.len() || n_out > out.len() {
             return false;
         }
-        // GPU resident path (toggle on): keyed by the `.q42` blob offset (== info.byte_offset).
+        // GPU resident path (toggle on): keyed by the P64 blob offset (== info.byte_offset).
         #[cfg(not(target_arch = "wasm32"))]
         if crate::llm_bench::ternary_ffn_enabled() {
             if let Some(res) = self.ternary_ffn.as_ref() {

@@ -998,9 +998,9 @@ pub struct QTensorEngine {
     pub gguf_mmap: Option<Arc<memmap2::Mmap>>,
     #[cfg(target_arch = "wasm32")]
     pub gguf_mmap: Option<Arc<[u8]>>,
-    /// Phase 4: resident `.q42` container bytes (set when booted from a `.q42`, not a GGUF).
+    /// Resident P64 container bytes.
     #[cfg(target_arch = "wasm32")]
-    pub q42_resident: Option<Arc<[u8]>>,
+    pub p64_resident: Option<Arc<[u8]>>,
 
     /// Byte offset into the mmap where tensor data begins.
     pub tensor_data_offset: u64,
@@ -1092,9 +1092,9 @@ pub struct QTensorEngine {
     /// native top-k decode path, so these two fields are available on both targets.
     mc8_logits_resident_buf: Option<wgpu::Buffer>,
     mc8_logits_row_bytes: u32,
-    /// A1b (STELLAR §A): resident 2-bit ternary-FFN GEMM dispatcher, built once at `.q42` boot from
+    /// A1b (STELLAR §A): resident 2-bit ternary-FFN GEMM dispatcher, built once at P64 boot from
     /// the container's base-3 FFN blobs (rebaked to 2-bit, uploaded once). `None` until a ternary
-    /// `.q42` is adopted; the FFN dispatch branch (`dispatch_ternary_ffn`) uses it when present +
+    /// P64 is adopted; the FFN dispatch branch (`dispatch_ternary_ffn`) uses it when present +
     /// the toggle is on, else the CPU oracle. Native-only; the wasm ternary path is a later step.
     #[cfg(not(target_arch = "wasm32"))]
     ternary_ffn: Option<crate::ternary_gpu::TernaryFfnResident>,
@@ -1134,19 +1134,18 @@ thread_local! {
 }
 
 #[cfg(target_arch = "wasm32")]
-pub async fn initialize_webgpu_engine(gguf_data: std::sync::Arc<[u8]>) -> Result<(), String> {
+pub async fn initialize_webgpu_engine(model_data: std::sync::Arc<[u8]>) -> Result<(), String> {
     // Use `try_new()` (not `new_async()`) so a missing/incompatible WebGPU adapter
     // surfaces as a rejected promise the JS layer can display, rather than an
     // `.expect()` panic that aborts the wasm module and leaves the init promise
     // pending forever (the "stuck on Initialising…" hang).
     let mut engine = QTensorEngine::try_new().await?;
-    // Dual-format boot gate: inspect the first 4 magic bytes.
-    //   b"P64" → Phase 4 AOT container (validate CRC, map blobs straight into the arenas).
-    //   else    → legacy GGUF (parse metadata, reserve GEMM + KV arenas).
-    if gguf_data.len() >= 4 && gguf_data[0..4] == *b"P64" {
-        engine.adopt_resident_q42(gguf_data)?;
+    // Dual-format boot gate. P64 owns the canonical lowercase four-byte
+    // `p64\0` magic.
+    if crate::p64_weight::has_p64_magic(&model_data) {
+        engine.adopt_resident_p64(model_data)?;
     } else {
-        engine.adopt_resident_mmap(gguf_data)?;
+        engine.adopt_resident_mmap(model_data)?;
     }
     WASM_ENGINE_INSTANCE.with(|g| *g.borrow_mut() = Some(engine));
     Ok(())

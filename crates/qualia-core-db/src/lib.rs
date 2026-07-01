@@ -1375,7 +1375,7 @@ pub mod wal;
 pub mod gguf_bridge;
 #[cfg(any(not(target_arch = "wasm32"), feature = "wasm-llm"))]
 pub use gguf_bridge as inference_runtime;
-/// Phase 4: AOT GGUF → `.q42` LLM-weight container compiler.
+/// Phase 4: AOT GGUF → P64 LLM-weight container compiler.
 /// Phase 6 / task #12: safetensor (+ MLX) source parsing + dtype gate for the streaming transcoder.
 /// Task #12 / STELLAR §A: BitNet b1.58 ternary quantization codec (compression during transcode).
 /// Task #12 / STELLAR §A: tensor-name → engine GEMM-role mapping + the ternary (FFN-only) policy.

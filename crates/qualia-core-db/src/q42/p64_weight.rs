@@ -22,7 +22,16 @@
 use crate::gguf_sharder::{GgufHyperparams, GgufTensorIndex, GgufTensorInfo};
 
 pub const P64_MAGIC: [u8; 4] = *b"p64\0";
-pub const P64_VERSION: u16 = 3;
+pub const P64_VERSION: u16 = 4;
+
+/// Return `true` only for the canonical four-byte P64 container magic.
+///
+/// Keep format sniffing centralized here. Historical code used `.q42` names
+/// and, in one WASM path, compared against the non-canonical `b"P64"` literal.
+#[inline]
+pub fn has_p64_magic(data: &[u8]) -> bool {
+    data.starts_with(&P64_MAGIC)
+}
 /// 14 = 16 KB pages (default; minimizes page faults on large FFN blocks). 12 = 4 KB.
 pub const P64_DEFAULT_PAGE_LOG2: u16 = 14;
 pub const P64_WEIGHT_HEADER_BYTES: usize = 64;
@@ -48,6 +57,8 @@ pub const P64_ROLE_FFN_NORM: u16 = 8;
 pub const P64_ROLE_TOKEN_EMBD: u16 = 9;
 pub const P64_ROLE_OUTPUT: u16 = 10;
 pub const P64_ROLE_OUTPUT_NORM: u16 = 11;
+pub const P64_ROLE_ATTN_SUBLN: u16 = 12;
+pub const P64_ROLE_FFN_SUBLN: u16 = 13;
 /// A source GGUF tensor preserved byte-for-byte but not consumed by a known
 /// engine role. Its source offset and name hash remain in the entry so a
 /// validator can still prove complete model preservation.
@@ -346,7 +357,7 @@ pub fn compile_gguf_to_p64(input: &[u8], page_log2: u16) -> Result<Vec<u8>, Stri
         string_table.extend_from_slice(name.as_bytes());
         string_table.push(0);
     }
-    let tokenizer = crate::gguf_sharder::GgufTokenizer::from_gguf(input).to_q42_section();
+    let tokenizer = crate::gguf_sharder::GgufTokenizer::from_gguf(input).to_p64_section();
     let manifold_count = index
         .hyperparams
         .n_layer
@@ -482,7 +493,7 @@ pub fn compile_gguf_to_p64(input: &[u8], page_log2: u16) -> Result<Vec<u8>, Stri
     Ok(output)
 }
 
-/// Compile a flat GGUF byte image into a `.q42` LLM-weight container.
+/// Compile a flat GGUF byte image into a P64 LLM-weight container.
 /// `page_log2 == 0` selects the default (16 KB). Returns the little-endian container bytes.
 #[allow(dead_code)]
 fn compile_gguf_to_p64_legacy(input: &[u8], page_log2: u16) -> Result<Vec<u8>, String> {
@@ -569,7 +580,7 @@ fn compile_gguf_to_p64_legacy(input: &[u8], page_log2: u16) -> Result<Vec<u8>, S
     // Now extract vocabulary from GGUF and append to string table.
     let tokenizer_offset = string_table.len() as u32;
     let tok = crate::gguf_sharder::GgufTokenizer::from_gguf(input);
-    
+
     let mut tok_bytes: Vec<u8> = Vec::new();
     // Serialize vocabulary sizes and strings
     tok_bytes.extend_from_slice(&(tok.vocab.len() as u32).to_le_bytes());
@@ -579,7 +590,7 @@ fn compile_gguf_to_p64_legacy(input: &[u8], page_log2: u16) -> Result<Vec<u8>, S
         tok_bytes.extend_from_slice(v_bytes);
     }
     let tokenizer_size = tok_bytes.len() as u32;
-    
+
     string_table.extend_from_slice(&tok_bytes);
 
     // Padding string table to 64 bytes
@@ -735,22 +746,27 @@ fn compile_gguf_to_p64_legacy(input: &[u8], page_log2: u16) -> Result<Vec<u8>, S
     Ok(out)
 }
 
-// Ensure the caller functions are properly aliased
+/// Compatibility alias for the historical pre-P64 API name.
 pub fn compile_gguf_to_q42(input: &[u8], page_log2: u16) -> Result<Vec<u8>, String> {
     compile_gguf_to_p64(input, page_log2)
 }
 
-/// Task #12 / STELLAR §A — like [`compile_gguf_to_q42`] but **ternary-packs the FFN projections**
+/// Task #12 / STELLAR §A — like [`compile_gguf_to_p64`] but **ternary-packs the FFN projections**
 /// (gate/up/down) during the compile, producing a **complete, runnable** P64: hyperparameters +
 /// tokenizer are preserved (so the live loader boots it and builds the KV cache), while the FFN
 /// tensors are BitNet-1.58b ternary blobs (`ternary::dequantize_blob` / the 2-bit GPU kernel).
 /// Attention / norms / embeddings stay verbatim at their source precision. This is the loadable
 /// container the live FFN-ternary dispatch path will run + measure against.
-pub fn compile_gguf_to_q42_ternary_ffn(input: &[u8], page_log2: u16) -> Result<Vec<u8>, String> {
-    compile_gguf_to_q42_ffn_quant_awq(input, page_log2, None, 0.0, FfnQuant::Ternary)
+pub fn compile_gguf_to_p64_ternary_ffn(input: &[u8], page_log2: u16) -> Result<Vec<u8>, String> {
+    compile_gguf_to_p64_ffn_quant_awq(input, page_log2, None, 0.0, FfnQuant::Ternary)
 }
 
-/// Target quantization for the FFN tensors in an AWQ `.q42` compile.
+/// Compatibility alias for the historical pre-P64 API name.
+pub fn compile_gguf_to_q42_ternary_ffn(input: &[u8], page_log2: u16) -> Result<Vec<u8>, String> {
+    compile_gguf_to_p64_ternary_ffn(input, page_log2)
+}
+
+/// Target quantization for the FFN tensors in an AWQ P64 compile.
 #[derive(Clone, Copy, PartialEq, Eq, Debug)]
 pub enum FfnQuant {
     /// BitNet 1.58b ternary (`GGML_TYPE_TERNARY_158`, resident 2-bit GPU path).
@@ -759,35 +775,55 @@ pub enum FfnQuant {
     Q4_0,
 }
 
-/// AWQ-aware ternary FFN compile (back-compat wrapper for [`compile_gguf_to_q42_ffn_quant_awq`]).
+/// AWQ-aware ternary FFN compile.
+pub fn compile_gguf_to_p64_ternary_ffn_awq(
+    input: &[u8],
+    page_log2: u16,
+    awq_scales: Option<&[Vec<f32>]>,
+    alpha: f32,
+) -> Result<Vec<u8>, String> {
+    compile_gguf_to_p64_ffn_quant_awq(input, page_log2, awq_scales, alpha, FfnQuant::Ternary)
+}
+
+/// Compatibility alias for the historical pre-P64 API name.
 pub fn compile_gguf_to_q42_ternary_ffn_awq(
     input: &[u8],
     page_log2: u16,
     awq_scales: Option<&[Vec<f32>]>,
     alpha: f32,
 ) -> Result<Vec<u8>, String> {
-    compile_gguf_to_q42_ffn_quant_awq(input, page_log2, awq_scales, alpha, FfnQuant::Ternary)
+    compile_gguf_to_p64_ternary_ffn_awq(input, page_log2, awq_scales, alpha)
 }
 
 /// AWQ-aware **Q4_0** FFN compile (Path A) — FFN packed to 4-bit Q4_0 (AWQ's design regime); all else
 /// verbatim from the source GGUF.
+pub fn compile_gguf_to_p64_q4_ffn_awq(
+    input: &[u8],
+    page_log2: u16,
+    awq_scales: Option<&[Vec<f32>]>,
+    alpha: f32,
+) -> Result<Vec<u8>, String> {
+    compile_gguf_to_p64_ffn_quant_awq(input, page_log2, awq_scales, alpha, FfnQuant::Q4_0)
+}
+
+/// Compatibility alias for the historical pre-P64 API name.
 pub fn compile_gguf_to_q42_q4_ffn_awq(
     input: &[u8],
     page_log2: u16,
     awq_scales: Option<&[Vec<f32>]>,
     alpha: f32,
 ) -> Result<Vec<u8>, String> {
-    compile_gguf_to_q42_ffn_quant_awq(input, page_log2, awq_scales, alpha, FfnQuant::Q4_0)
+    compile_gguf_to_p64_q4_ffn_awq(input, page_log2, awq_scales, alpha)
 }
 
-/// AWQ-aware FFN-quantized `.q42` compile. `quant` selects the FFN target (ternary or Q4_0). When
+/// AWQ-aware FFN-quantized P64 compile. `quant` selects the FFN target (ternary or Q4_0). When
 /// `awq_scales` is `Some` (per-layer per-input-channel salience from [`crate::llm_awq::snapshot`]) the
 /// gate/up input channel `i` is scaled by `s_i^alpha` before packing and `ffn_norm` is divided by
 /// `s_i^alpha` — mathematically exact in f32 (`(X·norm/s^a)·(W·s^a)=(X·norm)·W`) — moving salient
 /// channels into a range the quant grid represents better. `awq_scales = None` / `alpha == 0.0`
 /// reproduces the plain (un-calibrated) compile. The down projection is left un-scaled (no clean fold
 /// site — a v2 item). Everything outside the FFN passes through verbatim from the source GGUF.
-pub fn compile_gguf_to_q42_ffn_quant_awq(
+pub fn compile_gguf_to_p64_ffn_quant_awq(
     input: &[u8],
     page_log2: u16,
     awq_scales: Option<&[Vec<f32>]>,
@@ -1004,9 +1040,20 @@ pub fn compile_gguf_to_q42_ffn_quant_awq(
     Ok(output)
 }
 
+/// Compatibility alias for the historical pre-P64 API name.
+pub fn compile_gguf_to_q42_ffn_quant_awq(
+    input: &[u8],
+    page_log2: u16,
+    awq_scales: Option<&[Vec<f32>]>,
+    alpha: f32,
+    quant: FfnQuant,
+) -> Result<Vec<u8>, String> {
+    compile_gguf_to_p64_ffn_quant_awq(input, page_log2, awq_scales, alpha, quant)
+}
+
 /// `format_flags` bit: container produced by the **raw streaming transcode** (safetensor/MLX →
 /// P64) — tensors are verbatim high-fidelity blobs not yet mapped to engine GEMM roles, and the
-/// GGUF hyperparameter block is absent. (Distinguishes it from a `compile_gguf_to_q42` container.)
+/// GGUF hyperparameter block is absent. (Distinguishes it from a `compile_gguf_to_p64` container.)
 pub const FORMAT_FLAG_RAW_TRANSCODE: u16 = 1 << 1;
 /// `format_flags` bit: tensors were **ternary-quantized (BitNet 1.58b)** during transcode — each
 /// blob is `[scale: f32][packed trits]` (`ggml_type = ternary::GGML_TYPE_TERNARY_158`); decode via
@@ -1412,7 +1459,7 @@ pub fn transcode_safetensor_to_p64_ffn_ternary<W: std::io::Write>(
     transcode_safetensor_to_p64_policy(src, page_log2, out)
 }
 
-/// GGUF tensor-name suffix for a per-layer `.q42` role (None for global tensors, named directly).
+/// GGUF tensor-name suffix for a per-layer P64 role (None for global tensors, named directly).
 fn p64_role_suffix(role_id: u16) -> Option<&'static [u8]> {
     match role_id {
         P64_ROLE_ATTN_K => Some(b"attn_k.weight"),
@@ -1428,7 +1475,7 @@ fn p64_role_suffix(role_id: u16) -> Option<&'static [u8]> {
     }
 }
 
-/// Runtime reader: parses a `.q42` container's header + manifest in microseconds. Tensor blobs
+/// Runtime reader: parses a P64 container's header + manifest in microseconds. Tensor blobs
 /// stay in the caller's byte slice (zero-copy); only the small manifest is materialized. The
 /// `role`/`layer`/`blob_offset` fields map directly to the resident WebGPU weight arenas.
 pub struct P64TensorIndex {
@@ -1956,24 +2003,24 @@ mod tests {
     }
 
     #[test]
-    fn compile_smollm2_to_q42_layout() {
+    fn compile_smollm2_to_p64_layout() {
         let path = "C:/Projects/qualiaDB/docs/models/SmolLM2-360M-Instruct-Q4_K_M.gguf";
         if !std::path::Path::new(path).exists() {
-            eprintln!("[q42] model not present — skipping");
+            eprintln!("[p64] model not present — skipping");
             return;
         }
         let gguf = std::fs::read(path).expect("read gguf");
-        let q42 = compile_gguf_to_q42(&gguf, 0).expect("compile");
+        let p64 = compile_gguf_to_p64(&gguf, 0).expect("compile");
 
         // Magic + version + default page size.
-        assert_eq!(&q42[0..4], b"P64", "magic");
-        assert_eq!(le_u16(&q42, 4), P64_VERSION, "version");
-        assert_eq!(le_u16(&q42, 6), 14, "default page_log2 = 16KB");
+        assert_eq!(&p64[0..4], &P64_MAGIC, "magic");
+        assert_eq!(le_u16(&p64, 4), P64_VERSION, "version");
+        assert_eq!(le_u16(&p64, 6), 14, "default page_log2 = 16KB");
         let page = 1usize << 14;
 
         // Tensor count: SmolLM2-360M has 32 layers × 9 per-layer tensors + globals.
-        let n_tensors = le_u32(&q42, 8) as usize;
-        let n_layers = le_u32(&q42, 12);
+        let n_tensors = le_u32(&p64, 8) as usize;
+        let n_layers = le_u32(&p64, 12);
         assert_eq!(n_layers, 32, "n_layers");
         assert!(
             n_tensors >= 32 * 9,
@@ -1981,32 +2028,32 @@ mod tests {
         );
 
         // Hyperparameter block (v2 header) round-trips SmolLM2-360M geometry.
-        assert_eq!(le_u32(&q42, 16), 960, "n_embd");
-        assert_eq!(le_u32(&q42, 20), 15, "n_head");
-        assert_eq!(le_u32(&q42, 24), 5, "n_kv_head");
+        assert_eq!(le_u32(&p64, 16), 960, "n_embd");
+        assert_eq!(le_u32(&p64, 20), 15, "n_head");
+        assert_eq!(le_u32(&p64, 24), 5, "n_kv_head");
 
         // Blob region + the first tensor blob both sit on a 16KB boundary.
-        let manifest_offset = le_u64(&q42, 40) as usize;
-        let blob_offset = le_u64(&q42, 48) as usize;
+        let manifest_offset = le_u64(&p64, 40) as usize;
+        let blob_offset = le_u64(&p64, 48) as usize;
         assert_eq!(blob_offset % page, 0, "blob region 16KB-aligned");
         let first_entry = manifest_offset; // entry[0]
-        let first_blob = le_u64(&q42, first_entry + 16) as usize; // blob_offset field @ entry+16
-        let first_len = le_u64(&q42, first_entry + 24) as usize;
+        let first_blob = le_u64(&p64, first_entry + 16) as usize; // blob_offset field @ entry+16
+        let first_len = le_u64(&p64, first_entry + 24) as usize;
         assert_eq!(first_blob % page, 0, "first tensor blob 16KB-aligned");
         assert_eq!(first_blob, blob_offset, "first blob == blob region start");
-        assert!(first_blob + first_len <= q42.len(), "first blob in-bounds");
+        assert!(first_blob + first_len <= p64.len(), "first blob in-bounds");
 
         // Every tensor blob is 16KB-aligned and in-bounds.
         for k in 0..n_tensors {
             let e = manifest_offset + k * P64_TENSOR_ENTRY_BYTES;
-            let bo = le_u64(&q42, e + 16) as usize;
-            let bl = le_u64(&q42, e + 24) as usize;
+            let bo = le_u64(&p64, e + 16) as usize;
+            let bl = le_u64(&p64, e + 24) as usize;
             assert_eq!(bo % page, 0, "tensor {k} blob 16KB-aligned");
-            assert!(bo + bl <= q42.len(), "tensor {k} in-bounds");
+            assert!(bo + bl <= p64.len(), "tensor {k} in-bounds");
         }
 
         // Round-trip through the runtime reader.
-        let idx = P64TensorIndex::from_p64(&q42).expect("from_p64");
+        let idx = P64TensorIndex::from_p64(&p64).expect("from_p64");
         assert_eq!(idx.entries.len(), n_tensors, "reader entry count");
         assert_eq!(
             idx.header.blob_offset as usize, blob_offset,
@@ -2020,13 +2067,13 @@ mod tests {
         for (k, e) in idx.entries.iter().enumerate() {
             assert_eq!(e.blob_offset as usize % page, 0, "reader entry {k} aligned");
             assert_eq!(
-                idx.blob(&q42, e).len(),
+                idx.blob(&p64, e).len(),
                 e.byte_len as usize,
                 "reader blob len {k}"
             );
         }
         // Bad magic is rejected.
-        let mut bad = q42.clone();
+        let mut bad = p64.clone();
         bad[0] = b'X';
         assert!(
             P64TensorIndex::from_p64(&bad).is_err(),
@@ -2034,8 +2081,8 @@ mod tests {
         );
 
         // Integrity: header CRC populated; a flipped manifest byte (corrupted offset) is rejected.
-        assert_ne!(le_u32(&q42, 72), 0, "header_crc populated");
-        let mut tampered = q42.clone();
+        assert_ne!(le_u32(&p64, 72), 0, "header_crc populated");
+        let mut tampered = p64.clone();
         tampered[manifest_offset + 16] ^= 0xFF; // first entry's blob_offset
         assert!(
             P64TensorIndex::from_p64(&tampered).is_err(),
@@ -2043,26 +2090,26 @@ mod tests {
         );
 
         eprintln!(
-            "[q42] OK: {n_tensors} tensors, {n_layers} layers, blob@{blob_offset}, total {} MB; reader round-trip + hyperparams verified",
-            q42.len() / (1024 * 1024)
+            "[p64] OK: {n_tensors} tensors, {n_layers} layers, blob@{blob_offset}, total {} MB; reader round-trip + hyperparams verified",
+            p64.len() / (1024 * 1024)
         );
     }
 
-    /// Proves inference-from-`.q42` equivalence WITHOUT a browser: the synthetic GGUF index built
-    /// from the `.q42` manifest returns byte-identical weights + matching metadata vs the original
+    /// Proves inference-from-P64 equivalence WITHOUT a browser: the synthetic GGUF index built
+    /// from the P64 manifest returns byte-identical weights + matching metadata vs the original
     /// GGUF index for every tensor. Identical weights → identical logits → identical output. The
-    /// only piece the `.q42` does not yet carry is the tokenizer (a separate, flagged gap).
+    /// P64 carries the tokenizer in its embedded Q42T section.
     #[test]
-    fn q42_synthetic_index_matches_gguf() {
+    fn p64_synthetic_index_matches_gguf() {
         let path = "C:/Projects/qualiaDB/docs/models/SmolLM2-360M-Instruct-Q4_K_M.gguf";
         if !std::path::Path::new(path).exists() {
-            eprintln!("[q42] model not present — skipping");
+            eprintln!("[p64] model not present — skipping");
             return;
         }
         let gguf = std::fs::read(path).expect("read gguf");
-        let q42 = compile_gguf_to_q42(&gguf, 0).expect("compile");
+        let p64 = compile_gguf_to_p64(&gguf, 0).expect("compile");
         let orig = GgufTensorIndex::from_gguf(&gguf);
-        let q = P64TensorIndex::from_p64(&q42).expect("from_p64");
+        let q = P64TensorIndex::from_p64(&p64).expect("from_p64");
         let synth = q.to_gguf_index();
 
         let mut checked = 0usize;
@@ -2073,8 +2120,8 @@ mod tests {
                     assert_eq!(s.dims[0], o.dims[0], "{label} dim0");
                     assert_eq!(s.dims[1], o.dims[1], "{label} dim1");
                     let sb =
-                        crate::ggml_quants::fetch_tensor_bytes(&q42, synth.tensor_data_start, &s)
-                            .expect("q42 tensor bytes");
+                        crate::ggml_quants::fetch_tensor_bytes(&p64, synth.tensor_data_start, &s)
+                            .expect("P64 tensor bytes");
                     let ob =
                         crate::ggml_quants::fetch_tensor_bytes(&gguf, orig.tensor_data_start, &o)
                             .expect("gguf tensor bytes");
@@ -2118,53 +2165,53 @@ mod tests {
             "expected ≥288 tensors byte-checked, got {checked}"
         );
         eprintln!(
-            "[q42] synthetic index == GGUF: {checked} tensors byte-identical + metadata match"
+            "[p64] synthetic index == GGUF: {checked} tensors byte-identical + metadata match"
         );
     }
 
-    /// Proves the v3 tokenizer section round-trips: a tokenizer rebuilt from the `.q42` section
+    /// Proves the v3 tokenizer section round-trips: a tokenizer rebuilt from the P64 section
     /// encodes/decodes identically to the GGUF tokenizer. With weight byte-parity (above), this
-    /// guarantees q42-only inference produces the same tokens as the GGUF path.
+    /// guarantees P64-only inference produces the same tokens as the GGUF path.
     #[test]
-    fn q42_tokenizer_roundtrip() {
+    fn p64_tokenizer_roundtrip() {
         use crate::gguf_sharder::GgufTokenizer;
         let path = "C:/Projects/qualiaDB/docs/models/SmolLM2-360M-Instruct-Q4_K_M.gguf";
         if !std::path::Path::new(path).exists() {
-            eprintln!("[q42] model not present — skipping");
+            eprintln!("[p64] model not present — skipping");
             return;
         }
         let gguf = std::fs::read(path).expect("read gguf");
-        let q42 = compile_gguf_to_q42(&gguf, 0).expect("compile");
-        let q = P64TensorIndex::from_p64(&q42).expect("from_p64");
+        let p64 = compile_gguf_to_p64(&gguf, 0).expect("compile");
+        let q = P64TensorIndex::from_p64(&p64).expect("from_p64");
 
-        let tok_bytes = q.tokenizer_bytes(&q42);
+        let tok_bytes = q.tokenizer_bytes(&p64);
         assert!(!tok_bytes.is_empty(), "tokenizer section present");
-        let tok_q42 = GgufTokenizer::from_p64_section(tok_bytes).expect("from_p64_section");
+        let tok_p64 = GgufTokenizer::from_p64_section(tok_bytes).expect("from_p64_section");
         let tok_gguf = GgufTokenizer::from_gguf(&gguf);
 
-        assert_eq!(tok_q42.bos_token_id, tok_gguf.bos_token_id, "bos");
-        assert_eq!(tok_q42.eos_token_id, tok_gguf.eos_token_id, "eos");
-        assert_eq!(tok_q42.add_bos_token, tok_gguf.add_bos_token, "add_bos");
-        assert_eq!(tok_q42.vocab.len(), tok_gguf.vocab.len(), "vocab len");
+        assert_eq!(tok_p64.bos_token_id, tok_gguf.bos_token_id, "bos");
+        assert_eq!(tok_p64.eos_token_id, tok_gguf.eos_token_id, "eos");
+        assert_eq!(tok_p64.add_bos_token, tok_gguf.add_bos_token, "add_bos");
+        assert_eq!(tok_p64.vocab.len(), tok_gguf.vocab.len(), "vocab len");
         for prompt in [
             "The capital of France is",
             "<|im_start|>user\nWhat is the capital of France?<|im_end|>\n<|im_start|>assistant\n",
         ] {
             assert_eq!(
-                tok_q42.encode_prompt(prompt),
+                tok_p64.encode_prompt(prompt),
                 tok_gguf.encode_prompt(prompt),
                 "encode mismatch for {prompt:?}"
             );
         }
         let ids = tok_gguf.encode_prompt("The capital of France is");
         assert_eq!(
-            tok_q42.decode(&ids),
+            tok_p64.decode(&ids),
             tok_gguf.decode(&ids),
             "decode mismatch"
         );
         eprintln!(
-            "[q42] tokenizer round-trip: encode/decode identical to GGUF ({} vocab, section {} KB)",
-            tok_q42.vocab.len(),
+            "[p64] tokenizer round-trip: encode/decode identical to GGUF ({} vocab, section {} KB)",
+            tok_p64.vocab.len(),
             tok_bytes.len() / 1024
         );
     }
@@ -2173,6 +2220,17 @@ mod tests {
 #[cfg(test)]
 mod p64_validation_tests {
     use super::*;
+
+    #[test]
+    fn p64_magic_sniff_is_exact_and_case_sensitive() {
+        assert!(has_p64_magic(b"p64\0payload"));
+        assert!(has_p64_magic(&P64_MAGIC));
+        assert!(!has_p64_magic(b"P64\0payload"));
+        assert!(!has_p64_magic(b"P64"));
+        assert!(!has_p64_magic(b"p64"));
+        assert!(!has_p64_magic(b"Q42\0payload"));
+        assert!(!has_p64_magic(b"GGUFpayload"));
+    }
 
     fn put_kv_u32(out: &mut Vec<u8>, key: &str, value: u32) {
         out.extend_from_slice(&(key.len() as u64).to_le_bytes());

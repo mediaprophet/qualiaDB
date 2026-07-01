@@ -94,13 +94,18 @@ This Swarm Orchestration enables massive parallel execution, deep neural-network
 
 ## The LLM Inference Stack (native, no Ollama)
 
+For the byte-to-runtime path, P64 compatibility aliases, native/WASM
+differences, governance boundary, and current implementation gaps, see the
+[Q42/P64 Inference Pipeline](p64-q42-inference-pipeline.md). The table below is
+a compact component summary.
+
 Qualia-DB runs LLM inference entirely in-process. There is no Ollama, no Python runtime, no HTTP server for models.
 
 | Step | Component | Detail |
 |------|-----------|--------|
-| 1 | `gguf_sharder.rs` · `GgufTokenizer` | Parses GGUF v2/v3 KV section: extracts vocabulary (`tokenizer.ggml.tokens`), BOS/EOS IDs. Greedy longest-match `encode()`; SentencePiece `▁`-aware `decode()`. Falls back to 256-entry byte-level tokeniser when no model is loaded. |
-| 2 | `gguf_sharder.rs` · `GGufSharder` | Parses GGUF header magic + tensor count; generates `NQuin` pointer map (byte offsets in object field, upper 4 bits = modality flag `0b1001`). |
-| 3 | `gguf_bridge.rs` · `QTensorEngine` | `load_gguf(path)` memory-maps weights via `memmap2` (zero heap). `dispatch_fused_transformer_block()` tries DirectML → Accelerate → wgpu/WGSL in order. |
+| 1 | `gguf_sharder.rs` · `GgufTokenizer` | Reads tokenizer metadata from GGUF or the embedded P64 `Q42T` section. Greedy longest-match `encode()`; SentencePiece `▁`-aware `decode()`. |
+| 2 | `p64_weight.rs` · `P64TensorIndex` | Validates P64 v3, exposes role-tagged tensor descriptors, and builds the synthetic `GgufTensorIndex` compatibility view used by the engine. |
+| 3 | `gguf_bridge` · `QTensorEngine` | Adopts an explicitly mounted P64 mmap or loads GGUF, reserves GEMM/KV arenas, and runs the production transformer-forward path. |
 | 4 | `shaders/fused_tensor_contraction.wgsl` | WGSL compute shader, 64 threads/workgroup, 4096 FMA ops per thread; backend via DirectML 1.15 / Vulkan / Metal / WebGPU. |
 | 5 | `llm_agent.rs` · `LocalLlmAgent` | `infer_local_model()` runs the Phase 8 autoregressive decode loop: tokenise prompt → per-step GPU dispatch → SPSC logit stream → sentinel rollback check → argmax sample → EOS detection → detokenise. |
 | 6 | `orchestrator.rs` · `TaskOrchestrator` | `orchestrate_inference()` gates every call: `validate_intent` → `infer` → `validate_output`. Manages `ModelLifecycle` state machine and `ThermalGovernor`. |
@@ -112,7 +117,7 @@ Qualia-DB runs LLM inference entirely in-process. There is no Ollama, no Python 
 | Windows x64 | DirectML 1.15 (D3D12, hardware-vendor kernels) | wgpu / D3D12 |
 | macOS Apple Silicon | Accelerate `cblas_sgemm` (AMX coprocessor) | wgpu / Metal |
 | Linux (NVIDIA/AMD) | wgpu / Vulkan (system ICD) | — |
-| WASM | Mock path (GPU not accessible from browser) | — |
+| WASM | Browser WebGPU with P64 or GGUF | Model-backed P64 browser release run remains tracked in the pipeline manual |
 
 ### Phase 8 Bifurcated Compute
 
@@ -128,14 +133,14 @@ Per decode step:
 2. Argmax + anomaly flag are packed into a fixed-size `LogitSummary` (no heap) and pushed to `LogitStream`.
 3. Sentinel reads the summary. If `anomaly_byte == 0x99` (anachronism signature), it pushes `DenyRollback` to `ControlStream`.
 4. On the next step, the LLM thread pops `ControlStream`. If a rollback is pending, it substitutes a safe neighbour token instead of the argmax.
-5. Loop ends at EOS token or `MAX_OUTPUT_TOKENS` (2048).
+5. Loop ends at EOS, the release decode budget (256), the 30-second cooperative deadline, or the absolute `MAX_OUTPUT_TOKENS` ceiling (2048).
 
 > **Note — embedding lookup fully implemented.** The decode loop uses real token embeddings via `GgufTensorIndex::dequantize_token_embedding_into()` which parses the GGUF tensor-info section and dequantizes per-token embeddings into caller-supplied buffers. The GPU compute, SPSC ring, governance pipeline, and tokeniser are all fully functional.
 
 ### AgentBackend Variants
 
 ```rust
-Local   // GGUF on-disk → wgpu → in-process. No outbound traffic. 128 MB RAM cap.
+Local   // Explicitly mounted P64 or GGUF → wgpu → in-process. No outbound traffic.
 Remote  // API call → Nym mixnet → ILP metered. Requires signed VC from Principal.
 Hybrid  // Local-first. Falls back to Remote only with explicit Principal consent.
 ```

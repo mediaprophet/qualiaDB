@@ -1,10 +1,23 @@
 //! Process-wide resident GGUF mmap — released explicitly on model eviction.
 
-use std::path::Path;
-use std::sync::{Arc, Mutex, OnceLock};
-
 #[cfg(not(target_arch = "wasm32"))]
 use crate::gguf_bridge::{GgufLoadReport, QTensorEngine};
+#[cfg(not(target_arch = "wasm32"))]
+use std::path::Path;
+#[cfg(not(target_arch = "wasm32"))]
+use std::sync::{Arc, Mutex, OnceLock};
+
+#[cfg(unix)]
+fn apply_mlock(mmap: &memmap2::Mmap, mlock: bool) {
+    if mlock {
+        unsafe {
+            libc::mlock(mmap.as_ptr() as *const libc::c_void, mmap.len());
+        }
+    }
+}
+
+#[cfg(not(unix))]
+fn apply_mlock(_mmap: &memmap2::Mmap, _mlock: bool) {}
 
 #[cfg(not(target_arch = "wasm32"))]
 #[derive(Debug)]
@@ -23,7 +36,7 @@ fn slot() -> &'static Arc<Mutex<Option<ResidentModelSlot>>> {
 
 /// Memory-map `path` and retain until [`clear_resident_model`].
 #[cfg(not(target_arch = "wasm32"))]
-pub fn mount_resident_gguf(model_id: u64, path: &str) -> Result<GgufLoadReport, String> {
+pub fn mount_resident_gguf(model_id: u64, path: &str, mlock: bool) -> Result<GgufLoadReport, String> {
     clear_resident_model();
     let mut engine = tokio::task::block_in_place(|| {
         tokio::runtime::Handle::current().block_on(QTensorEngine::try_new())
@@ -33,6 +46,7 @@ pub fn mount_resident_gguf(model_id: u64, path: &str) -> Result<GgufLoadReport, 
         .gguf_mmap
         .take()
         .ok_or_else(|| "Internal error: GGUF mmap missing after load".to_string())?;
+    apply_mlock(&mmap, mlock);
     let normalized = Path::new(path)
         .canonicalize()
         .map(|p| p.to_string_lossy().into_owned())
@@ -51,18 +65,51 @@ pub fn mount_resident_gguf(_model_id: u64, _path: &str) -> Result<(), String> {
     Ok(())
 }
 
-/// A1b: memory-map a `.q42` weight container and retain it as the resident model (native). Mirrors
-/// [`mount_resident_gguf`] but boots via the native q42 path (`adopt_resident_q42_mmap`), which
-/// builds the resident 2-bit ternary-FFN dispatcher.
+/// Memory-map a P64 weight container and retain it as the resident model.
+///
+/// The function name is retained for source compatibility. New format-neutral
+/// callers should use [`mount_resident_model`].
 #[cfg(not(target_arch = "wasm32"))]
-pub fn mount_resident_q42(model_id: u64, path: &str) -> Result<GgufLoadReport, String> {
+pub fn mount_resident_q42(model_id: u64, path: &str, mlock: bool) -> Result<GgufLoadReport, String> {
     clear_resident_model();
     let file = std::fs::File::open(path).map_err(|e| format!("open {path}: {e}"))?;
-    let mmap = Arc::new(unsafe { memmap2::Mmap::map(&file) }.map_err(|e| e.to_string())?);
+    let mmap_raw = unsafe { memmap2::MmapOptions::new().populate().map(&file) }.map_err(|e| e.to_string())?;
+    apply_mlock(&mmap_raw, mlock);
+    let mmap = Arc::new(mmap_raw);
     let mut engine = tokio::task::block_in_place(|| {
         tokio::runtime::Handle::current().block_on(QTensorEngine::try_new())
     })?;
-    let report = engine.adopt_resident_q42_mmap(Arc::clone(&mmap))?;
+    let report = engine.adopt_resident_p64_mmap(Arc::clone(&mmap))?;
+    let normalized = Path::new(path)
+        .canonicalize()
+        .map(|p| p.to_string_lossy().into_owned())
+        .unwrap_or_else(|_| path.to_string());
+    *slot().lock().map_err(|e| e.to_string())? = Some(ResidentModelSlot {
+        model_id,
+        gguf_path: normalized,
+        mmap,
+        report,
+    });
+    Ok(report)
+}
+
+/// Memory-map a local model and select P64 or GGUF by canonical magic.
+///
+/// This is the preferred format-neutral entry point. The historical
+/// `mount_resident_q42` function remains as a compatibility alias for callers
+/// that already know they have a P64 container.
+#[cfg(not(target_arch = "wasm32"))]
+pub fn mount_resident_model(model_id: u64, path: &str, mlock: bool) -> Result<GgufLoadReport, String> {
+    clear_resident_model();
+    let mut engine = tokio::task::block_in_place(|| {
+        tokio::runtime::Handle::current().block_on(QTensorEngine::try_new())
+    })?;
+    let report = engine.load_model_checked(path)?;
+    let mmap = engine
+        .gguf_mmap
+        .take()
+        .ok_or_else(|| "Internal error: model mmap missing after load".to_string())?;
+    apply_mlock(&mmap, mlock);
     let normalized = Path::new(path)
         .canonicalize()
         .map(|p| p.to_string_lossy().into_owned())

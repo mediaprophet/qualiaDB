@@ -125,7 +125,7 @@ pub fn tensor_byte_len(tensor: &GgufTensorInfo) -> Option<usize> {
     if n0 == 0 {
         return None;
     }
-    // BitNet-1.58b ternary blob (STELLAR §A, `.q42` FFN): a SINGLE per-tensor `[scale f32][packed
+    // BitNet-1.58b ternary blob (STELLAR §A, P64 FFN): a SINGLE per-tensor `[scale f32][packed
     // trits]` payload over ALL elements — NOT a per-row block format, so `ggml_row_bytes * dims[1]`
     // does not apply. Compute the whole-tensor packed length directly from the element count.
     if tensor.ggml_type == crate::ternary::GGML_TYPE_TERNARY_158 {

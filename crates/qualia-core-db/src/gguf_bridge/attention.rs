@@ -91,6 +91,13 @@ impl QTensorEngine {
         norm_weight: Option<&[f32]>,
         readback_out: Option<&mut [f32]>,
     ) -> bool {
+        // Heterogeneous dispatch: ternary weights are strictly routed to adder paths (FFN),
+        // reserving the attention MAC units for high-precision projections.
+        if info.ggml_type == crate::ternary::GGML_TYPE_TERNARY_158 {
+            wlog("[attention] FAILED: ternary weights not supported for attention (MAC reserved)");
+            return false;
+        }
+
         // #48 correctness path: route native attention through the CPU reference (the wasm-proven
         // SDPA) when enabled — bypasses the GPU attention shader whose output is currently unbounded.
         #[cfg(not(target_arch = "wasm32"))]

@@ -874,3 +874,223 @@ pub async fn fetch_emergency_contacts() -> Result<Vec<EmergencyContactDto>, Stri
 pub async fn fetch_emergency_contacts() -> Result<Vec<EmergencyContactDto>, String> {
     Ok(vec![])
 }
+
+#[derive(Debug, Clone, Default, Deserialize)]
+pub struct SanctuaryPrefsDto {
+    pub enabled: bool,
+    pub locked: bool,
+    pub decoy_session: bool,
+    #[serde(default)]
+    pub armed_at_unix: Option<u32>,
+}
+
+#[derive(Debug, Clone, Serialize)]
+struct LifeEventWire {
+    id: String,
+    title: String,
+    #[serde(skip_serializing_if = "Option::is_none")]
+    notes: Option<String>,
+}
+
+#[derive(Debug, Clone, Serialize)]
+struct WelfareCaseWire {
+    id: String,
+    title: String,
+    #[serde(skip_serializing_if = "Option::is_none")]
+    summary: Option<String>,
+}
+
+#[derive(Debug, Clone, Serialize)]
+struct WellbeingObservationWire {
+    id: String,
+    mood_label: String,
+    #[serde(skip_serializing_if = "Option::is_none")]
+    intensity_1_10: Option<u8>,
+}
+
+#[derive(Debug, Clone, Serialize)]
+struct TherapyNoteWire {
+    id: String,
+    notes: String,
+    #[serde(skip_serializing_if = "Option::is_none")]
+    provider_label: Option<String>,
+}
+
+#[cfg(target_arch = "wasm32")]
+async fn invoke_report_json(command: &str, report_json: &str) -> Result<HealthRecordDto, String> {
+    let args = js_sys::Object::new();
+    js_sys::Reflect::set(
+        &args,
+        &"reportJson".into(),
+        &wasm_bindgen::JsValue::from_str(report_json),
+    )
+    .map_err(|_| "failed to build invoke args".to_string())?;
+    let js = tauri_invoke(command, args.into())
+        .await
+        .map_err(|e| format!("{e:?}"))?;
+    let out = js
+        .as_string()
+        .ok_or_else(|| format!("{command} response was not JSON"))?;
+    serde_json::from_str(&out).map_err(|e| e.to_string())
+}
+
+#[cfg(target_arch = "wasm32")]
+pub async fn add_life_event(title: &str, notes: Option<&str>) -> Result<HealthRecordDto, String> {
+    let wire = LifeEventWire {
+        id: uuid::Uuid::new_v4().to_string(),
+        title: title.to_string(),
+        notes: notes.map(str::to_string),
+    };
+    let json = serde_json::to_string(&wire).map_err(|e| e.to_string())?;
+    invoke_report_json("wellfair_add_life_event", &json).await
+}
+
+#[cfg(not(target_arch = "wasm32"))]
+pub async fn add_life_event(_title: &str, _notes: Option<&str>) -> Result<HealthRecordDto, String> {
+    Err("Life events require the Tauri desktop host".into())
+}
+
+#[cfg(target_arch = "wasm32")]
+pub async fn add_welfare_case(title: &str, summary: Option<&str>) -> Result<HealthRecordDto, String> {
+    let wire = WelfareCaseWire {
+        id: uuid::Uuid::new_v4().to_string(),
+        title: title.to_string(),
+        summary: summary.map(str::to_string),
+    };
+    let json = serde_json::to_string(&wire).map_err(|e| e.to_string())?;
+    invoke_report_json("wellfair_add_welfare_case", &json).await
+}
+
+#[cfg(not(target_arch = "wasm32"))]
+pub async fn add_welfare_case(_title: &str, _summary: Option<&str>) -> Result<HealthRecordDto, String> {
+    Err("Welfare cases require the Tauri desktop host".into())
+}
+
+#[cfg(target_arch = "wasm32")]
+pub async fn add_wellbeing_observation(
+    mood: &str,
+    intensity: Option<u8>,
+) -> Result<HealthRecordDto, String> {
+    let wire = WellbeingObservationWire {
+        id: uuid::Uuid::new_v4().to_string(),
+        mood_label: mood.to_string(),
+        intensity_1_10: intensity,
+    };
+    let json = serde_json::to_string(&wire).map_err(|e| e.to_string())?;
+    invoke_report_json("wellfair_add_wellbeing_observation", &json).await
+}
+
+#[cfg(not(target_arch = "wasm32"))]
+pub async fn add_wellbeing_observation(
+    _mood: &str,
+    _intensity: Option<u8>,
+) -> Result<HealthRecordDto, String> {
+    Err("Wellbeing observations require the Tauri desktop host".into())
+}
+
+#[cfg(target_arch = "wasm32")]
+pub async fn add_therapy_note(notes: &str, provider: Option<&str>) -> Result<HealthRecordDto, String> {
+    let wire = TherapyNoteWire {
+        id: uuid::Uuid::new_v4().to_string(),
+        notes: notes.to_string(),
+        provider_label: provider.map(str::to_string),
+    };
+    let json = serde_json::to_string(&wire).map_err(|e| e.to_string())?;
+    invoke_report_json("wellfair_add_therapy_note", &json).await
+}
+
+#[cfg(not(target_arch = "wasm32"))]
+pub async fn add_therapy_note(_notes: &str, _provider: Option<&str>) -> Result<HealthRecordDto, String> {
+    Err("Therapy notes require the Tauri desktop host".into())
+}
+
+#[cfg(target_arch = "wasm32")]
+pub async fn add_sanctuary_note(body: &str) -> Result<HealthRecordDto, String> {
+    let args = js_sys::Object::new();
+    js_sys::Reflect::set(&args, &"body".into(), &wasm_bindgen::JsValue::from_str(body))
+        .map_err(|_| "failed to build invoke args".to_string())?;
+    let js = tauri_invoke("wellfair_add_sanctuary_note", args.into())
+        .await
+        .map_err(|e| format!("{e:?}"))?;
+    let out = js
+        .as_string()
+        .ok_or_else(|| "sanctuary note response was not JSON".to_string())?;
+    serde_json::from_str(&out).map_err(|e| e.to_string())
+}
+
+#[cfg(not(target_arch = "wasm32"))]
+pub async fn add_sanctuary_note(_body: &str) -> Result<HealthRecordDto, String> {
+    Err("Sanctuary notes require the Tauri desktop host".into())
+}
+
+#[cfg(target_arch = "wasm32")]
+pub async fn fetch_sanctuary_prefs() -> Result<SanctuaryPrefsDto, String> {
+    let js = tauri_invoke("wellfair_sanctuary_prefs", wasm_bindgen::JsValue::NULL)
+        .await
+        .map_err(|e| format!("{e:?}"))?;
+    let json = js.as_string().ok_or_else(|| "sanctuary prefs response not JSON".to_string())?;
+    serde_json::from_str(&json).map_err(|e| e.to_string())
+}
+
+#[cfg(not(target_arch = "wasm32"))]
+pub async fn fetch_sanctuary_prefs() -> Result<SanctuaryPrefsDto, String> {
+    Ok(SanctuaryPrefsDto::default())
+}
+
+#[cfg(target_arch = "wasm32")]
+pub async fn setup_sanctuary(real_pin: &str, decoy_pin: &str) -> Result<SanctuaryPrefsDto, String> {
+    let args = js_sys::Object::new();
+    js_sys::Reflect::set(
+        &args,
+        &"realPin".into(),
+        &wasm_bindgen::JsValue::from_str(real_pin),
+    )
+    .map_err(|_| "failed to build invoke args".to_string())?;
+    js_sys::Reflect::set(
+        &args,
+        &"decoyPin".into(),
+        &wasm_bindgen::JsValue::from_str(decoy_pin),
+    )
+    .map_err(|_| "failed to build invoke args".to_string())?;
+    let js = tauri_invoke("wellfair_setup_sanctuary", args.into())
+        .await
+        .map_err(|e| format!("{e:?}"))?;
+    let json = js.as_string().ok_or_else(|| "setup sanctuary response not JSON".to_string())?;
+    serde_json::from_str(&json).map_err(|e| e.to_string())
+}
+
+#[cfg(not(target_arch = "wasm32"))]
+pub async fn setup_sanctuary(_real_pin: &str, _decoy_pin: &str) -> Result<SanctuaryPrefsDto, String> {
+    Err("Sanctuary setup requires the Tauri desktop host".into())
+}
+
+#[cfg(target_arch = "wasm32")]
+pub async fn lock_sanctuary() -> Result<SanctuaryPrefsDto, String> {
+    let js = tauri_invoke("wellfair_lock_sanctuary", wasm_bindgen::JsValue::NULL)
+        .await
+        .map_err(|e| format!("{e:?}"))?;
+    let json = js.as_string().ok_or_else(|| "lock sanctuary response not JSON".to_string())?;
+    serde_json::from_str(&json).map_err(|e| e.to_string())
+}
+
+#[cfg(not(target_arch = "wasm32"))]
+pub async fn lock_sanctuary() -> Result<SanctuaryPrefsDto, String> {
+    Err("Sanctuary lock requires the Tauri desktop host".into())
+}
+
+#[cfg(target_arch = "wasm32")]
+pub async fn unlock_sanctuary(pin: &str) -> Result<SanctuaryPrefsDto, String> {
+    let args = js_sys::Object::new();
+    js_sys::Reflect::set(&args, &"pin".into(), &wasm_bindgen::JsValue::from_str(pin))
+        .map_err(|_| "failed to build invoke args".to_string())?;
+    let js = tauri_invoke("wellfair_unlock_sanctuary", args.into())
+        .await
+        .map_err(|e| format!("{e:?}"))?;
+    let json = js.as_string().ok_or_else(|| "unlock sanctuary response not JSON".to_string())?;
+    serde_json::from_str(&json).map_err(|e| e.to_string())
+}
+
+#[cfg(not(target_arch = "wasm32"))]
+pub async fn unlock_sanctuary(_pin: &str) -> Result<SanctuaryPrefsDto, String> {
+    Err("Sanctuary unlock requires the Tauri desktop host".into())
+}

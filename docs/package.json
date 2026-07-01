@@ -3,7 +3,8 @@
   "private": true,
   "type": "module",
   "scripts": {
-    "build:tailwind": "tailwindcss -i ./css/tailwind-input.css -o ./css/tailwind-built.css --minify"
+    "build:tailwind": "tailwindcss -i ./css/tailwind-input.css -o ./css/tailwind-built.css --minify",
+    "test:p64-cache": "node ./tests/p64-cache-header.test.mjs"
   },
   "devDependencies": {
     "@tailwindcss/cli": "^4.1.8",

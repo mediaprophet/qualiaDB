@@ -603,7 +603,7 @@ pub fn run_bench(cfg: &BenchConfig) -> Result<BenchResult, String> {
     // ── Make resident so warm runs adopt the mmap (skip disk load). ──
     let model_id = crate::q_hash(&cfg.model_path);
     let mut meta = ModelMeta::default();
-    if let Ok(report) = crate::resident_model::mount_resident_gguf(model_id, &cfg.model_path) {
+    if let Ok(report) = crate::resident_model::mount_resident_gguf(model_id, &cfg.model_path, false) {
         meta = ModelMeta {
             n_layer: report.n_layer,
             n_head: report.n_head,
@@ -729,7 +729,7 @@ pub fn compare_topk_decode(
     );
     set_decode_budget_override(decode_tokens);
     let model_id = crate::q_hash(model_path);
-    let _ = crate::resident_model::mount_resident_gguf(model_id, model_path);
+    let _ = crate::resident_model::mount_resident_gguf(model_id, model_path, false);
 
     set_gpu_topk(false);
     let (off_text, _, _, _) = agent.infer_local_model_streaming::<fn(String)>(prompt, "", None);
@@ -791,9 +791,9 @@ pub fn decode_with_metrics(
     set_decode_budget_override(decode_tokens);
     let model_id = crate::q_hash(model_path);
     if is_q42 {
-        crate::resident_model::mount_resident_q42(model_id, model_path)?;
+        crate::resident_model::mount_resident_q42(model_id, model_path, false)?;
     } else {
-        let _ = crate::resident_model::mount_resident_gguf(model_id, model_path);
+        let _ = crate::resident_model::mount_resident_gguf(model_id, model_path, false);
     }
     reset_phase_metrics();
     let (text, _, _, _) = agent.infer_local_model_streaming::<fn(String)>(prompt, "", None);
@@ -999,7 +999,7 @@ pub fn perplexity_eval_blocking(model_path: &str, max_tok: usize) -> Result<(f64
             let f = std::fs::File::open(&model_path).map_err(|e| e.to_string())?;
             let mmap = unsafe { memmap2::Mmap::map(&f) }.map_err(|e| e.to_string())?;
             engine
-                .adopt_resident_q42_mmap(std::sync::Arc::new(mmap))
+                .adopt_resident_p64_mmap(std::sync::Arc::new(mmap))
                 .map_err(|e| format!("q42 adopt: {e}"))?;
         } else {
             engine.load_gguf(&model_path);

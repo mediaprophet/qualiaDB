@@ -35,6 +35,20 @@ use wellfare_core::personal_records::{
 use super::med_reminders::{
     compute_due_reminders, load_prefs, save_prefs, DueMedReminder, MedReminderPrefs,
 };
+use super::sanctuary::{
+    apply_sanctuary_projection, build_sanctuary_note_envelope, load_prefs as load_sanctuary_prefs,
+    lock_sanctuary, sanctuary_note_summary, setup_sanctuary, unlock_sanctuary, SanctuaryNote,
+    SanctuaryPrefs,
+};
+use wellfare_core::life_records::{
+    build_case_task_envelope, build_life_event_envelope, build_welfare_case_envelope,
+    case_task_summary, life_event_summary, welfare_case_summary, CaseTaskReport, LifeEventReport,
+    WelfareCaseReport,
+};
+use wellfare_core::mental_wellbeing::{
+    build_therapy_note_envelope, build_wellbeing_observation_envelope, therapy_note_summary,
+    wellbeing_observation_summary, TherapyNote, WellbeingObservation,
+};
 use wellfare_core::medication::{
     self, AdministrationStatus, DietEntry, MedicationAdministration, MedicationCatalogEntry,
 };
@@ -46,7 +60,13 @@ use wellfare_core::sleep_analytics::{
 use super::personal_profile::{EmergencyContact, EmergencyContactStore, new_contact_id};
 
 const QAPP_SHELL: &str = "wellfair-shell";
+const QAPP_LIFE: &str = "wellfair-life";
+const QAPP_WELLBEING: &str = "wellfair-wellbeing";
+const QAPP_SANCTUARY: &str = "wellfair-sanctuary";
 const SOURCE_PERSONAL: &str = "wellfair:personal";
+const SOURCE_LIFE: &str = "wellfair:life";
+const SOURCE_WELLBEING: &str = "wellfair:wellbeing";
+const SOURCE_SANCTUARY: &str = "wellfair:sanctuary";
 
 /// Transport-neutral Host API exported for UI and qApps.
 pub struct WebizenHostApi {
@@ -273,9 +293,12 @@ impl WebizenHostApi {
     }
 
     pub fn list_health_records(&self, limit: usize) -> Result<Vec<JournalEntry>, String> {
-        self.vault
+        let entries = self
+            .vault
             .list_health_records(limit)
-            .map_err(|e| e.to_string())
+            .map_err(|e| e.to_string())?;
+        let prefs = load_sanctuary_prefs(&self.storage_root);
+        Ok(apply_sanctuary_projection(&prefs, entries))
     }
 
     pub fn list_receipts(&self, limit: usize) -> Result<Vec<ReceiptRecord>, String> {
@@ -611,9 +634,136 @@ impl WebizenHostApi {
         if !prefs.enabled || !prefs.permission_granted {
             return Ok(Vec::new());
         }
-        let journal = self.list_health_records(128)?;
+        let journal = self
+            .vault
+            .list_health_records(128)
+            .map_err(|e| e.to_string())?;
         let now = chrono::Local::now().time();
         Ok(compute_due_reminders(&journal, now, window_minutes))
+    }
+
+    pub fn sanctuary_prefs(&self) -> SanctuaryPrefs {
+        load_sanctuary_prefs(&self.storage_root)
+    }
+
+    pub fn setup_sanctuary(&self, real_pin: &str, decoy_pin: &str) -> Result<SanctuaryPrefs, String> {
+        setup_sanctuary(&self.storage_root, real_pin, decoy_pin, Self::now_unix() as u32)
+    }
+
+    pub fn lock_sanctuary(&self) -> Result<SanctuaryPrefs, String> {
+        lock_sanctuary(&self.storage_root)
+    }
+
+    pub fn unlock_sanctuary(&self, pin: &str) -> Result<SanctuaryPrefs, String> {
+        unlock_sanctuary(&self.storage_root, pin)
+    }
+
+    pub fn add_life_event(&mut self, report: &LifeEventReport) -> Result<JournalEntry, String> {
+        let payload = serde_json::to_string(report).map_err(|e| e.to_string())?;
+        let hash = Self::payload_hash_hex(&payload);
+        let asserted = Self::now_unix() as u32;
+        let envelope = build_life_event_envelope(
+            report,
+            &self.owner_did,
+            &self.author_did,
+            asserted,
+            Some(hash),
+        );
+        let summary = life_event_summary(report);
+        self.submit_record_with_summary(QAPP_LIFE, envelope, SOURCE_LIFE, Some(summary))?;
+        self.latest_journal_entry()
+    }
+
+    pub fn add_welfare_case(&mut self, report: &WelfareCaseReport) -> Result<JournalEntry, String> {
+        let payload = serde_json::to_string(report).map_err(|e| e.to_string())?;
+        let hash = Self::payload_hash_hex(&payload);
+        let asserted = Self::now_unix() as u32;
+        let envelope = build_welfare_case_envelope(
+            report,
+            &self.owner_did,
+            &self.author_did,
+            asserted,
+            Some(hash),
+        );
+        let summary = welfare_case_summary(report);
+        self.submit_record_with_summary(QAPP_LIFE, envelope, SOURCE_LIFE, Some(summary))?;
+        self.latest_journal_entry()
+    }
+
+    pub fn add_case_task(&mut self, report: &CaseTaskReport) -> Result<JournalEntry, String> {
+        let payload = serde_json::to_string(report).map_err(|e| e.to_string())?;
+        let hash = Self::payload_hash_hex(&payload);
+        let asserted = Self::now_unix() as u32;
+        let envelope = build_case_task_envelope(
+            report,
+            &self.owner_did,
+            &self.author_did,
+            asserted,
+            Some(hash),
+        );
+        let summary = case_task_summary(report);
+        self.submit_record_with_summary(QAPP_LIFE, envelope, SOURCE_LIFE, Some(summary))?;
+        self.latest_journal_entry()
+    }
+
+    pub fn add_wellbeing_observation(
+        &mut self,
+        report: &WellbeingObservation,
+    ) -> Result<JournalEntry, String> {
+        let payload = serde_json::to_string(report).map_err(|e| e.to_string())?;
+        let hash = Self::payload_hash_hex(&payload);
+        let asserted = Self::now_unix() as u32;
+        let envelope = build_wellbeing_observation_envelope(
+            report,
+            &self.owner_did,
+            &self.author_did,
+            asserted,
+            Some(hash),
+        );
+        let summary = wellbeing_observation_summary(report);
+        self.submit_record_with_summary(QAPP_WELLBEING, envelope, SOURCE_WELLBEING, Some(summary))?;
+        self.latest_journal_entry()
+    }
+
+    pub fn add_therapy_note(&mut self, report: &TherapyNote) -> Result<JournalEntry, String> {
+        let payload = serde_json::to_string(report).map_err(|e| e.to_string())?;
+        let hash = Self::payload_hash_hex(&payload);
+        let asserted = Self::now_unix() as u32;
+        let envelope = build_therapy_note_envelope(
+            report,
+            &self.owner_did,
+            &self.author_did,
+            asserted,
+            Some(hash),
+        );
+        let summary = therapy_note_summary(report);
+        self.submit_record_with_summary(QAPP_WELLBEING, envelope, SOURCE_WELLBEING, Some(summary))?;
+        self.latest_journal_entry()
+    }
+
+    pub fn add_sanctuary_note(&mut self, note: &SanctuaryNote) -> Result<JournalEntry, String> {
+        let payload = serde_json::to_string(note).map_err(|e| e.to_string())?;
+        let hash = Self::payload_hash_hex(&payload);
+        let asserted = Self::now_unix() as u32;
+        let envelope = build_sanctuary_note_envelope(
+            note,
+            &self.owner_did,
+            &self.author_did,
+            asserted,
+            Some(hash),
+        );
+        let summary = sanctuary_note_summary(note);
+        self.submit_record_with_summary(QAPP_SANCTUARY, envelope, SOURCE_SANCTUARY, Some(summary))?;
+        self.latest_journal_entry()
+    }
+
+    fn latest_journal_entry(&self) -> Result<JournalEntry, String> {
+        self.vault
+            .list_health_records(1)
+            .map_err(|e| e.to_string())?
+            .into_iter()
+            .next()
+            .ok_or_else(|| "record committed but not found in journal".to_string())
     }
 }
 

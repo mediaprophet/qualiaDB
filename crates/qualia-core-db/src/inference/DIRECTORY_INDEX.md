@@ -265,6 +265,7 @@ Comprehensive index of functionality for `inference`. This document serves as th
   - `fn slot`
   - `fn mount_resident_gguf`
   - `fn mount_resident_q42`
+  - `fn mount_resident_model`
   - `fn clear_resident_model`
   - `fn resident_mmap_for_path`
   - `fn resident_model_id`

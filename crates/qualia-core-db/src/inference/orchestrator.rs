@@ -142,6 +142,7 @@ pub struct TaskOrchestrator {
     pub current_model_id: Arc<std::sync::Mutex<Option<u64>>>,
     pub resident_memory_bytes: Arc<AtomicU64>,
     pub scrubbing_lock: Arc<AtomicBool>,
+    pub mlock_enabled: Arc<AtomicBool>,
 }
 
 impl TaskOrchestrator {
@@ -235,6 +236,7 @@ impl TaskOrchestrator {
             current_model_id: Arc::new(std::sync::Mutex::new(None)),
             resident_memory_bytes: Arc::new(AtomicU64::new(0)),
             scrubbing_lock: Arc::new(AtomicBool::new(false)),
+            mlock_enabled: Arc::new(AtomicBool::new(false)),
         }
     }
 

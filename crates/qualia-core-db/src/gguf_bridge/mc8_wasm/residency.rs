@@ -321,21 +321,20 @@ impl QTensorEngine {
         }
     }
 
-    /// Phase 4: boot from a `.q42` weight container. Validates integrity (CRC via `from_p64`), builds
-    /// a synthetic `GgufTensorIndex` from the manifest, points the byte source at the `.q42` bytes
+    /// Boot from a P64 weight container. Validates integrity (CRC via `from_p64`), builds
+    /// a synthetic `GgufTensorIndex` from the manifest, points the byte source at the P64 bytes
     /// (`tensor_data_start = 0`, absolute blob offsets), reserves the GEMM/KV arenas, and uploads the
     /// resident weights via the **standard** path — so the entire GGUF hot path runs unchanged
-    /// (format-agnostic). NOTE: the `.q42` weight container does not yet carry the tokenizer, so a
-    /// q42-only boot maps weights/params but cannot tokenize until a tokenizer section lands.
-    pub(crate) fn adopt_resident_q42(&mut self, data: Arc<[u8]>) -> Result<(), String> {
+    /// (format-agnostic). Full GGUF conversions carry the tokenizer in the embedded Q42T section.
+    pub(crate) fn adopt_resident_p64(&mut self, data: Arc<[u8]>) -> Result<(), String> {
         let q = crate::p64_weight::P64TensorIndex::from_p64(&data)?;
         let index = q.to_gguf_index();
         let hp = index.hyperparams;
         if hp.n_layer == 0 || hp.n_embd == 0 {
-            return Err("Q42: missing hyperparameters in header".to_string());
+            return Err("P64: missing hyperparameters in header".to_string());
         }
         self.hyperparams = hp;
-        self.tensor_data_offset = 0; // q42 blob offsets are absolute
+        self.tensor_data_offset = 0; // P64 blob offsets are absolute
         let staging = index
             .max_layer_tensor_bytes
             .max(4096)
@@ -343,23 +342,23 @@ impl QTensorEngine {
         self.ensure_gemm_buffers(staging, MAX_STACK_GEMM_OUT as u32);
         self.ensure_kv_cache(&hp);
         if self.kv_layout.is_none() || self.kv_cache_cpu.is_none() {
-            return Err("Q42: KV cache allocation failed".to_string());
+            return Err("P64: KV cache allocation failed".to_string());
         }
         // Byte source for fetch_tensor_bytes (tensor_data_start=0 + absolute blob offsets).
         self.gguf_mmap = Some(data.clone());
-        self.q42_resident = Some(data);
+        self.p64_resident = Some(data);
         // Resident weight upload reuses the standard path through the synthetic index.
         if !self.mc8_upload_all_resident_weights(&index) {
-            wlog("[Q42] eager resident upload skipped — will retry lazily");
+            wlog("[P64] eager resident upload skipped — will retry lazily");
         }
         if !self.mc8_upload_resident_logits(&index) {
-            wlog("[Q42] resident logits projection skipped — per-token upload fallback");
+            wlog("[P64] resident logits projection skipped — per-token upload fallback");
         }
         if !self.mc8_upload_resident_norms(&index) {
-            wlog("[Q42] resident norm weights skipped — per-layer upload fallback");
+            wlog("[P64] resident norm weights skipped — per-layer upload fallback");
         }
         wlog(&format!(
-            "[Q42] boot OK: {} tensors, {} layers (synthetic GGUF index; weights resident)",
+            "[P64] boot OK: {} tensors, {} layers (synthetic GGUF index; weights resident)",
             q.entries.len(),
             hp.n_layer
         ));

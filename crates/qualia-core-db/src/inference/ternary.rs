@@ -3,7 +3,7 @@
 //! Ternary packing of weights `∈ {-1, 0, +1}` with a per-tensor **absmean** scale (BitNet 1.58b):
 //! it replaces fused multiply-adds with hardware adds/subtracts in the GEMM kernels and shrinks the
 //! weights to ≈ **1.6 bits each**. This module is the reusable codec; it is applied *during*
-//! transcode by [`crate::p64_weight::transcode_safetensor_to_p64_ternary`] so a `.q42` ships
+//! transcode by [`crate::p64_weight::transcode_safetensor_to_p64_ternary`] so a P64 image ships
 //! compressed, not as a verbatim blob.
 //!
 //! ## Encoding

@@ -40,7 +40,7 @@ manifold is the primary substrate, text/vision are projections of it).
   browser build. Same WGSL everywhere. NPU bridges (DirectML/CoreML/NNAPI) partial.
 - **The record:** `NQuin` — 48 bytes, six `u64` `[subject, predicate, object, context, metadata,
   parity]`. Everything (semantic data, weight pointers, governance) is bit-packed into this.
-- **Weight format:** `.q42` / `Q42W` — header → tensor manifest (role, layer, ggml-type, dims, blob
+- **Weight format:** P64 / `p64\0` — header → tensor manifest (role, layer, ggml-type, dims, blob
   offset/len, CRC) → page-aligned blobs; front-of-file lexicon (`Q42LEX`) + block index for a
   two-step range fetch. Memory-mapped (`memmap2`); the OS demand-pages disk→RAM.
 - **GPU residency:** two modes — **resident** (all weights uploaded once; fastest; needs fit in VRAM)
@@ -77,8 +77,8 @@ Compression-led, because **decode is memory-bandwidth-bound** (each token stream
   zero-heap dequant.
 - **GPU kernels** — `ternary_gemm.wgsl` (base-3) + `ternary_gemm_2bit.wgsl` (branchless) + an
   `f16_gemv.wgsl` baseline; native dispatch + **on-device parity verified on the A2000**.
-- **Transcode** — safetensor → Q42W (verbatim / ternary / FFN-policy) and a **runnable** GGUF →
-  ternary-FFN container (`compile_gguf_to_q42_ternary_ffn`) that preserves hyperparams + tokenizer.
+- **Transcode** — safetensor → P64 (verbatim / ternary / FFN-policy) and a **runnable** GGUF →
+  ternary-FFN container (`compile_gguf_to_p64_ternary_ffn`) that preserves hyperparams + tokenizer.
 - **Name→role policy** (`tensor_roles.rs`) — GGUF + HF names → engine roles; ternary the FFN only.
 - **Kernel benchmark (4096² batch-1 GEMV, persistent pipeline):**
 
@@ -106,7 +106,7 @@ Compression-led, because **decode is memory-bandwidth-bound** (each token stream
 - **Tiled/coalesced GEMV + subgroup reductions** (decode), register-blocked tiled GEMM (prefill).
 - **KIVI KV-cache** (2-bit K / 4-bit V), **W4A4+AWQ** (attention), **speculative decoding**.
 - **Double-buffered streaming** (ping-pong upload of layer N+1 while computing N) for > VRAM models.
-- **TTFT:** pre-built pipelines, pre-compiled `.q42` distribution, lazy first-layer upload.
+- **TTFT:** pre-built pipelines, pre-compiled P64 distribution, lazy first-layer upload.
 - **No clean native F16/Q8 baseline tok/s yet** (the only end-to-end number, ~5.9 tok/s SmolLM2-360M,
   is old + browser/WASM).
 
@@ -206,7 +206,7 @@ TPS first?
   `docs/manuals/standards/.../cml`, `.../CMLD` (the CML/CMLD standards),
   `core-ontologies/CML_CONCEPT_GRAPH.md` (the concept-graph architecture).
 - **Key source:** `crates/qualia-core-db/src/` — `ternary.rs`, `ternary_gpu.rs`,
-  `shaders/{ternary_gemm,ternary_gemm_2bit,f16_gemv}.wgsl`, `q42_weight.rs`, `safetensor.rs`,
+  `shaders/{ternary_gemm,ternary_gemm_2bit,f16_gemv}.wgsl`, `p64_weight.rs`, `safetensor.rs`,
   `tensor_roles.rs`, `neuro_symbolic_sieve.rs`, `gguf_bridge.rs`
   (`dispatch_transformer_forward` / `encode_fused_ffn_expansion`), `gpu_context.rs`,
   `modalities/logic/deontic.rs`, `render/`.

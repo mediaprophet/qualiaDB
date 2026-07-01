@@ -92,7 +92,33 @@ impl QTensorEngine {
         }
     }
 
-    /// A1b: build the resident 2-bit ternary-FFN dispatcher from a `.q42` container's base-3 FFN
+    /// Memory-map and auto-detect a supported local model container.
+    ///
+    /// Canonical P64 is detected by its exact `p64\0` magic and adopted through
+    /// the P64 validation path. All other inputs are passed to the GGUF parser,
+    /// which rejects malformed or unsupported data.
+    #[cfg(not(target_arch = "wasm32"))]
+    pub fn load_model_checked(&mut self, path: &str) -> Result<GgufLoadReport, String> {
+        let file = std::fs::File::open(path).map_err(|e| format!("open {path}: {e}"))?;
+        let mmap = std::sync::Arc::new(
+            unsafe { memmap2::MmapOptions::new().map(&file) }.map_err(|e| e.to_string())?,
+        );
+        if crate::p64_weight::has_p64_magic(&mmap[..]) {
+            self.adopt_resident_p64_mmap(mmap)
+        } else {
+            self.adopt_resident_mmap(mmap)
+        }
+    }
+
+    /// Fail-soft wrapper retained for the agent decode path.
+    #[cfg(not(target_arch = "wasm32"))]
+    pub fn load_model(&mut self, path: &str) {
+        if let Err(e) = self.load_model_checked(path) {
+            eprintln!("[gguf_bridge] Could not load model {path}: {e}");
+        }
+    }
+
+    /// Build the resident 2-bit ternary-FFN dispatcher from a P64 container's base-3 FFN
     /// blobs (rebaked to 2-bit + uploaded once). Returns false if there are no ternary FFN tensors
     /// or the GPU build fails — the FFN then runs the CPU oracle (`dispatch_ternary_ffn` fallback).
     #[cfg(not(target_arch = "wasm32"))]
@@ -115,7 +141,7 @@ impl QTensorEngine {
             if n_in == 0 || n_out == 0 || off + len > data.len() {
                 continue;
             }
-            // key = the .q42 blob offset == the synthetic index's GgufTensorInfo::byte_offset.
+            // key = the P64 blob offset == the synthetic index's GgufTensorInfo::byte_offset.
             tensors.push((e.blob_offset as u64, n_in, n_out, &data[off..off + len]));
         }
         if tensors.is_empty() {
@@ -139,29 +165,29 @@ impl QTensorEngine {
         }
     }
 
-    /// A1b: boot from an already-mapped `.q42` weight container (native). Mirrors the GGUF
+    /// Boot from an already-mapped P64 weight container (native). Mirrors the GGUF
     /// `adopt_resident_mmap` but for the `P64` format: validates + builds a synthetic GGUF index
-    /// from the manifest, points the byte source at the `.q42` bytes (`tensor_data_start = 0`,
+    /// from the manifest, points the byte source at the P64 bytes (`tensor_data_start = 0`,
     /// absolute blob offsets), reserves the GEMM/KV arenas, makes the (verbatim) output projection
     /// resident, and builds the resident 2-bit ternary-FFN dispatcher from the FFN blobs. The
     /// attention/norm/embed tensors stay at source precision and run the standard GGUF hot path.
     #[cfg(not(target_arch = "wasm32"))]
-    pub fn adopt_resident_q42_mmap(
+    pub fn adopt_resident_p64_mmap(
         &mut self,
         mmap: Arc<memmap2::Mmap>,
     ) -> Result<GgufLoadReport, String> {
         let file_size = mmap.len();
         if file_size == 0 {
-            return Err("Empty Q42 mmap".to_string());
+            return Err("Empty P64 mmap".to_string());
         }
         let q = crate::p64_weight::P64TensorIndex::from_p64(&mmap[..])?;
         let index = q.to_gguf_index();
         let hp = index.hyperparams;
         if hp.n_layer == 0 || hp.n_embd == 0 {
-            return Err("Q42: missing hyperparameters in header".to_string());
+            return Err("P64: missing hyperparameters in header".to_string());
         }
         self.hyperparams = hp;
-        self.tensor_data_offset = 0; // q42 blob offsets are absolute
+        self.tensor_data_offset = 0; // P64 blob offsets are absolute
         let staging = index
             .max_layer_tensor_bytes
             .max(4096)
@@ -169,11 +195,11 @@ impl QTensorEngine {
         self.ensure_gemm_buffers(staging, MAX_STACK_GEMM_OUT as u32);
         self.ensure_kv_cache(&hp);
         if self.kv_layout.is_none() || self.kv_cache_cpu.is_none() {
-            return Err("Q42: KV cache allocation failed".to_string());
+            return Err("P64: KV cache allocation failed".to_string());
         }
         self.gguf_mmap = Some(mmap);
         if !self.mc8_upload_resident_logits(&index) {
-            log::info!("LLM_LOAD|q42-logits|0.70|skipped — per-token upload fallback");
+            log::info!("LLM_LOAD|p64-logits|0.70|skipped — per-token upload fallback");
         }
         if !self.build_ternary_ffn_resident(&q) {
             log::info!(
@@ -202,7 +228,17 @@ impl QTensorEngine {
         })
     }
 
-    /// A1b: number of resident ternary FFN tensors (0 unless a ternary `.q42` was adopted). Lets a
+    /// Compatibility alias for the historical pre-P64 API name.
+    #[deprecated(note = "use adopt_resident_p64_mmap")]
+    #[cfg(not(target_arch = "wasm32"))]
+    pub fn adopt_resident_q42_mmap(
+        &mut self,
+        mmap: Arc<memmap2::Mmap>,
+    ) -> Result<GgufLoadReport, String> {
+        self.adopt_resident_p64_mmap(mmap)
+    }
+
+    /// A1b: number of resident ternary FFN tensors (0 unless a ternary P64 was adopted). Lets a
     /// test confirm the GPU resident path is actually populated (not a silent CPU-only fallback).
     #[cfg(not(target_arch = "wasm32"))]
     pub fn ternary_ffn_resident_len(&self) -> usize {

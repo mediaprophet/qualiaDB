@@ -20,7 +20,7 @@
 pub enum SourceFormat {
     /// safetensor (incl. MLX-safetensor).
     Safetensor,
-    /// GGUF (the legacy path — `p64_weight::compile_gguf_to_q42`).
+    /// GGUF (the established path — `p64_weight::compile_gguf_to_p64`).
     Gguf,
     /// Unrecognised.
     Unknown,

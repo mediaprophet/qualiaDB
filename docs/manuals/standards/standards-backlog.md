@@ -385,6 +385,9 @@ Each of those should become its own draft with its own conformance language.
 
 Done (in `standards/`):
 
+- [x] `p64-weight-container-standard.md` - byte-accurate P64 v3 weight-container standard
+  (header, tensor manifest, 10D manifold table, tokenizer, CRC-32C, producer profiles,
+  and fail-closed reader validation; 2026-07-02)
 - [x] `q42-format-internal-draft.md` — v3 volume + separate `.p64` weight container (refreshed 2026-06-30)
 - [x] `did-q42-method-draft.md`
 - [x] `qualia-vault-manifest.md`

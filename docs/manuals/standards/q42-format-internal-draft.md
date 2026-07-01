@@ -332,6 +332,11 @@ Matches:
 
 ### `.p64` weight container (AOT LLM)
 
+The byte-accurate normative layout, including all fixed-record offsets, flags,
+tokenizer encoding, manifold records, checksums, and reader validation rules,
+is specified separately in
+[`p64-weight-container-standard.md`](p64-weight-container-standard.md).
+
 A **separate** artifact from the semantic graph `.q42` above — it carries an **independent section
 magic** (`b"p64\0"`, never collides with `Q42\0`). It is the Ahead-Of-Time-compiled home for an LLM's
 weights, so the engine boots **zero-parse** instead of re-parsing a GGUF on every load. Produced by the

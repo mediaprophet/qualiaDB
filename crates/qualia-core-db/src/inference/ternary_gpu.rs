@@ -236,7 +236,7 @@ struct ResidentTernaryTensor {
 /// uploaded **once** into a single resident VRAM buffer. (The prior 1.02× failure rebuilt the
 /// pipeline per call.) At decode each FFN GEMV binds its own weight sub-range — no re-upload —
 /// writes only the activation row + params, dispatches, and reads back `n_out` floats. Tensors are
-/// keyed by their `.q42` blob offset (`GgufTensorInfo::byte_offset`), the unique per-tensor handle.
+/// keyed by their P64 blob offset (`GgufTensorInfo::byte_offset`), the unique per-tensor handle.
 ///
 /// On-disk the FFN weights stay base-3 (densest, 1.6 bit); 2-bit is the GPU-resident layout only
 /// (2.0 bit, shift/mask, divergence-free → 1.77× vs F16 on the A2000). Native-only; the wasm WebGPU
@@ -257,7 +257,7 @@ pub struct TernaryFfnResident {
 impl TernaryFfnResident {
     /// Build the resident set from `(key, n_in, n_out, base3_blob)` tuples. Each base-3 blob
     /// (`[scale f32][5-trits/byte]`) is rebaked to the 2-bit runtime layout here — load-time heap is
-    /// the sanctioned path; the hot loop stays zero-heap. `key` is the tensor's `.q42` blob offset.
+    /// the sanctioned path; the hot loop stays zero-heap. `key` is the tensor's P64 blob offset.
     /// Returns `None` if `tensors` is empty or any blob is malformed.
     pub fn build(
         device: &wgpu::Device,
@@ -574,7 +574,7 @@ mod tests {
     }
 
     /// A1b inc 2b ON-DEVICE GATE: the resident 2-bit dispatcher (persistent pipeline + ONE resident
-    /// weight buffer + 256-aligned sub-range bindings, keyed by `.q42` blob offset) reproduces the
+    /// weight buffer + 256-aligned sub-range bindings, keyed by P64 blob offset) reproduces the
     /// base-3 CPU oracle byte-for-byte — for TWO differently-shaped tensors at distinct keys, proving
     /// the per-key lookup, sub-range binding, rebake, and GEMV are all correct. Skips with no GPU.
     #[test]

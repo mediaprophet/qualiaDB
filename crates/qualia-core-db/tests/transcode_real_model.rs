@@ -5,7 +5,7 @@
 
 use std::path::Path;
 
-/// Task #12 (§A): compile the real Q8 SmolLM2-360M GGUF into a **runnable** ternary-FFN Q42W
+/// Task #12 (§A): compile the real Q8 SmolLM2-360M GGUF into a **runnable** ternary-FFN P64
 /// (hyperparams + tokenizer preserved; FFN tensors ternarised) and verify it round-trips + loads.
 #[test]
 fn compile_smollm2_q8_gguf_to_runnable_ternary_ffn() {
@@ -21,10 +21,10 @@ fn compile_smollm2_q8_gguf_to_runnable_ternary_ffn() {
     let mmap = unsafe { memmap2::Mmap::map(&file) }.expect("mmap gguf");
     let src_bytes = mmap.len();
 
-    let out = qualia_core_db::q42_weight::compile_gguf_to_q42_ternary_ffn(&mmap, 14)
+    let out = qualia_core_db::p64_weight::compile_gguf_to_p64_ternary_ffn(&mmap, 14)
         .expect("ternary-FFN GGUF compile");
-    let idx =
-        qualia_core_db::q42_weight::Q42TensorIndex::from_q42(&out).expect("round-trip from_q42");
+    let idx = qualia_core_db::p64_weight::P64TensorIndex::from_p64(&out)
+        .expect("round-trip from_p64");
 
     // The container is COMPLETE (runnable): hyperparams + tokenizer carried through.
     assert!(idx.hparams.n_layer > 0, "n_layers must survive");
@@ -49,10 +49,10 @@ fn compile_smollm2_q8_gguf_to_runnable_ternary_ffn() {
     );
     assert!(out.len() < src_bytes, "ternary FFN must shrink the model");
 
-    eprintln!("── SmolLM2-360M Q8 GGUF → runnable ternary-FFN .q42 ──");
+    eprintln!("── SmolLM2-360M Q8 GGUF → runnable ternary-FFN P64 ──");
     eprintln!("source GGUF (Q8) : {:.1} MB", src_bytes as f64 / 1e6);
     eprintln!(
-        "output .q42       : {:.1} MB  ({:.2}x smaller)",
+        "output P64        : {:.1} MB  ({:.2}x smaller)",
         out.len() as f64 / 1e6,
         src_bytes as f64 / out.len() as f64
     );
@@ -77,9 +77,9 @@ fn compile_smollm2_q8_gguf_to_runnable_ternary_ffn() {
     }
 }
 
-/// A1b inc 3 ON-DEVICE GATE: native `.q42` boot + the FFN dispatch branch on the REAL SmolLM2 FFN
-/// weights. Compiles the q8 GGUF → ternary `.q42`, mmaps it, boots it natively
-/// (`adopt_resident_q42_mmap` → builds the resident 2-bit set), then for FFN gate/up/down on the
+/// A1b inc 3 ON-DEVICE GATE: native P64 boot + the FFN dispatch branch on the REAL SmolLM2 FFN
+/// weights. Compiles the q8 GGUF → ternary P64, mmaps it, boots it natively
+/// (`adopt_resident_p64_mmap` → builds the resident 2-bit set), then for FFN gate/up/down on the
 /// first + last layer asserts the GPU 2-bit path (toggle ON) == the CPU base-3 oracle (toggle OFF).
 /// This isolates ternary-FFN correctness on real weights from the full decode loop. Skips if the q8
 /// GGUF is absent. Run: `cargo test -p qualia-core-db --test transcode_real_model
@@ -89,7 +89,7 @@ fn compile_smollm2_q8_gguf_to_runnable_ternary_ffn() {
 fn ternary_ffn_native_boot_and_dispatch_matches_cpu() {
     use qualia_core_db::gguf_bridge::QTensorEngine;
     use qualia_core_db::llm_bench::set_ternary_ffn;
-    use qualia_core_db::q42_weight::Q42TensorIndex;
+    use qualia_core_db::p64_weight::P64TensorIndex;
 
     let candidates = [
         "../../docs/models/smollm2-360m-instruct-q8_0.gguf",
@@ -101,12 +101,12 @@ fn ternary_ffn_native_boot_and_dispatch_matches_cpu() {
     };
     let src = std::fs::File::open(path).expect("open gguf");
     let src_mmap = unsafe { memmap2::Mmap::map(&src) }.expect("mmap gguf");
-    let q42 = qualia_core_db::q42_weight::compile_gguf_to_q42_ternary_ffn(&src_mmap, 14)
+    let p64 = qualia_core_db::p64_weight::compile_gguf_to_p64_ternary_ffn(&src_mmap, 14)
         .expect("ternary-FFN compile");
-    let tmp = std::env::temp_dir().join("a1b_smollm2_ternary_ffn.q42");
-    std::fs::write(&tmp, &q42).expect("write temp .q42");
-    let f = std::fs::File::open(&tmp).expect("open temp .q42");
-    let mmap = std::sync::Arc::new(unsafe { memmap2::Mmap::map(&f) }.expect("mmap .q42"));
+    let tmp = std::env::temp_dir().join("a1b_smollm2_ternary_ffn.p64");
+    std::fs::write(&tmp, &p64).expect("write temp P64");
+    let f = std::fs::File::open(&tmp).expect("open temp P64");
+    let mmap = std::sync::Arc::new(unsafe { memmap2::Mmap::map(&f) }.expect("mmap P64"));
 
     let rt = tokio::runtime::Builder::new_multi_thread()
         .worker_threads(2)
@@ -117,10 +117,10 @@ fn ternary_ffn_native_boot_and_dispatch_matches_cpu() {
         .block_on(async { QTensorEngine::try_new().await })
         .expect("native engine");
     let report = engine
-        .adopt_resident_q42_mmap(mmap.clone())
-        .expect("native .q42 boot");
+        .adopt_resident_p64_mmap(mmap.clone())
+        .expect("native P64 boot");
     eprintln!(
-        "[a1b] booted ternary .q42 natively: {} layers, {:.1} MB mapped, {} resident ternary FFN tensors",
+        "[a1b] booted ternary P64 natively: {} layers, {:.1} MB mapped, {} resident ternary FFN tensors",
         report.n_layer,
         report.mapped_bytes as f64 / 1e6,
         engine.ternary_ffn_resident_len()
@@ -132,7 +132,7 @@ fn ternary_ffn_native_boot_and_dispatch_matches_cpu() {
         "all FFN projections must be resident (else the GPU path silently fell back to CPU)"
     );
 
-    let q = Q42TensorIndex::from_q42(&mmap[..]).expect("from_q42");
+    let q = P64TensorIndex::from_p64(&mmap[..]).expect("from_p64");
     let index = q.to_gguf_index();
 
     let mut max_diff = 0f32;
@@ -172,7 +172,7 @@ fn ternary_ffn_native_boot_and_dispatch_matches_cpu() {
         "GPU 2-bit ternary FFN must match the CPU base-3 oracle on real weights (max_diff {max_diff})"
     );
     let _ = std::fs::remove_file(&tmp);
-    eprintln!("[a1b] native .q42 boot + ternary FFN dispatch verified on the real model.");
+    eprintln!("[a1b] native P64 boot + ternary FFN dispatch verified on the real model.");
 }
 
 #[test]
@@ -195,12 +195,12 @@ fn transcode_smollm2_360m_ffn_ternary() {
 
     let mut out: Vec<u8> = Vec::new();
     let report =
-        qualia_core_db::q42_weight::transcode_safetensor_to_q42_ffn_ternary(&mmap, 14, &mut out)
+        qualia_core_db::p64_weight::transcode_safetensor_to_p64_ffn_ternary(&mmap, 14, &mut out)
             .expect("ternary-policy transcode");
 
     // Parse the emitted container back (validates CRC + manifest).
-    let idx =
-        qualia_core_db::q42_weight::Q42TensorIndex::from_q42(&out).expect("round-trip from_q42");
+    let idx = qualia_core_db::p64_weight::P64TensorIndex::from_p64(&out)
+        .expect("round-trip from_p64");
 
     // Classify entries: ternary (FFN) vs verbatim, and tally the tensor-data bytes.
     let tern_code = qualia_core_db::ternary::GGML_TYPE_TERNARY_158;
@@ -218,7 +218,7 @@ fn transcode_smollm2_360m_ffn_ternary() {
     eprintln!("── SmolLM2-360M FFN-ternary transcode ─────────────────────────────");
     eprintln!("source safetensor : {:.1} MB", src_bytes as f64 / 1e6);
     eprintln!(
-        "output .q42 (Q42W): {:.1} MB  ({:.2}x smaller)",
+        "output P64        : {:.1} MB  ({:.2}x smaller)",
         report.bytes_written as f64 / 1e6,
         src_bytes as f64 / report.bytes_written as f64
     );

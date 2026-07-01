@@ -41,6 +41,8 @@ impl DecisionResult {
 pub struct PolicyDecisionService {
     /// qApp IDs permitted to write health observations without extra prompt.
     health_writers: &'static [&'static str],
+    /// qApps permitted to write Classified sanctuary/wellbeing records (Phase 3).
+    classified_writers: &'static [&'static str],
 }
 
 impl PolicyDecisionService {
@@ -50,7 +52,15 @@ impl PolicyDecisionService {
                 "wellfair-health",
                 "wellfair-medication",
                 "wellfair-shell",
+                "wellfair-life",
+                "wellfair-wellbeing",
                 "wellfair",
+            ],
+            classified_writers: &[
+                "wellfair-shell",
+                "wellfair-sanctuary",
+                "wellfair-wellbeing",
+                "wellfair-life",
             ],
         }
     }
@@ -77,6 +87,16 @@ impl PolicyDecisionService {
         now_unix: u64,
     ) -> DecisionResult {
         if sensitivity == SensitivityClass::Classified {
+            if requested_scope == "write_record"
+                && self.classified_writers.iter().any(|id| *id == qapp_id)
+            {
+                return DecisionResult::Permit {
+                    obligations: vec![
+                        "emit_wal_receipt".into(),
+                        "sanctuary_projection_required".into(),
+                    ],
+                };
+            }
             return DecisionResult::Deny {
                 reasons: vec!["Classified records require explicit guardian approval".into()],
             };

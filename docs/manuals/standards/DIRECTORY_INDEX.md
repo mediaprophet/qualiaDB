@@ -1,6 +1,6 @@
 ---
 created: 2026-06-30
-updated: 2026-06-30
+updated: 2026-07-02
 update_scope: Comprehensive
 ---
 
@@ -22,6 +22,7 @@ Comprehensive index of functionality for `standards`. This document serves as th
 - 📄 `did-q42-method-draft.md`
 - 📄 `hcai-agreement-negotiation-protocol.md`
 - 📄 `index.html`
+- 📄 `p64-weight-container-standard.md` — P64 v3 byte layout, roles, manifold records, tokenizer, alignment, and validation
 - 📄 `q42-10d-tensor-standard.md`
 - 📄 `q42-acoustic-plane-draft.md`
 - 📄 `q42-format-internal-draft.md`
@@ -35,4 +36,5 @@ Comprehensive index of functionality for `standards`. This document serves as th
 - 📄 `yaml-ld-q42-specification.md`
 
 ## Changelog
+- **2026-07-02**: Added the standalone P64 v3 weight-container standard.
 - **2026-06-30**: Automated full index generation, extracting code definitions.

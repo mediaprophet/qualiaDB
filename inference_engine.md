@@ -507,10 +507,10 @@ These opcodes allow the inference engine to map contextual paths natively using 
 
 ---
 
-## The Q42 Artifact Family & Format Evolution
-As detailed in recent architecture reports, Q42 is evolving from a narrow inference sidecar into a normative **artifact family**. This structured approach separates the data plane from the control plane:
-- **Root Envelope**: A unified binary envelope and section table that unambiguously hosts mixed-profile artifacts, version negotiation, and endianness policies.
-- **Q42W (Weights Container)**: A standalone sibling to GGUF, containing page-aligned quantized blobs, hyperparameters, explicit tokenizer payloads, and stable tensor-role semantics.
+## P64 weights and Q42 governance
+The implemented architecture keeps mathematical model state and semantic state as sibling formats with distinct magic:
+- **P64 (Weights Container)**: A standalone sibling to GGUF, containing page-aligned quantized blobs, hyperparameters, explicit tokenizer payloads, and stable tensor-role semantics.
+- **Q42 (Semantic Volume)**: Quins, assertions, indexes, provenance, and Merkle-DAG history used to govern and explain inference.
 - **QKVP (Runtime Semantic Paging)**: A formal runtime profile for semantic pages, tracking entropy, manifold indexes, and capability markers alongside tensors.
 - **Q42T (Tensor10D)**: Machine-checkable conformance profiles defining projection metrics, rounding rules, and deterministic hit sets across CPU/GPU backends.
 - **QCHK (Capability Envelopes)**: The normative governance hook, establishing `did:q42` boundaries, Merkle DAGs, and provenance/consent limits over the execution container.
@@ -519,7 +519,7 @@ As detailed in recent architecture reports, Q42 is evolving from a narrow infere
 
 ## Optimization Roadmap & Novel Hypotheses (2025-2026 SOTA Integration)
 
-**The Core Challenge**: The custom q42-based inference engine (QualiaDB's WASM/WebGPU + native Rust paths, with .q42 AOT containers from GGUF) delivers innovative sovereignty, zero-allocation discipline, semantic integration, and edge resilience—but raw throughput needs to scale for larger models against highly optimized C++ engines. The gap stems from kernel efficiency (matmul/attention dispatch, memory hierarchy exploitation) and KV cache architecture, not fundamental design.
+**The Core Challenge**: The custom Qualia inference engine (QualiaDB's WASM/WebGPU + native Rust paths, with P64 AOT weight containers compiled from GGUF and Q42 semantic provenance) delivers innovative sovereignty, zero-allocation discipline, semantic integration, and edge resilience—but raw throughput needs to scale for larger models against highly optimized C++ engines. The gap stems from kernel efficiency (matmul/attention dispatch, memory hierarchy exploitation) and KV cache architecture, not fundamental design.
 
 ### Current SOTA in KV Cache & Inference Optimization
 Industry progress heavily validates the hierarchical and semantic hypotheses discussed earlier:

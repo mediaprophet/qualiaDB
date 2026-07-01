@@ -396,10 +396,11 @@ When `qualia-core-db` is compiled to the `wasm32-unknown-unknown` target, `infer
 
 The in-browser path (`#[cfg(target_arch = "wasm32")]`) is a fully GPU-resident decode loop:
 
-- **`.q42` AOT container** — a GGUF is compiled **once** (`q42_weight.rs::compile_gguf_to_q42`,
-  `compileGgufToQ42` WASM export) into a 16 KB-page-aligned, `Q42W`-magic, CRC-32C container holding
-  weight blobs + hyperparams + tokenizer. Cached in OPFS (`loadOrCompileQ42`); `initialize_webgpu_engine`
-  boots **zero-parse** from it (`adopt_resident_q42`). All inference thereafter reads from the `.q42`.
+- **P64 AOT container** — a GGUF is compiled **once** (`p64_weight.rs::compile_gguf_to_p64`,
+  `compileGgufToP64` WASM export) into a page-aligned, canonical `p64\0` CRC-32C container holding
+  weight blobs + hyperparameters + tokenizer. Cached in OPFS (`loadOrCompileP64`);
+  `initialize_webgpu_engine` boots from it through `adopt_resident_p64`. All inference thereafter
+  reads from P64. Historical `q42`-named APIs remain compatibility aliases only.
 - **Resident everything** — layer weights (7 role buffers), the tied `token_embd` output/logits
   projection (~50 MB), and per-layer attn/ffn norms are uploaded to VRAM **once at init**. No per-token
   or per-layer `write_buffer` re-uploads.

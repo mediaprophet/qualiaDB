@@ -161,34 +161,39 @@ Local LLM inference uses the **in-process** `gguf_bridge` + WebGPU path — not 
 server, llama.cpp daemon, or Python. Pure Rust→WASM. Phase 5 decode is **~5.9 tok/s** on
 SmolLM2-360M (Q4_K_M), coherent, on a stock NVIDIA Ampere via Chrome WebGPU.
 
-### 4.1 Browser WebGPU path (recommended) — AOT `.q42`
+### 4.1 Browser WebGPU path — AOT P64
 
-Compile a GGUF to a self-contained `.q42` container **once** (weights + hyperparams + tokenizer,
-`Q42W` magic — see [`standards/q42-format-internal-draft.md`](standards/q42-format-internal-draft.md)),
-cache it in OPFS, and boot zero-parse from it thereafter. All inference then runs from the `.q42`.
+Compile GGUF once to canonical P64, cache the result in OPFS, then initialize
+the WebGPU engine from the validated P64:
 
 ```javascript
 import init, {
-  initialize_webgpu_engine,   // boots from GGUF *or* .q42 (magic-sniffed)
-  inferWasmStreaming,         // streaming decode (alias: inferWasmAsync)
-  compileGgufToQ42, q42FormatVersion,
-} from './playground/qualia_core_db.js';   // wasm-full bundle — the LLM is NOT in the slim portal
-import { loadOrCompileQ42 } from './js/opfs-model-cache.js';
+  initialize_webgpu_engine,
+  inferWasmAsync,
+  compileGgufToP64,
+  p64FormatVersion,
+} from './playground/qualia_core_db.js';
+import { loadOrCompileP64 } from './js/opfs-model-cache.js';
 
 await init();
-// Cold: stream GGUF → compile .q42 → cache in OPFS. Warm: instant zero-parse .q42 hit.
-const { bytes } = await loadOrCompileQ42(modelUrl, 'SmolLM2-360M-Instruct-Q4_K_M', {
-  compile: compileGgufToQ42, formatVersion: q42FormatVersion(),
+const { bytes } = await loadOrCompileP64(modelUrl, modelName, {
+  compile: compileGgufToP64,
+  formatVersion: p64FormatVersion(),
 });
-await initialize_webgpu_engine(bytes);            // resident weights/logits/norms, single-submit forward
+await initialize_webgpu_engine(bytes);
 
-await inferWasmStreaming('The capital of France is', (tokenDelta) => {
+await inferWasmAsync('The capital of France is', (tokenDelta) => {
   outputEl.textContent += tokenDelta;
 });
 ```
 
-`compileGgufToQ42(gguf, page_log2)` → `Uint8Array` (the `.q42`); `q42FormatVersion()` keys the OPFS
-cache so an engine upgrade never boots a stale container. Live demos: `online-llm-demo.html`, `llmdemo/`.
+`initialize_webgpu_engine` also accepts GGUF bytes as a fallback. Historical
+exports `compileGgufToQ42` and `q42FormatVersion` remain aliases and still emit
+or report P64 v3. The checked-in playground bundle includes both naming
+surfaces. See the [Q42/P64 Inference Pipeline](p64-q42-inference-pipeline.md)
+for the remaining model-backed browser release checks and the
+[P64 Weight Container Standard](standards/p64-weight-container-standard.md)
+for the binary format.
 
 ### 4.2 Extension Bus (hybrid — native daemon offload)
 

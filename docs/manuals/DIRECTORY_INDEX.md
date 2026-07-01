@@ -1,6 +1,6 @@
 ---
 created: 2026-06-30
-updated: 2026-06-30
+updated: 2026-07-02
 update_scope: Comprehensive
 ---
 
@@ -25,6 +25,7 @@ Comprehensive index of functionality for `manuals`. This document serves as the 
 - 📄 `glossary.md`
 - 📄 `index.html`
 - 📄 `llm-governance-rules.n3`
+- 📄 `p64-q42-inference-pipeline.md` — Native/WASM model conversion, residency, decode, governance, and Q42/P64 boundaries
 - 📄 `project_genesis.n3`
 - 📄 `qapp_llmHelper.md`
 - 📄 `qapps_specification.md`
@@ -38,4 +39,5 @@ Comprehensive index of functionality for `manuals`. This document serves as the 
 - 📄 `wgsl-forge.md`
 
 ## Changelog
+- **2026-07-02**: Added the end-to-end Q42/P64 inference pipeline manual.
 - **2026-06-30**: Automated full index generation, extracting code definitions.

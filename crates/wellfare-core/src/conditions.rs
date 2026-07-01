@@ -90,6 +90,18 @@ pub fn journal_kind_for_record_id(record_id: &str) -> &'static str {
         "disputed_diagnosis"
     } else if record_id.contains(":housing_safety:") {
         "housing_safety"
+    } else if record_id.contains(":life_event:") {
+        "life_event"
+    } else if record_id.contains(":welfare_case:") {
+        "welfare_case"
+    } else if record_id.contains(":case_task:") {
+        "case_task"
+    } else if record_id.contains(":wellbeing_observation:") {
+        "wellbeing_observation"
+    } else if record_id.contains(":therapy_note:") {
+        "therapy_note"
+    } else if record_id.contains(":sanctuary_note:") {
+        "sanctuary_note"
     } else if record_id.contains(":medication:") {
         "medication"
     } else if record_id.contains(":med_admin:") {

@@ -118,3 +118,7 @@ is **Vulkan** (vendor-neutral), and the override is verified to switch the real 
 The implementation lives in
 `crates/qualia-core-db/src/wgsl_forge/`; the CLI surface is
 `crates/qualia-cli/src/shader.rs`.
+
+For the runtime boundary around P64 residency, production decode, governance,
+and Q42 provenance, see the
+[Q42/P64 Inference Pipeline](p64-q42-inference-pipeline.md).

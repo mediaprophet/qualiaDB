@@ -15,6 +15,7 @@ pub mod med_reminders;
 mod medication_flow;
 pub mod policy;
 pub mod receipt;
+pub mod sanctuary;
 pub mod snapshot;
 pub mod sync_outbox;
 pub mod vault;
@@ -24,6 +25,9 @@ mod replay_tests;
 
 #[cfg(test)]
 mod journey_tests;
+
+#[cfg(test)]
+mod phase3_tests;
 
 pub use host_state::{
     demo_host_snapshot, fixture_host_snapshot, WellfairHostSnapshot,

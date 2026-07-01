@@ -570,6 +570,12 @@ fn build_sieve(
     }
 }
 
+static PREFIX_CACHE: std::sync::OnceLock<std::sync::Mutex<std::collections::HashMap<u64, Box<[f32]>>>> = std::sync::OnceLock::new();
+
+fn get_prefix_cache() -> &'static std::sync::Mutex<std::collections::HashMap<u64, Box<[f32]>>> {
+    PREFIX_CACHE.get_or_init(|| std::sync::Mutex::new(std::collections::HashMap::new()))
+}
+
 // ─── LocalLlmAgent ───────────────────────────────────────────────────────────
 /// The concrete local inference agent. Uses a mock inference path for now;
 /// swap `infer_local_model` for an actual llama.cpp FFI call.
@@ -843,34 +849,34 @@ impl LocalLlmAgent {
                 if let Some(mmap) =
                     crate::resident_model::resident_mmap_for_path(model_path.as_str())
                 {
-                    // A1b: a `.q42` weight container (magic `P64`) boots through the native q42
-                    // path (synthetic index + resident 2-bit ternary FFN); else the GGUF path.
-                    let is_q42 = mmap.len() >= 4 && mmap[0..4] == *b"p64\0";
-                    let adopted = if is_q42 {
-                        engine.adopt_resident_q42_mmap(mmap).is_ok()
+                    // P64 boots through its synthetic index + resident 2-bit
+                    // ternary FFN adoption path.
+                    let is_p64 = crate::p64_weight::has_p64_magic(&mmap[..]);
+                    let adopted = if is_p64 {
+                        engine.adopt_resident_p64_mmap(mmap).is_ok()
                     } else {
                         engine.adopt_resident_mmap(mmap).is_ok()
                     };
                     if !adopted {
-                        engine.load_gguf(&model_path);
+                        engine.load_model(&model_path);
                     }
                 } else {
-                    engine.load_gguf(&model_path);
+                    engine.load_model(&model_path);
                 }
 
-                // A1b: tokenizer + tensor index come from the matching on-disk format. The q42
-                // container carries the tokenizer in a Q42 section and its tensor metadata in the
-                // manifest (→ `to_gguf_index`); the GGUF path parses both from the GGUF header.
-                let is_q42_mmap = engine
+                // Tokenizer + tensor index come from the matching on-disk
+                // format. P64 carries a Q42T tokenizer section and a manifest;
+                // GGUF carries both in its own metadata.
+                let is_p64_mmap = engine
                     .gguf_mmap
                     .as_ref()
-                    .map(|m| m.len() >= 4 && m[0..4] == *b"p64\0")
+                    .map(|m| crate::p64_weight::has_p64_magic(&m[..]))
                     .unwrap_or(false);
                 let tok = engine
                     .gguf_mmap
                     .as_ref()
                     .map(|m| {
-                        if is_q42_mmap {
+                        if is_p64_mmap {
                             crate::p64_weight::P64TensorIndex::from_p64(m)
                                 .ok()
                                 .and_then(|qi| {
@@ -884,13 +890,13 @@ impl LocalLlmAgent {
                     .unwrap_or_default();
 
                 // Parse tensor-info section → real embedding lookup.
-                let tensor_idx = engine.gguf_mmap.as_ref().map(|m| {
-                    if is_q42_mmap {
+                let tensor_idx = engine.gguf_mmap.as_ref().and_then(|m| {
+                    if is_p64_mmap {
                         crate::p64_weight::P64TensorIndex::from_p64(m)
                             .map(|qi| qi.to_gguf_index())
-                            .unwrap_or_else(|_| crate::gguf_sharder::GgufTensorIndex::from_gguf(m))
+                            .ok()
                     } else {
-                        crate::gguf_sharder::GgufTensorIndex::from_gguf(m)
+                        Some(crate::gguf_sharder::GgufTensorIndex::from_gguf(m))
                     }
                 });
 
@@ -915,7 +921,19 @@ impl LocalLlmAgent {
                 let mut scratch_b = [0f32; MAX_FFN_DIM];
                 let mut prefill_chunk = [0f32; PREFILL_CHUNK_STACK_FLOATS];
                 let emb_dim = emb_dim.min(MAX_EMB_DIM);
-                engine.reset_kv_cache();
+                let mut prefix_cached = false;
+                if prov_hash != 0 {
+                    if let Ok(cache) = get_prefix_cache().lock() {
+                        if let Some(cached_kv) = cache.get(&prov_hash) {
+                            engine.set_kv_cache_cpu(cached_kv);
+                            prefix_cached = true;
+                        }
+                    }
+                }
+
+                if !prefix_cached {
+                    engine.reset_kv_cache();
+                }
 
                 // Phase boundary: load (mmap/adopt + tokenizer + tensor index + setup) done.
                 crate::llm_bench::record_load_ns(t_phase.elapsed().as_nanos() as u64);
@@ -929,44 +947,54 @@ impl LocalLlmAgent {
                     0,
                 );
                 let draft_mapper = crate::topology_draft::TopologyDraftMapper::new(&tok);
-                if prompt_len > 1 {
-                    if let Some(idx) = tensor_idx.as_ref() {
-                        let prefill_tokens = prompt_len - 1;
-                        let chunk_cap = (PREFILL_CHUNK_STACK_FLOATS / emb_dim)
-                            .min(PREFILL_CHUNK_SIZE)
-                            .max(1);
-                        let mut pos = 0usize;
-                        while pos < prefill_tokens {
-                            let n = (prefill_tokens - pos).min(chunk_cap);
-                            let batch_elems = n * emb_dim;
-                            {
-                                let mmap = match engine.gguf_mmap.as_deref() {
-                                    Some(m) => m,
-                                    None => break,
-                                };
-                                for t in 0..n {
-                                    let _ = idx.dequantize_token_embedding_into(
-                                        mmap,
-                                        ctx[pos + t],
-                                        &mut prefill_chunk[t * emb_dim..(t + 1) * emb_dim],
-                                    );
+                if !prefix_cached {
+                    if prompt_len > 1 {
+                        if let Some(idx) = tensor_idx.as_ref() {
+                            let prefill_tokens = prompt_len - 1;
+                            let chunk_cap = (PREFILL_CHUNK_STACK_FLOATS / emb_dim)
+                                .min(PREFILL_CHUNK_SIZE)
+                                .max(1);
+                            let mut pos = 0usize;
+                            while pos < prefill_tokens {
+                                let n = (prefill_tokens - pos).min(chunk_cap);
+                                let batch_elems = n * emb_dim;
+                                {
+                                    let mmap = match engine.gguf_mmap.as_deref() {
+                                        Some(m) => m,
+                                        None => break,
+                                    };
+                                    for t in 0..n {
+                                        let _ = idx.dequantize_token_embedding_into(
+                                            mmap,
+                                            ctx[pos + t],
+                                            &mut prefill_chunk[t * emb_dim..(t + 1) * emb_dim],
+                                        );
+                                    }
                                 }
+                                if !engine.dispatch_prefill_chunk(
+                                    idx,
+                                    &mut prefill_chunk[..batch_elems],
+                                    emb_dim,
+                                    n as u32,
+                                    pos as u32,
+                                    &mut scratch_a,
+                                    &mut scratch_b,
+                                    TEST_TRANSFORMER_LAYER_CAP,
+                                ) {
+                                    crate::gguf_bridge::wlog(&format!(
+                                        "[llm] PREFILL chunk FAILED pos={pos} n={n}"
+                                    ));
+                                }
+                                pos += n;
                             }
-                            if !engine.dispatch_prefill_chunk(
-                                idx,
-                                &mut prefill_chunk[..batch_elems],
-                                emb_dim,
-                                n as u32,
-                                pos as u32,
-                                &mut scratch_a,
-                                &mut scratch_b,
-                                TEST_TRANSFORMER_LAYER_CAP,
-                            ) {
-                                crate::gguf_bridge::wlog(&format!(
-                                    "[llm] PREFILL chunk FAILED pos={pos} n={n}"
-                                ));
+                        }
+                    }
+
+                    if prov_hash != 0 {
+                        if let Some(cpu_kv) = engine.get_kv_cache_cpu() {
+                            if let Ok(mut cache) = get_prefix_cache().lock() {
+                                cache.insert(prov_hash, cpu_kv.into());
                             }
-                            pos += n;
                         }
                     }
                 }
@@ -1181,7 +1209,7 @@ impl LocalLlmAgent {
                                 let fast_entropy = -(top1_v - top2_v);
                                 if fast_entropy > chunk_policy.max_entropy_drop {
                                     current_page_id += 1;
-                                    
+
                                     #[cfg(not(target_arch = "wasm32"))]
                                     if let Some(ref mut wal) = thermal_wal_opt {
                                         let record = crate::inference::thermal_wal::ThermalEvictionRecord {
@@ -1382,7 +1410,7 @@ impl LocalLlmAgent {
         // ── Native GPU path ─────────────────────────────────────────────────
         #[cfg(target_arch = "wasm32")]
         {
-            use crate::gguf_bridge::{QTensor, QTensorEngine};
+            use crate::gguf_bridge::QTensor;
             use crate::gguf_sharder::GgufTokenizer;
 
             let model_path = match &self.backend {
@@ -1462,17 +1490,39 @@ impl LocalLlmAgent {
                     )
                 };
 
+                let is_p64_mmap = engine
+                    .gguf_mmap
+                    .as_ref()
+                    .map(|m| crate::p64_weight::has_p64_magic(&m[..]))
+                    .unwrap_or(false);
+
                 let tok = engine
                     .gguf_mmap
                     .as_ref()
-                    .map(|m| GgufTokenizer::from_gguf(m))
+                    .map(|m| {
+                        if is_p64_mmap {
+                            crate::p64_weight::P64TensorIndex::from_p64(m)
+                                .ok()
+                                .and_then(|index| {
+                                    GgufTokenizer::from_p64_section(index.tokenizer_bytes(m))
+                                })
+                                .unwrap_or_default()
+                        } else {
+                            GgufTokenizer::from_gguf(m)
+                        }
+                    })
                     .unwrap_or_default();
 
                 // Parse tensor-info section → real embedding lookup.
-                let tensor_idx = engine
-                    .gguf_mmap
-                    .as_ref()
-                    .map(|m| crate::gguf_sharder::GgufTensorIndex::from_gguf(m));
+                let tensor_idx = engine.gguf_mmap.as_ref().and_then(|m| {
+                    if is_p64_mmap {
+                        crate::p64_weight::P64TensorIndex::from_p64(m)
+                            .map(|index| index.to_gguf_index())
+                            .ok()
+                    } else {
+                        Some(crate::gguf_sharder::GgufTensorIndex::from_gguf(m))
+                    }
+                });
 
                 let mut ctx = tok.encode_prompt(&prompt_owned);
                 let eos = tok.eos_token_id;

@@ -222,7 +222,7 @@ fn probe_and_activate_model(
         ram_total_gib,
         ram_free_gib
     );
-    match qualia_core_db::resident_model::mount_resident_gguf(profile_id, gguf_path) {
+    match qualia_core_db::resident_model::mount_resident_gguf(profile_id, gguf_path, orch.mlock_enabled.load(std::sync::atomic::Ordering::Relaxed)) {
         Ok(report) => {
             let kv_cache_mb = (report.kv_cache_bytes / (1024 * 1024)).min(u32::MAX as u64) as u32;
             record_llm_memory_bytes(report.mapped_bytes);

@@ -464,11 +464,11 @@ impl GgufTensorIndex {
         })
     }
 
-    /// Build a synthetic index from an explicit `(name, info)` list — used to boot from a `.q42`
+    /// Build a synthetic index from an explicit `(name, info)` list — used to boot from a P64
     /// weight container so the *entire* GGUF-based hot path (get_layer_tensors / fetch_tensor_bytes /
     /// resident upload) works unchanged. The caller passes absolute blob offsets in each
     /// `GgufTensorInfo.byte_offset` and `tensor_data_start = 0`, pointing the byte source at the
-    /// `.q42` bytes. Format-agnostic: the hot path never learns it is reading a `.q42`.
+    /// P64 bytes. Format-agnostic: the hot path never learns it is reading P64.
     pub fn from_components(
         named_tensors: &[(&[u8], GgufTensorInfo)],
         hyperparams: GgufHyperparams,
@@ -949,10 +949,10 @@ impl GgufTokenizer {
         })
     }
 
-    /// Phase 4 v3: serialize the tokenizer into a compact, contiguous `.q42` section (no page
+    /// Phase 4 v3: serialize the tokenizer into a compact, contiguous P64 section (no page
     /// alignment needed). Only the source fields are written (vocab / merges / bos / eos / add_bos /
     /// pre); the derived maps are rebuilt by [`from_p64_section`]. Heap use here is load-time only.
-    pub fn to_q42_section(&self) -> Vec<u8> {
+    pub fn to_p64_section(&self) -> Vec<u8> {
         let mut out = Vec::with_capacity(1 << 20);
         out.extend_from_slice(b"Q42T");
         out.extend_from_slice(&1u16.to_le_bytes()); // section version
@@ -978,7 +978,13 @@ impl GgufTokenizer {
         out
     }
 
-    /// Phase 4 v3: rebuild a tokenizer from a `.q42` tokenizer section — bypasses GGUF KV string-key
+    /// Compatibility alias for the historical pre-P64 method name.
+    #[deprecated(note = "use to_p64_section")]
+    pub fn to_q42_section(&self) -> Vec<u8> {
+        self.to_p64_section()
+    }
+
+    /// Phase 4 v3: rebuild a tokenizer from a P64 tokenizer section — bypasses GGUF KV string-key
     /// parsing entirely. Fully bounds-checked (the section is untrusted input). Returns `None` on any
     /// malformed field.
     pub fn from_p64_section(data: &[u8]) -> Option<Self> {

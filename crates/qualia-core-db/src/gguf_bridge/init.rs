@@ -637,7 +637,7 @@ impl QTensorEngine {
             dml: dml_status,
             gguf_mmap: None,
             #[cfg(target_arch = "wasm32")]
-            q42_resident: None,
+            p64_resident: None,
             tensor_data_offset: 0,
             hyperparams: crate::gguf_sharder::GgufHyperparams::default(),
             max_tensor_bytes: 0,
@@ -839,6 +839,27 @@ impl QTensorEngine {
             for v in cpu.iter_mut().take(n) {
                 unsafe { core::ptr::write_volatile(v, 0.0) };
             }
+        }
+        if let (Some(cpu), Some(gpu)) = (self.kv_cache_cpu.as_ref(), self.kv_cache_gpu.as_ref()) {
+            self.gpu_queue()
+                .write_buffer(gpu, 0, bytemuck::cast_slice(&cpu[..n]));
+        }
+    }
+
+    pub fn get_kv_cache_cpu(&self) -> Option<&[f32]> {
+        self.kv_cache_cpu.as_deref()
+    }
+
+    pub fn set_kv_cache_cpu(&mut self, data: &[f32]) {
+        let Some(layout) = self.kv_layout.as_ref() else {
+            return;
+        };
+        let n = layout.total_f32_elems;
+        if data.len() < n {
+            return;
+        }
+        if let Some(cpu) = self.kv_cache_cpu.as_mut() {
+            cpu[..n].copy_from_slice(&data[..n]);
         }
         if let (Some(cpu), Some(gpu)) = (self.kv_cache_cpu.as_ref(), self.kv_cache_gpu.as_ref()) {
             self.gpu_queue()

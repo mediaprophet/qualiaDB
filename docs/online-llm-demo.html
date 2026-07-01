@@ -273,10 +273,10 @@ import init, {
     releaseWebgpuEngine,
     isWebgpuEngineReady,
     getEngineVersion,
-    compileGgufToQ42,
-    q42FormatVersion,
+    compileGgufToP64,
+    p64FormatVersion,
 } from './playground/qualia_core_db.js';
-import { loadGgufCached, loadOrCompileQ42 } from './js/opfs-model-cache.js';
+import { loadGgufCached, loadOrCompileP64 } from './js/opfs-model-cache.js';
 
 // ── Constants ─────────────────────────────────────────────────────────────────
 
@@ -445,29 +445,28 @@ async function loadModel() {
             ggufBytes = await readLocalGguf(localFiles);
             document.getElementById('dl-progress').style.width = '100%';
         } else {
-            // Phase 4 AOT: compile GGUF→.q42 once, cache the .q42 in OPFS, warm-boot from it
-            // thereafter (0 network, 0 compile). The .q42 streams to disk; only the .q42 is stored.
+            // AOT: compile GGUF→P64 once, cache P64 in OPFS, then warm-boot it.
             showDlStatus(`Downloading ${name}…`);
-            const { bytes, source } = await loadOrCompileQ42(url, url.split('/').pop(), {
-                compile: compileGgufToQ42,
-                formatVersion: q42FormatVersion(),
+            const { bytes, source } = await loadOrCompileP64(url, url.split('/').pop(), {
+                compile: compileGgufToP64,
+                formatVersion: p64FormatVersion(),
                 onProgress: (loaded, total, phase) => {
-                    if (phase === 'q42-hit') {
+                    if (phase === 'p64-hit') {
                         document.getElementById('dl-progress').style.width = '100%';
-                        showDlStatus(`Loaded ${name} from .q42 cache`);
+                        showDlStatus(`Loaded ${name} from P64 cache`);
                     } else if (phase === 'download') {
                         const pct = total ? Math.round(loaded / total * 100) : 0;
                         document.getElementById('dl-progress').style.width = `${pct}%`;
                         showDlStatus(`Downloading ${name}: ${pct}% (${(loaded / 1048576).toFixed(1)} MB)`);
                     } else if (phase === 'compile') {
-                        showDlStatus(`Compiling ${name} → .q42…`);
+                        showDlStatus(`Compiling ${name} → P64…`);
                     }
                 },
             });
             ggufBytes = bytes;
-            showDlStatus(source === 'opfs-q42-hit'
-                ? `Loaded ${name} from .q42 cache`
-                : `Compiled ${name} → .q42 (cached for next time)`);
+            showDlStatus(source === 'opfs-p64-hit'
+                ? `Loaded ${name} from P64 cache`
+                : `Compiled ${name} → P64 (cached for next time)`);
         }
 
         showDlStatus('Initialising Qualia WebGPU engine…');

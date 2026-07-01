@@ -58,6 +58,9 @@ Comprehensive index of functionality for `gguf_bridge`. This document serves as 
   - `fn kv_cache_bytes`
   - `fn load_gguf_checked`
   - `fn load_gguf`
+  - `fn load_model_checked`
+  - `fn load_model`
+  - `fn adopt_resident_p64_mmap`
   - `fn adopt_resident_q42_mmap`
   - `fn ternary_ffn_resident_len`
   - `fn adopt_resident_mmap`

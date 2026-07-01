@@ -141,13 +141,13 @@ fn a1a_gpu_topk_matches_argmax_text() {
     println!("[a1a] token-identity verified + coherent generation: top-k == argmax");
 }
 
-/// A1b DISCRIMINATOR: boot a **verbatim** (non-ternary) `.q42` natively and verify it decodes
-/// COHERENTLY. This isolates the native q42-boot wiring (synthetic index + tokenizer-section +
+/// A1b DISCRIMINATOR: boot a **verbatim** (non-ternary) P64 natively and verify it decodes
+/// COHERENTLY. This isolates the native P64-boot wiring (synthetic index + tokenizer-section +
 /// resident logits + the attention/embed/output hot path) from the ternary FFN quantization. If
-/// this is coherent but the ternary `.q42` is degenerate, the degeneration is PTQ quality loss (the
+/// this is coherent but the ternary P64 is degenerate, the degeneration is PTQ quality loss (the
 /// D20-gated finding), not a boot bug. Skips if the q8 GGUF is absent.
 #[test]
-fn a1b_verbatim_q42_native_boot_is_coherent() {
+fn a1b_verbatim_p64_native_boot_is_coherent() {
     use qualia_core_db::llm_bench::decode_with_metrics_blocking;
     let Some(gguf) = find_model("smollm2-360m-instruct-q8_0.gguf") else {
         eprintln!("[a1b-verbatim] q8 GGUF absent — skipping");
@@ -155,24 +155,25 @@ fn a1b_verbatim_q42_native_boot_is_coherent() {
     };
     let src = std::fs::File::open(&gguf).expect("open gguf");
     let mmap = unsafe { memmap2::Mmap::map(&src) }.expect("mmap gguf");
-    let q42 = qualia_core_db::q42_weight::compile_gguf_to_q42(&mmap, 14).expect("verbatim q42 compile");
+    let p64 = qualia_core_db::p64_weight::compile_gguf_to_p64(&mmap, 14)
+        .expect("verbatim P64 compile");
     drop(mmap);
     drop(src);
-    let path = results_dir().join("smollm2-360m-verbatim.q42");
-    std::fs::write(&path, &q42).expect("write verbatim .q42");
+    let path = results_dir().join("smollm2-360m-verbatim.p64");
+    std::fs::write(&path, &p64).expect("write verbatim P64");
     let path_str = path.to_string_lossy().to_string();
 
     let (text, tok) = decode_with_metrics_blocking(&path_str, "Once upon a time, there was a", 24)
-        .expect("verbatim q42 decode");
-    eprintln!("[a1b-verbatim] native q42 (Q8 verbatim) decode: {tok:.2} tok/s | {text:?}");
+        .expect("verbatim P64 decode");
+    eprintln!("[a1b-verbatim] native P64 (Q8 verbatim) decode: {tok:.2} tok/s | {text:?}");
     let _ = std::fs::remove_file(&path);
     assert!(
         !text.trim_start().starts_with("<|endoftext|>") && text.contains(' ') && text.len() > 8,
-        "verbatim .q42 native boot must decode coherently (else the q42 boot path has a bug, not PTQ): {text:?}"
+        "verbatim P64 native boot must decode coherently (else the P64 boot path has a bug, not PTQ): {text:?}"
     );
 }
 
-/// A1b — ternary-FFN coherence + MVPP. Compiles the q8 GGUF → ternary-FFN `.q42`, boots it
+/// A1b — ternary-FFN coherence + MVPP. Compiles the q8 GGUF → ternary-FFN P64, boots it
 /// natively (resident 2-bit FFN), and measures decode three ways on the SAME prompt/budget:
 ///   • ternary FFN **GPU 2-bit** (toggle ON)
 ///   • ternary FFN **CPU oracle** (toggle OFF) — identical weights, so ON/OFF isolates the GPU kernel
@@ -192,15 +193,15 @@ fn a1b_ternary_ffn_decode_mvpp() {
     // Build the runnable ternary-FFN container once.
     let src = std::fs::File::open(&gguf).expect("open gguf");
     let mmap = unsafe { memmap2::Mmap::map(&src) }.expect("mmap gguf");
-    let q42 = qualia_core_db::q42_weight::compile_gguf_to_q42_ternary_ffn(&mmap, 14)
+    let p64 = qualia_core_db::p64_weight::compile_gguf_to_p64_ternary_ffn(&mmap, 14)
         .expect("ternary-FFN compile");
     drop(mmap);
     drop(src);
-    let q42_path = results_dir().join("smollm2-360m-ternary-ffn.q42");
-    std::fs::write(&q42_path, &q42).expect("write .q42");
-    let q42_str = q42_path.to_string_lossy().to_string();
+    let p64_path = results_dir().join("smollm2-360m-ternary-ffn.p64");
+    std::fs::write(&p64_path, &p64).expect("write P64");
+    let p64_str = p64_path.to_string_lossy().to_string();
     let gguf_str = gguf.to_string_lossy().to_string();
-    eprintln!("[a1b] built ternary .q42: {:.1} MB → {}", q42.len() as f64 / 1e6, q42_str);
+    eprintln!("[a1b] built ternary P64: {:.1} MB → {}", p64.len() as f64 / 1e6, p64_str);
 
     let prompt = "Once upon a time, there was a";
     let n = 24u32;
@@ -208,13 +209,13 @@ fn a1b_ternary_ffn_decode_mvpp() {
     // (1) ternary FFN GPU 2-bit (toggle ON).
     set_ternary_ffn(true);
     let (on_text, on_tok) =
-        decode_with_metrics_blocking(&q42_str, prompt, n).expect("q42 GPU-ON decode");
+        decode_with_metrics_blocking(&p64_str, prompt, n).expect("P64 GPU-ON decode");
     eprintln!("[a1b] ternary GPU-ON  : {on_tok:.2} tok/s | {on_text:?}");
 
     // (2) ternary FFN CPU oracle (toggle OFF) — same weights.
     set_ternary_ffn(false);
     let (off_text, off_tok) =
-        decode_with_metrics_blocking(&q42_str, prompt, n).expect("q42 CPU-OFF decode");
+        decode_with_metrics_blocking(&p64_str, prompt, n).expect("P64 CPU-OFF decode");
     eprintln!("[a1b] ternary CPU-OFF : {off_tok:.2} tok/s | {off_text:?}");
 
     // (3) q8 GGUF baseline (FFN on GPU via the proven Q8 GEMM).
@@ -253,7 +254,7 @@ fn a1b_ternary_ffn_decode_mvpp() {
     eprintln!("──────────────────────────────────────────────────────────────");
 
     // ── Engineering gates (what is genuinely true + proven; NOT a coherence claim) ──
-    // 1. The native q42 ternary decode path runs end-to-end and emits non-empty text.
+    // 1. The native P64 ternary decode path runs end-to-end and emits non-empty text.
     assert!(on_text.len() > 8 && on_text.contains(' '), "ternary decode produced no text: {on_text:?}");
     // 2. GPU 2-bit and CPU oracle compute the SAME ternary math, but the f32 REDUCTION ORDER
     //    differs (GPU parallel tree vs CPU sequential sum), so per-token logits agree only within
@@ -276,7 +277,7 @@ fn a1b_ternary_ffn_decode_mvpp() {
     // 3. The GPU kernel delivers a real speedup over the CPU oracle on the same weights.
     assert!(on_tok > off_tok, "GPU ternary must beat the CPU oracle ({on_tok} vs {off_tok})");
     // NOTE (measurement honesty): coherence is NOT asserted here. The companion test
-    // `a1b_verbatim_q42_native_boot_is_coherent` proves the q42 boot path is correct, so any ternary
+    // `a1b_verbatim_p64_native_boot_is_coherent` proves the P64 boot path is correct, so any ternary
     // degeneration is PTQ quality loss (the D20-eval-gated adoption decision), not an engine bug.
     set_ternary_ffn(false);
 }
@@ -837,7 +838,7 @@ fn w1_awq_sweep_smollm2() {
     };
     let alphas = [0.0f32, 0.5, 1.0];
     let (ref_ppl, results) =
-        awq_sweep_blocking(&gguf.to_string_lossy(), &alphas, 64, qualia_core_db::q42_weight::FfnQuant::Ternary)
+        awq_sweep_blocking(&gguf.to_string_lossy(), &alphas, 64, qualia_core_db::p64_weight::FfnQuant::Ternary)
             .expect("awq sweep");
 
     println!("\n=== AWQ alpha-sweep (SmolLM2-360M ternary FFN; Q8 ref PPL {ref_ppl:.2}) ===");
@@ -878,7 +879,7 @@ fn w1_awq_sweep_smollm2() {
 #[test]
 fn w1_awq_q4_sweep_smollm2() {
     use qualia_core_db::llm_bench::awq_sweep_blocking;
-    use qualia_core_db::q42_weight::FfnQuant;
+    use qualia_core_db::p64_weight::FfnQuant;
     let Some(gguf) = find_model("smollm2-360m-instruct-q8_0.gguf") else {
         eprintln!("[awq-q4] SmolLM2 Q8 absent — skipping");
         return;

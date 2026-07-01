@@ -13,7 +13,7 @@
 use crate::p64_weight::{
     P64_LAYER_GLOBAL, P64_ROLE_ATTN_K, P64_ROLE_ATTN_NORM, P64_ROLE_ATTN_OUTPUT, P64_ROLE_ATTN_Q,
     P64_ROLE_ATTN_V, P64_ROLE_FFN_DOWN, P64_ROLE_FFN_GATE, P64_ROLE_FFN_NORM, P64_ROLE_FFN_UP,
-    P64_ROLE_OUTPUT, P64_ROLE_OUTPUT_NORM, P64_ROLE_TOKEN_EMBD,
+    P64_ROLE_OUTPUT, P64_ROLE_OUTPUT_NORM, P64_ROLE_TOKEN_EMBD, P64_ROLE_ATTN_SUBLN, P64_ROLE_FFN_SUBLN,
 };
 
 /// A resolved tensor identity: an engine role + its layer (`P64_LAYER_GLOBAL` for non-layer tensors).
@@ -75,6 +75,10 @@ pub fn name_to_role(name: &str) -> Option<TensorRole> {
         P64_ROLE_FFN_UP
     } else if name.contains("ffn_down") || name.contains("down_proj") {
         P64_ROLE_FFN_DOWN
+    } else if name.contains("attn_sub_norm") || name.contains("self_attn_layer_norm") {
+        P64_ROLE_ATTN_SUBLN
+    } else if name.contains("ffn_sub_norm") || name.contains("mlp_layer_norm") {
+        P64_ROLE_FFN_SUBLN
     } else if name.contains("attn_norm") || name.contains("input_layernorm") {
         P64_ROLE_ATTN_NORM
     } else if name.contains("ffn_norm") || name.contains("post_attention_layernorm") {

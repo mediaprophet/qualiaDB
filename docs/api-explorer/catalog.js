@@ -3199,59 +3199,59 @@ if (caps.includes('BlackScholes')) {
         id: 'wasm.initialize_webgpu',
         category: 'WASM API',
         name: 'initialize_webgpu_engine()',
-        summary: 'Boots the native WebGPU LLM engine from a model Uint8Array. Dual-format: peeks the 4-byte magic — a raw GGUF is parsed into a GgufTensorIndex, or a "Q42W" .q42 container boots zero-parse via adopt_resident_q42 (weights + hyperparams + tokenizer). All weights upload to VRAM once (resident). Phase 5 decode = parallel Q/K/V projection + single-submit forward → ~5.9 tok/s on SmolLM2-360M (Chrome WebGPU / NVIDIA Ampere).',
+        summary: 'Boots the native WebGPU LLM engine from a model Uint8Array. Dual-format: canonical P64 (`p64\\0`) is validated and exposed through a synthetic tensor index; GGUF uses its native metadata index. Resident weights and the KV arena are initialized before decode.',
         params: [
-            { name: 'model_data', type: 'Uint8Array', desc: 'Raw GGUF bytes, or a compiled .q42 container (Q42W magic)' },
+            { name: 'model_data', type: 'Uint8Array', desc: 'Raw GGUF bytes or a canonical P64 v3 container' },
         ],
         returns: 'Promise<void>',
         snippets: [
             js(`
-import init, { initialize_webgpu_engine, compileGgufToQ42, q42FormatVersion } from '../playground/qualia_core_db.js';
-import { loadOrCompileQ42 } from '../js/opfs-model-cache.js';
+import init, { initialize_webgpu_engine, compileGgufToP64, p64FormatVersion } from '../playground/qualia_core_db.js';
+import { loadOrCompileP64 } from '../js/opfs-model-cache.js';
 await init();
 
-// AOT: compile GGUF → .q42 once, cache in OPFS, warm-boot zero-parse thereafter.
-const { bytes } = await loadOrCompileQ42(
+// AOT: compile GGUF → P64 once, cache in OPFS, warm-boot thereafter.
+const { bytes } = await loadOrCompileP64(
   'https://huggingface.co/HuggingFaceTB/SmolLM2-360M-Instruct-GGUF/resolve/main/smollm2-360m-instruct-q4_k_m.gguf',
   'SmolLM2-360M-Instruct-Q4_K_M',
-  { compile: compileGgufToQ42, formatVersion: q42FormatVersion() },
+  { compile: compileGgufToP64, formatVersion: p64FormatVersion() },
 );
-await initialize_webgpu_engine(bytes);  // boots from the .q42
+await initialize_webgpu_engine(bytes);
 console.log('Engine resident — ready to generate');
 `),
         ],
     },
 
     {
-        id: 'wasm.compileGgufToQ42',
+        id: 'wasm.compileGgufToP64',
         category: 'WASM API',
-        name: 'compileGgufToQ42()',
-        summary: 'Ahead-Of-Time compiler: turns a GGUF Uint8Array into a self-contained .q42 weight container — 16 KB-page-aligned weight blobs + hyperparams + tokenizer, "Q42W" magic, CRC-32C integrity. Run once; cache the .q42 in OPFS (loadOrCompileQ42). Every boot after is a zero-parse .q42 load and all inference runs from the .q42; the GGUF is never re-touched.',
+        name: 'compileGgufToP64()',
+        summary: 'Ahead-of-time compiler: turns a GGUF Uint8Array into canonical P64 v3 with page-aligned weight blobs, hyperparameters, tokenizer, manifold records, and CRC-32C integrity. The historical compileGgufToQ42 export remains as an alias.',
         params: [
             { name: 'gguf', type: 'Uint8Array', desc: 'Raw GGUF model bytes' },
             { name: 'page_log2', type: 'u16', desc: 'Page-alignment exponent (14 = 16 KB pages, the default)' },
         ],
-        returns: 'Uint8Array — the .q42 container',
+        returns: 'Uint8Array — the P64 container',
         snippets: [
             js(`
-import init, { compileGgufToQ42, q42FormatVersion } from '../playground/qualia_core_db.js';
+import init, { compileGgufToP64, p64FormatVersion } from '../playground/qualia_core_db.js';
 await init();
 const gguf = new Uint8Array(await (await fetch('model.gguf')).arrayBuffer());
-const q42 = compileGgufToQ42(gguf, 14);
-console.log('format v' + q42FormatVersion() + ', ' + (q42.length / 1048576).toFixed(1) + ' MB .q42');
+const p64 = compileGgufToP64(gguf, 14);
+console.log('P64 v' + p64FormatVersion() + ', ' + (p64.length / 1048576).toFixed(1) + ' MB');
 `),
         ],
     },
 
     {
-        id: 'wasm.q42FormatVersion',
+        id: 'wasm.p64FormatVersion',
         category: 'WASM API',
-        name: 'q42FormatVersion()',
-        summary: 'Returns the .q42 weight-container format version this build emits/consumes. Used as the OPFS cache key by loadOrCompileQ42 — a cached .q42 whose header version differs is discarded and recompiled, so an engine upgrade never boots a stale container.',
+        name: 'p64FormatVersion()',
+        summary: 'Returns the P64 container version this build emits and consumes. The historical q42FormatVersion export returns the same value.',
         params: [],
-        returns: 'number — current .q42 format version',
+        returns: 'number — current P64 format version',
         snippets: [
-            js(`import init, { q42FormatVersion } from '../playground/qualia_core_db.js';\nawait init();\nconsole.log('q42 format v' + q42FormatVersion());`),
+            js(`import init, { p64FormatVersion } from '../playground/qualia_core_db.js';\nawait init();\nconsole.log('P64 v' + p64FormatVersion());`),
         ],
     },
 
@@ -3283,7 +3283,7 @@ console.log(full);
         id: 'wasm.infer',
         category: 'WASM API',
         name: 'infer_wasm()',
-        summary: 'Non-streaming browser LLM inference on the native WebGPU path (gguf_bridge → llm_agent decode). Requires initialize_webgpu_engine() first (GGUF or .q42). For token-by-token UX use inferWasmStreaming(). Phase 5: coherent at ~5.9 tok/s on SmolLM2-360M.',
+        summary: 'Non-streaming browser LLM inference on the native WebGPU path (gguf_bridge → llm_agent decode). Requires initialize_webgpu_engine() first with GGUF or P64. For token-by-token UX use inferWasmStreaming().',
         params: [
             { name: 'prompt', type: 'string', desc: 'User prompt (include chat-template markers if applicable)' },
         ],

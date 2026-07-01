@@ -597,6 +597,120 @@ pub fn wellfair_query_graph_coverage(
     serde_json::to_string(&rows).map_err(|e| e.to_string())
 }
 
+#[command]
+pub fn wellfair_sanctuary_prefs(app: AppHandle) -> Result<String, String> {
+    let state = app.state::<HostApiState>();
+    let guard = state.0.lock().map_err(|e| e.to_string())?;
+    let host = guard
+        .as_ref()
+        .ok_or_else(|| "Host API not initialized — unlock vault first".to_string())?;
+    serde_json::to_string(&host.sanctuary_prefs()).map_err(|e| e.to_string())
+}
+
+#[command]
+pub fn wellfair_setup_sanctuary(
+    app: AppHandle,
+    real_pin: String,
+    decoy_pin: String,
+) -> Result<String, String> {
+    let state = app.state::<HostApiState>();
+    let guard = state.0.lock().map_err(|e| e.to_string())?;
+    let host = guard
+        .as_ref()
+        .ok_or_else(|| "Host API not initialized — unlock vault first".to_string())?;
+    let prefs = host.setup_sanctuary(&real_pin, &decoy_pin)?;
+    serde_json::to_string(&prefs).map_err(|e| e.to_string())
+}
+
+#[command]
+pub fn wellfair_lock_sanctuary(app: AppHandle) -> Result<String, String> {
+    let state = app.state::<HostApiState>();
+    let guard = state.0.lock().map_err(|e| e.to_string())?;
+    let host = guard
+        .as_ref()
+        .ok_or_else(|| "Host API not initialized — unlock vault first".to_string())?;
+    let prefs = host.lock_sanctuary()?;
+    serde_json::to_string(&prefs).map_err(|e| e.to_string())
+}
+
+#[command]
+pub fn wellfair_unlock_sanctuary(app: AppHandle, pin: String) -> Result<String, String> {
+    let state = app.state::<HostApiState>();
+    let guard = state.0.lock().map_err(|e| e.to_string())?;
+    let host = guard
+        .as_ref()
+        .ok_or_else(|| "Host API not initialized — unlock vault first".to_string())?;
+    let prefs = host.unlock_sanctuary(&pin)?;
+    serde_json::to_string(&prefs).map_err(|e| e.to_string())
+}
+
+#[command]
+pub fn wellfair_add_life_event(app: AppHandle, report_json: String) -> Result<String, String> {
+    let report: wellfare_core::life_records::LifeEventReport =
+        serde_json::from_str(&report_json).map_err(|e| format!("invalid life event JSON: {e}"))?;
+    let state = app.state::<HostApiState>();
+    let mut guard = state.0.lock().map_err(|e| e.to_string())?;
+    let host = guard
+        .as_mut()
+        .ok_or_else(|| "Host API not initialized — unlock vault first".to_string())?;
+    let entry = host.add_life_event(&report)?;
+    serde_json::to_string(&entry).map_err(|e| e.to_string())
+}
+
+#[command]
+pub fn wellfair_add_welfare_case(app: AppHandle, report_json: String) -> Result<String, String> {
+    let report: wellfare_core::life_records::WelfareCaseReport =
+        serde_json::from_str(&report_json).map_err(|e| format!("invalid welfare case JSON: {e}"))?;
+    let state = app.state::<HostApiState>();
+    let mut guard = state.0.lock().map_err(|e| e.to_string())?;
+    let host = guard
+        .as_mut()
+        .ok_or_else(|| "Host API not initialized — unlock vault first".to_string())?;
+    let entry = host.add_welfare_case(&report)?;
+    serde_json::to_string(&entry).map_err(|e| e.to_string())
+}
+
+#[command]
+pub fn wellfair_add_wellbeing_observation(
+    app: AppHandle,
+    report_json: String,
+) -> Result<String, String> {
+    let report: wellfare_core::mental_wellbeing::WellbeingObservation =
+        serde_json::from_str(&report_json).map_err(|e| format!("invalid wellbeing JSON: {e}"))?;
+    let state = app.state::<HostApiState>();
+    let mut guard = state.0.lock().map_err(|e| e.to_string())?;
+    let host = guard
+        .as_mut()
+        .ok_or_else(|| "Host API not initialized — unlock vault first".to_string())?;
+    let entry = host.add_wellbeing_observation(&report)?;
+    serde_json::to_string(&entry).map_err(|e| e.to_string())
+}
+
+#[command]
+pub fn wellfair_add_therapy_note(app: AppHandle, report_json: String) -> Result<String, String> {
+    let report: wellfare_core::mental_wellbeing::TherapyNote =
+        serde_json::from_str(&report_json).map_err(|e| format!("invalid therapy note JSON: {e}"))?;
+    let state = app.state::<HostApiState>();
+    let mut guard = state.0.lock().map_err(|e| e.to_string())?;
+    let host = guard
+        .as_mut()
+        .ok_or_else(|| "Host API not initialized — unlock vault first".to_string())?;
+    let entry = host.add_therapy_note(&report)?;
+    serde_json::to_string(&entry).map_err(|e| e.to_string())
+}
+
+#[command]
+pub fn wellfair_add_sanctuary_note(app: AppHandle, body: String) -> Result<String, String> {
+    let note = qualia_client_core::wellfair::sanctuary::SanctuaryNote::new(body);
+    let state = app.state::<HostApiState>();
+    let mut guard = state.0.lock().map_err(|e| e.to_string())?;
+    let host = guard
+        .as_mut()
+        .ok_or_else(|| "Host API not initialized — unlock vault first".to_string())?;
+    let entry = host.add_sanctuary_note(&note)?;
+    serde_json::to_string(&entry).map_err(|e| e.to_string())
+}
+
 fn parse_administration_status(s: &str) -> wellfare_core::medication::AdministrationStatus {
     match s.to_ascii_lowercase().as_str() {
         "skipped" => wellfare_core::medication::AdministrationStatus::Skipped,
@@ -3117,6 +3231,15 @@ pub fn get_invoke_handler() -> impl Fn(tauri::ipc::Invoke<tauri::Wry>) -> bool {
         wellfair_set_med_reminders_enabled,
         wellfair_list_due_med_reminders,
         wellfair_query_graph_coverage,
+        wellfair_sanctuary_prefs,
+        wellfair_setup_sanctuary,
+        wellfair_lock_sanctuary,
+        wellfair_unlock_sanctuary,
+        wellfair_add_life_event,
+        wellfair_add_welfare_case,
+        wellfair_add_wellbeing_observation,
+        wellfair_add_therapy_note,
+        wellfair_add_sanctuary_note,
         wellfair_add_medication,
         wellfair_record_administration,
         wellfair_add_diet_entry,
