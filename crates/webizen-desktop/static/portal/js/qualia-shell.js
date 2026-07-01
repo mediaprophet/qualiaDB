@@ -176,6 +176,25 @@ export async function loadQualiaPortal(canvas) {
         }
         portalModule = mod;
         ensureCanvasBackingStore(canvas);
+        // Arm the WebGPU 3D path (PortalGpu) BEFORE constructing the portal: QualiaPortal::new()
+        // paints one frame, and that initial canvas2d paint grabs a 2d context on the canvas, which
+        // makes the WebGPU surface fail to bind ("canvas already in use"). Init first → new()'s first
+        // paint adopts the stashed GPU instead. (The limits-shim strips the removed
+        // maxInterStageShaderComponents limit so requestDevice succeeds on current Chrome.) Retry a
+        // few frames since the freshly-shown canvas may not be paint-ready immediately.
+        if (typeof mod.portal_init_webgpu === 'function' && navigator.gpu) {
+            const raf2 = () => new Promise((r) => requestAnimationFrame(() => requestAnimationFrame(r)));
+            for (let attempt = 0; attempt < 10; attempt++) {
+                let ok = false, err = null;
+                try { ok = await mod.portal_init_webgpu(canvas); }
+                catch (e) { err = String((e && e.message) || e).slice(0, 400); }
+                window.__qualiaGpuInit = { ok, err, attempt, w: canvas.width, h: canvas.height };
+                if (ok) { debugLog('portal_init_webgpu ok', { attempt }); break; }
+                await raf2();
+            }
+        } else {
+            window.__qualiaGpuInit = { skipped: true, hasFn: typeof mod.portal_init_webgpu, hasGpu: !!navigator.gpu };
+        }
         portal = new mod.QualiaPortal(canvas);
         const tier = portal.tier?.() ?? -1;
         debugLog('QualiaPortal ready', { source: 'qualia-portal', tier });

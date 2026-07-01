@@ -1,5 +1,5 @@
 {
-  "version": "0.0.18",
+  "version": "0.0.23",
   "brand": {
     "name": "QualiaDB",
     "tagline": "Human-Centric Semantic Engine",
@@ -88,6 +88,20 @@
       "label": "Sci Computing",
       "href": "scientific-computing.html",
       "icon": "fa-calculator",
+      "group": "Sciences"
+    },
+    {
+      "label": "Computational Engine",
+      "href": "compute-engine.html",
+      "icon": "fa-calculator",
+      "highlight": true,
+      "group": "Sciences"
+    },
+    {
+      "label": "WGSL Forge",
+      "href": "forge-showcase.html",
+      "icon": "fa-hammer",
+      "highlight": true,
       "group": "Sciences"
     },
     {
