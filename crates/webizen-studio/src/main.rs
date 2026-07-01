@@ -2,6 +2,7 @@
 
 pub mod canvas_model;
 pub mod canvas_editor;
+pub mod canvas_graph;
 pub mod components;
 mod endpoints;
 mod pane_registry;

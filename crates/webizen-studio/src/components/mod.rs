@@ -10,6 +10,7 @@ pub mod llm_harness;
 pub mod nexus;
 pub mod ontology_import_wizard;
 pub mod personal_ontology;
+pub mod selection_sidebar;
 pub mod qapp_dispatcher;
 pub mod qapps;
 pub mod render_preview;

@@ -13,6 +13,7 @@
 pub mod graph;
 pub mod mesh;
 pub mod motion;
+pub mod motion_loop;
 pub mod qualia;
 pub mod scene;
 

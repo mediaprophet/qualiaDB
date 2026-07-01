@@ -1,6 +1,7 @@
 //! Node-relational presentation — SVG graph of panes and their bindings.
 
 use dioxus::prelude::*;
+use crate::canvas_graph::{derive_graph_edges, edge_visual};
 use crate::canvas_model::{Page, PanePlacement};
 
 /// Pixels per layout point (matches grid and spatial canvases).
@@ -15,66 +16,12 @@ struct NodeLayout {
     h: f64,
 }
 
-#[derive(Clone, Debug, PartialEq, Eq, Hash)]
-struct GraphEdge {
-    from_idx: usize,
-    to_idx: usize,
-    label: String,
-}
-
 fn pane_rect(pane: &PanePlacement) -> (f64, f64, f64, f64) {
     let w = (pane.w.max(20) as f64) * POINT_SCALE;
     let h = (pane.h.max(10) as f64) * POINT_SCALE;
     let x = pane.x as f64 * POINT_SCALE;
     let y = pane.y as f64 * POINT_SCALE;
     (x, y, w, h)
-}
-
-/// Collect directed edges from anchor links and shared data_bindings.
-fn derive_graph_edges(panes: &[PanePlacement]) -> Vec<GraphEdge> {
-    let mut edges = Vec::new();
-    let mut seen = std::collections::HashSet::new();
-
-    let index_by_id: std::collections::HashMap<&str, usize> = panes
-        .iter()
-        .enumerate()
-        .map(|(i, p)| (p.component_id.as_str(), i))
-        .collect();
-
-    for (to_idx, pane) in panes.iter().enumerate() {
-        if let Some(anchor) = pane.anchor.as_deref() {
-            if let Some(&from_idx) = index_by_id.get(anchor) {
-                let key = (from_idx, to_idx, "anchor".to_string());
-                if seen.insert(key.clone()) {
-                    edges.push(GraphEdge {
-                        from_idx,
-                        to_idx,
-                        label: "anchor".to_string(),
-                    });
-                }
-            }
-        }
-
-        for binding in &pane.data_bindings {
-            for (from_idx, other) in panes.iter().enumerate() {
-                if from_idx == to_idx {
-                    continue;
-                }
-                if other.data_bindings.iter().any(|b| b == binding) {
-                    let key = (from_idx.min(to_idx), from_idx.max(to_idx), binding.clone());
-                    if seen.insert(key) {
-                        edges.push(GraphEdge {
-                            from_idx,
-                            to_idx,
-                            label: binding.clone(),
-                        });
-                    }
-                }
-            }
-        }
-    }
-
-    edges
 }
 
 fn cubic_path(x1: f64, y1: f64, x2: f64, y2: f64) -> String {
@@ -114,6 +61,17 @@ pub fn NodeGraphCanvas(page: Page) -> Element {
     });
 
     rsx! {
+        style {
+            r#"
+            @keyframes node-edge-flow {{
+                from {{ stroke-dashoffset: 24; }}
+                to {{ stroke-dashoffset: 0; }}
+            }}
+            .node-graph-edge-strong {{
+                animation: node-edge-flow 2.4s linear infinite;
+            }}
+            "#
+        }
         div {
             style: "position: relative; width: 100%; height: 100%; min-height: 500px; background: var(--qualia-bg, #0a0a0a); border: 1px solid var(--qualia-border, #333); border-radius: 12px; overflow: auto;",
 
@@ -143,12 +101,14 @@ pub fn NodeGraphCanvas(page: Page) -> Element {
                     ) {
                         path {
                             key: "{edge.from_idx}-{edge.to_idx}-{edge.label}",
-                            class: "node-graph-edge",
+                            class: if edge.strength >= 2 { "node-graph-edge node-graph-edge-strong" } else { "node-graph-edge" },
                             d: "{cubic_path(from.cx, from.cy, to.cx, to.cy)}",
                             fill: "none",
                             stroke: "var(--qualia-accent, #f59e0b)",
-                            stroke_width: "1.5",
-                            opacity: "0.55",
+                            stroke_width: "{edge_visual(edge.strength).0}",
+                            opacity: "{edge_visual(edge.strength).1}",
+                            stroke_dasharray: if edge.strength >= 2 { "8 4" } else { "none" },
+                            style: "{edge_visual(edge.strength).2}",
                             "marker-end": "url(#node-graph-arrow)",
                         }
                     }
@@ -180,54 +140,5 @@ pub fn NodeGraphCanvas(page: Page) -> Element {
                 }
             }
         }
-    }
-}
-
-#[cfg(test)]
-mod tests {
-    use super::*;
-    use crate::canvas_model::LayerBehavior;
-
-    fn pane(cid: &str, anchor: Option<&str>, bindings: &[&str]) -> PanePlacement {
-        PanePlacement {
-            component_id: cid.to_string(),
-            x: 0,
-            y: 0,
-            w: 10,
-            h: 8,
-            data_bindings: bindings.iter().map(|s| s.to_string()).collect(),
-            binds_rpc: None,
-            requires_capability: vec![],
-            ui_mode: None,
-            layer: LayerBehavior::Docked,
-            anchor: anchor.map(str::to_string),
-            min_w_points: 0,
-            min_h_points: 0,
-            supported_presentations: vec![],
-            theme: Default::default(),
-        }
-    }
-
-    #[test]
-    fn anchor_creates_directed_edge() {
-        let panes = vec![
-            pane("chat", None, &[]),
-            pane("overlay", Some("chat"), &[]),
-        ];
-        let edges = derive_graph_edges(&panes);
-        assert_eq!(edges.len(), 1);
-        assert_eq!(edges[0].from_idx, 0);
-        assert_eq!(edges[0].to_idx, 1);
-    }
-
-    #[test]
-    fn shared_binding_creates_edge() {
-        let panes = vec![
-            pane("a", None, &["did:q42:user#chat"]),
-            pane("b", None, &["did:q42:user#chat"]),
-        ];
-        let edges = derive_graph_edges(&panes);
-        assert_eq!(edges.len(), 1);
-        assert_eq!(edges[0].label, "did:q42:user#chat");
     }
 }

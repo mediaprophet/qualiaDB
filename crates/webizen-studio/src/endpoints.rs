@@ -34,6 +34,14 @@ pub fn portal_design_studio_url() -> String {
     format!("{DAEMON_HTTP}/design-studio.html")
 }
 
+pub fn assets_catalog_url() -> String {
+    format!("{DAEMON_HTTP}/api/assets/catalog")
+}
+
+pub fn assets_enqueue_url() -> String {
+    format!("{DAEMON_HTTP}/api/assets/enqueue")
+}
+
 /// `{DAEMON_HTTP}/telemetry` — server-sent telemetry stream.
 pub fn telemetry_url() -> String {
     format!("{DAEMON_HTTP}/telemetry")

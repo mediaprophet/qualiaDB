@@ -46,6 +46,9 @@ use crate::canvas_editor::{
 use crate::components::ontology_import_wizard::{
     OntologyImportWizard, OntologyLayoutSuggestion,
 };
+use crate::components::selection_sidebar::SelectionSidebar;
+use crate::render::motion::Spring;
+use crate::render::motion_loop::{spawn_ui_motion_loop, step_selection_spring};
 use crate::pane_registry::{
     builtin_pane_definitions, category_label, find_pane, PaneCategory, PaneDefinition,
 };
@@ -469,6 +472,20 @@ pub fn DynamicPage(path: Vec<String>, #[props(default)] app_id: Option<String>) 
     let drag_anchor = use_signal(|| (0.0_f64, 0.0_f64));
     let canvas_extent = use_signal(|| (800.0_f64, 520.0_f64));
     let pane_palette = use_signal(builtin_pane_definitions);
+    let mut selection_spring = use_signal(|| Spring::new(0.0));
+    let mut selection_scale = use_signal(|| 1.0_f64);
+
+    #[cfg(target_arch = "wasm32")]
+    use_effect(move || {
+        let mut selection_spring = selection_spring;
+        let mut selection_scale = selection_scale;
+        let selected_pane_index = selected_pane_index;
+        spawn_ui_motion_loop(move |dt| {
+            let selected = selected_pane_index.read().is_some();
+            let scale = step_selection_spring(&mut selection_spring.write(), selected, None, dt);
+            selection_scale.set(scale);
+        });
+    });
 
     // ── Boot Rehydration ───────────────────────────────────
     // Only talk to the local daemon when one can exist (native / Tauri webview).
@@ -571,52 +588,15 @@ pub fn DynamicPage(path: Vec<String>, #[props(default)] app_id: Option<String>) 
             let dt = evt.data().data_transfer();
             if let Some(component_id) = dt.get_data("application/x-qualia-pane-id") {
                 if !component_id.is_empty() {
-                    // Look up default dimensions from the registry
-                    let (default_w, default_h) = find_pane(&component_id)
-                        .map(|p| (p.default_w, p.default_h))
-                        .unwrap_or((4, 2));
-
-                    let new_pane = PanePlacement {
-                        component_id: component_id.clone(),
-                        x: 4,
-                        y: 4 + (workspace
-                            .read()
-                            .pages
-                            .first()
-                            .map(|p| p.panes.len())
-                            .unwrap_or(0) as u16
-                            * 6),
-                        w: (default_w as u16).saturating_mul(6),
-                        h: (default_h as u16).saturating_mul(6),
-                        data_bindings: vec![],
-                        binds_rpc: if component_id == "custom-web-module" {
-                            Some(crate::endpoints::MODULE_RPC_WS.into())
-                        } else {
-                            None
-                        },
-                        requires_capability: vec![],
-                        ui_mode: if component_id == "custom-web-module" {
-                            Some(UiMode::IFrameSandbox)
-                        } else {
-                            None
-                        },
-                        layer: if component_id == "custom-web-module" {
-                            LayerBehavior::FloatingOverlay
-                        } else {
-                            LayerBehavior::Docked
-                        },
-                        anchor: None,
-                        min_w_points: (default_w as u16).saturating_mul(4),
-                        min_h_points: (default_h as u16).saturating_mul(4),
-                        supported_presentations: vec![PresentationMode::GridBound],
-                        theme: ThemeBinding::default(),
-                    };
-
                     let snapshot = workspace.read().clone();
                     history.write().push(snapshot);
                     let mut ws = workspace.write();
                     if let Some(page) = ws.pages.first_mut() {
-                        page.panes.push(new_pane);
+                        if let Some(new_pane) =
+                            build_pane_placement(&component_id, page.panes.len())
+                        {
+                            page.panes.push(new_pane);
+                        }
                     }
                 }
             }
@@ -853,6 +833,26 @@ pub fn DynamicPage(path: Vec<String>, #[props(default)] app_id: Option<String>) 
                 page.panes = suggestion.panes;
                 page.presentation_mode = suggestion.presentation;
                 page.name = suggestion.label;
+            }
+        }
+    };
+
+    let select_pane_from_graph = {
+        let mut selected_pane_index = selected_pane_index.clone();
+        move |idx: usize| selected_pane_index.set(Some(idx))
+    };
+
+    let add_companion_pane = {
+        let mut workspace = workspace.clone();
+        let mut history = history.clone();
+        let current_path = format!("/{}", path.join("/"));
+        move |component_id: String| {
+            history.write().push(workspace.read().clone());
+            let mut ws = workspace.write();
+            if let Some(page) = ws.pages.iter_mut().find(|p| p.url_path == current_path) {
+                if let Some(pane) = build_pane_placement(&component_id, page.panes.len()) {
+                    page.panes.push(pane);
+                }
             }
         }
     };
@@ -1188,6 +1188,7 @@ pub fn DynamicPage(path: Vec<String>, #[props(default)] app_id: Option<String>) 
                                             editor_mode(),
                                             &pane_interaction,
                                             &drag_anchor,
+                                            selection_scale(),
                                         )}
                                     }
 
@@ -1204,6 +1205,7 @@ pub fn DynamicPage(path: Vec<String>, #[props(default)] app_id: Option<String>) 
                                                     editor_mode(),
                                                     &pane_interaction,
                                                     &drag_anchor,
+                                                    selection_scale(),
                                                 )}
                                             }
                                         }
@@ -1241,6 +1243,16 @@ pub fn DynamicPage(path: Vec<String>, #[props(default)] app_id: Option<String>) 
             // ════════════════════════════════════════════════
             div {
                 style: "background: var(--qualia-surface, #111); border-left: 1px solid var(--qualia-border, #333); padding: 1rem; overflow-y: auto; display: flex; flex-direction: column; gap: 1rem;",
+
+                if let Some(page) = current_page.clone() {
+                    SelectionSidebar {
+                        page: page.clone(),
+                        selected_idx: *selected_pane_index.read(),
+                        palette: pane_palette.read().clone(),
+                        on_select_pane: select_pane_from_graph,
+                        on_add_component: add_companion_pane,
+                    }
+                }
 
                 // Property Inspector
                 div {
@@ -1756,7 +1768,50 @@ fn canvas_container_style(page: &Page) -> String {
     }
 }
 
-fn pane_style_for_layout(page: &Page, pane: &PanePlacement, is_selected: bool) -> String {
+fn build_pane_placement(component_id: &str, existing_count: usize) -> Option<PanePlacement> {
+    if component_id.is_empty() {
+        return None;
+    }
+    let (default_w, default_h) = find_pane(component_id)
+        .map(|p| (p.default_w, p.default_h))
+        .unwrap_or((4, 2));
+    Some(PanePlacement {
+        component_id: component_id.to_string(),
+        x: 4,
+        y: 4 + (existing_count as u16).saturating_mul(6),
+        w: (default_w as u16).saturating_mul(6),
+        h: (default_h as u16).saturating_mul(6),
+        data_bindings: vec![],
+        binds_rpc: if component_id == "custom-web-module" {
+            Some(crate::endpoints::MODULE_RPC_WS.into())
+        } else {
+            None
+        },
+        requires_capability: vec![],
+        ui_mode: if component_id == "custom-web-module" {
+            Some(UiMode::IFrameSandbox)
+        } else {
+            None
+        },
+        layer: if component_id == "custom-web-module" {
+            LayerBehavior::FloatingOverlay
+        } else {
+            LayerBehavior::Docked
+        },
+        anchor: None,
+        min_w_points: (default_w as u16).saturating_mul(4),
+        min_h_points: (default_h as u16).saturating_mul(4),
+        supported_presentations: vec![PresentationMode::GridBound],
+        theme: ThemeBinding::default(),
+    })
+}
+
+fn pane_style_for_layout(
+    page: &Page,
+    pane: &PanePlacement,
+    is_selected: bool,
+    selection_scale: f64,
+) -> String {
     let border_color = if is_selected {
         "var(--qualia-accent, #0ff)"
     } else {
@@ -1772,10 +1827,15 @@ fn pane_style_for_layout(page: &Page, pane: &PanePlacement, is_selected: bool) -
     } else {
         "0 12px 26px rgba(0, 0, 0, 0.18)"
     };
+    let transform = if is_selected {
+        format!("transform: scale({selection_scale:.4}); transform-origin: center center;")
+    } else {
+        String::new()
+    };
 
     match (&page.layout_strategy, &pane.layer) {
         (LayoutStrategy::CssGrid { .. }, LayerBehavior::Docked) => format!(
-            "grid-column: {} / span {}; grid-row: {} / span {}; background: {}; border: 1px solid {}; border-radius: 10px; padding: 0.75rem; cursor: pointer; transition: border-color 0.2s, background 0.2s, transform 0.2s; display: flex; flex-direction: column; justify-content: space-between; min-height: 88px; box-shadow: {};",
+            "grid-column: {} / span {}; grid-row: {} / span {}; background: {}; border: 1px solid {}; border-radius: 10px; padding: 0.75rem; cursor: pointer; transition: border-color 0.2s, background 0.2s, transform 0.12s ease-out; display: flex; flex-direction: column; justify-content: space-between; min-height: 88px; box-shadow: {}; {transform}",
             pane.x.max(1),
             pane.w.max(1),
             pane.y.max(1),
@@ -1803,7 +1863,7 @@ fn pane_style_for_layout(page: &Page, pane: &PanePlacement, is_selected: bool) -
 
             match pane.layer {
                 LayerBehavior::Docked => format!(
-                    "position: absolute; left: {:.3}%; top: {:.3}%; width: calc({:.3}% - {}px); height: calc({:.3}% - {}px); min-width: {}px; min-height: {}px; background: {}; border: 1px solid {}; border-radius: 12px; padding: 0.75rem; cursor: pointer; transition: border-color 0.2s, background 0.2s, transform 0.2s; display: flex; flex-direction: column; justify-content: space-between; box-shadow: {}; overflow: hidden;",
+                    "position: absolute; left: {:.3}%; top: {:.3}%; width: calc({:.3}% - {}px); height: calc({:.3}% - {}px); min-width: {}px; min-height: {}px; background: {}; border: 1px solid {}; border-radius: 12px; padding: 0.75rem; cursor: pointer; transition: border-color 0.2s, background 0.2s, transform 0.12s ease-out; display: flex; flex-direction: column; justify-content: space-between; box-shadow: {}; overflow: hidden; {transform}",
                     left,
                     top,
                     width,
@@ -1856,8 +1916,10 @@ fn render_placed_pane(
     editor_mode: CanvasEditorMode,
     pane_interaction: &Signal<Option<PaneInteraction>>,
     drag_anchor: &Signal<(f64, f64)>,
+    selection_scale: f64,
 ) -> Element {
     let is_selected = *selected.read() == Some(idx);
+    let scale = if is_selected { selection_scale } else { 1.0 };
     let editing = editor_mode == CanvasEditorMode::Edit;
 
     let element_tag = find_pane(&pane.component_id)
@@ -1879,7 +1941,7 @@ fn render_placed_pane(
             "data-theme": "{theme.theme_key.clone().unwrap_or_default()}",
             "data-pane-index": "{idx}",
             "data-selected": if is_selected { "true" } else { "false" },
-            style: "{pane_style_for_layout(page, pane, is_selected)}",
+            style: "{pane_style_for_layout(page, pane, is_selected, scale)}",
             onclick: move |_| {
                 selected.set(Some(idx));
             },
