@@ -1,6 +1,7 @@
 pub mod companion_pairing;
 pub mod companion_sync;
 pub mod conditions;
+pub mod personal_records;
 pub mod medication;
 pub mod models;
 pub mod record;

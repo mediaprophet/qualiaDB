@@ -1,9 +1,10 @@
 //! Personal Core — owner profile, conditions/allergies, emergency contacts, accessibility.
 
 use super::host_client::{
-    add_allergy, add_condition, add_emergency_contact, fetch_emergency_contacts,
-    fetch_health_records, fetch_identity, save_accessibility, AddAllergyRequest,
-    AddConditionRequest, EmergencyContactDto,
+    add_allergy, add_condition, add_disputed_diagnosis, add_emergency_contact,
+    add_housing_safety, fetch_emergency_contacts, fetch_health_records, fetch_identity,
+    save_accessibility, AddAllergyRequest, AddConditionRequest, AddDisputedDiagnosisRequest,
+    AddHousingSafetyRequest, EmergencyContactDto,
 };
 use super::host_dto::{AccessibilityPreferences, HealthRecordDto, NetworkExposure, VaultLifecycle};
 use super::host_client::use_host_snapshot;
@@ -29,6 +30,11 @@ struct PersonalUiState {
     allergy_reaction: String,
     allergy_severity: String,
     allergy_notes: String,
+    disputed_label: String,
+    disputed_reason: String,
+    housing_dwelling: String,
+    housing_hazards: String,
+    housing_homeless: bool,
     profile_records: Vec<HealthRecordDto>,
     profile_status: String,
     contact_name: String,
@@ -66,12 +72,20 @@ pub fn WellfairPersonalPanel() -> Element {
                 Ok(list) => {
                     let profile: Vec<_> = list
                         .into_iter()
-                        .filter(|r| r.kind == "condition" || r.kind == "allergy")
+                        .filter(|r| {
+                            matches!(
+                                r.kind.as_str(),
+                                "condition"
+                                    | "allergy"
+                                    | "disputed_diagnosis"
+                                    | "housing_safety"
+                            )
+                        })
                         .collect();
                     let n = profile.len();
                     state.write().profile_records = profile;
                     state.write().profile_status = if n == 0 {
-                        "No self-reported conditions or allergies yet.".into()
+                        "No self-reported profile health records yet.".into()
                     } else {
                         format!("{n} restricted profile record(s).")
                     };
@@ -330,6 +344,121 @@ pub fn WellfairPersonalPanel() -> Element {
                             }
                         }
                     }
+                }
+            }
+
+            div {
+                style: "margin-bottom:1rem;padding:0.65rem;border-radius:8px;border:1px solid var(--qualia-border,#eee);",
+                h3 { style: "margin:0 0 0.5rem;font-size:0.88rem;", "Disputed / unconfirmed diagnosis" }
+                p {
+                    style: "margin:0 0 0.5rem;font-size:0.76rem;color:var(--qualia-text-muted,#666);",
+                    "Epistemic status Disputed — stored Restricted in your vault."
+                }
+                input {
+                    r#type: "text",
+                    placeholder: "Diagnosis label you dispute",
+                    value: "{state.read().disputed_label}",
+                    oninput: move |e| state.write().disputed_label = e.value(),
+                    style: "width:100%;padding:0.35rem;margin-bottom:0.35rem;border-radius:6px;border:1px solid var(--qualia-border,#ccc);font-size:0.8rem;",
+                }
+                input {
+                    r#type: "text",
+                    placeholder: "Why disputed (optional)",
+                    value: "{state.read().disputed_reason}",
+                    oninput: move |e| state.write().disputed_reason = e.value(),
+                    style: "width:100%;padding:0.35rem;margin-bottom:0.35rem;border-radius:6px;border:1px solid var(--qualia-border,#ccc);font-size:0.8rem;",
+                }
+                button {
+                    style: "padding:0.35rem 0.65rem;border-radius:6px;border:none;background:#6a4c93;color:#fff;font-size:0.78rem;cursor:pointer;",
+                    disabled: state.read().disputed_label.trim().is_empty(),
+                    onclick: move |_| {
+                        let label = state.read().disputed_label.trim().to_string();
+                        if label.is_empty() { return; }
+                        let reason = {
+                            let v = state.read().disputed_reason.trim().to_string();
+                            if v.is_empty() { None } else { Some(v) }
+                        };
+                        spawn(async move {
+                            let req = AddDisputedDiagnosisRequest {
+                                label,
+                                attributed_by: None,
+                                dispute_reason: reason,
+                                supporting_notes: None,
+                            };
+                            match add_disputed_diagnosis(&req).await {
+                                Ok(_) => {
+                                    state.write().disputed_label.clear();
+                                    state.write().disputed_reason.clear();
+                                    state.write().status = "Disputed diagnosis saved.".into();
+                                    reload_profile_records();
+                                }
+                                Err(e) => state.write().status = format!("Save failed: {e}"),
+                            }
+                        });
+                    },
+                    "Save disputed diagnosis"
+                }
+            }
+
+            div {
+                style: "margin-bottom:1rem;padding:0.65rem;border-radius:8px;border:1px solid var(--qualia-border,#eee);",
+                h3 { style: "margin:0 0 0.5rem;font-size:0.88rem;", "Housing & safety" }
+                label { style: "font-size:0.78rem;", "Dwelling type" }
+                select {
+                    value: "{state.read().housing_dwelling}",
+                    onchange: move |e| state.write().housing_dwelling = e.value(),
+                    style: "width:100%;padding:0.35rem;margin-bottom:0.35rem;border-radius:6px;border:1px solid var(--qualia-border,#ccc);",
+                    option { value: "unknown", "Unknown" }
+                    option { value: "fixed", "Fixed address" }
+                    option { value: "temporary", "Temporary" }
+                    option { value: "mobile_shelter", "Mobile shelter / vehicle" }
+                    option { value: "homeless", "No fixed dwelling" }
+                }
+                label {
+                    style: "display:flex;align-items:center;gap:0.4rem;font-size:0.78rem;margin-bottom:0.35rem;",
+                    input {
+                        r#type: "checkbox",
+                        checked: state.read().housing_homeless,
+                        onchange: move |e| state.write().housing_homeless = e.checked(),
+                    }
+                    "Currently without stable housing"
+                }
+                input {
+                    r#type: "text",
+                    placeholder: "Safety hazards (optional)",
+                    value: "{state.read().housing_hazards}",
+                    oninput: move |e| state.write().housing_hazards = e.value(),
+                    style: "width:100%;padding:0.35rem;margin-bottom:0.35rem;border-radius:6px;border:1px solid var(--qualia-border,#ccc);font-size:0.8rem;",
+                }
+                button {
+                    style: "padding:0.35rem 0.65rem;border-radius:6px;border:none;background:#bc6c25;color:#fff;font-size:0.78rem;cursor:pointer;",
+                    onclick: move |_| {
+                        let dwelling = state.read().housing_dwelling.clone();
+                        let homeless = state.read().housing_homeless;
+                        let hazards = {
+                            let v = state.read().housing_hazards.trim().to_string();
+                            if v.is_empty() { None } else { Some(v) }
+                        };
+                        spawn(async move {
+                            let req = AddHousingSafetyRequest {
+                                dwelling_type: Some(dwelling),
+                                homelessness: Some(homeless),
+                                violence_concern: None,
+                                hazards,
+                                location_notes: None,
+                                notes: None,
+                            };
+                            match add_housing_safety(&req).await {
+                                Ok(_) => {
+                                    state.write().housing_hazards.clear();
+                                    state.write().status = "Housing/safety context saved.".into();
+                                    reload_profile_records();
+                                }
+                                Err(e) => state.write().status = format!("Save failed: {e}"),
+                            }
+                        });
+                    },
+                    "Save housing/safety"
                 }
             }
 

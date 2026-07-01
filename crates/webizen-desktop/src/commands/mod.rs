@@ -462,6 +462,126 @@ pub fn wellfair_add_allergy(app: AppHandle, report_json: String) -> Result<Strin
     serde_json::to_string(&entry).map_err(|e| e.to_string())
 }
 
+#[derive(Debug, serde::Deserialize)]
+struct DisputedDiagnosisInput {
+    label: String,
+    attributed_by: Option<String>,
+    dispute_reason: Option<String>,
+    supporting_notes: Option<String>,
+}
+
+#[derive(Debug, serde::Deserialize)]
+struct HousingSafetyInput {
+    dwelling_type: Option<String>,
+    homelessness: Option<bool>,
+    violence_concern: Option<bool>,
+    hazards: Option<String>,
+    location_notes: Option<String>,
+    notes: Option<String>,
+}
+
+#[command]
+pub fn wellfair_add_disputed_diagnosis(
+    app: AppHandle,
+    report_json: String,
+) -> Result<String, String> {
+    let input: DisputedDiagnosisInput =
+        serde_json::from_str(&report_json).map_err(|e| format!("invalid disputed JSON: {e}"))?;
+    let mut report = wellfare_core::personal_records::DisputedDiagnosisReport::new(input.label);
+    report.attributed_by = input.attributed_by.filter(|s| !s.trim().is_empty());
+    report.dispute_reason = input.dispute_reason.filter(|s| !s.trim().is_empty());
+    report.supporting_notes = input.supporting_notes.filter(|s| !s.trim().is_empty());
+    let state = app.state::<HostApiState>();
+    let mut guard = state.0.lock().map_err(|e| e.to_string())?;
+    let host = guard
+        .as_mut()
+        .ok_or_else(|| "Host API not initialized — unlock vault first".to_string())?;
+    let entry = host.add_disputed_diagnosis(&report)?;
+    serde_json::to_string(&entry).map_err(|e| e.to_string())
+}
+
+#[command]
+pub fn wellfair_add_housing_safety(
+    app: AppHandle,
+    report_json: String,
+) -> Result<String, String> {
+    let input: HousingSafetyInput =
+        serde_json::from_str(&report_json).map_err(|e| format!("invalid housing JSON: {e}"))?;
+    let mut report = wellfare_core::personal_records::HousingSafetyReport::new();
+    if let Some(dt) = input.dwelling_type.as_deref() {
+        report.dwelling_type = match dt.to_ascii_lowercase().as_str() {
+            "fixed" => wellfare_core::personal_records::DwellingType::Fixed,
+            "temporary" => wellfare_core::personal_records::DwellingType::Temporary,
+            "mobile_shelter" | "mobileshelter" => {
+                wellfare_core::personal_records::DwellingType::MobileShelter
+            }
+            "homeless" => wellfare_core::personal_records::DwellingType::Homeless,
+            _ => wellfare_core::personal_records::DwellingType::Unknown,
+        };
+    }
+    report.homelessness = input.homelessness.unwrap_or(false);
+    report.violence_concern = input.violence_concern.unwrap_or(false);
+    report.hazards = input.hazards.filter(|s| !s.trim().is_empty());
+    report.location_notes = input.location_notes.filter(|s| !s.trim().is_empty());
+    report.notes = input.notes.filter(|s| !s.trim().is_empty());
+    let state = app.state::<HostApiState>();
+    let mut guard = state.0.lock().map_err(|e| e.to_string())?;
+    let host = guard
+        .as_mut()
+        .ok_or_else(|| "Host API not initialized — unlock vault first".to_string())?;
+    let entry = host.add_housing_safety(&report)?;
+    serde_json::to_string(&entry).map_err(|e| e.to_string())
+}
+
+#[command]
+pub fn wellfair_med_reminder_prefs(app: AppHandle) -> Result<String, String> {
+    let state = app.state::<HostApiState>();
+    let guard = state.0.lock().map_err(|e| e.to_string())?;
+    let host = guard
+        .as_ref()
+        .ok_or_else(|| "Host API not initialized — unlock vault first".to_string())?;
+    serde_json::to_string(&host.med_reminder_prefs()).map_err(|e| e.to_string())
+}
+
+#[command]
+pub fn wellfair_grant_med_reminder_permission(app: AppHandle) -> Result<String, String> {
+    let state = app.state::<HostApiState>();
+    let guard = state.0.lock().map_err(|e| e.to_string())?;
+    let host = guard
+        .as_ref()
+        .ok_or_else(|| "Host API not initialized — unlock vault first".to_string())?;
+    let prefs = host.grant_med_reminder_permission()?;
+    serde_json::to_string(&prefs).map_err(|e| e.to_string())
+}
+
+#[command]
+pub fn wellfair_set_med_reminders_enabled(
+    app: AppHandle,
+    enabled: bool,
+) -> Result<String, String> {
+    let state = app.state::<HostApiState>();
+    let guard = state.0.lock().map_err(|e| e.to_string())?;
+    let host = guard
+        .as_ref()
+        .ok_or_else(|| "Host API not initialized — unlock vault first".to_string())?;
+    let prefs = host.set_med_reminders_enabled(enabled)?;
+    serde_json::to_string(&prefs).map_err(|e| e.to_string())
+}
+
+#[command]
+pub fn wellfair_list_due_med_reminders(
+    app: AppHandle,
+    window_minutes: Option<i32>,
+) -> Result<String, String> {
+    let state = app.state::<HostApiState>();
+    let guard = state.0.lock().map_err(|e| e.to_string())?;
+    let host = guard
+        .as_ref()
+        .ok_or_else(|| "Host API not initialized — unlock vault first".to_string())?;
+    let due = host.list_due_med_reminders(window_minutes.unwrap_or(30))?;
+    serde_json::to_string(&due).map_err(|e| e.to_string())
+}
+
 fn parse_administration_status(s: &str) -> wellfare_core::medication::AdministrationStatus {
     match s.to_ascii_lowercase().as_str() {
         "skipped" => wellfare_core::medication::AdministrationStatus::Skipped,
@@ -2975,6 +3095,12 @@ pub fn get_invoke_handler() -> impl Fn(tauri::ipc::Invoke<tauri::Wry>) -> bool {
         wellfair_list_consents,
         wellfair_add_condition,
         wellfair_add_allergy,
+        wellfair_add_disputed_diagnosis,
+        wellfair_add_housing_safety,
+        wellfair_med_reminder_prefs,
+        wellfair_grant_med_reminder_permission,
+        wellfair_set_med_reminders_enabled,
+        wellfair_list_due_med_reminders,
         wellfair_add_medication,
         wellfair_record_administration,
         wellfair_add_diet_entry,

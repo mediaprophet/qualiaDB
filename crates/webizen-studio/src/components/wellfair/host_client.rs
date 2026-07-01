@@ -372,6 +372,158 @@ pub async fn add_allergy(_req: &AddAllergyRequest) -> Result<HealthRecordDto, St
     Err("Add allergy requires the Tauri desktop host".into())
 }
 
+#[derive(Debug, Clone, serde::Serialize)]
+pub struct AddDisputedDiagnosisRequest {
+    pub label: String,
+    #[serde(skip_serializing_if = "Option::is_none")]
+    pub attributed_by: Option<String>,
+    #[serde(skip_serializing_if = "Option::is_none")]
+    pub dispute_reason: Option<String>,
+    #[serde(skip_serializing_if = "Option::is_none")]
+    pub supporting_notes: Option<String>,
+}
+
+#[derive(Debug, Clone, serde::Serialize)]
+pub struct AddHousingSafetyRequest {
+    #[serde(skip_serializing_if = "Option::is_none")]
+    pub dwelling_type: Option<String>,
+    #[serde(skip_serializing_if = "Option::is_none")]
+    pub homelessness: Option<bool>,
+    #[serde(skip_serializing_if = "Option::is_none")]
+    pub violence_concern: Option<bool>,
+    #[serde(skip_serializing_if = "Option::is_none")]
+    pub hazards: Option<String>,
+    #[serde(skip_serializing_if = "Option::is_none")]
+    pub location_notes: Option<String>,
+    #[serde(skip_serializing_if = "Option::is_none")]
+    pub notes: Option<String>,
+}
+
+#[cfg(target_arch = "wasm32")]
+pub async fn add_disputed_diagnosis(req: &AddDisputedDiagnosisRequest) -> Result<HealthRecordDto, String> {
+    let json = serde_json::to_string(req).map_err(|e| e.to_string())?;
+    let args = js_sys::Object::new();
+    js_sys::Reflect::set(&args, &"reportJson".into(), &wasm_bindgen::JsValue::from_str(&json))
+        .map_err(|_| "failed to build invoke args".to_string())?;
+    let js = tauri_invoke("wellfair_add_disputed_diagnosis", args.into())
+        .await
+        .map_err(|e| format!("{e:?}"))?;
+    let out = js
+        .as_string()
+        .ok_or_else(|| "add_disputed_diagnosis response was not JSON".to_string())?;
+    serde_json::from_str(&out).map_err(|e| e.to_string())
+}
+
+#[cfg(not(target_arch = "wasm32"))]
+pub async fn add_disputed_diagnosis(_req: &AddDisputedDiagnosisRequest) -> Result<HealthRecordDto, String> {
+    Err("Disputed diagnosis requires the Tauri desktop host".into())
+}
+
+#[cfg(target_arch = "wasm32")]
+pub async fn add_housing_safety(req: &AddHousingSafetyRequest) -> Result<HealthRecordDto, String> {
+    let json = serde_json::to_string(req).map_err(|e| e.to_string())?;
+    let args = js_sys::Object::new();
+    js_sys::Reflect::set(&args, &"reportJson".into(), &wasm_bindgen::JsValue::from_str(&json))
+        .map_err(|_| "failed to build invoke args".to_string())?;
+    let js = tauri_invoke("wellfair_add_housing_safety", args.into())
+        .await
+        .map_err(|e| format!("{e:?}"))?;
+    let out = js
+        .as_string()
+        .ok_or_else(|| "add_housing_safety response was not JSON".to_string())?;
+    serde_json::from_str(&out).map_err(|e| e.to_string())
+}
+
+#[cfg(not(target_arch = "wasm32"))]
+pub async fn add_housing_safety(_req: &AddHousingSafetyRequest) -> Result<HealthRecordDto, String> {
+    Err("Housing/safety requires the Tauri desktop host".into())
+}
+
+#[derive(Debug, Clone, Default, Deserialize)]
+pub struct MedReminderPrefsDto {
+    pub enabled: bool,
+    pub permission_granted: bool,
+    pub permission_granted_at_unix: Option<u32>,
+}
+
+#[derive(Debug, Clone, Deserialize)]
+pub struct DueMedReminderDto {
+    pub medication_id: String,
+    pub medication_name: String,
+    pub schedule_slot: String,
+    pub minutes_until_due: i32,
+}
+
+#[cfg(target_arch = "wasm32")]
+pub async fn fetch_med_reminder_prefs() -> Result<MedReminderPrefsDto, String> {
+    let js = tauri_invoke("wellfair_med_reminder_prefs", wasm_bindgen::JsValue::NULL)
+        .await
+        .map_err(|e| format!("{e:?}"))?;
+    let json = js.as_string().ok_or_else(|| "prefs response not JSON".to_string())?;
+    serde_json::from_str(&json).map_err(|e| e.to_string())
+}
+
+#[cfg(not(target_arch = "wasm32"))]
+pub async fn fetch_med_reminder_prefs() -> Result<MedReminderPrefsDto, String> {
+    Ok(MedReminderPrefsDto {
+        enabled: false,
+        permission_granted: false,
+        permission_granted_at_unix: None,
+    })
+}
+
+#[cfg(target_arch = "wasm32")]
+pub async fn grant_med_reminder_permission() -> Result<MedReminderPrefsDto, String> {
+    let js = tauri_invoke("wellfair_grant_med_reminder_permission", wasm_bindgen::JsValue::NULL)
+        .await
+        .map_err(|e| format!("{e:?}"))?;
+    let json = js.as_string().ok_or_else(|| "grant response not JSON".to_string())?;
+    serde_json::from_str(&json).map_err(|e| e.to_string())
+}
+
+#[cfg(not(target_arch = "wasm32"))]
+pub async fn grant_med_reminder_permission() -> Result<MedReminderPrefsDto, String> {
+    Err("Med reminders require the Tauri desktop host".into())
+}
+
+#[cfg(target_arch = "wasm32")]
+pub async fn set_med_reminders_enabled(enabled: bool) -> Result<MedReminderPrefsDto, String> {
+    let args = js_sys::Object::new();
+    js_sys::Reflect::set(&args, &"enabled".into(), &wasm_bindgen::JsValue::from(enabled))
+        .map_err(|_| "failed to build invoke args".to_string())?;
+    let js = tauri_invoke("wellfair_set_med_reminders_enabled", args.into())
+        .await
+        .map_err(|e| format!("{e:?}"))?;
+    let json = js.as_string().ok_or_else(|| "set enabled response not JSON".to_string())?;
+    serde_json::from_str(&json).map_err(|e| e.to_string())
+}
+
+#[cfg(not(target_arch = "wasm32"))]
+pub async fn set_med_reminders_enabled(_enabled: bool) -> Result<MedReminderPrefsDto, String> {
+    Err("Med reminders require the Tauri desktop host".into())
+}
+
+#[cfg(target_arch = "wasm32")]
+pub async fn fetch_due_med_reminders(window_minutes: i32) -> Result<Vec<DueMedReminderDto>, String> {
+    let args = js_sys::Object::new();
+    js_sys::Reflect::set(
+        &args,
+        &"window_minutes".into(),
+        &wasm_bindgen::JsValue::from(window_minutes),
+    )
+    .map_err(|_| "failed to build invoke args".to_string())?;
+    let js = tauri_invoke("wellfair_list_due_med_reminders", args.into())
+        .await
+        .map_err(|e| format!("{e:?}"))?;
+    let json = js.as_string().ok_or_else(|| "due reminders response not JSON".to_string())?;
+    serde_json::from_str(&json).map_err(|e| e.to_string())
+}
+
+#[cfg(not(target_arch = "wasm32"))]
+pub async fn fetch_due_med_reminders(_window_minutes: i32) -> Result<Vec<DueMedReminderDto>, String> {
+    Ok(vec![])
+}
+
 #[derive(Debug, Clone, Serialize, Deserialize)]
 pub struct EmergencyContactDto {
     pub id: String,

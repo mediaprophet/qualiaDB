@@ -86,6 +86,10 @@ pub fn journal_kind_for_record_id(record_id: &str) -> &'static str {
         "condition"
     } else if record_id.contains(":allergy:") {
         "allergy"
+    } else if record_id.contains(":disputed_diagnosis:") {
+        "disputed_diagnosis"
+    } else if record_id.contains(":housing_safety:") {
+        "housing_safety"
     } else if record_id.contains(":medication:") {
         "medication"
     } else if record_id.contains(":med_admin:") {

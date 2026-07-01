@@ -29,8 +29,12 @@ pub struct HealthExportPackage {
     pub manifest: Vec<HealthExportManifestEntry>,
 }
 
-fn assurance_label(evidence_type: &str) -> &'static str {
-    if evidence_type.contains("SelfReported") {
+fn assurance_label(evidence_type: &str, kind: &str) -> &'static str {
+    if kind == "disputed_diagnosis" {
+        "disputed_self_reported_restricted"
+    } else if kind == "housing_safety" {
+        "safety_context_restricted"
+    } else if evidence_type.contains("SelfReported") {
         "self_reported_restricted"
     } else if evidence_type.contains("DeviceMeasured") {
         "device_measured_restricted"
@@ -76,7 +80,7 @@ pub fn build_export_package(
             evidence_type: entry.evidence_type.clone(),
             sensitivity: entry.sensitivity.clone(),
             asserted_time_unix: entry.asserted_time_unix,
-            assurance: assurance_label(&entry.evidence_type).to_string(),
+            assurance: assurance_label(&entry.evidence_type, &entry.kind).to_string(),
         });
     }
 

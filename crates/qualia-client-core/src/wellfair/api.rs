@@ -27,6 +27,14 @@ use wellfare_core::conditions::{
     allergy_summary, build_allergy_envelope, build_condition_envelope, condition_summary,
     AllergyReport, ConditionReport,
 };
+use wellfare_core::personal_records::{
+    build_disputed_diagnosis_envelope, build_housing_safety_envelope,
+    disputed_diagnosis_summary, housing_safety_summary, DisputedDiagnosisReport,
+    HousingSafetyReport,
+};
+use super::med_reminders::{
+    compute_due_reminders, load_prefs, save_prefs, DueMedReminder, MedReminderPrefs,
+};
 use wellfare_core::medication::{
     self, AdministrationStatus, DietEntry, MedicationAdministration, MedicationCatalogEntry,
 };
@@ -328,6 +336,50 @@ impl WebizenHostApi {
             .ok_or_else(|| "condition committed but not found in journal".to_string())
     }
 
+    pub fn add_disputed_diagnosis(
+        &mut self,
+        report: &DisputedDiagnosisReport,
+    ) -> Result<JournalEntry, String> {
+        let payload = serde_json::to_string(report).map_err(|e| e.to_string())?;
+        let hash = Self::payload_hash_hex(&payload);
+        let asserted = Self::now_unix() as u32;
+        let envelope = build_disputed_diagnosis_envelope(
+            report,
+            &self.owner_did,
+            &self.author_did,
+            asserted,
+            Some(hash),
+        );
+        let summary = disputed_diagnosis_summary(report);
+        self.submit_record_with_summary(QAPP_SHELL, envelope, SOURCE_PERSONAL, Some(summary))?;
+        self.list_health_records(1)?
+            .into_iter()
+            .next()
+            .ok_or_else(|| "disputed diagnosis committed but not found in journal".to_string())
+    }
+
+    pub fn add_housing_safety(
+        &mut self,
+        report: &HousingSafetyReport,
+    ) -> Result<JournalEntry, String> {
+        let payload = serde_json::to_string(report).map_err(|e| e.to_string())?;
+        let hash = Self::payload_hash_hex(&payload);
+        let asserted = Self::now_unix() as u32;
+        let envelope = build_housing_safety_envelope(
+            report,
+            &self.owner_did,
+            &self.author_did,
+            asserted,
+            Some(hash),
+        );
+        let summary = housing_safety_summary(report);
+        self.submit_record_with_summary(QAPP_SHELL, envelope, SOURCE_PERSONAL, Some(summary))?;
+        self.list_health_records(1)?
+            .into_iter()
+            .next()
+            .ok_or_else(|| "housing/safety committed but not found in journal".to_string())
+    }
+
     pub fn add_allergy(&mut self, report: &AllergyReport) -> Result<JournalEntry, String> {
         let payload = serde_json::to_string(report).map_err(|e| e.to_string())?;
         let hash = Self::payload_hash_hex(&payload);
@@ -531,6 +583,38 @@ impl WebizenHostApi {
         let store = EmergencyContactStore::open(&self.storage_root).map_err(|e| e.to_string())?;
         store.list().map_err(|e| e.to_string())
     }
+
+    pub fn med_reminder_prefs(&self) -> MedReminderPrefs {
+        load_prefs(&self.storage_root)
+    }
+
+    pub fn set_med_reminders_enabled(&self, enabled: bool) -> Result<MedReminderPrefs, String> {
+        let mut prefs = load_prefs(&self.storage_root);
+        if enabled && !prefs.permission_granted {
+            return Err("Grant reminder permission before enabling notifications".into());
+        }
+        prefs.enabled = enabled;
+        save_prefs(&self.storage_root, &prefs).map_err(|e| e.to_string())?;
+        Ok(prefs)
+    }
+
+    pub fn grant_med_reminder_permission(&self) -> Result<MedReminderPrefs, String> {
+        let mut prefs = load_prefs(&self.storage_root);
+        prefs.permission_granted = true;
+        prefs.permission_granted_at_unix = Some(Self::now_unix() as u32);
+        save_prefs(&self.storage_root, &prefs).map_err(|e| e.to_string())?;
+        Ok(prefs)
+    }
+
+    pub fn list_due_med_reminders(&self, window_minutes: i32) -> Result<Vec<DueMedReminder>, String> {
+        let prefs = load_prefs(&self.storage_root);
+        if !prefs.enabled || !prefs.permission_granted {
+            return Ok(Vec::new());
+        }
+        let journal = self.list_health_records(128)?;
+        let now = chrono::Local::now().time();
+        Ok(compute_due_reminders(&journal, now, window_minutes))
+    }
 }
 
 #[cfg(test)]
@@ -578,5 +662,26 @@ mod api_tests {
         let entry = host.add_allergy(&report).unwrap();
         assert_eq!(entry.kind, "allergy");
         assert!(entry.id.contains(":allergy:"));
+    }
+
+    #[test]
+    fn add_disputed_diagnosis_journal_kind() {
+        let dir = tempdir().unwrap();
+        let mut host = test_host(dir.path());
+        let report = DisputedDiagnosisReport::new("Bipolar disorder");
+        let entry = host.add_disputed_diagnosis(&report).unwrap();
+        assert_eq!(entry.kind, "disputed_diagnosis");
+        assert!(entry.id.contains(":disputed_diagnosis:"));
+    }
+
+    #[test]
+    fn add_housing_safety_journal_kind() {
+        let dir = tempdir().unwrap();
+        let mut host = test_host(dir.path());
+        let mut report = HousingSafetyReport::new();
+        report.dwelling_type = wellfare_core::personal_records::DwellingType::MobileShelter;
+        report.homelessness = true;
+        let entry = host.add_housing_safety(&report).unwrap();
+        assert_eq!(entry.kind, "housing_safety");
     }
 }

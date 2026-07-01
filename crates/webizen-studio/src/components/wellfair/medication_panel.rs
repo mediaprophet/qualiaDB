@@ -1,7 +1,9 @@
 //! Medication & Nutrition — catalogue, administrations, and diet (Phase 2 Q6).
 
 use super::host_client::{
-    add_diet_entry, add_medication, fetch_health_records, record_administration,
+    add_diet_entry, add_medication, fetch_due_med_reminders, fetch_health_records,
+    fetch_med_reminder_prefs, grant_med_reminder_permission, record_administration,
+    set_med_reminders_enabled, DueMedReminderDto, MedReminderPrefsDto,
 };
 use super::host_dto::HealthRecordDto;
 use dioxus::prelude::*;
@@ -17,6 +19,8 @@ pub fn WellfairMedicationPanel() -> Element {
     let mut diet_cal = use_signal(String::new);
     let mut rows = use_signal(Vec::<HealthRecordDto>::new);
     let mut status = use_signal(|| "Load medication and diet records from your vault.".to_string());
+    let mut reminder_prefs = use_signal(MedReminderPrefsDto::default);
+    let mut due_reminders = use_signal(Vec::<DueMedReminderDto>::new);
 
     let reload = move || {
         spawn(async move {
@@ -42,8 +46,20 @@ pub fn WellfairMedicationPanel() -> Element {
         });
     };
 
+    let reload_reminders = move || {
+        spawn(async move {
+            if let Ok(p) = fetch_med_reminder_prefs().await {
+                reminder_prefs.set(p);
+            }
+            if let Ok(due) = fetch_due_med_reminders(45).await {
+                due_reminders.set(due);
+            }
+        });
+    };
+
     use_effect(move || {
         reload();
+        reload_reminders();
     });
 
     let on_add_med = move |_| {
@@ -94,6 +110,66 @@ pub fn WellfairMedicationPanel() -> Element {
             p {
                 style: "margin:0 0 0.75rem;font-size:0.76rem;color:var(--qualia-text-muted,#666);",
                 "{status()}"
+            }
+
+            div {
+                style: "margin-bottom:1rem;padding:0.65rem;border:1px solid var(--qualia-border,#eee);border-radius:8px;",
+                h3 { style: "margin:0 0 0.35rem;font-size:0.88rem;", "Local reminders" }
+                p {
+                    style: "margin:0 0 0.5rem;font-size:0.74rem;color:var(--qualia-text-muted,#666);",
+                    "Schedule-based reminders stay on-device. Grant permission once, then enable."
+                }
+                if !reminder_prefs.read().permission_granted {
+                    button {
+                        style: "padding:0.35rem 0.65rem;border-radius:6px;border:none;background:#e76f51;color:#fff;font-size:0.78rem;cursor:pointer;margin-right:0.5rem;",
+                        onclick: move |_| {
+                            spawn(async move {
+                                match grant_med_reminder_permission().await {
+                                    Ok(p) => {
+                                        reminder_prefs.set(p);
+                                        status.set("Reminder permission granted.".into());
+                                    }
+                                    Err(e) => status.set(format!("Permission failed: {e}")),
+                                }
+                            });
+                        },
+                        "Grant reminder permission"
+                    }
+                } else {
+                    label {
+                        style: "display:flex;align-items:center;gap:0.4rem;font-size:0.78rem;",
+                        input {
+                            r#type: "checkbox",
+                            checked: reminder_prefs.read().enabled,
+                            onchange: move |e| {
+                                let on = e.checked();
+                                spawn(async move {
+                                    match set_med_reminders_enabled(on).await {
+                                        Ok(p) => reminder_prefs.set(p),
+                                        Err(err) => status.set(format!("{err}")),
+                                    }
+                                });
+                            },
+                        }
+                        "Enable medication reminders"
+                    }
+                }
+                if !due_reminders.read().is_empty() {
+                    ul {
+                        style: "margin:0.5rem 0 0;padding:0;list-style:none;font-size:0.76rem;",
+                        for r in due_reminders.read().clone() {
+                            li {
+                                key: "{r.medication_id}-{r.schedule_slot}",
+                                style: "padding:0.25rem 0;",
+                                strong { "{r.medication_name}" }
+                                span { " — due {r.schedule_slot}" }
+                                if r.minutes_until_due < 0 {
+                                    span { style: "color:#c1121f;margin-left:0.35rem;", "(overdue)" }
+                                }
+                            }
+                        }
+                    }
+                }
             }
 
             div {

@@ -9,6 +9,7 @@ pub mod graph_store;
 pub mod host_state;
 pub mod import_samsung;
 pub mod journal;
+pub mod med_reminders;
 #[cfg(test)]
 mod medication_flow;
 pub mod policy;
