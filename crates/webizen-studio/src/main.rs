@@ -151,10 +151,6 @@ fn AboutRoute() -> Element {
     rsx! { components::about_page::AboutPage {} }
 }
 
-const SHOELACE_CSS: &str =
-    "https://cdn.jsdelivr.net/npm/@shoelace-style/shoelace@2.15.0/cdn/themes/dark.css";
-const SHOELACE_JS: &str =
-    "https://cdn.jsdelivr.net/npm/@shoelace-style/shoelace@2.15.0/cdn/shoelace-autoloader.js";
 const INTER_FONT: &str =
     "https://fonts.googleapis.com/css2?family=Inter:wght@300;400;500;600;700&display=swap";
 
@@ -419,11 +415,13 @@ fn App() -> Element {
         .get("bg-gradient")
         .cloned()
         .unwrap_or(format!("linear-gradient(160deg, {bg} 0%, {bg} 100%)"));
+    let shoelace_css = crate::endpoints::shoelace_stylesheet_href();
+    let shoelace_js = crate::endpoints::shoelace_autoloader_src();
 
     rsx! {
-        document::Link { rel: "stylesheet", href: SHOELACE_CSS }
+        document::Link { rel: "stylesheet", href: "{shoelace_css}" }
         document::Link { rel: "stylesheet", href: INTER_FONT }
-        document::Script { r#type: "module", src: SHOELACE_JS }
+        document::Script { r#type: "module", src: "{shoelace_js}" }
         document::Link { rel: "icon", href: "https://www.webizen.org/favicon.ico" }
         document::Title { "Webizen" }
 

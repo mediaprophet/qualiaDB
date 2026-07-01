@@ -29,6 +29,27 @@ pub fn telemetry_url() -> String {
     format!("{DAEMON_HTTP}/telemetry")
 }
 
+/// Bundled Shoelace path (offline Tauri desktop). GH Pages demo uses CDN.
+pub const SHOELACE_VENDOR_BASE: &str = "/vendor/shoelace";
+pub const SHOELACE_CDN_BASE: &str =
+    "https://cdn.jsdelivr.net/npm/@shoelace-style/shoelace@2.15.0/cdn";
+
+pub fn shoelace_base() -> &'static str {
+    if is_native_host() {
+        SHOELACE_VENDOR_BASE
+    } else {
+        SHOELACE_CDN_BASE
+    }
+}
+
+pub fn shoelace_stylesheet_href() -> String {
+    format!("{}/themes/dark.css", shoelace_base())
+}
+
+pub fn shoelace_autoloader_src() -> String {
+    format!("{}/shoelace-autoloader.js", shoelace_base())
+}
+
 /// True when a local Webizen daemon could plausibly be reached.
 ///
 /// On native builds this is always true. On wasm it is true only inside the

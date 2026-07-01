@@ -143,6 +143,7 @@ pub fn NodeGraphCanvas(page: Page) -> Element {
                     ) {
                         path {
                             key: "{edge.from_idx}-{edge.to_idx}-{edge.label}",
+                            class: "node-graph-edge",
                             d: "{cubic_path(from.cx, from.cy, to.cx, to.cy)}",
                             fill: "none",
                             stroke: "var(--qualia-accent, #f59e0b)",

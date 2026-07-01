@@ -154,32 +154,57 @@ pub fn clamp_pane_size(w: i32, h: i32, x: u16, y: u16, grid_w: u16, grid_h: u16)
     (w.clamp(4, max_w as i32) as u16, h.clamp(4, max_h as i32) as u16)
 }
 
-/// QPrime semantic elevation + reduced-motion guard.
+/// QPrime motion layer: elevation utilities, pane breathe, graph edge pulse.
 pub fn qprime_elevation_css() -> &'static str {
     r#"
-.webizen-studio-shell {
-  --qualia-elevation-1: 0 12px 26px rgba(0, 0, 0, 0.18);
-  --qualia-elevation-2: 0 22px 50px rgba(0, 0, 0, 0.28);
-  --qualia-elevation-3: 0 28px 80px rgba(0, 0, 0, 0.38);
-}
 .webizen-module-pane {
   backdrop-filter: blur(12px);
   -webkit-backdrop-filter: blur(12px);
-  transition: box-shadow 0.22s ease, transform 0.22s ease, border-color 0.18s ease;
+  box-shadow: var(--qualia-elevation-1);
+  transition:
+    box-shadow var(--qualia-motion-duration) var(--qualia-motion-ease),
+    transform var(--qualia-motion-duration) var(--qualia-motion-ease),
+    border-color calc(var(--qualia-motion-duration) * 0.8) var(--qualia-motion-ease);
 }
 .webizen-module-pane[data-selected="true"] {
   transform: translateY(-2px);
   box-shadow: var(--qualia-elevation-2);
   z-index: 12;
+  animation: qprime-pane-breathe 2.8s var(--qualia-motion-ease) infinite;
+}
+.theme-sanctuary .webizen-module-pane[data-selected="true"] {
+  animation: none;
+  transform: none;
 }
 .webizen-canvas-toolbar button {
-  transition: background 0.15s ease, border-color 0.15s ease, opacity 0.15s ease;
+  transition:
+    background var(--qualia-motion-duration) var(--qualia-motion-ease),
+    border-color var(--qualia-motion-duration) var(--qualia-motion-ease),
+    opacity var(--qualia-motion-duration) var(--qualia-motion-ease);
+}
+.webizen-canvas-toolbar button:focus-visible,
+.webizen-module-pane:focus-visible {
+  outline: var(--qualia-focus-ring-offset) solid transparent;
+  box-shadow: var(--qualia-focus-ring), var(--qualia-elevation-1);
+}
+.node-graph-edge {
+  animation: qprime-edge-pulse 3.2s ease-in-out infinite;
+}
+@keyframes qprime-pane-breathe {
+  0%, 100% { box-shadow: var(--qualia-elevation-2); }
+  50% { box-shadow: var(--qualia-elevation-3); }
+}
+@keyframes qprime-edge-pulse {
+  0%, 100% { opacity: 0.45; stroke-width: 1.5; }
+  50% { opacity: 0.85; stroke-width: 2.25; }
 }
 @media (prefers-reduced-motion: reduce) {
   .webizen-module-pane,
-  .webizen-canvas-toolbar button {
+  .webizen-canvas-toolbar button,
+  .node-graph-edge {
     transition: none !important;
     transform: none !important;
+    animation: none !important;
   }
 }
 "#

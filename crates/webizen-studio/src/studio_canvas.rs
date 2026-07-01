@@ -48,7 +48,7 @@ use crate::pane_registry::{
 };
 use crate::theme_engine::{
     builtin_theme_catalog, collect_stylesheets, join_theme_classes, render_scope_tokens,
-    resolve_theme, ResolvedTheme, ThemeBinding, ThemeDefinition,
+    resolve_theme, theme_binding_provenance, ResolvedTheme, ThemeBinding, ThemeDefinition,
 };
 
 pub use crate::canvas_model::{
@@ -1217,6 +1217,25 @@ pub fn DynamicPage(path: Vec<String>, #[props(default)] app_id: Option<String>) 
                                         style: "margin-bottom: 0.5rem;",
                                         span { style: "color: var(--qualia-text-muted, #888);", "Component: " }
                                         span { style: "color: var(--qualia-accent, #0ff);", "{pane.component_id}" }
+                                    }
+                                    div {
+                                        style: "display: flex; flex-wrap: wrap; gap: 0.3rem; margin-bottom: 0.55rem;",
+                                        span {
+                                            style: "font-size: 0.62rem; padding: 0.12rem 0.45rem; border-radius: 999px; background: rgba(245,158,11,0.12); color: var(--qualia-accent); border: 1px solid rgba(245,158,11,0.25);",
+                                            "{theme_binding_provenance(&pane.theme)}"
+                                        }
+                                        if pane.binds_rpc.is_some() {
+                                            span {
+                                                style: "font-size: 0.62rem; padding: 0.12rem 0.45rem; border-radius: 999px; background: rgba(59,130,246,0.12); color: #93c5fd; border: 1px solid rgba(59,130,246,0.25);",
+                                                "Shared via RPC"
+                                            }
+                                        }
+                                        if !pane.data_bindings.is_empty() {
+                                            span {
+                                                style: "font-size: 0.62rem; padding: 0.12rem 0.45rem; border-radius: 999px; background: rgba(16,185,129,0.1); color: #6ee7b7; border: 1px solid rgba(16,185,129,0.22);",
+                                                "Ontology bound"
+                                            }
+                                        }
                                     }
                                     if editor_mode() == CanvasEditorMode::Edit {
                                         div {

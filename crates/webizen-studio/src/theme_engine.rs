@@ -123,6 +123,8 @@ pub fn builtin_theme_catalog() -> Vec<ThemeDefinition> {
                 ("accent".to_string(), "#2b6cb0".to_string()), // Calm, trustworthy blue
                 ("accent-glow".to_string(), "rgba(43, 108, 176, 0.1)".to_string()),
                 ("bg-gradient".to_string(), "none".to_string()), // Muted, gentle
+                ("motion-duration".to_string(), "0ms".to_string()),
+                ("motion-ease".to_string(), "linear".to_string()),
             ]),
         },
         ThemeDefinition {
@@ -172,15 +174,80 @@ pub fn resolve_theme(binding: Option<&ThemeBinding>, catalog: &[ThemeDefinition]
     resolved
 }
 
-pub fn render_scope_tokens(selector: &str, theme: &ResolvedTheme) -> Option<String> {
-    if theme.tokens.is_empty() {
-        return None;
-    }
+/// Motion, elevation, typography, and focus tokens shared by every QPrime scope.
+pub fn qprime_system_token_pairs() -> [(&'static str, &'static str); 12] {
+    [
+        ("elevation-0", "none"),
+        (
+            "elevation-1",
+            "0 12px 26px rgba(0, 0, 0, 0.18)",
+        ),
+        (
+            "elevation-2",
+            "0 22px 50px rgba(0, 0, 0, 0.28)",
+        ),
+        (
+            "elevation-3",
+            "0 28px 80px rgba(0, 0, 0, 0.38)",
+        ),
+        ("motion-duration", "220ms"),
+        ("motion-ease", "cubic-bezier(0.22, 1, 0.36, 1)"),
+        ("type-scale", "1"),
+        ("type-scale-sm", "0.875"),
+        ("type-scale-lg", "1.125"),
+        (
+            "focus-ring",
+            "0 0 0 3px var(--qualia-accent-glow, rgba(245, 158, 11, 0.35))",
+        ),
+        ("focus-ring-color", "var(--qualia-accent, #f59e0b)"),
+        ("focus-ring-offset", "2px"),
+    ]
+}
 
+/// Shoelace design tokens bridged from Qualia accent/surface tokens.
+pub fn shoelace_bridge_css(selector: &str, theme: &ResolvedTheme) -> String {
+    let accent = theme
+        .tokens
+        .get("accent")
+        .map(String::as_str)
+        .unwrap_or("#f59e0b");
+    let surface = theme
+        .tokens
+        .get("surface")
+        .map(String::as_str)
+        .unwrap_or("rgba(20, 28, 48, 0.7)");
+    let text = theme
+        .tokens
+        .get("text")
+        .map(String::as_str)
+        .unwrap_or("#f8f9fb");
+    format!(
+        "{selector} {{
+  --sl-color-primary-600: {accent};
+  --sl-color-primary-500: {accent};
+  --sl-color-primary-400: {accent};
+  --sl-color-neutral-0: {surface};
+  --sl-color-neutral-50: {surface};
+  --sl-color-neutral-900: {text};
+  --sl-focus-ring: var(--qualia-focus-ring);
+  --sl-transition-fast: var(--qualia-motion-duration);
+  --sl-transition-medium: var(--qualia-motion-duration);
+}}
+"
+    )
+}
+
+pub fn render_scope_tokens(selector: &str, theme: &ResolvedTheme) -> Option<String> {
+    let mut css = format!("{selector} {{\n");
+    for (token, value) in qprime_system_token_pairs() {
+        css.push_str("  --qualia-");
+        css.push_str(token);
+        css.push_str(": ");
+        css.push_str(value);
+        css.push_str(";\n");
+    }
     let mut pairs: Vec<_> = theme.tokens.iter().collect();
     pairs.sort_by(|left, right| left.0.cmp(right.0));
-
-    let mut css = format!("{selector} {{\n");
     for (token, value) in pairs {
         css.push_str("  --qualia-");
         css.push_str(token);
@@ -189,6 +256,7 @@ pub fn render_scope_tokens(selector: &str, theme: &ResolvedTheme) -> Option<Stri
         css.push_str(";\n");
     }
     css.push_str("}\n");
+    css.push_str(&shoelace_bridge_css(selector, theme));
     Some(css)
 }
 
@@ -210,6 +278,53 @@ pub fn join_theme_classes(base_class: &str, theme: &ResolvedTheme) -> String {
             format!("{base_class} {class_name}")
         }
         _ => base_class.to_string(),
+    }
+}
+
+/// Human-readable provenance for inspector chips (Phase 2B).
+pub fn theme_binding_provenance(binding: &ThemeBinding) -> &'static str {
+    if !binding.tokens.is_empty()
+        || binding
+            .stylesheet_href
+            .as_ref()
+            .is_some_and(|h| !h.trim().is_empty())
+        || binding
+            .class_name
+            .as_ref()
+            .is_some_and(|c| !c.trim().is_empty())
+    {
+        "Locally overridden"
+    } else if binding.theme_id.is_some() {
+        "Inherited from preset"
+    } else {
+        "Workspace default"
+    }
+}
+
+#[cfg(test)]
+mod tests {
+    use super::*;
+
+    #[test]
+    fn shoelace_bridge_maps_accent() {
+        let theme = resolve_theme(
+            Some(&ThemeBinding {
+                theme_id: Some("fiduciary-dark".to_string()),
+                ..Default::default()
+            }),
+            &builtin_theme_catalog(),
+        );
+        let css = shoelace_bridge_css(":root", &theme);
+        assert!(css.contains("--sl-color-primary-600: #f59e0b"));
+    }
+
+    #[test]
+    fn sanctuary_zero_motion_override() {
+        let theme = builtin_theme_catalog()
+            .into_iter()
+            .find(|t| t.id == "sanctuary")
+            .expect("sanctuary preset");
+        assert_eq!(theme.tokens.get("motion-duration").map(String::as_str), Some("0ms"));
     }
 }
 
