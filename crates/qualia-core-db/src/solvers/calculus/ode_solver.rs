@@ -21,7 +21,7 @@
 //! ```
 
 #[cfg(not(target_arch = "wasm32"))]
-use crate::platform::gpu::{GpuError, GpuIntegrator, PlatformGpuIntegrator};
+use crate::platform::gpu::{GpuError, PlatformGpuIntegrator};
 use crate::NQuin;
 
 // ─── BVP Convergence (Shooting Method) ──────────────────────────────────────────
@@ -591,7 +591,7 @@ impl<S: OdeSystem> Rk4Solver<S> {
     #[cfg(not(target_arch = "wasm32"))]
     pub fn step_gpu(
         &mut self,
-        integrator: &mut PlatformGpuIntegrator,
+        _integrator: &mut PlatformGpuIntegrator,
         t: f64,
         y: f64,
         h: f64,

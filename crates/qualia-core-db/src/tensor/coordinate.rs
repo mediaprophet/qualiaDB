@@ -1,6 +1,5 @@
 //! Coordinate types and utilities for 10D tensor system
 
-use serde::{Deserialize, Serialize};
 
 /// Quantum context coordinate type
 pub type QuantumContext = f32;

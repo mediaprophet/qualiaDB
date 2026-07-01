@@ -4,6 +4,8 @@
 //! that leverage Phase 2 architectural enhancements for unprecedented performance and capabilities.
 
 #[cfg(not(target_arch = "wasm32"))]
+pub mod category_theory;
+#[cfg(not(target_arch = "wasm32"))]
 pub mod chemistry_modeling;
 #[cfg(not(target_arch = "wasm32"))]
 pub mod constructibility;

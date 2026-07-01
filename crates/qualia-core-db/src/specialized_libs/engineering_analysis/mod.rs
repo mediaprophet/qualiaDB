@@ -112,6 +112,12 @@ fn normal_cdf(x: f64) -> f64 {
 /// against the analytic conduction solutions.
 pub mod thermal_conduction;
 
+/// Real 2-D incompressible Navier–Stokes finite-volume solver (Chorin projection
+/// method on a staggered Cartesian grid). Backs `perform_fluid_analysis`. Split
+/// into its own library submodule (PROJECT RULE §11); carries its own correctness
+/// tests (lid-driven cavity, channel flow, pressure outlet).
+pub mod cfd;
+
 /// Engineering Analysis Library Manager
 pub struct EngineeringAnalysisLibrary {
     structural_analyzer: StructuralAnalyzer,
@@ -3587,7 +3593,7 @@ impl ReliabilityAnalyzer {
             .materials
             .values()
             .next()
-            .and_then(|m| {
+            .and_then(|_m| {
                 // Material doesn't carry geometric properties directly; use
                 // geometry dimensions as a proxy.
                 None::<f64>

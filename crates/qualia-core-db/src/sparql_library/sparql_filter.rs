@@ -523,9 +523,9 @@ impl ExpressionEvaluator {
     fn evaluate_subquery(
         query_id: u16,
         ctx: &SparqlQueryContext,
-        row: &BindingRow,
+        _row: &BindingRow,
     ) -> Result<EvalResult, String> {
-        let subquery = ctx
+        let _subquery = ctx
             .subqueries
             .get(query_id as usize)
             .ok_or("Subquery ID out of bounds")?;

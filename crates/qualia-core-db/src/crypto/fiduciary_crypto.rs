@@ -10,7 +10,7 @@
 //! standardized algorithm. The serialized key/signature byte layouts therefore changed.
 
 use fips204::ml_dsa_65;
-use fips204::traits::{KeyGen, SerDes, Signer, Verifier};
+use fips204::traits::{SerDes, Signer, Verifier};
 use serde::{Deserialize, Serialize};
 use serde_bytes;
 use sha3::{Digest, Sha3_512};
@@ -321,7 +321,7 @@ impl MlDsaKeyManager {
     /// Check if a key should be rotated based on the rotation policy.
     /// Returns true if the key has exceeded its maximum signature count
     /// or the rotation interval has elapsed.
-    pub fn should_rotate_key(&self, key_id: &str, signature_count: u64, key_age_seconds: u64) -> bool {
+    pub fn should_rotate_key(&self, _key_id: &str, signature_count: u64, key_age_seconds: u64) -> bool {
         signature_count >= self.key_rotation_policy.max_signatures
             || key_age_seconds >= self.key_rotation_policy.rotation_interval
     }

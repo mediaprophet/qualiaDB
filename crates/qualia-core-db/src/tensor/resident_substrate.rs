@@ -6,7 +6,7 @@ use core::cell::UnsafeCell;
 use std::sync::atomic::{AtomicU32, Ordering};
 use std::sync::OnceLock;
 
-use super::buffer_export::{parse_header, read_tensor_at, TENSOR_STRIDE};
+use super::buffer_export::{parse_header, read_tensor_at};
 use super::q42_integration::{
     Q42TensorView, TensorMetadata, TensorVolumeConfig, TensorVolumeError,
 };
@@ -90,7 +90,7 @@ impl ResidentTensorSubstrate {
         bytes: &[u8],
         default_subject_hash: u64,
     ) -> Result<u32, &'static str> {
-        let (header, header_len) = parse_header(bytes)?;
+        let (header, _header_len) = parse_header(bytes)?;
         let count = header.node_count as usize;
         if count > MAX_RESIDENT_NODES {
             return Err("resident substrate capacity exceeded");

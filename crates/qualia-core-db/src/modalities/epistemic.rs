@@ -1,4 +1,4 @@
-use crate::{q_hash, NQuin};
+use crate::NQuin;
 
 pub const OP_KNOWS: u8 = 0x20;
 pub const OP_BELIEVES: u8 = 0x21;

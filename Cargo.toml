@@ -15,6 +15,7 @@ members = [
     "crates/wellfare-core",
     "crates/qualia-semantic-library",
     "crates/webizen-lite-wasm",
+    "crates/qualia-q-forge",
 ]
 resolver = "2"
 

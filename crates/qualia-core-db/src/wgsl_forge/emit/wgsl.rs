@@ -1,6 +1,6 @@
 use std::fmt::Write;
 
-use super::{GeneratedShader, TargetBackend};
+use super::GeneratedShader;
 use crate::wgsl_forge::{ForgeError, KernelSpec, Op, Schedule, FORGE_SCHEMA_VERSION};
 
 pub fn emit_wgsl(kernel: &KernelSpec, schedule: Schedule) -> Result<GeneratedShader, ForgeError> {

@@ -8,7 +8,7 @@ use std::collections::HashMap;
 use std::sync::Arc;
 
 #[cfg(not(target_arch = "wasm32"))]
-use crate::q42_lexicon::{CborLdError, Q42CborLdParser, Q42Context, SemanticPayload};
+use crate::q42_lexicon::{CborLdError, Q42CborLdParser, Q42Context};
 #[cfg(not(target_arch = "wasm32"))]
 use crate::q42_volume::Q42Volume;
 
@@ -162,7 +162,7 @@ impl VaultManifestProcessor {
     pub fn validate_manifest(&self, manifest: &VaultManifest) -> Result<(), CborLdError> {
         // Check if all terms exist in Q42 lexicon
         for collection in &manifest.collections {
-            if let Some(hash) = self
+            if let Some(_hash) = self
                 .q42_context
                 .resolve_semantic_term(&collection.collection_type)
             {
@@ -173,7 +173,7 @@ impl VaultManifestProcessor {
         }
 
         for capability in &manifest.capabilities {
-            if let Some(hash) = self
+            if let Some(_hash) = self
                 .q42_context
                 .resolve_semantic_term(&capability.capability_type)
             {

@@ -1,15 +1,14 @@
 use axum::{
     body::{Body, Bytes},
     extract::{
-        ws::{Message, WebSocket},
+        ws::Message,
         Query, State, WebSocketUpgrade,
     },
     http::{header, HeaderMap, HeaderName, HeaderValue, Method, StatusCode},
     response::{IntoResponse, Response},
-    routing::{get, options, post},
+    routing::{get, post},
     Json, Router,
 };
-use core_affinity::CoreId;
 use futures_util::{SinkExt, StreamExt};
 use serde::{Deserialize, Serialize};
 use serde_json::json;
@@ -18,7 +17,7 @@ use std::sync::{Arc, Mutex};
 use tokio::sync::broadcast;
 use tokio_stream::wrappers::UnboundedReceiverStream;
 use tower_http::{
-    cors::{Any, CorsLayer},
+    cors::CorsLayer,
     services::ServeDir,
     set_header::SetResponseHeaderLayer,
 };

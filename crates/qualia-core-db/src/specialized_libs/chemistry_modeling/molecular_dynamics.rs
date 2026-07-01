@@ -260,7 +260,7 @@ pub fn run_md(
     let mut e_min = f64::INFINITY;
     let mut e_max = f64::NEG_INFINITY;
 
-    let mut record = |step: usize,
+    let record = |step: usize,
                       positions: &[[f64; 3]],
                       velocities: &[[f64; 3]],
                       forces: &[[f64; 3]],

@@ -509,7 +509,7 @@ pub struct DidCorsHelper;
 
 impl DidCorsHelper {
     /// Verify DID signature for CORS preflight
-    pub fn verify_did_signature(did: u64, signature: u64, challenge: u64) -> Result<bool, String> {
+    pub fn verify_did_signature(_did: u64, _signature: u64, _challenge: u64) -> Result<bool, String> {
         // In production, this would:
         // 1. Resolve DID to get public key
         // 2. Verify signature of challenge using public key

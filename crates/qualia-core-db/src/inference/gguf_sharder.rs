@@ -1176,7 +1176,7 @@ impl GgufTokenizer {
         if let Some(&id) = self.token_to_id_map.get(piece) {
             return vec![id];
         }
-        let mut word: String = piece.bytes().map(gpt2_byte_to_unicode).collect();
+        let word: String = piece.bytes().map(gpt2_byte_to_unicode).collect();
         if let Some(&id) = self.token_to_id_map.get(word.as_str()) {
             return vec![id];
         }

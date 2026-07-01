@@ -11,7 +11,7 @@ impl QTensorEngine {
         emb_dim: usize,
         tensors: &crate::gguf_sharder::LayerTensors,
         scratch_a: &mut [f32],
-        scratch_b: &mut [f32],
+        _scratch_b: &mut [f32],
     ) -> bool {
         // Phase 3: try the single-submit fused FFN first (one round-trip/layer). Requires resident
         // weights; on any ineligibility it returns false and we fall through to the per-GEMM path.

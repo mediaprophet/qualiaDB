@@ -1,9 +1,9 @@
-use crate::extension_manifest::{ExtensionCapability, ExtensionManifest};
+use crate::extension_manifest::ExtensionManifest;
 use crate::{q_hash, NQuin};
 use std::collections::HashMap;
 use std::fs;
 use std::path::{Path, PathBuf};
-use std::sync::{Arc, RwLock};
+use std::sync::RwLock;
 
 /// Global registry of discovered and provisioned capability extensions.
 pub struct ExtensionBus {

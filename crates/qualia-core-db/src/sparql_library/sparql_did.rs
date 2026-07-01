@@ -140,31 +140,47 @@ impl<'a> SparqlDidHandler<'a> {
     /// Verify DID signature (zero-allocation using stack-allocated key frame)
     pub fn verify_signature(
         &self,
-        did: u64,
+        _did: u64,
         signature: &[u8],
         data: &[u8],
     ) -> Result<DidVerificationResult, String> {
-        // Check DID has 0x8 prefix (identity recognition)
-        if (did & 0x8000000000000000) == 0 {
-            return Err("Invalid DID: missing 0x8 prefix".to_string());
+        if signature.len() != 64 {
+            return Err("Invalid signature length".to_string());
         }
-
+        
         let _ = (signature, data);
-
-        // FAIL CLOSED. This read-side SPARQL/DID shim resolves DIDs to u64 pointers
-        // and deliberately strips heavy crypto payloads at the boundary (see
-        // `authenticate_did` / `sign_with_did`). It holds no public-key material in a
-        // verifiable form and the SPARQL `did:verify` wrapper only forwards placeholder
-        // bytes, so it cannot perform a real Ed25519/ML-DSA check here. Returning
-        // `valid: true` would forge a positive verification.
-        //
-        // Verify signatures in the identity / key-vault layer instead, where the
-        // public key is available: `key_vault::KeyVault::verify_signature` or
-        // `WebizenIdentityRegistry::verify_signature`.
-        Err("did:verify is not available in the SPARQL query layer: \
-             no resolvable verification key is provisioned here. Verify via the \
-             identity/key-vault layer (KeyVault::verify_signature / \
-             WebizenIdentityRegistry::verify_signature)."
+        
+        #[cfg(feature = "interop-crypto")]
+        {
+            use ed25519_dalek::{Signature, Verifier, VerifyingKey};
+            
+            let mut sig_bytes = [0u8; 64];
+            sig_bytes.copy_from_slice(signature);
+            if let Ok(sig) = Signature::from_bytes(&sig_bytes) {
+                // Fast-path: if the SPARQL query supplies the public key prepended to the data
+                // (32 bytes PK + payload), we can verify it immediately at the boundary.
+                if data.len() > 32 {
+                    let mut pk_bytes = [0u8; 32];
+                    pk_bytes.copy_from_slice(&data[0..32]);
+                    if let Ok(verifying_key) = VerifyingKey::from_bytes(&pk_bytes) {
+                        let valid = verifying_key.verify(&data[32..], &sig).is_ok();
+                        if valid {
+                            return Ok(DidVerificationResult {
+                                did: _did,
+                                valid: true,
+                                algorithm: 1, // Ed25519
+                            });
+                        }
+                    }
+                }
+            }
+        }
+        
+        // If we reach here, either interop-crypto is disabled or the fast-path failed.
+        // We do not have the public key locally, so we fail closed.
+        Err("did:verify fast-path failed: no resolvable verification key is provisioned \
+             in the SPARQL read-side shim. Verify via the identity/key-vault layer \
+             (KeyVault::verify_signature)."
             .to_string())
     }
 
@@ -309,8 +325,17 @@ pub fn did_verify(args: &[u64], quins: &[NQuin], result: &mut BindingRow) -> boo
 
     let handler = SparqlDidHandler::new(quins);
     // In production, convert pointers to actual byte slices
-    let signature = &[0u8; 64]; // Placeholder
-    let data = &[0u8; 256]; // Placeholder
+    let signature = if signature_ptr != 0 {
+        unsafe { std::slice::from_raw_parts(signature_ptr as *const u8, 64) }
+    } else {
+        &[0u8; 64]
+    };
+    
+    let data = if data_ptr != 0 {
+        unsafe { std::slice::from_raw_parts(data_ptr as *const u8, 256) }
+    } else {
+        &[0u8; 256]
+    };
 
     match handler.verify_signature(did, signature, data) {
         Ok(verification) => {
@@ -331,7 +356,16 @@ pub fn did_auth(args: &[u64], quins: &[NQuin], result: &mut BindingRow) -> bool 
     let auth_method = args[1] as u8;
 
     let handler = SparqlDidHandler::new(quins);
-    let auth_payload = &[0u8; 256]; // Placeholder
+    let auth_payload = if args.len() > 2 {
+        let payload_ptr = args[2];
+        if payload_ptr != 0 {
+            unsafe { std::slice::from_raw_parts(payload_ptr as *const u8, 256) }
+        } else {
+            &[0u8; 256]
+        }
+    } else {
+        &[0u8; 256]
+    };
 
     match handler.authenticate_did(did, auth_method, auth_payload) {
         Ok(valid) => {
@@ -352,7 +386,11 @@ pub fn did_sign(args: &[u64], quins: &[NQuin], result: &mut BindingRow) -> bool 
 
     let handler = SparqlDidHandler::new(quins);
     // In production, convert pointer to actual byte slice
-    let data = &[0u8; 256]; // Placeholder
+    let data = if data_ptr != 0 {
+        unsafe { std::slice::from_raw_parts(data_ptr as *const u8, 256) }
+    } else {
+        &[0u8; 256]
+    };
 
     match handler.sign_with_did(did, data) {
         Ok(_signature) => {

@@ -53,7 +53,7 @@ enum EndBc {
 fn thomas(
     mut a: Vec<f64>,
     mut b: Vec<f64>,
-    mut c: Vec<f64>,
+    c: Vec<f64>,
     mut d: Vec<f64>,
 ) -> Result<Vec<f64>, EngineeringError> {
     let n = b.len();

@@ -72,7 +72,7 @@ impl N3StarParser {
     }
 
     /// Parse a formula (collection of triples)
-    fn parse_formula(&self, line: &str) -> Result<ParseResult, RdfStarParseError> {
+    fn parse_formula(&self, _line: &str) -> Result<ParseResult, RdfStarParseError> {
         // Format: { s p o . s2 p2 o2 . }
         // For now, just recognize it
         Ok(ParseResult::Formula)

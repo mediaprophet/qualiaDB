@@ -5,9 +5,6 @@
 
 use serde::{Deserialize, Serialize};
 use std::collections::HashMap;
-use std::fs::{File, OpenOptions};
-use std::path::Path;
-use std::sync::{Arc, Mutex};
 
 /// eBPF Firewall Manager
 pub struct EbpfFirewall {
@@ -549,7 +546,7 @@ impl EbpfFirewall {
         &self,
         fd: i32,
         program_id: u32,
-        program_type: ProgramType,
+        _program_type: ProgramType,
     ) -> Result<(), EbpfError> {
         #[cfg(target_os = "linux")]
         {
@@ -613,21 +610,21 @@ impl EbpfFirewall {
     }
 
     /// Detect socket type
-    fn detect_socket_type(&self, fd: i32) -> Result<SocketType, EbpfError> {
+    fn detect_socket_type(&self, _fd: i32) -> Result<SocketType, EbpfError> {
         // In real implementation, would use getsockopt() to detect type
         // For now, return default
         Ok(SocketType::Stream)
     }
 
     /// Detect protocol
-    fn detect_protocol(&self, fd: i32) -> Result<Protocol, EbpfError> {
+    fn detect_protocol(&self, _fd: i32) -> Result<Protocol, EbpfError> {
         // In real implementation, would use getsockopt() to detect protocol
         // For now, return default
         Ok(Protocol::Tcp)
     }
 
     /// Get local address
-    fn get_local_address(&self, fd: i32) -> Result<SocketAddress, EbpfError> {
+    fn get_local_address(&self, _fd: i32) -> Result<SocketAddress, EbpfError> {
         // In real implementation, would use getsockname()
         // For now, return default
         Ok(SocketAddress {
@@ -638,7 +635,7 @@ impl EbpfFirewall {
     }
 
     /// Get remote address
-    fn get_remote_address(&self, fd: i32) -> Result<Option<SocketAddress>, EbpfError> {
+    fn get_remote_address(&self, _fd: i32) -> Result<Option<SocketAddress>, EbpfError> {
         // In real implementation, would use getpeername()
         // For now, return None
         Ok(None)

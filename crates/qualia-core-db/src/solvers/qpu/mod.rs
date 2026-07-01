@@ -34,6 +34,7 @@ pub struct JobParameters {
     pub hamiltonian: Option<String>,
     /// Circuit JSON (gate-model problems)
     pub circuit: Option<String>,
+    pub circuit_depth: u32,
     pub shots: u32,
     pub extra: serde_json::Value,
 }
@@ -44,6 +45,7 @@ impl Default for JobParameters {
             num_qubits: 1,
             hamiltonian: None,
             circuit: None,
+            circuit_depth: 1,
             shots: 1000,
             extra: serde_json::Value::Null,
         }

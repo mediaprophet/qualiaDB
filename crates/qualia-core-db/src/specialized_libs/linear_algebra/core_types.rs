@@ -1,12 +1,5 @@
 use serde::{Deserialize, Serialize};
-use std::collections::HashMap;
-use std::sync::{Arc, Mutex};
 
-use super::computation::*;
-use super::optimization::*;
-use super::performance::*;
-use super::privacy::*;
-use super::storage::*;
 
 /// Matrix metadata
 #[derive(Debug, Clone, Serialize, Deserialize)]

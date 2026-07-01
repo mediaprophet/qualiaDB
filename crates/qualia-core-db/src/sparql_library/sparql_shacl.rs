@@ -4,7 +4,6 @@
 
 use crate::sparql_ast::*;
 use crate::sparql_executor::*;
-use crate::sparql_parser;
 use crate::sparql_planner::*;
 use crate::NQuin;
 

@@ -137,7 +137,7 @@ impl WebizenRegistry {
         }
 
         // Parse the verifying key
-        use ed25519_dalek::{Signature, Verifier, VerifyingKey};
+        use ed25519_dalek::{Signature, VerifyingKey};
         let vk =
             VerifyingKey::from_bytes(&key_bytes).map_err(|e| format!("Invalid public key: {e}"))?;
 

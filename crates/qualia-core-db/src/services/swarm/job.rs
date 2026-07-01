@@ -127,11 +127,11 @@ impl JobSpec {
 /// across nodes — the basis for content-addressed dispatch and dedup.
 pub fn content_id(input: &JobInput) -> u64 {
     let mut h: u64 = 0xcbf29ce484222325;
-    let mut byte = |b: u8, h: &mut u64| {
+    let byte = |b: u8, h: &mut u64| {
         *h ^= b as u64;
         *h = h.wrapping_mul(0x100000001b3);
     };
-    let mut word = |w: u64, h: &mut u64| {
+    let word = |w: u64, h: &mut u64| {
         for b in w.to_le_bytes() {
             byte(b, h);
         }

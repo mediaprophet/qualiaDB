@@ -11,12 +11,8 @@
 //! - Error handling and fallback mechanisms
 
 use crate::fiduciary_crypto::FiduciaryCrypto;
-use crate::lexicon::generate_60bit_token;
-use crate::zk_proofs::ZkProofSystem;
-use crate::NQuin;
-use core::mem;
 use core::ptr;
-use core::sync::atomic::{AtomicU32, AtomicU64, Ordering};
+use core::sync::atomic::Ordering;
 
 /// QPU Bridge Manager - Main interface for quantum computing operations
 ///
@@ -361,17 +357,17 @@ impl QPUBridgeManager {
     /// Submit to IBM Quantum API
     fn submit_to_ibm_quantum(
         &self,
-        job_id: &[u8; 64],
+        _job_id: &[u8; 64],
         circuit: &QuantumCircuit,
     ) -> Result<(), QPUBridgeError> {
         // This would make actual HTTP request to IBM Quantum API
         // For now, simulate success
 
         // Create authentication header
-        let auth_header = self.auth_manager.create_auth_header()?;
+        let _auth_header = self.auth_manager.create_auth_header()?;
 
         // Serialize quantum circuit
-        let circuit_json = self.serialize_circuit(circuit)?;
+        let _circuit_json = self.serialize_circuit(circuit)?;
 
         // Submit job
         // In production, this would be an HTTP POST request
@@ -418,7 +414,7 @@ impl QPUBridgeManager {
         params: QPUJobSubmissionParams,
     ) -> Result<QuantumCircuitParams, QPUBridgeError> {
         unsafe {
-            let input_data = core::slice::from_raw_parts(params.input_data, params.input_size);
+            let _input_data = core::slice::from_raw_parts(params.input_data, params.input_size);
 
             // Extract state vector from input
             let num_qubits = (params.input_size / 8) as u32;
@@ -444,7 +440,7 @@ impl QPUBridgeManager {
         params: QPUJobSubmissionParams,
     ) -> Result<QuantumCircuitParams, QPUBridgeError> {
         unsafe {
-            let input_data = core::slice::from_raw_parts(params.input_data, params.input_size);
+            let _input_data = core::slice::from_raw_parts(params.input_data, params.input_size);
 
             // Extract measurement basis from input
             let num_qubits = (params.input_size / 4) as u32;
@@ -552,7 +548,7 @@ impl QPUBridgeManager {
     }
 
     /// Serialize quantum circuit to JSON
-    fn serialize_circuit(&self, circuit: &QuantumCircuit) -> Result<[u8; 1024], QPUBridgeError> {
+    fn serialize_circuit(&self, _circuit: &QuantumCircuit) -> Result<[u8; 1024], QPUBridgeError> {
         // This would serialize the quantum circuit to JSON format
         // For now, return a placeholder
         let mut json_buffer = [0u8; 1024];

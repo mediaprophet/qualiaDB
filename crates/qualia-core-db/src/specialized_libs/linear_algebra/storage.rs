@@ -2,11 +2,7 @@ use serde::{Deserialize, Serialize};
 use std::collections::HashMap;
 use std::sync::{Arc, Mutex};
 
-use super::computation::*;
 use super::core_types::*;
-use super::optimization::*;
-use super::performance::*;
-use super::privacy::*;
 
 /// Matrix storage using ZNS for zero-copy operations
 pub struct MatrixStorage {
@@ -342,7 +338,7 @@ impl MatrixAllocator {
         })?;
 
         // Remove the free block from the list
-        let mut free_block = self.free_blocks.swap_remove(block_index);
+        let free_block = self.free_blocks.swap_remove(block_index);
 
         let start_address = free_block.start_address;
         let allocated_block = MemoryBlock {

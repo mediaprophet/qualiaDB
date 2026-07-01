@@ -183,7 +183,7 @@ impl<'a> UpdateExecutor<'a> {
         Ok(deleted as u64)
     }
 
-    fn execute_load(&mut self, uri: u64, graph: u64) -> Result<u64, String> {
+    fn execute_load(&mut self, _uri: u64, _graph: u64) -> Result<u64, String> {
         // In production, this would:
         // 1. Resolve URI hash to actual URL
         // 2. Fetch RDF from URL using HTTP client
@@ -202,7 +202,7 @@ impl<'a> UpdateExecutor<'a> {
         Ok((original_len - self.quins.len()) as u64)
     }
 
-    fn execute_create(&mut self, graph: u64) -> Result<u64, String> {
+    fn execute_create(&mut self, _graph: u64) -> Result<u64, String> {
         // Create a new named graph (metadata only)
         // In production, this would:
         // 1. Check if graph already exists

@@ -10,13 +10,6 @@
 //! - Authentication and rate limiting
 //! - Error handling and fallback mechanisms
 
-use crate::fiduciary_crypto::FiduciaryCrypto;
-use crate::lexicon::generate_60bit_token;
-use crate::zk_proofs::ZkProofSystem;
-use crate::NQuin;
-use core::mem;
-use core::ptr;
-use core::sync::atomic::{AtomicU32, AtomicU64, Ordering};
 
 /// QPU Bridge Manager - Main interface for quantum computing operations
 ///

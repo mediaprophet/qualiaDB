@@ -248,7 +248,7 @@ impl SemanticCuller {
     /// Cull a single Quin
     fn cull_single_quin(
         &mut self,
-        agency_id: &str,
+        _agency_id: &str,
         quin: &Quin,
         policy: Option<&AgencyPolicy>,
     ) -> CullingResult {

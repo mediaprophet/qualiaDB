@@ -17,7 +17,7 @@
 
 use std::collections::HashMap;
 
-use crate::frame_layout::{pack_float_object, unpack_float_object};
+use crate::frame_layout::pack_float_object;
 use crate::{q_hash, NQuin};
 use serde_json::Value;
 

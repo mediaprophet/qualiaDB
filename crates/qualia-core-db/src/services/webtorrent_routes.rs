@@ -2,7 +2,6 @@
 
 #![cfg(not(target_arch = "wasm32"))]
 
-use axum::body::Body;
 use axum::http::HeaderMap;
 use axum::{
     extract::{Path as AxumPath, State},
@@ -11,7 +10,6 @@ use axum::{
     routing::{get, post},
     Json, Router,
 };
-use serde::Serialize;
 use serde_json::json;
 use std::path::Path;
 

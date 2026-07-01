@@ -8,7 +8,6 @@ use std::io;
 
 use crate::q42_lex::{LexError, Q42LexMmap};
 use crate::q42_volume::Q42Volume;
-use crate::q_hash;
 
 /// Error type for CBOR-LD operations
 #[derive(Debug, Clone, PartialEq, Eq)]

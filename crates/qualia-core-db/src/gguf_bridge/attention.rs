@@ -89,7 +89,7 @@ impl QTensorEngine {
         proj_kind: u32,
         n_workgroups: u32,
         norm_weight: Option<&[f32]>,
-        mut readback_out: Option<&mut [f32]>,
+        readback_out: Option<&mut [f32]>,
     ) -> bool {
         // #48 correctness path: route native attention through the CPU reference (the wasm-proven
         // SDPA) when enabled — bypasses the GPU attention shader whose output is currently unbounded.

@@ -164,7 +164,7 @@ pub fn execution_environment_json() -> serde_json::Value {
     })
 }
 
-use crate::daemon_query::{self, QueryExecError};
+use crate::daemon_query::QueryExecError;
 
 #[derive(Clone)]
 struct DaemonSecurity {

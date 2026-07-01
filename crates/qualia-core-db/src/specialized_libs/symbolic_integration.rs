@@ -9,7 +9,7 @@
 //! Simpson fallback when the symbolic form is unavailable.
 
 use super::symbolic_algebra::{
-    add, c, cos, differentiate, div, exp, ln, mul, neg, pow, simplify, sin, sub, var, Expr,
+    add, c, cos, div, exp, ln, mul, neg, pow, simplify, sin, sub, var, Expr,
 };
 
 #[derive(Debug, Clone, PartialEq, Eq)]

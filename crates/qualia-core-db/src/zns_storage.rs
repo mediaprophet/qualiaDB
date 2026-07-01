@@ -5,9 +5,8 @@
 
 use serde::{Deserialize, Serialize};
 use std::collections::HashMap;
-use std::fs::{File, OpenOptions};
+use std::fs::OpenOptions;
 use std::path::Path;
-use std::sync::{Arc, Mutex};
 
 /// ZNS Zone Manager for hardware-sympathetic storage
 pub struct ZnsZoneManager {
@@ -177,7 +176,7 @@ impl ZnsZoneManager {
         let device_path = device_path.as_ref();
 
         // Open device file
-        let device_file = OpenOptions::new()
+        let _device_file = OpenOptions::new()
             .read(true)
             .write(true)
             .open(device_path)

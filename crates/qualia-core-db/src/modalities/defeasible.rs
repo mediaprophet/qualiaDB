@@ -1,4 +1,4 @@
-use crate::{q_hash, NQuin};
+use crate::NQuin;
 
 pub const OP_DEFEASIBLE_OVERRIDE: u8 = 0x50;
 // Shared with deontic logic; canonical bit position lives in the FrameLayout ABI.

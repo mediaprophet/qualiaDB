@@ -7,8 +7,9 @@
 //! Ported from `qpu/src/dispatcher.rs`.
 
 use super::{JobStatus, QpuError, QpuJob, QpuResult};
-use std::collections::HashMap;
+use std::collections::{BinaryHeap, HashMap};
 use std::sync::Arc;
+use std::cmp::Ordering;
 use tokio::sync::{Mutex, RwLock};
 
 // ── Job state ─────────────────────────────────────────────────────────────────
@@ -48,10 +49,40 @@ pub struct QueueStats {
 
 // ── Job queue ─────────────────────────────────────────────────────────────────
 
+/// Prioritized job wrapper for QGroup heuristic
+#[derive(Debug, Clone)]
+pub struct PrioritizedJob(pub QpuJob);
+
+impl PartialEq for PrioritizedJob {
+    fn eq(&self, other: &Self) -> bool {
+        self.0.job_id == other.0.job_id
+    }
+}
+impl Eq for PrioritizedJob {}
+
+impl PartialOrd for PrioritizedJob {
+    fn partial_cmp(&self, other: &Self) -> Option<Ordering> {
+        Some(self.cmp(other))
+    }
+}
+
+impl Ord for PrioritizedJob {
+    fn cmp(&self, other: &Self) -> Ordering {
+        // QGroup heuristic: group by similar circuit depth and shot count.
+        // We sort descending so the BinaryHeap (max-heap) pops highest depth first,
+        // and jobs with similar depths will be contiguous.
+        let depth_ord = self.0.parameters.circuit_depth.cmp(&other.0.parameters.circuit_depth);
+        if depth_ord != Ordering::Equal {
+            return depth_ord;
+        }
+        self.0.parameters.shots.cmp(&other.0.parameters.shots)
+    }
+}
+
 /// In-process job queue.  HTTP dispatch is performed by the caller via
 /// `submit_fn` passed to `process_queue`.
 pub struct JobQueue {
-    pending: Arc<Mutex<Vec<QpuJob>>>,
+    pending: Arc<Mutex<BinaryHeap<PrioritizedJob>>>,
     running: Arc<RwLock<HashMap<String, JobState>>>,
     completed: Arc<Mutex<Vec<QpuResult>>>,
 }
@@ -59,7 +90,7 @@ pub struct JobQueue {
 impl JobQueue {
     pub fn new() -> Self {
         Self {
-            pending: Arc::new(Mutex::new(Vec::new())),
+            pending: Arc::new(Mutex::new(BinaryHeap::new())),
             running: Arc::new(RwLock::new(HashMap::new())),
             completed: Arc::new(Mutex::new(Vec::new())),
         }
@@ -68,7 +99,7 @@ impl JobQueue {
     /// Enqueue a job for dispatch.
     pub async fn enqueue(&self, job: QpuJob) -> String {
         let id = job.job_id.clone();
-        self.pending.lock().await.push(job);
+        self.pending.lock().await.push(PrioritizedJob(job));
         id
     }
 
@@ -79,9 +110,13 @@ impl JobQueue {
     where
         F: Fn(&QpuJob) -> Result<String, String>,
     {
-        let jobs = {
+        let jobs: Vec<QpuJob> = {
             let mut pending = self.pending.lock().await;
-            std::mem::take(&mut *pending)
+            let mut jobs = Vec::with_capacity(pending.len());
+            while let Some(job) = pending.pop() {
+                jobs.push(job.0);
+            }
+            jobs
         };
 
         for job in jobs {
@@ -244,5 +279,48 @@ mod tests {
         let handler = FallbackHandler::new(false);
         let job = QpuJob::default();
         assert!(handler.simulate_classically(&job).is_err());
+    }
+
+    #[tokio::test]
+    async fn test_qgroup_heuristic_sorting() {
+        let q = JobQueue::new();
+        
+        let mut job1 = QpuJob::new("job1".into(), ProblemType::Vqe, JobParameters::default());
+        job1.parameters.circuit_depth = 10;
+        job1.parameters.shots = 1000;
+        
+        let mut job2 = QpuJob::new("job2".into(), ProblemType::Vqe, JobParameters::default());
+        job2.parameters.circuit_depth = 50;
+        job2.parameters.shots = 1000;
+        
+        let mut job3 = QpuJob::new("job3".into(), ProblemType::Vqe, JobParameters::default());
+        job3.parameters.circuit_depth = 10;
+        job3.parameters.shots = 2000;
+
+        let mut job4 = QpuJob::new("job4".into(), ProblemType::Vqe, JobParameters::default());
+        job4.parameters.circuit_depth = 50;
+        job4.parameters.shots = 500;
+
+        // Enqueue jobs in random order
+        q.enqueue(job1).await;
+        q.enqueue(job2).await;
+        q.enqueue(job3).await;
+        q.enqueue(job4).await;
+
+        let jobs = {
+            let mut pending = q.pending.lock().await;
+            let mut extracted = Vec::new();
+            while let Some(job) = pending.pop() {
+                extracted.push(job.0);
+            }
+            extracted
+        };
+
+        // BinaryHeap pops the largest first. 
+        // Based on our Ord implementation: highest depth first, then highest shots.
+        assert_eq!(jobs[0].job_id, "job2"); // depth: 50, shots: 1000
+        assert_eq!(jobs[1].job_id, "job4"); // depth: 50, shots: 500
+        assert_eq!(jobs[2].job_id, "job3"); // depth: 10, shots: 2000
+        assert_eq!(jobs[3].job_id, "job1"); // depth: 10, shots: 1000
     }
 }

@@ -112,37 +112,41 @@ pub fn fit(
         }
         if max_step < TOL {
             converged = true;
-            // Standard errors from info⁻¹ at the solution.
-            let mut std_errors = vec![0.0; p];
-            let mut z_values = vec![0.0; p];
-            let mut p_values = vec![0.0; p];
-            let mut ej = vec![0.0; p];
-            let mut cj = vec![0.0; p];
-            for a in 0..p {
-                ej.iter_mut().for_each(|v| *v = 0.0);
-                ej[a] = 1.0;
-                cholesky_solve(p, &l, &ej, &mut cj)?;
-                let se = if cj[a] > 0.0 { cj[a].sqrt() } else { 0.0 };
-                std_errors[a] = se;
-                if se > 0.0 {
-                    let z = beta[a] / se;
-                    z_values[a] = z;
-                    p_values[a] = normal::two_sided_p(z);
-                }
-            }
-            return Ok(CoxModel {
-                coefficients: beta,
-                std_errors,
-                z_values,
-                p_values,
-                log_partial_likelihood: log_pl,
-                n_iter: iters,
-                converged,
-            });
+            break;
         }
     }
-    let _ = (converged, log_pl);
-    Err(LearningError::NotConverged)
+    
+    // Standard errors from info⁻¹ at the solution.
+    let mut l = vec![0.0; p * p];
+    cholesky_factor(p, &info, &mut l).map_err(|_| LearningError::Singular)?;
+    
+    let mut std_errors = vec![0.0; p];
+    let mut z_values = vec![0.0; p];
+    let mut p_values = vec![0.0; p];
+    let mut ej = vec![0.0; p];
+    let mut cj = vec![0.0; p];
+    for a in 0..p {
+        ej.iter_mut().for_each(|v| *v = 0.0);
+        ej[a] = 1.0;
+        cholesky_solve(p, &l, &ej, &mut cj)?;
+        let se = if cj[a] > 0.0 { cj[a].sqrt() } else { 0.0 };
+        std_errors[a] = se;
+        if se > 0.0 {
+            let z = beta[a] / se;
+            z_values[a] = z;
+            p_values[a] = normal::two_sided_p(z);
+        }
+    }
+    
+    Ok(CoxModel {
+        coefficients: beta,
+        std_errors,
+        z_values,
+        p_values,
+        log_partial_likelihood: log_pl,
+        n_iter: iters,
+        converged,
+    })
 }
 
 #[cfg(test)]

@@ -1,5 +1,4 @@
 //! Read `.q42.lex` reverse-lexicon sidecars (Q42LEX format from qualia-cli ingest).
-use crate::lexicon::TAG_EMBEDDED;
 
 use std::collections::HashMap;
 use std::fs::File;

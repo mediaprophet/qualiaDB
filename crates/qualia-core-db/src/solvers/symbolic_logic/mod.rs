@@ -6,7 +6,6 @@
 
 use crate::solvers::SolversError as ExecutionError;
 use crate::solvers::{SolverConfig, SolverResult, SolverState};
-use crate::webizen::SlgOpcode;
 
 /// Forward chaining defeasible reasoning solver
 #[repr(C)]

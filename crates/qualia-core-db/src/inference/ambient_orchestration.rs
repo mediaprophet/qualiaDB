@@ -931,8 +931,8 @@ impl AmbientOrchestrationManager {
     /// Execute computation on device
     fn execute_computation_on_device(
         &self,
-        device: &AmbientDevice,
-        computation: &SubThresholdComputation,
+        _device: &AmbientDevice,
+        _computation: &SubThresholdComputation,
     ) -> Result<ComputationResult, AmbientError> {
         // In real implementation, would execute sub-threshold computation
         // For now, simulate computation
@@ -1014,7 +1014,7 @@ impl PowerManager {
     }
 
     /// Check if device can execute task
-    pub fn can_execute(&self, device: &AmbientDevice) -> bool {
+    pub fn can_execute(&self, _device: &AmbientDevice) -> bool {
         let battery_level = self.battery_monitor.current_level;
         let thermal_state = &self.thermal_monitor.thermal_state;
 
@@ -1040,7 +1040,7 @@ impl PowerManager {
     }
 
     /// Get battery level
-    pub fn get_battery_level(&self, device_id: &str) -> f64 {
+    pub fn get_battery_level(&self, _device_id: &str) -> f64 {
         self.battery_monitor.current_level
     }
 

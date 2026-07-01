@@ -39,7 +39,7 @@ const MAX_SLOTS: usize = SLG_ARENA_SIZE / QUIN_SIZE; // 917,504 slots
 use crate::modalities::logic::n3_compiler::{
     compile_rule_to_zero_heap, CompiledRule, CompiledTerm, CompiledTriple,
 };
-use crate::modalities::logic::n3_parser::{Rule, Term, Triple};
+use crate::modalities::logic::n3_parser::Rule;
 
 /// The 42MB Static Tabling Arena for SLG Resolution
 /// Implemented as a Zero-Allocation Static Ring-Buffer Arena
@@ -1979,7 +1979,7 @@ pub fn execute_vm_frame(
                 let start = f64::from_bits(start_bits);
                 let end = f64::from_bits(end_bits);
                 let step_size = f64::from_bits(step_size_bits as u64);
-                let kahan_compensation = f32::from_bits(kahan_bits);
+                let _kahan_compensation = f32::from_bits(kahan_bits);
 
                 // Create a mock continuous grid for demonstration (as bytes)
                 let grid_data: Vec<u8> = vec![0u8; 1000 * 8]; // 1000 f64 values
@@ -2000,7 +2000,7 @@ pub fn execute_vm_frame(
                 let start = f64::from_bits(start_bits);
                 let end = f64::from_bits(end_bits);
                 let step_size = f64::from_bits(step_size_bits as u64);
-                let kahan_compensation = f32::from_bits(kahan_bits);
+                let _kahan_compensation = f32::from_bits(kahan_bits);
 
                 // Create a mock continuous grid for demonstration (as bytes)
                 let grid_data: Vec<u8> = vec![0u8; 1000 * 8]; // 1000 f64 values

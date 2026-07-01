@@ -95,6 +95,7 @@ impl AngularMomentum {
     }
 }
 
+
 impl std::fmt::Display for AngularMomentum {
     fn fmt(&self, f: &mut std::fmt::Formatter<'_>) -> std::fmt::Result {
         write!(f, "{}", self.letter())
@@ -959,28 +960,45 @@ fn parse_fortran_float(s: &str) -> Result<f64, BasisSetError> {
 // ─── Error Type ───────────────────────────────────────────────────────────
 
 /// Errors that can occur during basis set parsing or operations.
-#[derive(Debug, thiserror::Error)]
+#[derive(Debug)]
 pub enum BasisSetError {
-    #[error("JSON parse error: {0}")]
-    JsonParse(#[from] serde_json::Error),
-
-    #[error("element Z={z} not found in basis set '{basis}'")]
+    JsonParse(serde_json::Error),
     ElementNotFound { z: u32, basis: String },
-
-    #[error("unknown function type: '{0}' (expected 'gto' or 'gto_spherical')")]
     UnknownFunctionType(String),
-
-    #[error("invalid angular momentum value: {0} (must be 0–255)")]
     InvalidAngularMomentum(i32),
-
-    #[error("dimension mismatch: expected {expected}, got {got} ({context})")]
     DimensionMismatch { expected: usize, got: usize, context: String },
-
-    #[error("failed to parse float from '{input}': {source}")]
-    FloatParse { input: String, #[source] std::num::ParseFloatError },
-
-    #[error("ECP potential not found for angular momentum {0}")]
+    FloatParse { input: String, source: std::num::ParseFloatError },
     EcpNotFound(AngularMomentum),
+}
+
+impl std::fmt::Display for BasisSetError {
+    fn fmt(&self, f: &mut std::fmt::Formatter<'_>) -> std::fmt::Result {
+        match self {
+            Self::JsonParse(e) => write!(f, "JSON parse error: {}", e),
+            Self::ElementNotFound { z, basis } => write!(f, "element Z={} not found in basis set '{}'", z, basis),
+            Self::UnknownFunctionType(s) => write!(f, "unknown function type: '{}' (expected 'gto' or 'gto_spherical')", s),
+            Self::InvalidAngularMomentum(am) => write!(f, "invalid angular momentum value: {} (must be 0–255)", am),
+            Self::DimensionMismatch { expected, got, context } => write!(f, "dimension mismatch: expected {}, got {} ({})", expected, got, context),
+            Self::FloatParse { input, source } => write!(f, "failed to parse float from '{}': {}", input, source),
+            Self::EcpNotFound(am) => write!(f, "ECP potential not found for angular momentum {}", am.0),
+        }
+    }
+}
+
+impl std::error::Error for BasisSetError {
+    fn source(&self) -> Option<&(dyn std::error::Error + 'static)> {
+        match self {
+            Self::JsonParse(e) => Some(e),
+            Self::FloatParse { source, .. } => Some(source),
+            _ => None,
+        }
+    }
+}
+
+impl From<serde_json::Error> for BasisSetError {
+    fn from(err: serde_json::Error) -> Self {
+        Self::JsonParse(err)
+    }
 }
 
 // ─── Element Symbol Lookup ────────────────────────────────────────────────

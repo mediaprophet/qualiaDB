@@ -12,7 +12,6 @@
 #![cfg(not(target_arch = "wasm32"))]
 
 use memmap2::MmapOptions;
-use std::collections::HashMap;
 use std::path::{Path, PathBuf};
 use std::sync::{Arc, RwLock};
 
@@ -373,7 +372,7 @@ impl StorageDriver for MmapApfsDriver {
 
     fn snapshot(&self, snapshot_id: &str) -> Result<(), StorageError> {
         let src = &self.inner.root;
-        let dst = snap_dir(src, snapshot_id);
+        let _dst = snap_dir(src, snapshot_id);
 
         #[cfg(target_os = "macos")]
         {

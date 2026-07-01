@@ -5,13 +5,11 @@
 
 use crate::q_hash;
 use std::collections::HashMap;
-use std::fs::{File, OpenOptions};
+use std::fs::OpenOptions;
 #[cfg(unix)]
 use std::os::unix::io::AsRawFd;
 
 use serde::{Deserialize, Serialize};
-#[cfg(windows)]
-use std::os::windows::io::AsRawHandle;
 use std::path::Path;
 
 /// CSD Manager for computational storage operations
@@ -351,7 +349,7 @@ impl CsdManager {
 
     /// Probe CSD device
     fn probe_device(&self, device_path: &str) -> Result<CsdDevice, CsdError> {
-        let device_file = OpenOptions::new()
+        let _device_file = OpenOptions::new()
             .read(true)
             .write(true)
             .open(device_path)
@@ -863,7 +861,7 @@ impl CsdPerformanceMonitor {
     }
 
     /// Update metrics
-    pub fn update_metrics(&mut self, operation_id: u64, execution_time: u64, data_size: u64) {
+    pub fn update_metrics(&mut self, _operation_id: u64, execution_time: u64, data_size: u64) {
         self.global_metrics.total_operations += 1;
         self.global_metrics.total_execution_time += execution_time;
         self.global_metrics.average_execution_time = self.global_metrics.total_execution_time

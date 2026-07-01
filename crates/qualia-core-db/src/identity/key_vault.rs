@@ -358,10 +358,10 @@ impl KeyVault {
 
         let cipher =
             Aes256Gcm::new_from_slice(&wrap_key_bytes).map_err(|_| "AES-GCM key init failed")?;
-        let aes_nonce = aes_gcm::Nonce::from_slice(&nonce_bytes);
+        let aes_nonce = aes_gcm::Nonce::try_from(nonce_bytes.as_slice()).unwrap();
 
         let ct_vec = cipher
-            .encrypt(aes_nonce, layer_key.raw().as_ref())
+            .encrypt(&aes_nonce, layer_key.raw().as_ref())
             .map_err(|_| "AES-GCM encryption failed")?;
 
         let mut ciphertext = [0u8; 48];
@@ -403,10 +403,10 @@ impl KeyVault {
 
         let cipher =
             Aes256Gcm::new_from_slice(&wrap_key_bytes).map_err(|_| "AES-GCM key init failed")?;
-        let nonce = aes_gcm::Nonce::from_slice(&encapsulated.nonce);
+        let nonce = aes_gcm::Nonce::try_from(encapsulated.nonce.as_slice()).unwrap();
 
         let plaintext = cipher
-            .decrypt(nonce, encapsulated.ciphertext.as_ref())
+            .decrypt(&nonce, encapsulated.ciphertext.as_ref())
             .map_err(|_| "AES-GCM decryption failed — wrong key or tampered ciphertext")?;
 
         if plaintext.len() != 32 {

@@ -1,0 +1,654 @@
+﻿
+warning: profiles for the non root package will be ignored, specify profiles at the workspace root:
+warning: C:\Projects\qualia-27062026\crates\qualia-core-db\Cargo.toml: unused manifest key: bench.1.atoi
+warning: C:\Projects\qualia-27062026\crates\qualia-core-db\Cargo.toml: unused manifest key: bench.1.csv
+warning: qualia-core-db@0.0.23: Qualia-DB: DirectML 1.15 linked from 
+C:\Projects\qualia-27062026\crates\qualia-core-db\..\..\vendor\directml\bin\x64-win.
+crates\qualia-core-db\src\specialized_libs\cryptographic_library\mod.rs:380:5: warning: variant `PCI_DSS` should have 
+an upper camel case name: help: convert the identifier to upper camel case: `PciDss`
+crates\qualia-core-db\src\specialized_libs\cryptographic_library\mod.rs:393:5: warning: variant `PCI_DSS` should have 
+an upper camel case name: help: convert the identifier to upper camel case: `PciDss`
+crates\qualia-core-db\src\specialized_libs\cryptographic_library\mod.rs:1314:5: warning: variant `zkSNARKs` should 
+have an upper camel case name: help: convert the identifier to upper camel case: `ZkSnarks`
+crates\qualia-core-db\src\specialized_libs\cryptographic_library\mod.rs:1315:5: warning: variant `zkSTARKs` should 
+have an upper camel case name: help: convert the identifier to upper camel case: `ZkStarks`
+crates\qualia-core-db\src\identity\key_vault.rs:361:41: warning: use of deprecated associated function 
+`aead::hybrid_array::Array::<T, U>::from_slice`: use `TryFrom` instead
+crates\qualia-core-db\src\identity\key_vault.rs:406:37: warning: use of deprecated associated function 
+`aead::hybrid_array::Array::<T, U>::from_slice`: use `TryFrom` instead
+crates\qualia-core-db\src\specialized_libs\cryptographic_library\mod.rs:3357:46: warning: use of deprecated associated 
+function `aead::hybrid_array::Array::<T, U>::from_slice`: use `TryFrom` instead
+crates\qualia-core-db\src\specialized_libs\cryptographic_library\mod.rs:3361:28: warning: use of deprecated associated 
+function `aead::hybrid_array::Array::<T, U>::from_slice`: use `TryFrom` instead
+crates\qualia-core-db\src\specialized_libs\cryptographic_library\mod.rs:3387:46: warning: use of deprecated associated 
+function `aead::hybrid_array::Array::<T, U>::from_slice`: use `TryFrom` instead
+crates\qualia-core-db\src\specialized_libs\cryptographic_library\mod.rs:3390:28: warning: use of deprecated associated 
+function `aead::hybrid_array::Array::<T, U>::from_slice`: use `TryFrom` instead
+crates\qualia-core-db\src\services\daemon.rs:3:20: warning: unused import: `SinkExt`
+crates\qualia-core-db\src\services\webizen_server.rs:12:20: warning: unused import: `SinkExt`
+crates\qualia-core-db\src\q42\p64_weight.rs:1092:9: warning: unused import: `std::io::Write`
+crates\qualia-core-db\src\specialized_libs\linear_algebra\optimization.rs:6:5: warning: unused import: `super::privacy`
+crates\qualia-core-db\src\specialized_libs\linear_algebra\optimization.rs:1:26: warning: unused import: `Serialize`
+crates\qualia-core-db\src\sparql_library\parsers\cbor_parser.rs:233:9: warning: unused import: `std::io::Read`
+crates\qualia-core-db\src\specialized_libs\linear_algebra\optimization.rs:1:13: warning: unused import: `Deserialize`
+crates\qualia-core-db\src\specialized_libs\linear_algebra\computation.rs:6:5: warning: unused import: `super::privacy`
+crates\qualia-core-db\src\governance\webizen_bytecode.rs:185:21: warning: value assigned to `stats` is never read
+crates\qualia-core-db\src\solvers\learning\survival\cox.rs:48:21: warning: value assigned to `iters` is never read
+crates\qualia-core-db\src\services\daemon.rs:7:7: warning: constant `OFFICIAL_WEB_HUB_ORIGIN` is never used
+crates\qualia-core-db\src\services\daemon.rs:8:7: warning: constant `QUERY_PAYLOAD_LIMIT_BYTES` is never used
+crates\qualia-core-db\src\services\daemon.rs:9:7: warning: constant `PROXY_FETCH_MAX_BYTES` is never used
+crates\qualia-core-db\src\services\daemon.rs:13:4: warning: function `proxy_target_allowed` is never used
+crates\qualia-core-db\src\services\daemon.rs:49:4: warning: function `ip_is_restricted` is never used
+crates\qualia-core-db\src\services\daemon.rs:58:4: warning: function `ws_query_error_json` is never used
+crates\qualia-core-db\src\services\daemon.rs:93:4: warning: function `decode_bench_load_b64` is never used
+crates\qualia-core-db\src\services\daemon.rs:172:5: warning: field `token` is never read
+crates\qualia-core-db\src\services\daemon.rs:177:8: warning: struct `NativeQueryRequest` is never constructed
+crates\qualia-core-db\src\services\daemon.rs:186:6: warning: enum `OutputFormat` is never used
+crates\qualia-core-db\src\services\daemon.rs:198:4: warning: function `negotiate_format` is never used
+crates\qualia-core-db\src\services\daemon_swarm.rs:27:11: warning: constant `DNSSEC_TXT_RECORD` is never used
+crates\qualia-core-db\src\services\daemon_swarm.rs:28:11: warning: constant `DNSSEC_CERT_RECORD` is never used
+crates\qualia-core-db\src\services\webizen_server.rs:33:7: warning: constant `QUERY_PAYLOAD_LIMIT_BYTES` is never used
+crates\qualia-core-db\src\platform\host.rs:202:8: warning: methods `get_inactive_buffer_mut` and `get_inactive_buffer` 
+are never used
+crates\qualia-core-db\src\platform\local_scheduler.rs:221:5: warning: fields `job_receiver` and `wal_path` are never 
+read
+crates\qualia-core-db\src\inference\inference_agent.rs:312:4: warning: function `cpu_embedding_forward` is never used
+crates\qualia-core-db\src\inference\inference_agent.rs:335:4: warning: function `lora_embedding_forward` is never used
+crates\qualia-core-db\src\inference\ambient_orchestration.rs:107:5: warning: field `resource_allocator` is never read
+crates\qualia-core-db\src\inference\ambient_orchestration.rs:128:5: warning: fields `workload_history`, 
+`prediction_model`, and `analysis_window` are never read
+crates\qualia-core-db\src\inference\ambient_orchestration.rs:172:5: warning: fields `allocation_strategy`, 
+`resource_pool`, and `allocation_history` are never read
+crates\qualia-core-db\src\inference\ambient_orchestration.rs:226:5: warning: fields `adaptation_strategy`, 
+`adaptation_history`, and `learning_rate` are never read
+crates\qualia-core-db\src\inference\ambient_orchestration.rs:284:5: warning: fields `power_policy` and 
+`power_optimizer` are never read
+crates\qualia-core-db\src\inference\ambient_orchestration.rs:322:5: warning: fields `voltage`, `temperature`, 
+`health`, `charging`, and `estimated_time_remaining` are never read
+crates\qualia-core-db\src\inference\ambient_orchestration.rs:332:5: warning: fields `gpu_temperature`, 
+`battery_temperature`, and `ambient_temperature` are never read
+crates\qualia-core-db\src\inference\ambient_orchestration.rs:379:5: warning: fields `optimization_algorithm`, 
+`optimization_history`, and `target_efficiency` are never read
+crates\qualia-core-db\src\inference\ambient_orchestration.rs:415:5: warning: fields `scheduling_policy` and 
+`execution_history` are never read
+crates\qualia-core-db\src\inference\ambient_orchestration.rs:438:5: warning: fields `running_tasks` and 
+`completed_tasks` are never read
+crates\qualia-core-db\src\inference\ambient_orchestration.rs:508:5: warning: field `task_metrics` is never read
+crates\qualia-core-db\src\q42\yaml_ld_q42.rs:21:5: warning: fields `buffer` and `cursor` are never read
+crates\qualia-core-db\src\modalities\logic\deontic.rs:492:4: warning: function `term_uri_hash` is never used
+crates\qualia-core-db\src\modalities\logic\specialized_libs_shacl.rs:352:5: warning: field `require_solvent_model` is 
+never read
+crates\qualia-core-db\src\modalities\logic\rules.rs:26:7: warning: constant `RULE_EVAL_PREDICATE` is never used
+crates\qualia-core-db\src\identity\agency.rs:5:7: warning: constant `LANE_KEY_LENGTH` is never used
+crates\qualia-core-db\src\identity\vault_manifest.rs:97:5: warning: field `cbor_ld_parser` is never read
+crates\qualia-core-db\src\net\acoustic_ble_mesh.rs:104:5: warning: fields `available_channels`, `active_channels`, and 
+`channel_allocation` are never read
+crates\qualia-core-db\src\net\acoustic_ble_mesh.rs:132:5: warning: fields `modem_type`, `transmission_power`, 
+`receiver_sensitivity`, and `signal_processing` are never read
+crates\qualia-core-db\src\net\acoustic_ble_mesh.rs:177:5: warning: fields `protocol_stack`, `packet_handler`, 
+`flow_control`, and `error_handling` are never read
+crates\qualia-core-db\src\net\acoustic_ble_mesh.rs:403:5: warning: fields `mesh_network`, `provisioning_manager`, 
+`configuration_manager`, and `message_handler` are never read
+crates\qualia-core-db\src\net\acoustic_ble_mesh.rs:495:5: warning: fields `provisioning_protocol`, 
+`provisioning_data`, and `oob_data` are never read
+crates\qualia-core-db\src\net\acoustic_ble_mesh.rs:537:5: warning: fields `config_database`, `config_models`, and 
+`access_control` are never read
+crates\qualia-core-db\src\net\acoustic_ble_mesh.rs:632:5: warning: fields `message_queue`, `routing_table`, and 
+`security_manager` are never read
+crates\qualia-core-db\src\net\acoustic_ble_mesh.rs:677:5: warning: fields `advertising_data`, `scan_response_data`, 
+`advertising_parameters`, and `active_advertisements` are never read
+crates\qualia-core-db\src\net\acoustic_ble_mesh.rs:730:5: warning: fields `scanning_parameters`, `scan_filter`, and 
+`active_scans` are never read
+crates\qualia-core-db\src\net\acoustic_ble_mesh.rs:789:5: warning: fields `connections`, `connection_parameters`, and 
+`security_manager` are never read
+crates\qualia-core-db\src\net\acoustic_ble_mesh.rs:868:5: warning: fields `forwarding_table`, `route_discovery`, and 
+`congestion_control` are never read
+crates\qualia-core-db\src\net\acoustic_ble_mesh.rs:988:5: warning: fields `buffer_manager`, `priority_queue`, and 
+`persistence_manager` are never read
+crates\qualia-core-db\src\net\acoustic_ble_mesh.rs:1095:5: warning: fields `acoustic_metrics`, `ble_metrics`, and 
+`routing_metrics` are never read
+crates\qualia-core-db\src\net\ebpf_filter.rs:395:11: warning: associated constant `XPC_SERVICE` is never used
+crates\qualia-core-db\src\tensor\volume_gpu.rs:29:5: warning: field `max_nodes` is never read
+crates\qualia-core-db\src\sparql_library\parsers\n3_star.rs:243:9: warning: field `rule_type` is never read
+crates\qualia-core-db\src\sparql_library\parsers\nquads_star.rs:13:5: warning: field `context_hash` is never read
+crates\qualia-core-db\src\sparql_library\parsers\nquads_star.rs:209:9: warning: fields `subject_str`, `predicate_str`, 
+`object_str`, and `graph_str` are never read
+crates\qualia-core-db\src\sparql_library\parsers\nquads_star.rs:220:9: warning: fields `outer_predicate_str`, 
+`outer_object_str`, and `outer_graph_str` are never read
+crates\qualia-core-db\src\sparql_library\parsers\ntriples_star.rs:15:5: warning: field `context_hash` is never read
+crates\qualia-core-db\src\sparql_library\parsers\ntriples_star.rs:188:9: warning: fields `subject_str`, 
+`predicate_str`, and `object_str` are never read
+crates\qualia-core-db\src\sparql_library\parsers\ntriples_star.rs:197:9: warning: fields `outer_predicate_str` and 
+`outer_object_str` are never read
+crates\qualia-core-db\src\sparql_library\parsers\trig_star.rs:13:5: warning: field `context_hash` is never read
+crates\qualia-core-db\src\sparql_library\parsers\turtle_star.rs:25:5: warning: variants `ExpectPredicate`, 
+`ExpectObject`, and `ExpectEmbeddedEnd` are never constructed
+crates\qualia-core-db\src\sparql_library\parsers\turtle_star.rs:87:8: warning: method `is_empty` is never used
+crates\qualia-core-db\src\sparql_library\parsers\turtle_star.rs:99:5: warning: field `context_hash` is never read
+crates\qualia-core-db\src\q42_lex.rs:19:7: warning: constant `LEX_TAG_WEBIZEN` is never used
+crates\qualia-core-db\src\render\pga.rs:365:4: warning: function `approx_eq3` is never used
+crates\qualia-core-db\src\render\gpu\mod.rs:61:5: warning: fields `hdr_texture`, `blur_a`, `blur_b`, `half_width`, and 
+`half_height` are never read
+crates\qualia-core-db\src\render\gpu\mod.rs:128:5: warning: field `projector_camera_layout` is never read
+crates\qualia-core-db\src\zns_storage.rs:69:5: warning: field `allocation_strategy` is never read
+crates\qualia-core-db\src\zns_storage.rs:95:5: warning: fields `completion_queue` and `scheduler_policy` are never read
+crates\qualia-core-db\src\crypto\zk_proofs.rs:15:16: warning: fields `proof_generator` and `proof_verifier` are never 
+read
+crates\qualia-core-db\src\crypto\zk_proofs.rs:60:16: warning: fields `variable_counter` and `current_circuit` are 
+never read
+crates\qualia-core-db\src\crypto\zk_proofs.rs:122:16: warning: field `witness_generator` is never read
+crates\qualia-core-db\src\crypto\zk_proofs.rs:128:16: warning: fields `assignments` and `random_values` are never read
+crates\qualia-core-db\src\crypto\zk_proofs.rs:255:16: warning: field `circuit_metrics` is never read
+crates\qualia-core-db\src\crypto\zk_proofs.rs:855:19: warning: method `generate_nonce` is never used
+crates\qualia-core-db\src\csd_storage.rs:129:5: warning: fields `running_operations`, `completion_queue`, and 
+`scheduling_policy` are never read
+crates\qualia-core-db\src\csd_storage.rs:224:5: warning: fields `device_metrics` and `function_metrics` are never read
+crates\qualia-core-db\src\csd_storage.rs:736:8: warning: methods `bytes_to_f32_slice`, `serialize_dimensions`, and 
+`serialize_convolution_dimensions` are never used
+crates\qualia-core-db\src\specialized_libs\chemistry_modeling\mod.rs:58:5: warning: field `boundary_conditions` is 
+never read
+crates\qualia-core-db\src\specialized_libs\chemistry_modeling\mod.rs:64:5: warning: field `simulation_config` is never 
+read
+crates\qualia-core-db\src\specialized_libs\chemistry_modeling\mod.rs:123:5: warning: fields `control_type`, 
+`adaptive_parameters`, and `stability_analysis` are never read
+crates\qualia-core-db\src\specialized_libs\chemistry_modeling\mod.rs:148:5: warning: fields `analysis_method`, 
+`energy_conservation`, and `temperature_fluctuation` are never read
+crates\qualia-core-db\src\specialized_libs\chemistry_modeling\mod.rs:241:5: warning: fields `control_method`, 
+`thermostat_parameters`, and `temperature_profile` are never read
+crates\qualia-core-db\src\specialized_libs\chemistry_modeling\mod.rs:357:5: warning: fields `bonded_interactions`, 
+`nonbonded_interactions`, and `long_range_interactions` are never read
+crates\qualia-core-db\src\specialized_libs\chemistry_modeling\mod.rs:364:5: warning: fields `bond_calculator`, 
+`angle_calculator`, `torsion_calculator`, and `improper_calculator` are never read
+crates\qualia-core-db\src\specialized_libs\chemistry_modeling\mod.rs:473:5: warning: fields `lennard_jones`, 
+`coulomb`, and `buckingham` are never read
+crates\qualia-core-db\src\specialized_libs\chemistry_modeling\mod.rs:507:5: warning: fields `ewald_summation`, 
+`particle_mesh`, and `reaction_field` are never read
+crates\qualia-core-db\src\specialized_libs\chemistry_modeling\mod.rs:539:5: warning: fields `kinetic_energy`, 
+`potential_energy`, and `total_energy` are never read
+crates\qualia-core-db\src\specialized_libs\chemistry_modeling\mod.rs:571:5: warning: fields `integrator_type` and 
+`integrator_parameters` are never read
+crates\qualia-core-db\src\specialized_libs\chemistry_modeling\mod.rs:597:5: warning: fields `constraint_algorithm` and 
+`constraint_parameters` are never read
+crates\qualia-core-db\src\specialized_libs\chemistry_modeling\mod.rs:620:5: warning: fields `boundary_type`, 
+`box_vectors`, and `minimum_image` are never read
+crates\qualia-core-db\src\specialized_libs\chemistry_modeling\mod.rs:641:5: warning: fields `method_type`, 
+`basis_set`, and `scf_parameters` are never read
+crates\qualia-core-db\src\specialized_libs\chemistry_modeling\mod.rs:710:5: warning: fields `electronic_energy`, 
+`nuclear_energy`, and `total_energy` are never read
+crates\qualia-core-db\src\specialized_libs\chemistry_modeling\mod.rs:742:5: warning: fields `dipole_moment`, 
+`polarizability`, and `mulliken_charges` are never read
+crates\qualia-core-db\src\specialized_libs\chemistry_modeling\mod.rs:770:5: warning: field `reaction_network` is never 
+read
+crates\qualia-core-db\src\specialized_libs\chemistry_modeling\mod.rs:777:5: warning: fields `reactions`, `species`, 
+and `pathways` are never read
+crates\qualia-core-db\src\specialized_libs\chemistry_modeling\mod.rs:852:5: warning: fields `rate_laws`, 
+`rate_constants`, and `reaction_rates` are never read
+crates\qualia-core-db\src\specialized_libs\chemistry_modeling\mod.rs:931:5: warning: field `thermodynamic_data` is 
+never read
+crates\qualia-core-db\src\specialized_libs\chemistry_modeling\mod.rs:949:5: warning: fields `equilibrium_constant`, 
+`reaction_quotient`, and `gibbs_energy` are never read
+crates\qualia-core-db\src\specialized_libs\chemistry_modeling\mod.rs:979:5: warning: fields `phase_diagrams`, 
+`phase_transitions`, and `phase_equilibria` are never read
+crates\qualia-core-db\src\specialized_libs\chemistry_modeling\mod.rs:1076:5: warning: field `machine_learning_models` 
+is never read
+crates\qualia-core-db\src\specialized_libs\chemistry_modeling\mod.rs:1139:5: warning: fields `molecular_descriptors`, 
+`quantum_descriptors`, and `topological_descriptors` are never read
+crates\qualia-core-db\src\specialized_libs\cryptographic_library\mod.rs:335:5: warning: fields `encryption_algorithm` 
+and `encryption_policy` are never read
+crates\qualia-core-db\src\specialized_libs\cryptographic_library\mod.rs:579:5: warning: field `authentication_methods` 
+is never read
+crates\qualia-core-db\src\specialized_libs\cryptographic_library\mod.rs:750:5: warning: fields `rotation_schedule` and 
+`rotation_history` are never read
+crates\qualia-core-db\src\specialized_libs\cryptographic_library\mod.rs:839:5: warning: fields `entries` and 
+`retention_policy` are never read
+crates\qualia-core-db\src\specialized_libs\cryptographic_library\mod.rs:856:5: warning: fields `recovery_methods`, 
+`recovery_policies`, and `recovery_attempts` are never read
+crates\qualia-core-db\src\specialized_libs\cryptographic_library\mod.rs:907:5: warning: fields `signing_algorithms` 
+and `verification_algorithms` are never read
+crates\qualia-core-db\src\specialized_libs\cryptographic_library\mod.rs:1024:5: warning: field 
+`optimization_strategies` is never read
+crates\qualia-core-db\src\specialized_libs\cryptographic_library\mod.rs:1050:5: warning: fields 
+`encryption_algorithms` and `decryption_algorithms` are never read
+crates\qualia-core-db\src\specialized_libs\cryptographic_library\mod.rs:1120:5: warning: field `derivation_functions` 
+is never read
+crates\qualia-core-db\src\specialized_libs\cryptographic_library\mod.rs:1146:5: warning: field 
+`optimization_strategies` is never read
+crates\qualia-core-db\src\specialized_libs\cryptographic_library\mod.rs:1172:5: warning: field `hash_algorithms` is 
+never read
+crates\qualia-core-db\src\specialized_libs\cryptographic_library\mod.rs:1199:5: warning: field `verification_records` 
+is never read
+crates\qualia-core-db\src\specialized_libs\cryptographic_library\mod.rs:1270:5: warning: field 
+`optimization_strategies` is never read
+crates\qualia-core-db\src\specialized_libs\cryptographic_library\mod.rs:1295:5: warning: field `proof_systems` is 
+never read
+crates\qualia-core-db\src\specialized_libs\cryptographic_library\mod.rs:1499:5: warning: fields 
+`verification_algorithms` and `batch_verifier` are never read
+crates\qualia-core-db\src\specialized_libs\cryptographic_library\mod.rs:1506:5: warning: fields `batch_size`, 
+`parallel_verification`, and `verification_queue` are never read
+crates\qualia-core-db\src\specialized_libs\cryptographic_library\mod.rs:1531:5: warning: fields 
+`optimization_strategies` and `performance_metrics` are never read
+crates\qualia-core-db\src\specialized_libs\cryptographic_library\mod.rs:1555:5: warning: field 
+`optimization_strategies` is never read
+crates\qualia-core-db\src\specialized_libs\cryptographic_library\mod.rs:1588:5: warning: fields `threat_signatures` 
+and `detection_rules` are never read
+crates\qualia-core-db\src\specialized_libs\cryptographic_library\mod.rs:1690:5: warning: fields `alert_types`, 
+`notification_channels`, and `escalation_policies` are never read
+crates\qualia-core-db\src\specialized_libs\cryptographic_library\mod.rs:1707:5: warning: fields 
+`detection_algorithms`, `baseline_models`, and `alert_thresholds` are never read
+crates\qualia-core-db\src\specialized_libs\cryptographic_library\mod.rs:1742:5: warning: fields 
+`compliance_frameworks` and `audit_trail` are never read
+crates\qualia-core-db\src\specialized_libs\cryptographic_library\mod.rs:1785:5: warning: fields `entries` and 
+`retention_policy` are never read
+crates\qualia-core-db\src\specialized_libs\cryptographic_library\mod.rs:1823:5: warning: field `report_templates` is 
+never read
+crates\qualia-core-db\src\specialized_libs\cryptographic_library\mod.rs:1868:5: warning: fields `schedules` and 
+`scheduler` are never read
+crates\qualia-core-db\src\specialized_libs\cryptographic_library\mod.rs:1904:5: warning: fields `scheduler_type` and 
+`queue_manager` are never read
+crates\qualia-core-db\src\specialized_libs\cryptographic_library\mod.rs:1919:5: warning: fields `pending_reports`, 
+`running_reports`, and `completed_reports` are never read
+crates\qualia-core-db\src\specialized_libs\cryptographic_library\mod.rs:1962:5: warning: fields 
+`distribution_channels` and `delivery_tracker` are never read
+crates\qualia-core-db\src\specialized_libs\cryptographic_library\mod.rs:2013:5: warning: fields `deliveries` and 
+`status` are never read
+crates\qualia-core-db\src\specialized_libs\engineering_analysis\mod.rs:144:5: warning: fields `buckling_analysis` and 
+`vibration_analysis` are never read
+crates\qualia-core-db\src\specialized_libs\engineering_analysis\mod.rs:165:5: warning: field `mesh_quality` is never 
+read
+crates\qualia-core-db\src\specialized_libs\engineering_analysis\mod.rs:381:5: warning: fields `solvers`, 
+`solver_parameters`, and `convergence_criteria` are never read
+crates\qualia-core-db\src\specialized_libs\engineering_analysis\mod.rs:461:5: warning: field `result_extractors` is 
+never read
+crates\qualia-core-db\src\specialized_libs\engineering_analysis\mod.rs:500:5: warning: fields `visualization_types` 
+and `rendering_engine` are never read
+crates\qualia-core-db\src\specialized_libs\engineering_analysis\mod.rs:541:5: warning: fields `report_templates` and 
+`export_formats` are never read
+crates\qualia-core-db\src\specialized_libs\engineering_analysis\mod.rs:609:5: warning: fields `modal_analysis`, 
+`transient_analysis`, and `harmonic_analysis` are never read
+crates\qualia-core-db\src\specialized_libs\engineering_analysis\mod.rs:616:5: warning: fields `eigenvalue_solver`, 
+`mode_shapes`, and `modal_parameters` are never read
+crates\qualia-core-db\src\specialized_libs\engineering_analysis\mod.rs:657:5: warning: fields `time_integration`, 
+`loading_history`, and `response_calculation` are never read
+crates\qualia-core-db\src\specialized_libs\engineering_analysis\mod.rs:724:5: warning: fields `frequency_response` and 
+`resonance_detection` are never read
+crates\qualia-core-db\src\specialized_libs\engineering_analysis\mod.rs:746:5: warning: fields `eigenvalue_buckling` 
+and `nonlinear_buckling` are never read
+crates\qualia-core-db\src\specialized_libs\engineering_analysis\mod.rs:782:5: warning: fields `free_vibration`, 
+`forced_vibration`, and `random_vibration` are never read
+crates\qualia-core-db\src\specialized_libs\engineering_analysis\mod.rs:861:5: warning: fields `position_analysis`, 
+`velocity_analysis`, and `acceleration_analysis` are never read
+crates\qualia-core-db\src\specialized_libs\engineering_analysis\mod.rs:902:5: warning: fields `force_analysis`, 
+`inertia_analysis`, and `energy_analysis` are never read
+crates\qualia-core-db\src\specialized_libs\engineering_analysis\mod.rs:934:5: warning: fields `synthesis`, `analysis`, 
+and `optimization` are never read
+crates\qualia-core-db\src\specialized_libs\engineering_analysis\mod.rs:1015:5: warning: fields `component_design`, 
+`assembly_design`, and `tolerance_analysis` are never read
+crates\qualia-core-db\src\specialized_libs\engineering_analysis\mod.rs:1154:5: warning: fields `heat_transfer`, 
+`thermal_stress`, and `thermal_analysis` are never read
+crates\qualia-core-db\src\specialized_libs\engineering_analysis\mod.rs:1163:5: warning: fields `conduction`, 
+`convection`, and `radiation` are never read
+crates\qualia-core-db\src\specialized_libs\engineering_analysis\mod.rs:1232:5: warning: fields `pipe_flow` and 
+`open_channel_flow` are never read
+crates\qualia-core-db\src\specialized_libs\engineering_analysis\mod.rs:1238:5: warning: fields `navier_stokes_solver`, 
+`turbulence_modeling`, and `mesh_generator` are never read
+crates\qualia-core-db\src\specialized_libs\engineering_analysis\mod.rs:1381:5: warning: fields `probability_analysis` 
+and `statistical_analysis` are never read
+crates\qualia-core-db\src\specialized_libs\engineering_analysis\mod.rs:1461:5: warning: fields `failure_modes`, 
+`fault_tree`, and `fmea` are never read
+crates\qualia-core-db\src\specialized_libs\engineering_analysis\mod.rs:1559:5: warning: fields 
+`preventive_maintenance`, `predictive_maintenance`, and `condition_based_maintenance` are never read
+crates\qualia-core-db\src\specialized_libs\engineering_analysis\cfd.rs:122:4: warning: function `apply_bc` is never 
+used
+crates\qualia-core-db\src\specialized_libs\engineering_analysis\cfd.rs:369:11: warning: constant `OPP` is never used
+crates\qualia-core-db\src\specialized_libs\financial_modeling\mod.rs:39:5: warning: fields `portfolio_metadata` and 
+`access_control` are never read
+crates\qualia-core-db\src\specialized_libs\financial_modeling\mod.rs:191:5: warning: fields 
+`authentication_requirements` and `audit_logging` are never read
+crates\qualia-core-db\src\specialized_libs\financial_modeling\mod.rs:238:5: warning: field `retention_policy` is never 
+read
+crates\qualia-core-db\src\specialized_libs\financial_modeling\mod.rs:281:5: warning: field `market_data` is never read
+crates\qualia-core-db\src\specialized_libs\financial_modeling\mod.rs:392:5: warning: fields `volume_data` and 
+`technical_indicators` are never read
+crates\qualia-core-db\src\specialized_libs\financial_modeling\mod.rs:431:5: warning: field `validation_rules` is never 
+read
+crates\qualia-core-db\src\specialized_libs\financial_modeling\mod.rs:466:5: warning: fields `compliance_rules`, 
+`regulatory_frameworks`, and `screening_lists` are never read
+crates\qualia-core-db\src\specialized_libs\financial_modeling\mod.rs:605:5: warning: fields `risk_models` and 
+`risk_metrics` are never read
+crates\qualia-core-db\src\specialized_libs\financial_modeling\mod.rs:681:5: warning: fields `scenarios`, 
+`stress_tests`, and `sensitivity_analyzer` are never read
+crates\qualia-core-db\src\specialized_libs\financial_modeling\mod.rs:811:5: warning: fields `sensitivity_factors` and 
+`correlation_matrix` are never read
+crates\qualia-core-db\src\specialized_libs\financial_modeling\mod.rs:938:5: warning: fields `optimization_algorithms`, 
+`objective_functions`, and `constraints` are never read
+crates\qualia-core-db\src\specialized_libs\financial_modeling\mod.rs:1015:5: warning: field `execution_strategies` is 
+never read
+crates\qualia-core-db\src\specialized_libs\financial_modeling\mod.rs:1050:5: warning: fields `orders`, 
+`order_validation`, and `order_routing` are never read
+crates\qualia-core-db\src\specialized_libs\financial_modeling\mod.rs:1109:5: warning: fields `validation_rules` and 
+`compliance_checker` are never read
+crates\qualia-core-db\src\specialized_libs\financial_modeling\mod.rs:1143:5: warning: fields `compliance_rules` and 
+`regulatory_limits` are never read
+crates\qualia-core-db\src\specialized_libs\financial_modeling\mod.rs:1202:5: warning: fields `routing_strategies` and 
+`venue_selector` are never read
+crates\qualia-core-db\src\specialized_libs\financial_modeling\mod.rs:1248:5: warning: fields `venues` and 
+`venue_performance` are never read
+crates\qualia-core-db\src\specialized_libs\financial_modeling\mod.rs:1293:5: warning: fields `settlement_methods`, 
+`clearing_house`, and `settlement_validator` are never read
+crates\qualia-core-db\src\specialized_libs\financial_modeling\mod.rs:1351:5: warning: fields `validation_rules` and 
+`compliance_checker` are never read
+crates\qualia-core-db\src\specialized_libs\financial_modeling\mod.rs:1384:5: warning: fields `compliance_rules` and 
+`regulatory_requirements` are never read
+crates\qualia-core-db\src\specialized_libs\financial_modeling\mod.rs:1425:5: warning: fields `performance_metrics`, 
+`benchmark_comparator`, and `attribution_analyzer` are never read
+crates\qualia-core-db\src\specialized_libs\financial_modeling\mod.rs:1448:5: warning: field `comparison_metrics` is 
+never read
+crates\qualia-core-db\src\specialized_libs\financial_modeling\mod.rs:1482:5: warning: fields `attribution_models` and 
+`attribution_results` are never read
+crates\qualia-core-db\src\specialized_libs\financial_modeling\mod.rs:1526:5: warning: fields `risk_models` and 
+`risk_metrics` are never read
+crates\qualia-core-db\src\specialized_libs\financial_modeling\mod.rs:1539:5: warning: fields `pricing_models` and 
+`market_data` are never read
+crates\qualia-core-db\src\specialized_libs\financial_modeling\mod.rs:1573:5: warning: fields `valuation_methods`, 
+`discount_rates`, and `cash_flow_projections` are never read
+crates\qualia-core-db\src\specialized_libs\financial_modeling\mod.rs:1643:5: warning: field `position_manager` is 
+never read
+crates\qualia-core-db\src\specialized_libs\financial_modeling\mod.rs:1648:5: warning: fields `positions`, 
+`position_limits`, and `margin_calculator` are never read
+crates\qualia-core-db\src\specialized_libs\financial_modeling\mod.rs:1679:5: warning: fields `margin_methods` and 
+`margin_requirements` are never read
+crates\qualia-core-db\src\specialized_libs\financial_modeling\mod.rs:1717:5: warning: field `surveillance_rules` is 
+never read
+crates\qualia-core-db\src\specialized_libs\financial_modeling\mod.rs:1770:5: warning: fields `detection_algorithms` 
+and `anomaly_patterns` are never read
+crates\qualia-core-db\src\specialized_libs\financial_modeling\mod.rs:1819:5: warning: fields `alerts`, 
+`alert_escalation`, and `notification_system` are never read
+crates\qualia-core-db\src\specialized_libs\financial_modeling\mod.rs:1866:5: warning: fields `escalation_rules` and 
+`escalation_history` are never read
+crates\qualia-core-db\src\specialized_libs\financial_modeling\mod.rs:1923:5: warning: fields `notification_channels` 
+and `notification_templates` are never read
+crates\qualia-core-db\src\specialized_libs\financial_modeling\mod.rs:1982:5: warning: field `report_templates` is 
+never read
+crates\qualia-core-db\src\specialized_libs\financial_modeling\mod.rs:2053:5: warning: field `generation_strategies` is 
+never read
+crates\qualia-core-db\src\specialized_libs\financial_modeling\mod.rs:2083:5: warning: fields `aggregation_rules` and 
+`data_sources` are never read
+crates\qualia-core-db\src\specialized_libs\machine_learning.rs:235:5: warning: field `relationships` is never read
+crates\qualia-core-db\src\specialized_libs\machine_learning.rs:482:5: warning: fields `loading_strategies` and 
+`format_converters` are never read
+crates\qualia-core-db\src\specialized_libs\machine_learning.rs:543:5: warning: fields `cache_entries`, `cache_policy`, 
+and `cache_stats` are never read
+crates\qualia-core-db\src\specialized_libs\machine_learning.rs:616:5: warning: fields `conversion_pipelines` and 
+`optimization_strategies` are never read
+crates\qualia-core-db\src\specialized_libs\machine_learning.rs:724:5: warning: fields `validators`, 
+`validation_rules`, and `test_suite` are never read
+crates\qualia-core-db\src\specialized_libs\machine_learning.rs:934:5: warning: field `inference_backends` is never read
+crates\qualia-core-db\src\specialized_libs\machine_learning.rs:974:5: warning: fields `scheduling_policy`, 
+`queue_manager`, and `load_balancer` are never read
+crates\qualia-core-db\src\specialized_libs\machine_learning.rs:991:5: warning: fields `pending_requests`, 
+`running_requests`, and `completed_requests` are never read
+crates\qualia-core-db\src\specialized_libs\machine_learning.rs:1071:5: warning: fields `balancing_strategy`, 
+`backend_metrics`, and `health_checker` are never read
+crates\qualia-core-db\src\specialized_libs\machine_learning.rs:1098:5: warning: fields `health_checks`, 
+`check_interval`, and `timeout` are never read
+crates\qualia-core-db\src\specialized_libs\machine_learning.rs:1123:5: warning: fields `batching_strategy`, 
+`batch_size`, and `batch_timeout` are never read
+crates\qualia-core-db\src\specialized_libs\machine_learning.rs:1141:5: warning: fields `optimization_algorithms` and 
+`optimization_metrics` are never read
+crates\qualia-core-db\src\specialized_libs\machine_learning.rs:1166:5: warning: field `optimization_strategies` is 
+never read
+crates\qualia-core-db\src\specialized_libs\machine_learning.rs:1183:5: warning: fields `analysis_methods` and 
+`performance_profiles` are never read
+crates\qualia-core-db\src\specialized_libs\machine_learning.rs:1218:5: warning: fields `detection_algorithms` and 
+`detection_thresholds` are never read
+crates\qualia-core-db\src\specialized_libs\machine_learning.rs:1242:5: warning: fields `tuning_algorithms`, 
+`tuning_objectives`, and `tuning_history` are never read
+crates\qualia-core-db\src\specialized_libs\machine_learning.rs:1278:5: warning: fields `tuning_records` and 
+`best_configurations` are never read
+crates\qualia-core-db\src\specialized_libs\machine_learning.rs:1302:5: warning: field `training_backends` is never read
+crates\qualia-core-db\src\specialized_libs\machine_learning.rs:1350:5: warning: field `scheduling_policy` is never read
+crates\qualia-core-db\src\specialized_libs\machine_learning.rs:1366:5: warning: fields `resources` and 
+`allocation_strategy` are never read
+crates\qualia-core-db\src\specialized_libs\machine_learning.rs:1411:5: warning: fields `utilization_history` and 
+`current_utilization` are never read
+crates\qualia-core-db\src\specialized_libs\machine_learning.rs:1425:5: warning: fields `training_jobs` and 
+`progress_metrics` are never read
+crates\qualia-core-db\src\specialized_libs\machine_learning.rs:1451:5: warning: fields `data_sources`, 
+`data_transformers`, `data_loaders`, and `data_augmenters` are never read
+crates\qualia-core-db\src\specialized_libs\machine_learning.rs:1566:5: warning: fields `optimization_algorithms` and 
+`early_stopping` are never read
+crates\qualia-core-db\src\specialized_libs\machine_learning.rs:1583:5: warning: fields `tuning_space`, 
+`tuning_algorithm`, and `tuning_history` are never read
+crates\qualia-core-db\src\specialized_libs\machine_learning.rs:1642:5: warning: fields `stopping_criteria`, 
+`patience`, `min_delta`, and `restore_best_weights` are never read
+crates\qualia-core-db\src\specialized_libs\machine_learning.rs:1667:5: warning: fields `optimization_algorithms`, 
+`optimization_objectives`, and `optimization_constraints` are never read
+crates\qualia-core-db\src\specialized_libs\medical_computing\mod.rs:24:5: warning: field `medical_history` is never 
+read
+crates\qualia-core-db\src\specialized_libs\medical_computing\mod.rs:32:5: warning: fields `demographics` and 
+`medical_identifiers` are never read
+crates\qualia-core-db\src\specialized_libs\medical_computing\mod.rs:496:5: warning: field `encryption_algorithms` is 
+never read
+crates\qualia-core-db\src\specialized_libs\medical_computing\mod.rs:532:5: warning: fields `keys`, `key_rotation`, and 
+`key_recovery` are never read
+crates\qualia-core-db\src\specialized_libs\medical_computing\mod.rs:559:5: warning: fields `rotation_policy`, 
+`rotation_schedule`, and `rotation_history` are never read
+crates\qualia-core-db\src\specialized_libs\medical_computing\mod.rs:612:5: warning: fields `recovery_methods` and 
+`recovery_procedures` are never read
+crates\qualia-core-db\src\specialized_libs\medical_computing\mod.rs:669:5: warning: fields `protection_policies`, 
+`breach_detection`, and `incident_response` are never read
+crates\qualia-core-db\src\specialized_libs\medical_computing\mod.rs:751:5: warning: fields `detection_algorithms` and 
+`alert_systems` are never read
+crates\qualia-core-db\src\specialized_libs\medical_computing\mod.rs:827:5: warning: fields `response_plans`, 
+`response_team`, and `escalation_procedures` are never read
+crates\qualia-core-db\src\specialized_libs\medical_computing\mod.rs:918:5: warning: fields `escalation_rules` and 
+`escalation_matrix` are never read
+crates\qualia-core-db\src\specialized_libs\medical_computing\mod.rs:985:5: warning: fields `anonymization_methods`, 
+`privacy_models`, and `risk_assessment` are never read
+crates\qualia-core-db\src\specialized_libs\medical_computing\mod.rs:1046:5: warning: fields `risk_models` and 
+`risk_metrics` are never read
+crates\qualia-core-db\src\specialized_libs\medical_computing\mod.rs:1088:5: warning: fields `log_entries`, 
+`log_analysis`, and `retention_policy` are never read
+crates\qualia-core-db\src\specialized_libs\medical_computing\mod.rs:1128:5: warning: fields `analysis_methods` and 
+`anomaly_detection` are never read
+crates\qualia-core-db\src\specialized_libs\medical_computing\mod.rs:1152:5: warning: fields `detection_algorithms` and 
+`alert_thresholds` are never read
+crates\qualia-core-db\src\specialized_libs\medical_computing\mod.rs:1176:5: warning: fields `consent_records`, 
+`consent_policies`, and `consent_workflows` are never read
+crates\qualia-core-db\src\specialized_libs\medical_computing\mod.rs:1277:5: warning: field `access_policies` is never 
+read
+crates\qualia-core-db\src\specialized_libs\medical_computing\mod.rs:1311:5: warning: fields `authentication_methods`, 
+`session_management`, and `multi_factor` are never read
+crates\qualia-core-db\src\specialized_libs\medical_computing\mod.rs:1337:5: warning: fields `sessions` and 
+`session_policies` are never read
+crates\qualia-core-db\src\specialized_libs\medical_computing\mod.rs:1365:5: warning: fields `factors` and 
+`factor_combinations` are never read
+crates\qualia-core-db\src\specialized_libs\medical_computing\mod.rs:1396:5: warning: fields `authorization_policies`, 
+`permission_management`, and `role_management` are never read
+crates\qualia-core-db\src\specialized_libs\medical_computing\mod.rs:1455:5: warning: fields `permissions` and 
+`permission_groups` are never read
+crates\qualia-core-db\src\specialized_libs\medical_computing\mod.rs:1469:5: warning: fields `roles` and 
+`role_hierarchy` are never read
+crates\qualia-core-db\src\specialized_libs\medical_computing\mod.rs:1500:5: warning: fields `diagnostic_algorithms`, 
+`symptom_analyzer`, and `lab_interpreter` are never read
+crates\qualia-core-db\src\specialized_libs\medical_computing\mod.rs:1525:5: warning: fields `symptom_patterns` and 
+`symptom_correlations` are never read
+crates\qualia-core-db\src\specialized_libs\medical_computing\mod.rs:1549:5: warning: fields `reference_ranges` and 
+`abnormality_detector` are never read
+crates\qualia-core-db\src\specialized_libs\medical_computing\mod.rs:1556:5: warning: fields `detection_algorithms` and 
+`severity_assessment` are never read
+crates\qualia-core-db\src\specialized_libs\medical_computing\mod.rs:1563:5: warning: fields `assessment_criteria` and 
+`scoring_system` are never read
+crates\qualia-core-db\src\specialized_libs\medical_computing\mod.rs:1595:5: warning: fields `risk_models` and 
+`risk_factors` are never read
+crates\qualia-core-db\src\specialized_libs\medical_computing\mod.rs:1648:5: warning: fields `treatment_guidelines` and 
+`decision_support` are never read
+crates\qualia-core-db\src\specialized_libs\medical_computing\mod.rs:1700:5: warning: fields `decision_trees` and 
+`scoring_systems` are never read
+crates\qualia-core-db\src\specialized_libs\medical_computing\mod.rs:1733:5: warning: fields `prediction_models` and 
+`outcome_metrics` are never read
+crates\qualia-core-db\src\specialized_libs\medical_computing\mod.rs:1801:5: warning: fields `acquisition_protocols` 
+and `quality_control` are never read
+crates\qualia-core-db\src\specialized_libs\medical_computing\mod.rs:1837:5: warning: fields `quality_metrics` and 
+`quality_standards` are never read
+crates\qualia-core-db\src\specialized_libs\medical_computing\mod.rs:1888:5: warning: fields `preprocessing_algorithms` 
+and `enhancement_techniques` are never read
+crates\qualia-core-db\src\specialized_libs\medical_computing\mod.rs:1928:5: warning: fields `analysis_algorithms` and 
+`detection_methods` are never read
+crates\qualia-core-db\src\specialized_libs\medical_computing\mod.rs:1968:5: warning: fields `storage_systems` and 
+`compression_methods` are never read
+crates\qualia-core-db\src\specialized_libs\medical_computing\mod.rs:2016:5: warning: fields `target_databases` and 
+`validation_methods` are never read
+crates\qualia-core-db\src\specialized_libs\medical_computing\mod.rs:2101:5: warning: fields `compound_libraries` and 
+`screening_assays` are never read
+crates\qualia-core-db\src\specialized_libs\medical_computing\mod.rs:2223:5: warning: fields `optimization_strategies` 
+and `adme_prediction` are never read
+crates\qualia-core-db\src\specialized_libs\medical_computing\mod.rs:2246:5: warning: fields `absorption_model`, 
+`distribution_model`, `metabolism_model`, and `excretion_model` are never read
+crates\qualia-core-db\src\specialized_libs\medical_computing\mod.rs:2311:5: warning: fields `in_vitro_testing`, 
+`in_vivo_testing`, and `toxicology_studies` are never read
+crates\qualia-core-db\src\specialized_libs\medical_computing\mod.rs:2439:5: warning: fields `privacy_rules`, 
+`security_rules`, and `breach_notification` are never read
+crates\qualia-core-db\src\specialized_libs\medical_computing\mod.rs:2506:5: warning: fields `notification_rules` and 
+`notification_templates` are never read
+crates\qualia-core-db\src\specialized_libs\medical_computing\mod.rs:2539:5: warning: fields 
+`data_protection_principles`, `data_subject_rights`, and `data_processing_agreements` are never read
+crates\qualia-core-db\src\specialized_libs\medical_computing\mod.rs:2607:5: warning: fields `clinical_guidelines`, 
+`quality_metrics`, and `best_practices` are never read
+crates\qualia-core-db\src\specialized_libs\medical_computing\mod.rs:2658:5: warning: fields `audit_trails`, 
+`audit_reports`, and `compliance_monitoring` are never read
+crates\qualia-core-db\src\specialized_libs\medical_computing\mod.rs:2739:5: warning: fields `monitoring_rules` and 
+`compliance_metrics` are never read
+crates\qualia-core-db\src\specialized_libs\physics_simulation.rs:35:5: warning: fields `simulation_config` and 
+`initial_conditions` are never read
+crates\qualia-core-db\src\specialized_libs\physics_simulation.rs:222:5: warning: field `integrator_type` is never read
+crates\qualia-core-db\src\specialized_libs\physics_simulation.rs:292:5: warning: fields `analysis_method`, 
+`eigenvalue_analysis`, and `von_neumann_analysis` are never read
+crates\qualia-core-db\src\specialized_libs\physics_simulation.rs:328:5: warning: fields `discretization_method` and 
+`stencil_operators` are never read
+crates\qualia-core-db\src\specialized_libs\physics_simulation.rs:353:5: warning: fields `grid_type`, 
+`grid_parameters`, and `quality_metrics` are never read
+crates\qualia-core-db\src\specialized_libs\physics_simulation.rs:404:5: warning: fields `mesh_type`, 
+`mesh_parameters`, and `quality_metrics` are never read
+crates\qualia-core-db\src\specialized_libs\physics_simulation.rs:564:5: warning: fields `condition_types`, 
+`condition_values`, and `perturbations` are never read
+crates\qualia-core-db\src\specialized_libs\physics_simulation.rs:614:5: warning: field `solver_type` is never read
+crates\qualia-core-db\src\specialized_libs\physics_simulation.rs:638:5: warning: fields `solver_id`, `solver_method`, 
+`preconditioner`, `convergence_criteria`, and `solver_parameters` are never read
+crates\qualia-core-db\src\specialized_libs\physics_simulation.rs:663:5: warning: fields `solver_method`, 
+`preconditioner`, `convergence_criteria`, and `solver_parameters` are never read
+crates\qualia-core-db\src\specialized_libs\physics_simulation.rs:693:5: warning: fields `preconditioner_type` and 
+`preconditioner_parameters` are never read
+crates\qualia-core-db\src\specialized_libs\physics_simulation.rs:757:5: warning: fields `solver_method`, 
+`convergence_criteria`, and `solver_parameters` are never read
+crates\qualia-core-db\src\specialized_libs\physics_simulation.rs:817:5: warning: fields `solver_method`, 
+`eigenvalue_type`, and `solver_parameters` are never read
+crates\qualia-core-db\src\specialized_libs\physics_simulation.rs:867:5: warning: fields `optimizer_type`, 
+`objective_function`, `constraints`, and `solver_parameters` are never read
+crates\qualia-core-db\src\specialized_libs\physics_simulation.rs:895:5: warning: fields `function_id`, 
+`function_type`, `gradient_available`, and `hessian_available` are never read
+crates\qualia-core-db\src\specialized_libs\physics_simulation.rs:921:5: warning: fields `constraint_id`, 
+`constraint_type`, `constraint_function`, and `bounds` are never read
+crates\qualia-core-db\src\specialized_libs\physics_simulation.rs:980:5: warning: fields `node_capabilities` and 
+`node_status` are never read
+crates\qualia-core-db\src\specialized_libs\physics_simulation.rs:1033:5: warning: fields `balancing_strategy`, 
+`load_metrics`, and `redistribution_policy` are never read
+crates\qualia-core-db\src\specialized_libs\physics_simulation.rs:1072:5: warning: fields `synchronization_method` and 
+`consistency_model` are never read
+crates\qualia-core-db\src\specialized_libs\physics_simulation.rs:1110:5: warning: fields `resolution_strategy`, 
+`conflict_detection`, and `resolution_policy` are never read
+crates\qualia-core-db\src\specialized_libs\physics_simulation.rs:1135:5: warning: fields `detection_method` and 
+`conflict_types` are never read
+crates\qualia-core-db\src\specialized_libs\physics_simulation.rs:1168:5: warning: fields `policy_id`, `policy_rules`, 
+and `default_action` are never read
+crates\qualia-core-db\src\specialized_libs\physics_simulation.rs:1203:5: warning: fields `data_layout` and 
+`access_patterns` are never read
+crates\qualia-core-db\src\specialized_libs\physics_simulation.rs:1212:5: warning: fields `backend_id`, `backend_type`, 
+`capacity`, and `performance` are never read
+crates\qualia-core-db\src\specialized_libs\physics_simulation.rs:1245:5: warning: fields `layout_type`, `block_size`, 
+`stripe_size`, and `replication_factor` are never read
+crates\qualia-core-db\src\specialized_libs\physics_simulation.rs:1269:5: warning: fields `read_patterns`, 
+`write_patterns`, and `temporal_patterns` are never read
+crates\qualia-core-db\src\specialized_libs\physics_simulation.rs:1277:5: warning: fields `pattern_id`, `pattern_type`, 
+`time_scale`, and `periodicity` are never read
+crates\qualia-core-db\src\specialized_libs\physics_simulation.rs:1314:5: warning: fields `compression_algorithms`, 
+`compression_ratio`, and `compression_performance` are never read
+crates\qualia-core-db\src\specialized_libs\physics_simulation.rs:1322:5: warning: fields `algorithm_id`, 
+`algorithm_type`, and `parameters` are never read
+crates\qualia-core-db\src\specialized_libs\physics_simulation.rs:1365:5: warning: fields `cache_policy`, `cache_size`, 
+and `cache_performance` are never read
+crates\qualia-core-db\src\specialized_libs\physics_simulation.rs:1373:5: warning: fields `eviction_policy`, 
+`write_policy`, and `consistency_policy` are never read
+crates\qualia-core-db\src\specialized_libs\physics_simulation.rs:1427:5: warning: fields `migration_policies`, 
+`migration_tools`, and `migration_status` are never read
+crates\qualia-core-db\src\specialized_libs\physics_simulation.rs:1435:5: warning: fields `policy_id`, 
+`migration_trigger`, `migration_strategy`, and `migration_schedule` are never read
+crates\qualia-core-db\src\specialized_libs\physics_simulation.rs:1472:5: warning: fields `schedule_id`, 
+`migration_time`, `migration_window`, and `priority` are never read
+crates\qualia-core-db\src\specialized_libs\physics_simulation.rs:1490:5: warning: fields `tool_id`, `tool_type`, and 
+`tool_capabilities` are never read
+crates\qualia-core-db\src\specialized_libs\physics_simulation.rs:1523:5: warning: fields `active_migrations`, 
+`completed_migrations`, and `failed_migrations` are never read
+crates\qualia-core-db\src\specialized_libs\physics_simulation.rs:1531:5: warning: fields `migration_id`, 
+`source_backend`, `target_backend`, `start_time`, and `progress` are never read
+crates\qualia-core-db\src\specialized_libs\physics_simulation.rs:1541:5: warning: fields `migration_id`, 
+`source_backend`, `target_backend`, `start_time`, `end_time`, and `success` are never read
+crates\qualia-core-db\src\specialized_libs\physics_simulation.rs:1552:5: warning: fields `migration_id`, 
+`source_backend`, `target_backend`, `start_time`, and `error_message` are never read
+crates\qualia-core-db\src\specialized_libs\physics_simulation.rs:2029:8: warning: methods `initialize_cfd_fields` and 
+`check_convergence` are never used
+crates\qualia-core-db\src\specialized_libs\statistical_computing.rs:170:5: warning: field `search_engine` is never read
+crates\qualia-core-db\src\specialized_libs\statistical_computing.rs:184:5: warning: fields `engine_type` and 
+`indexing_strategy` are never read
+crates\qualia-core-db\src\specialized_libs\statistical_computing.rs:210:5: warning: field `compression_algorithms` is 
+never read
+crates\qualia-core-db\src\specialized_libs\statistical_computing.rs:251:5: warning: fields `indexes` and 
+`indexing_strategy` are never read
+crates\qualia-core-db\src\specialized_libs\statistical_computing.rs:287:5: warning: field `optimization_rules` is 
+never read
+crates\qualia-core-db\src\specialized_libs\statistical_computing.rs:400:5: warning: fields `computation_units` and 
+`operation_queue` are never read
+crates\qualia-core-db\src\specialized_libs\statistical_computing.rs:609:5: warning: fields `scheduling_policy`, 
+`queue_manager`, and `load_balancer` are never read
+crates\qualia-core-db\src\specialized_libs\statistical_computing.rs:626:5: warning: fields `pending_queue`, 
+`running_operations`, and `completed_operations` are never read
+crates\qualia-core-db\src\specialized_libs\statistical_computing.rs:788:5: warning: fields `balancing_strategy` and 
+`unit_metrics` are never read
+crates\qualia-core-db\src\specialized_libs\statistical_computing.rs:804:5: warning: fields `acceleration_strategies` 
+and `hardware_accelerators` are never read
+crates\qualia-core-db\src\specialized_libs\statistical_computing.rs:857:5: warning: fields `noise_mechanisms` and 
+`privacy_accountant` are never read
+crates\qualia-core-db\src\specialized_libs\statistical_computing.rs:915:5: warning: fields `aggregation_protocols`, 
+`encryption_schemes`, and `integrity_checks` are never read
+crates\qualia-core-db\src\specialized_libs\statistical_computing.rs:979:5: warning: field `analysis_algorithms` is 
+never read
+crates\qualia-core-db\src\specialized_libs\statistical_computing.rs:1000:5: warning: fields `pattern_types` and 
+`recognition_algorithms` are never read
+crates\qualia-core-db\src\specialized_libs\statistical_computing.rs:1030:5: warning: fields `patterns` and 
+`pattern_templates` are never read
+crates\qualia-core-db\src\specialized_libs\statistical_computing.rs:1088:5: warning: fields `detection_algorithms` and 
+`threshold_methods` are never read
+crates\qualia-core-db\src\specialized_libs\statistical_computing.rs:1115:5: warning: fields `alert_types`, 
+`notification_channels`, and `escalation_policies` are never read
+crates\qualia-core-db\src\specialized_libs\statistical_computing.rs:1170:5: warning: fields `forecasting_models` and 
+`accuracy_metrics` are never read
+crates\qualia-core-db\src\specialized_libs\statistical_computing.rs:1200:5: warning: fields `selection_criteria`, 
+`cross_validation`, and `hyperparameter_tuning` are never read
+crates\qualia-core-db\src\specialized_libs\statistical_computing.rs:1285:5: warning: fields `operation_metrics` and 
+`dataset_metrics` are never read
+crates\qualia-core-db\src\specialized_libs\statistical_computing.rs:2316:8: warning: method `get_dataset_data_legacy` 
+is never used
+crates\qualia-core-db\src\gguf_bridge\mod.rs:987:5: warning: fields `mock_pipeline`, `elem_rms_norm_pipeline`, and 
+`elem_add_residual_pipeline` are never read
+crates\qualia-core-db\src\gguf_bridge\gpu_params.rs:79:18: warning: constant `ELEM_OP_RMS_NORM` is never used
+crates\qualia-core-db\src\gguf_bridge\gpu_params.rs:81:18: warning: constant `ELEM_OP_ADD_RESIDUAL` is never used
+crates\qualia-core-db\src\gguf_bridge\cpu_ops.rs:21:15: warning: function `update_streaming_argmax` is never used
+crates\qualia-core-db\src\gguf_bridge\cpu_ops.rs:64:15: warning: function `relu_inplace` is never used
+crates\qualia-core-db\src\solvers\qpu\dispatcher.rs:19:5: warning: fields `job`, `enqueued_at_ms`, `retries`, and 
+`status` are never read
+crates\qualia-core-db\src\solvers\qpu\dispatcher.rs:27:5: warning: variants `Queued`, `Running`, `Completed`, and 
+`Failed` are never constructed
+crates\qualia-core-db\src\solvers\learning\gaussian_process\mod.rs:24:5: warning: field `noise_var` is never read
+warning: `qualia-core-db` (lib) generated 355 warnings
+
+

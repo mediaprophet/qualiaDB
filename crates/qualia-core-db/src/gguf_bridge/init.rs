@@ -51,7 +51,7 @@ impl QTensorEngine {
         #[cfg(not(target_arch = "wasm32"))]
         let device = &shared.device;
         #[cfg(not(target_arch = "wasm32"))]
-        let queue = &shared.queue;
+        let _queue = &shared.queue;
         #[cfg(not(target_arch = "wasm32"))]
         log::info!("LLM_LOAD|gpu-device|0.35|Reusing process-wide wgpu device");
 

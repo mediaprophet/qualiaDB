@@ -19,11 +19,6 @@ pub use performance::*;
 pub use privacy::*;
 pub use storage::*;
 
-use crate::solvers::SolversError;
-use serde::{Deserialize, Serialize};
-use std::collections::HashMap;
-use std::ops::{Add, Mul, Sub};
-use std::sync::{Arc, Mutex};
 
 #[cfg(test)]
 mod tests {

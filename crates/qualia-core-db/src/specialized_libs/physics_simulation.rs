@@ -8,7 +8,6 @@
 
 use super::linear_algebra::AccessPattern;
 use crate::acoustic_ble_mesh::{MeshNetworkManager, MessagePriority, NetworkStatus};
-use crate::zns_storage::ZnsZoneManager;
 use serde::{Deserialize, Serialize};
 use std::collections::HashMap;
 use std::sync::{Arc, Mutex};
@@ -2909,7 +2908,7 @@ impl PhysicsSolver {
         Ok(())
     }
 
-    pub fn create_cfd_solver(&self, config: &SimulationConfig) -> Result<CfdSolver, PhysicsError> {
+    pub fn create_cfd_solver(&self, _config: &SimulationConfig) -> Result<CfdSolver, PhysicsError> {
         let solver = CfdSolver {
             solver_id: "cfd_solver".to_string(),
             solver_method: LinearSolverMethod::GMRES,
@@ -3192,7 +3191,7 @@ impl MeshCoordinator {
 
     pub fn distribute_simulation(
         &self,
-        simulation: &Simulation,
+        _simulation: &Simulation,
     ) -> Result<NodeDistribution, PhysicsError> {
         // Distribute simulation across available nodes
         let distribution = NodeDistribution {
@@ -3410,7 +3409,7 @@ impl PhysicsDataManager {
 
     pub fn store_field_data(
         &mut self,
-        simulation: &Simulation,
+        _simulation: &Simulation,
         fields: &[PhysicsField],
     ) -> Result<(), PhysicsError> {
         // Store each field through the registered storage backends.

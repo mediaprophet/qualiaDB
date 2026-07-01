@@ -4,9 +4,7 @@
 //! classical half of hybrid quantum-classical loops, designed specifically for
 //! the #![no_std] environment of Qualia-DB.
 
-use crate::solvers::SolversError as ExecutionError;
 use crate::solvers::{SolverConfig, SolverResult, SolverState};
-use crate::NQuin;
 use core::f64::consts;
 
 /// QAOA angle optimizer for quantum approximate optimization

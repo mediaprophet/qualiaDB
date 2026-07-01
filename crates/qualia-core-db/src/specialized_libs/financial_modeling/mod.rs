@@ -7,8 +7,8 @@
 //! - Statistical Computing Library for advanced financial analytics
 
 use serde::{Deserialize, Serialize};
-use std::collections::{HashMap, HashSet};
-use std::sync::{Arc, Mutex};
+use std::collections::HashMap;
+use std::sync::Mutex;
 
 /// Real return-based portfolio risk metrics (volatility, historical VaR/CVaR,
 /// Sharpe, Sortino, max-drawdown) computed from each asset's price history.
@@ -3851,7 +3851,7 @@ impl PricingEngine {
     fn calculate_theta(
         &self,
         params: &OptionParameters,
-        d1: f64,
+        _d1: f64,
         d2: f64,
         pdf_d1: f64,
     ) -> f64 {

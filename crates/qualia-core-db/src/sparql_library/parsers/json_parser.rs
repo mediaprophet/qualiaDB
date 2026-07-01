@@ -5,7 +5,7 @@
 
 use chrono::{DateTime, NaiveDate, NaiveDateTime, TimeZone, Utc};
 use serde_json::{Deserializer, Value};
-use std::io::{BufReader, Read};
+use std::io::Read;
 
 use crate::mini_parser::hash_token;
 use crate::NQuin;

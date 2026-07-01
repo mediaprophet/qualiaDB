@@ -5,7 +5,6 @@
 
 use crate::solvers::SolversError as ExecutionError;
 use crate::solvers::{SolverConfig, SolverResult, SolverState};
-use core::f64::consts;
 
 /// General-dimension metaheuristic optimizers (hill-climbing / simulated annealing /
 /// Artificial Bee Colony) — global search beyond the fixed-`[f64;4]` solvers below.
@@ -120,7 +119,7 @@ pub trait ObjectiveFunction {
     fn evaluate(&self, params: &[f64; 4]) -> f64;
 
     /// Check if parameters are within bounds
-    fn in_bounds(&self, params: &[f64; 4]) -> bool {
+    fn in_bounds(&self, _params: &[f64; 4]) -> bool {
         true // Default: no bounds
     }
 }

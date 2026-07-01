@@ -10,13 +10,8 @@
 //! - Authentication and rate limiting
 //! - Error handling and fallback mechanisms
 
-use crate::fiduciary_crypto::FiduciaryCrypto;
 use crate::lexicon::generate_60bit_token;
-use crate::zk_proofs::ZkProofSystem;
-use crate::NQuin;
-use core::mem;
 use core::ptr;
-use core::sync::atomic::{AtomicU32, AtomicU64, Ordering};
 
 /// QPU Bridge Manager - Main interface for quantum computing operations
 ///
@@ -302,7 +297,7 @@ impl QPURateLimiter {
         self.current_jobs < self.jobs_per_second && self.quota_remaining > 0
     }
 
-    pub fn record_job_submission(&mut self, current_time: u64) {
+    pub fn record_job_submission(&mut self, _current_time: u64) {
         self.current_jobs += 1;
         self.quota_remaining -= 1;
     }

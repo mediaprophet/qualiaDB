@@ -53,7 +53,7 @@ pub fn shared_policy() -> &'static ComputePolicy {
 }
 
 /// Multi-threaded CPU `C = A·B` (f32, row-major) — the always-present fallback.
-fn cpu_gemm_f32(m: usize, k: usize, n: usize, a: &[f32], b: &[f32], c: &mut [f32]) {
+fn cpu_gemm_f32(_m: usize, k: usize, n: usize, a: &[f32], b: &[f32], c: &mut [f32]) {
     use rayon::prelude::*;
     c.par_chunks_mut(n).enumerate().for_each(|(i, row)| {
         let a_row = &a[i * k..(i + 1) * k];

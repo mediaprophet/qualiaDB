@@ -267,7 +267,7 @@ pub fn write_vc_claim_quins(
 }
 
 use crate::modalities::logic::deontic::{DEFEATER_BIT, OP_FORBID, OP_OBLIGATE, OP_PERMIT};
-use crate::modalities::logic::n3_compiler::{CompiledRule, CompiledTerm};
+use crate::modalities::logic::n3_compiler::CompiledRule;
 use crate::modalities::logic::n3_parser::RuleType;
 
 /// Compile an N3 rule into a norm Quin (or a defeater Quin if rule_type is Defeater).

@@ -8,7 +8,7 @@ use std::sync::atomic::{AtomicU32, Ordering};
 use bytemuck::{Pod, Zeroable};
 
 use crate::audio::audio_spectral_sheet::{preview_bins_from_tensor, SPECTRAL_PREVIEW_BINS};
-use crate::audio::dsp_kernel::{configure_voice_from_tensor, epistemic_fm_index};
+use crate::audio::dsp_kernel::configure_voice_from_tensor;
 use crate::audio::hrtf::{binaural_from_position, room_damp_from_manifold};
 use crate::gpu_context::{ComputeUniverse, OperationalMode};
 use crate::render::acoustic::{

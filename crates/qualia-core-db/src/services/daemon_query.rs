@@ -9,7 +9,7 @@ use crate::sparql_ast::{BindingRow, SparqlQuery};
 use crate::sparql_executor::QueryExecutor;
 use crate::sparql_parser;
 use crate::sparql_planner::QueryPlanner;
-use crate::webizen_bytecode::{self, ExecutionStats};
+use crate::webizen_bytecode::ExecutionStats;
 use crate::NQuin;
 
 pub const QUERY_OUT_SLOTS: usize = 1_000;

@@ -6,7 +6,6 @@
 
 use crate::solvers::SolversError as ExecutionError;
 use crate::solvers::{SolverConfig, SolverResult, SolverState};
-use core::f64::consts;
 
 /// Dynamic-size, caller-owned-buffer decompositions (nalgebra-parity, zero-heap).
 pub mod cholesky;

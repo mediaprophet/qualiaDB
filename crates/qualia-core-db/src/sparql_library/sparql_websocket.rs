@@ -136,7 +136,7 @@ impl<'a> SparqlWebSocketHandler<'a> {
         &self,
         query: &str,
         format: &str,
-        session_id: u64,
+        _session_id: u64,
     ) -> Result<String, String> {
         // Parse query
         let (sparql_query, ctx) = sparql_parser::parse_sparql(query)?;
@@ -186,7 +186,7 @@ impl<'a> SparqlWebSocketHandler<'a> {
         &self,
         query: &str,
         chunk_size: usize,
-        session_id: u64,
+        _session_id: u64,
     ) -> Result<Vec<String>, String> {
         // Parse and execute query
         let (sparql_query, ctx) = sparql_parser::parse_sparql(query)?;

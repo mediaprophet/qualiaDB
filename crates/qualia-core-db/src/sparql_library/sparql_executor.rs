@@ -4,7 +4,7 @@
 
 use crate::lexicon::generate_embedded_triple_id;
 use crate::rdf_star::is_virtual_id;
-use crate::sparql_aggregates::{AggregateFunction, AggregationContext, GroupKey};
+use crate::sparql_aggregates::{AggregationContext, GroupKey};
 use crate::sparql_ast::*;
 use crate::sparql_filter::ExpressionEvaluator;
 use crate::sparql_planner::*;
@@ -231,8 +231,8 @@ impl<'a> QueryExecutor<'a> {
     fn execute_subject_scan(
         &self,
         subject: u64,
-        ctx: &SparqlQueryContext,
-        row: &mut BindingRow,
+        _ctx: &SparqlQueryContext,
+        _row: &mut BindingRow,
         results: &mut Vec<BindingRow>,
     ) -> Result<bool, String> {
         // Scan all quins matching the subject
@@ -253,8 +253,8 @@ impl<'a> QueryExecutor<'a> {
     fn execute_predicate_scan(
         &self,
         predicate: u64,
-        ctx: &SparqlQueryContext,
-        row: &mut BindingRow,
+        _ctx: &SparqlQueryContext,
+        _row: &mut BindingRow,
         results: &mut Vec<BindingRow>,
     ) -> Result<bool, String> {
         for quin in self.quins {
@@ -272,8 +272,8 @@ impl<'a> QueryExecutor<'a> {
     fn execute_object_scan(
         &self,
         object: u64,
-        ctx: &SparqlQueryContext,
-        row: &mut BindingRow,
+        _ctx: &SparqlQueryContext,
+        _row: &mut BindingRow,
         results: &mut Vec<BindingRow>,
     ) -> Result<bool, String> {
         for quin in self.quins {
@@ -393,7 +393,7 @@ impl<'a> QueryExecutor<'a> {
         join_var: VariableId,
         plan: &ExecutionPlan,
         ctx: &SparqlQueryContext,
-        row: &mut BindingRow,
+        _row: &mut BindingRow,
         results: &mut Vec<BindingRow>,
     ) -> Result<bool, String> {
         let mut left_results = Vec::new();
@@ -477,7 +477,7 @@ impl<'a> QueryExecutor<'a> {
         _join_var: VariableId,
         plan: &ExecutionPlan,
         ctx: &SparqlQueryContext,
-        row: &mut BindingRow,
+        _row: &mut BindingRow,
         results: &mut Vec<BindingRow>,
     ) -> Result<bool, String> {
         let mut left_results = Vec::new();
@@ -626,7 +626,7 @@ impl<'a> QueryExecutor<'a> {
         row: &mut BindingRow,
         results: &mut Vec<BindingRow>,
     ) -> Result<bool, String> {
-        let start_len = results.len();
+        let _start_len = results.len();
 
         // Execute left
         self.execute_operator(left, plan, ctx, row, results)?;
@@ -951,7 +951,7 @@ impl<'a> QueryExecutor<'a> {
     ) -> Result<bool, String> {
         // Zero-allocation federated query execution
         // Use fixed-size network buffer instead of allocating per request
-        let network_buffer = [0u8; 4096];
+        let _network_buffer = [0u8; 4096];
 
         // Check if DID has 0x8 prefix (identity recognition)
         let is_did = (endpoint_did_id & 0x8000000000000000) != 0;

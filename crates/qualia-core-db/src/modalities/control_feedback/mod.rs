@@ -2,7 +2,6 @@
 // Provides self-stabilizing agents for power systems and sanctuary management
 
 use crate::NQuin;
-use std::collections::HashMap;
 
 // Canonical bit positions live in the FrameLayout ABI (single source of truth).
 pub use crate::frame_layout::{CONTROL_BIT, FEEDBACK_BIT, STABILIZATION_BIT};

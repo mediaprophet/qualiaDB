@@ -1074,7 +1074,11 @@ impl Extension for PinnExtension {
                     result_quins: vec![],
                     metadata: {
                         let mut meta = HashMap::new();
+                        use base64::{Engine as _, engine::general_purpose::STANDARD as BASE64_STANDARD};
+                        let encoded_smx = BASE64_STANDARD.encode(&smx_data);
+                        
                         meta.insert("model_name".to_string(), model_name);
+                        meta.insert("smx_data".to_string(), encoded_smx);
                         meta.insert("compression_ratio".to_string(), model.quantization_config.compression_ratio.to_string());
                         meta.insert("quantization_bits".to_string(), model.quantization_config.quantization_bits.to_string());
                         meta.insert("smx_version".to_string(), "1.0".to_string());

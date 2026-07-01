@@ -4,9 +4,7 @@
 //! boundary value problems, and numerical integration suitable for the #![no_std]
 //! environment of Qualia-DB.
 
-use crate::solvers::SolversError as ExecutionError;
 use crate::solvers::{SolverConfig, SolverResult, SolverState};
-use core::f64::consts;
 
 // Numerical ODE / sensitivity / provenance solvers — relocated here from
 // `modalities::calculus` (they are STEM math, not logic modalities). The canonical
@@ -196,7 +194,7 @@ impl RungeKutta4Static {
         // RK4 coefficients
         let k1 = f.derivatives(self.t, &self.state);
 
-        let y_temp: [f64; 4];
+        let _y_temp: [f64; 4];
         let mut y_temp = [0.0; 4];
         for i in 0..4 {
             y_temp[i] = self.state[i] + 0.5 * dt * k1[i];
@@ -226,13 +224,19 @@ impl RungeKutta4Static {
         Ok(())
     }
 
-    /// Estimate error from RK4 coefficients
+    /// Estimate error from RK4 coefficients using a variance-based heuristic
     fn estimate_error(&self, k1: &[f64; 4], k2: &[f64; 4], k3: &[f64; 4], k4: &[f64; 4]) -> f64 {
         let mut error: f64 = 0.0;
 
         for i in 0..4 {
-            // Error estimate: |k2 - k3| / max(|k2|, |k3|, 1e-10)
-            let local_error = (k2[i] - k3[i]).abs() / k2[i].abs().max(k3[i].abs()).max(1e-10);
+            // Error estimate using all coefficients to detect high curvature and instability
+            let k_avg = (k1[i] + 2.0 * k2[i] + 2.0 * k3[i] + k4[i]) / 6.0;
+            let variance = (k1[i] - k_avg).powi(2) 
+                         + (k2[i] - k_avg).powi(2) 
+                         + (k3[i] - k_avg).powi(2) 
+                         + (k4[i] - k_avg).powi(2);
+            
+            let local_error = variance.sqrt() / k_avg.abs().max(1e-10);
             error = error.max(local_error);
         }
 

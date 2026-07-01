@@ -7,11 +7,8 @@
 //! - Allocation Firewall (eBPF) for kernel-level cryptographic operations
 
 use crate::fiduciary_crypto::{CryptoContext, MlDsaSignature, MlDsaSigner, MlDsaVcProof};
-use crate::zk_proofs::ZkProofSystem;
-use crate::zns_storage::ZnsZoneManager;
 use serde::{Deserialize, Serialize};
 use std::collections::HashMap;
-use std::sync::{Arc, Mutex};
 
 /// Cryptographic Library Manager
 pub struct CryptographicLibrary {
@@ -380,7 +377,7 @@ pub enum ComplianceStandard {
     HIPAA,
     GDPR,
     SOC2,
-    PCI_DSS,
+    PciDss,
     ISO27001,
 }
 
@@ -393,7 +390,7 @@ pub enum ComplianceRequirement {
     HIPAA,
     GDPR,
     SOX,
-    PCI_DSS,
+    PciDss,
     Custom(String),
 }
 
@@ -1314,8 +1311,8 @@ pub struct ProofSystem {
 /// Proof system types
 #[derive(Debug, Clone, PartialEq, Serialize, Deserialize)]
 pub enum ProofSystemType {
-    zkSNARKs,
-    zkSTARKs,
+    ZkSnarks,
+    ZkStarks,
     Bulletproofs,
     SigmaProtocols,
     Custom(String),
@@ -2712,7 +2709,7 @@ impl KeyManager {
     pub fn generate_key_pair(
         &mut self,
         key_id: String,
-        key_type: KeyType,
+        _key_type: KeyType,
         algorithm: KeyAlgorithm,
         security_level: SecurityLevel,
     ) -> Result<(Key, Key), CryptographicError> {
@@ -3357,14 +3354,14 @@ impl EncryptionAtRest {
             .ok_or_else(|| CryptographicError::EncryptionError("no master KEK available".to_string()))?;
 
         use aes_gcm::{aead::Aead, Aes256Gcm, KeyInit, Nonce};
-        let key = aes_gcm::Key::<Aes256Gcm>::from_slice(kek);
-        let cipher = Aes256Gcm::new(key);
+        let key = aes_gcm::Key::<Aes256Gcm>::try_from(kek.as_slice()).unwrap();
+        let cipher = Aes256Gcm::new(&key);
 
         let nonce_bytes: [u8; 12] = rand::random();
-        let nonce = Nonce::from_slice(&nonce_bytes);
+        let nonce = Nonce::try_from(nonce_bytes.as_slice()).unwrap();
 
         let ciphertext = cipher
-            .encrypt(nonce, plaintext)
+            .encrypt(&nonce, plaintext)
             .map_err(|e| CryptographicError::EncryptionError(format!("AES-GCM encrypt failed: {e}")))?;
 
         // Pack: nonce (12) + ciphertext (includes 16-byte GCM tag appended by aes-gcm)
@@ -3387,14 +3384,14 @@ impl EncryptionAtRest {
             .ok_or_else(|| CryptographicError::DecryptionError("no master KEK available".to_string()))?;
 
         use aes_gcm::{aead::Aead, Aes256Gcm, KeyInit, Nonce};
-        let key = aes_gcm::Key::<Aes256Gcm>::from_slice(kek);
-        let cipher = Aes256Gcm::new(key);
+        let key = aes_gcm::Key::<Aes256Gcm>::try_from(kek.as_slice()).unwrap();
+        let cipher = Aes256Gcm::new(&key);
 
-        let nonce = Nonce::from_slice(&packed[..12]);
+        let nonce = Nonce::try_from(&packed[..12]).unwrap();
         let ciphertext = &packed[12..];
 
         cipher
-            .decrypt(nonce, ciphertext)
+            .decrypt(&nonce, ciphertext)
             .map_err(|e| CryptographicError::DecryptionError(format!("AES-GCM decrypt failed: {e}")))
     }
 
@@ -5374,7 +5371,7 @@ impl ProofEngine {
     ) -> Result<Vec<u8>, CryptographicError> {
         use ark_bls12_381::Bls12_381;
         use ark_groth16::Groth16;
-        use ark_relations::gr1cs::ConstraintSynthesizer;
+        
         use ark_serialize::CanonicalSerialize;
         use ark_snark::SNARK;
         use sha2::{Digest, Sha256};

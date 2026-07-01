@@ -23,6 +23,15 @@ pub mod molecular_dynamics;
 /// Analytical Integral Engine for Quantum Chemistry
 pub mod integrals;
 
+/// Basis Set and Spatial Discretization Engine for Quantum Chemistry
+pub mod basis_set;
+
+/// Self-Consistent Field (SCF) Iterative Driver
+pub mod scf;
+
+/// Density Functional Theory (DFT) Integration
+pub mod dft;
+
 /// Chemistry Modeling Library Manager
 pub struct ChemistryModelingLibrary {
     molecular_simulator: MolecularSimulator,

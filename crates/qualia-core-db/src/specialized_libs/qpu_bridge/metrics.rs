@@ -10,19 +10,8 @@
 //! - Authentication and rate limiting
 //! - Error handling and fallback mechanisms
 
-use crate::fiduciary_crypto::FiduciaryCrypto;
-use crate::lexicon::generate_60bit_token;
-use crate::zk_proofs::ZkProofSystem;
-use crate::NQuin;
-use core::mem;
-use core::ptr;
-use core::sync::atomic::{AtomicU32, AtomicU64, Ordering};
+use core::sync::atomic::{AtomicU32, AtomicU64};
 
-/// QPU Bridge Manager - Main interface for quantum computing operations
-///
-/// This struct manages connections to remote quantum computing resources while
-/// maintaining strict zero-allocation invariants and security requirements.
-use super::*;
 
 #[repr(C)]
 pub struct QPUMetrics {

@@ -57,7 +57,7 @@ pub fn validate_native(
     target: TargetBackend,
     kernel: Option<&KernelSpec>,
 ) -> Result<ValidationReport, ForgeError> {
-    use std::io::Write;
+    
     use std::process::Command;
 
     let tool_name = match target {
@@ -77,7 +77,7 @@ pub fn validate_native(
         .tempfile()
         .map_err(|e| ForgeError::Io(format!("Failed to create temp file: {}", e)))?;
 
-    let mut temp_path = temp_file.path().to_path_buf();
+    let temp_path = temp_file.path().to_path_buf();
     
     // Write source to temp file
     std::fs::write(&temp_path, source)

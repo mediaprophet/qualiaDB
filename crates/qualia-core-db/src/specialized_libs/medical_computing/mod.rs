@@ -8,7 +8,6 @@
 
 use serde::{Deserialize, Serialize};
 use std::collections::HashMap;
-use std::sync::{Arc, Mutex};
 
 /// Medical Computing Library Manager
 pub struct MedicalComputingLibrary {
@@ -3885,7 +3884,7 @@ impl MedicalComplianceMonitor {
 
     pub fn check_compliance(
         &mut self,
-        compliance_type: ComplianceType,
+        _compliance_type: ComplianceType,
     ) -> Result<ComplianceReport, MedicalError> {
         // Check compliance
         let report = ComplianceReport::new();

@@ -98,6 +98,7 @@ impl QuboFormulation {
             num_qubits: self.num_variables,
             hamiltonian: serde_json::to_string(self).ok(),
             circuit: None,
+            circuit_depth: 1,
             shots: 1000,
             extra: serde_json::json!({"formulation": "qubo"}),
         }
@@ -172,6 +173,7 @@ impl CircuitFormulation {
             num_qubits: self.num_qubits,
             hamiltonian: None,
             circuit: serde_json::to_string(self).ok(),
+            circuit_depth: self.gates.len() as u32,
             shots: 1000,
             extra: serde_json::json!({"formulation": "circuit"}),
         }

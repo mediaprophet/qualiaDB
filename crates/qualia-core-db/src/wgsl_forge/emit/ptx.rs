@@ -1,6 +1,6 @@
 use std::fmt::Write;
 
-use super::{GeneratedShader, TargetBackend};
+use super::GeneratedShader;
 use crate::wgsl_forge::{ForgeError, KernelSpec, Schedule};
 
 pub fn emit_ptx(kernel: &KernelSpec, schedule: Schedule) -> Result<GeneratedShader, ForgeError> {
@@ -28,7 +28,7 @@ pub fn emit_ptx(kernel: &KernelSpec, schedule: Schedule) -> Result<GeneratedShad
 fn emit_kernel_body(
     source: &mut String,
     kernel: &KernelSpec,
-    schedule: Schedule,
+    _schedule: Schedule,
 ) -> Result<(), ForgeError> {
     writeln!(source, ".version 7.5\n.target sm_75\n.address_size 64\n").map_err(|error| ForgeError::Emission(error.to_string()))?;
     

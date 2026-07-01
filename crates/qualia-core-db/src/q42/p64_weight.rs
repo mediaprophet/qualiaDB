@@ -568,15 +568,19 @@ fn compile_gguf_to_p64_legacy(input: &[u8], page_log2: u16) -> Result<Vec<u8>, S
 
     // Now extract vocabulary from GGUF and append to string table.
     let tokenizer_offset = string_table.len() as u32;
-    // We assume vocab is in GGUF as string slices, but since we don't easily have it without a tokenizer instance,
-    // we'll just extract the bytes using the old tokenizer logic or rely on caller to pass it.
-    // For Phase 2, we just append the raw tokenizer bytes we find from the tokenizer instance.
     let tok = crate::gguf_sharder::GgufTokenizer::from_gguf(input);
+    
     let mut tok_bytes: Vec<u8> = Vec::new();
-    // Re-serialize tokenizer to our embedded format, for now we just dump the GgufTokenizer as bytes using bincode or similar,
-    // or just leave it empty for now and let the caller fix it. The previous codebase probably had logic for this.
-    // To match the Phase 2 requirements, we'll write a minimal dummy or copy it from the end of the gguf index.
-    let tokenizer_size = 0u32;
+    // Serialize vocabulary sizes and strings
+    tok_bytes.extend_from_slice(&(tok.vocab.len() as u32).to_le_bytes());
+    for v in &tok.vocab {
+        let v_bytes = v.as_bytes();
+        tok_bytes.extend_from_slice(&(v_bytes.len() as u32).to_le_bytes());
+        tok_bytes.extend_from_slice(v_bytes);
+    }
+    let tokenizer_size = tok_bytes.len() as u32;
+    
+    string_table.extend_from_slice(&tok_bytes);
 
     // Padding string table to 64 bytes
     while string_table.len() % 64 != 0 {
@@ -622,7 +626,6 @@ fn compile_gguf_to_p64_legacy(input: &[u8], page_log2: u16) -> Result<Vec<u8>, S
     let manifold_table_size = manifold_table.len() as u32;
 
     // Layout
-    let header_offset = 0;
     let hparams_offset = 64;
     let entries_offset = 128;
     let string_table_offset = entries_offset + (tensor_count * 64) as u32;
@@ -640,7 +643,7 @@ fn compile_gguf_to_p64_legacy(input: &[u8], page_log2: u16) -> Result<Vec<u8>, S
 
     out[8..12].copy_from_slice(&0u32.to_le_bytes()); // role_table_offset
     out[12..16].copy_from_slice(&(entries_offset as u32).to_le_bytes()); // tensor_table_offset
-    out[16..20].copy_from_slice(&0u32.to_le_bytes()); // tokenizer_offset
+    out[16..20].copy_from_slice(&(tokenizer_offset as u32).to_le_bytes()); // tokenizer_offset
     out[20..24].copy_from_slice(&(hparams_offset as u32).to_le_bytes()); // hparams_offset
     out[24..28].copy_from_slice(&string_table_offset.to_le_bytes()); // string_table_offset
     out[28..32].copy_from_slice(&0u32.to_le_bytes()); // checksum_offset
@@ -718,6 +721,7 @@ fn compile_gguf_to_p64_legacy(input: &[u8], page_log2: u16) -> Result<Vec<u8>, S
         out[e_off + 28..e_off + 32].copy_from_slice(&(info.dims[3] as u32).to_le_bytes());
         out[e_off + 32..e_off + 36].copy_from_slice(&(cursor_blob as u32).to_le_bytes());
         out[e_off + 36..e_off + 40].copy_from_slice(&(byte_len as u32).to_le_bytes());
+        out[e_off + 40..e_off + 44].copy_from_slice(&(n_elements as u32).to_le_bytes());
 
         cursor_blob += byte_len;
     }

@@ -1543,7 +1543,7 @@ impl AcousticNetwork {
         Ok(discovered_nodes)
     }
 
-    pub fn send_message(&mut self, message: &StoredMessage) -> Result<(), MeshError> {
+    pub fn send_message(&mut self, _message: &StoredMessage) -> Result<(), MeshError> {
         // Send message through acoustic network
         thread::sleep(Duration::from_millis(500)); // Simulate transmission time
         Ok(())
@@ -1619,7 +1619,7 @@ impl BleNetwork {
         Ok(discovered_nodes)
     }
 
-    pub fn send_message(&mut self, message: &StoredMessage) -> Result<(), MeshError> {
+    pub fn send_message(&mut self, _message: &StoredMessage) -> Result<(), MeshError> {
         // Send message through BLE network
         thread::sleep(Duration::from_millis(100)); // Simulate transmission time
         Ok(())
@@ -1710,7 +1710,7 @@ impl MeshPerformanceMonitor {
         }
     }
 
-    pub fn update_receive_metrics(&mut self, message: &StoredMessage) {
+    pub fn update_receive_metrics(&mut self, _message: &StoredMessage) {
         // Update receive metrics
         self.global_metrics.total_messages += 1;
     }

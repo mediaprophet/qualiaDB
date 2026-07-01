@@ -23,7 +23,6 @@
 
 use std::fs::File;
 use std::mem::ManuallyDrop;
-use std::path::Path;
 use windows::{
     core::Interface,
     Win32::{
@@ -37,8 +36,6 @@ use windows::{
     },
 };
 
-#[cfg(target_os = "windows")]
-use std::os::windows::io::AsRawHandle;
 
 // ─── FFI Firewall: Type-Erased Interface ─────────────────────────────────────
 
@@ -104,7 +101,7 @@ unsafe fn directstorage_read_impl(
     // Cast type-erased pointers back to specific Windows types
     let device = &(*device_ptr).d3d12;
     let handle = HANDLE(file_handle);
-    let gpu_buffer = &*(gpu_buffer_ptr as *const ID3D12Resource);
+    let _gpu_buffer = &*(gpu_buffer_ptr as *const ID3D12Resource);
 
     // Perform DirectStorage read operation
     // Note: Actual DirectStorage implementation would go here

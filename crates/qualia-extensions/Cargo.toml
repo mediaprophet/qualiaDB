@@ -18,6 +18,7 @@ clap = { version = "4.0", features = ["derive"] }
 
 # Native Qualia pipeline (replaces Candle for PINN)
 qualia-core-db = { path = "../qualia-core-db", optional = true }
+qualia-q-forge = { path = "../qualia-q-forge", optional = true }
 
 # WebGPU dependencies
 wgpu = { version = "29", optional = true }
@@ -49,7 +50,7 @@ criterion = "0.8"
 
 [features]
 default = ["qpu", "pinn", "webgpu"]
-qpu = ["reqwest"]
+qpu = ["reqwest", "qualia-q-forge"]
 pinn = ["qualia-core-db", "wgpu"]  # Use native Qualia pipeline instead of Candle
 webgpu = ["wgpu", "winit"]
 

@@ -1,10 +1,8 @@
 use serde::{Deserialize, Serialize};
 use std::collections::HashMap;
-use std::sync::{Arc, Mutex};
 
 use super::computation::*;
 use super::core_types::*;
-use super::performance::*;
 use super::privacy::*;
 use super::storage::*;
 
@@ -179,8 +177,8 @@ impl OptimizationEngine {
         right: &Matrix,
     ) -> Result<OptimizedMultiplication, LinearAlgebraError> {
         // Analyze matrices
-        let left_analysis = self.analyzer.analyze_matrix(left)?;
-        let right_analysis = self.analyzer.analyze_matrix(right)?;
+        let _left_analysis = self.analyzer.analyze_matrix(left)?;
+        let _right_analysis = self.analyzer.analyze_matrix(right)?;
 
         // Create optimized operation
         let optimized = OptimizedMultiplication {

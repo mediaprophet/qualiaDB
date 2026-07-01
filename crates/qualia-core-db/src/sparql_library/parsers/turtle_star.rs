@@ -186,7 +186,7 @@ impl TurtleStarParser {
         let frame = StackFrame::new();
         self.stack.push(frame)?;
 
-        let start_depth = self.stack.depth();
+        let _start_depth = self.stack.depth();
 
         // Parse subject
         match self.parse_token(input, pos)? {
@@ -344,7 +344,7 @@ pub fn parse_turtle_star_into<R: Read, S: crate::sparql_library::quin_sink::Quin
         // Check if line contains embedded triple marker
         if l.contains("<<") {
             // Parse embedded triple using stack-based parser
-            if let Ok((virtual_id, components)) = parser.parse_embedded_triple(bytes) {
+            if let Ok((_virtual_id, components)) = parser.parse_embedded_triple(bytes) {
                 // Emit the embedded triple as a Quin
                 sink.push(NQuin {
                     subject: components[0],

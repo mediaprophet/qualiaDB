@@ -454,7 +454,7 @@ pub fn verify_integrity(
     use crate::sparql_library::parsers::turtle_star::TurtleStarParser;
     use std::fs::File;
     use std::io::BufReader;
-    use std::io::Read;
+    
 
     // Calculate source checksum
     let mut source_checksum: u64 = 0;

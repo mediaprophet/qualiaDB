@@ -666,7 +666,7 @@ impl LocalLlmAgent {
         &self,
         prompt: &str,
         graph_context: &str,
-        mut on_token: Option<F>,
+        on_token: Option<F>,
     ) -> (String, Vec<u64>, u32, Option<NQuin>) {
         self.infer_local_model_inner(prompt, graph_context, on_token)
     }

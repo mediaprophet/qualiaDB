@@ -8,7 +8,6 @@
 
 use serde::{Deserialize, Serialize};
 use std::collections::HashMap;
-use std::sync::{Arc, Mutex};
 
 /// Maximum number of token embeddings materialised into `Model.weights` when loading a
 /// real GGUF file. The full vocabulary embedding table can be multiple gigabytes, so only
@@ -4052,7 +4051,7 @@ impl RequestScheduler {
         Ok(())
     }
 
-    pub fn schedule_request(&mut self, request: &InferenceRequest) -> Result<String, MLError> {
+    pub fn schedule_request(&mut self, _request: &InferenceRequest) -> Result<String, MLError> {
         // Simplified scheduling - return backend ID
         Ok("backend_1".to_string())
     }
@@ -4293,7 +4292,7 @@ impl TrainingEngine {
     /// Start a training *job* (the catalog/scheduler path). This records the job with the
     /// scheduler but performs no weight updates; use [`start_training`] for the real SGD
     /// loop that mutates a model's weights.
-    pub fn start_training_job(&mut self, job: &TrainingJob) -> Result<(), MLError> {
+    pub fn start_training_job(&mut self, _job: &TrainingJob) -> Result<(), MLError> {
         // Start training job
         Ok(())
     }
@@ -4928,7 +4927,7 @@ impl MLOptimizationEngine {
     pub fn optimize_model(
         &mut self,
         model_id: &str,
-        algorithm: MLOptimizationAlgorithm,
+        _algorithm: MLOptimizationAlgorithm,
     ) -> Result<Model, MLError> {
         let mut model = Model::new();
         model.model_id = model_id.to_string();

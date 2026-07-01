@@ -12,7 +12,7 @@ pub mod wasm;
 #[cfg(test)]
 mod tests {
     use super::*;
-    use models::*;
+    
     use parser::*;
     use rdf::*;
     use chrono::Timelike;

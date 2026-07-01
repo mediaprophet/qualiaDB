@@ -2048,8 +2048,8 @@ impl StatisticalComputingLibrary {
     /// Compute Spearman correlation
     fn spearman_correlation(&self, x: &[f64], y: &[f64]) -> Result<f64, StatisticalError> {
         // Convert to ranks
-        let mut x_ranked = self.rank_values(x);
-        let mut y_ranked = self.rank_values(y);
+        let x_ranked = self.rank_values(x);
+        let y_ranked = self.rank_values(y);
 
         // Compute Pearson correlation on ranks
         self.pearson_correlation(&x_ranked, &y_ranked)
@@ -3663,9 +3663,9 @@ impl StatisticalPerformanceMonitor {
 
     pub fn record_operation(
         &mut self,
-        operation_type: &str,
+        _operation_type: &str,
         execution_time: u64,
-        memory_usage: u64,
+        _memory_usage: u64,
         privacy_cost: f64,
     ) {
         self.system_metrics.total_operations += 1;

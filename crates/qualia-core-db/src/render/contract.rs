@@ -3,14 +3,6 @@
 //! Run via `cargo test -p qualia-core-db phenomenal_contract --lib` or
 //! `node docs/tests/phenomenal-verify.mjs`.
 
-use crate::render::acoustic::{
-    sigma_to_center_frequency_hz, sigma_to_wavelength_nm, ACOUSTIC_UNIFORM_FLOAT_COUNT,
-};
-use crate::render::control::{PortalControlCommand, CONTROL_RING_CAP, ICP_MAGIC_BIT};
-use crate::render::spectral::sigma_to_cie_xyz;
-use crate::shaders::viewport::{AMBIENT_WGSL, BLOOM_WGSL, PROJECTOR_WGSL};
-use crate::tensor::buffer_export::{TensorBufferHeader, TENSOR_HEADER_BYTES, TENSOR_STRIDE};
-use crate::tensor::Tensor10D;
 
 /// Rust `portal_gpu` projector camera bind group (group 0).
 pub const PROJECTOR_GROUP0_BINDINGS: &[u32] = &[0, 1];

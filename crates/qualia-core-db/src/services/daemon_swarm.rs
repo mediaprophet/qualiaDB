@@ -6,14 +6,14 @@
 pub mod swarm {
     use crate::identifier::parse_did_q42;
     #[cfg(not(target_arch = "wasm32"))]
-    use crate::q42_lexicon::{CborLdError, Q42CborLdParser, Q42Context, SemanticPayload};
+    use crate::q42_lexicon::{CborLdError, Q42CborLdParser, Q42Context};
     #[cfg(not(target_arch = "wasm32"))]
     use crate::q42_volume::Q42Volume;
     use crate::NQuin;
     use crate::QualiaSuperBlock;
     use crossbeam_channel::{bounded, Receiver, Sender};
     use std::collections::HashMap;
-    use std::io;
+    
     use std::net::IpAddr;
     use std::process::Command;
     use std::sync::{Arc, Mutex};
@@ -1273,7 +1273,7 @@ pub mod swarm {
             port: u16,
         ) -> Result<u64, &'static str> {
             use boringtun::noise::Tunn;
-            use rand::Rng;
+            
 
             // Generate ephemeral local WireGuard private key
             let mut raw_priv: [u8; 32] = rand::random();

@@ -5,7 +5,9 @@
 //! and caller-supplied buffers.
 
 pub mod zero_heap;
+pub mod zero_heap_algebra;
 
 pub use zero_heap::{
     FixedArray, FixedQueue, FixedStack, RingBuffer, MAX_FIXED_ARRAY_SIZE, MAX_RING_BUFFER_SIZE,
 };
+pub use zero_heap_algebra::ZeroHeapMatrix;

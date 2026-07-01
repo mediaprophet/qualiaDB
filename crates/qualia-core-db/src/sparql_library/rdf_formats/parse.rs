@@ -1,6 +1,6 @@
 //! Zero-heap RDF parse dispatch into [`QuinCollector`].
 
-use super::{collector::QuinCollector, QuinSink, RdfFormat};
+use super::{collector::QuinCollector, RdfFormat};
 use std::io::Read;
 
 #[derive(Debug, Clone, PartialEq, Eq)]
