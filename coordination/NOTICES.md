@@ -14,6 +14,8 @@ YYYY-MM-DD | INSTRUMENT | CLAIM|PROGRESS|BLOCKED|RELEASE | short description | p
 
 ## Active notices
 
+2026-07-01 | Grok | PROGRESS | Phase 1 WellFair: live host snapshot, PolicyDecisionService, Samsung CSV→WAL import, Tools UI panel | wellfair/{api,import_samsung,snapshot,policy}, webizen-desktop commands
+2026-07-01 | Grok | RELEASE | WS2+3 committed on 0.0.24; legacy qualia_bindings/webizen retained in commit (WS1 retires separately) | feat(wellfair) qapp_install+companion_bundle+shell
 2026-07-01 | Grok | CLAIM | Full floor after Gemini stand-down: WS2+3 commit + frontend compile verification; auditing wellfare-core deletions against WS1 plan | canonical 0.0.24
 2026-07-01 | Grok | PROGRESS | Build green: webizen-studio + webizen-desktop check 1m03s; only 2 deletions in tree (qualia_bindings, webizen) — match WS1 retire list; record.rs added | wellfare-core, docs/plans/wellfair-webizen-desktop/
 2026-07-01 | Grok | PROGRESS | WS2+3 verified: qapp_install 5/5, companion_bundle 1/1, webizen-studio check green; fixed qapp_version test typos + bundled_qapps dead code | qualia-client-core, webizen-studio

@@ -199,20 +199,32 @@ fn main() {
             let settings_port = settings_server::spawn_settings_server(app_state.clone());
             eprintln!("Settings portal ready at http://127.0.0.1:{settings_port}/");
 
-            // Initialize WebizenHostApi for qApps
-            if let Ok(mut kv) = app_state.key_vault.lock() {
-                let key_bytes = kv.get_master_key_bytes();
-                let signing_key = ed25519_dalek::SigningKey::from_bytes(&key_bytes);
-                let author_did = qualia_core_db::q_hash("did:q42:local");
-                let storage_path = app_state.config.lock().unwrap().storage_path.clone();
-                let wal_path = std::path::PathBuf::from(storage_path).join("qualia_global.wal");
-                if let Ok(vault) = qualia_client_core::wellfair::vault::VaultService::open(&wal_path, author_did) {
+            // Initialize WebizenHostApi for qApps (requires unlocked KeyVault).
+            if let Ok(kv) = app_state.key_vault.lock() {
+                if !kv.is_locked() {
+                    let key_bytes = kv.get_master_key_bytes();
+                    let signing_key = ed25519_dalek::SigningKey::from_bytes(&key_bytes);
+                    let author_did_hash = qualia_core_db::q_hash("did:q42:local");
+                    let owner_did = "did:q42:wellfair:owner".to_string();
+                    let author_did = owner_did.clone();
+                    let storage_path = app_state.config.lock().unwrap().storage_path.clone();
+                    let wal_path = std::path::PathBuf::from(storage_path).join("qualia_global.wal");
+                    if let Ok(vault) =
+                        qualia_client_core::wellfair::vault::VaultService::open(&wal_path, author_did_hash)
+                    {
                         let policy = qualia_client_core::wellfair::policy::PolicyDecisionService::new();
-                        let host_api = qualia_client_core::wellfair::api::WebizenHostApi::new(vault, policy, signing_key);
+                        let host_api = qualia_client_core::wellfair::api::WebizenHostApi::new(
+                            vault,
+                            policy,
+                            signing_key,
+                            owner_did,
+                            author_did,
+                        );
                         let state_arc = app.state::<commands::HostApiState>().0.clone();
                         if let Ok(mut host_guard) = state_arc.lock() {
                             *host_guard = Some(host_api);
                         };
+                    }
                 }
             }
 

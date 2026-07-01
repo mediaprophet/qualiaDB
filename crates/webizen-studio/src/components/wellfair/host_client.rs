@@ -4,6 +4,9 @@ use super::host_dto::WellfairHostSnapshot;
 use dioxus::prelude::*;
 
 #[cfg(target_arch = "wasm32")]
+use crate::components::qapp_engine::tauri_invoke;
+
+#[cfg(target_arch = "wasm32")]
 pub async fn fetch_host_snapshot() -> WellfairHostSnapshot {
     match tauri_invoke("wellfair_host_snapshot", wasm_bindgen::JsValue::NULL).await {
         Ok(js) => {
@@ -40,4 +43,19 @@ pub fn HostSnapshotProvider(children: Element) -> Element {
 
 pub fn use_host_snapshot() -> Signal<WellfairHostSnapshot> {
     consume_context::<Signal<WellfairHostSnapshot>>()
+}
+
+#[cfg(target_arch = "wasm32")]
+pub async fn import_samsung_folder(folder_path: &str) -> Result<String, String> {
+    let args = wasm_bindgen::JsValue::from_str(folder_path);
+    let js = tauri_invoke("wellfair_import_samsung_folder", args)
+        .await
+        .map_err(|e| format!("{e:?}"))?;
+    js.as_string()
+        .ok_or_else(|| "import response was not a JSON string".to_string())
+}
+
+#[cfg(not(target_arch = "wasm32"))]
+pub async fn import_samsung_folder(_folder_path: &str) -> Result<String, String> {
+    Err("Samsung import requires the Tauri desktop host".into())
 }

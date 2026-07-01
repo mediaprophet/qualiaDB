@@ -3,6 +3,7 @@ use super::host_dto::{ConsentGrantDraft, PolicyDecisionDto, ProvenanceHop, Sensi
 use super::shared::{
     ConsentGrantEditor, OfflineState, ProvenanceTrail, SensitivityBadge, SyncState,
 };
+use super::tools_panel::WellfairToolsPanel;
 use dioxus::prelude::*;
 
 const AREAS: &[(&str, &str)] = &[
@@ -93,6 +94,8 @@ pub fn WellfairShell() -> Element {
                     }
                 }
             }
+
+            WellfairToolsPanel {}
 
             section {
                 style: "display:grid;grid-template-columns:1fr 1fr;gap:1rem;",

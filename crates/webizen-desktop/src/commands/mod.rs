@@ -196,9 +196,44 @@ pub fn save_config(new_config: AgentConfig) -> Result<(), String> {
 }
 
 #[command]
-pub fn wellfair_host_snapshot() -> Result<String, String> {
-    let snapshot = qualia_client_core::wellfair::fixture_host_snapshot();
+pub fn wellfair_host_snapshot(
+    app_state: State<'_, std::sync::Arc<qualia_client_core::state::AppState>>,
+    host_state: State<'_, HostApiState>,
+) -> Result<String, String> {
+    let kv = app_state.key_vault.lock().map_err(|e| e.to_string())?;
+    let host_ready = host_state
+        .0
+        .lock()
+        .map_err(|e| e.to_string())?
+        .is_some();
+    let owner_label = api::read_identity()
+        .and_then(|v| {
+            v.get("display_name")
+                .and_then(|n| n.as_str())
+                .map(|s| s.to_string())
+        })
+        .unwrap_or_else(|| "Owner vault".to_string());
+    let snapshot = qualia_client_core::wellfair::build_host_snapshot(
+        &kv,
+        host_ready,
+        &owner_label,
+        false,
+    );
     serde_json::to_string(&snapshot).map_err(|e| e.to_string())
+}
+
+#[command]
+pub fn wellfair_import_samsung_folder(
+    app: AppHandle,
+    folder_path: String,
+) -> Result<String, String> {
+    let state = app.state::<HostApiState>();
+    let mut guard = state.0.lock().map_err(|e| e.to_string())?;
+    let host = guard
+        .as_mut()
+        .ok_or_else(|| "Host API not initialized — unlock vault first".to_string())?;
+    let report = host.import_samsung_health_folder(std::path::Path::new(&folder_path));
+    serde_json::to_string(&report).map_err(|e| e.to_string())
 }
 
 // ── Wallet / identity ─────────────────────────────────────────────────────────
@@ -2595,6 +2630,7 @@ pub fn get_invoke_handler() -> impl Fn(tauri::ipc::Invoke<tauri::Wry>) -> bool {
         get_config,
         save_config,
         wellfair_host_snapshot,
+        wellfair_import_samsung_folder,
         get_wallet_status,
         is_first_run,
         read_identity,
