@@ -1486,7 +1486,7 @@ mod tests {
 
     #[test]
     fn qualia_logic_val() {
-        use crate::modalities::logic::core::{WebizenCompiler, WebizenOpcode, WebizenVM};
+        use crate::modalities::logic::core::{WebizenCompiler, WebizenVM};
         let q = NQuin {
             subject: 0,
             predicate: 100,
@@ -1561,7 +1561,7 @@ mod tests {
     #[test]
     fn qualia_vector_density() {
         use crate::domains::mathematical::geometric::{
-            extract_spatial_projection, BoundingHull, VectorSectorMap,
+            extract_spatial_projection, VectorSectorMap,
         };
         let q = NQuin {
             subject: 0,

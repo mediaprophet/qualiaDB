@@ -2388,7 +2388,7 @@ pub fn check_personhood_category_error(agent_type: u64, claims_dignity_right: bo
 #[cfg(test)]
 mod tests {
     use super::*;
-    use crate::crdt::{SuspendedTransaction, SuspendedTransactionQueue};
+    use crate::crdt::SuspendedTransactionQueue;
 
     #[test]
     fn zk_consume_fact_gates_resource_exhaustion_on_verified_proof() {
@@ -2935,8 +2935,7 @@ mod tests {
     #[test]
     fn agency_n3_file_parses_and_g1_fires_end_to_end() {
         use crate::modalities::logic::n3_parser::{N3Event, N3Parser};
-        use std::io::Cursor;
-
+        
         let path = std::path::Path::new(env!("CARGO_MANIFEST_DIR"))
             .join("../../core-ontologies/agency.n3");
         let text = std::fs::read_to_string(&path).expect("agency.n3 must be readable");

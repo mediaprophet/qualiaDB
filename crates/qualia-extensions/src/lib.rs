@@ -431,7 +431,7 @@ mod tests {
         assert!(!parsed.result_quins.is_empty());
 
         extension_result_free(res);
-        unsafe { extension_manager_free(mgr) };
+        extension_manager_free(mgr);
     }
 
     #[test]
@@ -446,7 +446,7 @@ mod tests {
         assert!(std::str::from_utf8(msg).unwrap().contains("nonexistent"));
 
         extension_result_free(res);
-        unsafe { extension_manager_free(mgr) };
+        extension_manager_free(mgr);
     }
 
     #[test]
@@ -467,6 +467,6 @@ mod tests {
         let msg = unsafe { std::slice::from_raw_parts(res.error_msg, res.error_len) };
         assert!(std::str::from_utf8(msg).unwrap().contains("parameters JSON"));
         extension_result_free(res);
-        unsafe { extension_manager_free(mgr) };
+        extension_manager_free(mgr);
     }
 }

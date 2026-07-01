@@ -281,7 +281,7 @@ mod tests {
 
     #[test]
     fn commons_lane_excludes_restricted_quins() {
-        let mut public = sample_quin();
+        let public = sample_quin();
         let mut restricted = sample_quin();
         restricted.set_sensitivity_byte(NQuin::SENSITIVITY_RESTRICTED);
         let req = TensorSliceRequest {

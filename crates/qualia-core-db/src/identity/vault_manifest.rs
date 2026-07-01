@@ -431,9 +431,7 @@ impl VaultManifest {
 #[cfg(test)]
 mod tests {
     use super::*;
-    use crate::mini_parser::hash_token;
-    use std::collections::HashMap;
-
+        
     #[test]
     fn test_vault_manifest_creation() {
         let manifest = VaultManifest::new("test-vault-123".to_string());

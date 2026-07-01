@@ -213,39 +213,112 @@ pub fn orthogonalization_matrix<const N: usize>(
 pub fn solve_rhf_scf<const N: usize>(
     h_core: &ZeroHeapMatrix<f64, N, N>, // One-electron Hamiltonian
     s: &ZeroHeapMatrix<f64, N, N>, // Overlap Matrix
-    _eri: &ZeroHeapMatrix<f64, N, N>, // Two-electron repulsion integrals (simplified for mock, normally 4D)
+    eri: &ZeroHeapMatrix<f64, N, N>, // Two-electron repulsion integrals (mock 2D mapped for test)
     num_electrons: usize, // Total electrons
 ) -> Result<f64, ScfError> {
     let x = orthogonalization_matrix(s)?;
+    let x_t = transpose(&x);
     let mut density = ZeroHeapMatrix::<f64, N, N>::zeros();
     let mut old_energy = 0.0;
     
-    for _iter in 0..MAX_SCF_ITERATIONS {
-        // 1. Build Fock Matrix (F = H + G(P)). For this simplified zero-heap driver, 
-        // we'll mock the two-electron operator G(P) to just use `density` scaling to test DIIS 
-        // logic without the full 4D ERI tensor contraction in this small driver mock.
+    // DIIS History arrays (Zero heap constraint)
+    let mut error_vectors = [ZeroHeapMatrix::<f64, N, N>::zeros(); DIIS_SUBSPACE_SIZE];
+    let mut fock_history = [ZeroHeapMatrix::<f64, N, N>::zeros(); DIIS_SUBSPACE_SIZE];
+    let mut diis_count = 0;
+    let mut diis_index = 0;
+
+    for iter in 0..MAX_SCF_ITERATIONS {
+        // 1. Build Fock Matrix (F = H + G(P))
         let mut fock = *h_core;
-        for i in 0..N {
-            for j in 0..N {
-                // Mock interaction
-                fock.set(i, j, fock.get(i, j) + density.get(i, j) * 0.1); 
+        for mu in 0..N {
+            for nu in 0..N {
+                let mut g = 0.0;
+                for lam in 0..N {
+                    for sig in 0..N {
+                        // Normally this would index a 4D ERI tensor (mu, nu | lam, sig).
+                        // In this mock, we map it to 2D for demonstration by collapsing indices.
+                        let eri_val = eri.get((mu + lam) % N, (nu + sig) % N);
+                        // J - 0.5 * K (Coulomb - Exchange)
+                        g += density.get(lam, sig) * (eri_val - 0.5 * eri.get((mu + sig) % N, (nu + lam) % N));
+                    }
+                }
+                fock.set(mu, nu, fock.get(mu, nu) + g); 
             }
         }
         
-        // Note: Full DIIS logic would store history of F, D, S here.
-        // e_i = FDS - SDF
+        // 2. Compute DIIS error vector: e = FDS - SDF
+        let fds = fock * density * (*s);
+        let sdf = (*s) * density * fock;
+        let mut err_vec = ZeroHeapMatrix::<f64, N, N>::zeros();
+        for i in 0..N {
+            for j in 0..N {
+                err_vec.set(i, j, fds.get(i, j) - sdf.get(i, j));
+            }
+        }
         
-        // 2. Transform Fock matrix to orthogonal basis: F' = X^T * F * X
-        let x_t = transpose(&x);
-        let f_prime = x_t * fock * x;
+        // Transform error vector to orthogonal basis: e' = X^T * e * X
+        let err_ortho = x_t * err_vec * x;
+        let mut max_err: f64 = 0.0;
+        for i in 0..N {
+            for j in 0..N {
+                max_err = max_err.max(err_ortho.get(i, j).abs());
+            }
+        }
+
+        // 3. DIIS Extrapolation
+        fock_history[diis_index] = fock;
+        error_vectors[diis_index] = err_ortho;
+        if diis_count < DIIS_SUBSPACE_SIZE {
+            diis_count += 1;
+        }
+        diis_index = (diis_index + 1) % DIIS_SUBSPACE_SIZE;
+
+        let mut fock_extrapolated = fock;
+        if diis_count > 1 {
+            // Build Pulay matrix B
+            let _b_size = diis_count + 1;
+            let mut b_matrix = ZeroHeapMatrix::<f64, { DIIS_SUBSPACE_SIZE + 1 }, { DIIS_SUBSPACE_SIZE + 1 }>::zeros();
+            for i in 0..diis_count {
+                for j in 0..diis_count {
+                    let mut dot = 0.0;
+                    for mu in 0..N {
+                        for nu in 0..N {
+                            dot += error_vectors[i].get(mu, nu) * error_vectors[j].get(mu, nu);
+                        }
+                    }
+                    b_matrix.set(i, j, dot);
+                }
+                b_matrix.set(i, diis_count, -1.0);
+                b_matrix.set(diis_count, i, -1.0);
+            }
+            b_matrix.set(diis_count, diis_count, 0.0);
+            
+            let mut rhs = [0.0; DIIS_SUBSPACE_SIZE + 1];
+            rhs[diis_count] = -1.0;
+
+            // Use our Gaussian elimination to solve B * c = rhs
+            if let Ok(c) = gaussian_elimination(b_matrix, rhs) {
+                fock_extrapolated = ZeroHeapMatrix::<f64, N, N>::zeros();
+                for i in 0..diis_count {
+                    for mu in 0..N {
+                        for nu in 0..N {
+                            fock_extrapolated.set(mu, nu, fock_extrapolated.get(mu, nu) + c[i] * fock_history[i].get(mu, nu));
+                        }
+                    }
+                }
+            }
+        }
+
+        // 4. Transform Fock matrix to orthogonal basis: F' = X^T * F * X
+        let f_prime = x_t * fock_extrapolated * x;
         
-        // 3. Diagonalize F' to get eigenvalues and C'
+        // 5. Diagonalize F' to get eigenvalues and C'
         let (_evals, c_prime) = jacobi_diagonalization(&f_prime)?;
         
-        // 4. Back transform C' to original basis: C = X * C'
+        // 6. Back transform C' to original basis: C = X * C'
         let c = x * c_prime;
         
-        // 5. Build new density matrix P = 2 * C_occ * C_occ^T
+        // 7. Build new density matrix P = 2 * C_occ * C_occ^T
         let mut new_density = ZeroHeapMatrix::<f64, N, N>::zeros();
         let num_occ = num_electrons / 2;
         for mu in 0..N {
@@ -258,15 +331,16 @@ pub fn solve_rhf_scf<const N: usize>(
             }
         }
         
-        // 6. Calculate Electronic Energy
+        // 8. Calculate Electronic Energy
         let mut energy = 0.0;
         for mu in 0..N {
             for nu in 0..N {
-                energy += 0.5 * new_density.get(mu, nu) * (h_core.get(mu, nu) + fock.get(mu, nu));
+                energy += 0.5 * new_density.get(mu, nu) * (h_core.get(mu, nu) + fock_extrapolated.get(mu, nu));
             }
         }
         
-        if (energy - old_energy).abs() < SCF_CONVERGENCE_THRESHOLD {
+        // Check both Energy and DIIS error convergence
+        if iter > 0 && (energy - old_energy).abs() < SCF_CONVERGENCE_THRESHOLD && max_err < 1e-6 {
             return Ok(energy);
         }
         old_energy = energy;

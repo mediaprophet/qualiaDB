@@ -6666,7 +6666,7 @@ mod tests {
         library.initialize().unwrap();
 
         // Generate key pair
-        let key_pair = library
+        let _key_pair = library
             .generate_mldsa_key_pair("test_key".to_string(), SecurityLevel::High)
             .unwrap();
 
@@ -6690,7 +6690,7 @@ mod tests {
         library.initialize().unwrap();
 
         // Generate key pair
-        let key_pair = library
+        let _key_pair = library
             .generate_mldsa_key_pair("test_key".to_string(), SecurityLevel::High)
             .unwrap();
 
@@ -7051,7 +7051,7 @@ mod tests {
         library.initialize().unwrap();
 
         // Generate initial key
-        let key_pair = library
+        let _key_pair = library
             .generate_mldsa_key_pair("test_key".to_string(), SecurityLevel::High)
             .unwrap();
 

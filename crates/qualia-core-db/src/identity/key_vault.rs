@@ -3,9 +3,25 @@ use sha2::{Digest, Sha256};
 use std::fs;
 use std::path::Path;
 
+fn generate_master_secret() -> Result<[u8; 32], String> {
+    let mut secret = [0u8; 32];
+    getrandom::fill(&mut secret).map_err(|e| format!("OS RNG failed: {e}"))?;
+    Ok(secret)
+}
+
+#[cfg(not(target_arch = "wasm32"))]
+fn keyring_entry_for(storage_dir: &str) -> Result<keyring::Entry, String> {
+    let mut hasher = Sha256::new();
+    hasher.update(storage_dir.as_bytes());
+    let digest = hasher.finalize();
+    let username = format!("master_{}", hex::encode(&digest[..8]));
+    keyring::Entry::new("qualia_db", &username).map_err(|e| format!("Keyring error: {e}"))
+}
+
 /// High-level Key Management module for the Qualia Node.
 pub struct KeyVault {
-    master_key: SigningKey,
+    master_key: Option<SigningKey>,
+    storage_dir: Option<String>,
 }
 
 impl KeyVault {
@@ -18,11 +34,85 @@ impl KeyVault {
         let mut secret = [0u8; 32];
         secret.copy_from_slice(&result);
         Self {
-            master_key: SigningKey::from_bytes(&secret),
+            master_key: Some(SigningKey::from_bytes(&secret)),
+            storage_dir: None,
         }
     }
 
-    /// Initializes the KeyVault from disk. Generates a new master key if none exists.
+    pub fn is_locked(&self) -> bool {
+        self.master_key.is_none()
+    }
+
+    pub fn lock(&mut self) {
+        self.master_key = None;
+    }
+
+    #[cfg(not(target_arch = "wasm32"))]
+    pub fn unlock(&mut self) -> Result<(), String> {
+        let dir = self.storage_dir.as_ref().ok_or("No storage dir configured")?;
+        let temp = Self::load_or_generate(dir)?;
+        self.master_key = temp.master_key;
+        Ok(())
+    }
+
+    #[cfg(target_arch = "wasm32")]
+    pub fn unlock(&mut self) -> Result<(), String> {
+        let temp = Self::load_or_generate("")?;
+        self.master_key = temp.master_key;
+        Ok(())
+    }
+
+    #[cfg(not(target_arch = "wasm32"))]
+    pub fn load_or_generate(storage_dir: &str) -> Result<Self, String> {
+        let vault_path = Path::new(storage_dir).join("keystore.bin");
+        let entry = keyring_entry_for(storage_dir)?;
+
+        let master_key = match entry.get_password() {
+            Ok(secret_hex) => {
+                let bytes =
+                    hex::decode(secret_hex).map_err(|e| format!("Invalid hex in keyring: {e}"))?;
+                if bytes.len() != 32 {
+                    return Err("Corrupted master key length in keyring".into());
+                }
+                let mut secret = [0u8; 32];
+                secret.copy_from_slice(&bytes[0..32]);
+                SigningKey::from_bytes(&secret)
+            }
+            Err(_) => {
+                if vault_path.exists() {
+                    let bytes =
+                        fs::read(&vault_path).map_err(|e| format!("Failed to read keystore: {e}"))?;
+                    if bytes.len() != 32 {
+                        return Err("Corrupted master key length".into());
+                    }
+                    let secret_hex = hex::encode(&bytes[0..32]);
+                    let _ = entry.set_password(&secret_hex);
+                    let mut secret = [0u8; 32];
+                    secret.copy_from_slice(&bytes[0..32]);
+                    SigningKey::from_bytes(&secret)
+                } else {
+                    let secret = generate_master_secret()?;
+                    let new_key = SigningKey::from_bytes(&secret);
+                    let secret_hex = hex::encode(secret);
+                    let _ = entry.set_password(&secret_hex);
+                    if let Some(parent) = vault_path.parent() {
+                        fs::create_dir_all(parent)
+                            .map_err(|e| format!("Failed to create keystore dir: {e}"))?;
+                    }
+                    fs::write(&vault_path, secret)
+                        .map_err(|e| format!("Failed to write keystore: {e}"))?;
+                    new_key
+                }
+            }
+        };
+
+        Ok(Self {
+            master_key: Some(master_key),
+            storage_dir: Some(storage_dir.to_string()),
+        })
+    }
+
+    #[cfg(target_arch = "wasm32")]
     pub fn load_or_generate(storage_dir: &str) -> Result<Self, String> {
         let vault_path = Path::new(storage_dir).join("keystore.bin");
 
@@ -36,34 +126,32 @@ impl KeyVault {
             secret.copy_from_slice(&bytes[0..32]);
             SigningKey::from_bytes(&secret)
         } else {
-            use std::time::{SystemTime, UNIX_EPOCH};
-            let nanos = SystemTime::now()
-                .duration_since(UNIX_EPOCH)
-                .unwrap()
-                .as_nanos();
-            let mut hasher = Sha256::new();
-            hasher.update(&nanos.to_be_bytes());
-            let result = hasher.finalize();
-            let mut secret = [0u8; 32];
-            secret.copy_from_slice(&result);
-            let new_key = SigningKey::from_bytes(&secret);
+            let secret = generate_master_secret()?;
             if let Some(parent) = vault_path.parent() {
-                fs::create_dir_all(parent)
-                    .map_err(|e| format!("Failed to create keystore dir: {e}"))?;
+                if !parent.as_os_str().is_empty() {
+                    fs::create_dir_all(parent)
+                        .map_err(|e| format!("Failed to create keystore dir: {e}"))?;
+                }
             }
-            fs::write(&vault_path, secret)
-                .map_err(|e| format!("Failed to write keystore: {}", e))?;
-            new_key
+            if !storage_dir.is_empty() {
+                fs::write(&vault_path, secret)
+                    .map_err(|e| format!("Failed to write keystore: {e}"))?;
+            }
+            SigningKey::from_bytes(&secret)
         };
 
-        Ok(Self { master_key })
+        Ok(Self { 
+            master_key: Some(master_key),
+            storage_dir: Some(storage_dir.to_string()),
+        })
     }
 
     /// Derives a deterministic Pairwise or Front Door key from the Master Key.
     /// This ensures we can recover all DIDs from the single master root.
     pub fn derive_key(&self, context_id: &str) -> SigningKey {
+        let master_key = self.master_key.as_ref().expect("Vault is locked");
         let mut hasher = Sha256::new();
-        hasher.update(self.master_key.to_bytes());
+        hasher.update(master_key.to_bytes());
         hasher.update(context_id.as_bytes());
         let result = hasher.finalize();
 
@@ -77,14 +165,9 @@ impl KeyVault {
         signing_key.sign(payload)
     }
 
-    /// Vault is always unlocked once loaded from disk (lock/unlock UI is a follow-up).
-    pub fn is_locked(&self) -> bool {
-        false
-    }
-
     /// Exposes the raw bytes of the master key for libp2p identity bindings
     pub fn get_master_key_bytes(&self) -> [u8; 32] {
-        self.master_key.to_bytes()
+        self.master_key.as_ref().expect("Vault is locked").to_bytes()
     }
 
     /// Ed25519 verifying key bytes for a context-derived pairwise key.
@@ -146,7 +229,8 @@ impl KeyVault {
         let payload_json =
             serde_json::to_string(&payload).map_err(|e| format!("Serialization error: {}", e))?;
 
-        let signature = self.sign_payload(&self.master_key, payload_json.as_bytes());
+        let master_key = self.master_key.as_ref().expect("Vault is locked");
+        let signature = self.sign_payload(master_key, payload_json.as_bytes());
         let signature_hex = hex::encode(signature.to_bytes());
         let payload_hex = hex::encode(payload_json.as_bytes());
 
@@ -172,8 +256,8 @@ impl KeyVault {
         let mut sig_array = [0u8; 64];
         sig_array.copy_from_slice(&signature_bytes);
 
-        // Verify cryptographic signature against master key
-        let verifying_key = VerifyingKey::from(&self.master_key);
+        let master_key = self.master_key.as_ref().expect("Vault is locked");
+        let verifying_key = VerifyingKey::from(master_key);
         let signature = Signature::from_bytes(&sig_array);
         verifying_key
             .verify(&payload_bytes, &signature)
@@ -294,7 +378,8 @@ impl KeyVault {
         use hkdf::Hkdf;
         use sha2::Sha256;
 
-        let ikm = self.master_key.to_bytes();
+        let master_key = self.master_key.as_ref().expect("Vault is locked");
+        let ikm = master_key.to_bytes();
         let salt: &[u8] = b"qualia:subgraph:salt:v1";
         let hk = Hkdf::<Sha256>::new(Some(salt), &ikm);
 
@@ -430,8 +515,9 @@ impl KeyVault {
     ///
     /// Used when the node itself is a VC recipient.
     pub fn derive_x25519_secret(&self) -> [u8; 32] {
+        let master_key = self.master_key.as_ref().expect("Vault is locked");
         let mut h = Sha256::new();
-        h.update(self.master_key.to_bytes());
+        h.update(master_key.to_bytes());
         h.update(b"qualia:x25519:static");
         h.finalize().into()
     }
@@ -489,6 +575,22 @@ mod subgraph_key_tests {
 
         assert_eq!(recovered.raw(), layer_key.raw());
         assert_eq!(recovered.layer(), SubgraphLayer::Fiduciary);
+    }
+
+    #[test]
+    fn lock_and_unlock_roundtrip() {
+        let tmp = tempfile::tempdir().expect("tmpdir");
+        let path = tmp.path().to_str().unwrap();
+        let mut vault = KeyVault::load_or_generate(path).expect("vault");
+        assert!(!vault.is_locked());
+
+        let before = vault.get_master_key_bytes();
+        vault.lock();
+        assert!(vault.is_locked());
+
+        vault.unlock().expect("unlock");
+        assert!(!vault.is_locked());
+        assert_eq!(vault.get_master_key_bytes(), before);
     }
 
     #[test]

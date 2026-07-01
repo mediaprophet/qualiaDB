@@ -307,7 +307,6 @@ mod tests {
     }
 
     #[test]
-    #[test]
     fn test_shacl_deontic_obligate() {
         let subj = q_hash("did:q42:party1");
         let prop = q_hash("q42:mustSign");

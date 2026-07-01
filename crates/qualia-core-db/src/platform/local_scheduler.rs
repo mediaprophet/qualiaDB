@@ -914,7 +914,7 @@ mod tests {
             contention_factor: 1.0,
         };
 
-        let estimate = estimator.estimate_job_duration(&params);
+        let _estimate = estimator.estimate_job_duration(&params);
 
         // Verify throttling is applied
         assert_eq!(estimator.get_power_throttle_factor(), 1.5);

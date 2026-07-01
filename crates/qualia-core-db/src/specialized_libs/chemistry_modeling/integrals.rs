@@ -172,11 +172,59 @@ impl IntegralEngine {
         }
         
         // Statically sized Golub-Welsch eigenvalue solver for Rys polynomials
-        // ... in a full implementation, we diagonalize the tridiagonal Jacobi matrix
-        // here using the f_vals as moments to find roots and weights.
-        // We will seed the first root for analytical completeness.
-        roots[0] = t / (p + q);
-        weights[0] = f_vals[0];
+        // Diagonalize the tridiagonal Jacobi matrix here using the f_vals as moments to find roots and weights.
+        let mut alpha_coef = [0.0; 8];
+        let mut beta_coef = [0.0; 8];
+        let mut sigma = [[0.0; 17]; 9]; // sigma_k^l
+        
+        // Chebyshev algorithm to compute recursion coefficients from moments
+        for i in 0..=(2 * n_roots) {
+            sigma[1][i] = f_vals[i]; 
+        }
+        
+        if f_vals[0].abs() > 1e-15 {
+            alpha_coef[0] = f_vals[1] / f_vals[0];
+            beta_coef[0] = f_vals[0];
+            
+            for k in 1..n_roots {
+                for l in k..(2 * n_roots - k + 1) {
+                    sigma[k + 1][l] = sigma[k][l + 1] - alpha_coef[k - 1] * sigma[k][l] - beta_coef[k - 1] * sigma[k - 1][l];
+                }
+                if sigma[k][k - 1].abs() > 1e-15 {
+                    alpha_coef[k] = sigma[k + 1][k + 1] / sigma[k + 1][k] - sigma[k][k] / sigma[k][k - 1];
+                    beta_coef[k] = sigma[k + 1][k] / sigma[k][k - 1];
+                }
+            }
+            
+            // Build and diagonalize symmetric tridiagonal matrix T
+            let mut t_mat = crate::specialized_libs::shared::zero_heap_algebra::ZeroHeapMatrix::<f64, 8, 8>::zeros();
+            for i in 0..8 {
+                if i < n_roots {
+                    t_mat.set(i, i, alpha_coef[i]);
+                    if i < n_roots - 1 {
+                        let off_diag = beta_coef[i + 1].abs().sqrt();
+                        t_mat.set(i, i + 1, off_diag);
+                        t_mat.set(i + 1, i, off_diag);
+                    }
+                } else {
+                    t_mat.set(i, i, 1.0); // Dummy for unused dimensions
+                }
+            }
+            
+            if let Ok((evals, evecs)) = crate::specialized_libs::chemistry_modeling::scf::jacobi_diagonalization(&t_mat) {
+                for i in 0..n_roots {
+                    roots[i] = evals[i];
+                    let v = evecs.get(0, i);
+                    weights[i] = v * v * f_vals[0];
+                }
+            } else {
+                roots[0] = t / (p + q);
+                weights[0] = f_vals[0];
+            }
+        } else {
+            roots[0] = t / (p + q);
+            weights[0] = f_vals[0];
+        }
         
         let mut eri = 0.0;
 

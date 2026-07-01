@@ -435,7 +435,7 @@ pub fn parse_turtle_star_stream<R: Read>(
 #[cfg(test)]
 mod tests {
     use super::*;
-    use crate::rdf_star::{RdfStarParser, RdfStarSerializer};
+    use crate::rdf_star::{RdfStarParser};
 
     #[test]
     fn test_turtle_star_parser_creation() {

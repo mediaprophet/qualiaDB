@@ -744,8 +744,7 @@ pub fn bidx_blocks_for_hash(bidx: &[u8], object_hash: u64) -> Vec<usize> {
 mod tests {
     use super::*;
     use crate::mini_parser::hash_token;
-    use std::io::Write;
-    use tempfile::NamedTempFile;
+        use tempfile::NamedTempFile;
 
     fn sample_quin(subj: &str, pred: &str, obj: &str) -> (NQuin, HashMap<u64, String>) {
         let mut lex = HashMap::new();

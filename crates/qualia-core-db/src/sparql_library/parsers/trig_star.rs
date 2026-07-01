@@ -340,7 +340,7 @@ pub fn parse_trig_star_stream<R: std::io::Read>(
 #[cfg(test)]
 mod tests {
     use super::*;
-    use crate::rdf_star::{RdfStarParser, RdfStarSerializer};
+    use crate::rdf_star::{RdfStarParser};
 
     #[test]
     fn test_trig_star_parser_creation() {

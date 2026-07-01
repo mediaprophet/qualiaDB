@@ -186,8 +186,7 @@ pub fn publish_to_commons(
 #[cfg(test)]
 mod tests {
     use super::*;
-    use std::path::PathBuf;
-
+    
     #[test]
     fn test_rigorous_metadata_scrubbing() {
         let mut matrix = QuboMatrix::new(2);

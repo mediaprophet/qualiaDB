@@ -1406,7 +1406,7 @@ mod tests {
             }
             gguf_skip_value(&mmap, &mut pos, vtype).unwrap();
         }
-        let mut blk_samples = 0usize;
+        let _blk_samples = 0usize;
         for _ in 0..tensor_count {
             let nlen = u64::from_le_bytes(mmap[pos..pos + 8].try_into().unwrap()) as usize;
             pos += 8;
