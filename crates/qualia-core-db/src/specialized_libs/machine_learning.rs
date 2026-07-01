@@ -5366,6 +5366,41 @@ impl ProgressTracker {
     pub fn initialize(&mut self) -> Result<(), MLError> {
         Ok(())
     }
+
+    /// Register a training job under its job id.
+    pub fn register_job(&mut self, job: TrainingJob) {
+        self.training_jobs.insert(job.job_id.clone(), job);
+    }
+
+    /// Get a registered training job by id.
+    pub fn get_job(&self, job_id: &str) -> Option<&TrainingJob> {
+        self.training_jobs.get(job_id)
+    }
+
+    /// Get a mutable reference to a registered training job by id.
+    pub fn get_job_mut(&mut self, job_id: &str) -> Option<&mut TrainingJob> {
+        self.training_jobs.get_mut(job_id)
+    }
+
+    /// List the ids of all registered training jobs.
+    pub fn list_jobs(&self) -> Vec<String> {
+        self.training_jobs.keys().cloned().collect()
+    }
+
+    /// Remove a registered training job by id. Returns `true` if removed.
+    pub fn remove_job(&mut self, job_id: &str) -> bool {
+        self.training_jobs.remove(job_id).is_some()
+    }
+
+    /// Return a reference to the progress metrics.
+    pub fn progress_metrics(&self) -> &ProgressMetrics {
+        &self.progress_metrics
+    }
+
+    /// Return a mutable reference to the progress metrics.
+    pub fn progress_metrics_mut(&mut self) -> &mut ProgressMetrics {
+        &mut self.progress_metrics
+    }
 }
 
 impl ProgressMetrics {
@@ -5391,6 +5426,70 @@ impl DataPipeline {
 
     pub fn initialize(&mut self) -> Result<(), MLError> {
         Ok(())
+    }
+
+    /// Register a data source under its source id.
+    pub fn register_data_source(&mut self, source: DataSource) {
+        self.data_sources
+            .insert(source.source_id.clone(), source);
+    }
+
+    /// Get a registered data source by id.
+    pub fn get_data_source(&self, source_id: &str) -> Option<&DataSource> {
+        self.data_sources.get(source_id)
+    }
+
+    /// List the ids of all registered data sources.
+    pub fn list_data_sources(&self) -> Vec<String> {
+        self.data_sources.keys().cloned().collect()
+    }
+
+    /// Register a data transformer under its transformer id.
+    pub fn register_transformer(&mut self, transformer: DataTransformer) {
+        self.data_transformers
+            .insert(transformer.transformer_id.clone(), transformer);
+    }
+
+    /// Get a registered data transformer by id.
+    pub fn get_transformer(&self, transformer_id: &str) -> Option<&DataTransformer> {
+        self.data_transformers.get(transformer_id)
+    }
+
+    /// List the ids of all registered data transformers.
+    pub fn list_transformers(&self) -> Vec<String> {
+        self.data_transformers.keys().cloned().collect()
+    }
+
+    /// Register a data loader under its loader id.
+    pub fn register_loader(&mut self, loader: DataLoader) {
+        self.data_loaders
+            .insert(loader.loader_id.clone(), loader);
+    }
+
+    /// Get a registered data loader by id.
+    pub fn get_loader(&self, loader_id: &str) -> Option<&DataLoader> {
+        self.data_loaders.get(loader_id)
+    }
+
+    /// List the ids of all registered data loaders.
+    pub fn list_loaders(&self) -> Vec<String> {
+        self.data_loaders.keys().cloned().collect()
+    }
+
+    /// Register a data augmenter under its augmenter id.
+    pub fn register_augmenter(&mut self, augmenter: DataAugmenter) {
+        self.data_augmenters
+            .insert(augmenter.augmenter_id.clone(), augmenter);
+    }
+
+    /// Get a registered data augmenter by id.
+    pub fn get_augmenter(&self, augmenter_id: &str) -> Option<&DataAugmenter> {
+        self.data_augmenters.get(augmenter_id)
+    }
+
+    /// List the ids of all registered data augmenters.
+    pub fn list_augmenters(&self) -> Vec<String> {
+        self.data_augmenters.keys().cloned().collect()
     }
 }
 
@@ -5470,6 +5569,32 @@ impl TrainingOptimizer {
         self.hyperparameter_tuner.initialize()?;
         Ok(())
     }
+
+    /// Register a training optimization algorithm under the given name.
+    pub fn register_algorithm(&mut self, name: &str, algorithm: TrainingOptimizationAlgorithm) {
+        self.optimization_algorithms
+            .insert(name.to_string(), algorithm);
+    }
+
+    /// Get a registered training optimization algorithm by name.
+    pub fn get_algorithm(&self, name: &str) -> Option<&TrainingOptimizationAlgorithm> {
+        self.optimization_algorithms.get(name)
+    }
+
+    /// List the names of all registered training optimization algorithms.
+    pub fn list_algorithms(&self) -> Vec<String> {
+        self.optimization_algorithms.keys().cloned().collect()
+    }
+
+    /// Return a reference to the early-stopping configuration.
+    pub fn early_stopping(&self) -> &EarlyStopping {
+        &self.early_stopping
+    }
+
+    /// Return a mutable reference to the early-stopping configuration.
+    pub fn early_stopping_mut(&mut self) -> &mut EarlyStopping {
+        &mut self.early_stopping
+    }
 }
 
 impl HyperparameterTuner {
@@ -5483,6 +5608,36 @@ impl HyperparameterTuner {
 
     pub fn initialize(&mut self) -> Result<(), MLError> {
         Ok(())
+    }
+
+    /// Return a reference to the tuning space.
+    pub fn tuning_space(&self) -> &TuningSpace {
+        &self.tuning_space
+    }
+
+    /// Return a mutable reference to the tuning space.
+    pub fn tuning_space_mut(&mut self) -> &mut TuningSpace {
+        &mut self.tuning_space
+    }
+
+    /// Return the configured tuning algorithm.
+    pub fn tuning_algorithm(&self) -> &TuningAlgorithm {
+        &self.tuning_algorithm
+    }
+
+    /// Set the tuning algorithm.
+    pub fn set_tuning_algorithm(&mut self, algorithm: TuningAlgorithm) {
+        self.tuning_algorithm = algorithm;
+    }
+
+    /// Return a reference to the tuning history.
+    pub fn tuning_history(&self) -> &TuningHistory {
+        &self.tuning_history
+    }
+
+    /// Return a mutable reference to the tuning history.
+    pub fn tuning_history_mut(&mut self) -> &mut TuningHistory {
+        &mut self.tuning_history
     }
 }
 
@@ -5537,6 +5692,46 @@ impl EarlyStopping {
             restore_best_weights: true,
         }
     }
+
+    /// Return a reference to the stopping criteria.
+    pub fn stopping_criteria(&self) -> &StoppingCriteria {
+        &self.stopping_criteria
+    }
+
+    /// Return a mutable reference to the stopping criteria.
+    pub fn stopping_criteria_mut(&mut self) -> &mut StoppingCriteria {
+        &mut self.stopping_criteria
+    }
+
+    /// Return the configured patience (number of epochs without improvement).
+    pub fn patience(&self) -> u32 {
+        self.patience
+    }
+
+    /// Set the patience.
+    pub fn set_patience(&mut self, patience: u32) {
+        self.patience = patience;
+    }
+
+    /// Return the minimum delta required to count as an improvement.
+    pub fn min_delta(&self) -> f64 {
+        self.min_delta
+    }
+
+    /// Set the minimum delta.
+    pub fn set_min_delta(&mut self, min_delta: f64) {
+        self.min_delta = min_delta;
+    }
+
+    /// Return whether best weights should be restored after early stopping.
+    pub fn restore_best_weights(&self) -> bool {
+        self.restore_best_weights
+    }
+
+    /// Set whether to restore best weights.
+    pub fn set_restore_best_weights(&mut self, restore: bool) {
+        self.restore_best_weights = restore;
+    }
 }
 
 impl StoppingCriteria {
@@ -5561,6 +5756,42 @@ impl MLOptimizationEngine {
 
     pub fn initialize(&mut self) -> Result<(), MLError> {
         Ok(())
+    }
+
+    /// Register an optimization algorithm under the given name.
+    pub fn register_algorithm(&mut self, name: &str, algorithm: MLOptimizationAlgorithm) {
+        self.optimization_algorithms
+            .insert(name.to_string(), algorithm);
+    }
+
+    /// Get a registered optimization algorithm by name.
+    pub fn get_algorithm(&self, name: &str) -> Option<&MLOptimizationAlgorithm> {
+        self.optimization_algorithms.get(name)
+    }
+
+    /// List the names of all registered optimization algorithms.
+    pub fn list_algorithms(&self) -> Vec<String> {
+        self.optimization_algorithms.keys().cloned().collect()
+    }
+
+    /// Add an optimization objective to the configured set.
+    pub fn add_objective(&mut self, objective: OptimizationObjective) {
+        self.optimization_objectives.push(objective);
+    }
+
+    /// Return a reference to the configured optimization objectives.
+    pub fn objectives(&self) -> &[OptimizationObjective] {
+        &self.optimization_objectives
+    }
+
+    /// Add an optimization constraint to the configured set.
+    pub fn add_constraint(&mut self, constraint: OptimizationConstraint) {
+        self.optimization_constraints.push(constraint);
+    }
+
+    /// Return a reference to the configured optimization constraints.
+    pub fn constraints(&self) -> &[OptimizationConstraint] {
+        &self.optimization_constraints
     }
 
     pub fn optimize_model(

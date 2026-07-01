@@ -134,7 +134,7 @@ something we don't have here.
   The **LLM lane** (`gguf_bridge`/`inference`/`shaders`) is being deliberately deferred (LLM last).
 - **`NOTICES.md`** was earlier reported "broken — proceed without it" but is in fact readable; this
   session's sub-agents have been appending CLAIM/RELEASE lines to the canonical
-  `C:\Projects\qualiaDB\coordination\NOTICES.md`.
+  `C:\Projects\qualia-27062026\coordination\NOTICES.md`.
 - **Pre-existing crate warnings (~684).** The forge work added none of note, but the crate carries
   a large pre-existing warning load (mostly dead-code in `specialized_libs`) — out of scope here,
   flagged for a future hygiene pass.

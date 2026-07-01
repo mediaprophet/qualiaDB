@@ -164,8 +164,7 @@ provenance/
 /agent-intents/
 fix_quotes.py
 
-# Agent coordination live feed — shared local scratch, gitignored so it doesn't fork per worktree
-coordination/NOTICES.md
+# Agent coordination feed is tracked at coordination/NOTICES.md (canonical tree: C:\Projects\qualia-27062026)
 
 
 # Private Development Documents, not for GitHub (do not publish)

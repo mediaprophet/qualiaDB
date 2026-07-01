@@ -4020,6 +4020,36 @@ impl DescriptorCalculator {
         }
     }
 
+    /// Borrow the molecular descriptors.
+    pub fn molecular_descriptors(&self) -> &MolecularDescriptors {
+        &self.molecular_descriptors
+    }
+
+    /// Mutably borrow the molecular descriptors.
+    pub fn molecular_descriptors_mut(&mut self) -> &mut MolecularDescriptors {
+        &mut self.molecular_descriptors
+    }
+
+    /// Borrow the quantum descriptors.
+    pub fn quantum_descriptors(&self) -> &QuantumDescriptors {
+        &self.quantum_descriptors
+    }
+
+    /// Mutably borrow the quantum descriptors.
+    pub fn quantum_descriptors_mut(&mut self) -> &mut QuantumDescriptors {
+        &mut self.quantum_descriptors
+    }
+
+    /// Borrow the topological descriptors.
+    pub fn topological_descriptors(&self) -> &TopologicalDescriptors {
+        &self.topological_descriptors
+    }
+
+    /// Mutably borrow the topological descriptors.
+    pub fn topological_descriptors_mut(&mut self) -> &mut TopologicalDescriptors {
+        &mut self.topological_descriptors
+    }
+
     pub fn initialize(&mut self) -> Result<(), ChemistryError> {
         Ok(())
     }

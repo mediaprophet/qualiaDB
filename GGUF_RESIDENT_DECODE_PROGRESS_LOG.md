@@ -1,7 +1,7 @@
 # GGUF decode residency — perf-push progress log
 
 Workstream: get native gguf decode from ~18.5 tok/s toward the 60 tok/s target by removing
-per-layer CPU↔GPU readback stalls. Branch: `0.0.21-la` (worktree `.worktrees/qualia-la`).
+per-layer CPU↔GPU readback stalls. Branch: `0.0.21-la` (legacy checkout under `C:\Projects\qualiaDB\.worktrees\qualia-la`).
 Honest engineering record (§9). Numbers are real or marked "not measured".
 
 ---

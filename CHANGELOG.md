@@ -58,7 +58,7 @@ source of truth, specialized libraries become composition callers, and every new
 categorised library that reuses the foundation (no duplicated math), fails closed (real result /
 `NotImplemented` / `InsufficientData` — never a fabricated number), and is dispatch-ready (§13:
 clear kernel-class boundary + an always-present CPU reference). Engine `--lib` suite green
-throughout, **2091 tests** by series end (authoritative build: `--manifest-path` the worktree).
+throughout, **2091 tests** by series end (authoritative build from `C:\Projects\qualia-27062026`).
 
 ### Added — Hardware-backend bridge (P1–P3)
 - `platform/compute_bridge/`: an **open `ProbeableBackend` registry** + 8-class `KernelClass`

@@ -891,8 +891,7 @@ cargo test
    wasm32 build and introduces no renderer, daemon, network, or filesystem dependency.
 2. Keep `wasm_capabilities.rs`, the MCP tool catalog, and
    `docs/manuals/wasm-capability-profiles.md` synchronized.
-3. `HANDOVER.md` is deleted in the existing worktree, so this session did not
-   recreate or modify it.
+3. `HANDOVER.md` is absent from the repo, so this session did not recreate or modify it.
 
 ---
 

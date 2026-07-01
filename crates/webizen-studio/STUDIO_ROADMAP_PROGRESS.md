@@ -99,7 +99,18 @@ Use this file as the **session reminder**: what is done, what is next, and where
 | Settings portal HTTP smoke | ✅ | scripts/studio-portal-smoke.ps1 |
 | Portal workflow E2E (HTTP) | ✅ | scripts/studio-e2e-workflow.ps1 |
 | Full Tauri GUI E2E | ✅ | Playwright `scripts/studio-gui-e2e/` + `studio-gui-e2e.ps1` |
-| IHP / PDF / extension stretch | ❌ | deferred — no studio integration point in this worktree |
+| IHP / PDF / extension stretch | ❌ | deferred — no studio integration point yet |
+
+---
+
+## Session log
+
+### 2026-07-01 — canonical tree consolidation
+
+- All studio work lives in `C:\Projects\qualia-27062026` on `0.0.23` (`c69f80e4`+).
+- Stashed `specialized_libs` improvements (physics, ML, chemistry) merged into canonical tree.
+- `CLAUDE.md` §0 added: no git worktrees / vendor clone paths; `coordination/NOTICES.md` created.
+- Orphan `components/node_graph.rs` and `components/spatial_bridge.rs` removed (superseded by `render/`).
 
 ---
 

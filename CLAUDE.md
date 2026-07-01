@@ -4,6 +4,18 @@ Read this before writing any code. It exists to prevent systematic misconception
 The detailed coordination document is [`AGENTS.md`](AGENTS.md).
 The architecture reference is [`ARCHITECTURE.md`](ARCHITECTURE.md).
 
+## 0. Canonical repository root (PROJECT RULE — Timothy, 2026-07-01)
+
+**All development happens in `C:\Projects\qualia-27062026`.**
+
+- Do **not** create or use git worktrees, vendor-specific clone paths (e.g. under `.grok\worktrees\`), or
+  secondary checkouts for routine work. Those paths do not stay in sync with the human developer's tree and
+  reproduce platform lock-in.
+- Before writing code, `cd` to `C:\Projects\qualia-27062026` (or open that folder in the IDE). Commit and
+  push from there; Timothy reviews diffs in that directory.
+- `C:\Projects\qualiaDB` is a legacy sibling checkout — do not treat it as the active workspace unless
+  Timothy explicitly says otherwise.
+
 ---
 
 ## 1. The LLM Engine Is NOT Ollama
@@ -165,23 +177,17 @@ descriptive name.
 
 ## 10. Multi-agent collaboration — announce before you act (PROJECT RULE)
 
-More than one instrument works this repo at once (separate worktrees/branches), **all allocated by
-Timothy**. Before writing ANY code, every instrument — *including the LLM-lane Claude instance* — must:
+More than one AI instrument may work this repo at once (separate branches or sessions), **all allocated by
+Timothy**. Before writing ANY code, every instrument must:
 
-1. **Read the allocation + the live feed.** [`WORK_ALLOCATION_PLAN.md`](WORK_ALLOCATION_PLAN.md) says
-   who is allocated what, plus the off-limits lists (§0.2). `coordination/NOTICES.md` (canonical
-   absolute path `C:\Projects\qualiaDB\coordination\NOTICES.md`, shared across all worktrees) is the
-   live feed of what each instrument is touching right now.
-2. **Check for collision, then defer — do not compete.** If the files you intend to touch are another
-   instrument's allocation/off-limits, or already `CLAIM`ed in `NOTICES.md`, **stop. Do not start, do
-   not duplicate, do not "reconcile" their work against yours.** You have no lane to defend and no
-   territory to fortify. Report it to Timothy and await his (re)allocation — he disposes.
-3. **Announce.** Append a dated one-line notice to `NOTICES.md` on `CLAIM` (start), `PROGRESS`
-   (milestone), `BLOCKED`, and `RELEASE` (done/handed back). That is how the other instruments — and
-   Timothy — see your progress without re-deriving it and burning his tokens.
-
-The full protocol (notice format, anti-competition rules, who arbitrates) is
-[`WORK_ALLOCATION_PLAN.md`](WORK_ALLOCATION_PLAN.md) §6.
+1. **Work in the canonical tree.** All edits land in `C:\Projects\qualia-27062026` (see §0). Never fork
+   work into vendor-specific directories or git worktrees.
+2. **Read the live feed.** `coordination/NOTICES.md` (path:
+   `C:\Projects\qualia-27062026\coordination\NOTICES.md`) records what each instrument is touching.
+3. **Check for collision, then defer — do not compete.** If the files you intend to touch are already
+   `CLAIM`ed in `NOTICES.md`, **stop.** Report it to Timothy and await his (re)allocation.
+4. **Announce.** Append a dated one-line notice on `CLAIM` (start), `PROGRESS` (milestone), `BLOCKED`,
+   and `RELEASE` (done).
 
 ## 11. Big file → library with a sub-directory (PROJECT RULE — Timothy, 2026-06-25)
 
@@ -242,8 +248,8 @@ several can run at once.
 
 - **Good candidates:** bounded tasks with a clear acceptance test — a dependency sweep, a module's test
   coverage, a contained refactor — especially several that parallelise.
-- **Isolation:** give each sub-agent its **own worktree** (the Agent `isolation: "worktree"` option) so
-  concurrent edits cannot collide — the same discipline §10 requires of every instrument.
+- **Isolation:** use a **feature branch** in `C:\Projects\qualia-27062026` (or a short-lived git branch
+  checked out in that same directory). Do **not** use git worktrees or vendor-specific clone paths.
 - **Respect lane allocation (§10).** Never spawn a sub-agent into another instrument's live or
   off-limits lane (e.g. **reqwest async I/O is Gemini's lane** in `qualia-client-core` — coordinate, do
   not duplicate). Announce sub-agent work in `NOTICES.md` like any other.

@@ -2026,7 +2026,7 @@ impl PhysicsSimulationLibrary {
         Ok(())
     }
 
-    fn initialize_cfd_fields(
+    pub fn initialize_cfd_fields(
         &self,
         simulation: &Simulation,
     ) -> Result<Vec<PhysicsField>, PhysicsError> {
@@ -2083,7 +2083,7 @@ impl PhysicsSimulationLibrary {
         Ok(fields)
     }
 
-    fn check_convergence(&self, solver_result: &SolverResult) -> bool {
+    pub fn check_convergence(&self, solver_result: &SolverResult) -> bool {
         // Simple convergence check
         solver_result.residual_norm < 1e-6
     }
@@ -4071,6 +4071,31 @@ impl StorageBackend {
             },
         }
     }
+
+    /// Get the backend ID.
+    pub fn get_backend_id(&self) -> &str {
+        &self.backend_id
+    }
+
+    /// Get the backend type.
+    pub fn get_backend_type(&self) -> &StorageBackendType {
+        &self.backend_type
+    }
+
+    /// Get the capacity in bytes.
+    pub fn get_capacity(&self) -> u64 {
+        self.capacity
+    }
+
+    /// Get a reference to the performance metrics.
+    pub fn get_performance(&self) -> &StoragePerformance {
+        &self.performance
+    }
+
+    /// Set the performance metrics.
+    pub fn set_performance(&mut self, performance: StoragePerformance) {
+        self.performance = performance;
+    }
 }
 
 impl PhysicsDataStorage {
@@ -4131,6 +4156,26 @@ impl PhysicsDataStorage {
     pub fn retrieve_field_data(&self, field_id: &str) -> Option<Vec<f64>> {
         self.stored_data.get(field_id).cloned()
     }
+
+    /// Get a reference to the data layout.
+    pub fn get_data_layout(&self) -> &DataLayout {
+        &self.data_layout
+    }
+
+    /// Get a mutable reference to the data layout.
+    pub fn get_data_layout_mut(&mut self) -> &mut DataLayout {
+        &mut self.data_layout
+    }
+
+    /// Get a reference to the access patterns.
+    pub fn get_access_patterns(&self) -> &AccessPatterns {
+        &self.access_patterns
+    }
+
+    /// Get a mutable reference to the access patterns.
+    pub fn get_access_patterns_mut(&mut self) -> &mut AccessPatterns {
+        &mut self.access_patterns
+    }
 }
 
 impl DataLayout {
@@ -4142,6 +4187,46 @@ impl DataLayout {
             replication_factor: 1,
         }
     }
+
+    /// Get the layout type.
+    pub fn get_layout_type(&self) -> &DataLayoutType {
+        &self.layout_type
+    }
+
+    /// Set the layout type.
+    pub fn set_layout_type(&mut self, layout_type: DataLayoutType) {
+        self.layout_type = layout_type;
+    }
+
+    /// Get the block size.
+    pub fn get_block_size(&self) -> usize {
+        self.block_size
+    }
+
+    /// Set the block size.
+    pub fn set_block_size(&mut self, size: usize) {
+        self.block_size = size;
+    }
+
+    /// Get the stripe size, if any.
+    pub fn get_stripe_size(&self) -> Option<usize> {
+        self.stripe_size
+    }
+
+    /// Set the stripe size.
+    pub fn set_stripe_size(&mut self, size: Option<usize>) {
+        self.stripe_size = size;
+    }
+
+    /// Get the replication factor.
+    pub fn get_replication_factor(&self) -> usize {
+        self.replication_factor
+    }
+
+    /// Set the replication factor.
+    pub fn set_replication_factor(&mut self, factor: usize) {
+        self.replication_factor = factor;
+    }
 }
 
 impl AccessPatterns {
@@ -4151,6 +4236,36 @@ impl AccessPatterns {
             write_patterns: HashMap::new(),
             temporal_patterns: HashMap::new(),
         }
+    }
+
+    /// Register a read access pattern under the given name.
+    pub fn add_read_pattern(&mut self, name: &str, pattern: AccessPattern) {
+        self.read_patterns.insert(name.to_string(), pattern);
+    }
+
+    /// Get a read access pattern by name, if any.
+    pub fn get_read_pattern(&self, name: &str) -> Option<&AccessPattern> {
+        self.read_patterns.get(name)
+    }
+
+    /// Register a write access pattern under the given name.
+    pub fn add_write_pattern(&mut self, name: &str, pattern: AccessPattern) {
+        self.write_patterns.insert(name.to_string(), pattern);
+    }
+
+    /// Get a write access pattern by name, if any.
+    pub fn get_write_pattern(&self, name: &str) -> Option<&AccessPattern> {
+        self.write_patterns.get(name)
+    }
+
+    /// Register a temporal pattern under the given name.
+    pub fn add_temporal_pattern(&mut self, name: &str, pattern: TemporalPattern) {
+        self.temporal_patterns.insert(name.to_string(), pattern);
+    }
+
+    /// Get a temporal pattern by name, if any.
+    pub fn get_temporal_pattern(&self, name: &str) -> Option<&TemporalPattern> {
+        self.temporal_patterns.get(name)
     }
 }
 
@@ -4162,6 +4277,41 @@ impl TemporalPattern {
             time_scale: TimeScale::Second,
             periodicity: None,
         }
+    }
+
+    /// Get the pattern ID.
+    pub fn get_pattern_id(&self) -> &str {
+        &self.pattern_id
+    }
+
+    /// Get the pattern type.
+    pub fn get_pattern_type(&self) -> &TemporalPatternType {
+        &self.pattern_type
+    }
+
+    /// Set the pattern type.
+    pub fn set_pattern_type(&mut self, ptype: TemporalPatternType) {
+        self.pattern_type = ptype;
+    }
+
+    /// Get the time scale.
+    pub fn get_time_scale(&self) -> &TimeScale {
+        &self.time_scale
+    }
+
+    /// Set the time scale.
+    pub fn set_time_scale(&mut self, scale: TimeScale) {
+        self.time_scale = scale;
+    }
+
+    /// Get the periodicity, if any.
+    pub fn get_periodicity(&self) -> Option<f64> {
+        self.periodicity
+    }
+
+    /// Set the periodicity.
+    pub fn set_periodicity(&mut self, periodicity: Option<f64>) {
+        self.periodicity = periodicity;
     }
 }
 
@@ -4176,6 +4326,42 @@ impl DataCompression {
 
     pub fn initialize(&mut self) -> Result<(), PhysicsError> {
         Ok(())
+    }
+
+    /// Register a compression algorithm under the given name.
+    pub fn add_compression_algorithm(&mut self, name: &str, algo: CompressionAlgorithm) {
+        self.compression_algorithms
+            .insert(name.to_string(), algo);
+    }
+
+    /// Get a compression algorithm by name, if any.
+    pub fn get_compression_algorithm(&self, name: &str) -> Option<&CompressionAlgorithm> {
+        self.compression_algorithms.get(name)
+    }
+
+    /// List all registered compression algorithm names.
+    pub fn list_compression_algorithms(&self) -> Vec<String> {
+        self.compression_algorithms.keys().cloned().collect()
+    }
+
+    /// Get a reference to the compression ratio.
+    pub fn get_compression_ratio(&self) -> &CompressionRatio {
+        &self.compression_ratio
+    }
+
+    /// Get a mutable reference to the compression ratio.
+    pub fn get_compression_ratio_mut(&mut self) -> &mut CompressionRatio {
+        &mut self.compression_ratio
+    }
+
+    /// Get a reference to the compression performance.
+    pub fn get_compression_performance(&self) -> &CompressionPerformance {
+        &self.compression_performance
+    }
+
+    /// Get a mutable reference to the compression performance.
+    pub fn get_compression_performance_mut(&mut self) -> &mut CompressionPerformance {
+        &mut self.compression_performance
     }
 }
 
@@ -4207,6 +4393,31 @@ impl CompressionAlgorithm {
             parameters: CompressionParameters::new(),
         }
     }
+
+    /// Get the algorithm ID.
+    pub fn get_algorithm_id(&self) -> &str {
+        &self.algorithm_id
+    }
+
+    /// Get the algorithm type.
+    pub fn get_algorithm_type(&self) -> &CompressionAlgorithmType {
+        &self.algorithm_type
+    }
+
+    /// Set the algorithm type.
+    pub fn set_algorithm_type(&mut self, atype: CompressionAlgorithmType) {
+        self.algorithm_type = atype;
+    }
+
+    /// Get a reference to the compression parameters.
+    pub fn get_parameters(&self) -> &CompressionParameters {
+        &self.parameters
+    }
+
+    /// Get a mutable reference to the compression parameters.
+    pub fn get_parameters_mut(&mut self) -> &mut CompressionParameters {
+        &mut self.parameters
+    }
 }
 
 impl CompressionParameters {
@@ -4232,6 +4443,36 @@ impl DataCache {
     pub fn initialize(&mut self) -> Result<(), PhysicsError> {
         Ok(())
     }
+
+    /// Get a reference to the cache policy.
+    pub fn get_cache_policy(&self) -> &CachePolicy {
+        &self.cache_policy
+    }
+
+    /// Get a mutable reference to the cache policy.
+    pub fn get_cache_policy_mut(&mut self) -> &mut CachePolicy {
+        &mut self.cache_policy
+    }
+
+    /// Get the cache size in bytes.
+    pub fn get_cache_size(&self) -> u64 {
+        self.cache_size
+    }
+
+    /// Set the cache size in bytes.
+    pub fn set_cache_size(&mut self, size: u64) {
+        self.cache_size = size;
+    }
+
+    /// Get a reference to the cache performance.
+    pub fn get_cache_performance(&self) -> &CachePerformance {
+        &self.cache_performance
+    }
+
+    /// Get a mutable reference to the cache performance.
+    pub fn get_cache_performance_mut(&mut self) -> &mut CachePerformance {
+        &mut self.cache_performance
+    }
 }
 
 impl CachePolicy {
@@ -4241,6 +4482,36 @@ impl CachePolicy {
             write_policy: WritePolicy::WriteThrough,
             consistency_policy: CacheConsistencyPolicy::Eventual,
         }
+    }
+
+    /// Get the eviction policy.
+    pub fn get_eviction_policy(&self) -> &EvictionPolicy {
+        &self.eviction_policy
+    }
+
+    /// Set the eviction policy.
+    pub fn set_eviction_policy(&mut self, policy: EvictionPolicy) {
+        self.eviction_policy = policy;
+    }
+
+    /// Get the write policy.
+    pub fn get_write_policy(&self) -> &WritePolicy {
+        &self.write_policy
+    }
+
+    /// Set the write policy.
+    pub fn set_write_policy(&mut self, policy: WritePolicy) {
+        self.write_policy = policy;
+    }
+
+    /// Get the consistency policy.
+    pub fn get_consistency_policy(&self) -> &CacheConsistencyPolicy {
+        &self.consistency_policy
+    }
+
+    /// Set the consistency policy.
+    pub fn set_consistency_policy(&mut self, policy: CacheConsistencyPolicy) {
+        self.consistency_policy = policy;
     }
 }
 
@@ -4266,6 +4537,41 @@ impl DataMigration {
     pub fn initialize(&mut self) -> Result<(), PhysicsError> {
         Ok(())
     }
+
+    /// Register a migration policy under the given name.
+    pub fn add_migration_policy(&mut self, name: &str, policy: MigrationPolicy) {
+        self.migration_policies.insert(name.to_string(), policy);
+    }
+
+    /// Get a migration policy by name, if any.
+    pub fn get_migration_policy(&self, name: &str) -> Option<&MigrationPolicy> {
+        self.migration_policies.get(name)
+    }
+
+    /// List all registered migration policy names.
+    pub fn list_migration_policies(&self) -> Vec<String> {
+        self.migration_policies.keys().cloned().collect()
+    }
+
+    /// Add a migration tool.
+    pub fn add_migration_tool(&mut self, tool: MigrationTool) {
+        self.migration_tools.push(tool);
+    }
+
+    /// List all migration tools.
+    pub fn list_migration_tools(&self) -> &[MigrationTool] {
+        &self.migration_tools
+    }
+
+    /// Get a reference to the migration status.
+    pub fn get_migration_status(&self) -> &MigrationStatus {
+        &self.migration_status
+    }
+
+    /// Get a mutable reference to the migration status.
+    pub fn get_migration_status_mut(&mut self) -> &mut MigrationStatus {
+        &mut self.migration_status
+    }
 }
 
 impl MigrationStatus {
@@ -4276,6 +4582,36 @@ impl MigrationStatus {
             failed_migrations: Vec::new(),
         }
     }
+
+    /// Add an active migration.
+    pub fn add_active_migration(&mut self, migration: ActiveMigration) {
+        self.active_migrations.push(migration);
+    }
+
+    /// List all active migrations.
+    pub fn list_active_migrations(&self) -> &[ActiveMigration] {
+        &self.active_migrations
+    }
+
+    /// Add a completed migration.
+    pub fn add_completed_migration(&mut self, migration: CompletedMigration) {
+        self.completed_migrations.push(migration);
+    }
+
+    /// List all completed migrations.
+    pub fn list_completed_migrations(&self) -> &[CompletedMigration] {
+        &self.completed_migrations
+    }
+
+    /// Add a failed migration.
+    pub fn add_failed_migration(&mut self, migration: FailedMigration) {
+        self.failed_migrations.push(migration);
+    }
+
+    /// List all failed migrations.
+    pub fn list_failed_migrations(&self) -> &[FailedMigration] {
+        &self.failed_migrations
+    }
 }
 
 impl MigrationTool {
@@ -4285,6 +4621,31 @@ impl MigrationTool {
             tool_type: MigrationToolType::FileSystem,
             tool_capabilities: ToolCapabilities::new(),
         }
+    }
+
+    /// Get the tool ID.
+    pub fn get_tool_id(&self) -> &str {
+        &self.tool_id
+    }
+
+    /// Get the tool type.
+    pub fn get_tool_type(&self) -> &MigrationToolType {
+        &self.tool_type
+    }
+
+    /// Set the tool type.
+    pub fn set_tool_type(&mut self, ttype: MigrationToolType) {
+        self.tool_type = ttype;
+    }
+
+    /// Get a reference to the tool capabilities.
+    pub fn get_tool_capabilities(&self) -> &ToolCapabilities {
+        &self.tool_capabilities
+    }
+
+    /// Get a mutable reference to the tool capabilities.
+    pub fn get_tool_capabilities_mut(&mut self) -> &mut ToolCapabilities {
+        &mut self.tool_capabilities
     }
 }
 
@@ -4297,6 +4658,171 @@ impl ToolCapabilities {
             compression: true,
             parallel_migration: true,
         }
+    }
+}
+
+impl MigrationPolicy {
+    /// Get the policy ID.
+    pub fn get_policy_id(&self) -> &str {
+        &self.policy_id
+    }
+
+    /// Get the migration trigger.
+    pub fn get_migration_trigger(&self) -> &MigrationTrigger {
+        &self.migration_trigger
+    }
+
+    /// Set the migration trigger.
+    pub fn set_migration_trigger(&mut self, trigger: MigrationTrigger) {
+        self.migration_trigger = trigger;
+    }
+
+    /// Get the migration strategy.
+    pub fn get_migration_strategy(&self) -> &MigrationStrategy {
+        &self.migration_strategy
+    }
+
+    /// Set the migration strategy.
+    pub fn set_migration_strategy(&mut self, strategy: MigrationStrategy) {
+        self.migration_strategy = strategy;
+    }
+
+    /// Get a reference to the migration schedule.
+    pub fn get_migration_schedule(&self) -> &MigrationSchedule {
+        &self.migration_schedule
+    }
+
+    /// Get a mutable reference to the migration schedule.
+    pub fn get_migration_schedule_mut(&mut self) -> &mut MigrationSchedule {
+        &mut self.migration_schedule
+    }
+}
+
+impl MigrationSchedule {
+    /// Get the schedule ID.
+    pub fn get_schedule_id(&self) -> &str {
+        &self.schedule_id
+    }
+
+    /// Get the migration time.
+    pub fn get_migration_time(&self) -> u64 {
+        self.migration_time
+    }
+
+    /// Set the migration time.
+    pub fn set_migration_time(&mut self, time: u64) {
+        self.migration_time = time;
+    }
+
+    /// Get the migration window.
+    pub fn get_migration_window(&self) -> u64 {
+        self.migration_window
+    }
+
+    /// Set the migration window.
+    pub fn set_migration_window(&mut self, window: u64) {
+        self.migration_window = window;
+    }
+
+    /// Get the migration priority.
+    pub fn get_priority(&self) -> &MigrationPriority {
+        &self.priority
+    }
+
+    /// Set the migration priority.
+    pub fn set_priority(&mut self, priority: MigrationPriority) {
+        self.priority = priority;
+    }
+}
+
+impl ActiveMigration {
+    /// Get the migration ID.
+    pub fn get_migration_id(&self) -> &str {
+        &self.migration_id
+    }
+
+    /// Get the source backend.
+    pub fn get_source_backend(&self) -> &str {
+        &self.source_backend
+    }
+
+    /// Get the target backend.
+    pub fn get_target_backend(&self) -> &str {
+        &self.target_backend
+    }
+
+    /// Get the start time.
+    pub fn get_start_time(&self) -> u64 {
+        self.start_time
+    }
+
+    /// Get the progress (0.0 to 1.0).
+    pub fn get_progress(&self) -> f64 {
+        self.progress
+    }
+
+    /// Set the progress (0.0 to 1.0).
+    pub fn set_progress(&mut self, progress: f64) {
+        self.progress = progress;
+    }
+}
+
+impl CompletedMigration {
+    /// Get the migration ID.
+    pub fn get_migration_id(&self) -> &str {
+        &self.migration_id
+    }
+
+    /// Get the source backend.
+    pub fn get_source_backend(&self) -> &str {
+        &self.source_backend
+    }
+
+    /// Get the target backend.
+    pub fn get_target_backend(&self) -> &str {
+        &self.target_backend
+    }
+
+    /// Get the start time.
+    pub fn get_start_time(&self) -> u64 {
+        self.start_time
+    }
+
+    /// Get the end time.
+    pub fn get_end_time(&self) -> u64 {
+        self.end_time
+    }
+
+    /// Returns whether the migration was successful.
+    pub fn was_successful(&self) -> bool {
+        self.success
+    }
+}
+
+impl FailedMigration {
+    /// Get the migration ID.
+    pub fn get_migration_id(&self) -> &str {
+        &self.migration_id
+    }
+
+    /// Get the source backend.
+    pub fn get_source_backend(&self) -> &str {
+        &self.source_backend
+    }
+
+    /// Get the target backend.
+    pub fn get_target_backend(&self) -> &str {
+        &self.target_backend
+    }
+
+    /// Get the start time.
+    pub fn get_start_time(&self) -> u64 {
+        self.start_time
+    }
+
+    /// Get the error message.
+    pub fn get_error_message(&self) -> &str {
+        &self.error_message
     }
 }
 
