@@ -14,6 +14,10 @@ YYYY-MM-DD | INSTRUMENT | CLAIM|PROGRESS|BLOCKED|RELEASE | short description | p
 
 ## Active notices
 
+2026-07-02 | Grok | RELEASE | Merged grok desktop clone → canonical 0.0.24; pushed origin/0.0.24 (f0265dfe + ec84d512); 14 wellfair tests pass | C:\Projects\qualia-27062026
+2026-07-02 | Grok | RELEASE | Phase 2 Consent panel + sleep dashboard + policy evaluate/grant/revoke API; journal summary projections | wellfair/{consent_store,policy,api,journal,import_samsung}, consent_panel, sleep_panel, webizen-desktop commands
+2026-07-02 | Grok | PROGRESS | WS1 checkpoint: dag.bin+meta.json+vault.q42 graph quins persist; Social Book panel; mobile outbox restore | wellfair/{checkpoint_store,graph_store,vault}, social_book_panel
+2026-07-02 | Grok | PROGRESS | Phase 1 complete: journal+receipts jsonl, WAL checkpoint, Health tab UI, policy receipts panel | wellfair/{journal,receipt,vault,api}, webizen-studio/health_panel
 2026-07-01 | Grok | PROGRESS | Phase 1 WellFair: live host snapshot, PolicyDecisionService, Samsung CSV→WAL import, Tools UI panel | wellfair/{api,import_samsung,snapshot,policy}, webizen-desktop commands
 2026-07-01 | Grok | RELEASE | WS2+3 committed on 0.0.24; legacy qualia_bindings/webizen retained in commit (WS1 retires separately) | feat(wellfair) qapp_install+companion_bundle+shell
 2026-07-01 | Grok | CLAIM | Full floor after Gemini stand-down: WS2+3 commit + frontend compile verification; auditing wellfare-core deletions against WS1 plan | canonical 0.0.24
