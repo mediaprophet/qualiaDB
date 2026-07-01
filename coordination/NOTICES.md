@@ -14,6 +14,7 @@ YYYY-MM-DD | INSTRUMENT | CLAIM|PROGRESS|BLOCKED|RELEASE | short description | p
 
 ## Active notices
 
+2026-07-02 | Grok | RELEASE | Phase 3: life/sanctuary/wellbeing panels + missing modules; 43 wellfair + 2 phase3 tests; studio+desktop check green | wellfair/, wellfare-core/, webizen-studio/wellfair/
 2026-07-02 | Grok | CLAIM | Phase 3 recovery: host_client glue, sanctuary/life/wellbeing panels, shell wiring | wellfair/, wellfare-core/, webizen-desktop commands
 2026-07-02 | Grok | RELEASE | Phase 2 closeout: OS med notifications, companion E2E, audit/graph panel; 38 wellfair tests; PHASE2 doc | med_reminder_notifier, companion_tests, audit_panel, WELLFAIR_PHASE2_CLOSEOUT.md
 2026-07-02 | Grok | RELEASE | Social Book write path + sharing preview; lib.rs fixes companion_gateway RA; 36 wellfair tests pass | webizen-desktop/lib.rs, social_book_panel, host_client
