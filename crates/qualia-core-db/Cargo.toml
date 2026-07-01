@@ -5,7 +5,7 @@ edition = "2021"
 authors = ["Timothy Charles Holborn <timothy.holborn@gmail.com>"]
 
 [features]
-default = ["profile_target_1024", "zk-culling", "gpu-runtime", "wgsl-forge"]
+default = ["profile_target_1024", "zk-culling", "gpu-runtime", "wgsl-forge", "privacy-he"]
 
 # ── Qualia WASM portal build profiles (use with --no-default-features on wasm32) ──
 # Ontology MCP kernel:              --features wasm-ontology (exclusive)
@@ -57,6 +57,10 @@ zk-culling = ["ark-bls12-381", "ark-groth16", "ark-relations", "ark-snark", "ark
 
 # Post-quantum KEM encapsulation + fixed-size serialization shim
 pq-kem = ["thiserror"]
+
+# Exact packed homomorphic arithmetic for the linear-algebra privacy engine.
+# Large BFV keys/ciphertexts remain outside the NQuin ABI.
+privacy-he = ["dep:fhe", "dep:fhe-traits", "dep:rand09"]
 
 # QPU internal functionality (undocumented, private)
 # This feature gate enables internal QPU modules that are not publicly documented
@@ -120,6 +124,9 @@ rio_api = "0.8"
 lz4_flex = "0.13"
 rtrb = "0.3.4"
 rand = "0.10.1"
+fhe = { version = "0.1.1", optional = true }
+fhe-traits = { version = "0.1.1", optional = true }
+rand09 = { package = "rand", version = "0.9.2", optional = true }
 hex = "0.4.3"
 sha1 = "0.11"
 sha3 = "0.12"

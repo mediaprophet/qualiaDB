@@ -67,7 +67,9 @@ Correctly platform/hardware-gated. Options:
 13. **Services: `SwarmVerify::verify()` + `IlpDispatcher::dispatch_payment()`** (desktop-only)
 
 ### Research-Grade (7)
-14. **LA: Privacy engine** — homomorphic encryption + differential privacy
+14. **LA: Privacy engine** — ✅ implemented 2026-07-01: feature-gated pure-Rust
+    BFV packed arithmetic, 48-byte external-ciphertext references, calibrated
+    Laplace/Gaussian mechanisms, and basic/advanced/RDP budget accounting.
 15. **Financial: Monte Carlo stress testing** — scenario analysis
 16. **ML: Model converter** — PyTorch↔TF↔ONNX
 17. **ML: Model compression** — quantization/pruning/distillation

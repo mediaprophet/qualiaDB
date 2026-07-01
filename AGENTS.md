@@ -75,6 +75,7 @@ parity     [0..63]   XOR fold: subject ^ predicate ^ object ^ context (ECC stub)
 | **10D Manifold → WebizenVM bridge** | `modalities/manifold.rs`, `governance/webizen.rs` | ✅ LTL + stable-model ASP wired | Two parity-valid Quins per state; bounded zero-heap VM evaluation |
 | **WGSL Forge** | `wgsl_forge/`, `qualia-cli/src/shader.rs` | ✅ deterministic generation/certification/tuning | Typed kernel/schedule IR, Naga validation, CPU oracle, real GPU timing, adapter-keyed cache |
 | **N-Dimensional Renderer SDK** | `render/gpu/`, `webizen-render/` | ✅ native + WASM volumetric path | Shared wgpu 29 device, Tensor10D projector, depth/bloom/mesh/picking, caller-buffered RGBA8, serde SDK adapter |
+| **Linear-Algebra Privacy Engine** | `specialized_libs/linear_algebra/privacy/` | ✅ BFV HE + calibrated DP | Packed exact add/multiply/dot, 48-byte external ciphertext ref, Laplace/Gaussian, basic/advanced/RDP accounting |
 
 ## 2-B. Other Real Implementations (do NOT stub-replace without reading first)
 
@@ -1026,3 +1027,35 @@ cargo test
 - 22 features implemented across 5 modules (crypto: 5, financial: 5,
   ML: 3, physics: 5, statistical: 4)
 - 52 new tests added (8 crypto, 15 financial, 8 ML, 13 physics, 11 statistical)
+
+### 2026-07-01 — Codex (linear-algebra privacy engine)
+
+**Completed:**
+- Replaced the metadata-only privacy stub with feature-gated pure-Rust BFV:
+  standard approximately 128-bit-security parameters, packed signed encryption,
+  add, relinearized multiply, rotation-based dot product, caller-buffered
+  fixed-point conversion, and verified external ciphertext serialization.
+- Added a separate 48-byte `HeCiphertextRef`; BFV ciphertexts and keys never enter
+  the `NQuin` payload.
+- Added caller-buffered Laplace and calibrated Gaussian DP releases using OS
+  entropy, fail-closed budgets, and basic/advanced/RDP composition.
+- Split the former file into `privacy/{mod,bfv,differential_privacy}.rs` and
+  documented the threat model in `docs/manuals/privacy-engine.md`.
+
+**Verification:**
+- Privacy tests: 14 passed, 0 failed, 1 ignored debug-expensive production smoke.
+- Production release BFV smoke: 1 passed; degree 4096, key/context cap enforced,
+  encrypt/decrypt exact; test execution 2.98s.
+- `wasm32-unknown-unknown --no-default-features --features wasm-ontology`: passed.
+- Full non-CFD library suite: 2,648 passed, 0 failed, 54 ignored, 7 filtered.
+- The unfiltered suite was temporarily blocked by two failures in the separately
+  claimed, concurrently developed `engineering_analysis/cfd.rs`; that work was
+  preserved and not modified here.
+
+**Architectural decisions:**
+1. BFV is used for exact integer/fixed-point algebra; CKKS approximation is not
+   mixed into the first privacy ABI.
+2. Large cryptographic objects stay in bounded external storage and cross engine
+   boundaries only through fixed-size references.
+3. The upstream `fhe` implementation is mathematically real but not independently
+   audited; it must not be described as FIPS-validated or high-risk-production ready.

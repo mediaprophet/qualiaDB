@@ -964,7 +964,7 @@ High-performance domain libraries. All 9 sub-modules are **✅ fully active** as
 | File | Status | Contents | MCP tool |
 |---|---|---|---|
 | `qpu_bridge.rs` | ✅ Active | Bridge between `solvers/qpu/` and external QPU providers; classical problem formulation → QPU submission | `qpu_optimize`, `qpu_dft` |
-| `linear_algebra.rs` | ✅ Active | Dense/sparse matrix ops, LU decomposition, SVD, eigenvalues; ZK privacy matrix multiply | `matrix_operation` |
+| `linear_algebra.rs` | ✅ Active | Dense/sparse matrix ops, LU decomposition, SVD, eigenvalues; ZK matrix proofs; packed BFV HE; calibrated Laplace/Gaussian DP | `matrix_operation` |
 | `statistical_computing.rs` | ✅ Active | Descriptive stats (mean/median/variance/correlation), regression, hypothesis testing, histograms | `statistical_analysis` |
 | `cryptographic_library.rs` | ✅ Active | AES-256-GCM encrypt/decrypt, Ed25519 sign/verify, SHA-256 hashing, key rotation | (internal; `fiduciary_crypto.rs` is the primary MCP path) |
 | `engineering_analysis.rs` | ✅ Active | FEA / FEM structural, mechanical, thermal, fluid, reliability analysis | `engineering_analysis_op` |

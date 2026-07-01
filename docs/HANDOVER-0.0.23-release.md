@@ -49,6 +49,12 @@ All committed + pushed to `origin/0.0.23` (latest ~`10ba23a8`). Highlights:
   uses `shared_gpu()`, supports depth/bloom/Tensor10D SOA/mesh/picking, and reads linear RGBA8 into a
   caller buffer. `webizen-render` is a workspace SDK adapter and routes scene PNG helpers through the
   volumetric engine. A real A2000 tensor+mesh render/readback and 41 renderer tests pass.
+- **Linear-algebra privacy engine**: the metadata-only stub is replaced by feature-gated,
+  pure-Rust BFV packed integer/fixed-point encryption (add, multiply, dot product),
+  a separate 48-byte external-ciphertext ABI reference, and calibrated
+  Laplace/Gaussian DP with basic, advanced, and RDP accounting. The BFV backend is
+  mathematically real but upstream is not independently audited; see
+  `docs/manuals/privacy-engine.md`.
 
 ## 2. Honest findings (settled — don't re-litigate, build on them)
 

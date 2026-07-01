@@ -64,7 +64,10 @@ Comprehensive index of functionality for `linear_algebra`. This document serves 
   - `fn new`
   - `fn record_operation`
   - `fn get_system_metrics`
-- 📄 `privacy.rs`
+- 📁 `privacy/`
+  - `mod.rs` — privacy facade, fixed-capacity key metadata, secure-aggregation capabilities
+  - `bfv.rs` + `bfv/tests.rs` — feature-gated exact packed BFV encryption/add/multiply/dot product, 48-byte ciphertext references, and focused tests
+  - `differential_privacy.rs` + `differential_privacy/tests.rs` — caller-buffered Laplace/Gaussian releases, basic/advanced/RDP accounting, and focused tests
   - `struct PrivacyEngine`
   - `struct HomomorphicOperations`
   - `enum HomomorphicOperation`
@@ -80,7 +83,10 @@ Comprehensive index of functionality for `linear_algebra`. This document serves 
   - `struct PrivacyAccountant`
   - `enum CompositionMethod`
   - `impl PrivacyEngine`
-  - *(...and 6 more)*
+  - `struct BfvEngine`
+  - `struct HeCiphertextRef`
+  - `fn encode_fixed_point_into`
+  - `fn decode_fixed_point_into`
 - 📄 `storage.rs`
   - `struct MatrixStorage`
   - `struct MatrixZone`
@@ -100,4 +106,6 @@ Comprehensive index of functionality for `linear_algebra`. This document serves 
   - *(...and 13 more)*
 
 ## Changelog
+- **2026-07-01**: Replaced the privacy metadata stub with real BFV homomorphic
+  arithmetic and calibrated differential privacy; split the module by concern.
 - **2026-06-30**: Automated full index generation, extracting code definitions.
