@@ -17,7 +17,15 @@ use super::host_state::WellfairHostSnapshot;
 use ed25519_dalek::SigningKey;
 use qualia_core_db::key_vault::KeyVault;
 use wellfare_core::companion_sync::CompanionHealthBundle;
+use wellfare_core::medication::{
+    self, AdministrationStatus, DietEntry, MedicationAdministration, MedicationCatalogEntry,
+};
 use wellfare_core::record::RecordEnvelope;
+use wellfare_core::sleep_analytics::{
+    self, SleepDebtReport, SleepHeatmapReport, SleepNightSample, DEFAULT_TARGET_SLEEP_MIN,
+};
+
+use super::personal_profile::{EmergencyContact, EmergencyContactStore, new_contact_id};
 
 /// Transport-neutral Host API exported for UI and qApps.
 pub struct WebizenHostApi {
@@ -277,5 +285,157 @@ impl WebizenHostApi {
             }
         }
         report
+    }
+
+    const QAPP_MEDICATION: &'static str = "wellfair-medication";
+
+    pub fn add_medication(
+        &mut self,
+        name: &str,
+        dose: &str,
+        route: &str,
+        schedule_times: Vec<String>,
+    ) -> Result<JournalEntry, String> {
+        let now = Self::now_unix() as u32;
+        let entry = MedicationCatalogEntry {
+            id: medication::new_medication_id(name, now),
+            name: name.to_string(),
+            dose: dose.to_string(),
+            route: route.to_string(),
+            schedule_times,
+            prescriber: None,
+            ceased_at_unix: None,
+            created_at_unix: now,
+        };
+        let packed = medication::medication_envelope(&entry, &self.owner_did, &self.author_did);
+        self.submit_record_with_summary(
+            Self::QAPP_MEDICATION,
+            packed.envelope,
+            "wellfair-medication:ui",
+            Some(packed.summary),
+        )?;
+        self.finalize_batch().ok();
+        self.list_health_records(1)?
+            .into_iter()
+            .next()
+            .ok_or_else(|| "medication committed but journal empty".into())
+    }
+
+    pub fn record_administration(
+        &mut self,
+        medication_id: &str,
+        medication_name: &str,
+        status: AdministrationStatus,
+        notes: Option<String>,
+    ) -> Result<JournalEntry, String> {
+        let now = Self::now_unix() as u32;
+        let admin = MedicationAdministration {
+            id: medication::new_administration_id(medication_id, now),
+            medication_id: medication_id.to_string(),
+            medication_name: medication_name.to_string(),
+            status,
+            administered_at_unix: now,
+            notes,
+        };
+        let packed = medication::administration_envelope(&admin, &self.owner_did, &self.author_did);
+        self.submit_record_with_summary(
+            Self::QAPP_MEDICATION,
+            packed.envelope,
+            "wellfair-medication:ui",
+            Some(packed.summary),
+        )?;
+        self.finalize_batch().ok();
+        self.list_health_records(1)?
+            .into_iter()
+            .next()
+            .ok_or_else(|| "administration committed but journal empty".into())
+    }
+
+    pub fn add_diet_entry(
+        &mut self,
+        description: &str,
+        meal_type: &str,
+        calories_kcal: Option<u32>,
+    ) -> Result<JournalEntry, String> {
+        let now = Self::now_unix() as u32;
+        let diet = DietEntry {
+            id: medication::new_diet_id(description, now),
+            description: description.to_string(),
+            meal_type: meal_type.to_string(),
+            calories_kcal,
+            logged_at_unix: now,
+        };
+        let packed = medication::diet_envelope(&diet, &self.owner_did, &self.author_did);
+        self.submit_record_with_summary(
+            Self::QAPP_MEDICATION,
+            packed.envelope,
+            "wellfair-medication:ui",
+            Some(packed.summary),
+        )?;
+        self.finalize_batch().ok();
+        self.list_health_records(1)?
+            .into_iter()
+            .next()
+            .ok_or_else(|| "diet entry committed but journal empty".into())
+    }
+
+    pub fn list_journal_by_kind(&self, kind: &str, limit: usize) -> Result<Vec<JournalEntry>, String> {
+        Ok(self
+            .list_health_records(limit)?
+            .into_iter()
+            .filter(|e| e.kind == kind)
+            .collect())
+    }
+
+    pub fn sleep_analytics(&self, target_min: f64) -> Result<(SleepDebtReport, SleepHeatmapReport), String> {
+        let sleep_rows = self.list_journal_by_kind("sleep", 128)?;
+        let mut samples = Vec::new();
+        for row in sleep_rows {
+            if let Some(ref summary) = row.summary {
+                if let Some((dur, eff)) = sleep_analytics::parse_sleep_summary_json(summary) {
+                    samples.push(SleepNightSample {
+                        night_unix: row.asserted_time_unix,
+                        duration_min: dur,
+                        efficiency: eff,
+                    });
+                }
+            }
+        }
+        samples.sort_by_key(|s| s.night_unix);
+        let debt = sleep_analytics::compute_sleep_debt(&samples, target_min);
+        let heatmap = sleep_analytics::compute_weekly_heatmap(&samples, target_min);
+        Ok((debt, heatmap))
+    }
+
+    pub fn default_sleep_analytics(&self) -> Result<(SleepDebtReport, SleepHeatmapReport), String> {
+        self.sleep_analytics(DEFAULT_TARGET_SLEEP_MIN)
+    }
+
+    pub fn add_emergency_contact(
+        &self,
+        display_name: &str,
+        relationship: &str,
+        phone: Option<String>,
+        email: Option<String>,
+        notes: Option<String>,
+    ) -> Result<EmergencyContact, String> {
+        let now = Self::now_unix() as u32;
+        let contact = EmergencyContact {
+            id: new_contact_id(display_name, now),
+            display_name: display_name.to_string(),
+            relationship: relationship.to_string(),
+            phone,
+            email,
+            notes,
+            created_at_unix: now,
+        };
+        let store = EmergencyContactStore::open(&self.storage_root).map_err(|e| e.to_string())?;
+        store.append(&contact).map_err(|e| e.to_string())?;
+        Ok(contact)
+    }
+
+    pub fn list_emergency_contacts(&self) -> Result<Vec<EmergencyContact>, String> {
+        let store = EmergencyContactStore::open(&self.storage_root).map_err(|e| e.to_string())?;
+        store.list().map_err(|e| e.to_string())
     }
 }

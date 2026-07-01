@@ -11,6 +11,8 @@ csv = "1.3"
 serde = { version = "1.0", features = ["derive"] }
 chrono = { version = "0.4", features = ["serde"] }
 serde_json = "1.0"
+sha2 = "0.10"
+hex = "0.4"
 uuid = { version = "1.8", features = ["v4", "serde", "js"] }
 # oxigraph: in-memory RDF store + SPARQL 1.1 engine (W4/W5)
 # js feature: uses js-sys for random/time in WASM; compiles natively without it

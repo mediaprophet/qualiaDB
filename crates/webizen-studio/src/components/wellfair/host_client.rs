@@ -6,6 +6,7 @@ use super::host_dto::{
 };
 use super::host_dto::ConsentGrantDraft;
 use dioxus::prelude::*;
+use serde::{Deserialize, Serialize};
 
 #[cfg(target_arch = "wasm32")]
 use crate::components::qapp_engine::tauri_invoke;
@@ -291,5 +292,235 @@ pub async fn fetch_consents() -> Result<Vec<ConsentGrantDto>, String> {
 
 #[cfg(not(target_arch = "wasm32"))]
 pub async fn fetch_consents() -> Result<Vec<ConsentGrantDto>, String> {
+    Ok(vec![])
+}
+
+#[derive(Debug, Clone, Serialize, Deserialize)]
+pub struct EmergencyContactDto {
+    pub id: String,
+    pub display_name: String,
+    pub relationship: String,
+    pub phone: Option<String>,
+    pub email: Option<String>,
+    pub notes: Option<String>,
+    pub created_at_unix: u32,
+}
+
+#[derive(Debug, Clone, Serialize, Deserialize)]
+pub struct SleepAnalyticsDto {
+    pub debt: serde_json::Value,
+    pub heatmap: serde_json::Value,
+}
+
+#[cfg(target_arch = "wasm32")]
+pub async fn add_medication(
+    name: &str,
+    dose: &str,
+    route: &str,
+    schedule: &str,
+) -> Result<HealthRecordDto, String> {
+    let args = js_sys::Object::new();
+    for (key, val) in [
+        ("name", name),
+        ("dose", dose),
+        ("route", route),
+        ("schedule", schedule),
+    ] {
+        js_sys::Reflect::set(&args, &key.into(), &wasm_bindgen::JsValue::from_str(val))
+            .map_err(|_| "failed to build invoke args".to_string())?;
+    }
+    let js = tauri_invoke("wellfair_add_medication", args.into())
+        .await
+        .map_err(|e| format!("{e:?}"))?;
+    let json = js
+        .as_string()
+        .ok_or_else(|| "medication response was not JSON".to_string())?;
+    serde_json::from_str(&json).map_err(|e| e.to_string())
+}
+
+#[cfg(not(target_arch = "wasm32"))]
+pub async fn add_medication(
+    _name: &str,
+    _dose: &str,
+    _route: &str,
+    _schedule: &str,
+) -> Result<HealthRecordDto, String> {
+    Err("Medication requires the Tauri desktop host".into())
+}
+
+#[cfg(target_arch = "wasm32")]
+pub async fn record_administration(
+    medication_id: &str,
+    medication_name: &str,
+    status: &str,
+    notes: Option<&str>,
+) -> Result<HealthRecordDto, String> {
+    let args = js_sys::Object::new();
+    js_sys::Reflect::set(
+        &args,
+        &"medicationId".into(),
+        &wasm_bindgen::JsValue::from_str(medication_id),
+    )
+    .map_err(|_| "failed to build invoke args".to_string())?;
+    js_sys::Reflect::set(
+        &args,
+        &"medicationName".into(),
+        &wasm_bindgen::JsValue::from_str(medication_name),
+    )
+    .map_err(|_| "failed to build invoke args".to_string())?;
+    js_sys::Reflect::set(
+        &args,
+        &"status".into(),
+        &wasm_bindgen::JsValue::from_str(status),
+    )
+    .map_err(|_| "failed to build invoke args".to_string())?;
+    if let Some(n) = notes {
+        js_sys::Reflect::set(
+            &args,
+            &"notes".into(),
+            &wasm_bindgen::JsValue::from_str(n),
+        )
+        .map_err(|_| "failed to build invoke args".to_string())?;
+    }
+    let js = tauri_invoke("wellfair_record_administration", args.into())
+        .await
+        .map_err(|e| format!("{e:?}"))?;
+    let json = js
+        .as_string()
+        .ok_or_else(|| "administration response was not JSON".to_string())?;
+    serde_json::from_str(&json).map_err(|e| e.to_string())
+}
+
+#[cfg(not(target_arch = "wasm32"))]
+pub async fn record_administration(
+    _medication_id: &str,
+    _medication_name: &str,
+    _status: &str,
+    _notes: Option<&str>,
+) -> Result<HealthRecordDto, String> {
+    Err("Administration log requires the Tauri desktop host".into())
+}
+
+#[cfg(target_arch = "wasm32")]
+pub async fn add_diet_entry(
+    description: &str,
+    meal_type: &str,
+    calories_kcal: Option<u32>,
+) -> Result<HealthRecordDto, String> {
+    let args = js_sys::Object::new();
+    js_sys::Reflect::set(
+        &args,
+        &"description".into(),
+        &wasm_bindgen::JsValue::from_str(description),
+    )
+    .map_err(|_| "failed to build invoke args".to_string())?;
+    js_sys::Reflect::set(
+        &args,
+        &"mealType".into(),
+        &wasm_bindgen::JsValue::from_str(meal_type),
+    )
+    .map_err(|_| "failed to build invoke args".to_string())?;
+    if let Some(c) = calories_kcal {
+        js_sys::Reflect::set(
+            &args,
+            &"caloriesKcal".into(),
+            &wasm_bindgen::JsValue::from(c),
+        )
+        .map_err(|_| "failed to build invoke args".to_string())?;
+    }
+    let js = tauri_invoke("wellfair_add_diet_entry", args.into())
+        .await
+        .map_err(|e| format!("{e:?}"))?;
+    let json = js
+        .as_string()
+        .ok_or_else(|| "diet response was not JSON".to_string())?;
+    serde_json::from_str(&json).map_err(|e| e.to_string())
+}
+
+#[cfg(not(target_arch = "wasm32"))]
+pub async fn add_diet_entry(
+    _description: &str,
+    _meal_type: &str,
+    _calories_kcal: Option<u32>,
+) -> Result<HealthRecordDto, String> {
+    Err("Diet log requires the Tauri desktop host".into())
+}
+
+#[cfg(target_arch = "wasm32")]
+pub async fn fetch_sleep_analytics() -> Result<SleepAnalyticsDto, String> {
+    let js = tauri_invoke("wellfair_sleep_analytics", wasm_bindgen::JsValue::NULL)
+        .await
+        .map_err(|e| format!("{e:?}"))?;
+    let json = js
+        .as_string()
+        .ok_or_else(|| "sleep analytics response was not JSON".to_string())?;
+    serde_json::from_str(&json).map_err(|e| e.to_string())
+}
+
+#[cfg(not(target_arch = "wasm32"))]
+pub async fn fetch_sleep_analytics() -> Result<SleepAnalyticsDto, String> {
+    Err("Sleep analytics requires the Tauri desktop host".into())
+}
+
+#[cfg(target_arch = "wasm32")]
+pub async fn add_emergency_contact(
+    display_name: &str,
+    relationship: &str,
+    phone: Option<&str>,
+    email: Option<&str>,
+) -> Result<EmergencyContactDto, String> {
+    let args = js_sys::Object::new();
+    js_sys::Reflect::set(
+        &args,
+        &"displayName".into(),
+        &wasm_bindgen::JsValue::from_str(display_name),
+    )
+    .map_err(|_| "failed to build invoke args".to_string())?;
+    js_sys::Reflect::set(
+        &args,
+        &"relationship".into(),
+        &wasm_bindgen::JsValue::from_str(relationship),
+    )
+    .map_err(|_| "failed to build invoke args".to_string())?;
+    if let Some(p) = phone {
+        js_sys::Reflect::set(&args, &"phone".into(), &wasm_bindgen::JsValue::from_str(p))
+            .map_err(|_| "failed to build invoke args".to_string())?;
+    }
+    if let Some(e) = email {
+        js_sys::Reflect::set(&args, &"email".into(), &wasm_bindgen::JsValue::from_str(e))
+            .map_err(|_| "failed to build invoke args".to_string())?;
+    }
+    let js = tauri_invoke("wellfair_add_emergency_contact", args.into())
+        .await
+        .map_err(|e| format!("{e:?}"))?;
+    let json = js
+        .as_string()
+        .ok_or_else(|| "contact response was not JSON".to_string())?;
+    serde_json::from_str(&json).map_err(|e| e.to_string())
+}
+
+#[cfg(not(target_arch = "wasm32"))]
+pub async fn add_emergency_contact(
+    _display_name: &str,
+    _relationship: &str,
+    _phone: Option<&str>,
+    _email: Option<&str>,
+) -> Result<EmergencyContactDto, String> {
+    Err("Emergency contacts require the Tauri desktop host".into())
+}
+
+#[cfg(target_arch = "wasm32")]
+pub async fn fetch_emergency_contacts() -> Result<Vec<EmergencyContactDto>, String> {
+    let js = tauri_invoke("wellfair_list_emergency_contacts", wasm_bindgen::JsValue::NULL)
+        .await
+        .map_err(|e| format!("{e:?}"))?;
+    let json = js
+        .as_string()
+        .ok_or_else(|| "contacts response was not JSON".to_string())?;
+    serde_json::from_str(&json).map_err(|e| e.to_string())
+}
+
+#[cfg(not(target_arch = "wasm32"))]
+pub async fn fetch_emergency_contacts() -> Result<Vec<EmergencyContactDto>, String> {
     Ok(vec![])
 }

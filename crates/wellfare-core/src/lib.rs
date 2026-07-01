@@ -1,7 +1,9 @@
 pub mod companion_pairing;
 pub mod companion_sync;
+pub mod medication;
 pub mod models;
 pub mod record;
+pub mod sleep_analytics;
 pub mod parser;
 pub mod rdf;
 pub mod store;

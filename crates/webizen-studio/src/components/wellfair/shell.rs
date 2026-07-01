@@ -1,5 +1,6 @@
 use super::consent_panel::WellfairConsentPanel;
 use super::health_panel::WellfairHealthPanel;
+use super::medication_panel::WellfairMedicationPanel;
 use super::personal_panel::WellfairPersonalPanel;
 use super::sleep_panel::WellfairSleepPanel;
 use super::social_book_panel::WellfairSocialBookPanel;
@@ -58,6 +59,7 @@ pub fn WellfairShell() -> Element {
         "Health" => rsx! {
             WellfairHealthPanel {}
             WellfairSleepPanel {}
+            WellfairMedicationPanel {}
         },
         "Relationships" => rsx! {
             WellfairSocialBookPanel {}

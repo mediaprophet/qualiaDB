@@ -56,6 +56,12 @@ fn infer_kind(record_id: &str) -> String {
         "steps".into()
     } else if record_id.contains(":heart_rate:") {
         "heart_rate".into()
+    } else if record_id.contains(":medication:") {
+        "medication".into()
+    } else if record_id.contains(":med_admin:") {
+        "med_administration".into()
+    } else if record_id.contains(":diet:") {
+        "diet".into()
     } else {
         "record".into()
     }

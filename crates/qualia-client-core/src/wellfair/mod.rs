@@ -1,11 +1,14 @@
 pub mod accessibility_prefs;
 pub mod api;
 pub mod consent_store;
+pub mod personal_profile;
 pub mod checkpoint_store;
 pub mod graph_store;
 pub mod host_state;
 pub mod import_samsung;
 pub mod journal;
+#[cfg(test)]
+mod medication_flow;
 pub mod policy;
 pub mod receipt;
 pub mod snapshot;

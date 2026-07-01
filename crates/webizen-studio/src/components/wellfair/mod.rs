@@ -1,5 +1,6 @@
 pub mod consent_panel;
 pub mod health_panel;
+pub mod medication_panel;
 pub mod personal_panel;
 pub mod receipts_panel;
 pub mod sleep_panel;
@@ -13,6 +14,7 @@ pub mod tools_panel;
 
 pub use consent_panel::WellfairConsentPanel;
 pub use health_panel::WellfairHealthPanel;
+pub use medication_panel::WellfairMedicationPanel;
 pub use personal_panel::WellfairPersonalPanel;
 pub use sleep_panel::WellfairSleepPanel;
 pub use receipts_panel::WellfairReceiptsPanel;

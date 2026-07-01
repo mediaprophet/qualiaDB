@@ -46,7 +46,12 @@ pub struct PolicyDecisionService {
 impl PolicyDecisionService {
     pub fn new() -> Self {
         Self {
-            health_writers: &["wellfair-health", "wellfair-shell", "wellfair"],
+            health_writers: &[
+                "wellfair-health",
+                "wellfair-medication",
+                "wellfair-shell",
+                "wellfair",
+            ],
         }
     }
 
@@ -139,6 +144,20 @@ mod tests {
         let svc = PolicyDecisionService::new();
         let d = svc.evaluate_access(
             "wellfair-health",
+            "write_record",
+            SensitivityClass::Restricted,
+            EpistemicStatus::Asserted,
+            &[],
+            0,
+        );
+        assert!(matches!(d, DecisionResult::Permit { .. }));
+    }
+
+    #[test]
+    fn medication_writer_permitted() {
+        let svc = PolicyDecisionService::new();
+        let d = svc.evaluate_access(
+            "wellfair-medication",
             "write_record",
             SensitivityClass::Restricted,
             EpistemicStatus::Asserted,

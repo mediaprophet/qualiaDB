@@ -1,6 +1,9 @@
 //! Personal Core — owner profile and accessibility preferences.
 
-use super::host_client::{fetch_identity, save_accessibility};
+use super::host_client::{
+    add_emergency_contact, fetch_emergency_contacts, fetch_identity, save_accessibility,
+    EmergencyContactDto,
+};
 use super::host_dto::{AccessibilityPreferences, NetworkExposure, VaultLifecycle};
 use super::host_client::use_host_snapshot;
 use dioxus::prelude::*;
@@ -18,6 +21,10 @@ struct PersonalUiState {
     display_name: String,
     status: String,
     prefs: AccessibilityPreferences,
+    contact_name: String,
+    contact_rel: String,
+    contact_phone: String,
+    contacts: Vec<EmergencyContactDto>,
 }
 
 #[component]
@@ -34,7 +41,16 @@ pub fn WellfairPersonalPanel() -> Element {
         state.write().prefs = prefs;
     });
 
+    let reload_contacts = move || {
+        spawn(async move {
+            if let Ok(list) = fetch_emergency_contacts().await {
+                state.write().contacts = list;
+            }
+        });
+    };
+
     use_effect(move || {
+        reload_contacts();
         spawn(async move {
             if let Ok(json) = fetch_identity().await {
                 if let Some(name) = json
@@ -141,6 +157,79 @@ pub fn WellfairPersonalPanel() -> Element {
                     p {
                         style: "margin:0.5rem 0 0;font-size:0.76rem;color:var(--qualia-text-muted,#666);",
                         "{state.read().status}"
+                    }
+                }
+            }
+
+            div {
+                style: "margin-top:1rem;padding:0.65rem;border-radius:8px;border:1px solid var(--qualia-border,#eee);",
+                h3 { style: "margin:0 0 0.5rem;font-size:0.88rem;", "Emergency contacts" }
+                label { style: "font-size:0.78rem;", "Name" }
+                input {
+                    r#type: "text",
+                    value: "{state.read().contact_name}",
+                    oninput: move |e| state.write().contact_name = e.value(),
+                    style: "width:100%;padding:0.35rem;margin-bottom:0.35rem;border-radius:6px;border:1px solid var(--qualia-border,#ccc);",
+                }
+                label { style: "font-size:0.78rem;", "Relationship" }
+                input {
+                    r#type: "text",
+                    value: "{state.read().contact_rel}",
+                    oninput: move |e| state.write().contact_rel = e.value(),
+                    style: "width:100%;padding:0.35rem;margin-bottom:0.35rem;border-radius:6px;border:1px solid var(--qualia-border,#ccc);",
+                }
+                label { style: "font-size:0.78rem;", "Phone (optional)" }
+                input {
+                    r#type: "tel",
+                    value: "{state.read().contact_phone}",
+                    oninput: move |e| state.write().contact_phone = e.value(),
+                    style: "width:100%;padding:0.35rem;margin-bottom:0.35rem;border-radius:6px;border:1px solid var(--qualia-border,#ccc);",
+                }
+                button {
+                    style: "padding:0.4rem 0.75rem;border-radius:6px;border:none;background:#457b9d;color:#fff;font-size:0.82rem;cursor:pointer;",
+                    onclick: move |_| {
+                        let name = state.read().contact_name.clone();
+                        let rel = state.read().contact_rel.clone();
+                        let phone = state.read().contact_phone.clone();
+                        if name.trim().is_empty() {
+                            state.write().status = "Enter a contact name.".into();
+                            return;
+                        }
+                        let phone_owned = if phone.trim().is_empty() {
+                            None
+                        } else {
+                            Some(phone)
+                        };
+                        spawn(async move {
+                            let phone_ref = phone_owned.as_deref();
+                            match add_emergency_contact(&name, &rel, phone_ref, None).await {
+                                Ok(_) => {
+                                    state.write().status = "Emergency contact saved.".into();
+                                    state.write().contact_name.clear();
+                                    state.write().contact_rel.clear();
+                                    state.write().contact_phone.clear();
+                                    if let Ok(list) = fetch_emergency_contacts().await {
+                                        state.write().contacts = list;
+                                    }
+                                }
+                                Err(e) => state.write().status = format!("Contact save failed: {e}"),
+                            }
+                        });
+                    },
+                    "Add contact"
+                }
+                if !state.read().contacts.is_empty() {
+                    ul {
+                        style: "margin:0.65rem 0 0;padding-left:1.1rem;font-size:0.8rem;",
+                        for c in state.read().contacts.clone() {
+                            li {
+                                key: "{c.id}",
+                                "{c.display_name} ({c.relationship})"
+                                if let Some(ref p) = c.phone {
+                                    span { style: "color:var(--qualia-text-muted,#666);", " — {p}" }
+                                }
+                            }
+                        }
                     }
                 }
             }
