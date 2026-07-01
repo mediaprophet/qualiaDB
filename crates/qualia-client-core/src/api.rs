@@ -219,38 +219,57 @@ pub fn generate_qapp_credential(qapp_name: String) -> String {
 
 pub fn verify_and_install_qapp(target_path: String) -> Result<String, String> {
     let state = crate::state::APP_STATE.get().unwrap();
-    let path = std::path::PathBuf::from(&target_path);
-    let manifest_path = resolve_package_manifest_path(&path)
-        .ok_or_else(|| "qapp.json not found in directory".to_string())?;
+    let storage = state.config.lock().unwrap().storage_path.clone();
+    let storage_path = std::path::PathBuf::from(&storage);
 
-    let content = std::fs::read_to_string(&manifest_path).map_err(|e| e.to_string())?;
-    let manifest: qapp_registry::QappPackageManifest = serde_json::from_str(&content)
-        .map_err(|e| format!("Invalid qapp package manifest: {e}"))?;
+    if let Ok(port) = target_path.parse::<u16>() {
+        return Err(format!(
+            "Dev proxy port registration ({port}) requires a package directory path, not a bare port"
+        ));
+    }
 
+    let source_dir = std::path::PathBuf::from(&target_path);
+    if !source_dir.is_dir() {
+        return Err(format!("Qapp source directory not found: {target_path}"));
+    }
+
+    let entry = crate::qapp_install::install_package_atomic(
+        &storage_path,
+        &source_dir,
+        crate::qapp_install::InstallPolicy::Development,
+        None,
+    )
+    .map_err(|e| e.to_string())?;
+
+    let package_dir = crate::qapp_paths::resolve_active_package_dir(&storage_path, &entry.package_id);
+    let manifest = load_qapp_package_from_dir(&package_dir)?;
     let qapp_did = format!(
         "did:qualia:qapp:{}",
         manifest.name.to_lowercase().replace(" ", "-")
     );
 
-    let target = if let Ok(port) = target_path.parse::<u16>() {
-        qapp_registry::QappTarget::LocalProxyPort(port)
-    } else {
-        qapp_registry::QappTarget::LocalDevDirectory(path)
-    };
-
     let registered_qapp = qapp_registry::RegisteredQapp {
         did: qapp_did.clone(),
-        manifest,
-        target,
+        manifest: manifest.clone(),
+        target: qapp_registry::QappTarget::IsolatedVault(entry.package_id.clone()),
     };
 
-    let qapp_id_hash = crate::qapp_manifest::install_qapp_capabilities(&registered_qapp.manifest)
+    let qapp_id_hash = crate::qapp_manifest::install_qapp_capabilities(&manifest)
         .map_err(|e| format!("Qapp capability compile failed: {e:?}"))?;
 
-    state.installed_qapps.lock().unwrap().push(registered_qapp);
+    {
+        let mut installed = state.installed_qapps.lock().unwrap();
+        installed.retain(|q| {
+            q.manifest.name != entry.package_id && q.did != qapp_did
+        });
+        installed.push(registered_qapp);
+    }
     save_directory_state();
 
-    Ok(format!("{qapp_did} (hash={qapp_id_hash})"))
+    Ok(format!(
+        "{qapp_did} v{} hash={} content={}",
+        entry.active_version, qapp_id_hash, entry.content_hash
+    ))
 }
 
 #[derive(Serialize)]
@@ -3476,9 +3495,13 @@ pub fn launch_installed_qapp_with_context(
 ) -> Result<String, String> {
     let state = crate::state::APP_STATE.get().unwrap();
     let data_dir = state.config.lock().unwrap().storage_path.clone();
-    let qapp_dir = qapps_dir(&data_dir).join(&qapp_name);
+    let storage_path = std::path::PathBuf::from(&data_dir);
+    if crate::qapp_install::is_package_revoked(&storage_path, &qapp_name) {
+        return Err(format!("Qapp package revoked: {qapp_name}"));
+    }
+    let qapp_dir = crate::qapp_paths::resolve_active_package_dir(&storage_path, &qapp_name);
 
-    if !qapp_dir.exists() {
+    if !qapp_dir.join(crate::qapp_registry::QAPP_PACKAGE_MANIFEST).is_file() {
         return Err(format!("Qapp directory not found: {qapp_name}"));
     }
 

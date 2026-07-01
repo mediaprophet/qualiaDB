@@ -25,6 +25,7 @@ webizen-runtime = { path = "../webizen-runtime" }
 webizen-render = { path = "../webizen-render" }
 webizen-studio = { path = "../webizen-studio" }
 qualia-semantic-library = { path = "../qualia-semantic-library" }
+wellfare-core = { path = "../wellfare-core" }
 futures-util = "0.3"
 mime_guess = "2.0"
 pdf-extract = "0.12"

@@ -1,4 +1,5 @@
 pub mod models;
+pub mod record;
 pub mod parser;
 pub mod rdf;
 pub mod store;

@@ -79,6 +79,9 @@ pub enum Route {
     #[route("/nexus")]
     NexusRoute {},
 
+    #[route("/wellfair")]
+    WellfairRoute {},
+
     #[end_layout]
     #[route("/:..path")]
     DynamicPage { path: Vec<String> },
@@ -141,6 +144,15 @@ fn SceneInteractionRoute() -> Element {
 #[component]
 fn NexusRoute() -> Element {
     rsx! { components::nexus::Nexus {} }
+}
+
+#[component]
+fn WellfairRoute() -> Element {
+    rsx! {
+        components::wellfair::HostSnapshotProvider {
+            components::wellfair::WellfairShell {}
+        }
+    }
 }
 
 #[component]
@@ -250,6 +262,13 @@ fn AppLayout() -> Element {
                     style: "color: {accent}; font-weight: 600;",
                     sl-icon { "name": "activity", style: "font-size: 0.9rem;" }
                     "Anatomy Test"
+                }
+                Link {
+                    to: Route::WellfairRoute {},
+                    class: "nav-item",
+                    style: "color: {text_muted};",
+                    sl-icon { "name": "heart-pulse", style: "font-size: 0.9rem;" }
+                    "WellFair"
                 }
                 Link {
                     to: Route::QAppsRoute {},

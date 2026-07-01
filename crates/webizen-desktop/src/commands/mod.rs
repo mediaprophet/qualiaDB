@@ -195,6 +195,12 @@ pub fn save_config(new_config: AgentConfig) -> Result<(), String> {
     api::save_config(new_config)
 }
 
+#[command]
+pub fn wellfair_host_snapshot() -> Result<String, String> {
+    let snapshot = qualia_client_core::wellfair::fixture_host_snapshot();
+    serde_json::to_string(&snapshot).map_err(|e| e.to_string())
+}
+
 // ── Wallet / identity ─────────────────────────────────────────────────────────
 
 #[command]
@@ -793,7 +799,27 @@ fn qapp_slug(s: &str) -> String {
             out.push('_');
         }
     }
-    out.trim_matches('_').to_string()
+    out.trim_end_matches('_').to_string()
+}
+
+// ── Webizen Host API (qApp Message Bus) ──────────────────────────────────────
+
+pub struct HostApiState(pub std::sync::Arc<std::sync::Mutex<Option<qualia_client_core::wellfair::api::WebizenHostApi>>>);
+
+#[tauri::command]
+pub fn submit_record(
+    app: tauri::AppHandle,
+    qapp_id: String,
+    envelope: wellfare_core::record::RecordEnvelope,
+) -> Result<usize, String> {
+    let state = app.state::<HostApiState>();
+    let mut api_guard = state.0.lock().map_err(|e| e.to_string())?;
+    
+    if let Some(host_api) = api_guard.as_mut() {
+        host_api.submit_record(&qapp_id, envelope)
+    } else {
+        Err("Host API not initialized".into())
+    }
 }
 
 fn qapp_evidence_score(key: &str, value: &str) -> f32 {
@@ -2553,6 +2579,7 @@ pub fn get_invoke_handler() -> impl Fn(tauri::ipc::Invoke<tauri::Wry>) -> bool {
         fetch_domain_ontology,
         validate_shacl_shape,
         evaluate_logic_rules,
+        submit_record,
         
         list_installed_qapps,
         generate_qapp_credential,
@@ -2567,6 +2594,7 @@ pub fn get_invoke_handler() -> impl Fn(tauri::ipc::Invoke<tauri::Wry>) -> bool {
         run_engine_command,
         get_config,
         save_config,
+        wellfair_host_snapshot,
         get_wallet_status,
         is_first_run,
         read_identity,

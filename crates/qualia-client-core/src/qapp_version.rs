@@ -89,14 +89,17 @@ mod tests {
 
     #[test]
     fn patch_bump_is_newer() {
-        assert!(is_version_newer("0.0.12", "0.0.12"));
-        assert!(!is_version_newer("0.0.12", "0.0.12"));
+        assert!(is_version_newer("0.0.13", "0.0.12"));
+        assert!(!is_version_newer("0.0.12", "0.0.13"));
     }
 
     #[test]
     fn v_prefix_and_whitespace() {
+        use std::cmp::Ordering;
+
         assert!(parse_version(" v0.0.12 ").is_some());
-        assert!(is_version_newer("v0.0.12", "0.0.12"));
+        assert!(!is_version_newer("v0.0.12", "0.0.12"));
+        assert_eq!(compare_versions("v0.0.12", "0.0.12"), Some(Ordering::Equal));
     }
 
     #[test]
