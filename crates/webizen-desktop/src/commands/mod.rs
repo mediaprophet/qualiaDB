@@ -237,6 +237,13 @@ pub fn wellfair_import_samsung_folder(
 }
 
 #[command]
+pub fn wellfair_companion_pairing() -> Result<String, String> {
+    let port = crate::companion_gateway::companion_listen_port();
+    let info = crate::companion_gateway::companion_pairing_info(port);
+    serde_json::to_string(&info).map_err(|e| e.to_string())
+}
+
+#[command]
 pub fn wellfair_ingest_companion_health(
     app: AppHandle,
     bundle_json: String,
@@ -2647,6 +2654,7 @@ pub fn get_invoke_handler() -> impl Fn(tauri::ipc::Invoke<tauri::Wry>) -> bool {
         get_config,
         save_config,
         wellfair_host_snapshot,
+        wellfair_companion_pairing,
         wellfair_import_samsung_folder,
         wellfair_ingest_companion_health,
         get_wallet_status,

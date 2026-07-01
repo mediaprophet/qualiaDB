@@ -12388,6 +12388,7 @@ dependencies = [
  "chrono",
  "crossbeam-channel",
  "ed25519-dalek",
+ "fast_qr",
  "futures-util",
  "hex 0.4.3",
  "librqbit",

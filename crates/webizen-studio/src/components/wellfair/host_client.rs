@@ -74,3 +74,17 @@ pub async fn import_samsung_folder(folder_path: &str) -> Result<String, String> 
 pub async fn import_samsung_folder(_folder_path: &str) -> Result<String, String> {
     Err("Samsung folder import requires the Tauri desktop host".into())
 }
+
+#[cfg(target_arch = "wasm32")]
+pub async fn fetch_companion_pairing() -> Result<String, String> {
+    let js = tauri_invoke("wellfair_companion_pairing", wasm_bindgen::JsValue::NULL)
+        .await
+        .map_err(|e| format!("{e:?}"))?;
+    js.as_string()
+        .ok_or_else(|| "pairing response was not a JSON string".to_string())
+}
+
+#[cfg(not(target_arch = "wasm32"))]
+pub async fn fetch_companion_pairing() -> Result<String, String> {
+    Err("Companion pairing requires the Tauri desktop host".into())
+}

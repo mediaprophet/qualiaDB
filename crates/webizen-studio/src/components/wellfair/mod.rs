@@ -1,9 +1,11 @@
 pub mod host_client;
 pub mod host_dto;
+pub mod pairing_panel;
 pub mod shared;
 pub mod shell;
 pub mod tools_panel;
 
 pub use host_client::{fetch_host_snapshot, HostSnapshotProvider};
 pub use shell::WellfairShell;
+pub use pairing_panel::CompanionPairingPanel;
 pub use tools_panel::WellfairToolsPanel;

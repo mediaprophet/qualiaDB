@@ -123,6 +123,8 @@ pub fn spawn_settings_server(
         host_api: host_api.clone(),
     };
 
+    crate::companion_gateway::set_companion_listen_port(port);
+
     tauri::async_runtime::spawn(async move {
         if let Err(err) = run_settings_server(state, port).await {
             eprintln!("Settings portal failed: {err}");
@@ -167,6 +169,8 @@ async fn run_settings_server(state: SettingsServerState, port: u16) -> Result<()
             post(companion_ingest_route),
         )
         .route("/mobile/stream", get(companion_ws_route))
+        .route("/mobile/qr", get(companion_qr_route))
+        .route("/api/wellfair/companion/pairing", get(companion_pairing_route))
         .nest_service("/", ServeDir::new(static_root).append_index_html_on_directories(true))
         .layer(CorsLayer::permissive())
         .with_state(state);
@@ -718,4 +722,24 @@ async fn companion_ingest_route(
     crate::companion_gateway::companion_ingest_post(State(state.host_api), json)
         .await
         .map_err(|(code, msg)| (code, msg))
+}
+
+async fn companion_pairing_route(
+    State(state): State<SettingsServerState>,
+) -> Json<crate::companion_gateway::CompanionPairingInfo> {
+    let port = *state.listen_port.lock().unwrap();
+    Json(crate::companion_gateway::companion_pairing_info(port))
+}
+
+async fn companion_qr_route(
+    State(state): State<SettingsServerState>,
+) -> impl IntoResponse {
+    let port = *state.listen_port.lock().unwrap();
+    let info = crate::companion_gateway::companion_pairing_info(port);
+    let svg = crate::companion_gateway::companion_qr_svg(&info.ws_url);
+    (
+        StatusCode::OK,
+        [(header::CONTENT_TYPE, "image/svg+xml")],
+        svg,
+    )
 }

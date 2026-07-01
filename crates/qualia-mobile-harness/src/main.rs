@@ -13,12 +13,39 @@ fn main() {
 const OUTBOX_KEY: &str = "qualia-wellfair-health-outbox";
 
 #[wasm_bindgen(inline_js = r#"
-    export function startQrScanner(videoElementId, onScanSuccess) {
-        console.log("Starting QR scanner on element:", videoElementId);
-        setTimeout(() => {
-            const simulatedDesktopIP = "192.168.1.45:8080";
-            onScanSuccess(`ws://${simulatedDesktopIP}/mobile/stream`);
-        }, 2000);
+    export async function startQrScanner(videoElementId, onScanSuccess, onScanError) {
+        const video = document.getElementById(videoElementId);
+        if (!video) {
+            onScanError("Video element not found");
+            return;
+        }
+        if (!('BarcodeDetector' in window)) {
+            onScanError("Camera QR scan unavailable — enter the desktop WS URL manually.");
+            return;
+        }
+        try {
+            const stream = await navigator.mediaDevices.getUserMedia({
+                video: { facingMode: { ideal: "environment" } },
+                audio: false,
+            });
+            video.srcObject = stream;
+            await video.play();
+            const detector = new BarcodeDetector({ formats: ["qr_code"] });
+            const scan = async () => {
+                try {
+                    const codes = await detector.detect(video);
+                    if (codes.length > 0 && codes[0].rawValue) {
+                        onScanSuccess(codes[0].rawValue);
+                        stream.getTracks().forEach((t) => t.stop());
+                        return;
+                    }
+                } catch (_) {}
+                requestAnimationFrame(scan);
+            };
+            scan();
+        } catch (err) {
+            onScanError(String(err));
+        }
     }
 
     export async function requestDirectoryAccess() {
@@ -68,7 +95,11 @@ const OUTBOX_KEY: &str = "qualia-wellfair-health-outbox";
     }
 "#)]
 extern "C" {
-    fn startQrScanner(video_id: &str, callback: &Closure<dyn FnMut(String)>);
+    fn startQrScanner(
+        video_id: &str,
+        on_success: &Closure<dyn FnMut(String)>,
+        on_error: &Closure<dyn FnMut(String)>,
+    );
     #[wasm_bindgen(catch)]
     async fn requestDirectoryAccess() -> Result<JsValue, JsValue>;
     #[wasm_bindgen(catch)]
@@ -86,6 +117,7 @@ enum AppState {
     Initializing,
     VaultInit,
     Scanning,
+    ManualConnect,
     Connecting(String),
     Connected,
     BundleReady { json: String, file_count: usize },
@@ -117,6 +149,7 @@ fn App() -> Element {
     let mut ws_target = use_signal(|| String::new());
     let mut ws_handle = use_signal(|| None::<WebSocket>);
     let mut status_msg = use_signal(|| String::new());
+    let mut manual_ws_url = use_signal(|| String::new());
     let file_input_id = "samsung-csv-picker";
 
     use_effect(move || {
@@ -138,14 +171,20 @@ fn App() -> Element {
 
     use_effect(move || {
         if *state.read() == AppState::Scanning {
-            let callback = Closure::wrap(Box::new(move |scanned_text: String| {
+            let on_success = Closure::wrap(Box::new(move |scanned_text: String| {
                 web_sys::console::log_1(&format!("Scanned QR: {}", scanned_text).into());
                 ws_target.set(scanned_text.clone());
                 state.set(AppState::Connecting(scanned_text));
             }) as Box<dyn FnMut(String)>);
+            let mut status_msg_scan = status_msg.clone();
+            let on_error = Closure::wrap(Box::new(move |msg: String| {
+                status_msg_scan.set(msg);
+                state.set(AppState::ManualConnect);
+            }) as Box<dyn FnMut(String)>);
 
-            startQrScanner("qr-video-element", &callback);
-            callback.forget();
+            startQrScanner("qr-video-element", &on_success, &on_error);
+            on_success.forget();
+            on_error.forget();
         }
     });
 
@@ -167,6 +206,7 @@ fn App() -> Element {
                     ws.set_onopen(Some(on_open.as_ref().unchecked_ref()));
                     on_open.forget();
 
+                    let mut status_msg_ws = status_msg.clone();
                     let on_message = Closure::wrap(Box::new(move |e: MessageEvent| {
                         if let Ok(txt) = e.data().dyn_into::<js_sys::JsString>() {
                             let text: String = txt.into();
@@ -184,8 +224,10 @@ fn App() -> Element {
                                         r#"{{"type":"HEALTH_BUNDLE","bundle":{pending}}}"#
                                     );
                                     let _ = ws_clone.send_with_str(&payload);
-                                    status_msg.set("Sent pending health bundle to desktop.".into());
+                                    status_msg_ws.set("Sent pending health bundle to desktop.".into());
                                 }
+                            } else if text.contains("HEALTH_BUNDLE_ACK") {
+                                status_msg_ws.set("Desktop acknowledged health bundle.".into());
                             }
                         }
                     }) as Box<dyn FnMut(MessageEvent)>);
@@ -231,7 +273,7 @@ fn App() -> Element {
                 },
                 AppState::Scanning => rsx! {
                     div {
-                        style: "text-align: center;",
+                        style: "text-align: center; max-width: 420px;",
                         h3 { "Scan Desktop QR Code" }
                         video {
                             id: "qr-video-element",
@@ -239,7 +281,48 @@ fn App() -> Element {
                             height: "auto",
                             autoplay: true,
                         }
-                        p { "Pair with your authoritative desktop, then export Samsung Health CSVs here." }
+                        p { "Point your camera at the QR shown in desktop WellFair → Tools." }
+                        button {
+                            style: "margin-top: 0.75rem; padding: 8px 14px; background: #444; color: #fff; border: none; border-radius: 4px;",
+                            onclick: move |_| state.set(AppState::ManualConnect),
+                            "Enter URL manually"
+                        }
+                    }
+                },
+                AppState::ManualConnect => rsx! {
+                    div {
+                        style: "max-width: 420px; width: 100%;",
+                        h3 { "Connect manually" }
+                        p {
+                            style: "font-size: 0.85rem; color: #ccc;",
+                            "Copy the WebSocket URL from desktop WellFair pairing panel."
+                        }
+                        input {
+                            r#type: "text",
+                            value: "{manual_ws_url.read()}",
+                            placeholder: "ws://192.168.x.x:8080/mobile/stream",
+                            style: "width: 100%; padding: 10px; margin: 0.75rem 0; border-radius: 4px; border: 1px solid #555; background: #222; color: #fff;",
+                            oninput: move |e| manual_ws_url.set(e.value()),
+                        }
+                        button {
+                            style: "padding: 10px 16px; background: #2a6f97; color: white; border: none; border-radius: 4px;",
+                            onclick: move |_| {
+                                let url = manual_ws_url.read().trim().to_string();
+                                if url.starts_with("ws://") || url.starts_with("wss://") {
+                                    ws_target.set(url.clone());
+                                    state.set(AppState::Connecting(url));
+                                } else {
+                                    let mut msg_sig = status_msg.clone();
+                                    msg_sig.set("Enter a ws:// or wss:// URL from your desktop.".into());
+                                }
+                            },
+                            "Connect"
+                        }
+                        button {
+                            style: "margin-left: 0.5rem; padding: 10px 16px; background: #444; color: white; border: none; border-radius: 4px;",
+                            onclick: move |_| state.set(AppState::Scanning),
+                            "Try camera again"
+                        }
                     }
                 },
                 AppState::Connecting(url) => rsx! {
@@ -320,7 +403,7 @@ fn App() -> Element {
                                         let ws_handle = ws_handle.clone();
                                         move |_| {
                                             let json = json.clone();
-                                            let status_msg = status_msg.clone();
+                                            let mut status_msg = status_msg.clone();
                                             let ws_handle = ws_handle.clone();
                                             spawn(async move {
                                                 if copyToClipboard(&json).await.is_ok() {

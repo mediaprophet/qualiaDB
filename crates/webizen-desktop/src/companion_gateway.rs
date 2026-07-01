@@ -1,5 +1,8 @@
 //! Companion gateway — phone WS + loopback POST ingest for Samsung health bundles.
 
+use std::net::UdpSocket;
+use std::sync::atomic::{AtomicU16, Ordering};
+
 use axum::extract::ws::{Message, WebSocket, WebSocketUpgrade};
 use axum::extract::State;
 use axum::response::IntoResponse;
@@ -10,6 +13,58 @@ use serde_json::Value;
 use std::sync::{Arc, Mutex};
 
 pub type HostApiHandle = Arc<Mutex<Option<WebizenHostApi>>>;
+
+pub const DEFAULT_COMPANION_PORT: u16 = 8080;
+
+static COMPANION_LISTEN_PORT: AtomicU16 = AtomicU16::new(DEFAULT_COMPANION_PORT);
+
+pub fn set_companion_listen_port(port: u16) {
+    COMPANION_LISTEN_PORT.store(port, Ordering::SeqCst);
+}
+
+pub fn companion_listen_port() -> u16 {
+    COMPANION_LISTEN_PORT.load(Ordering::SeqCst)
+}
+
+pub fn guess_lan_ipv4() -> String {
+    let socket = match UdpSocket::bind("0.0.0.0:0") {
+        Ok(s) => s,
+        Err(_) => return "127.0.0.1".into(),
+    };
+    if socket.connect("8.8.8.8:80").is_err() {
+        return "127.0.0.1".into();
+    }
+    match socket.local_addr() {
+        Ok(addr) if addr.ip().is_ipv4() => addr.ip().to_string(),
+        _ => "127.0.0.1".into(),
+    }
+}
+
+#[derive(Debug, Clone, serde::Serialize)]
+pub struct CompanionPairingInfo {
+    pub ws_url: String,
+    pub lan_ip: String,
+    pub port: u16,
+    pub qr_path: String,
+}
+
+pub fn companion_pairing_info(port: u16) -> CompanionPairingInfo {
+    let lan_ip = guess_lan_ipv4();
+    let ws_url = format!("ws://{lan_ip}:{port}/mobile/stream");
+    CompanionPairingInfo {
+        ws_url,
+        lan_ip,
+        port,
+        qr_path: "/mobile/qr".into(),
+    }
+}
+
+pub fn companion_qr_svg(ws_url: &str) -> String {
+    let qr = fast_qr::QRBuilder::new(ws_url)
+        .build()
+        .unwrap_or_else(|_| fast_qr::QRBuilder::new("ws://127.0.0.1:8080/mobile/stream").build().unwrap());
+    fast_qr::convert::svg::SvgBuilder::default().to_str(&qr)
+}
 
 const CHALLENGE: &str = "CHALLENGE_BYTES_123456789";
 const AUTH_OK: &str = "AUTH_SUCCESS";

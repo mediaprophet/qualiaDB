@@ -3,6 +3,7 @@ use super::host_dto::{ConsentGrantDraft, PolicyDecisionDto, ProvenanceHop, Sensi
 use super::shared::{
     ConsentGrantEditor, OfflineState, ProvenanceTrail, SensitivityBadge, SyncState,
 };
+use super::pairing_panel::CompanionPairingPanel;
 use super::tools_panel::WellfairToolsPanel;
 use dioxus::prelude::*;
 
@@ -95,6 +96,7 @@ pub fn WellfairShell() -> Element {
                 }
             }
 
+            CompanionPairingPanel {}
             WellfairToolsPanel {}
 
             section {
