@@ -1,3 +1,5 @@
+pub mod companion_pairing;
+pub mod companion_sync;
 pub mod models;
 pub mod record;
 pub mod parser;

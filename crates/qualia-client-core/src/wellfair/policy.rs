@@ -1,3 +1,4 @@
+use super::consent_store::ConsentGrantRecord;
 use super::host_state::{ConsentGrantDraft, PolicyDecisionDto};
 use wellfare_core::record::{EpistemicStatus, SensitivityClass};
 
@@ -49,6 +50,17 @@ impl PolicyDecisionService {
         }
     }
 
+    fn has_active_grant(
+        grants: &[ConsentGrantRecord],
+        qapp_id: &str,
+        scope: &str,
+        now_unix: u64,
+    ) -> bool {
+        grants.iter().any(|g| {
+            g.is_active(now_unix) && g.recipient == qapp_id && g.scope == scope
+        })
+    }
+
     /// Evaluates if a qApp capability is permitted to act on a record with a given sensitivity.
     pub fn evaluate_access(
         &self,
@@ -56,6 +68,8 @@ impl PolicyDecisionService {
         requested_scope: &str,
         sensitivity: SensitivityClass,
         epistemic: EpistemicStatus,
+        active_grants: &[ConsentGrantRecord],
+        now_unix: u64,
     ) -> DecisionResult {
         if sensitivity == SensitivityClass::Classified {
             return DecisionResult::Deny {
@@ -69,24 +83,35 @@ impl PolicyDecisionService {
             };
         }
 
-        if requested_scope == "write_record" {
-            if self.health_writers.iter().any(|id| *id == qapp_id) {
-                return DecisionResult::Permit {
-                    obligations: vec!["emit_wal_receipt".into()],
+        match requested_scope {
+            "write_record" | "read_record" => {
+                if self.health_writers.iter().any(|id| *id == qapp_id) {
+                    return DecisionResult::Permit {
+                        obligations: vec!["emit_wal_receipt".into()],
+                    };
+                }
+                if Self::has_active_grant(active_grants, qapp_id, requested_scope, now_unix) {
+                    return DecisionResult::Permit {
+                        obligations: vec!["emit_wal_receipt".into(), "honour_consent_expiry".into()],
+                    };
+                }
+                let fields = if requested_scope == "write_record" {
+                    vec!["health.observation".into()]
+                } else {
+                    vec!["health.observation".into(), "profile.display_name".into()]
                 };
+                DecisionResult::Prompt {
+                    requested_consent: ConsentGrantDraft {
+                        recipient: qapp_id.to_string(),
+                        purpose: format!("{requested_scope} via WellFair host"),
+                        fields,
+                        expires_at_unix: None,
+                    },
+                }
             }
-            return DecisionResult::Prompt {
-                requested_consent: ConsentGrantDraft {
-                    recipient: qapp_id.to_string(),
-                    purpose: format!("write_record via {requested_scope}"),
-                    fields: vec!["health.observation".into()],
-                    expires_at_unix: None,
-                },
-            };
-        }
-
-        DecisionResult::Deny {
-            reasons: vec![format!("Unknown scope: {requested_scope}")],
+            _ => DecisionResult::Deny {
+                reasons: vec![format!("Unknown scope: {requested_scope}")],
+            },
         }
     }
 }
@@ -103,6 +128,8 @@ mod tests {
             "write_record",
             SensitivityClass::Classified,
             EpistemicStatus::Asserted,
+            &[],
+            0,
         );
         assert!(matches!(d, DecisionResult::Deny { .. }));
     }
@@ -115,6 +142,33 @@ mod tests {
             "write_record",
             SensitivityClass::Restricted,
             EpistemicStatus::Asserted,
+            &[],
+            0,
+        );
+        assert!(matches!(d, DecisionResult::Permit { .. }));
+    }
+
+    #[test]
+    fn active_grant_permits_third_party_qapp() {
+        use super::super::consent_store::ConsentGrantRecord;
+        let svc = PolicyDecisionService::new();
+        let grant = ConsentGrantRecord {
+            id: "g1".into(),
+            recipient: "wellfair-care".into(),
+            purpose: "care team write".into(),
+            fields: vec!["health.observation".into()],
+            scope: "write_record".into(),
+            granted_at_unix: 1,
+            expires_at_unix: None,
+            revoked: false,
+        };
+        let d = svc.evaluate_access(
+            "wellfair-care",
+            "write_record",
+            SensitivityClass::Restricted,
+            EpistemicStatus::Asserted,
+            &[grant],
+            100,
         );
         assert!(matches!(d, DecisionResult::Permit { .. }));
     }

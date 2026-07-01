@@ -64,6 +64,7 @@ pub struct SettingsServerState {
     pub manifest: Arc<Mutex<String>>,
     pub listen_port: Arc<Mutex<u16>>,
     pub static_root: PathBuf,
+    pub host_api: crate::companion_gateway::HostApiHandle,
 }
 
 #[derive(Serialize)]
@@ -107,8 +108,11 @@ fn static_portal_dir() -> PathBuf {
     PathBuf::from(env!("CARGO_MANIFEST_DIR")).join("static/portal")
 }
 
-pub fn spawn_settings_server(app_state: Arc<AppState>) -> u16 {
-    let port = find_open_port("127.0.0.1", DEFAULT_SETTINGS_PORT);
+pub fn spawn_settings_server(
+    app_state: Arc<AppState>,
+    host_api: crate::companion_gateway::HostApiHandle,
+) -> u16 {
+    let port = find_open_port("0.0.0.0", DEFAULT_SETTINGS_PORT);
     let storage_path = app_state.config.lock().unwrap().storage_path.clone();
     let initial_manifest = load_persisted_manifest(&storage_path);
     let state = SettingsServerState {
@@ -116,7 +120,10 @@ pub fn spawn_settings_server(app_state: Arc<AppState>) -> u16 {
         manifest: Arc::new(Mutex::new(initial_manifest)),
         listen_port: Arc::new(Mutex::new(port)),
         static_root: static_portal_dir(),
+        host_api: host_api.clone(),
     };
+
+    crate::companion_gateway::set_companion_listen_port(port);
 
     tauri::async_runtime::spawn(async move {
         if let Err(err) = run_settings_server(state, port).await {
@@ -157,15 +164,24 @@ async fn run_settings_server(state: SettingsServerState, port: u16) -> Result<()
         .route("/api/assets/recommend", post(assets_recommend_handler))
         .route("/api/assets/enqueue", post(assets_enqueue_handler))
         .route("/generate_pane", post(generate_pane_handler))
+        .route(
+            "/wellfair/companion/ingest",
+            post(companion_ingest_route),
+        )
+        .route("/mobile/stream", get(companion_ws_route))
+        .route("/mobile/qr", get(companion_qr_route))
+        .route("/api/wellfair/companion/pairing", get(companion_pairing_route))
         .nest_service("/", ServeDir::new(static_root).append_index_html_on_directories(true))
         .layer(CorsLayer::permissive())
         .with_state(state);
 
-    let addr = SocketAddr::from(([127, 0, 0, 1], port));
+    let addr = SocketAddr::from(([0, 0, 0, 0], port));
     let listener = tokio::net::TcpListener::bind(addr)
         .await
-        .map_err(|e| format!("bind 127.0.0.1:{port}: {e}"))?;
-    println!("Qualia settings portal listening on http://127.0.0.1:{port}/");
+        .map_err(|e| format!("bind 0.0.0.0:{port}: {e}"))?;
+    println!(
+        "Qualia settings + companion gateway on http://127.0.0.1:{port}/ (LAN ws://<host>:{port}/mobile/stream)"
+    );
     axum::serve(listener, app)
         .await
         .map_err(|e| format!("settings server: {e}"))
@@ -689,4 +705,41 @@ async fn assets_enqueue_handler(
         .enqueue(kind)
         .map(|job| (StatusCode::ACCEPTED, Json(job)))
         .map_err(|e| (StatusCode::BAD_REQUEST, e))
+}
+
+async fn companion_ws_route(
+    State(state): State<SettingsServerState>,
+    ws: axum::extract::ws::WebSocketUpgrade,
+) -> impl IntoResponse {
+    crate::companion_gateway::companion_ws_upgrade(State(state.host_api), ws).await
+}
+
+async fn companion_ingest_route(
+    State(state): State<SettingsServerState>,
+    Json(bundle): Json<wellfare_core::companion_sync::CompanionHealthBundle>,
+) -> Result<Json<crate::companion_gateway::IngestAck>, (StatusCode, String)> {
+    let json = serde_json::to_string(&bundle).map_err(|e| (StatusCode::BAD_REQUEST, e.to_string()))?;
+    crate::companion_gateway::companion_ingest_post(State(state.host_api), json)
+        .await
+        .map_err(|(code, msg)| (code, msg))
+}
+
+async fn companion_pairing_route(
+    State(state): State<SettingsServerState>,
+) -> Json<crate::companion_gateway::CompanionPairingInfo> {
+    let port = *state.listen_port.lock().unwrap();
+    Json(crate::companion_gateway::companion_pairing_info(port))
+}
+
+async fn companion_qr_route(
+    State(state): State<SettingsServerState>,
+) -> impl IntoResponse {
+    let port = *state.listen_port.lock().unwrap();
+    let info = crate::companion_gateway::companion_pairing_info(port);
+    let svg = crate::companion_gateway::companion_qr_svg(&info.ws_url);
+    (
+        StatusCode::OK,
+        [(header::CONTENT_TYPE, "image/svg+xml")],
+        svg,
+    )
 }

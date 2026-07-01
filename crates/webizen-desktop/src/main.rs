@@ -10,6 +10,7 @@ use tauri::{Emitter, Manager};
 use tauri_plugin_updater::UpdaterExt;
 
 pub mod commands;
+pub mod companion_gateway;
 pub mod runtime;
 pub mod settings_server;
 pub mod telemetry_bridge;
@@ -96,6 +97,9 @@ fn main() {
     let vault_for_daemon = app_state.key_vault.clone();
 
     let (tx, mut rx) = tokio::sync::mpsc::channel::<String>(100);
+    let host_api_state: std::sync::Arc<
+        std::sync::Mutex<Option<qualia_client_core::wellfair::api::WebizenHostApi>>,
+    > = std::sync::Arc::new(std::sync::Mutex::new(None));
 
     tauri::Builder::default()
         .plugin(tauri_plugin_updater::Builder::new().build())
@@ -133,7 +137,7 @@ fn main() {
         )))
         .manage(commands::binary_registry::BinaryNodeRegistry::new())
         .manage(telemetry_bridge::TelemetryBridge::new())
-        .manage(commands::HostApiState(std::sync::Arc::new(std::sync::Mutex::new(None))))
+        .manage(commands::HostApiState(host_api_state.clone()))
         .setup(move |app| {
             let handle = app.handle();
             let daemon_status_item =
@@ -196,10 +200,6 @@ fn main() {
 
             qualia_client_core::local_job_scheduler::LocalJobScheduler::spawn_global_worker();
 
-            let settings_port = settings_server::spawn_settings_server(app_state.clone());
-            eprintln!("Settings portal ready at http://127.0.0.1:{settings_port}/");
-
-            // Initialize WebizenHostApi for qApps (requires unlocked KeyVault).
             if let Ok(kv) = app_state.key_vault.lock() {
                 if !kv.is_locked() {
                     let key_bytes = kv.get_master_key_bytes();
@@ -207,26 +207,37 @@ fn main() {
                     let author_did_hash = qualia_core_db::q_hash("did:q42:local");
                     let owner_did = "did:q42:wellfair:owner".to_string();
                     let author_did = owner_did.clone();
-                    let storage_path = app_state.config.lock().unwrap().storage_path.clone();
-                    let wal_path = std::path::PathBuf::from(storage_path).join("qualia_global.wal");
-                    if let Ok(vault) =
-                        qualia_client_core::wellfair::vault::VaultService::open(&wal_path, author_did_hash)
-                    {
-                        let policy = qualia_client_core::wellfair::policy::PolicyDecisionService::new();
+                    let storage_root = std::path::PathBuf::from(
+                        app_state.config.lock().unwrap().storage_path.clone(),
+                    );
+                    let wal_path = storage_root.join("qualia_global.wal");
+                    if let Ok(vault) = qualia_client_core::wellfair::vault::VaultService::open(
+                        &wal_path,
+                        &storage_root,
+                        author_did_hash,
+                    ) {
+                        let policy =
+                            qualia_client_core::wellfair::policy::PolicyDecisionService::new();
                         let host_api = qualia_client_core::wellfair::api::WebizenHostApi::new(
                             vault,
                             policy,
                             signing_key,
                             owner_did,
                             author_did,
+                            storage_root.clone(),
                         );
-                        let state_arc = app.state::<commands::HostApiState>().0.clone();
-                        if let Ok(mut host_guard) = state_arc.lock() {
+                        if let Ok(mut host_guard) = host_api_state.lock() {
                             *host_guard = Some(host_api);
                         };
                     }
                 }
             }
+
+            let settings_port =
+                settings_server::spawn_settings_server(app_state.clone(), host_api_state.clone());
+            eprintln!(
+                "Settings + companion gateway ready at http://127.0.0.1:{settings_port}/ (LAN ws://<host>:{settings_port}/mobile/stream)"
+            );
 
             // Cold-path essentials: seed bundled ontologies when the queue is idle.
             if let Ok(job) = qualia_client_core::local_job_scheduler::LocalJobScheduler::global()

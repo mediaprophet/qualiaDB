@@ -8473,11 +8473,13 @@ dependencies = [
  "sha1 0.11.0",
  "sha2 0.11.0",
  "sysinfo",
+ "tempfile",
  "tiny_http",
  "tokio",
  "url",
  "urlencoding",
  "uuid",
+ "wellfare-core",
  "winreg 0.56.0",
 ]
 
@@ -8617,7 +8619,10 @@ name = "qualia-mobile-harness"
 version = "0.0.23"
 dependencies = [
  "dioxus",
+ "ed25519-dalek",
  "futures-util",
+ "getrandom 0.2.17",
+ "hex 0.4.3",
  "js-sys",
  "qualia-core-db",
  "serde",
@@ -8625,6 +8630,7 @@ dependencies = [
  "wasm-bindgen",
  "wasm-bindgen-futures",
  "web-sys",
+ "wellfare-core",
 ]
 
 [[package]]
@@ -12385,6 +12391,7 @@ dependencies = [
  "chrono",
  "crossbeam-channel",
  "ed25519-dalek",
+ "fast_qr",
  "futures-util",
  "hex 0.4.3",
  "librqbit",
@@ -12411,6 +12418,7 @@ dependencies = [
  "webizen-render",
  "webizen-runtime",
  "webizen-studio",
+ "wellfare-core",
 ]
 
 [[package]]

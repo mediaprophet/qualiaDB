@@ -1,10 +1,12 @@
-//! Phase 2 Tools — Samsung Health folder import (HLT-01).
+//! WellFair Tools — companion bundle ingest (primary) + folder import (dev fallback).
 
 use dioxus::prelude::*;
 
 #[derive(Clone, Debug, Default, PartialEq)]
 struct ImportUiState {
+    bundle_json: String,
     folder_path: String,
+    show_dev_fallback: bool,
     status: String,
     last_report: String,
 }
@@ -17,23 +19,22 @@ pub fn WellfairToolsPanel() -> Element {
         section {
             aria_label: "WellFair tools",
             style: "padding:0.85rem;border:1px solid var(--qualia-border,#ddd);border-radius:10px;background:var(--qualia-surface,#fafafa);",
-            h2 { style: "margin:0 0 0.5rem;font-size:1rem;", "Tools — Samsung Health import" }
+            h2 { style: "margin:0 0 0.5rem;font-size:1rem;", "Tools — Samsung Health sync" }
             p {
                 style: "margin:0 0 0.75rem;font-size:0.78rem;color:var(--qualia-text-muted,#666);",
-                "Select a folder containing Samsung Health CSV exports. Records compile to canonical envelopes and commit through WebizenHostApi → VaultService WAL."
+                "Samsung Health data lives on your phone. Use the WellFair companion PWA to export CSVs, then paste or share the bundle JSON here. Your desktop vault is the authoritative store."
             }
             label {
-                style: "display:block;font-size:0.78rem;margin-bottom:0.25rem;",
-                "Folder path"
+                style: "display:block;font-size:0.78rem;margin-bottom:0.25rem;font-weight:600;",
+                "Companion bundle JSON (from phone)"
             }
-            input {
-                r#type: "text",
-                value: "{state.read().folder_path}",
-                placeholder: "C:\\Users\\…\\samsung_health_export",
-                style: "width:100%;padding:0.45rem 0.55rem;border-radius:6px;border:1px solid var(--qualia-border,#ccc);font-size:0.82rem;",
+            textarea {
+                value: "{state.read().bundle_json}",
+                placeholder: "Paste JSON from companion Share / Copy on your phone…",
+                rows: "6",
+                style: "width:100%;padding:0.45rem 0.55rem;border-radius:6px;border:1px solid var(--qualia-border,#ccc);font-size:0.78rem;font-family:monospace;resize:vertical;",
                 oninput: move |e| {
-                    let mut s = state.write();
-                    s.folder_path = e.value();
+                    state.write().bundle_json = e.value();
                 },
             }
             div {
@@ -41,28 +42,84 @@ pub fn WellfairToolsPanel() -> Element {
                 button {
                     style: "padding:0.4rem 0.75rem;border-radius:6px;border:none;background:var(--qualia-accent,#2a6f97);color:#fff;font-size:0.82rem;cursor:pointer;",
                     onclick: move |_| {
-                        let path = state.read().folder_path.clone();
-                        if path.trim().is_empty() {
-                            state.write().status = "Enter a folder path first.".into();
+                        let json = state.read().bundle_json.clone();
+                        if json.trim().is_empty() {
+                            state.write().status = "Paste a companion bundle JSON from your phone first.".into();
                             return;
                         }
-                        state.write().status = "Importing…".into();
+                        state.write().status = "Ingesting companion bundle…".into();
                         spawn(async move {
-                            let result = super::host_client::import_samsung_folder(&path).await;
+                            let result = super::host_client::ingest_companion_health(&json).await;
                             let mut s = state.write();
                             match result {
                                 Ok(report_json) => {
-                                    s.status = "Import complete.".into();
+                                    s.status = "Companion ingest complete.".into();
                                     s.last_report = report_json;
                                 }
                                 Err(e) => {
-                                    s.status = format!("Import failed: {e}");
+                                    s.status = format!("Ingest failed: {e}");
                                     s.last_report.clear();
                                 }
                             }
                         });
                     },
-                    "Import folder"
+                    "Ingest from phone"
+                }
+                button {
+                    style: "padding:0.4rem 0.75rem;border-radius:6px;border:1px solid var(--qualia-border,#ccc);background:transparent;color:var(--qualia-text-muted,#555);font-size:0.82rem;cursor:pointer;",
+                    onclick: move |_| {
+                        let mut s = state.write();
+                        s.show_dev_fallback = !s.show_dev_fallback;
+                    },
+                    if state.read().show_dev_fallback { "Hide dev fallback" } else { "Dev: folder import" }
+                }
+            }
+            if state.read().show_dev_fallback {
+                div {
+                    style: "margin-top:0.85rem;padding-top:0.75rem;border-top:1px dashed var(--qualia-border,#ddd);",
+                    p {
+                        style: "margin:0 0 0.5rem;font-size:0.72rem;color:var(--qualia-text-muted,#888);",
+                        "Developer/testing only — not the production path when data is on a phone."
+                    }
+                    label {
+                        style: "display:block;font-size:0.78rem;margin-bottom:0.25rem;",
+                        "Folder path"
+                    }
+                    input {
+                        r#type: "text",
+                        value: "{state.read().folder_path}",
+                        placeholder: "C:\\Users\\…\\samsung_health_export",
+                        style: "width:100%;padding:0.45rem 0.55rem;border-radius:6px;border:1px solid var(--qualia-border,#ccc);font-size:0.82rem;",
+                        oninput: move |e| {
+                            state.write().folder_path = e.value();
+                        },
+                    }
+                    button {
+                        style: "margin-top:0.5rem;padding:0.35rem 0.65rem;border-radius:6px;border:none;background:#666;color:#fff;font-size:0.78rem;cursor:pointer;",
+                        onclick: move |_| {
+                            let path = state.read().folder_path.clone();
+                            if path.trim().is_empty() {
+                                state.write().status = "Enter a folder path first.".into();
+                                return;
+                            }
+                            state.write().status = "Importing folder (dev)…".into();
+                            spawn(async move {
+                                let result = super::host_client::import_samsung_folder(&path).await;
+                                let mut s = state.write();
+                                match result {
+                                    Ok(report_json) => {
+                                        s.status = "Folder import complete.".into();
+                                        s.last_report = report_json;
+                                    }
+                                    Err(e) => {
+                                        s.status = format!("Import failed: {e}");
+                                        s.last_report.clear();
+                                    }
+                                }
+                            });
+                        },
+                        "Import folder (dev)"
+                    }
                 }
             }
             if !state.read().status.is_empty() {
