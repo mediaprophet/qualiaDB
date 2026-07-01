@@ -1,9 +1,12 @@
 #![allow(non_snake_case)]
 
+mod companion_device;
+
 use dioxus::prelude::*;
 use wasm_bindgen::prelude::*;
 use wasm_bindgen::JsCast;
 use web_sys::{MessageEvent, WebSocket};
+use wellfare_core::companion_pairing::MSG_CHALLENGE;
 use wellfare_core::companion_sync::{CompanionCsvFile, CompanionHealthBundle};
 
 fn main() {
@@ -124,22 +127,12 @@ enum AppState {
     Error(String),
 }
 
-fn device_id() -> String {
-    let stored = loadOutbox("qualia-device-id");
-    if !stored.is_empty() {
-        return stored;
-    }
-    let id = format!("phone-{}", js_sys::Math::random().to_string());
-    persistOutbox("qualia-device-id", &id);
-    id
-}
-
 fn captured_at_unix() -> u32 {
     (js_sys::Date::new_0().get_time() / 1000.0) as u32
 }
 
 fn build_bundle_from_files(files: Vec<CompanionCsvFile>) -> Result<String, String> {
-    let bundle = CompanionHealthBundle::new(device_id(), captured_at_unix(), files);
+    let bundle = CompanionHealthBundle::new(companion_device::device_id(), captured_at_unix(), files);
     bundle.validate()?;
     serde_json::to_string_pretty(&bundle).map_err(|e| e.to_string())
 }
@@ -212,11 +205,18 @@ fn App() -> Element {
                             let text: String = txt.into();
                             web_sys::console::log_1(&format!("Received WS Message: {}", text).into());
 
-                            if text == "CHALLENGE_BYTES_123456789" {
-                                web_sys::console::log_1(&"Solving DID Challenge...".into());
-                                let signature = "SIGNED_WITH_MOBILE_DID_777";
-                                let _ = ws_clone.send_with_str(signature);
-                            } else if text == "AUTH_SUCCESS" {
+                            if text.contains(MSG_CHALLENGE) {
+                                web_sys::console::log_1(&"Signing Ed25519 pairing challenge...".into());
+                                match companion_device::build_pairing_response(&text) {
+                                    Ok(response_json) => {
+                                        let _ = ws_clone.send_with_str(&response_json);
+                                    }
+                                    Err(e) => {
+                                        status_msg_ws.set(format!("Pairing sign failed: {e}"));
+                                        state.set(AppState::Error(e));
+                                    }
+                                }
+                            } else if text.contains("AUTH_SUCCESS") {
                                 state.set(AppState::Connected);
                                 let pending = loadOutbox(OUTBOX_KEY);
                                 if !pending.is_empty() {
@@ -226,6 +226,9 @@ fn App() -> Element {
                                     let _ = ws_clone.send_with_str(&payload);
                                     status_msg_ws.set("Sent pending health bundle to desktop.".into());
                                 }
+                            } else if text.contains("AUTH_DENIED") {
+                                status_msg_ws.set("Desktop denied pairing.".into());
+                                state.set(AppState::Error("Pairing denied by desktop".into()));
                             } else if text.contains("HEALTH_BUNDLE_ACK") {
                                 status_msg_ws.set("Desktop acknowledged health bundle.".into());
                             }

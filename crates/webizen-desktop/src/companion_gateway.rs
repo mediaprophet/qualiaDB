@@ -7,10 +7,16 @@ use axum::extract::ws::{Message, WebSocket, WebSocketUpgrade};
 use axum::extract::State;
 use axum::response::IntoResponse;
 use axum::Json;
+use ed25519_dalek::{Signature, Verifier, VerifyingKey};
 use qualia_client_core::wellfair::api::WebizenHostApi;
+use rand::Rng;
 use serde::Deserialize;
 use serde_json::Value;
 use std::sync::{Arc, Mutex};
+use wellfare_core::companion_pairing::{
+    CompanionAuthResult, CompanionChallenge, CompanionPairingResponse, COMPANION_PAIRING_CONTEXT,
+    MSG_PAIRING_RESPONSE,
+};
 
 pub type HostApiHandle = Arc<Mutex<Option<WebizenHostApi>>>;
 
@@ -62,12 +68,13 @@ pub fn companion_pairing_info(port: u16) -> CompanionPairingInfo {
 pub fn companion_qr_svg(ws_url: &str) -> String {
     let qr = fast_qr::QRBuilder::new(ws_url)
         .build()
-        .unwrap_or_else(|_| fast_qr::QRBuilder::new("ws://127.0.0.1:8080/mobile/stream").build().unwrap());
+        .unwrap_or_else(|_| {
+            fast_qr::QRBuilder::new("ws://127.0.0.1:8080/mobile/stream")
+                .build()
+                .unwrap()
+        });
     fast_qr::convert::svg::SvgBuilder::default().to_str(&qr)
 }
-
-const CHALLENGE: &str = "CHALLENGE_BYTES_123456789";
-const AUTH_OK: &str = "AUTH_SUCCESS";
 
 #[derive(Debug, Deserialize)]
 struct HealthBundleWire {
@@ -82,6 +89,54 @@ pub struct IngestAck {
     pub records_committed: usize,
     pub records_skipped: usize,
     pub errors: Vec<String>,
+}
+
+fn random_nonce_hex() -> String {
+    let mut nonce = [0u8; 32];
+    rand::rng().fill_bytes(&mut nonce);
+    hex::encode(nonce)
+}
+
+fn verify_pairing_response(
+    challenge: &CompanionChallenge,
+    response: &CompanionPairingResponse,
+) -> Result<(), String> {
+    if response.msg_type != MSG_PAIRING_RESPONSE {
+        return Err("expected PAIRING_RESPONSE".into());
+    }
+    if response.device_id.trim().is_empty() {
+        return Err("device_id required".into());
+    }
+    if challenge.context != COMPANION_PAIRING_CONTEXT {
+        return Err("invalid challenge context".into());
+    }
+
+    let nonce = hex::decode(&challenge.nonce_hex).map_err(|e| format!("bad nonce: {e}"))?;
+    if nonce.len() != 32 {
+        return Err("challenge nonce must be 32 bytes".into());
+    }
+
+    let pk_bytes: [u8; 32] = hex::decode(&response.public_key_hex)
+        .map_err(|e| format!("bad public key: {e}"))?
+        .try_into()
+        .map_err(|_| "public key must be 32 bytes".to_string())?;
+    let sig_bytes: [u8; 64] = hex::decode(&response.signature_hex)
+        .map_err(|e| format!("bad signature: {e}"))?
+        .try_into()
+        .map_err(|_| "signature must be 64 bytes".to_string())?;
+
+    let verifying_key =
+        VerifyingKey::from_bytes(&pk_bytes).map_err(|_| "invalid Ed25519 public key".to_string())?;
+    let signature = Signature::from_bytes(&sig_bytes);
+
+    let mut payload = Vec::with_capacity(challenge.context.len() + 1 + nonce.len());
+    payload.extend_from_slice(challenge.context.as_bytes());
+    payload.push(0);
+    payload.extend_from_slice(&nonce);
+
+    verifying_key
+        .verify(&payload, &signature)
+        .map_err(|_| "signature verification failed".to_string())
 }
 
 fn ingest_bundle_json(host_api: &HostApiHandle, bundle_json: &str) -> Result<IngestAck, String> {
@@ -104,12 +159,9 @@ pub async fn companion_ingest_post(
     State(host_api): State<HostApiHandle>,
     body: String,
 ) -> Result<Json<IngestAck>, (axum::http::StatusCode, String)> {
-    ingest_bundle_json(&host_api, &body).map(Json).map_err(|e| {
-        (
-            axum::http::StatusCode::BAD_REQUEST,
-            e,
-        )
-    })
+    ingest_bundle_json(&host_api, &body)
+        .map(Json)
+        .map_err(|e| (axum::http::StatusCode::BAD_REQUEST, e))
 }
 
 pub async fn companion_ws_upgrade(
@@ -120,8 +172,14 @@ pub async fn companion_ws_upgrade(
 }
 
 async fn companion_ws_session(mut socket: WebSocket, host_api: HostApiHandle) {
+    let challenge = CompanionChallenge::new(random_nonce_hex());
+    let challenge_json = match serde_json::to_string(&challenge) {
+        Ok(j) => j,
+        Err(_) => return,
+    };
+
     if socket
-        .send(Message::Text(CHALLENGE.into()))
+        .send(Message::Text(challenge_json.into()))
         .await
         .is_err()
     {
@@ -139,13 +197,29 @@ async fn companion_ws_session(mut socket: WebSocket, host_api: HostApiHandle) {
         };
 
         if !authenticated {
-            if !text.is_empty() {
-                authenticated = true;
-                if socket
-                    .send(Message::Text(AUTH_OK.into()))
-                    .await
-                    .is_err()
-                {
+            match serde_json::from_str::<CompanionPairingResponse>(&text) {
+                Ok(response) => match verify_pairing_response(&challenge, &response) {
+                    Ok(()) => {
+                        authenticated = true;
+                        let ack = serde_json::to_string(&CompanionAuthResult::success())
+                            .unwrap_or_else(|_| r#"{"type":"AUTH_SUCCESS"}"#.into());
+                        if socket.send(Message::Text(ack.into())).await.is_err() {
+                            break;
+                        }
+                    }
+                    Err(reason) => {
+                        let deny = serde_json::to_string(&CompanionAuthResult::denied(reason))
+                            .unwrap_or_else(|_| r#"{"type":"AUTH_DENIED"}"#.into());
+                        let _ = socket.send(Message::Text(deny.into())).await;
+                        break;
+                    }
+                },
+                Err(_) => {
+                    let deny = serde_json::to_string(&CompanionAuthResult::denied(
+                        "expected PAIRING_RESPONSE JSON",
+                    ))
+                    .unwrap_or_else(|_| r#"{"type":"AUTH_DENIED"}"#.into());
+                    let _ = socket.send(Message::Text(deny.into())).await;
                     break;
                 }
             }
@@ -178,5 +252,33 @@ async fn companion_ws_session(mut socket: WebSocket, host_api: HostApiHandle) {
                 }
             }
         }
+    }
+}
+
+#[cfg(test)]
+mod tests {
+    use super::*;
+    use ed25519_dalek::Signer;
+    use ed25519_dalek::SigningKey;
+
+    #[test]
+    fn verify_valid_pairing_response() {
+        let signing_key = SigningKey::from_bytes(&[7u8; 32]);
+        let nonce = [9u8; 32];
+        let challenge = CompanionChallenge::new(hex::encode(nonce));
+
+        let mut payload = Vec::new();
+        payload.extend_from_slice(challenge.context.as_bytes());
+        payload.push(0);
+        payload.extend_from_slice(&nonce);
+        let signature = signing_key.sign(&payload);
+
+        let response = CompanionPairingResponse::new(
+            "phone-test",
+            hex::encode(signing_key.verifying_key().to_bytes()),
+            hex::encode(signature.to_bytes()),
+        );
+
+        assert!(verify_pairing_response(&challenge, &response).is_ok());
     }
 }
