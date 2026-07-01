@@ -14,6 +14,7 @@ YYYY-MM-DD | INSTRUMENT | CLAIM|PROGRESS|BLOCKED|RELEASE | short description | p
 
 ## Active notices
 
+2026-07-02 | Grok | RELEASE | Chemistry/crypto stash on 0.0.24 (4256c731): SCF+DIIS, integral engine, OS keyring vault lock/unlock+CSPRNG; 52 chem + 5 vault + 14 wellfair tests pass | crates/qualia-core-db/src/{identity/key_vault,specialized_libs/chemistry_modeling}
 2026-07-02 | Grok | RELEASE | Merged grok desktop clone → canonical 0.0.24; pushed origin/0.0.24 (f0265dfe + ec84d512); 14 wellfair tests pass | C:\Projects\qualia-27062026
 2026-07-02 | Grok | RELEASE | Phase 2 Consent panel + sleep dashboard + policy evaluate/grant/revoke API; journal summary projections | wellfair/{consent_store,policy,api,journal,import_samsung}, consent_panel, sleep_panel, webizen-desktop commands
 2026-07-02 | Grok | PROGRESS | WS1 checkpoint: dag.bin+meta.json+vault.q42 graph quins persist; Social Book panel; mobile outbox restore | wellfair/{checkpoint_store,graph_store,vault}, social_book_panel
