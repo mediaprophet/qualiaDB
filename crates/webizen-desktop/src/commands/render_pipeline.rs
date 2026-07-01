@@ -4,11 +4,28 @@
 
 use std::f64::consts::PI;
 
+use serde::Deserialize;
 use webizen_render::scene_contract::{
-    EpistemicState, RenderScene, SceneCamera, SceneNode, ScenePoint, Tensor10DProjection,
+    EpistemicState, RenderScene, SceneCamera, SceneEdge, SceneNode, ScenePoint,
+    Tensor10DProjection,
 };
-use webizen_studio::render::qualia::{ItemState, SemanticScene};
 use webizen_studio::render::item_color;
+use webizen_studio::render::qualia::{ItemState, SemanticScene};
+
+/// Studio canvas pane placement passed from the spatial view (grid points).
+#[derive(Clone, Debug, Deserialize)]
+pub struct StudioPaneInput {
+    pub component_id: String,
+    pub x: u16,
+    pub y: u16,
+    pub w: u16,
+    pub h: u16,
+    #[serde(default)]
+    pub data_bindings: Vec<String>,
+}
+
+const GRID_W: f64 = 96.0;
+const GRID_H: f64 = 64.0;
 
 /// Golden-angle sphere layout for semantic graph nodes.
 fn sphere_position(index: usize, total: usize) -> (f64, f64, f64) {
@@ -113,6 +130,112 @@ pub fn semantic_to_render_scene(semantic: &SemanticScene) -> RenderScene {
     scene
 }
 
+/// Map a studio pane's point-grid placement to a manifold coordinate.
+fn pane_manifold_position(pane: &StudioPaneInput) -> (f64, f64, f64) {
+    let cx = (pane.x as f64 + pane.w as f64 * 0.5) / GRID_W;
+    let cz = (pane.y as f64 + pane.h as f64 * 0.5) / GRID_H;
+    let x = (cx - 0.5) * 12.0;
+    let z = (cz - 0.5) * 8.0;
+    let area = (pane.w as f64 * pane.h as f64) / (GRID_W * GRID_H);
+    let y = area.sqrt().clamp(0.15, 1.0) * 4.0;
+    (x, y, z)
+}
+
+fn pane_intensity(pane: &StudioPaneInput) -> f64 {
+    let area = (pane.w as f64 * pane.h as f64) / (GRID_W * GRID_H);
+    (0.35 + area.sqrt() * 0.55).clamp(0.35, 0.95)
+}
+
+fn pane_color(component_id: &str) -> String {
+    let id = component_id.to_ascii_lowercase();
+    if id.contains("health") || id.contains("clinical") {
+        "#22c55e".to_string()
+    } else if id.contains("legal") || id.contains("shacl") || id.contains("n3") {
+        "#6366f1".to_string()
+    } else if id.contains("sparql") || id.contains("ontology") {
+        "#0ea5e9".to_string()
+    } else if id.contains("render") || id.contains("nexus") || id.contains("spatial") {
+        "#f59e0b".to_string()
+    } else if id.contains("chat") || id.contains("llm") || id.contains("infer") {
+        "#ec4899".to_string()
+    } else {
+        "#94a3b8".to_string()
+    }
+}
+
+/// Merge studio workspace panes into an existing volumetric scene (PR-C10 parity).
+pub fn merge_workspace_panes(scene: &mut RenderScene, panes: &[StudioPaneInput]) {
+    if panes.is_empty() {
+        return;
+    }
+
+    let positions: Vec<(f64, f64, f64)> = panes.iter().map(pane_manifold_position).collect();
+
+    for (idx, pane) in panes.iter().enumerate() {
+        let (x, y, z) = positions[idx];
+        let intensity = pane_intensity(pane);
+        let has_bindings = !pane.data_bindings.is_empty();
+
+        scene.add_node(SceneNode {
+            id: format!("pane:{}", pane.component_id),
+            position: ScenePoint {
+                x: 0.5,
+                y: 0.5,
+                z: 0.0,
+            },
+            color: pane_color(&pane.component_id),
+            radius: 5.0 + intensity * 8.0,
+            alpha: 0.65 + intensity * 0.3,
+            is_inferencing: has_bindings,
+            pulse_rate: if has_bindings { 0.8 } else { 0.0 },
+            tensor: Tensor10DProjection {
+                q: 0.0,
+                v: idx as f64,
+                w: 1.0,
+                x,
+                y,
+                z,
+                t: intensity,
+                alpha: intensity,
+                mu: 0.0,
+                sigma: intensity,
+            },
+            epistemic_state: if has_bindings {
+                EpistemicState::Sandbox
+            } else {
+                EpistemicState::Collapsed
+            },
+            version: intensity,
+        });
+    }
+
+    for i in 0..panes.len().saturating_sub(1) {
+        let a = positions[i];
+        let b = positions[i + 1];
+        let share_binding = panes[i]
+            .data_bindings
+            .iter()
+            .any(|bnd| panes[i + 1].data_bindings.iter().any(|o| o == bnd));
+        if share_binding {
+            scene.add_edge(SceneEdge {
+                from: ScenePoint {
+                    x: a.0,
+                    y: a.1,
+                    z: a.2,
+                },
+                to: ScenePoint {
+                    x: b.0,
+                    y: b.1,
+                    z: b.2,
+                },
+                color: "rgba(14, 165, 233, 0.45)".to_string(),
+                alpha: 0.5,
+                width: 2.0,
+            });
+        }
+    }
+}
+
 /// Project node world positions to screen pixels for CPU-side picking.
 pub fn compute_pick_positions(
     scene: &RenderScene,
@@ -150,6 +273,34 @@ pub fn compute_pick_positions(
 mod tests {
     use super::*;
     use webizen_studio::render::qualia::SceneItem;
+
+    #[test]
+    fn workspace_panes_merge_into_scene() {
+        let mut scene = RenderScene::new();
+        merge_workspace_panes(
+            &mut scene,
+            &[
+                StudioPaneInput {
+                    component_id: "health-monitor".into(),
+                    x: 0,
+                    y: 0,
+                    w: 48,
+                    h: 40,
+                    data_bindings: vec!["fhir:Patient".into()],
+                },
+                StudioPaneInput {
+                    component_id: "sparql-explorer".into(),
+                    x: 50,
+                    y: 0,
+                    w: 44,
+                    h: 40,
+                    data_bindings: vec!["fhir:Patient".into()],
+                },
+            ],
+        );
+        assert_eq!(scene.nodes.len(), 2);
+        assert_eq!(scene.edges.len(), 1);
+    }
 
     #[test]
     fn semantic_scene_produces_nodes_and_picks() {

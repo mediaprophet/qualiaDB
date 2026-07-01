@@ -43,8 +43,39 @@ where
     serde_wasm_bindgen::from_value(value).map_err(|e| e.to_string())
 }
 
+#[cfg(target_arch = "wasm32")]
+fn render_preview_args(page: &Page, width: u32, height: u32) -> serde_json::Value {
+    json!({
+        "width": width,
+        "height": height,
+        "panes": page.panes,
+    })
+}
+
+#[cfg(target_arch = "wasm32")]
+fn spawn_spatial_refresh(page: Page, mut epoch: Signal<u64>, mut status: Signal<String>) {
+    wasm_bindgen_futures::spawn_local(async move {
+        match invoke_tauri_json::<()>(
+            "update_render_preview",
+            render_preview_args(&page, 960, 540),
+        )
+        .await
+        {
+            Ok(_) => {
+                epoch.set(epoch() + 1);
+                status.set(format!(
+                    "PortalGpu frame — {} workspace panes",
+                    page.panes.len()
+                ));
+            }
+            Err(err) => status.set(format!("Spatial render unavailable: {err}")),
+        }
+    });
+}
+
 #[component]
 pub fn SpatialBridgeCanvas(page: Page) -> Element {
+    let page_for_effect = page.clone();
     let epoch = use_signal(|| 0u64);
     let mut live_portal = use_signal(|| false);
     let mut status = use_signal(|| {
@@ -70,6 +101,7 @@ pub fn SpatialBridgeCanvas(page: Page) -> Element {
 
             let mut epoch = epoch;
             let mut status = status;
+            let page_snapshot = page_for_effect.clone();
 
             wasm_bindgen_futures::spawn_local(async move {
                 let callback =
@@ -91,13 +123,16 @@ pub fn SpatialBridgeCanvas(page: Page) -> Element {
 
                 match invoke_tauri_json::<()>(
                     "update_render_preview",
-                    json!({ "width": 960, "height": 540 }),
+                    render_preview_args(&page_snapshot, 960, 540),
                 )
                 .await
                 {
                     Ok(_) => {
                         epoch.set(epoch() + 1);
-                        status.set("PortalGpu volumetric frame".to_string());
+                        status.set(format!(
+                            "PortalGpu frame — {} workspace panes",
+                            page_snapshot.panes.len()
+                        ));
                     }
                     Err(err) => status.set(format!("Spatial render unavailable: {err}")),
                 }
@@ -105,27 +140,16 @@ pub fn SpatialBridgeCanvas(page: Page) -> Element {
         });
     }
 
-    let refresh = move |_| {
-        #[cfg(target_arch = "wasm32")]
-        if crate::endpoints::is_native_host() {
-            let mut epoch = epoch;
-            let mut status = status;
-            wasm_bindgen_futures::spawn_local(async move {
-                match invoke_tauri_json::<()>(
-                    "update_render_preview",
-                    json!({ "width": 960, "height": 540 }),
-                )
-                .await
-                {
-                    Ok(_) => {
-                        epoch.set(epoch() + 1);
-                        status.set("PortalGpu volumetric frame".to_string());
-                    }
-                    Err(err) => status.set(format!("Spatial render unavailable: {err}")),
-                }
-            });
+    let refresh = {
+        let page = page.clone();
+        move |_| {
+            #[cfg(target_arch = "wasm32")]
+            if crate::endpoints::is_native_host() {
+                spawn_spatial_refresh(page.clone(), epoch, status);
+            }
         }
     };
+    let refresh_again = refresh.clone();
 
     let toggle_live_portal = {
         let mut live_portal = live_portal;
@@ -194,7 +218,7 @@ pub fn SpatialBridgeCanvas(page: Page) -> Element {
                     if !live_portal() {
                         button {
                             style: "padding: 0.3rem 0.65rem; border-radius: 6px; border: 1px solid var(--qualia-border); background: rgba(0,0,0,0.45); color: var(--qualia-text); font-size: 0.7rem; cursor: pointer; backdrop-filter: blur(8px);",
-                            onclick: refresh,
+                            onclick: refresh_again,
                             "↻"
                         }
                     }

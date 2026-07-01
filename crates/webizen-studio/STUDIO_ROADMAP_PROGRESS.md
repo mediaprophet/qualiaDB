@@ -73,7 +73,7 @@ Use this file as the **session reminder**: what is done, what is next, and where
 | node_graph SVG edges | ✅ | strength glow |
 | spatial_bridge Live portal | ✅ | iframe + offline WASM |
 | canvas_graph edge derivation | ✅ | |
-| Native PortalGpu parity (PR-C10) | ❌ | replace iframe where desired |
+| Native PortalGpu parity (PR-C10) | ✅ | workspace panes → GPU scene via `merge_workspace_panes` |
 
 ---
 
@@ -103,7 +103,7 @@ Use this file as the **session reminder**: what is done, what is next, and where
 ## Next actions (pick up here)
 
 1. **Run smoke** with desktop open: `.\scripts\studio-portal-smoke.ps1`
-2. **Phase 3:** native `PortalGpu` spatial path (PR-C10) vs iframe WASM
+2. **Phase 3 (stretch):** feed live QualiaDB graph into spatial scene (beyond mock neighborhood)
 3. **Phase 5:** Tauri GUI walkthrough script (optional Playwright/webdriver)
 4. **Stretch:** wire real local LLM infer into `/generate_pane` (orchestrator path)
 5. **Push** branch `0.0.23` after each verified slice
@@ -127,3 +127,9 @@ Use this file as the **session reminder**: what is done, what is next, and where
 - `POST /generate_pane` on settings portal (`settings_server.rs`).
 - Studio prompt bar calls API on desktop; local fallback for GitHub Pages demo.
 - `scripts/studio-portal-smoke.ps1` — HTTP smoke (health, generate, manifest, history, spatial shell).
+
+### 2026-07-01 — Grok (PR-C10 workspace → PortalGpu)
+
+- `render_pipeline::merge_workspace_panes` — maps studio pane grid to manifold nodes + binding edges.
+- `update_render_preview` accepts optional `panes`; spatial_bridge passes current page layout.
+- Tests: `workspace_panes_merge_into_scene` + wasm32 check green.

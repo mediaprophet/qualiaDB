@@ -1854,6 +1854,7 @@ pub async fn toggle_render_loop(
 pub async fn update_render_preview(
     width: u32,
     height: u32,
+    panes: Option<Vec<render_pipeline::StudioPaneInput>>,
     state: State<'_, PreviewState>,
     app_state: State<'_, std::sync::Arc<qualia_client_core::state::AppState>>,
     app: AppHandle,
@@ -1873,11 +1874,13 @@ pub async fn update_render_preview(
         .to_string_lossy()
         .to_string();
 
+    let workspace_panes = panes.unwrap_or_default();
     let pick_slot = state.node_positions.clone();
 
     let png = tokio::task::spawn_blocking(move || -> Result<Vec<u8>, String> {
         let semantic = fetch_local_neighborhood(&qualia_db_path)?;
-        let render_scene = render_pipeline::semantic_to_render_scene(&semantic);
+        let mut render_scene = render_pipeline::semantic_to_render_scene(&semantic);
+        render_pipeline::merge_workspace_panes(&mut render_scene, &workspace_panes);
         let picks = render_pipeline::compute_pick_positions(&render_scene, width, height);
 
         let png = webizen_render::render_scene_png(&render_scene, width, height)
