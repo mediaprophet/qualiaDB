@@ -33,6 +33,59 @@ pub struct ResolvedTheme {
     pub tokens: HashMap<String, String>,
 }
 
+/// Canonical QPrime preset IDs (theme picker foreground).
+pub const QPRIME_PRESET_IDS: &[&str] = &[
+    "fiduciary-dark",
+    "commons-light",
+    "sanctuary",
+    "infosphere",
+];
+
+/// Legacy extras — available but not primary in the picker.
+pub const LEGACY_PRESET_IDS: &[&str] = &["human-warmth", "twilight-blue", "midnight-slate"];
+
+pub fn is_qprime_preset(id: &str) -> bool {
+    QPRIME_PRESET_IDS.contains(&id)
+}
+
+pub fn theme_label(id: &str) -> String {
+    id.split('-')
+        .map(|w| {
+            let mut c = w.chars();
+            c.next()
+                .map(|ch| ch.to_uppercase().collect::<String>() + c.as_str())
+                .unwrap_or_default()
+        })
+        .collect::<Vec<_>>()
+        .join(" ")
+}
+
+/// Split catalog into QPrime presets (ordered) and everything else.
+pub fn theme_picker_sections(catalog: &[ThemeDefinition]) -> (Vec<ThemeDefinition>, Vec<ThemeDefinition>) {
+    let mut qprime = Vec::new();
+    for id in QPRIME_PRESET_IDS {
+        if let Some(t) = catalog.iter().find(|t| t.id == *id) {
+            qprime.push(t.clone());
+        }
+    }
+    let legacy_ids: std::collections::BTreeSet<&str> =
+        LEGACY_PRESET_IDS.iter().copied().collect();
+    let extras: Vec<ThemeDefinition> = catalog
+        .iter()
+        .filter(|t| !is_qprime_preset(&t.id) && !legacy_ids.contains(t.id.as_str()))
+        .cloned()
+        .collect();
+    let mut legacy: Vec<ThemeDefinition> = catalog
+        .iter()
+        .filter(|t| legacy_ids.contains(t.id.as_str()))
+        .cloned()
+        .collect();
+    legacy.sort_by(|a, b| a.id.cmp(&b.id));
+    let mut other = legacy;
+    other.extend(extras);
+    (qprime, other)
+}
+
 pub fn builtin_theme_catalog() -> Vec<ThemeDefinition> {
     vec![
         ThemeDefinition {
@@ -316,6 +369,13 @@ mod tests {
         );
         let css = shoelace_bridge_css(":root", &theme);
         assert!(css.contains("--sl-color-primary-600: #f59e0b"));
+    }
+
+    #[test]
+    fn theme_picker_lists_qprime_first() {
+        let (qprime, _) = theme_picker_sections(&builtin_theme_catalog());
+        assert_eq!(qprime.len(), 4);
+        assert_eq!(qprime[0].id, "fiduciary-dark");
     }
 
     #[test]

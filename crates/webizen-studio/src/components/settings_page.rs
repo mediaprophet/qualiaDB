@@ -304,9 +304,11 @@ pub fn SettingsPage() -> Element {
         .clone()
         .unwrap_or_else(|| "fiduciary-dark".to_string());
 
-    let theme_options: Vec<(String, String)> = theme_catalog
+    let (qprime_themes, other_themes) = theme_engine::theme_picker_sections(&theme_catalog);
+    let theme_options: Vec<(String, String)> = qprime_themes
         .iter()
-        .map(|theme| (theme.id.clone(), theme_label(&theme.id)))
+        .chain(other_themes.iter())
+        .map(|theme| (theme.id.clone(), theme_engine::theme_label(&theme.id)))
         .collect();
 
     let on_theme_change = move |evt: Event<FormData>| {
@@ -550,7 +552,7 @@ pub fn SettingsPage() -> Element {
                         SelectControl {
                             label: "Theme Preset",
                             value: current_theme_id.clone(),
-                            note: "Theme changes flow through the shared app theme context immediately.".to_string(),
+                            note: "QPrime presets (fiduciary-dark, commons-light, sanctuary, infosphere) are listed first.".to_string(),
                             disabled: false,
                             options: theme_options,
                             oninput: on_theme_change

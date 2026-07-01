@@ -157,6 +157,10 @@ pub fn clamp_pane_size(w: i32, h: i32, x: u16, y: u16, grid_w: u16, grid_h: u16)
 /// QPrime motion layer: elevation utilities, pane breathe, graph edge pulse.
 pub fn qprime_elevation_css() -> &'static str {
     r#"
+.elevation-0 { box-shadow: var(--qualia-elevation-0, none); }
+.elevation-1 { box-shadow: var(--qualia-elevation-1); }
+.elevation-2 { box-shadow: var(--qualia-elevation-2); }
+.elevation-3 { box-shadow: var(--qualia-elevation-3); }
 .webizen-module-pane {
   backdrop-filter: blur(12px);
   -webkit-backdrop-filter: blur(12px);
@@ -172,9 +176,14 @@ pub fn qprime_elevation_css() -> &'static str {
   z-index: 12;
   animation: qprime-pane-breathe 2.8s var(--qualia-motion-ease) infinite;
 }
-.theme-sanctuary .webizen-module-pane[data-selected="true"] {
-  animation: none;
-  transform: none;
+.theme-sanctuary .webizen-module-pane[data-selected="true"],
+.theme-sanctuary .webizen-module-pane {
+  animation: none !important;
+  transform: none !important;
+  transition: none !important;
+}
+.theme-sanctuary .node-graph-edge {
+  animation: none !important;
 }
 .webizen-canvas-toolbar button {
   transition:

@@ -43,6 +43,7 @@ use crate::canvas_editor::{
     clamp_pane_origin, clamp_pane_size, grid_metrics, new_workspace_shell, pixel_delta_to_grid,
     qprime_elevation_css, snap_u16, CanvasEditorMode, PaneInteraction, WorkspaceHistory,
 };
+use crate::pane_generator;
 use crate::components::ontology_import_wizard::{
     OntologyImportWizard, OntologyLayoutSuggestion,
 };
@@ -58,6 +59,7 @@ use crate::theme_engine::{
     builtin_theme_catalog, collect_stylesheets, join_theme_classes, render_scope_tokens,
     resolve_theme, theme_binding_provenance, ResolvedTheme, ThemeBinding, ThemeDefinition,
 };
+use crate::theme_engine;
 
 pub use crate::canvas_model::{
     CoordinateSpace, LayerBehavior, LayoutStrategy, Page, PanePlacement, PresentationMode,
@@ -483,6 +485,48 @@ pub fn DynamicPage(path: Vec<String>, #[props(default)] app_id: Option<String>) 
     let mut deploy_history = use_signal(Vec::<DeployHistoryRow>::new);
     let mut replay_status = use_signal(|| String::new());
     let mut replaying_revision = use_signal(|| None::<u64>);
+    let mut motion_theme_class = use_signal(|| String::new());
+    let mut pane_prompt = use_signal(|| String::new());
+    let mut generate_status = use_signal(|| String::new());
+    let mut generate_nonce = use_signal(|| 0u32);
+    let global_theme = consume_context::<Signal<ResolvedTheme>>();
+
+    use_effect(move || {
+        let global_class = global_theme().class_name.clone();
+        let ws = workspace.read().clone();
+        let catalog = if ws.themes.is_empty() {
+            builtin_theme_catalog()
+        } else {
+            ws.themes.clone()
+        };
+        let app = resolve_theme(Some(&ws.app_theme), &catalog);
+        let env = resolve_theme(Some(&ws.environment_theme), &catalog);
+        let class = global_class
+            .or(app.class_name)
+            .or(env.class_name)
+            .unwrap_or_else(|| "theme-fiduciary-dark".to_string());
+        motion_theme_class.set(class);
+    });
+
+    let generate_path = format!("/{}", path.join("/"));
+    use_effect(move || {
+        if generate_nonce() == 0 {
+            return;
+        }
+        let prompt = pane_prompt();
+        if prompt.trim().is_empty() {
+            generate_status.set("Describe a pane layout first.".to_string());
+            return;
+        }
+        let plan = pane_generator::generate_panes_from_prompt(&prompt, &pane_palette.read());
+        history.write().push(workspace.read().clone());
+        let mut ws = workspace.write();
+        if let Some(page) = ws.pages.iter_mut().find(|p| p.url_path == generate_path) {
+            page.panes = plan.panes;
+            page.presentation_mode = plan.presentation;
+        }
+        generate_status.set(plan.summary);
+    });
 
     #[cfg(target_arch = "wasm32")]
     use_effect(move || {
@@ -491,11 +535,19 @@ pub fn DynamicPage(path: Vec<String>, #[props(default)] app_id: Option<String>) 
         let mut mode_pulse_spring = mode_pulse_spring;
         let mut mode_pulse_scale = mode_pulse_scale;
         let selected_pane_index = selected_pane_index;
+        let motion_theme_class = motion_theme_class;
         spawn_ui_motion_loop(move |dt| {
+            let theme_class = motion_theme_class.read().clone();
+            let theme_ref = if theme_class.is_empty() {
+                None
+            } else {
+                Some(theme_class.as_str())
+            };
             let selected = selected_pane_index.read().is_some();
-            let scale = step_selection_spring(&mut selection_spring.write(), selected, None, dt);
+            let scale =
+                step_selection_spring(&mut selection_spring.write(), selected, theme_ref, dt);
             selection_scale.set(scale);
-            let pulse = step_mode_pulse_spring(&mut mode_pulse_spring.write(), dt);
+            let pulse = step_mode_pulse_spring(&mut mode_pulse_spring.write(), theme_ref, dt);
             mode_pulse_scale.set(pulse);
         });
     });
@@ -1193,21 +1245,40 @@ pub fn DynamicPage(path: Vec<String>, #[props(default)] app_id: Option<String>) 
                         div {
                             style: "margin-bottom: 1rem; display: flex; justify-content: space-between; align-items: center; gap: 1rem;",
 
-                            // D2.1: LLM-Driven Pane Maker Prompt Bar
+                            // D2.1: Keyword pane planner (prompt bar)
                             div {
-                                style: "flex: 1; display: flex; gap: 0.5rem;",
-                                input {
-                                    type: "text",
-                                    placeholder: "Describe a pane to generate (e.g., 'Health tracker with chart and inputs')...",
-                                    style: "flex: 1; background: var(--qualia-surface, #222); border: 1px solid var(--qualia-border, #444); color: white; padding: 0.4rem 0.6rem; border-radius: 4px; font-size: 0.85rem;",
-                                    // Simple mock handling for now
-                                    onkeydown: |_evt| {
-                                        // if evt.key() == "Enter" { ... fetch /generate_pane ... }
+                                style: "flex: 1; display: flex; flex-direction: column; gap: 0.35rem;",
+                                div {
+                                    style: "display: flex; gap: 0.5rem;",
+                                    input {
+                                        r#type: "text",
+                                        value: "{pane_prompt()}",
+                                        placeholder: "Describe a pane layout (e.g. 'Health tracker with chart and inputs')...",
+                                        style: "flex: 1; background: var(--qualia-surface, #222); border: 1px solid var(--qualia-border, #444); color: white; padding: 0.4rem 0.6rem; border-radius: 4px; font-size: 0.85rem;",
+                                        oninput: move |e: Event<FormData>| pane_prompt.set(e.value()),
+                                        onkeydown: {
+                                            let mut generate_nonce = generate_nonce.clone();
+                                            move |e: Event<KeyboardData>| {
+                                                if e.key() == Key::Enter {
+                                                    generate_nonce.set(generate_nonce() + 1);
+                                                }
+                                            }
+                                        },
+                                    }
+                                    button {
+                                        style: "background: var(--qualia-accent, #0ff); color: black; border: none; padding: 0 1rem; border-radius: 4px; font-weight: bold; cursor: pointer;",
+                                        onclick: {
+                                            let mut generate_nonce = generate_nonce.clone();
+                                            move |_| generate_nonce.set(generate_nonce() + 1)
+                                        },
+                                        "Generate"
                                     }
                                 }
-                                button {
-                                    style: "background: var(--qualia-accent, #0ff); color: black; border: none; padding: 0 1rem; border-radius: 4px; font-weight: bold; cursor: pointer;",
-                                    "Generate"
+                                if !generate_status.read().is_empty() {
+                                    span {
+                                        style: "font-size: 0.68rem; color: var(--qualia-accent);",
+                                        "{generate_status.read()}"
+                                    }
                                 }
                             }
 
@@ -1367,6 +1438,41 @@ pub fn DynamicPage(path: Vec<String>, #[props(default)] app_id: Option<String>) 
                                         }
                                     }
                                     if editor_mode() == CanvasEditorMode::Edit {
+                                        label {
+                                            style: "display: block; margin-bottom: 0.5rem; font-size: 0.68rem; color: var(--qualia-text-muted);",
+                                            "Theme preset"
+                                            select {
+                                                value: "{pane.theme.theme_id.clone().unwrap_or_default()}",
+                                                style: "width: 100%; margin-top: 0.15rem; background: var(--qualia-surface); border: 1px solid var(--qualia-border); color: var(--qualia-text); border-radius: 4px; padding: 0.25rem;",
+                                                onchange: {
+                                                    let mut workspace = workspace.clone();
+                                                    let mut record_workspace = record_workspace.clone();
+                                                    let path = current_path.clone();
+                                                    move |e: Event<FormData>| {
+                                                        record_workspace();
+                                                        let mut ws = workspace.write();
+                                                        if let Some(page) = ws.pages.iter_mut().find(|p| p.url_path == path) {
+                                                            if let Some(p) = page.panes.get_mut(idx) {
+                                                                let v = e.value();
+                                                                p.theme.theme_id = if v.is_empty() {
+                                                                    None
+                                                                } else {
+                                                                    Some(v)
+                                                                };
+                                                            }
+                                                        }
+                                                    }
+                                                },
+                                                option { value: "", "Inherit workspace" }
+                                                for qid in theme_engine::QPRIME_PRESET_IDS {
+                                                    option {
+                                                        value: "{qid}",
+                                                        selected: pane.theme.theme_id.as_deref() == Some(*qid),
+                                                        "{theme_engine::theme_label(qid)}"
+                                                    }
+                                                }
+                                            }
+                                        }
                                         div {
                                             style: "display: grid; grid-template-columns: 1fr 1fr; gap: 0.35rem; margin-bottom: 0.6rem;",
                                             label {

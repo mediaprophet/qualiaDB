@@ -135,22 +135,7 @@ pub fn Dashboard() -> Element {
         v
     };
 
-    let theme_options: Vec<(String, String)> = all_themes
-        .iter()
-        .map(|t| {
-            let label =
-                t.id.split('-')
-                    .map(|w| {
-                        let mut c = w.chars();
-                        c.next()
-                            .map(|ch| ch.to_uppercase().collect::<String>() + c.as_str())
-                            .unwrap_or_default()
-                    })
-                    .collect::<Vec<_>>()
-                    .join(" ");
-            (t.id.clone(), label)
-        })
-        .collect();
+    let (qprime_themes, other_themes) = theme_engine::theme_picker_sections(&all_themes);
 
     let handle_theme_change = move |evt: Event<FormData>| {
         let id = evt.value();
@@ -327,11 +312,26 @@ pub fn Dashboard() -> Element {
                             select {
                                 onchange: handle_theme_change,
                                 style: "background: rgba(128,128,128,0.07); border: 1px solid var(--qualia-border); border-radius: 8px; padding: 0.5rem 0.75rem; color: var(--qualia-text); font-size: 0.85rem; outline: none; font-family: 'Inter', sans-serif; width: 100%; cursor: pointer;",
-                                for (id, label) in theme_options.iter() {
-                                    option {
-                                        value: "{id}",
-                                        selected: id == &current_id,
-                                        "{label}"
+                                optgroup {
+                                    label: "QPrime presets",
+                                    for theme in qprime_themes.iter() {
+                                        option {
+                                            value: "{theme.id}",
+                                            selected: theme.id == current_id,
+                                            "{theme_engine::theme_label(&theme.id)}"
+                                        }
+                                    }
+                                }
+                                if !other_themes.is_empty() {
+                                    optgroup {
+                                        label: "Legacy & custom",
+                                        for theme in other_themes.iter() {
+                                            option {
+                                                value: "{theme.id}",
+                                                selected: theme.id == current_id,
+                                                "{theme_engine::theme_label(&theme.id)}"
+                                            }
+                                        }
                                     }
                                 }
                             }

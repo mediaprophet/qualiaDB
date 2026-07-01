@@ -5,6 +5,7 @@ pub mod canvas_editor;
 pub mod canvas_graph;
 pub mod components;
 mod endpoints;
+mod pane_generator;
 mod pane_registry;
 mod render;
 mod studio_canvas;
@@ -418,6 +419,17 @@ fn App() -> Element {
         .unwrap_or(format!("linear-gradient(160deg, {bg} 0%, {bg} 100%)"));
     let shoelace_css = crate::endpoints::shoelace_stylesheet_href();
     let shoelace_js = crate::endpoints::shoelace_autoloader_src();
+    let shell_class = t
+        .class_name
+        .clone()
+        .filter(|c| !c.trim().is_empty())
+        .unwrap_or_else(|| "theme-fiduciary-dark".to_string());
+    let shell_scope = format!(".webizen-studio-shell.{shell_class}");
+    let shell_theme_css = theme_engine::render_scope_tokens(&shell_scope, &t).unwrap_or_default();
+    let data_theme = t
+        .theme_key
+        .clone()
+        .unwrap_or_else(|| "fiduciary-dark".to_string());
 
     rsx! {
         document::Link { rel: "stylesheet", href: "{shoelace_css}" }
@@ -425,6 +437,10 @@ fn App() -> Element {
         document::Script { r#type: "module", src: "{shoelace_js}" }
         document::Link { rel: "icon", href: "https://www.webizen.org/favicon.ico" }
         document::Title { "Webizen" }
+
+        document::Style {
+            "{shell_theme_css}{crate::canvas_editor::qprime_elevation_css()}"
+        }
 
         document::Style {
             "
@@ -469,6 +485,9 @@ fn App() -> Element {
         }
 
         div {
+            class: "webizen-studio-shell {shell_class}",
+            "data-theme-scope": "app",
+            "data-theme": "{data_theme}",
             style: "--qualia-bg: {bg}; --qualia-surface: {surface}; --qualia-border: {border}; --qualia-text: {text}; --qualia-text-muted: {text_muted}; --qualia-accent: {accent}; --qualia-accent-glow: {accent_glow}; width: 100vw; height: 100vh; background: {bg_gradient}; color: var(--qualia-text); font-family: 'Inter', sans-serif; transition: background 0.5s ease, color 0.4s ease; overflow: hidden;",
             Router::<Route> {}
         }

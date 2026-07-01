@@ -33,7 +33,7 @@ impl Default for LayoutStrategy {
     }
 }
 
-#[derive(Serialize, Deserialize, Clone, Debug, PartialEq)]
+#[derive(Serialize, Deserialize, Clone, Debug, PartialEq, Eq)]
 pub enum PresentationMode {
     GridBound,
     NodeRelational,
