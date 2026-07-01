@@ -5,6 +5,7 @@ use super::shared::{
     ConsentGrantEditor, OfflineState, ProvenanceTrail, SensitivityBadge, SyncState,
 };
 use super::pairing_panel::CompanionPairingPanel;
+use super::receipts_panel::WellfairReceiptsPanel;
 use super::tools_panel::WellfairToolsPanel;
 use dioxus::prelude::*;
 
@@ -61,6 +62,7 @@ pub fn WellfairShell() -> Element {
         "Tools" => rsx! {
             CompanionPairingPanel {}
             WellfairToolsPanel {}
+            WellfairReceiptsPanel {}
         },
         name => rsx! {
             div {
