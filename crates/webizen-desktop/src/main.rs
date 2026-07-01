@@ -207,12 +207,13 @@ fn main() {
                     let author_did_hash = qualia_core_db::q_hash("did:q42:local");
                     let owner_did = "did:q42:wellfair:owner".to_string();
                     let author_did = owner_did.clone();
-                    let storage_path = app_state.config.lock().unwrap().storage_path.clone();
-                    let wal_path =
-                        std::path::PathBuf::from(storage_path).join("qualia_global.wal");
+                    let storage_root = std::path::PathBuf::from(
+                        app_state.config.lock().unwrap().storage_path.clone(),
+                    );
+                    let wal_path = storage_root.join("qualia_global.wal");
                     if let Ok(vault) = qualia_client_core::wellfair::vault::VaultService::open(
                         &wal_path,
-                        &storage_path,
+                        &storage_root,
                         author_did_hash,
                     ) {
                         let policy =
