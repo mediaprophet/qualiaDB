@@ -1,6 +1,8 @@
 pub mod accessibility_prefs;
 pub mod api;
 pub mod consent_store;
+pub mod export_package;
+pub mod graph_query;
 pub mod personal_profile;
 pub mod checkpoint_store;
 pub mod graph_store;
@@ -17,6 +19,9 @@ pub mod vault;
 
 #[cfg(test)]
 mod replay_tests;
+
+#[cfg(test)]
+mod journey_tests;
 
 pub use host_state::{
     demo_host_snapshot, fixture_host_snapshot, WellfairHostSnapshot,

@@ -11,6 +11,10 @@ use super::import_samsung::{
 use super::journal::JournalEntry;
 use super::policy::{DecisionResult, PolicyDecisionService};
 use super::receipt::{receipt_from_decision, ReceiptRecord};
+use super::export_package::{
+    build_export_package, export_policy_receipt, ExportReceipt, HealthExportPackage,
+};
+use super::graph_query::GraphCoverageRow;
 use super::sync_outbox::SyncOutboxEntry;
 use super::snapshot::build_host_snapshot;
 use super::vault::VaultService;
@@ -272,6 +276,32 @@ impl WebizenHostApi {
 
     pub fn list_outbox(&self, limit: usize) -> Result<Vec<SyncOutboxEntry>, String> {
         self.vault.list_outbox(limit).map_err(|e| e.to_string())
+    }
+
+    /// Standards-readable Turtle export bound to the latest checkpoint (§8.1 step 9).
+    pub fn export_health_package(
+        &mut self,
+        limit: usize,
+    ) -> Result<(HealthExportPackage, ExportReceipt), String> {
+        self.finalize_batch().ok();
+        let entries = self.list_health_records(limit)?;
+        let exported_at = Self::now_unix() as u32;
+        let pkg = build_export_package(
+            &entries,
+            exported_at,
+            self.vault.last_checkpoint_hash(),
+        );
+        let receipt = export_policy_receipt(&pkg, exported_at);
+        self.vault.append_receipt(&receipt).map_err(|e| e.to_string())?;
+        let export_receipt = ExportReceipt::from_package(&pkg);
+        Ok((pkg, export_receipt))
+    }
+
+    /// Journal row → materialized quin coverage (bounded semantic query).
+    pub fn query_graph_coverage(&self, limit: usize) -> Result<Vec<GraphCoverageRow>, String> {
+        self.vault
+            .graph_coverage(limit)
+            .map_err(|e| e.to_string())
     }
 
     fn payload_hash_hex(payload: &str) -> String {

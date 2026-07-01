@@ -134,6 +134,31 @@ pub fn WellfairToolsPanel() -> Element {
                     "{state.read().last_report}"
                 }
             }
+
+            div {
+                style: "margin-top:1rem;padding-top:0.75rem;border-top:1px solid var(--qualia-border,#eee);",
+                h3 { style: "margin:0 0 0.35rem;font-size:0.88rem;", "Export — standards-readable package" }
+                p {
+                    style: "margin:0 0 0.5rem;font-size:0.76rem;color:var(--qualia-text-muted,#666);",
+                    "Produces Turtle + typed assurance manifest bound to the vault checkpoint (§8.1 step 9)."
+                }
+                button {
+                    style: "padding:0.4rem 0.75rem;border-radius:6px;border:none;background:#2a6f97;color:#fff;font-size:0.82rem;cursor:pointer;",
+                    onclick: move |_| {
+                        state.write().status = "Building export package…".into();
+                        spawn(async move {
+                            match super::host_client::export_health_package(256).await {
+                                Ok(json) => {
+                                    state.write().status = "Export complete — inspect receipt in Receipts panel.".into();
+                                    state.write().last_report = json;
+                                }
+                                Err(e) => state.write().status = format!("Export failed: {e}"),
+                            }
+                        });
+                    },
+                    "Export health records"
+                }
+            }
         }
     }
 }

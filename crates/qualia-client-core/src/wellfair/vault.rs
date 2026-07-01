@@ -79,6 +79,13 @@ impl VaultService {
         self.graph.list_recent(limit)
     }
 
+    pub fn graph_coverage(&self, journal_limit: usize) -> std::io::Result<Vec<super::graph_query::GraphCoverageRow>> {
+        let journal = self.journal.list_recent(journal_limit)?;
+        let quin_limit = journal.len().saturating_mul(8).max(64);
+        let quins = self.graph.list_recent(quin_limit)?;
+        Ok(super::graph_query::coverage_for_journal(&journal, &quins))
+    }
+
     pub fn journal_count(&self) -> std::io::Result<usize> {
         self.journal.count()
     }

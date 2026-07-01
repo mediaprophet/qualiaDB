@@ -135,6 +135,23 @@ pub async fn fetch_receipts(_limit: usize) -> Result<Vec<ReceiptDto>, String> {
 }
 
 #[cfg(target_arch = "wasm32")]
+pub async fn export_health_package(limit: usize) -> Result<String, String> {
+    let args = js_sys::Object::new();
+    js_sys::Reflect::set(&args, &"limit".into(), &wasm_bindgen::JsValue::from(limit as u32))
+        .map_err(|_| "failed to build invoke args".to_string())?;
+    let js = tauri_invoke("wellfair_export_health_package", args.into())
+        .await
+        .map_err(|e| format!("{e:?}"))?;
+    js.as_string()
+        .ok_or_else(|| "export response was not a JSON string".to_string())
+}
+
+#[cfg(not(target_arch = "wasm32"))]
+pub async fn export_health_package(_limit: usize) -> Result<String, String> {
+    Err("Health export requires the Tauri desktop host".into())
+}
+
+#[cfg(target_arch = "wasm32")]
 pub async fn fetch_identity() -> Result<serde_json::Value, String> {
     let js = tauri_invoke("read_identity", wasm_bindgen::JsValue::NULL)
         .await

@@ -268,6 +268,24 @@ pub fn wellfair_list_receipts(app: AppHandle, limit: Option<usize>) -> Result<St
 }
 
 #[command]
+pub fn wellfair_export_health_package(
+    app: AppHandle,
+    limit: Option<usize>,
+) -> Result<String, String> {
+    let state = app.state::<HostApiState>();
+    let mut guard = state.0.lock().map_err(|e| e.to_string())?;
+    let host = guard
+        .as_mut()
+        .ok_or_else(|| "Host API not initialized — unlock vault first".to_string())?;
+    let (package, receipt) = host.export_health_package(limit.unwrap_or(256))?;
+    serde_json::to_string(&serde_json::json!({
+        "package": package,
+        "receipt": receipt,
+    }))
+    .map_err(|e| e.to_string())
+}
+
+#[command]
 pub fn wellfair_import_samsung_folder(
     app: AppHandle,
     folder_path: String,
@@ -2946,6 +2964,7 @@ pub fn get_invoke_handler() -> impl Fn(tauri::ipc::Invoke<tauri::Wry>) -> bool {
         wellfair_host_snapshot,
         wellfair_list_health_records,
         wellfair_list_receipts,
+        wellfair_export_health_package,
         wellfair_save_accessibility,
         wellfair_companion_pairing,
         wellfair_import_samsung_folder,
