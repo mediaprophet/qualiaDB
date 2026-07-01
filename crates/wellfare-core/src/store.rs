@@ -2,7 +2,7 @@
 /// Accepts Turtle serialised by rdf.rs, executes SPARQL 1.1 SELECT/ASK/CONSTRUCT.
 use oxigraph::io::{RdfFormat, RdfParser};
 use oxigraph::sparql::results::{QueryResultsFormat, QueryResultsSerializer};
-use oxigraph::sparql::QueryResults;
+use oxigraph::sparql::{QueryResults, SparqlEvaluator};
 use oxigraph::store::Store;
 
 pub struct HealthStore {
@@ -26,9 +26,15 @@ impl HealthStore {
 
     /// Execute a SPARQL SELECT, ASK, or CONSTRUCT query; returns JSON SPARQL results.
     pub fn query(&self, sparql: &str) -> Result<String, String> {
-        match self.inner.query(sparql) {
-            Err(e) => Err(e.to_string()),
-            Ok(QueryResults::Solutions(solutions)) => {
+        let results = SparqlEvaluator::new()
+            .parse_query(sparql)
+            .map_err(|e| e.to_string())?
+            .on_store(&self.inner)
+            .execute()
+            .map_err(|e| e.to_string())?;
+
+        match results {
+            QueryResults::Solutions(solutions) => {
                 let mut buf = Vec::new();
                 let variables = solutions.variables().to_vec();
                 let mut writer = QueryResultsSerializer::from_format(QueryResultsFormat::Json)
@@ -42,8 +48,8 @@ impl HealthStore {
                 writer.finish().map_err(|e| e.to_string())?;
                 String::from_utf8(buf).map_err(|e| e.to_string())
             }
-            Ok(QueryResults::Boolean(b)) => Ok(format!("{{\"boolean\":{}}}", b)),
-            Ok(QueryResults::Graph(triples)) => {
+            QueryResults::Boolean(b) => Ok(format!("{{\"boolean\":{}}}", b)),
+            QueryResults::Graph(triples) => {
                 let mut buf = Vec::new();
                 for triple in triples {
                     let t = triple.map_err(|e| e.to_string())?;
