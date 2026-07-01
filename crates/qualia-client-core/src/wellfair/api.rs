@@ -1,5 +1,7 @@
 use std::path::Path;
 
+use super::accessibility_prefs;
+use super::host_state::AccessibilityPreferences;
 use super::import_samsung::{
     import_samsung_folder, ingest_companion_health_bundle, SamsungImportReport,
 };
@@ -21,6 +23,7 @@ pub struct WebizenHostApi {
     signing_key: SigningKey,
     owner_did: String,
     author_did: String,
+    storage_root: std::path::PathBuf,
 }
 
 impl WebizenHostApi {
@@ -30,6 +33,7 @@ impl WebizenHostApi {
         signing_key: SigningKey,
         owner_did: String,
         author_did: String,
+        storage_root: std::path::PathBuf,
     ) -> Self {
         Self {
             vault,
@@ -37,7 +41,16 @@ impl WebizenHostApi {
             signing_key,
             owner_did,
             author_did,
+            storage_root,
         }
+    }
+
+    pub fn save_accessibility(&self, prefs: &AccessibilityPreferences) -> Result<(), String> {
+        accessibility_prefs::save(&self.storage_root, prefs).map_err(|e| e.to_string())
+    }
+
+    pub fn load_accessibility(&self) -> AccessibilityPreferences {
+        accessibility_prefs::load(&self.storage_root)
     }
 
     pub fn snapshot_from_vault(key_vault: &KeyVault, owner_label: &str, demo_mode: bool) -> WellfairHostSnapshot {
@@ -45,7 +58,13 @@ impl WebizenHostApi {
     }
 
     pub fn build_snapshot(&mut self, key_vault: &KeyVault, owner_label: &str) -> WellfairHostSnapshot {
-        let mut snap = build_host_snapshot(key_vault, true, owner_label, false);
+        let mut snap = super::snapshot::build_host_snapshot_with_storage(
+            key_vault,
+            true,
+            owner_label,
+            false,
+            Some(&self.storage_root),
+        );
         if let Ok(count) = self.vault.journal_count() {
             snap.health_record_count = count as u32;
         }

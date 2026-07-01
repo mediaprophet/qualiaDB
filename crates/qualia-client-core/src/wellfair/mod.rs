@@ -1,3 +1,4 @@
+pub mod accessibility_prefs;
 pub mod api;
 pub mod host_state;
 pub mod import_samsung;

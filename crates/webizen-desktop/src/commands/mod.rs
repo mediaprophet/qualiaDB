@@ -209,12 +209,37 @@ pub fn wellfair_host_snapshot(
                 .map(|s| s.to_string())
         })
         .unwrap_or_else(|| "Owner vault".to_string());
+    let storage_root = std::path::PathBuf::from(
+        app_state.config.lock().map_err(|e| e.to_string())?.storage_path.clone(),
+    );
     let snapshot = if let Some(host) = guard.as_mut() {
         host.build_snapshot(&kv, &owner_label)
     } else {
-        qualia_client_core::wellfair::build_host_snapshot(&kv, false, &owner_label, false)
+        qualia_client_core::wellfair::snapshot::build_host_snapshot_with_storage(
+            &kv,
+            false,
+            &owner_label,
+            false,
+            Some(&storage_root),
+        )
     };
     serde_json::to_string(&snapshot).map_err(|e| e.to_string())
+}
+
+#[command]
+pub fn wellfair_save_accessibility(
+    app: AppHandle,
+    prefs_json: String,
+) -> Result<String, String> {
+    let prefs: qualia_client_core::wellfair::host_state::AccessibilityPreferences =
+        serde_json::from_str(&prefs_json).map_err(|e| format!("invalid prefs JSON: {e}"))?;
+    let state = app.state::<HostApiState>();
+    let guard = state.0.lock().map_err(|e| e.to_string())?;
+    let host = guard
+        .as_ref()
+        .ok_or_else(|| "Host API not initialized — unlock vault first".to_string())?;
+    host.save_accessibility(&prefs)?;
+    serde_json::to_string(&prefs).map_err(|e| e.to_string())
 }
 
 #[command]
@@ -2677,6 +2702,7 @@ pub fn get_invoke_handler() -> impl Fn(tauri::ipc::Invoke<tauri::Wry>) -> bool {
         wellfair_host_snapshot,
         wellfair_list_health_records,
         wellfair_list_receipts,
+        wellfair_save_accessibility,
         wellfair_companion_pairing,
         wellfair_import_samsung_folder,
         wellfair_ingest_companion_health,

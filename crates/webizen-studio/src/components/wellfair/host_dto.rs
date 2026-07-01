@@ -38,7 +38,7 @@ pub enum SensitivityClassDto {
     Classified,
 }
 
-#[derive(Debug, Clone, PartialEq, Eq, Serialize, Deserialize)]
+#[derive(Debug, Clone, Default, PartialEq, Eq, Serialize, Deserialize)]
 pub struct AccessibilityPreferences {
     pub high_contrast: bool,
     pub reduced_motion: bool,

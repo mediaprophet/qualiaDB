@@ -1,4 +1,5 @@
 use super::health_panel::WellfairHealthPanel;
+use super::personal_panel::WellfairPersonalPanel;
 use super::host_client::use_host_snapshot;
 use super::host_dto::{ConsentGrantDraft, PolicyDecisionDto, ProvenanceHop, SensitivityClassDto, VaultLifecycle};
 use super::shared::{
@@ -58,6 +59,7 @@ pub fn WellfairShell() -> Element {
     };
 
     let area_content = match active_area().as_str() {
+        "Personal" => rsx! { WellfairPersonalPanel {} },
         "Health" => rsx! { WellfairHealthPanel {} },
         "Tools" => rsx! {
             CompanionPairingPanel {}

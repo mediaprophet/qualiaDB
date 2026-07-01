@@ -1,9 +1,11 @@
 //! Derive `WellfairHostSnapshot` from live host services (not Dioxus signals).
 
+use super::accessibility_prefs;
 use super::host_state::{
     AccessibilityPreferences, NetworkExposure, SyncQueueState, VaultLifecycle, WellfairHostSnapshot,
 };
 use qualia_core_db::key_vault::KeyVault;
+use std::path::Path;
 
 /// Build operating-state snapshot from KeyVault + Host API readiness.
 pub fn build_host_snapshot(
@@ -11,6 +13,16 @@ pub fn build_host_snapshot(
     host_api_ready: bool,
     owner_label: &str,
     demo_mode: bool,
+) -> WellfairHostSnapshot {
+    build_host_snapshot_with_storage(key_vault, host_api_ready, owner_label, demo_mode, None)
+}
+
+pub fn build_host_snapshot_with_storage(
+    key_vault: &KeyVault,
+    host_api_ready: bool,
+    owner_label: &str,
+    demo_mode: bool,
+    storage_root: Option<&Path>,
 ) -> WellfairHostSnapshot {
     let vault = if demo_mode {
         VaultLifecycle::Unlocked
@@ -32,7 +44,9 @@ pub fn build_host_snapshot(
         } else {
             owner_label.to_string()
         },
-        accessibility: AccessibilityPreferences::default(),
+        accessibility: storage_root
+            .map(accessibility_prefs::load)
+            .unwrap_or_default(),
         pending_jobs: 0,
         health_record_count: 0,
         last_checkpoint_prefix: None,

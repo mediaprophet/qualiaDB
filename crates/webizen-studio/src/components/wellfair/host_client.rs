@@ -128,3 +128,40 @@ pub async fn fetch_receipts(limit: usize) -> Result<Vec<ReceiptDto>, String> {
 pub async fn fetch_receipts(_limit: usize) -> Result<Vec<ReceiptDto>, String> {
     Ok(vec![])
 }
+
+#[cfg(target_arch = "wasm32")]
+pub async fn fetch_identity() -> Result<serde_json::Value, String> {
+    let js = tauri_invoke("read_identity", wasm_bindgen::JsValue::NULL)
+        .await
+        .map_err(|e| format!("{e:?}"))?;
+    if js.is_null() || js.is_undefined() {
+        return Ok(serde_json::Value::Null);
+    }
+    serde_wasm_bindgen::from_value(js).map_err(|e| e.to_string())
+}
+
+#[cfg(not(target_arch = "wasm32"))]
+pub async fn fetch_identity() -> Result<serde_json::Value, String> {
+    Ok(serde_json::Value::Null)
+}
+
+#[cfg(target_arch = "wasm32")]
+pub async fn save_accessibility(prefs: &super::host_dto::AccessibilityPreferences) -> Result<(), String> {
+    let json = serde_json::to_string(prefs).map_err(|e| e.to_string())?;
+    let args = js_sys::Object::new();
+    js_sys::Reflect::set(&args, &"prefsJson".into(), &wasm_bindgen::JsValue::from_str(&json))
+        .map_err(|_| "failed to build invoke args".to_string())?;
+    let js = tauri_invoke("wellfair_save_accessibility", args.into())
+        .await
+        .map_err(|e| format!("{e:?}"))?;
+    if js.is_string() {
+        Ok(())
+    } else {
+        Err("save_accessibility returned unexpected response".into())
+    }
+}
+
+#[cfg(not(target_arch = "wasm32"))]
+pub async fn save_accessibility(_prefs: &super::host_dto::AccessibilityPreferences) -> Result<(), String> {
+    Err("Accessibility save requires the Tauri desktop host".into())
+}

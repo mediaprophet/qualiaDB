@@ -224,6 +224,7 @@ fn main() {
                             signing_key,
                             owner_did,
                             author_did,
+                            storage_root.clone(),
                         );
                         if let Ok(mut host_guard) = host_api_state.lock() {
                             *host_guard = Some(host_api);
