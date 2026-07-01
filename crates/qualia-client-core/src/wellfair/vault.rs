@@ -13,6 +13,7 @@ use super::consent_store::ConsentStore;
 use super::graph_store::GraphStore;
 use super::journal::{JournalEntry, WellfairJournal};
 use super::receipt::{ReceiptLog, ReceiptRecord};
+use super::sync_outbox::{SyncOutbox, SyncOutboxEntry};
 
 /// Coordinates transactions, graph materialization, and crash recovery.
 pub struct VaultService {
@@ -25,6 +26,7 @@ pub struct VaultService {
     journal: WellfairJournal,
     receipts: ReceiptLog,
     consents: ConsentStore,
+    sync_outbox: SyncOutbox,
     last_checkpoint_hash: Option<[u8; 32]>,
 }
 
@@ -42,6 +44,7 @@ impl VaultService {
         let journal = WellfairJournal::open(&storage_root)?;
         let receipts = ReceiptLog::open(&storage_root)?;
         let consents = ConsentStore::open(&storage_root)?;
+        let sync_outbox = SyncOutbox::open(&storage_root)?;
 
         let last_checkpoint_hash = if wal.prev_dag_hash != [0u8; 32] {
             Some(wal.prev_dag_hash)
@@ -63,6 +66,7 @@ impl VaultService {
             journal,
             receipts,
             consents,
+            sync_outbox,
             last_checkpoint_hash,
         })
     }
@@ -85,6 +89,14 @@ impl VaultService {
 
     pub fn list_receipts(&self, limit: usize) -> std::io::Result<Vec<ReceiptRecord>> {
         self.receipts.list_recent(limit)
+    }
+
+    pub fn list_outbox(&self, limit: usize) -> std::io::Result<Vec<SyncOutboxEntry>> {
+        self.sync_outbox.list_recent(limit)
+    }
+
+    pub fn outbox_queued_count(&self) -> std::io::Result<usize> {
+        self.sync_outbox.count_queued()
     }
 
     pub fn list_active_consents(&self, now_unix: u64) -> std::io::Result<Vec<super::consent_store::ConsentGrantRecord>> {
@@ -191,6 +203,8 @@ impl VaultService {
             .unwrap_or(0);
         let entry = JournalEntry::from_envelope(envelope, source, committed_unix, summary);
         self.journal.append(&entry)?;
+        let outbox_entry = SyncOutboxEntry::from_envelope(envelope, committed_unix);
+        self.sync_outbox.enqueue(&outbox_entry)?;
         Ok(committed)
     }
 

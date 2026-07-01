@@ -14,6 +14,7 @@ YYYY-MM-DD | INSTRUMENT | CLAIM|PROGRESS|BLOCKED|RELEASE | short description | p
 
 ## Active notices
 
+2026-07-02 | Grok | RELEASE | Parallel sprint landed: sync outbox, replay idempotency, conditions/allergies UI+API; 27 wellfair + 3 conditions tests pass | wellfair/{sync_outbox,replay_tests,api,vault}, wellfare-core/conditions.rs, personal_panel, webizen-desktop commands
 2026-07-02 | Grok | RELEASE | Phase 2 Q5+Q6+Q2: medication/nutrition panel, sleep debt+heatmap, emergency contacts; 18 wellfair tests pass | wellfair/, webizen-studio/wellfair/, webizen-desktop commands
 2026-07-02 | Grok | RELEASE | Chemistry/crypto stash on 0.0.24 (4256c731): SCF+DIIS, integral engine, OS keyring vault lock/unlock+CSPRNG; 52 chem + 5 vault + 14 wellfair tests pass | crates/qualia-core-db/src/{identity/key_vault,specialized_libs/chemistry_modeling}
 2026-07-02 | Grok | RELEASE | Merged grok desktop clone → canonical 0.0.24; pushed origin/0.0.24 (f0265dfe + ec84d512); 14 wellfair tests pass | C:\Projects\qualia-27062026

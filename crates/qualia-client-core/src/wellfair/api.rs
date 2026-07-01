@@ -11,12 +11,18 @@ use super::import_samsung::{
 use super::journal::JournalEntry;
 use super::policy::{DecisionResult, PolicyDecisionService};
 use super::receipt::{receipt_from_decision, ReceiptRecord};
+use super::sync_outbox::SyncOutboxEntry;
 use super::snapshot::build_host_snapshot;
 use super::vault::VaultService;
 use super::host_state::WellfairHostSnapshot;
 use ed25519_dalek::SigningKey;
 use qualia_core_db::key_vault::KeyVault;
+use sha2::{Digest, Sha256};
 use wellfare_core::companion_sync::CompanionHealthBundle;
+use wellfare_core::conditions::{
+    allergy_summary, build_allergy_envelope, build_condition_envelope, condition_summary,
+    AllergyReport, ConditionReport,
+};
 use wellfare_core::medication::{
     self, AdministrationStatus, DietEntry, MedicationAdministration, MedicationCatalogEntry,
 };
@@ -26,6 +32,9 @@ use wellfare_core::sleep_analytics::{
 };
 
 use super::personal_profile::{EmergencyContact, EmergencyContactStore, new_contact_id};
+
+const QAPP_SHELL: &str = "wellfair-shell";
+const SOURCE_PERSONAL: &str = "wellfair:personal";
 
 /// Transport-neutral Host API exported for UI and qApps.
 pub struct WebizenHostApi {
@@ -90,6 +99,12 @@ impl WebizenHostApi {
         }
         if let Some(hash) = self.vault.last_checkpoint_hash() {
             snap.last_checkpoint_prefix = Some(hex::encode(&hash[..4]));
+        }
+        if let Ok(queued) = self.vault.outbox_queued_count() {
+            snap.pending_jobs = snap.pending_jobs.saturating_add(queued as u32);
+            if queued > 0 {
+                snap.sync_state = super::host_state::SyncQueueState::Queued;
+            }
         }
         snap
     }
@@ -253,6 +268,54 @@ impl WebizenHostApi {
 
     pub fn list_receipts(&self, limit: usize) -> Result<Vec<ReceiptRecord>, String> {
         self.vault.list_receipts(limit).map_err(|e| e.to_string())
+    }
+
+    pub fn list_outbox(&self, limit: usize) -> Result<Vec<SyncOutboxEntry>, String> {
+        self.vault.list_outbox(limit).map_err(|e| e.to_string())
+    }
+
+    fn payload_hash_hex(payload: &str) -> String {
+        hex::encode(Sha256::digest(payload.as_bytes()).as_slice())
+    }
+
+    pub fn add_condition(&mut self, report: &ConditionReport) -> Result<JournalEntry, String> {
+        let payload = serde_json::to_string(report).map_err(|e| e.to_string())?;
+        let hash = Self::payload_hash_hex(&payload);
+        let asserted = Self::now_unix() as u32;
+        let envelope = build_condition_envelope(
+            report,
+            &self.owner_did,
+            &self.author_did,
+            asserted,
+            Some(hash),
+        );
+        let summary = condition_summary(report);
+        self.submit_record_with_summary(QAPP_SHELL, envelope, SOURCE_PERSONAL, Some(summary))?;
+        let entries = self.list_health_records(1)?;
+        entries
+            .into_iter()
+            .next()
+            .ok_or_else(|| "condition committed but not found in journal".to_string())
+    }
+
+    pub fn add_allergy(&mut self, report: &AllergyReport) -> Result<JournalEntry, String> {
+        let payload = serde_json::to_string(report).map_err(|e| e.to_string())?;
+        let hash = Self::payload_hash_hex(&payload);
+        let asserted = Self::now_unix() as u32;
+        let envelope = build_allergy_envelope(
+            report,
+            &self.owner_did,
+            &self.author_did,
+            asserted,
+            Some(hash),
+        );
+        let summary = allergy_summary(report);
+        self.submit_record_with_summary(QAPP_SHELL, envelope, SOURCE_PERSONAL, Some(summary))?;
+        let entries = self.list_health_records(1)?;
+        entries
+            .into_iter()
+            .next()
+            .ok_or_else(|| "allergy committed but not found in journal".to_string())
     }
 
     pub fn graph_quin_count(&self) -> usize {
@@ -437,5 +500,53 @@ impl WebizenHostApi {
     pub fn list_emergency_contacts(&self) -> Result<Vec<EmergencyContact>, String> {
         let store = EmergencyContactStore::open(&self.storage_root).map_err(|e| e.to_string())?;
         store.list().map_err(|e| e.to_string())
+    }
+}
+
+#[cfg(test)]
+mod api_tests {
+    use super::*;
+    use crate::wellfair::policy::PolicyDecisionService;
+    use crate::wellfair::vault::VaultService;
+    use ed25519_dalek::SigningKey;
+    use tempfile::tempdir;
+
+    fn test_host(dir: &std::path::Path) -> WebizenHostApi {
+        let wal = dir.join("test.wal");
+        let vault = VaultService::open(&wal, dir, 0xBEEF).unwrap();
+        let policy = PolicyDecisionService::new();
+        let signing_key = SigningKey::from_bytes(&[9u8; 32]);
+        WebizenHostApi::new(
+            vault,
+            policy,
+            signing_key,
+            "did:wf:owner".into(),
+            "did:wf:owner".into(),
+            dir.to_path_buf(),
+        )
+    }
+
+    #[test]
+    fn add_condition_writes_restricted_journal_entry() {
+        let dir = tempdir().unwrap();
+        let mut host = test_host(dir.path());
+        let report = ConditionReport::new("Hypertension");
+        let entry = host.add_condition(&report).unwrap();
+        assert_eq!(entry.kind, "condition");
+        assert_eq!(entry.source, SOURCE_PERSONAL);
+        assert!(entry.id.contains(":condition:"));
+        let listed = host.list_health_records(8).unwrap();
+        assert_eq!(listed.len(), 1);
+        assert_eq!(listed[0].kind, "condition");
+    }
+
+    #[test]
+    fn add_allergy_writes_allergy_journal_entry() {
+        let dir = tempdir().unwrap();
+        let mut host = test_host(dir.path());
+        let report = AllergyReport::new("Shellfish");
+        let entry = host.add_allergy(&report).unwrap();
+        assert_eq!(entry.kind, "allergy");
+        assert!(entry.id.contains(":allergy:"));
     }
 }

@@ -5,6 +5,7 @@ use std::io::{BufRead, BufReader, Write};
 use std::path::{Path, PathBuf};
 
 use serde::{Deserialize, Serialize};
+use wellfare_core::conditions::journal_kind_for_record_id;
 use wellfare_core::record::RecordEnvelope;
 
 pub const JOURNAL_FILE: &str = "wellfair/journal.jsonl";
@@ -48,23 +49,7 @@ impl JournalEntry {
 }
 
 fn infer_kind(record_id: &str) -> String {
-    if record_id.contains(":weight:") {
-        "weight".into()
-    } else if record_id.contains(":sleep:") {
-        "sleep".into()
-    } else if record_id.contains(":steps:") {
-        "steps".into()
-    } else if record_id.contains(":heart_rate:") {
-        "heart_rate".into()
-    } else if record_id.contains(":medication:") {
-        "medication".into()
-    } else if record_id.contains(":med_admin:") {
-        "med_administration".into()
-    } else if record_id.contains(":diet:") {
-        "diet".into()
-    } else {
-        "record".into()
-    }
+    journal_kind_for_record_id(record_id).to_string()
 }
 
 pub struct WellfairJournal {

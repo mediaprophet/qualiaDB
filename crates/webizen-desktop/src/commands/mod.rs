@@ -381,6 +381,69 @@ pub fn wellfair_list_consents(app: AppHandle) -> Result<String, String> {
     serde_json::to_string(&grants).map_err(|e| e.to_string())
 }
 
+#[derive(Debug, serde::Deserialize)]
+struct ConditionReportInput {
+    label: String,
+    icd10_code: Option<String>,
+    notes: Option<String>,
+}
+
+#[derive(Debug, serde::Deserialize)]
+struct AllergyReportInput {
+    substance: String,
+    reaction: Option<String>,
+    severity: Option<String>,
+    notes: Option<String>,
+}
+
+#[command]
+pub fn wellfair_add_condition(app: AppHandle, report_json: String) -> Result<String, String> {
+    let input: ConditionReportInput =
+        serde_json::from_str(&report_json).map_err(|e| format!("invalid condition JSON: {e}"))?;
+    let mut report = wellfare_core::conditions::ConditionReport::new(input.label);
+    report.icd10_code = input
+        .icd10_code
+        .filter(|s| !s.trim().is_empty())
+        .map(|s| s.trim().to_string());
+    report.notes = input
+        .notes
+        .filter(|s| !s.trim().is_empty())
+        .map(|s| s.trim().to_string());
+    let state = app.state::<HostApiState>();
+    let mut guard = state.0.lock().map_err(|e| e.to_string())?;
+    let host = guard
+        .as_mut()
+        .ok_or_else(|| "Host API not initialized — unlock vault first".to_string())?;
+    let entry = host.add_condition(&report)?;
+    serde_json::to_string(&entry).map_err(|e| e.to_string())
+}
+
+#[command]
+pub fn wellfair_add_allergy(app: AppHandle, report_json: String) -> Result<String, String> {
+    let input: AllergyReportInput =
+        serde_json::from_str(&report_json).map_err(|e| format!("invalid allergy JSON: {e}"))?;
+    let mut report = wellfare_core::conditions::AllergyReport::new(input.substance);
+    report.reaction = input
+        .reaction
+        .filter(|s| !s.trim().is_empty())
+        .map(|s| s.trim().to_string());
+    report.severity = input
+        .severity
+        .filter(|s| !s.trim().is_empty())
+        .map(|s| s.trim().to_string());
+    report.notes = input
+        .notes
+        .filter(|s| !s.trim().is_empty())
+        .map(|s| s.trim().to_string());
+    let state = app.state::<HostApiState>();
+    let mut guard = state.0.lock().map_err(|e| e.to_string())?;
+    let host = guard
+        .as_mut()
+        .ok_or_else(|| "Host API not initialized — unlock vault first".to_string())?;
+    let entry = host.add_allergy(&report)?;
+    serde_json::to_string(&entry).map_err(|e| e.to_string())
+}
+
 fn parse_administration_status(s: &str) -> wellfare_core::medication::AdministrationStatus {
     match s.to_ascii_lowercase().as_str() {
         "skipped" => wellfare_core::medication::AdministrationStatus::Skipped,
@@ -2891,6 +2954,8 @@ pub fn get_invoke_handler() -> impl Fn(tauri::ipc::Invoke<tauri::Wry>) -> bool {
         wellfair_grant_consent,
         wellfair_revoke_consent,
         wellfair_list_consents,
+        wellfair_add_condition,
+        wellfair_add_allergy,
         wellfair_add_medication,
         wellfair_record_administration,
         wellfair_add_diet_entry,

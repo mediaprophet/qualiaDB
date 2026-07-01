@@ -12,7 +12,11 @@ mod medication_flow;
 pub mod policy;
 pub mod receipt;
 pub mod snapshot;
+pub mod sync_outbox;
 pub mod vault;
+
+#[cfg(test)]
+mod replay_tests;
 
 pub use host_state::{
     demo_host_snapshot, fixture_host_snapshot, WellfairHostSnapshot,

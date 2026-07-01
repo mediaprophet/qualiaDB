@@ -12613,12 +12613,14 @@ version = "0.0.23"
 dependencies = [
  "chrono",
  "csv",
+ "hex 0.4.3",
  "js-sys",
  "oxigraph",
  "qualia-core-db",
  "serde",
  "serde-wasm-bindgen",
  "serde_json",
+ "sha2 0.10.9",
  "uuid",
  "wasm-bindgen",
 ]

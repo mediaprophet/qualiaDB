@@ -1,10 +1,11 @@
-//! Personal Core — owner profile and accessibility preferences.
+//! Personal Core — owner profile, conditions/allergies, emergency contacts, accessibility.
 
 use super::host_client::{
-    add_emergency_contact, fetch_emergency_contacts, fetch_identity, save_accessibility,
-    EmergencyContactDto,
+    add_allergy, add_condition, add_emergency_contact, fetch_emergency_contacts,
+    fetch_health_records, fetch_identity, save_accessibility, AddAllergyRequest,
+    AddConditionRequest, EmergencyContactDto,
 };
-use super::host_dto::{AccessibilityPreferences, NetworkExposure, VaultLifecycle};
+use super::host_dto::{AccessibilityPreferences, HealthRecordDto, NetworkExposure, VaultLifecycle};
 use super::host_client::use_host_snapshot;
 use dioxus::prelude::*;
 
@@ -21,10 +22,32 @@ struct PersonalUiState {
     display_name: String,
     status: String,
     prefs: AccessibilityPreferences,
+    condition_label: String,
+    condition_icd10: String,
+    condition_notes: String,
+    allergy_substance: String,
+    allergy_reaction: String,
+    allergy_severity: String,
+    allergy_notes: String,
+    profile_records: Vec<HealthRecordDto>,
+    profile_status: String,
     contact_name: String,
     contact_rel: String,
     contact_phone: String,
     contacts: Vec<EmergencyContactDto>,
+}
+
+fn summary_preview(summary: &Option<String>) -> String {
+    summary
+        .as_ref()
+        .map(|s| {
+            if s.len() > 72 {
+                format!("{}…", &s[..72])
+            } else {
+                s.clone()
+            }
+        })
+        .unwrap_or_else(|| "—".into())
 }
 
 #[component]
@@ -36,10 +59,27 @@ pub fn WellfairPersonalPanel() -> Element {
         ..PersonalUiState::default()
     });
 
-    use_effect(move || {
-        let prefs = snapshot().accessibility.clone();
-        state.write().prefs = prefs;
-    });
+    let reload_profile_records = move || {
+        spawn(async move {
+            state.write().profile_status = "Loading profile records…".into();
+            match fetch_health_records(64).await {
+                Ok(list) => {
+                    let profile: Vec<_> = list
+                        .into_iter()
+                        .filter(|r| r.kind == "condition" || r.kind == "allergy")
+                        .collect();
+                    let n = profile.len();
+                    state.write().profile_records = profile;
+                    state.write().profile_status = if n == 0 {
+                        "No self-reported conditions or allergies yet.".into()
+                    } else {
+                        format!("{n} restricted profile record(s).")
+                    };
+                }
+                Err(e) => state.write().profile_status = format!("Could not load records: {e}"),
+            }
+        });
+    };
 
     let reload_contacts = move || {
         spawn(async move {
@@ -50,6 +90,12 @@ pub fn WellfairPersonalPanel() -> Element {
     };
 
     use_effect(move || {
+        let prefs = snapshot().accessibility.clone();
+        state.write().prefs = prefs;
+    });
+
+    use_effect(move || {
+        reload_profile_records();
         reload_contacts();
         spawn(async move {
             if let Ok(json) = fetch_identity().await {
@@ -89,6 +135,274 @@ pub fn WellfairPersonalPanel() -> Element {
                 }
                 p { style: "margin:0;font-size:0.76rem;color:var(--qualia-text-muted,#666);",
                     "{vault_status} · {network_label(snap.network)}"
+                }
+            }
+
+            div {
+                style: "margin-bottom:1rem;padding:0.65rem;border-radius:8px;border:1px solid var(--qualia-border,#eee);",
+                h3 { style: "margin:0 0 0.5rem;font-size:0.88rem;", "Conditions & allergies (self-reported, restricted)" }
+                p {
+                    style: "margin:0 0 0.65rem;font-size:0.76rem;color:var(--qualia-text-muted,#666);",
+                    "Stored in your vault journal with SelfReported evidence. Not shared without consent."
+                }
+
+                div {
+                    style: "display:grid;gap:0.75rem;margin-bottom:0.75rem;",
+                    div {
+                        style: "padding:0.5rem;border-radius:6px;border:1px dashed var(--qualia-border,#ddd);",
+                        h4 { style: "margin:0 0 0.4rem;font-size:0.82rem;", "Add condition" }
+                        label {
+                            style: "display:block;font-size:0.76rem;margin-bottom:0.25rem;",
+                            "Label"
+                        }
+                        input {
+                            r#type: "text",
+                            value: "{state.read().condition_label}",
+                            placeholder: "e.g. Type 2 diabetes",
+                            style: "width:100%;padding:0.35rem 0.45rem;border-radius:6px;border:1px solid var(--qualia-border,#ccc);font-size:0.8rem;box-sizing:border-box;",
+                            oninput: move |e| state.write().condition_label = e.value(),
+                        }
+                        label {
+                            style: "display:block;font-size:0.76rem;margin:0.4rem 0 0.25rem;",
+                            "ICD-10 (optional)"
+                        }
+                        input {
+                            r#type: "text",
+                            value: "{state.read().condition_icd10}",
+                            placeholder: "e.g. E11",
+                            style: "width:100%;padding:0.35rem 0.45rem;border-radius:6px;border:1px solid var(--qualia-border,#ccc);font-size:0.8rem;box-sizing:border-box;",
+                            oninput: move |e| state.write().condition_icd10 = e.value(),
+                        }
+                        label {
+                            style: "display:block;font-size:0.76rem;margin:0.4rem 0 0.25rem;",
+                            "Notes (optional)"
+                        }
+                        input {
+                            r#type: "text",
+                            value: "{state.read().condition_notes}",
+                            style: "width:100%;padding:0.35rem 0.45rem;border-radius:6px;border:1px solid var(--qualia-border,#ccc);font-size:0.8rem;box-sizing:border-box;",
+                            oninput: move |e| state.write().condition_notes = e.value(),
+                        }
+                        button {
+                            style: "margin-top:0.5rem;padding:0.35rem 0.65rem;border-radius:6px;border:none;background:var(--qualia-accent,#2a6f97);color:#fff;font-size:0.78rem;cursor:pointer;",
+                            disabled: state.read().condition_label.trim().is_empty(),
+                            onclick: move |_| {
+                                let label = state.read().condition_label.trim().to_string();
+                                if label.is_empty() {
+                                    return;
+                                }
+                                let icd10 = {
+                                    let v = state.read().condition_icd10.trim().to_string();
+                                    if v.is_empty() { None } else { Some(v) }
+                                };
+                                let notes = {
+                                    let v = state.read().condition_notes.trim().to_string();
+                                    if v.is_empty() { None } else { Some(v) }
+                                };
+                                state.write().status = "Saving condition…".into();
+                                spawn(async move {
+                                    let req = AddConditionRequest {
+                                        label,
+                                        icd10_code: icd10,
+                                        notes,
+                                    };
+                                    match add_condition(&req).await {
+                                        Ok(_) => {
+                                            state.write().condition_label.clear();
+                                            state.write().condition_icd10.clear();
+                                            state.write().condition_notes.clear();
+                                            state.write().status = "Condition saved to vault.".into();
+                                            reload_profile_records();
+                                        }
+                                        Err(e) => state.write().status = format!("Condition save failed: {e}"),
+                                    }
+                                });
+                            },
+                            "Save condition"
+                        }
+                    }
+                    div {
+                        style: "padding:0.5rem;border-radius:6px;border:1px dashed var(--qualia-border,#ddd);",
+                        h4 { style: "margin:0 0 0.4rem;font-size:0.82rem;", "Add allergy" }
+                        label {
+                            style: "display:block;font-size:0.76rem;margin-bottom:0.25rem;",
+                            "Substance"
+                        }
+                        input {
+                            r#type: "text",
+                            value: "{state.read().allergy_substance}",
+                            placeholder: "e.g. Penicillin",
+                            style: "width:100%;padding:0.35rem 0.45rem;border-radius:6px;border:1px solid var(--qualia-border,#ccc);font-size:0.8rem;box-sizing:border-box;",
+                            oninput: move |e| state.write().allergy_substance = e.value(),
+                        }
+                        label {
+                            style: "display:block;font-size:0.76rem;margin:0.4rem 0 0.25rem;",
+                            "Reaction (optional)"
+                        }
+                        input {
+                            r#type: "text",
+                            value: "{state.read().allergy_reaction}",
+                            style: "width:100%;padding:0.35rem 0.45rem;border-radius:6px;border:1px solid var(--qualia-border,#ccc);font-size:0.8rem;box-sizing:border-box;",
+                            oninput: move |e| state.write().allergy_reaction = e.value(),
+                        }
+                        label {
+                            style: "display:block;font-size:0.76rem;margin:0.4rem 0 0.25rem;",
+                            "Severity (optional)"
+                        }
+                        input {
+                            r#type: "text",
+                            value: "{state.read().allergy_severity}",
+                            placeholder: "mild / moderate / severe",
+                            style: "width:100%;padding:0.35rem 0.45rem;border-radius:6px;border:1px solid var(--qualia-border,#ccc);font-size:0.8rem;box-sizing:border-box;",
+                            oninput: move |e| state.write().allergy_severity = e.value(),
+                        }
+                        button {
+                            style: "margin-top:0.5rem;padding:0.35rem 0.65rem;border-radius:6px;border:none;background:var(--qualia-accent,#2a6f97);color:#fff;font-size:0.78rem;cursor:pointer;",
+                            disabled: state.read().allergy_substance.trim().is_empty(),
+                            onclick: move |_| {
+                                let substance = state.read().allergy_substance.trim().to_string();
+                                if substance.is_empty() {
+                                    return;
+                                }
+                                let reaction = {
+                                    let v = state.read().allergy_reaction.trim().to_string();
+                                    if v.is_empty() { None } else { Some(v) }
+                                };
+                                let severity = {
+                                    let v = state.read().allergy_severity.trim().to_string();
+                                    if v.is_empty() { None } else { Some(v) }
+                                };
+                                let notes = {
+                                    let v = state.read().allergy_notes.trim().to_string();
+                                    if v.is_empty() { None } else { Some(v) }
+                                };
+                                state.write().status = "Saving allergy…".into();
+                                spawn(async move {
+                                    let req = AddAllergyRequest {
+                                        substance,
+                                        reaction,
+                                        severity,
+                                        notes,
+                                    };
+                                    match add_allergy(&req).await {
+                                        Ok(_) => {
+                                            state.write().allergy_substance.clear();
+                                            state.write().allergy_reaction.clear();
+                                            state.write().allergy_severity.clear();
+                                            state.write().allergy_notes.clear();
+                                            state.write().status = "Allergy saved to vault.".into();
+                                            reload_profile_records();
+                                        }
+                                        Err(e) => state.write().status = format!("Allergy save failed: {e}"),
+                                    }
+                                });
+                            },
+                            "Save allergy"
+                        }
+                    }
+                }
+
+                div {
+                    style: "display:flex;align-items:center;justify-content:space-between;gap:0.5rem;margin-bottom:0.35rem;",
+                    p {
+                        style: "margin:0;font-size:0.76rem;color:var(--qualia-text-muted,#666);",
+                        "{state.read().profile_status}"
+                    }
+                    button {
+                        style: "padding:0.25rem 0.55rem;border-radius:6px;border:1px solid var(--qualia-border,#ccc);background:transparent;font-size:0.75rem;cursor:pointer;",
+                        onclick: move |_| reload_profile_records(),
+                        "Refresh"
+                    }
+                }
+                if !state.read().profile_records.is_empty() {
+                    ul {
+                        style: "margin:0;padding:0;list-style:none;font-size:0.78rem;",
+                        for row in state.read().profile_records.clone() {
+                            li {
+                                key: "{row.id}",
+                                style: "padding:0.35rem 0;border-bottom:1px solid var(--qualia-border,#eee);",
+                                strong { "{row.kind}: " }
+                                span { "{summary_preview(&row.summary)}" }
+                                span {
+                                    style: "margin-left:0.35rem;color:var(--qualia-text-muted,#666);font-size:0.72rem;",
+                                    "· {row.evidence_type} · restricted"
+                                }
+                            }
+                        }
+                    }
+                }
+            }
+
+            div {
+                style: "margin-bottom:1rem;padding:0.65rem;border-radius:8px;border:1px solid var(--qualia-border,#eee);",
+                h3 { style: "margin:0 0 0.5rem;font-size:0.88rem;", "Emergency contacts" }
+                label { style: "font-size:0.78rem;", "Name" }
+                input {
+                    r#type: "text",
+                    value: "{state.read().contact_name}",
+                    oninput: move |e| state.write().contact_name = e.value(),
+                    style: "width:100%;padding:0.35rem;margin-bottom:0.35rem;border-radius:6px;border:1px solid var(--qualia-border,#ccc);",
+                }
+                label { style: "font-size:0.78rem;", "Relationship" }
+                input {
+                    r#type: "text",
+                    value: "{state.read().contact_rel}",
+                    oninput: move |e| state.write().contact_rel = e.value(),
+                    style: "width:100%;padding:0.35rem;margin-bottom:0.35rem;border-radius:6px;border:1px solid var(--qualia-border,#ccc);",
+                }
+                label { style: "font-size:0.78rem;", "Phone (optional)" }
+                input {
+                    r#type: "tel",
+                    value: "{state.read().contact_phone}",
+                    oninput: move |e| state.write().contact_phone = e.value(),
+                    style: "width:100%;padding:0.35rem;margin-bottom:0.35rem;border-radius:6px;border:1px solid var(--qualia-border,#ccc);",
+                }
+                button {
+                    style: "padding:0.4rem 0.75rem;border-radius:6px;border:none;background:#457b9d;color:#fff;font-size:0.82rem;cursor:pointer;",
+                    onclick: move |_| {
+                        let name = state.read().contact_name.clone();
+                        let rel = state.read().contact_rel.clone();
+                        let phone = state.read().contact_phone.clone();
+                        if name.trim().is_empty() {
+                            state.write().status = "Enter a contact name.".into();
+                            return;
+                        }
+                        let phone_owned = if phone.trim().is_empty() {
+                            None
+                        } else {
+                            Some(phone)
+                        };
+                        spawn(async move {
+                            let phone_ref = phone_owned.as_deref();
+                            match add_emergency_contact(&name, &rel, phone_ref, None).await {
+                                Ok(_) => {
+                                    state.write().status = "Emergency contact saved.".into();
+                                    state.write().contact_name.clear();
+                                    state.write().contact_rel.clear();
+                                    state.write().contact_phone.clear();
+                                    if let Ok(list) = fetch_emergency_contacts().await {
+                                        state.write().contacts = list;
+                                    }
+                                }
+                                Err(e) => state.write().status = format!("Contact save failed: {e}"),
+                            }
+                        });
+                    },
+                    "Add contact"
+                }
+                if !state.read().contacts.is_empty() {
+                    ul {
+                        style: "margin:0.65rem 0 0;padding-left:1.1rem;font-size:0.8rem;",
+                        for c in state.read().contacts.clone() {
+                            li {
+                                key: "{c.id}",
+                                "{c.display_name} ({c.relationship})"
+                                if let Some(ref p) = c.phone {
+                                    span { style: "color:var(--qualia-text-muted,#666);", " — {p}" }
+                                }
+                            }
+                        }
+                    }
                 }
             }
 
@@ -157,79 +471,6 @@ pub fn WellfairPersonalPanel() -> Element {
                     p {
                         style: "margin:0.5rem 0 0;font-size:0.76rem;color:var(--qualia-text-muted,#666);",
                         "{state.read().status}"
-                    }
-                }
-            }
-
-            div {
-                style: "margin-top:1rem;padding:0.65rem;border-radius:8px;border:1px solid var(--qualia-border,#eee);",
-                h3 { style: "margin:0 0 0.5rem;font-size:0.88rem;", "Emergency contacts" }
-                label { style: "font-size:0.78rem;", "Name" }
-                input {
-                    r#type: "text",
-                    value: "{state.read().contact_name}",
-                    oninput: move |e| state.write().contact_name = e.value(),
-                    style: "width:100%;padding:0.35rem;margin-bottom:0.35rem;border-radius:6px;border:1px solid var(--qualia-border,#ccc);",
-                }
-                label { style: "font-size:0.78rem;", "Relationship" }
-                input {
-                    r#type: "text",
-                    value: "{state.read().contact_rel}",
-                    oninput: move |e| state.write().contact_rel = e.value(),
-                    style: "width:100%;padding:0.35rem;margin-bottom:0.35rem;border-radius:6px;border:1px solid var(--qualia-border,#ccc);",
-                }
-                label { style: "font-size:0.78rem;", "Phone (optional)" }
-                input {
-                    r#type: "tel",
-                    value: "{state.read().contact_phone}",
-                    oninput: move |e| state.write().contact_phone = e.value(),
-                    style: "width:100%;padding:0.35rem;margin-bottom:0.35rem;border-radius:6px;border:1px solid var(--qualia-border,#ccc);",
-                }
-                button {
-                    style: "padding:0.4rem 0.75rem;border-radius:6px;border:none;background:#457b9d;color:#fff;font-size:0.82rem;cursor:pointer;",
-                    onclick: move |_| {
-                        let name = state.read().contact_name.clone();
-                        let rel = state.read().contact_rel.clone();
-                        let phone = state.read().contact_phone.clone();
-                        if name.trim().is_empty() {
-                            state.write().status = "Enter a contact name.".into();
-                            return;
-                        }
-                        let phone_owned = if phone.trim().is_empty() {
-                            None
-                        } else {
-                            Some(phone)
-                        };
-                        spawn(async move {
-                            let phone_ref = phone_owned.as_deref();
-                            match add_emergency_contact(&name, &rel, phone_ref, None).await {
-                                Ok(_) => {
-                                    state.write().status = "Emergency contact saved.".into();
-                                    state.write().contact_name.clear();
-                                    state.write().contact_rel.clear();
-                                    state.write().contact_phone.clear();
-                                    if let Ok(list) = fetch_emergency_contacts().await {
-                                        state.write().contacts = list;
-                                    }
-                                }
-                                Err(e) => state.write().status = format!("Contact save failed: {e}"),
-                            }
-                        });
-                    },
-                    "Add contact"
-                }
-                if !state.read().contacts.is_empty() {
-                    ul {
-                        style: "margin:0.65rem 0 0;padding-left:1.1rem;font-size:0.8rem;",
-                        for c in state.read().contacts.clone() {
-                            li {
-                                key: "{c.id}",
-                                "{c.display_name} ({c.relationship})"
-                                if let Some(ref p) = c.phone {
-                                    span { style: "color:var(--qualia-text-muted,#666);", " — {p}" }
-                                }
-                            }
-                        }
                     }
                 }
             }

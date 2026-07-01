@@ -295,6 +295,66 @@ pub async fn fetch_consents() -> Result<Vec<ConsentGrantDto>, String> {
     Ok(vec![])
 }
 
+#[derive(Debug, Clone, serde::Serialize)]
+pub struct AddConditionRequest {
+    pub label: String,
+    #[serde(skip_serializing_if = "Option::is_none")]
+    pub icd10_code: Option<String>,
+    #[serde(skip_serializing_if = "Option::is_none")]
+    pub notes: Option<String>,
+}
+
+#[derive(Debug, Clone, serde::Serialize)]
+pub struct AddAllergyRequest {
+    pub substance: String,
+    #[serde(skip_serializing_if = "Option::is_none")]
+    pub reaction: Option<String>,
+    #[serde(skip_serializing_if = "Option::is_none")]
+    pub severity: Option<String>,
+    #[serde(skip_serializing_if = "Option::is_none")]
+    pub notes: Option<String>,
+}
+
+#[cfg(target_arch = "wasm32")]
+pub async fn add_condition(req: &AddConditionRequest) -> Result<HealthRecordDto, String> {
+    let json = serde_json::to_string(req).map_err(|e| e.to_string())?;
+    let args = js_sys::Object::new();
+    js_sys::Reflect::set(&args, &"reportJson".into(), &wasm_bindgen::JsValue::from_str(&json))
+        .map_err(|_| "failed to build invoke args".to_string())?;
+    let js = tauri_invoke("wellfair_add_condition", args.into())
+        .await
+        .map_err(|e| format!("{e:?}"))?;
+    let out = js
+        .as_string()
+        .ok_or_else(|| "add_condition response was not a JSON string".to_string())?;
+    serde_json::from_str(&out).map_err(|e| e.to_string())
+}
+
+#[cfg(not(target_arch = "wasm32"))]
+pub async fn add_condition(_req: &AddConditionRequest) -> Result<HealthRecordDto, String> {
+    Err("Add condition requires the Tauri desktop host".into())
+}
+
+#[cfg(target_arch = "wasm32")]
+pub async fn add_allergy(req: &AddAllergyRequest) -> Result<HealthRecordDto, String> {
+    let json = serde_json::to_string(req).map_err(|e| e.to_string())?;
+    let args = js_sys::Object::new();
+    js_sys::Reflect::set(&args, &"reportJson".into(), &wasm_bindgen::JsValue::from_str(&json))
+        .map_err(|_| "failed to build invoke args".to_string())?;
+    let js = tauri_invoke("wellfair_add_allergy", args.into())
+        .await
+        .map_err(|e| format!("{e:?}"))?;
+    let out = js
+        .as_string()
+        .ok_or_else(|| "add_allergy response was not a JSON string".to_string())?;
+    serde_json::from_str(&out).map_err(|e| e.to_string())
+}
+
+#[cfg(not(target_arch = "wasm32"))]
+pub async fn add_allergy(_req: &AddAllergyRequest) -> Result<HealthRecordDto, String> {
+    Err("Add allergy requires the Tauri desktop host".into())
+}
+
 #[derive(Debug, Clone, Serialize, Deserialize)]
 pub struct EmergencyContactDto {
     pub id: String,
