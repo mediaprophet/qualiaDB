@@ -72,7 +72,10 @@ Correctly platform/hardware-gated. Options:
     Laplace/Gaussian mechanisms, and basic/advanced/RDP budget accounting.
 15. **Financial: Monte Carlo stress testing** — scenario analysis
 16. **ML: Model converter** — PyTorch↔TF↔ONNX
-17. **ML: Model compression** — quantization/pruning/distillation
+17. **ML: Model compression** — ✅ implemented 2026-07-01: model-agnostic
+    symmetric-int8 PTQ with error evidence, exact unstructured/output-channel
+    pruning with packed masks and SGD recovery, and measured teacher-student
+    distillation for the existing MLP/linear training boundary.
 18. **Statistical: Query optimizer** — SQL-like cost-based optimization
 19. **Engineering: CFD solver** — Navier-Stokes finite-volume
 20. **Chemistry: Quantum electronic-structure** — Hartree-Fock/DFT

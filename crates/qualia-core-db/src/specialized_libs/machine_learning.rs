@@ -350,6 +350,77 @@ pub struct CompressionQualityMetrics {
     pub compression_count: u64,
 }
 
+/// Number of logical pruning decisions encoded in one mask byte.
+pub const PRUNING_MASK_BITS_PER_BYTE: usize = 8;
+
+/// Model-agnostic post-training quantization schemes.
+///
+/// The compressed payload is intentionally just a caller-owned byte slice plus
+/// these scalar parameters; it is not tied to GGUF or any framework container.
+#[derive(Debug, Clone, Copy, PartialEq, Eq, Serialize, Deserialize)]
+pub enum QuantizationScheme {
+    /// Per-tensor signed int8 quantization with a zero point of zero.
+    SymmetricInt8,
+}
+
+/// Calibration parameters required to reconstruct a PTQ tensor.
+#[repr(C)]
+#[derive(Debug, Clone, Copy, PartialEq)]
+pub struct QuantizationParameters {
+    pub scheme: QuantizationScheme,
+    pub scale: f64,
+    pub zero_point: i16,
+}
+
+/// Measured result of a real post-training quantization pass.
+#[derive(Debug, Clone, Copy, PartialEq)]
+pub struct QuantizationReport {
+    pub parameters: QuantizationParameters,
+    pub element_count: usize,
+    pub original_bytes: usize,
+    pub compressed_bytes: usize,
+    pub compression_ratio: f64,
+    pub rmse: f64,
+    pub max_abs_error: f64,
+}
+
+/// Measured result of an exact magnitude-pruning pass.
+#[derive(Debug, Clone, Copy, PartialEq)]
+pub struct PruningReport {
+    pub total_weights: usize,
+    pub pruned_weights: usize,
+    pub kept_weights: usize,
+    pub total_units: usize,
+    pub pruned_units: usize,
+    pub requested_sparsity: f64,
+    pub achieved_sparsity: f64,
+    pub original_bytes: usize,
+    pub compressed_bytes: usize,
+    pub compression_ratio: f64,
+    /// Fraction of the original squared L2 energy retained by the sparse tensor.
+    pub l2_energy_preserved: f64,
+}
+
+/// Configuration for the teacher-to-student loop supported by this module.
+///
+/// `teacher_weight=1` trains solely on teacher outputs; `0` uses only hard
+/// targets. Intermediate values blend both target tensors.
+#[derive(Debug, Clone, Copy, PartialEq)]
+pub struct DistillationConfig {
+    pub teacher_weight: f64,
+}
+
+/// Evidence emitted by a completed teacher-to-student training run.
+#[derive(Debug, Clone)]
+pub struct DistillationReport {
+    pub teacher_parameters: usize,
+    pub student_parameters: usize,
+    pub compression_ratio: f64,
+    pub fidelity_mse_before: f64,
+    pub fidelity_mse_after: f64,
+    pub training: TrainingResult,
+}
+
 /// Model version control
 pub struct ModelVersionControl {
     versions: HashMap<String, ModelVersion>,
@@ -2231,7 +2302,10 @@ impl ModelCatalog {
             ],
             metadata: {
                 let mut m = HashMap::new();
-                m.insert("model_type".to_string(), format!("{:?}", metadata.model_type));
+                m.insert(
+                    "model_type".to_string(),
+                    format!("{:?}", metadata.model_type),
+                );
                 m.insert("framework".to_string(), format!("{:?}", metadata.framework));
                 m.insert(
                     "total_parameters".to_string(),
@@ -2382,10 +2456,7 @@ impl ModelCompression {
         self.register_algorithm("QuantizationInt8", CompressionAlgorithm::Quantization);
         self.register_algorithm("QuantizationFP16", CompressionAlgorithm::Quantization);
         self.register_algorithm("Pruning", CompressionAlgorithm::Pruning);
-        self.register_algorithm(
-            "Distillation",
-            CompressionAlgorithm::KnowledgeDistillation,
-        );
+        self.register_algorithm("Distillation", CompressionAlgorithm::KnowledgeDistillation);
         Ok(())
     }
 
@@ -2403,6 +2474,565 @@ impl ModelCompression {
     /// List the names of all registered compression algorithms.
     pub fn list_algorithms(&self) -> Vec<String> {
         self.compression_algorithms.keys().cloned().collect()
+    }
+
+    /// Number of bytes needed for a packed one-bit-per-weight pruning mask.
+    pub const fn pruning_mask_bytes(weight_count: usize) -> usize {
+        weight_count.div_ceil(PRUNING_MASK_BITS_PER_BYTE)
+    }
+
+    /// Return whether `weight_index` is present in a packed pruning mask.
+    pub fn mask_keeps(mask: &[u8], weight_index: usize) -> bool {
+        let byte = weight_index / PRUNING_MASK_BITS_PER_BYTE;
+        let bit = weight_index % PRUNING_MASK_BITS_PER_BYTE;
+        mask.get(byte)
+            .map(|value| (value & (1u8 << bit)) != 0)
+            .unwrap_or(false)
+    }
+
+    fn set_mask_bit(mask: &mut [u8], weight_index: usize) {
+        let byte = weight_index / PRUNING_MASK_BITS_PER_BYTE;
+        let bit = weight_index % PRUNING_MASK_BITS_PER_BYTE;
+        mask[byte] |= 1u8 << bit;
+    }
+
+    /// Run per-tensor symmetric signed-int8 post-training quantization.
+    ///
+    /// `out` is caller-owned and receives the complete compressed payload.
+    /// The returned scale is the only side metadata required to dequantize it.
+    pub fn quantize_symmetric_int8_into(
+        &mut self,
+        weights: &[f64],
+        out: &mut [i8],
+    ) -> Result<QuantizationReport, MLError> {
+        if weights.is_empty() {
+            return Err(MLError::ValidationError(
+                "cannot quantize an empty weight tensor".to_string(),
+            ));
+        }
+        if out.len() < weights.len() {
+            return Err(MLError::ResourceError(format!(
+                "int8 output buffer needs {} elements, got {}",
+                weights.len(),
+                out.len()
+            )));
+        }
+
+        let mut max_abs = 0.0f64;
+        let mut signal_sq = 0.0f64;
+        for &weight in weights {
+            if !weight.is_finite() {
+                return Err(MLError::ValidationError(
+                    "quantization input contains a non-finite weight".to_string(),
+                ));
+            }
+            max_abs = max_abs.max(weight.abs());
+            signal_sq += weight * weight;
+        }
+
+        let scale = if max_abs == 0.0 {
+            1.0
+        } else {
+            max_abs / i8::MAX as f64
+        };
+        let mut squared_error = 0.0f64;
+        let mut max_abs_error = 0.0f64;
+        for (index, &weight) in weights.iter().enumerate() {
+            let quantized = (weight / scale)
+                .round()
+                .clamp(-(i8::MAX as f64), i8::MAX as f64) as i8;
+            out[index] = quantized;
+            let error = weight - quantized as f64 * scale;
+            squared_error += error * error;
+            max_abs_error = max_abs_error.max(error.abs());
+        }
+
+        let rmse = (squared_error / weights.len() as f64).sqrt();
+        let signal_rms = (signal_sq / weights.len() as f64).sqrt();
+        let preservation = if signal_rms == 0.0 {
+            1.0
+        } else {
+            (1.0 - rmse / signal_rms).clamp(0.0, 1.0)
+        };
+        let original_bytes = std::mem::size_of_val(weights);
+        // Portable payload: one byte per weight plus the f64 scale.
+        let compressed_bytes = weights.len() + std::mem::size_of::<f64>();
+        let report = QuantizationReport {
+            parameters: QuantizationParameters {
+                scheme: QuantizationScheme::SymmetricInt8,
+                scale,
+                zero_point: 0,
+            },
+            element_count: weights.len(),
+            original_bytes,
+            compressed_bytes,
+            compression_ratio: original_bytes as f64 / compressed_bytes as f64,
+            rmse,
+            max_abs_error,
+        };
+        self.record_measured_compression(original_bytes, compressed_bytes, preservation);
+        Ok(report)
+    }
+
+    /// Dequantize a symmetric-int8 tensor into caller-owned floating-point storage.
+    pub fn dequantize_symmetric_int8_into(
+        quantized: &[i8],
+        parameters: QuantizationParameters,
+        out: &mut [f64],
+    ) -> Result<usize, MLError> {
+        if parameters.scheme != QuantizationScheme::SymmetricInt8
+            || !parameters.scale.is_finite()
+            || parameters.scale <= 0.0
+            || parameters.zero_point != 0
+        {
+            return Err(MLError::ValidationError(
+                "invalid symmetric-int8 quantization parameters".to_string(),
+            ));
+        }
+        if out.len() < quantized.len() {
+            return Err(MLError::ResourceError(format!(
+                "dequantization output needs {} elements, got {}",
+                quantized.len(),
+                out.len()
+            )));
+        }
+        for (dst, &value) in out.iter_mut().zip(quantized.iter()) {
+            *dst = value as f64 * parameters.scale;
+        }
+        Ok(quantized.len())
+    }
+
+    /// Exact unstructured magnitude pruning.
+    ///
+    /// The smallest-magnitude weights are removed. The result is a real sparse
+    /// representation: a packed keep-mask and the retained values in original
+    /// index order. `scratch_indices` is caller-provided sorting workspace.
+    pub fn prune_unstructured_into(
+        &mut self,
+        weights: &[f64],
+        sparsity: f64,
+        mask_out: &mut [u8],
+        values_out: &mut [f64],
+        scratch_indices: &mut [usize],
+    ) -> Result<PruningReport, MLError> {
+        Self::validate_pruning_input(weights, sparsity)?;
+        let count = weights.len();
+        let mask_bytes = Self::pruning_mask_bytes(count);
+        let pruned = ((count as f64 * sparsity).round() as usize).min(count);
+        let kept = count - pruned;
+        if mask_out.len() < mask_bytes {
+            return Err(MLError::ResourceError(format!(
+                "pruning mask needs {} bytes, got {}",
+                mask_bytes,
+                mask_out.len()
+            )));
+        }
+        if values_out.len() < kept {
+            return Err(MLError::ResourceError(format!(
+                "sparse value buffer needs {} elements, got {}",
+                kept,
+                values_out.len()
+            )));
+        }
+        if scratch_indices.len() < count {
+            return Err(MLError::ResourceError(format!(
+                "pruning scratch needs {} indices, got {}",
+                count,
+                scratch_indices.len()
+            )));
+        }
+
+        mask_out[..mask_bytes].fill(0);
+        for (index, slot) in scratch_indices[..count].iter_mut().enumerate() {
+            *slot = index;
+        }
+        scratch_indices[..count].sort_unstable_by(|left, right| {
+            weights[*left]
+                .abs()
+                .total_cmp(&weights[*right].abs())
+                .then_with(|| left.cmp(right))
+        });
+        for &index in &scratch_indices[pruned..count] {
+            Self::set_mask_bit(mask_out, index);
+        }
+
+        let mut write = 0usize;
+        let mut original_energy = 0.0f64;
+        let mut kept_energy = 0.0f64;
+        for (index, &weight) in weights.iter().enumerate() {
+            original_energy += weight * weight;
+            if Self::mask_keeps(mask_out, index) {
+                values_out[write] = weight;
+                write += 1;
+                kept_energy += weight * weight;
+            }
+        }
+
+        let report = Self::make_pruning_report(
+            count,
+            pruned,
+            count,
+            pruned,
+            sparsity,
+            mask_bytes,
+            original_energy,
+            kept_energy,
+        );
+        self.record_measured_compression(
+            report.original_bytes,
+            report.compressed_bytes,
+            report.l2_energy_preserved.sqrt(),
+        );
+        Ok(report)
+    }
+
+    /// Structured output-channel pruning for a row-major `rows × columns` matrix.
+    ///
+    /// Entire rows with the smallest L2 norm are removed and packed contiguously.
+    /// `row_mask_out` contains one keep bit per row.
+    pub fn prune_output_channels_into(
+        &mut self,
+        weights: &[f64],
+        rows: usize,
+        columns: usize,
+        sparsity: f64,
+        row_mask_out: &mut [u8],
+        values_out: &mut [f64],
+        score_scratch: &mut [f64],
+        index_scratch: &mut [usize],
+    ) -> Result<PruningReport, MLError> {
+        Self::validate_pruning_input(weights, sparsity)?;
+        if rows == 0 || columns == 0 || rows.checked_mul(columns) != Some(weights.len()) {
+            return Err(MLError::ValidationError(format!(
+                "structured pruning shape {}x{} does not match {} weights",
+                rows,
+                columns,
+                weights.len()
+            )));
+        }
+        let mask_bytes = Self::pruning_mask_bytes(rows);
+        let pruned_rows = ((rows as f64 * sparsity).round() as usize).min(rows);
+        let kept_rows = rows - pruned_rows;
+        let kept_weights = kept_rows * columns;
+        if row_mask_out.len() < mask_bytes
+            || score_scratch.len() < rows
+            || index_scratch.len() < rows
+            || values_out.len() < kept_weights
+        {
+            return Err(MLError::ResourceError(
+                "structured-pruning caller buffers are too small".to_string(),
+            ));
+        }
+
+        row_mask_out[..mask_bytes].fill(0);
+        let mut original_energy = 0.0f64;
+        for row in 0..rows {
+            let mut row_energy = 0.0f64;
+            for &weight in &weights[row * columns..(row + 1) * columns] {
+                row_energy += weight * weight;
+            }
+            score_scratch[row] = row_energy;
+            index_scratch[row] = row;
+            original_energy += row_energy;
+        }
+        index_scratch[..rows].sort_unstable_by(|left, right| {
+            score_scratch[*left]
+                .total_cmp(&score_scratch[*right])
+                .then_with(|| left.cmp(right))
+        });
+        for &row in &index_scratch[pruned_rows..rows] {
+            Self::set_mask_bit(row_mask_out, row);
+        }
+
+        let mut write = 0usize;
+        let mut kept_energy = 0.0f64;
+        for row in 0..rows {
+            if Self::mask_keeps(row_mask_out, row) {
+                let source = &weights[row * columns..(row + 1) * columns];
+                values_out[write..write + columns].copy_from_slice(source);
+                write += columns;
+                kept_energy += score_scratch[row];
+            }
+        }
+
+        let report = Self::make_pruning_report(
+            weights.len(),
+            pruned_rows * columns,
+            rows,
+            pruned_rows,
+            sparsity,
+            mask_bytes,
+            original_energy,
+            kept_energy,
+        );
+        self.record_measured_compression(
+            report.original_bytes,
+            report.compressed_bytes,
+            report.l2_energy_preserved.sqrt(),
+        );
+        Ok(report)
+    }
+
+    /// Reconstruct an unstructured sparse tensor into caller-owned dense storage.
+    pub fn unpack_pruned_weights_into(
+        mask: &[u8],
+        packed_values: &[f64],
+        out: &mut [f64],
+    ) -> Result<usize, MLError> {
+        let needed_mask = Self::pruning_mask_bytes(out.len());
+        if mask.len() < needed_mask {
+            return Err(MLError::ResourceError(format!(
+                "pruning mask needs {} bytes, got {}",
+                needed_mask,
+                mask.len()
+            )));
+        }
+        let kept = (0..out.len())
+            .filter(|&index| Self::mask_keeps(mask, index))
+            .count();
+        if packed_values.len() < kept {
+            return Err(MLError::ResourceError(format!(
+                "packed sparse tensor needs {} values, got {}",
+                kept,
+                packed_values.len()
+            )));
+        }
+
+        let mut read = 0usize;
+        for (index, value) in out.iter_mut().enumerate() {
+            if Self::mask_keeps(mask, index) {
+                *value = packed_values[read];
+                read += 1;
+            } else {
+                *value = 0.0;
+            }
+        }
+        Ok(read)
+    }
+
+    /// Distil any inference-supported teacher MLP into the existing single-linear
+    /// SGD student. Teacher outputs are generated from real forward passes and
+    /// optionally blended with hard targets in `target_buffer`.
+    pub fn distill_linear_student(
+        &mut self,
+        training_engine: &mut TrainingEngine,
+        teacher: &Model,
+        student: &mut Model,
+        training_data: &[f64],
+        hard_targets: Option<&[f64]>,
+        distillation: DistillationConfig,
+        training: &TrainingConfig,
+        target_buffer: &mut [f64],
+    ) -> Result<DistillationReport, MLError> {
+        if !distillation.teacher_weight.is_finite()
+            || !(0.0..=1.0).contains(&distillation.teacher_weight)
+        {
+            return Err(MLError::ValidationError(
+                "teacher_weight must be finite and in [0, 1]".to_string(),
+            ));
+        }
+        let input_size = student
+            .architecture
+            .input_shape
+            .first()
+            .copied()
+            .ok_or_else(|| MLError::TrainingError("student input shape is empty".into()))?;
+        let output_size = student
+            .architecture
+            .output_shape
+            .first()
+            .copied()
+            .ok_or_else(|| MLError::TrainingError("student output shape is empty".into()))?;
+        if input_size == 0 || training_data.is_empty() || training_data.len() % input_size != 0 {
+            return Err(MLError::DataError(
+                "distillation training data has an invalid shape".to_string(),
+            ));
+        }
+        if teacher.architecture.input_shape.first().copied() != Some(input_size)
+            || teacher.architecture.output_shape.first().copied() != Some(output_size)
+        {
+            return Err(MLError::ValidationError(
+                "teacher and student input/output shapes must match".to_string(),
+            ));
+        }
+        let samples = training_data.len() / input_size;
+        let target_count = samples * output_size;
+        if target_buffer.len() < target_count {
+            return Err(MLError::ResourceError(format!(
+                "distillation target buffer needs {} elements, got {}",
+                target_count,
+                target_buffer.len()
+            )));
+        }
+        if let Some(targets) = hard_targets {
+            if targets.len() != target_count {
+                return Err(MLError::DataError(format!(
+                    "hard target length {} does not match {}",
+                    targets.len(),
+                    target_count
+                )));
+            }
+        } else if distillation.teacher_weight < 1.0 {
+            return Err(MLError::ValidationError(
+                "hard targets are required when teacher_weight is below 1".to_string(),
+            ));
+        }
+
+        for sample in 0..samples {
+            let input = &training_data[sample * input_size..(sample + 1) * input_size];
+            let teacher_output = InferenceEngine::forward_pass(teacher, input)?;
+            if teacher_output.len() != output_size {
+                return Err(MLError::ValidationError(
+                    "teacher produced an unexpected output shape".to_string(),
+                ));
+            }
+            for output in 0..output_size {
+                let index = sample * output_size + output;
+                let hard = hard_targets.map(|targets| targets[index]).unwrap_or(0.0);
+                target_buffer[index] = distillation.teacher_weight * teacher_output[output]
+                    + (1.0 - distillation.teacher_weight) * hard;
+            }
+        }
+
+        let fidelity_mse_before =
+            Self::teacher_student_fidelity_mse(teacher, student, training_data)?;
+        let training_result = training_engine.start_training(
+            student,
+            training_data,
+            &target_buffer[..target_count],
+            training,
+        )?;
+        let fidelity_mse_after =
+            Self::teacher_student_fidelity_mse(teacher, student, training_data)?;
+
+        let teacher_bytes = std::mem::size_of_val(teacher.weights.as_slice());
+        let student_bytes = std::mem::size_of_val(student.weights.as_slice());
+        let compression_ratio = teacher_bytes as f64 / student_bytes.max(1) as f64;
+        self.record_measured_compression(
+            teacher_bytes,
+            student_bytes,
+            (1.0 / (1.0 + fidelity_mse_after.sqrt())).clamp(0.0, 1.0),
+        );
+        Ok(DistillationReport {
+            teacher_parameters: teacher.weights.len(),
+            student_parameters: student.weights.len(),
+            compression_ratio,
+            fidelity_mse_before,
+            fidelity_mse_after,
+            training: training_result,
+        })
+    }
+
+    fn teacher_student_fidelity_mse(
+        teacher: &Model,
+        student: &Model,
+        training_data: &[f64],
+    ) -> Result<f64, MLError> {
+        let input_size = student.architecture.input_shape[0];
+        let samples = training_data.len() / input_size;
+        let mut squared_error = 0.0f64;
+        let mut outputs = 0usize;
+        for sample in 0..samples {
+            let input = &training_data[sample * input_size..(sample + 1) * input_size];
+            let teacher_output = InferenceEngine::forward_pass(teacher, input)?;
+            let student_output = InferenceEngine::forward_pass(student, input)?;
+            if teacher_output.len() != student_output.len() {
+                return Err(MLError::ValidationError(
+                    "teacher and student output lengths differ".to_string(),
+                ));
+            }
+            for (&teacher_value, &student_value) in teacher_output.iter().zip(student_output.iter())
+            {
+                let difference = teacher_value - student_value;
+                squared_error += difference * difference;
+                outputs += 1;
+            }
+        }
+        Ok(if outputs == 0 {
+            0.0
+        } else {
+            squared_error / outputs as f64
+        })
+    }
+
+    fn validate_pruning_input(weights: &[f64], sparsity: f64) -> Result<(), MLError> {
+        if weights.is_empty() {
+            return Err(MLError::ValidationError(
+                "cannot prune an empty weight tensor".to_string(),
+            ));
+        }
+        if !sparsity.is_finite() || !(0.0..=1.0).contains(&sparsity) {
+            return Err(MLError::ValidationError(
+                "sparsity must be finite and in [0, 1]".to_string(),
+            ));
+        }
+        if weights.iter().any(|weight| !weight.is_finite()) {
+            return Err(MLError::ValidationError(
+                "pruning input contains a non-finite weight".to_string(),
+            ));
+        }
+        Ok(())
+    }
+
+    #[allow(clippy::too_many_arguments)]
+    fn make_pruning_report(
+        total_weights: usize,
+        pruned_weights: usize,
+        total_units: usize,
+        pruned_units: usize,
+        requested_sparsity: f64,
+        mask_bytes: usize,
+        original_energy: f64,
+        kept_energy: f64,
+    ) -> PruningReport {
+        let kept_weights = total_weights - pruned_weights;
+        let original_bytes = total_weights * std::mem::size_of::<f64>();
+        let compressed_bytes = mask_bytes + kept_weights * std::mem::size_of::<f64>();
+        PruningReport {
+            total_weights,
+            pruned_weights,
+            kept_weights,
+            total_units,
+            pruned_units,
+            requested_sparsity,
+            achieved_sparsity: pruned_weights as f64 / total_weights as f64,
+            original_bytes,
+            compressed_bytes,
+            compression_ratio: original_bytes as f64 / compressed_bytes.max(1) as f64,
+            l2_energy_preserved: if original_energy == 0.0 {
+                1.0
+            } else {
+                kept_energy / original_energy
+            },
+        }
+    }
+
+    fn record_measured_compression(
+        &mut self,
+        original_bytes: usize,
+        compressed_bytes: usize,
+        preservation: f64,
+    ) {
+        self.compression_statistics.original_size = original_bytes as u64;
+        self.compression_statistics.compressed_size = compressed_bytes as u64;
+        self.compression_statistics.compression_ratio =
+            original_bytes as f64 / compressed_bytes.max(1) as f64;
+
+        let count = self.quality_metrics.compression_count;
+        let next = count + 1;
+        let ratio = self.compression_statistics.compression_ratio;
+        let reduction =
+            (1.0 - compressed_bytes as f64 / original_bytes.max(1) as f64).clamp(0.0, 1.0);
+        self.quality_metrics.compression_count = next;
+        self.quality_metrics.compression_ratio =
+            (self.quality_metrics.compression_ratio * count as f64 + ratio) / next as f64;
+        self.quality_metrics.size_reduction =
+            (self.quality_metrics.size_reduction * count as f64 + reduction) / next as f64;
+        self.quality_metrics.memory_savings = self.quality_metrics.size_reduction;
+        self.quality_metrics.accuracy_preservation = (self.quality_metrics.accuracy_preservation
+            * count as f64
+            + preservation.clamp(0.0, 1.0))
+            / next as f64;
     }
 
     /// Record the result of a compression operation and update the aggregate
@@ -2461,6 +3091,11 @@ impl ModelCompression {
         &self.quality_metrics
     }
 
+    /// Access byte counts and the ratio from the most recent real compression.
+    pub fn get_compression_statistics(&self) -> &CompressionStatistics {
+        &self.compression_statistics
+    }
+
     /// Return the overall compression ratio recorded so far.
     pub fn compression_ratio(&self) -> f64 {
         self.quality_metrics.compression_ratio
@@ -2513,11 +3148,7 @@ impl ModelVersionControl {
 
     /// Register a new version for a model. Returns an error if a version with
     /// the same `version_id` is already registered for that model.
-    pub fn create_version(
-        &mut self,
-        model_id: &str,
-        version: ModelVersion,
-    ) -> Result<(), MLError> {
+    pub fn create_version(&mut self, model_id: &str, version: ModelVersion) -> Result<(), MLError> {
         let key = version_key(model_id, &version.version_id);
         if self.versions.contains_key(&key) {
             return Err(MLError::ModelError(format!(
@@ -2560,10 +3191,7 @@ impl ModelVersionControl {
             )));
         }
         // Validate that the originating version is registered somewhere.
-        let exists = self
-            .versions
-            .values()
-            .any(|v| v.version_id == from_version);
+        let exists = self.versions.values().any(|v| v.version_id == from_version);
         if !exists {
             return Err(MLError::ModelError(format!(
                 "cannot branch from unknown version '{}'",
@@ -2590,7 +3218,10 @@ impl ModelVersionControl {
                 version_id
             )));
         }
-        let entry = self.tags.entry(version_id.to_string()).or_insert_with(Vec::new);
+        let entry = self
+            .tags
+            .entry(version_id.to_string())
+            .or_insert_with(Vec::new);
         if !entry.iter().any(|t| t == tag) {
             entry.push(tag.to_string());
         }
@@ -2599,10 +3230,7 @@ impl ModelVersionControl {
 
     /// Get all tags attached to a version.
     pub fn get_tags(&self, version_id: &str) -> Vec<String> {
-        self.tags
-            .get(version_id)
-            .cloned()
-            .unwrap_or_default()
+        self.tags.get(version_id).cloned().unwrap_or_default()
     }
 
     /// Find all version ids that carry the given tag.
@@ -3261,7 +3889,10 @@ impl InferenceEngine {
                     if activations.len() != in_size {
                         return Err(MLError::InferenceError(format!(
                             "layer {} ({}): expected input size {}, got {}",
-                            idx, layer.layer_id, in_size, activations.len()
+                            idx,
+                            layer.layer_id,
+                            in_size,
+                            activations.len()
                         )));
                     }
 
@@ -3284,8 +3915,7 @@ impl InferenceEngine {
                     for j in 0..out_size {
                         let mut acc = 0.0;
                         for i in 0..in_size {
-                            acc += model.weights[weight_offset + j * in_size + i]
-                                * activations[i];
+                            acc += model.weights[weight_offset + j * in_size + i] * activations[i];
                         }
                         acc += model.weights[weight_offset + weight_count + j];
                         out[j] = acc;
@@ -3691,6 +4321,32 @@ impl TrainingEngine {
         targets: &[f64],
         config: &TrainingConfig,
     ) -> Result<TrainingResult, MLError> {
+        self.start_training_impl(model, training_data, targets, config, None)
+    }
+
+    /// Run SGD recovery while preserving an unstructured pruning mask.
+    ///
+    /// Masked weights are forced to zero before training and skipped during
+    /// every optimizer update, so recovery cannot silently regrow them.
+    pub fn start_training_with_pruning_mask(
+        &mut self,
+        model: &mut Model,
+        training_data: &[f64],
+        targets: &[f64],
+        config: &TrainingConfig,
+        pruning_mask: &[u8],
+    ) -> Result<TrainingResult, MLError> {
+        self.start_training_impl(model, training_data, targets, config, Some(pruning_mask))
+    }
+
+    fn start_training_impl(
+        &mut self,
+        model: &mut Model,
+        training_data: &[f64],
+        targets: &[f64],
+        config: &TrainingConfig,
+        pruning_mask: Option<&[u8]>,
+    ) -> Result<TrainingResult, MLError> {
         // --- Validate the optimizer. ---
         if config.optimizer != TrainingAlgorithm::SGD {
             return Err(MLError::TrainingError(format!(
@@ -3746,6 +4402,21 @@ impl TrainingEngine {
                 bias_count
             )));
         }
+        if let Some(mask) = pruning_mask {
+            let mask_bytes = ModelCompression::pruning_mask_bytes(needed);
+            if mask.len() < mask_bytes {
+                return Err(MLError::ResourceError(format!(
+                    "training pruning mask needs {} bytes, got {}",
+                    mask_bytes,
+                    mask.len()
+                )));
+            }
+            for index in 0..needed {
+                if !ModelCompression::mask_keeps(mask, index) {
+                    model.weights[index] = 0.0;
+                }
+            }
+        }
 
         // --- Validate the data shapes. ---
         if in_size == 0 {
@@ -3777,7 +4448,8 @@ impl TrainingEngine {
         let start = std::time::Instant::now();
 
         // --- Initial loss (before any weight update). ---
-        let initial_loss = Self::full_dataset_mse(&model.weights, training_data, targets, in_size, out_size);
+        let initial_loss =
+            Self::full_dataset_mse(&model.weights, training_data, targets, in_size, out_size);
 
         let mut last_loss = initial_loss;
         let mut epochs_completed: usize = 0;
@@ -3815,12 +4487,18 @@ impl TrainingEngine {
                 // Average over (batch_size * out_size) and apply the learning rate.
                 let scale = config.learning_rate / (b * out_size as f64);
                 for k in 0..needed {
-                    model.weights[k] -= scale * grad[k];
+                    if pruning_mask
+                        .map(|mask| ModelCompression::mask_keeps(mask, k))
+                        .unwrap_or(true)
+                    {
+                        model.weights[k] -= scale * grad[k];
+                    }
                 }
             }
 
             epochs_completed = (epoch + 1) as usize;
-            let loss = Self::full_dataset_mse(&model.weights, training_data, targets, in_size, out_size);
+            let loss =
+                Self::full_dataset_mse(&model.weights, training_data, targets, in_size, out_size);
             if (last_loss - loss).abs() < CONVERGENCE_THRESHOLD {
                 convergence_achieved = true;
                 last_loss = loss;
@@ -3941,7 +4619,9 @@ fn deterministic_shuffle(n: usize, seed: u64) -> Vec<usize> {
     let mut order: Vec<usize> = (0..n).collect();
     let mut state = seed.wrapping_add(0x9E3779B97F4A7C15);
     for i in (1..n).rev() {
-        state = state.wrapping_mul(6364136223846793005).wrapping_add(1442695040888963407);
+        state = state
+            .wrapping_mul(6364136223846793005)
+            .wrapping_add(1442695040888963407);
         let j = (state >> 33) as usize % (i + 1);
         order.swap(i, j);
     }
@@ -4628,16 +5308,15 @@ mod tests {
             // Flattened in consumption order: layer1 W(3×2) + bias(3), layer2 W(2×3) + bias(2).
             weights: vec![
                 1.0, 2.0, 0.0, -1.0, 0.5, 0.5, // W1 row-major
-                0.0, 0.0, 0.0,                 // bias1
-                1.0, 0.0, 0.0, 0.0, 1.0, 0.0,  // W2 row-major
-                0.0, 0.0,                       // bias2
+                0.0, 0.0, 0.0, // bias1
+                1.0, 0.0, 0.0, 0.0, 1.0, 0.0, // W2 row-major
+                0.0, 0.0, // bias2
             ],
             metadata: ModelMetadata::new(),
         };
 
         let input = [1.0f64, 2.0];
-        let input_bytes: Vec<u8> =
-            input.iter().flat_map(|v| v.to_le_bytes()).collect();
+        let input_bytes: Vec<u8> = input.iter().flat_map(|v| v.to_le_bytes()).collect();
 
         let request = InferenceRequest {
             request_id: "req_mlp".to_string(),
@@ -4710,8 +5389,7 @@ mod tests {
         };
 
         let input = [1.0f64, 2.0, 3.0, 4.0];
-        let input_bytes: Vec<u8> =
-            input.iter().flat_map(|v| v.to_le_bytes()).collect();
+        let input_bytes: Vec<u8> = input.iter().flat_map(|v| v.to_le_bytes()).collect();
 
         let request = InferenceRequest {
             request_id: "req_attn".to_string(),
@@ -4869,12 +5547,18 @@ mod tests {
         // Adding "c" exceeds the budget and must evict the oldest (b).
         cache.put("c".to_string(), mk("c")).unwrap();
 
-        assert!(cache.get("b").is_none(), "LRU entry 'b' should have been evicted");
+        assert!(
+            cache.get("b").is_none(),
+            "LRU entry 'b' should have been evicted"
+        );
         assert!(cache.get("a").is_some(), "'a' should still be resident");
         assert!(cache.get("c").is_some(), "'c' should be resident");
 
         let stats = cache.cache_stats();
-        assert!(stats.eviction_count >= 1, "eviction_count should reflect evictions");
+        assert!(
+            stats.eviction_count >= 1,
+            "eviction_count should reflect evictions"
+        );
         assert!(stats.total_size <= cache.cache_policy.max_size);
     }
 
@@ -4890,7 +5574,11 @@ mod tests {
         assert_eq!(model.model_id, "fallback_missing");
         assert_eq!(model.model_type, ModelType::LLM);
         assert_eq!(model.framework, MLFramework::PyTorch);
-        assert_eq!(model.weights.len(), 1000, "mock model should have 1000 weights");
+        assert_eq!(
+            model.weights.len(),
+            1000,
+            "mock model should have 1000 weights"
+        );
 
         // The loaded model should be cached in the model_store.
         assert!(storage.model_store.contains_key("fallback_missing"));
@@ -4909,7 +5597,11 @@ mod tests {
             .expect("non-GGUF file should fall back to mock model, not error");
 
         assert_eq!(model.model_id, "fallback_non_gguf");
-        assert_eq!(model.weights.len(), 1000, "mock model should have 1000 weights");
+        assert_eq!(
+            model.weights.len(),
+            1000,
+            "mock model should have 1000 weights"
+        );
 
         let _ = std::fs::remove_file(&path);
     }
@@ -4926,7 +5618,9 @@ mod tests {
         assert_eq!(first.model_id, "cached_model");
 
         // Second load should come from the store without re-reading disk.
-        let second = storage.load_model("cached_model", "/nonexistent/model.gguf").unwrap();
+        let second = storage
+            .load_model("cached_model", "/nonexistent/model.gguf")
+            .unwrap();
         assert_eq!(second.model_id, first.model_id);
         assert_eq!(second.weights.len(), first.weights.len());
     }
@@ -4939,8 +5633,10 @@ mod tests {
         let gguf_path = match candidate {
             Some(p) if !p.is_empty() && std::path::Path::new(&p).exists() => p,
             _ => {
-                eprintln!("[test_model_storage_load_model_real_gguf_if_present] \
-                           no GGUF file available (set QUALIA_TEST_GGUF_PATH); skipping");
+                eprintln!(
+                    "[test_model_storage_load_model_real_gguf_if_present] \
+                           no GGUF file available (set QUALIA_TEST_GGUF_PATH); skipping"
+                );
                 return;
             }
         };
@@ -4951,7 +5647,10 @@ mod tests {
             Err(e) => {
                 // A parse failure should have fallen back to the mock model, not errored,
                 // so reaching here is unexpected — surface it.
-                panic!("load_model returned error for real GGUF {}: {}", gguf_path, e);
+                panic!(
+                    "load_model returned error for real GGUF {}: {}",
+                    gguf_path, e
+                );
             }
         };
 
@@ -5065,7 +5764,10 @@ mod tests {
             metadata: HashMap::new(),
             relevance_score: 1.0,
         });
-        assert!(index.search("alpha").is_empty(), "search before initialize must be empty");
+        assert!(
+            index.search("alpha").is_empty(),
+            "search before initialize must be empty"
+        );
 
         index.initialize().unwrap();
         let hits = index.search("alpha");
@@ -5259,7 +5961,11 @@ mod tests {
             .start_training(&mut model, &[1.0], &[1.0], &config)
             .expect_err("activated layer must be rejected");
         let msg = format!("{}", err);
-        assert!(msg.contains("activation"), "error should mention activation: {}", msg);
+        assert!(
+            msg.contains("activation"),
+            "error should mention activation: {}",
+            msg
+        );
     }
 
     // ------------------------------------------------------------------
@@ -5291,7 +5997,9 @@ mod tests {
         assert!(format!("{}", err).contains("already exists"));
 
         // Retrieval works.
-        let got = vc.get_version("model-a", "v1").expect("version should exist");
+        let got = vc
+            .get_version("model-a", "v1")
+            .expect("version should exist");
         assert_eq!(got.version_id, "v1");
 
         // Unknown model/version returns None.
@@ -5424,10 +6132,9 @@ mod tests {
         mc.initialize().unwrap();
 
         // 1000 bytes -> 250 bytes is a 4x compression ratio (75% reduction).
-        assert!(
-            mc.record_compression("QuantizationInt8", 1000, 250, 0.90, 0.88)
-                .is_ok()
-        );
+        assert!(mc
+            .record_compression("QuantizationInt8", 1000, 250, 0.90, 0.88)
+            .is_ok());
 
         let metrics = mc.get_quality_metrics();
         assert_eq!(metrics.compression_count, 1);
@@ -5472,5 +6179,234 @@ mod tests {
         let metrics = mc.get_quality_metrics();
         assert_eq!(metrics.compression_count, 2);
         assert!((metrics.compression_ratio - 3.0).abs() < 1e-9);
+    }
+
+    #[test]
+    fn test_symmetric_int8_ptq_round_trip_measures_error() {
+        let weights = [-1.0, -0.51, 0.0, 0.26, 0.75, 1.0];
+        let mut quantized = [0i8; 6];
+        let mut compression = ModelCompression::new();
+
+        let report = compression
+            .quantize_symmetric_int8_into(&weights, &mut quantized)
+            .expect("PTQ should succeed");
+        let mut reconstructed = [0.0f64; 6];
+        let written = ModelCompression::dequantize_symmetric_int8_into(
+            &quantized,
+            report.parameters,
+            &mut reconstructed,
+        )
+        .expect("dequantization should succeed");
+
+        assert_eq!(written, weights.len());
+        assert_eq!(quantized[0], -127);
+        assert_eq!(quantized[5], 127);
+        assert!(report.compression_ratio > 3.0);
+        assert!(report.rmse > 0.0);
+        assert!(report.max_abs_error <= report.parameters.scale / 2.0 + f64::EPSILON);
+        for (&expected, &actual) in weights.iter().zip(reconstructed.iter()) {
+            assert!((expected - actual).abs() <= report.parameters.scale / 2.0 + f64::EPSILON);
+        }
+        assert_eq!(compression.get_quality_metrics().compression_count, 1);
+    }
+
+    #[test]
+    fn test_unstructured_pruning_packs_exact_smallest_weights() {
+        let weights = [0.01, 5.0, -0.02, 4.0];
+        let mut mask = [0u8; 1];
+        let mut packed = [0.0f64; 2];
+        let mut scratch = [0usize; 4];
+        let mut compression = ModelCompression::new();
+
+        let report = compression
+            .prune_unstructured_into(&weights, 0.5, &mut mask, &mut packed, &mut scratch)
+            .expect("magnitude pruning should succeed");
+
+        assert_eq!(report.pruned_weights, 2);
+        assert_eq!(report.kept_weights, 2);
+        assert_eq!(packed, [5.0, 4.0]);
+        assert!(!ModelCompression::mask_keeps(&mask, 0));
+        assert!(ModelCompression::mask_keeps(&mask, 1));
+        assert!(!ModelCompression::mask_keeps(&mask, 2));
+        assert!(ModelCompression::mask_keeps(&mask, 3));
+
+        let mut reconstructed = [9.0f64; 4];
+        assert_eq!(
+            ModelCompression::unpack_pruned_weights_into(&mask, &packed, &mut reconstructed)
+                .unwrap(),
+            2
+        );
+        assert_eq!(reconstructed, [0.0, 5.0, 0.0, 4.0]);
+        assert!(report.l2_energy_preserved > 0.999);
+    }
+
+    #[test]
+    fn test_structured_pruning_removes_lowest_energy_output_channel() {
+        // Three output channels (rows), two inputs per channel.
+        let weights = [0.1, 0.1, 5.0, 5.0, 2.0, 2.0];
+        let mut row_mask = [0u8; 1];
+        let mut packed = [0.0f64; 4];
+        let mut scores = [0.0f64; 3];
+        let mut indices = [0usize; 3];
+        let mut compression = ModelCompression::new();
+
+        let report = compression
+            .prune_output_channels_into(
+                &weights,
+                3,
+                2,
+                1.0 / 3.0,
+                &mut row_mask,
+                &mut packed,
+                &mut scores,
+                &mut indices,
+            )
+            .expect("structured pruning should succeed");
+
+        assert_eq!(report.total_units, 3);
+        assert_eq!(report.pruned_units, 1);
+        assert_eq!(report.pruned_weights, 2);
+        assert!(!ModelCompression::mask_keeps(&row_mask, 0));
+        assert!(ModelCompression::mask_keeps(&row_mask, 1));
+        assert!(ModelCompression::mask_keeps(&row_mask, 2));
+        assert_eq!(packed, [5.0, 5.0, 2.0, 2.0]);
+    }
+
+    fn compression_test_linear_model(
+        model_id: &str,
+        input_size: usize,
+        output_size: usize,
+        weights: Vec<f64>,
+    ) -> Model {
+        Model {
+            model_id: model_id.to_string(),
+            model_type: ModelType::RNN,
+            framework: MLFramework::Custom("compression-test".to_string()),
+            architecture: ModelArchitecture {
+                layers: vec![LayerInfo {
+                    layer_id: format!("{}_linear", model_id),
+                    layer_type: LayerType::Linear,
+                    input_shape: vec![input_size],
+                    output_shape: vec![output_size],
+                    parameters: input_size * output_size + output_size,
+                    activation: None,
+                }],
+                connections: vec![],
+                input_shape: vec![input_size],
+                output_shape: vec![output_size],
+                total_parameters: input_size * output_size + output_size,
+            },
+            weights,
+            metadata: ModelMetadata::new(),
+        }
+    }
+
+    fn compression_test_training_config() -> TrainingConfig {
+        TrainingConfig {
+            epochs: 500,
+            batch_size: 8,
+            learning_rate: 0.05,
+            optimizer: TrainingAlgorithm::SGD,
+            loss_function: "mse".to_string(),
+            metrics: vec!["loss".to_string()],
+            validation_split: 0.0,
+        }
+    }
+
+    #[test]
+    fn test_pruning_recovery_never_regrows_masked_weight() {
+        let mut model = compression_test_linear_model("masked", 2, 1, vec![0.0, 8.0, 0.0]);
+        // Keep w0 and bias, prune w1.
+        let mask = [0b0000_0101u8];
+        let mut inputs = Vec::new();
+        let mut targets = Vec::new();
+        for x0 in -10..=10 {
+            for x1 in -2..=2 {
+                inputs.push(x0 as f64 / 5.0);
+                inputs.push(x1 as f64);
+                targets.push(2.0 * (x0 as f64 / 5.0) + 1.0);
+            }
+        }
+
+        let mut trainer = TrainingEngine::new();
+        let result = trainer
+            .start_training_with_pruning_mask(
+                &mut model,
+                &inputs,
+                &targets,
+                &compression_test_training_config(),
+                &mask,
+            )
+            .expect("masked recovery should train");
+
+        assert!(result.final_loss < result.initial_loss);
+        assert_eq!(model.weights[1], 0.0, "pruned weight must remain zero");
+        assert!((model.weights[0] - 2.0).abs() < 0.05);
+        assert!((model.weights[2] - 1.0).abs() < 0.05);
+    }
+
+    #[test]
+    fn test_teacher_student_distillation_trains_smaller_linear_model() {
+        // A two-layer linear teacher representing y = 2x + 1:
+        // [x, -x] followed by 3*x + 1*(-x) + 1.
+        let teacher = Model {
+            model_id: "teacher".to_string(),
+            model_type: ModelType::RNN,
+            framework: MLFramework::Custom("compression-test".to_string()),
+            architecture: ModelArchitecture {
+                layers: vec![
+                    LayerInfo {
+                        layer_id: "teacher_1".to_string(),
+                        layer_type: LayerType::Linear,
+                        input_shape: vec![1],
+                        output_shape: vec![2],
+                        parameters: 4,
+                        activation: None,
+                    },
+                    LayerInfo {
+                        layer_id: "teacher_2".to_string(),
+                        layer_type: LayerType::Linear,
+                        input_shape: vec![2],
+                        output_shape: vec![1],
+                        parameters: 3,
+                        activation: None,
+                    },
+                ],
+                connections: vec![],
+                input_shape: vec![1],
+                output_shape: vec![1],
+                total_parameters: 7,
+            },
+            weights: vec![1.0, -1.0, 0.0, 0.0, 3.0, 1.0, 1.0],
+            metadata: ModelMetadata::new(),
+        };
+        let mut student = compression_test_linear_model("student", 1, 1, vec![0.0, 0.0]);
+        let inputs: Vec<f64> = (-20..=20).map(|x| x as f64 / 10.0).collect();
+        let mut target_buffer = vec![0.0f64; inputs.len()];
+        let mut trainer = TrainingEngine::new();
+        let mut compression = ModelCompression::new();
+
+        let report = compression
+            .distill_linear_student(
+                &mut trainer,
+                &teacher,
+                &mut student,
+                &inputs,
+                None,
+                DistillationConfig {
+                    teacher_weight: 1.0,
+                },
+                &compression_test_training_config(),
+                &mut target_buffer,
+            )
+            .expect("distillation should succeed");
+
+        assert_eq!(report.teacher_parameters, 7);
+        assert_eq!(report.student_parameters, 2);
+        assert!((report.compression_ratio - 3.5).abs() < 1e-12);
+        assert!(report.fidelity_mse_after < report.fidelity_mse_before);
+        assert!(report.fidelity_mse_after < 1e-3);
+        assert!((student.weights[0] - 2.0).abs() < 0.05);
+        assert!((student.weights[1] - 1.0).abs() < 0.05);
     }
 }

@@ -1059,3 +1059,38 @@ cargo test
    boundaries only through fixed-size references.
 3. The upstream `fhe` implementation is mathematically real but not independently
    audited; it must not be described as FIPS-validated or high-risk-production ready.
+
+### 2026-07-01 — Codex (model-agnostic compression)
+
+**Completed:**
+- Replaced `ModelCompression`'s metrics-only behavior with symmetric-int8 PTQ
+  over caller-owned buffers, including dequantization, byte ratios, RMSE, and
+  maximum reconstruction error.
+- Added exact unstructured magnitude pruning and structured output-channel
+  pruning. Both emit a packed one-bit keep mask plus retained values rather than
+  merely zeroing a dense tensor.
+- Added mask-preserving SGD recovery; pruned parameters remain zero throughout
+  optimizer updates.
+- Added a real teacher-student loop: supported MLP teachers generate targets for
+  the existing single-linear-layer SGD student, with optional hard-target
+  blending and fidelity measurements before and after training.
+- Documented the scope and limitations in
+  `docs/manuals/model-compression.md`.
+
+**Verification:**
+- Compression end-to-end tests: 5 passed, 0 failed.
+- Full `machine_learning` module: 40 passed, 0 failed.
+- Full library excluding four concurrently developed CFD tests: 2,655 passed,
+  0 failed, 55 ignored.
+- The unfiltered suite reaches four pre-existing out-of-bounds failures at
+  `engineering_analysis/cfd.rs:510`; that separate uncommitted work was
+  preserved and not modified here.
+
+**Architectural decisions:**
+1. The generic API operates on flat numeric tensors and is independent of the
+   existing GGUF-specific codecs.
+2. PTQ is implemented now; QAT remains blocked on fake-quantized backward
+   operators and a broader trainer.
+3. Distillation is honest about the current training boundary: MLP teacher,
+   linear SGD/MSE student. Transformer/CNN and temperature-KL distillation need
+   additional training infrastructure.
