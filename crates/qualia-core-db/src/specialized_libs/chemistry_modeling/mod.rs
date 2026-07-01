@@ -20,6 +20,9 @@ use std::sync::{Arc, Mutex};
 /// its own and carries its own correctness tests.
 pub mod molecular_dynamics;
 
+/// Analytical Integral Engine for Quantum Chemistry
+pub mod integrals;
+
 /// Chemistry Modeling Library Manager
 pub struct ChemistryModelingLibrary {
     molecular_simulator: MolecularSimulator,
