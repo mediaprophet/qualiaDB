@@ -671,6 +671,19 @@ pub fn wellfair_add_welfare_case(app: AppHandle, report_json: String) -> Result<
 }
 
 #[command]
+pub fn wellfair_add_case_task(app: AppHandle, report_json: String) -> Result<String, String> {
+    let report: wellfare_core::life_records::CaseTaskReport =
+        serde_json::from_str(&report_json).map_err(|e| format!("invalid case task JSON: {e}"))?;
+    let state = app.state::<HostApiState>();
+    let mut guard = state.0.lock().map_err(|e| e.to_string())?;
+    let host = guard
+        .as_mut()
+        .ok_or_else(|| "Host API not initialized — unlock vault first".to_string())?;
+    let entry = host.add_case_task(&report)?;
+    serde_json::to_string(&entry).map_err(|e| e.to_string())
+}
+
+#[command]
 pub fn wellfair_add_wellbeing_observation(
     app: AppHandle,
     report_json: String,
@@ -3237,6 +3250,7 @@ pub fn get_invoke_handler() -> impl Fn(tauri::ipc::Invoke<tauri::Wry>) -> bool {
         wellfair_unlock_sanctuary,
         wellfair_add_life_event,
         wellfair_add_welfare_case,
+        wellfair_add_case_task,
         wellfair_add_wellbeing_observation,
         wellfair_add_therapy_note,
         wellfair_add_sanctuary_note,

@@ -901,6 +901,13 @@ struct WelfareCaseWire {
 }
 
 #[derive(Debug, Clone, Serialize)]
+struct CaseTaskWire {
+    id: String,
+    case_id: String,
+    title: String,
+}
+
+#[derive(Debug, Clone, Serialize)]
 struct WellbeingObservationWire {
     id: String,
     mood_label: String,
@@ -964,6 +971,22 @@ pub async fn add_welfare_case(title: &str, summary: Option<&str>) -> Result<Heal
 #[cfg(not(target_arch = "wasm32"))]
 pub async fn add_welfare_case(_title: &str, _summary: Option<&str>) -> Result<HealthRecordDto, String> {
     Err("Welfare cases require the Tauri desktop host".into())
+}
+
+#[cfg(target_arch = "wasm32")]
+pub async fn add_case_task(case_id: &str, title: &str) -> Result<HealthRecordDto, String> {
+    let wire = CaseTaskWire {
+        id: uuid::Uuid::new_v4().to_string(),
+        case_id: case_id.to_string(),
+        title: title.to_string(),
+    };
+    let json = serde_json::to_string(&wire).map_err(|e| e.to_string())?;
+    invoke_report_json("wellfair_add_case_task", &json).await
+}
+
+#[cfg(not(target_arch = "wasm32"))]
+pub async fn add_case_task(_case_id: &str, _title: &str) -> Result<HealthRecordDto, String> {
+    Err("Case tasks require the Tauri desktop host".into())
 }
 
 #[cfg(target_arch = "wasm32")]

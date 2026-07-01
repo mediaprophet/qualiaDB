@@ -5,7 +5,7 @@ mod tests {
     use std::path::PathBuf;
 
     use ed25519_dalek::SigningKey;
-    use wellfare_core::life_records::{LifeEventReport, WelfareCaseReport};
+    use wellfare_core::life_records::{CaseTaskReport, LifeEventReport, WelfareCaseReport};
     use wellfare_core::mental_wellbeing::{TherapyNote, WellbeingObservation};
 
     use crate::wellfair::api::WebizenHostApi;
@@ -39,6 +39,22 @@ mod tests {
             .unwrap();
         assert_eq!(case.kind, "welfare_case");
         assert!(is_sanctuary_protected_kind("welfare_case"));
+    }
+
+    #[test]
+    fn case_task_links_to_welfare_case() {
+        let dir = tempfile::tempdir().unwrap();
+        let mut host = host(&dir);
+        let case = host
+            .add_welfare_case(&WelfareCaseReport::new("Housing review"))
+            .unwrap();
+        assert_eq!(case.kind, "welfare_case");
+        let case_uuid = case.id.rsplit(':').next().expect("case uuid");
+        let task = host
+            .add_case_task(&CaseTaskReport::new(case_uuid, "Gather tenancy documents"))
+            .unwrap();
+        assert_eq!(task.kind, "case_task");
+        assert!(task.summary.as_ref().is_some_and(|s| s.contains(case_uuid)));
     }
 
     #[test]
